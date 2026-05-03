@@ -104,6 +104,10 @@ export function CardsPage() {
   const [debtPaymentError, setDebtPaymentError] = useState('')
   const [debtPaymentSaving, setDebtPaymentSaving] = useState(false)
   const [allCards, setAllCards] = useState<Card[]>([])
+  const [expenseCard, setExpenseCard] = useState<Card | null>(null)
+  const [expenseAmount, setExpenseAmount] = useState('')
+  const [expenseError, setExpenseError] = useState('')
+  const [expenseSaving, setExpenseSaving] = useState(false)
 
   function openTransaction(card: Card, reload: () => Promise<void>) {
     setTransactionCard(card)
@@ -211,6 +215,42 @@ export function CardsPage() {
     await reloadCards?.()
   }
 
+  function openExpense(card: Card, reload: () => Promise<void>) {
+    setExpenseCard(card)
+    setReloadCards(() => reload)
+    setExpenseAmount('')
+    setExpenseError('')
+  }
+
+  async function handleExpenseSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!expenseCard) return
+
+    const amount = parseNumber(expenseAmount)
+    if (amount <= 0) {
+      setExpenseError('Harcama tutarı 0 dan büyük olmalı.')
+      return
+    }
+
+    setExpenseSaving(true)
+    setExpenseError('')
+
+    const nextDebt = expenseCard.debt_amount + amount
+    const { error } = await supabase
+      .from('cards')
+      .update({ debt_amount: nextDebt, updated_at: new Date().toISOString() })
+      .eq('id', expenseCard.id)
+
+    setExpenseSaving(false)
+    if (error) {
+      setExpenseError(error.message)
+      return
+    }
+
+    setExpenseCard(null)
+    await reloadCards?.()
+  }
+
   return (
     <>
       <CrudPage
@@ -297,13 +337,22 @@ export function CardsPage() {
               İşlem
             </button>
           ) : row.card_type === 'kredi_karti' ? (
-            <button
-              type="button"
-              onClick={() => openDebtPayment(row, helpers.reload, helpers.rows as Card[])}
-              className="rounded-lg border border-stone-200 bg-stone-700 px-3 py-2 text-xs font-semibold text-white shadow-sm dark:border-stone-700 dark:bg-stone-600"
-            >
-              Borç öde
-            </button>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => openExpense(row, helpers.reload)}
+                className="rounded-lg border border-stone-200 bg-rose-600 px-3 py-2 text-xs font-semibold text-white shadow-sm hover:bg-rose-700 dark:border-stone-700 dark:bg-rose-600"
+              >
+                Harcama ekle
+              </button>
+              <button
+                type="button"
+                onClick={() => openDebtPayment(row, helpers.reload, helpers.rows as Card[])}
+                className="rounded-lg border border-stone-200 bg-stone-700 px-3 py-2 text-xs font-semibold text-white shadow-sm dark:border-stone-700 dark:bg-stone-600"
+              >
+                Borç öde
+              </button>
+            </div>
           ) : null
         }
       />
@@ -389,6 +438,36 @@ export function CardsPage() {
             className="w-full rounded-xl bg-stone-700 px-4 py-3.5 text-sm font-semibold text-white disabled:opacity-60 dark:bg-stone-600"
           >
             {debtPaymentSaving ? 'İşleniyor...' : 'Borç öde'}
+          </button>
+        </form>
+      </SimpleModal>
+
+      <SimpleModal title="Harcama ekle" open={Boolean(expenseCard)} onClose={() => setExpenseCard(null)}>
+        <form onSubmit={handleExpenseSubmit} className="space-y-4">
+          <div className="rounded-lg bg-stone-50 p-3 text-sm text-stone-600 dark:bg-stone-900 dark:text-stone-300">
+            <p className="font-semibold text-stone-950 dark:text-stone-50">{expenseCard?.card_name}</p>
+            <p>Mevcut borç: {formatCurrency(expenseCard?.debt_amount ?? 0)}</p>
+          </div>
+          <label className="block text-sm font-medium text-stone-700 dark:text-stone-200">
+            Harcama tutarı
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={expenseAmount}
+              onChange={(event) => setExpenseAmount(event.target.value)}
+              className="mt-1 w-full rounded-lg border border-stone-200 px-3 py-3 outline-none focus:border-rose-600 dark:border-stone-700 dark:bg-stone-950 dark:text-stone-100"
+              placeholder="0.00"
+              required
+            />
+          </label>
+          {expenseError ? <p className="rounded-lg bg-rose-50 p-3 text-sm text-rose-700">{expenseError}</p> : null}
+          <button
+            type="submit"
+            disabled={expenseSaving}
+            className="w-full rounded-xl bg-rose-600 px-4 py-3.5 text-sm font-semibold text-white disabled:opacity-60 hover:bg-rose-700"
+          >
+            {expenseSaving ? 'Ekleniyor...' : 'Harcamayı ekle'}
           </button>
         </form>
       </SimpleModal>
