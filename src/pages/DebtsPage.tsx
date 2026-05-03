@@ -171,7 +171,7 @@ export function DebtsPage() {
           <button
             type="button"
             onClick={() => void markDebtAsClosed(row, helpers.reload, helpers.setError)}
-            className="rounded-lg border border-emerald-200 bg-emerald-700 px-3 py-2 text-xs font-semibold text-white shadow-sm dark:border-emerald-800"
+            className="rounded-lg border border-stone-200 bg-stone-700 px-3 py-2 text-xs font-semibold text-white shadow-sm dark:border-stone-700 dark:bg-stone-600"
           >
             Kapandı
           </button>

@@ -275,7 +275,7 @@ export function CardsPage() {
             <button
               type="button"
               onClick={() => openTransaction(row, helpers.reload)}
-              className="rounded-lg border border-emerald-200 bg-white/80 px-3 py-2 text-xs font-semibold text-emerald-800 shadow-sm dark:border-emerald-900 dark:bg-stone-950/40 dark:text-emerald-300"
+              className="rounded-lg border border-stone-200 bg-stone-700 px-3 py-2 text-xs font-semibold text-white shadow-sm dark:border-stone-700 dark:bg-stone-600"
             >
               İşlem
             </button>
@@ -283,7 +283,7 @@ export function CardsPage() {
             <button
               type="button"
               onClick={() => openDebtPayment(row, helpers.reload, helpers.rows as Card[])}
-              className="rounded-lg border border-amber-200 bg-white/80 px-3 py-2 text-xs font-semibold text-amber-800 shadow-sm dark:border-amber-900 dark:bg-stone-950/40 dark:text-amber-300"
+              className="rounded-lg border border-stone-200 bg-stone-700 px-3 py-2 text-xs font-semibold text-white shadow-sm dark:border-stone-700 dark:bg-stone-600"
             >
               Borç öde
             </button>
@@ -324,7 +324,7 @@ export function CardsPage() {
           <button
             type="submit"
             disabled={transactionSaving}
-            className="w-full rounded-xl bg-emerald-700 px-4 py-3.5 text-sm font-semibold text-white disabled:opacity-60"
+            className="w-full rounded-xl bg-stone-700 px-4 py-3.5 text-sm font-semibold text-white disabled:opacity-60 dark:bg-stone-600"
           >
             {transactionSaving ? 'İşleniyor...' : 'Bakiyeyi güncelle'}
           </button>
@@ -369,7 +369,7 @@ export function CardsPage() {
           <button
             type="submit"
             disabled={debtPaymentSaving}
-            className="w-full rounded-xl bg-amber-700 px-4 py-3.5 text-sm font-semibold text-white disabled:opacity-60"
+            className="w-full rounded-xl bg-stone-700 px-4 py-3.5 text-sm font-semibold text-white disabled:opacity-60 dark:bg-stone-600"
           >
             {debtPaymentSaving ? 'İşleniyor...' : 'Borç öde'}
           </button>

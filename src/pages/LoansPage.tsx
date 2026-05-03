@@ -201,7 +201,7 @@ export function LoansPage() {
           <button
             type="button"
             onClick={() => void openInstallmentPayment(row, helpers.reload)}
-            className="rounded-lg border border-emerald-200 bg-emerald-700 px-3 py-2 text-xs font-semibold text-white shadow-sm dark:border-emerald-800"
+            className="rounded-lg border border-stone-200 bg-stone-700 px-3 py-2 text-xs font-semibold text-white shadow-sm dark:border-stone-700 dark:bg-stone-600"
           >
             Taksit öde
           </button>
@@ -248,7 +248,7 @@ export function LoansPage() {
           <button
             type="submit"
             disabled={installmentSaving}
-            className="w-full rounded-xl bg-emerald-700 px-4 py-3.5 text-sm font-semibold text-white disabled:opacity-60"
+            className="w-full rounded-xl bg-stone-700 px-4 py-3.5 text-sm font-semibold text-white disabled:opacity-60 dark:bg-stone-600"
           >
             {installmentSaving ? 'İşleniyor...' : 'Taksit öde'}
           </button>
