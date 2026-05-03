@@ -43,13 +43,13 @@ const fields: FormField[] = [
 ]
 
 const assetTone: Record<Asset['category'], { card: string; detail: string }> = {
-  Nakit: { card: 'border-emerald-200 bg-emerald-50/35', detail: 'bg-emerald-50' },
-  Altın: { card: 'border-amber-200 bg-amber-50/45', detail: 'bg-amber-50' },
-  Fon: { card: 'border-sky-200 bg-sky-50/40', detail: 'bg-sky-50' },
-  Hisse: { card: 'border-indigo-200 bg-indigo-50/35', detail: 'bg-indigo-50' },
-  Araç: { card: 'border-orange-200 bg-orange-50/35', detail: 'bg-orange-50' },
-  BES: { card: 'border-teal-200 bg-teal-50/35', detail: 'bg-teal-50' },
-  Diğer: { card: 'border-stone-200 bg-white', detail: 'bg-stone-50' },
+  Nakit: { card: 'border-emerald-200 bg-emerald-50/35 dark:border-emerald-900 dark:bg-emerald-950/25', detail: 'bg-emerald-50 dark:bg-emerald-950/40' },
+  Altın: { card: 'border-amber-200 bg-amber-50/45 dark:border-amber-900 dark:bg-amber-950/25', detail: 'bg-amber-50 dark:bg-amber-950/40' },
+  Fon: { card: 'border-sky-200 bg-sky-50/40 dark:border-sky-900 dark:bg-sky-950/25', detail: 'bg-sky-50 dark:bg-sky-950/40' },
+  Hisse: { card: 'border-indigo-200 bg-indigo-50/35 dark:border-indigo-900 dark:bg-indigo-950/25', detail: 'bg-indigo-50 dark:bg-indigo-950/40' },
+  Araç: { card: 'border-orange-200 bg-orange-50/35 dark:border-orange-900 dark:bg-orange-950/25', detail: 'bg-orange-50 dark:bg-orange-950/40' },
+  BES: { card: 'border-teal-200 bg-teal-50/35 dark:border-teal-900 dark:bg-teal-950/25', detail: 'bg-teal-50 dark:bg-teal-950/40' },
+  Diğer: { card: 'border-stone-200 bg-white dark:border-stone-800 dark:bg-stone-900', detail: 'bg-stone-50 dark:bg-stone-800' },
 }
 
 export function AssetsPage() {

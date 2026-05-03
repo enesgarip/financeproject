@@ -12,7 +12,7 @@ const items = [
 
 export function BottomNav() {
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-stone-200 bg-white/95 px-1 pb-[max(env(safe-area-inset-bottom),0.35rem)] pt-2 backdrop-blur">
+    <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-stone-200 bg-white/95 px-1 pb-[max(env(safe-area-inset-bottom),0.35rem)] pt-2 backdrop-blur dark:border-stone-800 dark:bg-stone-950/95">
       <div className="mx-auto grid max-w-xl grid-cols-6">
         {items.map((item) => (
           <NavLink
@@ -21,7 +21,7 @@ export function BottomNav() {
             end={item.to === '/'}
             className={({ isActive }) =>
               `flex min-w-0 flex-col items-center gap-1 rounded-md px-1 py-1.5 text-[11px] font-medium ${
-                isActive ? 'text-emerald-700' : 'text-stone-500'
+                isActive ? 'text-emerald-700 dark:text-emerald-400' : 'text-stone-500 dark:text-stone-400'
               }`
             }
           >

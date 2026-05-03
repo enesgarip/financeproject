@@ -2,7 +2,7 @@ export type Json = string | number | boolean | null | { [key: string]: Json | un
 
 export type AssetCategory = 'Nakit' | 'Altın' | 'Fon' | 'Hisse' | 'Araç' | 'BES' | 'Diğer'
 export type AssetUnit = 'TRY' | 'gram' | 'adet'
-export type CardType = 'banka_karti' | 'kredi_karti' | 'vadesiz_hesap'
+export type CardType = 'banka_karti' | 'kredi_karti'
 export type LoanStatus = 'active' | 'closed'
 export type DebtDirection = 'borç_aldım' | 'borç_verdim'
 export type DebtValueType = 'TRY' | 'gram_altin' | 'ceyrek_altin'
@@ -30,6 +30,7 @@ export type Card = BaseRow & {
   card_name: string
   card_type: CardType
   current_balance: number
+  credit_limit: number
   debt_amount: number
   statement_day: number | null
   due_day: number | null

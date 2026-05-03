@@ -143,7 +143,7 @@ export function CrudPage<T extends TableName>({
   return (
     <section className="space-y-4">
       <div className="flex items-center justify-between gap-3">
-        <p className="text-sm text-stone-500">{rows.length} kayıt</p>
+        <p className="text-sm text-stone-500 dark:text-stone-400">{rows.length} kayıt</p>
         <button
           type="button"
           onClick={openCreate}
@@ -157,7 +157,7 @@ export function CrudPage<T extends TableName>({
       {error ? <p className="rounded-lg bg-rose-50 p-3 text-sm text-rose-700">{error}</p> : null}
 
       {loading ? (
-        <p className="rounded-lg bg-white p-4 text-sm text-stone-500">Kayıtlar yükleniyor...</p>
+        <p className="rounded-lg bg-white p-4 text-sm text-stone-500 dark:bg-stone-900 dark:text-stone-400">Kayıtlar yükleniyor...</p>
       ) : rows.length === 0 ? (
         <EmptyState title={emptyTitle} description={emptyDescription} />
       ) : (
@@ -165,20 +165,20 @@ export function CrudPage<T extends TableName>({
           {rows.map((row) => (
             <article
               key={row.id}
-              className={`rounded-lg border bg-white p-4 shadow-sm ${getCardClassName?.(row) ?? 'border-stone-200'}`}
+              className={`rounded-lg border bg-white p-4 shadow-sm dark:bg-stone-900 ${getCardClassName?.(row) ?? 'border-stone-200 dark:border-stone-800'}`}
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <h2 className="truncate text-base font-semibold text-stone-950">{renderTitle(row)}</h2>
+                  <h2 className="truncate text-base font-semibold text-stone-950 dark:text-stone-50">{renderTitle(row)}</h2>
                   {renderSubtitle ? (
-                    <p className="mt-1 text-sm text-stone-500">{renderSubtitle(row)}</p>
+                    <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">{renderSubtitle(row)}</p>
                   ) : null}
                 </div>
                 <div className="flex shrink-0 gap-1">
                   <button
                     type="button"
                     onClick={() => openEdit(row)}
-                    className="grid size-9 place-items-center rounded-full text-stone-500 hover:bg-stone-100"
+                    className="grid size-9 place-items-center rounded-full text-stone-500 hover:bg-stone-100 dark:text-stone-400 dark:hover:bg-stone-800"
                     aria-label="Düzenle"
                   >
                     <Pencil size={17} />
@@ -197,13 +197,13 @@ export function CrudPage<T extends TableName>({
                 {renderDetails(row).map((detail) => (
                   <div
                     key={detail}
-                    className={`rounded-md px-3 py-2 text-stone-700 ${getDetailClassName?.(row) ?? 'bg-stone-50'}`}
+                    className={`rounded-md px-3 py-2 text-stone-700 dark:text-stone-200 ${getDetailClassName?.(row) ?? 'bg-stone-50 dark:bg-stone-800'}`}
                   >
                     {detail}
                   </div>
                 ))}
               </dl>
-              {'note' in row && row.note ? <p className="mt-3 text-sm text-stone-500">{row.note}</p> : null}
+              {'note' in row && row.note ? <p className="mt-3 text-sm text-stone-500 dark:text-stone-400">{row.note}</p> : null}
             </article>
           ))}
         </div>
@@ -218,7 +218,7 @@ export function CrudPage<T extends TableName>({
           {fields
             .filter((field) => !field.visibleWhen || formValues[field.visibleWhen.field] === field.visibleWhen.value)
             .map((field) => (
-              <label key={field.name} className="block text-sm font-medium text-stone-700">
+              <label key={field.name} className="block text-sm font-medium text-stone-700 dark:text-stone-200">
                 {field.label}
                 {field.type === 'select' ? (
                   <select
@@ -226,7 +226,7 @@ export function CrudPage<T extends TableName>({
                     required={field.required}
                     value={formValues[field.name] ?? ''}
                     onChange={(event) => updateFormValue(field.name, event.target.value)}
-                    className="mt-1 w-full rounded-lg border border-stone-200 bg-white px-3 py-3 outline-none focus:border-emerald-600"
+                    className="mt-1 w-full rounded-lg border border-stone-200 bg-white px-3 py-3 outline-none focus:border-emerald-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
                   >
                     {field.options?.map((option) => (
                       <option key={option.value} value={option.value}>
@@ -240,7 +240,7 @@ export function CrudPage<T extends TableName>({
                     rows={3}
                     value={formValues[field.name] ?? ''}
                     onChange={(event) => updateFormValue(field.name, event.target.value)}
-                    className="mt-1 w-full rounded-lg border border-stone-200 px-3 py-3 outline-none focus:border-emerald-600"
+                    className="mt-1 w-full rounded-lg border border-stone-200 px-3 py-3 outline-none focus:border-emerald-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
                   />
                 ) : field.type === 'date' ? (
                   <div className="relative mt-1">
@@ -252,12 +252,12 @@ export function CrudPage<T extends TableName>({
                       onClick={(event) => event.currentTarget.showPicker?.()}
                       onFocus={(event) => event.currentTarget.showPicker?.()}
                       onChange={(event) => updateFormValue(field.name, event.target.value)}
-                      className="w-full rounded-lg border border-stone-200 px-3 py-3 pr-11 outline-none focus:border-emerald-600"
+                      className="w-full rounded-lg border border-stone-200 px-3 py-3 pr-11 outline-none focus:border-emerald-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
                     />
                     <CalendarDays
                       aria-hidden="true"
                       size={18}
-                      className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-stone-400"
+                      className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 dark:text-stone-500"
                     />
                   </div>
                 ) : field.type === 'day' ? (
@@ -267,7 +267,7 @@ export function CrudPage<T extends TableName>({
                       required={field.required}
                       value={formValues[field.name] ?? ''}
                       onChange={(event) => updateFormValue(field.name, event.target.value)}
-                      className="w-full appearance-none rounded-lg border border-stone-200 bg-white px-3 py-3 pr-11 outline-none focus:border-emerald-600"
+                      className="w-full appearance-none rounded-lg border border-stone-200 bg-white px-3 py-3 pr-11 outline-none focus:border-emerald-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
                     >
                       <option value="">Gün seç</option>
                       {Array.from({ length: 31 }, (_, index) => {
@@ -282,7 +282,7 @@ export function CrudPage<T extends TableName>({
                     <CalendarDays
                       aria-hidden="true"
                       size={18}
-                      className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-stone-400"
+                      className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 dark:text-stone-500"
                     />
                   </div>
                 ) : (
@@ -294,7 +294,7 @@ export function CrudPage<T extends TableName>({
                     step={field.step}
                     value={formValues[field.name] ?? ''}
                     onChange={(event) => updateFormValue(field.name, event.target.value)}
-                    className="mt-1 w-full rounded-lg border border-stone-200 px-3 py-3 outline-none focus:border-emerald-600"
+                    className="mt-1 w-full rounded-lg border border-stone-200 px-3 py-3 outline-none focus:border-emerald-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
                   />
                 )}
               </label>

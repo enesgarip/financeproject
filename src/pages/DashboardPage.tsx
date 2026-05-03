@@ -72,6 +72,10 @@ export function DashboardPage() {
       data.cards.filter((card) => card.card_type === 'kredi_karti'),
       (card) => card.debt_amount,
     )
+    const totalCreditLimit = sum(
+      data.cards.filter((card) => card.card_type === 'kredi_karti'),
+      (card) => card.credit_limit,
+    )
     const totalLoanDebt = sum(
       data.loans.filter((loan) => loan.status === 'active'),
       (loan) => loan.remaining_amount,
@@ -93,6 +97,7 @@ export function DashboardPage() {
       totalDebts,
       netWorth,
       totalCreditCardDebt,
+      totalCreditLimit,
       totalLoanDebt,
       totalPersonalDebts,
       totalReceivables,
@@ -137,7 +142,7 @@ export function DashboardPage() {
   )
 
   if (loading) {
-    return <p className="rounded-lg bg-white p-4 text-sm text-stone-500">Özet yükleniyor...</p>
+    return <p className="rounded-lg bg-white p-4 text-sm text-stone-500 dark:bg-stone-900 dark:text-stone-400">Özet yükleniyor...</p>
   }
 
   if (error) {
@@ -150,6 +155,7 @@ export function DashboardPage() {
         <StatCard label="Toplam varlık" value={formatCurrency(summary.totalAssets)} tone="good" />
         <StatCard label="Toplam borç" value={formatCurrency(summary.totalDebts)} tone="bad" />
         <StatCard label="Net değer" value={formatCurrency(summary.netWorth)} />
+        <StatCard label="Toplam limit" value={formatCurrency(summary.totalCreditLimit)} />
         <StatCard label="Kart borcu" value={formatCurrency(summary.totalCreditCardDebt)} />
         <StatCard label="Kredi borcu" value={formatCurrency(summary.totalLoanDebt)} />
         <StatCard label="Kişisel borç" value={formatCurrency(summary.totalPersonalDebts)} />
@@ -207,7 +213,7 @@ export function DashboardPage() {
 function UpcomingSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section>
-      <h2 className="mb-3 text-base font-semibold text-stone-950">{title}</h2>
+      <h2 className="mb-3 text-base font-semibold text-stone-950 dark:text-stone-50">{title}</h2>
       <div className="space-y-2">{children}</div>
     </section>
   )
@@ -215,15 +221,15 @@ function UpcomingSection({ title, children }: { title: string; children: React.R
 
 function UpcomingRow({ title, value, date }: { title: string; value: string; date: string }) {
   return (
-    <article className="flex items-center justify-between gap-3 rounded-lg border border-stone-200 bg-white p-3 shadow-sm">
+    <article className="flex items-center justify-between gap-3 rounded-lg border border-stone-200 bg-white p-3 shadow-sm dark:border-stone-800 dark:bg-stone-900">
       <div className="min-w-0">
-        <p className="truncate text-sm font-semibold text-stone-950">{title}</p>
-        <p className="mt-1 flex items-center gap-1 text-xs text-stone-500">
+        <p className="truncate text-sm font-semibold text-stone-950 dark:text-stone-50">{title}</p>
+        <p className="mt-1 flex items-center gap-1 text-xs text-stone-500 dark:text-stone-400">
           <CalendarDays size={14} />
           {date}
         </p>
       </div>
-      <p className="shrink-0 text-sm font-semibold text-stone-900">{value}</p>
+      <p className="shrink-0 text-sm font-semibold text-stone-900 dark:text-stone-100">{value}</p>
     </article>
   )
 }
