@@ -164,7 +164,7 @@ export function DebtsPage() {
         return details
       }}
       groupBy={(row) => directionLabel(row.direction)}
-      getGroupClassName={(group) => (group === 'Borç aldım' ? debtTone.borç_aldım.group : debtTone.borç_verdim.group)}
+      getGroupClassName={() => 'text-stone-900 dark:text-stone-100'}
       getCardClassName={(row) => debtTone[row.direction].card}
       getDetailClassName={(row) => debtTone[row.direction].detail}
       renderRowActions={(row, helpers) =>
