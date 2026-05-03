@@ -107,7 +107,7 @@ export function AssetsPage() {
       getCardClassName={(row) => assetTone[row.category].card}
       getDetailClassName={(row) => assetTone[row.category].detail}
       groupBy={(row) => row.category}
-      getGroupClassName={(group) => 'border-b border-stone-200 bg-transparent px-0 pb-2 pt-1 text-stone-500 dark:border-stone-800 dark:bg-transparent dark:text-stone-400'}
+      getGroupClassName={() => 'border-b border-stone-200 bg-transparent px-0 pb-2 pt-1 text-stone-500 dark:border-stone-800 dark:bg-transparent dark:text-stone-400'}
     />
   )
 }
