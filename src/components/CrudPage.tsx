@@ -156,7 +156,7 @@ export function CrudPage<T extends TableName>({
         <button
           type="button"
           onClick={openCreate}
-          className="inline-flex items-center gap-2 rounded-lg bg-emerald-700 px-3 py-2 text-sm font-semibold text-white"
+          className="hidden items-center gap-2 rounded-lg bg-emerald-700 px-3 py-2 text-sm font-semibold text-white shadow-sm sm:inline-flex"
         >
           <Plus size={17} />
           {addLabel}
@@ -184,7 +184,7 @@ export function CrudPage<T extends TableName>({
                 <article
                   key={row.id}
                   style={getCardStyle?.(row, rows)}
-                  className={`rounded-lg border bg-white p-4 shadow-sm dark:bg-stone-900 ${getCardClassName?.(row, rows) ?? 'border-stone-200 dark:border-stone-800'}`}
+                  className={`rounded-xl border bg-white p-3 shadow-sm dark:bg-stone-900 min-[390px]:p-4 ${getCardClassName?.(row, rows) ?? 'border-stone-200 dark:border-stone-800'}`}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
@@ -197,7 +197,7 @@ export function CrudPage<T extends TableName>({
                       <button
                         type="button"
                         onClick={() => openEdit(row)}
-                        className="grid size-9 place-items-center rounded-full text-stone-500 hover:bg-stone-100 dark:text-stone-400 dark:hover:bg-stone-800"
+                        className="grid size-10 place-items-center rounded-full text-stone-500 hover:bg-stone-100 dark:text-stone-400 dark:hover:bg-stone-800"
                         aria-label="Düzenle"
                       >
                         <Pencil size={17} />
@@ -205,19 +205,19 @@ export function CrudPage<T extends TableName>({
                       <button
                         type="button"
                         onClick={() => void handleDelete(row.id)}
-                        className="grid size-9 place-items-center rounded-full text-rose-600 hover:bg-rose-50"
+                        className="grid size-10 place-items-center rounded-full text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40"
                         aria-label="Sil"
                       >
                         <Trash2 size={17} />
                       </button>
                     </div>
                   </div>
-                  <dl className="mt-4 grid grid-cols-2 gap-2 text-sm">
+                  <dl className="mt-4 grid grid-cols-1 gap-2 text-sm min-[390px]:grid-cols-2">
                     {renderDetails(row).map((detail) => (
                       <div
                         key={detail}
                         style={getDetailStyle?.(row, rows)}
-                        className={`rounded-md px-3 py-2 text-stone-700 dark:text-stone-200 ${getDetailClassName?.(row, rows) ?? 'bg-stone-50 dark:bg-stone-800'}`}
+                        className={`min-w-0 break-words rounded-lg px-3 py-2.5 text-stone-700 dark:text-stone-200 ${getDetailClassName?.(row, rows) ?? 'bg-stone-50 dark:bg-stone-800'}`}
                       >
                         {detail}
                       </div>
@@ -330,12 +330,21 @@ export function CrudPage<T extends TableName>({
           <button
             type="submit"
             disabled={saving}
-            className="w-full rounded-lg bg-emerald-700 px-4 py-3 text-sm font-semibold text-white disabled:opacity-60"
+            className="sticky bottom-0 z-10 w-full rounded-xl bg-emerald-700 px-4 py-3.5 text-sm font-semibold text-white shadow-[0_-10px_24px_rgba(255,255,255,0.9)] disabled:opacity-60 dark:shadow-[0_-10px_24px_rgba(12,10,9,0.9)] sm:static sm:shadow-none"
           >
             {saving ? 'Kaydediliyor...' : 'Kaydet'}
           </button>
         </form>
       </SimpleModal>
+
+      <button
+        type="button"
+        onClick={openCreate}
+        className="fixed bottom-[calc(env(safe-area-inset-bottom)+5.4rem)] right-4 z-30 inline-flex h-12 items-center gap-2 rounded-full bg-emerald-700 px-4 text-sm font-semibold text-white shadow-lg shadow-emerald-900/20 active:scale-[0.98] sm:hidden"
+      >
+        <Plus size={18} />
+        Ekle
+      </button>
     </section>
   )
 }
