@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Kişisel Finans">
+  <rect width="512" height="512" rx="108" fill="#047857"/>
+  <path fill="#ecfdf5" d="M128 154a42 42 0 0 1 42-42h172a42 42 0 0 1 42 42v204a42 42 0 0 1-42 42H170a42 42 0 0 1-42-42V154Z"/>
+  <path fill="#047857" d="M176 176h160v36H176v-36Zm0 70h108v30H176v-30Zm0 64h160v30H176v-30Z"/>
+  <circle cx="335" cy="262" r="43" fill="#facc15"/>
+  <path fill="#14532d" d="M321 263c0-20 15-36 34-39 10 9 16 22 16 38 0 14-6 28-16 37-19-2-34-16-34-36Z"/>
+</svg>

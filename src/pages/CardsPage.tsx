@@ -1,0 +1,75 @@
+import { CrudPage, type FormField } from '../components/CrudPage'
+import type { Card } from '../types/database'
+import { formatCurrency, parseNumber } from '../utils/formatCurrency'
+
+const fields: FormField[] = [
+  { name: 'bank_name', label: 'Banka', type: 'text', required: true },
+  { name: 'card_name', label: 'Kart / hesap adı', type: 'text', required: true },
+  {
+    name: 'card_type',
+    label: 'Tür',
+    type: 'select',
+    options: [
+      { label: 'Banka kartı', value: 'banka_karti' },
+      { label: 'Kredi kartı', value: 'kredi_karti' },
+      { label: 'Vadesiz hesap', value: 'vadesiz_hesap' },
+    ],
+  },
+  { name: 'current_balance', label: 'Mevcut bakiye', type: 'number', step: '0.01', required: true },
+  { name: 'debt_amount', label: 'Borç tutarı', type: 'number', min: '0', step: '0.01', required: true },
+  { name: 'statement_day', label: 'Ekstre günü', type: 'number', min: '1', step: '1' },
+  { name: 'due_day', label: 'Son ödeme günü', type: 'number', min: '1', step: '1' },
+  { name: 'note', label: 'Not', type: 'textarea' },
+]
+
+function optionalDay(value: FormDataEntryValue | null) {
+  const parsed = Number(value)
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null
+}
+
+function cardTypeLabel(value: Card['card_type']) {
+  if (value === 'kredi_karti') return 'Kredi kartı'
+  if (value === 'banka_karti') return 'Banka kartı'
+  return 'Vadesiz hesap'
+}
+
+export function CardsPage() {
+  return (
+    <CrudPage
+      table="cards"
+      addLabel="Kart ekle"
+      fields={fields}
+      emptyTitle="Henüz kart yok"
+      emptyDescription="Kredi kartı, banka kartı ve vadesiz hesaplarını buradan takip edebilirsin."
+      getInitialValues={(row?: Card) => ({
+        bank_name: row?.bank_name ?? '',
+        card_name: row?.card_name ?? '',
+        card_type: row?.card_type ?? 'kredi_karti',
+        current_balance: row?.current_balance ?? 0,
+        debt_amount: row?.debt_amount ?? 0,
+        statement_day: row?.statement_day ?? '',
+        due_day: row?.due_day ?? '',
+        note: row?.note ?? '',
+      })}
+      mapForm={(formData, userId) => ({
+        user_id: userId,
+        bank_name: String(formData.get('bank_name') ?? ''),
+        card_name: String(formData.get('card_name') ?? ''),
+        card_type: formData.get('card_type') as Card['card_type'],
+        current_balance: parseNumber(formData.get('current_balance')),
+        debt_amount: parseNumber(formData.get('debt_amount')),
+        statement_day: optionalDay(formData.get('statement_day')),
+        due_day: optionalDay(formData.get('due_day')),
+        note: String(formData.get('note') ?? '') || null,
+      })}
+      renderTitle={(row) => row.card_name}
+      renderSubtitle={(row) => `${row.bank_name} · ${cardTypeLabel(row.card_type)}`}
+      renderDetails={(row) => [
+        `Bakiye: ${formatCurrency(row.current_balance)}`,
+        `Borç: ${formatCurrency(row.debt_amount)}`,
+        `Ekstre: ${row.statement_day ?? '-'}`,
+        `Son ödeme: ${row.due_day ?? '-'}`,
+      ]}
+    />
+  )
+}
