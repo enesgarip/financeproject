@@ -1,4 +1,4 @@
-import { CalendarDays, Pencil, Plus, Trash2 } from 'lucide-react'
+import { CalendarDays, MoreVertical, Pencil, Plus, Trash2 } from 'lucide-react'
 import type { CSSProperties, ReactNode } from 'react'
 import { useCallback, useEffect, useState } from 'react'
 import { useAuth } from '../auth/useAuth'
@@ -44,7 +44,7 @@ type CrudPageProps<T extends TableName> = {
   getDetailStyle?: (row: RowFor<T>, rows: RowFor<T>[]) => CSSProperties
   groupBy?: (row: RowFor<T>) => string
   getGroupClassName?: (group: string) => string
-  renderRowActions?: (row: RowFor<T>, helpers: { reload: () => Promise<void>; setError: (message: string) => void }) => ReactNode
+  renderRowActions?: (row: RowFor<T>, helpers: { reload: () => Promise<void>; setError: (message: string) => void; rows: RowFor<T>[] }) => ReactNode
 }
 
 export function CrudPage<T extends TableName>({
@@ -75,6 +75,7 @@ export function CrudPage<T extends TableName>({
   const [editing, setEditing] = useState<RowFor<T> | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
   const [formValues, setFormValues] = useState<Record<string, string>>({})
+  const [menuOpenId, setMenuOpenId] = useState<string | null>(null)
 
   const loadRows = useCallback(async () => {
     setLoading(true)
@@ -186,32 +187,55 @@ export function CrudPage<T extends TableName>({
                 <article
                   key={row.id}
                   style={getCardStyle?.(row, rows)}
-                  className={`rounded-xl border bg-white p-3 shadow-sm dark:bg-stone-900 min-[390px]:p-4 ${getCardClassName?.(row, rows) ?? 'border-stone-200 dark:border-stone-800'}`}
+                  className={`rounded-xl border bg-white p-3 shadow-md transition-all hover:shadow-lg hover:-translate-y-0.5 dark:bg-stone-900 min-[390px]:p-4 ${getCardClassName?.(row, rows) ?? 'border-stone-200 dark:border-stone-800'}`}
                 >
                   <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                       <h2 className="truncate text-base font-semibold text-stone-950 dark:text-stone-50">{renderTitle(row)}</h2>
                       {renderSubtitle ? (
                         <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">{renderSubtitle(row)}</p>
                       ) : null}
                     </div>
-                    <div className="flex shrink-0 gap-1">
-                      <button
-                        type="button"
-                        onClick={() => openEdit(row)}
-                        className="grid size-10 place-items-center rounded-full text-stone-500 hover:bg-stone-100 dark:text-stone-400 dark:hover:bg-stone-800"
-                        aria-label="Düzenle"
-                      >
-                        <Pencil size={17} />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => void handleDelete(row.id)}
-                        className="grid size-10 place-items-center rounded-full text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40"
-                        aria-label="Sil"
-                      >
-                        <Trash2 size={17} />
-                      </button>
+                    <div className="flex items-center gap-2">
+                      {renderRowActions ? (
+                        <div className="flex flex-wrap gap-2">{renderRowActions(row, { reload: loadRows, setError, rows })}</div>
+                      ) : null}
+                      <div className="relative shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => setMenuOpenId(menuOpenId === row.id ? null : row.id)}
+                          className="grid size-9 place-items-center rounded-full text-stone-500 hover:bg-stone-100 dark:text-stone-400 dark:hover:bg-stone-800"
+                          aria-label="Menü"
+                        >
+                          <MoreVertical size={18} />
+                        </button>
+                        {menuOpenId === row.id && (
+                          <div className="absolute right-0 top-full z-10 mt-1 w-36 rounded-lg border border-stone-200 bg-white py-1 shadow-lg dark:border-stone-700 dark:bg-stone-900">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setMenuOpenId(null)
+                                openEdit(row)
+                              }}
+                              className="flex w-full items-center gap-2 px-3 py-2 text-sm text-stone-700 hover:bg-stone-50 dark:text-stone-200 dark:hover:bg-stone-800"
+                            >
+                              <Pencil size={14} />
+                              Düzenle
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setMenuOpenId(null)
+                                void handleDelete(row.id)
+                              }}
+                              className="flex w-full items-center gap-2 px-3 py-2 text-sm text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/40"
+                            >
+                              <Trash2 size={14} />
+                              Sil
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                   <dl className="mt-4 grid grid-cols-1 gap-2 text-sm min-[390px]:grid-cols-2">
@@ -226,9 +250,6 @@ export function CrudPage<T extends TableName>({
                     ))}
                   </dl>
                   {'note' in row && row.note ? <p className="mt-3 text-sm text-stone-500 dark:text-stone-400">{row.note}</p> : null}
-                  {renderRowActions ? (
-                    <div className="mt-3 flex flex-wrap gap-2">{renderRowActions(row, { reload: loadRows, setError })}</div>
-                  ) : null}
                 </article>
               ))}
             </section>

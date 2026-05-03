@@ -1,4 +1,5 @@
 import { CrudPage, type FormField } from '../components/CrudPage'
+import { supabase } from '../lib/supabase'
 import type { Debt } from '../types/database'
 import { formatDate } from '../utils/date'
 import { formatCurrency, formatNumber, parseNumber } from '../utils/formatCurrency'
@@ -99,6 +100,23 @@ const debtTone: Record<Debt['direction'], { card: string; detail: string; group:
   },
 }
 
+async function markDebtAsClosed(debt: Debt, reload: () => Promise<void>, setError: (message: string) => void) {
+  const confirmed = window.confirm(`${debt.person_name} ile olan borç kaydını kapandı olarak işaretlemek istiyor musun?`)
+  if (!confirmed) return
+
+  const { error } = await supabase
+    .from('debts')
+    .update({ status: 'kapandı', updated_at: new Date().toISOString() })
+    .eq('id', debt.id)
+
+  if (error) {
+    setError(error.message)
+    return
+  }
+
+  await reload()
+}
+
 export function DebtsPage() {
   return (
     <CrudPage
@@ -148,6 +166,17 @@ export function DebtsPage() {
       getGroupClassName={(group) => (group === 'Borç aldım' ? debtTone.borç_aldım.group : debtTone.borç_verdim.group)}
       getCardClassName={(row) => debtTone[row.direction].card}
       getDetailClassName={(row) => debtTone[row.direction].detail}
+      renderRowActions={(row, helpers) =>
+        row.status === 'açık' ? (
+          <button
+            type="button"
+            onClick={() => void markDebtAsClosed(row, helpers.reload, helpers.setError)}
+            className="rounded-lg border border-emerald-200 bg-emerald-700 px-3 py-2 text-xs font-semibold text-white shadow-sm dark:border-emerald-800"
+          >
+            Kapandı
+          </button>
+        ) : null
+      }
     />
   )
 }

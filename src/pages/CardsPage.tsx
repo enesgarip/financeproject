@@ -98,6 +98,12 @@ export function CardsPage() {
   const [transactionError, setTransactionError] = useState('')
   const [transactionSaving, setTransactionSaving] = useState(false)
   const [reloadCards, setReloadCards] = useState<(() => Promise<void>) | null>(null)
+  const [debtPaymentCard, setDebtPaymentCard] = useState<Card | null>(null)
+  const [debtPaymentAmount, setDebtPaymentAmount] = useState('')
+  const [debtPaymentSourceCard, setDebtPaymentSourceCard] = useState('')
+  const [debtPaymentError, setDebtPaymentError] = useState('')
+  const [debtPaymentSaving, setDebtPaymentSaving] = useState(false)
+  const [allCards, setAllCards] = useState<Card[]>([])
 
   function openTransaction(card: Card, reload: () => Promise<void>) {
     setTransactionCard(card)
@@ -113,7 +119,7 @@ export function CardsPage() {
 
     const amount = parseNumber(transactionAmount)
     if (amount <= 0) {
-      setTransactionError('Tutar 0’dan büyük olmalı.')
+      setTransactionError('Tutar 0 dan büyük olmalı.')
       return
     }
 
@@ -137,6 +143,71 @@ export function CardsPage() {
     }
 
     setTransactionCard(null)
+    await reloadCards?.()
+  }
+
+  function openDebtPayment(card: Card, reload: () => Promise<void>, cards: Card[]) {
+    setDebtPaymentCard(card)
+    setReloadCards(() => reload)
+    setAllCards(cards.filter((c) => c.card_type === 'banka_karti' && c.id !== card.id))
+    setDebtPaymentAmount('')
+    setDebtPaymentSourceCard('')
+    setDebtPaymentError('')
+  }
+
+  async function handleDebtPaymentSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!debtPaymentCard) return
+
+    const amount = parseNumber(debtPaymentAmount)
+    if (amount <= 0) {
+      setDebtPaymentError('Tutar 0 dan büyük olmalı.')
+      return
+    }
+
+    if (!debtPaymentSourceCard) {
+      setDebtPaymentError('Kaynak hesap seçmelisin.')
+      return
+    }
+
+    const sourceCard = allCards.find((c) => c.id === debtPaymentSourceCard)
+    if (!sourceCard) {
+      setDebtPaymentError('Kaynak hesap bulunamadı.')
+      return
+    }
+
+    if (sourceCard.current_balance < amount) {
+      setDebtPaymentError('Kaynak hesap bakiyesi yetersiz.')
+      return
+    }
+
+    setDebtPaymentSaving(true)
+    setDebtPaymentError('')
+
+    const { error: sourceError } = await supabase
+      .from('cards')
+      .update({ current_balance: sourceCard.current_balance - amount, updated_at: new Date().toISOString() })
+      .eq('id', sourceCard.id)
+
+    if (sourceError) {
+      setDebtPaymentSaving(false)
+      setDebtPaymentError(sourceError.message)
+      return
+    }
+
+    const nextDebt = Math.max(0, debtPaymentCard.debt_amount - amount)
+    const { error: debtError } = await supabase
+      .from('cards')
+      .update({ debt_amount: nextDebt, updated_at: new Date().toISOString() })
+      .eq('id', debtPaymentCard.id)
+
+    setDebtPaymentSaving(false)
+    if (debtError) {
+      setDebtPaymentError(debtError.message)
+      return
+    }
+
+    setDebtPaymentCard(null)
     await reloadCards?.()
   }
 
@@ -184,8 +255,8 @@ export function CardsPage() {
             ? [
                 `Limit: ${formatCurrency(row.credit_limit)}`,
                 `Borç: ${formatCurrency(row.debt_amount)}`,
-                `Ekstre: ${row.statement_day ?? '-'}`,
-                `Son ödeme: ${row.due_day ?? '-'}`,
+                `Ekstre: ${row.statement_day ? `Her ayın ${row.statement_day}. günü` : '-'}`,
+                `Son ödeme: ${row.due_day ? `Her ayın ${row.due_day}. günü` : '-'}`,
               ]
             : [`Bakiye: ${formatCurrency(row.current_balance)}`]
         }
@@ -207,6 +278,14 @@ export function CardsPage() {
               className="rounded-lg border border-emerald-200 bg-white/80 px-3 py-2 text-xs font-semibold text-emerald-800 shadow-sm dark:border-emerald-900 dark:bg-stone-950/40 dark:text-emerald-300"
             >
               İşlem
+            </button>
+          ) : row.card_type === 'kredi_karti' ? (
+            <button
+              type="button"
+              onClick={() => openDebtPayment(row, helpers.reload, helpers.rows as Card[])}
+              className="rounded-lg border border-amber-200 bg-white/80 px-3 py-2 text-xs font-semibold text-amber-800 shadow-sm dark:border-amber-900 dark:bg-stone-950/40 dark:text-amber-300"
+            >
+              Borç öde
             </button>
           ) : null
         }
@@ -248,6 +327,51 @@ export function CardsPage() {
             className="w-full rounded-xl bg-emerald-700 px-4 py-3.5 text-sm font-semibold text-white disabled:opacity-60"
           >
             {transactionSaving ? 'İşleniyor...' : 'Bakiyeyi güncelle'}
+          </button>
+        </form>
+      </SimpleModal>
+
+      <SimpleModal title="Kredi kartı borç ödeme" open={Boolean(debtPaymentCard)} onClose={() => setDebtPaymentCard(null)}>
+        <form onSubmit={handleDebtPaymentSubmit} className="space-y-4">
+          <div className="rounded-lg bg-stone-50 p-3 text-sm text-stone-600 dark:bg-stone-900 dark:text-stone-300">
+            <p className="font-semibold text-stone-950 dark:text-stone-50">{debtPaymentCard?.card_name}</p>
+            <p>Mevcut borç: {formatCurrency(debtPaymentCard?.debt_amount ?? 0)}</p>
+          </div>
+          <label className="block text-sm font-medium text-stone-700 dark:text-stone-200">
+            Ödeme tutarı
+            <input
+              required
+              min="0"
+              step="0.01"
+              type="number"
+              value={debtPaymentAmount}
+              onChange={(event) => setDebtPaymentAmount(event.target.value)}
+              className="mt-1 w-full rounded-lg border border-stone-200 px-3 py-3 outline-none focus:border-emerald-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+            />
+          </label>
+          <label className="block text-sm font-medium text-stone-700 dark:text-stone-200">
+            Kaynak hesap
+            <select
+              required
+              value={debtPaymentSourceCard}
+              onChange={(event) => setDebtPaymentSourceCard(event.target.value)}
+              className="mt-1 w-full rounded-lg border border-stone-200 bg-white px-3 py-3 outline-none focus:border-emerald-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+            >
+              <option value="">Hesap seç</option>
+              {allCards.map((card) => (
+                <option key={card.id} value={card.id}>
+                  {card.card_name} ({formatCurrency(card.current_balance)})
+                </option>
+              ))}
+            </select>
+          </label>
+          {debtPaymentError ? <p className="rounded-lg bg-rose-50 p-3 text-sm text-rose-700">{debtPaymentError}</p> : null}
+          <button
+            type="submit"
+            disabled={debtPaymentSaving}
+            className="w-full rounded-xl bg-amber-700 px-4 py-3.5 text-sm font-semibold text-white disabled:opacity-60"
+          >
+            {debtPaymentSaving ? 'İşleniyor...' : 'Borç öde'}
           </button>
         </form>
       </SimpleModal>
