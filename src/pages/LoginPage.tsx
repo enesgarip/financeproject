@@ -25,7 +25,7 @@ export function LoginPage() {
         await signIn(email, password)
       } else {
         await signUp(email, password)
-        setMessage('Kayıt tamamlandı. E-posta onayı açıksa gelen kutunu kontrol et.')
+        setMessage('Kayıt başarılı. E-posta onayı açıksa gelen kutunu kontrol et.')
       }
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'İşlem tamamlanamadı.')
@@ -50,20 +50,20 @@ export function LoginPage() {
             onClick={() => setMode('login')}
             className={`rounded-md px-3 py-2 ${mode === 'login' ? 'bg-white shadow-sm dark:bg-stone-950' : 'text-stone-500 dark:text-stone-400'}`}
           >
-            Giriş
+            Giriş Yap
           </button>
           <button
             type="button"
             onClick={() => setMode('register')}
             className={`rounded-md px-3 py-2 ${mode === 'register' ? 'bg-white shadow-sm dark:bg-stone-950' : 'text-stone-500 dark:text-stone-400'}`}
           >
-            Kayıt
+            Kayıt Ol
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="mt-5 space-y-4">
           <label className="block text-sm font-medium text-stone-700 dark:text-stone-200">
-            E-posta
+            E-posta adresi
             <input
               required
               type="email"

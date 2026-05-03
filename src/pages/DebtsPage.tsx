@@ -101,7 +101,7 @@ const debtTone: Record<Debt['direction'], { card: string; detail: string; group:
 }
 
 async function markDebtAsClosed(debt: Debt, reload: () => Promise<void>, setError: (message: string) => void) {
-  const confirmed = window.confirm(`${debt.person_name} ile olan borç kaydını kapandı olarak işaretlemek istiyor musun?`)
+  const confirmed = window.confirm('Bu borç kaydını kapandı olarak işaretlemek istediğine emin misin?')
   if (!confirmed) return
 
   const { error } = await supabase
@@ -121,6 +121,7 @@ export function DebtsPage() {
   return (
     <CrudPage
       table="debts"
+      pageTitle="Borç / Alacak"
       addLabel="Borç ekle"
       fields={fields}
       emptyTitle="Henüz borç kaydı yok"

@@ -3,11 +3,11 @@ import { NavLink } from 'react-router-dom'
 
 const items = [
   { to: '/', label: 'Özet', icon: Home },
-  { to: '/varliklar', label: 'Varlık', icon: Banknote },
-  { to: '/kartlar', label: 'Kart', icon: CreditCard },
-  { to: '/krediler', label: 'Kredi', icon: Landmark },
-  { to: '/borclar', label: 'Borç', icon: HandCoins },
-  { to: '/odemeler', label: 'Ödeme', icon: WalletCards },
+  { to: '/varliklar', label: 'Varlıklar', icon: Banknote },
+  { to: '/kartlar', label: 'Kartlar', icon: CreditCard },
+  { to: '/krediler', label: 'Krediler', icon: Landmark },
+  { to: '/borclar', label: 'Borçlar', icon: HandCoins },
+  { to: '/odemeler', label: 'Ödemeler', icon: WalletCards },
 ]
 
 export function BottomNav() {

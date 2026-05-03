@@ -23,6 +23,7 @@ export function PaymentsPage() {
   return (
     <CrudPage
       table="payments"
+      pageTitle="Ödemeler"
       addLabel="Ödeme ekle"
       fields={fields}
       emptyTitle="Henüz ödeme yok"

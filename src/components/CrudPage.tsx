@@ -29,6 +29,7 @@ export type FormField = {
 type CrudPageProps<T extends TableName> = {
   table: T
   addLabel: string
+  pageTitle?: string
   fields: FormField[]
   emptyTitle: string
   emptyDescription: string
@@ -51,6 +52,7 @@ type CrudPageProps<T extends TableName> = {
 export function CrudPage<T extends TableName>({
   table,
   addLabel,
+  pageTitle,
   fields,
   emptyTitle,
   emptyDescription,
@@ -156,22 +158,27 @@ export function CrudPage<T extends TableName>({
 
   return (
     <section className="space-y-4">
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-sm text-stone-500 dark:text-stone-400">{rows.length} kayıt</p>
-        <button
-          type="button"
-          onClick={openCreate}
-          className="hidden items-center gap-2 rounded-lg bg-emerald-700 px-3 py-2 text-sm font-semibold text-white shadow-sm sm:inline-flex"
-        >
-          <Plus size={17} />
-          {addLabel}
-        </button>
+      <div className="rounded-3xl border border-stone-200 bg-white p-4 shadow-sm dark:border-stone-800 dark:bg-stone-950">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-lg font-semibold text-stone-950 dark:text-stone-50">{pageTitle ?? addLabel}</h1>
+            <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">{rows.length} kayıt bulundu</p>
+          </div>
+          <button
+            type="button"
+            onClick={openCreate}
+            className="inline-flex items-center gap-2 rounded-lg bg-emerald-700 px-4 py-3 text-sm font-semibold text-white shadow-sm"
+          >
+            <Plus size={17} />
+            {addLabel}
+          </button>
+        </div>
       </div>
 
       {error ? <p className="rounded-lg bg-rose-50 p-3 text-sm text-rose-700">{error}</p> : null}
 
       {loading ? (
-        <p className="rounded-lg bg-white p-4 text-sm text-stone-500 dark:bg-stone-900 dark:text-stone-400">Kayıtlar yükleniyor...</p>
+        <p className="rounded-lg bg-white p-4 text-sm text-stone-500 dark:bg-stone-900 dark:text-stone-400">Kayıtlar yükleniyor…</p>
       ) : rows.length === 0 ? (
         <EmptyState title={emptyTitle} description={emptyDescription} />
       ) : (

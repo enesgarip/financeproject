@@ -68,6 +68,7 @@ export function AssetsPage() {
   return (
     <CrudPage
       table="assets"
+      pageTitle="Varlıklar"
       addLabel="Varlık ekle"
       fields={fields}
       emptyTitle="Henüz varlık yok"

@@ -149,6 +149,7 @@ export function LoansPage() {
     <>
       <CrudPage
         table="loans"
+        pageTitle="Krediler"
         addLabel="Kredi ekle"
         fields={fields}
         emptyTitle="Henüz kredi yok"

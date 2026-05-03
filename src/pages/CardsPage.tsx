@@ -215,6 +215,7 @@ export function CardsPage() {
     <>
       <CrudPage
         table="cards"
+        pageTitle="Kartlar"
         addLabel="Kart ekle"
         fields={fields}
         emptyTitle="Henüz kart yok"
