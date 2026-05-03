@@ -23,6 +23,8 @@ const emptyData: DashboardData = {
   payments: [],
 }
 
+const UPCOMING_DAYS = 15
+
 function sum<T>(rows: T[], selector: (row: T) => number) {
   return rows.reduce((total, row) => total + selector(row), 0)
 }
@@ -80,6 +82,10 @@ export function DashboardPage() {
       data.loans.filter((loan) => loan.status === 'active'),
       (loan) => loan.remaining_amount,
     )
+    const totalLoanMonthlyPayment = sum(
+      data.loans.filter((loan) => loan.status === 'active'),
+      (loan) => loan.monthly_payment,
+    )
     const openDebts = data.debts.filter((debt) => debt.status === 'açık')
     const totalPersonalDebts = sum(
       openDebts.filter((debt) => debt.direction === 'borç_aldım'),
@@ -99,6 +105,7 @@ export function DashboardPage() {
       totalCreditCardDebt,
       totalCreditLimit,
       totalLoanDebt,
+      totalLoanMonthlyPayment,
       totalPersonalDebts,
       totalReceivables,
     }
@@ -107,7 +114,7 @@ export function DashboardPage() {
   const upcomingPayments = useMemo(
     () =>
       data.payments
-        .filter((payment) => payment.status === 'bekliyor' && isUpcomingDate(payment.due_date))
+        .filter((payment) => payment.status === 'bekliyor' && isUpcomingDate(payment.due_date, UPCOMING_DAYS))
         .sort((a, b) => a.due_date.localeCompare(b.due_date))
         .slice(0, 5),
     [data.payments],
@@ -120,7 +127,7 @@ export function DashboardPage() {
         .map((card) => ({ card, dueDate: nextMonthlyDate(card.due_day) }))
         .filter((item) => {
           const remaining = daysUntil(item.dueDate)
-          return remaining !== null && remaining >= 0 && remaining <= 30
+          return remaining !== null && remaining >= 0 && remaining <= UPCOMING_DAYS
         })
         .sort((a, b) => (a.dueDate?.getTime() ?? 0) - (b.dueDate?.getTime() ?? 0))
         .slice(0, 5),
@@ -134,7 +141,7 @@ export function DashboardPage() {
         .map((loan) => ({ loan, dueDate: nextMonthlyDate(loan.installment_day) }))
         .filter((item) => {
           const remaining = daysUntil(item.dueDate)
-          return remaining !== null && remaining >= 0 && remaining <= 30
+          return remaining !== null && remaining >= 0 && remaining <= UPCOMING_DAYS
         })
         .sort((a, b) => (a.dueDate?.getTime() ?? 0) - (b.dueDate?.getTime() ?? 0))
         .slice(0, 5),
@@ -158,13 +165,14 @@ export function DashboardPage() {
         <StatCard label="Toplam limit" value={formatCurrency(summary.totalCreditLimit)} />
         <StatCard label="Kart borcu" value={formatCurrency(summary.totalCreditCardDebt)} />
         <StatCard label="Kredi borcu" value={formatCurrency(summary.totalLoanDebt)} />
+        <StatCard label="Kredi ödemesi" value={formatCurrency(summary.totalLoanMonthlyPayment)} tone="bad" />
         <StatCard label="Kişisel borç" value={formatCurrency(summary.totalPersonalDebts)} />
         <StatCard label="Alacak" value={formatCurrency(summary.totalReceivables)} tone="good" />
       </div>
 
       <UpcomingSection title="Yaklaşan ödemeler">
         {upcomingPayments.length === 0 ? (
-          <EmptyState title="Yaklaşan ödeme yok" description="Önümüzdeki 30 gün için bekleyen ödeme bulunmuyor." />
+          <EmptyState title="Yaklaşan ödeme yok" description="Önümüzdeki 15 gün için bekleyen ödeme bulunmuyor." />
         ) : (
           upcomingPayments.map((payment) => (
             <UpcomingRow
@@ -179,7 +187,7 @@ export function DashboardPage() {
 
       <UpcomingSection title="Kart son ödeme günleri">
         {upcomingCards.length === 0 ? (
-          <EmptyState title="Yaklaşan kart günü yok" description="Önümüzdeki 30 gün için kart son ödeme günü yok." />
+          <EmptyState title="Yaklaşan kart günü yok" description="Önümüzdeki 15 gün için kart son ödeme günü yok." />
         ) : (
           upcomingCards.map(({ card, dueDate }) => (
             <UpcomingRow
@@ -194,7 +202,7 @@ export function DashboardPage() {
 
       <UpcomingSection title="Kredi taksitleri">
         {upcomingLoans.length === 0 ? (
-          <EmptyState title="Yaklaşan kredi taksidi yok" description="Önümüzdeki 30 gün için aktif kredi taksidi yok." />
+          <EmptyState title="Yaklaşan kredi taksidi yok" description="Önümüzdeki 15 gün için aktif kredi taksidi yok." />
         ) : (
           upcomingLoans.map(({ loan, dueDate }) => (
             <UpcomingRow
