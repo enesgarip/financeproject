@@ -14,7 +14,7 @@ type FieldOption = {
 export type FormField = {
   name: string
   label: string
-  type: 'text' | 'number' | 'date' | 'select' | 'textarea'
+  type: 'text' | 'number' | 'date' | 'day' | 'select' | 'textarea'
   required?: boolean
   step?: string
   min?: string
@@ -254,6 +254,31 @@ export function CrudPage<T extends TableName>({
                       onChange={(event) => updateFormValue(field.name, event.target.value)}
                       className="w-full rounded-lg border border-stone-200 px-3 py-3 pr-11 outline-none focus:border-emerald-600"
                     />
+                    <CalendarDays
+                      aria-hidden="true"
+                      size={18}
+                      className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-stone-400"
+                    />
+                  </div>
+                ) : field.type === 'day' ? (
+                  <div className="relative mt-1">
+                    <select
+                      name={field.name}
+                      required={field.required}
+                      value={formValues[field.name] ?? ''}
+                      onChange={(event) => updateFormValue(field.name, event.target.value)}
+                      className="w-full appearance-none rounded-lg border border-stone-200 bg-white px-3 py-3 pr-11 outline-none focus:border-emerald-600"
+                    >
+                      <option value="">Gün seç</option>
+                      {Array.from({ length: 31 }, (_, index) => {
+                        const day = String(index + 1)
+                        return (
+                          <option key={day} value={day}>
+                            Her ayın {day}. günü
+                          </option>
+                        )
+                      })}
+                    </select>
                     <CalendarDays
                       aria-hidden="true"
                       size={18}

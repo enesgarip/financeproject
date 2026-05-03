@@ -17,8 +17,8 @@ const fields: FormField[] = [
   },
   { name: 'current_balance', label: 'Mevcut bakiye', type: 'number', step: '0.01', required: true },
   { name: 'debt_amount', label: 'Borç tutarı', type: 'number', min: '0', step: '0.01', required: true },
-  { name: 'statement_day', label: 'Ekstre günü', type: 'number', min: '1', step: '1' },
-  { name: 'due_day', label: 'Son ödeme günü', type: 'number', min: '1', step: '1' },
+  { name: 'statement_day', label: 'Ekstre günü', type: 'day' },
+  { name: 'due_day', label: 'Son ödeme günü', type: 'day' },
   { name: 'note', label: 'Not', type: 'textarea' },
 ]
 
