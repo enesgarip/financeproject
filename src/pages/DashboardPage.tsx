@@ -23,8 +23,7 @@ const emptyData: DashboardData = {
   payments: [],
 }
 
-const UPCOMING_PAYMENT_DAYS = 30
-const UPCOMING_MONTHLY_DAYS = 15
+const UPCOMING_DAYS = 30
 
 function sum<T>(rows: T[], selector: (row: T) => number) {
   return rows.reduce((total, row) => total + selector(row), 0)
@@ -112,42 +111,49 @@ export function DashboardPage() {
     }
   }, [data])
 
-  const upcomingPayments = useMemo(
-    () =>
-      data.payments
-        .filter((payment) => payment.status === 'bekliyor' && isUpcomingDate(payment.due_date, UPCOMING_PAYMENT_DAYS))
-        .sort((a, b) => a.due_date.localeCompare(b.due_date))
-        .slice(0, 5),
-    [data.payments],
-  )
+  const upcomingItems = useMemo(() => {
+    const manualPayments = data.payments
+      .filter((payment) => payment.status === 'bekliyor' && isUpcomingDate(payment.due_date, UPCOMING_DAYS))
+      .map((payment) => ({
+        id: `payment-${payment.id}`,
+        title: `Ödeme · ${payment.title}`,
+        value: formatCurrency(payment.amount),
+        date: formatDate(payment.due_date),
+        sortTime: new Date(`${payment.due_date}T00:00:00`).getTime(),
+      }))
 
-  const upcomingCards = useMemo(
-    () =>
-      data.cards
-        .filter((card) => card.card_type === 'kredi_karti' && card.due_day)
-        .map((card) => ({ card, dueDate: nextMonthlyDate(card.due_day) }))
-        .filter((item) => {
-          const remaining = daysUntil(item.dueDate)
-          return remaining !== null && remaining >= 0 && remaining <= UPCOMING_MONTHLY_DAYS
-        })
-        .sort((a, b) => (a.dueDate?.getTime() ?? 0) - (b.dueDate?.getTime() ?? 0))
-        .slice(0, 5),
-    [data.cards],
-  )
+    const creditCards = data.cards
+      .filter((card) => card.card_type === 'kredi_karti' && card.due_day)
+      .map((card) => ({ card, dueDate: nextMonthlyDate(card.due_day) }))
+      .filter((item) => {
+        const remaining = daysUntil(item.dueDate)
+        return remaining !== null && remaining >= 0 && remaining <= UPCOMING_DAYS
+      })
+      .map(({ card, dueDate }) => ({
+        id: `card-${card.id}`,
+        title: `Kart · ${card.bank_name} · ${card.card_name}`,
+        value: formatCurrency(card.debt_amount),
+        date: formatMonthDay(dueDate),
+        sortTime: dueDate?.getTime() ?? 0,
+      }))
 
-  const upcomingLoans = useMemo(
-    () =>
-      data.loans
-        .filter((loan) => loan.status === 'active' && loan.installment_day)
-        .map((loan) => ({ loan, dueDate: nextMonthlyDate(loan.installment_day) }))
-        .filter((item) => {
-          const remaining = daysUntil(item.dueDate)
-          return remaining !== null && remaining >= 0 && remaining <= UPCOMING_MONTHLY_DAYS
-        })
-        .sort((a, b) => (a.dueDate?.getTime() ?? 0) - (b.dueDate?.getTime() ?? 0))
-        .slice(0, 5),
-    [data.loans],
-  )
+    const loanInstallments = data.loans
+      .filter((loan) => loan.status === 'active' && loan.installment_day)
+      .map((loan) => ({ loan, dueDate: nextMonthlyDate(loan.installment_day) }))
+      .filter((item) => {
+        const remaining = daysUntil(item.dueDate)
+        return remaining !== null && remaining >= 0 && remaining <= UPCOMING_DAYS
+      })
+      .map(({ loan, dueDate }) => ({
+        id: `loan-${loan.id}`,
+        title: `Kredi · ${loan.bank_name} · ${loan.loan_name}`,
+        value: formatCurrency(loan.monthly_payment),
+        date: formatMonthDay(dueDate),
+        sortTime: dueDate?.getTime() ?? 0,
+      }))
+
+    return [...manualPayments, ...creditCards, ...loanInstallments].sort((a, b) => a.sortTime - b.sortTime).slice(0, 10)
+  }, [data.cards, data.loans, data.payments])
 
   if (loading) {
     return <p className="rounded-lg bg-white p-4 text-sm text-stone-500 dark:bg-stone-900 dark:text-stone-400">Özet yükleniyor...</p>
@@ -172,51 +178,21 @@ export function DashboardPage() {
       </div>
 
       <UpcomingSection title="Yaklaşan ödemeler">
-        {upcomingPayments.length === 0 ? (
-          <EmptyState title="Yaklaşan ödeme yok" description="Önümüzdeki 30 gün için bekleyen ödeme bulunmuyor." />
+        {upcomingItems.length === 0 ? (
+          <EmptyState title="Yaklaşan ödeme yok" description="Önümüzdeki 30 gün için ödeme, kart günü veya kredi taksidi bulunmuyor." />
         ) : (
-          upcomingPayments.map((payment) => (
-            <UpcomingRow
-              key={payment.id}
-              title={payment.title}
-              value={formatCurrency(payment.amount)}
-              date={formatDate(payment.due_date)}
-            />
-          ))
-        )}
-      </UpcomingSection>
-
-      <UpcomingSection title="Kart son ödeme günleri">
-        {upcomingCards.length === 0 ? (
-          <EmptyState title="Yaklaşan kart günü yok" description="Önümüzdeki 15 gün için kart son ödeme günü yok." />
-        ) : (
-          upcomingCards.map(({ card, dueDate }) => (
-            <UpcomingRow
-              key={card.id}
-              title={`${card.bank_name} · ${card.card_name}`}
-              value={formatCurrency(card.debt_amount)}
-              date={dueDate ? new Intl.DateTimeFormat('tr-TR', { day: '2-digit', month: 'short' }).format(dueDate) : '-'}
-            />
-          ))
-        )}
-      </UpcomingSection>
-
-      <UpcomingSection title="Kredi taksitleri">
-        {upcomingLoans.length === 0 ? (
-          <EmptyState title="Yaklaşan kredi taksidi yok" description="Önümüzdeki 15 gün için aktif kredi taksidi yok." />
-        ) : (
-          upcomingLoans.map(({ loan, dueDate }) => (
-            <UpcomingRow
-              key={loan.id}
-              title={`${loan.bank_name} · ${loan.loan_name}`}
-              value={formatCurrency(loan.monthly_payment)}
-              date={dueDate ? new Intl.DateTimeFormat('tr-TR', { day: '2-digit', month: 'short' }).format(dueDate) : '-'}
-            />
+          upcomingItems.map((item) => (
+            <UpcomingRow key={item.id} title={item.title} value={item.value} date={item.date} />
           ))
         )}
       </UpcomingSection>
     </section>
   )
+}
+
+function formatMonthDay(date: Date | null) {
+  if (!date) return '-'
+  return new Intl.DateTimeFormat('tr-TR', { day: '2-digit', month: 'short' }).format(date)
 }
 
 function UpcomingSection({ title, children }: { title: string; children: React.ReactNode }) {

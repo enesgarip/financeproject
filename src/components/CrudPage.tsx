@@ -1,5 +1,5 @@
 import { CalendarDays, Pencil, Plus, Trash2 } from 'lucide-react'
-import type { CSSProperties } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 import { useCallback, useEffect, useState } from 'react'
 import { useAuth } from '../auth/useAuth'
 import { supabase } from '../lib/supabase'
@@ -44,6 +44,7 @@ type CrudPageProps<T extends TableName> = {
   getDetailStyle?: (row: RowFor<T>, rows: RowFor<T>[]) => CSSProperties
   groupBy?: (row: RowFor<T>) => string
   getGroupClassName?: (group: string) => string
+  renderRowActions?: (row: RowFor<T>, helpers: { reload: () => Promise<void>; setError: (message: string) => void }) => ReactNode
 }
 
 export function CrudPage<T extends TableName>({
@@ -64,6 +65,7 @@ export function CrudPage<T extends TableName>({
   getDetailStyle,
   groupBy,
   getGroupClassName,
+  renderRowActions,
 }: CrudPageProps<T>) {
   const { user } = useAuth()
   const [rows, setRows] = useState<RowFor<T>[]>([])
@@ -224,6 +226,9 @@ export function CrudPage<T extends TableName>({
                     ))}
                   </dl>
                   {'note' in row && row.note ? <p className="mt-3 text-sm text-stone-500 dark:text-stone-400">{row.note}</p> : null}
+                  {renderRowActions ? (
+                    <div className="mt-3 flex flex-wrap gap-2">{renderRowActions(row, { reload: loadRows, setError })}</div>
+                  ) : null}
                 </article>
               ))}
             </section>

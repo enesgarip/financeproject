@@ -1,4 +1,5 @@
 import { CrudPage, type FormField } from '../components/CrudPage'
+import { supabase } from '../lib/supabase'
 import type { Loan } from '../types/database'
 import { formatDate } from '../utils/date'
 import { formatCurrency, parseNumber } from '../utils/formatCurrency'
@@ -33,6 +34,32 @@ function optionalDay(value: FormDataEntryValue | null) {
 function optionalDate(value: FormDataEntryValue | null) {
   const date = String(value ?? '')
   return date || null
+}
+
+async function payInstallment(loan: Loan, reload: () => Promise<void>, setError: (message: string) => void) {
+  const confirmed = window.confirm(`${loan.loan_name} için ${formatCurrency(loan.monthly_payment)} tutarında taksit ödensin mi?`)
+  if (!confirmed) return
+
+  const remainingInstallments = Math.max(0, loan.remaining_installments - 1)
+  const remainingAmount = Math.max(0, loan.remaining_amount - loan.monthly_payment)
+  const status = remainingInstallments === 0 || remainingAmount === 0 ? 'closed' : 'active'
+
+  const { error } = await supabase
+    .from('loans')
+    .update({
+      remaining_installments: remainingInstallments,
+      remaining_amount: remainingAmount,
+      status,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', loan.id)
+
+  if (error) {
+    setError(error.message)
+    return
+  }
+
+  await reload()
 }
 
 export function LoansPage() {
@@ -76,8 +103,20 @@ export function LoansPage() {
         `Kalan: ${formatCurrency(row.remaining_amount)}`,
         `Aylık: ${formatCurrency(row.monthly_payment)}`,
         `Taksit günü: ${row.installment_day ?? '-'}`,
+        `Kalan taksit: ${row.remaining_installments}`,
         `Bitiş: ${formatDate(row.end_date)}`,
       ]}
+      renderRowActions={(row, helpers) =>
+        row.status === 'active' && row.remaining_installments > 0 ? (
+          <button
+            type="button"
+            onClick={() => void payInstallment(row, helpers.reload, helpers.setError)}
+            className="rounded-lg border border-emerald-200 bg-emerald-700 px-3 py-2 text-xs font-semibold text-white shadow-sm dark:border-emerald-800"
+          >
+            Taksit öde
+          </button>
+        ) : null
+      }
     />
   )
 }
