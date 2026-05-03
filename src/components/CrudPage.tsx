@@ -45,6 +45,7 @@ type CrudPageProps<T extends TableName> = {
   groupBy?: (row: RowFor<T>) => string
   getGroupClassName?: (group: string) => string
   renderRowActions?: (row: RowFor<T>, helpers: { reload: () => Promise<void>; setError: (message: string) => void; rows: RowFor<T>[] }) => ReactNode
+  renderExtra?: (row: RowFor<T>) => ReactNode
 }
 
 export function CrudPage<T extends TableName>({
@@ -66,6 +67,7 @@ export function CrudPage<T extends TableName>({
   groupBy,
   getGroupClassName,
   renderRowActions,
+  renderExtra,
 }: CrudPageProps<T>) {
   const { user } = useAuth()
   const [rows, setRows] = useState<RowFor<T>[]>([])
@@ -250,6 +252,7 @@ export function CrudPage<T extends TableName>({
                     ))}
                   </dl>
                   {'note' in row && row.note ? <p className="mt-3 text-sm text-stone-500 dark:text-stone-400">{row.note}</p> : null}
+                  {renderExtra ? renderExtra(row) : null}
                 </article>
               ))}
             </section>

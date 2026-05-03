@@ -169,55 +169,56 @@ export function DashboardPage() {
           label="Toplam varlık"
           value={formatCurrency(summary.totalAssets)}
           icon={<Wallet size={20} />}
-          color="blue"
+          color="indigo"
         />
         <ModernStatCard
           label="Toplam borç"
           value={formatCurrency(summary.totalDebts)}
           icon={<AlertCircle size={20} />}
-          color="red"
+          color="rose"
         />
         <ModernStatCard
           label="Net değer"
           value={formatCurrency(summary.netWorth)}
           icon={summary.netWorth >= 0 ? <TrendingUp size={20} /> : <TrendingDown size={20} />}
-          color={summary.netWorth >= 0 ? 'green' : 'red'}
+          color={summary.netWorth >= 0 ? 'emerald' : 'rose'}
+          highlight
         />
         <ModernStatCard
           label="Toplam limit"
           value={formatCurrency(summary.totalCreditLimit)}
           icon={<CreditCard size={20} />}
-          color="purple"
+          color="violet"
         />
         <ModernStatCard
           label="Kart borcu"
           value={formatCurrency(summary.totalCreditCardDebt)}
           icon={<CreditCard size={20} />}
-          color="orange"
+          color="amber"
         />
         <ModernStatCard
           label="Kredi borcu"
           value={formatCurrency(summary.totalLoanDebt)}
           icon={<Landmark size={20} />}
-          color="orange"
+          color="amber"
         />
         <ModernStatCard
           label="Kredi ödemesi"
           value={formatCurrency(summary.totalLoanMonthlyPayment)}
           icon={<Landmark size={20} />}
-          color="red"
+          color="rose"
         />
         <ModernStatCard
           label="Kişisel borç"
           value={formatCurrency(summary.totalPersonalDebts)}
           icon={<ArrowDownRight size={20} />}
-          color="red"
+          color="rose"
         />
         <ModernStatCard
           label="Alacak"
           value={formatCurrency(summary.totalReceivables)}
           icon={<ArrowUpRight size={20} />}
-          color="green"
+          color="emerald"
         />
       </div>
 
@@ -242,46 +243,46 @@ function formatMonthDay(date: Date | null) {
 function UpcomingSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section>
-      <h2 className="mb-3 text-base font-semibold text-stone-950 dark:text-stone-50">{title}</h2>
-      <div className="space-y-2">{children}</div>
+      <h2 className="mb-4 text-lg font-bold text-stone-950 dark:text-stone-50">{title}</h2>
+      <div className="space-y-3">{children}</div>
     </section>
   )
 }
 
-function ModernStatCard({ label, value, icon, color }: { label: string; value: string; icon: React.ReactNode; color: 'blue' | 'green' | 'red' | 'orange' | 'purple' }) {
+function ModernStatCard({ label, value, icon, color, highlight }: { label: string; value: string; icon: React.ReactNode; color: 'indigo' | 'emerald' | 'rose' | 'amber' | 'violet'; highlight?: boolean }) {
   const colorClasses = {
-    blue: 'from-blue-500 to-blue-600 dark:from-blue-600 dark:to-blue-700',
-    green: 'from-emerald-500 to-emerald-600 dark:from-emerald-600 dark:to-emerald-700',
-    red: 'from-rose-500 to-rose-600 dark:from-rose-600 dark:to-rose-700',
-    orange: 'from-amber-500 to-amber-600 dark:from-amber-600 dark:to-amber-700',
-    purple: 'from-violet-500 to-violet-600 dark:from-violet-600 dark:to-violet-700',
+    indigo: 'from-indigo-500 to-indigo-600 dark:from-indigo-600 dark:to-indigo-700',
+    emerald: 'from-emerald-500 to-emerald-600 dark:from-emerald-600 dark:to-emerald-700',
+    rose: 'from-rose-500 to-rose-600 dark:from-rose-600 dark:to-rose-700',
+    amber: 'from-amber-500 to-amber-600 dark:from-amber-600 dark:to-amber-700',
+    violet: 'from-violet-500 to-violet-600 dark:from-violet-600 dark:to-violet-700',
   }
 
   const bgClasses = {
-    blue: 'bg-blue-50 dark:bg-blue-950/30',
-    green: 'bg-emerald-50 dark:bg-emerald-950/30',
-    red: 'bg-rose-50 dark:bg-rose-950/30',
-    orange: 'bg-amber-50 dark:bg-amber-950/30',
-    purple: 'bg-violet-50 dark:bg-violet-950/30',
+    indigo: 'bg-indigo-50 dark:bg-indigo-950/30',
+    emerald: 'bg-emerald-50 dark:bg-emerald-950/30',
+    rose: 'bg-rose-50 dark:bg-rose-950/30',
+    amber: 'bg-amber-50 dark:bg-amber-950/30',
+    violet: 'bg-violet-50 dark:bg-violet-950/30',
   }
 
   const iconBgClasses = {
-    blue: 'bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-300',
-    green: 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-300',
-    red: 'bg-rose-100 dark:bg-rose-900/50 text-rose-600 dark:text-rose-300',
-    orange: 'bg-amber-100 dark:bg-amber-900/50 text-amber-600 dark:text-amber-300',
-    purple: 'bg-violet-100 dark:bg-violet-900/50 text-violet-600 dark:text-violet-300',
+    indigo: 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-300',
+    emerald: 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-300',
+    rose: 'bg-rose-100 dark:bg-rose-900/50 text-rose-600 dark:text-rose-300',
+    amber: 'bg-amber-100 dark:bg-amber-900/50 text-amber-600 dark:text-amber-300',
+    violet: 'bg-violet-100 dark:bg-violet-900/50 text-violet-600 dark:text-violet-300',
   }
 
   return (
-    <div className={`relative overflow-hidden rounded-xl border-0 p-4 shadow-md transition-all hover:shadow-lg hover:-translate-y-0.5 ${bgClasses[color]}`}>
-      <div className={`absolute -right-4 -top-4 size-20 rounded-full opacity-10 bg-gradient-to-br ${colorClasses[color]}`} />
+    <div className={`relative overflow-hidden rounded-xl border-0 shadow-md transition-all hover:shadow-lg hover:-translate-y-0.5 ${highlight ? 'col-span-2 p-5' : 'p-4'} ${bgClasses[color]}`}>
+      <div className={`absolute -right-4 -top-4 rounded-full opacity-10 bg-gradient-to-br ${colorClasses[color]} ${highlight ? 'size-32' : 'size-20'}`} />
       <div className="relative flex items-start justify-between">
         <div className="flex-1">
-          <p className="text-xs font-medium text-stone-600 dark:text-stone-400">{label}</p>
-          <p className="mt-1 text-lg font-bold text-stone-900 dark:text-stone-100">{value}</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-stone-600 dark:text-stone-400">{label}</p>
+          <p className={`mt-1 font-extrabold tracking-tight text-stone-900 dark:text-stone-100 ${highlight ? 'text-2xl' : 'text-lg'}`}>{value}</p>
         </div>
-        <div className={`flex size-10 shrink-0 items-center justify-center rounded-xl ${iconBgClasses[color]}`}>
+        <div className={`flex shrink-0 items-center justify-center rounded-xl ${iconBgClasses[color]} ${highlight ? 'size-12' : 'size-10'}`}>
           {icon}
         </div>
       </div>
@@ -291,7 +292,7 @@ function ModernStatCard({ label, value, icon, color }: { label: string; value: s
 
 function ModernUpcomingRow({ title, value, date }: { title: string; value: string; date: string }) {
   return (
-    <article className="flex items-center justify-between gap-3 rounded-xl border border-stone-200 bg-white p-4 shadow-md transition-all hover:shadow-lg hover:-translate-y-0.5 dark:border-stone-800 dark:bg-stone-900">
+    <article className="flex items-center justify-between gap-3 rounded-xl border border-stone-200 bg-white p-4 shadow-md transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 hover:border-indigo-300 dark:border-stone-800 dark:bg-stone-900 dark:hover:border-indigo-700">
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-semibold text-stone-950 dark:text-stone-50">{title}</p>
         <p className="mt-1 flex items-center gap-1.5 text-xs text-stone-500 dark:text-stone-400">
@@ -299,7 +300,7 @@ function ModernUpcomingRow({ title, value, date }: { title: string; value: strin
           {date}
         </p>
       </div>
-      <div className="shrink-0 rounded-lg bg-stone-100 px-3 py-1.5 text-sm font-semibold text-stone-900 dark:bg-stone-800 dark:text-stone-100">
+      <div className="shrink-0 rounded-lg bg-stone-100 px-3 py-1.5 text-sm font-semibold text-stone-900 transition-colors hover:bg-indigo-100 dark:bg-stone-800 dark:text-stone-100 dark:hover:bg-indigo-900/30">
         {value}
       </div>
     </article>

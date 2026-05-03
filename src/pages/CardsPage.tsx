@@ -260,6 +260,22 @@ export function CardsPage() {
               ]
             : [`Bakiye: ${formatCurrency(row.current_balance)}`]
         }
+        renderExtra={(row) =>
+          row.card_type === 'kredi_karti' && row.credit_limit > 0 ? (
+            <div className="mt-3">
+              <div className="mb-1.5 flex items-center justify-between text-xs text-stone-600 dark:text-stone-400">
+                <span>Limit kullanımı</span>
+                <span>{Math.round((row.debt_amount / row.credit_limit) * 100)}%</span>
+              </div>
+              <div className="h-2 w-full overflow-hidden rounded-full bg-stone-200 dark:bg-stone-800">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-indigo-600 transition-all duration-500"
+                  style={{ width: `${Math.min(100, (row.debt_amount / row.credit_limit) * 100)}%` }}
+                />
+              </div>
+            </div>
+          ) : null
+        }
         getCardClassName={() =>
           'border-[hsl(var(--bank-hue)_72%_74%)] bg-[hsl(var(--bank-hue)_88%_97%)] dark:border-[hsl(var(--bank-hue)_48%_38%)] dark:bg-[hsl(var(--bank-hue)_55%_16%)]'
         }
