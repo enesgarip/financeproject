@@ -66,6 +66,11 @@ function cardTypeLabel(value: Card['card_type']) {
   return 'Banka kartı'
 }
 
+function cardGroupLabel(value: Card['card_type']) {
+  if (value === 'kredi_karti') return 'Kredi kartları'
+  return 'Banka kartları'
+}
+
 function normalizeBankName(bankName: string) {
   return bankName.trim().toLocaleLowerCase('tr-TR')
 }
@@ -90,7 +95,8 @@ export function CardsPage() {
       addLabel="Kart ekle"
       fields={fields}
       emptyTitle="Henüz kart yok"
-      emptyDescription="Kredi kartı, banka kartı ve vadesiz hesaplarını buradan takip edebilirsin."
+      emptyDescription="Kredi kartı ve banka kartlarını buradan takip edebilirsin."
+      orderBy="card_type"
       getInitialValues={(row?: Card) => ({
         bank_name: row?.bank_name ?? '',
         card_name: row?.card_name ?? '',
@@ -137,6 +143,10 @@ export function CardsPage() {
       getDetailClassName={() => 'bg-[hsl(var(--bank-hue)_88%_94%)] dark:bg-[hsl(var(--bank-hue)_50%_22%)]'}
       getCardStyle={(row, rows) => bankHueStyle(row.bank_name, rows)}
       getDetailStyle={(row, rows) => bankHueStyle(row.bank_name, rows)}
+      groupBy={(row) => cardGroupLabel(row.card_type)}
+      getGroupClassName={() =>
+        'border-b border-stone-200 bg-transparent px-0 pb-2 pt-1 text-stone-500 dark:border-stone-800 dark:bg-transparent dark:text-stone-400'
+      }
     />
   )
 }

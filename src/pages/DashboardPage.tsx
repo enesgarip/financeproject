@@ -23,7 +23,8 @@ const emptyData: DashboardData = {
   payments: [],
 }
 
-const UPCOMING_DAYS = 15
+const UPCOMING_PAYMENT_DAYS = 30
+const UPCOMING_MONTHLY_DAYS = 15
 
 function sum<T>(rows: T[], selector: (row: T) => number) {
   return rows.reduce((total, row) => total + selector(row), 0)
@@ -114,7 +115,7 @@ export function DashboardPage() {
   const upcomingPayments = useMemo(
     () =>
       data.payments
-        .filter((payment) => payment.status === 'bekliyor' && isUpcomingDate(payment.due_date, UPCOMING_DAYS))
+        .filter((payment) => payment.status === 'bekliyor' && isUpcomingDate(payment.due_date, UPCOMING_PAYMENT_DAYS))
         .sort((a, b) => a.due_date.localeCompare(b.due_date))
         .slice(0, 5),
     [data.payments],
@@ -127,7 +128,7 @@ export function DashboardPage() {
         .map((card) => ({ card, dueDate: nextMonthlyDate(card.due_day) }))
         .filter((item) => {
           const remaining = daysUntil(item.dueDate)
-          return remaining !== null && remaining >= 0 && remaining <= UPCOMING_DAYS
+          return remaining !== null && remaining >= 0 && remaining <= UPCOMING_MONTHLY_DAYS
         })
         .sort((a, b) => (a.dueDate?.getTime() ?? 0) - (b.dueDate?.getTime() ?? 0))
         .slice(0, 5),
@@ -141,7 +142,7 @@ export function DashboardPage() {
         .map((loan) => ({ loan, dueDate: nextMonthlyDate(loan.installment_day) }))
         .filter((item) => {
           const remaining = daysUntil(item.dueDate)
-          return remaining !== null && remaining >= 0 && remaining <= UPCOMING_DAYS
+          return remaining !== null && remaining >= 0 && remaining <= UPCOMING_MONTHLY_DAYS
         })
         .sort((a, b) => (a.dueDate?.getTime() ?? 0) - (b.dueDate?.getTime() ?? 0))
         .slice(0, 5),
@@ -172,7 +173,7 @@ export function DashboardPage() {
 
       <UpcomingSection title="Yaklaşan ödemeler">
         {upcomingPayments.length === 0 ? (
-          <EmptyState title="Yaklaşan ödeme yok" description="Önümüzdeki 15 gün için bekleyen ödeme bulunmuyor." />
+          <EmptyState title="Yaklaşan ödeme yok" description="Önümüzdeki 30 gün için bekleyen ödeme bulunmuyor." />
         ) : (
           upcomingPayments.map((payment) => (
             <UpcomingRow
