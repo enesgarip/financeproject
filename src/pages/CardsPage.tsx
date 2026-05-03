@@ -22,6 +22,15 @@ const fields: FormField[] = [
   { name: 'note', label: 'Not', type: 'textarea' },
 ]
 
+const bankTones = [
+  { card: 'border-sky-200 bg-sky-50/40', detail: 'bg-sky-50' },
+  { card: 'border-violet-200 bg-violet-50/35', detail: 'bg-violet-50' },
+  { card: 'border-rose-200 bg-rose-50/35', detail: 'bg-rose-50' },
+  { card: 'border-emerald-200 bg-emerald-50/35', detail: 'bg-emerald-50' },
+  { card: 'border-amber-200 bg-amber-50/40', detail: 'bg-amber-50' },
+  { card: 'border-cyan-200 bg-cyan-50/35', detail: 'bg-cyan-50' },
+]
+
 function optionalDay(value: FormDataEntryValue | null) {
   const parsed = Number(value)
   return Number.isFinite(parsed) && parsed > 0 ? parsed : null
@@ -31,6 +40,12 @@ function cardTypeLabel(value: Card['card_type']) {
   if (value === 'kredi_karti') return 'Kredi kartı'
   if (value === 'banka_karti') return 'Banka kartı'
   return 'Vadesiz hesap'
+}
+
+function bankTone(bankName: string) {
+  const normalized = bankName.trim().toLocaleLowerCase('tr-TR')
+  const total = [...normalized].reduce((sum, char) => sum + char.charCodeAt(0), 0)
+  return bankTones[total % bankTones.length]
 }
 
 export function CardsPage() {
@@ -70,6 +85,8 @@ export function CardsPage() {
         `Ekstre: ${row.statement_day ?? '-'}`,
         `Son ödeme: ${row.due_day ?? '-'}`,
       ]}
+      getCardClassName={(row) => bankTone(row.bank_name).card}
+      getDetailClassName={(row) => bankTone(row.bank_name).detail}
     />
   )
 }

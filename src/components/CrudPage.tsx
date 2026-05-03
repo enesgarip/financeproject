@@ -1,4 +1,4 @@
-import { Pencil, Plus, Trash2 } from 'lucide-react'
+import { CalendarDays, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { useAuth } from '../auth/useAuth'
 import { supabase } from '../lib/supabase'
@@ -19,6 +19,10 @@ export type FormField = {
   step?: string
   min?: string
   options?: FieldOption[]
+  visibleWhen?: {
+    field: string
+    value: string
+  }
 }
 
 type CrudPageProps<T extends TableName> = {
@@ -33,6 +37,8 @@ type CrudPageProps<T extends TableName> = {
   renderTitle: (row: RowFor<T>) => string
   renderSubtitle?: (row: RowFor<T>) => string
   renderDetails: (row: RowFor<T>) => string[]
+  getCardClassName?: (row: RowFor<T>) => string
+  getDetailClassName?: (row: RowFor<T>) => string
 }
 
 export function CrudPage<T extends TableName>({
@@ -47,6 +53,8 @@ export function CrudPage<T extends TableName>({
   renderTitle,
   renderSubtitle,
   renderDetails,
+  getCardClassName,
+  getDetailClassName,
 }: CrudPageProps<T>) {
   const { user } = useAuth()
   const [rows, setRows] = useState<RowFor<T>[]>([])
@@ -55,6 +63,7 @@ export function CrudPage<T extends TableName>({
   const [error, setError] = useState('')
   const [editing, setEditing] = useState<RowFor<T> | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
+  const [formValues, setFormValues] = useState<Record<string, string>>({})
 
   const loadRows = useCallback(async () => {
     setLoading(true)
@@ -76,12 +85,18 @@ export function CrudPage<T extends TableName>({
 
   function openCreate() {
     setEditing(null)
+    setFormValues(toFormValues(getInitialValues()))
     setModalOpen(true)
   }
 
   function openEdit(row: RowFor<T>) {
     setEditing(row)
+    setFormValues(toFormValues(getInitialValues(row)))
     setModalOpen(true)
+  }
+
+  function updateFormValue(name: string, value: string) {
+    setFormValues((current) => ({ ...current, [name]: value }))
   }
 
   async function handleDelete(id: string) {
@@ -125,8 +140,6 @@ export function CrudPage<T extends TableName>({
     await loadRows()
   }
 
-  const initialValues = getInitialValues(editing ?? undefined)
-
   return (
     <section className="space-y-4">
       <div className="flex items-center justify-between gap-3">
@@ -150,7 +163,10 @@ export function CrudPage<T extends TableName>({
       ) : (
         <div className="space-y-3">
           {rows.map((row) => (
-            <article key={row.id} className="rounded-lg border border-stone-200 bg-white p-4 shadow-sm">
+            <article
+              key={row.id}
+              className={`rounded-lg border bg-white p-4 shadow-sm ${getCardClassName?.(row) ?? 'border-stone-200'}`}
+            >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <h2 className="truncate text-base font-semibold text-stone-950">{renderTitle(row)}</h2>
@@ -179,7 +195,10 @@ export function CrudPage<T extends TableName>({
               </div>
               <dl className="mt-4 grid grid-cols-2 gap-2 text-sm">
                 {renderDetails(row).map((detail) => (
-                  <div key={detail} className="rounded-md bg-stone-50 px-3 py-2 text-stone-700">
+                  <div
+                    key={detail}
+                    className={`rounded-md px-3 py-2 text-stone-700 ${getDetailClassName?.(row) ?? 'bg-stone-50'}`}
+                  >
                     {detail}
                   </div>
                 ))}
@@ -196,42 +215,65 @@ export function CrudPage<T extends TableName>({
         onClose={() => setModalOpen(false)}
       >
         <form onSubmit={handleSubmit} className="space-y-4">
-          {fields.map((field) => (
-            <label key={field.name} className="block text-sm font-medium text-stone-700">
-              {field.label}
-              {field.type === 'select' ? (
-                <select
-                  name={field.name}
-                  required={field.required}
-                  defaultValue={String(initialValues[field.name] ?? '')}
-                  className="mt-1 w-full rounded-lg border border-stone-200 bg-white px-3 py-3 outline-none focus:border-emerald-600"
-                >
-                  {field.options?.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              ) : field.type === 'textarea' ? (
-                <textarea
-                  name={field.name}
-                  rows={3}
-                  defaultValue={String(initialValues[field.name] ?? '')}
-                  className="mt-1 w-full rounded-lg border border-stone-200 px-3 py-3 outline-none focus:border-emerald-600"
-                />
-              ) : (
-                <input
-                  name={field.name}
-                  type={field.type}
-                  required={field.required}
-                  min={field.min}
-                  step={field.step}
-                  defaultValue={String(initialValues[field.name] ?? '')}
-                  className="mt-1 w-full rounded-lg border border-stone-200 px-3 py-3 outline-none focus:border-emerald-600"
-                />
-              )}
-            </label>
-          ))}
+          {fields
+            .filter((field) => !field.visibleWhen || formValues[field.visibleWhen.field] === field.visibleWhen.value)
+            .map((field) => (
+              <label key={field.name} className="block text-sm font-medium text-stone-700">
+                {field.label}
+                {field.type === 'select' ? (
+                  <select
+                    name={field.name}
+                    required={field.required}
+                    value={formValues[field.name] ?? ''}
+                    onChange={(event) => updateFormValue(field.name, event.target.value)}
+                    className="mt-1 w-full rounded-lg border border-stone-200 bg-white px-3 py-3 outline-none focus:border-emerald-600"
+                  >
+                    {field.options?.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                ) : field.type === 'textarea' ? (
+                  <textarea
+                    name={field.name}
+                    rows={3}
+                    value={formValues[field.name] ?? ''}
+                    onChange={(event) => updateFormValue(field.name, event.target.value)}
+                    className="mt-1 w-full rounded-lg border border-stone-200 px-3 py-3 outline-none focus:border-emerald-600"
+                  />
+                ) : field.type === 'date' ? (
+                  <div className="relative mt-1">
+                    <input
+                      name={field.name}
+                      type="date"
+                      required={field.required}
+                      value={formValues[field.name] ?? ''}
+                      onClick={(event) => event.currentTarget.showPicker?.()}
+                      onFocus={(event) => event.currentTarget.showPicker?.()}
+                      onChange={(event) => updateFormValue(field.name, event.target.value)}
+                      className="w-full rounded-lg border border-stone-200 px-3 py-3 pr-11 outline-none focus:border-emerald-600"
+                    />
+                    <CalendarDays
+                      aria-hidden="true"
+                      size={18}
+                      className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-stone-400"
+                    />
+                  </div>
+                ) : (
+                  <input
+                    name={field.name}
+                    type={field.type}
+                    required={field.required}
+                    min={field.min}
+                    step={field.step}
+                    value={formValues[field.name] ?? ''}
+                    onChange={(event) => updateFormValue(field.name, event.target.value)}
+                    className="mt-1 w-full rounded-lg border border-stone-200 px-3 py-3 outline-none focus:border-emerald-600"
+                  />
+                )}
+              </label>
+            ))}
           <button
             type="submit"
             disabled={saving}
@@ -243,4 +285,8 @@ export function CrudPage<T extends TableName>({
       </SimpleModal>
     </section>
   )
+}
+
+function toFormValues(values: Record<string, string | number>) {
+  return Object.fromEntries(Object.entries(values).map(([key, value]) => [key, String(value)]))
 }
