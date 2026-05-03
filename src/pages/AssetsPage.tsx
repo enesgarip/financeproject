@@ -1,6 +1,6 @@
 import { CrudPage, type FormField } from '../components/CrudPage'
 import type { Asset } from '../types/database'
-import { formatCurrency, parseNumber } from '../utils/formatCurrency'
+import { formatCurrency, formatNumber, parseNumber } from '../utils/formatCurrency'
 
 const categoryOptions: Asset['category'][] = ['Nakit', 'Altın', 'Fon', 'Hisse', 'Araç', 'BES', 'Diğer']
 
@@ -86,7 +86,7 @@ export function AssetsPage() {
       renderSubtitle={(row) => row.category}
       renderDetails={(row) => {
         const details = [`Değer: ${formatCurrency(row.estimated_value_try)}`]
-        if (row.category === 'Altın') details.unshift(`Miktar: ${row.amount} ${row.unit}`)
+        if (row.category === 'Altın') details.unshift(`Miktar: ${formatNumber(row.amount)} ${row.unit}`)
         return details
       }}
       getCardClassName={(row) => assetTone[row.category].card}

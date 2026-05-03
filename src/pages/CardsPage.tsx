@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react'
 import { CrudPage, type FormField } from '../components/CrudPage'
 import type { Card } from '../types/database'
 import { formatCurrency, parseNumber } from '../utils/formatCurrency'
@@ -55,15 +56,6 @@ const fields: FormField[] = [
   { name: 'note', label: 'Not', type: 'textarea' },
 ]
 
-const bankTones = [
-  { card: 'border-sky-200 bg-sky-50/40 dark:border-sky-900 dark:bg-sky-950/25', detail: 'bg-sky-50 dark:bg-sky-950/40' },
-  { card: 'border-violet-200 bg-violet-50/35 dark:border-violet-900 dark:bg-violet-950/25', detail: 'bg-violet-50 dark:bg-violet-950/40' },
-  { card: 'border-rose-200 bg-rose-50/35 dark:border-rose-900 dark:bg-rose-950/25', detail: 'bg-rose-50 dark:bg-rose-950/40' },
-  { card: 'border-emerald-200 bg-emerald-50/35 dark:border-emerald-900 dark:bg-emerald-950/25', detail: 'bg-emerald-50 dark:bg-emerald-950/40' },
-  { card: 'border-amber-200 bg-amber-50/40 dark:border-amber-900 dark:bg-amber-950/25', detail: 'bg-amber-50 dark:bg-amber-950/40' },
-  { card: 'border-cyan-200 bg-cyan-50/35 dark:border-cyan-900 dark:bg-cyan-950/25', detail: 'bg-cyan-50 dark:bg-cyan-950/40' },
-]
-
 function optionalDay(value: FormDataEntryValue | null) {
   const parsed = Number(value)
   return Number.isFinite(parsed) && parsed > 0 ? parsed : null
@@ -74,10 +66,21 @@ function cardTypeLabel(value: Card['card_type']) {
   return 'Banka kartı'
 }
 
-function bankTone(bankName: string) {
-  const normalized = bankName.trim().toLocaleLowerCase('tr-TR')
-  const total = [...normalized].reduce((sum, char) => sum + char.charCodeAt(0), 0)
-  return bankTones[total % bankTones.length]
+function normalizeBankName(bankName: string) {
+  return bankName.trim().toLocaleLowerCase('tr-TR')
+}
+
+function bankHue(bankName: string, rows: Card[]) {
+  const banks = Array.from(new Set(rows.map((row) => normalizeBankName(row.bank_name)).filter(Boolean))).sort((a, b) =>
+    a.localeCompare(b, 'tr-TR'),
+  )
+  const index = Math.max(0, banks.indexOf(normalizeBankName(bankName)))
+
+  return (index * 47 + 196) % 360
+}
+
+function bankHueStyle(bankName: string, rows: Card[]) {
+  return { '--bank-hue': String(bankHue(bankName, rows)) } as CSSProperties
 }
 
 export function CardsPage() {
@@ -128,8 +131,12 @@ export function CardsPage() {
             ]
           : [`Bakiye: ${formatCurrency(row.current_balance)}`]
       }
-      getCardClassName={(row) => bankTone(row.bank_name).card}
-      getDetailClassName={(row) => bankTone(row.bank_name).detail}
+      getCardClassName={() =>
+        'border-[hsl(var(--bank-hue)_72%_74%)] bg-[hsl(var(--bank-hue)_88%_97%)] dark:border-[hsl(var(--bank-hue)_48%_38%)] dark:bg-[hsl(var(--bank-hue)_55%_16%)]'
+      }
+      getDetailClassName={() => 'bg-[hsl(var(--bank-hue)_88%_94%)] dark:bg-[hsl(var(--bank-hue)_50%_22%)]'}
+      getCardStyle={(row, rows) => bankHueStyle(row.bank_name, rows)}
+      getDetailStyle={(row, rows) => bankHueStyle(row.bank_name, rows)}
     />
   )
 }

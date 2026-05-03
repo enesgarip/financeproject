@@ -2,7 +2,15 @@ export function formatCurrency(value: number | null | undefined) {
   return new Intl.NumberFormat('tr-TR', {
     style: 'currency',
     currency: 'TRY',
-    maximumFractionDigits: 0,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value ?? 0)
+}
+
+export function formatNumber(value: number | null | undefined) {
+  return new Intl.NumberFormat('tr-TR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   }).format(value ?? 0)
 }
 

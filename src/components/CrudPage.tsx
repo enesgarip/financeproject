@@ -1,4 +1,5 @@
 import { CalendarDays, Pencil, Plus, Trash2 } from 'lucide-react'
+import type { CSSProperties } from 'react'
 import { useCallback, useEffect, useState } from 'react'
 import { useAuth } from '../auth/useAuth'
 import { supabase } from '../lib/supabase'
@@ -37,8 +38,10 @@ type CrudPageProps<T extends TableName> = {
   renderTitle: (row: RowFor<T>) => string
   renderSubtitle?: (row: RowFor<T>) => string
   renderDetails: (row: RowFor<T>) => string[]
-  getCardClassName?: (row: RowFor<T>) => string
-  getDetailClassName?: (row: RowFor<T>) => string
+  getCardClassName?: (row: RowFor<T>, rows: RowFor<T>[]) => string
+  getDetailClassName?: (row: RowFor<T>, rows: RowFor<T>[]) => string
+  getCardStyle?: (row: RowFor<T>, rows: RowFor<T>[]) => CSSProperties
+  getDetailStyle?: (row: RowFor<T>, rows: RowFor<T>[]) => CSSProperties
 }
 
 export function CrudPage<T extends TableName>({
@@ -55,6 +58,8 @@ export function CrudPage<T extends TableName>({
   renderDetails,
   getCardClassName,
   getDetailClassName,
+  getCardStyle,
+  getDetailStyle,
 }: CrudPageProps<T>) {
   const { user } = useAuth()
   const [rows, setRows] = useState<RowFor<T>[]>([])
@@ -165,7 +170,8 @@ export function CrudPage<T extends TableName>({
           {rows.map((row) => (
             <article
               key={row.id}
-              className={`rounded-lg border bg-white p-4 shadow-sm dark:bg-stone-900 ${getCardClassName?.(row) ?? 'border-stone-200 dark:border-stone-800'}`}
+              style={getCardStyle?.(row, rows)}
+              className={`rounded-lg border bg-white p-4 shadow-sm dark:bg-stone-900 ${getCardClassName?.(row, rows) ?? 'border-stone-200 dark:border-stone-800'}`}
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
@@ -197,7 +203,8 @@ export function CrudPage<T extends TableName>({
                 {renderDetails(row).map((detail) => (
                   <div
                     key={detail}
-                    className={`rounded-md px-3 py-2 text-stone-700 dark:text-stone-200 ${getDetailClassName?.(row) ?? 'bg-stone-50 dark:bg-stone-800'}`}
+                    style={getDetailStyle?.(row, rows)}
+                    className={`rounded-md px-3 py-2 text-stone-700 dark:text-stone-200 ${getDetailClassName?.(row, rows) ?? 'bg-stone-50 dark:bg-stone-800'}`}
                   >
                     {detail}
                   </div>

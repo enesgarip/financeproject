@@ -1,7 +1,7 @@
 import { CrudPage, type FormField } from '../components/CrudPage'
 import type { Debt } from '../types/database'
 import { formatDate } from '../utils/date'
-import { formatCurrency, parseNumber } from '../utils/formatCurrency'
+import { formatCurrency, formatNumber, parseNumber } from '../utils/formatCurrency'
 
 const fields: FormField[] = [
   { name: 'person_name', label: 'Kişi', type: 'text', required: true },
@@ -88,7 +88,7 @@ export function DebtsPage() {
       renderTitle={(row) => row.person_name}
       renderSubtitle={(row) => `${directionLabel(row.direction)} · ${row.status}`}
       renderDetails={(row) => [
-        `Miktar: ${row.amount} ${row.value_type}`,
+        `Miktar: ${formatNumber(row.amount)} ${row.value_type}`,
         `Değer: ${formatCurrency(row.estimated_value_try)}`,
         `Vade: ${formatDate(row.due_date)}`,
       ]}
