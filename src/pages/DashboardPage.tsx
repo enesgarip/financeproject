@@ -137,7 +137,7 @@ export function DashboardPage() {
       }))
 
     const loanInstallments = data.loans
-      .filter((loan) => loan.status === 'active' && loan.installment_day)
+      .filter((loan) => loan.status === 'active' && loan.installment_day && loan.remaining_installments > 0)
       .map((loan) => ({ loan, dueDate: nextMonthlyDate(loan.installment_day) }))
       .filter((item) => {
         const remaining = daysUntil(item.dueDate)

@@ -6,8 +6,9 @@ import type { Card, Loan } from '../types/database'
 import { formatDate } from '../utils/date'
 import { formatCurrency, parseNumber } from '../utils/formatCurrency'
 
-function getNextPaymentDate(installmentDay: number | null): string | null {
-  if (!installmentDay) return null
+function getNextPaymentDate(installmentDay: number | null, remainingInstallments: number): string | null {
+  if (!installmentDay || remainingInstallments <= 0) return null
+
   const today = new Date()
   const currentMonth = today.getMonth()
   const currentYear = today.getFullYear()
@@ -191,7 +192,7 @@ export function LoansPage() {
           `Kalan taksit: ${row.remaining_installments}`,
         ]
         if (row.status === 'active' && row.installment_day) {
-          const nextPayment = getNextPaymentDate(row.installment_day)
+          const nextPayment = getNextPaymentDate(row.installment_day, row.remaining_installments)
           if (nextPayment) details.push(`Bir sonraki ödeme: ${nextPayment}`)
         }
         if (row.end_date) details.push(`Bitiş tarihi: ${formatDate(row.end_date)}`)
