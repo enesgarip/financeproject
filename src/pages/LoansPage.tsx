@@ -3,13 +3,13 @@ import { CrudPage, type FormField } from '../components/CrudPage'
 import { SimpleModal } from '../components/SimpleModal'
 import { supabase } from '../lib/supabase'
 import type { Card, Loan } from '../types/database'
-import { formatDate } from '../utils/date'
+import { formatDate, startOfToday } from '../utils/date'
 import { formatCurrency, parseNumber } from '../utils/formatCurrency'
 
 function getNextPaymentDate(installmentDay: number | null, remainingInstallments: number): string | null {
   if (!installmentDay || remainingInstallments <= 0) return null
 
-  const today = new Date()
+  const today = startOfToday()
   const currentMonth = today.getMonth()
   const currentYear = today.getFullYear()
 
@@ -18,7 +18,7 @@ function getNextPaymentDate(installmentDay: number | null, remainingInstallments
     nextDate = new Date(currentYear, currentMonth + 1, installmentDay)
   }
 
-  return formatDate(nextDate.toISOString().split('T')[0])
+  return formatDate(nextDate.toLocaleDateString('sv-SE'))
 }
 
 const fields: FormField[] = [
@@ -27,7 +27,15 @@ const fields: FormField[] = [
   { name: 'total_amount', label: 'Toplam kredi tutarı', type: 'number', min: '0', step: '0.01', required: true },
   { name: 'remaining_amount', label: 'Kalan borç', type: 'number', min: '0', step: '0.01', required: true },
   { name: 'monthly_payment', label: 'Aylık ödeme', type: 'number', min: '0', step: '0.01', required: true },
-  { name: 'installment_day', label: 'Taksit günü', type: 'number', min: '1', step: '1' },
+  {
+    name: 'installment_day',
+    label: 'Taksit günü',
+    type: 'select',
+    options: Array.from({ length: 31 }, (_, index) => ({
+      label: `Ayın ${index + 1}. günü`,
+      value: String(index + 1),
+    })),
+  },
   { name: 'start_date', label: 'Başlangıç tarihi', type: 'date' },
   { name: 'end_date', label: 'Bitiş tarihi', type: 'date' },
   { name: 'remaining_installments', label: 'Kalan taksit', type: 'number', min: '0', step: '1', required: true },
