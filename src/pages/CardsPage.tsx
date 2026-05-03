@@ -324,8 +324,19 @@ export function CardsPage() {
         getCardStyle={(row, rows) => bankHueStyle(row.bank_name, rows)}
         getDetailStyle={(row, rows) => bankHueStyle(row.bank_name, rows)}
         groupBy={(row) => cardGroupLabel(row.card_type)}
-        getGroupClassName={() =>
-          'border-b border-stone-200 bg-transparent px-0 pb-2 pt-1 text-stone-500 dark:border-stone-800 dark:bg-transparent dark:text-stone-400'
+        renderMenuActions={(row, helpers) =>
+          row.card_type === 'kredi_karti' ? (
+            <button
+              type="button"
+              onClick={() => {
+                openDebtPayment(row, helpers.reload, helpers.rows as Card[])
+                helpers.closeMenu()
+              }}
+              className="flex w-full items-center gap-2 px-3 py-2 text-sm text-stone-700 hover:bg-stone-50 dark:text-stone-200 dark:hover:bg-stone-800"
+            >
+              💳 Borç öde
+            </button>
+          ) : null
         }
         renderRowActions={(row, helpers) =>
           row.card_type === 'banka_karti' ? (
@@ -337,22 +348,13 @@ export function CardsPage() {
               İşlem
             </button>
           ) : row.card_type === 'kredi_karti' ? (
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => openExpense(row, helpers.reload)}
-                className="rounded-lg border border-stone-200 bg-rose-600 px-3 py-2 text-xs font-semibold text-white shadow-sm hover:bg-rose-700 dark:border-stone-700 dark:bg-rose-600"
-              >
-                Harcama ekle
-              </button>
-              <button
-                type="button"
-                onClick={() => openDebtPayment(row, helpers.reload, helpers.rows as Card[])}
-                className="rounded-lg border border-stone-200 bg-stone-700 px-3 py-2 text-xs font-semibold text-white shadow-sm dark:border-stone-700 dark:bg-stone-600"
-              >
-                Borç öde
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={() => openExpense(row, helpers.reload)}
+              className="rounded-lg border border-stone-200 bg-rose-600 px-3 py-2 text-xs font-semibold text-white shadow-sm hover:bg-rose-700 dark:border-stone-700 dark:bg-rose-600"
+            >
+              Harcama ekle
+            </button>
           ) : null
         }
       />

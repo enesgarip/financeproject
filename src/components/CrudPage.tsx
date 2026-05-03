@@ -46,6 +46,7 @@ type CrudPageProps<T extends TableName> = {
   groupBy?: (row: RowFor<T>) => string
   getGroupClassName?: (group: string) => string
   renderRowActions?: (row: RowFor<T>, helpers: { reload: () => Promise<void>; setError: (message: string) => void; rows: RowFor<T>[] }) => ReactNode
+  renderMenuActions?: (row: RowFor<T>, helpers: { reload: () => Promise<void>; setError: (message: string) => void; rows: RowFor<T>[]; closeMenu: () => void }) => ReactNode
   renderExtra?: (row: RowFor<T>) => ReactNode
 }
 
@@ -69,6 +70,7 @@ export function CrudPage<T extends TableName>({
   groupBy,
   getGroupClassName,
   renderRowActions,
+  renderMenuActions,
   renderExtra,
 }: CrudPageProps<T>) {
   const { user } = useAuth()
@@ -80,6 +82,17 @@ export function CrudPage<T extends TableName>({
   const [modalOpen, setModalOpen] = useState(false)
   const [formValues, setFormValues] = useState<Record<string, string>>({})
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null)
+
+  useEffect(() => {
+    function handleClickOutside() {
+      setMenuOpenId(null)
+    }
+
+    if (menuOpenId) {
+      document.addEventListener('click', handleClickOutside)
+      return () => document.removeEventListener('click', handleClickOutside)
+    }
+  }, [menuOpenId])
 
   const loadRows = useCallback(async () => {
     setLoading(true)
@@ -216,7 +229,10 @@ export function CrudPage<T extends TableName>({
                       <div className="relative shrink-0">
                         <button
                           type="button"
-                          onClick={() => setMenuOpenId(menuOpenId === row.id ? null : row.id)}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setMenuOpenId(menuOpenId === row.id ? null : row.id)
+                          }}
                           className="grid size-9 place-items-center rounded-full text-stone-500 hover:bg-stone-100 dark:text-stone-400 dark:hover:bg-stone-800"
                           aria-label="Menü"
                         >
@@ -224,9 +240,11 @@ export function CrudPage<T extends TableName>({
                         </button>
                         {menuOpenId === row.id && (
                           <div className="absolute right-0 top-full z-10 mt-1 w-36 rounded-lg border border-stone-200 bg-white py-1 shadow-lg dark:border-stone-700 dark:bg-stone-900">
+                            {renderMenuActions ? renderMenuActions(row, { reload: loadRows, setError, rows, closeMenu: () => setMenuOpenId(null) }) : null}
                             <button
                               type="button"
-                              onClick={() => {
+                              onClick={(e) => {
+                                e.stopPropagation()
                                 setMenuOpenId(null)
                                 openEdit(row)
                               }}
@@ -237,7 +255,8 @@ export function CrudPage<T extends TableName>({
                             </button>
                             <button
                               type="button"
-                              onClick={() => {
+                              onClick={(e) => {
+                                e.stopPropagation()
                                 setMenuOpenId(null)
                                 void handleDelete(row.id)
                               }}
