@@ -20,6 +20,7 @@ create table if not exists public.assets (
   category text not null check (category in ('Nakit', 'Altın', 'Fon', 'Hisse', 'Araç', 'BES', 'Diğer')),
   amount numeric(14, 2) not null default 0 check (amount >= 0),
   unit text not null check (unit in ('TRY', 'gram', 'adet')),
+  currency text check (currency in ('TRY', 'USD', 'EUR', 'GBP')),
   estimated_value_try numeric(14, 2) not null default 0 check (estimated_value_try >= 0),
   note text
 );

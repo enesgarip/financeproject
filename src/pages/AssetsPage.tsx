@@ -13,6 +13,18 @@ const fields: FormField[] = [
     options: categoryOptions.map((value) => ({ label: value, value })),
   },
   {
+    name: 'currency',
+    label: 'Para birimi',
+    type: 'select',
+    options: [
+      { label: 'Türk lirası (TRY)', value: 'TRY' },
+      { label: 'Dolar (USD)', value: 'USD' },
+      { label: 'Euro (EUR)', value: 'EUR' },
+      { label: 'Pound (GBP)', value: 'GBP' },
+    ],
+    visibleWhen: { field: 'category', value: 'Nakit' },
+  },
+  {
     name: 'amount',
     label: 'Altın miktarı',
     type: 'number',
@@ -65,6 +77,7 @@ export function AssetsPage() {
         category: row?.category ?? 'Nakit',
         amount: row?.amount ?? 0,
         unit: row?.unit === 'TRY' ? 'gram' : (row?.unit ?? 'gram'),
+        currency: row?.currency ?? 'TRY',
         estimated_value_try: row?.estimated_value_try ?? 0,
         note: row?.note ?? '',
       })}
@@ -78,6 +91,7 @@ export function AssetsPage() {
           category,
           amount: isGold ? parseNumber(formData.get('amount')) : 1,
           unit: isGold ? (formData.get('unit') as Asset['unit']) : 'TRY',
+          currency: category === 'Nakit' ? (formData.get('currency') as Asset['currency']) : null,
           estimated_value_try: parseNumber(formData.get('estimated_value_try')),
           note: String(formData.get('note') ?? '') || null,
         }
@@ -87,6 +101,7 @@ export function AssetsPage() {
       renderDetails={(row) => {
         const details = [`Değer: ${formatCurrency(row.estimated_value_try)}`]
         if (row.category === 'Altın') details.unshift(`Miktar: ${formatNumber(row.amount)} ${row.unit}`)
+        if (row.category === 'Nakit') details.unshift(`Para birimi: ${row.currency ?? 'TRY'}`)
         return details
       }}
       getCardClassName={(row) => assetTone[row.category].card}
