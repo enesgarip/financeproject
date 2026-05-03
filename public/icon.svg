@@ -1,7 +1,28 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Kişisel Finans">
-  <rect width="512" height="512" rx="108" fill="#047857"/>
-  <path fill="#ecfdf5" d="M128 154a42 42 0 0 1 42-42h172a42 42 0 0 1 42 42v204a42 42 0 0 1-42 42H170a42 42 0 0 1-42-42V154Z"/>
-  <path fill="#047857" d="M176 176h160v36H176v-36Zm0 70h108v30H176v-30Zm0 64h160v30H176v-30Z"/>
-  <circle cx="335" cy="262" r="43" fill="#facc15"/>
-  <path fill="#14532d" d="M321 263c0-20 15-36 34-39 10 9 16 22 16 38 0 14-6 28-16 37-19-2-34-16-34-36Z"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Finans">
+  <defs>
+    <linearGradient id="bg" x1="82" y1="54" x2="430" y2="470" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#075e3f"/>
+      <stop offset="1" stop-color="#023b2b"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="130" y1="206" x2="298" y2="372" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#fde68a"/>
+      <stop offset=".45" stop-color="#f5c451"/>
+      <stop offset="1" stop-color="#b7791f"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="145%">
+      <feDropShadow dx="0" dy="15" stdDeviation="16" flood-color="#01291f" flood-opacity=".36"/>
+    </filter>
+  </defs>
+  <rect width="512" height="512" fill="url(#bg)"/>
+  <g filter="url(#shadow)">
+    <path fill="#0f5137" d="M174 150c0-18 15-33 33-33h123c18 0 33 15 33 33v52H174v-52Z"/>
+    <path fill="#f8f1df" d="M118 184c0-25 20-45 45-45h190c25 0 45 20 45 45v172c0 25-20 45-45 45H163c-25 0-45-20-45-45V184Z"/>
+    <path fill="#0b573c" d="M326 248h92c18 0 33 15 33 33v42c0 18-15 33-33 33h-92c-18 0-33-15-33-33v-42c0-18 15-33 33-33Z"/>
+    <circle cx="389" cy="302" r="24" fill="url(#gold)"/>
+    <circle cx="202" cy="316" r="88" fill="url(#gold)"/>
+    <circle cx="202" cy="316" r="65" fill="#075e3f"/>
+    <path fill="#fffaf0" d="M191 252h29v84h42v26h-71V252Z"/>
+    <path fill="#fffaf0" d="M163 316l89-38 10 22-89 38-10-22Z"/>
+    <path fill="#fffaf0" d="M164 354l102-43 10 22-102 43-10-22Z"/>
+  </g>
 </svg>
