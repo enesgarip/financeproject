@@ -23,8 +23,8 @@ function getNextPaymentDate(installmentDay: number | null): string | null {
 const fields: FormField[] = [
   { name: 'bank_name', label: 'Banka', type: 'text', required: true },
   { name: 'loan_name', label: 'Kredi adı', type: 'text', required: true },
-  { name: 'total_amount', label: 'Toplam tutar', type: 'number', min: '0', step: '0.01', required: true },
-  { name: 'remaining_amount', label: 'Kalan tutar', type: 'number', min: '0', step: '0.01', required: true },
+  { name: 'total_amount', label: 'Toplam kredi tutarı', type: 'number', min: '0', step: '0.01', required: true },
+  { name: 'remaining_amount', label: 'Kalan borç', type: 'number', min: '0', step: '0.01', required: true },
   { name: 'monthly_payment', label: 'Aylık ödeme', type: 'number', min: '0', step: '0.01', required: true },
   { name: 'installment_day', label: 'Taksit günü', type: 'number', min: '1', step: '1' },
   { name: 'start_date', label: 'Başlangıç tarihi', type: 'date' },
@@ -182,19 +182,19 @@ export function LoansPage() {
         note: String(formData.get('note') ?? '') || null,
       })}
       renderTitle={(row) => row.loan_name}
-      renderSubtitle={(row) => `${row.bank_name} · ${row.status === 'active' ? 'Aktif' : 'Kapalı'}`}
+      renderSubtitle={(row) => `${row.bank_name} · ${row.status === 'active' ? 'Aktif kredi' : 'Kapalı kredi'}`}
       renderDetails={(row) => {
         const details = [
-          `Kalan: ${formatCurrency(row.remaining_amount)}`,
-          `Aylık: ${formatCurrency(row.monthly_payment)}`,
-          `Taksit günü: ${row.installment_day ? `Her ayın ${row.installment_day}. günü` : '-'}`,
+          `Kalan borç: ${formatCurrency(row.remaining_amount)}`,
+          `Aylık ödeme: ${formatCurrency(row.monthly_payment)}`,
+          `Taksit günü: ${row.installment_day ? `Ayın ${row.installment_day}. günü` : '-'}`,
           `Kalan taksit: ${row.remaining_installments}`,
         ]
         if (row.status === 'active' && row.installment_day) {
           const nextPayment = getNextPaymentDate(row.installment_day)
-          if (nextPayment) details.push(`Sonraki ödeme: ${nextPayment}`)
+          if (nextPayment) details.push(`Bir sonraki ödeme: ${nextPayment}`)
         }
-        if (row.end_date) details.push(`Bitiş: ${formatDate(row.end_date)}`)
+        if (row.end_date) details.push(`Bitiş tarihi: ${formatDate(row.end_date)}`)
         return details
       }}
       renderRowActions={(row, helpers) =>
@@ -210,7 +210,7 @@ export function LoansPage() {
       }
     />
 
-      <SimpleModal title="Kredi taksit ödeme" open={Boolean(installmentLoan)} onClose={() => setInstallmentLoan(null)}>
+      <SimpleModal title="Taksit ödemesi" open={Boolean(installmentLoan)} onClose={() => setInstallmentLoan(null)}>
         <form onSubmit={handleInstallmentSubmit} className="space-y-4">
           <div className="rounded-lg bg-stone-50 p-3 text-sm text-stone-600 dark:bg-stone-900 dark:text-stone-300">
             <p className="font-semibold text-stone-950 dark:text-stone-50">{installmentLoan?.loan_name}</p>
