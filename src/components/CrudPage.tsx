@@ -186,18 +186,22 @@ export function CrudPage<T extends TableName>({
           {groupRows(rows, groupBy).map(({ group, items }) => (
             <section key={group} className="space-y-3">
               {groupBy ? (
-                <h2
-                  className={`rounded-md px-3 py-2 text-sm font-semibold ${getGroupClassName?.(group) ?? 'bg-stone-100 text-stone-700 dark:bg-stone-800 dark:text-stone-200'}`}
-                >
-                  {group}
-                </h2>
+                <div className="relative overflow-hidden rounded-3xl border border-stone-200 bg-stone-50/90 px-4 py-3 shadow-sm dark:border-stone-800 dark:bg-stone-950/55">
+                  <span className="absolute inset-y-0 left-0 w-1 rounded-r-full bg-emerald-400 dark:bg-emerald-500" />
+                  <h2
+                    className={`relative text-sm font-semibold text-stone-900 dark:text-stone-100 ${getGroupClassName?.(group) ?? 'bg-transparent text-stone-900 dark:text-stone-100'}`}
+                  >
+                    {group}
+                  </h2>
+                </div>
               ) : null}
-              {items.map((row) => (
-                <article
-                  key={row.id}
-                  style={getCardStyle?.(row, rows)}
-                  className={`rounded-xl border bg-white p-3 shadow-md transition-all hover:shadow-lg hover:-translate-y-0.5 dark:bg-stone-900 min-[390px]:p-4 ${getCardClassName?.(row, rows) ?? 'border-stone-200 dark:border-stone-800'}`}
-                >
+              <div className="space-y-4">
+                {items.map((row) => (
+                  <article
+                    key={row.id}
+                    style={getCardStyle?.(row, rows)}
+                    className={`rounded-3xl border bg-white p-4 shadow-sm transition-all hover:shadow-lg hover:-translate-y-0.5 dark:border-stone-800 dark:bg-stone-950 min-[390px]:p-5 ${getCardClassName?.(row, rows) ?? 'border-stone-200'}`}
+                  >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
                       <h2 className="truncate text-base font-semibold text-stone-950 dark:text-stone-50">{renderTitle(row)}</h2>
@@ -262,6 +266,7 @@ export function CrudPage<T extends TableName>({
                   {renderExtra ? renderExtra(row) : null}
                 </article>
               ))}
+            </div>
             </section>
           ))}
         </div>

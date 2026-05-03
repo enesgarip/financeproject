@@ -172,9 +172,9 @@ export function DebtsPage() {
           <button
             type="button"
             onClick={() => void markDebtAsClosed(row, helpers.reload, helpers.setError)}
-            className="rounded-lg border border-stone-200 bg-stone-700 px-3 py-2 text-xs font-semibold text-white shadow-sm dark:border-stone-700 dark:bg-stone-600"
+            className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-700"
           >
-            Kapandı
+            Ödeme yapıldı olarak işaretle
           </button>
         ) : null
       }
