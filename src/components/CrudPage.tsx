@@ -22,7 +22,7 @@ export type FormField = {
   options?: FieldOption[]
   visibleWhen?: {
     field: string
-    value: string
+    value: string | string[]
   }
 }
 
@@ -42,6 +42,8 @@ type CrudPageProps<T extends TableName> = {
   getDetailClassName?: (row: RowFor<T>, rows: RowFor<T>[]) => string
   getCardStyle?: (row: RowFor<T>, rows: RowFor<T>[]) => CSSProperties
   getDetailStyle?: (row: RowFor<T>, rows: RowFor<T>[]) => CSSProperties
+  groupBy?: (row: RowFor<T>) => string
+  getGroupClassName?: (group: string) => string
 }
 
 export function CrudPage<T extends TableName>({
@@ -60,6 +62,8 @@ export function CrudPage<T extends TableName>({
   getDetailClassName,
   getCardStyle,
   getDetailStyle,
+  groupBy,
+  getGroupClassName,
 }: CrudPageProps<T>) {
   const { user } = useAuth()
   const [rows, setRows] = useState<RowFor<T>[]>([])
@@ -166,52 +170,63 @@ export function CrudPage<T extends TableName>({
       ) : rows.length === 0 ? (
         <EmptyState title={emptyTitle} description={emptyDescription} />
       ) : (
-        <div className="space-y-3">
-          {rows.map((row) => (
-            <article
-              key={row.id}
-              style={getCardStyle?.(row, rows)}
-              className={`rounded-lg border bg-white p-4 shadow-sm dark:bg-stone-900 ${getCardClassName?.(row, rows) ?? 'border-stone-200 dark:border-stone-800'}`}
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <h2 className="truncate text-base font-semibold text-stone-950 dark:text-stone-50">{renderTitle(row)}</h2>
-                  {renderSubtitle ? (
-                    <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">{renderSubtitle(row)}</p>
-                  ) : null}
-                </div>
-                <div className="flex shrink-0 gap-1">
-                  <button
-                    type="button"
-                    onClick={() => openEdit(row)}
-                    className="grid size-9 place-items-center rounded-full text-stone-500 hover:bg-stone-100 dark:text-stone-400 dark:hover:bg-stone-800"
-                    aria-label="Düzenle"
-                  >
-                    <Pencil size={17} />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => void handleDelete(row.id)}
-                    className="grid size-9 place-items-center rounded-full text-rose-600 hover:bg-rose-50"
-                    aria-label="Sil"
-                  >
-                    <Trash2 size={17} />
-                  </button>
-                </div>
-              </div>
-              <dl className="mt-4 grid grid-cols-2 gap-2 text-sm">
-                {renderDetails(row).map((detail) => (
-                  <div
-                    key={detail}
-                    style={getDetailStyle?.(row, rows)}
-                    className={`rounded-md px-3 py-2 text-stone-700 dark:text-stone-200 ${getDetailClassName?.(row, rows) ?? 'bg-stone-50 dark:bg-stone-800'}`}
-                  >
-                    {detail}
+        <div className="space-y-5">
+          {groupRows(rows, groupBy).map(({ group, items }) => (
+            <section key={group} className="space-y-3">
+              {groupBy ? (
+                <h2
+                  className={`rounded-md px-3 py-2 text-sm font-semibold ${getGroupClassName?.(group) ?? 'bg-stone-100 text-stone-700 dark:bg-stone-800 dark:text-stone-200'}`}
+                >
+                  {group}
+                </h2>
+              ) : null}
+              {items.map((row) => (
+                <article
+                  key={row.id}
+                  style={getCardStyle?.(row, rows)}
+                  className={`rounded-lg border bg-white p-4 shadow-sm dark:bg-stone-900 ${getCardClassName?.(row, rows) ?? 'border-stone-200 dark:border-stone-800'}`}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <h2 className="truncate text-base font-semibold text-stone-950 dark:text-stone-50">{renderTitle(row)}</h2>
+                      {renderSubtitle ? (
+                        <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">{renderSubtitle(row)}</p>
+                      ) : null}
+                    </div>
+                    <div className="flex shrink-0 gap-1">
+                      <button
+                        type="button"
+                        onClick={() => openEdit(row)}
+                        className="grid size-9 place-items-center rounded-full text-stone-500 hover:bg-stone-100 dark:text-stone-400 dark:hover:bg-stone-800"
+                        aria-label="Düzenle"
+                      >
+                        <Pencil size={17} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void handleDelete(row.id)}
+                        className="grid size-9 place-items-center rounded-full text-rose-600 hover:bg-rose-50"
+                        aria-label="Sil"
+                      >
+                        <Trash2 size={17} />
+                      </button>
+                    </div>
                   </div>
-                ))}
-              </dl>
-              {'note' in row && row.note ? <p className="mt-3 text-sm text-stone-500 dark:text-stone-400">{row.note}</p> : null}
-            </article>
+                  <dl className="mt-4 grid grid-cols-2 gap-2 text-sm">
+                    {renderDetails(row).map((detail) => (
+                      <div
+                        key={detail}
+                        style={getDetailStyle?.(row, rows)}
+                        className={`rounded-md px-3 py-2 text-stone-700 dark:text-stone-200 ${getDetailClassName?.(row, rows) ?? 'bg-stone-50 dark:bg-stone-800'}`}
+                      >
+                        {detail}
+                      </div>
+                    ))}
+                  </dl>
+                  {'note' in row && row.note ? <p className="mt-3 text-sm text-stone-500 dark:text-stone-400">{row.note}</p> : null}
+                </article>
+              ))}
+            </section>
           ))}
         </div>
       )}
@@ -223,7 +238,13 @@ export function CrudPage<T extends TableName>({
       >
         <form onSubmit={handleSubmit} className="space-y-4">
           {fields
-            .filter((field) => !field.visibleWhen || formValues[field.visibleWhen.field] === field.visibleWhen.value)
+            .filter(
+              (field) =>
+                !field.visibleWhen ||
+                (Array.isArray(field.visibleWhen.value)
+                  ? field.visibleWhen.value.includes(formValues[field.visibleWhen.field])
+                  : formValues[field.visibleWhen.field] === field.visibleWhen.value),
+            )
             .map((field) => (
               <label key={field.name} className="block text-sm font-medium text-stone-700 dark:text-stone-200">
                 {field.label}
@@ -321,4 +342,16 @@ export function CrudPage<T extends TableName>({
 
 function toFormValues(values: Record<string, string | number>) {
   return Object.fromEntries(Object.entries(values).map(([key, value]) => [key, String(value)]))
+}
+
+function groupRows<T>(rows: T[], groupBy?: (row: T) => string) {
+  if (!groupBy) return [{ group: 'all', items: rows }]
+
+  const groups = new Map<string, T[]>()
+  for (const row of rows) {
+    const group = groupBy(row)
+    groups.set(group, [...(groups.get(group) ?? []), row])
+  }
+
+  return Array.from(groups, ([group, items]) => ({ group, items }))
 }

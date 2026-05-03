@@ -6,7 +6,7 @@ export type CashCurrency = 'TRY' | 'USD' | 'EUR' | 'GBP'
 export type CardType = 'banka_karti' | 'kredi_karti'
 export type LoanStatus = 'active' | 'closed'
 export type DebtDirection = 'borç_aldım' | 'borç_verdim'
-export type DebtValueType = 'TRY' | 'gram_altin' | 'ceyrek_altin'
+export type DebtValueType = 'TRY' | 'doviz' | 'gram_altin' | 'ceyrek_altin'
 export type DebtStatus = 'açık' | 'kapandı'
 export type PaymentStatus = 'bekliyor' | 'ödendi'
 
@@ -57,6 +57,7 @@ export type Debt = BaseRow & {
   person_name: string
   direction: DebtDirection
   value_type: DebtValueType
+  currency: CashCurrency | null
   amount: number
   estimated_value_try: number
   due_date: string | null
