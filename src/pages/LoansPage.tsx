@@ -180,13 +180,20 @@ async function syncLoanInstallmentPlan(loan: Loan) {
   const desiredNumbers = new Set(schedule.map((item) => item.installment_no))
   const payload = schedule.map((item) => {
     const current = existingByNo.get(item.installment_no)
-    return {
-      ...item,
-      id: current?.id,
+    const result: InsertFor<'loan_installments'> = {
+      user_id: item.user_id,
+      loan_id: item.loan_id,
+      installment_no: item.installment_no,
+      due_date: item.due_date,
+      amount: item.amount,
       status: current?.status ?? item.status,
       paid_at: current?.paid_at ?? item.paid_at,
       note: current?.note ?? item.note,
     }
+    if (current?.id) {
+      (result as any).id = current.id
+    }
+    return result
   })
 
   const { error: upsertError } = await supabase
