@@ -9,6 +9,9 @@ export type DebtDirection = 'borç_aldım' | 'borç_verdim'
 export type DebtValueType = 'TRY' | 'doviz' | 'gram_altin' | 'ceyrek_altin'
 export type DebtStatus = 'açık' | 'kapandı'
 export type PaymentStatus = 'bekliyor' | 'ödendi'
+export type LoanInstallmentStatus = 'bekliyor' | 'ödendi'
+export type TransactionHistoryType = 'payment' | 'transfer' | 'loan' | 'debt' | 'card'
+export type UpcomingDismissalSource = 'payment' | 'card' | 'loan_installment' | 'debt'
 
 export type BaseRow = {
   id: string
@@ -53,6 +56,16 @@ export type Loan = BaseRow & {
   note: string | null
 }
 
+export type LoanInstallment = BaseRow & {
+  loan_id: string
+  installment_no: number
+  due_date: string
+  amount: number
+  status: LoanInstallmentStatus
+  paid_at: string | null
+  note: string | null
+}
+
 export type Debt = BaseRow & {
   person_name: string
   direction: DebtDirection
@@ -71,6 +84,24 @@ export type Payment = BaseRow & {
   due_date: string
   status: PaymentStatus
   note: string | null
+}
+
+export type TransactionHistory = BaseRow & {
+  occurred_at: string
+  type: TransactionHistoryType
+  title: string
+  amount: number | null
+  source_table: string | null
+  source_id: string | null
+  note: string | null
+}
+
+export type DismissedUpcomingItem = {
+  id: string
+  user_id: string
+  created_at: string
+  item_key: string
+  source: UpcomingDismissalSource
 }
 
 type Table<Row, Insert, Update> = {
@@ -97,8 +128,15 @@ export type Database = {
       assets: Table<Asset, WithBaseInsert<Asset>, WithBaseUpdate<Asset>>
       cards: Table<Card, WithBaseInsert<Card>, WithBaseUpdate<Card>>
       loans: Table<Loan, WithBaseInsert<Loan>, WithBaseUpdate<Loan>>
+      loan_installments: Table<LoanInstallment, WithBaseInsert<LoanInstallment>, WithBaseUpdate<LoanInstallment>>
       debts: Table<Debt, WithBaseInsert<Debt>, WithBaseUpdate<Debt>>
       payments: Table<Payment, WithBaseInsert<Payment>, WithBaseUpdate<Payment>>
+      transaction_history: Table<TransactionHistory, WithBaseInsert<TransactionHistory>, WithBaseUpdate<TransactionHistory>>
+      dismissed_upcoming_items: Table<
+        DismissedUpcomingItem,
+        Omit<DismissedUpcomingItem, 'id' | 'created_at'> & { id?: string; created_at?: string },
+        Partial<Omit<DismissedUpcomingItem, 'id' | 'user_id' | 'created_at'>> & { created_at?: string }
+      >
     }
     Views: Record<string, never>
     Functions: Record<string, never>

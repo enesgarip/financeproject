@@ -1,7 +1,8 @@
-import { CalendarDays, TrendingUp, TrendingDown, Wallet, CreditCard, Landmark, AlertCircle, ArrowUpRight, ArrowDownRight } from 'lucide-react'
+import { CalendarDays, TrendingUp, TrendingDown, Wallet, CreditCard, Landmark, AlertCircle, ArrowUpRight, ArrowDownRight, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useAuth } from '../auth/useAuth'
 import { supabase } from '../lib/supabase'
-import type { Asset, Card, Debt, Loan, Payment } from '../types/database'
+import type { Asset, Card, Debt, DismissedUpcomingItem, Loan, LoanInstallment, Payment, TransactionHistory, UpcomingDismissalSource } from '../types/database'
 import { daysUntil, formatDate, isUpcomingDate, nextMonthlyDate } from '../utils/date'
 import { formatCurrency } from '../utils/formatCurrency'
 import { EmptyState } from '../components/EmptyState'
@@ -10,25 +11,42 @@ type DashboardData = {
   assets: Asset[]
   cards: Card[]
   loans: Loan[]
+  loanInstallments: LoanInstallment[]
   debts: Debt[]
   payments: Payment[]
+  transactionHistory: TransactionHistory[]
+  dismissedUpcomingItems: DismissedUpcomingItem[]
 }
 
 const emptyData: DashboardData = {
   assets: [],
   cards: [],
   loans: [],
+  loanInstallments: [],
   debts: [],
   payments: [],
+  transactionHistory: [],
+  dismissedUpcomingItems: [],
 }
 
 const UPCOMING_DAYS = 30
+
+type UpcomingItem = {
+  id: string
+  recordId: string
+  source: UpcomingDismissalSource
+  title: string
+  value: string
+  date: string
+  sortTime: number
+}
 
 function sum<T>(rows: T[], selector: (row: T) => number) {
   return rows.reduce((total, row) => total + selector(row), 0)
 }
 
 export function DashboardPage() {
+  const { user } = useAuth()
   const [data, setData] = useState<DashboardData>(emptyData)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -37,15 +55,30 @@ export function DashboardPage() {
     setLoading(true)
     setError('')
 
-    const [assets, cards, loans, debts, payments] = await Promise.all([
+    const historyStart = new Date()
+    historyStart.setMonth(historyStart.getMonth() - 3)
+
+    const [assets, cards, loans, loanInstallments, debts, payments, transactionHistory, dismissedUpcomingItems] = await Promise.all([
       supabase.from('assets').select('*'),
       supabase.from('cards').select('*'),
       supabase.from('loans').select('*'),
+      supabase.from('loan_installments').select('*'),
       supabase.from('debts').select('*'),
       supabase.from('payments').select('*'),
+      supabase.from('transaction_history').select('*').gte('occurred_at', historyStart.toISOString()).order('occurred_at', { ascending: false }),
+      supabase.from('dismissed_upcoming_items').select('*'),
     ])
 
-    const firstError = [assets.error, cards.error, loans.error, debts.error, payments.error].find(Boolean)
+    const firstError = [
+      assets.error,
+      cards.error,
+      loans.error,
+      loanInstallments.error,
+      debts.error,
+      payments.error,
+      transactionHistory.error,
+      dismissedUpcomingItems.error,
+    ].find(Boolean)
     if (firstError) {
       setError(firstError.message)
       setLoading(false)
@@ -56,8 +89,11 @@ export function DashboardPage() {
       assets: assets.data ?? [],
       cards: cards.data ?? [],
       loans: loans.data ?? [],
+      loanInstallments: loanInstallments.data ?? [],
       debts: debts.data ?? [],
       payments: payments.data ?? [],
+      transactionHistory: transactionHistory.data ?? [],
+      dismissedUpcomingItems: dismissedUpcomingItems.data ?? [],
     })
     setLoading(false)
   }, [])
@@ -111,10 +147,14 @@ export function DashboardPage() {
   }, [data])
 
   const upcomingItems = useMemo(() => {
+    const dismissedKeys = new Set(data.dismissedUpcomingItems.map((item) => item.item_key))
+    const loansById = new Map(data.loans.map((loan) => [loan.id, loan]))
     const manualPayments = data.payments
       .filter((payment) => payment.status === 'bekliyor' && isUpcomingDate(payment.due_date, UPCOMING_DAYS))
       .map((payment) => ({
         id: `payment-${payment.id}`,
+        recordId: payment.id,
+        source: 'payment' as const,
         title: `Ödeme · ${payment.title}`,
         value: formatCurrency(payment.amount),
         date: formatDate(payment.due_date),
@@ -129,14 +169,43 @@ export function DashboardPage() {
         return remaining !== null && remaining >= 0 && remaining <= UPCOMING_DAYS
       })
       .map(({ card, dueDate }) => ({
-        id: `card-${card.id}`,
+        id: `card-${card.id}-${dateInputValue(dueDate)}`,
+        recordId: card.id,
+        source: 'card' as const,
         title: `Kart · ${card.bank_name} · ${card.card_name}`,
         value: formatCurrency(card.debt_amount),
         date: formatMonthDay(dueDate),
         sortTime: dueDate?.getTime() ?? 0,
       }))
 
-    const loanInstallments = data.loans
+    const loanInstallments = data.loanInstallments
+      .filter((installment) => installment.status === 'bekliyor' && isUpcomingDate(installment.due_date, UPCOMING_DAYS))
+      .map((installment) => {
+        const loan = loansById.get(installment.loan_id)
+        return {
+          id: `loan-installment-${installment.id}`,
+          recordId: installment.id,
+          source: 'loan_installment' as const,
+          title: loan ? `Kredi · ${loan.bank_name} · ${loan.loan_name}` : 'Kredi taksidi',
+          value: formatCurrency(installment.amount),
+          date: formatDate(installment.due_date),
+          sortTime: new Date(`${installment.due_date}T00:00:00`).getTime(),
+        }
+      })
+
+    const personalDebts = data.debts
+      .filter((debt) => debt.direction === 'borç_aldım' && debt.status === 'açık' && isUpcomingDate(debt.due_date, UPCOMING_DAYS))
+      .map((debt) => ({
+        id: `debt-${debt.id}`,
+        recordId: debt.id,
+        source: 'debt' as const,
+        title: `Borç · ${debt.person_name}`,
+        value: formatCurrency(debt.estimated_value_try),
+        date: formatDate(debt.due_date),
+        sortTime: new Date(`${debt.due_date}T00:00:00`).getTime(),
+      }))
+
+    const legacyLoanInstallments = data.loanInstallments.length > 0 ? [] : data.loans
       .filter((loan) => loan.status === 'active' && loan.installment_day && loan.remaining_installments > 0)
       .map((loan) => ({ loan, dueDate: nextMonthlyDate(loan.installment_day) }))
       .filter((item) => {
@@ -144,15 +213,47 @@ export function DashboardPage() {
         return remaining !== null && remaining >= 0 && remaining <= UPCOMING_DAYS
       })
       .map(({ loan, dueDate }) => ({
-        id: `loan-${loan.id}`,
+        id: `loan-${loan.id}-${dateInputValue(dueDate)}`,
+        recordId: loan.id,
+        source: 'loan_installment' as const,
         title: `Kredi · ${loan.bank_name} · ${loan.loan_name}`,
         value: formatCurrency(loan.monthly_payment),
         date: formatMonthDay(dueDate),
         sortTime: dueDate?.getTime() ?? 0,
       }))
 
-    return [...manualPayments, ...creditCards, ...loanInstallments].sort((a, b) => a.sortTime - b.sortTime).slice(0, 10)
-  }, [data.cards, data.loans, data.payments])
+    return [...manualPayments, ...creditCards, ...loanInstallments, ...personalDebts, ...legacyLoanInstallments]
+      .filter((item) => !dismissedKeys.has(item.id))
+      .sort((a, b) => a.sortTime - b.sortTime)
+      .slice(0, 10)
+  }, [data.cards, data.debts, data.dismissedUpcomingItems, data.loanInstallments, data.loans, data.payments])
+
+  async function dismissUpcomingItem(item: UpcomingItem) {
+    if (!user) return
+
+    if (item.source === 'payment') {
+      const { error: deleteError } = await supabase.from('payments').delete().eq('id', item.recordId)
+      if (deleteError) {
+        setError(deleteError.message)
+        return
+      }
+    } else {
+      const { error: dismissError } = await supabase.from('dismissed_upcoming_items').upsert(
+        {
+          user_id: user.id,
+          item_key: item.id,
+          source: item.source,
+        },
+        { onConflict: 'user_id,item_key' },
+      )
+      if (dismissError) {
+        setError(dismissError.message)
+        return
+      }
+    }
+
+    await loadDashboard()
+  }
 
   if (loading) {
     return <p className="rounded-lg bg-white p-4 text-sm text-stone-500 dark:bg-stone-900 dark:text-stone-400">Özet yükleniyor...</p>
@@ -227,12 +328,18 @@ export function DashboardPage() {
           <EmptyState title="Yaklaşan ödeme yok" description="Önümüzdeki 30 gün için ödeme, kart günü veya kredi taksidi bulunmuyor." />
         ) : (
           upcomingItems.map((item) => (
-            <ModernUpcomingRow key={item.id} title={item.title} value={item.value} date={item.date} />
+            <ModernUpcomingRow key={item.id} item={item} onDismiss={dismissUpcomingItem} />
           ))
         )}
       </UpcomingSection>
+
+      <HistorySection rows={data.transactionHistory} />
     </section>
   )
+}
+
+function dateInputValue(date: Date | null) {
+  return date ? date.toLocaleDateString('sv-SE') : 'unknown'
 }
 
 function formatMonthDay(date: Date | null) {
@@ -290,19 +397,88 @@ function ModernStatCard({ label, value, icon, color, highlight }: { label: strin
   )
 }
 
-function ModernUpcomingRow({ title, value, date }: { title: string; value: string; date: string }) {
+function ModernUpcomingRow({ item, onDismiss }: { item: UpcomingItem; onDismiss: (item: UpcomingItem) => Promise<void> }) {
+  const [dragStart, setDragStart] = useState<number | null>(null)
+  const [isOpen, setIsOpen] = useState(false)
+
   return (
-    <article className="flex items-center justify-between gap-3 rounded-xl border border-stone-200 bg-white p-4 shadow-md transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 hover:border-indigo-300 dark:border-stone-800 dark:bg-stone-900 dark:hover:border-indigo-700">
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-semibold text-stone-950 dark:text-stone-50">{title}</p>
-        <p className="mt-1 flex items-center gap-1.5 text-xs text-stone-500 dark:text-stone-400">
-          <CalendarDays size={14} className="text-stone-400 dark:text-stone-500" />
-          {date}
-        </p>
-      </div>
-      <div className="shrink-0 rounded-lg bg-stone-100 px-3 py-1.5 text-sm font-semibold text-stone-900 transition-colors hover:bg-indigo-100 dark:bg-stone-800 dark:text-stone-100 dark:hover:bg-indigo-900/30">
-        {value}
-      </div>
-    </article>
+    <div className="relative overflow-hidden rounded-xl">
+      <button
+        type="button"
+        onClick={() => void onDismiss(item)}
+        className="absolute inset-y-0 right-0 grid w-16 place-items-center bg-rose-600 text-white"
+        aria-label="Yaklaşan ödemeyi sil"
+      >
+        <Trash2 size={18} />
+      </button>
+      <article
+        onPointerDown={(event) => setDragStart(event.clientX)}
+        onPointerUp={(event) => {
+          if (dragStart === null) return
+          const delta = event.clientX - dragStart
+          if (delta < -45) setIsOpen(true)
+          if (delta > 30) setIsOpen(false)
+          setDragStart(null)
+        }}
+        className={`relative flex items-center justify-between gap-3 rounded-xl border border-stone-200 bg-white p-4 shadow-md transition-all duration-300 hover:border-indigo-300 hover:shadow-lg dark:border-stone-800 dark:bg-stone-900 dark:hover:border-indigo-700 ${
+          isOpen ? '-translate-x-16' : 'translate-x-0'
+        }`}
+        style={{ touchAction: 'pan-y' }}
+      >
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-semibold text-stone-950 dark:text-stone-50">{item.title}</p>
+          <p className="mt-1 flex items-center gap-1.5 text-xs text-stone-500 dark:text-stone-400">
+            <CalendarDays size={14} className="text-stone-400 dark:text-stone-500" />
+            {item.date}
+          </p>
+        </div>
+        <div className="shrink-0 rounded-lg bg-stone-100 px-3 py-1.5 text-sm font-semibold text-stone-900 transition-colors hover:bg-indigo-100 dark:bg-stone-800 dark:text-stone-100 dark:hover:bg-indigo-900/30">
+          {item.value}
+        </div>
+      </article>
+    </div>
   )
+}
+
+function HistorySection({ rows }: { rows: TransactionHistory[] }) {
+  return (
+    <section>
+      <h2 className="mb-4 text-lg font-bold text-stone-950 dark:text-stone-50">Son 3 ay işlem geçmişi</h2>
+      {rows.length === 0 ? (
+        <EmptyState title="İşlem geçmişi yok" description="Ödemeler, transferler ve borç kapatma işlemleri burada görünecek." />
+      ) : (
+        <div className="space-y-3">
+          {rows.slice(0, 20).map((row) => (
+            <article
+              key={row.id}
+              className="rounded-xl border border-stone-200 bg-white p-4 shadow-sm dark:border-stone-800 dark:bg-stone-900"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold text-stone-950 dark:text-stone-50">{row.title}</p>
+                  <p className="mt-1 text-xs text-stone-500 dark:text-stone-400">{formatHistoryDate(row.occurred_at)}</p>
+                </div>
+                {row.amount !== null ? (
+                  <span className="shrink-0 rounded-lg bg-stone-100 px-3 py-1.5 text-sm font-semibold text-stone-900 dark:bg-stone-800 dark:text-stone-100">
+                    {formatCurrency(row.amount)}
+                  </span>
+                ) : null}
+              </div>
+              {row.note ? <p className="mt-2 text-xs text-stone-500 dark:text-stone-400">{row.note}</p> : null}
+            </article>
+          ))}
+        </div>
+      )}
+    </section>
+  )
+}
+
+function formatHistoryDate(value: string) {
+  return new Intl.DateTimeFormat('tr-TR', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(value))
 }

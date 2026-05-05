@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import type { Debt } from '../types/database'
 import { formatDate } from '../utils/date'
 import { formatCurrency, formatNumber, parseNumber } from '../utils/formatCurrency'
+import { addTransactionHistory } from '../utils/history'
 
 const fields: FormField[] = [
   { name: 'person_name', label: 'Kişi', type: 'text', required: true },
@@ -114,6 +115,20 @@ async function markDebtAsClosed(debt: Debt, reload: () => Promise<void>, setErro
     return
   }
 
+  const historyError = await addTransactionHistory({
+    user_id: debt.user_id,
+    type: 'debt',
+    title: `${debt.person_name} borç kaydı kapandı`,
+    amount: debt.estimated_value_try,
+    source_table: 'debts',
+    source_id: debt.id,
+    note: debt.direction === 'borç_aldım' ? 'Alınan borç ödendi.' : 'Verilen borç tahsil edildi.',
+  })
+  if (historyError) {
+    setError(historyError.message)
+    return
+  }
+
   await reload()
 }
 
@@ -172,7 +187,7 @@ export function DebtsPage() {
           <button
             type="button"
             onClick={() => void markDebtAsClosed(row, helpers.reload, helpers.setError)}
-            className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-700"
+            className="max-w-full rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-700"
           >
             Ödeme yapıldı olarak işaretle
           </button>

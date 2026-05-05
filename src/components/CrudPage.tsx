@@ -12,6 +12,9 @@ type FieldOption = {
   value: string
 }
 
+type FormErrors = Record<string, string>
+type SaveAction = 'create' | 'update'
+
 export type FormField = {
   name: string
   label: string
@@ -36,6 +39,8 @@ type CrudPageProps<T extends TableName> = {
   orderBy?: keyof RowFor<T> & string
   getInitialValues: (row?: RowFor<T>) => Record<string, string | number>
   mapForm: (formData: FormData, userId: string) => InsertFor<T> | UpdateFor<T>
+  validateForm?: (formData: FormData, values: Record<string, string>, editing: RowFor<T> | null) => FormErrors
+  afterSave?: (row: RowFor<T>, action: SaveAction, helpers: { reload: () => Promise<void>; setError: (message: string) => void }) => Promise<void> | void
   renderTitle: (row: RowFor<T>) => string
   renderSubtitle?: (row: RowFor<T>) => string
   renderDetails: (row: RowFor<T>) => string[]
@@ -47,7 +52,7 @@ type CrudPageProps<T extends TableName> = {
   getGroupClassName?: (group: string) => string
   renderRowActions?: (row: RowFor<T>, helpers: { reload: () => Promise<void>; setError: (message: string) => void; rows: RowFor<T>[] }) => ReactNode
   renderMenuActions?: (row: RowFor<T>, helpers: { reload: () => Promise<void>; setError: (message: string) => void; rows: RowFor<T>[]; closeMenu: () => void }) => ReactNode
-  renderExtra?: (row: RowFor<T>) => ReactNode
+  renderExtra?: (row: RowFor<T>, helpers: { reload: () => Promise<void>; setError: (message: string) => void; rows: RowFor<T>[] }) => ReactNode
 }
 
 export function CrudPage<T extends TableName>({
@@ -60,6 +65,8 @@ export function CrudPage<T extends TableName>({
   orderBy = 'created_at' as keyof RowFor<T> & string,
   getInitialValues,
   mapForm,
+  validateForm,
+  afterSave,
   renderTitle,
   renderSubtitle,
   renderDetails,
@@ -81,7 +88,10 @@ export function CrudPage<T extends TableName>({
   const [editing, setEditing] = useState<RowFor<T> | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
   const [formValues, setFormValues] = useState<Record<string, string>>({})
+  const [formErrors, setFormErrors] = useState<FormErrors>({})
+  const [formError, setFormError] = useState('')
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null)
+  const visibleFields = fields.filter((field) => isFieldVisible(field, formValues))
 
   useEffect(() => {
     function handleClickOutside() {
@@ -115,17 +125,28 @@ export function CrudPage<T extends TableName>({
   function openCreate() {
     setEditing(null)
     setFormValues(toFormValues(getInitialValues()))
+    setFormErrors({})
+    setFormError('')
     setModalOpen(true)
   }
 
   function openEdit(row: RowFor<T>) {
     setEditing(row)
     setFormValues(toFormValues(getInitialValues(row)))
+    setFormErrors({})
+    setFormError('')
     setModalOpen(true)
   }
 
   function updateFormValue(name: string, value: string) {
     setFormValues((current) => ({ ...current, [name]: value }))
+    setFormErrors((current) => {
+      if (!current[name]) return current
+      const next = { ...current }
+      delete next[name]
+      return next
+    })
+    setFormError('')
   }
 
   async function handleDelete(id: string) {
@@ -144,9 +165,22 @@ export function CrudPage<T extends TableName>({
     event.preventDefault()
     if (!user) return
 
+    const formData = new FormData(event.currentTarget)
+    const validationErrors = {
+      ...validateFields(visibleFields, formData),
+      ...(validateForm?.(formData, formValues, editing) ?? {}),
+    }
+    if (Object.keys(validationErrors).length > 0) {
+      setFormErrors(validationErrors)
+      setFormError('Lütfen zorunlu alanları ve hatalı değerleri kontrol et.')
+      return
+    }
+
     setSaving(true)
     setError('')
-    const payload = mapForm(new FormData(event.currentTarget), user.id)
+    setFormError('')
+    const payload = mapForm(formData, user.id)
+    const action: SaveAction = editing ? 'update' : 'create'
 
     const response = editing
       ? await supabase
@@ -156,15 +190,27 @@ export function CrudPage<T extends TableName>({
           .select()
           .single()
       : await supabase.from(table as never).insert(payload as never).select().single()
+    const savedResponse = response as unknown as { data: unknown; error: { message: string } | null }
 
-    if (response.error) {
-      setError(response.error.message)
+    if (savedResponse.error) {
+      setError(savedResponse.error.message)
       setSaving(false)
       return
     }
 
+    if (savedResponse.data) {
+      try {
+        await afterSave?.(savedResponse.data as RowFor<T>, action, { reload: loadRows, setError })
+      } catch (saveError) {
+        setError(saveError instanceof Error ? saveError.message : 'Kayıt sonrası işlem tamamlanamadı.')
+        setSaving(false)
+        return
+      }
+    }
+
     setModalOpen(false)
     setEditing(null)
+    setFormErrors({})
     setSaving(false)
     await loadRows()
   }
@@ -222,11 +268,7 @@ export function CrudPage<T extends TableName>({
                         <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">{renderSubtitle(row)}</p>
                       ) : null}
                     </div>
-                    <div className="flex items-center gap-2">
-                      {renderRowActions ? (
-                        <div className="flex flex-wrap gap-2">{renderRowActions(row, { reload: loadRows, setError, rows })}</div>
-                      ) : null}
-                      <div className="relative shrink-0">
+                    <div className="relative shrink-0">
                         <button
                           type="button"
                           onClick={(e) => {
@@ -267,9 +309,11 @@ export function CrudPage<T extends TableName>({
                             </button>
                           </div>
                         )}
-                      </div>
                     </div>
                   </div>
+                  {renderRowActions ? (
+                    <div className="mt-3 flex flex-wrap gap-2">{renderRowActions(row, { reload: loadRows, setError, rows })}</div>
+                  ) : null}
                   <dl className="mt-4 grid grid-cols-1 gap-2 text-sm min-[390px]:grid-cols-2">
                     {renderDetails(row).map((detail) => (
                       <div
@@ -282,7 +326,7 @@ export function CrudPage<T extends TableName>({
                     ))}
                   </dl>
                   {'note' in row && row.note ? <p className="mt-3 text-sm text-stone-500 dark:text-stone-400">{row.note}</p> : null}
-                  {renderExtra ? renderExtra(row) : null}
+                  {renderExtra ? renderExtra(row, { reload: loadRows, setError, rows }) : null}
                 </article>
               ))}
             </div>
@@ -296,25 +340,28 @@ export function CrudPage<T extends TableName>({
         open={modalOpen}
         onClose={() => setModalOpen(false)}
       >
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {fields
-            .filter(
-              (field) =>
-                !field.visibleWhen ||
-                (Array.isArray(field.visibleWhen.value)
-                  ? field.visibleWhen.value.includes(formValues[field.visibleWhen.field])
-                  : formValues[field.visibleWhen.field] === field.visibleWhen.value),
-            )
-            .map((field) => (
+        <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+          {formError ? <p className="rounded-lg bg-rose-50 p-3 text-sm text-rose-700 dark:bg-rose-950/40 dark:text-rose-200">{formError}</p> : null}
+          {visibleFields.map((field) => {
+            const fieldError = formErrors[field.name]
+            const fieldBorder = fieldError
+              ? 'border-rose-400 focus:border-rose-600 dark:border-rose-700'
+              : 'border-stone-200 focus:border-emerald-600 dark:border-stone-700'
+
+            return (
               <label key={field.name} className="block text-sm font-medium text-stone-700 dark:text-stone-200">
-                {field.label}
+                <span>
+                  {field.label}
+                  {field.required ? <span className="text-rose-500"> *</span> : null}
+                </span>
                 {field.type === 'select' ? (
                   <select
                     name={field.name}
                     required={field.required}
                     value={formValues[field.name] ?? ''}
                     onChange={(event) => updateFormValue(field.name, event.target.value)}
-                    className="mt-1 w-full rounded-lg border border-stone-200 bg-white px-3 py-3 outline-none focus:border-emerald-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+                    aria-invalid={Boolean(fieldError)}
+                    className={`mt-1 w-full rounded-lg border bg-white px-3 py-3 outline-none dark:bg-stone-900 dark:text-stone-100 ${fieldBorder}`}
                   >
                     {field.options?.map((option) => (
                       <option key={option.value} value={option.value}>
@@ -328,7 +375,8 @@ export function CrudPage<T extends TableName>({
                     rows={3}
                     value={formValues[field.name] ?? ''}
                     onChange={(event) => updateFormValue(field.name, event.target.value)}
-                    className="mt-1 w-full rounded-lg border border-stone-200 px-3 py-3 outline-none focus:border-emerald-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+                    aria-invalid={Boolean(fieldError)}
+                    className={`mt-1 w-full rounded-lg border px-3 py-3 outline-none dark:bg-stone-900 dark:text-stone-100 ${fieldBorder}`}
                   />
                 ) : field.type === 'date' ? (
                   <div className="relative mt-1">
@@ -340,7 +388,8 @@ export function CrudPage<T extends TableName>({
                       onClick={(event) => event.currentTarget.showPicker?.()}
                       onFocus={(event) => event.currentTarget.showPicker?.()}
                       onChange={(event) => updateFormValue(field.name, event.target.value)}
-                      className="w-full rounded-lg border border-stone-200 px-3 py-3 pr-11 outline-none focus:border-emerald-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+                      aria-invalid={Boolean(fieldError)}
+                      className={`min-w-0 max-w-full appearance-none rounded-lg border px-3 py-3 pr-11 text-base outline-none [color-scheme:light] dark:bg-stone-900 dark:text-stone-100 dark:[color-scheme:dark] ${fieldBorder}`}
                     />
                     <CalendarDays
                       aria-hidden="true"
@@ -355,7 +404,8 @@ export function CrudPage<T extends TableName>({
                       required={field.required}
                       value={formValues[field.name] ?? ''}
                       onChange={(event) => updateFormValue(field.name, event.target.value)}
-                      className="w-full appearance-none rounded-lg border border-stone-200 bg-white px-3 py-3 pr-11 outline-none focus:border-emerald-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+                      aria-invalid={Boolean(fieldError)}
+                      className={`w-full appearance-none rounded-lg border bg-white px-3 py-3 pr-11 outline-none dark:bg-stone-900 dark:text-stone-100 ${fieldBorder}`}
                     >
                       <option value="">Gün seç</option>
                       {Array.from({ length: 31 }, (_, index) => {
@@ -382,11 +432,14 @@ export function CrudPage<T extends TableName>({
                     step={field.step}
                     value={formValues[field.name] ?? ''}
                     onChange={(event) => updateFormValue(field.name, event.target.value)}
-                    className="mt-1 w-full rounded-lg border border-stone-200 px-3 py-3 outline-none focus:border-emerald-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+                    aria-invalid={Boolean(fieldError)}
+                    className={`mt-1 w-full rounded-lg border px-3 py-3 outline-none dark:bg-stone-900 dark:text-stone-100 ${fieldBorder}`}
                   />
                 )}
+                {fieldError ? <span className="mt-1 block text-xs font-medium text-rose-600 dark:text-rose-300">{fieldError}</span> : null}
               </label>
-            ))}
+            )
+          })}
           <button
             type="submit"
             disabled={saving}
@@ -411,6 +464,41 @@ export function CrudPage<T extends TableName>({
 
 function toFormValues(values: Record<string, string | number>) {
   return Object.fromEntries(Object.entries(values).map(([key, value]) => [key, String(value)]))
+}
+
+function isFieldVisible(field: FormField, values: Record<string, string>) {
+  if (!field.visibleWhen) return true
+
+  const currentValue = values[field.visibleWhen.field]
+  return Array.isArray(field.visibleWhen.value)
+    ? field.visibleWhen.value.includes(currentValue)
+    : currentValue === field.visibleWhen.value
+}
+
+function validateFields(fields: FormField[], formData: FormData) {
+  const errors: FormErrors = {}
+
+  for (const field of fields) {
+    const rawValue = String(formData.get(field.name) ?? '').trim()
+    if (field.required && !rawValue) {
+      errors[field.name] = 'Bu alan zorunlu.'
+      continue
+    }
+
+    if (field.type === 'number' && rawValue) {
+      const value = Number(rawValue)
+      if (!Number.isFinite(value)) {
+        errors[field.name] = 'Geçerli bir sayı gir.'
+        continue
+      }
+
+      if (field.min !== undefined && value < Number(field.min)) {
+        errors[field.name] = `En az ${field.min} olmalı.`
+      }
+    }
+  }
+
+  return errors
 }
 
 function groupRows<T>(rows: T[], groupBy?: (row: T) => string) {

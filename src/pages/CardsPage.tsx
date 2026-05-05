@@ -5,6 +5,7 @@ import { SimpleModal } from '../components/SimpleModal'
 import { supabase } from '../lib/supabase'
 import type { Card } from '../types/database'
 import { formatCurrency, parseNumber } from '../utils/formatCurrency'
+import { addTransactionHistory } from '../utils/history'
 
 const fields: FormField[] = [
   { name: 'bank_name', label: 'Banka', type: 'text', required: true },
@@ -146,6 +147,20 @@ export function CardsPage() {
       return
     }
 
+    const historyError = await addTransactionHistory({
+      user_id: transactionCard.user_id,
+      type: 'transfer',
+      title: `${transactionCard.card_name} ${transactionType === 'in' ? 'para girişi' : 'para çıkışı'}`,
+      amount,
+      source_table: 'cards',
+      source_id: transactionCard.id,
+      note: transactionType === 'in' ? 'Banka kartına para geldi.' : 'Banka kartından para çıktı.',
+    })
+    if (historyError) {
+      setTransactionError(historyError.message)
+      return
+    }
+
     setTransactionCard(null)
     await reloadCards?.()
   }
@@ -211,6 +226,20 @@ export function CardsPage() {
       return
     }
 
+    const historyError = await addTransactionHistory({
+      user_id: debtPaymentCard.user_id,
+      type: 'payment',
+      title: `${debtPaymentCard.card_name} kart borcu ödendi`,
+      amount,
+      source_table: 'cards',
+      source_id: debtPaymentCard.id,
+      note: `${sourceCard.card_name} hesabından ödendi.`,
+    })
+    if (historyError) {
+      setDebtPaymentError(historyError.message)
+      return
+    }
+
     setDebtPaymentCard(null)
     await reloadCards?.()
   }
@@ -244,6 +273,20 @@ export function CardsPage() {
     setExpenseSaving(false)
     if (error) {
       setExpenseError(error.message)
+      return
+    }
+
+    const historyError = await addTransactionHistory({
+      user_id: expenseCard.user_id,
+      type: 'card',
+      title: `${expenseCard.card_name} harcama`,
+      amount,
+      source_table: 'cards',
+      source_id: expenseCard.id,
+      note: 'Kredi kartına harcama eklendi.',
+    })
+    if (historyError) {
+      setExpenseError(historyError.message)
       return
     }
 
