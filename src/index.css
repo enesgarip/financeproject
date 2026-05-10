@@ -3,7 +3,51 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+}
+
 :root {
+  --radius: 0.7rem;
+  --background: #f7f8f4;
+  --foreground: #17211b;
+  --card: #ffffff;
+  --card-foreground: #17211b;
+  --popover: #ffffff;
+  --popover-foreground: #17211b;
+  --primary: #047857;
+  --primary-foreground: #ffffff;
+  --secondary: #eef2ee;
+  --secondary-foreground: #17211b;
+  --muted: #eef0eb;
+  --muted-foreground: #70746d;
+  --accent: #e6f6ef;
+  --accent-foreground: #065f46;
+  --destructive: #e11d48;
+  --border: #dedfd8;
+  --input: #e7e8e1;
+  --ring: #059669;
   color: #17211b;
   background: #f7f8f4;
   color-scheme: light dark;
@@ -19,6 +63,24 @@
 }
 
 :root.dark {
+  --background: #11110f;
+  --foreground: #e7e5e4;
+  --card: #1c1b18;
+  --card-foreground: #f5f5f4;
+  --popover: #1c1b18;
+  --popover-foreground: #f5f5f4;
+  --primary: #34d399;
+  --primary-foreground: #052e23;
+  --secondary: #292824;
+  --secondary-foreground: #f5f5f4;
+  --muted: #292824;
+  --muted-foreground: #a8a29e;
+  --accent: #14382c;
+  --accent-foreground: #bbf7d0;
+  --destructive: #fb7185;
+  --border: #3c3933;
+  --input: #33302b;
+  --ring: #34d399;
   color-scheme: dark;
   color: #e7e5e4;
   background: #11110f;

@@ -1,19 +1,25 @@
-import { CalendarDays, TrendingUp, TrendingDown, Wallet, CreditCard, Landmark, AlertCircle, ArrowUpRight, ArrowDownRight, Trash2 } from 'lucide-react'
+import { ArrowDownRight, ArrowUpRight, CalendarDays, CreditCard, Landmark, ReceiptText, Trash2, TrendingDown, TrendingUp } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAuth } from '../auth/useAuth'
 import { supabase } from '../lib/supabase'
-import type { Asset, Card, Debt, DismissedUpcomingItem, Loan, LoanInstallment, Payment, TransactionHistory, UpcomingDismissalSource } from '../types/database'
+import type { Asset, Card as FinanceCard, Debt, DismissedUpcomingItem, Loan, LoanInstallment, Payment, SalaryHistory, TransactionHistory, UpcomingDismissalSource } from '../types/database'
 import { daysUntil, formatDate, isUpcomingDate, nextMonthlyDate } from '../utils/date'
 import { formatCurrency } from '../utils/formatCurrency'
 import { EmptyState } from '../components/EmptyState'
+import { Badge } from '../components/ui/badge'
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
+import { Progress } from '../components/ui/progress'
+import { Separator } from '../components/ui/separator'
+import { Skeleton } from '../components/ui/skeleton'
 
 type DashboardData = {
   assets: Asset[]
-  cards: Card[]
+  cards: FinanceCard[]
   loans: Loan[]
   loanInstallments: LoanInstallment[]
   debts: Debt[]
   payments: Payment[]
+  salaryHistory: SalaryHistory[]
   transactionHistory: TransactionHistory[]
   dismissedUpcomingItems: DismissedUpcomingItem[]
 }
@@ -25,6 +31,7 @@ const emptyData: DashboardData = {
   loanInstallments: [],
   debts: [],
   payments: [],
+  salaryHistory: [],
   transactionHistory: [],
   dismissedUpcomingItems: [],
 }
@@ -41,19 +48,75 @@ type UpcomingItem = {
   sortTime: number
 }
 
+type CreditLimitGroup = {
+  key: string
+  label: string
+  limit: number
+  debt: number
+  available: number
+  usageRate: number
+  cards: FinanceCard[]
+}
+
 function sum<T>(rows: T[], selector: (row: T) => number) {
   return rows.reduce((total, row) => total + selector(row), 0)
 }
 
-function totalCreditLimit(cards: Card[]) {
+function totalCreditLimit(cards: FinanceCard[]) {
   const limitsByGroup = new Map<string, number>()
 
   for (const card of cards.filter((item) => item.card_type === 'kredi_karti')) {
-    const groupKey = card.limit_group_name?.trim() || card.id
+    const groupKey = creditLimitGroupKey(card)
     limitsByGroup.set(groupKey, Math.max(limitsByGroup.get(groupKey) ?? 0, card.credit_limit))
   }
 
   return Array.from(limitsByGroup.values()).reduce((total, limit) => total + limit, 0)
+}
+
+function creditLimitGroupKey(card: FinanceCard) {
+  return card.limit_group_name?.trim() || card.id
+}
+
+function buildCreditLimitGroups(cards: FinanceCard[]): CreditLimitGroup[] {
+  const groups = new Map<string, FinanceCard[]>()
+
+  for (const card of cards.filter((item) => item.card_type === 'kredi_karti')) {
+    const key = creditLimitGroupKey(card)
+    groups.set(key, [...(groups.get(key) ?? []), card])
+  }
+
+  return Array.from(groups, ([key, groupCards]) => {
+    const limit = Math.max(...groupCards.map((card) => card.credit_limit), 0)
+    const debt = sum(groupCards, (card) => card.debt_amount)
+    const usageRate = limit > 0 ? Math.min(100, (debt / limit) * 100) : 0
+    const groupName = groupCards.find((card) => card.limit_group_name?.trim())?.limit_group_name?.trim()
+
+    return {
+      key,
+      label: groupName || groupCards[0]?.card_name || 'Kart grubu',
+      limit,
+      debt,
+      available: Math.max(0, limit - debt),
+      usageRate,
+      cards: groupCards,
+    }
+  }).sort((a, b) => b.debt - a.debt)
+}
+
+function getSalaryTrend(rows: SalaryHistory[]) {
+  const ordered = [...rows].sort((a, b) => a.effective_date.localeCompare(b.effective_date))
+  const current = ordered.at(-1) ?? null
+  const previous = ordered.at(-2) ?? null
+
+  if (!current || !previous || previous.amount <= 0) return { current, previous, difference: 0, percentage: 0 }
+
+  const difference = current.amount - previous.amount
+  return {
+    current,
+    previous,
+    difference,
+    percentage: (difference / previous.amount) * 100,
+  }
 }
 
 export function DashboardPage() {
@@ -69,13 +132,14 @@ export function DashboardPage() {
     const historyStart = new Date()
     historyStart.setMonth(historyStart.getMonth() - 3)
 
-    const [assets, cards, loans, loanInstallments, debts, payments, transactionHistory, dismissedUpcomingItems] = await Promise.all([
+    const [assets, cards, loans, loanInstallments, debts, payments, salaryHistory, transactionHistory, dismissedUpcomingItems] = await Promise.all([
       supabase.from('assets').select('*'),
       supabase.from('cards').select('*'),
       supabase.from('loans').select('*'),
       supabase.from('loan_installments').select('*'),
       supabase.from('debts').select('*'),
       supabase.from('payments').select('*'),
+      supabase.from('salary_history').select('*').order('effective_date', { ascending: false }),
       supabase.from('transaction_history').select('*').gte('occurred_at', historyStart.toISOString()).order('occurred_at', { ascending: false }),
       supabase.from('dismissed_upcoming_items').select('*'),
     ])
@@ -87,6 +151,7 @@ export function DashboardPage() {
       loanInstallments.error,
       debts.error,
       payments.error,
+      salaryHistory.error,
       transactionHistory.error,
       dismissedUpcomingItems.error,
     ].find(Boolean)
@@ -103,6 +168,7 @@ export function DashboardPage() {
       loanInstallments: loanInstallments.data ?? [],
       debts: debts.data ?? [],
       payments: payments.data ?? [],
+      salaryHistory: salaryHistory.data ?? [],
       transactionHistory: transactionHistory.data ?? [],
       dismissedUpcomingItems: dismissedUpcomingItems.data ?? [],
     })
@@ -153,6 +219,9 @@ export function DashboardPage() {
     )
     const totalDebts = totalCreditCardDebt + totalLoanDebt + totalPersonalDebts
     const netWorth = totalAssets + totalReceivables - totalDebts
+    const creditUsageRate = totalSharedCreditLimit > 0 ? Math.min(100, (totalCreditCardDebt / totalSharedCreditLimit) * 100) : 0
+    const salaryTrend = getSalaryTrend(data.salaryHistory)
+    const creditLimitGroups = buildCreditLimitGroups(data.cards)
 
     return {
       totalAssets,
@@ -160,10 +229,13 @@ export function DashboardPage() {
       netWorth,
       totalCreditCardDebt,
       totalCreditLimit: totalSharedCreditLimit,
+      creditUsageRate,
+      creditLimitGroups,
       totalLoanDebt,
       totalLoanMonthlyPayment,
       totalPersonalDebts,
       totalReceivables,
+      salaryTrend,
     }
   }, [data])
 
@@ -278,7 +350,17 @@ export function DashboardPage() {
   }
 
   if (loading) {
-    return <p className="rounded-lg bg-white p-4 text-sm text-stone-500 dark:bg-stone-900 dark:text-stone-400">Özet yükleniyor...</p>
+    return (
+      <section className="flex flex-col gap-4">
+        <Skeleton className="h-44 rounded-2xl" />
+        <div className="grid grid-cols-2 gap-3">
+          {Array.from({ length: 6 }, (_, index) => (
+            <Skeleton key={index} className="h-24 rounded-xl" />
+          ))}
+        </div>
+        <Skeleton className="h-32 rounded-2xl" />
+      </section>
+    )
   }
 
   if (error) {
@@ -286,63 +368,35 @@ export function DashboardPage() {
   }
 
   return (
-    <section className="space-y-6">
+    <section className="flex flex-col gap-5">
+      <NetWorthPanel
+        netWorth={summary.netWorth}
+        totalAssets={summary.totalAssets}
+        totalDebts={summary.totalDebts}
+        totalReceivables={summary.totalReceivables}
+      />
+
       <div className="grid grid-cols-2 gap-3">
-        <ModernStatCard
-          label="Toplam varlık"
-          value={formatCurrency(summary.totalAssets)}
-          icon={<Wallet size={20} />}
-          color="indigo"
-        />
-        <ModernStatCard
-          label="Toplam borç"
-          value={formatCurrency(summary.totalDebts)}
-          icon={<AlertCircle size={20} />}
-          color="rose"
-        />
-        <ModernStatCard
-          label="Net değer"
-          value={formatCurrency(summary.netWorth)}
-          icon={summary.netWorth >= 0 ? <TrendingUp size={20} /> : <TrendingDown size={20} />}
-          color={summary.netWorth >= 0 ? 'emerald' : 'rose'}
-          highlight
-        />
-        <ModernStatCard
-          label="Toplam limit"
-          value={formatCurrency(summary.totalCreditLimit)}
-          icon={<CreditCard size={20} />}
-          color="violet"
-        />
-        <ModernStatCard
-          label="Kart borcu"
-          value={formatCurrency(summary.totalCreditCardDebt)}
-          icon={<CreditCard size={20} />}
-          color="amber"
-        />
-        <ModernStatCard
-          label="Kredi borcu"
-          value={formatCurrency(summary.totalLoanDebt)}
-          icon={<Landmark size={20} />}
-          color="amber"
-        />
-        <ModernStatCard
-          label="Kredi ödemesi"
+        <MetricTile label="Toplam limit" value={formatCurrency(summary.totalCreditLimit)} icon={<CreditCard />} tone="indigo" />
+        <MetricTile label="Kart borcu" value={formatCurrency(summary.totalCreditCardDebt)} icon={<ReceiptText />} tone="amber" />
+        <MetricTile label="Kredi borcu" value={formatCurrency(summary.totalLoanDebt)} icon={<Landmark />} tone="rose" />
+        <MetricTile label="Kredi ödemesi" value={formatCurrency(summary.totalLoanMonthlyPayment)} icon={<CalendarDays />} tone="stone" />
+        <MetricTile label="Kişisel borç" value={formatCurrency(summary.totalPersonalDebts)} icon={<ArrowDownRight />} tone="rose" />
+        <MetricTile label="Alacak" value={formatCurrency(summary.totalReceivables)} icon={<ArrowUpRight />} tone="emerald" />
+      </div>
+
+      <CreditLimitSection groups={summary.creditLimitGroups} totalUsageRate={summary.creditUsageRate} />
+
+      <div className="grid gap-3 min-[520px]:grid-cols-2">
+        <PulseCard
+          title="Kredi ritmi"
+          label="Aylık ödeme"
           value={formatCurrency(summary.totalLoanMonthlyPayment)}
-          icon={<Landmark size={20} />}
-          color="rose"
+          description={`${formatCurrency(summary.totalLoanDebt)} aktif kredi borcu`}
+          icon={<Landmark />}
+          tone="rose"
         />
-        <ModernStatCard
-          label="Kişisel borç"
-          value={formatCurrency(summary.totalPersonalDebts)}
-          icon={<ArrowDownRight size={20} />}
-          color="rose"
-        />
-        <ModernStatCard
-          label="Alacak"
-          value={formatCurrency(summary.totalReceivables)}
-          icon={<ArrowUpRight size={20} />}
-          color="emerald"
-        />
+        <SalaryPulse trend={summary.salaryTrend} />
       </div>
 
       <UpcomingSection title="Yaklaşan ödemeler">
@@ -378,44 +432,147 @@ function UpcomingSection({ title, children }: { title: string; children: React.R
   )
 }
 
-function ModernStatCard({ label, value, icon, color, highlight }: { label: string; value: string; icon: React.ReactNode; color: 'indigo' | 'emerald' | 'rose' | 'amber' | 'violet'; highlight?: boolean }) {
-  const colorClasses = {
-    indigo: 'from-indigo-500 to-indigo-600 dark:from-indigo-600 dark:to-indigo-700',
-    emerald: 'from-emerald-500 to-emerald-600 dark:from-emerald-600 dark:to-emerald-700',
-    rose: 'from-rose-500 to-rose-600 dark:from-rose-600 dark:to-rose-700',
-    amber: 'from-amber-500 to-amber-600 dark:from-amber-600 dark:to-amber-700',
-    violet: 'from-violet-500 to-violet-600 dark:from-violet-600 dark:to-violet-700',
-  }
-
-  const bgClasses = {
-    indigo: 'bg-indigo-50 dark:bg-indigo-950/30',
-    emerald: 'bg-emerald-50 dark:bg-emerald-950/30',
-    rose: 'bg-rose-50 dark:bg-rose-950/30',
-    amber: 'bg-amber-50 dark:bg-amber-950/30',
-    violet: 'bg-violet-50 dark:bg-violet-950/30',
-  }
-
-  const iconBgClasses = {
-    indigo: 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-300',
-    emerald: 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-300',
-    rose: 'bg-rose-100 dark:bg-rose-900/50 text-rose-600 dark:text-rose-300',
-    amber: 'bg-amber-100 dark:bg-amber-900/50 text-amber-600 dark:text-amber-300',
-    violet: 'bg-violet-100 dark:bg-violet-900/50 text-violet-600 dark:text-violet-300',
-  }
+function NetWorthPanel({ netWorth, totalAssets, totalDebts, totalReceivables }: { netWorth: number; totalAssets: number; totalDebts: number; totalReceivables: number }) {
+  const isPositive = netWorth >= 0
+  const TrendIcon = isPositive ? TrendingUp : TrendingDown
 
   return (
-    <div className={`relative overflow-hidden rounded-xl border-0 shadow-md transition-all hover:shadow-lg hover:-translate-y-0.5 ${highlight ? 'col-span-2 p-5' : 'p-4'} ${bgClasses[color]}`}>
-      <div className={`absolute -right-4 -top-4 rounded-full opacity-10 bg-gradient-to-br ${colorClasses[color]} ${highlight ? 'size-32' : 'size-20'}`} />
-      <div className="relative flex items-start justify-between">
-        <div className="flex-1">
-          <p className="text-xs font-semibold uppercase tracking-wide text-stone-600 dark:text-stone-400">{label}</p>
-          <p className={`mt-1 font-extrabold tracking-tight text-stone-900 dark:text-stone-100 ${highlight ? 'text-2xl' : 'text-lg'}`}>{value}</p>
+    <Card className="border-emerald-200/70 bg-gradient-to-br from-emerald-700 to-emerald-900 py-0 text-white shadow-lg shadow-emerald-950/15 dark:border-emerald-900">
+      <CardContent className="p-5">
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <p className="text-xs font-semibold uppercase text-emerald-100/80">Net durum</p>
+            <p className="mt-2 break-words text-[clamp(1.9rem,8vw,2.7rem)] font-extrabold leading-none tabular-nums">
+              {formatCurrency(netWorth)}
+            </p>
+          </div>
+          <Badge className="shrink-0 bg-white/14 text-white ring-1 ring-white/20">
+            <TrendIcon data-icon="inline-start" />
+            {isPositive ? 'Pozitif' : 'Ekside'}
+          </Badge>
         </div>
-        <div className={`flex shrink-0 items-center justify-center rounded-xl ${iconBgClasses[color]} ${highlight ? 'size-12' : 'size-10'}`}>
-          {icon}
+        <Separator className="my-4 bg-white/15" />
+        <div className="grid grid-cols-3 gap-2 text-xs">
+          <SummaryPill label="Varlık" value={formatCurrency(totalAssets)} />
+          <SummaryPill label="Borç" value={formatCurrency(totalDebts)} />
+          <SummaryPill label="Alacak" value={formatCurrency(totalReceivables)} />
         </div>
-      </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+function SummaryPill({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="min-w-0 rounded-lg bg-white/10 px-2.5 py-2 ring-1 ring-white/10">
+      <p className="truncate text-[11px] font-medium text-emerald-50/75">{label}</p>
+      <p className="mt-1 truncate text-sm font-bold tabular-nums text-white">{value}</p>
     </div>
+  )
+}
+
+function MetricTile({ label, value, icon, tone }: { label: string; value: string; icon: React.ReactNode; tone: 'emerald' | 'rose' | 'amber' | 'indigo' | 'stone' }) {
+  const toneClass = {
+    emerald: 'bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-300 dark:ring-emerald-900',
+    rose: 'bg-rose-50 text-rose-700 ring-rose-200 dark:bg-rose-950/30 dark:text-rose-300 dark:ring-rose-900',
+    amber: 'bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-950/30 dark:text-amber-300 dark:ring-amber-900',
+    indigo: 'bg-indigo-50 text-indigo-700 ring-indigo-200 dark:bg-indigo-950/30 dark:text-indigo-300 dark:ring-indigo-900',
+    stone: 'bg-stone-100 text-stone-700 ring-stone-200 dark:bg-stone-900 dark:text-stone-300 dark:ring-stone-800',
+  }[tone]
+
+  return (
+    <Card size="sm" className="border-0 shadow-sm ring-1 ring-stone-200/80 dark:ring-stone-800">
+      <CardContent className="flex items-start justify-between gap-3 p-3">
+        <div className="min-w-0">
+          <p className="truncate text-[11px] font-bold uppercase text-muted-foreground">{label}</p>
+          <p className="mt-1 break-words text-[clamp(1rem,4.8vw,1.25rem)] font-extrabold leading-tight tabular-nums text-foreground">{value}</p>
+        </div>
+        <div className={`grid size-9 shrink-0 place-items-center rounded-lg ring-1 ${toneClass}`}>{icon}</div>
+      </CardContent>
+    </Card>
+  )
+}
+
+function CreditLimitSection({ groups, totalUsageRate }: { groups: CreditLimitGroup[]; totalUsageRate: number }) {
+  if (groups.length === 0) return null
+
+  return (
+    <Card className="border-0 shadow-sm ring-1 ring-stone-200/80 dark:ring-stone-800">
+      <CardHeader className="pb-0">
+        <div className="flex items-center justify-between gap-3">
+          <CardTitle>Kart limitleri</CardTitle>
+          <Badge variant="secondary">%{Math.round(totalUsageRate)} kullanım</Badge>
+        </div>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-3 pt-1">
+        {groups.slice(0, 3).map((group) => (
+          <div key={group.key} className="rounded-xl bg-muted/55 p-3">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-bold text-foreground">{group.label}</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  {group.cards.length} kart · kalan {formatCurrency(group.available)}
+                </p>
+              </div>
+              <p className="shrink-0 text-sm font-extrabold tabular-nums text-foreground">{formatCurrency(group.debt)}</p>
+            </div>
+            <Progress value={group.usageRate} className="mt-3 h-1.5" />
+            <div className="mt-2 flex items-center justify-between text-[11px] font-medium text-muted-foreground">
+              <span>Limit {formatCurrency(group.limit)}</span>
+              <span>%{Math.round(group.usageRate)}</span>
+            </div>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  )
+}
+
+function PulseCard({ title, label, value, description, icon, tone }: { title: string; label: string; value: string; description: string; icon: React.ReactNode; tone: 'emerald' | 'rose' }) {
+  const toneClass = tone === 'emerald' ? 'text-emerald-700 bg-emerald-50 dark:text-emerald-300 dark:bg-emerald-950/30' : 'text-rose-700 bg-rose-50 dark:text-rose-300 dark:bg-rose-950/30'
+
+  return (
+    <Card className="border-0 shadow-sm ring-1 ring-stone-200/80 dark:ring-stone-800">
+      <CardContent className="flex items-center gap-3 p-4">
+        <div className={`grid size-10 shrink-0 place-items-center rounded-xl ${toneClass}`}>{icon}</div>
+        <div className="min-w-0">
+          <p className="text-xs font-bold uppercase text-muted-foreground">{title}</p>
+          <p className="mt-1 text-sm text-muted-foreground">{label}</p>
+          <p className="truncate text-lg font-extrabold tabular-nums text-foreground">{value}</p>
+          <p className="truncate text-xs text-muted-foreground">{description}</p>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+function SalaryPulse({ trend }: { trend: ReturnType<typeof getSalaryTrend> }) {
+  if (!trend.current) {
+    return (
+      <PulseCard
+        title="Maaş trendi"
+        label="Henüz kayıt yok"
+        value="-"
+        description="Maaş geçmişi varlıklara dahil edilmez"
+        icon={<TrendingUp />}
+        tone="emerald"
+      />
+    )
+  }
+
+  const trendLabel = trend.previous
+    ? `${trend.difference >= 0 ? '+' : ''}${formatCurrency(trend.difference)} · ${trend.percentage >= 0 ? '+' : ''}${trend.percentage.toFixed(1)}%`
+    : 'İlk maaş kaydı'
+
+  return (
+    <PulseCard
+      title="Maaş trendi"
+      label={formatDate(trend.current.effective_date)}
+      value={formatCurrency(trend.current.amount)}
+      description={trendLabel}
+      icon={<TrendingUp />}
+      tone="emerald"
+    />
   )
 }
 
