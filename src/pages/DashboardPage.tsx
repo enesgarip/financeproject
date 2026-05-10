@@ -45,6 +45,17 @@ function sum<T>(rows: T[], selector: (row: T) => number) {
   return rows.reduce((total, row) => total + selector(row), 0)
 }
 
+function totalCreditLimit(cards: Card[]) {
+  const limitsByGroup = new Map<string, number>()
+
+  for (const card of cards.filter((item) => item.card_type === 'kredi_karti')) {
+    const groupKey = card.limit_group_name?.trim() || card.id
+    limitsByGroup.set(groupKey, Math.max(limitsByGroup.get(groupKey) ?? 0, card.credit_limit))
+  }
+
+  return Array.from(limitsByGroup.values()).reduce((total, limit) => total + limit, 0)
+}
+
 export function DashboardPage() {
   const { user } = useAuth()
   const [data, setData] = useState<DashboardData>(emptyData)
@@ -122,10 +133,7 @@ export function DashboardPage() {
       data.cards.filter((card) => card.card_type === 'kredi_karti'),
       (card) => card.debt_amount,
     )
-    const totalCreditLimit = sum(
-      data.cards.filter((card) => card.card_type === 'kredi_karti'),
-      (card) => card.credit_limit,
-    )
+    const totalSharedCreditLimit = totalCreditLimit(data.cards)
     const totalLoanDebt = sum(
       data.loans.filter((loan) => loan.status === 'active'),
       (loan) => loan.remaining_amount,
@@ -151,7 +159,7 @@ export function DashboardPage() {
       totalDebts,
       netWorth,
       totalCreditCardDebt,
-      totalCreditLimit,
+      totalCreditLimit: totalSharedCreditLimit,
       totalLoanDebt,
       totalLoanMonthlyPayment,
       totalPersonalDebts,
