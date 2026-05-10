@@ -97,6 +97,7 @@ function buildLoanSchedule(loan: Loan): InsertFor<'loan_installments'>[] {
 
   while (dueDate <= end && schedule.length < 240) {
     schedule.push({
+      id: crypto.randomUUID(),
       user_id: loan.user_id,
       loan_id: loan.id,
       installment_no: schedule.length + 1,
@@ -114,6 +115,12 @@ function buildLoanSchedule(loan: Loan): InsertFor<'loan_installments'>[] {
   }
 
   return schedule
+}
+
+function nextPendingInstallment(loan: Loan, installments: LoanInstallment[]) {
+  return installments
+    .filter((item) => item.loan_id === loan.id && item.status !== 'ödendi')
+    .sort((a, b) => a.due_date.localeCompare(b.due_date) || a.installment_no - b.installment_no)[0]
 }
 
 function validateLoanForm(formData: FormData) {
@@ -181,6 +188,7 @@ async function syncLoanInstallmentPlan(loan: Loan) {
   const payload = schedule.map((item) => {
     const current = existingByNo.get(item.installment_no)
     const result: InsertFor<'loan_installments'> = {
+      id: current?.id ?? item.id ?? crypto.randomUUID(),
       user_id: item.user_id,
       loan_id: item.loan_id,
       installment_no: item.installment_no,
@@ -189,9 +197,6 @@ async function syncLoanInstallmentPlan(loan: Loan) {
       status: current?.status ?? item.status,
       paid_at: current?.paid_at ?? item.paid_at,
       note: current?.note ?? item.note,
-    }
-    if (current?.id) {
-      (result as any).id = current.id
     }
     return result
   })
@@ -477,7 +482,33 @@ export function LoansPage() {
 
   function renderPaymentPlan(loan: Loan, reload: () => Promise<void>, setError: (message: string) => void) {
     const loanInstallments = installments.filter((item) => item.loan_id === loan.id)
-    if (loanInstallments.length === 0) return null
+    if (loanInstallments.length === 0) {
+      return (
+        <section className="mt-4 rounded-2xl border border-dashed border-stone-300 bg-white/55 p-3 dark:border-stone-700 dark:bg-stone-950/45">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-semibold text-stone-900 dark:text-stone-100">Ödeme planı yok</h3>
+              <p className="mt-1 text-xs text-stone-500 dark:text-stone-400">Kredi bilgilerinden aylık taksit listesini oluşturabilirsin.</p>
+            </div>
+            <button
+              type="button"
+              onClick={async () => {
+                try {
+                  await syncLoanInstallmentPlan(loan)
+                  await loadInstallments()
+                  await reload()
+                } catch (syncError) {
+                  setError(syncError instanceof Error ? syncError.message : 'Ödeme planı oluşturulamadı.')
+                }
+              }}
+              className="shrink-0 rounded-lg bg-emerald-700 px-3 py-2 text-xs font-semibold text-white shadow-sm"
+            >
+              Plan oluştur
+            </button>
+          </div>
+        </section>
+      )
+    }
 
     return (
       <section className="mt-4 rounded-2xl border border-stone-200 bg-white/65 p-3 dark:border-stone-800 dark:bg-stone-950/50">
@@ -600,14 +631,19 @@ export function LoansPage() {
         renderTitle={(row) => row.loan_name}
         renderSubtitle={(row) => `${row.bank_name} · ${row.status === 'active' ? 'Aktif kredi' : 'Kapalı kredi'}`}
         renderDetails={(row) => {
+          const nextInstallment = nextPendingInstallment(row as Loan, installments)
           const details = [
             `Kalan borç: ${formatCurrency(row.remaining_amount)}`,
             `Aylık ödeme: ${formatCurrency(row.monthly_payment)}`,
             `Taksit günü: ${row.installment_day ? `Ayın ${row.installment_day}. günü` : '-'}`,
             `Kalan taksit: ${row.remaining_installments}`,
           ]
-          if (row.status === 'active' && row.installment_day) {
-            const nextPayment = getNextPaymentDate(row.installment_day, row.remaining_installments)
+          if (row.status === 'active') {
+            const nextPayment = nextInstallment
+              ? formatDate(nextInstallment.due_date)
+              : row.installment_day
+                ? getNextPaymentDate(row.installment_day, row.remaining_installments)
+                : null
             if (nextPayment) details.push(`Bir sonraki ödeme: ${nextPayment}`)
           }
           if (row.end_date) details.push(`Bitiş tarihi: ${formatDate(row.end_date)}`)

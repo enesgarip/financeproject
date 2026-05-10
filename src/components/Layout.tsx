@@ -27,7 +27,7 @@ export function Layout() {
   }, [isDark])
 
   return (
-    <div className="min-h-svh bg-[#f7f8f4] text-stone-900 dark:bg-stone-950 dark:text-stone-100">
+    <div className="flex min-h-dvh flex-col bg-[#f7f8f4] text-stone-900 dark:bg-stone-950 dark:text-stone-100">
       <header className="sticky top-0 z-20 border-b border-stone-200 bg-[#f7f8f4]/95 px-4 pb-3 pt-[calc(env(safe-area-inset-top)+0.75rem)] backdrop-blur dark:border-stone-800 dark:bg-stone-950/95">
         <div className="mx-auto flex max-w-xl items-center justify-between gap-3">
           <div className="min-w-0">
@@ -54,7 +54,7 @@ export function Layout() {
           </div>
         </div>
       </header>
-      <main className="mx-auto w-full max-w-xl px-4 pb-[calc(env(safe-area-inset-bottom)+6.25rem)] pt-4">
+      <main className="mx-auto w-full max-w-xl flex-1 px-4 pb-[calc(env(safe-area-inset-bottom)+6.75rem)] pt-4">
         <Outlet />
       </main>
       <BottomNav />

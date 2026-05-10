@@ -103,6 +103,19 @@ export function DashboardPage() {
     void loadDashboard()
   }, [loadDashboard])
 
+  useEffect(() => {
+    function reloadWhenVisible() {
+      if (document.visibilityState === 'visible') void loadDashboard()
+    }
+
+    window.addEventListener('focus', loadDashboard)
+    document.addEventListener('visibilitychange', reloadWhenVisible)
+    return () => {
+      window.removeEventListener('focus', loadDashboard)
+      document.removeEventListener('visibilitychange', reloadWhenVisible)
+    }
+  }, [loadDashboard])
+
   const summary = useMemo(() => {
     const totalAssets = sum(data.assets, (asset) => asset.estimated_value_try)
     const totalCreditCardDebt = sum(
@@ -162,7 +175,7 @@ export function DashboardPage() {
       }))
 
     const creditCards = data.cards
-      .filter((card) => card.card_type === 'kredi_karti' && card.due_day)
+      .filter((card) => card.card_type === 'kredi_karti' && card.due_day && card.debt_amount > 0)
       .map((card) => ({ card, dueDate: nextMonthlyDate(card.due_day) }))
       .filter((item) => {
         const remaining = daysUntil(item.dueDate)
@@ -205,8 +218,9 @@ export function DashboardPage() {
         sortTime: new Date(`${debt.due_date}T00:00:00`).getTime(),
       }))
 
-    const legacyLoanInstallments = data.loanInstallments.length > 0 ? [] : data.loans
-      .filter((loan) => loan.status === 'active' && loan.installment_day && loan.remaining_installments > 0)
+    const plannedLoanIds = new Set(data.loanInstallments.map((installment) => installment.loan_id))
+    const legacyLoanInstallments = data.loans
+      .filter((loan) => !plannedLoanIds.has(loan.id) && loan.status === 'active' && loan.installment_day && loan.remaining_installments > 0)
       .map((loan) => ({ loan, dueDate: nextMonthlyDate(loan.installment_day) }))
       .filter((item) => {
         const remaining = daysUntil(item.dueDate)

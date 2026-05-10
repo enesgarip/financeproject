@@ -1,3 +1,4 @@
+import { ReceiptText } from 'lucide-react'
 import type { CSSProperties } from 'react'
 import { useState } from 'react'
 import { CrudPage, type FormField } from '../components/CrudPage'
@@ -11,6 +12,12 @@ const fields: FormField[] = [
   { name: 'bank_name', label: 'Banka', type: 'text', required: true },
   { name: 'card_name', label: 'Kart / hesap adı', type: 'text', required: true },
   {
+    name: 'holder_name',
+    label: 'Kart sahibi',
+    type: 'text',
+    visibleWhen: { field: 'card_type', value: 'kredi_karti' },
+  },
+  {
     name: 'card_type',
     label: 'Tür',
     type: 'select',
@@ -20,8 +27,14 @@ const fields: FormField[] = [
     ],
   },
   {
+    name: 'limit_group_name',
+    label: 'Ortak limit grubu',
+    type: 'text',
+    visibleWhen: { field: 'card_type', value: 'kredi_karti' },
+  },
+  {
     name: 'credit_limit',
-    label: 'Limit',
+    label: 'Limit / ortak limit',
     type: 'number',
     min: '0',
     step: '0.01',
@@ -30,7 +43,25 @@ const fields: FormField[] = [
   },
   {
     name: 'debt_amount',
-    label: 'Borç tutarı',
+    label: 'Güncel toplam borç',
+    type: 'number',
+    min: '0',
+    step: '0.01',
+    required: true,
+    visibleWhen: { field: 'card_type', value: 'kredi_karti' },
+  },
+  {
+    name: 'statement_debt_amount',
+    label: 'Dönem borcu',
+    type: 'number',
+    min: '0',
+    step: '0.01',
+    required: true,
+    visibleWhen: { field: 'card_type', value: 'kredi_karti' },
+  },
+  {
+    name: 'current_period_spending',
+    label: 'Dönem içi harcama',
     type: 'number',
     min: '0',
     step: '0.01',
@@ -90,6 +121,28 @@ function bankHue(bankName: string, rows: Card[]) {
 
 function bankHueStyle(bankName: string, rows: Card[]) {
   return { '--bank-hue': String(bankHue(bankName, rows)) } as CSSProperties
+}
+
+function limitGroupKey(card: Card) {
+  return card.limit_group_name?.trim() || card.id
+}
+
+function limitGroupCards(card: Card, rows: Card[]) {
+  const key = limitGroupKey(card)
+  return rows.filter((row) => row.card_type === 'kredi_karti' && limitGroupKey(row) === key)
+}
+
+function limitGroupStats(card: Card, rows: Card[]) {
+  const groupCards = limitGroupCards(card, rows)
+  const sharedLimit = Math.max(...groupCards.map((row) => row.credit_limit), card.credit_limit, 0)
+  const totalDebt = groupCards.reduce((total, row) => total + row.debt_amount, 0)
+  return {
+    sharedLimit,
+    totalDebt,
+    availableLimit: Math.max(0, sharedLimit - totalDebt),
+    usageRate: sharedLimit > 0 ? Math.min(100, (totalDebt / sharedLimit) * 100) : 0,
+    isShared: Boolean(card.limit_group_name?.trim()) && groupCards.length > 1,
+  }
 }
 
 export function CardsPage() {
@@ -169,7 +222,7 @@ export function CardsPage() {
     setDebtPaymentCard(card)
     setReloadCards(() => reload)
     setAllCards(cards.filter((c) => c.card_type === 'banka_karti' && c.id !== card.id))
-    setDebtPaymentAmount('')
+    setDebtPaymentAmount(String(card.statement_debt_amount || card.debt_amount || ''))
     setDebtPaymentSourceCard('')
     setDebtPaymentError('')
   }
@@ -215,9 +268,10 @@ export function CardsPage() {
     }
 
     const nextDebt = Math.max(0, debtPaymentCard.debt_amount - amount)
+    const nextStatementDebt = Math.max(0, debtPaymentCard.statement_debt_amount - amount)
     const { error: debtError } = await supabase
       .from('cards')
-      .update({ debt_amount: nextDebt, updated_at: new Date().toISOString() })
+      .update({ debt_amount: nextDebt, statement_debt_amount: nextStatementDebt, updated_at: new Date().toISOString() })
       .eq('id', debtPaymentCard.id)
 
     setDebtPaymentSaving(false)
@@ -265,9 +319,10 @@ export function CardsPage() {
     setExpenseError('')
 
     const nextDebt = expenseCard.debt_amount + amount
+    const nextCurrentPeriod = expenseCard.current_period_spending + amount
     const { error } = await supabase
       .from('cards')
-      .update({ debt_amount: nextDebt, updated_at: new Date().toISOString() })
+      .update({ debt_amount: nextDebt, current_period_spending: nextCurrentPeriod, updated_at: new Date().toISOString() })
       .eq('id', expenseCard.id)
 
     setExpenseSaving(false)
@@ -294,6 +349,40 @@ export function CardsPage() {
     await reloadCards?.()
   }
 
+  async function cutStatement(card: Card, reload: () => Promise<void>, setError: (message: string) => void) {
+    if (card.current_period_spending <= 0) {
+      setError('Dönem içi harcama olmadığı için kesilecek ekstre yok.')
+      return
+    }
+
+    const { error } = await supabase
+      .from('cards')
+      .update({
+        statement_debt_amount: card.statement_debt_amount + card.current_period_spending,
+        current_period_spending: 0,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', card.id)
+
+    if (error) {
+      setError(error.message)
+      return
+    }
+
+    const historyError = await addTransactionHistory({
+      user_id: card.user_id,
+      type: 'card',
+      title: `${card.card_name} ekstresi kesildi`,
+      amount: card.current_period_spending,
+      source_table: 'cards',
+      source_id: card.id,
+      note: card.holder_name ? `${card.holder_name} kartı için dönem borcuna aktarıldı.` : 'Dönem borcuna aktarıldı.',
+    })
+    if (historyError) setError(historyError.message)
+
+    await reload()
+  }
+
   return (
     <>
       <CrudPage
@@ -308,9 +397,13 @@ export function CardsPage() {
           bank_name: row?.bank_name ?? '',
           card_name: row?.card_name ?? '',
           card_type: row?.card_type ?? 'kredi_karti',
+          holder_name: row?.holder_name ?? '',
+          limit_group_name: row?.limit_group_name ?? '',
           current_balance: row?.current_balance ?? 0,
           credit_limit: row?.credit_limit ?? 0,
           debt_amount: row?.debt_amount ?? 0,
+          statement_debt_amount: row?.statement_debt_amount ?? row?.debt_amount ?? 0,
+          current_period_spending: row?.current_period_spending ?? 0,
           statement_day: row?.statement_day ?? '',
           due_day: row?.due_day ?? '',
           note: row?.note ?? '',
@@ -324,9 +417,13 @@ export function CardsPage() {
             bank_name: String(formData.get('bank_name') ?? ''),
             card_name: String(formData.get('card_name') ?? ''),
             card_type: cardType,
+            holder_name: isCreditCard ? String(formData.get('holder_name') ?? '').trim() || null : null,
+            limit_group_name: isCreditCard ? String(formData.get('limit_group_name') ?? '').trim() || null : null,
             current_balance: isCreditCard ? 0 : parseNumber(formData.get('current_balance')),
             credit_limit: isCreditCard ? parseNumber(formData.get('credit_limit')) : 0,
             debt_amount: isCreditCard ? parseNumber(formData.get('debt_amount')) : 0,
+            statement_debt_amount: isCreditCard ? parseNumber(formData.get('statement_debt_amount')) : 0,
+            current_period_spending: isCreditCard ? parseNumber(formData.get('current_period_spending')) : 0,
             statement_day: isCreditCard ? optionalDay(formData.get('statement_day')) : null,
             due_day: isCreditCard ? optionalDay(formData.get('due_day')) : null,
             note: String(formData.get('note') ?? '') || null,
@@ -337,29 +434,42 @@ export function CardsPage() {
         renderDetails={(row) =>
           row.card_type === 'kredi_karti'
             ? [
+                row.holder_name ? `Kart sahibi: ${row.holder_name}` : 'Kart sahibi: -',
+                row.limit_group_name ? `Ortak limit: ${row.limit_group_name}` : 'Ortak limit: -',
                 `Limit: ${formatCurrency(row.credit_limit)}`,
-                `Borç: ${formatCurrency(row.debt_amount)}`,
+                `Güncel borç: ${formatCurrency(row.debt_amount)}`,
+                `Dönem borcu: ${formatCurrency(row.statement_debt_amount)}`,
+                `Dönem içi: ${formatCurrency(row.current_period_spending)}`,
                 `Ekstre: ${row.statement_day ? `Her ayın ${row.statement_day}. günü` : '-'}`,
                 `Son ödeme: ${row.due_day ? `Her ayın ${row.due_day}. günü` : '-'}`,
               ]
             : [`Bakiye: ${formatCurrency(row.current_balance)}`]
         }
-        renderExtra={(row) =>
-          row.card_type === 'kredi_karti' && row.credit_limit > 0 ? (
-            <div className="mt-3">
-              <div className="mb-1.5 flex items-center justify-between text-xs text-stone-600 dark:text-stone-400">
-                <span>Limit kullanımı</span>
-                <span>{Math.round((row.debt_amount / row.credit_limit) * 100)}%</span>
+        renderExtra={(row, helpers) => {
+          if (row.card_type !== 'kredi_karti' || row.credit_limit <= 0) return null
+
+          const stats = limitGroupStats(row, helpers.rows as Card[])
+          return (
+            <div className="mt-3 rounded-xl bg-white/60 p-3 dark:bg-stone-950/35">
+              <div className="mb-1.5 flex items-center justify-between gap-3 text-xs text-stone-600 dark:text-stone-400">
+                <span>{stats.isShared ? 'Ortak limit kullanımı' : 'Limit kullanımı'}</span>
+                <span>{Math.round(stats.usageRate)}%</span>
               </div>
               <div className="h-2 w-full overflow-hidden rounded-full bg-stone-200 dark:bg-stone-800">
                 <div
-                  className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-indigo-600 transition-all duration-500"
-                  style={{ width: `${Math.min(100, (row.debt_amount / row.credit_limit) * 100)}%` }}
+                  className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-emerald-500 transition-all duration-500"
+                  style={{ width: `${stats.usageRate}%` }}
                 />
               </div>
+              {stats.isShared ? (
+                <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-stone-600 dark:text-stone-300">
+                  <span>Grup borcu: {formatCurrency(stats.totalDebt)}</span>
+                  <span className="text-right">Kalan limit: {formatCurrency(stats.availableLimit)}</span>
+                </div>
+              ) : null}
             </div>
-          ) : null
-        }
+          )
+        }}
         getCardClassName={() =>
           'border-[hsl(var(--bank-hue)_72%_74%)] bg-[hsl(var(--bank-hue)_88%_97%)] dark:border-[hsl(var(--bank-hue)_48%_38%)] dark:bg-[hsl(var(--bank-hue)_55%_16%)]'
         }
@@ -369,16 +479,30 @@ export function CardsPage() {
         groupBy={(row) => cardGroupLabel(row.card_type)}
         renderMenuActions={(row, helpers) =>
           row.card_type === 'kredi_karti' ? (
-            <button
-              type="button"
-              onClick={() => {
-                openDebtPayment(row, helpers.reload, helpers.rows as Card[])
-                helpers.closeMenu()
-              }}
-              className="flex w-full items-center gap-2 px-3 py-2 text-sm text-stone-700 hover:bg-stone-50 dark:text-stone-200 dark:hover:bg-stone-800"
-            >
-              💳 Borç öde
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={() => {
+                  openDebtPayment(row, helpers.reload, helpers.rows as Card[])
+                  helpers.closeMenu()
+                }}
+                className="flex w-full items-center gap-2 px-3 py-2 text-sm text-stone-700 hover:bg-stone-50 dark:text-stone-200 dark:hover:bg-stone-800"
+              >
+                <ReceiptText size={14} />
+                Borç öde
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  helpers.closeMenu()
+                  void cutStatement(row, helpers.reload, helpers.setError)
+                }}
+                className="flex w-full items-center gap-2 px-3 py-2 text-sm text-stone-700 hover:bg-stone-50 dark:text-stone-200 dark:hover:bg-stone-800"
+              >
+                <ReceiptText size={14} />
+                Ekstre kes
+              </button>
+            </>
           ) : null
         }
         renderRowActions={(row, helpers) =>

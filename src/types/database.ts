@@ -34,9 +34,13 @@ export type Card = BaseRow & {
   bank_name: string
   card_name: string
   card_type: CardType
+  holder_name: string | null
+  limit_group_name: string | null
   current_balance: number
   credit_limit: number
   debt_amount: number
+  statement_debt_amount: number
+  current_period_spending: number
   statement_day: number | null
   due_day: number | null
   note: string | null
@@ -104,6 +108,13 @@ export type DismissedUpcomingItem = {
   source: UpcomingDismissalSource
 }
 
+export type SalaryHistory = BaseRow & {
+  title: string
+  amount: number
+  effective_date: string
+  note: string | null
+}
+
 type Table<Row, Insert, Update> = {
   Row: Row
   Insert: Insert
@@ -132,6 +143,7 @@ export type Database = {
       debts: Table<Debt, WithBaseInsert<Debt>, WithBaseUpdate<Debt>>
       payments: Table<Payment, WithBaseInsert<Payment>, WithBaseUpdate<Payment>>
       transaction_history: Table<TransactionHistory, WithBaseInsert<TransactionHistory>, WithBaseUpdate<TransactionHistory>>
+      salary_history: Table<SalaryHistory, WithBaseInsert<SalaryHistory>, WithBaseUpdate<SalaryHistory>>
       dismissed_upcoming_items: Table<
         DismissedUpcomingItem,
         Omit<DismissedUpcomingItem, 'id' | 'created_at'> & { id?: string; created_at?: string },

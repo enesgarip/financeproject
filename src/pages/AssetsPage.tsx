@@ -1,5 +1,6 @@
 import { CrudPage, type FormField } from '../components/CrudPage'
-import type { Asset } from '../types/database'
+import type { Asset, SalaryHistory } from '../types/database'
+import { formatDate } from '../utils/date'
 import { formatCurrency, formatNumber, parseNumber } from '../utils/formatCurrency'
 
 const categoryOptions: Asset['category'][] = ['Nakit', 'Altın', 'Fon', 'Hisse', 'Araç', 'BES', 'Diğer']
@@ -54,6 +55,13 @@ const fields: FormField[] = [
   { name: 'note', label: 'Not', type: 'textarea' },
 ]
 
+const salaryFields: FormField[] = [
+  { name: 'title', label: 'Başlık', type: 'text', required: true },
+  { name: 'amount', label: 'Net maaş', type: 'number', min: '0', step: '0.01', required: true },
+  { name: 'effective_date', label: 'Geçerli olduğu tarih', type: 'date', required: true },
+  { name: 'note', label: 'Not', type: 'textarea' },
+]
+
 const assetTone: Record<Asset['category'], { card: string; detail: string }> = {
   Nakit: { card: 'border-emerald-200 bg-emerald-50/35 dark:border-emerald-900 dark:bg-emerald-950/25', detail: 'bg-emerald-50 dark:bg-emerald-950/40' },
   Altın: { card: 'border-amber-200 bg-amber-50/45 dark:border-amber-900 dark:bg-amber-950/25', detail: 'bg-amber-50 dark:bg-amber-950/40' },
@@ -66,49 +74,97 @@ const assetTone: Record<Asset['category'], { card: string; detail: string }> = {
 
 export function AssetsPage() {
   return (
-    <CrudPage
-      table="assets"
-      pageTitle="Varlıklar"
-      addLabel="Varlık ekle"
-      fields={fields}
-      emptyTitle="Henüz varlık yok"
-      emptyDescription="Nakit, altın, fon, hisse veya diğer varlıklarını buradan ekleyebilirsin."
-      getInitialValues={(row?: Asset) => ({
-        name: row?.name ?? '',
-        category: row?.category ?? 'Nakit',
-        amount: row?.amount ?? 0,
-        unit: row?.unit === 'TRY' ? 'gram' : (row?.unit ?? 'gram'),
-        currency: row?.currency ?? 'TRY',
-        estimated_value_try: row?.estimated_value_try ?? 0,
-        note: row?.note ?? '',
-      })}
-      mapForm={(formData, userId) => {
-        const category = formData.get('category') as Asset['category']
-        const isGold = category === 'Altın'
+    <div className="space-y-8">
+      <CrudPage
+        table="assets"
+        pageTitle="Varlıklar"
+        addLabel="Varlık ekle"
+        fields={fields}
+        emptyTitle="Henüz varlık yok"
+        emptyDescription="Nakit, altın, fon, hisse veya diğer varlıklarını buradan ekleyebilirsin."
+        getInitialValues={(row?: Asset) => ({
+          name: row?.name ?? '',
+          category: row?.category ?? 'Nakit',
+          amount: row?.amount ?? 0,
+          unit: row?.unit === 'TRY' ? 'gram' : (row?.unit ?? 'gram'),
+          currency: row?.currency ?? 'TRY',
+          estimated_value_try: row?.estimated_value_try ?? 0,
+          note: row?.note ?? '',
+        })}
+        mapForm={(formData, userId) => {
+          const category = formData.get('category') as Asset['category']
+          const isGold = category === 'Altın'
 
-        return {
+          return {
+            user_id: userId,
+            name: String(formData.get('name') ?? ''),
+            category,
+            amount: isGold ? parseNumber(formData.get('amount')) : 1,
+            unit: isGold ? (formData.get('unit') as Asset['unit']) : 'TRY',
+            currency: category === 'Nakit' ? (formData.get('currency') as Asset['currency']) : null,
+            estimated_value_try: parseNumber(formData.get('estimated_value_try')),
+            note: String(formData.get('note') ?? '') || null,
+          }
+        }}
+        renderTitle={(row) => row.name}
+        renderSubtitle={(row) => row.category}
+        renderDetails={(row) => {
+          const details = [`Değer: ${formatCurrency(row.estimated_value_try)}`]
+          if (row.category === 'Altın') details.unshift(`Miktar: ${formatNumber(row.amount)} ${row.unit}`)
+          if (row.category === 'Nakit') details.unshift(`Para birimi: ${row.currency ?? 'TRY'}`)
+          return details
+        }}
+        getCardClassName={(row) => assetTone[row.category].card}
+        getDetailClassName={(row) => assetTone[row.category].detail}
+        groupBy={(row) => row.category}
+        showFloatingAdd={false}
+      />
+
+      <CrudPage
+        table="salary_history"
+        pageTitle="Maaş geçmişi"
+        addLabel="Maaş ekle"
+        fields={salaryFields}
+        emptyTitle="Henüz maaş kaydı yok"
+        emptyDescription="Maaşını varlık hesaplarına katmadan tarihsel artışını buradan takip edebilirsin."
+        orderBy="effective_date"
+        orderAscending={false}
+        getInitialValues={(row?: SalaryHistory) => ({
+          title: row?.title ?? 'Maaş',
+          amount: row?.amount ?? 0,
+          effective_date: row?.effective_date ?? new Date().toLocaleDateString('sv-SE'),
+          note: row?.note ?? '',
+        })}
+        mapForm={(formData, userId) => ({
           user_id: userId,
-          name: String(formData.get('name') ?? ''),
-          category,
-          amount: isGold ? parseNumber(formData.get('amount')) : 1,
-          unit: isGold ? (formData.get('unit') as Asset['unit']) : 'TRY',
-          currency: category === 'Nakit' ? (formData.get('currency') as Asset['currency']) : null,
-          estimated_value_try: parseNumber(formData.get('estimated_value_try')),
+          title: String(formData.get('title') ?? '').trim() || 'Maaş',
+          amount: parseNumber(formData.get('amount')),
+          effective_date: String(formData.get('effective_date') ?? ''),
           note: String(formData.get('note') ?? '') || null,
-        }
-      }}
-      renderTitle={(row) => row.name}
-      renderSubtitle={(row) => row.category}
-      renderDetails={(row) => {
-        const details = [`Değer: ${formatCurrency(row.estimated_value_try)}`]
-        if (row.category === 'Altın') details.unshift(`Miktar: ${formatNumber(row.amount)} ${row.unit}`)
-        if (row.category === 'Nakit') details.unshift(`Para birimi: ${row.currency ?? 'TRY'}`)
-        return details
-      }}
-      getCardClassName={(row) => assetTone[row.category].card}
-      getDetailClassName={(row) => assetTone[row.category].detail}
-      groupBy={(row) => row.category}
-      getGroupClassName={() => 'border-b border-stone-200 bg-transparent px-0 pb-2 pt-1 text-stone-500 dark:border-stone-800 dark:bg-transparent dark:text-stone-400'}
-    />
+        })}
+        renderTitle={(row) => row.title}
+        renderSubtitle={(row) => formatDate(row.effective_date)}
+        renderDetails={(row) => [`Net maaş: ${formatCurrency(row.amount)}`]}
+        renderExtra={(row, helpers) => {
+          const orderedRows = [...(helpers.rows as SalaryHistory[])].sort((a, b) => a.effective_date.localeCompare(b.effective_date))
+          const index = orderedRows.findIndex((item) => item.id === row.id)
+          const previous = index > 0 ? orderedRows[index - 1] : null
+          if (!previous || previous.amount <= 0) return null
+
+          const difference = row.amount - previous.amount
+          const percentage = (difference / previous.amount) * 100
+          return (
+            <div className="mt-3 rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200">
+              Önceki kayda göre {difference >= 0 ? '+' : ''}
+              {formatCurrency(difference)} ({percentage >= 0 ? '+' : ''}
+              {percentage.toFixed(1)}%)
+            </div>
+          )
+        }}
+        getCardClassName={() => 'border-emerald-200 bg-emerald-50/35 dark:border-emerald-900 dark:bg-emerald-950/25'}
+        getDetailClassName={() => 'bg-emerald-50 dark:bg-emerald-950/40'}
+        showFloatingAdd={false}
+      />
+    </div>
   )
 }

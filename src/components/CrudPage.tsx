@@ -37,6 +37,7 @@ type CrudPageProps<T extends TableName> = {
   emptyTitle: string
   emptyDescription: string
   orderBy?: keyof RowFor<T> & string
+  orderAscending?: boolean
   getInitialValues: (row?: RowFor<T>) => Record<string, string | number>
   mapForm: (formData: FormData, userId: string) => InsertFor<T> | UpdateFor<T>
   validateForm?: (formData: FormData, values: Record<string, string>, editing: RowFor<T> | null) => FormErrors
@@ -53,6 +54,7 @@ type CrudPageProps<T extends TableName> = {
   renderRowActions?: (row: RowFor<T>, helpers: { reload: () => Promise<void>; setError: (message: string) => void; rows: RowFor<T>[] }) => ReactNode
   renderMenuActions?: (row: RowFor<T>, helpers: { reload: () => Promise<void>; setError: (message: string) => void; rows: RowFor<T>[]; closeMenu: () => void }) => ReactNode
   renderExtra?: (row: RowFor<T>, helpers: { reload: () => Promise<void>; setError: (message: string) => void; rows: RowFor<T>[] }) => ReactNode
+  showFloatingAdd?: boolean
 }
 
 export function CrudPage<T extends TableName>({
@@ -63,6 +65,7 @@ export function CrudPage<T extends TableName>({
   emptyTitle,
   emptyDescription,
   orderBy = 'created_at' as keyof RowFor<T> & string,
+  orderAscending,
   getInitialValues,
   mapForm,
   validateForm,
@@ -79,6 +82,7 @@ export function CrudPage<T extends TableName>({
   renderRowActions,
   renderMenuActions,
   renderExtra,
+  showFloatingAdd = true,
 }: CrudPageProps<T>) {
   const { user } = useAuth()
   const [rows, setRows] = useState<RowFor<T>[]>([])
@@ -110,12 +114,12 @@ export function CrudPage<T extends TableName>({
     const { data, error: loadError } = await supabase
       .from(table as never)
       .select('*')
-      .order(orderBy, { ascending: orderBy.includes('date') || orderBy.includes('day') })
+      .order(orderBy, { ascending: orderAscending ?? (orderBy.includes('date') || orderBy.includes('day')) })
 
     if (loadError) setError(loadError.message)
     setRows((data ?? []) as unknown as RowFor<T>[])
     setLoading(false)
-  }, [orderBy, table])
+  }, [orderAscending, orderBy, table])
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -245,13 +249,13 @@ export function CrudPage<T extends TableName>({
           {groupRows(rows, groupBy).map(({ group, items }) => (
             <section key={group} className="space-y-3">
               {groupBy ? (
-                <div className="relative overflow-hidden rounded-3xl border border-stone-200 bg-stone-50/90 px-4 py-3 shadow-sm dark:border-stone-800 dark:bg-stone-950/55">
-                  <span className="absolute inset-y-0 left-0 w-1 rounded-r-full bg-emerald-400 dark:bg-emerald-500" />
+                <div className="flex items-center gap-3 px-1 py-1">
                   <h2
-                    className={`relative text-sm font-semibold text-stone-900 dark:text-stone-100 ${getGroupClassName?.(group) ?? 'bg-transparent text-stone-900 dark:text-stone-100'}`}
+                    className={`shrink-0 text-xs font-bold uppercase text-stone-500 dark:text-stone-400 ${getGroupClassName?.(group) ?? ''}`}
                   >
                     {group}
                   </h2>
+                  <span className="h-px flex-1 bg-gradient-to-r from-stone-300 via-stone-200 to-transparent dark:from-stone-700 dark:via-stone-800" />
                 </div>
               ) : null}
               <div className="space-y-4">
@@ -450,14 +454,16 @@ export function CrudPage<T extends TableName>({
         </form>
       </SimpleModal>
 
-      <button
-        type="button"
-        onClick={openCreate}
-        className="fixed bottom-[calc(env(safe-area-inset-bottom)+5.4rem)] right-4 z-30 inline-flex h-12 items-center gap-2 rounded-full bg-emerald-700 px-4 text-sm font-semibold text-white shadow-lg shadow-emerald-900/20 active:scale-[0.98] sm:hidden"
-      >
-        <Plus size={18} />
-        Ekle
-      </button>
+      {showFloatingAdd ? (
+        <button
+          type="button"
+          onClick={openCreate}
+          className="fixed bottom-[calc(env(safe-area-inset-bottom)+5.4rem)] right-4 z-30 inline-flex h-12 items-center gap-2 rounded-full bg-emerald-700 px-4 text-sm font-semibold text-white shadow-lg shadow-emerald-900/20 active:scale-[0.98] sm:hidden"
+        >
+          <Plus size={18} />
+          Ekle
+        </button>
+      ) : null}
     </section>
   )
 }

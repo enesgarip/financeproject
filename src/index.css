@@ -30,7 +30,7 @@
 
 body {
   min-width: 320px;
-  min-height: 100svh;
+  min-height: 100dvh;
   margin: 0;
   overscroll-behavior-y: none;
   -webkit-tap-highlight-color: transparent;
@@ -53,5 +53,5 @@ button:disabled {
 }
 
 #root {
-  min-height: 100svh;
+  min-height: 100dvh;
 }
