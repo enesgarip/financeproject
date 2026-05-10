@@ -1,6 +1,9 @@
 import { useState } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
+import { Button } from '../components/ui/button'
+import { Card, CardContent } from '../components/ui/card'
+import { Tabs, TabsList, TabsTrigger } from '../components/ui/tabs'
 
 export function LoginPage() {
   const { signIn, signUp, user } = useAuth()
@@ -35,64 +38,55 @@ export function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-svh items-center justify-start bg-[#f7f8f4] px-4 py-10 text-stone-900 dark:bg-stone-950 dark:text-stone-100 sm:justify-center">
-      <section className="w-full max-w-[22rem] rounded-lg border border-stone-200 bg-white p-4 shadow-sm dark:border-stone-800 dark:bg-stone-900">
-        <div>
-          <h1 className="text-2xl font-semibold text-stone-950 dark:text-stone-50">Kişisel Finans</h1>
-          <p className="mt-2 text-sm leading-6 text-stone-500 dark:text-stone-400">
+    <main className="flex min-h-dvh items-center justify-center overflow-x-hidden bg-background px-4 py-10 text-foreground">
+      <Card className="mx-auto w-full max-w-[21rem] border-0 shadow-xl ring-1 ring-stone-200/80 dark:ring-stone-800 sm:max-w-[23rem]">
+        <CardContent className="p-5">
+          <div>
+            <div className="mb-4 grid size-11 place-items-center rounded-xl bg-emerald-50 text-xl font-extrabold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
+              ₺
+            </div>
+            <h1 className="text-2xl font-extrabold tracking-normal text-foreground">Kişisel Finans</h1>
+            <p className="mt-2 text-sm leading-6 text-muted-foreground">
             Varlıklarını, borçlarını ve yaklaşan ödemelerini tek yerden takip et.
-          </p>
-        </div>
+            </p>
+          </div>
 
-        <div className="mt-5 grid grid-cols-2 rounded-lg bg-stone-100 p-1 text-sm font-medium dark:bg-stone-800">
-          <button
-            type="button"
-            onClick={() => setMode('login')}
-            className={`rounded-md px-3 py-2 ${mode === 'login' ? 'bg-white shadow-sm dark:bg-stone-950' : 'text-stone-500 dark:text-stone-400'}`}
-          >
-            Giriş Yap
-          </button>
-          <button
-            type="button"
-            onClick={() => setMode('register')}
-            className={`rounded-md px-3 py-2 ${mode === 'register' ? 'bg-white shadow-sm dark:bg-stone-950' : 'text-stone-500 dark:text-stone-400'}`}
-          >
-            Kayıt Ol
-          </button>
-        </div>
+          <Tabs value={mode} onValueChange={(value) => setMode(value as 'login' | 'register')} className="mt-5">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="login">Giriş Yap</TabsTrigger>
+              <TabsTrigger value="register">Kayıt Ol</TabsTrigger>
+            </TabsList>
+          </Tabs>
 
-        <form onSubmit={handleSubmit} className="mt-5 space-y-4">
-          <label className="block text-sm font-medium text-stone-700 dark:text-stone-200">
+          <form onSubmit={handleSubmit} className="mt-5 flex flex-col gap-4">
+            <label className="block text-sm font-semibold text-foreground">
             E-posta adresi
-            <input
-              required
-              type="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              className="mt-1 w-full rounded-lg border border-stone-200 px-3 py-3 outline-none focus:border-emerald-600 dark:border-stone-700 dark:bg-stone-950 dark:text-stone-100"
-            />
-          </label>
-          <label className="block text-sm font-medium text-stone-700 dark:text-stone-200">
+              <input
+                required
+                type="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-3 outline-none ring-ring/0 transition focus:border-ring focus:ring-3 focus:ring-ring/20"
+              />
+            </label>
+            <label className="block text-sm font-semibold text-foreground">
             Şifre
-            <input
-              required
-              minLength={6}
-              type="password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              className="mt-1 w-full rounded-lg border border-stone-200 px-3 py-3 outline-none focus:border-emerald-600 dark:border-stone-700 dark:bg-stone-950 dark:text-stone-100"
-            />
-          </label>
-          {message ? <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800">{message}</p> : null}
-          <button
-            type="submit"
-            disabled={submitting}
-            className="w-full rounded-lg bg-emerald-700 px-4 py-3 text-sm font-semibold text-white disabled:opacity-60"
-          >
-            {submitting ? 'Bekle...' : mode === 'login' ? 'Giriş yap' : 'Kayıt ol'}
-          </button>
-        </form>
-      </section>
+              <input
+                required
+                minLength={6}
+                type="password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-3 outline-none ring-ring/0 transition focus:border-ring focus:ring-3 focus:ring-ring/20"
+              />
+            </label>
+            {message ? <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-950/30 dark:text-amber-200">{message}</p> : null}
+            <Button type="submit" disabled={submitting} className="h-11 w-full">
+              {submitting ? 'Bekle...' : mode === 'login' ? 'Giriş yap' : 'Kayıt ol'}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
     </main>
   )
 }

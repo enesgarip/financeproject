@@ -1,4 +1,7 @@
 import { CrudPage, type FormField } from '../components/CrudPage'
+import { Badge } from '../components/ui/badge'
+import { Card, CardContent } from '../components/ui/card'
+import { Progress } from '../components/ui/progress'
 import { supabase } from '../lib/supabase'
 import type { Debt } from '../types/database'
 import { formatDate } from '../utils/date'
@@ -101,6 +104,69 @@ const debtTone: Record<Debt['direction'], { card: string; detail: string; group:
   },
 }
 
+function DebtsOverview({ rows }: { rows: Debt[] }) {
+  const openRows = rows.filter((row) => row.status === 'açık')
+  if (openRows.length === 0) return null
+
+  const borrowed = openRows
+    .filter((row) => row.direction === 'borç_aldım')
+    .reduce((sum, row) => sum + row.estimated_value_try, 0)
+  const receivable = openRows
+    .filter((row) => row.direction === 'borç_verdim')
+    .reduce((sum, row) => sum + row.estimated_value_try, 0)
+  const total = borrowed + receivable
+  const net = receivable - borrowed
+  const borrowedRate = total > 0 ? Math.min(100, (borrowed / total) * 100) : 0
+  const upcoming = openRows
+    .filter((row) => row.due_date)
+    .sort((a, b) => String(a.due_date).localeCompare(String(b.due_date)))[0]
+
+  return (
+    <Card className="border-0 shadow-sm ring-1 ring-stone-200/80 dark:ring-stone-800">
+      <CardContent className="p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-xs font-bold uppercase text-muted-foreground">Borç dengesi</p>
+            <p className={`mt-1 text-2xl font-extrabold tabular-nums ${net >= 0 ? 'text-emerald-700 dark:text-emerald-300' : 'text-rose-700 dark:text-rose-300'}`}>
+              {formatCurrency(Math.abs(net))}
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">{net >= 0 ? 'Net alacak' : 'Net borç'}</p>
+          </div>
+          <Badge variant={net >= 0 ? 'default' : 'destructive'}>{openRows.length} açık</Badge>
+        </div>
+        <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
+          <OverviewStat label="Borç" value={formatCurrency(borrowed)} tone="rose" />
+          <OverviewStat label="Alacak" value={formatCurrency(receivable)} tone="emerald" />
+        </div>
+        <div className="mt-4">
+          <div className="mb-1.5 flex justify-between text-xs text-muted-foreground">
+            <span>Borç ağırlığı</span>
+            <span>%{Math.round(borrowedRate)}</span>
+          </div>
+          <Progress value={borrowedRate} className="h-1.5" />
+        </div>
+        {upcoming?.due_date ? (
+          <div className="mt-3 rounded-xl bg-muted/55 px-3 py-2 text-sm">
+            <span className="font-semibold text-foreground">{upcoming.person_name}</span>
+            <span className="text-muted-foreground"> · en yakın vade {formatDate(upcoming.due_date)}</span>
+          </div>
+        ) : null}
+      </CardContent>
+    </Card>
+  )
+}
+
+function OverviewStat({ label, value, tone }: { label: string; value: string; tone: 'emerald' | 'rose' }) {
+  const toneClass = tone === 'emerald' ? 'text-emerald-700 dark:text-emerald-300' : 'text-rose-700 dark:text-rose-300'
+
+  return (
+    <div className="min-w-0 rounded-lg bg-muted/55 px-2.5 py-2">
+      <p className="truncate text-[11px] font-medium text-muted-foreground">{label}</p>
+      <p className={`mt-1 truncate text-sm font-bold tabular-nums ${toneClass}`}>{value}</p>
+    </div>
+  )
+}
+
 async function markDebtAsClosed(debt: Debt, reload: () => Promise<void>, setError: (message: string) => void) {
   const confirmed = window.confirm('Bu borç kaydını kapandı olarak işaretlemek istediğine emin misin?')
   if (!confirmed) return
@@ -142,6 +208,7 @@ export function DebtsPage() {
       emptyTitle="Henüz borç kaydı yok"
       emptyDescription="Kişisel borçlarını ve alacaklarını sade şekilde takip edebilirsin."
       orderBy="due_date"
+      renderBeforeList={({ loading, rows }) => (!loading ? <DebtsOverview rows={rows as Debt[]} /> : null)}
       getInitialValues={(row?: Debt) => ({
         person_name: row?.person_name ?? '',
         direction: row?.direction ?? 'borç_aldım',

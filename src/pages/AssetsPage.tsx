@@ -1,4 +1,7 @@
 import { CrudPage, type FormField } from '../components/CrudPage'
+import { Badge } from '../components/ui/badge'
+import { Card, CardContent } from '../components/ui/card'
+import { Progress } from '../components/ui/progress'
 import type { Asset, SalaryHistory } from '../types/database'
 import { formatDate } from '../utils/date'
 import { formatCurrency, formatNumber, parseNumber } from '../utils/formatCurrency'
@@ -72,6 +75,86 @@ const assetTone: Record<Asset['category'], { card: string; detail: string }> = {
   Diğer: { card: 'border-stone-200 bg-white dark:border-stone-800 dark:bg-stone-900', detail: 'bg-stone-50 dark:bg-stone-800' },
 }
 
+function AssetsOverview({ rows }: { rows: Asset[] }) {
+  if (rows.length === 0) return null
+
+  const total = rows.reduce((sum, row) => sum + row.estimated_value_try, 0)
+  const categoryTotals = categoryOptions
+    .map((category) => ({
+      category,
+      total: rows.filter((row) => row.category === category).reduce((sum, row) => sum + row.estimated_value_try, 0),
+    }))
+    .filter((item) => item.total > 0)
+    .sort((a, b) => b.total - a.total)
+  const cashTotal = categoryTotals.find((item) => item.category === 'Nakit')?.total ?? 0
+
+  return (
+    <div className="flex flex-col gap-3">
+      <Card className="border-0 shadow-sm ring-1 ring-stone-200/80 dark:ring-stone-800">
+        <CardContent className="p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-xs font-bold uppercase text-muted-foreground">Varlık kompozisyonu</p>
+              <p className="mt-1 text-2xl font-extrabold tabular-nums text-foreground">{formatCurrency(total)}</p>
+              <p className="mt-1 text-sm text-muted-foreground">Nakit {formatCurrency(cashTotal)}</p>
+            </div>
+            <Badge variant="secondary">{rows.length} kayıt</Badge>
+          </div>
+          <div className="mt-4 flex flex-col gap-3">
+            {categoryTotals.slice(0, 5).map((item) => {
+              const rate = total > 0 ? Math.min(100, (item.total / total) * 100) : 0
+              return (
+                <div key={item.category}>
+                  <div className="mb-1.5 flex items-center justify-between gap-3 text-xs">
+                    <span className="font-semibold text-foreground">{item.category}</span>
+                    <span className="tabular-nums text-muted-foreground">{formatCurrency(item.total)}</span>
+                  </div>
+                  <Progress value={rate} className="h-1.5" />
+                </div>
+              )
+            })}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
+function SalaryOverview({ rows }: { rows: SalaryHistory[] }) {
+  if (rows.length === 0) return null
+
+  const ordered = [...rows].sort((a, b) => a.effective_date.localeCompare(b.effective_date))
+  const current = ordered.at(-1)
+  const previous = ordered.at(-2)
+  if (!current) return null
+
+  const difference = previous ? current.amount - previous.amount : 0
+  const percentage = previous && previous.amount > 0 ? (difference / previous.amount) * 100 : 0
+
+  return (
+    <Card className="border-0 shadow-sm ring-1 ring-emerald-200/80 dark:ring-emerald-900">
+      <CardContent className="p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-xs font-bold uppercase text-muted-foreground">Maaş trendi</p>
+            <p className="mt-1 text-2xl font-extrabold tabular-nums text-foreground">{formatCurrency(current.amount)}</p>
+            <p className="mt-1 text-sm text-muted-foreground">{formatDate(current.effective_date)}</p>
+          </div>
+          <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200">
+            {previous ? `${difference >= 0 ? '+' : ''}${percentage.toFixed(1)}%` : 'İlk kayıt'}
+          </Badge>
+        </div>
+        {previous ? (
+          <div className="mt-4 rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-200">
+            Önceki kayda göre {difference >= 0 ? '+' : ''}
+            {formatCurrency(difference)}
+          </div>
+        ) : null}
+      </CardContent>
+    </Card>
+  )
+}
+
 export function AssetsPage() {
   return (
     <div className="space-y-8">
@@ -82,6 +165,7 @@ export function AssetsPage() {
         fields={fields}
         emptyTitle="Henüz varlık yok"
         emptyDescription="Nakit, altın, fon, hisse veya diğer varlıklarını buradan ekleyebilirsin."
+        renderBeforeList={({ loading, rows }) => (!loading ? <AssetsOverview rows={rows as Asset[]} /> : null)}
         getInitialValues={(row?: Asset) => ({
           name: row?.name ?? '',
           category: row?.category ?? 'Nakit',
@@ -129,6 +213,7 @@ export function AssetsPage() {
         emptyDescription="Maaşını varlık hesaplarına katmadan tarihsel artışını buradan takip edebilirsin."
         orderBy="effective_date"
         orderAscending={false}
+        renderBeforeList={({ loading, rows }) => (!loading ? <SalaryOverview rows={rows as SalaryHistory[]} /> : null)}
         getInitialValues={(row?: SalaryHistory) => ({
           title: row?.title ?? 'Maaş',
           amount: row?.amount ?? 0,
