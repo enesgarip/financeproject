@@ -1,8 +1,11 @@
-import { ReceiptText } from 'lucide-react'
+import { ReceiptText, WalletCards } from 'lucide-react'
 import type { CSSProperties } from 'react'
 import { useState } from 'react'
 import { CrudPage, type FormField } from '../components/CrudPage'
 import { SimpleModal } from '../components/SimpleModal'
+import { Badge } from '../components/ui/badge'
+import { Card as SurfaceCard, CardContent, CardHeader, CardTitle } from '../components/ui/card'
+import { Progress } from '../components/ui/progress'
 import { supabase } from '../lib/supabase'
 import type { Card } from '../types/database'
 import { formatCurrency, parseNumber } from '../utils/formatCurrency'
@@ -101,8 +104,8 @@ function cardTypeLabel(value: Card['card_type']) {
   return 'Banka kartı'
 }
 
-function cardGroupLabel(value: Card['card_type']) {
-  if (value === 'kredi_karti') return 'Kredi kartları'
+function cardGroupLabel(row: Card) {
+  if (row.card_type === 'kredi_karti') return row.limit_group_name?.trim() ? `Ortak limit · ${row.limit_group_name.trim()}` : 'Tekil kredi kartları'
   return 'Banka kartları'
 }
 
@@ -143,6 +146,135 @@ function limitGroupStats(card: Card, rows: Card[]) {
     usageRate: sharedLimit > 0 ? Math.min(100, (totalDebt / sharedLimit) * 100) : 0,
     isShared: Boolean(card.limit_group_name?.trim()) && groupCards.length > 1,
   }
+}
+
+type LimitGroupSummary = {
+  key: string
+  label: string
+  bankName: string
+  cards: Card[]
+  limit: number
+  debt: number
+  statementDebt: number
+  currentPeriod: number
+  available: number
+  usageRate: number
+}
+
+function buildLimitGroupSummaries(rows: Card[]): LimitGroupSummary[] {
+  const groups = new Map<string, Card[]>()
+
+  for (const card of rows.filter((row) => row.card_type === 'kredi_karti')) {
+    const key = limitGroupKey(card)
+    groups.set(key, [...(groups.get(key) ?? []), card])
+  }
+
+  return Array.from(groups, ([key, cards]) => {
+    const limit = Math.max(...cards.map((card) => card.credit_limit), 0)
+    const debt = cards.reduce((total, card) => total + card.debt_amount, 0)
+    const statementDebt = cards.reduce((total, card) => total + card.statement_debt_amount, 0)
+    const currentPeriod = cards.reduce((total, card) => total + card.current_period_spending, 0)
+    const label = cards.find((card) => card.limit_group_name?.trim())?.limit_group_name?.trim() || cards[0]?.card_name || 'Kredi kartı'
+
+    return {
+      key,
+      label,
+      bankName: cards[0]?.bank_name ?? '',
+      cards,
+      limit,
+      debt,
+      statementDebt,
+      currentPeriod,
+      available: Math.max(0, limit - debt),
+      usageRate: limit > 0 ? Math.min(100, (debt / limit) * 100) : 0,
+    }
+  }).sort((a, b) => b.debt - a.debt)
+}
+
+function CreditCardOverview({ rows }: { rows: Card[] }) {
+  const groups = buildLimitGroupSummaries(rows)
+  const bankCards = rows.filter((row) => row.card_type === 'banka_karti')
+  if (groups.length === 0 && bankCards.length === 0) return null
+
+  const totalLimit = groups.reduce((total, group) => total + group.limit, 0)
+  const totalDebt = groups.reduce((total, group) => total + group.debt, 0)
+  const totalAvailable = Math.max(0, totalLimit - totalDebt)
+  const totalUsageRate = totalLimit > 0 ? Math.min(100, (totalDebt / totalLimit) * 100) : 0
+  const cashBalance = bankCards.reduce((total, card) => total + card.current_balance, 0)
+
+  return (
+    <div className="flex flex-col gap-3">
+      <SurfaceCard className="border-0 shadow-sm ring-1 ring-stone-200/80 dark:ring-stone-800">
+        <CardContent className="p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-xs font-bold uppercase text-muted-foreground">Kart özeti</p>
+              <p className="mt-1 text-2xl font-extrabold tabular-nums text-foreground">{formatCurrency(totalDebt)}</p>
+              <p className="mt-1 text-sm text-muted-foreground">Kalan ortak limit {formatCurrency(totalAvailable)}</p>
+            </div>
+            <div className="grid size-11 shrink-0 place-items-center rounded-xl bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300">
+              <WalletCards />
+            </div>
+          </div>
+          <Progress value={totalUsageRate} className="mt-4 h-2" />
+          <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
+            <OverviewStat label="Limit" value={formatCurrency(totalLimit)} />
+            <OverviewStat label="Kullanım" value={`%${Math.round(totalUsageRate)}`} />
+            <OverviewStat label="Hesap" value={formatCurrency(cashBalance)} />
+          </div>
+        </CardContent>
+      </SurfaceCard>
+
+      {groups.length > 0 ? (
+        <div className="flex snap-x gap-3 overflow-x-auto pb-1">
+          {groups.map((group) => (
+            <SurfaceCard key={group.key} className="min-w-[86%] snap-start border-0 shadow-sm ring-1 ring-stone-200/80 dark:ring-stone-800 min-[520px]:min-w-[48%]">
+              <CardHeader className="pb-0">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <CardTitle className="truncate text-base">{group.label}</CardTitle>
+                    <p className="mt-1 truncate text-xs text-muted-foreground">{group.bankName}</p>
+                  </div>
+                  <Badge variant="secondary">{group.cards.length} kart</Badge>
+                </div>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-3 pt-1">
+                <div className="grid grid-cols-3 gap-2 text-xs">
+                  <OverviewStat label="Borç" value={formatCurrency(group.debt)} />
+                  <OverviewStat label="Dönem" value={formatCurrency(group.statementDebt)} />
+                  <OverviewStat label="Dönem içi" value={formatCurrency(group.currentPeriod)} />
+                </div>
+                <Progress value={group.usageRate} className="h-1.5" />
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span>Limit {formatCurrency(group.limit)}</span>
+                  <span>Kalan {formatCurrency(group.available)}</span>
+                </div>
+                <div className="flex flex-col gap-2">
+                  {group.cards.map((card) => (
+                    <div key={card.id} className="flex items-center justify-between gap-2 rounded-lg bg-muted/55 px-2.5 py-2 text-xs">
+                      <span className="min-w-0 truncate font-semibold text-foreground">
+                        {card.holder_name || card.card_name}
+                      </span>
+                      <span className="shrink-0 tabular-nums text-muted-foreground">{formatCurrency(card.debt_amount)}</span>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </SurfaceCard>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
+function OverviewStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="min-w-0 rounded-lg bg-muted/55 px-2.5 py-2">
+      <p className="truncate text-[11px] font-medium text-muted-foreground">{label}</p>
+      <p className="mt-1 truncate text-sm font-bold tabular-nums text-foreground">{value}</p>
+    </div>
+  )
 }
 
 export function CardsPage() {
@@ -393,6 +525,7 @@ export function CardsPage() {
         emptyTitle="Henüz kart yok"
         emptyDescription="Kredi kartı ve banka kartlarını buradan takip edebilirsin."
         orderBy="card_type"
+        renderBeforeList={({ loading, rows }) => (!loading ? <CreditCardOverview rows={rows as Card[]} /> : null)}
         getInitialValues={(row?: Card) => ({
           bank_name: row?.bank_name ?? '',
           card_name: row?.card_name ?? '',
@@ -476,7 +609,7 @@ export function CardsPage() {
         getDetailClassName={() => 'bg-[hsl(var(--bank-hue)_88%_94%)] dark:bg-[hsl(var(--bank-hue)_50%_22%)]'}
         getCardStyle={(row, rows) => bankHueStyle(row.bank_name, rows)}
         getDetailStyle={(row, rows) => bankHueStyle(row.bank_name, rows)}
-        groupBy={(row) => cardGroupLabel(row.card_type)}
+        groupBy={(row) => cardGroupLabel(row)}
         renderMenuActions={(row, helpers) =>
           row.card_type === 'kredi_karti' ? (
             <>

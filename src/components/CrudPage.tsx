@@ -54,6 +54,7 @@ type CrudPageProps<T extends TableName> = {
   renderRowActions?: (row: RowFor<T>, helpers: { reload: () => Promise<void>; setError: (message: string) => void; rows: RowFor<T>[] }) => ReactNode
   renderMenuActions?: (row: RowFor<T>, helpers: { reload: () => Promise<void>; setError: (message: string) => void; rows: RowFor<T>[]; closeMenu: () => void }) => ReactNode
   renderExtra?: (row: RowFor<T>, helpers: { reload: () => Promise<void>; setError: (message: string) => void; rows: RowFor<T>[] }) => ReactNode
+  renderBeforeList?: (helpers: { loading: boolean; rows: RowFor<T>[]; reload: () => Promise<void>; setError: (message: string) => void }) => ReactNode
   showFloatingAdd?: boolean
 }
 
@@ -82,6 +83,7 @@ export function CrudPage<T extends TableName>({
   renderRowActions,
   renderMenuActions,
   renderExtra,
+  renderBeforeList,
   showFloatingAdd = true,
 }: CrudPageProps<T>) {
   const { user } = useAuth()
@@ -239,6 +241,7 @@ export function CrudPage<T extends TableName>({
       </div>
 
       {error ? <p className="rounded-lg bg-rose-50 p-3 text-sm text-rose-700">{error}</p> : null}
+      {renderBeforeList ? renderBeforeList({ loading, rows, reload: loadRows, setError }) : null}
 
       {loading ? (
         <p className="rounded-lg bg-white p-4 text-sm text-stone-500 dark:bg-stone-900 dark:text-stone-400">Kayıtlar yükleniyor…</p>
