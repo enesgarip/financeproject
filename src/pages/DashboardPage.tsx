@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAuth } from '../auth/useAuth'
 import { supabase } from '../lib/supabase'
 import type { Asset, Card as FinanceCard, Debt, DismissedUpcomingItem, Loan, LoanInstallment, Payment, SalaryHistory, TransactionHistory, UpcomingDismissalSource } from '../types/database'
-import { daysUntil, formatDate, isUpcomingDate, nextMonthlyDate } from '../utils/date'
+import { daysUntil, endOfMonth, formatDate, isDateInMonth, isUpcomingDate, monthlyOccurrenceDate, nextMonthlyDate, startOfMonth } from '../utils/date'
 import { formatCurrency } from '../utils/formatCurrency'
 import { EmptyState } from '../components/EmptyState'
 import { Badge } from '../components/ui/badge'
@@ -56,6 +56,20 @@ type CreditLimitGroup = {
   available: number
   usageRate: number
   cards: FinanceCard[]
+}
+
+type CashFlowSummary = {
+  monthLabel: string
+  cashAssets: number
+  income: number
+  outflow: number
+  netFlow: number
+  projectedCash: number
+  recurringPayments: number
+  cardOutflow: number
+  loanOutflow: number
+  paymentOutflow: number
+  debtOutflow: number
 }
 
 function sum<T>(rows: T[], selector: (row: T) => number) {
@@ -116,6 +130,92 @@ function getSalaryTrend(rows: SalaryHistory[]) {
     previous,
     difference,
     percentage: (difference / previous.amount) * 100,
+  }
+}
+
+function getCurrentSalary(rows: SalaryHistory[]) {
+  const today = new Date().toLocaleDateString('sv-SE')
+  const ordered = [...rows].sort((a, b) => a.effective_date.localeCompare(b.effective_date))
+  return ordered.filter((row) => row.effective_date <= today).at(-1) ?? ordered.at(-1) ?? null
+}
+
+function paymentOccurrenceInMonth(payment: Payment, month = new Date()) {
+  if (payment.status !== 'bekliyor') return null
+
+  if (payment.recurrence === 'monthly') {
+    const occurrence = monthlyOccurrenceDate(payment.recurrence_day, month)
+    if (!occurrence) return null
+
+    const dueDate = new Date(`${payment.due_date}T00:00:00`)
+    const endDate = payment.recurrence_end_date ? new Date(`${payment.recurrence_end_date}T00:00:00`) : null
+    if (occurrence < dueDate) return null
+    if (endDate && occurrence > endDate) return null
+    return occurrence
+  }
+
+  return isDateInMonth(payment.due_date, month) ? new Date(`${payment.due_date}T00:00:00`) : null
+}
+
+function buildMonthlyCashFlow(data: DashboardData): CashFlowSummary {
+  const month = new Date()
+  const monthStart = startOfMonth(month)
+  const monthEnd = endOfMonth(month)
+  const monthLabel = new Intl.DateTimeFormat('tr-TR', { month: 'long', year: 'numeric' }).format(month)
+  const currentSalary = getCurrentSalary(data.salaryHistory)
+  const cashAssets = sum(
+    data.assets.filter((asset) => asset.category === 'Nakit'),
+    (asset) => asset.estimated_value_try,
+  )
+  const openDebts = data.debts.filter((debt) => debt.status === 'açık')
+  const receivableIncome = sum(
+    openDebts.filter((debt) => debt.direction === 'borç_verdim' && isDateInMonth(debt.due_date, month)),
+    (debt) => debt.estimated_value_try,
+  )
+  const paymentOutflow = sum(
+    data.payments.filter((payment) => paymentOccurrenceInMonth(payment, month)),
+    (payment) => payment.amount,
+  )
+  const recurringPayments = data.payments.filter((payment) => payment.recurrence === 'monthly' && payment.status === 'bekliyor').length
+  const cardOutflow = sum(
+    data.cards.filter((card) => {
+      const dueDate = monthlyOccurrenceDate(card.due_day, month)
+      return card.card_type === 'kredi_karti' && card.debt_amount > 0 && dueDate !== null && dueDate >= monthStart && dueDate <= monthEnd
+    }),
+    (card) => card.debt_amount,
+  )
+  const plannedLoanIds = new Set(data.loanInstallments.map((installment) => installment.loan_id))
+  const scheduledLoanOutflow = sum(
+    data.loanInstallments.filter((installment) => installment.status === 'bekliyor' && isDateInMonth(installment.due_date, month)),
+    (installment) => installment.amount,
+  )
+  const legacyLoanOutflow = sum(
+    data.loans.filter((loan) => {
+      const dueDate = monthlyOccurrenceDate(loan.installment_day, month)
+      return !plannedLoanIds.has(loan.id) && loan.status === 'active' && loan.remaining_installments > 0 && dueDate !== null && dueDate >= monthStart && dueDate <= monthEnd
+    }),
+    (loan) => loan.monthly_payment,
+  )
+  const loanOutflow = scheduledLoanOutflow + legacyLoanOutflow
+  const debtOutflow = sum(
+    openDebts.filter((debt) => debt.direction === 'borç_aldım' && isDateInMonth(debt.due_date, month)),
+    (debt) => debt.estimated_value_try,
+  )
+  const income = (currentSalary?.amount ?? 0) + receivableIncome
+  const outflow = paymentOutflow + cardOutflow + loanOutflow + debtOutflow
+  const netFlow = income - outflow
+
+  return {
+    monthLabel,
+    cashAssets,
+    income,
+    outflow,
+    netFlow,
+    projectedCash: cashAssets + netFlow,
+    recurringPayments,
+    cardOutflow,
+    loanOutflow,
+    paymentOutflow,
+    debtOutflow,
   }
 }
 
@@ -222,6 +322,7 @@ export function DashboardPage() {
     const creditUsageRate = totalSharedCreditLimit > 0 ? Math.min(100, (totalCreditCardDebt / totalSharedCreditLimit) * 100) : 0
     const salaryTrend = getSalaryTrend(data.salaryHistory)
     const creditLimitGroups = buildCreditLimitGroups(data.cards)
+    const cashFlow = buildMonthlyCashFlow(data)
 
     return {
       totalAssets,
@@ -236,6 +337,7 @@ export function DashboardPage() {
       totalPersonalDebts,
       totalReceivables,
       salaryTrend,
+      cashFlow,
     }
   }, [data])
 
@@ -368,6 +470,8 @@ export function DashboardPage() {
         totalReceivables={summary.totalReceivables}
       />
 
+      <CashFlowPanel cashFlow={summary.cashFlow} />
+
       <div className="grid grid-cols-2 gap-3">
         <MetricTile label="Toplam limit" value={formatCurrency(summary.totalCreditLimit)} icon={<CreditCard />} tone="indigo" />
         <MetricTile label="Kart borcu" value={formatCurrency(summary.totalCreditCardDebt)} icon={<ReceiptText />} tone="amber" />
@@ -459,6 +563,72 @@ function SummaryPill({ label, value }: { label: string; value: string }) {
     <div className="min-w-0 rounded-lg bg-white/10 px-2.5 py-2 ring-1 ring-white/10">
       <p className="truncate text-[11px] font-medium text-emerald-50/75">{label}</p>
       <p className="mt-1 whitespace-normal text-[0.72rem] font-bold leading-tight tabular-nums text-white [overflow-wrap:anywhere] min-[390px]:text-sm">
+        {value}
+      </p>
+    </div>
+  )
+}
+
+function CashFlowPanel({ cashFlow }: { cashFlow: CashFlowSummary }) {
+  const outflowRate = cashFlow.income > 0 ? Math.min(100, (cashFlow.outflow / cashFlow.income) * 100) : 0
+  const projectionTone = cashFlow.projectedCash >= 0 ? 'text-emerald-700 dark:text-emerald-300' : 'text-rose-700 dark:text-rose-300'
+
+  return (
+    <Card className="border-0 shadow-sm ring-1 ring-stone-200/80 dark:ring-stone-800">
+      <CardHeader className="pb-0">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <CardTitle>Aylık nakit akışı</CardTitle>
+            <p className="mt-1 text-sm text-muted-foreground">{cashFlow.monthLabel}</p>
+          </div>
+          <Badge variant={cashFlow.netFlow >= 0 ? 'secondary' : 'destructive'}>
+            {cashFlow.netFlow >= 0 ? 'Artıda' : 'Açık var'}
+          </Badge>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4 pt-2">
+        <div className="grid grid-cols-3 gap-2">
+          <CashFlowMetric label="Gelir" value={formatCurrency(cashFlow.income)} tone="emerald" />
+          <CashFlowMetric label="Çıkış" value={formatCurrency(cashFlow.outflow)} tone="rose" />
+          <CashFlowMetric label="Ay sonu" value={formatCurrency(cashFlow.projectedCash)} tone={cashFlow.projectedCash >= 0 ? 'emerald' : 'rose'} />
+        </div>
+
+        <div>
+          <div className="mb-1.5 flex items-center justify-between text-xs text-muted-foreground">
+            <span>Gelire göre çıkış</span>
+            <span>%{Math.round(outflowRate)}</span>
+          </div>
+          <Progress value={outflowRate} className="h-1.5" />
+        </div>
+
+        <div className="grid gap-2 text-xs text-muted-foreground min-[430px]:grid-cols-2">
+          <span>Kart: {formatCurrency(cashFlow.cardOutflow)}</span>
+          <span>Kredi: {formatCurrency(cashFlow.loanOutflow)}</span>
+          <span>Fatura/ödeme: {formatCurrency(cashFlow.paymentOutflow)}</span>
+          <span>Kişisel borç: {formatCurrency(cashFlow.debtOutflow)}</span>
+        </div>
+
+        <div className="rounded-xl bg-muted/55 px-3 py-2 text-sm">
+          <p className="text-muted-foreground">
+            Mevcut nakit {formatCurrency(cashFlow.cashAssets)} · {cashFlow.recurringPayments} aylık ödeme takipte
+          </p>
+          <p className={`mt-1 font-bold tabular-nums ${projectionTone}`}>
+            Bu ay tahmini net akış: {cashFlow.netFlow >= 0 ? '+' : ''}
+            {formatCurrency(cashFlow.netFlow)}
+          </p>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+function CashFlowMetric({ label, value, tone }: { label: string; value: string; tone: 'emerald' | 'rose' }) {
+  const toneClass = tone === 'emerald' ? 'text-emerald-700 dark:text-emerald-300' : 'text-rose-700 dark:text-rose-300'
+
+  return (
+    <div className="min-w-0 rounded-xl bg-muted/55 px-3 py-2">
+      <p className="truncate text-[11px] font-bold uppercase text-muted-foreground">{label}</p>
+      <p className={`mt-1 text-[clamp(0.82rem,3.8vw,1rem)] font-extrabold leading-tight tabular-nums [overflow-wrap:anywhere] ${toneClass}`}>
         {value}
       </p>
     </div>

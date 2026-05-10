@@ -9,6 +9,7 @@ export type DebtDirection = 'borç_aldım' | 'borç_verdim'
 export type DebtValueType = 'TRY' | 'doviz' | 'gram_altin' | 'ceyrek_altin'
 export type DebtStatus = 'açık' | 'kapandı'
 export type PaymentStatus = 'bekliyor' | 'ödendi'
+export type PaymentRecurrence = 'none' | 'monthly'
 export type LoanInstallmentStatus = 'bekliyor' | 'ödendi'
 export type TransactionHistoryType = 'payment' | 'transfer' | 'loan' | 'debt' | 'card'
 export type UpcomingDismissalSource = 'payment' | 'card' | 'loan_installment' | 'debt'
@@ -87,6 +88,9 @@ export type Payment = BaseRow & {
   amount: number
   due_date: string
   status: PaymentStatus
+  recurrence: PaymentRecurrence
+  recurrence_day: number | null
+  recurrence_end_date: string | null
   note: string | null
 }
 
