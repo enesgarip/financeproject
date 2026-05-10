@@ -1,7 +1,10 @@
-import { Check, MoreVertical, Pencil, Trash2 } from 'lucide-react'
+import { CalendarDays, Check, Landmark, MoreVertical, Pencil, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { CrudPage, type FormField } from '../components/CrudPage'
 import { SimpleModal } from '../components/SimpleModal'
+import { Badge } from '../components/ui/badge'
+import { Card as SurfaceCard, CardContent, CardHeader, CardTitle } from '../components/ui/card'
+import { Progress } from '../components/ui/progress'
 import { supabase } from '../lib/supabase'
 import type { Card, InsertFor, Loan, LoanInstallment } from '../types/database'
 import { formatDate, startOfToday } from '../utils/date'
@@ -121,6 +124,106 @@ function nextPendingInstallment(loan: Loan, installments: LoanInstallment[]) {
   return installments
     .filter((item) => item.loan_id === loan.id && item.status !== 'ödendi')
     .sort((a, b) => a.due_date.localeCompare(b.due_date) || a.installment_no - b.installment_no)[0]
+}
+
+function loanProgress(loan: Loan, installments: LoanInstallment[]) {
+  const loanInstallments = installments.filter((item) => item.loan_id === loan.id)
+  const paidCount = loanInstallments.filter((item) => item.status === 'ödendi').length
+  const totalCount = loanInstallments.length || paidCount + loan.remaining_installments
+  const progressRate = totalCount > 0 ? Math.min(100, (paidCount / totalCount) * 100) : 0
+
+  return {
+    paidCount,
+    totalCount,
+    progressRate,
+    next: nextPendingInstallment(loan, installments),
+  }
+}
+
+function LoanOverview({ loans, installments }: { loans: Loan[]; installments: LoanInstallment[] }) {
+  const activeLoans = loans.filter((loan) => loan.status === 'active')
+  if (activeLoans.length === 0) return null
+
+  const totalRemaining = activeLoans.reduce((total, loan) => total + loan.remaining_amount, 0)
+  const totalMonthly = activeLoans.reduce((total, loan) => total + loan.monthly_payment, 0)
+  const nextItems = activeLoans
+    .map((loan) => ({ loan, item: nextPendingInstallment(loan, installments) }))
+    .filter((entry): entry is { loan: Loan; item: LoanInstallment } => Boolean(entry.item))
+    .sort((a, b) => a.item.due_date.localeCompare(b.item.due_date))
+  const nextPayment = nextItems[0]
+
+  return (
+    <div className="flex flex-col gap-3">
+      <SurfaceCard className="border-0 shadow-sm ring-1 ring-stone-200/80 dark:ring-stone-800">
+        <CardContent className="p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-xs font-bold uppercase text-muted-foreground">Kredi ritmi</p>
+              <p className="mt-1 text-2xl font-extrabold tabular-nums text-foreground">{formatCurrency(totalMonthly)}</p>
+              <p className="mt-1 text-sm text-muted-foreground">Aylık ödeme yükü</p>
+            </div>
+            <div className="grid size-11 shrink-0 place-items-center rounded-xl bg-rose-50 text-rose-700 dark:bg-rose-950/30 dark:text-rose-300">
+              <Landmark />
+            </div>
+          </div>
+          <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
+            <OverviewStat label="Kalan borç" value={formatCurrency(totalRemaining)} />
+            <OverviewStat label="Aktif kredi" value={`${activeLoans.length} kayıt`} />
+          </div>
+          {nextPayment ? (
+            <div className="mt-3 flex items-center justify-between gap-3 rounded-xl bg-muted/55 px-3 py-2 text-sm">
+              <div className="min-w-0">
+                <p className="truncate font-semibold text-foreground">{nextPayment.loan.loan_name}</p>
+                <p className="text-xs text-muted-foreground">Sıradaki taksit · {formatDate(nextPayment.item.due_date)}</p>
+              </div>
+              <Badge variant="secondary">{formatCurrency(nextPayment.item.amount)}</Badge>
+            </div>
+          ) : null}
+        </CardContent>
+      </SurfaceCard>
+
+      <div className="flex snap-x gap-3 overflow-x-auto pb-1">
+        {activeLoans.map((loan) => {
+          const progress = loanProgress(loan, installments)
+          return (
+            <SurfaceCard key={loan.id} className="min-w-[86%] snap-start border-0 shadow-sm ring-1 ring-stone-200/80 dark:ring-stone-800 min-[520px]:min-w-[48%]">
+              <CardHeader className="pb-0">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <CardTitle className="truncate text-base">{loan.loan_name}</CardTitle>
+                    <p className="mt-1 truncate text-xs text-muted-foreground">{loan.bank_name}</p>
+                  </div>
+                  <Badge variant={progress.next ? 'secondary' : 'default'}>
+                    {progress.totalCount ? `${progress.paidCount}/${progress.totalCount}` : `${loan.remaining_installments} kaldı`}
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-1">
+                <Progress value={progress.progressRate} className="h-1.5" />
+                <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+                  <OverviewStat label="Kalan borç" value={formatCurrency(loan.remaining_amount)} />
+                  <OverviewStat label="Taksit" value={formatCurrency(loan.monthly_payment)} />
+                </div>
+                <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
+                  <CalendarDays size={14} />
+                  {progress.next ? formatDate(progress.next.due_date) : 'Bekleyen taksit yok'}
+                </div>
+              </CardContent>
+            </SurfaceCard>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+function OverviewStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="min-w-0 rounded-lg bg-muted/55 px-2.5 py-2">
+      <p className="truncate text-[11px] font-medium text-muted-foreground">{label}</p>
+      <p className="mt-1 truncate text-sm font-bold tabular-nums text-foreground">{value}</p>
+    </div>
+  )
 }
 
 function validateLoanForm(formData: FormData) {
@@ -597,6 +700,7 @@ export function LoansPage() {
         emptyTitle="Henüz kredi yok"
         emptyDescription="Aktif veya kapanmış kredilerini, taksit günleriyle birlikte ekleyebilirsin."
         validateForm={validateLoanForm}
+        renderBeforeList={({ loading, rows }) => (!loading ? <LoanOverview loans={rows as Loan[]} installments={installments} /> : null)}
         afterSave={async (row) => {
           await syncLoanInstallmentPlan(row as Loan)
           await loadInstallments()
