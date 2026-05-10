@@ -325,25 +325,17 @@ export function DashboardPage() {
   async function dismissUpcomingItem(item: UpcomingItem) {
     if (!user) return
 
-    if (item.source === 'payment') {
-      const { error: deleteError } = await supabase.from('payments').delete().eq('id', item.recordId)
-      if (deleteError) {
-        setError(deleteError.message)
-        return
-      }
-    } else {
-      const { error: dismissError } = await supabase.from('dismissed_upcoming_items').upsert(
-        {
-          user_id: user.id,
-          item_key: item.id,
-          source: item.source,
-        },
-        { onConflict: 'user_id,item_key' },
-      )
-      if (dismissError) {
-        setError(dismissError.message)
-        return
-      }
+    const { error: dismissError } = await supabase.from('dismissed_upcoming_items').upsert(
+      {
+        user_id: user.id,
+        item_key: item.id,
+        source: item.source,
+      },
+      { onConflict: 'user_id,item_key' },
+    )
+    if (dismissError) {
+      setError(dismissError.message)
+      return
     }
 
     await loadDashboard()
@@ -466,7 +458,9 @@ function SummaryPill({ label, value }: { label: string; value: string }) {
   return (
     <div className="min-w-0 rounded-lg bg-white/10 px-2.5 py-2 ring-1 ring-white/10">
       <p className="truncate text-[11px] font-medium text-emerald-50/75">{label}</p>
-      <p className="mt-1 truncate text-sm font-bold tabular-nums text-white">{value}</p>
+      <p className="mt-1 whitespace-normal text-[0.72rem] font-bold leading-tight tabular-nums text-white [overflow-wrap:anywhere] min-[390px]:text-sm">
+        {value}
+      </p>
     </div>
   )
 }
@@ -586,7 +580,7 @@ function ModernUpcomingRow({ item, onDismiss }: { item: UpcomingItem; onDismiss:
         type="button"
         onClick={() => void onDismiss(item)}
         className="absolute inset-y-0 right-0 grid w-16 place-items-center bg-rose-600 text-white"
-        aria-label="Yaklaşan ödemeyi sil"
+        aria-label="Yaklaşan ödemeyi listeden gizle"
       >
         <Trash2 size={18} />
       </button>
