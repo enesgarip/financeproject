@@ -9,6 +9,7 @@ export function LoginPage() {
   const { signIn, signUp, user } = useAuth()
   const location = useLocation()
   const [mode, setMode] = useState<'login' | 'register'>('login')
+  const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [message, setMessage] = useState('')
@@ -21,13 +22,21 @@ export function LoginPage() {
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    const trimmedEmail = email.trim()
+    const trimmedFullName = fullName.trim()
+
+    if (mode === 'register' && !trimmedFullName) {
+      setMessage('Ad soyad alanı zorunlu.')
+      return
+    }
+
     setSubmitting(true)
     setMessage('')
     try {
       if (mode === 'login') {
-        await signIn(email, password)
+        await signIn(trimmedEmail, password)
       } else {
-        await signUp(email, password)
+        await signUp(trimmedEmail, password, trimmedFullName)
         setMessage('Kayıt başarılı. E-posta onayı açıksa gelen kutunu kontrol et.')
       }
     } catch (error) {
@@ -51,7 +60,14 @@ export function LoginPage() {
             </p>
           </div>
 
-          <Tabs value={mode} onValueChange={(value) => setMode(value as 'login' | 'register')} className="mt-5">
+          <Tabs
+            value={mode}
+            onValueChange={(value) => {
+              setMode(value as 'login' | 'register')
+              setMessage('')
+            }}
+            className="mt-5"
+          >
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="login">Giriş Yap</TabsTrigger>
               <TabsTrigger value="register">Kayıt Ol</TabsTrigger>
@@ -59,11 +75,25 @@ export function LoginPage() {
           </Tabs>
 
           <form onSubmit={handleSubmit} className="mt-5 flex flex-col gap-4">
+            {mode === 'register' ? (
+              <label className="block text-sm font-semibold text-foreground">
+              Ad soyad
+                <input
+                  required
+                  type="text"
+                  autoComplete="name"
+                  value={fullName}
+                  onChange={(event) => setFullName(event.target.value)}
+                  className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-3 outline-none ring-ring/0 transition focus:border-ring focus:ring-3 focus:ring-ring/20"
+                />
+              </label>
+            ) : null}
             <label className="block text-sm font-semibold text-foreground">
             E-posta adresi
               <input
                 required
                 type="email"
+                autoComplete="email"
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
                 className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-3 outline-none ring-ring/0 transition focus:border-ring focus:ring-3 focus:ring-ring/20"
@@ -75,6 +105,7 @@ export function LoginPage() {
                 required
                 minLength={6}
                 type="password"
+                autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
                 className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-3 outline-none ring-ring/0 transition focus:border-ring focus:ring-3 focus:ring-ring/20"

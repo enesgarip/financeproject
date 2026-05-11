@@ -1,3 +1,4 @@
+import type { User } from '@supabase/supabase-js'
 import { ArrowDownRight, ArrowUpRight, CalendarDays, CreditCard, Landmark, ReceiptText, Trash2, TrendingDown, TrendingUp } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAuth } from '../auth/useAuth'
@@ -228,6 +229,7 @@ export function DashboardPage() {
   const [data, setData] = useState<DashboardData>(emptyData)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const displayName = useMemo(() => getUserDisplayName(user), [user])
 
   const loadDashboard = useCallback(async () => {
     setLoading(true)
@@ -467,6 +469,13 @@ export function DashboardPage() {
 
   return (
     <section className="flex flex-col gap-5">
+      <div>
+        <p className="text-2xl font-extrabold leading-tight text-stone-950 dark:text-stone-50">
+          Hoş geldiniz{displayName ? `, ${displayName}` : ''}
+        </p>
+        <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">Finans özetin hazır.</p>
+      </div>
+
       <NetWorthPanel
         netWorth={summary.netWorth}
         totalAssets={summary.totalAssets}
@@ -521,6 +530,14 @@ function dateInputValue(date: Date | null) {
 function formatMonthDay(date: Date | null) {
   if (!date) return '-'
   return new Intl.DateTimeFormat('tr-TR', { day: '2-digit', month: 'short' }).format(date)
+}
+
+function getUserDisplayName(user: User | null) {
+  const metadata = user?.user_metadata
+  const fullName = typeof metadata?.full_name === 'string' ? metadata.full_name.trim() : ''
+  const name = typeof metadata?.name === 'string' ? metadata.name.trim() : ''
+
+  return fullName || name
 }
 
 function UpcomingSection({ title, children }: { title: string; children: React.ReactNode }) {
