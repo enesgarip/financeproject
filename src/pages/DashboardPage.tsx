@@ -1,5 +1,5 @@
 import type { User } from '@supabase/supabase-js'
-import { ArrowDownRight, ArrowUpRight, CalendarDays, CreditCard, Landmark, ReceiptText, Trash2, TrendingDown, TrendingUp } from 'lucide-react'
+import { ArrowDownRight, ArrowUpRight, CalendarDays, CreditCard, Landmark, ReceiptText, Sparkles, Trash2, TrendingDown, TrendingUp } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAuth } from '../auth/useAuth'
 import { supabase } from '../lib/supabase'
@@ -469,12 +469,7 @@ export function DashboardPage() {
 
   return (
     <section className="flex flex-col gap-5">
-      <div>
-        <p className="text-2xl font-extrabold leading-tight text-stone-950 dark:text-stone-50">
-          Hoş geldiniz{displayName ? `, ${displayName}` : ''}
-        </p>
-        <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">Finans özetin hazır.</p>
-      </div>
+      <WelcomePanel displayName={displayName} cashFlow={summary.cashFlow} />
 
       <NetWorthPanel
         netWorth={summary.netWorth}
@@ -538,6 +533,61 @@ function getUserDisplayName(user: User | null) {
   const name = typeof metadata?.name === 'string' ? metadata.name.trim() : ''
 
   return fullName || name
+}
+
+function WelcomePanel({ displayName, cashFlow }: { displayName: string; cashFlow: CashFlowSummary }) {
+  const netFlowIsPositive = cashFlow.netFlow >= 0
+  const signedNetFlow = `${netFlowIsPositive ? '+' : ''}${formatCurrency(cashFlow.netFlow)}`
+
+  return (
+    <Card className="relative overflow-hidden border-0 bg-emerald-950 py-0 text-white shadow-xl shadow-emerald-950/20 ring-1 ring-emerald-500/20">
+      <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(4,120,87,0.98),rgba(13,148,136,0.94)_46%,rgba(79,70,229,0.92))]" />
+      <div className="absolute inset-0 opacity-25 [background-image:linear-gradient(120deg,rgba(255,255,255,0.18)_1px,transparent_1px),linear-gradient(0deg,rgba(255,255,255,0.1)_1px,transparent_1px)] [background-size:22px_22px]" />
+      <CardContent className="relative p-5">
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-white/14 px-3 py-1.5 text-xs font-bold text-emerald-50 ring-1 ring-white/18">
+              <Sparkles size={14} />
+              Finans özeti hazır
+            </div>
+            <h2 className="break-words text-[clamp(1.8rem,7vw,2.65rem)] font-black leading-[0.98] tracking-normal">
+              Hoş geldiniz{displayName ? ',' : ''}
+              {displayName ? <span className="block text-emerald-100">{displayName}</span> : null}
+            </h2>
+            <p className="mt-3 max-w-md text-sm font-medium leading-6 text-white/78">
+              {cashFlow.monthLabel} için nakit akışı, kartlar ve yaklaşan ödemeler tek ekranda.
+            </p>
+          </div>
+          <div className="grid size-12 shrink-0 place-items-center rounded-2xl bg-white/15 text-emerald-50 ring-1 ring-white/20">
+            <TrendingUp size={22} />
+          </div>
+        </div>
+
+        <div className="mt-5 grid grid-cols-3 gap-2">
+          <WelcomeMetric label="Dönem" value={cashFlow.monthLabel} />
+          <WelcomeMetric label="Net akış" value={signedNetFlow} tone={netFlowIsPositive ? 'positive' : 'negative'} />
+          <WelcomeMetric label="Nakit" value={formatCurrency(cashFlow.cashAssets)} />
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+function WelcomeMetric({ label, value, tone = 'neutral' }: { label: string; value: string; tone?: 'neutral' | 'positive' | 'negative' }) {
+  const valueClass = {
+    neutral: 'text-white',
+    positive: 'text-emerald-100',
+    negative: 'text-rose-100',
+  }[tone]
+
+  return (
+    <div className="min-w-0 rounded-xl bg-white/12 px-3 py-2.5 ring-1 ring-white/14 backdrop-blur">
+      <p className="truncate text-[10px] font-bold uppercase text-white/58">{label}</p>
+      <p className={`mt-1 text-[clamp(0.72rem,3.4vw,0.92rem)] font-extrabold leading-tight tabular-nums [overflow-wrap:anywhere] ${valueClass}`}>
+        {value}
+      </p>
+    </div>
+  )
 }
 
 function UpcomingSection({ title, children }: { title: string; children: React.ReactNode }) {
