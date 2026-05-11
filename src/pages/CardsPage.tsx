@@ -1,6 +1,6 @@
 import { ReceiptText, WalletCards } from 'lucide-react'
 import type { CSSProperties } from 'react'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { CrudPage, type FormField } from '../components/CrudPage'
 import { SimpleModal } from '../components/SimpleModal'
 import { Badge } from '../components/ui/badge'
@@ -277,6 +277,153 @@ function OverviewStat({ label, value }: { label: string; value: string }) {
   )
 }
 
+function cardOptionLabel(card: Card) {
+  const owner = card.holder_name ? ` · ${card.holder_name}` : ''
+  return `${card.bank_name} · ${card.card_name}${owner}`
+}
+
+function QuickExpensePanel({
+  rows,
+  reload,
+  setError,
+}: {
+  rows: Card[]
+  reload: () => Promise<void>
+  setError: (message: string) => void
+}) {
+  const [cardId, setCardId] = useState('')
+  const [amount, setAmount] = useState('')
+  const [description, setDescription] = useState('')
+  const [localError, setLocalError] = useState('')
+  const [saving, setSaving] = useState(false)
+  const cards = useMemo(() => rows.filter((row) => row.card_type === 'kredi_karti' || row.card_type === 'banka_karti'), [rows])
+  const activeCardId = cards.some((card) => card.id === cardId) ? cardId : (cards[0]?.id ?? '')
+  const selectedCard = cards.find((card) => card.id === activeCardId)
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+
+    const parsedAmount = parseNumber(amount)
+    const trimmedDescription = description.trim()
+    if (!selectedCard) {
+      setLocalError('Kart seçmelisin.')
+      return
+    }
+    if (parsedAmount <= 0) {
+      setLocalError('Tutar 0 dan büyük olmalı.')
+      return
+    }
+    if (!trimmedDescription) {
+      setLocalError('Açıklama yazmalısın.')
+      return
+    }
+
+    setSaving(true)
+    setLocalError('')
+    setError('')
+    const { error } = await supabase.rpc('add_card_expense', {
+      p_card_id: selectedCard.id,
+      p_amount: parsedAmount,
+      p_description: trimmedDescription,
+    })
+
+    setSaving(false)
+    if (error) {
+      setLocalError(error.message)
+      return
+    }
+
+    setAmount('')
+    setDescription('')
+    await reload()
+  }
+
+  if (cards.length === 0) return null
+
+  return (
+    <SurfaceCard className="border-0 shadow-sm ring-1 ring-emerald-200/80 dark:ring-emerald-900/70">
+      <CardHeader className="pb-0">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <CardTitle className="text-base">Hızlı harcama</CardTitle>
+            <p className="mt-1 text-xs text-muted-foreground">Kart, TL tutar ve açıklama yeterli.</p>
+          </div>
+          {selectedCard ? (
+            <Badge variant={selectedCard.card_type === 'kredi_karti' ? 'secondary' : 'outline'}>
+              {selectedCard.card_type === 'kredi_karti'
+                ? `Borç ${formatCurrency(selectedCard.debt_amount)}`
+                : `Bakiye ${formatCurrency(selectedCard.current_balance)}`}
+            </Badge>
+          ) : null}
+        </div>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+          <label className="block text-sm font-medium text-stone-700 dark:text-stone-200">
+            Kart
+            <select
+              value={activeCardId}
+              onChange={(event) => {
+                setCardId(event.target.value)
+                setLocalError('')
+              }}
+              className="mt-1 w-full rounded-lg border border-stone-200 bg-white px-3 py-3 outline-none focus:border-emerald-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+              required
+            >
+              {cards.map((card) => (
+                <option key={card.id} value={card.id}>
+                  {cardOptionLabel(card)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <div className="grid grid-cols-1 gap-3 min-[430px]:grid-cols-[minmax(0,0.75fr)_minmax(0,1.25fr)]">
+            <label className="block text-sm font-medium text-stone-700 dark:text-stone-200">
+              TL
+              <input
+                value={amount}
+                onChange={(event) => {
+                  setAmount(event.target.value)
+                  setLocalError('')
+                }}
+                type="number"
+                min="0"
+                step="0.01"
+                inputMode="decimal"
+                placeholder="0.00"
+                className="mt-1 w-full rounded-lg border border-stone-200 px-3 py-3 outline-none focus:border-emerald-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+                required
+              />
+            </label>
+            <label className="block text-sm font-medium text-stone-700 dark:text-stone-200">
+              Açıklama
+              <input
+                value={description}
+                onChange={(event) => {
+                  setDescription(event.target.value)
+                  setLocalError('')
+                }}
+                type="text"
+                placeholder="Migros, benzin, yemek..."
+                className="mt-1 w-full rounded-lg border border-stone-200 px-3 py-3 outline-none focus:border-emerald-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+                required
+              />
+            </label>
+          </div>
+          {localError ? <p className="rounded-lg bg-rose-50 p-3 text-sm text-rose-700 dark:bg-rose-950/40 dark:text-rose-200">{localError}</p> : null}
+          <button
+            type="submit"
+            disabled={saving}
+            className="rounded-xl bg-emerald-700 px-4 py-3.5 text-sm font-semibold text-white shadow-sm disabled:opacity-60 hover:bg-emerald-800"
+          >
+            {saving ? 'Ekleniyor...' : 'Harcamayı kaydet'}
+          </button>
+        </form>
+      </CardContent>
+    </SurfaceCard>
+  )
+}
+
 export function CardsPage() {
   const [transactionCard, setTransactionCard] = useState<Card | null>(null)
   const [transactionType, setTransactionType] = useState<'in' | 'out'>('in')
@@ -292,6 +439,7 @@ export function CardsPage() {
   const [allCards, setAllCards] = useState<Card[]>([])
   const [expenseCard, setExpenseCard] = useState<Card | null>(null)
   const [expenseAmount, setExpenseAmount] = useState('')
+  const [expenseDescription, setExpenseDescription] = useState('')
   const [expenseError, setExpenseError] = useState('')
   const [expenseSaving, setExpenseSaving] = useState(false)
 
@@ -434,6 +582,7 @@ export function CardsPage() {
     setExpenseCard(card)
     setReloadCards(() => reload)
     setExpenseAmount('')
+    setExpenseDescription('')
     setExpenseError('')
   }
 
@@ -442,38 +591,29 @@ export function CardsPage() {
     if (!expenseCard) return
 
     const amount = parseNumber(expenseAmount)
+    const description = expenseDescription.trim()
     if (amount <= 0) {
       setExpenseError('Harcama tutarı 0 dan büyük olmalı.')
+      return
+    }
+
+    if (!description) {
+      setExpenseError('Açıklama yazmalısın.')
       return
     }
 
     setExpenseSaving(true)
     setExpenseError('')
 
-    const nextDebt = expenseCard.debt_amount + amount
-    const nextCurrentPeriod = expenseCard.current_period_spending + amount
-    const { error } = await supabase
-      .from('cards')
-      .update({ debt_amount: nextDebt, current_period_spending: nextCurrentPeriod, updated_at: new Date().toISOString() })
-      .eq('id', expenseCard.id)
+    const { error } = await supabase.rpc('add_card_expense', {
+      p_card_id: expenseCard.id,
+      p_amount: amount,
+      p_description: description,
+    })
 
     setExpenseSaving(false)
     if (error) {
       setExpenseError(error.message)
-      return
-    }
-
-    const historyError = await addTransactionHistory({
-      user_id: expenseCard.user_id,
-      type: 'card',
-      title: `${expenseCard.card_name} harcama`,
-      amount,
-      source_table: 'cards',
-      source_id: expenseCard.id,
-      note: 'Kredi kartına harcama eklendi.',
-    })
-    if (historyError) {
-      setExpenseError(historyError.message)
       return
     }
 
@@ -525,7 +665,14 @@ export function CardsPage() {
         emptyTitle="Henüz kart yok"
         emptyDescription="Kredi kartı ve banka kartlarını buradan takip edebilirsin."
         orderBy="card_type"
-        renderBeforeList={({ loading, rows }) => (!loading ? <CreditCardOverview rows={rows as Card[]} /> : null)}
+        renderBeforeList={({ loading, rows, reload, setError }) =>
+          !loading ? (
+            <div className="flex flex-col gap-3">
+              <QuickExpensePanel rows={rows as Card[]} reload={reload} setError={setError} />
+              <CreditCardOverview rows={rows as Card[]} />
+            </div>
+          ) : null
+        }
         getInitialValues={(row?: Card) => ({
           bank_name: row?.bank_name ?? '',
           card_name: row?.card_name ?? '',
@@ -760,6 +907,17 @@ export function CardsPage() {
               onChange={(event) => setExpenseAmount(event.target.value)}
               className="mt-1 w-full rounded-lg border border-stone-200 px-3 py-3 outline-none focus:border-rose-600 dark:border-stone-700 dark:bg-stone-950 dark:text-stone-100"
               placeholder="0.00"
+              required
+            />
+          </label>
+          <label className="block text-sm font-medium text-stone-700 dark:text-stone-200">
+            Açıklama
+            <input
+              type="text"
+              value={expenseDescription}
+              onChange={(event) => setExpenseDescription(event.target.value)}
+              className="mt-1 w-full rounded-lg border border-stone-200 px-3 py-3 outline-none focus:border-rose-600 dark:border-stone-700 dark:bg-stone-950 dark:text-stone-100"
+              placeholder="Migros, benzin, yemek..."
               required
             />
           </label>

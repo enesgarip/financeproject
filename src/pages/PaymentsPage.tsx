@@ -3,13 +3,30 @@ import { Badge } from '../components/ui/badge'
 import { Card, CardContent } from '../components/ui/card'
 import { Progress } from '../components/ui/progress'
 import { supabase } from '../lib/supabase'
-import type { Payment } from '../types/database'
+import type { Payment, PaymentCategory } from '../types/database'
 import { addMonths, dateInputValue, daysUntil, formatDate, nextMonthlyDateFrom } from '../utils/date'
 import { formatCurrency, parseNumber } from '../utils/formatCurrency'
 import { addTransactionHistory } from '../utils/history'
 
+const paymentCategoryOptions: { label: PaymentCategory; value: PaymentCategory }[] = [
+  { label: 'Fatura', value: 'Fatura' },
+  { label: 'Dijital üyelik', value: 'Dijital üyelik' },
+  { label: 'Kira / aidat', value: 'Kira / aidat' },
+  { label: 'Sigorta', value: 'Sigorta' },
+  { label: 'Vergi / devlet', value: 'Vergi / devlet' },
+  { label: 'Eğitim', value: 'Eğitim' },
+  { label: 'Sağlık', value: 'Sağlık' },
+  { label: 'Diğer', value: 'Diğer' },
+]
+
 const fields: FormField[] = [
   { name: 'title', label: 'Başlık', type: 'text', required: true },
+  {
+    name: 'category',
+    label: 'Kategori',
+    type: 'select',
+    options: paymentCategoryOptions,
+  },
   { name: 'amount', label: 'Tutar', type: 'number', min: '0', step: '0.01', required: true },
   { name: 'due_date', label: 'Sıradaki tarih', type: 'date', required: true },
   {
@@ -174,6 +191,7 @@ export function PaymentsPage() {
       renderBeforeList={({ loading, rows }) => (!loading ? <PaymentsOverview rows={rows as Payment[]} /> : null)}
       getInitialValues={(row?: Payment) => ({
         title: row?.title ?? '',
+        category: row?.category ?? 'Diğer',
         amount: row?.amount ?? 0,
         due_date: row?.due_date ?? new Date().toISOString().slice(0, 10),
         recurrence: row?.recurrence ?? 'none',
@@ -188,6 +206,7 @@ export function PaymentsPage() {
         return {
           user_id: userId,
           title: String(formData.get('title') ?? '').trim(),
+          category: (formData.get('category') as PaymentCategory | null) ?? 'Diğer',
           amount: parseNumber(formData.get('amount')),
           due_date: String(formData.get('due_date') ?? ''),
           status: recurrence === 'monthly' ? 'bekliyor' : (formData.get('status') as Payment['status']),
@@ -198,8 +217,9 @@ export function PaymentsPage() {
         }
       }}
       renderTitle={(row) => row.title}
-      renderSubtitle={(row) => `${row.status} · ${getPaymentScheduleLabel(row)}`}
+      renderSubtitle={(row) => `${row.category} · ${row.status} · ${getPaymentScheduleLabel(row)}`}
       renderDetails={(row) => [`Tutar: ${formatCurrency(row.amount)}`, `Sıradaki tarih: ${formatDate(row.due_date)}`]}
+      groupBy={(row) => row.category}
       renderRowActions={(row, helpers) =>
         row.status === 'bekliyor' ? (
           <button

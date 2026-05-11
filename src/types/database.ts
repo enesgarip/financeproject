@@ -4,6 +4,7 @@ export type AssetCategory = 'Nakit' | 'Altın' | 'Fon' | 'Hisse' | 'Araç' | 'BE
 export type AssetUnit = 'TRY' | 'gram' | 'adet'
 export type CashCurrency = 'TRY' | 'USD' | 'EUR' | 'GBP'
 export type CardType = 'banka_karti' | 'kredi_karti'
+export type PaymentCategory = 'Fatura' | 'Dijital üyelik' | 'Kira / aidat' | 'Sigorta' | 'Vergi / devlet' | 'Eğitim' | 'Sağlık' | 'Diğer'
 export type LoanStatus = 'active' | 'closed'
 export type DebtDirection = 'borç_aldım' | 'borç_verdim'
 export type DebtValueType = 'TRY' | 'doviz' | 'gram_altin' | 'ceyrek_altin'
@@ -47,6 +48,14 @@ export type Card = BaseRow & {
   note: string | null
 }
 
+export type CardExpense = BaseRow & {
+  card_id: string
+  spent_at: string
+  amount: number
+  description: string
+  note: string | null
+}
+
 export type Loan = BaseRow & {
   bank_name: string
   loan_name: string
@@ -85,6 +94,7 @@ export type Debt = BaseRow & {
 
 export type Payment = BaseRow & {
   title: string
+  category: PaymentCategory
   amount: number
   due_date: string
   status: PaymentStatus
@@ -142,6 +152,7 @@ export type Database = {
     Tables: {
       assets: Table<Asset, WithBaseInsert<Asset>, WithBaseUpdate<Asset>>
       cards: Table<Card, WithBaseInsert<Card>, WithBaseUpdate<Card>>
+      card_expenses: Table<CardExpense, WithBaseInsert<CardExpense>, WithBaseUpdate<CardExpense>>
       loans: Table<Loan, WithBaseInsert<Loan>, WithBaseUpdate<Loan>>
       loan_installments: Table<LoanInstallment, WithBaseInsert<LoanInstallment>, WithBaseUpdate<LoanInstallment>>
       debts: Table<Debt, WithBaseInsert<Debt>, WithBaseUpdate<Debt>>
@@ -155,7 +166,17 @@ export type Database = {
       >
     }
     Views: Record<string, never>
-    Functions: Record<string, never>
+    Functions: {
+      add_card_expense: {
+        Args: {
+          p_card_id: string
+          p_amount: number
+          p_description: string
+          p_spent_at?: string
+        }
+        Returns: CardExpense
+      }
+    }
     Enums: Record<string, never>
     CompositeTypes: Record<string, never>
   }
