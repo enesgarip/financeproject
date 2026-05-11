@@ -201,7 +201,6 @@ export function AssetsPage() {
         getCardClassName={(row) => assetTone[row.category].card}
         getDetailClassName={(row) => assetTone[row.category].detail}
         groupBy={(row) => row.category}
-        showFloatingAdd={false}
       />
 
       <CrudPage
@@ -248,7 +247,6 @@ export function AssetsPage() {
         }}
         getCardClassName={() => 'border-emerald-200 bg-emerald-50/35 dark:border-emerald-900 dark:bg-emerald-950/25'}
         getDetailClassName={() => 'bg-emerald-50 dark:bg-emerald-950/40'}
-        showFloatingAdd={false}
       />
     </div>
   )

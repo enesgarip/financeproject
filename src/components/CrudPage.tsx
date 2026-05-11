@@ -55,7 +55,6 @@ type CrudPageProps<T extends TableName> = {
   renderMenuActions?: (row: RowFor<T>, helpers: { reload: () => Promise<void>; setError: (message: string) => void; rows: RowFor<T>[]; closeMenu: () => void }) => ReactNode
   renderExtra?: (row: RowFor<T>, helpers: { reload: () => Promise<void>; setError: (message: string) => void; rows: RowFor<T>[] }) => ReactNode
   renderBeforeList?: (helpers: { loading: boolean; rows: RowFor<T>[]; reload: () => Promise<void>; setError: (message: string) => void }) => ReactNode
-  showFloatingAdd?: boolean
 }
 
 export function CrudPage<T extends TableName>({
@@ -84,7 +83,6 @@ export function CrudPage<T extends TableName>({
   renderMenuActions,
   renderExtra,
   renderBeforeList,
-  showFloatingAdd = true,
 }: CrudPageProps<T>) {
   const { user } = useAuth()
   const [rows, setRows] = useState<RowFor<T>[]>([])
@@ -457,16 +455,6 @@ export function CrudPage<T extends TableName>({
         </form>
       </SimpleModal>
 
-      {showFloatingAdd ? (
-        <button
-          type="button"
-          onClick={openCreate}
-          className="fixed bottom-[calc(env(safe-area-inset-bottom)+5.4rem)] right-4 z-30 inline-flex h-12 items-center gap-2 rounded-full bg-emerald-700 px-4 text-sm font-semibold text-white shadow-lg shadow-emerald-900/20 active:scale-[0.98] sm:hidden"
-        >
-          <Plus size={18} />
-          Ekle
-        </button>
-      ) : null}
     </section>
   )
 }
