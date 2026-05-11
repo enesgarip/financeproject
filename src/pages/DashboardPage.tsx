@@ -156,6 +156,10 @@ function paymentOccurrenceInMonth(payment: Payment, month = new Date()) {
   return isDateInMonth(payment.due_date, month) ? new Date(`${payment.due_date}T00:00:00`) : null
 }
 
+function cardMonthlyPaymentAmount(card: FinanceCard) {
+  return card.statement_debt_amount
+}
+
 function buildMonthlyCashFlow(data: DashboardData): CashFlowSummary {
   const month = new Date()
   const monthStart = startOfMonth(month)
@@ -179,9 +183,9 @@ function buildMonthlyCashFlow(data: DashboardData): CashFlowSummary {
   const cardOutflow = sum(
     data.cards.filter((card) => {
       const dueDate = monthlyOccurrenceDate(card.due_day, month)
-      return card.card_type === 'kredi_karti' && card.debt_amount > 0 && dueDate !== null && dueDate >= monthStart && dueDate <= monthEnd
+      return card.card_type === 'kredi_karti' && cardMonthlyPaymentAmount(card) > 0 && dueDate !== null && dueDate >= monthStart && dueDate <= monthEnd
     }),
-    (card) => card.debt_amount,
+    cardMonthlyPaymentAmount,
   )
   const plannedLoanIds = new Set(data.loanInstallments.map((installment) => installment.loan_id))
   const scheduledLoanOutflow = sum(
@@ -357,7 +361,7 @@ export function DashboardPage() {
       }))
 
     const creditCards = data.cards
-      .filter((card) => card.card_type === 'kredi_karti' && card.due_day && card.debt_amount > 0)
+      .filter((card) => card.card_type === 'kredi_karti' && card.due_day && cardMonthlyPaymentAmount(card) > 0)
       .map((card) => ({ card, dueDate: nextMonthlyDate(card.due_day) }))
       .filter((item) => {
         const remaining = daysUntil(item.dueDate)
@@ -368,7 +372,7 @@ export function DashboardPage() {
         recordId: card.id,
         source: 'card' as const,
         title: `Kart · ${card.bank_name} · ${card.card_name}`,
-        value: formatCurrency(card.debt_amount),
+        value: formatCurrency(cardMonthlyPaymentAmount(card)),
         date: formatMonthDay(dueDate),
         sortTime: dueDate?.getTime() ?? 0,
       }))
