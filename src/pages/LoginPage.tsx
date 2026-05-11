@@ -68,9 +68,19 @@ export function LoginPage() {
             }}
             className="mt-5"
           >
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="login">Giriş Yap</TabsTrigger>
-              <TabsTrigger value="register">Kayıt Ol</TabsTrigger>
+            <TabsList className="grid h-12 w-full grid-cols-2 rounded-2xl bg-stone-100 p-1 dark:bg-stone-900">
+              <TabsTrigger
+                value="login"
+                className="h-full rounded-xl text-base font-semibold data-[state=active]:bg-emerald-700 data-[state=active]:text-white data-[state=active]:shadow-sm dark:data-[state=active]:bg-emerald-600"
+              >
+                Giriş Yap
+              </TabsTrigger>
+              <TabsTrigger
+                value="register"
+                className="h-full rounded-xl text-base font-semibold data-[state=active]:bg-emerald-700 data-[state=active]:text-white data-[state=active]:shadow-sm dark:data-[state=active]:bg-emerald-600"
+              >
+                Kayıt Ol
+              </TabsTrigger>
             </TabsList>
           </Tabs>
 
