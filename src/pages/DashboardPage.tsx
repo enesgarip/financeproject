@@ -486,7 +486,15 @@ export function DashboardPage() {
 
       <CashFlowPanel cashFlow={summary.cashFlow} />
 
-      <PeriodDebtTotalsPanel cashFlow={summary.cashFlow} />
+      <div className="grid gap-3 min-[760px]:grid-cols-2">
+        <PeriodDebtTotalsPanel cashFlow={summary.cashFlow} />
+        <CurrentDebtTotalsPanel
+          totalDebt={summary.totalDebts}
+          cardDebt={summary.totalCreditCardDebt}
+          loanDebt={summary.totalLoanDebt}
+          personalDebt={summary.totalPersonalDebts}
+        />
+      </div>
 
       <div className="grid grid-cols-2 gap-3">
         <MetricTile label="Toplam limit" value={formatCurrency(summary.totalCreditLimit)} icon={<CreditCard />} tone="indigo" />
@@ -713,6 +721,32 @@ function PeriodDebtTotalsPanel({ cashFlow }: { cashFlow: CashFlowSummary }) {
         <CashFlowMetric label="Kredi taksidi" value={formatCurrency(cashFlow.loanOutflow)} tone="rose" />
         <CashFlowMetric label="Fatura/ödeme" value={formatCurrency(cashFlow.paymentOutflow)} tone="rose" />
         <CashFlowMetric label="Kişisel borç" value={formatCurrency(cashFlow.debtOutflow)} tone="rose" />
+      </CardContent>
+    </Card>
+  )
+}
+
+function CurrentDebtTotalsPanel({
+  totalDebt,
+  cardDebt,
+  loanDebt,
+  personalDebt,
+}: {
+  totalDebt: number
+  cardDebt: number
+  loanDebt: number
+  personalDebt: number
+}) {
+  return (
+    <Card className="border-0 shadow-sm ring-1 ring-stone-200/80 dark:ring-stone-800">
+      <CardHeader className="pb-2">
+        <CardTitle>Güncel borç toplamları</CardTitle>
+      </CardHeader>
+      <CardContent className="grid grid-cols-2 gap-2 pt-0">
+        <CashFlowMetric label="Toplam borç" value={formatCurrency(totalDebt)} tone="rose" />
+        <CashFlowMetric label="Kart borcu" value={formatCurrency(cardDebt)} tone="rose" />
+        <CashFlowMetric label="Kredi borcu" value={formatCurrency(loanDebt)} tone="rose" />
+        <CashFlowMetric label="Kişisel borç" value={formatCurrency(personalDebt)} tone="rose" />
       </CardContent>
     </Card>
   )
