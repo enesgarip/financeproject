@@ -321,6 +321,7 @@ async function syncLoanInstallmentPlan(loan: Loan) {
 
 export function LoansPage() {
   const [installmentLoan, setInstallmentLoan] = useState<Loan | null>(null)
+  const [installmentItem, setInstallmentItem] = useState<LoanInstallment | null>(null)
   const [installmentAmount, setInstallmentAmount] = useState('')
   const [installmentSourceCard, setInstallmentSourceCard] = useState('')
   const [installmentError, setInstallmentError] = useState('')
@@ -362,19 +363,26 @@ export function LoansPage() {
     }
   }, [planMenuOpenId])
 
-  async function openInstallmentPayment(loan: Loan, reload: () => Promise<void>) {
+  async function openInstallmentPayment(loan: Loan, item: LoanInstallment, reload: () => Promise<void>) {
     const cards = await getBankaKartlari()
     setInstallmentLoan(loan)
+    setInstallmentItem(item)
     setReloadLoans(() => reload)
     setBankaKartlari(cards)
-    setInstallmentAmount(String(loan.monthly_payment))
+    setInstallmentAmount(String(item.amount))
     setInstallmentSourceCard('')
+    setInstallmentError(cards.length === 0 ? 'Ödeme için önce bir banka kartı hesabı eklemelisin.' : '')
+  }
+
+  function closeInstallmentPayment() {
+    setInstallmentLoan(null)
+    setInstallmentItem(null)
     setInstallmentError('')
   }
 
   async function handleInstallmentSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (!installmentLoan) return
+    if (!installmentLoan || !installmentItem) return
 
     const amount = parseNumber(installmentAmount)
     if (amount <= 0) {
@@ -412,59 +420,34 @@ export function LoansPage() {
       return
     }
 
-    const nextPlanItem = installments
-      .filter((item) => item.loan_id === installmentLoan.id && item.status !== 'ödendi')
-      .sort((a, b) => a.due_date.localeCompare(b.due_date))[0]
+    const paidAt = new Date().toISOString()
+    const { error: planError } = await supabase
+      .from('loan_installments')
+      .update({ status: 'ödendi', paid_at: paidAt, amount, updated_at: paidAt })
+      .eq('id', installmentItem.id)
 
-    if (nextPlanItem) {
-      const paidAt = new Date().toISOString()
-      const { error: planError } = await supabase
-        .from('loan_installments')
-        .update({ status: 'ödendi', paid_at: paidAt, amount, updated_at: paidAt })
-        .eq('id', nextPlanItem.id)
+    if (planError) {
+      setInstallmentSaving(false)
+      setInstallmentError(planError.message)
+      return
+    }
 
-      if (planError) {
-        setInstallmentSaving(false)
-        setInstallmentError(planError.message)
-        return
-      }
-
-      try {
-        await updateLoanTotalsFromInstallments(installmentLoan.id)
-      } catch (loanError) {
-        setInstallmentSaving(false)
-        setInstallmentError(loanError instanceof Error ? loanError.message : 'Kredi güncellenemedi.')
-        return
-      }
-    } else {
-      const remainingInstallments = Math.max(0, installmentLoan.remaining_installments - 1)
-      const remainingAmount = Math.max(0, installmentLoan.remaining_amount - amount)
-      const status = remainingInstallments === 0 || remainingAmount === 0 ? 'closed' : 'active'
-      const { error: loanError } = await supabase
-        .from('loans')
-        .update({
-          remaining_installments: remainingInstallments,
-          remaining_amount: remainingAmount,
-          status,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', installmentLoan.id)
-
-      if (loanError) {
-        setInstallmentSaving(false)
-        setInstallmentError(loanError.message)
-        return
-      }
+    try {
+      await updateLoanTotalsFromInstallments(installmentLoan.id)
+    } catch (loanError) {
+      setInstallmentSaving(false)
+      setInstallmentError(loanError instanceof Error ? loanError.message : 'Kredi güncellenemedi.')
+      return
     }
 
     const historyError = await addTransactionHistory({
       user_id: installmentLoan.user_id,
       type: 'loan',
-      title: `${installmentLoan.loan_name} taksit ödemesi`,
+      title: `${installmentLoan.loan_name} ${installmentItem.installment_no}. taksit ödemesi`,
       amount,
-      source_table: 'loans',
-      source_id: installmentLoan.id,
-      note: `${sourceCard.card_name} hesabından ödendi.`,
+      source_table: 'loan_installments',
+      source_id: installmentItem.id,
+      note: `${sourceCard.card_name} hesabından ödendi. Vade: ${formatDate(installmentItem.due_date)}`,
     })
 
     setInstallmentSaving(false)
@@ -473,12 +456,17 @@ export function LoansPage() {
       return
     }
 
-    setInstallmentLoan(null)
+    closeInstallmentPayment()
     await loadInstallments()
     await reloadLoans?.()
   }
 
   async function toggleInstallmentPaid(item: LoanInstallment, loan: Loan, reload: () => Promise<void>, setError: (message: string) => void) {
+    if (item.status !== 'ödendi') {
+      await openInstallmentPayment(loan, item, reload)
+      return
+    }
+
     const nextStatus = item.status === 'ödendi' ? 'bekliyor' : 'ödendi'
     const paidAt = nextStatus === 'ödendi' ? new Date().toISOString() : null
     const { error } = await supabase
@@ -489,19 +477,6 @@ export function LoansPage() {
     if (error) {
       setError(error.message)
       return
-    }
-
-    if (nextStatus === 'ödendi') {
-      const historyError = await addTransactionHistory({
-        user_id: loan.user_id,
-        type: 'loan',
-        title: `${loan.loan_name} taksidi ödendi`,
-        amount: item.amount,
-        source_table: 'loan_installments',
-        source_id: item.id,
-        note: formatDate(item.due_date),
-      })
-      if (historyError) setError(historyError.message)
     }
 
     try {
@@ -635,7 +610,7 @@ export function LoansPage() {
                     ? 'border-emerald-600 bg-emerald-600 text-white'
                     : 'border-stone-300 bg-white text-transparent dark:border-stone-700 dark:bg-stone-950'
                 }`}
-                aria-label={item.status === 'ödendi' ? 'Taksiti bekliyor yap' : 'Taksiti ödendi işaretle'}
+                aria-label={item.status === 'ödendi' ? 'Taksiti bekliyor yap' : 'Taksit ödemesini aç'}
               >
                 <Check size={16} strokeWidth={3} />
               </button>
@@ -754,24 +729,16 @@ export function LoansPage() {
           return details
         }}
         renderExtra={(row, helpers) => renderPaymentPlan(row as Loan, helpers.reload, helpers.setError)}
-        renderRowActions={(row, helpers) =>
-          row.status === 'active' && row.remaining_installments > 0 ? (
-            <button
-              type="button"
-              onClick={() => void openInstallmentPayment(row, helpers.reload)}
-              className="rounded-lg border border-stone-200 bg-stone-700 px-3 py-2 text-xs font-semibold text-white shadow-sm dark:border-stone-700 dark:bg-stone-600"
-            >
-              Taksit öde
-            </button>
-          ) : null
-        }
       />
 
-      <SimpleModal title="Taksit ödemesi" open={Boolean(installmentLoan)} onClose={() => setInstallmentLoan(null)}>
+      <SimpleModal title="Taksit ödemesi" open={Boolean(installmentLoan && installmentItem)} onClose={closeInstallmentPayment}>
         <form onSubmit={handleInstallmentSubmit} className="space-y-4">
           <div className="rounded-lg bg-stone-50 p-3 text-sm text-stone-600 dark:bg-stone-900 dark:text-stone-300">
             <p className="font-semibold text-stone-950 dark:text-stone-50">{installmentLoan?.loan_name}</p>
-            <p>Aylık taksit: {formatCurrency(installmentLoan?.monthly_payment ?? 0)}</p>
+            <p>
+              {installmentItem?.installment_no}. taksit · {installmentItem ? formatDate(installmentItem.due_date) : '-'}
+            </p>
+            <p>Planlanan tutar: {formatCurrency(installmentItem?.amount ?? 0)}</p>
             <p>Kalan taksit: {installmentLoan?.remaining_installments ?? 0}</p>
           </div>
           <label className="block text-sm font-medium text-stone-700 dark:text-stone-200">
@@ -808,7 +775,7 @@ export function LoansPage() {
             disabled={installmentSaving}
             className="w-full rounded-xl bg-stone-700 px-4 py-3.5 text-sm font-semibold text-white disabled:opacity-60 dark:bg-stone-600"
           >
-            {installmentSaving ? 'İşleniyor...' : 'Taksit öde'}
+            {installmentSaving ? 'İşleniyor...' : 'Taksiti öde'}
           </button>
         </form>
       </SimpleModal>
