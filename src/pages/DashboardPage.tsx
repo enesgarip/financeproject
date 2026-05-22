@@ -488,20 +488,28 @@ export function DashboardPage() {
     return <p className="rounded-lg bg-rose-50 p-3 text-sm text-rose-700">{error}</p>
   }
 
+  const hasCreditLimitGroups = summary.creditLimitGroups.length > 0
+
   return (
-    <section className="flex flex-col gap-5">
-      <WelcomePanel displayName={displayName} cashFlow={summary.cashFlow} />
+    <section className="grid gap-5 lg:grid-cols-12 lg:items-start">
+      <div className="lg:col-span-7">
+        <WelcomePanel displayName={displayName} cashFlow={summary.cashFlow} />
+      </div>
 
-      <NetWorthPanel
-        netWorth={summary.netWorth}
-        totalAssets={summary.totalAssets}
-        totalDebts={summary.totalDebts}
-        totalReceivables={summary.totalReceivables}
-      />
+      <div className="lg:col-span-5">
+        <NetWorthPanel
+          netWorth={summary.netWorth}
+          totalAssets={summary.totalAssets}
+          totalDebts={summary.totalDebts}
+          totalReceivables={summary.totalReceivables}
+        />
+      </div>
 
-      <CashFlowPanel cashFlow={summary.cashFlow} />
+      <div className="lg:col-span-7">
+        <CashFlowPanel cashFlow={summary.cashFlow} />
+      </div>
 
-      <div className="grid gap-3 min-[760px]:grid-cols-2">
+      <div className="grid gap-3 min-[760px]:grid-cols-2 lg:col-span-5 lg:grid-cols-1">
         <PeriodDebtTotalsPanel cashFlow={summary.cashFlow} />
         <CurrentDebtTotalsPanel
           totalDebt={summary.totalDebts}
@@ -511,15 +519,19 @@ export function DashboardPage() {
         />
       </div>
 
-      <div className="grid gap-3 min-[520px]:grid-cols-3">
+      <div className="grid gap-3 min-[520px]:grid-cols-3 lg:col-span-12">
         <MetricTile label="Toplam limit" value={formatCurrency(summary.totalCreditLimit)} icon={<CreditCard />} tone="indigo" />
         <MetricTile label="Kredi ödemesi" value={formatCurrency(summary.totalLoanMonthlyPayment)} icon={<CalendarDays />} tone="stone" />
         <MetricTile label="Alacak" value={formatCurrency(summary.totalReceivables)} icon={<ArrowUpRight />} tone="emerald" />
       </div>
 
-      <CreditLimitSection groups={summary.creditLimitGroups} totalUsageRate={summary.creditUsageRate} />
+      {hasCreditLimitGroups ? (
+        <div className="lg:col-span-7">
+          <CreditLimitSection groups={summary.creditLimitGroups} totalUsageRate={summary.creditUsageRate} />
+        </div>
+      ) : null}
 
-      <div className="grid gap-3 min-[520px]:grid-cols-2">
+      <div className={`grid gap-3 min-[520px]:grid-cols-2 ${hasCreditLimitGroups ? 'lg:col-span-5 lg:grid-cols-1' : 'lg:col-span-12'}`}>
         <PulseCard
           title="Kredi ritmi"
           label="Aylık ödeme"
@@ -531,17 +543,21 @@ export function DashboardPage() {
         <SalaryPulse trend={summary.salaryTrend} />
       </div>
 
-      <UpcomingSection title="Yaklaşan ödemeler">
-        {upcomingItems.length === 0 ? (
-          <EmptyState title="Yaklaşan ödeme yok" description="Önümüzdeki 30 gün için ödeme, kart günü veya kredi taksidi bulunmuyor." />
-        ) : (
-          upcomingItems.map((item) => (
-            <ModernUpcomingRow key={item.id} item={item} onDismiss={dismissUpcomingItem} />
-          ))
-        )}
-      </UpcomingSection>
+      <div className="lg:col-span-5">
+        <UpcomingSection title="Yaklaşan ödemeler">
+          {upcomingItems.length === 0 ? (
+            <EmptyState title="Yaklaşan ödeme yok" description="Önümüzdeki 30 gün için ödeme, kart günü veya kredi taksidi bulunmuyor." />
+          ) : (
+            upcomingItems.map((item) => (
+              <ModernUpcomingRow key={item.id} item={item} onDismiss={dismissUpcomingItem} />
+            ))
+          )}
+        </UpcomingSection>
+      </div>
 
-      <HistorySection rows={data.transactionHistory} />
+      <div className="lg:col-span-7">
+        <HistorySection rows={data.transactionHistory} />
+      </div>
     </section>
   )
 }
@@ -768,9 +784,9 @@ function CashFlowMetric({ label, value, tone }: { label: string; value: string; 
   const toneClass = tone === 'emerald' ? 'text-emerald-700 dark:text-emerald-300' : 'text-rose-700 dark:text-rose-300'
 
   return (
-    <div className="min-w-0 rounded-xl bg-muted/55 px-3 py-2">
+    <div className="min-w-0 rounded-xl bg-muted/55 px-2.5 py-2 min-[430px]:px-3">
       <p className="truncate text-[11px] font-bold uppercase text-muted-foreground">{label}</p>
-      <p className={`mt-1 text-[clamp(0.82rem,3.8vw,1rem)] font-extrabold leading-tight tabular-nums [overflow-wrap:anywhere] ${toneClass}`}>
+      <p className={`mt-1 whitespace-nowrap text-[clamp(0.7rem,3vw,1rem)] font-extrabold leading-tight tabular-nums ${toneClass}`}>
         {value}
       </p>
     </div>
