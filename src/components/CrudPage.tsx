@@ -39,7 +39,7 @@ type CrudPageProps<T extends TableName> = {
   orderBy?: keyof RowFor<T> & string
   orderAscending?: boolean
   getInitialValues: (row?: RowFor<T>) => Record<string, string | number>
-  mapForm: (formData: FormData, userId: string) => InsertFor<T> | UpdateFor<T>
+  mapForm: (formData: FormData, userId: string, editing: RowFor<T> | null) => InsertFor<T> | UpdateFor<T>
   validateForm?: (formData: FormData, values: Record<string, string>, editing: RowFor<T> | null) => FormErrors
   afterSave?: (row: RowFor<T>, action: SaveAction, helpers: { reload: () => Promise<void>; setError: (message: string) => void }) => Promise<void> | void
   renderTitle: (row: RowFor<T>) => string
@@ -183,7 +183,7 @@ export function CrudPage<T extends TableName>({
     setSaving(true)
     setError('')
     setFormError('')
-    const payload = mapForm(formData, user.id)
+    const payload = mapForm(formData, user.id, editing)
     const action: SaveAction = editing ? 'update' : 'create'
 
     const response = editing

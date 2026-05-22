@@ -191,6 +191,20 @@ export type Database = {
         }
         Returns: LoanInstallment
       }
+      pay_payment: {
+        Args: {
+          p_payment_id: string
+          p_source_card_id: string
+        }
+        Returns: Payment
+      }
+      settle_personal_debt: {
+        Args: {
+          p_debt_id: string
+          p_account_card_id: string
+        }
+        Returns: Debt
+      }
     }
     Enums: Record<string, never>
     CompositeTypes: Record<string, never>

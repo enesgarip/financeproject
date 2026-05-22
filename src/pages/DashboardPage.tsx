@@ -3,7 +3,7 @@ import { ArrowUpRight, CalendarDays, CreditCard, Landmark, Sparkles, Trash2, Tre
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAuth } from '../auth/useAuth'
 import { supabase } from '../lib/supabase'
-import type { Asset, Card as FinanceCard, Debt, DismissedUpcomingItem, Loan, LoanInstallment, Payment, SalaryHistory, TransactionHistory, UpcomingDismissalSource } from '../types/database'
+import type { Asset, Card as FinanceCard, Debt, DismissedUpcomingItem, Loan, LoanInstallment, Payment, SalaryHistory, TransactionHistory, TransactionHistoryType, UpcomingDismissalSource } from '../types/database'
 import { daysUntil, endOfMonth, formatDate, isDateInMonth, isUpcomingDate, monthlyOccurrenceDate, nextMonthlyDate, startOfMonth } from '../utils/date'
 import { formatCurrency } from '../utils/formatCurrency'
 import { EmptyState } from '../components/EmptyState'
@@ -38,6 +38,15 @@ const emptyData: DashboardData = {
 }
 
 const UPCOMING_DAYS = 30
+
+const historyFilters: Array<{ label: string; value: TransactionHistoryType | 'all' }> = [
+  { label: 'Tümü', value: 'all' },
+  { label: 'Ödeme', value: 'payment' },
+  { label: 'Transfer', value: 'transfer' },
+  { label: 'Kredi', value: 'loan' },
+  { label: 'Borç', value: 'debt' },
+  { label: 'Kart', value: 'card' },
+]
 
 type UpcomingItem = {
   id: string
@@ -585,7 +594,7 @@ function WelcomePanel({ displayName, cashFlow }: { displayName: string; cashFlow
         <div className="mt-5 grid grid-cols-3 gap-2">
           <WelcomeMetric label="Dönem" value={cashFlow.monthLabel} />
           <WelcomeMetric label="Net akış" value={signedNetFlow} tone={netFlowIsPositive ? 'positive' : 'negative'} />
-          <WelcomeMetric label="Nakit" value={formatCurrency(cashFlow.cashAssets)} />
+          <WelcomeMetric label="Nakit / hesap" value={formatCurrency(cashFlow.cashAssets)} />
         </div>
       </CardContent>
     </Card>
@@ -700,7 +709,7 @@ function CashFlowPanel({ cashFlow }: { cashFlow: CashFlowSummary }) {
 
         <div className="rounded-xl bg-muted/55 px-3 py-2 text-sm">
           <p className="text-muted-foreground">
-            Mevcut nakit {formatCurrency(cashFlow.cashAssets)} · {cashFlow.recurringPayments} aylık ödeme takipte
+            Hesaplardaki nakit {formatCurrency(cashFlow.cashAssets)} · {cashFlow.recurringPayments} aylık ödeme takipte
           </p>
           <p className={`mt-1 font-bold tabular-nums ${projectionTone}`}>
             Bu ay tahmini net akış: {cashFlow.netFlow >= 0 ? '+' : ''}
@@ -917,14 +926,42 @@ function ModernUpcomingRow({ item, onDismiss }: { item: UpcomingItem; onDismiss:
 }
 
 function HistorySection({ rows }: { rows: TransactionHistory[] }) {
+  const [activeType, setActiveType] = useState<TransactionHistoryType | 'all'>('all')
+  const filteredRows = activeType === 'all' ? rows : rows.filter((row) => row.type === activeType)
+
   return (
     <section>
-      <h2 className="mb-4 text-lg font-bold text-stone-950 dark:text-stone-50">Son 3 ay işlem geçmişi</h2>
+      <div className="mb-4 flex flex-col gap-3">
+        <h2 className="text-lg font-bold text-stone-950 dark:text-stone-50">Son 3 ay işlem geçmişi</h2>
+        <div className="flex flex-wrap gap-2">
+          {historyFilters.map((filter) => {
+            const isActive = activeType === filter.value
+
+            return (
+              <button
+                key={filter.value}
+                type="button"
+                aria-pressed={isActive}
+                onClick={() => setActiveType(filter.value)}
+                className={`rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
+                  isActive
+                    ? 'bg-stone-950 text-white dark:bg-stone-50 dark:text-stone-950'
+                    : 'bg-stone-100 text-stone-600 hover:bg-stone-200 dark:bg-stone-800 dark:text-stone-300 dark:hover:bg-stone-700'
+                }`}
+              >
+                {filter.label}
+              </button>
+            )
+          })}
+        </div>
+      </div>
       {rows.length === 0 ? (
         <EmptyState title="İşlem geçmişi yok" description="Ödemeler, transferler ve borç kapatma işlemleri burada görünecek." />
+      ) : filteredRows.length === 0 ? (
+        <EmptyState title="Bu filtrede işlem yok" description="Farklı bir işlem türü seçerek geçmiş kayıtları görebilirsiniz." />
       ) : (
         <div className="space-y-3">
-          {rows.slice(0, 20).map((row) => (
+          {filteredRows.slice(0, 20).map((row) => (
             <article
               key={row.id}
               className="rounded-xl border border-stone-200 bg-white p-4 shadow-sm dark:border-stone-800 dark:bg-stone-900"

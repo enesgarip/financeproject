@@ -1,12 +1,13 @@
 import { CrudPage, type FormField } from '../components/CrudPage'
+import { SimpleModal } from '../components/SimpleModal'
 import { Badge } from '../components/ui/badge'
 import { Card, CardContent } from '../components/ui/card'
 import { Progress } from '../components/ui/progress'
 import { supabase } from '../lib/supabase'
-import type { Payment, PaymentCategory } from '../types/database'
-import { addMonths, dateInputValue, daysUntil, formatDate, nextMonthlyDateFrom } from '../utils/date'
+import type { Card as FinanceCard, Payment, PaymentCategory } from '../types/database'
+import { daysUntil, formatDate } from '../utils/date'
 import { formatCurrency, parseNumber } from '../utils/formatCurrency'
-import { addTransactionHistory } from '../utils/history'
+import { useState } from 'react'
 
 const paymentCategoryOptions: { label: PaymentCategory; value: PaymentCategory }[] = [
   { label: 'Fatura', value: 'Fatura' },
@@ -50,16 +51,6 @@ const fields: FormField[] = [
     type: 'date',
     visibleWhen: { field: 'recurrence', value: 'monthly' },
   },
-  {
-    name: 'status',
-    label: 'Durum',
-    type: 'select',
-    options: [
-      { label: 'Bekliyor', value: 'bekliyor' },
-      { label: 'Ödendi', value: 'ödendi' },
-    ],
-    visibleWhen: { field: 'recurrence', value: 'none' },
-  },
   { name: 'note', label: 'Not', type: 'textarea' },
 ]
 
@@ -72,52 +63,14 @@ function validatePaymentForm(formData: FormData) {
   return errors
 }
 
-async function markPaymentAsPaid(payment: Payment, reload: () => Promise<void>, setError: (message: string) => void) {
-  const nextDueDate = getNextRecurringDueDate(payment)
-  const recurringPayload = nextDueDate
-    ? { due_date: dateInputValue(nextDueDate), status: 'bekliyor' as const, updated_at: new Date().toISOString() }
-    : { status: 'ödendi' as const, updated_at: new Date().toISOString() }
+async function getBankaKartlari(): Promise<FinanceCard[]> {
+  const { data, error } = await supabase
+    .from('cards')
+    .select('*')
+    .eq('card_type', 'banka_karti')
 
-  const { error } = await supabase
-    .from('payments')
-    .update(payment.recurrence === 'monthly' ? recurringPayload : { status: 'ödendi', updated_at: new Date().toISOString() })
-    .eq('id', payment.id)
-
-  if (error) {
-    setError(error.message)
-    return
-  }
-
-  const historyError = await addTransactionHistory({
-    user_id: payment.user_id,
-    type: 'payment',
-    title: `${payment.title} ödendi`,
-    amount: payment.amount,
-    source_table: 'payments',
-    source_id: payment.id,
-    note: formatDate(payment.due_date),
-  })
-  if (historyError) {
-    setError(historyError.message)
-    return
-  }
-
-  await reload()
-}
-
-function getNextRecurringDueDate(payment: Payment) {
-  if (payment.recurrence !== 'monthly') return null
-
-  const currentDueDate = new Date(`${payment.due_date}T00:00:00`)
-  const paymentDay = payment.recurrence_day ?? currentDueDate.getDate()
-  const nextDueDate = nextMonthlyDateFrom(paymentDay, addMonths(currentDueDate, 1))
-  if (!nextDueDate) return null
-
-  if (payment.recurrence_end_date && nextDueDate > new Date(`${payment.recurrence_end_date}T00:00:00`)) {
-    return null
-  }
-
-  return nextDueDate
+  if (error) return []
+  return (data as FinanceCard[]) ?? []
 }
 
 function getPaymentScheduleLabel(payment: Payment) {
@@ -178,59 +131,155 @@ function PaymentsOverview({ rows }: { rows: Payment[] }) {
 }
 
 export function PaymentsPage() {
-  return (
-    <CrudPage
-      table="payments"
-      pageTitle="Ödemeler"
-      addLabel="Ödeme ekle"
-      fields={fields}
-      emptyTitle="Henüz ödeme yok"
-      emptyDescription="Yaklaşan kira, fatura veya tek seferlik ödemelerini buradan ekleyebilirsin."
-      orderBy="due_date"
-      validateForm={validatePaymentForm}
-      renderBeforeList={({ loading, rows }) => (!loading ? <PaymentsOverview rows={rows as Payment[]} /> : null)}
-      getInitialValues={(row?: Payment) => ({
-        title: row?.title ?? '',
-        category: row?.category ?? 'Diğer',
-        amount: row?.amount ?? 0,
-        due_date: row?.due_date ?? new Date().toISOString().slice(0, 10),
-        recurrence: row?.recurrence ?? 'none',
-        recurrence_day: row?.recurrence_day ?? (row?.due_date ? new Date(`${row.due_date}T00:00:00`).getDate() : new Date().getDate()),
-        recurrence_end_date: row?.recurrence_end_date ?? '',
-        status: row?.status ?? 'bekliyor',
-        note: row?.note ?? '',
-      })}
-      mapForm={(formData, userId) => {
-        const recurrence = formData.get('recurrence') as Payment['recurrence']
+  const [paymentToPay, setPaymentToPay] = useState<Payment | null>(null)
+  const [paymentCards, setPaymentCards] = useState<FinanceCard[]>([])
+  const [paymentSourceCard, setPaymentSourceCard] = useState('')
+  const [paymentError, setPaymentError] = useState('')
+  const [paymentSaving, setPaymentSaving] = useState(false)
+  const [reloadPayments, setReloadPayments] = useState<(() => Promise<void>) | null>(null)
 
-        return {
-          user_id: userId,
-          title: String(formData.get('title') ?? '').trim(),
-          category: (formData.get('category') as PaymentCategory | null) ?? 'Diğer',
-          amount: parseNumber(formData.get('amount')),
-          due_date: String(formData.get('due_date') ?? ''),
-          status: recurrence === 'monthly' ? 'bekliyor' : (formData.get('status') as Payment['status']),
-          recurrence,
-          recurrence_day: recurrence === 'monthly' ? Number(formData.get('recurrence_day')) : null,
-          recurrence_end_date: recurrence === 'monthly' ? String(formData.get('recurrence_end_date') ?? '') || null : null,
-          note: String(formData.get('note') ?? '') || null,
+  async function openPayment(payment: Payment, reload: () => Promise<void>) {
+    const cards = await getBankaKartlari()
+    setPaymentToPay(payment)
+    setPaymentCards(cards)
+    setPaymentSourceCard('')
+    setPaymentError(cards.length === 0 ? 'Ödeme için önce bir banka kartı hesabı eklemelisin.' : '')
+    setReloadPayments(() => reload)
+  }
+
+  function closePayment() {
+    setPaymentToPay(null)
+    setPaymentSourceCard('')
+    setPaymentError('')
+  }
+
+  async function handlePaymentSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!paymentToPay) return
+
+    if (!paymentSourceCard) {
+      setPaymentError('Kaynak hesap seçmelisin.')
+      return
+    }
+
+    const sourceCard = paymentCards.find((card) => card.id === paymentSourceCard)
+    if (!sourceCard) {
+      setPaymentError('Kaynak hesap bulunamadı.')
+      return
+    }
+
+    if (sourceCard.current_balance < paymentToPay.amount) {
+      setPaymentError('Kaynak hesap bakiyesi yetersiz.')
+      return
+    }
+
+    setPaymentSaving(true)
+    setPaymentError('')
+
+    const { error } = await supabase.rpc('pay_payment', {
+      p_payment_id: paymentToPay.id,
+      p_source_card_id: sourceCard.id,
+    })
+
+    setPaymentSaving(false)
+    if (error) {
+      setPaymentError(error.message)
+      return
+    }
+
+    closePayment()
+    await reloadPayments?.()
+  }
+
+  return (
+    <>
+      <CrudPage
+        table="payments"
+        pageTitle="Ödemeler"
+        addLabel="Ödeme ekle"
+        fields={fields}
+        emptyTitle="Henüz ödeme yok"
+        emptyDescription="Yaklaşan kira, fatura veya tek seferlik ödemelerini buradan ekleyebilirsin."
+        orderBy="due_date"
+        validateForm={validatePaymentForm}
+        renderBeforeList={({ loading, rows }) => (!loading ? <PaymentsOverview rows={rows as Payment[]} /> : null)}
+        getInitialValues={(row?: Payment) => ({
+          title: row?.title ?? '',
+          category: row?.category ?? 'Diğer',
+          amount: row?.amount ?? 0,
+          due_date: row?.due_date ?? new Date().toISOString().slice(0, 10),
+          recurrence: row?.recurrence ?? 'none',
+          recurrence_day: row?.recurrence_day ?? (row?.due_date ? new Date(`${row.due_date}T00:00:00`).getDate() : new Date().getDate()),
+          recurrence_end_date: row?.recurrence_end_date ?? '',
+          status: row?.status ?? 'bekliyor',
+          note: row?.note ?? '',
+        })}
+        mapForm={(formData, userId, editing) => {
+          const recurrence = formData.get('recurrence') as Payment['recurrence']
+
+          return {
+            user_id: userId,
+            title: String(formData.get('title') ?? '').trim(),
+            category: (formData.get('category') as PaymentCategory | null) ?? 'Diğer',
+            amount: parseNumber(formData.get('amount')),
+            due_date: String(formData.get('due_date') ?? ''),
+            status: recurrence === 'monthly' ? 'bekliyor' : (editing?.status ?? 'bekliyor'),
+            recurrence,
+            recurrence_day: recurrence === 'monthly' ? Number(formData.get('recurrence_day')) : null,
+            recurrence_end_date: recurrence === 'monthly' ? String(formData.get('recurrence_end_date') ?? '') || null : null,
+            note: String(formData.get('note') ?? '') || null,
+          }
+        }}
+        renderTitle={(row) => row.title}
+        renderSubtitle={(row) => `${row.category} · ${row.status} · ${getPaymentScheduleLabel(row)}`}
+        renderDetails={(row) => [`Tutar: ${formatCurrency(row.amount)}`, `Sıradaki tarih: ${formatDate(row.due_date)}`]}
+        groupBy={(row) => row.category}
+        renderRowActions={(row, helpers) =>
+          row.status === 'bekliyor' ? (
+            <button
+              type="button"
+              onClick={() => void openPayment(row, helpers.reload)}
+              className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-700"
+            >
+              Öde
+            </button>
+          ) : null
         }
-      }}
-      renderTitle={(row) => row.title}
-      renderSubtitle={(row) => `${row.category} · ${row.status} · ${getPaymentScheduleLabel(row)}`}
-      renderDetails={(row) => [`Tutar: ${formatCurrency(row.amount)}`, `Sıradaki tarih: ${formatDate(row.due_date)}`]}
-      groupBy={(row) => row.category}
-      renderRowActions={(row, helpers) =>
-        row.status === 'bekliyor' ? (
+      />
+
+      <SimpleModal title="Ödeme yap" open={Boolean(paymentToPay)} onClose={closePayment}>
+        <form onSubmit={handlePaymentSubmit} className="space-y-4">
+          <div className="rounded-lg bg-stone-50 p-3 text-sm text-stone-600 dark:bg-stone-900 dark:text-stone-300">
+            <p className="font-semibold text-stone-950 dark:text-stone-50">{paymentToPay?.title}</p>
+            <p>Tutar: {formatCurrency(paymentToPay?.amount ?? 0)}</p>
+            <p>Vade: {paymentToPay ? formatDate(paymentToPay.due_date) : '-'}</p>
+          </div>
+          <label className="block text-sm font-medium text-stone-700 dark:text-stone-200">
+            Kaynak hesap
+            <select
+              required
+              value={paymentSourceCard}
+              onChange={(event) => setPaymentSourceCard(event.target.value)}
+              className="mt-1 w-full rounded-lg border border-stone-200 bg-white px-3 py-3 outline-none focus:border-emerald-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+            >
+              <option value="">Hesap seç</option>
+              {paymentCards.map((card) => (
+                <option key={card.id} value={card.id}>
+                  {card.card_name} ({formatCurrency(card.current_balance)})
+                </option>
+              ))}
+            </select>
+          </label>
+          {paymentError ? <p className="rounded-lg bg-rose-50 p-3 text-sm text-rose-700">{paymentError}</p> : null}
           <button
-            type="button"
-            onClick={() => void markPaymentAsPaid(row, helpers.reload, helpers.setError)}
-            className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-700"
+            type="submit"
+            disabled={paymentSaving}
+            className="w-full rounded-xl bg-stone-700 px-4 py-3.5 text-sm font-semibold text-white disabled:opacity-60 dark:bg-stone-600"
           >
-            Ödendi işaretle
+            {paymentSaving ? 'İşleniyor...' : 'Ödemeyi tamamla'}
           </button>
-        ) : null
-      }
-    />
+        </form>
+      </SimpleModal>
+    </>
   )
 }
