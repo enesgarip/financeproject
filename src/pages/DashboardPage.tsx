@@ -480,6 +480,8 @@ export function DashboardPage() {
 
       <CashFlowPanel cashFlow={summary.cashFlow} />
 
+      <PeriodDebtTotalsPanel cashFlow={summary.cashFlow} />
+
       <div className="grid grid-cols-2 gap-3">
         <MetricTile label="Toplam limit" value={formatCurrency(summary.totalCreditLimit)} icon={<CreditCard />} tone="indigo" />
         <MetricTile label="Kart borcu" value={formatCurrency(summary.totalCreditCardDebt)} icon={<ReceiptText />} tone="amber" />
@@ -688,6 +690,23 @@ function CashFlowPanel({ cashFlow }: { cashFlow: CashFlowSummary }) {
             {formatCurrency(cashFlow.netFlow)}
           </p>
         </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+
+function PeriodDebtTotalsPanel({ cashFlow }: { cashFlow: CashFlowSummary }) {
+  return (
+    <Card className="border-0 shadow-sm ring-1 ring-stone-200/80 dark:ring-stone-800">
+      <CardHeader className="pb-2">
+        <CardTitle>Dönem borcu toplamları</CardTitle>
+      </CardHeader>
+      <CardContent className="grid grid-cols-2 gap-2 pt-0">
+        <CashFlowMetric label="Kart borcu" value={formatCurrency(cashFlow.cardOutflow)} tone="rose" />
+        <CashFlowMetric label="Kredi taksidi" value={formatCurrency(cashFlow.loanOutflow)} tone="rose" />
+        <CashFlowMetric label="Fatura/ödeme" value={formatCurrency(cashFlow.paymentOutflow)} tone="rose" />
+        <CashFlowMetric label="Kişisel borç" value={formatCurrency(cashFlow.debtOutflow)} tone="rose" />
       </CardContent>
     </Card>
   )
