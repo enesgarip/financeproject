@@ -176,6 +176,21 @@ export type Database = {
         }
         Returns: CardExpense
       }
+      pay_card_debt: {
+        Args: {
+          p_card_id: string
+          p_source_card_id: string
+          p_amount: number
+        }
+        Returns: Card
+      }
+      pay_loan_installment: {
+        Args: {
+          p_installment_id: string
+          p_source_card_id: string
+        }
+        Returns: LoanInstallment
+      }
     }
     Enums: Record<string, never>
     CompositeTypes: Record<string, never>

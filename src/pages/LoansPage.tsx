@@ -9,7 +9,6 @@ import { supabase } from '../lib/supabase'
 import type { Card, InsertFor, Loan, LoanInstallment } from '../types/database'
 import { formatDate, startOfToday } from '../utils/date'
 import { formatCurrency, parseNumber } from '../utils/formatCurrency'
-import { addTransactionHistory } from '../utils/history'
 
 function getNextPaymentDate(installmentDay: number | null, remainingInstallments: number): string | null {
   if (!installmentDay || remainingInstallments <= 0) return null
@@ -30,7 +29,6 @@ const fields: FormField[] = [
   { name: 'bank_name', label: 'Banka', type: 'text', required: true },
   { name: 'loan_name', label: 'Kredi adı', type: 'text', required: true },
   { name: 'total_amount', label: 'Toplam kredi tutarı', type: 'number', min: '0', step: '0.01', required: true },
-  { name: 'remaining_amount', label: 'Kalan borç', type: 'number', min: '0', step: '0.01', required: true },
   { name: 'monthly_payment', label: 'Aylık ödeme', type: 'number', min: '0', step: '0.01', required: true },
   {
     name: 'installment_day',
@@ -44,7 +42,6 @@ const fields: FormField[] = [
   },
   { name: 'start_date', label: 'Başlangıç tarihi', type: 'date', required: true },
   { name: 'end_date', label: 'Bitiş tarihi', type: 'date', required: true },
-  { name: 'remaining_installments', label: 'Kalan taksit', type: 'number', min: '0', step: '1', required: true },
   {
     name: 'status',
     label: 'Durum',
@@ -229,18 +226,12 @@ function OverviewStat({ label, value }: { label: string; value: string }) {
 function validateLoanForm(formData: FormData) {
   const errors: Record<string, string> = {}
   const totalAmount = parseNumber(formData.get('total_amount'))
-  const remainingAmount = parseNumber(formData.get('remaining_amount'))
   const monthlyPayment = parseNumber(formData.get('monthly_payment'))
-  const remainingInstallments = parseNumber(formData.get('remaining_installments'))
   const startDate = String(formData.get('start_date') ?? '')
   const endDate = String(formData.get('end_date') ?? '')
 
   if (totalAmount <= 0) errors.total_amount = 'Toplam kredi tutarı 0’dan büyük olmalı.'
-  if (remainingAmount < 0) errors.remaining_amount = 'Kalan borç negatif olamaz.'
   if (monthlyPayment <= 0) errors.monthly_payment = 'Aylık ödeme 0’dan büyük olmalı.'
-  if (!Number.isInteger(remainingInstallments) || remainingInstallments < 0) {
-    errors.remaining_installments = 'Kalan taksit 0 veya daha büyük tam sayı olmalı.'
-  }
   if (startDate && endDate && endDate < startDate) {
     errors.end_date = 'Bitiş tarihi başlangıç tarihinden önce olamaz.'
   }
@@ -322,7 +313,6 @@ async function syncLoanInstallmentPlan(loan: Loan) {
 export function LoansPage() {
   const [installmentLoan, setInstallmentLoan] = useState<Loan | null>(null)
   const [installmentItem, setInstallmentItem] = useState<LoanInstallment | null>(null)
-  const [installmentAmount, setInstallmentAmount] = useState('')
   const [installmentSourceCard, setInstallmentSourceCard] = useState('')
   const [installmentError, setInstallmentError] = useState('')
   const [installmentSaving, setInstallmentSaving] = useState(false)
@@ -369,7 +359,6 @@ export function LoansPage() {
     setInstallmentItem(item)
     setReloadLoans(() => reload)
     setBankaKartlari(cards)
-    setInstallmentAmount(String(item.amount))
     setInstallmentSourceCard('')
     setInstallmentError(cards.length === 0 ? 'Ödeme için önce bir banka kartı hesabı eklemelisin.' : '')
   }
@@ -384,8 +373,7 @@ export function LoansPage() {
     event.preventDefault()
     if (!installmentLoan || !installmentItem) return
 
-    const amount = parseNumber(installmentAmount)
-    if (amount <= 0) {
+    if (installmentItem.amount <= 0) {
       setInstallmentError('Tutar 0 dan büyük olmalı.')
       return
     }
@@ -401,7 +389,7 @@ export function LoansPage() {
       return
     }
 
-    if (sourceCard.current_balance < amount) {
+    if (sourceCard.current_balance < installmentItem.amount) {
       setInstallmentError('Kaynak hesap bakiyesi yetersiz.')
       return
     }
@@ -409,50 +397,14 @@ export function LoansPage() {
     setInstallmentSaving(true)
     setInstallmentError('')
 
-    const { error: sourceError } = await supabase
-      .from('cards')
-      .update({ current_balance: sourceCard.current_balance - amount, updated_at: new Date().toISOString() })
-      .eq('id', sourceCard.id)
-
-    if (sourceError) {
-      setInstallmentSaving(false)
-      setInstallmentError(sourceError.message)
-      return
-    }
-
-    const paidAt = new Date().toISOString()
-    const { error: planError } = await supabase
-      .from('loan_installments')
-      .update({ status: 'ödendi', paid_at: paidAt, amount, updated_at: paidAt })
-      .eq('id', installmentItem.id)
-
-    if (planError) {
-      setInstallmentSaving(false)
-      setInstallmentError(planError.message)
-      return
-    }
-
-    try {
-      await updateLoanTotalsFromInstallments(installmentLoan.id)
-    } catch (loanError) {
-      setInstallmentSaving(false)
-      setInstallmentError(loanError instanceof Error ? loanError.message : 'Kredi güncellenemedi.')
-      return
-    }
-
-    const historyError = await addTransactionHistory({
-      user_id: installmentLoan.user_id,
-      type: 'loan',
-      title: `${installmentLoan.loan_name} ${installmentItem.installment_no}. taksit ödemesi`,
-      amount,
-      source_table: 'loan_installments',
-      source_id: installmentItem.id,
-      note: `${sourceCard.card_name} hesabından ödendi. Vade: ${formatDate(installmentItem.due_date)}`,
+    const { error } = await supabase.rpc('pay_loan_installment', {
+      p_installment_id: installmentItem.id,
+      p_source_card_id: sourceCard.id,
     })
 
     setInstallmentSaving(false)
-    if (historyError) {
-      setInstallmentError(historyError.message)
+    if (error) {
+      setInstallmentError(error.message)
       return
     }
 
@@ -467,25 +419,7 @@ export function LoansPage() {
       return
     }
 
-    const nextStatus = item.status === 'ödendi' ? 'bekliyor' : 'ödendi'
-    const paidAt = nextStatus === 'ödendi' ? new Date().toISOString() : null
-    const { error } = await supabase
-      .from('loan_installments')
-      .update({ status: nextStatus, paid_at: paidAt, updated_at: new Date().toISOString() })
-      .eq('id', item.id)
-
-    if (error) {
-      setError(error.message)
-      return
-    }
-
-    try {
-      await updateLoanTotalsFromInstallments(loan.id)
-      await loadInstallments()
-      await reload()
-    } catch (updateError) {
-      setError(updateError instanceof Error ? updateError.message : 'Kredi güncellenemedi.')
-    }
+    setError('Ödenmiş taksit geri alınamaz. Yanlış ödeme için yeni bir düzeltme kaydı eklemek daha güvenli.')
   }
 
   function openPlanEdit(item: LoanInstallment) {
@@ -605,12 +539,13 @@ export function LoansPage() {
               <button
                 type="button"
                 onClick={() => void toggleInstallmentPaid(item, loan, reload, setError)}
+                disabled={item.status === 'ödendi'}
                 className={`grid size-8 shrink-0 place-items-center rounded-full border ${
                   item.status === 'ödendi'
                     ? 'border-emerald-600 bg-emerald-600 text-white'
                     : 'border-stone-300 bg-white text-transparent dark:border-stone-700 dark:bg-stone-950'
                 }`}
-                aria-label={item.status === 'ödendi' ? 'Taksiti bekliyor yap' : 'Taksit ödemesini aç'}
+                aria-label={item.status === 'ödendi' ? 'Taksit ödendi' : 'Taksit ödemesini aç'}
               >
                 <Check size={16} strokeWidth={3} />
               </button>
@@ -684,12 +619,10 @@ export function LoansPage() {
           bank_name: row?.bank_name ?? '',
           loan_name: row?.loan_name ?? '',
           total_amount: row?.total_amount ?? 0,
-          remaining_amount: row?.remaining_amount ?? row?.total_amount ?? 0,
           monthly_payment: row?.monthly_payment ?? 0,
           installment_day: row?.installment_day ?? '',
           start_date: row?.start_date ?? '',
           end_date: row?.end_date ?? '',
-          remaining_installments: row?.remaining_installments ?? 0,
           status: row?.status ?? 'active',
           note: row?.note ?? '',
         })}
@@ -698,12 +631,12 @@ export function LoansPage() {
           bank_name: String(formData.get('bank_name') ?? '').trim(),
           loan_name: String(formData.get('loan_name') ?? '').trim(),
           total_amount: parseNumber(formData.get('total_amount')),
-          remaining_amount: parseNumber(formData.get('remaining_amount')),
+          remaining_amount: parseNumber(formData.get('total_amount')),
           monthly_payment: parseNumber(formData.get('monthly_payment')),
           installment_day: optionalDay(formData.get('installment_day')),
           start_date: optionalDate(formData.get('start_date')),
           end_date: optionalDate(formData.get('end_date')),
-          remaining_installments: Math.trunc(parseNumber(formData.get('remaining_installments'))),
+          remaining_installments: 0,
           status: formData.get('status') as Loan['status'],
           note: String(formData.get('note') ?? '') || null,
         })}
@@ -741,18 +674,6 @@ export function LoansPage() {
             <p>Planlanan tutar: {formatCurrency(installmentItem?.amount ?? 0)}</p>
             <p>Kalan taksit: {installmentLoan?.remaining_installments ?? 0}</p>
           </div>
-          <label className="block text-sm font-medium text-stone-700 dark:text-stone-200">
-            Ödeme tutarı
-            <input
-              required
-              min="0"
-              step="0.01"
-              type="number"
-              value={installmentAmount}
-              onChange={(event) => setInstallmentAmount(event.target.value)}
-              className="mt-1 w-full rounded-lg border border-stone-200 px-3 py-3 outline-none focus:border-emerald-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
-            />
-          </label>
           <label className="block text-sm font-medium text-stone-700 dark:text-stone-200">
             Kaynak hesap
             <select

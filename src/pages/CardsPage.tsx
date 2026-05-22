@@ -528,44 +528,23 @@ export function CardsPage() {
       return
     }
 
+    if (amount > debtPaymentCard.debt_amount) {
+      setDebtPaymentError('Ödeme tutarı güncel borçtan büyük olamaz.')
+      return
+    }
+
     setDebtPaymentSaving(true)
     setDebtPaymentError('')
 
-    const { error: sourceError } = await supabase
-      .from('cards')
-      .update({ current_balance: sourceCard.current_balance - amount, updated_at: new Date().toISOString() })
-      .eq('id', sourceCard.id)
-
-    if (sourceError) {
-      setDebtPaymentSaving(false)
-      setDebtPaymentError(sourceError.message)
-      return
-    }
-
-    const nextDebt = Math.max(0, debtPaymentCard.debt_amount - amount)
-    const nextStatementDebt = Math.max(0, debtPaymentCard.statement_debt_amount - amount)
-    const { error: debtError } = await supabase
-      .from('cards')
-      .update({ debt_amount: nextDebt, statement_debt_amount: nextStatementDebt, updated_at: new Date().toISOString() })
-      .eq('id', debtPaymentCard.id)
+    const { error } = await supabase.rpc('pay_card_debt', {
+      p_card_id: debtPaymentCard.id,
+      p_source_card_id: sourceCard.id,
+      p_amount: amount,
+    })
 
     setDebtPaymentSaving(false)
-    if (debtError) {
-      setDebtPaymentError(debtError.message)
-      return
-    }
-
-    const historyError = await addTransactionHistory({
-      user_id: debtPaymentCard.user_id,
-      type: 'payment',
-      title: `${debtPaymentCard.card_name} kart borcu ödendi`,
-      amount,
-      source_table: 'cards',
-      source_id: debtPaymentCard.id,
-      note: `${sourceCard.card_name} hesabından ödendi.`,
-    })
-    if (historyError) {
-      setDebtPaymentError(historyError.message)
+    if (error) {
+      setDebtPaymentError(error.message)
       return
     }
 
@@ -801,6 +780,7 @@ export function CardsPage() {
             <input
               required
               min="0"
+              max={debtPaymentCard?.debt_amount ?? undefined}
               step="0.01"
               type="number"
               value={debtPaymentAmount}

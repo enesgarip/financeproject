@@ -1,5 +1,5 @@
 import type { User } from '@supabase/supabase-js'
-import { ArrowDownRight, ArrowUpRight, CalendarDays, CreditCard, Landmark, ReceiptText, Sparkles, Trash2, TrendingDown, TrendingUp } from 'lucide-react'
+import { ArrowUpRight, CalendarDays, CreditCard, Landmark, Sparkles, Trash2, TrendingDown, TrendingUp } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAuth } from '../auth/useAuth'
 import { supabase } from '../lib/supabase'
@@ -171,6 +171,9 @@ function buildMonthlyCashFlow(data: DashboardData): CashFlowSummary {
   const cashAssets = sum(
     data.assets.filter((asset) => asset.category === 'Nakit'),
     (asset) => asset.estimated_value_try,
+  ) + sum(
+    data.cards.filter((card) => card.card_type === 'banka_karti'),
+    (card) => card.current_balance,
   )
   const openDebts = data.debts.filter((debt) => debt.status === 'açık')
   const receivableIncome = sum(
@@ -306,7 +309,10 @@ export function DashboardPage() {
   }, [loadDashboard])
 
   const summary = useMemo(() => {
-    const totalAssets = sum(data.assets, (asset) => asset.estimated_value_try)
+    const totalAssets = sum(data.assets, (asset) => asset.estimated_value_try) + sum(
+      data.cards.filter((card) => card.card_type === 'banka_karti'),
+      (card) => card.current_balance,
+    )
     const totalCreditCardDebt = sum(
       data.cards.filter((card) => card.card_type === 'kredi_karti'),
       (card) => card.debt_amount,
@@ -496,12 +502,9 @@ export function DashboardPage() {
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid gap-3 min-[520px]:grid-cols-3">
         <MetricTile label="Toplam limit" value={formatCurrency(summary.totalCreditLimit)} icon={<CreditCard />} tone="indigo" />
-        <MetricTile label="Kart borcu" value={formatCurrency(summary.totalCreditCardDebt)} icon={<ReceiptText />} tone="amber" />
-        <MetricTile label="Kredi borcu" value={formatCurrency(summary.totalLoanDebt)} icon={<Landmark />} tone="rose" />
         <MetricTile label="Kredi ödemesi" value={formatCurrency(summary.totalLoanMonthlyPayment)} icon={<CalendarDays />} tone="stone" />
-        <MetricTile label="Kişisel borç" value={formatCurrency(summary.totalPersonalDebts)} icon={<ArrowDownRight />} tone="rose" />
         <MetricTile label="Alacak" value={formatCurrency(summary.totalReceivables)} icon={<ArrowUpRight />} tone="emerald" />
       </div>
 
