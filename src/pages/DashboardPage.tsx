@@ -67,6 +67,7 @@ type CashFlowSummary = {
   netFlow: number
   projectedCash: number
   recurringPayments: number
+  cardStatementDebt: number
   cardOutflow: number
   loanOutflow: number
   paymentOutflow: number
@@ -181,6 +182,10 @@ function buildMonthlyCashFlow(data: DashboardData): CashFlowSummary {
     (payment) => payment.amount,
   )
   const recurringPayments = data.payments.filter((payment) => payment.recurrence === 'monthly' && payment.status === 'bekliyor').length
+  const cardStatementDebt = sum(
+    data.cards.filter((card) => card.card_type === 'kredi_karti'),
+    cardMonthlyPaymentAmount,
+  )
   const cardOutflow = sum(
     data.cards.filter((card) => {
       const dueDate = monthlyOccurrenceDate(card.due_day, month)
@@ -217,6 +222,7 @@ function buildMonthlyCashFlow(data: DashboardData): CashFlowSummary {
     netFlow,
     projectedCash: cashAssets + netFlow,
     recurringPayments,
+    cardStatementDebt,
     cardOutflow,
     loanOutflow,
     paymentOutflow,
@@ -703,7 +709,7 @@ function PeriodDebtTotalsPanel({ cashFlow }: { cashFlow: CashFlowSummary }) {
         <CardTitle>Dönem borcu toplamları</CardTitle>
       </CardHeader>
       <CardContent className="grid grid-cols-2 gap-2 pt-0">
-        <CashFlowMetric label="Kart borcu" value={formatCurrency(cashFlow.cardOutflow)} tone="rose" />
+        <CashFlowMetric label="Kart borcu" value={formatCurrency(cashFlow.cardStatementDebt)} tone="rose" />
         <CashFlowMetric label="Kredi taksidi" value={formatCurrency(cashFlow.loanOutflow)} tone="rose" />
         <CashFlowMetric label="Fatura/ödeme" value={formatCurrency(cashFlow.paymentOutflow)} tone="rose" />
         <CashFlowMetric label="Kişisel borç" value={formatCurrency(cashFlow.debtOutflow)} tone="rose" />
