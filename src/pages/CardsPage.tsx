@@ -127,6 +127,12 @@ function bankHueStyle(bankName: string, rows: Card[]) {
   return { '--bank-hue': String(bankHue(bankName, rows)) } as CSSProperties
 }
 
+function isSchemaCacheError(error: { code?: string; message?: string } | null | undefined) {
+  if (!error) return false
+  const message = error.message ?? ''
+  return error.code === 'PGRST202' || error.code === 'PGRST205' || message.includes('schema cache') || message.includes('Could not find the function')
+}
+
 function limitGroupKey(card: Card) {
   return card.limit_group_name?.trim() || card.id
 }
@@ -337,9 +343,23 @@ function QuickExpensePanel({
       p_installment_count: parsedInstallmentCount,
     })
 
+    let submitError = error
+    if (submitError && isSchemaCacheError(submitError) && parsedInstallmentCount === 1) {
+      const { error: legacyError } = await supabase.rpc('add_card_expense', {
+        p_card_id: selectedCard.id,
+        p_amount: parsedAmount,
+        p_description: trimmedDescription,
+      })
+      submitError = legacyError
+    }
+
     setSaving(false)
-    if (error) {
-      setLocalError(error.message)
+    if (submitError) {
+      setLocalError(
+        isSchemaCacheError(submitError) && parsedInstallmentCount > 1
+          ? 'Taksit altyapısı canlı veritabanına uygulanmamış. Migration çalışınca bu işlem açılacak.'
+          : submitError.message,
+      )
       return
     }
 
@@ -610,7 +630,37 @@ export function CardsPage() {
     })
 
     if (error) {
-      setError(error.message)
+      if (!isSchemaCacheError(error)) {
+        setError(error.message)
+        return
+      }
+
+      const statementDebt = card.statement_debt_amount + card.current_period_spending
+      const { error: updateError } = await supabase
+        .from('cards')
+        .update({ statement_debt_amount: statementDebt, current_period_spending: 0, updated_at: new Date().toISOString() })
+        .eq('id', card.id)
+
+      if (updateError) {
+        setError(updateError.message)
+        return
+      }
+
+      const historyError = await addTransactionHistory({
+        user_id: card.user_id,
+        type: 'card',
+        title: `${card.card_name} ekstresi kesildi`,
+        amount: card.current_period_spending,
+        source_table: 'cards',
+        source_id: card.id,
+        note: 'Dönem borcuna aktarıldı.',
+      })
+      if (historyError) {
+        setError(historyError.message)
+        return
+      }
+
+      await reload()
       return
     }
 

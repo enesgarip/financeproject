@@ -629,7 +629,7 @@ function WelcomeMetric({ label, value, tone = 'neutral' }: { label: string; valu
   return (
     <div className="min-w-0 rounded-xl bg-white/12 px-3 py-2.5 ring-1 ring-white/14 backdrop-blur">
       <p className="truncate text-[10px] font-bold uppercase text-white/58">{label}</p>
-      <p className={`mt-1 text-[clamp(0.72rem,3.4vw,0.92rem)] font-extrabold leading-tight tabular-nums [overflow-wrap:anywhere] ${valueClass}`}>
+      <p className={`mt-1 whitespace-nowrap text-[clamp(0.58rem,2.45vw,0.92rem)] font-extrabold leading-tight tabular-nums ${valueClass}`}>
         {value}
       </p>
     </div>
@@ -655,7 +655,7 @@ function NetWorthPanel({ netWorth, totalAssets, totalDebts, totalReceivables }: 
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
             <p className="text-xs font-semibold uppercase text-emerald-100/80">Net durum</p>
-            <p className="mt-2 break-words text-[clamp(1.9rem,8vw,2.7rem)] font-extrabold leading-none tabular-nums">
+            <p className="mt-2 whitespace-nowrap text-[clamp(1.45rem,6.6vw,2.7rem)] font-extrabold leading-none tabular-nums">
               {formatCurrency(netWorth)}
             </p>
           </div>
@@ -679,7 +679,7 @@ function SummaryPill({ label, value }: { label: string; value: string }) {
   return (
     <div className="min-w-0 rounded-lg bg-white/10 px-2.5 py-2 ring-1 ring-white/10">
       <p className="truncate text-[11px] font-medium text-emerald-50/75">{label}</p>
-      <p className="mt-1 whitespace-normal text-[0.72rem] font-bold leading-tight tabular-nums text-white [overflow-wrap:anywhere] min-[390px]:text-sm">
+      <p className="mt-1 whitespace-nowrap text-[clamp(0.58rem,2.65vw,0.875rem)] font-bold leading-tight tabular-nums text-white">
         {value}
       </p>
     </div>
@@ -860,7 +860,7 @@ function MetricTile({ label, value, icon, tone }: { label: string; value: string
       <CardContent className="flex items-start justify-between gap-3 p-3">
         <div className="min-w-0">
           <p className="truncate text-[11px] font-bold uppercase text-muted-foreground">{label}</p>
-          <p className="mt-1 break-words text-[clamp(1rem,4.8vw,1.25rem)] font-extrabold leading-tight tabular-nums text-foreground">{value}</p>
+          <p className="mt-1 whitespace-nowrap text-[clamp(0.78rem,3.3vw,1.25rem)] font-extrabold leading-tight tabular-nums text-foreground">{value}</p>
         </div>
         <div className={`grid size-9 shrink-0 place-items-center rounded-lg ring-1 ${toneClass}`}>{icon}</div>
       </CardContent>

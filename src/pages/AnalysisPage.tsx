@@ -50,6 +50,16 @@ type SearchItem = {
   date: string | null
 }
 
+type QueryError = {
+  code?: string
+  message?: string
+}
+
+type QueryResponse<T> = {
+  data: T[] | null
+  error: QueryError | null
+}
+
 const emptyAnalysisData: AnalysisData = {
   assets: [],
   cards: [],
@@ -64,6 +74,25 @@ const emptyAnalysisData: AnalysisData = {
   cardStatementArchives: [],
   budgets: [],
   savingsGoals: [],
+}
+
+const optionalTableLabels: Record<string, string> = {
+  card_installments: 'kart taksitleri',
+  card_statement_archives: 'ekstre arşivi',
+  budgets: 'bütçeler',
+  savings_goals: 'birikim hedefleri',
+}
+
+function isMissingSchemaCacheError(error: QueryError | null | undefined) {
+  if (!error) return false
+  const message = error.message ?? ''
+  return error.code === 'PGRST205' || message.includes('schema cache') || message.includes('Could not find the table')
+}
+
+function optionalRows<T>(response: QueryResponse<T>, tableName: string) {
+  if (!response.error) return { rows: response.data ?? [], missingTable: null, error: null }
+  if (isMissingSchemaCacheError(response.error)) return { rows: [] as T[], missingTable: tableName, error: null }
+  return { rows: [] as T[], missingTable: null, error: response.error }
 }
 
 const budgetFields: FormField[] = [
@@ -145,7 +174,7 @@ function buildSearchItems(data: AnalysisData): SearchItem[] {
     ...data.cardExpenses.map((expense) => ({
       type: 'Kart harcaması',
       title: expense.description,
-      subtitle: `${cardsById.get(expense.card_id)?.card_name ?? 'Kart'} · ${expense.category}`,
+      subtitle: `${cardsById.get(expense.card_id)?.card_name ?? 'Kart'} · ${expense.category ?? 'Diğer'}`,
       amount: expense.amount,
       date: expense.spent_at,
     })),
@@ -354,7 +383,7 @@ function BudgetProgress({ budgets, expenses }: { budgets: Budget[]; expenses: Ca
     <div className="space-y-2">
       {monthlyBudgets.map((budget) => {
         const spent = sum(
-          monthlyExpenses.filter((expense) => expense.category === budget.category),
+          monthlyExpenses.filter((expense) => (expense.category ?? 'Diğer') === budget.category),
           (expense) => expense.amount,
         )
         const usageRate = budget.limit_amount > 0 ? Math.min(100, (spent / budget.limit_amount) * 100) : 0
@@ -501,17 +530,36 @@ function SearchExport({ items }: { items: SearchItem[] }) {
   )
 }
 
+function SchemaMigrationNotice({ missingTables }: { missingTables: string[] }) {
+  if (missingTables.length === 0) return null
+
+  const labels = missingTables.map((table) => optionalTableLabels[table] ?? table).join(', ')
+
+  return (
+    <Card className="border-amber-200 bg-amber-50/80 shadow-sm ring-1 ring-amber-200/80 dark:border-amber-900 dark:bg-amber-950/20 dark:ring-amber-900/70 lg:col-span-12">
+      <CardContent className="p-4">
+        <p className="text-sm font-bold text-amber-900 dark:text-amber-100">Canlı veritabanı migration bekliyor</p>
+        <p className="mt-1 text-sm text-amber-900/75 dark:text-amber-100/75">
+          {labels} tabloları henüz canlı Supabase tarafında görünmüyor. Ekranı kırmadan mevcut verilerle devam ediyorum.
+        </p>
+      </CardContent>
+    </Card>
+  )
+}
+
 export function AnalysisPage() {
   const { user } = useAuth()
   const [data, setData] = useState<AnalysisData>(emptyAnalysisData)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [missingTables, setMissingTables] = useState<string[]>([])
 
   const loadAnalysis = useCallback(async () => {
     if (!user) return
 
     setLoading(true)
     setError('')
+    setMissingTables([])
 
     const historyStart = new Date()
     historyStart.setMonth(historyStart.getMonth() - 6)
@@ -546,6 +594,11 @@ export function AnalysisPage() {
       supabase.from('savings_goals').select('*').order('created_at', { ascending: false }),
     ])
 
+    const cardInstallmentRows = optionalRows<CardInstallment>(cardInstallments, 'card_installments')
+    const cardStatementArchiveRows = optionalRows<CardStatementArchive>(cardStatementArchives, 'card_statement_archives')
+    const budgetRows = optionalRows<Budget>(budgets, 'budgets')
+    const savingsGoalRows = optionalRows<SavingsGoal>(savingsGoals, 'savings_goals')
+
     const firstError = [
       assets.error,
       cards.error,
@@ -556,18 +609,23 @@ export function AnalysisPage() {
       salaryHistory.error,
       transactionHistory.error,
       cardExpenses.error,
-      cardInstallments.error,
-      cardStatementArchives.error,
-      budgets.error,
-      savingsGoals.error,
+      cardInstallmentRows.error,
+      cardStatementArchiveRows.error,
+      budgetRows.error,
+      savingsGoalRows.error,
     ].find(Boolean)
 
     if (firstError) {
-      setError(firstError.message)
+      setError(firstError.message ?? 'Analiz verileri yüklenemedi.')
       setLoading(false)
       return
     }
 
+    setMissingTables(
+      [cardInstallmentRows.missingTable, cardStatementArchiveRows.missingTable, budgetRows.missingTable, savingsGoalRows.missingTable].filter(
+        Boolean,
+      ) as string[],
+    )
     setData({
       assets: assets.data ?? [],
       cards: cards.data ?? [],
@@ -578,10 +636,10 @@ export function AnalysisPage() {
       salaryHistory: salaryHistory.data ?? [],
       transactionHistory: transactionHistory.data ?? [],
       cardExpenses: cardExpenses.data ?? [],
-      cardInstallments: cardInstallments.data ?? [],
-      cardStatementArchives: cardStatementArchives.data ?? [],
-      budgets: budgets.data ?? [],
-      savingsGoals: savingsGoals.data ?? [],
+      cardInstallments: cardInstallmentRows.rows,
+      cardStatementArchives: cardStatementArchiveRows.rows,
+      budgets: budgetRows.rows,
+      savingsGoals: savingsGoalRows.rows,
     })
     setLoading(false)
   }, [user])
@@ -592,6 +650,8 @@ export function AnalysisPage() {
   }, [loadAnalysis])
 
   const searchItems = useMemo(() => buildSearchItems(data), [data])
+  const canManageBudgets = !missingTables.includes('budgets')
+  const canManageGoals = !missingTables.includes('savings_goals')
 
   if (error) {
     return <p className="rounded-lg bg-rose-50 p-3 text-sm text-rose-700">{error}</p>
@@ -600,6 +660,7 @@ export function AnalysisPage() {
   return (
     <section className="space-y-5">
       <div className="grid gap-5 lg:grid-cols-12">
+        <SchemaMigrationNotice missingTables={missingTables} />
         <MonthlyReport data={data} />
         <UpcomingInstallments data={data} />
         <SearchExport items={searchItems} />
@@ -608,6 +669,7 @@ export function AnalysisPage() {
 
       {loading ? <p className="rounded-xl bg-white p-4 text-sm text-muted-foreground dark:bg-stone-900">Analiz verileri yükleniyor...</p> : null}
 
+      {canManageBudgets ? (
       <CrudPage
         table="budgets"
         pageTitle="Bütçeler"
@@ -637,7 +699,9 @@ export function AnalysisPage() {
         renderSubtitle={(row) => formatMonth(row.month)}
         renderDetails={(row) => [`Limit: ${formatCurrency(row.limit_amount)}`]}
       />
+      ) : null}
 
+      {canManageGoals ? (
       <CrudPage
         table="savings_goals"
         pageTitle="Birikim hedefleri"
@@ -678,6 +742,7 @@ export function AnalysisPage() {
             : 'border-stone-200'
         }
       />
+      ) : null}
     </section>
   )
 }
