@@ -8,6 +8,7 @@ import { Card as SurfaceCard, CardContent, CardHeader, CardTitle } from '../comp
 import { Progress } from '../components/ui/progress'
 import { supabase } from '../lib/supabase'
 import type { Card } from '../types/database'
+import { expenseCategoryOptions } from '../utils/categories'
 import { formatCurrency, parseNumber } from '../utils/formatCurrency'
 import { addTransactionHistory } from '../utils/history'
 
@@ -294,6 +295,8 @@ function QuickExpensePanel({
   const [cardId, setCardId] = useState('')
   const [amount, setAmount] = useState('')
   const [description, setDescription] = useState('')
+  const [category, setCategory] = useState(expenseCategoryOptions[0]?.value ?? 'Diğer')
+  const [installmentCount, setInstallmentCount] = useState('1')
   const [localError, setLocalError] = useState('')
   const [saving, setSaving] = useState(false)
   const cards = useMemo(() => rows.filter((row) => row.card_type === 'kredi_karti' || row.card_type === 'banka_karti'), [rows])
@@ -304,6 +307,7 @@ function QuickExpensePanel({
     event.preventDefault()
 
     const parsedAmount = parseNumber(amount)
+    const parsedInstallmentCount = selectedCard?.card_type === 'banka_karti' ? 1 : Math.max(1, Math.min(36, Number(installmentCount) || 1))
     const trimmedDescription = description.trim()
     if (!selectedCard) {
       setLocalError('Kart seçmelisin.')
@@ -317,6 +321,10 @@ function QuickExpensePanel({
       setLocalError('Açıklama yazmalısın.')
       return
     }
+    if (selectedCard.card_type === 'banka_karti' && parsedInstallmentCount > 1) {
+      setLocalError('Taksitli harcama sadece kredi kartı için kullanılabilir.')
+      return
+    }
 
     setSaving(true)
     setLocalError('')
@@ -325,6 +333,8 @@ function QuickExpensePanel({
       p_card_id: selectedCard.id,
       p_amount: parsedAmount,
       p_description: trimmedDescription,
+      p_category: category,
+      p_installment_count: parsedInstallmentCount,
     })
 
     setSaving(false)
@@ -335,6 +345,8 @@ function QuickExpensePanel({
 
     setAmount('')
     setDescription('')
+    setCategory(expenseCategoryOptions[0]?.value ?? 'Diğer')
+    setInstallmentCount('1')
     await reload()
   }
 
@@ -358,7 +370,7 @@ function QuickExpensePanel({
         </div>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-2.5">
           <label className="block text-sm font-medium text-stone-700 dark:text-stone-200">
             Kart
             <select
@@ -367,7 +379,7 @@ function QuickExpensePanel({
                 setCardId(event.target.value)
                 setLocalError('')
               }}
-              className="mt-1 w-full rounded-lg border border-stone-200 bg-white px-3 py-3 outline-none focus:border-emerald-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+              className="mt-1 w-full rounded-lg border border-stone-200 bg-white px-3 py-2.5 outline-none focus:border-emerald-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
               required
             >
               {cards.map((card) => (
@@ -377,7 +389,7 @@ function QuickExpensePanel({
               ))}
             </select>
           </label>
-          <div className="grid grid-cols-1 gap-3 min-[430px]:grid-cols-[minmax(0,0.75fr)_minmax(0,1.25fr)]">
+          <div className="grid grid-cols-[minmax(0,0.72fr)_minmax(0,1.28fr)] gap-2.5">
             <label className="block text-sm font-medium text-stone-700 dark:text-stone-200">
               TL
               <input
@@ -391,7 +403,7 @@ function QuickExpensePanel({
                 step="0.01"
                 inputMode="decimal"
                 placeholder="0.00"
-                className="mt-1 w-full rounded-lg border border-stone-200 px-3 py-3 outline-none focus:border-emerald-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+                className="mt-1 w-full rounded-lg border border-stone-200 px-3 py-2.5 outline-none focus:border-emerald-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
                 required
               />
             </label>
@@ -405,8 +417,43 @@ function QuickExpensePanel({
                 }}
                 type="text"
                 placeholder="Migros, benzin, yemek..."
-                className="mt-1 w-full rounded-lg border border-stone-200 px-3 py-3 outline-none focus:border-emerald-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+                className="mt-1 w-full rounded-lg border border-stone-200 px-3 py-2.5 outline-none focus:border-emerald-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
                 required
+              />
+            </label>
+          </div>
+          <div className="grid grid-cols-2 gap-2.5">
+            <label className="block text-sm font-medium text-stone-700 dark:text-stone-200">
+              Kategori
+              <select
+                value={category}
+                onChange={(event) => {
+                  setCategory(event.target.value)
+                  setLocalError('')
+                }}
+                className="mt-1 w-full rounded-lg border border-stone-200 bg-white px-3 py-2.5 outline-none focus:border-emerald-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+              >
+                {expenseCategoryOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="block text-sm font-medium text-stone-700 dark:text-stone-200">
+              Taksit
+              <input
+                value={selectedCard?.card_type === 'banka_karti' ? '1' : installmentCount}
+                onChange={(event) => {
+                  setInstallmentCount(event.target.value)
+                  setLocalError('')
+                }}
+                type="number"
+                min="1"
+                max="36"
+                step="1"
+                disabled={selectedCard?.card_type === 'banka_karti'}
+                className="mt-1 w-full rounded-lg border border-stone-200 px-3 py-2.5 outline-none focus:border-emerald-600 disabled:bg-stone-100 disabled:text-stone-500 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100 dark:disabled:bg-stone-800"
               />
             </label>
           </div>
@@ -414,7 +461,7 @@ function QuickExpensePanel({
           <button
             type="submit"
             disabled={saving}
-            className="rounded-xl bg-emerald-700 px-4 py-3.5 text-sm font-semibold text-white shadow-sm disabled:opacity-60 hover:bg-emerald-800"
+            className="rounded-xl bg-emerald-700 px-4 py-3 text-sm font-semibold text-white shadow-sm disabled:opacity-60 hover:bg-emerald-800"
           >
             {saving ? 'Ekleniyor...' : 'Harcamayı kaydet'}
           </button>
@@ -558,30 +605,14 @@ export function CardsPage() {
       return
     }
 
-    const { error } = await supabase
-      .from('cards')
-      .update({
-        statement_debt_amount: card.statement_debt_amount + card.current_period_spending,
-        current_period_spending: 0,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', card.id)
+    const { error } = await supabase.rpc('cut_card_statement', {
+      p_card_id: card.id,
+    })
 
     if (error) {
       setError(error.message)
       return
     }
-
-    const historyError = await addTransactionHistory({
-      user_id: card.user_id,
-      type: 'card',
-      title: `${card.card_name} ekstresi kesildi`,
-      amount: card.current_period_spending,
-      source_table: 'cards',
-      source_id: card.id,
-      note: card.holder_name ? `${card.holder_name} kartı için dönem borcuna aktarıldı.` : 'Dönem borcuna aktarıldı.',
-    })
-    if (historyError) setError(historyError.message)
 
     await reload()
   }

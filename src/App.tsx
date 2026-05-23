@@ -7,6 +7,9 @@ import { Layout } from './components/Layout'
 const AssetsPage = lazy(() =>
   import('./pages/AssetsPage').then((module) => ({ default: module.AssetsPage })),
 )
+const AnalysisPage = lazy(() =>
+  import('./pages/AnalysisPage').then((module) => ({ default: module.AnalysisPage })),
+)
 const CardsPage = lazy(() =>
   import('./pages/CardsPage').then((module) => ({ default: module.CardsPage })),
 )
@@ -57,6 +60,7 @@ export function App() {
           <Route path="krediler" element={routeElement(<LoansPage />)} />
           <Route path="borclar" element={routeElement(<DebtsPage />)} />
           <Route path="odemeler" element={routeElement(<PaymentsPage />)} />
+          <Route path="analiz" element={routeElement(<AnalysisPage />)} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

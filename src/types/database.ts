@@ -12,6 +12,8 @@ export type DebtStatus = 'açık' | 'kapandı'
 export type PaymentStatus = 'bekliyor' | 'ödendi'
 export type PaymentRecurrence = 'none' | 'monthly'
 export type LoanInstallmentStatus = 'bekliyor' | 'ödendi'
+export type CardInstallmentStatus = 'scheduled' | 'posted'
+export type SavingsGoalStatus = 'active' | 'completed'
 export type TransactionHistoryType = 'payment' | 'transfer' | 'loan' | 'debt' | 'card'
 export type UpcomingDismissalSource = 'payment' | 'card' | 'loan_installment' | 'debt'
 
@@ -53,6 +55,49 @@ export type CardExpense = BaseRow & {
   spent_at: string
   amount: number
   description: string
+  category: string
+  installment_count: number
+  installment_amount: number
+  note: string | null
+}
+
+export type Budget = BaseRow & {
+  month: string
+  category: string
+  limit_amount: number
+  note: string | null
+}
+
+export type SavingsGoal = BaseRow & {
+  name: string
+  target_amount: number
+  current_amount: number
+  target_date: string | null
+  status: SavingsGoalStatus
+  note: string | null
+}
+
+export type CardInstallment = BaseRow & {
+  card_id: string
+  card_expense_id: string | null
+  installment_no: number
+  installment_count: number
+  due_month: string
+  amount: number
+  description: string
+  category: string
+  status: CardInstallmentStatus
+  posted_at: string | null
+  note: string | null
+}
+
+export type CardStatementArchive = BaseRow & {
+  card_id: string
+  statement_date: string
+  due_date: string | null
+  statement_debt_amount: number
+  current_period_spending: number
+  total_debt_amount: number
   note: string | null
 }
 
@@ -153,6 +198,10 @@ export type Database = {
       assets: Table<Asset, WithBaseInsert<Asset>, WithBaseUpdate<Asset>>
       cards: Table<Card, WithBaseInsert<Card>, WithBaseUpdate<Card>>
       card_expenses: Table<CardExpense, WithBaseInsert<CardExpense>, WithBaseUpdate<CardExpense>>
+      budgets: Table<Budget, WithBaseInsert<Budget>, WithBaseUpdate<Budget>>
+      savings_goals: Table<SavingsGoal, WithBaseInsert<SavingsGoal>, WithBaseUpdate<SavingsGoal>>
+      card_installments: Table<CardInstallment, WithBaseInsert<CardInstallment>, WithBaseUpdate<CardInstallment>>
+      card_statement_archives: Table<CardStatementArchive, WithBaseInsert<CardStatementArchive>, WithBaseUpdate<CardStatementArchive>>
       loans: Table<Loan, WithBaseInsert<Loan>, WithBaseUpdate<Loan>>
       loan_installments: Table<LoanInstallment, WithBaseInsert<LoanInstallment>, WithBaseUpdate<LoanInstallment>>
       debts: Table<Debt, WithBaseInsert<Debt>, WithBaseUpdate<Debt>>
@@ -173,8 +222,16 @@ export type Database = {
           p_amount: number
           p_description: string
           p_spent_at?: string
+          p_installment_count?: number
+          p_category?: string
         }
         Returns: CardExpense
+      }
+      cut_card_statement: {
+        Args: {
+          p_card_id: string
+        }
+        Returns: CardStatementArchive
       }
       pay_card_debt: {
         Args: {

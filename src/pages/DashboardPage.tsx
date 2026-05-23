@@ -492,11 +492,11 @@ export function DashboardPage() {
 
   return (
     <section className="grid gap-5 lg:grid-cols-12 lg:items-start">
-      <div className="lg:col-span-7">
+      <div className="min-w-0 lg:col-span-7">
         <WelcomePanel displayName={displayName} cashFlow={summary.cashFlow} />
       </div>
 
-      <div className="lg:col-span-5">
+      <div className="min-w-0 lg:col-span-5">
         <NetWorthPanel
           netWorth={summary.netWorth}
           totalAssets={summary.totalAssets}
@@ -505,11 +505,11 @@ export function DashboardPage() {
         />
       </div>
 
-      <div className="lg:col-span-7">
+      <div className="min-w-0 lg:col-span-7">
         <CashFlowPanel cashFlow={summary.cashFlow} />
       </div>
 
-      <div className="grid gap-3 min-[760px]:grid-cols-2 lg:col-span-5 lg:grid-cols-1">
+      <div className="grid min-w-0 gap-3 min-[760px]:grid-cols-2 lg:col-span-5 lg:grid-cols-1">
         <PeriodDebtTotalsPanel cashFlow={summary.cashFlow} />
         <CurrentDebtTotalsPanel
           totalDebt={summary.totalDebts}
@@ -519,19 +519,21 @@ export function DashboardPage() {
         />
       </div>
 
-      <div className="grid gap-3 min-[520px]:grid-cols-3 lg:col-span-12">
+      <div className="grid min-w-0 gap-3 min-[520px]:grid-cols-3 lg:col-span-12">
         <MetricTile label="Toplam limit" value={formatCurrency(summary.totalCreditLimit)} icon={<CreditCard />} tone="indigo" />
         <MetricTile label="Kredi ödemesi" value={formatCurrency(summary.totalLoanMonthlyPayment)} icon={<CalendarDays />} tone="stone" />
         <MetricTile label="Alacak" value={formatCurrency(summary.totalReceivables)} icon={<ArrowUpRight />} tone="emerald" />
       </div>
 
+      <UpcomingAlertPanel items={upcomingItems} />
+
       {hasCreditLimitGroups ? (
-        <div className="lg:col-span-7">
+        <div className="min-w-0 lg:col-span-7">
           <CreditLimitSection groups={summary.creditLimitGroups} totalUsageRate={summary.creditUsageRate} />
         </div>
       ) : null}
 
-      <div className={`grid gap-3 min-[520px]:grid-cols-2 ${hasCreditLimitGroups ? 'lg:col-span-5 lg:grid-cols-1' : 'lg:col-span-12'}`}>
+      <div className={`grid min-w-0 gap-3 min-[520px]:grid-cols-2 ${hasCreditLimitGroups ? 'lg:col-span-5 lg:grid-cols-1' : 'lg:col-span-12'}`}>
         <PulseCard
           title="Kredi ritmi"
           label="Aylık ödeme"
@@ -543,7 +545,7 @@ export function DashboardPage() {
         <SalaryPulse trend={summary.salaryTrend} />
       </div>
 
-      <div className="lg:col-span-5">
+      <div className="min-w-0 lg:col-span-5">
         <UpcomingSection title="Yaklaşan ödemeler">
           {upcomingItems.length === 0 ? (
             <EmptyState title="Yaklaşan ödeme yok" description="Önümüzdeki 30 gün için ödeme, kart günü veya kredi taksidi bulunmuyor." />
@@ -555,7 +557,7 @@ export function DashboardPage() {
         </UpcomingSection>
       </div>
 
-      <div className="lg:col-span-7">
+      <div className="min-w-0 lg:col-span-7">
         <HistorySection rows={data.transactionHistory} />
       </div>
     </section>
@@ -607,7 +609,7 @@ function WelcomePanel({ displayName, cashFlow }: { displayName: string; cashFlow
           </div>
         </div>
 
-        <div className="mt-5 grid grid-cols-3 gap-2">
+        <div className="mt-5 grid grid-cols-[repeat(3,minmax(0,1fr))] gap-2">
           <WelcomeMetric label="Dönem" value={cashFlow.monthLabel} />
           <WelcomeMetric label="Net akış" value={signedNetFlow} tone={netFlowIsPositive ? 'positive' : 'negative'} />
           <WelcomeMetric label="Nakit / hesap" value={formatCurrency(cashFlow.cashAssets)} />
@@ -663,7 +665,7 @@ function NetWorthPanel({ netWorth, totalAssets, totalDebts, totalReceivables }: 
           </Badge>
         </div>
         <Separator className="my-4 bg-white/15" />
-        <div className="grid grid-cols-3 gap-2 text-xs">
+        <div className="grid grid-cols-[repeat(3,minmax(0,1fr))] gap-2 text-xs">
           <SummaryPill label="Varlık" value={formatCurrency(totalAssets)} />
           <SummaryPill label="Borç" value={formatCurrency(totalDebts)} />
           <SummaryPill label="Alacak" value={formatCurrency(totalReceivables)} />
@@ -702,7 +704,7 @@ function CashFlowPanel({ cashFlow }: { cashFlow: CashFlowSummary }) {
         </div>
       </CardHeader>
       <CardContent className="space-y-4 pt-2">
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-[repeat(3,minmax(0,1fr))] gap-2">
           <CashFlowMetric label="Gelir" value={formatCurrency(cashFlow.income)} tone="emerald" />
           <CashFlowMetric label="Çıkış" value={formatCurrency(cashFlow.outflow)} tone="rose" />
           <CashFlowMetric label="Ay sonu" value={formatCurrency(cashFlow.projectedCash)} tone={cashFlow.projectedCash >= 0 ? 'emerald' : 'rose'} />
@@ -744,11 +746,62 @@ function PeriodDebtTotalsPanel({ cashFlow }: { cashFlow: CashFlowSummary }) {
       <CardHeader className="pb-2">
         <CardTitle>Dönem borcu toplamları</CardTitle>
       </CardHeader>
-      <CardContent className="grid grid-cols-2 gap-2 pt-0">
+      <CardContent className="grid grid-cols-[repeat(2,minmax(0,1fr))] gap-2 pt-0">
         <CashFlowMetric label="Kart borcu" value={formatCurrency(cashFlow.cardStatementDebt)} tone="rose" />
         <CashFlowMetric label="Kredi taksidi" value={formatCurrency(cashFlow.loanOutflow)} tone="rose" />
         <CashFlowMetric label="Fatura/ödeme" value={formatCurrency(cashFlow.paymentOutflow)} tone="rose" />
         <CashFlowMetric label="Kişisel borç" value={formatCurrency(cashFlow.debtOutflow)} tone="rose" />
+      </CardContent>
+    </Card>
+  )
+}
+
+function upcomingDayLabel(sortTime: number) {
+  const remaining = daysUntil(new Date(sortTime))
+  if (remaining === null) return 'Tarih yok'
+  if (remaining < 0) return `${Math.abs(remaining)} gün geçti`
+  if (remaining === 0) return 'Bugün'
+  if (remaining === 1) return 'Yarın'
+  return `${remaining} gün kaldı`
+}
+
+function UpcomingAlertPanel({ items }: { items: UpcomingItem[] }) {
+  if (items.length === 0) return null
+
+  const urgentCount = items.filter((item) => {
+    const remaining = daysUntil(new Date(item.sortTime))
+    return remaining !== null && remaining <= 7
+  }).length
+
+  return (
+    <Card className="min-w-0 border-amber-200 bg-amber-50/70 py-0 shadow-sm ring-1 ring-amber-200/80 dark:border-amber-900 dark:bg-amber-950/20 dark:ring-amber-900/70 lg:col-span-12">
+      <CardContent className="p-4">
+        <div className="flex flex-col gap-3 min-[760px]:flex-row min-[760px]:items-start min-[760px]:justify-between">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="text-sm font-bold uppercase text-amber-800 dark:text-amber-200">Ödeme alarmı</p>
+              <Badge variant={urgentCount > 0 ? 'destructive' : 'secondary'}>{urgentCount > 0 ? `${urgentCount} yakın vade` : `${items.length} kayıt`}</Badge>
+            </div>
+            <p className="mt-1 text-sm text-amber-900/75 dark:text-amber-100/75">
+              Yaklaşan kart, kredi, fatura ve kişisel borç vadelerini kaçırmamak için öne aldım.
+            </p>
+          </div>
+          <div className="grid min-w-0 flex-1 gap-2 min-[760px]:max-w-xl">
+            {items.slice(0, 3).map((item) => (
+              <div key={item.id} className="flex min-w-0 items-center justify-between gap-3 rounded-xl bg-white/75 px-3 py-2 text-sm dark:bg-stone-950/45">
+                <div className="min-w-0">
+                  <p className="truncate font-semibold text-stone-950 dark:text-stone-50">{item.title}</p>
+                  <p className="mt-0.5 text-xs text-stone-600 dark:text-stone-300">
+                    {item.date} · {upcomingDayLabel(item.sortTime)}
+                  </p>
+                </div>
+                <span className="shrink-0 whitespace-nowrap rounded-lg bg-amber-100 px-2 py-1 text-xs font-bold tabular-nums text-amber-900 dark:bg-amber-900/45 dark:text-amber-100">
+                  {item.value}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
       </CardContent>
     </Card>
   )
@@ -770,7 +823,7 @@ function CurrentDebtTotalsPanel({
       <CardHeader className="pb-2">
         <CardTitle>Güncel borç toplamları</CardTitle>
       </CardHeader>
-      <CardContent className="grid grid-cols-2 gap-2 pt-0">
+      <CardContent className="grid grid-cols-[repeat(2,minmax(0,1fr))] gap-2 pt-0">
         <CashFlowMetric label="Toplam borç" value={formatCurrency(totalDebt)} tone="rose" />
         <CashFlowMetric label="Kart borcu" value={formatCurrency(cardDebt)} tone="rose" />
         <CashFlowMetric label="Kredi borcu" value={formatCurrency(loanDebt)} tone="rose" />

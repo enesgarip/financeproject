@@ -11,12 +11,13 @@ const titles: Record<string, string> = {
   '/krediler': 'Krediler',
   '/borclar': 'Borç / Alacak',
   '/odemeler': 'Ödemeler',
+  '/analiz': 'Analiz',
 }
 
 export function Layout() {
   const { pathname } = useLocation()
   const { signOut, user } = useAuth()
-  const contentWidthClass = pathname === '/' ? 'max-w-5xl' : 'max-w-3xl'
+  const contentWidthClass = pathname === '/' || pathname === '/analiz' ? 'max-w-5xl' : 'max-w-3xl'
   const [isDark, setIsDark] = useState(() => {
     const storedTheme = localStorage.getItem('theme')
     return storedTheme ? storedTheme === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches
