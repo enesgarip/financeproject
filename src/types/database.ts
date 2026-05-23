@@ -11,6 +11,8 @@ export type DebtValueType = 'TRY' | 'doviz' | 'gram_altin' | 'ceyrek_altin'
 export type DebtStatus = 'açık' | 'kapandı'
 export type PaymentStatus = 'bekliyor' | 'ödendi'
 export type PaymentRecurrence = 'none' | 'monthly'
+export type PaymentMethod = 'manual' | 'bank_auto'
+export type PaymentAmountStatus = 'exact' | 'estimated'
 export type LoanInstallmentStatus = 'bekliyor' | 'ödendi'
 export type CardInstallmentStatus = 'scheduled' | 'posted'
 export type SavingsGoalStatus = 'active' | 'completed'
@@ -141,8 +143,10 @@ export type Payment = BaseRow & {
   title: string
   category: PaymentCategory
   amount: number
+  amount_status: PaymentAmountStatus
   due_date: string
   status: PaymentStatus
+  payment_method: PaymentMethod
   recurrence: PaymentRecurrence
   recurrence_day: number | null
   recurrence_end_date: string | null
@@ -252,6 +256,7 @@ export type Database = {
         Args: {
           p_payment_id: string
           p_source_card_id: string
+          p_paid_amount?: number
         }
         Returns: Payment
       }

@@ -4,7 +4,7 @@ import { Badge } from '../components/ui/badge'
 import { Card, CardContent } from '../components/ui/card'
 import { Progress } from '../components/ui/progress'
 import { supabase } from '../lib/supabase'
-import type { Card as FinanceCard, Payment, PaymentCategory } from '../types/database'
+import type { Card as FinanceCard, Payment, PaymentAmountStatus, PaymentCategory, PaymentMethod } from '../types/database'
 import { daysUntil, formatDate } from '../utils/date'
 import { formatCurrency, parseNumber } from '../utils/formatCurrency'
 import { useState } from 'react'
@@ -20,6 +20,16 @@ const paymentCategoryOptions: { label: PaymentCategory; value: PaymentCategory }
   { label: 'Diğer', value: 'Diğer' },
 ]
 
+const paymentMethodOptions: { label: string; value: PaymentMethod }[] = [
+  { label: 'Manuel ödeme', value: 'manual' },
+  { label: 'Banka talimatı', value: 'bank_auto' },
+]
+
+const amountStatusOptions: { label: string; value: PaymentAmountStatus }[] = [
+  { label: 'Kesin tutar', value: 'exact' },
+  { label: 'Tahmini / beklenen', value: 'estimated' },
+]
+
 const fields: FormField[] = [
   { name: 'title', label: 'Başlık', type: 'text', required: true },
   {
@@ -28,7 +38,19 @@ const fields: FormField[] = [
     type: 'select',
     options: paymentCategoryOptions,
   },
-  { name: 'amount', label: 'Tutar', type: 'number', min: '0', step: '0.01', required: true },
+  {
+    name: 'payment_method',
+    label: 'Ödeme yöntemi',
+    type: 'select',
+    options: paymentMethodOptions,
+  },
+  {
+    name: 'amount_status',
+    label: 'Tutar durumu',
+    type: 'select',
+    options: amountStatusOptions,
+  },
+  { name: 'amount', label: 'Tutar / tahmin', type: 'number', min: '0', step: '0.01' },
   { name: 'due_date', label: 'Sıradaki tarih', type: 'date', required: true },
   {
     name: 'recurrence',
@@ -56,7 +78,12 @@ const fields: FormField[] = [
 
 function validatePaymentForm(formData: FormData) {
   const errors: Record<string, string> = {}
-  if (parseNumber(formData.get('amount')) <= 0) errors.amount = 'Tutar 0’dan büyük olmalı.'
+  const amount = parseNumber(formData.get('amount'))
+  const paymentMethod = formData.get('payment_method')
+  const amountStatus = formData.get('amount_status')
+  const canWaitForActualAmount = paymentMethod === 'bank_auto' && amountStatus === 'estimated'
+  if (amount < 0) errors.amount = 'Tutar negatif olamaz.'
+  if (amount <= 0 && !canWaitForActualAmount) errors.amount = 'Tutar 0’dan büyük olmalı.'
   if (formData.get('recurrence') === 'monthly' && !formData.get('recurrence_day')) {
     errors.recurrence_day = 'Aylık ödeme için gün seç.'
   }
@@ -78,6 +105,26 @@ function getPaymentScheduleLabel(payment: Payment) {
 
   const endDate = payment.recurrence_end_date ? ` · ${formatDate(payment.recurrence_end_date)} bitecek` : ''
   return `Aylık · Her ayın ${payment.recurrence_day ?? '-'}. günü${endDate}`
+}
+
+function getPaymentMethodLabel(payment: Payment) {
+  return payment.payment_method === 'bank_auto' ? 'Banka talimatı' : 'Manuel ödeme'
+}
+
+function getAmountStatusLabel(payment: Payment) {
+  return payment.amount_status === 'estimated' ? 'Tahmini' : 'Kesin'
+}
+
+function getPaymentAmountLabel(payment: Payment) {
+  if (payment.amount <= 0 && payment.amount_status === 'estimated') return 'Tutar bekleniyor'
+  const prefix = payment.amount_status === 'estimated' ? 'Yaklaşık ' : ''
+  return `${prefix}${formatCurrency(payment.amount)}`
+}
+
+function isSchemaCacheError(error: { code?: string; message?: string } | null | undefined) {
+  if (!error) return false
+  const message = error.message ?? ''
+  return error.code === 'PGRST202' || error.code === 'PGRST204' || message.includes('schema cache') || message.includes('Could not find the function')
 }
 
 function PaymentsOverview({ rows }: { rows: Payment[] }) {
@@ -122,7 +169,7 @@ function PaymentsOverview({ rows }: { rows: Payment[] }) {
               <p className="truncate font-semibold text-foreground">{nextPayment.title}</p>
               <p className="text-xs text-muted-foreground">Sıradaki tarih {formatDate(nextPayment.due_date)}</p>
             </div>
-            <span className="shrink-0 font-bold tabular-nums text-foreground">{formatCurrency(nextPayment.amount)}</span>
+            <span className="shrink-0 font-bold tabular-nums text-foreground">{getPaymentAmountLabel(nextPayment)}</span>
           </div>
         ) : null}
       </CardContent>
@@ -134,6 +181,7 @@ export function PaymentsPage() {
   const [paymentToPay, setPaymentToPay] = useState<Payment | null>(null)
   const [paymentCards, setPaymentCards] = useState<FinanceCard[]>([])
   const [paymentSourceCard, setPaymentSourceCard] = useState('')
+  const [paidAmount, setPaidAmount] = useState('')
   const [paymentError, setPaymentError] = useState('')
   const [paymentSaving, setPaymentSaving] = useState(false)
   const [reloadPayments, setReloadPayments] = useState<(() => Promise<void>) | null>(null)
@@ -143,6 +191,7 @@ export function PaymentsPage() {
     setPaymentToPay(payment)
     setPaymentCards(cards)
     setPaymentSourceCard('')
+    setPaidAmount(payment.amount > 0 ? String(payment.amount) : '')
     setPaymentError(cards.length === 0 ? 'Ödeme için önce bir banka kartı hesabı eklemelisin.' : '')
     setReloadPayments(() => reload)
   }
@@ -150,12 +199,19 @@ export function PaymentsPage() {
   function closePayment() {
     setPaymentToPay(null)
     setPaymentSourceCard('')
+    setPaidAmount('')
     setPaymentError('')
   }
 
   async function handlePaymentSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!paymentToPay) return
+
+    const parsedPaidAmount = parseNumber(paidAmount)
+    if (parsedPaidAmount <= 0) {
+      setPaymentError('Ödenen tutar 0’dan büyük olmalı.')
+      return
+    }
 
     if (!paymentSourceCard) {
       setPaymentError('Kaynak hesap seçmelisin.')
@@ -168,7 +224,7 @@ export function PaymentsPage() {
       return
     }
 
-    if (sourceCard.current_balance < paymentToPay.amount) {
+    if (sourceCard.current_balance < parsedPaidAmount) {
       setPaymentError('Kaynak hesap bakiyesi yetersiz.')
       return
     }
@@ -179,11 +235,30 @@ export function PaymentsPage() {
     const { error } = await supabase.rpc('pay_payment', {
       p_payment_id: paymentToPay.id,
       p_source_card_id: sourceCard.id,
+      p_paid_amount: parsedPaidAmount,
     })
 
+    let submitError = error
+    if (submitError && isSchemaCacheError(submitError)) {
+      const { error: updateError } = await supabase
+        .from('payments')
+        .update({ amount: parsedPaidAmount, updated_at: new Date().toISOString() })
+        .eq('id', paymentToPay.id)
+
+      if (updateError) {
+        submitError = updateError
+      } else {
+        const { error: legacyError } = await supabase.rpc('pay_payment', {
+          p_payment_id: paymentToPay.id,
+          p_source_card_id: sourceCard.id,
+        })
+        submitError = legacyError
+      }
+    }
+
     setPaymentSaving(false)
-    if (error) {
-      setPaymentError(error.message)
+    if (submitError) {
+      setPaymentError(submitError.message)
       return
     }
 
@@ -206,6 +281,8 @@ export function PaymentsPage() {
         getInitialValues={(row?: Payment) => ({
           title: row?.title ?? '',
           category: row?.category ?? 'Diğer',
+          payment_method: row?.payment_method ?? 'manual',
+          amount_status: row?.amount_status ?? (row?.category === 'Fatura' ? 'estimated' : 'exact'),
           amount: row?.amount ?? 0,
           due_date: row?.due_date ?? new Date().toISOString().slice(0, 10),
           recurrence: row?.recurrence ?? 'none',
@@ -221,6 +298,8 @@ export function PaymentsPage() {
             user_id: userId,
             title: String(formData.get('title') ?? '').trim(),
             category: (formData.get('category') as PaymentCategory | null) ?? 'Diğer',
+            payment_method: (formData.get('payment_method') as PaymentMethod | null) ?? 'manual',
+            amount_status: (formData.get('amount_status') as PaymentAmountStatus | null) ?? 'exact',
             amount: parseNumber(formData.get('amount')),
             due_date: String(formData.get('due_date') ?? ''),
             status: recurrence === 'monthly' ? 'bekliyor' : (editing?.status ?? 'bekliyor'),
@@ -232,7 +311,11 @@ export function PaymentsPage() {
         }}
         renderTitle={(row) => row.title}
         renderSubtitle={(row) => `${row.category} · ${row.status} · ${getPaymentScheduleLabel(row)}`}
-        renderDetails={(row) => [`Tutar: ${formatCurrency(row.amount)}`, `Sıradaki tarih: ${formatDate(row.due_date)}`]}
+        renderDetails={(row) => [
+          `Tutar: ${getPaymentAmountLabel(row)}`,
+          `Durum: ${getAmountStatusLabel(row)} · ${getPaymentMethodLabel(row)}`,
+          `Sıradaki tarih: ${formatDate(row.due_date)}`,
+        ]}
         groupBy={(row) => row.category}
         renderRowActions={(row, helpers) =>
           row.status === 'bekliyor' ? (
@@ -241,7 +324,7 @@ export function PaymentsPage() {
               onClick={() => void openPayment(row, helpers.reload)}
               className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-700"
             >
-              Öde
+              {row.payment_method === 'bank_auto' ? 'Ödendi gir' : 'Öde'}
             </button>
           ) : null
         }
@@ -251,9 +334,23 @@ export function PaymentsPage() {
         <form onSubmit={handlePaymentSubmit} className="space-y-4">
           <div className="rounded-lg bg-stone-50 p-3 text-sm text-stone-600 dark:bg-stone-900 dark:text-stone-300">
             <p className="font-semibold text-stone-950 dark:text-stone-50">{paymentToPay?.title}</p>
-            <p>Tutar: {formatCurrency(paymentToPay?.amount ?? 0)}</p>
+            <p>Planlanan tutar: {paymentToPay ? getPaymentAmountLabel(paymentToPay) : '-'}</p>
+            <p>Yöntem: {paymentToPay ? getPaymentMethodLabel(paymentToPay) : '-'}</p>
             <p>Vade: {paymentToPay ? formatDate(paymentToPay.due_date) : '-'}</p>
           </div>
+          <label className="block text-sm font-medium text-stone-700 dark:text-stone-200">
+            Ödenen gerçek tutar
+            <input
+              required
+              min="0"
+              step="0.01"
+              type="number"
+              inputMode="decimal"
+              value={paidAmount}
+              onChange={(event) => setPaidAmount(event.target.value)}
+              className="mt-1 w-full rounded-lg border border-stone-200 px-3 py-3 outline-none focus:border-emerald-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+            />
+          </label>
           <label className="block text-sm font-medium text-stone-700 dark:text-stone-200">
             Kaynak hesap
             <select

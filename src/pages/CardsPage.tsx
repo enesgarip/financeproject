@@ -302,18 +302,20 @@ function QuickExpensePanel({
   const [amount, setAmount] = useState('')
   const [description, setDescription] = useState('')
   const [category, setCategory] = useState(expenseCategoryOptions[0]?.value ?? 'Diğer')
+  const [paymentMode, setPaymentMode] = useState<'cash' | 'installment'>('cash')
   const [installmentCount, setInstallmentCount] = useState('1')
   const [localError, setLocalError] = useState('')
   const [saving, setSaving] = useState(false)
   const cards = useMemo(() => rows.filter((row) => row.card_type === 'kredi_karti' || row.card_type === 'banka_karti'), [rows])
   const activeCardId = cards.some((card) => card.id === cardId) ? cardId : (cards[0]?.id ?? '')
   const selectedCard = cards.find((card) => card.id === activeCardId)
+  const canUseInstallments = selectedCard?.card_type === 'kredi_karti'
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
     const parsedAmount = parseNumber(amount)
-    const parsedInstallmentCount = selectedCard?.card_type === 'banka_karti' ? 1 : Math.max(1, Math.min(36, Number(installmentCount) || 1))
+    const parsedInstallmentCount = canUseInstallments && paymentMode === 'installment' ? Math.max(2, Math.min(36, Number(installmentCount) || 2)) : 1
     const trimmedDescription = description.trim()
     if (!selectedCard) {
       setLocalError('Kart seçmelisin.')
@@ -327,11 +329,6 @@ function QuickExpensePanel({
       setLocalError('Açıklama yazmalısın.')
       return
     }
-    if (selectedCard.card_type === 'banka_karti' && parsedInstallmentCount > 1) {
-      setLocalError('Taksitli harcama sadece kredi kartı için kullanılabilir.')
-      return
-    }
-
     setSaving(true)
     setLocalError('')
     setError('')
@@ -366,6 +363,7 @@ function QuickExpensePanel({
     setAmount('')
     setDescription('')
     setCategory(expenseCategoryOptions[0]?.value ?? 'Diğer')
+    setPaymentMode('cash')
     setInstallmentCount('1')
     await reload()
   }
@@ -397,6 +395,7 @@ function QuickExpensePanel({
               value={activeCardId}
               onChange={(event) => {
                 setCardId(event.target.value)
+                setPaymentMode('cash')
                 setLocalError('')
               }}
               className="mt-1 w-full rounded-lg border border-stone-200 bg-white px-3 py-2.5 outline-none focus:border-emerald-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
@@ -461,22 +460,40 @@ function QuickExpensePanel({
               </select>
             </label>
             <label className="block text-sm font-medium text-stone-700 dark:text-stone-200">
-              Taksit
+              İşlem türü
+              <select
+                value={canUseInstallments ? paymentMode : 'cash'}
+                onChange={(event) => {
+                  const nextMode = event.target.value as 'cash' | 'installment'
+                  setPaymentMode(nextMode)
+                  if (nextMode === 'installment' && Number(installmentCount) < 2) setInstallmentCount('2')
+                  setLocalError('')
+                }}
+                disabled={!canUseInstallments}
+                className="mt-1 w-full rounded-lg border border-stone-200 bg-white px-3 py-2.5 outline-none focus:border-emerald-600 disabled:bg-stone-100 disabled:text-stone-500 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100 dark:disabled:bg-stone-800"
+              >
+                <option value="cash">Peşin</option>
+                <option value="installment">Taksitli</option>
+              </select>
+            </label>
+          </div>
+          {canUseInstallments && paymentMode === 'installment' ? (
+            <label className="block text-sm font-medium text-stone-700 dark:text-stone-200">
+              Taksit sayısı
               <input
-                value={selectedCard?.card_type === 'banka_karti' ? '1' : installmentCount}
+                value={installmentCount}
                 onChange={(event) => {
                   setInstallmentCount(event.target.value)
                   setLocalError('')
                 }}
                 type="number"
-                min="1"
+                min="2"
                 max="36"
                 step="1"
-                disabled={selectedCard?.card_type === 'banka_karti'}
-                className="mt-1 w-full rounded-lg border border-stone-200 px-3 py-2.5 outline-none focus:border-emerald-600 disabled:bg-stone-100 disabled:text-stone-500 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100 dark:disabled:bg-stone-800"
+                className="mt-1 w-full rounded-lg border border-stone-200 px-3 py-2.5 outline-none focus:border-emerald-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
               />
             </label>
-          </div>
+          ) : null}
           {localError ? <p className="rounded-lg bg-rose-50 p-3 text-sm text-rose-700 dark:bg-rose-950/40 dark:text-rose-200">{localError}</p> : null}
           <button
             type="submit"
