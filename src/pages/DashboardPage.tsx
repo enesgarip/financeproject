@@ -1,9 +1,9 @@
 import type { User } from '@supabase/supabase-js'
-import { ArrowUpRight, CalendarDays, CreditCard, Landmark, Sparkles, Trash2, TrendingDown, TrendingUp } from 'lucide-react'
+import { ArrowUpRight, CalendarDays, CreditCard, Landmark, Sparkles, TrendingDown, TrendingUp } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAuth } from '../auth/useAuth'
 import { supabase } from '../lib/supabase'
-import type { Asset, Card as FinanceCard, Debt, DismissedUpcomingItem, Loan, LoanInstallment, Payment, SalaryHistory, TransactionHistory, TransactionHistoryType, UpcomingDismissalSource } from '../types/database'
+import type { Asset, Card as FinanceCard, Debt, Loan, LoanInstallment, Payment, SalaryHistory, TransactionHistory, TransactionHistoryType } from '../types/database'
 import { daysUntil, endOfMonth, formatDate, isDateInMonth, isUpcomingDate, monthlyOccurrenceDate, nextMonthlyDate, startOfMonth } from '../utils/date'
 import { formatCurrency } from '../utils/formatCurrency'
 import { EmptyState } from '../components/EmptyState'
@@ -22,7 +22,6 @@ type DashboardData = {
   payments: Payment[]
   salaryHistory: SalaryHistory[]
   transactionHistory: TransactionHistory[]
-  dismissedUpcomingItems: DismissedUpcomingItem[]
 }
 
 const emptyData: DashboardData = {
@@ -34,7 +33,6 @@ const emptyData: DashboardData = {
   payments: [],
   salaryHistory: [],
   transactionHistory: [],
-  dismissedUpcomingItems: [],
 }
 
 const UPCOMING_DAYS = 30
@@ -50,8 +48,6 @@ const historyFilters: Array<{ label: string; value: TransactionHistoryType | 'al
 
 type UpcomingItem = {
   id: string
-  recordId: string
-  source: UpcomingDismissalSource
   title: string
   value: string
   date: string
@@ -256,7 +252,7 @@ export function DashboardPage() {
     const historyStart = new Date()
     historyStart.setMonth(historyStart.getMonth() - 3)
 
-    const [assets, cards, loans, loanInstallments, debts, payments, salaryHistory, transactionHistory, dismissedUpcomingItems] = await Promise.all([
+    const [assets, cards, loans, loanInstallments, debts, payments, salaryHistory, transactionHistory] = await Promise.all([
       supabase.from('assets').select('*'),
       supabase.from('cards').select('*'),
       supabase.from('loans').select('*'),
@@ -265,7 +261,6 @@ export function DashboardPage() {
       supabase.from('payments').select('*'),
       supabase.from('salary_history').select('*').order('effective_date', { ascending: false }),
       supabase.from('transaction_history').select('*').gte('occurred_at', historyStart.toISOString()).order('occurred_at', { ascending: false }),
-      supabase.from('dismissed_upcoming_items').select('*'),
     ])
 
     const firstError = [
@@ -277,7 +272,6 @@ export function DashboardPage() {
       payments.error,
       salaryHistory.error,
       transactionHistory.error,
-      dismissedUpcomingItems.error,
     ].find(Boolean)
     if (firstError) {
       setError(firstError.message)
@@ -294,7 +288,6 @@ export function DashboardPage() {
       payments: payments.data ?? [],
       salaryHistory: salaryHistory.data ?? [],
       transactionHistory: transactionHistory.data ?? [],
-      dismissedUpcomingItems: dismissedUpcomingItems.data ?? [],
     })
     setLoading(false)
   }, [])
@@ -369,14 +362,11 @@ export function DashboardPage() {
   }, [data])
 
   const upcomingItems = useMemo(() => {
-    const dismissedKeys = new Set(data.dismissedUpcomingItems.map((item) => item.item_key))
     const loansById = new Map(data.loans.map((loan) => [loan.id, loan]))
     const manualPayments = data.payments
       .filter((payment) => payment.status === 'bekliyor' && isUpcomingDate(payment.due_date, UPCOMING_DAYS))
       .map((payment) => ({
         id: `payment-${payment.id}`,
-        recordId: payment.id,
-        source: 'payment' as const,
         title: `Ödeme · ${payment.title}`,
         value: formatCurrency(payment.amount),
         date: formatDate(payment.due_date),
@@ -392,8 +382,6 @@ export function DashboardPage() {
       })
       .map(({ card, dueDate }) => ({
         id: `card-${card.id}-${dateInputValue(dueDate)}`,
-        recordId: card.id,
-        source: 'card' as const,
         title: `Kart · ${card.bank_name} · ${card.card_name}`,
         value: formatCurrency(cardMonthlyPaymentAmount(card)),
         date: formatMonthDay(dueDate),
@@ -406,8 +394,6 @@ export function DashboardPage() {
         const loan = loansById.get(installment.loan_id)
         return {
           id: `loan-installment-${installment.id}`,
-          recordId: installment.id,
-          source: 'loan_installment' as const,
           title: loan ? `Kredi · ${loan.bank_name} · ${loan.loan_name}` : 'Kredi taksidi',
           value: formatCurrency(installment.amount),
           date: formatDate(installment.due_date),
@@ -419,8 +405,6 @@ export function DashboardPage() {
       .filter((debt) => debt.direction === 'borç_aldım' && debt.status === 'açık' && isUpcomingDate(debt.due_date, UPCOMING_DAYS))
       .map((debt) => ({
         id: `debt-${debt.id}`,
-        recordId: debt.id,
-        source: 'debt' as const,
         title: `Borç · ${debt.person_name}`,
         value: formatCurrency(debt.estimated_value_try),
         date: formatDate(debt.due_date),
@@ -437,8 +421,6 @@ export function DashboardPage() {
       })
       .map(({ loan, dueDate }) => ({
         id: `loan-${loan.id}-${dateInputValue(dueDate)}`,
-        recordId: loan.id,
-        source: 'loan_installment' as const,
         title: `Kredi · ${loan.bank_name} · ${loan.loan_name}`,
         value: formatCurrency(loan.monthly_payment),
         date: formatMonthDay(dueDate),
@@ -446,29 +428,9 @@ export function DashboardPage() {
       }))
 
     return [...manualPayments, ...creditCards, ...loanInstallments, ...personalDebts, ...legacyLoanInstallments]
-      .filter((item) => !dismissedKeys.has(item.id))
       .sort((a, b) => a.sortTime - b.sortTime)
       .slice(0, 10)
-  }, [data.cards, data.debts, data.dismissedUpcomingItems, data.loanInstallments, data.loans, data.payments])
-
-  async function dismissUpcomingItem(item: UpcomingItem) {
-    if (!user) return
-
-    const { error: dismissError } = await supabase.from('dismissed_upcoming_items').upsert(
-      {
-        user_id: user.id,
-        item_key: item.id,
-        source: item.source,
-      },
-      { onConflict: 'user_id,item_key' },
-    )
-    if (dismissError) {
-      setError(dismissError.message)
-      return
-    }
-
-    await loadDashboard()
-  }
+  }, [data.cards, data.debts, data.loanInstallments, data.loans, data.payments])
 
   if (loading) {
     return (
@@ -545,19 +507,7 @@ export function DashboardPage() {
         <SalaryPulse trend={summary.salaryTrend} />
       </div>
 
-      <div className="min-w-0 lg:col-span-5">
-        <UpcomingSection title="Yaklaşan ödemeler">
-          {upcomingItems.length === 0 ? (
-            <EmptyState title="Yaklaşan ödeme yok" description="Önümüzdeki 30 gün için ödeme, kart günü veya kredi taksidi bulunmuyor." />
-          ) : (
-            upcomingItems.map((item) => (
-              <ModernUpcomingRow key={item.id} item={item} onDismiss={dismissUpcomingItem} />
-            ))
-          )}
-        </UpcomingSection>
-      </div>
-
-      <div className="min-w-0 lg:col-span-7">
+      <div className="min-w-0 lg:col-span-12">
         <HistorySection rows={data.transactionHistory} />
       </div>
     </section>
@@ -633,15 +583,6 @@ function WelcomeMetric({ label, value, tone = 'neutral' }: { label: string; valu
         {value}
       </p>
     </div>
-  )
-}
-
-function UpcomingSection({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <section>
-      <h2 className="mb-4 text-lg font-bold text-stone-950 dark:text-stone-50">{title}</h2>
-      <div className="space-y-3">{children}</div>
-    </section>
   )
 }
 
@@ -948,49 +889,6 @@ function SalaryPulse({ trend }: { trend: ReturnType<typeof getSalaryTrend> }) {
       icon={<TrendingUp />}
       tone="emerald"
     />
-  )
-}
-
-function ModernUpcomingRow({ item, onDismiss }: { item: UpcomingItem; onDismiss: (item: UpcomingItem) => Promise<void> }) {
-  const [dragStart, setDragStart] = useState<number | null>(null)
-  const [isOpen, setIsOpen] = useState(false)
-
-  return (
-    <div className="relative overflow-hidden rounded-xl">
-      <button
-        type="button"
-        onClick={() => void onDismiss(item)}
-        className="absolute inset-y-0 right-0 grid w-16 place-items-center bg-rose-600 text-white"
-        aria-label="Yaklaşan ödemeyi listeden gizle"
-      >
-        <Trash2 size={18} />
-      </button>
-      <article
-        onPointerDown={(event) => setDragStart(event.clientX)}
-        onPointerUp={(event) => {
-          if (dragStart === null) return
-          const delta = event.clientX - dragStart
-          if (delta < -45) setIsOpen(true)
-          if (delta > 30) setIsOpen(false)
-          setDragStart(null)
-        }}
-        className={`relative flex items-center justify-between gap-3 rounded-xl border border-stone-200 bg-white p-4 shadow-md transition-all duration-300 hover:border-indigo-300 hover:shadow-lg dark:border-stone-800 dark:bg-stone-900 dark:hover:border-indigo-700 ${
-          isOpen ? '-translate-x-16' : 'translate-x-0'
-        }`}
-        style={{ touchAction: 'pan-y' }}
-      >
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold text-stone-950 dark:text-stone-50">{item.title}</p>
-          <p className="mt-1 flex items-center gap-1.5 text-xs text-stone-500 dark:text-stone-400">
-            <CalendarDays size={14} className="text-stone-400 dark:text-stone-500" />
-            {item.date}
-          </p>
-        </div>
-        <div className="shrink-0 rounded-lg bg-stone-100 px-3 py-1.5 text-sm font-semibold text-stone-900 transition-colors hover:bg-indigo-100 dark:bg-stone-800 dark:text-stone-100 dark:hover:bg-indigo-900/30">
-          {item.value}
-        </div>
-      </article>
-    </div>
   )
 }
 
