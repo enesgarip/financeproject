@@ -719,9 +719,103 @@ function CalendarEventPill({ event }: { event: CalendarEvent }) {
   return <p className={`truncate rounded-md px-1.5 py-0.5 text-[10px] font-semibold ${toneClass}`}>{event.title}</p>
 }
 
+type CategoryInsight = {
+  category: string
+  title: string
+  description: string
+  tone: 'emerald' | 'amber' | 'rose'
+  priority: number
+  amount: number
+}
+
+function monthKeyFor(value: Date | string) {
+  const date = typeof value === 'string' ? new Date(`${value}T00:00:00`) : value
+  return dateInputValue(startOfMonth(Number.isNaN(date.getTime()) ? new Date() : date))
+}
+
+function previousMonthKeys(count: number) {
+  const today = new Date()
+  return Array.from({ length: count }, (_, index) => dateInputValue(startOfMonth(new Date(today.getFullYear(), today.getMonth() - index - 1, 1))))
+}
+
+function buildCategoryInsights(data: AnalysisData): CategoryInsight[] {
+  const currentMonth = dateInputValue(startOfMonth())
+  const previousMonths = previousMonthKeys(3)
+  const currentTotals = new Map<string, number>()
+  const previousTotals = new Map<string, number>()
+  const budgetsByCategory = new Map(data.budgets.filter((budget) => budget.month === currentMonth).map((budget) => [budget.category, budget]))
+
+  for (const expense of data.cardExpenses) {
+    const category = expense.category || 'Diğer'
+    const expenseMonth = monthKeyFor(expense.spent_at)
+
+    if (expenseMonth === currentMonth) {
+      currentTotals.set(category, (currentTotals.get(category) ?? 0) + expense.amount)
+    } else if (previousMonths.includes(expenseMonth)) {
+      previousTotals.set(category, (previousTotals.get(category) ?? 0) + expense.amount)
+    }
+  }
+
+  return Array.from(currentTotals, ([category, amount]) => {
+    const budget = budgetsByCategory.get(category)
+    const average = (previousTotals.get(category) ?? 0) / 3
+    const limitRate = budget && budget.limit_amount > 0 ? amount / budget.limit_amount : 0
+
+    if (budget && limitRate >= 1) {
+      return {
+        category,
+        title: 'Bütçe aşıldı',
+        description: `${formatCurrency(amount)} harcandı; limit ${formatCurrency(budget.limit_amount)}.`,
+        tone: 'rose' as const,
+        priority: 1,
+        amount,
+      }
+    }
+
+    if (budget && limitRate >= 0.8) {
+      return {
+        category,
+        title: `Limitin %${Math.round(limitRate * 100)} doldu`,
+        description: `${formatCurrency(Math.max(0, budget.limit_amount - amount))} alan kaldı.`,
+        tone: 'amber' as const,
+        priority: 2,
+        amount,
+      }
+    }
+
+    if (average > 0 && amount >= average * 1.25) {
+      return {
+        category,
+        title: 'Son 3 ay ortalamasının üstünde',
+        description: `Bu ay ${formatCurrency(amount)}, üç aylık ortalama ${formatCurrency(average)}.`,
+        tone: 'amber' as const,
+        priority: 3,
+        amount,
+      }
+    }
+
+    if (average > 0 && amount <= average * 0.75) {
+      return {
+        category,
+        title: 'Ortalamanın altında',
+        description: `Bu ay tempo ${formatCurrency(average - amount)} daha düşük görünüyor.`,
+        tone: 'emerald' as const,
+        priority: 6,
+        amount,
+      }
+    }
+
+    return null
+  })
+    .filter((item): item is CategoryInsight => Boolean(item))
+    .sort((a, b) => a.priority - b.priority || b.amount - a.amount)
+    .slice(0, 3)
+}
+
 function CategorySpendingChart({ data }: { data: AnalysisData }) {
   const monthlyExpenses = data.cardExpenses.filter((expense) => isDateInMonth(expense.spent_at))
   const total = sum(monthlyExpenses, (expense) => expense.amount)
+  const insights = buildCategoryInsights(data)
   const categoryTotals = Array.from(
     monthlyExpenses.reduce((map, expense) => {
       const category = expense.category || 'Diğer'
@@ -761,6 +855,24 @@ function CategorySpendingChart({ data }: { data: AnalysisData }) {
             )
           })
         )}
+        {insights.length > 0 ? (
+          <div className="rounded-xl bg-muted/45 p-3">
+            <p className="text-xs font-bold uppercase text-muted-foreground">Kategori içgörüleri</p>
+            <div className="mt-2 grid gap-2">
+              {insights.map((insight) => (
+                <div key={`${insight.category}-${insight.title}`} className="flex min-w-0 items-start justify-between gap-3 rounded-lg bg-background/70 px-3 py-2 text-sm">
+                  <div className="min-w-0">
+                    <p className="truncate font-bold text-foreground">{insight.category}</p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">{insight.title} · {insight.description}</p>
+                  </div>
+                  <Badge variant={insight.tone === 'rose' ? 'destructive' : insight.tone === 'amber' ? 'secondary' : 'default'}>
+                    {formatCurrency(insight.amount)}
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
       </CardContent>
     </Card>
   )
@@ -881,19 +993,37 @@ function PeopleLedger({ debts }: { debts: Debt[] }) {
 
 function MonthCloseAssistant({ data, missingTables }: { data: AnalysisData; missingTables: string[] }) {
   const monthKey = dateInputValue(startOfMonth())
-  const overduePayments = data.payments.filter((payment) => payment.status === 'bekliyor' && (daysUntil(payment.due_date) ?? 0) < 0).length
+  const today = new Date()
+  const currentMonthExpenses = data.cardExpenses.filter((expense) => isDateInMonth(expense.spent_at))
+  const creditCards = data.cards.filter((card) => card.card_type === 'kredi_karti')
+  const statementDayPassedCards = creditCards.filter((card) => {
+    if (!card.statement_day || card.current_period_spending <= 0) return false
+    const statementDate = new Date(today.getFullYear(), today.getMonth(), Math.min(card.statement_day, new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate()))
+    return today >= statementDate
+  })
+  const staleInstallments = data.cardInstallments.filter((item) => item.status === 'scheduled' && item.due_month <= monthKey).length
+  const openPaymentCount = data.payments.filter((payment) => paymentInCurrentMonth(payment) || (payment.status === 'bekliyor' && (daysUntil(payment.due_date) ?? 0) < 0)).length
+  const budgetOverruns = data.budgets.filter((budget) => {
+    if (budget.month !== monthKey || budget.limit_amount <= 0) return false
+    const spent = sum(
+      currentMonthExpenses.filter((expense) => (expense.category || 'Diğer') === budget.category),
+      (expense) => expense.amount,
+    )
+    return spent > budget.limit_amount
+  }).length
   const checks = [
-    { label: 'Bu ay bütçe tanımlı', done: data.budgets.some((budget) => budget.month === monthKey) },
-    { label: 'Aktif birikim hedefi var', done: data.savingsGoals.some((goal) => goal.status === 'active') },
-    { label: 'Gecikmiş ödeme yok', done: overduePayments === 0 },
-    { label: 'Ekstre arşivi tutuluyor', done: data.cardStatementArchives.length > 0 },
-    { label: 'Canlı migration tamam', done: missingTables.length === 0 },
+    { label: 'Ekstreler kontrol edildi', done: statementDayPassedCards.length === 0, detail: statementDayPassedCards.length > 0 ? `${statementDayPassedCards.length} kart bekliyor` : 'Kesim günü geçmiş açık dönem yok' },
+    { label: 'Taksitler işlendi', done: staleInstallments === 0, detail: staleInstallments > 0 ? `${staleInstallments} taksit planlı kaldı` : 'Bu aya kadar planlı taksit yok' },
+    { label: 'Maaş kaydı güncel', done: Boolean(getCurrentSalary(data.salaryHistory)), detail: getCurrentSalary(data.salaryHistory) ? formatCurrency(getCurrentSalary(data.salaryHistory)?.amount ?? 0) : 'Maaş eklenmedi' },
+    { label: 'Faturalar kapandı', done: openPaymentCount === 0, detail: openPaymentCount > 0 ? `${openPaymentCount} açık ödeme` : 'Açık vade görünmüyor' },
+    { label: 'Bütçe aşımı yok', done: budgetOverruns === 0, detail: budgetOverruns > 0 ? `${budgetOverruns} kategori limit üstü` : 'Limitler sakin' },
+    { label: 'Veri altyapısı hazır', done: missingTables.length === 0, detail: missingTables.length > 0 ? `${missingTables.length} migration bekliyor` : 'Tablolar erişilebilir' },
   ]
   const completed = checks.filter((check) => check.done).length
 
   return (
     <Card className="border-0 bg-stone-950 text-white shadow-lg shadow-stone-950/10 ring-1 ring-stone-800 lg:col-span-12">
-      <CardContent className="grid gap-4 p-4 min-[760px]:grid-cols-[1fr_auto] min-[760px]:items-center">
+      <CardContent className="grid gap-4 p-4 min-[760px]:grid-cols-[0.72fr_1.28fr] min-[760px]:items-center">
         <div>
           <div className="flex items-center gap-2">
             <CheckCircle2 className="text-emerald-300" />
@@ -903,10 +1033,11 @@ function MonthCloseAssistant({ data, missingTables }: { data: AnalysisData; miss
             {formatMonth(monthKey)} için {completed}/{checks.length} kontrol tamam. Raporu PDF olarak yazdırıp arşivleyebilirsin.
           </p>
         </div>
-        <div className="grid gap-2 min-[560px]:grid-cols-5 min-[760px]:min-w-[560px]">
+        <div className="grid gap-2 min-[560px]:grid-cols-2 min-[980px]:grid-cols-3">
           {checks.map((check) => (
-            <div key={check.label} className={`rounded-xl px-3 py-2 text-xs font-bold ${check.done ? 'bg-emerald-400/15 text-emerald-100' : 'bg-white/10 text-white/70'}`}>
-              {check.label}
+            <div key={check.label} className={`rounded-xl px-3 py-2 ${check.done ? 'bg-emerald-400/15 text-emerald-100' : 'bg-white/10 text-white/75'}`}>
+              <p className="truncate text-xs font-bold">{check.label}</p>
+              <p className="mt-0.5 truncate text-[11px] opacity-70">{check.detail}</p>
             </div>
           ))}
         </div>

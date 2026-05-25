@@ -3,12 +3,12 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 
 const actions = [
-  { to: '/kartlar', label: 'Harcama', description: 'Kartlar ekranında hızlı harcama', icon: WalletCards },
-  { to: '/odemeler', label: 'Ödeme', description: 'Fatura, kira veya abonelik', icon: ReceiptText },
-  { to: '/borclar', label: 'Borç', description: 'Borç veya alacak kaydı', icon: HandCoins },
-  { to: '/varliklar', label: 'Varlık', description: 'Nakit, yatırım veya maaş', icon: Banknote },
-  { to: '/krediler', label: 'Kredi', description: 'Kredi ve taksit planı', icon: Landmark },
-  { to: '/veri-sagligi', label: 'Kontrol', description: 'Veri sağlığı ve güvenli düzeltmeler', icon: ShieldCheck },
+  { to: '/kartlar#hizli-harcama', matchPath: '/kartlar', label: 'Harcama', description: 'Kartlar ekranında hızlı harcama', icon: WalletCards },
+  { to: '/odemeler?new=1', matchPath: '/odemeler', label: 'Ödeme', description: 'Fatura, kira veya abonelik', icon: ReceiptText },
+  { to: '/borclar?new=1', matchPath: '/borclar', label: 'Borç', description: 'Borç veya alacak kaydı', icon: HandCoins },
+  { to: '/varliklar?new=1', matchPath: '/varliklar', label: 'Varlık', description: 'Nakit, yatırım veya maaş', icon: Banknote },
+  { to: '/krediler?new=1', matchPath: '/krediler', label: 'Kredi', description: 'Kredi ve taksit planı', icon: Landmark },
+  { to: '/veri-sagligi', matchPath: '/veri-sagligi', label: 'Kontrol', description: 'Veri sağlığı ve güvenli düzeltmeler', icon: ShieldCheck },
 ]
 
 const routePriorities: Record<string, string> = {
@@ -36,7 +36,7 @@ export function QuickActions() {
   const preferredAction = routePriorities[location.pathname] ?? routePriorities[`/${location.pathname.split('/')[1]}`]
   const orderedActions = useMemo(() => {
     if (!preferredAction) return actions
-    return [...actions].sort((left, right) => Number(right.to === preferredAction) - Number(left.to === preferredAction))
+    return [...actions].sort((left, right) => Number(right.matchPath === preferredAction) - Number(left.matchPath === preferredAction))
   }, [preferredAction])
   const tucked = formFocused && !open
 
@@ -63,7 +63,7 @@ export function QuickActions() {
               to={action.to}
               onClick={() => setOpenPath(null)}
               className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition hover:bg-stone-100 dark:hover:bg-stone-900 ${
-                action.to === preferredAction ? 'bg-emerald-50/80 dark:bg-emerald-950/25' : ''
+                action.matchPath === preferredAction ? 'bg-emerald-50/80 dark:bg-emerald-950/25' : ''
               }`}
             >
               <div className="grid size-9 shrink-0 place-items-center rounded-lg bg-emerald-50 text-emerald-700 dark:bg-emerald-950/35 dark:text-emerald-300">

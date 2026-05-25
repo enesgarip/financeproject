@@ -1,6 +1,7 @@
 import { CalendarDays, MoreVertical, Pencil, Plus, Trash2 } from 'lucide-react'
 import type { CSSProperties, ReactNode } from 'react'
 import { useCallback, useEffect, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
 import { supabase } from '../lib/supabase'
 import type { InsertFor, RowFor, TableName, UpdateFor } from '../types/database'
@@ -85,6 +86,8 @@ export function CrudPage<T extends TableName>({
   renderBeforeList,
 }: CrudPageProps<T>) {
   const { user } = useAuth()
+  const location = useLocation()
+  const navigate = useNavigate()
   const [rows, setRows] = useState<RowFor<T>[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -126,13 +129,32 @@ export function CrudPage<T extends TableName>({
     void loadRows()
   }, [loadRows])
 
-  function openCreate() {
+  const openCreate = useCallback(() => {
     setEditing(null)
     setFormValues(toFormValues(getInitialValues()))
     setFormErrors({})
     setFormError('')
     setModalOpen(true)
-  }
+  }, [getInitialValues])
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search)
+    if (params.get('new') !== '1') return
+
+    const openTimer = window.setTimeout(() => {
+      openCreate()
+      params.delete('new')
+      navigate(
+        {
+          pathname: location.pathname,
+          search: params.toString() ? `?${params.toString()}` : '',
+        },
+        { replace: true },
+      )
+    }, 0)
+
+    return () => window.clearTimeout(openTimer)
+  }, [location.pathname, location.search, navigate, openCreate])
 
   function openEdit(row: RowFor<T>) {
     setEditing(row)
