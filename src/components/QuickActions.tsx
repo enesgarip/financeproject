@@ -1,6 +1,6 @@
 import { Banknote, HandCoins, Landmark, Plus, ReceiptText, ShieldCheck, WalletCards, X } from 'lucide-react'
-import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useEffect, useMemo, useState } from 'react'
+import { Link, useLocation } from 'react-router-dom'
 
 const actions = [
   { to: '/kartlar', label: 'Harcama', description: 'Kartlar ekranında hızlı harcama', icon: WalletCards },
@@ -11,19 +11,60 @@ const actions = [
   { to: '/veri-sagligi', label: 'Kontrol', description: 'Veri sağlığı ve güvenli düzeltmeler', icon: ShieldCheck },
 ]
 
+const routePriorities: Record<string, string> = {
+  '/kartlar': '/kartlar',
+  '/odemeler': '/odemeler',
+  '/borclar': '/borclar',
+  '/varliklar': '/varliklar',
+  '/krediler': '/krediler',
+  '/veri-sagligi': '/veri-sagligi',
+  '/analiz': '/veri-sagligi',
+}
+
+function isFormElementActive() {
+  if (typeof document === 'undefined') return false
+  const element = document.activeElement
+  if (!(element instanceof HTMLElement)) return false
+  return Boolean(element.closest('input, textarea, select, [contenteditable="true"]'))
+}
+
 export function QuickActions() {
-  const [open, setOpen] = useState(false)
+  const [openPath, setOpenPath] = useState<string | null>(null)
+  const [formFocused, setFormFocused] = useState(false)
+  const location = useLocation()
+  const open = openPath === location.pathname
+  const preferredAction = routePriorities[location.pathname] ?? routePriorities[`/${location.pathname.split('/')[1]}`]
+  const orderedActions = useMemo(() => {
+    if (!preferredAction) return actions
+    return [...actions].sort((left, right) => Number(right.to === preferredAction) - Number(left.to === preferredAction))
+  }, [preferredAction])
+  const tucked = formFocused && !open
+
+  useEffect(() => {
+    const syncFocus = () => setFormFocused(isFormElementActive())
+    const syncFocusAfterBlur = () => window.setTimeout(syncFocus, 0)
+
+    syncFocus()
+    document.addEventListener('focusin', syncFocus)
+    document.addEventListener('focusout', syncFocusAfterBlur)
+    return () => {
+      document.removeEventListener('focusin', syncFocus)
+      document.removeEventListener('focusout', syncFocusAfterBlur)
+    }
+  }, [])
 
   return (
     <div className="fixed bottom-[calc(env(safe-area-inset-bottom)+5.15rem)] right-4 z-40 flex flex-col items-end gap-3">
       {open ? (
         <div className="w-[min(calc(100vw-2rem),22rem)] rounded-2xl border border-stone-200 bg-white p-2 shadow-2xl shadow-stone-950/15 dark:border-stone-800 dark:bg-stone-950 dark:shadow-black/40">
-          {actions.map((action) => (
+          {orderedActions.map((action) => (
             <Link
               key={action.to + action.label}
               to={action.to}
-              onClick={() => setOpen(false)}
-              className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition hover:bg-stone-100 dark:hover:bg-stone-900"
+              onClick={() => setOpenPath(null)}
+              className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition hover:bg-stone-100 dark:hover:bg-stone-900 ${
+                action.to === preferredAction ? 'bg-emerald-50/80 dark:bg-emerald-950/25' : ''
+              }`}
             >
               <div className="grid size-9 shrink-0 place-items-center rounded-lg bg-emerald-50 text-emerald-700 dark:bg-emerald-950/35 dark:text-emerald-300">
                 <action.icon size={17} />
@@ -39,10 +80,12 @@ export function QuickActions() {
 
       <button
         type="button"
-        onClick={() => setOpen((current) => !current)}
+        onClick={() => setOpenPath((current) => (current === location.pathname ? null : location.pathname))}
         aria-expanded={open}
         aria-label={open ? 'Hızlı işlem menüsünü kapat' : 'Hızlı işlem menüsünü aç'}
-        className="grid size-14 place-items-center rounded-full bg-emerald-700 text-white shadow-xl shadow-emerald-900/25 ring-1 ring-white/25 transition hover:bg-emerald-800"
+        className={`grid size-14 place-items-center rounded-full bg-emerald-700 text-white shadow-xl shadow-emerald-900/25 ring-1 ring-white/25 transition hover:bg-emerald-800 ${
+          tucked ? 'pointer-events-none translate-y-3 scale-90 opacity-0 sm:pointer-events-auto sm:translate-y-0 sm:scale-100 sm:opacity-100' : ''
+        }`}
       >
         {open ? <X size={24} /> : <Plus size={26} />}
       </button>

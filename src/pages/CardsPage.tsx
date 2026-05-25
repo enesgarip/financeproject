@@ -9,6 +9,7 @@ import { Progress } from '../components/ui/progress'
 import { supabase } from '../lib/supabase'
 import type { Card, InsertFor } from '../types/database'
 import { expenseCategoryOptions } from '../utils/categories'
+import { dateInputValue, formatDate } from '../utils/date'
 import { formatCurrency, parseNumber } from '../utils/formatCurrency'
 import { addTransactionHistory } from '../utils/history'
 
@@ -309,6 +310,38 @@ function addMonthsToMonth(month: string, months: number) {
   return new Date(year, monthIndex - 1 + months, 1).toLocaleDateString('sv-SE')
 }
 
+function dateInCardMonth(year: number, month: number, preferredDay: number) {
+  const lastDay = new Date(year, month + 1, 0).getDate()
+  return new Date(year, month, Math.min(preferredDay, lastDay))
+}
+
+function getCardStatementPreview(card: Card | undefined) {
+  if (card?.card_type !== 'kredi_karti' || !card.statement_day || !card.due_day) return null
+
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const statementThisMonth = dateInCardMonth(today.getFullYear(), today.getMonth(), card.statement_day)
+  const statementDate =
+    today <= statementThisMonth
+      ? statementThisMonth
+      : dateInCardMonth(today.getFullYear(), today.getMonth() + 1, card.statement_day)
+  const dueDate = dateInCardMonth(
+    statementDate.getFullYear(),
+    statementDate.getMonth() + (card.due_day <= card.statement_day ? 1 : 0),
+    card.due_day,
+  )
+
+  return {
+    statementDate: dateInputValue(statementDate),
+    dueDate: dateInputValue(dueDate),
+  }
+}
+
+function moneyShare(amount: number, pieces: number) {
+  if (amount <= 0) return 0
+  return Math.round((amount / Math.max(1, pieces) + Number.EPSILON) * 100) / 100
+}
+
 function formatMonthLabel(month: string) {
   if (!isMonthValue(month)) return '-'
   return new Intl.DateTimeFormat('tr-TR', { month: 'long', year: 'numeric' }).format(new Date(`${monthDateValue(month)}T00:00:00`))
@@ -340,13 +373,17 @@ function QuickExpensePanel({
   const activeCardId = cards.some((card) => card.id === cardId) ? cardId : (cards[0]?.id ?? '')
   const selectedCard = cards.find((card) => card.id === activeCardId)
   const canUseInstallments = selectedCard?.card_type === 'kredi_karti'
+  const parsedAmount = parseNumber(amount)
+  const parsedInstallmentCount = canUseInstallments && paymentMode === 'installment' ? Math.max(2, Math.min(36, Number(installmentCount) || 2)) : 1
+  const trimmedDescription = description.trim()
+  const statementPreview = useMemo(() => getCardStatementPreview(selectedCard), [selectedCard])
+  const firstPeriodAmount = parsedInstallmentCount > 1 ? moneyShare(parsedAmount, parsedInstallmentCount) : parsedAmount
+  const debitPreview = Math.max(0, (selectedCard?.current_balance ?? 0) - parsedAmount)
+  const canSubmitQuickExpense = Boolean(selectedCard) && parsedAmount > 0 && trimmedDescription.length > 0 && !saving
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
-    const parsedAmount = parseNumber(amount)
-    const parsedInstallmentCount = canUseInstallments && paymentMode === 'installment' ? Math.max(2, Math.min(36, Number(installmentCount) || 2)) : 1
-    const trimmedDescription = description.trim()
     if (!selectedCard) {
       setLocalError('Kart seçmelisin.')
       return
@@ -524,10 +561,32 @@ function QuickExpensePanel({
               />
             </label>
           ) : null}
+          {selectedCard?.card_type === 'kredi_karti' ? (
+            <div className="rounded-xl border border-emerald-100 bg-emerald-50/70 p-3 dark:border-emerald-900/60 dark:bg-emerald-950/25">
+              <div className="grid grid-cols-3 gap-2">
+                <OverviewStat label="Ekstre" value={statementPreview ? formatDate(statementPreview.statementDate) : 'Gün eksik'} />
+                <OverviewStat label="Son ödeme" value={statementPreview ? formatDate(statementPreview.dueDate) : 'Gün eksik'} />
+                <OverviewStat
+                  label={parsedInstallmentCount > 1 ? 'İlk yansıma' : 'Yansıma'}
+                  value={formatCurrency(firstPeriodAmount)}
+                />
+              </div>
+              {!statementPreview ? (
+                <p className="mt-2 text-xs font-medium text-amber-700 dark:text-amber-200">
+                  Kartta ekstre ve son ödeme günü eksik. Kartı güncellersen analizler daha net çalışır.
+                </p>
+              ) : null}
+            </div>
+          ) : selectedCard ? (
+            <div className="grid grid-cols-2 gap-2 rounded-xl border border-stone-200 bg-stone-50/80 p-3 dark:border-stone-800 dark:bg-stone-900/50">
+              <OverviewStat label="Mevcut bakiye" value={formatCurrency(selectedCard.current_balance)} />
+              <OverviewStat label="İşlem sonrası" value={formatCurrency(debitPreview)} />
+            </div>
+          ) : null}
           {localError ? <p className="rounded-lg bg-rose-50 p-3 text-sm text-rose-700 dark:bg-rose-950/40 dark:text-rose-200">{localError}</p> : null}
           <button
             type="submit"
-            disabled={saving}
+            disabled={!canSubmitQuickExpense}
             className="rounded-xl bg-emerald-700 px-4 py-3 text-sm font-semibold text-white shadow-sm disabled:opacity-60 hover:bg-emerald-800"
           >
             {saving ? 'Ekleniyor...' : 'Harcamayı kaydet'}

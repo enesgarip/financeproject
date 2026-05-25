@@ -1,4 +1,4 @@
-import { Activity, AlertTriangle, CheckCircle2, RefreshCw, ShieldCheck, Wrench } from 'lucide-react'
+import { Activity, AlertTriangle, CheckCircle2, RefreshCw, ShieldCheck, Undo2, Wrench } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Badge } from '../components/ui/badge'
@@ -96,6 +96,39 @@ type HealthIssue = {
   }
 }
 
+type UndoTable =
+  | 'assets'
+  | 'budgets'
+  | 'cards'
+  | 'card_expenses'
+  | 'card_installments'
+  | 'card_statement_archives'
+  | 'debts'
+  | 'loans'
+  | 'loan_installments'
+  | 'payments'
+
+type UndoRow = Record<string, unknown> & { id: string }
+
+type UndoEntry =
+  | {
+      action: 'restoreRows'
+      table: UndoTable
+      rows: UndoRow[]
+    }
+  | {
+      action: 'deleteRows'
+      table: UndoTable
+      ids: string[]
+    }
+
+type UndoBatch = {
+  id: string
+  label: string
+  createdAt: string
+  entries: UndoEntry[]
+}
+
 const emptyData: HealthData = {
   assets: [],
   budgets: [],
@@ -181,6 +214,209 @@ function severityClass(severity: HealthIssue['severity']) {
   if (severity === 'error') return 'bg-rose-50 text-rose-700 dark:bg-rose-950/30 dark:text-rose-300'
   if (severity === 'warning') return 'bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-300'
   return 'bg-sky-50 text-sky-700 dark:bg-sky-950/30 dark:text-sky-300'
+}
+
+function newUndoId() {
+  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) return crypto.randomUUID()
+  return `${Date.now()}-${Math.random().toString(36).slice(2)}`
+}
+
+function makeUndoBatch(label: string, entries: UndoEntry[]): UndoBatch | null {
+  if (entries.length === 0) return null
+  return {
+    id: newUndoId(),
+    label,
+    createdAt: new Date().toISOString(),
+    entries,
+  }
+}
+
+function compactIds(ids: string[]) {
+  return [...new Set(ids.filter(Boolean))]
+}
+
+async function captureUndoRows(table: UndoTable, ids: string[]): Promise<UndoEntry | null> {
+  const uniqueIds = compactIds(ids)
+  if (uniqueIds.length === 0) return null
+
+  if (table === 'assets') {
+    const { data, error } = await supabase.from('assets').select('*').in('id', uniqueIds)
+    if (error) throw new Error(error.message)
+    return { action: 'restoreRows', table, rows: (data ?? []) as unknown as UndoRow[] }
+  }
+  if (table === 'budgets') {
+    const { data, error } = await supabase.from('budgets').select('*').in('id', uniqueIds)
+    if (error) throw new Error(error.message)
+    return { action: 'restoreRows', table, rows: (data ?? []) as unknown as UndoRow[] }
+  }
+  if (table === 'cards') {
+    const { data, error } = await supabase.from('cards').select('*').in('id', uniqueIds)
+    if (error) throw new Error(error.message)
+    return { action: 'restoreRows', table, rows: (data ?? []) as unknown as UndoRow[] }
+  }
+  if (table === 'card_expenses') {
+    const { data, error } = await supabase.from('card_expenses').select('*').in('id', uniqueIds)
+    if (error) throw new Error(error.message)
+    return { action: 'restoreRows', table, rows: (data ?? []) as unknown as UndoRow[] }
+  }
+  if (table === 'card_installments') {
+    const { data, error } = await supabase.from('card_installments').select('*').in('id', uniqueIds)
+    if (error) throw new Error(error.message)
+    return { action: 'restoreRows', table, rows: (data ?? []) as unknown as UndoRow[] }
+  }
+  if (table === 'card_statement_archives') {
+    const { data, error } = await supabase.from('card_statement_archives').select('*').in('id', uniqueIds)
+    if (error) throw new Error(error.message)
+    return { action: 'restoreRows', table, rows: (data ?? []) as unknown as UndoRow[] }
+  }
+  if (table === 'debts') {
+    const { data, error } = await supabase.from('debts').select('*').in('id', uniqueIds)
+    if (error) throw new Error(error.message)
+    return { action: 'restoreRows', table, rows: (data ?? []) as unknown as UndoRow[] }
+  }
+  if (table === 'loans') {
+    const { data, error } = await supabase.from('loans').select('*').in('id', uniqueIds)
+    if (error) throw new Error(error.message)
+    return { action: 'restoreRows', table, rows: (data ?? []) as unknown as UndoRow[] }
+  }
+  if (table === 'loan_installments') {
+    const { data, error } = await supabase.from('loan_installments').select('*').in('id', uniqueIds)
+    if (error) throw new Error(error.message)
+    return { action: 'restoreRows', table, rows: (data ?? []) as unknown as UndoRow[] }
+  }
+  if (table === 'payments') {
+    const { data, error } = await supabase.from('payments').select('*').in('id', uniqueIds)
+    if (error) throw new Error(error.message)
+    return { action: 'restoreRows', table, rows: (data ?? []) as unknown as UndoRow[] }
+  }
+
+  return null
+}
+
+async function restoreUndoRows(table: UndoTable, rows: UndoRow[]) {
+  if (rows.length === 0) return
+
+  if (table === 'assets') {
+    const { error } = await supabase.from('assets').upsert(rows as unknown as InsertFor<'assets'>[])
+    if (error) throw new Error(error.message)
+    return
+  }
+  if (table === 'budgets') {
+    const { error } = await supabase.from('budgets').upsert(rows as unknown as InsertFor<'budgets'>[])
+    if (error) throw new Error(error.message)
+    return
+  }
+  if (table === 'cards') {
+    const { error } = await supabase.from('cards').upsert(rows as unknown as InsertFor<'cards'>[])
+    if (error) throw new Error(error.message)
+    return
+  }
+  if (table === 'card_expenses') {
+    const { error } = await supabase.from('card_expenses').upsert(rows as unknown as InsertFor<'card_expenses'>[])
+    if (error) throw new Error(error.message)
+    return
+  }
+  if (table === 'card_installments') {
+    const { error } = await supabase.from('card_installments').upsert(rows as unknown as InsertFor<'card_installments'>[])
+    if (error) throw new Error(error.message)
+    return
+  }
+  if (table === 'card_statement_archives') {
+    const { error } = await supabase
+      .from('card_statement_archives')
+      .upsert(rows as unknown as InsertFor<'card_statement_archives'>[])
+    if (error) throw new Error(error.message)
+    return
+  }
+  if (table === 'debts') {
+    const { error } = await supabase.from('debts').upsert(rows as unknown as InsertFor<'debts'>[])
+    if (error) throw new Error(error.message)
+    return
+  }
+  if (table === 'loans') {
+    const { error } = await supabase.from('loans').upsert(rows as unknown as InsertFor<'loans'>[])
+    if (error) throw new Error(error.message)
+    return
+  }
+  if (table === 'loan_installments') {
+    const { error } = await supabase.from('loan_installments').upsert(rows as unknown as InsertFor<'loan_installments'>[])
+    if (error) throw new Error(error.message)
+    return
+  }
+  if (table === 'payments') {
+    const { error } = await supabase.from('payments').upsert(rows as unknown as InsertFor<'payments'>[])
+    if (error) throw new Error(error.message)
+  }
+}
+
+async function deleteUndoRows(table: UndoTable, ids: string[]) {
+  const uniqueIds = compactIds(ids)
+  if (uniqueIds.length === 0) return
+
+  if (table === 'card_installments') {
+    const { error } = await supabase.from('card_installments').delete().in('id', uniqueIds)
+    if (error) throw new Error(error.message)
+    return
+  }
+
+  throw new Error('Bu tablo için geri alma silme adımı tanımlı değil.')
+}
+
+async function applyUndoEntry(entry: UndoEntry) {
+  if (entry.action === 'restoreRows') {
+    await restoreUndoRows(entry.table, entry.rows)
+    return
+  }
+
+  await deleteUndoRows(entry.table, entry.ids)
+}
+
+function previewValue(value: string | number | null) {
+  if (value === null) return 'boş'
+  if (typeof value === 'number') return Number.isInteger(value) ? String(value) : formatCurrency(value)
+  if (/^\d{4}-\d{2}-\d{2}/.test(value)) return formatDate(value)
+  return value
+}
+
+function previewUpdates(updates: Record<string, string | number | null> | undefined) {
+  if (!updates) return []
+  return Object.entries(updates).map(([key, value]) => `${key}: ${previewValue(value)}`)
+}
+
+function issuePreviewDetails(issue: HealthIssue) {
+  const payload = issue.payload
+  if (!payload || !issue.fixable) return []
+
+  const previews: string[] = []
+  const updatePreview = previewUpdates(payload.updates)
+  const affectedRows = payload.ids?.length ?? 0
+
+  if (issue.kind === 'cardSingleInstallments') {
+    previews.push('Harcama kaydı korunur, sadece peşin işlem için oluşmuş taksit planı temizlenir.')
+    previews.push(`${affectedRows} taksit planı satırı silinir.`)
+  } else if (issue.kind === 'cardMissingInstallments') {
+    previews.push(`${payload.installmentNos?.length ?? 0} eksik taksit satırı eklenecek.`)
+    previews.push(`Başlangıç ayı: ${payload.baseMonth ? formatDate(payload.baseMonth) : 'hesaplanamadı'}`)
+  } else if (issue.kind === 'cardDebtSplit') {
+    previews.push(`Ekstre borcu: ${formatCurrency(payload.statementDebt ?? 0)}`)
+    previews.push(`Dönem içi harcama: ${formatCurrency(payload.currentPeriod ?? 0)}`)
+  } else if (issue.kind === 'loanTotals') {
+    previews.push(`Kalan tutar: ${formatCurrency(payload.remainingAmount ?? 0)}`)
+    previews.push(`Kalan taksit: ${payload.remainingInstallments ?? 0}`)
+  } else if (issue.kind === 'loanPaidAtMissing') {
+    previews.push(`${affectedRows} ödenmiş kredi taksidine ödeme tarihi eklenecek.`)
+  } else if (issue.kind === 'loanPendingPaidAt') {
+    previews.push(`${affectedRows} bekleyen kredi taksidinden ödeme tarihi kaldırılacak.`)
+  } else if (issue.kind === 'paymentDueDay') {
+    previews.push(`Yeni ödeme tarihi: ${payload.dueDate ? formatDate(payload.dueDate) : 'hesaplanamadı'}`)
+  } else if (updatePreview.length > 0) {
+    previews.push(`Güncellenecek alanlar: ${updatePreview.join(', ')}`)
+  } else if (affectedRows > 0) {
+    previews.push(`${affectedRows} kayıt güncellenecek.`)
+  }
+
+  previews.push('Uygulama öncesi kayıt görüntüsü bu oturumda geri alma için saklanır.')
+  return previews
 }
 
 function buildIssues(data: HealthData): HealthIssue[] {
@@ -1194,6 +1430,8 @@ export function DataHealthPage() {
   const [data, setData] = useState<HealthData>(emptyData)
   const [loading, setLoading] = useState(true)
   const [fixingId, setFixingId] = useState<string | null>(null)
+  const [undoStack, setUndoStack] = useState<UndoBatch[]>([])
+  const [undoing, setUndoing] = useState(false)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
 
@@ -1279,11 +1517,17 @@ export function DataHealthPage() {
     info: issues.filter((issue) => issue.severity === 'info').length,
   }
 
-  async function fixIssue(issue: HealthIssue) {
+  async function fixIssue(issue: HealthIssue): Promise<UndoBatch | null> {
     const payload = issue.payload
-    if (!payload) return
+    if (!payload) return null
+    const undoEntries: UndoEntry[] = []
+    const addUndo = async (table: UndoTable, ids: string[]) => {
+      const entry = await captureUndoRows(table, ids)
+      if (entry) undoEntries.push(entry)
+    }
 
     if (issue.kind === 'assetShape' && payload.assetId && payload.updates) {
+      await addUndo('assets', [payload.assetId])
       const { error: updateError } = await supabase
         .from('assets')
         .update({ ...(payload.updates as UpdateFor<'assets'>), updated_at: new Date().toISOString() })
@@ -1292,6 +1536,7 @@ export function DataHealthPage() {
     }
 
     if (issue.kind === 'budgetMonth' && payload.budgetId && payload.updates) {
+      await addUndo('budgets', [payload.budgetId])
       const { error: updateError } = await supabase
         .from('budgets')
         .update({ ...(payload.updates as UpdateFor<'budgets'>), updated_at: new Date().toISOString() })
@@ -1300,6 +1545,7 @@ export function DataHealthPage() {
     }
 
     if (issue.kind === 'cardDebtSplit' && payload.cardId) {
+      await addUndo('cards', [payload.cardId])
       const { error: updateError } = await supabase
         .from('cards')
         .update({
@@ -1312,6 +1558,7 @@ export function DataHealthPage() {
     }
 
     if (issue.kind === 'cardTypeFields' && payload.cardId && payload.updates) {
+      await addUndo('cards', [payload.cardId])
       const { error: updateError } = await supabase
         .from('cards')
         .update({ ...(payload.updates as UpdateFor<'cards'>), updated_at: new Date().toISOString() })
@@ -1320,6 +1567,7 @@ export function DataHealthPage() {
     }
 
     if (issue.kind === 'cardExpenseAmount' && payload.expenseId && payload.updates) {
+      await addUndo('card_expenses', [payload.expenseId])
       const { error: updateError } = await supabase
         .from('card_expenses')
         .update({ ...(payload.updates as UpdateFor<'card_expenses'>), updated_at: new Date().toISOString() })
@@ -1328,11 +1576,13 @@ export function DataHealthPage() {
     }
 
     if (issue.kind === 'cardSingleInstallments' && payload.ids?.length) {
+      await addUndo('card_installments', payload.ids)
       const { error: deleteError } = await supabase.from('card_installments').delete().in('id', payload.ids)
       if (deleteError) throw new Error(deleteError.message)
     }
 
     if ((issue.kind === 'cardInstallmentDueMonth' || issue.kind === 'cardInstallmentPostedAt' || issue.kind === 'cardInstallmentCount') && payload.ids?.length && payload.updates) {
+      await addUndo('card_installments', payload.ids)
       const { error: updateError } = await supabase
         .from('card_installments')
         .update({ ...(payload.updates as UpdateFor<'card_installments'>), updated_at: new Date().toISOString() })
@@ -1341,6 +1591,7 @@ export function DataHealthPage() {
     }
 
     if (issue.kind === 'cardStatementTotals' && payload.statementArchiveId && payload.updates) {
+      await addUndo('card_statement_archives', [payload.statementArchiveId])
       const { error: updateError } = await supabase
         .from('card_statement_archives')
         .update({ ...(payload.updates as UpdateFor<'card_statement_archives'>), updated_at: new Date().toISOString() })
@@ -1374,11 +1625,16 @@ export function DataHealthPage() {
         }
       })
 
-      const { error: insertError } = await supabase.from('card_installments').insert(rows)
+      const { data: insertedRows, error: insertError } = await supabase.from('card_installments').insert(rows).select('id')
       if (insertError) throw new Error(insertError.message)
+      const insertedIds = (insertedRows ?? []).map((row) => row.id).filter(Boolean)
+      if (insertedIds.length > 0) {
+        undoEntries.push({ action: 'deleteRows', table: 'card_installments', ids: insertedIds })
+      }
     }
 
     if (issue.kind === 'debtShape' && payload.debtId && payload.updates) {
+      await addUndo('debts', [payload.debtId])
       const { error: updateError } = await supabase
         .from('debts')
         .update({ ...(payload.updates as UpdateFor<'debts'>), updated_at: new Date().toISOString() })
@@ -1387,6 +1643,7 @@ export function DataHealthPage() {
     }
 
     if (issue.kind === 'loanTotals' && payload.loanId) {
+      await addUndo('loans', [payload.loanId])
       const { error: updateError } = await supabase
         .from('loans')
         .update({
@@ -1400,6 +1657,7 @@ export function DataHealthPage() {
     }
 
     if (issue.kind === 'loanInstallmentDueDay' && payload.ids?.length && payload.updates) {
+      await addUndo('loan_installments', payload.ids)
       const { error: updateError } = await supabase
         .from('loan_installments')
         .update({ ...(payload.updates as UpdateFor<'loan_installments'>), updated_at: new Date().toISOString() })
@@ -1408,6 +1666,7 @@ export function DataHealthPage() {
     }
 
     if (issue.kind === 'loanPaidAtMissing' && payload.ids?.length) {
+      await addUndo('loan_installments', payload.ids)
       const { error: updateError } = await supabase
         .from('loan_installments')
         .update({ paid_at: new Date().toISOString(), updated_at: new Date().toISOString() })
@@ -1416,6 +1675,7 @@ export function DataHealthPage() {
     }
 
     if (issue.kind === 'loanPendingPaidAt' && payload.ids?.length) {
+      await addUndo('loan_installments', payload.ids)
       const { error: updateError } = await supabase
         .from('loan_installments')
         .update({ paid_at: null, updated_at: new Date().toISOString() })
@@ -1424,6 +1684,7 @@ export function DataHealthPage() {
     }
 
     if (issue.kind === 'paymentDueDay' && payload.paymentId && payload.dueDate) {
+      await addUndo('payments', [payload.paymentId])
       const { error: updateError } = await supabase
         .from('payments')
         .update({ due_date: payload.dueDate, updated_at: new Date().toISOString() })
@@ -1432,12 +1693,15 @@ export function DataHealthPage() {
     }
 
     if (issue.kind === 'paymentRecurrenceFields' && payload.paymentId && payload.updates) {
+      await addUndo('payments', [payload.paymentId])
       const { error: updateError } = await supabase
         .from('payments')
         .update({ ...(payload.updates as UpdateFor<'payments'>), updated_at: new Date().toISOString() })
         .eq('id', payload.paymentId)
       if (updateError) throw new Error(updateError.message)
     }
+
+    return makeUndoBatch(issue.title, undoEntries)
   }
 
   async function handleFix(issue: HealthIssue) {
@@ -1446,9 +1710,12 @@ export function DataHealthPage() {
     setMessage('')
 
     try {
-      await fixIssue(issue)
+      const undoBatch = await fixIssue(issue)
+      if (undoBatch) {
+        setUndoStack((current) => [undoBatch, ...current].slice(0, 5))
+      }
       await loadData()
-      setMessage('Düzeltme uygulandı.')
+      setMessage('Düzeltme uygulandı. Bu oturumda geri alabilirsin.')
     } catch (fixError) {
       setError(fixError instanceof Error ? fixError.message : 'Düzeltme uygulanamadı.')
     } finally {
@@ -1460,18 +1727,52 @@ export function DataHealthPage() {
     setFixingId('all')
     setError('')
     setMessage('')
+    const undoEntries: UndoEntry[] = []
 
     try {
       for (const issue of fixableIssues) {
-        await fixIssue(issue)
+        const undoBatch = await fixIssue(issue)
+        if (undoBatch) undoEntries.push(...undoBatch.entries)
+      }
+      const batch = makeUndoBatch('Toplu veri sağlığı düzeltmesi', undoEntries)
+      if (batch) {
+        setUndoStack((current) => [batch, ...current].slice(0, 5))
       }
       await loadData()
-      setMessage(`${fixableIssues.length} güvenli düzeltme uygulandı.`)
+      setMessage(`${fixableIssues.length} güvenli düzeltme uygulandı. Toplu işlem geri alınabilir.`)
     } catch (fixError) {
-      setError(fixError instanceof Error ? fixError.message : 'Toplu düzeltme tamamlanamadı.')
+      const partialBatch = makeUndoBatch('Kısmi veri sağlığı düzeltmesi', undoEntries)
+      if (partialBatch) {
+        setUndoStack((current) => [partialBatch, ...current].slice(0, 5))
+      }
       await loadData()
+      setError(
+        fixError instanceof Error
+          ? `${fixError.message} Önceki başarılı adımlar geri alınabilir.`
+          : 'Toplu düzeltme tamamlanamadı. Önceki başarılı adımlar geri alınabilir.',
+      )
     } finally {
       setFixingId(null)
+    }
+  }
+
+  async function handleUndo(batch: UndoBatch) {
+    setUndoing(true)
+    setError('')
+    setMessage('')
+
+    try {
+      for (const entry of [...batch.entries].reverse()) {
+        await applyUndoEntry(entry)
+      }
+      setUndoStack((current) => current.filter((item) => item.id !== batch.id))
+      await loadData()
+      setMessage('Son veri sağlığı düzeltmesi geri alındı.')
+    } catch (undoError) {
+      await loadData()
+      setError(undoError instanceof Error ? undoError.message : 'Geri alma tamamlanamadı.')
+    } finally {
+      setUndoing(false)
     }
   }
 
@@ -1500,7 +1801,7 @@ export function DataHealthPage() {
             <button
               type="button"
               onClick={() => void loadData()}
-              disabled={loading || Boolean(fixingId)}
+              disabled={loading || Boolean(fixingId) || undoing}
               className="inline-flex items-center gap-2 rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm font-semibold text-stone-700 shadow-sm disabled:opacity-60 dark:border-stone-800 dark:bg-stone-950 dark:text-stone-200"
             >
               <RefreshCw size={15} />
@@ -1509,12 +1810,23 @@ export function DataHealthPage() {
             <button
               type="button"
               onClick={() => void handleFixAll()}
-              disabled={loading || Boolean(fixingId) || fixableIssues.length === 0}
+              disabled={loading || Boolean(fixingId) || undoing || fixableIssues.length === 0}
               className="inline-flex items-center gap-2 rounded-xl bg-emerald-700 px-3 py-2 text-sm font-semibold text-white shadow-sm disabled:opacity-60 hover:bg-emerald-800"
             >
               <Wrench size={15} />
               Güvenli düzeltmeleri uygula
             </button>
+            {undoStack[0] ? (
+              <button
+                type="button"
+                onClick={() => void handleUndo(undoStack[0])}
+                disabled={loading || Boolean(fixingId) || undoing}
+                className="inline-flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-800 shadow-sm disabled:opacity-60 dark:border-amber-900/70 dark:bg-amber-950/30 dark:text-amber-200"
+              >
+                <Undo2 size={15} />
+                {undoing ? 'Geri alınıyor...' : 'Son düzeltmeyi geri al'}
+              </button>
+            ) : null}
           </div>
           {message ? <p className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-200">{message}</p> : null}
           {error ? <p className="rounded-lg bg-rose-50 p-3 text-sm text-rose-700 dark:bg-rose-950/40 dark:text-rose-200">{error}</p> : null}
@@ -1556,12 +1868,22 @@ export function DataHealthPage() {
                         <span key={detail}>{detail}</span>
                       ))}
                     </div>
+                    {issuePreviewDetails(issue).length > 0 ? (
+                      <div className="mt-3 rounded-xl border border-emerald-100 bg-emerald-50/70 p-3 text-xs text-emerald-900 dark:border-emerald-900/60 dark:bg-emerald-950/25 dark:text-emerald-100">
+                        <p className="font-bold">Düzeltme önizlemesi</p>
+                        <div className="mt-2 grid gap-1">
+                          {issuePreviewDetails(issue).map((detail, index) => (
+                            <span key={`${issue.id}-preview-${index}`}>{detail}</span>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
                     <div className="mt-3 flex flex-wrap gap-2">
                       {issue.fixable ? (
                         <button
                           type="button"
                           onClick={() => void handleFix(issue)}
-                          disabled={Boolean(fixingId)}
+                          disabled={Boolean(fixingId) || undoing}
                           className="rounded-lg bg-stone-800 px-3 py-2 text-xs font-semibold text-white shadow-sm disabled:opacity-60 dark:bg-stone-700"
                         >
                           {fixingId === issue.id ? 'Düzeltiliyor...' : issue.fixLabel}
