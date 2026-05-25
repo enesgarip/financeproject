@@ -1,4 +1,4 @@
-import { ReceiptText, WalletCards } from 'lucide-react'
+import { CalendarClock, ReceiptText, WalletCards } from 'lucide-react'
 import type { CSSProperties } from 'react'
 import { useMemo, useState } from 'react'
 import { CrudPage, type FormField } from '../components/CrudPage'
@@ -7,7 +7,7 @@ import { Badge } from '../components/ui/badge'
 import { Card as SurfaceCard, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Progress } from '../components/ui/progress'
 import { supabase } from '../lib/supabase'
-import type { Card } from '../types/database'
+import type { Card, InsertFor } from '../types/database'
 import { expenseCategoryOptions } from '../utils/categories'
 import { formatCurrency, parseNumber } from '../utils/formatCurrency'
 import { addTransactionHistory } from '../utils/history'
@@ -289,6 +289,36 @@ function cardOptionLabel(card: Card) {
   return `${card.bank_name} · ${card.card_name}${owner}`
 }
 
+function monthInputValue(value = new Date()) {
+  return value.toLocaleDateString('sv-SE').slice(0, 7)
+}
+
+function isMonthValue(month: string) {
+  return /^\d{4}-\d{2}$/.test(month)
+}
+
+function monthDateValue(month: string) {
+  const safeMonth = isMonthValue(month) ? month : monthInputValue()
+  return `${safeMonth}-01`
+}
+
+function addMonthsToMonth(month: string, months: number) {
+  const [year, monthIndex] = monthDateValue(month).slice(0, 7).split('-').map(Number)
+  if (!year || !monthIndex) return monthDateValue(monthInputValue())
+
+  return new Date(year, monthIndex - 1 + months, 1).toLocaleDateString('sv-SE')
+}
+
+function formatMonthLabel(month: string) {
+  if (!isMonthValue(month)) return '-'
+  return new Intl.DateTimeFormat('tr-TR', { month: 'long', year: 'numeric' }).format(new Date(`${monthDateValue(month)}T00:00:00`))
+}
+
+function parseInstallmentNumber(value: string, fallback: number) {
+  const parsed = Math.trunc(Number(value))
+  return Number.isFinite(parsed) ? parsed : fallback
+}
+
 function QuickExpensePanel({
   rows,
   reload,
@@ -508,6 +538,328 @@ function QuickExpensePanel({
   )
 }
 
+function LegacyInstallmentPanel({
+  rows,
+  reload,
+  setError,
+}: {
+  rows: Card[]
+  reload: () => Promise<void>
+  setError: (message: string) => void
+}) {
+  const [cardId, setCardId] = useState('')
+  const [installmentAmount, setInstallmentAmount] = useState('')
+  const [description, setDescription] = useState('')
+  const [category, setCategory] = useState(expenseCategoryOptions[0]?.value ?? 'Diğer')
+  const [totalInstallments, setTotalInstallments] = useState('9')
+  const [paidInstallments, setPaidInstallments] = useState('3')
+  const [nextDueMonth, setNextDueMonth] = useState(monthInputValue())
+  const [addRemainingToDebt, setAddRemainingToDebt] = useState(true)
+  const [localError, setLocalError] = useState('')
+  const [saving, setSaving] = useState(false)
+
+  const creditCards = useMemo(() => rows.filter((row) => row.card_type === 'kredi_karti'), [rows])
+  const activeCardId = creditCards.some((card) => card.id === cardId) ? cardId : (creditCards[0]?.id ?? '')
+  const selectedCard = creditCards.find((card) => card.id === activeCardId)
+  const parsedInstallmentAmount = parseNumber(installmentAmount)
+  const parsedTotalInstallments = Math.max(2, Math.min(36, parseInstallmentNumber(totalInstallments, 2)))
+  const parsedPaidInstallments = Math.max(0, Math.min(parsedTotalInstallments - 1, parseInstallmentNumber(paidInstallments, 0)))
+  const remainingCount = Math.max(1, parsedTotalInstallments - parsedPaidInstallments)
+  const remainingAmount = Number((parsedInstallmentAmount * remainingCount).toFixed(2))
+  const totalAmount = Number((parsedInstallmentAmount * parsedTotalInstallments).toFixed(2))
+  const firstDueIsCurrentMonth = nextDueMonth === monthInputValue()
+
+  async function rollbackExpense(expenseId: string) {
+    await supabase.from('card_expenses').delete().eq('id', expenseId)
+  }
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+
+    const trimmedDescription = description.trim()
+    const currentMonth = monthInputValue()
+    if (!selectedCard) {
+      setLocalError('Kredi kartı seçmelisin.')
+      return
+    }
+    if (parsedInstallmentAmount <= 0) {
+      setLocalError('Taksit tutarı 0 dan büyük olmalı.')
+      return
+    }
+    if (!trimmedDescription) {
+      setLocalError('Açıklama yazmalısın.')
+      return
+    }
+    if (parsedPaidInstallments >= parsedTotalInstallments) {
+      setLocalError('Ödenen taksit toplam taksitten küçük olmalı.')
+      return
+    }
+    if (!isMonthValue(nextDueMonth)) {
+      setLocalError('Sıradaki taksit ayını seçmelisin.')
+      return
+    }
+    if (nextDueMonth < currentMonth) {
+      setLocalError('Sıradaki taksit ayı geçmiş olamaz.')
+      return
+    }
+
+    setSaving(true)
+    setLocalError('')
+    setError('')
+
+    const { data: expense, error: expenseError } = await supabase
+      .from('card_expenses')
+      .insert({
+        user_id: selectedCard.user_id,
+        card_id: selectedCard.id,
+        spent_at: addMonthsToMonth(nextDueMonth, -parsedPaidInstallments),
+        amount: totalAmount,
+        description: trimmedDescription,
+        category,
+        installment_count: parsedTotalInstallments,
+        installment_amount: parsedInstallmentAmount,
+        note: `${parsedPaidInstallments}/${parsedTotalInstallments} taksiti uygulama öncesinde ödendi.`,
+      })
+      .select()
+      .single()
+
+    if (expenseError || !expense) {
+      setSaving(false)
+      setLocalError(expenseError?.message ?? 'Taksit devri oluşturulamadı.')
+      return
+    }
+
+    const installments: InsertFor<'card_installments'>[] = Array.from({ length: remainingCount }, (_, index) => {
+      const installmentNo = parsedPaidInstallments + index + 1
+      const dueMonth = addMonthsToMonth(nextDueMonth, index)
+      const isCurrentMonth = dueMonth.slice(0, 7) === currentMonth
+
+      return {
+        user_id: selectedCard.user_id,
+        card_id: selectedCard.id,
+        card_expense_id: expense.id,
+        installment_no: installmentNo,
+        installment_count: parsedTotalInstallments,
+        due_month: dueMonth,
+        amount: parsedInstallmentAmount,
+        description: trimmedDescription,
+        category,
+        status: isCurrentMonth ? 'posted' : 'scheduled',
+        posted_at: isCurrentMonth ? new Date().toISOString() : null,
+        note: 'Uygulama öncesinden devreden taksit.',
+      }
+    })
+
+    const { error: installmentError } = await supabase.from('card_installments').insert(installments)
+    if (installmentError) {
+      await rollbackExpense(expense.id)
+      setSaving(false)
+      setLocalError(installmentError.message)
+      return
+    }
+
+    if (addRemainingToDebt) {
+      const { error: cardUpdateError } = await supabase
+        .from('cards')
+        .update({
+          debt_amount: selectedCard.debt_amount + remainingAmount,
+          current_period_spending: selectedCard.current_period_spending + (firstDueIsCurrentMonth ? parsedInstallmentAmount : 0),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', selectedCard.id)
+
+      if (cardUpdateError) {
+        await rollbackExpense(expense.id)
+        setSaving(false)
+        setLocalError(cardUpdateError.message)
+        return
+      }
+    }
+
+    const historyError = await addTransactionHistory({
+      user_id: selectedCard.user_id,
+      type: 'card',
+      title: `${trimmedDescription} taksit devri`,
+      amount: remainingAmount,
+      source_table: 'card_expenses',
+      source_id: expense.id,
+      note: `${parsedPaidInstallments}/${parsedTotalInstallments} taksit ödenmiş; kalan ${remainingCount} taksit eklendi.`,
+    })
+    if (historyError) {
+      setError(`Devir eklendi, ancak işlem geçmişi yazılamadı: ${historyError.message}`)
+    }
+
+    setSaving(false)
+    setInstallmentAmount('')
+    setDescription('')
+    setCategory(expenseCategoryOptions[0]?.value ?? 'Diğer')
+    setTotalInstallments('9')
+    setPaidInstallments('3')
+    setNextDueMonth(monthInputValue())
+    setAddRemainingToDebt(true)
+    await reload()
+  }
+
+  if (creditCards.length === 0) return null
+
+  return (
+    <SurfaceCard className="border-0 shadow-sm ring-1 ring-amber-200/80 dark:ring-amber-900/70">
+      <CardHeader className="pb-0">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <CardTitle className="text-base">Taksit devri</CardTitle>
+            <p className="mt-1 text-xs text-muted-foreground">Önceden başlamış taksitlerin kalan aylarını ekle.</p>
+          </div>
+          <Badge variant="outline">{remainingCount} kalan</Badge>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-2.5">
+          <label className="block text-sm font-medium text-stone-700 dark:text-stone-200">
+            Kart
+            <select
+              value={activeCardId}
+              onChange={(event) => {
+                setCardId(event.target.value)
+                setLocalError('')
+              }}
+              className="mt-1 w-full rounded-lg border border-stone-200 bg-white px-3 py-2.5 outline-none focus:border-emerald-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+              required
+            >
+              {creditCards.map((card) => (
+                <option key={card.id} value={card.id}>
+                  {cardOptionLabel(card)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <div className="grid grid-cols-[minmax(0,0.74fr)_minmax(0,1.26fr)] gap-2.5">
+            <label className="block text-sm font-medium text-stone-700 dark:text-stone-200">
+              Taksit tutarı
+              <input
+                value={installmentAmount}
+                onChange={(event) => {
+                  setInstallmentAmount(event.target.value)
+                  setLocalError('')
+                }}
+                type="number"
+                min="0"
+                step="0.01"
+                inputMode="decimal"
+                placeholder="0.00"
+                className="mt-1 w-full rounded-lg border border-stone-200 px-3 py-2.5 outline-none focus:border-emerald-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+                required
+              />
+            </label>
+            <label className="block text-sm font-medium text-stone-700 dark:text-stone-200">
+              Açıklama
+              <input
+                value={description}
+                onChange={(event) => {
+                  setDescription(event.target.value)
+                  setLocalError('')
+                }}
+                type="text"
+                placeholder="Telefon, beyaz eşya..."
+                className="mt-1 w-full rounded-lg border border-stone-200 px-3 py-2.5 outline-none focus:border-emerald-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+                required
+              />
+            </label>
+          </div>
+          <div className="grid grid-cols-2 gap-2.5">
+            <label className="block text-sm font-medium text-stone-700 dark:text-stone-200">
+              Toplam
+              <input
+                value={totalInstallments}
+                onChange={(event) => {
+                  setTotalInstallments(event.target.value)
+                  setLocalError('')
+                }}
+                type="number"
+                min="2"
+                max="36"
+                step="1"
+                className="mt-1 w-full rounded-lg border border-stone-200 px-3 py-2.5 outline-none focus:border-emerald-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+              />
+            </label>
+            <label className="block text-sm font-medium text-stone-700 dark:text-stone-200">
+              Ödenen
+              <input
+                value={paidInstallments}
+                onChange={(event) => {
+                  setPaidInstallments(event.target.value)
+                  setLocalError('')
+                }}
+                type="number"
+                min="0"
+                max={Math.max(0, parsedTotalInstallments - 1)}
+                step="1"
+                className="mt-1 w-full rounded-lg border border-stone-200 px-3 py-2.5 outline-none focus:border-emerald-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+              />
+            </label>
+          </div>
+          <div className="grid grid-cols-2 gap-2.5">
+            <label className="block text-sm font-medium text-stone-700 dark:text-stone-200">
+              Sıradaki ay
+              <input
+                value={nextDueMonth}
+                onChange={(event) => {
+                  setNextDueMonth(event.target.value)
+                  setLocalError('')
+                }}
+                type="month"
+                min={monthInputValue()}
+                className="mt-1 w-full rounded-lg border border-stone-200 px-3 py-2.5 outline-none focus:border-emerald-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+                required
+              />
+            </label>
+            <label className="block text-sm font-medium text-stone-700 dark:text-stone-200">
+              Kategori
+              <select
+                value={category}
+                onChange={(event) => {
+                  setCategory(event.target.value)
+                  setLocalError('')
+                }}
+                className="mt-1 w-full rounded-lg border border-stone-200 bg-white px-3 py-2.5 outline-none focus:border-emerald-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+              >
+                {expenseCategoryOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <label className="flex items-start gap-2 rounded-lg bg-amber-50 px-3 py-2.5 text-sm font-medium text-amber-950 dark:bg-amber-950/30 dark:text-amber-100">
+            <input
+              checked={addRemainingToDebt}
+              onChange={(event) => setAddRemainingToDebt(event.target.checked)}
+              type="checkbox"
+              className="mt-1 size-4 rounded border-amber-300 text-emerald-700"
+            />
+            <span>Kalan tutarı kart borcuna ekle</span>
+          </label>
+          <div className="grid grid-cols-3 gap-2 text-xs">
+            <OverviewStat label="Kalan" value={`${remainingCount}/${parsedTotalInstallments}`} />
+            <OverviewStat label="Tutar" value={formatCurrency(remainingAmount)} />
+            <OverviewStat label="İlk ay" value={formatMonthLabel(nextDueMonth)} />
+          </div>
+          {localError ? <p className="rounded-lg bg-rose-50 p-3 text-sm text-rose-700 dark:bg-rose-950/40 dark:text-rose-200">{localError}</p> : null}
+          <button
+            type="submit"
+            disabled={saving}
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-stone-800 px-4 py-3 text-sm font-semibold text-white shadow-sm disabled:opacity-60 hover:bg-stone-900 dark:bg-stone-700 dark:hover:bg-stone-600"
+          >
+            <CalendarClock size={16} />
+            {saving ? 'Ekleniyor...' : 'Devir taksitlerini ekle'}
+          </button>
+        </form>
+      </CardContent>
+    </SurfaceCard>
+  )
+}
+
 export function CardsPage() {
   const [transactionCard, setTransactionCard] = useState<Card | null>(null)
   const [transactionType, setTransactionType] = useState<'in' | 'out'>('in')
@@ -698,6 +1050,7 @@ export function CardsPage() {
           !loading ? (
             <div className="flex flex-col gap-3">
               <QuickExpensePanel rows={rows as Card[]} reload={reload} setError={setError} />
+              <LegacyInstallmentPanel rows={rows as Card[]} reload={reload} setError={setError} />
               <CreditCardOverview rows={rows as Card[]} />
             </div>
           ) : null
