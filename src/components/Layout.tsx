@@ -59,7 +59,7 @@ export function Layout() {
           </div>
         </div>
       </header>
-      <main className={`mx-auto w-full ${contentWidthClass} flex-1 px-4 pb-[calc(env(safe-area-inset-bottom)+6.75rem)] pt-4`}>
+      <main className={`mx-auto w-full ${contentWidthClass} flex-1 px-4 pb-[calc(env(safe-area-inset-bottom)+11rem)] pt-4`}>
         <Outlet />
       </main>
       <QuickActions />

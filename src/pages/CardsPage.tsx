@@ -568,6 +568,13 @@ function LegacyInstallmentPanel({
   const remainingAmount = Number((parsedInstallmentAmount * remainingCount).toFixed(2))
   const totalAmount = Number((parsedInstallmentAmount * parsedTotalInstallments).toFixed(2))
   const firstDueIsCurrentMonth = nextDueMonth === monthInputValue()
+  const canSubmitLegacyInstallment =
+    Boolean(selectedCard) &&
+    parsedInstallmentAmount > 0 &&
+    description.trim().length > 0 &&
+    parsedPaidInstallments < parsedTotalInstallments &&
+    isMonthValue(nextDueMonth) &&
+    nextDueMonth >= monthInputValue()
 
   async function rollbackExpense(expenseId: string) {
     await supabase.from('card_expenses').delete().eq('id', expenseId)
@@ -798,8 +805,8 @@ function LegacyInstallmentPanel({
               />
             </label>
           </div>
-          <div className="grid grid-cols-2 gap-2.5">
-            <label className="block text-sm font-medium text-stone-700 dark:text-stone-200">
+          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+            <label className="block min-w-0 text-sm font-medium text-stone-700 dark:text-stone-200">
               Sıradaki ay
               <input
                 value={nextDueMonth}
@@ -809,11 +816,11 @@ function LegacyInstallmentPanel({
                 }}
                 type="month"
                 min={monthInputValue()}
-                className="mt-1 w-full rounded-lg border border-stone-200 px-3 py-2.5 outline-none focus:border-emerald-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+                className="mt-1 w-full min-w-0 rounded-lg border border-stone-200 px-3 py-2.5 outline-none focus:border-emerald-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
                 required
               />
             </label>
-            <label className="block text-sm font-medium text-stone-700 dark:text-stone-200">
+            <label className="block min-w-0 text-sm font-medium text-stone-700 dark:text-stone-200">
               Kategori
               <select
                 value={category}
@@ -821,7 +828,7 @@ function LegacyInstallmentPanel({
                   setCategory(event.target.value)
                   setLocalError('')
                 }}
-                className="mt-1 w-full rounded-lg border border-stone-200 bg-white px-3 py-2.5 outline-none focus:border-emerald-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+                className="mt-1 w-full min-w-0 rounded-lg border border-stone-200 bg-white px-3 py-2.5 outline-none focus:border-emerald-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
               >
                 {expenseCategoryOptions.map((option) => (
                   <option key={option.value} value={option.value}>
@@ -848,7 +855,7 @@ function LegacyInstallmentPanel({
           {localError ? <p className="rounded-lg bg-rose-50 p-3 text-sm text-rose-700 dark:bg-rose-950/40 dark:text-rose-200">{localError}</p> : null}
           <button
             type="submit"
-            disabled={saving}
+            disabled={saving || !canSubmitLegacyInstallment}
             className="inline-flex items-center justify-center gap-2 rounded-xl bg-stone-800 px-4 py-3 text-sm font-semibold text-white shadow-sm disabled:opacity-60 hover:bg-stone-900 dark:bg-stone-700 dark:hover:bg-stone-600"
           >
             <CalendarClock size={16} />
