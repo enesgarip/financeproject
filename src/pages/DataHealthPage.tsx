@@ -51,6 +51,7 @@ type HealthIssue = {
     | 'cardDebtSplit'
     | 'cardTypeFields'
     | 'cardExpenseAmount'
+    | 'cardSingleInstallments'
     | 'cardMissingInstallments'
     | 'cardInstallmentDueMonth'
     | 'cardInstallmentPostedAt'
@@ -539,12 +540,14 @@ function buildIssues(data: HealthData): HealthIssue[] {
       issues.push({
         id: `card-expense-single-has-installments-${expense.id}`,
         area: 'Kartlar',
-        severity: 'info',
+        severity: 'warning',
         title: `${expense.description} tek çekim ama taksit satırı var`,
-        description: 'Tek çekim harcamada bağlı taksit planı bulunuyor; işlem yanlışlıkla taksitliye çevrilmiş olabilir.',
-        details: [`Satır sayısı: ${rows.length}`, `Kart: ${cardLabel(card)}`],
-        fixable: false,
-        kind: 'manual',
+        description: 'Bu işlem peşin görünüyor; harcama kaydı kalacak, sadece analizleri şişiren taksit planı satırları temizlenecek.',
+        details: [`Satır sayısı: ${rows.length}`, `Kart: ${cardLabel(card)}`, `Tutar: ${formatCurrency(expense.amount)}`],
+        fixable: true,
+        fixLabel: 'Peşin plan satırlarını kaldır',
+        kind: 'cardSingleInstallments',
+        payload: { ids: rows.map((row) => row.id) },
       })
     }
 
@@ -571,6 +574,9 @@ function buildIssues(data: HealthData): HealthIssue[] {
   for (const installment of data.cardInstallments) {
     const expense = installment.card_expense_id ? expensesById.get(installment.card_expense_id) : null
     const card = cardsById.get(installment.card_id)
+    const isSingleExpensePlan = Boolean(expense && expense.installment_count <= 1)
+
+    if (isSingleExpensePlan) continue
 
     if (card && card.card_type !== 'kredi_karti') {
       issues.push({
@@ -1319,6 +1325,11 @@ export function DataHealthPage() {
         .update({ ...(payload.updates as UpdateFor<'card_expenses'>), updated_at: new Date().toISOString() })
         .eq('id', payload.expenseId)
       if (updateError) throw new Error(updateError.message)
+    }
+
+    if (issue.kind === 'cardSingleInstallments' && payload.ids?.length) {
+      const { error: deleteError } = await supabase.from('card_installments').delete().in('id', payload.ids)
+      if (deleteError) throw new Error(deleteError.message)
     }
 
     if ((issue.kind === 'cardInstallmentDueMonth' || issue.kind === 'cardInstallmentPostedAt' || issue.kind === 'cardInstallmentCount') && payload.ids?.length && payload.updates) {
