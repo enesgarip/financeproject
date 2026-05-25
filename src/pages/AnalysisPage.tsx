@@ -1,4 +1,4 @@
-import { Archive, BarChart3, Download, Search, WalletCards } from 'lucide-react'
+import { Archive, BarChart3, CalendarDays, CheckCircle2, Download, PieChart, Search, TrendingUp, Users, WalletCards } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAuth } from '../auth/useAuth'
 import { CrudPage, type FormField } from '../components/CrudPage'
@@ -23,7 +23,7 @@ import type {
   TransactionHistory,
 } from '../types/database'
 import { expenseCategoryOptions } from '../utils/categories'
-import { dateInputValue, formatDate, isDateInMonth, monthlyOccurrenceDate, startOfMonth } from '../utils/date'
+import { dateInputValue, daysUntil, formatDate, isDateInMonth, monthlyOccurrenceDate, startOfMonth } from '../utils/date'
 import { formatCurrency, parseNumber } from '../utils/formatCurrency'
 
 type AnalysisData = {
@@ -300,8 +300,14 @@ function MonthlyReport({ data }: { data: AnalysisData }) {
             <CardTitle>Aylık rapor</CardTitle>
             <p className="mt-1 text-sm text-muted-foreground">{formatMonth(monthKey)}</p>
           </div>
-          <div className="grid size-11 place-items-center rounded-xl bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300">
-            <BarChart3 />
+          <div className="flex shrink-0 items-center gap-2">
+            <Button type="button" variant="outline" onClick={() => window.print()}>
+              <Download />
+              PDF
+            </Button>
+            <div className="grid size-11 place-items-center rounded-xl bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300">
+              <BarChart3 />
+            </div>
           </div>
         </div>
       </CardHeader>
@@ -530,6 +536,348 @@ function SearchExport({ items }: { items: SearchItem[] }) {
   )
 }
 
+type CalendarEvent = {
+  id: string
+  date: string
+  title: string
+  amount: number
+  tone: 'emerald' | 'rose' | 'amber' | 'stone'
+}
+
+function buildCalendarEvents(data: AnalysisData) {
+  const monthKey = dateInputValue(startOfMonth())
+  const events: CalendarEvent[] = []
+
+  for (const payment of data.payments) {
+    const occurrence = payment.recurrence === 'monthly' ? monthlyOccurrenceDate(payment.recurrence_day) : new Date(`${payment.due_date}T00:00:00`)
+    if (payment.status !== 'bekliyor' || !occurrence || !isDateInMonth(occurrence)) continue
+
+    events.push({
+      id: `payment-${payment.id}`,
+      date: dateInputValue(occurrence),
+      title: payment.title,
+      amount: payment.amount,
+      tone: payment.amount_status === 'estimated' ? 'amber' : 'rose',
+    })
+  }
+
+  for (const card of data.cards.filter((item) => item.card_type === 'kredi_karti' && item.statement_debt_amount > 0)) {
+    const dueDate = monthlyOccurrenceDate(card.due_day)
+    if (!dueDate || !isDateInMonth(dueDate)) continue
+    events.push({
+      id: `card-${card.id}`,
+      date: dateInputValue(dueDate),
+      title: `${card.card_name} ekstresi`,
+      amount: card.statement_debt_amount,
+      tone: 'rose',
+    })
+  }
+
+  for (const installment of data.loanInstallments.filter((item) => item.status === 'bekliyor' && isDateInMonth(item.due_date))) {
+    const loan = data.loans.find((item) => item.id === installment.loan_id)
+    events.push({
+      id: `loan-${installment.id}`,
+      date: installment.due_date,
+      title: loan ? `${loan.loan_name} taksidi` : 'Kredi taksidi',
+      amount: installment.amount,
+      tone: 'rose',
+    })
+  }
+
+  for (const installment of data.cardInstallments.filter((item) => item.status === 'scheduled' && item.due_month === monthKey)) {
+    events.push({
+      id: `card-installment-${installment.id}`,
+      date: installment.due_month,
+      title: installment.description,
+      amount: installment.amount,
+      tone: 'amber',
+    })
+  }
+
+  for (const debt of data.debts.filter((item) => item.status === 'açık' && item.due_date && isDateInMonth(item.due_date))) {
+    events.push({
+      id: `debt-${debt.id}`,
+      date: debt.due_date ?? monthKey,
+      title: debt.direction === 'borç_aldım' ? `${debt.person_name} borcu` : `${debt.person_name} alacağı`,
+      amount: debt.estimated_value_try,
+      tone: debt.direction === 'borç_aldım' ? 'rose' : 'emerald',
+    })
+  }
+
+  return events.sort((a, b) => a.date.localeCompare(b.date) || b.amount - a.amount)
+}
+
+function FinancialCalendar({ data }: { data: AnalysisData }) {
+  const monthStart = startOfMonth()
+  const daysInMonth = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0).getDate()
+  const firstOffset = (monthStart.getDay() + 6) % 7
+  const events = buildCalendarEvents(data)
+  const eventsByDate = new Map<string, CalendarEvent[]>()
+
+  for (const event of events) {
+    eventsByDate.set(event.date, [...(eventsByDate.get(event.date) ?? []), event])
+  }
+
+  return (
+    <Card className="border-0 shadow-sm ring-1 ring-stone-200/80 dark:ring-stone-800 lg:col-span-7">
+      <CardHeader className="pb-0">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <CardTitle>Finans takvimi</CardTitle>
+            <p className="mt-1 text-sm text-muted-foreground">{formatMonth(dateInputValue(monthStart))} içindeki nakit hareketleri.</p>
+          </div>
+          <CalendarDays className="text-emerald-700 dark:text-emerald-300" />
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-3 pt-2">
+        <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-bold uppercase text-muted-foreground">
+          {['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'].map((day) => (
+            <span key={day}>{day}</span>
+          ))}
+        </div>
+        <div className="grid grid-cols-7 gap-1.5">
+          {Array.from({ length: firstOffset }, (_, index) => (
+            <div key={`empty-${index}`} className="min-h-20 rounded-xl bg-transparent" />
+          ))}
+          {Array.from({ length: daysInMonth }, (_, index) => {
+            const day = index + 1
+            const date = dateInputValue(new Date(monthStart.getFullYear(), monthStart.getMonth(), day))
+            const dayEvents = eventsByDate.get(date) ?? []
+            const dayTotal = dayEvents.reduce((total, event) => total + (event.tone === 'emerald' ? event.amount : -event.amount), 0)
+
+            return (
+              <div key={date} className="min-h-20 rounded-xl bg-muted/45 p-1.5">
+                <div className="flex items-center justify-between gap-1">
+                  <span className="text-xs font-bold text-foreground">{day}</span>
+                  {dayEvents.length > 0 ? (
+                    <span className={`hidden text-[10px] font-bold tabular-nums min-[560px]:inline ${dayTotal >= 0 ? 'text-emerald-700 dark:text-emerald-300' : 'text-rose-700 dark:text-rose-300'}`}>
+                      {dayTotal >= 0 ? '+' : ''}
+                      {formatCurrency(dayTotal).replace(',00', '')}
+                    </span>
+                  ) : null}
+                </div>
+                <div className="mt-1 space-y-1">
+                  {dayEvents.slice(0, 2).map((event) => (
+                    <CalendarEventPill key={event.id} event={event} />
+                  ))}
+                  {dayEvents.length > 2 ? <p className="text-[10px] font-semibold text-muted-foreground">+{dayEvents.length - 2} kayıt</p> : null}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+function CalendarEventPill({ event }: { event: CalendarEvent }) {
+  const toneClass = {
+    emerald: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200',
+    rose: 'bg-rose-100 text-rose-800 dark:bg-rose-950/50 dark:text-rose-200',
+    amber: 'bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-200',
+    stone: 'bg-stone-100 text-stone-800 dark:bg-stone-800 dark:text-stone-200',
+  }[event.tone]
+
+  return <p className={`truncate rounded-md px-1.5 py-0.5 text-[10px] font-semibold ${toneClass}`}>{event.title}</p>
+}
+
+function CategorySpendingChart({ data }: { data: AnalysisData }) {
+  const monthlyExpenses = data.cardExpenses.filter((expense) => isDateInMonth(expense.spent_at))
+  const total = sum(monthlyExpenses, (expense) => expense.amount)
+  const categoryTotals = Array.from(
+    monthlyExpenses.reduce((map, expense) => {
+      const category = expense.category || 'Diğer'
+      map.set(category, (map.get(category) ?? 0) + expense.amount)
+      return map
+    }, new Map<string, number>()),
+    ([category, amount]) => ({ category, amount }),
+  ).sort((a, b) => b.amount - a.amount)
+
+  return (
+    <Card className="border-0 shadow-sm ring-1 ring-stone-200/80 dark:ring-stone-800 lg:col-span-5">
+      <CardHeader className="pb-0">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <CardTitle>Kategori harcaması</CardTitle>
+            <p className="mt-1 text-sm text-muted-foreground">Bu ay kart harcamalarının dağılımı.</p>
+          </div>
+          <PieChart className="text-emerald-700 dark:text-emerald-300" />
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-3 pt-2">
+        {categoryTotals.length === 0 ? (
+          <p className="rounded-xl bg-muted/45 p-3 text-sm text-muted-foreground">Bu ay kategorili kart harcaması yok.</p>
+        ) : (
+          categoryTotals.slice(0, 7).map((item) => {
+            const rate = total > 0 ? Math.min(100, (item.amount / total) * 100) : 0
+            return (
+              <div key={item.category}>
+                <div className="mb-1.5 flex items-center justify-between gap-3 text-sm">
+                  <span className="min-w-0 truncate font-semibold text-foreground">{item.category}</span>
+                  <span className="shrink-0 text-xs font-bold tabular-nums text-muted-foreground">{formatCurrency(item.amount)}</span>
+                </div>
+                <div className="h-2 overflow-hidden rounded-full bg-muted">
+                  <div className="h-full rounded-full bg-emerald-600" style={{ width: `${rate}%` }} />
+                </div>
+              </div>
+            )
+          })
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
+function CashFlowTrend({ data }: { data: AnalysisData }) {
+  const salary = getCurrentSalary(data.salaryHistory)?.amount ?? 0
+  const months = Array.from({ length: 6 }, (_, index) => new Date(new Date().getFullYear(), new Date().getMonth() - 5 + index, 1))
+  const rows = months.map((month) => {
+    const income = salary + sum(
+      data.debts.filter((debt) => debt.direction === 'borç_verdim' && debt.status === 'açık' && isDateInMonth(debt.due_date, month)),
+      (debt) => debt.estimated_value_try,
+    )
+    const outflow =
+      sum(data.cardExpenses.filter((expense) => isDateInMonth(expense.spent_at, month)), (expense) => expense.amount) +
+      sum(data.payments.filter((payment) => {
+        if (payment.status !== 'bekliyor') return false
+        if (payment.recurrence === 'monthly') return Boolean(monthlyOccurrenceDate(payment.recurrence_day, month))
+        return isDateInMonth(payment.due_date, month)
+      }), (payment) => payment.amount) +
+      sum(data.loanInstallments.filter((installment) => isDateInMonth(installment.due_date, month)), (installment) => installment.amount) +
+      sum(data.debts.filter((debt) => debt.direction === 'borç_aldım' && debt.status === 'açık' && isDateInMonth(debt.due_date, month)), (debt) => debt.estimated_value_try)
+
+    return {
+      label: new Intl.DateTimeFormat('tr-TR', { month: 'short' }).format(month),
+      income,
+      outflow,
+      net: income - outflow,
+    }
+  })
+  const maxValue = Math.max(...rows.map((row) => Math.max(row.income, row.outflow)), 1)
+
+  return (
+    <Card className="border-0 shadow-sm ring-1 ring-stone-200/80 dark:ring-stone-800 lg:col-span-7">
+      <CardHeader className="pb-0">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <CardTitle>6 aylık ritim</CardTitle>
+            <p className="mt-1 text-sm text-muted-foreground">Gelir ve planlı çıkışların kaba karşılaştırması.</p>
+          </div>
+          <TrendingUp className="text-emerald-700 dark:text-emerald-300" />
+        </div>
+      </CardHeader>
+      <CardContent className="pt-2">
+        <div className="grid grid-cols-6 items-end gap-2">
+          {rows.map((row) => (
+            <div key={row.label} className="min-w-0">
+              <div className="flex h-28 items-end gap-1 rounded-xl bg-muted/45 p-1.5">
+                <div className="w-1/2 rounded-md bg-emerald-500" style={{ height: `${Math.max(8, (row.income / maxValue) * 100)}%` }} />
+                <div className="w-1/2 rounded-md bg-rose-500" style={{ height: `${Math.max(8, (row.outflow / maxValue) * 100)}%` }} />
+              </div>
+              <p className="mt-1 truncate text-center text-[11px] font-bold text-muted-foreground">{row.label}</p>
+              <p className={`truncate text-center text-[10px] font-bold tabular-nums ${row.net >= 0 ? 'text-emerald-700 dark:text-emerald-300' : 'text-rose-700 dark:text-rose-300'}`}>
+                {row.net >= 0 ? '+' : ''}
+                {formatCurrency(row.net).replace(',00', '')}
+              </p>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+function PeopleLedger({ debts }: { debts: Debt[] }) {
+  const rows = Array.from(
+    debts
+      .filter((debt) => debt.status === 'açık')
+      .reduce((map, debt) => {
+        const current = map.get(debt.person_name) ?? { person: debt.person_name, borrowed: 0, receivable: 0, count: 0 }
+        if (debt.direction === 'borç_aldım') current.borrowed += debt.estimated_value_try
+        else current.receivable += debt.estimated_value_try
+        current.count += 1
+        map.set(debt.person_name, current)
+        return map
+      }, new Map<string, { person: string; borrowed: number; receivable: number; count: number }>()),
+    ([, value]) => value,
+  ).sort((a, b) => Math.abs(b.receivable - b.borrowed) - Math.abs(a.receivable - a.borrowed))
+
+  return (
+    <Card className="border-0 shadow-sm ring-1 ring-stone-200/80 dark:ring-stone-800 lg:col-span-5">
+      <CardHeader className="pb-0">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <CardTitle>Kişi bazlı bakiye</CardTitle>
+            <p className="mt-1 text-sm text-muted-foreground">Açık borç ve alacakları kişi profili gibi oku.</p>
+          </div>
+          <Users className="text-emerald-700 dark:text-emerald-300" />
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-2 pt-2">
+        {rows.length === 0 ? (
+          <p className="rounded-xl bg-muted/45 p-3 text-sm text-muted-foreground">Açık kişi borcu veya alacağı yok.</p>
+        ) : (
+          rows.slice(0, 6).map((row) => {
+            const net = row.receivable - row.borrowed
+            return (
+              <div key={row.person} className="rounded-xl bg-muted/45 p-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-bold text-foreground">{row.person}</p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">{row.count} açık kayıt</p>
+                  </div>
+                  <Badge variant={net >= 0 ? 'default' : 'destructive'}>{net >= 0 ? 'Alacak' : 'Borç'}</Badge>
+                </div>
+                <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+                  <StatPill label="Alacak" value={formatCurrency(row.receivable)} tone="emerald" />
+                  <StatPill label="Borç" value={formatCurrency(row.borrowed)} tone="rose" />
+                </div>
+              </div>
+            )
+          })
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
+function MonthCloseAssistant({ data, missingTables }: { data: AnalysisData; missingTables: string[] }) {
+  const monthKey = dateInputValue(startOfMonth())
+  const overduePayments = data.payments.filter((payment) => payment.status === 'bekliyor' && (daysUntil(payment.due_date) ?? 0) < 0).length
+  const checks = [
+    { label: 'Bu ay bütçe tanımlı', done: data.budgets.some((budget) => budget.month === monthKey) },
+    { label: 'Aktif birikim hedefi var', done: data.savingsGoals.some((goal) => goal.status === 'active') },
+    { label: 'Gecikmiş ödeme yok', done: overduePayments === 0 },
+    { label: 'Ekstre arşivi tutuluyor', done: data.cardStatementArchives.length > 0 },
+    { label: 'Canlı migration tamam', done: missingTables.length === 0 },
+  ]
+  const completed = checks.filter((check) => check.done).length
+
+  return (
+    <Card className="border-0 bg-stone-950 text-white shadow-lg shadow-stone-950/10 ring-1 ring-stone-800 lg:col-span-12">
+      <CardContent className="grid gap-4 p-4 min-[760px]:grid-cols-[1fr_auto] min-[760px]:items-center">
+        <div>
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="text-emerald-300" />
+            <h2 className="text-base font-extrabold">Ay kapanış asistanı</h2>
+          </div>
+          <p className="mt-1 text-sm text-white/65">
+            {formatMonth(monthKey)} için {completed}/{checks.length} kontrol tamam. Raporu PDF olarak yazdırıp arşivleyebilirsin.
+          </p>
+        </div>
+        <div className="grid gap-2 min-[560px]:grid-cols-5 min-[760px]:min-w-[560px]">
+          {checks.map((check) => (
+            <div key={check.label} className={`rounded-xl px-3 py-2 text-xs font-bold ${check.done ? 'bg-emerald-400/15 text-emerald-100' : 'bg-white/10 text-white/70'}`}>
+              {check.label}
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
 function SchemaMigrationNotice({ missingTables }: { missingTables: string[] }) {
   if (missingTables.length === 0) return null
 
@@ -661,8 +1009,13 @@ export function AnalysisPage() {
     <section className="space-y-5">
       <div className="grid gap-5 lg:grid-cols-12">
         <SchemaMigrationNotice missingTables={missingTables} />
+        <MonthCloseAssistant data={data} missingTables={missingTables} />
         <MonthlyReport data={data} />
         <UpcomingInstallments data={data} />
+        <FinancialCalendar data={data} />
+        <CategorySpendingChart data={data} />
+        <CashFlowTrend data={data} />
+        <PeopleLedger debts={data.debts} />
         <SearchExport items={searchItems} />
         <StatementArchive data={data} />
       </div>

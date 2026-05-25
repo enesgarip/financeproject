@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
 import { BottomNav } from './BottomNav'
+import { QuickActions } from './QuickActions'
 
 const titles: Record<string, string> = {
   '/': 'Finans Özeti',
@@ -12,6 +13,7 @@ const titles: Record<string, string> = {
   '/borclar': 'Borç / Alacak',
   '/odemeler': 'Ödemeler',
   '/analiz': 'Analiz',
+  '/daha': 'Daha',
 }
 
 export function Layout() {
@@ -59,6 +61,7 @@ export function Layout() {
       <main className={`mx-auto w-full ${contentWidthClass} flex-1 px-4 pb-[calc(env(safe-area-inset-bottom)+6.75rem)] pt-4`}>
         <Outlet />
       </main>
+      <QuickActions />
       <BottomNav />
     </div>
   )

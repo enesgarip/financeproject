@@ -116,3 +116,20 @@ button:disabled {
 #root {
   min-height: 100dvh;
 }
+
+@media print {
+  nav,
+  header button,
+  .fixed {
+    display: none !important;
+  }
+
+  body {
+    background: #ffffff !important;
+  }
+
+  main {
+    max-width: none !important;
+    padding: 0 !important;
+  }
+}

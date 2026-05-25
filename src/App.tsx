@@ -25,6 +25,9 @@ const LoansPage = lazy(() =>
 const LoginPage = lazy(() =>
   import('./pages/LoginPage').then((module) => ({ default: module.LoginPage })),
 )
+const MorePage = lazy(() =>
+  import('./pages/MorePage').then((module) => ({ default: module.MorePage })),
+)
 const PaymentsPage = lazy(() =>
   import('./pages/PaymentsPage').then((module) => ({ default: module.PaymentsPage })),
 )
@@ -61,6 +64,7 @@ export function App() {
           <Route path="borclar" element={routeElement(<DebtsPage />)} />
           <Route path="odemeler" element={routeElement(<PaymentsPage />)} />
           <Route path="analiz" element={routeElement(<AnalysisPage />)} />
+          <Route path="daha" element={routeElement(<MorePage />)} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

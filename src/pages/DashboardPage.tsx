@@ -1,5 +1,18 @@
 import type { User } from '@supabase/supabase-js'
-import { ArrowUpRight, CalendarDays, CreditCard, Landmark, Sparkles, TrendingDown, TrendingUp } from 'lucide-react'
+import {
+  AlertTriangle,
+  ArrowUpRight,
+  CalendarDays,
+  Calculator,
+  CreditCard,
+  Landmark,
+  Lightbulb,
+  Search,
+  ShieldCheck,
+  Sparkles,
+  TrendingDown,
+  TrendingUp,
+} from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAuth } from '../auth/useAuth'
 import { supabase } from '../lib/supabase'
@@ -77,6 +90,12 @@ type CashFlowSummary = {
   loanOutflow: number
   paymentOutflow: number
   debtOutflow: number
+}
+
+type SmartInsight = {
+  title: string
+  description: string
+  tone: 'emerald' | 'amber' | 'rose' | 'stone'
 }
 
 function sum<T>(rows: T[], selector: (row: T) => number) {
@@ -236,6 +255,72 @@ function buildMonthlyCashFlow(data: DashboardData): CashFlowSummary {
     paymentOutflow,
     debtOutflow,
   }
+}
+
+function buildSmartInsights(
+  cashFlow: CashFlowSummary,
+  creditUsageRate: number,
+  totalDebts: number,
+  totalReceivables: number,
+  upcomingItems: UpcomingItem[],
+): SmartInsight[] {
+  const insights: SmartInsight[] = []
+  const urgentCount = upcomingItems.filter((item) => {
+    const remaining = daysUntil(new Date(item.sortTime))
+    return remaining !== null && remaining <= 7
+  }).length
+
+  if (cashFlow.projectedCash < 0) {
+    insights.push({
+      title: 'Ay sonu nakit açığı görünüyor',
+      description: `${cashFlow.monthLabel} projeksiyonu ${formatCurrency(cashFlow.projectedCash)}. Büyük ödemeleri veya tahsilatı öne almak iyi olur.`,
+      tone: 'rose',
+    })
+  } else if (cashFlow.netFlow < 0) {
+    insights.push({
+      title: 'Bu ay nakit azalıyor',
+      description: `Net akış ${formatCurrency(cashFlow.netFlow)}. Ay sonu pozitif kalsa da çıkış temposu gelirden yüksek.`,
+      tone: 'amber',
+    })
+  } else {
+    insights.push({
+      title: 'Bu ay nakit akışı rahat',
+      description: `Tahmini net akış +${formatCurrency(cashFlow.netFlow)}. Fazlayı kart borcu, hedef veya yatırım tarafına ayırabilirsin.`,
+      tone: 'emerald',
+    })
+  }
+
+  if (urgentCount > 0) {
+    insights.push({
+      title: `${urgentCount} yakın vade var`,
+      description: 'Önümüzdeki 7 gün içinde ödeme takibi gerekiyor. En yakın kalemleri ödeme alarmında öne aldım.',
+      tone: urgentCount >= 3 ? 'rose' : 'amber',
+    })
+  }
+
+  if (creditUsageRate >= 80) {
+    insights.push({
+      title: 'Kart limit kullanımı yüksek',
+      description: `Toplam limitin yaklaşık %${Math.round(creditUsageRate)} kullanılıyor. Yeni harcamalarda taksit ve limit grubuna dikkat.`,
+      tone: 'rose',
+    })
+  } else if (creditUsageRate >= 55) {
+    insights.push({
+      title: 'Kart kullanımı izlenmeli',
+      description: `Limit kullanımın %${Math.round(creditUsageRate)} seviyesinde. Ekstre kesilmeden önce dönem içi harcamayı kontrol etmek iyi olur.`,
+      tone: 'amber',
+    })
+  }
+
+  if (totalReceivables > 0 && totalDebts > 0) {
+    insights.push({
+      title: 'Alacaklar borcu dengeleyebilir',
+      description: `${formatCurrency(totalReceivables)} açık alacak var. Tahsilat tarihleri nakit açığını yumuşatabilir.`,
+      tone: 'stone',
+    })
+  }
+
+  return insights.slice(0, 4)
 }
 
 export function DashboardPage() {
@@ -432,6 +517,11 @@ export function DashboardPage() {
       .slice(0, 10)
   }, [data.cards, data.debts, data.loanInstallments, data.loans, data.payments])
 
+  const insights = useMemo(
+    () => buildSmartInsights(summary.cashFlow, summary.creditUsageRate, summary.totalDebts, summary.totalReceivables, upcomingItems),
+    [summary.cashFlow, summary.creditUsageRate, summary.totalDebts, summary.totalReceivables, upcomingItems],
+  )
+
   if (loading) {
     return (
       <section className="flex flex-col gap-4">
@@ -479,6 +569,14 @@ export function DashboardPage() {
           loanDebt={summary.totalLoanDebt}
           personalDebt={summary.totalPersonalDebts}
         />
+      </div>
+
+      <div className="min-w-0 lg:col-span-7">
+        <SmartInsightsPanel insights={insights} />
+      </div>
+
+      <div className="min-w-0 lg:col-span-5">
+        <ScenarioSimulator cashFlow={summary.cashFlow} netWorth={summary.netWorth} />
       </div>
 
       <div className="grid min-w-0 gap-3 min-[520px]:grid-cols-3 lg:col-span-12">
@@ -677,6 +775,129 @@ function CashFlowPanel({ cashFlow }: { cashFlow: CashFlowSummary }) {
         </div>
       </CardContent>
     </Card>
+  )
+}
+
+function SmartInsightsPanel({ insights }: { insights: SmartInsight[] }) {
+  const toneClass = {
+    emerald: 'border-emerald-200 bg-emerald-50/70 text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950/25 dark:text-emerald-100',
+    amber: 'border-amber-200 bg-amber-50/75 text-amber-950 dark:border-amber-900 dark:bg-amber-950/25 dark:text-amber-100',
+    rose: 'border-rose-200 bg-rose-50/75 text-rose-950 dark:border-rose-900 dark:bg-rose-950/25 dark:text-rose-100',
+    stone: 'border-stone-200 bg-white text-stone-900 dark:border-stone-800 dark:bg-stone-900 dark:text-stone-100',
+  }
+  const iconClass = {
+    emerald: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/70 dark:text-emerald-300',
+    amber: 'bg-amber-100 text-amber-700 dark:bg-amber-950/70 dark:text-amber-300',
+    rose: 'bg-rose-100 text-rose-700 dark:bg-rose-950/70 dark:text-rose-300',
+    stone: 'bg-stone-100 text-stone-700 dark:bg-stone-800 dark:text-stone-300',
+  }
+
+  return (
+    <Card className="border-0 shadow-sm ring-1 ring-stone-200/80 dark:ring-stone-800">
+      <CardHeader className="pb-0">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <CardTitle>Akıllı uyarılar</CardTitle>
+            <p className="mt-1 text-sm text-muted-foreground">Bu ay karar vermeyi hızlandıran kısa finans sinyalleri.</p>
+          </div>
+          <Lightbulb className="text-emerald-700 dark:text-emerald-300" />
+        </div>
+      </CardHeader>
+      <CardContent className="grid gap-2 pt-2 min-[560px]:grid-cols-2">
+        {insights.map((insight) => {
+          const Icon = insight.tone === 'rose' ? AlertTriangle : insight.tone === 'emerald' ? ShieldCheck : Lightbulb
+
+          return (
+            <article key={insight.title} className={`rounded-xl border p-3 ${toneClass[insight.tone]}`}>
+              <div className="flex items-start gap-3">
+                <div className={`grid size-9 shrink-0 place-items-center rounded-lg ${iconClass[insight.tone]}`}>
+                  <Icon size={17} />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="text-sm font-extrabold leading-snug">{insight.title}</h3>
+                  <p className="mt-1 text-xs leading-5 opacity-75">{insight.description}</p>
+                </div>
+              </div>
+            </article>
+          )
+        })}
+      </CardContent>
+    </Card>
+  )
+}
+
+function parseScenarioAmount(value: string) {
+  const parsed = Number(value.replace(',', '.'))
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0
+}
+
+function ScenarioSimulator({ cashFlow, netWorth }: { cashFlow: CashFlowSummary; netWorth: number }) {
+  const [extraIncome, setExtraIncome] = useState('')
+  const [debtPayment, setDebtPayment] = useState('')
+  const [plannedSpend, setPlannedSpend] = useState('')
+  const [goalTransfer, setGoalTransfer] = useState('')
+  const income = parseScenarioAmount(extraIncome)
+  const debt = parseScenarioAmount(debtPayment)
+  const spend = parseScenarioAmount(plannedSpend)
+  const transfer = parseScenarioAmount(goalTransfer)
+  const projectedCash = cashFlow.projectedCash + income - debt - spend - transfer
+  const projectedNetWorth = netWorth + income - spend
+  const cashTone = projectedCash >= 0 ? 'text-emerald-700 dark:text-emerald-300' : 'text-rose-700 dark:text-rose-300'
+  const hasScenario = income + debt + spend + transfer > 0
+
+  return (
+    <Card className="border-0 shadow-sm ring-1 ring-stone-200/80 dark:ring-stone-800">
+      <CardHeader className="pb-0">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <CardTitle>Senaryo dene</CardTitle>
+            <p className="mt-1 text-sm text-muted-foreground">Bu ay için hızlı nakit ve net durum provası.</p>
+          </div>
+          <Calculator className="text-emerald-700 dark:text-emerald-300" />
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-3 pt-2">
+        <div className="grid grid-cols-2 gap-2">
+          <ScenarioInput label="Ek gelir" value={extraIncome} onChange={setExtraIncome} />
+          <ScenarioInput label="Ek borç öde" value={debtPayment} onChange={setDebtPayment} />
+          <ScenarioInput label="Planlı harcama" value={plannedSpend} onChange={setPlannedSpend} />
+          <ScenarioInput label="Hedefe ayır" value={goalTransfer} onChange={setGoalTransfer} />
+        </div>
+        <div className="rounded-xl bg-muted/55 p-3">
+          <div className="flex items-center justify-between gap-3 text-sm">
+            <span className="text-muted-foreground">Senaryo ay sonu nakit</span>
+            <strong className={`shrink-0 tabular-nums ${cashTone}`}>{formatCurrency(projectedCash)}</strong>
+          </div>
+          <div className="mt-2 flex items-center justify-between gap-3 text-sm">
+            <span className="text-muted-foreground">Tahmini net durum</span>
+            <strong className="shrink-0 tabular-nums text-foreground">{formatCurrency(projectedNetWorth)}</strong>
+          </div>
+        </div>
+        <p className="text-xs leading-5 text-muted-foreground">
+          {hasScenario
+            ? 'Ek borç ödeme ve hedef transferi nakdi azaltır; net durumu yalnızca ek gelir ve yeni harcama değiştirir.'
+            : 'Alanlara tutar girerek ay sonu projeksiyonunu anında oynatabilirsin.'}
+        </p>
+      </CardContent>
+    </Card>
+  )
+}
+
+function ScenarioInput({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+  return (
+    <label className="block text-xs font-bold uppercase text-muted-foreground">
+      {label}
+      <input
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        type="number"
+        inputMode="decimal"
+        min="0"
+        step="0.01"
+        placeholder="0"
+        className="mt-1 w-full rounded-lg border border-stone-200 bg-white px-2.5 py-2 text-sm font-semibold tabular-nums text-foreground outline-none focus:border-emerald-600 dark:border-stone-700 dark:bg-stone-900"
+      />
+    </label>
   )
 }
 
@@ -894,13 +1115,27 @@ function SalaryPulse({ trend }: { trend: ReturnType<typeof getSalaryTrend> }) {
 
 function HistorySection({ rows }: { rows: TransactionHistory[] }) {
   const [activeType, setActiveType] = useState<TransactionHistoryType | 'all'>('all')
-  const filteredRows = activeType === 'all' ? rows : rows.filter((row) => row.type === activeType)
+  const [query, setQuery] = useState('')
+  const normalizedQuery = query.trim().toLocaleLowerCase('tr-TR')
+  const filteredRows = (activeType === 'all' ? rows : rows.filter((row) => row.type === activeType)).filter((row) =>
+    normalizedQuery ? `${row.title} ${row.note ?? ''} ${row.type}`.toLocaleLowerCase('tr-TR').includes(normalizedQuery) : true,
+  )
+  const groupedRows = groupHistoryRows(filteredRows.slice(0, 40))
 
   return (
     <section>
       <div className="mb-4 flex flex-col gap-3">
         <h2 className="text-lg font-bold text-stone-950 dark:text-stone-50">Son 3 ay işlem geçmişi</h2>
-        <div className="flex flex-wrap gap-2">
+        <label className="relative block">
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <input
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Geçmişte ara"
+            className="w-full rounded-xl border border-stone-200 bg-white py-2.5 pl-9 pr-3 text-sm outline-none focus:border-emerald-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+          />
+        </label>
+        <div className="flex gap-2 overflow-x-auto pb-1">
           {historyFilters.map((filter) => {
             const isActive = activeType === filter.value
 
@@ -910,7 +1145,7 @@ function HistorySection({ rows }: { rows: TransactionHistory[] }) {
                 type="button"
                 aria-pressed={isActive}
                 onClick={() => setActiveType(filter.value)}
-                className={`rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
+                className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
                   isActive
                     ? 'bg-stone-950 text-white dark:bg-stone-50 dark:text-stone-950'
                     : 'bg-stone-100 text-stone-600 hover:bg-stone-200 dark:bg-stone-800 dark:text-stone-300 dark:hover:bg-stone-700'
@@ -927,30 +1162,79 @@ function HistorySection({ rows }: { rows: TransactionHistory[] }) {
       ) : filteredRows.length === 0 ? (
         <EmptyState title="Bu filtrede işlem yok" description="Farklı bir işlem türü seçerek geçmiş kayıtları görebilirsiniz." />
       ) : (
-        <div className="space-y-3">
-          {filteredRows.slice(0, 20).map((row) => (
-            <article
-              key={row.id}
-              className="rounded-xl border border-stone-200 bg-white p-4 shadow-sm dark:border-stone-800 dark:bg-stone-900"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold text-stone-950 dark:text-stone-50">{row.title}</p>
-                  <p className="mt-1 text-xs text-stone-500 dark:text-stone-400">{formatHistoryDate(row.occurred_at)}</p>
-                </div>
-                {row.amount !== null ? (
-                  <span className="shrink-0 rounded-lg bg-stone-100 px-3 py-1.5 text-sm font-semibold text-stone-900 dark:bg-stone-800 dark:text-stone-100">
-                    {formatCurrency(row.amount)}
-                  </span>
-                ) : null}
+        <div className="space-y-5">
+          {groupedRows.map((group) => (
+            <section key={group.label} className="space-y-2">
+              <div className="flex items-center gap-3">
+                <h3 className="shrink-0 text-xs font-bold uppercase text-muted-foreground">{group.label}</h3>
+                <span className="h-px flex-1 bg-gradient-to-r from-stone-300 to-transparent dark:from-stone-700" />
               </div>
-              {row.note ? <p className="mt-2 text-xs text-stone-500 dark:text-stone-400">{row.note}</p> : null}
-            </article>
+              <div className="space-y-2">
+                {group.rows.map((row) => (
+                  <article key={row.id} className="flex gap-3 rounded-xl border border-stone-200 bg-white p-3 shadow-sm dark:border-stone-800 dark:bg-stone-900">
+                    <div className={`mt-1 size-2.5 shrink-0 rounded-full ${historyDotClass(row.type)}`} />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-bold text-stone-950 dark:text-stone-50">{row.title}</p>
+                          <p className="mt-0.5 text-xs text-stone-500 dark:text-stone-400">{formatHistoryDate(row.occurred_at)}</p>
+                        </div>
+                        {row.amount !== null ? (
+                          <span className="shrink-0 rounded-lg bg-stone-100 px-2.5 py-1 text-xs font-bold tabular-nums text-stone-900 dark:bg-stone-800 dark:text-stone-100">
+                            {formatCurrency(row.amount)}
+                          </span>
+                        ) : null}
+                      </div>
+                      {row.note ? <p className="mt-2 text-xs leading-5 text-stone-500 dark:text-stone-400">{row.note}</p> : null}
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </section>
           ))}
         </div>
       )}
     </section>
   )
+}
+
+function groupHistoryRows(rows: TransactionHistory[]) {
+  const groups = new Map<string, TransactionHistory[]>()
+
+  for (const row of rows) {
+    const label = formatHistoryDay(row.occurred_at)
+    groups.set(label, [...(groups.get(label) ?? []), row])
+  }
+
+  return Array.from(groups, ([label, groupRows]) => ({ label, rows: groupRows }))
+}
+
+function formatHistoryDay(value: string) {
+  const date = new Date(value)
+  const today = new Date()
+  const yesterday = new Date()
+  yesterday.setDate(today.getDate() - 1)
+
+  if (date.toLocaleDateString('sv-SE') === today.toLocaleDateString('sv-SE')) return 'Bugün'
+  if (date.toLocaleDateString('sv-SE') === yesterday.toLocaleDateString('sv-SE')) return 'Dün'
+
+  return new Intl.DateTimeFormat('tr-TR', {
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric',
+  }).format(date)
+}
+
+function historyDotClass(type: TransactionHistoryType) {
+  const classes: Record<TransactionHistoryType, string> = {
+    payment: 'bg-amber-500',
+    transfer: 'bg-sky-500',
+    loan: 'bg-rose-500',
+    debt: 'bg-violet-500',
+    card: 'bg-emerald-500',
+  }
+
+  return classes[type]
 }
 
 function formatHistoryDate(value: string) {
