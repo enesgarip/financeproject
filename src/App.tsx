@@ -16,6 +16,9 @@ const CardsPage = lazy(() =>
 const DashboardPage = lazy(() =>
   import('./pages/DashboardPage').then((module) => ({ default: module.DashboardPage })),
 )
+const DataHealthPage = lazy(() =>
+  import('./pages/DataHealthPage').then((module) => ({ default: module.DataHealthPage })),
+)
 const DebtsPage = lazy(() =>
   import('./pages/DebtsPage').then((module) => ({ default: module.DebtsPage })),
 )
@@ -64,6 +67,7 @@ export function App() {
           <Route path="borclar" element={routeElement(<DebtsPage />)} />
           <Route path="odemeler" element={routeElement(<PaymentsPage />)} />
           <Route path="analiz" element={routeElement(<AnalysisPage />)} />
+          <Route path="veri-sagligi" element={routeElement(<DataHealthPage />)} />
           <Route path="daha" element={routeElement(<MorePage />)} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />

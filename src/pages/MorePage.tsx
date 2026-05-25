@@ -1,4 +1,4 @@
-import { Banknote, HandCoins, Landmark, WalletCards } from 'lucide-react'
+import { Banknote, HandCoins, Landmark, ShieldCheck, WalletCards } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 const links = [
@@ -29,6 +29,13 @@ const links = [
     description: 'Kart seçip peşin veya taksitli harcama gir.',
     icon: WalletCards,
     tone: 'bg-sky-50 text-sky-700 dark:bg-sky-950/30 dark:text-sky-300',
+  },
+  {
+    to: '/veri-sagligi',
+    title: 'Veri sağlığı',
+    description: 'Kart, kredi ve ödeme tutarsızlıklarını kontrol et.',
+    icon: ShieldCheck,
+    tone: 'bg-violet-50 text-violet-700 dark:bg-violet-950/30 dark:text-violet-300',
   },
 ]
 
