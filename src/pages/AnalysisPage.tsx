@@ -335,10 +335,44 @@ function MonthlyReport({ data }: { data: AnalysisData }) {
 
 function UpcomingInstallments({ data }: { data: AnalysisData }) {
   const cardsById = new Map(data.cards.map((card) => [card.id, card]))
-  const upcoming = data.cardInstallments
-    .filter((item) => item.status === 'scheduled')
-    .sort((a, b) => a.due_month.localeCompare(b.due_month) || a.installment_no - b.installment_no)
-    .slice(0, 6)
+  const loansById = new Map(data.loans.map((loan) => [loan.id, loan]))
+  const monthKey = dateInputValue(startOfMonth())
+  const cardItems = data.cardInstallments
+    .filter((item) => item.status === 'scheduled' || item.due_month >= monthKey)
+    .map((item) => {
+      const isPastScheduled = item.status === 'scheduled' && item.due_month < monthKey
+      const statusLabel = isPastScheduled ? 'Geçmiş dönem' : item.status === 'posted' ? 'Bu dönem' : 'Planlı'
+
+      return {
+        id: `card-${item.id}`,
+        title: item.description,
+        subtitle: `${cardsById.get(item.card_id)?.card_name ?? 'Kart'} · ${formatMonth(item.due_month)} · ${item.installment_no}/${item.installment_count}`,
+        amount: item.amount,
+        sortDate: item.due_month,
+        statusLabel,
+        tone: isPastScheduled ? 'destructive' : item.status === 'posted' ? 'default' : 'secondary',
+      }
+    })
+  const loanItems = data.loanInstallments
+    .filter((item) => item.status === 'bekliyor')
+    .map((item) => {
+      const loan = loansById.get(item.loan_id)
+      const remaining = daysUntil(item.due_date)
+      const statusLabel = remaining !== null && remaining < 0 ? 'Gecikmiş' : remaining === 0 ? 'Bugün' : 'Bekliyor'
+
+      return {
+        id: `loan-${item.id}`,
+        title: loan ? loan.loan_name : 'Kredi taksidi',
+        subtitle: `${loan?.bank_name ?? 'Kredi'} · ${formatDate(item.due_date)} · ${item.installment_no}. taksit`,
+        amount: item.amount,
+        sortDate: item.due_date,
+        statusLabel,
+        tone: remaining !== null && remaining < 0 ? 'destructive' : 'outline',
+      }
+    })
+  const upcoming = [...cardItems, ...loanItems]
+    .sort((a, b) => a.sortDate.localeCompare(b.sortDate) || b.amount - a.amount)
+    .slice(0, 8)
 
   return (
     <Card className="border-0 shadow-sm ring-1 ring-stone-200/80 dark:ring-stone-800 lg:col-span-5">
@@ -346,22 +380,25 @@ function UpcomingInstallments({ data }: { data: AnalysisData }) {
         <div className="flex items-start justify-between gap-3">
           <div>
             <CardTitle>Yaklaşan taksitler</CardTitle>
-            <p className="mt-1 text-sm text-muted-foreground">{upcoming.length} planlı taksit</p>
+            <p className="mt-1 text-sm text-muted-foreground">{upcoming.length} kart / kredi taksiti</p>
           </div>
           <WalletCards className="text-emerald-700 dark:text-emerald-300" />
         </div>
       </CardHeader>
       <CardContent className="space-y-2 pt-2">
         {upcoming.length === 0 ? (
-          <p className="rounded-xl bg-muted/45 p-3 text-sm text-muted-foreground">Planlı kart taksiti yok.</p>
+          <p className="rounded-xl bg-muted/45 p-3 text-sm text-muted-foreground">Bekleyen kart veya kredi taksiti yok.</p>
         ) : (
           upcoming.map((item) => (
             <div key={item.id} className="rounded-xl bg-muted/45 px-3 py-2 text-sm">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="truncate font-semibold text-foreground">{item.description}</p>
+                  <div className="flex min-w-0 items-center gap-2">
+                    <p className="truncate font-semibold text-foreground">{item.title}</p>
+                    <Badge variant={item.tone as 'default' | 'secondary' | 'destructive' | 'outline'}>{item.statusLabel}</Badge>
+                  </div>
                   <p className="mt-0.5 text-xs text-muted-foreground">
-                    {cardsById.get(item.card_id)?.card_name ?? 'Kart'} · {formatMonth(item.due_month)}
+                    {item.subtitle}
                   </p>
                 </div>
                 <span className="shrink-0 whitespace-nowrap rounded-lg bg-white px-2 py-1 text-xs font-bold tabular-nums text-foreground dark:bg-stone-900">
@@ -584,13 +621,13 @@ function buildCalendarEvents(data: AnalysisData) {
     })
   }
 
-  for (const installment of data.cardInstallments.filter((item) => item.status === 'scheduled' && item.due_month === monthKey)) {
+  for (const installment of data.cardInstallments.filter((item) => item.due_month === monthKey && (item.status === 'scheduled' || item.status === 'posted'))) {
     events.push({
       id: `card-installment-${installment.id}`,
       date: installment.due_month,
-      title: installment.description,
+      title: `${installment.description} (${installment.installment_no}/${installment.installment_count})`,
       amount: installment.amount,
-      tone: 'amber',
+      tone: installment.status === 'posted' ? 'stone' : 'amber',
     })
   }
 
