@@ -4,16 +4,20 @@ import {
   ArrowUpRight,
   CalendarDays,
   Calculator,
+  CheckCircle2,
   CreditCard,
   Landmark,
   Lightbulb,
+  ListChecks,
   Search,
   ShieldCheck,
   Sparkles,
   TrendingDown,
   TrendingUp,
+  Wrench,
 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
 import { supabase } from '../lib/supabase'
 import type { Asset, Card as FinanceCard, Debt, Loan, LoanInstallment, Payment, SalaryHistory, TransactionHistory, TransactionHistoryType } from '../types/database'
@@ -98,8 +102,27 @@ type SmartInsight = {
   tone: 'emerald' | 'amber' | 'rose' | 'stone'
 }
 
+type FocusAction = {
+  id: string
+  title: string
+  description: string
+  to: string
+  cta: string
+  tone: 'emerald' | 'amber' | 'rose' | 'indigo' | 'stone'
+  icon: 'alert' | 'calendar' | 'card' | 'check' | 'health' | 'loan' | 'wrench'
+  priority: number
+}
+
 function sum<T>(rows: T[], selector: (row: T) => number) {
   return rows.reduce((total, row) => total + selector(row), 0)
+}
+
+function roundMoney(value: number) {
+  return Math.round((value + Number.EPSILON) * 100) / 100
+}
+
+function moneyDiffers(left: number, right: number) {
+  return Math.abs(roundMoney(left) - roundMoney(right)) > 0.01
 }
 
 function totalCreditLimit(cards: FinanceCard[]) {
@@ -323,6 +346,173 @@ function buildSmartInsights(
   return insights.slice(0, 4)
 }
 
+function buildFocusActions(data: DashboardData, cashFlow: CashFlowSummary, creditUsageRate: number, upcomingItems: UpcomingItem[]): FocusAction[] {
+  const actions: FocusAction[] = []
+  const bankAccounts = data.cards.filter((card) => card.card_type === 'banka_karti')
+  const creditCards = data.cards.filter((card) => card.card_type === 'kredi_karti')
+  const overduePayments = data.payments.filter((payment) => {
+    const remaining = daysUntil(payment.due_date)
+    return payment.status === 'bekliyor' && remaining !== null && remaining < 0
+  })
+  const overdueLoanInstallments = data.loanInstallments.filter((installment) => {
+    const remaining = daysUntil(installment.due_date)
+    return installment.status === 'bekliyor' && remaining !== null && remaining < 0
+  })
+  const urgentCount = upcomingItems.filter((item) => {
+    const remaining = daysUntil(new Date(item.sortTime))
+    return remaining !== null && remaining >= 0 && remaining <= 3
+  }).length
+  const cardSplitIssues = creditCards.filter((card) => card.statement_debt_amount + card.current_period_spending > card.debt_amount + 0.01)
+  const plannedLoanIds = new Set(data.loanInstallments.map((installment) => installment.loan_id))
+  const loansWithoutPlan = data.loans.filter((loan) => loan.status === 'active' && loan.remaining_installments > 0 && !plannedLoanIds.has(loan.id))
+  const loanInstallmentsByLoan = new Map<string, LoanInstallment[]>()
+
+  for (const item of data.loanInstallments) {
+    loanInstallmentsByLoan.set(item.loan_id, [...(loanInstallmentsByLoan.get(item.loan_id) ?? []), item])
+  }
+
+  const loanSummaryDrifts = data.loans.filter((loan) => {
+    const rows = loanInstallmentsByLoan.get(loan.id) ?? []
+    if (rows.length === 0) return false
+
+    const pending = rows.filter((item) => item.status !== 'ödendi')
+    const remainingAmount = pending.reduce((total, item) => total + item.amount, 0)
+    const expectedStatus = pending.length === 0 ? 'closed' : 'active'
+
+    return moneyDiffers(loan.remaining_amount, remainingAmount) || loan.remaining_installments !== pending.length || loan.status !== expectedStatus
+  })
+
+  if (bankAccounts.length === 0) {
+    actions.push({
+      id: 'setup-bank-account',
+      title: 'Önce bir banka hesabı ekle',
+      description: 'Ödeme, kredi taksidi ve borç kapatma akışları için kaynak hesap gerekiyor.',
+      to: '/kartlar',
+      cta: 'Hesap ekle',
+      tone: 'rose',
+      icon: 'card',
+      priority: 1,
+    })
+  }
+
+  if (overduePayments.length + overdueLoanInstallments.length > 0) {
+    actions.push({
+      id: 'overdue-payments',
+      title: `${overduePayments.length + overdueLoanInstallments.length} geciken ödeme var`,
+      description: 'Geciken ödeme ve kredi taksitlerini öne aldım; nakit planını bozmadan kapatmak iyi olur.',
+      to: overduePayments.length > 0 ? '/odemeler' : '/krediler',
+      cta: 'Gecikeni gör',
+      tone: 'rose',
+      icon: 'alert',
+      priority: 2,
+    })
+  }
+
+  if (cashFlow.projectedCash < 0) {
+    actions.push({
+      id: 'cash-gap',
+      title: 'Ay sonu nakit açığı görünüyor',
+      description: `${cashFlow.monthLabel} projeksiyonu ${formatCurrency(cashFlow.projectedCash)}. Ödeme tarihlerini ve tahsilatları birlikte kontrol et.`,
+      to: '/analiz',
+      cta: 'Analize git',
+      tone: 'rose',
+      icon: 'alert',
+      priority: 3,
+    })
+  }
+
+  if (urgentCount > 0) {
+    actions.push({
+      id: 'urgent-upcoming',
+      title: `${urgentCount} vade 3 gün içinde`,
+      description: 'Yakın vadeleri kaçırmamak için ödeme alarmındaki ilk kalemlerden başlamak en güvenlisi.',
+      to: '/odemeler',
+      cta: 'Vadeleri gör',
+      tone: urgentCount >= 3 ? 'rose' : 'amber',
+      icon: 'calendar',
+      priority: 4,
+    })
+  }
+
+  if (cardSplitIssues.length + loanSummaryDrifts.length > 0) {
+    actions.push({
+      id: 'data-health',
+      title: 'Veri tutarlılığı düzeltmesi var',
+      description: `${cardSplitIssues.length + loanSummaryDrifts.length} kayıt otomatik kontrolle düzeltilebilir görünüyor.`,
+      to: '/veri-sagligi',
+      cta: 'Kontrol et',
+      tone: 'amber',
+      icon: 'health',
+      priority: 5,
+    })
+  }
+
+  if (loansWithoutPlan.length > 0) {
+    actions.push({
+      id: 'loan-plan',
+      title: `${loansWithoutPlan.length} kredide ödeme planı eksik`,
+      description: 'Plan oluşunca yaklaşan taksitler, analiz ve nakit akışı daha doğru çalışır.',
+      to: '/krediler',
+      cta: 'Plan oluştur',
+      tone: 'indigo',
+      icon: 'loan',
+      priority: 6,
+    })
+  }
+
+  if (creditUsageRate >= 80) {
+    actions.push({
+      id: 'credit-usage',
+      title: 'Kart limit kullanımı yüksek',
+      description: `Toplam limitin yaklaşık %${Math.round(creditUsageRate)} kullanılıyor. Ortak limit ve dönem içi harcamayı kontrol et.`,
+      to: '/kartlar',
+      cta: 'Kartlara git',
+      tone: 'amber',
+      icon: 'card',
+      priority: 7,
+    })
+  }
+
+  if (!data.salaryHistory.length) {
+    actions.push({
+      id: 'salary-setup',
+      title: 'Maaş bilgisini ekle',
+      description: 'Maaş geçmişi girilince aylık nakit akışı ve ay sonu tahmini daha gerçekçi olur.',
+      to: '/varliklar',
+      cta: 'Maaş ekle',
+      tone: 'emerald',
+      icon: 'check',
+      priority: 20,
+    })
+  }
+
+  if (creditCards.length > 0) {
+    actions.push({
+      id: 'legacy-installments',
+      title: 'Eski taksitli işlemleri devret',
+      description: 'Uygulamadan önce başlamış taksitlerde yalnızca kalan ayları eklemek için taksit devrini kullan.',
+      to: '/kartlar',
+      cta: 'Taksit devri',
+      tone: 'stone',
+      icon: 'wrench',
+      priority: 80,
+    })
+  }
+
+  actions.push({
+    id: 'weekly-data-health',
+    title: 'Haftalık veri sağlığı kontrolü',
+    description: 'Kart, kredi ve ödeme kayıtlarında sessizce oluşan tutarsızlıkları tek ekranda tara.',
+    to: '/veri-sagligi',
+    cta: 'Taramayı aç',
+    tone: 'stone',
+    icon: 'health',
+    priority: 90,
+  })
+
+  return actions.sort((a, b) => a.priority - b.priority).slice(0, 4)
+}
+
 export function DashboardPage() {
   const { user } = useAuth()
   const [data, setData] = useState<DashboardData>(emptyData)
@@ -521,6 +711,10 @@ export function DashboardPage() {
     () => buildSmartInsights(summary.cashFlow, summary.creditUsageRate, summary.totalDebts, summary.totalReceivables, upcomingItems),
     [summary.cashFlow, summary.creditUsageRate, summary.totalDebts, summary.totalReceivables, upcomingItems],
   )
+  const focusActions = useMemo(
+    () => buildFocusActions(data, summary.cashFlow, summary.creditUsageRate, upcomingItems),
+    [data, summary.cashFlow, summary.creditUsageRate, upcomingItems],
+  )
 
   if (loading) {
     return (
@@ -555,6 +749,10 @@ export function DashboardPage() {
           totalDebts={summary.totalDebts}
           totalReceivables={summary.totalReceivables}
         />
+      </div>
+
+      <div className="min-w-0 lg:col-span-12">
+        <FocusActionPanel actions={focusActions} cashFlow={summary.cashFlow} />
       </div>
 
       <div className="min-w-0 lg:col-span-7">
@@ -681,6 +879,100 @@ function WelcomeMetric({ label, value, tone = 'neutral' }: { label: string; valu
         {value}
       </p>
     </div>
+  )
+}
+
+function FocusActionPanel({ actions, cashFlow }: { actions: FocusAction[]; cashFlow: CashFlowSummary }) {
+  const primaryAction = actions[0]
+  const cashIsPositive = cashFlow.projectedCash >= 0
+  const statusLabel = primaryAction.priority <= 7 ? 'Aksiyon gerekli' : 'Takip temiz'
+
+  return (
+    <Card className="border-0 bg-white py-0 shadow-sm ring-1 ring-stone-200/80 dark:bg-stone-950 dark:ring-stone-800">
+      <CardContent className="p-4">
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.4fr)] lg:items-stretch">
+          <div className="flex min-w-0 flex-col justify-between rounded-2xl bg-stone-950 p-4 text-white dark:bg-stone-900">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-xs font-bold uppercase text-emerald-200">Bugünün odağı</p>
+                <h2 className="mt-2 text-2xl font-black leading-tight">{statusLabel}</h2>
+                <p className="mt-2 text-sm leading-6 text-white/70">
+                  En önemli finans aksiyonlarını risk, vade ve veri tutarlılığına göre sıraladım.
+                </p>
+              </div>
+              <div className="grid size-11 shrink-0 place-items-center rounded-xl bg-white/10 text-emerald-200 ring-1 ring-white/10">
+                <ListChecks size={21} />
+              </div>
+            </div>
+            <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
+              <div className="rounded-xl bg-white/10 px-3 py-2 ring-1 ring-white/10">
+                <p className="font-bold uppercase text-white/55">Ay sonu</p>
+                <p className={`mt-1 truncate text-sm font-extrabold tabular-nums ${cashIsPositive ? 'text-emerald-200' : 'text-rose-200'}`}>
+                  {formatCurrency(cashFlow.projectedCash)}
+                </p>
+              </div>
+              <div className="rounded-xl bg-white/10 px-3 py-2 ring-1 ring-white/10">
+                <p className="font-bold uppercase text-white/55">Sıradaki</p>
+                <p className="mt-1 truncate text-sm font-extrabold text-white">{primaryAction.cta}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid gap-2 min-[720px]:grid-cols-2">
+            {actions.map((action) => (
+              <FocusActionCard key={action.id} action={action} />
+            ))}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+function FocusActionCard({ action }: { action: FocusAction }) {
+  const Icon = {
+    alert: AlertTriangle,
+    calendar: CalendarDays,
+    card: CreditCard,
+    check: CheckCircle2,
+    health: ShieldCheck,
+    loan: Landmark,
+    wrench: Wrench,
+  }[action.icon]
+  const toneClass = {
+    emerald: 'bg-emerald-50 text-emerald-800 ring-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-200 dark:ring-emerald-900/70',
+    amber: 'bg-amber-50 text-amber-900 ring-amber-200 dark:bg-amber-950/30 dark:text-amber-100 dark:ring-amber-900/70',
+    rose: 'bg-rose-50 text-rose-900 ring-rose-200 dark:bg-rose-950/30 dark:text-rose-100 dark:ring-rose-900/70',
+    indigo: 'bg-indigo-50 text-indigo-900 ring-indigo-200 dark:bg-indigo-950/30 dark:text-indigo-100 dark:ring-indigo-900/70',
+    stone: 'bg-stone-50 text-stone-900 ring-stone-200 dark:bg-stone-900 dark:text-stone-100 dark:ring-stone-800',
+  }[action.tone]
+  const iconClass = {
+    emerald: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/65 dark:text-emerald-300',
+    amber: 'bg-amber-100 text-amber-700 dark:bg-amber-950/65 dark:text-amber-300',
+    rose: 'bg-rose-100 text-rose-700 dark:bg-rose-950/65 dark:text-rose-300',
+    indigo: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-950/65 dark:text-indigo-300',
+    stone: 'bg-stone-200 text-stone-700 dark:bg-stone-800 dark:text-stone-300',
+  }[action.tone]
+
+  return (
+    <Link
+      to={action.to}
+      className={`group flex min-w-0 flex-col justify-between rounded-2xl p-3 ring-1 transition hover:-translate-y-0.5 hover:shadow-md ${toneClass}`}
+    >
+      <div className="flex items-start gap-3">
+        <div className={`grid size-10 shrink-0 place-items-center rounded-xl ${iconClass}`}>
+          <Icon size={18} />
+        </div>
+        <div className="min-w-0">
+          <h3 className="text-sm font-extrabold leading-snug">{action.title}</h3>
+          <p className="mt-1 line-clamp-2 text-xs leading-5 opacity-75">{action.description}</p>
+        </div>
+      </div>
+      <span className="mt-3 inline-flex items-center text-xs font-black uppercase tracking-normal opacity-75 group-hover:opacity-100">
+        {action.cta}
+        <ArrowUpRight className="ml-1 size-3.5" />
+      </span>
+    </Link>
   )
 }
 

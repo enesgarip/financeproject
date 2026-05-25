@@ -1,4 +1,4 @@
-import { Banknote, HandCoins, Landmark, Plus, ReceiptText, WalletCards, X } from 'lucide-react'
+import { Banknote, HandCoins, Landmark, Plus, ReceiptText, ShieldCheck, WalletCards, X } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 
@@ -8,6 +8,7 @@ const actions = [
   { to: '/borclar', label: 'Borç', description: 'Borç veya alacak kaydı', icon: HandCoins },
   { to: '/varliklar', label: 'Varlık', description: 'Nakit, yatırım veya maaş', icon: Banknote },
   { to: '/krediler', label: 'Kredi', description: 'Kredi ve taksit planı', icon: Landmark },
+  { to: '/veri-sagligi', label: 'Kontrol', description: 'Veri sağlığı ve güvenli düzeltmeler', icon: ShieldCheck },
 ]
 
 export function QuickActions() {
