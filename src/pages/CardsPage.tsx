@@ -527,7 +527,7 @@ function QuickExpensePanel({
             </label>
           </div>
           <div className="grid grid-cols-2 gap-2.5 min-[760px]:grid-cols-4">
-            <label className="block text-sm font-medium text-stone-700 dark:text-stone-200">
+            <label className="block min-w-0 text-sm font-medium text-stone-700 dark:text-stone-200">
               Tarih
               <input
                 value={spentAt}
@@ -538,10 +538,10 @@ function QuickExpensePanel({
                 onClick={(event) => event.currentTarget.showPicker?.()}
                 onFocus={(event) => event.currentTarget.showPicker?.()}
                 type="date"
-                className="mt-1 w-full rounded-lg border border-stone-200 px-3 py-2.5 outline-none [color-scheme:light] focus:border-emerald-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100 dark:[color-scheme:dark]"
+                className="mt-1 block w-full min-w-0 max-w-[10.75rem] appearance-none rounded-lg border border-stone-200 px-3 py-2.5 outline-none [color-scheme:light] focus:border-emerald-600 min-[480px]:max-w-full dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100 dark:[color-scheme:dark]"
               />
             </label>
-            <label className="block text-sm font-medium text-stone-700 dark:text-stone-200">
+            <label className="block min-w-0 text-sm font-medium text-stone-700 dark:text-stone-200">
               Kategori
               <select
                 value={category}
@@ -549,7 +549,7 @@ function QuickExpensePanel({
                   setCategory(event.target.value)
                   setLocalError('')
                 }}
-                className="mt-1 w-full rounded-lg border border-stone-200 bg-white px-3 py-2.5 outline-none focus:border-emerald-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+                className="mt-1 w-full min-w-0 rounded-lg border border-stone-200 bg-white px-3 py-2.5 outline-none focus:border-emerald-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
               >
                 {expenseCategoryOptions.map((option) => (
                   <option key={option.value} value={option.value}>
@@ -558,7 +558,7 @@ function QuickExpensePanel({
                 ))}
               </select>
             </label>
-            <label className="block text-sm font-medium text-stone-700 dark:text-stone-200">
+            <label className="block min-w-0 text-sm font-medium text-stone-700 dark:text-stone-200">
               İşlem türü
               <select
                 value={canUseInstallments ? paymentMode : 'cash'}
@@ -569,13 +569,13 @@ function QuickExpensePanel({
                   setLocalError('')
                 }}
                 disabled={!canUseInstallments}
-                className="mt-1 w-full rounded-lg border border-stone-200 bg-white px-3 py-2.5 outline-none focus:border-emerald-600 disabled:bg-stone-100 disabled:text-stone-500 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100 dark:disabled:bg-stone-800"
+                className="mt-1 w-full min-w-0 rounded-lg border border-stone-200 bg-white px-3 py-2.5 outline-none focus:border-emerald-600 disabled:bg-stone-100 disabled:text-stone-500 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100 dark:disabled:bg-stone-800"
               >
                 <option value="cash">Peşin</option>
                 <option value="installment">Taksitli</option>
               </select>
             </label>
-            <label className="block text-sm font-medium text-stone-700 dark:text-stone-200">
+            <label className="block min-w-0 text-sm font-medium text-stone-700 dark:text-stone-200">
               Durum
               <select
                 value={expenseStatus}
@@ -583,7 +583,7 @@ function QuickExpensePanel({
                   setExpenseStatus(event.target.value as CardExpenseStatus)
                   setLocalError('')
                 }}
-                className="mt-1 w-full rounded-lg border border-stone-200 bg-white px-3 py-2.5 outline-none focus:border-emerald-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+                className="mt-1 w-full min-w-0 rounded-lg border border-stone-200 bg-white px-3 py-2.5 outline-none focus:border-emerald-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
               >
                 <option value="posted">Kesinleşmiş</option>
                 <option value="provision">Provizyonda</option>
@@ -919,7 +919,7 @@ function LegacyInstallmentPanel({
               />
             </label>
           </div>
-          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-2.5 min-[480px]:grid-cols-2">
             <label className="block min-w-0 text-sm font-medium text-stone-700 dark:text-stone-200">
               Sıradaki ay
               <input
@@ -930,7 +930,7 @@ function LegacyInstallmentPanel({
                 }}
                 type="month"
                 min={monthInputValue()}
-                className="mt-1 w-full min-w-0 rounded-lg border border-stone-200 px-3 py-2.5 outline-none focus:border-emerald-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+                className="mt-1 block w-full min-w-0 max-w-[10.75rem] appearance-none rounded-lg border border-stone-200 px-3 py-2.5 outline-none focus:border-emerald-600 min-[480px]:max-w-full dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
                 required
               />
             </label>
