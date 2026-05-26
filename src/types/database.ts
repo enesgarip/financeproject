@@ -15,6 +15,7 @@ export type PaymentMethod = 'manual' | 'bank_auto'
 export type PaymentAmountStatus = 'exact' | 'estimated'
 export type LoanInstallmentStatus = 'bekliyor' | 'ödendi'
 export type CardInstallmentStatus = 'scheduled' | 'posted'
+export type CardExpenseStatus = 'provision' | 'posted' | 'cancelled'
 export type SavingsGoalStatus = 'active' | 'completed'
 export type TransactionHistoryType = 'payment' | 'transfer' | 'loan' | 'debt' | 'card'
 export type UpcomingDismissalSource = 'payment' | 'card' | 'loan_installment' | 'debt'
@@ -47,6 +48,7 @@ export type Card = BaseRow & {
   debt_amount: number
   statement_debt_amount: number
   current_period_spending: number
+  provision_amount: number
   statement_day: number | null
   due_day: number | null
   note: string | null
@@ -60,6 +62,8 @@ export type CardExpense = BaseRow & {
   category: string
   installment_count: number
   installment_amount: number
+  status: CardExpenseStatus
+  posted_at: string | null
   note: string | null
 }
 
@@ -228,6 +232,13 @@ export type Database = {
           p_spent_at?: string
           p_installment_count?: number
           p_category?: string
+          p_status?: CardExpenseStatus
+        }
+        Returns: CardExpense
+      }
+      cancel_card_provision: {
+        Args: {
+          p_expense_id: string
         }
         Returns: CardExpense
       }
@@ -236,6 +247,12 @@ export type Database = {
           p_card_id: string
         }
         Returns: CardStatementArchive
+      }
+      post_card_provision: {
+        Args: {
+          p_expense_id: string
+        }
+        Returns: CardExpense
       }
       pay_card_debt: {
         Args: {
@@ -266,6 +283,10 @@ export type Database = {
           p_account_card_id: string
         }
         Returns: Debt
+      }
+      reset_user_finance_data: {
+        Args: Record<string, never>
+        Returns: void
       }
     }
     Enums: Record<string, never>

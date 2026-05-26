@@ -95,6 +95,10 @@ function optionalRows<T>(response: QueryResponse<T>, tableName: string) {
   return { rows: [] as T[], missingTable: null, error: response.error }
 }
 
+function activeCardExpense(expense: CardExpense) {
+  return expense.status !== 'cancelled'
+}
+
 const budgetFields: FormField[] = [
   { name: 'month', label: 'Ay', type: 'date', required: true },
   { name: 'category', label: 'Kategori', type: 'select', options: expenseCategoryOptions },
@@ -171,8 +175,8 @@ function buildSearchItems(data: AnalysisData): SearchItem[] {
       amount: card.card_type === 'kredi_karti' ? card.debt_amount : card.current_balance,
       date: card.updated_at,
     })),
-    ...data.cardExpenses.map((expense) => ({
-      type: 'Kart harcaması',
+    ...data.cardExpenses.filter(activeCardExpense).map((expense) => ({
+      type: expense.status === 'provision' ? 'Kart provizyonu' : 'Kart harcaması',
       title: expense.description,
       subtitle: `${cardsById.get(expense.card_id)?.card_name ?? 'Kart'} · ${expense.category ?? 'Diğer'}`,
       amount: expense.amount,
@@ -266,7 +270,7 @@ function MonthlyReport({ data }: { data: AnalysisData }) {
     (debt) => debt.estimated_value_try,
   )
   const cardSpending = sum(
-    data.cardExpenses.filter((expense) => isDateInMonth(expense.spent_at)),
+    data.cardExpenses.filter((expense) => activeCardExpense(expense) && isDateInMonth(expense.spent_at)),
     (expense) => expense.amount,
   )
   const cardInstallments = sum(
@@ -416,7 +420,7 @@ function UpcomingInstallments({ data }: { data: AnalysisData }) {
 function BudgetProgress({ budgets, expenses }: { budgets: Budget[]; expenses: CardExpense[] }) {
   const monthKey = dateInputValue(startOfMonth())
   const monthlyBudgets = budgets.filter((budget) => budget.month === monthKey)
-  const monthlyExpenses = expenses.filter((expense) => isDateInMonth(expense.spent_at))
+  const monthlyExpenses = expenses.filter((expense) => activeCardExpense(expense) && isDateInMonth(expense.spent_at))
 
   if (monthlyBudgets.length === 0) {
     return <p className="rounded-xl bg-muted/45 p-3 text-sm text-muted-foreground">Bu ay için bütçe eklediğinde kategori kullanımı burada görünecek.</p>
@@ -745,7 +749,7 @@ function buildCategoryInsights(data: AnalysisData): CategoryInsight[] {
   const previousTotals = new Map<string, number>()
   const budgetsByCategory = new Map(data.budgets.filter((budget) => budget.month === currentMonth).map((budget) => [budget.category, budget]))
 
-  for (const expense of data.cardExpenses) {
+  for (const expense of data.cardExpenses.filter(activeCardExpense)) {
     const category = expense.category || 'Diğer'
     const expenseMonth = monthKeyFor(expense.spent_at)
 
@@ -813,7 +817,7 @@ function buildCategoryInsights(data: AnalysisData): CategoryInsight[] {
 }
 
 function CategorySpendingChart({ data }: { data: AnalysisData }) {
-  const monthlyExpenses = data.cardExpenses.filter((expense) => isDateInMonth(expense.spent_at))
+  const monthlyExpenses = data.cardExpenses.filter((expense) => activeCardExpense(expense) && isDateInMonth(expense.spent_at))
   const total = sum(monthlyExpenses, (expense) => expense.amount)
   const insights = buildCategoryInsights(data)
   const categoryTotals = Array.from(
@@ -887,7 +891,7 @@ function CashFlowTrend({ data }: { data: AnalysisData }) {
       (debt) => debt.estimated_value_try,
     )
     const outflow =
-      sum(data.cardExpenses.filter((expense) => isDateInMonth(expense.spent_at, month)), (expense) => expense.amount) +
+      sum(data.cardExpenses.filter((expense) => activeCardExpense(expense) && isDateInMonth(expense.spent_at, month)), (expense) => expense.amount) +
       sum(data.payments.filter((payment) => {
         if (payment.status !== 'bekliyor') return false
         if (payment.recurrence === 'monthly') return Boolean(monthlyOccurrenceDate(payment.recurrence_day, month))
@@ -994,7 +998,7 @@ function PeopleLedger({ debts }: { debts: Debt[] }) {
 function MonthCloseAssistant({ data, missingTables }: { data: AnalysisData; missingTables: string[] }) {
   const monthKey = dateInputValue(startOfMonth())
   const today = new Date()
-  const currentMonthExpenses = data.cardExpenses.filter((expense) => isDateInMonth(expense.spent_at))
+  const currentMonthExpenses = data.cardExpenses.filter((expense) => activeCardExpense(expense) && isDateInMonth(expense.spent_at))
   const creditCards = data.cards.filter((card) => card.card_type === 'kredi_karti')
   const statementDayPassedCards = creditCards.filter((card) => {
     if (!card.statement_day || card.current_period_spending <= 0) return false

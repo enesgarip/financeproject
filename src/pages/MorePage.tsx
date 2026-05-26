@@ -33,7 +33,7 @@ const links = [
   {
     to: '/veri-sagligi',
     title: 'Veri sağlığı',
-    description: 'Kart, kredi ve ödeme tutarsızlıklarını kontrol et.',
+    description: 'Tutarsızlıkları kontrol et, gerekirse tüm veriyi sıfırla.',
     icon: ShieldCheck,
     tone: 'bg-violet-50 text-violet-700 dark:bg-violet-950/30 dark:text-violet-300',
   },

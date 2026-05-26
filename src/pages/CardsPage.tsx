@@ -1,13 +1,13 @@
-import { CalendarClock, ReceiptText, WalletCards } from 'lucide-react'
+import { CalendarClock, CheckCircle2, Clock3, ReceiptText, WalletCards, XCircle } from 'lucide-react'
 import type { CSSProperties } from 'react'
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { CrudPage, type FormField } from '../components/CrudPage'
 import { SimpleModal } from '../components/SimpleModal'
 import { Badge } from '../components/ui/badge'
 import { Card as SurfaceCard, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Progress } from '../components/ui/progress'
 import { supabase } from '../lib/supabase'
-import type { Card, InsertFor } from '../types/database'
+import type { Card, CardExpense, CardExpenseStatus, InsertFor } from '../types/database'
 import { expenseCategoryOptions } from '../utils/categories'
 import { getCardStatementPeriod } from '../utils/cardStatement'
 import { dateInputValue, formatDate } from '../utils/date'
@@ -48,17 +48,8 @@ const fields: FormField[] = [
     visibleWhen: { field: 'card_type', value: 'kredi_karti' },
   },
   {
-    name: 'debt_amount',
-    label: 'Güncel toplam borç',
-    type: 'number',
-    min: '0',
-    step: '0.01',
-    required: true,
-    visibleWhen: { field: 'card_type', value: 'kredi_karti' },
-  },
-  {
     name: 'statement_debt_amount',
-    label: 'Dönem borcu',
+    label: 'Ekstre borcu (ödenecek)',
     type: 'number',
     min: '0',
     step: '0.01',
@@ -67,7 +58,16 @@ const fields: FormField[] = [
   },
   {
     name: 'current_period_spending',
-    label: 'Dönem içi harcama',
+    label: 'Dönem içi kesinleşen',
+    type: 'number',
+    min: '0',
+    step: '0.01',
+    required: true,
+    visibleWhen: { field: 'card_type', value: 'kredi_karti' },
+  },
+  {
+    name: 'provision_amount',
+    label: 'Provizyon bekleyen',
     type: 'number',
     min: '0',
     step: '0.01',
@@ -135,6 +135,22 @@ function isSchemaCacheError(error: { code?: string; message?: string } | null | 
   return error.code === 'PGRST202' || error.code === 'PGRST205' || message.includes('schema cache') || message.includes('Could not find the function')
 }
 
+function roundMoney(value: number) {
+  return Math.round((value + Number.EPSILON) * 100) / 100
+}
+
+function cardProvisionAmount(card: Pick<Card, 'provision_amount'>) {
+  return card.provision_amount ?? 0
+}
+
+function cardSplitTotal(statementDebt: number, currentPeriod: number, provisionAmount: number) {
+  return roundMoney(statementDebt + currentPeriod + provisionAmount)
+}
+
+function cardPayableDebt(card: Card) {
+  return Math.max(0, card.debt_amount - cardProvisionAmount(card))
+}
+
 function limitGroupKey(card: Card) {
   return card.limit_group_name?.trim() || card.id
 }
@@ -148,9 +164,11 @@ function limitGroupStats(card: Card, rows: Card[]) {
   const groupCards = limitGroupCards(card, rows)
   const sharedLimit = Math.max(...groupCards.map((row) => row.credit_limit), card.credit_limit, 0)
   const totalDebt = groupCards.reduce((total, row) => total + row.debt_amount, 0)
+  const provisionAmount = groupCards.reduce((total, row) => total + cardProvisionAmount(row), 0)
   return {
     sharedLimit,
     totalDebt,
+    provisionAmount,
     availableLimit: Math.max(0, sharedLimit - totalDebt),
     usageRate: sharedLimit > 0 ? Math.min(100, (totalDebt / sharedLimit) * 100) : 0,
     isShared: Boolean(card.limit_group_name?.trim()) && groupCards.length > 1,
@@ -166,6 +184,7 @@ type LimitGroupSummary = {
   debt: number
   statementDebt: number
   currentPeriod: number
+  provision: number
   available: number
   usageRate: number
 }
@@ -183,6 +202,7 @@ function buildLimitGroupSummaries(rows: Card[]): LimitGroupSummary[] {
     const debt = cards.reduce((total, card) => total + card.debt_amount, 0)
     const statementDebt = cards.reduce((total, card) => total + card.statement_debt_amount, 0)
     const currentPeriod = cards.reduce((total, card) => total + card.current_period_spending, 0)
+    const provision = cards.reduce((total, card) => total + cardProvisionAmount(card), 0)
     const label = cards.find((card) => card.limit_group_name?.trim())?.limit_group_name?.trim() || cards[0]?.card_name || 'Kredi kartı'
 
     return {
@@ -194,6 +214,7 @@ function buildLimitGroupSummaries(rows: Card[]): LimitGroupSummary[] {
       debt,
       statementDebt,
       currentPeriod,
+      provision,
       available: Math.max(0, limit - debt),
       usageRate: limit > 0 ? Math.min(100, (debt / limit) * 100) : 0,
     }
@@ -207,6 +228,9 @@ function CreditCardOverview({ rows }: { rows: Card[] }) {
 
   const totalLimit = groups.reduce((total, group) => total + group.limit, 0)
   const totalDebt = groups.reduce((total, group) => total + group.debt, 0)
+  const totalStatementDebt = groups.reduce((total, group) => total + group.statementDebt, 0)
+  const totalCurrentPeriod = groups.reduce((total, group) => total + group.currentPeriod, 0)
+  const totalProvision = groups.reduce((total, group) => total + group.provision, 0)
   const totalAvailable = Math.max(0, totalLimit - totalDebt)
   const totalUsageRate = totalLimit > 0 ? Math.min(100, (totalDebt / totalLimit) * 100) : 0
   const cashBalance = bankCards.reduce((total, card) => total + card.current_balance, 0)
@@ -219,14 +243,20 @@ function CreditCardOverview({ rows }: { rows: Card[] }) {
             <div className="min-w-0">
               <p className="text-xs font-bold uppercase text-muted-foreground">Kart özeti</p>
               <p className="mt-1 text-2xl font-extrabold tabular-nums text-foreground">{formatCurrency(totalDebt)}</p>
-              <p className="mt-1 text-sm text-muted-foreground">Kalan ortak limit {formatCurrency(totalAvailable)}</p>
+              <p className="mt-1 text-sm text-muted-foreground">Toplam borç ve provizyon dahil limit kullanımı</p>
             </div>
             <div className="grid size-11 shrink-0 place-items-center rounded-xl bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300">
               <WalletCards />
             </div>
           </div>
           <Progress value={totalUsageRate} className="mt-4 h-2" />
-          <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
+          <div className="mt-3 grid grid-cols-2 gap-2 text-xs min-[520px]:grid-cols-4">
+            <OverviewStat label="Ekstre borcu" value={formatCurrency(totalStatementDebt)} />
+            <OverviewStat label="Dönem içi" value={formatCurrency(totalCurrentPeriod)} />
+            <OverviewStat label="Provizyon" value={formatCurrency(totalProvision)} />
+            <OverviewStat label="Kalan limit" value={formatCurrency(totalAvailable)} />
+          </div>
+          <div className="mt-2 grid grid-cols-3 gap-2 text-xs">
             <OverviewStat label="Limit" value={formatCurrency(totalLimit)} />
             <OverviewStat label="Kullanım" value={`%${Math.round(totalUsageRate)}`} />
             <OverviewStat label="Hesap" value={formatCurrency(cashBalance)} />
@@ -248,10 +278,11 @@ function CreditCardOverview({ rows }: { rows: Card[] }) {
                 </div>
               </CardHeader>
               <CardContent className="flex flex-col gap-3 pt-1">
-                <div className="grid grid-cols-3 gap-2 text-xs">
-                  <OverviewStat label="Borç" value={formatCurrency(group.debt)} />
-                  <OverviewStat label="Dönem" value={formatCurrency(group.statementDebt)} />
+                <div className="grid grid-cols-2 gap-2 text-xs min-[460px]:grid-cols-4">
+                  <OverviewStat label="Toplam" value={formatCurrency(group.debt)} />
+                  <OverviewStat label="Ekstre" value={formatCurrency(group.statementDebt)} />
                   <OverviewStat label="Dönem içi" value={formatCurrency(group.currentPeriod)} />
+                  <OverviewStat label="Provizyon" value={formatCurrency(group.provision)} />
                 </div>
                 <Progress value={group.usageRate} className="h-1.5" />
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
@@ -264,7 +295,10 @@ function CreditCardOverview({ rows }: { rows: Card[] }) {
                       <span className="min-w-0 truncate font-semibold text-foreground">
                         {card.holder_name || card.card_name}
                       </span>
-                      <span className="shrink-0 tabular-nums text-muted-foreground">{formatCurrency(card.debt_amount)}</span>
+                      <span className="shrink-0 tabular-nums text-muted-foreground">
+                        {formatCurrency(card.debt_amount)}
+                        {cardProvisionAmount(card) > 0 ? ` · prov. ${formatCurrency(cardProvisionAmount(card))}` : ''}
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -342,6 +376,7 @@ function QuickExpensePanel({
   const [category, setCategory] = useState(expenseCategoryOptions[0]?.value ?? 'Diğer')
   const [paymentMode, setPaymentMode] = useState<'cash' | 'installment'>('cash')
   const [installmentCount, setInstallmentCount] = useState('1')
+  const [expenseStatus, setExpenseStatus] = useState<CardExpenseStatus>('posted')
   const [localError, setLocalError] = useState('')
   const [saving, setSaving] = useState(false)
   const cards = useMemo(() => rows.filter((row) => row.card_type === 'kredi_karti' || row.card_type === 'banka_karti'), [rows])
@@ -354,6 +389,7 @@ function QuickExpensePanel({
   const statementPreview = useMemo(() => getCardStatementPeriod(selectedCard, spentAt), [selectedCard, spentAt])
   const firstPeriodAmount = parsedInstallmentCount > 1 ? moneyShare(parsedAmount, parsedInstallmentCount) : parsedAmount
   const debitPreview = Math.max(0, (selectedCard?.current_balance ?? 0) - parsedAmount)
+  const isProvision = expenseStatus === 'provision'
   const canSubmitQuickExpense = Boolean(selectedCard) && parsedAmount > 0 && trimmedDescription.length > 0 && !saving
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -381,10 +417,11 @@ function QuickExpensePanel({
       p_spent_at: spentAt,
       p_category: category,
       p_installment_count: parsedInstallmentCount,
+      p_status: expenseStatus,
     })
 
     let submitError = error
-    if (submitError && isSchemaCacheError(submitError) && parsedInstallmentCount === 1) {
+    if (submitError && isSchemaCacheError(submitError) && parsedInstallmentCount === 1 && expenseStatus === 'posted') {
       const { error: legacyError } = await supabase.rpc('add_card_expense', {
         p_card_id: selectedCard.id,
         p_amount: parsedAmount,
@@ -397,8 +434,8 @@ function QuickExpensePanel({
     setSaving(false)
     if (submitError) {
       setLocalError(
-        isSchemaCacheError(submitError) && parsedInstallmentCount > 1
-          ? 'Taksit altyapısı canlı veritabanına uygulanmamış. Migration çalışınca bu işlem açılacak.'
+        isSchemaCacheError(submitError)
+          ? 'Provizyon/taksit altyapısı canlı veritabanına uygulanmamış. Migration çalışınca bu işlem açılacak.'
           : submitError.message,
       )
       return
@@ -410,6 +447,7 @@ function QuickExpensePanel({
     setCategory(expenseCategoryOptions[0]?.value ?? 'Diğer')
     setPaymentMode('cash')
     setInstallmentCount('1')
+    setExpenseStatus('posted')
     await reload()
   }
 
@@ -426,7 +464,9 @@ function QuickExpensePanel({
           {selectedCard ? (
             <Badge variant={selectedCard.card_type === 'kredi_karti' ? 'secondary' : 'outline'}>
               {selectedCard.card_type === 'kredi_karti'
-                ? `Borç ${formatCurrency(selectedCard.debt_amount)}`
+                ? cardProvisionAmount(selectedCard) > 0
+                  ? `Provizyon ${formatCurrency(cardProvisionAmount(selectedCard))}`
+                  : `Toplam ${formatCurrency(selectedCard.debt_amount)}`
                 : `Bakiye ${formatCurrency(selectedCard.current_balance)}`}
             </Badge>
           ) : null}
@@ -486,7 +526,7 @@ function QuickExpensePanel({
               />
             </label>
           </div>
-          <div className="grid grid-cols-2 gap-2.5 min-[600px]:grid-cols-3">
+          <div className="grid grid-cols-2 gap-2.5 min-[760px]:grid-cols-4">
             <label className="block text-sm font-medium text-stone-700 dark:text-stone-200">
               Tarih
               <input
@@ -535,6 +575,20 @@ function QuickExpensePanel({
                 <option value="installment">Taksitli</option>
               </select>
             </label>
+            <label className="block text-sm font-medium text-stone-700 dark:text-stone-200">
+              Durum
+              <select
+                value={expenseStatus}
+                onChange={(event) => {
+                  setExpenseStatus(event.target.value as CardExpenseStatus)
+                  setLocalError('')
+                }}
+                className="mt-1 w-full rounded-lg border border-stone-200 bg-white px-3 py-2.5 outline-none focus:border-emerald-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+              >
+                <option value="posted">Kesinleşmiş</option>
+                <option value="provision">Provizyonda</option>
+              </select>
+            </label>
           </div>
           {canUseInstallments && paymentMode === 'installment' ? (
             <label className="block text-sm font-medium text-stone-700 dark:text-stone-200">
@@ -560,13 +614,15 @@ function QuickExpensePanel({
                 <OverviewStat label="Ekstre" value={statementPreview ? formatDate(statementPreview.statementDate) : 'Gün eksik'} />
                 <OverviewStat label="Son ödeme" value={statementPreview ? formatDate(statementPreview.dueDate) : 'Gün eksik'} />
                 <OverviewStat
-                  label={parsedInstallmentCount > 1 ? 'İlk yansıma' : 'Yansıma'}
-                  value={formatCurrency(firstPeriodAmount)}
+                  label={isProvision ? 'Durum' : parsedInstallmentCount > 1 ? 'İlk yansıma' : 'Yansıma'}
+                  value={isProvision ? 'Provizyon' : formatCurrency(firstPeriodAmount)}
                 />
               </div>
               {statementPreview ? (
                 <p className="mt-2 text-xs font-medium text-emerald-800 dark:text-emerald-100">
-                  Bu işlem {statementPreview.statementMonthLabel} ekstresine girer; ödeme planı {formatDate(statementPreview.dueDate)} tarihine bağlanır.
+                  {isProvision
+                    ? `Bu işlem şimdilik sadece limitten düşer; kesinleşince ${statementPreview.statementMonthLabel} dönemine alınır.`
+                    : `Bu işlem ${statementPreview.statementMonthLabel} ekstresine girer; ödeme planı ${formatDate(statementPreview.dueDate)} tarihine bağlanır.`}
                 </p>
               ) : (
                 <p className="mt-2 text-xs font-medium text-amber-700 dark:text-amber-200">
@@ -681,6 +737,8 @@ function LegacyInstallmentPanel({
         category,
         installment_count: parsedTotalInstallments,
         installment_amount: parsedInstallmentAmount,
+        status: 'posted',
+        posted_at: new Date().toISOString(),
         note: `${parsedPaidInstallments}/${parsedTotalInstallments} taksiti uygulama öncesinde ödendi.`,
       })
       .select()
@@ -923,6 +981,96 @@ function LegacyInstallmentPanel({
   )
 }
 
+function ProvisionPanel({
+  rows,
+  provisions,
+  loading,
+  actionId,
+  onPost,
+  onCancel,
+}: {
+  rows: Card[]
+  provisions: CardExpense[]
+  loading: boolean
+  actionId: string | null
+  onPost: (expense: CardExpense) => void
+  onCancel: (expense: CardExpense) => void
+}) {
+  const pending = provisions.filter((expense) => expense.status === 'provision')
+  const cardsById = useMemo(() => new Map(rows.map((card) => [card.id, card])), [rows])
+  const totalProvision = pending.reduce((total, expense) => total + expense.amount, 0)
+
+  if (loading && pending.length === 0) {
+    return (
+      <SurfaceCard className="border-0 shadow-sm ring-1 ring-amber-200/80 dark:ring-amber-900/70">
+        <CardContent className="p-4 text-sm text-muted-foreground">Provizyonlar yükleniyor...</CardContent>
+      </SurfaceCard>
+    )
+  }
+
+  if (pending.length === 0) return null
+
+  return (
+    <SurfaceCard className="border-0 shadow-sm ring-1 ring-amber-200/80 dark:ring-amber-900/70">
+      <CardHeader className="pb-0">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Clock3 size={17} />
+              Provizyondaki işlemler
+            </CardTitle>
+            <p className="mt-1 text-xs text-muted-foreground">Kesinleşince dönem içine alınır, iptal edilirse limitten çıkarılır.</p>
+          </div>
+          <Badge variant="secondary">{formatCurrency(totalProvision)}</Badge>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-2 pt-2">
+        {pending.map((expense) => {
+          const card = cardsById.get(expense.card_id)
+          const postActionId = `post-${expense.id}`
+          const cancelActionId = `cancel-${expense.id}`
+
+          return (
+            <div key={expense.id} className="rounded-xl bg-amber-50/80 px-3 py-2.5 dark:bg-amber-950/25">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-bold text-foreground">{expense.description}</p>
+                  <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                    {card ? `${card.bank_name} · ${card.card_name}` : 'Kart'} · {formatDate(expense.spent_at)}
+                  </p>
+                </div>
+                <span className="shrink-0 rounded-lg bg-white px-2 py-1 text-xs font-bold tabular-nums text-foreground dark:bg-stone-900">
+                  {formatCurrency(expense.amount)}
+                </span>
+              </div>
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => onPost(expense)}
+                  disabled={Boolean(actionId)}
+                  className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-700 px-3 py-2 text-xs font-semibold text-white disabled:opacity-60 hover:bg-emerald-800"
+                >
+                  <CheckCircle2 size={14} />
+                  {actionId === postActionId ? 'İşleniyor...' : 'Kesinleştir'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onCancel(expense)}
+                  disabled={Boolean(actionId)}
+                  className="inline-flex items-center justify-center gap-2 rounded-lg border border-rose-200 bg-white px-3 py-2 text-xs font-semibold text-rose-700 disabled:opacity-60 hover:bg-rose-50 dark:border-rose-900/70 dark:bg-stone-950 dark:text-rose-300 dark:hover:bg-rose-950/30"
+                >
+                  <XCircle size={14} />
+                  {actionId === cancelActionId ? 'İşleniyor...' : 'İptal et'}
+                </button>
+              </div>
+            </div>
+          )
+        })}
+      </CardContent>
+    </SurfaceCard>
+  )
+}
+
 export function CardsPage() {
   const [transactionCard, setTransactionCard] = useState<Card | null>(null)
   const [transactionType, setTransactionType] = useState<'in' | 'out'>('in')
@@ -936,6 +1084,67 @@ export function CardsPage() {
   const [debtPaymentError, setDebtPaymentError] = useState('')
   const [debtPaymentSaving, setDebtPaymentSaving] = useState(false)
   const [allCards, setAllCards] = useState<Card[]>([])
+  const [provisions, setProvisions] = useState<CardExpense[]>([])
+  const [provisionsLoading, setProvisionsLoading] = useState(false)
+  const [provisionError, setProvisionError] = useState('')
+  const [provisionActionId, setProvisionActionId] = useState<string | null>(null)
+
+  const loadProvisions = useCallback(async () => {
+    setProvisionsLoading(true)
+    setProvisionError('')
+    const { data, error } = await supabase
+      .from('card_expenses')
+      .select('*')
+      .eq('status', 'provision')
+      .order('spent_at', { ascending: false })
+
+    if (error) {
+      setProvisions([])
+      setProvisionError(
+        isSchemaCacheError(error)
+          ? 'Provizyon altyapısı henüz canlı veritabanında yok. Migration uygulanınca bu liste açılacak.'
+          : error.message,
+      )
+    } else {
+      setProvisions((data ?? []) as CardExpense[])
+    }
+    setProvisionsLoading(false)
+  }, [])
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void loadProvisions()
+  }, [loadProvisions])
+
+  async function refreshCardsAndProvisions(reload: () => Promise<void>) {
+    await Promise.all([reload(), loadProvisions()])
+  }
+
+  async function handleProvisionAction(
+    expense: CardExpense,
+    action: 'post' | 'cancel',
+    reload: () => Promise<void>,
+    setError: (message: string) => void,
+  ) {
+    setProvisionActionId(`${action}-${expense.id}`)
+    setError('')
+    setProvisionError('')
+
+    const rpcName = action === 'post' ? 'post_card_provision' : 'cancel_card_provision'
+    const { error } = await supabase.rpc(rpcName, { p_expense_id: expense.id })
+
+    if (error) {
+      const message = isSchemaCacheError(error)
+        ? 'Provizyon altyapısı canlı veritabanına uygulanmamış. Migration çalışınca bu işlem açılacak.'
+        : error.message
+      setError(message)
+      setProvisionActionId(null)
+      return
+    }
+
+    await refreshCardsAndProvisions(reload)
+    setProvisionActionId(null)
+  }
 
   function openTransaction(card: Card, reload: () => Promise<void>) {
     setTransactionCard(card)
@@ -996,7 +1205,7 @@ export function CardsPage() {
     setDebtPaymentCard(card)
     setReloadCards(() => reload)
     setAllCards(cards.filter((c) => c.card_type === 'banka_karti' && c.id !== card.id))
-    setDebtPaymentAmount(String(card.statement_debt_amount || card.debt_amount || ''))
+    setDebtPaymentAmount(String(card.statement_debt_amount || cardPayableDebt(card) || ''))
     setDebtPaymentSourceCard('')
     setDebtPaymentError('')
   }
@@ -1027,8 +1236,14 @@ export function CardsPage() {
       return
     }
 
-    if (amount > debtPaymentCard.debt_amount) {
-      setDebtPaymentError('Ödeme tutarı güncel borçtan büyük olamaz.')
+    const payableDebt = cardPayableDebt(debtPaymentCard)
+    if (payableDebt <= 0) {
+      setDebtPaymentError('Ödenebilir kesinleşmiş borç yok. Provizyon kesinleşince ödeme yapabilirsin.')
+      return
+    }
+
+    if (amount > payableDebt) {
+      setDebtPaymentError('Ödeme tutarı provizyon hariç kesinleşmiş borçtan büyük olamaz.')
       return
     }
 
@@ -1112,7 +1327,18 @@ export function CardsPage() {
         renderBeforeList={({ loading, rows, reload, setError }) =>
           !loading ? (
             <div className="flex flex-col gap-3">
-              <QuickExpensePanel rows={rows as Card[]} reload={reload} setError={setError} />
+              <QuickExpensePanel rows={rows as Card[]} reload={() => refreshCardsAndProvisions(reload)} setError={setError} />
+              {provisionError ? (
+                <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">{provisionError}</p>
+              ) : null}
+              <ProvisionPanel
+                rows={rows as Card[]}
+                provisions={provisions}
+                loading={provisionsLoading}
+                actionId={provisionActionId}
+                onPost={(expense) => void handleProvisionAction(expense, 'post', reload, setError)}
+                onCancel={(expense) => void handleProvisionAction(expense, 'cancel', reload, setError)}
+              />
               <LegacyInstallmentPanel rows={rows as Card[]} reload={reload} setError={setError} />
               <CreditCardOverview rows={rows as Card[]} />
             </div>
@@ -1126,9 +1352,9 @@ export function CardsPage() {
           limit_group_name: row?.limit_group_name ?? '',
           current_balance: row?.current_balance ?? 0,
           credit_limit: row?.credit_limit ?? 0,
-          debt_amount: row?.debt_amount ?? 0,
           statement_debt_amount: row?.statement_debt_amount ?? row?.debt_amount ?? 0,
           current_period_spending: row?.current_period_spending ?? 0,
+          provision_amount: row?.provision_amount ?? 0,
           statement_day: row?.statement_day ?? '',
           due_day: row?.due_day ?? '',
           note: row?.note ?? '',
@@ -1136,6 +1362,9 @@ export function CardsPage() {
         mapForm={(formData, userId) => {
           const cardType = formData.get('card_type') as Card['card_type']
           const isCreditCard = cardType === 'kredi_karti'
+          const statementDebt = isCreditCard ? parseNumber(formData.get('statement_debt_amount')) : 0
+          const currentPeriod = isCreditCard ? parseNumber(formData.get('current_period_spending')) : 0
+          const provisionAmount = isCreditCard ? parseNumber(formData.get('provision_amount')) : 0
 
           return {
             user_id: userId,
@@ -1146,9 +1375,10 @@ export function CardsPage() {
             limit_group_name: isCreditCard ? String(formData.get('limit_group_name') ?? '').trim() || null : null,
             current_balance: isCreditCard ? 0 : parseNumber(formData.get('current_balance')),
             credit_limit: isCreditCard ? parseNumber(formData.get('credit_limit')) : 0,
-            debt_amount: isCreditCard ? parseNumber(formData.get('debt_amount')) : 0,
-            statement_debt_amount: isCreditCard ? parseNumber(formData.get('statement_debt_amount')) : 0,
-            current_period_spending: isCreditCard ? parseNumber(formData.get('current_period_spending')) : 0,
+            debt_amount: isCreditCard ? cardSplitTotal(statementDebt, currentPeriod, provisionAmount) : 0,
+            statement_debt_amount: statementDebt,
+            current_period_spending: currentPeriod,
+            provision_amount: provisionAmount,
             statement_day: isCreditCard ? optionalDay(formData.get('statement_day')) : null,
             due_day: isCreditCard ? optionalDay(formData.get('due_day')) : null,
             note: String(formData.get('note') ?? '') || null,
@@ -1162,9 +1392,10 @@ export function CardsPage() {
                 row.holder_name ? `Kart sahibi: ${row.holder_name}` : 'Kart sahibi: -',
                 row.limit_group_name ? `Ortak limit: ${row.limit_group_name}` : 'Ortak limit: -',
                 `Limit: ${formatCurrency(row.credit_limit)}`,
-                `Güncel borç: ${formatCurrency(row.debt_amount)}`,
-                `Dönem borcu: ${formatCurrency(row.statement_debt_amount)}`,
-                `Dönem içi: ${formatCurrency(row.current_period_spending)}`,
+                `Toplam borç: ${formatCurrency(row.debt_amount)}`,
+                `Ekstre borcu: ${formatCurrency(row.statement_debt_amount)}`,
+                `Dönem içi kesinleşen: ${formatCurrency(row.current_period_spending)}`,
+                `Provizyon: ${formatCurrency(cardProvisionAmount(row))}`,
                 `Ekstre: ${row.statement_day ? `Her ayın ${row.statement_day}. günü` : '-'}`,
                 `Son ödeme: ${row.due_day ? `Her ayın ${row.due_day}. günü` : '-'}`,
               ]
@@ -1187,9 +1418,10 @@ export function CardsPage() {
                 />
               </div>
               {stats.isShared ? (
-                <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-stone-600 dark:text-stone-300">
+                <div className="mt-2 grid grid-cols-1 gap-2 text-xs text-stone-600 dark:text-stone-300 min-[430px]:grid-cols-3">
                   <span>Grup borcu: {formatCurrency(stats.totalDebt)}</span>
-                  <span className="text-right">Kalan limit: {formatCurrency(stats.availableLimit)}</span>
+                  <span>Provizyon: {formatCurrency(stats.provisionAmount)}</span>
+                  <span>Kalan limit: {formatCurrency(stats.availableLimit)}</span>
                 </div>
               ) : null}
             </div>
@@ -1287,14 +1519,16 @@ export function CardsPage() {
         <form onSubmit={handleDebtPaymentSubmit} className="space-y-4">
           <div className="rounded-lg bg-stone-50 p-3 text-sm text-stone-600 dark:bg-stone-900 dark:text-stone-300">
             <p className="font-semibold text-stone-950 dark:text-stone-50">{debtPaymentCard?.card_name}</p>
-            <p>Mevcut borç: {formatCurrency(debtPaymentCard?.debt_amount ?? 0)}</p>
+            <p>Ekstre borcu: {formatCurrency(debtPaymentCard?.statement_debt_amount ?? 0)}</p>
+            <p>Toplam borç: {formatCurrency(debtPaymentCard?.debt_amount ?? 0)}</p>
+            <p>Ödenebilir: {formatCurrency(debtPaymentCard ? cardPayableDebt(debtPaymentCard) : 0)}</p>
           </div>
           <label className="block text-sm font-medium text-stone-700 dark:text-stone-200">
             Ödeme tutarı
             <input
               required
               min="0"
-              max={debtPaymentCard?.debt_amount ?? undefined}
+              max={debtPaymentCard ? cardPayableDebt(debtPaymentCard) : undefined}
               step="0.01"
               type="number"
               value={debtPaymentAmount}

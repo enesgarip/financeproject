@@ -125,6 +125,10 @@ function moneyDiffers(left: number, right: number) {
   return Math.abs(roundMoney(left) - roundMoney(right)) > 0.01
 }
 
+function cardProvisionAmount(card: Pick<FinanceCard, 'provision_amount'>) {
+  return card.provision_amount ?? 0
+}
+
 function totalCreditLimit(cards: FinanceCard[]) {
   const limitsByGroup = new Map<string, number>()
 
@@ -362,7 +366,9 @@ function buildFocusActions(data: DashboardData, cashFlow: CashFlowSummary, credi
     const remaining = daysUntil(new Date(item.sortTime))
     return remaining !== null && remaining >= 0 && remaining <= 3
   }).length
-  const cardSplitIssues = creditCards.filter((card) => card.statement_debt_amount + card.current_period_spending > card.debt_amount + 0.01)
+  const cardSplitIssues = creditCards.filter(
+    (card) => card.statement_debt_amount + card.current_period_spending + cardProvisionAmount(card) > card.debt_amount + 0.01,
+  )
   const plannedLoanIds = new Set(data.loanInstallments.map((installment) => installment.loan_id))
   const loansWithoutPlan = data.loans.filter((loan) => loan.status === 'active' && loan.remaining_installments > 0 && !plannedLoanIds.has(loan.id))
   const loanInstallmentsByLoan = new Map<string, LoanInstallment[]>()

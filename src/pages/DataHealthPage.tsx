@@ -1,6 +1,7 @@
-import { Activity, AlertTriangle, CheckCircle2, RefreshCw, ShieldCheck, Undo2, Wrench } from 'lucide-react'
+import { Activity, AlertTriangle, CheckCircle2, DatabaseZap, RefreshCw, ShieldCheck, Trash2, Undo2, Wrench } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { SimpleModal } from '../components/SimpleModal'
 import { Badge } from '../components/ui/badge'
 import { Card as SurfaceCard, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { supabase } from '../lib/supabase'
@@ -79,6 +80,7 @@ type HealthIssue = {
     updates?: Record<string, string | number | null>
     statementDebt?: number
     currentPeriod?: number
+    provisionAmount?: number
     remainingAmount?: number
     remainingInstallments?: number
     loanStatus?: Loan['status']
@@ -152,6 +154,12 @@ function moneyDiffers(left: number, right: number) {
   return Math.abs(roundMoney(left) - roundMoney(right)) > 0.01
 }
 
+function isSchemaCacheError(error: { code?: string; message?: string } | null | undefined) {
+  if (!error) return false
+  const message = error.message ?? ''
+  return error.code === 'PGRST202' || error.code === 'PGRST205' || message.includes('schema cache') || message.includes('Could not find the function')
+}
+
 function currentMonthStart() {
   const today = new Date()
   return dateInputValue(new Date(today.getFullYear(), today.getMonth(), 1))
@@ -190,6 +198,14 @@ function range(from: number, to: number) {
 function cardLabel(card: Card | undefined) {
   if (!card) return 'Kart bulunamadı'
   return `${card.bank_name} · ${card.card_name}`
+}
+
+function cardProvisionAmount(card: Pick<Card, 'provision_amount'>) {
+  return card.provision_amount ?? 0
+}
+
+function activeCardExpense(expense: CardExpense) {
+  return expense.status !== 'cancelled'
 }
 
 function parseLegacyPaidCount(expense: CardExpense) {
@@ -399,7 +415,8 @@ function issuePreviewDetails(issue: HealthIssue) {
     previews.push(`Başlangıç ayı: ${payload.baseMonth ? formatDate(payload.baseMonth) : 'hesaplanamadı'}`)
   } else if (issue.kind === 'cardDebtSplit') {
     previews.push(`Ekstre borcu: ${formatCurrency(payload.statementDebt ?? 0)}`)
-    previews.push(`Dönem içi harcama: ${formatCurrency(payload.currentPeriod ?? 0)}`)
+    previews.push(`Dönem içi kesinleşen: ${formatCurrency(payload.currentPeriod ?? 0)}`)
+    previews.push(`Provizyon: ${formatCurrency(payload.provisionAmount ?? 0)}`)
   } else if (issue.kind === 'loanTotals') {
     previews.push(`Kalan tutar: ${formatCurrency(payload.remainingAmount ?? 0)}`)
     previews.push(`Kalan taksit: ${payload.remainingInstallments ?? 0}`)
@@ -562,11 +579,12 @@ function buildIssues(data: HealthData): HealthIssue[] {
     const details: string[] = []
 
     if (card.card_type === 'banka_karti') {
-      if (card.credit_limit !== 0 || card.debt_amount !== 0 || card.statement_debt_amount !== 0 || card.current_period_spending !== 0) {
+      if (card.credit_limit !== 0 || card.debt_amount !== 0 || card.statement_debt_amount !== 0 || card.current_period_spending !== 0 || cardProvisionAmount(card) !== 0) {
         updates.credit_limit = 0
         updates.debt_amount = 0
         updates.statement_debt_amount = 0
         updates.current_period_spending = 0
+        updates.provision_amount = 0
         details.push('Banka kartında kredi/borç alanları 0 olmalı.')
       }
       if (card.statement_day !== null || card.due_day !== null) {
@@ -597,35 +615,41 @@ function buildIssues(data: HealthData): HealthIssue[] {
 
   for (const card of data.cards.filter((item) => item.card_type === 'kredi_karti')) {
     const statementDebt = Math.min(card.statement_debt_amount, card.debt_amount)
-    const currentPeriod = Math.min(card.current_period_spending, Math.max(0, card.debt_amount - statementDebt))
+    const provisionAmount = Math.min(cardProvisionAmount(card), Math.max(0, card.debt_amount - statementDebt))
+    const currentPeriod = Math.min(card.current_period_spending, Math.max(0, card.debt_amount - statementDebt - provisionAmount))
 
-    if (moneyDiffers(statementDebt, card.statement_debt_amount) || moneyDiffers(currentPeriod, card.current_period_spending)) {
+    if (
+      moneyDiffers(statementDebt, card.statement_debt_amount) ||
+      moneyDiffers(currentPeriod, card.current_period_spending) ||
+      moneyDiffers(provisionAmount, cardProvisionAmount(card))
+    ) {
       issues.push({
         id: `card-split-${card.id}`,
         area: 'Kartlar',
         severity: 'error',
         title: `${cardLabel(card)} borç kırılımı tutarsız`,
-        description: 'Dönem borcu ve dönem içi harcama toplamı güncel toplam borcu aşıyor.',
+        description: 'Ekstre borcu, dönem içi kesinleşen ve provizyon toplamı güncel toplam borcu aşıyor.',
         details: [
           `Güncel borç: ${formatCurrency(card.debt_amount)}`,
-          `Dönem borcu: ${formatCurrency(card.statement_debt_amount)} → ${formatCurrency(statementDebt)}`,
+          `Ekstre borcu: ${formatCurrency(card.statement_debt_amount)} → ${formatCurrency(statementDebt)}`,
           `Dönem içi: ${formatCurrency(card.current_period_spending)} → ${formatCurrency(currentPeriod)}`,
+          `Provizyon: ${formatCurrency(cardProvisionAmount(card))} → ${formatCurrency(provisionAmount)}`,
         ],
         fixable: true,
         fixLabel: 'Borç kırılımını düzelt',
         kind: 'cardDebtSplit',
-        payload: { cardId: card.id, statementDebt, currentPeriod },
+        payload: { cardId: card.id, statementDebt, currentPeriod, provisionAmount },
       })
     }
 
-    const splitTotal = roundMoney(card.statement_debt_amount + card.current_period_spending)
+    const splitTotal = roundMoney(card.statement_debt_amount + card.current_period_spending + cardProvisionAmount(card))
     if (card.debt_amount > splitTotal + 0.01) {
       issues.push({
         id: `card-unclassified-debt-${card.id}`,
         area: 'Kartlar',
         severity: 'info',
         title: `${cardLabel(card)} borcunun bir kısmı sınıflanmamış`,
-        description: 'Toplam borç, dönem borcu ve dönem içi harcama toplamından yüksek görünüyor.',
+        description: 'Toplam borç, ekstre borcu, dönem içi kesinleşen ve provizyon toplamından yüksek görünüyor.',
         details: [`Toplam borç: ${formatCurrency(card.debt_amount)}`, `Sınıflanan: ${formatCurrency(splitTotal)}`],
         fixable: false,
         kind: 'manual',
@@ -740,19 +764,19 @@ function buildIssues(data: HealthData): HealthIssue[] {
     })
   }
 
-  for (const expense of data.cardExpenses) {
+  for (const expense of data.cardExpenses.filter(activeCardExpense)) {
     const card = cardsById.get(expense.card_id)
     const rows = installmentsByExpense.get(expense.id) ?? []
     const expectedInstallmentAmount =
       expense.installment_count <= 1 ? expense.amount : roundMoney(expense.amount / Math.max(1, expense.installment_count))
 
-    if (card && card.card_type !== 'kredi_karti') {
+    if (card && card.card_type !== 'kredi_karti' && (expense.installment_count > 1 || rows.length > 0)) {
       issues.push({
         id: `card-expense-bank-card-${expense.id}`,
         area: 'Kartlar',
         severity: 'warning',
         title: `${expense.description} banka kartına bağlı`,
-        description: 'Kart harcaması/taksit planı kredi kartı üzerinde olmalı; banka kartına bağlı kayıt analizleri şaşırtabilir.',
+        description: 'Taksit planı kredi kartı üzerinde olmalı; banka kartına bağlı taksit kayıtları analizleri şaşırtabilir.',
         details: [`Kart: ${cardLabel(card)}`],
         fixable: false,
         kind: 'manual',
@@ -901,7 +925,7 @@ function buildIssues(data: HealthData): HealthIssue[] {
     }
   }
 
-  for (const expense of data.cardExpenses.filter((item) => item.installment_count > 1)) {
+  for (const expense of data.cardExpenses.filter((item) => item.status === 'posted' && item.installment_count > 1)) {
     const rows = installmentsByExpense.get(expense.id) ?? []
     const existingNos = new Set(rows.map((row) => row.installment_no))
     const paidBefore = parseLegacyPaidCount(expense)
@@ -1434,6 +1458,9 @@ export function DataHealthPage() {
   const [undoing, setUndoing] = useState(false)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
+  const [resetOpen, setResetOpen] = useState(false)
+  const [resetConfirm, setResetConfirm] = useState('')
+  const [resetting, setResetting] = useState(false)
 
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -1551,6 +1578,7 @@ export function DataHealthPage() {
         .update({
           statement_debt_amount: payload.statementDebt ?? 0,
           current_period_spending: payload.currentPeriod ?? 0,
+          provision_amount: payload.provisionAmount ?? 0,
           updated_at: new Date().toISOString(),
         })
         .eq('id', payload.cardId)
@@ -1776,7 +1804,40 @@ export function DataHealthPage() {
     }
   }
 
+  async function handleResetAllData(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const normalizedConfirm = resetConfirm.trim().toLocaleUpperCase('tr-TR')
+    if (normalizedConfirm !== 'SİL' && normalizedConfirm !== 'SIL') {
+      setError('Tüm veriyi silmek için onay alanına SİL yazmalısın.')
+      return
+    }
+
+    setResetting(true)
+    setError('')
+    setMessage('')
+
+    const { error: resetError } = await supabase.rpc('reset_user_finance_data', {})
+    if (resetError) {
+      setError(
+        isSchemaCacheError(resetError)
+          ? 'Sıfırlama altyapısı canlı veritabanına uygulanmamış. Migration çalışınca bu işlem açılacak.'
+          : resetError.message,
+      )
+      setResetting(false)
+      return
+    }
+
+    setUndoStack([])
+    setData(emptyData)
+    setResetConfirm('')
+    setResetOpen(false)
+    setResetting(false)
+    await loadData()
+    setMessage('Tüm finans verisi silindi. Sıfırdan veri girebilirsin.')
+  }
+
   return (
+    <>
     <section className="space-y-4">
       <SurfaceCard className="border-0 shadow-sm ring-1 ring-stone-200/80 dark:ring-stone-800">
         <CardHeader className="pb-2">
@@ -1827,6 +1888,18 @@ export function DataHealthPage() {
                 {undoing ? 'Geri alınıyor...' : 'Son düzeltmeyi geri al'}
               </button>
             ) : null}
+            <button
+              type="button"
+              onClick={() => {
+                setResetConfirm('')
+                setResetOpen(true)
+              }}
+              disabled={loading || Boolean(fixingId) || undoing || resetting}
+              className="inline-flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-700 shadow-sm disabled:opacity-60 dark:border-rose-900/70 dark:bg-rose-950/30 dark:text-rose-200"
+            >
+              <DatabaseZap size={15} />
+              Tüm veriyi sil
+            </button>
           </div>
           {message ? <p className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-200">{message}</p> : null}
           {error ? <p className="rounded-lg bg-rose-50 p-3 text-sm text-rose-700 dark:bg-rose-950/40 dark:text-rose-200">{error}</p> : null}
@@ -1903,6 +1976,40 @@ export function DataHealthPage() {
         </div>
       )}
     </section>
+
+    <SimpleModal title="Tüm veriyi sil" open={resetOpen} onClose={() => setResetOpen(false)}>
+      <form onSubmit={handleResetAllData} className="space-y-4">
+        <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800 dark:border-rose-900/70 dark:bg-rose-950/30 dark:text-rose-100">
+          <div className="flex items-start gap-3">
+            <Trash2 className="mt-0.5 size-5 shrink-0" />
+            <div>
+              <p className="font-bold">Bu işlem geri alınamaz.</p>
+              <p className="mt-1">
+                Varlıklar, kartlar, harcamalar, ekstre arşivi, krediler, borç/alacaklar, ödemeler, bütçeler, hedefler,
+                maaş geçmişi ve işlem geçmişi silinir.
+              </p>
+            </div>
+          </div>
+        </div>
+        <label className="block text-sm font-medium text-stone-700 dark:text-stone-200">
+          Onay için SİL yaz
+          <input
+            value={resetConfirm}
+            onChange={(event) => setResetConfirm(event.target.value)}
+            className="mt-1 w-full rounded-lg border border-stone-200 px-3 py-3 outline-none focus:border-rose-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+          />
+        </label>
+        <button
+          type="submit"
+          disabled={resetting}
+          className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-rose-700 px-4 py-3.5 text-sm font-semibold text-white shadow-sm disabled:opacity-60 hover:bg-rose-800"
+        >
+          <DatabaseZap size={16} />
+          {resetting ? 'Siliniyor...' : 'Tüm veriyi kalıcı olarak sil'}
+        </button>
+      </form>
+    </SimpleModal>
+    </>
   )
 }
 
