@@ -8,7 +8,7 @@ import { Card as SurfaceCard, CardContent, CardHeader, CardTitle } from '../comp
 import { Progress } from '../components/ui/progress'
 import { supabase } from '../lib/supabase'
 import type { Card, CardExpense, CardExpenseStatus, InsertFor } from '../types/database'
-import { expenseCategoryOptions } from '../utils/categories'
+import { expenseCategoryOptions, inferExpenseCategory } from '../utils/categories'
 import { getCardStatementPeriod } from '../utils/cardStatement'
 import { dateInputValue, formatDate } from '../utils/date'
 import { formatCurrency, parseNumber } from '../utils/formatCurrency'
@@ -374,6 +374,7 @@ function QuickExpensePanel({
   const [description, setDescription] = useState('')
   const [spentAt, setSpentAt] = useState(dateInputValue(new Date()))
   const [category, setCategory] = useState(expenseCategoryOptions[0]?.value ?? 'Diğer')
+  const [categoryTouched, setCategoryTouched] = useState(false)
   const [paymentMode, setPaymentMode] = useState<'cash' | 'installment'>('cash')
   const [installmentCount, setInstallmentCount] = useState('1')
   const [expenseStatus, setExpenseStatus] = useState<CardExpenseStatus>('posted')
@@ -386,6 +387,7 @@ function QuickExpensePanel({
   const parsedAmount = parseNumber(amount)
   const parsedInstallmentCount = canUseInstallments && paymentMode === 'installment' ? Math.max(2, Math.min(36, Number(installmentCount) || 2)) : 1
   const trimmedDescription = description.trim()
+  const suggestedCategory = useMemo(() => inferExpenseCategory(description), [description])
   const statementPreview = useMemo(() => getCardStatementPeriod(selectedCard, spentAt), [selectedCard, spentAt])
   const firstPeriodAmount = parsedInstallmentCount > 1 ? moneyShare(parsedAmount, parsedInstallmentCount) : parsedAmount
   const debitPreview = Math.max(0, (selectedCard?.current_balance ?? 0) - parsedAmount)
@@ -445,6 +447,7 @@ function QuickExpensePanel({
     setDescription('')
     setSpentAt(dateInputValue(new Date()))
     setCategory(expenseCategoryOptions[0]?.value ?? 'Diğer')
+    setCategoryTouched(false)
     setPaymentMode('cash')
     setInstallmentCount('1')
     setExpenseStatus('posted')
@@ -516,7 +519,12 @@ function QuickExpensePanel({
               <input
                 value={description}
                 onChange={(event) => {
-                  setDescription(event.target.value)
+                  const nextDescription = event.target.value
+                  setDescription(nextDescription)
+                  if (!categoryTouched) {
+                    const inferredCategory = inferExpenseCategory(nextDescription)
+                    if (inferredCategory) setCategory(inferredCategory)
+                  }
                   setLocalError('')
                 }}
                 type="text"
@@ -547,6 +555,7 @@ function QuickExpensePanel({
                 value={category}
                 onChange={(event) => {
                   setCategory(event.target.value)
+                  setCategoryTouched(true)
                   setLocalError('')
                 }}
                 className="mt-1 w-full min-w-0 rounded-lg border border-stone-200 bg-white px-3 py-2.5 outline-none focus:border-emerald-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
@@ -590,6 +599,18 @@ function QuickExpensePanel({
               </select>
             </label>
           </div>
+          {suggestedCategory && suggestedCategory !== category ? (
+            <button
+              type="button"
+              onClick={() => {
+                setCategory(suggestedCategory)
+                setCategoryTouched(true)
+              }}
+              className="inline-flex w-fit items-center rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-800 ring-1 ring-emerald-200 hover:bg-emerald-100 dark:bg-emerald-950/30 dark:text-emerald-200 dark:ring-emerald-900/70"
+            >
+              Kategori önerisi: {suggestedCategory}
+            </button>
+          ) : null}
           {canUseInstallments && paymentMode === 'installment' ? (
             <label className="block text-sm font-medium text-stone-700 dark:text-stone-200">
               Taksit sayısı
@@ -663,6 +684,7 @@ function LegacyInstallmentPanel({
   const [installmentAmount, setInstallmentAmount] = useState('')
   const [description, setDescription] = useState('')
   const [category, setCategory] = useState(expenseCategoryOptions[0]?.value ?? 'Diğer')
+  const [categoryTouched, setCategoryTouched] = useState(false)
   const [totalInstallments, setTotalInstallments] = useState('9')
   const [paidInstallments, setPaidInstallments] = useState('3')
   const [nextDueMonth, setNextDueMonth] = useState(monthInputValue())
@@ -679,6 +701,7 @@ function LegacyInstallmentPanel({
   const remainingCount = Math.max(1, parsedTotalInstallments - parsedPaidInstallments)
   const remainingAmount = Number((parsedInstallmentAmount * remainingCount).toFixed(2))
   const totalAmount = Number((parsedInstallmentAmount * parsedTotalInstallments).toFixed(2))
+  const suggestedCategory = useMemo(() => inferExpenseCategory(description), [description])
   const firstDueIsCurrentMonth = nextDueMonth === monthInputValue()
   const canSubmitLegacyInstallment =
     Boolean(selectedCard) &&
@@ -814,6 +837,7 @@ function LegacyInstallmentPanel({
     setInstallmentAmount('')
     setDescription('')
     setCategory(expenseCategoryOptions[0]?.value ?? 'Diğer')
+    setCategoryTouched(false)
     setTotalInstallments('9')
     setPaidInstallments('3')
     setNextDueMonth(monthInputValue())
@@ -877,7 +901,12 @@ function LegacyInstallmentPanel({
               <input
                 value={description}
                 onChange={(event) => {
-                  setDescription(event.target.value)
+                  const nextDescription = event.target.value
+                  setDescription(nextDescription)
+                  if (!categoryTouched) {
+                    const inferredCategory = inferExpenseCategory(nextDescription)
+                    if (inferredCategory) setCategory(inferredCategory)
+                  }
                   setLocalError('')
                 }}
                 type="text"
@@ -940,6 +969,7 @@ function LegacyInstallmentPanel({
                 value={category}
                 onChange={(event) => {
                   setCategory(event.target.value)
+                  setCategoryTouched(true)
                   setLocalError('')
                 }}
                 className="mt-1 w-full min-w-0 rounded-lg border border-stone-200 bg-white px-3 py-2.5 outline-none focus:border-emerald-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
@@ -952,6 +982,18 @@ function LegacyInstallmentPanel({
               </select>
             </label>
           </div>
+          {suggestedCategory && suggestedCategory !== category ? (
+            <button
+              type="button"
+              onClick={() => {
+                setCategory(suggestedCategory)
+                setCategoryTouched(true)
+              }}
+              className="inline-flex w-fit items-center rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-800 ring-1 ring-emerald-200 hover:bg-emerald-100 dark:bg-emerald-950/30 dark:text-emerald-200 dark:ring-emerald-900/70"
+            >
+              Kategori önerisi: {suggestedCategory}
+            </button>
+          ) : null}
           <label className="flex items-start gap-2 rounded-lg bg-amber-50 px-3 py-2.5 text-sm font-medium text-amber-950 dark:bg-amber-950/30 dark:text-amber-100">
             <input
               checked={addRemainingToDebt}

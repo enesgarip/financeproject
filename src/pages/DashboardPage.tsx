@@ -69,6 +69,8 @@ type UpcomingItem = {
   id: string
   title: string
   value: string
+  amount: number
+  kind: 'payment' | 'card' | 'loan' | 'debt'
   date: string
   sortTime: number
 }
@@ -371,6 +373,18 @@ function buildFocusActions(data: DashboardData, cashFlow: CashFlowSummary, credi
   const cardSplitIssues = creditCards.filter(
     (card) => card.statement_debt_amount + card.current_period_spending + cardProvisionAmount(card) > card.debt_amount + 0.01,
   )
+  const unclassifiedCardDebts = creditCards.filter((card) => {
+    const classifiedDebt = card.statement_debt_amount + card.current_period_spending + cardProvisionAmount(card)
+    return card.debt_amount > classifiedDebt + 0.01
+  })
+  const cardsWithProvisions = creditCards.filter((card) => cardProvisionAmount(card) > 0)
+  const totalProvision = sum(cardsWithProvisions, cardProvisionAmount)
+  const statementReadyCards = creditCards.filter((card) => {
+    if (card.current_period_spending <= 0 || !card.statement_day) return false
+    const statementDate = monthlyOccurrenceDate(card.statement_day)
+    const remaining = daysUntil(statementDate)
+    return remaining !== null && remaining <= 0
+  })
   const plannedLoanIds = new Set(data.loanInstallments.map((installment) => installment.loan_id))
   const loansWithoutPlan = data.loans.filter((loan) => loan.status === 'active' && loan.remaining_installments > 0 && !plannedLoanIds.has(loan.id))
   const loanInstallmentsByLoan = new Map<string, LoanInstallment[]>()
@@ -442,11 +456,37 @@ function buildFocusActions(data: DashboardData, cashFlow: CashFlowSummary, credi
     })
   }
 
-  if (cardSplitIssues.length + loanSummaryDrifts.length > 0) {
+  if (totalProvision > 0) {
+    actions.push({
+      id: 'card-provisions',
+      title: `${formatCurrency(totalProvision)} provizyon bekliyor`,
+      description: 'Kesinleşenleri güncel borca aktar, iptal olanları limitten çıkar.',
+      to: '/kartlar',
+      cta: 'Provizyonları aç',
+      tone: 'amber',
+      icon: 'card',
+      priority: 4.5,
+    })
+  }
+
+  if (statementReadyCards.length > 0) {
+    actions.push({
+      id: 'statement-ready',
+      title: `${statementReadyCards.length} kartta ekstre kesilebilir`,
+      description: 'Dönem içi kesinleşen harcamalar ekstre borcuna aktarılmaya hazır görünüyor.',
+      to: '/kartlar',
+      cta: 'Ekstreleri kontrol et',
+      tone: 'indigo',
+      icon: 'calendar',
+      priority: 4.7,
+    })
+  }
+
+  if (cardSplitIssues.length + unclassifiedCardDebts.length + loanSummaryDrifts.length > 0) {
     actions.push({
       id: 'data-health',
       title: 'Veri tutarlılığı düzeltmesi var',
-      description: `${cardSplitIssues.length + loanSummaryDrifts.length} kayıt otomatik kontrolle düzeltilebilir görünüyor.`,
+      description: `${cardSplitIssues.length + unclassifiedCardDebts.length + loanSummaryDrifts.length} kayıt otomatik kontrolle düzeltilebilir görünüyor.`,
       to: '/veri-sagligi',
       cta: 'Kontrol et',
       tone: 'amber',
@@ -518,7 +558,7 @@ function buildFocusActions(data: DashboardData, cashFlow: CashFlowSummary, credi
     priority: 90,
   })
 
-  return actions.sort((a, b) => a.priority - b.priority).slice(0, 4)
+  return actions.sort((a, b) => a.priority - b.priority)
 }
 
 export function DashboardPage() {
@@ -652,6 +692,8 @@ export function DashboardPage() {
         id: `payment-${payment.id}`,
         title: `Ödeme · ${payment.title}`,
         value: formatCurrency(payment.amount),
+        amount: payment.amount,
+        kind: 'payment' as const,
         date: formatDate(payment.due_date),
         sortTime: new Date(`${payment.due_date}T00:00:00`).getTime(),
       }))
@@ -667,6 +709,8 @@ export function DashboardPage() {
         id: `card-${card.id}-${dateInputValue(dueDate)}`,
         title: `Kart · ${card.bank_name} · ${card.card_name}`,
         value: formatCurrency(cardMonthlyPaymentAmount(card)),
+        amount: cardMonthlyPaymentAmount(card),
+        kind: 'card' as const,
         date: formatMonthDay(dueDate),
         sortTime: dueDate?.getTime() ?? 0,
       }))
@@ -679,6 +723,8 @@ export function DashboardPage() {
           id: `loan-installment-${installment.id}`,
           title: loan ? `Kredi · ${loan.bank_name} · ${loan.loan_name}` : 'Kredi taksidi',
           value: formatCurrency(installment.amount),
+          amount: installment.amount,
+          kind: 'loan' as const,
           date: formatDate(installment.due_date),
           sortTime: new Date(`${installment.due_date}T00:00:00`).getTime(),
         }
@@ -690,6 +736,8 @@ export function DashboardPage() {
         id: `debt-${debt.id}`,
         title: `Borç · ${debt.person_name}`,
         value: formatCurrency(debt.estimated_value_try),
+        amount: debt.estimated_value_try,
+        kind: 'debt' as const,
         date: formatDate(debt.due_date),
         sortTime: new Date(`${debt.due_date}T00:00:00`).getTime(),
       }))
@@ -706,13 +754,14 @@ export function DashboardPage() {
         id: `loan-${loan.id}-${dateInputValue(dueDate)}`,
         title: `Kredi · ${loan.bank_name} · ${loan.loan_name}`,
         value: formatCurrency(loan.monthly_payment),
+        amount: loan.monthly_payment,
+        kind: 'loan' as const,
         date: formatMonthDay(dueDate),
         sortTime: dueDate?.getTime() ?? 0,
       }))
 
     return [...manualPayments, ...creditCards, ...loanInstallments, ...personalDebts, ...legacyLoanInstallments]
       .sort((a, b) => a.sortTime - b.sortTime)
-      .slice(0, 10)
   }, [data.cards, data.debts, data.loanInstallments, data.loans, data.payments])
 
   const insights = useMemo(
@@ -775,6 +824,10 @@ export function DashboardPage() {
           loanDebt={summary.totalLoanDebt}
           personalDebt={summary.totalPersonalDebts}
         />
+      </div>
+
+      <div className="min-w-0 lg:col-span-12">
+        <CashFlowCalendarPanel items={upcomingItems} cashFlow={summary.cashFlow} />
       </div>
 
       <div className="min-w-0 lg:col-span-7">
@@ -891,9 +944,12 @@ function WelcomeMetric({ label, value, tone = 'neutral' }: { label: string; valu
 }
 
 function FocusActionPanel({ actions, cashFlow }: { actions: FocusAction[]; cashFlow: CashFlowSummary }) {
+  const [showAll, setShowAll] = useState(false)
   const primaryAction = actions[0]
   const cashIsPositive = cashFlow.projectedCash >= 0
   const statusLabel = primaryAction.priority <= 7 ? 'Aksiyon gerekli' : 'Takip temiz'
+  const visibleActions = showAll ? actions : actions.slice(0, 4)
+  const hiddenCount = Math.max(0, actions.length - 4)
 
   return (
     <Card className="border-0 bg-white py-0 shadow-sm ring-1 ring-stone-200/80 dark:bg-stone-950 dark:ring-stone-800">
@@ -926,10 +982,23 @@ function FocusActionPanel({ actions, cashFlow }: { actions: FocusAction[]; cashF
             </div>
           </div>
 
-          <div className="grid gap-2 min-[720px]:grid-cols-2">
-            {actions.map((action) => (
-              <FocusActionCard key={action.id} action={action} />
-            ))}
+          <div className="min-w-0">
+            <div className="grid gap-2 min-[720px]:grid-cols-2">
+              {visibleActions.map((action) => (
+                <FocusActionCard key={action.id} action={action} />
+              ))}
+            </div>
+            {hiddenCount > 0 ? (
+              <button
+                type="button"
+                onClick={() => setShowAll((current) => !current)}
+                aria-expanded={showAll}
+                className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-stone-200 bg-stone-50 px-3 py-2 text-xs font-black text-stone-700 shadow-sm hover:bg-stone-100 dark:border-stone-800 dark:bg-stone-900 dark:text-stone-200 dark:hover:bg-stone-800"
+              >
+                {showAll ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+                {showAll ? 'Aksiyonları daralt' : `Tüm aksiyonları göster (${actions.length})`}
+              </button>
+            ) : null}
           </div>
         </div>
       </CardContent>
@@ -1073,6 +1142,125 @@ function CashFlowPanel({ cashFlow }: { cashFlow: CashFlowSummary }) {
             {formatCurrency(cashFlow.netFlow)}
           </p>
         </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+type CashFlowCalendarGroup = {
+  dayKey: string
+  dateLabel: string
+  amount: number
+  count: number
+  kinds: Set<UpcomingItem['kind']>
+  cashAfter: number
+  items: UpcomingItem[]
+}
+
+function buildCashFlowCalendarGroups(items: UpcomingItem[], startingCash: number): CashFlowCalendarGroup[] {
+  const groups = new Map<string, Omit<CashFlowCalendarGroup, 'cashAfter'>>()
+
+  for (const item of items) {
+    const dayKey = new Date(item.sortTime).toLocaleDateString('sv-SE')
+    const current = groups.get(dayKey)
+    const nextItems = [...(current?.items ?? []), item]
+    groups.set(dayKey, {
+      dayKey,
+      dateLabel: formatDate(dayKey),
+      amount: roundMoney((current?.amount ?? 0) + item.amount),
+      count: nextItems.length,
+      kinds: new Set([...(current?.kinds ?? []), item.kind]),
+      items: nextItems,
+    })
+  }
+
+  let runningCash = startingCash
+  return Array.from(groups.values())
+    .sort((a, b) => a.dayKey.localeCompare(b.dayKey))
+    .map((group) => {
+      runningCash = roundMoney(runningCash - group.amount)
+      return { ...group, cashAfter: runningCash }
+    })
+}
+
+function kindLabel(kind: UpcomingItem['kind']) {
+  if (kind === 'payment') return 'Ödeme'
+  if (kind === 'card') return 'Kart'
+  if (kind === 'loan') return 'Kredi'
+  return 'Borç'
+}
+
+function CashFlowCalendarPanel({ items, cashFlow }: { items: UpcomingItem[]; cashFlow: CashFlowSummary }) {
+  const [showAll, setShowAll] = useState(false)
+  const groups = useMemo(() => buildCashFlowCalendarGroups(items, cashFlow.cashAssets), [cashFlow.cashAssets, items])
+  const visibleGroups = showAll ? groups : groups.slice(0, 4)
+  const totalUpcoming = sum(items, (item) => item.amount)
+  const lowestCash = groups.reduce((lowest, group) => Math.min(lowest, group.cashAfter), cashFlow.cashAssets)
+
+  return (
+    <Card className="border-0 shadow-sm ring-1 ring-stone-200/80 dark:ring-stone-800">
+      <CardHeader className="pb-2">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <CardTitle>Nakit takvimi</CardTitle>
+            <p className="mt-1 text-sm text-muted-foreground">Önümüzdeki {UPCOMING_DAYS} gün için günlük ödeme yoğunluğu.</p>
+          </div>
+          <Badge variant={lowestCash < 0 ? 'destructive' : 'secondary'}>
+            {groups.length > 0 ? `${groups.length} gün · ${formatCurrency(totalUpcoming)}` : 'Takvim temiz'}
+          </Badge>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-3 pt-0">
+        {groups.length === 0 ? (
+          <div className="flex items-center gap-3 rounded-xl bg-emerald-50 px-3 py-3 text-sm text-emerald-900 dark:bg-emerald-950/25 dark:text-emerald-100">
+            <CheckCircle2 className="size-5 shrink-0" />
+            <span>Yaklaşan ödeme yok; bu dönem nakit takvimi sakin görünüyor.</span>
+          </div>
+        ) : (
+          <>
+            <div className="grid gap-2 lg:grid-cols-2">
+              {visibleGroups.map((group) => {
+                const cashTone = group.cashAfter < 0 ? 'text-rose-700 dark:text-rose-300' : 'text-emerald-700 dark:text-emerald-300'
+
+                return (
+                  <article key={group.dayKey} className="rounded-xl border border-stone-200 bg-white/70 p-3 dark:border-stone-800 dark:bg-stone-950/45">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="font-extrabold text-foreground">{group.dateLabel}</p>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {Array.from(group.kinds).map(kindLabel).join(' · ')} · {group.count} kayıt
+                        </p>
+                      </div>
+                      <span className="shrink-0 rounded-lg bg-rose-50 px-2 py-1 text-xs font-black tabular-nums text-rose-700 dark:bg-rose-950/30 dark:text-rose-300">
+                        {formatCurrency(group.amount)}
+                      </span>
+                    </div>
+                    <div className="mt-3 grid gap-1 text-xs text-muted-foreground">
+                      {group.items.slice(0, 2).map((item) => (
+                        <span key={item.id} className="truncate">
+                          {item.title} · {item.value}
+                        </span>
+                      ))}
+                      {group.items.length > 2 ? <span>+{group.items.length - 2} kayıt daha</span> : null}
+                    </div>
+                    <p className={`mt-3 text-xs font-bold tabular-nums ${cashTone}`}>Bu gün sonrası tahmini nakit: {formatCurrency(group.cashAfter)}</p>
+                  </article>
+                )
+              })}
+            </div>
+            {groups.length > 4 ? (
+              <button
+                type="button"
+                onClick={() => setShowAll((current) => !current)}
+                aria-expanded={showAll}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-stone-200 bg-stone-50 px-3 py-2 text-xs font-black text-stone-700 shadow-sm hover:bg-stone-100 dark:border-stone-800 dark:bg-stone-900 dark:text-stone-200 dark:hover:bg-stone-800"
+              >
+                {showAll ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+                {showAll ? 'Takvimi daralt' : `Tüm günleri göster (${groups.length})`}
+              </button>
+            ) : null}
+          </>
+        )}
       </CardContent>
     </Card>
   )
