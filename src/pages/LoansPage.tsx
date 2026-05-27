@@ -1,6 +1,7 @@
 import { CalendarDays, Check, CheckCircle2, Landmark, MoreVertical, Pencil, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { CrudPage, type FormField } from '../components/CrudPage'
+import { AccountSelector } from '../components/finance/AccountSelector'
 import { SimpleModal } from '../components/SimpleModal'
 import { Badge } from '../components/ui/badge'
 import { Card as SurfaceCard, CardContent, CardHeader, CardTitle } from '../components/ui/card'
@@ -750,22 +751,12 @@ export function LoansPage() {
             <p>Planlanan tutar: {formatCurrency(installmentItem?.amount ?? 0)}</p>
             <p>Kalan taksit: {installmentLoan?.remaining_installments ?? 0}</p>
           </div>
-          <label className="block text-sm font-medium text-stone-700 dark:text-stone-200">
-            Kaynak hesap
-            <select
-              required
-              value={installmentSourceCard}
-              onChange={(event) => setInstallmentSourceCard(event.target.value)}
-              className="mt-1 w-full rounded-lg border border-stone-200 bg-white px-3 py-3 outline-none focus:border-emerald-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
-            >
-              <option value="">Hesap seç</option>
-              {bankaKartlari.map((card) => (
-                <option key={card.id} value={card.id}>
-                  {card.card_name} ({formatCurrency(card.current_balance)})
-                </option>
-              ))}
-            </select>
-          </label>
+          <AccountSelector
+            accounts={bankaKartlari}
+            value={installmentSourceCard}
+            onChange={setInstallmentSourceCard}
+            amount={installmentItem?.amount ?? 0}
+          />
           {installmentError ? <p className="rounded-lg bg-rose-50 p-3 text-sm text-rose-700">{installmentError}</p> : null}
           <button
             type="submit"

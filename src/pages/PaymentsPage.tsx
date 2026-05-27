@@ -1,4 +1,6 @@
 import { CrudPage, type FormField } from '../components/CrudPage'
+import { AccountSelector } from '../components/finance/AccountSelector'
+import { MoneyInput } from '../components/finance/MoneyInput'
 import { SimpleModal } from '../components/SimpleModal'
 import { Badge } from '../components/ui/badge'
 import { Card, CardContent } from '../components/ui/card'
@@ -338,35 +340,8 @@ export function PaymentsPage() {
             <p>Yöntem: {paymentToPay ? getPaymentMethodLabel(paymentToPay) : '-'}</p>
             <p>Vade: {paymentToPay ? formatDate(paymentToPay.due_date) : '-'}</p>
           </div>
-          <label className="block text-sm font-medium text-stone-700 dark:text-stone-200">
-            Ödenen gerçek tutar
-            <input
-              required
-              min="0"
-              step="0.01"
-              type="number"
-              inputMode="decimal"
-              value={paidAmount}
-              onChange={(event) => setPaidAmount(event.target.value)}
-              className="mt-1 w-full rounded-lg border border-stone-200 px-3 py-3 outline-none focus:border-emerald-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
-            />
-          </label>
-          <label className="block text-sm font-medium text-stone-700 dark:text-stone-200">
-            Kaynak hesap
-            <select
-              required
-              value={paymentSourceCard}
-              onChange={(event) => setPaymentSourceCard(event.target.value)}
-              className="mt-1 w-full rounded-lg border border-stone-200 bg-white px-3 py-3 outline-none focus:border-emerald-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
-            >
-              <option value="">Hesap seç</option>
-              {paymentCards.map((card) => (
-                <option key={card.id} value={card.id}>
-                  {card.card_name} ({formatCurrency(card.current_balance)})
-                </option>
-              ))}
-            </select>
-          </label>
+          <MoneyInput label="Ödenen gerçek tutar" value={paidAmount} onValueChange={setPaidAmount} required />
+          <AccountSelector accounts={paymentCards} value={paymentSourceCard} onChange={setPaymentSourceCard} amount={parseNumber(paidAmount)} />
           {paymentError ? <p className="rounded-lg bg-rose-50 p-3 text-sm text-rose-700">{paymentError}</p> : null}
           <button
             type="submit"

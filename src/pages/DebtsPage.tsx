@@ -1,4 +1,5 @@
 import { CrudPage, type FormField } from '../components/CrudPage'
+import { AccountSelector } from '../components/finance/AccountSelector'
 import { SimpleModal } from '../components/SimpleModal'
 import { Badge } from '../components/ui/badge'
 import { Card, CardContent } from '../components/ui/card'
@@ -303,22 +304,13 @@ export function DebtsPage() {
             <p>Tutar: {formatCurrency(debtToSettle?.estimated_value_try ?? 0)}</p>
             <p>{settlementIsBorrowed ? 'Bu tutar seçilen hesaptan düşer.' : 'Bu tutar seçilen hesaba eklenir.'}</p>
           </div>
-          <label className="block text-sm font-medium text-stone-700 dark:text-stone-200">
-            {settlementIsBorrowed ? 'Kaynak hesap' : 'Tahsilat hesabı'}
-            <select
-              required
-              value={debtAccountCard}
-              onChange={(event) => setDebtAccountCard(event.target.value)}
-              className="mt-1 w-full rounded-lg border border-stone-200 bg-white px-3 py-3 outline-none focus:border-emerald-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
-            >
-              <option value="">Hesap seç</option>
-              {debtCards.map((card) => (
-                <option key={card.id} value={card.id}>
-                  {card.card_name} ({formatCurrency(card.current_balance)})
-                </option>
-              ))}
-            </select>
-          </label>
+          <AccountSelector
+            accounts={debtCards}
+            value={debtAccountCard}
+            onChange={setDebtAccountCard}
+            amount={settlementIsBorrowed ? debtToSettle?.estimated_value_try ?? 0 : -(debtToSettle?.estimated_value_try ?? 0)}
+            label={settlementIsBorrowed ? 'Kaynak hesap' : 'Tahsilat hesabı'}
+          />
           {debtPaymentError ? <p className="rounded-lg bg-rose-50 p-3 text-sm text-rose-700">{debtPaymentError}</p> : null}
           <button
             type="submit"

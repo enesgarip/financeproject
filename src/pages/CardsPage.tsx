@@ -2,13 +2,17 @@ import { CalendarClock, CheckCircle2, Clock3, ReceiptText, WalletCards, XCircle 
 import type { CSSProperties } from 'react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { CrudPage, type FormField } from '../components/CrudPage'
+import { AccountSelector } from '../components/finance/AccountSelector'
+import { CategoryPicker } from '../components/finance/CategoryPicker'
+import { InstallmentPlanner } from '../components/finance/InstallmentPlanner'
+import { MoneyInput } from '../components/finance/MoneyInput'
 import { SimpleModal } from '../components/SimpleModal'
 import { Badge } from '../components/ui/badge'
 import { Card as SurfaceCard, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Progress } from '../components/ui/progress'
 import { supabase } from '../lib/supabase'
 import type { Card, CardExpense, CardExpenseStatus, InsertFor } from '../types/database'
-import { expenseCategoryOptions, inferExpenseCategory } from '../utils/categories'
+import { expenseCategoryOptions } from '../utils/categories'
 import { getCardStatementPeriod } from '../utils/cardStatement'
 import { dateInputValue, formatDate } from '../utils/date'
 import { formatCurrency, parseNumber } from '../utils/formatCurrency'
@@ -374,7 +378,6 @@ function QuickExpensePanel({
   const [description, setDescription] = useState('')
   const [spentAt, setSpentAt] = useState(dateInputValue(new Date()))
   const [category, setCategory] = useState(expenseCategoryOptions[0]?.value ?? 'Diğer')
-  const [categoryTouched, setCategoryTouched] = useState(false)
   const [paymentMode, setPaymentMode] = useState<'cash' | 'installment'>('cash')
   const [installmentCount, setInstallmentCount] = useState('1')
   const [expenseStatus, setExpenseStatus] = useState<CardExpenseStatus>('posted')
@@ -387,7 +390,6 @@ function QuickExpensePanel({
   const parsedAmount = parseNumber(amount)
   const parsedInstallmentCount = canUseInstallments && paymentMode === 'installment' ? Math.max(2, Math.min(36, Number(installmentCount) || 2)) : 1
   const trimmedDescription = description.trim()
-  const suggestedCategory = useMemo(() => inferExpenseCategory(description), [description])
   const statementPreview = useMemo(() => getCardStatementPeriod(selectedCard, spentAt), [selectedCard, spentAt])
   const firstPeriodAmount = parsedInstallmentCount > 1 ? moneyShare(parsedAmount, parsedInstallmentCount) : parsedAmount
   const debitPreview = Math.max(0, (selectedCard?.current_balance ?? 0) - parsedAmount)
@@ -447,7 +449,6 @@ function QuickExpensePanel({
     setDescription('')
     setSpentAt(dateInputValue(new Date()))
     setCategory(expenseCategoryOptions[0]?.value ?? 'Diğer')
-    setCategoryTouched(false)
     setPaymentMode('cash')
     setInstallmentCount('1')
     setExpenseStatus('posted')
@@ -497,34 +498,21 @@ function QuickExpensePanel({
             </select>
           </label>
           <div className="grid grid-cols-[minmax(0,0.72fr)_minmax(0,1.28fr)] gap-2.5">
-            <label className="block text-sm font-medium text-stone-700 dark:text-stone-200">
-              TL
-              <input
-                value={amount}
-                onChange={(event) => {
-                  setAmount(event.target.value)
-                  setLocalError('')
-                }}
-                type="number"
-                min="0"
-                step="0.01"
-                inputMode="decimal"
-                placeholder="0.00"
-                className="mt-1 w-full rounded-lg border border-stone-200 px-3 py-2.5 outline-none focus:border-emerald-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
-                required
-              />
-            </label>
+            <MoneyInput
+              label="TL"
+              value={amount}
+              onValueChange={(nextAmount) => {
+                setAmount(nextAmount)
+                setLocalError('')
+              }}
+              required
+            />
             <label className="block text-sm font-medium text-stone-700 dark:text-stone-200">
               Açıklama
               <input
                 value={description}
                 onChange={(event) => {
-                  const nextDescription = event.target.value
-                  setDescription(nextDescription)
-                  if (!categoryTouched) {
-                    const inferredCategory = inferExpenseCategory(nextDescription)
-                    if (inferredCategory) setCategory(inferredCategory)
-                  }
+                  setDescription(event.target.value)
                   setLocalError('')
                 }}
                 type="text"
@@ -549,24 +537,7 @@ function QuickExpensePanel({
                 className="mt-1 block w-full min-w-0 max-w-[10.75rem] appearance-none rounded-lg border border-stone-200 px-3 py-2.5 outline-none [color-scheme:light] focus:border-emerald-600 min-[480px]:max-w-full dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100 dark:[color-scheme:dark]"
               />
             </label>
-            <label className="block min-w-0 text-sm font-medium text-stone-700 dark:text-stone-200">
-              Kategori
-              <select
-                value={category}
-                onChange={(event) => {
-                  setCategory(event.target.value)
-                  setCategoryTouched(true)
-                  setLocalError('')
-                }}
-                className="mt-1 w-full min-w-0 rounded-lg border border-stone-200 bg-white px-3 py-2.5 outline-none focus:border-emerald-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
-              >
-                {expenseCategoryOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <CategoryPicker description={description} value={category} onChange={setCategory} />
             <label className="block min-w-0 text-sm font-medium text-stone-700 dark:text-stone-200">
               İşlem türü
               <select
@@ -599,18 +570,6 @@ function QuickExpensePanel({
               </select>
             </label>
           </div>
-          {suggestedCategory && suggestedCategory !== category ? (
-            <button
-              type="button"
-              onClick={() => {
-                setCategory(suggestedCategory)
-                setCategoryTouched(true)
-              }}
-              className="inline-flex w-fit items-center rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-800 ring-1 ring-emerald-200 hover:bg-emerald-100 dark:bg-emerald-950/30 dark:text-emerald-200 dark:ring-emerald-900/70"
-            >
-              Kategori önerisi: {suggestedCategory}
-            </button>
-          ) : null}
           {canUseInstallments && paymentMode === 'installment' ? (
             <label className="block text-sm font-medium text-stone-700 dark:text-stone-200">
               Taksit sayısı
@@ -684,7 +643,6 @@ function LegacyInstallmentPanel({
   const [installmentAmount, setInstallmentAmount] = useState('')
   const [description, setDescription] = useState('')
   const [category, setCategory] = useState(expenseCategoryOptions[0]?.value ?? 'Diğer')
-  const [categoryTouched, setCategoryTouched] = useState(false)
   const [totalInstallments, setTotalInstallments] = useState('9')
   const [paidInstallments, setPaidInstallments] = useState('3')
   const [nextDueMonth, setNextDueMonth] = useState(monthInputValue())
@@ -701,7 +659,6 @@ function LegacyInstallmentPanel({
   const remainingCount = Math.max(1, parsedTotalInstallments - parsedPaidInstallments)
   const remainingAmount = Number((parsedInstallmentAmount * remainingCount).toFixed(2))
   const totalAmount = Number((parsedInstallmentAmount * parsedTotalInstallments).toFixed(2))
-  const suggestedCategory = useMemo(() => inferExpenseCategory(description), [description])
   const firstDueIsCurrentMonth = nextDueMonth === monthInputValue()
   const canSubmitLegacyInstallment =
     Boolean(selectedCard) &&
@@ -837,7 +794,6 @@ function LegacyInstallmentPanel({
     setInstallmentAmount('')
     setDescription('')
     setCategory(expenseCategoryOptions[0]?.value ?? 'Diğer')
-    setCategoryTouched(false)
     setTotalInstallments('9')
     setPaidInstallments('3')
     setNextDueMonth(monthInputValue())
@@ -879,34 +835,21 @@ function LegacyInstallmentPanel({
             </select>
           </label>
           <div className="grid grid-cols-[minmax(0,0.74fr)_minmax(0,1.26fr)] gap-2.5">
-            <label className="block text-sm font-medium text-stone-700 dark:text-stone-200">
-              Taksit tutarı
-              <input
-                value={installmentAmount}
-                onChange={(event) => {
-                  setInstallmentAmount(event.target.value)
-                  setLocalError('')
-                }}
-                type="number"
-                min="0"
-                step="0.01"
-                inputMode="decimal"
-                placeholder="0.00"
-                className="mt-1 w-full rounded-lg border border-stone-200 px-3 py-2.5 outline-none focus:border-emerald-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
-                required
-              />
-            </label>
+            <MoneyInput
+              label="Taksit tutarı"
+              value={installmentAmount}
+              onValueChange={(nextAmount) => {
+                setInstallmentAmount(nextAmount)
+                setLocalError('')
+              }}
+              required
+            />
             <label className="block text-sm font-medium text-stone-700 dark:text-stone-200">
               Açıklama
               <input
                 value={description}
                 onChange={(event) => {
-                  const nextDescription = event.target.value
-                  setDescription(nextDescription)
-                  if (!categoryTouched) {
-                    const inferredCategory = inferExpenseCategory(nextDescription)
-                    if (inferredCategory) setCategory(inferredCategory)
-                  }
+                  setDescription(event.target.value)
                   setLocalError('')
                 }}
                 type="text"
@@ -963,37 +906,8 @@ function LegacyInstallmentPanel({
                 required
               />
             </label>
-            <label className="block min-w-0 text-sm font-medium text-stone-700 dark:text-stone-200">
-              Kategori
-              <select
-                value={category}
-                onChange={(event) => {
-                  setCategory(event.target.value)
-                  setCategoryTouched(true)
-                  setLocalError('')
-                }}
-                className="mt-1 w-full min-w-0 rounded-lg border border-stone-200 bg-white px-3 py-2.5 outline-none focus:border-emerald-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
-              >
-                {expenseCategoryOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <CategoryPicker description={description} value={category} onChange={setCategory} />
           </div>
-          {suggestedCategory && suggestedCategory !== category ? (
-            <button
-              type="button"
-              onClick={() => {
-                setCategory(suggestedCategory)
-                setCategoryTouched(true)
-              }}
-              className="inline-flex w-fit items-center rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-800 ring-1 ring-emerald-200 hover:bg-emerald-100 dark:bg-emerald-950/30 dark:text-emerald-200 dark:ring-emerald-900/70"
-            >
-              Kategori önerisi: {suggestedCategory}
-            </button>
-          ) : null}
           <label className="flex items-start gap-2 rounded-lg bg-amber-50 px-3 py-2.5 text-sm font-medium text-amber-950 dark:bg-amber-950/30 dark:text-amber-100">
             <input
               checked={addRemainingToDebt}
@@ -1003,11 +917,14 @@ function LegacyInstallmentPanel({
             />
             <span>Kalan tutarı kart borcuna ekle</span>
           </label>
-          <div className="grid grid-cols-3 gap-2 text-xs">
-            <OverviewStat label="Kalan" value={`${remainingCount}/${parsedTotalInstallments}`} />
-            <OverviewStat label="Tutar" value={formatCurrency(remainingAmount)} />
-            <OverviewStat label="İlk ay" value={formatMonthLabel(nextDueMonth)} />
-          </div>
+          <InstallmentPlanner
+            compact
+            remainingCount={remainingCount}
+            totalInstallments={parsedTotalInstallments}
+            remainingAmount={remainingAmount}
+            firstLabel={formatMonthLabel(nextDueMonth)}
+            monthlyAmount={parsedInstallmentAmount}
+          />
           {localError ? <p className="rounded-lg bg-rose-50 p-3 text-sm text-rose-700 dark:bg-rose-950/40 dark:text-rose-200">{localError}</p> : null}
           <button
             type="submit"
@@ -1605,35 +1522,13 @@ export function CardsPage() {
             <p>Toplam borç: {formatCurrency(debtPaymentCard?.debt_amount ?? 0)}</p>
             <p>Ödenebilir: {formatCurrency(debtPaymentCard ? cardPayableDebt(debtPaymentCard) : 0)}</p>
           </div>
-          <label className="block text-sm font-medium text-stone-700 dark:text-stone-200">
-            Ödeme tutarı
-            <input
-              required
-              min="0"
-              max={debtPaymentCard ? cardPayableDebt(debtPaymentCard) : undefined}
-              step="0.01"
-              type="number"
-              value={debtPaymentAmount}
-              onChange={(event) => setDebtPaymentAmount(event.target.value)}
-              className="mt-1 w-full rounded-lg border border-stone-200 px-3 py-3 outline-none focus:border-emerald-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
-            />
-          </label>
-          <label className="block text-sm font-medium text-stone-700 dark:text-stone-200">
-            Kaynak hesap
-            <select
-              required
-              value={debtPaymentSourceCard}
-              onChange={(event) => setDebtPaymentSourceCard(event.target.value)}
-              className="mt-1 w-full rounded-lg border border-stone-200 bg-white px-3 py-3 outline-none focus:border-emerald-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
-            >
-              <option value="">Hesap seç</option>
-              {allCards.map((card) => (
-                <option key={card.id} value={card.id}>
-                  {card.card_name} ({formatCurrency(card.current_balance)})
-                </option>
-              ))}
-            </select>
-          </label>
+          <MoneyInput label="Ödeme tutarı" value={debtPaymentAmount} onValueChange={setDebtPaymentAmount} required />
+          <AccountSelector
+            accounts={allCards}
+            value={debtPaymentSourceCard}
+            onChange={setDebtPaymentSourceCard}
+            amount={parseNumber(debtPaymentAmount)}
+          />
           {debtPaymentError ? <p className="rounded-lg bg-rose-50 p-3 text-sm text-rose-700">{debtPaymentError}</p> : null}
           <button
             type="submit"

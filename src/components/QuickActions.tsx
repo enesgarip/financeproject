@@ -1,4 +1,4 @@
-import { Banknote, HandCoins, Landmark, Plus, ReceiptText, ShieldCheck, WalletCards, X } from 'lucide-react'
+import { Banknote, HandCoins, Landmark, Plus, ReceiptText, Search, ShieldCheck, WalletCards, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 
@@ -30,14 +30,19 @@ function isFormElementActive() {
 
 export function QuickActions() {
   const [openPath, setOpenPath] = useState<string | null>(null)
+  const [query, setQuery] = useState('')
   const [formFocused, setFormFocused] = useState(false)
   const location = useLocation()
   const open = openPath === location.pathname
   const preferredAction = routePriorities[location.pathname] ?? routePriorities[`/${location.pathname.split('/')[1]}`]
   const orderedActions = useMemo(() => {
-    if (!preferredAction) return actions
-    return [...actions].sort((left, right) => Number(right.matchPath === preferredAction) - Number(left.matchPath === preferredAction))
-  }, [preferredAction])
+    const normalizedQuery = query.trim().toLocaleLowerCase('tr-TR')
+    const filteredActions = normalizedQuery
+      ? actions.filter((action) => `${action.label} ${action.description}`.toLocaleLowerCase('tr-TR').includes(normalizedQuery))
+      : actions
+    if (!preferredAction) return filteredActions
+    return [...filteredActions].sort((left, right) => Number(right.matchPath === preferredAction) - Number(left.matchPath === preferredAction))
+  }, [preferredAction, query])
   const tucked = formFocused && !open
 
   useEffect(() => {
@@ -57,6 +62,15 @@ export function QuickActions() {
     <div className="fixed bottom-[calc(env(safe-area-inset-bottom)+5.15rem)] right-4 z-40 flex flex-col items-end gap-3">
       {open ? (
         <div className="w-[min(calc(100vw-2rem),22rem)] rounded-2xl border border-stone-200 bg-white p-2 shadow-2xl shadow-stone-950/15 dark:border-stone-800 dark:bg-stone-950 dark:shadow-black/40">
+          <label className="relative mb-2 block">
+            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-stone-400" />
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="İşlem ara"
+              className="w-full rounded-xl border border-stone-200 bg-stone-50 py-2.5 pl-9 pr-3 text-sm font-semibold outline-none focus:border-emerald-600 dark:border-stone-800 dark:bg-stone-900 dark:text-stone-100"
+            />
+          </label>
           {orderedActions.map((action) => (
             <Link
               key={action.to + action.label}
@@ -75,12 +89,16 @@ export function QuickActions() {
               </div>
             </Link>
           ))}
+          {orderedActions.length === 0 ? <p className="px-3 py-4 text-center text-sm text-stone-500">Eşleşen hızlı işlem yok.</p> : null}
         </div>
       ) : null}
 
       <button
         type="button"
-        onClick={() => setOpenPath((current) => (current === location.pathname ? null : location.pathname))}
+        onClick={() => {
+          setQuery('')
+          setOpenPath((current) => (current === location.pathname ? null : location.pathname))
+        }}
         aria-expanded={open}
         aria-label={open ? 'Hızlı işlem menüsünü kapat' : 'Hızlı işlem menüsünü aç'}
         className={`grid size-14 place-items-center rounded-full bg-emerald-700 text-white shadow-xl shadow-emerald-900/25 ring-1 ring-white/25 transition hover:bg-emerald-800 ${

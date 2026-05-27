@@ -1192,8 +1192,10 @@ function kindLabel(kind: UpcomingItem['kind']) {
 
 function CashFlowCalendarPanel({ items, cashFlow }: { items: UpcomingItem[]; cashFlow: CashFlowSummary }) {
   const [showAll, setShowAll] = useState(false)
+  const [selectedDayKey, setSelectedDayKey] = useState<string | null>(null)
   const groups = useMemo(() => buildCashFlowCalendarGroups(items, cashFlow.cashAssets), [cashFlow.cashAssets, items])
   const visibleGroups = showAll ? groups : groups.slice(0, 4)
+  const selectedGroup = visibleGroups.find((group) => group.dayKey === selectedDayKey) ?? visibleGroups[0] ?? null
   const totalUpcoming = sum(items, (item) => item.amount)
   const lowestCash = groups.reduce((lowest, group) => Math.min(lowest, group.cashAfter), cashFlow.cashAssets)
 
@@ -1221,13 +1223,24 @@ function CashFlowCalendarPanel({ items, cashFlow }: { items: UpcomingItem[]; cas
             <div className="grid gap-2 lg:grid-cols-2">
               {visibleGroups.map((group) => {
                 const cashTone = group.cashAfter < 0 ? 'text-rose-700 dark:text-rose-300' : 'text-emerald-700 dark:text-emerald-300'
+                const isSelected = selectedGroup?.dayKey === group.dayKey
 
                 return (
-                  <article key={group.dayKey} className="rounded-xl border border-stone-200 bg-white/70 p-3 dark:border-stone-800 dark:bg-stone-950/45">
+                  <button
+                    key={group.dayKey}
+                    type="button"
+                    onClick={() => setSelectedDayKey(group.dayKey)}
+                    aria-pressed={isSelected}
+                    className={`rounded-xl border p-3 text-left transition ${
+                      isSelected
+                        ? 'border-emerald-300 bg-emerald-50/80 ring-1 ring-emerald-200 dark:border-emerald-900/80 dark:bg-emerald-950/25 dark:ring-emerald-900/70'
+                        : 'border-stone-200 bg-white/70 hover:bg-stone-50 dark:border-stone-800 dark:bg-stone-950/45 dark:hover:bg-stone-900'
+                    }`}
+                  >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <p className="font-extrabold text-foreground">{group.dateLabel}</p>
-                        <p className="mt-1 text-xs text-muted-foreground">
+                        <p className="mt-1 truncate text-xs text-muted-foreground">
                           {Array.from(group.kinds).map(kindLabel).join(' · ')} · {group.count} kayıt
                         </p>
                       </div>
@@ -1235,19 +1248,39 @@ function CashFlowCalendarPanel({ items, cashFlow }: { items: UpcomingItem[]; cas
                         {formatCurrency(group.amount)}
                       </span>
                     </div>
-                    <div className="mt-3 grid gap-1 text-xs text-muted-foreground">
-                      {group.items.slice(0, 2).map((item) => (
-                        <span key={item.id} className="truncate">
-                          {item.title} · {item.value}
-                        </span>
-                      ))}
-                      {group.items.length > 2 ? <span>+{group.items.length - 2} kayıt daha</span> : null}
-                    </div>
                     <p className={`mt-3 text-xs font-bold tabular-nums ${cashTone}`}>Bu gün sonrası tahmini nakit: {formatCurrency(group.cashAfter)}</p>
-                  </article>
+                  </button>
                 )
               })}
             </div>
+            {selectedGroup ? (
+              <div className="rounded-2xl border border-emerald-100 bg-emerald-50/70 p-3 dark:border-emerald-900/60 dark:bg-emerald-950/25">
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="text-sm font-black text-emerald-950 dark:text-emerald-50">{selectedGroup.dateLabel}</p>
+                    <p className="mt-1 text-xs text-emerald-900/70 dark:text-emerald-100/70">
+                      {selectedGroup.count} kayıt · toplam {formatCurrency(selectedGroup.amount)}
+                    </p>
+                  </div>
+                  <Badge variant={selectedGroup.cashAfter < 0 ? 'destructive' : 'secondary'}>
+                    Sonra {formatCurrency(selectedGroup.cashAfter)}
+                  </Badge>
+                </div>
+                <div className="mt-3 grid gap-2">
+                  {selectedGroup.items.map((item) => (
+                    <div key={item.id} className="flex min-w-0 items-center justify-between gap-3 rounded-xl bg-white/75 px-3 py-2 text-sm dark:bg-stone-950/45">
+                      <div className="min-w-0">
+                        <p className="truncate font-bold text-stone-950 dark:text-stone-50">{item.title}</p>
+                        <p className="mt-0.5 text-xs text-muted-foreground">{kindLabel(item.kind)}</p>
+                      </div>
+                      <span className="shrink-0 whitespace-nowrap rounded-lg bg-emerald-100 px-2 py-1 text-xs font-black tabular-nums text-emerald-900 dark:bg-emerald-900/45 dark:text-emerald-100">
+                        {item.value}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
             {groups.length > 4 ? (
               <button
                 type="button"
