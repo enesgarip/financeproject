@@ -58,6 +58,7 @@ type HealthIssue = {
     | 'cardInstallmentPostedAt'
     | 'cardInstallmentCount'
     | 'cardStatementTotals'
+    | 'cardUnclassifiedDebt'
     | 'assetShape'
     | 'budgetMonth'
     | 'debtShape'
@@ -417,6 +418,9 @@ function issuePreviewDetails(issue: HealthIssue) {
     previews.push(`Ekstre borcu: ${formatCurrency(payload.statementDebt ?? 0)}`)
     previews.push(`Dönem içi kesinleşen: ${formatCurrency(payload.currentPeriod ?? 0)}`)
     previews.push(`Provizyon: ${formatCurrency(payload.provisionAmount ?? 0)}`)
+  } else if (issue.kind === 'cardUnclassifiedDebt') {
+    previews.push(`Sınıflandırılacak tutar: ${formatCurrency(payload.amount ?? 0)}`)
+    previews.push(`Dönem içi kesinleşen: ${formatCurrency(payload.currentPeriod ?? 0)}`)
   } else if (issue.kind === 'loanTotals') {
     previews.push(`Kalan tutar: ${formatCurrency(payload.remainingAmount ?? 0)}`)
     previews.push(`Kalan taksit: ${payload.remainingInstallments ?? 0}`)
@@ -644,15 +648,24 @@ function buildIssues(data: HealthData): HealthIssue[] {
 
     const splitTotal = roundMoney(card.statement_debt_amount + card.current_period_spending + cardProvisionAmount(card))
     if (card.debt_amount > splitTotal + 0.01) {
+      const unclassifiedAmount = roundMoney(card.debt_amount - splitTotal)
+      const nextCurrentPeriod = roundMoney(card.current_period_spending + unclassifiedAmount)
+
       issues.push({
         id: `card-unclassified-debt-${card.id}`,
         area: 'Kartlar',
         severity: 'info',
         title: `${cardLabel(card)} borcunun bir kısmı sınıflanmamış`,
         description: 'Toplam borç, ekstre borcu, dönem içi kesinleşen ve provizyon toplamından yüksek görünüyor.',
-        details: [`Toplam borç: ${formatCurrency(card.debt_amount)}`, `Sınıflanan: ${formatCurrency(splitTotal)}`],
-        fixable: false,
-        kind: 'manual',
+        details: [
+          `Toplam borç: ${formatCurrency(card.debt_amount)}`,
+          `Sınıflanan: ${formatCurrency(splitTotal)}`,
+          `Sınıflandırılacak: ${formatCurrency(unclassifiedAmount)}`,
+        ],
+        fixable: true,
+        fixLabel: 'Dönem içine sınıflandır',
+        kind: 'cardUnclassifiedDebt',
+        payload: { cardId: card.id, amount: unclassifiedAmount, currentPeriod: nextCurrentPeriod },
       })
     }
 
@@ -1579,6 +1592,18 @@ export function DataHealthPage() {
           statement_debt_amount: payload.statementDebt ?? 0,
           current_period_spending: payload.currentPeriod ?? 0,
           provision_amount: payload.provisionAmount ?? 0,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', payload.cardId)
+      if (updateError) throw new Error(updateError.message)
+    }
+
+    if (issue.kind === 'cardUnclassifiedDebt' && payload.cardId) {
+      await addUndo('cards', [payload.cardId])
+      const { error: updateError } = await supabase
+        .from('cards')
+        .update({
+          current_period_spending: payload.currentPeriod ?? 0,
           updated_at: new Date().toISOString(),
         })
         .eq('id', payload.cardId)

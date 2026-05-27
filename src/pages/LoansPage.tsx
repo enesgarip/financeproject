@@ -1,4 +1,4 @@
-import { CalendarDays, Check, Landmark, MoreVertical, Pencil, Trash2 } from 'lucide-react'
+import { CalendarDays, Check, CheckCircle2, Landmark, MoreVertical, Pencil, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { CrudPage, type FormField } from '../components/CrudPage'
 import { SimpleModal } from '../components/SimpleModal'
@@ -326,6 +326,7 @@ export function LoansPage() {
   const [planNote, setPlanNote] = useState('')
   const [planError, setPlanError] = useState('')
   const [planSaving, setPlanSaving] = useState(false)
+  const [manualPaidActionId, setManualPaidActionId] = useState<string | null>(null)
 
   const loadInstallments = useCallback(async () => {
     const { data, error } = await supabase
@@ -411,6 +412,50 @@ export function LoansPage() {
     closeInstallmentPayment()
     await loadInstallments()
     await reloadLoans?.()
+  }
+
+  async function markInstallmentsPaidWithoutAccount(
+    loan: Loan,
+    items: LoanInstallment[],
+    reload: () => Promise<void>,
+    setError: (message: string) => void,
+  ) {
+    const pendingItems = items.filter((item) => item.status !== 'ödendi')
+    if (pendingItems.length === 0) return
+
+    const confirmed = window.confirm(
+      pendingItems.length === 1
+        ? `${pendingItems[0].installment_no}. taksiti kaynak hesaptan düşmeden ödendi işaretlemek istiyor musun?`
+        : `${pendingItems.length} taksiti kaynak hesaptan düşmeden ödendi işaretlemek istiyor musun?`,
+    )
+    if (!confirmed) return
+
+    const actionId = pendingItems.length === 1 ? `manual-${pendingItems[0].id}` : `manual-bulk-${loan.id}`
+    const paidAt = new Date().toISOString()
+
+    setManualPaidActionId(actionId)
+    setError('')
+
+    const { error } = await supabase
+      .from('loan_installments')
+      .update({ status: 'ödendi', paid_at: paidAt, updated_at: paidAt })
+      .in('id', pendingItems.map((item) => item.id))
+
+    if (error) {
+      setError(error.message)
+      setManualPaidActionId(null)
+      return
+    }
+
+    try {
+      await updateLoanTotalsFromInstallments(loan.id)
+      await loadInstallments()
+      await reload()
+    } catch (updateError) {
+      setError(updateError instanceof Error ? updateError.message : 'Kredi güncellenemedi.')
+    } finally {
+      setManualPaidActionId(null)
+    }
   }
 
   async function toggleInstallmentPaid(item: LoanInstallment, loan: Loan, reload: () => Promise<void>, setError: (message: string) => void) {
@@ -522,13 +567,30 @@ export function LoansPage() {
       )
     }
 
+    const today = dateInputValue(startOfToday())
+    const pastPendingInstallments = loanInstallments.filter((item) => item.status !== 'ödendi' && item.due_date < today)
+    const bulkManualActionId = `manual-bulk-${loan.id}`
+
     return (
       <section className="mt-4 rounded-2xl border border-stone-200 bg-white/65 p-3 dark:border-stone-800 dark:bg-stone-950/50">
-        <div className="mb-2 flex items-center justify-between gap-2">
+        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
           <h3 className="text-sm font-semibold text-stone-900 dark:text-stone-100">Ödeme planı</h3>
-          <span className="rounded-full bg-stone-100 px-2 py-1 text-xs font-semibold text-stone-600 dark:bg-stone-800 dark:text-stone-300">
-            {loanInstallments.filter((item) => item.status === 'ödendi').length}/{loanInstallments.length}
-          </span>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            {pastPendingInstallments.length > 0 ? (
+              <button
+                type="button"
+                onClick={() => void markInstallmentsPaidWithoutAccount(loan, pastPendingInstallments, reload, setError)}
+                disabled={Boolean(manualPaidActionId)}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1.5 text-xs font-semibold text-emerald-800 disabled:opacity-60 dark:border-emerald-900/70 dark:bg-emerald-950/30 dark:text-emerald-200"
+              >
+                <CheckCircle2 size={14} />
+                {manualPaidActionId === bulkManualActionId ? 'İşaretleniyor...' : 'Geçmişleri ödendi say'}
+              </button>
+            ) : null}
+            <span className="rounded-full bg-stone-100 px-2 py-1 text-xs font-semibold text-stone-600 dark:bg-stone-800 dark:text-stone-300">
+              {loanInstallments.filter((item) => item.status === 'ödendi').length}/{loanInstallments.length}
+            </span>
+          </div>
         </div>
         <div className="space-y-2">
           {loanInstallments.map((item) => (
@@ -579,6 +641,20 @@ export function LoansPage() {
                       <Pencil size={14} />
                       Düzenle
                     </button>
+                    {item.status !== 'ödendi' ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPlanMenuOpenId(null)
+                          void markInstallmentsPaidWithoutAccount(loan, [item], reload, setError)
+                        }}
+                        disabled={Boolean(manualPaidActionId)}
+                        className="flex w-full items-center gap-2 px-3 py-2 text-sm text-emerald-700 hover:bg-emerald-50 disabled:opacity-60 dark:text-emerald-300 dark:hover:bg-emerald-950/40"
+                      >
+                        <CheckCircle2 size={14} />
+                        {manualPaidActionId === `manual-${item.id}` ? 'İşaretleniyor...' : 'Hesapsız ödendi'}
+                      </button>
+                    ) : null}
                     <button
                       type="button"
                       onClick={() => {

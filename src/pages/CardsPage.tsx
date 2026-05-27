@@ -987,6 +987,7 @@ function ProvisionPanel({
   loading,
   actionId,
   onPost,
+  onPostAll,
   onCancel,
 }: {
   rows: Card[]
@@ -994,6 +995,7 @@ function ProvisionPanel({
   loading: boolean
   actionId: string | null
   onPost: (expense: CardExpense) => void
+  onPostAll: (expenses: CardExpense[]) => void
   onCancel: (expense: CardExpense) => void
 }) {
   const pending = provisions.filter((expense) => expense.status === 'provision')
@@ -1021,7 +1023,18 @@ function ProvisionPanel({
             </CardTitle>
             <p className="mt-1 text-xs text-muted-foreground">Kesinleşince dönem içine alınır, iptal edilirse limitten çıkarılır.</p>
           </div>
-          <Badge variant="secondary">{formatCurrency(totalProvision)}</Badge>
+          <div className="flex shrink-0 flex-col items-end gap-2">
+            <Badge variant="secondary">{formatCurrency(totalProvision)}</Badge>
+            <button
+              type="button"
+              onClick={() => onPostAll(pending)}
+              disabled={Boolean(actionId)}
+              className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-emerald-700 px-2.5 py-1.5 text-xs font-semibold text-white disabled:opacity-60 hover:bg-emerald-800"
+            >
+              <CheckCircle2 size={13} />
+              {actionId === 'post-all' ? 'Aktarılıyor...' : 'Tümünü aktar'}
+            </button>
+          </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-2 pt-2">
@@ -1051,7 +1064,7 @@ function ProvisionPanel({
                   className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-700 px-3 py-2 text-xs font-semibold text-white disabled:opacity-60 hover:bg-emerald-800"
                 >
                   <CheckCircle2 size={14} />
-                  {actionId === postActionId ? 'İşleniyor...' : 'Kesinleştir'}
+                  {actionId === postActionId ? 'İşleniyor...' : 'Güncel borca aktar'}
                 </button>
                 <button
                   type="button"
@@ -1140,6 +1153,32 @@ export function CardsPage() {
       setError(message)
       setProvisionActionId(null)
       return
+    }
+
+    await refreshCardsAndProvisions(reload)
+    setProvisionActionId(null)
+  }
+
+  async function handlePostAllProvisions(expenses: CardExpense[], reload: () => Promise<void>, setError: (message: string) => void) {
+    const pendingExpenses = expenses.filter((expense) => expense.status === 'provision')
+    if (pendingExpenses.length === 0) return
+
+    setProvisionActionId('post-all')
+    setError('')
+    setProvisionError('')
+
+    for (const expense of pendingExpenses) {
+      const { error } = await supabase.rpc('post_card_provision', { p_expense_id: expense.id })
+      if (error) {
+        setError(
+          isSchemaCacheError(error)
+            ? 'Provizyon altyapısı canlı veritabanına uygulanmamış. Migration çalışınca bu işlem açılacak.'
+            : error.message,
+        )
+        await refreshCardsAndProvisions(reload)
+        setProvisionActionId(null)
+        return
+      }
     }
 
     await refreshCardsAndProvisions(reload)
@@ -1337,6 +1376,7 @@ export function CardsPage() {
                 loading={provisionsLoading}
                 actionId={provisionActionId}
                 onPost={(expense) => void handleProvisionAction(expense, 'post', reload, setError)}
+                onPostAll={(expenses) => void handlePostAllProvisions(expenses, reload, setError)}
                 onCancel={(expense) => void handleProvisionAction(expense, 'cancel', reload, setError)}
               />
               <LegacyInstallmentPanel rows={rows as Card[]} reload={reload} setError={setError} />

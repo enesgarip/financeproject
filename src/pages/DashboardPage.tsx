@@ -5,6 +5,8 @@ import {
   CalendarDays,
   Calculator,
   CheckCircle2,
+  ChevronDown,
+  ChevronUp,
   CreditCard,
   Landmark,
   Lightbulb,
@@ -1226,12 +1228,16 @@ function upcomingDayLabel(sortTime: number) {
 }
 
 function UpcomingAlertPanel({ items }: { items: UpcomingItem[] }) {
+  const [showAll, setShowAll] = useState(false)
+
   if (items.length === 0) return null
 
   const urgentCount = items.filter((item) => {
     const remaining = daysUntil(new Date(item.sortTime))
     return remaining !== null && remaining <= 7
   }).length
+  const visibleItems = showAll ? items : items.slice(0, 3)
+  const hiddenCount = Math.max(0, items.length - 3)
 
   return (
     <Card className="min-w-0 border-amber-200 bg-amber-50/70 py-0 shadow-sm ring-1 ring-amber-200/80 dark:border-amber-900 dark:bg-amber-950/20 dark:ring-amber-900/70 lg:col-span-12">
@@ -1246,20 +1252,33 @@ function UpcomingAlertPanel({ items }: { items: UpcomingItem[] }) {
               Yaklaşan kart, kredi, fatura ve kişisel borç vadelerini kaçırmamak için öne aldım.
             </p>
           </div>
-          <div className="grid min-w-0 flex-1 gap-2 min-[760px]:max-w-xl">
-            {items.slice(0, 3).map((item) => (
-              <div key={item.id} className="flex min-w-0 items-center justify-between gap-3 rounded-xl bg-white/75 px-3 py-2 text-sm dark:bg-stone-950/45">
-                <div className="min-w-0">
-                  <p className="truncate font-semibold text-stone-950 dark:text-stone-50">{item.title}</p>
-                  <p className="mt-0.5 text-xs text-stone-600 dark:text-stone-300">
-                    {item.date} · {upcomingDayLabel(item.sortTime)}
-                  </p>
+          <div className="min-w-0 flex-1 min-[760px]:max-w-xl">
+            <div className={`grid gap-2 ${showAll ? 'max-h-80 overflow-y-auto pr-1' : ''}`}>
+              {visibleItems.map((item) => (
+                <div key={item.id} className="flex min-w-0 items-center justify-between gap-3 rounded-xl bg-white/75 px-3 py-2 text-sm dark:bg-stone-950/45">
+                  <div className="min-w-0">
+                    <p className="truncate font-semibold text-stone-950 dark:text-stone-50">{item.title}</p>
+                    <p className="mt-0.5 text-xs text-stone-600 dark:text-stone-300">
+                      {item.date} · {upcomingDayLabel(item.sortTime)}
+                    </p>
+                  </div>
+                  <span className="shrink-0 whitespace-nowrap rounded-lg bg-amber-100 px-2 py-1 text-xs font-bold tabular-nums text-amber-900 dark:bg-amber-900/45 dark:text-amber-100">
+                    {item.value}
+                  </span>
                 </div>
-                <span className="shrink-0 whitespace-nowrap rounded-lg bg-amber-100 px-2 py-1 text-xs font-bold tabular-nums text-amber-900 dark:bg-amber-900/45 dark:text-amber-100">
-                  {item.value}
-                </span>
-              </div>
-            ))}
+              ))}
+            </div>
+            {hiddenCount > 0 ? (
+              <button
+                type="button"
+                onClick={() => setShowAll((current) => !current)}
+                aria-expanded={showAll}
+                className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-amber-200 bg-white/70 px-3 py-2 text-xs font-bold text-amber-900 shadow-sm hover:bg-white dark:border-amber-900/70 dark:bg-stone-950/40 dark:text-amber-100 dark:hover:bg-stone-950/70"
+              >
+                {showAll ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+                {showAll ? 'Daralt' : `Tümünü göster (${items.length})`}
+              </button>
+            ) : null}
           </div>
         </div>
       </CardContent>
