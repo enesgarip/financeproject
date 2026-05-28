@@ -251,6 +251,7 @@ export type Database = {
       post_card_provision: {
         Args: {
           p_expense_id: string
+          p_post_amount?: number
         }
         Returns: CardExpense
       }

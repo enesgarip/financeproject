@@ -42,7 +42,7 @@ const links = [
 export function MorePage() {
   return (
     <section className="space-y-4">
-      <div className="rounded-3xl border border-stone-200 bg-white p-4 shadow-sm dark:border-stone-800 dark:bg-stone-950">
+      <div className="rounded-xl border border-border/75 bg-card p-4 shadow-[0_10px_30px_rgba(15,23,42,0.04)] dark:shadow-black/20">
         <h1 className="text-lg font-semibold text-stone-950 dark:text-stone-50">Daha fazla işlem</h1>
         <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">Daha seyrek kullanılan finans kayıtları ve hızlı giriş yüzeyleri.</p>
       </div>
@@ -52,7 +52,7 @@ export function MorePage() {
           <Link
             key={item.to}
             to={item.to}
-            className="flex items-center gap-3 rounded-2xl border border-stone-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-stone-800 dark:bg-stone-950"
+            className="flex items-center gap-3 rounded-xl border border-border/75 bg-card p-4 shadow-[0_8px_26px_rgba(15,23,42,0.04)] transition hover:-translate-y-0.5 hover:shadow-[0_16px_36px_rgba(15,23,42,0.08)] dark:shadow-black/20"
           >
             <div className={`grid size-11 shrink-0 place-items-center rounded-xl ${item.tone}`}>
               <item.icon size={20} />

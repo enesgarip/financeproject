@@ -11,14 +11,14 @@ export function SimpleModal({ title, open, children, onClose }: SimpleModalProps
   if (!open) return null
 
   return (
-    <div className="fixed inset-0 z-40 flex items-end bg-black/45 sm:items-center sm:justify-center sm:p-6">
-      <section className="max-h-[92svh] w-full min-w-0 overflow-x-hidden overflow-y-auto rounded-t-2xl bg-white shadow-xl dark:bg-stone-950 sm:max-w-lg sm:rounded-2xl">
-        <header className="sticky top-0 z-10 flex items-center justify-between border-b border-stone-200 bg-white px-4 py-3 dark:border-stone-800 dark:bg-stone-950">
+    <div className="fixed inset-0 z-40 flex items-end bg-black/45 backdrop-blur-sm sm:items-center sm:justify-center sm:p-6">
+      <section className="max-h-[92svh] w-full min-w-0 overflow-x-hidden overflow-y-auto rounded-t-xl border border-border/80 bg-card shadow-xl dark:shadow-black/40 sm:max-w-lg sm:rounded-xl">
+        <header className="sticky top-0 z-10 flex items-center justify-between border-b border-border/80 bg-card/95 px-4 py-3 backdrop-blur">
           <h2 className="text-base font-semibold text-stone-950 dark:text-stone-50">{title}</h2>
           <button
             type="button"
             onClick={onClose}
-            className="grid size-9 place-items-center rounded-full text-stone-500 hover:bg-stone-100 dark:text-stone-400 dark:hover:bg-stone-900"
+            className="grid size-9 place-items-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground"
             aria-label="Kapat"
           >
             <X size={18} />

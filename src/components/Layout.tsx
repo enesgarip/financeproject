@@ -32,8 +32,8 @@ export function Layout() {
   }, [isDark])
 
   return (
-    <div className="flex min-h-dvh flex-col bg-[#f7f8f4] text-stone-900 dark:bg-stone-950 dark:text-stone-100">
-      <header className="sticky top-0 z-20 border-b border-stone-200 bg-[#f7f8f4]/95 px-4 pb-3 pt-[calc(env(safe-area-inset-top)+0.75rem)] backdrop-blur dark:border-stone-800 dark:bg-stone-950/95">
+    <div className="flex min-h-dvh flex-col bg-background text-foreground">
+      <header className="sticky top-0 z-20 border-b border-border/80 bg-background/95 px-4 pb-3 pt-[calc(env(safe-area-inset-top)+0.75rem)] backdrop-blur-xl">
         <div className={`mx-auto flex ${contentWidthClass} items-center justify-between gap-3`}>
           <div className="min-w-0">
             <h1 className="truncate text-lg font-semibold leading-tight text-stone-950 dark:text-stone-50">{titles[pathname] ?? 'Finans'}</h1>
@@ -43,7 +43,7 @@ export function Layout() {
             <button
               type="button"
               onClick={() => setIsDark((current) => !current)}
-              className="grid size-10 place-items-center rounded-full border border-stone-200 bg-white text-stone-600 shadow-sm dark:border-stone-800 dark:bg-stone-900 dark:text-stone-300"
+              className="grid size-10 place-items-center rounded-lg border border-border/80 bg-card text-muted-foreground shadow-sm transition hover:text-foreground"
               aria-label={isDark ? 'Gündüz temasına geç' : 'Gece temasına geç'}
             >
               {isDark ? <Sun size={18} /> : <Moon size={18} />}
@@ -51,7 +51,7 @@ export function Layout() {
             <button
               type="button"
               onClick={() => void signOut()}
-              className="grid size-10 place-items-center rounded-full border border-stone-200 bg-white text-stone-600 shadow-sm dark:border-stone-800 dark:bg-stone-900 dark:text-stone-300"
+              className="grid size-10 place-items-center rounded-lg border border-border/80 bg-card text-muted-foreground shadow-sm transition hover:text-foreground"
               aria-label="Çıkış yap"
             >
               <LogOut size={18} />
@@ -59,7 +59,7 @@ export function Layout() {
           </div>
         </div>
       </header>
-      <main className={`mx-auto w-full ${contentWidthClass} flex-1 px-4 pb-[calc(env(safe-area-inset-bottom)+11rem)] pt-4`}>
+      <main className={`mx-auto w-full ${contentWidthClass} flex-1 px-4 pb-[calc(env(safe-area-inset-bottom)+11rem)] pt-5`}>
         <Outlet />
       </main>
       <QuickActions />

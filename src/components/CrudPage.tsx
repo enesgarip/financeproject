@@ -243,7 +243,7 @@ export function CrudPage<T extends TableName>({
 
   return (
     <section className="space-y-4">
-      <div className="rounded-3xl border border-stone-200 bg-white p-4 shadow-sm dark:border-stone-800 dark:bg-stone-950">
+      <div className="rounded-xl border border-border/75 bg-card p-4 shadow-[0_10px_30px_rgba(15,23,42,0.04)] dark:shadow-black/20">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-lg font-semibold text-stone-950 dark:text-stone-50">{pageTitle ?? addLabel}</h1>
@@ -252,7 +252,7 @@ export function CrudPage<T extends TableName>({
           <button
             type="button"
             onClick={openCreate}
-            className="inline-flex items-center gap-2 rounded-lg bg-emerald-700 px-4 py-3 text-sm font-semibold text-white shadow-sm"
+            className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground shadow-sm transition hover:bg-primary/90"
           >
             <Plus size={17} />
             {addLabel}
@@ -286,7 +286,7 @@ export function CrudPage<T extends TableName>({
                   <article
                     key={row.id}
                     style={getCardStyle?.(row, rows)}
-                    className={`rounded-3xl border bg-white p-4 shadow-sm transition-all hover:shadow-lg hover:-translate-y-0.5 dark:border-stone-800 dark:bg-stone-950 min-[390px]:p-5 ${getCardClassName?.(row, rows) ?? 'border-stone-200'}`}
+                    className={`rounded-xl border bg-card p-4 shadow-[0_8px_26px_rgba(15,23,42,0.04)] transition-all hover:-translate-y-0.5 hover:shadow-[0_16px_36px_rgba(15,23,42,0.08)] dark:shadow-black/20 min-[390px]:p-5 ${getCardClassName?.(row, rows) ?? 'border-border/75'}`}
                   >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
@@ -302,13 +302,13 @@ export function CrudPage<T extends TableName>({
                             e.stopPropagation()
                             setMenuOpenId(menuOpenId === row.id ? null : row.id)
                           }}
-                          className="grid size-9 place-items-center rounded-full text-stone-500 hover:bg-stone-100 dark:text-stone-400 dark:hover:bg-stone-800"
+                          className="grid size-9 place-items-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground"
                           aria-label="Menü"
                         >
                           <MoreVertical size={18} />
                         </button>
                         {menuOpenId === row.id && (
-                          <div className="absolute right-0 top-full z-10 mt-1 w-36 rounded-lg border border-stone-200 bg-white py-1 shadow-lg dark:border-stone-700 dark:bg-stone-900">
+                          <div className="absolute right-0 top-full z-10 mt-1 w-36 rounded-lg border border-border bg-popover py-1 shadow-lg">
                             {renderMenuActions ? renderMenuActions(row, { reload: loadRows, setError, rows, closeMenu: () => setMenuOpenId(null) }) : null}
                             <button
                               type="button"

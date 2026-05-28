@@ -658,6 +658,7 @@ function FinancialCalendar({ data }: { data: AnalysisData }) {
   for (const event of events) {
     eventsByDate.set(event.date, [...(eventsByDate.get(event.date) ?? []), event])
   }
+  const busyDays = Array.from(eventsByDate.entries()).sort(([leftDate], [rightDate]) => leftDate.localeCompare(rightDate))
 
   return (
     <Card className="border-0 shadow-sm ring-1 ring-stone-200/80 dark:ring-stone-800 lg:col-span-7">
@@ -687,7 +688,7 @@ function FinancialCalendar({ data }: { data: AnalysisData }) {
             const dayTotal = dayEvents.reduce((total, event) => total + (event.tone === 'emerald' ? event.amount : -event.amount), 0)
 
             return (
-              <div key={date} className="min-h-20 rounded-xl bg-muted/45 p-1.5">
+              <div key={date} className="min-h-[6.25rem] rounded-lg bg-muted/45 p-1.5 ring-1 ring-transparent min-[560px]:min-h-[7rem]">
                 <div className="flex items-center justify-between gap-1">
                   <span className="text-xs font-bold text-foreground">{day}</span>
                   {dayEvents.length > 0 ? (
@@ -697,16 +698,43 @@ function FinancialCalendar({ data }: { data: AnalysisData }) {
                     </span>
                   ) : null}
                 </div>
-                <div className="mt-1 space-y-1">
+                <div className="mt-1 flex flex-col gap-1">
                   {dayEvents.slice(0, 2).map((event) => (
                     <CalendarEventPill key={event.id} event={event} />
                   ))}
-                  {dayEvents.length > 2 ? <p className="text-[10px] font-semibold text-muted-foreground">+{dayEvents.length - 2} kayıt</p> : null}
+                  {dayEvents.length > 2 ? <p className="text-[10px] font-semibold leading-tight text-muted-foreground">+{dayEvents.length - 2} kayıt</p> : null}
                 </div>
               </div>
             )
           })}
         </div>
+        {busyDays.length > 0 ? (
+          <div className="grid gap-2 min-[560px]:grid-cols-2">
+            {busyDays.map(([date, dayEvents]) => {
+              const dayTotal = dayEvents.reduce((total, event) => total + (event.tone === 'emerald' ? event.amount : -event.amount), 0)
+
+              return (
+                <div key={`detail-${date}`} className="rounded-lg bg-muted/45 p-2.5 text-xs">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="font-bold text-foreground">{formatDate(date)}</span>
+                    <span className={`shrink-0 font-bold tabular-nums ${dayTotal >= 0 ? 'text-emerald-700 dark:text-emerald-300' : 'text-rose-700 dark:text-rose-300'}`}>
+                      {dayTotal >= 0 ? '+' : ''}
+                      {formatCurrency(dayTotal)}
+                    </span>
+                  </div>
+                  <div className="mt-2 flex flex-col gap-1.5">
+                    {dayEvents.map((event) => (
+                      <div key={`detail-${event.id}`} className="flex min-w-0 items-start justify-between gap-2 rounded-md bg-background/70 px-2 py-1.5">
+                        <span className="min-w-0 break-words font-semibold text-foreground">{event.title}</span>
+                        <span className="shrink-0 font-bold tabular-nums text-muted-foreground">{formatCurrency(event.amount)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        ) : null}
       </CardContent>
     </Card>
   )
@@ -720,7 +748,14 @@ function CalendarEventPill({ event }: { event: CalendarEvent }) {
     stone: 'bg-stone-100 text-stone-800 dark:bg-stone-800 dark:text-stone-200',
   }[event.tone]
 
-  return <p className={`truncate rounded-md px-1.5 py-0.5 text-[10px] font-semibold ${toneClass}`}>{event.title}</p>
+  return (
+    <p
+      title={`${event.title} - ${formatCurrency(event.amount)}`}
+      className={`rounded-md px-1.5 py-1 text-[8.5px] font-semibold leading-[1.12] [overflow-wrap:anywhere] min-[560px]:text-[10px] ${toneClass}`}
+    >
+      {event.title}
+    </p>
+  )
 }
 
 type CategoryInsight = {

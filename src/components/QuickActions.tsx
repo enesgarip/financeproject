@@ -61,14 +61,14 @@ export function QuickActions() {
   return (
     <div className="fixed bottom-[calc(env(safe-area-inset-bottom)+5.15rem)] right-4 z-40 flex flex-col items-end gap-3">
       {open ? (
-        <div className="w-[min(calc(100vw-2rem),22rem)] rounded-2xl border border-stone-200 bg-white p-2 shadow-2xl shadow-stone-950/15 dark:border-stone-800 dark:bg-stone-950 dark:shadow-black/40">
+        <div className="w-[min(calc(100vw-2rem),22rem)] rounded-xl border border-border/80 bg-card p-2 shadow-2xl shadow-stone-950/15 dark:shadow-black/40">
           <label className="relative mb-2 block">
             <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-stone-400" />
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="İşlem ara"
-              className="w-full rounded-xl border border-stone-200 bg-stone-50 py-2.5 pl-9 pr-3 text-sm font-semibold outline-none focus:border-emerald-600 dark:border-stone-800 dark:bg-stone-900 dark:text-stone-100"
+              className="w-full rounded-lg border border-border bg-muted/55 py-2.5 pl-9 pr-3 text-sm font-semibold outline-none focus:border-primary dark:text-stone-100"
             />
           </label>
           {orderedActions.map((action) => (
@@ -76,11 +76,11 @@ export function QuickActions() {
               key={action.to + action.label}
               to={action.to}
               onClick={() => setOpenPath(null)}
-              className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition hover:bg-stone-100 dark:hover:bg-stone-900 ${
-                action.matchPath === preferredAction ? 'bg-emerald-50/80 dark:bg-emerald-950/25' : ''
+              className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition hover:bg-muted ${
+                action.matchPath === preferredAction ? 'bg-primary/10' : ''
               }`}
             >
-              <div className="grid size-9 shrink-0 place-items-center rounded-lg bg-emerald-50 text-emerald-700 dark:bg-emerald-950/35 dark:text-emerald-300">
+              <div className="grid size-9 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
                 <action.icon size={17} />
               </div>
               <div className="min-w-0">
@@ -101,7 +101,7 @@ export function QuickActions() {
         }}
         aria-expanded={open}
         aria-label={open ? 'Hızlı işlem menüsünü kapat' : 'Hızlı işlem menüsünü aç'}
-        className={`grid size-14 place-items-center rounded-full bg-emerald-700 text-white shadow-xl shadow-emerald-900/25 ring-1 ring-white/25 transition hover:bg-emerald-800 ${
+        className={`grid size-14 place-items-center rounded-full bg-primary text-primary-foreground shadow-xl shadow-emerald-900/25 ring-1 ring-white/25 transition hover:bg-primary/90 ${
           tucked ? 'pointer-events-none translate-y-3 scale-90 opacity-0 sm:pointer-events-auto sm:translate-y-0 sm:scale-100 sm:opacity-100' : ''
         }`}
       >
