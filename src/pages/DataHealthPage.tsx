@@ -59,7 +59,6 @@ type HealthIssue = {
     | 'cardInstallmentPostedAt'
     | 'cardInstallmentCount'
     | 'cardStatementTotals'
-    | 'cardUnclassifiedDebt'
     | 'cardScheduledDebt'
     | 'assetShape'
     | 'budgetMonth'
@@ -426,9 +425,9 @@ function issuePreviewDetails(issue: HealthIssue) {
     previews.push(`Ekstre borcu: ${formatCurrency(payload.statementDebt ?? 0)}`)
     previews.push(`Dönem içi kesinleşen: ${formatCurrency(payload.currentPeriod ?? 0)}`)
     previews.push(`Provizyon: ${formatCurrency(payload.provisionAmount ?? 0)}`)
-  } else if (issue.kind === 'cardUnclassifiedDebt') {
-    previews.push(`Sınıflandırılacak tutar: ${formatCurrency(payload.amount ?? 0)}`)
-    previews.push(`Dönem içi kesinleşen: ${formatCurrency(payload.currentPeriod ?? 0)}`)
+  } else if (issue.kind === 'cardScheduledDebt') {
+    previews.push(`Yeni toplam borç: ${formatCurrency(payload.nextDebtAmount ?? 0)}`)
+    previews.push(`Planlı taksit tutarı borca eklenecek.`)
   } else if (issue.kind === 'loanTotals') {
     previews.push(`Kalan tutar: ${formatCurrency(payload.remainingAmount ?? 0)}`)
     previews.push(`Kalan taksit: ${payload.remainingInstallments ?? 0}`)
@@ -465,6 +464,12 @@ function buildIssues(data: HealthData): HealthIssue[] {
 
   for (const item of data.loanInstallments) {
     installmentsByLoan.set(item.loan_id, [...(installmentsByLoan.get(item.loan_id) ?? []), item])
+  }
+
+  const scheduledInstallmentsByCard = new Map<string, number>()
+  for (const item of data.cardInstallments) {
+    if (item.status !== 'scheduled') continue
+    scheduledInstallmentsByCard.set(item.card_id, roundMoney((scheduledInstallmentsByCard.get(item.card_id) ?? 0) + item.amount))
   }
 
   for (const asset of data.assets) {
@@ -654,27 +659,67 @@ function buildIssues(data: HealthData): HealthIssue[] {
       })
     }
 
-    const splitTotal = roundMoney(card.statement_debt_amount + card.current_period_spending + cardProvisionAmount(card))
-    if (card.debt_amount > splitTotal + 0.01) {
-      const unclassifiedAmount = roundMoney(card.debt_amount - splitTotal)
-      const nextCurrentPeriod = roundMoney(card.current_period_spending + unclassifiedAmount)
+    const splitTotal = cardSplitTotal(card.statement_debt_amount, card.current_period_spending, cardProvisionAmount(card))
+    const scheduledTotal = scheduledInstallmentsByCard.get(card.id) ?? 0
+
+    if (scheduledTotal > 0.01 && card.debt_amount <= splitTotal + 0.01) {
+      const nextDebtAmount = roundMoney(card.debt_amount + scheduledTotal)
 
       issues.push({
-        id: `card-unclassified-debt-${card.id}`,
+        id: `card-scheduled-debt-${card.id}`,
         area: 'Kartlar',
-        severity: 'info',
-        title: `${cardLabel(card)} borcunun bir kısmı sınıflanmamış`,
-        description: 'Toplam borç, ekstre borcu, dönem içi kesinleşen ve provizyon toplamından yüksek görünüyor.',
+        severity: 'error',
+        title: `${cardLabel(card)} planlı taksitleri limitten düşmüyor`,
+        description: 'Gelecek taksitler kayıtlı ama kart borcuna eklenmemiş; kalan limit yanlış yüksek görünür.',
         details: [
-          `Toplam borç: ${formatCurrency(card.debt_amount)}`,
-          `Sınıflanan: ${formatCurrency(splitTotal)}`,
-          `Sınıflandırılacak: ${formatCurrency(unclassifiedAmount)}`,
+          `Planlı taksit: ${formatCurrency(scheduledTotal)}`,
+          `Güncel borç: ${formatCurrency(card.debt_amount)}`,
+          `Önerilen borç: ${formatCurrency(nextDebtAmount)}`,
         ],
         fixable: true,
-        fixLabel: 'Dönem içine sınıflandır',
-        kind: 'cardUnclassifiedDebt',
-        payload: { cardId: card.id, amount: unclassifiedAmount, currentPeriod: nextCurrentPeriod },
+        fixLabel: 'Planlı taksitleri borca ekle',
+        kind: 'cardScheduledDebt',
+        payload: { cardId: card.id, scheduledTotal, nextDebtAmount },
       })
+    }
+
+    if (card.debt_amount > splitTotal + 0.01) {
+      const unclassifiedAmount = roundMoney(card.debt_amount - splitTotal)
+      const unexplained = roundMoney(unclassifiedAmount - Math.min(unclassifiedAmount, scheduledTotal))
+      const hasInstallmentExpenses = data.cardExpenses.some(
+        (expense) => expense.card_id === card.id && expense.status === 'posted' && expense.installment_count > 1,
+      )
+
+      if (unexplained > 0.01) {
+        issues.push({
+          id: `card-unclassified-debt-${card.id}`,
+          area: 'Kartlar',
+          severity: scheduledTotal > 0 ? 'warning' : 'info',
+          title: `${cardLabel(card)} borç kırılımında eksik pay`,
+          description:
+            scheduledTotal > 0
+              ? 'Toplam borç gelecek taksitleri de içerir; bu farkın çoğu planlı taksitlerden gelir ve dönem içine yazılmamalıdır.'
+              : 'Toplam borç, ekstre + dönem içi + provizyon toplamından yüksek. Farkı ekstre borcuna aktarmak daha güvenlidir.',
+          details: [
+            `Toplam borç: ${formatCurrency(card.debt_amount)}`,
+            `Ekstre + dönem + provizyon: ${formatCurrency(splitTotal)}`,
+            scheduledTotal > 0 ? `Planlı taksit (beklenen fark): ${formatCurrency(scheduledTotal)}` : null,
+            `Düzeltilmesi gereken: ${formatCurrency(unexplained)}`,
+            hasInstallmentExpenses && scheduledTotal <= 0.01
+              ? 'Taksitli harcama var ama plan satırı eksik olabilir; eksik taksit uyarılarına da bak.'
+              : null,
+          ].filter((item): item is string => Boolean(item)),
+          fixable: true,
+          fixLabel: 'Ekstre borcuna aktar',
+          kind: 'cardDebtSplit',
+          payload: {
+            cardId: card.id,
+            statementDebt: roundMoney(card.statement_debt_amount + unexplained),
+            currentPeriod: card.current_period_spending,
+            provisionAmount: cardProvisionAmount(card),
+          },
+        })
+      }
     }
 
     if (card.debt_amount > 0 && (!card.statement_day || !card.due_day)) {
@@ -708,36 +753,6 @@ function buildIssues(data: HealthData): HealthIssue[] {
   for (const card of data.cards.filter((item) => item.card_type === 'kredi_karti')) {
     const key = card.limit_group_name?.trim() || card.id
     creditGroups.set(key, [...(creditGroups.get(key) ?? []), card])
-  }
-
-  for (const card of data.cards.filter((item) => item.card_type === 'kredi_karti')) {
-    const scheduledTotal = roundMoney(
-      data.cardInstallments.filter((item) => item.card_id === card.id && item.status === 'scheduled').reduce((total, item) => total + item.amount, 0),
-    )
-
-    if (scheduledTotal <= 0.01) continue
-
-    const splitTotal = cardSplitTotal(card.statement_debt_amount, card.current_period_spending, cardProvisionAmount(card))
-    if (card.debt_amount <= splitTotal + 0.01) {
-      const nextDebtAmount = roundMoney(card.debt_amount + scheduledTotal)
-
-      issues.push({
-        id: `card-scheduled-debt-${card.id}`,
-        area: 'Kartlar',
-        severity: 'error',
-        title: `${cardLabel(card)} planlı taksitleri limitten düşmüyor`,
-        description: 'Gelecek taksitler kayıtlı ama kart borcuna eklenmemiş; kalan limit yanlış yüksek görünür.',
-        details: [
-          `Planlı taksit: ${formatCurrency(scheduledTotal)}`,
-          `Güncel borç: ${formatCurrency(card.debt_amount)}`,
-          `Önerilen borç: ${formatCurrency(nextDebtAmount)}`,
-        ],
-        fixable: true,
-        fixLabel: 'Planlı taksitleri borca ekle',
-        kind: 'cardScheduledDebt',
-        payload: { cardId: card.id, scheduledTotal, nextDebtAmount },
-      })
-    }
   }
 
   for (const [key, groupCards] of creditGroups) {
@@ -1633,18 +1648,6 @@ export function DataHealthPage() {
           statement_debt_amount: payload.statementDebt ?? 0,
           current_period_spending: payload.currentPeriod ?? 0,
           provision_amount: payload.provisionAmount ?? 0,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', payload.cardId)
-      if (updateError) throw new Error(updateError.message)
-    }
-
-    if (issue.kind === 'cardUnclassifiedDebt' && payload.cardId) {
-      await addUndo('cards', [payload.cardId])
-      const { error: updateError } = await supabase
-        .from('cards')
-        .update({
-          current_period_spending: payload.currentPeriod ?? 0,
           updated_at: new Date().toISOString(),
         })
         .eq('id', payload.cardId)
