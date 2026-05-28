@@ -17,7 +17,7 @@ export type LoanInstallmentStatus = 'bekliyor' | 'ödendi'
 export type CardInstallmentStatus = 'scheduled' | 'posted'
 export type CardExpenseStatus = 'provision' | 'posted' | 'cancelled'
 export type SavingsGoalStatus = 'active' | 'completed'
-export type SavingsGoalValueType = 'TRY' | 'gram_altin' | 'ceyrek_altin'
+export type SavingsGoalValueType = 'TRY' | 'gram_altin' | 'ceyrek_altin' | 'composite'
 export type TransactionHistoryType = 'payment' | 'transfer' | 'loan' | 'debt' | 'card'
 export type UpcomingDismissalSource = 'payment' | 'card' | 'loan_installment' | 'debt'
 
@@ -84,6 +84,15 @@ export type SavingsGoal = BaseRow & {
   target_date: string | null
   status: SavingsGoalStatus
   note: string | null
+}
+
+export type SavingsGoalComponent = BaseRow & {
+  goal_id: string
+  label: string | null
+  value_type: Exclude<SavingsGoalValueType, 'composite'>
+  target_amount: number
+  current_amount: number
+  sort_order: number
 }
 
 export type CardInstallment = BaseRow & {
@@ -211,6 +220,7 @@ export type Database = {
       card_expenses: Table<CardExpense, WithBaseInsert<CardExpense>, WithBaseUpdate<CardExpense>>
       budgets: Table<Budget, WithBaseInsert<Budget>, WithBaseUpdate<Budget>>
       savings_goals: Table<SavingsGoal, WithBaseInsert<SavingsGoal>, WithBaseUpdate<SavingsGoal>>
+      savings_goal_components: Table<SavingsGoalComponent, WithBaseInsert<SavingsGoalComponent>, WithBaseUpdate<SavingsGoalComponent>>
       card_installments: Table<CardInstallment, WithBaseInsert<CardInstallment>, WithBaseUpdate<CardInstallment>>
       card_statement_archives: Table<CardStatementArchive, WithBaseInsert<CardStatementArchive>, WithBaseUpdate<CardStatementArchive>>
       loans: Table<Loan, WithBaseInsert<Loan>, WithBaseUpdate<Loan>>

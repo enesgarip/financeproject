@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { CrudPage, type FormField } from '../components/CrudPage'
 import { AccountSelector } from '../components/finance/AccountSelector'
 import { CategoryPicker } from '../components/finance/CategoryPicker'
+import { CardInstallmentCalendarPanel } from '../components/finance/CardInstallmentCalendarPanel'
 import { CardInstallmentExpensesPanel } from '../components/finance/CardInstallmentExpensesPanel'
 import { InstallmentPlanner } from '../components/finance/InstallmentPlanner'
 import { MoneyInput } from '../components/finance/MoneyInput'
@@ -1391,6 +1392,7 @@ export function CardsPage() {
                 onCancel={(expense) => void handleProvisionAction(expense, 'cancel', reload, setError)}
               />
               <LegacyInstallmentPanel rows={rows as Card[]} reload={reload} setError={setError} />
+              <CardInstallmentCalendarPanel cards={rows as Card[]} />
               <CardInstallmentExpensesPanel cards={rows as Card[]} reload={() => refreshCardsAndProvisions(reload)} setError={setError} />
               <CreditCardOverview rows={rows as Card[]} />
             </div>

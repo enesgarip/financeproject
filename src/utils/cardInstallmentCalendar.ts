@@ -1,0 +1,57 @@
+import type { Card, CardInstallment } from '../types/database'
+import { addMonths, dateInputValue, startOfMonth } from './date'
+
+export type CardInstallmentMonthRow = {
+  cardId: string
+  cardLabel: string
+  amount: number
+  count: number
+}
+
+export type CardInstallmentMonthSummary = {
+  monthKey: string
+  monthLabel: string
+  total: number
+  rows: CardInstallmentMonthRow[]
+}
+
+function monthLabel(monthKey: string) {
+  return new Intl.DateTimeFormat('tr-TR', { month: 'long', year: 'numeric' }).format(new Date(`${monthKey}T00:00:00`))
+}
+
+export function buildCardInstallmentCalendar(
+  installments: CardInstallment[],
+  cards: Card[],
+  monthCount = 4,
+): CardInstallmentMonthSummary[] {
+  const cardsById = new Map(cards.map((card) => [card.id, card]))
+  const start = dateInputValue(startOfMonth())
+  const monthKeys = Array.from({ length: monthCount }, (_, index) => dateInputValue(addMonths(new Date(`${start}T00:00:00`), index)))
+
+  return monthKeys.map((monthKey) => {
+    const monthInstallments = installments.filter((item) => item.due_month.slice(0, 7) === monthKey.slice(0, 7))
+    const byCard = new Map<string, CardInstallmentMonthRow>()
+
+    for (const item of monthInstallments) {
+      const card = cardsById.get(item.card_id)
+      const cardLabel = card ? `${card.bank_name} · ${card.card_name}` : 'Kart'
+      const existing = byCard.get(item.card_id)
+
+      if (existing) {
+        existing.amount += item.amount
+        existing.count += 1
+      } else {
+        byCard.set(item.card_id, { cardId: item.card_id, cardLabel, amount: item.amount, count: 1 })
+      }
+    }
+
+    const rows = Array.from(byCard.values()).sort((a, b) => b.amount - a.amount)
+    const total = rows.reduce((sum, row) => sum + row.amount, 0)
+
+    return { monthKey, monthLabel: monthLabel(monthKey), total, rows }
+  })
+}
+
+export function totalScheduledInstallments(installments: CardInstallment[]) {
+  return installments.filter((item) => item.status === 'scheduled').reduce((sum, item) => sum + item.amount, 0)
+}

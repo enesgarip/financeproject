@@ -22,7 +22,21 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
 import { supabase } from '../lib/supabase'
-import type { Asset, Card as FinanceCard, Debt, Loan, LoanInstallment, Payment, SalaryHistory, TransactionHistory, TransactionHistoryType } from '../types/database'
+import type {
+  Asset,
+  Budget,
+  Card as FinanceCard,
+  CardExpense,
+  Debt,
+  Loan,
+  LoanInstallment,
+  Payment,
+  SalaryHistory,
+  TransactionHistory,
+  TransactionHistoryType,
+} from '../types/database'
+import { BudgetAlertPanel } from '../components/dashboard/BudgetAlertPanel'
+import { StatementReminderPanel } from '../components/dashboard/StatementReminderPanel'
 import { daysUntil, endOfMonth, formatDate, isDateInMonth, isUpcomingDate, monthlyOccurrenceDate, nextMonthlyDate, startOfMonth } from '../utils/date'
 import { formatCurrency } from '../utils/formatCurrency'
 import { EmptyState } from '../components/EmptyState'
@@ -41,6 +55,8 @@ type DashboardData = {
   payments: Payment[]
   salaryHistory: SalaryHistory[]
   transactionHistory: TransactionHistory[]
+  budgets: Budget[]
+  cardExpenses: CardExpense[]
 }
 
 const emptyData: DashboardData = {
@@ -52,6 +68,8 @@ const emptyData: DashboardData = {
   payments: [],
   salaryHistory: [],
   transactionHistory: [],
+  budgets: [],
+  cardExpenses: [],
 }
 
 const UPCOMING_DAYS = 30
@@ -575,16 +593,19 @@ export function DashboardPage() {
     const historyStart = new Date()
     historyStart.setMonth(historyStart.getMonth() - 3)
 
-    const [assets, cards, loans, loanInstallments, debts, payments, salaryHistory, transactionHistory] = await Promise.all([
-      supabase.from('assets').select('*'),
-      supabase.from('cards').select('*'),
-      supabase.from('loans').select('*'),
-      supabase.from('loan_installments').select('*'),
-      supabase.from('debts').select('*'),
-      supabase.from('payments').select('*'),
-      supabase.from('salary_history').select('*').order('effective_date', { ascending: false }),
-      supabase.from('transaction_history').select('*').gte('occurred_at', historyStart.toISOString()).order('occurred_at', { ascending: false }),
-    ])
+    const [assets, cards, loans, loanInstallments, debts, payments, salaryHistory, transactionHistory, budgets, cardExpenses] =
+      await Promise.all([
+        supabase.from('assets').select('*'),
+        supabase.from('cards').select('*'),
+        supabase.from('loans').select('*'),
+        supabase.from('loan_installments').select('*'),
+        supabase.from('debts').select('*'),
+        supabase.from('payments').select('*'),
+        supabase.from('salary_history').select('*').order('effective_date', { ascending: false }),
+        supabase.from('transaction_history').select('*').gte('occurred_at', historyStart.toISOString()).order('occurred_at', { ascending: false }),
+        supabase.from('budgets').select('*'),
+        supabase.from('card_expenses').select('*'),
+      ])
 
     const firstError = [
       assets.error,
@@ -595,6 +616,8 @@ export function DashboardPage() {
       payments.error,
       salaryHistory.error,
       transactionHistory.error,
+      budgets.error?.code === 'PGRST205' ? null : budgets.error,
+      cardExpenses.error,
     ].find(Boolean)
     if (firstError) {
       setError(firstError.message)
@@ -611,6 +634,8 @@ export function DashboardPage() {
       payments: payments.data ?? [],
       salaryHistory: salaryHistory.data ?? [],
       transactionHistory: transactionHistory.data ?? [],
+      budgets: budgets.error ? [] : (budgets.data ?? []),
+      cardExpenses: cardExpenses.data ?? [],
     })
     setLoading(false)
   }, [])
@@ -810,6 +835,11 @@ export function DashboardPage() {
 
       <div className="min-w-0 lg:col-span-12">
         <FocusActionPanel actions={focusActions} cashFlow={summary.cashFlow} />
+      </div>
+
+      <div className="grid min-w-0 gap-3 min-[760px]:grid-cols-2 lg:col-span-12">
+        <StatementReminderPanel cards={data.cards} />
+        <BudgetAlertPanel budgets={data.budgets} expenses={data.cardExpenses} />
       </div>
 
       <div className="min-w-0 lg:col-span-7">
