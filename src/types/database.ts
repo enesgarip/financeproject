@@ -17,6 +17,7 @@ export type LoanInstallmentStatus = 'bekliyor' | 'ödendi'
 export type CardInstallmentStatus = 'scheduled' | 'posted'
 export type CardExpenseStatus = 'provision' | 'posted' | 'cancelled'
 export type SavingsGoalStatus = 'active' | 'completed'
+export type SavingsGoalValueType = 'TRY' | 'gram_altin' | 'ceyrek_altin'
 export type TransactionHistoryType = 'payment' | 'transfer' | 'loan' | 'debt' | 'card'
 export type UpcomingDismissalSource = 'payment' | 'card' | 'loan_installment' | 'debt'
 
@@ -76,8 +77,10 @@ export type Budget = BaseRow & {
 
 export type SavingsGoal = BaseRow & {
   name: string
+  value_type: SavingsGoalValueType
   target_amount: number
   current_amount: number
+  estimated_value_try: number | null
   target_date: string | null
   status: SavingsGoalStatus
   note: string | null
@@ -262,6 +265,18 @@ export type Database = {
           p_amount: number
         }
         Returns: Card
+      }
+      update_card_expense: {
+        Args: {
+          p_expense_id: string
+          p_amount: number
+          p_description: string
+          p_spent_at?: string
+          p_installment_count?: number
+          p_category?: string
+          p_note?: string | null
+        }
+        Returns: CardExpense
       }
       pay_loan_installment: {
         Args: {

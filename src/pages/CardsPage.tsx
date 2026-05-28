@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { CrudPage, type FormField } from '../components/CrudPage'
 import { AccountSelector } from '../components/finance/AccountSelector'
 import { CategoryPicker } from '../components/finance/CategoryPicker'
+import { CardInstallmentExpensesPanel } from '../components/finance/CardInstallmentExpensesPanel'
 import { InstallmentPlanner } from '../components/finance/InstallmentPlanner'
 import { MoneyInput } from '../components/finance/MoneyInput'
 import { SimpleModal } from '../components/SimpleModal'
@@ -646,7 +647,6 @@ function LegacyInstallmentPanel({
   const [totalInstallments, setTotalInstallments] = useState('9')
   const [paidInstallments, setPaidInstallments] = useState('3')
   const [nextDueMonth, setNextDueMonth] = useState(monthInputValue())
-  const [addRemainingToDebt, setAddRemainingToDebt] = useState(true)
   const [localError, setLocalError] = useState('')
   const [saving, setSaving] = useState(false)
 
@@ -759,22 +759,20 @@ function LegacyInstallmentPanel({
       return
     }
 
-    if (addRemainingToDebt) {
-      const { error: cardUpdateError } = await supabase
-        .from('cards')
-        .update({
-          debt_amount: selectedCard.debt_amount + remainingAmount,
-          current_period_spending: selectedCard.current_period_spending + (firstDueIsCurrentMonth ? parsedInstallmentAmount : 0),
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', selectedCard.id)
+    const { error: cardUpdateError } = await supabase
+      .from('cards')
+      .update({
+        debt_amount: selectedCard.debt_amount + remainingAmount,
+        current_period_spending: selectedCard.current_period_spending + (firstDueIsCurrentMonth ? parsedInstallmentAmount : 0),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', selectedCard.id)
 
-      if (cardUpdateError) {
-        await rollbackExpense(expense.id)
-        setSaving(false)
-        setLocalError(cardUpdateError.message)
-        return
-      }
+    if (cardUpdateError) {
+      await rollbackExpense(expense.id)
+      setSaving(false)
+      setLocalError(cardUpdateError.message)
+      return
     }
 
     const historyError = await addTransactionHistory({
@@ -797,7 +795,6 @@ function LegacyInstallmentPanel({
     setTotalInstallments('9')
     setPaidInstallments('3')
     setNextDueMonth(monthInputValue())
-    setAddRemainingToDebt(true)
     await reload()
   }
 
@@ -908,15 +905,9 @@ function LegacyInstallmentPanel({
             </label>
             <CategoryPicker description={description} value={category} onChange={setCategory} />
           </div>
-          <label className="flex items-start gap-2 rounded-lg bg-amber-50 px-3 py-2.5 text-sm font-medium text-amber-950 dark:bg-amber-950/30 dark:text-amber-100">
-            <input
-              checked={addRemainingToDebt}
-              onChange={(event) => setAddRemainingToDebt(event.target.checked)}
-              type="checkbox"
-              className="mt-1 size-4 rounded border-amber-300 text-emerald-700"
-            />
-            <span>Kalan tutarı kart borcuna ekle</span>
-          </label>
+          <p className="rounded-lg bg-amber-50 px-3 py-2.5 text-xs font-medium text-amber-950 dark:bg-amber-950/30 dark:text-amber-100">
+            Kalan {formatCurrency(remainingAmount)} tutarı otomatik olarak kart borcuna eklenir; böylece gelecek taksitler limit hesabına yansır.
+          </p>
           <InstallmentPlanner
             compact
             remainingCount={remainingCount}
@@ -1400,6 +1391,7 @@ export function CardsPage() {
                 onCancel={(expense) => void handleProvisionAction(expense, 'cancel', reload, setError)}
               />
               <LegacyInstallmentPanel rows={rows as Card[]} reload={reload} setError={setError} />
+              <CardInstallmentExpensesPanel cards={rows as Card[]} reload={() => refreshCardsAndProvisions(reload)} setError={setError} />
               <CreditCardOverview rows={rows as Card[]} />
             </div>
           ) : null

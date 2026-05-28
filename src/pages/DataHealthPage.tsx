@@ -23,6 +23,7 @@ import type {
 } from '../types/database'
 import { dateInputValue, formatDate } from '../utils/date'
 import { formatCurrency } from '../utils/formatCurrency'
+import { formatSavingsGoalAmount } from '../utils/savingsGoal'
 
 type HealthData = {
   assets: Asset[]
@@ -59,6 +60,7 @@ type HealthIssue = {
     | 'cardInstallmentCount'
     | 'cardStatementTotals'
     | 'cardUnclassifiedDebt'
+    | 'cardScheduledDebt'
     | 'assetShape'
     | 'budgetMonth'
     | 'debtShape'
@@ -82,6 +84,8 @@ type HealthIssue = {
     statementDebt?: number
     currentPeriod?: number
     provisionAmount?: number
+    scheduledTotal?: number
+    nextDebtAmount?: number
     remainingAmount?: number
     remainingInstallments?: number
     loanStatus?: Loan['status']
@@ -203,6 +207,10 @@ function cardLabel(card: Card | undefined) {
 
 function cardProvisionAmount(card: Pick<Card, 'provision_amount'>) {
   return card.provision_amount ?? 0
+}
+
+function cardSplitTotal(statementDebt: number, currentPeriod: number, provisionAmount: number) {
+  return roundMoney(statementDebt + currentPeriod + provisionAmount)
 }
 
 function activeCardExpense(expense: CardExpense) {
@@ -700,6 +708,36 @@ function buildIssues(data: HealthData): HealthIssue[] {
   for (const card of data.cards.filter((item) => item.card_type === 'kredi_karti')) {
     const key = card.limit_group_name?.trim() || card.id
     creditGroups.set(key, [...(creditGroups.get(key) ?? []), card])
+  }
+
+  for (const card of data.cards.filter((item) => item.card_type === 'kredi_karti')) {
+    const scheduledTotal = roundMoney(
+      data.cardInstallments.filter((item) => item.card_id === card.id && item.status === 'scheduled').reduce((total, item) => total + item.amount, 0),
+    )
+
+    if (scheduledTotal <= 0.01) continue
+
+    const splitTotal = cardSplitTotal(card.statement_debt_amount, card.current_period_spending, cardProvisionAmount(card))
+    if (card.debt_amount <= splitTotal + 0.01) {
+      const nextDebtAmount = roundMoney(card.debt_amount + scheduledTotal)
+
+      issues.push({
+        id: `card-scheduled-debt-${card.id}`,
+        area: 'Kartlar',
+        severity: 'error',
+        title: `${cardLabel(card)} planlı taksitleri limitten düşmüyor`,
+        description: 'Gelecek taksitler kayıtlı ama kart borcuna eklenmemiş; kalan limit yanlış yüksek görünür.',
+        details: [
+          `Planlı taksit: ${formatCurrency(scheduledTotal)}`,
+          `Güncel borç: ${formatCurrency(card.debt_amount)}`,
+          `Önerilen borç: ${formatCurrency(nextDebtAmount)}`,
+        ],
+        fixable: true,
+        fixLabel: 'Planlı taksitleri borca ekle',
+        kind: 'cardScheduledDebt',
+        payload: { cardId: card.id, scheduledTotal, nextDebtAmount },
+      })
+    }
   }
 
   for (const [key, groupCards] of creditGroups) {
@@ -1322,7 +1360,7 @@ function buildIssues(data: HealthData): HealthIssue[] {
         severity: 'warning',
         title: `${goal.name} hedef tutarı 0`,
         description: '0 TL hedef tutarı hedef ilerlemesini anlamlı gösteremez.',
-        details: [`Birikim: ${formatCurrency(goal.current_amount)}`],
+        details: [`Birikim: ${formatSavingsGoalAmount(goal, goal.current_amount)}`],
         fixable: false,
         kind: 'manual',
       })
@@ -1335,7 +1373,7 @@ function buildIssues(data: HealthData): HealthIssue[] {
         severity: 'info',
         title: `${goal.name} hedefi tamamlanmış görünüyor`,
         description: 'Birikim hedef tutarına ulaşmış ama hedef hâlâ aktif durumda.',
-        details: [`Birikim: ${formatCurrency(goal.current_amount)}`, `Hedef: ${formatCurrency(goal.target_amount)}`],
+        details: [`Birikim: ${formatSavingsGoalAmount(goal, goal.current_amount)}`, `Hedef: ${formatSavingsGoalAmount(goal, goal.target_amount)}`],
         fixable: false,
         kind: 'manual',
       })
@@ -1348,7 +1386,7 @@ function buildIssues(data: HealthData): HealthIssue[] {
         severity: 'warning',
         title: `${goal.name} tamamlandı ama hedef altında`,
         description: 'Tamamlandı durumundaki hedefin birikimi hedef tutarının altında kalmış.',
-        details: [`Birikim: ${formatCurrency(goal.current_amount)}`, `Hedef: ${formatCurrency(goal.target_amount)}`],
+        details: [`Birikim: ${formatSavingsGoalAmount(goal, goal.current_amount)}`, `Hedef: ${formatSavingsGoalAmount(goal, goal.target_amount)}`],
         fixable: false,
         kind: 'manual',
       })
@@ -1361,7 +1399,10 @@ function buildIssues(data: HealthData): HealthIssue[] {
         severity: 'info',
         title: `${goal.name} hedef tarihi geçmiş`,
         description: 'Hedef tarihi geçmiş ama hedef henüz tamamlanmamış.',
-        details: [`Hedef tarihi: ${formatDate(goal.target_date)}`, `Eksik: ${formatCurrency(goal.target_amount - goal.current_amount)}`],
+        details: [
+          `Hedef tarihi: ${formatDate(goal.target_date)}`,
+          `Eksik: ${formatSavingsGoalAmount(goal, Math.max(0, goal.target_amount - goal.current_amount))}`,
+        ],
         fixable: false,
         kind: 'manual',
       })
@@ -1604,6 +1645,18 @@ export function DataHealthPage() {
         .from('cards')
         .update({
           current_period_spending: payload.currentPeriod ?? 0,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', payload.cardId)
+      if (updateError) throw new Error(updateError.message)
+    }
+
+    if (issue.kind === 'cardScheduledDebt' && payload.cardId && payload.nextDebtAmount !== undefined) {
+      await addUndo('cards', [payload.cardId])
+      const { error: updateError } = await supabase
+        .from('cards')
+        .update({
+          debt_amount: payload.nextDebtAmount,
           updated_at: new Date().toISOString(),
         })
         .eq('id', payload.cardId)

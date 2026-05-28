@@ -20,8 +20,10 @@ import type {
   Payment,
   SalaryHistory,
   SavingsGoal,
+  SavingsGoalValueType,
   TransactionHistory,
 } from '../types/database'
+import { formatSavingsGoalAmount, formatSavingsGoalProgress, savingsGoalValueTypeLabel } from '../utils/savingsGoal'
 import { expenseCategoryOptions } from '../utils/categories'
 import { dateInputValue, daysUntil, formatDate, isDateInMonth, monthlyOccurrenceDate, startOfMonth } from '../utils/date'
 import { formatCurrency, parseNumber } from '../utils/formatCurrency'
@@ -108,8 +110,26 @@ const budgetFields: FormField[] = [
 
 const goalFields: FormField[] = [
   { name: 'name', label: 'Hedef adı', type: 'text', required: true },
-  { name: 'target_amount', label: 'Hedef tutar', type: 'number', min: '0', step: '0.01', required: true },
-  { name: 'current_amount', label: 'Biriken tutar', type: 'number', min: '0', step: '0.01', required: true },
+  {
+    name: 'value_type',
+    label: 'Hedef türü',
+    type: 'select',
+    options: [
+      { label: 'Türk lirası (TRY)', value: 'TRY' },
+      { label: 'Gram altın', value: 'gram_altin' },
+      { label: 'Çeyrek altın', value: 'ceyrek_altin' },
+    ],
+  },
+  { name: 'target_amount', label: 'Hedef miktar', type: 'number', min: '0', step: '0.01', required: true },
+  { name: 'current_amount', label: 'Biriken miktar', type: 'number', min: '0', step: '0.01', required: true },
+  {
+    name: 'estimated_value_try',
+    label: 'Tahmini değer (TRY)',
+    type: 'number',
+    min: '0',
+    step: '0.01',
+    visibleWhen: { field: 'value_type', value: ['gram_altin', 'ceyrek_altin'] },
+  },
   { name: 'target_date', label: 'Hedef tarih', type: 'date' },
   {
     name: 'status',
@@ -470,9 +490,7 @@ function GoalsProgress({ goals }: { goals: SavingsGoal[] }) {
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="truncate text-sm font-bold text-foreground">{goal.name}</p>
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  {formatCurrency(goal.current_amount)} / {formatCurrency(goal.target_amount)}
-                </p>
+                <p className="mt-0.5 text-xs text-muted-foreground">{formatSavingsGoalProgress(goal)}</p>
               </div>
               <Badge variant={goal.status === 'completed' ? 'default' : 'secondary'}>%{Math.round(rate)}</Badge>
             </div>
@@ -1268,34 +1286,58 @@ export function AnalysisPage() {
         addLabel="Hedef ekle"
         fields={goalFields}
         emptyTitle="Henüz birikim hedefi yok"
-        emptyDescription="Araba, tatil veya acil durum fonu gibi hedeflerini buradan takip edebilirsin."
+        emptyDescription="Araba, tatil, evlilik altını veya acil durum fonu gibi hedeflerini buradan takip edebilirsin."
         orderBy="created_at"
         orderAscending={false}
         renderBeforeList={({ loading, rows }) => (!loading ? <GoalsProgress goals={rows as SavingsGoal[]} /> : null)}
         getInitialValues={(row?: SavingsGoal) => ({
           name: row?.name ?? '',
+          value_type: row?.value_type ?? 'TRY',
           target_amount: row?.target_amount ?? 0,
           current_amount: row?.current_amount ?? 0,
+          estimated_value_try: row?.estimated_value_try ?? '',
           target_date: row?.target_date ?? '',
           status: row?.status ?? 'active',
           note: row?.note ?? '',
         })}
-        mapForm={(formData, userId) => ({
-          user_id: userId,
-          name: String(formData.get('name') ?? '').trim(),
-          target_amount: parseNumber(formData.get('target_amount')),
-          current_amount: parseNumber(formData.get('current_amount')),
-          target_date: String(formData.get('target_date') ?? '') || null,
-          status: formData.get('status') as SavingsGoal['status'],
-          note: String(formData.get('note') ?? '') || null,
-        })}
+        mapForm={(formData, userId) => {
+          const valueType = formData.get('value_type') as SavingsGoalValueType
+          const isGold = valueType === 'gram_altin' || valueType === 'ceyrek_altin'
+          const estimatedRaw = String(formData.get('estimated_value_try') ?? '').trim()
+
+          return {
+            user_id: userId,
+            name: String(formData.get('name') ?? '').trim(),
+            value_type: valueType,
+            target_amount: parseNumber(formData.get('target_amount')),
+            current_amount: parseNumber(formData.get('current_amount')),
+            estimated_value_try: isGold && estimatedRaw ? parseNumber(formData.get('estimated_value_try')) : null,
+            target_date: String(formData.get('target_date') ?? '') || null,
+            status: formData.get('status') as SavingsGoal['status'],
+            note: String(formData.get('note') ?? '') || null,
+          }
+        }}
         renderTitle={(row) => row.name}
-        renderSubtitle={(row) => (row.status === 'active' ? 'Aktif hedef' : 'Tamamlandı')}
-        renderDetails={(row) => [
-          `Biriken: ${formatCurrency(row.current_amount)}`,
-          `Hedef: ${formatCurrency(row.target_amount)}`,
-          `Tarih: ${formatDate(row.target_date)}`,
-        ]}
+        renderSubtitle={(row) =>
+          row.status === 'active'
+            ? row.value_type === 'TRY'
+              ? 'Aktif hedef'
+              : `Aktif · ${savingsGoalValueTypeLabel(row.value_type)}`
+            : row.value_type === 'TRY'
+              ? 'Tamamlandı'
+              : `Tamamlandı · ${savingsGoalValueTypeLabel(row.value_type)}`
+        }
+        renderDetails={(row) => {
+          const details = [
+            `Biriken: ${formatSavingsGoalAmount(row, row.current_amount)}`,
+            `Hedef: ${formatSavingsGoalAmount(row, row.target_amount)}`,
+            `Tarih: ${formatDate(row.target_date)}`,
+          ]
+          if (row.estimated_value_try && row.value_type !== 'TRY') {
+            details.splice(2, 0, `Tahmini değer: ${formatCurrency(row.estimated_value_try)}`)
+          }
+          return details
+        }}
         getCardClassName={(row) =>
           row.status === 'completed'
             ? 'border-emerald-200 bg-emerald-50 dark:border-emerald-900 dark:bg-emerald-950/30'
