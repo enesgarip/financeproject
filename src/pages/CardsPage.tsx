@@ -748,6 +748,7 @@ function LegacyInstallmentPanel({
         category,
         status: isCurrentMonth ? 'posted' : 'scheduled',
         posted_at: isCurrentMonth ? new Date().toISOString() : null,
+        paid_at: null,
         note: 'Uygulama öncesinden devreden taksit.',
       }
     })

@@ -29,7 +29,7 @@ export function buildCardInstallmentCalendar(
   const monthKeys = Array.from({ length: monthCount }, (_, index) => dateInputValue(addMonths(new Date(`${start}T00:00:00`), index)))
 
   return monthKeys.map((monthKey) => {
-    const monthInstallments = installments.filter((item) => item.due_month.slice(0, 7) === monthKey.slice(0, 7))
+    const monthInstallments = installments.filter((item) => item.status !== 'paid' && item.due_month.slice(0, 7) === monthKey.slice(0, 7))
     const byCard = new Map<string, CardInstallmentMonthRow>()
 
     for (const item of monthInstallments) {

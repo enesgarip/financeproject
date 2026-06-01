@@ -137,6 +137,12 @@ type UndoBatch = {
   entries: UndoEntry[]
 }
 
+type IssueGuide = {
+  problem: string
+  whyItMatters: string
+  nextStep: string
+}
+
 const emptyData: HealthData = {
   assets: [],
   budgets: [],
@@ -241,6 +247,118 @@ function severityClass(severity: HealthIssue['severity']) {
   if (severity === 'error') return 'bg-rose-50 text-rose-700 dark:bg-rose-950/30 dark:text-rose-300'
   if (severity === 'warning') return 'bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-300'
   return 'bg-sky-50 text-sky-700 dark:bg-sky-950/30 dark:text-sky-300'
+}
+
+function buildIssueGuide(issue: HealthIssue): IssueGuide {
+  if (issue.kind === 'cardScheduledDebt') {
+    return {
+      problem: 'Planli kart taksitleri kayitli, ama kart borcuna tam yansimiyor.',
+      whyItMatters: 'Kalan limit gercekten daha yuksek gorunur; bu da yeni harcama ve odeme planini yaniltir.',
+      nextStep: issue.fixable
+        ? 'Kart borcunu taksit planiyla hizalamak icin hizli duzeltmeyi uygula.'
+        : 'Kart borcunu ve taksit planini birlikte kontrol et; gerekiyorsa Kartlar ekranindan duzelt.',
+    }
+  }
+
+  if (issue.kind === 'cardDebtSplit' || issue.kind === 'cardStatementTotals') {
+    return {
+      problem: 'Kart borcunun ekstre, donem ici veya arsiv kiriliminda tutarsizlik var.',
+      whyItMatters: 'Odeme tutari, aylik yuk ve veri sagligi kontrolleri bu kirilima gore hesap yapar.',
+      nextStep: issue.fixable
+        ? 'Hizli duzeltmeyle kirilimi yeniden hizala, sonra Kartlar ekraninda toplamlari gozden gecir.'
+        : 'Kartin son ekstre ve donem ici hareketlerini kontrol ederek kaynak kaydi duzelt.',
+    }
+  }
+
+  if (
+    issue.kind === 'cardExpenseAmount' ||
+    issue.kind === 'cardSingleInstallments' ||
+    issue.kind === 'cardMissingInstallments' ||
+    issue.kind === 'cardInstallmentDueMonth' ||
+    issue.kind === 'cardInstallmentPostedAt' ||
+    issue.kind === 'cardInstallmentCount'
+  ) {
+    return {
+      problem: 'Kart harcamasi ile bagli taksit satirlari birbiriyle uyusmuyor.',
+      whyItMatters: 'Yaklasan taksitler, donem yuku ve kalan borc hatali hesaplanabilir.',
+      nextStep: issue.fixable
+        ? 'Hizli duzeltmeyi uygulayip taksit planini yeniden hizala.'
+        : 'Kartlar ekraninda ilgili taksitli harcamayi acip satirlari tek tek kontrol et.',
+    }
+  }
+
+  if (issue.kind === 'loanTotals' || issue.kind === 'loanInstallmentDueDay') {
+    return {
+      problem: 'Kredi ozeti ile taksit plani birbirinden kopmus gorunuyor.',
+      whyItMatters: 'Kalan borc, kalan taksit ve nakit akis projeksiyonu yanlis gorunebilir.',
+      nextStep: issue.fixable
+        ? 'Hizli duzeltmeyle kredi ozetini plana gore guncelle.'
+        : 'Kredi planini ve kredi kartini birlikte kontrol ederek eksik veya hatali satiri duzelt.',
+    }
+  }
+
+  if (issue.kind === 'loanPaidAtMissing' || issue.kind === 'loanPendingPaidAt') {
+    return {
+      problem: 'Kredi taksitinin odeme tarihi alani durumuyla uyusmuyor.',
+      whyItMatters: 'Odenmis/bekleyen ayrimi raporlarda ve veri sagligi kontrollerinde guven kaybina yol acar.',
+      nextStep: issue.fixable
+        ? 'Tarih alanini hizli duzeltmeyle senkronize et.'
+        : 'Krediler ekraninda ilgili taksiti acip gercek odeme durumunu kontrol et.',
+    }
+  }
+
+  if (issue.kind === 'paymentDueDay' || issue.kind === 'paymentRecurrenceFields') {
+    return {
+      problem: 'Odeme takvimi alanlari birbiriyle uyusmuyor.',
+      whyItMatters: 'Yaklasan odemeler ve aylik cikis plani yanlis gun veya yanlis kayitla hesaplanabilir.',
+      nextStep: issue.fixable
+        ? 'Takvim alanlarini hizli duzeltmeyle guncelle.'
+        : 'Odemeler ekraninda tekrar bilgilerini ve son tarihi kontrol et.',
+    }
+  }
+
+  if (issue.kind === 'assetShape' || issue.kind === 'budgetMonth' || issue.kind === 'debtShape' || issue.kind === 'cardTypeFields') {
+    return {
+      problem: 'Kayit formundaki teknik alanlar secili turle veya beklenen formatla uyusmuyor.',
+      whyItMatters: 'Ozet kartlari, dagilimlar ve filtreler bu kaydi yanlis yorumlayabilir.',
+      nextStep: issue.fixable
+        ? 'Hizli duzeltmeyle alanlari normalize et.'
+        : 'Ilgili kaydi acip tur, tarih ve tutar alanlarini gozden gecir.',
+    }
+  }
+
+  return {
+    problem: issue.description,
+    whyItMatters:
+      issue.severity === 'error'
+        ? 'Bu uyumsuzluk hesaplamalari dogrudan bozabilir ve finansal ozetlere guveni dusurur.'
+        : issue.severity === 'warning'
+          ? 'Bu kayit zamanla daha buyuk hesap farklarina veya hatali hatirlatmalara donusebilir.'
+          : 'Bu kaydi duzeltmek gelecekteki kontrollerin daha temiz ve anlasilir olmasini saglar.',
+    nextStep: issue.fixable
+      ? `Hizli aksiyonlardaki "${issue.fixLabel ?? 'Duzelt'}" adimini kullan.`
+      : 'Ilgili kaydi acip alanlari elle kontrol et; emin degilsen daha sonra hatirlat ile listeden gecici olarak kaldir.',
+  }
+}
+
+function navigationAction(issue: HealthIssue) {
+  if (issue.id.includes('stale-installment')) return { to: '/kartlar', label: 'Doneme dahil et' }
+  if (issue.id.includes('no-plan')) return { to: '/krediler', label: 'Plani olustur' }
+
+  if (issue.kind.startsWith('card') || issue.kind === 'cardTypeFields') return { to: '/kartlar', label: 'Kartlara git' }
+  if (issue.kind.startsWith('loan')) return { to: '/krediler', label: 'Kredilere git' }
+  if (issue.kind.startsWith('payment')) {
+    return { to: '/odemeler', label: issue.title.toLocaleLowerCase('tr-TR').includes('vadesi ge') ? 'Odendi isaretle' : 'Odemelere git' }
+  }
+  if (issue.kind === 'debtShape' || issue.title.toLocaleLowerCase('tr-TR').includes('bor') || issue.title.toLocaleLowerCase('tr-TR').includes('alacak')) {
+    return { to: '/borclar', label: 'Borclara git' }
+  }
+  if (issue.kind === 'assetShape' || issue.title.toLocaleLowerCase('tr-TR').includes('varl')) return { to: '/varliklar', label: 'Varliklara git' }
+  if (issue.kind === 'budgetMonth' || issue.title.toLocaleLowerCase('tr-TR').includes('hedef') || issue.title.toLocaleLowerCase('tr-TR').includes('maa')) {
+    return { to: '/analiz', label: 'Kaydi ac' }
+  }
+
+  return null
 }
 
 function newUndoId() {
@@ -1621,6 +1739,7 @@ export function DataHealthPage() {
   const [resetOpen, setResetOpen] = useState(false)
   const [resetConfirm, setResetConfirm] = useState('')
   const [resetting, setResetting] = useState(false)
+  const [snoozedIssueIds, setSnoozedIssueIds] = useState<string[]>([])
 
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -1701,11 +1820,12 @@ export function DataHealthPage() {
   }, [loadData])
 
   const issues = useMemo(() => buildIssues(data), [data])
-  const fixableIssues = issues.filter((issue) => issue.fixable)
+  const visibleIssues = useMemo(() => issues.filter((issue) => !snoozedIssueIds.includes(issue.id)), [issues, snoozedIssueIds])
+  const fixableIssues = visibleIssues.filter((issue) => issue.fixable)
   const stats = {
-    errors: issues.filter((issue) => issue.severity === 'error').length,
-    warnings: issues.filter((issue) => issue.severity === 'warning').length,
-    info: issues.filter((issue) => issue.severity === 'info').length,
+    errors: visibleIssues.filter((issue) => issue.severity === 'error').length,
+    warnings: visibleIssues.filter((issue) => issue.severity === 'warning').length,
+    info: visibleIssues.filter((issue) => issue.severity === 'info').length,
   }
 
   async function fixIssue(issue: HealthIssue): Promise<UndoBatch | null> {
@@ -1825,6 +1945,7 @@ export function DataHealthPage() {
           category: payload.category ?? 'Diğer',
           status: 'scheduled',
           posted_at: null,
+          paid_at: null,
           note: 'Veri sağlığı kontrolüyle tamamlandı.',
         }
       })
@@ -2025,7 +2146,7 @@ export function DataHealthPage() {
               </CardTitle>
               <p className="mt-1 text-sm text-muted-foreground">Varlık, bütçe, kart, kredi, borç, ödeme ve hedef kayıtlarındaki tutarlılık kontrolleri.</p>
             </div>
-            <Badge variant={issues.length > 0 ? 'secondary' : 'default'}>{loading ? 'Kontrol' : `${issues.length} bulgu`}</Badge>
+            <Badge variant={visibleIssues.length > 0 ? 'secondary' : 'default'}>{loading ? 'Kontrol' : `${visibleIssues.length} bulgu`}</Badge>
           </div>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -2053,6 +2174,17 @@ export function DataHealthPage() {
               <Wrench size={15} />
               Güvenli düzeltmeleri uygula
             </button>
+            {snoozedIssueIds.length > 0 ? (
+              <button
+                type="button"
+                onClick={() => setSnoozedIssueIds([])}
+                disabled={loading || Boolean(fixingId) || undoing}
+                className="inline-flex items-center gap-2 rounded-xl border border-sky-200 bg-sky-50 px-3 py-2 text-sm font-semibold text-sky-800 shadow-sm disabled:opacity-60 dark:border-sky-900/70 dark:bg-sky-950/30 dark:text-sky-200"
+              >
+                <Activity size={15} />
+                {snoozedIssueIds.length} ertelenen uyariyi geri getir
+              </button>
+            ) : null}
             {undoStack[0] ? (
               <button
                 type="button"
@@ -2084,7 +2216,19 @@ export function DataHealthPage() {
 
       {loading ? (
         <div className="h-32 animate-pulse rounded-2xl border border-border bg-muted/60" />
-      ) : issues.length === 0 ? (
+      ) : visibleIssues.length === 0 && issues.length > 0 ? (
+        <SurfaceCard className="border-0 shadow-sm ring-1 ring-sky-200/80 dark:ring-sky-900/70">
+          <CardContent className="flex items-center gap-3 p-4">
+            <div className="grid size-11 shrink-0 place-items-center rounded-xl bg-sky-50 text-sky-700 dark:bg-sky-950/30 dark:text-sky-300">
+              <Activity size={22} />
+            </div>
+            <div>
+              <h2 className="font-bold text-foreground">Aktif listede uyari kalmadi</h2>
+              <p className="mt-1 text-sm text-muted-foreground">Bulunan kayitlari daha sonra hatirlat olarak erteledin. Istersen yukaridan geri getirebilirsin.</p>
+            </div>
+          </CardContent>
+        </SurfaceCard>
+      ) : visibleIssues.length === 0 ? (
         <SurfaceCard className="border-0 shadow-sm ring-1 ring-emerald-200/80 dark:ring-emerald-900/70">
           <CardContent className="flex items-center gap-3 p-4">
             <div className="grid size-11 shrink-0 place-items-center rounded-xl bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300">
@@ -2098,57 +2242,88 @@ export function DataHealthPage() {
         </SurfaceCard>
       ) : (
         <div className="grid gap-3">
-          {issues.map((issue) => (
-            <SurfaceCard key={issue.id} className="border-0 shadow-sm ring-1 ring-stone-200/80 dark:ring-stone-800">
-              <CardContent className="p-4">
-                <div className="flex items-start gap-3">
-                  <div className={`grid size-10 shrink-0 place-items-center rounded-xl ${severityClass(issue.severity)}`}>
-                    {issue.fixable ? <Wrench size={19} /> : issue.severity === 'info' ? <Activity size={19} /> : <AlertTriangle size={19} />}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Badge variant="outline">{issue.area}</Badge>
-                      <Badge variant={issue.fixable ? 'secondary' : 'outline'}>{issue.fixable ? 'Düzeltilebilir' : 'Kontrol gerekli'}</Badge>
+          {visibleIssues.map((issue) => {
+            const guide = buildIssueGuide(issue)
+            const quickLink = navigationAction(issue)
+            const previewRows = issuePreviewDetails(issue)
+
+            return (
+              <SurfaceCard key={issue.id} className="border-0 shadow-sm ring-1 ring-stone-200/80 dark:ring-stone-800">
+                <CardContent className="p-4">
+                  <div className="flex items-start gap-3">
+                    <div className={`grid size-10 shrink-0 place-items-center rounded-xl ${severityClass(issue.severity)}`}>
+                      {issue.fixable ? <Wrench size={19} /> : issue.severity === 'info' ? <Activity size={19} /> : <AlertTriangle size={19} />}
                     </div>
-                    <h2 className="mt-2 text-base font-bold text-foreground">{issue.title}</h2>
-                    <p className="mt-1 text-sm text-muted-foreground">{issue.description}</p>
-                    <div className="mt-3 grid gap-1 text-xs text-muted-foreground">
-                      {issue.details.map((detail) => (
-                        <span key={detail}>{detail}</span>
-                      ))}
-                    </div>
-                    {issuePreviewDetails(issue).length > 0 ? (
-                      <div className="mt-3 rounded-xl border border-emerald-100 bg-emerald-50/70 p-3 text-xs text-emerald-900 dark:border-emerald-900/60 dark:bg-emerald-950/25 dark:text-emerald-100">
-                        <p className="font-bold">Düzeltme önizlemesi</p>
-                        <div className="mt-2 grid gap-1">
-                          {issuePreviewDetails(issue).map((detail, index) => (
-                            <span key={`${issue.id}-preview-${index}`}>{detail}</span>
-                          ))}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge variant="outline">{issue.area}</Badge>
+                        <Badge variant={issue.fixable ? 'secondary' : 'outline'}>{issue.fixable ? 'Hazir aksiyon var' : 'Elle inceleme gerekli'}</Badge>
+                      </div>
+                      <h2 className="mt-2 text-base font-bold text-foreground">{issue.title}</h2>
+                      <p className="mt-1 text-sm text-muted-foreground">{issue.description}</p>
+                      <div className="mt-3 grid gap-2 rounded-xl border border-stone-200/80 bg-stone-50/80 p-3 text-sm dark:border-stone-800 dark:bg-stone-900/60">
+                        <div>
+                          <p className="font-semibold text-foreground">Sorun nedir?</p>
+                          <p className="mt-1 text-muted-foreground">{guide.problem}</p>
+                        </div>
+                        <div>
+                          <p className="font-semibold text-foreground">Neden onemli?</p>
+                          <p className="mt-1 text-muted-foreground">{guide.whyItMatters}</p>
+                        </div>
+                        <div>
+                          <p className="font-semibold text-foreground">Ne yapmaliyim?</p>
+                          <p className="mt-1 text-muted-foreground">{guide.nextStep}</p>
                         </div>
                       </div>
-                    ) : null}
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {issue.fixable ? (
-                        <button
-                          type="button"
-                          onClick={() => void handleFix(issue)}
-                          disabled={Boolean(fixingId) || undoing}
-                          className="rounded-lg bg-stone-800 px-3 py-2 text-xs font-semibold text-white shadow-sm disabled:opacity-60 dark:bg-stone-700"
-                        >
-                          {fixingId === issue.id ? 'Düzeltiliyor...' : issue.fixLabel}
-                        </button>
+                      <div className="mt-3 grid gap-1 text-xs text-muted-foreground">
+                        {issue.details.map((detail) => (
+                          <span key={detail}>{detail}</span>
+                        ))}
+                      </div>
+                      {previewRows.length > 0 ? (
+                        <div className="mt-3 rounded-xl border border-emerald-100 bg-emerald-50/70 p-3 text-xs text-emerald-900 dark:border-emerald-900/60 dark:bg-emerald-950/25 dark:text-emerald-100">
+                          <p className="font-bold">Duzeltme onizlemesi</p>
+                          <div className="mt-2 grid gap-1">
+                            {previewRows.map((detail, index) => (
+                              <span key={`${issue.id}-preview-${index}`}>{detail}</span>
+                            ))}
+                          </div>
+                        </div>
                       ) : null}
-                      {issue.area === 'Krediler' && issue.id.includes('no-plan') ? (
-                        <Link to="/krediler" className="rounded-lg border border-stone-200 px-3 py-2 text-xs font-semibold text-stone-700 dark:border-stone-800 dark:text-stone-200">
-                          Kredilere git
-                        </Link>
-                      ) : null}
+                      <div className="mt-3">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Hizli aksiyonlar</p>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {issue.fixable ? (
+                            <button
+                              type="button"
+                              onClick={() => void handleFix(issue)}
+                              disabled={Boolean(fixingId) || undoing}
+                              className="rounded-lg bg-stone-800 px-3 py-2 text-xs font-semibold text-white shadow-sm disabled:opacity-60 dark:bg-stone-700"
+                            >
+                              {fixingId === issue.id ? 'Duzeltiliyor...' : issue.fixLabel}
+                            </button>
+                          ) : null}
+                          {quickLink ? (
+                            <Link to={quickLink.to} className="rounded-lg border border-stone-200 px-3 py-2 text-xs font-semibold text-stone-700 dark:border-stone-800 dark:text-stone-200">
+                              {quickLink.label}
+                            </Link>
+                          ) : null}
+                          <button
+                            type="button"
+                            onClick={() => setSnoozedIssueIds((current) => (current.includes(issue.id) ? current : [...current, issue.id]))}
+                            disabled={Boolean(fixingId) || undoing}
+                            className="rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-xs font-semibold text-sky-800 disabled:opacity-60 dark:border-sky-900/70 dark:bg-sky-950/30 dark:text-sky-200"
+                          >
+                            Daha sonra hatirlat
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </CardContent>
-            </SurfaceCard>
-          ))}
+                </CardContent>
+              </SurfaceCard>
+            )
+          })}
         </div>
       )}
     </section>

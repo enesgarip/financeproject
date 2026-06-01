@@ -1,0 +1,11 @@
+services:
+  app:
+    build:
+      context: .
+    ports:
+      - "4173:4173"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:4173 >/dev/null 2>&1 || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 12

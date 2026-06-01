@@ -258,7 +258,7 @@ function MonthlyReport({ data }: { data: AnalysisData }) {
     (expense) => expense.amount,
   )
   const cardInstallments = sum(
-    data.cardInstallments.filter((installment) => installment.due_month === monthKey),
+    data.cardInstallments.filter((installment) => installment.due_month === monthKey && installment.status !== 'paid'),
     (installment) => installment.amount,
   )
   const payments = sum(data.payments.filter(paymentInCurrentMonth), (payment) => payment.amount)
@@ -326,7 +326,7 @@ function UpcomingInstallments({ data }: { data: AnalysisData }) {
   const loansById = new Map(data.loans.map((loan) => [loan.id, loan]))
   const monthKey = dateInputValue(startOfMonth())
   const cardItems = data.cardInstallments
-    .filter((item) => item.status === 'scheduled' || item.due_month >= monthKey)
+    .filter((item) => item.status !== 'paid' && (item.status === 'scheduled' || item.due_month >= monthKey))
     .map((item) => {
       const isPastScheduled = item.status === 'scheduled' && item.due_month < monthKey
       const statusLabel = isPastScheduled ? 'Geçmiş dönem' : item.status === 'posted' ? 'Bu dönem' : 'Planlı'

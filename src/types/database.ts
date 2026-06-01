@@ -14,7 +14,7 @@ export type PaymentRecurrence = 'none' | 'monthly'
 export type PaymentMethod = 'manual' | 'bank_auto'
 export type PaymentAmountStatus = 'exact' | 'estimated'
 export type LoanInstallmentStatus = 'bekliyor' | 'ödendi'
-export type CardInstallmentStatus = 'scheduled' | 'posted'
+export type CardInstallmentStatus = 'scheduled' | 'posted' | 'paid'
 export type CardExpenseStatus = 'provision' | 'posted' | 'cancelled'
 export type SavingsGoalStatus = 'active' | 'completed'
 export type SavingsGoalValueType = 'TRY' | 'gram_altin' | 'ceyrek_altin' | 'composite'
@@ -106,6 +106,7 @@ export type CardInstallment = BaseRow & {
   category: string
   status: CardInstallmentStatus
   posted_at: string | null
+  paid_at: string | null
   note: string | null
 }
 
@@ -275,6 +276,12 @@ export type Database = {
           p_amount: number
         }
         Returns: Card
+      }
+      pay_card_installment: {
+        Args: {
+          p_installment_id: string
+        }
+        Returns: CardInstallment
       }
       update_card_expense: {
         Args: {
