@@ -8,7 +8,10 @@ import { supabase } from '../lib/supabase'
 import type { InsertFor, RowFor, TableName, UpdateFor } from '../types/database'
 import { EmptyState } from './EmptyState'
 import { SimpleModal } from './SimpleModal'
+import { Alert } from './ui/alert'
 import { Button } from './ui/button'
+import { ConfirmDialog } from './ui/confirm-dialog'
+import { Input, Select, Textarea } from './ui/input'
 import { Skeleton } from './ui/skeleton'
 
 type FieldOption = {
@@ -102,6 +105,8 @@ export function CrudPage<T extends TableName>({
   const [formError, setFormError] = useState('')
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null)
   const [query, setQuery] = useState('')
+  const [deleteId, setDeleteId] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState(false)
   const visibleFields = fields.filter((field) => isFieldVisible(field, formValues))
   const normalizedQuery = query.trim().toLocaleLowerCase('tr-TR')
   const rowMeta = useMemo(() => {
@@ -204,16 +209,19 @@ export function CrudPage<T extends TableName>({
     setFormError('')
   }
 
-  async function handleDelete(id: string) {
-    const confirmed = window.confirm('Bu kaydı silmek istiyor musun?')
-    if (!confirmed) return
+  async function confirmDelete() {
+    if (!deleteId) return
 
-    const { error: deleteError } = await supabase.from(table as never).delete().eq('id', id)
+    setDeleting(true)
+    const { error: deleteError } = await supabase.from(table as never).delete().eq('id', deleteId)
     if (deleteError) {
       setError(deleteError.message)
+      setDeleting(false)
       return
     }
-    setRows((current) => current.filter((row) => row.id !== id))
+    setRows((current) => current.filter((row) => row.id !== deleteId))
+    setDeleteId(null)
+    setDeleting(false)
   }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -272,7 +280,7 @@ export function CrudPage<T extends TableName>({
 
   return (
     <section className="flex flex-col gap-4">
-      <div className="rounded-lg border border-border/75 bg-card p-4 shadow-[0_10px_30px_rgba(15,23,42,0.04)] dark:shadow-black/20">
+      <div className="finance-surface rounded-lg p-4">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="min-w-0">
             <h1 className="text-lg font-black text-foreground">{pageTitle ?? addLabel}</h1>
@@ -283,11 +291,11 @@ export function CrudPage<T extends TableName>({
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <label className="relative block sm:w-72">
               <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <input
+              <Input
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder="Kayıtlarda ara"
-                className="h-10 w-full rounded-lg border border-input bg-background pl-9 pr-3 text-sm font-semibold outline-none transition focus:border-ring focus:ring-3 focus:ring-ring/15"
+                className="pl-9 text-sm"
               />
             </label>
             <Button type="button" onClick={openCreate} className="h-10 gap-2 px-4">
@@ -298,7 +306,7 @@ export function CrudPage<T extends TableName>({
         </div>
       </div>
 
-      {error ? <p className="rounded-lg bg-rose-50 p-3 text-sm text-rose-700">{error}</p> : null}
+      {error ? <Alert variant="destructive">{error}</Alert> : null}
       {renderBeforeList ? renderBeforeList({ loading, rows, reload: loadRows, setError }) : null}
 
       {loading ? (
@@ -337,7 +345,7 @@ export function CrudPage<T extends TableName>({
                       key={row.id}
                       style={getCardStyle?.(row, rows)}
                       className={cn(
-                        'rounded-lg border bg-card p-4 shadow-[0_8px_26px_rgba(15,23,42,0.04)] transition-all hover:-translate-y-0.5 hover:shadow-[0_16px_36px_rgba(15,23,42,0.08)] dark:shadow-black/20 min-[390px]:p-5',
+                        'rounded-lg border bg-card/95 p-4 shadow-[var(--shadow-card)] transition-all hover:-translate-y-0.5 hover:shadow-[var(--shadow-card-hover)] min-[390px]:p-5',
                         getCardClassName?.(row, rows) ?? 'border-border/75',
                       )}
                     >
@@ -355,13 +363,13 @@ export function CrudPage<T extends TableName>({
                             e.stopPropagation()
                             setMenuOpenId(menuOpenId === row.id ? null : row.id)
                           }}
-                          className="grid size-9 place-items-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground"
+                          className="grid size-10 place-items-center rounded-lg text-muted-foreground transition hover:bg-muted hover:text-foreground"
                           aria-label="Menü"
                         >
                           <MoreVertical size={18} />
                         </button>
                         {menuOpenId === row.id && (
-                          <div className="absolute right-0 top-full z-10 mt-1 w-36 rounded-lg border border-border bg-popover py-1 shadow-lg">
+                          <div className="absolute right-0 top-full z-10 mt-1 w-40 rounded-lg border border-border bg-popover py-1 shadow-[var(--shadow-elevated)]">
                             {renderMenuActions ? renderMenuActions(row, { reload: loadRows, setError, rows, closeMenu: () => setMenuOpenId(null) }) : null}
                             <button
                               type="button"
@@ -380,7 +388,7 @@ export function CrudPage<T extends TableName>({
                               onClick={(e) => {
                                 e.stopPropagation()
                                 setMenuOpenId(null)
-                                void handleDelete(row.id)
+                                setDeleteId(row.id)
                               }}
                               className="flex w-full items-center gap-2 px-3 py-2 text-sm text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/40"
                             >
@@ -400,7 +408,7 @@ export function CrudPage<T extends TableName>({
                         key={detail}
                         style={getDetailStyle?.(row, rows)}
                         className={cn(
-                          'min-w-0 break-words rounded-lg px-3 py-2.5 text-foreground/85',
+                          'min-w-0 break-words rounded-lg px-3 py-2.5 text-foreground/85 ring-1 ring-black/[0.025] dark:ring-white/[0.04]',
                           getDetailClassName?.(row, rows) ?? 'bg-muted/55',
                         )}
                       >
@@ -425,12 +433,9 @@ export function CrudPage<T extends TableName>({
         onClose={() => setModalOpen(false)}
       >
         <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
-          {formError ? <p className="rounded-lg bg-rose-50 p-3 text-sm text-rose-700 dark:bg-rose-950/40 dark:text-rose-200">{formError}</p> : null}
+          {formError ? <Alert variant="destructive">{formError}</Alert> : null}
           {visibleFields.map((field) => {
             const fieldError = formErrors[field.name]
-            const fieldBorder = fieldError
-              ? 'border-destructive focus:border-destructive'
-              : 'border-input focus:border-ring'
 
             return (
               <label key={field.name} className="block text-sm font-semibold text-foreground">
@@ -439,32 +444,32 @@ export function CrudPage<T extends TableName>({
                   {field.required ? <span className="text-rose-500"> *</span> : null}
                 </span>
                 {field.type === 'select' ? (
-                  <select
+                  <Select
                     name={field.name}
                     required={field.required}
                     value={formValues[field.name] ?? ''}
                     onChange={(event) => updateFormValue(field.name, event.target.value)}
                     aria-invalid={Boolean(fieldError)}
-                    className={`mt-1 w-full rounded-lg border bg-background px-3 py-3 outline-none transition focus:ring-3 focus:ring-ring/15 ${fieldBorder}`}
+                    className="mt-1"
                   >
                     {field.options?.map((option) => (
                       <option key={option.value} value={option.value}>
                         {option.label}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                 ) : field.type === 'textarea' ? (
-                  <textarea
+                  <Textarea
                     name={field.name}
                     rows={3}
                     value={formValues[field.name] ?? ''}
                     onChange={(event) => updateFormValue(field.name, event.target.value)}
                     aria-invalid={Boolean(fieldError)}
-                    className={`mt-1 w-full rounded-lg border bg-background px-3 py-3 outline-none transition focus:ring-3 focus:ring-ring/15 ${fieldBorder}`}
+                    className="mt-1"
                   />
                 ) : field.type === 'date' ? (
                   <div className="relative mt-1">
-                    <input
+                    <Input
                       name={field.name}
                       type="date"
                       required={field.required}
@@ -473,7 +478,7 @@ export function CrudPage<T extends TableName>({
                       onFocus={(event) => event.currentTarget.showPicker?.()}
                       onChange={(event) => updateFormValue(field.name, event.target.value)}
                       aria-invalid={Boolean(fieldError)}
-                      className={`min-w-0 max-w-full appearance-none rounded-lg border bg-background px-3 py-3 pr-11 text-base outline-none transition [color-scheme:light] focus:ring-3 focus:ring-ring/15 dark:[color-scheme:dark] ${fieldBorder}`}
+                      className="max-w-full pr-11"
                     />
                     <CalendarDays
                       aria-hidden="true"
@@ -483,13 +488,13 @@ export function CrudPage<T extends TableName>({
                   </div>
                 ) : field.type === 'day' ? (
                   <div className="relative mt-1">
-                    <select
+                    <Select
                       name={field.name}
                       required={field.required}
                       value={formValues[field.name] ?? ''}
                       onChange={(event) => updateFormValue(field.name, event.target.value)}
                       aria-invalid={Boolean(fieldError)}
-                      className={`w-full appearance-none rounded-lg border bg-background px-3 py-3 pr-11 outline-none transition focus:ring-3 focus:ring-ring/15 ${fieldBorder}`}
+                      className="appearance-none pr-11"
                     >
                       <option value="">Gün seç</option>
                       {Array.from({ length: 31 }, (_, index) => {
@@ -500,7 +505,7 @@ export function CrudPage<T extends TableName>({
                           </option>
                         )
                       })}
-                    </select>
+                    </Select>
                     <CalendarDays
                       aria-hidden="true"
                       size={18}
@@ -508,7 +513,7 @@ export function CrudPage<T extends TableName>({
                     />
                   </div>
                 ) : (
-                  <input
+                  <Input
                     name={field.name}
                     type={field.type}
                     required={field.required}
@@ -517,7 +522,7 @@ export function CrudPage<T extends TableName>({
                     value={formValues[field.name] ?? ''}
                     onChange={(event) => updateFormValue(field.name, event.target.value)}
                     aria-invalid={Boolean(fieldError)}
-                    className={`mt-1 w-full rounded-lg border bg-background px-3 py-3 outline-none transition focus:ring-3 focus:ring-ring/15 ${fieldBorder}`}
+                    className="mt-1"
                   />
                 )}
                 {fieldError ? <span className="mt-1 block text-xs font-medium text-rose-600 dark:text-rose-300">{fieldError}</span> : null}
@@ -533,6 +538,17 @@ export function CrudPage<T extends TableName>({
           </Button>
         </form>
       </SimpleModal>
+
+      <ConfirmDialog
+        open={Boolean(deleteId)}
+        title="Kaydı sil"
+        description="Bu kayıt kalıcı olarak silinecek. İşlemi onaylamadan önce doğru kaydı seçtiğinden emin ol."
+        confirmLabel="Sil"
+        variant="destructive"
+        loading={deleting}
+        onCancel={() => setDeleteId(null)}
+        onConfirm={() => void confirmDelete()}
+      />
 
     </section>
   )

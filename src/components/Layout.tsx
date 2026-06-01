@@ -52,9 +52,9 @@ export function Layout() {
 
   return (
     <div className="min-h-dvh bg-background text-foreground">
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r border-border/80 bg-card/95 p-4 shadow-[12px_0_40px_rgba(15,23,42,0.04)] backdrop-blur-xl lg:flex">
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r border-border/75 bg-card/92 p-4 shadow-[12px_0_40px_rgba(15,23,42,0.045)] backdrop-blur-xl dark:shadow-black/30 lg:flex">
         <div className="flex items-center gap-3 px-1 pb-6">
-          <div className="grid size-10 place-items-center rounded-lg bg-primary text-lg font-black text-primary-foreground shadow-sm shadow-emerald-900/15">
+          <div className="grid size-10 place-items-center rounded-lg bg-primary text-lg font-black text-primary-foreground shadow-sm shadow-primary/20">
             ₺
           </div>
           <div className="min-w-0">
@@ -73,7 +73,7 @@ export function Layout() {
                 cn(
                   'flex h-11 items-center gap-3 rounded-lg px-3 text-sm font-bold transition',
                   isActive
-                    ? 'bg-primary/10 text-primary ring-1 ring-primary/15'
+                    ? 'bg-primary/10 text-primary ring-1 ring-primary/18'
                     : 'text-muted-foreground hover:bg-muted/75 hover:text-foreground',
                 )
               }
@@ -84,7 +84,7 @@ export function Layout() {
           ))}
         </nav>
 
-        <div className="rounded-lg border border-border/75 bg-background/75 p-3">
+        <div className="rounded-lg border border-border/75 bg-background/70 p-3 shadow-sm">
           <p className="truncate text-sm font-bold text-foreground">{user?.email ?? 'Oturum'}</p>
           <button
             type="button"
@@ -98,7 +98,7 @@ export function Layout() {
       </aside>
 
       <div className="flex min-h-dvh flex-col lg:pl-64">
-        <header className="sticky top-0 z-20 border-b border-border/80 bg-background/92 px-4 pb-3 pt-[calc(env(safe-area-inset-top)+0.75rem)] backdrop-blur-xl">
+        <header className="sticky top-0 z-20 border-b border-border/75 bg-background/88 px-4 pb-3 pt-[calc(env(safe-area-inset-top)+0.75rem)] backdrop-blur-xl">
           <div className={`mx-auto flex ${contentWidthClass} items-center justify-between gap-3`}>
             <div className="min-w-0">
               <h1 className="truncate text-lg font-black leading-tight text-foreground">{titles[pathname] ?? 'Finans'}</h1>
@@ -108,14 +108,14 @@ export function Layout() {
               </p>
             </div>
             <div className="flex shrink-0 items-center gap-2">
-              <div className="hidden h-10 items-center gap-2 rounded-lg border border-border/80 bg-card px-3 text-xs font-bold text-muted-foreground shadow-sm sm:flex">
+              <div className="hidden h-10 items-center gap-2 rounded-lg border border-border/80 bg-card/95 px-3 text-xs font-bold text-muted-foreground shadow-sm sm:flex">
                 <CalendarDays size={15} />
                 <span>{currentDateLabel()}</span>
               </div>
               <button
                 type="button"
                 onClick={() => setIsDark((current) => !current)}
-                className="grid size-10 place-items-center rounded-lg border border-border/80 bg-card text-muted-foreground shadow-sm transition hover:text-foreground"
+                className="grid size-10 place-items-center rounded-lg border border-border/80 bg-card/95 text-muted-foreground shadow-sm transition hover:bg-muted hover:text-foreground"
                 aria-label={isDark ? 'Gündüz temasına geç' : 'Gece temasına geç'}
               >
                 {isDark ? <Sun size={18} /> : <Moon size={18} />}
@@ -123,7 +123,7 @@ export function Layout() {
               <button
                 type="button"
                 onClick={() => void signOut()}
-                className="grid size-10 place-items-center rounded-lg border border-border/80 bg-card text-muted-foreground shadow-sm transition hover:text-foreground lg:hidden"
+                className="grid size-10 place-items-center rounded-lg border border-border/80 bg-card/95 text-muted-foreground shadow-sm transition hover:bg-muted hover:text-foreground lg:hidden"
                 aria-label="Çıkış yap"
               >
                 <LogOut size={18} />

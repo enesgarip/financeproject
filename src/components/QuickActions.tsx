@@ -2,6 +2,7 @@ import { Banknote, HandCoins, Landmark, Plus, ReceiptText, Search, ShieldCheck, 
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { cn } from '../lib/utils'
+import { Input } from './ui/input'
 
 const actions = [
   { to: '/kartlar#hizli-harcama', matchPath: '/kartlar', label: 'Harcama', description: 'Kartlar ekranında hızlı harcama', icon: WalletCards },
@@ -62,14 +63,14 @@ export function QuickActions() {
   return (
     <div className="fixed bottom-[calc(env(safe-area-inset-bottom)+5.25rem)] right-4 z-40 flex flex-col items-end gap-3 lg:bottom-6 lg:right-6">
       {open ? (
-        <div className="w-[min(calc(100vw-2rem),23rem)] rounded-lg border border-border/80 bg-card p-2 shadow-2xl shadow-stone-950/15 dark:shadow-black/40">
+        <div className="w-[min(calc(100vw-2rem),23rem)] rounded-lg border border-border/80 bg-card/96 p-2 shadow-[var(--shadow-elevated)] backdrop-blur-xl">
           <label className="relative mb-2 block">
             <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <input
+            <Input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Hızlı işlem ara"
-              className="w-full rounded-lg border border-input bg-background py-2.5 pl-9 pr-3 text-sm font-semibold outline-none transition focus:border-ring focus:ring-3 focus:ring-ring/15"
+              className="pl-9 text-sm"
             />
           </label>
           {orderedActions.map((action) => (
@@ -104,7 +105,7 @@ export function QuickActions() {
         aria-expanded={open}
         aria-label={open ? 'Hızlı işlem menüsünü kapat' : 'Hızlı işlem menüsünü aç'}
         className={cn(
-          'grid size-14 place-items-center rounded-full bg-primary text-primary-foreground shadow-xl shadow-emerald-900/25 ring-1 ring-white/25 transition hover:bg-primary/90',
+          'grid size-14 place-items-center rounded-full bg-primary text-primary-foreground shadow-xl shadow-primary/25 ring-1 ring-white/25 transition hover:bg-primary/90',
           tucked && 'pointer-events-none translate-y-3 scale-90 opacity-0 sm:pointer-events-auto sm:translate-y-0 sm:scale-100 sm:opacity-100',
         )}
       >
