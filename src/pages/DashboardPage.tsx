@@ -43,6 +43,7 @@ import { formatCurrency } from '../utils/formatCurrency'
 import { EmptyState } from '../components/EmptyState'
 import { Badge } from '../components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
+import { Input } from '../components/ui/input'
 import { Progress } from '../components/ui/progress'
 import { Separator } from '../components/ui/separator'
 import { Skeleton } from '../components/ui/skeleton'
@@ -886,13 +887,13 @@ export function DashboardPage() {
   if (loading) {
     return (
       <section className="flex flex-col gap-4">
-        <Skeleton className="h-44 rounded-2xl" />
+        <Skeleton className="h-44 rounded-lg" />
         <div className="grid grid-cols-2 gap-3">
           {Array.from({ length: 6 }, (_, index) => (
-            <Skeleton key={index} className="h-24 rounded-xl" />
+            <Skeleton key={index} className="h-24 rounded-lg" />
           ))}
         </div>
-        <Skeleton className="h-32 rounded-2xl" />
+        <Skeleton className="h-32 rounded-lg" />
       </section>
     )
   }
@@ -904,7 +905,7 @@ export function DashboardPage() {
   const hasCreditLimitGroups = summary.creditLimitGroups.length > 0
 
   return (
-    <section className="grid gap-5 lg:grid-cols-12 lg:items-start">
+    <section className="grid gap-4 lg:grid-cols-12 lg:items-start">
       <div className="min-w-0 lg:col-span-7">
         <WelcomePanel displayName={displayName} cashFlow={summary.cashFlow} />
       </div>
@@ -1009,25 +1010,24 @@ function WelcomePanel({ displayName, cashFlow }: { displayName: string; cashFlow
   const signedNetFlow = `${netFlowIsPositive ? '+' : ''}${formatCurrency(cashFlow.netFlow)}`
 
   return (
-    <Card className="relative overflow-hidden border-0 bg-emerald-950 py-0 text-white shadow-xl shadow-emerald-950/20 ring-1 ring-emerald-500/20">
-      <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(4,120,87,0.98),rgba(13,148,136,0.94)_46%,rgba(79,70,229,0.92))]" />
-      <div className="absolute inset-0 opacity-25 [background-image:linear-gradient(120deg,rgba(255,255,255,0.18)_1px,transparent_1px),linear-gradient(0deg,rgba(255,255,255,0.1)_1px,transparent_1px)] [background-size:22px_22px]" />
+    <Card className="relative overflow-hidden border-primary/15 bg-gradient-to-br from-card via-card to-accent/45 py-0 shadow-[var(--shadow-card)] ring-1 ring-primary/10">
+      <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary via-info to-warning" />
       <CardContent className="relative p-5">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
-            <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-white/14 px-3 py-1.5 text-xs font-bold text-emerald-50 ring-1 ring-white/18">
+            <div className="mb-4 inline-flex items-center gap-2 rounded-lg bg-primary/10 px-3 py-1.5 text-xs font-bold text-primary ring-1 ring-primary/15">
               <Sparkles size={14} />
               Finans özeti hazır
             </div>
-            <h2 className="break-words text-[clamp(1.8rem,7vw,2.65rem)] font-black leading-[0.98] tracking-normal">
+            <h2 className="break-words text-[clamp(1.55rem,6vw,2.2rem)] font-black leading-tight tracking-normal text-foreground">
               Hoş geldiniz{displayName ? ',' : ''}
-              {displayName ? <span className="block text-emerald-100">{displayName}</span> : null}
+              {displayName ? <span className="block text-primary">{displayName}</span> : null}
             </h2>
-            <p className="mt-3 max-w-md text-sm font-medium leading-6 text-white/78">
+            <p className="mt-3 max-w-md text-sm font-medium leading-6 text-muted-foreground">
               {cashFlow.monthLabel} için nakit akışı, kartlar ve yaklaşan ödemeler tek ekranda.
             </p>
           </div>
-          <div className="grid size-12 shrink-0 place-items-center rounded-2xl bg-white/15 text-emerald-50 ring-1 ring-white/20">
+          <div className="grid size-12 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary ring-1 ring-primary/15">
             <TrendingUp size={22} />
           </div>
         </div>
@@ -1044,15 +1044,15 @@ function WelcomePanel({ displayName, cashFlow }: { displayName: string; cashFlow
 
 function WelcomeMetric({ label, value, tone = 'neutral' }: { label: string; value: string; tone?: 'neutral' | 'positive' | 'negative' }) {
   const valueClass = {
-    neutral: 'text-white',
-    positive: 'text-emerald-100',
-    negative: 'text-rose-100',
+    neutral: 'text-foreground',
+    positive: 'text-success',
+    negative: 'text-destructive',
   }[tone]
 
   return (
-    <div className="min-w-0 rounded-xl bg-white/12 px-3 py-2.5 ring-1 ring-white/14 backdrop-blur">
-      <p className="truncate text-[10px] font-bold uppercase text-white/58">{label}</p>
-      <p className={`mt-1 whitespace-nowrap text-[clamp(0.58rem,2.45vw,0.92rem)] font-extrabold leading-tight tabular-nums ${valueClass}`}>
+    <div className="min-w-0 rounded-lg bg-background/75 px-3 py-2.5 ring-1 ring-border/70">
+      <p className="truncate text-[10px] font-bold uppercase text-muted-foreground">{label}</p>
+      <p className={`finance-value mt-1 whitespace-nowrap text-[clamp(0.62rem,2.5vw,0.95rem)] font-extrabold leading-tight ${valueClass}`}>
         {value}
       </p>
     </div>
@@ -1068,32 +1068,32 @@ function FocusActionPanel({ actions, cashFlow }: { actions: FocusAction[]; cashF
   const hiddenCount = Math.max(0, actions.length - 4)
 
   return (
-    <Card className="border-0 bg-white py-0 shadow-sm ring-1 ring-stone-200/80 dark:bg-stone-950 dark:ring-stone-800">
+    <Card className="border-0 bg-card/95 py-0 shadow-[var(--shadow-card)] ring-1 ring-border/80">
       <CardContent className="p-4">
         <div className="grid gap-4 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.4fr)] lg:items-stretch">
-          <div className="flex min-w-0 flex-col justify-between rounded-2xl bg-stone-950 p-4 text-white dark:bg-stone-900">
+          <div className="flex min-w-0 flex-col justify-between rounded-lg border border-border/75 bg-surface-muted p-4">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <p className="text-xs font-bold uppercase text-emerald-200">Bugünün odağı</p>
-                <h2 className="mt-2 text-2xl font-black leading-tight">{statusLabel}</h2>
-                <p className="mt-2 text-sm leading-6 text-white/70">
+                <p className="text-xs font-bold uppercase text-primary">Bugünün odağı</p>
+                <h2 className="mt-2 text-2xl font-black leading-tight text-foreground">{statusLabel}</h2>
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">
                   En önemli finans aksiyonlarını risk, vade ve veri tutarlılığına göre sıraladım.
                 </p>
               </div>
-              <div className="grid size-11 shrink-0 place-items-center rounded-xl bg-white/10 text-emerald-200 ring-1 ring-white/10">
+              <div className="grid size-11 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary ring-1 ring-primary/15">
                 <ListChecks size={21} />
               </div>
             </div>
             <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
-              <div className="rounded-xl bg-white/10 px-3 py-2 ring-1 ring-white/10">
-                <p className="font-bold uppercase text-white/55">Ay sonu</p>
-                <p className={`mt-1 truncate text-sm font-extrabold tabular-nums ${cashIsPositive ? 'text-emerald-200' : 'text-rose-200'}`}>
+              <div className="rounded-lg bg-card/80 px-3 py-2 ring-1 ring-border/70">
+                <p className="font-bold uppercase text-muted-foreground">Ay sonu</p>
+                <p className={`finance-value mt-1 truncate text-sm font-extrabold ${cashIsPositive ? 'text-success' : 'text-destructive'}`}>
                   {formatCurrency(cashFlow.projectedCash)}
                 </p>
               </div>
-              <div className="rounded-xl bg-white/10 px-3 py-2 ring-1 ring-white/10">
-                <p className="font-bold uppercase text-white/55">Sıradaki</p>
-                <p className="mt-1 truncate text-sm font-extrabold text-white">{primaryAction.cta}</p>
+              <div className="rounded-lg bg-card/80 px-3 py-2 ring-1 ring-border/70">
+                <p className="font-bold uppercase text-muted-foreground">Sıradaki</p>
+                <p className="mt-1 truncate text-sm font-extrabold text-foreground">{primaryAction.cta}</p>
               </div>
             </div>
           </div>
@@ -1109,7 +1109,7 @@ function FocusActionPanel({ actions, cashFlow }: { actions: FocusAction[]; cashF
                 type="button"
                 onClick={() => setShowAll((current) => !current)}
                 aria-expanded={showAll}
-                className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-stone-200 bg-stone-50 px-3 py-2 text-xs font-black text-stone-700 shadow-sm hover:bg-stone-100 dark:border-stone-800 dark:bg-stone-900 dark:text-stone-200 dark:hover:bg-stone-800"
+                className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-muted/55 px-3 py-2 text-xs font-black text-muted-foreground shadow-sm transition hover:bg-muted hover:text-foreground"
               >
                 {showAll ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
                 {showAll ? 'Aksiyonları daralt' : `Tüm aksiyonları göster (${actions.length})`}
@@ -1133,35 +1133,35 @@ function FocusActionCard({ action }: { action: FocusAction }) {
     wrench: Wrench,
   }[action.icon]
   const toneClass = {
-    emerald: 'bg-emerald-50 text-emerald-800 ring-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-200 dark:ring-emerald-900/70',
-    amber: 'bg-amber-50 text-amber-900 ring-amber-200 dark:bg-amber-950/30 dark:text-amber-100 dark:ring-amber-900/70',
-    rose: 'bg-rose-50 text-rose-900 ring-rose-200 dark:bg-rose-950/30 dark:text-rose-100 dark:ring-rose-900/70',
-    indigo: 'bg-indigo-50 text-indigo-900 ring-indigo-200 dark:bg-indigo-950/30 dark:text-indigo-100 dark:ring-indigo-900/70',
-    stone: 'bg-stone-50 text-stone-900 ring-stone-200 dark:bg-stone-900 dark:text-stone-100 dark:ring-stone-800',
+    emerald: 'border-success/20 bg-card text-foreground ring-success/15 hover:border-success/35',
+    amber: 'border-warning/25 bg-card text-foreground ring-warning/15 hover:border-warning/40',
+    rose: 'border-destructive/20 bg-card text-foreground ring-destructive/15 hover:border-destructive/35',
+    indigo: 'border-info/20 bg-card text-foreground ring-info/15 hover:border-info/35',
+    stone: 'border-border bg-card text-foreground ring-border/70 hover:border-muted-foreground/35',
   }[action.tone]
   const iconClass = {
-    emerald: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/65 dark:text-emerald-300',
-    amber: 'bg-amber-100 text-amber-700 dark:bg-amber-950/65 dark:text-amber-300',
-    rose: 'bg-rose-100 text-rose-700 dark:bg-rose-950/65 dark:text-rose-300',
-    indigo: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-950/65 dark:text-indigo-300',
-    stone: 'bg-stone-200 text-stone-700 dark:bg-stone-800 dark:text-stone-300',
+    emerald: 'bg-success/10 text-success',
+    amber: 'bg-warning/12 text-warning',
+    rose: 'bg-destructive/10 text-destructive',
+    indigo: 'bg-info/10 text-info',
+    stone: 'bg-muted text-muted-foreground',
   }[action.tone]
 
   return (
     <Link
       to={action.to}
-      className={`group flex min-w-0 flex-col justify-between rounded-2xl p-3 ring-1 transition hover:-translate-y-0.5 hover:shadow-md ${toneClass}`}
+      className={`group flex min-w-0 flex-col justify-between rounded-lg border p-3 shadow-sm ring-1 transition hover:-translate-y-0.5 hover:shadow-[var(--shadow-card)] ${toneClass}`}
     >
       <div className="flex items-start gap-3">
-        <div className={`grid size-10 shrink-0 place-items-center rounded-xl ${iconClass}`}>
+        <div className={`grid size-10 shrink-0 place-items-center rounded-lg ${iconClass}`}>
           <Icon size={18} />
         </div>
         <div className="min-w-0">
           <h3 className="text-sm font-extrabold leading-snug">{action.title}</h3>
-          <p className="mt-1 line-clamp-2 text-xs leading-5 opacity-75">{action.description}</p>
+          <p className="mt-1 line-clamp-2 text-xs leading-5 text-muted-foreground">{action.description}</p>
         </div>
       </div>
-      <span className="mt-3 inline-flex items-center text-xs font-black uppercase tracking-normal opacity-75 group-hover:opacity-100">
+      <span className="mt-3 inline-flex items-center text-xs font-black uppercase tracking-normal text-muted-foreground group-hover:text-foreground">
         {action.cta}
         <ArrowUpRight className="ml-1 size-3.5" />
       </span>
@@ -1174,36 +1174,42 @@ function NetWorthPanel({ netWorth, totalAssets, totalDebts, totalReceivables }: 
   const TrendIcon = isPositive ? TrendingUp : TrendingDown
 
   return (
-    <Card className="border-emerald-200/70 bg-gradient-to-br from-emerald-700 to-emerald-900 py-0 text-white shadow-lg shadow-emerald-950/15 dark:border-emerald-900">
+    <Card className="border-primary/15 bg-card/95 py-0 shadow-[var(--shadow-card)] ring-1 ring-primary/10">
       <CardContent className="p-5">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
-            <p className="text-xs font-semibold uppercase text-emerald-100/80">Net durum</p>
-            <p className="mt-2 whitespace-nowrap text-[clamp(1.45rem,6.6vw,2.7rem)] font-extrabold leading-none tabular-nums">
+            <p className="text-xs font-semibold uppercase text-muted-foreground">Net değer</p>
+            <p className={`finance-value mt-2 whitespace-nowrap text-[clamp(1.45rem,6.6vw,2.55rem)] font-extrabold leading-none ${isPositive ? 'text-foreground' : 'text-destructive'}`}>
               {formatCurrency(netWorth)}
             </p>
           </div>
-          <Badge className="shrink-0 bg-white/14 text-white ring-1 ring-white/20">
+          <Badge variant={isPositive ? 'secondary' : 'destructive'} className="shrink-0">
             <TrendIcon data-icon="inline-start" />
             {isPositive ? 'Pozitif' : 'Ekside'}
           </Badge>
         </div>
-        <Separator className="my-4 bg-white/15" />
+        <Separator className="my-4" />
         <div className="grid grid-cols-[repeat(3,minmax(0,1fr))] gap-2 text-xs">
-          <SummaryPill label="Varlık" value={formatCurrency(totalAssets)} />
-          <SummaryPill label="Borç" value={formatCurrency(totalDebts)} />
-          <SummaryPill label="Alacak" value={formatCurrency(totalReceivables)} />
+          <SummaryPill label="Varlık" value={formatCurrency(totalAssets)} tone="positive" />
+          <SummaryPill label="Borç" value={formatCurrency(totalDebts)} tone="negative" />
+          <SummaryPill label="Alacak" value={formatCurrency(totalReceivables)} tone="positive" />
         </div>
       </CardContent>
     </Card>
   )
 }
 
-function SummaryPill({ label, value }: { label: string; value: string }) {
+function SummaryPill({ label, value, tone = 'neutral' }: { label: string; value: string; tone?: 'neutral' | 'positive' | 'negative' }) {
+  const valueClass = {
+    neutral: 'text-foreground',
+    positive: 'text-success',
+    negative: 'text-destructive',
+  }[tone]
+
   return (
-    <div className="min-w-0 rounded-lg bg-white/10 px-2.5 py-2 ring-1 ring-white/10">
-      <p className="truncate text-[11px] font-medium text-emerald-50/75">{label}</p>
-      <p className="mt-1 whitespace-nowrap text-[clamp(0.58rem,2.65vw,0.875rem)] font-bold leading-tight tabular-nums text-white">
+    <div className="min-w-0 rounded-lg bg-muted/45 px-2.5 py-2 ring-1 ring-border/60">
+      <p className="truncate text-[11px] font-medium text-muted-foreground">{label}</p>
+      <p className={`finance-value mt-1 whitespace-nowrap text-[clamp(0.58rem,2.65vw,0.875rem)] font-bold leading-tight ${valueClass}`}>
         {value}
       </p>
     </div>
@@ -1215,7 +1221,7 @@ function CashFlowPanel({ cashFlow }: { cashFlow: CashFlowSummary }) {
   const projectionTone = cashFlow.projectedCash >= 0 ? 'text-emerald-700 dark:text-emerald-300' : 'text-rose-700 dark:text-rose-300'
 
   return (
-    <Card className="border-0 shadow-sm ring-1 ring-stone-200/80 dark:ring-stone-800">
+    <Card className="border-0 shadow-[var(--shadow-card)] ring-1 ring-border/80">
       <CardHeader className="pb-0">
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -1249,7 +1255,7 @@ function CashFlowPanel({ cashFlow }: { cashFlow: CashFlowSummary }) {
           <span>Kişisel borç: {formatCurrency(cashFlow.debtOutflow)}</span>
         </div>
 
-        <div className="rounded-xl bg-muted/55 px-3 py-2 text-sm">
+        <div className="rounded-lg bg-muted/55 px-3 py-2 text-sm">
           <p className="text-muted-foreground">
             Hesaplardaki nakit {formatCurrency(cashFlow.cashAssets)} · {cashFlow.recurringPayments} aylık ödeme takipte
           </p>
@@ -1316,7 +1322,7 @@ function CashFlowCalendarPanel({ items, cashFlow }: { items: UpcomingItem[]; cas
   const lowestCash = groups.reduce((lowest, group) => Math.min(lowest, group.cashAfter), cashFlow.cashAssets)
 
   return (
-    <Card className="border-0 shadow-sm ring-1 ring-stone-200/80 dark:ring-stone-800">
+    <Card className="border-0 shadow-[var(--shadow-card)] ring-1 ring-border/80">
       <CardHeader className="pb-2">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
@@ -1330,7 +1336,7 @@ function CashFlowCalendarPanel({ items, cashFlow }: { items: UpcomingItem[]; cas
       </CardHeader>
       <CardContent className="space-y-3 pt-0">
         {groups.length === 0 ? (
-          <div className="flex items-center gap-3 rounded-xl bg-emerald-50 px-3 py-3 text-sm text-emerald-900 dark:bg-emerald-950/25 dark:text-emerald-100">
+          <div className="flex items-center gap-3 rounded-lg bg-success/10 px-3 py-3 text-sm text-success">
             <CheckCircle2 className="size-5 shrink-0" />
             <span>Yaklaşan ödeme yok; bu dönem nakit takvimi sakin görünüyor.</span>
           </div>
@@ -1347,10 +1353,10 @@ function CashFlowCalendarPanel({ items, cashFlow }: { items: UpcomingItem[]; cas
                     type="button"
                     onClick={() => setSelectedDayKey(group.dayKey)}
                     aria-pressed={isSelected}
-                    className={`rounded-xl border p-3 text-left transition ${
+                    className={`rounded-lg border p-3 text-left transition ${
                       isSelected
                         ? 'border-emerald-300 bg-emerald-50/80 ring-1 ring-emerald-200 dark:border-emerald-900/80 dark:bg-emerald-950/25 dark:ring-emerald-900/70'
-                        : 'border-stone-200 bg-white/70 hover:bg-stone-50 dark:border-stone-800 dark:bg-stone-950/45 dark:hover:bg-stone-900'
+                        : 'border-border bg-card/70 hover:bg-muted/45'
                     }`}
                   >
                     <div className="flex items-start justify-between gap-3">
@@ -1370,7 +1376,7 @@ function CashFlowCalendarPanel({ items, cashFlow }: { items: UpcomingItem[]; cas
               })}
             </div>
             {selectedGroup ? (
-              <div className="rounded-2xl border border-emerald-100 bg-emerald-50/70 p-3 dark:border-emerald-900/60 dark:bg-emerald-950/25">
+              <div className="rounded-lg border border-primary/15 bg-primary/10 p-3">
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div className="min-w-0">
                     <p className="text-sm font-black text-emerald-950 dark:text-emerald-50">{selectedGroup.dateLabel}</p>
@@ -1384,9 +1390,9 @@ function CashFlowCalendarPanel({ items, cashFlow }: { items: UpcomingItem[]; cas
                 </div>
                 <div className="mt-3 grid gap-2">
                   {selectedGroup.items.map((item) => (
-                    <div key={item.id} className="flex min-w-0 items-center justify-between gap-3 rounded-xl bg-white/75 px-3 py-2 text-sm dark:bg-stone-950/45">
+                    <div key={item.id} className="flex min-w-0 items-center justify-between gap-3 rounded-lg bg-card/80 px-3 py-2 text-sm">
                       <div className="min-w-0">
-                        <p className="truncate font-bold text-stone-950 dark:text-stone-50">{item.title}</p>
+                        <p className="truncate font-bold text-foreground">{item.title}</p>
                         <p className="mt-0.5 text-xs text-muted-foreground">{kindLabel(item.kind)}</p>
                       </div>
                       <span className="shrink-0 whitespace-nowrap rounded-lg bg-emerald-100 px-2 py-1 text-xs font-black tabular-nums text-emerald-900 dark:bg-emerald-900/45 dark:text-emerald-100">
@@ -1402,7 +1408,7 @@ function CashFlowCalendarPanel({ items, cashFlow }: { items: UpcomingItem[]; cas
                 type="button"
                 onClick={() => setShowAll((current) => !current)}
                 aria-expanded={showAll}
-                className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-stone-200 bg-stone-50 px-3 py-2 text-xs font-black text-stone-700 shadow-sm hover:bg-stone-100 dark:border-stone-800 dark:bg-stone-900 dark:text-stone-200 dark:hover:bg-stone-800"
+                className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-muted/55 px-3 py-2 text-xs font-black text-muted-foreground shadow-sm transition hover:bg-muted hover:text-foreground"
               >
                 {showAll ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
                 {showAll ? 'Takvimi daralt' : `Tüm günleri göster (${groups.length})`}
@@ -1420,17 +1426,17 @@ function SmartInsightsPanel({ insights }: { insights: SmartInsight[] }) {
     emerald: 'border-emerald-200 bg-emerald-50/70 text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950/25 dark:text-emerald-100',
     amber: 'border-amber-200 bg-amber-50/75 text-amber-950 dark:border-amber-900 dark:bg-amber-950/25 dark:text-amber-100',
     rose: 'border-rose-200 bg-rose-50/75 text-rose-950 dark:border-rose-900 dark:bg-rose-950/25 dark:text-rose-100',
-    stone: 'border-stone-200 bg-white text-stone-900 dark:border-stone-800 dark:bg-stone-900 dark:text-stone-100',
+    stone: 'border-border bg-card text-foreground',
   }
   const iconClass = {
     emerald: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/70 dark:text-emerald-300',
     amber: 'bg-amber-100 text-amber-700 dark:bg-amber-950/70 dark:text-amber-300',
     rose: 'bg-rose-100 text-rose-700 dark:bg-rose-950/70 dark:text-rose-300',
-    stone: 'bg-stone-100 text-stone-700 dark:bg-stone-800 dark:text-stone-300',
+    stone: 'bg-muted text-muted-foreground',
   }
 
   return (
-    <Card className="border-0 shadow-sm ring-1 ring-stone-200/80 dark:ring-stone-800">
+    <Card className="border-0 shadow-[var(--shadow-card)] ring-1 ring-border/80">
       <CardHeader className="pb-0">
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -1445,7 +1451,7 @@ function SmartInsightsPanel({ insights }: { insights: SmartInsight[] }) {
           const Icon = insight.tone === 'rose' ? AlertTriangle : insight.tone === 'emerald' ? ShieldCheck : Lightbulb
 
           return (
-            <article key={insight.title} className={`rounded-xl border p-3 ${toneClass[insight.tone]}`}>
+            <article key={insight.title} className={`rounded-lg border p-3 ${toneClass[insight.tone]}`}>
               <div className="flex items-start gap-3">
                 <div className={`grid size-9 shrink-0 place-items-center rounded-lg ${iconClass[insight.tone]}`}>
                   <Icon size={17} />
@@ -1483,7 +1489,7 @@ function ScenarioSimulator({ cashFlow, netWorth }: { cashFlow: CashFlowSummary; 
   const hasScenario = income + debt + spend + transfer > 0
 
   return (
-    <Card className="border-0 shadow-sm ring-1 ring-stone-200/80 dark:ring-stone-800">
+    <Card className="border-0 shadow-[var(--shadow-card)] ring-1 ring-border/80">
       <CardHeader className="pb-0">
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -1500,7 +1506,7 @@ function ScenarioSimulator({ cashFlow, netWorth }: { cashFlow: CashFlowSummary; 
           <ScenarioInput label="Planlı harcama" value={plannedSpend} onChange={setPlannedSpend} />
           <ScenarioInput label="Hedefe ayır" value={goalTransfer} onChange={setGoalTransfer} />
         </div>
-        <div className="rounded-xl bg-muted/55 p-3">
+        <div className="rounded-lg bg-muted/55 p-3">
           <div className="flex items-center justify-between gap-3 text-sm">
             <span className="text-muted-foreground">Senaryo ay sonu nakit</span>
             <strong className={`shrink-0 tabular-nums ${cashTone}`}>{formatCurrency(projectedCash)}</strong>
@@ -1532,7 +1538,7 @@ function ScenarioInput({ label, value, onChange }: { label: string; value: strin
         min="0"
         step="0.01"
         placeholder="0"
-        className="mt-1 w-full rounded-lg border border-stone-200 bg-white px-2.5 py-2 text-sm font-semibold tabular-nums text-foreground outline-none focus:border-emerald-600 dark:border-stone-700 dark:bg-stone-900"
+        className="mt-1 w-full rounded-lg border border-input bg-background/85 px-2.5 py-2 text-sm font-semibold tabular-nums text-foreground outline-none focus:border-ring focus:ring-3 focus:ring-ring/15"
       />
     </label>
   )
@@ -1541,7 +1547,7 @@ function ScenarioInput({ label, value, onChange }: { label: string; value: strin
 
 function PeriodDebtTotalsPanel({ cashFlow }: { cashFlow: CashFlowSummary }) {
   return (
-    <Card className="border-0 shadow-sm ring-1 ring-stone-200/80 dark:ring-stone-800">
+    <Card className="border-0 shadow-[var(--shadow-card)] ring-1 ring-border/80">
       <CardHeader className="pb-2">
         <CardTitle>Dönem borcu toplamları</CardTitle>
       </CardHeader>
@@ -1565,7 +1571,7 @@ function NextMonthLoadPanel({ load }: { load: MonthlyLoadSummary }) {
   ]
 
   return (
-    <Card className="border-0 shadow-sm ring-1 ring-stone-200/80 dark:ring-stone-800">
+    <Card className="border-0 shadow-[var(--shadow-card)] ring-1 ring-border/80">
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -1576,7 +1582,7 @@ function NextMonthLoadPanel({ load }: { load: MonthlyLoadSummary }) {
         </div>
       </CardHeader>
       <CardContent className="space-y-3 pt-0">
-        <div className="rounded-xl bg-rose-50/80 px-3 py-3 dark:bg-rose-950/25">
+        <div className="rounded-lg bg-destructive/10 px-3 py-3">
           <p className="text-[11px] font-bold uppercase text-rose-700 dark:text-rose-300">Toplam planlı çıkış</p>
           <p className="mt-1 whitespace-nowrap text-[clamp(1rem,4vw,1.55rem)] font-black tabular-nums text-rose-800 dark:text-rose-200">
             {formatCurrency(load.total)}
@@ -1629,10 +1635,10 @@ function UpcomingAlertPanel({ items }: { items: UpcomingItem[] }) {
           <div className="min-w-0 flex-1 min-[760px]:max-w-xl">
             <div className={`grid gap-2 ${showAll ? 'max-h-80 overflow-y-auto pr-1' : ''}`}>
               {visibleItems.map((item) => (
-                <div key={item.id} className="flex min-w-0 items-center justify-between gap-3 rounded-xl bg-white/75 px-3 py-2 text-sm dark:bg-stone-950/45">
+                <div key={item.id} className="flex min-w-0 items-center justify-between gap-3 rounded-lg bg-card/80 px-3 py-2 text-sm">
                   <div className="min-w-0">
-                    <p className="truncate font-semibold text-stone-950 dark:text-stone-50">{item.title}</p>
-                    <p className="mt-0.5 text-xs text-stone-600 dark:text-stone-300">
+                    <p className="truncate font-semibold text-foreground">{item.title}</p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">
                       {item.date} · {upcomingDayLabel(item.sortTime)}
                     </p>
                   </div>
@@ -1647,7 +1653,7 @@ function UpcomingAlertPanel({ items }: { items: UpcomingItem[] }) {
                 type="button"
                 onClick={() => setShowAll((current) => !current)}
                 aria-expanded={showAll}
-                className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-amber-200 bg-white/70 px-3 py-2 text-xs font-bold text-amber-900 shadow-sm hover:bg-white dark:border-amber-900/70 dark:bg-stone-950/40 dark:text-amber-100 dark:hover:bg-stone-950/70"
+                className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-amber-200 bg-card/70 px-3 py-2 text-xs font-bold text-amber-900 shadow-sm transition hover:bg-card dark:border-amber-900/70 dark:text-amber-100"
               >
                 {showAll ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
                 {showAll ? 'Daralt' : `Tümünü göster (${items.length})`}
@@ -1672,7 +1678,7 @@ function CurrentDebtTotalsPanel({
   personalDebt: number
 }) {
   return (
-    <Card className="border-0 shadow-sm ring-1 ring-stone-200/80 dark:ring-stone-800">
+    <Card className="border-0 shadow-[var(--shadow-card)] ring-1 ring-border/80">
       <CardHeader className="pb-2">
         <CardTitle>Güncel borç toplamları</CardTitle>
       </CardHeader>
@@ -1690,7 +1696,7 @@ function CashFlowMetric({ label, value, tone }: { label: string; value: string; 
   const toneClass = tone === 'emerald' ? 'text-emerald-700 dark:text-emerald-300' : 'text-rose-700 dark:text-rose-300'
 
   return (
-    <div className="min-w-0 rounded-xl bg-muted/55 px-2.5 py-2 min-[430px]:px-3">
+    <div className="min-w-0 rounded-lg bg-muted/55 px-2.5 py-2 min-[430px]:px-3">
       <p className="truncate text-[11px] font-bold uppercase text-muted-foreground">{label}</p>
       <p className={`mt-1 whitespace-nowrap text-[clamp(0.7rem,3vw,1rem)] font-extrabold leading-tight tabular-nums ${toneClass}`}>
         {value}
@@ -1705,11 +1711,11 @@ function MetricTile({ label, value, icon, tone }: { label: string; value: string
     rose: 'bg-rose-50 text-rose-700 ring-rose-200 dark:bg-rose-950/30 dark:text-rose-300 dark:ring-rose-900',
     amber: 'bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-950/30 dark:text-amber-300 dark:ring-amber-900',
     indigo: 'bg-indigo-50 text-indigo-700 ring-indigo-200 dark:bg-indigo-950/30 dark:text-indigo-300 dark:ring-indigo-900',
-    stone: 'bg-stone-100 text-stone-700 ring-stone-200 dark:bg-stone-900 dark:text-stone-300 dark:ring-stone-800',
+    stone: 'bg-muted text-muted-foreground ring-border',
   }[tone]
 
   return (
-    <Card size="sm" className="border-0 shadow-sm ring-1 ring-stone-200/80 dark:ring-stone-800">
+    <Card size="sm" className="border-0 shadow-[var(--shadow-card)] ring-1 ring-border/80">
       <CardContent className="flex items-start justify-between gap-3 p-3">
         <div className="min-w-0">
           <p className="truncate text-[11px] font-bold uppercase text-muted-foreground">{label}</p>
@@ -1725,7 +1731,7 @@ function CreditLimitSection({ groups, totalUsageRate }: { groups: CreditLimitGro
   if (groups.length === 0) return null
 
   return (
-    <Card className="border-0 shadow-sm ring-1 ring-stone-200/80 dark:ring-stone-800">
+    <Card className="border-0 shadow-[var(--shadow-card)] ring-1 ring-border/80">
       <CardHeader className="pb-0">
         <div className="flex items-center justify-between gap-3">
           <CardTitle>Kart limitleri</CardTitle>
@@ -1734,7 +1740,7 @@ function CreditLimitSection({ groups, totalUsageRate }: { groups: CreditLimitGro
       </CardHeader>
       <CardContent className="flex flex-col gap-3 pt-1">
         {groups.slice(0, 3).map((group) => (
-          <div key={group.key} className="rounded-xl bg-muted/55 p-3">
+          <div key={group.key} className="rounded-lg bg-muted/55 p-3">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="truncate text-sm font-bold text-foreground">{group.label}</p>
@@ -1760,9 +1766,9 @@ function PulseCard({ title, label, value, description, icon, tone }: { title: st
   const toneClass = tone === 'emerald' ? 'text-emerald-700 bg-emerald-50 dark:text-emerald-300 dark:bg-emerald-950/30' : 'text-rose-700 bg-rose-50 dark:text-rose-300 dark:bg-rose-950/30'
 
   return (
-    <Card className="border-0 shadow-sm ring-1 ring-stone-200/80 dark:ring-stone-800">
+    <Card className="border-0 shadow-[var(--shadow-card)] ring-1 ring-border/80">
       <CardContent className="flex items-center gap-3 p-4">
-        <div className={`grid size-10 shrink-0 place-items-center rounded-xl ${toneClass}`}>{icon}</div>
+        <div className={`grid size-10 shrink-0 place-items-center rounded-lg ${toneClass}`}>{icon}</div>
         <div className="min-w-0">
           <p className="text-xs font-bold uppercase text-muted-foreground">{title}</p>
           <p className="mt-1 text-sm text-muted-foreground">{label}</p>
@@ -1814,19 +1820,27 @@ function HistorySection({ rows }: { rows: TransactionHistory[] }) {
   const groupedRows = groupHistoryRows(filteredRows.slice(0, 40))
 
   return (
-    <section>
-      <div className="mb-4 flex flex-col gap-3">
-        <h2 className="text-lg font-bold text-stone-950 dark:text-stone-50">Son 3 ay işlem geçmişi</h2>
+    <Card className="border-0 shadow-[var(--shadow-card)] ring-1 ring-border/80">
+      <CardHeader className="pb-0">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <CardTitle>Son güncellemeler</CardTitle>
+            <p className="mt-1 text-sm text-muted-foreground">Son 3 ay işlem geçmişi ve hesap hareketleri.</p>
+          </div>
+          <Badge variant="secondary">{filteredRows.length} kayıt</Badge>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4 pt-2">
         <label className="relative block">
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <input
+          <Input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Geçmişte ara"
-            className="w-full rounded-xl border border-stone-200 bg-white py-2.5 pl-9 pr-3 text-sm outline-none focus:border-emerald-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+            className="pl-9 text-sm"
           />
         </label>
-        <div className="flex gap-2 overflow-x-auto pb-1">
+        <div className="finance-scrollbar flex gap-2 overflow-x-auto pb-1">
           {historyFilters.map((filter) => {
             const isActive = activeType === filter.value
 
@@ -1836,10 +1850,10 @@ function HistorySection({ rows }: { rows: TransactionHistory[] }) {
                 type="button"
                 aria-pressed={isActive}
                 onClick={() => setActiveType(filter.value)}
-                className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
+                className={`shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
                   isActive
-                    ? 'bg-stone-950 text-white dark:bg-stone-50 dark:text-stone-950'
-                    : 'bg-stone-100 text-stone-600 hover:bg-stone-200 dark:bg-stone-800 dark:text-stone-300 dark:hover:bg-stone-700'
+                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    : 'bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground'
                 }`}
               >
                 {filter.label}
@@ -1847,7 +1861,6 @@ function HistorySection({ rows }: { rows: TransactionHistory[] }) {
             )
           })}
         </div>
-      </div>
       {rows.length === 0 ? (
         <EmptyState title="İşlem geçmişi yok" description="Ödemeler, transferler ve borç kapatma işlemleri burada görünecek." />
       ) : filteredRows.length === 0 ? (
@@ -1858,25 +1871,25 @@ function HistorySection({ rows }: { rows: TransactionHistory[] }) {
             <section key={group.label} className="space-y-2">
               <div className="flex items-center gap-3">
                 <h3 className="shrink-0 text-xs font-bold uppercase text-muted-foreground">{group.label}</h3>
-                <span className="h-px flex-1 bg-gradient-to-r from-stone-300 to-transparent dark:from-stone-700" />
+                <span className="h-px flex-1 bg-gradient-to-r from-border to-transparent" />
               </div>
               <div className="space-y-2">
                 {group.rows.map((row) => (
-                  <article key={row.id} className="flex gap-3 rounded-xl border border-stone-200 bg-white p-3 shadow-sm dark:border-stone-800 dark:bg-stone-900">
+                  <article key={row.id} className="flex gap-3 rounded-lg border border-border/75 bg-card/80 p-3 shadow-sm">
                     <div className={`mt-1 size-2.5 shrink-0 rounded-full ${historyDotClass(row.type)}`} />
                     <div className="min-w-0 flex-1">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
-                          <p className="truncate text-sm font-bold text-stone-950 dark:text-stone-50">{row.title}</p>
-                          <p className="mt-0.5 text-xs text-stone-500 dark:text-stone-400">{formatHistoryDate(row.occurred_at)}</p>
+                          <p className="truncate text-sm font-bold text-foreground">{row.title}</p>
+                          <p className="mt-0.5 text-xs text-muted-foreground">{formatHistoryDate(row.occurred_at)}</p>
                         </div>
                         {row.amount !== null ? (
-                          <span className="shrink-0 rounded-lg bg-stone-100 px-2.5 py-1 text-xs font-bold tabular-nums text-stone-900 dark:bg-stone-800 dark:text-stone-100">
+                          <span className="finance-value shrink-0 rounded-lg bg-muted px-2.5 py-1 text-xs font-bold text-foreground">
                             {formatCurrency(row.amount)}
                           </span>
                         ) : null}
                       </div>
-                      {row.note ? <p className="mt-2 text-xs leading-5 text-stone-500 dark:text-stone-400">{row.note}</p> : null}
+                      {row.note ? <p className="mt-2 text-xs leading-5 text-muted-foreground">{row.note}</p> : null}
                     </div>
                   </article>
                 ))}
@@ -1885,7 +1898,8 @@ function HistorySection({ rows }: { rows: TransactionHistory[] }) {
           ))}
         </div>
       )}
-    </section>
+      </CardContent>
+    </Card>
   )
 }
 

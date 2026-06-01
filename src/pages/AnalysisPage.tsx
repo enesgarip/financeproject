@@ -1027,20 +1027,20 @@ function MonthCloseAssistant({ data, missingTables }: { data: AnalysisData; miss
   const completed = checks.filter((check) => check.done).length
 
   return (
-    <Card className="border-0 bg-stone-950 text-white shadow-lg shadow-stone-950/10 ring-1 ring-stone-800 lg:col-span-12">
+    <Card className="border-0 bg-card/95 text-foreground shadow-[var(--shadow-card)] ring-1 ring-border/80 lg:col-span-12">
       <CardContent className="grid gap-4 p-4 min-[760px]:grid-cols-[0.72fr_1.28fr] min-[760px]:items-center">
         <div>
           <div className="flex items-center gap-2">
-            <CheckCircle2 className="text-emerald-300" />
+            <CheckCircle2 className="text-success" />
             <h2 className="text-base font-extrabold">Ay kapanış asistanı</h2>
           </div>
-          <p className="mt-1 text-sm text-white/65">
+          <p className="mt-1 text-sm text-muted-foreground">
             {formatMonth(monthKey)} için {completed}/{checks.length} kontrol tamam. Raporu PDF olarak yazdırıp arşivleyebilirsin.
           </p>
         </div>
         <div className="grid gap-2 min-[560px]:grid-cols-2 min-[980px]:grid-cols-3">
           {checks.map((check) => (
-            <div key={check.label} className={`rounded-xl px-3 py-2 ${check.done ? 'bg-emerald-400/15 text-emerald-100' : 'bg-white/10 text-white/75'}`}>
+            <div key={check.label} className={`rounded-lg px-3 py-2 ${check.done ? 'bg-success/10 text-success' : 'bg-muted/55 text-muted-foreground'}`}>
               <p className="truncate text-xs font-bold">{check.label}</p>
               <p className="mt-0.5 truncate text-[11px] opacity-70">{check.detail}</p>
             </div>

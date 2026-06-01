@@ -1,12 +1,18 @@
-import { CalendarDays, MoreVertical, Pencil, Plus, Trash2 } from 'lucide-react'
+import { CalendarDays, MoreVertical, Pencil, Plus, Search, Trash2 } from 'lucide-react'
 import type { CSSProperties, ReactNode } from 'react'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
+import { cn } from '../lib/utils'
 import { supabase } from '../lib/supabase'
 import type { InsertFor, RowFor, TableName, UpdateFor } from '../types/database'
 import { EmptyState } from './EmptyState'
 import { SimpleModal } from './SimpleModal'
+import { Alert } from './ui/alert'
+import { Button } from './ui/button'
+import { ConfirmDialog } from './ui/confirm-dialog'
+import { Input, Select, Textarea } from './ui/input'
+import { Skeleton } from './ui/skeleton'
 
 type FieldOption = {
   label: string
@@ -98,7 +104,35 @@ export function CrudPage<T extends TableName>({
   const [formErrors, setFormErrors] = useState<FormErrors>({})
   const [formError, setFormError] = useState('')
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null)
+  const [query, setQuery] = useState('')
+  const [deleteId, setDeleteId] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState(false)
   const visibleFields = fields.filter((field) => isFieldVisible(field, formValues))
+  const normalizedQuery = query.trim().toLocaleLowerCase('tr-TR')
+  const rowMeta = useMemo(() => {
+    const map = new Map<string, { title: string; subtitle: string; details: string[]; note: string; searchText: string }>()
+
+    for (const row of rows) {
+      const title = renderTitle(row)
+      const subtitle = renderSubtitle?.(row) ?? ''
+      const details = renderDetails(row)
+      const note = 'note' in row && row.note ? String(row.note) : ''
+      map.set(row.id, {
+        title,
+        subtitle,
+        details,
+        note,
+        searchText: [title, subtitle, ...details, note].join(' ').toLocaleLowerCase('tr-TR'),
+      })
+    }
+
+    return map
+  }, [renderDetails, renderSubtitle, renderTitle, rows])
+  const visibleRows = useMemo(
+    () => (normalizedQuery ? rows.filter((row) => rowMeta.get(row.id)?.searchText.includes(normalizedQuery)) : rows),
+    [normalizedQuery, rowMeta, rows],
+  )
+  const groupedVisibleRows = useMemo(() => groupRows(visibleRows, groupBy), [groupBy, visibleRows])
 
   useEffect(() => {
     function handleClickOutside() {
@@ -175,16 +209,19 @@ export function CrudPage<T extends TableName>({
     setFormError('')
   }
 
-  async function handleDelete(id: string) {
-    const confirmed = window.confirm('Bu kaydı silmek istiyor musun?')
-    if (!confirmed) return
+  async function confirmDelete() {
+    if (!deleteId) return
 
-    const { error: deleteError } = await supabase.from(table as never).delete().eq('id', id)
+    setDeleting(true)
+    const { error: deleteError } = await supabase.from(table as never).delete().eq('id', deleteId)
     if (deleteError) {
       setError(deleteError.message)
+      setDeleting(false)
       return
     }
-    setRows((current) => current.filter((row) => row.id !== id))
+    setRows((current) => current.filter((row) => row.id !== deleteId))
+    setDeleteId(null)
+    setDeleting(false)
   }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -242,57 +279,81 @@ export function CrudPage<T extends TableName>({
   }
 
   return (
-    <section className="space-y-4">
-      <div className="rounded-xl border border-border/75 bg-card p-4 shadow-[0_10px_30px_rgba(15,23,42,0.04)] dark:shadow-black/20">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-lg font-semibold text-stone-950 dark:text-stone-50">{pageTitle ?? addLabel}</h1>
-            <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">{rows.length} kayıt bulundu</p>
+    <section className="flex flex-col gap-4">
+      <div className="finance-surface rounded-lg p-4">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="min-w-0">
+            <h1 className="text-lg font-black text-foreground">{pageTitle ?? addLabel}</h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {normalizedQuery ? `${visibleRows.length} / ${rows.length} kayıt gösteriliyor` : `${rows.length} kayıt bulundu`}
+            </p>
           </div>
-          <button
-            type="button"
-            onClick={openCreate}
-            className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground shadow-sm transition hover:bg-primary/90"
-          >
-            <Plus size={17} />
-            {addLabel}
-          </button>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <label className="relative block sm:w-72">
+              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Kayıtlarda ara"
+                className="pl-9 text-sm"
+              />
+            </label>
+            <Button type="button" onClick={openCreate} className="h-10 gap-2 px-4">
+              <Plus data-icon="inline-start" />
+              {addLabel}
+            </Button>
+          </div>
         </div>
       </div>
 
-      {error ? <p className="rounded-lg bg-rose-50 p-3 text-sm text-rose-700">{error}</p> : null}
+      {error ? <Alert variant="destructive">{error}</Alert> : null}
       {renderBeforeList ? renderBeforeList({ loading, rows, reload: loadRows, setError }) : null}
 
       {loading ? (
-        <p className="rounded-lg bg-white p-4 text-sm text-stone-500 dark:bg-stone-900 dark:text-stone-400">Kayıtlar yükleniyor…</p>
+        <div className="grid gap-3">
+          <Skeleton className="h-24 rounded-lg" />
+          <Skeleton className="h-24 rounded-lg" />
+        </div>
       ) : rows.length === 0 ? (
         <EmptyState title={emptyTitle} description={emptyDescription} />
+      ) : visibleRows.length === 0 ? (
+        <EmptyState title="Eşleşen kayıt yok" description="Arama metnini temizleyerek tüm kayıtları tekrar görebilirsin." />
       ) : (
-        <div className="space-y-5">
-          {groupRows(rows, groupBy).map(({ group, items }) => (
-            <section key={group} className="space-y-3">
+        <div className="flex flex-col gap-5">
+          {groupedVisibleRows.map(({ group, items }) => (
+            <section key={group} className="flex flex-col gap-3">
               {groupBy ? (
                 <div className="flex items-center gap-3 px-1 py-1">
                   <h2
-                    className={`shrink-0 text-xs font-bold uppercase text-stone-500 dark:text-stone-400 ${getGroupClassName?.(group) ?? ''}`}
+                    className={cn('shrink-0 text-xs font-black uppercase text-muted-foreground', getGroupClassName?.(group))}
                   >
                     {group}
                   </h2>
-                  <span className="h-px flex-1 bg-gradient-to-r from-stone-300 via-stone-200 to-transparent dark:from-stone-700 dark:via-stone-800" />
+                  <span className="h-px flex-1 bg-gradient-to-r from-border via-border/60 to-transparent" />
                 </div>
               ) : null}
-              <div className="space-y-4">
-                {items.map((row) => (
-                  <article
-                    key={row.id}
-                    style={getCardStyle?.(row, rows)}
-                    className={`rounded-xl border bg-card p-4 shadow-[0_8px_26px_rgba(15,23,42,0.04)] transition-all hover:-translate-y-0.5 hover:shadow-[0_16px_36px_rgba(15,23,42,0.08)] dark:shadow-black/20 min-[390px]:p-5 ${getCardClassName?.(row, rows) ?? 'border-border/75'}`}
-                  >
+              <div className="flex flex-col gap-3">
+                {items.map((row) => {
+                  const meta = rowMeta.get(row.id)
+                  const title = meta?.title ?? renderTitle(row)
+                  const subtitle = meta?.subtitle ?? renderSubtitle?.(row) ?? ''
+                  const details = meta?.details ?? renderDetails(row)
+                  const note = meta?.note ?? ('note' in row && row.note ? String(row.note) : '')
+
+                  return (
+                    <article
+                      key={row.id}
+                      style={getCardStyle?.(row, rows)}
+                      className={cn(
+                        'rounded-lg border bg-card/95 p-4 shadow-[var(--shadow-card)] transition-all hover:-translate-y-0.5 hover:shadow-[var(--shadow-card-hover)] min-[390px]:p-5',
+                        getCardClassName?.(row, rows) ?? 'border-border/75',
+                      )}
+                    >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
-                      <h2 className="truncate text-base font-semibold text-stone-950 dark:text-stone-50">{renderTitle(row)}</h2>
-                      {renderSubtitle ? (
-                        <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">{renderSubtitle(row)}</p>
+                      <h2 className="truncate text-base font-black text-foreground">{title}</h2>
+                      {subtitle ? (
+                        <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>
                       ) : null}
                     </div>
                     <div className="relative shrink-0">
@@ -302,13 +363,13 @@ export function CrudPage<T extends TableName>({
                             e.stopPropagation()
                             setMenuOpenId(menuOpenId === row.id ? null : row.id)
                           }}
-                          className="grid size-9 place-items-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground"
+                          className="grid size-10 place-items-center rounded-lg text-muted-foreground transition hover:bg-muted hover:text-foreground"
                           aria-label="Menü"
                         >
                           <MoreVertical size={18} />
                         </button>
                         {menuOpenId === row.id && (
-                          <div className="absolute right-0 top-full z-10 mt-1 w-36 rounded-lg border border-border bg-popover py-1 shadow-lg">
+                          <div className="absolute right-0 top-full z-10 mt-1 w-40 rounded-lg border border-border bg-popover py-1 shadow-[var(--shadow-elevated)]">
                             {renderMenuActions ? renderMenuActions(row, { reload: loadRows, setError, rows, closeMenu: () => setMenuOpenId(null) }) : null}
                             <button
                               type="button"
@@ -317,7 +378,7 @@ export function CrudPage<T extends TableName>({
                                 setMenuOpenId(null)
                                 openEdit(row)
                               }}
-                              className="flex w-full items-center gap-2 px-3 py-2 text-sm text-stone-700 hover:bg-stone-50 dark:text-stone-200 dark:hover:bg-stone-800"
+                              className="flex w-full items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted"
                             >
                               <Pencil size={14} />
                               Düzenle
@@ -327,7 +388,7 @@ export function CrudPage<T extends TableName>({
                               onClick={(e) => {
                                 e.stopPropagation()
                                 setMenuOpenId(null)
-                                void handleDelete(row.id)
+                                setDeleteId(row.id)
                               }}
                               className="flex w-full items-center gap-2 px-3 py-2 text-sm text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/40"
                             >
@@ -342,20 +403,24 @@ export function CrudPage<T extends TableName>({
                     <div className="mt-3 flex flex-wrap gap-2">{renderRowActions(row, { reload: loadRows, setError, rows })}</div>
                   ) : null}
                   <dl className="mt-4 grid grid-cols-1 gap-2 text-sm min-[390px]:grid-cols-2">
-                    {renderDetails(row).map((detail) => (
+                    {details.map((detail) => (
                       <div
                         key={detail}
                         style={getDetailStyle?.(row, rows)}
-                        className={`min-w-0 break-words rounded-lg px-3 py-2.5 text-stone-700 dark:text-stone-200 ${getDetailClassName?.(row, rows) ?? 'bg-stone-50 dark:bg-stone-800'}`}
+                        className={cn(
+                          'min-w-0 break-words rounded-lg px-3 py-2.5 text-foreground/85 ring-1 ring-black/[0.025] dark:ring-white/[0.04]',
+                          getDetailClassName?.(row, rows) ?? 'bg-muted/55',
+                        )}
                       >
                         {detail}
                       </div>
                     ))}
                   </dl>
-                  {'note' in row && row.note ? <p className="mt-3 text-sm text-stone-500 dark:text-stone-400">{row.note}</p> : null}
+                  {note ? <p className="mt-3 text-sm text-muted-foreground">{note}</p> : null}
                   {renderExtra ? renderExtra(row, { reload: loadRows, setError, rows }) : null}
                 </article>
-              ))}
+                  )
+                })}
             </div>
             </section>
           ))}
@@ -367,47 +432,44 @@ export function CrudPage<T extends TableName>({
         open={modalOpen}
         onClose={() => setModalOpen(false)}
       >
-        <form onSubmit={handleSubmit} className="space-y-4" noValidate>
-          {formError ? <p className="rounded-lg bg-rose-50 p-3 text-sm text-rose-700 dark:bg-rose-950/40 dark:text-rose-200">{formError}</p> : null}
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
+          {formError ? <Alert variant="destructive">{formError}</Alert> : null}
           {visibleFields.map((field) => {
             const fieldError = formErrors[field.name]
-            const fieldBorder = fieldError
-              ? 'border-rose-400 focus:border-rose-600 dark:border-rose-700'
-              : 'border-stone-200 focus:border-emerald-600 dark:border-stone-700'
 
             return (
-              <label key={field.name} className="block text-sm font-medium text-stone-700 dark:text-stone-200">
+              <label key={field.name} className="block text-sm font-semibold text-foreground">
                 <span>
                   {field.label}
                   {field.required ? <span className="text-rose-500"> *</span> : null}
                 </span>
                 {field.type === 'select' ? (
-                  <select
+                  <Select
                     name={field.name}
                     required={field.required}
                     value={formValues[field.name] ?? ''}
                     onChange={(event) => updateFormValue(field.name, event.target.value)}
                     aria-invalid={Boolean(fieldError)}
-                    className={`mt-1 w-full rounded-lg border bg-white px-3 py-3 outline-none dark:bg-stone-900 dark:text-stone-100 ${fieldBorder}`}
+                    className="mt-1"
                   >
                     {field.options?.map((option) => (
                       <option key={option.value} value={option.value}>
                         {option.label}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                 ) : field.type === 'textarea' ? (
-                  <textarea
+                  <Textarea
                     name={field.name}
                     rows={3}
                     value={formValues[field.name] ?? ''}
                     onChange={(event) => updateFormValue(field.name, event.target.value)}
                     aria-invalid={Boolean(fieldError)}
-                    className={`mt-1 w-full rounded-lg border px-3 py-3 outline-none dark:bg-stone-900 dark:text-stone-100 ${fieldBorder}`}
+                    className="mt-1"
                   />
                 ) : field.type === 'date' ? (
                   <div className="relative mt-1">
-                    <input
+                    <Input
                       name={field.name}
                       type="date"
                       required={field.required}
@@ -416,23 +478,23 @@ export function CrudPage<T extends TableName>({
                       onFocus={(event) => event.currentTarget.showPicker?.()}
                       onChange={(event) => updateFormValue(field.name, event.target.value)}
                       aria-invalid={Boolean(fieldError)}
-                      className={`min-w-0 max-w-full appearance-none rounded-lg border px-3 py-3 pr-11 text-base outline-none [color-scheme:light] dark:bg-stone-900 dark:text-stone-100 dark:[color-scheme:dark] ${fieldBorder}`}
+                      className="max-w-full pr-11"
                     />
                     <CalendarDays
                       aria-hidden="true"
                       size={18}
-                      className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 dark:text-stone-500"
+                      className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
                     />
                   </div>
                 ) : field.type === 'day' ? (
                   <div className="relative mt-1">
-                    <select
+                    <Select
                       name={field.name}
                       required={field.required}
                       value={formValues[field.name] ?? ''}
                       onChange={(event) => updateFormValue(field.name, event.target.value)}
                       aria-invalid={Boolean(fieldError)}
-                      className={`w-full appearance-none rounded-lg border bg-white px-3 py-3 pr-11 outline-none dark:bg-stone-900 dark:text-stone-100 ${fieldBorder}`}
+                      className="appearance-none pr-11"
                     >
                       <option value="">Gün seç</option>
                       {Array.from({ length: 31 }, (_, index) => {
@@ -443,15 +505,15 @@ export function CrudPage<T extends TableName>({
                           </option>
                         )
                       })}
-                    </select>
+                    </Select>
                     <CalendarDays
                       aria-hidden="true"
                       size={18}
-                      className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 dark:text-stone-500"
+                      className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
                     />
                   </div>
                 ) : (
-                  <input
+                  <Input
                     name={field.name}
                     type={field.type}
                     required={field.required}
@@ -460,22 +522,33 @@ export function CrudPage<T extends TableName>({
                     value={formValues[field.name] ?? ''}
                     onChange={(event) => updateFormValue(field.name, event.target.value)}
                     aria-invalid={Boolean(fieldError)}
-                    className={`mt-1 w-full rounded-lg border px-3 py-3 outline-none dark:bg-stone-900 dark:text-stone-100 ${fieldBorder}`}
+                    className="mt-1"
                   />
                 )}
                 {fieldError ? <span className="mt-1 block text-xs font-medium text-rose-600 dark:text-rose-300">{fieldError}</span> : null}
               </label>
             )
           })}
-          <button
+          <Button
             type="submit"
             disabled={saving}
-            className="sticky bottom-0 z-10 w-full rounded-xl bg-emerald-700 px-4 py-3.5 text-sm font-semibold text-white shadow-[0_-10px_24px_rgba(255,255,255,0.9)] disabled:opacity-60 dark:shadow-[0_-10px_24px_rgba(12,10,9,0.9)] sm:static sm:shadow-none"
+            className="sticky bottom-0 z-10 h-11 w-full shadow-[0_-10px_24px_rgba(255,255,255,0.9)] dark:shadow-[0_-10px_24px_rgba(12,10,9,0.9)] sm:static sm:shadow-none"
           >
             {saving ? 'Kaydediliyor...' : 'Kaydet'}
-          </button>
+          </Button>
         </form>
       </SimpleModal>
+
+      <ConfirmDialog
+        open={Boolean(deleteId)}
+        title="Kaydı sil"
+        description="Bu kayıt kalıcı olarak silinecek. İşlemi onaylamadan önce doğru kaydı seçtiğinden emin ol."
+        confirmLabel="Sil"
+        variant="destructive"
+        loading={deleting}
+        onCancel={() => setDeleteId(null)}
+        onConfirm={() => void confirmDelete()}
+      />
 
     </section>
   )

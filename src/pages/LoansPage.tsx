@@ -6,6 +6,7 @@ import { SimpleModal } from '../components/SimpleModal'
 import { Badge } from '../components/ui/badge'
 import { Card as SurfaceCard, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Progress } from '../components/ui/progress'
+import { useConfirmDialog } from '../components/ui/use-confirm-dialog'
 import { supabase } from '../lib/supabase'
 import type { Card, InsertFor, Loan, LoanInstallment } from '../types/database'
 import { formatDate, startOfToday } from '../utils/date'
@@ -180,11 +181,11 @@ function LoanOverview({ loans, installments }: { loans: Loan[]; installments: Lo
         </CardContent>
       </SurfaceCard>
 
-      <div className="flex snap-x gap-3 overflow-x-auto pb-1">
+      <div className="grid gap-3 min-[680px]:grid-cols-2 xl:grid-cols-3">
         {activeLoans.map((loan) => {
           const progress = loanProgress(loan, installments)
           return (
-            <SurfaceCard key={loan.id} className="min-w-[86%] snap-start border-0 shadow-sm ring-1 ring-stone-200/80 dark:ring-stone-800 min-[520px]:min-w-[48%]">
+            <SurfaceCard key={loan.id} className="border-0 shadow-sm ring-1 ring-stone-200/80 dark:ring-stone-800">
               <CardHeader className="pb-0">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
@@ -312,6 +313,7 @@ async function syncLoanInstallmentPlan(loan: Loan) {
 }
 
 export function LoansPage() {
+  const { confirm, confirmDialog } = useConfirmDialog()
   const [installmentLoan, setInstallmentLoan] = useState<Loan | null>(null)
   const [installmentItem, setInstallmentItem] = useState<LoanInstallment | null>(null)
   const [installmentSourceCard, setInstallmentSourceCard] = useState('')
@@ -424,11 +426,14 @@ export function LoansPage() {
     const pendingItems = items.filter((item) => item.status !== 'ödendi')
     if (pendingItems.length === 0) return
 
-    const confirmed = window.confirm(
-      pendingItems.length === 1
-        ? `${pendingItems[0].installment_no}. taksiti kaynak hesaptan düşmeden ödendi işaretlemek istiyor musun?`
-        : `${pendingItems.length} taksiti kaynak hesaptan düşmeden ödendi işaretlemek istiyor musun?`,
-    )
+    const confirmed = await confirm({
+      title: 'Taksiti ödendi işaretle',
+      description:
+        pendingItems.length === 1
+          ? `${pendingItems[0].installment_no}. taksit kaynak hesaptan düşmeden ödendi işaretlenecek.`
+          : `${pendingItems.length} taksit kaynak hesaptan düşmeden ödendi işaretlenecek.`,
+      confirmLabel: 'Ödendi işaretle',
+    })
     if (!confirmed) return
 
     const actionId = pendingItems.length === 1 ? `manual-${pendingItems[0].id}` : `manual-bulk-${loan.id}`
@@ -520,7 +525,12 @@ export function LoansPage() {
   }
 
   async function deletePlanItem(item: LoanInstallment, reload: () => Promise<void>, setError: (message: string) => void) {
-    const confirmed = window.confirm('Bu taksiti ödeme planından silmek istiyor musun?')
+    const confirmed = await confirm({
+      title: 'Taksiti sil',
+      description: 'Bu taksit ödeme planından silinecek ve kredi toplamları yeniden hesaplanacak.',
+      confirmLabel: 'Sil',
+      variant: 'destructive',
+    })
     if (!confirmed) return
 
     const { error } = await supabase.from('loan_installments').delete().eq('id', item.id)
@@ -811,6 +821,7 @@ export function LoansPage() {
           </button>
         </form>
       </SimpleModal>
+      {confirmDialog}
     </>
   )
 }

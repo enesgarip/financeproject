@@ -2,9 +2,13 @@ import { Pencil, Plus, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAuth } from '../../auth/useAuth'
 import { SimpleModal } from '../SimpleModal'
+import { Alert } from '../ui/alert'
 import { Badge } from '../ui/badge'
+import { Button } from '../ui/button'
 import { Card, CardContent } from '../ui/card'
+import { Input, Select, Textarea } from '../ui/input'
 import { Progress } from '../ui/progress'
+import { useConfirmDialog } from '../ui/use-confirm-dialog'
 import { supabase } from '../../lib/supabase'
 import type { InsertFor, SavingsGoal, SavingsGoalComponent, SavingsGoalValueType, UpdateFor } from '../../types/database'
 import { formatDate } from '../../utils/date'
@@ -40,6 +44,7 @@ function defaultCompositeDrafts() {
 
 export function SavingsGoalsPanel() {
   const { user } = useAuth()
+  const { confirm, confirmDialog } = useConfirmDialog()
   const [goals, setGoals] = useState<SavingsGoal[]>([])
   const [components, setComponents] = useState<SavingsGoalComponent[]>([])
   const [loading, setLoading] = useState(true)
@@ -143,7 +148,13 @@ export function SavingsGoalsPanel() {
   }
 
   async function handleDelete(goal: SavingsGoal) {
-    if (!window.confirm(`"${goal.name}" hedefini silmek istiyor musun?`)) return
+    const confirmed = await confirm({
+      title: 'Hedefi sil',
+      description: `"${goal.name}" hedefi ve bağlı bileşenleri silinecek. Bu işlem geri alınamaz.`,
+      confirmLabel: 'Sil',
+      variant: 'destructive',
+    })
+    if (!confirmed) return
 
     const { error: deleteError } = await supabase.from('savings_goals').delete().eq('id', goal.id)
     if (deleteError) {
@@ -266,22 +277,21 @@ export function SavingsGoalsPanel() {
           <h2 className="text-lg font-bold text-foreground">Birikim hedefleri</h2>
           <p className="text-sm text-muted-foreground">TL, altın veya karma hedef (ör. gram + çeyrek).</p>
         </div>
-        <button
+        <Button
           type="button"
           onClick={openCreate}
-          className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-700 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-800"
         >
           <Plus size={16} />
           Hedef ekle
-        </button>
+        </Button>
       </div>
 
-      {error ? <p className="rounded-lg bg-rose-50 p-3 text-sm text-rose-700 dark:bg-rose-950/40 dark:text-rose-200">{error}</p> : null}
+      {error ? <Alert variant="destructive">{error}</Alert> : null}
 
       {loading ? (
         <p className="text-sm text-muted-foreground">Hedefler yükleniyor...</p>
       ) : goals.length === 0 ? (
-        <Card className="border-0 shadow-sm ring-1 ring-stone-200/80 dark:ring-stone-800">
+        <Card className="border-0 shadow-[var(--shadow-card)] ring-1 ring-border/80">
           <CardContent className="p-4 text-sm text-muted-foreground">Henüz birikim hedefi yok.</CardContent>
         </Card>
       ) : (
@@ -291,7 +301,7 @@ export function SavingsGoalsPanel() {
             const goalComponents = componentsByGoal.get(goal.id) ?? []
 
             return (
-              <Card key={goal.id} className="border-0 shadow-sm ring-1 ring-stone-200/80 dark:ring-stone-800">
+              <Card key={goal.id} className="border-0 shadow-[var(--shadow-card)] ring-1 ring-border/80">
                 <CardContent className="p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
@@ -321,10 +331,10 @@ export function SavingsGoalsPanel() {
                       ) : null}
                     </div>
                     <div className="flex shrink-0 gap-1">
-                      <button type="button" onClick={() => openEdit(goal)} className="rounded-lg p-2 text-stone-600 hover:bg-stone-100 dark:hover:bg-stone-800">
+                      <button type="button" onClick={() => openEdit(goal)} className="rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground">
                         <Pencil size={16} />
                       </button>
-                      <button type="button" onClick={() => void handleDelete(goal)} className="rounded-lg p-2 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40">
+                      <button type="button" onClick={() => void handleDelete(goal)} className="rounded-lg p-2 text-destructive hover:bg-destructive/10">
                         <Trash2 size={16} />
                       </button>
                     </div>
@@ -342,27 +352,27 @@ export function SavingsGoalsPanel() {
         <form onSubmit={handleSubmit} className="space-y-4">
           <label className="block text-sm font-medium">
             Hedef adı
-            <input value={name} onChange={(e) => setName(e.target.value)} className="mt-1 w-full rounded-lg border px-3 py-2.5 dark:border-stone-700 dark:bg-stone-900" required />
+            <Input value={name} onChange={(e) => setName(e.target.value)} className="mt-1" required />
           </label>
           <label className="block text-sm font-medium">
             Hedef türü
-            <select
+            <Select
               value={valueType}
               onChange={(e) => setValueType(e.target.value as SavingsGoalValueType)}
-              className="mt-1 w-full rounded-lg border px-3 py-2.5 dark:border-stone-700 dark:bg-stone-900"
+              className="mt-1"
             >
               <option value="TRY">Türk lirası (TRY)</option>
               <option value="gram_altin">Gram altın</option>
               <option value="ceyrek_altin">Çeyrek altın</option>
               <option value="composite">Karma (birden fazla)</option>
-            </select>
+            </Select>
           </label>
 
           {valueType === 'composite' ? (
-            <div className="space-y-3 rounded-xl bg-amber-50/70 p-3 dark:bg-amber-950/25">
-              <p className="text-xs font-medium text-amber-950 dark:text-amber-100">Örn. evlilik: 29 gram + 1 çeyrek ayrı satırlarda.</p>
+            <div className="space-y-3 rounded-lg bg-warning/10 p-3">
+              <p className="text-xs font-medium text-warning">Örn. evlilik: 29 gram + 1 çeyrek ayrı satırlarda.</p>
               {componentDrafts.map((draft, index) => (
-                <div key={draft.key} className="space-y-2 rounded-lg bg-white/80 p-2.5 dark:bg-stone-900/80">
+                <div key={draft.key} className="space-y-2 rounded-lg bg-card/80 p-2.5 ring-1 ring-border/70">
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-xs font-semibold text-muted-foreground">Bileşen {index + 1}</span>
                     {componentDrafts.length > 1 ? (
@@ -375,15 +385,15 @@ export function SavingsGoalsPanel() {
                       </button>
                     ) : null}
                   </div>
-                  <input
+                  <Input
                     value={draft.label}
                     onChange={(e) =>
                       setComponentDrafts((rows) => rows.map((row) => (row.key === draft.key ? { ...row, label: e.target.value } : row)))
                     }
                     placeholder="Etiket (ör. Gram)"
-                    className="w-full rounded-lg border px-3 py-2 text-sm dark:border-stone-700 dark:bg-stone-900"
+                    className="h-10 text-sm"
                   />
-                  <select
+                  <Select
                     value={draft.value_type}
                     onChange={(e) =>
                       setComponentDrafts((rows) =>
@@ -392,14 +402,14 @@ export function SavingsGoalsPanel() {
                         ),
                       )
                     }
-                    className="w-full rounded-lg border px-3 py-2 text-sm dark:border-stone-700 dark:bg-stone-900"
+                    className="h-10 text-sm"
                   >
                     <option value="TRY">TRY</option>
                     <option value="gram_altin">Gram altın</option>
                     <option value="ceyrek_altin">Çeyrek altın</option>
-                  </select>
+                  </Select>
                   <div className="grid grid-cols-2 gap-2">
-                    <input
+                    <Input
                       value={draft.current_amount}
                       onChange={(e) =>
                         setComponentDrafts((rows) => rows.map((row) => (row.key === draft.key ? { ...row, current_amount: e.target.value } : row)))
@@ -408,9 +418,9 @@ export function SavingsGoalsPanel() {
                       min="0"
                       step="0.01"
                       placeholder="Biriken"
-                      className="rounded-lg border px-3 py-2 text-sm dark:border-stone-700 dark:bg-stone-900"
+                      className="h-10 text-sm"
                     />
-                    <input
+                    <Input
                       value={draft.target_amount}
                       onChange={(e) =>
                         setComponentDrafts((rows) => rows.map((row) => (row.key === draft.key ? { ...row, target_amount: e.target.value } : row)))
@@ -419,7 +429,7 @@ export function SavingsGoalsPanel() {
                       min="0"
                       step="0.01"
                       placeholder="Hedef"
-                      className="rounded-lg border px-3 py-2 text-sm dark:border-stone-700 dark:bg-stone-900"
+                      className="h-10 text-sm"
                       required
                     />
                   </div>
@@ -428,7 +438,7 @@ export function SavingsGoalsPanel() {
               <button
                 type="button"
                 onClick={() => setComponentDrafts((rows) => [...rows, newComponentDraft()])}
-                className="text-sm font-semibold text-emerald-700"
+                className="text-sm font-semibold text-primary"
               >
                 + Bileşen ekle
               </button>
@@ -438,17 +448,17 @@ export function SavingsGoalsPanel() {
               <div className="grid grid-cols-2 gap-3">
                 <label className="block text-sm font-medium">
                   Hedef miktar
-                  <input value={targetAmount} onChange={(e) => setTargetAmount(e.target.value)} type="number" min="0" step="0.01" className="mt-1 w-full rounded-lg border px-3 py-2.5 dark:border-stone-700 dark:bg-stone-900" required />
+                  <Input value={targetAmount} onChange={(e) => setTargetAmount(e.target.value)} type="number" min="0" step="0.01" className="mt-1" required />
                 </label>
                 <label className="block text-sm font-medium">
                   Biriken miktar
-                  <input value={currentAmount} onChange={(e) => setCurrentAmount(e.target.value)} type="number" min="0" step="0.01" className="mt-1 w-full rounded-lg border px-3 py-2.5 dark:border-stone-700 dark:bg-stone-900" required />
+                  <Input value={currentAmount} onChange={(e) => setCurrentAmount(e.target.value)} type="number" min="0" step="0.01" className="mt-1" required />
                 </label>
               </div>
               {valueType === 'gram_altin' || valueType === 'ceyrek_altin' ? (
                 <label className="block text-sm font-medium">
                   Tahmini değer (TRY)
-                  <input value={estimatedValueTry} onChange={(e) => setEstimatedValueTry(e.target.value)} type="number" min="0" step="0.01" className="mt-1 w-full rounded-lg border px-3 py-2.5 dark:border-stone-700 dark:bg-stone-900" />
+                  <Input value={estimatedValueTry} onChange={(e) => setEstimatedValueTry(e.target.value)} type="number" min="0" step="0.01" className="mt-1" />
                 </label>
               ) : null}
             </>
@@ -457,26 +467,27 @@ export function SavingsGoalsPanel() {
           <div className="grid grid-cols-2 gap-3">
             <label className="block text-sm font-medium">
               Hedef tarih
-              <input value={targetDate} onChange={(e) => setTargetDate(e.target.value)} type="date" className="mt-1 w-full rounded-lg border px-3 py-2.5 dark:border-stone-700 dark:bg-stone-900" />
+              <Input value={targetDate} onChange={(e) => setTargetDate(e.target.value)} type="date" className="mt-1" />
             </label>
             <label className="block text-sm font-medium">
               Durum
-              <select value={status} onChange={(e) => setStatus(e.target.value as SavingsGoal['status'])} className="mt-1 w-full rounded-lg border px-3 py-2.5 dark:border-stone-700 dark:bg-stone-900">
+              <Select value={status} onChange={(e) => setStatus(e.target.value as SavingsGoal['status'])} className="mt-1">
                 <option value="active">Aktif</option>
                 <option value="completed">Tamamlandı</option>
-              </select>
+              </Select>
             </label>
           </div>
           <label className="block text-sm font-medium">
             Not
-            <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} className="mt-1 w-full rounded-lg border px-3 py-2.5 dark:border-stone-700 dark:bg-stone-900" />
+            <Textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} className="mt-1" />
           </label>
-          {formError ? <p className="rounded-lg bg-rose-50 p-3 text-sm text-rose-700">{formError}</p> : null}
-          <button type="submit" disabled={saving} className="w-full rounded-xl bg-emerald-700 px-4 py-3 text-sm font-semibold text-white disabled:opacity-60">
+          {formError ? <Alert variant="destructive">{formError}</Alert> : null}
+          <Button type="submit" disabled={saving} className="w-full">
             {saving ? 'Kaydediliyor...' : 'Kaydet'}
-          </button>
+          </Button>
         </form>
       </SimpleModal>
+      {confirmDialog}
     </section>
   )
 }
