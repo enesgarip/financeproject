@@ -13,7 +13,7 @@ const tones = [
 export function MorePage() {
   return (
     <section className="flex flex-col gap-4">
-      <div className="rounded-lg border border-border/75 bg-card p-4 shadow-[0_10px_30px_rgba(15,23,42,0.04)] dark:shadow-black/20">
+      <div className="finance-surface rounded-lg p-4">
         <h1 className="text-lg font-black text-foreground">Daha fazla işlem</h1>
         <p className="mt-1 text-sm text-muted-foreground">Daha seyrek kullanılan finans kayıtları ve hızlı giriş yüzeyleri.</p>
       </div>
@@ -23,7 +23,7 @@ export function MorePage() {
           <Link
             key={item.to}
             to={item.to}
-            className="group flex items-center gap-3 rounded-lg border border-border/75 bg-card p-4 shadow-[0_8px_26px_rgba(15,23,42,0.04)] transition hover:-translate-y-0.5 hover:shadow-[0_16px_36px_rgba(15,23,42,0.08)] dark:shadow-black/20"
+            className="group flex items-center gap-3 rounded-lg border border-border/75 bg-card/95 p-4 shadow-[var(--shadow-card)] transition hover:-translate-y-0.5 hover:shadow-[var(--shadow-card-hover)]"
           >
             <div className={`grid size-11 shrink-0 place-items-center rounded-lg ${tones[index % tones.length]}`}>
               <item.icon size={20} />

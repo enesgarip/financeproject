@@ -1,5 +1,6 @@
 import type { Card } from '../../types/database'
 import { formatCurrency } from '../../utils/formatCurrency'
+import { Select } from '../ui/input'
 
 type AccountSelectorProps = {
   accounts: Card[]
@@ -27,13 +28,13 @@ export function AccountSelector({
 
   return (
     <div className="space-y-2">
-      <label className="block text-sm font-medium text-stone-700 dark:text-stone-200">
+      <label className="block text-sm font-semibold text-foreground">
         {label}
-        <select
+        <Select
           required
           value={value}
           onChange={(event) => onChange(event.target.value)}
-          className="mt-1 w-full rounded-lg border border-stone-200 bg-white px-3 py-3 outline-none focus:border-emerald-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+          className="mt-1"
         >
           <option value="">{accounts.length > 0 ? 'Hesap seç' : emptyMessage}</option>
           {accounts.map((account) => (
@@ -41,13 +42,13 @@ export function AccountSelector({
               {account.card_name} ({formatCurrency(account.current_balance)})
             </option>
           ))}
-        </select>
+        </Select>
       </label>
       {bestAccount && !value ? (
         <button
           type="button"
           onClick={() => onChange(bestAccount.id)}
-          className="inline-flex w-fit rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-800 ring-1 ring-emerald-200 hover:bg-emerald-100 dark:bg-emerald-950/30 dark:text-emerald-200 dark:ring-emerald-900/70"
+          className="inline-flex w-fit rounded-lg bg-primary/10 px-3 py-1.5 text-xs font-bold text-primary ring-1 ring-primary/15 transition hover:bg-primary/15"
         >
           Önerilen hesap: {bestAccount.card_name}
         </button>
@@ -56,8 +57,8 @@ export function AccountSelector({
         <div
           className={`grid grid-cols-2 gap-2 rounded-xl px-3 py-2 text-xs ${
             hasInsufficientBalance
-              ? 'bg-rose-50 text-rose-800 dark:bg-rose-950/30 dark:text-rose-200'
-              : 'bg-emerald-50 text-emerald-900 dark:bg-emerald-950/25 dark:text-emerald-100'
+              ? 'bg-destructive/10 text-destructive'
+              : 'bg-success/10 text-success'
           }`}
         >
           <span>Bakiye: {formatCurrency(selectedAccount.current_balance)}</span>

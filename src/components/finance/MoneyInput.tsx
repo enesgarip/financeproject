@@ -1,4 +1,5 @@
 import { formatCurrency, parseNumber } from '../../utils/formatCurrency'
+import { Input } from '../ui/input'
 
 type MoneyInputProps = {
   label: string
@@ -32,9 +33,9 @@ export function MoneyInput({
   }
 
   return (
-    <label className={`block text-sm font-medium text-stone-700 dark:text-stone-200 ${className}`}>
+    <label className={`block text-sm font-semibold text-foreground ${className}`}>
       {label}
-      <input
+      <Input
         value={value}
         onChange={(event) => onValueChange(event.target.value)}
         onBlur={handleBlur}
@@ -42,7 +43,7 @@ export function MoneyInput({
         inputMode="decimal"
         required={required}
         placeholder={placeholder}
-        className="mt-1 w-full rounded-lg border border-stone-200 px-3 py-2.5 tabular-nums outline-none focus:border-emerald-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+        className="mt-1 tabular-nums"
       />
       {parsedValue > 0 ? <span className="mt-1 block text-xs font-semibold text-muted-foreground">{formatCurrency(parsedValue)}</span> : null}
     </label>

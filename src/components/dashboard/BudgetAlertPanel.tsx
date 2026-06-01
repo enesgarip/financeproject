@@ -18,7 +18,7 @@ export function BudgetAlertPanel({ budgets, expenses }: BudgetAlertPanelProps) {
   if (alerts.length === 0) return null
 
   return (
-    <Card className="border-0 shadow-sm ring-1 ring-amber-200/80 dark:ring-amber-900/70">
+    <Card className="border-0 shadow-[var(--shadow-card)] ring-1 ring-warning/20">
       <CardHeader className="pb-0">
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -38,7 +38,7 @@ export function BudgetAlertPanel({ budgets, expenses }: BudgetAlertPanelProps) {
           return (
             <div
               key={alert.budgetId}
-              className={`rounded-xl px-3 py-2.5 ${alert.status === 'over' ? 'bg-rose-50 dark:bg-rose-950/30' : 'bg-amber-50 dark:bg-amber-950/25'}`}
+              className={`rounded-lg px-3 py-2.5 ${alert.status === 'over' ? 'bg-destructive/10' : 'bg-warning/10'}`}
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
@@ -57,7 +57,7 @@ export function BudgetAlertPanel({ budgets, expenses }: BudgetAlertPanelProps) {
                 </div>
                 <Link
                   to="/analiz"
-                  className="shrink-0 rounded-lg bg-white px-2.5 py-1.5 text-xs font-semibold text-amber-900 ring-1 ring-amber-200 hover:bg-amber-100 dark:bg-stone-900 dark:text-amber-100 dark:ring-amber-900"
+                  className="shrink-0 rounded-lg bg-card px-2.5 py-1.5 text-xs font-semibold text-warning ring-1 ring-warning/20 transition hover:bg-warning/10"
                 >
                   Analiz
                 </Link>
