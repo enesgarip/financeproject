@@ -11,6 +11,7 @@ import { MoneyInput } from '../components/finance/MoneyInput'
 import { SimpleModal } from '../components/SimpleModal'
 import { Badge } from '../components/ui/badge'
 import { Card as SurfaceCard, CardContent, CardHeader, CardTitle } from '../components/ui/card'
+import { HelpTooltip, type HelpTooltipContent } from '../components/ui/help-tooltip'
 import { Progress } from '../components/ui/progress'
 import { supabase } from '../lib/supabase'
 import type { Card, CardExpense, CardExpenseStatus, InsertFor } from '../types/database'
@@ -102,6 +103,59 @@ const fields: FormField[] = [
   },
   { name: 'note', label: 'Not', type: 'textarea' },
 ]
+
+const cardHelp = {
+  summary: {
+    calculation: 'Kredi kartı borçları, dönem içi harcamalar ve provizyonlar birlikte okunur; banka kartları ayrıca hesap bakiyesi olarak gösterilir.',
+    importance: 'Kart tarafındaki toplam yükü ve eldeki hesap bakiyesini aynı anda görmeni sağlar.',
+    source: 'Kartlar, kart harcamaları ve provizyon kayıtları.',
+  },
+  totalDebt: {
+    calculation: 'Ekstre borcu, dönem içi kesinleşen harcama ve provizyon toplamıdır.',
+    importance: 'Kart limitini kullanan toplam yükü gösterir.',
+    source: 'Kart kaydındaki borç kırılımı ve kart harcama kayıtları.',
+  },
+  statementDebt: {
+    calculation: 'Kesilmiş ekstreye düşmüş, artık ödenebilir olan kart borcudur.',
+    importance: 'Son ödeme tarihine kadar ödenmesi gereken gerçek tutarı ayırır.',
+    source: 'Kart kaydındaki ekstre borcu ve ekstre kesme işlemleri.',
+  },
+  currentPeriod: {
+    calculation: 'Bu dönem kesinleşmiş ama henüz ekstreye aktarılmamış harcamalar toplanır.',
+    importance: 'Bir sonraki ekstreye girecek yükü önceden görmeni sağlar.',
+    source: 'Kesinleşmiş kart harcamaları ve dönem bilgileri.',
+  },
+  provision: {
+    calculation: 'Provizyonda bekleyen kart işlemleri toplanır; henüz ödenebilir borç sayılmaz.',
+    importance: 'Limitten düşen ama kesinleşmeden ödenmemesi gereken tutarı ayrı tutar.',
+    source: 'Provizyon durumundaki kart harcama kayıtları.',
+  },
+  availableLimit: {
+    calculation: 'Kredi limiti veya ortak limit grubundan toplam kart borcu düşülür.',
+    importance: 'Yeni harcama için kalan gerçek alanı gösterir.',
+    source: 'Kart limiti, ortak limit grubu ve toplam borç kayıtları.',
+  },
+  limit: {
+    calculation: 'Ortak limit grubunda en yüksek limit alınır; tekil kartta kartın kendi limiti kullanılır.',
+    importance: 'Aynı limiti paylaşan kartlarda limiti iki kez saymayı önler.',
+    source: 'Kart limiti ve ortak limit grubu alanları.',
+  },
+  usage: {
+    calculation: 'Toplam borç, kullanılabilir kredi limitine bölünerek yüzdeye çevrilir.',
+    importance: 'Limit doluluğunu ve riskli kullanım seviyesini hızlı gösterir.',
+    source: 'Kart borcu, provizyon ve limit kayıtları.',
+  },
+  cashBalance: {
+    calculation: 'Banka kartı türündeki hesapların güncel bakiyeleri toplanır.',
+    importance: 'Kart borçlarına karşı eldeki nakit hesabı birlikte görmeyi sağlar.',
+    source: 'Banka kartı / hesap bakiyesi kayıtları.',
+  },
+  provisionsPanel: {
+    calculation: 'Provizyon durumundaki kart harcamaları listelenir ve toplamı gösterilir.',
+    importance: 'Kesinleşince dönem içine geçecek, iptalde limitten çıkacak işlemleri kontrol eder.',
+    source: 'Kart harcama kayıtlarının provizyon durumu.',
+  },
+} satisfies Record<string, HelpTooltipContent>
 
 function optionalDay(value: FormDataEntryValue | null) {
   const parsed = Number(value)
@@ -247,7 +301,10 @@ function CreditCardOverview({ rows }: { rows: Card[] }) {
         <CardContent className="p-4">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <p className="text-xs font-bold uppercase text-muted-foreground">Kart özeti</p>
+              <p className="inline-flex items-center gap-1 text-xs font-bold uppercase text-muted-foreground">
+                Kart özeti
+                <HelpTooltip title="Kart özeti" content={cardHelp.summary} />
+              </p>
               <p className="mt-1 text-2xl font-extrabold tabular-nums text-foreground">{formatCurrency(totalDebt)}</p>
               <p className="mt-1 text-sm text-muted-foreground">Toplam borç ve provizyon dahil limit kullanımı</p>
             </div>
@@ -257,15 +314,15 @@ function CreditCardOverview({ rows }: { rows: Card[] }) {
           </div>
           <Progress value={totalUsageRate} className="mt-4 h-2" />
           <div className="mt-3 grid grid-cols-2 gap-2 text-xs min-[520px]:grid-cols-4">
-            <OverviewStat label="Ekstre borcu" value={formatCurrency(totalStatementDebt)} />
-            <OverviewStat label="Dönem içi" value={formatCurrency(totalCurrentPeriod)} />
-            <OverviewStat label="Provizyon" value={formatCurrency(totalProvision)} />
-            <OverviewStat label="Kalan limit" value={formatCurrency(totalAvailable)} />
+            <OverviewStat label="Ekstre borcu" value={formatCurrency(totalStatementDebt)} help={cardHelp.statementDebt} />
+            <OverviewStat label="Dönem içi" value={formatCurrency(totalCurrentPeriod)} help={cardHelp.currentPeriod} />
+            <OverviewStat label="Provizyon" value={formatCurrency(totalProvision)} help={cardHelp.provision} />
+            <OverviewStat label="Kalan limit" value={formatCurrency(totalAvailable)} help={cardHelp.availableLimit} />
           </div>
           <div className="mt-2 grid grid-cols-3 gap-2 text-xs">
-            <OverviewStat label="Limit" value={formatCurrency(totalLimit)} />
-            <OverviewStat label="Kullanım" value={`%${Math.round(totalUsageRate)}`} />
-            <OverviewStat label="Hesap" value={formatCurrency(cashBalance)} />
+            <OverviewStat label="Limit" value={formatCurrency(totalLimit)} help={cardHelp.limit} />
+            <OverviewStat label="Kullanım" value={`%${Math.round(totalUsageRate)}`} help={cardHelp.usage} />
+            <OverviewStat label="Hesap" value={formatCurrency(cashBalance)} help={cardHelp.cashBalance} />
           </div>
         </CardContent>
       </SurfaceCard>
@@ -285,10 +342,10 @@ function CreditCardOverview({ rows }: { rows: Card[] }) {
               </CardHeader>
               <CardContent className="flex flex-col gap-3 pt-1">
                 <div className="grid grid-cols-2 gap-2 text-xs min-[460px]:grid-cols-4">
-                  <OverviewStat label="Toplam" value={formatCurrency(group.debt)} />
-                  <OverviewStat label="Ekstre" value={formatCurrency(group.statementDebt)} />
-                  <OverviewStat label="Dönem içi" value={formatCurrency(group.currentPeriod)} />
-                  <OverviewStat label="Provizyon" value={formatCurrency(group.provision)} />
+                  <OverviewStat label="Toplam" value={formatCurrency(group.debt)} help={cardHelp.totalDebt} />
+                  <OverviewStat label="Ekstre" value={formatCurrency(group.statementDebt)} help={cardHelp.statementDebt} />
+                  <OverviewStat label="Dönem içi" value={formatCurrency(group.currentPeriod)} help={cardHelp.currentPeriod} />
+                  <OverviewStat label="Provizyon" value={formatCurrency(group.provision)} help={cardHelp.provision} />
                 </div>
                 <Progress value={group.usageRate} className="h-1.5" />
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
@@ -317,10 +374,13 @@ function CreditCardOverview({ rows }: { rows: Card[] }) {
   )
 }
 
-function OverviewStat({ label, value }: { label: string; value: string }) {
+function OverviewStat({ label, value, help }: { label: string; value: string; help?: HelpTooltipContent }) {
   return (
     <div className="min-w-0 rounded-lg bg-muted/55 px-2.5 py-2">
-      <p className="truncate text-[11px] font-medium text-muted-foreground">{label}</p>
+      <div className="flex min-w-0 items-center gap-1">
+        <p className="truncate text-[11px] font-medium text-muted-foreground">{label}</p>
+        {help ? <HelpTooltip title={label} content={help} /> : null}
+      </div>
       <p className="mt-1 truncate text-sm font-bold tabular-nums text-foreground">{value}</p>
     </div>
   )
@@ -1005,6 +1065,7 @@ function ProvisionPanel({
             <CardTitle className="flex items-center gap-2 text-base">
               <Clock3 size={17} />
               Provizyondaki işlemler
+              <HelpTooltip title="Provizyondaki işlemler" content={cardHelp.provisionsPanel} />
             </CardTitle>
             <p className="mt-1 text-xs text-muted-foreground">Kesinleşince dönem içine alınır, iptal edilirse limitten çıkarılır.</p>
           </div>

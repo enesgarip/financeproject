@@ -5,6 +5,7 @@ import { MoneyInput } from './MoneyInput'
 import { SimpleModal } from '../SimpleModal'
 import { Badge } from '../ui/badge'
 import { Card as SurfaceCard, CardContent, CardHeader, CardTitle } from '../ui/card'
+import { HelpTooltip, type HelpTooltipContent } from '../ui/help-tooltip'
 import { supabase } from '../../lib/supabase'
 import type { Card, CardExpense, CardInstallment } from '../../types/database'
 import { expenseCategoryOptions } from '../../utils/categories'
@@ -33,6 +34,12 @@ type CardInstallmentExpensesPanelProps = {
   reload: () => Promise<void>
   setError: (message: string) => void
 }
+
+const installmentExpensesHelp = {
+  calculation: 'Taksit sayısı 1’den büyük olan kesinleşmiş kart harcamaları ve bağlı taksit satırları gösterilir.',
+  importance: 'Kalan taksitleri ve ödenmiş işaretlerini tek yerden takip etmeyi sağlar.',
+  source: 'Kart harcamaları ve kart taksit kayıtları.',
+} satisfies HelpTooltipContent
 
 export function CardInstallmentExpensesPanel({ cards, reload, setError }: CardInstallmentExpensesPanelProps) {
   const [expenses, setExpenses] = useState<CardExpense[]>([])
@@ -227,7 +234,10 @@ export function CardInstallmentExpensesPanel({ cards, reload, setError }: CardIn
         <CardHeader className="pb-0">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <CardTitle className="text-base">Taksitli harcamalar</CardTitle>
+              <CardTitle className="inline-flex items-center gap-1.5 text-base">
+                Taksitli harcamalar
+                <HelpTooltip title="Taksitli harcamalar" content={installmentExpensesHelp} />
+              </CardTitle>
               <p className="mt-1 text-xs text-muted-foreground">Taksitleri tek tek odendi isaretleyebilir, kalan borcu canli takip edebilirsin.</p>
             </div>
             <Badge variant="secondary">{expenses.length}</Badge>

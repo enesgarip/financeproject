@@ -2,6 +2,7 @@ import { PieChart } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { Badge } from '../ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card'
+import { HelpTooltip, type HelpTooltipContent } from '../ui/help-tooltip'
 import { Progress } from '../ui/progress'
 import type { Budget, CardExpense } from '../../types/database'
 import { buildBudgetAlerts } from '../../utils/budgetAlerts'
@@ -11,6 +12,12 @@ type BudgetAlertPanelProps = {
   budgets: Budget[]
   expenses: CardExpense[]
 }
+
+const budgetAlertHelp = {
+  calculation: 'Bu ayki kategori bütçesi, iptal edilmemiş kart harcamalarıyla karşılaştırılır; %80 üzeri uyarı, limit aşımı kırmızı görünür.',
+  importance: 'Ay bitmeden hangi kategorinin kontrolden çıktığını erken yakalamaya yardım eder.',
+  source: 'Analiz ekranındaki bütçeler ve kart harcama kayıtları.',
+} satisfies HelpTooltipContent
 
 export function BudgetAlertPanel({ budgets, expenses }: BudgetAlertPanelProps) {
   const alerts = buildBudgetAlerts(budgets, expenses)
@@ -25,6 +32,7 @@ export function BudgetAlertPanel({ budgets, expenses }: BudgetAlertPanelProps) {
             <CardTitle className="flex items-center gap-2 text-base">
               <PieChart size={17} />
               Bütçe uyarıları
+              <HelpTooltip title="Bütçe uyarıları" content={budgetAlertHelp} />
             </CardTitle>
             <p className="mt-1 text-sm text-muted-foreground">Bu ay limitine yaklaşan veya aşan kategoriler.</p>
           </div>

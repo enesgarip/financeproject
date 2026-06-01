@@ -2,6 +2,7 @@ import { CalendarClock } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { Badge } from '../ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card'
+import { HelpTooltip, type HelpTooltipContent } from '../ui/help-tooltip'
 import type { Card as FinanceCard } from '../../types/database'
 import {
   buildStatementReminders,
@@ -13,6 +14,12 @@ import { dateInputValue, formatDate } from '../../utils/date'
 type StatementReminderPanelProps = {
   cards: FinanceCard[]
 }
+
+const statementReminderHelp = {
+  calculation: 'Ekstre günü ve son ödeme günü olan kredi kartlarında yaklaşan veya kesilebilir ekstreler hesaplanır.',
+  importance: 'Ekstre kesimini ve son ödeme tarihini kaçırmadan takip etmeyi kolaylaştırır.',
+  source: 'Kartlar ekranındaki kredi kartı ekstre günü, son ödeme günü ve borç bilgileri.',
+} satisfies HelpTooltipContent
 
 export function StatementReminderPanel({ cards }: StatementReminderPanelProps) {
   const reminders = buildStatementReminders(cards)
@@ -27,6 +34,7 @@ export function StatementReminderPanel({ cards }: StatementReminderPanelProps) {
             <CardTitle className="flex items-center gap-2 text-base">
               <CalendarClock size={17} />
               Ekstre hatırlatıcısı
+              <HelpTooltip title="Ekstre hatırlatıcısı" content={statementReminderHelp} />
             </CardTitle>
             <p className="mt-1 text-sm text-muted-foreground">Kesilecek veya yaklaşan ekstreler.</p>
           </div>

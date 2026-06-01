@@ -43,6 +43,7 @@ import { formatCurrency } from '../utils/formatCurrency'
 import { EmptyState } from '../components/EmptyState'
 import { Badge } from '../components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
+import { HelpTooltip, type HelpTooltipContent } from '../components/ui/help-tooltip'
 import { Input } from '../components/ui/input'
 import { Progress } from '../components/ui/progress'
 import { Separator } from '../components/ui/separator'
@@ -77,6 +78,54 @@ const emptyData: DashboardData = {
 }
 
 const UPCOMING_DAYS = 30
+
+const dashboardHelp = {
+  netWorth: {
+    calculation: 'Varlıklar ve alacaklar toplanır; kart, kredi ve kişisel borçlar düşülür.',
+    importance: 'Tek bakışta genel finansal durumun artıda mı ekside mi olduğunu gösterir.',
+    source: 'Varlıklar, banka kartları, kredi kartları, krediler ve borç/alacak kayıtları.',
+  },
+  cashFlow: {
+    calculation: 'Bu ayki maaş ve alacaklardan; kart ekstresi, kredi, ödeme ve kişisel borç çıkışları düşülür.',
+    importance: 'Ay bitmeden nakit açığı oluşup oluşmayacağını erkenden görmeni sağlar.',
+    source: 'Maaş geçmişi, ödemeler, kart son ödeme günleri, krediler ve borç kayıtları.',
+  },
+  periodDebt: {
+    calculation: 'Bu ay ödenmesi beklenen kart ekstresi, kredi taksidi, fatura/ödeme ve kişisel borçlar gruplanır.',
+    importance: 'Ay içindeki gerçek ödeme baskısını hangi kalemin oluşturduğunu ayırır.',
+    source: 'Kart, kredi, ödeme ve borç kayıtlarındaki vade/tarih alanları.',
+  },
+  nextMonthLoad: {
+    calculation: 'Gelecek ayki planlı ödemeler, kart taksitleri, kredi taksitleri ve kişisel borçlar toplanır.',
+    importance: 'Önümüzdeki ayın yükünü bugünden görüp nakit ayırmana yardım eder.',
+    source: 'Ödeme planları, kart taksitleri, kredi taksitleri ve açık borç kayıtları.',
+  },
+  currentDebt: {
+    calculation: 'Kredi kartı toplam borcu, aktif kredi kalan borcu ve açık kişisel borçlar toplanır.',
+    importance: 'Bugün kapatılması veya yönetilmesi gereken toplam yükü gösterir.',
+    source: 'Kartlar, krediler ve borç/alacak ekranındaki açık kayıtlar.',
+  },
+  totalLimit: {
+    calculation: 'Ortak limit grubunda limitler toplanmaz; grup için en yüksek limit alınır, tekil kartlar ayrıca eklenir.',
+    importance: 'Kredi limitini olduğundan yüksek göstermeden gerçek kullanım alanını anlatır.',
+    source: 'Kartlar ekranındaki kredi limiti ve ortak limit grubu alanları.',
+  },
+  loanPayment: {
+    calculation: 'Aktif kredilerin aylık ödeme tutarları toplanır.',
+    importance: 'Her ay düzenli ayrılması gereken kredi nakdini hızlıca gösterir.',
+    source: 'Krediler ekranındaki aktif kredi kayıtları.',
+  },
+  receivable: {
+    calculation: 'Durumu açık olan “borç verdim” kayıtlarının tahmini TL değeri toplanır.',
+    importance: 'Gelebilecek parayı borç yükünden ayrı görmeni sağlar.',
+    source: 'Borç / Alacak ekranındaki açık alacak kayıtları.',
+  },
+  creditLimit: {
+    calculation: 'Her limit grubunda en yüksek limit alınır; grup borcu ise kart borçlarının toplamıdır.',
+    importance: 'Özellikle ortak limitli kartlarda kalan alanı daha doğru takip eder.',
+    source: 'Kredi kartı limitleri, borç tutarları ve ortak limit grubu kayıtları.',
+  },
+} satisfies Record<string, HelpTooltipContent>
 
 const historyFilters: Array<{ label: string; value: TransactionHistoryType | 'all' }> = [
   { label: 'Tümü', value: 'all' },
@@ -956,9 +1005,9 @@ export function DashboardPage() {
       </div>
 
       <div className="grid min-w-0 gap-3 min-[520px]:grid-cols-3 lg:col-span-12">
-        <MetricTile label="Toplam limit" value={formatCurrency(summary.totalCreditLimit)} icon={<CreditCard />} tone="indigo" />
-        <MetricTile label="Kredi ödemesi" value={formatCurrency(summary.totalLoanMonthlyPayment)} icon={<CalendarDays />} tone="stone" />
-        <MetricTile label="Alacak" value={formatCurrency(summary.totalReceivables)} icon={<ArrowUpRight />} tone="emerald" />
+        <MetricTile label="Toplam limit" value={formatCurrency(summary.totalCreditLimit)} icon={<CreditCard />} tone="indigo" help={dashboardHelp.totalLimit} />
+        <MetricTile label="Kredi ödemesi" value={formatCurrency(summary.totalLoanMonthlyPayment)} icon={<CalendarDays />} tone="stone" help={dashboardHelp.loanPayment} />
+        <MetricTile label="Alacak" value={formatCurrency(summary.totalReceivables)} icon={<ArrowUpRight />} tone="emerald" help={dashboardHelp.receivable} />
       </div>
 
       <UpcomingAlertPanel items={upcomingItems} />
@@ -1178,7 +1227,10 @@ function NetWorthPanel({ netWorth, totalAssets, totalDebts, totalReceivables }: 
       <CardContent className="p-5">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
-            <p className="text-xs font-semibold uppercase text-muted-foreground">Net değer</p>
+            <p className="inline-flex items-center gap-1 text-xs font-semibold uppercase text-muted-foreground">
+              Net değer
+              <HelpTooltip title="Net değer" content={dashboardHelp.netWorth} />
+            </p>
             <p className={`finance-value mt-2 whitespace-nowrap text-[clamp(1.45rem,6.6vw,2.55rem)] font-extrabold leading-none ${isPositive ? 'text-foreground' : 'text-destructive'}`}>
               {formatCurrency(netWorth)}
             </p>
@@ -1225,7 +1277,10 @@ function CashFlowPanel({ cashFlow }: { cashFlow: CashFlowSummary }) {
       <CardHeader className="pb-0">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <CardTitle>Aylık nakit akışı</CardTitle>
+            <CardTitle className="inline-flex items-center gap-1.5">
+              Aylık nakit akışı
+              <HelpTooltip title="Aylık nakit akışı" content={dashboardHelp.cashFlow} />
+            </CardTitle>
             <p className="mt-1 text-sm text-muted-foreground">{cashFlow.monthLabel}</p>
           </div>
           <Badge variant={cashFlow.netFlow >= 0 ? 'secondary' : 'destructive'}>
@@ -1549,7 +1604,10 @@ function PeriodDebtTotalsPanel({ cashFlow }: { cashFlow: CashFlowSummary }) {
   return (
     <Card className="border-0 shadow-[var(--shadow-card)] ring-1 ring-border/80">
       <CardHeader className="pb-2">
-        <CardTitle>Dönem borcu toplamları</CardTitle>
+        <CardTitle className="inline-flex items-center gap-1.5">
+          Dönem borcu toplamları
+          <HelpTooltip title="Dönem borcu toplamları" content={dashboardHelp.periodDebt} />
+        </CardTitle>
       </CardHeader>
       <CardContent className="grid grid-cols-[repeat(2,minmax(0,1fr))] gap-2 pt-0">
         <CashFlowMetric label="Kart borcu" value={formatCurrency(cashFlow.cardStatementDebt)} tone="rose" />
@@ -1575,7 +1633,10 @@ function NextMonthLoadPanel({ load }: { load: MonthlyLoadSummary }) {
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <CardTitle>Gelecek ay yükü</CardTitle>
+            <CardTitle className="inline-flex items-center gap-1.5">
+              Gelecek ay yükü
+              <HelpTooltip title="Gelecek ay yükü" content={dashboardHelp.nextMonthLoad} />
+            </CardTitle>
             <p className="mt-1 text-sm capitalize text-muted-foreground">{load.monthLabel}</p>
           </div>
           <Badge variant={load.total > 0 ? 'secondary' : 'outline'}>{formatCurrency(load.total)}</Badge>
@@ -1680,7 +1741,10 @@ function CurrentDebtTotalsPanel({
   return (
     <Card className="border-0 shadow-[var(--shadow-card)] ring-1 ring-border/80">
       <CardHeader className="pb-2">
-        <CardTitle>Güncel borç toplamları</CardTitle>
+        <CardTitle className="inline-flex items-center gap-1.5">
+          Güncel borç toplamları
+          <HelpTooltip title="Güncel borç toplamları" content={dashboardHelp.currentDebt} />
+        </CardTitle>
       </CardHeader>
       <CardContent className="grid grid-cols-[repeat(2,minmax(0,1fr))] gap-2 pt-0">
         <CashFlowMetric label="Toplam borç" value={formatCurrency(totalDebt)} tone="rose" />
@@ -1705,7 +1769,19 @@ function CashFlowMetric({ label, value, tone }: { label: string; value: string; 
   )
 }
 
-function MetricTile({ label, value, icon, tone }: { label: string; value: string; icon: React.ReactNode; tone: 'emerald' | 'rose' | 'amber' | 'indigo' | 'stone' }) {
+function MetricTile({
+  label,
+  value,
+  icon,
+  tone,
+  help,
+}: {
+  label: string
+  value: string
+  icon: React.ReactNode
+  tone: 'emerald' | 'rose' | 'amber' | 'indigo' | 'stone'
+  help?: HelpTooltipContent
+}) {
   const toneClass = {
     emerald: 'bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-300 dark:ring-emerald-900',
     rose: 'bg-rose-50 text-rose-700 ring-rose-200 dark:bg-rose-950/30 dark:text-rose-300 dark:ring-rose-900',
@@ -1718,7 +1794,10 @@ function MetricTile({ label, value, icon, tone }: { label: string; value: string
     <Card size="sm" className="border-0 shadow-[var(--shadow-card)] ring-1 ring-border/80">
       <CardContent className="flex items-start justify-between gap-3 p-3">
         <div className="min-w-0">
-          <p className="truncate text-[11px] font-bold uppercase text-muted-foreground">{label}</p>
+          <div className="flex min-w-0 items-center gap-1">
+            <p className="truncate text-[11px] font-bold uppercase text-muted-foreground">{label}</p>
+            {help ? <HelpTooltip title={label} content={help} /> : null}
+          </div>
           <p className="mt-1 whitespace-nowrap text-[clamp(0.78rem,3.3vw,1.25rem)] font-extrabold leading-tight tabular-nums text-foreground">{value}</p>
         </div>
         <div className={`grid size-9 shrink-0 place-items-center rounded-lg ring-1 ${toneClass}`}>{icon}</div>
@@ -1734,7 +1813,10 @@ function CreditLimitSection({ groups, totalUsageRate }: { groups: CreditLimitGro
     <Card className="border-0 shadow-[var(--shadow-card)] ring-1 ring-border/80">
       <CardHeader className="pb-0">
         <div className="flex items-center justify-between gap-3">
-          <CardTitle>Kart limitleri</CardTitle>
+          <CardTitle className="inline-flex items-center gap-1.5">
+            Kart limitleri
+            <HelpTooltip title="Kart limitleri" content={dashboardHelp.creditLimit} />
+          </CardTitle>
           <Badge variant="secondary">%{Math.round(totalUsageRate)} kullanım</Badge>
         </div>
       </CardHeader>

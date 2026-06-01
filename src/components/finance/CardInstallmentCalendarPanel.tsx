@@ -2,6 +2,7 @@ import { CalendarRange } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Badge } from '../ui/badge'
 import { Card as SurfaceCard, CardContent, CardHeader, CardTitle } from '../ui/card'
+import { HelpTooltip, type HelpTooltipContent } from '../ui/help-tooltip'
 import { supabase } from '../../lib/supabase'
 import type { Card, CardInstallment } from '../../types/database'
 import { buildCardInstallmentCalendar } from '../../utils/cardInstallmentCalendar'
@@ -10,6 +11,12 @@ import { formatCurrency } from '../../utils/formatCurrency'
 type CardInstallmentCalendarPanelProps = {
   cards: Card[]
 }
+
+const installmentCalendarHelp = {
+  calculation: 'Ödenmemiş kart taksitleri vade ayına göre gruplanır ve önümüzdeki 4 ay için toplanır.',
+  importance: 'Yaklaşan taksit yükünü aya göre önceden görmeni sağlar.',
+  source: 'Kart taksit kayıtları ve bağlı kredi kartı bilgileri.',
+} satisfies HelpTooltipContent
 
 export function CardInstallmentCalendarPanel({ cards }: CardInstallmentCalendarPanelProps) {
   const [installments, setInstallments] = useState<CardInstallment[]>([])
@@ -54,6 +61,7 @@ export function CardInstallmentCalendarPanel({ cards }: CardInstallmentCalendarP
             <CardTitle className="flex items-center gap-2 text-base">
               <CalendarRange size={17} />
               Taksit takvimi
+              <HelpTooltip title="Taksit takvimi" content={installmentCalendarHelp} />
             </CardTitle>
             <p className="mt-1 text-xs text-muted-foreground">Önümüzdeki 4 ayda kartlara yansıyacak taksit yükü.</p>
           </div>
