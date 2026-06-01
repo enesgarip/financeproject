@@ -1,6 +1,7 @@
 import { Banknote, HandCoins, Landmark, Plus, ReceiptText, Search, ShieldCheck, WalletCards, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
+import { cn } from '../lib/utils'
 
 const actions = [
   { to: '/kartlar#hizli-harcama', matchPath: '/kartlar', label: 'Harcama', description: 'Kartlar ekranında hızlı harcama', icon: WalletCards },
@@ -59,16 +60,16 @@ export function QuickActions() {
   }, [])
 
   return (
-    <div className="fixed bottom-[calc(env(safe-area-inset-bottom)+5.15rem)] right-4 z-40 flex flex-col items-end gap-3">
+    <div className="fixed bottom-[calc(env(safe-area-inset-bottom)+5.25rem)] right-4 z-40 flex flex-col items-end gap-3 lg:bottom-6 lg:right-6">
       {open ? (
-        <div className="w-[min(calc(100vw-2rem),22rem)] rounded-xl border border-border/80 bg-card p-2 shadow-2xl shadow-stone-950/15 dark:shadow-black/40">
+        <div className="w-[min(calc(100vw-2rem),23rem)] rounded-lg border border-border/80 bg-card p-2 shadow-2xl shadow-stone-950/15 dark:shadow-black/40">
           <label className="relative mb-2 block">
-            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-stone-400" />
+            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="İşlem ara"
-              className="w-full rounded-lg border border-border bg-muted/55 py-2.5 pl-9 pr-3 text-sm font-semibold outline-none focus:border-primary dark:text-stone-100"
+              placeholder="Hızlı işlem ara"
+              className="w-full rounded-lg border border-input bg-background py-2.5 pl-9 pr-3 text-sm font-semibold outline-none transition focus:border-ring focus:ring-3 focus:ring-ring/15"
             />
           </label>
           {orderedActions.map((action) => (
@@ -76,20 +77,21 @@ export function QuickActions() {
               key={action.to + action.label}
               to={action.to}
               onClick={() => setOpenPath(null)}
-              className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition hover:bg-muted ${
-                action.matchPath === preferredAction ? 'bg-primary/10' : ''
-              }`}
+              className={cn(
+                'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition hover:bg-muted',
+                action.matchPath === preferredAction && 'bg-primary/10',
+              )}
             >
               <div className="grid size-9 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
                 <action.icon size={17} />
               </div>
               <div className="min-w-0">
-                <p className="font-bold text-stone-950 dark:text-stone-50">{action.label}</p>
-                <p className="truncate text-xs text-stone-500 dark:text-stone-400">{action.description}</p>
+                <p className="font-bold text-foreground">{action.label}</p>
+                <p className="truncate text-xs text-muted-foreground">{action.description}</p>
               </div>
             </Link>
           ))}
-          {orderedActions.length === 0 ? <p className="px-3 py-4 text-center text-sm text-stone-500">Eşleşen hızlı işlem yok.</p> : null}
+          {orderedActions.length === 0 ? <p className="px-3 py-4 text-center text-sm text-muted-foreground">Eşleşen hızlı işlem yok.</p> : null}
         </div>
       ) : null}
 
@@ -101,9 +103,10 @@ export function QuickActions() {
         }}
         aria-expanded={open}
         aria-label={open ? 'Hızlı işlem menüsünü kapat' : 'Hızlı işlem menüsünü aç'}
-        className={`grid size-14 place-items-center rounded-full bg-primary text-primary-foreground shadow-xl shadow-emerald-900/25 ring-1 ring-white/25 transition hover:bg-primary/90 ${
-          tucked ? 'pointer-events-none translate-y-3 scale-90 opacity-0 sm:pointer-events-auto sm:translate-y-0 sm:scale-100 sm:opacity-100' : ''
-        }`}
+        className={cn(
+          'grid size-14 place-items-center rounded-full bg-primary text-primary-foreground shadow-xl shadow-emerald-900/25 ring-1 ring-white/25 transition hover:bg-primary/90',
+          tucked && 'pointer-events-none translate-y-3 scale-90 opacity-0 sm:pointer-events-auto sm:translate-y-0 sm:scale-100 sm:opacity-100',
+        )}
       >
         {open ? <X size={24} /> : <Plus size={26} />}
       </button>

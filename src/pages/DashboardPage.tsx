@@ -1010,7 +1010,7 @@ function WelcomePanel({ displayName, cashFlow }: { displayName: string; cashFlow
 
   return (
     <Card className="relative overflow-hidden border-0 bg-emerald-950 py-0 text-white shadow-xl shadow-emerald-950/20 ring-1 ring-emerald-500/20">
-      <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(4,120,87,0.98),rgba(13,148,136,0.94)_46%,rgba(79,70,229,0.92))]" />
+      <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(4,90,68,0.98),rgba(6,120,87,0.96)_50%,rgba(20,83,45,0.94))]" />
       <div className="absolute inset-0 opacity-25 [background-image:linear-gradient(120deg,rgba(255,255,255,0.18)_1px,transparent_1px),linear-gradient(0deg,rgba(255,255,255,0.1)_1px,transparent_1px)] [background-size:22px_22px]" />
       <CardContent className="relative p-5">
         <div className="flex items-start justify-between gap-4">

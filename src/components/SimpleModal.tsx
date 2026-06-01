@@ -12,9 +12,9 @@ export function SimpleModal({ title, open, children, onClose }: SimpleModalProps
 
   return (
     <div className="fixed inset-0 z-40 flex items-end bg-black/45 backdrop-blur-sm sm:items-center sm:justify-center sm:p-6">
-      <section className="max-h-[92svh] w-full min-w-0 overflow-x-hidden overflow-y-auto rounded-t-xl border border-border/80 bg-card shadow-xl dark:shadow-black/40 sm:max-w-lg sm:rounded-xl">
+      <section className="max-h-[92svh] w-full min-w-0 overflow-x-hidden overflow-y-auto rounded-t-lg border border-border/80 bg-card shadow-xl dark:shadow-black/40 sm:max-w-lg sm:rounded-lg">
         <header className="sticky top-0 z-10 flex items-center justify-between border-b border-border/80 bg-card/95 px-4 py-3 backdrop-blur">
-          <h2 className="text-base font-semibold text-stone-950 dark:text-stone-50">{title}</h2>
+          <h2 className="text-base font-black text-foreground">{title}</h2>
           <button
             type="button"
             onClick={onClose}

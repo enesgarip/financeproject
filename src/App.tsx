@@ -1,4 +1,4 @@
-import { lazy, Suspense, type ReactNode } from 'react'
+import { lazy, Suspense, useEffect, type ReactNode } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { AuthProvider } from './auth/AuthProvider'
 import { ProtectedRoute } from './auth/ProtectedRoute'
@@ -47,9 +47,20 @@ function routeElement(page: ReactNode) {
   return <Suspense fallback={<PageFallback />}>{page}</Suspense>
 }
 
+function ThemeBoot() {
+  useEffect(() => {
+    const storedTheme = localStorage.getItem('theme')
+    const isDark = storedTheme ? storedTheme === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches
+    document.documentElement.classList.toggle('dark', isDark)
+  }, [])
+
+  return null
+}
+
 export function App() {
   return (
     <AuthProvider>
+      <ThemeBoot />
       <Routes>
         <Route path="/login" element={routeElement(<LoginPage />)} />
         <Route

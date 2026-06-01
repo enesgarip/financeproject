@@ -28,28 +28,28 @@
 }
 
 :root {
-  --radius: 0.55rem;
-  --background: #f5f7fb;
-  --foreground: #18212f;
+  --radius: 0.5rem;
+  --background: #f7f8fb;
+  --foreground: #172033;
   --card: #ffffff;
   --card-foreground: #18212f;
   --popover: #ffffff;
   --popover-foreground: #18212f;
-  --primary: #087a5c;
+  --primary: #07845f;
   --primary-foreground: #ffffff;
-  --secondary: #edf2f7;
-  --secondary-foreground: #18212f;
-  --muted: #e9eef5;
-  --muted-foreground: #667085;
+  --secondary: #eef3f7;
+  --secondary-foreground: #172033;
+  --muted: #eaf0f6;
+  --muted-foreground: #647084;
   --accent: #e7f6f2;
   --accent-foreground: #075f49;
   --destructive: #e11d48;
-  --border: #d9e0ea;
-  --input: #dce3ec;
+  --border: #dce3ec;
+  --input: #dce4ee;
   --ring: #059669;
-  color: #18212f;
-  background: #f5f7fb;
-  color-scheme: light dark;
+  color: #172033;
+  background: #f7f8fb;
+  color-scheme: light;
   font-family:
     ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   font-feature-settings: 'liga' 1, 'kern' 1;
@@ -95,6 +95,16 @@ body {
   margin: 0;
   overscroll-behavior-y: none;
   -webkit-tap-highlight-color: transparent;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--primary) 22%, transparent);
+}
+
+@supports (scrollbar-color: auto) {
+  * {
+    scrollbar-color: color-mix(in srgb, var(--muted-foreground) 34%, transparent) transparent;
+  }
 }
 
 button,
