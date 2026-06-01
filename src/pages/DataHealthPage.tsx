@@ -19,11 +19,12 @@ import type {
   Payment,
   SalaryHistory,
   SavingsGoal,
+  SavingsGoalComponent,
   UpdateFor,
 } from '../types/database'
 import { dateInputValue, formatDate } from '../utils/date'
 import { formatCurrency } from '../utils/formatCurrency'
-import { formatSavingsGoalAmount } from '../utils/savingsGoal'
+import { formatComponentAmount, formatSavingsGoalAmount, savingsGoalValueTypeLabel } from '../utils/savingsGoal'
 
 type HealthData = {
   assets: Asset[]
@@ -38,6 +39,7 @@ type HealthData = {
   payments: Payment[]
   salaryHistory: SalaryHistory[]
   savingsGoals: SavingsGoal[]
+  savingsGoalComponents: SavingsGoalComponent[]
 }
 
 type HealthIssue = {
@@ -148,6 +150,7 @@ const emptyData: HealthData = {
   payments: [],
   salaryHistory: [],
   savingsGoals: [],
+  savingsGoalComponents: [],
 }
 
 function roundMoney(value: number) {
@@ -257,6 +260,11 @@ function makeUndoBatch(label: string, entries: UndoEntry[]): UndoBatch | null {
 
 function compactIds(ids: string[]) {
   return [...new Set(ids.filter(Boolean))]
+}
+
+function formatGoalComponentProgress(component: SavingsGoalComponent) {
+  const label = component.label?.trim() || savingsGoalValueTypeLabel(component.value_type)
+  return `${label}: ${formatComponentAmount(component, component.current_amount)} / ${formatComponentAmount(component, component.target_amount)}`
 }
 
 async function captureUndoRows(table: UndoTable, ids: string[]): Promise<UndoEntry | null> {
@@ -456,6 +464,7 @@ function buildIssues(data: HealthData): HealthIssue[] {
   const expensesById = new Map(data.cardExpenses.map((expense) => [expense.id, expense]))
   const installmentsByExpense = new Map<string, CardInstallment[]>()
   const installmentsByLoan = new Map<string, LoanInstallment[]>()
+  const componentsByGoal = new Map<string, SavingsGoalComponent[]>()
 
   for (const item of data.cardInstallments) {
     if (!item.card_expense_id) continue
@@ -464,6 +473,10 @@ function buildIssues(data: HealthData): HealthIssue[] {
 
   for (const item of data.loanInstallments) {
     installmentsByLoan.set(item.loan_id, [...(installmentsByLoan.get(item.loan_id) ?? []), item])
+  }
+
+  for (const item of data.savingsGoalComponents) {
+    componentsByGoal.set(item.goal_id, [...(componentsByGoal.get(item.goal_id) ?? []), item])
   }
 
   const scheduledInstallmentsByCard = new Map<string, number>()
@@ -1368,6 +1381,84 @@ function buildIssues(data: HealthData): HealthIssue[] {
   }
 
   for (const goal of data.savingsGoals) {
+    const goalComponents = componentsByGoal.get(goal.id) ?? []
+    const isComponentBackedGoal = goal.value_type === 'composite' || goalComponents.length > 0
+
+    if (isComponentBackedGoal) {
+      const componentsWithMissingTarget = goalComponents.filter((component) => component.target_amount <= 0)
+      const incompleteComponents = goalComponents.filter((component) => component.current_amount + 0.01 < component.target_amount)
+      const componentDetails = goalComponents.map(formatGoalComponentProgress)
+      const goalKindLabel = goal.value_type === 'composite' ? 'karma hedef' : 'bileşenli hedef'
+
+      if (goalComponents.length === 0) {
+        issues.push({
+          id: `goal-composite-empty-${goal.id}`,
+          area: 'Hedefler',
+          severity: 'warning',
+          title: `${goal.name} ${goalKindLabel}inde bileşen yok`,
+          description: 'Karma hedefler ilerlemeyi bileşen satırlarından hesaplar; en az bir bileşen eklenmeli.',
+          details: ['Hedefi düzenleyip gram, çeyrek veya TRY bileşeni ekle.'],
+          fixable: false,
+          kind: 'manual',
+        })
+        continue
+      }
+
+      if (componentsWithMissingTarget.length > 0) {
+        issues.push({
+          id: `goal-composite-zero-target-${goal.id}`,
+          area: 'Hedefler',
+          severity: 'warning',
+          title: `${goal.name} bileşen hedefi eksik`,
+          description: 'Karma hedefte her bileşenin hedef miktarı 0 dan büyük olmalı.',
+          details: componentsWithMissingTarget.map(formatGoalComponentProgress),
+          fixable: false,
+          kind: 'manual',
+        })
+      }
+
+      if (goal.status === 'active' && componentsWithMissingTarget.length === 0 && incompleteComponents.length === 0) {
+        issues.push({
+          id: `goal-complete-active-${goal.id}`,
+          area: 'Hedefler',
+          severity: 'info',
+          title: `${goal.name} hedefi tamamlanmış görünüyor`,
+          description: 'Karma hedefin tüm bileşenleri tamamlanmış ama hedef hâlâ aktif durumda.',
+          details: componentDetails,
+          fixable: false,
+          kind: 'manual',
+        })
+      }
+
+      if (goal.status === 'completed' && incompleteComponents.length > 0) {
+        issues.push({
+          id: `goal-completed-under-target-${goal.id}`,
+          area: 'Hedefler',
+          severity: 'warning',
+          title: `${goal.name} tamamlandı ama bileşen eksiği var`,
+          description: 'Tamamlandı durumundaki karma hedefin bazı bileşenleri hedefin altında kalmış.',
+          details: incompleteComponents.map(formatGoalComponentProgress),
+          fixable: false,
+          kind: 'manual',
+        })
+      }
+
+      if (goal.status === 'active' && goal.target_date && goal.target_date < today && incompleteComponents.length > 0) {
+        issues.push({
+          id: `goal-overdue-${goal.id}`,
+          area: 'Hedefler',
+          severity: 'info',
+          title: `${goal.name} hedef tarihi geçmiş`,
+          description: 'Hedef tarihi geçmiş ama karma hedefin bazı bileşenleri henüz tamamlanmamış.',
+          details: [`Hedef tarihi: ${formatDate(goal.target_date)}`, ...incompleteComponents.map(formatGoalComponentProgress)],
+          fixable: false,
+          kind: 'manual',
+        })
+      }
+
+      continue
+    }
+
     if (goal.target_amount <= 0) {
       issues.push({
         id: `goal-zero-target-${goal.id}`,
@@ -1549,6 +1640,7 @@ export function DataHealthPage() {
       payments,
       salaryHistory,
       savingsGoals,
+      savingsGoalComponents,
     ] = await Promise.all([
       supabase.from('assets').select('*'),
       supabase.from('budgets').select('*'),
@@ -1562,6 +1654,7 @@ export function DataHealthPage() {
       supabase.from('payments').select('*'),
       supabase.from('salary_history').select('*'),
       supabase.from('savings_goals').select('*'),
+      supabase.from('savings_goal_components').select('*'),
     ])
 
     const firstError = [
@@ -1577,6 +1670,7 @@ export function DataHealthPage() {
       payments.error,
       salaryHistory.error,
       savingsGoals.error,
+      savingsGoalComponents.error,
     ].find(Boolean)
     if (firstError) {
       setError(firstError.message)
@@ -1594,6 +1688,7 @@ export function DataHealthPage() {
         payments: (payments.data ?? []) as Payment[],
         salaryHistory: (salaryHistory.data ?? []) as SalaryHistory[],
         savingsGoals: (savingsGoals.data ?? []) as SavingsGoal[],
+        savingsGoalComponents: (savingsGoalComponents.data ?? []) as SavingsGoalComponent[],
       })
     }
 

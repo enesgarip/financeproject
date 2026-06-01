@@ -58,6 +58,7 @@ export function CardInstallmentExpensesPanel({ cards, reload, setError }: CardIn
   }, [setError])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadExpenses()
   }, [loadExpenses])
 

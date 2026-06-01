@@ -95,6 +95,7 @@ export function SavingsGoalsPanel() {
   }, [])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadData()
   }, [loadData])
 
@@ -173,12 +174,17 @@ export function SavingsGoalsPanel() {
         return
       }
 
-      parsedComponents = componentDrafts.map((draft, index) => {
+      const nextComponents: InsertFor<'savings_goal_components'>[] = []
+
+      for (const [index, draft] of componentDrafts.entries()) {
         const target = parseNumber(draft.target_amount)
         const current = parseNumber(draft.current_amount)
-        if (target <= 0) throw new Error(`${draft.label || 'Bileşen'} hedef miktarı 0 dan büyük olmalı.`)
+        if (target <= 0) {
+          setFormError(`${draft.label || 'Bileşen'} hedef miktarı 0 dan büyük olmalı.`)
+          return
+        }
 
-        return {
+        nextComponents.push({
           user_id: user.id,
           goal_id: '',
           label: draft.label.trim() || null,
@@ -186,8 +192,10 @@ export function SavingsGoalsPanel() {
           target_amount: target,
           current_amount: current,
           sort_order: index,
-        }
-      })
+        })
+      }
+
+      parsedComponents = nextComponents
     } else {
       if (parseNumber(targetAmount) <= 0) {
         setFormError('Hedef miktar 0 dan büyük olmalı.')
@@ -199,11 +207,13 @@ export function SavingsGoalsPanel() {
     setFormError('')
 
     try {
+      const compositeTargetAmount = parsedComponents.length
+      const compositeCurrentAmount = parsedComponents.filter((row) => row.current_amount + 0.01 >= row.target_amount).length
       const goalFields = {
         name: trimmedName,
         value_type: valueType,
-        target_amount: isComposite ? 0 : parseNumber(targetAmount),
-        current_amount: isComposite ? 0 : parseNumber(currentAmount),
+        target_amount: isComposite ? compositeTargetAmount : parseNumber(targetAmount),
+        current_amount: isComposite ? compositeCurrentAmount : parseNumber(currentAmount),
         estimated_value_try: isGold && estimatedValueTry.trim() ? parseNumber(estimatedValueTry) : null,
         target_date: targetDate || null,
         status,

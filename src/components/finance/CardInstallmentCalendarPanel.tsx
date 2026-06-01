@@ -34,9 +34,10 @@ export function CardInstallmentCalendarPanel({ cards }: CardInstallmentCalendarP
       setInstallments(((data ?? []) as CardInstallment[]).filter((item) => creditCardIds.has(item.card_id)))
     }
     setLoading(false)
-  }, [creditCards.length])
+  }, [creditCards])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadInstallments()
   }, [loadInstallments])
 

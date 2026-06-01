@@ -9,7 +9,7 @@ export function formatCurrency(value: number | null | undefined) {
 
 export function formatNumber(value: number | null | undefined) {
   return new Intl.NumberFormat('tr-TR', {
-    maximumFractionDigits: 0,
+    maximumFractionDigits: 2,
   }).format(value ?? 0)
 }
 

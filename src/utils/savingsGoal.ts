@@ -13,7 +13,7 @@ export function formatSavingsGoalAmount(
   amount: number,
 ) {
   if (goal.value_type === 'TRY') return formatCurrency(amount)
-  if (goal.value_type === 'composite') return formatCurrency(amount)
+  if (goal.value_type === 'composite') return `${formatNumber(amount)} bileşen`
   const unit = goal.value_type === 'gram_altin' ? 'gram' : 'çeyrek'
   return `${formatNumber(amount)} ${unit}`
 }
@@ -46,12 +46,11 @@ export function formatSavingsGoalProgress(goal: SavingsGoal, components: Savings
 
     if (rows.length === 0) return 'Bileşen eklenmedi'
 
-    return rows
-      .map((row) => {
-        const label = row.label?.trim() || savingsGoalValueTypeLabel(row.value_type)
-        return `${label}: ${formatComponentAmount(row, row.current_amount)} / ${formatComponentAmount(row, row.target_amount)}`
-      })
-      .join(' · ')
+    const completedCount = rows.filter((row) => row.target_amount > 0 && row.current_amount + 0.01 >= row.target_amount).length
+    const rates = rows.map((row) => (row.target_amount > 0 ? Math.min(100, (row.current_amount / row.target_amount) * 100) : 0))
+    const averageRate = rates.reduce((sum, rate) => sum + rate, 0) / rows.length
+
+    return `${completedCount}/${rows.length} bileşen tamam · %${Math.round(averageRate)}`
   }
 
   return `${formatSavingsGoalAmount(goal, goal.current_amount)} / ${formatSavingsGoalAmount(goal, goal.target_amount)}`

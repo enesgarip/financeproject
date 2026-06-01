@@ -27,6 +27,7 @@ import type {
   Budget,
   Card as FinanceCard,
   CardExpense,
+  CardInstallment,
   Debt,
   Loan,
   LoanInstallment,
@@ -37,7 +38,7 @@ import type {
 } from '../types/database'
 import { BudgetAlertPanel } from '../components/dashboard/BudgetAlertPanel'
 import { StatementReminderPanel } from '../components/dashboard/StatementReminderPanel'
-import { daysUntil, endOfMonth, formatDate, isDateInMonth, isUpcomingDate, monthlyOccurrenceDate, nextMonthlyDate, startOfMonth } from '../utils/date'
+import { addMonths, daysUntil, endOfMonth, formatDate, isDateInMonth, isUpcomingDate, monthlyOccurrenceDate, nextMonthlyDate, startOfMonth } from '../utils/date'
 import { formatCurrency } from '../utils/formatCurrency'
 import { EmptyState } from '../components/EmptyState'
 import { Badge } from '../components/ui/badge'
@@ -57,6 +58,7 @@ type DashboardData = {
   transactionHistory: TransactionHistory[]
   budgets: Budget[]
   cardExpenses: CardExpense[]
+  cardInstallments: CardInstallment[]
 }
 
 const emptyData: DashboardData = {
@@ -70,6 +72,7 @@ const emptyData: DashboardData = {
   transactionHistory: [],
   budgets: [],
   cardExpenses: [],
+  cardInstallments: [],
 }
 
 const UPCOMING_DAYS = 30
@@ -118,6 +121,16 @@ type CashFlowSummary = {
   debtOutflow: number
 }
 
+type MonthlyLoadSummary = {
+  monthLabel: string
+  total: number
+  payments: number
+  cardInstallments: number
+  loanInstallments: number
+  legacyLoanInstallments: number
+  personalDebts: number
+}
+
 type SmartInsight = {
   title: string
   description: string
@@ -149,6 +162,16 @@ function moneyDiffers(left: number, right: number) {
 
 function cardProvisionAmount(card: Pick<FinanceCard, 'provision_amount'>) {
   return card.provision_amount ?? 0
+}
+
+function cardSplitTotal(statementDebt: number, currentPeriod: number, provisionAmount: number) {
+  return roundMoney(statementDebt + currentPeriod + provisionAmount)
+}
+
+function isMissingSchemaCacheError(error: { code?: string; message?: string } | null | undefined) {
+  if (!error) return false
+  const message = error.message ?? ''
+  return error.code === 'PGRST205' || message.includes('schema cache') || message.includes('Could not find the table')
 }
 
 function totalCreditLimit(cards: FinanceCard[]) {
@@ -306,6 +329,47 @@ function buildMonthlyCashFlow(data: DashboardData): CashFlowSummary {
   }
 }
 
+function buildMonthlyLoad(data: DashboardData, month: Date): MonthlyLoadSummary {
+  const monthStart = startOfMonth(month)
+  const monthPrefix = dateInputValue(monthStart).slice(0, 7)
+  const monthLabel = new Intl.DateTimeFormat('tr-TR', { month: 'long', year: 'numeric' }).format(monthStart)
+  const plannedLoanIds = new Set(data.loanInstallments.map((installment) => installment.loan_id))
+  const inTargetMonth = (value: string | null | undefined) => Boolean(value && value.slice(0, 7) === monthPrefix)
+  const payments = sum(
+    data.payments.filter((payment) => paymentOccurrenceInMonth(payment, monthStart)),
+    (payment) => payment.amount,
+  )
+  const cardInstallments = sum(
+    data.cardInstallments.filter((installment) => installment.status === 'scheduled' && inTargetMonth(installment.due_month)),
+    (installment) => installment.amount,
+  )
+  const loanInstallments = sum(
+    data.loanInstallments.filter((installment) => installment.status === 'bekliyor' && isDateInMonth(installment.due_date, monthStart)),
+    (installment) => installment.amount,
+  )
+  const legacyLoanInstallments = sum(
+    data.loans.filter((loan) => {
+      const dueDate = monthlyOccurrenceDate(loan.installment_day, monthStart)
+      return !plannedLoanIds.has(loan.id) && loan.status === 'active' && loan.remaining_installments > 0 && dueDate !== null
+    }),
+    (loan) => loan.monthly_payment,
+  )
+  const personalDebts = sum(
+    data.debts.filter((debt) => debt.direction === 'borç_aldım' && debt.status === 'açık' && isDateInMonth(debt.due_date, monthStart)),
+    (debt) => debt.estimated_value_try,
+  )
+
+  return {
+    monthLabel,
+    total: payments + cardInstallments + loanInstallments + legacyLoanInstallments + personalDebts,
+    payments,
+    cardInstallments,
+    loanInstallments,
+    legacyLoanInstallments,
+    personalDebts,
+  }
+}
+
 function buildSmartInsights(
   cashFlow: CashFlowSummary,
   creditUsageRate: number,
@@ -388,12 +452,26 @@ function buildFocusActions(data: DashboardData, cashFlow: CashFlowSummary, credi
     const remaining = daysUntil(new Date(item.sortTime))
     return remaining !== null && remaining >= 0 && remaining <= 3
   }).length
+  const scheduledInstallmentsByCard = new Map<string, number>()
+  for (const item of data.cardInstallments) {
+    if (item.status !== 'scheduled') continue
+    scheduledInstallmentsByCard.set(item.card_id, roundMoney((scheduledInstallmentsByCard.get(item.card_id) ?? 0) + item.amount))
+  }
+
   const cardSplitIssues = creditCards.filter(
-    (card) => card.statement_debt_amount + card.current_period_spending + cardProvisionAmount(card) > card.debt_amount + 0.01,
+    (card) => cardSplitTotal(card.statement_debt_amount, card.current_period_spending, cardProvisionAmount(card)) > card.debt_amount + 0.01,
   )
+  const cardScheduledDebtIssues = creditCards.filter((card) => {
+    const splitTotal = cardSplitTotal(card.statement_debt_amount, card.current_period_spending, cardProvisionAmount(card))
+    const scheduledTotal = scheduledInstallmentsByCard.get(card.id) ?? 0
+    return scheduledTotal > 0.01 && card.debt_amount <= splitTotal + 0.01
+  })
   const unclassifiedCardDebts = creditCards.filter((card) => {
-    const classifiedDebt = card.statement_debt_amount + card.current_period_spending + cardProvisionAmount(card)
-    return card.debt_amount > classifiedDebt + 0.01
+    const splitTotal = cardSplitTotal(card.statement_debt_amount, card.current_period_spending, cardProvisionAmount(card))
+    const scheduledTotal = scheduledInstallmentsByCard.get(card.id) ?? 0
+    const unclassifiedAmount = roundMoney(card.debt_amount - splitTotal)
+    const unexplainedAmount = roundMoney(unclassifiedAmount - Math.min(unclassifiedAmount, scheduledTotal))
+    return unexplainedAmount > 0.01
   })
   const cardsWithProvisions = creditCards.filter((card) => cardProvisionAmount(card) > 0)
   const totalProvision = sum(cardsWithProvisions, cardProvisionAmount)
@@ -500,11 +578,13 @@ function buildFocusActions(data: DashboardData, cashFlow: CashFlowSummary, credi
     })
   }
 
-  if (cardSplitIssues.length + unclassifiedCardDebts.length + loanSummaryDrifts.length > 0) {
+  const dataHealthIssueCount = cardSplitIssues.length + cardScheduledDebtIssues.length + unclassifiedCardDebts.length + loanSummaryDrifts.length
+
+  if (dataHealthIssueCount > 0) {
     actions.push({
       id: 'data-health',
       title: 'Veri tutarlılığı düzeltmesi var',
-      description: `${cardSplitIssues.length + unclassifiedCardDebts.length + loanSummaryDrifts.length} kayıt otomatik kontrolle düzeltilebilir görünüyor.`,
+      description: `${dataHealthIssueCount} kayıt otomatik kontrolle düzeltilebilir görünüyor.`,
       to: '/veri-sagligi',
       cta: 'Kontrol et',
       tone: 'amber',
@@ -593,7 +673,7 @@ export function DashboardPage() {
     const historyStart = new Date()
     historyStart.setMonth(historyStart.getMonth() - 3)
 
-    const [assets, cards, loans, loanInstallments, debts, payments, salaryHistory, transactionHistory, budgets, cardExpenses] =
+    const [assets, cards, loans, loanInstallments, debts, payments, salaryHistory, transactionHistory, budgets, cardExpenses, cardInstallments] =
       await Promise.all([
         supabase.from('assets').select('*'),
         supabase.from('cards').select('*'),
@@ -605,6 +685,7 @@ export function DashboardPage() {
         supabase.from('transaction_history').select('*').gte('occurred_at', historyStart.toISOString()).order('occurred_at', { ascending: false }),
         supabase.from('budgets').select('*'),
         supabase.from('card_expenses').select('*'),
+        supabase.from('card_installments').select('*'),
       ])
 
     const firstError = [
@@ -616,8 +697,9 @@ export function DashboardPage() {
       payments.error,
       salaryHistory.error,
       transactionHistory.error,
-      budgets.error?.code === 'PGRST205' ? null : budgets.error,
+      isMissingSchemaCacheError(budgets.error) ? null : budgets.error,
       cardExpenses.error,
+      isMissingSchemaCacheError(cardInstallments.error) ? null : cardInstallments.error,
     ].find(Boolean)
     if (firstError) {
       setError(firstError.message)
@@ -636,6 +718,7 @@ export function DashboardPage() {
       transactionHistory: transactionHistory.data ?? [],
       budgets: budgets.error ? [] : (budgets.data ?? []),
       cardExpenses: cardExpenses.data ?? [],
+      cardInstallments: cardInstallments.error ? [] : (cardInstallments.data ?? []),
     })
     setLoading(false)
   }, [])
@@ -691,6 +774,7 @@ export function DashboardPage() {
     const salaryTrend = getSalaryTrend(data.salaryHistory)
     const creditLimitGroups = buildCreditLimitGroups(data.cards)
     const cashFlow = buildMonthlyCashFlow(data)
+    const nextMonthLoad = buildMonthlyLoad(data, addMonths(startOfMonth(), 1))
 
     return {
       totalAssets,
@@ -706,6 +790,7 @@ export function DashboardPage() {
       totalReceivables,
       salaryTrend,
       cashFlow,
+      nextMonthLoad,
     }
   }, [data])
 
@@ -847,6 +932,7 @@ export function DashboardPage() {
       </div>
 
       <div className="grid min-w-0 gap-3 min-[760px]:grid-cols-2 lg:col-span-5 lg:grid-cols-1">
+        <NextMonthLoadPanel load={summary.nextMonthLoad} />
         <PeriodDebtTotalsPanel cashFlow={summary.cashFlow} />
         <CurrentDebtTotalsPanel
           totalDebt={summary.totalDebts}
@@ -1464,6 +1550,43 @@ function PeriodDebtTotalsPanel({ cashFlow }: { cashFlow: CashFlowSummary }) {
         <CashFlowMetric label="Kredi taksidi" value={formatCurrency(cashFlow.loanOutflow)} tone="rose" />
         <CashFlowMetric label="Fatura/ödeme" value={formatCurrency(cashFlow.paymentOutflow)} tone="rose" />
         <CashFlowMetric label="Kişisel borç" value={formatCurrency(cashFlow.debtOutflow)} tone="rose" />
+      </CardContent>
+    </Card>
+  )
+}
+
+function NextMonthLoadPanel({ load }: { load: MonthlyLoadSummary }) {
+  const loanTotal = load.loanInstallments + load.legacyLoanInstallments
+  const rows = [
+    { label: 'Fatura/ödeme', value: load.payments },
+    { label: 'Kart taksitleri', value: load.cardInstallments },
+    { label: 'Kredi taksidi', value: loanTotal },
+    { label: 'Kişisel borç', value: load.personalDebts },
+  ]
+
+  return (
+    <Card className="border-0 shadow-sm ring-1 ring-stone-200/80 dark:ring-stone-800">
+      <CardHeader className="pb-2">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <CardTitle>Gelecek ay yükü</CardTitle>
+            <p className="mt-1 text-sm capitalize text-muted-foreground">{load.monthLabel}</p>
+          </div>
+          <Badge variant={load.total > 0 ? 'secondary' : 'outline'}>{formatCurrency(load.total)}</Badge>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-3 pt-0">
+        <div className="rounded-xl bg-rose-50/80 px-3 py-3 dark:bg-rose-950/25">
+          <p className="text-[11px] font-bold uppercase text-rose-700 dark:text-rose-300">Toplam planlı çıkış</p>
+          <p className="mt-1 whitespace-nowrap text-[clamp(1rem,4vw,1.55rem)] font-black tabular-nums text-rose-800 dark:text-rose-200">
+            {formatCurrency(load.total)}
+          </p>
+        </div>
+        <div className="grid grid-cols-[repeat(2,minmax(0,1fr))] gap-2">
+          {rows.map((row) => (
+            <CashFlowMetric key={row.label} label={row.label} value={formatCurrency(row.value)} tone="rose" />
+          ))}
+        </div>
       </CardContent>
     </Card>
   )
