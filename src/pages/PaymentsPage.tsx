@@ -92,14 +92,16 @@ function validatePaymentForm(formData: FormData) {
   return errors
 }
 
-async function getBankaKartlari(): Promise<FinanceCard[]> {
+async function getPaymentCards(): Promise<FinanceCard[]> {
   const { data, error } = await supabase
     .from('cards')
     .select('*')
-    .eq('card_type', 'banka_karti')
 
   if (error) return []
-  return (data as FinanceCard[]) ?? []
+  return ((data as FinanceCard[]) ?? []).sort((left, right) => {
+    if (left.card_type !== right.card_type) return left.card_type === 'banka_karti' ? -1 : 1
+    return `${left.bank_name} ${left.card_name}`.localeCompare(`${right.bank_name} ${right.card_name}`, 'tr')
+  })
 }
 
 function getPaymentScheduleLabel(payment: Payment) {
@@ -189,12 +191,12 @@ export function PaymentsPage() {
   const [reloadPayments, setReloadPayments] = useState<(() => Promise<void>) | null>(null)
 
   async function openPayment(payment: Payment, reload: () => Promise<void>) {
-    const cards = await getBankaKartlari()
+    const cards = await getPaymentCards()
     setPaymentToPay(payment)
     setPaymentCards(cards)
     setPaymentSourceCard('')
     setPaidAmount(payment.amount > 0 ? String(payment.amount) : '')
-    setPaymentError(cards.length === 0 ? 'Ödeme için önce bir banka kartı hesabı eklemelisin.' : '')
+    setPaymentError(cards.length === 0 ? 'Ödeme için önce bir banka hesabı veya kredi kartı eklemelisin.' : '')
     setReloadPayments(() => reload)
   }
 
@@ -226,7 +228,7 @@ export function PaymentsPage() {
       return
     }
 
-    if (sourceCard.current_balance < parsedPaidAmount) {
+    if (sourceCard.card_type === 'banka_karti' && sourceCard.current_balance < parsedPaidAmount) {
       setPaymentError('Kaynak hesap bakiyesi yetersiz.')
       return
     }
@@ -341,7 +343,14 @@ export function PaymentsPage() {
             <p>Vade: {paymentToPay ? formatDate(paymentToPay.due_date) : '-'}</p>
           </div>
           <MoneyInput label="Ödenen gerçek tutar" value={paidAmount} onValueChange={setPaidAmount} required />
-          <AccountSelector accounts={paymentCards} value={paymentSourceCard} onChange={setPaymentSourceCard} amount={parseNumber(paidAmount)} />
+          <AccountSelector
+            accounts={paymentCards}
+            value={paymentSourceCard}
+            onChange={setPaymentSourceCard}
+            amount={parseNumber(paidAmount)}
+            label="Ödeme kaynağı"
+            emptyMessage="Kullanılabilir banka hesabı veya kredi kartı yok."
+          />
           {paymentError ? <p className="rounded-lg bg-rose-50 p-3 text-sm text-rose-700">{paymentError}</p> : null}
           <button
             type="submit"
