@@ -220,7 +220,7 @@ function cardSplitTotal(statementDebt: number, currentPeriod: number, provisionA
 function isMissingSchemaCacheError(error: { code?: string; message?: string } | null | undefined) {
   if (!error) return false
   const message = error.message ?? ''
-  return error.code === 'PGRST205' || message.includes('schema cache') || message.includes('Could not find the table')
+  return error.code === 'PGRST202' || error.code === 'PGRST205' || message.includes('schema cache') || message.includes('Could not find the table') || message.includes('Could not find the function')
 }
 
 function totalCreditLimit(cards: FinanceCard[]) {
@@ -707,6 +707,13 @@ export function DashboardPage() {
   const loadDashboard = useCallback(async () => {
     setLoading(true)
     setError('')
+
+    const { error: statementCutError } = await supabase.rpc('cut_due_card_statements')
+    if (statementCutError && !isMissingSchemaCacheError(statementCutError)) {
+      setError(statementCutError.message)
+      setLoading(false)
+      return
+    }
 
     const historyStart = new Date()
     historyStart.setMonth(historyStart.getMonth() - 3)

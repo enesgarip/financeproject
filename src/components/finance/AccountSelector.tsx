@@ -62,7 +62,7 @@ export function AccountSelector({
           <option value="">{accounts.length > 0 ? 'Hesap seç' : emptyMessage}</option>
           {accounts.map((account) => (
             <option key={account.id} value={account.id}>
-              {accountDisplayName(account)} ({formatCurrency(account.current_balance)})
+              {getAccountOptionLabel(account)}
             </option>
           ))}
         </Select>

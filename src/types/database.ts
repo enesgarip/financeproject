@@ -16,6 +16,7 @@ export type PaymentAmountStatus = 'exact' | 'estimated'
 export type LoanInstallmentStatus = 'bekliyor' | 'ödendi'
 export type CardInstallmentStatus = 'scheduled' | 'posted' | 'paid'
 export type CardExpenseStatus = 'provision' | 'posted' | 'cancelled'
+export type CardStatementStatus = 'open' | 'paid'
 export type SavingsGoalStatus = 'active' | 'completed'
 export type SavingsGoalValueType = 'TRY' | 'gram_altin' | 'ceyrek_altin' | 'composite'
 export type TransactionHistoryType = 'payment' | 'transfer' | 'loan' | 'debt' | 'card'
@@ -57,6 +58,7 @@ export type Card = BaseRow & {
 
 export type CardExpense = BaseRow & {
   card_id: string
+  statement_archive_id: string | null
   spent_at: string
   amount: number
   description: string
@@ -98,6 +100,7 @@ export type SavingsGoalComponent = BaseRow & {
 export type CardInstallment = BaseRow & {
   card_id: string
   card_expense_id: string | null
+  statement_archive_id: string | null
   installment_no: number
   installment_count: number
   due_month: string
@@ -112,11 +115,16 @@ export type CardInstallment = BaseRow & {
 
 export type CardStatementArchive = BaseRow & {
   card_id: string
+  period_year: number
+  period_month: number
   statement_date: string
   due_date: string | null
   statement_debt_amount: number
   current_period_spending: number
   total_debt_amount: number
+  status: CardStatementStatus
+  paid_at: string | null
+  payment_source_card_id: string | null
   note: string | null
 }
 
@@ -202,7 +210,11 @@ type Table<Row, Insert, Update> = {
   Relationships: []
 }
 
-type WithBaseInsert<T> = Omit<T, keyof BaseRow> & {
+type NullableKeys<T> = {
+  [K in keyof T]-?: null extends T[K] ? K : never
+}[keyof T]
+
+type WithBaseInsert<T> = Omit<T, keyof BaseRow | NullableKeys<T>> & Partial<Pick<T, NullableKeys<T>>> & {
   id?: string
   user_id: string
   created_at?: string
@@ -262,6 +274,10 @@ export type Database = {
         }
         Returns: CardStatementArchive
       }
+      cut_due_card_statements: {
+        Args: Record<string, never>
+        Returns: number
+      }
       post_card_provision: {
         Args: {
           p_expense_id: string
@@ -276,6 +292,13 @@ export type Database = {
           p_amount: number
         }
         Returns: Card
+      }
+      pay_card_statement: {
+        Args: {
+          p_statement_id: string
+          p_source_card_id: string
+        }
+        Returns: CardStatementArchive
       }
       pay_card_installment: {
         Args: {

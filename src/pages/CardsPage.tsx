@@ -14,7 +14,7 @@ import { Card as SurfaceCard, CardContent, CardHeader, CardTitle } from '../comp
 import { HelpTooltip, type HelpTooltipContent } from '../components/ui/help-tooltip'
 import { Progress } from '../components/ui/progress'
 import { supabase } from '../lib/supabase'
-import type { Card, CardExpense, CardExpenseStatus, InsertFor } from '../types/database'
+import type { Card, CardExpense, CardExpenseStatus, CardStatementArchive, InsertFor } from '../types/database'
 import { expenseCategoryOptions } from '../utils/categories'
 import { getCardStatementPeriod } from '../utils/cardStatement'
 import { dateInputValue, formatDate } from '../utils/date'
@@ -1252,6 +1252,140 @@ function ProvisionPanel({
   )
 }
 
+function statementPeriodLabel(statement: CardStatementArchive) {
+  return new Intl.DateTimeFormat('tr-TR', { month: 'long', year: 'numeric' }).format(new Date(statement.period_year, statement.period_month - 1, 1))
+}
+
+function StatementPanel({
+  rows,
+  statements,
+  loading,
+  actionId,
+  onPay,
+}: {
+  rows: Card[]
+  statements: CardStatementArchive[]
+  loading: boolean
+  actionId: string | null
+  onPay: (statement: CardStatementArchive, card: Card) => void
+}) {
+  const cardsById = useMemo(() => new Map(rows.map((card) => [card.id, card])), [rows])
+  const openStatements = statements
+    .filter((statement) => statement.status === 'open')
+    .sort((a, b) => (a.due_date ?? a.statement_date).localeCompare(b.due_date ?? b.statement_date))
+  const totalOpenAmount = openStatements.reduce((total, statement) => total + statement.statement_debt_amount, 0)
+
+  if (loading && openStatements.length === 0) {
+    return (
+      <SurfaceCard className="border-0 shadow-sm ring-1 ring-emerald-200/80 dark:ring-emerald-900/70">
+        <CardContent className="p-4 text-sm text-muted-foreground">Ekstreler yukleniyor...</CardContent>
+      </SurfaceCard>
+    )
+  }
+
+  if (openStatements.length === 0) return null
+
+  return (
+    <SurfaceCard className="border-0 shadow-sm ring-1 ring-emerald-200/80 dark:ring-emerald-900/70">
+      <CardHeader className="pb-0">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <ReceiptText size={17} />
+              Acik ekstreler
+            </CardTitle>
+            <p className="mt-1 text-xs text-muted-foreground">Ekstre odendiginde bu ekstreye bagli kart taksitleri otomatik kapanir.</p>
+          </div>
+          <Badge variant="secondary">{formatCurrency(totalOpenAmount)}</Badge>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-2 pt-2">
+        {openStatements.map((statement) => {
+          const card = cardsById.get(statement.card_id)
+          if (!card) return null
+
+          return (
+            <div key={statement.id} className="rounded-xl bg-emerald-50/70 px-3 py-3 dark:bg-emerald-950/20">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-bold text-foreground">{card.card_name}</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    {card.bank_name} - {statementPeriodLabel(statement)} - son odeme {formatDate(statement.due_date)}
+                  </p>
+                </div>
+                <span className="shrink-0 rounded-lg bg-white px-2 py-1 text-xs font-bold tabular-nums text-foreground dark:bg-stone-900">
+                  {formatCurrency(statement.statement_debt_amount)}
+                </span>
+              </div>
+              <div className="mt-3 grid gap-2 min-[520px]:grid-cols-[minmax(0,1fr)_auto] min-[520px]:items-center">
+                <p className="text-xs leading-5 text-emerald-900/80 dark:text-emerald-100/80">
+                  Bu tutar kart borcunun icindedir. Kredi karti taksitleri ayrica borc olarak ikinci kez eklenmez.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => onPay(statement, card)}
+                  disabled={Boolean(actionId)}
+                  className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-emerald-700 px-3 py-2 text-xs font-semibold text-white shadow-sm disabled:opacity-60 hover:bg-emerald-800"
+                >
+                  <CheckCircle2 size={14} />
+                  {actionId === statement.id ? 'Isleniyor...' : 'Ekstreyi odendi isaretle'}
+                </button>
+              </div>
+            </div>
+          )
+        })}
+      </CardContent>
+    </SurfaceCard>
+  )
+}
+
+function shouldRunStatementCut(card: Card) {
+  if (card.card_type !== 'kredi_karti' || !card.statement_day || card.current_period_spending <= 0) return false
+
+  const today = new Date()
+  const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate()
+  return Math.min(card.statement_day, lastDay) <= today.getDate()
+}
+
+function DueStatementAutomation({
+  rows,
+  reload,
+  loadStatements,
+  setError,
+}: {
+  rows: Card[]
+  reload: () => Promise<void>
+  loadStatements: () => Promise<void>
+  setError: (message: string) => void
+}) {
+  useEffect(() => {
+    if (!rows.some(shouldRunStatementCut)) return
+
+    let cancelled = false
+
+    async function runDueStatementCut() {
+      const { data, error } = await supabase.rpc('cut_due_card_statements')
+
+      if (error) {
+        if (!isSchemaCacheError(error)) setError(error.message)
+        return
+      }
+
+      if (!cancelled && (data ?? 0) > 0) {
+        await Promise.all([reload(), loadStatements()])
+      }
+    }
+
+    void runDueStatementCut()
+
+    return () => {
+      cancelled = true
+    }
+  }, [loadStatements, reload, rows, setError])
+
+  return null
+}
+
 export function CardsPage() {
   const [transactionCard, setTransactionCard] = useState<Card | null>(null)
   const [transactionType, setTransactionType] = useState<'in' | 'out' | 'transfer'>('in')
@@ -1271,6 +1405,15 @@ export function CardsPage() {
   const [provisionsLoading, setProvisionsLoading] = useState(false)
   const [provisionError, setProvisionError] = useState('')
   const [provisionActionId, setProvisionActionId] = useState<string | null>(null)
+  const [statements, setStatements] = useState<CardStatementArchive[]>([])
+  const [statementsLoading, setStatementsLoading] = useState(false)
+  const [statementError, setStatementError] = useState('')
+  const [statementActionId, setStatementActionId] = useState<string | null>(null)
+  const [statementPayment, setStatementPayment] = useState<{ statement: CardStatementArchive; card: Card } | null>(null)
+  const [statementPaymentAccounts, setStatementPaymentAccounts] = useState<Card[]>([])
+  const [statementPaymentSourceCard, setStatementPaymentSourceCard] = useState('')
+  const [statementPaymentError, setStatementPaymentError] = useState('')
+  const [statementPaymentSaving, setStatementPaymentSaving] = useState(false)
 
   const loadProvisions = useCallback(async () => {
     setProvisionsLoading(true)
@@ -1294,13 +1437,40 @@ export function CardsPage() {
     setProvisionsLoading(false)
   }, [])
 
+  const loadStatements = useCallback(async () => {
+    setStatementsLoading(true)
+    setStatementError('')
+    const { data, error } = await supabase
+      .from('card_statement_archives')
+      .select('*')
+      .order('statement_date', { ascending: false })
+      .limit(24)
+
+    if (error) {
+      setStatements([])
+      setStatementError(
+        isSchemaCacheError(error)
+          ? 'Ekstre odeme altyapisi henuz canli veritabaninda yok. Migration uygulaninca bu panel acilacak.'
+          : error.message,
+      )
+    } else {
+      setStatements((data ?? []) as CardStatementArchive[])
+    }
+    setStatementsLoading(false)
+  }, [])
+
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadProvisions()
   }, [loadProvisions])
 
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void loadStatements()
+  }, [loadStatements])
+
   async function refreshCardsAndProvisions(reload: () => Promise<void>) {
-    await Promise.all([reload(), loadProvisions()])
+    await Promise.all([reload(), loadProvisions(), loadStatements()])
   }
 
   async function handleProvisionAction(
@@ -1521,6 +1691,66 @@ export function CardsPage() {
     await reloadCards?.()
   }
 
+  function openStatementPayment(statement: CardStatementArchive, card: Card, cards: Card[], reload: () => Promise<void>) {
+    const accounts = cards.filter((row) => row.card_type === 'banka_karti' && row.id !== card.id)
+    setStatementPayment({ statement, card })
+    setStatementPaymentAccounts(accounts)
+    setStatementPaymentSourceCard('')
+    setStatementPaymentError(accounts.length === 0 ? 'Ekstre odemesi icin once bir banka hesabi eklemelisin.' : '')
+    setReloadCards(() => reload)
+  }
+
+  function closeStatementPayment() {
+    setStatementPayment(null)
+    setStatementPaymentSourceCard('')
+    setStatementPaymentError('')
+  }
+
+  async function handleStatementPaymentSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!statementPayment) return
+
+    if (!statementPaymentSourceCard) {
+      setStatementPaymentError('Kaynak hesap secmelisin.')
+      return
+    }
+
+    const sourceCard = statementPaymentAccounts.find((card) => card.id === statementPaymentSourceCard)
+    if (!sourceCard) {
+      setStatementPaymentError('Kaynak hesap bulunamadi.')
+      return
+    }
+
+    if (sourceCard.current_balance < statementPayment.statement.statement_debt_amount) {
+      setStatementPaymentError('Kaynak hesap bakiyesi yetersiz.')
+      return
+    }
+
+    setStatementPaymentSaving(true)
+    setStatementActionId(statementPayment.statement.id)
+    setStatementPaymentError('')
+
+    const { error } = await supabase.rpc('pay_card_statement', {
+      p_statement_id: statementPayment.statement.id,
+      p_source_card_id: sourceCard.id,
+    })
+
+    setStatementPaymentSaving(false)
+    setStatementActionId(null)
+
+    if (error) {
+      setStatementPaymentError(
+        isSchemaCacheError(error)
+          ? 'Ekstre odeme altyapisi canli veritabanina uygulanmamis. Migration calisinca bu islem acilacak.'
+          : error.message,
+      )
+      return
+    }
+
+    closeStatementPayment()
+    await Promise.all([reloadCards?.(), loadStatements()])
+  }
+
   async function cutStatement(card: Card, reload: () => Promise<void>, setError: (message: string) => void) {
     if (card.current_period_spending <= 0) {
       setError('Dönem içi harcama olmadığı için kesilecek ekstre yok.')
@@ -1562,11 +1792,11 @@ export function CardsPage() {
         return
       }
 
-      await reload()
+      await Promise.all([reload(), loadStatements()])
       return
     }
 
-    await reload()
+    await Promise.all([reload(), loadStatements()])
   }
 
   const transactionTarget = movementAccounts.find((card) => card.id === transactionTargetCard)
@@ -1586,9 +1816,20 @@ export function CardsPage() {
         renderBeforeList={({ loading, rows, reload, setError }) =>
           !loading ? (
             <div className="flex flex-col gap-3">
+              <DueStatementAutomation rows={rows as Card[]} reload={reload} loadStatements={loadStatements} setError={setError} />
               <AccountHubPanel rows={rows as Card[]} onOpenTransfer={(source) => openTransaction(source, reload, rows as Card[], 'transfer')} />
               <CreditCardOverview rows={rows as Card[]} />
               <QuickExpensePanel rows={rows as Card[]} reload={() => refreshCardsAndProvisions(reload)} setError={setError} />
+              {statementError ? (
+                <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">{statementError}</p>
+              ) : null}
+              <StatementPanel
+                rows={rows as Card[]}
+                statements={statements}
+                loading={statementsLoading}
+                actionId={statementActionId}
+                onPay={(statement, card) => openStatementPayment(statement, card, rows as Card[], reload)}
+              />
               {provisionError ? (
                 <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">{provisionError}</p>
               ) : null}
@@ -1604,7 +1845,6 @@ export function CardsPage() {
               <CardInstallmentCalendarPanel cards={rows as Card[]} />
               <CardInstallmentExpensesPanel
                 cards={rows as Card[]}
-                accounts={(rows as Card[]).filter((row) => row.card_type === 'banka_karti')}
                 reload={() => refreshCardsAndProvisions(reload)}
                 setError={setError}
               />
@@ -1848,6 +2088,34 @@ export function CardsPage() {
             className="w-full rounded-xl bg-stone-700 px-4 py-3.5 text-sm font-semibold text-white disabled:opacity-60 dark:bg-stone-600"
           >
             {debtPaymentSaving ? 'İşleniyor...' : 'Borç öde'}
+          </button>
+        </form>
+      </SimpleModal>
+
+      <SimpleModal title="Ekstre odemesi" open={Boolean(statementPayment)} onClose={closeStatementPayment}>
+        <form onSubmit={handleStatementPaymentSubmit} className="space-y-4">
+          <div className="rounded-lg bg-stone-50 p-3 text-sm text-stone-600 dark:bg-stone-900 dark:text-stone-300">
+            <p className="font-semibold text-stone-950 dark:text-stone-50">{statementPayment?.card.card_name}</p>
+            <p>Ekstre: {statementPayment ? statementPeriodLabel(statementPayment.statement) : '-'}</p>
+            <p>Son odeme: {statementPayment ? formatDate(statementPayment.statement.due_date) : '-'}</p>
+            <p>Tutar: {formatCurrency(statementPayment?.statement.statement_debt_amount ?? 0)}</p>
+          </div>
+          <AccountSelector
+            accounts={statementPaymentAccounts}
+            value={statementPaymentSourceCard}
+            onChange={setStatementPaymentSourceCard}
+            amount={statementPayment?.statement.statement_debt_amount ?? 0}
+          />
+          <p className="rounded-lg bg-emerald-50 p-3 text-xs text-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-100">
+            Bu ekstre kapandiginda ekstreye bagli kredi karti taksitleri otomatik odendi olur. Taksitler net borca ayrica eklenmez.
+          </p>
+          {statementPaymentError ? <p className="rounded-lg bg-rose-50 p-3 text-sm text-rose-700">{statementPaymentError}</p> : null}
+          <button
+            type="submit"
+            disabled={statementPaymentSaving}
+            className="w-full rounded-xl bg-emerald-700 px-4 py-3.5 text-sm font-semibold text-white disabled:opacity-60"
+          >
+            {statementPaymentSaving ? 'Isleniyor...' : 'Ekstreyi odendi isaretle'}
           </button>
         </form>
       </SimpleModal>

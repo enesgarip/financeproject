@@ -1,13 +1,11 @@
-import { Check, Pencil, ReceiptText } from 'lucide-react'
+import { Check, Clock3, Pencil, ReceiptText } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { AccountSelector } from './AccountSelector'
 import { CategoryPicker } from './CategoryPicker'
 import { MoneyInput } from './MoneyInput'
 import { SimpleModal } from '../SimpleModal'
 import { Badge } from '../ui/badge'
 import { Card as SurfaceCard, CardContent, CardHeader, CardTitle } from '../ui/card'
 import { HelpTooltip, type HelpTooltipContent } from '../ui/help-tooltip'
-import { useConfirmDialog } from '../ui/use-confirm-dialog'
 import { supabase } from '../../lib/supabase'
 import type { Card, CardExpense, CardInstallment } from '../../types/database'
 import { expenseCategoryOptions } from '../../utils/categories'
@@ -31,20 +29,25 @@ function historicalPaidInstallmentCount(expense: CardExpense) {
   return Math.max(0, Math.min(expense.installment_count - 1, paid))
 }
 
+function installmentStatusLabel(item: CardInstallment) {
+  if (item.status === 'paid') return 'Odendi'
+  if (item.status === 'posted') return item.statement_archive_id ? 'Acik ekstrede' : 'Bu donem'
+  return 'Planli'
+}
+
 type CardInstallmentExpensesPanelProps = {
   cards: Card[]
-  accounts: Card[]
   reload: () => Promise<void>
   setError: (message: string) => void
 }
 
 const installmentExpensesHelp = {
-  calculation: 'Taksit sayısı 1’den büyük olan kesinleşmiş kart harcamaları ve bağlı taksit satırları gösterilir.',
-  importance: 'Kalan taksitleri ve ödenmiş işaretlerini tek yerden takip etmeyi sağlar.',
-  source: 'Kart harcamaları ve kart taksit kayıtları.',
+  calculation: 'Taksit sayisi 1den buyuk olan kesinlesmis kart harcamalari ve bagli taksit satirlari gosterilir.',
+  importance: 'Kredi karti taksitleri ayri borc degildir; kart ekstresi odendiginde ilgili taksitler otomatik kapanir.',
+  source: 'Kart harcamalari, kart taksit kayitlari ve ekstre arsivi.',
 } satisfies HelpTooltipContent
 
-export function CardInstallmentExpensesPanel({ cards, accounts, reload, setError }: CardInstallmentExpensesPanelProps) {
+export function CardInstallmentExpensesPanel({ cards, reload, setError }: CardInstallmentExpensesPanelProps) {
   const [expenses, setExpenses] = useState<CardExpense[]>([])
   const [installments, setInstallments] = useState<CardInstallment[]>([])
   const [loading, setLoading] = useState(true)
@@ -57,10 +60,6 @@ export function CardInstallmentExpensesPanel({ cards, accounts, reload, setError
   const [note, setNote] = useState('')
   const [localError, setLocalError] = useState('')
   const [saving, setSaving] = useState(false)
-  const [payingId, setPayingId] = useState<string | null>(null)
-  const [installmentToPay, setInstallmentToPay] = useState<CardInstallment | null>(null)
-  const [paymentSourceCard, setPaymentSourceCard] = useState('')
-  const [paymentError, setPaymentError] = useState('')
 
   const cardsById = useMemo(() => new Map(cards.map((card) => [card.id, card])), [cards])
   const installmentsByExpense = useMemo(() => {
@@ -130,8 +129,9 @@ export function CardInstallmentExpensesPanel({ cards, accounts, reload, setError
 
   function openEdit(expense: CardExpense) {
     const expenseInstallments = installmentsByExpense.get(expense.id) ?? []
-    if (expenseInstallments.some((item) => item.status === 'paid')) {
-      setError('Odeme alinmis taksitli harcama duzenlenemez.')
+    const locked = expenseInstallments.some((item) => item.status === 'paid' || item.statement_archive_id)
+    if (locked) {
+      setError('Ekstreye baglanmis veya odenmis taksitli harcama duzenlenemez.')
       return
     }
 
@@ -195,103 +195,6 @@ export function CardInstallmentExpensesPanel({ cards, accounts, reload, setError
     await Promise.all([loadExpenses(), reload()])
   }
 
-  function openInstallmentPayment(installment: CardInstallment) {
-    if (installment.status === 'paid') {
-      setError('Ödenmiş taksit geri alınamaz.')
-      return
-    }
-
-    setInstallmentToPay(installment)
-    setPaymentSourceCard('')
-    setPaymentError(accounts.length === 0 ? 'Ödeme için önce bir banka hesabı eklemelisin.' : '')
-  }
-
-  function closeInstallmentPayment() {
-    setInstallmentToPay(null)
-    setPaymentSourceCard('')
-    setPaymentError('')
-  }
-
-  async function handleInstallmentPaymentSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    if (!installmentToPay) return
-
-    if (!paymentSourceCard) {
-      setPaymentError('Kaynak hesap seçmelisin.')
-      return
-    }
-
-    const sourceAccount = accounts.find((account) => account.id === paymentSourceCard)
-    if (!sourceAccount) {
-      setPaymentError('Kaynak hesap bulunamadı.')
-      return
-    }
-
-    if (sourceAccount.current_balance < installmentToPay.amount) {
-      setPaymentError('Kaynak hesap bakiyesi yetersiz.')
-      return
-    }
-
-    const installment = installmentToPay
-    setPayingId(installment.id)
-    setError('')
-    setPaymentError('')
-
-    const { error } = await supabase.rpc('pay_card_installment', {
-      p_installment_id: installment.id,
-      p_source_card_id: sourceAccount.id,
-    })
-
-    if (error) {
-      const message = isSchemaCacheError(error)
-        ? 'Kaynak hesaplı taksit ödemesi henüz veritabanında yok. Migration uygulanınca bu işlem açılacak.'
-        : error.message
-      setPaymentError(message)
-      setPayingId(null)
-      return
-    }
-
-    try {
-      await Promise.all([loadExpenses(), reload()])
-      closeInstallmentPayment()
-    } finally {
-      setPayingId(null)
-    }
-  }
-
-  async function handleUndoPaid(installment: CardInstallment) {
-    const confirmed = await confirm({
-      title: 'Taksit ödemesini geri al',
-      description: `${installment.installment_no}/${installment.installment_count}. taksit tekrar borca eklenecek ve ödendi tarihi silinecek.`,
-      confirmLabel: 'Geri al',
-    })
-    if (!confirmed) return
-
-    setPayingId(installment.id)
-    setError('')
-
-    const { error } = await supabase.rpc('unpay_card_installment', {
-      p_installment_id: installment.id,
-      p_source_card_id: sourceAccount.id,
-    })
-
-    if (error) {
-      const message = isSchemaCacheError(error)
-        ? 'Kaynak hesaplı taksit ödemesi henüz veritabanında yok. Migration uygulanınca bu işlem açılacak.'
-        : error.message
-      setPaymentError(message)
-      setPayingId(null)
-      return
-    }
-
-    try {
-      await Promise.all([loadExpenses(), reload()])
-      closeInstallmentPayment()
-    } finally {
-      setPayingId(null)
-    }
-  }
-
   if (loading) {
     return (
       <SurfaceCard className="border-0 shadow-sm ring-1 ring-stone-200/80 dark:ring-stone-800">
@@ -312,7 +215,7 @@ export function CardInstallmentExpensesPanel({ cards, accounts, reload, setError
                 Taksitli harcamalar
                 <HelpTooltip title="Taksitli harcamalar" content={installmentExpensesHelp} />
               </CardTitle>
-              <p className="mt-1 text-xs text-muted-foreground">Taksit ödemesi kaynak hesabından düşer; kart borcu ve geçmiş birlikte güncellenir.</p>
+              <p className="mt-1 text-xs text-muted-foreground">Kart taksitleri ayri borc degildir; bagli ekstre odendiginde otomatik kapanir.</p>
             </div>
             <Badge variant="secondary">{expenses.length}</Badge>
           </div>
@@ -327,7 +230,7 @@ export function CardInstallmentExpensesPanel({ cards, accounts, reload, setError
             )
             const remainingInstallments = expenseInstallments.filter((item) => item.status !== 'paid')
             const remainingAmount = remainingInstallments.reduce((sum, item) => sum + item.amount, 0)
-            const hasPaidInstallment = expenseInstallments.some((item) => item.status === 'paid')
+            const isLocked = expenseInstallments.some((item) => item.status === 'paid' || item.statement_archive_id)
 
             return (
               <section key={expense.id} className="rounded-xl bg-muted/45 px-3 py-3">
@@ -335,27 +238,27 @@ export function CardInstallmentExpensesPanel({ cards, accounts, reload, setError
                   <div className="min-w-0">
                     <p className="truncate text-sm font-bold text-foreground">{expense.description}</p>
                     <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                      {card ? `${card.bank_name} · ${card.card_name}` : 'Kart'} · {formatDate(expense.spent_at)} · {expense.installment_count} taksit
+                      {card ? `${card.bank_name} - ${card.card_name}` : 'Kart'} - {formatDate(expense.spent_at)} - {expense.installment_count} taksit
                     </p>
                     <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] font-semibold">
                       <span className="rounded-full bg-white px-2 py-1 text-stone-700 dark:bg-stone-900 dark:text-stone-200">
                         {paidCount}/{expense.installment_count} odendi
                       </span>
                       <span className="rounded-full bg-white px-2 py-1 text-stone-700 dark:bg-stone-900 dark:text-stone-200">
-                        {remainingInstallments.length} kalan
+                        {remainingInstallments.length} taksit izleniyor
                       </span>
                       <span className="rounded-full bg-white px-2 py-1 text-stone-700 dark:bg-stone-900 dark:text-stone-200">
-                        {formatCurrency(remainingAmount)} kalan borc
+                        {formatCurrency(remainingAmount)} bilgi amacli
                       </span>
                     </div>
-                    {hasPaidInstallment ? (
-                      <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">Odenmis taksit oldugu icin bu harcama duzenlemeye kapatildi.</p>
+                    {isLocked ? (
+                      <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">Ekstreye baglandigi veya odendigi icin bu harcama duzenlemeye kapali.</p>
                     ) : null}
                   </div>
                   <button
                     type="button"
                     onClick={() => openEdit(expense)}
-                    disabled={hasPaidInstallment}
+                    disabled={isLocked}
                     className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-stone-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-stone-700 hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
                   >
                     <Pencil size={13} />
@@ -369,46 +272,44 @@ export function CardInstallmentExpensesPanel({ cards, accounts, reload, setError
                   ) : (
                     expenseInstallments.map((item) => {
                       const isPaid = item.status === 'paid'
-                      const statusLabel = isPaid ? 'Odendi' : item.status === 'posted' ? 'Bu donem' : 'Planli'
+                      const isStatementLinked = Boolean(item.statement_archive_id)
 
                       return (
                         <div
                           key={item.id}
-                          className={`flex items-center gap-2 rounded-xl border px-2.5 py-2 text-sm ${
+                          className={`flex items-start gap-2 rounded-xl border px-2.5 py-2 text-sm ${
                             isPaid
                               ? 'border-emerald-200 bg-emerald-50 dark:border-emerald-900/60 dark:bg-emerald-950/20'
-                              : 'border-stone-200 bg-white/90 dark:border-stone-800 dark:bg-stone-950/65'
+                              : isStatementLinked
+                                ? 'border-amber-200 bg-amber-50 dark:border-amber-900/60 dark:bg-amber-950/20'
+                                : 'border-stone-200 bg-white/90 dark:border-stone-800 dark:bg-stone-950/65'
                           }`}
                         >
-                          {isPaid ? (
-                            <div
-                              className="grid size-8 shrink-0 place-items-center rounded-full border border-emerald-600 bg-emerald-600 text-white"
-                              aria-label="Taksit odendi"
-                            >
-                              <Check size={16} strokeWidth={3} />
-                            </div>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => openInstallmentPayment(item)}
-                              disabled={payingId !== null}
-                              className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg border border-stone-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-stone-700 hover:bg-stone-50 disabled:opacity-60 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
-                            >
-                              <ReceiptText size={13} />
-                              Öde
-                            </button>
-                          )}
+                          <div
+                            className={`grid size-8 shrink-0 place-items-center rounded-full border ${
+                              isPaid
+                                ? 'border-emerald-600 bg-emerald-600 text-white'
+                                : isStatementLinked
+                                  ? 'border-amber-300 bg-amber-100 text-amber-800 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-200'
+                                  : 'border-stone-200 bg-white text-stone-500 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-300'
+                            }`}
+                            aria-label={installmentStatusLabel(item)}
+                          >
+                            {isPaid ? <Check size={16} strokeWidth={3} /> : isStatementLinked ? <ReceiptText size={15} /> : <Clock3 size={15} />}
+                          </div>
                           <div className="min-w-0 flex-1">
                             <p className={`truncate font-semibold ${isPaid ? 'text-emerald-800 dark:text-emerald-200' : 'text-stone-900 dark:text-stone-100'}`}>
-                              {item.installment_no}/{item.installment_count}. taksit · {formatCurrency(item.amount)}
+                              {item.installment_no}/{item.installment_count}. taksit - {formatCurrency(item.amount)}
                             </p>
                             <p className={`text-xs ${isPaid ? 'text-emerald-700/80 dark:text-emerald-300/80' : 'text-stone-500 dark:text-stone-400'}`}>
-                              {formatDate(item.due_month)} · {statusLabel}
+                              {formatDate(item.due_month)} - {installmentStatusLabel(item)}
                             </p>
+                            {!isPaid ? (
+                              <p className="mt-1 text-[11px] leading-4 text-muted-foreground">
+                                Bu taksit, bagli oldugu kredi karti ekstresi odendiginde otomatik kapanir.
+                              </p>
+                            ) : null}
                           </div>
-                          {payingId === item.id ? (
-                            <span className="shrink-0 text-[11px] font-semibold text-muted-foreground">İşleniyor...</span>
-                          ) : null}
                         </div>
                       )
                     })
@@ -469,7 +370,7 @@ export function CardInstallmentExpensesPanel({ cards, accounts, reload, setError
             />
           </label>
           <p className="rounded-lg bg-amber-50 p-3 text-xs text-amber-900 dark:bg-amber-950/30 dark:text-amber-100">
-            Duzenleme sonrasi kalan taksitler limitten duselecek sekilde kart borcu guncellenir. Odenmis taksit olan kayitlar bu ekrandan degistirilemez.
+            Duzenleme sonrasi kalan taksit plani yeniden kurulur. Ekstreye baglanmis veya odemesi kapanmis kayitlar degistirilemez.
           </p>
           {localError ? <p className="rounded-lg bg-rose-50 p-3 text-sm text-rose-700 dark:bg-rose-950/40 dark:text-rose-200">{localError}</p> : null}
           <button
@@ -478,25 +379,6 @@ export function CardInstallmentExpensesPanel({ cards, accounts, reload, setError
             className="w-full rounded-xl bg-emerald-700 px-4 py-3 text-sm font-semibold text-white disabled:opacity-60"
           >
             {saving ? 'Kaydediliyor...' : 'Degisiklikleri kaydet'}
-          </button>
-        </form>
-      </SimpleModal>
-
-      <SimpleModal title="Taksit öde" open={Boolean(installmentToPay)} onClose={closeInstallmentPayment}>
-        <form onSubmit={handleInstallmentPaymentSubmit} className="space-y-4">
-          <div className="rounded-lg bg-stone-50 p-3 text-sm text-stone-600 dark:bg-stone-900 dark:text-stone-300">
-            <p className="font-semibold text-stone-950 dark:text-stone-50">{installmentToPay?.description}</p>
-            <p>Tutar: {formatCurrency(installmentToPay?.amount ?? 0)}</p>
-            <p>Vade: {installmentToPay ? formatDate(installmentToPay.due_month) : '-'}</p>
-          </div>
-          <AccountSelector accounts={accounts} value={paymentSourceCard} onChange={setPaymentSourceCard} amount={installmentToPay?.amount ?? 0} />
-          {paymentError ? <p className="rounded-lg bg-rose-50 p-3 text-sm text-rose-700 dark:bg-rose-950/40 dark:text-rose-200">{paymentError}</p> : null}
-          <button
-            type="submit"
-            disabled={Boolean(payingId)}
-            className="w-full rounded-xl bg-stone-700 px-4 py-3.5 text-sm font-semibold text-white disabled:opacity-60 dark:bg-stone-600"
-          >
-            {payingId ? 'İşleniyor...' : 'Taksiti öde'}
           </button>
         </form>
       </SimpleModal>

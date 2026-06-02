@@ -241,12 +241,6 @@ function validateLoanForm(formData: FormData) {
   return errors
 }
 
-function isSchemaCacheError(error: { code?: string; message?: string } | null | undefined) {
-  if (!error) return false
-  const message = error.message ?? ''
-  return error.code === 'PGRST202' || error.code === 'PGRST205' || message.includes('schema cache') || message.includes('Could not find the function')
-}
-
 async function getBankaKartlari(): Promise<Card[]> {
   const { data, error } = await supabase
     .from('cards')
@@ -499,6 +493,7 @@ export function LoansPage() {
 
   function renderPaymentPlan(loan: Loan, reload: () => Promise<void>, setError: (message: string) => void) {
     const loanInstallments = installments.filter((item) => item.loan_id === loan.id)
+    const undoPaidActionId: string | null = null
     if (loanInstallments.length === 0) {
       return (
         <section className="mt-4 rounded-2xl border border-dashed border-stone-300 bg-white/55 p-3 dark:border-stone-700 dark:bg-stone-950/45">

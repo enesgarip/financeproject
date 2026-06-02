@@ -2,7 +2,7 @@
 
 ## Scope
 
-This file records the current business rules inferred from the codebase as of 2026-06-01. If code and this file diverge, update both intentionally.
+This file records the current business rules inferred from the codebase as of 2026-06-02. If code and this file diverge, update both intentionally.
 
 ## Money and Formatting
 
@@ -46,6 +46,15 @@ From `src/utils/cardStatement.ts`:
 - period end is the statement date
 - due date may fall in the same month or next month depending on `due_day <= statement_day`
 
+Statement archive behavior:
+
+- `card_statement_archives` tracks a monthly card statement with `period_year`, `period_month`, and `status`
+- statement status is `open` until paid, then `paid`
+- `cut_card_statement` is idempotent for one user/card/month
+- statement amount is the posted current-period spending at cut time
+- cutting a statement links posted card expenses and posted card installments through `statement_archive_id`
+- the dashboard/cards page may call `cut_due_card_statements` to cut due statements automatically when the statement day has arrived
+
 ## Card Payment Rules
 
 On the cards page:
@@ -55,7 +64,9 @@ On the cards page:
 - user should not pay more than payable posted debt
 - provision must post before it becomes payable debt
 - card debt payments must debit a `banka_karti` source account
-- card installment payments also must debit a `banka_karti` source account; they are no longer just a visual "paid" mark
+- the preferred credit-card payment flow is paying an open statement with `pay_card_statement`
+- statement payment debits a `banka_karti`, reduces card debt, marks the statement paid, and marks linked installments paid
+- direct card debt payment is legacy/manual behavior and should not be the primary installment flow
 
 ## Card Expense Rules
 
@@ -72,7 +83,11 @@ From `src/utils/cardInstallmentCalendar.ts` and page logic:
 - installment calendar defaults to upcoming months from the current month
 - only `scheduled` installments count in scheduled-total style calculations
 - `posted` installments represent already-posted/consumed rows
-- `paid` installments represent a real payment from a bank account and reduce both account balance and card debt
+- credit-card installments are not separate debt
+- the unpaid installment total is informational/planning data and must not be added on top of card debt
+- posted installments become payable as part of the card statement
+- paying the linked statement marks included installments `paid`
+- locked installments, meaning paid or linked to a statement, should not be edited from the UI
 
 ## Bank Account / Transfer Rules
 
