@@ -731,19 +731,30 @@ export function DashboardPage() {
   }
 
   const hasCreditLimitGroups = summary.creditLimitGroups.length > 0
+  const upcomingTotal = sum(upcomingItems, (item) => item.amount)
 
   return (
     <section className="grid gap-4 lg:grid-cols-12 lg:items-start">
       <div className="min-w-0 lg:col-span-7">
-        <WelcomePanel displayName={displayName} cashFlow={summary.cashFlow} />
-      </div>
-
-      <div className="min-w-0 lg:col-span-5">
         <NetWorthPanel
           netWorth={summary.netWorth}
           totalAssets={summary.totalAssets}
           totalDebts={summary.totalDebts}
           totalReceivables={summary.totalReceivables}
+        />
+      </div>
+
+      <div className="min-w-0 lg:col-span-5">
+        <WelcomePanel displayName={displayName} cashFlow={summary.cashFlow} />
+      </div>
+
+      <div className="min-w-0 lg:col-span-12">
+        <PriorityMetricRail
+          totalAssets={summary.totalAssets}
+          totalDebts={summary.totalDebts}
+          monthlyLoad={summary.cashFlow.outflow}
+          upcomingTotal={upcomingTotal}
+          upcomingCount={upcomingItems.length}
         />
       </div>
 
@@ -889,6 +900,47 @@ function WelcomeMetric({ label, value, tone = 'neutral' }: { label: string; valu
   )
 }
 
+function PriorityMetricRail({
+  totalAssets,
+  totalDebts,
+  monthlyLoad,
+  upcomingTotal,
+  upcomingCount,
+}: {
+  totalAssets: number
+  totalDebts: number
+  monthlyLoad: number
+  upcomingTotal: number
+  upcomingCount: number
+}) {
+  const metrics = [
+    { label: 'Toplam varlık', value: formatCurrency(totalAssets), tone: 'good' as const },
+    { label: 'Toplam borç', value: formatCurrency(totalDebts), tone: 'danger' as const },
+    { label: 'Bu ay ödeme yükü', value: formatCurrency(monthlyLoad), tone: monthlyLoad > 0 ? ('warning' as const) : ('neutral' as const) },
+    { label: 'Yaklaşan ödemeler', value: upcomingCount > 0 ? formatCurrency(upcomingTotal) : 'Temiz', tone: upcomingCount > 0 ? ('warning' as const) : ('good' as const) },
+  ]
+
+  return (
+    <div className="grid gap-3 min-[520px]:grid-cols-2 lg:grid-cols-4">
+      {metrics.map((metric) => (
+        <div key={metric.label} className="finance-panel min-w-0 rounded-lg p-4">
+          <p className="truncate text-[11px] font-black uppercase text-muted-foreground">{metric.label}</p>
+          <p className={`finance-value mt-2 truncate text-[clamp(1rem,4vw,1.35rem)] font-black leading-tight ${priorityMetricToneClass(metric.tone)}`}>
+            {metric.value}
+          </p>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function priorityMetricToneClass(tone: 'neutral' | 'good' | 'warning' | 'danger') {
+  if (tone === 'good') return 'text-emerald-700 dark:text-emerald-300'
+  if (tone === 'warning') return 'text-amber-700 dark:text-amber-300'
+  if (tone === 'danger') return 'text-rose-700 dark:text-rose-300'
+  return 'text-foreground'
+}
+
 function FocusActionPanel({ actions, cashFlow }: { actions: FocusAction[]; cashFlow: CashFlowSummary }) {
   const [showAll, setShowAll] = useState(false)
   const primaryAction = actions[0]
@@ -1003,15 +1055,15 @@ function NetWorthPanel({ netWorth, totalAssets, totalDebts, totalReceivables }: 
   const TrendIcon = isPositive ? TrendingUp : TrendingDown
 
   return (
-    <Card className="border-primary/15 bg-card/95 py-0 shadow-[var(--shadow-card)] ring-1 ring-primary/10">
+    <Card className="border-primary/15 bg-gradient-to-br from-card via-card to-accent/35 py-0 shadow-[var(--shadow-card)] ring-1 ring-primary/10">
       <CardContent className="p-5">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
             <p className="inline-flex items-center gap-1 text-xs font-semibold uppercase text-muted-foreground">
-              Net değer
-              <HelpTooltip title="Net değer" content={dashboardHelp.netWorth} />
+              Net varlık
+              <HelpTooltip title="Net varlık" content={dashboardHelp.netWorth} />
             </p>
-            <p className={`finance-value mt-2 whitespace-nowrap text-[clamp(1.45rem,6.6vw,2.55rem)] font-extrabold leading-none ${isPositive ? 'text-foreground' : 'text-destructive'}`}>
+            <p className={`finance-value mt-2 whitespace-nowrap text-[clamp(1.7rem,7vw,2.85rem)] font-black leading-none ${isPositive ? 'text-foreground' : 'text-destructive'}`}>
               {formatCurrency(netWorth)}
             </p>
           </div>

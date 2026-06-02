@@ -1,4 +1,15 @@
-import { ArrowRightLeft, CalendarClock, CheckCircle2, Clock3, ReceiptText, WalletCards, XCircle } from 'lucide-react'
+import {
+  AlertTriangle,
+  ArrowRightLeft,
+  CalendarClock,
+  CheckCircle2,
+  Clock3,
+  CreditCard as CreditCardIcon,
+  Landmark,
+  ReceiptText,
+  WalletCards,
+  XCircle,
+} from 'lucide-react'
 import type { CSSProperties } from 'react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { CrudPage, type FormField } from '../components/CrudPage'
@@ -14,10 +25,10 @@ import { Card as SurfaceCard, CardContent, CardHeader, CardTitle } from '../comp
 import { HelpTooltip, type HelpTooltipContent } from '../components/ui/help-tooltip'
 import { Progress } from '../components/ui/progress'
 import { supabase } from '../lib/supabase'
-import type { Card, CardExpense, CardExpenseStatus, CardStatementArchive, InsertFor } from '../types/database'
+import type { Card, CardExpense, CardExpenseStatus, CardInstallment, CardStatementArchive, InsertFor } from '../types/database'
 import { expenseCategoryOptions } from '../utils/categories'
 import { getCardStatementPeriod } from '../utils/cardStatement'
-import { dateInputValue, formatDate } from '../utils/date'
+import { dateInputValue, daysUntil, formatDate, nextMonthlyDate } from '../utils/date'
 import { cardPayableDebt, cardProvisionAmount, cardSplitTotal } from '../utils/financeSummary'
 import { formatCurrency, parseNumber } from '../utils/formatCurrency'
 import { addTransactionHistory } from '../utils/history'
@@ -464,6 +475,264 @@ function OverviewStat({ label, value, help }: { label: string; value: string; he
       </div>
       <p className="mt-1 truncate text-sm font-bold tabular-nums text-foreground">{value}</p>
     </div>
+  )
+}
+
+type CreditCardStatus = {
+  label: string
+  description: string
+  className: string
+}
+
+function getCreditCardStatus(card: Card, usageRate: number): CreditCardStatus {
+  const payableDebt = cardPayableDebt(card)
+  const dueDate = nextMonthlyDate(card.due_day)
+  const remainingDays = daysUntil(dueDate)
+
+  if (payableDebt > 0 && remainingDays !== null && remainingDays < 0) {
+    return {
+      label: 'Gecikmiş',
+      description: `${Math.abs(remainingDays)} gün geçti`,
+      className: 'bg-rose-50 text-rose-700 ring-rose-200 dark:bg-rose-950/35 dark:text-rose-200 dark:ring-rose-900/70',
+    }
+  }
+
+  if (payableDebt > 0 && remainingDays !== null && remainingDays <= 5) {
+    return {
+      label: 'Son ödeme yaklaşıyor',
+      description: remainingDays === 0 ? 'Bugün' : `${remainingDays} gün kaldı`,
+      className: 'bg-amber-50 text-amber-800 ring-amber-200 dark:bg-amber-950/35 dark:text-amber-100 dark:ring-amber-900/70',
+    }
+  }
+
+  if (usageRate >= 80) {
+    return {
+      label: 'Limit kullanımı yüksek',
+      description: `%${Math.round(usageRate)} kullanım`,
+      className: 'bg-amber-50 text-amber-800 ring-amber-200 dark:bg-amber-950/35 dark:text-amber-100 dark:ring-amber-900/70',
+    }
+  }
+
+  return {
+    label: 'Normal',
+    description: payableDebt > 0 ? 'Takipte' : 'Ödenebilir borç yok',
+    className: 'bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-950/35 dark:text-emerald-200 dark:ring-emerald-900/70',
+  }
+}
+
+function formatMonthlyDay(day: number | null | undefined) {
+  return day ? `Her ay ${day}` : '-'
+}
+
+function formatShortDate(value: Date | null) {
+  if (!value) return '-'
+  return new Intl.DateTimeFormat('tr-TR', { day: 'numeric', month: 'long' }).format(value)
+}
+
+function activeInstallmentCount(card: Card, installments: CardInstallment[]) {
+  return installments.filter((installment) => installment.card_id === card.id && installment.status !== 'paid').length
+}
+
+function openStatementAmount(card: Card, statements: CardStatementArchive[]) {
+  return statements
+    .filter((statement) => statement.card_id === card.id && statement.status === 'open')
+    .reduce((total, statement) => total + statement.statement_debt_amount, 0)
+}
+
+function CardDatum({ label, value, tone = 'neutral' }: { label: string; value: string; tone?: 'neutral' | 'good' | 'warning' | 'danger' }) {
+  const valueClass = {
+    neutral: 'text-foreground',
+    good: 'text-emerald-700 dark:text-emerald-300',
+    warning: 'text-amber-700 dark:text-amber-300',
+    danger: 'text-rose-700 dark:text-rose-300',
+  }[tone]
+
+  return (
+    <div className="finance-field min-w-0 rounded-lg px-3 py-2.5">
+      <p className="truncate text-[11px] font-bold uppercase text-muted-foreground">{label}</p>
+      <p className={`finance-value mt-1 truncate text-sm font-black leading-tight ${valueClass}`}>{value}</p>
+    </div>
+  )
+}
+
+function CreditAccountListCard({
+  row,
+  rows,
+  statements,
+  installments,
+  menu,
+  rowActions,
+  reload,
+  setError,
+  onTransfer,
+  onPayDebt,
+  onCutStatement,
+}: {
+  row: Card
+  rows: Card[]
+  statements: CardStatementArchive[]
+  installments: CardInstallment[]
+  menu: React.ReactNode
+  rowActions: React.ReactNode
+  reload: () => Promise<void>
+  setError: (message: string) => void
+  onTransfer: (source: Card) => void
+  onPayDebt: (card: Card, reload: () => Promise<void>, rows: Card[]) => void
+  onCutStatement: (card: Card, reload: () => Promise<void>, setError: (message: string) => void) => Promise<void>
+}) {
+  if (row.card_type === 'banka_karti') {
+    const accountCount = rows.filter((card) => card.card_type === 'banka_karti').length
+
+    return (
+      <article
+        style={bankHueStyle(row.bank_name, rows)}
+        className="finance-panel min-w-0 rounded-lg p-4 ring-1 ring-[hsl(var(--bank-hue)_42%_82%/0.55)] dark:ring-[hsl(var(--bank-hue)_40%_42%/0.45)]"
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex min-w-0 items-start gap-3">
+            <div className="grid size-11 shrink-0 place-items-center rounded-lg bg-[hsl(var(--bank-hue)_70%_94%)] text-[hsl(var(--bank-hue)_58%_34%)] ring-1 ring-[hsl(var(--bank-hue)_58%_80%)] dark:bg-[hsl(var(--bank-hue)_44%_18%)] dark:text-[hsl(var(--bank-hue)_70%_78%)] dark:ring-[hsl(var(--bank-hue)_42%_36%)]">
+              <Landmark size={20} />
+            </div>
+            <div className="min-w-0">
+              <h2 className="truncate text-base font-black text-foreground">{row.card_name}</h2>
+              <p className="mt-1 truncate text-sm text-muted-foreground">{row.bank_name} · banka hesabı</p>
+            </div>
+          </div>
+          {menu}
+        </div>
+
+        <div className="mt-4 rounded-lg bg-[hsl(var(--bank-hue)_58%_97%)] p-3 ring-1 ring-[hsl(var(--bank-hue)_50%_84%/0.7)] dark:bg-[hsl(var(--bank-hue)_40%_16%)] dark:ring-[hsl(var(--bank-hue)_36%_34%)]">
+          <p className="text-[11px] font-bold uppercase text-muted-foreground">Kullanılabilir bakiye</p>
+          <p className="finance-value mt-1 truncate text-[clamp(1.35rem,6vw,2rem)] font-black leading-none text-foreground">
+            {formatCurrency(row.current_balance)}
+          </p>
+        </div>
+
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          <CardDatum label="Tür" value="Banka hesabı" />
+          <CardDatum label="Not" value={row.note || '-'} />
+        </div>
+
+        <button
+          type="button"
+          onClick={() => onTransfer(row)}
+          disabled={accountCount < 2}
+          className="finance-touch-target mt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-3 py-2 text-xs font-black text-primary-foreground shadow-sm transition hover:bg-primary/90 disabled:opacity-55"
+        >
+          <ArrowRightLeft size={15} />
+          Transfer yap
+        </button>
+        {rowActions}
+      </article>
+    )
+  }
+
+  const stats = limitGroupStats(row, rows)
+  const usageRate = Math.round(stats.usageRate)
+  const dueDate = nextMonthlyDate(row.due_day)
+  const status = getCreditCardStatus(row, stats.usageRate)
+  const openAmount = openStatementAmount(row, statements)
+  const installmentCount = activeInstallmentCount(row, installments)
+  const payableDebt = cardPayableDebt(row)
+
+  return (
+    <article
+      style={bankHueStyle(row.bank_name, rows)}
+      className="finance-panel min-w-0 rounded-lg p-4 ring-1 ring-[hsl(var(--bank-hue)_42%_82%/0.55)] dark:ring-[hsl(var(--bank-hue)_40%_42%/0.45)]"
+    >
+      <div className="relative overflow-hidden rounded-lg bg-[linear-gradient(135deg,hsl(var(--bank-hue)_72%_34%),hsl(var(--bank-hue)_48%_24%))] p-4 text-white shadow-sm">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="truncate text-xs font-bold uppercase text-white/70">{row.bank_name}</p>
+            <h2 className="mt-1 truncate text-lg font-black leading-tight">{row.card_name}</h2>
+            {row.holder_name ? <p className="mt-1 truncate text-xs font-semibold text-white/70">{row.holder_name}</p> : null}
+          </div>
+          <div className="flex shrink-0 items-start gap-2">
+            <div className="grid size-10 place-items-center rounded-lg bg-white/14 text-white ring-1 ring-white/20">
+              <CreditCardIcon size={19} />
+            </div>
+            <div className="[&_.absolute]:text-foreground [&_button]:text-white/78 [&_button:hover]:bg-white/12 [&_button:hover]:text-white">{menu}</div>
+          </div>
+        </div>
+
+        <div className="mt-5 grid grid-cols-[minmax(0,1fr)_auto] items-end gap-3">
+          <div className="min-w-0">
+            <p className="text-[11px] font-bold uppercase text-white/65">Güncel borç</p>
+            <p className="finance-value mt-1 truncate text-[clamp(1.45rem,6vw,2.15rem)] font-black leading-none">{formatCurrency(row.debt_amount)}</p>
+          </div>
+          <span className="rounded-lg bg-white/14 px-2.5 py-1 text-xs font-black ring-1 ring-white/18">%{usageRate}</span>
+        </div>
+
+        <div className="mt-4">
+          <div className="h-2 overflow-hidden rounded-full bg-white/18">
+            <div className="h-full rounded-full bg-white transition-all" style={{ width: `${stats.usageRate}%` }} />
+          </div>
+          <div className="mt-2 flex items-center justify-between gap-3 text-[11px] font-semibold text-white/72">
+            <span>Limit {formatCurrency(stats.sharedLimit)}</span>
+            <span>Kalan {formatCurrency(stats.availableLimit)}</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <span className={`inline-flex min-h-6 items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-black ring-1 ${status.className}`}>
+          {status.label === 'Normal' ? <CheckCircle2 size={13} /> : <AlertTriangle size={13} />}
+          {status.label}
+        </span>
+        <span className="rounded-lg bg-muted px-2.5 py-1 text-xs font-bold text-muted-foreground">{status.description}</span>
+        {stats.isShared ? <span className="rounded-lg bg-info/10 px-2.5 py-1 text-xs font-bold text-info">Ortak limit</span> : null}
+      </div>
+
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        <CardDatum label="Kullanılabilir" value={formatCurrency(stats.availableLimit)} tone="good" />
+        <CardDatum label="Dönem borcu" value={formatCurrency(row.current_period_spending)} />
+        <CardDatum label="Açık ekstre" value={formatCurrency(openAmount || row.statement_debt_amount)} tone={openAmount + row.statement_debt_amount > 0 ? 'danger' : 'neutral'} />
+        <CardDatum label="Devam eden taksit" value={`${installmentCount} işlem`} tone={installmentCount > 0 ? 'warning' : 'neutral'} />
+      </div>
+
+      <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+        <div className="rounded-lg bg-muted/55 px-3 py-2">
+          <p className="font-bold uppercase text-muted-foreground">Ekstre</p>
+          <p className="mt-1 font-extrabold text-foreground">{formatMonthlyDay(row.statement_day)}</p>
+        </div>
+        <div className="rounded-lg bg-muted/55 px-3 py-2">
+          <p className="font-bold uppercase text-muted-foreground">Son ödeme</p>
+          <p className="mt-1 font-extrabold text-foreground">{formatShortDate(dueDate)}</p>
+        </div>
+      </div>
+
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        <button
+          type="button"
+          onClick={() => onPayDebt(row, reload, rows)}
+          disabled={payableDebt <= 0}
+          className="finance-touch-target inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-3 py-2 text-xs font-black text-primary-foreground shadow-sm transition hover:bg-primary/90 disabled:opacity-55"
+        >
+          <ReceiptText size={14} />
+          Borç öde
+        </button>
+        <a
+          href="#hizli-harcama"
+          className="finance-touch-target inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-xs font-black text-foreground shadow-sm transition hover:bg-muted"
+        >
+          Harcama ekle
+        </a>
+        <a
+          href="#hizli-harcama"
+          className="finance-touch-target inline-flex items-center justify-center rounded-lg border border-border bg-card px-3 py-2 text-xs font-black text-foreground shadow-sm transition hover:bg-muted"
+        >
+          Taksit ekle
+        </a>
+        <button
+          type="button"
+          onClick={() => void onCutStatement(row, reload, setError)}
+          disabled={row.current_period_spending <= 0}
+          className="finance-touch-target inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-xs font-black text-foreground shadow-sm transition hover:bg-muted disabled:opacity-55"
+        >
+          Ekstre kes
+        </button>
+      </div>
+    </article>
   )
 }
 
@@ -1394,6 +1663,7 @@ export function CardsPage() {
   const [statementsLoading, setStatementsLoading] = useState(false)
   const [statementError, setStatementError] = useState('')
   const [statementActionId, setStatementActionId] = useState<string | null>(null)
+  const [installments, setInstallments] = useState<CardInstallment[]>([])
   const [statementPayment, setStatementPayment] = useState<{ statement: CardStatementArchive; card: Card } | null>(null)
   const [statementPaymentAccounts, setStatementPaymentAccounts] = useState<Card[]>([])
   const [statementPaymentSourceCard, setStatementPaymentSourceCard] = useState('')
@@ -1444,6 +1714,20 @@ export function CardsPage() {
     setStatementsLoading(false)
   }, [])
 
+  const loadInstallments = useCallback(async () => {
+    const { data, error } = await supabase
+      .from('card_installments')
+      .select('*')
+      .order('due_month', { ascending: true })
+
+    if (error) {
+      setInstallments([])
+      return
+    }
+
+    setInstallments((data ?? []) as CardInstallment[])
+  }, [])
+
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadProvisions()
@@ -1454,8 +1738,13 @@ export function CardsPage() {
     void loadStatements()
   }, [loadStatements])
 
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void loadInstallments()
+  }, [loadInstallments])
+
   async function refreshCardsAndProvisions(reload: () => Promise<void>) {
-    await Promise.all([reload(), loadProvisions(), loadStatements()])
+    await Promise.all([reload(), loadProvisions(), loadStatements(), loadInstallments()])
   }
 
   async function handleProvisionAction(
@@ -1733,7 +2022,7 @@ export function CardsPage() {
     }
 
     closeStatementPayment()
-    await Promise.all([reloadCards?.(), loadStatements()])
+    await Promise.all([reloadCards?.(), loadStatements(), loadInstallments()])
   }
 
   async function cutStatement(card: Card, reload: () => Promise<void>, setError: (message: string) => void) {
@@ -1901,6 +2190,21 @@ export function CardsPage() {
               ]
             : [`Bakiye: ${formatCurrency(row.current_balance)}`]
         }
+        renderCard={(row, helpers) => (
+          <CreditAccountListCard
+            row={row as Card}
+            rows={helpers.rows as Card[]}
+            statements={statements}
+            installments={installments}
+            menu={helpers.menu}
+            rowActions={helpers.rowActions}
+            reload={helpers.reload}
+            setError={helpers.setError}
+            onTransfer={(source) => openTransaction(source, helpers.reload, helpers.rows as Card[], 'transfer')}
+            onPayDebt={openDebtPayment}
+            onCutStatement={cutStatement}
+          />
+        )}
         renderExtra={(row, helpers) => {
           if (row.card_type !== 'kredi_karti' || row.credit_limit <= 0) return null
 

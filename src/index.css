@@ -38,7 +38,7 @@
 
 :root {
   --radius: 0.5rem;
-  --background: #f4f7f9;
+  --background: #f5f7fa;
   --foreground: #111827;
   --card: #ffffff;
   --card-foreground: #111827;
@@ -48,7 +48,7 @@
   --primary-foreground: #ffffff;
   --secondary: #e9eff5;
   --secondary-foreground: #172033;
-  --muted: #e8eef4;
+  --muted: #e7edf3;
   --muted-foreground: #667085;
   --accent: #e7f5f1;
   --accent-foreground: #075c47;
@@ -62,11 +62,11 @@
   --info-foreground: #eff6ff;
   --surface: #ffffff;
   --surface-muted: #f8fafc;
-  --border: #d9e2ec;
-  --input: #d4deea;
+  --border: #d7e0ea;
+  --input: #d1dbe7;
   --ring: #0c8b68;
-  --shadow-card: 0 10px 28px rgba(16, 24, 40, 0.055);
-  --shadow-card-hover: 0 18px 44px rgba(16, 24, 40, 0.095);
+  --shadow-card: 0 10px 28px rgba(16, 24, 40, 0.06);
+  --shadow-card-hover: 0 18px 44px rgba(16, 24, 40, 0.1);
   --shadow-elevated: 0 24px 64px rgba(16, 24, 40, 0.14);
   color: #111827;
   background: #f4f7f9;
@@ -122,7 +122,7 @@
   box-sizing: border-box;
 }
 
-body {
+  body {
   min-width: 320px;
   min-height: 100dvh;
   margin: 0;
@@ -172,6 +172,21 @@ button:disabled {
 
   .finance-surface-muted {
     background: color-mix(in srgb, var(--muted) 46%, transparent);
+  }
+
+  .finance-panel {
+    border: 1px solid color-mix(in srgb, var(--border) 82%, transparent);
+    background: color-mix(in srgb, var(--card) 95%, transparent);
+    box-shadow: var(--shadow-card);
+  }
+
+  .finance-field {
+    border: 1px solid color-mix(in srgb, var(--border) 74%, transparent);
+    background: color-mix(in srgb, var(--muted) 52%, transparent);
+  }
+
+  .finance-touch-target {
+    min-height: 2.75rem;
   }
 
   .finance-value {

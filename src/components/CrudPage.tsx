@@ -22,6 +22,14 @@ type FieldOption = {
 type FormErrors = Record<string, string>
 type SaveAction = 'create' | 'update'
 
+type RowMeta = {
+  title: string
+  subtitle: string
+  details: string[]
+  note: string
+  searchText: string
+}
+
 export type FormField = {
   name: string
   label: string
@@ -61,6 +69,17 @@ type CrudPageProps<T extends TableName> = {
   renderRowActions?: (row: RowFor<T>, helpers: { reload: () => Promise<void>; setError: (message: string) => void; rows: RowFor<T>[] }) => ReactNode
   renderMenuActions?: (row: RowFor<T>, helpers: { reload: () => Promise<void>; setError: (message: string) => void; rows: RowFor<T>[]; closeMenu: () => void }) => ReactNode
   renderExtra?: (row: RowFor<T>, helpers: { reload: () => Promise<void>; setError: (message: string) => void; rows: RowFor<T>[] }) => ReactNode
+  renderCard?: (
+    row: RowFor<T>,
+    helpers: {
+      meta: RowMeta
+      reload: () => Promise<void>
+      setError: (message: string) => void
+      rows: RowFor<T>[]
+      menu: ReactNode
+      rowActions: ReactNode
+    },
+  ) => ReactNode
   renderBeforeList?: (helpers: { loading: boolean; rows: RowFor<T>[]; reload: () => Promise<void>; setError: (message: string) => void }) => ReactNode
 }
 
@@ -89,6 +108,7 @@ export function CrudPage<T extends TableName>({
   renderRowActions,
   renderMenuActions,
   renderExtra,
+  renderCard,
   renderBeforeList,
 }: CrudPageProps<T>) {
   const { user } = useAuth()
@@ -110,7 +130,7 @@ export function CrudPage<T extends TableName>({
   const visibleFields = fields.filter((field) => isFieldVisible(field, formValues))
   const normalizedQuery = query.trim().toLocaleLowerCase('tr-TR')
   const rowMeta = useMemo(() => {
-    const map = new Map<string, { title: string; subtitle: string; details: string[]; note: string; searchText: string }>()
+    const map = new Map<string, RowMeta>()
 
     for (const row of rows) {
       const title = renderTitle(row)
@@ -280,10 +300,10 @@ export function CrudPage<T extends TableName>({
 
   return (
     <section className="flex flex-col gap-4">
-      <div className="finance-surface rounded-lg p-4">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+      <div className="finance-surface rounded-lg p-4 sm:p-5">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div className="min-w-0">
-            <h1 className="text-lg font-black text-foreground">{pageTitle ?? addLabel}</h1>
+            <h1 className="text-xl font-black leading-tight text-foreground">{pageTitle ?? addLabel}</h1>
             <p className="mt-1 text-sm text-muted-foreground">
               {normalizedQuery ? `${visibleRows.length} / ${rows.length} kayıt gösteriliyor` : `${rows.length} kayıt bulundu`}
             </p>
@@ -310,9 +330,17 @@ export function CrudPage<T extends TableName>({
       {renderBeforeList ? renderBeforeList({ loading, rows, reload: loadRows, setError }) : null}
 
       {loading ? (
-        <div className="grid gap-3">
-          <Skeleton className="h-24 rounded-lg" />
-          <Skeleton className="h-24 rounded-lg" />
+        <div className="grid gap-3 sm:grid-cols-2">
+          {Array.from({ length: 4 }, (_, index) => (
+            <div key={index} className="finance-surface rounded-lg p-4">
+              <Skeleton className="h-5 w-2/3" />
+              <Skeleton className="mt-3 h-4 w-1/2" />
+              <div className="mt-5 grid grid-cols-2 gap-2">
+                <Skeleton className="h-14 rounded-lg" />
+                <Skeleton className="h-14 rounded-lg" />
+              </div>
+            </div>
+          ))}
         </div>
       ) : rows.length === 0 ? (
         <EmptyState title={emptyTitle} description={emptyDescription} />
@@ -332,20 +360,82 @@ export function CrudPage<T extends TableName>({
                   <span className="h-px flex-1 bg-gradient-to-r from-border via-border/60 to-transparent" />
                 </div>
               ) : null}
-              <div className="flex flex-col gap-3">
+              <div className="grid gap-3 min-[760px]:grid-cols-2 xl:grid-cols-3">
                 {items.map((row) => {
                   const meta = rowMeta.get(row.id)
                   const title = meta?.title ?? renderTitle(row)
                   const subtitle = meta?.subtitle ?? renderSubtitle?.(row) ?? ''
                   const details = meta?.details ?? renderDetails(row)
                   const note = meta?.note ?? ('note' in row && row.note ? String(row.note) : '')
+                  const resolvedMeta: RowMeta = {
+                    title,
+                    subtitle,
+                    details,
+                    note,
+                    searchText: meta?.searchText ?? [title, subtitle, ...details, note].join(' ').toLocaleLowerCase('tr-TR'),
+                  }
+                  const rowMenu = (
+                    <div className="relative shrink-0">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setMenuOpenId(menuOpenId === row.id ? null : row.id)
+                          }}
+                          className="grid size-10 place-items-center rounded-lg text-muted-foreground transition hover:bg-muted hover:text-foreground"
+                          aria-label="Menu"
+                        >
+                          <MoreVertical size={18} />
+                        </button>
+                        {menuOpenId === row.id && (
+                          <div className="absolute right-0 top-full z-10 mt-1 w-44 rounded-lg border border-border bg-popover py-1 shadow-[var(--shadow-elevated)]">
+                            {renderMenuActions ? renderMenuActions(row, { reload: loadRows, setError, rows, closeMenu: () => setMenuOpenId(null) }) : null}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setMenuOpenId(null)
+                                openEdit(row)
+                              }}
+                              className="flex w-full items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted"
+                            >
+                              <Pencil size={14} />
+                              Düzenle
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setMenuOpenId(null)
+                                setDeleteId(row.id)
+                              }}
+                              className="flex w-full items-center gap-2 px-3 py-2 text-sm text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/40"
+                            >
+                              <Trash2 size={14} />
+                              Sil
+                            </button>
+                          </div>
+                        )}
+                    </div>
+                  )
+                  const rowActions = renderRowActions ? (
+                    <div className="mt-3 flex flex-wrap gap-2">{renderRowActions(row, { reload: loadRows, setError, rows })}</div>
+                  ) : null
+
+                  if (renderCard) {
+                    return (
+                      <div key={row.id} className="min-w-0">
+                        {renderCard(row, { meta: resolvedMeta, reload: loadRows, setError, rows, menu: rowMenu, rowActions })}
+                      </div>
+                    )
+                  }
 
                   return (
                     <article
                       key={row.id}
                       style={getCardStyle?.(row, rows)}
                       className={cn(
-                        'rounded-lg border bg-card/95 p-4 shadow-[var(--shadow-card)] transition-all hover:-translate-y-0.5 hover:shadow-[var(--shadow-card-hover)] min-[390px]:p-5',
+                        'min-w-0 rounded-lg border bg-card/95 p-4 shadow-[var(--shadow-card)] transition-all hover:-translate-y-0.5 hover:shadow-[var(--shadow-card-hover)] min-[390px]:p-5',
                         getCardClassName?.(row, rows) ?? 'border-border/75',
                       )}
                     >
@@ -403,18 +493,29 @@ export function CrudPage<T extends TableName>({
                     <div className="mt-3 flex flex-wrap gap-2">{renderRowActions(row, { reload: loadRows, setError, rows })}</div>
                   ) : null}
                   <dl className="mt-4 grid grid-cols-1 gap-2 text-sm min-[390px]:grid-cols-2">
-                    {details.map((detail) => (
-                      <div
-                        key={detail}
-                        style={getDetailStyle?.(row, rows)}
-                        className={cn(
-                          'min-w-0 break-words rounded-lg px-3 py-2.5 text-foreground/85 ring-1 ring-black/[0.025] dark:ring-white/[0.04]',
-                          getDetailClassName?.(row, rows) ?? 'bg-muted/55',
-                        )}
-                      >
-                        {detail}
-                      </div>
-                    ))}
+                    {details.map((detail) => {
+                      const parsedDetail = splitDetail(detail)
+
+                      return (
+                        <div
+                          key={detail}
+                          style={getDetailStyle?.(row, rows)}
+                          className={cn(
+                            'min-w-0 rounded-lg px-3 py-2.5 ring-1 ring-black/[0.025] dark:ring-white/[0.04]',
+                            getDetailClassName?.(row, rows) ?? 'bg-muted/55',
+                          )}
+                        >
+                          {parsedDetail ? (
+                            <>
+                              <dt className="truncate text-[11px] font-bold uppercase text-muted-foreground">{parsedDetail.label}</dt>
+                              <dd className="mt-1 break-words text-sm font-extrabold leading-snug text-foreground">{parsedDetail.value}</dd>
+                            </>
+                          ) : (
+                            <span className="break-words text-sm font-semibold text-foreground/85">{detail}</span>
+                          )}
+                        </div>
+                      )
+                    })}
                   </dl>
                   {note ? <p className="mt-3 text-sm text-muted-foreground">{note}</p> : null}
                   {renderExtra ? renderExtra(row, { reload: loadRows, setError, rows }) : null}
@@ -432,13 +533,13 @@ export function CrudPage<T extends TableName>({
         open={modalOpen}
         onClose={() => setModalOpen(false)}
       >
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
-          {formError ? <Alert variant="destructive">{formError}</Alert> : null}
+        <form onSubmit={handleSubmit} className="grid gap-4 sm:grid-cols-2" noValidate>
+          {formError ? <Alert variant="destructive" className="sm:col-span-2">{formError}</Alert> : null}
           {visibleFields.map((field) => {
             const fieldError = formErrors[field.name]
 
             return (
-              <label key={field.name} className="block text-sm font-semibold text-foreground">
+              <label key={field.name} className={cn('block text-sm font-semibold text-foreground', field.type === 'textarea' && 'sm:col-span-2')}>
                 <span>
                   {field.label}
                   {field.required ? <span className="text-rose-500"> *</span> : null}
@@ -532,7 +633,7 @@ export function CrudPage<T extends TableName>({
           <Button
             type="submit"
             disabled={saving}
-            className="sticky bottom-0 z-10 h-11 w-full shadow-[0_-10px_24px_rgba(255,255,255,0.9)] dark:shadow-[0_-10px_24px_rgba(12,10,9,0.9)] sm:static sm:shadow-none"
+            className="sticky bottom-0 z-10 h-11 w-full shadow-[0_-10px_24px_rgba(255,255,255,0.9)] dark:shadow-[0_-10px_24px_rgba(12,10,9,0.9)] sm:static sm:col-span-2 sm:shadow-none"
           >
             {saving ? 'Kaydediliyor...' : 'Kaydet'}
           </Button>
@@ -603,4 +704,14 @@ function groupRows<T>(rows: T[], groupBy?: (row: T) => string) {
   }
 
   return Array.from(groups, ([group, items]) => ({ group, items }))
+}
+
+function splitDetail(detail: string) {
+  const separatorIndex = detail.indexOf(':')
+  if (separatorIndex <= 0) return null
+
+  return {
+    label: detail.slice(0, separatorIndex).trim(),
+    value: detail.slice(separatorIndex + 1).trim(),
+  }
 }
