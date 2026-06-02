@@ -2,6 +2,7 @@ import { CalendarDays, Check, Landmark, MoreVertical, Pencil, ReceiptText, Trash
 import { useCallback, useEffect, useState } from 'react'
 import { CrudPage, type FormField } from '../components/CrudPage'
 import { AccountSelector } from '../components/finance/AccountSelector'
+import { BankLogo } from '../components/finance/BankLogo'
 import { SimpleModal } from '../components/SimpleModal'
 import { Badge } from '../components/ui/badge'
 import { Card as SurfaceCard, CardContent, CardHeader, CardTitle } from '../components/ui/card'
@@ -188,9 +189,12 @@ function LoanOverview({ loans, installments }: { loans: Loan[]; installments: Lo
             <SurfaceCard key={loan.id} className="border-0 shadow-sm ring-1 ring-stone-200/80 dark:ring-stone-800">
               <CardHeader className="pb-0">
                 <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <CardTitle className="truncate text-base">{loan.loan_name}</CardTitle>
-                    <p className="mt-1 truncate text-xs text-muted-foreground">{loan.bank_name}</p>
+                  <div className="flex min-w-0 items-start gap-3">
+                    <BankLogo bankName={loan.bank_name} size="sm" />
+                    <div className="min-w-0">
+                      <CardTitle className="truncate text-base">{loan.loan_name}</CardTitle>
+                      <p className="mt-1 truncate text-xs text-muted-foreground">{loan.bank_name}</p>
+                    </div>
                   </div>
                   <Badge variant={progress.next ? 'secondary' : 'default'}>
                     {progress.totalCount ? `${progress.paidCount}/${progress.totalCount}` : `${loan.remaining_installments} kaldı`}

@@ -83,6 +83,8 @@ type CrudPageProps<T extends TableName> = {
   ) => ReactNode
   renderBeforeList?: (helpers: { loading: boolean; rows: RowFor<T>[]; reload: () => Promise<void>; setError: (message: string) => void }) => ReactNode
   renderAfterList?: (helpers: { loading: boolean; rows: RowFor<T>[]; reload: () => Promise<void>; setError: (message: string) => void }) => ReactNode
+  /** false ise dahili kayıt listesi (kart ızgarası) gizlenir; sayfa içi sekmeler için kullanılır. */
+  showList?: boolean
 }
 
 export function CrudPage<T extends TableName>({
@@ -113,6 +115,7 @@ export function CrudPage<T extends TableName>({
   renderCard,
   renderBeforeList,
   renderAfterList,
+  showList = true,
 }: CrudPageProps<T>) {
   const { user } = useAuth()
   const location = useLocation()
@@ -332,7 +335,7 @@ export function CrudPage<T extends TableName>({
       {error ? <Alert variant="destructive">{error}</Alert> : null}
       {renderBeforeList ? renderBeforeList({ loading, rows, reload: loadRows, setError }) : null}
 
-      {loading ? (
+      {!showList ? null : loading ? (
         <div className="grid gap-3 sm:grid-cols-2">
           {Array.from({ length: 4 }, (_, index) => (
             <div key={index} className="finance-surface rounded-lg p-4">

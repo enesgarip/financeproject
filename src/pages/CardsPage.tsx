@@ -5,7 +5,7 @@ import {
   CheckCircle2,
   Clock3,
   CreditCard as CreditCardIcon,
-  Landmark,
+  LayoutGrid,
   ReceiptText,
   XCircle,
 } from 'lucide-react'
@@ -16,6 +16,7 @@ import { AccountSelector } from '../components/finance/AccountSelector'
 import { CategoryPicker } from '../components/finance/CategoryPicker'
 import { CardInstallmentCalendarPanel } from '../components/finance/CardInstallmentCalendarPanel'
 import { CardInstallmentExpensesPanel } from '../components/finance/CardInstallmentExpensesPanel'
+import { BankLogo } from '../components/finance/BankLogo'
 import { AmountDisplay, FinancePanel, MiniStat, ProgressStrip, SectionHeader, StatusBadge } from '../components/finance/FinanceUI'
 import { InstallmentPlanner } from '../components/finance/InstallmentPlanner'
 import { MoneyInput } from '../components/finance/MoneyInput'
@@ -30,8 +31,65 @@ import { expenseCategoryOptions } from '../utils/categories'
 import { getCardStatementPeriod } from '../utils/cardStatement'
 import { dateInputValue, daysUntil, formatDate, nextMonthlyDate } from '../utils/date'
 import { cardPayableDebt, cardProvisionAmount, cardSplitTotal } from '../utils/financeSummary'
+import { bankBrandGradient, getBankBrand } from '../utils/bankBranding'
+import { cn } from '../lib/utils'
 import { formatCurrency, parseNumber } from '../utils/formatCurrency'
 import { addTransactionHistory } from '../utils/history'
+
+type CardSection = 'ozet' | 'kartlar' | 'islemler' | 'ekstreler'
+
+const cardSections = [
+  { id: 'ozet', label: 'Özet', icon: LayoutGrid },
+  { id: 'kartlar', label: 'Kartlar', icon: CreditCardIcon },
+  { id: 'islemler', label: 'İşlemler', icon: ReceiptText },
+  { id: 'ekstreler', label: 'Ekstreler', icon: CalendarClock },
+] as const satisfies readonly { id: CardSection; label: string; icon: typeof LayoutGrid }[]
+
+function CardSectionNav({
+  section,
+  onSelect,
+  counts,
+}: {
+  section: CardSection
+  onSelect: (next: CardSection) => void
+  counts: Partial<Record<CardSection, number>>
+}) {
+  return (
+    <div className="finance-command-surface -mx-1 flex gap-1.5 overflow-x-auto rounded-lg p-1.5 finance-scrollbar">
+      {cardSections.map((item) => {
+        const isActive = item.id === section
+        const count = counts[item.id]
+        return (
+          <button
+            key={item.id}
+            type="button"
+            onClick={() => onSelect(item.id)}
+            aria-pressed={isActive}
+            className={cn(
+              'flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-2 text-xs font-black transition',
+              isActive
+                ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/20'
+                : 'text-muted-foreground hover:bg-muted/70 hover:text-foreground',
+            )}
+          >
+            <item.icon size={16} strokeWidth={2.3} className="shrink-0" />
+            <span className="truncate">{item.label}</span>
+            {count ? (
+              <span
+                className={cn(
+                  'grid min-w-5 shrink-0 place-items-center rounded-full px-1 text-[10px] font-black tabular-nums',
+                  isActive ? 'bg-primary-foreground/20 text-primary-foreground' : 'bg-primary/12 text-primary',
+                )}
+              >
+                {count}
+              </span>
+            ) : null}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
 
 const fields: FormField[] = [
   { name: 'bank_name', label: 'Banka', type: 'text', required: true },
@@ -328,9 +386,12 @@ function CreditCardOverview({ rows }: { rows: Card[] }) {
             <SurfaceCard key={group.key} className="min-w-[86%] snap-start border-0 shadow-sm ring-1 ring-stone-200/80 dark:ring-stone-800 min-[520px]:min-w-[48%]">
               <CardHeader className="pb-0">
                 <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <CardTitle className="truncate text-base">{group.label}</CardTitle>
-                    <p className="mt-1 truncate text-xs text-muted-foreground">{group.bankName}</p>
+                  <div className="flex min-w-0 items-start gap-3">
+                    <BankLogo bankName={group.bankName} size="sm" />
+                    <div className="min-w-0">
+                      <CardTitle className="truncate text-base">{group.label}</CardTitle>
+                      <p className="mt-1 truncate text-xs text-muted-foreground">{group.bankName}</p>
+                    </div>
                   </div>
                   <Badge variant="secondary">{group.cards.length} kart</Badge>
                 </div>
@@ -428,9 +489,12 @@ function AccountHubPanel({
           <div className="grid gap-2 min-[760px]:grid-cols-2">
             {accounts.map((account) => (
               <div key={account.id} className="flex items-center justify-between gap-3 rounded-lg bg-muted/55 px-3 py-2.5">
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-bold text-foreground">{account.card_name}</p>
-                  <p className="truncate text-xs text-muted-foreground">{account.bank_name}</p>
+                <div className="flex min-w-0 items-center gap-3">
+                  <BankLogo bankName={account.bank_name} size="sm" />
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-bold text-foreground">{account.card_name}</p>
+                    <p className="truncate text-xs text-muted-foreground">{account.bank_name}</p>
+                  </div>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
                   <span className="text-sm font-extrabold tabular-nums text-foreground">{formatCurrency(account.current_balance)}</span>
@@ -591,9 +655,7 @@ function CreditAccountListCard({
       >
         <div className="flex items-start justify-between gap-3">
           <div className="flex min-w-0 items-start gap-3">
-            <div className="grid size-11 shrink-0 place-items-center rounded-lg bg-[hsl(var(--bank-hue)_70%_94%)] text-[hsl(var(--bank-hue)_58%_34%)] ring-1 ring-[hsl(var(--bank-hue)_58%_80%)] dark:bg-[hsl(var(--bank-hue)_44%_18%)] dark:text-[hsl(var(--bank-hue)_70%_78%)] dark:ring-[hsl(var(--bank-hue)_42%_36%)]">
-              <Landmark size={20} />
-            </div>
+            <BankLogo bankName={row.bank_name} size="md" />
             <div className="min-w-0">
               <h2 className="truncate text-base font-black text-foreground">{row.card_name}</h2>
               <p className="mt-1 truncate text-sm text-muted-foreground">{row.bank_name} · banka hesabı</p>
@@ -645,17 +707,21 @@ function CreditAccountListCard({
       style={bankHueStyle(row.bank_name, rows)}
       className="finance-panel min-w-0 rounded-lg bg-card/96 p-4 ring-1 ring-[hsl(var(--bank-hue)_42%_82%/0.55)] dark:ring-[hsl(var(--bank-hue)_40%_42%/0.45)]"
     >
-      <div className="relative overflow-hidden rounded-lg bg-[linear-gradient(135deg,hsl(var(--bank-hue)_72%_32%),hsl(var(--bank-hue)_48%_20%))] p-4 text-white shadow-sm">
+      <div
+        style={{ backgroundImage: bankBrandGradient(row.bank_name) }}
+        className="relative overflow-hidden rounded-lg p-4 text-white shadow-sm"
+      >
         <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-white/35" />
-        <div className="flex items-start justify-between gap-3">
+        <div className="pointer-events-none absolute -right-8 -top-10 size-32 rounded-full bg-white/10 blur-2xl" />
+        <div className="relative flex items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="truncate text-xs font-bold uppercase text-white/70">{row.bank_name}</p>
             <h2 className="mt-1 truncate text-lg font-black leading-tight">{row.card_name}</h2>
             {row.holder_name ? <p className="mt-1 truncate text-xs font-semibold text-white/70">{row.holder_name}</p> : null}
           </div>
           <div className="flex shrink-0 items-start gap-2">
-            <div className="grid size-10 place-items-center rounded-lg bg-white/14 text-white ring-1 ring-white/20">
-              <CreditCardIcon size={19} />
+            <div className="grid size-10 place-items-center rounded-lg bg-white/15 text-xs font-black uppercase tracking-tight text-white ring-1 ring-white/25">
+              {getBankBrand(row.bank_name).code}
             </div>
             <div className="[&_.absolute]:text-foreground [&_button]:text-white/78 [&_button:hover]:bg-white/12 [&_button:hover]:text-white">{menu}</div>
           </div>
@@ -1706,6 +1772,7 @@ function DueStatementAutomation({
 }
 
 export function CardsPage() {
+  const [section, setSection] = useState<CardSection>('ozet')
   const [transactionCard, setTransactionCard] = useState<Card | null>(null)
   const [transactionType, setTransactionType] = useState<'in' | 'out' | 'transfer'>('in')
   const [transactionAmount, setTransactionAmount] = useState('')
@@ -2138,6 +2205,11 @@ export function CardsPage() {
     await Promise.all([reload(), loadStatements()])
   }
 
+  const handleSectionChange = useCallback((next: CardSection) => {
+    setSection(next)
+    if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' })
+  }, [])
+
   const transactionTarget = movementAccounts.find((card) => card.id === transactionTargetCard)
   const transactionTargetAccounts = movementAccounts.filter((card) => card.id !== transactionCard?.id)
   const transactionAmountValue = parseNumber(transactionAmount)
@@ -2152,58 +2224,79 @@ export function CardsPage() {
         emptyTitle="Henüz kart yok"
         emptyDescription="Banka hesaplarını ve kredi kartlarını buradan takip edebilirsin."
         orderBy="card_type"
-        renderBeforeList={({ loading, rows, reload, setError }) =>
-          !loading ? (
+        showList={section === 'kartlar'}
+        renderBeforeList={({ loading, rows, reload, setError }) => {
+          const cardRows = rows as Card[]
+          const counts: Partial<Record<CardSection, number>> = {
+            kartlar: cardRows.length,
+            ekstreler:
+              statements.filter((statement) => statement.status === 'open').length +
+              provisions.filter((expense) => expense.status === 'provision').length,
+          }
+
+          return (
             <div className="flex flex-col gap-3">
-              <DueStatementAutomation rows={rows as Card[]} reload={reload} loadStatements={loadStatements} setError={setError} />
-              <AccountHubPanel rows={rows as Card[]} onOpenTransfer={(source) => openTransaction(source, reload, rows as Card[], 'transfer')} />
-              <CreditCardOverview rows={rows as Card[]} />
+              <CardSectionNav section={section} onSelect={handleSectionChange} counts={counts} />
+              {!loading ? (
+                <DueStatementAutomation rows={cardRows} reload={reload} loadStatements={loadStatements} setError={setError} />
+              ) : null}
+
+              {!loading && section === 'ozet' ? (
+                <>
+                  <AccountHubPanel rows={cardRows} onOpenTransfer={(source) => openTransaction(source, reload, cardRows, 'transfer')} />
+                  <CreditCardOverview rows={cardRows} />
+                </>
+              ) : null}
+
+              {!loading && section === 'islemler' ? (
+                <>
+                  <QuickExpensePanel rows={cardRows} reload={() => refreshCardsAndProvisions(reload)} setError={setError} />
+                  <CardInstallmentExpensesPanel
+                    cards={cardRows}
+                    reload={() => refreshCardsAndProvisions(reload)}
+                    setError={setError}
+                  />
+                  {cardRows.some((row) => row.card_type === 'kredi_karti') ? (
+                    <details className="rounded-lg border border-border/75 bg-card/80 p-3 shadow-sm">
+                      <summary className="cursor-pointer text-sm font-bold text-foreground">Eski taksit devri</summary>
+                      <div className="mt-3">
+                        <LegacyInstallmentPanel rows={cardRows} reload={reload} setError={setError} />
+                      </div>
+                    </details>
+                  ) : null}
+                </>
+              ) : null}
+
+              {!loading && section === 'ekstreler' ? (
+                <>
+                  {statementError ? (
+                    <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">{statementError}</p>
+                  ) : null}
+                  <StatementPanel
+                    rows={cardRows}
+                    statements={statements}
+                    loading={statementsLoading}
+                    actionId={statementActionId}
+                    onPay={(statement, card) => openStatementPayment(statement, card, cardRows, reload)}
+                  />
+                  {provisionError ? (
+                    <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">{provisionError}</p>
+                  ) : null}
+                  <ProvisionPanel
+                    rows={cardRows}
+                    provisions={provisions}
+                    loading={provisionsLoading}
+                    actionId={provisionActionId}
+                    onPost={(expense, amount) => void handleProvisionAction(expense, 'post', reload, setError, amount)}
+                    onPostAll={(expenses) => void handlePostAllProvisions(expenses, reload, setError)}
+                    onCancel={(expense) => void handleProvisionAction(expense, 'cancel', reload, setError)}
+                  />
+                  <CardInstallmentCalendarPanel cards={cardRows} />
+                </>
+              ) : null}
             </div>
-          ) : null
-        }
-        renderAfterList={({ loading, rows, reload, setError }) =>
-          !loading ? (
-            <div className="flex flex-col gap-3">
-              <QuickExpensePanel rows={rows as Card[]} reload={() => refreshCardsAndProvisions(reload)} setError={setError} />
-              {statementError ? (
-                <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">{statementError}</p>
-              ) : null}
-              <StatementPanel
-                rows={rows as Card[]}
-                statements={statements}
-                loading={statementsLoading}
-                actionId={statementActionId}
-                onPay={(statement, card) => openStatementPayment(statement, card, rows as Card[], reload)}
-              />
-              {provisionError ? (
-                <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">{provisionError}</p>
-              ) : null}
-              <ProvisionPanel
-                rows={rows as Card[]}
-                provisions={provisions}
-                loading={provisionsLoading}
-                actionId={provisionActionId}
-                onPost={(expense, amount) => void handleProvisionAction(expense, 'post', reload, setError, amount)}
-                onPostAll={(expenses) => void handlePostAllProvisions(expenses, reload, setError)}
-                onCancel={(expense) => void handleProvisionAction(expense, 'cancel', reload, setError)}
-              />
-              <CardInstallmentCalendarPanel cards={rows as Card[]} />
-              <CardInstallmentExpensesPanel
-                cards={rows as Card[]}
-                reload={() => refreshCardsAndProvisions(reload)}
-                setError={setError}
-              />
-              {(rows as Card[]).some((row) => row.card_type === 'kredi_karti') ? (
-                <details className="rounded-lg border border-border/75 bg-card/80 p-3 shadow-sm">
-                  <summary className="cursor-pointer text-sm font-bold text-foreground">Eski taksit devri</summary>
-                  <div className="mt-3">
-                    <LegacyInstallmentPanel rows={rows as Card[]} reload={reload} setError={setError} />
-                  </div>
-                </details>
-              ) : null}
-            </div>
-          ) : null
-        }
+          )
+        }}
         getInitialValues={(row?: Card) => ({
           bank_name: row?.bank_name ?? '',
           card_name: row?.card_name ?? '',
