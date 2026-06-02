@@ -1,4 +1,4 @@
-import { CalendarDays, Check, CheckCircle2, Landmark, MoreVertical, Pencil, Trash2 } from 'lucide-react'
+import { CalendarDays, Check, CheckCircle2, Landmark, MoreVertical, Pencil, RotateCcw, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { CrudPage, type FormField } from '../components/CrudPage'
 import { AccountSelector } from '../components/finance/AccountSelector'
@@ -241,6 +241,12 @@ function validateLoanForm(formData: FormData) {
   return errors
 }
 
+function isSchemaCacheError(error: { code?: string; message?: string } | null | undefined) {
+  if (!error) return false
+  const message = error.message ?? ''
+  return error.code === 'PGRST202' || error.code === 'PGRST205' || message.includes('schema cache') || message.includes('Could not find the function')
+}
+
 async function getBankaKartlari(): Promise<Card[]> {
   const { data, error } = await supabase
     .from('cards')
@@ -330,6 +336,7 @@ export function LoansPage() {
   const [planError, setPlanError] = useState('')
   const [planSaving, setPlanSaving] = useState(false)
   const [manualPaidActionId, setManualPaidActionId] = useState<string | null>(null)
+  const [undoPaidActionId, setUndoPaidActionId] = useState<string | null>(null)
 
   const loadInstallments = useCallback(async () => {
     const { data, error } = await supabase
@@ -470,7 +477,46 @@ export function LoansPage() {
       return
     }
 
-    setError('Ödenmiş taksit geri alınamaz. Yanlış ödeme için yeni bir düzeltme kaydı eklemek daha güvenli.')
+    await undoInstallmentPaid(item, reload, setError)
+  }
+
+  async function undoInstallmentPaid(
+    item: LoanInstallment,
+    reload: () => Promise<void>,
+    setError: (message: string) => void,
+  ) {
+    const confirmed = await confirm({
+      title: 'Taksit ödemesini geri al',
+      description: `${item.installment_no}. taksit tekrar bekliyor yapılacak ve kredi kalan borcu yeniden hesaplanacak. Kaynak hesaba otomatik para iadesi yapılmaz.`,
+      confirmLabel: 'Geri al',
+    })
+    if (!confirmed) return
+
+    setUndoPaidActionId(item.id)
+    setError('')
+
+    const { error } = await supabase.rpc('unpay_loan_installment', {
+      p_installment_id: item.id,
+    })
+
+    if (error) {
+      setError(
+        isSchemaCacheError(error)
+          ? 'Taksit geri alma henuz veritabaninda yok. Migration uygulaninca bu islem acilacak.'
+          : error.message,
+      )
+      setUndoPaidActionId(null)
+      return
+    }
+
+    try {
+      await loadInstallments()
+      await reload()
+    } catch (updateError) {
+      setError(updateError instanceof Error ? updateError.message : 'Kredi güncellenemedi.')
+    } finally {
+      setUndoPaidActionId(null)
+    }
   }
 
   function openPlanEdit(item: LoanInstallment) {
@@ -612,13 +658,13 @@ export function LoansPage() {
               <button
                 type="button"
                 onClick={() => void toggleInstallmentPaid(item, loan, reload, setError)}
-                disabled={item.status === 'ödendi'}
+                disabled={undoPaidActionId === item.id}
                 className={`grid size-8 shrink-0 place-items-center rounded-full border ${
                   item.status === 'ödendi'
                     ? 'border-emerald-600 bg-emerald-600 text-white'
                     : 'border-stone-300 bg-white text-transparent dark:border-stone-700 dark:bg-stone-950'
                 }`}
-                aria-label={item.status === 'ödendi' ? 'Taksit ödendi' : 'Taksit ödemesini aç'}
+                aria-label={item.status === 'ödendi' ? 'Taksit ödemesini geri al' : 'Taksit ödemesini aç'}
               >
                 <Check size={16} strokeWidth={3} />
               </button>
@@ -627,7 +673,7 @@ export function LoansPage() {
                   {item.installment_no}. taksit · {formatCurrency(item.amount)}
                 </p>
                 <p className="text-xs text-stone-500 dark:text-stone-400">
-                  {formatDate(item.due_date)} · {item.status === 'ödendi' ? 'Ödendi' : 'Bekliyor'}
+                  {formatDate(item.due_date)} · {item.status === 'ödendi' ? (undoPaidActionId === item.id ? 'Geri alınıyor...' : 'Ödendi') : 'Bekliyor'}
                 </p>
               </div>
               <div className="relative shrink-0">
@@ -665,7 +711,20 @@ export function LoansPage() {
                         <CheckCircle2 size={14} />
                         {manualPaidActionId === `manual-${item.id}` ? 'İşaretleniyor...' : 'Hesapsız ödendi'}
                       </button>
-                    ) : null}
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPlanMenuOpenId(null)
+                          void undoInstallmentPaid(item, reload, setError)
+                        }}
+                        disabled={undoPaidActionId === item.id}
+                        className="flex w-full items-center gap-2 px-3 py-2 text-sm text-amber-700 hover:bg-amber-50 disabled:opacity-60 dark:text-amber-300 dark:hover:bg-amber-950/40"
+                      >
+                        <RotateCcw size={14} />
+                        {undoPaidActionId === item.id ? 'Geri alınıyor...' : 'Geri al'}
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={() => {

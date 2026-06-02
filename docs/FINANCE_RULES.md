@@ -70,6 +70,9 @@ From `src/utils/cardInstallmentCalendar.ts` and page logic:
 - installment calendar defaults to upcoming months from the current month
 - only `scheduled` installments count in scheduled-total style calculations
 - `posted` installments represent already-posted/consumed rows
+- paid card installments can be reversed:
+  - scheduled rows return to `scheduled` and re-add to card `debt_amount`
+  - posted rows return to `posted` and re-add to `debt_amount` plus the current statement/current-period bucket
 
 ## Budget Alert Rules
 
@@ -89,6 +92,9 @@ From `src/utils/budgetAlerts.ts`:
 - payments can be one-off or monthly recurring
 - recurrence types currently include `none` and `monthly`
 - payment status is mainly `bekliyor` or `ödendi`
+- marking a payment paid can use a bank card or credit card:
+  - bank cards decrease `current_balance`
+  - credit cards create a posted `card_expenses` row and increase `debt_amount` plus `current_period_spending`
 - dashboard monthly load includes:
   - one-off payments due in the month
   - recurring monthly payments whose occurrence lands in the month
@@ -97,6 +103,7 @@ From `src/utils/budgetAlerts.ts`:
 
 - loans may be tracked with explicit `loan_installments`
 - if explicit installment rows do not exist, dashboard logic falls back to legacy monthly summary fields on the loan row
+- paid loan installments can be reversed to `bekliyor`; loan remaining totals are recalculated, but source-account balance is not automatically refunded because the paid installment row does not store the source account id
 - a loan should align with:
   - `remaining_amount`
   - `remaining_installments`

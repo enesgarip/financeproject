@@ -1,4 +1,4 @@
-import { Check, Pencil } from 'lucide-react'
+import { Check, Pencil, RotateCcw } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { CategoryPicker } from './CategoryPicker'
 import { MoneyInput } from './MoneyInput'
@@ -6,6 +6,7 @@ import { SimpleModal } from '../SimpleModal'
 import { Badge } from '../ui/badge'
 import { Card as SurfaceCard, CardContent, CardHeader, CardTitle } from '../ui/card'
 import { HelpTooltip, type HelpTooltipContent } from '../ui/help-tooltip'
+import { useConfirmDialog } from '../ui/use-confirm-dialog'
 import { supabase } from '../../lib/supabase'
 import type { Card, CardExpense, CardInstallment } from '../../types/database'
 import { expenseCategoryOptions } from '../../utils/categories'
@@ -42,6 +43,7 @@ const installmentExpensesHelp = {
 } satisfies HelpTooltipContent
 
 export function CardInstallmentExpensesPanel({ cards, reload, setError }: CardInstallmentExpensesPanelProps) {
+  const { confirm, confirmDialog } = useConfirmDialog()
   const [expenses, setExpenses] = useState<CardExpense[]>([])
   const [installments, setInstallments] = useState<CardInstallment[]>([])
   const [loading, setLoading] = useState(true)
@@ -191,7 +193,7 @@ export function CardInstallmentExpensesPanel({ cards, reload, setError }: CardIn
 
   async function handleMarkPaid(installment: CardInstallment) {
     if (installment.status === 'paid') {
-      setError('Odenmis taksit geri alinamaz.')
+      await handleUndoPaid(installment)
       return
     }
 
@@ -205,6 +207,37 @@ export function CardInstallmentExpensesPanel({ cards, reload, setError }: CardIn
     if (error) {
       const message = isSchemaCacheError(error)
         ? 'Taksit odeme isareti henuz veritabaninda yok. Migration uygulaninca bu islem acilacak.'
+        : error.message
+      setError(message)
+      setPayingId(null)
+      return
+    }
+
+    try {
+      await Promise.all([loadExpenses(), reload()])
+    } finally {
+      setPayingId(null)
+    }
+  }
+
+  async function handleUndoPaid(installment: CardInstallment) {
+    const confirmed = await confirm({
+      title: 'Taksit ödemesini geri al',
+      description: `${installment.installment_no}/${installment.installment_count}. taksit tekrar borca eklenecek ve ödendi tarihi silinecek.`,
+      confirmLabel: 'Geri al',
+    })
+    if (!confirmed) return
+
+    setPayingId(installment.id)
+    setError('')
+
+    const { error } = await supabase.rpc('unpay_card_installment', {
+      p_installment_id: installment.id,
+    })
+
+    if (error) {
+      const message = isSchemaCacheError(error)
+        ? 'Taksit geri alma henuz veritabaninda yok. Migration uygulaninca bu islem acilacak.'
         : error.message
       setError(message)
       setPayingId(null)
@@ -309,13 +342,13 @@ export function CardInstallmentExpensesPanel({ cards, reload, setError }: CardIn
                           <button
                             type="button"
                             onClick={() => void handleMarkPaid(item)}
-                            disabled={isPaid || payingId !== null}
+                            disabled={payingId !== null}
                             className={`grid size-8 shrink-0 place-items-center rounded-full border ${
                               isPaid
                                 ? 'border-emerald-600 bg-emerald-600 text-white'
                                 : 'border-stone-300 bg-white text-transparent dark:border-stone-700 dark:bg-stone-950'
                             }`}
-                            aria-label={isPaid ? 'Taksit odendi' : 'Taksiti odendi isaretle'}
+                            aria-label={isPaid ? 'Taksit odemesini geri al' : 'Taksiti odendi isaretle'}
                           >
                             <Check size={16} strokeWidth={3} />
                           </button>
@@ -329,6 +362,17 @@ export function CardInstallmentExpensesPanel({ cards, reload, setError }: CardIn
                           </div>
                           {payingId === item.id ? (
                             <span className="shrink-0 text-[11px] font-semibold text-muted-foreground">Isleniyor...</span>
+                          ) : null}
+                          {isPaid && payingId !== item.id ? (
+                            <button
+                              type="button"
+                              onClick={() => void handleUndoPaid(item)}
+                              disabled={payingId !== null}
+                              className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-xs font-semibold text-amber-800 hover:bg-amber-100 disabled:opacity-60 dark:border-amber-900/70 dark:bg-amber-950/30 dark:text-amber-200"
+                            >
+                              <RotateCcw size={13} />
+                              Geri al
+                            </button>
                           ) : null}
                         </div>
                       )
@@ -402,6 +446,7 @@ export function CardInstallmentExpensesPanel({ cards, reload, setError }: CardIn
           </button>
         </form>
       </SimpleModal>
+      {confirmDialog}
     </>
   )
 }

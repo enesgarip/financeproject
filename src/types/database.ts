@@ -283,6 +283,12 @@ export type Database = {
         }
         Returns: CardInstallment
       }
+      unpay_card_installment: {
+        Args: {
+          p_installment_id: string
+        }
+        Returns: CardInstallment
+      }
       update_card_expense: {
         Args: {
           p_expense_id: string
@@ -299,6 +305,12 @@ export type Database = {
         Args: {
           p_installment_id: string
           p_source_card_id: string
+        }
+        Returns: LoanInstallment
+      }
+      unpay_loan_installment: {
+        Args: {
+          p_installment_id: string
         }
         Returns: LoanInstallment
       }
