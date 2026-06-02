@@ -66,24 +66,27 @@ function CardSectionNav({
             onClick={() => onSelect(item.id)}
             aria-pressed={isActive}
             className={cn(
-              'flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-2 text-xs font-black transition',
+              'flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-md px-1.5 py-2 text-[11px] font-black leading-tight transition',
+              'min-[560px]:flex-row min-[560px]:gap-1.5 min-[560px]:px-3 min-[560px]:text-xs',
               isActive
                 ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/20'
                 : 'text-muted-foreground hover:bg-muted/70 hover:text-foreground',
             )}
           >
             <item.icon size={16} strokeWidth={2.3} className="shrink-0" />
-            <span className="truncate">{item.label}</span>
-            {count ? (
-              <span
-                className={cn(
-                  'grid min-w-5 shrink-0 place-items-center rounded-full px-1 text-[10px] font-black tabular-nums',
-                  isActive ? 'bg-primary-foreground/20 text-primary-foreground' : 'bg-primary/12 text-primary',
-                )}
-              >
-                {count}
-              </span>
-            ) : null}
+            <span className="flex items-center gap-1 whitespace-nowrap">
+              {item.label}
+              {count ? (
+                <span
+                  className={cn(
+                    'grid min-w-4 place-items-center rounded-full px-1 text-[9px] font-black tabular-nums min-[560px]:text-[10px]',
+                    isActive ? 'bg-primary-foreground/20 text-primary-foreground' : 'bg-primary/12 text-primary',
+                  )}
+                >
+                  {count}
+                </span>
+              ) : null}
+            </span>
           </button>
         )
       })}
@@ -630,6 +633,7 @@ function CreditAccountListCard({
   onTransfer,
   onPayDebt,
   onCutStatement,
+  onAddExpense,
 }: {
   row: Card
   rows: Card[]
@@ -642,6 +646,7 @@ function CreditAccountListCard({
   onTransfer: (source: Card) => void
   onPayDebt: (card: Card, reload: () => Promise<void>, rows: Card[]) => void
   onCutStatement: (card: Card, reload: () => Promise<void>, setError: (message: string) => void) => Promise<void>
+  onAddExpense: (card: Card, mode: 'cash' | 'installment') => void
 }) {
   const [detailsOpen, setDetailsOpen] = useState(false)
 
@@ -709,10 +714,12 @@ function CreditAccountListCard({
     >
       <div
         style={{ backgroundImage: bankBrandGradient(row.bank_name) }}
-        className="relative overflow-hidden rounded-lg p-4 text-white shadow-sm"
+        className="relative rounded-lg p-4 text-white shadow-sm"
       >
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-white/35" />
-        <div className="pointer-events-none absolute -right-8 -top-10 size-32 rounded-full bg-white/10 blur-2xl" />
+        <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-lg">
+          <div className="absolute inset-x-0 top-0 h-px bg-white/35" />
+          <div className="absolute -right-8 -top-10 size-32 rounded-full bg-white/10 blur-2xl" />
+        </div>
         <div className="relative flex items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="truncate text-xs font-bold uppercase text-white/70">{row.bank_name}</p>
@@ -723,7 +730,9 @@ function CreditAccountListCard({
             <div className="grid size-10 place-items-center rounded-lg bg-white/15 text-xs font-black uppercase tracking-tight text-white ring-1 ring-white/25">
               {getBankBrand(row.bank_name).code}
             </div>
-            <div className="[&_.absolute]:text-foreground [&_button]:text-white/78 [&_button:hover]:bg-white/12 [&_button:hover]:text-white">{menu}</div>
+            <div className="[&>div>button]:border-white/30 [&>div>button]:bg-white/15 [&>div>button]:text-white [&>div>button:hover]:bg-white/25 [&>div>button:hover]:text-white">
+              {menu}
+            </div>
           </div>
         </div>
 
@@ -791,18 +800,20 @@ function CreditAccountListCard({
           <ReceiptText size={14} />
           Ekstreyi öde
         </button>
-        <a
-          href="#hizli-harcama"
+        <button
+          type="button"
+          onClick={() => onAddExpense(row, 'cash')}
           className="finance-touch-target inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-xs font-black text-foreground shadow-sm transition hover:bg-muted"
         >
           Harcama ekle
-        </a>
-        <a
-          href="#hizli-harcama"
+        </button>
+        <button
+          type="button"
+          onClick={() => onAddExpense(row, 'installment')}
           className="finance-touch-target inline-flex items-center justify-center rounded-lg border border-border bg-card px-3 py-2 text-xs font-black text-foreground shadow-sm transition hover:bg-muted"
         >
           Taksit ekle
-        </a>
+        </button>
         <button
           type="button"
           onClick={() => void onCutStatement(row, reload, setError)}
@@ -911,10 +922,12 @@ function QuickExpensePanel({
   rows,
   reload,
   setError,
+  focus,
 }: {
   rows: Card[]
   reload: () => Promise<void>
   setError: (message: string) => void
+  focus?: { cardId: string; mode: 'cash' | 'installment'; nonce: number } | null
 }) {
   const [cardId, setCardId] = useState('')
   const [amount, setAmount] = useState('')
@@ -938,6 +951,21 @@ function QuickExpensePanel({
   const debitPreview = Math.max(0, (selectedCard?.current_balance ?? 0) - parsedAmount)
   const isProvision = expenseStatus === 'provision'
   const canSubmitQuickExpense = Boolean(selectedCard) && parsedAmount > 0 && trimmedDescription.length > 0 && !saving
+
+  // "Harcama ekle / Taksit ekle" kısayolundan gelen kartı ve modu önceden seç.
+  const focusNonce = focus?.nonce
+  useEffect(() => {
+    if (!focus) return
+    const targetCard = cards.find((card) => card.id === focus.cardId)
+    if (!targetCard) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setCardId(targetCard.id)
+    if (focus.mode === 'installment' && targetCard.card_type === 'kredi_karti') {
+      setPaymentMode('installment')
+      setInstallmentCount((current) => (Number(current) < 2 ? '2' : current))
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusNonce])
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -2205,8 +2233,16 @@ export function CardsPage() {
     await Promise.all([reload(), loadStatements()])
   }
 
+  const [quickExpenseFocus, setQuickExpenseFocus] = useState<{ cardId: string; mode: 'cash' | 'installment'; nonce: number } | null>(null)
+
   const handleSectionChange = useCallback((next: CardSection) => {
     setSection(next)
+    if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' })
+  }, [])
+
+  const focusQuickExpense = useCallback((card: Card, mode: 'cash' | 'installment') => {
+    setQuickExpenseFocus({ cardId: card.id, mode, nonce: Date.now() })
+    setSection('islemler')
     if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' })
   }, [])
 
@@ -2250,7 +2286,7 @@ export function CardsPage() {
 
               {!loading && section === 'islemler' ? (
                 <>
-                  <QuickExpensePanel rows={cardRows} reload={() => refreshCardsAndProvisions(reload)} setError={setError} />
+                  <QuickExpensePanel rows={cardRows} reload={() => refreshCardsAndProvisions(reload)} setError={setError} focus={quickExpenseFocus} />
                   <CardInstallmentExpensesPanel
                     cards={cardRows}
                     reload={() => refreshCardsAndProvisions(reload)}
@@ -2367,6 +2403,7 @@ export function CardsPage() {
             onTransfer={(source) => openTransaction(source, helpers.reload, helpers.rows as Card[], 'transfer')}
             onPayDebt={openDebtPayment}
             onCutStatement={cutStatement}
+            onAddExpense={focusQuickExpense}
           />
         )}
         renderExtra={(row, helpers) => {
