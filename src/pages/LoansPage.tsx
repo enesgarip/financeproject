@@ -1,4 +1,4 @@
-import { CalendarDays, Check, CheckCircle2, Landmark, MoreVertical, Pencil, Trash2 } from 'lucide-react'
+import { CalendarDays, Check, Landmark, MoreVertical, Pencil, ReceiptText, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { CrudPage, type FormField } from '../components/CrudPage'
 import { AccountSelector } from '../components/finance/AccountSelector'
@@ -329,7 +329,6 @@ export function LoansPage() {
   const [planNote, setPlanNote] = useState('')
   const [planError, setPlanError] = useState('')
   const [planSaving, setPlanSaving] = useState(false)
-  const [manualPaidActionId, setManualPaidActionId] = useState<string | null>(null)
 
   const loadInstallments = useCallback(async () => {
     const { data, error } = await supabase
@@ -415,62 +414,6 @@ export function LoansPage() {
     closeInstallmentPayment()
     await loadInstallments()
     await reloadLoans?.()
-  }
-
-  async function markInstallmentsPaidWithoutAccount(
-    loan: Loan,
-    items: LoanInstallment[],
-    reload: () => Promise<void>,
-    setError: (message: string) => void,
-  ) {
-    const pendingItems = items.filter((item) => item.status !== 'ödendi')
-    if (pendingItems.length === 0) return
-
-    const confirmed = await confirm({
-      title: 'Taksiti ödendi işaretle',
-      description:
-        pendingItems.length === 1
-          ? `${pendingItems[0].installment_no}. taksit kaynak hesaptan düşmeden ödendi işaretlenecek.`
-          : `${pendingItems.length} taksit kaynak hesaptan düşmeden ödendi işaretlenecek.`,
-      confirmLabel: 'Ödendi işaretle',
-    })
-    if (!confirmed) return
-
-    const actionId = pendingItems.length === 1 ? `manual-${pendingItems[0].id}` : `manual-bulk-${loan.id}`
-    const paidAt = new Date().toISOString()
-
-    setManualPaidActionId(actionId)
-    setError('')
-
-    const { error } = await supabase
-      .from('loan_installments')
-      .update({ status: 'ödendi', paid_at: paidAt, updated_at: paidAt })
-      .in('id', pendingItems.map((item) => item.id))
-
-    if (error) {
-      setError(error.message)
-      setManualPaidActionId(null)
-      return
-    }
-
-    try {
-      await updateLoanTotalsFromInstallments(loan.id)
-      await loadInstallments()
-      await reload()
-    } catch (updateError) {
-      setError(updateError instanceof Error ? updateError.message : 'Kredi güncellenemedi.')
-    } finally {
-      setManualPaidActionId(null)
-    }
-  }
-
-  async function toggleInstallmentPaid(item: LoanInstallment, loan: Loan, reload: () => Promise<void>, setError: (message: string) => void) {
-    if (item.status !== 'ödendi') {
-      await openInstallmentPayment(loan, item, reload)
-      return
-    }
-
-    setError('Ödenmiş taksit geri alınamaz. Yanlış ödeme için yeni bir düzeltme kaydı eklemek daha güvenli.')
   }
 
   function openPlanEdit(item: LoanInstallment) {
@@ -578,26 +521,11 @@ export function LoansPage() {
       )
     }
 
-    const today = dateInputValue(startOfToday())
-    const pastPendingInstallments = loanInstallments.filter((item) => item.status !== 'ödendi' && item.due_date < today)
-    const bulkManualActionId = `manual-bulk-${loan.id}`
-
     return (
       <section className="mt-4 rounded-2xl border border-stone-200 bg-white/65 p-3 dark:border-stone-800 dark:bg-stone-950/50">
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
           <h3 className="text-sm font-semibold text-stone-900 dark:text-stone-100">Ödeme planı</h3>
           <div className="flex flex-wrap items-center justify-end gap-2">
-            {pastPendingInstallments.length > 0 ? (
-              <button
-                type="button"
-                onClick={() => void markInstallmentsPaidWithoutAccount(loan, pastPendingInstallments, reload, setError)}
-                disabled={Boolean(manualPaidActionId)}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1.5 text-xs font-semibold text-emerald-800 disabled:opacity-60 dark:border-emerald-900/70 dark:bg-emerald-950/30 dark:text-emerald-200"
-              >
-                <CheckCircle2 size={14} />
-                {manualPaidActionId === bulkManualActionId ? 'İşaretleniyor...' : 'Geçmişleri ödendi say'}
-              </button>
-            ) : null}
             <span className="rounded-full bg-stone-100 px-2 py-1 text-xs font-semibold text-stone-600 dark:bg-stone-800 dark:text-stone-300">
               {loanInstallments.filter((item) => item.status === 'ödendi').length}/{loanInstallments.length}
             </span>
@@ -609,19 +537,23 @@ export function LoansPage() {
               key={item.id}
               className="flex items-center gap-2 rounded-xl bg-stone-50 px-2 py-2 text-sm dark:bg-stone-900"
             >
-              <button
-                type="button"
-                onClick={() => void toggleInstallmentPaid(item, loan, reload, setError)}
-                disabled={item.status === 'ödendi'}
-                className={`grid size-8 shrink-0 place-items-center rounded-full border ${
-                  item.status === 'ödendi'
-                    ? 'border-emerald-600 bg-emerald-600 text-white'
-                    : 'border-stone-300 bg-white text-transparent dark:border-stone-700 dark:bg-stone-950'
-                }`}
-                aria-label={item.status === 'ödendi' ? 'Taksit ödendi' : 'Taksit ödemesini aç'}
-              >
-                <Check size={16} strokeWidth={3} />
-              </button>
+              {item.status === 'ödendi' ? (
+                <div
+                  className="grid size-8 shrink-0 place-items-center rounded-full border border-emerald-600 bg-emerald-600 text-white"
+                  aria-label="Taksit ödendi"
+                >
+                  <Check size={16} strokeWidth={3} />
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => void openInstallmentPayment(loan, item, reload)}
+                  className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg border border-stone-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-stone-700 hover:bg-stone-50 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+                >
+                  <ReceiptText size={13} />
+                  Öde
+                </button>
+              )}
               <div className="min-w-0 flex-1">
                 <p className="truncate font-semibold text-stone-900 dark:text-stone-100">
                   {item.installment_no}. taksit · {formatCurrency(item.amount)}
@@ -652,20 +584,6 @@ export function LoansPage() {
                       <Pencil size={14} />
                       Düzenle
                     </button>
-                    {item.status !== 'ödendi' ? (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setPlanMenuOpenId(null)
-                          void markInstallmentsPaidWithoutAccount(loan, [item], reload, setError)
-                        }}
-                        disabled={Boolean(manualPaidActionId)}
-                        className="flex w-full items-center gap-2 px-3 py-2 text-sm text-emerald-700 hover:bg-emerald-50 disabled:opacity-60 dark:text-emerald-300 dark:hover:bg-emerald-950/40"
-                      >
-                        <CheckCircle2 size={14} />
-                        {manualPaidActionId === `manual-${item.id}` ? 'İşaretleniyor...' : 'Hesapsız ödendi'}
-                      </button>
-                    ) : null}
                     <button
                       type="button"
                       onClick={() => {

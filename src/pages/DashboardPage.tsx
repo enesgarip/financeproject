@@ -16,7 +16,6 @@ import {
   Sparkles,
   TrendingDown,
   TrendingUp,
-  Wrench,
 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
@@ -118,7 +117,7 @@ const dashboardHelp = {
   receivable: {
     calculation: 'Durumu açık olan “borç verdim” kayıtlarının tahmini TL değeri toplanır.',
     importance: 'Gelebilecek parayı borç yükünden ayrı görmeni sağlar.',
-    source: 'Borç / Alacak ekranındaki açık alacak kayıtları.',
+    source: 'Kişiler ekranındaki açık alacak kayıtları.',
   },
   creditLimit: {
     calculation: 'Her limit grubunda en yüksek limit alınır; grup borcu ise kart borçlarının toplamıdır.',
@@ -194,7 +193,7 @@ type FocusAction = {
   to: string
   cta: string
   tone: 'emerald' | 'amber' | 'rose' | 'indigo' | 'stone'
-  icon: 'alert' | 'calendar' | 'card' | 'check' | 'health' | 'loan' | 'wrench'
+  icon: 'alert' | 'calendar' | 'card' | 'check' | 'health' | 'loan'
   priority: number
 }
 
@@ -582,7 +581,7 @@ function buildFocusActions(data: DashboardData, cashFlow: CashFlowSummary, credi
       title: 'Ay sonu nakit açığı görünüyor',
       description: `${cashFlow.monthLabel} projeksiyonu ${formatCurrency(cashFlow.projectedCash)}. Ödeme tarihlerini ve tahsilatları birlikte kontrol et.`,
       to: '/analiz',
-      cta: 'Analize git',
+      cta: 'Raporlara git',
       tone: 'rose',
       icon: 'alert',
       priority: 3,
@@ -633,13 +632,13 @@ function buildFocusActions(data: DashboardData, cashFlow: CashFlowSummary, credi
   if (dataHealthIssueCount > 0) {
     actions.push({
       id: 'data-health',
-      title: 'Veri tutarlılığı düzeltmesi var',
-      description: `${dataHealthIssueCount} kayıt otomatik kontrolle düzeltilebilir görünüyor.`,
+      title: 'Kayıt kontrolü önerisi var',
+      description: `${dataHealthIssueCount} kayıt için güvenli düzeltme önerisi hazır.`,
       to: '/veri-sagligi',
-      cta: 'Kontrol et',
-      tone: 'amber',
+      cta: 'Veri kontrolü',
+      tone: 'stone',
       icon: 'health',
-      priority: 5,
+      priority: 50,
     })
   }
 
@@ -682,29 +681,18 @@ function buildFocusActions(data: DashboardData, cashFlow: CashFlowSummary, credi
     })
   }
 
-  if (creditCards.length > 0) {
+  if (actions.length === 0) {
     actions.push({
-      id: 'legacy-installments',
-      title: 'Eski taksitli işlemleri devret',
-      description: 'Uygulamadan önce başlamış taksitlerde yalnızca kalan ayları eklemek için taksit devrini kullan.',
+      id: 'all-clear',
+      title: 'Bugün sakin görünüyor',
+      description: 'Yakın vade, bakiye açığı veya limit uyarısı yok.',
       to: '/kartlar',
-      cta: 'Taksit devri',
-      tone: 'stone',
-      icon: 'wrench',
-      priority: 80,
+      cta: 'Hesaplara bak',
+      tone: 'emerald',
+      icon: 'check',
+      priority: 100,
     })
   }
-
-  actions.push({
-    id: 'weekly-data-health',
-    title: 'Haftalık veri sağlığı kontrolü',
-    description: 'Kart, kredi ve ödeme kayıtlarında sessizce oluşan tutarsızlıkları tek ekranda tara.',
-    to: '/veri-sagligi',
-    cta: 'Taramayı aç',
-    tone: 'stone',
-    icon: 'health',
-    priority: 90,
-  })
 
   return actions.sort((a, b) => a.priority - b.priority)
 }
@@ -1084,7 +1072,7 @@ function WelcomePanel({ displayName, cashFlow }: { displayName: string; cashFlow
         <div className="mt-5 grid grid-cols-[repeat(3,minmax(0,1fr))] gap-2">
           <WelcomeMetric label="Dönem" value={cashFlow.monthLabel} />
           <WelcomeMetric label="Net akış" value={signedNetFlow} tone={netFlowIsPositive ? 'positive' : 'negative'} />
-          <WelcomeMetric label="Nakit / hesap" value={formatCurrency(cashFlow.cashAssets)} />
+          <WelcomeMetric label="Hesap bakiyesi" value={formatCurrency(cashFlow.cashAssets)} />
         </div>
       </CardContent>
     </Card>
@@ -1112,7 +1100,7 @@ function FocusActionPanel({ actions, cashFlow }: { actions: FocusAction[]; cashF
   const [showAll, setShowAll] = useState(false)
   const primaryAction = actions[0]
   const cashIsPositive = cashFlow.projectedCash >= 0
-  const statusLabel = primaryAction.priority <= 7 ? 'Aksiyon gerekli' : 'Takip temiz'
+  const statusLabel = primaryAction.priority <= 20 ? 'Aksiyon gerekli' : 'Takip temiz'
   const visibleActions = showAll ? actions : actions.slice(0, 4)
   const hiddenCount = Math.max(0, actions.length - 4)
 
@@ -1126,7 +1114,7 @@ function FocusActionPanel({ actions, cashFlow }: { actions: FocusAction[]; cashF
                 <p className="text-xs font-bold uppercase text-primary">Bugünün odağı</p>
                 <h2 className="mt-2 text-2xl font-black leading-tight text-foreground">{statusLabel}</h2>
                 <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                  En önemli finans aksiyonlarını risk, vade ve veri tutarlılığına göre sıraladım.
+                  En önemli finans aksiyonlarını vade, bakiye ve limit durumuna göre sıraladım.
                 </p>
               </div>
               <div className="grid size-11 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary ring-1 ring-primary/15">
@@ -1179,7 +1167,6 @@ function FocusActionCard({ action }: { action: FocusAction }) {
     check: CheckCircle2,
     health: ShieldCheck,
     loan: Landmark,
-    wrench: Wrench,
   }[action.icon]
   const toneClass = {
     emerald: 'border-success/20 bg-card text-foreground ring-success/15 hover:border-success/35',
@@ -1944,7 +1931,7 @@ function HistorySection({ rows }: { rows: TransactionHistory[] }) {
           })}
         </div>
       {rows.length === 0 ? (
-        <EmptyState title="İşlem geçmişi yok" description="Ödemeler, transferler ve borç kapatma işlemleri burada görünecek." />
+        <EmptyState title="İşlem geçmişi yok" description="Planlı ödemeler, transferler ve borç kapatma işlemleri burada görünecek." />
       ) : filteredRows.length === 0 ? (
         <EmptyState title="Bu filtrede işlem yok" description="Farklı bir işlem türü seçerek geçmiş kayıtları görebilirsiniz." />
       ) : (

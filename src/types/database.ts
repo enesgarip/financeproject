@@ -280,8 +280,18 @@ export type Database = {
       pay_card_installment: {
         Args: {
           p_installment_id: string
+          p_source_card_id: string
         }
         Returns: CardInstallment
+      }
+      transfer_between_accounts: {
+        Args: {
+          p_source_card_id: string
+          p_target_card_id: string
+          p_amount: number
+          p_note?: string | null
+        }
+        Returns: Json
       }
       update_card_expense: {
         Args: {

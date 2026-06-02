@@ -272,10 +272,10 @@ export function PaymentsPage() {
     <>
       <CrudPage
         table="payments"
-        pageTitle="Ödemeler"
-        addLabel="Ödeme ekle"
+        pageTitle="Planlı ödemeler"
+        addLabel="Planlı ödeme ekle"
         fields={fields}
-        emptyTitle="Henüz ödeme yok"
+        emptyTitle="Henüz planlı ödeme yok"
         emptyDescription="Yaklaşan kira, fatura veya tek seferlik ödemelerini buradan ekleyebilirsin."
         orderBy="due_date"
         validateForm={validatePaymentForm}
@@ -326,7 +326,7 @@ export function PaymentsPage() {
               onClick={() => void openPayment(row, helpers.reload)}
               className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-700"
             >
-              {row.payment_method === 'bank_auto' ? 'Ödendi gir' : 'Öde'}
+              Öde
             </button>
           ) : null
         }

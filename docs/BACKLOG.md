@@ -15,6 +15,10 @@
   - provision posted
   - statement cut
   - debt paid
+- Continue banking simplification from `docs/BANKING_SIMPLIFICATION_AUDIT.md`.
+  - shared account-payment drawer
+  - shared account movement helper/RPC family
+  - normalized upcoming obligations view
 
 ## P1 - Product / Reliability
 

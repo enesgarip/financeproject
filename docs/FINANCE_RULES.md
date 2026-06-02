@@ -54,6 +54,8 @@ On the cards page:
   - `payableDebt = max(0, debt_amount - provision_amount)`
 - user should not pay more than payable posted debt
 - provision must post before it becomes payable debt
+- card debt payments must debit a `banka_karti` source account
+- card installment payments also must debit a `banka_karti` source account; they are no longer just a visual "paid" mark
 
 ## Card Expense Rules
 
@@ -70,6 +72,17 @@ From `src/utils/cardInstallmentCalendar.ts` and page logic:
 - installment calendar defaults to upcoming months from the current month
 - only `scheduled` installments count in scheduled-total style calculations
 - `posted` installments represent already-posted/consumed rows
+- `paid` installments represent a real payment from a bank account and reduce both account balance and card debt
+
+## Bank Account / Transfer Rules
+
+- `cards.card_type = 'banka_karti'` represents a bank account balance in the app.
+- Manual account inflow/outflow updates one account balance and writes `transaction_history`.
+- Bank-to-bank transfer uses `transfer_between_accounts`:
+  - source and target must both be `banka_karti`
+  - source and target cannot be the same account
+  - source balance must be enough for the transfer amount
+  - source balance decreases, target balance increases, and one `transfer` history row is written
 
 ## Budget Alert Rules
 
@@ -97,6 +110,7 @@ From `src/utils/budgetAlerts.ts`:
 
 - loans may be tracked with explicit `loan_installments`
 - if explicit installment rows do not exist, dashboard logic falls back to legacy monthly summary fields on the loan row
+- normal app flow should pay a loan installment through a selected `banka_karti` source account; it should not be marked paid as a visual-only action
 - a loan should align with:
   - `remaining_amount`
   - `remaining_installments`

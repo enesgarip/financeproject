@@ -14,11 +14,11 @@ const fields: FormField[] = [
   { name: 'person_name', label: 'Kişi', type: 'text', required: true },
   {
     name: 'direction',
-    label: 'Yön',
+    label: 'Durum',
     type: 'select',
     options: [
-      { label: 'Borç aldım', value: 'borç_aldım' },
-      { label: 'Borç verdim', value: 'borç_verdim' },
+      { label: 'Ben borçluyum', value: 'borç_aldım' },
+      { label: 'Bana borçlu', value: 'borç_verdim' },
     ],
   },
   {
@@ -70,7 +70,7 @@ function optionalDate(value: FormDataEntryValue | null) {
 }
 
 function directionLabel(value: Debt['direction']) {
-  return value === 'borç_aldım' ? 'Borç aldım' : 'Borç verdim'
+  return value === 'borç_aldım' ? 'Ben borçluyum' : 'Bana borçlu'
 }
 
 function valueTypeLabel(row: Debt) {
@@ -237,11 +237,11 @@ export function DebtsPage() {
     <>
       <CrudPage
         table="debts"
-        pageTitle="Borç / Alacak"
-        addLabel="Borç ekle"
+        pageTitle="Kişiler"
+        addLabel="Borç / alacak ekle"
         fields={fields}
-        emptyTitle="Henüz borç kaydı yok"
-        emptyDescription="Kişisel borçlarını ve alacaklarını sade şekilde takip edebilirsin."
+        emptyTitle="Henüz kişi kaydı yok"
+        emptyDescription="Kişisel borçlarını ve alacaklarını buradan takip edebilirsin."
         orderBy="due_date"
         renderBeforeList={({ loading, rows }) => (!loading ? <DebtsOverview rows={rows as Debt[]} /> : null)}
         getInitialValues={(row?: Debt) => ({
@@ -273,7 +273,7 @@ export function DebtsPage() {
           }
         }}
         renderTitle={(row) => row.person_name}
-        renderSubtitle={(row) => `${valueTypeLabel(row)} · ${row.status}`}
+        renderSubtitle={(row) => `${directionLabel(row.direction)} · ${valueTypeLabel(row)} · ${row.status}`}
         renderDetails={(row) => {
           const details = [`Değer: ${formatCurrency(row.estimated_value_try)}`, `Vade: ${formatDate(row.due_date)}`]
           if (isGoldDebt(row)) details.unshift(`Miktar: ${formatNumber(row.amount)} ${valueTypeLabel(row)}`)

@@ -10,13 +10,13 @@ import { QuickActions } from './QuickActions'
 const titles: Record<string, string> = {
   '/': 'Finans Özeti',
   '/varliklar': 'Varlıklar',
-  '/kartlar': 'Kartlar',
+  '/kartlar': 'Hesaplar ve Kartlar',
   '/krediler': 'Krediler',
-  '/borclar': 'Borç / Alacak',
-  '/odemeler': 'Ödemeler',
-  '/analiz': 'Analiz',
-  '/veri-sagligi': 'Veri Sağlığı',
-  '/daha': 'Daha',
+  '/borclar': 'Kişiler',
+  '/odemeler': 'Planlı Ödemeler',
+  '/analiz': 'Raporlar',
+  '/veri-sagligi': 'Veri Kontrolü',
+  '/daha': 'Diğer',
 }
 
 const widePaths = new Set(['/', '/analiz', '/kartlar', '/krediler', '/veri-sagligi'])
@@ -69,14 +69,15 @@ export function Layout() {
               key={item.to}
               to={item.to}
               end={item.to === '/'}
-              className={({ isActive }) =>
-                cn(
+              className={({ isActive }) => {
+                const itemIsActive = isActive || ('activePaths' in item && (item.activePaths as readonly string[]).includes(pathname))
+                return cn(
                   'flex h-11 items-center gap-3 rounded-lg px-3 text-sm font-bold transition',
-                  isActive
+                  itemIsActive
                     ? 'bg-primary/10 text-primary ring-1 ring-primary/18'
                     : 'text-muted-foreground hover:bg-muted/75 hover:text-foreground',
                 )
-              }
+              }}
             >
               <item.icon size={18} strokeWidth={2.2} />
               <span className="truncate">{item.label}</span>
@@ -104,7 +105,7 @@ export function Layout() {
               <h1 className="truncate text-lg font-black leading-tight text-foreground">{titles[pathname] ?? 'Finans'}</h1>
               <p className="truncate text-xs text-muted-foreground max-[360px]:hidden lg:hidden">{user?.email}</p>
               <p className="hidden truncate text-xs text-muted-foreground lg:block">
-                Varlıklarını, borçlarını ve ödemelerini tek yerden yönet.
+                Hesaplarını, planlı ödemelerini ve kişileri tek yerden yönet.
               </p>
             </div>
             <div className="flex shrink-0 items-center gap-2">

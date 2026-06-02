@@ -11,6 +11,10 @@ type AccountSelectorProps = {
   emptyMessage?: string
 }
 
+function accountDisplayName(account: Card) {
+  return account.bank_name ? `${account.bank_name} · ${account.card_name}` : account.card_name
+}
+
 export function AccountSelector({
   accounts,
   value,
@@ -39,7 +43,7 @@ export function AccountSelector({
           <option value="">{accounts.length > 0 ? 'Hesap seç' : emptyMessage}</option>
           {accounts.map((account) => (
             <option key={account.id} value={account.id}>
-              {account.card_name} ({formatCurrency(account.current_balance)})
+              {accountDisplayName(account)} ({formatCurrency(account.current_balance)})
             </option>
           ))}
         </Select>
@@ -50,7 +54,7 @@ export function AccountSelector({
           onClick={() => onChange(bestAccount.id)}
           className="inline-flex w-fit rounded-lg bg-primary/10 px-3 py-1.5 text-xs font-bold text-primary ring-1 ring-primary/15 transition hover:bg-primary/15"
         >
-          Önerilen hesap: {bestAccount.card_name}
+          Önerilen hesap: {accountDisplayName(bestAccount)}
         </button>
       ) : null}
       {selectedAccount ? (

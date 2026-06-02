@@ -6,35 +6,29 @@ import {
   Home,
   Landmark,
   MoreHorizontal,
-  ReceiptText,
   ShieldCheck,
   WalletCards,
 } from 'lucide-react'
 
 export const primaryNavItems = [
   { to: '/', label: 'Özet', icon: Home },
-  { to: '/varliklar', label: 'Varlıklar', icon: Banknote },
-  { to: '/kartlar', label: 'Kartlar', icon: CreditCard },
-  { to: '/krediler', label: 'Krediler', icon: Landmark },
-  { to: '/borclar', label: 'Borç / Alacak', icon: HandCoins },
-  { to: '/odemeler', label: 'Ödemeler', icon: WalletCards },
-  { to: '/analiz', label: 'Analiz', icon: BarChart3 },
-  { to: '/veri-sagligi', label: 'Veri Sağlığı', icon: ShieldCheck },
-  { to: '/daha', label: 'Daha', icon: MoreHorizontal },
+  { to: '/kartlar', label: 'Hesaplar', icon: CreditCard },
+  { to: '/odemeler', label: 'Planlı', icon: WalletCards },
+  { to: '/borclar', label: 'Kişiler', icon: HandCoins },
+  { to: '/analiz', label: 'Raporlar', icon: BarChart3 },
+  { to: '/daha', label: 'Diğer', icon: MoreHorizontal, activePaths: ['/varliklar', '/krediler', '/veri-sagligi'] },
 ] as const
 
 export const bottomNavItems = [
   { to: '/', label: 'Özet', icon: Home },
-  { to: '/kartlar', label: 'Kartlar', icon: CreditCard },
-  { to: '/odemeler', label: 'Ödemeler', icon: WalletCards },
-  { to: '/analiz', label: 'Analiz', icon: BarChart3 },
-  { to: '/daha', label: 'Daha', icon: MoreHorizontal },
+  { to: '/kartlar', label: 'Hesaplar', icon: CreditCard },
+  { to: '/odemeler', label: 'Planlı', icon: WalletCards },
+  { to: '/borclar', label: 'Kişiler', icon: HandCoins },
+  { to: '/daha', label: 'Diğer', icon: MoreHorizontal, activePaths: ['/varliklar', '/krediler', '/analiz', '/veri-sagligi'] },
 ] as const
 
 export const quickEntryItems = [
-  { to: '/varliklar', title: 'Varlıklar ve maaş', description: 'Nakit, yatırım, BES ve maaş geçmişi.', icon: Banknote },
-  { to: '/krediler', title: 'Krediler', description: 'Kredi bakiyesi, taksit planı ve ödeme akışı.', icon: Landmark },
-  { to: '/borclar', title: 'Borç / alacak', description: 'Kişi bazlı borçlar, alacaklar ve tahsilatlar.', icon: HandCoins },
-  { to: '/kartlar', title: 'Hızlı harcama', description: 'Kart seçip peşin veya taksitli harcama gir.', icon: ReceiptText },
-  { to: '/veri-sagligi', title: 'Veri sağlığı', description: 'Tutarsızlıkları kontrol et, güvenli düzelt.', icon: ShieldCheck },
+  { section: 'records', to: '/varliklar', title: 'Varlıklar ve maaş', description: 'Nakit, yatırım, BES ve maaş.', icon: Banknote },
+  { section: 'records', to: '/krediler', title: 'Krediler', description: 'Kredi bakiyesi ve taksit planı.', icon: Landmark },
+  { section: 'maintenance', to: '/veri-sagligi', title: 'Veri kontrolü', description: 'Tutarsız kayıtları güvenle düzelt.', icon: ShieldCheck },
 ] as const

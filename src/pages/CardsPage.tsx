@@ -1,4 +1,4 @@
-import { CalendarClock, CheckCircle2, Clock3, ReceiptText, WalletCards, XCircle } from 'lucide-react'
+import { ArrowRightLeft, CalendarClock, CheckCircle2, Clock3, ReceiptText, WalletCards, XCircle } from 'lucide-react'
 import type { CSSProperties } from 'react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { CrudPage, type FormField } from '../components/CrudPage'
@@ -371,6 +371,102 @@ function CreditCardOverview({ rows }: { rows: Card[] }) {
         </div>
       ) : null}
     </div>
+  )
+}
+
+function AccountHubPanel({
+  rows,
+  onOpenTransfer,
+}: {
+  rows: Card[]
+  onOpenTransfer: (source: Card) => void
+}) {
+  const accounts = rows.filter((row) => row.card_type === 'banka_karti')
+  const creditCards = rows.filter((row) => row.card_type === 'kredi_karti')
+  if (accounts.length === 0 && creditCards.length === 0) return null
+
+  const accountBalance = accounts.reduce((total, account) => total + account.current_balance, 0)
+  const cardDebt = creditCards.reduce((total, card) => total + card.debt_amount, 0)
+  const payableCardDebt = creditCards.reduce((total, card) => total + cardPayableDebt(card), 0)
+  const banks = Array.from(
+    accounts.reduce((map, account) => {
+      const current = map.get(account.bank_name) ?? { balance: 0, count: 0 }
+      map.set(account.bank_name, {
+        balance: current.balance + account.current_balance,
+        count: current.count + 1,
+      })
+      return map
+    }, new Map<string, { balance: number; count: number }>()),
+  ).sort((left, right) => right[1].balance - left[1].balance)
+  const canTransfer = accounts.length > 1
+
+  return (
+    <SurfaceCard id="hesap-merkezi" className="border-0 shadow-sm ring-1 ring-primary/18">
+      <CardHeader className="pb-0">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <CardTitle className="text-base">Hesap merkezi</CardTitle>
+            <p className="mt-1 text-xs text-muted-foreground">Banka hesapları, kredi kartı yükü ve transferler tek yerde.</p>
+          </div>
+          {accounts[0] ? (
+            <button
+              type="button"
+              onClick={() => onOpenTransfer(accounts[0])}
+              disabled={!canTransfer}
+              className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg bg-primary px-3 py-2 text-xs font-bold text-primary-foreground shadow-sm disabled:opacity-55"
+            >
+              <ArrowRightLeft size={14} />
+              Transfer
+            </button>
+          ) : null}
+        </div>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-3 pt-3">
+        <div className="grid grid-cols-2 gap-2 min-[620px]:grid-cols-4">
+          <OverviewStat label="Hesap bakiyesi" value={formatCurrency(accountBalance)} help={cardHelp.cashBalance} />
+          <OverviewStat label="Kredi kartı borcu" value={formatCurrency(cardDebt)} help={cardHelp.totalDebt} />
+          <OverviewStat label="Ödenebilir borç" value={formatCurrency(payableCardDebt)} help={cardHelp.statementDebt} />
+          <OverviewStat label="Banka sayısı" value={String(banks.length)} />
+        </div>
+
+        {accounts.length > 0 ? (
+          <div className="grid gap-2 min-[760px]:grid-cols-2">
+            {accounts.map((account) => (
+              <div key={account.id} className="flex items-center justify-between gap-3 rounded-lg bg-muted/55 px-3 py-2.5">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-bold text-foreground">{account.card_name}</p>
+                  <p className="truncate text-xs text-muted-foreground">{account.bank_name}</p>
+                </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  <span className="text-sm font-extrabold tabular-nums text-foreground">{formatCurrency(account.current_balance)}</span>
+                  <button
+                    type="button"
+                    onClick={() => onOpenTransfer(account)}
+                    disabled={!canTransfer}
+                    className="grid size-8 place-items-center rounded-lg border border-border bg-card text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:opacity-45"
+                    aria-label={`${account.card_name} hesabından transfer yap`}
+                  >
+                    <ArrowRightLeft size={15} />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="rounded-lg bg-muted/45 p-3 text-sm text-muted-foreground">Transfer için önce banka kartı türünde en az iki hesap ekle.</p>
+        )}
+
+        {banks.length > 1 ? (
+          <div className="flex flex-wrap gap-2">
+            {banks.map(([bankName, bank]) => (
+              <Badge key={bankName} variant="outline">
+                {bankName} · {formatCurrency(bank.balance)}
+              </Badge>
+            ))}
+          </div>
+        ) : null}
+      </CardContent>
+    </SurfaceCard>
   )
 }
 
@@ -1158,10 +1254,12 @@ function ProvisionPanel({
 
 export function CardsPage() {
   const [transactionCard, setTransactionCard] = useState<Card | null>(null)
-  const [transactionType, setTransactionType] = useState<'in' | 'out'>('in')
+  const [transactionType, setTransactionType] = useState<'in' | 'out' | 'transfer'>('in')
   const [transactionAmount, setTransactionAmount] = useState('')
+  const [transactionTargetCard, setTransactionTargetCard] = useState('')
   const [transactionError, setTransactionError] = useState('')
   const [transactionSaving, setTransactionSaving] = useState(false)
+  const [movementAccounts, setMovementAccounts] = useState<Card[]>([])
   const [reloadCards, setReloadCards] = useState<(() => Promise<void>) | null>(null)
   const [debtPaymentCard, setDebtPaymentCard] = useState<Card | null>(null)
   const [debtPaymentAmount, setDebtPaymentAmount] = useState('')
@@ -1259,11 +1357,14 @@ export function CardsPage() {
     setProvisionActionId(null)
   }
 
-  function openTransaction(card: Card, reload: () => Promise<void>) {
+  function openTransaction(card: Card, reload: () => Promise<void>, cards: Card[], type: 'in' | 'out' | 'transfer' = 'in') {
+    const accounts = cards.filter((row) => row.card_type === 'banka_karti')
     setTransactionCard(card)
     setReloadCards(() => reload)
-    setTransactionType('in')
+    setMovementAccounts(accounts)
+    setTransactionType(type)
     setTransactionAmount('')
+    setTransactionTargetCard('')
     setTransactionError('')
   }
 
@@ -1274,6 +1375,47 @@ export function CardsPage() {
     const amount = parseNumber(transactionAmount)
     if (amount <= 0) {
       setTransactionError('Tutar 0 dan büyük olmalı.')
+      return
+    }
+
+    if (transactionType === 'transfer') {
+      const targetCard = movementAccounts.find((card) => card.id === transactionTargetCard)
+      if (!targetCard) {
+        setTransactionError('Hedef hesap seçmelisin.')
+        return
+      }
+
+      if (targetCard.id === transactionCard.id) {
+        setTransactionError('Kaynak ve hedef hesap aynı olamaz.')
+        return
+      }
+
+      if (transactionCard.current_balance < amount) {
+        setTransactionError('Kaynak hesap bakiyesi yetersiz.')
+        return
+      }
+
+      setTransactionSaving(true)
+      setTransactionError('')
+
+      const { error } = await supabase.rpc('transfer_between_accounts', {
+        p_source_card_id: transactionCard.id,
+        p_target_card_id: targetCard.id,
+        p_amount: amount,
+      })
+
+      setTransactionSaving(false)
+      if (error) {
+        setTransactionError(
+          isSchemaCacheError(error)
+            ? 'Transfer altyapısı canlı veritabanına uygulanmamış. Migration çalışınca bu işlem açılacak.'
+            : error.message,
+        )
+        return
+      }
+
+      setTransactionCard(null)
+      await reloadCards?.()
       return
     }
 
@@ -1427,19 +1569,25 @@ export function CardsPage() {
     await reload()
   }
 
+  const transactionTarget = movementAccounts.find((card) => card.id === transactionTargetCard)
+  const transactionTargetAccounts = movementAccounts.filter((card) => card.id !== transactionCard?.id)
+  const transactionAmountValue = parseNumber(transactionAmount)
+
   return (
     <>
       <CrudPage
         table="cards"
-        pageTitle="Kartlar"
-        addLabel="Kart ekle"
+        pageTitle="Hesaplar ve kartlar"
+        addLabel="Hesap / kart ekle"
         fields={fields}
         emptyTitle="Henüz kart yok"
-        emptyDescription="Kredi kartı ve banka kartlarını buradan takip edebilirsin."
+        emptyDescription="Banka hesaplarını ve kredi kartlarını buradan takip edebilirsin."
         orderBy="card_type"
         renderBeforeList={({ loading, rows, reload, setError }) =>
           !loading ? (
             <div className="flex flex-col gap-3">
+              <AccountHubPanel rows={rows as Card[]} onOpenTransfer={(source) => openTransaction(source, reload, rows as Card[], 'transfer')} />
+              <CreditCardOverview rows={rows as Card[]} />
               <QuickExpensePanel rows={rows as Card[]} reload={() => refreshCardsAndProvisions(reload)} setError={setError} />
               {provisionError ? (
                 <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">{provisionError}</p>
@@ -1453,10 +1601,21 @@ export function CardsPage() {
                 onPostAll={(expenses) => void handlePostAllProvisions(expenses, reload, setError)}
                 onCancel={(expense) => void handleProvisionAction(expense, 'cancel', reload, setError)}
               />
-              <LegacyInstallmentPanel rows={rows as Card[]} reload={reload} setError={setError} />
               <CardInstallmentCalendarPanel cards={rows as Card[]} />
-              <CardInstallmentExpensesPanel cards={rows as Card[]} reload={() => refreshCardsAndProvisions(reload)} setError={setError} />
-              <CreditCardOverview rows={rows as Card[]} />
+              <CardInstallmentExpensesPanel
+                cards={rows as Card[]}
+                accounts={(rows as Card[]).filter((row) => row.card_type === 'banka_karti')}
+                reload={() => refreshCardsAndProvisions(reload)}
+                setError={setError}
+              />
+              {(rows as Card[]).some((row) => row.card_type === 'kredi_karti') ? (
+                <details className="rounded-lg border border-border/75 bg-card/80 p-3 shadow-sm">
+                  <summary className="cursor-pointer text-sm font-bold text-foreground">Eski taksit devri</summary>
+                  <div className="mt-3">
+                    <LegacyInstallmentPanel rows={rows as Card[]} reload={reload} setError={setError} />
+                  </div>
+                </details>
+              ) : null}
             </div>
           ) : null
         }
@@ -1582,7 +1741,7 @@ export function CardsPage() {
           row.card_type === 'banka_karti' ? (
             <button
               type="button"
-              onClick={() => openTransaction(row, helpers.reload)}
+              onClick={() => openTransaction(row, helpers.reload, helpers.rows as Card[])}
               className="rounded-lg border border-stone-200 bg-stone-700 px-3 py-2 text-xs font-semibold text-white shadow-sm dark:border-stone-700 dark:bg-stone-600"
             >
               İşlem
@@ -1591,7 +1750,7 @@ export function CardsPage() {
         }
       />
 
-      <SimpleModal title="Banka kartı işlemi" open={Boolean(transactionCard)} onClose={() => setTransactionCard(null)}>
+      <SimpleModal title="Banka hesabı işlemi" open={Boolean(transactionCard)} onClose={() => setTransactionCard(null)}>
         <form onSubmit={handleTransactionSubmit} className="space-y-4">
           <div className="rounded-lg bg-stone-50 p-3 text-sm text-stone-600 dark:bg-stone-900 dark:text-stone-300">
             <p className="font-semibold text-stone-950 dark:text-stone-50">{transactionCard?.card_name}</p>
@@ -1601,11 +1760,16 @@ export function CardsPage() {
             İşlem tipi
             <select
               value={transactionType}
-              onChange={(event) => setTransactionType(event.target.value as 'in' | 'out')}
+              onChange={(event) => {
+                setTransactionType(event.target.value as 'in' | 'out' | 'transfer')
+                setTransactionTargetCard('')
+                setTransactionError('')
+              }}
               className="mt-1 w-full rounded-lg border border-stone-200 bg-white px-3 py-3 outline-none focus:border-emerald-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
             >
               <option value="in">Para geldi</option>
               <option value="out">Para gitti</option>
+              <option value="transfer">Hesaplar arası transfer</option>
             </select>
           </label>
           <label className="block text-sm font-medium text-stone-700 dark:text-stone-200">
@@ -1620,13 +1784,44 @@ export function CardsPage() {
               className="mt-1 w-full rounded-lg border border-stone-200 px-3 py-3 outline-none focus:border-emerald-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
             />
           </label>
+          {transactionType === 'transfer' ? (
+            <>
+              <label className="block text-sm font-medium text-stone-700 dark:text-stone-200">
+                Hedef hesap
+                <select
+                  required
+                  value={transactionTargetCard}
+                  onChange={(event) => {
+                    setTransactionTargetCard(event.target.value)
+                    setTransactionError('')
+                  }}
+                  className="mt-1 w-full rounded-lg border border-stone-200 bg-white px-3 py-3 outline-none focus:border-emerald-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+                >
+                  <option value="">{transactionTargetAccounts.length > 0 ? 'Hedef hesap seç' : 'Transfer için ikinci hesap gerekli'}</option>
+                  {transactionTargetAccounts.map((account) => (
+                    <option key={account.id} value={account.id}>
+                      {account.bank_name} · {account.card_name} ({formatCurrency(account.current_balance)})
+                    </option>
+                  ))}
+                </select>
+              </label>
+              {transactionTarget ? (
+                <div className="grid grid-cols-2 gap-2 rounded-xl bg-muted/45 px-3 py-2 text-xs text-muted-foreground">
+                  <span>
+                    Kaynak sonrası: {formatCurrency((transactionCard?.current_balance ?? 0) - transactionAmountValue)}
+                  </span>
+                  <span>Hedef sonrası: {formatCurrency(transactionTarget.current_balance + transactionAmountValue)}</span>
+                </div>
+              ) : null}
+            </>
+          ) : null}
           {transactionError ? <p className="rounded-lg bg-rose-50 p-3 text-sm text-rose-700">{transactionError}</p> : null}
           <button
             type="submit"
             disabled={transactionSaving}
             className="w-full rounded-xl bg-stone-700 px-4 py-3.5 text-sm font-semibold text-white disabled:opacity-60 dark:bg-stone-600"
           >
-            {transactionSaving ? 'İşleniyor...' : 'Bakiyeyi güncelle'}
+            {transactionSaving ? 'İşleniyor...' : transactionType === 'transfer' ? 'Transferi tamamla' : 'Bakiyeyi güncelle'}
           </button>
         </form>
       </SimpleModal>

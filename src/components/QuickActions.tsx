@@ -1,16 +1,16 @@
-import { Banknote, HandCoins, Landmark, Plus, ReceiptText, Search, ShieldCheck, WalletCards, X } from 'lucide-react'
+import { ArrowRightLeft, Banknote, HandCoins, Landmark, Plus, ReceiptText, Search, WalletCards, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { cn } from '../lib/utils'
 import { Input } from './ui/input'
 
 const actions = [
-  { to: '/kartlar#hizli-harcama', matchPath: '/kartlar', label: 'Harcama', description: 'Kartlar ekranında hızlı harcama', icon: WalletCards },
-  { to: '/odemeler?new=1', matchPath: '/odemeler', label: 'Ödeme', description: 'Fatura, kira veya abonelik', icon: ReceiptText },
-  { to: '/borclar?new=1', matchPath: '/borclar', label: 'Borç', description: 'Borç veya alacak kaydı', icon: HandCoins },
+  { to: '/kartlar#hizli-harcama', matchPath: '/kartlar', label: 'Harcama', description: 'Hesaptan veya karttan harca', icon: WalletCards },
+  { to: '/kartlar#hesap-merkezi', matchPath: '/kartlar', label: 'Transfer', description: 'Hesaptan hesaba aktar', icon: ArrowRightLeft },
+  { to: '/odemeler?new=1', matchPath: '/odemeler', label: 'Planlı', description: 'Fatura, kira veya abonelik', icon: ReceiptText },
+  { to: '/borclar?new=1', matchPath: '/borclar', label: 'Kişi', description: 'Borç veya alacak kaydı', icon: HandCoins },
   { to: '/varliklar?new=1', matchPath: '/varliklar', label: 'Varlık', description: 'Nakit, yatırım veya maaş', icon: Banknote },
   { to: '/krediler?new=1', matchPath: '/krediler', label: 'Kredi', description: 'Kredi ve taksit planı', icon: Landmark },
-  { to: '/veri-sagligi', matchPath: '/veri-sagligi', label: 'Kontrol', description: 'Veri sağlığı ve güvenli düzeltmeler', icon: ShieldCheck },
 ]
 
 const routePriorities: Record<string, string> = {
@@ -19,8 +19,6 @@ const routePriorities: Record<string, string> = {
   '/borclar': '/borclar',
   '/varliklar': '/varliklar',
   '/krediler': '/krediler',
-  '/veri-sagligi': '/veri-sagligi',
-  '/analiz': '/veri-sagligi',
 }
 
 function isFormElementActive() {

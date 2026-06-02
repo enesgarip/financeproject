@@ -44,7 +44,7 @@ type HealthData = {
 
 type HealthIssue = {
   id: string
-  area: 'Varlıklar' | 'Bütçeler' | 'Kartlar' | 'Krediler' | 'Borçlar' | 'Ödemeler' | 'Maaş' | 'Hedefler'
+  area: 'Varlıklar' | 'Bütçeler' | 'Kartlar' | 'Krediler' | 'Kişiler' | 'Planlı' | 'Maaş' | 'Hedefler'
   severity: 'error' | 'warning' | 'info'
   title: string
   description: string
@@ -1394,7 +1394,7 @@ function buildIssues(data: HealthData): HealthIssue[] {
     if (debt.value_type === 'doviz' && (!debt.currency || debt.currency === 'TRY')) {
       issues.push({
         id: `debt-fx-currency-${debt.id}`,
-        area: 'Borçlar',
+        area: 'Kişiler',
         severity: 'warning',
         title: `${debt.person_name} döviz kaydında para birimi eksik`,
         description: 'Döviz borç/alacak kaydında USD, EUR veya GBP gibi bir para birimi seçili olmalı.',
@@ -1412,7 +1412,7 @@ function buildIssues(data: HealthData): HealthIssue[] {
     if (Object.keys(updates).length > 0) {
       issues.push({
         id: `debt-shape-${debt.id}`,
-        area: 'Borçlar',
+        area: 'Kişiler',
         severity: 'warning',
         title: `${debt.person_name} borç alanları türle uyuşmuyor`,
         description: 'Değer türü değişiminden kalmış teknik alanlar var.',
@@ -1427,11 +1427,11 @@ function buildIssues(data: HealthData): HealthIssue[] {
     if (debt.status === 'açık' && debt.estimated_value_try <= 0) {
       issues.push({
         id: `debt-zero-${debt.id}`,
-        area: 'Borçlar',
+        area: 'Kişiler',
         severity: 'warning',
         title: `${debt.person_name} açık borç/alacak değeri 0`,
         description: 'Açık kayıt 0 TL göründüğü için net borç/alacak hesabını etkili takip edemez.',
-        details: [`Yön: ${debt.direction}`],
+        details: [`Durum: ${debt.direction === 'borç_aldım' ? 'Ben borçluyum' : 'Bana borçlu'}`],
         fixable: false,
         kind: 'manual',
       })
@@ -1440,7 +1440,7 @@ function buildIssues(data: HealthData): HealthIssue[] {
     if (isGold && debt.amount <= 0) {
       issues.push({
         id: `debt-gold-amount-${debt.id}`,
-        area: 'Borçlar',
+        area: 'Kişiler',
         severity: 'warning',
         title: `${debt.person_name} altın miktarı eksik`,
         description: 'Altın türündeki borç/alacakta miktar 0 görünüyor.',
@@ -1453,7 +1453,7 @@ function buildIssues(data: HealthData): HealthIssue[] {
     if (debt.status === 'açık' && debt.due_date && debt.due_date < today) {
       issues.push({
         id: `debt-overdue-${debt.id}`,
-        area: 'Borçlar',
+        area: 'Kişiler',
         severity: 'info',
         title: `${debt.person_name} vadesi geçmiş açık kayıt`,
         description: 'Vadesi geçmiş borç/alacak hâlâ açık görünüyor.',
@@ -1638,7 +1638,7 @@ function buildIssues(data: HealthData): HealthIssue[] {
     if (payment.status === 'bekliyor' && payment.due_date < today) {
       issues.push({
         id: `payment-overdue-${payment.id}`,
-        area: 'Ödemeler',
+        area: 'Planlı',
         severity: 'info',
         title: `${payment.title} vadesi geçmiş`,
         description: 'Bekleyen ödeme tarihi geçmiş görünüyor.',
@@ -1651,7 +1651,7 @@ function buildIssues(data: HealthData): HealthIssue[] {
     if (payment.status === 'bekliyor' && payment.amount <= 0 && !(payment.payment_method === 'bank_auto' && payment.amount_status === 'estimated')) {
       issues.push({
         id: `payment-zero-${payment.id}`,
-        area: 'Ödemeler',
+        area: 'Planlı',
         severity: 'warning',
         title: `${payment.title} ödeme tutarı 0`,
         description: 'Bekleyen ödeme 0 TL görünüyor; ödeme akışı eksik hesaplanır.',
@@ -1664,7 +1664,7 @@ function buildIssues(data: HealthData): HealthIssue[] {
     if (payment.recurrence === 'none' && (payment.recurrence_day !== null || payment.recurrence_end_date !== null)) {
       issues.push({
         id: `payment-recurrence-fields-${payment.id}`,
-        area: 'Ödemeler',
+        area: 'Planlı',
         severity: 'warning',
         title: `${payment.title} tekrar alanları temiz değil`,
         description: 'Tek seferlik ödeme kaydında aylık tekrar alanları dolu kalmış.',
@@ -1681,7 +1681,7 @@ function buildIssues(data: HealthData): HealthIssue[] {
     if (!payment.recurrence_day) {
       issues.push({
         id: `payment-no-day-${payment.id}`,
-        area: 'Ödemeler',
+        area: 'Planlı',
         severity: 'warning',
         title: `${payment.title} tekrar günü eksik`,
         description: 'Aylık ödeme kaydında ay günü boş.',
@@ -1696,7 +1696,7 @@ function buildIssues(data: HealthData): HealthIssue[] {
     if (payment.due_date !== expectedDueDate) {
       issues.push({
         id: `payment-due-day-${payment.id}`,
-        area: 'Ödemeler',
+        area: 'Planlı',
         severity: 'warning',
         title: `${payment.title} tarihi tekrar günüyle uyuşmuyor`,
         description: 'Aylık ödeme tarihi, seçili tekrar gününe göre hizalanmamış.',
@@ -1711,7 +1711,7 @@ function buildIssues(data: HealthData): HealthIssue[] {
     if (payment.status === 'bekliyor' && payment.recurrence_end_date && payment.due_date > payment.recurrence_end_date) {
       issues.push({
         id: `payment-ended-${payment.id}`,
-        area: 'Ödemeler',
+        area: 'Planlı',
         severity: 'info',
         title: `${payment.title} bitiş tarihini geçmiş`,
         description: 'Aylık ödeme hâlâ bekliyor ama tekrar bitiş tarihi geride kalmış.',
@@ -2142,9 +2142,9 @@ export function DataHealthPage() {
             <div className="min-w-0">
               <CardTitle className="flex items-center gap-2 text-lg">
                 <ShieldCheck size={20} />
-                Veri sağlığı
+                Veri kontrolü
               </CardTitle>
-              <p className="mt-1 text-sm text-muted-foreground">Varlık, bütçe, kart, kredi, borç, ödeme ve hedef kayıtlarındaki tutarlılık kontrolleri.</p>
+              <p className="mt-1 text-sm text-muted-foreground">Varlık, kart, kredi, kişi ve planlı ödeme kayıtları.</p>
             </div>
             <Badge variant={visibleIssues.length > 0 ? 'secondary' : 'default'}>{loading ? 'Kontrol' : `${visibleIssues.length} bulgu`}</Badge>
           </div>
@@ -2291,7 +2291,7 @@ export function DataHealthPage() {
                         </div>
                       ) : null}
                       <div className="mt-3">
-                        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Hizli aksiyonlar</p>
+                        <p className="text-xs font-semibold uppercase text-muted-foreground">Hızlı aksiyonlar</p>
                         <div className="mt-2 flex flex-wrap gap-2">
                           {issue.fixable ? (
                             <button
