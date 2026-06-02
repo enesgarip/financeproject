@@ -36,7 +36,7 @@
 
 ## P3 - Nice to Have
 
-- Add import/export or backup flow for personal finance data.
+- Add guided import/restore flow for personal finance data. JSON/CSV export now exists in the data health screen.
 - Add stronger historical analytics for cash flow and debt trend.
 - Add better scenario planning around next-month and multi-month obligations.
 

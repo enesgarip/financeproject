@@ -18,6 +18,7 @@ import type { Card, CardExpense, CardExpenseStatus, CardStatementArchive, Insert
 import { expenseCategoryOptions } from '../utils/categories'
 import { getCardStatementPeriod } from '../utils/cardStatement'
 import { dateInputValue, formatDate } from '../utils/date'
+import { cardPayableDebt, cardProvisionAmount, cardSplitTotal } from '../utils/financeSummary'
 import { formatCurrency, parseNumber } from '../utils/formatCurrency'
 import { addTransactionHistory } from '../utils/history'
 
@@ -193,22 +194,6 @@ function isSchemaCacheError(error: { code?: string; message?: string } | null | 
   if (!error) return false
   const message = error.message ?? ''
   return error.code === 'PGRST202' || error.code === 'PGRST205' || message.includes('schema cache') || message.includes('Could not find the function')
-}
-
-function roundMoney(value: number) {
-  return Math.round((value + Number.EPSILON) * 100) / 100
-}
-
-function cardProvisionAmount(card: Pick<Card, 'provision_amount'>) {
-  return card.provision_amount ?? 0
-}
-
-function cardSplitTotal(statementDebt: number, currentPeriod: number, provisionAmount: number) {
-  return roundMoney(statementDebt + currentPeriod + provisionAmount)
-}
-
-function cardPayableDebt(card: Card) {
-  return Math.max(0, card.statement_debt_amount + card.current_period_spending)
 }
 
 function limitGroupKey(card: Card) {

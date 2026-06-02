@@ -1,4 +1,4 @@
-import { Activity, AlertTriangle, CheckCircle2, DatabaseZap, RefreshCw, ShieldCheck, Trash2, Undo2, Wrench } from 'lucide-react'
+import { Activity, AlertTriangle, CheckCircle2, DatabaseZap, Download, RefreshCw, ShieldCheck, Trash2, Undo2, Wrench } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { SimpleModal } from '../components/SimpleModal'
@@ -23,6 +23,7 @@ import type {
   UpdateFor,
 } from '../types/database'
 import { dateInputValue, formatDate } from '../utils/date'
+import { cardProvisionAmount, cardSplitTotal, moneyDiffers, roundMoney } from '../utils/financeSummary'
 import { formatCurrency } from '../utils/formatCurrency'
 import { formatComponentAmount, formatSavingsGoalAmount, savingsGoalValueTypeLabel } from '../utils/savingsGoal'
 
@@ -159,13 +160,21 @@ const emptyData: HealthData = {
   savingsGoalComponents: [],
 }
 
-function roundMoney(value: number) {
-  return Math.round((value + Number.EPSILON) * 100) / 100
-}
-
-function moneyDiffers(left: number, right: number) {
-  return Math.abs(roundMoney(left) - roundMoney(right)) > 0.01
-}
+const exportTables = [
+  { key: 'assets', table: 'assets' },
+  { key: 'budgets', table: 'budgets' },
+  { key: 'cards', table: 'cards' },
+  { key: 'cardExpenses', table: 'card_expenses' },
+  { key: 'cardInstallments', table: 'card_installments' },
+  { key: 'cardStatementArchives', table: 'card_statement_archives' },
+  { key: 'debts', table: 'debts' },
+  { key: 'loans', table: 'loans' },
+  { key: 'loanInstallments', table: 'loan_installments' },
+  { key: 'payments', table: 'payments' },
+  { key: 'salaryHistory', table: 'salary_history' },
+  { key: 'savingsGoals', table: 'savings_goals' },
+  { key: 'savingsGoalComponents', table: 'savings_goal_components' },
+] satisfies Array<{ key: keyof HealthData; table: string }>
 
 function isSchemaCacheError(error: { code?: string; message?: string } | null | undefined) {
   if (!error) return false
@@ -211,14 +220,6 @@ function range(from: number, to: number) {
 function cardLabel(card: Card | undefined) {
   if (!card) return 'Kart bulunamadı'
   return `${card.bank_name} · ${card.card_name}`
-}
-
-function cardProvisionAmount(card: Pick<Card, 'provision_amount'>) {
-  return card.provision_amount ?? 0
-}
-
-function cardSplitTotal(statementDebt: number, currentPeriod: number, provisionAmount: number) {
-  return roundMoney(statementDebt + currentPeriod + provisionAmount)
 }
 
 function activeCardExpense(expense: CardExpense) {
@@ -378,6 +379,66 @@ function makeUndoBatch(label: string, entries: UndoEntry[]): UndoBatch | null {
 
 function compactIds(ids: string[]) {
   return [...new Set(ids.filter(Boolean))]
+}
+
+function exportFile(filename: string, content: string, mimeType: string) {
+  const blob = new Blob([content], { type: mimeType })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  link.click()
+  URL.revokeObjectURL(url)
+}
+
+function csvCell(value: unknown) {
+  const text = value === null || value === undefined ? '' : String(value)
+  return `"${text.replaceAll('"', '""')}"`
+}
+
+function exportRowLabel(row: Record<string, unknown>) {
+  const keys = ['name', 'card_name', 'loan_name', 'title', 'person_name', 'description', 'label', 'bank_name']
+  return keys.map((key) => row[key]).find((value) => typeof value === 'string' && value.trim()) ?? ''
+}
+
+function exportRowAmount(row: Record<string, unknown>) {
+  const keys = ['estimated_value_try', 'statement_debt_amount', 'debt_amount', 'remaining_amount', 'current_balance', 'amount', 'target_amount']
+  return keys.map((key) => row[key]).find((value) => typeof value === 'number') ?? ''
+}
+
+function exportRowDate(row: Record<string, unknown>) {
+  const keys = ['due_date', 'statement_date', 'due_month', 'spent_at', 'effective_date', 'target_date', 'created_at']
+  return keys.map((key) => row[key]).find((value) => typeof value === 'string' && value) ?? ''
+}
+
+function downloadDataJson(data: HealthData) {
+  const exportedAt = new Date().toISOString()
+  exportFile(
+    `financeproject-backup-${dateInputValue(new Date())}.json`,
+    JSON.stringify({ exportedAt, schema: 'financeproject-v1', data }, null, 2),
+    'application/json;charset=utf-8',
+  )
+}
+
+function downloadDataCsv(data: HealthData) {
+  const headers = ['table', 'id', 'label', 'amount', 'status', 'date', 'json']
+  const rows = exportTables.flatMap(({ key, table }) =>
+    data[key].map((item) => {
+      const row = item as unknown as Record<string, unknown>
+      return [
+        table,
+        row.id ?? '',
+        exportRowLabel(row),
+        exportRowAmount(row),
+        row.status ?? row.card_type ?? row.category ?? '',
+        exportRowDate(row),
+        JSON.stringify(row),
+      ]
+    }),
+  )
+
+  const csv = [headers, ...rows].map((row) => row.map(csvCell).join(',')).join('\n')
+  exportFile(`financeproject-backup-${dateInputValue(new Date())}.csv`, csv, 'text/csv;charset=utf-8')
 }
 
 function formatGoalComponentProgress(component: SavingsGoalComponent) {
@@ -2196,6 +2257,24 @@ export function DataHealthPage() {
                 {undoing ? 'Geri alınıyor...' : 'Son düzeltmeyi geri al'}
               </button>
             ) : null}
+            <button
+              type="button"
+              onClick={() => downloadDataJson(data)}
+              disabled={loading || Boolean(fixingId) || undoing || resetting}
+              className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-800 shadow-sm disabled:opacity-60 dark:border-emerald-900/70 dark:bg-emerald-950/30 dark:text-emerald-200"
+            >
+              <Download size={15} />
+              JSON yedek
+            </button>
+            <button
+              type="button"
+              onClick={() => downloadDataCsv(data)}
+              disabled={loading || Boolean(fixingId) || undoing || resetting}
+              className="inline-flex items-center gap-2 rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm font-semibold text-stone-700 shadow-sm disabled:opacity-60 dark:border-stone-800 dark:bg-stone-950 dark:text-stone-200"
+            >
+              <Download size={15} />
+              CSV yedek
+            </button>
             <button
               type="button"
               onClick={() => {

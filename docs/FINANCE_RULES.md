@@ -52,6 +52,7 @@ From `src/utils/cardStatement.ts`:
 Statement archive behavior:
 
 - `card_statement_archives` tracks a monthly card statement with `period_year`, `period_month`, and `status`
+- one user/card/month can have only one statement archive
 - statement status is `open` until paid, then `paid`
 - `cut_card_statement` is idempotent for one user/card/month
 - statement amount is the posted current-period spending at cut time

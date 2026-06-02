@@ -307,6 +307,12 @@ export type Database = {
         }
         Returns: CardInstallment
       }
+      unpay_card_installment: {
+        Args: {
+          p_installment_id: string
+        }
+        Returns: CardInstallment
+      }
       transfer_between_accounts: {
         Args: {
           p_source_card_id: string
