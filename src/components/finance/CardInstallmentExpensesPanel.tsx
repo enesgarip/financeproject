@@ -7,6 +7,7 @@ import { SimpleModal } from '../SimpleModal'
 import { Badge } from '../ui/badge'
 import { Card as SurfaceCard, CardContent, CardHeader, CardTitle } from '../ui/card'
 import { HelpTooltip, type HelpTooltipContent } from '../ui/help-tooltip'
+import { useConfirmDialog } from '../ui/use-confirm-dialog'
 import { supabase } from '../../lib/supabase'
 import type { Card, CardExpense, CardInstallment } from '../../types/database'
 import { expenseCategoryOptions } from '../../utils/categories'
@@ -237,6 +238,39 @@ export function CardInstallmentExpensesPanel({ cards, accounts, reload, setError
     setPaymentError('')
 
     const { error } = await supabase.rpc('pay_card_installment', {
+      p_installment_id: installment.id,
+      p_source_card_id: sourceAccount.id,
+    })
+
+    if (error) {
+      const message = isSchemaCacheError(error)
+        ? 'Kaynak hesaplı taksit ödemesi henüz veritabanında yok. Migration uygulanınca bu işlem açılacak.'
+        : error.message
+      setPaymentError(message)
+      setPayingId(null)
+      return
+    }
+
+    try {
+      await Promise.all([loadExpenses(), reload()])
+      closeInstallmentPayment()
+    } finally {
+      setPayingId(null)
+    }
+  }
+
+  async function handleUndoPaid(installment: CardInstallment) {
+    const confirmed = await confirm({
+      title: 'Taksit ödemesini geri al',
+      description: `${installment.installment_no}/${installment.installment_count}. taksit tekrar borca eklenecek ve ödendi tarihi silinecek.`,
+      confirmLabel: 'Geri al',
+    })
+    if (!confirmed) return
+
+    setPayingId(installment.id)
+    setError('')
+
+    const { error } = await supabase.rpc('unpay_card_installment', {
       p_installment_id: installment.id,
       p_source_card_id: sourceAccount.id,
     })

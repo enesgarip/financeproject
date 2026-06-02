@@ -102,6 +102,9 @@ From `src/utils/budgetAlerts.ts`:
 - payments can be one-off or monthly recurring
 - recurrence types currently include `none` and `monthly`
 - payment status is mainly `bekliyor` or `ödendi`
+- marking a payment paid can use a bank card or credit card:
+  - bank cards decrease `current_balance`
+  - credit cards create a posted `card_expenses` row and increase `debt_amount` plus `current_period_spending`
 - dashboard monthly load includes:
   - one-off payments due in the month
   - recurring monthly payments whose occurrence lands in the month

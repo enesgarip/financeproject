@@ -241,6 +241,12 @@ function validateLoanForm(formData: FormData) {
   return errors
 }
 
+function isSchemaCacheError(error: { code?: string; message?: string } | null | undefined) {
+  if (!error) return false
+  const message = error.message ?? ''
+  return error.code === 'PGRST202' || error.code === 'PGRST205' || message.includes('schema cache') || message.includes('Could not find the function')
+}
+
 async function getBankaKartlari(): Promise<Card[]> {
   const { data, error } = await supabase
     .from('cards')
@@ -559,7 +565,7 @@ export function LoansPage() {
                   {item.installment_no}. taksit · {formatCurrency(item.amount)}
                 </p>
                 <p className="text-xs text-stone-500 dark:text-stone-400">
-                  {formatDate(item.due_date)} · {item.status === 'ödendi' ? 'Ödendi' : 'Bekliyor'}
+                  {formatDate(item.due_date)} · {item.status === 'ödendi' ? (undoPaidActionId === item.id ? 'Geri alınıyor...' : 'Ödendi') : 'Bekliyor'}
                 </p>
               </div>
               <div className="relative shrink-0">

@@ -312,6 +312,12 @@ export type Database = {
         }
         Returns: LoanInstallment
       }
+      unpay_loan_installment: {
+        Args: {
+          p_installment_id: string
+        }
+        Returns: LoanInstallment
+      }
       pay_payment: {
         Args: {
           p_payment_id: string
