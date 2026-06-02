@@ -208,7 +208,7 @@ function cardSplitTotal(statementDebt: number, currentPeriod: number, provisionA
 }
 
 function cardPayableDebt(card: Card) {
-  return Math.max(0, card.debt_amount - cardProvisionAmount(card))
+  return Math.max(0, card.statement_debt_amount + card.current_period_spending)
 }
 
 function limitGroupKey(card: Card) {

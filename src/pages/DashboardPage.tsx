@@ -32,12 +32,35 @@ import type {
   LoanInstallment,
   Payment,
   SalaryHistory,
+  SavingsGoal,
+  SavingsGoalComponent,
   TransactionHistory,
   TransactionHistoryType,
 } from '../types/database'
 import { BudgetAlertPanel } from '../components/dashboard/BudgetAlertPanel'
 import { StatementReminderPanel } from '../components/dashboard/StatementReminderPanel'
-import { addMonths, daysUntil, endOfMonth, formatDate, isDateInMonth, isUpcomingDate, monthlyOccurrenceDate, nextMonthlyDate, startOfMonth } from '../utils/date'
+import { addMonths, daysUntil, formatDate, isUpcomingDate, monthlyOccurrenceDate, nextMonthlyDate, startOfMonth } from '../utils/date'
+import {
+  buildCreditLimitGroups,
+  buildFinancialHealth,
+  buildFinancialPosition,
+  buildGoalProgressSummary,
+  buildMonthlyCashFlow,
+  buildMonthlyLoad,
+  cardMonthlyPaymentAmount,
+  cardProvisionAmount,
+  cardSplitTotal,
+  getSalaryTrend,
+  moneyDiffers,
+  roundMoney,
+  sum,
+  totalCreditLimit,
+  type CashFlowSummary,
+  type CreditLimitGroup,
+  type FinancialHealthSummary,
+  type GoalProgressSummary,
+  type MonthlyLoadSummary,
+} from '../utils/financeSummary'
 import { formatCurrency } from '../utils/formatCurrency'
 import { EmptyState } from '../components/EmptyState'
 import { Badge } from '../components/ui/badge'
@@ -60,6 +83,8 @@ type DashboardData = {
   budgets: Budget[]
   cardExpenses: CardExpense[]
   cardInstallments: CardInstallment[]
+  savingsGoals: SavingsGoal[]
+  savingsGoalComponents: SavingsGoalComponent[]
 }
 
 const emptyData: DashboardData = {
@@ -74,15 +99,17 @@ const emptyData: DashboardData = {
   budgets: [],
   cardExpenses: [],
   cardInstallments: [],
+  savingsGoals: [],
+  savingsGoalComponents: [],
 }
 
 const UPCOMING_DAYS = 30
 
 const dashboardHelp = {
   netWorth: {
-    calculation: 'Varlıklar ve alacaklar toplanır; kart, kredi ve kişisel borçlar düşülür.',
-    importance: 'Tek bakışta genel finansal durumun artıda mı ekside mi olduğunu gösterir.',
-    source: 'Varlıklar, banka kartları, kredi kartları, krediler ve borç/alacak kayıtları.',
+    calculation: 'Varlıklardan kart, kredi, kişisel borç ve bekleyen fatura/ödeme yükleri düşülür; alacaklar ayrıca gösterilir.',
+    importance: 'Alacakları tahsil edilmiş varsaymadan gerçek net değerin artıda mı ekside mi olduğunu gösterir.',
+    source: 'Varlıklar, banka kartları, kredi kartları, krediler, planlı ödemeler ve borç/alacak kayıtları.',
   },
   cashFlow: {
     calculation: 'Bu ayki maaş ve alacaklardan; kart ekstresi, kredi, ödeme ve kişisel borç çıkışları düşülür.',
@@ -95,14 +122,14 @@ const dashboardHelp = {
     source: 'Kart, kredi, ödeme ve borç kayıtlarındaki vade/tarih alanları.',
   },
   nextMonthLoad: {
-    calculation: 'Gelecek ayki planlı ödemeler, kart taksitleri, kredi taksitleri ve kişisel borçlar toplanır.',
+    calculation: 'Gelecek ayki planlı ödemeler, açık ekstreler, kart taksit planı, kredi taksitleri ve kişisel borçlar toplanır.',
     importance: 'Önümüzdeki ayın yükünü bugünden görüp nakit ayırmana yardım eder.',
     source: 'Ödeme planları, kart taksitleri, kredi taksitleri ve açık borç kayıtları.',
   },
   currentDebt: {
-    calculation: 'Kredi kartı toplam borcu, aktif kredi kalan borcu ve açık kişisel borçlar toplanır.',
+    calculation: 'Kredi kartı toplam borcu, aktif kredi kalan borcu, açık kişisel borçlar ve bekleyen planlı ödemeler toplanır.',
     importance: 'Bugün kapatılması veya yönetilmesi gereken toplam yükü gösterir.',
-    source: 'Kartlar, krediler ve borç/alacak ekranındaki açık kayıtlar.',
+    source: 'Kartlar, krediler, planlı ödemeler ve borç/alacak ekranındaki açık kayıtlar.',
   },
   totalLimit: {
     calculation: 'Ortak limit grubunda limitler toplanmaz; grup için en yüksek limit alınır, tekil kartlar ayrıca eklenir.',
@@ -145,41 +172,6 @@ type UpcomingItem = {
   sortTime: number
 }
 
-type CreditLimitGroup = {
-  key: string
-  label: string
-  limit: number
-  debt: number
-  available: number
-  usageRate: number
-  cards: FinanceCard[]
-}
-
-type CashFlowSummary = {
-  monthLabel: string
-  cashAssets: number
-  income: number
-  outflow: number
-  netFlow: number
-  projectedCash: number
-  recurringPayments: number
-  cardStatementDebt: number
-  cardOutflow: number
-  loanOutflow: number
-  paymentOutflow: number
-  debtOutflow: number
-}
-
-type MonthlyLoadSummary = {
-  monthLabel: string
-  total: number
-  payments: number
-  cardInstallments: number
-  loanInstallments: number
-  legacyLoanInstallments: number
-  personalDebts: number
-}
-
 type SmartInsight = {
   title: string
   description: string
@@ -197,226 +189,10 @@ type FocusAction = {
   priority: number
 }
 
-function sum<T>(rows: T[], selector: (row: T) => number) {
-  return rows.reduce((total, row) => total + selector(row), 0)
-}
-
-function roundMoney(value: number) {
-  return Math.round((value + Number.EPSILON) * 100) / 100
-}
-
-function moneyDiffers(left: number, right: number) {
-  return Math.abs(roundMoney(left) - roundMoney(right)) > 0.01
-}
-
-function cardProvisionAmount(card: Pick<FinanceCard, 'provision_amount'>) {
-  return card.provision_amount ?? 0
-}
-
-function cardSplitTotal(statementDebt: number, currentPeriod: number, provisionAmount: number) {
-  return roundMoney(statementDebt + currentPeriod + provisionAmount)
-}
-
 function isMissingSchemaCacheError(error: { code?: string; message?: string } | null | undefined) {
   if (!error) return false
   const message = error.message ?? ''
   return error.code === 'PGRST202' || error.code === 'PGRST205' || message.includes('schema cache') || message.includes('Could not find the table') || message.includes('Could not find the function')
-}
-
-function totalCreditLimit(cards: FinanceCard[]) {
-  const limitsByGroup = new Map<string, number>()
-
-  for (const card of cards.filter((item) => item.card_type === 'kredi_karti')) {
-    const groupKey = creditLimitGroupKey(card)
-    limitsByGroup.set(groupKey, Math.max(limitsByGroup.get(groupKey) ?? 0, card.credit_limit))
-  }
-
-  return Array.from(limitsByGroup.values()).reduce((total, limit) => total + limit, 0)
-}
-
-function creditLimitGroupKey(card: FinanceCard) {
-  return card.limit_group_name?.trim() || card.id
-}
-
-function buildCreditLimitGroups(cards: FinanceCard[]): CreditLimitGroup[] {
-  const groups = new Map<string, FinanceCard[]>()
-
-  for (const card of cards.filter((item) => item.card_type === 'kredi_karti')) {
-    const key = creditLimitGroupKey(card)
-    groups.set(key, [...(groups.get(key) ?? []), card])
-  }
-
-  return Array.from(groups, ([key, groupCards]) => {
-    const limit = Math.max(...groupCards.map((card) => card.credit_limit), 0)
-    const debt = sum(groupCards, (card) => card.debt_amount)
-    const usageRate = limit > 0 ? Math.min(100, (debt / limit) * 100) : 0
-    const groupName = groupCards.find((card) => card.limit_group_name?.trim())?.limit_group_name?.trim()
-
-    return {
-      key,
-      label: groupName || groupCards[0]?.card_name || 'Kart grubu',
-      limit,
-      debt,
-      available: Math.max(0, limit - debt),
-      usageRate,
-      cards: groupCards,
-    }
-  }).sort((a, b) => b.debt - a.debt)
-}
-
-function getSalaryTrend(rows: SalaryHistory[]) {
-  const ordered = [...rows].sort((a, b) => a.effective_date.localeCompare(b.effective_date))
-  const current = ordered.at(-1) ?? null
-  const previous = ordered.at(-2) ?? null
-
-  if (!current || !previous || previous.amount <= 0) return { current, previous, difference: 0, percentage: 0 }
-
-  const difference = current.amount - previous.amount
-  return {
-    current,
-    previous,
-    difference,
-    percentage: (difference / previous.amount) * 100,
-  }
-}
-
-function getCurrentSalary(rows: SalaryHistory[]) {
-  const today = new Date().toLocaleDateString('sv-SE')
-  const ordered = [...rows].sort((a, b) => a.effective_date.localeCompare(b.effective_date))
-  return ordered.filter((row) => row.effective_date <= today).at(-1) ?? ordered.at(-1) ?? null
-}
-
-function paymentOccurrenceInMonth(payment: Payment, month = new Date()) {
-  if (payment.status !== 'bekliyor') return null
-
-  if (payment.recurrence === 'monthly') {
-    const occurrence = monthlyOccurrenceDate(payment.recurrence_day, month)
-    if (!occurrence) return null
-
-    const dueDate = new Date(`${payment.due_date}T00:00:00`)
-    const endDate = payment.recurrence_end_date ? new Date(`${payment.recurrence_end_date}T00:00:00`) : null
-    if (occurrence < dueDate) return null
-    if (endDate && occurrence > endDate) return null
-    return occurrence
-  }
-
-  return isDateInMonth(payment.due_date, month) ? new Date(`${payment.due_date}T00:00:00`) : null
-}
-
-function cardMonthlyPaymentAmount(card: FinanceCard) {
-  return card.statement_debt_amount
-}
-
-function buildMonthlyCashFlow(data: DashboardData): CashFlowSummary {
-  const month = new Date()
-  const monthStart = startOfMonth(month)
-  const monthEnd = endOfMonth(month)
-  const monthLabel = new Intl.DateTimeFormat('tr-TR', { month: 'long', year: 'numeric' }).format(month)
-  const currentSalary = getCurrentSalary(data.salaryHistory)
-  const cashAssets = sum(
-    data.assets.filter((asset) => asset.category === 'Nakit'),
-    (asset) => asset.estimated_value_try,
-  ) + sum(
-    data.cards.filter((card) => card.card_type === 'banka_karti'),
-    (card) => card.current_balance,
-  )
-  const openDebts = data.debts.filter((debt) => debt.status === 'açık')
-  const receivableIncome = sum(
-    openDebts.filter((debt) => debt.direction === 'borç_verdim' && isDateInMonth(debt.due_date, month)),
-    (debt) => debt.estimated_value_try,
-  )
-  const paymentOutflow = sum(
-    data.payments.filter((payment) => paymentOccurrenceInMonth(payment, month)),
-    (payment) => payment.amount,
-  )
-  const recurringPayments = data.payments.filter((payment) => payment.recurrence === 'monthly' && payment.status === 'bekliyor').length
-  const cardStatementDebt = sum(
-    data.cards.filter((card) => card.card_type === 'kredi_karti'),
-    cardMonthlyPaymentAmount,
-  )
-  const cardOutflow = sum(
-    data.cards.filter((card) => {
-      const dueDate = monthlyOccurrenceDate(card.due_day, month)
-      return card.card_type === 'kredi_karti' && cardMonthlyPaymentAmount(card) > 0 && dueDate !== null && dueDate >= monthStart && dueDate <= monthEnd
-    }),
-    cardMonthlyPaymentAmount,
-  )
-  const plannedLoanIds = new Set(data.loanInstallments.map((installment) => installment.loan_id))
-  const scheduledLoanOutflow = sum(
-    data.loanInstallments.filter((installment) => installment.status === 'bekliyor' && isDateInMonth(installment.due_date, month)),
-    (installment) => installment.amount,
-  )
-  const legacyLoanOutflow = sum(
-    data.loans.filter((loan) => {
-      const dueDate = monthlyOccurrenceDate(loan.installment_day, month)
-      return !plannedLoanIds.has(loan.id) && loan.status === 'active' && loan.remaining_installments > 0 && dueDate !== null && dueDate >= monthStart && dueDate <= monthEnd
-    }),
-    (loan) => loan.monthly_payment,
-  )
-  const loanOutflow = scheduledLoanOutflow + legacyLoanOutflow
-  const debtOutflow = sum(
-    openDebts.filter((debt) => debt.direction === 'borç_aldım' && isDateInMonth(debt.due_date, month)),
-    (debt) => debt.estimated_value_try,
-  )
-  const income = (currentSalary?.amount ?? 0) + receivableIncome
-  const outflow = paymentOutflow + cardOutflow + loanOutflow + debtOutflow
-  const netFlow = income - outflow
-
-  return {
-    monthLabel,
-    cashAssets,
-    income,
-    outflow,
-    netFlow,
-    projectedCash: cashAssets + netFlow,
-    recurringPayments,
-    cardStatementDebt,
-    cardOutflow,
-    loanOutflow,
-    paymentOutflow,
-    debtOutflow,
-  }
-}
-
-function buildMonthlyLoad(data: DashboardData, month: Date): MonthlyLoadSummary {
-  const monthStart = startOfMonth(month)
-  const monthPrefix = dateInputValue(monthStart).slice(0, 7)
-  const monthLabel = new Intl.DateTimeFormat('tr-TR', { month: 'long', year: 'numeric' }).format(monthStart)
-  const plannedLoanIds = new Set(data.loanInstallments.map((installment) => installment.loan_id))
-  const inTargetMonth = (value: string | null | undefined) => Boolean(value && value.slice(0, 7) === monthPrefix)
-  const payments = sum(
-    data.payments.filter((payment) => paymentOccurrenceInMonth(payment, monthStart)),
-    (payment) => payment.amount,
-  )
-  const cardInstallments = sum(
-    data.cardInstallments.filter((installment) => installment.status === 'scheduled' && inTargetMonth(installment.due_month)),
-    (installment) => installment.amount,
-  )
-  const loanInstallments = sum(
-    data.loanInstallments.filter((installment) => installment.status === 'bekliyor' && isDateInMonth(installment.due_date, monthStart)),
-    (installment) => installment.amount,
-  )
-  const legacyLoanInstallments = sum(
-    data.loans.filter((loan) => {
-      const dueDate = monthlyOccurrenceDate(loan.installment_day, monthStart)
-      return !plannedLoanIds.has(loan.id) && loan.status === 'active' && loan.remaining_installments > 0 && dueDate !== null
-    }),
-    (loan) => loan.monthly_payment,
-  )
-  const personalDebts = sum(
-    data.debts.filter((debt) => debt.direction === 'borç_aldım' && debt.status === 'açık' && isDateInMonth(debt.due_date, monthStart)),
-    (debt) => debt.estimated_value_try,
-  )
-
-  return {
-    monthLabel,
-    total: payments + cardInstallments + loanInstallments + legacyLoanInstallments + personalDebts,
-    payments,
-    cardInstallments,
-    loanInstallments,
-    legacyLoanInstallments,
-    personalDebts,
-  }
 }
 
 function buildSmartInsights(
@@ -718,7 +494,21 @@ export function DashboardPage() {
     const historyStart = new Date()
     historyStart.setMonth(historyStart.getMonth() - 3)
 
-    const [assets, cards, loans, loanInstallments, debts, payments, salaryHistory, transactionHistory, budgets, cardExpenses, cardInstallments] =
+    const [
+      assets,
+      cards,
+      loans,
+      loanInstallments,
+      debts,
+      payments,
+      salaryHistory,
+      transactionHistory,
+      budgets,
+      cardExpenses,
+      cardInstallments,
+      savingsGoals,
+      savingsGoalComponents,
+    ] =
       await Promise.all([
         supabase.from('assets').select('*'),
         supabase.from('cards').select('*'),
@@ -731,6 +521,8 @@ export function DashboardPage() {
         supabase.from('budgets').select('*'),
         supabase.from('card_expenses').select('*'),
         supabase.from('card_installments').select('*'),
+        supabase.from('savings_goals').select('*'),
+        supabase.from('savings_goal_components').select('*'),
       ])
 
     const firstError = [
@@ -745,6 +537,8 @@ export function DashboardPage() {
       isMissingSchemaCacheError(budgets.error) ? null : budgets.error,
       cardExpenses.error,
       isMissingSchemaCacheError(cardInstallments.error) ? null : cardInstallments.error,
+      isMissingSchemaCacheError(savingsGoals.error) ? null : savingsGoals.error,
+      isMissingSchemaCacheError(savingsGoalComponents.error) ? null : savingsGoalComponents.error,
     ].find(Boolean)
     if (firstError) {
       setError(firstError.message)
@@ -764,6 +558,8 @@ export function DashboardPage() {
       budgets: budgets.error ? [] : (budgets.data ?? []),
       cardExpenses: cardExpenses.data ?? [],
       cardInstallments: cardInstallments.error ? [] : (cardInstallments.data ?? []),
+      savingsGoals: savingsGoals.error ? [] : (savingsGoals.data ?? []),
+      savingsGoalComponents: savingsGoalComponents.error ? [] : (savingsGoalComponents.data ?? []),
     })
     setLoading(false)
   }, [])
@@ -787,55 +583,29 @@ export function DashboardPage() {
   }, [loadDashboard])
 
   const summary = useMemo(() => {
-    const totalAssets = sum(data.assets, (asset) => asset.estimated_value_try) + sum(
-      data.cards.filter((card) => card.card_type === 'banka_karti'),
-      (card) => card.current_balance,
-    )
-    const totalCreditCardDebt = sum(
-      data.cards.filter((card) => card.card_type === 'kredi_karti'),
-      (card) => card.debt_amount,
-    )
+    const position = buildFinancialPosition(data)
     const totalSharedCreditLimit = totalCreditLimit(data.cards)
-    const totalLoanDebt = sum(
-      data.loans.filter((loan) => loan.status === 'active'),
-      (loan) => loan.remaining_amount,
-    )
     const totalLoanMonthlyPayment = sum(
       data.loans.filter((loan) => loan.status === 'active'),
       (loan) => loan.monthly_payment,
     )
-    const openDebts = data.debts.filter((debt) => debt.status === 'açık')
-    const totalPersonalDebts = sum(
-      openDebts.filter((debt) => debt.direction === 'borç_aldım'),
-      (debt) => debt.estimated_value_try,
-    )
-    const totalReceivables = sum(
-      openDebts.filter((debt) => debt.direction === 'borç_verdim'),
-      (debt) => debt.estimated_value_try,
-    )
-    const totalDebts = totalCreditCardDebt + totalLoanDebt + totalPersonalDebts
-    const netWorth = totalAssets + totalReceivables - totalDebts
-    const creditUsageRate = totalSharedCreditLimit > 0 ? Math.min(100, (totalCreditCardDebt / totalSharedCreditLimit) * 100) : 0
+    const creditUsageRate = totalSharedCreditLimit > 0 ? Math.min(100, (position.totalCreditCardDebt / totalSharedCreditLimit) * 100) : 0
     const salaryTrend = getSalaryTrend(data.salaryHistory)
     const creditLimitGroups = buildCreditLimitGroups(data.cards)
     const cashFlow = buildMonthlyCashFlow(data)
     const nextMonthLoad = buildMonthlyLoad(data, addMonths(startOfMonth(), 1))
+    const goalProgress = buildGoalProgressSummary(data.savingsGoals, data.savingsGoalComponents)
 
     return {
-      totalAssets,
-      totalDebts,
-      netWorth,
-      totalCreditCardDebt,
+      ...position,
       totalCreditLimit: totalSharedCreditLimit,
       creditUsageRate,
       creditLimitGroups,
-      totalLoanDebt,
       totalLoanMonthlyPayment,
-      totalPersonalDebts,
-      totalReceivables,
       salaryTrend,
       cashFlow,
       nextMonthLoad,
+      goalProgress,
     }
   }, [data])
 
@@ -918,6 +688,20 @@ export function DashboardPage() {
     return [...manualPayments, ...creditCards, ...loanInstallments, ...personalDebts, ...legacyLoanInstallments]
       .sort((a, b) => a.sortTime - b.sortTime)
   }, [data.cards, data.debts, data.loanInstallments, data.loans, data.payments])
+  const financialHealth = useMemo(() => {
+    const urgentUpcomingCount = upcomingItems.filter((item) => {
+      const remaining = daysUntil(new Date(item.sortTime))
+      return remaining !== null && remaining >= 0 && remaining <= 7
+    }).length
+
+    return buildFinancialHealth({
+      position: summary,
+      cashFlow: summary.cashFlow,
+      creditUsageRate: summary.creditUsageRate,
+      urgentUpcomingCount,
+      averageGoalProgress: summary.goalProgress.averageProgress,
+    })
+  }, [summary, upcomingItems])
 
   const insights = useMemo(
     () => buildSmartInsights(summary.cashFlow, summary.creditUsageRate, summary.totalDebts, summary.totalReceivables, upcomingItems),
@@ -967,7 +751,8 @@ export function DashboardPage() {
         <FocusActionPanel actions={focusActions} cashFlow={summary.cashFlow} />
       </div>
 
-      <div className="grid min-w-0 gap-3 min-[760px]:grid-cols-2 lg:col-span-12">
+      <div className="grid min-w-0 gap-3 min-[760px]:grid-cols-3 lg:col-span-12">
+        <FinancialHealthPanel health={financialHealth} goalProgress={summary.goalProgress} />
         <StatementReminderPanel cards={data.cards} />
         <BudgetAlertPanel budgets={data.budgets} expenses={data.cardExpenses} />
       </div>
@@ -984,6 +769,7 @@ export function DashboardPage() {
           cardDebt={summary.totalCreditCardDebt}
           loanDebt={summary.totalLoanDebt}
           personalDebt={summary.totalPersonalDebts}
+          paymentDebt={summary.totalPaymentLiabilities}
         />
       </div>
 
@@ -1002,7 +788,7 @@ export function DashboardPage() {
       <div className="grid min-w-0 gap-3 min-[520px]:grid-cols-3 lg:col-span-12">
         <MetricTile label="Toplam limit" value={formatCurrency(summary.totalCreditLimit)} icon={<CreditCard />} tone="indigo" help={dashboardHelp.totalLimit} />
         <MetricTile label="Kredi ödemesi" value={formatCurrency(summary.totalLoanMonthlyPayment)} icon={<CalendarDays />} tone="stone" help={dashboardHelp.loanPayment} />
-        <MetricTile label="Alacak" value={formatCurrency(summary.totalReceivables)} icon={<ArrowUpRight />} tone="emerald" help={dashboardHelp.receivable} />
+        <MetricTile label="Tahsilat" value={formatCurrency(summary.totalReceivables)} icon={<ArrowUpRight />} tone="emerald" help={dashboardHelp.receivable} />
       </div>
 
       <UpcomingAlertPanel items={upcomingItems} />
@@ -1238,8 +1024,64 @@ function NetWorthPanel({ netWorth, totalAssets, totalDebts, totalReceivables }: 
         <div className="grid grid-cols-[repeat(3,minmax(0,1fr))] gap-2 text-xs">
           <SummaryPill label="Varlık" value={formatCurrency(totalAssets)} tone="positive" />
           <SummaryPill label="Borç" value={formatCurrency(totalDebts)} tone="negative" />
-          <SummaryPill label="Alacak" value={formatCurrency(totalReceivables)} tone="positive" />
+          <SummaryPill label="Tahsilat" value={formatCurrency(totalReceivables)} tone="positive" />
         </div>
+        {totalReceivables > 0 ? (
+          <p className="mt-3 text-xs leading-5 text-muted-foreground">Beklenen tahsilat net değere eklenmedi; gelirse tablo {formatCurrency(netWorth + totalReceivables)} olur.</p>
+        ) : null}
+      </CardContent>
+    </Card>
+  )
+}
+
+function FinancialHealthPanel({ health, goalProgress }: { health: FinancialHealthSummary; goalProgress: GoalProgressSummary }) {
+  const toneClass = {
+    emerald: 'bg-emerald-50 text-emerald-800 ring-emerald-200 dark:bg-emerald-950/25 dark:text-emerald-100 dark:ring-emerald-900',
+    amber: 'bg-amber-50 text-amber-900 ring-amber-200 dark:bg-amber-950/25 dark:text-amber-100 dark:ring-amber-900',
+    rose: 'bg-rose-50 text-rose-900 ring-rose-200 dark:bg-rose-950/25 dark:text-rose-100 dark:ring-rose-900',
+  }[health.tone]
+  const scoreTone = health.tone === 'emerald' ? 'text-emerald-700 dark:text-emerald-300' : health.tone === 'amber' ? 'text-amber-700 dark:text-amber-300' : 'text-rose-700 dark:text-rose-300'
+  const Icon = health.tone === 'rose' ? AlertTriangle : ShieldCheck
+
+  return (
+    <Card className="border-0 shadow-[var(--shadow-card)] ring-1 ring-border/80">
+      <CardHeader className="pb-1">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <CardTitle className="text-base">Finansal sağlık</CardTitle>
+            <p className="mt-1 text-xs text-muted-foreground">Borç, nakit, limit ve hedef dengesi.</p>
+          </div>
+          <Badge variant={health.tone === 'rose' ? 'destructive' : 'secondary'}>{health.label}</Badge>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-3 pt-1">
+        <div className={`rounded-lg p-3 ring-1 ${toneClass}`}>
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-[11px] font-bold uppercase opacity-75">Skor</p>
+              <p className={`mt-1 text-2xl font-black tabular-nums ${scoreTone}`}>{health.score}/100</p>
+            </div>
+            <div className="grid size-10 shrink-0 place-items-center rounded-lg bg-card/70">
+              <Icon size={19} />
+            </div>
+          </div>
+          <Progress value={health.score} className="mt-3 h-1.5" />
+        </div>
+        <p className="text-xs leading-5 text-muted-foreground">{health.description}</p>
+        {goalProgress.nextGoalName ? (
+          <div className="rounded-lg bg-muted/55 px-3 py-2 text-xs text-muted-foreground">
+            <span className="font-bold text-foreground">{goalProgress.nextGoalName}</span>
+            <span> için aylık {formatCurrency(goalProgress.nextGoalMonthlyNeed)} gerekebilir.</span>
+          </div>
+        ) : null}
+        <ul className="space-y-1.5">
+          {health.factors.slice(0, 3).map((factor) => (
+            <li key={factor} className="flex gap-2 text-xs leading-5 text-muted-foreground">
+              <span className="mt-2 size-1.5 shrink-0 rounded-full bg-primary/70" />
+              <span>{factor}</span>
+            </li>
+          ))}
+        </ul>
       </CardContent>
     </Card>
   )
@@ -1302,6 +1144,7 @@ function CashFlowPanel({ cashFlow }: { cashFlow: CashFlowSummary }) {
           <span>Kredi: {formatCurrency(cashFlow.loanOutflow)}</span>
           <span>Fatura/ödeme: {formatCurrency(cashFlow.paymentOutflow)}</span>
           <span>Kişisel borç: {formatCurrency(cashFlow.debtOutflow)}</span>
+          {cashFlow.receivableIncome > 0 ? <span>Tahsilat: {formatCurrency(cashFlow.receivableIncome)}</span> : null}
         </div>
 
         <div className="rounded-lg bg-muted/55 px-3 py-2 text-sm">
@@ -1617,6 +1460,7 @@ function NextMonthLoadPanel({ load }: { load: MonthlyLoadSummary }) {
   const loanTotal = load.loanInstallments + load.legacyLoanInstallments
   const rows = [
     { label: 'Fatura/ödeme', value: load.payments },
+    { label: 'Açık ekstre', value: load.cardStatements },
     { label: 'Kart taksitleri', value: load.cardInstallments },
     { label: 'Kredi taksidi', value: loanTotal },
     { label: 'Kişisel borç', value: load.personalDebts },
@@ -1726,11 +1570,13 @@ function CurrentDebtTotalsPanel({
   cardDebt,
   loanDebt,
   personalDebt,
+  paymentDebt,
 }: {
   totalDebt: number
   cardDebt: number
   loanDebt: number
   personalDebt: number
+  paymentDebt: number
 }) {
   return (
     <Card className="border-0 shadow-[var(--shadow-card)] ring-1 ring-border/80">
@@ -1745,6 +1591,7 @@ function CurrentDebtTotalsPanel({
         <CashFlowMetric label="Kart borcu" value={formatCurrency(cardDebt)} tone="rose" />
         <CashFlowMetric label="Kredi borcu" value={formatCurrency(loanDebt)} tone="rose" />
         <CashFlowMetric label="Kişisel borç" value={formatCurrency(personalDebt)} tone="rose" />
+        <CashFlowMetric label="Fatura/ödeme" value={formatCurrency(paymentDebt)} tone="rose" />
       </CardContent>
     </Card>
   )

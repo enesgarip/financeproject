@@ -17,15 +17,18 @@ This file records the current business rules inferred from the codebase as of 20
 
 ## Cards: Core Model
 
-Credit card debt is conceptually split into:
+Credit card debt is conceptually split into visible payable/planning parts:
 
 - `statement_debt_amount`: already billed, payable amount
 - `current_period_spending`: posted spending in the current period but not yet statemented
 - `provision_amount`: pending/provisional spending
+- scheduled future installment amount: future credit-card installment planning
 
 Current code expects:
 
-`debt_amount = statement_debt_amount + current_period_spending + provision_amount`
+`debt_amount >= statement_debt_amount + current_period_spending + provision_amount`
+
+When there are scheduled future card installments, the expected difference is the future installment amount. The future installment rows are planning rows inside card debt; they must not be added as a second independent debt bucket.
 
 This relationship appears in both card page logic and dashboard/data-health checks.
 
@@ -59,8 +62,8 @@ Statement archive behavior:
 
 On the cards page:
 
-- payable card debt excludes provision:
-  - `payableDebt = max(0, debt_amount - provision_amount)`
+- payable card debt excludes provision and future scheduled installments:
+  - `payableDebt = max(0, statement_debt_amount + current_period_spending)`
 - user should not pay more than payable posted debt
 - provision must post before it becomes payable debt
 - card debt payments must debit a `banka_karti` source account
@@ -87,6 +90,7 @@ From `src/utils/cardInstallmentCalendar.ts` and page logic:
 - the unpaid installment total is informational/planning data and must not be added on top of card debt
 - posted installments become payable as part of the card statement
 - paying the linked statement marks included installments `paid`
+- credit-card installments are not manually paid; manual payment is limited to the card's statement/current-period debt
 - locked installments, meaning paid or linked to a statement, should not be edited from the UI
 
 ## Bank Account / Transfer Rules
@@ -141,6 +145,7 @@ From `src/utils/budgetAlerts.ts`:
 - `borç_verdim` behaves like receivable income
 - debts may be TRY, FX, gram gold, or quarter gold in type
 - summaries often use `estimated_value_try`
+- open receivables are shown as expected collection and are not added to net worth until collected
 
 ## Savings Goals
 
@@ -164,6 +169,8 @@ Non-composite goal progress rule:
 
 Current dashboard behavior includes:
 
+- net worth equals assets minus card, loan, personal debt, and pending payment liabilities
+- open receivables are shown separately as expected collection
 - monthly cash projection
 - upcoming obligations within a lookahead window
 - credit usage monitoring
