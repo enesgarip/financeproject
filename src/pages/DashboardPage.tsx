@@ -39,6 +39,7 @@ import type {
 } from '../types/database'
 import { BudgetAlertPanel } from '../components/dashboard/BudgetAlertPanel'
 import { StatementReminderPanel } from '../components/dashboard/StatementReminderPanel'
+import { AmountDisplay, FinancePanel, MetricCard, MiniStat, PageHero, ProgressStrip, SectionHeader, StatusBadge } from '../components/finance/FinanceUI'
 import { addMonths, daysUntil, formatDate, isUpcomingDate, monthlyOccurrenceDate, nextMonthlyDate, startOfMonth } from '../utils/date'
 import {
   buildCreditLimitGroups,
@@ -734,27 +735,54 @@ export function DashboardPage() {
   const upcomingTotal = sum(upcomingItems, (item) => item.amount)
 
   return (
-    <section className="grid gap-4 lg:grid-cols-12 lg:items-start">
-      <div className="min-w-0 lg:col-span-7">
-        <NetWorthPanel
+    <section className="grid gap-5 lg:grid-cols-12 lg:items-start">
+      <div className="min-w-0 lg:col-span-8">
+        <DashboardHero
+          displayName={displayName}
           netWorth={summary.netWorth}
           totalAssets={summary.totalAssets}
           totalDebts={summary.totalDebts}
           totalReceivables={summary.totalReceivables}
+          cashFlow={summary.cashFlow}
+          health={financialHealth}
+        />
+      </div>
+
+      <div className="min-w-0 lg:col-span-4">
+        <MonthlyPaymentLoadPanel
+          cashFlow={summary.cashFlow}
+          nextMonthLoad={summary.nextMonthLoad}
+          upcomingTotal={upcomingTotal}
+          upcomingCount={upcomingItems.length}
         />
       </div>
 
       <div className="min-w-0 lg:col-span-5">
-        <WelcomePanel displayName={displayName} cashFlow={summary.cashFlow} />
+        <CreditCardSnapshotPanel
+          cards={data.cards}
+          totalDebt={summary.totalCreditCardDebt}
+          statementDebt={summary.totalCardStatementDebt}
+          totalLimit={summary.totalCreditLimit}
+          usageRate={summary.creditUsageRate}
+        />
       </div>
 
-      <div className="min-w-0 lg:col-span-12">
-        <PriorityMetricRail
+      <div className="min-w-0 lg:col-span-7">
+        <CashFlowCalendarPanel items={upcomingItems} cashFlow={summary.cashFlow} />
+      </div>
+
+      <div className="min-w-0 lg:col-span-4">
+        <GoalProgressCommand goalProgress={summary.goalProgress} />
+      </div>
+
+      <div className="min-w-0 lg:col-span-8">
+        <AnalyticsSnapshotPanel
+          cashFlow={summary.cashFlow}
           totalAssets={summary.totalAssets}
           totalDebts={summary.totalDebts}
-          monthlyLoad={summary.cashFlow.outflow}
-          upcomingTotal={upcomingTotal}
-          upcomingCount={upcomingItems.length}
+          cardDebt={summary.totalCreditCardDebt}
+          loanDebt={summary.totalLoanDebt}
+          personalDebt={summary.totalPersonalDebts}
         />
       </div>
 
@@ -782,10 +810,6 @@ export function DashboardPage() {
           personalDebt={summary.totalPersonalDebts}
           paymentDebt={summary.totalPaymentLiabilities}
         />
-      </div>
-
-      <div className="min-w-0 lg:col-span-12">
-        <CashFlowCalendarPanel items={upcomingItems} cashFlow={summary.cashFlow} />
       </div>
 
       <div className="min-w-0 lg:col-span-7">
@@ -829,6 +853,217 @@ export function DashboardPage() {
   )
 }
 
+function DashboardHero({
+  displayName,
+  netWorth,
+  totalAssets,
+  totalDebts,
+  totalReceivables,
+  cashFlow,
+  health,
+}: {
+  displayName: string
+  netWorth: number
+  totalAssets: number
+  totalDebts: number
+  totalReceivables: number
+  cashFlow: CashFlowSummary
+  health: FinancialHealthSummary
+}) {
+  const netWorthTone = netWorth >= 0 ? 'good' : 'danger'
+  const debtPressure = totalAssets > 0 ? Math.min(100, (totalDebts / totalAssets) * 100) : totalDebts > 0 ? 100 : 0
+  const projectedTone = cashFlow.projectedCash >= 0 ? 'good' : 'danger'
+
+  return (
+    <PageHero
+      label="Finansal durum"
+      title={displayName ? `Merhaba, ${displayName}` : 'Bugünkü finans tablon'}
+      amount={formatCurrency(netWorth)}
+      tone={netWorthTone}
+      description={`${cashFlow.monthLabel} için net varlık, borç baskısı ve nakit projeksiyonu tek bakışta.`}
+      action={<StatusBadge tone={health.tone === 'emerald' ? 'good' : health.tone === 'amber' ? 'warning' : 'danger'}>{health.label}</StatusBadge>}
+    >
+      <div className="grid gap-2 min-[520px]:grid-cols-4">
+        <MiniStat label="Toplam varlık" value={formatCurrency(totalAssets)} tone="good" />
+        <MiniStat label="Toplam borç" value={formatCurrency(totalDebts)} tone={totalDebts > 0 ? 'danger' : 'good'} />
+        <MiniStat label="Ay sonu nakit" value={formatCurrency(cashFlow.projectedCash)} tone={projectedTone} />
+        <MiniStat label="Bekleyen tahsilat" value={formatCurrency(totalReceivables)} tone={totalReceivables > 0 ? 'info' : 'neutral'} />
+      </div>
+      <ProgressStrip
+        label="Borç / varlık baskısı"
+        value={debtPressure}
+        tone={debtPressure >= 75 ? 'danger' : debtPressure >= 45 ? 'warning' : 'good'}
+        detail={health.description}
+      />
+    </PageHero>
+  )
+}
+
+function MonthlyPaymentLoadPanel({
+  cashFlow,
+  nextMonthLoad,
+  upcomingTotal,
+  upcomingCount,
+}: {
+  cashFlow: CashFlowSummary
+  nextMonthLoad: MonthlyLoadSummary
+  upcomingTotal: number
+  upcomingCount: number
+}) {
+  const loadRate = cashFlow.income > 0 ? Math.min(100, (cashFlow.outflow / cashFlow.income) * 100) : cashFlow.outflow > 0 ? 100 : 0
+  const tone = loadRate >= 90 ? 'danger' : loadRate >= 65 ? 'warning' : 'good'
+
+  return (
+    <FinancePanel tone={tone} className="p-4 sm:p-5">
+      <SectionHeader
+        title="Bu ay ödeme yükü"
+        description="Kart, kredi, fatura ve kişisel borç baskısı."
+        action={<StatusBadge tone={tone}>{upcomingCount > 0 ? `${upcomingCount} vade` : 'Takvim temiz'}</StatusBadge>}
+      />
+      <div className="mt-5">
+        <AmountDisplay label={cashFlow.monthLabel} value={formatCurrency(cashFlow.outflow)} tone={tone} size="lg" />
+      </div>
+      <div className="mt-5 grid grid-cols-2 gap-2">
+        <MiniStat label="Yaklaşan toplam" value={upcomingCount > 0 ? formatCurrency(upcomingTotal) : 'Yok'} tone={upcomingCount > 0 ? 'warning' : 'good'} />
+        <MiniStat label="Gelecek ay" value={formatCurrency(nextMonthLoad.total)} tone={nextMonthLoad.total > cashFlow.outflow ? 'warning' : 'neutral'} />
+      </div>
+      <div className="mt-5">
+        <ProgressStrip label="Gelire göre çıkış" value={loadRate} tone={tone} />
+      </div>
+    </FinancePanel>
+  )
+}
+
+function CreditCardSnapshotPanel({
+  cards,
+  totalDebt,
+  statementDebt,
+  totalLimit,
+  usageRate,
+}: {
+  cards: FinanceCard[]
+  totalDebt: number
+  statementDebt: number
+  totalLimit: number
+  usageRate: number
+}) {
+  const creditCards = cards.filter((card) => card.card_type === 'kredi_karti')
+  const visibleCards = [...creditCards].sort((left, right) => right.debt_amount - left.debt_amount).slice(0, 3)
+  const availableLimit = Math.max(0, totalLimit - totalDebt)
+  const dueSoonCount = creditCards.filter((card) => {
+    const remaining = daysUntil(nextMonthlyDate(card.due_day))
+    return cardMonthlyPaymentAmount(card) > 0 && remaining !== null && remaining >= 0 && remaining <= 7
+  }).length
+  const tone = usageRate >= 80 ? 'danger' : usageRate >= 55 ? 'warning' : 'good'
+
+  return (
+    <FinancePanel tone={tone} className="p-4 sm:p-5">
+      <SectionHeader
+        title="Kredi kartları"
+        description="Açık ekstre, limit ve yaklaşan son ödeme odağı."
+        action={<StatusBadge tone={dueSoonCount > 0 ? 'warning' : 'good'}>{dueSoonCount > 0 ? `${dueSoonCount} yakın vade` : 'Kontrol altında'}</StatusBadge>}
+      />
+      <div className="mt-5">
+        <AmountDisplay label="Toplam kart borcu" value={formatCurrency(totalDebt)} tone={tone} size="lg" />
+      </div>
+      <div className="mt-5 grid grid-cols-2 gap-2">
+        <MiniStat label="Açık ekstre" value={formatCurrency(statementDebt)} tone={statementDebt > 0 ? 'warning' : 'good'} />
+        <MiniStat label="Kullanılabilir" value={formatCurrency(availableLimit)} tone="good" />
+      </div>
+      <div className="mt-5">
+        <ProgressStrip label="Limit kullanımı" value={usageRate} tone={tone} detail={`${creditCards.length} kredi kartı takipte`} />
+      </div>
+      {visibleCards.length > 0 ? (
+        <div className="mt-4 flex flex-col gap-2">
+          {visibleCards.map((card) => (
+            <Link key={card.id} to="/kartlar" className="flex min-w-0 items-center justify-between gap-3 rounded-lg bg-background/65 px-3 py-2.5 ring-1 ring-border/70 transition hover:bg-muted">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-black text-foreground">{card.card_name}</p>
+                <p className="truncate text-xs text-muted-foreground">{card.bank_name}</p>
+              </div>
+              <p className="finance-value shrink-0 text-sm font-black text-foreground">{formatCurrency(card.debt_amount)}</p>
+            </Link>
+          ))}
+        </div>
+      ) : (
+        <p className="mt-4 rounded-lg bg-background/65 p-3 text-sm text-muted-foreground ring-1 ring-border/70">Henüz kredi kartı yok; kart ekleyince ekstre ve limit takibi burada görünür.</p>
+      )}
+    </FinancePanel>
+  )
+}
+
+function GoalProgressCommand({ goalProgress }: { goalProgress: GoalProgressSummary }) {
+  const tone = goalProgress.activeCount === 0 ? 'info' : goalProgress.averageProgress >= 70 ? 'good' : goalProgress.averageProgress >= 35 ? 'warning' : 'info'
+
+  return (
+    <FinancePanel tone={tone} className="p-4 sm:p-5">
+      <SectionHeader
+        title="Hedef ilerlemeleri"
+        description="Aktif hedeflerin ortalama ilerleme durumu."
+        action={<StatusBadge tone={tone}>{goalProgress.activeCount} hedef</StatusBadge>}
+      />
+      <div className="mt-5">
+        <ProgressStrip label="Ortalama ilerleme" value={goalProgress.averageProgress} tone={tone} />
+      </div>
+      <div className="mt-5 grid grid-cols-2 gap-2">
+        <MiniStat label="Sıradaki hedef" value={goalProgress.nextGoalName ?? 'Henüz yok'} tone={goalProgress.nextGoalName ? 'premium' : 'neutral'} />
+        <MiniStat label="Aylık ihtiyaç" value={formatCurrency(goalProgress.nextGoalMonthlyNeed)} tone={goalProgress.nextGoalMonthlyNeed > 0 ? 'warning' : 'neutral'} />
+      </div>
+    </FinancePanel>
+  )
+}
+
+function AnalyticsSnapshotPanel({
+  cashFlow,
+  totalAssets,
+  totalDebts,
+  cardDebt,
+  loanDebt,
+  personalDebt,
+}: {
+  cashFlow: CashFlowSummary
+  totalAssets: number
+  totalDebts: number
+  cardDebt: number
+  loanDebt: number
+  personalDebt: number
+}) {
+  const debtBase = Math.max(1, totalDebts)
+  const assetDebtRatio = totalAssets > 0 ? Math.min(100, (totalDebts / totalAssets) * 100) : totalDebts > 0 ? 100 : 0
+
+  return (
+    <FinancePanel className="p-4 sm:p-5">
+      <SectionHeader title="Analiz kartları" description="Gelir/gider ve borç dağılımını hızlı kontrol et." />
+      <div className="mt-4 grid gap-3 min-[720px]:grid-cols-3">
+        <MetricCard
+          label="Gelir / gider"
+          value={`${cashFlow.netFlow >= 0 ? '+' : ''}${formatCurrency(cashFlow.netFlow)}`}
+          description={`Gelir ${formatCurrency(cashFlow.income)} · Çıkış ${formatCurrency(cashFlow.outflow)}`}
+          tone={cashFlow.netFlow >= 0 ? 'good' : 'danger'}
+          icon={TrendingUp}
+        />
+        <FinancePanel className="p-4">
+          <AmountDisplay label="Borç dağılımı" value={formatCurrency(totalDebts)} tone={totalDebts > 0 ? 'warning' : 'good'} />
+          <div className="mt-4 flex flex-col gap-3">
+            <ProgressStrip label="Kart" value={(cardDebt / debtBase) * 100} tone="warning" />
+            <ProgressStrip label="Kredi" value={(loanDebt / debtBase) * 100} tone="info" />
+            <ProgressStrip label="Kişisel" value={(personalDebt / debtBase) * 100} tone="danger" />
+          </div>
+        </FinancePanel>
+        <FinancePanel className="p-4">
+          <AmountDisplay label="Varlık / borç" value={`%${Math.round(assetDebtRatio)}`} tone={assetDebtRatio >= 80 ? 'danger' : assetDebtRatio >= 45 ? 'warning' : 'good'} />
+          <p className="mt-3 text-xs font-medium leading-5 text-muted-foreground">
+            Varlık {formatCurrency(totalAssets)} · Borç {formatCurrency(totalDebts)}
+          </p>
+          <div className="mt-4">
+            <ProgressStrip label="Borç baskısı" value={assetDebtRatio} tone={assetDebtRatio >= 80 ? 'danger' : assetDebtRatio >= 45 ? 'warning' : 'good'} />
+          </div>
+        </FinancePanel>
+      </div>
+    </FinancePanel>
+  )
+}
+
 function dateInputValue(date: Date | null) {
   return date ? date.toLocaleDateString('sv-SE') : 'unknown'
 }
@@ -846,7 +1081,7 @@ function getUserDisplayName(user: User | null) {
   return fullName || name
 }
 
-function WelcomePanel({ displayName, cashFlow }: { displayName: string; cashFlow: CashFlowSummary }) {
+export function WelcomePanel({ displayName, cashFlow }: { displayName: string; cashFlow: CashFlowSummary }) {
   const netFlowIsPositive = cashFlow.netFlow >= 0
   const signedNetFlow = `${netFlowIsPositive ? '+' : ''}${formatCurrency(cashFlow.netFlow)}`
 
@@ -900,7 +1135,7 @@ function WelcomeMetric({ label, value, tone = 'neutral' }: { label: string; valu
   )
 }
 
-function PriorityMetricRail({
+export function PriorityMetricRail({
   totalAssets,
   totalDebts,
   monthlyLoad,
@@ -1050,7 +1285,7 @@ function FocusActionCard({ action }: { action: FocusAction }) {
   )
 }
 
-function NetWorthPanel({ netWorth, totalAssets, totalDebts, totalReceivables }: { netWorth: number; totalAssets: number; totalDebts: number; totalReceivables: number }) {
+export function NetWorthPanel({ netWorth, totalAssets, totalDebts, totalReceivables }: { netWorth: number; totalAssets: number; totalDebts: number; totalReceivables: number }) {
   const isPositive = netWorth >= 0
   const TrendIcon = isPositive ? TrendingUp : TrendingDown
 

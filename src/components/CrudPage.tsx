@@ -7,6 +7,7 @@ import { cn } from '../lib/utils'
 import { supabase } from '../lib/supabase'
 import type { InsertFor, RowFor, TableName, UpdateFor } from '../types/database'
 import { EmptyState } from './EmptyState'
+import { FormSection } from './finance/FinanceUI'
 import { SimpleModal } from './SimpleModal'
 import { Alert } from './ui/alert'
 import { Button } from './ui/button'
@@ -81,6 +82,7 @@ type CrudPageProps<T extends TableName> = {
     },
   ) => ReactNode
   renderBeforeList?: (helpers: { loading: boolean; rows: RowFor<T>[]; reload: () => Promise<void>; setError: (message: string) => void }) => ReactNode
+  renderAfterList?: (helpers: { loading: boolean; rows: RowFor<T>[]; reload: () => Promise<void>; setError: (message: string) => void }) => ReactNode
 }
 
 export function CrudPage<T extends TableName>({
@@ -110,6 +112,7 @@ export function CrudPage<T extends TableName>({
   renderExtra,
   renderCard,
   renderBeforeList,
+  renderAfterList,
 }: CrudPageProps<T>) {
   const { user } = useAuth()
   const location = useLocation()
@@ -299,8 +302,8 @@ export function CrudPage<T extends TableName>({
   }
 
   return (
-    <section className="flex flex-col gap-4">
-      <div className="finance-surface rounded-lg p-4 sm:p-5">
+    <section className="flex flex-col gap-5">
+      <div className="finance-hero-panel rounded-lg p-4 sm:p-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div className="min-w-0">
             <h1 className="text-xl font-black leading-tight text-foreground">{pageTitle ?? addLabel}</h1>
@@ -308,8 +311,8 @@ export function CrudPage<T extends TableName>({
               {normalizedQuery ? `${visibleRows.length} / ${rows.length} kayıt gösteriliyor` : `${rows.length} kayıt bulundu`}
             </p>
           </div>
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            <label className="relative block sm:w-72">
+          <div className="grid gap-2 sm:grid-cols-[minmax(14rem,18rem)_auto] sm:items-center">
+            <label className="relative block">
               <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 value={query}
@@ -318,7 +321,7 @@ export function CrudPage<T extends TableName>({
                 className="pl-9 text-sm"
               />
             </label>
-            <Button type="button" onClick={openCreate} className="h-10 gap-2 px-4">
+            <Button type="button" onClick={openCreate} className="h-11 gap-2 px-4">
               <Plus data-icon="inline-start" />
               {addLabel}
             </Button>
@@ -343,7 +346,16 @@ export function CrudPage<T extends TableName>({
           ))}
         </div>
       ) : rows.length === 0 ? (
-        <EmptyState title={emptyTitle} description={emptyDescription} />
+        <EmptyState
+          title={emptyTitle}
+          description={emptyDescription}
+          action={
+            <Button type="button" onClick={openCreate}>
+              <Plus data-icon="inline-start" />
+              {addLabel}
+            </Button>
+          }
+        />
       ) : visibleRows.length === 0 ? (
         <EmptyState title="Eşleşen kayıt yok" description="Arama metnini temizleyerek tüm kayıtları tekrar görebilirsin." />
       ) : (
@@ -382,7 +394,7 @@ export function CrudPage<T extends TableName>({
                             e.stopPropagation()
                             setMenuOpenId(menuOpenId === row.id ? null : row.id)
                           }}
-                          className="grid size-10 place-items-center rounded-lg text-muted-foreground transition hover:bg-muted hover:text-foreground"
+                          className="grid size-10 place-items-center rounded-lg border border-border/70 bg-background/55 text-muted-foreground transition hover:bg-muted hover:text-foreground"
                           aria-label="Menu"
                         >
                           <MoreVertical size={18} />
@@ -435,7 +447,7 @@ export function CrudPage<T extends TableName>({
                       key={row.id}
                       style={getCardStyle?.(row, rows)}
                       className={cn(
-                        'min-w-0 rounded-lg border bg-card/95 p-4 shadow-[var(--shadow-card)] transition-all hover:-translate-y-0.5 hover:shadow-[var(--shadow-card-hover)] min-[390px]:p-5',
+                        'min-w-0 rounded-lg border bg-card/96 p-4 shadow-[var(--shadow-card)] ring-1 ring-black/[0.025] transition-all hover:-translate-y-0.5 hover:shadow-[var(--shadow-card-hover)] dark:ring-white/[0.04] min-[390px]:p-5',
                         getCardClassName?.(row, rows) ?? 'border-border/75',
                       )}
                     >
@@ -453,7 +465,7 @@ export function CrudPage<T extends TableName>({
                             e.stopPropagation()
                             setMenuOpenId(menuOpenId === row.id ? null : row.id)
                           }}
-                          className="grid size-10 place-items-center rounded-lg text-muted-foreground transition hover:bg-muted hover:text-foreground"
+                          className="grid size-10 place-items-center rounded-lg border border-border/70 bg-background/55 text-muted-foreground transition hover:bg-muted hover:text-foreground"
                           aria-label="Menü"
                         >
                           <MoreVertical size={18} />
@@ -501,7 +513,7 @@ export function CrudPage<T extends TableName>({
                           key={detail}
                           style={getDetailStyle?.(row, rows)}
                           className={cn(
-                            'min-w-0 rounded-lg px-3 py-2.5 ring-1 ring-black/[0.025] dark:ring-white/[0.04]',
+                            'min-w-0 rounded-lg bg-surface-muted/75 px-3 py-2.5 ring-1 ring-border/65',
                             getDetailClassName?.(row, rows) ?? 'bg-muted/55',
                           )}
                         >
@@ -528,13 +540,19 @@ export function CrudPage<T extends TableName>({
         </div>
       )}
 
+      {!loading && rows.length > 0 && renderAfterList ? renderAfterList({ loading, rows, reload: loadRows, setError }) : null}
+
       <SimpleModal
         title={editing ? 'Kaydı düzenle' : addLabel}
         open={modalOpen}
         onClose={() => setModalOpen(false)}
       >
-        <form onSubmit={handleSubmit} className="grid gap-4 sm:grid-cols-2" noValidate>
-          {formError ? <Alert variant="destructive" className="sm:col-span-2">{formError}</Alert> : null}
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
+          {formError ? <Alert variant="destructive">{formError}</Alert> : null}
+          <FormSection
+            title={editing ? 'Kayıt bilgileri' : 'Yeni kayıt bilgileri'}
+            description="Zorunlu alanları doldur; para ve tarih alanları finans hesaplamalarına doğrudan yansır."
+          >
           {visibleFields.map((field) => {
             const fieldError = formErrors[field.name]
 
@@ -630,10 +648,11 @@ export function CrudPage<T extends TableName>({
               </label>
             )
           })}
+          </FormSection>
           <Button
             type="submit"
             disabled={saving}
-            className="sticky bottom-0 z-10 h-11 w-full shadow-[0_-10px_24px_rgba(255,255,255,0.9)] dark:shadow-[0_-10px_24px_rgba(12,10,9,0.9)] sm:static sm:col-span-2 sm:shadow-none"
+            className="sticky bottom-0 z-10 h-12 w-full shadow-[0_-10px_24px_rgba(255,255,255,0.9)] dark:shadow-[0_-10px_24px_rgba(12,10,9,0.9)] sm:static sm:shadow-none"
           >
             {saving ? 'Kaydediliyor...' : 'Kaydet'}
           </Button>

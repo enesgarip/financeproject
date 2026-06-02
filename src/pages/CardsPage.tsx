@@ -7,7 +7,6 @@ import {
   CreditCard as CreditCardIcon,
   Landmark,
   ReceiptText,
-  WalletCards,
   XCircle,
 } from 'lucide-react'
 import type { CSSProperties } from 'react'
@@ -17,6 +16,7 @@ import { AccountSelector } from '../components/finance/AccountSelector'
 import { CategoryPicker } from '../components/finance/CategoryPicker'
 import { CardInstallmentCalendarPanel } from '../components/finance/CardInstallmentCalendarPanel'
 import { CardInstallmentExpensesPanel } from '../components/finance/CardInstallmentExpensesPanel'
+import { AmountDisplay, FinancePanel, MiniStat, ProgressStrip, SectionHeader, StatusBadge } from '../components/finance/FinanceUI'
 import { InstallmentPlanner } from '../components/finance/InstallmentPlanner'
 import { MoneyInput } from '../components/finance/MoneyInput'
 import { SimpleModal } from '../components/SimpleModal'
@@ -293,35 +293,34 @@ function CreditCardOverview({ rows }: { rows: Card[] }) {
 
   return (
     <div className="flex flex-col gap-3">
-      <SurfaceCard className="border-0 shadow-sm ring-1 ring-stone-200/80 dark:ring-stone-800">
-        <CardContent className="p-4">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <p className="inline-flex items-center gap-1 text-xs font-bold uppercase text-muted-foreground">
-                Kart özeti
-                <HelpTooltip title="Kart özeti" content={cardHelp.summary} />
-              </p>
-              <p className="mt-1 text-2xl font-extrabold tabular-nums text-foreground">{formatCurrency(totalDebt)}</p>
-              <p className="mt-1 text-sm text-muted-foreground">Toplam borç ve provizyon dahil limit kullanımı</p>
+      <FinancePanel tone={totalUsageRate >= 80 ? 'danger' : totalUsageRate >= 55 ? 'warning' : 'premium'} className="p-4 sm:p-5">
+        <SectionHeader
+          title="Kart özeti"
+          description="Toplam borç, açık ekstre, provizyon ve kullanılabilir limit."
+          action={
+            <div className="inline-flex items-center gap-1 text-muted-foreground">
+              <HelpTooltip title="Kart özeti" content={cardHelp.summary} />
+              <StatusBadge tone={totalUsageRate >= 80 ? 'danger' : totalUsageRate >= 55 ? 'warning' : 'good'}>%{Math.round(totalUsageRate)}</StatusBadge>
             </div>
-            <div className="grid size-11 shrink-0 place-items-center rounded-xl bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300">
-              <WalletCards />
+          }
+        />
+        <div className="mt-5 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] lg:items-end">
+          <div className="min-w-0">
+            <AmountDisplay label="Toplam kart borcu" value={formatCurrency(totalDebt)} tone={totalDebt > 0 ? 'warning' : 'good'} size="lg" />
+            <div className="mt-4">
+              <ProgressStrip label="Limit kullanımı" value={totalUsageRate} tone={totalUsageRate >= 80 ? 'danger' : totalUsageRate >= 55 ? 'warning' : 'good'} />
             </div>
           </div>
-          <Progress value={totalUsageRate} className="mt-4 h-2" />
-          <div className="mt-3 grid grid-cols-2 gap-2 text-xs min-[520px]:grid-cols-4">
-            <OverviewStat label="Ekstre borcu" value={formatCurrency(totalStatementDebt)} help={cardHelp.statementDebt} />
-            <OverviewStat label="Dönem içi" value={formatCurrency(totalCurrentPeriod)} help={cardHelp.currentPeriod} />
-            <OverviewStat label="Provizyon" value={formatCurrency(totalProvision)} help={cardHelp.provision} />
-            <OverviewStat label="Kalan limit" value={formatCurrency(totalAvailable)} help={cardHelp.availableLimit} />
+          <div className="grid grid-cols-2 gap-2 min-[520px]:grid-cols-3">
+            <MiniStat label="Ekstre borcu" value={formatCurrency(totalStatementDebt)} tone={totalStatementDebt > 0 ? 'warning' : 'good'} />
+            <MiniStat label="Dönem içi" value={formatCurrency(totalCurrentPeriod)} tone="info" />
+            <MiniStat label="Provizyon" value={formatCurrency(totalProvision)} tone={totalProvision > 0 ? 'warning' : 'neutral'} />
+            <MiniStat label="Kalan limit" value={formatCurrency(totalAvailable)} tone="good" />
+            <MiniStat label="Limit" value={formatCurrency(totalLimit)} tone="neutral" />
+            <MiniStat label="Hesap bakiyesi" value={formatCurrency(cashBalance)} tone="premium" />
           </div>
-          <div className="mt-2 grid grid-cols-3 gap-2 text-xs">
-            <OverviewStat label="Limit" value={formatCurrency(totalLimit)} help={cardHelp.limit} />
-            <OverviewStat label="Kullanım" value={`%${Math.round(totalUsageRate)}`} help={cardHelp.usage} />
-            <OverviewStat label="Hesap" value={formatCurrency(cashBalance)} help={cardHelp.cashBalance} />
-          </div>
-        </CardContent>
-      </SurfaceCard>
+        </div>
+      </FinancePanel>
 
       {groups.length > 0 ? (
         <div className="flex snap-x gap-3 overflow-x-auto pb-1">
@@ -580,6 +579,8 @@ function CreditAccountListCard({
   onPayDebt: (card: Card, reload: () => Promise<void>, rows: Card[]) => void
   onCutStatement: (card: Card, reload: () => Promise<void>, setError: (message: string) => void) => Promise<void>
 }) {
+  const [detailsOpen, setDetailsOpen] = useState(false)
+
   if (row.card_type === 'banka_karti') {
     const accountCount = rows.filter((card) => card.card_type === 'banka_karti').length
 
@@ -634,13 +635,18 @@ function CreditAccountListCard({
   const openAmount = openStatementAmount(row, statements)
   const installmentCount = activeInstallmentCount(row, installments)
   const payableDebt = cardPayableDebt(row)
+  const openStatements = statements.filter((statement) => statement.card_id === row.id && statement.status === 'open')
+  const cardInstallments = installments
+    .filter((installment) => installment.card_id === row.id && installment.status !== 'paid')
+    .sort((left, right) => left.due_month.localeCompare(right.due_month))
 
   return (
     <article
       style={bankHueStyle(row.bank_name, rows)}
-      className="finance-panel min-w-0 rounded-lg p-4 ring-1 ring-[hsl(var(--bank-hue)_42%_82%/0.55)] dark:ring-[hsl(var(--bank-hue)_40%_42%/0.45)]"
+      className="finance-panel min-w-0 rounded-lg bg-card/96 p-4 ring-1 ring-[hsl(var(--bank-hue)_42%_82%/0.55)] dark:ring-[hsl(var(--bank-hue)_40%_42%/0.45)]"
     >
-      <div className="relative overflow-hidden rounded-lg bg-[linear-gradient(135deg,hsl(var(--bank-hue)_72%_34%),hsl(var(--bank-hue)_48%_24%))] p-4 text-white shadow-sm">
+      <div className="relative overflow-hidden rounded-lg bg-[linear-gradient(135deg,hsl(var(--bank-hue)_72%_32%),hsl(var(--bank-hue)_48%_20%))] p-4 text-white shadow-sm">
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-white/35" />
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="truncate text-xs font-bold uppercase text-white/70">{row.bank_name}</p>
@@ -655,7 +661,7 @@ function CreditAccountListCard({
           </div>
         </div>
 
-        <div className="mt-5 grid grid-cols-[minmax(0,1fr)_auto] items-end gap-3">
+        <div className="mt-6 grid grid-cols-[minmax(0,1fr)_auto] items-end gap-3">
           <div className="min-w-0">
             <p className="text-[11px] font-bold uppercase text-white/65">Güncel borç</p>
             <p className="finance-value mt-1 truncate text-[clamp(1.45rem,6vw,2.15rem)] font-black leading-none">{formatCurrency(row.debt_amount)}</p>
@@ -701,7 +707,15 @@ function CreditAccountListCard({
         </div>
       </div>
 
-      <div className="mt-3 grid grid-cols-2 gap-2">
+      <div className="mt-3 grid grid-cols-2 gap-2 min-[520px]:grid-cols-4">
+        <button
+          type="button"
+          onClick={() => setDetailsOpen((current) => !current)}
+          aria-expanded={detailsOpen}
+          className="finance-touch-target inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-xs font-black text-foreground shadow-sm transition hover:bg-muted"
+        >
+          Detay
+        </button>
         <button
           type="button"
           onClick={() => onPayDebt(row, reload, rows)}
@@ -709,7 +723,7 @@ function CreditAccountListCard({
           className="finance-touch-target inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-3 py-2 text-xs font-black text-primary-foreground shadow-sm transition hover:bg-primary/90 disabled:opacity-55"
         >
           <ReceiptText size={14} />
-          Borç öde
+          Ekstreyi öde
         </button>
         <a
           href="#hizli-harcama"
@@ -732,6 +746,57 @@ function CreditAccountListCard({
           Ekstre kes
         </button>
       </div>
+      {detailsOpen ? (
+        <div className="mt-4 rounded-lg border border-border/80 bg-surface-muted/70 p-3 ring-1 ring-border/60">
+          <SectionHeader
+            title="Kart detay özeti"
+            description="Borç, ekstre, limit, vade ve devam eden taksitleri birlikte oku."
+            action={<StatusBadge tone={payableDebt > 0 ? 'warning' : 'good'}>{payableDebt > 0 ? 'Açık ekstre' : 'Temiz'}</StatusBadge>}
+          />
+          <div className="mt-4 grid grid-cols-2 gap-2 min-[620px]:grid-cols-3">
+            <MiniStat label="Ödenebilir" value={formatCurrency(payableDebt)} tone={payableDebt > 0 ? 'warning' : 'good'} />
+            <MiniStat label="Açık ekstre" value={formatCurrency(openAmount || row.statement_debt_amount)} tone={openAmount + row.statement_debt_amount > 0 ? 'danger' : 'neutral'} />
+            <MiniStat label="Kalan limit" value={formatCurrency(stats.availableLimit)} tone="good" />
+            <MiniStat label="Son ödeme" value={formatShortDate(dueDate)} tone={payableDebt > 0 ? 'warning' : 'neutral'} />
+            <MiniStat label="Ekstre günü" value={formatMonthlyDay(row.statement_day)} />
+            <MiniStat label="Limit kullanımı" value={`%${usageRate}`} tone={usageRate >= 80 ? 'danger' : usageRate >= 55 ? 'warning' : 'good'} />
+          </div>
+          <div className="mt-4 grid gap-3 min-[760px]:grid-cols-2">
+            <div className="rounded-lg bg-card/80 p-3 ring-1 ring-border/70">
+              <p className="text-xs font-black uppercase text-muted-foreground">Devam eden taksitler</p>
+              {cardInstallments.length > 0 ? (
+                <div className="mt-3 flex flex-col gap-2">
+                  {cardInstallments.slice(0, 3).map((installment) => (
+                    <div key={installment.id} className="flex min-w-0 items-center justify-between gap-3 rounded-lg bg-muted/55 px-3 py-2 text-xs">
+                      <span className="min-w-0 truncate font-bold text-foreground">{installment.description}</span>
+                      <span className="shrink-0 font-black tabular-nums text-foreground">
+                        {formatCurrency(installment.amount)} · {formatMonthLabel(installment.due_month.slice(0, 7))}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="mt-3 text-sm text-muted-foreground">Devam eden taksit yok.</p>
+              )}
+            </div>
+            <div className="rounded-lg bg-card/80 p-3 ring-1 ring-border/70">
+              <p className="text-xs font-black uppercase text-muted-foreground">Ekstre geçmişi</p>
+              {openStatements.length > 0 ? (
+                <div className="mt-3 flex flex-col gap-2">
+                  {openStatements.slice(0, 3).map((statement) => (
+                    <div key={statement.id} className="flex min-w-0 items-center justify-between gap-3 rounded-lg bg-muted/55 px-3 py-2 text-xs">
+                      <span className="min-w-0 truncate font-bold text-foreground">{statementPeriodLabel(statement)}</span>
+                      <span className="shrink-0 font-black tabular-nums text-foreground">{formatCurrency(statement.statement_debt_amount)}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="mt-3 text-sm text-muted-foreground">Açık ekstre kaydı yok.</p>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : null}
     </article>
   )
 }
@@ -2093,6 +2158,12 @@ export function CardsPage() {
               <DueStatementAutomation rows={rows as Card[]} reload={reload} loadStatements={loadStatements} setError={setError} />
               <AccountHubPanel rows={rows as Card[]} onOpenTransfer={(source) => openTransaction(source, reload, rows as Card[], 'transfer')} />
               <CreditCardOverview rows={rows as Card[]} />
+            </div>
+          ) : null
+        }
+        renderAfterList={({ loading, rows, reload, setError }) =>
+          !loading ? (
+            <div className="flex flex-col gap-3">
               <QuickExpensePanel rows={rows as Card[]} reload={() => refreshCardsAndProvisions(reload)} setError={setError} />
               {statementError ? (
                 <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">{statementError}</p>

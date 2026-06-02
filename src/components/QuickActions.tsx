@@ -59,9 +59,9 @@ export function QuickActions() {
   }, [])
 
   return (
-    <div className="fixed bottom-[calc(env(safe-area-inset-bottom)+5.25rem)] right-4 z-40 flex flex-col items-end gap-3 lg:bottom-6 lg:right-6">
+    <div className="fixed bottom-[calc(env(safe-area-inset-bottom)+5.45rem)] right-4 z-40 flex flex-col items-end gap-3 lg:bottom-6 lg:right-6">
       {open ? (
-        <div className="w-[min(calc(100vw-2rem),23rem)] rounded-lg border border-border/80 bg-card/96 p-2 shadow-[var(--shadow-elevated)] backdrop-blur-xl">
+        <div className="finance-command-surface w-[min(calc(100vw-2rem),24rem)] rounded-lg p-2">
           <label className="relative mb-2 block">
             <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -78,14 +78,14 @@ export function QuickActions() {
               onClick={() => setOpenPath(null)}
               className={cn(
                 'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition hover:bg-muted',
-                action.matchPath === preferredAction && 'bg-primary/10',
+                action.matchPath === preferredAction && 'bg-primary/10 ring-1 ring-primary/15',
               )}
             >
               <div className="grid size-9 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
                 <action.icon size={17} />
               </div>
               <div className="min-w-0">
-                <p className="font-bold text-foreground">{action.label}</p>
+                <p className="font-black text-foreground">{action.label}</p>
                 <p className="truncate text-xs text-muted-foreground">{action.description}</p>
               </div>
             </Link>
@@ -103,7 +103,7 @@ export function QuickActions() {
         aria-expanded={open}
         aria-label={open ? 'Hızlı işlem menüsünü kapat' : 'Hızlı işlem menüsünü aç'}
         className={cn(
-          'grid size-14 place-items-center rounded-full bg-primary text-primary-foreground shadow-xl shadow-primary/25 ring-1 ring-white/25 transition hover:bg-primary/90',
+          'grid size-14 place-items-center rounded-full bg-primary text-primary-foreground shadow-xl shadow-primary/30 ring-1 ring-white/25 transition hover:bg-primary/90',
           tucked && 'pointer-events-none translate-y-3 scale-90 opacity-0 sm:pointer-events-auto sm:translate-y-0 sm:scale-100 sm:opacity-100',
         )}
       >

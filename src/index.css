@@ -38,38 +38,38 @@
 
 :root {
   --radius: 0.5rem;
-  --background: #f5f7fa;
-  --foreground: #111827;
+  --background: #eef3f7;
+  --foreground: #101722;
   --card: #ffffff;
-  --card-foreground: #111827;
+  --card-foreground: #101722;
   --popover: #ffffff;
-  --popover-foreground: #111827;
-  --primary: #0c8b68;
+  --popover-foreground: #101722;
+  --primary: #08775f;
   --primary-foreground: #ffffff;
-  --secondary: #e9eff5;
-  --secondary-foreground: #172033;
-  --muted: #e7edf3;
-  --muted-foreground: #667085;
-  --accent: #e7f5f1;
-  --accent-foreground: #075c47;
-  --destructive: #d92d53;
+  --secondary: #e2eaf2;
+  --secondary-foreground: #152033;
+  --muted: #e5edf4;
+  --muted-foreground: #607085;
+  --accent: #dff6ee;
+  --accent-foreground: #07513f;
+  --destructive: #c92f4c;
   --destructive-foreground: #ffffff;
-  --success: #0f9f72;
+  --success: #07845f;
   --success-foreground: #ffffff;
-  --warning: #b7791f;
+  --warning: #b46c08;
   --warning-foreground: #fff7ed;
-  --info: #2563eb;
+  --info: #245fd6;
   --info-foreground: #eff6ff;
   --surface: #ffffff;
-  --surface-muted: #f8fafc;
-  --border: #d7e0ea;
-  --input: #d1dbe7;
-  --ring: #0c8b68;
-  --shadow-card: 0 10px 28px rgba(16, 24, 40, 0.06);
-  --shadow-card-hover: 0 18px 44px rgba(16, 24, 40, 0.1);
-  --shadow-elevated: 0 24px 64px rgba(16, 24, 40, 0.14);
-  color: #111827;
-  background: #f4f7f9;
+  --surface-muted: #f6f9fb;
+  --border: #cfdae6;
+  --input: #cbd8e5;
+  --ring: #08775f;
+  --shadow-card: 0 12px 34px rgba(16, 24, 40, 0.075);
+  --shadow-card-hover: 0 20px 48px rgba(16, 24, 40, 0.12);
+  --shadow-elevated: 0 28px 74px rgba(16, 24, 40, 0.18);
+  color: #101722;
+  background: #eef3f7;
   color-scheme: light;
   font-family:
     ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -83,19 +83,19 @@
 }
 
 :root.dark {
-  --background: #0b1016;
-  --foreground: #edf2f7;
-  --card: #121821;
+  --background: #071017;
+  --foreground: #edf4f7;
+  --card: #101923;
   --card-foreground: #f8fafc;
-  --popover: #121821;
+  --popover: #101923;
   --popover-foreground: #f8fafc;
-  --primary: #35d39a;
+  --primary: #37d8a2;
   --primary-foreground: #052e23;
-  --secondary: #1c2531;
+  --secondary: #1a2632;
   --secondary-foreground: #f8fafc;
-  --muted: #1c2531;
-  --muted-foreground: #a8b3c2;
-  --accent: #123b31;
+  --muted: #1a2632;
+  --muted-foreground: #a8b6c6;
+  --accent: #103c31;
   --accent-foreground: #c7f7df;
   --destructive: #fb7185;
   --destructive-foreground: #fff1f2;
@@ -105,29 +105,31 @@
   --warning-foreground: #241a05;
   --info: #60a5fa;
   --info-foreground: #061527;
-  --surface: #151c25;
-  --surface-muted: #111923;
-  --border: #2b3543;
-  --input: #303b49;
+  --surface: #121d27;
+  --surface-muted: #0e1721;
+  --border: #263646;
+  --input: #2d4050;
   --ring: #34d399;
-  --shadow-card: 0 12px 34px rgba(0, 0, 0, 0.28);
-  --shadow-card-hover: 0 20px 48px rgba(0, 0, 0, 0.38);
-  --shadow-elevated: 0 28px 70px rgba(0, 0, 0, 0.52);
+  --shadow-card: 0 14px 40px rgba(0, 0, 0, 0.32);
+  --shadow-card-hover: 0 22px 54px rgba(0, 0, 0, 0.44);
+  --shadow-elevated: 0 32px 78px rgba(0, 0, 0, 0.58);
   color-scheme: dark;
   color: #edf2f7;
-  background: #0b1016;
+  background: #071017;
 }
 
 * {
   box-sizing: border-box;
 }
 
-  body {
+body {
   min-width: 320px;
   min-height: 100dvh;
   margin: 0;
   background:
-    linear-gradient(180deg, color-mix(in srgb, var(--background) 92%, #ffffff 8%) 0%, var(--background) 34rem),
+    linear-gradient(180deg, color-mix(in srgb, var(--background) 72%, #ffffff 28%) 0%, var(--background) 30rem),
+    linear-gradient(120deg, color-mix(in srgb, var(--primary) 10%, transparent) 0%, transparent 32rem),
+    linear-gradient(220deg, color-mix(in srgb, var(--info) 8%, transparent) 0%, transparent 28rem),
     var(--background);
   overscroll-behavior-y: none;
   -webkit-tap-highlight-color: transparent;
@@ -166,7 +168,7 @@ button:disabled {
 @layer components {
   .finance-surface {
     border: 1px solid color-mix(in srgb, var(--border) 82%, transparent);
-    background: color-mix(in srgb, var(--card) 94%, transparent);
+    background: color-mix(in srgb, var(--card) 96%, transparent);
     box-shadow: var(--shadow-card);
   }
 
@@ -178,6 +180,20 @@ button:disabled {
     border: 1px solid color-mix(in srgb, var(--border) 82%, transparent);
     background: color-mix(in srgb, var(--card) 95%, transparent);
     box-shadow: var(--shadow-card);
+  }
+
+  .finance-hero-panel {
+    border: 1px solid color-mix(in srgb, var(--primary) 18%, var(--border));
+    background:
+      linear-gradient(135deg, color-mix(in srgb, var(--card) 95%, var(--primary) 5%), color-mix(in srgb, var(--accent) 64%, var(--card) 36%));
+    box-shadow: var(--shadow-card);
+  }
+
+  .finance-command-surface {
+    border: 1px solid color-mix(in srgb, var(--border) 84%, transparent);
+    background: color-mix(in srgb, var(--card) 92%, transparent);
+    box-shadow: var(--shadow-card);
+    backdrop-filter: blur(18px);
   }
 
   .finance-field {
@@ -192,6 +208,11 @@ button:disabled {
   .finance-value {
     font-variant-numeric: tabular-nums;
     letter-spacing: 0;
+  }
+
+  .finance-section-grid {
+    display: grid;
+    gap: 1rem;
   }
 
   .finance-scrollbar {
