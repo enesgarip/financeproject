@@ -10,4 +10,18 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Isolate heavy vendor libs
+          'vendor-react':    ['react', 'react-dom', 'react-router-dom'],
+          'vendor-motion':   ['framer-motion'],
+          'vendor-recharts': ['recharts'],
+          'vendor-radix':    ['radix-ui'],
+        },
+      },
+    },
+    chunkSizeWarningLimit: 700,
+  },
 })

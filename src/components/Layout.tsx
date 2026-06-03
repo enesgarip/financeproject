@@ -50,92 +50,146 @@ export function Layout() {
     localStorage.setItem('theme', isDark ? 'dark' : 'light')
   }, [isDark])
 
+  const userInitial = user?.email?.[0]?.toUpperCase() ?? '?'
+
   return (
     <div className="min-h-dvh bg-background text-foreground">
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-72 flex-col border-r border-border/80 bg-card/88 p-4 shadow-[18px_0_54px_rgba(16,24,40,0.08)] backdrop-blur-xl dark:shadow-black/35 lg:flex">
-        <div className="finance-command-surface mb-5 flex items-center gap-3 rounded-lg p-3">
-          <div className="grid size-11 place-items-center rounded-lg bg-primary text-lg font-black text-primary-foreground shadow-sm shadow-primary/25">
-            ₺
-          </div>
-          <div className="min-w-0">
-            <p className="truncate text-base font-black text-foreground">FinanceProject</p>
-            <p className="truncate text-xs font-semibold text-muted-foreground">Kişisel finans kontrol merkezi</p>
-          </div>
-        </div>
+      {/* ── Desktop Sidebar ── */}
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col lg:flex">
+        {/* Glass border on the right */}
+        <div className="absolute inset-y-0 right-0 w-px bg-gradient-to-b from-transparent via-border/60 to-transparent" />
+        <div className="flex h-full flex-col gap-2 p-4"
+          style={{ background: 'color-mix(in srgb, var(--card) 85%, transparent)', backdropFilter: 'blur(24px)' }}>
 
-        <nav className="flex flex-1 flex-col gap-1.5">
-          {primaryNavItems.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.to === '/'}
-              className={({ isActive }) => {
-                const itemIsActive = isActive || ('activePaths' in item && (item.activePaths as readonly string[]).includes(pathname))
-                return cn(
-                  'flex h-11 items-center gap-3 rounded-lg px-3 text-sm font-black transition',
-                  itemIsActive
-                    ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/20'
-                    : 'text-muted-foreground hover:bg-muted/75 hover:text-foreground',
-                )
-              }}
+          {/* Brand */}
+          <div className="mb-2 flex items-center gap-3 px-1 py-2">
+            <div className="relative grid size-9 shrink-0 place-items-center rounded-xl bg-primary text-base font-black text-primary-foreground shadow-[0_4px_14px_color-mix(in_srgb,var(--primary)_40%,transparent)]">
+              ₺
+              <span className="absolute -right-0.5 -top-0.5 size-2.5 rounded-full bg-success ring-2 ring-card" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-black tracking-tight text-foreground">FinanceProject</p>
+              <p className="text-[11px] text-muted-foreground">Kişisel finans merkezi</p>
+            </div>
+          </div>
+
+          {/* Navigation */}
+          <nav className="flex flex-1 flex-col gap-0.5">
+            <p className="finance-label mb-2 px-3">Navigasyon</p>
+            {primaryNavItems.map((item) => (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                end={item.to === '/'}
+                className={({ isActive }) => {
+                  const itemIsActive =
+                    isActive ||
+                    ('activePaths' in item &&
+                      (item.activePaths as readonly string[]).includes(pathname))
+                  return cn(
+                    'group flex h-10 items-center gap-3 rounded-xl px-3 text-sm transition-all',
+                    itemIsActive
+                      ? [
+                          'bg-primary text-primary-foreground font-semibold',
+                          'shadow-[0_2px_12px_color-mix(in_srgb,var(--primary)_35%,transparent)]',
+                        ].join(' ')
+                      : 'text-muted-foreground font-medium hover:bg-muted/70 hover:text-foreground',
+                  )
+                }}
+              >
+                {({ isActive }) => {
+                  const itemIsActive =
+                    isActive ||
+                    ('activePaths' in item &&
+                      (item.activePaths as readonly string[]).includes(pathname))
+                  return (
+                    <>
+                      <item.icon
+                        size={17}
+                        strokeWidth={itemIsActive ? 2.5 : 2}
+                        className="shrink-0"
+                      />
+                      <span className="truncate">{item.label}</span>
+                    </>
+                  )
+                }}
+              </NavLink>
+            ))}
+          </nav>
+
+          {/* User section */}
+          <div className="rounded-xl border border-border/60 bg-muted/30 p-3">
+            <div className="flex items-center gap-2.5">
+              <div className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary/15 text-xs font-bold text-primary">
+                {userInitial}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-xs font-semibold text-foreground">{user?.email ?? '—'}</p>
+                <p className="text-[10px] text-muted-foreground">Oturum açık</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => void signOut()}
+              className="mt-2.5 flex h-8 w-full items-center justify-center gap-2 rounded-lg border border-border/60 bg-card/60 text-xs font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground"
             >
-              <item.icon size={18} strokeWidth={2.2} />
-              <span className="truncate">{item.label}</span>
-            </NavLink>
-          ))}
-        </nav>
-
-        <div className="rounded-lg border border-border/75 bg-background/72 p-3 shadow-sm">
-          <p className="mb-1 text-[11px] font-black uppercase text-muted-foreground">Oturum</p>
-          <p className="truncate text-sm font-bold text-foreground">{user?.email ?? 'Oturum'}</p>
-          <button
-            type="button"
-            onClick={() => void signOut()}
-            className="mt-3 inline-flex h-9 w-full items-center justify-center gap-2 rounded-lg border border-border bg-card px-3 text-xs font-black text-muted-foreground transition hover:bg-muted hover:text-foreground"
-          >
-            <LogOut size={15} />
-            Çıkış yap
-          </button>
+              <LogOut size={13} />
+              Çıkış yap
+            </button>
+          </div>
         </div>
       </aside>
 
-      <div className="flex min-h-dvh flex-col lg:pl-72">
-        <header className="sticky top-0 z-20 border-b border-border/75 bg-background/86 px-4 pb-3 pt-[calc(env(safe-area-inset-top)+0.75rem)] backdrop-blur-xl">
+      {/* ── Main content ── */}
+      <div className="flex min-h-dvh flex-col lg:pl-64">
+        {/* Header */}
+        <header className="sticky top-0 z-20 border-b border-border/60 px-4 pb-3 pt-[calc(env(safe-area-inset-top)+0.75rem)]"
+          style={{ background: 'color-mix(in srgb, var(--background) 88%, transparent)', backdropFilter: 'blur(20px)' }}>
           <div className={`mx-auto flex ${contentWidthClass} items-center justify-between gap-3`}>
             <div className="min-w-0">
-              <h1 className="truncate text-lg font-black leading-tight text-foreground">{titles[pathname] ?? 'Finans'}</h1>
-              <p className="truncate text-xs text-muted-foreground max-[360px]:hidden lg:hidden">{user?.email}</p>
+              <h1 className="truncate text-base font-bold leading-tight tracking-tight text-foreground lg:text-lg">
+                {titles[pathname] ?? 'Finans'}
+              </h1>
               <p className="hidden truncate text-xs text-muted-foreground lg:block">
                 Hesaplarını, planlı ödemelerini ve kişileri tek yerden yönet.
               </p>
             </div>
+
             <div className="flex shrink-0 items-center gap-2">
-              <div className="hidden h-10 items-center gap-2 rounded-lg border border-border/80 bg-card/95 px-3 text-xs font-bold text-muted-foreground shadow-sm sm:flex">
-                <CalendarDays size={15} />
+              <div className="hidden h-9 items-center gap-2 rounded-xl border border-border/70 bg-card/80 px-3 text-xs font-medium text-muted-foreground backdrop-blur-sm sm:flex">
+                <CalendarDays size={13} className="shrink-0" />
                 <span>{currentDateLabel()}</span>
               </div>
+
               <button
                 type="button"
-                onClick={() => setIsDark((current) => !current)}
-                className="grid size-10 place-items-center rounded-lg border border-border/80 bg-card/95 text-muted-foreground shadow-sm transition hover:bg-muted hover:text-foreground"
+                onClick={() => setIsDark((c) => !c)}
+                className="grid size-9 place-items-center rounded-xl border border-border/70 bg-card/80 text-muted-foreground backdrop-blur-sm transition hover:bg-muted hover:text-foreground"
                 aria-label={isDark ? 'Gündüz temasına geç' : 'Gece temasına geç'}
               >
-                {isDark ? <Sun size={18} /> : <Moon size={18} />}
+                {isDark ? <Sun size={16} /> : <Moon size={16} />}
               </button>
+
               <button
                 type="button"
                 onClick={() => void signOut()}
-                className="grid size-10 place-items-center rounded-lg border border-border/80 bg-card/95 text-muted-foreground shadow-sm transition hover:bg-muted hover:text-foreground lg:hidden"
+                className="grid size-9 place-items-center rounded-xl border border-border/70 bg-card/80 text-muted-foreground backdrop-blur-sm transition hover:bg-muted hover:text-foreground lg:hidden"
                 aria-label="Çıkış yap"
               >
-                <LogOut size={18} />
+                <LogOut size={16} />
               </button>
             </div>
           </div>
         </header>
-        <main className={`mx-auto w-full ${contentWidthClass} flex-1 px-4 pb-[calc(env(safe-area-inset-bottom)+11rem)] pt-5 lg:px-7 lg:pb-12 lg:pt-7`}>
+
+        <main className={cn(
+          'mx-auto w-full flex-1 px-4 pt-5 lg:px-6 lg:pt-7',
+          'pb-[calc(env(safe-area-inset-bottom)+11rem)] lg:pb-14',
+          contentWidthClass,
+        )}>
           <Outlet />
         </main>
+
         <QuickActions />
         <BottomNav />
       </div>

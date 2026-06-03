@@ -17,6 +17,7 @@ import {
   TrendingDown,
   TrendingUp,
 } from 'lucide-react'
+import { motion, type Variants } from 'framer-motion'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
@@ -64,13 +65,15 @@ import {
 } from '../utils/financeSummary'
 import { formatCurrency } from '../utils/formatCurrency'
 import { EmptyState } from '../components/EmptyState'
+import { CashFlowChart, type CashFlowPoint } from '../components/charts/CashFlowChart'
+import { DonutChart, type DonutSlice } from '../components/charts/DonutChart'
 import { Badge } from '../components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { HelpTooltip, type HelpTooltipContent } from '../components/ui/help-tooltip'
 import { Input } from '../components/ui/input'
 import { Progress } from '../components/ui/progress'
 import { Separator } from '../components/ui/separator'
-import { Skeleton } from '../components/ui/skeleton'
+import { SkeletonDashboard } from '../components/ui/skeleton'
 
 type DashboardData = {
   assets: Asset[]
@@ -714,17 +717,7 @@ export function DashboardPage() {
   )
 
   if (loading) {
-    return (
-      <section className="flex flex-col gap-4">
-        <Skeleton className="h-44 rounded-lg" />
-        <div className="grid grid-cols-2 gap-3">
-          {Array.from({ length: 6 }, (_, index) => (
-            <Skeleton key={index} className="h-24 rounded-lg" />
-          ))}
-        </div>
-        <Skeleton className="h-32 rounded-lg" />
-      </section>
-    )
+    return <SkeletonDashboard />
   }
 
   if (error) {
@@ -734,9 +727,23 @@ export function DashboardPage() {
   const hasCreditLimitGroups = summary.creditLimitGroups.length > 0
   const upcomingTotal = sum(upcomingItems, (item) => item.amount)
 
+  const stagger: Variants = {
+    hidden: {},
+    visible: { transition: { staggerChildren: 0.06 } },
+  }
+  const fadeUp: Variants = {
+    hidden:  { opacity: 0, y: 14 },
+    visible: { opacity: 1, y: 0 },
+  }
+
   return (
-    <section className="grid gap-5 lg:grid-cols-12 lg:items-start">
-      <div className="min-w-0 lg:col-span-8">
+    <motion.section
+      variants={stagger}
+      initial="hidden"
+      animate="visible"
+      className="grid gap-5 lg:grid-cols-12 lg:items-start"
+    >
+      <motion.div variants={fadeUp} className="min-w-0 lg:col-span-8">
         <DashboardHero
           displayName={displayName}
           netWorth={summary.netWorth}
@@ -746,18 +753,18 @@ export function DashboardPage() {
           cashFlow={summary.cashFlow}
           health={financialHealth}
         />
-      </div>
+      </motion.div>
 
-      <div className="min-w-0 lg:col-span-4">
+      <motion.div variants={fadeUp} className="min-w-0 lg:col-span-4">
         <MonthlyPaymentLoadPanel
           cashFlow={summary.cashFlow}
           nextMonthLoad={summary.nextMonthLoad}
           upcomingTotal={upcomingTotal}
           upcomingCount={upcomingItems.length}
         />
-      </div>
+      </motion.div>
 
-      <div className="min-w-0 lg:col-span-5">
+      <motion.div variants={fadeUp} className="min-w-0 lg:col-span-5">
         <CreditCardSnapshotPanel
           cards={data.cards}
           totalDebt={summary.totalCreditCardDebt}
@@ -765,17 +772,17 @@ export function DashboardPage() {
           totalLimit={summary.totalCreditLimit}
           usageRate={summary.creditUsageRate}
         />
-      </div>
+      </motion.div>
 
-      <div className="min-w-0 lg:col-span-7">
+      <motion.div variants={fadeUp} className="min-w-0 lg:col-span-7">
         <CashFlowCalendarPanel items={upcomingItems} cashFlow={summary.cashFlow} />
-      </div>
+      </motion.div>
 
-      <div className="min-w-0 lg:col-span-4">
+      <motion.div variants={fadeUp} className="min-w-0 lg:col-span-4">
         <GoalProgressCommand goalProgress={summary.goalProgress} />
-      </div>
+      </motion.div>
 
-      <div className="min-w-0 lg:col-span-8">
+      <motion.div variants={fadeUp} className="min-w-0 lg:col-span-8">
         <AnalyticsSnapshotPanel
           cashFlow={summary.cashFlow}
           totalAssets={summary.totalAssets}
@@ -784,23 +791,23 @@ export function DashboardPage() {
           loanDebt={summary.totalLoanDebt}
           personalDebt={summary.totalPersonalDebts}
         />
-      </div>
+      </motion.div>
 
-      <div className="min-w-0 lg:col-span-12">
+      <motion.div variants={fadeUp} className="min-w-0 lg:col-span-12">
         <FocusActionPanel actions={focusActions} cashFlow={summary.cashFlow} />
-      </div>
+      </motion.div>
 
-      <div className="grid min-w-0 gap-3 min-[760px]:grid-cols-3 lg:col-span-12">
+      <motion.div variants={fadeUp} className="grid min-w-0 gap-3 min-[760px]:grid-cols-3 lg:col-span-12">
         <FinancialHealthPanel health={financialHealth} goalProgress={summary.goalProgress} />
         <StatementReminderPanel cards={data.cards} />
         <BudgetAlertPanel budgets={data.budgets} expenses={data.cardExpenses} />
-      </div>
+      </motion.div>
 
-      <div className="min-w-0 lg:col-span-7">
+      <motion.div variants={fadeUp} className="min-w-0 lg:col-span-7">
         <CashFlowPanel cashFlow={summary.cashFlow} />
-      </div>
+      </motion.div>
 
-      <div className="grid min-w-0 gap-3 min-[760px]:grid-cols-2 lg:col-span-5 lg:grid-cols-1">
+      <motion.div variants={fadeUp} className="grid min-w-0 gap-3 min-[760px]:grid-cols-2 lg:col-span-5 lg:grid-cols-1">
         <NextMonthLoadPanel load={summary.nextMonthLoad} />
         <PeriodDebtTotalsPanel cashFlow={summary.cashFlow} />
         <CurrentDebtTotalsPanel
@@ -810,31 +817,31 @@ export function DashboardPage() {
           personalDebt={summary.totalPersonalDebts}
           paymentDebt={summary.totalPaymentLiabilities}
         />
-      </div>
+      </motion.div>
 
-      <div className="min-w-0 lg:col-span-7">
+      <motion.div variants={fadeUp} className="min-w-0 lg:col-span-7">
         <SmartInsightsPanel insights={insights} />
-      </div>
+      </motion.div>
 
-      <div className="min-w-0 lg:col-span-5">
+      <motion.div variants={fadeUp} className="min-w-0 lg:col-span-5">
         <ScenarioSimulator cashFlow={summary.cashFlow} netWorth={summary.netWorth} />
-      </div>
+      </motion.div>
 
-      <div className="grid min-w-0 gap-3 min-[520px]:grid-cols-3 lg:col-span-12">
+      <motion.div variants={fadeUp} className="grid min-w-0 gap-3 min-[520px]:grid-cols-3 lg:col-span-12">
         <MetricTile label="Toplam limit" value={formatCurrency(summary.totalCreditLimit)} icon={<CreditCard />} tone="indigo" help={dashboardHelp.totalLimit} />
         <MetricTile label="Kredi ödemesi" value={formatCurrency(summary.totalLoanMonthlyPayment)} icon={<CalendarDays />} tone="stone" help={dashboardHelp.loanPayment} />
         <MetricTile label="Tahsilat" value={formatCurrency(summary.totalReceivables)} icon={<ArrowUpRight />} tone="emerald" help={dashboardHelp.receivable} />
-      </div>
+      </motion.div>
 
       <UpcomingAlertPanel items={upcomingItems} />
 
       {hasCreditLimitGroups ? (
-        <div className="min-w-0 lg:col-span-7">
+        <motion.div variants={fadeUp} className="min-w-0 lg:col-span-7">
           <CreditLimitSection groups={summary.creditLimitGroups} totalUsageRate={summary.creditUsageRate} />
-        </div>
+        </motion.div>
       ) : null}
 
-      <div className={`grid min-w-0 gap-3 min-[520px]:grid-cols-2 ${hasCreditLimitGroups ? 'lg:col-span-5 lg:grid-cols-1' : 'lg:col-span-12'}`}>
+      <motion.div variants={fadeUp} className={`grid min-w-0 gap-3 min-[520px]:grid-cols-2 ${hasCreditLimitGroups ? 'lg:col-span-5 lg:grid-cols-1' : 'lg:col-span-12'}`}>
         <PulseCard
           title="Kredi ritmi"
           label="Aylık ödeme"
@@ -844,12 +851,12 @@ export function DashboardPage() {
           tone="rose"
         />
         <SalaryPulse trend={summary.salaryTrend} />
-      </div>
+      </motion.div>
 
-      <div className="min-w-0 lg:col-span-12">
+      <motion.div variants={fadeUp} className="min-w-0 lg:col-span-12">
         <HistorySection rows={data.transactionHistory} />
-      </div>
-    </section>
+      </motion.div>
+    </motion.section>
   )
 }
 
@@ -1028,37 +1035,55 @@ function AnalyticsSnapshotPanel({
   loanDebt: number
   personalDebt: number
 }) {
-  const debtBase = Math.max(1, totalDebts)
   const assetDebtRatio = totalAssets > 0 ? Math.min(100, (totalDebts / totalAssets) * 100) : totalDebts > 0 ? 100 : 0
+
+  const donutData: DonutSlice[] = [
+    ...(cardDebt > 0    ? [{ name: 'Kart',    value: cardDebt,     color: 'var(--warning)' }]     : []),
+    ...(loanDebt > 0    ? [{ name: 'Kredi',   value: loanDebt,     color: 'var(--info)' }]         : []),
+    ...(personalDebt > 0? [{ name: 'Kişisel', value: personalDebt, color: 'var(--destructive)' }]  : []),
+  ]
 
   return (
     <FinancePanel className="p-4 sm:p-5">
       <SectionHeader title="Analiz kartları" description="Gelir/gider ve borç dağılımını hızlı kontrol et." />
       <div className="mt-4 grid gap-3 min-[720px]:grid-cols-3">
+        {/* Net flow card */}
         <MetricCard
-          label="Gelir / gider"
+          label="Gelir / Gider"
           value={`${cashFlow.netFlow >= 0 ? '+' : ''}${formatCurrency(cashFlow.netFlow)}`}
           description={`Gelir ${formatCurrency(cashFlow.income)} · Çıkış ${formatCurrency(cashFlow.outflow)}`}
           tone={cashFlow.netFlow >= 0 ? 'good' : 'danger'}
           icon={TrendingUp}
+          deltaLabel={cashFlow.netFlow >= 0 ? 'up' : 'down'}
+          delta={cashFlow.netFlow >= 0 ? 'Pozitif akış' : 'Nakit açığı'}
         />
-        <FinancePanel className="p-4">
-          <AmountDisplay label="Borç dağılımı" value={formatCurrency(totalDebts)} tone={totalDebts > 0 ? 'warning' : 'good'} />
-          <div className="mt-4 flex flex-col gap-3">
-            <ProgressStrip label="Kart" value={(cardDebt / debtBase) * 100} tone="warning" />
-            <ProgressStrip label="Kredi" value={(loanDebt / debtBase) * 100} tone="info" />
-            <ProgressStrip label="Kişisel" value={(personalDebt / debtBase) * 100} tone="danger" />
-          </div>
-        </FinancePanel>
-        <FinancePanel className="p-4">
-          <AmountDisplay label="Varlık / borç" value={`%${Math.round(assetDebtRatio)}`} tone={assetDebtRatio >= 80 ? 'danger' : assetDebtRatio >= 45 ? 'warning' : 'good'} />
-          <p className="mt-3 text-xs font-medium leading-5 text-muted-foreground">
+
+        {/* Debt donut */}
+        <div className="rounded-2xl border border-border/70 bg-card p-4 shadow-[var(--shadow-card)]">
+          <p className="finance-label mb-3">Borç Dağılımı</p>
+          {donutData.length > 0 ? (
+            <DonutChart data={donutData} size={160} innerRadius={42} totalLabel="Toplam Borç" />
+          ) : (
+            <div className="flex h-40 items-center justify-center text-xs text-muted-foreground">
+              Borç kaydı yok
+            </div>
+          )}
+        </div>
+
+        {/* Asset/debt ratio */}
+        <div className="rounded-2xl border border-border/70 bg-card p-4 shadow-[var(--shadow-card)]">
+          <AmountDisplay
+            label="Varlık / Borç Baskısı"
+            value={`%${Math.round(assetDebtRatio)}`}
+            tone={assetDebtRatio >= 80 ? 'danger' : assetDebtRatio >= 45 ? 'warning' : 'good'}
+          />
+          <p className="mt-2 text-xs text-muted-foreground">
             Varlık {formatCurrency(totalAssets)} · Borç {formatCurrency(totalDebts)}
           </p>
-          <div className="mt-4">
-            <ProgressStrip label="Borç baskısı" value={assetDebtRatio} tone={assetDebtRatio >= 80 ? 'danger' : assetDebtRatio >= 45 ? 'warning' : 'good'} />
+          <div className="mt-4 flex flex-col gap-3">
+            <ProgressStrip label="Borç Baskısı" value={assetDebtRatio} tone={assetDebtRatio >= 80 ? 'danger' : assetDebtRatio >= 45 ? 'warning' : 'good'} />
           </div>
-        </FinancePanel>
+        </div>
       </div>
     </FinancePanel>
   )
@@ -1148,32 +1173,38 @@ export function PriorityMetricRail({
   upcomingTotal: number
   upcomingCount: number
 }) {
-  const metrics = [
-    { label: 'Toplam varlık', value: formatCurrency(totalAssets), tone: 'good' as const },
-    { label: 'Toplam borç', value: formatCurrency(totalDebts), tone: 'danger' as const },
-    { label: 'Bu ay ödeme yükü', value: formatCurrency(monthlyLoad), tone: monthlyLoad > 0 ? ('warning' as const) : ('neutral' as const) },
-    { label: 'Yaklaşan ödemeler', value: upcomingCount > 0 ? formatCurrency(upcomingTotal) : 'Temiz', tone: upcomingCount > 0 ? ('warning' as const) : ('good' as const) },
-  ]
-
   return (
     <div className="grid gap-3 min-[520px]:grid-cols-2 lg:grid-cols-4">
-      {metrics.map((metric) => (
-        <div key={metric.label} className="finance-panel min-w-0 rounded-lg p-4">
-          <p className="truncate text-[11px] font-black uppercase text-muted-foreground">{metric.label}</p>
-          <p className={`finance-value mt-2 truncate text-[clamp(1rem,4vw,1.35rem)] font-black leading-tight ${priorityMetricToneClass(metric.tone)}`}>
-            {metric.value}
-          </p>
-        </div>
-      ))}
+      <MetricCard
+        label="Toplam Varlık"
+        value={formatCurrency(totalAssets)}
+        tone="good"
+        deltaLabel="up"
+        delta="Aktif"
+      />
+      <MetricCard
+        label="Toplam Borç"
+        value={formatCurrency(totalDebts)}
+        tone={totalDebts > 0 ? 'danger' : 'good'}
+        delta={totalDebts > 0 ? 'Takipte' : 'Temiz'}
+        deltaLabel={totalDebts > 0 ? 'down' : 'flat'}
+      />
+      <MetricCard
+        label="Bu Ay Yük"
+        value={formatCurrency(monthlyLoad)}
+        tone={monthlyLoad > 0 ? 'warning' : 'neutral'}
+        delta="Aylık çıkış"
+        deltaLabel="flat"
+      />
+      <MetricCard
+        label="Yaklaşan Ödeme"
+        value={upcomingCount > 0 ? formatCurrency(upcomingTotal) : 'Temiz'}
+        tone={upcomingCount > 0 ? 'warning' : 'good'}
+        delta={upcomingCount > 0 ? `${upcomingCount} vade` : 'Vade yok'}
+        deltaLabel={upcomingCount > 0 ? 'down' : 'up'}
+      />
     </div>
   )
-}
-
-function priorityMetricToneClass(tone: 'neutral' | 'good' | 'warning' | 'danger') {
-  if (tone === 'good') return 'text-emerald-700 dark:text-emerald-300'
-  if (tone === 'warning') return 'text-amber-700 dark:text-amber-300'
-  if (tone === 'danger') return 'text-rose-700 dark:text-rose-300'
-  return 'text-foreground'
 }
 
 function FocusActionPanel({ actions, cashFlow }: { actions: FocusAction[]; cashFlow: CashFlowSummary }) {
@@ -1393,10 +1424,44 @@ function SummaryPill({ label, value, tone = 'neutral' }: { label: string; value:
 
 function CashFlowPanel({ cashFlow }: { cashFlow: CashFlowSummary }) {
   const outflowRate = cashFlow.income > 0 ? Math.min(100, (cashFlow.outflow / cashFlow.income) * 100) : 0
-  const projectionTone = cashFlow.projectedCash >= 0 ? 'text-emerald-700 dark:text-emerald-300' : 'text-rose-700 dark:text-rose-300'
+  const isPositive = cashFlow.netFlow >= 0
+
+  // Build chart data from cashFlow breakdown
+  const chartData: CashFlowPoint[] = cashFlow.income > 0 || cashFlow.outflow > 0 ? [
+    {
+      label: 'Gelir',
+      income: cashFlow.income,
+      outflow: 0,
+      net: cashFlow.income,
+    },
+    {
+      label: 'Kart',
+      income: 0,
+      outflow: cashFlow.cardOutflow,
+      net: -cashFlow.cardOutflow,
+    },
+    {
+      label: 'Kredi',
+      income: 0,
+      outflow: cashFlow.loanOutflow,
+      net: -cashFlow.loanOutflow,
+    },
+    {
+      label: 'Fatura',
+      income: 0,
+      outflow: cashFlow.paymentOutflow,
+      net: -cashFlow.paymentOutflow,
+    },
+    {
+      label: 'Net',
+      income: Math.max(0, cashFlow.netFlow),
+      outflow: Math.max(0, -cashFlow.netFlow),
+      net: cashFlow.netFlow,
+    },
+  ] : []
 
   return (
-    <Card className="border-0 shadow-[var(--shadow-card)] ring-1 ring-border/80">
+    <Card variant="default" className="border-border/70">
       <CardHeader className="pb-0">
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -1404,43 +1469,54 @@ function CashFlowPanel({ cashFlow }: { cashFlow: CashFlowSummary }) {
               Aylık nakit akışı
               <HelpTooltip title="Aylık nakit akışı" content={dashboardHelp.cashFlow} />
             </CardTitle>
-            <p className="mt-1 text-sm text-muted-foreground">{cashFlow.monthLabel}</p>
+            <p className="mt-1 text-xs text-muted-foreground">{cashFlow.monthLabel}</p>
           </div>
-          <Badge variant={cashFlow.netFlow >= 0 ? 'secondary' : 'destructive'}>
-            {cashFlow.netFlow >= 0 ? 'Artıda' : 'Açık var'}
+          <Badge variant={isPositive ? 'success' : 'destructive'}>
+            {isPositive ? 'Artıda' : 'Açık var'}
           </Badge>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4 pt-2">
-        <div className="grid grid-cols-[repeat(3,minmax(0,1fr))] gap-2">
+      <CardContent className="space-y-4 pt-3">
+        {/* Summary pills */}
+        <div className="grid grid-cols-3 gap-2">
           <CashFlowMetric label="Gelir" value={formatCurrency(cashFlow.income)} tone="emerald" />
           <CashFlowMetric label="Çıkış" value={formatCurrency(cashFlow.outflow)} tone="rose" />
           <CashFlowMetric label="Ay sonu" value={formatCurrency(cashFlow.projectedCash)} tone={cashFlow.projectedCash >= 0 ? 'emerald' : 'rose'} />
         </div>
 
-        <div>
-          <div className="mb-1.5 flex items-center justify-between text-xs text-muted-foreground">
-            <span>Gelire göre çıkış</span>
-            <span>%{Math.round(outflowRate)}</span>
+        {/* Area chart */}
+        {chartData.length > 0 && (
+          <div className="rounded-xl bg-muted/20 p-2">
+            <CashFlowChart data={chartData} height={180} />
           </div>
-          <Progress value={outflowRate} className="h-1.5" />
+        )}
+
+        {/* Outflow rate */}
+        <div>
+          <div className="mb-1.5 flex items-center justify-between text-xs">
+            <span className="text-muted-foreground">Gelire göre çıkış</span>
+            <span className="font-mono font-semibold tabular-nums text-foreground">%{Math.round(outflowRate)}</span>
+          </div>
+          <Progress value={outflowRate} autoColor size="default" />
         </div>
 
-        <div className="grid gap-2 text-xs text-muted-foreground min-[430px]:grid-cols-2">
-          <span>Kart: {formatCurrency(cashFlow.cardOutflow)}</span>
-          <span>Kredi: {formatCurrency(cashFlow.loanOutflow)}</span>
-          <span>Fatura/ödeme: {formatCurrency(cashFlow.paymentOutflow)}</span>
-          <span>Kişisel borç: {formatCurrency(cashFlow.debtOutflow)}</span>
-          {cashFlow.receivableIncome > 0 ? <span>Tahsilat: {formatCurrency(cashFlow.receivableIncome)}</span> : null}
+        {/* Detail grid */}
+        <div className="grid gap-1.5 text-xs text-muted-foreground min-[430px]:grid-cols-2">
+          <span>🏦 Kart: <span className="font-mono font-medium text-foreground">{formatCurrency(cashFlow.cardOutflow)}</span></span>
+          <span>📋 Kredi: <span className="font-mono font-medium text-foreground">{formatCurrency(cashFlow.loanOutflow)}</span></span>
+          <span>🧾 Fatura: <span className="font-mono font-medium text-foreground">{formatCurrency(cashFlow.paymentOutflow)}</span></span>
+          <span>👤 Kişisel: <span className="font-mono font-medium text-foreground">{formatCurrency(cashFlow.debtOutflow)}</span></span>
+          {cashFlow.receivableIncome > 0 ? (
+            <span>📥 Tahsilat: <span className="font-mono font-medium text-success">{formatCurrency(cashFlow.receivableIncome)}</span></span>
+          ) : null}
         </div>
 
-        <div className="rounded-lg bg-muted/55 px-3 py-2 text-sm">
-          <p className="text-muted-foreground">
-            Hesaplardaki nakit {formatCurrency(cashFlow.cashAssets)} · {cashFlow.recurringPayments} aylık ödeme takipte
+        <div className="rounded-xl bg-muted/40 px-3 py-2.5 text-sm">
+          <p className="text-xs text-muted-foreground">
+            Hesap nakdi {formatCurrency(cashFlow.cashAssets)} · {cashFlow.recurringPayments} aylık ödeme
           </p>
-          <p className={`mt-1 font-bold tabular-nums ${projectionTone}`}>
-            Bu ay tahmini net akış: {cashFlow.netFlow >= 0 ? '+' : ''}
-            {formatCurrency(cashFlow.netFlow)}
+          <p className={`mt-0.5 font-mono text-sm font-semibold tabular-nums ${isPositive ? 'text-success' : 'text-destructive'}`}>
+            Net akış: {cashFlow.netFlow >= 0 ? '+' : ''}{formatCurrency(cashFlow.netFlow)}
           </p>
         </div>
       </CardContent>

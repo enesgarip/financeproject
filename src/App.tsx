@@ -1,68 +1,110 @@
+import { AnimatePresence, motion, type Variants } from 'framer-motion'
 import { lazy, Suspense, useEffect, type ReactNode } from 'react'
-import { Navigate, Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { AuthProvider } from './auth/AuthProvider'
 import { ProtectedRoute } from './auth/ProtectedRoute'
 import { Layout } from './components/Layout'
+import { ToastProvider } from './components/ui/toast'
 
 const AssetsPage = lazy(() =>
-  import('./pages/AssetsPage').then((module) => ({ default: module.AssetsPage })),
+  import('./pages/AssetsPage').then((m) => ({ default: m.AssetsPage })),
 )
 const AnalysisPage = lazy(() =>
-  import('./pages/AnalysisPage').then((module) => ({ default: module.AnalysisPage })),
+  import('./pages/AnalysisPage').then((m) => ({ default: m.AnalysisPage })),
 )
 const CardsPage = lazy(() =>
-  import('./pages/CardsPage').then((module) => ({ default: module.CardsPage })),
+  import('./pages/CardsPage').then((m) => ({ default: m.CardsPage })),
 )
 const DashboardPage = lazy(() =>
-  import('./pages/DashboardPage').then((module) => ({ default: module.DashboardPage })),
+  import('./pages/DashboardPage').then((m) => ({ default: m.DashboardPage })),
 )
 const DataHealthPage = lazy(() =>
-  import('./pages/DataHealthPage').then((module) => ({ default: module.DataHealthPage })),
+  import('./pages/DataHealthPage').then((m) => ({ default: m.DataHealthPage })),
 )
 const DebtsPage = lazy(() =>
-  import('./pages/DebtsPage').then((module) => ({ default: module.DebtsPage })),
+  import('./pages/DebtsPage').then((m) => ({ default: m.DebtsPage })),
 )
 const LoansPage = lazy(() =>
-  import('./pages/LoansPage').then((module) => ({ default: module.LoansPage })),
+  import('./pages/LoansPage').then((m) => ({ default: m.LoansPage })),
 )
 const LoginPage = lazy(() =>
-  import('./pages/LoginPage').then((module) => ({ default: module.LoginPage })),
+  import('./pages/LoginPage').then((m) => ({ default: m.LoginPage })),
 )
 const MorePage = lazy(() =>
-  import('./pages/MorePage').then((module) => ({ default: module.MorePage })),
+  import('./pages/MorePage').then((m) => ({ default: m.MorePage })),
 )
 const PaymentsPage = lazy(() =>
-  import('./pages/PaymentsPage').then((module) => ({ default: module.PaymentsPage })),
+  import('./pages/PaymentsPage').then((m) => ({ default: m.PaymentsPage })),
 )
+
+const pageVariants: Variants = {
+  hidden:  { opacity: 0, y: 10 },
+  visible: { opacity: 1, y: 0 },
+  exit:    { opacity: 0, y: -6 },
+}
+
+const pageTransition = { duration: 0.22, ease: 'easeOut' as const }
+const pageExitTransition = { duration: 0.15, ease: 'easeIn' as const }
+
+function PageTransition({ children }: { children: ReactNode }) {
+  return (
+    <motion.div
+      variants={pageVariants}
+      initial="hidden"
+      animate="visible"
+      exit="exit"
+      transition={pageTransition}
+      style={{ width: '100%' }}
+    >
+      {children}
+    </motion.div>
+  )
+}
+
+// Suppress unused warning — used in exit transition
+void pageExitTransition
 
 function PageFallback() {
   return (
-    <div className="mx-auto flex min-h-[45vh] w-full max-w-md items-center justify-center px-6">
-      <div className="h-24 w-full animate-pulse rounded-2xl border border-border bg-muted/60 shadow-sm" />
+    <div className="flex min-h-[40vh] items-start justify-center pt-8">
+      <div className="flex flex-col gap-4 w-full max-w-2xl">
+        <div className="h-40 w-full animate-pulse rounded-2xl border border-border bg-muted/40" />
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {Array.from({ length: 4 }, (_, i) => (
+            <div key={i} className="h-24 animate-pulse rounded-2xl border border-border bg-muted/40" />
+          ))}
+        </div>
+      </div>
     </div>
   )
 }
 
-function routeElement(page: ReactNode) {
-  return <Suspense fallback={<PageFallback />}>{page}</Suspense>
+function routeElement(page: ReactNode, key: string) {
+  return (
+    <Suspense fallback={<PageFallback />}>
+      <PageTransition key={key}>{page}</PageTransition>
+    </Suspense>
+  )
 }
 
 function ThemeBoot() {
   useEffect(() => {
     const storedTheme = localStorage.getItem('theme')
-    const isDark = storedTheme ? storedTheme === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches
+    const isDark = storedTheme
+      ? storedTheme === 'dark'
+      : window.matchMedia('(prefers-color-scheme: dark)').matches
     document.documentElement.classList.toggle('dark', isDark)
   }, [])
-
   return null
 }
 
-export function App() {
+function AnimatedRoutes() {
+  const location = useLocation()
+
   return (
-    <AuthProvider>
-      <ThemeBoot />
-      <Routes>
-        <Route path="/login" element={routeElement(<LoginPage />)} />
+    <AnimatePresence mode="wait">
+      <Routes location={location} key={location.pathname}>
+        <Route path="/login" element={routeElement(<LoginPage />, 'login')} />
         <Route
           path="/"
           element={
@@ -71,18 +113,29 @@ export function App() {
             </ProtectedRoute>
           }
         >
-          <Route index element={routeElement(<DashboardPage />)} />
-          <Route path="varliklar" element={routeElement(<AssetsPage />)} />
-          <Route path="kartlar" element={routeElement(<CardsPage />)} />
-          <Route path="krediler" element={routeElement(<LoansPage />)} />
-          <Route path="borclar" element={routeElement(<DebtsPage />)} />
-          <Route path="odemeler" element={routeElement(<PaymentsPage />)} />
-          <Route path="analiz" element={routeElement(<AnalysisPage />)} />
-          <Route path="veri-sagligi" element={routeElement(<DataHealthPage />)} />
-          <Route path="daha" element={routeElement(<MorePage />)} />
+          <Route index             element={routeElement(<DashboardPage />, '/')} />
+          <Route path="varliklar"  element={routeElement(<AssetsPage />,   'varliklar')} />
+          <Route path="kartlar"    element={routeElement(<CardsPage />,    'kartlar')} />
+          <Route path="krediler"   element={routeElement(<LoansPage />,    'krediler')} />
+          <Route path="borclar"    element={routeElement(<DebtsPage />,    'borclar')} />
+          <Route path="odemeler"   element={routeElement(<PaymentsPage />, 'odemeler')} />
+          <Route path="analiz"     element={routeElement(<AnalysisPage />, 'analiz')} />
+          <Route path="veri-sagligi" element={routeElement(<DataHealthPage />, 'veri-sagligi')} />
+          <Route path="daha"       element={routeElement(<MorePage />,     'daha')} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+    </AnimatePresence>
+  )
+}
+
+export function App() {
+  return (
+    <AuthProvider>
+      <ToastProvider>
+        <ThemeBoot />
+        <AnimatedRoutes />
+      </ToastProvider>
     </AuthProvider>
   )
 }

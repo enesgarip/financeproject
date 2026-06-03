@@ -1,7 +1,9 @@
-import { Archive, BarChart3, CalendarDays, CheckCircle2, Download, PieChart, Search, TrendingUp, Users, WalletCards } from 'lucide-react'
+import { Archive, BarChart3, CalendarDays, CheckCircle2, Download, PieChart, Search, Users, WalletCards } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAuth } from '../auth/useAuth'
 import { CrudPage, type FormField } from '../components/CrudPage'
+import { CashFlowChart, type CashFlowPoint } from '../components/charts/CashFlowChart'
+import { DonutChart, type DonutSlice } from '../components/charts/DonutChart'
 import { Badge } from '../components/ui/badge'
 import { Button } from '../components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
@@ -817,9 +819,13 @@ function buildCategoryInsights(data: AnalysisData): CategoryInsight[] {
     .slice(0, 3)
 }
 
+const CATEGORY_PALETTE = [
+  'var(--primary)', 'var(--success)', 'var(--warning)', 'var(--destructive)',
+  'var(--info)', '#a78bfa', '#fb923c', '#38bdf8',
+]
+
 function CategorySpendingChart({ data }: { data: AnalysisData }) {
   const monthlyExpenses = data.cardExpenses.filter((expense) => activeCardExpense(expense) && isDateInMonth(expense.spent_at))
-  const total = sum(monthlyExpenses, (expense) => expense.amount)
   const insights = buildCategoryInsights(data)
   const categoryTotals = Array.from(
     monthlyExpenses.reduce((map, expense) => {
@@ -830,47 +836,40 @@ function CategorySpendingChart({ data }: { data: AnalysisData }) {
     ([category, amount]) => ({ category, amount }),
   ).sort((a, b) => b.amount - a.amount)
 
+  const donutData: DonutSlice[] = categoryTotals.slice(0, 7).map((item, i) => ({
+    name:  item.category,
+    value: item.amount,
+    color: CATEGORY_PALETTE[i % CATEGORY_PALETTE.length],
+  }))
+
   return (
-    <Card className="border-0 shadow-sm ring-1 ring-stone-200/80 dark:ring-stone-800 lg:col-span-5">
+    <Card className="border-border/70 lg:col-span-5">
       <CardHeader className="pb-0">
         <div className="flex items-start justify-between gap-3">
           <div>
             <CardTitle>Kategori harcaması</CardTitle>
-            <p className="mt-1 text-sm text-muted-foreground">Bu ay kart harcamalarının dağılımı.</p>
+            <p className="mt-1 text-xs text-muted-foreground">Bu ay kart harcamalarının dağılımı.</p>
           </div>
-          <PieChart className="text-emerald-700 dark:text-emerald-300" />
+          <PieChart size={18} className="text-primary" />
         </div>
       </CardHeader>
-      <CardContent className="space-y-3 pt-2">
-        {categoryTotals.length === 0 ? (
+      <CardContent className="space-y-3 pt-3">
+        {donutData.length === 0 ? (
           <p className="rounded-xl bg-muted/45 p-3 text-sm text-muted-foreground">Bu ay kategorili kart harcaması yok.</p>
         ) : (
-          categoryTotals.slice(0, 7).map((item) => {
-            const rate = total > 0 ? Math.min(100, (item.amount / total) * 100) : 0
-            return (
-              <div key={item.category}>
-                <div className="mb-1.5 flex items-center justify-between gap-3 text-sm">
-                  <span className="min-w-0 truncate font-semibold text-foreground">{item.category}</span>
-                  <span className="shrink-0 text-xs font-bold tabular-nums text-muted-foreground">{formatCurrency(item.amount)}</span>
-                </div>
-                <div className="h-2 overflow-hidden rounded-full bg-muted">
-                  <div className="h-full rounded-full bg-emerald-600" style={{ width: `${rate}%` }} />
-                </div>
-              </div>
-            )
-          })
+          <DonutChart data={donutData} size={180} innerRadius={50} totalLabel="Bu ay" />
         )}
         {insights.length > 0 ? (
-          <div className="rounded-xl bg-muted/45 p-3">
-            <p className="text-xs font-bold uppercase text-muted-foreground">Kategori içgörüleri</p>
-            <div className="mt-2 grid gap-2">
+          <div className="rounded-xl bg-muted/40 p-3">
+            <p className="finance-label mb-2">Kategori içgörüleri</p>
+            <div className="grid gap-2">
               {insights.map((insight) => (
-                <div key={`${insight.category}-${insight.title}`} className="flex min-w-0 items-start justify-between gap-3 rounded-lg bg-background/70 px-3 py-2 text-sm">
+                <div key={`${insight.category}-${insight.title}`} className="flex min-w-0 items-start justify-between gap-3 rounded-lg bg-card px-3 py-2 text-sm ring-1 ring-border/60">
                   <div className="min-w-0">
-                    <p className="truncate font-bold text-foreground">{insight.category}</p>
+                    <p className="truncate font-semibold text-foreground">{insight.category}</p>
                     <p className="mt-0.5 text-xs text-muted-foreground">{insight.title} · {insight.description}</p>
                   </div>
-                  <Badge variant={insight.tone === 'rose' ? 'destructive' : insight.tone === 'amber' ? 'secondary' : 'default'}>
+                  <Badge variant={insight.tone === 'rose' ? 'destructive' : insight.tone === 'amber' ? 'warning' : 'success'}>
                     {formatCurrency(insight.amount)}
                   </Badge>
                 </div>
@@ -886,7 +885,8 @@ function CategorySpendingChart({ data }: { data: AnalysisData }) {
 function CashFlowTrend({ data }: { data: AnalysisData }) {
   const salary = getCurrentSalary(data.salaryHistory)?.amount ?? 0
   const months = Array.from({ length: 6 }, (_, index) => new Date(new Date().getFullYear(), new Date().getMonth() - 5 + index, 1))
-  const rows = months.map((month) => {
+
+  const chartData: CashFlowPoint[] = months.map((month) => {
     const income = salary + sum(
       data.debts.filter((debt) => debt.direction === 'borç_verdim' && debt.status === 'açık' && isDateInMonth(debt.due_date, month)),
       (debt) => debt.estimated_value_try,
@@ -908,34 +908,39 @@ function CashFlowTrend({ data }: { data: AnalysisData }) {
       net: income - outflow,
     }
   })
-  const maxValue = Math.max(...rows.map((row) => Math.max(row.income, row.outflow)), 1)
+
+  const totalNet = chartData.reduce((s, r) => s + r.net, 0)
 
   return (
-    <Card className="border-0 shadow-sm ring-1 ring-stone-200/80 dark:ring-stone-800 lg:col-span-7">
+    <Card className="border-border/70 lg:col-span-7">
       <CardHeader className="pb-0">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <CardTitle>6 aylık ritim</CardTitle>
-            <p className="mt-1 text-sm text-muted-foreground">Gelir ve planlı çıkışların kaba karşılaştırması.</p>
+            <CardTitle>6 aylık nakit akışı</CardTitle>
+            <p className="mt-1 text-xs text-muted-foreground">Gelir ve planlı çıkışların aylık karşılaştırması.</p>
           </div>
-          <TrendingUp className="text-emerald-700 dark:text-emerald-300" />
+          <Badge variant={totalNet >= 0 ? 'success' : 'destructive'}>
+            {totalNet >= 0 ? 'Pozitif' : 'Negatif'}
+          </Badge>
         </div>
       </CardHeader>
-      <CardContent className="pt-2">
-        <div className="grid grid-cols-6 items-end gap-2">
-          {rows.map((row) => (
-            <div key={row.label} className="min-w-0">
-              <div className="flex h-28 items-end gap-1 rounded-xl bg-muted/45 p-1.5">
-                <div className="w-1/2 rounded-md bg-emerald-500" style={{ height: `${Math.max(8, (row.income / maxValue) * 100)}%` }} />
-                <div className="w-1/2 rounded-md bg-rose-500" style={{ height: `${Math.max(8, (row.outflow / maxValue) * 100)}%` }} />
-              </div>
-              <p className="mt-1 truncate text-center text-[11px] font-bold text-muted-foreground">{row.label}</p>
-              <p className={`truncate text-center text-[10px] font-bold tabular-nums ${row.net >= 0 ? 'text-emerald-700 dark:text-emerald-300' : 'text-rose-700 dark:text-rose-300'}`}>
-                {row.net >= 0 ? '+' : ''}
-                {formatCurrency(row.net).replace(',00', '')}
-              </p>
-            </div>
-          ))}
+      <CardContent className="pt-3">
+        <div className="rounded-xl bg-muted/20 p-2">
+          <CashFlowChart data={chartData} height={220} />
+        </div>
+        <div className="mt-3 flex items-center gap-4 text-xs text-muted-foreground">
+          <span className="flex items-center gap-1.5">
+            <span className="size-2 rounded-full bg-success" />
+            Gelir
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="size-2 rounded-full bg-destructive" />
+            Gider
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="size-2 rounded-full bg-primary" />
+            Net
+          </span>
         </div>
       </CardContent>
     </Card>

@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import url('https://api.fontshare.com/v2/css?f[]=clash-display@400,500,600,700&display=swap');
 @import 'tailwindcss';
 
 @custom-variant dark (&:where(.dark, .dark *));
@@ -6,7 +8,8 @@
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+  --radius-xl: calc(var(--radius) + 8px);
+  --radius-2xl: calc(var(--radius) + 16px);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -34,46 +37,82 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  --font-display: var(--font-family-display);
+  --font-body: var(--font-family-body);
+  --font-mono: var(--font-family-mono);
 }
 
+/* ─── LIGHT MODE ─── */
 :root {
-  --radius: 0.5rem;
-  --background: #eef3f7;
-  --foreground: #101722;
-  --card: #ffffff;
-  --card-foreground: #101722;
-  --popover: #ffffff;
-  --popover-foreground: #101722;
-  --primary: #08775f;
-  --primary-foreground: #ffffff;
-  --secondary: #e2eaf2;
-  --secondary-foreground: #152033;
-  --muted: #e5edf4;
-  --muted-foreground: #607085;
-  --accent: #dff6ee;
-  --accent-foreground: #07513f;
-  --destructive: #c92f4c;
+  --radius: 0.625rem;
+
+  /* Typography */
+  --font-family-display: 'Clash Display', 'DM Sans', ui-sans-serif, sans-serif;
+  --font-family-body: 'DM Sans', ui-sans-serif, -apple-system, sans-serif;
+  --font-family-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  /* Brand palette — Cobalt blue */
+  --brand-50:  #eef2ff;
+  --brand-100: #e0e7ff;
+  --brand-200: #c7d2fe;
+  --brand-300: #a5b4fc;
+  --brand-400: #818cf8;
+  --brand-500: #6366f1;
+  --brand-600: #4f46e5;
+  --brand-700: #4338ca;
+  --brand-800: #3730a3;
+  --brand-900: #312e81;
+  --brand-950: #1e1b4b;
+
+  /* Semantic tokens */
+  --background:           #f0f4fa;
+  --foreground:           #0f1623;
+  --card:                 #ffffff;
+  --card-foreground:      #0f1623;
+  --popover:              #ffffff;
+  --popover-foreground:   #0f1623;
+  --primary:              #4f46e5;
+  --primary-foreground:   #ffffff;
+  --secondary:            #e8edf8;
+  --secondary-foreground: #1e2a45;
+  --muted:                #eaeff8;
+  --muted-foreground:     #5a6882;
+  --accent:               #e0e7ff;
+  --accent-foreground:    #3730a3;
+  --destructive:          #dc2626;
   --destructive-foreground: #ffffff;
-  --success: #07845f;
-  --success-foreground: #ffffff;
-  --warning: #b46c08;
-  --warning-foreground: #fff7ed;
-  --info: #245fd6;
-  --info-foreground: #eff6ff;
-  --surface: #ffffff;
-  --surface-muted: #f6f9fb;
-  --border: #cfdae6;
-  --input: #cbd8e5;
-  --ring: #08775f;
-  --shadow-card: 0 12px 34px rgba(16, 24, 40, 0.075);
-  --shadow-card-hover: 0 20px 48px rgba(16, 24, 40, 0.12);
-  --shadow-elevated: 0 28px 74px rgba(16, 24, 40, 0.18);
-  color: #101722;
-  background: #eef3f7;
+  --success:              #059669;
+  --success-foreground:   #ffffff;
+  --warning:              #d97706;
+  --warning-foreground:   #fefce8;
+  --info:                 #2563eb;
+  --info-foreground:      #eff6ff;
+  --surface:              #ffffff;
+  --surface-muted:        #f5f8fd;
+  --border:               #d1d9ed;
+  --input:                #c8d2e8;
+  --ring:                 #6366f1;
+
+  /* Shadows */
+  --shadow-subtle:  0 1px 2px rgba(15, 22, 35, 0.04);
+  --shadow-card:    0 4px 16px rgba(15, 22, 35, 0.06), 0 1px 4px rgba(15, 22, 35, 0.04);
+  --shadow-lifted:  0 8px 28px rgba(15, 22, 35, 0.09), 0 2px 8px rgba(15, 22, 35, 0.05);
+  --shadow-floating:0 16px 48px rgba(15, 22, 35, 0.13), 0 4px 16px rgba(15, 22, 35, 0.07);
+  --shadow-modal:   0 24px 72px rgba(15, 22, 35, 0.20), 0 8px 24px rgba(15, 22, 35, 0.10);
+  --shadow-card-hover: 0 8px 32px rgba(15, 22, 35, 0.10), 0 2px 8px rgba(15, 22, 35, 0.06);
+  --shadow-elevated: 0 20px 60px rgba(15, 22, 35, 0.16);
+
+  /* Motion */
+  --motion-fast:   150ms cubic-bezier(0.16, 1, 0.3, 1);
+  --motion-normal: 250ms cubic-bezier(0.16, 1, 0.3, 1);
+  --motion-slow:   400ms cubic-bezier(0.16, 1, 0.3, 1);
+  --motion-spring: 500ms cubic-bezier(0.34, 1.56, 0.64, 1);
+
   color-scheme: light;
-  font-family:
-    ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  font-feature-settings: 'liga' 1, 'kern' 1;
+  color: var(--foreground);
+  background: var(--background);
+  font-family: var(--font-family-body);
+  font-feature-settings: 'liga' 1, 'kern' 1, 'cv01' 1;
   font-variant-ligatures: common-ligatures;
   line-height: 1.58;
   font-synthesis: none;
@@ -82,43 +121,63 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* ─── DARK MODE ─── */
 :root.dark {
-  --background: #071017;
-  --foreground: #edf4f7;
-  --card: #101923;
-  --card-foreground: #f8fafc;
-  --popover: #101923;
-  --popover-foreground: #f8fafc;
-  --primary: #37d8a2;
-  --primary-foreground: #052e23;
-  --secondary: #1a2632;
-  --secondary-foreground: #f8fafc;
-  --muted: #1a2632;
-  --muted-foreground: #a8b6c6;
-  --accent: #103c31;
-  --accent-foreground: #c7f7df;
-  --destructive: #fb7185;
+  /* Background stack */
+  --background:           #0A0B0F;
+  --card:                 #111318;
+  --card-foreground:      #f1f3fa;
+  --popover:              #111318;
+  --popover-foreground:   #f1f3fa;
+  --surface:              #111318;
+  --surface-muted:        #0d0f13;
+  --surface-elevated:     #1a1d26;
+
+  /* Foreground */
+  --foreground:           #f1f3fa;
+  --muted-foreground:     #8b90a7;
+
+  /* Brand — Royal blue */
+  --primary:              #6c8ef5;
+  --primary-foreground:   #0a0f2e;
+
+  /* Semantic */
+  --secondary:            #1a1d26;
+  --secondary-foreground: #e8eaf0;
+  --muted:                #161920;
+  --accent:               #1a1f3a;
+  --accent-foreground:    #93acfc;
+  --destructive:          #f87171;
   --destructive-foreground: #fff1f2;
-  --success: #34d399;
-  --success-foreground: #052e23;
-  --warning: #fbbf24;
-  --warning-foreground: #241a05;
-  --info: #60a5fa;
-  --info-foreground: #061527;
-  --surface: #121d27;
-  --surface-muted: #0e1721;
-  --border: #263646;
-  --input: #2d4050;
-  --ring: #34d399;
-  --shadow-card: 0 14px 40px rgba(0, 0, 0, 0.32);
-  --shadow-card-hover: 0 22px 54px rgba(0, 0, 0, 0.44);
-  --shadow-elevated: 0 32px 78px rgba(0, 0, 0, 0.58);
+  --success:              #34d399;
+  --success-foreground:   #052e1a;
+  --warning:              #fbbf24;
+  --warning-foreground:   #241a05;
+  --info:                 #60a5fa;
+  --info-foreground:      #06111f;
+  --border:               #252836;
+  --border-strong:        #363a50;
+  --input:                #252836;
+  --ring:                 #6c8ef5;
+
+  /* Dark shadows */
+  --shadow-subtle:   0 1px 3px rgba(0, 0, 0, 0.25);
+  --shadow-card:     0 4px 20px rgba(0, 0, 0, 0.35), 0 1px 6px rgba(0, 0, 0, 0.20);
+  --shadow-lifted:   0 8px 32px rgba(0, 0, 0, 0.45), 0 2px 10px rgba(0, 0, 0, 0.25);
+  --shadow-floating: 0 16px 56px rgba(0, 0, 0, 0.55), 0 4px 20px rgba(0, 0, 0, 0.30);
+  --shadow-modal:    0 24px 80px rgba(0, 0, 0, 0.70), 0 8px 32px rgba(0, 0, 0, 0.40);
+  --shadow-card-hover: 0 8px 36px rgba(0, 0, 0, 0.50), 0 2px 12px rgba(0, 0, 0, 0.28);
+  --shadow-elevated:   0 20px 64px rgba(0, 0, 0, 0.60);
+
   color-scheme: dark;
-  color: #edf2f7;
-  background: #071017;
+  color: var(--foreground);
+  background: var(--background);
 }
 
-* {
+/* ─── RESET ─── */
+*,
+*::before,
+*::after {
   box-sizing: border-box;
 }
 
@@ -127,21 +186,28 @@ body {
   min-height: 100dvh;
   margin: 0;
   background:
-    linear-gradient(180deg, color-mix(in srgb, var(--background) 72%, #ffffff 28%) 0%, var(--background) 30rem),
-    linear-gradient(120deg, color-mix(in srgb, var(--primary) 10%, transparent) 0%, transparent 32rem),
-    linear-gradient(220deg, color-mix(in srgb, var(--info) 8%, transparent) 0%, transparent 28rem),
+    radial-gradient(ellipse 80% 50% at 50% -10%, color-mix(in srgb, var(--primary) 8%, transparent), transparent),
     var(--background);
   overscroll-behavior-y: none;
   -webkit-tap-highlight-color: transparent;
 }
 
+.dark body {
+  background:
+    radial-gradient(ellipse 80% 40% at 50% -5%, color-mix(in srgb, var(--primary) 12%, transparent), transparent),
+    radial-gradient(ellipse 60% 30% at 90% 90%, color-mix(in srgb, var(--success) 5%, transparent), transparent),
+    var(--background);
+}
+
 ::selection {
-  background: color-mix(in srgb, var(--primary) 22%, transparent);
+  background: color-mix(in srgb, var(--primary) 24%, transparent);
+  color: var(--foreground);
 }
 
 @supports (scrollbar-color: auto) {
   * {
-    scrollbar-color: color-mix(in srgb, var(--muted-foreground) 34%, transparent) transparent;
+    scrollbar-color: color-mix(in srgb, var(--muted-foreground) 30%, transparent) transparent;
+    scrollbar-width: thin;
   }
 }
 
@@ -150,6 +216,10 @@ input,
 select,
 textarea {
   font: inherit;
+}
+
+input[type="number"],
+input[type="text"] {
   font-size: 16px;
 }
 
@@ -165,49 +235,121 @@ button:disabled {
   min-height: 100dvh;
 }
 
+/* ─── FOCUS RING ─── */
+:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ─── FINANCE COMPONENTS ─── */
 @layer components {
+
+  /* Surfaces */
   .finance-surface {
-    border: 1px solid color-mix(in srgb, var(--border) 82%, transparent);
-    background: color-mix(in srgb, var(--card) 96%, transparent);
+    border: 1px solid var(--border);
+    background: var(--card);
     box-shadow: var(--shadow-card);
+    transition: box-shadow var(--motion-normal), transform var(--motion-normal);
+  }
+
+  .finance-surface:hover {
+    box-shadow: var(--shadow-card-hover);
   }
 
   .finance-surface-muted {
-    background: color-mix(in srgb, var(--muted) 46%, transparent);
+    background: color-mix(in srgb, var(--muted) 50%, transparent);
+    border: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
   }
 
   .finance-panel {
-    border: 1px solid color-mix(in srgb, var(--border) 82%, transparent);
-    background: color-mix(in srgb, var(--card) 95%, transparent);
+    border: 1px solid var(--border);
+    background: var(--card);
     box-shadow: var(--shadow-card);
+    border-radius: calc(var(--radius) + 4px);
+    transition: box-shadow var(--motion-normal);
+  }
+
+  .finance-panel:hover {
+    box-shadow: var(--shadow-lifted);
   }
 
   .finance-hero-panel {
-    border: 1px solid color-mix(in srgb, var(--primary) 18%, var(--border));
-    background:
-      linear-gradient(135deg, color-mix(in srgb, var(--card) 95%, var(--primary) 5%), color-mix(in srgb, var(--accent) 64%, var(--card) 36%));
+    border: 1px solid color-mix(in srgb, var(--primary) 22%, var(--border));
+    background: linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--card) 94%, var(--primary) 6%),
+      color-mix(in srgb, var(--accent) 70%, var(--card) 30%)
+    );
+    box-shadow: var(--shadow-lifted);
+  }
+
+  .finance-glass {
+    border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+    background: color-mix(in srgb, var(--card) 70%, transparent);
+    backdrop-filter: blur(20px) saturate(1.4);
+    -webkit-backdrop-filter: blur(20px) saturate(1.4);
     box-shadow: var(--shadow-card);
   }
 
   .finance-command-surface {
-    border: 1px solid color-mix(in srgb, var(--border) 84%, transparent);
-    background: color-mix(in srgb, var(--card) 92%, transparent);
-    box-shadow: var(--shadow-card);
-    backdrop-filter: blur(18px);
+    border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+    background: color-mix(in srgb, var(--card) 88%, transparent);
+    box-shadow: var(--shadow-floating);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
   }
 
   .finance-field {
-    border: 1px solid color-mix(in srgb, var(--border) 74%, transparent);
-    background: color-mix(in srgb, var(--muted) 52%, transparent);
+    border: 1px solid var(--border);
+    background: color-mix(in srgb, var(--muted) 45%, transparent);
+    transition: border-color var(--motion-fast), box-shadow var(--motion-fast);
   }
 
+  .finance-field:focus-within {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 16%, transparent);
+  }
+
+  /* Card variants */
+  .card-interactive {
+    cursor: pointer;
+    transition: transform var(--motion-normal), box-shadow var(--motion-normal);
+  }
+
+  .card-interactive:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-floating);
+  }
+
+  .card-interactive:active {
+    transform: translateY(0);
+    box-shadow: var(--shadow-card);
+  }
+
+  /* Typography helpers */
   .finance-touch-target {
     min-height: 2.75rem;
   }
 
   .finance-value {
+    font-family: var(--font-family-mono);
     font-variant-numeric: tabular-nums;
-    letter-spacing: 0;
+    letter-spacing: -0.01em;
+  }
+
+  .finance-display {
+    font-family: var(--font-family-display);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+
+  .finance-label {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--muted-foreground);
   }
 
   .finance-section-grid {
@@ -218,8 +360,133 @@ button:disabled {
   .finance-scrollbar {
     scrollbar-width: thin;
   }
+
+  /* Skeleton shimmer */
+  .skeleton-shimmer {
+    background: linear-gradient(
+      90deg,
+      var(--muted) 25%,
+      color-mix(in srgb, var(--muted) 70%, var(--card) 30%) 50%,
+      var(--muted) 75%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.8s ease-in-out infinite;
+  }
+
+  /* Gradient text */
+  .gradient-text {
+    background: linear-gradient(135deg, var(--primary), var(--info));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  /* Progress bar states */
+  .progress-safe     { --progress-color: var(--success); }
+  .progress-warn     { --progress-color: var(--warning); }
+  .progress-danger   { --progress-color: var(--destructive); }
+  .progress-info     { --progress-color: var(--info); }
+  .progress-primary  { --progress-color: var(--primary); }
+
+  /* Pulse border for budget overage */
+  .pulse-border {
+    animation: pulse-border 2s ease-in-out infinite;
+  }
+
+  /* Number reveal */
+  .count-up {
+    font-variant-numeric: tabular-nums;
+    transition: all var(--motion-slow);
+  }
+
+  /* Sidebar active indicator */
+  .nav-pill {
+    position: relative;
+    z-index: 1;
+  }
+
+  .nav-pill::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: var(--primary);
+    opacity: 0;
+    transition: opacity var(--motion-fast);
+    z-index: -1;
+  }
+
+  /* Stat card trend indicators */
+  .trend-up   { color: var(--success); }
+  .trend-down { color: var(--destructive); }
+  .trend-flat { color: var(--muted-foreground); }
 }
 
+/* ─── KEYFRAMES ─── */
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+@keyframes pulse-border {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--destructive) 35%, transparent); }
+  50%       { box-shadow: 0 0 0 4px color-mix(in srgb, var(--destructive) 10%, transparent); }
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes slide-in-right {
+  from { opacity: 0; transform: translateX(24px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+/* ─── ANIMATION UTILITIES ─── */
+.animate-fade-in-up   { animation: fade-in-up   var(--motion-normal) both; }
+.animate-fade-in      { animation: fade-in       var(--motion-fast)   both; }
+.animate-scale-in     { animation: scale-in      var(--motion-normal) both; }
+.animate-slide-in-right { animation: slide-in-right var(--motion-normal) both; }
+
+/* Stagger delays */
+.delay-50  { animation-delay:  50ms; }
+.delay-100 { animation-delay: 100ms; }
+.delay-150 { animation-delay: 150ms; }
+.delay-200 { animation-delay: 200ms; }
+.delay-300 { animation-delay: 300ms; }
+.delay-400 { animation-delay: 400ms; }
+.delay-500 { animation-delay: 500ms; }
+
+/* ─── REDUCED MOTION ─── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ─── PRINT ─── */
 @media print {
   nav,
   header button,
