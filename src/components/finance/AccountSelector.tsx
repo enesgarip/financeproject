@@ -11,10 +11,6 @@ type AccountSelectorProps = {
   emptyMessage?: string
 }
 
-function accountDisplayName(account: Card) {
-  return account.bank_name ? `${account.bank_name} · ${account.card_name}` : account.card_name
-}
-
 export function AccountSelector({
   accounts,
   value,
@@ -32,13 +28,6 @@ export function AccountSelector({
     : null
   const nextAvailableLimit = availableLimit !== null ? availableLimit - amount : null
   const hasInsufficientBalance = remainingBalance !== null && remainingBalance < 0
-  const bestAccount = accounts
-    .filter((account) => account.card_type === 'kredi_karti' || amount <= 0 || account.current_balance >= amount)
-    .sort((left, right) => {
-      const leftScore = left.card_type === 'kredi_karti' ? left.credit_limit - left.debt_amount : left.current_balance
-      const rightScore = right.card_type === 'kredi_karti' ? right.credit_limit - right.debt_amount : right.current_balance
-      return rightScore - leftScore
-    })[0]
 
   function getAccountOptionLabel(account: Card) {
     if (account.card_type === 'kredi_karti') {
@@ -67,15 +56,6 @@ export function AccountSelector({
           ))}
         </Select>
       </label>
-      {bestAccount && !value ? (
-        <button
-          type="button"
-          onClick={() => onChange(bestAccount.id)}
-          className="inline-flex w-fit rounded-lg bg-primary/10 px-3 py-1.5 text-xs font-bold text-primary ring-1 ring-primary/15 transition hover:bg-primary/15"
-        >
-          Önerilen hesap: {accountDisplayName(bestAccount)}
-        </button>
-      ) : null}
       {selectedAccount ? (
         <div
           className={`grid grid-cols-2 gap-2 rounded-xl px-3 py-2 text-xs ${

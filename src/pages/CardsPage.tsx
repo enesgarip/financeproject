@@ -462,22 +462,9 @@ function AccountHubPanel({
   return (
     <SurfaceCard id="hesap-merkezi" className="border-0 shadow-sm ring-1 ring-primary/18">
       <CardHeader className="pb-0">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <CardTitle className="text-base">Hesap merkezi</CardTitle>
-            <p className="mt-1 text-xs text-muted-foreground">Banka hesapları, kredi kartı yükü ve transferler tek yerde.</p>
-          </div>
-          {accounts[0] ? (
-            <button
-              type="button"
-              onClick={() => onOpenTransfer(accounts[0])}
-              disabled={!canTransfer}
-              className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg bg-primary px-3 py-2 text-xs font-bold text-primary-foreground shadow-sm disabled:opacity-55"
-            >
-              <ArrowRightLeft size={14} />
-              Transfer
-            </button>
-          ) : null}
+        <div className="min-w-0">
+          <CardTitle className="text-base">Hesap merkezi</CardTitle>
+          <p className="mt-1 text-xs text-muted-foreground">Banka hesapları, kredi kartı yükü ve transferler tek yerde.</p>
         </div>
       </CardHeader>
       <CardContent className="flex flex-col gap-3 pt-3">
@@ -2249,6 +2236,7 @@ export function CardsPage() {
   const transactionTarget = movementAccounts.find((card) => card.id === transactionTargetCard)
   const transactionTargetAccounts = movementAccounts.filter((card) => card.id !== transactionCard?.id)
   const transactionAmountValue = parseNumber(transactionAmount)
+  const transactionIsTransfer = transactionType === 'transfer'
 
   return (
     <>
@@ -2439,69 +2427,48 @@ export function CardsPage() {
         getCardStyle={(row, rows) => bankHueStyle(row.bank_name, rows)}
         getDetailStyle={(row, rows) => bankHueStyle(row.bank_name, rows)}
         groupBy={(row) => cardGroupLabel(row)}
-        renderMenuActions={(row, helpers) =>
-          row.card_type === 'kredi_karti' ? (
-            <>
-              <button
-                type="button"
-                onClick={() => {
-                  openDebtPayment(row, helpers.reload, helpers.rows as Card[])
-                  helpers.closeMenu()
-                }}
-                className="flex w-full items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted"
-              >
-                <ReceiptText size={14} />
-                Borç öde
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  helpers.closeMenu()
-                  void cutStatement(row, helpers.reload, helpers.setError)
-                }}
-                className="flex w-full items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted"
-              >
-                <ReceiptText size={14} />
-                Ekstre kes
-              </button>
-            </>
-          ) : null
-        }
         renderRowActions={(row, helpers) =>
           row.card_type === 'banka_karti' ? (
             <button
               type="button"
               onClick={() => openTransaction(row, helpers.reload, helpers.rows as Card[])}
-              className="rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground shadow-[0_2px_8px_color-mix(in_srgb,var(--primary)_30%,transparent)] transition hover:bg-primary/90 active:scale-[0.97]"
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground shadow-[0_2px_8px_color-mix(in_srgb,var(--primary)_30%,transparent)] transition hover:bg-primary/90 active:scale-[0.97]"
             >
-              İşlem
+              <ReceiptText size={14} />
+              Para hareketi
             </button>
           ) : null
         }
       />
 
-      <SimpleModal title="Banka hesabı işlemi" open={Boolean(transactionCard)} onClose={() => setTransactionCard(null)}>
+      <SimpleModal title={transactionIsTransfer ? 'Hesaplar arası transfer' : 'Para hareketi'} open={Boolean(transactionCard)} onClose={() => setTransactionCard(null)}>
         <form onSubmit={handleTransactionSubmit} className="space-y-4">
           <div className="rounded-xl border border-border/60 bg-muted/30 p-3 text-sm text-muted-foreground">
             <p className="font-semibold text-foreground">{transactionCard?.card_name}</p>
             <p>Mevcut bakiye: {formatCurrency(transactionCard?.current_balance ?? 0)}</p>
           </div>
-          <label className="block text-sm font-semibold text-foreground">
-            İşlem tipi
-            <select
-              value={transactionType}
-              onChange={(event) => {
-                setTransactionType(event.target.value as 'in' | 'out' | 'transfer')
-                setTransactionTargetCard('')
-                setTransactionError('')
-              }}
-              className="mt-1 w-full rounded-lg border border-input bg-white px-3 py-3 outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 dark:bg-card/50 dark:text-foreground"
-            >
-              <option value="in">Para geldi</option>
-              <option value="out">Para gitti</option>
-              <option value="transfer">Hesaplar arası transfer</option>
-            </select>
-          </label>
+          {transactionIsTransfer ? (
+            <div className="rounded-xl border border-border/60 bg-muted/30 p-3 text-sm">
+              <p className="text-xs font-bold uppercase text-muted-foreground">İşlem tipi</p>
+              <p className="mt-1 font-semibold text-foreground">Hesaplar arası transfer</p>
+            </div>
+          ) : (
+            <label className="block text-sm font-semibold text-foreground">
+              İşlem tipi
+              <select
+                value={transactionType}
+                onChange={(event) => {
+                  setTransactionType(event.target.value as 'in' | 'out')
+                  setTransactionTargetCard('')
+                  setTransactionError('')
+                }}
+                className="mt-1 w-full rounded-lg border border-input bg-white px-3 py-3 outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 dark:bg-card/50 dark:text-foreground"
+              >
+                <option value="in">Para geldi</option>
+                <option value="out">Para gitti</option>
+              </select>
+            </label>
+          )}
           <label className="block text-sm font-semibold text-foreground">
             Tutar
             <input
@@ -2514,7 +2481,7 @@ export function CardsPage() {
               className="mt-1 w-full rounded-lg border border-input px-3 py-3 outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 dark:bg-card/50 dark:text-foreground"
             />
           </label>
-          {transactionType === 'transfer' ? (
+          {transactionIsTransfer ? (
             <>
               <label className="block text-sm font-semibold text-foreground">
                 Hedef hesap
@@ -2551,7 +2518,7 @@ export function CardsPage() {
             disabled={transactionSaving}
             className="h-12 w-full rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-[0_2px_8px_color-mix(in_srgb,var(--primary)_30%,transparent)] transition hover:bg-primary/90 active:scale-[0.99] disabled:opacity-50"
           >
-            {transactionSaving ? 'İşleniyor...' : transactionType === 'transfer' ? 'Transferi tamamla' : 'Bakiyeyi güncelle'}
+            {transactionSaving ? 'İşleniyor...' : transactionIsTransfer ? 'Transferi tamamla' : 'Bakiyeyi güncelle'}
           </button>
         </form>
       </SimpleModal>

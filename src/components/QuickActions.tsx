@@ -5,21 +5,13 @@ import { cn } from '../lib/utils'
 import { Input } from './ui/input'
 
 const actions = [
-  { to: '/kartlar#hizli-harcama', matchPath: '/kartlar', label: 'Harcama', description: 'Hesaptan veya karttan harca', icon: WalletCards },
-  { to: '/kartlar#hesap-merkezi', matchPath: '/kartlar', label: 'Transfer', description: 'Hesaptan hesaba aktar', icon: ArrowRightLeft },
-  { to: '/odemeler?new=1', matchPath: '/odemeler', label: 'Planlı', description: 'Fatura, kira veya abonelik', icon: ReceiptText },
-  { to: '/borclar?new=1', matchPath: '/borclar', label: 'Kişi', description: 'Borç veya alacak kaydı', icon: HandCoins },
-  { to: '/varliklar?new=1', matchPath: '/varliklar', label: 'Varlık', description: 'Nakit, yatırım veya maaş', icon: Banknote },
-  { to: '/krediler?new=1', matchPath: '/krediler', label: 'Kredi', description: 'Kredi ve taksit planı', icon: Landmark },
+  { to: '/kartlar#hizli-harcama', label: 'Harcama', description: 'Hesaptan veya karttan harca', icon: WalletCards, hiddenOnPaths: ['/kartlar'] },
+  { to: '/kartlar#hesap-merkezi', label: 'Transfer', description: 'Hesaptan hesaba aktar', icon: ArrowRightLeft, hiddenOnPaths: ['/kartlar'] },
+  { to: '/odemeler?new=1', label: 'Planlı', description: 'Fatura, kira veya abonelik', icon: ReceiptText, hiddenOnPaths: ['/odemeler'] },
+  { to: '/borclar?new=1', label: 'Kişi', description: 'Borç veya alacak kaydı', icon: HandCoins, hiddenOnPaths: ['/borclar'] },
+  { to: '/varliklar?new=1', label: 'Varlık', description: 'Nakit, yatırım veya maaş', icon: Banknote, hiddenOnPaths: ['/varliklar', '/daha'] },
+  { to: '/krediler?new=1', label: 'Kredi', description: 'Kredi ve taksit planı', icon: Landmark, hiddenOnPaths: ['/krediler', '/daha'] },
 ]
-
-const routePriorities: Record<string, string> = {
-  '/kartlar': '/kartlar',
-  '/odemeler': '/odemeler',
-  '/borclar': '/borclar',
-  '/varliklar': '/varliklar',
-  '/krediler': '/krediler',
-}
 
 function isFormElementActive() {
   if (typeof document === 'undefined') return false
@@ -34,15 +26,14 @@ export function QuickActions() {
   const [formFocused, setFormFocused] = useState(false)
   const location = useLocation()
   const open = openPath === location.pathname
-  const preferredAction = routePriorities[location.pathname] ?? routePriorities[`/${location.pathname.split('/')[1]}`]
+  const currentRootPath = location.pathname === '/' ? '/' : `/${location.pathname.split('/')[1]}`
   const orderedActions = useMemo(() => {
     const normalizedQuery = query.trim().toLocaleLowerCase('tr-TR')
-    const filteredActions = normalizedQuery
-      ? actions.filter((action) => `${action.label} ${action.description}`.toLocaleLowerCase('tr-TR').includes(normalizedQuery))
-      : actions
-    if (!preferredAction) return filteredActions
-    return [...filteredActions].sort((left, right) => Number(right.matchPath === preferredAction) - Number(left.matchPath === preferredAction))
-  }, [preferredAction, query])
+    const availableActions = actions.filter((action) => !action.hiddenOnPaths.includes(currentRootPath))
+    return normalizedQuery
+      ? availableActions.filter((action) => `${action.label} ${action.description}`.toLocaleLowerCase('tr-TR').includes(normalizedQuery))
+      : availableActions
+  }, [currentRootPath, query])
   const tucked = formFocused && !open
 
   useEffect(() => {
@@ -76,10 +67,7 @@ export function QuickActions() {
               key={action.to + action.label}
               to={action.to}
               onClick={() => setOpenPath(null)}
-              className={cn(
-                'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition hover:bg-muted',
-                action.matchPath === preferredAction && 'bg-primary/10 ring-1 ring-primary/15',
-              )}
+              className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition hover:bg-muted"
             >
               <div className="grid size-9 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
                 <action.icon size={17} />

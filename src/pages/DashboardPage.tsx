@@ -13,7 +13,6 @@ import {
   ListChecks,
   Search,
   ShieldCheck,
-  TrendingDown,
   TrendingUp,
 } from 'lucide-react'
 import { motion, type Variants } from 'framer-motion'
