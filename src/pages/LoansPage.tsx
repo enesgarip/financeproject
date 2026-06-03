@@ -154,29 +154,30 @@ function LoanOverview({ loans, installments }: { loans: Loan[]; installments: Lo
 
   return (
     <div className="flex flex-col gap-3">
-      <SurfaceCard className="border-0 shadow-sm ring-1 ring-stone-200/80 dark:ring-stone-800">
-        <CardContent className="p-4">
+      <SurfaceCard variant="elevated" className="overflow-hidden">
+        <div className="pointer-events-none -mt-4 mb-1 h-[2px] bg-gradient-to-r from-destructive via-primary to-info opacity-80" />
+        <CardContent className="p-4 sm:p-5">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <p className="text-xs font-bold uppercase text-muted-foreground">Kredi ritmi</p>
-              <p className="mt-1 text-2xl font-extrabold tabular-nums text-foreground">{formatCurrency(totalMonthly)}</p>
-              <p className="mt-1 text-sm text-muted-foreground">Aylık ödeme yükü</p>
+              <p className="finance-label">Aylık Ödeme Yükü</p>
+              <p className="finance-value mt-1.5 text-[clamp(1.5rem,6vw,2.1rem)] font-bold leading-none text-foreground">{formatCurrency(totalMonthly)}</p>
+              <p className="mt-1.5 text-xs text-muted-foreground">Aktif kredilerin toplam taksiti</p>
             </div>
-            <div className="grid size-11 shrink-0 place-items-center rounded-xl bg-rose-50 text-rose-700 dark:bg-rose-950/30 dark:text-rose-300">
-              <Landmark />
+            <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-destructive/12 text-destructive">
+              <Landmark className="size-5" />
             </div>
           </div>
-          <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
-            <OverviewStat label="Kalan borç" value={formatCurrency(totalRemaining)} />
-            <OverviewStat label="Aktif kredi" value={`${activeLoans.length} kayıt`} />
+          <div className="mt-4 grid grid-cols-2 gap-2">
+            <OverviewStat label="Kalan Borç" value={formatCurrency(totalRemaining)} tone="danger" />
+            <OverviewStat label="Aktif Kredi" value={`${activeLoans.length} kayıt`} />
           </div>
           {nextPayment ? (
-            <div className="mt-3 flex items-center justify-between gap-3 rounded-xl bg-muted/55 px-3 py-2 text-sm">
+            <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-border/60 bg-muted/30 px-3 py-2.5 text-sm">
               <div className="min-w-0">
                 <p className="truncate font-semibold text-foreground">{nextPayment.loan.loan_name}</p>
                 <p className="text-xs text-muted-foreground">Sıradaki taksit · {formatDate(nextPayment.item.due_date)}</p>
               </div>
-              <Badge variant="secondary">{formatCurrency(nextPayment.item.amount)}</Badge>
+              <Badge variant="warning">{formatCurrency(nextPayment.item.amount)}</Badge>
             </div>
           ) : null}
         </CardContent>
@@ -186,7 +187,7 @@ function LoanOverview({ loans, installments }: { loans: Loan[]; installments: Lo
         {activeLoans.map((loan) => {
           const progress = loanProgress(loan, installments)
           return (
-            <SurfaceCard key={loan.id} className="border-0 shadow-sm ring-1 ring-stone-200/80 dark:ring-stone-800">
+            <SurfaceCard key={loan.id} variant="interactive">
               <CardHeader className="pb-0">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex min-w-0 items-start gap-3">
@@ -196,15 +197,15 @@ function LoanOverview({ loans, installments }: { loans: Loan[]; installments: Lo
                       <p className="mt-1 truncate text-xs text-muted-foreground">{loan.bank_name}</p>
                     </div>
                   </div>
-                  <Badge variant={progress.next ? 'secondary' : 'default'}>
+                  <Badge variant={progress.next ? 'warning' : 'success'}>
                     {progress.totalCount ? `${progress.paidCount}/${progress.totalCount}` : `${loan.remaining_installments} kaldı`}
                   </Badge>
                 </div>
               </CardHeader>
               <CardContent className="pt-1">
-                <Progress value={progress.progressRate} className="h-1.5" />
-                <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
-                  <OverviewStat label="Kalan borç" value={formatCurrency(loan.remaining_amount)} />
+                <Progress value={progress.progressRate} color="primary" size="default" />
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  <OverviewStat label="Kalan Borç" value={formatCurrency(loan.remaining_amount)} tone="danger" />
                   <OverviewStat label="Taksit" value={formatCurrency(loan.monthly_payment)} />
                 </div>
                 <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
@@ -220,11 +221,12 @@ function LoanOverview({ loans, installments }: { loans: Loan[]; installments: Lo
   )
 }
 
-function OverviewStat({ label, value }: { label: string; value: string }) {
+function OverviewStat({ label, value, tone = 'neutral' }: { label: string; value: string; tone?: 'neutral' | 'danger' | 'success' }) {
+  const toneClass = tone === 'danger' ? 'text-destructive' : tone === 'success' ? 'text-success' : 'text-foreground'
   return (
-    <div className="min-w-0 rounded-lg bg-muted/55 px-2.5 py-2">
-      <p className="truncate text-[11px] font-medium text-muted-foreground">{label}</p>
-      <p className="mt-1 truncate text-sm font-bold tabular-nums text-foreground">{value}</p>
+    <div className="min-w-0 rounded-xl border border-border/60 bg-muted/30 px-3 py-2.5">
+      <p className="finance-label truncate">{label}</p>
+      <p className={`finance-value mt-1 truncate text-sm font-bold tabular-nums ${toneClass}`}>{value}</p>
     </div>
   )
 }
@@ -500,11 +502,11 @@ export function LoansPage() {
     const undoPaidActionId: string | null = null
     if (loanInstallments.length === 0) {
       return (
-        <section className="mt-4 rounded-2xl border border-dashed border-stone-300 bg-white/55 p-3 dark:border-stone-700 dark:bg-stone-950/45">
+        <section className="mt-4 rounded-2xl border border-dashed border-border/70 bg-muted/20 p-3">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <h3 className="text-sm font-semibold text-stone-900 dark:text-stone-100">Ödeme planı yok</h3>
-              <p className="mt-1 text-xs text-stone-500 dark:text-stone-400">Kredi bilgilerinden aylık taksit listesini oluşturabilirsin.</p>
+              <h3 className="text-sm font-semibold text-foreground">Ödeme planı yok</h3>
+              <p className="mt-1 text-xs text-muted-foreground">Kredi bilgilerinden aylık taksit listesini oluşturabilirsin.</p>
             </div>
             <button
               type="button"
@@ -517,7 +519,7 @@ export function LoansPage() {
                   setError(syncError instanceof Error ? syncError.message : 'Ödeme planı oluşturulamadı.')
                 }
               }}
-              className="shrink-0 rounded-lg bg-emerald-700 px-3 py-2 text-xs font-semibold text-white shadow-sm"
+              className="shrink-0 rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground shadow-[0_2px_8px_color-mix(in_srgb,var(--primary)_30%,transparent)] transition hover:bg-primary/90 active:scale-[0.97]"
             >
               Plan oluştur
             </button>
@@ -527,24 +529,22 @@ export function LoansPage() {
     }
 
     return (
-      <section className="mt-4 rounded-2xl border border-stone-200 bg-white/65 p-3 dark:border-stone-800 dark:bg-stone-950/50">
+      <section className="mt-4 rounded-2xl border border-border/70 bg-muted/20 p-3">
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-          <h3 className="text-sm font-semibold text-stone-900 dark:text-stone-100">Ödeme planı</h3>
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            <span className="rounded-full bg-stone-100 px-2 py-1 text-xs font-semibold text-stone-600 dark:bg-stone-800 dark:text-stone-300">
-              {loanInstallments.filter((item) => item.status === 'ödendi').length}/{loanInstallments.length}
-            </span>
-          </div>
+          <h3 className="finance-label">Ödeme Planı</h3>
+          <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-semibold tabular-nums text-muted-foreground">
+            {loanInstallments.filter((item) => item.status === 'ödendi').length}/{loanInstallments.length}
+          </span>
         </div>
         <div className="space-y-2">
           {loanInstallments.map((item) => (
             <div
               key={item.id}
-              className="flex items-center gap-2 rounded-xl bg-stone-50 px-2 py-2 text-sm dark:bg-stone-900"
+              className="flex items-center gap-2 rounded-xl border border-border/50 bg-card px-2 py-2 text-sm"
             >
               {item.status === 'ödendi' ? (
                 <div
-                  className="grid size-8 shrink-0 place-items-center rounded-full border border-emerald-600 bg-emerald-600 text-white"
+                  className="grid size-8 shrink-0 place-items-center rounded-full bg-success text-success-foreground"
                   aria-label="Taksit ödendi"
                 >
                   <Check size={16} strokeWidth={3} />
@@ -553,17 +553,17 @@ export function LoansPage() {
                 <button
                   type="button"
                   onClick={() => void openInstallmentPayment(loan, item, reload)}
-                  className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg border border-stone-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-stone-700 hover:bg-stone-50 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+                  className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg border border-border bg-card px-2.5 py-1.5 text-xs font-semibold text-foreground transition hover:bg-muted active:scale-[0.97]"
                 >
                   <ReceiptText size={13} />
                   Öde
                 </button>
               )}
               <div className="min-w-0 flex-1">
-                <p className="truncate font-semibold text-stone-900 dark:text-stone-100">
-                  {item.installment_no}. taksit · {formatCurrency(item.amount)}
+                <p className="truncate font-semibold text-foreground">
+                  {item.installment_no}. taksit · <span className="font-mono">{formatCurrency(item.amount)}</span>
                 </p>
-                <p className="text-xs text-stone-500 dark:text-stone-400">
+                <p className="text-xs text-muted-foreground">
                   {formatDate(item.due_date)} · {item.status === 'ödendi' ? (undoPaidActionId === item.id ? 'Geri alınıyor...' : 'Ödendi') : 'Bekliyor'}
                 </p>
               </div>
@@ -574,17 +574,17 @@ export function LoansPage() {
                     event.stopPropagation()
                     setPlanMenuOpenId(planMenuOpenId === item.id ? null : item.id)
                   }}
-                  className="grid size-8 place-items-center rounded-full text-stone-500 hover:bg-stone-200 dark:text-stone-400 dark:hover:bg-stone-800"
+                  className="grid size-8 place-items-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground"
                   aria-label="Taksit menüsü"
                 >
                   <MoreVertical size={16} />
                 </button>
                 {planMenuOpenId === item.id ? (
-                  <div className="absolute right-0 top-full z-20 mt-1 w-36 rounded-lg border border-stone-200 bg-white py-1 shadow-lg dark:border-stone-700 dark:bg-stone-900">
+                  <div className="absolute right-0 top-full z-20 mt-1 w-36 rounded-lg border border-border bg-popover py-1 shadow-[var(--shadow-elevated)]">
                     <button
                       type="button"
                       onClick={() => openPlanEdit(item)}
-                      className="flex w-full items-center gap-2 px-3 py-2 text-sm text-stone-700 hover:bg-stone-50 dark:text-stone-200 dark:hover:bg-stone-800"
+                      className="flex w-full items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted"
                     >
                       <Pencil size={14} />
                       Düzenle
@@ -595,7 +595,7 @@ export function LoansPage() {
                         setPlanMenuOpenId(null)
                         void deletePlanItem(item, reload, setError)
                       }}
-                      className="flex w-full items-center gap-2 px-3 py-2 text-sm text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/40"
+                      className="flex w-full items-center gap-2 px-3 py-2 text-sm text-destructive hover:bg-destructive/10"
                     >
                       <Trash2 size={14} />
                       Sil
@@ -676,13 +676,13 @@ export function LoansPage() {
 
       <SimpleModal title="Taksit ödemesi" open={Boolean(installmentLoan && installmentItem)} onClose={closeInstallmentPayment}>
         <form onSubmit={handleInstallmentSubmit} className="space-y-4">
-          <div className="rounded-lg bg-stone-50 p-3 text-sm text-stone-600 dark:bg-stone-900 dark:text-stone-300">
-            <p className="font-semibold text-stone-950 dark:text-stone-50">{installmentLoan?.loan_name}</p>
-            <p>
+          <div className="rounded-xl border border-border/60 bg-muted/30 p-3 text-sm text-muted-foreground">
+            <p className="font-semibold text-foreground">{installmentLoan?.loan_name}</p>
+            <p className="mt-0.5">
               {installmentItem?.installment_no}. taksit · {installmentItem ? formatDate(installmentItem.due_date) : '-'}
             </p>
-            <p>Planlanan tutar: {formatCurrency(installmentItem?.amount ?? 0)}</p>
-            <p>Kalan taksit: {installmentLoan?.remaining_installments ?? 0}</p>
+            <p className="mt-0.5">Planlanan tutar: <span className="font-mono font-semibold text-foreground">{formatCurrency(installmentItem?.amount ?? 0)}</span></p>
+            <p className="mt-0.5">Kalan taksit: {installmentLoan?.remaining_installments ?? 0}</p>
           </div>
           <AccountSelector
             accounts={bankaKartlari}
@@ -690,11 +690,13 @@ export function LoansPage() {
             onChange={setInstallmentSourceCard}
             amount={installmentItem?.amount ?? 0}
           />
-          {installmentError ? <p className="rounded-lg bg-rose-50 p-3 text-sm text-rose-700">{installmentError}</p> : null}
+          {installmentError ? (
+            <p className="rounded-xl border border-destructive/20 bg-destructive/8 p-3 text-sm font-medium text-destructive">{installmentError}</p>
+          ) : null}
           <button
             type="submit"
             disabled={installmentSaving}
-            className="w-full rounded-xl bg-stone-700 px-4 py-3.5 text-sm font-semibold text-white disabled:opacity-60 dark:bg-stone-600"
+            className="h-12 w-full rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-[0_2px_8px_color-mix(in_srgb,var(--primary)_30%,transparent)] transition hover:bg-primary/90 active:scale-[0.99] disabled:opacity-50"
           >
             {installmentSaving ? 'İşleniyor...' : 'Taksiti öde'}
           </button>
@@ -703,17 +705,17 @@ export function LoansPage() {
 
       <SimpleModal title="Taksiti düzenle" open={Boolean(editingPlanItem)} onClose={() => setEditingPlanItem(null)}>
         <form onSubmit={handlePlanEditSubmit} className="space-y-4">
-          <label className="block text-sm font-medium text-stone-700 dark:text-stone-200">
+          <label className="block text-sm font-semibold text-foreground">
             Vade tarihi
             <input
               required
               type="date"
               value={planDueDate}
               onChange={(event) => setPlanDueDate(event.target.value)}
-              className="mt-1 w-full rounded-lg border border-stone-200 px-3 py-3 outline-none focus:border-emerald-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+              className="mt-1 h-10 w-full rounded-xl border border-input bg-card/80 px-3 text-sm text-foreground outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 dark:bg-card/50 [color-scheme:light] dark:[color-scheme:dark]"
             />
           </label>
-          <label className="block text-sm font-medium text-stone-700 dark:text-stone-200">
+          <label className="block text-sm font-semibold text-foreground">
             Tutar
             <input
               required
@@ -722,23 +724,25 @@ export function LoansPage() {
               type="number"
               value={planAmount}
               onChange={(event) => setPlanAmount(event.target.value)}
-              className="mt-1 w-full rounded-lg border border-stone-200 px-3 py-3 outline-none focus:border-emerald-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+              className="mt-1 h-10 w-full rounded-xl border border-input bg-card/80 px-3 text-sm font-mono tabular-nums text-foreground outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 dark:bg-card/50"
             />
           </label>
-          <label className="block text-sm font-medium text-stone-700 dark:text-stone-200">
+          <label className="block text-sm font-semibold text-foreground">
             Not
             <textarea
               rows={3}
               value={planNote}
               onChange={(event) => setPlanNote(event.target.value)}
-              className="mt-1 w-full rounded-lg border border-stone-200 px-3 py-3 outline-none focus:border-emerald-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+              className="mt-1 w-full resize-y rounded-xl border border-input bg-card/80 px-3 py-2.5 text-sm text-foreground outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 dark:bg-card/50"
             />
           </label>
-          {planError ? <p className="rounded-lg bg-rose-50 p-3 text-sm text-rose-700">{planError}</p> : null}
+          {planError ? (
+            <p className="rounded-xl border border-destructive/20 bg-destructive/8 p-3 text-sm font-medium text-destructive">{planError}</p>
+          ) : null}
           <button
             type="submit"
             disabled={planSaving}
-            className="w-full rounded-xl bg-emerald-700 px-4 py-3.5 text-sm font-semibold text-white disabled:opacity-60"
+            className="h-12 w-full rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-[0_2px_8px_color-mix(in_srgb,var(--primary)_30%,transparent)] transition hover:bg-primary/90 active:scale-[0.99] disabled:opacity-50"
           >
             {planSaving ? 'Kaydediliyor...' : 'Kaydet'}
           </button>

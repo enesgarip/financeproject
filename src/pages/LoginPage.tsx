@@ -50,30 +50,38 @@ export function LoginPage() {
   return (
     <main className="flex min-h-dvh items-center justify-center overflow-x-hidden bg-background px-4 py-8 text-foreground">
       <div className="grid w-full max-w-5xl items-stretch gap-5 lg:grid-cols-[1.05fr_0.95fr]">
-        <section className="hidden rounded-lg border border-border/75 bg-card p-5 shadow-xl shadow-stone-950/5 dark:shadow-black/30 lg:flex lg:flex-col lg:justify-between">
+        <section className="relative hidden overflow-hidden rounded-2xl border border-border/60 bg-card p-5 shadow-[var(--shadow-lifted)] lg:flex lg:flex-col lg:justify-between">
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-primary via-info to-warning opacity-80" />
           <div>
             <div className="flex items-center gap-3">
-              <div className="grid size-11 place-items-center rounded-lg bg-primary text-xl font-black text-primary-foreground">₺</div>
+              <div className="grid size-11 place-items-center rounded-xl bg-primary text-xl font-black text-primary-foreground shadow-[0_4px_14px_color-mix(in_srgb,var(--primary)_40%,transparent)]">₺</div>
               <div>
-                <h1 className="text-xl font-black text-foreground">Kişisel Finans</h1>
+                <h1 className="text-xl font-bold tracking-tight text-foreground">Kişisel Finans</h1>
                 <p className="text-sm text-muted-foreground">Günlük para kararlarını tek ekranda toparla.</p>
               </div>
             </div>
 
-            <div className="mt-8 rounded-lg bg-emerald-950 p-5 text-white ring-1 ring-emerald-500/20">
-              <div className="flex items-start justify-between gap-4">
+            {/* Demo cash-flow card — brand gradient */}
+            <div
+              className="relative mt-8 overflow-hidden rounded-2xl p-5 text-white shadow-[var(--shadow-floating)]"
+              style={{ background: 'linear-gradient(135deg, var(--brand-900, #312e81), var(--brand-700, #4338ca))' }}
+            >
+              <div className="pointer-events-none absolute -right-12 -top-12 size-40 rounded-full bg-white/10 blur-2xl" />
+              <div className="relative flex items-start justify-between gap-4">
                 <div>
-                  <p className="text-xs font-bold uppercase text-emerald-100/75">Nakit akışı</p>
-                  <p className="mt-2 text-3xl font-black tabular-nums">₺10.860,00</p>
-                  <p className="mt-1 text-sm text-emerald-50/70">Ay sonu projeksiyonu artıda.</p>
+                  <p className="text-[11px] font-bold uppercase tracking-wide text-white/65">Nakit akışı</p>
+                  <p className="mt-2 font-mono text-3xl font-bold tabular-nums">₺10.860,00</p>
+                  <p className="mt-1 text-sm text-white/65">Ay sonu projeksiyonu artıda.</p>
                 </div>
-                <TrendingUp className="text-emerald-200" />
+                <div className="grid size-9 place-items-center rounded-xl bg-white/15">
+                  <TrendingUp className="size-5 text-white" />
+                </div>
               </div>
-              <div className="mt-5 grid grid-cols-3 gap-2">
+              <div className="relative mt-5 grid grid-cols-3 gap-2">
                 {['Gelir', 'Gider', 'Net'].map((label, index) => (
-                  <div key={label} className="rounded-lg bg-white/10 px-3 py-2 ring-1 ring-white/10">
-                    <p className="text-[11px] font-bold uppercase text-white/55">{label}</p>
-                    <p className={`mt-1 text-sm font-black tabular-nums ${index === 1 ? 'text-rose-200' : 'text-emerald-100'}`}>
+                  <div key={label} className="rounded-xl bg-white/10 px-3 py-2 ring-1 ring-white/10">
+                    <p className="text-[10px] font-bold uppercase tracking-wide text-white/55">{label}</p>
+                    <p className={`mt-1 font-mono text-sm font-bold tabular-nums ${index === 1 ? 'text-rose-200' : 'text-emerald-200'}`}>
                       {index === 0 ? '₺28.750' : index === 1 ? '₺17.890' : '₺10.860'}
                     </p>
                   </div>
@@ -83,30 +91,34 @@ export function LoginPage() {
           </div>
 
           <div className="mt-5 grid gap-3">
-            <div className="flex items-center gap-3 rounded-lg border border-border bg-background/70 p-3">
-              <WalletCards className="size-5 text-primary" />
+            <div className="flex items-center gap-3 rounded-xl border border-border/60 bg-muted/30 p-3">
+              <div className="grid size-9 shrink-0 place-items-center rounded-lg bg-primary/12 text-primary">
+                <WalletCards className="size-5" />
+              </div>
               <div>
-                <p className="text-sm font-black text-foreground">Kart, kredi ve ödemeler</p>
+                <p className="text-sm font-bold text-foreground">Kart, kredi ve ödemeler</p>
                 <p className="text-xs text-muted-foreground">Vadeleri ve limitleri aynı ritimde izle.</p>
               </div>
             </div>
-            <div className="flex items-center gap-3 rounded-lg border border-border bg-background/70 p-3">
-              <ShieldCheck className="size-5 text-primary" />
+            <div className="flex items-center gap-3 rounded-xl border border-border/60 bg-muted/30 p-3">
+              <div className="grid size-9 shrink-0 place-items-center rounded-lg bg-success/12 text-success">
+                <ShieldCheck className="size-5" />
+              </div>
               <div>
-                <p className="text-sm font-black text-foreground">Veri sağlığı</p>
+                <p className="text-sm font-bold text-foreground">Veri sağlığı</p>
                 <p className="text-xs text-muted-foreground">Tutarsızlıkları büyümeden yakala.</p>
               </div>
             </div>
           </div>
         </section>
 
-      <Card className="mx-auto w-full max-w-[23rem] border-0 shadow-xl ring-1 ring-border/80 sm:max-w-[25rem] lg:max-w-none">
+      <Card variant="elevated" className="mx-auto w-full max-w-[23rem] sm:max-w-[25rem] lg:max-w-none">
         <CardContent className="p-5 sm:p-6">
           <div>
-            <div className="mb-4 grid size-11 place-items-center rounded-lg bg-primary/10 text-xl font-black text-primary">
+            <div className="mb-4 grid size-11 place-items-center rounded-xl bg-primary/12 text-xl font-black text-primary">
               ₺
             </div>
-            <h1 className="text-2xl font-black tracking-normal text-foreground">Kişisel Finans</h1>
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">Kişisel Finans</h1>
             <p className="mt-2 text-sm leading-6 text-muted-foreground">
             Varlıklarını, borçlarını ve yaklaşan ödemelerini tek yerden takip et.
             </p>
@@ -146,7 +158,7 @@ export function LoginPage() {
                   autoComplete="name"
                   value={fullName}
                   onChange={(event) => setFullName(event.target.value)}
-                  className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-3 outline-none ring-ring/0 transition focus:border-ring focus:ring-3 focus:ring-ring/20"
+                  className="mt-1 h-11 w-full rounded-xl border border-input bg-card/80 px-3 text-sm text-foreground outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 dark:bg-card/50"
                 />
               </label>
             ) : null}
@@ -158,7 +170,7 @@ export function LoginPage() {
                 autoComplete="email"
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
-                className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-3 outline-none ring-ring/0 transition focus:border-ring focus:ring-3 focus:ring-ring/20"
+                className="mt-1 h-11 w-full rounded-xl border border-input bg-card/80 px-3 text-sm text-foreground outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 dark:bg-card/50"
               />
             </label>
             <label className="block text-sm font-semibold text-foreground">
@@ -170,10 +182,10 @@ export function LoginPage() {
                 autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
-                className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-3 outline-none ring-ring/0 transition focus:border-ring focus:ring-3 focus:ring-ring/20"
+                className="mt-1 h-11 w-full rounded-xl border border-input bg-card/80 px-3 text-sm text-foreground outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 dark:bg-card/50"
               />
             </label>
-            {message ? <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-950/30 dark:text-amber-200">{message}</p> : null}
+            {message ? <p className="rounded-xl border border-warning/25 bg-warning/8 p-3 text-sm font-medium text-warning">{message}</p> : null}
             <Button type="submit" disabled={submitting} className="h-11 w-full gap-2">
               {submitting ? 'Bekle...' : mode === 'login' ? 'Giriş yap' : 'Kayıt ol'}
               {!submitting ? <ArrowRight data-icon="inline-end" /> : null}

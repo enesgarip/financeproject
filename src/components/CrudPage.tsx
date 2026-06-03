@@ -306,10 +306,11 @@ export function CrudPage<T extends TableName>({
 
   return (
     <section className="flex flex-col gap-5">
-      <div className="finance-hero-panel rounded-lg p-4 sm:p-5">
+      <div className="finance-hero-panel relative overflow-hidden rounded-2xl p-4 sm:p-5">
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-primary via-info to-warning opacity-80" />
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div className="min-w-0">
-            <h1 className="text-xl font-black leading-tight text-foreground">{pageTitle ?? addLabel}</h1>
+            <h1 className="text-xl font-bold leading-tight tracking-tight text-foreground">{pageTitle ?? addLabel}</h1>
             <p className="mt-1 text-sm text-muted-foreground">
               {normalizedQuery ? `${visibleRows.length} / ${rows.length} kayıt gösteriliyor` : `${rows.length} kayıt bulundu`}
             </p>
@@ -336,14 +337,14 @@ export function CrudPage<T extends TableName>({
       {renderBeforeList ? renderBeforeList({ loading, rows, reload: loadRows, setError }) : null}
 
       {!showList ? null : loading ? (
-        <div className="grid gap-3 sm:grid-cols-2">
-          {Array.from({ length: 4 }, (_, index) => (
-            <div key={index} className="finance-surface rounded-lg p-4">
+        <div className="grid gap-3 min-[760px]:grid-cols-2 xl:grid-cols-3">
+          {Array.from({ length: 6 }, (_, index) => (
+            <div key={index} className="rounded-2xl border border-border/50 bg-card p-4 shadow-[var(--shadow-card)] min-[390px]:p-5">
               <Skeleton className="h-5 w-2/3" />
-              <Skeleton className="mt-3 h-4 w-1/2" />
+              <Skeleton className="mt-3 h-3.5 w-1/2" />
               <div className="mt-5 grid grid-cols-2 gap-2">
-                <Skeleton className="h-14 rounded-lg" />
-                <Skeleton className="h-14 rounded-lg" />
+                <Skeleton className="h-14 rounded-xl" />
+                <Skeleton className="h-14 rounded-xl" />
               </div>
             </div>
           ))}
@@ -424,7 +425,7 @@ export function CrudPage<T extends TableName>({
                                 setMenuOpenId(null)
                                 setDeleteId(row.id)
                               }}
-                              className="flex w-full items-center gap-2 px-3 py-2 text-sm text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/40"
+                              className="flex w-full items-center gap-2 px-3 py-2 text-sm text-destructive hover:bg-destructive/10"
                             >
                               <Trash2 size={14} />
                               Sil
@@ -450,7 +451,7 @@ export function CrudPage<T extends TableName>({
                       key={row.id}
                       style={getCardStyle?.(row, rows)}
                       className={cn(
-                        'min-w-0 rounded-lg border bg-card/96 p-4 shadow-[var(--shadow-card)] ring-1 ring-black/[0.025] transition-all hover:-translate-y-0.5 hover:shadow-[var(--shadow-card-hover)] dark:ring-white/[0.04] min-[390px]:p-5',
+                        'min-w-0 rounded-2xl border bg-card p-4 shadow-[var(--shadow-card)] transition-all duration-250 hover:-translate-y-0.5 hover:shadow-[var(--shadow-lifted)] dark:ring-1 dark:ring-white/[0.04] min-[390px]:p-5',
                         getCardClassName?.(row, rows) ?? 'border-border/75',
                       )}
                     >
@@ -495,7 +496,7 @@ export function CrudPage<T extends TableName>({
                                 setMenuOpenId(null)
                                 setDeleteId(row.id)
                               }}
-                              className="flex w-full items-center gap-2 px-3 py-2 text-sm text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/40"
+                              className="flex w-full items-center gap-2 px-3 py-2 text-sm text-destructive hover:bg-destructive/10"
                             >
                               <Trash2 size={14} />
                               Sil
@@ -516,14 +517,14 @@ export function CrudPage<T extends TableName>({
                           key={detail}
                           style={getDetailStyle?.(row, rows)}
                           className={cn(
-                            'min-w-0 rounded-lg bg-surface-muted/75 px-3 py-2.5 ring-1 ring-border/65',
-                            getDetailClassName?.(row, rows) ?? 'bg-muted/55',
+                            'min-w-0 rounded-xl border border-border/50 bg-muted/30 px-3 py-2.5',
+                            getDetailClassName?.(row, rows) ?? 'bg-muted/40',
                           )}
                         >
                           {parsedDetail ? (
                             <>
-                              <dt className="truncate text-[11px] font-bold uppercase text-muted-foreground">{parsedDetail.label}</dt>
-                              <dd className="mt-1 break-words text-sm font-extrabold leading-snug text-foreground">{parsedDetail.value}</dd>
+                              <dt className="finance-label truncate">{parsedDetail.label}</dt>
+                              <dd className="mt-1 break-words font-mono text-sm font-bold leading-snug text-foreground">{parsedDetail.value}</dd>
                             </>
                           ) : (
                             <span className="break-words text-sm font-semibold text-foreground/85">{detail}</span>
@@ -563,7 +564,7 @@ export function CrudPage<T extends TableName>({
               <label key={field.name} className={cn('block text-sm font-semibold text-foreground', field.type === 'textarea' && 'sm:col-span-2')}>
                 <span>
                   {field.label}
-                  {field.required ? <span className="text-rose-500"> *</span> : null}
+                  {field.required ? <span className="text-destructive"> *</span> : null}
                 </span>
                 {field.type === 'select' ? (
                   <Select
@@ -647,7 +648,7 @@ export function CrudPage<T extends TableName>({
                     className="mt-1"
                   />
                 )}
-                {fieldError ? <span className="mt-1 block text-xs font-medium text-rose-600 dark:text-rose-300">{fieldError}</span> : null}
+                {fieldError ? <span className="mt-1 block text-xs font-medium text-destructive">{fieldError}</span> : null}
               </label>
             )
           })}

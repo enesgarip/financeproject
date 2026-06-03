@@ -1,12 +1,36 @@
+import { ArrowDownRight, ArrowUpRight, Banknote, Coins, Landmark, LineChart, Minus, PiggyBank, TrendingUp, Wallet } from 'lucide-react'
+import type { ComponentType } from 'react'
 import { CrudPage, type FormField } from '../components/CrudPage'
+import { DonutChart, type DonutSlice } from '../components/charts/DonutChart'
 import { Badge } from '../components/ui/badge'
 import { Card, CardContent } from '../components/ui/card'
-import { Progress } from '../components/ui/progress'
 import type { Asset, SalaryHistory } from '../types/database'
 import { formatDate } from '../utils/date'
 import { formatCurrency, formatNumber, parseNumber } from '../utils/formatCurrency'
 
 const categoryOptions: Asset['category'][] = ['Nakit', 'Altın', 'Fon', 'Hisse', 'Araç', 'BES', 'Diğer']
+
+/* Category → colour + icon mapping driven by design tokens */
+const categoryMeta: Record<Asset['category'], { color: string; icon: ComponentType<{ className?: string }> }> = {
+  Nakit: { color: 'var(--success)',     icon: Banknote },
+  Altın: { color: 'var(--warning)',     icon: Coins },
+  Fon:   { color: 'var(--info)',        icon: LineChart },
+  Hisse: { color: 'var(--primary)',     icon: TrendingUp },
+  Araç:  { color: '#fb923c',            icon: Wallet },
+  BES:   { color: '#2dd4bf',            icon: PiggyBank },
+  Diğer: { color: 'var(--muted-foreground)', icon: Landmark },
+}
+
+/* Soft tinted card backgrounds per category (token-based, dark-safe) */
+const categoryCardTint: Record<Asset['category'], string> = {
+  Nakit: 'border-success/20 bg-success/5 dark:bg-success/8',
+  Altın: 'border-warning/20 bg-warning/5 dark:bg-warning/8',
+  Fon:   'border-info/20 bg-info/5 dark:bg-info/8',
+  Hisse: 'border-primary/20 bg-primary/5 dark:bg-primary/8',
+  Araç:  'border-orange-300/30 bg-orange-50/40 dark:border-orange-900/40 dark:bg-orange-950/15',
+  BES:   'border-teal-300/30 bg-teal-50/40 dark:border-teal-900/40 dark:bg-teal-950/15',
+  Diğer: 'border-border/70 bg-card',
+}
 
 const fields: FormField[] = [
   { name: 'name', label: 'Ad', type: 'text', required: true },
@@ -65,16 +89,6 @@ const salaryFields: FormField[] = [
   { name: 'note', label: 'Not', type: 'textarea' },
 ]
 
-const assetTone: Record<Asset['category'], { card: string; detail: string }> = {
-  Nakit: { card: 'border-emerald-200 bg-emerald-50/35 dark:border-emerald-900 dark:bg-emerald-950/25', detail: 'bg-emerald-50 dark:bg-emerald-950/40' },
-  Altın: { card: 'border-amber-200 bg-amber-50/45 dark:border-amber-900 dark:bg-amber-950/25', detail: 'bg-amber-50 dark:bg-amber-950/40' },
-  Fon: { card: 'border-sky-200 bg-sky-50/40 dark:border-sky-900 dark:bg-sky-950/25', detail: 'bg-sky-50 dark:bg-sky-950/40' },
-  Hisse: { card: 'border-indigo-200 bg-indigo-50/35 dark:border-indigo-900 dark:bg-indigo-950/25', detail: 'bg-indigo-50 dark:bg-indigo-950/40' },
-  Araç: { card: 'border-orange-200 bg-orange-50/35 dark:border-orange-900 dark:bg-orange-950/25', detail: 'bg-orange-50 dark:bg-orange-950/40' },
-  BES: { card: 'border-teal-200 bg-teal-50/35 dark:border-teal-900 dark:bg-teal-950/25', detail: 'bg-teal-50 dark:bg-teal-950/40' },
-  Diğer: { card: 'border-stone-200 bg-white dark:border-stone-800 dark:bg-stone-900', detail: 'bg-stone-50 dark:bg-stone-800' },
-}
-
 function AssetsOverview({ rows }: { rows: Asset[] }) {
   if (rows.length === 0) return null
 
@@ -86,37 +100,62 @@ function AssetsOverview({ rows }: { rows: Asset[] }) {
     }))
     .filter((item) => item.total > 0)
     .sort((a, b) => b.total - a.total)
+
   const cashTotal = categoryTotals.find((item) => item.category === 'Nakit')?.total ?? 0
+  const topCategory = categoryTotals[0]
+
+  const donutData: DonutSlice[] = categoryTotals.map((item) => ({
+    name: item.category,
+    value: item.total,
+    color: categoryMeta[item.category].color,
+  }))
 
   return (
-    <div className="flex flex-col gap-3">
-      <Card className="border-0 shadow-sm ring-1 ring-stone-200/80 dark:ring-stone-800">
-        <CardContent className="p-4">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <p className="text-xs font-bold uppercase text-muted-foreground">Varlık kompozisyonu</p>
-              <p className="mt-1 text-2xl font-extrabold tabular-nums text-foreground">{formatCurrency(total)}</p>
-              <p className="mt-1 text-sm text-muted-foreground">Nakit {formatCurrency(cashTotal)}</p>
+    <Card variant="elevated" className="overflow-hidden border-primary/15">
+      {/* Top accent line */}
+      <div className="pointer-events-none -mt-4 mb-1 h-[2px] bg-gradient-to-r from-success via-primary to-warning opacity-80" />
+      <CardContent className="p-4 sm:p-5">
+        <div className="grid gap-5 sm:grid-cols-[1.1fr_1fr] sm:items-center">
+          {/* Left: total + highlights */}
+          <div className="min-w-0">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="finance-label">Toplam Varlık</p>
+                <p className="finance-value mt-1.5 text-[clamp(1.75rem,7vw,2.5rem)] font-bold leading-none text-foreground">
+                  {formatCurrency(total)}
+                </p>
+              </div>
+              <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/12 text-primary">
+                <Wallet className="size-5" />
+              </div>
             </div>
-            <Badge variant="secondary">{rows.length} kayıt</Badge>
+
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              <div className="min-w-0 rounded-xl border border-border/60 bg-muted/30 px-3 py-2.5">
+                <p className="finance-label truncate">Nakit</p>
+                <p className="finance-value mt-1 truncate text-sm font-bold text-success">{formatCurrency(cashTotal)}</p>
+              </div>
+              <div className="min-w-0 rounded-xl border border-border/60 bg-muted/30 px-3 py-2.5">
+                <p className="finance-label truncate">En Büyük Kalem</p>
+                <p className="finance-value mt-1 truncate text-sm font-bold text-foreground">
+                  {topCategory ? topCategory.category : '—'}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-3 flex items-center gap-2">
+              <Badge variant="secondary">{rows.length} kayıt</Badge>
+              <Badge variant="outline">{categoryTotals.length} kategori</Badge>
+            </div>
           </div>
-          <div className="mt-4 flex flex-col gap-3">
-            {categoryTotals.slice(0, 5).map((item) => {
-              const rate = total > 0 ? Math.min(100, (item.total / total) * 100) : 0
-              return (
-                <div key={item.category}>
-                  <div className="mb-1.5 flex items-center justify-between gap-3 text-xs">
-                    <span className="font-semibold text-foreground">{item.category}</span>
-                    <span className="tabular-nums text-muted-foreground">{formatCurrency(item.total)}</span>
-                  </div>
-                  <Progress value={rate} className="h-1.5" />
-                </div>
-              )
-            })}
+
+          {/* Right: donut composition */}
+          <div className="min-w-0">
+            <DonutChart data={donutData} size={170} innerRadius={48} totalLabel="Varlık" />
           </div>
-        </CardContent>
-      </Card>
-    </div>
+        </div>
+      </CardContent>
+    </Card>
   )
 }
 
@@ -130,26 +169,41 @@ function SalaryOverview({ rows }: { rows: SalaryHistory[] }) {
 
   const difference = previous ? current.amount - previous.amount : 0
   const percentage = previous && previous.amount > 0 ? (difference / previous.amount) * 100 : 0
+  const isUp = difference > 0
+  const isDown = difference < 0
+  const DeltaIcon = isUp ? ArrowUpRight : isDown ? ArrowDownRight : Minus
+  const deltaColor = isUp ? 'text-success' : isDown ? 'text-destructive' : 'text-muted-foreground'
 
   return (
-    <Card className="border-0 shadow-sm ring-1 ring-emerald-200/80 dark:ring-emerald-900">
-      <CardContent className="p-4">
+    <Card variant="default" className="overflow-hidden border-success/20">
+      <CardContent className="p-4 sm:p-5">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-xs font-bold uppercase text-muted-foreground">Maaş trendi</p>
-            <p className="mt-1 text-2xl font-extrabold tabular-nums text-foreground">{formatCurrency(current.amount)}</p>
-            <p className="mt-1 text-sm text-muted-foreground">{formatDate(current.effective_date)}</p>
+            <p className="finance-label">Güncel Maaş</p>
+            <p className="finance-value mt-1.5 text-[clamp(1.5rem,6vw,2.1rem)] font-bold leading-none text-foreground">
+              {formatCurrency(current.amount)}
+            </p>
+            <p className="mt-1.5 text-xs text-muted-foreground">{formatDate(current.effective_date)}</p>
           </div>
-          <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200">
-            {previous ? `${difference >= 0 ? '+' : ''}${percentage.toFixed(1)}%` : 'İlk kayıt'}
-          </Badge>
+          <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-success/12 text-success">
+            <TrendingUp className="size-5" />
+          </div>
         </div>
+
         {previous ? (
-          <div className="mt-4 rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-200">
-            Önceki kayda göre {difference >= 0 ? '+' : ''}
-            {formatCurrency(difference)}
+          <div className="mt-4 flex items-center justify-between gap-3 rounded-xl border border-border/60 bg-muted/30 px-3 py-2.5">
+            <span className="text-xs text-muted-foreground">Önceki kayda göre</span>
+            <span className={`flex items-center gap-1 font-mono text-sm font-semibold tabular-nums ${deltaColor}`}>
+              <DeltaIcon size={14} />
+              {difference >= 0 ? '+' : ''}{formatCurrency(difference)}
+              <span className="ml-1 text-xs">({percentage >= 0 ? '+' : ''}{percentage.toFixed(1)}%)</span>
+            </span>
           </div>
-        ) : null}
+        ) : (
+          <div className="mt-4 rounded-xl border border-border/60 bg-muted/30 px-3 py-2.5 text-xs text-muted-foreground">
+            İlk maaş kaydı — sonraki kayıtlarda artış trendi burada görünecek.
+          </div>
+        )}
       </CardContent>
     </Card>
   )
@@ -198,8 +252,8 @@ export function AssetsPage() {
           if (row.category === 'Nakit') details.unshift(`Para birimi: ${row.currency ?? 'TRY'}`)
           return details
         }}
-        getCardClassName={(row) => assetTone[row.category].card}
-        getDetailClassName={(row) => assetTone[row.category].detail}
+        getCardClassName={(row) => categoryCardTint[row.category]}
+        getDetailClassName={() => 'bg-muted/40'}
         groupBy={(row) => row.category}
       />
 
@@ -237,16 +291,18 @@ export function AssetsPage() {
 
           const difference = row.amount - previous.amount
           const percentage = (difference / previous.amount) * 100
+          const isUp = difference >= 0
           return (
-            <div className="mt-3 rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200">
-              Önceki kayda göre {difference >= 0 ? '+' : ''}
-              {formatCurrency(difference)} ({percentage >= 0 ? '+' : ''}
-              {percentage.toFixed(1)}%)
+            <div className={`mt-3 flex items-center gap-1.5 rounded-xl border px-3 py-2 text-sm ${isUp ? 'border-success/20 bg-success/8 text-success' : 'border-destructive/20 bg-destructive/8 text-destructive'}`}>
+              {isUp ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
+              <span className="font-mono font-semibold tabular-nums">
+                {difference >= 0 ? '+' : ''}{formatCurrency(difference)} ({percentage >= 0 ? '+' : ''}{percentage.toFixed(1)}%)
+              </span>
             </div>
           )
         }}
-        getCardClassName={() => 'border-emerald-200 bg-emerald-50/35 dark:border-emerald-900 dark:bg-emerald-950/25'}
-        getDetailClassName={() => 'bg-emerald-50 dark:bg-emerald-950/40'}
+        getCardClassName={() => 'border-success/20 bg-success/5 dark:bg-success/8'}
+        getDetailClassName={() => 'bg-muted/40'}
       />
     </div>
   )
