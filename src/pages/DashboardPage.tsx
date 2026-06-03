@@ -13,7 +13,6 @@ import {
   ListChecks,
   Search,
   ShieldCheck,
-  Sparkles,
   TrendingDown,
   TrendingUp,
 } from 'lucide-react'
@@ -72,7 +71,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { HelpTooltip, type HelpTooltipContent } from '../components/ui/help-tooltip'
 import { Input } from '../components/ui/input'
 import { Progress } from '../components/ui/progress'
-import { Separator } from '../components/ui/separator'
 import { SkeletonDashboard } from '../components/ui/skeleton'
 
 type DashboardData = {
@@ -1106,106 +1104,7 @@ function getUserDisplayName(user: User | null) {
   return fullName || name
 }
 
-export function WelcomePanel({ displayName, cashFlow }: { displayName: string; cashFlow: CashFlowSummary }) {
-  const netFlowIsPositive = cashFlow.netFlow >= 0
-  const signedNetFlow = `${netFlowIsPositive ? '+' : ''}${formatCurrency(cashFlow.netFlow)}`
 
-  return (
-    <Card className="relative overflow-hidden border-primary/15 bg-gradient-to-br from-card via-card to-accent/45 py-0 shadow-[var(--shadow-card)] ring-1 ring-primary/10">
-      <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary via-info to-warning" />
-      <CardContent className="relative p-5">
-        <div className="flex items-start justify-between gap-4">
-          <div className="min-w-0">
-            <div className="mb-4 inline-flex items-center gap-2 rounded-lg bg-primary/10 px-3 py-1.5 text-xs font-bold text-primary ring-1 ring-primary/15">
-              <Sparkles size={14} />
-              Finans özeti hazır
-            </div>
-            <h2 className="break-words text-[clamp(1.55rem,6vw,2.2rem)] font-black leading-tight tracking-normal text-foreground">
-              Hoş geldiniz{displayName ? ',' : ''}
-              {displayName ? <span className="block text-primary">{displayName}</span> : null}
-            </h2>
-            <p className="mt-3 max-w-md text-sm font-medium leading-6 text-muted-foreground">
-              {cashFlow.monthLabel} için nakit akışı, kartlar ve yaklaşan ödemeler tek ekranda.
-            </p>
-          </div>
-          <div className="grid size-12 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary ring-1 ring-primary/15">
-            <TrendingUp size={22} />
-          </div>
-        </div>
-
-        <div className="mt-5 grid grid-cols-[repeat(3,minmax(0,1fr))] gap-2">
-          <WelcomeMetric label="Dönem" value={cashFlow.monthLabel} />
-          <WelcomeMetric label="Net akış" value={signedNetFlow} tone={netFlowIsPositive ? 'positive' : 'negative'} />
-          <WelcomeMetric label="Hesap bakiyesi" value={formatCurrency(cashFlow.cashAssets)} />
-        </div>
-      </CardContent>
-    </Card>
-  )
-}
-
-function WelcomeMetric({ label, value, tone = 'neutral' }: { label: string; value: string; tone?: 'neutral' | 'positive' | 'negative' }) {
-  const valueClass = {
-    neutral: 'text-foreground',
-    positive: 'text-success',
-    negative: 'text-destructive',
-  }[tone]
-
-  return (
-    <div className="min-w-0 rounded-lg bg-background/75 px-3 py-2.5 ring-1 ring-border/70">
-      <p className="truncate text-[10px] font-bold uppercase text-muted-foreground">{label}</p>
-      <p className={`finance-value mt-1 whitespace-nowrap text-[clamp(0.62rem,2.5vw,0.95rem)] font-extrabold leading-tight ${valueClass}`}>
-        {value}
-      </p>
-    </div>
-  )
-}
-
-export function PriorityMetricRail({
-  totalAssets,
-  totalDebts,
-  monthlyLoad,
-  upcomingTotal,
-  upcomingCount,
-}: {
-  totalAssets: number
-  totalDebts: number
-  monthlyLoad: number
-  upcomingTotal: number
-  upcomingCount: number
-}) {
-  return (
-    <div className="grid gap-3 min-[520px]:grid-cols-2 lg:grid-cols-4">
-      <MetricCard
-        label="Toplam Varlık"
-        value={formatCurrency(totalAssets)}
-        tone="good"
-        deltaLabel="up"
-        delta="Aktif"
-      />
-      <MetricCard
-        label="Toplam Borç"
-        value={formatCurrency(totalDebts)}
-        tone={totalDebts > 0 ? 'danger' : 'good'}
-        delta={totalDebts > 0 ? 'Takipte' : 'Temiz'}
-        deltaLabel={totalDebts > 0 ? 'down' : 'flat'}
-      />
-      <MetricCard
-        label="Bu Ay Yük"
-        value={formatCurrency(monthlyLoad)}
-        tone={monthlyLoad > 0 ? 'warning' : 'neutral'}
-        delta="Aylık çıkış"
-        deltaLabel="flat"
-      />
-      <MetricCard
-        label="Yaklaşan Ödeme"
-        value={upcomingCount > 0 ? formatCurrency(upcomingTotal) : 'Temiz'}
-        tone={upcomingCount > 0 ? 'warning' : 'good'}
-        delta={upcomingCount > 0 ? `${upcomingCount} vade` : 'Vade yok'}
-        deltaLabel={upcomingCount > 0 ? 'down' : 'up'}
-      />
-    </div>
-  )
-}
 
 function FocusActionPanel({ actions, cashFlow }: { actions: FocusAction[]; cashFlow: CashFlowSummary }) {
   const [showAll, setShowAll] = useState(false)
@@ -1316,41 +1215,6 @@ function FocusActionCard({ action }: { action: FocusAction }) {
   )
 }
 
-export function NetWorthPanel({ netWorth, totalAssets, totalDebts, totalReceivables }: { netWorth: number; totalAssets: number; totalDebts: number; totalReceivables: number }) {
-  const isPositive = netWorth >= 0
-  const TrendIcon = isPositive ? TrendingUp : TrendingDown
-
-  return (
-    <Card className="border-primary/15 bg-gradient-to-br from-card via-card to-accent/35 py-0 shadow-[var(--shadow-card)] ring-1 ring-primary/10">
-      <CardContent className="p-5">
-        <div className="flex items-start justify-between gap-4">
-          <div className="min-w-0">
-            <p className="inline-flex items-center gap-1 text-xs font-semibold uppercase text-muted-foreground">
-              Net varlık
-              <HelpTooltip title="Net varlık" content={dashboardHelp.netWorth} />
-            </p>
-            <p className={`finance-value mt-2 whitespace-nowrap text-[clamp(1.7rem,7vw,2.85rem)] font-black leading-none ${isPositive ? 'text-foreground' : 'text-destructive'}`}>
-              {formatCurrency(netWorth)}
-            </p>
-          </div>
-          <Badge variant={isPositive ? 'secondary' : 'destructive'} className="shrink-0">
-            <TrendIcon data-icon="inline-start" />
-            {isPositive ? 'Pozitif' : 'Ekside'}
-          </Badge>
-        </div>
-        <Separator className="my-4" />
-        <div className="grid grid-cols-[repeat(3,minmax(0,1fr))] gap-2 text-xs">
-          <SummaryPill label="Varlık" value={formatCurrency(totalAssets)} tone="positive" />
-          <SummaryPill label="Borç" value={formatCurrency(totalDebts)} tone="negative" />
-          <SummaryPill label="Tahsilat" value={formatCurrency(totalReceivables)} tone="positive" />
-        </div>
-        {totalReceivables > 0 ? (
-          <p className="mt-3 text-xs leading-5 text-muted-foreground">Beklenen tahsilat net değere eklenmedi; gelirse tablo {formatCurrency(netWorth + totalReceivables)} olur.</p>
-        ) : null}
-      </CardContent>
-    </Card>
-  )
-}
 
 function FinancialHealthPanel({ health, goalProgress }: { health: FinancialHealthSummary; goalProgress: GoalProgressSummary }) {
   const toneClass = {
@@ -1405,22 +1269,6 @@ function FinancialHealthPanel({ health, goalProgress }: { health: FinancialHealt
   )
 }
 
-function SummaryPill({ label, value, tone = 'neutral' }: { label: string; value: string; tone?: 'neutral' | 'positive' | 'negative' }) {
-  const valueClass = {
-    neutral: 'text-foreground',
-    positive: 'text-success',
-    negative: 'text-destructive',
-  }[tone]
-
-  return (
-    <div className="min-w-0 rounded-lg bg-muted/45 px-2.5 py-2 ring-1 ring-border/60">
-      <p className="truncate text-[11px] font-medium text-muted-foreground">{label}</p>
-      <p className={`finance-value mt-1 whitespace-nowrap text-[clamp(0.58rem,2.65vw,0.875rem)] font-bold leading-tight ${valueClass}`}>
-        {value}
-      </p>
-    </div>
-  )
-}
 
 function CashFlowPanel({ cashFlow }: { cashFlow: CashFlowSummary }) {
   const outflowRate = cashFlow.income > 0 ? Math.min(100, (cashFlow.outflow / cashFlow.income) * 100) : 0

@@ -10,7 +10,7 @@ import { Progress } from '../components/ui/progress'
 import { useConfirmDialog } from '../components/ui/use-confirm-dialog'
 import { supabase } from '../lib/supabase'
 import type { Card, InsertFor, Loan, LoanInstallment } from '../types/database'
-import { formatDate, startOfToday } from '../utils/date'
+import { dateInMonth, dateInputValue, formatDate, startOfToday } from '../utils/date'
 import { formatCurrency, parseNumber } from '../utils/formatCurrency'
 
 function getNextPaymentDate(installmentDay: number | null, remainingInstallments: number): string | null {
@@ -74,14 +74,6 @@ function parseLocalDate(value: string | null | undefined) {
   return new Date(year, month - 1, day)
 }
 
-function dateInputValue(date: Date) {
-  return date.toLocaleDateString('sv-SE')
-}
-
-function dateInMonth(year: number, month: number, preferredDay: number) {
-  const lastDay = new Date(year, month + 1, 0).getDate()
-  return new Date(year, month, Math.min(preferredDay, lastDay))
-}
 
 function buildLoanSchedule(loan: Loan): InsertFor<'loan_installments'>[] {
   const start = parseLocalDate(loan.start_date)
