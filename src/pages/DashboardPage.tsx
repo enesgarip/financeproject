@@ -1059,7 +1059,7 @@ function AnalyticsSnapshotPanel({
         <div className="rounded-2xl border border-border/70 bg-card p-4 shadow-[var(--shadow-card)]">
           <p className="finance-label mb-3">Borç Dağılımı</p>
           {donutData.length > 0 ? (
-            <DonutChart data={donutData} size={160} innerRadius={42} totalLabel="Toplam Borç" />
+            <DonutChart data={donutData} size={176} innerRadius={48} totalLabel="Toplam Borç" />
           ) : (
             <div className="flex h-40 items-center justify-center text-xs text-muted-foreground">
               Borç kaydı yok

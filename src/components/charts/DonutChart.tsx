@@ -39,7 +39,19 @@ export function DonutChart({
 
   const total = data.reduce((sum, d) => sum + d.value, 0)
   const active = activeIndex !== null ? data[activeIndex] : null
-  const outerRadius = innerRadius + 32
+  const centerValue = active ? formatCurrency(active.value) : formatCurrency(total)
+  const centerLabel = active ? active.name : totalLabel
+  const availableOuterRadius = Math.max(innerRadius + 8, size / 2 - 8)
+  const outerRadius = Math.min(innerRadius + 32, availableOuterRadius)
+  const centerMaxWidth = Math.max(56, Math.floor(innerRadius * 1.72))
+  const valueFontSize = Math.max(
+    9,
+    Math.min(15, Math.floor((centerMaxWidth / Math.max(centerValue.length, 1)) * 1.55)),
+  )
+  const labelFontSize = Math.max(
+    8,
+    Math.min(10, Math.floor((centerMaxWidth / Math.max(centerLabel.length, 1)) * 1.6)),
+  )
 
   if (data.length === 0 || total === 0) {
     return (
@@ -56,16 +68,22 @@ export function DonutChart({
     <div className="flex flex-col gap-4">
       {/* Chart */}
       <div className="relative" style={{ height: size }}>
-        {/* Center label overlay — positioned over the donut hole */}
+        {/* Center label overlay */}
         <div
           className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-0.5"
           aria-hidden
         >
-          <span className="font-mono text-[clamp(0.75rem,3vw,1rem)] font-semibold tabular-nums text-foreground transition-all duration-200">
-            {active ? formatCurrency(active.value) : formatCurrency(total)}
+          <span
+            className="block overflow-hidden text-ellipsis whitespace-nowrap text-center font-mono font-semibold tabular-nums text-foreground transition-all duration-200"
+            style={{ maxWidth: centerMaxWidth, fontSize: valueFontSize, lineHeight: 1.05 }}
+          >
+            {centerValue}
           </span>
-          <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground transition-all duration-200">
-            {active ? active.name : totalLabel}
+          <span
+            className="block overflow-hidden text-ellipsis whitespace-nowrap text-center font-medium uppercase text-muted-foreground transition-all duration-200"
+            style={{ maxWidth: centerMaxWidth, fontSize: labelFontSize, lineHeight: 1.1, letterSpacing: 0 }}
+          >
+            {centerLabel}
           </span>
         </div>
 
