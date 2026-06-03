@@ -18,7 +18,7 @@ export function InstallmentPlanner({
   compact = false,
 }: InstallmentPlannerProps) {
   return (
-    <div className="rounded-xl border border-amber-100 bg-amber-50/70 p-3 dark:border-amber-900/60 dark:bg-amber-950/25">
+    <div className="rounded-xl border border-warning/20 bg-warning/8 p-3">
       <div className={`grid gap-2 text-xs ${compact ? 'grid-cols-3' : 'grid-cols-2 min-[460px]:grid-cols-4'}`}>
         <InstallmentStat label="Kalan" value={`${remainingCount}/${totalInstallments}`} />
         <InstallmentStat label="Toplam" value={formatCurrency(remainingAmount)} />
@@ -31,9 +31,9 @@ export function InstallmentPlanner({
 
 function InstallmentStat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="min-w-0 rounded-lg bg-white/70 px-2.5 py-2 dark:bg-stone-950/35">
-      <p className="truncate text-[11px] font-bold uppercase text-amber-800/70 dark:text-amber-200/70">{label}</p>
-      <p className="mt-1 truncate text-sm font-black tabular-nums text-stone-950 dark:text-stone-50">{value}</p>
+    <div className="min-w-0 rounded-lg bg-card/60 px-2.5 py-2">
+      <p className="truncate text-[11px] font-bold uppercase text-warning/80">{label}</p>
+      <p className="mt-1 truncate font-mono text-sm font-bold tabular-nums text-foreground">{value}</p>
     </div>
   )
 }

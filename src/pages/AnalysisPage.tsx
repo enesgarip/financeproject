@@ -235,8 +235,8 @@ function downloadCsv(items: SearchItem[]) {
 
 function StatPill({ label, value, tone = 'stone' }: { label: string; value: string; tone?: 'emerald' | 'rose' | 'stone' }) {
   const toneClass = {
-    emerald: 'text-emerald-700 dark:text-emerald-300',
-    rose: 'text-rose-700 dark:text-rose-300',
+    emerald: 'text-success',
+    rose: 'text-destructive',
     stone: 'text-foreground',
   }[tone]
 
@@ -283,7 +283,7 @@ function MonthlyReport({ data }: { data: AnalysisData }) {
   ]
 
   return (
-    <Card className="border-0 shadow-sm ring-1 ring-stone-200/80 dark:ring-stone-800 lg:col-span-7">
+    <Card className="border-border/70 shadow-[var(--shadow-card)] lg:col-span-7">
       <CardHeader className="pb-0">
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -295,7 +295,7 @@ function MonthlyReport({ data }: { data: AnalysisData }) {
               <Download />
               PDF
             </Button>
-            <div className="grid size-11 place-items-center rounded-xl bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300">
+            <div className="grid size-11 place-items-center rounded-xl bg-success/12 text-success">
               <BarChart3 />
             </div>
           </div>
@@ -365,14 +365,14 @@ function UpcomingInstallments({ data }: { data: AnalysisData }) {
     .slice(0, 8)
 
   return (
-    <Card className="border-0 shadow-sm ring-1 ring-stone-200/80 dark:ring-stone-800 lg:col-span-5">
+    <Card className="border-border/70 shadow-[var(--shadow-card)] lg:col-span-5">
       <CardHeader className="pb-0">
         <div className="flex items-start justify-between gap-3">
           <div>
             <CardTitle>Yaklaşan taksitler</CardTitle>
             <p className="mt-1 text-sm text-muted-foreground">{upcoming.length} kart / kredi taksiti</p>
           </div>
-          <WalletCards className="text-emerald-700 dark:text-emerald-300" />
+          <WalletCards className="text-success" />
         </div>
       </CardHeader>
       <CardContent className="space-y-2 pt-2">
@@ -391,7 +391,7 @@ function UpcomingInstallments({ data }: { data: AnalysisData }) {
                     {item.subtitle}
                   </p>
                 </div>
-                <span className="shrink-0 whitespace-nowrap rounded-lg bg-white px-2 py-1 text-xs font-bold tabular-nums text-foreground dark:bg-stone-900">
+                <span className="shrink-0 whitespace-nowrap rounded-lg bg-muted px-2 py-1 font-mono text-xs font-bold tabular-nums text-foreground ring-1 ring-border/60">
                   {formatCurrency(item.amount)}
                 </span>
               </div>
@@ -426,7 +426,7 @@ function BudgetProgress({ budgets, expenses }: { budgets: Budget[]; expenses: Ca
         return (
           <div
             key={budget.id}
-            className={`rounded-xl p-3 ${isOver ? 'bg-rose-50 dark:bg-rose-950/30' : isWarning ? 'bg-amber-50 dark:bg-amber-950/25' : 'bg-muted/45'}`}
+            className={`rounded-xl border p-3 ${isOver ? 'border-destructive/20 bg-destructive/8' : isWarning ? 'border-warning/20 bg-warning/8' : 'border-border/50 bg-muted/30'}`}
           >
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
@@ -435,11 +435,11 @@ function BudgetProgress({ budgets, expenses }: { budgets: Budget[]; expenses: Ca
                   {formatCurrency(spent)} / {formatCurrency(budget.limit_amount)}
                 </p>
                 {isOver ? (
-                  <p className="mt-0.5 text-xs font-medium text-rose-700 dark:text-rose-200">
+                  <p className="mt-0.5 text-xs font-medium text-destructive">
                     Limit {formatCurrency(spent - budget.limit_amount)} aşıldı
                   </p>
                 ) : isWarning ? (
-                  <p className="mt-0.5 text-xs font-medium text-amber-800 dark:text-amber-200">Limite yaklaşıyor</p>
+                  <p className="mt-0.5 text-xs font-medium text-warning">Limite yaklaşıyor</p>
                 ) : null}
               </div>
               <Badge variant={isOver ? 'destructive' : isWarning ? 'secondary' : 'outline'}>%{Math.round(usageRate)}</Badge>
@@ -457,14 +457,14 @@ function StatementArchive({ data }: { data: AnalysisData }) {
   const archives = data.cardStatementArchives.slice(0, 6)
 
   return (
-    <Card className="border-0 shadow-sm ring-1 ring-stone-200/80 dark:ring-stone-800 lg:col-span-5">
+    <Card className="border-border/70 shadow-[var(--shadow-card)] lg:col-span-5">
       <CardHeader className="pb-0">
         <div className="flex items-start justify-between gap-3">
           <div>
             <CardTitle>Ekstre arşivi</CardTitle>
             <p className="mt-1 text-sm text-muted-foreground">{archives.length} son kayıt</p>
           </div>
-          <Archive className="text-emerald-700 dark:text-emerald-300" />
+          <Archive className="text-success" />
         </div>
       </CardHeader>
       <CardContent className="space-y-2 pt-2">
@@ -480,7 +480,7 @@ function StatementArchive({ data }: { data: AnalysisData }) {
                     {formatDate(archive.statement_date)} · son ödeme {formatDate(archive.due_date)}
                   </p>
                 </div>
-                <span className="shrink-0 whitespace-nowrap rounded-lg bg-white px-2 py-1 text-xs font-bold tabular-nums text-foreground dark:bg-stone-900">
+                <span className="shrink-0 whitespace-nowrap rounded-lg bg-muted px-2 py-1 font-mono text-xs font-bold tabular-nums text-foreground ring-1 ring-border/60">
                   {formatCurrency(archive.statement_debt_amount)}
                 </span>
               </div>
@@ -500,7 +500,7 @@ function SearchExport({ items }: { items: SearchItem[] }) {
     : items.slice(0, 12)
 
   return (
-    <Card className="border-0 shadow-sm ring-1 ring-stone-200/80 dark:ring-stone-800 lg:col-span-7">
+    <Card className="border-border/70 shadow-[var(--shadow-card)] lg:col-span-7">
       <CardHeader className="pb-0">
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -520,7 +520,7 @@ function SearchExport({ items }: { items: SearchItem[] }) {
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Ara: market, kart, kredi, hedef..."
-            className="w-full rounded-xl border border-stone-200 bg-white py-3 pl-10 pr-3 text-sm outline-none focus:border-emerald-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+            className="w-full rounded-xl border border-input bg-card/80 py-3 pl-10 pr-3 text-sm text-foreground outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 dark:bg-card/50"
           />
         </label>
         <div className="space-y-2">
@@ -533,7 +533,7 @@ function SearchExport({ items }: { items: SearchItem[] }) {
                 </p>
               </div>
               {item.amount !== null ? (
-                <span className="shrink-0 whitespace-nowrap rounded-lg bg-white px-2 py-1 text-xs font-bold tabular-nums text-foreground dark:bg-stone-900">
+                <span className="shrink-0 whitespace-nowrap rounded-lg bg-muted px-2 py-1 font-mono text-xs font-bold tabular-nums text-foreground ring-1 ring-border/60">
                   {formatCurrency(item.amount)}
                 </span>
               ) : null}
@@ -629,14 +629,14 @@ function FinancialCalendar({ data }: { data: AnalysisData }) {
   const busyDays = Array.from(eventsByDate.entries()).sort(([leftDate], [rightDate]) => leftDate.localeCompare(rightDate))
 
   return (
-    <Card className="border-0 shadow-sm ring-1 ring-stone-200/80 dark:ring-stone-800 lg:col-span-7">
+    <Card className="border-border/70 shadow-[var(--shadow-card)] lg:col-span-7">
       <CardHeader className="pb-0">
         <div className="flex items-start justify-between gap-3">
           <div>
             <CardTitle>Finans takvimi</CardTitle>
             <p className="mt-1 text-sm text-muted-foreground">{formatMonth(dateInputValue(monthStart))} içindeki nakit hareketleri.</p>
           </div>
-          <CalendarDays className="text-emerald-700 dark:text-emerald-300" />
+          <CalendarDays className="text-success" />
         </div>
       </CardHeader>
       <CardContent className="space-y-3 pt-2">
@@ -660,7 +660,7 @@ function FinancialCalendar({ data }: { data: AnalysisData }) {
                 <div className="flex items-center justify-between gap-1">
                   <span className="text-xs font-bold text-foreground">{day}</span>
                   {dayEvents.length > 0 ? (
-                    <span className={`hidden text-[10px] font-bold tabular-nums min-[560px]:inline ${dayTotal >= 0 ? 'text-emerald-700 dark:text-emerald-300' : 'text-rose-700 dark:text-rose-300'}`}>
+                    <span className={`hidden text-[10px] font-bold tabular-nums min-[560px]:inline ${dayTotal >= 0 ? 'text-success' : 'text-destructive'}`}>
                       {dayTotal >= 0 ? '+' : ''}
                       {formatCurrency(dayTotal).replace(',00', '')}
                     </span>
@@ -685,7 +685,7 @@ function FinancialCalendar({ data }: { data: AnalysisData }) {
                 <div key={`detail-${date}`} className="rounded-lg bg-muted/45 p-2.5 text-xs">
                   <div className="flex items-center justify-between gap-3">
                     <span className="font-bold text-foreground">{formatDate(date)}</span>
-                    <span className={`shrink-0 font-bold tabular-nums ${dayTotal >= 0 ? 'text-emerald-700 dark:text-emerald-300' : 'text-rose-700 dark:text-rose-300'}`}>
+                    <span className={`shrink-0 font-bold tabular-nums ${dayTotal >= 0 ? 'text-success' : 'text-destructive'}`}>
                       {dayTotal >= 0 ? '+' : ''}
                       {formatCurrency(dayTotal)}
                     </span>
@@ -710,10 +710,10 @@ function FinancialCalendar({ data }: { data: AnalysisData }) {
 
 function CalendarEventPill({ event }: { event: CalendarEvent }) {
   const toneClass = {
-    emerald: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200',
-    rose: 'bg-rose-100 text-rose-800 dark:bg-rose-950/50 dark:text-rose-200',
-    amber: 'bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-200',
-    stone: 'bg-stone-100 text-stone-800 dark:bg-stone-800 dark:text-stone-200',
+    emerald: 'bg-success/12 text-success',
+    rose: 'bg-destructive/12 text-destructive',
+    amber: 'bg-warning/12 text-warning',
+    stone: 'bg-muted text-muted-foreground',
   }[event.tone]
 
   return (
@@ -963,14 +963,14 @@ function PeopleLedger({ debts }: { debts: Debt[] }) {
   ).sort((a, b) => Math.abs(b.receivable - b.borrowed) - Math.abs(a.receivable - a.borrowed))
 
   return (
-    <Card className="border-0 shadow-sm ring-1 ring-stone-200/80 dark:ring-stone-800 lg:col-span-5">
+    <Card className="border-border/70 shadow-[var(--shadow-card)] lg:col-span-5">
       <CardHeader className="pb-0">
         <div className="flex items-start justify-between gap-3">
           <div>
             <CardTitle>Kişi bazlı bakiye</CardTitle>
             <p className="mt-1 text-sm text-muted-foreground">Açık borç ve alacakları kişi profili gibi oku.</p>
           </div>
-          <Users className="text-emerald-700 dark:text-emerald-300" />
+          <Users className="text-success" />
         </div>
       </CardHeader>
       <CardContent className="space-y-2 pt-2">
@@ -1062,10 +1062,10 @@ function SchemaMigrationNotice({ missingTables }: { missingTables: string[] }) {
   const labels = missingTables.map((table) => optionalTableLabels[table] ?? table).join(', ')
 
   return (
-    <Card className="border-amber-200 bg-amber-50/80 shadow-sm ring-1 ring-amber-200/80 dark:border-amber-900 dark:bg-amber-950/20 dark:ring-amber-900/70 lg:col-span-12">
+    <Card className="border-warning/25 bg-warning/8 shadow-[var(--shadow-card)] lg:col-span-12">
       <CardContent className="p-4">
-        <p className="text-sm font-bold text-amber-900 dark:text-amber-100">Canlı veritabanı migration bekliyor</p>
-        <p className="mt-1 text-sm text-amber-900/75 dark:text-amber-100/75">
+        <p className="text-sm font-bold text-warning">Canlı veritabanı migration bekliyor</p>
+        <p className="mt-1 text-sm text-warning/80">
           {labels} tabloları henüz canlı Supabase tarafında görünmüyor. Ekranı kırmadan mevcut verilerle devam ediyorum.
         </p>
       </CardContent>
@@ -1180,7 +1180,7 @@ export function AnalysisPage() {
   const canManageGoals = !missingTables.includes('savings_goals')
 
   if (error) {
-    return <p className="rounded-lg bg-rose-50 p-3 text-sm text-rose-700">{error}</p>
+    return <p className="rounded-xl border border-destructive/20 bg-destructive/8 p-3 text-sm font-medium text-destructive">{error}</p>
   }
 
   return (
@@ -1198,7 +1198,7 @@ export function AnalysisPage() {
         <StatementArchive data={data} />
       </div>
 
-      {loading ? <p className="rounded-xl bg-white p-4 text-sm text-muted-foreground dark:bg-stone-900">Analiz verileri yükleniyor...</p> : null}
+      {loading ? <p className="rounded-xl border border-border/60 bg-card p-4 text-sm text-muted-foreground">Analiz verileri yükleniyor...</p> : null}
 
       {canManageBudgets ? (
       <CrudPage

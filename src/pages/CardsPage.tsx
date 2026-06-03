@@ -386,7 +386,7 @@ function CreditCardOverview({ rows }: { rows: Card[] }) {
       {groups.length > 0 ? (
         <div className="flex snap-x gap-3 overflow-x-auto pb-1">
           {groups.map((group) => (
-            <SurfaceCard key={group.key} className="min-w-[86%] snap-start border-0 shadow-sm ring-1 ring-stone-200/80 dark:ring-stone-800 min-[520px]:min-w-[48%]">
+            <SurfaceCard key={group.key} className="min-w-[86%] snap-start border-border/70 shadow-[var(--shadow-card)] min-[520px]:min-w-[48%]">
               <CardHeader className="pb-0">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex min-w-0 items-start gap-3">
@@ -559,7 +559,7 @@ function getCreditCardStatus(card: Card, usageRate: number): CreditCardStatus {
     return {
       label: 'Gecikmiş',
       description: `${Math.abs(remainingDays)} gün geçti`,
-      className: 'bg-rose-50 text-rose-700 ring-rose-200 dark:bg-rose-950/35 dark:text-rose-200 dark:ring-rose-900/70',
+      className: 'bg-destructive/12 text-destructive ring-destructive/20',
     }
   }
 
@@ -567,7 +567,7 @@ function getCreditCardStatus(card: Card, usageRate: number): CreditCardStatus {
     return {
       label: 'Son ödeme yaklaşıyor',
       description: remainingDays === 0 ? 'Bugün' : `${remainingDays} gün kaldı`,
-      className: 'bg-amber-50 text-amber-800 ring-amber-200 dark:bg-amber-950/35 dark:text-amber-100 dark:ring-amber-900/70',
+      className: 'bg-warning/12 text-warning ring-warning/20',
     }
   }
 
@@ -575,14 +575,14 @@ function getCreditCardStatus(card: Card, usageRate: number): CreditCardStatus {
     return {
       label: 'Limit kullanımı yüksek',
       description: `%${Math.round(usageRate)} kullanım`,
-      className: 'bg-amber-50 text-amber-800 ring-amber-200 dark:bg-amber-950/35 dark:text-amber-100 dark:ring-amber-900/70',
+      className: 'bg-warning/12 text-warning ring-warning/20',
     }
   }
 
   return {
     label: 'Normal',
     description: payableDebt > 0 ? 'Takipte' : 'Ödenebilir borç yok',
-    className: 'bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-950/35 dark:text-emerald-200 dark:ring-emerald-900/70',
+    className: 'bg-success/12 text-success ring-success/20',
   }
 }
 
@@ -608,9 +608,9 @@ function openStatementAmount(card: Card, statements: CardStatementArchive[]) {
 function CardDatum({ label, value, tone = 'neutral' }: { label: string; value: string; tone?: 'neutral' | 'good' | 'warning' | 'danger' }) {
   const valueClass = {
     neutral: 'text-foreground',
-    good: 'text-emerald-700 dark:text-emerald-300',
-    warning: 'text-amber-700 dark:text-amber-300',
-    danger: 'text-rose-700 dark:text-rose-300',
+    good: 'text-success',
+    warning: 'text-warning',
+    danger: 'text-destructive',
   }[tone]
 
   return (
@@ -1029,7 +1029,7 @@ function QuickExpensePanel({
   if (cards.length === 0) return null
 
   return (
-    <SurfaceCard id="hizli-harcama" className="border-0 shadow-sm ring-1 ring-emerald-200/80 dark:ring-emerald-900/70">
+    <SurfaceCard id="hizli-harcama" className="border-success/20 shadow-[var(--shadow-card)]">
       <CardHeader className="pb-0">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
@@ -1049,7 +1049,7 @@ function QuickExpensePanel({
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="flex flex-col gap-2.5">
-          <label className="block text-sm font-medium text-stone-700 dark:text-stone-200">
+          <label className="block text-sm font-semibold text-foreground">
             Kart
             <select
               value={activeCardId}
@@ -1058,7 +1058,7 @@ function QuickExpensePanel({
                 setPaymentMode('cash')
                 setLocalError('')
               }}
-              className="mt-1 w-full rounded-lg border border-stone-200 bg-white px-3 py-2.5 outline-none focus:border-emerald-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+              className="mt-1 w-full rounded-lg border border-input bg-white px-3 py-2.5 outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 dark:bg-card/50 dark:text-foreground"
               required
             >
               {cards.map((card) => (
@@ -1078,7 +1078,7 @@ function QuickExpensePanel({
               }}
               required
             />
-            <label className="block text-sm font-medium text-stone-700 dark:text-stone-200">
+            <label className="block text-sm font-semibold text-foreground">
               Açıklama
               <input
                 value={description}
@@ -1088,13 +1088,13 @@ function QuickExpensePanel({
                 }}
                 type="text"
                 placeholder="Migros, benzin, yemek..."
-                className="mt-1 w-full rounded-lg border border-stone-200 px-3 py-2.5 outline-none focus:border-emerald-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+                className="mt-1 w-full rounded-lg border border-input px-3 py-2.5 outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 dark:bg-card/50 dark:text-foreground"
                 required
               />
             </label>
           </div>
           <div className="grid grid-cols-2 gap-2.5 min-[760px]:grid-cols-4">
-            <label className="block min-w-0 text-sm font-medium text-stone-700 dark:text-stone-200">
+            <label className="block min-w-0 text-sm font-semibold text-foreground">
               Tarih
               <input
                 value={spentAt}
@@ -1105,11 +1105,11 @@ function QuickExpensePanel({
                 onClick={(event) => event.currentTarget.showPicker?.()}
                 onFocus={(event) => event.currentTarget.showPicker?.()}
                 type="date"
-                className="mt-1 block w-full min-w-0 max-w-[10.75rem] appearance-none rounded-lg border border-stone-200 px-3 py-2.5 outline-none [color-scheme:light] focus:border-emerald-600 min-[480px]:max-w-full dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100 dark:[color-scheme:dark]"
+                className="mt-1 block w-full min-w-0 max-w-[10.75rem] appearance-none rounded-lg border border-input px-3 py-2.5 outline-none [color-scheme:light] transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 min-[480px]:max-w-full dark:bg-card/50 dark:text-foreground dark:[color-scheme:dark]"
               />
             </label>
             <CategoryPicker description={description} value={category} onChange={setCategory} />
-            <label className="block min-w-0 text-sm font-medium text-stone-700 dark:text-stone-200">
+            <label className="block min-w-0 text-sm font-semibold text-foreground">
               İşlem türü
               <select
                 value={canUseInstallments ? paymentMode : 'cash'}
@@ -1120,13 +1120,13 @@ function QuickExpensePanel({
                   setLocalError('')
                 }}
                 disabled={!canUseInstallments}
-                className="mt-1 w-full min-w-0 rounded-lg border border-stone-200 bg-white px-3 py-2.5 outline-none focus:border-emerald-600 disabled:bg-stone-100 disabled:text-stone-500 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100 dark:disabled:bg-stone-800"
+                className="mt-1 w-full min-w-0 rounded-lg border border-input bg-card/80 px-3 py-2.5 outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 disabled:bg-muted disabled:text-muted-foreground dark:bg-card/50 dark:text-foreground dark:disabled:bg-muted"
               >
                 <option value="cash">Peşin</option>
                 <option value="installment">Taksitli</option>
               </select>
             </label>
-            <label className="block min-w-0 text-sm font-medium text-stone-700 dark:text-stone-200">
+            <label className="block min-w-0 text-sm font-semibold text-foreground">
               Durum
               <select
                 value={expenseStatus}
@@ -1134,7 +1134,7 @@ function QuickExpensePanel({
                   setExpenseStatus(event.target.value as CardExpenseStatus)
                   setLocalError('')
                 }}
-                className="mt-1 w-full min-w-0 rounded-lg border border-stone-200 bg-white px-3 py-2.5 outline-none focus:border-emerald-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+                className="mt-1 w-full min-w-0 rounded-lg border border-input bg-white px-3 py-2.5 outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 dark:bg-card/50 dark:text-foreground"
               >
                 <option value="posted">Kesinleşmiş</option>
                 <option value="provision">Provizyonda</option>
@@ -1142,7 +1142,7 @@ function QuickExpensePanel({
             </label>
           </div>
           {canUseInstallments && paymentMode === 'installment' ? (
-            <label className="block text-sm font-medium text-stone-700 dark:text-stone-200">
+            <label className="block text-sm font-semibold text-foreground">
               Taksit sayısı
               <input
                 value={installmentCount}
@@ -1154,12 +1154,12 @@ function QuickExpensePanel({
                 min="2"
                 max="36"
                 step="1"
-                className="mt-1 w-full rounded-lg border border-stone-200 px-3 py-2.5 outline-none focus:border-emerald-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+                className="mt-1 w-full rounded-lg border border-input px-3 py-2.5 outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 dark:bg-card/50 dark:text-foreground"
               />
             </label>
           ) : null}
           {selectedCard?.card_type === 'kredi_karti' ? (
-            <div className="rounded-xl border border-emerald-100 bg-emerald-50/70 p-3 dark:border-emerald-900/60 dark:bg-emerald-950/25">
+            <div className="rounded-xl border border-success/20 bg-success/8 p-3">
               <div className="grid grid-cols-2 gap-2 min-[430px]:grid-cols-4">
                 <OverviewStat label="Dönem" value={statementPreview?.periodLabel ?? 'Gün eksik'} />
                 <OverviewStat label="Ekstre" value={statementPreview ? formatDate(statementPreview.statementDate) : 'Gün eksik'} />
@@ -1170,28 +1170,28 @@ function QuickExpensePanel({
                 />
               </div>
               {statementPreview ? (
-                <p className="mt-2 text-xs font-medium text-emerald-800 dark:text-emerald-100">
+                <p className="mt-2 text-xs font-medium text-success">
                   {isProvision
                     ? `Bu işlem şimdilik sadece limitten düşer; kesinleşince ${statementPreview.statementMonthLabel} dönemine alınır.`
                     : `Bu işlem ${statementPreview.statementMonthLabel} ekstresine girer; ödeme planı ${formatDate(statementPreview.dueDate)} tarihine bağlanır.`}
                 </p>
               ) : (
-                <p className="mt-2 text-xs font-medium text-amber-700 dark:text-amber-200">
+                <p className="mt-2 text-xs font-medium text-warning">
                   Kartta ekstre ve son ödeme günü eksik. Kartı güncellersen analizler daha net çalışır.
                 </p>
               )}
             </div>
           ) : selectedCard ? (
-            <div className="grid grid-cols-2 gap-2 rounded-xl border border-stone-200 bg-stone-50/80 p-3 dark:border-stone-800 dark:bg-stone-900/50">
+            <div className="grid grid-cols-2 gap-2 rounded-xl border border-border/60 bg-muted/30 p-3">
               <OverviewStat label="Mevcut bakiye" value={formatCurrency(selectedCard.current_balance)} />
               <OverviewStat label="İşlem sonrası" value={formatCurrency(debitPreview)} />
             </div>
           ) : null}
-          {localError ? <p className="rounded-lg bg-rose-50 p-3 text-sm text-rose-700 dark:bg-rose-950/40 dark:text-rose-200">{localError}</p> : null}
+          {localError ? <p className="rounded-xl border border-destructive/20 bg-destructive/8 p-3 text-sm font-medium text-destructive">{localError}</p> : null}
           <button
             type="submit"
             disabled={!canSubmitQuickExpense}
-            className="rounded-xl bg-emerald-700 px-4 py-3 text-sm font-semibold text-white shadow-sm disabled:opacity-60 hover:bg-emerald-800"
+            className="rounded-xl bg-success px-4 py-3 text-sm font-semibold text-white shadow-sm disabled:opacity-60 hover:bg-success/90"
           >
             {saving ? 'Ekleniyor...' : 'Harcamayı kaydet'}
           </button>
@@ -1372,7 +1372,7 @@ function LegacyInstallmentPanel({
   if (creditCards.length === 0) return null
 
   return (
-    <SurfaceCard className="border-0 shadow-sm ring-1 ring-amber-200/80 dark:ring-amber-900/70">
+    <SurfaceCard className="border-warning/20 shadow-[var(--shadow-card)]">
       <CardHeader className="pb-0">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
@@ -1384,7 +1384,7 @@ function LegacyInstallmentPanel({
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="flex flex-col gap-2.5">
-          <label className="block text-sm font-medium text-stone-700 dark:text-stone-200">
+          <label className="block text-sm font-semibold text-foreground">
             Kart
             <select
               value={activeCardId}
@@ -1392,7 +1392,7 @@ function LegacyInstallmentPanel({
                 setCardId(event.target.value)
                 setLocalError('')
               }}
-              className="mt-1 w-full rounded-lg border border-stone-200 bg-white px-3 py-2.5 outline-none focus:border-emerald-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+              className="mt-1 w-full rounded-lg border border-input bg-white px-3 py-2.5 outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 dark:bg-card/50 dark:text-foreground"
               required
             >
               {creditCards.map((card) => (
@@ -1412,7 +1412,7 @@ function LegacyInstallmentPanel({
               }}
               required
             />
-            <label className="block text-sm font-medium text-stone-700 dark:text-stone-200">
+            <label className="block text-sm font-semibold text-foreground">
               Açıklama
               <input
                 value={description}
@@ -1422,13 +1422,13 @@ function LegacyInstallmentPanel({
                 }}
                 type="text"
                 placeholder="Telefon, beyaz eşya..."
-                className="mt-1 w-full rounded-lg border border-stone-200 px-3 py-2.5 outline-none focus:border-emerald-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+                className="mt-1 w-full rounded-lg border border-input px-3 py-2.5 outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 dark:bg-card/50 dark:text-foreground"
                 required
               />
             </label>
           </div>
           <div className="grid grid-cols-2 gap-2.5">
-            <label className="block text-sm font-medium text-stone-700 dark:text-stone-200">
+            <label className="block text-sm font-semibold text-foreground">
               Toplam
               <input
                 value={totalInstallments}
@@ -1440,10 +1440,10 @@ function LegacyInstallmentPanel({
                 min="2"
                 max="36"
                 step="1"
-                className="mt-1 w-full rounded-lg border border-stone-200 px-3 py-2.5 outline-none focus:border-emerald-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+                className="mt-1 w-full rounded-lg border border-input px-3 py-2.5 outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 dark:bg-card/50 dark:text-foreground"
               />
             </label>
-            <label className="block text-sm font-medium text-stone-700 dark:text-stone-200">
+            <label className="block text-sm font-semibold text-foreground">
               Ödenen
               <input
                 value={paidInstallments}
@@ -1455,12 +1455,12 @@ function LegacyInstallmentPanel({
                 min="0"
                 max={Math.max(0, parsedTotalInstallments - 1)}
                 step="1"
-                className="mt-1 w-full rounded-lg border border-stone-200 px-3 py-2.5 outline-none focus:border-emerald-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+                className="mt-1 w-full rounded-lg border border-input px-3 py-2.5 outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 dark:bg-card/50 dark:text-foreground"
               />
             </label>
           </div>
           <div className="grid grid-cols-1 gap-2.5 min-[480px]:grid-cols-2">
-            <label className="block min-w-0 text-sm font-medium text-stone-700 dark:text-stone-200">
+            <label className="block min-w-0 text-sm font-semibold text-foreground">
               Sıradaki ay
               <input
                 value={nextDueMonth}
@@ -1470,13 +1470,13 @@ function LegacyInstallmentPanel({
                 }}
                 type="month"
                 min={monthInputValue()}
-                className="mt-1 block w-full min-w-0 max-w-[10.75rem] appearance-none rounded-lg border border-stone-200 px-3 py-2.5 outline-none focus:border-emerald-600 min-[480px]:max-w-full dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+                className="mt-1 block w-full min-w-0 max-w-[10.75rem] appearance-none rounded-lg border border-input px-3 py-2.5 outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 min-[480px]:max-w-full dark:bg-card/50 dark:text-foreground"
                 required
               />
             </label>
             <CategoryPicker description={description} value={category} onChange={setCategory} />
           </div>
-          <p className="rounded-lg bg-amber-50 px-3 py-2.5 text-xs font-medium text-amber-950 dark:bg-amber-950/30 dark:text-amber-100">
+          <p className="rounded-xl border border-warning/20 bg-warning/8 px-3 py-2.5 text-xs font-medium text-warning">
             Kalan {formatCurrency(remainingAmount)} tutarı otomatik olarak kart borcuna eklenir; böylece gelecek taksitler limit hesabına yansır.
           </p>
           <InstallmentPlanner
@@ -1487,11 +1487,11 @@ function LegacyInstallmentPanel({
             firstLabel={formatMonthLabel(nextDueMonth)}
             monthlyAmount={parsedInstallmentAmount}
           />
-          {localError ? <p className="rounded-lg bg-rose-50 p-3 text-sm text-rose-700 dark:bg-rose-950/40 dark:text-rose-200">{localError}</p> : null}
+          {localError ? <p className="rounded-xl border border-destructive/20 bg-destructive/8 p-3 text-sm font-medium text-destructive">{localError}</p> : null}
           <button
             type="submit"
             disabled={saving || !canSubmitLegacyInstallment}
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-stone-800 px-4 py-3 text-sm font-semibold text-white shadow-sm disabled:opacity-60 hover:bg-stone-900 dark:bg-stone-700 dark:hover:bg-stone-600"
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-[0_2px_8px_color-mix(in_srgb,var(--primary)_30%,transparent)] transition hover:bg-primary/90 active:scale-[0.98] disabled:opacity-50"
           >
             <CalendarClock size={16} />
             {saving ? 'Ekleniyor...' : 'Devir taksitlerini ekle'}
@@ -1558,7 +1558,7 @@ function ProvisionPanel({
 
   if (loading && pending.length === 0) {
     return (
-      <SurfaceCard className="border-0 shadow-sm ring-1 ring-amber-200/80 dark:ring-amber-900/70">
+      <SurfaceCard className="border-warning/20 shadow-[var(--shadow-card)]">
         <CardContent className="p-4 text-sm text-muted-foreground">Provizyonlar yükleniyor...</CardContent>
       </SurfaceCard>
     )
@@ -1567,7 +1567,7 @@ function ProvisionPanel({
   if (pending.length === 0) return null
 
   return (
-    <SurfaceCard className="border-0 shadow-sm ring-1 ring-amber-200/80 dark:ring-amber-900/70">
+    <SurfaceCard className="border-warning/20 shadow-[var(--shadow-card)]">
       <CardHeader className="pb-0">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
@@ -1584,7 +1584,7 @@ function ProvisionPanel({
               type="button"
               onClick={() => onPostAll(pending)}
               disabled={Boolean(actionId)}
-              className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-emerald-700 px-2.5 py-1.5 text-xs font-semibold text-white disabled:opacity-60 hover:bg-emerald-800"
+              className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-success px-2.5 py-1.5 text-xs font-semibold text-white disabled:opacity-60 hover:bg-success/90"
             >
               <CheckCircle2 size={13} />
               {actionId === 'post-all' ? 'Aktarılıyor...' : 'Tümünü aktar'}
@@ -1599,7 +1599,7 @@ function ProvisionPanel({
           const cancelActionId = `cancel-${expense.id}`
 
           return (
-            <div key={expense.id} className="rounded-xl bg-amber-50/80 px-3 py-2.5 dark:bg-amber-950/25">
+            <div key={expense.id} className="rounded-xl border border-warning/15 bg-warning/8 px-3 py-2.5">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="truncate text-sm font-bold text-foreground">{expense.description}</p>
@@ -1607,11 +1607,11 @@ function ProvisionPanel({
                     {card ? `${card.bank_name} · ${card.card_name}` : 'Kart'} · {formatDate(expense.spent_at)}
                   </p>
                 </div>
-                <span className="shrink-0 rounded-lg bg-white px-2 py-1 text-xs font-bold tabular-nums text-foreground dark:bg-stone-900">
+                <span className="shrink-0 rounded-lg bg-card px-2 py-1 text-xs font-bold tabular-nums text-foreground ring-1 ring-border/60">
                   {formatCurrency(expense.amount)}
                 </span>
               </div>
-              <div className="mt-3 rounded-lg border border-amber-200/80 bg-white/70 p-2.5 dark:border-amber-900/60 dark:bg-stone-950/45">
+              <div className="mt-3 rounded-lg border border-warning/20 bg-card/60 p-2.5">
                 <div className="grid gap-2 min-[520px]:grid-cols-[minmax(0,1fr)_auto] min-[520px]:items-start">
                   <MoneyInput
                     label="Kısmi aktarılacak tutar"
@@ -1623,16 +1623,16 @@ function ProvisionPanel({
                     type="button"
                     onClick={() => handlePartialPost(expense)}
                     disabled={Boolean(actionId)}
-                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800 disabled:opacity-60 hover:bg-emerald-100 dark:border-emerald-900/70 dark:bg-emerald-950/35 dark:text-emerald-200 dark:hover:bg-emerald-950/55 min-[520px]:mt-6"
+                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-success/25 bg-success/8 px-3 py-2 text-xs font-semibold text-success transition hover:bg-success/15 disabled:opacity-50 min-[520px]:mt-6"
                   >
                     <CheckCircle2 size={14} />
                     {actionId === `partial-${expense.id}` ? 'Aktarılıyor...' : 'Kısmi aktar'}
                   </button>
                 </div>
                 {partialErrors[expense.id] ? (
-                  <p className="mt-2 text-xs font-semibold text-rose-700 dark:text-rose-300">{partialErrors[expense.id]}</p>
+                  <p className="mt-2 text-xs font-semibold text-destructive">{partialErrors[expense.id]}</p>
                 ) : (
-                  <p className="mt-2 text-xs text-amber-900/75 dark:text-amber-100/75">
+                  <p className="mt-2 text-xs text-warning/80">
                     Kalan tutar provizyonda bekler; önceki provizyon kayıtları da bu alandan parçalı aktarılır.
                   </p>
                 )}
@@ -1642,7 +1642,7 @@ function ProvisionPanel({
                   type="button"
                   onClick={() => onPost(expense)}
                   disabled={Boolean(actionId)}
-                  className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-700 px-3 py-2 text-xs font-semibold text-white disabled:opacity-60 hover:bg-emerald-800"
+                  className="inline-flex items-center justify-center gap-2 rounded-lg bg-success px-3 py-2 text-xs font-semibold text-white disabled:opacity-60 hover:bg-success/90"
                 >
                   <CheckCircle2 size={14} />
                   {actionId === postActionId ? 'İşleniyor...' : 'Tamamını aktar'}
@@ -1651,7 +1651,7 @@ function ProvisionPanel({
                   type="button"
                   onClick={() => onCancel(expense)}
                   disabled={Boolean(actionId)}
-                  className="inline-flex items-center justify-center gap-2 rounded-lg border border-rose-200 bg-white px-3 py-2 text-xs font-semibold text-rose-700 disabled:opacity-60 hover:bg-rose-50 dark:border-rose-900/70 dark:bg-stone-950 dark:text-rose-300 dark:hover:bg-rose-950/30"
+                  className="inline-flex items-center justify-center gap-2 rounded-lg border border-destructive/25 bg-destructive/8 px-3 py-2 text-xs font-semibold text-destructive transition hover:bg-destructive/15 disabled:opacity-50"
                 >
                   <XCircle size={14} />
                   {actionId === cancelActionId ? 'İşleniyor...' : 'İptal et'}
@@ -1690,7 +1690,7 @@ function StatementPanel({
 
   if (loading && openStatements.length === 0) {
     return (
-      <SurfaceCard className="border-0 shadow-sm ring-1 ring-emerald-200/80 dark:ring-emerald-900/70">
+      <SurfaceCard className="border-success/20 shadow-[var(--shadow-card)]">
         <CardContent className="p-4 text-sm text-muted-foreground">Ekstreler yukleniyor...</CardContent>
       </SurfaceCard>
     )
@@ -1699,7 +1699,7 @@ function StatementPanel({
   if (openStatements.length === 0) return null
 
   return (
-    <SurfaceCard className="border-0 shadow-sm ring-1 ring-emerald-200/80 dark:ring-emerald-900/70">
+    <SurfaceCard className="border-success/20 shadow-[var(--shadow-card)]">
       <CardHeader className="pb-0">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
@@ -1718,7 +1718,7 @@ function StatementPanel({
           if (!card) return null
 
           return (
-            <div key={statement.id} className="rounded-xl bg-emerald-50/70 px-3 py-3 dark:bg-emerald-950/20">
+            <div key={statement.id} className="rounded-xl border border-success/15 bg-success/8 px-3 py-3">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="truncate text-sm font-bold text-foreground">{card.card_name}</p>
@@ -1726,19 +1726,19 @@ function StatementPanel({
                     {card.bank_name} - {statementPeriodLabel(statement)} - son odeme {formatDate(statement.due_date)}
                   </p>
                 </div>
-                <span className="shrink-0 rounded-lg bg-white px-2 py-1 text-xs font-bold tabular-nums text-foreground dark:bg-stone-900">
+                <span className="shrink-0 rounded-lg bg-card px-2 py-1 text-xs font-bold tabular-nums text-foreground ring-1 ring-border/60">
                   {formatCurrency(statement.statement_debt_amount)}
                 </span>
               </div>
               <div className="mt-3 grid gap-2 min-[520px]:grid-cols-[minmax(0,1fr)_auto] min-[520px]:items-center">
-                <p className="text-xs leading-5 text-emerald-900/80 dark:text-emerald-100/80">
+                <p className="text-xs leading-5 text-success/80">
                   Bu tutar kart borcunun icindedir. Kredi karti taksitleri ayrica borc olarak ikinci kez eklenmez.
                 </p>
                 <button
                   type="button"
                   onClick={() => onPay(statement, card)}
                   disabled={Boolean(actionId)}
-                  className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-emerald-700 px-3 py-2 text-xs font-semibold text-white shadow-sm disabled:opacity-60 hover:bg-emerald-800"
+                  className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-success px-3 py-2 text-xs font-semibold text-white shadow-sm disabled:opacity-60 hover:bg-success/90"
                 >
                   <CheckCircle2 size={14} />
                   {actionId === statement.id ? 'Isleniyor...' : 'Ekstreyi odendi isaretle'}
@@ -2306,7 +2306,7 @@ export function CardsPage() {
               {!loading && section === 'ekstreler' ? (
                 <>
                   {statementError ? (
-                    <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">{statementError}</p>
+                    <p className="rounded-xl border border-warning/20 bg-warning/8 p-3 text-sm font-medium text-warning">{statementError}</p>
                   ) : null}
                   <StatementPanel
                     rows={cardRows}
@@ -2316,7 +2316,7 @@ export function CardsPage() {
                     onPay={(statement, card) => openStatementPayment(statement, card, cardRows, reload)}
                   />
                   {provisionError ? (
-                    <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">{provisionError}</p>
+                    <p className="rounded-xl border border-warning/20 bg-warning/8 p-3 text-sm font-medium text-warning">{provisionError}</p>
                   ) : null}
                   <ProvisionPanel
                     rows={cardRows}
@@ -2411,19 +2411,19 @@ export function CardsPage() {
 
           const stats = limitGroupStats(row, helpers.rows as Card[])
           return (
-            <div className="mt-3 rounded-xl bg-white/60 p-3 dark:bg-stone-950/35">
-              <div className="mb-1.5 flex items-center justify-between gap-3 text-xs text-stone-600 dark:text-stone-400">
+            <div className="mt-3 rounded-xl border border-border/50 bg-muted/30 p-3">
+              <div className="mb-1.5 flex items-center justify-between gap-3 text-xs text-muted-foreground">
                 <span>{stats.isShared ? 'Ortak limit kullanımı' : 'Limit kullanımı'}</span>
-                <span>{Math.round(stats.usageRate)}%</span>
+                <span className="font-mono font-semibold tabular-nums text-foreground">{Math.round(stats.usageRate)}%</span>
               </div>
-              <div className="h-2 w-full overflow-hidden rounded-full bg-stone-200 dark:bg-stone-800">
+              <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
                 <div
-                  className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-emerald-500 transition-all duration-500"
+                  className="h-full rounded-full bg-gradient-to-r from-primary to-info transition-all duration-500"
                   style={{ width: `${stats.usageRate}%` }}
                 />
               </div>
               {stats.isShared ? (
-                <div className="mt-2 grid grid-cols-1 gap-2 text-xs text-stone-600 dark:text-stone-300 min-[430px]:grid-cols-3">
+                <div className="mt-2 grid grid-cols-1 gap-2 text-xs text-muted-foreground min-[430px]:grid-cols-3">
                   <span>Grup borcu: {formatCurrency(stats.totalDebt)}</span>
                   <span>Provizyon: {formatCurrency(stats.provisionAmount)}</span>
                   <span>Kalan limit: {formatCurrency(stats.availableLimit)}</span>
@@ -2448,7 +2448,7 @@ export function CardsPage() {
                   openDebtPayment(row, helpers.reload, helpers.rows as Card[])
                   helpers.closeMenu()
                 }}
-                className="flex w-full items-center gap-2 px-3 py-2 text-sm text-stone-700 hover:bg-stone-50 dark:text-stone-200 dark:hover:bg-stone-800"
+                className="flex w-full items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted"
               >
                 <ReceiptText size={14} />
                 Borç öde
@@ -2459,7 +2459,7 @@ export function CardsPage() {
                   helpers.closeMenu()
                   void cutStatement(row, helpers.reload, helpers.setError)
                 }}
-                className="flex w-full items-center gap-2 px-3 py-2 text-sm text-stone-700 hover:bg-stone-50 dark:text-stone-200 dark:hover:bg-stone-800"
+                className="flex w-full items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted"
               >
                 <ReceiptText size={14} />
                 Ekstre kes
@@ -2472,7 +2472,7 @@ export function CardsPage() {
             <button
               type="button"
               onClick={() => openTransaction(row, helpers.reload, helpers.rows as Card[])}
-              className="rounded-lg border border-stone-200 bg-stone-700 px-3 py-2 text-xs font-semibold text-white shadow-sm dark:border-stone-700 dark:bg-stone-600"
+              className="rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground shadow-[0_2px_8px_color-mix(in_srgb,var(--primary)_30%,transparent)] transition hover:bg-primary/90 active:scale-[0.97]"
             >
               İşlem
             </button>
@@ -2482,11 +2482,11 @@ export function CardsPage() {
 
       <SimpleModal title="Banka hesabı işlemi" open={Boolean(transactionCard)} onClose={() => setTransactionCard(null)}>
         <form onSubmit={handleTransactionSubmit} className="space-y-4">
-          <div className="rounded-lg bg-stone-50 p-3 text-sm text-stone-600 dark:bg-stone-900 dark:text-stone-300">
-            <p className="font-semibold text-stone-950 dark:text-stone-50">{transactionCard?.card_name}</p>
+          <div className="rounded-xl border border-border/60 bg-muted/30 p-3 text-sm text-muted-foreground">
+            <p className="font-semibold text-foreground">{transactionCard?.card_name}</p>
             <p>Mevcut bakiye: {formatCurrency(transactionCard?.current_balance ?? 0)}</p>
           </div>
-          <label className="block text-sm font-medium text-stone-700 dark:text-stone-200">
+          <label className="block text-sm font-semibold text-foreground">
             İşlem tipi
             <select
               value={transactionType}
@@ -2495,14 +2495,14 @@ export function CardsPage() {
                 setTransactionTargetCard('')
                 setTransactionError('')
               }}
-              className="mt-1 w-full rounded-lg border border-stone-200 bg-white px-3 py-3 outline-none focus:border-emerald-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+              className="mt-1 w-full rounded-lg border border-input bg-white px-3 py-3 outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 dark:bg-card/50 dark:text-foreground"
             >
               <option value="in">Para geldi</option>
               <option value="out">Para gitti</option>
               <option value="transfer">Hesaplar arası transfer</option>
             </select>
           </label>
-          <label className="block text-sm font-medium text-stone-700 dark:text-stone-200">
+          <label className="block text-sm font-semibold text-foreground">
             Tutar
             <input
               required
@@ -2511,12 +2511,12 @@ export function CardsPage() {
               type="number"
               value={transactionAmount}
               onChange={(event) => setTransactionAmount(event.target.value)}
-              className="mt-1 w-full rounded-lg border border-stone-200 px-3 py-3 outline-none focus:border-emerald-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+              className="mt-1 w-full rounded-lg border border-input px-3 py-3 outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 dark:bg-card/50 dark:text-foreground"
             />
           </label>
           {transactionType === 'transfer' ? (
             <>
-              <label className="block text-sm font-medium text-stone-700 dark:text-stone-200">
+              <label className="block text-sm font-semibold text-foreground">
                 Hedef hesap
                 <select
                   required
@@ -2525,7 +2525,7 @@ export function CardsPage() {
                     setTransactionTargetCard(event.target.value)
                     setTransactionError('')
                   }}
-                  className="mt-1 w-full rounded-lg border border-stone-200 bg-white px-3 py-3 outline-none focus:border-emerald-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+                  className="mt-1 w-full rounded-lg border border-input bg-white px-3 py-3 outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 dark:bg-card/50 dark:text-foreground"
                 >
                   <option value="">{transactionTargetAccounts.length > 0 ? 'Hedef hesap seç' : 'Transfer için ikinci hesap gerekli'}</option>
                   {transactionTargetAccounts.map((account) => (
@@ -2545,11 +2545,11 @@ export function CardsPage() {
               ) : null}
             </>
           ) : null}
-          {transactionError ? <p className="rounded-lg bg-rose-50 p-3 text-sm text-rose-700">{transactionError}</p> : null}
+          {transactionError ? <p className="rounded-xl border border-destructive/20 bg-destructive/8 p-3 text-sm font-medium text-destructive">{transactionError}</p> : null}
           <button
             type="submit"
             disabled={transactionSaving}
-            className="w-full rounded-xl bg-stone-700 px-4 py-3.5 text-sm font-semibold text-white disabled:opacity-60 dark:bg-stone-600"
+            className="h-12 w-full rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-[0_2px_8px_color-mix(in_srgb,var(--primary)_30%,transparent)] transition hover:bg-primary/90 active:scale-[0.99] disabled:opacity-50"
           >
             {transactionSaving ? 'İşleniyor...' : transactionType === 'transfer' ? 'Transferi tamamla' : 'Bakiyeyi güncelle'}
           </button>
@@ -2558,8 +2558,8 @@ export function CardsPage() {
 
       <SimpleModal title="Kredi kartı borç ödeme" open={Boolean(debtPaymentCard)} onClose={() => setDebtPaymentCard(null)}>
         <form onSubmit={handleDebtPaymentSubmit} className="space-y-4">
-          <div className="rounded-lg bg-stone-50 p-3 text-sm text-stone-600 dark:bg-stone-900 dark:text-stone-300">
-            <p className="font-semibold text-stone-950 dark:text-stone-50">{debtPaymentCard?.card_name}</p>
+          <div className="rounded-xl border border-border/60 bg-muted/30 p-3 text-sm text-muted-foreground">
+            <p className="font-semibold text-foreground">{debtPaymentCard?.card_name}</p>
             <p>Ekstre borcu: {formatCurrency(debtPaymentCard?.statement_debt_amount ?? 0)}</p>
             <p>Toplam borç: {formatCurrency(debtPaymentCard?.debt_amount ?? 0)}</p>
             <p>Ödenebilir: {formatCurrency(debtPaymentCard ? cardPayableDebt(debtPaymentCard) : 0)}</p>
@@ -2571,11 +2571,11 @@ export function CardsPage() {
             onChange={setDebtPaymentSourceCard}
             amount={parseNumber(debtPaymentAmount)}
           />
-          {debtPaymentError ? <p className="rounded-lg bg-rose-50 p-3 text-sm text-rose-700">{debtPaymentError}</p> : null}
+          {debtPaymentError ? <p className="rounded-xl border border-destructive/20 bg-destructive/8 p-3 text-sm font-medium text-destructive">{debtPaymentError}</p> : null}
           <button
             type="submit"
             disabled={debtPaymentSaving}
-            className="w-full rounded-xl bg-stone-700 px-4 py-3.5 text-sm font-semibold text-white disabled:opacity-60 dark:bg-stone-600"
+            className="h-12 w-full rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-[0_2px_8px_color-mix(in_srgb,var(--primary)_30%,transparent)] transition hover:bg-primary/90 active:scale-[0.99] disabled:opacity-50"
           >
             {debtPaymentSaving ? 'İşleniyor...' : 'Borç öde'}
           </button>
@@ -2584,8 +2584,8 @@ export function CardsPage() {
 
       <SimpleModal title="Ekstre odemesi" open={Boolean(statementPayment)} onClose={closeStatementPayment}>
         <form onSubmit={handleStatementPaymentSubmit} className="space-y-4">
-          <div className="rounded-lg bg-stone-50 p-3 text-sm text-stone-600 dark:bg-stone-900 dark:text-stone-300">
-            <p className="font-semibold text-stone-950 dark:text-stone-50">{statementPayment?.card.card_name}</p>
+          <div className="rounded-xl border border-border/60 bg-muted/30 p-3 text-sm text-muted-foreground">
+            <p className="font-semibold text-foreground">{statementPayment?.card.card_name}</p>
             <p>Ekstre: {statementPayment ? statementPeriodLabel(statementPayment.statement) : '-'}</p>
             <p>Son odeme: {statementPayment ? formatDate(statementPayment.statement.due_date) : '-'}</p>
             <p>Tutar: {formatCurrency(statementPayment?.statement.statement_debt_amount ?? 0)}</p>
@@ -2596,14 +2596,14 @@ export function CardsPage() {
             onChange={setStatementPaymentSourceCard}
             amount={statementPayment?.statement.statement_debt_amount ?? 0}
           />
-          <p className="rounded-lg bg-emerald-50 p-3 text-xs text-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-100">
+          <p className="rounded-xl border border-success/20 bg-success/8 p-3 text-xs font-medium text-success">
             Bu ekstre kapandiginda ekstreye bagli kredi karti taksitleri otomatik odendi olur. Taksitler net borca ayrica eklenmez.
           </p>
-          {statementPaymentError ? <p className="rounded-lg bg-rose-50 p-3 text-sm text-rose-700">{statementPaymentError}</p> : null}
+          {statementPaymentError ? <p className="rounded-xl border border-destructive/20 bg-destructive/8 p-3 text-sm font-medium text-destructive">{statementPaymentError}</p> : null}
           <button
             type="submit"
             disabled={statementPaymentSaving}
-            className="w-full rounded-xl bg-emerald-700 px-4 py-3.5 text-sm font-semibold text-white disabled:opacity-60"
+            className="h-12 w-full rounded-xl bg-success px-4 text-sm font-semibold text-success-foreground shadow-[0_2px_8px_color-mix(in_srgb,var(--success)_28%,transparent)] transition hover:bg-success/90 active:scale-[0.99] disabled:opacity-50"
           >
             {statementPaymentSaving ? 'Isleniyor...' : 'Ekstreyi odendi isaretle'}
           </button>

@@ -721,7 +721,7 @@ export function DashboardPage() {
   }
 
   if (error) {
-    return <p className="rounded-lg bg-rose-50 p-3 text-sm text-rose-700">{error}</p>
+    return <p className="rounded-xl border border-destructive/20 bg-destructive/8 p-3 text-sm font-medium text-destructive">{error}</p>
   }
 
   const hasCreditLimitGroups = summary.creditLimitGroups.length > 0

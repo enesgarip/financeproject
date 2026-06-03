@@ -54,7 +54,7 @@ export function CardInstallmentCalendarPanel({ cards }: CardInstallmentCalendarP
   if (creditCards.length === 0) return null
 
   return (
-    <SurfaceCard id="taksit-takvimi" className="border-0 shadow-sm ring-1 ring-indigo-200/80 dark:ring-indigo-900/70">
+    <SurfaceCard id="taksit-takvimi" className="border-primary/20 shadow-[var(--shadow-card)]">
       <CardHeader className="pb-0">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
@@ -79,7 +79,7 @@ export function CardInstallmentCalendarPanel({ cards }: CardInstallmentCalendarP
               <div key={month.monthKey} className="rounded-xl bg-muted/45 p-3">
                 <div className="mb-2 flex items-center justify-between gap-2">
                   <p className="text-sm font-bold capitalize text-foreground">{month.monthLabel}</p>
-                  <span className="shrink-0 rounded-lg bg-white px-2 py-1 text-xs font-bold tabular-nums dark:bg-stone-900">
+                  <span className="shrink-0 rounded-lg bg-card px-2 py-1 font-mono text-xs font-bold tabular-nums text-foreground ring-1 ring-border/60">
                     {formatCurrency(month.total)}
                   </span>
                 </div>

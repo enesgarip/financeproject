@@ -379,7 +379,7 @@ export function SavingsGoalsPanel() {
                       <button
                         type="button"
                         onClick={() => setComponentDrafts((rows) => rows.filter((row) => row.key !== draft.key))}
-                        className="text-xs text-rose-600"
+                        className="text-xs font-semibold text-destructive"
                       >
                         Kaldır
                       </button>

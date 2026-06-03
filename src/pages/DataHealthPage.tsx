@@ -245,9 +245,9 @@ function inferInstallmentBaseMonth(expense: CardExpense, rows: CardInstallment[]
 }
 
 function severityClass(severity: HealthIssue['severity']) {
-  if (severity === 'error') return 'bg-rose-50 text-rose-700 dark:bg-rose-950/30 dark:text-rose-300'
-  if (severity === 'warning') return 'bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-300'
-  return 'bg-sky-50 text-sky-700 dark:bg-sky-950/30 dark:text-sky-300'
+  if (severity === 'error') return 'bg-destructive/12 text-destructive'
+  if (severity === 'warning') return 'bg-warning/12 text-warning'
+  return 'bg-info/12 text-info'
 }
 
 function buildIssueGuide(issue: HealthIssue): IssueGuide {
@@ -2197,31 +2197,32 @@ export function DataHealthPage() {
   return (
     <>
     <section className="space-y-4">
-      <SurfaceCard className="border-0 shadow-sm ring-1 ring-stone-200/80 dark:ring-stone-800">
+      <SurfaceCard variant="elevated" className="overflow-hidden">
+        <div className="pointer-events-none -mt-4 mb-1 h-[2px] bg-gradient-to-r from-info via-primary to-success opacity-80" />
         <CardHeader className="pb-2">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <CardTitle className="flex items-center gap-2 text-lg">
-                <ShieldCheck size={20} />
+                <ShieldCheck size={20} className="text-primary" />
                 Veri kontrolü
               </CardTitle>
               <p className="mt-1 text-sm text-muted-foreground">Varlık, kart, kredi, kişi ve planlı ödeme kayıtları.</p>
             </div>
-            <Badge variant={visibleIssues.length > 0 ? 'secondary' : 'default'}>{loading ? 'Kontrol' : `${visibleIssues.length} bulgu`}</Badge>
+            <Badge variant={visibleIssues.length > 0 ? 'warning' : 'success'}>{loading ? 'Kontrol' : `${visibleIssues.length} bulgu`}</Badge>
           </div>
         </CardHeader>
         <CardContent className="space-y-3">
-          <div className="grid grid-cols-3 gap-2 text-xs">
-            <HealthStat label="Kritik" value={stats.errors} />
-            <HealthStat label="Uyarı" value={stats.warnings} />
-            <HealthStat label="Bilgi" value={stats.info} />
+          <div className="grid grid-cols-3 gap-2">
+            <HealthStat label="Kritik" value={stats.errors} tone="danger" />
+            <HealthStat label="Uyarı" value={stats.warnings} tone="warning" />
+            <HealthStat label="Bilgi" value={stats.info} tone="info" />
           </div>
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
               onClick={() => void loadData()}
               disabled={loading || Boolean(fixingId) || undoing}
-              className="inline-flex items-center gap-2 rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm font-semibold text-stone-700 shadow-sm disabled:opacity-60 dark:border-stone-800 dark:bg-stone-950 dark:text-stone-200"
+              className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-sm font-semibold text-foreground transition hover:bg-muted disabled:opacity-50"
             >
               <RefreshCw size={15} />
               Yenile
@@ -2230,7 +2231,7 @@ export function DataHealthPage() {
               type="button"
               onClick={() => void handleFixAll()}
               disabled={loading || Boolean(fixingId) || undoing || fixableIssues.length === 0}
-              className="inline-flex items-center gap-2 rounded-xl bg-emerald-700 px-3 py-2 text-sm font-semibold text-white shadow-sm disabled:opacity-60 hover:bg-emerald-800"
+              className="inline-flex items-center gap-2 rounded-xl bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground shadow-[0_2px_8px_color-mix(in_srgb,var(--primary)_30%,transparent)] transition hover:bg-primary/90 active:scale-[0.97] disabled:opacity-50"
             >
               <Wrench size={15} />
               Güvenli düzeltmeleri uygula
@@ -2240,7 +2241,7 @@ export function DataHealthPage() {
                 type="button"
                 onClick={() => setSnoozedIssueIds([])}
                 disabled={loading || Boolean(fixingId) || undoing}
-                className="inline-flex items-center gap-2 rounded-xl border border-sky-200 bg-sky-50 px-3 py-2 text-sm font-semibold text-sky-800 shadow-sm disabled:opacity-60 dark:border-sky-900/70 dark:bg-sky-950/30 dark:text-sky-200"
+                className="inline-flex items-center gap-2 rounded-xl border border-info/25 bg-info/8 px-3 py-2 text-sm font-semibold text-info transition hover:bg-info/12 disabled:opacity-50"
               >
                 <Activity size={15} />
                 {snoozedIssueIds.length} ertelenen uyariyi geri getir
@@ -2251,7 +2252,7 @@ export function DataHealthPage() {
                 type="button"
                 onClick={() => void handleUndo(undoStack[0])}
                 disabled={loading || Boolean(fixingId) || undoing}
-                className="inline-flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-800 shadow-sm disabled:opacity-60 dark:border-amber-900/70 dark:bg-amber-950/30 dark:text-amber-200"
+                className="inline-flex items-center gap-2 rounded-xl border border-warning/25 bg-warning/8 px-3 py-2 text-sm font-semibold text-warning transition hover:bg-warning/12 disabled:opacity-50"
               >
                 <Undo2 size={15} />
                 {undoing ? 'Geri alınıyor...' : 'Son düzeltmeyi geri al'}
@@ -2261,7 +2262,7 @@ export function DataHealthPage() {
               type="button"
               onClick={() => downloadDataJson(data)}
               disabled={loading || Boolean(fixingId) || undoing || resetting}
-              className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-800 shadow-sm disabled:opacity-60 dark:border-emerald-900/70 dark:bg-emerald-950/30 dark:text-emerald-200"
+              className="inline-flex items-center gap-2 rounded-xl border border-success/25 bg-success/8 px-3 py-2 text-sm font-semibold text-success transition hover:bg-success/12 disabled:opacity-50"
             >
               <Download size={15} />
               JSON yedek
@@ -2270,7 +2271,7 @@ export function DataHealthPage() {
               type="button"
               onClick={() => downloadDataCsv(data)}
               disabled={loading || Boolean(fixingId) || undoing || resetting}
-              className="inline-flex items-center gap-2 rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm font-semibold text-stone-700 shadow-sm disabled:opacity-60 dark:border-stone-800 dark:bg-stone-950 dark:text-stone-200"
+              className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-sm font-semibold text-foreground transition hover:bg-muted disabled:opacity-50"
             >
               <Download size={15} />
               CSV yedek
@@ -2282,23 +2283,23 @@ export function DataHealthPage() {
                 setResetOpen(true)
               }}
               disabled={loading || Boolean(fixingId) || undoing || resetting}
-              className="inline-flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-700 shadow-sm disabled:opacity-60 dark:border-rose-900/70 dark:bg-rose-950/30 dark:text-rose-200"
+              className="inline-flex items-center gap-2 rounded-xl border border-destructive/25 bg-destructive/8 px-3 py-2 text-sm font-semibold text-destructive transition hover:bg-destructive/12 disabled:opacity-50"
             >
               <DatabaseZap size={15} />
               Tüm veriyi sil
             </button>
           </div>
-          {message ? <p className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-200">{message}</p> : null}
-          {error ? <p className="rounded-lg bg-rose-50 p-3 text-sm text-rose-700 dark:bg-rose-950/40 dark:text-rose-200">{error}</p> : null}
+          {message ? <p className="rounded-xl border border-success/20 bg-success/8 p-3 text-sm font-medium text-success">{message}</p> : null}
+          {error ? <p className="rounded-xl border border-destructive/20 bg-destructive/8 p-3 text-sm font-medium text-destructive">{error}</p> : null}
         </CardContent>
       </SurfaceCard>
 
       {loading ? (
-        <div className="h-32 animate-pulse rounded-2xl border border-border bg-muted/60" />
+        <div className="skeleton-shimmer h-32 rounded-2xl" />
       ) : visibleIssues.length === 0 && issues.length > 0 ? (
-        <SurfaceCard className="border-0 shadow-sm ring-1 ring-sky-200/80 dark:ring-sky-900/70">
+        <SurfaceCard variant="default" className="border-info/20">
           <CardContent className="flex items-center gap-3 p-4">
-            <div className="grid size-11 shrink-0 place-items-center rounded-xl bg-sky-50 text-sky-700 dark:bg-sky-950/30 dark:text-sky-300">
+            <div className="grid size-11 shrink-0 place-items-center rounded-xl bg-info/12 text-info">
               <Activity size={22} />
             </div>
             <div>
@@ -2308,9 +2309,9 @@ export function DataHealthPage() {
           </CardContent>
         </SurfaceCard>
       ) : visibleIssues.length === 0 ? (
-        <SurfaceCard className="border-0 shadow-sm ring-1 ring-emerald-200/80 dark:ring-emerald-900/70">
+        <SurfaceCard variant="default" className="border-success/20">
           <CardContent className="flex items-center gap-3 p-4">
-            <div className="grid size-11 shrink-0 place-items-center rounded-xl bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300">
+            <div className="grid size-11 shrink-0 place-items-center rounded-xl bg-success/12 text-success">
               <CheckCircle2 size={22} />
             </div>
             <div>
@@ -2327,7 +2328,7 @@ export function DataHealthPage() {
             const previewRows = issuePreviewDetails(issue)
 
             return (
-              <SurfaceCard key={issue.id} className="border-0 shadow-sm ring-1 ring-stone-200/80 dark:ring-stone-800">
+              <SurfaceCard key={issue.id} variant="default">
                 <CardContent className="p-4">
                   <div className="flex items-start gap-3">
                     <div className={`grid size-10 shrink-0 place-items-center rounded-xl ${severityClass(issue.severity)}`}>
@@ -2336,11 +2337,11 @@ export function DataHealthPage() {
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
                         <Badge variant="outline">{issue.area}</Badge>
-                        <Badge variant={issue.fixable ? 'secondary' : 'outline'}>{issue.fixable ? 'Hazir aksiyon var' : 'Elle inceleme gerekli'}</Badge>
+                        <Badge variant={issue.fixable ? 'success' : 'outline'}>{issue.fixable ? 'Hazir aksiyon var' : 'Elle inceleme gerekli'}</Badge>
                       </div>
                       <h2 className="mt-2 text-base font-bold text-foreground">{issue.title}</h2>
                       <p className="mt-1 text-sm text-muted-foreground">{issue.description}</p>
-                      <div className="mt-3 grid gap-2 rounded-xl border border-stone-200/80 bg-stone-50/80 p-3 text-sm dark:border-stone-800 dark:bg-stone-900/60">
+                      <div className="mt-3 grid gap-2 rounded-xl border border-border/60 bg-muted/30 p-3 text-sm">
                         <div>
                           <p className="font-semibold text-foreground">Sorun nedir?</p>
                           <p className="mt-1 text-muted-foreground">{guide.problem}</p>
@@ -2360,7 +2361,7 @@ export function DataHealthPage() {
                         ))}
                       </div>
                       {previewRows.length > 0 ? (
-                        <div className="mt-3 rounded-xl border border-emerald-100 bg-emerald-50/70 p-3 text-xs text-emerald-900 dark:border-emerald-900/60 dark:bg-emerald-950/25 dark:text-emerald-100">
+                        <div className="mt-3 rounded-xl border border-success/20 bg-success/8 p-3 text-xs text-success">
                           <p className="font-bold">Duzeltme onizlemesi</p>
                           <div className="mt-2 grid gap-1">
                             {previewRows.map((detail, index) => (
@@ -2370,20 +2371,20 @@ export function DataHealthPage() {
                         </div>
                       ) : null}
                       <div className="mt-3">
-                        <p className="text-xs font-semibold uppercase text-muted-foreground">Hızlı aksiyonlar</p>
+                        <p className="finance-label">Hızlı aksiyonlar</p>
                         <div className="mt-2 flex flex-wrap gap-2">
                           {issue.fixable ? (
                             <button
                               type="button"
                               onClick={() => void handleFix(issue)}
                               disabled={Boolean(fixingId) || undoing}
-                              className="rounded-lg bg-stone-800 px-3 py-2 text-xs font-semibold text-white shadow-sm disabled:opacity-60 dark:bg-stone-700"
+                              className="rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground shadow-[0_2px_8px_color-mix(in_srgb,var(--primary)_30%,transparent)] transition hover:bg-primary/90 active:scale-[0.97] disabled:opacity-50"
                             >
                               {fixingId === issue.id ? 'Duzeltiliyor...' : issue.fixLabel}
                             </button>
                           ) : null}
                           {quickLink ? (
-                            <Link to={quickLink.to} className="rounded-lg border border-stone-200 px-3 py-2 text-xs font-semibold text-stone-700 dark:border-stone-800 dark:text-stone-200">
+                            <Link to={quickLink.to} className="rounded-lg border border-border bg-card px-3 py-2 text-xs font-semibold text-foreground transition hover:bg-muted">
                               {quickLink.label}
                             </Link>
                           ) : null}
@@ -2391,7 +2392,7 @@ export function DataHealthPage() {
                             type="button"
                             onClick={() => setSnoozedIssueIds((current) => (current.includes(issue.id) ? current : [...current, issue.id]))}
                             disabled={Boolean(fixingId) || undoing}
-                            className="rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-xs font-semibold text-sky-800 disabled:opacity-60 dark:border-sky-900/70 dark:bg-sky-950/30 dark:text-sky-200"
+                            className="rounded-lg border border-info/25 bg-info/8 px-3 py-2 text-xs font-semibold text-info transition hover:bg-info/12 disabled:opacity-50"
                           >
                             Daha sonra hatirlat
                           </button>
@@ -2409,7 +2410,7 @@ export function DataHealthPage() {
 
     <SimpleModal title="Tüm veriyi sil" open={resetOpen} onClose={() => setResetOpen(false)}>
       <form onSubmit={handleResetAllData} className="space-y-4">
-        <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800 dark:border-rose-900/70 dark:bg-rose-950/30 dark:text-rose-100">
+        <div className="rounded-xl border border-destructive/20 bg-destructive/8 p-3 text-sm text-destructive">
           <div className="flex items-start gap-3">
             <Trash2 className="mt-0.5 size-5 shrink-0" />
             <div>
@@ -2421,18 +2422,18 @@ export function DataHealthPage() {
             </div>
           </div>
         </div>
-        <label className="block text-sm font-medium text-stone-700 dark:text-stone-200">
+        <label className="block text-sm font-semibold text-foreground">
           Onay için SİL yaz
           <input
             value={resetConfirm}
             onChange={(event) => setResetConfirm(event.target.value)}
-            className="mt-1 w-full rounded-lg border border-stone-200 px-3 py-3 outline-none focus:border-rose-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+            className="mt-1 h-10 w-full rounded-xl border border-input bg-card/80 px-3 text-sm text-foreground outline-none transition-all focus:border-destructive focus:ring-2 focus:ring-destructive/20 dark:bg-card/50"
           />
         </label>
         <button
           type="submit"
           disabled={resetting}
-          className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-rose-700 px-4 py-3.5 text-sm font-semibold text-white shadow-sm disabled:opacity-60 hover:bg-rose-800"
+          className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-destructive px-4 text-sm font-semibold text-destructive-foreground shadow-[0_2px_8px_color-mix(in_srgb,var(--destructive)_30%,transparent)] transition hover:bg-destructive/90 active:scale-[0.99] disabled:opacity-50"
         >
           <DatabaseZap size={16} />
           {resetting ? 'Siliniyor...' : 'Tüm veriyi kalıcı olarak sil'}
@@ -2443,11 +2444,16 @@ export function DataHealthPage() {
   )
 }
 
-function HealthStat({ label, value }: { label: string; value: number }) {
+function HealthStat({ label, value, tone = 'neutral' }: { label: string; value: number; tone?: 'neutral' | 'danger' | 'warning' | 'info' }) {
+  const toneClass =
+    tone === 'danger' ? 'text-destructive' :
+    tone === 'warning' ? 'text-warning' :
+    tone === 'info' ? 'text-info' :
+    'text-foreground'
   return (
-    <div className="min-w-0 rounded-lg bg-muted/55 px-2.5 py-2">
-      <p className="truncate text-[11px] font-medium text-muted-foreground">{label}</p>
-      <p className="mt-1 truncate text-sm font-bold tabular-nums text-foreground">{value}</p>
+    <div className="min-w-0 rounded-xl border border-border/60 bg-muted/30 px-3 py-2.5">
+      <p className="finance-label truncate">{label}</p>
+      <p className={`finance-value mt-1 truncate text-lg font-bold tabular-nums ${toneClass}`}>{value}</p>
     </div>
   )
 }
