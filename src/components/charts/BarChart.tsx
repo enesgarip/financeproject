@@ -3,12 +3,12 @@ import {
   BarChart as ReBarChart,
   CartesianGrid,
   Cell,
-  ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from 'recharts'
 import { formatCurrency } from '@/utils/formatCurrency'
+import { useChartWidth } from './useChartWidth'
 
 export type BarDataPoint = {
   label: string
@@ -66,6 +66,8 @@ export function BarChart({
   negativeColor = 'var(--destructive)',
   grouped = false,
 }: BarChartProps) {
+  const [chartRef, chartWidth] = useChartWidth()
+
   if (data.length === 0) {
     return (
       <div
@@ -78,8 +80,9 @@ export function BarChart({
   }
 
   return (
-    <ResponsiveContainer width="100%" height={height}>
-      <ReBarChart data={data} margin={{ top: 4, right: 4, left: 0, bottom: 0 }} barCategoryGap="32%">
+    <div ref={chartRef} className="min-w-0" style={{ height, minHeight: height }}>
+      {chartWidth > 0 ? (
+        <ReBarChart width={chartWidth} height={height} data={data} margin={{ top: 4, right: 4, left: 0, bottom: 0 }} barCategoryGap="32%">
         <CartesianGrid
           strokeDasharray="3 3"
           stroke="var(--border)"
@@ -126,7 +129,8 @@ export function BarChart({
           />
         )}
       </ReBarChart>
-    </ResponsiveContainer>
+      ) : null}
+    </div>
   )
 }
 

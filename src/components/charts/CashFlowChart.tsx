@@ -2,12 +2,12 @@ import {
   Area,
   AreaChart,
   CartesianGrid,
-  ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from 'recharts'
 import { formatCurrency } from '@/utils/formatCurrency'
+import { useChartWidth } from './useChartWidth'
 
 export type CashFlowPoint = {
   label: string
@@ -65,6 +65,8 @@ type CashFlowChartProps = {
 }
 
 export function CashFlowChart({ data, height = 220 }: CashFlowChartProps) {
+  const [chartRef, chartWidth] = useChartWidth()
+
   if (data.length === 0) {
     return (
       <div
@@ -77,8 +79,9 @@ export function CashFlowChart({ data, height = 220 }: CashFlowChartProps) {
   }
 
   return (
-    <ResponsiveContainer width="100%" height={height}>
-      <AreaChart data={data} margin={{ top: 8, right: 4, left: 0, bottom: 0 }}>
+    <div ref={chartRef} className="min-w-0" style={{ height, minHeight: height }}>
+      {chartWidth > 0 ? (
+        <AreaChart width={chartWidth} height={height} data={data} margin={{ top: 8, right: 4, left: 0, bottom: 0 }}>
         <defs>
           <linearGradient id="incomeGrad" x1="0" y1="0" x2="0" y2="1">
             <stop offset="5%"  stopColor="var(--success)"     stopOpacity={0.22} />
@@ -154,6 +157,7 @@ export function CashFlowChart({ data, height = 220 }: CashFlowChartProps) {
           activeDot={{ r: 4, fill: 'var(--primary)', stroke: 'var(--card)', strokeWidth: 2 }}
         />
       </AreaChart>
-    </ResponsiveContainer>
+      ) : null}
+    </div>
   )
 }

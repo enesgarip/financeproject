@@ -12,28 +12,64 @@ type AuthContextValue = {
   signOut: () => Promise<void>
 }
 
+function sessionPublishDelayMs(nextSession: Session | null) {
+  const accessToken = nextSession?.access_token
+  if (!accessToken) return 0
+
+  try {
+    const payload = accessToken.split('.')[1]
+    if (!payload) return 0
+    const normalizedPayload = payload.replace(/-/g, '+').replace(/_/g, '/')
+    const paddedPayload = normalizedPayload.padEnd(Math.ceil(normalizedPayload.length / 4) * 4, '=')
+    const parsed = JSON.parse(atob(paddedPayload)) as { iat?: unknown }
+    if (typeof parsed.iat !== 'number') return 0
+
+    return Math.max(0, parsed.iat * 1000 + 1000 - Date.now())
+  } catch {
+    return 0
+  }
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     let alive = true
+    let publishTimer: ReturnType<typeof window.setTimeout> | null = null
+
+    function publishSession(nextSession: Session | null) {
+      if (!alive) return
+      if (publishTimer) window.clearTimeout(publishTimer)
+
+      const delay = sessionPublishDelayMs(nextSession)
+      if (delay > 0) {
+        setLoading(true)
+        publishTimer = window.setTimeout(() => {
+          if (!alive) return
+          setSession(nextSession)
+          setLoading(false)
+        }, delay)
+        return
+      }
+
+      setSession(nextSession)
+      setLoading(false)
+    }
 
     supabase.auth.getSession().then(({ data }) => {
-      if (!alive) return
-      setSession(data.session)
-      setLoading(false)
+      publishSession(data.session)
     })
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      setSession(nextSession)
-      setLoading(false)
+      publishSession(nextSession)
     })
 
     return () => {
       alive = false
+      if (publishTimer) window.clearTimeout(publishTimer)
       subscription.unsubscribe()
     }
   }, [])

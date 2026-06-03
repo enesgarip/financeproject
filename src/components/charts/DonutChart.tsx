@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Cell, Pie, PieChart, ResponsiveContainer } from 'recharts'
+import { Cell, Pie, PieChart } from 'recharts'
 import { formatCurrency } from '@/utils/formatCurrency'
 import { cn } from '@/lib/utils'
 
@@ -67,7 +67,7 @@ export function DonutChart({
   return (
     <div className="flex flex-col gap-4">
       {/* Chart */}
-      <div className="relative" style={{ height: size }}>
+      <div className="relative mx-auto min-w-0" style={{ width: size, height: size, minHeight: size }}>
         {/* Center label overlay */}
         <div
           className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-0.5"
@@ -87,46 +87,44 @@ export function DonutChart({
           </span>
         </div>
 
-        <ResponsiveContainer width="100%" height="100%">
-          <PieChart>
-            <Pie
-              data={data}
-              cx="50%"
-              cy="50%"
-              innerRadius={innerRadius}
-              outerRadius={outerRadius}
-              dataKey="value"
-              paddingAngle={2}
-              animationBegin={0}
-              animationDuration={700}
-            >
-              {data.map((entry, index) => {
-                const isActive = activeIndex === index
-                const isAnyActive = activeIndex !== null
-                const color = entry.color ?? DEFAULT_COLORS[index % DEFAULT_COLORS.length]
+        <PieChart width={size} height={size}>
+          <Pie
+            data={data}
+            cx="50%"
+            cy="50%"
+            innerRadius={innerRadius}
+            outerRadius={outerRadius}
+            dataKey="value"
+            paddingAngle={2}
+            animationBegin={0}
+            animationDuration={700}
+          >
+            {data.map((entry, index) => {
+              const isActive = activeIndex === index
+              const isAnyActive = activeIndex !== null
+              const color = entry.color ?? DEFAULT_COLORS[index % DEFAULT_COLORS.length]
 
-                return (
-                  <Cell
-                    key={`cell-${index}`}
-                    fill={color}
-                    stroke="transparent"
-                    opacity={isAnyActive && !isActive ? 0.35 : 1}
-                    style={{
-                      cursor: 'pointer',
-                      transition: 'opacity 0.18s, r 0.18s',
-                      // Expand active slice via filter
-                      filter: isActive
-                        ? 'drop-shadow(0 0 6px color-mix(in srgb, currentColor 40%, transparent))'
-                        : undefined,
-                    }}
-                    onMouseEnter={() => setActiveIndex(index)}
-                    onMouseLeave={() => setActiveIndex(null)}
-                  />
-                )
-              })}
-            </Pie>
-          </PieChart>
-        </ResponsiveContainer>
+              return (
+                <Cell
+                  key={`cell-${index}`}
+                  fill={color}
+                  stroke="transparent"
+                  opacity={isAnyActive && !isActive ? 0.35 : 1}
+                  style={{
+                    cursor: 'pointer',
+                    transition: 'opacity 0.18s, r 0.18s',
+                    // Expand active slice via filter
+                    filter: isActive
+                      ? 'drop-shadow(0 0 6px color-mix(in srgb, currentColor 40%, transparent))'
+                      : undefined,
+                  }}
+                  onMouseEnter={() => setActiveIndex(index)}
+                  onMouseLeave={() => setActiveIndex(null)}
+                />
+              )
+            })}
+          </Pie>
+        </PieChart>
       </div>
 
       {/* Legend */}
