@@ -30,13 +30,9 @@ export function CategoryPicker({ label = 'Kategori', value, description, onChang
         </select>
       </label>
       {showSuggestion ? (
-        <button
-          type="button"
-          onClick={() => onChange(suggestedOption?.value ?? value)}
-          className="mt-2 inline-flex w-fit items-center rounded-full bg-success/12 px-3 py-1.5 text-xs font-bold text-success ring-1 ring-success/25 transition hover:bg-success/20"
-        >
-          Kategori önerisi: {suggestedOption?.label}
-        </button>
+        <p className="mt-2 rounded-lg bg-success/8 px-3 py-2 text-xs font-semibold text-success ring-1 ring-success/20">
+          Öneri: {suggestedOption?.label}
+        </p>
       ) : null}
     </div>
   )
