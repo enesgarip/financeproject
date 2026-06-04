@@ -82,6 +82,22 @@ Statement archive behavior:
 - cutting a statement links posted card expenses and posted card installments through `statement_archive_id`
 - the dashboard/cards page may call `cut_due_card_statements` to cut due statements automatically when the statement day has arrived
 
+## Scheduled Card Maintenance (server-side)
+
+A daily `pg_cron` job runs `run_scheduled_card_maintenance()` so time-based card
+transitions happen on the correct day even if the app is never opened.
+
+- It impersonates each credit-card user (sets the JWT `sub` claim) and calls the
+  existing, audited RPCs — `cut_due_card_statements` and `post_card_provision` —
+  so there is no duplicated money logic.
+- Statement cutting is idempotent (one archive per user/card/month); the client
+  still calls `cut_due_card_statements` on app open as an immediate fallback.
+- Provisions still pending after a threshold (default 7 days) are treated as
+  cleared and posted into the current period. This is the one transition that
+  mutates state on an assumption; it is logged to `transaction_history`.
+- The function is intentionally **not** granted to `authenticated` (it would let
+  one user trigger maintenance for everyone); only the scheduler runs it.
+
 ## Card Payment Rules
 
 On the cards page:
