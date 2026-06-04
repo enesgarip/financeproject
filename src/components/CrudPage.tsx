@@ -31,18 +31,28 @@ type RowMeta = {
   searchText: string
 }
 
+/** Extra data threaded into a form so computed fields can react to it (e.g. live market rates). */
+export type FieldContext = unknown
+
+export type FieldVisibility =
+  | { field: string; value: string | string[] }
+  | ((values: Record<string, string>) => boolean)
+
 export type FormField = {
   name: string
   label: string
-  type: 'text' | 'number' | 'date' | 'day' | 'select' | 'textarea'
+  type: 'text' | 'number' | 'date' | 'day' | 'select' | 'textarea' | 'computed'
   required?: boolean
   step?: string
   min?: string
   options?: FieldOption[]
-  visibleWhen?: {
-    field: string
-    value: string | string[]
-  }
+  visibleWhen?: FieldVisibility
+  /** type 'computed': derive a read-only value from current form values + context. */
+  compute?: (values: Record<string, string>, context: FieldContext) => number | null
+  /** type 'computed': format the derived value for display (defaults to String). */
+  formatComputed?: (value: number | null) => string
+  /** Optional helper line rendered under the field. */
+  hint?: (values: Record<string, string>, context: FieldContext) => string | null
 }
 
 type CrudPageProps<T extends TableName> = {
@@ -55,7 +65,9 @@ type CrudPageProps<T extends TableName> = {
   orderBy?: keyof RowFor<T> & string
   orderAscending?: boolean
   getInitialValues: (row?: RowFor<T>) => Record<string, string | number>
-  mapForm: (formData: FormData, userId: string, editing: RowFor<T> | null) => InsertFor<T> | UpdateFor<T>
+  mapForm: (formData: FormData, userId: string, editing: RowFor<T> | null, context: FieldContext) => InsertFor<T> | UpdateFor<T>
+  /** Arbitrary context (e.g. live market rates) forwarded to computed fields and mapForm. */
+  fieldContext?: FieldContext
   validateForm?: (formData: FormData, values: Record<string, string>, editing: RowFor<T> | null) => FormErrors
   afterSave?: (row: RowFor<T>, action: SaveAction, helpers: { reload: () => Promise<void>; setError: (message: string) => void }) => Promise<void> | void
   renderTitle: (row: RowFor<T>) => string
@@ -98,6 +110,7 @@ export function CrudPage<T extends TableName>({
   orderAscending,
   getInitialValues,
   mapForm,
+  fieldContext,
   validateForm,
   afterSave,
   renderTitle,
@@ -268,7 +281,7 @@ export function CrudPage<T extends TableName>({
     setSaving(true)
     setError('')
     setFormError('')
-    const payload = mapForm(formData, user.id, editing)
+    const payload = mapForm(formData, user.id, editing, fieldContext)
     const action: SaveAction = editing ? 'update' : 'create'
 
     const response = editing
@@ -559,6 +572,7 @@ export function CrudPage<T extends TableName>({
           >
           {visibleFields.map((field) => {
             const fieldError = formErrors[field.name]
+            const hintText = field.hint?.(formValues, fieldContext) ?? null
 
             return (
               <label key={field.name} className={cn('block text-sm font-semibold text-foreground', field.type === 'textarea' && 'sm:col-span-2')}>
@@ -635,6 +649,10 @@ export function CrudPage<T extends TableName>({
                       className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
                     />
                   </div>
+                ) : field.type === 'computed' ? (
+                  <div className="mt-1 flex min-h-[2.5rem] items-center rounded-xl border border-dashed border-border bg-muted/40 px-3 text-sm font-mono font-semibold tabular-nums text-foreground">
+                    {(field.formatComputed ?? defaultFormatComputed)(field.compute?.(formValues, fieldContext) ?? null)}
+                  </div>
                 ) : (
                   <Input
                     name={field.name}
@@ -649,6 +667,7 @@ export function CrudPage<T extends TableName>({
                   />
                 )}
                 {fieldError ? <span className="mt-1 block text-xs font-medium text-destructive">{fieldError}</span> : null}
+                {hintText ? <span className="mt-1 block text-xs text-muted-foreground">{hintText}</span> : null}
               </label>
             )
           })}
@@ -682,8 +701,13 @@ function toFormValues(values: Record<string, string | number>) {
   return Object.fromEntries(Object.entries(values).map(([key, value]) => [key, String(value)]))
 }
 
+function defaultFormatComputed(value: number | null) {
+  return value === null ? '—' : String(value)
+}
+
 function isFieldVisible(field: FormField, values: Record<string, string>) {
   if (!field.visibleWhen) return true
+  if (typeof field.visibleWhen === 'function') return field.visibleWhen(values)
 
   const currentValue = values[field.visibleWhen.field]
   return Array.isArray(field.visibleWhen.value)

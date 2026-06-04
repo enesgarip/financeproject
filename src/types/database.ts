@@ -36,6 +36,7 @@ export type Asset = BaseRow & {
   unit: AssetUnit
   currency: CashCurrency | null
   estimated_value_try: number
+  auto_valued: boolean
   note: string | null
 }
 
@@ -83,6 +84,7 @@ export type SavingsGoal = BaseRow & {
   target_amount: number
   current_amount: number
   estimated_value_try: number | null
+  auto_valued: boolean
   target_date: string | null
   status: SavingsGoalStatus
   note: string | null
@@ -159,6 +161,7 @@ export type Debt = BaseRow & {
   currency: CashCurrency | null
   amount: number
   estimated_value_try: number
+  auto_valued: boolean
   due_date: string | null
   status: DebtStatus
   note: string | null

@@ -19,7 +19,9 @@ import { motion, type Variants } from 'framer-motion'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
+import { ensureRatesLoaded } from '../lib/marketRatesClient'
 import { supabase } from '../lib/supabase'
+import { syncAutoValuedRows } from '../utils/valuationSync'
 import type {
   Asset,
   Budget,
@@ -490,6 +492,16 @@ export function DashboardPage() {
       setError(statementCutError.message)
       setLoading(false)
       return
+    }
+
+    // Refresh live rates and re-value auto-valued gold/FX rows so net worth and
+    // cash-flow math below read up-to-date stored values. Best-effort: a feed
+    // outage just leaves the last known values in place.
+    try {
+      const snapshot = await ensureRatesLoaded()
+      await syncAutoValuedRows(snapshot)
+    } catch {
+      // Non-fatal — dashboard still renders with the last stored valuation.
     }
 
     const historyStart = new Date()

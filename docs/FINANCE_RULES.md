@@ -15,6 +15,29 @@ This file records the current business rules inferred from the codebase as of 20
 - Asset estimated worth is normalized into TRY with `estimated_value_try`.
 - Non-TRY assets may still be represented through an estimated TRY value for summaries.
 
+## Market Rates & Auto-Valuation
+
+Gold and foreign-currency holdings, debts, and savings goals can derive their
+TRY value from live market rates instead of a hand-typed `estimated_value_try`.
+
+- Rate source: public truncgil v4 feed (`USD`, `EUR`, `GBP`, `GRA` = gram gold,
+  `CEYREKALTIN` = quarter gold), fetched client-side on app open and via a manual
+  "Yenile" button. The feed sometimes truncates its long JSON tail, so the parser
+  (`src/utils/marketRates.ts`) falls back to tolerant per-symbol extraction.
+- The `auto_valued` flag (on `assets`, `debts`, `savings_goals`) records opt-in.
+  Only auto-valued rows are recomputed; existing manual rows are never overwritten.
+- Quantity is the source of truth: gold uses `amount` (gram/piece), FX uses the
+  foreign `amount`. `estimated_value_try` is a cached projection refreshed on each
+  rate load (`syncAutoValuedRows`) so dashboard, summaries, and settlement RPCs
+  keep reading an up-to-date stored value.
+- Valuation side: holdings and receivables use the buying price (Alış); obligations
+  you owe (`borç_aldım`, gold/FX debts) use the selling price (Satış).
+- Symbol mapping: asset gold `unit='gram' → GRA`, `unit='adet' → CEYREKALTIN`;
+  cash/`doviz` use the currency code; debt `gram_altin → GRA`,
+  `ceyrek_altin → CEYREKALTIN`.
+- If a rate is missing or the feed is offline, the stored `estimated_value_try`
+  is used as a fallback.
+
 ## Cards: Core Model
 
 Credit card debt is conceptually split into visible payable/planning parts:

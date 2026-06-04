@@ -2,11 +2,15 @@ import { ArrowDownRight, ArrowUpRight, Banknote, Coins, Landmark, LineChart, Min
 import type { ComponentType } from 'react'
 import { CrudPage, type FormField } from '../components/CrudPage'
 import { DonutChart, type DonutSlice } from '../components/charts/DonutChart'
+import { RatesBanner } from '../components/finance/RatesBanner'
 import { Badge } from '../components/ui/badge'
 import { Card, CardContent } from '../components/ui/card'
+import { useMarketRates } from '../hooks/useMarketRates'
 import type { Asset, SalaryHistory } from '../types/database'
 import { formatDate } from '../utils/date'
 import { formatCurrency, formatNumber, parseNumber } from '../utils/formatCurrency'
+import type { MarketRatesSnapshot } from '../utils/marketRates'
+import { assetRateSymbol, effectiveAssetValue, valueAsset } from '../utils/valuation'
 
 const categoryOptions: Asset['category'][] = ['Nakit', 'Altın', 'Fon', 'Hisse', 'Araç', 'BES', 'Diğer']
 
@@ -32,6 +36,39 @@ const categoryCardTint: Record<Asset['category'], string> = {
   Diğer: 'border-border/70 bg-card',
 }
 
+/** A row is auto-valuable when its category maps to a gold or foreign-currency market symbol. */
+function assetSupportsAuto(values: Record<string, string>): boolean {
+  if (values.category === 'Altın') return true
+  return values.category === 'Nakit' && Boolean(values.currency) && values.currency !== 'TRY'
+}
+
+function assetIsAuto(values: Record<string, string>): boolean {
+  return assetSupportsAuto(values) && values.valuation === 'auto'
+}
+
+/** Build the (category, unit, currency, amount) shape the valuation helpers expect from raw form values. */
+function valuationInputFromForm(values: Record<string, string>): Pick<Asset, 'category' | 'unit' | 'currency' | 'amount'> {
+  const category = (values.category as Asset['category']) ?? 'Nakit'
+  const isGold = category === 'Altın'
+  return {
+    category,
+    unit: isGold ? ((values.unit as Asset['unit']) || 'gram') : 'TRY',
+    currency: category === 'Nakit' ? ((values.currency as Asset['currency']) || 'TRY') : null,
+    amount: parseNumber(values.amount),
+  }
+}
+
+function assetRateHint(values: Record<string, string>, context: unknown): string | null {
+  const snapshot = context as MarketRatesSnapshot | null
+  if (!snapshot) return null
+  const input = valuationInputFromForm(values)
+  const symbol = assetRateSymbol(input)
+  const rate = symbol ? snapshot.rates[symbol] : undefined
+  if (!rate) return null
+  const unitLabel = input.category === 'Altın' ? (input.unit === 'gram' ? 'gram' : 'çeyrek') : input.currency
+  return `1 ${unitLabel} ≈ ${formatCurrency(rate.buying)} (canlı)`
+}
+
 const fields: FormField[] = [
   { name: 'name', label: 'Ad', type: 'text', required: true },
   {
@@ -53,6 +90,16 @@ const fields: FormField[] = [
     visibleWhen: { field: 'category', value: 'Nakit' },
   },
   {
+    name: 'valuation',
+    label: 'Değerleme',
+    type: 'select',
+    options: [
+      { label: 'Otomatik (canlı kur)', value: 'auto' },
+      { label: 'Manuel', value: 'manual' },
+    ],
+    visibleWhen: (values) => assetSupportsAuto(values),
+  },
+  {
     name: 'amount',
     label: 'Altın miktarı',
     type: 'number',
@@ -60,6 +107,7 @@ const fields: FormField[] = [
     step: '0.01',
     required: true,
     visibleWhen: { field: 'category', value: 'Altın' },
+    hint: assetRateHint,
   },
   {
     name: 'unit',
@@ -67,9 +115,19 @@ const fields: FormField[] = [
     type: 'select',
     options: [
       { label: 'Gram', value: 'gram' },
-      { label: 'Adet', value: 'adet' },
+      { label: 'Çeyrek (adet)', value: 'adet' },
     ],
     visibleWhen: { field: 'category', value: 'Altın' },
+  },
+  {
+    name: 'amount',
+    label: 'Döviz tutarı',
+    type: 'number',
+    min: '0',
+    step: '0.01',
+    required: true,
+    visibleWhen: (values) => values.category === 'Nakit' && Boolean(values.currency) && values.currency !== 'TRY',
+    hint: assetRateHint,
   },
   {
     name: 'estimated_value_try',
@@ -78,6 +136,15 @@ const fields: FormField[] = [
     min: '0',
     step: '0.01',
     required: true,
+    visibleWhen: (values) => !assetIsAuto(values),
+  },
+  {
+    name: 'estimated_value_try_preview',
+    label: 'Güncel değer (otomatik)',
+    type: 'computed',
+    visibleWhen: (values) => assetIsAuto(values),
+    compute: (values, context) => valueAsset(valuationInputFromForm(values), context as MarketRatesSnapshot | null),
+    formatComputed: (value) => (value === null ? 'Kur bekleniyor…' : formatCurrency(value)),
   },
   { name: 'note', label: 'Not', type: 'textarea' },
 ]
@@ -89,14 +156,15 @@ const salaryFields: FormField[] = [
   { name: 'note', label: 'Not', type: 'textarea' },
 ]
 
-function AssetsOverview({ rows }: { rows: Asset[] }) {
+function AssetsOverview({ rows, snapshot }: { rows: Asset[]; snapshot: MarketRatesSnapshot | null }) {
   if (rows.length === 0) return null
 
-  const total = rows.reduce((sum, row) => sum + row.estimated_value_try, 0)
+  const valueOf = (row: Asset) => effectiveAssetValue(row, snapshot)
+  const total = rows.reduce((sum, row) => sum + valueOf(row), 0)
   const categoryTotals = categoryOptions
     .map((category) => ({
       category,
-      total: rows.filter((row) => row.category === category).reduce((sum, row) => sum + row.estimated_value_try, 0),
+      total: rows.filter((row) => row.category === category).reduce((sum, row) => sum + valueOf(row), 0),
     }))
     .filter((item) => item.total > 0)
     .sort((a, b) => b.total - a.total)
@@ -210,6 +278,8 @@ function SalaryOverview({ rows }: { rows: SalaryHistory[] }) {
 }
 
 export function AssetsPage() {
+  const { snapshot } = useMarketRates()
+
   return (
     <div className="space-y-8">
       <CrudPage
@@ -217,39 +287,64 @@ export function AssetsPage() {
         pageTitle="Varlıklar"
         addLabel="Varlık ekle"
         fields={fields}
+        fieldContext={snapshot}
         emptyTitle="Henüz varlık yok"
         emptyDescription="Nakit, altın, fon, hisse veya diğer varlıklarını buradan ekleyebilirsin."
-        renderBeforeList={({ loading, rows }) => (!loading ? <AssetsOverview rows={rows as Asset[]} /> : null)}
+        renderBeforeList={({ loading, rows, reload }) => (
+          <div className="space-y-3">
+            <RatesBanner onSynced={reload} />
+            {!loading ? <AssetsOverview rows={rows as Asset[]} snapshot={snapshot} /> : null}
+          </div>
+        )}
         getInitialValues={(row?: Asset) => ({
           name: row?.name ?? '',
           category: row?.category ?? 'Nakit',
           amount: row?.amount ?? 0,
           unit: row?.unit === 'TRY' ? 'gram' : (row?.unit ?? 'gram'),
           currency: row?.currency ?? 'TRY',
+          valuation: row ? (row.auto_valued ? 'auto' : 'manual') : 'auto',
           estimated_value_try: row?.estimated_value_try ?? 0,
           note: row?.note ?? '',
         })}
-        mapForm={(formData, userId) => {
+        mapForm={(formData, userId, _editing, context) => {
+          const snapshotForSave = context as MarketRatesSnapshot | null
           const category = formData.get('category') as Asset['category']
           const isGold = category === 'Altın'
+          const currency = category === 'Nakit' ? (formData.get('currency') as Asset['currency']) : null
+          const foreignCash = category === 'Nakit' && currency !== null && currency !== 'TRY'
+          const supportsAuto = isGold || foreignCash
+          const autoValued = supportsAuto && formData.get('valuation') === 'auto'
+          const amount = isGold || foreignCash ? parseNumber(formData.get('amount')) : 1
+          const unit: Asset['unit'] = isGold ? (formData.get('unit') as Asset['unit']) : 'TRY'
+
+          const manualValue = parseNumber(formData.get('estimated_value_try'))
+          const autoValue = autoValued ? valueAsset({ category, unit, currency, amount }, snapshotForSave) : null
 
           return {
             user_id: userId,
             name: String(formData.get('name') ?? ''),
             category,
-            amount: isGold ? parseNumber(formData.get('amount')) : 1,
-            unit: isGold ? (formData.get('unit') as Asset['unit']) : 'TRY',
-            currency: category === 'Nakit' ? (formData.get('currency') as Asset['currency']) : null,
-            estimated_value_try: parseNumber(formData.get('estimated_value_try')),
+            amount,
+            unit,
+            currency: category === 'Nakit' ? (currency ?? 'TRY') : null,
+            estimated_value_try: autoValue ?? manualValue,
+            auto_valued: autoValued,
             note: String(formData.get('note') ?? '') || null,
           }
         }}
         renderTitle={(row) => row.name}
         renderSubtitle={(row) => row.category}
         renderDetails={(row) => {
-          const details = [`Değer: ${formatCurrency(row.estimated_value_try)}`]
-          if (row.category === 'Altın') details.unshift(`Miktar: ${formatNumber(row.amount)} ${row.unit}`)
-          if (row.category === 'Nakit') details.unshift(`Para birimi: ${row.currency ?? 'TRY'}`)
+          const details = [`Değer: ${formatCurrency(effectiveAssetValue(row, snapshot))}`]
+          if (row.category === 'Altın') details.unshift(`Miktar: ${formatNumber(row.amount)} ${row.unit === 'adet' ? 'çeyrek' : row.unit}`)
+          if (row.category === 'Nakit') {
+            details.unshift(
+              row.auto_valued && row.currency && row.currency !== 'TRY'
+                ? `Tutar: ${formatNumber(row.amount)} ${row.currency}`
+                : `Para birimi: ${row.currency ?? 'TRY'}`,
+            )
+          }
+          if (row.auto_valued) details.push('Canlı kurla otomatik')
           return details
         }}
         getCardClassName={(row) => categoryCardTint[row.category]}

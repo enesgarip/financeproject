@@ -8,13 +8,15 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
+    "test:unit": "vitest run",
+    "test:unit:watch": "vitest",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "docker:build": "docker build -t financeproject .",
     "docker:preview": "docker compose -f docker-compose.ci.yml up --build app",
     "db:lint:local": "supabase db lint --local --fail-on error",
     "db:reset:local": "supabase db reset --local --no-seed",
-    "ci:local": "npm exec -- eslint . && npm exec -- tsc -b && npm exec -- vite build && npm exec -- playwright test"
+    "ci:local": "npm exec -- eslint . && npm exec -- tsc -b && npm exec -- vitest run && npm exec -- vite build && npm exec -- playwright test"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.105.1",
@@ -46,6 +48,7 @@
     "tailwindcss": "^4.2.4",
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.58.2",
-    "vite": "^7.3.2"
+    "vite": "^7.3.2",
+    "vitest": "^4.1.8"
   }
 }

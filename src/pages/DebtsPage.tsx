@@ -1,14 +1,49 @@
 import { CrudPage, type FormField } from '../components/CrudPage'
 import { AccountSelector } from '../components/finance/AccountSelector'
+import { RatesBanner } from '../components/finance/RatesBanner'
 import { SimpleModal } from '../components/SimpleModal'
 import { Badge } from '../components/ui/badge'
 import { Card, CardContent } from '../components/ui/card'
 import { Progress } from '../components/ui/progress'
+import { useMarketRates } from '../hooks/useMarketRates'
 import { supabase } from '../lib/supabase'
 import type { Card as FinanceCard, Debt } from '../types/database'
 import { formatDate } from '../utils/date'
 import { formatCurrency, formatNumber, parseNumber } from '../utils/formatCurrency'
+import type { MarketRatesSnapshot } from '../utils/marketRates'
+import { debtRateSymbol, effectiveDebtValue, valueDebt } from '../utils/valuation'
 import { useState } from 'react'
+
+/** Gold or non-TRY foreign-currency debts can be auto-valued from live rates. */
+function debtSupportsAuto(values: Record<string, string>): boolean {
+  if (values.value_type === 'gram_altin' || values.value_type === 'ceyrek_altin') return true
+  return values.value_type === 'doviz' && Boolean(values.currency) && values.currency !== 'TRY'
+}
+
+function debtIsAuto(values: Record<string, string>): boolean {
+  return debtSupportsAuto(values) && values.valuation === 'auto'
+}
+
+function valuationInputFromForm(values: Record<string, string>): Pick<Debt, 'value_type' | 'currency' | 'direction' | 'amount'> {
+  return {
+    value_type: (values.value_type as Debt['value_type']) ?? 'TRY',
+    currency: (values.currency as Debt['currency']) ?? null,
+    direction: (values.direction as Debt['direction']) ?? 'borç_aldım',
+    amount: parseNumber(values.amount),
+  }
+}
+
+function debtRateHint(values: Record<string, string>, context: unknown): string | null {
+  const snapshot = context as MarketRatesSnapshot | null
+  if (!snapshot) return null
+  const input = valuationInputFromForm(values)
+  const symbol = debtRateSymbol(input)
+  const rate = symbol ? snapshot.rates[symbol] : undefined
+  if (!rate) return null
+  const price = input.direction === 'borç_aldım' ? rate.selling : rate.buying
+  const unitLabel = input.value_type === 'gram_altin' ? 'gram' : input.value_type === 'ceyrek_altin' ? 'çeyrek' : input.currency
+  return `1 ${unitLabel} ≈ ${formatCurrency(price)} (canlı)`
+}
 
 const fields: FormField[] = [
   { name: 'person_name', label: 'Kişi', type: 'text', required: true },
@@ -44,13 +79,34 @@ const fields: FormField[] = [
     visibleWhen: { field: 'value_type', value: 'doviz' },
   },
   {
+    name: 'valuation',
+    label: 'Değerleme',
+    type: 'select',
+    options: [
+      { label: 'Otomatik (canlı kur)', value: 'auto' },
+      { label: 'Manuel', value: 'manual' },
+    ],
+    visibleWhen: (values) => debtSupportsAuto(values),
+  },
+  {
     name: 'amount',
-    label: 'Miktar',
+    label: 'Altın miktarı',
     type: 'number',
     min: '0',
     step: '0.01',
     required: true,
     visibleWhen: { field: 'value_type', value: ['gram_altin', 'ceyrek_altin'] },
+    hint: debtRateHint,
+  },
+  {
+    name: 'amount',
+    label: 'Döviz tutarı',
+    type: 'number',
+    min: '0',
+    step: '0.01',
+    required: true,
+    visibleWhen: (values) => values.value_type === 'doviz' && Boolean(values.currency) && values.currency !== 'TRY',
+    hint: debtRateHint,
   },
   {
     name: 'estimated_value_try',
@@ -59,6 +115,15 @@ const fields: FormField[] = [
     min: '0',
     step: '0.01',
     required: true,
+    visibleWhen: (values) => !debtIsAuto(values),
+  },
+  {
+    name: 'estimated_value_try_preview',
+    label: 'Güncel değer (otomatik)',
+    type: 'computed',
+    visibleWhen: (values) => debtIsAuto(values),
+    compute: (values, context) => valueDebt(valuationInputFromForm(values), context as MarketRatesSnapshot | null),
+    formatComputed: (value) => (value === null ? 'Kur bekleniyor…' : formatCurrency(value)),
   },
   { name: 'due_date', label: 'Vade tarihi', type: 'date' },
   { name: 'note', label: 'Not', type: 'textarea' },
@@ -95,16 +160,17 @@ const debtTone: Record<Debt['direction'], { card: string; detail: string }> = {
   },
 }
 
-function DebtsOverview({ rows }: { rows: Debt[] }) {
+function DebtsOverview({ rows, snapshot }: { rows: Debt[]; snapshot: MarketRatesSnapshot | null }) {
   const openRows = rows.filter((row) => row.status === 'açık')
   if (openRows.length === 0) return null
 
+  const valueOf = (row: Debt) => effectiveDebtValue(row, snapshot)
   const borrowed = openRows
     .filter((row) => row.direction === 'borç_aldım')
-    .reduce((sum, row) => sum + row.estimated_value_try, 0)
+    .reduce((sum, row) => sum + valueOf(row), 0)
   const receivable = openRows
     .filter((row) => row.direction === 'borç_verdim')
-    .reduce((sum, row) => sum + row.estimated_value_try, 0)
+    .reduce((sum, row) => sum + valueOf(row), 0)
   const total = borrowed + receivable
   const net = receivable - borrowed
   const borrowedRate = total > 0 ? Math.min(100, (borrowed / total) * 100) : 0
@@ -170,12 +236,15 @@ async function getBankaKartlari(): Promise<FinanceCard[]> {
 }
 
 export function DebtsPage() {
+  const { snapshot } = useMarketRates()
   const [debtToSettle, setDebtToSettle] = useState<Debt | null>(null)
   const [debtCards, setDebtCards] = useState<FinanceCard[]>([])
   const [debtAccountCard, setDebtAccountCard] = useState('')
   const [debtPaymentError, setDebtPaymentError] = useState('')
   const [debtPaymentSaving, setDebtPaymentSaving] = useState(false)
   const [reloadDebts, setReloadDebts] = useState<(() => Promise<void>) | null>(null)
+
+  const settlementValue = debtToSettle ? effectiveDebtValue(debtToSettle, snapshot) : 0
 
   async function openDebtSettlement(debt: Debt, reload: () => Promise<void>) {
     const cards = await getBankaKartlari()
@@ -207,7 +276,7 @@ export function DebtsPage() {
       return
     }
 
-    if (debtToSettle.direction === 'borç_aldım' && accountCard.current_balance < debtToSettle.estimated_value_try) {
+    if (debtToSettle.direction === 'borç_aldım' && accountCard.current_balance < settlementValue) {
       setDebtPaymentError('Kaynak hesap bakiyesi yetersiz.')
       return
     }
@@ -239,33 +308,51 @@ export function DebtsPage() {
         pageTitle="Kişiler"
         addLabel="Borç / alacak ekle"
         fields={fields}
+        fieldContext={snapshot}
         emptyTitle="Henüz kişi kaydı yok"
         emptyDescription="Kişisel borçlarını ve alacaklarını buradan takip edebilirsin."
         orderBy="due_date"
-        renderBeforeList={({ loading, rows }) => (!loading ? <DebtsOverview rows={rows as Debt[]} /> : null)}
+        renderBeforeList={({ loading, rows, reload }) => (
+          <div className="space-y-3">
+            <RatesBanner onSynced={reload} />
+            {!loading ? <DebtsOverview rows={rows as Debt[]} snapshot={snapshot} /> : null}
+          </div>
+        )}
         getInitialValues={(row?: Debt) => ({
           person_name: row?.person_name ?? '',
           direction: row?.direction ?? 'borç_aldım',
           value_type: row?.value_type ?? 'TRY',
           currency: row?.currency ?? 'USD',
+          valuation: row ? (row.auto_valued ? 'auto' : 'manual') : 'auto',
           amount: row?.amount ?? 0,
           estimated_value_try: row?.estimated_value_try ?? 0,
           due_date: row?.due_date ?? '',
           status: row?.status ?? 'açık',
           note: row?.note ?? '',
         })}
-        mapForm={(formData, userId, editing) => {
+        mapForm={(formData, userId, editing, context) => {
+          const snapshotForSave = context as MarketRatesSnapshot | null
           const valueType = formData.get('value_type') as Debt['value_type']
           const isGold = valueType === 'gram_altin' || valueType === 'ceyrek_altin'
+          const direction = formData.get('direction') as Debt['direction']
+          const currency = valueType === 'doviz' ? (formData.get('currency') as Debt['currency']) : valueType === 'TRY' ? 'TRY' : null
+          const foreignCash = valueType === 'doviz' && currency !== null && currency !== 'TRY'
+          const supportsAuto = isGold || foreignCash
+          const autoValued = supportsAuto && formData.get('valuation') === 'auto'
+          const amount = isGold || foreignCash ? parseNumber(formData.get('amount')) : 1
+
+          const manualValue = parseNumber(formData.get('estimated_value_try'))
+          const autoValue = autoValued ? valueDebt({ value_type: valueType, currency, direction, amount }, snapshotForSave) : null
 
           return {
             user_id: userId,
             person_name: String(formData.get('person_name') ?? ''),
-            direction: formData.get('direction') as Debt['direction'],
+            direction,
             value_type: valueType,
-            currency: valueType === 'doviz' ? (formData.get('currency') as Debt['currency']) : valueType === 'TRY' ? 'TRY' : null,
-            amount: isGold ? parseNumber(formData.get('amount')) : 1,
-            estimated_value_try: parseNumber(formData.get('estimated_value_try')),
+            currency,
+            amount,
+            estimated_value_try: autoValue ?? manualValue,
+            auto_valued: autoValued,
             due_date: optionalDate(formData.get('due_date')),
             status: editing?.status ?? 'açık',
             note: String(formData.get('note') ?? '') || null,
@@ -274,9 +361,12 @@ export function DebtsPage() {
         renderTitle={(row) => row.person_name}
         renderSubtitle={(row) => `${directionLabel(row.direction)} · ${valueTypeLabel(row)} · ${row.status}`}
         renderDetails={(row) => {
-          const details = [`Değer: ${formatCurrency(row.estimated_value_try)}`, `Vade: ${formatDate(row.due_date)}`]
+          const details = [`Değer: ${formatCurrency(effectiveDebtValue(row, snapshot))}`, `Vade: ${formatDate(row.due_date)}`]
           if (isGoldDebt(row)) details.unshift(`Miktar: ${formatNumber(row.amount)} ${valueTypeLabel(row)}`)
-          if (row.value_type === 'doviz') details.unshift(`Para birimi: ${row.currency ?? '-'}`)
+          if (row.value_type === 'doviz') {
+            details.unshift(row.auto_valued ? `Tutar: ${formatNumber(row.amount)} ${row.currency ?? '-'}` : `Para birimi: ${row.currency ?? '-'}`)
+          }
+          if (row.auto_valued) details.push('Canlı kurla otomatik')
           return details
         }}
         groupBy={(row) => directionLabel(row.direction)}
@@ -299,14 +389,14 @@ export function DebtsPage() {
         <form onSubmit={handleDebtSettlementSubmit} className="space-y-4">
           <div className="rounded-xl border border-border/60 bg-muted/30 p-3 text-sm text-muted-foreground">
             <p className="font-semibold text-foreground">{debtToSettle?.person_name}</p>
-            <p className="mt-0.5">Tutar: <span className="font-mono font-semibold text-foreground">{formatCurrency(debtToSettle?.estimated_value_try ?? 0)}</span></p>
+            <p className="mt-0.5">Tutar: <span className="font-mono font-semibold text-foreground">{formatCurrency(settlementValue)}</span></p>
             <p className="mt-0.5">{settlementIsBorrowed ? 'Bu tutar seçilen hesaptan düşer.' : 'Bu tutar seçilen hesaba eklenir.'}</p>
           </div>
           <AccountSelector
             accounts={debtCards}
             value={debtAccountCard}
             onChange={setDebtAccountCard}
-            amount={settlementIsBorrowed ? debtToSettle?.estimated_value_try ?? 0 : -(debtToSettle?.estimated_value_try ?? 0)}
+            amount={settlementIsBorrowed ? settlementValue : -settlementValue}
             label={settlementIsBorrowed ? 'Kaynak hesap' : 'Tahsilat hesabı'}
           />
           {debtPaymentError ? (

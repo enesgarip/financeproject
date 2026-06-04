@@ -11,6 +11,7 @@ import { Progress } from '../ui/progress'
 import { useConfirmDialog } from '../ui/use-confirm-dialog'
 import { supabase } from '../../lib/supabase'
 import type { InsertFor, SavingsGoal, SavingsGoalComponent, SavingsGoalValueType, UpdateFor } from '../../types/database'
+import { useMarketRates } from '../../hooks/useMarketRates'
 import { formatDate } from '../../utils/date'
 import { formatCurrency, parseNumber } from '../../utils/formatCurrency'
 import {
@@ -19,6 +20,7 @@ import {
   savingsGoalProgressRate,
   savingsGoalValueTypeLabel,
 } from '../../utils/savingsGoal'
+import { effectiveGoalValue, valueGoal } from '../../utils/valuation'
 
 type ComponentDraft = {
   key: string
@@ -44,6 +46,7 @@ function defaultCompositeDrafts() {
 
 export function SavingsGoalsPanel() {
   const { user } = useAuth()
+  const { snapshot } = useMarketRates()
   const { confirm, confirmDialog } = useConfirmDialog()
   const [goals, setGoals] = useState<SavingsGoal[]>([])
   const [components, setComponents] = useState<SavingsGoalComponent[]>([])
@@ -57,6 +60,7 @@ export function SavingsGoalsPanel() {
   const [targetAmount, setTargetAmount] = useState('')
   const [currentAmount, setCurrentAmount] = useState('')
   const [estimatedValueTry, setEstimatedValueTry] = useState('')
+  const [autoValued, setAutoValued] = useState(true)
   const [targetDate, setTargetDate] = useState('')
   const [status, setStatus] = useState<SavingsGoal['status']>('active')
   const [note, setNote] = useState('')
@@ -111,6 +115,7 @@ export function SavingsGoalsPanel() {
     setTargetAmount('')
     setCurrentAmount('')
     setEstimatedValueTry('')
+    setAutoValued(true)
     setTargetDate('')
     setStatus('active')
     setNote('')
@@ -127,6 +132,7 @@ export function SavingsGoalsPanel() {
     setTargetAmount(String(goal.target_amount))
     setCurrentAmount(String(goal.current_amount))
     setEstimatedValueTry(goal.estimated_value_try ? String(goal.estimated_value_try) : '')
+    setAutoValued(goal.auto_valued)
     setTargetDate(goal.target_date ?? '')
     setStatus(goal.status)
     setNote(goal.note ?? '')
@@ -220,12 +226,21 @@ export function SavingsGoalsPanel() {
     try {
       const compositeTargetAmount = parsedComponents.length
       const compositeCurrentAmount = parsedComponents.filter((row) => row.current_amount + 0.01 >= row.target_amount).length
+      const goalAutoValued = isGold && autoValued
+      const liveGoalValue = goalAutoValued
+        ? valueGoal({ value_type: valueType, current_amount: parseNumber(currentAmount) }, snapshot)
+        : null
       const goalFields = {
         name: trimmedName,
         value_type: valueType,
         target_amount: isComposite ? compositeTargetAmount : parseNumber(targetAmount),
         current_amount: isComposite ? compositeCurrentAmount : parseNumber(currentAmount),
-        estimated_value_try: isGold && estimatedValueTry.trim() ? parseNumber(estimatedValueTry) : null,
+        estimated_value_try: goalAutoValued
+          ? liveGoalValue ?? (estimatedValueTry.trim() ? parseNumber(estimatedValueTry) : null)
+          : isGold && estimatedValueTry.trim()
+            ? parseNumber(estimatedValueTry)
+            : null,
+        auto_valued: goalAutoValued,
         target_date: targetDate || null,
         status,
         note: note.trim() || null,
@@ -315,8 +330,10 @@ export function SavingsGoalsPanel() {
                         ) : null}
                       </div>
                       <p className="mt-1 text-xs text-muted-foreground">{formatSavingsGoalProgress(goal, goalComponents)}</p>
-                      {goal.estimated_value_try && goal.value_type !== 'TRY' && goal.value_type !== 'composite' ? (
-                        <p className="mt-0.5 text-xs text-muted-foreground">Tahmini: {formatCurrency(goal.estimated_value_try)}</p>
+                      {goal.value_type !== 'TRY' && goal.value_type !== 'composite' && (goal.auto_valued || goal.estimated_value_try) ? (
+                        <p className="mt-0.5 text-xs text-muted-foreground">
+                          {goal.auto_valued ? 'Güncel' : 'Tahmini'}: {formatCurrency(effectiveGoalValue(goal, snapshot))}
+                        </p>
                       ) : null}
                       {goal.target_date ? <p className="mt-0.5 text-xs text-muted-foreground">Hedef tarih: {formatDate(goal.target_date)}</p> : null}
                       {goal.value_type === 'composite' && goalComponents.length > 0 ? (
@@ -456,10 +473,31 @@ export function SavingsGoalsPanel() {
                 </label>
               </div>
               {valueType === 'gram_altin' || valueType === 'ceyrek_altin' ? (
-                <label className="block text-sm font-medium">
-                  Tahmini değer (TRY)
-                  <Input value={estimatedValueTry} onChange={(e) => setEstimatedValueTry(e.target.value)} type="number" min="0" step="0.01" className="mt-1" />
-                </label>
+                <div className="space-y-3">
+                  <label className="block text-sm font-medium">
+                    Değerleme
+                    <Select value={autoValued ? 'auto' : 'manual'} onChange={(e) => setAutoValued(e.target.value === 'auto')} className="mt-1">
+                      <option value="auto">Otomatik (canlı kur)</option>
+                      <option value="manual">Manuel</option>
+                    </Select>
+                  </label>
+                  {autoValued ? (
+                    <div className="rounded-lg border border-dashed border-border bg-muted/40 px-3 py-2.5 text-sm">
+                      <span className="text-muted-foreground">Güncel değer: </span>
+                      <span className="font-mono font-semibold tabular-nums text-foreground">
+                        {(() => {
+                          const live = valueGoal({ value_type: valueType, current_amount: parseNumber(currentAmount) }, snapshot)
+                          return live === null ? 'Kur bekleniyor…' : formatCurrency(live)
+                        })()}
+                      </span>
+                    </div>
+                  ) : (
+                    <label className="block text-sm font-medium">
+                      Tahmini değer (TRY)
+                      <Input value={estimatedValueTry} onChange={(e) => setEstimatedValueTry(e.target.value)} type="number" min="0" step="0.01" className="mt-1" />
+                    </label>
+                  )}
+                </div>
               ) : null}
             </>
           )}
