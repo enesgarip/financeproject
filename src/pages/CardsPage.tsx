@@ -25,6 +25,7 @@ import { Badge } from '../components/ui/badge'
 import { Card as SurfaceCard, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { HelpTooltip, type HelpTooltipContent } from '../components/ui/help-tooltip'
 import { Progress } from '../components/ui/progress'
+import { invalidateCategoryMemory, useCategoryMemory } from '../hooks/useCategoryMemory'
 import { supabase } from '../lib/supabase'
 import type { Card, CardExpense, CardExpenseStatus, CardInstallment, CardStatementArchive, InsertFor } from '../types/database'
 import { expenseCategoryOptions } from '../utils/categories'
@@ -926,6 +927,7 @@ function QuickExpensePanel({
   const [expenseStatus, setExpenseStatus] = useState<CardExpenseStatus>('posted')
   const [localError, setLocalError] = useState('')
   const [saving, setSaving] = useState(false)
+  const categoryMemory = useCategoryMemory()
   const cards = useMemo(() => rows.filter((row) => row.card_type === 'kredi_karti' || row.card_type === 'banka_karti'), [rows])
   const activeCardId = cards.some((card) => card.id === cardId) ? cardId : (cards[0]?.id ?? '')
   const selectedCard = cards.find((card) => card.id === activeCardId)
@@ -1003,6 +1005,7 @@ function QuickExpensePanel({
       return
     }
 
+    invalidateCategoryMemory()
     setAmount('')
     setDescription('')
     setSpentAt(dateInputValue(new Date()))
@@ -1095,7 +1098,7 @@ function QuickExpensePanel({
                 className="mt-1 block w-full min-w-0 max-w-[10.75rem] appearance-none rounded-lg border border-input px-3 py-2.5 outline-none [color-scheme:light] transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 min-[480px]:max-w-full dark:bg-card/50 dark:text-foreground dark:[color-scheme:dark]"
               />
             </label>
-            <CategoryPicker description={description} value={category} onChange={setCategory} />
+            <CategoryPicker description={description} value={category} onChange={setCategory} memory={categoryMemory} autoApply />
             <label className="block min-w-0 text-sm font-semibold text-foreground">
               İşlem türü
               <select
@@ -1206,6 +1209,7 @@ function LegacyInstallmentPanel({
   const [nextDueMonth, setNextDueMonth] = useState(monthInputValue())
   const [localError, setLocalError] = useState('')
   const [saving, setSaving] = useState(false)
+  const categoryMemory = useCategoryMemory()
 
   const creditCards = useMemo(() => rows.filter((row) => row.card_type === 'kredi_karti'), [rows])
   const activeCardId = creditCards.some((card) => card.id === cardId) ? cardId : (creditCards[0]?.id ?? '')
@@ -1346,6 +1350,7 @@ function LegacyInstallmentPanel({
       setError(`Devir eklendi, ancak işlem geçmişi yazılamadı: ${historyError.message}`)
     }
 
+    invalidateCategoryMemory()
     setSaving(false)
     setInstallmentAmount('')
     setDescription('')
@@ -1461,7 +1466,7 @@ function LegacyInstallmentPanel({
                 required
               />
             </label>
-            <CategoryPicker description={description} value={category} onChange={setCategory} />
+            <CategoryPicker description={description} value={category} onChange={setCategory} memory={categoryMemory} autoApply />
           </div>
           <p className="rounded-xl border border-warning/20 bg-warning/8 px-3 py-2.5 text-xs font-medium text-warning">
             Kalan {formatCurrency(remainingAmount)} tutarı otomatik olarak kart borcuna eklenir; böylece gelecek taksitler limit hesabına yansır.

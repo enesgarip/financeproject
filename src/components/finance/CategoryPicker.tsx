@@ -1,16 +1,35 @@
-import { useMemo } from 'react'
-import { expenseCategoryOptions, inferExpenseCategory } from '../../utils/categories'
+import { useEffect, useMemo, useRef } from 'react'
+import { type CategoryMemory, expenseCategoryOptions, suggestExpenseCategory } from '../../utils/categories'
 
 type CategoryPickerProps = {
   label?: string
   value: string
   description: string
   onChange: (value: string) => void
+  /** Learned (description → category) lookup from the user's past expenses. */
+  memory?: CategoryMemory
+  /** When true, the suggested category is auto-filled until the user picks one by hand. */
+  autoApply?: boolean
 }
 
-export function CategoryPicker({ label = 'Kategori', value, description, onChange }: CategoryPickerProps) {
-  const suggestedCategory = useMemo(() => inferExpenseCategory(description), [description])
+export function CategoryPicker({ label = 'Kategori', value, description, onChange, memory, autoApply = false }: CategoryPickerProps) {
+  const suggestedCategory = useMemo(() => suggestExpenseCategory(description, memory), [description, memory])
   const suggestedOption = expenseCategoryOptions.find((option) => option.value === suggestedCategory)
+
+  // Track whether the user has chosen a category by hand. Reset when the field
+  // is cleared (a new entry), so auto-fill kicks back in for the next expense.
+  const manuallyChosen = useRef(false)
+  const trimmed = description.trim()
+
+  useEffect(() => {
+    if (!trimmed) manuallyChosen.current = false
+  }, [trimmed])
+
+  useEffect(() => {
+    if (!autoApply || manuallyChosen.current) return
+    if (suggestedCategory && suggestedCategory !== value) onChange(suggestedCategory)
+  }, [autoApply, suggestedCategory, value, onChange])
+
   const showSuggestion = Boolean(suggestedOption && suggestedOption.value !== value)
 
   return (
@@ -19,7 +38,10 @@ export function CategoryPicker({ label = 'Kategori', value, description, onChang
         {label}
         <select
           value={value}
-          onChange={(event) => onChange(event.target.value)}
+          onChange={(event) => {
+            manuallyChosen.current = true
+            onChange(event.target.value)
+          }}
           className="mt-1 w-full min-w-0 rounded-lg border border-input bg-card/80 px-3 py-2.5 outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 dark:bg-card/50 dark:text-foreground"
         >
           {expenseCategoryOptions.map((option) => (

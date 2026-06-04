@@ -50,9 +50,71 @@ const categoryRules: Array<{ category: string; keywords: string[] }> = [
   },
 ]
 
+export function normalizeDescription(description: string) {
+  return description.trim().toLocaleLowerCase('tr-TR').replace(/\s+/g, ' ')
+}
+
 export function inferExpenseCategory(description: string) {
-  const normalized = description.trim().toLocaleLowerCase('tr-TR')
+  const normalized = normalizeDescription(description)
   if (!normalized) return null
 
   return categoryRules.find((rule) => rule.keywords.some((keyword) => normalized.includes(keyword)))?.category ?? null
+}
+
+/** A learned lookup of (normalized description → category) built from past expenses. */
+export type CategoryMemory = Map<string, string>
+
+/**
+ * Build a category memory from the user's previous expenses. For each distinct
+ * description, the most frequently used category wins (ties favour the most
+ * recent, so pass rows newest-first). Only known categories are kept.
+ */
+export function buildCategoryMemory(rows: Array<{ description: string | null; category: string | null }>): CategoryMemory {
+  const counts = new Map<string, Map<string, number>>()
+
+  for (const row of rows) {
+    const key = normalizeDescription(row.description ?? '')
+    const category = (row.category ?? '').trim()
+    if (!key || !category || !expenseCategories.includes(category)) continue
+    const inner = counts.get(key) ?? new Map<string, number>()
+    inner.set(category, (inner.get(category) ?? 0) + 1)
+    counts.set(key, inner)
+  }
+
+  const memory: CategoryMemory = new Map()
+  for (const [key, inner] of counts) {
+    let best = ''
+    let bestCount = -1
+    for (const [category, count] of inner) {
+      if (count > bestCount) {
+        best = category
+        bestCount = count
+      }
+    }
+    if (best) memory.set(key, best)
+  }
+  return memory
+}
+
+/**
+ * Suggest a category for a description. The user's own history (memory) wins
+ * over the built-in keyword dictionary; an exact normalized match is preferred,
+ * then a partial match, then the static keyword rules.
+ */
+export function suggestExpenseCategory(description: string, memory?: CategoryMemory): string | null {
+  const normalized = normalizeDescription(description)
+  if (!normalized) return null
+
+  if (memory && memory.size > 0) {
+    const exact = memory.get(normalized)
+    if (exact) return exact
+
+    for (const [key, category] of memory) {
+      if (key.length >= 3 && (normalized.includes(key) || key.includes(normalized))) {
+        return category
+      }
+    }
+  }
+
+  return inferExpenseCategory(description)
 }
