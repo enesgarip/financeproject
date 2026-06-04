@@ -10,6 +10,7 @@ import { supabase } from '../lib/supabase'
 import type { Card as FinanceCard, Debt } from '../types/database'
 import { formatDate } from '../utils/date'
 import { formatCurrency, formatNumber, parseNumber } from '../utils/formatCurrency'
+import { getLastUsed, resolvePreferred, setLastUsed } from '../utils/lastUsed'
 import type { MarketRatesSnapshot } from '../utils/marketRates'
 import { debtRateSymbol, effectiveDebtValue, valueDebt } from '../utils/valuation'
 import { useState } from 'react'
@@ -250,7 +251,7 @@ export function DebtsPage() {
     const cards = await getBankaKartlari()
     setDebtToSettle(debt)
     setDebtCards(cards)
-    setDebtAccountCard('')
+    setDebtAccountCard(resolvePreferred(getLastUsed('debtAccount'), cards.map((card) => card.id)))
     setDebtPaymentError(cards.length === 0 ? 'İşlem için önce bir banka kartı hesabı eklemelisin.' : '')
     setReloadDebts(() => reload)
   }
@@ -295,6 +296,7 @@ export function DebtsPage() {
       return
     }
 
+    setLastUsed('debtAccount', accountCard.id)
     closeDebtSettlement()
     await reloadDebts?.()
   }

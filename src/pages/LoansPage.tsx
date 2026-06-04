@@ -12,6 +12,7 @@ import { supabase } from '../lib/supabase'
 import type { Card, InsertFor, Loan, LoanInstallment } from '../types/database'
 import { dateInMonth, dateInputValue, formatDate, startOfToday } from '../utils/date'
 import { formatCurrency, parseNumber } from '../utils/formatCurrency'
+import { getLastUsed, resolvePreferred, setLastUsed } from '../utils/lastUsed'
 
 function getNextPaymentDate(installmentDay: number | null, remainingInstallments: number): string | null {
   if (!installmentDay || remainingInstallments <= 0) return null
@@ -360,7 +361,7 @@ export function LoansPage() {
     setInstallmentItem(item)
     setReloadLoans(() => reload)
     setBankaKartlari(cards)
-    setInstallmentSourceCard('')
+    setInstallmentSourceCard(resolvePreferred(getLastUsed('loanAccount'), cards.map((card) => card.id)))
     setInstallmentError(cards.length === 0 ? 'Ödeme için önce bir banka kartı hesabı eklemelisin.' : '')
   }
 
@@ -409,6 +410,7 @@ export function LoansPage() {
       return
     }
 
+    setLastUsed('loanAccount', sourceCard.id)
     closeInstallmentPayment()
     await loadInstallments()
     await reloadLoans?.()

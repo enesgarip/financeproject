@@ -32,6 +32,7 @@ import { expenseCategoryOptions } from '../utils/categories'
 import { getCardStatementPeriod } from '../utils/cardStatement'
 import { dateInputValue, daysUntil, formatDate, nextMonthlyDate } from '../utils/date'
 import { cardPayableDebt, cardProvisionAmount, cardSplitTotal } from '../utils/financeSummary'
+import { getLastUsed, resolvePreferred, setLastUsed } from '../utils/lastUsed'
 import { bankBrandGradient, getBankBrand } from '../utils/bankBranding'
 import { cn } from '../lib/utils'
 import { formatCurrency, parseNumber } from '../utils/formatCurrency'
@@ -917,7 +918,7 @@ function QuickExpensePanel({
   setError: (message: string) => void
   focus?: { cardId: string; mode: 'cash' | 'installment'; nonce: number } | null
 }) {
-  const [cardId, setCardId] = useState('')
+  const [cardId, setCardId] = useState(() => getLastUsed('expenseCard'))
   const [amount, setAmount] = useState('')
   const [description, setDescription] = useState('')
   const [spentAt, setSpentAt] = useState(dateInputValue(new Date()))
@@ -949,6 +950,7 @@ function QuickExpensePanel({
     if (!targetCard) return
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setCardId(targetCard.id)
+    setLastUsed('expenseCard', targetCard.id)
     if (focus.mode === 'installment' && targetCard.card_type === 'kredi_karti') {
       setPaymentMode('installment')
       setInstallmentCount((current) => (Number(current) < 2 ? '2' : current))
@@ -1006,6 +1008,8 @@ function QuickExpensePanel({
     }
 
     invalidateCategoryMemory()
+    setLastUsed('expenseCard', selectedCard.id)
+    setCardId(selectedCard.id)
     setAmount('')
     setDescription('')
     setSpentAt(dateInputValue(new Date()))
@@ -1044,7 +1048,9 @@ function QuickExpensePanel({
             <select
               value={activeCardId}
               onChange={(event) => {
-                setCardId(event.target.value)
+                const nextCardId = event.target.value
+                setCardId(nextCardId)
+                setLastUsed('expenseCard', nextCardId)
                 setPaymentMode('cash')
                 setLocalError('')
               }}
@@ -1200,7 +1206,7 @@ function LegacyInstallmentPanel({
   reload: () => Promise<void>
   setError: (message: string) => void
 }) {
-  const [cardId, setCardId] = useState('')
+  const [cardId, setCardId] = useState(() => getLastUsed('expenseCard'))
   const [installmentAmount, setInstallmentAmount] = useState('')
   const [description, setDescription] = useState('')
   const [category, setCategory] = useState(expenseCategoryOptions[0]?.value ?? 'Diğer')
@@ -1352,6 +1358,8 @@ function LegacyInstallmentPanel({
 
     invalidateCategoryMemory()
     setSaving(false)
+    setLastUsed('expenseCard', selectedCard.id)
+    setCardId(selectedCard.id)
     setInstallmentAmount('')
     setDescription('')
     setCategory(expenseCategoryOptions[0]?.value ?? 'Diğer')
@@ -1381,7 +1389,9 @@ function LegacyInstallmentPanel({
             <select
               value={activeCardId}
               onChange={(event) => {
-                setCardId(event.target.value)
+                const nextCardId = event.target.value
+                setCardId(nextCardId)
+                setLastUsed('expenseCard', nextCardId)
                 setLocalError('')
               }}
               className="mt-1 w-full rounded-lg border border-input bg-white px-3 py-2.5 outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 dark:bg-card/50 dark:text-foreground"
@@ -2053,11 +2063,12 @@ export function CardsPage() {
   }
 
   function openDebtPayment(card: Card, reload: () => Promise<void>, cards: Card[]) {
+    const accounts = cards.filter((c) => c.card_type === 'banka_karti' && c.id !== card.id)
     setDebtPaymentCard(card)
     setReloadCards(() => reload)
-    setAllCards(cards.filter((c) => c.card_type === 'banka_karti' && c.id !== card.id))
+    setAllCards(accounts)
     setDebtPaymentAmount(String(card.statement_debt_amount || cardPayableDebt(card) || ''))
-    setDebtPaymentSourceCard('')
+    setDebtPaymentSourceCard(resolvePreferred(getLastUsed('paymentAccount'), accounts.map((account) => account.id)))
     setDebtPaymentError('')
   }
 
@@ -2113,6 +2124,7 @@ export function CardsPage() {
       return
     }
 
+    setLastUsed('paymentAccount', sourceCard.id)
     setDebtPaymentCard(null)
     await reloadCards?.()
   }
@@ -2121,7 +2133,7 @@ export function CardsPage() {
     const accounts = cards.filter((row) => row.card_type === 'banka_karti' && row.id !== card.id)
     setStatementPayment({ statement, card })
     setStatementPaymentAccounts(accounts)
-    setStatementPaymentSourceCard('')
+    setStatementPaymentSourceCard(resolvePreferred(getLastUsed('paymentAccount'), accounts.map((account) => account.id)))
     setStatementPaymentError(accounts.length === 0 ? 'Ekstre odemesi icin once bir banka hesabi eklemelisin.' : '')
     setReloadCards(() => reload)
   }
@@ -2173,6 +2185,7 @@ export function CardsPage() {
       return
     }
 
+    setLastUsed('paymentAccount', sourceCard.id)
     closeStatementPayment()
     await Promise.all([reloadCards?.(), loadStatements(), loadInstallments()])
   }

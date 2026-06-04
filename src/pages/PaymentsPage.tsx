@@ -9,6 +9,7 @@ import { supabase } from '../lib/supabase'
 import type { Card as FinanceCard, Payment, PaymentAmountStatus, PaymentCategory, PaymentMethod } from '../types/database'
 import { daysUntil, formatDate } from '../utils/date'
 import { formatCurrency, parseNumber } from '../utils/formatCurrency'
+import { getLastUsed, resolvePreferred, setLastUsed } from '../utils/lastUsed'
 import { useState } from 'react'
 
 const paymentCategoryOptions: { label: PaymentCategory; value: PaymentCategory }[] = [
@@ -195,7 +196,7 @@ export function PaymentsPage() {
     const cards = await getPaymentCards()
     setPaymentToPay(payment)
     setPaymentCards(cards)
-    setPaymentSourceCard('')
+    setPaymentSourceCard(resolvePreferred(getLastUsed('paymentAccount'), cards.map((card) => card.id)))
     setPaidAmount(payment.amount > 0 ? String(payment.amount) : '')
     setPaymentError(cards.length === 0 ? 'Ödeme için önce bir banka hesabı veya kredi kartı eklemelisin.' : '')
     setReloadPayments(() => reload)
@@ -267,6 +268,7 @@ export function PaymentsPage() {
       return
     }
 
+    setLastUsed('paymentAccount', sourceCard.id)
     closePayment()
     await reloadPayments?.()
   }
