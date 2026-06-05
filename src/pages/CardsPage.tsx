@@ -27,6 +27,8 @@ import { HelpTooltip, type HelpTooltipContent } from '../components/ui/help-tool
 import { Progress } from '../components/ui/progress'
 import { invalidateCategoryMemory, useCategoryMemory } from '../hooks/useCategoryMemory'
 import { supabase } from '../lib/supabase'
+import { submitAccountMovement } from '../services/accountMovements'
+import { submitFinanceObligationPayment } from '../services/financePaymentActions'
 import type { Card, CardExpense, CardExpenseStatus, CardInstallment, CardStatementArchive, InsertFor } from '../types/database'
 import { expenseCategoryOptions } from '../utils/categories'
 import { getCardStatementPeriod } from '../utils/cardStatement'
@@ -37,6 +39,7 @@ import { bankBrandGradient, getBankBrand } from '../utils/bankBranding'
 import { cn } from '../lib/utils'
 import { formatCurrency, parseNumber } from '../utils/formatCurrency'
 import { addTransactionHistory } from '../utils/history'
+import { isMissingSupabaseCapabilityError } from '../utils/supabaseErrors'
 
 type CardSection = 'ozet' | 'kartlar' | 'islemler' | 'ekstreler'
 
@@ -265,9 +268,7 @@ function bankHueStyle(bankName: string, rows: Card[]) {
 }
 
 function isSchemaCacheError(error: { code?: string; message?: string } | null | undefined) {
-  if (!error) return false
-  const message = error.message ?? ''
-  return error.code === 'PGRST202' || error.code === 'PGRST205' || message.includes('schema cache') || message.includes('Could not find the function')
+  return isMissingSupabaseCapabilityError(error)
 }
 
 function limitGroupKey(card: Card) {
@@ -1979,82 +1980,18 @@ export function CardsPage() {
     if (!transactionCard) return
 
     const amount = parseNumber(transactionAmount)
-    if (amount <= 0) {
-      setTransactionError('Tutar 0 dan büyük olmalı.')
-      return
-    }
-
-    if (transactionType === 'transfer') {
-      const targetCard = movementAccounts.find((card) => card.id === transactionTargetCard)
-      if (!targetCard) {
-        setTransactionError('Hedef hesap seçmelisin.')
-        return
-      }
-
-      if (targetCard.id === transactionCard.id) {
-        setTransactionError('Kaynak ve hedef hesap aynı olamaz.')
-        return
-      }
-
-      if (transactionCard.current_balance < amount) {
-        setTransactionError('Kaynak hesap bakiyesi yetersiz.')
-        return
-      }
-
-      setTransactionSaving(true)
-      setTransactionError('')
-
-      const { error } = await supabase.rpc('transfer_between_accounts', {
-        p_source_card_id: transactionCard.id,
-        p_target_card_id: targetCard.id,
-        p_amount: amount,
-      })
-
-      setTransactionSaving(false)
-      if (error) {
-        setTransactionError(
-          isSchemaCacheError(error)
-            ? 'Transfer altyapısı canlı veritabanına uygulanmamış. Migration çalışınca bu işlem açılacak.'
-            : error.message,
-        )
-        return
-      }
-
-      setTransactionCard(null)
-      await reloadCards?.()
-      return
-    }
-
-    const nextBalance = transactionType === 'in' ? transactionCard.current_balance + amount : transactionCard.current_balance - amount
-    if (nextBalance < 0) {
-      setTransactionError('Giden tutar mevcut bakiyeden büyük olamaz.')
-      return
-    }
-
     setTransactionSaving(true)
     setTransactionError('')
-    const { error } = await supabase
-      .from('cards')
-      .update({ current_balance: nextBalance, updated_at: new Date().toISOString() })
-      .eq('id', transactionCard.id)
+    const { error } = await submitAccountMovement({
+      sourceAccount: transactionCard,
+      targetAccount: movementAccounts.find((card) => card.id === transactionTargetCard),
+      type: transactionType,
+      amount,
+    })
 
     setTransactionSaving(false)
     if (error) {
-      setTransactionError(error.message)
-      return
-    }
-
-    const historyError = await addTransactionHistory({
-      user_id: transactionCard.user_id,
-      type: 'transfer',
-      title: `${transactionCard.card_name} ${transactionType === 'in' ? 'para girişi' : 'para çıkışı'}`,
-      amount,
-      source_table: 'cards',
-      source_id: transactionCard.id,
-      note: transactionType === 'in' ? 'Banka kartına para geldi.' : 'Banka kartından para çıktı.',
-    })
-    if (historyError) {
-      setTransactionError(historyError.message)
+      setTransactionError(error.message ?? 'Para hareketi tamamlanamadı.')
       return
     }
 
@@ -2089,15 +2026,26 @@ export function CardsPage() {
     setDebtPaymentSaving(true)
     setDebtPaymentError('')
 
-    const { error } = await supabase.rpc('pay_card_debt', {
-      p_card_id: debtPaymentCard.id,
-      p_source_card_id: sourceCard.id,
-      p_amount: amount,
+    const { error } = await submitFinanceObligationPayment({
+      obligation: {
+        id: `card-debt-${debtPaymentCard.id}`,
+        kind: 'card_debt',
+        action: 'pay_card_debt',
+        sourceId: debtPaymentCard.id,
+        relatedCardId: debtPaymentCard.id,
+        title: debtPaymentCard.card_name,
+        subtitle: debtPaymentCard.bank_name,
+        date: dateInputValue(new Date()),
+        amount: payableDebt,
+        direction: 'outflow',
+      },
+      account: sourceCard,
+      amount,
     })
 
     setDebtPaymentSaving(false)
     if (error) {
-      setDebtPaymentError(error.message)
+      setDebtPaymentError(error.message ?? 'Kart borcu ödenemedi.')
       return
     }
 
@@ -2128,9 +2076,21 @@ export function CardsPage() {
     setStatementActionId(statementPayment.statement.id)
     setStatementPaymentError('')
 
-    const { error } = await supabase.rpc('pay_card_statement', {
-      p_statement_id: statementPayment.statement.id,
-      p_source_card_id: sourceCard.id,
+    const { error } = await submitFinanceObligationPayment({
+      obligation: {
+        id: `card-statement-${statementPayment.statement.id}`,
+        kind: 'card_statement',
+        action: 'pay_card_statement',
+        sourceId: statementPayment.statement.id,
+        relatedCardId: statementPayment.card.id,
+        title: `${statementPayment.card.card_name} ekstresi`,
+        subtitle: statementPayment.card.bank_name,
+        date: statementPayment.statement.due_date ?? statementPayment.statement.statement_date,
+        amount: statementPayment.statement.statement_debt_amount,
+        direction: 'outflow',
+      },
+      account: sourceCard,
+      amount: statementPayment.statement.statement_debt_amount,
     })
 
     setStatementPaymentSaving(false)
@@ -2140,7 +2100,7 @@ export function CardsPage() {
       setStatementPaymentError(
         isSchemaCacheError(error)
           ? 'Ekstre odeme altyapisi canli veritabanina uygulanmamis. Migration calisinca bu islem acilacak.'
-          : error.message,
+          : error.message ?? 'Ekstre ödenemedi.',
       )
       return
     }

@@ -26,6 +26,7 @@ import { dateInputValue, formatDate } from '../utils/date'
 import { cardProvisionAmount, cardSplitTotal, moneyDiffers, roundMoney } from '../utils/financeSummary'
 import { formatCurrency } from '../utils/formatCurrency'
 import { formatComponentAmount, formatSavingsGoalAmount, savingsGoalValueTypeLabel } from '../utils/savingsGoal'
+import { isMissingSupabaseCapabilityError } from '../utils/supabaseErrors'
 
 type HealthData = {
   assets: Asset[]
@@ -177,9 +178,7 @@ const exportTables = [
 ] satisfies Array<{ key: keyof HealthData; table: string }>
 
 function isSchemaCacheError(error: { code?: string; message?: string } | null | undefined) {
-  if (!error) return false
-  const message = error.message ?? ''
-  return error.code === 'PGRST202' || error.code === 'PGRST205' || message.includes('schema cache') || message.includes('Could not find the function')
+  return isMissingSupabaseCapabilityError(error)
 }
 
 function currentMonthStart() {
@@ -1801,6 +1800,7 @@ export function DataHealthPage() {
   const [resetConfirm, setResetConfirm] = useState('')
   const [resetting, setResetting] = useState(false)
   const [snoozedIssueIds, setSnoozedIssueIds] = useState<string[]>([])
+  const [fixAllOpen, setFixAllOpen] = useState(false)
 
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -2110,6 +2110,7 @@ export function DataHealthPage() {
   }
 
   async function handleFixAll() {
+    setFixAllOpen(false)
     setFixingId('all')
     setError('')
     setMessage('')
@@ -2229,7 +2230,7 @@ export function DataHealthPage() {
             </button>
             <button
               type="button"
-              onClick={() => void handleFixAll()}
+              onClick={() => setFixAllOpen(true)}
               disabled={loading || Boolean(fixingId) || undoing || fixableIssues.length === 0}
               className="inline-flex items-center gap-2 rounded-xl bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground shadow-[0_2px_8px_color-mix(in_srgb,var(--primary)_30%,transparent)] transition hover:bg-primary/90 active:scale-[0.97] disabled:opacity-50"
             >
@@ -2407,6 +2408,45 @@ export function DataHealthPage() {
         </div>
       )}
     </section>
+
+    <SimpleModal title="Toplu düzeltmeyi onayla" open={fixAllOpen} onClose={() => setFixAllOpen(false)}>
+      <div className="space-y-4">
+        <div className="rounded-xl border border-warning/20 bg-warning/8 p-3 text-sm text-warning">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="mt-0.5 size-5 shrink-0" />
+            <div>
+              <p className="font-bold">Toplu işlem {fixableIssues.length} kaydı etkileyebilir.</p>
+              <p className="mt-1">
+                Her düzeltmeden önce ilgili satırların bu oturumluk geri alma görüntüsü alınır. İşlem yarıda kalırsa başarılı adımlar yine geri alınabilir.
+              </p>
+            </div>
+          </div>
+        </div>
+        <div className="rounded-xl border border-border/70 bg-muted/30 p-3">
+          <p className="text-xs font-bold uppercase text-muted-foreground">İlk düzeltmeler</p>
+          <div className="mt-2 grid gap-2">
+            {fixableIssues.slice(0, 5).map((issue) => (
+              <div key={issue.id} className="rounded-lg bg-card/80 px-3 py-2 text-sm ring-1 ring-border/60">
+                <p className="font-semibold text-foreground">{issue.title}</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">{issue.fixLabel}</p>
+              </div>
+            ))}
+            {fixableIssues.length > 5 ? (
+              <p className="text-xs font-semibold text-muted-foreground">+{fixableIssues.length - 5} düzeltme daha</p>
+            ) : null}
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => void handleFixAll()}
+          disabled={Boolean(fixingId) || undoing || fixableIssues.length === 0}
+          className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-[0_2px_8px_color-mix(in_srgb,var(--primary)_30%,transparent)] transition hover:bg-primary/90 active:scale-[0.99] disabled:opacity-50"
+        >
+          <Wrench size={16} />
+          {fixingId === 'all' ? 'Düzeltiliyor...' : 'Toplu düzeltmeyi uygula'}
+        </button>
+      </div>
+    </SimpleModal>
 
     <SimpleModal title="Tüm veriyi sil" open={resetOpen} onClose={() => setResetOpen(false)}>
       <form onSubmit={handleResetAllData} className="space-y-4">

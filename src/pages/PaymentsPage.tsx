@@ -6,6 +6,18 @@ import { Badge } from '../components/ui/badge'
 import { Card, CardContent } from '../components/ui/card'
 import { Progress } from '../components/ui/progress'
 import { supabase } from '../lib/supabase'
+import {
+  accountLabelForObligation,
+  amountLabelForObligation,
+  emptyAccountMessageForObligation,
+  getAccountsForObligation,
+  lastUsedKeyForObligation,
+  modalTitleForObligation,
+  obligationAmountEditable,
+  sortPaymentAccounts,
+  submitFinanceObligationPayment,
+  submitLabelForObligation,
+} from '../services/financePaymentActions'
 import type {
   Card as FinanceCard,
   CardInstallment,
@@ -122,22 +134,7 @@ async function getPaymentCards(): Promise<FinanceCard[]> {
     .select('*')
 
   if (error) return []
-  return ((data as FinanceCard[]) ?? []).sort((left, right) => {
-    if (left.card_type !== right.card_type) return left.card_type === 'banka_karti' ? -1 : 1
-    return `${left.bank_name} ${left.card_name}`.localeCompare(`${right.bank_name} ${right.card_name}`, 'tr')
-  })
-}
-
-function getAccountsForObligation(obligation: FinanceObligation, cards: FinanceCard[]) {
-  const bankOnly = obligation.action !== 'pay_payment'
-  const accounts = bankOnly
-    ? cards.filter((card) => card.card_type === 'banka_karti' && card.id !== obligation.relatedCardId)
-    : cards
-
-  return [...accounts].sort((left, right) => {
-    if (left.card_type !== right.card_type) return left.card_type === 'banka_karti' ? -1 : 1
-    return `${left.bank_name} ${left.card_name}`.localeCompare(`${right.bank_name} ${right.card_name}`, 'tr')
-  })
+  return sortPaymentAccounts((data as FinanceCard[]) ?? [])
 }
 
 function paymentToObligation(payment: Payment): FinanceObligation {
@@ -174,59 +171,6 @@ function getPaymentAmountLabel(payment: Payment) {
   if (payment.amount <= 0 && payment.amount_status === 'estimated') return 'Tutar bekleniyor'
   const prefix = payment.amount_status === 'estimated' ? 'Yaklaşık ' : ''
   return `${prefix}${formatCurrency(payment.amount)}`
-}
-
-function isSchemaCacheError(error: { code?: string; message?: string } | null | undefined) {
-  if (!error) return false
-  const message = error.message ?? ''
-  return error.code === 'PGRST202' || error.code === 'PGRST204' || message.includes('schema cache') || message.includes('Could not find the function')
-}
-
-function lastUsedKeyForObligation(obligation: FinanceObligation) {
-  if (obligation.action === 'pay_loan_installment') return 'loanAccount'
-  if (obligation.action === 'settle_debt' || obligation.action === 'collect_debt') return 'debtAccount'
-  return 'paymentAccount'
-}
-
-function modalTitleForObligation(obligation: FinanceObligation | null) {
-  if (!obligation) return 'Ödeme yap'
-  if (obligation.action === 'collect_debt') return 'Alacağı tahsil et'
-  if (obligation.action === 'settle_debt') return 'Borcu öde'
-  if (obligation.action === 'pay_card_statement') return 'Ekstre ödemesi'
-  if (obligation.action === 'pay_card_debt') return 'Kredi kartı borç ödeme'
-  if (obligation.action === 'pay_loan_installment') return 'Taksit ödemesi'
-  return 'Ödeme yap'
-}
-
-function submitLabelForObligation(obligation: FinanceObligation | null) {
-  if (!obligation) return 'İşlemi tamamla'
-  if (obligation.action === 'collect_debt') return 'Tahsilatı tamamla'
-  if (obligation.action === 'settle_debt') return 'Borcu öde'
-  if (obligation.action === 'pay_card_statement') return 'Ekstreyi öde'
-  if (obligation.action === 'pay_card_debt') return 'Borç öde'
-  if (obligation.action === 'pay_loan_installment') return 'Taksiti öde'
-  return 'Ödemeyi tamamla'
-}
-
-function accountLabelForObligation(obligation: FinanceObligation | null) {
-  return obligation?.action === 'collect_debt' ? 'Tahsilat hesabı' : 'Kaynak hesap'
-}
-
-function amountLabelForObligation(obligation: FinanceObligation | null) {
-  if (obligation?.action === 'collect_debt') return 'Tahsilat tutarı'
-  if (obligation?.action === 'pay_payment') return 'Ödenen gerçek tutar'
-  if (obligation?.action === 'pay_card_debt') return 'Ödeme tutarı'
-  return 'Tutar'
-}
-
-function emptyAccountMessageForObligation(obligation: FinanceObligation | null) {
-  if (obligation?.action === 'pay_payment') return 'Kullanılabilir banka hesabı veya kredi kartı yok.'
-  if (obligation?.action === 'collect_debt') return 'Tahsilat için önce bir banka hesabı eklemelisin.'
-  return 'Ödeme için önce bir banka hesabı eklemelisin.'
-}
-
-function obligationAmountEditable(obligation: FinanceObligation | null) {
-  return obligation?.action === 'pay_payment' || obligation?.action === 'pay_card_debt'
 }
 
 function PaymentsOverview({ rows }: { rows: Payment[] }) {
@@ -351,62 +295,15 @@ export function PaymentsPage() {
     setObligationSaving(true)
     setObligationPaymentError('')
 
-    let submitError: { message: string; code?: string } | null = null
-
-    if (obligationToPay.action === 'pay_payment') {
-      const { error } = await supabase.rpc('pay_payment', {
-        p_payment_id: obligationToPay.sourceId,
-        p_source_card_id: account.id,
-        p_paid_amount: amount,
-      })
-
-      submitError = error
-      if (submitError && isSchemaCacheError(submitError)) {
-        const { error: updateError } = await supabase
-          .from('payments')
-          .update({ amount, updated_at: new Date().toISOString() })
-          .eq('id', obligationToPay.sourceId)
-
-        if (updateError) {
-          submitError = updateError
-        } else {
-          const { error: legacyError } = await supabase.rpc('pay_payment', {
-            p_payment_id: obligationToPay.sourceId,
-            p_source_card_id: account.id,
-          })
-          submitError = legacyError
-        }
-      }
-    } else if (obligationToPay.action === 'pay_card_statement') {
-      const { error } = await supabase.rpc('pay_card_statement', {
-        p_statement_id: obligationToPay.sourceId,
-        p_source_card_id: account.id,
-      })
-      submitError = error
-    } else if (obligationToPay.action === 'pay_card_debt') {
-      const { error } = await supabase.rpc('pay_card_debt', {
-        p_card_id: obligationToPay.sourceId,
-        p_source_card_id: account.id,
-        p_amount: amount,
-      })
-      submitError = error
-    } else if (obligationToPay.action === 'pay_loan_installment') {
-      const { error } = await supabase.rpc('pay_loan_installment', {
-        p_installment_id: obligationToPay.sourceId,
-        p_source_card_id: account.id,
-      })
-      submitError = error
-    } else if (obligationToPay.action === 'settle_debt' || obligationToPay.action === 'collect_debt') {
-      const { error } = await supabase.rpc('settle_personal_debt', {
-        p_debt_id: obligationToPay.sourceId,
-        p_account_card_id: account.id,
-      })
-      submitError = error
-    }
+    const { error: submitError } = await submitFinanceObligationPayment({
+      obligation: obligationToPay,
+      account,
+      amount,
+    })
 
     setObligationSaving(false)
     if (submitError) {
-      setObligationPaymentError(submitError.message)
+      setObligationPaymentError(submitError.message ?? 'Ödeme işlemi tamamlanamadı.')
       return
     }
 

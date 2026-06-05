@@ -1,0 +1,42 @@
+import { formatDate } from './date'
+import { formatCurrency } from './formatCurrency'
+import {
+  buildFinanceObligationsForRange,
+  type FinanceObligation,
+  type FinanceObligationsInput,
+} from './obligations'
+
+export type DashboardUpcomingItem = {
+  id: string
+  title: string
+  value: string
+  amount: number
+  kind: 'payment' | 'card' | 'loan' | 'debt'
+  date: string
+  sortTime: number
+}
+
+function obligationKindToDashboardKind(kind: FinanceObligation['kind']): DashboardUpcomingItem['kind'] {
+  if (kind === 'payment') return 'payment'
+  if (kind === 'loan_installment' || kind === 'legacy_loan_installment') return 'loan'
+  if (kind === 'personal_debt' || kind === 'personal_receivable') return 'debt'
+  return 'card'
+}
+
+export function obligationToDashboardUpcomingItem(item: FinanceObligation): DashboardUpcomingItem {
+  return {
+    id: item.id,
+    title: item.title,
+    value: formatCurrency(item.amount),
+    amount: item.amount,
+    kind: obligationKindToDashboardKind(item.kind),
+    date: formatDate(item.date),
+    sortTime: new Date(`${item.date}T00:00:00`).getTime(),
+  }
+}
+
+export function buildDashboardUpcomingItems(data: FinanceObligationsInput, days = 30, from = new Date()): DashboardUpcomingItem[] {
+  return buildFinanceObligationsForRange(data, { days, from })
+    .filter((item) => item.direction === 'outflow')
+    .map(obligationToDashboardUpcomingItem)
+}

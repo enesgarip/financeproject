@@ -28,6 +28,7 @@ import type {
   Card as FinanceCard,
   CardExpense,
   CardInstallment,
+  CardStatementArchive,
   Debt,
   Loan,
   LoanInstallment,
@@ -41,7 +42,7 @@ import type {
 import { BudgetAlertPanel } from '../components/dashboard/BudgetAlertPanel'
 import { StatementReminderPanel } from '../components/dashboard/StatementReminderPanel'
 import { AmountDisplay, FinancePanel, MetricCard, MiniStat, PageHero, ProgressStrip, SectionHeader, StatusBadge } from '../components/finance/FinanceUI'
-import { addMonths, daysUntil, formatDate, isUpcomingDate, monthlyOccurrenceDate, nextMonthlyDate, startOfMonth } from '../utils/date'
+import { addMonths, daysUntil, formatDate, monthlyOccurrenceDate, nextMonthlyDate, startOfMonth } from '../utils/date'
 import {
   buildCreditLimitGroups,
   buildFinancialHealth,
@@ -63,7 +64,9 @@ import {
   type GoalProgressSummary,
   type MonthlyLoadSummary,
 } from '../utils/financeSummary'
+import { buildDashboardUpcomingItems, type DashboardUpcomingItem } from '../utils/dashboardUpcoming'
 import { formatCurrency } from '../utils/formatCurrency'
+import { isMissingSupabaseCapabilityError } from '../utils/supabaseErrors'
 import { EmptyState } from '../components/EmptyState'
 import { CashFlowChart, type CashFlowPoint } from '../components/charts/CashFlowChart'
 import { DonutChart, type DonutSlice } from '../components/charts/DonutChart'
@@ -86,6 +89,7 @@ type DashboardData = {
   budgets: Budget[]
   cardExpenses: CardExpense[]
   cardInstallments: CardInstallment[]
+  cardStatements: CardStatementArchive[]
   savingsGoals: SavingsGoal[]
   savingsGoalComponents: SavingsGoalComponent[]
 }
@@ -102,6 +106,7 @@ const emptyData: DashboardData = {
   budgets: [],
   cardExpenses: [],
   cardInstallments: [],
+  cardStatements: [],
   savingsGoals: [],
   savingsGoalComponents: [],
 }
@@ -165,15 +170,7 @@ const historyFilters: Array<{ label: string; value: TransactionHistoryType | 'al
   { label: 'Kart', value: 'card' },
 ]
 
-type UpcomingItem = {
-  id: string
-  title: string
-  value: string
-  amount: number
-  kind: 'payment' | 'card' | 'loan' | 'debt'
-  date: string
-  sortTime: number
-}
+type UpcomingItem = DashboardUpcomingItem
 
 type SmartInsight = {
   title: string
@@ -193,9 +190,7 @@ type FocusAction = {
 }
 
 function isMissingSchemaCacheError(error: { code?: string; message?: string } | null | undefined) {
-  if (!error) return false
-  const message = error.message ?? ''
-  return error.code === 'PGRST202' || error.code === 'PGRST205' || message.includes('schema cache') || message.includes('Could not find the table') || message.includes('Could not find the function')
+  return isMissingSupabaseCapabilityError(error)
 }
 
 function buildSmartInsights(
@@ -519,6 +514,7 @@ export function DashboardPage() {
       budgets,
       cardExpenses,
       cardInstallments,
+      cardStatements,
       savingsGoals,
       savingsGoalComponents,
     ] =
@@ -534,6 +530,7 @@ export function DashboardPage() {
         supabase.from('budgets').select('*'),
         supabase.from('card_expenses').select('*'),
         supabase.from('card_installments').select('*'),
+        supabase.from('card_statement_archives').select('*').eq('status', 'open'),
         supabase.from('savings_goals').select('*'),
         supabase.from('savings_goal_components').select('*'),
       ])
@@ -550,6 +547,7 @@ export function DashboardPage() {
       isMissingSchemaCacheError(budgets.error) ? null : budgets.error,
       cardExpenses.error,
       isMissingSchemaCacheError(cardInstallments.error) ? null : cardInstallments.error,
+      isMissingSchemaCacheError(cardStatements.error) ? null : cardStatements.error,
       isMissingSchemaCacheError(savingsGoals.error) ? null : savingsGoals.error,
       isMissingSchemaCacheError(savingsGoalComponents.error) ? null : savingsGoalComponents.error,
     ].find(Boolean)
@@ -571,6 +569,7 @@ export function DashboardPage() {
       budgets: budgets.error ? [] : (budgets.data ?? []),
       cardExpenses: cardExpenses.data ?? [],
       cardInstallments: cardInstallments.error ? [] : (cardInstallments.data ?? []),
+      cardStatements: cardStatements.error ? [] : (cardStatements.data ?? []),
       savingsGoals: savingsGoals.error ? [] : (savingsGoals.data ?? []),
       savingsGoalComponents: savingsGoalComponents.error ? [] : (savingsGoalComponents.data ?? []),
     })
@@ -623,84 +622,16 @@ export function DashboardPage() {
   }, [data])
 
   const upcomingItems = useMemo(() => {
-    const loansById = new Map(data.loans.map((loan) => [loan.id, loan]))
-    const manualPayments = data.payments
-      .filter((payment) => payment.status === 'bekliyor' && isUpcomingDate(payment.due_date, UPCOMING_DAYS))
-      .map((payment) => ({
-        id: `payment-${payment.id}`,
-        title: `Ödeme · ${payment.title}`,
-        value: formatCurrency(payment.amount),
-        amount: payment.amount,
-        kind: 'payment' as const,
-        date: formatDate(payment.due_date),
-        sortTime: new Date(`${payment.due_date}T00:00:00`).getTime(),
-      }))
-
-    const creditCards = data.cards
-      .filter((card) => card.card_type === 'kredi_karti' && card.due_day && cardMonthlyPaymentAmount(card) > 0)
-      .map((card) => ({ card, dueDate: nextMonthlyDate(card.due_day) }))
-      .filter((item) => {
-        const remaining = daysUntil(item.dueDate)
-        return remaining !== null && remaining >= 0 && remaining <= UPCOMING_DAYS
-      })
-      .map(({ card, dueDate }) => ({
-        id: `card-${card.id}-${dateInputValue(dueDate)}`,
-        title: `Kart · ${card.bank_name} · ${card.card_name}`,
-        value: formatCurrency(cardMonthlyPaymentAmount(card)),
-        amount: cardMonthlyPaymentAmount(card),
-        kind: 'card' as const,
-        date: formatMonthDay(dueDate),
-        sortTime: dueDate?.getTime() ?? 0,
-      }))
-
-    const loanInstallments = data.loanInstallments
-      .filter((installment) => installment.status === 'bekliyor' && isUpcomingDate(installment.due_date, UPCOMING_DAYS))
-      .map((installment) => {
-        const loan = loansById.get(installment.loan_id)
-        return {
-          id: `loan-installment-${installment.id}`,
-          title: loan ? `Kredi · ${loan.bank_name} · ${loan.loan_name}` : 'Kredi taksidi',
-          value: formatCurrency(installment.amount),
-          amount: installment.amount,
-          kind: 'loan' as const,
-          date: formatDate(installment.due_date),
-          sortTime: new Date(`${installment.due_date}T00:00:00`).getTime(),
-        }
-      })
-
-    const personalDebts = data.debts
-      .filter((debt) => debt.direction === 'borç_aldım' && debt.status === 'açık' && isUpcomingDate(debt.due_date, UPCOMING_DAYS))
-      .map((debt) => ({
-        id: `debt-${debt.id}`,
-        title: `Borç · ${debt.person_name}`,
-        value: formatCurrency(debt.estimated_value_try),
-        amount: debt.estimated_value_try,
-        kind: 'debt' as const,
-        date: formatDate(debt.due_date),
-        sortTime: new Date(`${debt.due_date}T00:00:00`).getTime(),
-      }))
-
-    const plannedLoanIds = new Set(data.loanInstallments.map((installment) => installment.loan_id))
-    const legacyLoanInstallments = data.loans
-      .filter((loan) => !plannedLoanIds.has(loan.id) && loan.status === 'active' && loan.installment_day && loan.remaining_installments > 0)
-      .map((loan) => ({ loan, dueDate: nextMonthlyDate(loan.installment_day) }))
-      .filter((item) => {
-        const remaining = daysUntil(item.dueDate)
-        return remaining !== null && remaining >= 0 && remaining <= UPCOMING_DAYS
-      })
-      .map(({ loan, dueDate }) => ({
-        id: `loan-${loan.id}-${dateInputValue(dueDate)}`,
-        title: `Kredi · ${loan.bank_name} · ${loan.loan_name}`,
-        value: formatCurrency(loan.monthly_payment),
-        amount: loan.monthly_payment,
-        kind: 'loan' as const,
-        date: formatMonthDay(dueDate),
-        sortTime: dueDate?.getTime() ?? 0,
-      }))
-
-    return [...manualPayments, ...creditCards, ...loanInstallments, ...personalDebts, ...legacyLoanInstallments]
-      .sort((a, b) => a.sortTime - b.sortTime)
-  }, [data.cards, data.debts, data.loanInstallments, data.loans, data.payments])
+    return buildDashboardUpcomingItems({
+      cards: data.cards,
+      payments: data.payments,
+      loans: data.loans,
+      loanInstallments: data.loanInstallments,
+      debts: data.debts,
+      cardInstallments: data.cardInstallments,
+      cardStatements: data.cardStatements,
+    }, UPCOMING_DAYS)
+  }, [data.cardInstallments, data.cardStatements, data.cards, data.debts, data.loanInstallments, data.loans, data.payments])
   const financialHealth = useMemo(() => {
     const urgentUpcomingCount = upcomingItems.filter((item) => {
       const remaining = daysUntil(new Date(item.sortTime))
@@ -1096,15 +1027,6 @@ function AnalyticsSnapshotPanel({
       </div>
     </FinancePanel>
   )
-}
-
-function dateInputValue(date: Date | null) {
-  return date ? date.toLocaleDateString('sv-SE') : 'unknown'
-}
-
-function formatMonthDay(date: Date | null) {
-  if (!date) return '-'
-  return new Intl.DateTimeFormat('tr-TR', { day: '2-digit', month: 'short' }).format(date)
 }
 
 function getUserDisplayName(user: User | null) {

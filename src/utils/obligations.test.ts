@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import type { Card, CardInstallment, CardStatementArchive, Debt, Loan, LoanInstallment, Payment } from '../types/database'
-import { buildFinanceObligationsForMonth, summarizeFinanceObligations, type FinanceObligationsInput } from './obligations'
+import {
+  buildFinanceObligationsForMonth,
+  buildFinanceObligationsForRange,
+  summarizeFinanceObligations,
+  type FinanceObligationsInput,
+} from './obligations'
 
 const base = { id: 'id', user_id: 'u', created_at: '2026-06-01T00:00:00.000Z', updated_at: '2026-06-01T00:00:00.000Z' }
 const FROM = new Date(2026, 5, 1)
@@ -195,5 +200,44 @@ describe('buildFinanceObligationsForMonth', () => {
       ['legacy_loan_installment', '2026-07-07', 2000, null],
       ['card_installment', '2026-07-12', 400, null],
     ])
+  })
+
+  it('builds a short range from the same obligation source of truth', () => {
+    const items = buildFinanceObligationsForRange(
+      input({
+        payments: [
+          payment({
+            id: 'rent',
+            title: 'Kira',
+            amount: 5000,
+            due_date: '2026-01-05',
+            recurrence: 'monthly',
+            recurrence_day: 5,
+          }),
+        ],
+        cards: [card({ id: 'card', card_type: 'kredi_karti', statement_day: 1, due_day: 10, statement_debt_amount: 3000 })],
+        cardStatements: [statement({ id: 'statement', card_id: 'card', statement_debt_amount: 3000, due_date: '2026-06-10' })],
+      }),
+      { from: new Date(2026, 5, 1), days: 14 },
+    )
+
+    expect(items.map((item) => [item.kind, item.date, item.amount])).toEqual([
+      ['payment', '2026-06-05', 5000],
+      ['card_statement', '2026-06-10', 3000],
+    ])
+  })
+
+  it('does not include obligations outside the requested range', () => {
+    const items = buildFinanceObligationsForRange(
+      input({
+        payments: [
+          payment({ id: 'inside', amount: 100, due_date: '2026-06-03' }),
+          payment({ id: 'outside', amount: 200, due_date: '2026-07-03' }),
+        ],
+      }),
+      { from: new Date(2026, 5, 1), days: 10 },
+    )
+
+    expect(items.map((item) => item.sourceId)).toEqual(['inside'])
   })
 })

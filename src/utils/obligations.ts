@@ -8,7 +8,7 @@ import type {
   Payment,
 } from '../types/database'
 import { getNextCardPaymentDueDate } from './cardStatement'
-import { addMonths, dateInMonth, dateInputValue, isDateInMonth, monthlyOccurrenceDate, startOfMonth } from './date'
+import { addMonths, dateInMonth, dateInputValue, isDateInMonth, monthlyOccurrenceDate, startOfDay, startOfMonth } from './date'
 import { cardMonthlyPaymentAmount, paymentOccurrenceInMonth, roundMoney, sum } from './financeSummary'
 
 export type FinanceObligationKind =
@@ -65,6 +65,30 @@ export type FinanceObligationMonthSummary = {
 
 function monthDistance(from: Date, target: Date) {
   return (target.getFullYear() - from.getFullYear()) * 12 + target.getMonth() - from.getMonth()
+}
+
+function addDays(value: Date, days: number) {
+  const next = new Date(value)
+  next.setDate(value.getDate() + days)
+  return next
+}
+
+function monthsInRange(from: Date, to: Date) {
+  const months: Date[] = []
+  const cursor = startOfMonth(from)
+  const end = startOfMonth(to)
+
+  while (cursor <= end) {
+    months.push(new Date(cursor))
+    cursor.setMonth(cursor.getMonth() + 1)
+  }
+
+  return months
+}
+
+function dateIsInRange(value: string, from: Date, to: Date) {
+  const date = startOfDay(new Date(`${value}T00:00:00`))
+  return date >= startOfDay(from) && date <= startOfDay(to)
 }
 
 function cardLabel(card: Card | undefined) {
@@ -275,6 +299,31 @@ export function summarizeFinanceObligations(items: FinanceObligation[]): Finance
     payableCount: items.filter((item) => item.action).length,
     itemCount: items.length,
   }
+}
+
+export function buildFinanceObligationsForRange(
+  data: FinanceObligationsInput,
+  options: { from?: Date; days?: number } = {},
+): FinanceObligation[] {
+  const from = startOfDay(options.from ?? new Date())
+  const to = addDays(from, Math.max(0, options.days ?? 30))
+  const byId = new Map<string, FinanceObligation>()
+
+  for (const month of monthsInRange(from, to)) {
+    const monthlyItems = buildFinanceObligationsForMonth(data, month, { from })
+
+    for (const item of monthlyItems) {
+      if (!dateIsInRange(item.date, from, to)) continue
+      byId.set(item.id, item)
+    }
+  }
+
+  return Array.from(byId.values()).sort((left, right) => (
+    left.date.localeCompare(right.date) ||
+    left.direction.localeCompare(right.direction) ||
+    right.amount - left.amount ||
+    left.title.localeCompare(right.title, 'tr')
+  ))
 }
 
 export function groupFinanceObligationsByDate(items: FinanceObligation[]) {
