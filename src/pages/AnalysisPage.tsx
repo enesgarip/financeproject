@@ -1,5 +1,5 @@
 import { Archive, BarChart3, CalendarDays, CheckCircle2, Download, PieChart, Search, Users, WalletCards } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAuth } from '../auth/useAuth'
 import { CrudPage, type FormField } from '../components/CrudPage'
 import { BarChart, type BarDataPoint } from '../components/charts/BarChart'
@@ -32,6 +32,9 @@ import { dateInputValue, daysUntil, formatDate, isDateInMonth, monthlyOccurrence
 import { formatCurrency, parseNumber } from '../utils/formatCurrency'
 import { buildCashFlowForecast } from '../utils/cashFlowForecast'
 import { buildFinancialPosition } from '../utils/financeSummary'
+import { useMarketRates } from '../hooks/useMarketRates'
+import { type MarketRatesSnapshot } from '../utils/marketRates'
+import { convertNetWorth, formatRealValue, realValueChangeBadge, type RealUnit, REAL_UNIT_LABELS } from '../utils/realValue'
 
 type AnalysisData = {
   assets: Asset[]
@@ -955,7 +958,15 @@ function shortMonth(monthKey: string) {
   return new Intl.DateTimeFormat('tr-TR', { month: 'short' }).format(new Date(`${monthKey}T00:00:00`))
 }
 
-function NetWorthTrend({ snapshots }: { snapshots: NetWorthSnapshot[] }) {
+function NetWorthTrend({
+  snapshots,
+  ratesSnapshot,
+}: {
+  snapshots: NetWorthSnapshot[]
+  ratesSnapshot: MarketRatesSnapshot | null
+}) {
+  const [unit, setUnit] = useState<RealUnit>('TRY')
+
   if (snapshots.length < 2) {
     return (
       <Card className="border-border/70 shadow-[var(--shadow-card)] lg:col-span-12">
@@ -974,10 +985,32 @@ function NetWorthTrend({ snapshots }: { snapshots: NetWorthSnapshot[] }) {
 
   const latest = snapshots.at(-1)!
   const first = snapshots[0]!
-  const min = snapshots.reduce((a, b) => (b.net_worth < a.net_worth ? b : a))
-  const max = snapshots.reduce((a, b) => (b.net_worth > a.net_worth ? b : a))
-  const change = latest.net_worth - first.net_worth
   const spansDifferentYears = new Date(first.snapshot_date).getFullYear() !== new Date(latest.snapshot_date).getFullYear()
+
+  // Current rates for stat pills (always use live rates for "güncel" display)
+  const currentRates = {
+    goldTry: ratesSnapshot?.rates?.GRA?.buying ?? null,
+    usdTry: ratesSnapshot?.rates?.USD?.buying ?? null,
+  }
+
+  // Per-snapshot rates: use stored rate when available, fall back to current
+  function snapshotRates(s: NetWorthSnapshot) {
+    return {
+      goldTry: s.gold_try ?? currentRates.goldTry,
+      usdTry: s.usd_try ?? currentRates.usdTry,
+    }
+  }
+
+  function convertSnapshot(s: NetWorthSnapshot): number | null {
+    return convertNetWorth(s.net_worth, unit, snapshotRates(s))
+  }
+
+  function displayValue(tryAmount: number, rates: { goldTry?: number | null; usdTry?: number | null }): string {
+    if (unit === 'TRY') return formatCurrency(tryAmount)
+    const converted = convertNetWorth(tryAmount, unit, rates)
+    if (converted === null) return '—'
+    return formatRealValue(converted, unit)
+  }
 
   function snapshotLabel(s: NetWorthSnapshot) {
     const d = new Date(`${s.snapshot_date}T00:00:00`)
@@ -987,8 +1020,24 @@ function NetWorthTrend({ snapshots }: { snapshots: NetWorthSnapshot[] }) {
 
   const barData: BarDataPoint[] = snapshots.map((s) => ({
     label: snapshotLabel(s),
-    value: s.net_worth,
+    value: convertSnapshot(s) ?? 0,
   }))
+
+  const latestConverted = convertNetWorth(latest.net_worth, unit, currentRates)
+  const firstConverted = convertNetWorth(first.net_worth, unit, snapshotRates(first))
+  const minSnap = snapshots.reduce((a, b) => (b.net_worth < a.net_worth ? b : a))
+  const maxSnap = snapshots.reduce((a, b) => (b.net_worth > a.net_worth ? b : a))
+
+  const changeTry = latest.net_worth - first.net_worth
+  const changeBadge =
+    unit === 'TRY'
+      ? `${changeTry >= 0 ? '+' : ''}${formatCurrency(changeTry)}`
+      : (realValueChangeBadge(changeTry, unit, currentRates) ??
+        (latestConverted !== null && firstConverted !== null
+          ? `${latestConverted - firstConverted >= 0 ? '+' : ''}${formatRealValue(latestConverted - firstConverted, unit)}`
+          : null))
+
+  const hasRates = currentRates.goldTry !== null && currentRates.usdTry !== null
 
   return (
     <Card className="border-border/70 shadow-[var(--shadow-card)] lg:col-span-12">
@@ -1000,16 +1049,50 @@ function NetWorthTrend({ snapshots }: { snapshots: NetWorthSnapshot[] }) {
               Son {snapshots.length} gün · günlük otomatik anlık görüntü.
             </p>
           </div>
-          <Badge variant={change >= 0 ? 'success' : 'destructive'}>
-            {change >= 0 ? '+' : ''}{formatCurrency(change)}
-          </Badge>
+          {changeBadge ? (
+            <Badge variant={changeTry >= 0 ? 'success' : 'destructive'}>{changeBadge}</Badge>
+          ) : null}
+        </div>
+        {/* Unit toggle */}
+        <div className="mt-2 flex gap-1">
+          {(['TRY', 'GRA', 'USD'] as RealUnit[]).map((u) => (
+            <button
+              key={u}
+              onClick={() => setUnit(u)}
+              disabled={u !== 'TRY' && !hasRates}
+              className={[
+                'rounded-lg px-2.5 py-1 text-xs font-medium transition-colors',
+                unit === u
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-muted/60 text-muted-foreground hover:bg-muted',
+                u !== 'TRY' && !hasRates ? 'cursor-not-allowed opacity-40' : '',
+              ]
+                .filter(Boolean)
+                .join(' ')}
+              title={u !== 'TRY' && !hasRates ? 'Kur verisi yükleniyor...' : undefined}
+            >
+              {REAL_UNIT_LABELS[u]}
+            </button>
+          ))}
         </div>
       </CardHeader>
       <CardContent className="space-y-4 pt-3">
         <div className="grid grid-cols-3 gap-2">
-          <StatPill label="Güncel" value={formatCurrency(latest.net_worth)} tone={latest.net_worth >= 0 ? 'emerald' : 'rose'} />
-          <StatPill label="En yüksek" value={formatCurrency(max.net_worth)} tone="emerald" />
-          <StatPill label="En düşük" value={formatCurrency(min.net_worth)} tone={min.net_worth < 0 ? 'rose' : 'stone'} />
+          <StatPill
+            label="Güncel"
+            value={displayValue(latest.net_worth, currentRates)}
+            tone={latest.net_worth >= 0 ? 'emerald' : 'rose'}
+          />
+          <StatPill
+            label="En yüksek"
+            value={displayValue(maxSnap.net_worth, snapshotRates(maxSnap))}
+            tone="emerald"
+          />
+          <StatPill
+            label="En düşük"
+            value={displayValue(minSnap.net_worth, snapshotRates(minSnap))}
+            tone={minSnap.net_worth < 0 ? 'rose' : 'stone'}
+          />
         </div>
         <div className="rounded-xl bg-muted/20 p-2">
           <BarChart data={barData} height={200} positiveColor="var(--success)" />
@@ -1237,6 +1320,9 @@ function SchemaMigrationNotice({ missingTables }: { missingTables: string[] }) {
 
 export function AnalysisPage() {
   const { user } = useAuth()
+  const { snapshot: ratesSnapshot } = useMarketRates()
+  const ratesSnapshotRef = useRef<MarketRatesSnapshot | null>(null)
+  useEffect(() => { ratesSnapshotRef.current = ratesSnapshot }, [ratesSnapshot])
   const [data, setData] = useState<AnalysisData>(emptyAnalysisData)
   const [snapshots, setSnapshots] = useState<NetWorthSnapshot[]>([])
   const [loading, setLoading] = useState(true)
@@ -1344,9 +1430,15 @@ export function AnalysisPage() {
       salaryHistory: loadedData.salaryHistory,
       cardInstallments: loadedData.cardInstallments,
     })
+    const liveRates = ratesSnapshotRef.current
+    const goldTry = liveRates?.rates?.GRA?.buying ?? null
+    const usdTry = liveRates?.rates?.USD?.buying ?? null
     const upsertRes = await supabase
       .from('net_worth_snapshots')
-      .upsert({ user_id: user.id, snapshot_date: today, net_worth: position.netWorth }, { onConflict: 'user_id,snapshot_date' })
+      .upsert(
+        { user_id: user.id, snapshot_date: today, net_worth: position.netWorth, gold_try: goldTry, usd_try: usdTry },
+        { onConflict: 'user_id,snapshot_date' },
+      )
     if (!isMissingSchemaCacheError(upsertRes.error)) {
       const snapshotRes = await supabase
         .from('net_worth_snapshots')
@@ -1384,7 +1476,7 @@ export function AnalysisPage() {
         <FinancialCalendar data={data} />
         <CategorySpendingChart data={data} />
         <CashFlowTrend data={data} />
-        <NetWorthTrend snapshots={snapshots} />
+        <NetWorthTrend snapshots={snapshots} ratesSnapshot={ratesSnapshot} />
         <ForwardForecast data={data} />
         <PeopleLedger debts={data.debts} />
         <SearchExport items={searchItems} />

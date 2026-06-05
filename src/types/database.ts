@@ -194,6 +194,8 @@ export type TransactionHistory = BaseRow & {
 export type NetWorthSnapshot = BaseRow & {
   snapshot_date: string
   net_worth: number
+  gold_try: number | null
+  usd_try: number | null
 }
 
 export type DismissedUpcomingItem = {
