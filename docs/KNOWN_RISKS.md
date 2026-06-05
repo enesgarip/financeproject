@@ -1,14 +1,12 @@
 # Known Risks
 
-## 1. Encoding / Mojibake
+## 1. Encoding / Mojibake (mitigated)
 
-Some repo files currently show broken Turkish characters in terminal output and source text. This is a real maintenance risk because:
+A repo-wide scan on 2026-06-05 found **no** UTF-8 mojibake in `src`, `docs`, the SQL migrations, or `README.md` — Turkish characters render correctly. Earlier reports were most likely a terminal display artifact rather than corrupted bytes.
 
-- UI text can regress silently
-- docs and code reviews become harder
-- search results may miss expected words
+A regression guard now runs in CI: `src/utils/encoding.guard.test.ts` (part of `npm run test:unit`) reads every source/doc/migration file via Vite's `?raw` glob and fails if the tell-tale mojibake digraphs (the garbled two-character forms Turkish letters degrade into) or the Unicode replacement character reappear. The guard file itself lists the exact signatures and is the only file excluded from the scan.
 
-Affected examples were visible in `README.md` and several TSX/TS files during inspection.
+Residual risk is low: keep editors and tooling on UTF-8.
 
 ## 2. Domain Logic Concentration in Large Page Files
 
@@ -73,14 +71,16 @@ Risk:
 - a wrong rule or false-positive check can modify real user data
 - changes here need extra caution and verification
 
-## 7. Limited Safety Net from Tests
+## 7. Limited Safety Net from Tests (improving)
 
-During this task, no dedicated automated finance test suite was visible in the repo layout.
+A Vitest unit suite now covers the core pure finance utilities — statement period math (`cardStatement`), budget alerts (`budgetAlerts`), savings-goal progress (`savingsGoal`), live valuation (`valuation`), market-rate parsing (`marketRates`), category inference (`categories`), and last-used memory (`lastUsed`) — and runs in CI via `npm run test:unit`.
 
-Risk:
+Still uncovered, so manual review remains important for:
 
-- regression detection depends heavily on manual review
-- subtle money/date bugs can ship easily
+- large page components and their side effects
+- Supabase RPC finance mutations
+- aggregation utils (`cardInstallmentCalendar`, `financeSummary`, `statementReminder`)
+- subtle money/date bugs outside the tested utilities
 
 ## 8. Shared Credit Limit Semantics Are Non-Trivial
 

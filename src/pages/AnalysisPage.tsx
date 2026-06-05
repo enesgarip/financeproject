@@ -2,6 +2,7 @@ import { Archive, BarChart3, CalendarDays, CheckCircle2, Download, PieChart, Sea
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAuth } from '../auth/useAuth'
 import { CrudPage, type FormField } from '../components/CrudPage'
+import { BarChart, type BarDataPoint } from '../components/charts/BarChart'
 import { CashFlowChart, type CashFlowPoint } from '../components/charts/CashFlowChart'
 import { DonutChart, type DonutSlice } from '../components/charts/DonutChart'
 import { Badge } from '../components/ui/badge'
@@ -28,6 +29,7 @@ import { SavingsGoalsPanel } from '../components/finance/SavingsGoalsPanel'
 import { expenseCategoryOptions } from '../utils/categories'
 import { dateInputValue, daysUntil, formatDate, isDateInMonth, monthlyOccurrenceDate, startOfMonth } from '../utils/date'
 import { formatCurrency, parseNumber } from '../utils/formatCurrency'
+import { buildCashFlowForecast } from '../utils/cashFlowForecast'
 
 type AnalysisData = {
   assets: Asset[]
@@ -947,6 +949,100 @@ function CashFlowTrend({ data }: { data: AnalysisData }) {
   )
 }
 
+function shortMonth(monthKey: string) {
+  return new Intl.DateTimeFormat('tr-TR', { month: 'short' }).format(new Date(`${monthKey}T00:00:00`))
+}
+
+function ForwardForecast({ data }: { data: AnalysisData }) {
+  const forecast = useMemo(
+    () =>
+      buildCashFlowForecast(
+        {
+          assets: data.assets,
+          cards: data.cards,
+          loans: data.loans,
+          loanInstallments: data.loanInstallments,
+          debts: data.debts,
+          payments: data.payments,
+          salaryHistory: data.salaryHistory,
+          cardInstallments: data.cardInstallments,
+        },
+        { horizonMonths: 6 },
+      ),
+    [data],
+  )
+
+  const barData: BarDataPoint[] = forecast.months.map((month) => ({
+    label: shortMonth(month.monthKey),
+    value: month.endingBalance,
+  }))
+  const hasDeficit = forecast.firstNegative !== null
+
+  return (
+    <Card className="border-border/70 shadow-[var(--shadow-card)] lg:col-span-12">
+      <CardHeader className="pb-0">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <CardTitle>İleriye dönük nakit</CardTitle>
+            <p className="mt-1 text-sm text-muted-foreground">Önümüzdeki 6 ay · bilinen gelir ve yükümlülüklere göre tahmini bakiye.</p>
+          </div>
+          <Badge variant={hasDeficit ? 'destructive' : 'success'}>{hasDeficit ? 'Açık riski' : 'Pozitif'}</Badge>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4 pt-3">
+        <div className="grid grid-cols-3 gap-2">
+          <StatPill label="Başlangıç" value={formatCurrency(forecast.startingBalance)} />
+          <StatPill
+            label={forecast.lowest ? `En düşük · ${shortMonth(forecast.lowest.monthKey)}` : 'En düşük'}
+            value={formatCurrency(forecast.lowest?.balance ?? forecast.startingBalance)}
+            tone={(forecast.lowest?.balance ?? 0) < 0 ? 'rose' : 'stone'}
+          />
+          <StatPill
+            label="6 ay sonu"
+            value={formatCurrency(forecast.endingBalance)}
+            tone={forecast.endingBalance >= forecast.startingBalance ? 'emerald' : 'rose'}
+          />
+        </div>
+
+        {forecast.firstNegative ? (
+          <div className="rounded-xl border border-destructive/20 bg-destructive/8 p-3">
+            <p className="text-sm font-bold text-destructive">{forecast.firstNegative.monthLabel} içinde nakit açığa düşüyor</p>
+            <p className="mt-0.5 text-xs text-destructive/80">
+              Tahmini bakiye {formatCurrency(forecast.firstNegative.balance)}. Büyük ödemeleri veya tahsilatı öne almak iyi olur.
+            </p>
+          </div>
+        ) : null}
+
+        <div className="rounded-xl bg-muted/20 p-2">
+          <BarChart data={barData} height={200} positiveColor="var(--success)" />
+        </div>
+
+        <div className="grid gap-2 min-[560px]:grid-cols-2">
+          {forecast.months.map((month) => (
+            <div key={month.monthKey} className="flex items-center justify-between gap-3 rounded-xl bg-muted/45 px-3 py-2 text-sm">
+              <div className="min-w-0">
+                <p className="truncate font-semibold text-foreground">{month.monthLabel}</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  Net{' '}
+                  <span className={month.net >= 0 ? 'text-success' : 'text-destructive'}>
+                    {month.net >= 0 ? '+' : ''}
+                    {formatCurrency(month.net)}
+                  </span>
+                </p>
+              </div>
+              <span
+                className={`shrink-0 whitespace-nowrap rounded-lg px-2 py-1 font-mono text-xs font-bold tabular-nums ring-1 ring-border/60 ${month.endingBalance < 0 ? 'bg-destructive/10 text-destructive' : 'bg-muted text-foreground'}`}
+              >
+                {formatCurrency(month.endingBalance)}
+              </span>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
 function PeopleLedger({ debts }: { debts: Debt[] }) {
   const rows = Array.from(
     debts
@@ -1193,6 +1289,7 @@ export function AnalysisPage() {
         <FinancialCalendar data={data} />
         <CategorySpendingChart data={data} />
         <CashFlowTrend data={data} />
+        <ForwardForecast data={data} />
         <PeopleLedger debts={data.debts} />
         <SearchExport items={searchItems} />
         <StatementArchive data={data} />
