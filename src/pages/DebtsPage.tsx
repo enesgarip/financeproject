@@ -1,7 +1,6 @@
 import { CrudPage, type FormField } from '../components/CrudPage'
-import { AccountSelector } from '../components/finance/AccountSelector'
+import { AccountPaymentModal } from '../components/finance/AccountPaymentModal'
 import { RatesBanner } from '../components/finance/RatesBanner'
-import { SimpleModal } from '../components/SimpleModal'
 import { Badge } from '../components/ui/badge'
 import { Card, CardContent } from '../components/ui/card'
 import { Progress } from '../components/ui/progress'
@@ -262,25 +261,8 @@ export function DebtsPage() {
     setDebtPaymentError('')
   }
 
-  async function handleDebtSettlementSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault()
+  async function handleDebtSettlementSubmit({ account: accountCard }: { account: FinanceCard; amount: number }) {
     if (!debtToSettle) return
-
-    if (!debtAccountCard) {
-      setDebtPaymentError('Hesap seçmelisin.')
-      return
-    }
-
-    const accountCard = debtCards.find((card) => card.id === debtAccountCard)
-    if (!accountCard) {
-      setDebtPaymentError('Hesap bulunamadı.')
-      return
-    }
-
-    if (debtToSettle.direction === 'borç_aldım' && accountCard.current_balance < settlementValue) {
-      setDebtPaymentError('Kaynak hesap bakiyesi yetersiz.')
-      return
-    }
 
     setDebtPaymentSaving(true)
     setDebtPaymentError('')
@@ -387,32 +369,28 @@ export function DebtsPage() {
         }
       />
 
-      <SimpleModal title={settlementIsBorrowed ? 'Borcu öde' : 'Alacağı tahsil et'} open={Boolean(debtToSettle)} onClose={closeDebtSettlement}>
-        <form onSubmit={handleDebtSettlementSubmit} className="space-y-4">
-          <div className="rounded-xl border border-border/60 bg-muted/30 p-3 text-sm text-muted-foreground">
-            <p className="font-semibold text-foreground">{debtToSettle?.person_name}</p>
-            <p className="mt-0.5">Tutar: <span className="font-mono font-semibold text-foreground">{formatCurrency(settlementValue)}</span></p>
-            <p className="mt-0.5">{settlementIsBorrowed ? 'Bu tutar seçilen hesaptan düşer.' : 'Bu tutar seçilen hesaba eklenir.'}</p>
-          </div>
-          <AccountSelector
-            accounts={debtCards}
-            value={debtAccountCard}
-            onChange={setDebtAccountCard}
-            amount={settlementIsBorrowed ? settlementValue : -settlementValue}
-            label={settlementIsBorrowed ? 'Kaynak hesap' : 'Tahsilat hesabı'}
-          />
-          {debtPaymentError ? (
-            <p className="rounded-xl border border-destructive/20 bg-destructive/8 p-3 text-sm font-medium text-destructive">{debtPaymentError}</p>
-          ) : null}
-          <button
-            type="submit"
-            disabled={debtPaymentSaving}
-            className="h-12 w-full rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-[0_2px_8px_color-mix(in_srgb,var(--primary)_30%,transparent)] transition hover:bg-primary/90 active:scale-[0.99] disabled:opacity-50"
-          >
-            {debtPaymentSaving ? 'İşleniyor...' : settlementIsBorrowed ? 'Borcu öde' : 'Tahsilatı tamamla'}
-          </button>
-        </form>
-      </SimpleModal>
+      <AccountPaymentModal
+        title={settlementIsBorrowed ? 'Borcu öde' : 'Alacağı tahsil et'}
+        open={Boolean(debtToSettle)}
+        onClose={closeDebtSettlement}
+        accounts={debtCards}
+        selectedAccountId={debtAccountCard}
+        onSelectedAccountChange={setDebtAccountCard}
+        amountValue={String(settlementValue)}
+        onAmountValueChange={() => undefined}
+        amountEditable={false}
+        amountLabel={settlementIsBorrowed ? 'Ödenecek tutar' : 'Tahsilat tutarı'}
+        accountLabel={settlementIsBorrowed ? 'Kaynak hesap' : 'Tahsilat hesabı'}
+        accountPreviewAmount={(amount) => settlementIsBorrowed ? amount : -amount}
+        submitLabel={settlementIsBorrowed ? 'Borcu öde' : 'Tahsilatı tamamla'}
+        saving={debtPaymentSaving}
+        externalError={debtPaymentError}
+        successAction={!settlementIsBorrowed}
+        onSubmit={handleDebtSettlementSubmit}
+      >
+        <p className="font-semibold text-foreground">{debtToSettle?.person_name}</p>
+        <p className="mt-0.5">{settlementIsBorrowed ? 'Bu tutar seçilen hesaptan düşer.' : 'Bu tutar seçilen hesaba eklenir.'}</p>
+      </AccountPaymentModal>
     </>
   )
 }

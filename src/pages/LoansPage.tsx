@@ -1,7 +1,7 @@
 import { CalendarDays, Check, Landmark, MoreVertical, Pencil, ReceiptText, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { CrudPage, type FormField } from '../components/CrudPage'
-import { AccountSelector } from '../components/finance/AccountSelector'
+import { AccountPaymentModal } from '../components/finance/AccountPaymentModal'
 import { BankLogo } from '../components/finance/BankLogo'
 import { SimpleModal } from '../components/SimpleModal'
 import { Badge } from '../components/ui/badge'
@@ -371,30 +371,8 @@ export function LoansPage() {
     setInstallmentError('')
   }
 
-  async function handleInstallmentSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault()
+  async function handleInstallmentSubmit({ account: sourceCard }: { account: Card; amount: number }) {
     if (!installmentLoan || !installmentItem) return
-
-    if (installmentItem.amount <= 0) {
-      setInstallmentError('Tutar 0 dan büyük olmalı.')
-      return
-    }
-
-    if (!installmentSourceCard) {
-      setInstallmentError('Kaynak hesap seçmelisin.')
-      return
-    }
-
-    const sourceCard = bankaKartlari.find((c) => c.id === installmentSourceCard)
-    if (!sourceCard) {
-      setInstallmentError('Kaynak hesap bulunamadı.')
-      return
-    }
-
-    if (sourceCard.current_balance < installmentItem.amount) {
-      setInstallmentError('Kaynak hesap bakiyesi yetersiz.')
-      return
-    }
 
     setInstallmentSaving(true)
     setInstallmentError('')
@@ -668,34 +646,27 @@ export function LoansPage() {
         renderExtra={(row, helpers) => renderPaymentPlan(row as Loan, helpers.reload, helpers.setError)}
       />
 
-      <SimpleModal title="Taksit ödemesi" open={Boolean(installmentLoan && installmentItem)} onClose={closeInstallmentPayment}>
-        <form onSubmit={handleInstallmentSubmit} className="space-y-4">
-          <div className="rounded-xl border border-border/60 bg-muted/30 p-3 text-sm text-muted-foreground">
-            <p className="font-semibold text-foreground">{installmentLoan?.loan_name}</p>
-            <p className="mt-0.5">
-              {installmentItem?.installment_no}. taksit · {installmentItem ? formatDate(installmentItem.due_date) : '-'}
-            </p>
-            <p className="mt-0.5">Planlanan tutar: <span className="font-mono font-semibold text-foreground">{formatCurrency(installmentItem?.amount ?? 0)}</span></p>
-            <p className="mt-0.5">Kalan taksit: {installmentLoan?.remaining_installments ?? 0}</p>
-          </div>
-          <AccountSelector
-            accounts={bankaKartlari}
-            value={installmentSourceCard}
-            onChange={setInstallmentSourceCard}
-            amount={installmentItem?.amount ?? 0}
-          />
-          {installmentError ? (
-            <p className="rounded-xl border border-destructive/20 bg-destructive/8 p-3 text-sm font-medium text-destructive">{installmentError}</p>
-          ) : null}
-          <button
-            type="submit"
-            disabled={installmentSaving}
-            className="h-12 w-full rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-[0_2px_8px_color-mix(in_srgb,var(--primary)_30%,transparent)] transition hover:bg-primary/90 active:scale-[0.99] disabled:opacity-50"
-          >
-            {installmentSaving ? 'İşleniyor...' : 'Taksiti öde'}
-          </button>
-        </form>
-      </SimpleModal>
+      <AccountPaymentModal
+        title="Taksit ödemesi"
+        open={Boolean(installmentLoan && installmentItem)}
+        onClose={closeInstallmentPayment}
+        accounts={bankaKartlari}
+        selectedAccountId={installmentSourceCard}
+        onSelectedAccountChange={setInstallmentSourceCard}
+        amountValue={String(installmentItem?.amount ?? 0)}
+        onAmountValueChange={() => undefined}
+        amountEditable={false}
+        submitLabel="Taksiti öde"
+        saving={installmentSaving}
+        externalError={installmentError}
+        onSubmit={handleInstallmentSubmit}
+      >
+        <p className="font-semibold text-foreground">{installmentLoan?.loan_name}</p>
+        <p className="mt-0.5">
+          {installmentItem?.installment_no}. taksit · {installmentItem ? formatDate(installmentItem.due_date) : '-'}
+        </p>
+        <p className="mt-0.5">Kalan taksit: {installmentLoan?.remaining_installments ?? 0}</p>
+      </AccountPaymentModal>
 
       <SimpleModal title="Taksiti düzenle" open={Boolean(editingPlanItem)} onClose={() => setEditingPlanItem(null)}>
         <form onSubmit={handlePlanEditSubmit} className="space-y-4">

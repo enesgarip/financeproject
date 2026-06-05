@@ -12,7 +12,7 @@ import {
 import type { CSSProperties } from 'react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { CrudPage, type FormField } from '../components/CrudPage'
-import { AccountSelector } from '../components/finance/AccountSelector'
+import { AccountPaymentModal } from '../components/finance/AccountPaymentModal'
 import { CategoryPicker } from '../components/finance/CategoryPicker'
 import { CardInstallmentCalendarPanel } from '../components/finance/CardInstallmentCalendarPanel'
 import { CardInstallmentExpensesPanel } from '../components/finance/CardInstallmentExpensesPanel'
@@ -2072,31 +2072,8 @@ export function CardsPage() {
     setDebtPaymentError('')
   }
 
-  async function handleDebtPaymentSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault()
+  async function handleDebtPaymentSubmit({ account: sourceCard, amount }: { account: Card; amount: number }) {
     if (!debtPaymentCard) return
-
-    const amount = parseNumber(debtPaymentAmount)
-    if (amount <= 0) {
-      setDebtPaymentError('Tutar 0 dan büyük olmalı.')
-      return
-    }
-
-    if (!debtPaymentSourceCard) {
-      setDebtPaymentError('Kaynak hesap seçmelisin.')
-      return
-    }
-
-    const sourceCard = allCards.find((c) => c.id === debtPaymentSourceCard)
-    if (!sourceCard) {
-      setDebtPaymentError('Kaynak hesap bulunamadı.')
-      return
-    }
-
-    if (sourceCard.current_balance < amount) {
-      setDebtPaymentError('Kaynak hesap bakiyesi yetersiz.')
-      return
-    }
 
     const payableDebt = cardPayableDebt(debtPaymentCard)
     if (payableDebt <= 0) {
@@ -2144,25 +2121,8 @@ export function CardsPage() {
     setStatementPaymentError('')
   }
 
-  async function handleStatementPaymentSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault()
+  async function handleStatementPaymentSubmit({ account: sourceCard }: { account: Card; amount: number }) {
     if (!statementPayment) return
-
-    if (!statementPaymentSourceCard) {
-      setStatementPaymentError('Kaynak hesap secmelisin.')
-      return
-    }
-
-    const sourceCard = statementPaymentAccounts.find((card) => card.id === statementPaymentSourceCard)
-    if (!sourceCard) {
-      setStatementPaymentError('Kaynak hesap bulunamadi.')
-      return
-    }
-
-    if (sourceCard.current_balance < statementPayment.statement.statement_debt_amount) {
-      setStatementPaymentError('Kaynak hesap bakiyesi yetersiz.')
-      return
-    }
 
     setStatementPaymentSaving(true)
     setStatementActionId(statementPayment.statement.id)
@@ -2541,59 +2501,53 @@ export function CardsPage() {
         </form>
       </SimpleModal>
 
-      <SimpleModal title="Kredi kartı borç ödeme" open={Boolean(debtPaymentCard)} onClose={() => setDebtPaymentCard(null)}>
-        <form onSubmit={handleDebtPaymentSubmit} className="space-y-4">
-          <div className="rounded-xl border border-border/60 bg-muted/30 p-3 text-sm text-muted-foreground">
-            <p className="font-semibold text-foreground">{debtPaymentCard?.card_name}</p>
-            <p>Ekstre borcu: {formatCurrency(debtPaymentCard?.statement_debt_amount ?? 0)}</p>
-            <p>Toplam borç: {formatCurrency(debtPaymentCard?.debt_amount ?? 0)}</p>
-            <p>Ödenebilir: {formatCurrency(debtPaymentCard ? cardPayableDebt(debtPaymentCard) : 0)}</p>
-          </div>
-          <MoneyInput label="Ödeme tutarı" value={debtPaymentAmount} onValueChange={setDebtPaymentAmount} required />
-          <AccountSelector
-            accounts={allCards}
-            value={debtPaymentSourceCard}
-            onChange={setDebtPaymentSourceCard}
-            amount={parseNumber(debtPaymentAmount)}
-          />
-          {debtPaymentError ? <p className="rounded-xl border border-destructive/20 bg-destructive/8 p-3 text-sm font-medium text-destructive">{debtPaymentError}</p> : null}
-          <button
-            type="submit"
-            disabled={debtPaymentSaving}
-            className="h-12 w-full rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-[0_2px_8px_color-mix(in_srgb,var(--primary)_30%,transparent)] transition hover:bg-primary/90 active:scale-[0.99] disabled:opacity-50"
-          >
-            {debtPaymentSaving ? 'İşleniyor...' : 'Borç öde'}
-          </button>
-        </form>
-      </SimpleModal>
+      <AccountPaymentModal
+        title="Kredi kartı borç ödeme"
+        open={Boolean(debtPaymentCard)}
+        onClose={() => setDebtPaymentCard(null)}
+        accounts={allCards}
+        selectedAccountId={debtPaymentSourceCard}
+        onSelectedAccountChange={setDebtPaymentSourceCard}
+        amountValue={debtPaymentAmount}
+        onAmountValueChange={setDebtPaymentAmount}
+        amountLabel="Ödeme tutarı"
+        submitLabel="Borç öde"
+        saving={debtPaymentSaving}
+        externalError={debtPaymentError}
+        validate={({ amount }) => {
+          const payableDebt = debtPaymentCard ? cardPayableDebt(debtPaymentCard) : 0
+          if (amount > payableDebt) return 'Ödeme tutarı provizyon hariç kesinleşmiş borçtan büyük olamaz.'
+          return null
+        }}
+        onSubmit={handleDebtPaymentSubmit}
+      >
+        <p className="font-semibold text-foreground">{debtPaymentCard?.card_name}</p>
+        <p>Ekstre borcu: {formatCurrency(debtPaymentCard?.statement_debt_amount ?? 0)}</p>
+        <p>Toplam borç: {formatCurrency(debtPaymentCard?.debt_amount ?? 0)}</p>
+        <p>Ödenebilir: {formatCurrency(debtPaymentCard ? cardPayableDebt(debtPaymentCard) : 0)}</p>
+      </AccountPaymentModal>
 
-      <SimpleModal title="Ekstre odemesi" open={Boolean(statementPayment)} onClose={closeStatementPayment}>
-        <form onSubmit={handleStatementPaymentSubmit} className="space-y-4">
-          <div className="rounded-xl border border-border/60 bg-muted/30 p-3 text-sm text-muted-foreground">
-            <p className="font-semibold text-foreground">{statementPayment?.card.card_name}</p>
-            <p>Ekstre: {statementPayment ? statementPeriodLabel(statementPayment.statement) : '-'}</p>
-            <p>Son odeme: {statementPayment ? formatDate(statementPayment.statement.due_date) : '-'}</p>
-            <p>Tutar: {formatCurrency(statementPayment?.statement.statement_debt_amount ?? 0)}</p>
-          </div>
-          <AccountSelector
-            accounts={statementPaymentAccounts}
-            value={statementPaymentSourceCard}
-            onChange={setStatementPaymentSourceCard}
-            amount={statementPayment?.statement.statement_debt_amount ?? 0}
-          />
-          <p className="rounded-xl border border-success/20 bg-success/8 p-3 text-xs font-medium text-success">
-            Bu ekstre kapandiginda ekstreye bagli kredi karti taksitleri otomatik odendi olur. Taksitler net borca ayrica eklenmez.
-          </p>
-          {statementPaymentError ? <p className="rounded-xl border border-destructive/20 bg-destructive/8 p-3 text-sm font-medium text-destructive">{statementPaymentError}</p> : null}
-          <button
-            type="submit"
-            disabled={statementPaymentSaving}
-            className="h-12 w-full rounded-xl bg-success px-4 text-sm font-semibold text-success-foreground shadow-[0_2px_8px_color-mix(in_srgb,var(--success)_28%,transparent)] transition hover:bg-success/90 active:scale-[0.99] disabled:opacity-50"
-          >
-            {statementPaymentSaving ? 'Isleniyor...' : 'Ekstreyi odendi isaretle'}
-          </button>
-        </form>
-      </SimpleModal>
+      <AccountPaymentModal
+        title="Ekstre ödemesi"
+        open={Boolean(statementPayment)}
+        onClose={closeStatementPayment}
+        accounts={statementPaymentAccounts}
+        selectedAccountId={statementPaymentSourceCard}
+        onSelectedAccountChange={setStatementPaymentSourceCard}
+        amountValue={String(statementPayment?.statement.statement_debt_amount ?? 0)}
+        onAmountValueChange={() => undefined}
+        amountEditable={false}
+        submitLabel="Ekstreyi öde"
+        saving={statementPaymentSaving}
+        externalError={statementPaymentError}
+        successAction
+        info="Bu ekstre kapandığında ekstreye bağlı kredi kartı taksitleri otomatik ödenmiş olur."
+        onSubmit={handleStatementPaymentSubmit}
+      >
+        <p className="font-semibold text-foreground">{statementPayment?.card.card_name}</p>
+        <p>Ekstre: {statementPayment ? statementPeriodLabel(statementPayment.statement) : '-'}</p>
+        <p>Son ödeme: {statementPayment ? formatDate(statementPayment.statement.due_date) : '-'}</p>
+      </AccountPaymentModal>
     </>
   )
 }

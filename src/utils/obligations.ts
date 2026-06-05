@@ -1,0 +1,288 @@
+import type {
+  Card,
+  CardInstallment,
+  CardStatementArchive,
+  Debt,
+  Loan,
+  LoanInstallment,
+  Payment,
+} from '../types/database'
+import { getNextCardPaymentDueDate } from './cardStatement'
+import { addMonths, dateInMonth, dateInputValue, isDateInMonth, monthlyOccurrenceDate, startOfMonth } from './date'
+import { cardMonthlyPaymentAmount, paymentOccurrenceInMonth, roundMoney, sum } from './financeSummary'
+
+export type FinanceObligationKind =
+  | 'payment'
+  | 'card_statement'
+  | 'card_debt'
+  | 'card_installment'
+  | 'loan_installment'
+  | 'legacy_loan_installment'
+  | 'personal_debt'
+  | 'personal_receivable'
+
+export type FinanceObligationAction =
+  | 'pay_payment'
+  | 'pay_card_statement'
+  | 'pay_card_debt'
+  | 'pay_loan_installment'
+  | 'settle_debt'
+  | 'collect_debt'
+
+export type FinanceObligationDirection = 'outflow' | 'inflow'
+
+export type FinanceObligation = {
+  id: string
+  kind: FinanceObligationKind
+  action: FinanceObligationAction | null
+  sourceId: string
+  relatedCardId?: string
+  title: string
+  subtitle: string
+  date: string
+  amount: number
+  direction: FinanceObligationDirection
+  isEstimate?: boolean
+}
+
+export type FinanceObligationsInput = {
+  cards: Card[]
+  payments: Payment[]
+  loans: Loan[]
+  loanInstallments: LoanInstallment[]
+  debts: Debt[]
+  cardInstallments: CardInstallment[]
+  cardStatements: CardStatementArchive[]
+}
+
+export type FinanceObligationMonthSummary = {
+  outflow: number
+  inflow: number
+  net: number
+  payableCount: number
+  itemCount: number
+}
+
+function monthDistance(from: Date, target: Date) {
+  return (target.getFullYear() - from.getFullYear()) * 12 + target.getMonth() - from.getMonth()
+}
+
+function cardLabel(card: Card | undefined) {
+  return card ? `${card.bank_name} - ${card.card_name}` : 'Kart'
+}
+
+function addObligation(items: FinanceObligation[], item: FinanceObligation, options: { allowZero?: boolean } = {}) {
+  if (!options.allowZero && item.amount <= 0) return
+  items.push({ ...item, amount: roundMoney(Math.max(0, item.amount)) })
+}
+
+export function buildFinanceObligationsForMonth(
+  data: FinanceObligationsInput,
+  month: Date,
+  options: { from?: Date } = {},
+): FinanceObligation[] {
+  const monthStart = startOfMonth(month)
+  const fromMonth = startOfMonth(options.from ?? new Date())
+  const items: FinanceObligation[] = []
+  const cardsById = new Map(data.cards.map((card) => [card.id, card]))
+  const openStatements = data.cardStatements.filter((statement) => statement.status === 'open')
+  const cardsWithOpenStatements = new Set(openStatements.map((statement) => statement.card_id))
+
+  for (const payment of data.payments) {
+    const occurrence = paymentOccurrenceInMonth(payment, monthStart)
+    if (!occurrence) continue
+
+    addObligation(
+      items,
+      {
+        id: `payment-${payment.id}-${dateInputValue(occurrence)}`,
+        kind: 'payment',
+        action: 'pay_payment',
+        sourceId: payment.id,
+        title: payment.title,
+        subtitle: payment.recurrence === 'monthly' ? `${payment.category} - aylık` : payment.category,
+        date: dateInputValue(occurrence),
+        amount: payment.amount,
+        direction: 'outflow',
+        isEstimate: payment.amount_status === 'estimated',
+      },
+      { allowZero: payment.amount_status === 'estimated' },
+    )
+  }
+
+  for (const statement of openStatements) {
+    const dueDate = statement.due_date ?? statement.statement_date
+    if (!isDateInMonth(dueDate, monthStart)) continue
+
+    const card = cardsById.get(statement.card_id)
+    addObligation(items, {
+      id: `card-statement-${statement.id}`,
+      kind: 'card_statement',
+      action: 'pay_card_statement',
+      sourceId: statement.id,
+      relatedCardId: statement.card_id,
+      title: `${card?.card_name ?? 'Kredi kartı'} ekstresi`,
+      subtitle: cardLabel(card),
+      date: dueDate,
+      amount: statement.statement_debt_amount,
+      direction: 'outflow',
+    })
+  }
+
+  for (const card of data.cards.filter((row) => row.card_type === 'kredi_karti')) {
+    const nextDue = getNextCardPaymentDueDate(card, options.from)
+
+    if (!cardsWithOpenStatements.has(card.id) && nextDue && isDateInMonth(nextDue, monthStart)) {
+      addObligation(items, {
+        id: `card-debt-statement-${card.id}-${nextDue}`,
+        kind: 'card_debt',
+        action: 'pay_card_debt',
+        sourceId: card.id,
+        relatedCardId: card.id,
+        title: `${card.card_name} ekstre borcu`,
+        subtitle: card.bank_name,
+        date: nextDue,
+        amount: cardMonthlyPaymentAmount(card),
+        direction: 'outflow',
+      })
+    }
+
+    if (nextDue && card.current_period_spending > 0) {
+      const currentPeriodDueDate = dateInputValue(addMonths(new Date(`${nextDue}T00:00:00`), 1))
+      if (isDateInMonth(currentPeriodDueDate, monthStart)) {
+        addObligation(items, {
+          id: `card-debt-current-${card.id}-${currentPeriodDueDate}`,
+          kind: 'card_debt',
+          action: 'pay_card_debt',
+          sourceId: card.id,
+          relatedCardId: card.id,
+          title: `${card.card_name} dönem içi borç`,
+          subtitle: `${card.bank_name} - kesinleşmiş harcama`,
+          date: currentPeriodDueDate,
+          amount: card.current_period_spending,
+          direction: 'outflow',
+        })
+      }
+    }
+  }
+
+  for (const installment of data.cardInstallments) {
+    if (installment.status !== 'scheduled' || !isDateInMonth(installment.due_month, monthStart)) continue
+
+    const card = cardsById.get(installment.card_id)
+    const dueMonth = new Date(`${installment.due_month}T00:00:00`)
+    const displayDate = dateInputValue(dateInMonth(dueMonth.getFullYear(), dueMonth.getMonth(), card?.due_day ?? 1))
+    addObligation(items, {
+      id: `card-installment-${installment.id}`,
+      kind: 'card_installment',
+      action: null,
+      sourceId: installment.id,
+      relatedCardId: installment.card_id,
+      title: installment.description,
+      subtitle: `${cardLabel(card)} - ${installment.installment_no}/${installment.installment_count}. taksit`,
+      date: displayDate,
+      amount: installment.amount,
+      direction: 'outflow',
+    })
+  }
+
+  const plannedLoanIds = new Set(data.loanInstallments.map((installment) => installment.loan_id))
+
+  for (const installment of data.loanInstallments) {
+    if (installment.status !== 'bekliyor' || !isDateInMonth(installment.due_date, monthStart)) continue
+
+    const loan = data.loans.find((row) => row.id === installment.loan_id)
+    addObligation(items, {
+      id: `loan-installment-${installment.id}`,
+      kind: 'loan_installment',
+      action: 'pay_loan_installment',
+      sourceId: installment.id,
+      title: loan?.loan_name ?? 'Kredi taksiti',
+      subtitle: `${loan?.bank_name ?? 'Kredi'} - ${installment.installment_no}. taksit`,
+      date: installment.due_date,
+      amount: installment.amount,
+      direction: 'outflow',
+    })
+  }
+
+  for (const loan of data.loans) {
+    if (
+      plannedLoanIds.has(loan.id) ||
+      loan.status !== 'active' ||
+      loan.remaining_installments <= 0 ||
+      loan.monthly_payment <= 0
+    ) {
+      continue
+    }
+
+    const dueDate = monthlyOccurrenceDate(loan.installment_day, monthStart)
+    if (!dueDate) continue
+
+    const offset = monthDistance(fromMonth, monthStart)
+    const dueDateValue = dateInputValue(dueDate)
+    const startsAfter = loan.start_date ? dueDateValue < loan.start_date : false
+    const endsBefore = loan.end_date ? dueDateValue > loan.end_date : false
+    if (offset < 0 || offset >= loan.remaining_installments || startsAfter || endsBefore) continue
+
+    addObligation(items, {
+      id: `legacy-loan-${loan.id}-${dueDateValue}`,
+      kind: 'legacy_loan_installment',
+      action: null,
+      sourceId: loan.id,
+      title: loan.loan_name,
+      subtitle: `${loan.bank_name} - plan oluşturulmamış taksit`,
+      date: dueDateValue,
+      amount: loan.monthly_payment,
+      direction: 'outflow',
+      isEstimate: true,
+    })
+  }
+
+  for (const debt of data.debts) {
+    if (debt.status !== 'açık' || !debt.due_date || !isDateInMonth(debt.due_date, monthStart)) continue
+
+    const isBorrowed = debt.direction === 'borç_aldım'
+    addObligation(items, {
+      id: `debt-${debt.id}`,
+      kind: isBorrowed ? 'personal_debt' : 'personal_receivable',
+      action: isBorrowed ? 'settle_debt' : 'collect_debt',
+      sourceId: debt.id,
+      title: debt.person_name,
+      subtitle: isBorrowed ? 'Kişisel borç' : 'Beklenen tahsilat',
+      date: debt.due_date,
+      amount: debt.estimated_value_try,
+      direction: isBorrowed ? 'outflow' : 'inflow',
+      isEstimate: debt.auto_valued,
+    })
+  }
+
+  return items.sort((left, right) => (
+    left.date.localeCompare(right.date) ||
+    left.direction.localeCompare(right.direction) ||
+    right.amount - left.amount ||
+    left.title.localeCompare(right.title, 'tr')
+  ))
+}
+
+export function summarizeFinanceObligations(items: FinanceObligation[]): FinanceObligationMonthSummary {
+  const outflow = roundMoney(sum(items.filter((item) => item.direction === 'outflow'), (item) => item.amount))
+  const inflow = roundMoney(sum(items.filter((item) => item.direction === 'inflow'), (item) => item.amount))
+
+  return {
+    outflow,
+    inflow,
+    net: roundMoney(inflow - outflow),
+    payableCount: items.filter((item) => item.action).length,
+    itemCount: items.length,
+  }
+}
+
+export function groupFinanceObligationsByDate(items: FinanceObligation[]) {
+  const groups = new Map<string, FinanceObligation[]>()
+
+  for (const item of items) {
+    groups.set(item.date, [...(groups.get(item.date) ?? []), item])
+  }
+
+  return groups
+}
