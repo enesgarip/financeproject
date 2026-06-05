@@ -1,4 +1,3 @@
-import { AnimatePresence, motion, type Variants } from 'framer-motion'
 import { lazy, Suspense, useEffect, type ReactNode } from 'react'
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { AuthProvider } from './auth/AuthProvider'
@@ -37,32 +36,13 @@ const PaymentsPage = lazy(() =>
   import('./pages/PaymentsPage').then((m) => ({ default: m.PaymentsPage })),
 )
 
-const pageVariants: Variants = {
-  hidden:  { opacity: 0, y: 10 },
-  visible: { opacity: 1, y: 0 },
-  exit:    { opacity: 0, y: -6 },
-}
-
-const pageTransition = { duration: 0.22, ease: 'easeOut' as const }
-const pageExitTransition = { duration: 0.15, ease: 'easeIn' as const }
-
 function PageTransition({ children }: { children: ReactNode }) {
   return (
-    <motion.div
-      variants={pageVariants}
-      initial="hidden"
-      animate="visible"
-      exit="exit"
-      transition={pageTransition}
-      style={{ width: '100%' }}
-    >
+    <div className="page-route-transition w-full">
       {children}
-    </motion.div>
+    </div>
   )
 }
-
-// Suppress unused warning — used in exit transition
-void pageExitTransition
 
 function PageFallback() {
   return (
@@ -102,30 +82,28 @@ function AnimatedRoutes() {
   const location = useLocation()
 
   return (
-    <AnimatePresence mode="wait">
-      <Routes location={location} key={location.pathname}>
-        <Route path="/login" element={routeElement(<LoginPage />, 'login')} />
-        <Route
-          path="/"
-          element={
-            <ProtectedRoute>
-              <Layout />
-            </ProtectedRoute>
-          }
-        >
-          <Route index             element={routeElement(<DashboardPage />, '/')} />
-          <Route path="varliklar"  element={routeElement(<AssetsPage />,   'varliklar')} />
-          <Route path="kartlar"    element={routeElement(<CardsPage />,    'kartlar')} />
-          <Route path="krediler"   element={routeElement(<LoansPage />,    'krediler')} />
-          <Route path="borclar"    element={routeElement(<DebtsPage />,    'borclar')} />
-          <Route path="odemeler"   element={routeElement(<PaymentsPage />, 'odemeler')} />
-          <Route path="analiz"     element={routeElement(<AnalysisPage />, 'analiz')} />
-          <Route path="veri-sagligi" element={routeElement(<DataHealthPage />, 'veri-sagligi')} />
-          <Route path="daha"       element={routeElement(<MorePage />,     'daha')} />
-        </Route>
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </AnimatePresence>
+    <Routes location={location} key={location.pathname}>
+      <Route path="/login" element={routeElement(<LoginPage />, 'login')} />
+      <Route
+        path="/"
+        element={
+          <ProtectedRoute>
+            <Layout />
+          </ProtectedRoute>
+        }
+      >
+        <Route index element={routeElement(<DashboardPage />, '/')} />
+        <Route path="varliklar" element={routeElement(<AssetsPage />, 'varliklar')} />
+        <Route path="kartlar" element={routeElement(<CardsPage />, 'kartlar')} />
+        <Route path="krediler" element={routeElement(<LoansPage />, 'krediler')} />
+        <Route path="borclar" element={routeElement(<DebtsPage />, 'borclar')} />
+        <Route path="odemeler" element={routeElement(<PaymentsPage />, 'odemeler')} />
+        <Route path="analiz" element={routeElement(<AnalysisPage />, 'analiz')} />
+        <Route path="veri-sagligi" element={routeElement(<DataHealthPage />, 'veri-sagligi')} />
+        <Route path="daha" element={routeElement(<MorePage />, 'daha')} />
+      </Route>
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   )
 }
 

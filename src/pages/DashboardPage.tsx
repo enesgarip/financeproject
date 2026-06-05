@@ -45,7 +45,7 @@ import {
 } from '../components/dashboard/DashboardPanels'
 import { dashboardHelp, getUserDisplayName } from '../components/dashboard/dashboardPanelUtils'
 import { StatementReminderPanel } from '../components/dashboard/StatementReminderPanel'
-import { addMonths, daysUntil, monthlyOccurrenceDate, startOfMonth } from '../utils/date'
+import { addMonths, dateInputValue, daysUntil, monthlyOccurrenceDate, startOfMonth } from '../utils/date'
 import {
   buildCreditLimitGroups,
   buildFinancialHealth,
@@ -102,6 +102,8 @@ const emptyData: DashboardData = {
 }
 
 const UPCOMING_DAYS = 30
+const DASHBOARD_HISTORY_MONTHS = 3
+const DASHBOARD_SPENDING_MONTHS = 4
 
 type UpcomingItem = DashboardUpcomingItem
 
@@ -415,8 +417,10 @@ export function DashboardPage() {
       // Non-fatal — dashboard still renders with the last stored valuation.
     }
 
-    const historyStart = new Date()
-    historyStart.setMonth(historyStart.getMonth() - 3)
+    const currentMonthStart = startOfMonth()
+    const historyStart = addMonths(currentMonthStart, -DASHBOARD_HISTORY_MONTHS)
+    const spendingStart = dateInputValue(addMonths(currentMonthStart, -DASHBOARD_SPENDING_MONTHS))
+    const currentMonth = dateInputValue(currentMonthStart)
 
     const [
       assets,
@@ -443,8 +447,8 @@ export function DashboardPage() {
         supabase.from('payments').select('*'),
         supabase.from('salary_history').select('*').order('effective_date', { ascending: false }),
         supabase.from('transaction_history').select('*').gte('occurred_at', historyStart.toISOString()).order('occurred_at', { ascending: false }),
-        supabase.from('budgets').select('*'),
-        supabase.from('card_expenses').select('*'),
+        supabase.from('budgets').select('*').eq('month', currentMonth),
+        supabase.from('card_expenses').select('*').gte('spent_at', spendingStart).order('spent_at', { ascending: false }),
         supabase.from('card_installments').select('*'),
         supabase.from('card_statement_archives').select('*').eq('status', 'open'),
         supabase.from('savings_goals').select('*'),

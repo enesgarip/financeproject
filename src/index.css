@@ -464,6 +464,7 @@ button:disabled {
 .animate-fade-in      { animation: fade-in       var(--motion-fast)   both; }
 .animate-scale-in     { animation: scale-in      var(--motion-normal) both; }
 .animate-slide-in-right { animation: slide-in-right var(--motion-normal) both; }
+.page-route-transition { animation: fade-in-up 220ms cubic-bezier(0.16, 1, 0.3, 1) both; }
 
 /* Stagger delays */
 .delay-50  { animation-delay:  50ms; }

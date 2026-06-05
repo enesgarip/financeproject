@@ -14,11 +14,11 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          // Isolate heavy vendor libs
-          'vendor-react':    ['react', 'react-dom', 'react-router-dom'],
-          'vendor-motion':   ['framer-motion'],
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          'vendor-ui-utils': ['class-variance-authority', 'clsx', 'tailwind-merge'],
+          'vendor-motion': ['framer-motion'],
           'vendor-recharts': ['recharts'],
-          'vendor-radix':    ['radix-ui'],
+          'vendor-radix': ['radix-ui'],
         },
       },
     },

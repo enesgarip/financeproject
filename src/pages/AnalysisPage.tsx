@@ -28,7 +28,7 @@ import type {
 } from '../types/database'
 import { SavingsGoalsPanel } from '../components/finance/SavingsGoalsPanel'
 import { expenseCategoryOptions } from '../utils/categories'
-import { dateInputValue, daysUntil, formatDate, isDateInMonth, monthlyOccurrenceDate, startOfMonth } from '../utils/date'
+import { addMonths, dateInputValue, daysUntil, formatDate, isDateInMonth, monthlyOccurrenceDate, startOfMonth } from '../utils/date'
 import { formatCurrency, parseNumber } from '../utils/formatCurrency'
 import { buildCashFlowForecast } from '../utils/cashFlowForecast'
 import { buildFinancialPosition } from '../utils/financeSummary'
@@ -93,6 +93,9 @@ const optionalTableLabels: Record<string, string> = {
   budgets: 'bütçeler',
   savings_goals: 'birikim hedefleri',
 }
+
+const ANALYSIS_HISTORY_MONTHS = 6
+const STATEMENT_ARCHIVE_LIMIT = 6
 
 function isMissingSchemaCacheError(error: QueryError | null | undefined) {
   if (!error) return false
@@ -1452,8 +1455,8 @@ export function AnalysisPage() {
     setError('')
     setMissingTables([])
 
-    const historyStart = new Date()
-    historyStart.setMonth(historyStart.getMonth() - 6)
+    const analysisStart = addMonths(startOfMonth(), 1 - ANALYSIS_HISTORY_MONTHS)
+    const analysisStartValue = dateInputValue(analysisStart)
 
     const [
       assets,
@@ -1477,11 +1480,11 @@ export function AnalysisPage() {
       supabase.from('debts').select('*'),
       supabase.from('payments').select('*'),
       supabase.from('salary_history').select('*').order('effective_date', { ascending: false }),
-      supabase.from('transaction_history').select('*').gte('occurred_at', historyStart.toISOString()).order('occurred_at', { ascending: false }),
-      supabase.from('card_expenses').select('*').order('spent_at', { ascending: false }),
-      supabase.from('card_installments').select('*').order('due_month', { ascending: true }),
-      supabase.from('card_statement_archives').select('*').order('statement_date', { ascending: false }),
-      supabase.from('budgets').select('*').order('month', { ascending: false }),
+      supabase.from('transaction_history').select('*').gte('occurred_at', analysisStart.toISOString()).order('occurred_at', { ascending: false }),
+      supabase.from('card_expenses').select('*').gte('spent_at', analysisStartValue).order('spent_at', { ascending: false }),
+      supabase.from('card_installments').select('*').neq('status', 'paid').order('due_month', { ascending: true }),
+      supabase.from('card_statement_archives').select('*').order('statement_date', { ascending: false }).limit(STATEMENT_ARCHIVE_LIMIT),
+      supabase.from('budgets').select('*').gte('month', analysisStartValue).order('month', { ascending: false }),
       supabase.from('savings_goals').select('*').order('created_at', { ascending: false }),
     ])
 
@@ -1559,10 +1562,10 @@ export function AnalysisPage() {
       const snapshotRes = await supabase
         .from('net_worth_snapshots')
         .select('*')
-        .order('snapshot_date', { ascending: true })
+        .order('snapshot_date', { ascending: false })
         .limit(90)
       if (!isMissingSchemaCacheError(snapshotRes.error)) {
-        setSnapshots(snapshotRes.data ?? [])
+        setSnapshots([...(snapshotRes.data ?? [])].reverse())
       }
     }
 
