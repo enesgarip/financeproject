@@ -20,6 +20,7 @@ import type {
   Debt,
   Loan,
   LoanInstallment,
+  NetWorthSnapshot,
   Payment,
   SalaryHistory,
   SavingsGoal,
@@ -30,6 +31,7 @@ import { expenseCategoryOptions } from '../utils/categories'
 import { dateInputValue, daysUntil, formatDate, isDateInMonth, monthlyOccurrenceDate, startOfMonth } from '../utils/date'
 import { formatCurrency, parseNumber } from '../utils/formatCurrency'
 import { buildCashFlowForecast } from '../utils/cashFlowForecast'
+import { buildFinancialPosition } from '../utils/financeSummary'
 
 type AnalysisData = {
   assets: Asset[]
@@ -953,6 +955,70 @@ function shortMonth(monthKey: string) {
   return new Intl.DateTimeFormat('tr-TR', { month: 'short' }).format(new Date(`${monthKey}T00:00:00`))
 }
 
+function NetWorthTrend({ snapshots }: { snapshots: NetWorthSnapshot[] }) {
+  if (snapshots.length < 2) {
+    return (
+      <Card className="border-border/70 shadow-[var(--shadow-card)] lg:col-span-12">
+        <CardHeader className="pb-0">
+          <CardTitle>Net değer trendi</CardTitle>
+          <p className="mt-1 text-sm text-muted-foreground">Geçmişe dönük net değer değişimi.</p>
+        </CardHeader>
+        <CardContent className="pt-3">
+          <p className="rounded-xl bg-muted/45 p-4 text-sm text-muted-foreground">
+            Trend grafiği her gün AnalysisPage açıldığında güncellenir; birkaç gün sonra burada görünür.
+          </p>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  const latest = snapshots.at(-1)!
+  const first = snapshots[0]!
+  const min = snapshots.reduce((a, b) => (b.net_worth < a.net_worth ? b : a))
+  const max = snapshots.reduce((a, b) => (b.net_worth > a.net_worth ? b : a))
+  const change = latest.net_worth - first.net_worth
+  const spansDifferentYears = new Date(first.snapshot_date).getFullYear() !== new Date(latest.snapshot_date).getFullYear()
+
+  function snapshotLabel(s: NetWorthSnapshot) {
+    const d = new Date(`${s.snapshot_date}T00:00:00`)
+    const month = new Intl.DateTimeFormat('tr-TR', { month: 'short' }).format(d)
+    return spansDifferentYears ? `${month} '${String(d.getFullYear()).slice(2)}` : `${d.getDate()} ${month}`
+  }
+
+  const barData: BarDataPoint[] = snapshots.map((s) => ({
+    label: snapshotLabel(s),
+    value: s.net_worth,
+  }))
+
+  return (
+    <Card className="border-border/70 shadow-[var(--shadow-card)] lg:col-span-12">
+      <CardHeader className="pb-0">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <CardTitle>Net değer trendi</CardTitle>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Son {snapshots.length} gün · günlük otomatik anlık görüntü.
+            </p>
+          </div>
+          <Badge variant={change >= 0 ? 'success' : 'destructive'}>
+            {change >= 0 ? '+' : ''}{formatCurrency(change)}
+          </Badge>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4 pt-3">
+        <div className="grid grid-cols-3 gap-2">
+          <StatPill label="Güncel" value={formatCurrency(latest.net_worth)} tone={latest.net_worth >= 0 ? 'emerald' : 'rose'} />
+          <StatPill label="En yüksek" value={formatCurrency(max.net_worth)} tone="emerald" />
+          <StatPill label="En düşük" value={formatCurrency(min.net_worth)} tone={min.net_worth < 0 ? 'rose' : 'stone'} />
+        </div>
+        <div className="rounded-xl bg-muted/20 p-2">
+          <BarChart data={barData} height={200} positiveColor="var(--success)" />
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
 function ForwardForecast({ data }: { data: AnalysisData }) {
   const forecast = useMemo(
     () =>
@@ -1172,6 +1238,7 @@ function SchemaMigrationNotice({ missingTables }: { missingTables: string[] }) {
 export function AnalysisPage() {
   const { user } = useAuth()
   const [data, setData] = useState<AnalysisData>(emptyAnalysisData)
+  const [snapshots, setSnapshots] = useState<NetWorthSnapshot[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [missingTables, setMissingTables] = useState<string[]>([])
@@ -1248,7 +1315,7 @@ export function AnalysisPage() {
         Boolean,
       ) as string[],
     )
-    setData({
+    const loadedData = {
       assets: assets.data ?? [],
       cards: cards.data ?? [],
       loans: loans.data ?? [],
@@ -1262,7 +1329,35 @@ export function AnalysisPage() {
       cardStatementArchives: cardStatementArchiveRows.rows,
       budgets: budgetRows.rows,
       savingsGoals: savingsGoalRows.rows,
+    }
+    setData(loadedData)
+
+    // Daily net-worth snapshot — silent on missing table (before migration runs).
+    const today = new Date().toLocaleDateString('sv-SE')
+    const position = buildFinancialPosition({
+      assets: loadedData.assets,
+      cards: loadedData.cards,
+      loans: loadedData.loans,
+      loanInstallments: loadedData.loanInstallments,
+      debts: loadedData.debts,
+      payments: loadedData.payments,
+      salaryHistory: loadedData.salaryHistory,
+      cardInstallments: loadedData.cardInstallments,
     })
+    const upsertRes = await supabase
+      .from('net_worth_snapshots')
+      .upsert({ user_id: user.id, snapshot_date: today, net_worth: position.netWorth }, { onConflict: 'user_id,snapshot_date' })
+    if (!isMissingSchemaCacheError(upsertRes.error)) {
+      const snapshotRes = await supabase
+        .from('net_worth_snapshots')
+        .select('*')
+        .order('snapshot_date', { ascending: true })
+        .limit(90)
+      if (!isMissingSchemaCacheError(snapshotRes.error)) {
+        setSnapshots(snapshotRes.data ?? [])
+      }
+    }
+
     setLoading(false)
   }, [user])
 
@@ -1289,6 +1384,7 @@ export function AnalysisPage() {
         <FinancialCalendar data={data} />
         <CategorySpendingChart data={data} />
         <CashFlowTrend data={data} />
+        <NetWorthTrend snapshots={snapshots} />
         <ForwardForecast data={data} />
         <PeopleLedger debts={data.debts} />
         <SearchExport items={searchItems} />

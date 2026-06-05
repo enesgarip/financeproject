@@ -191,6 +191,11 @@ export type TransactionHistory = BaseRow & {
   note: string | null
 }
 
+export type NetWorthSnapshot = BaseRow & {
+  snapshot_date: string
+  net_worth: number
+}
+
 export type DismissedUpcomingItem = {
   id: string
   user_id: string
@@ -245,6 +250,7 @@ export type Database = {
       payments: Table<Payment, WithBaseInsert<Payment>, WithBaseUpdate<Payment>>
       transaction_history: Table<TransactionHistory, WithBaseInsert<TransactionHistory>, WithBaseUpdate<TransactionHistory>>
       salary_history: Table<SalaryHistory, WithBaseInsert<SalaryHistory>, WithBaseUpdate<SalaryHistory>>
+      net_worth_snapshots: Table<NetWorthSnapshot, WithBaseInsert<NetWorthSnapshot>, WithBaseUpdate<NetWorthSnapshot>>
       dismissed_upcoming_items: Table<
         DismissedUpcomingItem,
         Omit<DismissedUpcomingItem, 'id' | 'created_at'> & { id?: string; created_at?: string },
