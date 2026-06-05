@@ -1528,47 +1528,13 @@ function ProvisionPanel({
   provisions: CardExpense[]
   loading: boolean
   actionId: string | null
-  onPost: (expense: CardExpense, amount?: number) => void
+  onPost: (expense: CardExpense) => void
   onPostAll: (expenses: CardExpense[]) => void
   onCancel: (expense: CardExpense) => void
 }) {
   const pending = provisions.filter((expense) => expense.status === 'provision')
   const cardsById = useMemo(() => new Map(rows.map((card) => [card.id, card])), [rows])
   const totalProvision = pending.reduce((total, expense) => total + expense.amount, 0)
-  const [partialAmounts, setPartialAmounts] = useState<Record<string, string>>({})
-  const [partialErrors, setPartialErrors] = useState<Record<string, string>>({})
-
-  function updatePartialAmount(expenseId: string, value: string) {
-    setPartialAmounts((current) => ({ ...current, [expenseId]: value }))
-    setPartialErrors((current) => {
-      if (!current[expenseId]) return current
-      const next = { ...current }
-      delete next[expenseId]
-      return next
-    })
-  }
-
-  function handlePartialPost(expense: CardExpense) {
-    const amount = parseNumber(partialAmounts[expense.id] ?? '')
-
-    if (amount <= 0) {
-      setPartialErrors((current) => ({ ...current, [expense.id]: 'Aktarılacak tutarı yazmalısın.' }))
-      return
-    }
-
-    if (amount > expense.amount) {
-      setPartialErrors((current) => ({ ...current, [expense.id]: 'Tutar kalan provizyondan büyük olamaz.' }))
-      return
-    }
-
-    setPartialAmounts((current) => {
-      const next = { ...current }
-      delete next[expense.id]
-      return next
-    })
-    onPost(expense, amount === expense.amount ? undefined : amount)
-  }
-
   if (loading && pending.length === 0) {
     return (
       <SurfaceCard className="border-warning/20 shadow-[var(--shadow-card)]">
@@ -1624,32 +1590,6 @@ function ProvisionPanel({
                   {formatCurrency(expense.amount)}
                 </span>
               </div>
-              <div className="mt-3 rounded-lg border border-warning/20 bg-card/60 p-2.5">
-                <div className="grid gap-2 min-[520px]:grid-cols-[minmax(0,1fr)_auto] min-[520px]:items-start">
-                  <MoneyInput
-                    label="Kısmi aktarılacak tutar"
-                    value={partialAmounts[expense.id] ?? ''}
-                    onValueChange={(value) => updatePartialAmount(expense.id, value)}
-                    placeholder={formatCurrency(expense.amount)}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => handlePartialPost(expense)}
-                    disabled={Boolean(actionId)}
-                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-success/25 bg-success/8 px-3 py-2 text-xs font-semibold text-success transition hover:bg-success/15 disabled:opacity-50 min-[520px]:mt-6"
-                  >
-                    <CheckCircle2 size={14} />
-                    {actionId === `partial-${expense.id}` ? 'Aktarılıyor...' : 'Kısmi aktar'}
-                  </button>
-                </div>
-                {partialErrors[expense.id] ? (
-                  <p className="mt-2 text-xs font-semibold text-destructive">{partialErrors[expense.id]}</p>
-                ) : (
-                  <p className="mt-2 text-xs text-warning/80">
-                    Kalan tutar provizyonda bekler; önceki provizyon kayıtları da bu alandan parçalı aktarılır.
-                  </p>
-                )}
-              </div>
               <div className="mt-2 grid grid-cols-2 gap-2">
                 <button
                   type="button"
@@ -1658,7 +1598,7 @@ function ProvisionPanel({
                   className="inline-flex items-center justify-center gap-2 rounded-lg bg-success px-3 py-2 text-xs font-semibold text-white disabled:opacity-60 hover:bg-success/90"
                 >
                   <CheckCircle2 size={14} />
-                  {actionId === postActionId ? 'İşleniyor...' : 'Tamamını aktar'}
+                  {actionId === postActionId ? 'İşleniyor...' : 'Kesinleştir'}
                 </button>
                 <button
                   type="button"
@@ -1926,15 +1866,13 @@ export function CardsPage() {
     action: 'post' | 'cancel',
     reload: () => Promise<void>,
     setError: (message: string) => void,
-    amount?: number,
   ) {
-    setProvisionActionId(amount !== undefined ? `partial-${expense.id}` : `${action}-${expense.id}`)
+    setProvisionActionId(`${action}-${expense.id}`)
     setError('')
     setProvisionError('')
 
     const rpcName = action === 'post' ? 'post_card_provision' : 'cancel_card_provision'
-    const rpcArgs = amount !== undefined ? { p_expense_id: expense.id, p_post_amount: amount } : { p_expense_id: expense.id }
-    const { error } = await supabase.rpc(rpcName, rpcArgs)
+    const { error } = await supabase.rpc(rpcName, { p_expense_id: expense.id })
 
     if (error) {
       const message = isSchemaCacheError(error)
@@ -2260,7 +2198,7 @@ export function CardsPage() {
                     provisions={provisions}
                     loading={provisionsLoading}
                     actionId={provisionActionId}
-                    onPost={(expense, amount) => void handleProvisionAction(expense, 'post', reload, setError, amount)}
+                    onPost={(expense) => void handleProvisionAction(expense, 'post', reload, setError)}
                     onPostAll={(expenses) => void handlePostAllProvisions(expenses, reload, setError)}
                     onCancel={(expense) => void handleProvisionAction(expense, 'cancel', reload, setError)}
                   />
