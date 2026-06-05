@@ -30,17 +30,13 @@ import {
   CreditLimitSection,
   CurrentDebtTotalsPanel,
   DashboardHero,
-  FinancialHealthPanel,
   FocusActionPanel,
   GoalProgressCommand,
   HistorySection,
   MetricTile,
   MonthlyPaymentLoadPanel,
-  NextMonthLoadPanel,
-  PeriodDebtTotalsPanel,
   PulseCard,
   SalaryPulse,
-  ScenarioSimulator,
   SmartInsightsPanel,
   SpendingRadarPanel,
   UpcomingAlertPanel,
@@ -657,8 +653,7 @@ export function DashboardPage() {
         <FocusActionPanel actions={focusActions} cashFlow={summary.cashFlow} />
       </motion.div>
 
-      <motion.div variants={fadeUp} className="grid min-w-0 gap-3 min-[760px]:grid-cols-3 lg:col-span-12">
-        <FinancialHealthPanel health={financialHealth} goalProgress={summary.goalProgress} />
+      <motion.div variants={fadeUp} className="grid min-w-0 gap-3 min-[760px]:grid-cols-2 lg:col-span-12">
         <StatementReminderPanel cards={data.cards} />
         <BudgetAlertPanel budgets={data.budgets} expenses={data.cardExpenses} />
       </motion.div>
@@ -671,9 +666,7 @@ export function DashboardPage() {
         <CashFlowPanel cashFlow={summary.cashFlow} />
       </motion.div>
 
-      <motion.div variants={fadeUp} className="grid min-w-0 gap-3 min-[760px]:grid-cols-2 lg:col-span-5 lg:grid-cols-1">
-        <NextMonthLoadPanel load={summary.nextMonthLoad} />
-        <PeriodDebtTotalsPanel cashFlow={summary.cashFlow} />
+      <motion.div variants={fadeUp} className="min-w-0 lg:col-span-5">
         <CurrentDebtTotalsPanel
           totalDebt={summary.totalDebts}
           cardDebt={summary.totalCreditCardDebt}
@@ -683,12 +676,8 @@ export function DashboardPage() {
         />
       </motion.div>
 
-      <motion.div variants={fadeUp} className="min-w-0 lg:col-span-7">
+      <motion.div variants={fadeUp} className="min-w-0 lg:col-span-12">
         <SmartInsightsPanel insights={insights} />
-      </motion.div>
-
-      <motion.div variants={fadeUp} className="min-w-0 lg:col-span-5">
-        <ScenarioSimulator cashFlow={summary.cashFlow} netWorth={summary.netWorth} />
       </motion.div>
 
       <motion.div variants={fadeUp} className="grid min-w-0 gap-3 min-[520px]:grid-cols-3 lg:col-span-12">
