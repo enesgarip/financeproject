@@ -3,7 +3,6 @@ import {
   AlertTriangle,
   ArrowUpRight,
   CalendarDays,
-  Calculator,
   CheckCircle2,
   ChevronDown,
   ChevronUp,
@@ -738,8 +737,7 @@ export function DashboardPage() {
         <FocusActionPanel actions={focusActions} cashFlow={summary.cashFlow} />
       </motion.div>
 
-      <motion.div variants={fadeUp} className="grid min-w-0 gap-3 min-[760px]:grid-cols-3 lg:col-span-12">
-        <FinancialHealthPanel health={financialHealth} goalProgress={summary.goalProgress} />
+      <motion.div variants={fadeUp} className="grid min-w-0 gap-3 min-[760px]:grid-cols-2 lg:col-span-12">
         <StatementReminderPanel cards={data.cards} />
         <BudgetAlertPanel budgets={data.budgets} expenses={data.cardExpenses} />
       </motion.div>
@@ -752,9 +750,7 @@ export function DashboardPage() {
         <CashFlowPanel cashFlow={summary.cashFlow} />
       </motion.div>
 
-      <motion.div variants={fadeUp} className="grid min-w-0 gap-3 min-[760px]:grid-cols-2 lg:col-span-5 lg:grid-cols-1">
-        <NextMonthLoadPanel load={summary.nextMonthLoad} />
-        <PeriodDebtTotalsPanel cashFlow={summary.cashFlow} />
+      <motion.div variants={fadeUp} className="min-w-0 lg:col-span-5">
         <CurrentDebtTotalsPanel
           totalDebt={summary.totalDebts}
           cardDebt={summary.totalCreditCardDebt}
@@ -764,12 +760,8 @@ export function DashboardPage() {
         />
       </motion.div>
 
-      <motion.div variants={fadeUp} className="min-w-0 lg:col-span-7">
+      <motion.div variants={fadeUp} className="min-w-0 lg:col-span-12">
         <SmartInsightsPanel insights={insights} />
-      </motion.div>
-
-      <motion.div variants={fadeUp} className="min-w-0 lg:col-span-5">
-        <ScenarioSimulator cashFlow={summary.cashFlow} netWorth={summary.netWorth} />
       </motion.div>
 
       <motion.div variants={fadeUp} className="grid min-w-0 gap-3 min-[520px]:grid-cols-3 lg:col-span-12">
@@ -1199,60 +1191,6 @@ function SpendingRadarPanel({ expenses }: { expenses: CardExpense[] }) {
   )
 }
 
-function FinancialHealthPanel({ health, goalProgress }: { health: FinancialHealthSummary; goalProgress: GoalProgressSummary }) {
-  const toneClass = {
-    emerald: 'bg-emerald-50 text-emerald-800 ring-emerald-200 dark:bg-emerald-950/25 dark:text-emerald-100 dark:ring-emerald-900',
-    amber: 'bg-amber-50 text-amber-900 ring-amber-200 dark:bg-amber-950/25 dark:text-amber-100 dark:ring-amber-900',
-    rose: 'bg-rose-50 text-rose-900 ring-rose-200 dark:bg-rose-950/25 dark:text-rose-100 dark:ring-rose-900',
-  }[health.tone]
-  const scoreTone = health.tone === 'emerald' ? 'text-emerald-700 dark:text-emerald-300' : health.tone === 'amber' ? 'text-amber-700 dark:text-amber-300' : 'text-rose-700 dark:text-rose-300'
-  const Icon = health.tone === 'rose' ? AlertTriangle : ShieldCheck
-
-  return (
-    <Card className="border-0 shadow-[var(--shadow-card)] ring-1 ring-border/80">
-      <CardHeader className="pb-1">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <CardTitle className="text-base">Finansal sağlık</CardTitle>
-            <p className="mt-1 text-xs text-muted-foreground">Borç, nakit, limit ve hedef dengesi.</p>
-          </div>
-          <Badge variant={health.tone === 'rose' ? 'destructive' : 'secondary'}>{health.label}</Badge>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-3 pt-1">
-        <div className={`rounded-lg p-3 ring-1 ${toneClass}`}>
-          <div className="flex items-center justify-between gap-3">
-            <div className="min-w-0">
-              <p className="text-[11px] font-bold uppercase opacity-75">Skor</p>
-              <p className={`mt-1 text-2xl font-black tabular-nums ${scoreTone}`}>{health.score}/100</p>
-            </div>
-            <div className="grid size-10 shrink-0 place-items-center rounded-lg bg-card/70">
-              <Icon size={19} />
-            </div>
-          </div>
-          <Progress value={health.score} className="mt-3 h-1.5" />
-        </div>
-        <p className="text-xs leading-5 text-muted-foreground">{health.description}</p>
-        {goalProgress.nextGoalName ? (
-          <div className="rounded-lg bg-muted/55 px-3 py-2 text-xs text-muted-foreground">
-            <span className="font-bold text-foreground">{goalProgress.nextGoalName}</span>
-            <span> için aylık {formatCurrency(goalProgress.nextGoalMonthlyNeed)} gerekebilir.</span>
-          </div>
-        ) : null}
-        <ul className="space-y-1.5">
-          {health.factors.slice(0, 3).map((factor) => (
-            <li key={factor} className="flex gap-2 text-xs leading-5 text-muted-foreground">
-              <span className="mt-2 size-1.5 shrink-0 rounded-full bg-primary/70" />
-              <span>{factor}</span>
-            </li>
-          ))}
-        </ul>
-      </CardContent>
-    </Card>
-  )
-}
-
-
 function CashFlowPanel({ cashFlow }: { cashFlow: CashFlowSummary }) {
   const outflowRate = cashFlow.income > 0 ? Math.min(100, (cashFlow.outflow / cashFlow.income) * 100) : 0
   const isPositive = cashFlow.netFlow >= 0
@@ -1550,142 +1488,6 @@ function SmartInsightsPanel({ insights }: { insights: SmartInsight[] }) {
             </article>
           )
         })}
-      </CardContent>
-    </Card>
-  )
-}
-
-function parseScenarioAmount(value: string) {
-  const parsed = Number(value.replace(',', '.'))
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0
-}
-
-function ScenarioSimulator({ cashFlow, netWorth }: { cashFlow: CashFlowSummary; netWorth: number }) {
-  const [extraIncome, setExtraIncome] = useState('')
-  const [debtPayment, setDebtPayment] = useState('')
-  const [plannedSpend, setPlannedSpend] = useState('')
-  const [goalTransfer, setGoalTransfer] = useState('')
-  const income = parseScenarioAmount(extraIncome)
-  const debt = parseScenarioAmount(debtPayment)
-  const spend = parseScenarioAmount(plannedSpend)
-  const transfer = parseScenarioAmount(goalTransfer)
-  const projectedCash = cashFlow.projectedCash + income - debt - spend - transfer
-  const projectedNetWorth = netWorth + income - spend
-  const cashTone = projectedCash >= 0 ? 'text-emerald-700 dark:text-emerald-300' : 'text-rose-700 dark:text-rose-300'
-  const hasScenario = income + debt + spend + transfer > 0
-
-  return (
-    <Card className="border-0 shadow-[var(--shadow-card)] ring-1 ring-border/80">
-      <CardHeader className="pb-0">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <CardTitle>Senaryo dene</CardTitle>
-            <p className="mt-1 text-sm text-muted-foreground">Bu ay için hızlı nakit ve net durum provası.</p>
-          </div>
-          <Calculator className="text-emerald-700 dark:text-emerald-300" />
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-3 pt-2">
-        <div className="grid grid-cols-2 gap-2">
-          <ScenarioInput label="Ek gelir" value={extraIncome} onChange={setExtraIncome} />
-          <ScenarioInput label="Ek borç öde" value={debtPayment} onChange={setDebtPayment} />
-          <ScenarioInput label="Planlı harcama" value={plannedSpend} onChange={setPlannedSpend} />
-          <ScenarioInput label="Hedefe ayır" value={goalTransfer} onChange={setGoalTransfer} />
-        </div>
-        <div className="rounded-lg bg-muted/55 p-3">
-          <div className="flex items-center justify-between gap-3 text-sm">
-            <span className="text-muted-foreground">Senaryo ay sonu nakit</span>
-            <strong className={`shrink-0 tabular-nums ${cashTone}`}>{formatCurrency(projectedCash)}</strong>
-          </div>
-          <div className="mt-2 flex items-center justify-between gap-3 text-sm">
-            <span className="text-muted-foreground">Tahmini net durum</span>
-            <strong className="shrink-0 tabular-nums text-foreground">{formatCurrency(projectedNetWorth)}</strong>
-          </div>
-        </div>
-        <p className="text-xs leading-5 text-muted-foreground">
-          {hasScenario
-            ? 'Ek borç ödeme ve hedef transferi nakdi azaltır; net durumu yalnızca ek gelir ve yeni harcama değiştirir.'
-            : 'Alanlara tutar girerek ay sonu projeksiyonunu anında oynatabilirsin.'}
-        </p>
-      </CardContent>
-    </Card>
-  )
-}
-
-function ScenarioInput({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
-  return (
-    <label className="block text-xs font-bold uppercase text-muted-foreground">
-      {label}
-      <input
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        type="number"
-        inputMode="decimal"
-        min="0"
-        step="0.01"
-        placeholder="0"
-        className="mt-1 w-full rounded-lg border border-input bg-background/85 px-2.5 py-2 text-sm font-semibold tabular-nums text-foreground outline-none focus:border-ring focus:ring-3 focus:ring-ring/15"
-      />
-    </label>
-  )
-}
-
-
-function PeriodDebtTotalsPanel({ cashFlow }: { cashFlow: CashFlowSummary }) {
-  return (
-    <Card className="border-0 shadow-[var(--shadow-card)] ring-1 ring-border/80">
-      <CardHeader className="pb-2">
-        <CardTitle className="inline-flex items-center gap-1.5">
-          Dönem borcu toplamları
-          <HelpTooltip title="Dönem borcu toplamları" content={dashboardHelp.periodDebt} />
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="grid grid-cols-[repeat(2,minmax(0,1fr))] gap-2 pt-0">
-        <CashFlowMetric label="Kart borcu" value={formatCurrency(cashFlow.cardStatementDebt)} tone="rose" />
-        <CashFlowMetric label="Kredi taksidi" value={formatCurrency(cashFlow.loanOutflow)} tone="rose" />
-        <CashFlowMetric label="Fatura/ödeme" value={formatCurrency(cashFlow.paymentOutflow)} tone="rose" />
-        <CashFlowMetric label="Kişisel borç" value={formatCurrency(cashFlow.debtOutflow)} tone="rose" />
-      </CardContent>
-    </Card>
-  )
-}
-
-function NextMonthLoadPanel({ load }: { load: MonthlyLoadSummary }) {
-  const loanTotal = load.loanInstallments + load.legacyLoanInstallments
-  const rows = [
-    { label: 'Fatura/ödeme', value: load.payments },
-    { label: 'Açık ekstre', value: load.cardStatements },
-    { label: 'Kart taksitleri', value: load.cardInstallments },
-    { label: 'Kredi taksidi', value: loanTotal },
-    { label: 'Kişisel borç', value: load.personalDebts },
-  ]
-
-  return (
-    <Card className="border-0 shadow-[var(--shadow-card)] ring-1 ring-border/80">
-      <CardHeader className="pb-2">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <CardTitle className="inline-flex items-center gap-1.5">
-              Gelecek ay yükü
-              <HelpTooltip title="Gelecek ay yükü" content={dashboardHelp.nextMonthLoad} />
-            </CardTitle>
-            <p className="mt-1 text-sm capitalize text-muted-foreground">{load.monthLabel}</p>
-          </div>
-          <Badge variant={load.total > 0 ? 'secondary' : 'outline'}>{formatCurrency(load.total)}</Badge>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-3 pt-0">
-        <div className="rounded-lg bg-destructive/10 px-3 py-3">
-          <p className="text-[11px] font-bold uppercase text-rose-700 dark:text-rose-300">Toplam planlı çıkış</p>
-          <p className="mt-1 whitespace-nowrap text-[clamp(1rem,4vw,1.55rem)] font-black tabular-nums text-rose-800 dark:text-rose-200">
-            {formatCurrency(load.total)}
-          </p>
-        </div>
-        <div className="grid grid-cols-[repeat(2,minmax(0,1fr))] gap-2">
-          {rows.map((row) => (
-            <CashFlowMetric key={row.label} label={row.label} value={formatCurrency(row.value)} tone="rose" />
-          ))}
-        </div>
       </CardContent>
     </Card>
   )
