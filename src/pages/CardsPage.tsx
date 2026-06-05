@@ -13,6 +13,7 @@ import type { CSSProperties } from 'react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { CrudPage, type FormField } from '../components/CrudPage'
 import { AccountPaymentModal } from '../components/finance/AccountPaymentModal'
+import { StatementImportModal } from '../components/finance/StatementImportModal'
 import { CategoryPicker } from '../components/finance/CategoryPicker'
 import { CardInstallmentCalendarPanel } from '../components/finance/CardInstallmentCalendarPanel'
 import { CardInstallmentExpensesPanel } from '../components/finance/CardInstallmentExpensesPanel'
@@ -624,6 +625,7 @@ function CreditAccountListCard({
   onPayDebt,
   onCutStatement,
   onAddExpense,
+  onImportStatement,
 }: {
   row: Card
   rows: Card[]
@@ -637,6 +639,7 @@ function CreditAccountListCard({
   onPayDebt: (card: Card, reload: () => Promise<void>, rows: Card[]) => void
   onCutStatement: (card: Card, reload: () => Promise<void>, setError: (message: string) => void) => Promise<void>
   onAddExpense: (card: Card, mode: 'cash' | 'installment') => void
+  onImportStatement: (card: Card) => void
 }) {
   const [detailsOpen, setDetailsOpen] = useState(false)
 
@@ -796,6 +799,13 @@ function CreditAccountListCard({
           className="finance-touch-target inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-xs font-black text-foreground shadow-sm transition hover:bg-muted"
         >
           Harcama ekle
+        </button>
+        <button
+          type="button"
+          onClick={() => onImportStatement(row)}
+          className="finance-touch-target inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-xs font-black text-foreground shadow-sm transition hover:bg-muted"
+        >
+          Ekstre içe aktar
         </button>
         <button
           type="button"
@@ -1832,6 +1842,7 @@ export function CardsPage() {
   const [statementPaymentSourceCard, setStatementPaymentSourceCard] = useState('')
   const [statementPaymentError, setStatementPaymentError] = useState('')
   const [statementPaymentSaving, setStatementPaymentSaving] = useState(false)
+  const [importCard, setImportCard] = useState<Card | null>(null)
 
   const loadProvisions = useCallback(async () => {
     setProvisionsLoading(true)
@@ -2330,6 +2341,7 @@ export function CardsPage() {
             onPayDebt={openDebtPayment}
             onCutStatement={cutStatement}
             onAddExpense={focusQuickExpense}
+            onImportStatement={setImportCard}
           />
         )}
         renderExtra={(row, helpers) => {
@@ -2486,6 +2498,14 @@ export function CardsPage() {
         <p>Toplam borç: {formatCurrency(debtPaymentCard?.debt_amount ?? 0)}</p>
         <p>Ödenebilir: {formatCurrency(debtPaymentCard ? cardPayableDebt(debtPaymentCard) : 0)}</p>
       </AccountPaymentModal>
+
+      {importCard && (
+        <StatementImportModal
+          card={importCard}
+          onClose={() => setImportCard(null)}
+          onSuccess={() => { setImportCard(null); void reloadCards?.() }}
+        />
+      )}
 
       <AccountPaymentModal
         title="Ekstre ödemesi"
