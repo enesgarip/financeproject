@@ -35,6 +35,7 @@ import { buildFinancialPosition } from '../utils/financeSummary'
 import { useMarketRates } from '../hooks/useMarketRates'
 import { type MarketRatesSnapshot } from '../utils/marketRates'
 import { convertNetWorth, formatRealValue, realValueChangeBadge, type RealUnit, REAL_UNIT_LABELS } from '../utils/realValue'
+import { applyScenario, type ScenarioMutation } from '../utils/scenarioForecast'
 
 type AnalysisData = {
   assets: Asset[]
@@ -1070,6 +1071,7 @@ function NetWorthTrend({
                 .filter(Boolean)
                 .join(' ')}
               title={u !== 'TRY' && !hasRates ? 'Kur verisi yükleniyor...' : undefined}
+              aria-label={`Net değeri ${REAL_UNIT_LABELS[u]} cinsinden göster`}
             >
               {REAL_UNIT_LABELS[u]}
             </button>
@@ -1103,29 +1105,60 @@ function NetWorthTrend({
 }
 
 function ForwardForecast({ data }: { data: AnalysisData }) {
-  const forecast = useMemo(
-    () =>
-      buildCashFlowForecast(
-        {
-          assets: data.assets,
-          cards: data.cards,
-          loans: data.loans,
-          loanInstallments: data.loanInstallments,
-          debts: data.debts,
-          payments: data.payments,
-          salaryHistory: data.salaryHistory,
-          cardInstallments: data.cardInstallments,
-        },
-        { horizonMonths: 6 },
-      ),
+  const [scenarioOpen, setScenarioOpen] = useState(false)
+  const [removedIds, setRemovedIds] = useState<Set<string>>(new Set())
+
+  const forecastInput = useMemo(
+    () => ({
+      assets: data.assets,
+      cards: data.cards,
+      loans: data.loans,
+      loanInstallments: data.loanInstallments,
+      debts: data.debts,
+      payments: data.payments,
+      salaryHistory: data.salaryHistory,
+      cardInstallments: data.cardInstallments,
+    }),
     [data],
   )
 
-  const barData: BarDataPoint[] = forecast.months.map((month) => ({
+  const forecast = useMemo(() => buildCashFlowForecast(forecastInput, { horizonMonths: 6 }), [forecastInput])
+
+  const scenarioMutations = useMemo<ScenarioMutation[]>(() => {
+    if (removedIds.size === 0) return []
+    const mutations: ScenarioMutation[] = []
+    for (const id of removedIds) {
+      if (data.loans.some((l) => l.id === id)) mutations.push({ type: 'remove_loan', loanId: id })
+      else mutations.push({ type: 'remove_payment', paymentId: id })
+    }
+    return mutations
+  }, [removedIds, data.loans])
+
+  const scenarioForecast = useMemo(() => {
+    if (scenarioMutations.length === 0) return null
+    return buildCashFlowForecast(applyScenario(forecastInput, scenarioMutations), { horizonMonths: 6 })
+  }, [forecastInput, scenarioMutations])
+
+  const activeForBarChart = scenarioForecast ?? forecast
+  const barData: BarDataPoint[] = activeForBarChart.months.map((month) => ({
     label: shortMonth(month.monthKey),
     value: month.endingBalance,
   }))
-  const hasDeficit = forecast.firstNegative !== null
+  const hasDeficit = activeForBarChart.firstNegative !== null
+
+  const candidateLoans = data.loans.filter((l) => l.status === 'active' && l.remaining_installments > 0)
+  const candidatePayments = data.payments.filter((p) => p.recurrence !== 'none' && p.status !== 'ödendi')
+
+  function toggleId(id: string) {
+    setRemovedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const endingDelta = scenarioForecast ? scenarioForecast.endingBalance - forecast.endingBalance : null
 
   return (
     <Card className="border-border/70 shadow-[var(--shadow-card)] lg:col-span-12">
@@ -1140,25 +1173,32 @@ function ForwardForecast({ data }: { data: AnalysisData }) {
       </CardHeader>
       <CardContent className="space-y-4 pt-3">
         <div className="grid grid-cols-3 gap-2">
-          <StatPill label="Başlangıç" value={formatCurrency(forecast.startingBalance)} />
+          <StatPill label="Başlangıç" value={formatCurrency(activeForBarChart.startingBalance)} />
           <StatPill
-            label={forecast.lowest ? `En düşük · ${shortMonth(forecast.lowest.monthKey)}` : 'En düşük'}
-            value={formatCurrency(forecast.lowest?.balance ?? forecast.startingBalance)}
-            tone={(forecast.lowest?.balance ?? 0) < 0 ? 'rose' : 'stone'}
+            label={activeForBarChart.lowest ? `En düşük · ${shortMonth(activeForBarChart.lowest.monthKey)}` : 'En düşük'}
+            value={formatCurrency(activeForBarChart.lowest?.balance ?? activeForBarChart.startingBalance)}
+            tone={(activeForBarChart.lowest?.balance ?? 0) < 0 ? 'rose' : 'stone'}
           />
           <StatPill
             label="6 ay sonu"
-            value={formatCurrency(forecast.endingBalance)}
-            tone={forecast.endingBalance >= forecast.startingBalance ? 'emerald' : 'rose'}
+            value={formatCurrency(activeForBarChart.endingBalance)}
+            tone={activeForBarChart.endingBalance >= activeForBarChart.startingBalance ? 'emerald' : 'rose'}
           />
         </div>
 
-        {forecast.firstNegative ? (
+        {activeForBarChart.firstNegative ? (
           <div className="rounded-xl border border-destructive/20 bg-destructive/8 p-3">
-            <p className="text-sm font-bold text-destructive">{forecast.firstNegative.monthLabel} içinde nakit açığa düşüyor</p>
+            <p className="text-sm font-bold text-destructive">{activeForBarChart.firstNegative.monthLabel} içinde nakit açığa düşüyor</p>
             <p className="mt-0.5 text-xs text-destructive/80">
-              Tahmini bakiye {formatCurrency(forecast.firstNegative.balance)}. Büyük ödemeleri veya tahsilatı öne almak iyi olur.
+              Tahmini bakiye {formatCurrency(activeForBarChart.firstNegative.balance)}. Büyük ödemeleri veya tahsilatı öne almak iyi olur.
             </p>
+          </div>
+        ) : null}
+
+        {scenarioForecast && !scenarioForecast.firstNegative && forecast.firstNegative ? (
+          <div className="rounded-xl border border-success/20 bg-success/8 p-3">
+            <p className="text-sm font-bold text-success">Simülasyonda nakit açığı ortadan kalkıyor</p>
+            <p className="mt-0.5 text-xs text-success/80">Seçili yükümlülükleri kaldırmak 6 ay boyunca pozitif bakiyeyi koruyor.</p>
           </div>
         ) : null}
 
@@ -1167,7 +1207,7 @@ function ForwardForecast({ data }: { data: AnalysisData }) {
         </div>
 
         <div className="grid gap-2 min-[560px]:grid-cols-2">
-          {forecast.months.map((month) => (
+          {activeForBarChart.months.map((month) => (
             <div key={month.monthKey} className="flex items-center justify-between gap-3 rounded-xl bg-muted/45 px-3 py-2 text-sm">
               <div className="min-w-0">
                 <p className="truncate font-semibold text-foreground">{month.monthLabel}</p>
@@ -1187,6 +1227,82 @@ function ForwardForecast({ data }: { data: AnalysisData }) {
             </div>
           ))}
         </div>
+
+        {/* Scenario simulator */}
+        {(candidateLoans.length > 0 || candidatePayments.length > 0) ? (
+          <div className="rounded-xl border border-border/50 bg-muted/20">
+            <button
+              aria-expanded={scenarioOpen}
+              onClick={() => setScenarioOpen((v) => !v)}
+              className="flex w-full items-center justify-between px-4 py-3 text-left text-sm font-semibold text-foreground"
+            >
+              <span>Ya şöyle olsaydı?</span>
+              <span className="flex items-center gap-2">
+                {removedIds.size > 0 && endingDelta !== null ? (
+                  <Badge variant={endingDelta >= 0 ? 'success' : 'destructive'}>
+                    {endingDelta >= 0 ? '+' : ''}{formatCurrency(endingDelta)}
+                  </Badge>
+                ) : null}
+                <span className="text-xs text-muted-foreground">{scenarioOpen ? '▲' : '▼'}</span>
+              </span>
+            </button>
+
+            {scenarioOpen ? (
+              <div className="space-y-3 border-t border-border/40 px-4 pb-4 pt-3">
+                {candidateLoans.length > 0 ? (
+                  <div>
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Krediler</p>
+                    <div className="space-y-1.5">
+                      {candidateLoans.map((loan) => (
+                        <label key={loan.id} className="flex cursor-pointer items-center gap-3 rounded-lg px-2 py-1.5 hover:bg-muted/40">
+                          <input
+                            type="checkbox"
+                            checked={removedIds.has(loan.id)}
+                            onChange={() => toggleId(loan.id)}
+                            className="h-4 w-4 accent-primary"
+                            aria-label={`${loan.loan_name} kredisini kaldır`}
+                          />
+                          <span className="min-w-0 flex-1 truncate text-sm text-foreground">{loan.loan_name}</span>
+                          <span className="shrink-0 text-xs text-muted-foreground">{formatCurrency(loan.monthly_payment)}/ay</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+
+                {candidatePayments.length > 0 ? (
+                  <div>
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Düzenli ödemeler</p>
+                    <div className="space-y-1.5">
+                      {candidatePayments.map((payment) => (
+                        <label key={payment.id} className="flex cursor-pointer items-center gap-3 rounded-lg px-2 py-1.5 hover:bg-muted/40">
+                          <input
+                            type="checkbox"
+                            checked={removedIds.has(payment.id)}
+                            onChange={() => toggleId(payment.id)}
+                            className="h-4 w-4 accent-primary"
+                            aria-label={`${payment.title} ödemesini kaldır`}
+                          />
+                          <span className="min-w-0 flex-1 truncate text-sm text-foreground">{payment.title}</span>
+                          <span className="shrink-0 text-xs text-muted-foreground">{formatCurrency(payment.amount)}/ay</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+
+                {removedIds.size > 0 ? (
+                  <button
+                    onClick={() => setRemovedIds(new Set())}
+                    className="text-xs text-muted-foreground underline-offset-2 hover:underline"
+                  >
+                    Sıfırla
+                  </button>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
       </CardContent>
     </Card>
   )

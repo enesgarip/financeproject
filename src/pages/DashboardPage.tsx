@@ -66,6 +66,7 @@ import {
 } from '../utils/financeSummary'
 import { buildDashboardUpcomingItems, type DashboardUpcomingItem } from '../utils/dashboardUpcoming'
 import { formatCurrency } from '../utils/formatCurrency'
+import { detectSpendingAnomalies } from '../utils/spendingAnomalies'
 import { isMissingSupabaseCapabilityError } from '../utils/supabaseErrors'
 import { EmptyState } from '../components/EmptyState'
 import { CashFlowChart, type CashFlowPoint } from '../components/charts/CashFlowChart'
@@ -743,6 +744,10 @@ export function DashboardPage() {
         <BudgetAlertPanel budgets={data.budgets} expenses={data.cardExpenses} />
       </motion.div>
 
+      <motion.div variants={fadeUp} className="min-w-0 lg:col-span-12">
+        <SpendingRadarPanel expenses={data.cardExpenses} />
+      </motion.div>
+
       <motion.div variants={fadeUp} className="min-w-0 lg:col-span-7">
         <CashFlowPanel cashFlow={summary.cashFlow} />
       </motion.div>
@@ -1148,6 +1153,51 @@ function FocusActionCard({ action }: { action: FocusAction }) {
   )
 }
 
+
+function SpendingRadarPanel({ expenses }: { expenses: CardExpense[] }) {
+  const { anomalies, recurring } = useMemo(() => detectSpendingAnomalies(expenses), [expenses])
+
+  const hasContent = anomalies.length > 0 || recurring.length > 0
+  if (!hasContent) return null
+
+  return (
+    <Card className="border-0 shadow-[var(--shadow-card)] ring-1 ring-border/80">
+      <CardHeader className="pb-1">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <CardTitle className="text-base">Harcama radari</CardTitle>
+            <p className="mt-1 text-xs text-muted-foreground">Ortalamayı aşan kategoriler ve tekrar eden giderler.</p>
+          </div>
+          <Lightbulb size={16} className="mt-0.5 shrink-0 text-amber-500" />
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-3 pt-1">
+        {anomalies.slice(0, 3).map((anomaly) => (
+          <div key={anomaly.category} className="rounded-lg bg-amber-50/70 px-3 py-2 ring-1 ring-amber-200/60 dark:bg-amber-950/20 dark:ring-amber-900/40">
+            <div className="flex items-start justify-between gap-2">
+              <p className="text-xs font-bold text-amber-900 dark:text-amber-100">{anomaly.category}</p>
+              <span className="shrink-0 rounded-md bg-amber-200/70 px-1.5 py-0.5 text-[10px] font-bold text-amber-800 dark:bg-amber-900/50 dark:text-amber-200">
+                +{Math.round((anomaly.ratio - 1) * 100)}%
+              </span>
+            </div>
+            <p className="mt-0.5 text-[11px] text-amber-700/80 dark:text-amber-300/70">
+              Bu ay {formatCurrency(anomaly.currentMonth)} · ort. {formatCurrency(anomaly.threeMonthAvg)}
+            </p>
+          </div>
+        ))}
+        {recurring.slice(0, 3).map((item) => (
+          <div key={item.description} className="flex items-center justify-between gap-3 rounded-lg bg-muted/50 px-3 py-2">
+            <div className="min-w-0">
+              <p className="truncate text-xs font-semibold text-foreground">{item.description}</p>
+              <p className="text-[11px] text-muted-foreground">{item.monthCount} ay tekrar · {item.category}</p>
+            </div>
+            <span className="shrink-0 text-xs font-bold tabular-nums text-foreground">{formatCurrency(item.amount)}</span>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  )
+}
 
 function FinancialHealthPanel({ health, goalProgress }: { health: FinancialHealthSummary; goalProgress: GoalProgressSummary }) {
   const toneClass = {
