@@ -27,7 +27,7 @@ import type {
   TransactionHistory,
 } from '../types/database'
 import { SavingsGoalsPanel } from '../components/finance/SavingsGoalsPanel'
-import { expenseCategoryOptions } from '../utils/categories'
+import { expenseCategories, expenseCategoryOptions } from '../utils/categories'
 import { addMonths, dateInputValue, daysUntil, formatDate, isDateInMonth, monthlyOccurrenceDate, startOfMonth } from '../utils/date'
 import { formatCurrency, parseNumber } from '../utils/formatCurrency'
 import { buildCashFlowForecast } from '../utils/cashFlowForecast'
@@ -224,6 +224,43 @@ function buildSearchItems(data: AnalysisData): SearchItem[] {
   ].sort((a, b) => String(b.date ?? '').localeCompare(String(a.date ?? '')))
 }
 
+async function loadNetWorthSnapshots(
+  userId: string,
+  loadedData: AnalysisData,
+  ratesSnapshot: MarketRatesSnapshot | null,
+): Promise<NetWorthSnapshot[] | null> {
+  const today = new Date().toLocaleDateString('sv-SE')
+  const position = buildFinancialPosition({
+    assets: loadedData.assets,
+    cards: loadedData.cards,
+    loans: loadedData.loans,
+    loanInstallments: loadedData.loanInstallments,
+    debts: loadedData.debts,
+    payments: loadedData.payments,
+    salaryHistory: loadedData.salaryHistory,
+    cardInstallments: loadedData.cardInstallments,
+  })
+  const goldTry = ratesSnapshot?.rates?.GRA?.buying ?? null
+  const usdTry = ratesSnapshot?.rates?.USD?.buying ?? null
+  const upsertRes = await supabase
+    .from('net_worth_snapshots')
+    .upsert(
+      { user_id: userId, snapshot_date: today, net_worth: position.netWorth, gold_try: goldTry, usd_try: usdTry },
+      { onConflict: 'user_id,snapshot_date' },
+    )
+
+  if (isMissingSchemaCacheError(upsertRes.error)) return null
+
+  const snapshotRes = await supabase
+    .from('net_worth_snapshots')
+    .select('*')
+    .order('snapshot_date', { ascending: false })
+    .limit(90)
+
+  if (isMissingSchemaCacheError(snapshotRes.error)) return null
+  return [...(snapshotRes.data ?? [])].reverse() as NetWorthSnapshot[]
+}
+
 function csvValue(value: string | number | null | undefined) {
   const text = String(value ?? '')
   return `"${text.replaceAll('"', '""')}"`
@@ -415,9 +452,21 @@ function UpcomingInstallments({ data }: { data: AnalysisData }) {
 }
 
 function BudgetProgress({ budgets, expenses }: { budgets: Budget[]; expenses: CardExpense[] }) {
-  const monthKey = dateInputValue(startOfMonth())
-  const monthlyBudgets = budgets.filter((budget) => budget.month === monthKey)
-  const monthlyExpenses = expenses.filter((expense) => activeCardExpense(expense) && isDateInMonth(expense.spent_at))
+  const { monthlyBudgets, monthlyExpenses } = useMemo(() => {
+    const monthKey = dateInputValue(startOfMonth())
+    const spentByCategory = new Map<string, number>()
+
+    for (const expense of expenses) {
+      if (!activeCardExpense(expense) || !isDateInMonth(expense.spent_at)) continue
+      const normalizedCategory = expense.category ?? expenseCategories.at(-1) ?? 'Diger'
+      spentByCategory.set(normalizedCategory, (spentByCategory.get(normalizedCategory) ?? 0) + expense.amount)
+    }
+
+    return {
+      monthlyBudgets: budgets.filter((budget) => budget.month === monthKey),
+      monthlyExpenses: Array.from(spentByCategory, ([category, amount]) => ({ category, amount })),
+    }
+  }, [budgets, expenses])
 
   if (monthlyBudgets.length === 0) {
     return <p className="rounded-xl bg-muted/45 p-3 text-sm text-muted-foreground">Bu ay için bütçe eklediğinde kategori kullanımı burada görünecek.</p>
@@ -506,9 +555,13 @@ function StatementArchive({ data }: { data: AnalysisData }) {
 function SearchExport({ items }: { items: SearchItem[] }) {
   const [query, setQuery] = useState('')
   const normalizedQuery = query.trim().toLocaleLowerCase('tr-TR')
-  const filteredItems = normalizedQuery
-    ? items.filter((item) => `${item.type} ${item.title} ${item.subtitle}`.toLocaleLowerCase('tr-TR').includes(normalizedQuery))
-    : items.slice(0, 12)
+  const filteredItems = useMemo(
+    () =>
+      normalizedQuery
+        ? items.filter((item) => `${item.type} ${item.title} ${item.subtitle}`.toLocaleLowerCase('tr-TR').includes(normalizedQuery))
+        : items.slice(0, 12),
+    [items, normalizedQuery],
+  )
 
   return (
     <Card className="border-border/70 shadow-[var(--shadow-card)] lg:col-span-7">
@@ -628,16 +681,26 @@ function buildCalendarEvents(data: AnalysisData) {
 }
 
 function FinancialCalendar({ data }: { data: AnalysisData }) {
-  const monthStart = startOfMonth()
-  const daysInMonth = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0).getDate()
-  const firstOffset = (monthStart.getDay() + 6) % 7
-  const events = buildCalendarEvents(data)
-  const eventsByDate = new Map<string, CalendarEvent[]>()
+  const { monthStart, daysInMonth, firstOffset, eventsByDate, busyDays } = useMemo(() => {
+    const monthStart = startOfMonth()
+    const daysInMonth = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0).getDate()
+    const firstOffset = (monthStart.getDay() + 6) % 7
+    const eventsByDate = new Map<string, CalendarEvent[]>()
 
-  for (const event of events) {
-    eventsByDate.set(event.date, [...(eventsByDate.get(event.date) ?? []), event])
-  }
-  const busyDays = Array.from(eventsByDate.entries()).sort(([leftDate], [rightDate]) => leftDate.localeCompare(rightDate))
+    for (const event of buildCalendarEvents(data)) {
+      const dayEvents = eventsByDate.get(event.date)
+      if (dayEvents) dayEvents.push(event)
+      else eventsByDate.set(event.date, [event])
+    }
+
+    return {
+      monthStart,
+      daysInMonth,
+      firstOffset,
+      eventsByDate,
+      busyDays: Array.from(eventsByDate.entries()).sort(([leftDate], [rightDate]) => leftDate.localeCompare(rightDate)),
+    }
+  }, [data])
 
   return (
     <Card className="border-border/70 shadow-[var(--shadow-card)] lg:col-span-7">
@@ -836,8 +899,11 @@ const CATEGORY_PALETTE = [
 ]
 
 function CategorySpendingChart({ data }: { data: AnalysisData }) {
-  const monthlyExpenses = data.cardExpenses.filter((expense) => activeCardExpense(expense) && isDateInMonth(expense.spent_at))
-  const insights = buildCategoryInsights(data)
+  const monthlyExpenses = useMemo(
+    () => data.cardExpenses.filter((expense) => activeCardExpense(expense) && isDateInMonth(expense.spent_at)),
+    [data.cardExpenses],
+  )
+  const insights = useMemo(() => buildCategoryInsights(data), [data])
   const categoryTotals = Array.from(
     monthlyExpenses.reduce((map, expense) => {
       const category = expense.category || 'Diğer'
@@ -894,33 +960,35 @@ function CategorySpendingChart({ data }: { data: AnalysisData }) {
 }
 
 function CashFlowTrend({ data }: { data: AnalysisData }) {
-  const salary = getCurrentSalary(data.salaryHistory)?.amount ?? 0
-  const months = Array.from({ length: 6 }, (_, index) => new Date(new Date().getFullYear(), new Date().getMonth() - 5 + index, 1))
+  const chartData: CashFlowPoint[] = useMemo(() => {
+    const salary = getCurrentSalary(data.salaryHistory)?.amount ?? 0
+    const months = Array.from({ length: 6 }, (_, index) => new Date(new Date().getFullYear(), new Date().getMonth() - 5 + index, 1))
 
-  const chartData: CashFlowPoint[] = months.map((month) => {
-    const income = salary + sum(
-      data.debts.filter((debt) => debt.direction === 'borç_verdim' && debt.status === 'açık' && isDateInMonth(debt.due_date, month)),
-      (debt) => debt.estimated_value_try,
-    )
-    const outflow =
-      sum(data.cardExpenses.filter((expense) => activeCardExpense(expense) && isDateInMonth(expense.spent_at, month)), (expense) => expense.amount) +
-      sum(data.payments.filter((payment) => {
-        if (payment.status !== 'bekliyor') return false
-        if (payment.recurrence === 'monthly') return Boolean(monthlyOccurrenceDate(payment.recurrence_day, month))
-        return isDateInMonth(payment.due_date, month)
-      }), (payment) => payment.amount) +
-      sum(data.loanInstallments.filter((installment) => isDateInMonth(installment.due_date, month)), (installment) => installment.amount) +
-      sum(data.debts.filter((debt) => debt.direction === 'borç_aldım' && debt.status === 'açık' && isDateInMonth(debt.due_date, month)), (debt) => debt.estimated_value_try)
+    return months.map((month) => {
+      const income = salary + sum(
+        data.debts.filter((debt) => debt.direction === 'borç_verdim' && debt.status === 'açık' && isDateInMonth(debt.due_date, month)),
+        (debt) => debt.estimated_value_try,
+      )
+      const outflow =
+        sum(data.cardExpenses.filter((expense) => activeCardExpense(expense) && isDateInMonth(expense.spent_at, month)), (expense) => expense.amount) +
+        sum(data.payments.filter((payment) => {
+          if (payment.status !== 'bekliyor') return false
+          if (payment.recurrence === 'monthly') return Boolean(monthlyOccurrenceDate(payment.recurrence_day, month))
+          return isDateInMonth(payment.due_date, month)
+        }), (payment) => payment.amount) +
+        sum(data.loanInstallments.filter((installment) => isDateInMonth(installment.due_date, month)), (installment) => installment.amount) +
+        sum(data.debts.filter((debt) => debt.direction === 'borç_aldım' && debt.status === 'açık' && isDateInMonth(debt.due_date, month)), (debt) => debt.estimated_value_try)
 
-    return {
-      label: new Intl.DateTimeFormat('tr-TR', { month: 'short' }).format(month),
-      income,
-      outflow,
-      net: income - outflow,
-    }
-  })
+      return {
+        label: new Intl.DateTimeFormat('tr-TR', { month: 'short' }).format(month),
+        income,
+        outflow,
+        net: income - outflow,
+      }
+    })
+  }, [data.cardExpenses, data.debts, data.loanInstallments, data.payments, data.salaryHistory])
 
-  const totalNet = chartData.reduce((s, r) => s + r.net, 0)
+  const totalNet = useMemo(() => chartData.reduce((s, r) => s + r.net, 0), [chartData])
 
   return (
     <Card className="border-border/70 lg:col-span-7">
@@ -1143,10 +1211,14 @@ function ForwardForecast({ data }: { data: AnalysisData }) {
   }, [forecastInput, scenarioMutations])
 
   const activeForBarChart = scenarioForecast ?? forecast
-  const barData: BarDataPoint[] = activeForBarChart.months.map((month) => ({
-    label: shortMonth(month.monthKey),
-    value: month.endingBalance,
-  }))
+  const barData: BarDataPoint[] = useMemo(
+    () =>
+      activeForBarChart.months.map((month) => ({
+        label: shortMonth(month.monthKey),
+        value: month.endingBalance,
+      })),
+    [activeForBarChart],
+  )
   const hasDeficit = activeForBarChart.firstNegative !== null
 
   const candidateLoans = data.loans.filter((l) => l.status === 'active' && l.remaining_installments > 0)
@@ -1536,40 +1608,14 @@ export function AnalysisPage() {
       savingsGoals: savingsGoalRows.rows,
     }
     setData(loadedData)
-
-    // Daily net-worth snapshot — silent on missing table (before migration runs).
-    const today = new Date().toLocaleDateString('sv-SE')
-    const position = buildFinancialPosition({
-      assets: loadedData.assets,
-      cards: loadedData.cards,
-      loans: loadedData.loans,
-      loanInstallments: loadedData.loanInstallments,
-      debts: loadedData.debts,
-      payments: loadedData.payments,
-      salaryHistory: loadedData.salaryHistory,
-      cardInstallments: loadedData.cardInstallments,
-    })
-    const liveRates = ratesSnapshotRef.current
-    const goldTry = liveRates?.rates?.GRA?.buying ?? null
-    const usdTry = liveRates?.rates?.USD?.buying ?? null
-    const upsertRes = await supabase
-      .from('net_worth_snapshots')
-      .upsert(
-        { user_id: user.id, snapshot_date: today, net_worth: position.netWorth, gold_try: goldTry, usd_try: usdTry },
-        { onConflict: 'user_id,snapshot_date' },
-      )
-    if (!isMissingSchemaCacheError(upsertRes.error)) {
-      const snapshotRes = await supabase
-        .from('net_worth_snapshots')
-        .select('*')
-        .order('snapshot_date', { ascending: false })
-        .limit(90)
-      if (!isMissingSchemaCacheError(snapshotRes.error)) {
-        setSnapshots([...(snapshotRes.data ?? [])].reverse())
-      }
-    }
-
     setLoading(false)
+
+    try {
+      const loadedSnapshots = await loadNetWorthSnapshots(user.id, loadedData, ratesSnapshotRef.current)
+      if (loadedSnapshots) setSnapshots(loadedSnapshots)
+    } catch {
+      // Snapshot persistence is non-critical for the analysis page render.
+    }
   }, [user])
 
   useEffect(() => {

@@ -400,6 +400,14 @@ export function DashboardPage() {
     setLoading(true)
     setError('')
 
+    const valuationSyncPromise = (async () => {
+      try {
+        const snapshot = await ensureRatesLoaded()
+        await syncAutoValuedRows(snapshot)
+      } catch {
+        // Non-fatal: dashboard still renders with the last stored valuation.
+      }
+    })()
     const { error: statementCutError } = await supabase.rpc('cut_due_card_statements')
     if (statementCutError && !isMissingSchemaCacheError(statementCutError)) {
       setError(statementCutError.message)
@@ -410,13 +418,7 @@ export function DashboardPage() {
     // Refresh live rates and re-value auto-valued gold/FX rows so net worth and
     // cash-flow math below read up-to-date stored values. Best-effort: a feed
     // outage just leaves the last known values in place.
-    try {
-      const snapshot = await ensureRatesLoaded()
-      await syncAutoValuedRows(snapshot)
-    } catch {
-      // Non-fatal — dashboard still renders with the last stored valuation.
-    }
-
+    await valuationSyncPromise
     const currentMonthStart = startOfMonth()
     const historyStart = addMonths(currentMonthStart, -DASHBOARD_HISTORY_MONTHS)
     const spendingStart = dateInputValue(addMonths(currentMonthStart, -DASHBOARD_SPENDING_MONTHS))
