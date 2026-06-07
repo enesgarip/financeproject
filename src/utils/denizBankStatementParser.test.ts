@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { matchTransactions, parseDenizBankStatement } from './denizBankStatementParser'
+import { expenseTotalAmount, matchTransactions, parseDenizBankStatement } from './denizBankStatementParser'
 
 // Realistic Denizbank PDF text fixture (based on actual statement format)
 const SAMPLE_TEXT = `
@@ -162,10 +162,40 @@ describe('parseDenizBankStatement — installments', () => {
     expect(taksit?.amount).toBeCloseTo(21666.67)
   })
 
-  it('marks regular transactions as non-installment', () => {
+  it('extracts installment count and number from "/count-no" notation', () => {
+    const result = parseDenizBankStatement(SAMPLE_TEXT)
+    const beyler = result.transactions.find((t) => t.description.includes('BEYLER OPTİK'))
+    expect(beyler?.installmentCount).toBe(3)
+    expect(beyler?.installmentNo).toBe(1)
+
+    const neova = result.transactions.find(
+      (t) => t.description.includes('NEOVA') && t.installmentCount === 9,
+    )
+    expect(neova?.installmentCount).toBe(9)
+    expect(neova?.installmentNo).toBe(3)
+  })
+
+  it('falls back to "N.Tk" for installment number when notation is absent', () => {
+    const result = parseDenizBankStatement(SAMPLE_TEXT)
+    const nakit = result.transactions.find((t) => t.description.toLowerCase().includes('nakit'))
+    expect(nakit?.isInstallment).toBe(true)
+    expect(nakit?.installmentNo).toBe(3)
+    expect(nakit?.installmentCount).toBe(0) // toplam bilinmiyor
+  })
+
+  it('reconstructs total amount from monthly installment × count', () => {
+    const result = parseDenizBankStatement(SAMPLE_TEXT)
+    const beyler = result.transactions.find((t) => t.description.includes('BEYLER OPTİK'))!
+    expect(expenseTotalAmount(beyler)).toBeCloseTo(65000.01)
+  })
+
+  it('marks regular transactions as non-installment with count 1', () => {
     const result = parseDenizBankStatement(SAMPLE_TEXT)
     const cafe = result.transactions.find((t) => t.description.includes('CAFE LİFE'))
     expect(cafe?.isInstallment).toBe(false)
+    expect(cafe?.installmentCount).toBe(1)
+    expect(cafe?.installmentNo).toBe(1)
+    expect(expenseTotalAmount(cafe!)).toBeCloseTo(170)
   })
 })
 
@@ -191,6 +221,18 @@ describe('matchTransactions', () => {
     amount,
     category: 'Diğer',
     isInstallment: false,
+    installmentNo: 1,
+    installmentCount: 1,
+  })
+
+  const installmentTx = (date: string, monthly: number, count: number, no: number) => ({
+    date,
+    description: 'Taksit',
+    amount: monthly,
+    category: 'Diğer',
+    isInstallment: true,
+    installmentNo: no,
+    installmentCount: count,
   })
 
   const exp = (spent_at: string, amount: number, status = 'posted') => ({
@@ -231,6 +273,30 @@ describe('matchTransactions', () => {
 
   it('does not match different dates', () => {
     const result = matchTransactions([tx('2026-06-03', 170)], [exp('2026-06-04', 170)])
+    expect(result.unmatched).toHaveLength(1)
+  })
+
+  it('matches an installment line against the expense stored at its TOTAL amount', () => {
+    // Ekstrede aylık 21.666,67 görünür; app harcamayı toplam 65.000 ile saklar.
+    const result = matchTransactions(
+      [installmentTx('2026-05-19', 21666.67, 3, 1)],
+      [exp('2026-05-19', 65000)],
+    )
+    expect(result.matched).toHaveLength(1)
+    expect(result.unmatched).toHaveLength(0)
+  })
+
+  it('reports an unrecorded installment as unmatched', () => {
+    const result = matchTransactions([installmentTx('2026-05-19', 21666.67, 3, 1)], [])
+    expect(result.unmatched).toHaveLength(1)
+  })
+
+  it('does not match an installment against its monthly amount alone', () => {
+    // Aylık tutar (21.666,67) tek başına harcama olarak kayıtlıysa eşleşmemeli.
+    const result = matchTransactions(
+      [installmentTx('2026-05-19', 21666.67, 3, 1)],
+      [exp('2026-05-19', 21666.67)],
+    )
     expect(result.unmatched).toHaveLength(1)
   })
 })

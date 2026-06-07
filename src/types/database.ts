@@ -127,6 +127,9 @@ export type CardStatementArchive = BaseRow & {
   status: CardStatementStatus
   paid_at: string | null
   payment_source_card_id: string | null
+  reconciled_bank_amount: number | null
+  reconciled_at: string | null
+  reconciliation_note: string | null
   note: string | null
 }
 

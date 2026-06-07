@@ -3,7 +3,19 @@ import { useCallback, useRef, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import type { Card } from '../../types/database'
 import { formatCurrency } from '../../utils/formatCurrency'
-import { parseDenizBankStatement, matchTransactions, type ParsedTransaction } from '../../utils/denizBankStatementParser'
+import { parseDenizBankStatement, matchTransactions, expenseTotalAmount, type ParsedTransaction } from '../../utils/denizBankStatementParser'
+
+/**
+ * App'e güvenle otomatik aktarılabilen işlem mi?
+ * - Peşin/tek çekim → her zaman aktarılabilir (tek harcama).
+ * - Yeni taksitli (1. taksit, toplam taksit sayısı biliniyor) → tam plan kurulabilir.
+ * - Plan-ortası taksit (no>1) veya toplam sayısı bilinmeyen → otomatik kurmak
+ *   geçmişi çift sayar; bunlar manuel kontrole bırakılır.
+ */
+function isImportable(tx: ParsedTransaction): boolean {
+  if (!tx.isInstallment) return true
+  return tx.installmentNo === 1 && tx.installmentCount > 1
+}
 
 // ── PDF text extraction (lazy-loads pdfjs-dist) ───────────────────────────
 
@@ -77,8 +89,13 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
   const [dueDate, setDueDate] = useState('')
   const [matched, setMatched] = useState<ParsedTransaction[]>([])
   const [unmatched, setUnmatched] = useState<ParsedTransaction[]>([])
+  const [manualReview, setManualReview] = useState<ParsedTransaction[]>([])
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const [importedCount, setImportedCount] = useState(0)
+
+  const [reconciling, setReconciling] = useState(false)
+  const [reconciled, setReconciled] = useState(false)
+  const [reconcileError, setReconcileError] = useState('')
 
   const fileRef = useRef<HTMLInputElement>(null)
 
@@ -109,12 +126,18 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
 
       const result = matchTransactions(parsed.transactions, expenses ?? [])
 
+      // App'te olmayan işlemleri ikiye ayır: otomatik aktarılabilir olanlar ve
+      // plan-ortası/eksik bilgili taksitler (manuel kontrol gerektirir).
+      const importable = result.unmatched.filter(isImportable)
+      const manual = result.unmatched.filter((tx) => !isImportable(tx))
+
       setStatementTotal(parsed.totalDebt)
       setStatementDate(parsed.statementDate)
       setDueDate(parsed.dueDate)
       setMatched(result.matched)
-      setUnmatched(result.unmatched)
-      setSelected(new Set(result.unmatched.map((_, i) => i)))
+      setUnmatched(importable)
+      setManualReview(manual)
+      setSelected(new Set(importable.map((_, i) => i)))
       setStep('review')
     } catch (err) {
       setParseError(err instanceof Error ? err.message : 'PDF işlenirken bir hata oluştu.')
@@ -134,12 +157,14 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
     const errors: string[] = []
 
     for (const tx of toImport) {
+      const installment = tx.isInstallment && tx.installmentCount > 1
       const { error } = await supabase.rpc('add_card_expense', {
         p_card_id: card.id,
-        p_amount: tx.amount,
+        // Taksitli işlemde ekstre aylık tutarı taşır; harcamayı TOPLAM tutarla aç.
+        p_amount: installment ? expenseTotalAmount(tx) : tx.amount,
         p_description: tx.description,
         p_spent_at: tx.date,
-        p_installment_count: 1,
+        p_installment_count: installment ? tx.installmentCount : 1,
         p_category: tx.category,
         p_status: 'posted' as const,
       })
@@ -157,6 +182,25 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
 
     setImporting(false)
     setStep('success')
+  }
+
+  async function handleReconcile() {
+    setReconciling(true)
+    setReconcileError('')
+
+    // Dönem, ekstrenin kesim tarihinden türetilir (arşiv anahtarıyla aynı mantık).
+    const period = statementDate ? new Date(`${statementDate}T00:00:00`) : new Date()
+    const { error } = await supabase.rpc('set_statement_reconciliation', {
+      p_card_id: card.id,
+      p_period_year: period.getFullYear(),
+      p_period_month: period.getMonth() + 1,
+      p_bank_amount: statementTotal,
+      p_note: null,
+    })
+
+    if (error) setReconcileError(error.message)
+    else setReconciled(true)
+    setReconciling(false)
   }
 
   function toggleAll() {
@@ -280,7 +324,32 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
                 </div>
               </div>
 
-              <div className="flex gap-2 text-xs">
+              <button
+                type="button"
+                disabled={reconciling || reconciled || !statementTotal}
+                onClick={() => void handleReconcile()}
+                className="flex w-full items-center justify-center gap-2 rounded-xl border border-border py-2.5 text-xs font-black text-foreground transition hover:bg-muted/50 disabled:opacity-55"
+              >
+                {reconciling && <Loader2 size={13} className="animate-spin" />}
+                {reconciled ? (
+                  <>
+                    <CheckCircle2 size={13} className="text-success" /> Mutabık kaydedildi
+                  </>
+                ) : reconciling ? (
+                  'Kaydediliyor…'
+                ) : (
+                  'Bu ekstreyi mutabık olarak kaydet'
+                )}
+              </button>
+
+              {reconcileError && (
+                <p className="flex items-center gap-2 rounded-lg bg-destructive/10 p-2.5 text-[11px] text-destructive">
+                  <AlertCircle size={13} className="shrink-0" />
+                  {reconcileError}
+                </p>
+              )}
+
+              <div className="flex flex-wrap gap-2 text-xs">
                 <span className="flex items-center gap-1 rounded-md bg-success/10 px-2 py-1 font-bold text-success">
                   <CheckCircle2 size={12} />
                   {matched.length} eşleşti
@@ -289,11 +358,17 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
                   <AlertCircle size={12} />
                   {unmatched.length} eksik
                 </span>
+                {manualReview.length > 0 && (
+                  <span className="flex items-center gap-1 rounded-md bg-info/10 px-2 py-1 font-bold text-info">
+                    <AlertCircle size={12} />
+                    {manualReview.length} manuel
+                  </span>
+                )}
               </div>
             </div>
 
-            {/* Unmatched list */}
-            {unmatched.length > 0 ? (
+            {/* Importable (otomatik aktarılabilir) işlemler */}
+            {unmatched.length > 0 && (
               <>
                 <div className="flex items-center justify-between border-b border-border px-4 py-2">
                   <span className="text-xs font-bold text-muted-foreground">App'te olmayan işlemler</span>
@@ -322,11 +397,16 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
                         <p className="truncate text-xs font-bold text-foreground">{tx.description}</p>
                         <p className="text-[11px] text-muted-foreground">
                           {formatShortDate(tx.date)} · {tx.category}
-                          {tx.isInstallment ? ' · Taksit' : ''}
+                          {tx.isInstallment ? ` · ${tx.installmentCount} taksit` : ''}
                         </p>
                       </div>
-                      <span className="shrink-0 text-xs font-black text-foreground">
-                        {formatCurrency(tx.amount)}
+                      <span className="shrink-0 text-right text-xs font-black text-foreground">
+                        {formatCurrency(tx.isInstallment ? expenseTotalAmount(tx) : tx.amount)}
+                        {tx.isInstallment && (
+                          <span className="block text-[10px] font-bold text-muted-foreground">
+                            {formatCurrency(tx.amount)}/ay
+                          </span>
+                        )}
                       </span>
                     </label>
                   ))}
@@ -353,15 +433,57 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
                   </button>
                 </div>
               </>
-            ) : (
+            )}
+
+            {/* Manuel kontrol gereken taksitler (plan-ortası / toplam taksiti belirsiz) */}
+            {manualReview.length > 0 && (
+              <div className="border-t border-border">
+                <div className="px-4 py-2">
+                  <span className="text-xs font-bold text-muted-foreground">Manuel kontrol gerekli</span>
+                  <p className="mt-0.5 text-[11px] text-muted-foreground">
+                    Plan-ortası ya da toplam taksiti belirsiz işlemler otomatik aktarılmaz; gerekiyorsa Kartlar ekranından elle gir.
+                  </p>
+                </div>
+                <div className="max-h-40 overflow-y-auto">
+                  {manualReview.map((tx, i) => (
+                    <div
+                      key={i}
+                      className="flex items-center gap-3 border-b border-border/50 px-4 py-2.5"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-xs font-bold text-foreground">{tx.description}</p>
+                        <p className="text-[11px] text-muted-foreground">
+                          {formatShortDate(tx.date)} · {tx.category}
+                          {tx.isInstallment
+                            ? ` · ${tx.installmentNo}${tx.installmentCount ? `/${tx.installmentCount}` : ''}. taksit`
+                            : ''}
+                        </p>
+                      </div>
+                      <span className="shrink-0 text-xs font-black text-foreground">
+                        {formatCurrency(tx.amount)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Hiç eksik yok */}
+            {unmatched.length === 0 && manualReview.length === 0 && (
               <div className="p-6 text-center">
                 <CheckCircle2 size={32} className="mx-auto text-success" />
                 <p className="mt-2 text-sm font-bold text-foreground">Tüm işlemler app'te zaten kayıtlı</p>
                 <p className="mt-1 text-xs text-muted-foreground">Mutabakat tamam.</p>
+              </div>
+            )}
+
+            {/* İçe aktarılacak bir şey yokken kapat butonu */}
+            {unmatched.length === 0 && (
+              <div className="border-t border-border p-4">
                 <button
                   type="button"
                   onClick={onClose}
-                  className="mt-4 rounded-xl bg-primary px-6 py-2.5 text-sm font-black text-primary-foreground"
+                  className="w-full rounded-xl bg-primary py-3 text-sm font-black text-primary-foreground"
                 >
                   Kapat
                 </button>

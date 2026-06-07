@@ -6,6 +6,10 @@ export type ParsedTransaction = {
   amount: number
   category: string
   isInstallment: boolean
+  /** Bu satırın kaçıncı taksit olduğu (peşin/tek çekimde 1). */
+  installmentNo: number
+  /** Toplam taksit sayısı; ekstrede notasyon yoksa 0 (bilinmiyor). */
+  installmentCount: number
 }
 
 export type ParsedStatement = {
@@ -132,6 +136,21 @@ export function parseDenizBankStatement(text: string): ParsedStatement {
     // Everything between date and amount TL is the description region
     let descRegion = line.substring(11, line.length - amountMatch[0].length).trim()
 
+    const isInstallment = /taksit/i.test(descRegion)
+
+    // "Kalan Borç / Taksit" notation e.g. "43,333.33/3-1" → <kalan>/<toplam>-<kaçıncı>
+    const installmentNotation = descRegion.match(/[\d.,]+\/(\d+)-(\d+)/)
+    let installmentCount = isInstallment ? 0 : 1
+    let installmentNo = 1
+    if (installmentNotation) {
+      installmentCount = Number(installmentNotation[1])
+      installmentNo = Number(installmentNotation[2])
+    } else if (isInstallment) {
+      // Fallback: açıklamadaki "3.Tk" gibi ifadeden sıra no'su (toplam bilinmez)
+      const tkMatch = descRegion.match(/(\d+)\s*\.?\s*Tk\b/i)
+      if (tkMatch) installmentNo = Number(tkMatch[1])
+    }
+
     // Strip "Kalan Borç/Taksit" notation e.g. "43,333.33/3-1"
     descRegion = descRegion.replace(/\s+[\d.,]+\/\d+-\d+\s*/g, ' ')
 
@@ -141,18 +160,28 @@ export function parseDenizBankStatement(text: string): ParsedStatement {
     const description = cleanDescription(descRegion)
     if (!description) continue
 
-    const isInstallment = /taksit/i.test(descRegion)
-
     // Category: prefer suggestExpenseCategory (learns from history), fall back to section
     const category = suggestExpenseCategory(description) ?? sectionCategory
 
-    transactions.push({ date, description, amount, category, isInstallment })
+    transactions.push({ date, description, amount, category, isInstallment, installmentNo, installmentCount })
   }
 
   return { cardLastFour, statementDate, dueDate, totalDebt, transactions }
 }
 
 // ── Matching ───────────────────────────────────────────────────────────────
+
+/**
+ * Bir kart harcamasının app'te saklanan toplam tutarını döndürür.
+ * Ekstrede taksit satırı AYLIK tutarı taşır; app ise harcamayı TOPLAM tutarla
+ * saklar. Toplam taksit sayısı biliniyorsa aylık × sayı ile yeniden kurulur.
+ */
+export function expenseTotalAmount(tx: ParsedTransaction): number {
+  if (tx.isInstallment && tx.installmentCount > 1) {
+    return Math.round(tx.amount * tx.installmentCount * 100) / 100
+  }
+  return tx.amount
+}
 
 export function matchTransactions(
   pdfTransactions: ParsedTransaction[],
@@ -164,12 +193,15 @@ export function matchTransactions(
   const unmatched: ParsedTransaction[] = []
 
   for (const tx of pdfTransactions) {
+    // Taksitli işlem app'te orijinal tarih + TOPLAM tutarla bir harcama olarak
+    // durur; bu yüzden eşleştirmede toplam tutarı kullanırız.
+    const compareAmount = expenseTotalAmount(tx)
     let found = false
     for (let i = 0; i < active.length; i++) {
       if (usedIndices.has(i)) continue
       const exp = active[i]
       const sameDate = exp.spent_at === tx.date
-      const sameAmount = Math.abs(exp.amount - tx.amount) < 0.5
+      const sameAmount = Math.abs(exp.amount - compareAmount) < 0.5
       if (sameDate && sameAmount) {
         usedIndices.add(i)
         found = true

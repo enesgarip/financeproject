@@ -45,6 +45,7 @@ import {
 } from '../components/dashboard/DashboardPanels'
 import { dashboardHelp, getUserDisplayName } from '../components/dashboard/dashboardPanelUtils'
 import { StatementReminderPanel } from '../components/dashboard/StatementReminderPanel'
+import { ReconciliationPanel } from '../components/dashboard/ReconciliationPanel'
 import { addMonths, dateInputValue, daysUntil, monthlyOccurrenceDate, startOfMonth } from '../utils/date'
 import {
   buildCreditLimitGroups,
@@ -662,6 +663,10 @@ export function DashboardPage() {
       <motion.div variants={fadeUp} className="grid min-w-0 gap-3 min-[760px]:grid-cols-2 lg:col-span-12">
         <StatementReminderPanel cards={data.cards} />
         <BudgetAlertPanel budgets={data.budgets} expenses={data.cardExpenses} />
+      </motion.div>
+
+      <motion.div variants={fadeUp} className="min-w-0 lg:col-span-12">
+        <ReconciliationPanel cards={data.cards} statements={data.cardStatements} />
       </motion.div>
 
       <motion.div variants={fadeUp} className="min-w-0 lg:col-span-12">
