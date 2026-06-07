@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, type ReactNode } from 'react'
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
+import { Analytics } from '@vercel/analytics/react'
 import { AuthProvider } from './auth/AuthProvider'
 import { ProtectedRoute } from './auth/ProtectedRoute'
 import { Layout } from './components/Layout'
@@ -133,6 +134,7 @@ export function App() {
       <ToastProvider>
         <ThemeBoot />
         <AnimatedRoutes />
+        <Analytics />
       </ToastProvider>
     </AuthProvider>
   )
