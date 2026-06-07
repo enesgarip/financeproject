@@ -336,15 +336,15 @@ export function buildIssueGuide(issue: HealthIssue): IssueGuide {
 
 export function navigationAction(issue: HealthIssue) {
   if (issue.id.includes('stale-installment')) return { to: '/kartlar', label: 'Doneme dahil et' }
-  if (issue.id.includes('no-plan')) return { to: '/krediler', label: 'Plani olustur' }
+  if (issue.id.includes('no-plan')) return { to: '/borclar/krediler', label: 'Plani olustur' }
 
   if (issue.kind.startsWith('card') || issue.kind === 'cardTypeFields') return { to: '/kartlar', label: 'Kartlara git' }
-  if (issue.kind.startsWith('loan')) return { to: '/krediler', label: 'Kredilere git' }
+  if (issue.kind.startsWith('loan')) return { to: '/borclar/krediler', label: 'Kredilere git' }
   if (issue.kind.startsWith('payment')) {
     return { to: '/odemeler', label: issue.title.toLocaleLowerCase('tr-TR').includes('vadesi ge') ? 'Odendi isaretle' : 'Odemelere git' }
   }
   if (issue.kind === 'debtShape' || issue.title.toLocaleLowerCase('tr-TR').includes('bor') || issue.title.toLocaleLowerCase('tr-TR').includes('alacak')) {
-    return { to: '/borclar', label: 'Borclara git' }
+    return { to: '/borclar/kisiler', label: 'Borclara git' }
   }
   if (issue.kind === 'assetShape' || issue.title.toLocaleLowerCase('tr-TR').includes('varl')) return { to: '/varliklar', label: 'Varliklara git' }
   if (issue.kind === 'budgetMonth' || issue.title.toLocaleLowerCase('tr-TR').includes('hedef') || issue.title.toLocaleLowerCase('tr-TR').includes('maa')) {

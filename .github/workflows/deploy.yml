@@ -36,6 +36,9 @@ jobs:
       - name: Apply production migrations
         run: supabase db push --linked --include-all --password "$SUPABASE_DB_PASSWORD"
 
+      - name: Deploy edge functions
+        run: supabase functions deploy bist-quote --project-ref "$SUPABASE_PROJECT_REF"
+
   deploy:
     name: Trigger Vercel Deploy Hook
     runs-on: ubuntu-latest

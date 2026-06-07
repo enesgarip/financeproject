@@ -1,34 +1,43 @@
 import {
   BarChart3,
-  Banknote,
   CreditCard,
   HandCoins,
   Home,
-  Landmark,
-  MoreHorizontal,
-  ShieldCheck,
   WalletCards,
+  Wallet,
 } from 'lucide-react'
 
+/**
+ * Role-based information architecture:
+ *   Özet → Hesaplar (transactional) → Varlıklar (holdings) → Borçlar (liabilities) → Planlı (flow) → Raporlar (insight)
+ * Varlıklar and Borçlar are hubs with sub-tabs; see *HubTabs below.
+ */
 export const primaryNavItems = [
   { to: '/', label: 'Özet', icon: Home },
   { to: '/kartlar', label: 'Hesaplar', icon: CreditCard },
+  { to: '/varliklar', label: 'Varlıklar', icon: Wallet, activePaths: ['/varliklar/maas'] },
+  { to: '/borclar/krediler', label: 'Borçlar', icon: HandCoins, activePaths: ['/borclar', '/borclar/kisiler', '/krediler'] },
   { to: '/odemeler', label: 'Planlı', icon: WalletCards },
-  { to: '/borclar', label: 'Kişiler', icon: HandCoins },
   { to: '/analiz', label: 'Raporlar', icon: BarChart3 },
-  { to: '/daha', label: 'Diğer', icon: MoreHorizontal, activePaths: ['/varliklar', '/krediler', '/veri-sagligi'] },
 ] as const
 
+/** Mobile bottom bar holds 5 slots; Raporlar lives in the header menu instead. */
 export const bottomNavItems = [
   { to: '/', label: 'Özet', icon: Home },
   { to: '/kartlar', label: 'Hesaplar', icon: CreditCard },
+  { to: '/varliklar', label: 'Varlıklar', icon: Wallet, activePaths: ['/varliklar/maas'] },
+  { to: '/borclar/krediler', label: 'Borçlar', icon: HandCoins, activePaths: ['/borclar', '/borclar/kisiler', '/krediler'] },
   { to: '/odemeler', label: 'Planlı', icon: WalletCards },
-  { to: '/borclar', label: 'Kişiler', icon: HandCoins },
-  { to: '/daha', label: 'Diğer', icon: MoreHorizontal, activePaths: ['/varliklar', '/krediler', '/analiz', '/veri-sagligi'] },
 ] as const
 
-export const quickEntryItems = [
-  { section: 'records', to: '/varliklar', title: 'Varlıklar ve maaş', description: 'Nakit, yatırım, BES ve maaş.', icon: Banknote },
-  { section: 'records', to: '/krediler', title: 'Krediler', description: 'Kredi bakiyesi ve taksit planı.', icon: Landmark },
-  { section: 'maintenance', to: '/veri-sagligi', title: 'Veri kontrolü', description: 'Tutarsız kayıtları güvenle düzelt.', icon: ShieldCheck },
-] as const
+export type HubTab = { to: string; label: string; end?: boolean }
+
+export const assetsHubTabs: HubTab[] = [
+  { to: '/varliklar', label: 'Varlıklar', end: true },
+  { to: '/varliklar/maas', label: 'Maaş' },
+]
+
+export const liabilitiesHubTabs: HubTab[] = [
+  { to: '/borclar/krediler', label: 'Krediler' },
+  { to: '/borclar/kisiler', label: 'Kişiler' },
+]

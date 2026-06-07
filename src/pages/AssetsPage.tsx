@@ -1,18 +1,22 @@
-import { ArrowDownRight, ArrowUpRight, Banknote, Coins, Landmark, LineChart, Minus, PiggyBank, TrendingUp, Wallet } from 'lucide-react'
-import type { ComponentType } from 'react'
+import { ArrowDownRight, ArrowUpRight, Banknote, Coins, Landmark, LineChart, PiggyBank, TrendingUp, Wallet } from 'lucide-react'
+import { useEffect, useMemo, useState, type ComponentType } from 'react'
 import { CrudPage, type FormField } from '../components/CrudPage'
 import { DonutChart, type DonutSlice } from '../components/charts/DonutChart'
 import { RatesBanner } from '../components/finance/RatesBanner'
 import { Badge } from '../components/ui/badge'
 import { Card, CardContent } from '../components/ui/card'
 import { useMarketRates } from '../hooks/useMarketRates'
-import type { Asset, SalaryHistory } from '../types/database'
-import { formatDate } from '../utils/date'
+import { useStockPrices } from '../hooks/useStockPrices'
+import { normalizeTicker, type StockPrices } from '../lib/stockQuotesClient'
+import type { Asset } from '../types/database'
 import { formatCurrency, formatNumber, parseNumber } from '../utils/formatCurrency'
 import type { MarketRatesSnapshot } from '../utils/marketRates'
-import { assetRateSymbol, effectiveAssetValue, valueAsset } from '../utils/valuation'
+import { assetRateSymbol, effectiveAssetValue, stockCostBasis, stockProfit, valueAsset, valueStock } from '../utils/valuation'
 
 const categoryOptions: Asset['category'][] = ['Nakit', 'Altın', 'Fon', 'Hisse', 'Araç', 'BES', 'Diğer']
+
+/** Context passed to form fields: live FX rates + live BIST prices. */
+type FieldCtx = { snapshot: MarketRatesSnapshot | null; stockPrices: StockPrices }
 
 /* Category → colour + icon mapping driven by design tokens */
 const categoryMeta: Record<Asset['category'], { color: string; icon: ComponentType<{ className?: string }> }> = {
@@ -36,9 +40,10 @@ const categoryCardTint: Record<Asset['category'], string> = {
   Diğer: 'border-border/70 bg-card',
 }
 
-/** A row is auto-valuable when its category maps to a gold or foreign-currency market symbol. */
+/** A row is auto-valuable when its category maps to a market symbol or BIST ticker. */
 function assetSupportsAuto(values: Record<string, string>): boolean {
   if (values.category === 'Altın') return true
+  if (values.category === 'Hisse') return Boolean(values.symbol?.trim())
   return values.category === 'Nakit' && Boolean(values.currency) && values.currency !== 'TRY'
 }
 
@@ -46,8 +51,8 @@ function assetIsAuto(values: Record<string, string>): boolean {
   return assetSupportsAuto(values) && values.valuation === 'auto'
 }
 
-/** Build the (category, unit, currency, amount) shape the valuation helpers expect from raw form values. */
-function valuationInputFromForm(values: Record<string, string>): Pick<Asset, 'category' | 'unit' | 'currency' | 'amount'> {
+/** Build the valuation-helper shape the pure functions expect from raw form values. */
+function valuationInputFromForm(values: Record<string, string>): Pick<Asset, 'category' | 'unit' | 'currency' | 'amount' | 'symbol' | 'unit_cost'> {
   const category = (values.category as Asset['category']) ?? 'Nakit'
   const isGold = category === 'Altın'
   return {
@@ -55,11 +60,13 @@ function valuationInputFromForm(values: Record<string, string>): Pick<Asset, 'ca
     unit: isGold ? ((values.unit as Asset['unit']) || 'gram') : 'TRY',
     currency: category === 'Nakit' ? ((values.currency as Asset['currency']) || 'TRY') : null,
     amount: parseNumber(values.amount),
+    symbol: category === 'Hisse' ? (normalizeTicker(values.symbol) ?? null) : null,
+    unit_cost: category === 'Hisse' ? parseNumber(values.unit_cost) : null,
   }
 }
 
 function assetRateHint(values: Record<string, string>, context: unknown): string | null {
-  const snapshot = context as MarketRatesSnapshot | null
+  const snapshot = (context as FieldCtx | null)?.snapshot ?? null
   if (!snapshot) return null
   const input = valuationInputFromForm(values)
   const symbol = assetRateSymbol(input)
@@ -69,6 +76,14 @@ function assetRateHint(values: Record<string, string>, context: unknown): string
   return `1 ${unitLabel} ≈ ${formatCurrency(rate.buying)} (canlı)`
 }
 
+function assetStockHint(values: Record<string, string>, context: unknown): string | null {
+  const ticker = normalizeTicker(values.symbol)
+  if (!ticker) return null
+  const price = (context as FieldCtx | null)?.stockPrices?.[ticker]
+  if (!price) return 'Kaydedince canlı fiyatla değerlenecek (BIST).'
+  return `1 ${ticker} ≈ ${formatCurrency(price)} (canlı)`
+}
+
 const fields: FormField[] = [
   { name: 'name', label: 'Ad', type: 'text', required: true },
   {
@@ -76,6 +91,32 @@ const fields: FormField[] = [
     label: 'Kategori',
     type: 'select',
     options: categoryOptions.map((value) => ({ label: value, value })),
+  },
+  {
+    name: 'symbol',
+    label: 'BIST sembolü (örn. THYAO)',
+    type: 'text',
+    required: true,
+    visibleWhen: { field: 'category', value: 'Hisse' },
+    hint: assetStockHint,
+  },
+  {
+    name: 'amount',
+    label: 'Adet',
+    type: 'number',
+    min: '0',
+    step: '1',
+    required: true,
+    visibleWhen: { field: 'category', value: 'Hisse' },
+  },
+  {
+    name: 'unit_cost',
+    label: 'Birim maliyet (₺/adet)',
+    type: 'number',
+    min: '0',
+    step: '0.01',
+    visibleWhen: { field: 'category', value: 'Hisse' },
+    hint: () => 'Ortalama alış maliyetin — kâr/zarar bundan hesaplanır.',
   },
   {
     name: 'currency',
@@ -94,7 +135,7 @@ const fields: FormField[] = [
     label: 'Değerleme',
     type: 'select',
     options: [
-      { label: 'Otomatik (canlı kur)', value: 'auto' },
+      { label: 'Otomatik (canlı fiyat)', value: 'auto' },
       { label: 'Manuel', value: 'manual' },
     ],
     visibleWhen: (values) => assetSupportsAuto(values),
@@ -143,23 +184,44 @@ const fields: FormField[] = [
     label: 'Güncel değer (otomatik)',
     type: 'computed',
     visibleWhen: (values) => assetIsAuto(values),
-    compute: (values, context) => valueAsset(valuationInputFromForm(values), context as MarketRatesSnapshot | null),
-    formatComputed: (value) => (value === null ? 'Kur bekleniyor…' : formatCurrency(value)),
+    compute: (values, context) => {
+      const ctx = context as FieldCtx | null
+      const input = valuationInputFromForm(values)
+      return input.category === 'Hisse'
+        ? valueStock(input, ctx?.stockPrices)
+        : valueAsset(input, ctx?.snapshot)
+    },
+    formatComputed: (value) => (value === null ? 'Fiyat bekleniyor…' : formatCurrency(value)),
   },
   { name: 'note', label: 'Not', type: 'textarea' },
 ]
 
-const salaryFields: FormField[] = [
-  { name: 'title', label: 'Başlık', type: 'text', required: true },
-  { name: 'amount', label: 'Net maaş', type: 'number', min: '0', step: '0.01', required: true },
-  { name: 'effective_date', label: 'Geçerli olduğu tarih', type: 'date', required: true },
-  { name: 'note', label: 'Not', type: 'textarea' },
-]
+/** Side-effect-only child: keeps the parent's live BIST price map in sync with the loaded rows. */
+function StockPriceSync({ rows, onPrices }: { rows: Asset[]; onPrices: (prices: StockPrices) => void }) {
+  const symbols = rows.filter((row) => row.category === 'Hisse').map((row) => row.symbol)
+  const prices = useStockPrices(symbols)
+  useEffect(() => {
+    onPrices(prices)
+  }, [prices, onPrices])
+  return null
+}
 
-function AssetsOverview({ rows, snapshot }: { rows: Asset[]; snapshot: MarketRatesSnapshot | null }) {
+function ProfitBadge({ profit, profitPct }: { profit: number; profitPct: number }) {
+  const up = profit >= 0
+  return (
+    <div className={`mt-3 flex items-center gap-1.5 rounded-xl border px-3 py-2 text-sm ${up ? 'border-success/20 bg-success/8 text-success' : 'border-destructive/20 bg-destructive/8 text-destructive'}`}>
+      {up ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
+      <span className="font-mono font-semibold tabular-nums">
+        {profit >= 0 ? '+' : ''}{formatCurrency(profit)} ({profitPct >= 0 ? '+' : ''}{profitPct.toFixed(1)}%)
+      </span>
+    </div>
+  )
+}
+
+function AssetsOverview({ rows, snapshot, stockPrices }: { rows: Asset[]; snapshot: MarketRatesSnapshot | null; stockPrices: StockPrices }) {
   if (rows.length === 0) return null
 
-  const valueOf = (row: Asset) => effectiveAssetValue(row, snapshot)
+  const valueOf = (row: Asset) => effectiveAssetValue(row, snapshot, stockPrices)
   const total = rows.reduce((sum, row) => sum + valueOf(row), 0)
   const categoryTotals = categoryOptions
     .map((category) => ({
@@ -171,6 +233,21 @@ function AssetsOverview({ rows, snapshot }: { rows: Asset[]; snapshot: MarketRat
 
   const cashTotal = categoryTotals.find((item) => item.category === 'Nakit')?.total ?? 0
   const topCategory = categoryTotals[0]
+
+  // Aggregate stock profit/loss across all priced holdings with a cost basis.
+  const stockRows = rows.filter((row) => row.category === 'Hisse')
+  let stockCost = 0
+  let stockValue = 0
+  let hasStockCost = false
+  for (const row of stockRows) {
+    const cost = stockCostBasis(row)
+    if (cost === null) continue
+    hasStockCost = true
+    stockCost += cost
+    stockValue += valueOf(row)
+  }
+  const stockProfitTotal = stockValue - stockCost
+  const stockProfitPct = stockCost > 0 ? (stockProfitTotal / stockCost) * 100 : 0
 
   const donutData: DonutSlice[] = categoryTotals.map((item) => ({
     name: item.category,
@@ -211,6 +288,15 @@ function AssetsOverview({ rows, snapshot }: { rows: Asset[]; snapshot: MarketRat
               </div>
             </div>
 
+            {hasStockCost ? (
+              <div className="mt-2 min-w-0 rounded-xl border border-border/60 bg-muted/30 px-3 py-2.5">
+                <p className="finance-label truncate">Hisse Kâr / Zarar</p>
+                <p className={`finance-value mt-1 truncate text-sm font-bold tabular-nums ${stockProfitTotal >= 0 ? 'text-success' : 'text-destructive'}`}>
+                  {stockProfitTotal >= 0 ? '+' : ''}{formatCurrency(stockProfitTotal)} ({stockProfitPct >= 0 ? '+' : ''}{stockProfitPct.toFixed(1)}%)
+                </p>
+              </div>
+            ) : null}
+
             <div className="mt-3 flex items-center gap-2">
               <Badge variant="secondary">{rows.length} kayıt</Badge>
               <Badge variant="outline">{categoryTotals.length} kategori</Badge>
@@ -227,73 +313,25 @@ function AssetsOverview({ rows, snapshot }: { rows: Asset[]; snapshot: MarketRat
   )
 }
 
-function SalaryOverview({ rows }: { rows: SalaryHistory[] }) {
-  if (rows.length === 0) return null
-
-  const ordered = [...rows].sort((a, b) => a.effective_date.localeCompare(b.effective_date))
-  const current = ordered.at(-1)
-  const previous = ordered.at(-2)
-  if (!current) return null
-
-  const difference = previous ? current.amount - previous.amount : 0
-  const percentage = previous && previous.amount > 0 ? (difference / previous.amount) * 100 : 0
-  const isUp = difference > 0
-  const isDown = difference < 0
-  const DeltaIcon = isUp ? ArrowUpRight : isDown ? ArrowDownRight : Minus
-  const deltaColor = isUp ? 'text-success' : isDown ? 'text-destructive' : 'text-muted-foreground'
-
-  return (
-    <Card variant="default" className="overflow-hidden border-success/20">
-      <CardContent className="p-4 sm:p-5">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <p className="finance-label">Güncel Maaş</p>
-            <p className="finance-value mt-1.5 text-[clamp(1.5rem,6vw,2.1rem)] font-bold leading-none text-foreground">
-              {formatCurrency(current.amount)}
-            </p>
-            <p className="mt-1.5 text-xs text-muted-foreground">{formatDate(current.effective_date)}</p>
-          </div>
-          <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-success/12 text-success">
-            <TrendingUp className="size-5" />
-          </div>
-        </div>
-
-        {previous ? (
-          <div className="mt-4 flex items-center justify-between gap-3 rounded-xl border border-border/60 bg-muted/30 px-3 py-2.5">
-            <span className="text-xs text-muted-foreground">Önceki kayda göre</span>
-            <span className={`flex items-center gap-1 font-mono text-sm font-semibold tabular-nums ${deltaColor}`}>
-              <DeltaIcon size={14} />
-              {difference >= 0 ? '+' : ''}{formatCurrency(difference)}
-              <span className="ml-1 text-xs">({percentage >= 0 ? '+' : ''}{percentage.toFixed(1)}%)</span>
-            </span>
-          </div>
-        ) : (
-          <div className="mt-4 rounded-xl border border-border/60 bg-muted/30 px-3 py-2.5 text-xs text-muted-foreground">
-            İlk maaş kaydı — sonraki kayıtlarda artış trendi burada görünecek.
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  )
-}
-
 export function AssetsPage() {
   const { snapshot } = useMarketRates()
+  const [stockPrices, setStockPrices] = useState<StockPrices>({})
+  const fieldContext = useMemo<FieldCtx>(() => ({ snapshot, stockPrices }), [snapshot, stockPrices])
 
   return (
-    <div className="space-y-8">
-      <CrudPage
+    <CrudPage
         table="assets"
         pageTitle="Varlıklar"
         addLabel="Varlık ekle"
         fields={fields}
-        fieldContext={snapshot}
+        fieldContext={fieldContext}
         emptyTitle="Henüz varlık yok"
         emptyDescription="Nakit, altın, fon, hisse veya diğer varlıklarını buradan ekleyebilirsin."
         renderBeforeList={({ loading, rows, reload }) => (
           <div className="space-y-3">
+            <StockPriceSync rows={rows as Asset[]} onPrices={setStockPrices} />
             <RatesBanner onSynced={reload} />
-            {!loading ? <AssetsOverview rows={rows as Asset[]} snapshot={snapshot} /> : null}
+            {!loading ? <AssetsOverview rows={rows as Asset[]} snapshot={snapshot} stockPrices={stockPrices} /> : null}
           </div>
         )}
         getInitialValues={(row?: Asset) => ({
@@ -302,23 +340,34 @@ export function AssetsPage() {
           amount: row?.amount ?? 0,
           unit: row?.unit === 'TRY' ? 'gram' : (row?.unit ?? 'gram'),
           currency: row?.currency ?? 'TRY',
+          symbol: row?.symbol ?? '',
+          unit_cost: row?.unit_cost ?? 0,
           valuation: row ? (row.auto_valued ? 'auto' : 'manual') : 'auto',
           estimated_value_try: row?.estimated_value_try ?? 0,
           note: row?.note ?? '',
         })}
         mapForm={(formData, userId, _editing, context) => {
-          const snapshotForSave = context as MarketRatesSnapshot | null
+          const ctx = context as FieldCtx | null
           const category = formData.get('category') as Asset['category']
           const isGold = category === 'Altın'
+          const isStock = category === 'Hisse'
           const currency = category === 'Nakit' ? (formData.get('currency') as Asset['currency']) : null
           const foreignCash = category === 'Nakit' && currency !== null && currency !== 'TRY'
-          const supportsAuto = isGold || foreignCash
+          const symbol = isStock ? normalizeTicker(formData.get('symbol') as string) : null
+          const unitCost = isStock ? parseNumber(formData.get('unit_cost')) : null
+          const supportsAuto = isGold || foreignCash || (isStock && Boolean(symbol))
           const autoValued = supportsAuto && formData.get('valuation') === 'auto'
-          const amount = isGold || foreignCash ? parseNumber(formData.get('amount')) : 1
+          const amount = isGold || foreignCash || isStock ? parseNumber(formData.get('amount')) : 1
           const unit: Asset['unit'] = isGold ? (formData.get('unit') as Asset['unit']) : 'TRY'
 
           const manualValue = parseNumber(formData.get('estimated_value_try'))
-          const autoValue = autoValued ? valueAsset({ category, unit, currency, amount }, snapshotForSave) : null
+          const autoValue = autoValued
+            ? isStock
+              ? valueStock({ category, symbol, amount }, ctx?.stockPrices)
+              : valueAsset({ category, unit, currency, amount }, ctx?.snapshot)
+            : null
+          // New stock with no live price yet → seed with cost basis; the sync corrects it.
+          const stockSeed = isStock && unitCost ? Math.round(unitCost * amount * 100) / 100 : null
 
           return {
             user_id: userId,
@@ -327,16 +376,24 @@ export function AssetsPage() {
             amount,
             unit,
             currency: category === 'Nakit' ? (currency ?? 'TRY') : null,
-            estimated_value_try: autoValue ?? manualValue,
+            symbol,
+            unit_cost: unitCost,
+            estimated_value_try: autoValue ?? (autoValued ? stockSeed ?? manualValue : manualValue),
             auto_valued: autoValued,
             note: String(formData.get('note') ?? '') || null,
           }
         }}
         renderTitle={(row) => row.name}
-        renderSubtitle={(row) => row.category}
+        renderSubtitle={(row) => (row.category === 'Hisse' && row.symbol ? `${row.category} · ${row.symbol}` : row.category)}
         renderDetails={(row) => {
-          const details = [`Değer: ${formatCurrency(effectiveAssetValue(row, snapshot))}`]
+          const value = effectiveAssetValue(row, snapshot, stockPrices)
+          const details = [`Değer: ${formatCurrency(value)}`]
           if (row.category === 'Altın') details.unshift(`Miktar: ${formatNumber(row.amount)} ${row.unit === 'adet' ? 'çeyrek' : row.unit}`)
+          if (row.category === 'Hisse') {
+            details.unshift(`Adet: ${formatNumber(row.amount)}`)
+            const cost = stockCostBasis(row)
+            if (cost !== null) details.push(`Maliyet: ${formatCurrency(row.unit_cost ?? 0)}/adet · ${formatCurrency(cost)} toplam`)
+          }
           if (row.category === 'Nakit') {
             details.unshift(
               row.auto_valued && row.currency && row.currency !== 'TRY'
@@ -344,61 +401,19 @@ export function AssetsPage() {
                 : `Para birimi: ${row.currency ?? 'TRY'}`,
             )
           }
-          if (row.auto_valued) details.push('Canlı kurla otomatik')
+          if (row.auto_valued) details.push('Canlı fiyatla otomatik')
           return details
+        }}
+        renderExtra={(row) => {
+          if (row.category !== 'Hisse') return null
+          const value = effectiveAssetValue(row, snapshot, stockPrices)
+          const pl = stockProfit(value, row)
+          if (!pl) return null
+          return <ProfitBadge profit={pl.profit} profitPct={pl.profitPct} />
         }}
         getCardClassName={(row) => categoryCardTint[row.category]}
         getDetailClassName={() => 'bg-muted/40'}
         groupBy={(row) => row.category}
       />
-
-      <CrudPage
-        table="salary_history"
-        pageTitle="Maaş geçmişi"
-        addLabel="Maaş ekle"
-        fields={salaryFields}
-        emptyTitle="Henüz maaş kaydı yok"
-        emptyDescription="Maaşını varlık hesaplarına katmadan tarihsel artışını buradan takip edebilirsin."
-        orderBy="effective_date"
-        orderAscending={false}
-        renderBeforeList={({ loading, rows }) => (!loading ? <SalaryOverview rows={rows as SalaryHistory[]} /> : null)}
-        getInitialValues={(row?: SalaryHistory) => ({
-          title: row?.title ?? 'Maaş',
-          amount: row?.amount ?? 0,
-          effective_date: row?.effective_date ?? new Date().toLocaleDateString('sv-SE'),
-          note: row?.note ?? '',
-        })}
-        mapForm={(formData, userId) => ({
-          user_id: userId,
-          title: String(formData.get('title') ?? '').trim() || 'Maaş',
-          amount: parseNumber(formData.get('amount')),
-          effective_date: String(formData.get('effective_date') ?? ''),
-          note: String(formData.get('note') ?? '') || null,
-        })}
-        renderTitle={(row) => row.title}
-        renderSubtitle={(row) => formatDate(row.effective_date)}
-        renderDetails={(row) => [`Net maaş: ${formatCurrency(row.amount)}`]}
-        renderExtra={(row, helpers) => {
-          const orderedRows = [...(helpers.rows as SalaryHistory[])].sort((a, b) => a.effective_date.localeCompare(b.effective_date))
-          const index = orderedRows.findIndex((item) => item.id === row.id)
-          const previous = index > 0 ? orderedRows[index - 1] : null
-          if (!previous || previous.amount <= 0) return null
-
-          const difference = row.amount - previous.amount
-          const percentage = (difference / previous.amount) * 100
-          const isUp = difference >= 0
-          return (
-            <div className={`mt-3 flex items-center gap-1.5 rounded-xl border px-3 py-2 text-sm ${isUp ? 'border-success/20 bg-success/8 text-success' : 'border-destructive/20 bg-destructive/8 text-destructive'}`}>
-              {isUp ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
-              <span className="font-mono font-semibold tabular-nums">
-                {difference >= 0 ? '+' : ''}{formatCurrency(difference)} ({percentage >= 0 ? '+' : ''}{percentage.toFixed(1)}%)
-              </span>
-            </div>
-          )
-        }}
-        getCardClassName={() => 'border-success/20 bg-success/5 dark:bg-success/8'}
-        getDetailClassName={() => 'bg-muted/40'}
-      />
-    </div>
   )
 }

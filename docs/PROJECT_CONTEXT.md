@@ -38,14 +38,12 @@ The main product goal is to make monthly financial load visible before due dates
 - Layout/navigation: `src/components/Layout.tsx`, `src/components/BottomNav.tsx`, `src/components/navigation.ts`
 - Pages:
   - `DashboardPage.tsx`
-  - `AssetsPage.tsx`
+  - `AssetsPage.tsx` (Varlıklar hub: `AssetsHub.tsx` → varlıklar + `SalaryPage.tsx`)
   - `CardsPage.tsx`
-  - `LoansPage.tsx`
-  - `DebtsPage.tsx`
+  - `LoansPage.tsx` / `DebtsPage.tsx` (Borçlar hub: `LiabilitiesHub.tsx`)
   - `PaymentsPage.tsx`
   - `AnalysisPage.tsx`
   - `DataHealthPage.tsx`
-  - `MorePage.tsx`
   - `LoginPage.tsx`
 
 ## Backend / Data
@@ -109,17 +107,18 @@ The app has several planning-oriented layers already in place:
 ## Route Model
 
 - `/` dashboard
-- `/varliklar`
-- `/kartlar`
-- `/krediler`
-- `/borclar`
+- `/kartlar` (Hesaplar)
+- `/varliklar` hub → index (Varlıklar) + `/varliklar/maas` (Maaş)
+- `/borclar` hub → `/borclar/krediler` (Krediler) + `/borclar/kisiler` (Kişiler); bare `/borclar` redirects to krediler
 - `/odemeler`
-- `/analiz`
+- `/analiz` (Raporlar)
 - `/veri-sagligi`
-- `/daha`
 - `/login`
+- Legacy redirects: `/krediler` → `/borclar/krediler`, `/daha` → `/`
 
 All app routes except `/login` are protected by `ProtectedRoute`.
+
+Navigation (`src/components/navigation.ts`): bottom bar (mobile, 5) = Özet · Hesaplar · Varlıklar · Borçlar · Planlı; desktop sidebar adds Raporlar; Raporlar + Veri Kontrolü + Çıkış live in the mobile header menu.
 
 ## Database Notes
 

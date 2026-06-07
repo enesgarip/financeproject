@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { Asset, Debt, SavingsGoal } from '../types/database'
 import type { MarketRatesSnapshot } from './marketRates'
 import {
+  assetIsStock,
   assetRateSymbol,
   debtRateSide,
   debtRateSymbol,
@@ -9,9 +10,12 @@ import {
   effectiveDebtValue,
   effectiveGoalValue,
   goalRateSymbol,
+  stockCostBasis,
+  stockProfit,
   valueAsset,
   valueDebt,
   valueGoal,
+  valueStock,
 } from './valuation'
 
 const SNAPSHOT: MarketRatesSnapshot = {
@@ -39,6 +43,8 @@ function asset(overrides: Partial<Asset>): Asset {
     amount: 0,
     unit: 'gram',
     currency: null,
+    symbol: null,
+    unit_cost: null,
     estimated_value_try: 0,
     auto_valued: false,
     note: null,
@@ -140,5 +146,51 @@ describe('effective value (auto vs manual)', () => {
     expect(effectiveDebtValue(debt({ amount: 100, auto_valued: false, estimated_value_try: 4000 }), SNAPSHOT)).toBe(4000)
     expect(effectiveGoalValue(goal({ current_amount: 10, auto_valued: true, estimated_value_try: 1 }), SNAPSHOT)).toBe(65535.8)
     expect(effectiveGoalValue(goal({ current_amount: 10, auto_valued: false, estimated_value_try: 60000 }), SNAPSHOT)).toBe(60000)
+  })
+})
+
+describe('stocks (BIST)', () => {
+  const PRICES = { THYAO: 297, GARAN: 130.5 }
+
+  it('identifies stock rows only when a ticker is present', () => {
+    expect(assetIsStock(asset({ category: 'Hisse', symbol: 'THYAO' }))).toBe(true)
+    expect(assetIsStock(asset({ category: 'Hisse', symbol: null }))).toBe(false)
+    expect(assetIsStock(asset({ category: 'Fon', symbol: 'THYAO' }))).toBe(false)
+  })
+
+  it('values a holding at price × quantity (case-insensitive ticker)', () => {
+    expect(valueStock(asset({ category: 'Hisse', symbol: 'THYAO', amount: 100 }), PRICES)).toBe(29700)
+    expect(valueStock(asset({ category: 'Hisse', symbol: 'thyao', amount: 10 }), PRICES)).toBe(2970)
+  })
+
+  it('returns null when the price or symbol is missing', () => {
+    expect(valueStock(asset({ category: 'Hisse', symbol: 'UNKNOWN', amount: 10 }), PRICES)).toBeNull()
+    expect(valueStock(asset({ category: 'Hisse', symbol: 'THYAO', amount: 10 }), null)).toBeNull()
+    expect(valueStock(asset({ category: 'Hisse', symbol: null, amount: 10 }), PRICES)).toBeNull()
+  })
+
+  it('computes cost basis and profit/loss', () => {
+    const row = asset({ category: 'Hisse', symbol: 'THYAO', amount: 100, unit_cost: 250 })
+    expect(stockCostBasis(row)).toBe(25000)
+    const value = valueStock(row, PRICES)! // 29700
+    expect(stockProfit(value, row)).toEqual({ profit: 4700, profitPct: 18.8, cost: 25000 })
+  })
+
+  it('reports loss with negative profit', () => {
+    const row = asset({ category: 'Hisse', symbol: 'THYAO', amount: 100, unit_cost: 320 })
+    const value = valueStock(row, PRICES)! // 29700, cost 32000
+    expect(stockProfit(value, row)).toEqual({ profit: -2300, profitPct: -7.19, cost: 32000 })
+  })
+
+  it('has no profit metric without a cost basis', () => {
+    expect(stockCostBasis(asset({ category: 'Hisse', symbol: 'THYAO', amount: 100, unit_cost: null }))).toBeNull()
+    expect(stockProfit(29700, asset({ category: 'Hisse', unit_cost: null, amount: 100 }))).toBeNull()
+  })
+
+  it('uses live stock price in effectiveAssetValue when auto and priced', () => {
+    const row = asset({ category: 'Hisse', symbol: 'THYAO', amount: 100, auto_valued: true, estimated_value_try: 1 })
+    expect(effectiveAssetValue(row, SNAPSHOT, PRICES)).toBe(29700)
+    // falls back to stored value when the price is unavailable
+    expect(effectiveAssetValue(asset({ category: 'Hisse', symbol: 'X', amount: 100, auto_valued: true, estimated_value_try: 5000 }), SNAPSHOT, PRICES)).toBe(5000)
   })
 })

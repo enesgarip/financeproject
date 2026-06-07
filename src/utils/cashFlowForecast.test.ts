@@ -16,7 +16,7 @@ const base = { id: 'id', user_id: 'u', created_at: '2026-06-01T00:00:00.000Z', u
 const FROM = new Date(2026, 5, 1) // 1 June 2026
 
 function asset(overrides: Partial<Asset>): Asset {
-  return { ...base, name: 'Varlık', category: 'Nakit', amount: 0, unit: 'TRY', currency: 'TRY', estimated_value_try: 0, auto_valued: false, note: null, ...overrides }
+  return { ...base, name: 'Varlık', category: 'Nakit', amount: 0, unit: 'TRY', currency: 'TRY', symbol: null, unit_cost: null, estimated_value_try: 0, auto_valued: false, note: null, ...overrides }
 }
 
 function card(overrides: Partial<Card>): Card {

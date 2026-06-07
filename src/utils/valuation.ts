@@ -25,6 +25,13 @@ export function assetRateSymbol(asset: Pick<Asset, 'category' | 'unit' | 'curren
   return null
 }
 
+/** Live BIST equity prices keyed by ticker (without .IS), in TRY. */
+export type StockPrices = Record<string, number>
+
+function round2(value: number): number {
+  return Math.round((value + Number.EPSILON) * 100) / 100
+}
+
 export function debtRateSymbol(debt: Pick<Debt, 'value_type' | 'currency'>): RateSymbol | null {
   if (debt.value_type === 'gram_altin') return 'GRA'
   if (debt.value_type === 'ceyrek_altin') return 'CEYREKALTIN'
@@ -67,6 +74,42 @@ export function valueAsset(
   return convertToTry(asset.amount, symbol, snapshot, 'buying')
 }
 
+// --- Stocks (BIST equities, priced via the bist-quote edge function) -------
+
+/** A row is a stock holding when it's category 'Hisse' with a ticker symbol. */
+export function assetIsStock(asset: Pick<Asset, 'category' | 'symbol'>): boolean {
+  return asset.category === 'Hisse' && Boolean(asset.symbol)
+}
+
+/** Live TRY value of a stock holding = price × quantity. Null when unpriced. */
+export function valueStock(
+  asset: Pick<Asset, 'category' | 'symbol' | 'amount'>,
+  prices: StockPrices | null | undefined,
+): number | null {
+  if (!assetIsStock(asset) || !prices) return null
+  const price = prices[asset.symbol!.toUpperCase()]
+  if (typeof price !== 'number' || !Number.isFinite(price) || price <= 0) return null
+  return round2(price * asset.amount)
+}
+
+/** Total purchase cost of a stock holding = unit cost × quantity. */
+export function stockCostBasis(asset: Pick<Asset, 'unit_cost' | 'amount'>): number | null {
+  if (asset.unit_cost == null || !Number.isFinite(asset.unit_cost)) return null
+  return round2(asset.unit_cost * asset.amount)
+}
+
+/** Profit/loss of a stock holding given its current value, in TRY and percent. */
+export function stockProfit(
+  currentValue: number,
+  asset: Pick<Asset, 'unit_cost' | 'amount'>,
+): { profit: number; profitPct: number; cost: number } | null {
+  const cost = stockCostBasis(asset)
+  if (cost === null) return null
+  const profit = round2(currentValue - cost)
+  const profitPct = cost > 0 ? round2((profit / cost) * 100) : 0
+  return { profit, profitPct, cost }
+}
+
 export function valueDebt(
   debt: Pick<Debt, 'value_type' | 'currency' | 'direction' | 'amount'>,
   snapshot: MarketRatesSnapshot | null | undefined,
@@ -87,9 +130,13 @@ export function valueGoal(
 
 // --- Effective value (auto when opted-in & priced, else the stored value) --
 
-export function effectiveAssetValue(asset: Asset, snapshot: MarketRatesSnapshot | null | undefined): number {
+export function effectiveAssetValue(
+  asset: Asset,
+  snapshot: MarketRatesSnapshot | null | undefined,
+  stockPrices?: StockPrices | null,
+): number {
   if (asset.auto_valued) {
-    const auto = valueAsset(asset, snapshot)
+    const auto = assetIsStock(asset) ? valueStock(asset, stockPrices) : valueAsset(asset, snapshot)
     if (auto !== null) return auto
   }
   return asset.estimated_value_try

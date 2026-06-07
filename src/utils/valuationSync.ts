@@ -1,7 +1,8 @@
 import { supabase } from '../lib/supabase'
+import { fetchStockPrices } from '../lib/stockQuotesClient'
 import type { Asset, Debt, SavingsGoal } from '../types/database'
 import type { MarketRatesSnapshot } from './marketRates'
-import { valueAsset, valueDebt, valueGoal } from './valuation'
+import { assetIsStock, valueAsset, valueStock, valueDebt, valueGoal } from './valuation'
 
 /**
  * Write-back: when rates refresh, recompute `estimated_value_try` for the rows
@@ -31,8 +32,19 @@ async function syncAssets(snapshot: MarketRatesSnapshot): Promise<number> {
   const { data, error } = await supabase.from('assets').select('*').eq('auto_valued', true)
   if (error || !data) return 0
 
-  const updates = (data as Asset[])
-    .map((asset) => ({ asset, value: valueAsset(asset, snapshot) }))
+  const rows = data as Asset[]
+
+  // Stocks are priced via the bist-quote edge function (one batched call).
+  const stockRows = rows.filter(assetIsStock)
+  const stockPrices = stockRows.length
+    ? await fetchStockPrices(stockRows.map((asset) => asset.symbol!))
+    : {}
+
+  const updates = rows
+    .map((asset) => ({
+      asset,
+      value: assetIsStock(asset) ? valueStock(asset, stockPrices) : valueAsset(asset, snapshot),
+    }))
     .filter((entry): entry is { asset: Asset; value: number } => entry.value !== null && changed(entry.value, entry.asset.estimated_value_try))
 
   await Promise.all(

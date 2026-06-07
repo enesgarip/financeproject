@@ -1,6 +1,6 @@
-import { CalendarDays, LogOut, Moon, Sun } from 'lucide-react'
+import { BarChart3, CalendarDays, LogOut, Moon, MoreHorizontal, ShieldCheck, Sun } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { NavLink, Outlet, useLocation } from 'react-router-dom'
+import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
 import { cn } from '../lib/utils'
 import { BottomNav } from './BottomNav'
@@ -9,18 +9,18 @@ import { QuickActions } from './QuickActions'
 
 const titles: Record<string, string> = {
   '/': 'Finans Özeti',
-  '/varliklar': 'Varlıklar',
   '/kartlar': 'Hesaplar ve Kartlar',
-  '/krediler': 'Krediler',
-  '/borclar': 'Kişiler',
+  '/varliklar': 'Varlıklar',
+  '/varliklar/maas': 'Maaş',
+  '/borclar/krediler': 'Krediler',
+  '/borclar/kisiler': 'Kişiler',
   '/odemeler': 'Planlı Ödemeler',
   '/analiz': 'Raporlar',
   '/veri-sagligi': 'Veri Kontrolü',
-  '/daha': 'Diğer',
 }
 
-const widePaths = new Set(['/', '/analiz', '/kartlar', '/krediler', '/veri-sagligi'])
-const mediumPaths = new Set(['/varliklar', '/borclar', '/odemeler'])
+const widePaths = new Set(['/', '/analiz', '/kartlar', '/borclar/krediler', '/veri-sagligi'])
+const mediumPaths = new Set(['/varliklar', '/varliklar/maas', '/borclar/kisiler', '/odemeler'])
 
 function getContentWidthClass(pathname: string) {
   if (widePaths.has(pathname)) return 'max-w-7xl'
@@ -44,6 +44,7 @@ export function Layout() {
     const storedTheme = localStorage.getItem('theme')
     return storedTheme ? storedTheme === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches
   })
+  const [menuOpen, setMenuOpen] = useState(false)
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', isDark)
@@ -117,7 +118,21 @@ export function Layout() {
             ))}
           </nav>
 
-          {/* User section */}
+          {/* Maintenance + user section */}
+          <NavLink
+            to="/veri-sagligi"
+            className={({ isActive }) =>
+              cn(
+                'mb-2 flex h-10 items-center gap-3 rounded-xl px-3 text-sm transition-all',
+                isActive
+                  ? 'bg-primary text-primary-foreground font-semibold shadow-[0_2px_12px_color-mix(in_srgb,var(--primary)_35%,transparent)]'
+                  : 'text-muted-foreground font-medium hover:bg-muted/70 hover:text-foreground',
+              )
+            }
+          >
+            <ShieldCheck size={17} className="shrink-0" />
+            <span className="truncate">Veri Kontrolü</span>
+          </NavLink>
           <div className="rounded-xl border border-border/60 bg-muted/30 p-3">
             <div className="flex items-center gap-2.5">
               <div className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary/15 text-xs font-bold text-primary">
@@ -170,14 +185,56 @@ export function Layout() {
                 {isDark ? <Sun size={16} /> : <Moon size={16} />}
               </button>
 
-              <button
-                type="button"
-                onClick={() => void signOut()}
-                className="grid size-9 place-items-center rounded-xl border border-border/70 bg-card/80 text-muted-foreground backdrop-blur-sm transition hover:bg-muted hover:text-foreground lg:hidden"
-                aria-label="Çıkış yap"
-              >
-                <LogOut size={16} />
-              </button>
+              <div className="relative lg:hidden">
+                <button
+                  type="button"
+                  onClick={() => setMenuOpen((c) => !c)}
+                  aria-expanded={menuOpen}
+                  aria-label="Menü"
+                  className="grid size-9 place-items-center rounded-xl border border-border/70 bg-card/80 text-muted-foreground backdrop-blur-sm transition hover:bg-muted hover:text-foreground"
+                >
+                  <MoreHorizontal size={16} />
+                </button>
+
+                {menuOpen ? (
+                  <>
+                    <button
+                      type="button"
+                      aria-hidden
+                      tabIndex={-1}
+                      onClick={() => setMenuOpen(false)}
+                      className="fixed inset-0 z-40 cursor-default"
+                    />
+                    <div className="finance-command-surface absolute right-0 top-full z-50 mt-2 w-56 rounded-xl p-1.5">
+                      <Link
+                        to="/analiz"
+                        onClick={() => setMenuOpen(false)}
+                        className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-foreground transition hover:bg-muted"
+                      >
+                        <BarChart3 size={16} className="shrink-0 text-muted-foreground" />
+                        Raporlar
+                      </Link>
+                      <Link
+                        to="/veri-sagligi"
+                        onClick={() => setMenuOpen(false)}
+                        className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-foreground transition hover:bg-muted"
+                      >
+                        <ShieldCheck size={16} className="shrink-0 text-muted-foreground" />
+                        Veri Kontrolü
+                      </Link>
+                      <div className="my-1 h-px bg-border/60" />
+                      <button
+                        type="button"
+                        onClick={() => void signOut()}
+                        className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-destructive transition hover:bg-destructive/10"
+                      >
+                        <LogOut size={16} className="shrink-0" />
+                        Çıkış yap
+                      </button>
+                    </div>
+                  </>
+                ) : null}
+              </div>
             </div>
           </div>
         </header>

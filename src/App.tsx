@@ -3,10 +3,15 @@ import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { AuthProvider } from './auth/AuthProvider'
 import { ProtectedRoute } from './auth/ProtectedRoute'
 import { Layout } from './components/Layout'
+import { AssetsHub } from './pages/AssetsHub'
+import { LiabilitiesHub } from './pages/LiabilitiesHub'
 import { ToastProvider } from './components/ui/toast'
 
 const AssetsPage = lazy(() =>
   import('./pages/AssetsPage').then((m) => ({ default: m.AssetsPage })),
+)
+const SalaryPage = lazy(() =>
+  import('./pages/SalaryPage').then((m) => ({ default: m.SalaryPage })),
 )
 const AnalysisPage = lazy(() =>
   import('./pages/AnalysisPage').then((m) => ({ default: m.AnalysisPage })),
@@ -28,9 +33,6 @@ const LoansPage = lazy(() =>
 )
 const LoginPage = lazy(() =>
   import('./pages/LoginPage').then((m) => ({ default: m.LoginPage })),
-)
-const MorePage = lazy(() =>
-  import('./pages/MorePage').then((m) => ({ default: m.MorePage })),
 )
 const PaymentsPage = lazy(() =>
   import('./pages/PaymentsPage').then((m) => ({ default: m.PaymentsPage })),
@@ -93,14 +95,28 @@ function AnimatedRoutes() {
         }
       >
         <Route index element={routeElement(<DashboardPage />, '/')} />
-        <Route path="varliklar" element={routeElement(<AssetsPage />, 'varliklar')} />
         <Route path="kartlar" element={routeElement(<CardsPage />, 'kartlar')} />
-        <Route path="krediler" element={routeElement(<LoansPage />, 'krediler')} />
-        <Route path="borclar" element={routeElement(<DebtsPage />, 'borclar')} />
+
+        {/* Varlıklar hub: holdings + salary */}
+        <Route path="varliklar" element={<AssetsHub />}>
+          <Route index element={routeElement(<AssetsPage />, 'varliklar')} />
+          <Route path="maas" element={routeElement(<SalaryPage />, 'varliklar-maas')} />
+        </Route>
+
+        {/* Borçlar hub: loans + personal debts */}
+        <Route path="borclar" element={<LiabilitiesHub />}>
+          <Route index element={<Navigate to="/borclar/krediler" replace />} />
+          <Route path="krediler" element={routeElement(<LoansPage />, 'borclar-krediler')} />
+          <Route path="kisiler" element={routeElement(<DebtsPage />, 'borclar-kisiler')} />
+        </Route>
+
         <Route path="odemeler" element={routeElement(<PaymentsPage />, 'odemeler')} />
         <Route path="analiz" element={routeElement(<AnalysisPage />, 'analiz')} />
         <Route path="veri-sagligi" element={routeElement(<DataHealthPage />, 'veri-sagligi')} />
-        <Route path="daha" element={routeElement(<MorePage />, 'daha')} />
+
+        {/* Legacy redirects (bookmarks / PWA shortcuts) */}
+        <Route path="krediler" element={<Navigate to="/borclar/krediler" replace />} />
+        <Route path="daha" element={<Navigate to="/" replace />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

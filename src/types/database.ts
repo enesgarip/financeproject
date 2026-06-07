@@ -35,6 +35,10 @@ export type Asset = BaseRow & {
   amount: number
   unit: AssetUnit
   currency: CashCurrency | null
+  /** BIST ticker without .IS suffix (Hisse only). */
+  symbol: string | null
+  /** Average purchase cost per share in TRY (Hisse only). */
+  unit_cost: number | null
   estimated_value_try: number
   auto_valued: boolean
   note: string | null

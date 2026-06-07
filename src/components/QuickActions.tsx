@@ -8,9 +8,9 @@ const actions = [
   { to: '/kartlar#hizli-harcama', label: 'Harcama', description: 'Hesaptan veya karttan harca', icon: WalletCards, hiddenOnPaths: ['/kartlar'] },
   { to: '/kartlar#hesap-merkezi', label: 'Transfer', description: 'Hesaptan hesaba aktar', icon: ArrowRightLeft, hiddenOnPaths: ['/kartlar'] },
   { to: '/odemeler?new=1', label: 'Planlı', description: 'Fatura, kira veya abonelik', icon: ReceiptText, hiddenOnPaths: ['/odemeler'] },
-  { to: '/borclar?new=1', label: 'Kişi', description: 'Borç veya alacak kaydı', icon: HandCoins, hiddenOnPaths: ['/borclar'] },
-  { to: '/varliklar?new=1', label: 'Varlık', description: 'Nakit, yatırım veya maaş', icon: Banknote, hiddenOnPaths: ['/varliklar', '/daha'] },
-  { to: '/krediler?new=1', label: 'Kredi', description: 'Kredi ve taksit planı', icon: Landmark, hiddenOnPaths: ['/krediler', '/daha'] },
+  { to: '/borclar/kisiler?new=1', label: 'Kişi', description: 'Borç veya alacak kaydı', icon: HandCoins, hiddenOnPaths: ['/borclar'] },
+  { to: '/varliklar?new=1', label: 'Varlık', description: 'Nakit, yatırım veya maaş', icon: Banknote, hiddenOnPaths: ['/varliklar'] },
+  { to: '/borclar/krediler?new=1', label: 'Kredi', description: 'Kredi ve taksit planı', icon: Landmark, hiddenOnPaths: ['/borclar'] },
 ]
 
 function isFormElementActive() {

@@ -25,7 +25,7 @@ const JUNE = new Date(2026, 5, 15) // June 15, 2026
 // ── Factories ──────────────────────────────────────────────────────────────
 
 function asset(overrides: Partial<Asset>): Asset {
-  return { ...base, name: 'Varlık', category: 'Nakit', amount: 0, unit: 'TRY', currency: null, estimated_value_try: 0, auto_valued: false, note: null, ...overrides }
+  return { ...base, name: 'Varlık', category: 'Nakit', amount: 0, unit: 'TRY', currency: null, symbol: null, unit_cost: null, estimated_value_try: 0, auto_valued: false, note: null, ...overrides }
 }
 
 function bankCard(overrides: Partial<Card>): Card {
