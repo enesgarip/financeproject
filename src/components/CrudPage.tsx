@@ -79,6 +79,8 @@ type CrudPageProps<T extends TableName> = {
   getDetailStyle?: (row: RowFor<T>, rows: RowFor<T>[]) => CSSProperties
   groupBy?: (row: RowFor<T>) => string
   getGroupClassName?: (group: string) => string
+  canEditRow?: (row: RowFor<T>, rows: RowFor<T>[]) => boolean
+  canDeleteRow?: (row: RowFor<T>, rows: RowFor<T>[]) => boolean
   renderRowActions?: (row: RowFor<T>, helpers: { reload: () => Promise<void>; setError: (message: string) => void; rows: RowFor<T>[] }) => ReactNode
   renderMenuActions?: (row: RowFor<T>, helpers: { reload: () => Promise<void>; setError: (message: string) => void; rows: RowFor<T>[]; closeMenu: () => void }) => ReactNode
   renderExtra?: (row: RowFor<T>, helpers: { reload: () => Promise<void>; setError: (message: string) => void; rows: RowFor<T>[] }) => ReactNode
@@ -122,6 +124,8 @@ export function CrudPage<T extends TableName>({
   getDetailStyle,
   groupBy,
   getGroupClassName,
+  canEditRow,
+  canDeleteRow,
   renderRowActions,
   renderMenuActions,
   renderExtra,
@@ -396,6 +400,9 @@ export function CrudPage<T extends TableName>({
                   const subtitle = meta?.subtitle ?? renderSubtitle?.(row) ?? ''
                   const details = meta?.details ?? renderDetails(row)
                   const note = meta?.note ?? ('note' in row && row.note ? String(row.note) : '')
+                  const editAllowed = canEditRow?.(row, rows) ?? true
+                  const deleteAllowed = canDeleteRow?.(row, rows) ?? true
+                  const hasMenu = Boolean(renderMenuActions || editAllowed || deleteAllowed)
                   const resolvedMeta: RowMeta = {
                     title,
                     subtitle,
@@ -403,22 +410,23 @@ export function CrudPage<T extends TableName>({
                     note,
                     searchText: meta?.searchText ?? [title, subtitle, ...details, note].join(' ').toLocaleLowerCase('tr-TR'),
                   }
-                  const rowMenu = (
+                  const rowMenu = hasMenu ? (
                     <div className="relative shrink-0">
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            setMenuOpenId(menuOpenId === row.id ? null : row.id)
-                          }}
-                          className="grid size-10 place-items-center rounded-lg border border-border/70 bg-background/55 text-muted-foreground transition hover:bg-muted hover:text-foreground"
-                          aria-label="Menu"
-                        >
-                          <MoreVertical size={18} />
-                        </button>
-                        {menuOpenId === row.id && (
-                          <div className="absolute right-0 top-full z-10 mt-1 w-44 rounded-lg border border-border bg-popover py-1 shadow-[var(--shadow-elevated)]">
-                            {renderMenuActions ? renderMenuActions(row, { reload: loadRows, setError, rows, closeMenu: () => setMenuOpenId(null) }) : null}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setMenuOpenId(menuOpenId === row.id ? null : row.id)
+                        }}
+                        className="grid size-10 place-items-center rounded-lg border border-border/70 bg-background/55 text-muted-foreground transition hover:bg-muted hover:text-foreground"
+                        aria-label="Menu"
+                      >
+                        <MoreVertical size={18} />
+                      </button>
+                      {menuOpenId === row.id && (
+                        <div className="absolute right-0 top-full z-10 mt-1 w-44 rounded-lg border border-border bg-popover py-1 shadow-[var(--shadow-elevated)]">
+                          {renderMenuActions ? renderMenuActions(row, { reload: loadRows, setError, rows, closeMenu: () => setMenuOpenId(null) }) : null}
+                          {editAllowed ? (
                             <button
                               type="button"
                               onClick={(e) => {
@@ -431,6 +439,8 @@ export function CrudPage<T extends TableName>({
                               <Pencil size={14} />
                               Düzenle
                             </button>
+                          ) : null}
+                          {deleteAllowed ? (
                             <button
                               type="button"
                               onClick={(e) => {
@@ -443,10 +453,11 @@ export function CrudPage<T extends TableName>({
                               <Trash2 size={14} />
                               Sil
                             </button>
-                          </div>
-                        )}
+                          ) : null}
+                        </div>
+                      )}
                     </div>
-                  )
+                  ) : null
                   const rowActions = renderRowActions ? (
                     <div className="mt-3 flex flex-wrap gap-2">{renderRowActions(row, { reload: loadRows, setError, rows })}</div>
                   ) : null
@@ -475,7 +486,8 @@ export function CrudPage<T extends TableName>({
                         <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>
                       ) : null}
                     </div>
-                    <div className="relative shrink-0">
+                    {hasMenu ? (
+                      <div className="relative shrink-0">
                         <button
                           type="button"
                           onClick={(e) => {
@@ -490,33 +502,38 @@ export function CrudPage<T extends TableName>({
                         {menuOpenId === row.id && (
                           <div className="absolute right-0 top-full z-10 mt-1 w-40 rounded-lg border border-border bg-popover py-1 shadow-[var(--shadow-elevated)]">
                             {renderMenuActions ? renderMenuActions(row, { reload: loadRows, setError, rows, closeMenu: () => setMenuOpenId(null) }) : null}
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                setMenuOpenId(null)
-                                openEdit(row)
-                              }}
-                              className="flex w-full items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted"
-                            >
-                              <Pencil size={14} />
-                              Düzenle
-                            </button>
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                setMenuOpenId(null)
-                                setDeleteId(row.id)
-                              }}
-                              className="flex w-full items-center gap-2 px-3 py-2 text-sm text-destructive hover:bg-destructive/10"
-                            >
-                              <Trash2 size={14} />
-                              Sil
-                            </button>
+                            {editAllowed ? (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setMenuOpenId(null)
+                                  openEdit(row)
+                                }}
+                                className="flex w-full items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted"
+                              >
+                                <Pencil size={14} />
+                                Düzenle
+                              </button>
+                            ) : null}
+                            {deleteAllowed ? (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setMenuOpenId(null)
+                                  setDeleteId(row.id)
+                                }}
+                                className="flex w-full items-center gap-2 px-3 py-2 text-sm text-destructive hover:bg-destructive/10"
+                              >
+                                <Trash2 size={14} />
+                                Sil
+                              </button>
+                            ) : null}
                           </div>
                         )}
-                    </div>
+                      </div>
+                    ) : null}
                   </div>
                   {renderRowActions ? (
                     <div className="mt-3 flex flex-wrap gap-2">{renderRowActions(row, { reload: loadRows, setError, rows })}</div>

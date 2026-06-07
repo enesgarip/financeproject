@@ -37,10 +37,26 @@ export type Asset = BaseRow & {
   currency: CashCurrency | null
   /** BIST ticker without .IS suffix (Hisse only). */
   symbol: string | null
-  /** Average purchase cost per share in TRY (Hisse only). */
+  /** Average purchase cost per share/unit in TRY (Hisse and ledger-managed Altın). */
   unit_cost: number | null
   estimated_value_try: number
   auto_valued: boolean
+  /** When 'gold_ledger', this row is an aggregate maintained from gold_lots (do not hand-edit). */
+  source: string | null
+  note: string | null
+}
+
+export type GoldType = 'gram' | 'ceyrek'
+
+export type GoldLot = BaseRow & {
+  /** Purchase date; null when unknown. */
+  purchase_date: string | null
+  gold_type: GoldType
+  /** Karat (e.g. 24, 22); informational. */
+  ayar: number | null
+  quantity: number
+  /** TRY paid per unit at purchase; null when the cost is unknown. */
+  unit_price: number | null
   note: string | null
 }
 
@@ -260,6 +276,7 @@ export type Database = {
       transaction_history: Table<TransactionHistory, WithBaseInsert<TransactionHistory>, WithBaseUpdate<TransactionHistory>>
       salary_history: Table<SalaryHistory, WithBaseInsert<SalaryHistory>, WithBaseUpdate<SalaryHistory>>
       net_worth_snapshots: Table<NetWorthSnapshot, WithBaseInsert<NetWorthSnapshot>, WithBaseUpdate<NetWorthSnapshot>>
+      gold_lots: Table<GoldLot, WithBaseInsert<GoldLot>, WithBaseUpdate<GoldLot>>
       dismissed_upcoming_items: Table<
         DismissedUpcomingItem,
         Omit<DismissedUpcomingItem, 'id' | 'created_at'> & { id?: string; created_at?: string },

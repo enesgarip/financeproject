@@ -10,6 +10,9 @@ import { ToastProvider } from './components/ui/toast'
 const AssetsPage = lazy(() =>
   import('./pages/AssetsPage').then((m) => ({ default: m.AssetsPage })),
 )
+const GoldPage = lazy(() =>
+  import('./pages/GoldPage').then((m) => ({ default: m.GoldPage })),
+)
 const SalaryPage = lazy(() =>
   import('./pages/SalaryPage').then((m) => ({ default: m.SalaryPage })),
 )
@@ -101,6 +104,7 @@ function AnimatedRoutes() {
         <Route path="varliklar" element={<AssetsHub />}>
           <Route index element={routeElement(<AssetsPage />, 'varliklar')} />
           <Route path="maas" element={routeElement(<SalaryPage />, 'varliklar-maas')} />
+          <Route path="altin" element={routeElement(<GoldPage />, 'varliklar-altin')} />
         </Route>
 
         {/* Borçlar hub: loans + personal debts */}

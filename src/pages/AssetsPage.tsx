@@ -10,6 +10,7 @@ import { useStockPrices } from '../hooks/useStockPrices'
 import { normalizeTicker, type StockPrices } from '../lib/stockQuotesClient'
 import type { Asset } from '../types/database'
 import { formatCurrency, formatNumber, parseNumber } from '../utils/formatCurrency'
+import { GOLD_LEDGER_SOURCE } from '../utils/goldLedger'
 import type { MarketRatesSnapshot } from '../utils/marketRates'
 import { assetRateSymbol, effectiveAssetValue, stockCostBasis, stockProfit, valueAsset, valueStock } from '../utils/valuation'
 
@@ -38,6 +39,10 @@ const categoryCardTint: Record<Asset['category'], string> = {
   Araç:  'border-orange-300/30 bg-orange-50/40 dark:border-orange-900/40 dark:bg-orange-950/15',
   BES:   'border-teal-300/30 bg-teal-50/40 dark:border-teal-900/40 dark:bg-teal-950/15',
   Diğer: 'border-border/70 bg-card',
+}
+
+function isGoldLedgerAsset(row: Asset): boolean {
+  return row.source === GOLD_LEDGER_SOURCE
 }
 
 /** A row is auto-valuable when its category maps to a market symbol or BIST ticker. */
@@ -384,11 +389,20 @@ export function AssetsPage() {
           }
         }}
         renderTitle={(row) => row.name}
-        renderSubtitle={(row) => (row.category === 'Hisse' && row.symbol ? `${row.category} · ${row.symbol}` : row.category)}
+        renderSubtitle={(row) => {
+          if (isGoldLedgerAsset(row)) return `${row.category} · defter`
+          return row.category === 'Hisse' && row.symbol ? `${row.category} · ${row.symbol}` : row.category
+        }}
         renderDetails={(row) => {
           const value = effectiveAssetValue(row, snapshot, stockPrices)
           const details = [`Değer: ${formatCurrency(value)}`]
-          if (row.category === 'Altın') details.unshift(`Miktar: ${formatNumber(row.amount)} ${row.unit === 'adet' ? 'çeyrek' : row.unit}`)
+          if (row.category === 'Altın') {
+            details.unshift(`Miktar: ${formatNumber(row.amount)} ${row.unit === 'adet' ? 'çeyrek' : row.unit}`)
+            if (row.unit_cost != null) {
+              details.push(`Ort. maliyet: ${formatCurrency(row.unit_cost)}/${row.unit === 'adet' ? 'çeyrek' : 'gr'}`)
+            }
+            if (isGoldLedgerAsset(row)) details.push('Kaynak: Altın defteri')
+          }
           if (row.category === 'Hisse') {
             details.unshift(`Adet: ${formatNumber(row.amount)}`)
             const cost = stockCostBasis(row)
@@ -404,6 +418,8 @@ export function AssetsPage() {
           if (row.auto_valued) details.push('Canlı fiyatla otomatik')
           return details
         }}
+        canEditRow={(row) => !isGoldLedgerAsset(row)}
+        canDeleteRow={(row) => !isGoldLedgerAsset(row)}
         renderExtra={(row) => {
           if (row.category !== 'Hisse') return null
           const value = effectiveAssetValue(row, snapshot, stockPrices)

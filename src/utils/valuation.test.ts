@@ -47,6 +47,7 @@ function asset(overrides: Partial<Asset>): Asset {
     unit_cost: null,
     estimated_value_try: 0,
     auto_valued: false,
+    source: null,
     note: null,
     ...overrides,
   }

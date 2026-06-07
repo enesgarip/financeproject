@@ -15,7 +15,7 @@ import {
 export const primaryNavItems = [
   { to: '/', label: 'Özet', icon: Home },
   { to: '/kartlar', label: 'Hesaplar', icon: CreditCard },
-  { to: '/varliklar', label: 'Varlıklar', icon: Wallet, activePaths: ['/varliklar/maas'] },
+  { to: '/varliklar', label: 'Varlıklar', icon: Wallet, activePaths: ['/varliklar/maas', '/varliklar/altin'] },
   { to: '/borclar/krediler', label: 'Borçlar', icon: HandCoins, activePaths: ['/borclar', '/borclar/kisiler', '/krediler'] },
   { to: '/odemeler', label: 'Planlı', icon: WalletCards },
   { to: '/analiz', label: 'Raporlar', icon: BarChart3 },
@@ -25,7 +25,7 @@ export const primaryNavItems = [
 export const bottomNavItems = [
   { to: '/', label: 'Özet', icon: Home },
   { to: '/kartlar', label: 'Hesaplar', icon: CreditCard },
-  { to: '/varliklar', label: 'Varlıklar', icon: Wallet, activePaths: ['/varliklar/maas'] },
+  { to: '/varliklar', label: 'Varlıklar', icon: Wallet, activePaths: ['/varliklar/maas', '/varliklar/altin'] },
   { to: '/borclar/krediler', label: 'Borçlar', icon: HandCoins, activePaths: ['/borclar', '/borclar/kisiler', '/krediler'] },
   { to: '/odemeler', label: 'Planlı', icon: WalletCards },
 ] as const
@@ -35,6 +35,7 @@ export type HubTab = { to: string; label: string; end?: boolean }
 export const assetsHubTabs: HubTab[] = [
   { to: '/varliklar', label: 'Varlıklar', end: true },
   { to: '/varliklar/maas', label: 'Maaş' },
+  { to: '/varliklar/altin', label: 'Altın' },
 ]
 
 export const liabilitiesHubTabs: HubTab[] = [
