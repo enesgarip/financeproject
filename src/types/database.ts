@@ -292,6 +292,16 @@ export type Database = {
         Args: Record<string, never>
         Returns: number
       }
+      set_statement_reconciliation: {
+        Args: {
+          p_card_id: string
+          p_period_year: number
+          p_period_month: number
+          p_bank_amount: number
+          p_note?: string | null
+        }
+        Returns: CardStatementArchive
+      }
       post_card_provision: {
         Args: {
           p_expense_id: string

@@ -132,6 +132,9 @@ function statement(overrides: Partial<CardStatementArchive>): CardStatementArchi
     status: 'open',
     paid_at: null,
     payment_source_card_id: null,
+    reconciled_bank_amount: null,
+    reconciled_at: null,
+    reconciliation_note: null,
     note: null,
     ...overrides,
   }
