@@ -31,7 +31,7 @@ function noteForSummary(summary: GoldTypeSummary): string {
   const unknown = summary.unknownQuantity
   const missing = unknown > 0
     ? `${unknown.toLocaleString('tr-TR', { maximumFractionDigits: 4 })} ${summary.goldType === 'gram' ? 'gr' : 'adet'} maliyeti kayıtsız.`
-    : 'Tüm lot maliyetleri kayıtlı.'
+    : 'Tüm işlem maliyetleri kayıtlı.'
   return `Altın defterinden otomatik yönetiliyor. Toplam: ${quantityLabel(summary)}. ${missing}`
 }
 

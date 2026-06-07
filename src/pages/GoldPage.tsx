@@ -232,7 +232,7 @@ function GoldOverview({ rows, snapshot }: { rows: GoldLot[]; snapshot: MarketRat
         <MetricCard
           label="Toplam maliyet"
           value={formatCurrency(totalKnownCost)}
-          description="bilinen lotlar"
+          description="maliyeti kayıtlı alımlar"
           tone="neutral"
           icon={Coins}
         />
@@ -241,7 +241,7 @@ function GoldOverview({ rows, snapshot }: { rows: GoldLot[]; snapshot: MarketRat
           value={profit === null ? 'Kur bekleniyor' : `${profit >= 0 ? '+' : ''}${formatCurrency(profit)}`}
           delta={profitPct === null ? undefined : `${profitPct >= 0 ? '+' : ''}%${profitPct.toFixed(1)}`}
           deltaLabel={profit === null ? 'flat' : profit > 0 ? 'up' : profit < 0 ? 'down' : 'flat'}
-          description="bilinen maliyetli kısım"
+          description="kayıtlı maliyet üzerinden"
           tone={profit === null ? 'neutral' : profit >= 0 ? 'good' : 'danger'}
           icon={LineChart}
         />
@@ -251,7 +251,7 @@ function GoldOverview({ rows, snapshot }: { rows: GoldLot[]; snapshot: MarketRat
             gramSummary ? formatQuantity(gramSummary.totalQuantity, 'gram') : null,
             ceyrekSummary ? formatQuantity(ceyrekSummary.totalQuantity, 'ceyrek') : null,
           ].filter(Boolean).join(' · ')}
-          description={`${rows.length} lot`}
+          description={`${rows.length} işlem`}
           tone="info"
           icon={Scale}
         />
@@ -262,7 +262,7 @@ function GoldOverview({ rows, snapshot }: { rows: GoldLot[]; snapshot: MarketRat
           {unknownSummaries
             .map((summary) => `${formatQuantity(summary.unknownQuantity, summary.goldType)} maliyeti kayıtsız`)
             .join(' · ')}
-          . Adet toplamda sayılıyor; ortalama maliyet ve kâr/zarar sadece maliyeti bilinen lotlardan hesaplanıyor.
+          . Adet toplamda sayılıyor; ortalama maliyet ve kâr/zarar sadece maliyeti kayıtlı işlemlerden hesaplanıyor.
         </Alert>
       ) : null}
     </div>
@@ -304,14 +304,14 @@ function GoldAccumulationChart({ rows, snapshot }: { rows: GoldLot[]; snapshot: 
         <div className="flex min-w-0 flex-wrap items-start justify-between gap-3">
           <SectionHeader
             title="Birikim grafiği"
-            description="Tarihli lotlarda bilinen maliyet ve canlı piyasa değeri."
+            description="Tarihli işlemlerde kayıtlı maliyet ve canlı piyasa değeri."
           />
-          {undatedCount > 0 ? <Badge variant="warning">{undatedCount} tarihsiz lot grafikte yok</Badge> : null}
+          {undatedCount > 0 ? <Badge variant="warning">{undatedCount} tarihsiz işlem grafikte yok</Badge> : null}
         </div>
 
         {data.length === 0 ? (
           <div className="flex h-52 items-center justify-center rounded-xl bg-muted/30 text-sm text-muted-foreground">
-            Tarihli lot yok
+            Tarihli işlem yok
           </div>
         ) : (
           <div ref={chartRef} className="min-w-0" style={{ height: 260, minHeight: 260 }}>
@@ -378,12 +378,12 @@ export function GoldPage() {
     <CrudPage
       table="gold_lots"
       pageTitle="Altın"
-      addLabel="Lot ekle"
+      addLabel="İşlem ekle"
       fields={goldFields}
       orderBy="purchase_date"
       orderAscending={false}
-      emptyTitle="Henüz altın lotu yok"
-      emptyDescription="Gram veya çeyrek alımlarını lot olarak ekleyince toplam adet, ortalama maliyet ve net değer otomatik güncellenir."
+      emptyTitle="Henüz altın işlemi yok"
+      emptyDescription="Gram veya çeyrek alımlarını işlem olarak ekleyince toplam adet, ortalama maliyet ve net değer otomatik güncellenir."
       validateForm={validateGoldLot}
       getInitialValues={(row?: GoldLot) => ({
         purchase_date: row?.purchase_date ?? '',
@@ -427,7 +427,7 @@ export function GoldPage() {
       renderExtra={(row) =>
         row.unit_price == null ? (
           <Alert variant="warning" className="mt-3">
-            Bu lot adede dahil; ortalama maliyet ve kâr/zarar hesabına dahil değil.
+            Bu işlem adede dahil; ortalama maliyet ve kâr/zarar hesabına dahil değil.
           </Alert>
         ) : null
       }

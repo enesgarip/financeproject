@@ -15,6 +15,7 @@ import type { MarketRatesSnapshot } from '../utils/marketRates'
 import { assetRateSymbol, effectiveAssetValue, stockCostBasis, stockProfit, valueAsset, valueStock } from '../utils/valuation'
 
 const categoryOptions: Asset['category'][] = ['Nakit', 'Altın', 'Fon', 'Hisse', 'Araç', 'BES', 'Diğer']
+const formCategoryOptions = categoryOptions.filter((category) => category !== 'Altın')
 
 /** Context passed to form fields: live FX rates + live BIST prices. */
 type FieldCtx = { snapshot: MarketRatesSnapshot | null; stockPrices: StockPrices }
@@ -95,7 +96,7 @@ const fields: FormField[] = [
     name: 'category',
     label: 'Kategori',
     type: 'select',
-    options: categoryOptions.map((value) => ({ label: value, value })),
+    options: formCategoryOptions.map((value) => ({ label: value, value })),
   },
   {
     name: 'symbol',
@@ -223,6 +224,12 @@ function ProfitBadge({ profit, profitPct }: { profit: number; profitPct: number 
   )
 }
 
+function validateAssetForm(formData: FormData): Record<string, string> {
+  const category = formData.get('category')
+  if (category === 'Altın') return { category: 'Altın varlıkları artık Altın sekmesinden işlem olarak eklenir.' }
+  return {}
+}
+
 function AssetsOverview({ rows, snapshot, stockPrices }: { rows: Asset[]; snapshot: MarketRatesSnapshot | null; stockPrices: StockPrices }) {
   if (rows.length === 0) return null
 
@@ -330,8 +337,9 @@ export function AssetsPage() {
         addLabel="Varlık ekle"
         fields={fields}
         fieldContext={fieldContext}
+        validateForm={validateAssetForm}
         emptyTitle="Henüz varlık yok"
-        emptyDescription="Nakit, altın, fon, hisse veya diğer varlıklarını buradan ekleyebilirsin."
+        emptyDescription="Nakit, fon, hisse veya diğer varlıklarını buradan ekleyebilirsin. Altın işlemleri ayrı Altın sekmesinde tutulur."
         renderBeforeList={({ loading, rows, reload }) => (
           <div className="space-y-3">
             <StockPriceSync rows={rows as Asset[]} onPrices={setStockPrices} />
@@ -418,7 +426,7 @@ export function AssetsPage() {
           if (row.auto_valued) details.push('Canlı fiyatla otomatik')
           return details
         }}
-        canEditRow={(row) => !isGoldLedgerAsset(row)}
+        canEditRow={(row) => row.category !== 'Altın'}
         canDeleteRow={(row) => !isGoldLedgerAsset(row)}
         renderExtra={(row) => {
           if (row.category !== 'Hisse') return null
