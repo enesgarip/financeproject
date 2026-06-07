@@ -16,7 +16,11 @@ const CORS_HEADERS: Record<string, string> = {
 }
 
 const MAX_SYMBOLS = 60
-const YAHOO_BASE = 'https://query1.finance.yahoo.com/v8/finance/chart'
+// query1 sometimes rate-limits datacenter IPs; query2 is a transparent mirror.
+const YAHOO_HOSTS = [
+  'https://query1.finance.yahoo.com/v8/finance/chart',
+  'https://query2.finance.yahoo.com/v8/finance/chart',
+]
 
 /** Keep only plausible BIST tickers: 1-10 chars of A-Z/0-9, uppercased, no suffix. */
 function normalizeSymbol(raw: unknown): string | null {
@@ -26,16 +30,20 @@ function normalizeSymbol(raw: unknown): string | null {
 }
 
 async function fetchPrice(symbol: string): Promise<number | null> {
-  try {
-    const url = `${YAHOO_BASE}/${symbol}.IS?interval=1d&range=1d`
-    const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } })
-    if (!res.ok) return null
-    const json = await res.json()
-    const price = json?.chart?.result?.[0]?.meta?.regularMarketPrice
-    return typeof price === 'number' && Number.isFinite(price) && price > 0 ? price : null
-  } catch {
-    return null
+  for (const host of YAHOO_HOSTS) {
+    try {
+      const res = await fetch(`${host}/${symbol}.IS?interval=1d&range=1d`, {
+        headers: { 'User-Agent': 'Mozilla/5.0', Accept: 'application/json' },
+      })
+      if (!res.ok) continue
+      const json = await res.json()
+      const price = json?.chart?.result?.[0]?.meta?.regularMarketPrice
+      if (typeof price === 'number' && Number.isFinite(price) && price > 0) return price
+    } catch {
+      // Try the next host.
+    }
   }
+  return null
 }
 
 Deno.serve(async (req: Request) => {
