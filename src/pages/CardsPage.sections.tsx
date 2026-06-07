@@ -7,9 +7,10 @@ import {
   CreditCard as CreditCardIcon,
   LayoutGrid,
   ReceiptText,
+  ScanLine,
   XCircle,
 } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { BankLogo } from '../components/finance/BankLogo'
 import { CategoryPicker } from '../components/finance/CategoryPicker'
 import { AmountDisplay, FinancePanel, MiniStat, ProgressStrip, SectionHeader, StatusBadge } from '../components/finance/FinanceUI'
@@ -32,6 +33,7 @@ import { cn } from '../lib/utils'
 import { bankHueStyle, isSchemaCacheError, limitGroupKey, limitGroupStats, statementPeriodLabel } from './CardsPage.helpers'
 import { formatCurrency, parseNumber } from '../utils/formatCurrency'
 import { addTransactionHistory } from '../utils/history'
+import { parseReceiptImage } from '../lib/receiptParseClient'
 
 export type CardSection = 'ozet' | 'kartlar' | 'islemler' | 'ekstreler'
 
@@ -787,6 +789,8 @@ export function QuickExpensePanel({
   const [expenseStatus, setExpenseStatus] = useState<CardExpenseStatus>('posted')
   const [localError, setLocalError] = useState('')
   const [saving, setSaving] = useState(false)
+  const [scanning, setScanning] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const categoryMemory = useCategoryMemory()
   const cards = useMemo(() => rows.filter((row) => row.card_type === 'kredi_karti' || row.card_type === 'banka_karti'), [rows])
   const activeCardId = cards.some((card) => card.id === cardId) ? cardId : (cards[0]?.id ?? '')
@@ -816,6 +820,22 @@ export function QuickExpensePanel({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusNonce])
+
+  async function handleScanFile(file: File) {
+    setScanning(true)
+    setLocalError('')
+    try {
+      const result = await parseReceiptImage(file)
+      setAmount(String(result.amount))
+      if (result.merchant) setDescription(result.merchant)
+      if (result.category) setCategory(result.category)
+      if (result.date) setSpentAt(result.date)
+    } catch (scanError) {
+      setLocalError(scanError instanceof Error ? scanError.message : 'Fiş okunamadı, tekrar dene.')
+    } finally {
+      setScanning(false)
+    }
+  }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -902,6 +922,27 @@ export function QuickExpensePanel({
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="flex flex-col gap-2.5">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            className="hidden"
+            onChange={(event) => {
+              const file = event.target.files?.[0]
+              event.target.value = '' // allow re-selecting the same file
+              if (file) void handleScanFile(file)
+            }}
+          />
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={scanning}
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-dashed border-primary/40 bg-primary/5 px-4 py-2.5 text-sm font-semibold text-primary transition hover:bg-primary/10 disabled:opacity-60"
+          >
+            <ScanLine size={16} />
+            {scanning ? 'Fiş okunuyor...' : 'Fişi/faturayı tara'}
+          </button>
           <label className="block text-sm font-semibold text-foreground">
             Kart
             <select
