@@ -18,7 +18,7 @@ const CORS_HEADERS: Record<string, string> = {
 
 // Must mirror src/utils/categories.ts expenseCategories.
 const CATEGORIES = ['Market', 'Yemek', 'Ulaşım', 'Alışveriş', 'Fatura', 'Sağlık', 'Eğlence', 'Eğitim', 'Diğer']
-const MODEL = 'gemini-2.0-flash'
+const MODEL = 'gemini-2.5-flash'
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024 // ~8 MB of base64
 
 const PROMPT = `Sen bir Türkçe fiş/fatura okuyucususun. Verilen görsel bir alışveriş fişi, fatura veya banka harcama bildirimidir.
