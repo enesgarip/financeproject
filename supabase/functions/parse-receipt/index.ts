@@ -89,7 +89,7 @@ Deno.serve(async (req: Request) => {
     generationConfig: { responseMimeType: 'application/json', temperature: 0 },
   }
 
-  let geminiText = ''
+  let geminiText: string
   try {
     const res = await fetch(endpoint, {
       method: 'POST',
