@@ -34,8 +34,8 @@ jobs:
             sleep 15
           done
           [ "$ok" = 1 ] || { echo "::error::Supabase CLI download failed after 5 attempts"; exit 1; }
-          tar -xzf supabase.tar.gz supabase
-          sudo install supabase /usr/local/bin/supabase
+          tar -xzf supabase.tar.gz -C /tmp supabase
+          sudo install /tmp/supabase /usr/local/bin/supabase
           supabase --version
 
       - name: Link project
