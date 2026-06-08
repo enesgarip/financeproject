@@ -17,16 +17,51 @@ permissions:
   actions: write
 
 jobs:
-  # Take an encrypted backup before any migration runs, so a bad migration
-  # always has an exact pre-migration restore point. Migration waits on this.
+  # Detect whether this push touched any migration file. The pre-migration
+  # backup only runs when it did, so UI/edge-only deploys don't take (and crowd
+  # out) backups. The daily scheduled backup still covers everything else.
+  changes:
+    name: Detect migration changes
+    runs-on: ubuntu-latest
+    outputs:
+      migrations: ${{ steps.detect.outputs.migrations }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Detect migration changes
+        id: detect
+        env:
+          BEFORE: ${{ github.event.before }}
+          SHA: ${{ github.sha }}
+        run: |
+          if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
+            echo "migrations=true" >> "$GITHUB_OUTPUT" # manual/first run: back up to be safe
+            exit 0
+          fi
+          changed=$(git diff --name-only "$BEFORE" "$SHA" -- supabase/migrations 2>/dev/null || echo ERROR)
+          if [ "$changed" = "ERROR" ] || [ -n "$changed" ]; then
+            echo "migrations=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "migrations=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  # Encrypted backup before migrations run (only when a migration actually
+  # changed), so a bad migration always has a pre-migration restore point.
   backup:
     name: Pre-migration backup
+    needs: changes
+    if: ${{ needs.changes.outputs.migrations == 'true' }}
     uses: ./.github/workflows/db-backup.yml
     secrets: inherit
 
   migrate:
     name: Supabase Production Migration
-    needs: backup
+    needs: [changes, backup]
+    # Proceed unless a required backup failed; a skipped backup (no migration
+    # change) is fine.
+    if: ${{ !cancelled() && needs.backup.result != 'failure' }}
     runs-on: ubuntu-latest
     env:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
