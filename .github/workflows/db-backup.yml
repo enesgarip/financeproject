@@ -15,9 +15,11 @@ on:
   schedule:
     - cron: '0 2 * * *' # every day at 02:00 UTC
   workflow_dispatch:
+  workflow_call: # invoked by deploy.yml before migrations run
 
 permissions:
   contents: read
+  actions: write # needed to delete (prune) old backup artifacts
 
 jobs:
   backup:
@@ -64,3 +66,17 @@ jobs:
           path: backup-*.sql.gpg
           retention-days: 90
           if-no-files-found: error
+
+      - name: Prune old backups (keep newest 5)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          KEEP: '5'
+        run: |
+          old=$(gh api "repos/${{ github.repository }}/actions/artifacts?per_page=100" \
+            --jq '[.artifacts[] | select(.name | startswith("db-backup-"))]
+                  | sort_by(.created_at) | reverse | .[(env.KEEP | tonumber):] | .[].id')
+          for id in $old; do
+            echo "Deleting old backup artifact $id"
+            gh api -X DELETE "repos/${{ github.repository }}/actions/artifacts/$id" || true
+          done
+

@@ -10,9 +10,23 @@ concurrency:
   group: deploy-production
   cancel-in-progress: false
 
+# contents: read for checkout; actions: write so the pre-migration backup
+# (reusable db-backup workflow) can prune old artifacts.
+permissions:
+  contents: read
+  actions: write
+
 jobs:
+  # Take an encrypted backup before any migration runs, so a bad migration
+  # always has an exact pre-migration restore point. Migration waits on this.
+  backup:
+    name: Pre-migration backup
+    uses: ./.github/workflows/db-backup.yml
+    secrets: inherit
+
   migrate:
     name: Supabase Production Migration
+    needs: backup
     runs-on: ubuntu-latest
     env:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
