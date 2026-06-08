@@ -675,7 +675,12 @@ export function buildIssues(data: HealthData): HealthIssue[] {
         updates.currency = null
         details.push('Nakit dışı varlıkta para birimi temizlenecek.')
       }
-      if (asset.category !== 'Altın' && (asset.amount !== 1 || asset.unit !== 'TRY')) {
+      if (asset.category === 'Hisse') {
+        if (asset.unit !== 'TRY') {
+          updates.unit = 'TRY'
+          details.push('Hisse varlıkta birim teknik alanı TRY yapılacak; adet miktarı korunacak.')
+        }
+      } else if (asset.category !== 'Altın' && (asset.amount !== 1 || asset.unit !== 'TRY')) {
         updates.amount = 1
         updates.unit = 'TRY'
         details.push('Altın dışı varlıkta miktar/birim teknik alanları normalize edilecek.')
