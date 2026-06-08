@@ -1,0 +1,66 @@
+name: Database Backup
+
+# Daily encrypted logical backup of the Supabase Postgres database, stored as a
+# GitHub Actions artifact (free). The dump is AES256-encrypted with gpg before
+# upload, so it stays private even though this repository is public.
+#
+# Restore (locally):
+#   gpg --batch --yes --decrypt --passphrase "<BACKUP_PASSPHRASE>" \
+#       -o backup.sql backup-YYYYMMDD-HHMMSS.sql.gpg
+#   psql "<target-db-url>" -f backup.sql
+#
+# Required secrets: SUPABASE_DB_PASSWORD, SUPABASE_PROJECT_REF, BACKUP_PASSPHRASE
+
+on:
+  schedule:
+    - cron: '0 2 * * *' # every day at 02:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    name: Dump and encrypt
+    runs-on: ubuntu-latest
+    env:
+      PGPASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+      BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+      # Supabase free tier exposes only the connection pooler (no direct host).
+      POOLER_HOST: aws-1-eu-central-1.pooler.supabase.com
+    steps:
+      - name: Install PostgreSQL 17 client
+        run: |
+          sudo sh -c 'echo "deb https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
+          curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/pgdg.gpg
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client-17
+
+      - name: Verify backup passphrase is set
+        run: |
+          if [ -z "$BACKUP_PASSPHRASE" ]; then
+            echo "::error::BACKUP_PASSPHRASE secret is not set; refusing to write an unencrypted backup."
+            exit 1
+          fi
+
+      - name: Dump and encrypt
+        run: |
+          TS=$(date -u +%Y%m%d-%H%M%S)
+          OUT="backup-${TS}.sql.gpg"
+          /usr/lib/postgresql/17/bin/pg_dump \
+            -h "$POOLER_HOST" -p 5432 -U "postgres.${PROJECT_REF}" -d postgres \
+            --schema=public --schema=auth --schema=storage \
+            --no-owner --no-privileges \
+            | gpg --batch --yes --symmetric --cipher-algo AES256 \
+                  --passphrase "$BACKUP_PASSPHRASE" -o "$OUT"
+          echo "BACKUP_FILE=$OUT" >> "$GITHUB_ENV"
+          ls -lh "$OUT"
+
+      - name: Upload encrypted backup
+        uses: actions/upload-artifact@v4
+        with:
+          name: db-backup-${{ github.run_id }}
+          path: backup-*.sql.gpg
+          retention-days: 90
+          if-no-files-found: error
