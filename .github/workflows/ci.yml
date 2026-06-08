@@ -96,8 +96,12 @@ jobs:
             sleep 15
           done
           [ "$ok" = 1 ] || { echo "::error::Supabase CLI download failed after 5 attempts"; exit 1; }
-          tar -xzf supabase.tar.gz -C /tmp supabase
-          sudo install /tmp/supabase /usr/local/bin/supabase
+          rm -rf /tmp/sbcli && mkdir -p /tmp/sbcli
+          tar -xzf supabase.tar.gz -C /tmp/sbcli
+          # Recent releases ship a `supabase` shim plus a `supabase-go` binary;
+          # install both, co-located, so the shim can find its backend.
+          sudo cp /tmp/sbcli/supabase* /usr/local/bin/
+          sudo chmod +x /usr/local/bin/supabase*
           supabase --version
 
       - name: Start local Supabase
