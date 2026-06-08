@@ -110,6 +110,9 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - migrate
+    # Explicit condition: a skipped backup upstream must not skip the frontend
+    # deploy. Run whenever migration succeeded.
+    if: ${{ !cancelled() && needs.migrate.result == 'success' }}
     env:
       VERCEL_DEPLOY_HOOK_URL: ${{ secrets.VERCEL_DEPLOY_HOOK_URL }}
     steps:
