@@ -22,11 +22,22 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
-      - name: Setup Supabase CLI
-        uses: supabase/setup-cli@v2
-        with:
-          version: 2.101.0
-          
+      - name: Install Supabase CLI (with retry)
+        run: |
+          VERSION=2.101.0
+          ok=0
+          for i in 1 2 3 4 5; do
+            if curl -fSL "https://github.com/supabase/cli/releases/download/v${VERSION}/supabase_linux_amd64.tar.gz" -o supabase.tar.gz; then
+              ok=1; break
+            fi
+            echo "Supabase CLI download attempt $i failed; retrying in 15s..."
+            sleep 15
+          done
+          [ "$ok" = 1 ] || { echo "::error::Supabase CLI download failed after 5 attempts"; exit 1; }
+          tar -xzf supabase.tar.gz supabase
+          sudo install supabase /usr/local/bin/supabase
+          supabase --version
+
       - name: Link project
         run: supabase link --project-ref "$SUPABASE_PROJECT_REF" --yes
 
