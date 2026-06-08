@@ -1,5 +1,5 @@
 import { FileUp, X, CheckCircle2, AlertCircle, Loader2, FileText } from 'lucide-react'
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import type { Card } from '../../types/database'
 import { formatCurrency } from '../../utils/formatCurrency'
@@ -78,6 +78,15 @@ type Props = {
 }
 
 export function StatementImportModal({ card, onClose, onSuccess }: Props) {
+  // Modal açıkken arka plan sayfasının kaymasını engelle.
+  useEffect(() => {
+    const original = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = original
+    }
+  }, [])
+
   const [step, setStep] = useState<Step>('upload')
   const [parsing, setParsing] = useState(false)
   const [parseError, setParseError] = useState('')
@@ -226,8 +235,8 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
   const diff = statementTotal - appCardDebt
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-sm sm:items-center">
-      <div className="w-full max-w-lg rounded-t-2xl bg-card shadow-xl sm:rounded-2xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-3 py-4 backdrop-blur-sm sm:p-6">
+      <div className="max-h-[92svh] w-full max-w-lg overflow-y-auto rounded-2xl bg-card shadow-xl">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
           <div className="flex items-center gap-2">

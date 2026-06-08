@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { X } from 'lucide-react'
 
 type SimpleModalProps = {
@@ -8,15 +9,25 @@ type SimpleModalProps = {
 }
 
 export function SimpleModal({ title, open, children, onClose }: SimpleModalProps) {
+  // Modal açıkken arka plan sayfasının kaymasını engelle (mobilde "aşağı indim" hissini önler).
+  useEffect(() => {
+    if (!open) return
+    const original = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = original
+    }
+  }, [open])
+
   if (!open) return null
 
   return (
-    <div className="fixed inset-0 z-40 flex items-end bg-slate-950/56 px-0 backdrop-blur-md sm:items-center sm:justify-center sm:p-6">
+    <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-950/56 px-3 py-4 backdrop-blur-md sm:p-6">
       <section
         role="dialog"
         aria-modal="true"
         aria-labelledby="simple-modal-title"
-        className="max-h-[92svh] w-full min-w-0 overflow-x-hidden overflow-y-auto rounded-t-lg border border-border/85 bg-card text-card-foreground shadow-[var(--shadow-elevated)] sm:max-w-2xl sm:rounded-lg"
+        className="max-h-[92svh] w-full min-w-0 overflow-x-hidden overflow-y-auto rounded-lg border border-border/85 bg-card text-card-foreground shadow-[var(--shadow-elevated)] sm:max-w-2xl"
       >
         <header className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-border/80 bg-card/94 px-4 py-3 backdrop-blur">
           <h2 id="simple-modal-title" className="min-w-0 truncate text-base font-black text-foreground">{title}</h2>

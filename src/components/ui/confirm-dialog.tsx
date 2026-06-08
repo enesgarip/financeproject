@@ -1,3 +1,4 @@
+import { useEffect } from "react"
 import { AlertTriangle, X } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -26,6 +27,16 @@ function ConfirmDialog({
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
+  // Dialog açıkken arka plan sayfasının kaymasını engelle.
+  useEffect(() => {
+    if (!open) return
+    const original = document.body.style.overflow
+    document.body.style.overflow = "hidden"
+    return () => {
+      document.body.style.overflow = original
+    }
+  }, [open])
+
   if (!open) return null
 
   const isDestructive = variant === "destructive"
