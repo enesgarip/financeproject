@@ -14,8 +14,8 @@ export default defineConfig({
     react(),
     tailwindcss(),
     sentryVitePlugin({
-      org: process.env.SENTRY_ORG,
-      project: process.env.SENTRY_PROJECT,
+      org: process.env.SENTRY_ORG ?? 'enes-je',
+      project: process.env.SENTRY_PROJECT ?? 'javascript-react',
       authToken: sentryAuthToken,
       disable: !sentryAuthToken,
       // Upload the .map files, then delete them from the build output so they
