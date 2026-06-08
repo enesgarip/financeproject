@@ -1,8 +1,9 @@
-import { useEffect } from "react"
+import { createPortal } from "react-dom"
 import { AlertTriangle, X } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { useBodyScrollLock } from "./use-body-scroll-lock"
 
 type ConfirmDialogProps = {
   open: boolean
@@ -27,22 +28,14 @@ function ConfirmDialog({
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
-  // Dialog açıkken arka plan sayfasının kaymasını engelle.
-  useEffect(() => {
-    if (!open) return
-    const original = document.body.style.overflow
-    document.body.style.overflow = "hidden"
-    return () => {
-      document.body.style.overflow = original
-    }
-  }, [open])
+  useBodyScrollLock(open)
 
   if (!open) return null
 
   const isDestructive = variant === "destructive"
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-end bg-slate-950/45 px-3 pb-3 backdrop-blur-sm sm:items-center sm:justify-center sm:p-6">
+  return createPortal(
+    <div className="fixed inset-0 z-[90] flex items-end bg-slate-950/45 px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] backdrop-blur-sm sm:items-center sm:justify-center sm:p-6">
       <section
         role="alertdialog"
         aria-modal="true"
@@ -93,7 +86,8 @@ function ConfirmDialog({
           </Button>
         </div>
       </section>
-    </div>
+    </div>,
+    document.body,
   )
 }
 
