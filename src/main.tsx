@@ -3,6 +3,10 @@ import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import './index.css'
 import { App } from './App'
+import { ErrorFallback } from './components/ErrorFallback'
+import { initSentry, Sentry } from './lib/sentry'
+
+initSentry()
 
 const storedTheme = localStorage.getItem('theme')
 const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
@@ -10,9 +14,11 @@ document.documentElement.classList.toggle('dark', storedTheme ? storedTheme === 
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <BrowserRouter>
-      <App />
-    </BrowserRouter>
+    <Sentry.ErrorBoundary fallback={<ErrorFallback />}>
+      <BrowserRouter>
+        <App />
+      </BrowserRouter>
+    </Sentry.ErrorBoundary>
   </StrictMode>,
 )
 

@@ -19,6 +19,7 @@
     "ci:local": "npm exec -- eslint . && npm exec -- tsc -b && npm exec -- vitest run && npm exec -- vite build && npm exec -- playwright test"
   },
   "dependencies": {
+    "@sentry/react": "^10.56.0",
     "@supabase/supabase-js": "^2.105.1",
     "@vercel/analytics": "^2.0.1",
     "class-variance-authority": "^0.7.1",
