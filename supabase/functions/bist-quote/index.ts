@@ -9,13 +9,10 @@
 // Yahoo is an unofficial source and may change; callers must treat a missing
 // price as "unavailable" and fall back to the stored/manual value.
 
-const CORS_HEADERS: Record<string, string> = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-}
+import { fetchWithTimeout, handlePreflight, jsonResponse } from '../_shared/edge.ts'
 
 const MAX_SYMBOLS = 60
+const YAHOO_TIMEOUT_MS = 6_000
 // query1 sometimes rate-limits datacenter IPs; query2 is a transparent mirror.
 const YAHOO_HOSTS = [
   'https://query1.finance.yahoo.com/v8/finance/chart',
@@ -32,9 +29,11 @@ function normalizeSymbol(raw: unknown): string | null {
 async function fetchPrice(symbol: string): Promise<number | null> {
   for (const host of YAHOO_HOSTS) {
     try {
-      const res = await fetch(`${host}/${symbol}.IS?interval=1d&range=1d`, {
-        headers: { 'User-Agent': 'Mozilla/5.0', Accept: 'application/json' },
-      })
+      const res = await fetchWithTimeout(
+        `${host}/${symbol}.IS?interval=1d&range=1d`,
+        { headers: { 'User-Agent': 'Mozilla/5.0', Accept: 'application/json' } },
+        YAHOO_TIMEOUT_MS,
+      )
       if (!res.ok) continue
       const json = await res.json()
       const price = json?.chart?.result?.[0]?.meta?.regularMarketPrice
@@ -47,16 +46,10 @@ async function fetchPrice(symbol: string): Promise<number | null> {
 }
 
 Deno.serve(async (req: Request) => {
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: CORS_HEADERS })
-  }
+  const preflight = handlePreflight(req)
+  if (preflight) return preflight
 
-  if (req.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
-      status: 405,
-      headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
-    })
-  }
+  if (req.method !== 'POST') return jsonResponse({ error: 'Method not allowed' }, 405)
 
   let body: unknown
   try {
@@ -82,8 +75,5 @@ Deno.serve(async (req: Request) => {
     }),
   )
 
-  return new Response(
-    JSON.stringify({ prices, asOf: new Date().toISOString() }),
-    { headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' } },
-  )
+  return jsonResponse({ prices, asOf: new Date().toISOString() })
 })

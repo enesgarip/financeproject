@@ -10,16 +10,13 @@
 //
 // The image is forwarded to Google only for parsing and is never stored.
 
-const CORS_HEADERS: Record<string, string> = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-}
+import { fetchWithTimeout, handlePreflight, jsonResponse } from '../_shared/edge.ts'
 
 // Must mirror src/utils/categories.ts expenseCategories.
 const CATEGORIES = ['Market', 'Yemek', 'Ulaşım', 'Alışveriş', 'Fatura', 'Sağlık', 'Eğlence', 'Eğitim', 'Diğer']
 const MODEL = 'gemini-2.5-flash'
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024 // ~8 MB of base64
+const GEMINI_TIMEOUT_MS = 25_000
 
 const PROMPT = `Sen bir Türkçe fiş/fatura okuyucususun. Verilen görsel bir alışveriş fişi, fatura veya banka harcama bildirimidir.
 Görselden tek bir harcamayı çıkar ve SADECE şu JSON şemasında yanıt ver:
@@ -32,13 +29,6 @@ Kurallar:
 - Görsel bir harcama içermiyorsa amount: 0 döndür.`
 
 type ParsedReceipt = { merchant: string; amount: number; date: string; category: string }
-
-function jsonResponse(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
-  })
-}
 
 function coerceResult(raw: unknown): ParsedReceipt {
   const obj = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>
@@ -54,7 +44,8 @@ function coerceResult(raw: unknown): ParsedReceipt {
 }
 
 Deno.serve(async (req: Request) => {
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS_HEADERS })
+  const preflight = handlePreflight(req)
+  if (preflight) return preflight
   if (req.method !== 'POST') return jsonResponse({ error: 'Method not allowed' }, 405)
 
   const apiKey = Deno.env.get('GEMINI_API_KEY')
@@ -91,11 +82,15 @@ Deno.serve(async (req: Request) => {
 
   let geminiText: string
   try {
-    const res = await fetch(endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    })
+    const res = await fetchWithTimeout(
+      endpoint,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      },
+      GEMINI_TIMEOUT_MS,
+    )
     if (!res.ok) {
       return jsonResponse({ error: `Gemini hatası (${res.status}).` }, 502)
     }
