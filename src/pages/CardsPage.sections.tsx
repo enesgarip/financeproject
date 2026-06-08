@@ -2,9 +2,11 @@ import {
   AlertTriangle,
   ArrowRightLeft,
   CalendarClock,
+  Camera,
   CheckCircle2,
   Clock3,
   CreditCard as CreditCardIcon,
+  Image as ImageIcon,
   LayoutGrid,
   ReceiptText,
   ScanLine,
@@ -790,7 +792,8 @@ export function QuickExpensePanel({
   const [localError, setLocalError] = useState('')
   const [saving, setSaving] = useState(false)
   const [scanning, setScanning] = useState(false)
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const cameraInputRef = useRef<HTMLInputElement>(null)
+  const galleryInputRef = useRef<HTMLInputElement>(null)
   const categoryMemory = useCategoryMemory()
   const cards = useMemo(() => rows.filter((row) => row.card_type === 'kredi_karti' || row.card_type === 'banka_karti'), [rows])
   const activeCardId = cards.some((card) => card.id === cardId) ? cardId : (cards[0]?.id ?? '')
@@ -923,7 +926,7 @@ export function QuickExpensePanel({
       <CardContent>
         <form onSubmit={handleSubmit} className="flex flex-col gap-2.5">
           <input
-            ref={fileInputRef}
+            ref={cameraInputRef}
             type="file"
             accept="image/*"
             capture="environment"
@@ -934,15 +937,42 @@ export function QuickExpensePanel({
               if (file) void handleScanFile(file)
             }}
           />
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={scanning}
-            className="inline-flex items-center justify-center gap-2 rounded-xl border border-dashed border-primary/40 bg-primary/5 px-4 py-2.5 text-sm font-semibold text-primary transition hover:bg-primary/10 disabled:opacity-60"
-          >
-            <ScanLine size={16} />
-            {scanning ? 'Fiş okunuyor...' : 'Fişi/faturayı tara'}
-          </button>
+          <input
+            ref={galleryInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(event) => {
+              const file = event.target.files?.[0]
+              event.target.value = '' // allow re-selecting the same file
+              if (file) void handleScanFile(file)
+            }}
+          />
+          {scanning ? (
+            <div className="inline-flex items-center justify-center gap-2 rounded-xl border border-dashed border-primary/40 bg-primary/5 px-4 py-2.5 text-sm font-semibold text-primary">
+              <ScanLine size={16} />
+              Fiş okunuyor...
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-2.5">
+              <button
+                type="button"
+                onClick={() => cameraInputRef.current?.click()}
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-dashed border-primary/40 bg-primary/5 px-4 py-2.5 text-sm font-semibold text-primary transition hover:bg-primary/10"
+              >
+                <Camera size={16} />
+                Kamerayla çek
+              </button>
+              <button
+                type="button"
+                onClick={() => galleryInputRef.current?.click()}
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-dashed border-primary/40 bg-primary/5 px-4 py-2.5 text-sm font-semibold text-primary transition hover:bg-primary/10"
+              >
+                <ImageIcon size={16} />
+                Galeriden seç
+              </button>
+            </div>
+          )}
           <label className="block text-sm font-semibold text-foreground">
             Kart
             <select
