@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Budget, CardExpense } from '../types/database'
-import { buildBudgetAlerts } from './budgetAlerts'
+import { buildBudgetAlerts, buildBudgetUsage } from './budgetAlerts'
 
 const base = { id: 'id', user_id: 'u', created_at: '2026-06-01T00:00:00.000Z', updated_at: '2026-06-01T00:00:00.000Z' }
 const JUNE = new Date(2026, 5, 15)
@@ -66,5 +66,30 @@ describe('buildBudgetAlerts', () => {
   it('keeps usage just under 80% out of the alert list', () => {
     const alerts = buildBudgetAlerts([budget({ category: 'X', limit_amount: 1000 })], [expense({ category: 'X', amount: 799 })], JUNE)
     expect(alerts).toHaveLength(0)
+  })
+})
+
+describe('buildBudgetUsage', () => {
+  it('returns every monthly budget (including ok ones) so dashboard and analysis agree', () => {
+    const budgets = [
+      budget({ id: 'market', category: 'Market', limit_amount: 1000 }),
+      budget({ id: 'saglik', category: 'Sağlık', limit_amount: 1000 }),
+    ]
+    const expenses = [expense({ category: 'Market', amount: 1100 }), expense({ category: 'Sağlık', amount: 100 })]
+
+    const usage = buildBudgetUsage(budgets, expenses, JUNE)
+
+    expect(usage).toHaveLength(2)
+    expect(usage.find((row) => row.budgetId === 'market')).toMatchObject({ status: 'over', spent: 1100 })
+    expect(usage.find((row) => row.budgetId === 'saglik')).toMatchObject({ status: 'ok', spent: 100 })
+  })
+
+  it('buckets uncategorised expenses into Diğer for both screens', () => {
+    const usage = buildBudgetUsage(
+      [budget({ id: 'd', category: 'Diğer', limit_amount: 100 })],
+      [expense({ category: null, amount: 150 })],
+      JUNE,
+    )
+    expect(usage[0]).toMatchObject({ category: 'Diğer', spent: 150, status: 'over' })
   })
 })

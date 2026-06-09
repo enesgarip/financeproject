@@ -33,6 +33,7 @@ import type {
 import { daysUntil, formatDate } from '../utils/date'
 import { formatCurrency, parseNumber } from '../utils/formatCurrency'
 import { getLastUsed, resolvePreferred, setLastUsed } from '../utils/lastUsed'
+import { paymentCashOutflowAmount, paymentUsesCreditCard } from '../utils/financeSummary'
 import type { FinanceObligation, FinanceObligationsInput } from '../utils/obligations'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
@@ -141,16 +142,20 @@ async function getPaymentCards(): Promise<FinanceCard[]> {
 }
 
 function paymentToObligation(payment: Payment): FinanceObligation {
+  const usesCreditCard = paymentUsesCreditCard(payment)
   return {
     id: `payment-${payment.id}`,
     kind: 'payment',
     action: 'pay_payment',
     sourceId: payment.id,
+    relatedCardId: payment.auto_source_card_id ?? undefined,
     title: payment.title,
     subtitle: payment.category,
     date: payment.due_date,
     amount: payment.amount,
+    cashImpactAmount: paymentCashOutflowAmount(payment),
     direction: 'outflow',
+    settlement: usesCreditCard ? 'credit_card' : 'cash',
     isEstimate: payment.amount_status === 'estimated',
   }
 }
@@ -169,7 +174,7 @@ function getPaymentMethodLabel(payment: Payment) {
 // Banka talimatı + kredi kartı + bilinen tutar → vade gelince otomatik postalanır;
 // bu kayıtlarda manuel "Öde" butonu gösterilmez.
 function isAutoPostedPayment(payment: Payment) {
-  return payment.payment_method === 'bank_auto' && Boolean(payment.auto_source_card_id) && payment.amount > 0
+  return paymentUsesCreditCard(payment) && payment.amount > 0
 }
 
 /** Vadesi gelmiş banka talimatlarını açılışta otomatik karta borç olarak işler. */

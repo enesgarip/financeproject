@@ -27,11 +27,13 @@ import type {
   TransactionHistory,
 } from '../types/database'
 import { SavingsGoalsPanel } from '../components/finance/SavingsGoalsPanel'
-import { expenseCategories, expenseCategoryOptions } from '../utils/categories'
+import { expenseCategoryOptions } from '../utils/categories'
 import { addMonths, dateInputValue, daysUntil, formatDate, isDateInMonth, monthlyOccurrenceDate, startOfMonth } from '../utils/date'
 import { formatCurrency, parseNumber } from '../utils/formatCurrency'
 import { buildCashFlowForecast } from '../utils/cashFlowForecast'
-import { buildFinancialPosition } from '../utils/financeSummary'
+import { buildFinancialPosition, buildMonthlyCashFlow, paymentOccurrenceInMonth } from '../utils/financeSummary'
+import { buildFinanceObligationsForMonth, type FinanceObligation, type FinanceObligationsInput } from '../utils/obligations'
+import { activeExpense as activeCardExpense, buildBudgetUsage } from '../utils/budgetAlerts'
 import { useMarketRates } from '../hooks/useMarketRates'
 import { type MarketRatesSnapshot } from '../utils/marketRates'
 import { convertNetWorth, formatRealValue, realValueChangeBadge, type RealUnit, REAL_UNIT_LABELS } from '../utils/realValue'
@@ -117,10 +119,6 @@ function optionalRows<T>(response: QueryResponse<T>, tableName: string) {
   return { rows: [] as T[], missingTable: null, error: response.error }
 }
 
-function activeCardExpense(expense: CardExpense) {
-  return expense.status !== 'cancelled'
-}
-
 const budgetFields: FormField[] = [
   { name: 'month', label: 'Ay', type: 'date', required: true },
   { name: 'category', label: 'Kategori', type: 'select', options: expenseCategoryOptions },
@@ -147,19 +145,10 @@ function getCurrentSalary(rows: SalaryHistory[]) {
   return ordered.filter((row) => row.effective_date <= today).at(-1) ?? ordered.at(-1) ?? null
 }
 
+// Delegates to the shared occurrence rule so this page can never disagree with
+// the cash-flow / obligations engines about which payments land this month.
 function paymentInCurrentMonth(payment: Payment) {
-  if (payment.status !== 'bekliyor') return false
-
-  if (payment.recurrence === 'monthly') {
-    const occurrence = monthlyOccurrenceDate(payment.recurrence_day)
-    if (!occurrence) return false
-
-    const dueDate = new Date(`${payment.due_date}T00:00:00`)
-    const endDate = payment.recurrence_end_date ? new Date(`${payment.recurrence_end_date}T00:00:00`) : null
-    return occurrence >= dueDate && (!endDate || occurrence <= endDate)
-  }
-
-  return isDateInMonth(payment.due_date)
+  return paymentOccurrenceInMonth(payment) !== null
 }
 
 function buildSearchItems(data: AnalysisData): SearchItem[] {
@@ -305,37 +294,22 @@ function StatPill({ label, value, tone = 'stone' }: { label: string; value: stri
 }
 
 function MonthlyReport({ data }: { data: AnalysisData }) {
-  const monthKey = dateInputValue(startOfMonth())
-  const salary = getCurrentSalary(data.salaryHistory)?.amount ?? 0
-  const receivables = sum(
-    data.debts.filter((debt) => debt.direction === 'borç_verdim' && debt.status === 'açık' && isDateInMonth(debt.due_date)),
-    (debt) => debt.estimated_value_try,
-  )
+  // Same engine the dashboard cash-flow card uses, so "Gelir / Çıkış / Net" here
+  // can never disagree with the dashboard for the same month (credit-card auto
+  // payments are excluded from cash outflow exactly like there).
+  const cashFlow = buildMonthlyCashFlow(data)
   const cardSpending = sum(
     data.cardExpenses.filter((expense) => activeCardExpense(expense) && isDateInMonth(expense.spent_at)),
     (expense) => expense.amount,
   )
-  const cardInstallments = sum(
-    data.cardInstallments.filter((installment) => installment.due_month === monthKey && installment.status !== 'paid'),
-    (installment) => installment.amount,
-  )
-  const payments = sum(data.payments.filter(paymentInCurrentMonth), (payment) => payment.amount)
-  const loanInstallments = sum(
-    data.loanInstallments.filter((installment) => installment.status === 'bekliyor' && isDateInMonth(installment.due_date)),
-    (installment) => installment.amount,
-  )
-  const personalDebts = sum(
-    data.debts.filter((debt) => debt.direction === 'borç_aldım' && debt.status === 'açık' && isDateInMonth(debt.due_date)),
-    (debt) => debt.estimated_value_try,
-  )
-  const income = salary + receivables
-  const outflow = cardInstallments + payments + loanInstallments + personalDebts
-  const net = income - outflow
+  const income = cashFlow.income
+  const outflow = cashFlow.outflow
+  const net = cashFlow.netFlow
   const reportRows = [
-    { label: 'Kart taksitleri', value: cardInstallments },
-    { label: 'Fatura/ödeme', value: payments },
-    { label: 'Kredi taksidi', value: loanInstallments },
-    { label: 'Kişisel borç', value: personalDebts },
+    { label: 'Kart ödemesi', value: cashFlow.cardOutflow },
+    { label: 'Fatura/ödeme', value: cashFlow.paymentOutflow },
+    { label: 'Kredi taksidi', value: cashFlow.loanOutflow },
+    { label: 'Kişisel borç', value: cashFlow.debtOutflow },
   ]
 
   return (
@@ -344,7 +318,7 @@ function MonthlyReport({ data }: { data: AnalysisData }) {
         <div className="flex items-start justify-between gap-3">
           <div>
             <CardTitle>Aylık rapor</CardTitle>
-            <p className="mt-1 text-sm text-muted-foreground">{formatMonth(monthKey)}</p>
+            <p className="mt-1 text-sm text-muted-foreground">{cashFlow.monthLabel}</p>
           </div>
           <div className="flex shrink-0 items-center gap-2">
             <Button type="button" variant="outline" onClick={() => window.print()}>
@@ -460,59 +434,42 @@ function UpcomingInstallments({ data }: { data: AnalysisData }) {
 }
 
 function BudgetProgress({ budgets, expenses }: { budgets: Budget[]; expenses: CardExpense[] }) {
-  const { monthlyBudgets, monthlyExpenses } = useMemo(() => {
-    const monthKey = dateInputValue(startOfMonth())
-    const spentByCategory = new Map<string, number>()
+  // Same usage engine the dashboard budget-alert panel reads, so category spend
+  // and over/warning thresholds match across the two screens.
+  const usage = useMemo(() => buildBudgetUsage(budgets, expenses), [budgets, expenses])
 
-    for (const expense of expenses) {
-      if (!activeCardExpense(expense) || !isDateInMonth(expense.spent_at)) continue
-      const normalizedCategory = expense.category ?? expenseCategories.at(-1) ?? 'Diger'
-      spentByCategory.set(normalizedCategory, (spentByCategory.get(normalizedCategory) ?? 0) + expense.amount)
-    }
-
-    return {
-      monthlyBudgets: budgets.filter((budget) => budget.month === monthKey),
-      monthlyExpenses: Array.from(spentByCategory, ([category, amount]) => ({ category, amount })),
-    }
-  }, [budgets, expenses])
-
-  if (monthlyBudgets.length === 0) {
+  if (usage.length === 0) {
     return <p className="rounded-xl bg-muted/45 p-3 text-sm text-muted-foreground">Bu ay için bütçe eklediğinde kategori kullanımı burada görünecek.</p>
   }
 
   return (
     <div className="space-y-2">
-      {monthlyBudgets.map((budget) => {
-        const spent = sum(
-          monthlyExpenses.filter((expense) => (expense.category ?? 'Diğer') === budget.category),
-          (expense) => expense.amount,
-        )
-        const usageRate = budget.limit_amount > 0 ? Math.min(100, (spent / budget.limit_amount) * 100) : spent > 0 ? 100 : 0
-        const isOver = spent > budget.limit_amount + 0.01
-        const isWarning = !isOver && usageRate >= 80
+      {usage.map((budget) => {
+        const isOver = budget.status === 'over'
+        const isWarning = budget.status === 'warning'
 
         return (
           <div
-            key={budget.id}
+            key={budget.budgetId}
             className={`rounded-xl border p-3 ${isOver ? 'border-destructive/20 bg-destructive/8' : isWarning ? 'border-warning/20 bg-warning/8' : 'border-border/50 bg-muted/30'}`}
           >
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="truncate text-sm font-bold text-foreground">{budget.category}</p>
                 <p className="mt-0.5 text-xs text-muted-foreground">
-                  {formatCurrency(spent)} / {formatCurrency(budget.limit_amount)}
+                  {formatCurrency(budget.spent)} / {formatCurrency(budget.limit)}
                 </p>
                 {isOver ? (
                   <p className="mt-0.5 text-xs font-medium text-destructive">
-                    Limit {formatCurrency(spent - budget.limit_amount)} aşıldı
+                    Limit {formatCurrency(budget.spent - budget.limit)} aşıldı
                   </p>
                 ) : isWarning ? (
                   <p className="mt-0.5 text-xs font-medium text-warning">Limite yaklaşıyor</p>
                 ) : null}
               </div>
-              <Badge variant={isOver ? 'destructive' : isWarning ? 'secondary' : 'outline'}>%{Math.round(usageRate)}</Badge>
+              <Badge variant={isOver ? 'destructive' : isWarning ? 'secondary' : 'outline'}>%{Math.round(budget.usageRate)}</Badge>
             </div>
-            <Progress value={Math.min(100, usageRate)} className="mt-3 h-1.5" />
+            <Progress value={Math.min(100, budget.usageRate)} className="mt-3 h-1.5" />
           </div>
         )
       })}
@@ -625,67 +582,35 @@ type CalendarEvent = {
   tone: 'emerald' | 'rose' | 'amber' | 'stone'
 }
 
-function buildCalendarEvents(data: AnalysisData) {
-  const monthKey = dateInputValue(startOfMonth())
-  const events: CalendarEvent[] = []
-
-  for (const payment of data.payments) {
-    const occurrence = payment.recurrence === 'monthly' ? monthlyOccurrenceDate(payment.recurrence_day) : new Date(`${payment.due_date}T00:00:00`)
-    if (payment.status !== 'bekliyor' || !occurrence || !isDateInMonth(occurrence)) continue
-
-    events.push({
-      id: `payment-${payment.id}`,
-      date: dateInputValue(occurrence),
-      title: payment.title,
-      amount: payment.amount,
-      tone: payment.amount_status === 'estimated' ? 'amber' : 'rose',
-    })
+function analysisObligationsInput(data: AnalysisData): FinanceObligationsInput {
+  return {
+    cards: data.cards,
+    payments: data.payments,
+    loans: data.loans,
+    loanInstallments: data.loanInstallments,
+    debts: data.debts,
+    cardInstallments: data.cardInstallments,
+    cardStatements: data.cardStatementArchives,
   }
+}
 
-  for (const card of data.cards.filter((item) => item.card_type === 'kredi_karti' && item.statement_debt_amount > 0)) {
-    const dueDate = monthlyOccurrenceDate(card.due_day)
-    if (!dueDate || !isDateInMonth(dueDate)) continue
-    events.push({
-      id: `card-${card.id}`,
-      date: dateInputValue(dueDate),
-      title: `${card.card_name} ekstresi`,
-      amount: card.statement_debt_amount,
-      tone: 'rose',
-    })
-  }
+function obligationCalendarTone(item: FinanceObligation): CalendarEvent['tone'] {
+  if (item.direction === 'inflow') return 'emerald'
+  if (item.settlement === 'credit_card') return 'stone'
+  if (item.isEstimate) return 'amber'
+  return 'rose'
+}
 
-  for (const installment of data.loanInstallments.filter((item) => item.status === 'bekliyor' && isDateInMonth(item.due_date))) {
-    const loan = data.loans.find((item) => item.id === installment.loan_id)
-    events.push({
-      id: `loan-${installment.id}`,
-      date: installment.due_date,
-      title: loan ? `${loan.loan_name} taksidi` : 'Kredi taksidi',
-      amount: installment.amount,
-      tone: 'rose',
-    })
-  }
-
-  for (const installment of data.cardInstallments.filter((item) => item.due_month === monthKey && (item.status === 'scheduled' || item.status === 'posted'))) {
-    events.push({
-      id: `card-installment-${installment.id}`,
-      date: installment.due_month,
-      title: `${installment.description} (${installment.installment_no}/${installment.installment_count})`,
-      amount: installment.amount,
-      tone: installment.status === 'posted' ? 'stone' : 'amber',
-    })
-  }
-
-  for (const debt of data.debts.filter((item) => item.status === 'açık' && item.due_date && isDateInMonth(item.due_date))) {
-    events.push({
-      id: `debt-${debt.id}`,
-      date: debt.due_date ?? monthKey,
-      title: debt.direction === 'borç_aldım' ? `${debt.person_name} borcu` : `${debt.person_name} alacağı`,
-      amount: debt.estimated_value_try,
-      tone: debt.direction === 'borç_aldım' ? 'rose' : 'emerald',
-    })
-  }
-
-  return events.sort((a, b) => a.date.localeCompare(b.date) || b.amount - a.amount)
+// Reads the same obligation engine as the dashboard cash calendar, so both
+// screens list the identical items, dates and amounts for the month.
+function buildCalendarEvents(data: AnalysisData): CalendarEvent[] {
+  return buildFinanceObligationsForMonth(analysisObligationsInput(data), startOfMonth()).map((item) => ({
+    id: item.id,
+    date: item.date,
+    title: item.title,
+    amount: item.amount,
+    tone: obligationCalendarTone(item),
+  }))
 }
 
 function FinancialCalendar({ data }: { data: AnalysisData }) {
