@@ -146,7 +146,7 @@ export function LiveReconciliationPanel({ cards }: LiveReconciliationPanelProps)
                   <p className="mt-0.5 text-xs text-muted-foreground">
                     App: <span className="font-semibold text-foreground">{formatCurrency(item.app)}</span>
                     {item.last
-                      ? ` · Son mutabakat: ${formatDate(item.last.reconciled_at)}${
+                      ? ` · Son mutabakat: ${formatDate(item.last.reconciled_at.slice(0, 10))}${
                           item.daysSince != null ? ` (${item.daysSince} gün önce)` : ''
                         }`
                       : ' · Henüz mutabakat yok'}
