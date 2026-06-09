@@ -97,7 +97,7 @@ export function ReconciliationPanel({ cards, statements }: ReconciliationPanelPr
                 </p>
               </div>
               <Link
-                to="/kartlar"
+                to="/kartlar?section=ekstreler"
                 className="shrink-0 rounded-lg bg-card px-2.5 py-1.5 text-xs font-semibold text-warning ring-1 ring-warning/20 transition hover:bg-warning/10"
               >
                 Kartlara git

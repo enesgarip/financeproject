@@ -195,7 +195,7 @@ export function CreditCardSnapshotPanel({
       {visibleCards.length > 0 ? (
         <div className="mt-4 flex flex-col gap-2">
           {visibleCards.map((card) => (
-            <Link key={card.id} to="/kartlar" className="flex min-w-0 items-center justify-between gap-3 rounded-lg bg-background/65 px-3 py-2.5 ring-1 ring-border/70 transition hover:bg-muted">
+            <Link key={card.id} to="/kartlar?section=kartlar" className="flex min-w-0 items-center justify-between gap-3 rounded-lg bg-background/65 px-3 py-2.5 ring-1 ring-border/70 transition hover:bg-muted">
               <div className="min-w-0">
                 <p className="truncate text-sm font-black text-foreground">{card.card_name}</p>
                 <p className="truncate text-xs text-muted-foreground">{card.bank_name}</p>

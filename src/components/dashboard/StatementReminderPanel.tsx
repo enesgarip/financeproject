@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { Badge } from '../ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card'
 import { HelpTooltip, type HelpTooltipContent } from '../ui/help-tooltip'
-import type { Card as FinanceCard } from '../../types/database'
+import type { Card as FinanceCard, CardStatementArchive } from '../../types/database'
 import {
   buildStatementReminders,
   statementReminderDescription,
@@ -13,16 +13,17 @@ import { dateInputValue, formatDate } from '../../utils/date'
 
 type StatementReminderPanelProps = {
   cards: FinanceCard[]
+  statements: CardStatementArchive[]
 }
 
 const statementReminderHelp = {
   calculation: 'Ekstre günü ve son ödeme günü olan kredi kartlarında yaklaşan veya kesilebilir ekstreler hesaplanır.',
   importance: 'Ekstre kesimini ve son ödeme tarihini kaçırmadan takip etmeyi kolaylaştırır.',
-  source: 'Kartlar ekranındaki kredi kartı ekstre günü, son ödeme günü ve borç bilgileri.',
+  source: 'Kartlar ekranındaki kredi kartı ekstre günü, son ödeme günü, borç bilgileri ve ekstre arşivi.',
 } satisfies HelpTooltipContent
 
-export function StatementReminderPanel({ cards }: StatementReminderPanelProps) {
-  const reminders = buildStatementReminders(cards)
+export function StatementReminderPanel({ cards, statements }: StatementReminderPanelProps) {
+  const reminders = buildStatementReminders(cards, statements)
 
   if (reminders.length === 0) return null
 
@@ -64,7 +65,7 @@ export function StatementReminderPanel({ cards }: StatementReminderPanelProps) {
                 </p>
               </div>
               <Link
-                to="/kartlar"
+                to="/kartlar?section=ekstreler"
                 className="shrink-0 rounded-lg bg-card px-2.5 py-1.5 text-xs font-semibold text-info ring-1 ring-info/20 transition hover:bg-info/10"
               >
                 Kartlara git

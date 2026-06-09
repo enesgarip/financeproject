@@ -1,5 +1,6 @@
 import { ReceiptText } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { CrudPage } from '../components/CrudPage'
 import { AccountPaymentModal } from '../components/finance/AccountPaymentModal'
 import { StatementImportModal } from '../components/finance/StatementImportModal'
@@ -15,6 +16,7 @@ import { cardProvisionAmount, cardSplitTotal } from '../utils/financeSummary'
 import { getLastUsed, resolvePreferred, setLastUsed } from '../utils/lastUsed'
 import { formatCurrency, parseNumber } from '../utils/formatCurrency'
 import { addTransactionHistory } from '../utils/history'
+import { canCutCurrentStatement } from '../utils/statementCycle'
 import {
   AccountHubPanel,
   CardSectionNav,
@@ -38,8 +40,15 @@ import {
   statementPeriodLabel,
 } from './CardsPage.helpers'
 
+const cardSectionIds: CardSection[] = ['ozet', 'kartlar', 'islemler', 'ekstreler']
+
+function parseCardSection(value: string | null): CardSection {
+  return cardSectionIds.includes(value as CardSection) ? (value as CardSection) : 'ozet'
+}
+
 export function CardsPage() {
-  const [section, setSection] = useState<CardSection>('ozet')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const section = parseCardSection(searchParams.get('section'))
   const [transactionCard, setTransactionCard] = useState<Card | null>(null)
   const [transactionType, setTransactionType] = useState<'in' | 'out' | 'transfer'>('in')
   const [transactionAmount, setTransactionAmount] = useState('')
@@ -53,7 +62,7 @@ export function CardsPage() {
   const [provisionError, setProvisionError] = useState('')
   const [provisionActionId, setProvisionActionId] = useState<string | null>(null)
   const [statements, setStatements] = useState<CardStatementArchive[]>([])
-  const [statementsLoading, setStatementsLoading] = useState(false)
+  const [statementsLoading, setStatementsLoading] = useState(true)
   const [statementError, setStatementError] = useState('')
   const [statementActionId, setStatementActionId] = useState<string | null>(null)
   const [installments, setInstallments] = useState<CardInstallment[]>([])
@@ -290,6 +299,11 @@ export function CardsPage() {
       return
     }
 
+    if (!canCutCurrentStatement(card, statements)) {
+      setError('Bu ayin ekstresi zaten kesilmis veya ekstre gunu gelmemis. Yeni harcamalar sonraki ekstreye kalir.')
+      return
+    }
+
     const { error } = await supabase.rpc('cut_card_statement', {
       p_card_id: card.id,
     })
@@ -335,15 +349,20 @@ export function CardsPage() {
   const [quickExpenseFocus, setQuickExpenseFocus] = useState<{ cardId: string; mode: 'cash' | 'installment'; nonce: number } | null>(null)
 
   const handleSectionChange = useCallback((next: CardSection) => {
-    setSection(next)
+    const nextParams = new URLSearchParams(searchParams)
+    if (next === 'ozet') nextParams.delete('section')
+    else nextParams.set('section', next)
+    setSearchParams(nextParams, { replace: true })
     if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' })
-  }, [])
+  }, [searchParams, setSearchParams])
 
   const focusQuickExpense = useCallback((card: Card, mode: 'cash' | 'installment') => {
     setQuickExpenseFocus({ cardId: card.id, mode, nonce: Date.now() })
-    setSection('islemler')
+    const nextParams = new URLSearchParams(searchParams)
+    nextParams.set('section', 'islemler')
+    setSearchParams(nextParams, { replace: true })
     if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' })
-  }, [])
+  }, [searchParams, setSearchParams])
 
   const transactionTarget = movementAccounts.find((card) => card.id === transactionTargetCard)
   const transactionTargetAccounts = movementAccounts.filter((card) => card.id !== transactionCard?.id)
@@ -374,7 +393,14 @@ export function CardsPage() {
             <div className="flex flex-col gap-3">
               <CardSectionNav section={section} onSelect={handleSectionChange} counts={counts} />
               {!loading ? (
-                <DueStatementAutomation rows={cardRows} reload={reload} loadStatements={loadStatements} setError={setError} />
+                <DueStatementAutomation
+                  rows={cardRows}
+                  statements={statements}
+                  statementsLoading={statementsLoading}
+                  reload={reload}
+                  loadStatements={loadStatements}
+                  setError={setError}
+                />
               ) : null}
 
               {!loading && section === 'ozet' ? (
@@ -495,6 +521,7 @@ export function CardsPage() {
             row={row as Card}
             rows={helpers.rows as Card[]}
             statements={statements}
+            statementsLoading={statementsLoading}
             installments={installments}
             menu={helpers.menu}
             rowActions={helpers.rowActions}

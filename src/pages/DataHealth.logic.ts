@@ -335,10 +335,10 @@ export function buildIssueGuide(issue: HealthIssue): IssueGuide {
 }
 
 export function navigationAction(issue: HealthIssue) {
-  if (issue.id.includes('stale-installment')) return { to: '/kartlar', label: 'Doneme dahil et' }
+  if (issue.id.includes('stale-installment')) return { to: '/kartlar?section=islemler', label: 'Doneme dahil et' }
   if (issue.id.includes('no-plan')) return { to: '/borclar/krediler', label: 'Plani olustur' }
 
-  if (issue.kind.startsWith('card') || issue.kind === 'cardTypeFields') return { to: '/kartlar', label: 'Kartlara git' }
+  if (issue.kind.startsWith('card') || issue.kind === 'cardTypeFields') return { to: '/kartlar?section=kartlar', label: 'Kartlara git' }
   if (issue.kind.startsWith('loan')) return { to: '/borclar/krediler', label: 'Kredilere git' }
   if (issue.kind.startsWith('payment')) {
     return { to: '/odemeler', label: issue.title.toLocaleLowerCase('tr-TR').includes('vadesi ge') ? 'Odendi isaretle' : 'Odemelere git' }

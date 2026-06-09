@@ -36,6 +36,7 @@ import { bankHueStyle, isSchemaCacheError, limitGroupKey, limitGroupStats, state
 import { formatCurrency, parseNumber } from '../utils/formatCurrency'
 import { addTransactionHistory } from '../utils/history'
 import { parseReceiptImage } from '../lib/receiptParseClient'
+import { canCutCurrentStatement } from '../utils/statementCycle'
 
 export type CardSection = 'ozet' | 'kartlar' | 'islemler' | 'ekstreler'
 
@@ -468,6 +469,7 @@ export function CreditAccountListCard({
   row,
   rows,
   statements,
+  statementsLoading,
   installments,
   menu,
   rowActions,
@@ -481,6 +483,7 @@ export function CreditAccountListCard({
   row: Card
   rows: Card[]
   statements: CardStatementArchive[]
+  statementsLoading: boolean
   installments: CardInstallment[]
   menu: React.ReactNode
   rowActions: React.ReactNode
@@ -545,6 +548,7 @@ export function CreditAccountListCard({
   const openAmount = openStatementAmount(row, statements)
   const installmentCount = activeInstallmentCount(row, installments)
   const payableDebt = cardPayableDebt(row)
+  const canCutStatement = !statementsLoading && canCutCurrentStatement(row, statements)
   const openStatements = statements.filter((statement) => statement.card_id === row.id && statement.status === 'open')
   const cardInstallments = installments
     .filter((installment) => installment.card_id === row.id && installment.status !== 'paid')
@@ -658,7 +662,7 @@ export function CreditAccountListCard({
         <button
           type="button"
           onClick={() => void onCutStatement(row, reload, setError)}
-          disabled={row.current_period_spending <= 0}
+          disabled={!canCutStatement}
           className="finance-touch-target inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-xs font-black text-foreground shadow-sm transition hover:bg-muted disabled:opacity-55"
         >
           Ekstre kes
@@ -1609,27 +1613,28 @@ export function StatementPanel({
   )
 }
 
-function shouldRunStatementCut(card: Card) {
-  if (card.card_type !== 'kredi_karti' || !card.statement_day || card.current_period_spending <= 0) return false
-
-  const today = new Date()
-  const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate()
-  return Math.min(card.statement_day, lastDay) <= today.getDate()
+function shouldRunStatementCut(card: Card, statements: CardStatementArchive[]) {
+  return canCutCurrentStatement(card, statements)
 }
 
 export function DueStatementAutomation({
   rows,
+  statements,
+  statementsLoading,
   reload,
   loadStatements,
   setError,
 }: {
   rows: Card[]
+  statements: CardStatementArchive[]
+  statementsLoading: boolean
   reload: () => Promise<void>
   loadStatements: () => Promise<void>
   setError: (message: string) => void
 }) {
   useEffect(() => {
-    if (!rows.some(shouldRunStatementCut)) return
+    if (statementsLoading) return
+    if (!rows.some((card) => shouldRunStatementCut(card, statements))) return
 
     let cancelled = false
 
@@ -1651,7 +1656,7 @@ export function DueStatementAutomation({
     return () => {
       cancelled = true
     }
-  }, [loadStatements, reload, rows, setError])
+  }, [loadStatements, reload, rows, setError, statements, statementsLoading])
 
   return null
 }

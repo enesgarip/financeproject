@@ -46,7 +46,7 @@ import {
 import { dashboardHelp, getUserDisplayName } from '../components/dashboard/dashboardPanelUtils'
 import { StatementReminderPanel } from '../components/dashboard/StatementReminderPanel'
 import { ReconciliationPanel } from '../components/dashboard/ReconciliationPanel'
-import { addMonths, dateInputValue, daysUntil, monthlyOccurrenceDate, startOfMonth } from '../utils/date'
+import { addMonths, dateInputValue, daysUntil, startOfMonth } from '../utils/date'
 import {
   buildCreditLimitGroups,
   buildFinancialHealth,
@@ -67,6 +67,7 @@ import { buildDashboardUpcomingItems, type DashboardUpcomingItem } from '../util
 import { formatCurrency } from '../utils/formatCurrency'
 import { isMissingSupabaseCapabilityError } from '../utils/supabaseErrors'
 import { SkeletonDashboard } from '../components/ui/skeleton'
+import { canCutCurrentStatement } from '../utils/statementCycle'
 
 type DashboardData = {
   assets: Asset[]
@@ -217,12 +218,7 @@ function buildFocusActions(data: DashboardData, cashFlow: CashFlowSummary, credi
   })
   const cardsWithProvisions = creditCards.filter((card) => cardProvisionAmount(card) > 0)
   const totalProvision = sum(cardsWithProvisions, cardProvisionAmount)
-  const statementReadyCards = creditCards.filter((card) => {
-    if (card.current_period_spending <= 0 || !card.statement_day) return false
-    const statementDate = monthlyOccurrenceDate(card.statement_day)
-    const remaining = daysUntil(statementDate)
-    return remaining !== null && remaining <= 0
-  })
+  const statementReadyCards = creditCards.filter((card) => canCutCurrentStatement(card, data.cardStatements))
   const plannedLoanIds = new Set(data.loanInstallments.map((installment) => installment.loan_id))
   const loansWithoutPlan = data.loans.filter((loan) => loan.status === 'active' && loan.remaining_installments > 0 && !plannedLoanIds.has(loan.id))
   const loanInstallmentsByLoan = new Map<string, LoanInstallment[]>()
@@ -299,7 +295,7 @@ function buildFocusActions(data: DashboardData, cashFlow: CashFlowSummary, credi
       id: 'card-provisions',
       title: `${formatCurrency(totalProvision)} provizyon bekliyor`,
       description: 'Kesinleşenleri güncel borca aktar, iptal olanları limitten çıkar.',
-      to: '/kartlar',
+      to: '/kartlar?section=ekstreler',
       cta: 'Provizyonları aç',
       tone: 'amber',
       icon: 'card',
@@ -312,7 +308,7 @@ function buildFocusActions(data: DashboardData, cashFlow: CashFlowSummary, credi
       id: 'statement-ready',
       title: `${statementReadyCards.length} kartta ekstre kesilebilir`,
       description: 'Dönem içi kesinleşen harcamalar ekstre borcuna aktarılmaya hazır görünüyor.',
-      to: '/kartlar',
+      to: '/kartlar?section=ekstreler',
       cta: 'Ekstreleri kontrol et',
       tone: 'indigo',
       icon: 'calendar',
@@ -455,7 +451,7 @@ export function DashboardPage() {
         supabase.from('budgets').select('*').eq('month', currentMonth),
         supabase.from('card_expenses').select('*').gte('spent_at', spendingStart).order('spent_at', { ascending: false }),
         supabase.from('card_installments').select('*'),
-        supabase.from('card_statement_archives').select('*').eq('status', 'open'),
+        supabase.from('card_statement_archives').select('*').order('statement_date', { ascending: false }).limit(120),
         supabase.from('savings_goals').select('*'),
         supabase.from('savings_goal_components').select('*'),
       ])
@@ -663,12 +659,12 @@ export function DashboardPage() {
       </motion.div>
 
       <motion.div variants={fadeUp} className="grid min-w-0 gap-3 min-[760px]:grid-cols-2 lg:col-span-12">
-        <StatementReminderPanel cards={data.cards} />
+        <StatementReminderPanel cards={data.cards} statements={data.cardStatements} />
         <BudgetAlertPanel budgets={data.budgets} expenses={data.cardExpenses} />
       </motion.div>
 
       <motion.div variants={fadeUp} className="min-w-0 lg:col-span-12">
-        <ReconciliationPanel cards={data.cards} statements={data.cardStatements} />
+        <ReconciliationPanel cards={data.cards} statements={data.cardStatements.filter((statement) => statement.status === 'open')} />
       </motion.div>
 
       <motion.div variants={fadeUp} className="min-w-0 lg:col-span-12">

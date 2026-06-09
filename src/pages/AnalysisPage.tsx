@@ -40,6 +40,7 @@ import { buildPriceObservations, detectPriceIncreases, type PriceTrend } from '.
 import { computeFire, estimateMonthlySavingsFromNetWorth } from '../utils/fire'
 import { buildInflationShield } from '../utils/inflationShield'
 import { computeZakat } from '../utils/zakat'
+import { canCutCurrentStatement } from '../utils/statementCycle'
 
 type AnalysisData = {
   assets: Asset[]
@@ -99,7 +100,7 @@ const optionalTableLabels: Record<string, string> = {
 }
 
 const ANALYSIS_HISTORY_MONTHS = 6
-const STATEMENT_ARCHIVE_LIMIT = 6
+const STATEMENT_ARCHIVE_LIMIT = 48
 // Zam radarı needs a longer lookback than the main page so annual rent/insurance
 // hikes land inside the window; loaded independently of the 6-month dataset.
 const PRICE_RADAR_MONTHS = 13
@@ -1808,11 +1809,7 @@ function MonthCloseAssistant({ data, missingTables }: { data: AnalysisData; miss
   const today = new Date()
   const currentMonthExpenses = data.cardExpenses.filter((expense) => activeCardExpense(expense) && isDateInMonth(expense.spent_at))
   const creditCards = data.cards.filter((card) => card.card_type === 'kredi_karti')
-  const statementDayPassedCards = creditCards.filter((card) => {
-    if (!card.statement_day || card.current_period_spending <= 0) return false
-    const statementDate = new Date(today.getFullYear(), today.getMonth(), Math.min(card.statement_day, new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate()))
-    return today >= statementDate
-  })
+  const statementDayPassedCards = creditCards.filter((card) => canCutCurrentStatement(card, data.cardStatementArchives, today))
   const staleInstallments = data.cardInstallments.filter((item) => item.status === 'scheduled' && item.due_month <= monthKey).length
   const openPaymentCount = data.payments.filter((payment) => paymentInCurrentMonth(payment) || (payment.status === 'bekliyor' && (daysUntil(payment.due_date) ?? 0) < 0)).length
   const budgetOverruns = data.budgets.filter((budget) => {

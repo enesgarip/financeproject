@@ -1,6 +1,7 @@
-import type { Card } from '../types/database'
-import { dateInputValue, daysUntil, formatDate, monthlyOccurrenceDate, nextMonthlyDate } from './date'
+import type { Card, CardStatementArchive } from '../types/database'
+import { dateInputValue, formatDate, nextMonthlyDate } from './date'
 import { formatCurrency } from './formatCurrency'
+import { daysUntilFrom, nextUncutStatementDate } from './statementCycle'
 
 export type StatementReminder = {
   cardId: string
@@ -13,21 +14,18 @@ export type StatementReminder = {
   dueDateLabel: string
 }
 
-export function buildStatementReminders(cards: Card[]): StatementReminder[] {
+export function buildStatementReminders(cards: Card[], statements: CardStatementArchive[] = [], from = new Date()): StatementReminder[] {
   const reminders: StatementReminder[] = []
-  const today = new Date()
 
   for (const card of cards) {
     if (card.card_type !== 'kredi_karti' || !card.statement_day) continue
 
     const cardLabel = `${card.bank_name} · ${card.card_name}`
-    const statementDate = monthlyOccurrenceDate(card.statement_day, today) ?? nextMonthlyDate(card.statement_day)
+    const statementDate = nextUncutStatementDate(card, statements, from)
     if (!statementDate) continue
 
-    const remaining = daysUntil(statementDate)
-    if (remaining === null) continue
-
     const dueDate = card.due_day ? nextMonthlyDate(card.due_day) : null
+    const remaining = daysUntilFrom(statementDate, from)
 
     if (card.current_period_spending > 0 && remaining <= 0) {
       reminders.push({
