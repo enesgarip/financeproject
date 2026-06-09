@@ -1,4 +1,4 @@
-import { Check, Clock3, Pencil, ReceiptText } from 'lucide-react'
+import { Check, ChevronDown, Clock3, Pencil, ReceiptText } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { CategoryPicker } from './CategoryPicker'
 import { MoneyInput } from './MoneyInput'
@@ -60,6 +60,7 @@ export function CardInstallmentExpensesPanel({ cards, reload, setError }: CardIn
   const [note, setNote] = useState('')
   const [localError, setLocalError] = useState('')
   const [saving, setSaving] = useState(false)
+  const [completedOpen, setCompletedOpen] = useState(false)
 
   const cardsById = useMemo(() => new Map(cards.map((card) => [card.id, card])), [cards])
   const installmentsByExpense = useMemo(() => {
@@ -72,6 +73,18 @@ export function CardInstallmentExpensesPanel({ cards, reload, setError }: CardIn
 
     return next
   }, [installments])
+
+  // Taksitleri biten plan: taksit satırları var ve hepsi ödenmiş.
+  const { activeExpenses, completedExpenses } = useMemo(() => {
+    const active: CardExpense[] = []
+    const completed: CardExpense[] = []
+    for (const expense of expenses) {
+      const items = installmentsByExpense.get(expense.id) ?? []
+      if (items.length > 0 && items.every((item) => item.status === 'paid')) completed.push(expense)
+      else active.push(expense)
+    }
+    return { activeExpenses: active, completedExpenses: completed }
+  }, [expenses, installmentsByExpense])
 
   const loadInstallments = useCallback(
     async (expenseIds: string[]) => {
@@ -106,7 +119,7 @@ export function CardInstallmentExpensesPanel({ cards, reload, setError }: CardIn
       .eq('status', 'posted')
       .gt('installment_count', 1)
       .order('spent_at', { ascending: false })
-      .limit(12)
+      .limit(50)
 
     if (error) {
       setExpenses([])
@@ -205,6 +218,104 @@ export function CardInstallmentExpensesPanel({ cards, reload, setError }: CardIn
 
   if (expenses.length === 0) return null
 
+  const renderExpenseCard = (expense: CardExpense) => {
+    const card = cardsById.get(expense.card_id)
+    const expenseInstallments = installmentsByExpense.get(expense.id) ?? []
+    const paidCount = Math.min(
+      expense.installment_count,
+      historicalPaidInstallmentCount(expense) + expenseInstallments.filter((item) => item.status === 'paid').length,
+    )
+    const remainingInstallments = expenseInstallments.filter((item) => item.status !== 'paid')
+    const remainingAmount = remainingInstallments.reduce((sum, item) => sum + item.amount, 0)
+    const isLocked = expenseInstallments.some((item) => item.status === 'paid' || item.statement_archive_id)
+
+    return (
+      <section key={expense.id} className="rounded-xl bg-muted/45 px-3 py-3">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="truncate text-sm font-bold text-foreground">{expense.description}</p>
+            <p className="mt-0.5 truncate text-xs text-muted-foreground">
+              {card ? `${card.bank_name} - ${card.card_name}` : 'Kart'} - {formatDate(expense.spent_at)} - {expense.installment_count} taksit
+            </p>
+            <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] font-semibold">
+              <span className="rounded-full bg-muted px-2 py-1 text-muted-foreground">
+                {paidCount}/{expense.installment_count} odendi
+              </span>
+              <span className="rounded-full bg-muted px-2 py-1 text-muted-foreground">
+                {remainingInstallments.length} taksit izleniyor
+              </span>
+              <span className="rounded-full bg-muted px-2 py-1 text-muted-foreground">
+                {formatCurrency(remainingAmount)} bilgi amacli
+              </span>
+            </div>
+            {isLocked ? (
+              <p className="mt-2 text-xs text-warning">Ekstreye baglandigi veya odendigi icin bu harcama duzenlemeye kapali.</p>
+            ) : null}
+          </div>
+          <button
+            type="button"
+            onClick={() => openEdit(expense)}
+            disabled={isLocked}
+            className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-border bg-card px-2.5 py-1.5 text-xs font-semibold text-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <Pencil size={13} />
+            Duzenle
+          </button>
+        </div>
+
+        <div className="mt-3 space-y-2">
+          {expenseInstallments.length === 0 ? (
+            <p className="rounded-lg border border-border/50 bg-muted/30 px-3 py-2 text-xs text-muted-foreground">Taksit satiri bulunamadi.</p>
+          ) : (
+            expenseInstallments.map((item) => {
+              const isPaid = item.status === 'paid'
+              const isStatementLinked = Boolean(item.statement_archive_id)
+
+              return (
+                <div
+                  key={item.id}
+                  className={`flex items-start gap-2 rounded-xl border px-2.5 py-2 text-sm ${
+                    isPaid
+                      ? 'border-success/25 bg-success/8'
+                      : isStatementLinked
+                        ? 'border-warning/25 bg-warning/8'
+                        : 'border-border/60 bg-card'
+                  }`}
+                >
+                  <div
+                    className={`grid size-8 shrink-0 place-items-center rounded-full border ${
+                      isPaid
+                        ? 'border-success bg-success text-success-foreground'
+                        : isStatementLinked
+                          ? 'border-warning/40 bg-warning/15 text-warning'
+                          : 'border-border bg-muted text-muted-foreground'
+                    }`}
+                    aria-label={installmentStatusLabel(item)}
+                  >
+                    {isPaid ? <Check size={16} strokeWidth={3} /> : isStatementLinked ? <ReceiptText size={15} /> : <Clock3 size={15} />}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className={`truncate font-semibold ${isPaid ? 'text-success' : 'text-foreground'}`}>
+                      {item.installment_no}/{item.installment_count}. taksit - {formatCurrency(item.amount)}
+                    </p>
+                    <p className={`text-xs ${isPaid ? 'text-success/80' : 'text-muted-foreground'}`}>
+                      {formatDate(item.due_month)} - {installmentStatusLabel(item)}
+                    </p>
+                    {!isPaid ? (
+                      <p className="mt-1 text-[11px] leading-4 text-muted-foreground">
+                        Bu taksit, bagli oldugu kredi karti ekstresi odendiginde otomatik kapanir.
+                      </p>
+                    ) : null}
+                  </div>
+                </div>
+              )
+            })
+          )}
+        </div>
+      </section>
+    )
+  }
+
   return (
     <>
       <SurfaceCard className="border-border/70 shadow-[var(--shadow-card)]">
@@ -217,107 +328,37 @@ export function CardInstallmentExpensesPanel({ cards, reload, setError }: CardIn
               </CardTitle>
               <p className="mt-1 text-xs text-muted-foreground">Kart taksitleri ayri borc degildir; bagli ekstre odendiginde otomatik kapanir.</p>
             </div>
-            <Badge variant="secondary">{expenses.length}</Badge>
+            <Badge variant="secondary">{activeExpenses.length}</Badge>
           </div>
         </CardHeader>
         <CardContent className="space-y-3 pt-2">
-          {expenses.map((expense) => {
-            const card = cardsById.get(expense.card_id)
-            const expenseInstallments = installmentsByExpense.get(expense.id) ?? []
-            const paidCount = Math.min(
-              expense.installment_count,
-              historicalPaidInstallmentCount(expense) + expenseInstallments.filter((item) => item.status === 'paid').length,
-            )
-            const remainingInstallments = expenseInstallments.filter((item) => item.status !== 'paid')
-            const remainingAmount = remainingInstallments.reduce((sum, item) => sum + item.amount, 0)
-            const isLocked = expenseInstallments.some((item) => item.status === 'paid' || item.statement_archive_id)
+          {activeExpenses.length === 0 ? (
+            <p className="rounded-lg border border-border/50 bg-muted/30 px-3 py-2 text-xs text-muted-foreground">Devam eden taksitli harcama yok.</p>
+          ) : (
+            activeExpenses.map(renderExpenseCard)
+          )}
 
-            return (
-              <section key={expense.id} className="rounded-xl bg-muted/45 px-3 py-3">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-bold text-foreground">{expense.description}</p>
-                    <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                      {card ? `${card.bank_name} - ${card.card_name}` : 'Kart'} - {formatDate(expense.spent_at)} - {expense.installment_count} taksit
-                    </p>
-                    <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] font-semibold">
-                      <span className="rounded-full bg-muted px-2 py-1 text-muted-foreground">
-                        {paidCount}/{expense.installment_count} odendi
-                      </span>
-                      <span className="rounded-full bg-muted px-2 py-1 text-muted-foreground">
-                        {remainingInstallments.length} taksit izleniyor
-                      </span>
-                      <span className="rounded-full bg-muted px-2 py-1 text-muted-foreground">
-                        {formatCurrency(remainingAmount)} bilgi amacli
-                      </span>
-                    </div>
-                    {isLocked ? (
-                      <p className="mt-2 text-xs text-warning">Ekstreye baglandigi veya odendigi icin bu harcama duzenlemeye kapali.</p>
-                    ) : null}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => openEdit(expense)}
-                    disabled={isLocked}
-                    className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-border bg-card px-2.5 py-1.5 text-xs font-semibold text-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <Pencil size={13} />
-                    Duzenle
-                  </button>
+          {completedExpenses.length > 0 ? (
+            <div className="rounded-xl border border-border/60 bg-card/60">
+              <button
+                type="button"
+                onClick={() => setCompletedOpen((open) => !open)}
+                aria-expanded={completedOpen}
+                className="flex w-full items-center justify-between gap-2 px-3 py-2.5 text-sm font-semibold text-foreground transition hover:bg-muted/50"
+              >
+                <span className="inline-flex items-center gap-2">
+                  <Check size={15} className="text-success" />
+                  Tamamlananlar ({completedExpenses.length})
+                </span>
+                <ChevronDown size={16} className={`shrink-0 text-muted-foreground transition-transform ${completedOpen ? 'rotate-180' : ''}`} />
+              </button>
+              {completedOpen ? (
+                <div className="space-y-3 border-t border-border/60 p-3">
+                  {completedExpenses.map(renderExpenseCard)}
                 </div>
-
-                <div className="mt-3 space-y-2">
-                  {expenseInstallments.length === 0 ? (
-                    <p className="rounded-lg border border-border/50 bg-muted/30 px-3 py-2 text-xs text-muted-foreground">Taksit satiri bulunamadi.</p>
-                  ) : (
-                    expenseInstallments.map((item) => {
-                      const isPaid = item.status === 'paid'
-                      const isStatementLinked = Boolean(item.statement_archive_id)
-
-                      return (
-                        <div
-                          key={item.id}
-                          className={`flex items-start gap-2 rounded-xl border px-2.5 py-2 text-sm ${
-                            isPaid
-                              ? 'border-success/25 bg-success/8'
-                              : isStatementLinked
-                                ? 'border-warning/25 bg-warning/8'
-                                : 'border-border/60 bg-card'
-                          }`}
-                        >
-                          <div
-                            className={`grid size-8 shrink-0 place-items-center rounded-full border ${
-                              isPaid
-                                ? 'border-success bg-success text-success-foreground'
-                                : isStatementLinked
-                                  ? 'border-warning/40 bg-warning/15 text-warning'
-                                  : 'border-border bg-muted text-muted-foreground'
-                            }`}
-                            aria-label={installmentStatusLabel(item)}
-                          >
-                            {isPaid ? <Check size={16} strokeWidth={3} /> : isStatementLinked ? <ReceiptText size={15} /> : <Clock3 size={15} />}
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <p className={`truncate font-semibold ${isPaid ? 'text-success' : 'text-foreground'}`}>
-                              {item.installment_no}/{item.installment_count}. taksit - {formatCurrency(item.amount)}
-                            </p>
-                            <p className={`text-xs ${isPaid ? 'text-success/80' : 'text-muted-foreground'}`}>
-                              {formatDate(item.due_month)} - {installmentStatusLabel(item)}
-                            </p>
-                            {!isPaid ? (
-                              <p className="mt-1 text-[11px] leading-4 text-muted-foreground">
-                                Bu taksit, bagli oldugu kredi karti ekstresi odendiginde otomatik kapanir.
-                              </p>
-                            ) : null}
-                          </div>
-                        </div>
-                      )
-                    })
-                  )}
-                </div>
-              </section>
-            )
-          })}
+              ) : null}
+            </div>
+          ) : null}
         </CardContent>
       </SurfaceCard>
 
