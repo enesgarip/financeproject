@@ -469,28 +469,20 @@ export function CreditAccountListCard({
   row,
   rows,
   statements,
-  statementsLoading,
   installments,
   menu,
   rowActions,
-  reload,
-  setError,
   onTransfer,
-  onCutStatement,
   onAddExpense,
   onImportStatement,
 }: {
   row: Card
   rows: Card[]
   statements: CardStatementArchive[]
-  statementsLoading: boolean
   installments: CardInstallment[]
   menu: React.ReactNode
   rowActions: React.ReactNode
-  reload: () => Promise<void>
-  setError: (message: string) => void
   onTransfer: (source: Card) => void
-  onCutStatement: (card: Card, reload: () => Promise<void>, setError: (message: string) => void) => Promise<void>
   onAddExpense: (card: Card, mode: 'cash' | 'installment') => void
   onImportStatement: (card: Card) => void
 }) {
@@ -548,7 +540,6 @@ export function CreditAccountListCard({
   const openAmount = openStatementAmount(row, statements)
   const installmentCount = activeInstallmentCount(row, installments)
   const payableDebt = cardPayableDebt(row)
-  const canCutStatement = !statementsLoading && canCutCurrentStatement(row, statements)
   const openStatements = statements.filter((statement) => statement.card_id === row.id && statement.status === 'open')
   const cardInstallments = installments
     .filter((installment) => installment.card_id === row.id && installment.status !== 'paid')
@@ -658,14 +649,6 @@ export function CreditAccountListCard({
           className="finance-touch-target inline-flex items-center justify-center rounded-lg border border-border bg-card px-3 py-2 text-xs font-black text-foreground shadow-sm transition hover:bg-muted"
         >
           Taksit ekle
-        </button>
-        <button
-          type="button"
-          onClick={() => void onCutStatement(row, reload, setError)}
-          disabled={!canCutStatement}
-          className="finance-touch-target inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-xs font-black text-foreground shadow-sm transition hover:bg-muted disabled:opacity-55"
-        >
-          Ekstre kes
         </button>
       </div>
       {detailsOpen ? (

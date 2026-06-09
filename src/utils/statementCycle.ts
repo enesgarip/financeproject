@@ -47,8 +47,10 @@ export function canCutCurrentStatement(
     return false
   }
 
+  // Cut the day AFTER the statement day (like banks): the statement day's own
+  // spending belongs to that statement, so we only cut once the day is over.
   const statementDate = statementDateForMonth(card, from)
-  if (!statementDate || statementDate > startOfDay(from)) return false
+  if (!statementDate || startOfDay(from) <= statementDate) return false
 
   return !hasStatementArchiveForPeriod(card.id, statements, from)
 }

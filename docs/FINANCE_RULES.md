@@ -80,7 +80,7 @@ Statement archive behavior:
 - `cut_card_statement` is idempotent for one user/card/month
 - statement amount is the posted current-period spending at cut time
 - cutting a statement links posted card expenses and posted card installments through `statement_archive_id`
-- the dashboard/cards page may call `cut_due_card_statements` to cut due statements automatically when the statement day has arrived
+- statements are cut automatically the day **after** the statement day (like banks), so the statement day's own spending is included; the dashboard/cards page calls `cut_due_card_statements` on load and the daily `pg_cron` job runs it server-side. There is no manual "cut statement" action.
 
 ## Scheduled Card Maintenance (server-side)
 

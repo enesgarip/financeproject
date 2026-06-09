@@ -27,7 +27,10 @@ export function buildStatementReminders(cards: Card[], statements: CardStatement
     const dueDate = card.due_day ? nextMonthlyDate(card.due_day) : null
     const remaining = daysUntilFrom(statementDate, from)
 
-    if (card.current_period_spending > 0 && remaining <= 0) {
+    // The cut runs the day AFTER the statement day, so "ready/otomatik kesiliyor"
+    // only applies once the statement day is over (remaining < 0). On the statement
+    // day itself (remaining === 0) it is still an upcoming "bugün" reminder.
+    if (card.current_period_spending > 0 && remaining < 0) {
       reminders.push({
         cardId: card.id,
         cardLabel,
@@ -41,7 +44,7 @@ export function buildStatementReminders(cards: Card[], statements: CardStatement
       continue
     }
 
-    if (card.current_period_spending > 0 && remaining > 0 && remaining <= 3) {
+    if (card.current_period_spending > 0 && remaining >= 0 && remaining <= 3) {
       reminders.push({
         cardId: card.id,
         cardLabel,
@@ -63,7 +66,7 @@ export function buildStatementReminders(cards: Card[], statements: CardStatement
 
 export function statementReminderTitle(reminder: StatementReminder) {
   if (reminder.kind === 'ready') {
-    return `${reminder.cardLabel} ekstresi kesilebilir`
+    return `${reminder.cardLabel} ekstresi otomatik kesiliyor`
   }
 
   if (reminder.daysUntilStatement === 0) {
@@ -76,7 +79,7 @@ export function statementReminderTitle(reminder: StatementReminder) {
 export function statementReminderDescription(reminder: StatementReminder) {
   const period = `Dönem içi: ${formatCurrency(reminder.currentPeriodSpending)}`
   if (reminder.kind === 'ready') {
-    return `${period}. Kesince ekstre borcuna aktarılır.`
+    return `${period}. Otomatik olarak ekstre borcuna aktarılıyor.`
   }
 
   return `${period}. ${formatDate(dateInputValue(reminder.statementDate))} tarihinde ekstre kesilir.`

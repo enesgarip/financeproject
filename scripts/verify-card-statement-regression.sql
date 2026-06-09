@@ -155,12 +155,14 @@ declare
   v_linked_installments integer;
   v_card public.cards%rowtype;
 begin
+  -- Day-after cut semantics derive the period from the statement boundary, which
+  -- may land in the previous month when run on the 1st. The dedup guarantee under
+  -- test is "two cut calls -> exactly one archive", so count all archives instead
+  -- of filtering by the current calendar month.
   select count(*)
   into v_statement_count
   from public.card_statement_archives
-  where card_id = '00000000-0000-4000-8000-000000000202'
-    and period_year = extract(year from current_date)::integer
-    and period_month = extract(month from current_date)::integer;
+  where card_id = '00000000-0000-4000-8000-000000000202';
 
   if v_statement_count <> 1 then
     raise exception 'Expected one statement archive, got %', v_statement_count;

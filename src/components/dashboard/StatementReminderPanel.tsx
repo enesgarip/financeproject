@@ -17,8 +17,8 @@ type StatementReminderPanelProps = {
 }
 
 const statementReminderHelp = {
-  calculation: 'Ekstre günü ve son ödeme günü olan kredi kartlarında yaklaşan veya kesilebilir ekstreler hesaplanır.',
-  importance: 'Ekstre kesimini ve son ödeme tarihini kaçırmadan takip etmeyi kolaylaştırır.',
+  calculation: 'Ekstre günü ve son ödeme günü olan kredi kartlarında yaklaşan veya otomatik kesilen ekstreler hesaplanır.',
+  importance: 'Ekstre kesimi otomatik yapılır; bu panel son ödeme tarihini kaçırmadan takip etmeyi kolaylaştırır.',
   source: 'Kartlar ekranındaki kredi kartı ekstre günü, son ödeme günü, borç bilgileri ve ekstre arşivi.',
 } satisfies HelpTooltipContent
 
@@ -55,7 +55,7 @@ export function StatementReminderPanel({ cards, statements }: StatementReminderP
                 <div className="flex flex-wrap items-center gap-2">
                   <p className="font-semibold text-foreground">{statementReminderTitle(reminder)}</p>
                   <Badge variant={reminder.kind === 'ready' ? 'default' : 'secondary'}>
-                    {reminder.kind === 'ready' ? 'Kesilebilir' : `${reminder.daysUntilStatement} gün`}
+                    {reminder.kind === 'ready' ? 'Otomatik kesiliyor' : `${reminder.daysUntilStatement} gün`}
                   </Badge>
                 </div>
                 <p className="mt-0.5 text-xs text-muted-foreground">{statementReminderDescription(reminder)}</p>

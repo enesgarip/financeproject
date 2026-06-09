@@ -62,14 +62,26 @@ describe('statement cycle helpers', () => {
     expect(hasStatementArchiveForPeriod('card-1', [archive()], new Date('2026-07-01T12:00:00'))).toBe(false)
   })
 
-  it('allows cutting after the statement day when no archive exists', () => {
-    expect(canCutCurrentStatement(card(), [], new Date('2026-06-09T12:00:00'))).toBe(true)
+  it('allows cutting the day after the statement day when no archive exists', () => {
+    expect(canCutCurrentStatement(card(), [], new Date('2026-06-10T12:00:00'))).toBe(true)
     expect(canCutCurrentStatement(card(), [], new Date('2026-06-20T12:00:00'))).toBe(true)
   })
 
-  it('blocks cutting before the statement day or without current spending', () => {
+  it('blocks cutting on or before the statement day or without current spending', () => {
+    // The statement day's own spending belongs to that statement, so we only cut once it is over.
+    expect(canCutCurrentStatement(card(), [], new Date('2026-06-09T12:00:00'))).toBe(false)
     expect(canCutCurrentStatement(card(), [], new Date('2026-06-08T12:00:00'))).toBe(false)
     expect(canCutCurrentStatement(card({ current_period_spending: 0 }), [], new Date('2026-06-20T12:00:00'))).toBe(false)
+  })
+
+  it('respects a clamped month-end statement day without cutting early', () => {
+    // statement_day 31 in a 30-day month (June) clamps to the 30th. The client
+    // predicate only flags the current month, so it never cuts early; the June 30
+    // boundary itself is handled by the unconditional cut_due_card_statements RPC
+    // (dashboard load + daily cron), which mirrors this clamp server-side.
+    const monthEndCard = card({ statement_day: 31 })
+    expect(canCutCurrentStatement(monthEndCard, [], new Date('2026-06-29T12:00:00'))).toBe(false)
+    expect(canCutCurrentStatement(monthEndCard, [], new Date('2026-06-30T12:00:00'))).toBe(false)
   })
 
   it('blocks cutting when the current period already has an archive', () => {

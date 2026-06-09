@@ -15,8 +15,6 @@ import { formatDate } from '../utils/date'
 import { cardProvisionAmount, cardSplitTotal } from '../utils/financeSummary'
 import { getLastUsed, resolvePreferred, setLastUsed } from '../utils/lastUsed'
 import { formatCurrency, parseNumber } from '../utils/formatCurrency'
-import { addTransactionHistory } from '../utils/history'
-import { canCutCurrentStatement } from '../utils/statementCycle'
 import {
   AccountHubPanel,
   CardSectionNav,
@@ -293,59 +291,6 @@ export function CardsPage() {
     await Promise.all([reloadCards?.(), loadStatements(), loadInstallments()])
   }
 
-  async function cutStatement(card: Card, reload: () => Promise<void>, setError: (message: string) => void) {
-    if (card.current_period_spending <= 0) {
-      setError('Dönem içi harcama olmadığı için kesilecek ekstre yok.')
-      return
-    }
-
-    if (!canCutCurrentStatement(card, statements)) {
-      setError('Bu ayin ekstresi zaten kesilmis veya ekstre gunu gelmemis. Yeni harcamalar sonraki ekstreye kalir.')
-      return
-    }
-
-    const { error } = await supabase.rpc('cut_card_statement', {
-      p_card_id: card.id,
-    })
-
-    if (error) {
-      if (!isSchemaCacheError(error)) {
-        setError(error.message)
-        return
-      }
-
-      const statementDebt = card.statement_debt_amount + card.current_period_spending
-      const { error: updateError } = await supabase
-        .from('cards')
-        .update({ statement_debt_amount: statementDebt, current_period_spending: 0, updated_at: new Date().toISOString() })
-        .eq('id', card.id)
-
-      if (updateError) {
-        setError(updateError.message)
-        return
-      }
-
-      const historyError = await addTransactionHistory({
-        user_id: card.user_id,
-        type: 'card',
-        title: `${card.card_name} ekstresi kesildi`,
-        amount: card.current_period_spending,
-        source_table: 'cards',
-        source_id: card.id,
-        note: 'Dönem borcuna aktarıldı.',
-      })
-      if (historyError) {
-        setError(historyError.message)
-        return
-      }
-
-      await Promise.all([reload(), loadStatements()])
-      return
-    }
-
-    await Promise.all([reload(), loadStatements()])
-  }
-
   const [quickExpenseFocus, setQuickExpenseFocus] = useState<{ cardId: string; mode: 'cash' | 'installment'; nonce: number } | null>(null)
 
   const handleSectionChange = useCallback((next: CardSection) => {
@@ -521,14 +466,10 @@ export function CardsPage() {
             row={row as Card}
             rows={helpers.rows as Card[]}
             statements={statements}
-            statementsLoading={statementsLoading}
             installments={installments}
             menu={helpers.menu}
             rowActions={helpers.rowActions}
-            reload={helpers.reload}
-            setError={helpers.setError}
             onTransfer={(source) => openTransaction(source, helpers.reload, helpers.rows as Card[], 'transfer')}
-            onCutStatement={cutStatement}
             onAddExpense={focusQuickExpense}
             onImportStatement={setImportCard}
           />
