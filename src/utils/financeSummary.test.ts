@@ -13,6 +13,7 @@ import {
   getCurrentSalary,
   getSalaryTrend,
   moneyDiffers,
+  paymentCashOutflowAmount,
   paymentOccurrenceInMonth,
   roundMoney,
   sum,
@@ -288,6 +289,16 @@ describe('paymentOccurrenceInMonth', () => {
 
 // ── buildFinancialPosition ─────────────────────────────────────────────────
 
+describe('paymentCashOutflowAmount', () => {
+  it('keeps manual payments as cash outflow', () => {
+    expect(paymentCashOutflowAmount(payment({ amount: 1200, payment_method: 'manual' }))).toBe(1200)
+  })
+
+  it('removes credit-card automatic payments from immediate cash outflow', () => {
+    expect(paymentCashOutflowAmount(payment({ amount: 1200, payment_method: 'bank_auto', auto_source_card_id: 'credit-card' }))).toBe(0)
+  })
+})
+
 describe('buildFinancialPosition', () => {
   it('returns zero net worth for empty input', () => {
     const pos = buildFinancialPosition(emptyInput)
@@ -434,6 +445,20 @@ describe('buildMonthlyCashFlow', () => {
     )
     expect(flow.paymentOutflow).toBe(1200)
     expect(flow.outflow).toBeGreaterThanOrEqual(1200)
+  })
+
+  it('does not count credit-card automatic payments as immediate cash outflow', () => {
+    const flow = buildMonthlyCashFlow(
+      {
+        ...emptyInput,
+        payments: [
+          payment({ amount: 1200, due_date: '2026-06-10', payment_method: 'bank_auto', auto_source_card_id: 'credit-card' }),
+          payment({ amount: 300, due_date: '2026-06-12', payment_method: 'manual' }),
+        ],
+      },
+      JUNE,
+    )
+    expect(flow.paymentOutflow).toBe(300)
   })
 
   it('includes scheduled loan installments in outflow', () => {

@@ -188,6 +188,35 @@ describe('buildFinanceObligationsForMonth', () => {
     expect(items[0]).toMatchObject({ kind: 'card_statement', action: 'pay_card_statement', amount: 3000 })
   })
 
+  it('marks credit-card automatic payments as non-cash obligations', () => {
+    const items = buildFinanceObligationsForMonth(
+      input({
+        cards: [card({ id: 'credit-card', card_type: 'kredi_karti', bank_name: 'Banka', card_name: 'Kart' })],
+        payments: [
+          payment({
+            id: 'icloud',
+            title: 'iCloud+',
+            amount: 130,
+            due_date: '2026-06-11',
+            payment_method: 'bank_auto',
+            auto_source_card_id: 'credit-card',
+          }),
+        ],
+      }),
+      FROM,
+      { from: FROM },
+    )
+
+    expect(items).toHaveLength(1)
+    expect(items[0]).toMatchObject({
+      kind: 'payment',
+      amount: 130,
+      cashImpactAmount: 0,
+      settlement: 'credit_card',
+      relatedCardId: 'credit-card',
+    })
+  })
+
   it('places card installments and legacy loan estimates on their calendar days', () => {
     const july = new Date(2026, 6, 1)
     const items = buildFinanceObligationsForMonth(
@@ -204,6 +233,7 @@ describe('buildFinanceObligationsForMonth', () => {
       ['legacy_loan_installment', '2026-07-07', 2000, null],
       ['card_installment', '2026-07-12', 400, null],
     ])
+    expect(items.find((item) => item.kind === 'card_installment')).toMatchObject({ cashImpactAmount: 0, settlement: 'credit_card' })
   })
 
   it('builds a short range from the same obligation source of truth', () => {

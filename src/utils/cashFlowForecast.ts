@@ -4,6 +4,7 @@ import { addMonths, dateInputValue, isDateInMonth, startOfMonth } from './date'
 import {
   buildFinancialPosition,
   getCurrentSalary,
+  paymentCashOutflowAmount,
   paymentOccurrenceInMonth,
   roundMoney,
   sum,
@@ -116,7 +117,7 @@ export function buildCashFlowForecast(
     const paymentOutflow = roundMoney(
       sum(
         data.payments.filter((payment) => paymentOccurrenceInMonth(payment, monthDate)),
-        (payment) => payment.amount,
+        paymentCashOutflowAmount,
       ),
     )
     const scheduledLoanOutflow = sum(

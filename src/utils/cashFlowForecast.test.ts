@@ -128,6 +128,19 @@ describe('buildCashFlowForecast', () => {
     expect(forecast.months.map((m) => m.loanOutflow)).toEqual([0, 3500, 0])
   })
 
+  it('does not subtract credit-card automatic payments from monthly cash outflow', () => {
+    const forecast = buildCashFlowForecast(
+      buildInput({
+        payments: [
+          payment({ due_date: '2026-06-10', amount: 1200, payment_method: 'bank_auto', auto_source_card_id: 'credit-card' }),
+          payment({ due_date: '2026-06-12', amount: 300, payment_method: 'manual' }),
+        ],
+      }),
+      { from: FROM, horizonMonths: 1 },
+    )
+    expect(forecast.months[0]).toMatchObject({ paymentOutflow: 300, outflow: 300 })
+  })
+
   it('projects a full picture with running balance, lowest point, and no deficit', () => {
     const forecast = buildCashFlowForecast(
       buildInput({

@@ -4,13 +4,17 @@ import {
   buildFinanceObligationsForRange,
   type FinanceObligation,
   type FinanceObligationsInput,
+  type FinanceObligationSettlement,
 } from './obligations'
 
 export type DashboardUpcomingItem = {
   id: string
   title: string
+  subtitle: string
   value: string
   amount: number
+  cashImpactAmount: number
+  settlement: FinanceObligationSettlement
   kind: 'payment' | 'card' | 'loan' | 'debt'
   date: string
   sortTime: number
@@ -27,8 +31,11 @@ export function obligationToDashboardUpcomingItem(item: FinanceObligation): Dash
   return {
     id: item.id,
     title: item.title,
+    subtitle: item.subtitle,
     value: formatCurrency(item.amount),
     amount: item.amount,
+    cashImpactAmount: item.cashImpactAmount ?? item.amount,
+    settlement: item.settlement ?? 'cash',
     kind: obligationKindToDashboardKind(item.kind),
     date: formatDate(item.date),
     sortTime: new Date(`${item.date}T00:00:00`).getTime(),

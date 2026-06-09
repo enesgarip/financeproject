@@ -204,6 +204,14 @@ export function paymentOccurrenceInMonth(payment: Payment, month = new Date()) {
   return isDateInMonth(payment.due_date, month) ? new Date(`${payment.due_date}T00:00:00`) : null
 }
 
+export function paymentUsesCreditCard(payment: Pick<Payment, 'payment_method' | 'auto_source_card_id'>) {
+  return payment.payment_method === 'bank_auto' && Boolean(payment.auto_source_card_id)
+}
+
+export function paymentCashOutflowAmount(payment: Pick<Payment, 'amount' | 'payment_method' | 'auto_source_card_id'>) {
+  return paymentUsesCreditCard(payment) ? 0 : payment.amount
+}
+
 export function buildFinancialPosition(data: FinanceSummaryInput): FinancialPositionSummary {
   const bankCards = data.cards.filter((card) => card.card_type === 'banka_karti')
   const creditCards = data.cards.filter((card) => card.card_type === 'kredi_karti')
@@ -269,7 +277,7 @@ export function buildMonthlyCashFlow(data: FinanceSummaryInput, month = new Date
   )
   const paymentOutflow = sum(
     data.payments.filter((payment) => paymentOccurrenceInMonth(payment, monthStart)),
-    (payment) => payment.amount,
+    paymentCashOutflowAmount,
   )
   const recurringPayments = data.payments.filter((payment) => payment.recurrence === 'monthly' && payment.status === 'bekliyor').length
   const cardStatementDebt = sum(

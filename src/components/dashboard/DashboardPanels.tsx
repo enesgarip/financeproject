@@ -564,6 +564,8 @@ type CashFlowCalendarGroup = {
   dayKey: string
   dateLabel: string
   amount: number
+  cashImpactAmount: number
+  cardSettledAmount: number
   count: number
   kinds: Set<UpcomingItem['kind']>
   cashAfter: number
@@ -581,6 +583,8 @@ function buildCashFlowCalendarGroups(items: UpcomingItem[], startingCash: number
       dayKey,
       dateLabel: formatDate(dayKey),
       amount: roundMoney((current?.amount ?? 0) + item.amount),
+      cashImpactAmount: roundMoney((current?.cashImpactAmount ?? 0) + item.cashImpactAmount),
+      cardSettledAmount: roundMoney((current?.cardSettledAmount ?? 0) + (item.settlement === 'credit_card' ? item.amount : 0)),
       count: nextItems.length,
       kinds: new Set([...(current?.kinds ?? []), item.kind]),
       items: nextItems,
@@ -591,7 +595,7 @@ function buildCashFlowCalendarGroups(items: UpcomingItem[], startingCash: number
   return Array.from(groups.values())
     .sort((a, b) => a.dayKey.localeCompare(b.dayKey))
     .map((group) => {
-      runningCash = roundMoney(runningCash - group.amount)
+      runningCash = roundMoney(runningCash - group.cashImpactAmount)
       return { ...group, cashAfter: runningCash }
     })
 }
@@ -610,6 +614,8 @@ export function CashFlowCalendarPanel({ items, cashFlow }: { items: UpcomingItem
   const visibleGroups = showAll ? groups : groups.slice(0, 4)
   const selectedGroup = visibleGroups.find((group) => group.dayKey === selectedDayKey) ?? visibleGroups[0] ?? null
   const totalUpcoming = sum(items, (item) => item.amount)
+  const totalCashImpact = sum(items, (item) => item.cashImpactAmount)
+  const totalCardSettled = roundMoney(Math.max(0, totalUpcoming - totalCashImpact))
   const lowestCash = groups.reduce((lowest, group) => Math.min(lowest, group.cashAfter), cashFlow.cashAssets)
 
   return (
@@ -620,9 +626,12 @@ export function CashFlowCalendarPanel({ items, cashFlow }: { items: UpcomingItem
             <CardTitle>Nakit takvimi</CardTitle>
             <p className="mt-1 text-sm text-muted-foreground">Önümüzdeki {UPCOMING_DAYS} gün için günlük ödeme yoğunluğu.</p>
           </div>
-          <Badge variant={lowestCash < 0 ? 'destructive' : 'secondary'}>
-            {groups.length > 0 ? `${groups.length} gün · ${formatCurrency(totalUpcoming)}` : 'Takvim temiz'}
-          </Badge>
+          <div className="flex flex-wrap justify-end gap-2">
+            <Badge variant={lowestCash < 0 ? 'destructive' : 'secondary'}>
+              {groups.length > 0 ? `${groups.length} gün · nakit ${formatCurrency(totalCashImpact)}` : 'Takvim temiz'}
+            </Badge>
+            {totalCardSettled > 0 ? <Badge variant="info">Kart {formatCurrency(totalCardSettled)}</Badge> : null}
+          </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-3 pt-0">
@@ -636,6 +645,9 @@ export function CashFlowCalendarPanel({ items, cashFlow }: { items: UpcomingItem
             <div className="grid gap-2 lg:grid-cols-2">
               {visibleGroups.map((group) => {
                 const cashTone = group.cashAfter < 0 ? 'text-rose-700 dark:text-rose-300' : 'text-emerald-700 dark:text-emerald-300'
+                const cashBadgeClass = group.cashImpactAmount > 0
+                  ? 'bg-rose-50 text-rose-700 dark:bg-rose-950/30 dark:text-rose-300'
+                  : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300'
                 const isSelected = selectedGroup?.dayKey === group.dayKey
 
                 return (
@@ -657,9 +669,16 @@ export function CashFlowCalendarPanel({ items, cashFlow }: { items: UpcomingItem
                           {Array.from(group.kinds).map(kindLabel).join(' · ')} · {group.count} kayıt
                         </p>
                       </div>
-                      <span className="shrink-0 rounded-lg bg-rose-50 px-2 py-1 text-xs font-black tabular-nums text-rose-700 dark:bg-rose-950/30 dark:text-rose-300">
-                        {formatCurrency(group.amount)}
-                      </span>
+                      <div className="flex shrink-0 flex-col items-end gap-1">
+                        <span className={`rounded-lg px-2 py-1 text-xs font-black tabular-nums ${cashBadgeClass}`}>
+                          {group.cashImpactAmount > 0 ? `Nakit ${formatCurrency(group.cashImpactAmount)}` : 'Nakit etkisi yok'}
+                        </span>
+                        {group.cardSettledAmount > 0 ? (
+                          <span className="rounded-lg bg-info/10 px-2 py-1 text-[11px] font-black tabular-nums text-info">
+                            Kart {formatCurrency(group.cardSettledAmount)}
+                          </span>
+                        ) : null}
+                      </div>
                     </div>
                     <p className={`mt-3 text-xs font-bold tabular-nums ${cashTone}`}>Bu gün sonrası tahmini nakit: {formatCurrency(group.cashAfter)}</p>
                   </button>
@@ -672,7 +691,8 @@ export function CashFlowCalendarPanel({ items, cashFlow }: { items: UpcomingItem
                   <div className="min-w-0">
                     <p className="text-sm font-black text-emerald-950 dark:text-emerald-50">{selectedGroup.dateLabel}</p>
                     <p className="mt-1 text-xs text-emerald-900/70 dark:text-emerald-100/70">
-                      {selectedGroup.count} kayıt · toplam {formatCurrency(selectedGroup.amount)}
+                      {selectedGroup.count} kayıt · nakit etkisi {formatCurrency(selectedGroup.cashImpactAmount)}
+                      {selectedGroup.cardSettledAmount > 0 ? ` · kart ${formatCurrency(selectedGroup.cardSettledAmount)}` : ''}
                     </p>
                   </div>
                   <Badge variant={selectedGroup.cashAfter < 0 ? 'destructive' : 'secondary'}>
@@ -684,11 +704,23 @@ export function CashFlowCalendarPanel({ items, cashFlow }: { items: UpcomingItem
                     <div key={item.id} className="flex min-w-0 items-center justify-between gap-3 rounded-lg bg-card/80 px-3 py-2 text-sm">
                       <div className="min-w-0">
                         <p className="truncate font-bold text-foreground">{item.title}</p>
-                        <p className="mt-0.5 text-xs text-muted-foreground">{kindLabel(item.kind)}</p>
+                        <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                          {item.settlement === 'credit_card' ? 'Karttan işlenecek' : kindLabel(item.kind)}
+                          {item.subtitle ? ` · ${item.subtitle}` : ''}
+                        </p>
                       </div>
-                      <span className="shrink-0 whitespace-nowrap rounded-lg bg-emerald-100 px-2 py-1 text-xs font-black tabular-nums text-emerald-900 dark:bg-emerald-900/45 dark:text-emerald-100">
-                        {item.value}
-                      </span>
+                      <div className="flex shrink-0 flex-col items-end gap-1">
+                        <span className={`whitespace-nowrap rounded-lg px-2 py-1 text-xs font-black tabular-nums ${
+                          item.settlement === 'credit_card'
+                            ? 'bg-info/10 text-info'
+                            : 'bg-emerald-100 text-emerald-900 dark:bg-emerald-900/45 dark:text-emerald-100'
+                        }`}>
+                          {item.settlement === 'credit_card' ? 'Kart ' : ''}{item.value}
+                        </span>
+                        {item.cashImpactAmount !== item.amount ? (
+                          <span className="text-[10px] font-bold text-muted-foreground">Nakit {formatCurrency(item.cashImpactAmount)}</span>
+                        ) : null}
+                      </div>
                     </div>
                   ))}
                 </div>

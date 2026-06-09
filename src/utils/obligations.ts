@@ -9,7 +9,7 @@ import type {
 } from '../types/database'
 import { getNextCardPaymentDueDate } from './cardStatement'
 import { addMonths, dateInMonth, dateInputValue, isDateInMonth, monthlyOccurrenceDate, startOfDay, startOfMonth } from './date'
-import { cardMonthlyPaymentAmount, paymentOccurrenceInMonth, roundMoney, sum } from './financeSummary'
+import { cardMonthlyPaymentAmount, paymentCashOutflowAmount, paymentOccurrenceInMonth, paymentUsesCreditCard, roundMoney, sum } from './financeSummary'
 
 export type FinanceObligationKind =
   | 'payment'
@@ -30,6 +30,7 @@ export type FinanceObligationAction =
   | 'collect_debt'
 
 export type FinanceObligationDirection = 'outflow' | 'inflow'
+export type FinanceObligationSettlement = 'cash' | 'credit_card'
 
 export type FinanceObligation = {
   id: string
@@ -41,7 +42,9 @@ export type FinanceObligation = {
   subtitle: string
   date: string
   amount: number
+  cashImpactAmount?: number
   direction: FinanceObligationDirection
+  settlement?: FinanceObligationSettlement
   isEstimate?: boolean
 }
 
@@ -97,7 +100,13 @@ function cardLabel(card: Card | undefined) {
 
 function addObligation(items: FinanceObligation[], item: FinanceObligation, options: { allowZero?: boolean } = {}) {
   if (!options.allowZero && item.amount <= 0) return
-  items.push({ ...item, amount: roundMoney(Math.max(0, item.amount)) })
+  const amount = roundMoney(Math.max(0, item.amount))
+  items.push({
+    ...item,
+    amount,
+    cashImpactAmount: roundMoney(Math.max(0, item.cashImpactAmount ?? amount)),
+    settlement: item.settlement ?? 'cash',
+  })
 }
 
 export function buildFinanceObligationsForMonth(
@@ -115,6 +124,8 @@ export function buildFinanceObligationsForMonth(
   for (const payment of data.payments) {
     const occurrence = paymentOccurrenceInMonth(payment, monthStart)
     if (!occurrence) continue
+    const usesCreditCard = paymentUsesCreditCard(payment)
+    const autoSourceCard = payment.auto_source_card_id ? cardsById.get(payment.auto_source_card_id) : undefined
 
     addObligation(
       items,
@@ -123,11 +134,18 @@ export function buildFinanceObligationsForMonth(
         kind: 'payment',
         action: 'pay_payment',
         sourceId: payment.id,
+        relatedCardId: payment.auto_source_card_id ?? undefined,
         title: payment.title,
-        subtitle: payment.recurrence === 'monthly' ? `${payment.category} - aylık` : payment.category,
+        subtitle: usesCreditCard
+          ? `${payment.category} - ${cardLabel(autoSourceCard)} kart talimati`
+          : payment.recurrence === 'monthly'
+            ? `${payment.category} - aylik`
+            : payment.category,
         date: dateInputValue(occurrence),
         amount: payment.amount,
+        cashImpactAmount: paymentCashOutflowAmount(payment),
         direction: 'outflow',
+        settlement: usesCreditCard ? 'credit_card' : 'cash',
         isEstimate: payment.amount_status === 'estimated',
       },
       { allowZero: payment.amount_status === 'estimated' },
@@ -206,7 +224,9 @@ export function buildFinanceObligationsForMonth(
       subtitle: `${cardLabel(card)} - ${installment.installment_no}/${installment.installment_count}. taksit`,
       date: displayDate,
       amount: installment.amount,
+      cashImpactAmount: 0,
       direction: 'outflow',
+      settlement: 'credit_card',
     })
   }
 

@@ -104,4 +104,38 @@ describe('buildDashboardUpcomingItems', () => {
       ['card', 2000],
     ])
   })
+
+  it('keeps card automatic payments visible without cash impact', () => {
+    const items = buildDashboardUpcomingItems(
+      {
+        cards: [card({ id: 'credit-card', bank_name: 'Banka', card_name: 'Kart' })],
+        payments: [
+          payment({
+            id: 'icloud',
+            title: 'iCloud+',
+            amount: 130,
+            due_date: '2026-06-11',
+            payment_method: 'bank_auto',
+            auto_source_card_id: 'credit-card',
+          }),
+        ],
+        loans: [],
+        loanInstallments: [],
+        debts: [],
+        cardInstallments: [],
+        cardStatements: [],
+      },
+      14,
+      new Date(2026, 5, 1),
+    )
+
+    expect(items).toHaveLength(1)
+    expect(items[0]).toMatchObject({
+      title: 'iCloud+',
+      amount: 130,
+      cashImpactAmount: 0,
+      settlement: 'credit_card',
+      kind: 'payment',
+    })
+  })
 })
