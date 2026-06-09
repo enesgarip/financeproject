@@ -160,6 +160,13 @@ describe('parseDenizBankStatement — installments', () => {
     expect(taksit?.isInstallment).toBe(true)
   })
 
+  it('does not mis-categorise instalment rows as Ulaşım ("taksit" must not match "taksi")', () => {
+    const result = parseDenizBankStatement(SAMPLE_TEXT)
+    for (const tx of result.transactions.filter((t) => t.isInstallment)) {
+      expect(tx.category, `${tx.description} should not be Ulaşım`).not.toBe('Ulaşım')
+    }
+  })
+
   it('extracts correct installment amount (not total)', () => {
     const result = parseDenizBankStatement(SAMPLE_TEXT)
     const taksit = result.transactions.find((t) => t.description.includes('BEYLER OPTİK'))

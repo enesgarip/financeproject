@@ -23,6 +23,27 @@ describe('buildCategoryMemory', () => {
   })
 })
 
+describe('inferExpenseCategory word boundaries', () => {
+  it('does not categorise instalment ("taksit") rows as Ulaşım via the "taksi" keyword', () => {
+    expect(inferExpenseCategory('BEYLER OPTİK Peş. Taksit 1.Tk Anapara')).not.toBe('Ulaşım')
+    expect(inferExpenseCategory('NEOVA SİGORTA Peş. Taksit 3.Tk Anapara')).not.toBe('Ulaşım')
+    expect(inferExpenseCategory('Taksitli İşlem')).not.toBe('Ulaşım')
+  })
+
+  it('still matches genuine whole-word keywords', () => {
+    expect(inferExpenseCategory('Taksi durağı ödemesi')).toBe('Ulaşım')
+    expect(inferExpenseCategory('SHELL PETROL')).toBe('Ulaşım')
+    expect(inferExpenseCategory('ŞOK MARKET')).toBe('Market')
+    expect(inferExpenseCategory('BP AKARYAKIT')).toBe('Ulaşım')
+  })
+
+  it('does not latch a short keyword onto a larger word', () => {
+    // "bp" must not match inside another token, "dis" must not match "disko"
+    expect(inferExpenseCategory('ABPLAST SANAYI')).not.toBe('Ulaşım')
+    expect(inferExpenseCategory('DISKO GECESI')).not.toBe('Sağlık')
+  })
+})
+
 describe('suggestExpenseCategory', () => {
   const memory = buildCategoryMemory([
     { description: 'Kuaför Ayşe', category: 'Sağlık' },

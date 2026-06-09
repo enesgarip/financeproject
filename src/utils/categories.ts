@@ -54,11 +54,33 @@ export function normalizeDescription(description: string) {
   return description.trim().toLocaleLowerCase('tr-TR').replace(/\s+/g, ' ')
 }
 
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+/**
+ * Builds a whole-word matcher for a rule's keywords. Matching on word
+ * boundaries (instead of a raw substring `includes`) stops short keywords from
+ * latching onto unrelated words — e.g. the Ulaşım keyword "taksi" must not match
+ * "taksit"/"taksitli", which previously dumped every instalment purchase into
+ * Ulaşım. The boundaries use \p{L}/\p{N} (Unicode-aware so Turkish letters
+ * count as word characters) and avoid lookbehind for older Safari/iOS support.
+ */
+function keywordMatcher(keywords: string[]) {
+  const alternation = keywords.map(escapeRegExp).join('|')
+  return new RegExp(`(?:^|[^\\p{L}\\p{N}])(?:${alternation})(?![\\p{L}\\p{N}])`, 'u')
+}
+
+const categoryMatchers = categoryRules.map((rule) => ({
+  category: rule.category,
+  matcher: keywordMatcher(rule.keywords),
+}))
+
 export function inferExpenseCategory(description: string) {
   const normalized = normalizeDescription(description)
   if (!normalized) return null
 
-  return categoryRules.find((rule) => rule.keywords.some((keyword) => normalized.includes(keyword)))?.category ?? null
+  return categoryMatchers.find((rule) => rule.matcher.test(normalized))?.category ?? null
 }
 
 /** A learned lookup of (normalized description → category) built from past expenses. */
