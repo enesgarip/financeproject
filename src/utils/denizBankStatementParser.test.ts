@@ -96,10 +96,14 @@ describe('parseDenizBankStatement — transaction filtering', () => {
     expect(hasZero).toBe(false)
   })
 
-  it('skips nakit avans faiz lines', () => {
+  it('includes nakit avans faiz/BSMV/KKDF lines (Dönem Borcu kapsamında)', () => {
     const result = parseDenizBankStatement(SAMPLE_TEXT)
-    const hasFaiz = result.transactions.some((t) => /faiz|bsmv|kkdf/i.test(t.description))
-    expect(hasFaiz).toBe(false)
+    const faiz = result.transactions.find((t) => /faiz/i.test(t.description))
+    const bsmv = result.transactions.find((t) => /bsmv/i.test(t.description))
+    const kkdf = result.transactions.find((t) => /kkdf/i.test(t.description))
+    expect(faiz?.amount).toBeCloseTo(362.30)
+    expect(bsmv?.amount).toBeCloseTo(54.35)
+    expect(kkdf?.amount).toBeCloseTo(54.35)
   })
 
   it('includes nakit avans anapara as a transaction', () => {

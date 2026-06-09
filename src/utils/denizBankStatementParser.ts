@@ -112,8 +112,8 @@ export function parseDenizBankStatement(text: string): ParsedStatement {
     // Skip payment lines (amount followed by + sign)
     if (/[\d.,]+\+\s*TL/.test(line)) continue
 
-    // Skip interest and tax components on nakit avans
-    if (/\b(Faiz|BSMV|KKDF)\b/.test(line)) continue
+    // Nakit avansın faiz/BSMV/KKDF satırları Dönem Borcu'na dahildir; bunlar
+    // peşin masraf olarak içeri alınır (atlanırsa toplam eksik kalır).
 
     // Skip Hesaptan Ödeme
     if (line.includes('Hesaptan Ödeme')) continue
