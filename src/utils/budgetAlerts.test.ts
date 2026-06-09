@@ -87,7 +87,7 @@ describe('buildBudgetUsage', () => {
   it('buckets uncategorised expenses into Diğer for both screens', () => {
     const usage = buildBudgetUsage(
       [budget({ id: 'd', category: 'Diğer', limit_amount: 100 })],
-      [expense({ category: null, amount: 150 })],
+      [expense({ category: undefined, amount: 150 })],
       JUNE,
     )
     expect(usage[0]).toMatchObject({ category: 'Diğer', spent: 150, status: 'over' })
