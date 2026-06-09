@@ -1,5 +1,7 @@
 import { FileUp, X, CheckCircle2, AlertCircle, Loader2, FileText } from 'lucide-react'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
+import { useBodyScrollLock } from '../ui/use-body-scroll-lock'
 import { supabase } from '../../lib/supabase'
 import type { Card } from '../../types/database'
 import { formatCurrency } from '../../utils/formatCurrency'
@@ -78,16 +80,11 @@ type Props = {
 }
 
 export function StatementImportModal({ card, onClose, onSuccess }: Props) {
-  // Modal açıkken arka plan sayfasının kaymasını engelle.
-  useEffect(() => {
-    const original = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => {
-      document.body.style.overflow = original
-    }
-  }, [])
+  // Modal açıkken arka plan sayfasının kaymasını engelle (ortak kilit kalıbı).
+  useBodyScrollLock(true)
 
   const [step, setStep] = useState<Step>('upload')
+  const [cleanImport, setCleanImport] = useState(false)
   const [parsing, setParsing] = useState(false)
   const [parseError, setParseError] = useState('')
   const [importing, setImporting] = useState(false)
@@ -127,6 +124,21 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
         return
       }
 
+      setStatementTotal(parsed.totalDebt)
+      setStatementDate(parsed.statementDate)
+      setDueDate(parsed.dueDate)
+
+      // Temiz içe aktarma: kart sıfırlanacağı için eşleştirme yapılmaz; tüm
+      // işlemler (peşin + taksit) baştan kurulur.
+      if (cleanImport) {
+        setMatched([])
+        setManualReview([])
+        setUnmatched(parsed.transactions)
+        setSelected(new Set(parsed.transactions.map((_, i) => i)))
+        setStep('review')
+        return
+      }
+
       // Load existing expenses for this card to match against
       const { data: expenses } = await supabase
         .from('card_expenses')
@@ -140,9 +152,6 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
       const importable = result.unmatched.filter(isImportable)
       const manual = result.unmatched.filter((tx) => !isImportable(tx))
 
-      setStatementTotal(parsed.totalDebt)
-      setStatementDate(parsed.statementDate)
-      setDueDate(parsed.dueDate)
       setMatched(result.matched)
       setUnmatched(importable)
       setManualReview(manual)
@@ -153,9 +162,97 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
     } finally {
       setParsing(false)
     }
-  }, [card.id])
+  }, [card.id, cleanImport])
+
+  function todayIso() {
+    const now = new Date()
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+  }
+
+  // Mutabakat dönemi: temiz içe aktarmada ekstre bugün kesildiği için bugünün
+  // dönemi; normal modda ekstre kesim tarihinin dönemi kullanılır.
+  function reconcilePeriodDate() {
+    if (cleanImport) return new Date()
+    return statementDate ? new Date(`${statementDate}T00:00:00`) : new Date()
+  }
+
+  async function handleCleanImport() {
+    const toImport = unmatched.filter((_, i) => selected.has(i))
+    if (!toImport.length) return
+
+    setImporting(true)
+    setImportError('')
+
+    // 1) Kartı baseline'a çek.
+    const { error: resetError } = await supabase.rpc('reset_card_data', { p_card_id: card.id })
+    if (resetError) {
+      setImportError(`Sıfırlama başarısız: ${resetError.message}`)
+      setImporting(false)
+      return
+    }
+
+    // 2) Tüm işlemleri baştan kur (peşin + kalan-plan taksitler).
+    const today = todayIso()
+    let successCount = 0
+    const errors: string[] = []
+
+    for (const tx of toImport) {
+      const knownPlan = tx.isInstallment && tx.installmentCount > 1
+      // Plan-ortası taksitte kalan adet bu aydan itibaren kurulur.
+      const remaining = knownPlan ? Math.max(1, tx.installmentCount - tx.installmentNo + 1) : 1
+      const { error } = await supabase.rpc('add_card_expense', {
+        p_card_id: card.id,
+        p_amount: knownPlan ? Math.round(tx.amount * remaining * 100) / 100 : tx.amount,
+        p_description: tx.description,
+        // Kalan plan kuruluyorsa bugünden başlat; peşin/tek çekim orijinal tarihte kalır.
+        p_spent_at: knownPlan ? today : tx.date,
+        p_installment_count: knownPlan ? remaining : 1,
+        p_category: tx.category,
+        p_status: 'posted' as const,
+      })
+      if (error) errors.push(`${tx.description}: ${error.message}`)
+      else successCount++
+    }
+
+    setImportedCount(successCount)
+
+    if (!successCount) {
+      setImportError(`İçe aktarma başarısız: ${errors[0] ?? 'Bilinmeyen hata.'}`)
+      setImporting(false)
+      return
+    }
+
+    // 3) Ekstreyi kes → dönem içi tutar açık ekstreye (statement_debt_amount) taşınır.
+    const { error: cutError } = await supabase.rpc('cut_card_statement', { p_card_id: card.id })
+    if (cutError) {
+      setImportError(`Ekstre kesilemedi: ${cutError.message}`)
+      setImporting(false)
+      return
+    }
+
+    // 4) Banka tutarıyla mutabık işaretle (bugünün dönemi).
+    if (statementTotal) {
+      const period = reconcilePeriodDate()
+      const { error: reconcileErr } = await supabase.rpc('set_statement_reconciliation', {
+        p_card_id: card.id,
+        p_period_year: period.getFullYear(),
+        p_period_month: period.getMonth() + 1,
+        p_bank_amount: statementTotal,
+        p_note: null,
+      })
+      if (!reconcileErr) setReconciled(true)
+    }
+
+    setImporting(false)
+    setStep('success')
+  }
 
   async function handleImport() {
+    if (cleanImport) {
+      await handleCleanImport()
+      return
+    }
+
     const toImport = unmatched.filter((_, i) => selected.has(i))
     if (!toImport.length) return
 
@@ -197,8 +294,7 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
     setReconciling(true)
     setReconcileError('')
 
-    // Dönem, ekstrenin kesim tarihinden türetilir (arşiv anahtarıyla aynı mantık).
-    const period = statementDate ? new Date(`${statementDate}T00:00:00`) : new Date()
+    const period = reconcilePeriodDate()
     const { error } = await supabase.rpc('set_statement_reconciliation', {
       p_card_id: card.id,
       p_period_year: period.getFullYear(),
@@ -234,11 +330,11 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
   const appCardDebt = card.statement_debt_amount + card.current_period_spending
   const diff = statementTotal - appCardDebt
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-3 py-4 backdrop-blur-sm sm:p-6">
-      <div className="max-h-[92svh] w-full max-w-lg overflow-y-auto rounded-2xl bg-card shadow-xl">
+  return createPortal(
+    <div className="fixed inset-0 z-[80] flex items-start justify-center overflow-y-auto bg-black/50 px-3 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-[calc(env(safe-area-inset-top)+1rem)] backdrop-blur-sm sm:items-center sm:p-6">
+      <div className="max-h-[88svh] w-full max-w-lg overflow-x-hidden overflow-y-auto rounded-2xl bg-card shadow-xl sm:max-h-[92svh]">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-border px-4 py-3">
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-card/95 px-4 py-3 backdrop-blur">
           <div className="flex items-center gap-2">
             <FileText size={16} className="text-primary" />
             <span className="text-sm font-black text-foreground">Ekstre İçe Aktar</span>
@@ -279,6 +375,22 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
               <span className="text-xs text-muted-foreground">kk_hesap_ekstresi_*.pdf</span>
             </button>
 
+            <label className="flex cursor-pointer items-start gap-2.5 rounded-xl border border-border bg-muted/30 p-3">
+              <input
+                type="checkbox"
+                checked={cleanImport}
+                onChange={(e) => setCleanImport(e.target.checked)}
+                className="mt-0.5 size-4 accent-primary"
+              />
+              <span className="text-xs">
+                <span className="block font-bold text-foreground">Bu kartı sıfırlayıp ekstreyi baştan kur</span>
+                <span className="mt-0.5 block text-muted-foreground">
+                  Kartın mevcut tüm harcama, taksit ve ekstre verisi silinir; ekstredeki işlemler açık ekstre
+                  olarak kurulur, plan-ortası taksitler kalan adetle bu aydan itibaren takip edilir.
+                </span>
+              </span>
+            </label>
+
             <input
               ref={fileRef}
               type="file"
@@ -302,6 +414,12 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
         {/* Review step */}
         {step === 'review' && (
           <div className="flex max-h-[75vh] flex-col">
+            {cleanImport && (
+              <p className="flex items-start gap-2 border-b border-border bg-warning/10 px-4 py-3 text-xs font-bold text-warning">
+                <AlertCircle size={15} className="mt-0.5 shrink-0" />
+                Onayladığında bu kartın mevcut tüm harcama, taksit ve ekstre verisi silinip aşağıdaki işlemlerle baştan kurulur.
+              </p>
+            )}
             {/* Reconciliation summary */}
             <div className="border-b border-border p-4 space-y-3">
               <div className="grid grid-cols-2 gap-2 text-xs">
@@ -320,36 +438,42 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
                   <span className="text-muted-foreground">Bankadan gelen</span>
                   <span className="font-black text-foreground">{formatCurrency(statementTotal)}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">App hesabı</span>
-                  <span className="font-black text-foreground">{formatCurrency(appCardDebt)}</span>
-                </div>
-                <div className="h-px bg-border" />
-                <div className="flex justify-between">
-                  <span className="font-bold text-muted-foreground">Fark</span>
-                  <span className={`font-black ${Math.abs(diff) < 1 ? 'text-success' : 'text-destructive'}`}>
-                    {diff >= 0 ? '+' : ''}{formatCurrency(diff)}
-                  </span>
-                </div>
+                {!cleanImport && (
+                  <>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">App hesabı</span>
+                      <span className="font-black text-foreground">{formatCurrency(appCardDebt)}</span>
+                    </div>
+                    <div className="h-px bg-border" />
+                    <div className="flex justify-between">
+                      <span className="font-bold text-muted-foreground">Fark</span>
+                      <span className={`font-black ${Math.abs(diff) < 1 ? 'text-success' : 'text-destructive'}`}>
+                        {diff >= 0 ? '+' : ''}{formatCurrency(diff)}
+                      </span>
+                    </div>
+                  </>
+                )}
               </div>
 
-              <button
-                type="button"
-                disabled={reconciling || reconciled || !statementTotal}
-                onClick={() => void handleReconcile()}
-                className="flex w-full items-center justify-center gap-2 rounded-xl border border-border py-2.5 text-xs font-black text-foreground transition hover:bg-muted/50 disabled:opacity-55"
-              >
-                {reconciling && <Loader2 size={13} className="animate-spin" />}
-                {reconciled ? (
-                  <>
-                    <CheckCircle2 size={13} className="text-success" /> Mutabık kaydedildi
-                  </>
-                ) : reconciling ? (
-                  'Kaydediliyor…'
-                ) : (
-                  'Bu ekstreyi mutabık olarak kaydet'
-                )}
-              </button>
+              {!cleanImport && (
+                <button
+                  type="button"
+                  disabled={reconciling || reconciled || !statementTotal}
+                  onClick={() => void handleReconcile()}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-border py-2.5 text-xs font-black text-foreground transition hover:bg-muted/50 disabled:opacity-55"
+                >
+                  {reconciling && <Loader2 size={13} className="animate-spin" />}
+                  {reconciled ? (
+                    <>
+                      <CheckCircle2 size={13} className="text-success" /> Mutabık kaydedildi
+                    </>
+                  ) : reconciling ? (
+                    'Kaydediliyor…'
+                  ) : (
+                    'Bu ekstreyi mutabık olarak kaydet'
+                  )}
+                </button>
+              )}
 
               {reconcileError && (
                 <p className="flex items-center gap-2 rounded-lg bg-destructive/10 p-2.5 text-[11px] text-destructive">
@@ -358,29 +482,31 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
                 </p>
               )}
 
-              <div className="flex flex-wrap gap-2 text-xs">
-                <span className="flex items-center gap-1 rounded-md bg-success/10 px-2 py-1 font-bold text-success">
-                  <CheckCircle2 size={12} />
-                  {matched.length} eşleşti
-                </span>
-                <span className="flex items-center gap-1 rounded-md bg-warning/10 px-2 py-1 font-bold text-warning">
-                  <AlertCircle size={12} />
-                  {unmatched.length} eksik
-                </span>
-                {manualReview.length > 0 && (
-                  <span className="flex items-center gap-1 rounded-md bg-info/10 px-2 py-1 font-bold text-info">
-                    <AlertCircle size={12} />
-                    {manualReview.length} manuel
+              {!cleanImport && (
+                <div className="flex flex-wrap gap-2 text-xs">
+                  <span className="flex items-center gap-1 rounded-md bg-success/10 px-2 py-1 font-bold text-success">
+                    <CheckCircle2 size={12} />
+                    {matched.length} eşleşti
                   </span>
-                )}
-              </div>
+                  <span className="flex items-center gap-1 rounded-md bg-warning/10 px-2 py-1 font-bold text-warning">
+                    <AlertCircle size={12} />
+                    {unmatched.length} eksik
+                  </span>
+                  {manualReview.length > 0 && (
+                    <span className="flex items-center gap-1 rounded-md bg-info/10 px-2 py-1 font-bold text-info">
+                      <AlertCircle size={12} />
+                      {manualReview.length} manuel
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Importable (otomatik aktarılabilir) işlemler */}
             {unmatched.length > 0 && (
               <>
                 <div className="flex items-center justify-between border-b border-border px-4 py-2">
-                  <span className="text-xs font-bold text-muted-foreground">App'te olmayan işlemler</span>
+                  <span className="text-xs font-bold text-muted-foreground">{cleanImport ? 'İçe aktarılacak işlemler' : "App'te olmayan işlemler"}</span>
                   <button
                     type="button"
                     onClick={toggleAll}
@@ -391,34 +517,44 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
                 </div>
 
                 <div className="flex-1 overflow-y-auto">
-                  {unmatched.map((tx, i) => (
-                    <label
-                      key={i}
-                      className="flex cursor-pointer items-center gap-3 border-b border-border/50 px-4 py-2.5 hover:bg-muted/30"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selected.has(i)}
-                        onChange={() => toggleRow(i)}
-                        className="size-4 accent-primary"
-                      />
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-xs font-bold text-foreground">{tx.description}</p>
-                        <p className="text-[11px] text-muted-foreground">
-                          {formatShortDate(tx.date)} · {tx.category}
-                          {tx.isInstallment ? ` · ${tx.installmentCount} taksit` : ''}
-                        </p>
-                      </div>
-                      <span className="shrink-0 text-right text-xs font-black text-foreground">
-                        {formatCurrency(tx.isInstallment ? expenseTotalAmount(tx) : tx.amount)}
-                        {tx.isInstallment && (
-                          <span className="block text-[10px] font-bold text-muted-foreground">
-                            {formatCurrency(tx.amount)}/ay
-                          </span>
-                        )}
-                      </span>
-                    </label>
-                  ))}
+                  {unmatched.map((tx, i) => {
+                    const knownPlan = tx.isInstallment && tx.installmentCount > 1
+                    // Clean modda plan-ortası taksitten yalnızca kalan adet kurulur.
+                    const planCount = cleanImport && knownPlan
+                      ? Math.max(1, tx.installmentCount - tx.installmentNo + 1)
+                      : tx.installmentCount
+                    const rowTotal = knownPlan
+                      ? Math.round(tx.amount * planCount * 100) / 100
+                      : tx.amount
+                    return (
+                      <label
+                        key={i}
+                        className="flex cursor-pointer items-center gap-3 border-b border-border/50 px-4 py-2.5 hover:bg-muted/30"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selected.has(i)}
+                          onChange={() => toggleRow(i)}
+                          className="size-4 accent-primary"
+                        />
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-xs font-bold text-foreground">{tx.description}</p>
+                          <p className="text-[11px] text-muted-foreground">
+                            {formatShortDate(tx.date)} · {tx.category}
+                            {tx.isInstallment ? ` · ${cleanImport && knownPlan ? `${planCount} taksit kalan` : `${tx.installmentCount} taksit`}` : ''}
+                          </p>
+                        </div>
+                        <span className="shrink-0 text-right text-xs font-black text-foreground">
+                          {formatCurrency(rowTotal)}
+                          {tx.isInstallment && (
+                            <span className="block text-[10px] font-bold text-muted-foreground">
+                              {formatCurrency(tx.amount)}/ay
+                            </span>
+                          )}
+                        </span>
+                      </label>
+                    )
+                  })}
                 </div>
 
                 {importError && (
@@ -521,6 +657,7 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }

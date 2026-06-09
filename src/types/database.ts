@@ -411,6 +411,12 @@ export type Database = {
         Args: Record<string, never>
         Returns: void
       }
+      reset_card_data: {
+        Args: {
+          p_card_id: string
+        }
+        Returns: void
+      }
     }
     Enums: Record<string, never>
     CompositeTypes: Record<string, never>
