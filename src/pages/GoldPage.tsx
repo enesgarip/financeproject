@@ -27,6 +27,7 @@ import {
 } from '../utils/goldLedger'
 import { syncGoldLedgerAssets } from '../utils/goldLedgerSync'
 import type { MarketRatesSnapshot } from '../utils/marketRates'
+import { roundTL as round2 } from '../utils/money'
 import { valueAsset } from '../utils/valuation'
 
 const goldFields: FormField[] = [
@@ -83,9 +84,6 @@ type TooltipPayload = {
   stroke?: string
 }
 
-function round2(value: number): number {
-  return Math.round((value + Number.EPSILON) * 100) / 100
-}
 
 function formatDate(value: string | null): string {
   if (!value) return 'Tarih bilinmiyor'

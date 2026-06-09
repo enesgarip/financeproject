@@ -7,19 +7,15 @@ import {
   summarizeGold,
   type GoldTypeSummary,
 } from './goldLedger'
+import { moneyDiffers } from './financeSummary'
 import type { MarketRatesSnapshot } from './marketRates'
+import { roundTL as round2 } from './money'
 import { valueAsset } from './valuation'
-
-const TOLERANCE = 0.01
 
 export type GoldLedgerAssetSyncResult = {
   inserted: number
   updated: number
   deleted: number
-}
-
-function round2(value: number): number {
-  return Math.round((value + Number.EPSILON) * 100) / 100
 }
 
 function quantityLabel(summary: GoldTypeSummary): string {
@@ -88,8 +84,8 @@ function differs(next: InsertFor<'assets'>, current: Asset): boolean {
     next.source !== current.source ||
     next.note !== current.note ||
     Math.abs(next.amount - current.amount) > 0.0001 ||
-    Math.abs((next.unit_cost ?? 0) - (current.unit_cost ?? 0)) > TOLERANCE ||
-    Math.abs(next.estimated_value_try - current.estimated_value_try) > TOLERANCE
+    moneyDiffers(next.unit_cost ?? 0, current.unit_cost ?? 0) ||
+    moneyDiffers(next.estimated_value_try, current.estimated_value_try)
   )
 }
 

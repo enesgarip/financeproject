@@ -1,4 +1,5 @@
 import type { GoldLot, GoldType } from '../types/database'
+import { roundTL as round2 } from './money'
 
 /**
  * Pure aggregation over the gold purchase ledger (`gold_lots`).
@@ -34,10 +35,6 @@ export type GoldTypeSummary = {
   knownCost: number
   /** Average cost per unit across lots with a known price; null when none. */
   avgUnitCost: number | null
-}
-
-function round2(value: number): number {
-  return Math.round((value + Number.EPSILON) * 100) / 100
 }
 
 function round4(value: number): number {

@@ -11,6 +11,7 @@ import type {
   SavingsGoalComponent,
 } from '../types/database'
 import { dateInputValue, endOfMonth, isDateInMonth, monthlyOccurrenceDate, startOfMonth } from './date'
+import { roundTL, toKurus } from './money'
 import { savingsGoalProgressRate } from './savingsGoal'
 
 export type FinanceSummaryInput = {
@@ -101,11 +102,12 @@ export function sum<T>(rows: T[], selector: (row: T) => number) {
 }
 
 export function roundMoney(value: number) {
-  return Math.round((value + Number.EPSILON) * 100) / 100
+  return roundTL(value)
 }
 
 export function moneyDiffers(left: number, right: number) {
-  return Math.abs(roundMoney(left) - roundMoney(right)) > 0.01
+  // 1 kuruşluk tolerans korunur ama float çıkarma yerine tam sayı kuruş üzerinden.
+  return Math.abs(toKurus(left) - toKurus(right)) > 1
 }
 
 export function cardProvisionAmount(card: Pick<Card, 'provision_amount'>) {

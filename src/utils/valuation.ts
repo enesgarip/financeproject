@@ -1,5 +1,6 @@
 import type { Asset, Debt, SavingsGoal } from '../types/database'
 import { convertToTry, type MarketRatesSnapshot, type RateSide, type RateSymbol } from './marketRates'
+import { roundTL as round2 } from './money'
 
 /**
  * Domain valuation: maps an asset / debt / savings-goal row to the live market
@@ -27,10 +28,6 @@ export function assetRateSymbol(asset: Pick<Asset, 'category' | 'unit' | 'curren
 
 /** Live BIST equity prices keyed by ticker (without .IS), in TRY. */
 export type StockPrices = Record<string, number>
-
-function round2(value: number): number {
-  return Math.round((value + Number.EPSILON) * 100) / 100
-}
 
 export function debtRateSymbol(debt: Pick<Debt, 'value_type' | 'currency'>): RateSymbol | null {
   if (debt.value_type === 'gram_altin') return 'GRA'

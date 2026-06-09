@@ -2,6 +2,7 @@ import { supabase } from '../lib/supabase'
 import { fetchStockPrices } from '../lib/stockQuotesClient'
 import type { Asset, Debt, SavingsGoal } from '../types/database'
 import type { MarketRatesSnapshot } from './marketRates'
+import { moneyDiffers } from './financeSummary'
 import { assetIsStock, valueAsset, valueStock, valueDebt, valueGoal } from './valuation'
 
 /**
@@ -15,8 +16,6 @@ import { assetIsStock, valueAsset, valueStock, valueDebt, valueGoal } from './va
  * user, so no explicit user filter is needed.
  */
 
-const TOLERANCE = 0.01
-
 export type ValuationSyncResult = {
   updated: number
   assets: number
@@ -25,7 +24,7 @@ export type ValuationSyncResult = {
 }
 
 function changed(next: number, current: number | null | undefined): boolean {
-  return Math.abs(next - (current ?? 0)) > TOLERANCE
+  return moneyDiffers(next, current ?? 0)
 }
 
 async function syncAssets(snapshot: MarketRatesSnapshot): Promise<number> {

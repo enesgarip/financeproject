@@ -29,6 +29,7 @@ import { expenseCategoryOptions } from '../utils/categories'
 import { getCardStatementPeriod } from '../utils/cardStatement'
 import { dateInputValue, daysUntil, formatDate, nextMonthlyDate } from '../utils/date'
 import { cardPayableDebt, cardProvisionAmount } from '../utils/financeSummary'
+import { roundTL } from '../utils/money'
 import { getLastUsed, setLastUsed } from '../utils/lastUsed'
 import { bankBrandGradient, getBankBrand } from '../utils/bankBranding'
 import { cn, openNativePicker } from '../lib/utils'
@@ -733,7 +734,7 @@ function addMonthsToMonth(month: string, months: number) {
 
 function moneyShare(amount: number, pieces: number) {
   if (amount <= 0) return 0
-  return Math.round((amount / Math.max(1, pieces) + Number.EPSILON) * 100) / 100
+  return roundTL(amount / Math.max(1, pieces))
 }
 
 function formatMonthLabel(month: string) {

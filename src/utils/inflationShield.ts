@@ -1,4 +1,5 @@
 import type { Asset, Card } from '../types/database'
+import { roundTL as round2 } from './money'
 
 /**
  * "Enflasyon kalkanı" — how much of your wealth sits in real/hard assets that
@@ -32,10 +33,6 @@ export type InflationShieldSummary = {
 }
 
 const CASH_CATEGORY = 'Nakit'
-
-function round2(value: number): number {
-  return Math.round((value + Number.EPSILON) * 100) / 100
-}
 
 export function buildInflationShield(assets: Asset[], cards: Card[]): InflationShieldSummary {
   const byCategory = new Map<string, number>()
