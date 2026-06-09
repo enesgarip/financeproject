@@ -10,8 +10,8 @@ import { supabase } from '../lib/supabase'
 import { submitAccountMovement } from '../services/accountMovements'
 import { submitFinanceObligationPayment } from '../services/financePaymentActions'
 import type { Card, CardExpense, CardInstallment, CardStatementArchive } from '../types/database'
-import { dateInputValue, formatDate } from '../utils/date'
-import { cardPayableDebt, cardProvisionAmount, cardSplitTotal } from '../utils/financeSummary'
+import { formatDate } from '../utils/date'
+import { cardProvisionAmount, cardSplitTotal } from '../utils/financeSummary'
 import { getLastUsed, resolvePreferred, setLastUsed } from '../utils/lastUsed'
 import { formatCurrency, parseNumber } from '../utils/formatCurrency'
 import { addTransactionHistory } from '../utils/history'
@@ -48,12 +48,6 @@ export function CardsPage() {
   const [transactionSaving, setTransactionSaving] = useState(false)
   const [movementAccounts, setMovementAccounts] = useState<Card[]>([])
   const [reloadCards, setReloadCards] = useState<(() => Promise<void>) | null>(null)
-  const [debtPaymentCard, setDebtPaymentCard] = useState<Card | null>(null)
-  const [debtPaymentAmount, setDebtPaymentAmount] = useState('')
-  const [debtPaymentSourceCard, setDebtPaymentSourceCard] = useState('')
-  const [debtPaymentError, setDebtPaymentError] = useState('')
-  const [debtPaymentSaving, setDebtPaymentSaving] = useState(false)
-  const [allCards, setAllCards] = useState<Card[]>([])
   const [provisions, setProvisions] = useState<CardExpense[]>([])
   const [provisionsLoading, setProvisionsLoading] = useState(false)
   const [provisionError, setProvisionError] = useState('')
@@ -231,61 +225,6 @@ export function CardsPage() {
     }
 
     setTransactionCard(null)
-    await reloadCards?.()
-  }
-
-  function openDebtPayment(card: Card, reload: () => Promise<void>, cards: Card[]) {
-    const accounts = cards.filter((c) => c.card_type === 'banka_karti' && c.id !== card.id)
-    setDebtPaymentCard(card)
-    setReloadCards(() => reload)
-    setAllCards(accounts)
-    setDebtPaymentAmount(String(card.statement_debt_amount || cardPayableDebt(card) || ''))
-    setDebtPaymentSourceCard(resolvePreferred(getLastUsed('paymentAccount'), accounts.map((account) => account.id)))
-    setDebtPaymentError('')
-  }
-
-  async function handleDebtPaymentSubmit({ account: sourceCard, amount }: { account: Card; amount: number }) {
-    if (!debtPaymentCard) return
-
-    const payableDebt = cardPayableDebt(debtPaymentCard)
-    if (payableDebt <= 0) {
-      setDebtPaymentError('Ödenebilir kesinleşmiş borç yok. Provizyon kesinleşince ödeme yapabilirsin.')
-      return
-    }
-
-    if (amount > payableDebt) {
-      setDebtPaymentError('Ödeme tutarı provizyon hariç kesinleşmiş borçtan büyük olamaz.')
-      return
-    }
-
-    setDebtPaymentSaving(true)
-    setDebtPaymentError('')
-
-    const { error } = await submitFinanceObligationPayment({
-      obligation: {
-        id: `card-debt-${debtPaymentCard.id}`,
-        kind: 'card_debt',
-        action: 'pay_card_debt',
-        sourceId: debtPaymentCard.id,
-        relatedCardId: debtPaymentCard.id,
-        title: debtPaymentCard.card_name,
-        subtitle: debtPaymentCard.bank_name,
-        date: dateInputValue(new Date()),
-        amount: payableDebt,
-        direction: 'outflow',
-      },
-      account: sourceCard,
-      amount,
-    })
-
-    setDebtPaymentSaving(false)
-    if (error) {
-      setDebtPaymentError(error.message ?? 'Kart borcu ödenemedi.')
-      return
-    }
-
-    setLastUsed('paymentAccount', sourceCard.id)
-    setDebtPaymentCard(null)
     await reloadCards?.()
   }
 
@@ -562,7 +501,6 @@ export function CardsPage() {
             reload={helpers.reload}
             setError={helpers.setError}
             onTransfer={(source) => openTransaction(source, helpers.reload, helpers.rows as Card[], 'transfer')}
-            onPayDebt={openDebtPayment}
             onCutStatement={cutStatement}
             onAddExpense={focusQuickExpense}
             onImportStatement={setImportCard}
@@ -696,32 +634,6 @@ export function CardsPage() {
           </button>
         </form>
       </SimpleModal>
-
-      <AccountPaymentModal
-        title="Kredi kartı borç ödeme"
-        open={Boolean(debtPaymentCard)}
-        onClose={() => setDebtPaymentCard(null)}
-        accounts={allCards}
-        selectedAccountId={debtPaymentSourceCard}
-        onSelectedAccountChange={setDebtPaymentSourceCard}
-        amountValue={debtPaymentAmount}
-        onAmountValueChange={setDebtPaymentAmount}
-        amountLabel="Ödeme tutarı"
-        submitLabel="Borç öde"
-        saving={debtPaymentSaving}
-        externalError={debtPaymentError}
-        validate={({ amount }) => {
-          const payableDebt = debtPaymentCard ? cardPayableDebt(debtPaymentCard) : 0
-          if (amount > payableDebt) return 'Ödeme tutarı provizyon hariç kesinleşmiş borçtan büyük olamaz.'
-          return null
-        }}
-        onSubmit={handleDebtPaymentSubmit}
-      >
-        <p className="font-semibold text-foreground">{debtPaymentCard?.card_name}</p>
-        <p>Ekstre borcu: {formatCurrency(debtPaymentCard?.statement_debt_amount ?? 0)}</p>
-        <p>Toplam borç: {formatCurrency(debtPaymentCard?.debt_amount ?? 0)}</p>
-        <p>Ödenebilir: {formatCurrency(debtPaymentCard ? cardPayableDebt(debtPaymentCard) : 0)}</p>
-      </AccountPaymentModal>
 
       {importCard && (
         <StatementImportModal

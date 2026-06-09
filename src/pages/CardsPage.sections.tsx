@@ -474,7 +474,6 @@ export function CreditAccountListCard({
   reload,
   setError,
   onTransfer,
-  onPayDebt,
   onCutStatement,
   onAddExpense,
   onImportStatement,
@@ -488,7 +487,6 @@ export function CreditAccountListCard({
   reload: () => Promise<void>
   setError: (message: string) => void
   onTransfer: (source: Card) => void
-  onPayDebt: (card: Card, reload: () => Promise<void>, rows: Card[]) => void
   onCutStatement: (card: Card, reload: () => Promise<void>, setError: (message: string) => void) => Promise<void>
   onAddExpense: (card: Card, mode: 'cash' | 'installment') => void
   onImportStatement: (card: Card) => void
@@ -635,15 +633,6 @@ export function CreditAccountListCard({
           className="finance-touch-target inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-xs font-black text-foreground shadow-sm transition hover:bg-muted"
         >
           Detay
-        </button>
-        <button
-          type="button"
-          onClick={() => onPayDebt(row, reload, rows)}
-          disabled={payableDebt <= 0}
-          className="finance-touch-target inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-3 py-2 text-xs font-black text-primary-foreground shadow-sm transition hover:bg-primary/90 disabled:opacity-55"
-        >
-          <ReceiptText size={14} />
-          Ekstreyi öde
         </button>
         <button
           type="button"
