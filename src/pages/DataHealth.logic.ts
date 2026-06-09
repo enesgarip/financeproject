@@ -962,26 +962,12 @@ export function buildIssues(data: HealthData): HealthIssue[] {
   }
 
   for (const archive of data.cardStatementArchives) {
-    const archiveTotal = roundMoney(archive.statement_debt_amount + archive.current_period_spending)
     const card = cardsById.get(archive.card_id)
 
-    if (moneyDiffers(archive.total_debt_amount, archiveTotal)) {
-      issues.push({
-        id: `card-archive-total-${archive.id}`,
-        area: 'Kartlar',
-        severity: 'warning',
-        title: `${cardLabel(card)} ekstre arşiv toplamı tutarsız`,
-        description: 'Arşivdeki toplam borç, dönem borcu ve dönem içi harcama toplamıyla eşleşmiyor.',
-        details: [
-          `Ekstre: ${formatDate(archive.statement_date)}`,
-          `Toplam: ${formatCurrency(archive.total_debt_amount)} → ${formatCurrency(archiveTotal)}`,
-        ],
-        fixable: true,
-        fixLabel: 'Arşiv toplamını düzelt',
-        kind: 'cardStatementTotals',
-        payload: { statementArchiveId: archive.id, updates: { total_debt_amount: archiveTotal } },
-      })
-    }
+    // Not: Arşiv toplamı için alanlar-arası bir eşitlik kontrolü yapılmaz.
+    // cut_card_statement, total_debt_amount = kartın tam borcu (taksitler dahil),
+    // statement_debt_amount = current_period_spending = ekstre tutarı olarak yazar;
+    // bu yüzden total == statement + current_period beklentisi her zaman yanlış alarm üretir.
 
     if (archive.due_date && archive.due_date < archive.statement_date) {
       issues.push({
