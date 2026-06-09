@@ -119,9 +119,8 @@ function AnimatedRoutes() {
         <Route path="analiz" element={routeElement(<AnalysisPage />, 'analiz')} />
         <Route path="veri-sagligi" element={routeElement(<DataHealthPage />, 'veri-sagligi')} />
 
-        {/* Legacy redirects (bookmarks / PWA shortcuts) */}
+        {/* Legacy redirect: loans moved from /krediler to /borclar/krediler. */}
         <Route path="krediler" element={<Navigate to="/borclar/krediler" replace />} />
-        <Route path="daha" element={<Navigate to="/" replace />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

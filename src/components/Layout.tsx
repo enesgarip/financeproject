@@ -1,33 +1,12 @@
-import { BarChart3, CalendarDays, LogOut, Moon, MoreHorizontal, ShieldCheck, Sun } from 'lucide-react'
+import { CalendarDays, LogOut, Moon, MoreHorizontal, Sun } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
 import { cn } from '../lib/utils'
 import { BottomNav } from './BottomNav'
-import { primaryNavItems } from './navigation'
+import { contentWidthClass, overflowNavItems, primaryNavItems, routeTitle, secondaryNavItems } from './navigation'
 import { QuickActions } from './QuickActions'
 import { AppMark } from './AppMark'
-
-const titles: Record<string, string> = {
-  '/': 'Finans Özeti',
-  '/kartlar': 'Hesaplar ve Kartlar',
-  '/varliklar': 'Varlıklar',
-  '/varliklar/maas': 'Maaş',
-  '/borclar/krediler': 'Krediler',
-  '/borclar/kisiler': 'Kişiler',
-  '/odemeler': 'Planlı Ödemeler',
-  '/analiz': 'Raporlar',
-  '/veri-sagligi': 'Veri Kontrolü',
-}
-
-const widePaths = new Set(['/', '/analiz', '/kartlar', '/borclar/krediler', '/veri-sagligi'])
-const mediumPaths = new Set(['/varliklar', '/varliklar/maas', '/borclar/kisiler', '/odemeler'])
-
-function getContentWidthClass(pathname: string) {
-  if (widePaths.has(pathname)) return 'max-w-7xl'
-  if (mediumPaths.has(pathname)) return 'max-w-5xl'
-  return 'max-w-4xl'
-}
 
 function currentDateLabel() {
   return new Intl.DateTimeFormat('tr-TR', {
@@ -40,7 +19,7 @@ function currentDateLabel() {
 export function Layout() {
   const { pathname } = useLocation()
   const { signOut, user } = useAuth()
-  const contentWidthClass = getContentWidthClass(pathname)
+  const contentWidth = contentWidthClass(pathname)
   const [isDark, setIsDark] = useState(() => {
     const storedTheme = localStorage.getItem('theme')
     return storedTheme ? storedTheme === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches
@@ -117,20 +96,23 @@ export function Layout() {
           </nav>
 
           {/* Maintenance + user section */}
-          <NavLink
-            to="/veri-sagligi"
-            className={({ isActive }) =>
-              cn(
-                'mb-2 flex h-10 items-center gap-3 rounded-xl px-3 text-sm transition-all',
-                isActive
-                  ? 'bg-primary text-primary-foreground font-semibold shadow-[0_2px_12px_color-mix(in_srgb,var(--primary)_35%,transparent)]'
-                  : 'text-muted-foreground font-medium hover:bg-muted/70 hover:text-foreground',
-              )
-            }
-          >
-            <ShieldCheck size={17} className="shrink-0" />
-            <span className="truncate">Veri Kontrolü</span>
-          </NavLink>
+          {secondaryNavItems.map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              className={({ isActive }) =>
+                cn(
+                  'mb-2 flex h-10 items-center gap-3 rounded-xl px-3 text-sm transition-all',
+                  isActive
+                    ? 'bg-primary text-primary-foreground font-semibold shadow-[0_2px_12px_color-mix(in_srgb,var(--primary)_35%,transparent)]'
+                    : 'text-muted-foreground font-medium hover:bg-muted/70 hover:text-foreground',
+                )
+              }
+            >
+              <item.icon size={17} className="shrink-0" />
+              <span className="truncate">{item.label}</span>
+            </NavLink>
+          ))}
           <div className="rounded-xl border border-border/60 bg-muted/30 p-3">
             <div className="flex items-center gap-2.5">
               <div className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary/15 text-xs font-bold text-primary">
@@ -158,10 +140,10 @@ export function Layout() {
         {/* Header */}
         <header className="sticky top-0 z-20 border-b border-border/60 px-4 pb-3 pt-[calc(env(safe-area-inset-top)+0.75rem)]"
           style={{ background: 'color-mix(in srgb, var(--background) 88%, transparent)', backdropFilter: 'blur(20px)' }}>
-          <div className={`mx-auto flex ${contentWidthClass} items-center justify-between gap-3`}>
+          <div className={`mx-auto flex ${contentWidth} items-center justify-between gap-3`}>
             <div className="min-w-0">
               <h1 className="truncate text-base font-bold leading-tight tracking-tight text-foreground lg:text-lg">
-                {titles[pathname] ?? 'Denge'}
+                {routeTitle(pathname)}
               </h1>
               <p className="hidden truncate text-xs text-muted-foreground lg:block">
                 Hesaplarını, planlı ödemelerini ve kişileri tek yerden yönet.
@@ -204,22 +186,17 @@ export function Layout() {
                       className="fixed inset-0 z-40 cursor-default"
                     />
                     <div className="finance-command-surface absolute right-0 top-full z-50 mt-2 w-56 rounded-xl p-1.5">
-                      <Link
-                        to="/analiz"
-                        onClick={() => setMenuOpen(false)}
-                        className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-foreground transition hover:bg-muted"
-                      >
-                        <BarChart3 size={16} className="shrink-0 text-muted-foreground" />
-                        Raporlar
-                      </Link>
-                      <Link
-                        to="/veri-sagligi"
-                        onClick={() => setMenuOpen(false)}
-                        className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-foreground transition hover:bg-muted"
-                      >
-                        <ShieldCheck size={16} className="shrink-0 text-muted-foreground" />
-                        Veri Kontrolü
-                      </Link>
+                      {overflowNavItems.map((item) => (
+                        <Link
+                          key={item.to}
+                          to={item.to}
+                          onClick={() => setMenuOpen(false)}
+                          className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-foreground transition hover:bg-muted"
+                        >
+                          <item.icon size={16} className="shrink-0 text-muted-foreground" />
+                          {item.label}
+                        </Link>
+                      ))}
                       <div className="my-1 h-px bg-border/60" />
                       <button
                         type="button"
@@ -240,7 +217,7 @@ export function Layout() {
         <main className={cn(
           'mx-auto w-full flex-1 px-4 pt-5 lg:px-6 lg:pt-7',
           'pb-[calc(env(safe-area-inset-bottom)+11rem)] lg:pb-14',
-          contentWidthClass,
+          contentWidth,
         )}>
           <Outlet />
         </main>
