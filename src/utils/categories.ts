@@ -15,7 +15,7 @@ export const expenseCategoryOptions = expenseCategories.map((category) => ({
   value: category,
 }))
 
-const categoryRules: Array<{ category: string; keywords: string[] }> = [
+export const categoryRules: Array<{ category: string; keywords: string[] }> = [
   {
     category: 'Market',
     keywords: ['market', 'migros', 'bim', 'a101', 'şok', 'sok', 'carrefour', 'macrocenter', 'kasap', 'manav'],
