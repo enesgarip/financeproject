@@ -78,6 +78,7 @@ const payment1: Payment = {
   recurrence: 'monthly',
   recurrence_day: 1,
   recurrence_end_date: null,
+  auto_source_card_id: null,
   note: null,
 }
 

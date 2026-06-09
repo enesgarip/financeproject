@@ -15,6 +15,7 @@ function paymentRow(overrides: Partial<Payment> & { id: string; title: string; c
     recurrence: 'monthly',
     recurrence_day: 1,
     recurrence_end_date: null,
+    auto_source_card_id: null,
     note: null,
     ...overrides,
   }

@@ -44,6 +44,7 @@ function payment(overrides: Partial<Payment>): Payment {
     recurrence: 'none',
     recurrence_day: null,
     recurrence_end_date: null,
+    auto_source_card_id: null,
     note: null,
     ...overrides,
   }

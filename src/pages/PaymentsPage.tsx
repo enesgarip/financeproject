@@ -34,7 +34,7 @@ import { daysUntil, formatDate } from '../utils/date'
 import { formatCurrency, parseNumber } from '../utils/formatCurrency'
 import { getLastUsed, resolvePreferred, setLastUsed } from '../utils/lastUsed'
 import type { FinanceObligation, FinanceObligationsInput } from '../utils/obligations'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 const paymentCategoryOptions: { label: PaymentCategory; value: PaymentCategory }[] = [
   { label: 'Fatura', value: 'Fatura' },
@@ -68,7 +68,7 @@ const EMPTY_PLANNING_DATA: PlanningData = {
   cardStatements: [],
 }
 
-const fields: FormField[] = [
+const baseFields: FormField[] = [
   { name: 'title', label: 'Başlık', type: 'text', required: true },
   {
     name: 'category',
@@ -125,6 +125,9 @@ function validatePaymentForm(formData: FormData) {
   if (formData.get('recurrence') === 'monthly' && !formData.get('recurrence_day')) {
     errors.recurrence_day = 'Aylık ödeme için gün seç.'
   }
+  if (paymentMethod === 'bank_auto' && !String(formData.get('auto_source_card_id') ?? '').trim()) {
+    errors.auto_source_card_id = 'Banka talimatı için bir kredi kartı seç.'
+  }
   return errors
 }
 
@@ -161,6 +164,35 @@ function getPaymentScheduleLabel(payment: Payment) {
 
 function getPaymentMethodLabel(payment: Payment) {
   return payment.payment_method === 'bank_auto' ? 'Banka talimatı' : 'Manuel ödeme'
+}
+
+// Banka talimatı + kredi kartı + bilinen tutar → vade gelince otomatik postalanır;
+// bu kayıtlarda manuel "Öde" butonu gösterilmez.
+function isAutoPostedPayment(payment: Payment) {
+  return payment.payment_method === 'bank_auto' && Boolean(payment.auto_source_card_id) && payment.amount > 0
+}
+
+/** Vadesi gelmiş banka talimatlarını açılışta otomatik karta borç olarak işler. */
+function DueAutoPaymentsAutomation({ reload }: { reload: () => Promise<void> }) {
+  const ranRef = useRef(false)
+
+  useEffect(() => {
+    if (ranRef.current) return
+    ranRef.current = true
+
+    let cancelled = false
+    void (async () => {
+      const { data, error } = await supabase.rpc('post_due_card_auto_payments')
+      if (error) return
+      if (!cancelled && (data ?? 0) > 0) await reload()
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [reload])
+
+  return null
 }
 
 function getAmountStatusLabel(payment: Payment) {
@@ -235,6 +267,39 @@ export function PaymentsPage() {
   const [obligationPaymentError, setObligationPaymentError] = useState('')
   const [obligationSaving, setObligationSaving] = useState(false)
   const [reloadPayments, setReloadPayments] = useState<(() => Promise<void>) | null>(null)
+
+  // Kredi kartı seçimi (banka talimatı için) dinamik olarak kartlardan üretilir.
+  const formFields = useMemo<FormField[]>(() => {
+    const creditCardOptions = [
+      { value: '', label: 'Kart seç' },
+      ...planningData.cards
+        .filter((card) => card.card_type === 'kredi_karti')
+        .map((card) => ({ value: card.id, label: `${card.bank_name} · ${card.card_name}` })),
+    ]
+    const cardField: FormField = {
+      name: 'auto_source_card_id',
+      label: 'Otomatik ödeme kartı',
+      type: 'select',
+      options: creditCardOptions,
+      required: true,
+      visibleWhen: { field: 'payment_method', value: 'bank_auto' },
+    }
+    const result: FormField[] = []
+    for (const field of baseFields) {
+      result.push(field)
+      if (field.name === 'payment_method') result.push(cardField)
+    }
+    return result
+  }, [planningData.cards])
+
+  const cardLabelById = useCallback(
+    (cardId: string | null) => {
+      if (!cardId) return null
+      const card = planningData.cards.find((item) => item.id === cardId)
+      return card ? `${card.bank_name} · ${card.card_name}` : null
+    },
+    [planningData.cards],
+  )
 
   const loadPlanningData = useCallback(async () => {
     setPlanningLoading(true)
@@ -318,7 +383,7 @@ export function PaymentsPage() {
         table="payments"
         pageTitle="Planlı ödemeler"
         addLabel="Planlı ödeme ekle"
-        fields={fields}
+        fields={formFields}
         emptyTitle="Henüz planlı ödeme yok"
         emptyDescription="Yaklaşan kira, fatura veya tek seferlik ödemelerini buradan ekleyebilirsin."
         orderBy="due_date"
@@ -327,6 +392,7 @@ export function PaymentsPage() {
           const payments = rows as Payment[]
           return (
             <div className="flex flex-col gap-3">
+              <DueAutoPaymentsAutomation reload={async () => { await Promise.all([reload(), loadPlanningData()]) }} />
               {planningError ? <Alert variant="warning">{planningError}</Alert> : null}
               <ObligationsCalendar
                 loading={loading || planningLoading}
@@ -347,17 +413,22 @@ export function PaymentsPage() {
           recurrence: row?.recurrence ?? 'none',
           recurrence_day: row?.recurrence_day ?? (row?.due_date ? new Date(`${row.due_date}T00:00:00`).getDate() : new Date().getDate()),
           recurrence_end_date: row?.recurrence_end_date ?? '',
+          auto_source_card_id: row?.auto_source_card_id ?? '',
           status: row?.status ?? 'bekliyor',
           note: row?.note ?? '',
         })}
         mapForm={(formData, userId, editing) => {
           const recurrence = formData.get('recurrence') as Payment['recurrence']
+          const paymentMethod = (formData.get('payment_method') as PaymentMethod | null) ?? 'manual'
+          const autoSourceCardId = paymentMethod === 'bank_auto'
+            ? (String(formData.get('auto_source_card_id') ?? '').trim() || null)
+            : null
 
           return {
             user_id: userId,
             title: String(formData.get('title') ?? '').trim(),
             category: (formData.get('category') as PaymentCategory | null) ?? 'Diğer',
-            payment_method: (formData.get('payment_method') as PaymentMethod | null) ?? 'manual',
+            payment_method: paymentMethod,
             amount_status: (formData.get('amount_status') as PaymentAmountStatus | null) ?? 'exact',
             amount: parseNumber(formData.get('amount')),
             due_date: String(formData.get('due_date') ?? ''),
@@ -365,19 +436,29 @@ export function PaymentsPage() {
             recurrence,
             recurrence_day: recurrence === 'monthly' ? Number(formData.get('recurrence_day')) : null,
             recurrence_end_date: recurrence === 'monthly' ? String(formData.get('recurrence_end_date') ?? '') || null : null,
+            auto_source_card_id: autoSourceCardId,
             note: String(formData.get('note') ?? '') || null,
           }
         }}
         renderTitle={(row) => row.title}
         renderSubtitle={(row) => `${row.category} · ${row.status} · ${getPaymentScheduleLabel(row)}`}
-        renderDetails={(row) => [
-          `Tutar: ${getPaymentAmountLabel(row)}`,
-          `Durum: ${getAmountStatusLabel(row)} · ${getPaymentMethodLabel(row)}`,
-          `Sıradaki tarih: ${formatDate(row.due_date)}`,
-        ]}
+        renderDetails={(row) => {
+          const details = [
+            `Tutar: ${getPaymentAmountLabel(row)}`,
+            `Durum: ${getAmountStatusLabel(row)} · ${getPaymentMethodLabel(row)}`,
+            `Sıradaki tarih: ${formatDate(row.due_date)}`,
+          ]
+          const autoCard = cardLabelById(row.auto_source_card_id)
+          if (row.payment_method === 'bank_auto' && autoCard) {
+            details.push(isAutoPostedPayment(row)
+              ? `Otomatik karta işlenir: ${autoCard}`
+              : `Otomatik kart: ${autoCard} (tutar girilince işlenir)`)
+          }
+          return details
+        }}
         groupBy={(row) => row.category}
         renderRowActions={(row, helpers) =>
-          row.status === 'bekliyor' ? (
+          row.status === 'bekliyor' && !isAutoPostedPayment(row) ? (
             <button
               type="button"
               onClick={() => void openObligationPayment(paymentToObligation(row), helpers.reload)}

@@ -75,7 +75,7 @@ function payment(overrides: Partial<Payment>): Payment {
     ...base, title: 'Ödeme', category: 'Fatura', amount: 0,
     amount_status: 'exact', due_date: '2026-06-15', status: 'bekliyor',
     payment_method: 'manual', recurrence: 'none', recurrence_day: null,
-    recurrence_end_date: null, note: null, ...overrides,
+    recurrence_end_date: null, auto_source_card_id: null, note: null, ...overrides,
   }
 }
 

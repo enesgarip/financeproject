@@ -201,6 +201,7 @@ export type Payment = BaseRow & {
   recurrence: PaymentRecurrence
   recurrence_day: number | null
   recurrence_end_date: string | null
+  auto_source_card_id: string | null
   note: string | null
 }
 
@@ -416,6 +417,10 @@ export type Database = {
           p_card_id: string
         }
         Returns: void
+      }
+      post_due_card_auto_payments: {
+        Args: Record<string, never>
+        Returns: number
       }
     }
     Enums: Record<string, never>

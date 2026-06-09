@@ -409,9 +409,11 @@ export function DashboardPage() {
         // Non-fatal: dashboard still renders with the last stored valuation.
       }
     })()
-    const { error: statementCutError } = await supabase.rpc('cut_due_card_statements')
-    if (statementCutError && !isMissingSchemaCacheError(statementCutError)) {
-      setError(statementCutError.message)
+    const autoPayments = await supabase.rpc('post_due_card_auto_payments')
+    const statementCut = await supabase.rpc('cut_due_card_statements')
+    const maintenanceError = [autoPayments.error, statementCut.error].find((item) => item && !isMissingSchemaCacheError(item))
+    if (maintenanceError) {
+      setError(maintenanceError.message)
       setLoading(false)
       return
     }
