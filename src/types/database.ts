@@ -215,6 +215,24 @@ export type TransactionHistory = BaseRow & {
   note: string | null
 }
 
+export type CardLedgerKind = 'opening' | 'debit' | 'credit'
+
+/**
+ * Append-only event log of credit-card debt changes (roadmap A2). Each row is
+ * one change captured atomically by a trigger on `cards`. `amount_kurus` is
+ * signed integer kuruş: +debit (debt up), -credit (debt down). The card's debt
+ * equals the sum of its events (see utils/cardLedger.ts).
+ */
+export type CardLedger = BaseRow & {
+  card_id: string
+  occurred_at: string
+  kind: CardLedgerKind
+  amount_kurus: number
+  note: string | null
+  source_table: string | null
+  source_id: string | null
+}
+
 export type NetWorthSnapshot = BaseRow & {
   snapshot_date: string
   net_worth: number
@@ -278,6 +296,7 @@ export type Database = {
       salary_history: Table<SalaryHistory, WithBaseInsert<SalaryHistory>, WithBaseUpdate<SalaryHistory>>
       net_worth_snapshots: Table<NetWorthSnapshot, WithBaseInsert<NetWorthSnapshot>, WithBaseUpdate<NetWorthSnapshot>>
       gold_lots: Table<GoldLot, WithBaseInsert<GoldLot>, WithBaseUpdate<GoldLot>>
+      card_ledger: Table<CardLedger, WithBaseInsert<CardLedger>, WithBaseUpdate<CardLedger>>
       dismissed_upcoming_items: Table<
         DismissedUpcomingItem,
         Omit<DismissedUpcomingItem, 'id' | 'created_at'> & { id?: string; created_at?: string },

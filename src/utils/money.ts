@@ -26,7 +26,8 @@ export function toKurus(tl: number | null | undefined): number {
 /** Tam sayı kuruşu TL float'a çevirir (gösterim/saklama sınırı). */
 export function toTL(kurus: number | null | undefined): number {
   if (kurus == null || !Number.isFinite(kurus)) return 0
-  return Math.trunc(kurus) / 100
+  // `|| 0` normalizes -0 to +0 so callers never surface a negative zero.
+  return Math.trunc(kurus) / 100 || 0
 }
 
 /**
