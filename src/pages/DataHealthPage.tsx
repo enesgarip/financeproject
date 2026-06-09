@@ -1,6 +1,7 @@
 import { Activity, AlertTriangle, CheckCircle2, DatabaseZap, Download, RefreshCw, ShieldCheck, Trash2, Undo2, Wrench } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { LiveReconciliationPanel } from '../components/finance/LiveReconciliationPanel'
 import { SimpleModal } from '../components/SimpleModal'
 import { Badge } from '../components/ui/badge'
 import { Card as SurfaceCard, CardContent, CardHeader, CardTitle } from '../components/ui/card'
@@ -551,6 +552,8 @@ export function DataHealthPage() {
           {error ? <p className="rounded-xl border border-destructive/20 bg-destructive/8 p-3 text-sm font-medium text-destructive">{error}</p> : null}
         </CardContent>
       </SurfaceCard>
+
+      {!loading && data.cards.length > 0 ? <LiveReconciliationPanel cards={data.cards} /> : null}
 
       {loading ? (
         <div className="skeleton-shimmer h-32 rounded-2xl" />

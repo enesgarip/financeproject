@@ -233,6 +233,24 @@ export type CardLedger = BaseRow & {
   source_id: string | null
 }
 
+export type ReconciliationTarget = 'balance' | 'debt'
+
+/**
+ * One live-balance reconciliation event (roadmap A3): a snapshot comparing the
+ * app's current figure (bank account current_balance or credit-card
+ * debt_amount) against the real figure the user read in their banking app.
+ * `drift` = app_amount - real_amount, stored as a point-in-time fact.
+ */
+export type AccountReconciliation = BaseRow & {
+  card_id: string
+  reconciled_at: string
+  target: ReconciliationTarget
+  app_amount: number
+  real_amount: number
+  drift: number
+  note: string | null
+}
+
 export type NetWorthSnapshot = BaseRow & {
   snapshot_date: string
   net_worth: number
@@ -297,6 +315,11 @@ export type Database = {
       net_worth_snapshots: Table<NetWorthSnapshot, WithBaseInsert<NetWorthSnapshot>, WithBaseUpdate<NetWorthSnapshot>>
       gold_lots: Table<GoldLot, WithBaseInsert<GoldLot>, WithBaseUpdate<GoldLot>>
       card_ledger: Table<CardLedger, WithBaseInsert<CardLedger>, WithBaseUpdate<CardLedger>>
+      account_reconciliations: Table<
+        AccountReconciliation,
+        WithBaseInsert<AccountReconciliation>,
+        WithBaseUpdate<AccountReconciliation>
+      >
       dismissed_upcoming_items: Table<
         DismissedUpcomingItem,
         Omit<DismissedUpcomingItem, 'id' | 'created_at'> & { id?: string; created_at?: string },
