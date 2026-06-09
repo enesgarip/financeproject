@@ -3,7 +3,7 @@ import type { CSSProperties, ReactNode } from 'react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
-import { cn } from '../lib/utils'
+import { cn, openNativePicker } from '../lib/utils'
 import { supabase } from '../lib/supabase'
 import type { InsertFor, RowFor, TableName, UpdateFor } from '../types/database'
 import { EmptyState } from './EmptyState'
@@ -628,8 +628,8 @@ export function CrudPage<T extends TableName>({
                       type="date"
                       required={field.required}
                       value={formValues[field.name] ?? ''}
-                      onClick={(event) => event.currentTarget.showPicker?.()}
-                      onFocus={(event) => event.currentTarget.showPicker?.()}
+                      onClick={(event) => openNativePicker(event.currentTarget)}
+                      onFocus={(event) => openNativePicker(event.currentTarget)}
                       onChange={(event) => updateFormValue(field.name, event.target.value)}
                       aria-invalid={Boolean(fieldError)}
                       className="max-w-full pr-11"

@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, type ReactNode } from 'react'
+import { lazy, Suspense, useEffect, type ComponentType, type ReactNode } from 'react'
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { Analytics } from '@vercel/analytics/react'
 import { AuthProvider } from './auth/AuthProvider'
@@ -8,37 +8,63 @@ import { AssetsHub } from './pages/AssetsHub'
 import { LiabilitiesHub } from './pages/LiabilitiesHub'
 import { ToastProvider } from './components/ui/toast'
 
-const AssetsPage = lazy(() =>
+// A failed dynamic import almost always means a new deploy changed the chunk
+// hashes while this tab still references the old ones (Vercel then serves
+// index.html for the missing /assets/*.js, hence the "not a valid MIME type"
+// errors). Reload once to pull the fresh index.html and new chunk URLs; the
+// per-tab guard prevents a reload loop if the chunk is genuinely unreachable.
+const CHUNK_RELOAD_KEY = 'chunk-reload-attempted'
+
+function lazyWithReload<T extends ComponentType<unknown>>(factory: () => Promise<{ default: T }>) {
+  return lazy(async () => {
+    try {
+      const mod = await factory()
+      sessionStorage.removeItem(CHUNK_RELOAD_KEY)
+      return mod
+    } catch (error) {
+      if (!sessionStorage.getItem(CHUNK_RELOAD_KEY)) {
+        sessionStorage.setItem(CHUNK_RELOAD_KEY, '1')
+        window.location.reload()
+        // Keep Suspense pending until the reload happens instead of flashing the
+        // error boundary.
+        return new Promise<{ default: T }>(() => {})
+      }
+      throw error
+    }
+  })
+}
+
+const AssetsPage = lazyWithReload(() =>
   import('./pages/AssetsPage').then((m) => ({ default: m.AssetsPage })),
 )
-const GoldPage = lazy(() =>
+const GoldPage = lazyWithReload(() =>
   import('./pages/GoldPage').then((m) => ({ default: m.GoldPage })),
 )
-const SalaryPage = lazy(() =>
+const SalaryPage = lazyWithReload(() =>
   import('./pages/SalaryPage').then((m) => ({ default: m.SalaryPage })),
 )
-const AnalysisPage = lazy(() =>
+const AnalysisPage = lazyWithReload(() =>
   import('./pages/AnalysisPage').then((m) => ({ default: m.AnalysisPage })),
 )
-const CardsPage = lazy(() =>
+const CardsPage = lazyWithReload(() =>
   import('./pages/CardsPage').then((m) => ({ default: m.CardsPage })),
 )
-const DashboardPage = lazy(() =>
+const DashboardPage = lazyWithReload(() =>
   import('./pages/DashboardPage').then((m) => ({ default: m.DashboardPage })),
 )
-const DataHealthPage = lazy(() =>
+const DataHealthPage = lazyWithReload(() =>
   import('./pages/DataHealthPage').then((m) => ({ default: m.DataHealthPage })),
 )
-const DebtsPage = lazy(() =>
+const DebtsPage = lazyWithReload(() =>
   import('./pages/DebtsPage').then((m) => ({ default: m.DebtsPage })),
 )
-const LoansPage = lazy(() =>
+const LoansPage = lazyWithReload(() =>
   import('./pages/LoansPage').then((m) => ({ default: m.LoansPage })),
 )
-const LoginPage = lazy(() =>
+const LoginPage = lazyWithReload(() =>
   import('./pages/LoginPage').then((m) => ({ default: m.LoginPage })),
 )
-const PaymentsPage = lazy(() =>
+const PaymentsPage = lazyWithReload(() =>
   import('./pages/PaymentsPage').then((m) => ({ default: m.PaymentsPage })),
 )
 

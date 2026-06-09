@@ -31,7 +31,7 @@ import { dateInputValue, daysUntil, formatDate, nextMonthlyDate } from '../utils
 import { cardPayableDebt, cardProvisionAmount } from '../utils/financeSummary'
 import { getLastUsed, setLastUsed } from '../utils/lastUsed'
 import { bankBrandGradient, getBankBrand } from '../utils/bankBranding'
-import { cn } from '../lib/utils'
+import { cn, openNativePicker } from '../lib/utils'
 import { bankHueStyle, isSchemaCacheError, limitGroupKey, limitGroupStats, statementPeriodLabel } from './CardsPage.helpers'
 import { formatCurrency, parseNumber } from '../utils/formatCurrency'
 import { addTransactionHistory } from '../utils/history'
@@ -1004,8 +1004,8 @@ export function QuickExpensePanel({
                   setSpentAt(event.target.value)
                   setLocalError('')
                 }}
-                onClick={(event) => event.currentTarget.showPicker?.()}
-                onFocus={(event) => event.currentTarget.showPicker?.()}
+                onClick={(event) => openNativePicker(event.currentTarget)}
+                onFocus={(event) => openNativePicker(event.currentTarget)}
                 type="date"
                 className="mt-1 block w-full min-w-0 max-w-[10.75rem] appearance-none rounded-lg border border-input px-3 py-2.5 outline-none [color-scheme:light] transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 min-[480px]:max-w-full dark:bg-card/50 dark:text-foreground dark:[color-scheme:dark]"
               />
