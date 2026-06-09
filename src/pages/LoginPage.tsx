@@ -5,6 +5,7 @@ import { useAuth } from '../auth/useAuth'
 import { Button } from '../components/ui/button'
 import { Card, CardContent } from '../components/ui/card'
 import { Tabs, TabsList, TabsTrigger } from '../components/ui/tabs'
+import { AppMark } from '../components/AppMark'
 
 export function LoginPage() {
   const { signIn, signUp, user } = useAuth()
@@ -54,10 +55,10 @@ export function LoginPage() {
           <div className="pointer-events-none absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-primary via-info to-warning opacity-80" />
           <div>
             <div className="flex items-center gap-3">
-              <div className="grid size-11 place-items-center rounded-xl bg-primary text-xl font-black text-primary-foreground shadow-[0_4px_14px_color-mix(in_srgb,var(--primary)_40%,transparent)]">₺</div>
+              <AppMark className="size-11 shadow-[0_4px_14px_color-mix(in_srgb,var(--primary)_40%,transparent)]" />
               <div>
-                <h1 className="text-xl font-bold tracking-tight text-foreground">Kişisel Finans</h1>
-                <p className="text-sm text-muted-foreground">Günlük para kararlarını tek ekranda toparla.</p>
+                <h1 className="text-xl font-bold tracking-tight text-foreground">Denge</h1>
+                <p className="text-sm text-muted-foreground">Günlük para kararlarını dengede tut.</p>
               </div>
             </div>
 
@@ -115,10 +116,8 @@ export function LoginPage() {
       <Card variant="elevated" className="mx-auto w-full max-w-[23rem] sm:max-w-[25rem] lg:max-w-none">
         <CardContent className="p-5 sm:p-6">
           <div>
-            <div className="mb-4 grid size-11 place-items-center rounded-xl bg-primary/12 text-xl font-black text-primary">
-              ₺
-            </div>
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">Kişisel Finans</h1>
+            <AppMark className="mb-4 size-11 shadow-[0_4px_14px_color-mix(in_srgb,var(--primary)_24%,transparent)]" />
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">Denge</h1>
             <p className="mt-2 text-sm leading-6 text-muted-foreground">
             Varlıklarını, borçlarını ve yaklaşan ödemelerini tek yerden takip et.
             </p>

@@ -1,6 +1,6 @@
-# Kişisel Finans PWA
+# Denge
 
-React, TypeScript, Vite, Tailwind CSS ve Supabase ile hazırlanmış basit kişisel finans takip uygulaması.
+React, TypeScript, Vite, Tailwind CSS ve Supabase ile hazırlanmış kişisel finans denge uygulaması.
 
 ## Özellikler
 

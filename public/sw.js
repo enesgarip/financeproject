@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kisisel-finans-v2'
+const CACHE_NAME = 'denge-v1'
 const APP_SHELL = ['/', '/manifest.webmanifest', '/icon.svg']
 
 self.addEventListener('install', (event) => {

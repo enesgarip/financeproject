@@ -1,14 +1,20 @@
 {
-  "name": "Kişisel Finans",
-  "short_name": "Finans",
-  "description": "Varlık, borç, kart, kredi ve ödeme takibi.",
-  "theme_color": "#087a5c",
-  "background_color": "#f5f7fb",
+  "name": "Denge",
+  "short_name": "Denge",
+  "description": "Nakit akışı, kart, borç ve planlı ödeme dengesi.",
+  "theme_color": "#4f46e5",
+  "background_color": "#f0f4fa",
   "display": "standalone",
   "orientation": "portrait",
   "start_url": "/",
   "scope": "/",
   "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
     {
       "src": "/pwa-192x192.png",
       "sizes": "192x192",

@@ -6,6 +6,7 @@ import { cn } from '../lib/utils'
 import { BottomNav } from './BottomNav'
 import { primaryNavItems } from './navigation'
 import { QuickActions } from './QuickActions'
+import { AppMark } from './AppMark'
 
 const titles: Record<string, string> = {
   '/': 'Finans Özeti',
@@ -64,13 +65,10 @@ export function Layout() {
 
           {/* Brand */}
           <div className="mb-2 flex items-center gap-3 px-1 py-2">
-            <div className="relative grid size-9 shrink-0 place-items-center rounded-xl bg-primary text-base font-black text-primary-foreground shadow-[0_4px_14px_color-mix(in_srgb,var(--primary)_40%,transparent)]">
-              ₺
-              <span className="absolute -right-0.5 -top-0.5 size-2.5 rounded-full bg-success ring-2 ring-card" />
-            </div>
+            <AppMark className="size-9 shadow-[0_4px_14px_color-mix(in_srgb,var(--primary)_40%,transparent)]" />
             <div className="min-w-0">
-              <p className="text-sm font-black tracking-tight text-foreground">FinanceProject</p>
-              <p className="text-[11px] text-muted-foreground">Kişisel finans merkezi</p>
+              <p className="text-sm font-black tracking-tight text-foreground">Denge</p>
+              <p className="text-[11px] text-muted-foreground">Kişisel finans dengesi</p>
             </div>
           </div>
 
@@ -163,7 +161,7 @@ export function Layout() {
           <div className={`mx-auto flex ${contentWidthClass} items-center justify-between gap-3`}>
             <div className="min-w-0">
               <h1 className="truncate text-base font-bold leading-tight tracking-tight text-foreground lg:text-lg">
-                {titles[pathname] ?? 'Finans'}
+                {titles[pathname] ?? 'Denge'}
               </h1>
               <p className="hidden truncate text-xs text-muted-foreground lg:block">
                 Hesaplarını, planlı ödemelerini ve kişileri tek yerden yönet.
