@@ -31,7 +31,7 @@ import { expenseCategoryOptions } from '../utils/categories'
 import { addMonths, dateInputValue, daysUntil, formatDate, isDateInMonth, monthlyOccurrenceDate, startOfMonth } from '../utils/date'
 import { formatCurrency, parseNumber } from '../utils/formatCurrency'
 import { buildCashFlowForecast } from '../utils/cashFlowForecast'
-import { buildFinancialPosition, buildMonthlyCashFlow, paymentOccurrenceInMonth } from '../utils/financeSummary'
+import { buildFinancialPosition, buildMonthlyCashFlow, getCurrentSalary, paymentOccurrenceInMonth, sum } from '../utils/financeSummary'
 import { buildFinanceObligationsForMonth, type FinanceObligation, type FinanceObligationsInput } from '../utils/obligations'
 import { activeExpense as activeCardExpense, buildBudgetUsage } from '../utils/budgetAlerts'
 import { useMarketRates } from '../hooks/useMarketRates'
@@ -126,10 +126,6 @@ const budgetFields: FormField[] = [
   { name: 'note', label: 'Not', type: 'textarea' },
 ]
 
-function sum<T>(rows: T[], selector: (row: T) => number) {
-  return rows.reduce((total, row) => total + selector(row), 0)
-}
-
 function monthStartValue(value: FormDataEntryValue | null) {
   const date = value ? new Date(`${String(value)}T00:00:00`) : new Date()
   return dateInputValue(startOfMonth(Number.isNaN(date.getTime()) ? new Date() : date))
@@ -137,12 +133,6 @@ function monthStartValue(value: FormDataEntryValue | null) {
 
 function formatMonth(value: string) {
   return new Intl.DateTimeFormat('tr-TR', { month: 'long', year: 'numeric' }).format(new Date(`${value}T00:00:00`))
-}
-
-function getCurrentSalary(rows: SalaryHistory[]) {
-  const today = new Date().toLocaleDateString('sv-SE')
-  const ordered = [...rows].sort((a, b) => a.effective_date.localeCompare(b.effective_date))
-  return ordered.filter((row) => row.effective_date <= today).at(-1) ?? ordered.at(-1) ?? null
 }
 
 // Delegates to the shared occurrence rule so this page can never disagree with
