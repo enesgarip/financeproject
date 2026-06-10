@@ -343,7 +343,14 @@ export function AssetsPage() {
         renderBeforeList={({ loading, rows, reload }) => (
           <div className="space-y-3">
             <StockPriceSync rows={rows as Asset[]} onPrices={setStockPrices} />
-            <RatesBanner onSynced={reload} />
+            <RatesBanner
+              onSynced={reload}
+              note={
+                (rows as Asset[]).some((row) => row.category === 'Hisse' && row.symbol)
+                  ? 'BIST fiyatları Yahoo Finance üzerinden ~15 dk gecikmelidir.'
+                  : undefined
+              }
+            />
             {!loading ? <AssetsOverview rows={rows as Asset[]} snapshot={snapshot} stockPrices={stockPrices} /> : null}
           </div>
         )}

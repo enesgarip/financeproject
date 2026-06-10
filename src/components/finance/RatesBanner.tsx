@@ -23,7 +23,7 @@ function formatAsOf(iso: string | null): string {
  * auto-valued rows and, when something actually changed, asks the host page to
  * reload via `onSynced`.
  */
-export function RatesBanner({ onSynced }: { onSynced?: () => void | Promise<void> }) {
+export function RatesBanner({ onSynced, note }: { onSynced?: () => void | Promise<void>; note?: string }) {
   const { asOf, loading, error, source, isStale, snapshot, refresh } = useMarketRates()
 
   const onSyncedRef = useRef(onSynced)
@@ -61,10 +61,11 @@ export function RatesBanner({ onSynced }: { onSynced?: () => void | Promise<void
           <p className="truncate text-xs text-muted-foreground">
             {noData
               ? 'Kur verisi henüz yüklenmedi'
-              : `${formatAsOf(asOf)} itibarıyla${source === 'cache' ? ' · çevrimdışı kopya' : ''}${
+              : `truncgil.com · ${formatAsOf(asOf)} itibarıyla${source === 'cache' ? ' · çevrimdışı kopya' : ''}${
                   isStale && source !== 'cache' ? ' · güncel olmayabilir' : ''
                 }`}
           </p>
+          {note ? <p className="truncate text-xs text-muted-foreground/80">{note}</p> : null}
         </div>
       </div>
       <button
