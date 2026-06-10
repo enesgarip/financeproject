@@ -167,10 +167,12 @@ export function LiveReconciliationPanel({ cards }: LiveReconciliationPanelProps)
                     inputMode="decimal"
                     placeholder="0,00"
                     className="mt-1 tabular-nums"
+                    aria-label={`${item.card.bank_name} ${item.card.card_name} bankadaki gerçek ${item.target === 'debt' ? 'borç' : 'bakiye'}`}
                   />
                 </label>
                 {liveDrift != null ? (
                   <span
+                    aria-live="polite"
                     className={`pb-2 text-sm font-semibold ${
                       reconciledNow ? 'text-success' : 'text-destructive'
                     }`}
@@ -184,6 +186,7 @@ export function LiveReconciliationPanel({ cards }: LiveReconciliationPanelProps)
                   size="sm"
                   disabled={!hasInput || savingId === item.card.id}
                   onClick={() => handleSave(item.card.id, item.app, item.target)}
+                  aria-label={`${item.card.bank_name} ${item.card.card_name} mutabakatını kaydet`}
                 >
                   {savingId === item.card.id ? 'Kaydediliyor…' : 'Mutabık kaydet'}
                 </Button>

@@ -620,7 +620,7 @@ export function DataHealthPage() {
               <Upload size={15} />
               Yedekten geri yükle
             </button>
-            <input ref={restoreFileRef} type="file" accept="application/json,.json" onChange={handleRestoreFile} className="hidden" />
+            <input ref={restoreFileRef} type="file" accept="application/json,.json" onChange={handleRestoreFile} className="hidden" aria-label="Geri yüklenecek yedek dosyasını seç" />
             <button
               type="button"
               onClick={() => downloadDataCsv(data)}
