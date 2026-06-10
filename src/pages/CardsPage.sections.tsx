@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { BankLogo } from '../components/finance/BankLogo'
+import { CardLedgerPanel } from '../components/finance/CardLedgerPanel'
 import { CategoryPicker } from '../components/finance/CategoryPicker'
 import { AmountDisplay, FinancePanel, MiniStat, ProgressStrip, SectionHeader, StatusBadge } from '../components/finance/FinanceUI'
 import { InstallmentPlanner } from '../components/finance/InstallmentPlanner'
@@ -701,6 +702,7 @@ export function CreditAccountListCard({
               )}
             </div>
           </div>
+          <CardLedgerPanel card={row} />
         </div>
       ) : null}
     </article>
