@@ -60,7 +60,7 @@ jobs:
           ls -lh "$OUT"
 
       - name: Upload encrypted backup
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: db-backup-${{ github.run_id }}
           path: backup-*.sql.gpg
