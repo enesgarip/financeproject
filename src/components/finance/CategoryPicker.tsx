@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef } from 'react'
-import { type CategoryMemory, expenseCategoryOptions, suggestExpenseCategory } from '../../utils/categories'
+import { type CategoryMemory, expenseCategoryOptions, explainExpenseCategory } from '../../utils/categories'
 
 type CategoryPickerProps = {
   label?: string
@@ -12,8 +12,14 @@ type CategoryPickerProps = {
   autoApply?: boolean
 }
 
+function suggestionReason(source: 'memory-exact' | 'memory-partial' | 'keyword', match: string) {
+  if (source === 'keyword') return `"${match}" anahtar kelimesi eşleşti`
+  return `daha önce "${match}" kaydını böyle kategorilendirdin`
+}
+
 export function CategoryPicker({ label = 'Kategori', value, description, onChange, memory, autoApply = false }: CategoryPickerProps) {
-  const suggestedCategory = useMemo(() => suggestExpenseCategory(description, memory), [description, memory])
+  const suggestion = useMemo(() => explainExpenseCategory(description, memory), [description, memory])
+  const suggestedCategory = suggestion?.category ?? null
   const suggestedOption = expenseCategoryOptions.find((option) => option.value === suggestedCategory)
 
   // Track whether the user has chosen a category by hand. Reset when the field
@@ -51,9 +57,21 @@ export function CategoryPicker({ label = 'Kategori', value, description, onChang
           ))}
         </select>
       </label>
-      {showSuggestion ? (
-        <p className="mt-2 rounded-lg bg-success/8 px-3 py-2 text-xs font-semibold text-success ring-1 ring-success/20">
-          Öneri: {suggestedOption?.label}
+      {showSuggestion && suggestion ? (
+        <button
+          type="button"
+          onClick={() => {
+            manuallyChosen.current = true
+            onChange(suggestion.category)
+          }}
+          className="mt-2 block w-full rounded-lg bg-success/8 px-3 py-2 text-left text-xs font-semibold text-success ring-1 ring-success/20 transition hover:bg-success/15"
+        >
+          Öneri: {suggestedOption?.label} — {suggestionReason(suggestion.source, suggestion.match)}. Uygulamak için dokun.
+        </button>
+      ) : null}
+      {value && suggestion && suggestion.category === value ? (
+        <p className="mt-2 text-xs text-muted-foreground">
+          Neden {value}? {suggestionReason(suggestion.source, suggestion.match)}. Değiştirirsen bundan sonra senin seçimin önerilir.
         </p>
       ) : null}
     </div>

@@ -122,25 +122,47 @@ export function buildCategoryMemory(rows: Array<{ description: string | null; ca
   return memory
 }
 
+/** Why a category was suggested — powers the "neden bu kategoride?" UI. */
+export type CategorySuggestion = {
+  category: string
+  /** memory = user's own past expenses; keyword = built-in dictionary. */
+  source: 'memory-exact' | 'memory-partial' | 'keyword'
+  /** The remembered description (memory) or the dictionary keyword that matched. */
+  match: string
+}
+
 /**
- * Suggest a category for a description. The user's own history (memory) wins
- * over the built-in keyword dictionary; an exact normalized match is preferred,
- * then a partial match, then the static keyword rules.
+ * Suggest a category for a description, with the reason. The user's own
+ * history (memory) wins over the built-in keyword dictionary; an exact
+ * normalized match is preferred, then a partial match, then keyword rules.
  */
-export function suggestExpenseCategory(description: string, memory?: CategoryMemory): string | null {
+export function explainExpenseCategory(description: string, memory?: CategoryMemory): CategorySuggestion | null {
   const normalized = normalizeDescription(description)
   if (!normalized) return null
 
   if (memory && memory.size > 0) {
     const exact = memory.get(normalized)
-    if (exact) return exact
+    if (exact) return { category: exact, source: 'memory-exact', match: normalized }
 
     for (const [key, category] of memory) {
       if (key.length >= 3 && (normalized.includes(key) || key.includes(normalized))) {
-        return category
+        return { category, source: 'memory-partial', match: key }
       }
     }
   }
 
-  return inferExpenseCategory(description)
+  for (const { category, matcher } of categoryMatchers) {
+    if (matcher.test(normalized)) {
+      const rule = categoryRules.find((r) => r.category === category)
+      const keyword = rule?.keywords.find((k) => keywordMatcher([k]).test(normalized)) ?? rule?.keywords[0] ?? ''
+      return { category, source: 'keyword', match: keyword }
+    }
+  }
+
+  return null
+}
+
+/** Suggest a category for a description (see explainExpenseCategory for the why). */
+export function suggestExpenseCategory(description: string, memory?: CategoryMemory): string | null {
+  return explainExpenseCategory(description, memory)?.category ?? null
 }

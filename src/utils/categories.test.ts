@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildCategoryMemory, inferExpenseCategory, suggestExpenseCategory } from './categories'
+import { buildCategoryMemory, explainExpenseCategory, inferExpenseCategory, suggestExpenseCategory } from './categories'
 
 describe('buildCategoryMemory', () => {
   it('learns the most frequent category per description', () => {
@@ -65,5 +65,52 @@ describe('suggestExpenseCategory', () => {
 
   it('returns null for an empty description', () => {
     expect(suggestExpenseCategory('   ', memory)).toBeNull()
+  })
+})
+
+describe('explainExpenseCategory', () => {
+  const memory = buildCategoryMemory([
+    { description: 'Kuaför Ayşe', category: 'Sağlık' },
+    { description: 'Migros', category: 'Eğlence' },
+  ])
+
+  it('explains an exact memory hit', () => {
+    expect(explainExpenseCategory('Migros', memory)).toEqual({
+      category: 'Eğlence',
+      source: 'memory-exact',
+      match: 'migros',
+    })
+  })
+
+  it('explains a partial memory hit with the remembered key', () => {
+    expect(explainExpenseCategory('Kuaför Ayşe Bakırköy', memory)).toEqual({
+      category: 'Sağlık',
+      source: 'memory-partial',
+      match: 'kuaför ayşe',
+    })
+  })
+
+  it('explains a keyword hit with the exact keyword that matched', () => {
+    expect(explainExpenseCategory('SHELL ISTASYONU ANKARA')).toEqual({
+      category: 'Ulaşım',
+      source: 'keyword',
+      match: 'shell',
+    })
+    expect(explainExpenseCategory('NETFLIX.COM')).toEqual({
+      category: 'Eğlence',
+      source: 'keyword',
+      match: 'netflix',
+    })
+  })
+
+  it('returns null when nothing matches', () => {
+    expect(explainExpenseCategory('KUYUMCU ALTIN')).toBeNull()
+    expect(explainExpenseCategory('')).toBeNull()
+  })
+
+  it('stays consistent with suggestExpenseCategory', () => {
+    for (const desc of ['Migros', 'SHELL PETROL', 'KUYUMCU ALTIN', 'Kuaför Ayşe Bakırköy']) {
+      expect(explainExpenseCategory(desc, memory)?.category ?? null).toBe(suggestExpenseCategory(desc, memory))
+    }
   })
 })
