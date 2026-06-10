@@ -1,8 +1,17 @@
-import { Activity, AlertTriangle, CheckCircle2, DatabaseZap, Download, RefreshCw, ShieldCheck, Trash2, Undo2, Wrench } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Activity, AlertTriangle, CheckCircle2, DatabaseZap, Download, RefreshCw, ShieldCheck, Trash2, Undo2, Upload, Wrench } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useAuth } from '../auth/useAuth'
 import { LiveReconciliationPanel } from '../components/finance/LiveReconciliationPanel'
 import { SimpleModal } from '../components/SimpleModal'
+import {
+  BACKUP_TABLE_LABELS,
+  buildBackupPayload,
+  downloadBackupFile,
+  parseBackup,
+  restoreBackup,
+  type ParsedBackup,
+} from '../utils/backup'
 import { Badge } from '../components/ui/badge'
 import { Card as SurfaceCard, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { supabase } from '../lib/supabase'
@@ -32,7 +41,6 @@ import {
   captureUndoRows,
   currentMonthStart,
   downloadDataCsv,
-  downloadDataJson,
   emptyData,
   isSchemaCacheError,
   issuePreviewDetails,
@@ -47,6 +55,7 @@ import {
 } from './DataHealth.logic'
 
 export function DataHealthPage() {
+  const { user } = useAuth()
   const [data, setData] = useState<HealthData>(emptyData)
   const [loading, setLoading] = useState(true)
   const [fixingId, setFixingId] = useState<string | null>(null)
@@ -59,6 +68,12 @@ export function DataHealthPage() {
   const [resetting, setResetting] = useState(false)
   const [snoozedIssueIds, setSnoozedIssueIds] = useState<string[]>([])
   const [fixAllOpen, setFixAllOpen] = useState(false)
+  const [exporting, setExporting] = useState(false)
+  const [restoreParsed, setRestoreParsed] = useState<ParsedBackup | null>(null)
+  const [restoreConfirm, setRestoreConfirm] = useState('')
+  const [restoring, setRestoring] = useState(false)
+  const [restoreStep, setRestoreStep] = useState('')
+  const restoreFileRef = useRef<HTMLInputElement>(null)
 
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -453,6 +468,76 @@ export function DataHealthPage() {
     setMessage('Tüm finans verisi silindi. Sıfırdan veri girebilirsin.')
   }
 
+  async function handleFullExport() {
+    setExporting(true)
+    setError('')
+    try {
+      const { payload, totalRows } = await buildBackupPayload()
+      downloadBackupFile(payload)
+      setMessage(`Tam yedek indirildi (${totalRows} kayıt).`)
+    } catch (exportError) {
+      setError(exportError instanceof Error ? exportError.message : 'Yedek alınamadı.')
+    } finally {
+      setExporting(false)
+    }
+  }
+
+  function handleRestoreFile(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) return
+    setError('')
+    void file.text().then(
+      (text) => {
+        try {
+          setRestoreConfirm('')
+          setRestoreParsed(parseBackup(text))
+        } catch (parseError) {
+          setError(parseError instanceof Error ? parseError.message : 'Yedek dosyası okunamadı.')
+        }
+      },
+      () => setError('Dosya okunamadı.'),
+    )
+  }
+
+  async function handleRestore(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!restoreParsed || !user) return
+    const normalizedConfirm = restoreConfirm.trim().toLocaleUpperCase('tr-TR')
+    if (normalizedConfirm !== 'YÜKLE' && normalizedConfirm !== 'YUKLE') {
+      setError('Geri yüklemek için onay alanına YÜKLE yazmalısın.')
+      return
+    }
+
+    setRestoring(true)
+    setError('')
+    setMessage('')
+
+    try {
+      // Safety net: download the current data before wiping anything.
+      setRestoreStep('Mevcut veri yedekleniyor')
+      const { payload } = await buildBackupPayload()
+      downloadBackupFile(payload, 'financeproject-restore-oncesi')
+
+      await restoreBackup(restoreParsed, user.id, (progress) => setRestoreStep(progress.step))
+
+      setUndoStack([])
+      setRestoreParsed(null)
+      setRestoreConfirm('')
+      await loadData()
+      setMessage(`Yedek geri yüklendi (${restoreParsed.totalRows} kayıt).`)
+    } catch (restoreError) {
+      setError(
+        restoreError instanceof Error
+          ? `${restoreError.message} — İşlem yarıda kaldıysa az önce inen "restore-oncesi" dosyasıyla tekrar geri yükleyebilirsin.`
+          : 'Geri yükleme başarısız.',
+      )
+    } finally {
+      setRestoring(false)
+      setRestoreStep('')
+    }
+  }
+
   return (
     <>
     <section className="space-y-4">
@@ -519,13 +604,23 @@ export function DataHealthPage() {
             ) : null}
             <button
               type="button"
-              onClick={() => downloadDataJson(data)}
-              disabled={loading || Boolean(fixingId) || undoing || resetting}
+              onClick={() => void handleFullExport()}
+              disabled={loading || Boolean(fixingId) || undoing || resetting || exporting || restoring}
               className="inline-flex items-center gap-2 rounded-xl border border-success/25 bg-success/8 px-3 py-2 text-sm font-semibold text-success transition hover:bg-success/12 disabled:opacity-50"
             >
               <Download size={15} />
-              JSON yedek
+              {exporting ? 'Yedek alınıyor...' : 'JSON yedek'}
             </button>
+            <button
+              type="button"
+              onClick={() => restoreFileRef.current?.click()}
+              disabled={loading || Boolean(fixingId) || undoing || resetting || restoring}
+              className="inline-flex items-center gap-2 rounded-xl border border-info/25 bg-info/8 px-3 py-2 text-sm font-semibold text-info transition hover:bg-info/12 disabled:opacity-50"
+            >
+              <Upload size={15} />
+              Yedekten geri yükle
+            </button>
+            <input ref={restoreFileRef} type="file" accept="application/json,.json" onChange={handleRestoreFile} className="hidden" />
             <button
               type="button"
               onClick={() => downloadDataCsv(data)}
@@ -739,6 +834,51 @@ export function DataHealthPage() {
           {resetting ? 'Siliniyor...' : 'Tüm veriyi kalıcı olarak sil'}
         </button>
       </form>
+    </SimpleModal>
+
+    <SimpleModal title="Yedekten geri yükle" open={restoreParsed !== null} onClose={() => { if (!restoring) setRestoreParsed(null) }}>
+      {restoreParsed ? (
+        <form onSubmit={handleRestore} className="space-y-4">
+          <div className="rounded-xl border border-warning/20 bg-warning/8 p-3 text-sm text-warning">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="mt-0.5 size-5 shrink-0" />
+              <div>
+                <p className="font-bold">Mevcut tüm veri silinip yedektekiyle değiştirilir.</p>
+                <p className="mt-1">
+                  Güvenlik için işlem başlamadan önce mevcut verinin tam JSON yedeği otomatik indirilir.
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="rounded-xl border border-border/60 bg-muted/30 p-3 text-sm">
+            <p className="font-semibold text-foreground">
+              {restoreParsed.totalRows} kayıt geri yüklenecek
+              {restoreParsed.exportedAt ? ` · Yedek tarihi: ${restoreParsed.exportedAt.slice(0, 10)}` : ''}
+            </p>
+            <ul className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs text-muted-foreground">
+              {restoreParsed.counts.map(({ table, rows }) => (
+                <li key={table}>{BACKUP_TABLE_LABELS[table]}: <span className="font-semibold tabular-nums">{rows}</span></li>
+              ))}
+            </ul>
+          </div>
+          <label className="block text-sm font-semibold text-foreground">
+            Onay için YÜKLE yaz
+            <input
+              value={restoreConfirm}
+              onChange={(event) => setRestoreConfirm(event.target.value)}
+              className="mt-1 h-10 w-full rounded-xl border border-input bg-card/80 px-3 text-sm text-foreground outline-none transition-all focus:border-warning focus:ring-2 focus:ring-warning/20 dark:bg-card/50"
+            />
+          </label>
+          <button
+            type="submit"
+            disabled={restoring}
+            className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-[0_2px_8px_color-mix(in_srgb,var(--primary)_30%,transparent)] transition hover:bg-primary/90 active:scale-[0.99] disabled:opacity-50"
+          >
+            <Upload size={16} />
+            {restoring ? `${restoreStep || 'Geri yükleniyor'}...` : 'Yedeği geri yükle'}
+          </button>
+        </form>
+      ) : null}
     </SimpleModal>
     </>
   )
