@@ -1,4 +1,4 @@
-import { ArrowUpRight, CalendarDays, CreditCard, Landmark } from 'lucide-react'
+import { AlertTriangle, ArrowUpRight, CalendarDays, CreditCard, Landmark } from 'lucide-react'
 import { motion, type Variants } from 'framer-motion'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAuth } from '../auth/useAuth'
@@ -63,6 +63,7 @@ import {
   totalCreditLimit,
   type CashFlowSummary,
 } from '../utils/financeSummary'
+import { buildAttentionLine } from '../utils/attention'
 import { buildDashboardUpcomingItems, type DashboardUpcomingItem } from '../utils/dashboardUpcoming'
 import { formatCurrency } from '../utils/formatCurrency'
 import { isMissingSupabaseCapabilityError } from '../utils/supabaseErrors'
@@ -576,6 +577,7 @@ export function DashboardPage() {
     () => buildFocusActions(data, summary.cashFlow, summary.creditUsageRate, upcomingItems),
     [data, summary.cashFlow, summary.creditUsageRate, upcomingItems],
   )
+  const attentionLine = useMemo(() => buildAttentionLine(data, upcomingItems), [data, upcomingItems])
 
   if (loading) {
     return <SkeletonDashboard />
@@ -604,6 +606,22 @@ export function DashboardPage() {
       animate="visible"
       className="grid gap-5 lg:grid-cols-12 lg:items-start"
     >
+      {attentionLine ? (
+        <motion.div variants={fadeUp} className="min-w-0 lg:col-span-12">
+          <p
+            role="status"
+            className={`flex items-start gap-2.5 rounded-xl px-4 py-3 text-sm font-semibold ring-1 ${
+              attentionLine.tone === 'danger'
+                ? 'bg-destructive/8 text-destructive ring-destructive/25'
+                : 'bg-warning/8 text-warning ring-warning/25'
+            }`}
+          >
+            <AlertTriangle size={17} className="mt-0.5 shrink-0" />
+            <span className="min-w-0">{attentionLine.text}</span>
+          </p>
+        </motion.div>
+      ) : null}
+
       <motion.div variants={fadeUp} className="min-w-0 lg:col-span-8">
         <DashboardHero
           displayName={displayName}
