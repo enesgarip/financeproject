@@ -18,7 +18,7 @@ export const expenseCategoryOptions = expenseCategories.map((category) => ({
 export const categoryRules: Array<{ category: string; keywords: string[] }> = [
   {
     category: 'Market',
-    keywords: ['market', 'migros', 'bim', 'a101', 'şok', 'sok', 'carrefour', 'macrocenter', 'kasap', 'manav'],
+    keywords: ['market', 'migros', 'bim', 'a101', 'şok', 'sok', 'carrefour', 'carrefoursa', 'macrocenter', 'kasap', 'manav'],
   },
   {
     category: 'Yemek',
@@ -51,7 +51,11 @@ export const categoryRules: Array<{ category: string; keywords: string[] }> = [
 ]
 
 export function normalizeDescription(description: string) {
-  return description.trim().toLocaleLowerCase('tr-TR').replace(/\s+/g, ' ')
+  // Map Turkish capital I-variants to dotted 'i' BEFORE lowercasing. tr-TR
+  // lowercasing folds 'I' → dotless 'ı', so ALL-CAPS bank-statement merchants
+  // like "MIGROS"/"BIM"/"NETFLIX" became "mıgros"/"bım"/"netflıx" and never
+  // matched the dotted-i keywords. ş/ğ/ç/ö/ü still fold correctly via toLowerCase.
+  return description.trim().replace(/[Iİ]/g, 'i').toLowerCase().replace(/\s+/g, ' ')
 }
 
 function escapeRegExp(value: string) {
