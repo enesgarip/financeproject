@@ -233,7 +233,7 @@ export type CardLedger = BaseRow & {
   source_id: string | null
 }
 
-export type AccountLedgerKind = 'opening' | 'deposit' | 'withdrawal'
+export type AccountLedgerKind = 'opening' | 'deposit' | 'withdrawal' | 'adjustment'
 
 /**
  * Append-only event log of bank-account balance changes (roadmap Faz 3). Each
@@ -407,6 +407,20 @@ export type Database = {
         Returns: number
       }
       post_card_debt_correction: {
+        Args: {
+          p_card_id: string
+          p_amount_kurus: number
+          p_note: string
+        }
+        Returns: number
+      }
+      recompute_account_balance_from_ledger: {
+        Args: {
+          p_card_id: string
+        }
+        Returns: number
+      }
+      post_account_balance_correction: {
         Args: {
           p_card_id: string
           p_amount_kurus: number

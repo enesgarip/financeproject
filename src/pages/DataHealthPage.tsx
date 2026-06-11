@@ -18,6 +18,7 @@ import { supabase } from '../lib/supabase'
 import type {
   Asset,
   Budget,
+  AccountLedger,
   Card,
   CardExpense,
   CardInstallment,
@@ -33,6 +34,7 @@ import type {
   SavingsGoalComponent,
   UpdateFor,
 } from '../types/database'
+import { recomputeAccountBalance } from '../services/accountLedgerActions'
 import { recomputeCardDebt } from '../services/cardLedgerActions'
 import { roundMoney } from '../utils/financeSummary'
 import {
@@ -97,6 +99,7 @@ export function DataHealthPage() {
       savingsGoals,
       savingsGoalComponents,
       cardLedger,
+      accountLedger,
     ] = await Promise.all([
       supabase.from('assets').select('*'),
       supabase.from('budgets').select('*'),
@@ -111,8 +114,9 @@ export function DataHealthPage() {
       supabase.from('salary_history').select('*'),
       supabase.from('savings_goals').select('*'),
       supabase.from('savings_goal_components').select('*'),
-      // Best-effort: ledger may not be deployed yet → error leaves data null → [].
+      // Best-effort: ledgers may not be deployed yet → error leaves data null → [].
       supabase.from('card_ledger').select('*'),
+      supabase.from('account_ledger').select('*'),
     ])
 
     const firstError = [
@@ -140,6 +144,7 @@ export function DataHealthPage() {
         cardExpenses: (cardExpenses.data ?? []) as CardExpense[],
         cardInstallments: (cardInstallments.data ?? []) as CardInstallment[],
         cardLedger: (cardLedger.data ?? []) as CardLedger[],
+        accountLedger: (accountLedger.data ?? []) as AccountLedger[],
         cardStatementArchives: (cardStatementArchives.data ?? []) as CardStatementArchive[],
         debts: (debts.data ?? []) as Debt[],
         loans: (loans.data ?? []) as Loan[],
@@ -227,6 +232,14 @@ export function DataHealthPage() {
       // trigger so resetting debt to the projection doesn't emit a delta event.
       const { error: rpcError } = await recomputeCardDebt(payload.cardId)
       if (rpcError) throw new Error(rpcError.message ?? 'Borç yeniden hesaplanamadı.')
+    }
+
+    if (issue.kind === 'accountLedgerDrift' && payload.cardId) {
+      await addUndo('cards', [payload.cardId])
+      // RPC suppresses the balance trigger so resetting to the projection emits
+      // no delta event.
+      const { error: rpcError } = await recomputeAccountBalance(payload.cardId)
+      if (rpcError) throw new Error(rpcError.message ?? 'Bakiye yeniden hesaplanamadı.')
     }
 
     if (issue.kind === 'cardTypeFields' && payload.cardId && payload.updates) {

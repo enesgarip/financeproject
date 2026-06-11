@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase'
 import type {
+  AccountLedger,
   Asset,
   Budget,
   Card,
@@ -16,6 +17,7 @@ import type {
   SavingsGoal,
   SavingsGoalComponent,
 } from '../types/database'
+import { balanceDrift, projectAccountBalance, type AccountLedgerEvent } from '../utils/accountLedger'
 import { ledgerDrift, projectCardDebt, type CardLedgerEvent } from '../utils/cardLedger'
 import { dateInputValue, formatDate } from '../utils/date'
 import { cardProvisionAmount, cardSplitTotal, clampCardBreakdown, moneyDiffers, projectLoanSummary, roundMoney } from '../utils/financeSummary'
@@ -30,6 +32,7 @@ export type HealthData = {
   cardExpenses: CardExpense[]
   cardInstallments: CardInstallment[]
   cardLedger: CardLedger[]
+  accountLedger: AccountLedger[]
   cardStatementArchives: CardStatementArchive[]
   debts: Debt[]
   loans: Loan[]
@@ -61,6 +64,7 @@ export type HealthIssue = {
     | 'cardStatementTotals'
     | 'cardScheduledDebt'
     | 'cardLedgerDrift'
+    | 'accountLedgerDrift'
     | 'assetShape'
     | 'budgetMonth'
     | 'debtShape'
@@ -149,6 +153,7 @@ export const emptyData: HealthData = {
   cardExpenses: [],
   cardInstallments: [],
   cardLedger: [],
+  accountLedger: [],
   cardStatementArchives: [],
   debts: [],
   loans: [],
@@ -265,6 +270,16 @@ export function buildIssueGuide(issue: HealthIssue): IssueGuide {
       nextStep: issue.fixable
         ? 'Hizli duzeltmeyle borcu hareket gecmisine (gercek kaynak) gore yeniden hesapla.'
         : 'Kartin borc hareketlerini Kartlar ekranindan kontrol et.',
+    }
+  }
+
+  if (issue.kind === 'accountLedgerDrift') {
+    return {
+      problem: 'Hesabin kayitli bakiyesi, hesap hareketleri toplamindan farkli.',
+      whyItMatters: 'Hesap hareketleri degismez kayittir; fark, hareketlere yazilmadan bakiyenin degistigi anlamina gelir.',
+      nextStep: issue.fixable
+        ? 'Hizli duzeltmeyle bakiyeyi hareket gecmisine (gercek kaynak) gore yeniden hesapla.'
+        : 'Hesabin hareketlerini Kartlar ekranindan kontrol et.',
     }
   }
 
@@ -625,6 +640,9 @@ export function issuePreviewDetails(issue: HealthIssue) {
   } else if (issue.kind === 'cardLedgerDrift') {
     previews.push(`Borç hareket toplamına çekilecek: ${formatCurrency(payload.nextDebtAmount ?? 0)}`)
     previews.push('Yeni bir hareket yazılmaz; borç projeksiyona eşitlenir.')
+  } else if (issue.kind === 'accountLedgerDrift') {
+    previews.push(`Bakiye hareket toplamına çekilecek: ${formatCurrency(payload.nextDebtAmount ?? 0)}`)
+    previews.push('Yeni bir hareket yazılmaz; bakiye projeksiyona eşitlenir.')
   } else if (issue.kind === 'loanTotals') {
     previews.push(`Kalan tutar: ${formatCurrency(payload.remainingAmount ?? 0)}`)
     previews.push(`Kalan taksit: ${payload.remainingInstallments ?? 0}`)
@@ -990,6 +1008,39 @@ export function buildIssues(data: HealthData): HealthIssue[] {
       fixable: true,
       fixLabel: 'Hareketlere göre düzelt',
       kind: 'cardLedgerDrift',
+      payload: { cardId: card.id, nextDebtAmount: projection },
+    })
+  }
+
+  // Bank account balance drift vs the account ledger projection (Faz 3.1).
+  // Normally 0 (trigger keeps them in sync); non-zero means an out-of-band write.
+  const accountEventsByCard = new Map<string, AccountLedgerEvent[]>()
+  for (const event of data.accountLedger) {
+    accountEventsByCard.set(event.card_id, [...(accountEventsByCard.get(event.card_id) ?? []), event])
+  }
+
+  for (const card of data.cards.filter((item) => item.card_type === 'banka_karti')) {
+    const accountEvents = accountEventsByCard.get(card.id)
+    if (!accountEvents || accountEvents.length === 0) continue
+
+    const drift = balanceDrift(accountEvents, card.current_balance)
+    if (drift === 0) continue
+
+    const projection = projectAccountBalance(accountEvents)
+    issues.push({
+      id: `account-ledger-drift-${card.id}`,
+      area: 'Kartlar',
+      severity: 'error',
+      title: `${cardLabel(card)} bakiyesi hareket geçmişiyle uyuşmuyor`,
+      description: 'Kayıtlı bakiye, hesap hareketleri toplamından farklı; kayıt dışı bir değişiklik olmuş olabilir.',
+      details: [
+        `Kayıtlı bakiye: ${formatCurrency(card.current_balance)}`,
+        `Hareket toplamı: ${formatCurrency(projection)}`,
+        `Fark: ${drift > 0 ? '+' : ''}${formatCurrency(drift)}`,
+      ],
+      fixable: true,
+      fixLabel: 'Hareketlere göre düzelt',
+      kind: 'accountLedgerDrift',
       payload: { cardId: card.id, nextDebtAmount: projection },
     })
   }

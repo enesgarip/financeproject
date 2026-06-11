@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { Asset, Card, CardLedger } from '../types/database'
+import type { AccountLedger, Asset, Card, CardLedger } from '../types/database'
 import { buildIssues, emptyData } from './DataHealth.logic'
 
 const base = {
@@ -161,5 +161,68 @@ describe('buildIssues card ledger drift (A2.1)', () => {
     })
 
     expect(issues.find((issue) => issue.id === 'card-ledger-drift-card-1')).toBeUndefined()
+  })
+})
+
+function bankCard(overrides: Partial<Card> = {}): Card {
+  return creditCard({
+    id: 'bank-1',
+    card_type: 'banka_karti',
+    current_balance: 1200,
+    credit_limit: 0,
+    debt_amount: 0,
+    statement_day: null,
+    due_day: null,
+    ...overrides,
+  })
+}
+
+function accountEvent(overrides: Partial<AccountLedger> = {}): AccountLedger {
+  return {
+    ...base,
+    id: 'acct-1',
+    card_id: 'bank-1',
+    occurred_at: '2026-06-01T00:00:00.000Z',
+    kind: 'opening',
+    amount_kurus: 100000,
+    note: null,
+    source_table: 'cards',
+    source_id: 'bank-1',
+    ...overrides,
+  }
+}
+
+describe('buildIssues account ledger drift (Faz 3.1)', () => {
+  it('flags a fixable drift when stored balance differs from the ledger projection', () => {
+    const issues = buildIssues({
+      ...emptyData,
+      cards: [bankCard({ current_balance: 1200 })],
+      accountLedger: [accountEvent({ amount_kurus: 100000 })], // projection = 1000 TL
+    })
+
+    const drift = issues.find((issue) => issue.id === 'account-ledger-drift-bank-1')
+    expect(drift?.kind).toBe('accountLedgerDrift')
+    expect(drift?.fixable).toBe(true)
+    expect(drift?.payload?.nextDebtAmount).toBe(1000)
+  })
+
+  it('does not flag when the projection equals the stored balance', () => {
+    const issues = buildIssues({
+      ...emptyData,
+      cards: [bankCard({ current_balance: 1000 })],
+      accountLedger: [accountEvent({ amount_kurus: 100000 })],
+    })
+
+    expect(issues.find((issue) => issue.id === 'account-ledger-drift-bank-1')).toBeUndefined()
+  })
+
+  it('does not flag when the account has no ledger events', () => {
+    const issues = buildIssues({
+      ...emptyData,
+      cards: [bankCard({ current_balance: 1200 })],
+      accountLedger: [],
+    })
+
+    expect(issues.find((issue) => issue.id === 'account-ledger-drift-bank-1')).toBeUndefined()
   })
 })

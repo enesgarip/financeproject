@@ -543,7 +543,7 @@ export function CreditAccountListCard({
             Hareketler
           </button>
         </div>
-        {detailsOpen ? <AccountLedgerPanel card={row} /> : null}
+        {detailsOpen ? <AccountLedgerPanel card={row} onChanged={onChanged} /> : null}
         {rowActions}
       </article>
     )
