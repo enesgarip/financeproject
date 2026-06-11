@@ -18,7 +18,7 @@ import type {
 } from '../types/database'
 import { ledgerDrift, projectCardDebt, type CardLedgerEvent } from '../utils/cardLedger'
 import { dateInputValue, formatDate } from '../utils/date'
-import { cardProvisionAmount, cardSplitTotal, moneyDiffers, roundMoney } from '../utils/financeSummary'
+import { cardProvisionAmount, cardSplitTotal, clampCardBreakdown, moneyDiffers, roundMoney } from '../utils/financeSummary'
 import { formatCurrency } from '../utils/formatCurrency'
 import { formatComponentAmount, formatSavingsGoalAmount, savingsGoalValueTypeLabel } from '../utils/savingsGoal'
 import { isMissingSupabaseCapabilityError } from '../utils/supabaseErrors'
@@ -838,9 +838,12 @@ export function buildIssues(data: HealthData): HealthIssue[] {
   }
 
   for (const card of data.cards.filter((item) => item.card_type === 'kredi_karti')) {
-    const statementDebt = Math.min(card.statement_debt_amount, card.debt_amount)
-    const provisionAmount = Math.min(cardProvisionAmount(card), Math.max(0, card.debt_amount - statementDebt))
-    const currentPeriod = Math.min(card.current_period_spending, Math.max(0, card.debt_amount - statementDebt - provisionAmount))
+    const { statement: statementDebt, provision: provisionAmount, current: currentPeriod } = clampCardBreakdown(
+      card.debt_amount,
+      card.statement_debt_amount,
+      card.current_period_spending,
+      cardProvisionAmount(card),
+    )
 
     if (
       moneyDiffers(statementDebt, card.statement_debt_amount) ||

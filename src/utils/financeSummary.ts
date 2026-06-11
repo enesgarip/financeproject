@@ -122,6 +122,21 @@ export function cardPayableDebt(card: Pick<Card, 'statement_debt_amount' | 'curr
   return roundMoney(Math.max(0, card.statement_debt_amount + card.current_period_spending))
 }
 
+/**
+ * Clamps a credit card's debt breakdown so `statement + provision + current`
+ * never exceeds `debt` (roadmap "güven" Faz 1). Priority: statement is the most
+ * protected, then provision, then current absorbs the remainder. This is the
+ * TS twin of the DB BEFORE trigger `clamp_card_breakdown()` — the single source
+ * of truth for the invariant, shared with the DataHealth split check.
+ */
+export function clampCardBreakdown(debt: number, statement: number, current: number, provision: number) {
+  const total = Math.max(0, debt)
+  const clampedStatement = Math.min(Math.max(0, statement), total)
+  const clampedProvision = Math.min(Math.max(0, provision), Math.max(0, total - clampedStatement))
+  const clampedCurrent = Math.min(Math.max(0, current), Math.max(0, total - clampedStatement - clampedProvision))
+  return { statement: clampedStatement, provision: clampedProvision, current: clampedCurrent }
+}
+
 export function cardMonthlyPaymentAmount(card: Pick<Card, 'statement_debt_amount'>) {
   return card.statement_debt_amount
 }

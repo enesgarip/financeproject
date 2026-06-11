@@ -10,6 +10,7 @@ import {
   cardPayableDebt,
   cardProvisionAmount,
   cardSplitTotal,
+  clampCardBreakdown,
   getCurrentSalary,
   getSalaryTrend,
   moneyDiffers,
@@ -159,6 +160,31 @@ describe('cardPayableDebt', () => {
   it('clamps to 0 when negative sum', () => {
     const card = creditCard({ statement_debt_amount: -100, current_period_spending: 50 })
     expect(cardPayableDebt(card)).toBe(0)
+  })
+})
+
+describe('clampCardBreakdown', () => {
+  it('leaves a consistent breakdown untouched (no-op when split <= debt)', () => {
+    expect(clampCardBreakdown(100, 50, 30, 20)).toEqual({ statement: 50, provision: 20, current: 30 })
+  })
+
+  it('clamps the pay_card_debt over-payment case so split equals debt', () => {
+    // debt 100 = 50/30/20, pay 60 → debt 40, statement 0 (RPC), current/provision stale.
+    const out = clampCardBreakdown(40, 0, 30, 20)
+    expect(out).toEqual({ statement: 0, provision: 20, current: 20 })
+    expect(out.statement + out.provision + out.current).toBe(40)
+  })
+
+  it('protects statement first, then provision, then shrinks current last', () => {
+    // statement alone already exceeds debt → it absorbs everything, rest zeroed.
+    expect(clampCardBreakdown(40, 100, 30, 20)).toEqual({ statement: 40, provision: 0, current: 0 })
+    // statement fits, provision takes the remainder, current is squeezed out.
+    expect(clampCardBreakdown(40, 10, 30, 50)).toEqual({ statement: 10, provision: 30, current: 0 })
+  })
+
+  it('floors negatives and a negative debt at zero', () => {
+    expect(clampCardBreakdown(100, -10, -5, -20)).toEqual({ statement: 0, provision: 0, current: 0 })
+    expect(clampCardBreakdown(-50, 10, 10, 10)).toEqual({ statement: 0, provision: 0, current: 0 })
   })
 })
 
