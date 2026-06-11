@@ -141,6 +141,27 @@ export function cardMonthlyPaymentAmount(card: Pick<Card, 'statement_debt_amount
   return card.statement_debt_amount
 }
 
+/**
+ * Projects a loan's summary from its installment plan (roadmap "güven" Faz 2).
+ * remaining = sum of unpaid (status != 'ödendi') amounts, remaining_installments
+ * = unpaid count, status = 'closed' when none unpaid else 'active'. This is the
+ * TS twin of the DB trigger `sync_loan_summary()` — the single source of truth,
+ * shared with the DataHealth `loanTotals` check.
+ */
+export function projectLoanSummary(installments: Pick<LoanInstallment, 'amount' | 'status'>[]): {
+  remainingAmount: number
+  remainingInstallments: number
+  status: Loan['status']
+} {
+  const pending = installments.filter((item) => item.status !== 'ödendi')
+  const remainingInstallments = pending.length
+  return {
+    remainingAmount: roundMoney(pending.reduce((total, item) => total + item.amount, 0)),
+    remainingInstallments,
+    status: remainingInstallments === 0 ? 'closed' : 'active',
+  }
+}
+
 export function creditLimitGroupKey(card: Card) {
   return card.limit_group_name?.trim() || card.id
 }

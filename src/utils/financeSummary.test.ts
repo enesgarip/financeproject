@@ -11,6 +11,7 @@ import {
   cardProvisionAmount,
   cardSplitTotal,
   clampCardBreakdown,
+  projectLoanSummary,
   getCurrentSalary,
   getSalaryTrend,
   moneyDiffers,
@@ -185,6 +186,31 @@ describe('clampCardBreakdown', () => {
   it('floors negatives and a negative debt at zero', () => {
     expect(clampCardBreakdown(100, -10, -5, -20)).toEqual({ statement: 0, provision: 0, current: 0 })
     expect(clampCardBreakdown(-50, 10, 10, 10)).toEqual({ statement: 0, provision: 0, current: 0 })
+  })
+})
+
+describe('projectLoanSummary', () => {
+  it('sums only unpaid installments and stays active while any remain', () => {
+    expect(
+      projectLoanSummary([
+        { amount: 100, status: 'ödendi' },
+        { amount: 250, status: 'bekliyor' },
+        { amount: 250, status: 'bekliyor' },
+      ]),
+    ).toEqual({ remainingAmount: 500, remainingInstallments: 2, status: 'active' })
+  })
+
+  it('closes the loan when every installment is paid', () => {
+    expect(
+      projectLoanSummary([
+        { amount: 100, status: 'ödendi' },
+        { amount: 100, status: 'ödendi' },
+      ]),
+    ).toEqual({ remainingAmount: 0, remainingInstallments: 0, status: 'closed' })
+  })
+
+  it('treats an empty plan as closed with nothing remaining', () => {
+    expect(projectLoanSummary([])).toEqual({ remainingAmount: 0, remainingInstallments: 0, status: 'closed' })
   })
 })
 

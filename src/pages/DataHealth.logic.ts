@@ -18,7 +18,7 @@ import type {
 } from '../types/database'
 import { ledgerDrift, projectCardDebt, type CardLedgerEvent } from '../utils/cardLedger'
 import { dateInputValue, formatDate } from '../utils/date'
-import { cardProvisionAmount, cardSplitTotal, clampCardBreakdown, moneyDiffers, roundMoney } from '../utils/financeSummary'
+import { cardProvisionAmount, cardSplitTotal, clampCardBreakdown, moneyDiffers, projectLoanSummary, roundMoney } from '../utils/financeSummary'
 import { formatCurrency } from '../utils/formatCurrency'
 import { formatComponentAmount, formatSavingsGoalAmount, savingsGoalValueTypeLabel } from '../utils/savingsGoal'
 import { isMissingSupabaseCapabilityError } from '../utils/supabaseErrors'
@@ -1314,10 +1314,7 @@ export function buildIssues(data: HealthData): HealthIssue[] {
 
   for (const loan of data.loans) {
     const rows = installmentsByLoan.get(loan.id) ?? []
-    const pending = rows.filter((item) => item.status !== 'ödendi')
-    const remainingAmount = roundMoney(pending.reduce((total, item) => total + item.amount, 0))
-    const remainingInstallments = pending.length
-    const loanStatus: Loan['status'] = remainingInstallments === 0 ? 'closed' : 'active'
+    const { remainingAmount, remainingInstallments, status: loanStatus } = projectLoanSummary(rows)
 
     if (rows.length > 0 && (moneyDiffers(loan.remaining_amount, remainingAmount) || loan.remaining_installments !== remainingInstallments || loan.status !== loanStatus)) {
       issues.push({
