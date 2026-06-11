@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { Asset } from '../types/database'
+import type { Asset, Card, CardLedger } from '../types/database'
 import { buildIssues, emptyData } from './DataHealth.logic'
 
 const base = {
@@ -89,5 +89,77 @@ describe('buildIssues asset health checks', () => {
     expect(issues.find((issue) => issue.id === 'asset-shape-stock-unit-1')?.payload?.updates).toEqual({
       unit: 'TRY',
     })
+  })
+})
+
+function creditCard(overrides: Partial<Card> = {}): Card {
+  return {
+    ...base,
+    id: 'card-1',
+    bank_name: 'Banka',
+    card_name: 'Kart',
+    card_type: 'kredi_karti',
+    holder_name: null,
+    limit_group_name: null,
+    current_balance: 0,
+    credit_limit: 10000,
+    debt_amount: 120,
+    statement_debt_amount: 0,
+    current_period_spending: 0,
+    provision_amount: 0,
+    statement_day: 1,
+    due_day: 10,
+    note: null,
+    ...overrides,
+  }
+}
+
+function ledgerEvent(overrides: Partial<CardLedger> = {}): CardLedger {
+  return {
+    ...base,
+    id: 'ledger-1',
+    card_id: 'card-1',
+    occurred_at: '2026-06-01T00:00:00.000Z',
+    kind: 'opening',
+    amount_kurus: 10000,
+    note: null,
+    source_table: 'cards',
+    source_id: 'card-1',
+    ...overrides,
+  }
+}
+
+describe('buildIssues card ledger drift (A2.1)', () => {
+  it('flags a fixable drift when stored debt differs from the ledger projection', () => {
+    const issues = buildIssues({
+      ...emptyData,
+      cards: [creditCard({ debt_amount: 120 })],
+      cardLedger: [ledgerEvent({ amount_kurus: 10000 })], // projection = 100 TL
+    })
+
+    const drift = issues.find((issue) => issue.id === 'card-ledger-drift-card-1')
+    expect(drift?.kind).toBe('cardLedgerDrift')
+    expect(drift?.fixable).toBe(true)
+    expect(drift?.payload?.nextDebtAmount).toBe(100)
+  })
+
+  it('does not flag when the projection equals the stored debt', () => {
+    const issues = buildIssues({
+      ...emptyData,
+      cards: [creditCard({ debt_amount: 100 })],
+      cardLedger: [ledgerEvent({ amount_kurus: 10000 })],
+    })
+
+    expect(issues.find((issue) => issue.id === 'card-ledger-drift-card-1')).toBeUndefined()
+  })
+
+  it('does not flag when the card has no ledger events (table not deployed / empty)', () => {
+    const issues = buildIssues({
+      ...emptyData,
+      cards: [creditCard({ debt_amount: 120 })],
+      cardLedger: [],
+    })
+
+    expect(issues.find((issue) => issue.id === 'card-ledger-drift-card-1')).toBeUndefined()
   })
 })

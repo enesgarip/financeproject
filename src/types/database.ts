@@ -215,7 +215,7 @@ export type TransactionHistory = BaseRow & {
   note: string | null
 }
 
-export type CardLedgerKind = 'opening' | 'debit' | 'credit'
+export type CardLedgerKind = 'opening' | 'debit' | 'credit' | 'adjustment'
 
 /**
  * Append-only event log of credit-card debt changes (roadmap A2). Each row is
@@ -380,6 +380,20 @@ export type Database = {
           p_amount: number
         }
         Returns: Card
+      }
+      recompute_card_debt_from_ledger: {
+        Args: {
+          p_card_id: string
+        }
+        Returns: number
+      }
+      post_card_debt_correction: {
+        Args: {
+          p_card_id: string
+          p_amount_kurus: number
+          p_note: string
+        }
+        Returns: number
       }
       pay_card_statement: {
         Args: {

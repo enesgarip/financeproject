@@ -472,6 +472,7 @@ export function CardsPage() {
             onTransfer={(source) => openTransaction(source, helpers.reload, helpers.rows as Card[], 'transfer')}
             onAddExpense={focusQuickExpense}
             onImportStatement={setImportCard}
+            onChanged={helpers.reload}
           />
         )}
         renderExtra={(row, helpers) => {

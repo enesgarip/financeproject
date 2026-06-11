@@ -477,6 +477,7 @@ export function CreditAccountListCard({
   onTransfer,
   onAddExpense,
   onImportStatement,
+  onChanged,
 }: {
   row: Card
   rows: Card[]
@@ -487,6 +488,7 @@ export function CreditAccountListCard({
   onTransfer: (source: Card) => void
   onAddExpense: (card: Card, mode: 'cash' | 'installment') => void
   onImportStatement: (card: Card) => void
+  onChanged?: () => void | Promise<void>
 }) {
   const [detailsOpen, setDetailsOpen] = useState(false)
 
@@ -702,7 +704,7 @@ export function CreditAccountListCard({
               )}
             </div>
           </div>
-          <CardLedgerPanel card={row} />
+          <CardLedgerPanel card={row} onChanged={onChanged} />
         </div>
       ) : null}
     </article>

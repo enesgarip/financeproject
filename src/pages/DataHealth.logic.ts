@@ -5,6 +5,7 @@ import type {
   Card,
   CardExpense,
   CardInstallment,
+  CardLedger,
   CardStatementArchive,
   Debt,
   InsertFor,
@@ -15,6 +16,7 @@ import type {
   SavingsGoal,
   SavingsGoalComponent,
 } from '../types/database'
+import { ledgerDrift, projectCardDebt, type CardLedgerEvent } from '../utils/cardLedger'
 import { dateInputValue, formatDate } from '../utils/date'
 import { cardProvisionAmount, cardSplitTotal, moneyDiffers, roundMoney } from '../utils/financeSummary'
 import { formatCurrency } from '../utils/formatCurrency'
@@ -27,6 +29,7 @@ export type HealthData = {
   cards: Card[]
   cardExpenses: CardExpense[]
   cardInstallments: CardInstallment[]
+  cardLedger: CardLedger[]
   cardStatementArchives: CardStatementArchive[]
   debts: Debt[]
   loans: Loan[]
@@ -57,6 +60,7 @@ export type HealthIssue = {
     | 'cardInstallmentCount'
     | 'cardStatementTotals'
     | 'cardScheduledDebt'
+    | 'cardLedgerDrift'
     | 'assetShape'
     | 'budgetMonth'
     | 'debtShape'
@@ -144,6 +148,7 @@ export const emptyData: HealthData = {
   cards: [],
   cardExpenses: [],
   cardInstallments: [],
+  cardLedger: [],
   cardStatementArchives: [],
   debts: [],
   loans: [],
@@ -250,6 +255,16 @@ export function buildIssueGuide(issue: HealthIssue): IssueGuide {
       nextStep: issue.fixable
         ? 'Kart borcunu taksit planiyla hizalamak icin hizli duzeltmeyi uygula.'
         : 'Kart borcunu ve taksit planini birlikte kontrol et; gerekiyorsa Kartlar ekranindan duzelt.',
+    }
+  }
+
+  if (issue.kind === 'cardLedgerDrift') {
+    return {
+      problem: 'Kartin kayitli borcu, borc hareketleri toplamindan farkli.',
+      whyItMatters: 'Borc hareketleri degismez kayittir; fark, hareketlere yazilmadan borcun degistigi anlamina gelir.',
+      nextStep: issue.fixable
+        ? 'Hizli duzeltmeyle borcu hareket gecmisine (gercek kaynak) gore yeniden hesapla.'
+        : 'Kartin borc hareketlerini Kartlar ekranindan kontrol et.',
     }
   }
 
@@ -607,6 +622,9 @@ export function issuePreviewDetails(issue: HealthIssue) {
   } else if (issue.kind === 'cardScheduledDebt') {
     previews.push(`Yeni toplam borç: ${formatCurrency(payload.nextDebtAmount ?? 0)}`)
     previews.push(`Planlı taksit tutarı borca eklenecek.`)
+  } else if (issue.kind === 'cardLedgerDrift') {
+    previews.push(`Borç hareket toplamına çekilecek: ${formatCurrency(payload.nextDebtAmount ?? 0)}`)
+    previews.push('Yeni bir hareket yazılmaz; borç projeksiyona eşitlenir.')
   } else if (issue.kind === 'loanTotals') {
     previews.push(`Kalan tutar: ${formatCurrency(payload.remainingAmount ?? 0)}`)
     previews.push(`Kalan taksit: ${payload.remainingInstallments ?? 0}`)
@@ -936,6 +954,41 @@ export function buildIssues(data: HealthData): HealthIssue[] {
         kind: 'manual',
       })
     }
+  }
+
+  // Ledger drift (A2.1): stored debt vs the append-only event projection. With
+  // the AFTER trigger in place this is normally 0; a non-zero value means an
+  // out-of-band write slipped past the ledger. Only checked when ledger events
+  // exist for the card (table deployed + backfilled).
+  const ledgerEventsByCard = new Map<string, CardLedgerEvent[]>()
+  for (const event of data.cardLedger) {
+    ledgerEventsByCard.set(event.card_id, [...(ledgerEventsByCard.get(event.card_id) ?? []), event])
+  }
+
+  for (const card of data.cards.filter((item) => item.card_type === 'kredi_karti')) {
+    const cardEvents = ledgerEventsByCard.get(card.id)
+    if (!cardEvents || cardEvents.length === 0) continue
+
+    const drift = ledgerDrift(cardEvents, card.debt_amount)
+    if (drift === 0) continue
+
+    const projection = projectCardDebt(cardEvents)
+    issues.push({
+      id: `card-ledger-drift-${card.id}`,
+      area: 'Kartlar',
+      severity: 'error',
+      title: `${cardLabel(card)} borcu hareket geçmişiyle uyuşmuyor`,
+      description: 'Kayıtlı borç, borç hareketleri toplamından farklı; kayıt dışı bir değişiklik olmuş olabilir.',
+      details: [
+        `Kayıtlı borç: ${formatCurrency(card.debt_amount)}`,
+        `Hareket toplamı: ${formatCurrency(projection)}`,
+        `Fark: ${drift > 0 ? '+' : ''}${formatCurrency(drift)}`,
+      ],
+      fixable: true,
+      fixLabel: 'Hareketlere göre düzelt',
+      kind: 'cardLedgerDrift',
+      payload: { cardId: card.id, nextDebtAmount: projection },
+    })
   }
 
   const creditGroups = new Map<string, Card[]>()
