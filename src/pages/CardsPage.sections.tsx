@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { BankLogo } from '../components/finance/BankLogo'
+import { AccountLedgerPanel } from '../components/finance/AccountLedgerPanel'
 import { CardLedgerPanel } from '../components/finance/CardLedgerPanel'
 import { CategoryPicker } from '../components/finance/CategoryPicker'
 import { AmountDisplay, FinancePanel, MiniStat, ProgressStrip, SectionHeader, StatusBadge } from '../components/finance/FinanceUI'
@@ -523,15 +524,26 @@ export function CreditAccountListCard({
           <CardDatum label="Not" value={row.note || '-'} />
         </div>
 
-        <button
-          type="button"
-          onClick={() => onTransfer(row)}
-          disabled={accountCount < 2}
-          className="finance-touch-target mt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-3 py-2 text-xs font-black text-primary-foreground shadow-sm transition hover:bg-primary/90 disabled:opacity-55"
-        >
-          <ArrowRightLeft size={15} />
-          Transfer yap
-        </button>
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => onTransfer(row)}
+            disabled={accountCount < 2}
+            className="finance-touch-target inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-3 py-2 text-xs font-black text-primary-foreground shadow-sm transition hover:bg-primary/90 disabled:opacity-55"
+          >
+            <ArrowRightLeft size={15} />
+            Transfer yap
+          </button>
+          <button
+            type="button"
+            onClick={() => setDetailsOpen((current) => !current)}
+            aria-expanded={detailsOpen}
+            className="finance-touch-target inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-xs font-black text-foreground shadow-sm transition hover:bg-muted"
+          >
+            Hareketler
+          </button>
+        </div>
+        {detailsOpen ? <AccountLedgerPanel card={row} /> : null}
         {rowActions}
       </article>
     )

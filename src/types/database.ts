@@ -233,6 +233,24 @@ export type CardLedger = BaseRow & {
   source_id: string | null
 }
 
+export type AccountLedgerKind = 'opening' | 'deposit' | 'withdrawal'
+
+/**
+ * Append-only event log of bank-account balance changes (roadmap Faz 3). Each
+ * row is one change captured atomically by a trigger on `cards`. `amount_kurus`
+ * is signed integer kuruş: +deposit (balance up), -withdrawal (balance down).
+ * The account's balance equals the sum of its events (see utils/accountLedger.ts).
+ */
+export type AccountLedger = BaseRow & {
+  card_id: string
+  occurred_at: string
+  kind: AccountLedgerKind
+  amount_kurus: number
+  note: string | null
+  source_table: string | null
+  source_id: string | null
+}
+
 export type ReconciliationTarget = 'balance' | 'debt'
 
 /**
@@ -315,6 +333,7 @@ export type Database = {
       net_worth_snapshots: Table<NetWorthSnapshot, WithBaseInsert<NetWorthSnapshot>, WithBaseUpdate<NetWorthSnapshot>>
       gold_lots: Table<GoldLot, WithBaseInsert<GoldLot>, WithBaseUpdate<GoldLot>>
       card_ledger: Table<CardLedger, WithBaseInsert<CardLedger>, WithBaseUpdate<CardLedger>>
+      account_ledger: Table<AccountLedger, WithBaseInsert<AccountLedger>, WithBaseUpdate<AccountLedger>>
       account_reconciliations: Table<
         AccountReconciliation,
         WithBaseInsert<AccountReconciliation>,
