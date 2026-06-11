@@ -1,6 +1,5 @@
 import { supabase } from '../lib/supabase'
 import type { Card } from '../types/database'
-import { addTransactionHistory } from '../utils/history'
 import { isMissingSupabaseCapabilityError, type SupabaseLikeError } from '../utils/supabaseErrors'
 
 export type AccountMovementType = 'in' | 'out' | 'transfer'
@@ -40,25 +39,22 @@ export async function submitAccountMovement({
     }
   }
 
-  const nextBalance = type === 'in' ? sourceAccount.current_balance + amount : sourceAccount.current_balance - amount
-  if (nextBalance < 0) return { error: { message: 'Giden tutar mevcut bakiyeden büyük olamaz.' } }
+  if (type === 'out' && sourceAccount.current_balance < amount) {
+    return { error: { message: 'Giden tutar mevcut bakiyeden büyük olamaz.' } }
+  }
 
-  const { error } = await supabase
-    .from('cards')
-    .update({ current_balance: nextBalance, updated_at: new Date().toISOString() })
-    .eq('id', sourceAccount.id)
-
-  if (error) return { error }
-
-  const historyError = await addTransactionHistory({
-    user_id: sourceAccount.user_id,
-    type: 'transfer',
-    title: `${sourceAccount.card_name} ${type === 'in' ? 'para girişi' : 'para çıkışı'}`,
-    amount,
-    source_table: 'cards',
-    source_id: sourceAccount.id,
-    note: type === 'in' ? 'Banka kartına para geldi.' : 'Banka kartından para çıktı.',
+  // Atomic: the RPC updates the balance and writes transaction_history in one
+  // transaction (Faz 4). The Faz 3 account_ledger trigger also records the delta
+  // inside the same transaction — balance, ledger event and feed row commit together.
+  const { error } = await supabase.rpc('record_manual_account_movement', {
+    p_card_id: sourceAccount.id,
+    p_amount: amount,
+    p_direction: type,
   })
 
-  return { error: historyError }
+  return {
+    error: error && isMissingSupabaseCapabilityError(error)
+      ? { message: 'Para giriş/çıkış altyapısı canlı veritabanına uygulanmamış. Migration çalışınca bu işlem açılacak.', code: error.code }
+      : error,
+  }
 }

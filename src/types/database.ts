@@ -457,6 +457,15 @@ export type Database = {
         }
         Returns: Json
       }
+      record_manual_account_movement: {
+        Args: {
+          p_card_id: string
+          p_amount: number
+          p_direction: 'in' | 'out'
+          p_note?: string | null
+        }
+        Returns: Card
+      }
       update_card_expense: {
         Args: {
           p_expense_id: string
