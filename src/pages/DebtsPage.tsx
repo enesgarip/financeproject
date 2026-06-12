@@ -5,7 +5,9 @@ import { Badge } from '../components/ui/badge'
 import { Card, CardContent } from '../components/ui/card'
 import { Progress } from '../components/ui/progress'
 import { useMarketRates } from '../hooks/useMarketRates'
-import { supabase } from '../lib/supabase'
+import { useInvalidateFinanceSnapshot } from '../app/useFinanceSnapshot'
+import { fetchCardsByType } from '../data/repositories/cardsRepo'
+import { settlePersonalDebt } from '../data/repositories/debtsRepo'
 import type { Card as FinanceCard, Debt } from '../types/database'
 import { formatDate } from '../utils/date'
 import { formatCurrency, formatNumber, parseNumber } from '../utils/formatCurrency'
@@ -226,17 +228,13 @@ function OverviewStat({ label, value, tone }: { label: string; value: string; to
 }
 
 async function getBankaKartlari(): Promise<FinanceCard[]> {
-  const { data, error } = await supabase
-    .from('cards')
-    .select('*')
-    .eq('card_type', 'banka_karti')
-
-  if (error) return []
-  return (data as FinanceCard[]) ?? []
+  const result = await fetchCardsByType('banka_karti')
+  return result.ok ? result.data : []
 }
 
 export function DebtsPage() {
   const { snapshot } = useMarketRates()
+  const invalidateSnapshot = useInvalidateFinanceSnapshot()
   const [debtToSettle, setDebtToSettle] = useState<Debt | null>(null)
   const [debtCards, setDebtCards] = useState<FinanceCard[]>([])
   const [debtAccountCard, setDebtAccountCard] = useState('')
@@ -267,20 +265,17 @@ export function DebtsPage() {
     setDebtPaymentSaving(true)
     setDebtPaymentError('')
 
-    const { error } = await supabase.rpc('settle_personal_debt', {
-      p_debt_id: debtToSettle.id,
-      p_account_card_id: accountCard.id,
-    })
+    const result = await settlePersonalDebt(debtToSettle.id, accountCard.id)
 
     setDebtPaymentSaving(false)
-    if (error) {
-      setDebtPaymentError(error.message)
+    if (!result.ok) {
+      setDebtPaymentError(result.error.message ?? 'Borç kapatma işlemi tamamlanamadı.')
       return
     }
 
     setLastUsed('debtAccount', accountCard.id)
     closeDebtSettlement()
-    await reloadDebts?.()
+    await Promise.all([reloadDebts?.(), invalidateSnapshot()])
   }
 
   const settlementIsBorrowed = debtToSettle?.direction === 'borç_aldım'
@@ -296,9 +291,19 @@ export function DebtsPage() {
         emptyTitle="Henüz kişi kaydı yok"
         emptyDescription="Kişisel borçlarını ve alacaklarını buradan takip edebilirsin."
         orderBy="due_date"
+        afterSave={async () => {
+          await invalidateSnapshot()
+        }}
+        afterDelete={async () => {
+          await invalidateSnapshot()
+        }}
         renderBeforeList={({ loading, rows, reload }) => (
           <div className="space-y-3">
-            <RatesBanner onSynced={reload} />
+            <RatesBanner
+              onSynced={async () => {
+                await Promise.all([reload(), invalidateSnapshot()])
+              }}
+            />
             {!loading ? <DebtsOverview rows={rows as Debt[]} snapshot={snapshot} /> : null}
           </div>
         )}

@@ -5,7 +5,9 @@ import { Alert } from '../components/ui/alert'
 import { Badge } from '../components/ui/badge'
 import { Card, CardContent } from '../components/ui/card'
 import { Progress } from '../components/ui/progress'
-import { supabase } from '../lib/supabase'
+import { useFinanceSnapshot, useInvalidateFinanceSnapshot } from '../app/useFinanceSnapshot'
+import { postDueCardAutoPayments } from '../data/repositories/financeSnapshotRepo'
+import { fetchCards } from '../data/repositories/cardsRepo'
 import {
   accountLabelForObligation,
   amountLabelForObligation,
@@ -20,11 +22,6 @@ import {
 } from '../services/financePaymentActions'
 import type {
   Card as FinanceCard,
-  CardInstallment,
-  CardStatementArchive,
-  Debt,
-  Loan,
-  LoanInstallment,
   Payment,
   PaymentAmountStatus,
   PaymentCategory,
@@ -133,12 +130,8 @@ function validatePaymentForm(formData: FormData) {
 }
 
 async function getPaymentCards(): Promise<FinanceCard[]> {
-  const { data, error } = await supabase
-    .from('cards')
-    .select('*')
-
-  if (error) return []
-  return sortPaymentAccounts((data as FinanceCard[]) ?? [])
+  const result = await fetchCards()
+  return sortPaymentAccounts(result.ok ? result.data : [])
 }
 
 function paymentToObligation(payment: Payment): FinanceObligation {
@@ -187,9 +180,8 @@ function DueAutoPaymentsAutomation({ reload }: { reload: () => Promise<void> }) 
 
     let cancelled = false
     void (async () => {
-      const { data, error } = await supabase.rpc('post_due_card_auto_payments')
-      if (error) return
-      if (!cancelled && (data ?? 0) > 0) await reload()
+      const result = await postDueCardAutoPayments()
+      if (!cancelled && result.ok && result.data > 0) await reload()
     })()
 
     return () => {
@@ -262,9 +254,8 @@ function PaymentsOverview({ rows }: { rows: Payment[] }) {
 }
 
 export function PaymentsPage() {
-  const [planningData, setPlanningData] = useState<PlanningData>(EMPTY_PLANNING_DATA)
-  const [planningLoading, setPlanningLoading] = useState(true)
-  const [planningError, setPlanningError] = useState('')
+  const snapshotQuery = useFinanceSnapshot()
+  const invalidateSnapshot = useInvalidateFinanceSnapshot()
   const [obligationToPay, setObligationToPay] = useState<FinanceObligation | null>(null)
   const [obligationAccounts, setObligationAccounts] = useState<FinanceCard[]>([])
   const [obligationAccountId, setObligationAccountId] = useState('')
@@ -272,6 +263,31 @@ export function PaymentsPage() {
   const [obligationPaymentError, setObligationPaymentError] = useState('')
   const [obligationSaving, setObligationSaving] = useState(false)
   const [reloadPayments, setReloadPayments] = useState<(() => Promise<void>) | null>(null)
+
+  // Ortak finans snapshot'ından takvim girdisini türet: taksit/borç vadeleri
+  // artan sırada, ekstrelerden yalnızca açık olanlar (eski sorgu davranışıyla bire bir).
+  const planningData: PlanningData = useMemo(() => {
+    const snapshot = snapshotQuery.data
+    if (!snapshot) return EMPTY_PLANNING_DATA
+
+    const byDueDate = (a: { due_date: string | null }, b: { due_date: string | null }) =>
+      (a.due_date ?? '9999-12-31').localeCompare(b.due_date ?? '9999-12-31')
+
+    return {
+      cards: snapshot.cards,
+      loans: snapshot.loans,
+      loanInstallments: [...snapshot.loanInstallments].sort(byDueDate),
+      debts: [...snapshot.debts].sort(byDueDate),
+      cardInstallments: snapshot.cardInstallments,
+      cardStatements: snapshot.cardStatements.filter((statement) => statement.status === 'open').sort(byDueDate),
+    }
+  }, [snapshotQuery.data])
+
+  const planningLoading = snapshotQuery.isPending
+  const planningError = snapshotQuery.error instanceof Error ? snapshotQuery.error.message : ''
+  const loadPlanningData = useCallback(async () => {
+    await invalidateSnapshot()
+  }, [invalidateSnapshot])
 
   // Kredi kartı seçimi (banka talimatı için) dinamik olarak kartlardan üretilir.
   const formFields = useMemo<FormField[]>(() => {
@@ -305,38 +321,6 @@ export function PaymentsPage() {
     },
     [planningData.cards],
   )
-
-  const loadPlanningData = useCallback(async () => {
-    setPlanningLoading(true)
-    setPlanningError('')
-
-    const [cards, loans, loanInstallments, debts, cardInstallments, cardStatements] = await Promise.all([
-      supabase.from('cards').select('*'),
-      supabase.from('loans').select('*'),
-      supabase.from('loan_installments').select('*').order('due_date', { ascending: true }),
-      supabase.from('debts').select('*').order('due_date', { ascending: true }),
-      supabase.from('card_installments').select('*').order('due_month', { ascending: true }),
-      supabase.from('card_statement_archives').select('*').eq('status', 'open').order('due_date', { ascending: true }),
-    ])
-
-    const firstError = [cards.error, loans.error, loanInstallments.error, debts.error, cardInstallments.error, cardStatements.error].find(Boolean)
-    if (firstError) setPlanningError(firstError.message)
-
-    setPlanningData({
-      cards: (cards.data ?? []) as FinanceCard[],
-      loans: (loans.data ?? []) as Loan[],
-      loanInstallments: (loanInstallments.data ?? []) as LoanInstallment[],
-      debts: (debts.data ?? []) as Debt[],
-      cardInstallments: (cardInstallments.data ?? []) as CardInstallment[],
-      cardStatements: (cardStatements.data ?? []) as CardStatementArchive[],
-    })
-    setPlanningLoading(false)
-  }, [])
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    void loadPlanningData()
-  }, [loadPlanningData])
 
   async function openObligationPayment(obligation: FinanceObligation, reload: () => Promise<void>) {
     if (!obligation.action) return
@@ -393,6 +377,12 @@ export function PaymentsPage() {
         emptyDescription="Yaklaşan kira, fatura veya tek seferlik ödemelerini buradan ekleyebilirsin."
         orderBy="due_date"
         validateForm={validatePaymentForm}
+        afterSave={async () => {
+          await invalidateSnapshot()
+        }}
+        afterDelete={async () => {
+          await invalidateSnapshot()
+        }}
         renderBeforeList={({ loading, rows, reload }) => {
           const payments = rows as Payment[]
           return (

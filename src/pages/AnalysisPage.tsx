@@ -1,6 +1,9 @@
 import { Archive, BarChart3, CalendarDays, CheckCircle2, Download, Flame, HandCoins, PieChart, Search, ShieldCheck, TrendingUp, Users, WalletCards } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useAuth } from '../auth/useAuth'
+import { useFinanceSnapshot } from '../app/useFinanceSnapshot'
+import { fetchPriceRadarRows, PRICE_RADAR_MONTHS, upsertAndLoadNetWorthSnapshots } from '../data/repositories/analysisRepo'
 import { CrudPage, type FormField } from '../components/CrudPage'
 import { BarChart, type BarDataPoint } from '../components/charts/BarChart'
 import { CashFlowChart, type CashFlowPoint } from '../components/charts/CashFlowChart'
@@ -9,7 +12,6 @@ import { Badge } from '../components/ui/badge'
 import { Button } from '../components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Progress } from '../components/ui/progress'
-import { supabase } from '../lib/supabase'
 import type {
   Asset,
   Budget,
@@ -28,7 +30,7 @@ import type {
 } from '../types/database'
 import { SavingsGoalsPanel } from '../components/finance/SavingsGoalsPanel'
 import { expenseCategoryOptions } from '../utils/categories'
-import { addMonths, dateInputValue, daysUntil, formatDate, isDateInMonth, monthlyOccurrenceDate, startOfMonth } from '../utils/date'
+import { dateInputValue, daysUntil, formatDate, isDateInMonth, monthlyOccurrenceDate, startOfMonth } from '../utils/date'
 import { formatCurrency, parseNumber } from '../utils/formatCurrency'
 import { buildCashFlowForecast } from '../utils/cashFlowForecast'
 import { buildFinancialPosition, buildMonthlyCashFlow, getCurrentSalary, paymentOccurrenceInMonth, sum } from '../utils/financeSummary'
@@ -68,16 +70,6 @@ type SearchItem = {
   date: string | null
 }
 
-type QueryError = {
-  code?: string
-  message?: string
-}
-
-type QueryResponse<T> = {
-  data: T[] | null
-  error: QueryError | null
-}
-
 const emptyAnalysisData: AnalysisData = {
   assets: [],
   cards: [],
@@ -101,23 +93,7 @@ const optionalTableLabels: Record<string, string> = {
   savings_goals: 'birikim hedefleri',
 }
 
-const ANALYSIS_HISTORY_MONTHS = 6
 const STATEMENT_ARCHIVE_LIMIT = 48
-// Zam radarı needs a longer lookback than the main page so annual rent/insurance
-// hikes land inside the window; loaded independently of the 6-month dataset.
-const PRICE_RADAR_MONTHS = 13
-
-function isMissingSchemaCacheError(error: QueryError | null | undefined) {
-  if (!error) return false
-  const message = error.message ?? ''
-  return error.code === 'PGRST205' || message.includes('schema cache') || message.includes('Could not find the table')
-}
-
-function optionalRows<T>(response: QueryResponse<T>, tableName: string) {
-  if (!response.error) return { rows: response.data ?? [], missingTable: null, error: null }
-  if (isMissingSchemaCacheError(response.error)) return { rows: [] as T[], missingTable: tableName, error: null }
-  return { rows: [] as T[], missingTable: null, error: response.error }
-}
 
 const budgetFields: FormField[] = [
   { name: 'month', label: 'Ay', type: 'date', required: true },
@@ -216,7 +192,6 @@ async function loadNetWorthSnapshots(
   loadedData: AnalysisData,
   ratesSnapshot: MarketRatesSnapshot | null,
 ): Promise<NetWorthSnapshot[] | null> {
-  const today = new Date().toLocaleDateString('sv-SE')
   const position = buildFinancialPosition({
     assets: loadedData.assets,
     cards: loadedData.cards,
@@ -227,25 +202,13 @@ async function loadNetWorthSnapshots(
     salaryHistory: loadedData.salaryHistory,
     cardInstallments: loadedData.cardInstallments,
   })
-  const goldTry = ratesSnapshot?.rates?.GRA?.buying ?? null
-  const usdTry = ratesSnapshot?.rates?.USD?.buying ?? null
-  const upsertRes = await supabase
-    .from('net_worth_snapshots')
-    .upsert(
-      { user_id: userId, snapshot_date: today, net_worth: position.netWorth, gold_try: goldTry, usd_try: usdTry },
-      { onConflict: 'user_id,snapshot_date' },
-    )
+  const result = await upsertAndLoadNetWorthSnapshots(userId, {
+    netWorth: position.netWorth,
+    goldTry: ratesSnapshot?.rates?.GRA?.buying ?? null,
+    usdTry: ratesSnapshot?.rates?.USD?.buying ?? null,
+  })
 
-  if (isMissingSchemaCacheError(upsertRes.error)) return null
-
-  const snapshotRes = await supabase
-    .from('net_worth_snapshots')
-    .select('*')
-    .order('snapshot_date', { ascending: false })
-    .limit(90)
-
-  if (isMissingSchemaCacheError(snapshotRes.error)) return null
-  return [...(snapshotRes.data ?? [])].reverse() as NetWorthSnapshot[]
+  return result.ok ? result.data : null
 }
 
 function csvValue(value: string | number | null | undefined) {
@@ -1792,131 +1755,78 @@ export function AnalysisPage() {
   const { snapshot: ratesSnapshot } = useMarketRates()
   const ratesSnapshotRef = useRef<MarketRatesSnapshot | null>(null)
   useEffect(() => { ratesSnapshotRef.current = ratesSnapshot }, [ratesSnapshot])
-  const [data, setData] = useState<AnalysisData>(emptyAnalysisData)
-  const [snapshots, setSnapshots] = useState<NetWorthSnapshot[]>([])
-  const [priceTrends, setPriceTrends] = useState<PriceTrend[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
-  const [missingTables, setMissingTables] = useState<string[]>([])
 
-  const loadAnalysis = useCallback(async () => {
-    if (!user) return
+  const snapshotQuery = useFinanceSnapshot()
+  const userId = user?.id
 
-    setLoading(true)
-    setError('')
-    setMissingTables([])
-
-    const analysisStart = addMonths(startOfMonth(), 1 - ANALYSIS_HISTORY_MONTHS)
-    const analysisStartValue = dateInputValue(analysisStart)
-
-    const [
-      assets,
-      cards,
-      loans,
-      loanInstallments,
-      debts,
-      payments,
-      salaryHistory,
-      transactionHistory,
-      cardExpenses,
-      cardInstallments,
-      cardStatementArchives,
-      budgets,
-      savingsGoals,
-    ] = await Promise.all([
-      supabase.from('assets').select('*'),
-      supabase.from('cards').select('*'),
-      supabase.from('loans').select('*'),
-      supabase.from('loan_installments').select('*'),
-      supabase.from('debts').select('*'),
-      supabase.from('payments').select('*'),
-      supabase.from('salary_history').select('*').order('effective_date', { ascending: false }),
-      supabase.from('transaction_history').select('*').gte('occurred_at', analysisStart.toISOString()).order('occurred_at', { ascending: false }),
-      supabase.from('card_expenses').select('*').gte('spent_at', analysisStartValue).order('spent_at', { ascending: false }),
-      supabase.from('card_installments').select('*').neq('status', 'paid').order('due_month', { ascending: true }),
-      supabase.from('card_statement_archives').select('*').order('statement_date', { ascending: false }).limit(STATEMENT_ARCHIVE_LIMIT),
-      supabase.from('budgets').select('*').gte('month', analysisStartValue).order('month', { ascending: false }),
-      supabase.from('savings_goals').select('*').order('created_at', { ascending: false }),
-    ])
-
-    const cardInstallmentRows = optionalRows<CardInstallment>(cardInstallments, 'card_installments')
-    const cardStatementArchiveRows = optionalRows<CardStatementArchive>(cardStatementArchives, 'card_statement_archives')
-    const budgetRows = optionalRows<Budget>(budgets, 'budgets')
-    const savingsGoalRows = optionalRows<SavingsGoal>(savingsGoals, 'savings_goals')
-
-    const firstError = [
-      assets.error,
-      cards.error,
-      loans.error,
-      loanInstallments.error,
-      debts.error,
-      payments.error,
-      salaryHistory.error,
-      transactionHistory.error,
-      cardExpenses.error,
-      cardInstallmentRows.error,
-      cardStatementArchiveRows.error,
-      budgetRows.error,
-      savingsGoalRows.error,
-    ].find(Boolean)
-
-    if (firstError) {
-      setError(firstError.message ?? 'Analiz verileri yüklenemedi.')
-      setLoading(false)
-      return
+  // Dashboard'la paylaşılan 6 aylık snapshot'tan analiz görünümünü türet:
+  // taksitlerde ödenmişler hariç, ekstre arşivi 48 kayıtla sınırlı.
+  const data: AnalysisData = useMemo(() => {
+    const snapshot = snapshotQuery.data
+    if (!snapshot) return emptyAnalysisData
+    return {
+      assets: snapshot.assets,
+      cards: snapshot.cards,
+      loans: snapshot.loans,
+      loanInstallments: snapshot.loanInstallments,
+      debts: snapshot.debts,
+      payments: snapshot.payments,
+      salaryHistory: snapshot.salaryHistory,
+      transactionHistory: snapshot.transactionHistory,
+      cardExpenses: snapshot.cardExpenses,
+      cardInstallments: snapshot.cardInstallments.filter((installment) => installment.status !== 'paid'),
+      cardStatementArchives: snapshot.cardStatements.slice(0, STATEMENT_ARCHIVE_LIMIT),
+      budgets: snapshot.budgets,
+      savingsGoals: snapshot.savingsGoals,
     }
+  }, [snapshotQuery.data])
 
-    setMissingTables(
-      [cardInstallmentRows.missingTable, cardStatementArchiveRows.missingTable, budgetRows.missingTable, savingsGoalRows.missingTable].filter(
-        Boolean,
-      ) as string[],
-    )
-    const loadedData = {
-      assets: assets.data ?? [],
-      cards: cards.data ?? [],
-      loans: loans.data ?? [],
-      loanInstallments: loanInstallments.data ?? [],
-      debts: debts.data ?? [],
-      payments: payments.data ?? [],
-      salaryHistory: salaryHistory.data ?? [],
-      transactionHistory: transactionHistory.data ?? [],
-      cardExpenses: cardExpenses.data ?? [],
-      cardInstallments: cardInstallmentRows.rows,
-      cardStatementArchives: cardStatementArchiveRows.rows,
-      budgets: budgetRows.rows,
-      savingsGoals: savingsGoalRows.rows,
-    }
-    setData(loadedData)
-    setLoading(false)
+  const loading = snapshotQuery.isPending
+  const error = snapshotQuery.error instanceof Error ? snapshotQuery.error.message : ''
+  const missingTables = useMemo(
+    () => (snapshotQuery.data?.missingTables ?? []).filter((table) => table in optionalTableLabels),
+    [snapshotQuery.data],
+  )
 
-    try {
-      const loadedSnapshots = await loadNetWorthSnapshots(user.id, loadedData, ratesSnapshotRef.current)
-      if (loadedSnapshots) setSnapshots(loadedSnapshots)
-    } catch {
-      // Snapshot persistence is non-critical for the analysis page render.
-    }
+  // Net değer serisi: bugünü upsert edip son 90 günü okur. Snapshot her
+  // tazelendiğinde (dataUpdatedAt) yeniden hesaplanır; hata analiz render'ını engellemez.
+  const netWorthQuery = useQuery({
+    queryKey: ['net-worth-snapshots', userId, snapshotQuery.dataUpdatedAt],
+    enabled: Boolean(userId && snapshotQuery.data),
+    staleTime: Infinity,
+    queryFn: async () => {
+      try {
+        return (await loadNetWorthSnapshots(userId as string, data, ratesSnapshotRef.current)) ?? []
+      } catch {
+        return [] as NetWorthSnapshot[]
+      }
+    },
+  })
+  const snapshots = netWorthQuery.data ?? []
 
-    try {
-      const radarStart = dateInputValue(addMonths(startOfMonth(), 1 - PRICE_RADAR_MONTHS))
-      const [radarHistory, radarExpenses] = await Promise.all([
-        supabase.from('transaction_history').select('*').eq('type', 'payment').gte('occurred_at', radarStart).order('occurred_at', { ascending: false }),
-        supabase.from('card_expenses').select('*').eq('status', 'posted').gte('spent_at', radarStart).order('spent_at', { ascending: false }),
-      ])
-      const observations = buildPriceObservations({
-        transactionHistory: radarHistory.data ?? [],
-        payments: loadedData.payments,
-        cardExpenses: radarExpenses.data ?? [],
-      })
-      setPriceTrends(detectPriceIncreases(observations))
-    } catch {
-      // Zam radarı is a best-effort insight; ignore load failures.
-    }
-  }, [user])
+  // Zam radarı: 13 aylık bağımsız pencere, best-effort.
+  const priceTrendsQuery = useQuery({
+    queryKey: ['price-trends', userId, snapshotQuery.dataUpdatedAt],
+    enabled: Boolean(userId && snapshotQuery.data),
+    staleTime: Infinity,
+    queryFn: async () => {
+      try {
+        const radarResult = await fetchPriceRadarRows()
+        if (!radarResult.ok) return [] as PriceTrend[]
 
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    void loadAnalysis()
-  }, [loadAnalysis])
+        const radar = radarResult.data
+        const observations = buildPriceObservations({
+          transactionHistory: radar.transactionHistory,
+          payments: data.payments,
+          cardExpenses: radar.cardExpenses,
+        })
+        return detectPriceIncreases(observations)
+      } catch {
+        return [] as PriceTrend[]
+      }
+    },
+  })
+  const priceTrends = priceTrendsQuery.data ?? []
 
   const searchItems = useMemo(() => buildSearchItems(data), [data])
   const canManageBudgets = !missingTables.includes('budgets')

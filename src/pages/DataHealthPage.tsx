@@ -14,24 +14,16 @@ import {
 } from '../utils/backup'
 import { Badge } from '../components/ui/badge'
 import { Card as SurfaceCard, CardContent, CardHeader, CardTitle } from '../components/ui/card'
-import { supabase } from '../lib/supabase'
+import {
+  deleteDataHealthRows,
+  fetchDataHealthRows,
+  insertCardInstallments,
+  resetUserFinanceData,
+  updateDataHealthRow,
+  updateDataHealthRows,
+} from '../data/repositories/dataHealthRepo'
 import type {
-  Asset,
-  Budget,
-  AccountLedger,
-  Card,
-  CardExpense,
-  CardInstallment,
-  CardLedger,
-  CardStatementArchive,
-  Debt,
   InsertFor,
-  Loan,
-  LoanInstallment,
-  Payment,
-  SalaryHistory,
-  SavingsGoal,
-  SavingsGoalComponent,
   UpdateFor,
 } from '../types/database'
 import { recomputeAccountBalance } from '../services/accountLedgerActions'
@@ -84,76 +76,11 @@ export function DataHealthPage() {
     setError('')
     setMessage('')
 
-    const [
-      assets,
-      budgets,
-      cards,
-      cardExpenses,
-      cardInstallments,
-      cardStatementArchives,
-      debts,
-      loans,
-      loanInstallments,
-      payments,
-      salaryHistory,
-      savingsGoals,
-      savingsGoalComponents,
-      cardLedger,
-      accountLedger,
-    ] = await Promise.all([
-      supabase.from('assets').select('*'),
-      supabase.from('budgets').select('*'),
-      supabase.from('cards').select('*'),
-      supabase.from('card_expenses').select('*'),
-      supabase.from('card_installments').select('*'),
-      supabase.from('card_statement_archives').select('*'),
-      supabase.from('debts').select('*'),
-      supabase.from('loans').select('*'),
-      supabase.from('loan_installments').select('*'),
-      supabase.from('payments').select('*'),
-      supabase.from('salary_history').select('*'),
-      supabase.from('savings_goals').select('*'),
-      supabase.from('savings_goal_components').select('*'),
-      // Best-effort: ledgers may not be deployed yet → error leaves data null → [].
-      supabase.from('card_ledger').select('*'),
-      supabase.from('account_ledger').select('*'),
-    ])
-
-    const firstError = [
-      assets.error,
-      budgets.error,
-      cards.error,
-      cardExpenses.error,
-      cardInstallments.error,
-      cardStatementArchives.error,
-      debts.error,
-      loans.error,
-      loanInstallments.error,
-      payments.error,
-      salaryHistory.error,
-      savingsGoals.error,
-      savingsGoalComponents.error,
-    ].find(Boolean)
-    if (firstError) {
-      setError(firstError.message)
+    const result = await fetchDataHealthRows()
+    if (!result.ok) {
+      setError(result.error.message ?? 'Veri sağlığı kayıtları yüklenemedi.')
     } else {
-      setData({
-        assets: (assets.data ?? []) as Asset[],
-        budgets: (budgets.data ?? []) as Budget[],
-        cards: (cards.data ?? []) as Card[],
-        cardExpenses: (cardExpenses.data ?? []) as CardExpense[],
-        cardInstallments: (cardInstallments.data ?? []) as CardInstallment[],
-        cardLedger: (cardLedger.data ?? []) as CardLedger[],
-        accountLedger: (accountLedger.data ?? []) as AccountLedger[],
-        cardStatementArchives: (cardStatementArchives.data ?? []) as CardStatementArchive[],
-        debts: (debts.data ?? []) as Debt[],
-        loans: (loans.data ?? []) as Loan[],
-        loanInstallments: (loanInstallments.data ?? []) as LoanInstallment[],
-        payments: (payments.data ?? []) as Payment[],
-        salaryHistory: (salaryHistory.data ?? []) as SalaryHistory[],
-        savingsGoals: (savingsGoals.data ?? []) as SavingsGoal[],
-        savingsGoalComponents: (savingsGoalComponents.data ?? []) as SavingsGoalComponent[],
-      })
+      setData(result.data)
     }
 
     setLoading(false)
@@ -184,46 +111,32 @@ export function DataHealthPage() {
 
     if (issue.kind === 'assetShape' && payload.assetId && payload.updates) {
       await addUndo('assets', [payload.assetId])
-      const { error: updateError } = await supabase
-        .from('assets')
-        .update({ ...(payload.updates as UpdateFor<'assets'>), updated_at: new Date().toISOString() })
-        .eq('id', payload.assetId)
-      if (updateError) throw new Error(updateError.message)
+      const updateError = await updateDataHealthRow('assets', payload.assetId, payload.updates as UpdateFor<'assets'>)
+      if (!updateError.ok) throw new Error(updateError.error.message ?? 'Varlık güncellenemedi.')
     }
 
     if (issue.kind === 'budgetMonth' && payload.budgetId && payload.updates) {
       await addUndo('budgets', [payload.budgetId])
-      const { error: updateError } = await supabase
-        .from('budgets')
-        .update({ ...(payload.updates as UpdateFor<'budgets'>), updated_at: new Date().toISOString() })
-        .eq('id', payload.budgetId)
-      if (updateError) throw new Error(updateError.message)
+      const updateError = await updateDataHealthRow('budgets', payload.budgetId, payload.updates as UpdateFor<'budgets'>)
+      if (!updateError.ok) throw new Error(updateError.error.message ?? 'Bütçe güncellenemedi.')
     }
 
     if (issue.kind === 'cardDebtSplit' && payload.cardId) {
       await addUndo('cards', [payload.cardId])
-      const { error: updateError } = await supabase
-        .from('cards')
-        .update({
+      const updateError = await updateDataHealthRow('cards', payload.cardId, {
           statement_debt_amount: payload.statementDebt ?? 0,
           current_period_spending: payload.currentPeriod ?? 0,
           provision_amount: payload.provisionAmount ?? 0,
-          updated_at: new Date().toISOString(),
         })
-        .eq('id', payload.cardId)
-      if (updateError) throw new Error(updateError.message)
+      if (!updateError.ok) throw new Error(updateError.error.message ?? 'Kart borç kırılımı güncellenemedi.')
     }
 
     if (issue.kind === 'cardScheduledDebt' && payload.cardId && payload.nextDebtAmount !== undefined) {
       await addUndo('cards', [payload.cardId])
-      const { error: updateError } = await supabase
-        .from('cards')
-        .update({
+      const updateError = await updateDataHealthRow('cards', payload.cardId, {
           debt_amount: payload.nextDebtAmount,
-          updated_at: new Date().toISOString(),
         })
-        .eq('id', payload.cardId)
-      if (updateError) throw new Error(updateError.message)
+      if (!updateError.ok) throw new Error(updateError.error.message ?? 'Kart borcu güncellenemedi.')
     }
 
     if (issue.kind === 'cardLedgerDrift' && payload.cardId) {
@@ -244,44 +157,36 @@ export function DataHealthPage() {
 
     if (issue.kind === 'cardTypeFields' && payload.cardId && payload.updates) {
       await addUndo('cards', [payload.cardId])
-      const { error: updateError } = await supabase
-        .from('cards')
-        .update({ ...(payload.updates as UpdateFor<'cards'>), updated_at: new Date().toISOString() })
-        .eq('id', payload.cardId)
-      if (updateError) throw new Error(updateError.message)
+      const updateError = await updateDataHealthRow('cards', payload.cardId, payload.updates as UpdateFor<'cards'>)
+      if (!updateError.ok) throw new Error(updateError.error.message ?? 'Kart alanları güncellenemedi.')
     }
 
     if (issue.kind === 'cardExpenseAmount' && payload.expenseId && payload.updates) {
       await addUndo('card_expenses', [payload.expenseId])
-      const { error: updateError } = await supabase
-        .from('card_expenses')
-        .update({ ...(payload.updates as UpdateFor<'card_expenses'>), updated_at: new Date().toISOString() })
-        .eq('id', payload.expenseId)
-      if (updateError) throw new Error(updateError.message)
+      const updateError = await updateDataHealthRow('card_expenses', payload.expenseId, payload.updates as UpdateFor<'card_expenses'>)
+      if (!updateError.ok) throw new Error(updateError.error.message ?? 'Kart harcaması güncellenemedi.')
     }
 
     if (issue.kind === 'cardSingleInstallments' && payload.ids?.length) {
       await addUndo('card_installments', payload.ids)
-      const { error: deleteError } = await supabase.from('card_installments').delete().in('id', payload.ids)
-      if (deleteError) throw new Error(deleteError.message)
+      const deleteError = await deleteDataHealthRows('card_installments', payload.ids)
+      if (!deleteError.ok) throw new Error(deleteError.error.message ?? 'Kart taksitleri silinemedi.')
     }
 
     if ((issue.kind === 'cardInstallmentDueMonth' || issue.kind === 'cardInstallmentPostedAt' || issue.kind === 'cardInstallmentCount') && payload.ids?.length && payload.updates) {
       await addUndo('card_installments', payload.ids)
-      const { error: updateError } = await supabase
-        .from('card_installments')
-        .update({ ...(payload.updates as UpdateFor<'card_installments'>), updated_at: new Date().toISOString() })
-        .in('id', payload.ids)
-      if (updateError) throw new Error(updateError.message)
+      const updateError = await updateDataHealthRows('card_installments', payload.ids, payload.updates as UpdateFor<'card_installments'>)
+      if (!updateError.ok) throw new Error(updateError.error.message ?? 'Kart taksitleri güncellenemedi.')
     }
 
     if (issue.kind === 'cardStatementTotals' && payload.statementArchiveId && payload.updates) {
       await addUndo('card_statement_archives', [payload.statementArchiveId])
-      const { error: updateError } = await supabase
-        .from('card_statement_archives')
-        .update({ ...(payload.updates as UpdateFor<'card_statement_archives'>), updated_at: new Date().toISOString() })
-        .eq('id', payload.statementArchiveId)
-      if (updateError) throw new Error(updateError.message)
+      const updateError = await updateDataHealthRow(
+        'card_statement_archives',
+        payload.statementArchiveId,
+        payload.updates as UpdateFor<'card_statement_archives'>,
+      )
+      if (!updateError.ok) throw new Error(updateError.error.message ?? 'Ekstre arşivi güncellenemedi.')
     }
 
     if (issue.kind === 'cardMissingInstallments' && payload.userId && payload.cardId && payload.cardExpenseId && payload.installmentNos && payload.baseMonth) {
@@ -311,9 +216,10 @@ export function DataHealthPage() {
         }
       })
 
-      const { data: insertedRows, error: insertError } = await supabase.from('card_installments').insert(rows).select('id')
-      if (insertError) throw new Error(insertError.message)
-      const insertedIds = (insertedRows ?? []).map((row) => row.id).filter(Boolean)
+      const insertResult = await insertCardInstallments(rows)
+      if (!insertResult.ok) throw new Error(insertResult.error.message ?? 'Eksik taksitler eklenemedi.')
+
+      const insertedIds = insertResult.data
       if (insertedIds.length > 0) {
         undoEntries.push({ action: 'deleteRows', table: 'card_installments', ids: insertedIds })
       }
@@ -321,70 +227,48 @@ export function DataHealthPage() {
 
     if (issue.kind === 'debtShape' && payload.debtId && payload.updates) {
       await addUndo('debts', [payload.debtId])
-      const { error: updateError } = await supabase
-        .from('debts')
-        .update({ ...(payload.updates as UpdateFor<'debts'>), updated_at: new Date().toISOString() })
-        .eq('id', payload.debtId)
-      if (updateError) throw new Error(updateError.message)
+      const updateError = await updateDataHealthRow('debts', payload.debtId, payload.updates as UpdateFor<'debts'>)
+      if (!updateError.ok) throw new Error(updateError.error.message ?? 'Borç/alacak kaydı güncellenemedi.')
     }
 
     if (issue.kind === 'loanTotals' && payload.loanId) {
       await addUndo('loans', [payload.loanId])
-      const { error: updateError } = await supabase
-        .from('loans')
-        .update({
+      const updateError = await updateDataHealthRow('loans', payload.loanId, {
           remaining_amount: payload.remainingAmount ?? 0,
           remaining_installments: payload.remainingInstallments ?? 0,
           status: payload.loanStatus ?? 'active',
-          updated_at: new Date().toISOString(),
         })
-        .eq('id', payload.loanId)
-      if (updateError) throw new Error(updateError.message)
+      if (!updateError.ok) throw new Error(updateError.error.message ?? 'Kredi özeti güncellenemedi.')
     }
 
     if (issue.kind === 'loanInstallmentDueDay' && payload.ids?.length && payload.updates) {
       await addUndo('loan_installments', payload.ids)
-      const { error: updateError } = await supabase
-        .from('loan_installments')
-        .update({ ...(payload.updates as UpdateFor<'loan_installments'>), updated_at: new Date().toISOString() })
-        .in('id', payload.ids)
-      if (updateError) throw new Error(updateError.message)
+      const updateError = await updateDataHealthRows('loan_installments', payload.ids, payload.updates as UpdateFor<'loan_installments'>)
+      if (!updateError.ok) throw new Error(updateError.error.message ?? 'Kredi taksitleri güncellenemedi.')
     }
 
     if (issue.kind === 'loanPaidAtMissing' && payload.ids?.length) {
       await addUndo('loan_installments', payload.ids)
-      const { error: updateError } = await supabase
-        .from('loan_installments')
-        .update({ paid_at: new Date().toISOString(), updated_at: new Date().toISOString() })
-        .in('id', payload.ids)
-      if (updateError) throw new Error(updateError.message)
+      const updateError = await updateDataHealthRows('loan_installments', payload.ids, { paid_at: new Date().toISOString() })
+      if (!updateError.ok) throw new Error(updateError.error.message ?? 'Kredi taksitleri güncellenemedi.')
     }
 
     if (issue.kind === 'loanPendingPaidAt' && payload.ids?.length) {
       await addUndo('loan_installments', payload.ids)
-      const { error: updateError } = await supabase
-        .from('loan_installments')
-        .update({ paid_at: null, updated_at: new Date().toISOString() })
-        .in('id', payload.ids)
-      if (updateError) throw new Error(updateError.message)
+      const updateError = await updateDataHealthRows('loan_installments', payload.ids, { paid_at: null })
+      if (!updateError.ok) throw new Error(updateError.error.message ?? 'Kredi taksitleri güncellenemedi.')
     }
 
     if (issue.kind === 'paymentDueDay' && payload.paymentId && payload.dueDate) {
       await addUndo('payments', [payload.paymentId])
-      const { error: updateError } = await supabase
-        .from('payments')
-        .update({ due_date: payload.dueDate, updated_at: new Date().toISOString() })
-        .eq('id', payload.paymentId)
-      if (updateError) throw new Error(updateError.message)
+      const updateError = await updateDataHealthRow('payments', payload.paymentId, { due_date: payload.dueDate })
+      if (!updateError.ok) throw new Error(updateError.error.message ?? 'Ödeme tarihi güncellenemedi.')
     }
 
     if (issue.kind === 'paymentRecurrenceFields' && payload.paymentId && payload.updates) {
       await addUndo('payments', [payload.paymentId])
-      const { error: updateError } = await supabase
-        .from('payments')
-        .update({ ...(payload.updates as UpdateFor<'payments'>), updated_at: new Date().toISOString() })
-        .eq('id', payload.paymentId)
-      if (updateError) throw new Error(updateError.message)
+      const updateError = await updateDataHealthRow('payments', payload.paymentId, payload.updates as UpdateFor<'payments'>)
+      if (!updateError.ok) throw new Error(updateError.error.message ?? 'Planlı ödeme güncellenemedi.')
     }
 
     return makeUndoBatch(issue.title, undoEntries)
@@ -475,12 +359,12 @@ export function DataHealthPage() {
     setError('')
     setMessage('')
 
-    const { error: resetError } = await supabase.rpc('reset_user_finance_data', {})
-    if (resetError) {
+    const resetError = await resetUserFinanceData()
+    if (!resetError.ok) {
       setError(
-        isSchemaCacheError(resetError)
+        isSchemaCacheError(resetError.error)
           ? 'Sıfırlama altyapısı canlı veritabanına uygulanmamış. Migration çalışınca bu işlem açılacak.'
-          : resetError.message,
+          : resetError.error.message ?? 'Tüm veri silinemedi.',
       )
       setResetting(false)
       return

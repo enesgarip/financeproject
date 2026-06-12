@@ -2,7 +2,13 @@ import { FileUp, X, CheckCircle2, AlertCircle, Loader2, FileText } from 'lucide-
 import { useCallback, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useBodyScrollLock } from '../ui/use-body-scroll-lock'
-import { supabase } from '../../lib/supabase'
+import {
+  addCardExpense,
+  cutCardStatement,
+  fetchCardExpenseMatchRows,
+  resetCardData,
+  setStatementReconciliation,
+} from '../../data/repositories/cardsRepo'
 import type { Card } from '../../types/database'
 import { formatCurrency } from '../../utils/formatCurrency'
 import { parseDenizBankStatement, matchTransactions, expenseTotalAmount, type ParsedTransaction } from '../../utils/denizBankStatementParser'
@@ -140,12 +146,10 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
       }
 
       // Load existing expenses for this card to match against
-      const { data: expenses } = await supabase
-        .from('card_expenses')
-        .select('spent_at, amount, status')
-        .eq('card_id', card.id)
+      const expensesResult = await fetchCardExpenseMatchRows(card.id)
+      const expenses = expensesResult.ok ? expensesResult.data : []
 
-      const result = matchTransactions(parsed.transactions, expenses ?? [])
+      const result = matchTransactions(parsed.transactions, expenses)
 
       // App'te olmayan işlemleri ikiye ayır: otomatik aktarılabilir olanlar ve
       // plan-ortası/eksik bilgili taksitler (manuel kontrol gerektirir).
@@ -184,9 +188,9 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
     setImportError('')
 
     // 1) Kartı baseline'a çek.
-    const { error: resetError } = await supabase.rpc('reset_card_data', { p_card_id: card.id })
-    if (resetError) {
-      setImportError(`Sıfırlama başarısız: ${resetError.message}`)
+    const resetResult = await resetCardData(card.id)
+    if (!resetResult.ok) {
+      setImportError(`Sıfırlama başarısız: ${resetResult.error.message ?? 'Bilinmeyen hata.'}`)
       setImporting(false)
       return
     }
@@ -200,17 +204,17 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
       const knownPlan = tx.isInstallment && tx.installmentCount > 1
       // Plan-ortası taksitte kalan adet bu aydan itibaren kurulur.
       const remaining = knownPlan ? Math.max(1, tx.installmentCount - tx.installmentNo + 1) : 1
-      const { error } = await supabase.rpc('add_card_expense', {
-        p_card_id: card.id,
-        p_amount: knownPlan ? Math.round(tx.amount * remaining * 100) / 100 : tx.amount,
-        p_description: tx.description,
+      const result = await addCardExpense({
+        cardId: card.id,
+        amount: knownPlan ? Math.round(tx.amount * remaining * 100) / 100 : tx.amount,
+        description: tx.description,
         // Kalan plan kuruluyorsa bugünden başlat; peşin/tek çekim orijinal tarihte kalır.
-        p_spent_at: knownPlan ? today : tx.date,
-        p_installment_count: knownPlan ? remaining : 1,
-        p_category: tx.category,
-        p_status: 'posted' as const,
+        spentAt: knownPlan ? today : tx.date,
+        installmentCount: knownPlan ? remaining : 1,
+        category: tx.category,
+        status: 'posted',
       })
-      if (error) errors.push(`${tx.description}: ${error.message}`)
+      if (!result.ok) errors.push(`${tx.description}: ${result.error.message ?? 'Bilinmeyen hata.'}`)
       else successCount++
     }
 
@@ -223,9 +227,9 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
     }
 
     // 3) Ekstreyi kes → dönem içi tutar açık ekstreye (statement_debt_amount) taşınır.
-    const { error: cutError } = await supabase.rpc('cut_card_statement', { p_card_id: card.id })
-    if (cutError) {
-      setImportError(`Ekstre kesilemedi: ${cutError.message}`)
+    const cutResult = await cutCardStatement(card.id)
+    if (!cutResult.ok) {
+      setImportError(`Ekstre kesilemedi: ${cutResult.error.message ?? 'Bilinmeyen hata.'}`)
       setImporting(false)
       return
     }
@@ -233,14 +237,14 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
     // 4) Banka tutarıyla mutabık işaretle (bugünün dönemi).
     if (statementTotal) {
       const period = reconcilePeriodDate()
-      const { error: reconcileErr } = await supabase.rpc('set_statement_reconciliation', {
-        p_card_id: card.id,
-        p_period_year: period.getFullYear(),
-        p_period_month: period.getMonth() + 1,
-        p_bank_amount: statementTotal,
-        p_note: null,
+      const reconcileResult = await setStatementReconciliation({
+        cardId: card.id,
+        periodYear: period.getFullYear(),
+        periodMonth: period.getMonth() + 1,
+        bankAmount: statementTotal,
+        note: null,
       })
-      if (!reconcileErr) setReconciled(true)
+      if (reconcileResult.ok) setReconciled(true)
     }
 
     setImporting(false)
@@ -264,17 +268,17 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
 
     for (const tx of toImport) {
       const installment = tx.isInstallment && tx.installmentCount > 1
-      const { error } = await supabase.rpc('add_card_expense', {
-        p_card_id: card.id,
+      const result = await addCardExpense({
+        cardId: card.id,
         // Taksitli işlemde ekstre aylık tutarı taşır; harcamayı TOPLAM tutarla aç.
-        p_amount: installment ? expenseTotalAmount(tx) : tx.amount,
-        p_description: tx.description,
-        p_spent_at: tx.date,
-        p_installment_count: installment ? tx.installmentCount : 1,
-        p_category: tx.category,
-        p_status: 'posted' as const,
+        amount: installment ? expenseTotalAmount(tx) : tx.amount,
+        description: tx.description,
+        spentAt: tx.date,
+        installmentCount: installment ? tx.installmentCount : 1,
+        category: tx.category,
+        status: 'posted',
       })
-      if (error) errors.push(`${tx.description}: ${error.message}`)
+      if (!result.ok) errors.push(`${tx.description}: ${result.error.message ?? 'Bilinmeyen hata.'}`)
       else successCount++
     }
 
@@ -295,15 +299,15 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
     setReconcileError('')
 
     const period = reconcilePeriodDate()
-    const { error } = await supabase.rpc('set_statement_reconciliation', {
-      p_card_id: card.id,
-      p_period_year: period.getFullYear(),
-      p_period_month: period.getMonth() + 1,
-      p_bank_amount: statementTotal,
-      p_note: null,
+    const result = await setStatementReconciliation({
+      cardId: card.id,
+      periodYear: period.getFullYear(),
+      periodMonth: period.getMonth() + 1,
+      bankAmount: statementTotal,
+      note: null,
     })
 
-    if (error) setReconcileError(error.message)
+    if (!result.ok) setReconcileError(result.error.message ?? 'Mutabakat kaydedilemedi.')
     else setReconciled(true)
     setReconciling(false)
   }

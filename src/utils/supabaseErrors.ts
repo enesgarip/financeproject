@@ -1,6 +1,7 @@
 export type SupabaseLikeError = {
   code?: string
   message?: string
+  type?: string
 }
 
 export function isMissingSupabaseCapabilityError(error: SupabaseLikeError | null | undefined) {
@@ -8,6 +9,7 @@ export function isMissingSupabaseCapabilityError(error: SupabaseLikeError | null
   const message = error.message ?? ''
 
   return (
+    error.type === 'missing-capability' ||
     error.code === 'PGRST202' ||
     error.code === 'PGRST204' ||
     error.code === 'PGRST205' ||

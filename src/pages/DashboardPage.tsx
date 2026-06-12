@@ -1,10 +1,8 @@
 import { AlertTriangle, ArrowUpRight, CalendarDays, CreditCard, Landmark } from 'lucide-react'
 import { motion, type Variants } from 'framer-motion'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { useAuth } from '../auth/useAuth'
-import { ensureRatesLoaded } from '../lib/marketRatesClient'
-import { supabase } from '../lib/supabase'
-import { syncAutoValuedRows } from '../utils/valuationSync'
+import { useFinanceSnapshot } from '../app/useFinanceSnapshot'
 import type {
   Asset,
   Budget,
@@ -60,7 +58,6 @@ import { buildAttentionLine } from '../utils/attention'
 import { buildSmartInsights, buildFocusActions } from '../utils/dashboardInsights'
 import { buildDashboardUpcomingItems } from '../utils/dashboardUpcoming'
 import { formatCurrency } from '../utils/formatCurrency'
-import { isMissingSupabaseCapabilityError } from '../utils/supabaseErrors'
 import { SkeletonDashboard } from '../components/ui/skeleton'
 
 type DashboardData = {
@@ -101,138 +98,42 @@ const UPCOMING_DAYS = 30
 const DASHBOARD_HISTORY_MONTHS = 3
 const DASHBOARD_SPENDING_MONTHS = 4
 
-function isMissingSchemaCacheError(error: { code?: string; message?: string } | null | undefined) {
-  return isMissingSupabaseCapabilityError(error)
-}
-
 export function DashboardPage() {
   const { user } = useAuth()
-  const [data, setData] = useState<DashboardData>(emptyData)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
+  const snapshotQuery = useFinanceSnapshot()
   const displayName = useMemo(() => getUserDisplayName(user), [user])
 
-  const loadDashboard = useCallback(async () => {
-    setLoading(true)
-    setError('')
+  // Snapshot 6 aylık süperset taşır; dashboard kendi dar penceresine indirger
+  // (geçmiş 3 ay, harcamalar 4 ay, bütçe yalnızca içinde bulunulan ay).
+  const data: DashboardData = useMemo(() => {
+    const snapshot = snapshotQuery.data
+    if (!snapshot) return emptyData
 
-    const valuationSyncPromise = (async () => {
-      try {
-        const snapshot = await ensureRatesLoaded()
-        await syncAutoValuedRows(snapshot)
-      } catch {
-        // Non-fatal: dashboard still renders with the last stored valuation.
-      }
-    })()
-    const autoPayments = await supabase.rpc('post_due_card_auto_payments')
-    const statementCut = await supabase.rpc('cut_due_card_statements')
-    const maintenanceError = [autoPayments.error, statementCut.error].find((item) => item && !isMissingSchemaCacheError(item))
-    if (maintenanceError) {
-      setError(maintenanceError.message)
-      setLoading(false)
-      return
-    }
-
-    // Refresh live rates and re-value auto-valued gold/FX rows so net worth and
-    // cash-flow math below read up-to-date stored values. Best-effort: a feed
-    // outage just leaves the last known values in place.
-    await valuationSyncPromise
     const currentMonthStart = startOfMonth()
-    const historyStart = addMonths(currentMonthStart, -DASHBOARD_HISTORY_MONTHS)
+    const historyStart = addMonths(currentMonthStart, -DASHBOARD_HISTORY_MONTHS).getTime()
     const spendingStart = dateInputValue(addMonths(currentMonthStart, -DASHBOARD_SPENDING_MONTHS))
     const currentMonth = dateInputValue(currentMonthStart)
 
-    const [
-      assets,
-      cards,
-      loans,
-      loanInstallments,
-      debts,
-      payments,
-      salaryHistory,
-      transactionHistory,
-      budgets,
-      cardExpenses,
-      cardInstallments,
-      cardStatements,
-      savingsGoals,
-      savingsGoalComponents,
-    ] =
-      await Promise.all([
-        supabase.from('assets').select('*'),
-        supabase.from('cards').select('*'),
-        supabase.from('loans').select('*'),
-        supabase.from('loan_installments').select('*'),
-        supabase.from('debts').select('*'),
-        supabase.from('payments').select('*'),
-        supabase.from('salary_history').select('*').order('effective_date', { ascending: false }),
-        supabase.from('transaction_history').select('*').gte('occurred_at', historyStart.toISOString()).order('occurred_at', { ascending: false }),
-        supabase.from('budgets').select('*').eq('month', currentMonth),
-        supabase.from('card_expenses').select('*').gte('spent_at', spendingStart).order('spent_at', { ascending: false }),
-        supabase.from('card_installments').select('*'),
-        supabase.from('card_statement_archives').select('*').order('statement_date', { ascending: false }).limit(120),
-        supabase.from('savings_goals').select('*'),
-        supabase.from('savings_goal_components').select('*'),
-      ])
-
-    const firstError = [
-      assets.error,
-      cards.error,
-      loans.error,
-      loanInstallments.error,
-      debts.error,
-      payments.error,
-      salaryHistory.error,
-      transactionHistory.error,
-      isMissingSchemaCacheError(budgets.error) ? null : budgets.error,
-      cardExpenses.error,
-      isMissingSchemaCacheError(cardInstallments.error) ? null : cardInstallments.error,
-      isMissingSchemaCacheError(cardStatements.error) ? null : cardStatements.error,
-      isMissingSchemaCacheError(savingsGoals.error) ? null : savingsGoals.error,
-      isMissingSchemaCacheError(savingsGoalComponents.error) ? null : savingsGoalComponents.error,
-    ].find(Boolean)
-    if (firstError) {
-      setError(firstError.message)
-      setLoading(false)
-      return
+    return {
+      assets: snapshot.assets,
+      cards: snapshot.cards,
+      loans: snapshot.loans,
+      loanInstallments: snapshot.loanInstallments,
+      debts: snapshot.debts,
+      payments: snapshot.payments,
+      salaryHistory: snapshot.salaryHistory,
+      transactionHistory: snapshot.transactionHistory.filter((row) => new Date(row.occurred_at).getTime() >= historyStart),
+      budgets: snapshot.budgets.filter((budget) => budget.month === currentMonth),
+      cardExpenses: snapshot.cardExpenses.filter((expense) => expense.spent_at >= spendingStart),
+      cardInstallments: snapshot.cardInstallments,
+      cardStatements: snapshot.cardStatements,
+      savingsGoals: snapshot.savingsGoals,
+      savingsGoalComponents: snapshot.savingsGoalComponents,
     }
+  }, [snapshotQuery.data])
 
-    setData({
-      assets: assets.data ?? [],
-      cards: cards.data ?? [],
-      loans: loans.data ?? [],
-      loanInstallments: loanInstallments.data ?? [],
-      debts: debts.data ?? [],
-      payments: payments.data ?? [],
-      salaryHistory: salaryHistory.data ?? [],
-      transactionHistory: transactionHistory.data ?? [],
-      budgets: budgets.error ? [] : (budgets.data ?? []),
-      cardExpenses: cardExpenses.data ?? [],
-      cardInstallments: cardInstallments.error ? [] : (cardInstallments.data ?? []),
-      cardStatements: cardStatements.error ? [] : (cardStatements.data ?? []),
-      savingsGoals: savingsGoals.error ? [] : (savingsGoals.data ?? []),
-      savingsGoalComponents: savingsGoalComponents.error ? [] : (savingsGoalComponents.data ?? []),
-    })
-    setLoading(false)
-  }, [])
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    void loadDashboard()
-  }, [loadDashboard])
-
-  useEffect(() => {
-    function reloadWhenVisible() {
-      if (document.visibilityState === 'visible') void loadDashboard()
-    }
-
-    window.addEventListener('focus', loadDashboard)
-    document.addEventListener('visibilitychange', reloadWhenVisible)
-    return () => {
-      window.removeEventListener('focus', loadDashboard)
-      document.removeEventListener('visibilitychange', reloadWhenVisible)
-    }
-  }, [loadDashboard])
+  const loading = snapshotQuery.isPending
+  const error = snapshotQuery.error instanceof Error ? snapshotQuery.error.message : ''
 
   const summary = useMemo(() => {
     const position = buildFinancialPosition(data)

@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Badge } from '../ui/badge'
 import { Card as SurfaceCard, CardContent, CardHeader, CardTitle } from '../ui/card'
 import { HelpTooltip, type HelpTooltipContent } from '../ui/help-tooltip'
-import { supabase } from '../../lib/supabase'
+import { fetchCardInstallments } from '../../data/repositories/cardsRepo'
 import type { Card, CardInstallment } from '../../types/database'
 import { buildCardInstallmentCalendar } from '../../utils/cardInstallmentCalendar'
 import { formatCurrency } from '../../utils/formatCurrency'
@@ -33,12 +33,12 @@ export function CardInstallmentCalendarPanel({ cards }: CardInstallmentCalendarP
 
     setLoading(true)
     const creditCardIds = new Set(creditCards.map((card) => card.id))
-    const { data, error } = await supabase.from('card_installments').select('*').order('due_month', { ascending: true })
+    const result = await fetchCardInstallments()
 
-    if (error) {
+    if (!result.ok) {
       setInstallments([])
     } else {
-      setInstallments(((data ?? []) as CardInstallment[]).filter((item) => creditCardIds.has(item.card_id)))
+      setInstallments(result.data.filter((item) => creditCardIds.has(item.card_id)))
     }
     setLoading(false)
   }, [creditCards])

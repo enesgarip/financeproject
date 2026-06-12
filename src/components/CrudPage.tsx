@@ -3,8 +3,8 @@ import type { CSSProperties, ReactNode } from 'react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
+import { deleteCrudRow, fetchCrudRows, saveCrudRow } from '../data/repositories/crudRepo'
 import { cn, openNativePicker } from '../lib/utils'
-import { supabase } from '../lib/supabase'
 import type { InsertFor, RowFor, TableName, UpdateFor } from '../types/database'
 import { EmptyState } from './EmptyState'
 import { FormSection } from './finance/FinanceUI'
@@ -70,6 +70,7 @@ type CrudPageProps<T extends TableName> = {
   fieldContext?: FieldContext
   validateForm?: (formData: FormData, values: Record<string, string>, editing: RowFor<T> | null) => FormErrors
   afterSave?: (row: RowFor<T>, action: SaveAction, helpers: { reload: () => Promise<void>; setError: (message: string) => void }) => Promise<void> | void
+  afterDelete?: (row: RowFor<T> | null, helpers: { reload: () => Promise<void>; setError: (message: string) => void }) => Promise<void> | void
   renderTitle: (row: RowFor<T>) => string
   renderSubtitle?: (row: RowFor<T>) => string
   renderDetails: (row: RowFor<T>) => string[]
@@ -115,6 +116,7 @@ export function CrudPage<T extends TableName>({
   fieldContext,
   validateForm,
   afterSave,
+  afterDelete,
   renderTitle,
   renderSubtitle,
   renderDetails,
@@ -191,13 +193,18 @@ export function CrudPage<T extends TableName>({
   const loadRows = useCallback(async () => {
     setLoading(true)
     setError('')
-    const { data, error: loadError } = await supabase
-      .from(table as never)
-      .select('*')
-      .order(orderBy, { ascending: orderAscending ?? (orderBy.includes('date') || orderBy.includes('day')) })
+    const loadResult = await fetchCrudRows(
+      table,
+      orderBy,
+      orderAscending ?? (orderBy.includes('date') || orderBy.includes('day')),
+    )
 
-    if (loadError) setError(loadError.message)
-    setRows((data ?? []) as unknown as RowFor<T>[])
+    if (!loadResult.ok) {
+      setError(loadResult.error.message ?? 'Kayıtlar yüklenemedi.')
+      setRows([])
+    } else {
+      setRows(loadResult.data)
+    }
     setLoading(false)
   }, [orderAscending, orderBy, table])
 
@@ -256,12 +263,20 @@ export function CrudPage<T extends TableName>({
     if (!deleteId) return
 
     setDeleting(true)
-    const { error: deleteError } = await supabase.from(table as never).delete().eq('id', deleteId)
-    if (deleteError) {
-      setError(deleteError.message)
+    const deletedRow = rows.find((row) => row.id === deleteId) ?? null
+    const deleteResult = await deleteCrudRow(table, deleteId)
+    if (!deleteResult.ok) {
+      setError(deleteResult.error.message ?? 'Kayıt silinemedi.')
       setDeleting(false)
       return
     }
+
+    try {
+      await afterDelete?.(deletedRow, { reload: loadRows, setError })
+    } catch (deleteFollowUpError) {
+      setError(deleteFollowUpError instanceof Error ? deleteFollowUpError.message : 'Silme sonrası işlem tamamlanamadı.')
+    }
+
     setRows((current) => current.filter((row) => row.id !== deleteId))
     setDeleteId(null)
     setDeleting(false)
@@ -288,25 +303,18 @@ export function CrudPage<T extends TableName>({
     const payload = mapForm(formData, user.id, editing, fieldContext)
     const action: SaveAction = editing ? 'update' : 'create'
 
-    const response = editing
-      ? await supabase
-          .from(table as never)
-          .update(payload as never)
-          .eq('id', editing.id)
-          .select()
-          .single()
-      : await supabase.from(table as never).insert(payload as never).select().single()
-    const savedResponse = response as unknown as { data: unknown; error: { message: string } | null }
+    const saveResult = await saveCrudRow(table, payload, editing?.id ?? null)
 
-    if (savedResponse.error) {
-      setError(savedResponse.error.message)
+    if (!saveResult.ok) {
+      setError(saveResult.error.message ?? 'Kayıt kaydedilemedi.')
       setSaving(false)
       return
     }
 
-    if (savedResponse.data) {
+    const savedRow = saveResult.data
+    if (savedRow) {
       try {
-        await afterSave?.(savedResponse.data as RowFor<T>, action, { reload: loadRows, setError })
+        await afterSave?.(savedRow, action, { reload: loadRows, setError })
       } catch (saveError) {
         setError(saveError instanceof Error ? saveError.message : 'Kayıt sonrası işlem tamamlanamadı.')
         setSaving(false)

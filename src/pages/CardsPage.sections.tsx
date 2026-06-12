@@ -25,7 +25,7 @@ import { Card as SurfaceCard, CardContent, CardHeader, CardTitle } from '../comp
 import { HelpTooltip, type HelpTooltipContent } from '../components/ui/help-tooltip'
 import { Progress } from '../components/ui/progress'
 import { invalidateCategoryMemory, useCategoryMemory } from '../hooks/useCategoryMemory'
-import { supabase } from '../lib/supabase'
+import { addCardExpense, cutDueCardStatements, recordCardInstallmentCarryover } from '../data/repositories/cardsRepo'
 import type { Card, CardExpense, CardExpenseStatus, CardInstallment, CardStatementArchive } from '../types/database'
 import { expenseCategoryOptions } from '../utils/categories'
 import { getCardStatementPeriod } from '../utils/cardStatement'
@@ -850,33 +850,22 @@ export function QuickExpensePanel({
     setSaving(true)
     setLocalError('')
     setError('')
-    const { error } = await supabase.rpc('add_card_expense', {
-      p_card_id: selectedCard.id,
-      p_amount: parsedAmount,
-      p_description: trimmedDescription,
-      p_spent_at: spentAt,
-      p_category: category,
-      p_installment_count: parsedInstallmentCount,
-      p_status: expenseStatus,
+    const submitResult = await addCardExpense({
+      cardId: selectedCard.id,
+      amount: parsedAmount,
+      description: trimmedDescription,
+      spentAt,
+      category,
+      installmentCount: parsedInstallmentCount,
+      status: expenseStatus,
     })
 
-    let submitError = error
-    if (submitError && isSchemaCacheError(submitError) && parsedInstallmentCount === 1 && expenseStatus === 'posted') {
-      const { error: legacyError } = await supabase.rpc('add_card_expense', {
-        p_card_id: selectedCard.id,
-        p_amount: parsedAmount,
-        p_description: trimmedDescription,
-        p_spent_at: spentAt,
-      })
-      submitError = legacyError
-    }
-
     setSaving(false)
-    if (submitError) {
+    if (!submitResult.ok) {
       setLocalError(
-        isSchemaCacheError(submitError)
+        isSchemaCacheError(submitResult.error)
           ? 'Provizyon/taksit altyapısı canlı veritabanına uygulanmamış. Migration çalışınca bu işlem açılacak.'
-          : submitError.message,
+          : submitResult.error.message ?? 'Harcama kaydedilemedi.',
       )
       return
     }
@@ -1189,22 +1178,19 @@ export function LegacyInstallmentPanel({
     setLocalError('')
     setError('')
 
-    // Tüm akış (harcama + taksit satırları + borç güncelleme + işlem geçmişi)
-    // tek transaction'da: record_card_installment_carryover RPC. cards.debt_amount
-    // değişimini A2 card_ledger trigger'ı aynı transaction'da olaya çevirir.
-    const { error: rpcError } = await supabase.rpc('record_card_installment_carryover', {
-      p_card_id: selectedCard.id,
-      p_description: trimmedDescription,
-      p_installment_amount: parsedInstallmentAmount,
-      p_total_installments: parsedTotalInstallments,
-      p_paid_installments: parsedPaidInstallments,
-      p_next_due_month: addMonthsToMonth(nextDueMonth, 0),
-      p_category: category,
+    const carryoverResult = await recordCardInstallmentCarryover({
+      cardId: selectedCard.id,
+      description: trimmedDescription,
+      installmentAmount: parsedInstallmentAmount,
+      totalInstallments: parsedTotalInstallments,
+      paidInstallments: parsedPaidInstallments,
+      nextDueMonth: addMonthsToMonth(nextDueMonth, 0),
+      category,
     })
 
-    if (rpcError) {
+    if (!carryoverResult.ok) {
       setSaving(false)
-      setLocalError(rpcError.message)
+      setLocalError(carryoverResult.error.message ?? 'Taksit devri kaydedilemedi.')
       return
     }
 
@@ -1568,14 +1554,14 @@ export function DueStatementAutomation({
     let cancelled = false
 
     async function runDueStatementCut() {
-      const { data, error } = await supabase.rpc('cut_due_card_statements')
+      const cutResult = await cutDueCardStatements()
 
-      if (error) {
-        if (!isSchemaCacheError(error)) setError(error.message)
+      if (!cutResult.ok) {
+        if (!isSchemaCacheError(cutResult.error)) setError(cutResult.error.message ?? 'Ekstre kesimi başarısız.')
         return
       }
 
-      if (!cancelled && (data ?? 0) > 0) {
+      if (!cancelled && cutResult.data > 0) {
         await Promise.all([reload(), loadStatements()])
       }
     }

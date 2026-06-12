@@ -8,7 +8,17 @@ import { Badge } from '../components/ui/badge'
 import { Card as SurfaceCard, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Progress } from '../components/ui/progress'
 import { useConfirmDialog } from '../components/ui/use-confirm-dialog'
-import { supabase } from '../lib/supabase'
+import { useInvalidateFinanceSnapshot } from '../app/useFinanceSnapshot'
+import { fetchCardsByType } from '../data/repositories/cardsRepo'
+import {
+  deleteLoanInstallment,
+  deleteLoanInstallmentsByIds,
+  fetchLoanInstallments,
+  fetchLoanInstallmentsByLoan,
+  payLoanInstallment,
+  updateLoanInstallment,
+  upsertLoanInstallments,
+} from '../data/repositories/loansRepo'
 import type { Card, InsertFor, Loan, LoanInstallment } from '../types/database'
 import { dateInMonth, dateInputValue, formatDate, startOfToday } from '../utils/date'
 import { formatCurrency, parseNumber } from '../utils/formatCurrency'
@@ -241,13 +251,8 @@ function validateLoanForm(formData: FormData) {
 }
 
 async function getBankaKartlari(): Promise<Card[]> {
-  const { data, error } = await supabase
-    .from('cards')
-    .select('*')
-    .eq('card_type', 'banka_karti')
-
-  if (error) return []
-  return (data as Card[]) ?? []
+  const result = await fetchCardsByType('banka_karti')
+  return result.ok ? result.data : []
 }
 
 // Kredi özeti (remaining_amount/installments/status) artık DB'de loan_installments
@@ -258,10 +263,10 @@ async function syncLoanInstallmentPlan(loan: Loan) {
   const schedule = buildLoanSchedule(loan)
   if (schedule.length === 0) return
 
-  const { data: existingData, error: existingError } = await supabase.from('loan_installments').select('*').eq('loan_id', loan.id)
-  if (existingError) throw new Error(existingError.message)
+  const existingResult = await fetchLoanInstallmentsByLoan(loan.id)
+  if (!existingResult.ok) throw new Error(existingResult.error.message)
 
-  const existing = ((existingData ?? []) as LoanInstallment[])
+  const existing = existingResult.data
   const existingByNo = new Map(existing.map((item) => [item.installment_no, item]))
   const desiredNumbers = new Set(schedule.map((item) => item.installment_no))
   const payload = schedule.map((item) => {
@@ -280,17 +285,12 @@ async function syncLoanInstallmentPlan(loan: Loan) {
     return result
   })
 
-  const { error: upsertError } = await supabase
-    .from('loan_installments')
-    .upsert(payload, { onConflict: 'loan_id,installment_no' })
-
-  if (upsertError) throw new Error(upsertError.message)
+  const upsertResult = await upsertLoanInstallments(payload)
+  if (!upsertResult.ok) throw new Error(upsertResult.error.message)
 
   const extraIds = existing.filter((item) => !desiredNumbers.has(item.installment_no)).map((item) => item.id)
-  if (extraIds.length > 0) {
-    const { error: deleteError } = await supabase.from('loan_installments').delete().in('id', extraIds)
-    if (deleteError) throw new Error(deleteError.message)
-  }
+  const deleteExtraResult = await deleteLoanInstallmentsByIds(extraIds)
+  if (!deleteExtraResult.ok) throw new Error(deleteExtraResult.error.message)
 }
 
 export function LoansPage() {
@@ -311,14 +311,10 @@ export function LoansPage() {
   const [planError, setPlanError] = useState('')
   const [planSaving, setPlanSaving] = useState(false)
 
+  const invalidateSnapshot = useInvalidateFinanceSnapshot()
   const loadInstallments = useCallback(async () => {
-    const { data, error } = await supabase
-      .from('loan_installments')
-      .select('*')
-      .order('due_date', { ascending: true })
-      .order('installment_no', { ascending: true })
-
-    if (!error) setInstallments((data ?? []) as LoanInstallment[])
+    const result = await fetchLoanInstallments()
+    setInstallments(result.ok ? result.data : [])
   }, [])
 
   useEffect(() => {
@@ -359,21 +355,17 @@ export function LoansPage() {
     setInstallmentSaving(true)
     setInstallmentError('')
 
-    const { error } = await supabase.rpc('pay_loan_installment', {
-      p_installment_id: installmentItem.id,
-      p_source_card_id: sourceCard.id,
-    })
+    const result = await payLoanInstallment(installmentItem.id, sourceCard.id)
 
     setInstallmentSaving(false)
-    if (error) {
-      setInstallmentError(error.message)
+    if (!result.ok) {
+      setInstallmentError(result.error.message ?? 'Ödeme işlemi tamamlanamadı.')
       return
     }
 
     setLastUsed('loanAccount', sourceCard.id)
     closeInstallmentPayment()
-    await loadInstallments()
-    await reloadLoans?.()
+    await Promise.all([loadInstallments(), reloadLoans?.(), invalidateSnapshot()])
   }
 
   function openPlanEdit(item: LoanInstallment) {
@@ -400,25 +392,21 @@ export function LoansPage() {
     }
 
     setPlanSaving(true)
-    const { error } = await supabase
-      .from('loan_installments')
-      .update({
-        due_date: planDueDate,
-        amount,
-        note: planNote || null,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', editingPlanItem.id)
+    const result = await updateLoanInstallment(editingPlanItem.id, {
+      due_date: planDueDate,
+      amount,
+      note: planNote || null,
+      updated_at: new Date().toISOString(),
+    })
 
     setPlanSaving(false)
-    if (error) {
-      setPlanError(error.message)
+    if (!result.ok) {
+      setPlanError(result.error.message ?? 'Taksit güncellenemedi.')
       return
     }
 
     // loans özeti loan_installments trigger'ından otomatik güncellenir; sadece tazele.
-    await loadInstallments()
-    await reloadLoans?.()
+    await Promise.all([loadInstallments(), reloadLoans?.(), invalidateSnapshot()])
 
     setEditingPlanItem(null)
   }
@@ -432,15 +420,14 @@ export function LoansPage() {
     })
     if (!confirmed) return
 
-    const { error } = await supabase.from('loan_installments').delete().eq('id', item.id)
-    if (error) {
-      setError(error.message)
+    const result = await deleteLoanInstallment(item.id)
+    if (!result.ok) {
+      setError(result.error.message ?? 'Taksit silinemedi.')
       return
     }
 
     // loans özeti loan_installments trigger'ından otomatik güncellenir; sadece tazele.
-    await loadInstallments()
-    await reload()
+    await Promise.all([loadInstallments(), reload(), invalidateSnapshot()])
   }
 
   function renderPaymentPlan(loan: Loan, reload: () => Promise<void>, setError: (message: string) => void) {
@@ -459,8 +446,7 @@ export function LoansPage() {
               onClick={async () => {
                 try {
                   await syncLoanInstallmentPlan(loan)
-                  await loadInstallments()
-                  await reload()
+                  await Promise.all([loadInstallments(), reload(), invalidateSnapshot()])
                 } catch (syncError) {
                   setError(syncError instanceof Error ? syncError.message : 'Ödeme planı oluşturulamadı.')
                 }
@@ -569,7 +555,10 @@ export function LoansPage() {
         renderBeforeList={({ loading, rows }) => (!loading ? <LoanOverview loans={rows as Loan[]} installments={installments} /> : null)}
         afterSave={async (row) => {
           await syncLoanInstallmentPlan(row as Loan)
-          await loadInstallments()
+          await Promise.all([loadInstallments(), invalidateSnapshot()])
+        }}
+        afterDelete={async () => {
+          await Promise.all([loadInstallments(), invalidateSnapshot()])
         }}
         getInitialValues={(row?: Loan) => ({
           bank_name: row?.bank_name ?? '',

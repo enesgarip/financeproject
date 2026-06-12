@@ -6,7 +6,11 @@ import { SimpleModal } from '../SimpleModal'
 import { Badge } from '../ui/badge'
 import { Card as SurfaceCard, CardContent, CardHeader, CardTitle } from '../ui/card'
 import { HelpTooltip, type HelpTooltipContent } from '../ui/help-tooltip'
-import { supabase } from '../../lib/supabase'
+import {
+  fetchCardInstallmentsByExpenseIds,
+  fetchPostedInstallmentExpenses,
+  updateCardExpense,
+} from '../../data/repositories/cardsRepo'
 import type { Card, CardExpense, CardInstallment } from '../../types/database'
 import { expenseCategoryOptions } from '../../utils/categories'
 import { formatDate } from '../../utils/date'
@@ -93,45 +97,33 @@ export function CardInstallmentExpensesPanel({ cards, reload, setError }: CardIn
         return
       }
 
-      const { data, error } = await supabase
-        .from('card_installments')
-        .select('*')
-        .in('card_expense_id', expenseIds)
-        .order('due_month', { ascending: true })
-        .order('installment_no', { ascending: true })
+      const result = await fetchCardInstallmentsByExpenseIds(expenseIds)
 
-      if (error) {
+      if (!result.ok) {
         setInstallments([])
-        setError(error.message)
+        setError(result.error.message ?? 'Taksitler yüklenemedi.')
         return
       }
 
-      setInstallments((data ?? []) as CardInstallment[])
+      setInstallments(result.data)
     },
     [setError],
   )
 
   const loadExpenses = useCallback(async () => {
     setLoading(true)
-    const { data, error } = await supabase
-      .from('card_expenses')
-      .select('*')
-      .eq('status', 'posted')
-      .gt('installment_count', 1)
-      .order('spent_at', { ascending: false })
-      .limit(50)
+    const result = await fetchPostedInstallmentExpenses(50)
 
-    if (error) {
+    if (!result.ok) {
       setExpenses([])
       setInstallments([])
-      setError(error.message)
+      setError(result.error.message ?? 'Taksitli harcamalar yüklenemedi.')
       setLoading(false)
       return
     }
 
-    const rows = (data ?? []) as CardExpense[]
-    setExpenses(rows)
-    await loadInstallments(rows.map((expense) => expense.id))
+    setExpenses(result.data)
+    await loadInstallments(result.data.map((expense) => expense.id))
     setLoading(false)
   }, [loadInstallments, setError])
 
@@ -184,22 +176,22 @@ export function CardInstallmentExpensesPanel({ cards, reload, setError }: CardIn
     setLocalError('')
     setError('')
 
-    const { error } = await supabase.rpc('update_card_expense', {
-      p_expense_id: editing.id,
-      p_amount: parsedAmount,
-      p_description: trimmedDescription,
-      p_spent_at: spentAt,
-      p_installment_count: parsedInstallmentCount,
-      p_category: category,
-      p_note: note.trim() || null,
+    const result = await updateCardExpense({
+      expenseId: editing.id,
+      amount: parsedAmount,
+      description: trimmedDescription,
+      spentAt,
+      installmentCount: parsedInstallmentCount,
+      category,
+      note: note.trim() || null,
     })
 
     setSaving(false)
 
-    if (error) {
-      const message = isSchemaCacheError(error)
+    if (!result.ok) {
+      const message = isSchemaCacheError(result.error)
         ? 'Harcama duzenleme henuz veritabaninda yok. Migration uygulaninca bu islem acilacak.'
-        : error.message
+        : result.error.message ?? 'Taksitli harcama güncellenemedi.'
       setLocalError(message)
       return
     }

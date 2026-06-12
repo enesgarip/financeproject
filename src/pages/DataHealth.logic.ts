@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabase'
+import { deleteDataHealthRows, fetchUndoRows, restoreUndoRows as restoreUndoRepositoryRows } from '../data/repositories/dataHealthRepo'
 import type {
   AccountLedger,
   Asset,
@@ -9,7 +9,6 @@ import type {
   CardLedger,
   CardStatementArchive,
   Debt,
-  InsertFor,
   Loan,
   LoanInstallment,
   Payment,
@@ -472,114 +471,16 @@ export async function captureUndoRows(table: UndoTable, ids: string[]): Promise<
   const uniqueIds = compactIds(ids)
   if (uniqueIds.length === 0) return null
 
-  if (table === 'assets') {
-    const { data, error } = await supabase.from('assets').select('*').in('id', uniqueIds)
-    if (error) throw new Error(error.message)
-    return { action: 'restoreRows', table, rows: (data ?? []) as unknown as UndoRow[] }
-  }
-  if (table === 'budgets') {
-    const { data, error } = await supabase.from('budgets').select('*').in('id', uniqueIds)
-    if (error) throw new Error(error.message)
-    return { action: 'restoreRows', table, rows: (data ?? []) as unknown as UndoRow[] }
-  }
-  if (table === 'cards') {
-    const { data, error } = await supabase.from('cards').select('*').in('id', uniqueIds)
-    if (error) throw new Error(error.message)
-    return { action: 'restoreRows', table, rows: (data ?? []) as unknown as UndoRow[] }
-  }
-  if (table === 'card_expenses') {
-    const { data, error } = await supabase.from('card_expenses').select('*').in('id', uniqueIds)
-    if (error) throw new Error(error.message)
-    return { action: 'restoreRows', table, rows: (data ?? []) as unknown as UndoRow[] }
-  }
-  if (table === 'card_installments') {
-    const { data, error } = await supabase.from('card_installments').select('*').in('id', uniqueIds)
-    if (error) throw new Error(error.message)
-    return { action: 'restoreRows', table, rows: (data ?? []) as unknown as UndoRow[] }
-  }
-  if (table === 'card_statement_archives') {
-    const { data, error } = await supabase.from('card_statement_archives').select('*').in('id', uniqueIds)
-    if (error) throw new Error(error.message)
-    return { action: 'restoreRows', table, rows: (data ?? []) as unknown as UndoRow[] }
-  }
-  if (table === 'debts') {
-    const { data, error } = await supabase.from('debts').select('*').in('id', uniqueIds)
-    if (error) throw new Error(error.message)
-    return { action: 'restoreRows', table, rows: (data ?? []) as unknown as UndoRow[] }
-  }
-  if (table === 'loans') {
-    const { data, error } = await supabase.from('loans').select('*').in('id', uniqueIds)
-    if (error) throw new Error(error.message)
-    return { action: 'restoreRows', table, rows: (data ?? []) as unknown as UndoRow[] }
-  }
-  if (table === 'loan_installments') {
-    const { data, error } = await supabase.from('loan_installments').select('*').in('id', uniqueIds)
-    if (error) throw new Error(error.message)
-    return { action: 'restoreRows', table, rows: (data ?? []) as unknown as UndoRow[] }
-  }
-  if (table === 'payments') {
-    const { data, error } = await supabase.from('payments').select('*').in('id', uniqueIds)
-    if (error) throw new Error(error.message)
-    return { action: 'restoreRows', table, rows: (data ?? []) as unknown as UndoRow[] }
-  }
+  const result = await fetchUndoRows(table, uniqueIds)
+  if (!result.ok) throw new Error(result.error.message ?? 'Geri alma satırları yüklenemedi.')
 
-  return null
+  return { action: 'restoreRows', table, rows: result.data }
 }
 
 async function restoreUndoRows(table: UndoTable, rows: UndoRow[]) {
   if (rows.length === 0) return
-
-  if (table === 'assets') {
-    const { error } = await supabase.from('assets').upsert(rows as unknown as InsertFor<'assets'>[])
-    if (error) throw new Error(error.message)
-    return
-  }
-  if (table === 'budgets') {
-    const { error } = await supabase.from('budgets').upsert(rows as unknown as InsertFor<'budgets'>[])
-    if (error) throw new Error(error.message)
-    return
-  }
-  if (table === 'cards') {
-    const { error } = await supabase.from('cards').upsert(rows as unknown as InsertFor<'cards'>[])
-    if (error) throw new Error(error.message)
-    return
-  }
-  if (table === 'card_expenses') {
-    const { error } = await supabase.from('card_expenses').upsert(rows as unknown as InsertFor<'card_expenses'>[])
-    if (error) throw new Error(error.message)
-    return
-  }
-  if (table === 'card_installments') {
-    const { error } = await supabase.from('card_installments').upsert(rows as unknown as InsertFor<'card_installments'>[])
-    if (error) throw new Error(error.message)
-    return
-  }
-  if (table === 'card_statement_archives') {
-    const { error } = await supabase
-      .from('card_statement_archives')
-      .upsert(rows as unknown as InsertFor<'card_statement_archives'>[])
-    if (error) throw new Error(error.message)
-    return
-  }
-  if (table === 'debts') {
-    const { error } = await supabase.from('debts').upsert(rows as unknown as InsertFor<'debts'>[])
-    if (error) throw new Error(error.message)
-    return
-  }
-  if (table === 'loans') {
-    const { error } = await supabase.from('loans').upsert(rows as unknown as InsertFor<'loans'>[])
-    if (error) throw new Error(error.message)
-    return
-  }
-  if (table === 'loan_installments') {
-    const { error } = await supabase.from('loan_installments').upsert(rows as unknown as InsertFor<'loan_installments'>[])
-    if (error) throw new Error(error.message)
-    return
-  }
-  if (table === 'payments') {
-    const { error } = await supabase.from('payments').upsert(rows as unknown as InsertFor<'payments'>[])
-    if (error) throw new Error(error.message)
-  }
+  const result = await restoreUndoRepositoryRows(table, rows)
+  if (!result.ok) throw new Error(result.error.message ?? 'Geri alma satırları geri yüklenemedi.')
 }
 
 async function deleteUndoRows(table: UndoTable, ids: string[]) {
@@ -587,8 +488,8 @@ async function deleteUndoRows(table: UndoTable, ids: string[]) {
   if (uniqueIds.length === 0) return
 
   if (table === 'card_installments') {
-    const { error } = await supabase.from('card_installments').delete().in('id', uniqueIds)
-    if (error) throw new Error(error.message)
+    const result = await deleteDataHealthRows(table, uniqueIds)
+    if (!result.ok) throw new Error(result.error.message ?? 'Geri alma satırları silinemedi.')
     return
   }
 

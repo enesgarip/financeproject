@@ -7,7 +7,13 @@ import { StatementImportModal } from '../components/finance/StatementImportModal
 import { CardInstallmentCalendarPanel } from '../components/finance/CardInstallmentCalendarPanel'
 import { CardInstallmentExpensesPanel } from '../components/finance/CardInstallmentExpensesPanel'
 import { SimpleModal } from '../components/SimpleModal'
-import { supabase } from '../lib/supabase'
+import { useInvalidateFinanceSnapshot } from '../app/useFinanceSnapshot'
+import {
+  applyCardProvision,
+  fetchCardInstallments,
+  fetchProvisionExpenses,
+  fetchStatementArchives,
+} from '../data/repositories/cardsRepo'
 import { submitAccountMovement } from '../services/accountMovements'
 import { submitFinanceObligationPayment } from '../services/financePaymentActions'
 import type { Card, CardExpense, CardInstallment, CardStatementArchive } from '../types/database'
@@ -74,21 +80,17 @@ export function CardsPage() {
   const loadProvisions = useCallback(async () => {
     setProvisionsLoading(true)
     setProvisionError('')
-    const { data, error } = await supabase
-      .from('card_expenses')
-      .select('*')
-      .eq('status', 'provision')
-      .order('spent_at', { ascending: false })
+    const result = await fetchProvisionExpenses()
 
-    if (error) {
+    if (!result.ok) {
       setProvisions([])
       setProvisionError(
-        isSchemaCacheError(error)
+        isSchemaCacheError(result.error)
           ? 'Provizyon altyapısı henüz canlı veritabanında yok. Migration uygulanınca bu liste açılacak.'
-          : error.message,
+          : result.error.message ?? 'Provizyonlar yüklenemedi.',
       )
     } else {
-      setProvisions((data ?? []) as CardExpense[])
+      setProvisions(result.data)
     }
     setProvisionsLoading(false)
   }, [])
@@ -96,37 +98,30 @@ export function CardsPage() {
   const loadStatements = useCallback(async () => {
     setStatementsLoading(true)
     setStatementError('')
-    const { data, error } = await supabase
-      .from('card_statement_archives')
-      .select('*')
-      .order('statement_date', { ascending: false })
-      .limit(24)
+    const result = await fetchStatementArchives(24)
 
-    if (error) {
+    if (!result.ok) {
       setStatements([])
       setStatementError(
-        isSchemaCacheError(error)
+        isSchemaCacheError(result.error)
           ? 'Ekstre odeme altyapisi henuz canli veritabaninda yok. Migration uygulaninca bu panel acilacak.'
-          : error.message,
+          : result.error.message ?? 'Ekstreler yüklenemedi.',
       )
     } else {
-      setStatements((data ?? []) as CardStatementArchive[])
+      setStatements(result.data)
     }
     setStatementsLoading(false)
   }, [])
 
   const loadInstallments = useCallback(async () => {
-    const { data, error } = await supabase
-      .from('card_installments')
-      .select('*')
-      .order('due_month', { ascending: true })
+    const result = await fetchCardInstallments()
 
-    if (error) {
+    if (!result.ok) {
       setInstallments([])
       return
     }
 
-    setInstallments((data ?? []) as CardInstallment[])
+    setInstallments(result.data)
   }, [])
 
   useEffect(() => {
@@ -144,8 +139,9 @@ export function CardsPage() {
     void loadInstallments()
   }, [loadInstallments])
 
+  const invalidateSnapshot = useInvalidateFinanceSnapshot()
   async function refreshCardsAndProvisions(reload: () => Promise<void>) {
-    await Promise.all([reload(), loadProvisions(), loadStatements(), loadInstallments()])
+    await Promise.all([reload(), loadProvisions(), loadStatements(), loadInstallments(), invalidateSnapshot()])
   }
 
   async function handleProvisionAction(
@@ -158,13 +154,12 @@ export function CardsPage() {
     setError('')
     setProvisionError('')
 
-    const rpcName = action === 'post' ? 'post_card_provision' : 'cancel_card_provision'
-    const { error } = await supabase.rpc(rpcName, { p_expense_id: expense.id })
+    const result = await applyCardProvision(expense.id, action)
 
-    if (error) {
-      const message = isSchemaCacheError(error)
+    if (!result.ok) {
+      const message = isSchemaCacheError(result.error)
         ? 'Provizyon altyapısı canlı veritabanına uygulanmamış. Migration çalışınca bu işlem açılacak.'
-        : error.message
+        : result.error.message ?? 'Provizyon işlemi tamamlanamadı.'
       setError(message)
       setProvisionActionId(null)
       return
@@ -183,12 +178,12 @@ export function CardsPage() {
     setProvisionError('')
 
     for (const expense of pendingExpenses) {
-      const { error } = await supabase.rpc('post_card_provision', { p_expense_id: expense.id })
-      if (error) {
+      const result = await applyCardProvision(expense.id, 'post')
+      if (!result.ok) {
         setError(
-          isSchemaCacheError(error)
+          isSchemaCacheError(result.error)
             ? 'Provizyon altyapısı canlı veritabanına uygulanmamış. Migration çalışınca bu işlem açılacak.'
-            : error.message,
+            : result.error.message ?? 'Provizyon işlemi tamamlanamadı.',
         )
         await refreshCardsAndProvisions(reload)
         setProvisionActionId(null)
@@ -232,7 +227,7 @@ export function CardsPage() {
     }
 
     setTransactionCard(null)
-    await reloadCards?.()
+    await Promise.all([reloadCards?.(), invalidateSnapshot()])
   }
 
   function openStatementPayment(statement: CardStatementArchive, card: Card, cards: Card[], reload: () => Promise<void>) {
@@ -288,7 +283,7 @@ export function CardsPage() {
 
     setLastUsed('paymentAccount', sourceCard.id)
     closeStatementPayment()
-    await Promise.all([reloadCards?.(), loadStatements(), loadInstallments()])
+    await Promise.all([reloadCards?.(), loadStatements(), loadInstallments(), invalidateSnapshot()])
   }
 
   const [quickExpenseFocus, setQuickExpenseFocus] = useState<{ cardId: string; mode: 'cash' | 'installment'; nonce: number } | null>(null)
@@ -325,6 +320,12 @@ export function CardsPage() {
         emptyDescription="Banka hesaplarını ve kredi kartlarını buradan takip edebilirsin."
         orderBy="card_type"
         showList={section === 'kartlar'}
+        afterSave={async () => {
+          await invalidateSnapshot()
+        }}
+        afterDelete={async () => {
+          await invalidateSnapshot()
+        }}
         renderBeforeList={({ loading, rows, reload, setError }) => {
           const cardRows = rows as Card[]
           const counts: Partial<Record<CardSection, number>> = {
@@ -342,7 +343,9 @@ export function CardsPage() {
                   rows={cardRows}
                   statements={statements}
                   statementsLoading={statementsLoading}
-                  reload={reload}
+                  reload={async () => {
+                    await Promise.all([reload(), invalidateSnapshot()])
+                  }}
                   loadStatements={loadStatements}
                   setError={setError}
                 />
@@ -367,7 +370,7 @@ export function CardsPage() {
                     <details className="rounded-lg border border-border/75 bg-card/80 p-3 shadow-sm">
                       <summary className="cursor-pointer text-sm font-bold text-foreground">Eski taksit devri</summary>
                       <div className="mt-3">
-                        <LegacyInstallmentPanel rows={cardRows} reload={reload} setError={setError} />
+                        <LegacyInstallmentPanel rows={cardRows} reload={() => refreshCardsAndProvisions(reload)} setError={setError} />
                       </div>
                     </details>
                   ) : null}
@@ -472,7 +475,7 @@ export function CardsPage() {
             onTransfer={(source) => openTransaction(source, helpers.reload, helpers.rows as Card[], 'transfer')}
             onAddExpense={focusQuickExpense}
             onImportStatement={setImportCard}
-            onChanged={helpers.reload}
+            onChanged={() => refreshCardsAndProvisions(helpers.reload)}
           />
         )}
         renderExtra={(row, helpers) => {
@@ -608,7 +611,10 @@ export function CardsPage() {
         <StatementImportModal
           card={importCard}
           onClose={() => setImportCard(null)}
-          onSuccess={() => { setImportCard(null); void reloadCards?.() }}
+          onSuccess={() => {
+            setImportCard(null)
+            void Promise.all([reloadCards?.(), loadStatements(), loadInstallments(), invalidateSnapshot()])
+          }}
         />
       )}
 

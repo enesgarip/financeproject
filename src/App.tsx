@@ -1,6 +1,8 @@
 import { lazy, Suspense, useEffect, type ComponentType, type ReactNode } from 'react'
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { Analytics } from '@vercel/analytics/react'
+import { QueryClientProvider } from '@tanstack/react-query'
+import { queryClient } from './app/queryClient'
 import { AuthProvider } from './auth/AuthProvider'
 import { ProtectedRoute } from './auth/ProtectedRoute'
 import { Layout } from './components/Layout'
@@ -155,12 +157,14 @@ function AnimatedRoutes() {
 
 export function App() {
   return (
-    <AuthProvider>
-      <ToastProvider>
-        <ThemeBoot />
-        <AnimatedRoutes />
-        <Analytics />
-      </ToastProvider>
-    </AuthProvider>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <ToastProvider>
+          <ThemeBoot />
+          <AnimatedRoutes />
+          <Analytics />
+        </ToastProvider>
+      </AuthProvider>
+    </QueryClientProvider>
   )
 }

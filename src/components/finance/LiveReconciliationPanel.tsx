@@ -1,7 +1,7 @@
 import { Scale } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAuth } from '../../auth/useAuth'
-import { supabase } from '../../lib/supabase'
+import { fetchAccountReconciliations, insertAccountReconciliation } from '../../data/repositories/financePanelsRepo'
 import type { AccountReconciliation, Card, InsertFor } from '../../types/database'
 import { formatDate } from '../../utils/date'
 import { formatCurrency, parseNumber } from '../../utils/formatCurrency'
@@ -52,17 +52,14 @@ export function LiveReconciliationPanel({ cards }: LiveReconciliationPanelProps)
   )
 
   const load = useCallback(async () => {
-    const { data, error: loadError } = await supabase
-      .from('account_reconciliations')
-      .select('*')
-      .order('reconciled_at', { ascending: false })
+    const loadResult = await fetchAccountReconciliations()
 
-    if (loadError) {
+    if (!loadResult.ok) {
       // Table not deployed yet → hide the panel silently (matches app convention).
-      if (isMissingSupabaseCapabilityError(loadError)) setSupported(false)
+      if (isMissingSupabaseCapabilityError(loadResult.error)) setSupported(false)
       return
     }
-    setRows((data ?? []) as AccountReconciliation[])
+    setRows(loadResult.data)
   }, [])
 
   useEffect(() => {
@@ -91,11 +88,11 @@ export function LiveReconciliationPanel({ cards }: LiveReconciliationPanelProps)
       drift: computeDrift(app, real),
       reconciled_at: new Date().toISOString(),
     }
-    const { error: saveError } = await supabase.from('account_reconciliations').insert(payload)
+    const saveResult = await insertAccountReconciliation(payload)
     setSavingId(null)
 
-    if (saveError) {
-      setError(saveError.message ?? 'Mutabakat kaydedilemedi.')
+    if (!saveResult.ok) {
+      setError(saveResult.error.message ?? 'Mutabakat kaydedilemedi.')
       return
     }
     setInputs((prev) => ({ ...prev, [cardId]: '' }))

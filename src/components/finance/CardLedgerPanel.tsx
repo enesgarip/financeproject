@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { supabase } from '../../lib/supabase'
+import { fetchCardLedgerEvents } from '../../data/repositories/financePanelsRepo'
 import { postCardDebtCorrection, recomputeCardDebt } from '../../services/cardLedgerActions'
 import type { Card, CardLedger } from '../../types/database'
 import { ledgerDrift, summarizeCardLedger } from '../../utils/cardLedger'
@@ -40,18 +40,13 @@ export function CardLedgerPanel({ card, onChanged }: { card: Card; onChanged?: (
   const [note, setNote] = useState('')
 
   const load = useCallback(async () => {
-    const { data, error: loadError } = await supabase
-      .from('card_ledger')
-      .select('*')
-      .eq('card_id', card.id)
-      .order('occurred_at', { ascending: false })
-      .limit(200)
+    const loadResult = await fetchCardLedgerEvents(card.id)
 
-    if (loadError) {
-      if (isMissingSupabaseCapabilityError(loadError)) setSupported(false)
+    if (!loadResult.ok) {
+      if (isMissingSupabaseCapabilityError(loadResult.error)) setSupported(false)
       return
     }
-    setEvents((data ?? []) as CardLedger[])
+    setEvents(loadResult.data)
   }, [card.id])
 
   useEffect(() => {

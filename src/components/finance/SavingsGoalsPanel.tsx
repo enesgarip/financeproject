@@ -9,8 +9,8 @@ import { Card, CardContent } from '../ui/card'
 import { Input, Select, Textarea } from '../ui/input'
 import { Progress } from '../ui/progress'
 import { useConfirmDialog } from '../ui/use-confirm-dialog'
-import { supabase } from '../../lib/supabase'
-import type { InsertFor, SavingsGoal, SavingsGoalComponent, SavingsGoalValueType, UpdateFor } from '../../types/database'
+import { deleteSavingsGoal, fetchSavingsGoalsRows, upsertSavingsGoalWithComponents } from '../../data/repositories/savingsGoalsRepo'
+import type { InsertFor, SavingsGoal, SavingsGoalComponent, SavingsGoalValueType } from '../../types/database'
 import { useMarketRates } from '../../hooks/useMarketRates'
 import { formatDate } from '../../utils/date'
 import { formatCurrency, parseNumber } from '../../utils/formatCurrency'
@@ -82,21 +82,18 @@ export function SavingsGoalsPanel() {
     setLoading(true)
     setError('')
 
-    const [goalsResult, componentsResult] = await Promise.all([
-      supabase.from('savings_goals').select('*').order('created_at', { ascending: false }),
-      supabase.from('savings_goal_components').select('*').order('sort_order', { ascending: true }),
-    ])
+    const result = await fetchSavingsGoalsRows()
 
-    if (goalsResult.error) {
-      setError(goalsResult.error.message)
+    if (!result.ok) {
+      setError(result.error.message ?? 'Birikim hedefleri yüklenemedi.')
       setGoals([])
       setComponents([])
     } else {
-      setGoals((goalsResult.data ?? []) as SavingsGoal[])
-      if (componentsResult.error) {
+      setGoals(result.data.goals)
+      if (result.data.componentsError) {
         setComponents([])
       } else {
-        setComponents((componentsResult.data ?? []) as SavingsGoalComponent[])
+        setComponents(result.data.components)
       }
     }
 
@@ -162,9 +159,9 @@ export function SavingsGoalsPanel() {
     })
     if (!confirmed) return
 
-    const { error: deleteError } = await supabase.from('savings_goals').delete().eq('id', goal.id)
-    if (deleteError) {
-      setError(deleteError.message)
+    const deleteResult = await deleteSavingsGoal(goal.id)
+    if (!deleteResult.ok) {
+      setError(deleteResult.error.message ?? 'Hedef silinemedi.')
       return
     }
     await loadData()
@@ -246,35 +243,14 @@ export function SavingsGoalsPanel() {
         note: note.trim() || null,
       }
 
-      let goalId = editing?.id
-
-      if (editing) {
-        const { error: updateError } = await supabase
-          .from('savings_goals')
-          .update({ ...goalFields, updated_at: new Date().toISOString() } satisfies UpdateFor<'savings_goals'>)
-          .eq('id', editing.id)
-        if (updateError) throw new Error(updateError.message)
-      } else {
-        const { data, error: insertError } = await supabase
-          .from('savings_goals')
-          .insert({ user_id: user.id, ...goalFields } satisfies InsertFor<'savings_goals'>)
-          .select('id')
-          .single()
-        if (insertError || !data) throw new Error(insertError?.message ?? 'Hedef kaydedilemedi.')
-        goalId = data.id
-      }
-
-      if (!goalId) throw new Error('Hedef kimliği oluşturulamadı.')
-
-      if (isComposite) {
-        await supabase.from('savings_goal_components').delete().eq('goal_id', goalId)
-        const { error: componentError } = await supabase.from('savings_goal_components').insert(
-          parsedComponents.map((row) => ({ ...row, goal_id: goalId })),
-        )
-        if (componentError) throw new Error(componentError.message)
-      } else if (editing?.value_type === 'composite') {
-        await supabase.from('savings_goal_components').delete().eq('goal_id', goalId)
-      }
+      const result = await upsertSavingsGoalWithComponents({
+        userId: user.id,
+        editingGoal: editing,
+        goalFields,
+        components: parsedComponents,
+        isComposite,
+      })
+      if (!result.ok) throw new Error(result.error.message)
 
       setModalOpen(false)
       await loadData()
