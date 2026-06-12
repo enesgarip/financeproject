@@ -12,29 +12,23 @@ import { Badge } from '../components/ui/badge'
 import { Button } from '../components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Progress } from '../components/ui/progress'
-import type {
-  Asset,
-  Budget,
-  Card as FinanceCard,
-  CardExpense,
-  CardInstallment,
-  CardStatementArchive,
-  Debt,
-  Loan,
-  LoanInstallment,
-  NetWorthSnapshot,
-  Payment,
-  SalaryHistory,
-  SavingsGoal,
-  TransactionHistory,
-} from '../types/database'
+import type { Budget, CardExpense, Debt, NetWorthSnapshot, Payment } from '../types/database'
 import { SavingsGoalsPanel } from '../components/finance/SavingsGoalsPanel'
 import { expenseCategoryOptions } from '../utils/categories'
 import { dateInputValue, daysUntil, formatDate, isDateInMonth, monthlyOccurrenceDate, startOfMonth } from '../utils/date'
 import { formatCurrency, parseNumber } from '../utils/formatCurrency'
 import { buildCashFlowForecast } from '../utils/cashFlowForecast'
 import { buildFinancialPosition, buildMonthlyCashFlow, getCurrentSalary, paymentOccurrenceInMonth, sum } from '../utils/financeSummary'
-import { buildFinanceObligationsForMonth, type FinanceObligation, type FinanceObligationsInput } from '../utils/obligations'
+import {
+  buildCalendarEvents,
+  buildCategoryInsights,
+  buildSearchCsv,
+  buildSearchItems,
+  formatMonth,
+  type AnalysisData,
+  type CalendarEvent,
+  type SearchItem,
+} from '../utils/analysisView'
 import { activeExpense as activeCardExpense, buildBudgetUsage } from '../utils/budgetAlerts'
 import { useMarketRates } from '../hooks/useMarketRates'
 import { type MarketRatesSnapshot } from '../utils/marketRates'
@@ -45,30 +39,6 @@ import { computeFire, estimateMonthlySavingsFromNetWorth } from '../utils/fire'
 import { buildInflationShield } from '../utils/inflationShield'
 import { computeZakat } from '../utils/zakat'
 import { canCutCurrentStatement } from '../utils/statementCycle'
-
-type AnalysisData = {
-  assets: Asset[]
-  cards: FinanceCard[]
-  loans: Loan[]
-  loanInstallments: LoanInstallment[]
-  debts: Debt[]
-  payments: Payment[]
-  salaryHistory: SalaryHistory[]
-  transactionHistory: TransactionHistory[]
-  cardExpenses: CardExpense[]
-  cardInstallments: CardInstallment[]
-  cardStatementArchives: CardStatementArchive[]
-  budgets: Budget[]
-  savingsGoals: SavingsGoal[]
-}
-
-type SearchItem = {
-  type: string
-  title: string
-  subtitle: string
-  amount: number | null
-  date: string | null
-}
 
 const emptyAnalysisData: AnalysisData = {
   assets: [],
@@ -107,84 +77,10 @@ function monthStartValue(value: FormDataEntryValue | null) {
   return dateInputValue(startOfMonth(Number.isNaN(date.getTime()) ? new Date() : date))
 }
 
-function formatMonth(value: string) {
-  return new Intl.DateTimeFormat('tr-TR', { month: 'long', year: 'numeric' }).format(new Date(`${value}T00:00:00`))
-}
-
 // Delegates to the shared occurrence rule so this page can never disagree with
 // the cash-flow / obligations engines about which payments land this month.
 function paymentInCurrentMonth(payment: Payment) {
   return paymentOccurrenceInMonth(payment) !== null
-}
-
-function buildSearchItems(data: AnalysisData): SearchItem[] {
-  const cardsById = new Map(data.cards.map((card) => [card.id, card]))
-
-  return [
-    ...data.assets.map((asset) => ({
-      type: 'Varlık',
-      title: asset.name,
-      subtitle: asset.category,
-      amount: asset.estimated_value_try,
-      date: asset.updated_at,
-    })),
-    ...data.cards.map((card) => ({
-      type: 'Kart',
-      title: `${card.bank_name} ${card.card_name}`,
-      subtitle: card.card_type === 'kredi_karti' ? 'Kredi kartı' : 'Banka kartı',
-      amount: card.card_type === 'kredi_karti' ? card.debt_amount : card.current_balance,
-      date: card.updated_at,
-    })),
-    ...data.cardExpenses.filter(activeCardExpense).map((expense) => ({
-      type: expense.status === 'provision' ? 'Kart provizyonu' : 'Kart harcaması',
-      title: expense.description,
-      subtitle: `${cardsById.get(expense.card_id)?.card_name ?? 'Kart'} · ${expense.category ?? 'Diğer'}`,
-      amount: expense.amount,
-      date: expense.spent_at,
-    })),
-    ...data.loans.map((loan) => ({
-      type: 'Kredi',
-      title: loan.loan_name,
-      subtitle: loan.bank_name,
-      amount: loan.remaining_amount,
-      date: loan.end_date,
-    })),
-    ...data.payments.map((payment) => ({
-      type: 'Ödeme',
-      title: payment.title,
-      subtitle: payment.category,
-      amount: payment.amount,
-      date: payment.due_date,
-    })),
-    ...data.debts.map((debt) => ({
-      type: debt.direction === 'borç_aldım' ? 'Borç' : 'Alacak',
-      title: debt.person_name,
-      subtitle: debt.status,
-      amount: debt.estimated_value_try,
-      date: debt.due_date,
-    })),
-    ...data.budgets.map((budget) => ({
-      type: 'Bütçe',
-      title: budget.category,
-      subtitle: formatMonth(budget.month),
-      amount: budget.limit_amount,
-      date: budget.month,
-    })),
-    ...data.savingsGoals.map((goal) => ({
-      type: 'Birikim hedefi',
-      title: goal.name,
-      subtitle: goal.status === 'active' ? 'Aktif' : 'Tamamlandı',
-      amount: goal.current_amount,
-      date: goal.target_date,
-    })),
-    ...data.transactionHistory.map((row) => ({
-      type: 'Geçmiş',
-      title: row.title,
-      subtitle: row.note ?? row.type,
-      amount: row.amount,
-      date: row.occurred_at,
-    })),
-  ].sort((a, b) => String(b.date ?? '').localeCompare(String(a.date ?? '')))
 }
 
 async function loadNetWorthSnapshots(
@@ -211,18 +107,8 @@ async function loadNetWorthSnapshots(
   return result.ok ? result.data : null
 }
 
-function csvValue(value: string | number | null | undefined) {
-  const text = String(value ?? '')
-  return `"${text.replaceAll('"', '""')}"`
-}
-
 function downloadCsv(items: SearchItem[]) {
-  const rows = [
-    ['Tur', 'Baslik', 'Detay', 'Tutar', 'Tarih'],
-    ...items.map((item) => [item.type, item.title, item.subtitle, item.amount ?? '', item.date ?? '']),
-  ]
-  const csv = rows.map((row) => row.map(csvValue).join(',')).join('\n')
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
+  const blob = new Blob([buildSearchCsv(items)], { type: 'text/csv;charset=utf-8' })
   const url = URL.createObjectURL(blob)
   const link = document.createElement('a')
   link.href = url
@@ -527,45 +413,6 @@ function SearchExport({ items }: { items: SearchItem[] }) {
   )
 }
 
-type CalendarEvent = {
-  id: string
-  date: string
-  title: string
-  amount: number
-  tone: 'emerald' | 'rose' | 'amber' | 'stone'
-}
-
-function analysisObligationsInput(data: AnalysisData): FinanceObligationsInput {
-  return {
-    cards: data.cards,
-    payments: data.payments,
-    loans: data.loans,
-    loanInstallments: data.loanInstallments,
-    debts: data.debts,
-    cardInstallments: data.cardInstallments,
-    cardStatements: data.cardStatementArchives,
-  }
-}
-
-function obligationCalendarTone(item: FinanceObligation): CalendarEvent['tone'] {
-  if (item.direction === 'inflow') return 'emerald'
-  if (item.settlement === 'credit_card') return 'stone'
-  if (item.isEstimate) return 'amber'
-  return 'rose'
-}
-
-// Reads the same obligation engine as the dashboard cash calendar, so both
-// screens list the identical items, dates and amounts for the month.
-function buildCalendarEvents(data: AnalysisData): CalendarEvent[] {
-  return buildFinanceObligationsForMonth(analysisObligationsInput(data), startOfMonth()).map((item) => ({
-    id: item.id,
-    date: item.date,
-    title: item.title,
-    amount: item.amount,
-    tone: obligationCalendarTone(item),
-  }))
-}
-
 function FinancialCalendar({ data }: { data: AnalysisData }) {
   const { monthStart, daysInMonth, firstOffset, eventsByDate, busyDays } = useMemo(() => {
     const monthStart = startOfMonth()
@@ -684,99 +531,6 @@ function CalendarEventPill({ event }: { event: CalendarEvent }) {
       {event.title}
     </p>
   )
-}
-
-type CategoryInsight = {
-  category: string
-  title: string
-  description: string
-  tone: 'emerald' | 'amber' | 'rose'
-  priority: number
-  amount: number
-}
-
-function monthKeyFor(value: Date | string) {
-  const date = typeof value === 'string' ? new Date(`${value}T00:00:00`) : value
-  return dateInputValue(startOfMonth(Number.isNaN(date.getTime()) ? new Date() : date))
-}
-
-function previousMonthKeys(count: number) {
-  const today = new Date()
-  return Array.from({ length: count }, (_, index) => dateInputValue(startOfMonth(new Date(today.getFullYear(), today.getMonth() - index - 1, 1))))
-}
-
-function buildCategoryInsights(data: AnalysisData): CategoryInsight[] {
-  const currentMonth = dateInputValue(startOfMonth())
-  const previousMonths = previousMonthKeys(3)
-  const currentTotals = new Map<string, number>()
-  const previousTotals = new Map<string, number>()
-  const budgetsByCategory = new Map(data.budgets.filter((budget) => budget.month === currentMonth).map((budget) => [budget.category, budget]))
-
-  for (const expense of data.cardExpenses.filter(activeCardExpense)) {
-    const category = expense.category || 'Diğer'
-    const expenseMonth = monthKeyFor(expense.spent_at)
-
-    if (expenseMonth === currentMonth) {
-      currentTotals.set(category, (currentTotals.get(category) ?? 0) + expense.amount)
-    } else if (previousMonths.includes(expenseMonth)) {
-      previousTotals.set(category, (previousTotals.get(category) ?? 0) + expense.amount)
-    }
-  }
-
-  return Array.from(currentTotals, ([category, amount]) => {
-    const budget = budgetsByCategory.get(category)
-    const average = (previousTotals.get(category) ?? 0) / 3
-    const limitRate = budget && budget.limit_amount > 0 ? amount / budget.limit_amount : 0
-
-    if (budget && limitRate >= 1) {
-      return {
-        category,
-        title: 'Bütçe aşıldı',
-        description: `${formatCurrency(amount)} harcandı; limit ${formatCurrency(budget.limit_amount)}.`,
-        tone: 'rose' as const,
-        priority: 1,
-        amount,
-      }
-    }
-
-    if (budget && limitRate >= 0.8) {
-      return {
-        category,
-        title: `Limitin %${Math.round(limitRate * 100)} doldu`,
-        description: `${formatCurrency(Math.max(0, budget.limit_amount - amount))} alan kaldı.`,
-        tone: 'amber' as const,
-        priority: 2,
-        amount,
-      }
-    }
-
-    if (average > 0 && amount >= average * 1.25) {
-      return {
-        category,
-        title: 'Son 3 ay ortalamasının üstünde',
-        description: `Bu ay ${formatCurrency(amount)}, üç aylık ortalama ${formatCurrency(average)}.`,
-        tone: 'amber' as const,
-        priority: 3,
-        amount,
-      }
-    }
-
-    if (average > 0 && amount <= average * 0.75) {
-      return {
-        category,
-        title: 'Ortalamanın altında',
-        description: `Bu ay tempo ${formatCurrency(average - amount)} daha düşük görünüyor.`,
-        tone: 'emerald' as const,
-        priority: 6,
-        amount,
-      }
-    }
-
-    return null
-  })
-    .filter((item): item is CategoryInsight => Boolean(item))
-    .sort((a, b) => a.priority - b.priority || b.amount - a.amount)
-    .slice(0, 3)
 }
 
 const CATEGORY_PALETTE = [
