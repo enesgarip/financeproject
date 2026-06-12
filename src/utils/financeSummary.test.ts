@@ -11,6 +11,7 @@ import {
   cardProvisionAmount,
   cardSplitTotal,
   clampCardBreakdown,
+  expectedInstallmentAmount,
   projectLoanSummary,
   getCurrentSalary,
   getSalaryTrend,
@@ -211,6 +212,24 @@ describe('projectLoanSummary', () => {
 
   it('treats an empty plan as closed with nothing remaining', () => {
     expect(projectLoanSummary([])).toEqual({ remainingAmount: 0, remainingInstallments: 0, status: 'closed' })
+  })
+})
+
+describe('expectedInstallmentAmount', () => {
+  it('returns the full amount for single-shot expenses', () => {
+    expect(expectedInstallmentAmount(1200, 1)).toBe(1200)
+    expect(expectedInstallmentAmount(1200, 0)).toBe(1200)
+  })
+
+  it('divides evenly across installments, rounded to kuruş', () => {
+    expect(expectedInstallmentAmount(1200, 3)).toBe(400)
+    expect(expectedInstallmentAmount(100, 3)).toBe(33.33)
+    expect(expectedInstallmentAmount(2000, 12)).toBe(166.67)
+  })
+
+  it('matches the SQL twin: round(amount/count, 2)', () => {
+    // 0.1+0.2 türü float tozu roundTL ile temizlenir
+    expect(expectedInstallmentAmount(0.3, 3)).toBe(0.1)
   })
 })
 

@@ -162,6 +162,17 @@ export function projectLoanSummary(installments: Pick<LoanInstallment, 'amount' 
   }
 }
 
+/**
+ * Canonical per-installment amount for a card expense (roadmap "güven" Madde 1).
+ * Single çekim (count <= 1) → full amount; aksi halde round(amount / count, 2).
+ * TS twin of the DB BEFORE trigger `derive_card_expense_installment_amount()` —
+ * the single source of truth, shared with the DataHealth `cardExpenseAmount` check.
+ */
+export function expectedInstallmentAmount(amount: number, installmentCount: number) {
+  if (!installmentCount || installmentCount <= 1) return roundMoney(amount)
+  return roundMoney(amount / installmentCount)
+}
+
 export function creditLimitGroupKey(card: Card) {
   return card.limit_group_name?.trim() || card.id
 }

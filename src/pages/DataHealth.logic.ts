@@ -20,7 +20,7 @@ import type {
 import { balanceDrift, projectAccountBalance, type AccountLedgerEvent } from '../utils/accountLedger'
 import { ledgerDrift, projectCardDebt, type CardLedgerEvent } from '../utils/cardLedger'
 import { dateInputValue, formatDate } from '../utils/date'
-import { cardProvisionAmount, cardSplitTotal, clampCardBreakdown, moneyDiffers, projectLoanSummary, roundMoney } from '../utils/financeSummary'
+import { cardProvisionAmount, cardSplitTotal, clampCardBreakdown, expectedInstallmentAmount, moneyDiffers, projectLoanSummary, roundMoney } from '../utils/financeSummary'
 import { formatCurrency } from '../utils/formatCurrency'
 import { formatComponentAmount, formatSavingsGoalAmount, savingsGoalValueTypeLabel } from '../utils/savingsGoal'
 import { isMissingSupabaseCapabilityError } from '../utils/supabaseErrors'
@@ -1115,8 +1115,7 @@ export function buildIssues(data: HealthData): HealthIssue[] {
   for (const expense of data.cardExpenses.filter(activeCardExpense)) {
     const card = cardsById.get(expense.card_id)
     const rows = installmentsByExpense.get(expense.id) ?? []
-    const expectedInstallmentAmount =
-      expense.installment_count <= 1 ? expense.amount : roundMoney(expense.amount / Math.max(1, expense.installment_count))
+    const expectedAmount = expectedInstallmentAmount(expense.amount, expense.installment_count)
 
     if (card && card.card_type !== 'kredi_karti' && (expense.installment_count > 1 || rows.length > 0)) {
       issues.push({
@@ -1159,7 +1158,7 @@ export function buildIssues(data: HealthData): HealthIssue[] {
       })
     }
 
-    if (moneyDiffers(expense.installment_amount, expectedInstallmentAmount)) {
+    if (moneyDiffers(expense.installment_amount, expectedAmount)) {
       issues.push({
         id: `card-expense-amount-${expense.id}`,
         area: 'Kartlar',
@@ -1168,13 +1167,13 @@ export function buildIssues(data: HealthData): HealthIssue[] {
         description: 'Harcama toplamı ve taksit sayısından beklenen taksit tutarı farklı.',
         details: [
           `Kayıtlı taksit: ${formatCurrency(expense.installment_amount)}`,
-          `Beklenen: ${formatCurrency(expectedInstallmentAmount)}`,
+          `Beklenen: ${formatCurrency(expectedAmount)}`,
           `Toplam: ${formatCurrency(expense.amount)} · ${expense.installment_count} taksit`,
         ],
         fixable: true,
         fixLabel: 'Taksit tutarını düzelt',
         kind: 'cardExpenseAmount',
-        payload: { expenseId: expense.id, updates: { installment_amount: expectedInstallmentAmount } },
+        payload: { expenseId: expense.id, updates: { installment_amount: expectedAmount } },
       })
     }
   }
