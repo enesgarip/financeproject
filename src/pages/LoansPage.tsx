@@ -250,25 +250,9 @@ async function getBankaKartlari(): Promise<Card[]> {
   return (data as Card[]) ?? []
 }
 
-async function updateLoanTotalsFromInstallments(loanId: string) {
-  const { data, error } = await supabase.from('loan_installments').select('*').eq('loan_id', loanId)
-  if (error) throw new Error(error.message)
-
-  const installments = ((data ?? []) as LoanInstallment[]).filter((item) => item.status !== 'ödendi')
-  const remainingAmount = installments.reduce((total, item) => total + item.amount, 0)
-  const remainingInstallments = installments.length
-  const { error: updateError } = await supabase
-    .from('loans')
-    .update({
-      remaining_amount: remainingAmount,
-      remaining_installments: remainingInstallments,
-      status: remainingInstallments === 0 ? 'closed' : 'active',
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', loanId)
-
-  if (updateError) throw new Error(updateError.message)
-}
+// Kredi özeti (remaining_amount/installments/status) artık DB'de loan_installments
+// üzerindeki sync_loan_summary trigger'ından türetiliyor (Faz 2). İstemci tarafı
+// recompute fazlalıktı ve float topluyordu; kaldırıldı, trigger numeric ile kesin hesaplar.
 
 async function syncLoanInstallmentPlan(loan: Loan) {
   const schedule = buildLoanSchedule(loan)
@@ -307,8 +291,6 @@ async function syncLoanInstallmentPlan(loan: Loan) {
     const { error: deleteError } = await supabase.from('loan_installments').delete().in('id', extraIds)
     if (deleteError) throw new Error(deleteError.message)
   }
-
-  await updateLoanTotalsFromInstallments(loan.id)
 }
 
 export function LoansPage() {
@@ -434,13 +416,9 @@ export function LoansPage() {
       return
     }
 
-    try {
-      await updateLoanTotalsFromInstallments(editingPlanItem.loan_id)
-      await loadInstallments()
-      await reloadLoans?.()
-    } catch {
-      // The edited row is already saved; totals will recover on the next explicit loan action.
-    }
+    // loans özeti loan_installments trigger'ından otomatik güncellenir; sadece tazele.
+    await loadInstallments()
+    await reloadLoans?.()
 
     setEditingPlanItem(null)
   }
@@ -460,13 +438,9 @@ export function LoansPage() {
       return
     }
 
-    try {
-      await updateLoanTotalsFromInstallments(item.loan_id)
-      await loadInstallments()
-      await reload()
-    } catch (updateError) {
-      setError(updateError instanceof Error ? updateError.message : 'Kredi güncellenemedi.')
-    }
+    // loans özeti loan_installments trigger'ından otomatik güncellenir; sadece tazele.
+    await loadInstallments()
+    await reload()
   }
 
   function renderPaymentPlan(loan: Loan, reload: () => Promise<void>, setError: (message: string) => void) {
