@@ -1,5 +1,9 @@
-import { supabase } from '../lib/supabase'
-import { isMissingSupabaseCapabilityError } from './supabaseErrors'
+import {
+  deleteOwnRows,
+  fetchTableRows,
+  insertRows,
+  type BackupRow,
+} from '../data/repositories/backupRepo'
 
 /**
  * Full-data backup & restore (roadmap D8).
@@ -60,7 +64,7 @@ const V1_KEY_TO_TABLE: Record<string, RestoreTable> = {
   savingsGoalComponents: 'savings_goal_components',
 }
 
-export type BackupRow = Record<string, unknown>
+export type { BackupRow }
 
 export type ParsedBackup = {
   schema: string
@@ -137,12 +141,8 @@ export async function buildBackupPayload(): Promise<{ payload: string; totalRows
   let totalRows = 0
 
   for (const table of [...RESTORE_TABLE_ORDER, ...EXPORT_ONLY_TABLES]) {
-    const { data, error } = await supabase.from(table as 'cards').select('*')
-    if (error) {
-      if (isMissingSupabaseCapabilityError(error)) continue // table not deployed yet
-      throw new Error(`${table} okunamadı: ${error.message}`)
-    }
-    const rows = (data ?? []) as BackupRow[]
+    const rows = await fetchTableRows(table)
+    if (rows === null) continue // table not deployed yet
     tables[table] = rows
     totalRows += rows.length
   }
@@ -181,10 +181,7 @@ export async function restoreBackup(
   // Wipe child-first. Missing tables (not deployed) are skipped.
   for (const table of [...RESTORE_TABLE_ORDER].reverse()) {
     onProgress?.({ step: `${table} temizleniyor`, done: ++done, total: steps })
-    const { error } = await supabase.from(table as 'cards').delete().eq('user_id', userId)
-    if (error && !isMissingSupabaseCapabilityError(error)) {
-      throw new Error(`${table} temizlenemedi: ${error.message}`)
-    }
+    await deleteOwnRows(table, userId)
   }
 
   // Insert parent-first.
@@ -194,13 +191,8 @@ export async function restoreBackup(
     if (!rows || rows.length === 0) continue
 
     for (const part of chunk(rows, 200)) {
-      const { error } = await supabase
-        .from(table as 'cards')
-        .insert(part.map((row) => rowForInsert(row, userId)) as never)
-      if (error) {
-        if (isMissingSupabaseCapabilityError(error)) break // table not deployed: skip its rows
-        throw new Error(`${table} geri yüklenemedi: ${error.message}`)
-      }
+      const deployed = await insertRows(table, part.map((row) => rowForInsert(row, userId)))
+      if (!deployed) break // table not deployed: skip its rows
     }
   }
 }

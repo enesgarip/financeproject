@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { supabase } from '../lib/supabase'
+import { fetchCategoryMemoryRows } from '../data/repositories/categoryMemoryRepo'
 import { buildCategoryMemory, type CategoryMemory } from '../utils/categories'
 
 /**
@@ -13,14 +13,7 @@ let cache: CategoryMemory | null = null
 let inflight: Promise<CategoryMemory> | null = null
 
 async function loadMemory(): Promise<CategoryMemory> {
-  const { data, error } = await supabase
-    .from('card_expenses')
-    .select('description, category, spent_at')
-    .order('spent_at', { ascending: false })
-    .limit(400)
-
-  if (error) return new Map()
-  return buildCategoryMemory((data ?? []) as Array<{ description: string | null; category: string | null }>)
+  return buildCategoryMemory(await fetchCategoryMemoryRows())
 }
 
 export function invalidateCategoryMemory() {

@@ -1,4 +1,9 @@
-import { supabase } from '../lib/supabase'
+import {
+  deleteGoldLedgerAsset,
+  fetchGoldLedgerAssets,
+  insertGoldLedgerAsset,
+  updateGoldLedgerAsset,
+} from '../data/repositories/goldLedgerRepo'
 import type { Asset, GoldLot, GoldType, InsertFor, UpdateFor } from '../types/database'
 import {
   GOLD_LEDGER_SOURCE,
@@ -96,15 +101,7 @@ export async function syncGoldLedgerAssets(
 ): Promise<GoldLedgerAssetSyncResult> {
   const summaries = summarizeGold(lots)
   const wantedTypes = new Set(summaries.map((summary) => summary.goldType))
-  const { data, error } = await supabase
-    .from('assets')
-    .select('*')
-    .eq('user_id', userId)
-    .eq('source', GOLD_LEDGER_SOURCE)
-
-  if (error) throw error
-
-  const existing = (data ?? []) as Asset[]
+  const existing = await fetchGoldLedgerAssets(userId)
   const existingByType = new Map<GoldType, Asset>()
   for (const asset of existing) {
     const type = goldTypeFromAsset(asset)
@@ -120,28 +117,21 @@ export async function syncGoldLedgerAssets(
     const payload = buildGoldLedgerAssetPayload(summary, userId, snapshot, current?.estimated_value_try)
 
     if (!current) {
-      const { error: insertError } = await supabase.from('assets').insert(payload as never)
-      if (insertError) throw insertError
+      await insertGoldLedgerAsset(payload)
       inserted += 1
       continue
     }
 
     if (!differs(payload, current)) continue
     const updatePayload: UpdateFor<'assets'> = { ...payload, updated_at: new Date().toISOString() }
-    const { error: updateError } = await supabase
-      .from('assets')
-      .update(updatePayload as never)
-      .eq('id', current.id)
-
-    if (updateError) throw updateError
+    await updateGoldLedgerAsset(current.id, updatePayload)
     updated += 1
   }
 
   for (const asset of existing) {
     const type = goldTypeFromAsset(asset)
     if (!type || wantedTypes.has(type)) continue
-    const { error: deleteError } = await supabase.from('assets').delete().eq('id', asset.id)
-    if (deleteError) throw deleteError
+    await deleteGoldLedgerAsset(asset.id)
     deleted += 1
   }
 

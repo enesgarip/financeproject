@@ -1,6 +1,11 @@
-import { supabase } from '../lib/supabase'
 import { fetchStockPrices } from '../lib/stockQuotesClient'
-import type { Asset, Debt, SavingsGoal } from '../types/database'
+import {
+  fetchAutoValuedAssets,
+  fetchAutoValuedDebts,
+  fetchAutoValuedGoals,
+  persistEstimatedValues,
+  type EstimatedValueUpdate,
+} from '../data/repositories/valuationRepo'
 import type { MarketRatesSnapshot } from './marketRates'
 import { moneyDiffers } from './financeSummary'
 import { assetIsStock, valueAsset, valueStock, valueDebt, valueGoal } from './valuation'
@@ -12,8 +17,8 @@ import { assetIsStock, valueAsset, valueStock, valueDebt, valueGoal } from './va
  * Keeping the stored value fresh means every existing read path — dashboard net
  * worth, summaries, data-health, and server RPCs like `settle_personal_debt` —
  * stays correct without being rewired. Only auto-valued rows are touched, so
- * manual entries are never overwritten. RLS scopes all queries to the signed-in
- * user, so no explicit user filter is needed.
+ * manual entries are never overwritten. Data access lives in
+ * `data/repositories/valuationRepo`; this module is pure valuation + orchestration.
  */
 
 export type ValuationSyncResult = {
@@ -28,10 +33,8 @@ function changed(next: number, current: number | null | undefined): boolean {
 }
 
 async function syncAssets(snapshot: MarketRatesSnapshot): Promise<number> {
-  const { data, error } = await supabase.from('assets').select('*').eq('auto_valued', true)
-  if (error || !data) return 0
-
-  const rows = data as Asset[]
+  const rows = await fetchAutoValuedAssets()
+  if (rows.length === 0) return 0
 
   // Stocks are priced via the bist-quote edge function (one batched call).
   const stockRows = rows.filter(assetIsStock)
@@ -39,59 +42,42 @@ async function syncAssets(snapshot: MarketRatesSnapshot): Promise<number> {
     ? await fetchStockPrices(stockRows.map((asset) => asset.symbol!))
     : {}
 
-  const updates = rows
+  const updates: EstimatedValueUpdate[] = rows
     .map((asset) => ({
-      asset,
+      id: asset.id,
       value: assetIsStock(asset) ? valueStock(asset, stockPrices) : valueAsset(asset, snapshot),
+      current: asset.estimated_value_try,
     }))
-    .filter((entry): entry is { asset: Asset; value: number } => entry.value !== null && changed(entry.value, entry.asset.estimated_value_try))
+    .filter((entry) => entry.value !== null && changed(entry.value, entry.current))
+    .map(({ id, value }) => ({ id, value: value as number }))
 
-  await Promise.all(
-    updates.map(({ asset, value }) =>
-      supabase
-        .from('assets')
-        .update({ estimated_value_try: value, updated_at: new Date().toISOString() })
-        .eq('id', asset.id),
-    ),
-  )
+  await persistEstimatedValues('assets', updates)
   return updates.length
 }
 
 async function syncDebts(snapshot: MarketRatesSnapshot): Promise<number> {
-  const { data, error } = await supabase.from('debts').select('*').eq('auto_valued', true).eq('status', 'açık')
-  if (error || !data) return 0
+  const rows = await fetchAutoValuedDebts()
+  if (rows.length === 0) return 0
 
-  const updates = (data as Debt[])
-    .map((debt) => ({ debt, value: valueDebt(debt, snapshot) }))
-    .filter((entry): entry is { debt: Debt; value: number } => entry.value !== null && changed(entry.value, entry.debt.estimated_value_try))
+  const updates: EstimatedValueUpdate[] = rows
+    .map((debt) => ({ id: debt.id, value: valueDebt(debt, snapshot), current: debt.estimated_value_try }))
+    .filter((entry) => entry.value !== null && changed(entry.value, entry.current))
+    .map(({ id, value }) => ({ id, value: value as number }))
 
-  await Promise.all(
-    updates.map(({ debt, value }) =>
-      supabase
-        .from('debts')
-        .update({ estimated_value_try: value, updated_at: new Date().toISOString() })
-        .eq('id', debt.id),
-    ),
-  )
+  await persistEstimatedValues('debts', updates)
   return updates.length
 }
 
 async function syncGoals(snapshot: MarketRatesSnapshot): Promise<number> {
-  const { data, error } = await supabase.from('savings_goals').select('*').eq('auto_valued', true).eq('status', 'active')
-  if (error || !data) return 0
+  const rows = await fetchAutoValuedGoals()
+  if (rows.length === 0) return 0
 
-  const updates = (data as SavingsGoal[])
-    .map((goal) => ({ goal, value: valueGoal(goal, snapshot) }))
-    .filter((entry): entry is { goal: SavingsGoal; value: number } => entry.value !== null && changed(entry.value, entry.goal.estimated_value_try))
+  const updates: EstimatedValueUpdate[] = rows
+    .map((goal) => ({ id: goal.id, value: valueGoal(goal, snapshot), current: goal.estimated_value_try }))
+    .filter((entry) => entry.value !== null && changed(entry.value, entry.current))
+    .map(({ id, value }) => ({ id, value: value as number }))
 
-  await Promise.all(
-    updates.map(({ goal, value }) =>
-      supabase
-        .from('savings_goals')
-        .update({ estimated_value_try: value, updated_at: new Date().toISOString() })
-        .eq('id', goal.id),
-    ),
-  )
+  await persistEstimatedValues('savings_goals', updates)
   return updates.length
 }
 

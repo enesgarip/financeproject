@@ -20,7 +20,9 @@ export default defineConfig([
     },
   },
   {
-    files: ['src/{pages,components}/**/*.{ts,tsx}'],
+    // UI ve saf util/hook katmanları supabase'e doğrudan dokunamaz; tüm veri
+    // erişimi src/data (ve src/services RPC sarmalayıcıları) üzerinden gider.
+    files: ['src/{pages,components,utils,hooks}/**/*.{ts,tsx}'],
     rules: {
       'no-restricted-imports': [
         'error',
