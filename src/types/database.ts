@@ -478,6 +478,18 @@ export type Database = {
         }
         Returns: CardExpense
       }
+      record_card_installment_carryover: {
+        Args: {
+          p_card_id: string
+          p_description: string
+          p_installment_amount: number
+          p_total_installments: number
+          p_paid_installments: number
+          p_next_due_month: string
+          p_category?: string
+        }
+        Returns: CardExpense
+      }
       pay_loan_installment: {
         Args: {
           p_installment_id: string

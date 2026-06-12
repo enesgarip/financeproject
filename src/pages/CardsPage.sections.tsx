@@ -26,7 +26,7 @@ import { HelpTooltip, type HelpTooltipContent } from '../components/ui/help-tool
 import { Progress } from '../components/ui/progress'
 import { invalidateCategoryMemory, useCategoryMemory } from '../hooks/useCategoryMemory'
 import { supabase } from '../lib/supabase'
-import type { Card, CardExpense, CardExpenseStatus, CardInstallment, CardStatementArchive, InsertFor } from '../types/database'
+import type { Card, CardExpense, CardExpenseStatus, CardInstallment, CardStatementArchive } from '../types/database'
 import { expenseCategoryOptions } from '../utils/categories'
 import { getCardStatementPeriod } from '../utils/cardStatement'
 import { dateInputValue, daysUntil, formatDate, nextMonthlyDate } from '../utils/date'
@@ -37,7 +37,6 @@ import { bankBrandGradient, getBankBrand } from '../utils/bankBranding'
 import { cn, openNativePicker } from '../lib/utils'
 import { bankHueStyle, isSchemaCacheError, limitGroupKey, limitGroupStats, statementPeriodLabel } from './CardsPage.helpers'
 import { formatCurrency, parseNumber } from '../utils/formatCurrency'
-import { addTransactionHistory } from '../utils/history'
 import { parseReceiptImage } from '../lib/receiptParseClient'
 import { canCutCurrentStatement } from '../utils/statementCycle'
 
@@ -1148,8 +1147,6 @@ export function LegacyInstallmentPanel({
   const parsedPaidInstallments = Math.max(0, Math.min(parsedTotalInstallments - 1, parseInstallmentNumber(paidInstallments, 0)))
   const remainingCount = Math.max(1, parsedTotalInstallments - parsedPaidInstallments)
   const remainingAmount = Number((parsedInstallmentAmount * remainingCount).toFixed(2))
-  const totalAmount = Number((parsedInstallmentAmount * parsedTotalInstallments).toFixed(2))
-  const firstDueIsCurrentMonth = nextDueMonth === monthInputValue()
   const canSubmitLegacyInstallment =
     Boolean(selectedCard) &&
     parsedInstallmentAmount > 0 &&
@@ -1157,10 +1154,6 @@ export function LegacyInstallmentPanel({
     parsedPaidInstallments < parsedTotalInstallments &&
     isMonthValue(nextDueMonth) &&
     nextDueMonth >= monthInputValue()
-
-  async function rollbackExpense(expenseId: string) {
-    await supabase.from('card_expenses').delete().eq('id', expenseId)
-  }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -1196,87 +1189,23 @@ export function LegacyInstallmentPanel({
     setLocalError('')
     setError('')
 
-    const { data: expense, error: expenseError } = await supabase
-      .from('card_expenses')
-      .insert({
-        user_id: selectedCard.user_id,
-        card_id: selectedCard.id,
-        spent_at: addMonthsToMonth(nextDueMonth, -parsedPaidInstallments),
-        amount: totalAmount,
-        description: trimmedDescription,
-        category,
-        installment_count: parsedTotalInstallments,
-        installment_amount: parsedInstallmentAmount,
-        status: 'posted',
-        posted_at: new Date().toISOString(),
-        note: `${parsedPaidInstallments}/${parsedTotalInstallments} taksiti uygulama öncesinde ödendi.`,
-      })
-      .select()
-      .single()
-
-    if (expenseError || !expense) {
-      setSaving(false)
-      setLocalError(expenseError?.message ?? 'Taksit devri oluşturulamadı.')
-      return
-    }
-
-    const installments: InsertFor<'card_installments'>[] = Array.from({ length: remainingCount }, (_, index) => {
-      const installmentNo = parsedPaidInstallments + index + 1
-      const dueMonth = addMonthsToMonth(nextDueMonth, index)
-      const isCurrentMonth = dueMonth.slice(0, 7) === currentMonth
-
-      return {
-        user_id: selectedCard.user_id,
-        card_id: selectedCard.id,
-        card_expense_id: expense.id,
-        installment_no: installmentNo,
-        installment_count: parsedTotalInstallments,
-        due_month: dueMonth,
-        amount: parsedInstallmentAmount,
-        description: trimmedDescription,
-        category,
-        status: isCurrentMonth ? 'posted' : 'scheduled',
-        posted_at: isCurrentMonth ? new Date().toISOString() : null,
-        paid_at: null,
-        note: 'Uygulama öncesinden devreden taksit.',
-      }
+    // Tüm akış (harcama + taksit satırları + borç güncelleme + işlem geçmişi)
+    // tek transaction'da: record_card_installment_carryover RPC. cards.debt_amount
+    // değişimini A2 card_ledger trigger'ı aynı transaction'da olaya çevirir.
+    const { error: rpcError } = await supabase.rpc('record_card_installment_carryover', {
+      p_card_id: selectedCard.id,
+      p_description: trimmedDescription,
+      p_installment_amount: parsedInstallmentAmount,
+      p_total_installments: parsedTotalInstallments,
+      p_paid_installments: parsedPaidInstallments,
+      p_next_due_month: addMonthsToMonth(nextDueMonth, 0),
+      p_category: category,
     })
 
-    const { error: installmentError } = await supabase.from('card_installments').insert(installments)
-    if (installmentError) {
-      await rollbackExpense(expense.id)
+    if (rpcError) {
       setSaving(false)
-      setLocalError(installmentError.message)
+      setLocalError(rpcError.message)
       return
-    }
-
-    const { error: cardUpdateError } = await supabase
-      .from('cards')
-      .update({
-        debt_amount: selectedCard.debt_amount + remainingAmount,
-        current_period_spending: selectedCard.current_period_spending + (firstDueIsCurrentMonth ? parsedInstallmentAmount : 0),
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', selectedCard.id)
-
-    if (cardUpdateError) {
-      await rollbackExpense(expense.id)
-      setSaving(false)
-      setLocalError(cardUpdateError.message)
-      return
-    }
-
-    const historyError = await addTransactionHistory({
-      user_id: selectedCard.user_id,
-      type: 'card',
-      title: `${trimmedDescription} taksit devri`,
-      amount: remainingAmount,
-      source_table: 'card_expenses',
-      source_id: expense.id,
-      note: `${parsedPaidInstallments}/${parsedTotalInstallments} taksit ödenmiş; kalan ${remainingCount} taksit eklendi.`,
-    })
-    if (historyError) {
-      setError(`Devir eklendi, ancak işlem geçmişi yazılamadı: ${historyError.message}`)
     }
 
     invalidateCategoryMemory()
