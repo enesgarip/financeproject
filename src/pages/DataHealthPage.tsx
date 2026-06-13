@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
 import { LiveReconciliationPanel } from '../components/finance/LiveReconciliationPanel'
+import { NotificationSettings } from '../components/finance/NotificationSettings'
 import { SimpleModal } from '../components/SimpleModal'
 import {
   BACKUP_TABLE_LABELS,
@@ -560,6 +561,8 @@ export function DataHealthPage() {
       </SurfaceCard>
 
       {!loading && data.cards.length > 0 ? <LiveReconciliationPanel cards={data.cards} /> : null}
+
+      <NotificationSettings />
 
       {loading ? (
         <div className="skeleton-shimmer h-32 rounded-2xl" />

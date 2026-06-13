@@ -251,6 +251,18 @@ export type AccountLedger = BaseRow & {
   source_id: string | null
 }
 
+/**
+ * One Web Push subscription (roadmap Y1). The browser's PushManager output:
+ * `endpoint` + the two encryption keys (`p256dh`, `auth`). One row per device;
+ * the scheduled `push-notify` edge function reads these to send notifications.
+ */
+export type PushSubscription = BaseRow & {
+  endpoint: string
+  p256dh: string
+  auth: string
+  user_agent: string | null
+}
+
 export type ReconciliationTarget = 'balance' | 'debt'
 
 /**
@@ -339,6 +351,7 @@ export type Database = {
         WithBaseInsert<AccountReconciliation>,
         WithBaseUpdate<AccountReconciliation>
       >
+      push_subscriptions: Table<PushSubscription, WithBaseInsert<PushSubscription>, WithBaseUpdate<PushSubscription>>
       dismissed_upcoming_items: Table<
         DismissedUpcomingItem,
         Omit<DismissedUpcomingItem, 'id' | 'created_at'> & { id?: string; created_at?: string },
