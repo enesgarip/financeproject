@@ -4,6 +4,10 @@ Bu dosya, bu depoda çalışan AI ajanları (Claude Code, Codex vb.) için kalı
 bağlamdır. Amaç: temiz bir oturumun projenin kurallarını ve tuzaklarını sıfırdan
 keşfetmek zorunda kalmaması.
 
+Daha ayrıntılı ve görev bazlı okuma rotası için önce `docs/AI_CONTEXT_INDEX.md`
+dosyasını aç. Bu dosya kalıcı kuralları verir; index hangi domain dokümanını ve
+hangi kaynak dosyaları okuyacağını seçtirerek AI maliyetini düşürür.
+
 ## Proje
 
 Türkçe kişisel finans PWA'sı. Tek kullanıcı (sahibi = geliştirici). Stack:

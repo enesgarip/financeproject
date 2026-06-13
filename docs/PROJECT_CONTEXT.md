@@ -1,5 +1,8 @@
 # FinanceProject Project Context
 
+For AI/Codex sessions, start with `docs/AI_CONTEXT_INDEX.md` to choose the
+smallest relevant context path before reading this full project map.
+
 ## Purpose
 
 FinanceProject is a Turkish personal finance PWA for tracking:

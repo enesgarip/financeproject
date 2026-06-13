@@ -30,6 +30,7 @@
 ## P2 - UX / Maintainability
 
 - Add a concise developer-oriented architecture note for each major page.
+- Keep `docs/AI_CONTEXT_INDEX.md` current so future AI sessions can route to the right files with less repo scanning.
 - Reduce repeated money helper logic such as `roundMoney`, split-total helpers, and schema-cache checks.
 - Clarify where dashboard calculations belong versus page-local calculations.
 - Audit Turkish copy and encoding consistency across UI strings and docs.

@@ -4,6 +4,10 @@
 
 This guide tells future Codex sessions how to work in this repo with low re-explanation cost and low regression risk.
 
+For the cheapest routing map, read `docs/AI_CONTEXT_INDEX.md` first. This file
+explains working rules; the index tells you which deeper doc or code area to
+open for a specific task.
+
 ## Working Style for This Repo
 
 1. Read a small amount first.
@@ -16,6 +20,7 @@ This guide tells future Codex sessions how to work in this repo with low re-expl
 
 When starting a new task, usually inspect these first:
 
+- `docs/AI_CONTEXT_INDEX.md`
 - `src/App.tsx`
 - `src/types/database.ts`
 - `src/components/CrudPage.tsx`
