@@ -83,3 +83,18 @@ export function greaterThanTL(a: number | null | undefined, b: number | null | u
 export function diffTL(a: number | null | undefined, b: number | null | undefined): number {
   return toTL(subKurus(toKurus(a), toKurus(b)))
 }
+
+/**
+ * a, b'yi `toleranceKurus` kuruştan FAZLA aşıyorsa true. Dağınık `a > b + 0.01`
+ * float guard'larının kesin (kuruş) karşılığı: float toz/çıkarma yok ama 1-kuruşluk
+ * grace korunur (badge davranışı birebir aynı). Yön ÖNEMLİ — `equalsTL`/`diffTL`
+ * simetrik, bu değil. Sıfırla karşılaştırma için `exceedsTL(x, 0)`.
+ * `moneyDiffers` (financeSummary) ile aynı 1-kuruş toleransı, yönlü hâli.
+ */
+export function exceedsTL(
+  a: number | null | undefined,
+  b: number | null | undefined,
+  toleranceKurus = 1,
+): boolean {
+  return subKurus(toKurus(a), toKurus(b)) > toleranceKurus
+}

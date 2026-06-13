@@ -1,5 +1,6 @@
 import type { Budget, CardExpense } from '../types/database'
 import { dateInputValue, isDateInMonth, startOfMonth } from './date'
+import { exceedsTL } from './money'
 
 export type BudgetAlertStatus = 'over' | 'warning' | 'ok'
 
@@ -41,7 +42,7 @@ export function buildBudgetUsage(budgets: Budget[], expenses: CardExpense[], mon
     const usageRate = budget.limit_amount > 0 ? (spent / budget.limit_amount) * 100 : spent > 0 ? 100 : 0
     let status: BudgetAlertStatus = 'ok'
 
-    if (spent > budget.limit_amount + 0.01) status = 'over'
+    if (exceedsTL(spent, budget.limit_amount)) status = 'over'
     else if (usageRate >= 80) status = 'warning'
 
     return {

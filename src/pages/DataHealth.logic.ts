@@ -21,6 +21,7 @@ import { ledgerDrift, projectCardDebt, type CardLedgerEvent } from '../utils/car
 import { dateInputValue, formatDate } from '../utils/date'
 import { cardProvisionAmount, cardSplitTotal, clampCardBreakdown, expectedInstallmentAmount, moneyDiffers, projectLoanSummary, roundMoney } from '../utils/financeSummary'
 import { formatCurrency } from '../utils/formatCurrency'
+import { exceedsTL } from '../utils/money'
 import { formatComponentAmount, formatSavingsGoalAmount, savingsGoalValueTypeLabel } from '../utils/savingsGoal'
 import { isMissingSupabaseCapabilityError } from '../utils/supabaseErrors'
 
@@ -791,7 +792,7 @@ export function buildIssues(data: HealthData): HealthIssue[] {
     const splitTotal = cardSplitTotal(card.statement_debt_amount, card.current_period_spending, cardProvisionAmount(card))
     const scheduledTotal = scheduledInstallmentsByCard.get(card.id) ?? 0
 
-    if (scheduledTotal > 0.01 && card.debt_amount <= splitTotal + 0.01) {
+    if (exceedsTL(scheduledTotal, 0) && !exceedsTL(card.debt_amount, splitTotal)) {
       const nextDebtAmount = roundMoney(card.debt_amount + scheduledTotal)
 
       issues.push({
@@ -812,14 +813,14 @@ export function buildIssues(data: HealthData): HealthIssue[] {
       })
     }
 
-    if (card.debt_amount > splitTotal + 0.01) {
+    if (exceedsTL(card.debt_amount, splitTotal)) {
       const unclassifiedAmount = roundMoney(card.debt_amount - splitTotal)
       const unexplained = roundMoney(unclassifiedAmount - Math.min(unclassifiedAmount, scheduledTotal))
       const hasInstallmentExpenses = data.cardExpenses.some(
         (expense) => expense.card_id === card.id && expense.status === 'posted' && expense.installment_count > 1,
       )
 
-      if (unexplained > 0.01) {
+      if (exceedsTL(unexplained, 0)) {
         issues.push({
           id: `card-unclassified-debt-${card.id}`,
           area: 'Kartlar',
@@ -834,7 +835,7 @@ export function buildIssues(data: HealthData): HealthIssue[] {
             `Ekstre + dönem + provizyon: ${formatCurrency(splitTotal)}`,
             scheduledTotal > 0 ? `Planlı taksit (beklenen fark): ${formatCurrency(scheduledTotal)}` : null,
             `Düzeltilmesi gereken: ${formatCurrency(unexplained)}`,
-            hasInstallmentExpenses && scheduledTotal <= 0.01
+            hasInstallmentExpenses && !exceedsTL(scheduledTotal, 0)
               ? 'Taksitli harcama var ama plan satırı eksik olabilir; eksik taksit uyarılarına da bak.'
               : null,
           ].filter((item): item is string => Boolean(item)),
@@ -955,7 +956,7 @@ export function buildIssues(data: HealthData): HealthIssue[] {
   for (const [key, groupCards] of creditGroups) {
     const limit = Math.max(...groupCards.map((card) => card.credit_limit), 0)
     const debt = groupCards.reduce((total, card) => total + card.debt_amount, 0)
-    if (limit > 0 && debt > limit + 0.01) {
+    if (limit > 0 && exceedsTL(debt, limit)) {
       issues.push({
         id: `card-limit-over-${key}`,
         area: 'Kartlar',
@@ -1325,7 +1326,7 @@ export function buildIssues(data: HealthData): HealthIssue[] {
       })
     }
 
-    if (loan.remaining_amount > loan.total_amount + 0.01) {
+    if (exceedsTL(loan.remaining_amount, loan.total_amount)) {
       issues.push({
         id: `loan-remaining-over-total-${loan.id}`,
         area: 'Krediler',

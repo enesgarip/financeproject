@@ -9,6 +9,7 @@ import type {
   SalaryHistory,
 } from '../types/database'
 import { daysUntil } from './date'
+import { exceedsTL } from './money'
 import type { DashboardUpcomingItem } from './dashboardUpcoming'
 import {
   cardProvisionAmount,
@@ -134,19 +135,19 @@ export function buildFocusActions(
   }
 
   const cardSplitIssues = creditCards.filter(
-    (card) => cardSplitTotal(card.statement_debt_amount, card.current_period_spending, cardProvisionAmount(card)) > card.debt_amount + 0.01,
+    (card) => exceedsTL(cardSplitTotal(card.statement_debt_amount, card.current_period_spending, cardProvisionAmount(card)), card.debt_amount),
   )
   const cardScheduledDebtIssues = creditCards.filter((card) => {
     const splitTotal = cardSplitTotal(card.statement_debt_amount, card.current_period_spending, cardProvisionAmount(card))
     const scheduledTotal = scheduledInstallmentsByCard.get(card.id) ?? 0
-    return scheduledTotal > 0.01 && card.debt_amount <= splitTotal + 0.01
+    return exceedsTL(scheduledTotal, 0) && !exceedsTL(card.debt_amount, splitTotal)
   })
   const unclassifiedCardDebts = creditCards.filter((card) => {
     const splitTotal = cardSplitTotal(card.statement_debt_amount, card.current_period_spending, cardProvisionAmount(card))
     const scheduledTotal = scheduledInstallmentsByCard.get(card.id) ?? 0
     const unclassifiedAmount = roundMoney(card.debt_amount - splitTotal)
     const unexplainedAmount = roundMoney(unclassifiedAmount - Math.min(unclassifiedAmount, scheduledTotal))
-    return unexplainedAmount > 0.01
+    return exceedsTL(unexplainedAmount, 0)
   })
   const cardsWithProvisions = creditCards.filter((card) => cardProvisionAmount(card) > 0)
   const totalProvision = sum(cardsWithProvisions, cardProvisionAmount)

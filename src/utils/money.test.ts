@@ -3,6 +3,7 @@ import {
   addKurus,
   diffTL,
   equalsTL,
+  exceedsTL,
   greaterThanTL,
   roundTL,
   subKurus,
@@ -120,5 +121,37 @@ describe('greaterThanTL / diffTL', () => {
     expect(diffTL(100.3, 100)).toBe(0.3)
     expect(diffTL(0.1 + 0.2, 0.3)).toBe(0)
     expect(diffTL(50, 75.5)).toBe(-25.5)
+  })
+})
+
+describe('exceedsTL (+0.01 tolerance guard replacement)', () => {
+  it('keeps the 1-kuruş grace: fires only when a exceeds b by ≥ 2 kuruş', () => {
+    // eski `a > b + 0.01` davranışı birebir
+    expect(exceedsTL(100.02, 100)).toBe(true) // 2 kuruş fazla → uyar
+    expect(exceedsTL(100.01, 100)).toBe(false) // 1 kuruş grace içinde
+    expect(exceedsTL(100, 100)).toBe(false)
+    expect(exceedsTL(99.99, 100)).toBe(false)
+  })
+
+  it('is directional, unlike equalsTL/diffTL', () => {
+    expect(exceedsTL(100, 100.02)).toBe(false)
+    expect(exceedsTL(100.02, 100)).toBe(true)
+  })
+
+  it('compares against zero for ">0.01" style guards', () => {
+    expect(exceedsTL(0.02, 0)).toBe(true)
+    expect(exceedsTL(0.01, 0)).toBe(false) // grace
+    expect(exceedsTL(0, 0)).toBe(false)
+  })
+
+  it('removes float dust from the comparison', () => {
+    // 0.1 + 0.2 = 0.30000000000000004; çıplak `> 0.3 + 0.01` davranışı kuruşta kesin
+    expect(exceedsTL(0.1 + 0.2, 0.3)).toBe(false)
+  })
+
+  it('honours an explicit tolerance and nullish operands', () => {
+    expect(exceedsTL(100.05, 100, 0)).toBe(true) // 0 tolerans = greaterThanTL gibi
+    expect(exceedsTL(null, null)).toBe(false)
+    expect(exceedsTL(0.05, null)).toBe(true)
   })
 })

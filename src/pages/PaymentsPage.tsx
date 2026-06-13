@@ -30,6 +30,7 @@ import type {
 } from '../types/database'
 import { daysUntil, formatDate } from '../utils/date'
 import { formatCurrency, parseNumber } from '../utils/formatCurrency'
+import { exceedsTL } from '../utils/money'
 import { getLastUsed, resolvePreferred, setLastUsed } from '../utils/lastUsed'
 import { paymentCashOutflowAmount, paymentUsesCreditCard } from '../utils/financeSummary'
 import type { FinanceObligation, FinanceObligationsInput } from '../utils/obligations'
@@ -490,7 +491,7 @@ export function PaymentsPage() {
         successAction={obligationToPay?.action === 'collect_debt' || obligationToPay?.action === 'pay_card_statement'}
         info={obligationToPay?.action === 'pay_card_statement' ? 'Bu ekstre kapandığında ekstreye bağlı kredi kartı taksitleri otomatik ödenmiş olur.' : null}
         validate={({ amount }) => {
-          if (obligationToPay?.action === 'pay_card_debt' && amount > obligationToPay.amount + 0.01) {
+          if (obligationToPay?.action === 'pay_card_debt' && exceedsTL(amount, obligationToPay.amount)) {
             return 'Ödeme tutarı ödenebilir kart borcundan büyük olamaz.'
           }
           return null
