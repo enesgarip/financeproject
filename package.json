@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:local": "node scripts/dev-local.mjs",
+    "dev:local:stop": "supabase stop",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
@@ -16,6 +18,7 @@
     "docker:preview": "docker compose -f docker-compose.ci.yml up --build app",
     "db:lint:local": "supabase db lint --local --fail-on error",
     "db:reset:local": "supabase db reset --local --no-seed",
+    "db:seed:local": "supabase db reset --local",
     "ci:local": "npm exec -- eslint . && npm exec -- tsc -b && npm exec -- vitest run && npm exec -- vite build && npm exec -- playwright test"
   },
   "dependencies": {
