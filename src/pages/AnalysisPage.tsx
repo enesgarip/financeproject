@@ -33,6 +33,7 @@ import { activeExpense as activeCardExpense, buildBudgetUsage } from '../utils/b
 import { useMarketRates } from '../hooks/useMarketRates'
 import { type MarketRatesSnapshot } from '../utils/marketRates'
 import { convertNetWorth, formatRealValue, realValueChangeBadge, type RealUnit, REAL_UNIT_LABELS } from '../utils/realValue'
+import { selectNetWorthSeries, type NetWorthRange } from '../utils/netWorthSeries'
 import { applyScenario, type ScenarioMutation } from '../utils/scenarioForecast'
 import { buildPriceObservations, detectPriceIncreases, type PriceTrend } from '../utils/priceIncreaseRadar'
 import { computeFire, estimateMonthlySavingsFromNetWorth } from '../utils/fire'
@@ -1037,6 +1038,13 @@ function NetWorthTrend({
   ratesSnapshot: MarketRatesSnapshot | null
 }) {
   const [unit, setUnit] = useState<RealUnit>('TRY')
+  const [range, setRange] = useState<NetWorthRange>('90d')
+  const { series: derived, aggregated } = useMemo(
+    () => selectNetWorthSeries(snapshots, range, new Date()),
+    [snapshots, range],
+  )
+  // Seçilen aralıkta <2 nokta varsa (ör. yeni veri) tüm seriye düş.
+  const view = derived.length >= 2 ? derived : snapshots
 
   if (snapshots.length < 2) {
     return (
@@ -1054,8 +1062,8 @@ function NetWorthTrend({
     )
   }
 
-  const latest = snapshots.at(-1)!
-  const first = snapshots[0]!
+  const latest = snapshots.at(-1)! // Güncel = gerçek son değer (aralıktan bağımsız)
+  const first = view[0]!
   const spansDifferentYears = new Date(first.snapshot_date).getFullYear() !== new Date(latest.snapshot_date).getFullYear()
 
   // Current rates for stat pills (always use live rates for "güncel" display)
@@ -1089,15 +1097,15 @@ function NetWorthTrend({
     return spansDifferentYears ? `${month} '${String(d.getFullYear()).slice(2)}` : `${d.getDate()} ${month}`
   }
 
-  const barData: BarDataPoint[] = snapshots.map((s) => ({
+  const barData: BarDataPoint[] = view.map((s) => ({
     label: snapshotLabel(s),
     value: convertSnapshot(s) ?? 0,
   }))
 
   const latestConverted = convertNetWorth(latest.net_worth, unit, currentRates)
   const firstConverted = convertNetWorth(first.net_worth, unit, snapshotRates(first))
-  const minSnap = snapshots.reduce((a, b) => (b.net_worth < a.net_worth ? b : a))
-  const maxSnap = snapshots.reduce((a, b) => (b.net_worth > a.net_worth ? b : a))
+  const minSnap = view.reduce((a, b) => (b.net_worth < a.net_worth ? b : a))
+  const maxSnap = view.reduce((a, b) => (b.net_worth > a.net_worth ? b : a))
 
   const changeTry = latest.net_worth - first.net_worth
   const changeBadge =
@@ -1117,12 +1125,34 @@ function NetWorthTrend({
           <div>
             <CardTitle>Net değer trendi</CardTitle>
             <p className="mt-1 text-sm text-muted-foreground">
-              Son {snapshots.length} gün · günlük otomatik anlık görüntü.
+              {aggregated
+                ? `${view.length} ay · aylık (ay sonu) görünüm.`
+                : `Son ${view.length} gün · günlük otomatik anlık görüntü.`}
             </p>
           </div>
           {changeBadge ? (
             <Badge variant={changeTry >= 0 ? 'success' : 'destructive'}>{changeBadge}</Badge>
           ) : null}
+        </div>
+        {/* Range toggle (roadmap Y7) */}
+        <div className="mt-2 flex gap-1">
+          {([
+            ['90d', '90 gün'],
+            ['1y', '1 yıl'],
+            ['all', 'Tümü'],
+          ] as [NetWorthRange, string][]).map(([r, label]) => (
+            <button
+              key={r}
+              onClick={() => setRange(r)}
+              className={[
+                'rounded-lg px-2.5 py-1 text-xs font-medium transition-colors',
+                range === r ? 'bg-primary text-primary-foreground' : 'bg-muted/60 text-muted-foreground hover:bg-muted',
+              ].join(' ')}
+              aria-label={`Net değer trendini ${label} aralığında göster`}
+            >
+              {label}
+            </button>
+          ))}
         </div>
         {/* Unit toggle */}
         <div className="mt-2 flex gap-1">

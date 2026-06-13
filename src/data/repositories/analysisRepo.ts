@@ -6,7 +6,9 @@ import { ok, resultFromSupabase, voidResultFromSupabase, type Result } from '../
 
 export const PRICE_RADAR_MONTHS = 13
 
-const NET_WORTH_SNAPSHOT_LIMIT = 90
+// Çok-yıllık trend için (roadmap Y7): istemci uzun aralıkları aylık agrege eder
+// (utils/netWorthSeries). ~4 yıl günlük snapshot tek kullanıcı için ucuz.
+const NET_WORTH_SNAPSHOT_LIMIT = 1500
 
 export type NetWorthSnapshotInput = {
   netWorth: number
