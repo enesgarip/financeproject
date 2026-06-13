@@ -45,6 +45,9 @@ export type FireResult = {
 const MAX_MONTHS = 1200 // 100 yıllık üst sınır — sonsuz döngüyü engeller
 const FALLBACK_HORIZON = 360 // ulaşılamayınca grafiğin gösterileceği 30 yıllık ufuk
 
+// Kasıtlı olarak money.ts DEĞİL: bunlar ledger'a girmeyen, on yıllar sonrasına
+// dönük spekülatif projeksiyon/yüzde değerleri; yuvarlama yalnız grafik için
+// kozmetik. roundTL'e bağlama (Faz C: para değil, display precision).
 function round(value: number): number {
   return Math.round(value * 100) / 100
 }

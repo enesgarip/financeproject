@@ -20,6 +20,7 @@ export type RealRates = {
 export function tryToGoldGrams(tryAmount: number, goldTryRate: number | null | undefined): number | null {
   if (!Number.isFinite(tryAmount)) return null
   if (!goldTryRate || !Number.isFinite(goldTryRate) || goldTryRate <= 0) return null
+  // Sonuç gram (TL değil) — money.ts'e bağlama; bu birim dönüşümü/display precision (Faz C).
   return Math.round((tryAmount / goldTryRate) * 100) / 100
 }
 
@@ -27,6 +28,7 @@ export function tryToGoldGrams(tryAmount: number, goldTryRate: number | null | u
 export function tryToUsd(tryAmount: number, usdTryRate: number | null | undefined): number | null {
   if (!Number.isFinite(tryAmount)) return null
   if (!usdTryRate || !Number.isFinite(usdTryRate) || usdTryRate <= 0) return null
+  // Sonuç USD (TL değil) — money.ts'e bağlama; birim dönüşümü/display precision (Faz C).
   return Math.round((tryAmount / usdTryRate) * 100) / 100
 }
 

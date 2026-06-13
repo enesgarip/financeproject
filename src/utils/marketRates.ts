@@ -223,6 +223,7 @@ export function isSnapshotStale(
   return age > maxHours
 }
 
+// Kur değeri yuvarlaması (para değil) — money.ts'e bağlama; rate precision (Faz C).
 function round2(value: number) {
   return Math.round((value + Number.EPSILON) * 100) / 100
 }

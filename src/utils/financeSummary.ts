@@ -105,6 +105,8 @@ export function sum<T>(rows: T[], selector: (row: T) => number) {
   return rows.reduce((total, row) => total + selector(row), 0)
 }
 
+// Domain-anlamlı alias: TL para toplamları için kanonik roundTL'e delege eder
+// (Faz C: float sorunu çözülü). Yeni kod doğrudan roundTL de çağırabilir.
 export function roundMoney(value: number) {
   return roundTL(value)
 }

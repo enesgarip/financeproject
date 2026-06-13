@@ -37,6 +37,7 @@ export type GoldTypeSummary = {
   avgUnitCost: number | null
 }
 
+// Gram altın miktarı (TL değil), 4 hane — money.ts'e bağlama; miktar precision (Faz C).
 function round4(value: number): number {
   return Math.round((value + Number.EPSILON) * 10000) / 10000
 }
