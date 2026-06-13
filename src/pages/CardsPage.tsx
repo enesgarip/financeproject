@@ -24,15 +24,15 @@ import { formatCurrency, parseNumber } from '../utils/formatCurrency'
 import {
   AccountHubPanel,
   CardSectionNav,
-  CreditAccountListCard,
   CreditCardOverview,
   DueStatementAutomation,
-  LegacyInstallmentPanel,
   ProvisionPanel,
   StatementPanel,
   type CardSection,
 } from './CardsPage.sections'
 import { QuickExpensePanel } from './CardsPage.expense'
+import { CreditAccountListCard } from './CardsPage.list'
+import { LegacyInstallmentPanel } from './CardsPage.installment'
 import {
   bankHueStyle,
   cardGroupLabel,
