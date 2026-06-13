@@ -44,5 +44,5 @@
 
 1. Add targeted tests for `cardStatement`, `budgetAlerts`, and savings goal progress.
 2. Extract reusable card math helpers from page files into a single domain utility.
-3. Map all Supabase RPCs to user-visible actions in a short reference doc.
+3. Keep `docs/RPC_ACTION_REFERENCE.md` aligned when Supabase RPCs or user-visible actions change.
 4. Create a small migration compatibility checklist for releases.

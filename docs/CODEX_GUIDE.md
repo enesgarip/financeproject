@@ -65,6 +65,7 @@ Example:
   - migration/schema
 - For card, loan, debt, and payment flows, verify side effects on dashboard and data health views.
 - If a change affects table shape or RPC contracts, check `src/types/database.ts` and migrations together.
+- If a change affects an RPC-backed user action, update `docs/RPC_ACTION_REFERENCE.md`.
 - If a bug touches card debt math, also review:
   - `docs/CARD_DEBT_TRANSITIONS.md`
   - `statement_debt_amount`
