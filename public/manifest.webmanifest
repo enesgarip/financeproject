@@ -8,6 +8,29 @@
   "orientation": "portrait",
   "start_url": "/",
   "scope": "/",
+  "shortcuts": [
+    {
+      "name": "Harcama ekle",
+      "short_name": "Harcama",
+      "description": "Kart harcaması gir",
+      "url": "/kartlar?section=islemler",
+      "icons": [{ "src": "/pwa-192x192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Planlı ödemeler",
+      "short_name": "Ödemeler",
+      "description": "Yaklaşan ödeme ve yükümlülükler",
+      "url": "/odemeler",
+      "icons": [{ "src": "/pwa-192x192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Analiz",
+      "short_name": "Analiz",
+      "description": "Net değer ve nakit akışı analizi",
+      "url": "/analiz",
+      "icons": [{ "src": "/pwa-192x192.png", "sizes": "192x192", "type": "image/png" }]
+    }
+  ],
   "icons": [
     {
       "src": "/icon.svg",
