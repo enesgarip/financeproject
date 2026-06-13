@@ -18,7 +18,7 @@ FinanceProject is a Turkish personal finance PWA for tracking:
 
 The main product goal is to make monthly financial load visible before due dates are missed.
 
-> Kanonik kurallar `CLAUDE.md`'de, dosya haritası `docs/NAVIGATION_MAP.md`'de.
+> Kanonik kurallar `CLAUDE.md`'de, dosya haritası `docs/AI_CONTEXT_INDEX.md`'de.
 > Bu dosya domain + tablo + route haritasını tutar.
 
 ## Current Tech Stack
@@ -124,7 +124,7 @@ The app has several planning-oriented layers already in place:
 ## Key Utilities
 
 Para çekirdeği `src/utils/money.ts` (zorunlu — bkz. "Para modeli"). Konuya göre
-util ↔ repo ↔ sayfa eşlemesinin **tam ve güncel listesi** `docs/NAVIGATION_MAP.md`
+util ↔ repo ↔ sayfa eşlemesinin **tam ve güncel listesi** `docs/AI_CONTEXT_INDEX.md`
 tablosundadır; burada tekrarlamak drift yaratır.
 
 ## Route Model

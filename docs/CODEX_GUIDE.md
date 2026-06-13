@@ -2,7 +2,7 @@
 
 > **Kurallar burada değil.** Kanonik kural seti `CLAUDE.md`, giriş noktası kök
 > `AGENTS.md`. Görev bazlı en ucuz okuma rotası `docs/AI_CONTEXT_INDEX.md`; hızlı
-> task→dosya tablosu `docs/NAVIGATION_MAP.md`. Bu dosya yalnız Codex'e **iyi task
+> task→dosya tablosu da onun içinde. Bu dosya yalnız Codex'e **iyi task
 > nasıl verilir** + oturum disiplinini anlatır. (Eski sürümdeki "money 2 ondalık"
 > ve "frontend-only CRUD" bilgisi yanlıştı; artık `money.ts` + ledger/kuruş ve
 > katmanlı mimari geçerli — `AGENTS.md`'e bak.)
@@ -10,8 +10,7 @@
 ## Bir task'a başlarken
 
 1. `AGENTS.md`'deki 5 kritik kuralı içselleştir.
-2. `docs/AI_CONTEXT_INDEX.md` veya `docs/NAVIGATION_MAP.md`'den konunun dosyalarını
-   bul — grep ile keşif turu atma.
+2. `docs/AI_CONTEXT_INDEX.md`'den konunun dosyalarını bul — grep ile keşif turu atma.
 3. Az oku, mevcut deseni kopyala, edit'i dar tut.
 
 ## İyi task çerçevesi (kullanıcı verirken)
@@ -29,7 +28,7 @@ değiştirme. Migration yapma.`
 ## Bitirmeden önce kontrol listesi
 
 1. Route / util / `src/types/database.ts` / migration hâlâ hizalı mı? Yeni
-   repository/sayfa eklediysen `docs/NAVIGATION_MAP.md`'i güncelle, dosya
+   repository/sayfa eklediysen `docs/AI_CONTEXT_INDEX.md`'i güncelle, dosya
    taşıdıysan docs referansını düzelt (`docs.guard.test.ts` CI'da zorlar).
 2. Finans değişikliğiyse dashboard yan etkisi?
 3. Türetilmiş toplam değiştiyse veri sağlığı (`DataHealthPage`) yan etkisi?

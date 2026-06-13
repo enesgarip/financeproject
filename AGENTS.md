@@ -8,11 +8,11 @@
 
 **Kanonik kural seti `CLAUDE.md`'dir** (proje kökünde). Tam mimari, para modeli,
 ledger invariant'ları ve deploy hattı orada. Bir task'a başlamadan önce `CLAUDE.md`'i
-ve aşağıdaki navigation map'i oku — bu ikisi keşif turunu (grep fan-out) ortadan kaldırır.
+ve `docs/AI_CONTEXT_INDEX.md`'i oku — bu ikisi keşif turunu (grep fan-out) ortadan kaldırır.
 
 İkincil bağlam (yalnız gerektiğinde aç, baştan okuma):
+- `docs/AI_CONTEXT_INDEX.md` — görev rotası + "şu işi yapacaksan şu dosyalara bak" tablosu
 - `docs/PROJECT_CONTEXT.md` — domain + tablo + route haritası
-- `docs/NAVIGATION_MAP.md` — "şu işi yapacaksan şu dosyalara bak" tablosu
 - `docs/FINANCE_RULES.md` — finansal iş kuralları
 - `docs/KNOWN_RISKS.md` — bilinen tuzaklar
 - `docs/PIPELINE.md` — CI/deploy detayı

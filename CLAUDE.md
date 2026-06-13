@@ -6,14 +6,14 @@ keşfetmek zorunda kalmaması.
 
 **Bu dosya kanonik kural setidir.** Eşlik eden dosyalar:
 `AGENTS.md` (Codex giriş noktası — bu dosyaya yönlendirir + 5 kritik kuralı yineler),
-`docs/AI_CONTEXT_INDEX.md` (görev bazlı en ucuz okuma rotası: hangi domain dokümanı/
-kaynak dosya), `docs/NAVIGATION_MAP.md` (hızlı task → dosya tablosu),
+`docs/AI_CONTEXT_INDEX.md` (görev bazlı en ucuz okuma rotası + konu→dosya tablosu;
+keşif turu atmamak için **önce buna bak**),
 `docs/PROJECT_CONTEXT.md` (domain + tablo + route haritası).
 
 **Doküman güncel tutma kuralı:** Yeni `data/repositories/*` veya route sayfası
-(`*Page.tsx`/`*Hub.tsx`) eklediysen `docs/NAVIGATION_MAP.md`'e satır ekle. Dosya
-taşıdıysan/sildiysen docs'taki referansını güncelle. Bunu CI'da
-`docs.guard.test.ts` zorlar (kırık pointer + eksik harita = kırmızı).
+(`*Page.tsx`/`*Hub.tsx`) eklediysen `docs/AI_CONTEXT_INDEX.md`'in konu→dosya
+tablosuna satır ekle. Dosya taşıdıysan/sildiysen docs'taki referansını güncelle.
+Bunu CI'da `docs.guard.test.ts` zorlar (kırık pointer + eksik harita = kırmızı).
 
 ## Proje
 

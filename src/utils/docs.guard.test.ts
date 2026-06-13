@@ -11,7 +11,7 @@ import { describe, expect, it } from 'vitest'
  *   1. Broken-pointer guard — every concrete `*.ts/.tsx/.sql` path referenced in
  *      the curated docs must exist on disk.
  *   2. Structural-coverage guard — every repository and route-level page must be
- *      named in NAVIGATION_MAP.md, so new data/UI surfaces get a map entry.
+ *      named in AI_CONTEXT_INDEX.md, so new data/UI surfaces get a map entry.
  *
  * Scope is the curated navigation set only (the docs whose whole job is correct
  * pointers). Narrative/historical docs (BACKLOG, KNOWN_RISKS, ...) are out of
@@ -32,7 +32,7 @@ const fileSet = new Set(
 const CURATED = new Set([
   '/AGENTS.md',
   '/CLAUDE.md',
-  '/docs/NAVIGATION_MAP.md',
+  '/docs/AI_CONTEXT_INDEX.md',
   '/docs/PROJECT_CONTEXT.md',
   '/docs/CODEX_GUIDE.md',
   '/docs/PIPELINE.md',
@@ -45,7 +45,7 @@ const docs: Record<string, string> = Object.fromEntries(
 )
 
 const KNOWN_EXT = ['.ts', '.tsx', '.sql']
-// Bare layer prefixes used in NAVIGATION_MAP's table resolve under `src/`.
+// Bare layer prefixes used in the index's konu→dosya table resolve under `src/`.
 const SRC_PREFIXES = ['utils/', 'pages/', 'components/', 'data/', 'services/', 'app/', 'lib/', 'auth/', 'types/', 'hooks/']
 
 /** Pull backtick-wrapped tokens that name a concrete source file. */
@@ -86,8 +86,8 @@ describe('AI-context docs guard', () => {
     expect(broken).toEqual([])
   })
 
-  it('names every repository and route-level page in NAVIGATION_MAP.md', () => {
-    const navMap = docs['/docs/NAVIGATION_MAP.md'] ?? ''
+  it('names every repository and route-level page in AI_CONTEXT_INDEX.md', () => {
+    const navMap = docs['/docs/AI_CONTEXT_INDEX.md'] ?? ''
     expect(navMap.length).toBeGreaterThan(0)
 
     // Route-level pages = *Page.tsx / *Hub.tsx (helper/section splits excluded).
