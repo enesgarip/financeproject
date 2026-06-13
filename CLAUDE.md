@@ -4,9 +4,16 @@ Bu dosya, bu depoda çalışan AI ajanları (Claude Code, Codex vb.) için kalı
 bağlamdır. Amaç: temiz bir oturumun projenin kurallarını ve tuzaklarını sıfırdan
 keşfetmek zorunda kalmaması.
 
-Daha ayrıntılı ve görev bazlı okuma rotası için önce `docs/AI_CONTEXT_INDEX.md`
-dosyasını aç. Bu dosya kalıcı kuralları verir; index hangi domain dokümanını ve
-hangi kaynak dosyaları okuyacağını seçtirerek AI maliyetini düşürür.
+**Bu dosya kanonik kural setidir.** Eşlik eden dosyalar:
+`AGENTS.md` (Codex giriş noktası — bu dosyaya yönlendirir + 5 kritik kuralı yineler),
+`docs/AI_CONTEXT_INDEX.md` (görev bazlı en ucuz okuma rotası: hangi domain dokümanı/
+kaynak dosya), `docs/NAVIGATION_MAP.md` (hızlı task → dosya tablosu),
+`docs/PROJECT_CONTEXT.md` (domain + tablo + route haritası).
+
+**Doküman güncel tutma kuralı:** Yeni `data/repositories/*` veya route sayfası
+(`*Page.tsx`/`*Hub.tsx`) eklediysen `docs/NAVIGATION_MAP.md`'e satır ekle. Dosya
+taşıdıysan/sildiysen docs'taki referansını güncelle. Bunu CI'da
+`docs.guard.test.ts` zorlar (kırık pointer + eksik harita = kırmızı).
 
 ## Proje
 

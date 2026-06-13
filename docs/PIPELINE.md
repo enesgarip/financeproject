@@ -1,17 +1,19 @@
 # Development and Deploy Pipeline
 
+> Kanonik özet `CLAUDE.md`'de. Bu dosya CI/deploy detayını tutar.
+
 ## Goal
 
-This pipeline keeps the FinanceProject workflow simple:
+Gerçek akış: **`main`'e push = üretim deploy.** Push yalnız kullanıcı isteyince yapılır.
 
-1. develop on a feature branch
-2. run local quality checks
-3. push to GitHub
-4. open PR
-5. let GitHub Actions validate app + migrations
-6. merge to `main`
-7. apply Supabase migrations
-8. trigger Vercel production deploy hook
+1. çalış (genelde `main`, gerekirse feature branch)
+2. yerel kalite kontrolü: `npm run lint && npm run test:unit && npm run build`
+3. migration/trigger değiştiyse yerel Postgres'te doğrula (`npm run db:seed:local`)
+4. commit (Türkçe + faz/madde etiketli)
+5. `main`'e push → `deploy.yml` otomatik çalışır (aşağı bak)
+
+PR akışı (feature branch → PR → CI → merge) opsiyoneldir; `ci.yml` PR'larda ve
+aktif geliştirme dallarında koşar.
 
 ## Local Commands
 
@@ -50,10 +52,15 @@ Runs on push to `main` or manual dispatch.
 
 Order:
 
-1. link to the production Supabase project
-2. dry-run migrations
-3. apply pending migrations
-4. trigger Vercel deploy hook
+1. **Detect** — migration değişti mi? (değişmediyse backup atlanır, frontend yine deploy olur)
+2. **Pre-migration backup** — şifreli DB yedeği (yalnız migration varsa)
+3. **Migration** — `supabase db push` + edge functions deploy (`bist-quote`, `parse-receipt`)
+4. **Vercel** — frontend deploy hook
+
+Ek otomasyon:
+- `ci.yml`: Lint+Build (required), Playwright smoke, Supabase Migration Check, RLS denetimi.
+- Dependabot patch/minor PR'larını CI yeşilse otomatik squash-merge eder (major elde kalır).
+- Günlük şifreli DB yedeği cron'u (`db-backup.yml`).
 
 ## Required GitHub Secrets
 
