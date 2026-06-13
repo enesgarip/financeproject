@@ -1,4 +1,5 @@
 import { suggestExpenseCategory } from './categories'
+import { roundTL } from './money'
 
 export type ParsedTransaction = {
   date: string
@@ -178,7 +179,7 @@ export function parseDenizBankStatement(text: string): ParsedStatement {
  */
 export function expenseTotalAmount(tx: ParsedTransaction): number {
   if (tx.isInstallment && tx.installmentCount > 1) {
-    return Math.round(tx.amount * tx.installmentCount * 100) / 100
+    return roundTL(tx.amount * tx.installmentCount)
   }
   return tx.amount
 }

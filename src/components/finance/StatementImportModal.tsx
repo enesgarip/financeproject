@@ -12,6 +12,7 @@ import {
 import type { Card } from '../../types/database'
 import { formatCurrency } from '../../utils/formatCurrency'
 import { parseDenizBankStatement, matchTransactions, expenseTotalAmount, type ParsedTransaction } from '../../utils/denizBankStatementParser'
+import { roundTL } from '../../utils/money'
 import { parseStatementText } from '../../lib/statementParseClient'
 
 /**
@@ -213,7 +214,7 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
       const remaining = knownPlan ? Math.max(1, tx.installmentCount - tx.installmentNo + 1) : 1
       const result = await addCardExpense({
         cardId: card.id,
-        amount: knownPlan ? Math.round(tx.amount * remaining * 100) / 100 : tx.amount,
+        amount: knownPlan ? roundTL(tx.amount * remaining) : tx.amount,
         description: tx.description,
         // Kalan plan kuruluyorsa bugünden başlat; peşin/tek çekim orijinal tarihte kalır.
         spentAt: knownPlan ? today : tx.date,
@@ -536,7 +537,7 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
                       ? Math.max(1, tx.installmentCount - tx.installmentNo + 1)
                       : tx.installmentCount
                     const rowTotal = knownPlan
-                      ? Math.round(tx.amount * planCount * 100) / 100
+                      ? roundTL(tx.amount * planCount)
                       : tx.amount
                     return (
                       <label

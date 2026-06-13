@@ -5,7 +5,9 @@ import {
   formatComponentAmount,
   formatSavingsGoalAmount,
   formatSavingsGoalProgress,
+  savingsGoalBelowTarget,
   savingsGoalProgressRate,
+  savingsGoalTargetReached,
   savingsGoalValueTypeLabel,
 } from './savingsGoal'
 
@@ -80,6 +82,29 @@ describe('formatSavingsGoalProgress', () => {
 
   it('shows current over target for unit goals', () => {
     expect(formatSavingsGoalProgress(goal({ value_type: 'gram_altin', target_amount: 10, current_amount: 4 }))).toBe('4 gram / 10 gram')
+  })
+})
+
+describe('savings goal completion guards', () => {
+  it('treats a one-kurus gap as reached to preserve the legacy grace', () => {
+    const row = goal({ target_amount: 100, current_amount: 99.99 })
+
+    expect(savingsGoalTargetReached(row)).toBe(true)
+    expect(savingsGoalBelowTarget(row)).toBe(false)
+  })
+
+  it('treats gaps larger than one kurus as incomplete', () => {
+    const row = goal({ target_amount: 100, current_amount: 99.98 })
+
+    expect(savingsGoalTargetReached(row)).toBe(false)
+    expect(savingsGoalBelowTarget(row)).toBe(true)
+  })
+
+  it('does not mark rows without a positive target as complete or incomplete', () => {
+    const row = goal({ target_amount: 0, current_amount: 100 })
+
+    expect(savingsGoalTargetReached(row)).toBe(false)
+    expect(savingsGoalBelowTarget(row)).toBe(false)
   })
 })
 

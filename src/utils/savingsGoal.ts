@@ -1,5 +1,6 @@
 import type { SavingsGoal, SavingsGoalComponent, SavingsGoalValueType } from '../types/database'
 import { formatCurrency, formatNumber } from './formatCurrency'
+import { exceedsTL } from './money'
 
 export function savingsGoalValueTypeLabel(valueType: SavingsGoalValueType) {
   if (valueType === 'gram_altin') return 'gram'
@@ -38,6 +39,18 @@ export function savingsGoalProgressRate(
   return goal.target_amount > 0 ? Math.min(100, (goal.current_amount / goal.target_amount) * 100) : 0
 }
 
+export function savingsGoalTargetReached(
+  row: Pick<SavingsGoal | SavingsGoalComponent, 'target_amount' | 'current_amount'>,
+) {
+  return row.target_amount > 0 && !exceedsTL(row.target_amount, row.current_amount)
+}
+
+export function savingsGoalBelowTarget(
+  row: Pick<SavingsGoal | SavingsGoalComponent, 'target_amount' | 'current_amount'>,
+) {
+  return row.target_amount > 0 && exceedsTL(row.target_amount, row.current_amount)
+}
+
 export function formatSavingsGoalProgress(goal: SavingsGoal, components: SavingsGoalComponent[] = []) {
   if (goal.value_type === 'composite') {
     const rows = components
@@ -46,7 +59,7 @@ export function formatSavingsGoalProgress(goal: SavingsGoal, components: Savings
 
     if (rows.length === 0) return 'Bileşen eklenmedi'
 
-    const completedCount = rows.filter((row) => row.target_amount > 0 && row.current_amount + 0.01 >= row.target_amount).length
+    const completedCount = rows.filter(savingsGoalTargetReached).length
     const rates = rows.map((row) => (row.target_amount > 0 ? Math.min(100, (row.current_amount / row.target_amount) * 100) : 0))
     const averageRate = rates.reduce((sum, rate) => sum + rate, 0) / rows.length
 

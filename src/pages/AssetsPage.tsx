@@ -12,6 +12,7 @@ import type { Asset } from '../types/database'
 import { formatCurrency, formatNumber, parseNumber } from '../utils/formatCurrency'
 import { GOLD_LEDGER_SOURCE } from '../utils/goldLedger'
 import type { MarketRatesSnapshot } from '../utils/marketRates'
+import { roundTL } from '../utils/money'
 import { assetRateSymbol, effectiveAssetValue, stockCostBasis, stockProfit, valueAsset, valueStock } from '../utils/valuation'
 
 const categoryOptions: Asset['category'][] = ['Nakit', 'Altın', 'Fon', 'Hisse', 'Araç', 'BES', 'Diğer']
@@ -387,7 +388,7 @@ export function AssetsPage() {
               : valueAsset({ category, unit, currency, amount }, ctx?.snapshot)
             : null
           // New stock with no live price yet → seed with cost basis; the sync corrects it.
-          const stockSeed = isStock && unitCost ? Math.round(unitCost * amount * 100) / 100 : null
+          const stockSeed = isStock && unitCost ? roundTL(unitCost * amount) : null
 
           return {
             user_id: userId,

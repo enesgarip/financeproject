@@ -17,6 +17,7 @@ import { formatCurrency, parseNumber } from '../../utils/formatCurrency'
 import {
   formatComponentAmount,
   formatSavingsGoalProgress,
+  savingsGoalTargetReached,
   savingsGoalProgressRate,
   savingsGoalValueTypeLabel,
 } from '../../utils/savingsGoal'
@@ -222,7 +223,7 @@ export function SavingsGoalsPanel() {
 
     try {
       const compositeTargetAmount = parsedComponents.length
-      const compositeCurrentAmount = parsedComponents.filter((row) => row.current_amount + 0.01 >= row.target_amount).length
+      const compositeCurrentAmount = parsedComponents.filter(savingsGoalTargetReached).length
       const goalAutoValued = isGold && autoValued
       const liveGoalValue = goalAutoValued
         ? valueGoal({ value_type: valueType, current_amount: parseNumber(currentAmount) }, snapshot)

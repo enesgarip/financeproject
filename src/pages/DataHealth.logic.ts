@@ -22,7 +22,7 @@ import { dateInputValue, formatDate } from '../utils/date'
 import { buildCreditLimitGroups, cardProvisionAmount, cardSplitTotal, clampCardBreakdown, expectedInstallmentAmount, moneyDiffers, projectLoanSummary, roundMoney } from '../utils/financeSummary'
 import { formatCurrency } from '../utils/formatCurrency'
 import { exceedsTL } from '../utils/money'
-import { formatComponentAmount, formatSavingsGoalAmount, savingsGoalValueTypeLabel } from '../utils/savingsGoal'
+import { formatComponentAmount, formatSavingsGoalAmount, savingsGoalBelowTarget, savingsGoalTargetReached, savingsGoalValueTypeLabel } from '../utils/savingsGoal'
 import { isMissingSupabaseCapabilityError } from '../utils/supabaseErrors'
 
 export type HealthData = {
@@ -1545,7 +1545,7 @@ export function buildIssues(data: HealthData): HealthIssue[] {
 
     if (isComponentBackedGoal) {
       const componentsWithMissingTarget = goalComponents.filter((component) => component.target_amount <= 0)
-      const incompleteComponents = goalComponents.filter((component) => component.current_amount + 0.01 < component.target_amount)
+      const incompleteComponents = goalComponents.filter(savingsGoalBelowTarget)
       const componentDetails = goalComponents.map(formatGoalComponentProgress)
       const goalKindLabel = goal.value_type === 'composite' ? 'karma hedef' : 'bileşenli hedef'
 
@@ -1631,7 +1631,7 @@ export function buildIssues(data: HealthData): HealthIssue[] {
       })
     }
 
-    if (goal.status === 'active' && goal.target_amount > 0 && goal.current_amount >= goal.target_amount) {
+    if (goal.status === 'active' && savingsGoalTargetReached(goal)) {
       issues.push({
         id: `goal-complete-active-${goal.id}`,
         area: 'Hedefler',
@@ -1644,7 +1644,7 @@ export function buildIssues(data: HealthData): HealthIssue[] {
       })
     }
 
-    if (goal.status === 'completed' && goal.current_amount + 0.01 < goal.target_amount) {
+    if (goal.status === 'completed' && savingsGoalBelowTarget(goal)) {
       issues.push({
         id: `goal-completed-under-target-${goal.id}`,
         area: 'Hedefler',
@@ -1657,7 +1657,7 @@ export function buildIssues(data: HealthData): HealthIssue[] {
       })
     }
 
-    if (goal.status === 'active' && goal.target_date && goal.target_date < today && goal.current_amount + 0.01 < goal.target_amount) {
+    if (goal.status === 'active' && goal.target_date && goal.target_date < today && savingsGoalBelowTarget(goal)) {
       issues.push({
         id: `goal-overdue-${goal.id}`,
         area: 'Hedefler',
