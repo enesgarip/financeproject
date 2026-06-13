@@ -14,6 +14,62 @@ export function handlePreflight(req: Request): Response | null {
   return null
 }
 
+/** İsteğin istemci IP'sini x-forwarded-for / x-real-ip başlığından çıkarır. */
+function clientIp(req: Request): string {
+  const xff = req.headers.get('x-forwarded-for')
+  if (xff) return xff.split(',')[0]!.trim()
+  return req.headers.get('x-real-ip')?.trim() || 'unknown'
+}
+
+// Bellek-içi rate-limit kovaları (instance-başı). key = `${bucket}:${ip}` → hit zaman damgaları.
+const rateBuckets = new Map<string, number[]>()
+
+/**
+ * Bellek-içi kayan-pencere rate-limit (IP + bucket bazlı). Limit aşılırsa 429
+ * Response, aksi halde null döner (handlePreflight deseni).
+ *
+ * SINIR (bilinçli): sayaç edge instance-başınadır — cold start veya farklı
+ * instance yeni pencere demektir — ve IP-bazlıdır (IP rotasyonu aşar). Amaç
+ * pahalı uçların (Gemini) tek-IP'den hızlı istismarını kesip sağlayıcının kendi
+ * kota tavanıyla (ör. Gemini free-tier 429) defense-in-depth kurmak; mutlak kota
+ * güvencesi değil. Anon key frontend'de herkese açık olduğundan verify_jwt tek
+ * başına bu uçları korumaz → bu hafif kapı ucuz bir ek savunmadır.
+ */
+export function rateLimit(
+  req: Request,
+  opts: { max: number; windowMs: number; bucket: string },
+): Response | null {
+  const key = `${opts.bucket}:${clientIp(req)}`
+  const now = Date.now()
+  const cutoff = now - opts.windowMs
+  const hits = (rateBuckets.get(key) ?? []).filter((t) => t > cutoff)
+
+  if (hits.length >= opts.max) {
+    const retrySec = Math.max(1, Math.ceil((hits[0]! + opts.windowMs - now) / 1000))
+    return new Response(
+      JSON.stringify({ error: 'Çok fazla istek. Lütfen biraz sonra tekrar deneyin.' }),
+      {
+        status: 429,
+        headers: { ...CORS_HEADERS, 'Content-Type': 'application/json', 'Retry-After': String(retrySec) },
+      },
+    )
+  }
+
+  hits.push(now)
+  rateBuckets.set(key, hits)
+
+  // Çok sayıda IP'de haritanın sınırsız büyümemesi için fırsatçı süpürme.
+  if (rateBuckets.size > 5_000) {
+    for (const [k, ts] of rateBuckets) {
+      const live = ts.filter((t) => t > cutoff)
+      if (live.length === 0) rateBuckets.delete(k)
+      else rateBuckets.set(k, live)
+    }
+  }
+
+  return null
+}
+
 /** JSON response with CORS headers applied. */
 export function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {

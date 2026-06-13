@@ -12,7 +12,7 @@
 //
 // Metin yalnız çözümleme için Google'a iletilir, ASLA saklanmaz.
 
-import { fetchWithTimeout, handlePreflight, jsonResponse } from '../_shared/edge.ts'
+import { fetchWithTimeout, handlePreflight, jsonResponse, rateLimit } from '../_shared/edge.ts'
 
 const MODEL = 'gemini-2.5-flash'
 const MAX_TEXT_BYTES = 200_000 // ~200 KB düz metin
@@ -82,6 +82,9 @@ function coerceStatement(raw: unknown): RawStatement {
 Deno.serve(async (req: Request) => {
   const preflight = handlePreflight(req)
   if (preflight) return preflight
+  // Gemini'yi çağıran pahalı uç — tek-IP'den kota istismarını kes.
+  const limited = rateLimit(req, { bucket: 'parse-statement', max: 15, windowMs: 60_000 })
+  if (limited) return limited
   if (req.method !== 'POST') return jsonResponse({ error: 'Method not allowed' }, 405)
 
   const apiKey = Deno.env.get('GEMINI_API_KEY')

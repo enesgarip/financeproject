@@ -9,7 +9,7 @@
 // Yahoo is an unofficial source and may change; callers must treat a missing
 // price as "unavailable" and fall back to the stored/manual value.
 
-import { fetchWithTimeout, handlePreflight, jsonResponse } from '../_shared/edge.ts'
+import { fetchWithTimeout, handlePreflight, jsonResponse, rateLimit } from '../_shared/edge.ts'
 
 const MAX_SYMBOLS = 60
 const YAHOO_TIMEOUT_MS = 6_000
@@ -48,6 +48,10 @@ async function fetchPrice(symbol: string): Promise<number | null> {
 Deno.serve(async (req: Request) => {
   const preflight = handlePreflight(req)
   if (preflight) return preflight
+
+  // Yahoo proxy'si ucuz ama yine de tek-IP flood'unu kes.
+  const limited = rateLimit(req, { bucket: 'bist-quote', max: 30, windowMs: 60_000 })
+  if (limited) return limited
 
   if (req.method !== 'POST') return jsonResponse({ error: 'Method not allowed' }, 405)
 

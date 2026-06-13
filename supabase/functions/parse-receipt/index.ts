@@ -10,7 +10,7 @@
 //
 // The image is forwarded to Google only for parsing and is never stored.
 
-import { fetchWithTimeout, handlePreflight, jsonResponse } from '../_shared/edge.ts'
+import { fetchWithTimeout, handlePreflight, jsonResponse, rateLimit } from '../_shared/edge.ts'
 
 // Must mirror src/utils/categories.ts expenseCategories.
 const CATEGORIES = ['Market', 'Yemek', 'Ulaşım', 'Alışveriş', 'Fatura', 'Sağlık', 'Eğlence', 'Eğitim', 'Diğer']
@@ -46,6 +46,9 @@ function coerceResult(raw: unknown): ParsedReceipt {
 Deno.serve(async (req: Request) => {
   const preflight = handlePreflight(req)
   if (preflight) return preflight
+  // Gemini'yi çağıran pahalı uç — tek-IP'den kota istismarını kes.
+  const limited = rateLimit(req, { bucket: 'parse-receipt', max: 15, windowMs: 60_000 })
+  if (limited) return limited
   if (req.method !== 'POST') return jsonResponse({ error: 'Method not allowed' }, 405)
 
   const apiKey = Deno.env.get('GEMINI_API_KEY')
