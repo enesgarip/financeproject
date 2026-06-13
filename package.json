@@ -13,6 +13,7 @@
     "test:unit": "vitest run",
     "test:unit:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+    "check:bundle": "node scripts/check-bundle-size.mjs",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "docker:build": "docker build -t financeproject .",

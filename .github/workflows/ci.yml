@@ -42,6 +42,9 @@ jobs:
           VITE_SUPABASE_URL: https://example.supabase.co
           VITE_SUPABASE_ANON_KEY: ci-anon-key
 
+      - name: Bundle size budget
+        run: npm run check:bundle
+
   e2e:
     name: Playwright Smoke
     runs-on: ubuntu-latest
