@@ -1,0 +1,180 @@
+# AI Context Index
+
+Last reviewed: 2026-06-13
+
+This file is the cheapest starting point for future AI/Codex sessions. Its job
+is to reduce repeated repo discovery: read this first, choose the smallest
+relevant route, then open only the linked source files and docs for the task.
+
+## Cost Rule
+
+Do not start by reading every page, migration, or test file. Start with:
+
+1. The user's exact request.
+2. This index.
+3. One source-of-truth doc for the affected domain.
+4. The target code file and its closest test.
+
+Expand only when the change crosses a boundary such as page -> utility,
+frontend -> RPC, or RPC -> migration.
+
+## Permanent Context
+
+| File | Read When | Owns |
+| --- | --- | --- |
+| `CLAUDE.md` | A new AI agent needs persistent repo rules before acting | Stack summary, layer boundaries, money-model warnings, deployment gotchas |
+| `docs/CODEX_GUIDE.md` | A Codex session needs working rules and finish checklist | How to work in this repo with low regression risk |
+| `docs/PROJECT_CONTEXT.md` | You need the product map or route/table overview | Product purpose, app structure, important domains, route model |
+| `docs/KNOWN_RISKS.md` | You are choosing risk level or reviewing a change | Known failure modes and where to be extra cautious |
+| `docs/BACKLOG.md` | You need the next useful task | Priority backlog and suggested Codex tasks |
+
+## Domain Source Of Truth
+
+| Domain | First Doc | Then Read | Notes |
+| --- | --- | --- | --- |
+| Card debt fields and transitions | `docs/CARD_DEBT_TRANSITIONS.md` | `src/utils/financeSummary.ts`, `src/pages/CardsPage*.tsx`, latest card migrations | Use this before touching `debt_amount`, `statement_debt_amount`, `current_period_spending`, `provision_amount`, or card installments |
+| General finance rules | `docs/FINANCE_RULES.md` | Matching utility under `src/utils/*` | Broad business semantics: assets, cards, payments, loans, debts, goals, dashboard |
+| RPC-backed actions | `docs/RPC_ACTION_REFERENCE.md` | `src/data/repositories/*`, `src/services/*`, `src/types/database.ts`, migrations | Maps Supabase RPCs to user-visible actions and side effects |
+| Release/migration compatibility | `docs/MIGRATION_COMPATIBILITY_CHECKLIST.md` | `.github/workflows/ci.yml`, `.github/workflows/deploy.yml`, `supabase/migrations/*` | Use for schema, RLS, RPC, edge function, or generated type changes |
+| Banking simplification | `docs/BANKING_SIMPLIFICATION_AUDIT.md` | `src/pages/CardsPage.tsx`, `src/pages/CardsPage.sections.tsx`, `src/components/finance/*` | Tracks what was simplified and what remains |
+| Pipeline/deploy | `docs/PIPELINE.md` | GitHub workflow files and package scripts | CI, deploy, secrets, branch flow |
+
+## Architecture Map
+
+| Layer | Path | Rule |
+| --- | --- | --- |
+| Domain utilities | `src/utils/*` | Pure calculations and business rules. Prefer tests here. No Supabase imports. |
+| Data repositories | `src/data/repositories/*` | Table reads/writes and repository-shaped Supabase access. Return `Result<T>`. |
+| Services | `src/services/*` | RPC wrappers and cross-table mutation actions. Direct Supabase calls are intentional here. |
+| App hooks | `src/app/*` | TanStack Query cache and use-case hooks. |
+| Pages | `src/pages/*` | Route-level orchestration and UI state. Avoid burying new domain math here. |
+| Components | `src/components/*` | Reusable UI, finance panels, charts, selectors, modals. |
+| Database | `supabase/migrations/*` | Schema, RLS, triggers, RPCs. Treat migrations as forward-only after production. |
+| Edge functions | `supabase/functions/*` | External parsing/quote services. Use `_shared/edge.ts` conventions. |
+
+ESLint blocks `src/{pages,components,utils,hooks}` from importing
+`src/lib/supabase`. If UI needs data, add or reuse a repository/service wrapper.
+
+## Feature Routes
+
+| Route | Main Files | Data/Utility Neighbors |
+| --- | --- | --- |
+| `/` dashboard | `src/pages/DashboardPage.tsx`, `src/components/dashboard/*` | `src/app/useFinanceSnapshot.ts`, `src/data/repositories/financeSnapshotRepo.ts`, `src/utils/dashboard*`, `src/utils/financeSummary.ts` |
+| `/kartlar` accounts/cards | `src/pages/CardsPage.tsx`, `src/pages/CardsPage.sections.tsx`, `src/pages/CardsPage.helpers.ts` | `src/data/repositories/cardsRepo.ts`, `src/services/accountMovements.ts`, `src/utils/cardStatement.ts`, `src/utils/financeSummary.ts` |
+| `/odemeler` planned payments | `src/pages/PaymentsPage.tsx` | `src/data/repositories/paymentsRepo.ts`, `src/services/financePaymentActions.ts`, `src/utils/obligations.ts` |
+| `/borclar/krediler` loans | `src/pages/LoansPage.tsx` | `src/data/repositories/loansRepo.ts`, `src/services/financePaymentActions.ts`, `src/utils/financeSummary.ts` |
+| `/borclar/kisiler` personal debts | `src/pages/DebtsPage.tsx` | `src/data/repositories/debtsRepo.ts`, `src/services/financePaymentActions.ts` |
+| `/varliklar` assets | `src/pages/AssetsPage.tsx`, `src/pages/AssetsHub.tsx` | `src/data/repositories/valuationRepo.ts`, `src/utils/valuation*`, `src/utils/marketRates.ts` |
+| `/varliklar/maas` salary | `src/pages/SalaryPage.tsx` | `src/utils/financeSummary.ts` salary helpers |
+| `/analiz` reports | `src/pages/AnalysisPage.tsx` | `src/app/useFinanceSnapshot.ts`, `src/data/repositories/analysisRepo.ts`, `src/utils/analysisView.ts`, charts |
+| `/veri-sagligi` data health | `src/pages/DataHealthPage.tsx`, `src/pages/DataHealth.logic.ts` | `src/data/repositories/dataHealthRepo.ts`, ledger utilities, finance invariants |
+| `/login` auth | `src/pages/LoginPage.tsx`, `src/auth/*` | `src/lib/supabase.ts` |
+
+## Source-Of-Truth Matrix
+
+| Question | Source |
+| --- | --- |
+| How is card debt supposed to move? | `docs/CARD_DEBT_TRANSITIONS.md` |
+| Which user action calls which RPC? | `docs/RPC_ACTION_REFERENCE.md` |
+| Is this migration safe to release? | `docs/MIGRATION_COMPATIBILITY_CHECKLIST.md` |
+| Where does dashboard data come from? | `src/app/useFinanceSnapshot.ts` and `src/data/repositories/financeSnapshotRepo.ts` |
+| How should money be rounded/compared? | `src/utils/money.ts`; avoid new ad hoc tolerances |
+| How are shared credit limits grouped? | `buildCreditLimitGroups` in `src/utils/financeSummary.ts` |
+| How is loan summary projected? | `projectLoanSummary` in `src/utils/financeSummary.ts` plus DB trigger `sync_loan_summary` |
+| How are card/account ledgers projected? | `src/utils/cardLedger.ts`, `src/utils/accountLedger.ts` |
+| How are monthly obligations built? | `src/utils/obligations.ts` and dashboard upcoming utilities |
+| How are Turkish calendar presets defined? | `src/utils/obligationPresets.ts`, `src/components/finance/TurkishCalendarPresets.tsx` |
+
+## Common Task Playbooks
+
+### Card Debt Or Card Page Change
+
+Read:
+
+1. `docs/CARD_DEBT_TRANSITIONS.md`
+2. `src/utils/financeSummary.ts`
+3. `src/pages/CardsPage.helpers.ts`
+4. The relevant section in `src/pages/CardsPage.sections.tsx`
+5. Latest card-related migrations if RPC behavior changes
+
+Verify:
+
+- `npm exec -- vitest run src/utils/financeSummary.test.ts`
+- `npm run test:unit`
+- `npm run lint`
+- `npm run build`
+
+### New Or Changed RPC
+
+Read:
+
+1. `docs/RPC_ACTION_REFERENCE.md`
+2. `docs/MIGRATION_COMPATIBILITY_CHECKLIST.md`
+3. `src/types/database.ts`
+4. The repository/service wrapper that will call it
+5. The migration that defines it
+
+Update:
+
+- RPC args/return type in `src/types/database.ts`
+- Repository/service wrapper
+- Business-rule docs if side effects changed
+- Grants in the final migration signature
+
+### Page Refactor
+
+Read:
+
+1. Target page
+2. `docs/KNOWN_RISKS.md`
+3. The nearest utilities/repositories
+4. Existing tests for utilities touched by the page
+
+Keep behavior stable. Extract pure calculations to `src/utils/*` when possible,
+then cover with focused unit tests. Do not add a new abstraction unless it
+removes real duplication or isolates domain behavior.
+
+### Data Health Change
+
+Read:
+
+1. `src/pages/DataHealth.logic.ts`
+2. `src/pages/DataHealth.logic.test.ts`
+3. `docs/KNOWN_RISKS.md`
+4. Relevant invariant helper in `src/utils/*`
+
+Treat data-health fixes as operational writes against real user data. Prefer a
+shared helper/DB invariant over a page-only corrective formula.
+
+### Migration Or Release Change
+
+Read:
+
+1. `docs/MIGRATION_COMPATIBILITY_CHECKLIST.md`
+2. `docs/PIPELINE.md`
+3. `.github/workflows/ci.yml`
+4. `.github/workflows/deploy.yml`
+
+Use local Supabase checks when available. Production deploy order is migration
+and edge functions first, Vercel deploy hook second.
+
+## Verification Ladder
+
+Choose the smallest ladder that matches the risk:
+
+| Risk | Commands |
+| --- | --- |
+| Docs-only | `git diff --check` |
+| Pure utility change | Targeted Vitest file, then `npm run test:unit` |
+| TypeScript/UI change | `npm run lint`, `npm run test:unit`, `npm run build` |
+| Route/user-flow change | Previous row plus `npm run test:e2e` when feasible |
+| Migration/RPC/RLS change | Previous row plus `npm run db:reset:local`, `npm run db:lint:local`, `npm run db:audit:rls:local` when local Supabase is available |
+| Release-critical change | `npm run ci:local` and CI green |
+
+## Open Cost-Saving Work
+
+- Add short architecture notes for `DashboardPage`, `CardsPage`, and
+  `DataHealthPage` before large refactors.
+- Continue moving page-local finance math into tested utilities.
+- Keep docs current when behavior changes; stale docs increase AI cost more
+  than no docs.

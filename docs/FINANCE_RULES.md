@@ -40,6 +40,10 @@ TRY value from live market rates instead of a hand-typed `estimated_value_try`.
 
 ## Cards: Core Model
 
+Detailed field transitions are documented in `docs/CARD_DEBT_TRANSITIONS.md`.
+Treat that file as the card-debt mutation source of truth when changing card
+RPCs, page actions, dashboard math, or data-health checks.
+
 Credit card debt is conceptually split into visible payable/planning parts:
 
 - `statement_debt_amount`: already billed, payable amount

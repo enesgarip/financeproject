@@ -10,7 +10,7 @@
   - payable card debt excluding provision
   - recurring payment month occurrence
   - budget alert thresholds
-- Create a single documented source of truth for card debt transitions.
+- Maintain the documented source of truth for card debt transitions in `docs/CARD_DEBT_TRANSITIONS.md`.
   - expense added
   - provision posted
   - statement cut
@@ -30,6 +30,7 @@
 ## P2 - UX / Maintainability
 
 - Add a concise developer-oriented architecture note for each major page.
+- Keep `docs/AI_CONTEXT_INDEX.md` current so future AI sessions can route to the right files with less repo scanning.
 - Reduce repeated money helper logic such as `roundMoney`, split-total helpers, and schema-cache checks.
 - Clarify where dashboard calculations belong versus page-local calculations.
 - Audit Turkish copy and encoding consistency across UI strings and docs.
@@ -44,5 +45,5 @@
 
 1. Add targeted tests for `cardStatement`, `budgetAlerts`, and savings goal progress.
 2. Extract reusable card math helpers from page files into a single domain utility.
-3. Map all Supabase RPCs to user-visible actions in a short reference doc.
-4. Create a small migration compatibility checklist for releases.
+3. Keep `docs/RPC_ACTION_REFERENCE.md` aligned when Supabase RPCs or user-visible actions change.
+4. Keep `docs/MIGRATION_COMPATIBILITY_CHECKLIST.md` aligned with release workflow changes.

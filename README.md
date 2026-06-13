@@ -2,6 +2,9 @@
 
 React, TypeScript, Vite, Tailwind CSS ve Supabase ile hazırlanmış kişisel finans denge uygulaması.
 
+AI/Codex oturumları için önce `docs/AI_CONTEXT_INDEX.md` dosyasını okuyun; ilgili
+domain dokümanına ve kaynak dosyalara en kısa rotayı orası verir.
+
 ## Özellikler
 
 - Supabase Auth ile e-posta / şifre kayıt ve giriş

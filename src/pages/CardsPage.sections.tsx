@@ -30,12 +30,12 @@ import type { Card, CardExpense, CardExpenseStatus, CardInstallment, CardStateme
 import { expenseCategoryOptions } from '../utils/categories'
 import { getCardStatementPeriod } from '../utils/cardStatement'
 import { dateInputValue, daysUntil, formatDate, nextMonthlyDate } from '../utils/date'
-import { cardPayableDebt, cardProvisionAmount } from '../utils/financeSummary'
+import { buildCreditLimitGroups, cardPayableDebt, cardProvisionAmount } from '../utils/financeSummary'
 import { roundTL } from '../utils/money'
 import { getLastUsed, setLastUsed } from '../utils/lastUsed'
 import { bankBrandGradient, getBankBrand } from '../utils/bankBranding'
 import { cn, openNativePicker } from '../lib/utils'
-import { bankHueStyle, isSchemaCacheError, limitGroupKey, limitGroupStats, statementPeriodLabel } from './CardsPage.helpers'
+import { bankHueStyle, isSchemaCacheError, limitGroupStats, statementPeriodLabel } from './CardsPage.helpers'
 import { formatCurrency, parseNumber } from '../utils/formatCurrency'
 import { parseReceiptImage } from '../lib/receiptParseClient'
 import { canCutCurrentStatement } from '../utils/statementCycle'
@@ -166,35 +166,10 @@ type LimitGroupSummary = {
 }
 
 function buildLimitGroupSummaries(rows: Card[]): LimitGroupSummary[] {
-  const groups = new Map<string, Card[]>()
-
-  for (const card of rows.filter((row) => row.card_type === 'kredi_karti')) {
-    const key = limitGroupKey(card)
-    groups.set(key, [...(groups.get(key) ?? []), card])
-  }
-
-  return Array.from(groups, ([key, cards]) => {
-    const limit = Math.max(...cards.map((card) => card.credit_limit), 0)
-    const debt = cards.reduce((total, card) => total + card.debt_amount, 0)
-    const statementDebt = cards.reduce((total, card) => total + card.statement_debt_amount, 0)
-    const currentPeriod = cards.reduce((total, card) => total + card.current_period_spending, 0)
-    const provision = cards.reduce((total, card) => total + cardProvisionAmount(card), 0)
-    const label = cards.find((card) => card.limit_group_name?.trim())?.limit_group_name?.trim() || cards[0]?.card_name || 'Kredi kartı'
-
-    return {
-      key,
-      label,
-      bankName: cards[0]?.bank_name ?? '',
-      cards,
-      limit,
-      debt,
-      statementDebt,
-      currentPeriod,
-      provision,
-      available: Math.max(0, limit - debt),
-      usageRate: limit > 0 ? Math.min(100, (debt / limit) * 100) : 0,
-    }
-  }).sort((a, b) => b.debt - a.debt)
+  return buildCreditLimitGroups(rows).map((group) => ({
+    ...group,
+    bankName: group.cards[0]?.bank_name ?? '',
+  }))
 }
 
 export function CreditCardOverview({ rows }: { rows: Card[] }) {

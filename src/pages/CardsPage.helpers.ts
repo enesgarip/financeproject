@@ -1,7 +1,7 @@
 import type { CSSProperties } from 'react'
 import type { FormField } from '../components/CrudPage'
 import type { Card, CardStatementArchive } from '../types/database'
-import { cardProvisionAmount } from '../utils/financeSummary'
+import { buildCreditLimitGroups, creditLimitGroupKey } from '../utils/financeSummary'
 import { isMissingSupabaseCapabilityError } from '../utils/supabaseErrors'
 
 export const fields: FormField[] = [
@@ -124,26 +124,22 @@ export function isSchemaCacheError(error: { code?: string; message?: string } | 
 }
 
 export function limitGroupKey(card: Card) {
-  return card.limit_group_name?.trim() || card.id
-}
-
-function limitGroupCards(card: Card, rows: Card[]) {
-  const key = limitGroupKey(card)
-  return rows.filter((row) => row.card_type === 'kredi_karti' && limitGroupKey(row) === key)
+  return creditLimitGroupKey(card)
 }
 
 export function limitGroupStats(card: Card, rows: Card[]) {
-  const groupCards = limitGroupCards(card, rows)
-  const sharedLimit = Math.max(...groupCards.map((row) => row.credit_limit), card.credit_limit, 0)
-  const totalDebt = groupCards.reduce((total, row) => total + row.debt_amount, 0)
-  const provisionAmount = groupCards.reduce((total, row) => total + cardProvisionAmount(row), 0)
+  const group = buildCreditLimitGroups(rows).find((item) => item.key === limitGroupKey(card))
+  const sharedLimit = group?.limit ?? card.credit_limit
+  const totalDebt = group?.debt ?? card.debt_amount
+  const provisionAmount = group?.provision ?? 0
+
   return {
     sharedLimit,
     totalDebt,
     provisionAmount,
     availableLimit: Math.max(0, sharedLimit - totalDebt),
     usageRate: sharedLimit > 0 ? Math.min(100, (totalDebt / sharedLimit) * 100) : 0,
-    isShared: Boolean(card.limit_group_name?.trim()) && groupCards.length > 1,
+    isShared: group?.isShared ?? false,
   }
 }
 

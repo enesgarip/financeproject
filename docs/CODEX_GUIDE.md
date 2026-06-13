@@ -4,6 +4,10 @@
 
 This guide tells future Codex sessions how to work in this repo with low re-explanation cost and low regression risk.
 
+For the cheapest routing map, read `docs/AI_CONTEXT_INDEX.md` first. This file
+explains working rules; the index tells you which deeper doc or code area to
+open for a specific task.
+
 ## Working Style for This Repo
 
 1. Read a small amount first.
@@ -16,6 +20,7 @@ This guide tells future Codex sessions how to work in this repo with low re-expl
 
 When starting a new task, usually inspect these first:
 
+- `docs/AI_CONTEXT_INDEX.md`
 - `src/App.tsx`
 - `src/types/database.ts`
 - `src/components/CrudPage.tsx`
@@ -65,7 +70,10 @@ Example:
   - migration/schema
 - For card, loan, debt, and payment flows, verify side effects on dashboard and data health views.
 - If a change affects table shape or RPC contracts, check `src/types/database.ts` and migrations together.
+- If a change affects release compatibility, use `docs/MIGRATION_COMPATIBILITY_CHECKLIST.md`.
+- If a change affects an RPC-backed user action, update `docs/RPC_ACTION_REFERENCE.md`.
 - If a bug touches card debt math, also review:
+  - `docs/CARD_DEBT_TRANSITIONS.md`
   - `statement_debt_amount`
   - `current_period_spending`
   - `provision_amount`

@@ -1,0 +1,102 @@
+# Card Debt Transitions
+
+Last reviewed: 2026-06-13
+
+This file is the working source of truth for how credit-card debt moves through
+the app. If an RPC, page action, or data-health fix changes one of these rules,
+update this file in the same change.
+
+## Canonical Fields
+
+For `cards.card_type = 'kredi_karti'`:
+
+- `debt_amount`: total card debt. This includes statement debt, posted current
+  period spending, provisions, and future scheduled installment debt already
+  created by the app.
+- `statement_debt_amount`: billed/open-statement debt that is immediately due.
+- `current_period_spending`: posted spending that has not been cut into a
+  statement yet.
+- `provision_amount`: provisional spending that uses limit but is not payable.
+- `card_installments`: planning rows for installment timing. They are inside
+  card debt, not a second independent debt bucket.
+
+The visible split must never exceed total debt:
+
+```text
+statement_debt_amount + current_period_spending + provision_amount <= debt_amount
+```
+
+The database trigger `clamp_card_breakdown()` enforces this on writes. Its
+priority is statement first, then provision, then current period. The TypeScript
+twin is `clampCardBreakdown()` in `src/utils/financeSummary.ts`.
+
+## Display Helpers
+
+Use `src/utils/financeSummary.ts` instead of reimplementing card math in pages:
+
+- `cardProvisionAmount(card)`
+- `cardSplitTotal(statementDebt, currentPeriod, provisionAmount)`
+- `cardPayableDebt(card)`
+- `buildCreditLimitGroups(cards)`
+- `clampCardBreakdown(debt, statement, current, provision)`
+
+`buildCreditLimitGroups` is also the source for shared-limit semantics: group
+limit is the max `credit_limit` in the group, while group debt is the sum of
+member `debt_amount` values.
+
+## Transition Matrix
+
+| Action | Owner | Card field changes | Related rows |
+| --- | --- | --- | --- |
+| Posted expense added | `add_card_expense` | `debt_amount += amount`; `current_period_spending += first installment amount` | Inserts `card_expenses`; multi-installment expenses create one posted installment and future scheduled installments |
+| Provision expense added | `add_card_expense` with `status='provision'` | `debt_amount += amount`; `provision_amount += amount` | Inserts a provision `card_expenses` row; no installment rows are created until posting |
+| Provision posted | `post_card_provision` | `provision_amount -= posted amount`; `current_period_spending += first installment amount of posted amount` | Full post updates the same expense; partial post leaves the original provision with the remaining amount and inserts a posted expense; multi-installment posted provisions create installment rows |
+| Provision cancelled | `cancel_card_provision` | `debt_amount -= amount`; `provision_amount -= amount` | Marks the expense `cancelled`; removes related installment rows if any |
+| Statement cut | `cut_card_statement` / `cut_due_card_statements` | `statement_debt_amount += current_period_spending`; `current_period_spending = next period scheduled installment total`; `debt_amount` unchanged | Inserts or returns an open `card_statement_archives` row; links posted expenses/installments to the archive; posts next-period scheduled installments |
+| Statement paid | `pay_card_statement` | Source bank account `current_balance -= statement amount`; card `debt_amount -= statement amount`; card `statement_debt_amount -= statement amount` | Marks the statement `paid`; marks linked card installments `paid` |
+| Manual card debt paid | `pay_card_debt` | Source bank account `current_balance -= amount`; card `debt_amount -= amount`; statement debt is reduced first, then current-period spending | Does not close statement archive rows; does not change provisions or future scheduled installments |
+| Posted expense edited | `update_card_expense` | Reverses the previous posted impact, then applies the new posted impact | Recreates installment rows for the edited expense |
+| Legacy installment carried over | `record_card_installment_carryover` | `debt_amount += remaining installment total`; `current_period_spending += installment amount` only when the next due month is the current month | Inserts one posted expense and remaining installment rows |
+
+## Statement Boundary
+
+Statements are cut the day after the statement day, not on the statement day.
+This lets spending made on the statement day itself belong to that statement.
+
+The server-side daily maintenance job calls the same audited RPCs used by the
+client:
+
+- `cut_due_card_statements`
+- `post_card_provision`
+
+Do not duplicate their money-moving logic in a scheduler or page component.
+
+## Payment Semantics
+
+`cardPayableDebt(card)` is:
+
+```text
+max(0, statement_debt_amount + current_period_spending)
+```
+
+Payable debt excludes provisions and future scheduled installment debt. A
+provision must be posted before it becomes payable. Future installments become
+payable through statement cutting, not by adding them again to dashboard debt.
+
+The preferred user flow is paying an open statement with `pay_card_statement`.
+`pay_card_debt` remains a manual/legacy escape hatch for posted debt that is not
+represented by an open statement.
+
+## Data-Health Expectations
+
+Data health may flag:
+
+- split total greater than `debt_amount`
+- unexplained card debt where `debt_amount` is greater than visible split plus
+  scheduled installments
+- cards over shared/individual limit
+- statement/archive mismatches
+- ledger drift between `card_ledger` projection and `cards.debt_amount`
+
+When fixing one of these, keep the field transition above intact and prefer a
+single RPC/helper change over page-local compensation.
