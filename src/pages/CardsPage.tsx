@@ -29,10 +29,10 @@ import {
   DueStatementAutomation,
   LegacyInstallmentPanel,
   ProvisionPanel,
-  QuickExpensePanel,
   StatementPanel,
   type CardSection,
 } from './CardsPage.sections'
+import { QuickExpensePanel } from './CardsPage.expense'
 import {
   bankHueStyle,
   cardGroupLabel,
