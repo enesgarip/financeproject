@@ -29,16 +29,33 @@ import { addCardExpense, cutDueCardStatements, recordCardInstallmentCarryover } 
 import type { Card, CardExpense, CardExpenseStatus, CardInstallment, CardStatementArchive } from '../types/database'
 import { expenseCategoryOptions } from '../utils/categories'
 import { getCardStatementPeriod } from '../utils/cardStatement'
-import { dateInputValue, daysUntil, formatDate, nextMonthlyDate } from '../utils/date'
-import { buildCreditLimitGroups, cardPayableDebt, cardProvisionAmount } from '../utils/financeSummary'
-import { roundTL } from '../utils/money'
+import { dateInputValue, formatDate, nextMonthlyDate } from '../utils/date'
+import { cardPayableDebt, cardProvisionAmount } from '../utils/financeSummary'
 import { getLastUsed, setLastUsed } from '../utils/lastUsed'
 import { bankBrandGradient, getBankBrand } from '../utils/bankBranding'
 import { cn, openNativePicker } from '../lib/utils'
-import { bankHueStyle, isSchemaCacheError, limitGroupStats, statementPeriodLabel } from './CardsPage.helpers'
+import {
+  activeInstallmentCount,
+  addMonthsToMonth,
+  bankHueStyle,
+  buildLimitGroupSummaries,
+  cardOptionLabel,
+  formatMonthLabel,
+  formatMonthlyDay,
+  formatShortDate,
+  getCreditCardStatus,
+  isMonthValue,
+  isSchemaCacheError,
+  limitGroupStats,
+  moneyShare,
+  monthInputValue,
+  openStatementAmount,
+  parseInstallmentNumber,
+  shouldRunStatementCut,
+  statementPeriodLabel,
+} from './CardsPage.helpers'
 import { formatCurrency, parseNumber } from '../utils/formatCurrency'
 import { parseReceiptImage } from '../lib/receiptParseClient'
-import { canCutCurrentStatement } from '../utils/statementCycle'
 
 export type CardSection = 'ozet' | 'kartlar' | 'islemler' | 'ekstreler'
 
@@ -150,27 +167,6 @@ const cardHelp = {
     source: 'Kart harcama kayıtlarının provizyon durumu.',
   },
 } satisfies Record<string, HelpTooltipContent>
-
-type LimitGroupSummary = {
-  key: string
-  label: string
-  bankName: string
-  cards: Card[]
-  limit: number
-  debt: number
-  statementDebt: number
-  currentPeriod: number
-  provision: number
-  available: number
-  usageRate: number
-}
-
-function buildLimitGroupSummaries(rows: Card[]): LimitGroupSummary[] {
-  return buildCreditLimitGroups(rows).map((group) => ({
-    ...group,
-    bankName: group.cards[0]?.bank_name ?? '',
-  }))
-}
 
 export function CreditCardOverview({ rows }: { rows: Card[] }) {
   const groups = buildLimitGroupSummaries(rows)
@@ -363,67 +359,6 @@ function OverviewStat({ label, value, help }: { label: string; value: string; he
       <p className="mt-1 truncate text-sm font-bold tabular-nums text-foreground">{value}</p>
     </div>
   )
-}
-
-type CreditCardStatus = {
-  label: string
-  description: string
-  className: string
-}
-
-function getCreditCardStatus(card: Card, usageRate: number): CreditCardStatus {
-  const payableDebt = cardPayableDebt(card)
-  const dueDate = nextMonthlyDate(card.due_day)
-  const remainingDays = daysUntil(dueDate)
-
-  if (payableDebt > 0 && remainingDays !== null && remainingDays < 0) {
-    return {
-      label: 'Gecikmiş',
-      description: `${Math.abs(remainingDays)} gün geçti`,
-      className: 'bg-destructive/12 text-destructive ring-destructive/20',
-    }
-  }
-
-  if (payableDebt > 0 && remainingDays !== null && remainingDays <= 5) {
-    return {
-      label: 'Son ödeme yaklaşıyor',
-      description: remainingDays === 0 ? 'Bugün' : `${remainingDays} gün kaldı`,
-      className: 'bg-warning/12 text-warning ring-warning/20',
-    }
-  }
-
-  if (usageRate >= 80) {
-    return {
-      label: 'Limit kullanımı yüksek',
-      description: `%${Math.round(usageRate)} kullanım`,
-      className: 'bg-warning/12 text-warning ring-warning/20',
-    }
-  }
-
-  return {
-    label: 'Normal',
-    description: payableDebt > 0 ? 'Takipte' : 'Ödenebilir borç yok',
-    className: 'bg-success/12 text-success ring-success/20',
-  }
-}
-
-function formatMonthlyDay(day: number | null | undefined) {
-  return day ? `Her ay ${day}` : '-'
-}
-
-function formatShortDate(value: Date | null) {
-  if (!value) return '-'
-  return new Intl.DateTimeFormat('tr-TR', { day: 'numeric', month: 'long' }).format(value)
-}
-
-function activeInstallmentCount(card: Card, installments: CardInstallment[]) {
-  return installments.filter((installment) => installment.card_id === card.id && installment.status !== 'paid').length
-}
-
-function openStatementAmount(card: Card, statements: CardStatementArchive[]) {
-  return statements
-    .filter((statement) => statement.card_id === card.id && statement.status === 'open')
-    .reduce((total, statement) => total + statement.statement_debt_amount, 0)
 }
 
 function CardDatum({ label, value, tone = 'neutral' }: { label: string; value: string; tone?: 'neutral' | 'good' | 'warning' | 'danger' }) {
@@ -697,45 +632,6 @@ export function CreditAccountListCard({
   )
 }
 
-function cardOptionLabel(card: Card) {
-  const owner = card.holder_name ? ` · ${card.holder_name}` : ''
-  return `${card.bank_name} · ${card.card_name}${owner}`
-}
-
-function monthInputValue(value = new Date()) {
-  return value.toLocaleDateString('sv-SE').slice(0, 7)
-}
-
-function isMonthValue(month: string) {
-  return /^\d{4}-\d{2}$/.test(month)
-}
-
-function monthDateValue(month: string) {
-  const safeMonth = isMonthValue(month) ? month : monthInputValue()
-  return `${safeMonth}-01`
-}
-
-function addMonthsToMonth(month: string, months: number) {
-  const [year, monthIndex] = monthDateValue(month).slice(0, 7).split('-').map(Number)
-  if (!year || !monthIndex) return monthDateValue(monthInputValue())
-
-  return new Date(year, monthIndex - 1 + months, 1).toLocaleDateString('sv-SE')
-}
-
-function moneyShare(amount: number, pieces: number) {
-  if (amount <= 0) return 0
-  return roundTL(amount / Math.max(1, pieces))
-}
-
-function formatMonthLabel(month: string) {
-  if (!isMonthValue(month)) return '-'
-  return new Intl.DateTimeFormat('tr-TR', { month: 'long', year: 'numeric' }).format(new Date(`${monthDateValue(month)}T00:00:00`))
-}
-
-function parseInstallmentNumber(value: string, fallback: number) {
-  const parsed = Math.trunc(Number(value))
-  return Number.isFinite(parsed) ? parsed : fallback
-}
 
 export function QuickExpensePanel({
   rows,
@@ -1501,10 +1397,6 @@ export function StatementPanel({
       </CardContent>
     </SurfaceCard>
   )
-}
-
-function shouldRunStatementCut(card: Card, statements: CardStatementArchive[]) {
-  return canCutCurrentStatement(card, statements)
 }
 
 export function DueStatementAutomation({
