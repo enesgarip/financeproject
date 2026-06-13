@@ -32,8 +32,12 @@ export type CreditLimitGroup = {
   label: string
   limit: number
   debt: number
+  statementDebt: number
+  currentPeriod: number
+  provision: number
   available: number
   usageRate: number
+  isShared: boolean
   cards: Card[]
 }
 
@@ -199,6 +203,9 @@ export function buildCreditLimitGroups(cards: Card[]): CreditLimitGroup[] {
   return Array.from(groups, ([key, groupCards]) => {
     const limit = Math.max(...groupCards.map((card) => card.credit_limit), 0)
     const debt = sum(groupCards, (card) => card.debt_amount)
+    const statementDebt = sum(groupCards, (card) => card.statement_debt_amount)
+    const currentPeriod = sum(groupCards, (card) => card.current_period_spending)
+    const provision = sum(groupCards, cardProvisionAmount)
     const usageRate = limit > 0 ? Math.min(100, (debt / limit) * 100) : 0
     const groupName = groupCards.find((card) => card.limit_group_name?.trim())?.limit_group_name?.trim()
 
@@ -207,8 +214,12 @@ export function buildCreditLimitGroups(cards: Card[]): CreditLimitGroup[] {
       label: groupName || groupCards[0]?.card_name || 'Kart grubu',
       limit,
       debt,
+      statementDebt,
+      currentPeriod,
+      provision,
       available: Math.max(0, limit - debt),
       usageRate,
+      isShared: Boolean(groupName) && groupCards.length > 1,
       cards: groupCards,
     }
   }).sort((a, b) => b.debt - a.debt)

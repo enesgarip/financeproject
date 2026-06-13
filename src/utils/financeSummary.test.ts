@@ -263,6 +263,42 @@ describe('buildCreditLimitGroups', () => {
     expect(groups[0].usageRate).toBeCloseTo(40)
   })
 
+  it('carries the full debt breakdown for shared-limit UI and health checks', () => {
+    const c1 = creditCard({
+      id: 'c1',
+      limit_group_name: 'Shared',
+      credit_limit: 20000,
+      debt_amount: 5000,
+      statement_debt_amount: 2500,
+      current_period_spending: 1000,
+      provision_amount: 250,
+    })
+    const c2 = creditCard({
+      id: 'c2',
+      limit_group_name: ' Shared ',
+      credit_limit: 15000,
+      debt_amount: 3000,
+      statement_debt_amount: 500,
+      current_period_spending: 750,
+      provision_amount: null as unknown as number,
+    })
+
+    const groups = buildCreditLimitGroups([c1, c2])
+
+    expect(groups).toHaveLength(1)
+    expect(groups[0]).toMatchObject({
+      key: 'Shared',
+      label: 'Shared',
+      limit: 20000,
+      debt: 8000,
+      statementDebt: 3000,
+      currentPeriod: 1750,
+      provision: 250,
+      available: 12000,
+      isShared: true,
+    })
+  })
+
   it('treats each ungrouped card as its own group', () => {
     const c1 = creditCard({ id: 'c1', limit_group_name: null, credit_limit: 10000, debt_amount: 0 })
     const c2 = creditCard({ id: 'c2', limit_group_name: null, credit_limit: 5000, debt_amount: 0 })

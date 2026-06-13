@@ -19,7 +19,7 @@ import type {
 import { balanceDrift, projectAccountBalance, type AccountLedgerEvent } from '../utils/accountLedger'
 import { ledgerDrift, projectCardDebt, type CardLedgerEvent } from '../utils/cardLedger'
 import { dateInputValue, formatDate } from '../utils/date'
-import { cardProvisionAmount, cardSplitTotal, clampCardBreakdown, expectedInstallmentAmount, moneyDiffers, projectLoanSummary, roundMoney } from '../utils/financeSummary'
+import { buildCreditLimitGroups, cardProvisionAmount, cardSplitTotal, clampCardBreakdown, expectedInstallmentAmount, moneyDiffers, projectLoanSummary, roundMoney } from '../utils/financeSummary'
 import { formatCurrency } from '../utils/formatCurrency'
 import { exceedsTL } from '../utils/money'
 import { formatComponentAmount, formatSavingsGoalAmount, savingsGoalValueTypeLabel } from '../utils/savingsGoal'
@@ -947,23 +947,15 @@ export function buildIssues(data: HealthData): HealthIssue[] {
     })
   }
 
-  const creditGroups = new Map<string, Card[]>()
-  for (const card of data.cards.filter((item) => item.card_type === 'kredi_karti')) {
-    const key = card.limit_group_name?.trim() || card.id
-    creditGroups.set(key, [...(creditGroups.get(key) ?? []), card])
-  }
-
-  for (const [key, groupCards] of creditGroups) {
-    const limit = Math.max(...groupCards.map((card) => card.credit_limit), 0)
-    const debt = groupCards.reduce((total, card) => total + card.debt_amount, 0)
-    if (limit > 0 && exceedsTL(debt, limit)) {
+  for (const group of buildCreditLimitGroups(data.cards)) {
+    if (group.limit > 0 && exceedsTL(group.debt, group.limit)) {
       issues.push({
-        id: `card-limit-over-${key}`,
+        id: `card-limit-over-${group.key}`,
         area: 'Kartlar',
         severity: 'warning',
-        title: `${groupCards[0]?.limit_group_name || groupCards[0]?.card_name || 'Kart'} limit üstünde`,
+        title: `${group.label} limit üstünde`,
         description: 'Ortak/tekil limit borç toplamından düşük görünüyor.',
-        details: [`Limit: ${formatCurrency(limit)}`, `Borç: ${formatCurrency(debt)}`],
+        details: [`Limit: ${formatCurrency(group.limit)}`, `Borç: ${formatCurrency(group.debt)}`],
         fixable: false,
         kind: 'manual',
       })

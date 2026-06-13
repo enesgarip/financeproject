@@ -10,7 +10,7 @@
   - payable card debt excluding provision
   - recurring payment month occurrence
   - budget alert thresholds
-- Create a single documented source of truth for card debt transitions.
+- Maintain the documented source of truth for card debt transitions in `docs/CARD_DEBT_TRANSITIONS.md`.
   - expense added
   - provision posted
   - statement cut

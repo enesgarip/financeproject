@@ -66,6 +66,7 @@ Example:
 - For card, loan, debt, and payment flows, verify side effects on dashboard and data health views.
 - If a change affects table shape or RPC contracts, check `src/types/database.ts` and migrations together.
 - If a bug touches card debt math, also review:
+  - `docs/CARD_DEBT_TRANSITIONS.md`
   - `statement_debt_amount`
   - `current_period_spending`
   - `provision_amount`
