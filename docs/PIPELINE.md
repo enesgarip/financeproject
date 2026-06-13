@@ -116,6 +116,7 @@ Not required by the current hook-based production deploy flow, but useful if the
 ## Notes and Guardrails
 
 - Keep production schema changes migration-driven only.
+- For schema/RPC releases, use `docs/MIGRATION_COMPATIBILITY_CHECKLIST.md` before merge.
 - Do not store secret values in `.env.example`, workflow files, or source.
 - If Vercel Git auto-deploy is also enabled for `main`, deploy hook usage can create duplicate production deploys. For strict migration-then-deploy sequencing, align Vercel project settings with this workflow.
 - The Playwright suite is intentionally a smoke layer right now. Expand it gradually around stable user flows.
