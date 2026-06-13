@@ -19,6 +19,7 @@
     "docker:build": "docker build -t financeproject .",
     "docker:preview": "docker compose -f docker-compose.ci.yml up --build app",
     "db:lint:local": "supabase db lint --local --fail-on error",
+    "db:audit:rls:local": "docker exec -i supabase_db_financeproject psql -U postgres -d postgres -v ON_ERROR_STOP=1 -f - < supabase/tests/rls_audit.sql",
     "db:reset:local": "supabase db reset --local --no-seed",
     "db:seed:local": "supabase db reset --local",
     "ci:local": "npm exec -- eslint . && npm exec -- tsc -b && npm exec -- vitest run && npm exec -- vite build && npm exec -- playwright test"

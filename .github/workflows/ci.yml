@@ -115,3 +115,6 @@ jobs:
 
       - name: Lint local database
         run: supabase db lint --local --fail-on error
+
+      - name: RLS policy audit
+        run: docker exec -i supabase_db_financeproject psql -U postgres -d postgres -v ON_ERROR_STOP=1 -f - < supabase/tests/rls_audit.sql

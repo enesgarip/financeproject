@@ -25,6 +25,7 @@ npm run build          # tsc -b && vite build
 npm run db:seed:local  # Yerel DB'yi sıfırla + seed.sql yükle (test kullanıcısı)
 npm run db:reset:local # Yerel DB'yi sıfırla (seed YOK)
 npm run db:lint:local  # supabase db lint
+npm run db:audit:rls:local # RLS denetimi (her public tablo RLS açık + own-row policy mi; CI'da da koşar)
 ```
 
 `dev:local` sonrası giriş: **t@t.com / password123** (önce `db:seed:local` çalıştır).
