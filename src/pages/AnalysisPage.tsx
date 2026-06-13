@@ -1,4 +1,4 @@
-import { Archive, BarChart3, CalendarDays, CheckCircle2, Download, Flame, HandCoins, PieChart, Search, ShieldCheck, TrendingUp, Users, WalletCards } from 'lucide-react'
+import { Archive, BarChart3, CalendarDays, Check, CheckCircle2, Copy, Download, Flame, HandCoins, PieChart, Search, ShieldCheck, Sparkles, TrendingUp, Users, WalletCards } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useAuth } from '../auth/useAuth'
@@ -38,6 +38,8 @@ import { applyScenario, type ScenarioMutation } from '../utils/scenarioForecast'
 import { buildPriceObservations, detectPriceIncreases, type PriceTrend } from '../utils/priceIncreaseRadar'
 import { computeFire, estimateMonthlySavingsFromNetWorth } from '../utils/fire'
 import { buildInflationShield } from '../utils/inflationShield'
+import { buildFinancialReport, reportToMarkdown, type FinancialReport } from '../utils/financialReport'
+import { SimpleModal } from '../components/SimpleModal'
 import { computeZakat } from '../utils/zakat'
 import { canCutCurrentStatement } from '../utils/statementCycle'
 
@@ -133,6 +135,114 @@ function StatPill({ label, value, tone = 'stone' }: { label: string; value: stri
   )
 }
 
+function escapeHtml(value: string) {
+  return value.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c] ?? c)
+}
+
+/**
+ * Raporu yazdırılabilir (PDF) temiz bir pencerede açar. CSP-güvenli: pencere
+ * opener'ın CSP'sini miras alır, bu yüzden INLINE SCRIPT yok — yazdırma
+ * opener'dan `w.print()` ile tetiklenir (inline `<style>` 'unsafe-inline' ile serbest).
+ */
+function printFinancialReport(report: FinancialReport) {
+  const sectionsHtml = report.sections
+    .map((section) => {
+      const lines = section.lines?.length
+        ? `<ul>${section.lines.map((l) => `<li>${escapeHtml(l)}</li>`).join('')}</ul>`
+        : ''
+      const table = section.table
+        ? `<table><thead><tr>${section.table.headers.map((h) => `<th>${escapeHtml(h)}</th>`).join('')}</tr></thead><tbody>${section.table.rows
+            .map((r) => `<tr>${r.map((c) => `<td>${escapeHtml(c)}</td>`).join('')}</tr>`)
+            .join('')}</tbody></table>`
+        : ''
+      const note = section.note ? `<p class="note">${escapeHtml(section.note)}</p>` : ''
+      return `<section><h2>${escapeHtml(section.heading)}</h2>${lines}${table}${note}</section>`
+    })
+    .join('')
+
+  const html = `<!doctype html><html lang="tr"><head><meta charset="utf-8"><title>${escapeHtml(report.title)}</title><style>
+    body{font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:#0f172a;max-width:720px;margin:24px auto;padding:0 16px}
+    h1{font-size:20px;margin:0 0 4px}h2{font-size:15px;margin:20px 0 6px;border-bottom:1px solid #e2e8f0;padding-bottom:4px}
+    .sub{color:#64748b;font-size:12px;margin:0 0 8px}ul{margin:6px 0;padding-left:18px}li{margin:2px 0}
+    table{border-collapse:collapse;width:100%;margin:8px 0;font-size:13px}th,td{border:1px solid #e2e8f0;padding:5px 8px;text-align:left}
+    th{background:#f8fafc}td:not(:first-child),th:not(:first-child){text-align:right}.note{color:#64748b;font-size:12px;font-style:italic;margin:6px 0}
+  </style></head><body><h1>${escapeHtml(report.title)} — ${escapeHtml(report.generatedAt)}</h1>
+  <p class="sub">Para birimi: TL. Hesap/banka/kişi adı içermez (yalnız yapı + rakam).</p>${sectionsHtml}</body></html>`
+
+  const w = window.open('', '_blank', 'width=820,height=900')
+  if (!w) return
+  w.document.write(html)
+  w.document.close()
+  w.focus()
+  w.print()
+}
+
+/**
+ * "AI için özet" — finansal durumu yapısal markdown olarak panoya kopyalar
+ * (ChatGPT'ye yapıştırıp taktik almak) veya temiz PDF olarak yazdırır. Rapor
+ * kategori-bazlı agregasyondur: hesap/banka/kişi adı içermez (gizlilik yapı gereği).
+ */
+function AiSummaryButton({ data }: { data: AnalysisData }) {
+  const [open, setOpen] = useState(false)
+  const [copied, setCopied] = useState(false)
+
+  const report = useMemo(
+    () =>
+      buildFinancialReport({
+        assets: data.assets,
+        cards: data.cards,
+        loans: data.loans,
+        loanInstallments: data.loanInstallments,
+        debts: data.debts,
+        payments: data.payments,
+        salaryHistory: data.salaryHistory,
+        cardInstallments: data.cardInstallments,
+      }),
+    [data],
+  )
+  const markdown = useMemo(() => reportToMarkdown(report), [report])
+
+  async function copyMarkdown() {
+    try {
+      await navigator.clipboard.writeText(markdown)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      setCopied(false)
+    }
+  }
+
+  return (
+    <>
+      <Button type="button" variant="outline" onClick={() => setOpen(true)}>
+        <Sparkles />
+        AI özeti
+      </Button>
+      <SimpleModal title="Finansal özet — AI için" open={open} onClose={() => setOpen(false)}>
+        <div className="space-y-3">
+          <p className="text-sm text-muted-foreground">
+            Aşağıdaki özet hesap/banka/kişi adı içermez — yalnız yapı ve rakam. ChatGPT gibi bir asistana yapıştırıp
+            taktik alabilir veya PDF olarak indirebilirsin.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" onClick={copyMarkdown}>
+              {copied ? <Check /> : <Copy />}
+              {copied ? 'Kopyalandı' : 'AI için kopyala (Markdown)'}
+            </Button>
+            <Button type="button" variant="outline" onClick={() => printFinancialReport(report)}>
+              <Download />
+              Yazdır / PDF
+            </Button>
+          </div>
+          <pre className="max-h-[52svh] overflow-auto rounded-xl border border-border/70 bg-muted/40 p-3 text-xs leading-relaxed whitespace-pre-wrap break-words text-foreground">
+            {markdown}
+          </pre>
+        </div>
+      </SimpleModal>
+    </>
+  )
+}
+
 function MonthlyReport({ data }: { data: AnalysisData }) {
   // Same engine the dashboard cash-flow card uses, so "Gelir / Çıkış / Net" here
   // can never disagree with the dashboard for the same month (credit-card auto
@@ -160,7 +270,8 @@ function MonthlyReport({ data }: { data: AnalysisData }) {
             <CardTitle>Aylık rapor</CardTitle>
             <p className="mt-1 text-sm text-muted-foreground">{cashFlow.monthLabel}</p>
           </div>
-          <div className="flex shrink-0 items-center gap-2">
+          <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+            <AiSummaryButton data={data} />
             <Button type="button" variant="outline" onClick={() => window.print()}>
               <Download />
               PDF
