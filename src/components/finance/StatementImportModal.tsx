@@ -12,6 +12,7 @@ import {
 import type { Card } from '../../types/database'
 import { formatCurrency } from '../../utils/formatCurrency'
 import { parseDenizBankStatement, matchTransactions, expenseTotalAmount, type ParsedTransaction } from '../../utils/denizBankStatementParser'
+import { parseStatementText } from '../../lib/statementParseClient'
 
 /**
  * App'e güvenle otomatik aktarılabilen işlem mi?
@@ -122,10 +123,16 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
 
     try {
       const text = await extractPdfText(file)
-      const parsed = parseDenizBankStatement(text)
+      let parsed = parseDenizBankStatement(text)
+
+      // DenizBank formatı tanınmadıysa banka-bağımsız çözümleyiciye düş (Y3):
+      // metin parse-statement edge fonksiyonuna (Gemini) gönderilir.
+      if (!parsed.totalDebt && !parsed.transactions.length) {
+        parsed = await parseStatementText(text)
+      }
 
       if (!parsed.totalDebt && !parsed.transactions.length) {
-        setParseError('PDF okunamadı veya Denizbank ekstre formatında değil.')
+        setParseError('Ekstre okunamadı veya desteklenmeyen bir format.')
         setParsing(false)
         return
       }
@@ -359,7 +366,8 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
         {step === 'upload' && (
           <div className="p-4 space-y-4">
             <p className="text-sm text-muted-foreground">
-              Denizbank'tan aldığın ekstre PDF'ini yükle. Tüm işlemler cihazında okunur, dışarıya çıkmaz.
+              Kredi kartı ekstre PDF'ini yükle. DenizBank ekstreleri tamamen cihazında okunur;
+              diğer bankalarda metin yalnız çözümleme için sunucuya gönderilir, saklanmaz.
             </p>
 
             <button
