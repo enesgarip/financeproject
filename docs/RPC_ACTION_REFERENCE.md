@@ -1,6 +1,6 @@
 # Supabase RPC Action Reference
 
-Last reviewed: 2026-06-13
+Last reviewed: 2026-06-15
 
 This file maps Supabase RPCs to the user-visible actions that call them. Keep it
 updated whenever a page action, repository wrapper, or migration changes an RPC
@@ -76,6 +76,8 @@ These functions are database infrastructure, not direct app actions:
 - `touch_updated_at`
 - `record_card_debt_event`
 - `record_account_balance_event`
+- `private.debit_bank_account`
+- `private.credit_bank_account`
 - `clamp_card_breakdown`
 - `sync_loan_summary`
 - `derive_card_expense_installment_amount`

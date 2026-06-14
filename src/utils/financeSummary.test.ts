@@ -114,6 +114,9 @@ describe('sum', () => {
   it('reduces an array with a selector', () => {
     expect(sum([{ v: 1 }, { v: 2 }, { v: 3 }], (x) => x.v)).toBe(6)
   })
+  it('sums TL values through kurus instead of leaking float dust', () => {
+    expect(sum([{ v: 0.1 }, { v: 0.2 }], (x) => x.v)).toBe(0.3)
+  })
   it('returns 0 for empty array', () => {
     expect(sum([], (x: { v: number }) => x.v)).toBe(0)
   })
@@ -152,6 +155,9 @@ describe('cardSplitTotal', () => {
   it('sums statement + current + provision', () => {
     expect(cardSplitTotal(1000, 300, 50)).toBe(1350)
   })
+  it('keeps split totals at exact kurus precision', () => {
+    expect(cardSplitTotal(0.1, 0.2, 0.3)).toBe(0.6)
+  })
 })
 
 describe('cardPayableDebt', () => {
@@ -187,6 +193,12 @@ describe('clampCardBreakdown', () => {
   it('floors negatives and a negative debt at zero', () => {
     expect(clampCardBreakdown(100, -10, -5, -20)).toEqual({ statement: 0, provision: 0, current: 0 })
     expect(clampCardBreakdown(-50, 10, 10, 10)).toEqual({ statement: 0, provision: 0, current: 0 })
+  })
+
+  it('clamps in integer kurus when decimal dust would otherwise matter', () => {
+    const out = clampCardBreakdown(0.3, 0.1, 0.2, 0.1)
+    expect(out).toEqual({ statement: 0.1, provision: 0.1, current: 0.1 })
+    expect(out.statement + out.provision + out.current).toBeCloseTo(0.3)
   })
 })
 
@@ -507,6 +519,21 @@ describe('buildFinancialPosition', () => {
     // totalAssets = 50000, totalDebts = 10000 (credit card)
     expect(pos.netWorth).toBe(40000)
   })
+
+  it('keeps financial position totals exact at kurus precision', () => {
+    const pos = buildFinancialPosition({
+      ...emptyInput,
+      assets: [asset({ category: 'Nakit', estimated_value_try: 0.1 })],
+      cards: [
+        bankCard({ current_balance: 0.2 }),
+        creditCard({ debt_amount: 0.1, statement_debt_amount: 0.1 }),
+      ],
+    })
+
+    expect(pos.totalAssets).toBe(0.3)
+    expect(pos.totalDebts).toBe(0.1)
+    expect(pos.netWorth).toBe(0.2)
+  })
 })
 
 // ── buildMonthlyCashFlow ───────────────────────────────────────────────────
@@ -593,6 +620,23 @@ describe('buildMonthlyCashFlow', () => {
       JUNE,
     )
     expect(flow.projectedCash).toBeCloseTo(flow.cashAssets + flow.netFlow)
+  })
+
+  it('keeps projected cash exact at kurus precision', () => {
+    const flow = buildMonthlyCashFlow(
+      {
+        ...emptyInput,
+        assets: [asset({ category: 'Nakit', estimated_value_try: 0.1 })],
+        salaryHistory: [salary({ amount: 0.2, effective_date: '2026-01-01' })],
+        payments: [payment({ amount: 0.1, due_date: '2026-06-15', status: 'bekliyor' })],
+      },
+      JUNE,
+    )
+
+    expect(flow.income).toBe(0.2)
+    expect(flow.outflow).toBe(0.1)
+    expect(flow.netFlow).toBe(0.1)
+    expect(flow.projectedCash).toBe(0.2)
   })
 })
 

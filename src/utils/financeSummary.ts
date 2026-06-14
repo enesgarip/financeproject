@@ -11,7 +11,7 @@ import type {
   SavingsGoalComponent,
 } from '../types/database'
 import { dateInputValue, endOfMonth, isDateInMonth, monthlyOccurrenceDate, startOfMonth } from './date'
-import { roundTL, toKurus } from './money'
+import { diffTL, roundTL, sumTL, toKurus, toTL } from './money'
 import { savingsGoalProgressRate } from './savingsGoal'
 
 export type FinanceSummaryInput = {
@@ -102,7 +102,7 @@ export type FinancialHealthSummary = {
 }
 
 export function sum<T>(rows: T[], selector: (row: T) => number) {
-  return rows.reduce((total, row) => total + selector(row), 0)
+  return sumTL(rows.map(selector))
 }
 
 // Domain-anlamlı alias: TL para toplamları için kanonik roundTL'e delege eder
@@ -121,11 +121,11 @@ export function cardProvisionAmount(card: Pick<Card, 'provision_amount'>) {
 }
 
 export function cardSplitTotal(statementDebt: number, currentPeriod: number, provisionAmount: number) {
-  return roundMoney(statementDebt + currentPeriod + provisionAmount)
+  return sumTL([statementDebt, currentPeriod, provisionAmount])
 }
 
 export function cardPayableDebt(card: Pick<Card, 'statement_debt_amount' | 'current_period_spending'>) {
-  return roundMoney(Math.max(0, card.statement_debt_amount + card.current_period_spending))
+  return Math.max(0, sumTL([card.statement_debt_amount, card.current_period_spending]))
 }
 
 /**
@@ -136,11 +136,11 @@ export function cardPayableDebt(card: Pick<Card, 'statement_debt_amount' | 'curr
  * of truth for the invariant, shared with the DataHealth split check.
  */
 export function clampCardBreakdown(debt: number, statement: number, current: number, provision: number) {
-  const total = Math.max(0, debt)
-  const clampedStatement = Math.min(Math.max(0, statement), total)
-  const clampedProvision = Math.min(Math.max(0, provision), Math.max(0, total - clampedStatement))
-  const clampedCurrent = Math.min(Math.max(0, current), Math.max(0, total - clampedStatement - clampedProvision))
-  return { statement: clampedStatement, provision: clampedProvision, current: clampedCurrent }
+  const totalK = Math.max(0, toKurus(debt))
+  const clampedStatementK = Math.min(Math.max(0, toKurus(statement)), totalK)
+  const clampedProvisionK = Math.min(Math.max(0, toKurus(provision)), Math.max(0, totalK - clampedStatementK))
+  const clampedCurrentK = Math.min(Math.max(0, toKurus(current)), Math.max(0, totalK - clampedStatementK - clampedProvisionK))
+  return { statement: toTL(clampedStatementK), provision: toTL(clampedProvisionK), current: toTL(clampedCurrentK) }
 }
 
 export function cardMonthlyPaymentAmount(card: Pick<Card, 'statement_debt_amount'>) {
@@ -162,7 +162,7 @@ export function projectLoanSummary(installments: Pick<LoanInstallment, 'amount' 
   const pending = installments.filter((item) => item.status !== 'ödendi')
   const remainingInstallments = pending.length
   return {
-    remainingAmount: roundMoney(pending.reduce((total, item) => total + item.amount, 0)),
+    remainingAmount: sumTL(pending.map((item) => item.amount)),
     remainingInstallments,
     status: remainingInstallments === 0 ? 'closed' : 'active',
   }
@@ -191,7 +191,7 @@ export function totalCreditLimit(cards: Card[]) {
     limitsByGroup.set(groupKey, Math.max(limitsByGroup.get(groupKey) ?? 0, card.credit_limit))
   }
 
-  return Array.from(limitsByGroup.values()).reduce((total, limit) => total + limit, 0)
+  return sumTL(limitsByGroup.values())
 }
 
 export function buildCreditLimitGroups(cards: Card[]): CreditLimitGroup[] {
@@ -219,7 +219,7 @@ export function buildCreditLimitGroups(cards: Card[]): CreditLimitGroup[] {
       statementDebt,
       currentPeriod,
       provision,
-      available: Math.max(0, limit - debt),
+      available: Math.max(0, diffTL(limit, debt)),
       usageRate,
       isShared: Boolean(groupName) && groupCards.length > 1,
       cards: groupCards,
@@ -234,7 +234,7 @@ export function getSalaryTrend(rows: SalaryHistory[]) {
 
   if (!current || !previous || previous.amount <= 0) return { current, previous, difference: 0, percentage: 0 }
 
-  const difference = current.amount - previous.amount
+  const difference = diffTL(current.amount, previous.amount)
   return {
     current,
     previous,
@@ -277,17 +277,20 @@ export function paymentCashOutflowAmount(payment: Pick<Payment, 'amount' | 'paym
 export function buildFinancialPosition(data: FinanceSummaryInput): FinancialPositionSummary {
   const bankCards = data.cards.filter((card) => card.card_type === 'banka_karti')
   const creditCards = data.cards.filter((card) => card.card_type === 'kredi_karti')
-  const totalCashAssets = sum(
-    data.assets.filter((asset) => asset.category === 'Nakit'),
-    (asset) => asset.estimated_value_try,
-  ) + sum(bankCards, (card) => card.current_balance)
-  const totalAssets = sum(data.assets, (asset) => asset.estimated_value_try) + sum(bankCards, (card) => card.current_balance)
+  const totalCashAssets = sumTL([
+    sum(data.assets.filter((asset) => asset.category === 'Nakit'), (asset) => asset.estimated_value_try),
+    sum(bankCards, (card) => card.current_balance),
+  ])
+  const totalAssets = sumTL([
+    sum(data.assets, (asset) => asset.estimated_value_try),
+    sum(bankCards, (card) => card.current_balance),
+  ])
   const totalCreditCardDebt = sum(creditCards, (card) => card.debt_amount)
   const totalCardStatementDebt = sum(creditCards, (card) => card.statement_debt_amount)
   const totalCardCurrentPeriod = sum(creditCards, (card) => card.current_period_spending)
   const totalCardProvision = sum(creditCards, cardProvisionAmount)
   const totalCardSplitDebt = cardSplitTotal(totalCardStatementDebt, totalCardCurrentPeriod, totalCardProvision)
-  const totalCardFutureInstallmentDebt = roundMoney(Math.max(0, totalCreditCardDebt - totalCardSplitDebt))
+  const totalCardFutureInstallmentDebt = Math.max(0, diffTL(totalCreditCardDebt, totalCardSplitDebt))
   const totalLoanDebt = sum(
     data.loans.filter((loan) => loan.status === 'active'),
     (loan) => loan.remaining_amount,
@@ -305,15 +308,15 @@ export function buildFinancialPosition(data: FinanceSummaryInput): FinancialPosi
     data.payments.filter((payment) => payment.status === 'bekliyor'),
     (payment) => payment.amount,
   )
-  const totalDebts = roundMoney(totalCreditCardDebt + totalLoanDebt + totalPersonalDebts + totalPaymentLiabilities)
-  const netWorth = roundMoney(totalAssets - totalDebts)
+  const totalDebts = sumTL([totalCreditCardDebt, totalLoanDebt, totalPersonalDebts, totalPaymentLiabilities])
+  const netWorth = diffTL(totalAssets, totalDebts)
 
   return {
     totalAssets,
     totalCashAssets,
     totalDebts,
     netWorth,
-    netWorthIfReceivablesCollected: roundMoney(netWorth + totalReceivables),
+    netWorthIfReceivablesCollected: sumTL([netWorth, totalReceivables]),
     totalCreditCardDebt,
     totalCardStatementDebt,
     totalCardCurrentPeriod,
@@ -365,14 +368,14 @@ export function buildMonthlyCashFlow(data: FinanceSummaryInput, month = new Date
     }),
     (loan) => loan.monthly_payment,
   )
-  const loanOutflow = scheduledLoanOutflow + legacyLoanOutflow
+  const loanOutflow = sumTL([scheduledLoanOutflow, legacyLoanOutflow])
   const debtOutflow = sum(
     openDebts.filter((debt) => debt.direction === 'borç_aldım' && isDateInMonth(debt.due_date, monthStart)),
     (debt) => debt.estimated_value_try,
   )
-  const income = (currentSalary?.amount ?? 0) + receivableIncome
-  const outflow = paymentOutflow + cardOutflow + loanOutflow + debtOutflow
-  const netFlow = income - outflow
+  const income = sumTL([currentSalary?.amount, receivableIncome])
+  const outflow = sumTL([paymentOutflow, cardOutflow, loanOutflow, debtOutflow])
+  const netFlow = diffTL(income, outflow)
 
   return {
     monthLabel,
@@ -381,7 +384,7 @@ export function buildMonthlyCashFlow(data: FinanceSummaryInput, month = new Date
     receivableIncome,
     outflow,
     netFlow,
-    projectedCash: cashAssets + netFlow,
+    projectedCash: sumTL([cashAssets, netFlow]),
     recurringPayments,
     cardStatementDebt,
     cardOutflow,
@@ -430,7 +433,7 @@ export function buildMonthlyLoad(data: FinanceSummaryInput, month: Date): Monthl
 
   return {
     monthLabel,
-    total: payments + cardStatements + cardInstallments + loanInstallments + legacyLoanInstallments + personalDebts,
+    total: sumTL([payments, cardStatements, cardInstallments, loanInstallments, legacyLoanInstallments, personalDebts]),
     payments,
     cardStatements,
     cardInstallments,
@@ -451,11 +454,11 @@ export function buildGoalProgressSummary(goals: SavingsGoal[] = [], components: 
       const targetDate = new Date(`${goal.target_date}T00:00:00`)
       const monthDelta = (targetDate.getFullYear() - today.getFullYear()) * 12 + targetDate.getMonth() - today.getMonth()
       const remainingMonths = Math.max(1, monthDelta + 1)
-      const remaining = Math.max(0, goal.target_amount - goal.current_amount)
+      const remaining = Math.max(0, diffTL(goal.target_amount, goal.current_amount))
       return {
         goal,
         remaining,
-        monthlyNeed: remaining / remainingMonths,
+        monthlyNeed: roundTL(remaining / remainingMonths),
         targetTime: targetDate.getTime(),
       }
     })

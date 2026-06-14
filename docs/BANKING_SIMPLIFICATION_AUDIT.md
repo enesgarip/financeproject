@@ -58,11 +58,11 @@
   - Before: `DebtsPage` called the personal-debt settlement repository directly and owned separate modal state.
   - Now: personal debt settlement and receivable collection open the shared drawer from `FinanceObligation`, preserving debt reloads, snapshot invalidation, and inflow/outflow account preview.
 
-## Remaining Simplification Candidates
-
 - **One account movement helper**
   - Manual deposit, withdrawal, transfer, bill payment, debt settlement, and loan payment all update balances and history.
-  - A shared database function family or transaction service would make side effects easier to audit.
+  - Now: bank debit/credit row locking, ownership checks, type checks, balance validation, and balance updates are shared through internal `private.debit_bank_account` / `private.credit_bank_account` helpers, while each public RPC still owns its domain side effects and transaction-history insert.
+
+## Remaining Simplification Candidates
 
 - **Planning model unification**
   - Recurring payments, loan installments, card statement debt, and card installments all appear as upcoming obligations.

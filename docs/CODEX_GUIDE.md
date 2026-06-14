@@ -48,3 +48,9 @@ değiştirme. Migration yapma.`
 - Birikim hedefleri TRY, altın-bazlı veya kompozit olabilir.
 - `DataHealthPage` gerçek bir operasyonel araç — debug sayfası değil.
 - Düzeltme = ters kayıt (append-only), asla geçmişi UPDATE etme.
+- `financeSummary.ts` TL agregasyonlarında çıplak `+`/`-` kullanma; `sum()` zaten
+  `sumTL`'ye gider, yeni toplam/fark için `sumTL`/`diffTL` tercih et.
+- Banka hesabı debit/credit yapan RPC'ler ortak iç helper'ları kullanır:
+  `private.debit_bank_account` / `private.credit_bank_account`. Bu helper'ları
+  public RPC yüzeyine açma; transaction history ve domain yan etkileri public
+  RPC'lerde kalır.

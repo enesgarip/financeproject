@@ -4,16 +4,19 @@
 
 - ~~Break large finance-heavy page files into smaller domain modules without changing behavior.~~ DONE.
   - All four candidates split: `CardsPage` (hooks/sections/crud), `LoansPage` (helpers/components), `AnalysisPage` (panels/atoms/reports/trends/wealth), `DataHealthPage` (logic/components/actions).
-- Finish Faz C money cleanup (ledger integer-kuruş conversion).
-  - Remaining real work: migrate residual float TL ledger arithmetic to signed integer kuruş at the repo/data layer.
-  - Rounding/comparison sweep is DONE: all TL sums route through `roundMoney`→`roundTL`, and `+0.01` tolerances now use `exceedsTL`/`moneyDiffers`. The remaining bare `Math.round(x*100)/100` sites (`fire`, `realValue`, `marketRates`, `goldLedger`) are intentionally NOT money (display/rate/quantity precision) and are commented as such — do not route them through `money.ts`.
+- ~~Finish Faz C money cleanup (ledger integer-kuruş conversion).~~ DONE.
+  - `financeSummary.ts` fully migrated: `sum()` delegates to `sumTL`, all direct float additions use `sumTL([...])`, subtractions use `diffTL`, `clampCardBreakdown` operates in kuruş internally. No float TL arithmetic remains in the aggregation layer.
+  - Rounding/comparison sweep was already done: all TL sums route through `roundMoney`→`roundTL`, and `+0.01` tolerances use `exceedsTL`/`moneyDiffers`. The remaining bare `Math.round(x*100)/100` sites (`fire`, `realValue`, `marketRates`, `goldLedger`) are intentionally NOT money (display/rate/quantity precision) and are commented as such — do not route them through `money.ts`.
+  - Repo/service layers were already clean (no money arithmetic, only DB queries/RPCs).
+- ~~Extract shared account movement helpers for account-backed RPCs.~~ DONE.
+  - Bank debit/credit row locking, ownership checks, type checks, balance validation, and balance updates now live in internal `private.debit_bank_account` / `private.credit_bank_account` helpers.
+  - User-facing RPCs keep their existing contracts and transaction-history writes; helpers are not exposed as public RPCs.
 - Maintain the documented source of truth for card debt transitions in `docs/CARD_DEBT_TRANSITIONS.md`.
   - expense added
   - provision posted
   - statement cut
   - debt paid
 - Continue banking simplification from `docs/BANKING_SIMPLIFICATION_AUDIT.md`.
-  - shared account movement helper/RPC family
   - normalized upcoming obligations view
 
 ## P1 - Product / Reliability
@@ -39,7 +42,7 @@
 
 ## Suggested Next Tasks for Codex
 
-1. Plan the shared account movement helper/RPC family across manual deposit, withdrawal, transfer, bill payment, debt settlement, and loan payment.
+1. Plan the normalized upcoming obligations view across recurring payments, loan installments, card statements, and card installments.
 2. Keep `docs/RPC_ACTION_REFERENCE.md` aligned when Supabase RPCs or user-visible actions change.
 3. Keep `docs/MIGRATION_COMPATIBILITY_CHECKLIST.md` aligned with release workflow changes.
 4. ~~Continue shrinking the remaining large route files.~~ DONE — all four large page files are now split into focused modules.
@@ -49,7 +52,9 @@
 - Targeted tests now exist for `cardStatement`, `budgetAlerts`, and savings goal progress.
 - `financeSummary.test.ts` covers shared credit limit grouping, payable card debt excluding provision, and recurring payment month occurrence.
 - A narrow Faz C pass replaced savings-goal `+0.01` comparisons and obvious TL amount rounding sites with `money.ts` helpers.
-- Faz C rounding/comparison audit closed: the non-money `Math.round` helpers (`fire`, `realValue`, `marketRates`, `goldLedger`) were classified as display/rate/quantity precision and commented in place; only ledger integer-kuruş conversion remains under Faz C.
+- Faz C rounding/comparison audit closed: the non-money `Math.round` helpers (`fire`, `realValue`, `marketRates`, `goldLedger`) were classified as display/rate/quantity precision and commented in place.
+- Faz C integer-kuruş conversion completed: `financeSummary.ts` `sum()` now delegates to `sumTL`; all direct float TL additions/subtractions replaced with `sumTL`/`diffTL`; `clampCardBreakdown` operates in kuruş internally. Repo/service layers were already clean.
+- Account-backed money RPCs now share internal bank-account debit/credit helpers while keeping public RPC contracts unchanged.
 - `CardsPage.sections.tsx` is now a thin nav/automation module; overview, statement/provision panels, and help copy live in focused `CardsPage.*` files.
 - `CardsPage.tsx` data loading, account movement, statement payment, and section navigation orchestration now lives in `CardsPage.hooks.ts`.
 - `CardsPage.tsx` CRUD form mapping, card metadata renderers, limit usage extra block, bank hue styling, grouping, and row action button now live in `CardsPage.crud.tsx`; the route file is mostly orchestration and modal wiring.
