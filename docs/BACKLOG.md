@@ -13,7 +13,7 @@
   - statement cut
   - debt paid
 - Continue banking simplification from `docs/BANKING_SIMPLIFICATION_AUDIT.md`.
-  - shared account-payment drawer
+  - implement the shared account-payment drawer from `docs/SHARED_PAYMENT_DRAWER_PLAN.md`
   - shared account movement helper/RPC family
   - normalized upcoming obligations view
 
@@ -40,7 +40,7 @@
 
 ## Suggested Next Tasks for Codex
 
-1. Plan the shared payment drawer across card debt, card installments, loan installments, planned payments, and personal debt settlement.
+1. Implement phase 1 of `docs/SHARED_PAYMENT_DRAWER_PLAN.md`: add the shared hook/wrapper and migrate `PaymentsPage` first.
 2. Keep `docs/RPC_ACTION_REFERENCE.md` aligned when Supabase RPCs or user-visible actions change.
 3. Keep `docs/MIGRATION_COMPATIBILITY_CHECKLIST.md` aligned with release workflow changes.
 4. Continue shrinking the remaining large route files (`LoansPage.tsx`, `AnalysisPage.tsx`, `DataHealthPage.tsx`) with behavior-preserving module extracts.
@@ -54,3 +54,4 @@
 - `CardsPage.sections.tsx` is now a thin nav/automation module; overview, statement/provision panels, and help copy live in focused `CardsPage.*` files.
 - `CardsPage.tsx` data loading, account movement, statement payment, and section navigation orchestration now lives in `CardsPage.hooks.ts`.
 - `CardsPage.tsx` CRUD form mapping, card metadata renderers, limit usage extra block, bank hue styling, grouping, and row action button now live in `CardsPage.crud.tsx`; the route file is mostly orchestration and modal wiring.
+- `docs/SHARED_PAYMENT_DRAWER_PLAN.md` captures the shared payment drawer migration path across planned payments, card statement/manual debt payment, loan installments, and personal debt settlement.

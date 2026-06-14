@@ -38,11 +38,15 @@
   - Before: payment modals displayed only the local card/account name.
   - Now: account selectors include bank name and current balance so similarly named accounts are easier to distinguish.
 
+- **Shared payment drawer plan**
+  - Before: account-backed payments had a shared visual modal, but page-local state still duplicated account selection, last-used account, submit, and refresh behavior.
+  - Now: `docs/SHARED_PAYMENT_DRAWER_PLAN.md` defines the migration path for one drawer/hook across planned payments, card statements/manual card debt, loan installments, and personal debt settlement.
+
 ## Remaining Simplification Candidates
 
-- **One payment drawer for all money outflows**
-  - Card debt, card installment, loan installment, payment, and personal debt settlement all debit a bank account.
-  - A shared payment modal/service would reduce repeated validation and copy.
+- **Implement the shared payment drawer plan**
+  - `AccountPaymentModal` is the existing low-level UI.
+  - Next implementation step: add the shared hook/wrapper from `docs/SHARED_PAYMENT_DRAWER_PLAN.md`, then migrate `PaymentsPage` first.
 
 - **One account movement helper**
   - Manual deposit, withdrawal, transfer, bill payment, debt settlement, and loan payment all update balances and history.

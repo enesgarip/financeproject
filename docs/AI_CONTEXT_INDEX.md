@@ -35,6 +35,7 @@ frontend -> RPC, or RPC -> migration.
 | Card debt fields and transitions | `docs/CARD_DEBT_TRANSITIONS.md` | `src/utils/financeSummary.ts`, `src/pages/CardsPage*.tsx`, latest card migrations | Use this before touching `debt_amount`, `statement_debt_amount`, `current_period_spending`, `provision_amount`, or card installments |
 | General finance rules | `docs/FINANCE_RULES.md` | Matching utility under `src/utils/*` | Broad business semantics: assets, cards, payments, loans, debts, goals, dashboard |
 | RPC-backed actions | `docs/RPC_ACTION_REFERENCE.md` | `src/data/repositories/*`, `src/services/*`, `src/types/database.ts`, migrations | Maps Supabase RPCs to user-visible actions and side effects |
+| Shared payment drawer | `docs/SHARED_PAYMENT_DRAWER_PLAN.md` | `src/components/finance/AccountPaymentModal.tsx`, `src/services/financePaymentActions.ts`, payment-owning pages | Plan for unifying account-backed payment modals without changing RPC behavior |
 | Release/migration compatibility | `docs/MIGRATION_COMPATIBILITY_CHECKLIST.md` | `.github/workflows/ci.yml`, `.github/workflows/deploy.yml`, `supabase/migrations/*` | Use for schema, RLS, RPC, edge function, or generated type changes |
 | Banking simplification | `docs/BANKING_SIMPLIFICATION_AUDIT.md` | `src/pages/CardsPage.tsx`, `src/pages/CardsPage.sections.tsx`, `src/pages/CardsPage.overview.tsx`, `src/pages/CardsPage.statements.tsx`, `src/components/finance/*` | Tracks what was simplified and what remains |
 | Pipeline/deploy | `docs/PIPELINE.md` | GitHub workflow files and package scripts | CI, deploy, secrets, branch flow |
@@ -61,9 +62,9 @@ ESLint blocks `src/{pages,components,utils,hooks}` from importing
 | --- | --- | --- |
 | `/` dashboard | `src/pages/DashboardPage.tsx`, `src/components/dashboard/*` | `src/app/useFinanceSnapshot.ts`, `src/data/repositories/financeSnapshotRepo.ts`, `src/utils/dashboard*`, `src/utils/financeSummary.ts` |
 | `/kartlar` accounts/cards | `src/pages/CardsPage.tsx`, `src/pages/CardsPage.hooks.ts`, `src/pages/CardsPage.crud.tsx`, `src/pages/CardsPage.sections.tsx`, `src/pages/CardsPage.overview.tsx`, `src/pages/CardsPage.statements.tsx`, `src/pages/CardsPage.expense.tsx`, `src/pages/CardsPage.list.tsx`, `src/pages/CardsPage.installment.tsx`, `src/pages/CardsPage.helpers.ts` | `src/data/repositories/cardsRepo.ts`, `src/services/accountMovements.ts`, `src/utils/cardStatement.ts`, `src/utils/financeSummary.ts` |
-| `/odemeler` planned payments | `src/pages/PaymentsPage.tsx` | `src/data/repositories/paymentsRepo.ts`, `src/services/financePaymentActions.ts`, `src/utils/obligations.ts` |
-| `/borclar/krediler` loans | `src/pages/LoansPage.tsx` | `src/data/repositories/loansRepo.ts`, `src/services/financePaymentActions.ts`, `src/utils/financeSummary.ts` |
-| `/borclar/kisiler` personal debts | `src/pages/DebtsPage.tsx` | `src/data/repositories/debtsRepo.ts`, `src/services/financePaymentActions.ts` |
+| `/odemeler` planned payments | `src/pages/PaymentsPage.tsx` | `src/data/repositories/paymentsRepo.ts`, `src/services/financePaymentActions.ts`, `src/utils/obligations.ts`, `docs/SHARED_PAYMENT_DRAWER_PLAN.md` |
+| `/borclar/krediler` loans | `src/pages/LoansPage.tsx` | `src/data/repositories/loansRepo.ts`, `src/services/financePaymentActions.ts`, `src/utils/financeSummary.ts`, `docs/SHARED_PAYMENT_DRAWER_PLAN.md` |
+| `/borclar/kisiler` personal debts | `src/pages/DebtsPage.tsx` | `src/data/repositories/debtsRepo.ts`, `src/services/financePaymentActions.ts`, `docs/SHARED_PAYMENT_DRAWER_PLAN.md` |
 | `/varliklar` assets | `src/pages/AssetsPage.tsx`, `src/pages/AssetsHub.tsx` | `src/data/repositories/valuationRepo.ts`, `src/utils/valuation*`, `src/utils/marketRates.ts` |
 | `/varliklar/maas` salary | `src/pages/SalaryPage.tsx` | `src/utils/financeSummary.ts` salary helpers |
 | `/analiz` reports | `src/pages/AnalysisPage.tsx` | `src/app/useFinanceSnapshot.ts`, `src/data/repositories/analysisRepo.ts`, `src/utils/analysisView.ts`, charts |
