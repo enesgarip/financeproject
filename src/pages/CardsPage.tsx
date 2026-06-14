@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import { CrudPage } from '../components/CrudPage'
-import { AccountPaymentModal } from '../components/finance/AccountPaymentModal'
+import { FinancePaymentDrawer } from '../components/finance/FinancePaymentDrawer'
 import { StatementImportModal } from '../components/finance/StatementImportModal'
 import { CardInstallmentCalendarPanel } from '../components/finance/CardInstallmentCalendarPanel'
 import { CardInstallmentExpensesPanel } from '../components/finance/CardInstallmentExpensesPanel'
-import type { Card } from '../types/database'
+import type { Card, CardStatementArchive } from '../types/database'
 import { formatDate } from '../utils/date'
+import { useFinancePaymentDrawer } from '../hooks/useFinancePaymentDrawer'
 import {
   AccountHubPanel,
   CardSectionNav,
@@ -19,7 +20,7 @@ import { QuickExpensePanel } from './CardsPage.expense'
 import { CreditAccountListCard } from './CardsPage.list'
 import { LegacyInstallmentPanel } from './CardsPage.installment'
 import { MovementModal } from './CardsPage.movementModal'
-import { useAccountMovementModal, useCardSectionNavigation, useCardsPageData, useStatementPaymentModal } from './CardsPage.hooks'
+import { useAccountMovementModal, useCardSectionNavigation, useCardsPageData } from './CardsPage.hooks'
 import {
   getCardClassName,
   getCardInitialValues,
@@ -36,6 +37,7 @@ import {
 } from './CardsPage.crud'
 import {
   fields,
+  isSchemaCacheError,
   statementPeriodLabel,
 } from './CardsPage.helpers'
 
@@ -75,25 +77,45 @@ export function CardsPage() {
     openTransaction,
     setTransactionAmount,
   } = useAccountMovementModal({ invalidateSnapshot, reloadCards, setReloadCards })
-  const {
-    statementPayment,
-    statementPaymentAccounts,
-    statementPaymentError,
-    statementPaymentSaving,
-    statementPaymentSourceCard,
-    closeStatementPayment,
-    handleStatementPaymentSubmit,
-    openStatementPayment,
-    setStatementPaymentSourceCard,
-  } = useStatementPaymentModal({
-    invalidateSnapshot,
-    loadInstallments,
-    loadStatements,
-    reloadCards,
-    setReloadCards,
-    setStatementActionId,
-  })
+  const { drawerProps, openPaymentDrawer } = useFinancePaymentDrawer()
   const [importCard, setImportCard] = useState<Card | null>(null)
+
+  async function openStatementPayment(statement: CardStatementArchive, card: Card, cards: Card[], reload: () => Promise<void>) {
+    await openPaymentDrawer(
+      {
+        id: `card-statement-${statement.id}`,
+        kind: 'card_statement',
+        action: 'pay_card_statement',
+        sourceId: statement.id,
+        relatedCardId: card.id,
+        title: `${card.card_name} ekstresi`,
+        subtitle: card.bank_name,
+        date: statement.due_date ?? statement.statement_date,
+        amount: statement.statement_debt_amount,
+        direction: 'outflow',
+      },
+      {
+        cards,
+        reload,
+        afterSuccess: async () => {
+          await Promise.all([loadStatements(), loadInstallments(), invalidateSnapshot()])
+        },
+        detail: (
+          <>
+            <p className="font-semibold text-foreground">{card.card_name}</p>
+            <p>Ekstre: {statementPeriodLabel(statement)}</p>
+            <p>Son ödeme: {formatDate(statement.due_date)}</p>
+          </>
+        ),
+        formatSubmitError: (error) =>
+          isSchemaCacheError(error)
+            ? 'Ekstre odeme altyapisi canli veritabanina uygulanmamis. Migration calisinca bu islem acilacak.'
+            : error.message ?? 'Ekstre ödenemedi.',
+        onSubmitEnd: () => setStatementActionId(null),
+        onSubmitStart: () => setStatementActionId(statement.id),
+      },
+    )
+  }
 
   return (
     <>
@@ -247,27 +269,7 @@ export function CardsPage() {
         />
       )}
 
-      <AccountPaymentModal
-        title="Ekstre ödemesi"
-        open={Boolean(statementPayment)}
-        onClose={closeStatementPayment}
-        accounts={statementPaymentAccounts}
-        selectedAccountId={statementPaymentSourceCard}
-        onSelectedAccountChange={setStatementPaymentSourceCard}
-        amountValue={String(statementPayment?.statement.statement_debt_amount ?? 0)}
-        onAmountValueChange={() => undefined}
-        amountEditable={false}
-        submitLabel="Ekstreyi öde"
-        saving={statementPaymentSaving}
-        externalError={statementPaymentError}
-        successAction
-        info="Bu ekstre kapandığında ekstreye bağlı kredi kartı taksitleri otomatik ödenmiş olur."
-        onSubmit={handleStatementPaymentSubmit}
-      >
-        <p className="font-semibold text-foreground">{statementPayment?.card.card_name}</p>
-        <p>Ekstre: {statementPayment ? statementPeriodLabel(statementPayment.statement) : '-'}</p>
-        <p>Son ödeme: {statementPayment ? formatDate(statementPayment.statement.due_date) : '-'}</p>
-      </AccountPaymentModal>
+      <FinancePaymentDrawer {...drawerProps} />
     </>
   )
 }

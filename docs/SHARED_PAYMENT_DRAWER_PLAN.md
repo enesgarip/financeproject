@@ -73,8 +73,10 @@ have card data in memory.
 
 - 2026-06-14: Phase 1 complete. Added `useFinancePaymentDrawer` and
   `FinancePaymentDrawer`, then migrated `PaymentsPage` to the shared drawer.
-- Next slice: migrate `CardsPage` statement payment onto the shared drawer while
-  preserving statement action ids and statement/installment reloads.
+- 2026-06-14: Phase 2 complete. Migrated `CardsPage` statement payment to the
+  shared drawer while preserving statement action ids, statement/installment
+  reloads, snapshot invalidation, and schema-cache fallback copy.
+- Next slice: migrate loan installment payment onto the shared drawer.
 
 ## Migration Order
 
@@ -82,10 +84,10 @@ have card data in memory.
    `PaymentsPage` now uses `useFinancePaymentDrawer` and
    `FinancePaymentDrawer` because it already used `FinanceObligation` and
    `submitFinanceObligationPayment`.
-2. **Move card statement payment onto the drawer.**
-   Replace `useStatementPaymentModal` with a small statement-to-obligation
-   builder plus the shared drawer. Keep the statement action id/loading state in
-   `CardsPage.hooks.ts` until statement panels are simplified further.
+2. **Move card statement payment onto the drawer.** Done 2026-06-14.
+   `CardsPage` now builds a statement `FinanceObligation` and opens the shared
+   drawer. `useStatementPaymentModal` was removed; the route keeps only the
+   statement action id and refresh callbacks it needs.
 3. **Move loan installment payment onto obligations.**
    Build a `FinanceObligation` from `LoanInstallment` and submit through
    `submitFinanceObligationPayment` instead of calling `payLoanInstallment`

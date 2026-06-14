@@ -8,10 +8,8 @@ import {
   fetchStatementArchives,
 } from '../data/repositories/cardsRepo'
 import { submitAccountMovement } from '../services/accountMovements'
-import { submitFinanceObligationPayment } from '../services/financePaymentActions'
 import type { Card, CardExpense, CardInstallment, CardStatementArchive } from '../types/database'
 import { parseNumber } from '../utils/formatCurrency'
-import { getLastUsed, resolvePreferred, setLastUsed } from '../utils/lastUsed'
 import { isSchemaCacheError } from './CardsPage.helpers'
 import type { CardSection } from './CardsPage.sections'
 
@@ -287,95 +285,5 @@ export function useAccountMovementModal({
     handleTransactionTypeChange,
     openTransaction,
     setTransactionAmount,
-  }
-}
-
-export function useStatementPaymentModal({
-  invalidateSnapshot,
-  loadInstallments,
-  loadStatements,
-  reloadCards,
-  setReloadCards,
-  setStatementActionId,
-}: {
-  invalidateSnapshot: () => Promise<void>
-  loadInstallments: () => Promise<void>
-  loadStatements: () => Promise<void>
-  reloadCards: ReloadCards
-  setReloadCards: Dispatch<SetStateAction<ReloadCards>>
-  setStatementActionId: Dispatch<SetStateAction<string | null>>
-}) {
-  const [statementPayment, setStatementPayment] = useState<{ statement: CardStatementArchive; card: Card } | null>(null)
-  const [statementPaymentAccounts, setStatementPaymentAccounts] = useState<Card[]>([])
-  const [statementPaymentSourceCard, setStatementPaymentSourceCard] = useState('')
-  const [statementPaymentError, setStatementPaymentError] = useState('')
-  const [statementPaymentSaving, setStatementPaymentSaving] = useState(false)
-
-  function openStatementPayment(statement: CardStatementArchive, card: Card, cards: Card[], reload: () => Promise<void>) {
-    const accounts = cards.filter((row) => row.card_type === 'banka_karti' && row.id !== card.id)
-    setStatementPayment({ statement, card })
-    setStatementPaymentAccounts(accounts)
-    setStatementPaymentSourceCard(resolvePreferred(getLastUsed('paymentAccount'), accounts.map((account) => account.id)))
-    setStatementPaymentError(accounts.length === 0 ? 'Ekstre odemesi icin once bir banka hesabi eklemelisin.' : '')
-    setReloadCards(() => reload)
-  }
-
-  function closeStatementPayment() {
-    setStatementPayment(null)
-    setStatementPaymentSourceCard('')
-    setStatementPaymentError('')
-  }
-
-  async function handleStatementPaymentSubmit({ account: sourceCard }: { account: Card; amount: number }) {
-    if (!statementPayment) return
-
-    setStatementPaymentSaving(true)
-    setStatementActionId(statementPayment.statement.id)
-    setStatementPaymentError('')
-
-    const { error } = await submitFinanceObligationPayment({
-      obligation: {
-        id: `card-statement-${statementPayment.statement.id}`,
-        kind: 'card_statement',
-        action: 'pay_card_statement',
-        sourceId: statementPayment.statement.id,
-        relatedCardId: statementPayment.card.id,
-        title: `${statementPayment.card.card_name} ekstresi`,
-        subtitle: statementPayment.card.bank_name,
-        date: statementPayment.statement.due_date ?? statementPayment.statement.statement_date,
-        amount: statementPayment.statement.statement_debt_amount,
-        direction: 'outflow',
-      },
-      account: sourceCard,
-      amount: statementPayment.statement.statement_debt_amount,
-    })
-
-    setStatementPaymentSaving(false)
-    setStatementActionId(null)
-
-    if (error) {
-      setStatementPaymentError(
-        isSchemaCacheError(error)
-          ? 'Ekstre odeme altyapisi canli veritabanina uygulanmamis. Migration calisinca bu islem acilacak.'
-          : error.message ?? 'Ekstre ödenemedi.',
-      )
-      return
-    }
-
-    setLastUsed('paymentAccount', sourceCard.id)
-    closeStatementPayment()
-    await Promise.all([reloadCards?.(), loadStatements(), loadInstallments(), invalidateSnapshot()])
-  }
-
-  return {
-    statementPayment,
-    statementPaymentAccounts,
-    statementPaymentError,
-    statementPaymentSaving,
-    statementPaymentSourceCard,
-    closeStatementPayment,
-    handleStatementPaymentSubmit,
-    openStatementPayment,
-    setStatementPaymentSourceCard,
   }
 }

@@ -40,7 +40,7 @@
 
 ## Suggested Next Tasks for Codex
 
-1. Implement phase 2 of `docs/SHARED_PAYMENT_DRAWER_PLAN.md`: migrate `CardsPage` statement payment to the shared drawer.
+1. Implement phase 3 of `docs/SHARED_PAYMENT_DRAWER_PLAN.md`: migrate loan installment payment to the shared drawer.
 2. Keep `docs/RPC_ACTION_REFERENCE.md` aligned when Supabase RPCs or user-visible actions change.
 3. Keep `docs/MIGRATION_COMPATIBILITY_CHECKLIST.md` aligned with release workflow changes.
 4. Continue shrinking the remaining large route files (`LoansPage.tsx`, `AnalysisPage.tsx`, `DataHealthPage.tsx`) with behavior-preserving module extracts.
@@ -56,3 +56,4 @@
 - `CardsPage.tsx` CRUD form mapping, card metadata renderers, limit usage extra block, bank hue styling, grouping, and row action button now live in `CardsPage.crud.tsx`; the route file is mostly orchestration and modal wiring.
 - `docs/SHARED_PAYMENT_DRAWER_PLAN.md` captures the shared payment drawer migration path across planned payments, card statement/manual debt payment, loan installments, and personal debt settlement.
 - Shared payment drawer phase 1 is implemented: `PaymentsPage` now uses `useFinancePaymentDrawer` and `FinancePaymentDrawer`.
+- Shared payment drawer phase 2 is implemented: `CardsPage` statement payment now uses the shared drawer.
