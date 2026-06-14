@@ -79,7 +79,10 @@ have card data in memory.
 - 2026-06-14: Phase 3 complete. Migrated `LoansPage` loan installment payment
   to the shared drawer while preserving loan reloads, local installment reloads,
   and snapshot invalidation.
-- Next slice: migrate personal debt settlement onto the shared drawer.
+- 2026-06-14: Phase 4 complete. Migrated `DebtsPage` personal debt settlement
+  and receivable collection to the shared drawer.
+- Next slice: remove any now-unused legacy payment wrappers after a dedicated
+  dead-code pass.
 
 ## Migration Order
 
@@ -95,13 +98,14 @@ have card data in memory.
    `LoansPage` now builds a `FinanceObligation` from `LoanInstallment` and
    submits through the shared drawer. Loan plan edit/delete behavior remains
    untouched.
-4. **Move personal debt settlement onto obligations.**
-   Build `settle_debt` / `collect_debt` obligations in `DebtsPage` and submit
-   through the shared drawer. Preserve receivable inflow preview
-   (`accountPreviewAmount = -amount`).
-5. **Delete duplicate page state.**
-   Remove page-local selected-account, amount, saving, error, and last-used
-   plumbing once every page uses the hook.
+4. **Move personal debt settlement onto obligations.** Done 2026-06-14.
+   `DebtsPage` now builds `settle_debt` / `collect_debt` obligations and
+   submits through the shared drawer. Receivable inflow preview is preserved by
+   the drawer-level `collect_debt` rule.
+5. **Delete duplicate page state.** Done 2026-06-14.
+   `PaymentsPage`, `CardsPage`, `LoansPage`, and `DebtsPage` no longer own
+   duplicate selected-account, amount, saving, error, and last-used plumbing for
+   these account-backed payment flows.
 
 ## Guardrails
 

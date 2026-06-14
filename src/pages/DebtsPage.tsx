@@ -1,5 +1,5 @@
 import { CrudPage, type FormField } from '../components/CrudPage'
-import { AccountPaymentModal } from '../components/finance/AccountPaymentModal'
+import { FinancePaymentDrawer } from '../components/finance/FinancePaymentDrawer'
 import { RatesBanner } from '../components/finance/RatesBanner'
 import { Badge } from '../components/ui/badge'
 import { Card, CardContent } from '../components/ui/card'
@@ -7,14 +7,12 @@ import { Progress } from '../components/ui/progress'
 import { useMarketRates } from '../hooks/useMarketRates'
 import { useInvalidateFinanceSnapshot } from '../app/useFinanceSnapshot'
 import { fetchCardsByType } from '../data/repositories/cardsRepo'
-import { settlePersonalDebt } from '../data/repositories/debtsRepo'
 import type { Card as FinanceCard, Debt } from '../types/database'
 import { formatDate } from '../utils/date'
 import { formatCurrency, formatNumber, parseNumber } from '../utils/formatCurrency'
-import { getLastUsed, resolvePreferred, setLastUsed } from '../utils/lastUsed'
+import { useFinancePaymentDrawer } from '../hooks/useFinancePaymentDrawer'
 import type { MarketRatesSnapshot } from '../utils/marketRates'
 import { debtRateSymbol, effectiveDebtValue, valueDebt } from '../utils/valuation'
-import { useState } from 'react'
 
 /** Gold or non-TRY foreign-currency debts can be auto-valued from live rates. */
 function debtSupportsAuto(values: Record<string, string>): boolean {
@@ -235,50 +233,36 @@ async function getBankaKartlari(): Promise<FinanceCard[]> {
 export function DebtsPage() {
   const { snapshot } = useMarketRates()
   const invalidateSnapshot = useInvalidateFinanceSnapshot()
-  const [debtToSettle, setDebtToSettle] = useState<Debt | null>(null)
-  const [debtCards, setDebtCards] = useState<FinanceCard[]>([])
-  const [debtAccountCard, setDebtAccountCard] = useState('')
-  const [debtPaymentError, setDebtPaymentError] = useState('')
-  const [debtPaymentSaving, setDebtPaymentSaving] = useState(false)
-  const [reloadDebts, setReloadDebts] = useState<(() => Promise<void>) | null>(null)
-
-  const settlementValue = debtToSettle ? effectiveDebtValue(debtToSettle, snapshot) : 0
+  const { drawerProps, openPaymentDrawer } = useFinancePaymentDrawer()
 
   async function openDebtSettlement(debt: Debt, reload: () => Promise<void>) {
-    const cards = await getBankaKartlari()
-    setDebtToSettle(debt)
-    setDebtCards(cards)
-    setDebtAccountCard(resolvePreferred(getLastUsed('debtAccount'), cards.map((card) => card.id)))
-    setDebtPaymentError(cards.length === 0 ? 'İşlem için önce bir banka kartı hesabı eklemelisin.' : '')
-    setReloadDebts(() => reload)
+    const isBorrowed = debt.direction === 'borç_aldım'
+    await openPaymentDrawer(
+      {
+        id: `debt-${debt.id}`,
+        kind: isBorrowed ? 'personal_debt' : 'personal_receivable',
+        action: isBorrowed ? 'settle_debt' : 'collect_debt',
+        sourceId: debt.id,
+        title: debt.person_name,
+        subtitle: isBorrowed ? 'Kişisel borç' : 'Beklenen tahsilat',
+        date: debt.due_date ?? new Date().toISOString().slice(0, 10),
+        amount: effectiveDebtValue(debt, snapshot),
+        direction: isBorrowed ? 'outflow' : 'inflow',
+        isEstimate: debt.auto_valued,
+      },
+      {
+        loadCards: getBankaKartlari,
+        reload,
+        afterSuccess: invalidateSnapshot,
+        detail: (
+          <>
+            <p className="font-semibold text-foreground">{debt.person_name}</p>
+            <p className="mt-0.5">{isBorrowed ? 'Bu tutar seçilen hesaptan düşer.' : 'Bu tutar seçilen hesaba eklenir.'}</p>
+          </>
+        ),
+      },
+    )
   }
-
-  function closeDebtSettlement() {
-    setDebtToSettle(null)
-    setDebtAccountCard('')
-    setDebtPaymentError('')
-  }
-
-  async function handleDebtSettlementSubmit({ account: accountCard }: { account: FinanceCard; amount: number }) {
-    if (!debtToSettle) return
-
-    setDebtPaymentSaving(true)
-    setDebtPaymentError('')
-
-    const result = await settlePersonalDebt(debtToSettle.id, accountCard.id)
-
-    setDebtPaymentSaving(false)
-    if (!result.ok) {
-      setDebtPaymentError(result.error.message ?? 'Borç kapatma işlemi tamamlanamadı.')
-      return
-    }
-
-    setLastUsed('debtAccount', accountCard.id)
-    closeDebtSettlement()
-    await Promise.all([reloadDebts?.(), invalidateSnapshot()])
-  }
-
-  const settlementIsBorrowed = debtToSettle?.direction === 'borç_aldım'
 
   return (
     <>
@@ -374,28 +358,7 @@ export function DebtsPage() {
         }
       />
 
-      <AccountPaymentModal
-        title={settlementIsBorrowed ? 'Borcu öde' : 'Alacağı tahsil et'}
-        open={Boolean(debtToSettle)}
-        onClose={closeDebtSettlement}
-        accounts={debtCards}
-        selectedAccountId={debtAccountCard}
-        onSelectedAccountChange={setDebtAccountCard}
-        amountValue={String(settlementValue)}
-        onAmountValueChange={() => undefined}
-        amountEditable={false}
-        amountLabel={settlementIsBorrowed ? 'Ödenecek tutar' : 'Tahsilat tutarı'}
-        accountLabel={settlementIsBorrowed ? 'Kaynak hesap' : 'Tahsilat hesabı'}
-        accountPreviewAmount={(amount) => settlementIsBorrowed ? amount : -amount}
-        submitLabel={settlementIsBorrowed ? 'Borcu öde' : 'Tahsilatı tamamla'}
-        saving={debtPaymentSaving}
-        externalError={debtPaymentError}
-        successAction={!settlementIsBorrowed}
-        onSubmit={handleDebtSettlementSubmit}
-      >
-        <p className="font-semibold text-foreground">{debtToSettle?.person_name}</p>
-        <p className="mt-0.5">{settlementIsBorrowed ? 'Bu tutar seçilen hesaptan düşer.' : 'Bu tutar seçilen hesaba eklenir.'}</p>
-      </AccountPaymentModal>
+      <FinancePaymentDrawer {...drawerProps} />
     </>
   )
 }

@@ -36,8 +36,8 @@ The detailed field transitions for these RPCs live in
 | `pay_payment` | `submitFinanceObligationPayment` | Planned payments page/dashboard obligation modal | Marks one payment paid or advances monthly recurrence; bank source debits `current_balance`, credit-card source creates posted card spending |
 | `pay_card_statement` | `submitFinanceObligationPayment` | Pay open credit-card statement | Debits a bank account, reduces card debt and statement debt, marks statement paid, marks linked installments paid |
 | `pay_card_debt` | `submitFinanceObligationPayment` | Manual/legacy credit-card debt payment | Debits a bank account, reduces `debt_amount`, then reduces statement debt before current-period spending |
-| `pay_loan_installment` | `submitFinanceObligationPayment`, `loansRepo` | Pay loan installment | Debits a bank account, marks installment paid, syncs loan summary through DB invariants |
-| `settle_personal_debt` | `submitFinanceObligationPayment`, `debtsRepo` | Settle personal debt or collect receivable | Updates bank-account balance and closes the debt row |
+| `pay_loan_installment` | `submitFinanceObligationPayment` | Pay loan installment | Debits a bank account, marks installment paid, syncs loan summary through DB invariants |
+| `settle_personal_debt` | `submitFinanceObligationPayment` | Settle personal debt or collect receivable | Updates bank-account balance and closes the debt row |
 
 `pay_card_installment` and `unpay_card_installment` are still typed RPCs, but
 the current database definitions intentionally reject manual credit-card

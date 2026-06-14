@@ -13,7 +13,6 @@
   - statement cut
   - debt paid
 - Continue banking simplification from `docs/BANKING_SIMPLIFICATION_AUDIT.md`.
-  - implement the shared account-payment drawer from `docs/SHARED_PAYMENT_DRAWER_PLAN.md`
   - shared account movement helper/RPC family
   - normalized upcoming obligations view
 
@@ -40,7 +39,7 @@
 
 ## Suggested Next Tasks for Codex
 
-1. Implement phase 4 of `docs/SHARED_PAYMENT_DRAWER_PLAN.md`: migrate personal debt settlement to the shared drawer.
+1. Plan the shared account movement helper/RPC family across manual deposit, withdrawal, transfer, bill payment, debt settlement, and loan payment.
 2. Keep `docs/RPC_ACTION_REFERENCE.md` aligned when Supabase RPCs or user-visible actions change.
 3. Keep `docs/MIGRATION_COMPATIBILITY_CHECKLIST.md` aligned with release workflow changes.
 4. Continue shrinking the remaining large route files (`LoansPage.tsx`, `AnalysisPage.tsx`, `DataHealthPage.tsx`) with behavior-preserving module extracts.
@@ -58,3 +57,4 @@
 - Shared payment drawer phase 1 is implemented: `PaymentsPage` now uses `useFinancePaymentDrawer` and `FinancePaymentDrawer`.
 - Shared payment drawer phase 2 is implemented: `CardsPage` statement payment now uses the shared drawer.
 - Shared payment drawer phase 3 is implemented: `LoansPage` loan installment payment now uses the shared drawer.
+- Shared payment drawer phase 4 is implemented: `DebtsPage` personal debt settlement and receivable collection now use the shared drawer.

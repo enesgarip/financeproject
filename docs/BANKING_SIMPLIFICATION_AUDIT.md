@@ -54,11 +54,11 @@
   - Before: `LoansPage` called the loan-installment payment repository directly and owned separate modal state.
   - Now: loan installment payment opens the shared drawer from a `FinanceObligation`, preserving loan reloads, local installment reloads, and snapshot invalidation.
 
-## Remaining Simplification Candidates
+- **Shared payment drawer phase 4**
+  - Before: `DebtsPage` called the personal-debt settlement repository directly and owned separate modal state.
+  - Now: personal debt settlement and receivable collection open the shared drawer from `FinanceObligation`, preserving debt reloads, snapshot invalidation, and inflow/outflow account preview.
 
-- **Implement the shared payment drawer plan**
-  - `AccountPaymentModal` is the existing low-level UI.
-  - Next implementation step: migrate personal debt settlement to the shared drawer.
+## Remaining Simplification Candidates
 
 - **One account movement helper**
   - Manual deposit, withdrawal, transfer, bill payment, debt settlement, and loan payment all update balances and history.
