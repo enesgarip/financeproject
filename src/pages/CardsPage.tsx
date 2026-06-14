@@ -1,6 +1,5 @@
 import { ReceiptText } from 'lucide-react'
-import { useCallback, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useState } from 'react'
 import { CrudPage } from '../components/CrudPage'
 import { AccountPaymentModal } from '../components/finance/AccountPaymentModal'
 import { StatementImportModal } from '../components/finance/StatementImportModal'
@@ -23,7 +22,7 @@ import { QuickExpensePanel } from './CardsPage.expense'
 import { CreditAccountListCard } from './CardsPage.list'
 import { LegacyInstallmentPanel } from './CardsPage.installment'
 import { MovementModal } from './CardsPage.movementModal'
-import { useAccountMovementModal, useCardsPageData, useStatementPaymentModal } from './CardsPage.hooks'
+import { useAccountMovementModal, useCardSectionNavigation, useCardsPageData, useStatementPaymentModal } from './CardsPage.hooks'
 import {
   bankHueStyle,
   cardGroupLabel,
@@ -34,15 +33,8 @@ import {
   statementPeriodLabel,
 } from './CardsPage.helpers'
 
-const cardSectionIds: CardSection[] = ['ozet', 'kartlar', 'islemler', 'ekstreler']
-
-function parseCardSection(value: string | null): CardSection {
-  return cardSectionIds.includes(value as CardSection) ? (value as CardSection) : 'ozet'
-}
-
 export function CardsPage() {
-  const [searchParams, setSearchParams] = useSearchParams()
-  const section = parseCardSection(searchParams.get('section'))
+  const { focusQuickExpense, handleSectionChange, quickExpenseFocus, section } = useCardSectionNavigation()
   const {
     installments,
     invalidateSnapshot,
@@ -96,24 +88,6 @@ export function CardsPage() {
     setStatementActionId,
   })
   const [importCard, setImportCard] = useState<Card | null>(null)
-
-  const [quickExpenseFocus, setQuickExpenseFocus] = useState<{ cardId: string; mode: 'cash' | 'installment'; nonce: number } | null>(null)
-
-  const handleSectionChange = useCallback((next: CardSection) => {
-    const nextParams = new URLSearchParams(searchParams)
-    if (next === 'ozet') nextParams.delete('section')
-    else nextParams.set('section', next)
-    setSearchParams(nextParams, { replace: true })
-    if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' })
-  }, [searchParams, setSearchParams])
-
-  const focusQuickExpense = useCallback((card: Card, mode: 'cash' | 'installment') => {
-    setQuickExpenseFocus({ cardId: card.id, mode, nonce: Date.now() })
-    const nextParams = new URLSearchParams(searchParams)
-    nextParams.set('section', 'islemler')
-    setSearchParams(nextParams, { replace: true })
-    if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' })
-  }, [searchParams, setSearchParams])
 
   return (
     <>

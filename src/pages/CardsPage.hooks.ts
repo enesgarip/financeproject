@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState, type Dispatch, type FormEvent, type SetStateAction } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useInvalidateFinanceSnapshot } from '../app/useFinanceSnapshot'
 import {
   applyCardProvision,
@@ -12,8 +13,47 @@ import type { Card, CardExpense, CardInstallment, CardStatementArchive } from '.
 import { parseNumber } from '../utils/formatCurrency'
 import { getLastUsed, resolvePreferred, setLastUsed } from '../utils/lastUsed'
 import { isSchemaCacheError } from './CardsPage.helpers'
+import type { CardSection } from './CardsPage.sections'
 
 type ReloadCards = (() => Promise<void>) | null
+const cardSectionIds: CardSection[] = ['ozet', 'kartlar', 'islemler', 'ekstreler']
+
+function parseCardSection(value: string | null): CardSection {
+  return cardSectionIds.includes(value as CardSection) ? (value as CardSection) : 'ozet'
+}
+
+function scrollToPageTop() {
+  if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' })
+}
+
+export function useCardSectionNavigation() {
+  const [searchParams, setSearchParams] = useSearchParams()
+  const section = parseCardSection(searchParams.get('section'))
+  const [quickExpenseFocus, setQuickExpenseFocus] = useState<{ cardId: string; mode: 'cash' | 'installment'; nonce: number } | null>(null)
+
+  const handleSectionChange = useCallback((next: CardSection) => {
+    const nextParams = new URLSearchParams(searchParams)
+    if (next === 'ozet') nextParams.delete('section')
+    else nextParams.set('section', next)
+    setSearchParams(nextParams, { replace: true })
+    scrollToPageTop()
+  }, [searchParams, setSearchParams])
+
+  const focusQuickExpense = useCallback((card: Card, mode: 'cash' | 'installment') => {
+    setQuickExpenseFocus({ cardId: card.id, mode, nonce: Date.now() })
+    const nextParams = new URLSearchParams(searchParams)
+    nextParams.set('section', 'islemler')
+    setSearchParams(nextParams, { replace: true })
+    scrollToPageTop()
+  }, [searchParams, setSearchParams])
+
+  return {
+    focusQuickExpense,
+    handleSectionChange,
+    quickExpenseFocus,
+    section,
+  }
+}
 
 export function useCardsPageData() {
   const invalidateSnapshot = useInvalidateFinanceSnapshot()
