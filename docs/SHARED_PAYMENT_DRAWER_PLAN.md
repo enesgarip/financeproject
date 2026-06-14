@@ -76,7 +76,10 @@ have card data in memory.
 - 2026-06-14: Phase 2 complete. Migrated `CardsPage` statement payment to the
   shared drawer while preserving statement action ids, statement/installment
   reloads, snapshot invalidation, and schema-cache fallback copy.
-- Next slice: migrate loan installment payment onto the shared drawer.
+- 2026-06-14: Phase 3 complete. Migrated `LoansPage` loan installment payment
+  to the shared drawer while preserving loan reloads, local installment reloads,
+  and snapshot invalidation.
+- Next slice: migrate personal debt settlement onto the shared drawer.
 
 ## Migration Order
 
@@ -88,10 +91,10 @@ have card data in memory.
    `CardsPage` now builds a statement `FinanceObligation` and opens the shared
    drawer. `useStatementPaymentModal` was removed; the route keeps only the
    statement action id and refresh callbacks it needs.
-3. **Move loan installment payment onto obligations.**
-   Build a `FinanceObligation` from `LoanInstallment` and submit through
-   `submitFinanceObligationPayment` instead of calling `payLoanInstallment`
-   directly from the page. Keep loan plan edit/delete behavior untouched.
+3. **Move loan installment payment onto obligations.** Done 2026-06-14.
+   `LoansPage` now builds a `FinanceObligation` from `LoanInstallment` and
+   submits through the shared drawer. Loan plan edit/delete behavior remains
+   untouched.
 4. **Move personal debt settlement onto obligations.**
    Build `settle_debt` / `collect_debt` obligations in `DebtsPage` and submit
    through the shared drawer. Preserve receivable inflow preview

@@ -1,7 +1,7 @@
 import { CalendarDays, Check, Landmark, MoreVertical, Pencil, ReceiptText, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { CrudPage, type FormField } from '../components/CrudPage'
-import { AccountPaymentModal } from '../components/finance/AccountPaymentModal'
+import { FinancePaymentDrawer } from '../components/finance/FinancePaymentDrawer'
 import { BankLogo } from '../components/finance/BankLogo'
 import { SimpleModal } from '../components/SimpleModal'
 import { Badge } from '../components/ui/badge'
@@ -15,14 +15,13 @@ import {
   deleteLoanInstallmentsByIds,
   fetchLoanInstallments,
   fetchLoanInstallmentsByLoan,
-  payLoanInstallment,
   updateLoanInstallment,
   upsertLoanInstallments,
 } from '../data/repositories/loansRepo'
 import type { Card, InsertFor, Loan, LoanInstallment } from '../types/database'
 import { dateInMonth, dateInputValue, formatDate, startOfToday } from '../utils/date'
 import { formatCurrency, parseNumber } from '../utils/formatCurrency'
-import { getLastUsed, resolvePreferred, setLastUsed } from '../utils/lastUsed'
+import { useFinancePaymentDrawer } from '../hooks/useFinancePaymentDrawer'
 
 function getNextPaymentDate(installmentDay: number | null, remainingInstallments: number): string | null {
   if (!installmentDay || remainingInstallments <= 0) return null
@@ -295,13 +294,8 @@ async function syncLoanInstallmentPlan(loan: Loan) {
 
 export function LoansPage() {
   const { confirm, confirmDialog } = useConfirmDialog()
-  const [installmentLoan, setInstallmentLoan] = useState<Loan | null>(null)
-  const [installmentItem, setInstallmentItem] = useState<LoanInstallment | null>(null)
-  const [installmentSourceCard, setInstallmentSourceCard] = useState('')
-  const [installmentError, setInstallmentError] = useState('')
-  const [installmentSaving, setInstallmentSaving] = useState(false)
+  const { drawerProps, openPaymentDrawer } = useFinancePaymentDrawer()
   const [reloadLoans, setReloadLoans] = useState<(() => Promise<void>) | null>(null)
-  const [bankaKartlari, setBankaKartlari] = useState<Card[]>([])
   const [installments, setInstallments] = useState<LoanInstallment[]>([])
   const [planMenuOpenId, setPlanMenuOpenId] = useState<string | null>(null)
   const [editingPlanItem, setEditingPlanItem] = useState<LoanInstallment | null>(null)
@@ -334,38 +328,36 @@ export function LoansPage() {
   }, [planMenuOpenId])
 
   async function openInstallmentPayment(loan: Loan, item: LoanInstallment, reload: () => Promise<void>) {
-    const cards = await getBankaKartlari()
-    setInstallmentLoan(loan)
-    setInstallmentItem(item)
     setReloadLoans(() => reload)
-    setBankaKartlari(cards)
-    setInstallmentSourceCard(resolvePreferred(getLastUsed('loanAccount'), cards.map((card) => card.id)))
-    setInstallmentError(cards.length === 0 ? 'Ödeme için önce bir banka kartı hesabı eklemelisin.' : '')
-  }
-
-  function closeInstallmentPayment() {
-    setInstallmentLoan(null)
-    setInstallmentItem(null)
-    setInstallmentError('')
-  }
-
-  async function handleInstallmentSubmit({ account: sourceCard }: { account: Card; amount: number }) {
-    if (!installmentLoan || !installmentItem) return
-
-    setInstallmentSaving(true)
-    setInstallmentError('')
-
-    const result = await payLoanInstallment(installmentItem.id, sourceCard.id)
-
-    setInstallmentSaving(false)
-    if (!result.ok) {
-      setInstallmentError(result.error.message ?? 'Ödeme işlemi tamamlanamadı.')
-      return
-    }
-
-    setLastUsed('loanAccount', sourceCard.id)
-    closeInstallmentPayment()
-    await Promise.all([loadInstallments(), reloadLoans?.(), invalidateSnapshot()])
+    await openPaymentDrawer(
+      {
+        id: `loan-installment-${item.id}`,
+        kind: 'loan_installment',
+        action: 'pay_loan_installment',
+        sourceId: item.id,
+        title: loan.loan_name,
+        subtitle: `${loan.bank_name} - ${item.installment_no}. taksit`,
+        date: item.due_date,
+        amount: item.amount,
+        direction: 'outflow',
+      },
+      {
+        loadCards: getBankaKartlari,
+        reload,
+        afterSuccess: async () => {
+          await Promise.all([loadInstallments(), invalidateSnapshot()])
+        },
+        detail: (
+          <>
+            <p className="font-semibold text-foreground">{loan.loan_name}</p>
+            <p className="mt-0.5">
+              {item.installment_no}. taksit · {formatDate(item.due_date)}
+            </p>
+            <p className="mt-0.5">Kalan taksit: {loan.remaining_installments}</p>
+          </>
+        ),
+      },
+    )
   }
 
   function openPlanEdit(item: LoanInstallment) {
@@ -609,27 +601,7 @@ export function LoansPage() {
         renderExtra={(row, helpers) => renderPaymentPlan(row as Loan, helpers.reload, helpers.setError)}
       />
 
-      <AccountPaymentModal
-        title="Taksit ödemesi"
-        open={Boolean(installmentLoan && installmentItem)}
-        onClose={closeInstallmentPayment}
-        accounts={bankaKartlari}
-        selectedAccountId={installmentSourceCard}
-        onSelectedAccountChange={setInstallmentSourceCard}
-        amountValue={String(installmentItem?.amount ?? 0)}
-        onAmountValueChange={() => undefined}
-        amountEditable={false}
-        submitLabel="Taksiti öde"
-        saving={installmentSaving}
-        externalError={installmentError}
-        onSubmit={handleInstallmentSubmit}
-      >
-        <p className="font-semibold text-foreground">{installmentLoan?.loan_name}</p>
-        <p className="mt-0.5">
-          {installmentItem?.installment_no}. taksit · {installmentItem ? formatDate(installmentItem.due_date) : '-'}
-        </p>
-        <p className="mt-0.5">Kalan taksit: {installmentLoan?.remaining_installments ?? 0}</p>
-      </AccountPaymentModal>
+      <FinancePaymentDrawer {...drawerProps} />
 
       <SimpleModal title="Taksiti düzenle" open={Boolean(editingPlanItem)} onClose={() => setEditingPlanItem(null)}>
         <form onSubmit={handlePlanEditSubmit} className="space-y-4">

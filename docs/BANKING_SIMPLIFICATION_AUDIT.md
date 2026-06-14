@@ -50,11 +50,15 @@
   - Before: `CardsPage.hooks.ts` owned a separate statement payment modal state and submit path.
   - Now: card statement payment opens the shared drawer from a statement `FinanceObligation`, preserving statement action loading, reloads, and schema-cache fallback copy.
 
+- **Shared payment drawer phase 3**
+  - Before: `LoansPage` called the loan-installment payment repository directly and owned separate modal state.
+  - Now: loan installment payment opens the shared drawer from a `FinanceObligation`, preserving loan reloads, local installment reloads, and snapshot invalidation.
+
 ## Remaining Simplification Candidates
 
 - **Implement the shared payment drawer plan**
   - `AccountPaymentModal` is the existing low-level UI.
-  - Next implementation step: migrate loan installments and personal debt settlement to the shared drawer.
+  - Next implementation step: migrate personal debt settlement to the shared drawer.
 
 - **One account movement helper**
   - Manual deposit, withdrawal, transfer, bill payment, debt settlement, and loan payment all update balances and history.
