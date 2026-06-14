@@ -6,11 +6,9 @@ import { AccountPaymentModal } from '../components/finance/AccountPaymentModal'
 import { StatementImportModal } from '../components/finance/StatementImportModal'
 import { CardInstallmentCalendarPanel } from '../components/finance/CardInstallmentCalendarPanel'
 import { CardInstallmentExpensesPanel } from '../components/finance/CardInstallmentExpensesPanel'
-import { submitFinanceObligationPayment } from '../services/financePaymentActions'
-import type { Card, CardStatementArchive } from '../types/database'
+import type { Card } from '../types/database'
 import { formatDate } from '../utils/date'
 import { cardProvisionAmount, cardSplitTotal } from '../utils/financeSummary'
-import { getLastUsed, resolvePreferred, setLastUsed } from '../utils/lastUsed'
 import { formatCurrency, parseNumber } from '../utils/formatCurrency'
 import {
   AccountHubPanel,
@@ -25,13 +23,12 @@ import { QuickExpensePanel } from './CardsPage.expense'
 import { CreditAccountListCard } from './CardsPage.list'
 import { LegacyInstallmentPanel } from './CardsPage.installment'
 import { MovementModal } from './CardsPage.movementModal'
-import { useAccountMovementModal, useCardsPageData } from './CardsPage.hooks'
+import { useAccountMovementModal, useCardsPageData, useStatementPaymentModal } from './CardsPage.hooks'
 import {
   bankHueStyle,
   cardGroupLabel,
   cardTypeLabel,
   fields,
-  isSchemaCacheError,
   limitGroupStats,
   optionalDay,
   statementPeriodLabel,
@@ -80,68 +77,25 @@ export function CardsPage() {
     openTransaction,
     setTransactionAmount,
   } = useAccountMovementModal({ invalidateSnapshot, reloadCards, setReloadCards })
-  const [statementPayment, setStatementPayment] = useState<{ statement: CardStatementArchive; card: Card } | null>(null)
-  const [statementPaymentAccounts, setStatementPaymentAccounts] = useState<Card[]>([])
-  const [statementPaymentSourceCard, setStatementPaymentSourceCard] = useState('')
-  const [statementPaymentError, setStatementPaymentError] = useState('')
-  const [statementPaymentSaving, setStatementPaymentSaving] = useState(false)
+  const {
+    statementPayment,
+    statementPaymentAccounts,
+    statementPaymentError,
+    statementPaymentSaving,
+    statementPaymentSourceCard,
+    closeStatementPayment,
+    handleStatementPaymentSubmit,
+    openStatementPayment,
+    setStatementPaymentSourceCard,
+  } = useStatementPaymentModal({
+    invalidateSnapshot,
+    loadInstallments,
+    loadStatements,
+    reloadCards,
+    setReloadCards,
+    setStatementActionId,
+  })
   const [importCard, setImportCard] = useState<Card | null>(null)
-
-  function openStatementPayment(statement: CardStatementArchive, card: Card, cards: Card[], reload: () => Promise<void>) {
-    const accounts = cards.filter((row) => row.card_type === 'banka_karti' && row.id !== card.id)
-    setStatementPayment({ statement, card })
-    setStatementPaymentAccounts(accounts)
-    setStatementPaymentSourceCard(resolvePreferred(getLastUsed('paymentAccount'), accounts.map((account) => account.id)))
-    setStatementPaymentError(accounts.length === 0 ? 'Ekstre odemesi icin once bir banka hesabi eklemelisin.' : '')
-    setReloadCards(() => reload)
-  }
-
-  function closeStatementPayment() {
-    setStatementPayment(null)
-    setStatementPaymentSourceCard('')
-    setStatementPaymentError('')
-  }
-
-  async function handleStatementPaymentSubmit({ account: sourceCard }: { account: Card; amount: number }) {
-    if (!statementPayment) return
-
-    setStatementPaymentSaving(true)
-    setStatementActionId(statementPayment.statement.id)
-    setStatementPaymentError('')
-
-    const { error } = await submitFinanceObligationPayment({
-      obligation: {
-        id: `card-statement-${statementPayment.statement.id}`,
-        kind: 'card_statement',
-        action: 'pay_card_statement',
-        sourceId: statementPayment.statement.id,
-        relatedCardId: statementPayment.card.id,
-        title: `${statementPayment.card.card_name} ekstresi`,
-        subtitle: statementPayment.card.bank_name,
-        date: statementPayment.statement.due_date ?? statementPayment.statement.statement_date,
-        amount: statementPayment.statement.statement_debt_amount,
-        direction: 'outflow',
-      },
-      account: sourceCard,
-      amount: statementPayment.statement.statement_debt_amount,
-    })
-
-    setStatementPaymentSaving(false)
-    setStatementActionId(null)
-
-    if (error) {
-      setStatementPaymentError(
-        isSchemaCacheError(error)
-          ? 'Ekstre odeme altyapisi canli veritabanina uygulanmamis. Migration calisinca bu islem acilacak.'
-          : error.message ?? 'Ekstre ödenemedi.',
-      )
-      return
-    }
-
-    setLastUsed('paymentAccount', sourceCard.id)
-    closeStatementPayment()
-    await Promise.all([reloadCards?.(), loadStatements(), loadInstallments(), invalidateSnapshot()])
-  }
 
   const [quickExpenseFocus, setQuickExpenseFocus] = useState<{ cardId: string; mode: 'cash' | 'installment'; nonce: number } | null>(null)
 
