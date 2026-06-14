@@ -6,7 +6,6 @@ import { AccountPaymentModal } from '../components/finance/AccountPaymentModal'
 import { StatementImportModal } from '../components/finance/StatementImportModal'
 import { CardInstallmentCalendarPanel } from '../components/finance/CardInstallmentCalendarPanel'
 import { CardInstallmentExpensesPanel } from '../components/finance/CardInstallmentExpensesPanel'
-import { SimpleModal } from '../components/SimpleModal'
 import { useInvalidateFinanceSnapshot } from '../app/useFinanceSnapshot'
 import {
   applyCardProvision,
@@ -33,6 +32,7 @@ import {
 import { QuickExpensePanel } from './CardsPage.expense'
 import { CreditAccountListCard } from './CardsPage.list'
 import { LegacyInstallmentPanel } from './CardsPage.installment'
+import { MovementModal } from './CardsPage.movementModal'
 import {
   bankHueStyle,
   cardGroupLabel,
@@ -304,10 +304,7 @@ export function CardsPage() {
     if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' })
   }, [searchParams, setSearchParams])
 
-  const transactionTarget = movementAccounts.find((card) => card.id === transactionTargetCard)
   const transactionTargetAccounts = movementAccounts.filter((card) => card.id !== transactionCard?.id)
-  const transactionAmountValue = parseNumber(transactionAmount)
-  const transactionIsTransfer = transactionType === 'transfer'
 
   return (
     <>
@@ -525,87 +522,27 @@ export function CardsPage() {
         }
       />
 
-      <SimpleModal title={transactionIsTransfer ? 'Hesaplar arası transfer' : 'Para hareketi'} open={Boolean(transactionCard)} onClose={() => setTransactionCard(null)}>
-        <form onSubmit={handleTransactionSubmit} className="space-y-4">
-          <div className="rounded-xl border border-border/60 bg-muted/30 p-3 text-sm text-muted-foreground">
-            <p className="font-semibold text-foreground">{transactionCard?.card_name}</p>
-            <p>Mevcut bakiye: {formatCurrency(transactionCard?.current_balance ?? 0)}</p>
-          </div>
-          {transactionIsTransfer ? (
-            <div className="rounded-xl border border-border/60 bg-muted/30 p-3 text-sm">
-              <p className="text-xs font-bold uppercase text-muted-foreground">İşlem tipi</p>
-              <p className="mt-1 font-semibold text-foreground">Hesaplar arası transfer</p>
-            </div>
-          ) : (
-            <label className="block text-sm font-semibold text-foreground">
-              İşlem tipi
-              <select
-                value={transactionType}
-                onChange={(event) => {
-                  setTransactionType(event.target.value as 'in' | 'out')
-                  setTransactionTargetCard('')
-                  setTransactionError('')
-                }}
-                className="mt-1 w-full rounded-lg border border-input bg-white px-3 py-3 outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 dark:bg-card/50 dark:text-foreground"
-              >
-                <option value="in">Para geldi</option>
-                <option value="out">Para gitti</option>
-              </select>
-            </label>
-          )}
-          <label className="block text-sm font-semibold text-foreground">
-            Tutar
-            <input
-              required
-              min="0"
-              step="0.01"
-              type="number"
-              value={transactionAmount}
-              onChange={(event) => setTransactionAmount(event.target.value)}
-              className="mt-1 w-full rounded-lg border border-input px-3 py-3 outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 dark:bg-card/50 dark:text-foreground"
-            />
-          </label>
-          {transactionIsTransfer ? (
-            <>
-              <label className="block text-sm font-semibold text-foreground">
-                Hedef hesap
-                <select
-                  required
-                  value={transactionTargetCard}
-                  onChange={(event) => {
-                    setTransactionTargetCard(event.target.value)
-                    setTransactionError('')
-                  }}
-                  className="mt-1 w-full rounded-lg border border-input bg-white px-3 py-3 outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 dark:bg-card/50 dark:text-foreground"
-                >
-                  <option value="">{transactionTargetAccounts.length > 0 ? 'Hedef hesap seç' : 'Transfer için ikinci hesap gerekli'}</option>
-                  {transactionTargetAccounts.map((account) => (
-                    <option key={account.id} value={account.id}>
-                      {account.bank_name} · {account.card_name} ({formatCurrency(account.current_balance)})
-                    </option>
-                  ))}
-                </select>
-              </label>
-              {transactionTarget ? (
-                <div className="grid grid-cols-2 gap-2 rounded-xl bg-muted/45 px-3 py-2 text-xs text-muted-foreground">
-                  <span>
-                    Kaynak sonrası: {formatCurrency((transactionCard?.current_balance ?? 0) - transactionAmountValue)}
-                  </span>
-                  <span>Hedef sonrası: {formatCurrency(transactionTarget.current_balance + transactionAmountValue)}</span>
-                </div>
-              ) : null}
-            </>
-          ) : null}
-          {transactionError ? <p className="rounded-xl border border-destructive/20 bg-destructive/8 p-3 text-sm font-medium text-destructive">{transactionError}</p> : null}
-          <button
-            type="submit"
-            disabled={transactionSaving}
-            className="h-12 w-full rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-[0_2px_8px_color-mix(in_srgb,var(--primary)_30%,transparent)] transition hover:bg-primary/90 active:scale-[0.99] disabled:opacity-50"
-          >
-            {transactionSaving ? 'İşleniyor...' : transactionIsTransfer ? 'Transferi tamamla' : 'Bakiyeyi güncelle'}
-          </button>
-        </form>
-      </SimpleModal>
+      <MovementModal
+        card={transactionCard}
+        type={transactionType}
+        amount={transactionAmount}
+        targetCardId={transactionTargetCard}
+        targetAccounts={transactionTargetAccounts}
+        error={transactionError}
+        saving={transactionSaving}
+        onClose={() => setTransactionCard(null)}
+        onTypeChange={(value) => {
+          setTransactionType(value)
+          setTransactionTargetCard('')
+          setTransactionError('')
+        }}
+        onAmountChange={setTransactionAmount}
+        onTargetCardChange={(value) => {
+          setTransactionTargetCard(value)
+          setTransactionError('')
+        }}
+        onSubmit={handleTransactionSubmit}
+      />
 
       {importCard && (
         <StatementImportModal
