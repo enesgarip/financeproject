@@ -1,21 +1,14 @@
 import { ReceiptText } from 'lucide-react'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { CrudPage } from '../components/CrudPage'
 import { AccountPaymentModal } from '../components/finance/AccountPaymentModal'
 import { StatementImportModal } from '../components/finance/StatementImportModal'
 import { CardInstallmentCalendarPanel } from '../components/finance/CardInstallmentCalendarPanel'
 import { CardInstallmentExpensesPanel } from '../components/finance/CardInstallmentExpensesPanel'
-import { useInvalidateFinanceSnapshot } from '../app/useFinanceSnapshot'
-import {
-  applyCardProvision,
-  fetchCardInstallments,
-  fetchProvisionExpenses,
-  fetchStatementArchives,
-} from '../data/repositories/cardsRepo'
 import { submitAccountMovement } from '../services/accountMovements'
 import { submitFinanceObligationPayment } from '../services/financePaymentActions'
-import type { Card, CardExpense, CardInstallment, CardStatementArchive } from '../types/database'
+import type { Card, CardStatementArchive } from '../types/database'
 import { formatDate } from '../utils/date'
 import { cardProvisionAmount, cardSplitTotal } from '../utils/financeSummary'
 import { getLastUsed, resolvePreferred, setLastUsed } from '../utils/lastUsed'
@@ -33,6 +26,7 @@ import { QuickExpensePanel } from './CardsPage.expense'
 import { CreditAccountListCard } from './CardsPage.list'
 import { LegacyInstallmentPanel } from './CardsPage.installment'
 import { MovementModal } from './CardsPage.movementModal'
+import { useCardsPageData } from './CardsPage.hooks'
 import {
   bankHueStyle,
   cardGroupLabel,
@@ -53,6 +47,24 @@ function parseCardSection(value: string | null): CardSection {
 export function CardsPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const section = parseCardSection(searchParams.get('section'))
+  const {
+    installments,
+    invalidateSnapshot,
+    loadInstallments,
+    loadStatements,
+    provisionActionId,
+    provisionError,
+    provisions,
+    provisionsLoading,
+    refreshCardsAndProvisions,
+    statementActionId,
+    statementError,
+    statements,
+    statementsLoading,
+    handlePostAllProvisions,
+    handleProvisionAction,
+    setStatementActionId,
+  } = useCardsPageData()
   const [transactionCard, setTransactionCard] = useState<Card | null>(null)
   const [transactionType, setTransactionType] = useState<'in' | 'out' | 'transfer'>('in')
   const [transactionAmount, setTransactionAmount] = useState('')
@@ -61,139 +73,12 @@ export function CardsPage() {
   const [transactionSaving, setTransactionSaving] = useState(false)
   const [movementAccounts, setMovementAccounts] = useState<Card[]>([])
   const [reloadCards, setReloadCards] = useState<(() => Promise<void>) | null>(null)
-  const [provisions, setProvisions] = useState<CardExpense[]>([])
-  const [provisionsLoading, setProvisionsLoading] = useState(false)
-  const [provisionError, setProvisionError] = useState('')
-  const [provisionActionId, setProvisionActionId] = useState<string | null>(null)
-  const [statements, setStatements] = useState<CardStatementArchive[]>([])
-  const [statementsLoading, setStatementsLoading] = useState(true)
-  const [statementError, setStatementError] = useState('')
-  const [statementActionId, setStatementActionId] = useState<string | null>(null)
-  const [installments, setInstallments] = useState<CardInstallment[]>([])
   const [statementPayment, setStatementPayment] = useState<{ statement: CardStatementArchive; card: Card } | null>(null)
   const [statementPaymentAccounts, setStatementPaymentAccounts] = useState<Card[]>([])
   const [statementPaymentSourceCard, setStatementPaymentSourceCard] = useState('')
   const [statementPaymentError, setStatementPaymentError] = useState('')
   const [statementPaymentSaving, setStatementPaymentSaving] = useState(false)
   const [importCard, setImportCard] = useState<Card | null>(null)
-
-  const loadProvisions = useCallback(async () => {
-    setProvisionsLoading(true)
-    setProvisionError('')
-    const result = await fetchProvisionExpenses()
-
-    if (!result.ok) {
-      setProvisions([])
-      setProvisionError(
-        isSchemaCacheError(result.error)
-          ? 'Provizyon altyapısı henüz canlı veritabanında yok. Migration uygulanınca bu liste açılacak.'
-          : result.error.message ?? 'Provizyonlar yüklenemedi.',
-      )
-    } else {
-      setProvisions(result.data)
-    }
-    setProvisionsLoading(false)
-  }, [])
-
-  const loadStatements = useCallback(async () => {
-    setStatementsLoading(true)
-    setStatementError('')
-    const result = await fetchStatementArchives(24)
-
-    if (!result.ok) {
-      setStatements([])
-      setStatementError(
-        isSchemaCacheError(result.error)
-          ? 'Ekstre odeme altyapisi henuz canli veritabaninda yok. Migration uygulaninca bu panel acilacak.'
-          : result.error.message ?? 'Ekstreler yüklenemedi.',
-      )
-    } else {
-      setStatements(result.data)
-    }
-    setStatementsLoading(false)
-  }, [])
-
-  const loadInstallments = useCallback(async () => {
-    const result = await fetchCardInstallments()
-
-    if (!result.ok) {
-      setInstallments([])
-      return
-    }
-
-    setInstallments(result.data)
-  }, [])
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    void loadProvisions()
-  }, [loadProvisions])
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    void loadStatements()
-  }, [loadStatements])
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    void loadInstallments()
-  }, [loadInstallments])
-
-  const invalidateSnapshot = useInvalidateFinanceSnapshot()
-  async function refreshCardsAndProvisions(reload: () => Promise<void>) {
-    await Promise.all([reload(), loadProvisions(), loadStatements(), loadInstallments(), invalidateSnapshot()])
-  }
-
-  async function handleProvisionAction(
-    expense: CardExpense,
-    action: 'post' | 'cancel',
-    reload: () => Promise<void>,
-    setError: (message: string) => void,
-  ) {
-    setProvisionActionId(`${action}-${expense.id}`)
-    setError('')
-    setProvisionError('')
-
-    const result = await applyCardProvision(expense.id, action)
-
-    if (!result.ok) {
-      const message = isSchemaCacheError(result.error)
-        ? 'Provizyon altyapısı canlı veritabanına uygulanmamış. Migration çalışınca bu işlem açılacak.'
-        : result.error.message ?? 'Provizyon işlemi tamamlanamadı.'
-      setError(message)
-      setProvisionActionId(null)
-      return
-    }
-
-    await refreshCardsAndProvisions(reload)
-    setProvisionActionId(null)
-  }
-
-  async function handlePostAllProvisions(expenses: CardExpense[], reload: () => Promise<void>, setError: (message: string) => void) {
-    const pendingExpenses = expenses.filter((expense) => expense.status === 'provision')
-    if (pendingExpenses.length === 0) return
-
-    setProvisionActionId('post-all')
-    setError('')
-    setProvisionError('')
-
-    for (const expense of pendingExpenses) {
-      const result = await applyCardProvision(expense.id, 'post')
-      if (!result.ok) {
-        setError(
-          isSchemaCacheError(result.error)
-            ? 'Provizyon altyapısı canlı veritabanına uygulanmamış. Migration çalışınca bu işlem açılacak.'
-            : result.error.message ?? 'Provizyon işlemi tamamlanamadı.',
-        )
-        await refreshCardsAndProvisions(reload)
-        setProvisionActionId(null)
-        return
-      }
-    }
-
-    await refreshCardsAndProvisions(reload)
-    setProvisionActionId(null)
-  }
 
   function openTransaction(card: Card, reload: () => Promise<void>, cards: Card[], type: 'in' | 'out' | 'transfer' = 'in') {
     const accounts = cards.filter((row) => row.card_type === 'banka_karti')

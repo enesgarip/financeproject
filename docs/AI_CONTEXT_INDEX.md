@@ -60,7 +60,7 @@ ESLint blocks `src/{pages,components,utils,hooks}` from importing
 | Route | Main Files | Data/Utility Neighbors |
 | --- | --- | --- |
 | `/` dashboard | `src/pages/DashboardPage.tsx`, `src/components/dashboard/*` | `src/app/useFinanceSnapshot.ts`, `src/data/repositories/financeSnapshotRepo.ts`, `src/utils/dashboard*`, `src/utils/financeSummary.ts` |
-| `/kartlar` accounts/cards | `src/pages/CardsPage.tsx`, `src/pages/CardsPage.sections.tsx`, `src/pages/CardsPage.overview.tsx`, `src/pages/CardsPage.statements.tsx`, `src/pages/CardsPage.expense.tsx`, `src/pages/CardsPage.list.tsx`, `src/pages/CardsPage.installment.tsx`, `src/pages/CardsPage.helpers.ts` | `src/data/repositories/cardsRepo.ts`, `src/services/accountMovements.ts`, `src/utils/cardStatement.ts`, `src/utils/financeSummary.ts` |
+| `/kartlar` accounts/cards | `src/pages/CardsPage.tsx`, `src/pages/CardsPage.hooks.ts`, `src/pages/CardsPage.sections.tsx`, `src/pages/CardsPage.overview.tsx`, `src/pages/CardsPage.statements.tsx`, `src/pages/CardsPage.expense.tsx`, `src/pages/CardsPage.list.tsx`, `src/pages/CardsPage.installment.tsx`, `src/pages/CardsPage.helpers.ts` | `src/data/repositories/cardsRepo.ts`, `src/services/accountMovements.ts`, `src/utils/cardStatement.ts`, `src/utils/financeSummary.ts` |
 | `/odemeler` planned payments | `src/pages/PaymentsPage.tsx` | `src/data/repositories/paymentsRepo.ts`, `src/services/financePaymentActions.ts`, `src/utils/obligations.ts` |
 | `/borclar/krediler` loans | `src/pages/LoansPage.tsx` | `src/data/repositories/loansRepo.ts`, `src/services/financePaymentActions.ts`, `src/utils/financeSummary.ts` |
 | `/borclar/kisiler` personal debts | `src/pages/DebtsPage.tsx` | `src/data/repositories/debtsRepo.ts`, `src/services/financePaymentActions.ts` |
