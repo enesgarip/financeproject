@@ -40,7 +40,7 @@
 
 ## Suggested Next Tasks for Codex
 
-1. Continue shrinking `CardsPage.tsx` orchestration now that `CardsPage.sections.tsx` is thin.
+1. Extract remaining `CardsPage.tsx` form/render helper clusters after the data and modal orchestration hooks.
 2. Plan the shared payment drawer across card debt, card installments, loan installments, planned payments, and personal debt settlement.
 3. Keep `docs/RPC_ACTION_REFERENCE.md` aligned when Supabase RPCs or user-visible actions change.
 4. Keep `docs/MIGRATION_COMPATIBILITY_CHECKLIST.md` aligned with release workflow changes.
@@ -52,3 +52,4 @@
 - A narrow Faz C pass replaced savings-goal `+0.01` comparisons and obvious TL amount rounding sites with `money.ts` helpers.
 - Faz C rounding/comparison audit closed: the non-money `Math.round` helpers (`fire`, `realValue`, `marketRates`, `goldLedger`) were classified as display/rate/quantity precision and commented in place; only ledger integer-kuruş conversion remains under Faz C.
 - `CardsPage.sections.tsx` is now a thin nav/automation module; overview, statement/provision panels, and help copy live in focused `CardsPage.*` files.
+- `CardsPage.tsx` data loading, account movement, statement payment, and section navigation orchestration now lives in `CardsPage.hooks.ts`; the route file is down to the remaining CRUD/form/render wiring.
