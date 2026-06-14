@@ -63,12 +63,12 @@ ESLint blocks `src/{pages,components,utils,hooks}` from importing
 | `/` dashboard | `src/pages/DashboardPage.tsx`, `src/components/dashboard/*` | `src/app/useFinanceSnapshot.ts`, `src/data/repositories/financeSnapshotRepo.ts`, `src/utils/dashboard*`, `src/utils/financeSummary.ts` |
 | `/kartlar` accounts/cards | `src/pages/CardsPage.tsx`, `src/pages/CardsPage.hooks.ts`, `src/pages/CardsPage.crud.tsx`, `src/pages/CardsPage.sections.tsx`, `src/pages/CardsPage.overview.tsx`, `src/pages/CardsPage.statements.tsx`, `src/pages/CardsPage.expense.tsx`, `src/pages/CardsPage.list.tsx`, `src/pages/CardsPage.installment.tsx`, `src/pages/CardsPage.helpers.ts` | `src/data/repositories/cardsRepo.ts`, `src/services/accountMovements.ts`, `src/utils/cardStatement.ts`, `src/utils/financeSummary.ts` |
 | `/odemeler` planned payments | `src/pages/PaymentsPage.tsx` | `src/data/repositories/paymentsRepo.ts`, `src/services/financePaymentActions.ts`, `src/utils/obligations.ts`, `docs/SHARED_PAYMENT_DRAWER_PLAN.md` |
-| `/borclar/krediler` loans | `src/pages/LoansPage.tsx` | `src/data/repositories/loansRepo.ts`, `src/services/financePaymentActions.ts`, `src/utils/financeSummary.ts`, `docs/SHARED_PAYMENT_DRAWER_PLAN.md` |
+| `/borclar/krediler` loans | `src/pages/LoansPage.tsx`, `src/pages/LoansPage.helpers.ts`, `src/pages/LoansPage.components.tsx` | `src/data/repositories/loansRepo.ts`, `src/services/financePaymentActions.ts`, `src/utils/financeSummary.ts`, `docs/SHARED_PAYMENT_DRAWER_PLAN.md` |
 | `/borclar/kisiler` personal debts | `src/pages/DebtsPage.tsx` | `src/data/repositories/debtsRepo.ts`, `src/services/financePaymentActions.ts`, `docs/SHARED_PAYMENT_DRAWER_PLAN.md` |
 | `/varliklar` assets | `src/pages/AssetsPage.tsx`, `src/pages/AssetsHub.tsx` | `src/data/repositories/valuationRepo.ts`, `src/utils/valuation*`, `src/utils/marketRates.ts` |
 | `/varliklar/maas` salary | `src/pages/SalaryPage.tsx` | `src/utils/financeSummary.ts` salary helpers |
-| `/analiz` reports | `src/pages/AnalysisPage.tsx` | `src/app/useFinanceSnapshot.ts`, `src/data/repositories/analysisRepo.ts`, `src/utils/analysisView.ts`, charts |
-| `/veri-sagligi` data health | `src/pages/DataHealthPage.tsx`, `src/pages/DataHealth.logic.ts` | `src/data/repositories/dataHealthRepo.ts`, ledger utilities, finance invariants |
+| `/analiz` reports | `src/pages/AnalysisPage.tsx`, `src/pages/AnalysisPage.panels.tsx`, `src/pages/AnalysisPage.atoms.tsx`, `src/pages/AnalysisPage.reports.tsx`, `src/pages/AnalysisPage.trends.tsx`, `src/pages/AnalysisPage.wealth.tsx` | `src/app/useFinanceSnapshot.ts`, `src/data/repositories/analysisRepo.ts`, `src/utils/analysisView.ts`, charts |
+| `/veri-sagligi` data health | `src/pages/DataHealthPage.tsx`, `src/pages/DataHealthPage.actions.ts`, `src/pages/DataHealth.logic.ts` | `src/data/repositories/dataHealthRepo.ts`, ledger utilities, finance invariants |
 | `/login` auth | `src/pages/LoginPage.tsx`, `src/auth/*` | `src/lib/supabase.ts` |
 
 ## Source-Of-Truth Matrix

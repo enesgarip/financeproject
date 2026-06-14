@@ -110,7 +110,11 @@ Günlük şifreli DB yedeği cron'u var (`db-backup.yml`).
 3. Doğrulama tümüyle yeşilse (`lint + test:unit + build`, migration varsa lokal docker)
    **commit + push (= deploy) serbest** — ayrıca onay isteme. Kapı kırmızıysa veya
    riskli/geri-dönüşü zor durumda (geri alınamaz migration, sır sızıntısı) önce dur ve uyar.
-4. Commit mesajları Türkçe + faz/madde etiketli (örn. "Faz 5: ...").
+4. **Commit öncesi docs güncellemesi:** Kod değişikliğini commit etmeden önce
+   `docs/BACKLOG.md` (tamamlanan/ilerleyen maddeyi işaretle) ve
+   `docs/AI_CONTEXT_INDEX.md` (yeni/taşınan/silinen dosyayı konu→dosya tablosuna yansıt)
+   güncelle. Böylece her commit sonrası docs tutarlı kalır.
+5. Commit mesajları Türkçe + faz/madde etiketli (örn. "Faz 5: ...").
 
 ## Gotcha'lar (tekrarlamamak için)
 

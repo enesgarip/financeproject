@@ -2,8 +2,8 @@
 
 ## P0 - High Confidence / High Value
 
-- Break large finance-heavy page files into smaller domain modules without changing behavior.
-  - Highest candidates: `LoansPage.tsx`, `AnalysisPage.tsx`, `DataHealthPage.tsx`, `CardsPage.tsx`
+- ~~Break large finance-heavy page files into smaller domain modules without changing behavior.~~ DONE.
+  - All four candidates split: `CardsPage` (hooks/sections/crud), `LoansPage` (helpers/components), `AnalysisPage` (panels/atoms/reports/trends/wealth), `DataHealthPage` (logic/components/actions).
 - Finish Faz C money cleanup (ledger integer-kuruş conversion).
   - Remaining real work: migrate residual float TL ledger arithmetic to signed integer kuruş at the repo/data layer.
   - Rounding/comparison sweep is DONE: all TL sums route through `roundMoney`→`roundTL`, and `+0.01` tolerances now use `exceedsTL`/`moneyDiffers`. The remaining bare `Math.round(x*100)/100` sites (`fire`, `realValue`, `marketRates`, `goldLedger`) are intentionally NOT money (display/rate/quantity precision) and are commented as such — do not route them through `money.ts`.
@@ -42,7 +42,7 @@
 1. Plan the shared account movement helper/RPC family across manual deposit, withdrawal, transfer, bill payment, debt settlement, and loan payment.
 2. Keep `docs/RPC_ACTION_REFERENCE.md` aligned when Supabase RPCs or user-visible actions change.
 3. Keep `docs/MIGRATION_COMPATIBILITY_CHECKLIST.md` aligned with release workflow changes.
-4. Continue shrinking the remaining large route files (`LoansPage.tsx`, `AnalysisPage.tsx`, `DataHealthPage.tsx`) with behavior-preserving module extracts.
+4. ~~Continue shrinking the remaining large route files.~~ DONE — all four large page files are now split into focused modules.
 
 ## Recently Cleared / No Longer First Next Task
 
@@ -58,3 +58,4 @@
 - Shared payment drawer phase 2 is implemented: `CardsPage` statement payment now uses the shared drawer.
 - Shared payment drawer phase 3 is implemented: `LoansPage` loan installment payment now uses the shared drawer.
 - Shared payment drawer phase 4 is implemented: `DebtsPage` personal debt settlement and receivable collection now use the shared drawer.
+- All four large page files split into focused modules: `CardsPage` (hooks/sections/crud), `LoansPage` (helpers/components), `AnalysisPage` (panels/atoms/reports/trends/wealth), `DataHealthPage` (logic/components/actions). No file exceeds ~450 lines.
