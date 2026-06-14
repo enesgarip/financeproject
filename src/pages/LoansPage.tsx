@@ -1,296 +1,34 @@
-import { CalendarDays, Check, Landmark, MoreVertical, Pencil, ReceiptText, Trash2 } from 'lucide-react'
+import { Check, MoreVertical, Pencil, ReceiptText, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
-import { CrudPage, type FormField } from '../components/CrudPage'
+import { CrudPage } from '../components/CrudPage'
 import { FinancePaymentDrawer } from '../components/finance/FinancePaymentDrawer'
-import { BankLogo } from '../components/finance/BankLogo'
 import { SimpleModal } from '../components/SimpleModal'
-import { Badge } from '../components/ui/badge'
-import { Card as SurfaceCard, CardContent, CardHeader, CardTitle } from '../components/ui/card'
-import { Progress } from '../components/ui/progress'
 import { useConfirmDialog } from '../components/ui/use-confirm-dialog'
 import { useInvalidateFinanceSnapshot } from '../app/useFinanceSnapshot'
-import { fetchCardsByType } from '../data/repositories/cardsRepo'
 import {
   deleteLoanInstallment,
-  deleteLoanInstallmentsByIds,
   fetchLoanInstallments,
-  fetchLoanInstallmentsByLoan,
   updateLoanInstallment,
-  upsertLoanInstallments,
 } from '../data/repositories/loansRepo'
-import type { Card, InsertFor, Loan, LoanInstallment } from '../types/database'
-import { dateInMonth, dateInputValue, formatDate, startOfToday } from '../utils/date'
+import type { Loan, LoanInstallment } from '../types/database'
+import { formatDate } from '../utils/date'
 import { formatCurrency, parseNumber } from '../utils/formatCurrency'
 import { useFinancePaymentDrawer } from '../hooks/useFinancePaymentDrawer'
-
-function getNextPaymentDate(installmentDay: number | null, remainingInstallments: number): string | null {
-  if (!installmentDay || remainingInstallments <= 0) return null
-
-  const today = startOfToday()
-  const currentMonth = today.getMonth()
-  const currentYear = today.getFullYear()
-
-  let nextDate = dateInMonth(currentYear, currentMonth, installmentDay)
-  if (nextDate < today) {
-    nextDate = dateInMonth(currentYear, currentMonth + 1, installmentDay)
-  }
-
-  return formatDate(dateInputValue(nextDate))
-}
-
-const fields: FormField[] = [
-  { name: 'bank_name', label: 'Banka', type: 'text', required: true },
-  { name: 'loan_name', label: 'Kredi adı', type: 'text', required: true },
-  { name: 'total_amount', label: 'Toplam kredi tutarı', type: 'number', min: '0', step: '0.01', required: true },
-  { name: 'monthly_payment', label: 'Aylık ödeme', type: 'number', min: '0', step: '0.01', required: true },
-  {
-    name: 'installment_day',
-    label: 'Taksit günü',
-    type: 'select',
-    required: true,
-    options: Array.from({ length: 31 }, (_, index) => ({
-      label: `Ayın ${index + 1}. günü`,
-      value: String(index + 1),
-    })),
-  },
-  { name: 'start_date', label: 'Başlangıç tarihi', type: 'date', required: true },
-  { name: 'end_date', label: 'Bitiş tarihi', type: 'date', required: true },
-  {
-    name: 'status',
-    label: 'Durum',
-    type: 'select',
-    options: [
-      { label: 'Aktif', value: 'active' },
-      { label: 'Kapalı', value: 'closed' },
-    ],
-  },
-  { name: 'note', label: 'Not', type: 'textarea' },
-]
-
-function optionalDay(value: FormDataEntryValue | null) {
-  const parsed = Number(value)
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : null
-}
-
-function optionalDate(value: FormDataEntryValue | null) {
-  const date = String(value ?? '')
-  return date || null
-}
-
-function parseLocalDate(value: string | null | undefined) {
-  if (!value) return null
-  const [year, month, day] = value.split('-').map(Number)
-  if (!year || !month || !day) return null
-  return new Date(year, month - 1, day)
-}
-
-
-function buildLoanSchedule(loan: Loan): InsertFor<'loan_installments'>[] {
-  const start = parseLocalDate(loan.start_date)
-  const end = parseLocalDate(loan.end_date)
-  if (!start || !end || !loan.installment_day || loan.monthly_payment <= 0 || end < start) return []
-
-  const schedule: InsertFor<'loan_installments'>[] = []
-  let cursorMonth = start.getMonth()
-  let cursorYear = start.getFullYear()
-  let dueDate = dateInMonth(cursorYear, cursorMonth, loan.installment_day)
-
-  if (dueDate < start) {
-    cursorMonth += 1
-    dueDate = dateInMonth(cursorYear, cursorMonth, loan.installment_day)
-  }
-
-  while (dueDate <= end && schedule.length < 240) {
-    schedule.push({
-      id: crypto.randomUUID(),
-      user_id: loan.user_id,
-      loan_id: loan.id,
-      installment_no: schedule.length + 1,
-      due_date: dateInputValue(dueDate),
-      amount: loan.monthly_payment,
-      status: 'bekliyor',
-      paid_at: null,
-      note: null,
-    })
-
-    const nextMonth = new Date(cursorYear, cursorMonth + 1, 1)
-    cursorYear = nextMonth.getFullYear()
-    cursorMonth = nextMonth.getMonth()
-    dueDate = dateInMonth(cursorYear, cursorMonth, loan.installment_day)
-  }
-
-  return schedule
-}
-
-function nextPendingInstallment(loan: Loan, installments: LoanInstallment[]) {
-  return installments
-    .filter((item) => item.loan_id === loan.id && item.status !== 'ödendi')
-    .sort((a, b) => a.due_date.localeCompare(b.due_date) || a.installment_no - b.installment_no)[0]
-}
-
-function loanProgress(loan: Loan, installments: LoanInstallment[]) {
-  const loanInstallments = installments.filter((item) => item.loan_id === loan.id)
-  const paidCount = loanInstallments.filter((item) => item.status === 'ödendi').length
-  const totalCount = loanInstallments.length || paidCount + loan.remaining_installments
-  const progressRate = totalCount > 0 ? Math.min(100, (paidCount / totalCount) * 100) : 0
-
-  return {
-    paidCount,
-    totalCount,
-    progressRate,
-    next: nextPendingInstallment(loan, installments),
-  }
-}
-
-function LoanOverview({ loans, installments }: { loans: Loan[]; installments: LoanInstallment[] }) {
-  const activeLoans = loans.filter((loan) => loan.status === 'active')
-  if (activeLoans.length === 0) return null
-
-  const totalRemaining = activeLoans.reduce((total, loan) => total + loan.remaining_amount, 0)
-  const totalMonthly = activeLoans.reduce((total, loan) => total + loan.monthly_payment, 0)
-  const nextItems = activeLoans
-    .map((loan) => ({ loan, item: nextPendingInstallment(loan, installments) }))
-    .filter((entry): entry is { loan: Loan; item: LoanInstallment } => Boolean(entry.item))
-    .sort((a, b) => a.item.due_date.localeCompare(b.item.due_date))
-  const nextPayment = nextItems[0]
-
-  return (
-    <div className="flex flex-col gap-3">
-      <SurfaceCard variant="elevated" className="overflow-hidden">
-        <div className="pointer-events-none -mt-4 mb-1 h-[2px] bg-gradient-to-r from-destructive via-primary to-info opacity-80" />
-        <CardContent className="p-4 sm:p-5">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <p className="finance-label">Aylık Ödeme Yükü</p>
-              <p className="finance-value mt-1.5 text-[clamp(1.5rem,6vw,2.1rem)] font-bold leading-none text-foreground">{formatCurrency(totalMonthly)}</p>
-              <p className="mt-1.5 text-xs text-muted-foreground">Aktif kredilerin toplam taksiti</p>
-            </div>
-            <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-destructive/12 text-destructive">
-              <Landmark className="size-5" />
-            </div>
-          </div>
-          <div className="mt-4 grid grid-cols-2 gap-2">
-            <OverviewStat label="Kalan Borç" value={formatCurrency(totalRemaining)} tone="danger" />
-            <OverviewStat label="Aktif Kredi" value={`${activeLoans.length} kayıt`} />
-          </div>
-          {nextPayment ? (
-            <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-border/60 bg-muted/30 px-3 py-2.5 text-sm">
-              <div className="min-w-0">
-                <p className="truncate font-semibold text-foreground">{nextPayment.loan.loan_name}</p>
-                <p className="text-xs text-muted-foreground">Sıradaki taksit · {formatDate(nextPayment.item.due_date)}</p>
-              </div>
-              <Badge variant="warning">{formatCurrency(nextPayment.item.amount)}</Badge>
-            </div>
-          ) : null}
-        </CardContent>
-      </SurfaceCard>
-
-      <div className="grid gap-3 min-[680px]:grid-cols-2 xl:grid-cols-3">
-        {activeLoans.map((loan) => {
-          const progress = loanProgress(loan, installments)
-          return (
-            <SurfaceCard key={loan.id} variant="interactive">
-              <CardHeader className="pb-0">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex min-w-0 items-start gap-3">
-                    <BankLogo bankName={loan.bank_name} size="sm" />
-                    <div className="min-w-0">
-                      <CardTitle className="truncate text-base">{loan.loan_name}</CardTitle>
-                      <p className="mt-1 truncate text-xs text-muted-foreground">{loan.bank_name}</p>
-                    </div>
-                  </div>
-                  <Badge variant={progress.next ? 'warning' : 'success'}>
-                    {progress.totalCount ? `${progress.paidCount}/${progress.totalCount}` : `${loan.remaining_installments} kaldı`}
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent className="pt-1">
-                <Progress value={progress.progressRate} color="primary" size="default" />
-                <div className="mt-3 grid grid-cols-2 gap-2">
-                  <OverviewStat label="Kalan Borç" value={formatCurrency(loan.remaining_amount)} tone="danger" />
-                  <OverviewStat label="Taksit" value={formatCurrency(loan.monthly_payment)} />
-                </div>
-                <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
-                  <CalendarDays size={14} />
-                  {progress.next ? formatDate(progress.next.due_date) : 'Bekleyen taksit yok'}
-                </div>
-              </CardContent>
-            </SurfaceCard>
-          )
-        })}
-      </div>
-    </div>
-  )
-}
-
-function OverviewStat({ label, value, tone = 'neutral' }: { label: string; value: string; tone?: 'neutral' | 'danger' | 'success' }) {
-  const toneClass = tone === 'danger' ? 'text-destructive' : tone === 'success' ? 'text-success' : 'text-foreground'
-  return (
-    <div className="min-w-0 rounded-xl border border-border/60 bg-muted/30 px-3 py-2.5">
-      <p className="finance-label truncate">{label}</p>
-      <p className={`finance-value mt-1 truncate text-sm font-bold tabular-nums ${toneClass}`}>{value}</p>
-    </div>
-  )
-}
-
-function validateLoanForm(formData: FormData) {
-  const errors: Record<string, string> = {}
-  const totalAmount = parseNumber(formData.get('total_amount'))
-  const monthlyPayment = parseNumber(formData.get('monthly_payment'))
-  const startDate = String(formData.get('start_date') ?? '')
-  const endDate = String(formData.get('end_date') ?? '')
-
-  if (totalAmount <= 0) errors.total_amount = 'Toplam kredi tutarı 0’dan büyük olmalı.'
-  if (monthlyPayment <= 0) errors.monthly_payment = 'Aylık ödeme 0’dan büyük olmalı.'
-  if (startDate && endDate && endDate < startDate) {
-    errors.end_date = 'Bitiş tarihi başlangıç tarihinden önce olamaz.'
-  }
-
-  return errors
-}
-
-async function getBankaKartlari(): Promise<Card[]> {
-  const result = await fetchCardsByType('banka_karti')
-  return result.ok ? result.data : []
-}
+import { LoanOverview } from './LoansPage.components'
+import {
+  getBankaKartlari,
+  getNextPaymentDate,
+  loanFields,
+  nextPendingInstallment,
+  optionalDate,
+  optionalDay,
+  syncLoanInstallmentPlan,
+  validateLoanForm,
+} from './LoansPage.helpers'
 
 // Kredi özeti (remaining_amount/installments/status) artık DB'de loan_installments
 // üzerindeki sync_loan_summary trigger'ından türetiliyor (Faz 2). İstemci tarafı
 // recompute fazlalıktı ve float topluyordu; kaldırıldı, trigger numeric ile kesin hesaplar.
-
-async function syncLoanInstallmentPlan(loan: Loan) {
-  const schedule = buildLoanSchedule(loan)
-  if (schedule.length === 0) return
-
-  const existingResult = await fetchLoanInstallmentsByLoan(loan.id)
-  if (!existingResult.ok) throw new Error(existingResult.error.message)
-
-  const existing = existingResult.data
-  const existingByNo = new Map(existing.map((item) => [item.installment_no, item]))
-  const desiredNumbers = new Set(schedule.map((item) => item.installment_no))
-  const payload = schedule.map((item) => {
-    const current = existingByNo.get(item.installment_no)
-    const result: InsertFor<'loan_installments'> = {
-      id: current?.id ?? item.id ?? crypto.randomUUID(),
-      user_id: item.user_id,
-      loan_id: item.loan_id,
-      installment_no: item.installment_no,
-      due_date: item.due_date,
-      amount: item.amount,
-      status: current?.status ?? item.status,
-      paid_at: current?.paid_at ?? item.paid_at,
-      note: current?.note ?? item.note,
-    }
-    return result
-  })
-
-  const upsertResult = await upsertLoanInstallments(payload)
-  if (!upsertResult.ok) throw new Error(upsertResult.error.message)
-
-  const extraIds = existing.filter((item) => !desiredNumbers.has(item.installment_no)).map((item) => item.id)
-  const deleteExtraResult = await deleteLoanInstallmentsByIds(extraIds)
-  if (!deleteExtraResult.ok) throw new Error(deleteExtraResult.error.message)
-}
 
 export function LoansPage() {
   const { confirm, confirmDialog } = useConfirmDialog()
@@ -397,7 +135,6 @@ export function LoansPage() {
       return
     }
 
-    // loans özeti loan_installments trigger'ından otomatik güncellenir; sadece tazele.
     await Promise.all([loadInstallments(), reloadLoans?.(), invalidateSnapshot()])
 
     setEditingPlanItem(null)
@@ -418,7 +155,6 @@ export function LoansPage() {
       return
     }
 
-    // loans özeti loan_installments trigger'ından otomatik güncellenir; sadece tazele.
     await Promise.all([loadInstallments(), reload(), invalidateSnapshot()])
   }
 
@@ -540,7 +276,7 @@ export function LoansPage() {
         table="loans"
         pageTitle="Krediler"
         addLabel="Kredi ekle"
-        fields={fields}
+        fields={loanFields}
         emptyTitle="Henüz kredi yok"
         emptyDescription="Aktif veya kapanmış kredilerini, taksit günleriyle birlikte ekleyebilirsin."
         validateForm={validateLoanForm}
