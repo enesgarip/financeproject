@@ -1,6 +1,6 @@
 # AI Context Index
 
-Last reviewed: 2026-06-13
+Last reviewed: 2026-06-14
 
 This file is the cheapest starting point for future AI/Codex sessions. Its job
 is to reduce repeated repo discovery: read this first, choose the smallest
@@ -36,7 +36,7 @@ frontend -> RPC, or RPC -> migration.
 | General finance rules | `docs/FINANCE_RULES.md` | Matching utility under `src/utils/*` | Broad business semantics: assets, cards, payments, loans, debts, goals, dashboard |
 | RPC-backed actions | `docs/RPC_ACTION_REFERENCE.md` | `src/data/repositories/*`, `src/services/*`, `src/types/database.ts`, migrations | Maps Supabase RPCs to user-visible actions and side effects |
 | Release/migration compatibility | `docs/MIGRATION_COMPATIBILITY_CHECKLIST.md` | `.github/workflows/ci.yml`, `.github/workflows/deploy.yml`, `supabase/migrations/*` | Use for schema, RLS, RPC, edge function, or generated type changes |
-| Banking simplification | `docs/BANKING_SIMPLIFICATION_AUDIT.md` | `src/pages/CardsPage.tsx`, `src/pages/CardsPage.sections.tsx`, `src/components/finance/*` | Tracks what was simplified and what remains |
+| Banking simplification | `docs/BANKING_SIMPLIFICATION_AUDIT.md` | `src/pages/CardsPage.tsx`, `src/pages/CardsPage.sections.tsx`, `src/pages/CardsPage.overview.tsx`, `src/pages/CardsPage.statements.tsx`, `src/components/finance/*` | Tracks what was simplified and what remains |
 | Pipeline/deploy | `docs/PIPELINE.md` | GitHub workflow files and package scripts | CI, deploy, secrets, branch flow |
 
 ## Architecture Map
@@ -60,7 +60,7 @@ ESLint blocks `src/{pages,components,utils,hooks}` from importing
 | Route | Main Files | Data/Utility Neighbors |
 | --- | --- | --- |
 | `/` dashboard | `src/pages/DashboardPage.tsx`, `src/components/dashboard/*` | `src/app/useFinanceSnapshot.ts`, `src/data/repositories/financeSnapshotRepo.ts`, `src/utils/dashboard*`, `src/utils/financeSummary.ts` |
-| `/kartlar` accounts/cards | `src/pages/CardsPage.tsx`, `src/pages/CardsPage.sections.tsx`, `src/pages/CardsPage.helpers.ts` | `src/data/repositories/cardsRepo.ts`, `src/services/accountMovements.ts`, `src/utils/cardStatement.ts`, `src/utils/financeSummary.ts` |
+| `/kartlar` accounts/cards | `src/pages/CardsPage.tsx`, `src/pages/CardsPage.sections.tsx`, `src/pages/CardsPage.overview.tsx`, `src/pages/CardsPage.statements.tsx`, `src/pages/CardsPage.expense.tsx`, `src/pages/CardsPage.list.tsx`, `src/pages/CardsPage.installment.tsx`, `src/pages/CardsPage.helpers.ts` | `src/data/repositories/cardsRepo.ts`, `src/services/accountMovements.ts`, `src/utils/cardStatement.ts`, `src/utils/financeSummary.ts` |
 | `/odemeler` planned payments | `src/pages/PaymentsPage.tsx` | `src/data/repositories/paymentsRepo.ts`, `src/services/financePaymentActions.ts`, `src/utils/obligations.ts` |
 | `/borclar/krediler` loans | `src/pages/LoansPage.tsx` | `src/data/repositories/loansRepo.ts`, `src/services/financePaymentActions.ts`, `src/utils/financeSummary.ts` |
 | `/borclar/kisiler` personal debts | `src/pages/DebtsPage.tsx` | `src/data/repositories/debtsRepo.ts`, `src/services/financePaymentActions.ts` |
@@ -94,7 +94,7 @@ Read:
 1. `docs/CARD_DEBT_TRANSITIONS.md`
 2. `src/utils/financeSummary.ts`
 3. `src/pages/CardsPage.helpers.ts`
-4. The relevant section in `src/pages/CardsPage.sections.tsx`
+4. The relevant `CardsPage.*.tsx` presentation module (`sections`, `overview`, `statements`, `expense`, `list`, or `installment`)
 5. Latest card-related migrations if RPC behavior changes
 
 Verify:
@@ -191,7 +191,7 @@ paylaşır; her sayfa süpersetini client-side daraltır). Query client: `src/ap
 | İş / konu | Önce bak (domain/util) | Veri katmanı | UI |
 |---|---|---|---|
 | **Para hesabı/yuvarlama** | `utils/money.ts` (+ `money.test.ts`, `money.property.test.ts`) | — | — |
-| **Kart borcu / breakdown** | `utils/cardLedger.ts`, `utils/financeSummary.ts` (`clampCardBreakdown`) | `data/repositories/cardsRepo.ts`, `services/cardLedgerActions.ts` | `pages/CardsPage.tsx` (+ `.helpers.ts`, `.sections.tsx`) |
+| **Kart borcu / breakdown** | `utils/cardLedger.ts`, `utils/financeSummary.ts` (`clampCardBreakdown`) | `data/repositories/cardsRepo.ts`, `services/cardLedgerActions.ts` | `pages/CardsPage.tsx` (+ `.helpers.ts`, `.sections.tsx`, `.overview.tsx`, `.statements.tsx`, `.list.tsx`) |
 | **Ekstre / statement döngüsü** | `utils/cardStatement.ts`, `utils/statementCycle.ts`, `utils/statementReminder.ts` | `data/repositories/cardsRepo.ts` | `pages/CardsPage.tsx` |
 | **Taksit takvimi** | `utils/cardInstallmentCalendar.ts` | `data/repositories/cardsRepo.ts` | `pages/CardsPage.tsx` |
 | **Banka bakiyesi / hareket / mutabakat** | `utils/accountLedger.ts`, `utils/reconciliation.ts` | `data/repositories/financePanelsRepo.ts`, `services/accountLedgerActions.ts`, `services/accountMovements.ts` | `pages/CardsPage.tsx` |

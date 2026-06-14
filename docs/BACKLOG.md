@@ -3,7 +3,7 @@
 ## P0 - High Confidence / High Value
 
 - Break large finance-heavy page files into smaller domain modules without changing behavior.
-  - Highest candidates: `CardsPage.sections.tsx`, `DataHealthPage.tsx`, `CardsPage.tsx`
+  - Highest candidates: `LoansPage.tsx`, `AnalysisPage.tsx`, `DataHealthPage.tsx`, `CardsPage.tsx`
 - Finish Faz C money cleanup (ledger integer-kuruş conversion).
   - Remaining real work: migrate residual float TL ledger arithmetic to signed integer kuruş at the repo/data layer.
   - Rounding/comparison sweep is DONE: all TL sums route through `roundMoney`→`roundTL`, and `+0.01` tolerances now use `exceedsTL`/`moneyDiffers`. The remaining bare `Math.round(x*100)/100` sites (`fire`, `realValue`, `marketRates`, `goldLedger`) are intentionally NOT money (display/rate/quantity precision) and are commented as such — do not route them through `money.ts`.
@@ -40,7 +40,7 @@
 
 ## Suggested Next Tasks for Codex
 
-1. Extract reusable card/account section helpers from `CardsPage.sections.tsx` before larger UI moves.
+1. Continue shrinking `CardsPage.tsx` orchestration now that `CardsPage.sections.tsx` is thin.
 2. Plan the shared payment drawer across card debt, card installments, loan installments, planned payments, and personal debt settlement.
 3. Keep `docs/RPC_ACTION_REFERENCE.md` aligned when Supabase RPCs or user-visible actions change.
 4. Keep `docs/MIGRATION_COMPATIBILITY_CHECKLIST.md` aligned with release workflow changes.
@@ -51,3 +51,4 @@
 - `financeSummary.test.ts` covers shared credit limit grouping, payable card debt excluding provision, and recurring payment month occurrence.
 - A narrow Faz C pass replaced savings-goal `+0.01` comparisons and obvious TL amount rounding sites with `money.ts` helpers.
 - Faz C rounding/comparison audit closed: the non-money `Math.round` helpers (`fire`, `realValue`, `marketRates`, `goldLedger`) were classified as display/rate/quantity precision and commented in place; only ledger integer-kuruş conversion remains under Faz C.
+- `CardsPage.sections.tsx` is now a thin nav/automation module; overview, statement/provision panels, and help copy live in focused `CardsPage.*` files.
