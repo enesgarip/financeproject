@@ -6,7 +6,6 @@ import { AccountPaymentModal } from '../components/finance/AccountPaymentModal'
 import { StatementImportModal } from '../components/finance/StatementImportModal'
 import { CardInstallmentCalendarPanel } from '../components/finance/CardInstallmentCalendarPanel'
 import { CardInstallmentExpensesPanel } from '../components/finance/CardInstallmentExpensesPanel'
-import { submitAccountMovement } from '../services/accountMovements'
 import { submitFinanceObligationPayment } from '../services/financePaymentActions'
 import type { Card, CardStatementArchive } from '../types/database'
 import { formatDate } from '../utils/date'
@@ -26,7 +25,7 @@ import { QuickExpensePanel } from './CardsPage.expense'
 import { CreditAccountListCard } from './CardsPage.list'
 import { LegacyInstallmentPanel } from './CardsPage.installment'
 import { MovementModal } from './CardsPage.movementModal'
-import { useCardsPageData } from './CardsPage.hooks'
+import { useAccountMovementModal, useCardsPageData } from './CardsPage.hooks'
 import {
   bankHueStyle,
   cardGroupLabel,
@@ -65,55 +64,28 @@ export function CardsPage() {
     handleProvisionAction,
     setStatementActionId,
   } = useCardsPageData()
-  const [transactionCard, setTransactionCard] = useState<Card | null>(null)
-  const [transactionType, setTransactionType] = useState<'in' | 'out' | 'transfer'>('in')
-  const [transactionAmount, setTransactionAmount] = useState('')
-  const [transactionTargetCard, setTransactionTargetCard] = useState('')
-  const [transactionError, setTransactionError] = useState('')
-  const [transactionSaving, setTransactionSaving] = useState(false)
-  const [movementAccounts, setMovementAccounts] = useState<Card[]>([])
   const [reloadCards, setReloadCards] = useState<(() => Promise<void>) | null>(null)
+  const {
+    transactionAmount,
+    transactionCard,
+    transactionError,
+    transactionSaving,
+    transactionTargetAccounts,
+    transactionTargetCard,
+    transactionType,
+    closeTransaction,
+    handleTransactionSubmit,
+    handleTransactionTargetCardChange,
+    handleTransactionTypeChange,
+    openTransaction,
+    setTransactionAmount,
+  } = useAccountMovementModal({ invalidateSnapshot, reloadCards, setReloadCards })
   const [statementPayment, setStatementPayment] = useState<{ statement: CardStatementArchive; card: Card } | null>(null)
   const [statementPaymentAccounts, setStatementPaymentAccounts] = useState<Card[]>([])
   const [statementPaymentSourceCard, setStatementPaymentSourceCard] = useState('')
   const [statementPaymentError, setStatementPaymentError] = useState('')
   const [statementPaymentSaving, setStatementPaymentSaving] = useState(false)
   const [importCard, setImportCard] = useState<Card | null>(null)
-
-  function openTransaction(card: Card, reload: () => Promise<void>, cards: Card[], type: 'in' | 'out' | 'transfer' = 'in') {
-    const accounts = cards.filter((row) => row.card_type === 'banka_karti')
-    setTransactionCard(card)
-    setReloadCards(() => reload)
-    setMovementAccounts(accounts)
-    setTransactionType(type)
-    setTransactionAmount('')
-    setTransactionTargetCard('')
-    setTransactionError('')
-  }
-
-  async function handleTransactionSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    if (!transactionCard) return
-
-    const amount = parseNumber(transactionAmount)
-    setTransactionSaving(true)
-    setTransactionError('')
-    const { error } = await submitAccountMovement({
-      sourceAccount: transactionCard,
-      targetAccount: movementAccounts.find((card) => card.id === transactionTargetCard),
-      type: transactionType,
-      amount,
-    })
-
-    setTransactionSaving(false)
-    if (error) {
-      setTransactionError(error.message ?? 'Para hareketi tamamlanamadı.')
-      return
-    }
-
-    setTransactionCard(null)
-    await Promise.all([reloadCards?.(), invalidateSnapshot()])
-  }
 
   function openStatementPayment(statement: CardStatementArchive, card: Card, cards: Card[], reload: () => Promise<void>) {
     const accounts = cards.filter((row) => row.card_type === 'banka_karti' && row.id !== card.id)
@@ -188,8 +160,6 @@ export function CardsPage() {
     setSearchParams(nextParams, { replace: true })
     if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' })
   }, [searchParams, setSearchParams])
-
-  const transactionTargetAccounts = movementAccounts.filter((card) => card.id !== transactionCard?.id)
 
   return (
     <>
@@ -415,17 +385,10 @@ export function CardsPage() {
         targetAccounts={transactionTargetAccounts}
         error={transactionError}
         saving={transactionSaving}
-        onClose={() => setTransactionCard(null)}
-        onTypeChange={(value) => {
-          setTransactionType(value)
-          setTransactionTargetCard('')
-          setTransactionError('')
-        }}
+        onClose={closeTransaction}
+        onTypeChange={handleTransactionTypeChange}
         onAmountChange={setTransactionAmount}
-        onTargetCardChange={(value) => {
-          setTransactionTargetCard(value)
-          setTransactionError('')
-        }}
+        onTargetCardChange={handleTransactionTargetCardChange}
         onSubmit={handleTransactionSubmit}
       />
 

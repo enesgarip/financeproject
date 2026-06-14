@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, type Dispatch, type FormEvent, type SetStateAction } from 'react'
 import { useInvalidateFinanceSnapshot } from '../app/useFinanceSnapshot'
 import {
   applyCardProvision,
@@ -6,8 +6,12 @@ import {
   fetchProvisionExpenses,
   fetchStatementArchives,
 } from '../data/repositories/cardsRepo'
-import type { CardExpense, CardInstallment, CardStatementArchive } from '../types/database'
+import { submitAccountMovement } from '../services/accountMovements'
+import type { Card, CardExpense, CardInstallment, CardStatementArchive } from '../types/database'
+import { parseNumber } from '../utils/formatCurrency'
 import { isSchemaCacheError } from './CardsPage.helpers'
+
+type ReloadCards = (() => Promise<void>) | null
 
 export function useCardsPageData() {
   const invalidateSnapshot = useInvalidateFinanceSnapshot()
@@ -155,5 +159,91 @@ export function useCardsPageData() {
     handlePostAllProvisions,
     handleProvisionAction,
     setStatementActionId,
+  }
+}
+
+export function useAccountMovementModal({
+  invalidateSnapshot,
+  reloadCards,
+  setReloadCards,
+}: {
+  invalidateSnapshot: () => Promise<void>
+  reloadCards: ReloadCards
+  setReloadCards: Dispatch<SetStateAction<ReloadCards>>
+}) {
+  const [transactionCard, setTransactionCard] = useState<Card | null>(null)
+  const [transactionType, setTransactionType] = useState<'in' | 'out' | 'transfer'>('in')
+  const [transactionAmount, setTransactionAmount] = useState('')
+  const [transactionTargetCard, setTransactionTargetCard] = useState('')
+  const [transactionError, setTransactionError] = useState('')
+  const [transactionSaving, setTransactionSaving] = useState(false)
+  const [movementAccounts, setMovementAccounts] = useState<Card[]>([])
+
+  function openTransaction(card: Card, reload: () => Promise<void>, cards: Card[], type: 'in' | 'out' | 'transfer' = 'in') {
+    const accounts = cards.filter((row) => row.card_type === 'banka_karti')
+    setTransactionCard(card)
+    setReloadCards(() => reload)
+    setMovementAccounts(accounts)
+    setTransactionType(type)
+    setTransactionAmount('')
+    setTransactionTargetCard('')
+    setTransactionError('')
+  }
+
+  function closeTransaction() {
+    setTransactionCard(null)
+  }
+
+  function handleTransactionTypeChange(value: 'in' | 'out' | 'transfer') {
+    setTransactionType(value)
+    setTransactionTargetCard('')
+    setTransactionError('')
+  }
+
+  function handleTransactionTargetCardChange(value: string) {
+    setTransactionTargetCard(value)
+    setTransactionError('')
+  }
+
+  async function handleTransactionSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!transactionCard) return
+
+    const amount = parseNumber(transactionAmount)
+    setTransactionSaving(true)
+    setTransactionError('')
+    const { error } = await submitAccountMovement({
+      sourceAccount: transactionCard,
+      targetAccount: movementAccounts.find((card) => card.id === transactionTargetCard),
+      type: transactionType,
+      amount,
+    })
+
+    setTransactionSaving(false)
+    if (error) {
+      setTransactionError(error.message ?? 'Para hareketi tamamlanamadı.')
+      return
+    }
+
+    setTransactionCard(null)
+    await Promise.all([reloadCards?.(), invalidateSnapshot()])
+  }
+
+  const transactionTargetAccounts = movementAccounts.filter((card) => card.id !== transactionCard?.id)
+
+  return {
+    transactionAmount,
+    transactionCard,
+    transactionError,
+    transactionSaving,
+    transactionTargetAccounts,
+    transactionTargetCard,
+    transactionType,
+    closeTransaction,
+    handleTransactionSubmit,
+    handleTransactionTargetCardChange,
+    handleTransactionTypeChange,
+    openTransaction,
+    setTransactionAmount,
   }
 }
