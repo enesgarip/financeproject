@@ -54,9 +54,7 @@ type PaymentDrawerOpenOptions = {
   detail?: ReactNode
 }
 
-function useFinancePaymentDrawer(defaults: {
-  invalidateSnapshot: () => Promise<void>
-}) {
+function useFinancePaymentDrawer() {
   return {
     drawerProps,
     openPaymentDrawer,
@@ -65,15 +63,24 @@ function useFinancePaymentDrawer(defaults: {
 }
 ```
 
-The hook should require exactly one source for accounts: either `cards` or
-`loadCards`. If neither is provided, it can fall back to a shared `fetchCards`
-loader, but the preferred migration path is explicit data ownership per page.
+The hook receives refresh behavior per open call through `reload` and
+`afterSuccess`, keeping route reloads, snapshot invalidation, and page-local
+list refreshes explicit at each call site. The preferred account source is
+explicit page-owned `cards`; `loadCards` is only for pages that do not already
+have card data in memory.
+
+## Implementation Status
+
+- 2026-06-14: Phase 1 complete. Added `useFinancePaymentDrawer` and
+  `FinancePaymentDrawer`, then migrated `PaymentsPage` to the shared drawer.
+- Next slice: migrate `CardsPage` statement payment onto the shared drawer while
+  preserving statement action ids and statement/installment reloads.
 
 ## Migration Order
 
-1. **Extract without behavior change.**
-   Add `useFinancePaymentDrawer` and `FinancePaymentDrawer`, then migrate
-   `PaymentsPage` first because it already uses `FinanceObligation` and
+1. **Extract without behavior change.** Done 2026-06-14.
+   `PaymentsPage` now uses `useFinancePaymentDrawer` and
+   `FinancePaymentDrawer` because it already used `FinanceObligation` and
    `submitFinanceObligationPayment`.
 2. **Move card statement payment onto the drawer.**
    Replace `useStatementPaymentModal` with a small statement-to-obligation

@@ -1,5 +1,5 @@
 import { CrudPage, type FormField } from '../components/CrudPage'
-import { AccountPaymentModal } from '../components/finance/AccountPaymentModal'
+import { FinancePaymentDrawer } from '../components/finance/FinancePaymentDrawer'
 import { ObligationsCalendar } from '../components/finance/ObligationsCalendar'
 import { TurkishCalendarPresets } from '../components/finance/TurkishCalendarPresets'
 import { Alert } from '../components/ui/alert'
@@ -9,18 +9,7 @@ import { Progress } from '../components/ui/progress'
 import { useFinanceSnapshot, useInvalidateFinanceSnapshot } from '../app/useFinanceSnapshot'
 import { postDueCardAutoPayments } from '../data/repositories/financeSnapshotRepo'
 import { fetchCards } from '../data/repositories/cardsRepo'
-import {
-  accountLabelForObligation,
-  amountLabelForObligation,
-  emptyAccountMessageForObligation,
-  getAccountsForObligation,
-  lastUsedKeyForObligation,
-  modalTitleForObligation,
-  obligationAmountEditable,
-  sortPaymentAccounts,
-  submitFinanceObligationPayment,
-  submitLabelForObligation,
-} from '../services/financePaymentActions'
+import { sortPaymentAccounts } from '../services/financePaymentActions'
 import type {
   Card as FinanceCard,
   Payment,
@@ -30,11 +19,10 @@ import type {
 } from '../types/database'
 import { daysUntil, formatDate } from '../utils/date'
 import { formatCurrency, parseNumber } from '../utils/formatCurrency'
-import { exceedsTL } from '../utils/money'
-import { getLastUsed, resolvePreferred, setLastUsed } from '../utils/lastUsed'
 import { paymentCashOutflowAmount, paymentUsesCreditCard } from '../utils/financeSummary'
 import type { FinanceObligation, FinanceObligationsInput } from '../utils/obligations'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useFinancePaymentDrawer } from '../hooks/useFinancePaymentDrawer'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
 
 const paymentCategoryOptions: { label: PaymentCategory; value: PaymentCategory }[] = [
   { label: 'Fatura', value: 'Fatura' },
@@ -258,13 +246,7 @@ function PaymentsOverview({ rows }: { rows: Payment[] }) {
 export function PaymentsPage() {
   const snapshotQuery = useFinanceSnapshot()
   const invalidateSnapshot = useInvalidateFinanceSnapshot()
-  const [obligationToPay, setObligationToPay] = useState<FinanceObligation | null>(null)
-  const [obligationAccounts, setObligationAccounts] = useState<FinanceCard[]>([])
-  const [obligationAccountId, setObligationAccountId] = useState('')
-  const [obligationAmount, setObligationAmount] = useState('')
-  const [obligationPaymentError, setObligationPaymentError] = useState('')
-  const [obligationSaving, setObligationSaving] = useState(false)
-  const [reloadPayments, setReloadPayments] = useState<(() => Promise<void>) | null>(null)
+  const { drawerProps, openPaymentDrawer } = useFinancePaymentDrawer()
 
   // Ortak finans snapshot'ından takvim girdisini türet: taksit/borç vadeleri
   // artan sırada, ekstrelerden yalnızca açık olanlar (eski sorgu davranışıyla bire bir).
@@ -327,45 +309,12 @@ export function PaymentsPage() {
   async function openObligationPayment(obligation: FinanceObligation, reload: () => Promise<void>) {
     if (!obligation.action) return
 
-    const cards = planningData.cards.length > 0 ? planningData.cards : await getPaymentCards()
-    const accounts = getAccountsForObligation(obligation, cards)
-    const lastUsedKey = lastUsedKeyForObligation(obligation)
-    setObligationToPay(obligation)
-    setObligationAccounts(accounts)
-    setObligationAccountId(resolvePreferred(getLastUsed(lastUsedKey), accounts.map((card) => card.id)))
-    setObligationAmount(obligation.amount > 0 ? String(obligation.amount) : '')
-    setObligationPaymentError(accounts.length === 0 ? emptyAccountMessageForObligation(obligation) : '')
-    setReloadPayments(() => reload)
-  }
-
-  function closeObligationPayment() {
-    setObligationToPay(null)
-    setObligationAccountId('')
-    setObligationAmount('')
-    setObligationPaymentError('')
-  }
-
-  async function handleObligationPaymentSubmit({ account, amount }: { account: FinanceCard; amount: number }) {
-    if (!obligationToPay?.action) return
-
-    setObligationSaving(true)
-    setObligationPaymentError('')
-
-    const { error: submitError } = await submitFinanceObligationPayment({
-      obligation: obligationToPay,
-      account,
-      amount,
+    await openPaymentDrawer(obligation, {
+      cards: planningData.cards.length > 0 ? planningData.cards : undefined,
+      loadCards: planningData.cards.length > 0 ? undefined : getPaymentCards,
+      reload,
+      afterSuccess: loadPlanningData,
     })
-
-    setObligationSaving(false)
-    if (submitError) {
-      setObligationPaymentError(submitError.message ?? 'Ödeme işlemi tamamlanamadı.')
-      return
-    }
-
-    setLastUsed(lastUsedKeyForObligation(obligationToPay), account.id)
-    closeObligationPayment()
-    await Promise.all([reloadPayments?.(), loadPlanningData()])
   }
 
   return (
@@ -471,43 +420,7 @@ export function PaymentsPage() {
         }
       />
 
-      <AccountPaymentModal
-        title={modalTitleForObligation(obligationToPay)}
-        open={Boolean(obligationToPay)}
-        onClose={closeObligationPayment}
-        accounts={obligationAccounts}
-        selectedAccountId={obligationAccountId}
-        onSelectedAccountChange={setObligationAccountId}
-        amountValue={obligationAmount}
-        onAmountValueChange={setObligationAmount}
-        amountLabel={amountLabelForObligation(obligationToPay)}
-        accountLabel={accountLabelForObligation(obligationToPay)}
-        emptyMessage={emptyAccountMessageForObligation(obligationToPay)}
-        submitLabel={submitLabelForObligation(obligationToPay)}
-        saving={obligationSaving}
-        externalError={obligationPaymentError}
-        amountEditable={obligationAmountEditable(obligationToPay)}
-        accountPreviewAmount={(amount) => obligationToPay?.action === 'collect_debt' ? -amount : amount}
-        successAction={obligationToPay?.action === 'collect_debt' || obligationToPay?.action === 'pay_card_statement'}
-        info={obligationToPay?.action === 'pay_card_statement' ? 'Bu ekstre kapandığında ekstreye bağlı kredi kartı taksitleri otomatik ödenmiş olur.' : null}
-        validate={({ amount }) => {
-          if (obligationToPay?.action === 'pay_card_debt' && exceedsTL(amount, obligationToPay.amount)) {
-            return 'Ödeme tutarı ödenebilir kart borcundan büyük olamaz.'
-          }
-          return null
-        }}
-        onSubmit={handleObligationPaymentSubmit}
-      >
-        <p className="font-semibold text-foreground">{obligationToPay?.title}</p>
-        <p className="mt-0.5">{obligationToPay?.subtitle}</p>
-        <p className="mt-0.5">Tarih: {obligationToPay ? formatDate(obligationToPay.date) : '-'}</p>
-        <p className="mt-0.5">
-          Planlanan tutar:{' '}
-          <span className="font-mono font-semibold text-foreground">
-            {obligationToPay ? formatCurrency(obligationToPay.amount) : '-'}
-          </span>
-        </p>
-      </AccountPaymentModal>
+      <FinancePaymentDrawer {...drawerProps} />
     </>
   )
 }

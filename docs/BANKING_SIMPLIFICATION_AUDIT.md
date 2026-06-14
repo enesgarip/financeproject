@@ -42,11 +42,15 @@
   - Before: account-backed payments had a shared visual modal, but page-local state still duplicated account selection, last-used account, submit, and refresh behavior.
   - Now: `docs/SHARED_PAYMENT_DRAWER_PLAN.md` defines the migration path for one drawer/hook across planned payments, card statements/manual card debt, loan installments, and personal debt settlement.
 
+- **Shared payment drawer phase 1**
+  - Before: `PaymentsPage` owned its own payment drawer state even though it already used `FinanceObligation`.
+  - Now: `PaymentsPage` uses `useFinancePaymentDrawer` and `FinancePaymentDrawer`; account eligibility, last-used account, submit, labels, and drawer validation are shared.
+
 ## Remaining Simplification Candidates
 
 - **Implement the shared payment drawer plan**
   - `AccountPaymentModal` is the existing low-level UI.
-  - Next implementation step: add the shared hook/wrapper from `docs/SHARED_PAYMENT_DRAWER_PLAN.md`, then migrate `PaymentsPage` first.
+  - Next implementation step: migrate `CardsPage` statement payment to the shared drawer, then move loan installments and personal debt settlement.
 
 - **One account movement helper**
   - Manual deposit, withdrawal, transfer, bill payment, debt settlement, and loan payment all update balances and history.
