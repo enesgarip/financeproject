@@ -312,7 +312,7 @@ export function DataHealthPage() {
                 className="inline-flex items-center gap-2 rounded-xl border border-info/25 bg-info/8 px-3 py-2 text-sm font-semibold text-info transition hover:bg-info/12 disabled:opacity-50"
               >
                 <Activity size={15} />
-                {snoozedIssueIds.length} ertelenen uyariyi geri getir
+                {snoozedIssueIds.length} ertelenen uyarıyı geri getir
               </button>
             ) : null}
             {undoStack[0] ? (
@@ -385,8 +385,8 @@ export function DataHealthPage() {
               <Activity size={22} />
             </div>
             <div>
-              <h2 className="font-bold text-foreground">Aktif listede uyari kalmadi</h2>
-              <p className="mt-1 text-sm text-muted-foreground">Bulunan kayitlari daha sonra hatirlat olarak erteledin. Istersen yukaridan geri getirebilirsin.</p>
+              <h2 className="font-bold text-foreground">Aktif listede uyarı kalmadı</h2>
+              <p className="mt-1 text-sm text-muted-foreground">Bulunan kayıtları daha sonra hatırlat olarak erteledin. İstersen yukarıdan geri getirebilirsin.</p>
             </div>
           </CardContent>
         </SurfaceCard>

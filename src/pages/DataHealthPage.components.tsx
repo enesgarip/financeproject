@@ -53,7 +53,7 @@ export function HealthIssueCard({
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
               <Badge variant="outline">{issue.area}</Badge>
-              <Badge variant={issue.fixable ? 'success' : 'outline'}>{issue.fixable ? 'Hazir aksiyon var' : 'Elle inceleme gerekli'}</Badge>
+              <Badge variant={issue.fixable ? 'success' : 'outline'}>{issue.fixable ? 'Hazır aksiyon var' : 'Elle inceleme gerekli'}</Badge>
             </div>
             <h2 className="mt-2 text-base font-bold text-foreground">{issue.title}</h2>
             <p className="mt-1 text-sm text-muted-foreground">{issue.description}</p>
@@ -63,11 +63,11 @@ export function HealthIssueCard({
                 <p className="mt-1 text-muted-foreground">{guide.problem}</p>
               </div>
               <div>
-                <p className="font-semibold text-foreground">Neden onemli?</p>
+                <p className="font-semibold text-foreground">Neden önemli?</p>
                 <p className="mt-1 text-muted-foreground">{guide.whyItMatters}</p>
               </div>
               <div>
-                <p className="font-semibold text-foreground">Ne yapmaliyim?</p>
+                <p className="font-semibold text-foreground">Ne yapmalıyım?</p>
                 <p className="mt-1 text-muted-foreground">{guide.nextStep}</p>
               </div>
             </div>
@@ -78,7 +78,7 @@ export function HealthIssueCard({
             </div>
             {previewRows.length > 0 ? (
               <div className="mt-3 rounded-xl border border-success/20 bg-success/8 p-3 text-xs text-success">
-                <p className="font-bold">Duzeltme onizlemesi</p>
+                <p className="font-bold">Düzeltme önizlemesi</p>
                 <div className="mt-2 grid gap-1">
                   {previewRows.map((detail, index) => (
                     <span key={`${issue.id}-preview-${index}`}>{detail}</span>
@@ -96,7 +96,7 @@ export function HealthIssueCard({
                     disabled={Boolean(fixingId) || undoing}
                     className="rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground shadow-[0_2px_8px_color-mix(in_srgb,var(--primary)_30%,transparent)] transition hover:bg-primary/90 active:scale-[0.97] disabled:opacity-50"
                   >
-                    {fixingId === issue.id ? 'Duzeltiliyor...' : issue.fixLabel}
+                    {fixingId === issue.id ? 'Düzeltiliyor...' : issue.fixLabel}
                   </button>
                 ) : null}
                 {quickLink ? (
@@ -110,7 +110,7 @@ export function HealthIssueCard({
                   disabled={Boolean(fixingId) || undoing}
                   className="rounded-lg border border-info/25 bg-info/8 px-3 py-2 text-xs font-semibold text-info transition hover:bg-info/12 disabled:opacity-50"
                 >
-                  Daha sonra hatirlat
+                  Daha sonra hatırlat
                 </button>
               </div>
             </div>

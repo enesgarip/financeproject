@@ -255,41 +255,41 @@ export function severityClass(severity: HealthIssue['severity']) {
 export function buildIssueGuide(issue: HealthIssue): IssueGuide {
   if (issue.kind === 'cardScheduledDebt') {
     return {
-      problem: 'Planli kart taksitleri kayitli, ama kart borcuna tam yansimiyor.',
-      whyItMatters: 'Kalan limit gercekten daha yuksek gorunur; bu da yeni harcama ve odeme planini yaniltir.',
+      problem: 'Planlı kart taksitleri kayıtlı, ama kart borcuna tam yansımıyor.',
+      whyItMatters: 'Kalan limit gerçekten daha yüksek görünür; bu da yeni harcama ve ödeme planını yanıltır.',
       nextStep: issue.fixable
-        ? 'Kart borcunu taksit planiyla hizalamak icin hizli duzeltmeyi uygula.'
-        : 'Kart borcunu ve taksit planini birlikte kontrol et; gerekiyorsa Kartlar ekranindan duzelt.',
+        ? 'Kart borcunu taksit planıyla hizalamak için hızlı düzeltmeyi uygula.'
+        : 'Kart borcunu ve taksit planını birlikte kontrol et; gerekiyorsa Kartlar ekranından düzelt.',
     }
   }
 
   if (issue.kind === 'cardLedgerDrift') {
     return {
-      problem: 'Kartin kayitli borcu, borc hareketleri toplamindan farkli.',
-      whyItMatters: 'Borc hareketleri degismez kayittir; fark, hareketlere yazilmadan borcun degistigi anlamina gelir.',
+      problem: 'Kartın kayıtlı borcu, borç hareketleri toplamından farklı.',
+      whyItMatters: 'Borç hareketleri değişmez kayıttır; fark, hareketlere yazılmadan borcun değiştiği anlamına gelir.',
       nextStep: issue.fixable
-        ? 'Hizli duzeltmeyle borcu hareket gecmisine (gercek kaynak) gore yeniden hesapla.'
-        : 'Kartin borc hareketlerini Kartlar ekranindan kontrol et.',
+        ? 'Hızlı düzeltmeyle borcu hareket geçmişine (gerçek kaynak) göre yeniden hesapla.'
+        : 'Kartın borç hareketlerini Kartlar ekranından kontrol et.',
     }
   }
 
   if (issue.kind === 'accountLedgerDrift') {
     return {
-      problem: 'Hesabin kayitli bakiyesi, hesap hareketleri toplamindan farkli.',
-      whyItMatters: 'Hesap hareketleri degismez kayittir; fark, hareketlere yazilmadan bakiyenin degistigi anlamina gelir.',
+      problem: 'Hesabın kayıtlı bakiyesi, hesap hareketleri toplamından farklı.',
+      whyItMatters: 'Hesap hareketleri değişmez kayıttır; fark, hareketlere yazılmadan bakiyenin değiştiği anlamına gelir.',
       nextStep: issue.fixable
-        ? 'Hizli duzeltmeyle bakiyeyi hareket gecmisine (gercek kaynak) gore yeniden hesapla.'
-        : 'Hesabin hareketlerini Kartlar ekranindan kontrol et.',
+        ? 'Hızlı düzeltmeyle bakiyeyi hareket geçmişine (gerçek kaynak) göre yeniden hesapla.'
+        : 'Hesabın hareketlerini Kartlar ekranından kontrol et.',
     }
   }
 
   if (issue.kind === 'cardDebtSplit' || issue.kind === 'cardStatementTotals') {
     return {
-      problem: 'Kart borcunun ekstre, donem ici veya arsiv kiriliminda tutarsizlik var.',
-      whyItMatters: 'Odeme tutari, aylik yuk ve veri sagligi kontrolleri bu kirilima gore hesap yapar.',
+      problem: 'Kart borcunun ekstre, dönem içi veya arşiv kırılımında tutarsızlık var.',
+      whyItMatters: 'Ödeme tutarı, aylık yük ve veri sağlığı kontrolleri bu kırılıma göre hesap yapar.',
       nextStep: issue.fixable
-        ? 'Hizli duzeltmeyle kirilimi yeniden hizala, sonra Kartlar ekraninda toplamlari gozden gecir.'
-        : 'Kartin son ekstre ve donem ici hareketlerini kontrol ederek kaynak kaydi duzelt.',
+        ? 'Hızlı düzeltmeyle kırılımı yeniden hizala, sonra Kartlar ekranında toplamları gözden geçir.'
+        : 'Kartın son ekstre ve dönem içi hareketlerini kontrol ederek kaynak kaydı düzelt.',
     }
   }
 
@@ -302,51 +302,51 @@ export function buildIssueGuide(issue: HealthIssue): IssueGuide {
     issue.kind === 'cardInstallmentCount'
   ) {
     return {
-      problem: 'Kart harcamasi ile bagli taksit satirlari birbiriyle uyusmuyor.',
-      whyItMatters: 'Yaklasan taksitler, donem yuku ve kalan borc hatali hesaplanabilir.',
+      problem: 'Kart harcaması ile bağlı taksit satırları birbiriyle uyuşmuyor.',
+      whyItMatters: 'Yaklaşan taksitler, dönem yükü ve kalan borç hatalı hesaplanabilir.',
       nextStep: issue.fixable
-        ? 'Hizli duzeltmeyi uygulayip taksit planini yeniden hizala.'
-        : 'Kartlar ekraninda ilgili taksitli harcamayi acip satirlari tek tek kontrol et.',
+        ? 'Hızlı düzeltmeyi uygulayıp taksit planını yeniden hizala.'
+        : 'Kartlar ekranında ilgili taksitli harcamayı açıp satırları tek tek kontrol et.',
     }
   }
 
   if (issue.kind === 'loanTotals' || issue.kind === 'loanInstallmentDueDay') {
     return {
-      problem: 'Kredi ozeti ile taksit plani birbirinden kopmus gorunuyor.',
-      whyItMatters: 'Kalan borc, kalan taksit ve nakit akis projeksiyonu yanlis gorunebilir.',
+      problem: 'Kredi özeti ile taksit planı birbirinden kopmuş görünüyor.',
+      whyItMatters: 'Kalan borç, kalan taksit ve nakit akış projeksiyonu yanlış görünebilir.',
       nextStep: issue.fixable
-        ? 'Hizli duzeltmeyle kredi ozetini plana gore guncelle.'
-        : 'Kredi planini ve kredi kartini birlikte kontrol ederek eksik veya hatali satiri duzelt.',
+        ? 'Hızlı düzeltmeyle kredi özetini plana göre güncelle.'
+        : 'Kredi planını ve kredi kartını birlikte kontrol ederek eksik veya hatalı satırı düzelt.',
     }
   }
 
   if (issue.kind === 'loanPaidAtMissing' || issue.kind === 'loanPendingPaidAt') {
     return {
-      problem: 'Kredi taksitinin odeme tarihi alani durumuyla uyusmuyor.',
-      whyItMatters: 'Odenmis/bekleyen ayrimi raporlarda ve veri sagligi kontrollerinde guven kaybina yol acar.',
+      problem: 'Kredi taksitinin ödeme tarihi alanı durumuyla uyuşmuyor.',
+      whyItMatters: 'Ödenmiş/bekleyen ayrımı raporlarda ve veri sağlığı kontrollerinde güven kaybına yol açar.',
       nextStep: issue.fixable
-        ? 'Tarih alanini hizli duzeltmeyle senkronize et.'
-        : 'Krediler ekraninda ilgili taksiti acip gercek odeme durumunu kontrol et.',
+        ? 'Tarih alanını hızlı düzeltmeyle senkronize et.'
+        : 'Krediler ekranında ilgili taksiti açıp gerçek ödeme durumunu kontrol et.',
     }
   }
 
   if (issue.kind === 'paymentDueDay' || issue.kind === 'paymentRecurrenceFields') {
     return {
-      problem: 'Odeme takvimi alanlari birbiriyle uyusmuyor.',
-      whyItMatters: 'Yaklasan odemeler ve aylik cikis plani yanlis gun veya yanlis kayitla hesaplanabilir.',
+      problem: 'Ödeme takvimi alanları birbiriyle uyuşmuyor.',
+      whyItMatters: 'Yaklaşan ödemeler ve aylık çıkış planı yanlış gün veya yanlış kayıtla hesaplanabilir.',
       nextStep: issue.fixable
-        ? 'Takvim alanlarini hizli duzeltmeyle guncelle.'
-        : 'Odemeler ekraninda tekrar bilgilerini ve son tarihi kontrol et.',
+        ? 'Takvim alanlarını hızlı düzeltmeyle güncelle.'
+        : 'Ödemeler ekranında tekrar bilgilerini ve son tarihi kontrol et.',
     }
   }
 
   if (issue.kind === 'assetShape' || issue.kind === 'budgetMonth' || issue.kind === 'debtShape' || issue.kind === 'cardTypeFields') {
     return {
-      problem: 'Kayit formundaki teknik alanlar secili turle veya beklenen formatla uyusmuyor.',
-      whyItMatters: 'Ozet kartlari, dagilimlar ve filtreler bu kaydi yanlis yorumlayabilir.',
+      problem: 'Kayıt formundaki teknik alanlar seçili türle veya beklenen formatla uyuşmuyor.',
+      whyItMatters: 'Özet kartları, dağılımlar ve filtreler bu kaydı yanlış yorumlayabilir.',
       nextStep: issue.fixable
-        ? 'Hizli duzeltmeyle alanlari normalize et.'
-        : 'Ilgili kaydi acip tur, tarih ve tutar alanlarini gozden gecir.',
+        ? 'Hızlı düzeltmeyle alanları normalize et.'
+        : 'İlgili kaydı açıp tür, tarih ve tutar alanlarını gözden geçir.',
     }
   }
 
@@ -354,31 +354,31 @@ export function buildIssueGuide(issue: HealthIssue): IssueGuide {
     problem: issue.description,
     whyItMatters:
       issue.severity === 'error'
-        ? 'Bu uyumsuzluk hesaplamalari dogrudan bozabilir ve finansal ozetlere guveni dusurur.'
+        ? 'Bu uyumsuzluk hesaplamaları doğrudan bozabilir ve finansal özetlere güveni düşürür.'
         : issue.severity === 'warning'
-          ? 'Bu kayit zamanla daha buyuk hesap farklarina veya hatali hatirlatmalara donusebilir.'
-          : 'Bu kaydi duzeltmek gelecekteki kontrollerin daha temiz ve anlasilir olmasini saglar.',
+          ? 'Bu kayıt zamanla daha büyük hesap farklarına veya hatalı hatırlatmalara dönüşebilir.'
+          : 'Bu kaydı düzeltmek gelecekteki kontrollerin daha temiz ve anlaşılır olmasını sağlar.',
     nextStep: issue.fixable
-      ? `Hizli aksiyonlardaki "${issue.fixLabel ?? 'Duzelt'}" adimini kullan.`
-      : 'Ilgili kaydi acip alanlari elle kontrol et; emin degilsen daha sonra hatirlat ile listeden gecici olarak kaldir.',
+      ? `Hızlı aksiyonlardaki "${issue.fixLabel ?? 'Düzelt'}" adımını kullan.`
+      : 'İlgili kaydı açıp alanları elle kontrol et; emin değilsen daha sonra hatırlat ile listeden geçici olarak kaldır.',
   }
 }
 
 export function navigationAction(issue: HealthIssue) {
-  if (issue.id.includes('stale-installment')) return { to: '/kartlar?section=islemler', label: 'Doneme dahil et' }
-  if (issue.id.includes('no-plan')) return { to: '/borclar/krediler', label: 'Plani olustur' }
+  if (issue.id.includes('stale-installment')) return { to: '/kartlar?section=islemler', label: 'Döneme dahil et' }
+  if (issue.id.includes('no-plan')) return { to: '/borclar/krediler', label: 'Planı oluştur' }
 
   if (issue.kind.startsWith('card') || issue.kind === 'cardTypeFields') return { to: '/kartlar?section=kartlar', label: 'Kartlara git' }
   if (issue.kind.startsWith('loan')) return { to: '/borclar/krediler', label: 'Kredilere git' }
   if (issue.kind.startsWith('payment')) {
-    return { to: '/odemeler', label: issue.title.toLocaleLowerCase('tr-TR').includes('vadesi ge') ? 'Odendi isaretle' : 'Odemelere git' }
+    return { to: '/odemeler', label: issue.title.toLocaleLowerCase('tr-TR').includes('vadesi ge') ? 'Ödendi işaretle' : 'Ödemelere git' }
   }
   if (issue.kind === 'debtShape' || issue.title.toLocaleLowerCase('tr-TR').includes('bor') || issue.title.toLocaleLowerCase('tr-TR').includes('alacak')) {
-    return { to: '/borclar/kisiler', label: 'Borclara git' }
+    return { to: '/borclar/kisiler', label: 'Borçlara git' }
   }
-  if (issue.kind === 'assetShape' || issue.title.toLocaleLowerCase('tr-TR').includes('varl')) return { to: '/varliklar', label: 'Varliklara git' }
+  if (issue.kind === 'assetShape' || issue.title.toLocaleLowerCase('tr-TR').includes('varl')) return { to: '/varliklar', label: 'Varlıklara git' }
   if (issue.kind === 'budgetMonth' || issue.title.toLocaleLowerCase('tr-TR').includes('hedef') || issue.title.toLocaleLowerCase('tr-TR').includes('maa')) {
-    return { to: '/analiz', label: 'Kaydi ac' }
+    return { to: '/analiz', label: 'Kaydı aç' }
   }
 
   return null

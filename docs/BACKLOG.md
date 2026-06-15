@@ -42,7 +42,7 @@
 
 ## Suggested Next Tasks for Codex
 
-1. Audit Turkish copy and encoding consistency across UI strings and docs, starting with older DataHealth copy.
+1. Reduce repeated money helper logic such as `roundMoney`, split-total helpers, and schema-cache checks.
 2. Keep `docs/RPC_ACTION_REFERENCE.md` aligned when Supabase RPCs or user-visible actions change.
 3. Keep `docs/MIGRATION_COMPATIBILITY_CHECKLIST.md` aligned with release workflow changes.
 4. ~~Continue shrinking the remaining large route files.~~ DONE — all four large page files are now split into focused modules.
@@ -59,6 +59,7 @@
 - Legacy obligation cleanup pass completed: analysis month-close payment checks now consume the normalized obligation engine, and dashboard obligation mapping no longer exposes an unused public helper.
 - `docs/DASHBOARD_ARCHITECTURE.md` now documents dashboard data flow, utility ownership, normalized obligation input, panel boundaries, and verification.
 - `docs/CARDS_ARCHITECTURE.md` and `docs/DATA_HEALTH_ARCHITECTURE.md` now document page module boundaries, side-effect ownership, and verification routes for the remaining high-risk pages.
+- DataHealth copy polish pass completed for the older ASCII Turkish user-visible strings; encoding guard remains green.
 - `CardsPage.sections.tsx` is now a thin nav/automation module; overview, statement/provision panels, and help copy live in focused `CardsPage.*` files.
 - `CardsPage.tsx` data loading, account movement, statement payment, and section navigation orchestration now lives in `CardsPage.hooks.ts`.
 - `CardsPage.tsx` CRUD form mapping, card metadata renderers, limit usage extra block, bank hue styling, grouping, and row action button now live in `CardsPage.crud.tsx`; the route file is mostly orchestration and modal wiring.
