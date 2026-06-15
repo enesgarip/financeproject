@@ -19,9 +19,9 @@ import type {
 import { balanceDrift, projectAccountBalance, type AccountLedgerEvent } from '../utils/accountLedger'
 import { ledgerDrift, projectCardDebt, type CardLedgerEvent } from '../utils/cardLedger'
 import { dateInputValue, formatDate } from '../utils/date'
-import { buildCreditLimitGroups, cardProvisionAmount, cardSplitTotal, clampCardBreakdown, expectedInstallmentAmount, moneyDiffers, projectLoanSummary, roundMoney } from '../utils/financeSummary'
+import { buildCreditLimitGroups, cardProvisionAmount, cardSplitTotal, clampCardBreakdown, expectedInstallmentAmount, projectLoanSummary } from '../utils/financeSummary'
 import { formatCurrency } from '../utils/formatCurrency'
-import { exceedsTL } from '../utils/money'
+import { exceedsTL, moneyDiffers, roundTL } from '../utils/money'
 import { formatComponentAmount, formatSavingsGoalAmount, savingsGoalBelowTarget, savingsGoalTargetReached, savingsGoalValueTypeLabel } from '../utils/savingsGoal'
 
 export type HealthData = {
@@ -586,7 +586,7 @@ export function buildIssues(data: HealthData): HealthIssue[] {
   const scheduledInstallmentsByCard = new Map<string, number>()
   for (const item of data.cardInstallments) {
     if (item.status !== 'scheduled') continue
-    scheduledInstallmentsByCard.set(item.card_id, roundMoney((scheduledInstallmentsByCard.get(item.card_id) ?? 0) + item.amount))
+    scheduledInstallmentsByCard.set(item.card_id, roundTL((scheduledInstallmentsByCard.get(item.card_id) ?? 0) + item.amount))
   }
 
   for (const asset of data.assets) {
@@ -788,7 +788,7 @@ export function buildIssues(data: HealthData): HealthIssue[] {
     const scheduledTotal = scheduledInstallmentsByCard.get(card.id) ?? 0
 
     if (exceedsTL(scheduledTotal, 0) && !exceedsTL(card.debt_amount, splitTotal)) {
-      const nextDebtAmount = roundMoney(card.debt_amount + scheduledTotal)
+      const nextDebtAmount = roundTL(card.debt_amount + scheduledTotal)
 
       issues.push({
         id: `card-scheduled-debt-${card.id}`,
@@ -809,8 +809,8 @@ export function buildIssues(data: HealthData): HealthIssue[] {
     }
 
     if (exceedsTL(card.debt_amount, splitTotal)) {
-      const unclassifiedAmount = roundMoney(card.debt_amount - splitTotal)
-      const unexplained = roundMoney(unclassifiedAmount - Math.min(unclassifiedAmount, scheduledTotal))
+      const unclassifiedAmount = roundTL(card.debt_amount - splitTotal)
+      const unexplained = roundTL(unclassifiedAmount - Math.min(unclassifiedAmount, scheduledTotal))
       const hasInstallmentExpenses = data.cardExpenses.some(
         (expense) => expense.card_id === card.id && expense.status === 'posted' && expense.installment_count > 1,
       )
@@ -839,7 +839,7 @@ export function buildIssues(data: HealthData): HealthIssue[] {
           kind: 'cardDebtSplit',
           payload: {
             cardId: card.id,
-            statementDebt: roundMoney(card.statement_debt_amount + unexplained),
+            statementDebt: roundTL(card.statement_debt_amount + unexplained),
             currentPeriod: card.current_period_spending,
             provisionAmount: cardProvisionAmount(card),
           },
@@ -1196,7 +1196,7 @@ export function buildIssues(data: HealthData): HealthIssue[] {
                 installmentNos: futureMissingNos,
                 installmentCount: expense.installment_count,
                 baseMonth,
-                amount: roundMoney(expense.installment_amount || expense.amount / expense.installment_count),
+                amount: roundTL(expense.installment_amount || expense.amount / expense.installment_count),
                 totalAmount: expense.amount,
                 description: expense.description,
                 category: expense.category,
@@ -1220,13 +1220,13 @@ export function buildIssues(data: HealthData): HealthIssue[] {
 
     if (missingNos.length === 0 && extraRows.length === 0 && rows.length > 0) {
       const relevantRows = rows.filter((row) => expectedNos.includes(row.installment_no))
-      const plannedTotal = roundMoney(relevantRows.reduce((total, row) => total + row.amount, 0))
-      const baseAmount = roundMoney(expense.installment_amount || expense.amount / expense.installment_count)
-      const expectedPlannedTotal = roundMoney(
+      const plannedTotal = roundTL(relevantRows.reduce((total, row) => total + row.amount, 0))
+      const baseAmount = roundTL(expense.installment_amount || expense.amount / expense.installment_count)
+      const expectedPlannedTotal = roundTL(
         expectedNos.reduce((total, installmentNo) => {
           const amount =
             installmentNo === expense.installment_count
-              ? roundMoney(expense.amount - baseAmount * (expense.installment_count - 1))
+              ? roundTL(expense.amount - baseAmount * (expense.installment_count - 1))
               : baseAmount
           return total + amount
         }, 0),

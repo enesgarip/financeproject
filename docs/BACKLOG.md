@@ -6,7 +6,7 @@
   - All four candidates split: `CardsPage` (hooks/sections/crud), `LoansPage` (helpers/components), `AnalysisPage` (panels/atoms/reports/trends/wealth), `DataHealthPage` (logic/components/actions).
 - ~~Finish Faz C money cleanup (ledger integer-kuruş conversion).~~ DONE.
   - `financeSummary.ts` fully migrated: `sum()` delegates to `sumTL`, all direct float additions use `sumTL([...])`, subtractions use `diffTL`, `clampCardBreakdown` operates in kuruş internally. No float TL arithmetic remains in the aggregation layer.
-  - Rounding/comparison sweep was already done: all TL sums route through `roundMoney`→`roundTL`, and `+0.01` tolerances use `exceedsTL`/`moneyDiffers`. The remaining bare `Math.round(x*100)/100` sites (`fire`, `realValue`, `marketRates`, `goldLedger`) are intentionally NOT money (display/rate/quantity precision) and are commented as such — do not route them through `money.ts`.
+  - Rounding/comparison sweep was already done: all TL sums route through `roundTL`, and `+0.01` tolerances use `exceedsTL`/`moneyDiffers`. The remaining bare `Math.round(x*100)/100` sites (`fire`, `realValue`, `marketRates`, `goldLedger`) are intentionally NOT money (display/rate/quantity precision) and are commented as such — do not route them through `money.ts`.
   - Repo/service layers were already clean (no money arithmetic, only DB queries/RPCs).
 - ~~Extract shared account movement helpers for account-backed RPCs.~~ DONE.
   - Bank debit/credit row locking, ownership checks, type checks, balance validation, and balance updates now live in internal `private.debit_bank_account` / `private.credit_bank_account` helpers.
@@ -30,7 +30,7 @@
 
 - ~~Add a concise developer-oriented architecture note for each major page.~~ DONE for DashboardPage, CardsPage, and DataHealthPage.
 - Keep `docs/AI_CONTEXT_INDEX.md` current so future AI sessions can route to the right files with less repo scanning.
-- Reduce repeated money helper logic such as `roundMoney` and split-total helpers.
+- Reduce repeated split-total helper logic.
 - Clarify where dashboard calculations belong versus page-local calculations.
 - Audit Turkish copy and encoding consistency across UI strings and docs.
 
@@ -42,7 +42,7 @@
 
 ## Suggested Next Tasks for Codex
 
-1. Reduce repeated money helper logic such as `roundMoney` and split-total helpers.
+1. Reduce repeated split-total helper logic.
 2. Keep `docs/RPC_ACTION_REFERENCE.md` aligned when Supabase RPCs or user-visible actions change.
 3. ~~Keep `docs/MIGRATION_COMPATIBILITY_CHECKLIST.md` aligned with release workflow changes.~~ DONE.
 4. ~~Continue shrinking the remaining large route files.~~ DONE — all four large page files are now split into focused modules.
@@ -62,6 +62,7 @@
 - DataHealth copy polish pass completed for the older ASCII Turkish user-visible strings; encoding guard remains green.
 - Migration compatibility checklist now reflects the Lighthouse CI budget added to the release workflow.
 - Missing Supabase schema/RPC detection now centralizes on `utils/supabaseErrors.ts`; page-local schema-cache wrapper aliases were removed.
+- `roundMoney` alias was removed; money rounding/comparison helpers now live in `utils/money.ts`.
 - `CardsPage.sections.tsx` is now a thin nav/automation module; overview, statement/provision panels, and help copy live in focused `CardsPage.*` files.
 - `CardsPage.tsx` data loading, account movement, statement payment, and section navigation orchestration now lives in `CardsPage.hooks.ts`.
 - `CardsPage.tsx` CRUD form mapping, card metadata renderers, limit usage extra block, bank hue styling, grouping, and row action button now live in `CardsPage.crud.tsx`; the route file is mostly orchestration and modal wiring.

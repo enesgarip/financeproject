@@ -10,13 +10,11 @@ import type {
   SalaryHistory,
 } from '../types/database'
 import { daysUntil } from './date'
-import { exceedsTL } from './money'
+import { exceedsTL, moneyDiffers, roundTL } from './money'
 import type { DashboardUpcomingItem } from './dashboardUpcoming'
 import {
   cardProvisionAmount,
   cardSplitTotal,
-  moneyDiffers,
-  roundMoney,
   sum,
   type CashFlowSummary,
 } from './financeSummary'
@@ -149,7 +147,7 @@ export function buildFocusActions(
   const scheduledInstallmentsByCard = new Map<string, number>()
   for (const item of data.cardInstallments) {
     if (item.status !== 'scheduled') continue
-    scheduledInstallmentsByCard.set(item.card_id, roundMoney((scheduledInstallmentsByCard.get(item.card_id) ?? 0) + item.amount))
+    scheduledInstallmentsByCard.set(item.card_id, roundTL((scheduledInstallmentsByCard.get(item.card_id) ?? 0) + item.amount))
   }
 
   const cardSplitIssues = creditCards.filter(
@@ -163,8 +161,8 @@ export function buildFocusActions(
   const unclassifiedCardDebts = creditCards.filter((card) => {
     const splitTotal = cardSplitTotal(card.statement_debt_amount, card.current_period_spending, cardProvisionAmount(card))
     const scheduledTotal = scheduledInstallmentsByCard.get(card.id) ?? 0
-    const unclassifiedAmount = roundMoney(card.debt_amount - splitTotal)
-    const unexplainedAmount = roundMoney(unclassifiedAmount - Math.min(unclassifiedAmount, scheduledTotal))
+    const unclassifiedAmount = roundTL(card.debt_amount - splitTotal)
+    const unexplainedAmount = roundTL(unclassifiedAmount - Math.min(unclassifiedAmount, scheduledTotal))
     return exceedsTL(unexplainedAmount, 0)
   })
   const cardsWithProvisions = creditCards.filter((card) => cardProvisionAmount(card) > 0)

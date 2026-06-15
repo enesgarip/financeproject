@@ -14,13 +14,12 @@ import {
   projectLoanSummary,
   getCurrentSalary,
   getSalaryTrend,
-  moneyDiffers,
   paymentCashOutflowAmount,
   paymentOccurrenceInMonth,
-  roundMoney,
   sum,
   totalCreditLimit,
 } from './financeSummary'
+import { roundTL } from './money'
 
 const base = { id: 'id', user_id: 'u', created_at: '2026-01-01T00:00:00Z', updated_at: '2026-01-01T00:00:00Z' }
 const JUNE = new Date(2026, 5, 15) // June 15, 2026
@@ -109,26 +108,6 @@ describe('sum', () => {
   })
   it('returns 0 for empty array', () => {
     expect(sum([], (x: { v: number }) => x.v)).toBe(0)
-  })
-})
-
-describe('roundMoney', () => {
-  it('rounds to 2 decimal places', () => {
-    expect(roundMoney(1.005)).toBe(1.01)
-    expect(roundMoney(1.004)).toBe(1.00)
-    expect(roundMoney(1234.567)).toBe(1234.57)
-  })
-  it('handles negative values', () => {
-    expect(roundMoney(-1.234)).toBe(-1.23)
-  })
-})
-
-describe('moneyDiffers', () => {
-  it('returns false when both values round to the same cent', () => {
-    expect(moneyDiffers(100.001, 100.002)).toBe(false) // both → 100.00
-  })
-  it('returns true when values differ more than 1 cent', () => {
-    expect(moneyDiffers(100, 100.02)).toBe(true)
   })
 })
 
@@ -486,7 +465,7 @@ describe('buildFinancialPosition', () => {
     })
     expect(pos.totalPersonalDebts).toBe(2000)
     expect(pos.totalReceivables).toBe(1000)
-    expect(pos.netWorthIfReceivablesCollected).toBe(roundMoney(pos.netWorth + 1000))
+    expect(pos.netWorthIfReceivablesCollected).toBe(roundTL(pos.netWorth + 1000))
   })
 
   it('includes pending payments in totalPaymentLiabilities', () => {

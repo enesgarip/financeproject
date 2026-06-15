@@ -9,7 +9,8 @@ import type {
 } from '../types/database'
 import { getNextCardPaymentDueDate } from './cardStatement'
 import { addMonths, dateInMonth, dateInputValue, isDateInMonth, monthlyOccurrenceDate, startOfDay, startOfMonth } from './date'
-import { cardMonthlyPaymentAmount, paymentCashOutflowAmount, paymentOccurrenceInMonth, paymentUsesCreditCard, roundMoney, sum } from './financeSummary'
+import { cardMonthlyPaymentAmount, paymentCashOutflowAmount, paymentOccurrenceInMonth, paymentUsesCreditCard, sum } from './financeSummary'
+import { roundTL } from './money'
 
 export type FinanceObligationKind =
   | 'payment'
@@ -100,11 +101,11 @@ function cardLabel(card: Card | undefined) {
 
 function addObligation(items: FinanceObligation[], item: FinanceObligation, options: { allowZero?: boolean } = {}) {
   if (!options.allowZero && item.amount <= 0) return
-  const amount = roundMoney(Math.max(0, item.amount))
+  const amount = roundTL(Math.max(0, item.amount))
   items.push({
     ...item,
     amount,
-    cashImpactAmount: roundMoney(Math.max(0, item.cashImpactAmount ?? amount)),
+    cashImpactAmount: roundTL(Math.max(0, item.cashImpactAmount ?? amount)),
     settlement: item.settlement ?? 'cash',
   })
 }
@@ -309,13 +310,13 @@ export function buildFinanceObligationsForMonth(
 }
 
 export function summarizeFinanceObligations(items: FinanceObligation[]): FinanceObligationMonthSummary {
-  const outflow = roundMoney(sum(items.filter((item) => item.direction === 'outflow'), (item) => item.amount))
-  const inflow = roundMoney(sum(items.filter((item) => item.direction === 'inflow'), (item) => item.amount))
+  const outflow = roundTL(sum(items.filter((item) => item.direction === 'outflow'), (item) => item.amount))
+  const inflow = roundTL(sum(items.filter((item) => item.direction === 'inflow'), (item) => item.amount))
 
   return {
     outflow,
     inflow,
-    net: roundMoney(inflow - outflow),
+    net: roundTL(inflow - outflow),
     payableCount: items.filter((item) => item.action).length,
     itemCount: items.length,
   }

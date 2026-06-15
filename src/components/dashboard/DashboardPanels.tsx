@@ -29,11 +29,11 @@ import type { Card as FinanceCard, CardExpense, TransactionHistory, TransactionH
 import type { DashboardMonthlyLoadSummary, DashboardUpcomingItem } from '../../utils/dashboardUpcoming'
 import { daysUntil, formatDate, nextMonthlyDate } from '../../utils/date'
 import { formatCurrency } from '../../utils/formatCurrency'
+import { roundTL } from '../../utils/money'
 import { detectSpendingAnomalies } from '../../utils/spendingAnomalies'
 import {
   cardMonthlyPaymentAmount,
   getSalaryTrend,
-  roundMoney,
   sum,
   type CashFlowSummary,
   type CreditLimitGroup,
@@ -581,9 +581,9 @@ function buildCashFlowCalendarGroups(items: UpcomingItem[], startingCash: number
     groups.set(dayKey, {
       dayKey,
       dateLabel: formatDate(dayKey),
-      amount: roundMoney((current?.amount ?? 0) + item.amount),
-      cashImpactAmount: roundMoney((current?.cashImpactAmount ?? 0) + item.cashImpactAmount),
-      cardSettledAmount: roundMoney((current?.cardSettledAmount ?? 0) + (item.settlement === 'credit_card' ? item.amount : 0)),
+      amount: roundTL((current?.amount ?? 0) + item.amount),
+      cashImpactAmount: roundTL((current?.cashImpactAmount ?? 0) + item.cashImpactAmount),
+      cardSettledAmount: roundTL((current?.cardSettledAmount ?? 0) + (item.settlement === 'credit_card' ? item.amount : 0)),
       count: nextItems.length,
       kinds: new Set([...(current?.kinds ?? []), item.kind]),
       items: nextItems,
@@ -594,7 +594,7 @@ function buildCashFlowCalendarGroups(items: UpcomingItem[], startingCash: number
   return Array.from(groups.values())
     .sort((a, b) => a.dayKey.localeCompare(b.dayKey))
     .map((group) => {
-      runningCash = roundMoney(runningCash - group.cashImpactAmount)
+      runningCash = roundTL(runningCash - group.cashImpactAmount)
       return { ...group, cashAfter: runningCash }
     })
 }
@@ -614,7 +614,7 @@ export function CashFlowCalendarPanel({ items, cashFlow }: { items: UpcomingItem
   const selectedGroup = visibleGroups.find((group) => group.dayKey === selectedDayKey) ?? visibleGroups[0] ?? null
   const totalUpcoming = sum(items, (item) => item.amount)
   const totalCashImpact = sum(items, (item) => item.cashImpactAmount)
-  const totalCardSettled = roundMoney(Math.max(0, totalUpcoming - totalCashImpact))
+  const totalCardSettled = roundTL(Math.max(0, totalUpcoming - totalCashImpact))
   const lowestCash = groups.reduce((lowest, group) => Math.min(lowest, group.cashAfter), cashFlow.cashAssets)
 
   return (

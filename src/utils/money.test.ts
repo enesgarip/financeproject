@@ -5,6 +5,7 @@ import {
   equalsTL,
   exceedsTL,
   greaterThanTL,
+  moneyDiffers,
   roundTL,
   subKurus,
   sumKurus,
@@ -64,6 +65,13 @@ describe('roundTL', () => {
     expect(roundTL(0.1 + 0.2)).toBe(0.3)
     expect(roundTL(1.1 * 3)).toBe(3.3) // 3.3000000000000003 → 3.3
   })
+
+  it('rounds to 2 decimal places', () => {
+    expect(roundTL(1.005)).toBe(1.01)
+    expect(roundTL(1.004)).toBe(1)
+    expect(roundTL(1234.567)).toBe(1234.57)
+    expect(roundTL(-1.234)).toBe(-1.23)
+  })
 })
 
 describe('integer kuruş ops', () => {
@@ -108,6 +116,16 @@ describe('equalsTL (tolerance hack replacement)', () => {
   it('handles nullish as zero', () => {
     expect(equalsTL(null, 0)).toBe(true)
     expect(equalsTL(undefined, undefined)).toBe(true)
+  })
+})
+
+describe('moneyDiffers', () => {
+  it('returns false when both values round to the same cent', () => {
+    expect(moneyDiffers(100.001, 100.002)).toBe(false)
+  })
+
+  it('returns true when values differ more than 1 cent', () => {
+    expect(moneyDiffers(100, 100.02)).toBe(true)
   })
 })
 

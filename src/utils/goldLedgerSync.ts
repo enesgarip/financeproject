@@ -12,9 +12,8 @@ import {
   summarizeGold,
   type GoldTypeSummary,
 } from './goldLedger'
-import { moneyDiffers } from './financeSummary'
 import type { MarketRatesSnapshot } from './marketRates'
-import { roundTL as round2 } from './money'
+import { moneyDiffers, roundTL as round2 } from './money'
 import { valueAsset } from './valuation'
 
 export type GoldLedgerAssetSyncResult = {

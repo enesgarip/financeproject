@@ -7,7 +7,7 @@ import {
   type EstimatedValueUpdate,
 } from '../data/repositories/valuationRepo'
 import type { MarketRatesSnapshot } from './marketRates'
-import { moneyDiffers } from './financeSummary'
+import { moneyDiffers } from './money'
 import { assetIsStock, valueAsset, valueStock, valueDebt, valueGoal } from './valuation'
 
 /**

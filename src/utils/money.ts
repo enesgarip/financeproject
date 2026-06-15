@@ -71,6 +71,11 @@ export function equalsTL(a: number | null | undefined, b: number | null | undefi
   return toKurus(a) === toKurus(b)
 }
 
+/** İki TL değeri 1 kuruştan fazla ayrışıyorsa true. */
+export function moneyDiffers(left: number | null | undefined, right: number | null | undefined): boolean {
+  return Math.abs(toKurus(left) - toKurus(right)) > 1
+}
+
 /** a, b'den kesinlikle büyükse (kuruş hassasiyetinde) true. */
 export function greaterThanTL(a: number | null | undefined, b: number | null | undefined): boolean {
   return toKurus(a) > toKurus(b)
@@ -89,7 +94,7 @@ export function diffTL(a: number | null | undefined, b: number | null | undefine
  * float guard'larının kesin (kuruş) karşılığı: float toz/çıkarma yok ama 1-kuruşluk
  * grace korunur (badge davranışı birebir aynı). Yön ÖNEMLİ — `equalsTL`/`diffTL`
  * simetrik, bu değil. Sıfırla karşılaştırma için `exceedsTL(x, 0)`.
- * `moneyDiffers` (financeSummary) ile aynı 1-kuruş toleransı, yönlü hâli.
+ * `moneyDiffers` ile aynı 1-kuruş toleransı, yönlü hâli.
  */
 export function exceedsTL(
   a: number | null | undefined,

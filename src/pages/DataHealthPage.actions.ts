@@ -7,7 +7,7 @@ import {
 import type { InsertFor, UpdateFor } from '../types/database'
 import { recomputeAccountBalance } from '../services/accountLedgerActions'
 import { recomputeCardDebt } from '../services/cardLedgerActions'
-import { roundMoney } from '../utils/financeSummary'
+import { roundTL } from '../utils/money'
 import {
   addMonthsToMonthStart,
   captureUndoRows,
@@ -111,7 +111,7 @@ export async function fixIssue(issue: HealthIssue): Promise<UndoBatch | null> {
       const installmentCount = payload.installmentCount ?? 1
       const amount =
         payload.totalAmount && installmentNo === installmentCount
-          ? roundMoney(payload.totalAmount - baseAmount * (installmentCount - 1))
+          ? roundTL(payload.totalAmount - baseAmount * (installmentCount - 1))
           : baseAmount
 
       return {

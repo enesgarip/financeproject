@@ -2,10 +2,9 @@ import { addMonths, dateInputValue, startOfMonth } from './date'
 import {
   buildFinancialPosition,
   getCurrentSalary,
-  roundMoney,
   type FinanceSummaryInput,
 } from './financeSummary'
-import { diffTL, sumTL } from './money'
+import { diffTL, roundTL, sumTL } from './money'
 import {
   buildFinanceObligationsForMonth,
   type FinanceObligation,
@@ -121,8 +120,8 @@ export function buildCashFlowForecast(
   const from = options.from ?? new Date()
   const firstMonth = startOfMonth(from)
 
-  const startingBalance = roundMoney(buildFinancialPosition(data).totalCashAssets)
-  const salary = roundMoney(getCurrentSalary(data.salaryHistory)?.amount ?? 0)
+  const startingBalance = roundTL(buildFinancialPosition(data).totalCashAssets)
+  const salary = roundTL(getCurrentSalary(data.salaryHistory)?.amount ?? 0)
   const obligationInput = obligationsInput(data)
 
   const months: CashFlowForecastMonth[] = []

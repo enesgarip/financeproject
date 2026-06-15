@@ -1,5 +1,6 @@
 import type { Asset } from '../types/database'
-import { buildFinancialPosition, roundMoney, sum, type FinanceSummaryInput } from './financeSummary'
+import { buildFinancialPosition, sum, type FinanceSummaryInput } from './financeSummary'
+import { roundTL } from './money'
 
 /**
  * Zakat estimator aligned with the Diyanet (TR) ruling:
@@ -69,34 +70,34 @@ export function computeZakat(
   const receivables = position.totalReceivables
 
   const components: ZakatComponent[] = [
-    { key: 'cash', label: 'Nakit (TL + banka)', amount: roundMoney(cash), sign: 1 },
-    { key: 'gold', label: 'Altın', amount: roundMoney(gold), sign: 1 },
-    { key: 'tradeable', label: 'Hisse / Fon', amount: roundMoney(tradeable), sign: 1 },
+    { key: 'cash', label: 'Nakit (TL + banka)', amount: roundTL(cash), sign: 1 },
+    { key: 'gold', label: 'Altın', amount: roundTL(gold), sign: 1 },
+    { key: 'tradeable', label: 'Hisse / Fon', amount: roundTL(tradeable), sign: 1 },
   ]
   if (includeReceivables) {
-    components.push({ key: 'receivables', label: 'Alacaklar', amount: roundMoney(receivables), sign: 1 })
+    components.push({ key: 'receivables', label: 'Alacaklar', amount: roundTL(receivables), sign: 1 })
   }
   if (includeBes) {
-    components.push({ key: 'bes', label: 'BES', amount: roundMoney(bes), sign: 1 })
+    components.push({ key: 'bes', label: 'BES', amount: roundTL(bes), sign: 1 })
   }
 
-  const zakatableAssets = roundMoney(
+  const zakatableAssets = roundTL(
     cash + gold + tradeable + (includeReceivables ? receivables : 0) + (includeBes ? bes : 0),
   )
 
   const debts = position.totalCreditCardDebt + position.totalLoanDebt + position.totalPersonalDebts
-  const deductibleDebts = deductDebts ? roundMoney(debts) : 0
+  const deductibleDebts = deductDebts ? roundTL(debts) : 0
   if (deductDebts && deductibleDebts > 0) {
     components.push({ key: 'debts', label: 'Borçlar (kart + kredi + kişisel)', amount: deductibleDebts, sign: -1 })
   }
 
-  const netWealth = roundMoney(zakatableAssets - deductibleDebts)
+  const netWealth = roundTL(zakatableAssets - deductibleDebts)
 
   const hasPrice = typeof gramGoldPrice === 'number' && Number.isFinite(gramGoldPrice) && gramGoldPrice > 0
   const gramGoldPriceValue = hasPrice ? gramGoldPrice! : null
-  const nisabTry = hasPrice ? roundMoney(ZAKAT_NISAB_GOLD_GRAMS * gramGoldPrice!) : null
+  const nisabTry = hasPrice ? roundTL(ZAKAT_NISAB_GOLD_GRAMS * gramGoldPrice!) : null
   const meetsNisab = nisabTry !== null && netWealth >= nisabTry
-  const zakatDue = meetsNisab ? roundMoney(netWealth * ZAKAT_RATE) : 0
+  const zakatDue = meetsNisab ? roundTL(netWealth * ZAKAT_RATE) : 0
 
   return {
     zakatableAssets,

@@ -96,17 +96,6 @@ export function sum<T>(rows: T[], selector: (row: T) => number) {
   return sumTL(rows.map(selector))
 }
 
-// Domain-anlamlı alias: TL para toplamları için kanonik roundTL'e delege eder
-// (Faz C: float sorunu çözülü). Yeni kod doğrudan roundTL de çağırabilir.
-export function roundMoney(value: number) {
-  return roundTL(value)
-}
-
-export function moneyDiffers(left: number, right: number) {
-  // 1 kuruşluk tolerans korunur ama float çıkarma yerine tam sayı kuruş üzerinden.
-  return Math.abs(toKurus(left) - toKurus(right)) > 1
-}
-
 export function cardProvisionAmount(card: Pick<Card, 'provision_amount'>) {
   return card.provision_amount ?? 0
 }
@@ -166,8 +155,8 @@ export function projectLoanSummary(installments: Pick<LoanInstallment, 'amount' 
  * the single source of truth, shared with the DataHealth `cardExpenseAmount` check.
  */
 export function expectedInstallmentAmount(amount: number, installmentCount: number) {
-  if (!installmentCount || installmentCount <= 1) return roundMoney(amount)
-  return roundMoney(amount / installmentCount)
+  if (!installmentCount || installmentCount <= 1) return roundTL(amount)
+  return roundTL(amount / installmentCount)
 }
 
 export function creditLimitGroupKey(card: Card) {
