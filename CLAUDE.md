@@ -10,10 +10,15 @@ keşfetmek zorunda kalmaması.
 keşif turu atmamak için **önce buna bak**),
 `docs/PROJECT_CONTEXT.md` (domain + tablo + route haritası).
 
-**Doküman güncel tutma kuralı:** Yeni `data/repositories/*` veya route sayfası
-(`*Page.tsx`/`*Hub.tsx`) eklediysen `docs/AI_CONTEXT_INDEX.md`'in konu→dosya
-tablosuna satır ekle. Dosya taşıdıysan/sildiysen docs'taki referansını güncelle.
-Bunu CI'da `docs.guard.test.ts` zorlar (kırık pointer + eksik harita = kırmızı).
+**Doküman güncel tutma kuralı:** Yaşayan dokümanlar kodla aynı commit'te güncel
+kalır; "sonra bakarız" borcu açma. Özellikle `docs/BACKLOG.md`,
+`docs/AI_CONTEXT_INDEX.md`, `docs/CARD_DEBT_TRANSITIONS.md`,
+`docs/BANKING_SIMPLIFICATION_AUDIT.md` ve ilgili domain source-of-truth dokümanı,
+değişen davranışı/önceliği aynı PR/commit içinde yansıtmalı. Yeni
+`data/repositories/*` veya route sayfası (`*Page.tsx`/`*Hub.tsx`) eklediysen
+`docs/AI_CONTEXT_INDEX.md`'in konu→dosya tablosuna satır ekle. Dosya
+taşıdıysan/sildiysen docs'taki referansını güncelle. Bunu CI'da
+`docs.guard.test.ts` zorlar (kırık pointer + eksik harita = kırmızı).
 
 ## Proje
 

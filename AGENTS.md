@@ -10,6 +10,10 @@
 ledger invariant'ları ve deploy hattı orada. Bir task'a başlamadan önce `CLAUDE.md`'i
 ve `docs/AI_CONTEXT_INDEX.md`'i oku — bu ikisi keşif turunu (grep fan-out) ortadan kaldırır.
 
+**Yaşayan doküman kuralı:** `docs/BACKLOG.md`, `docs/AI_CONTEXT_INDEX.md`,
+`docs/CARD_DEBT_TRANSITIONS.md`, `docs/BANKING_SIMPLIFICATION_AUDIT.md` ve ilgili
+domain source-of-truth dokümanı, davranış/öncelik değiştiği commit'te güncel kalmalı.
+
 İkincil bağlam (yalnız gerektiğinde aç, baştan okuma):
 - `docs/AI_CONTEXT_INDEX.md` — görev rotası + "şu işi yapacaksan şu dosyalara bak" tablosu
 - `docs/PROJECT_CONTEXT.md` — domain + tablo + route haritası
@@ -17,7 +21,7 @@ ve `docs/AI_CONTEXT_INDEX.md`'i oku — bu ikisi keşif turunu (grep fan-out) or
 - `docs/KNOWN_RISKS.md` — bilinen tuzaklar
 - `docs/PIPELINE.md` — CI/deploy detayı
 
-## En kritik 5 kural (ihlal = regresyon)
+## En kritik 6 kural (ihlal = regresyon)
 
 1. **Para → `src/utils/money.ts`.** Çıplak `Math.round(x*100)/100` veya `+0.01`
    toleransı **YAZMA**. `roundTL/equalsTL/greaterThanTL/sumTL/toKurus/toTL` kullan.
@@ -34,6 +38,9 @@ ve `docs/AI_CONTEXT_INDEX.md`'i oku — bu ikisi keşif turunu (grep fan-out) or
 5. **Migration timestamp'i benzersiz olmalı** (`schema_migrations` PK = timestamp).
    Yeni migration dosyasından önce `supabase/migrations/` ve `git log`'a bak — başka
    bir oturum aynı timestamp'i kullanmış olabilir → `db reset` 23505 ile patlar.
+6. **Yaşayan docs aynı commit'te güncel kalmalı.** Backlog, AI context index,
+   domain source-of-truth notları ve tamamlanan audit dosyaları değişen davranışa
+   göre güncellenmeden işi kapatma.
 
 ## "Bitti" demeden önce
 
