@@ -18,7 +18,7 @@ import type {
   TransactionHistory,
 } from '../../types/database'
 import { addMonths, dateInputValue, startOfMonth } from '../../utils/date'
-import { isMissingSupabaseCapabilityError, type SupabaseLikeError } from '../../utils/supabaseErrors'
+import { isMissingSupabaseCapabilityError, missingSupabaseCapabilityMessage, type SupabaseLikeError } from '../../utils/supabaseErrors'
 import { syncAutoValuedRows } from '../../utils/valuationSync'
 import { resultFromSupabase, type Result } from '../result'
 
@@ -61,6 +61,13 @@ function optionalRows<T>(response: RowsResponse<T>, table: string, missingTables
     return []
   }
   throw new Error(response.error.message ?? 'Veri yüklenemedi.')
+}
+
+function financeMaintenanceErrorMessage(error: SupabaseLikeError) {
+  if (isMissingSupabaseCapabilityError(error)) {
+    return missingSupabaseCapabilityMessage('Finans bakım altyapısı', error)
+  }
+  return error.message ?? 'Finans bakımı çalıştırılamadı.'
 }
 
 /** Pencere başlangıcı: ay başından SNAPSHOT_HISTORY_MONTHS-1 ay geriye. */
@@ -137,7 +144,7 @@ export async function postDueCardAutoPayments(): Promise<Result<number>> {
 /**
  * Günlük bakım: vadesi gelen kart otomatik ödemelerini ve ekstre kesimlerini
  * DB tarafında işler, ardından canlı kurla otomatik değerlenen satırları tazeler.
- * Kur senkronu best-effort'tur; bakım RPC'lerindeki gerçek hatalar fırlatılır.
+ * Kur senkronu best-effort'tur; bakım RPC hataları migration/RPC drift'i dahil görünür kalır.
  */
 export async function runFinanceMaintenance(): Promise<void> {
   const valuationSync = (async () => {
@@ -151,10 +158,11 @@ export async function runFinanceMaintenance(): Promise<void> {
 
   const autoPayments = await supabase.rpc('post_due_card_auto_payments')
   const statementCut = await supabase.rpc('cut_due_card_statements')
-  const maintenanceError = [autoPayments.error, statementCut.error].find(
-    (error) => error && !isMissingSupabaseCapabilityError(error),
-  )
-  if (maintenanceError) throw new Error(maintenanceError.message)
+  const maintenanceError = [autoPayments.error, statementCut.error].find(Boolean)
+  if (maintenanceError) {
+    await valuationSync
+    throw new Error(financeMaintenanceErrorMessage(maintenanceError))
+  }
 
   await valuationSync
 }
