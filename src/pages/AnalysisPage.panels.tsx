@@ -3,11 +3,12 @@ import { useMemo } from 'react'
 import { Badge } from '../components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Progress } from '../components/ui/progress'
-import type { Budget, CardExpense, Debt, Payment } from '../types/database'
+import type { Budget, CardExpense, Debt } from '../types/database'
 import { dateInputValue, daysUntil, formatDate, isDateInMonth, startOfMonth } from '../utils/date'
 import { formatCurrency } from '../utils/formatCurrency'
-import { getCurrentSalary, paymentOccurrenceInMonth, sum } from '../utils/financeSummary'
+import { getCurrentSalary, sum } from '../utils/financeSummary'
 import {
+  analysisObligationsInput,
   buildCalendarEvents,
   formatMonth,
   type AnalysisData,
@@ -17,11 +18,8 @@ import { activeExpense as activeCardExpense, buildBudgetUsage } from '../utils/b
 import { PRICE_RADAR_MONTHS } from '../data/repositories/analysisRepo'
 import { type PriceTrend } from '../utils/priceIncreaseRadar'
 import { canCutCurrentStatement } from '../utils/statementCycle'
+import { buildFinanceObligationsForMonth } from '../utils/obligations'
 import { StatPill } from './AnalysisPage.atoms'
-
-function paymentInCurrentMonth(payment: Payment) {
-  return paymentOccurrenceInMonth(payment) !== null
-}
 
 export function UpcomingInstallments({ data }: { data: AnalysisData }) {
   const cardsById = new Map(data.cards.map((card) => [card.id, card]))
@@ -369,7 +367,12 @@ export function MonthCloseAssistant({ data, missingTables }: { data: AnalysisDat
   const creditCards = data.cards.filter((card) => card.card_type === 'kredi_karti')
   const statementDayPassedCards = creditCards.filter((card) => canCutCurrentStatement(card, data.cardStatementArchives, today))
   const staleInstallments = data.cardInstallments.filter((item) => item.status === 'scheduled' && item.due_month <= monthKey).length
-  const openPaymentCount = data.payments.filter((payment) => paymentInCurrentMonth(payment) || (payment.status === 'bekliyor' && (daysUntil(payment.due_date) ?? 0) < 0)).length
+  const currentMonthPaymentIds = new Set(
+    buildFinanceObligationsForMonth(analysisObligationsInput(data), startOfMonth())
+      .filter((item) => item.kind === 'payment')
+      .map((item) => item.sourceId),
+  )
+  const openPaymentCount = data.payments.filter((payment) => currentMonthPaymentIds.has(payment.id) || (payment.status === 'bekliyor' && (daysUntil(payment.due_date) ?? 0) < 0)).length
   const budgetOverruns = data.budgets.filter((budget) => {
     if (budget.month !== monthKey || budget.limit_amount <= 0) return false
     const spent = sum(

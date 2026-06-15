@@ -40,7 +40,7 @@ function obligationKindToDashboardKind(kind: FinanceObligation['kind']): Dashboa
   return 'card'
 }
 
-export function obligationToDashboardUpcomingItem(item: FinanceObligation): DashboardUpcomingItem {
+function obligationToDashboardUpcomingItem(item: FinanceObligation): DashboardUpcomingItem {
   return {
     id: item.id,
     title: item.title,
