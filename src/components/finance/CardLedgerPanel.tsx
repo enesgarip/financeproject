@@ -6,7 +6,8 @@ import { ledgerDrift, summarizeCardLedger } from '../../utils/cardLedger'
 import { formatDate } from '../../utils/date'
 import { formatCurrency, parseNumber } from '../../utils/formatCurrency'
 import { toTL } from '../../utils/money'
-import { isMissingSupabaseCapabilityError } from '../../utils/supabaseErrors'
+import { isMissingSupabaseCapabilityError, missingSupabaseCapabilityMessage } from '../../utils/supabaseErrors'
+import { Alert } from '../ui/alert'
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
 
@@ -22,7 +23,7 @@ const VISIBLE_EVENTS = 8
 /**
  * "Bu borç neyden oluşuyor?" (roadmap D9) — the user-facing read side of the
  * card debt ledger (A2). Mounted inside the card's details section, so it only
- * fetches when opened. Hides itself while the ledger table isn't deployed.
+ * fetches when opened and surfaces migration drift if the ledger table is missing.
  *
  * A2.1 adds the write side: when the stored debt drifts from the ledger it can
  * be pulled back to the projection ("Ledger'a göre düzelt"), and a manual fix is
@@ -31,7 +32,7 @@ const VISIBLE_EVENTS = 8
  */
 export function CardLedgerPanel({ card, onChanged }: { card: Card; onChanged?: () => void | Promise<void> }) {
   const [events, setEvents] = useState<CardLedger[] | null>(null)
-  const [supported, setSupported] = useState(true)
+  const [loadError, setLoadError] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [formOpen, setFormOpen] = useState(false)
@@ -43,9 +44,14 @@ export function CardLedgerPanel({ card, onChanged }: { card: Card; onChanged?: (
     const loadResult = await fetchCardLedgerEvents(card.id)
 
     if (!loadResult.ok) {
-      if (isMissingSupabaseCapabilityError(loadResult.error)) setSupported(false)
+      setLoadError(
+        isMissingSupabaseCapabilityError(loadResult.error)
+          ? missingSupabaseCapabilityMessage('Kart borç hareketleri altyapısı', loadResult.error)
+          : loadResult.error.message ?? 'Kart borç hareketleri yüklenemedi.',
+      )
       return
     }
+    setLoadError('')
     setEvents(loadResult.data)
   }, [card.id])
 
@@ -92,7 +98,8 @@ export function CardLedgerPanel({ card, onChanged }: { card: Card; onChanged?: (
     await afterMutation()
   }
 
-  if (!supported || events === null) return null
+  if (loadError) return <Alert variant="warning" className="mt-3">{loadError}</Alert>
+  if (events === null) return null
 
   const summary = summarizeCardLedger(events)
   // Events arrive newest-first; order doesn't matter for the sums.

@@ -22,14 +22,20 @@ Risk:
 - reasoning about side effects is expensive
 - testability is lower than it should be
 
-## 3. Frontend Assumes Certain Migrations/RPCs Already Exist
+## 3. Frontend Assumes Certain Migrations/RPCs Already Exist (mitigated)
 
-The code contains explicit fallback handling for missing schema cache / missing function cases. That usually means frontend and live database can drift.
+The code still detects missing schema cache / missing function cases, but the
+highest-risk paths now fail visibly instead of silently degrading:
 
-Risk:
+- user-visible actions use `missingSupabaseCapabilityMessage`
+- retired RPC signatures are not retried as hidden compatibility paths
+- app-start/card-page maintenance surfaces missing maintenance RPC deployment
+- ledger and live-reconciliation panels show migration-drift warnings when
+  their tables are absent
 
-- some actions work in one environment and fail in another
-- finance flows may partially degrade instead of failing clearly
+Remaining allowed fallbacks are intentionally narrow: Analysis reports optional
+missing tables through `SchemaMigrationNotice`, and backup/restore skips tables
+that are not deployed in the target environment.
 
 ## 4. Card Debt Math Has Multiple Derived Fields
 

@@ -21,10 +21,11 @@
 
 ## P1 - Product / Reliability
 
-- Reduce fallback logic that depends on missing Supabase schema cache or missing RPC deployment.
+- ~~Reduce fallback logic that depends on missing Supabase schema cache or missing RPC deployment.~~ DONE.
   - Legacy `add_card_expense` retry against the retired 4-argument RPC signature was removed; the canonical RPC now surfaces missing-capability instead of silently falling back.
   - App-start finance maintenance no longer suppresses missing `post_due_card_auto_payments` / `cut_due_card_statements`; migration drift now surfaces through the shared missing-capability message.
   - Cards-page due statement automation now reports missing `cut_due_card_statements` deployment instead of silently skipping the cut.
+  - Ledger and live-reconciliation panels now show shared migration-drift warnings instead of disappearing when optional tables are missing.
 - ~~Improve visibility of migration/version mismatches between frontend expectations and live database state.~~ DONE.
   - Missing schema/RPC errors now share `missingSupabaseCapabilityMessage`, which calls out migration/RPC deployment drift and includes Supabase codes when available.
 - ~~Document and standardize transaction history side effects for all finance mutations.~~ DONE.
@@ -79,6 +80,7 @@
 - Legacy `add_card_expense` RPC signature fallback was removed; missing canonical RPC deployment now follows the standard missing-capability path.
 - Finance maintenance now reports missing scheduled-maintenance RPC deployment instead of silently skipping those app-start jobs.
 - Cards-page due statement automation now surfaces missing statement-cut RPC deployment through the shared migration-drift message.
+- Ledger and live-reconciliation panels now surface missing table deployment through the shared migration-drift message instead of silently hiding.
 - `roundMoney` alias was removed; money rounding/comparison helpers now live in `utils/money.ts`.
 - Card debt split classification now shares `financeSummary.ts` helpers for Dashboard focus actions and Data Health issues.
 - `CardsPage.sections.tsx` is now a thin nav/automation module; overview, statement/provision panels, and help copy live in focused `CardsPage.*` files.

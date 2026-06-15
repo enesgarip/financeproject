@@ -19,7 +19,8 @@ import {
   type DriftCauseSummary,
   type ReconcileStatus,
 } from '../../utils/reconciliation'
-import { isMissingSupabaseCapabilityError } from '../../utils/supabaseErrors'
+import { isMissingSupabaseCapabilityError, missingSupabaseCapabilityMessage } from '../../utils/supabaseErrors'
+import { Alert } from '../ui/alert'
 import { Badge } from '../ui/badge'
 import { Button } from '../ui/button'
 import { Card as SurfaceCard, CardContent, CardHeader, CardTitle } from '../ui/card'
@@ -48,7 +49,7 @@ const STATUS_META: Record<ReconcileStatus, { variant: 'destructive' | 'secondary
 export function LiveReconciliationPanel({ cards }: LiveReconciliationPanelProps) {
   const { user } = useAuth()
   const [rows, setRows] = useState<AccountReconciliation[]>([])
-  const [supported, setSupported] = useState(true)
+  const [loadError, setLoadError] = useState('')
   const [inputs, setInputs] = useState<Record<string, string>>({})
   const [savingId, setSavingId] = useState<string | null>(null)
   const [error, setError] = useState('')
@@ -65,10 +66,15 @@ export function LiveReconciliationPanel({ cards }: LiveReconciliationPanelProps)
     const loadResult = await fetchAccountReconciliations()
 
     if (!loadResult.ok) {
-      // Table not deployed yet → hide the panel silently (matches app convention).
-      if (isMissingSupabaseCapabilityError(loadResult.error)) setSupported(false)
+      // Missing table/RPC drift stays visible; this panel should not disappear silently.
+      setLoadError(
+        isMissingSupabaseCapabilityError(loadResult.error)
+          ? missingSupabaseCapabilityMessage('Canlı mutabakat altyapısı', loadResult.error)
+          : loadResult.error.message ?? 'Mutabakat kayıtları yüklenemedi.',
+      )
       return
     }
+    setLoadError('')
     setRows(loadResult.data)
   }, [])
 
@@ -125,7 +131,17 @@ export function LiveReconciliationPanel({ cards }: LiveReconciliationPanelProps)
     await load()
   }
 
-  if (!supported || reconcilable.length === 0) return null
+  if (reconcilable.length === 0) return null
+
+  if (loadError) {
+    return (
+      <SurfaceCard className="border-0 shadow-[var(--shadow-card)] ring-1 ring-border/40">
+        <CardContent className="p-4">
+          <Alert variant="warning">{loadError}</Alert>
+        </CardContent>
+      </SurfaceCard>
+    )
+  }
 
   const actionableCount = items.filter((item) => item.status === 'drift' || item.status === 'never').length
 

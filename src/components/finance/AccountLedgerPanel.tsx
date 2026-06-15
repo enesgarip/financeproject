@@ -6,7 +6,8 @@ import { balanceDrift, summarizeAccountLedger } from '../../utils/accountLedger'
 import { formatDate } from '../../utils/date'
 import { formatCurrency, parseNumber } from '../../utils/formatCurrency'
 import { toTL } from '../../utils/money'
-import { isMissingSupabaseCapabilityError } from '../../utils/supabaseErrors'
+import { isMissingSupabaseCapabilityError, missingSupabaseCapabilityMessage } from '../../utils/supabaseErrors'
+import { Alert } from '../ui/alert'
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
 
@@ -22,7 +23,7 @@ const VISIBLE_EVENTS = 8
 /**
  * "Bu bakiye neyden oluşuyor?" — the user-facing side of the bank account
  * balance ledger (roadmap Faz 3). Mounted inside the account's details, so it
- * only fetches when opened. Hides itself while the ledger table isn't deployed.
+ * only fetches when opened and surfaces migration drift if the ledger table is missing.
  *
  * Faz 3.1 adds the write side (mirror of CardLedgerPanel): pull a drifted
  * balance back to the projection ("Ledger'a göre düzelt"), and post a manual fix
@@ -30,7 +31,7 @@ const VISIBLE_EVENTS = 8
  */
 export function AccountLedgerPanel({ card, onChanged }: { card: Card; onChanged?: () => void | Promise<void> }) {
   const [events, setEvents] = useState<AccountLedger[] | null>(null)
-  const [supported, setSupported] = useState(true)
+  const [loadError, setLoadError] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [formOpen, setFormOpen] = useState(false)
@@ -42,9 +43,14 @@ export function AccountLedgerPanel({ card, onChanged }: { card: Card; onChanged?
     const loadResult = await fetchAccountLedgerEvents(card.id)
 
     if (!loadResult.ok) {
-      if (isMissingSupabaseCapabilityError(loadResult.error)) setSupported(false)
+      setLoadError(
+        isMissingSupabaseCapabilityError(loadResult.error)
+          ? missingSupabaseCapabilityMessage('Hesap hareketleri altyapısı', loadResult.error)
+          : loadResult.error.message ?? 'Hesap hareketleri yüklenemedi.',
+      )
       return
     }
+    setLoadError('')
     setEvents(loadResult.data)
   }, [card.id])
 
@@ -91,7 +97,8 @@ export function AccountLedgerPanel({ card, onChanged }: { card: Card; onChanged?
     await afterMutation()
   }
 
-  if (!supported || events === null) return null
+  if (loadError) return <Alert variant="warning" className="mt-3">{loadError}</Alert>
+  if (events === null) return null
 
   const summary = summarizeAccountLedger(events)
   // Events arrive newest-first; order doesn't matter for the sums.
