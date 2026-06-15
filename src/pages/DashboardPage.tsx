@@ -22,25 +22,31 @@ import type {
 } from '../types/database'
 import { BudgetAlertPanel } from '../components/dashboard/BudgetAlertPanel'
 import {
+  DashboardHero,
+  DataHealthBadge,
+  GoalProgressCommand,
+  MetricTile,
+  PulseCard,
+  SalaryPulse,
+} from '../components/dashboard/DashboardPanels'
+import {
   AnalyticsSnapshotPanel,
-  CashFlowCalendarPanel,
-  CashFlowPanel,
   CreditCardSnapshotPanel,
   CreditLimitSection,
   CurrentDebtTotalsPanel,
-  DashboardHero,
-  DataHealthBadge,
-  FocusActionPanel,
-  GoalProgressCommand,
   HistorySection,
-  MetricTile,
+} from '../components/dashboard/DashboardCards'
+import {
+  CashFlowCalendarPanel,
+  CashFlowPanel,
   MonthlyPaymentLoadPanel,
-  PulseCard,
-  SalaryPulse,
+} from '../components/dashboard/DashboardCashFlow'
+import {
+  FocusActionPanel,
   SmartInsightsPanel,
   SpendingRadarPanel,
   UpcomingAlertPanel,
-} from '../components/dashboard/DashboardPanels'
+} from '../components/dashboard/DashboardInsights'
 import { dashboardHelp, getUserDisplayName } from '../components/dashboard/dashboardPanelUtils'
 import { StatementReminderPanel } from '../components/dashboard/StatementReminderPanel'
 import { ReconciliationPanel } from '../components/dashboard/ReconciliationPanel'

@@ -52,6 +52,10 @@
   - `utils/dataHealthSummary.ts` runs lightweight card-debt-split + loan-totals + limit checks from snapshot data.
   - `DataHealthBadge` component: green "temiz" or amber/red issue count with link to `/veri-sagligi`.
 
+- ~~Split dashboard presentation panels into focused component modules.~~ DONE.
+  - `DashboardPanels.tsx` now keeps hero/goal/metric/pulse pieces and shared panel types.
+  - `DashboardCards.tsx`, `DashboardCashFlow.tsx`, and `DashboardInsights.tsx` own card/debt/history, cash-flow, and insight/action panels.
+
 ## P3 - Nice to Have
 
 - Add guided import/restore flow for personal finance data.
@@ -108,3 +112,4 @@
 - `docs/RPC_ACTION_REFERENCE.md` now mirrors the refreshed card debt transition source of truth for planned card-funded payments, card resets, and ledger repair/correction.
 - Data Health "Tüm veriyi sil" now downloads a reset-before JSON backup before the destructive reset call and tells the user this preflight will happen.
 - Data Health JSON backup restore already exists; the remaining P3 import work is narrowed to a guided CSV/manual mapping flow.
+- Dashboard presentation panels were split into focused modules without changing dashboard data ownership or utility boundaries.

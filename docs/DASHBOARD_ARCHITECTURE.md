@@ -95,9 +95,20 @@ personal debt date filtering inside `DashboardPage`. Add behavior to
 
 ## Panels
 
-`src/components/dashboard/DashboardPanels.tsx` owns presentational dashboard
-panels only. It may format values and choose badges/tone, but new business rules
-belong in `src/utils/*`.
+`src/components/dashboard/*` owns presentational dashboard panels only. These
+modules may format values and choose badges/tone, but new business rules belong
+in `src/utils/*`.
+
+Current module split:
+
+- `DashboardPanels.tsx`: hero, goal progress, metric tiles, pulses, shared
+  dashboard-only panel types.
+- `DashboardCards.tsx`: card/debt/limit/history presentation.
+- `DashboardCashFlow.tsx`: monthly payment load, cash-flow chart, cash calendar.
+- `DashboardInsights.tsx`: focus actions, spending radar, smart insights,
+  upcoming alert.
+- `BudgetAlertPanel.tsx`, `StatementReminderPanel.tsx`, and
+  `ReconciliationPanel.tsx`: focused companion panels.
 
 If a panel grows a complex local calculation, extract it to a utility and cover
 it with focused Vitest tests.
