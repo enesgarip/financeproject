@@ -15,6 +15,7 @@ import type { Card, CardExpense, CardInstallment } from '../../types/database'
 import { expenseCategoryOptions } from '../../utils/categories'
 import { formatDate } from '../../utils/date'
 import { formatCurrency, parseNumber } from '../../utils/formatCurrency'
+import { sumTL } from '../../utils/money'
 import { isMissingSupabaseCapabilityError, missingSupabaseCapabilityMessage } from '../../utils/supabaseErrors'
 
 function historicalPaidInstallmentCount(expense: CardExpense) {
@@ -213,7 +214,7 @@ export function CardInstallmentExpensesPanel({ cards, reload, setError }: CardIn
       historicalPaidInstallmentCount(expense) + expenseInstallments.filter((item) => item.status === 'paid').length,
     )
     const remainingInstallments = expenseInstallments.filter((item) => item.status !== 'paid')
-    const remainingAmount = remainingInstallments.reduce((sum, item) => sum + item.amount, 0)
+    const remainingAmount = sumTL(remainingInstallments.map((item) => item.amount))
     const isLocked = expenseInstallments.some((item) => item.status === 'paid' || item.statement_archive_id)
 
     return (

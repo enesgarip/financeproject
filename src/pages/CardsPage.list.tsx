@@ -16,8 +16,8 @@ import {
   formatShortDate,
   getCreditCardStatus,
   limitGroupStats,
-  openStatementAmount,
   statementPeriodLabel,
+  visibleOpenStatementAmount,
 } from './CardsPage.helpers'
 import { CardDatum } from './CardsPage.atoms'
 import { formatCurrency } from '../utils/formatCurrency'
@@ -107,7 +107,7 @@ export function CreditAccountListCard({
   const usageRate = Math.round(stats.usageRate)
   const dueDate = nextMonthlyDate(row.due_day)
   const status = getCreditCardStatus(row, stats.usageRate)
-  const openAmount = openStatementAmount(row, statements)
+  const displayedOpenStatementAmount = visibleOpenStatementAmount(row, statements)
   const installmentCount = activeInstallmentCount(row, installments)
   const payableDebt = cardPayableDebt(row)
   const openStatements = statements.filter((statement) => statement.card_id === row.id && statement.status === 'open')
@@ -175,7 +175,7 @@ export function CreditAccountListCard({
       <div className="mt-3 grid grid-cols-2 gap-2">
         <CardDatum label="Kullanılabilir" value={formatCurrency(stats.availableLimit)} tone="good" />
         <CardDatum label="Dönem borcu" value={formatCurrency(row.current_period_spending)} />
-        <CardDatum label="Açık ekstre" value={formatCurrency(openAmount || row.statement_debt_amount)} tone={openAmount + row.statement_debt_amount > 0 ? 'danger' : 'neutral'} />
+        <CardDatum label="Açık ekstre" value={formatCurrency(displayedOpenStatementAmount)} tone={displayedOpenStatementAmount > 0 ? 'danger' : 'neutral'} />
         <CardDatum label="Devam eden taksit" value={`${installmentCount} işlem`} tone={installmentCount > 0 ? 'warning' : 'neutral'} />
       </div>
 
@@ -230,7 +230,7 @@ export function CreditAccountListCard({
           />
           <div className="mt-4 grid grid-cols-2 gap-2 min-[620px]:grid-cols-3">
             <MiniStat label="Ödenebilir" value={formatCurrency(payableDebt)} tone={payableDebt > 0 ? 'warning' : 'good'} />
-            <MiniStat label="Açık ekstre" value={formatCurrency(openAmount || row.statement_debt_amount)} tone={openAmount + row.statement_debt_amount > 0 ? 'danger' : 'neutral'} />
+            <MiniStat label="Açık ekstre" value={formatCurrency(displayedOpenStatementAmount)} tone={displayedOpenStatementAmount > 0 ? 'danger' : 'neutral'} />
             <MiniStat label="Kalan limit" value={formatCurrency(stats.availableLimit)} tone="good" />
             <MiniStat label="Son ödeme" value={formatShortDate(dueDate)} tone={payableDebt > 0 ? 'warning' : 'neutral'} />
             <MiniStat label="Ekstre günü" value={formatMonthlyDay(row.statement_day)} />

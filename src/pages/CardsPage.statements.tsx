@@ -6,6 +6,7 @@ import { HelpTooltip } from '../components/ui/help-tooltip'
 import type { Card, CardExpense, CardStatementArchive } from '../types/database'
 import { formatDate } from '../utils/date'
 import { formatCurrency } from '../utils/formatCurrency'
+import { sumTL } from '../utils/money'
 import { cardHelp } from './CardsPage.help'
 import { statementPeriodLabel } from './CardsPage.helpers'
 
@@ -28,7 +29,7 @@ export function ProvisionPanel({
 }) {
   const pending = provisions.filter((expense) => expense.status === 'provision')
   const cardsById = useMemo(() => new Map(rows.map((card) => [card.id, card])), [rows])
-  const totalProvision = pending.reduce((total, expense) => total + expense.amount, 0)
+  const totalProvision = sumTL(pending.map((expense) => expense.amount))
   if (loading && pending.length === 0) {
     return (
       <SurfaceCard className="border-warning/20 shadow-[var(--shadow-card)]">
@@ -129,7 +130,7 @@ export function StatementPanel({
   const openStatements = statements
     .filter((statement) => statement.status === 'open')
     .sort((a, b) => (a.due_date ?? a.statement_date).localeCompare(b.due_date ?? b.statement_date))
-  const totalOpenAmount = openStatements.reduce((total, statement) => total + statement.statement_debt_amount, 0)
+  const totalOpenAmount = sumTL(openStatements.map((statement) => statement.statement_debt_amount))
 
   if (loading && openStatements.length === 0) {
     return (

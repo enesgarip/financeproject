@@ -12,7 +12,7 @@ import {
 import type { Card } from '../../types/database'
 import { formatCurrency } from '../../utils/formatCurrency'
 import { parseDenizBankStatement, matchTransactions, expenseTotalAmount, type ParsedTransaction } from '../../utils/denizBankStatementParser'
-import { roundTL } from '../../utils/money'
+import { diffTL, roundTL, sumTL } from '../../utils/money'
 import { parseStatementText } from '../../lib/statementParseClient'
 
 /**
@@ -339,8 +339,8 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
     return new Intl.DateTimeFormat('tr-TR', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(`${iso}T00:00:00`))
   }
 
-  const appCardDebt = card.statement_debt_amount + card.current_period_spending
-  const diff = statementTotal - appCardDebt
+  const appCardDebt = sumTL([card.statement_debt_amount, card.current_period_spending])
+  const diff = diffTL(statementTotal, appCardDebt)
 
   return createPortal(
     <div className="fixed inset-0 z-[80] flex items-start justify-center overflow-y-auto bg-black/50 px-3 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-[calc(env(safe-area-inset-top)+1rem)] backdrop-blur-sm sm:items-center sm:p-6">

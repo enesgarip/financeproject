@@ -4,6 +4,7 @@ import { Card, CardContent } from '../components/ui/card'
 import type { SalaryHistory } from '../types/database'
 import { formatDate } from '../utils/date'
 import { formatCurrency, parseNumber } from '../utils/formatCurrency'
+import { diffTL } from '../utils/money'
 
 const salaryFields: FormField[] = [
   { name: 'title', label: 'Başlık', type: 'text', required: true },
@@ -20,7 +21,7 @@ function SalaryOverview({ rows }: { rows: SalaryHistory[] }) {
   const previous = ordered.at(-2)
   if (!current) return null
 
-  const difference = previous ? current.amount - previous.amount : 0
+  const difference = previous ? diffTL(current.amount, previous.amount) : 0
   const percentage = previous && previous.amount > 0 ? (difference / previous.amount) * 100 : 0
   const isUp = difference > 0
   const isDown = difference < 0
@@ -96,7 +97,7 @@ export function SalaryPage() {
         const previous = index > 0 ? orderedRows[index - 1] : null
         if (!previous || previous.amount <= 0) return null
 
-        const difference = row.amount - previous.amount
+        const difference = diffTL(row.amount, previous.amount)
         const percentage = (difference / previous.amount) * 100
         const isUp = difference >= 0
         return (

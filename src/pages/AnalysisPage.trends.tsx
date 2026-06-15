@@ -11,6 +11,7 @@ import { getCurrentSalary, sum } from '../utils/financeSummary'
 import { analysisFinanceSummaryInput, type AnalysisData } from '../utils/analysisView'
 import { activeExpense as activeCardExpense } from '../utils/budgetAlerts'
 import { type MarketRatesSnapshot } from '../utils/marketRates'
+import { diffTL, sumTL } from '../utils/money'
 import { convertNetWorth, formatRealValue, realValueChangeBadge, type RealUnit, REAL_UNIT_LABELS } from '../utils/realValue'
 import { selectNetWorthSeries, type NetWorthRange } from '../utils/netWorthSeries'
 import { applyScenario, type ScenarioMutation } from '../utils/scenarioForecast'
@@ -22,30 +23,34 @@ export function CashFlowTrend({ data }: { data: AnalysisData }) {
     const months = Array.from({ length: 6 }, (_, index) => new Date(new Date().getFullYear(), new Date().getMonth() - 5 + index, 1))
 
     return months.map((month) => {
-      const income = salary + sum(
-        data.debts.filter((debt) => debt.direction === 'borç_verdim' && debt.status === 'açık' && isDateInMonth(debt.due_date, month)),
-        (debt) => debt.estimated_value_try,
-      )
-      const outflow =
-        sum(data.cardExpenses.filter((expense) => activeCardExpense(expense) && isDateInMonth(expense.spent_at, month)), (expense) => expense.amount) +
+      const income = sumTL([
+        salary,
+        sum(
+          data.debts.filter((debt) => debt.direction === 'borç_verdim' && debt.status === 'açık' && isDateInMonth(debt.due_date, month)),
+          (debt) => debt.estimated_value_try,
+        ),
+      ])
+      const outflow = sumTL([
+        sum(data.cardExpenses.filter((expense) => activeCardExpense(expense) && isDateInMonth(expense.spent_at, month)), (expense) => expense.amount),
         sum(data.payments.filter((payment) => {
           if (payment.status !== 'bekliyor') return false
           if (payment.recurrence === 'monthly') return Boolean(monthlyOccurrenceDate(payment.recurrence_day, month))
           return isDateInMonth(payment.due_date, month)
-        }), (payment) => payment.amount) +
-        sum(data.loanInstallments.filter((installment) => isDateInMonth(installment.due_date, month)), (installment) => installment.amount) +
-        sum(data.debts.filter((debt) => debt.direction === 'borç_aldım' && debt.status === 'açık' && isDateInMonth(debt.due_date, month)), (debt) => debt.estimated_value_try)
+        }), (payment) => payment.amount),
+        sum(data.loanInstallments.filter((installment) => isDateInMonth(installment.due_date, month)), (installment) => installment.amount),
+        sum(data.debts.filter((debt) => debt.direction === 'borç_aldım' && debt.status === 'açık' && isDateInMonth(debt.due_date, month)), (debt) => debt.estimated_value_try),
+      ])
 
       return {
         label: new Intl.DateTimeFormat('tr-TR', { month: 'short' }).format(month),
         income,
         outflow,
-        net: income - outflow,
+        net: diffTL(income, outflow),
       }
     })
   }, [data.cardExpenses, data.debts, data.loanInstallments, data.payments, data.salaryHistory])
 
-  const totalNet = useMemo(() => chartData.reduce((s, r) => s + r.net, 0), [chartData])
+  const totalNet = useMemo(() => sumTL(chartData.map((row) => row.net)), [chartData])
 
   return (
     <Card className="border-border/70 lg:col-span-7">

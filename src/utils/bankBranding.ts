@@ -2,6 +2,8 @@
 // Telifli logo görseli kullanmak yerine marka renkli rozet üretiriz; bu hem
 // hızlı yüklenir hem de güvenli bir premium görünüm verir.
 
+import { normalizeSearchText } from './searchText'
+
 export type BankBrand = {
   /** Görsel rozette gösterilecek kısa kod (ör. GA, AK, İŞ). */
   code: string
@@ -26,7 +28,7 @@ const BANK_BRANDS: BankBrandSeed[] = [
   { keywords: ['garanti', 'bbva', 'bonus'], code: 'GA', color: '#0EA47A', name: 'Garanti BBVA' },
   { keywords: ['akbank', 'axess', 'wings'], code: 'AK', color: '#E2001A', name: 'Akbank' },
   { keywords: ['yapı kredi', 'yapi kredi', 'yapıkredi', 'yapikredi', 'world card', 'worldcard'], code: 'YK', color: '#003B6F', name: 'Yapı Kredi' },
-  { keywords: ['iş bankası', 'is bankasi', 'işbank', 'isbank', 'maximum', 'maximİles'], code: 'İŞ', color: '#0033A0', name: 'İş Bankası' },
+  { keywords: ['iş bankası', 'iş bankasi', 'is bankasi', 'işbank', 'isbank', 'maximum', 'maximİles'], code: 'İŞ', color: '#0033A0', name: 'İş Bankası' },
   { keywords: ['ziraat', 'bankkart'], code: 'ZB', color: '#C8102E', name: 'Ziraat Bankası' },
   { keywords: ['halkbank', 'halk bankası', 'halk bankasi', 'paraf'], code: 'HB', color: '#00529B', name: 'Halkbank' },
   { keywords: ['vakıf', 'vakif', 'vakıfbank', 'vakifbank'], code: 'VB', color: '#1B3A6B', name: 'VakıfBank' },
@@ -55,7 +57,7 @@ const BANK_BRANDS: BankBrandSeed[] = [
 const FALLBACK_COLORS = ['#475569', '#0E7490', '#7C3AED', '#B45309', '#0F766E', '#9333EA', '#1D4ED8', '#BE185D']
 
 function normalize(bankName: string) {
-  return bankName.trim().toLocaleLowerCase('tr-TR')
+  return normalizeSearchText(bankName)
 }
 
 function fallbackCode(bankName: string) {

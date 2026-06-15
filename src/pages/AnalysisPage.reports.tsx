@@ -9,6 +9,7 @@ import { buildMonthlyCashFlow, sum } from '../utils/financeSummary'
 import { activeExpense as activeCardExpense } from '../utils/budgetAlerts'
 import { formatDate, isDateInMonth } from '../utils/date'
 import { formatCurrency } from '../utils/formatCurrency'
+import { normalizeSearchText } from '../utils/searchText'
 import { StatPill } from './AnalysisPage.atoms'
 
 function escapeHtml(value: string) {
@@ -232,11 +233,11 @@ export function StatementArchive({ data }: { data: AnalysisData }) {
 
 export function SearchExport({ items }: { items: SearchItem[] }) {
   const [query, setQuery] = useState('')
-  const normalizedQuery = query.trim().toLocaleLowerCase('tr-TR')
+  const normalizedQuery = normalizeSearchText(query)
   const filteredItems = useMemo(
     () =>
       normalizedQuery
-        ? items.filter((item) => `${item.type} ${item.title} ${item.subtitle}`.toLocaleLowerCase('tr-TR').includes(normalizedQuery))
+        ? items.filter((item) => normalizeSearchText(`${item.type} ${item.title} ${item.subtitle}`).includes(normalizedQuery))
         : items.slice(0, 12),
     [items, normalizedQuery],
   )

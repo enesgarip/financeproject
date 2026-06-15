@@ -7,6 +7,7 @@ import { Progress } from '../ui/progress'
 import type { Budget, CardExpense } from '../../types/database'
 import { buildBudgetAlerts } from '../../utils/budgetAlerts'
 import { formatCurrency } from '../../utils/formatCurrency'
+import { diffTL } from '../../utils/money'
 
 type BudgetAlertPanelProps = {
   budgets: Budget[]
@@ -59,7 +60,7 @@ export function BudgetAlertPanel({ budgets, expenses }: BudgetAlertPanelProps) {
                   <p className="mt-0.5 text-xs text-muted-foreground">
                     {formatCurrency(alert.spent)} / {formatCurrency(alert.limit)}
                     {alert.status === 'over'
-                      ? ` · ${formatCurrency(alert.spent - alert.limit)} fazla`
+                      ? ` · ${formatCurrency(diffTL(alert.spent, alert.limit))} fazla`
                       : ` · kalan ${formatCurrency(alert.remaining)}`}
                   </p>
                 </div>

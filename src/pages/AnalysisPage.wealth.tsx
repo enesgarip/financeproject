@@ -14,6 +14,7 @@ import { activeExpense as activeCardExpense } from '../utils/budgetAlerts'
 import { type MarketRatesSnapshot } from '../utils/marketRates'
 import { computeFire, estimateMonthlySavingsFromNetWorth } from '../utils/fire'
 import { buildInflationShield } from '../utils/inflationShield'
+import { diffTL, sumTL } from '../utils/money'
 import { computeZakat } from '../utils/zakat'
 import { StatPill } from './AnalysisPage.atoms'
 
@@ -44,12 +45,12 @@ export function FireCalculator({ data, snapshots }: { data: AnalysisData; snapsh
     const monthCount = Math.max(1, new Set(active.map((expense) => expense.spent_at.slice(0, 7))).size)
     const avgCard = sum(active, (expense) => expense.amount) / monthCount
     const monthlyRecurring = sum(data.payments.filter((payment) => payment.recurrence === 'monthly'), (payment) => payment.amount)
-    return Math.round(avgCard + monthlyRecurring)
+    return sumTL([avgCard, monthlyRecurring])
   }, [data.cardExpenses, data.payments])
 
   const salary = getCurrentSalary(data.salaryHistory)?.amount ?? 0
   const snapshotSavings = useMemo(() => estimateMonthlySavingsFromNetWorth(snapshots), [snapshots])
-  const defaultSavings = snapshotSavings ?? Math.round(salary - defaultExpenses)
+  const defaultSavings = snapshotSavings ?? diffTL(salary, defaultExpenses)
   const savingsSource = snapshotSavings !== null ? 'net değer trendi' : 'maaş − gider'
 
   const [realReturn, setRealReturn] = useState(4)
@@ -347,7 +348,7 @@ export function CategorySpendingChart({ data }: { data: AnalysisData }) {
   const categoryTotals = Array.from(
     monthlyExpenses.reduce((map, expense) => {
       const category = expense.category || 'Diğer'
-      map.set(category, (map.get(category) ?? 0) + expense.amount)
+      map.set(category, sumTL([map.get(category), expense.amount]))
       return map
     }, new Map<string, number>()),
     ([category, amount]) => ({ category, amount }),

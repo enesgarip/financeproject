@@ -12,7 +12,7 @@ import type { Asset } from '../types/database'
 import { formatCurrency, formatNumber, parseNumber } from '../utils/formatCurrency'
 import { GOLD_LEDGER_SOURCE } from '../utils/goldLedger'
 import type { MarketRatesSnapshot } from '../utils/marketRates'
-import { roundTL } from '../utils/money'
+import { diffTL, sumTL, roundTL } from '../utils/money'
 import { assetRateSymbol, effectiveAssetValue, stockCostBasis, stockProfit, valueAsset, valueStock } from '../utils/valuation'
 
 const categoryOptions: Asset['category'][] = ['Nakit', 'Altın', 'Fon', 'Hisse', 'Araç', 'BES', 'Diğer']
@@ -235,11 +235,11 @@ function AssetsOverview({ rows, snapshot, stockPrices }: { rows: Asset[]; snapsh
   if (rows.length === 0) return null
 
   const valueOf = (row: Asset) => effectiveAssetValue(row, snapshot, stockPrices)
-  const total = rows.reduce((sum, row) => sum + valueOf(row), 0)
+  const total = sumTL(rows.map(valueOf))
   const categoryTotals = categoryOptions
     .map((category) => ({
       category,
-      total: rows.filter((row) => row.category === category).reduce((sum, row) => sum + valueOf(row), 0),
+      total: sumTL(rows.filter((row) => row.category === category).map(valueOf)),
     }))
     .filter((item) => item.total > 0)
     .sort((a, b) => b.total - a.total)
@@ -249,17 +249,19 @@ function AssetsOverview({ rows, snapshot, stockPrices }: { rows: Asset[]; snapsh
 
   // Aggregate stock profit/loss across all priced holdings with a cost basis.
   const stockRows = rows.filter((row) => row.category === 'Hisse')
-  let stockCost = 0
-  let stockValue = 0
+  const stockCosts: number[] = []
+  const stockValues: number[] = []
   let hasStockCost = false
   for (const row of stockRows) {
     const cost = stockCostBasis(row)
     if (cost === null) continue
     hasStockCost = true
-    stockCost += cost
-    stockValue += valueOf(row)
+    stockCosts.push(cost)
+    stockValues.push(valueOf(row))
   }
-  const stockProfitTotal = stockValue - stockCost
+  const stockCost = sumTL(stockCosts)
+  const stockValue = sumTL(stockValues)
+  const stockProfitTotal = diffTL(stockValue, stockCost)
   const stockProfitPct = stockCost > 0 ? (stockProfitTotal / stockCost) * 100 : 0
 
   const donutData: DonutSlice[] = categoryTotals.map((item) => ({

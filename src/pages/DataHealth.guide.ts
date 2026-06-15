@@ -1,5 +1,6 @@
 import { formatCurrency } from '../utils/formatCurrency'
 import { formatDate } from '../utils/date'
+import { normalizeSearchText } from '../utils/searchText'
 import type { HealthIssue } from './DataHealth.logic'
 
 type IssueGuide = {
@@ -127,19 +128,20 @@ export function buildIssueGuide(issue: HealthIssue): IssueGuide {
 }
 
 export function navigationAction(issue: HealthIssue) {
+  const normalizedTitle = normalizeSearchText(issue.title)
   if (issue.id.includes('stale-installment')) return { to: '/kartlar?section=islemler', label: 'Döneme dahil et' }
   if (issue.id.includes('no-plan')) return { to: '/borclar/krediler', label: 'Planı oluştur' }
 
   if (issue.kind.startsWith('card') || issue.kind === 'cardTypeFields') return { to: '/kartlar?section=kartlar', label: 'Kartlara git' }
   if (issue.kind.startsWith('loan')) return { to: '/borclar/krediler', label: 'Kredilere git' }
   if (issue.kind.startsWith('payment')) {
-    return { to: '/odemeler', label: issue.title.toLocaleLowerCase('tr-TR').includes('vadesi ge') ? 'Ödendi işaretle' : 'Ödemelere git' }
+    return { to: '/odemeler', label: normalizedTitle.includes('vadesi ge') ? 'Ödendi işaretle' : 'Ödemelere git' }
   }
-  if (issue.kind === 'debtShape' || issue.title.toLocaleLowerCase('tr-TR').includes('bor') || issue.title.toLocaleLowerCase('tr-TR').includes('alacak')) {
+  if (issue.kind === 'debtShape' || normalizedTitle.includes('bor') || normalizedTitle.includes('alacak')) {
     return { to: '/borclar/kisiler', label: 'Borçlara git' }
   }
-  if (issue.kind === 'assetShape' || issue.title.toLocaleLowerCase('tr-TR').includes('varl')) return { to: '/varliklar', label: 'Varlıklara git' }
-  if (issue.kind === 'budgetMonth' || issue.title.toLocaleLowerCase('tr-TR').includes('hedef') || issue.title.toLocaleLowerCase('tr-TR').includes('maa')) {
+  if (issue.kind === 'assetShape' || normalizedTitle.includes('varl')) return { to: '/varliklar', label: 'Varlıklara git' }
+  if (issue.kind === 'budgetMonth' || normalizedTitle.includes('hedef') || normalizedTitle.includes('maa')) {
     return { to: '/analiz', label: 'Kaydı aç' }
   }
 

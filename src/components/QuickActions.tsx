@@ -2,6 +2,7 @@ import { ArrowRightLeft, Banknote, HandCoins, Landmark, Plus, ReceiptText, Searc
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { cn } from '../lib/utils'
+import { normalizeSearchText } from '../utils/searchText'
 import { Input } from './ui/input'
 
 const actions = [
@@ -28,10 +29,10 @@ export function QuickActions() {
   const open = openPath === location.pathname
   const currentRootPath = location.pathname === '/' ? '/' : `/${location.pathname.split('/')[1]}`
   const orderedActions = useMemo(() => {
-    const normalizedQuery = query.trim().toLocaleLowerCase('tr-TR')
+    const normalizedQuery = normalizeSearchText(query)
     const availableActions = actions.filter((action) => !action.hiddenOnPaths.includes(currentRootPath))
     return normalizedQuery
-      ? availableActions.filter((action) => `${action.label} ${action.description}`.toLocaleLowerCase('tr-TR').includes(normalizedQuery))
+      ? availableActions.filter((action) => normalizeSearchText(`${action.label} ${action.description}`).includes(normalizedQuery))
       : availableActions
   }, [currentRootPath, query])
   const tucked = formFocused && !open

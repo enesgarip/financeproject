@@ -17,6 +17,8 @@ import { Progress } from '../ui/progress'
 import type { Card as FinanceCard, TransactionHistory, TransactionHistoryType } from '../../types/database'
 import { daysUntil, nextMonthlyDate } from '../../utils/date'
 import { formatCurrency } from '../../utils/formatCurrency'
+import { diffTL } from '../../utils/money'
+import { normalizeSearchText } from '../../utils/searchText'
 import {
   cardMonthlyPaymentAmount,
   type CashFlowSummary,
@@ -47,7 +49,7 @@ export function CreditCardSnapshotPanel({
 }) {
   const creditCards = cards.filter((card) => card.card_type === 'kredi_karti')
   const visibleCards = [...creditCards].sort((left, right) => right.debt_amount - left.debt_amount).slice(0, 3)
-  const availableLimit = Math.max(0, totalLimit - totalDebt)
+  const availableLimit = Math.max(0, diffTL(totalLimit, totalDebt))
   const dueSoonCount = creditCards.filter((card) => {
     const remaining = daysUntil(nextMonthlyDate(card.due_day))
     return cardMonthlyPaymentAmount(card) > 0 && remaining !== null && remaining >= 0 && remaining <= 7
@@ -232,9 +234,9 @@ export function CreditLimitSection({ groups, totalUsageRate }: { groups: CreditL
 export function HistorySection({ rows }: { rows: TransactionHistory[] }) {
   const [activeType, setActiveType] = useState<TransactionHistoryType | 'all'>('all')
   const [query, setQuery] = useState('')
-  const normalizedQuery = query.trim().toLocaleLowerCase('tr-TR')
+  const normalizedQuery = normalizeSearchText(query)
   const filteredRows = (activeType === 'all' ? rows : rows.filter((row) => row.type === activeType)).filter((row) =>
-    normalizedQuery ? `${row.title} ${row.note ?? ''} ${row.type}`.toLocaleLowerCase('tr-TR').includes(normalizedQuery) : true,
+    normalizedQuery ? normalizeSearchText(`${row.title} ${row.note ?? ''} ${row.type}`).includes(normalizedQuery) : true,
   )
   const groupedRows = groupHistoryRows(filteredRows.slice(0, 40))
 

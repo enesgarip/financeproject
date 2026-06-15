@@ -20,6 +20,7 @@ import { PRICE_RADAR_MONTHS } from '../data/repositories/analysisRepo'
 import { type PriceTrend } from '../utils/priceIncreaseRadar'
 import { canCutCurrentStatement } from '../utils/statementCycle'
 import { buildFinanceObligationsForMonth } from '../utils/obligations'
+import { diffTL, sumTL } from '../utils/money'
 import { StatPill } from './AnalysisPage.atoms'
 
 export function UpcomingInstallments({ data }: { data: AnalysisData }) {
@@ -128,7 +129,7 @@ export function BudgetProgress({ budgets, expenses }: { budgets: Budget[]; expen
                 </p>
                 {isOver ? (
                   <p className="mt-0.5 text-xs font-medium text-destructive">
-                    Limit {formatCurrency(budget.spent - budget.limit)} aşıldı
+                    Limit {formatCurrency(diffTL(budget.spent, budget.limit))} aşıldı
                   </p>
                 ) : isWarning ? (
                   <p className="mt-0.5 text-xs font-medium text-warning">Limite yaklaşıyor</p>
@@ -313,8 +314,8 @@ export function PeopleLedger({ debts }: { debts: Debt[] }) {
       .filter((debt) => debt.status === 'açık')
       .reduce((map, debt) => {
         const current = map.get(debt.person_name) ?? { person: debt.person_name, borrowed: 0, receivable: 0, count: 0 }
-        if (debt.direction === 'borç_aldım') current.borrowed += debt.estimated_value_try
-        else current.receivable += debt.estimated_value_try
+        if (debt.direction === 'borç_aldım') current.borrowed = sumTL([current.borrowed, debt.estimated_value_try])
+        else current.receivable = sumTL([current.receivable, debt.estimated_value_try])
         current.count += 1
         map.set(debt.person_name, current)
         return map

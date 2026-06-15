@@ -1,5 +1,5 @@
 import type { Asset, Card } from '../types/database'
-import { roundTL as round2 } from './money'
+import { roundTL as round2, sumTL } from './money'
 
 /**
  * "Enflasyon kalkanı" — how much of your wealth sits in real/hard assets that
@@ -40,15 +40,17 @@ export function buildInflationShield(assets: Asset[], cards: Card[]): InflationS
   for (const asset of assets) {
     const value = Number(asset.estimated_value_try) || 0
     if (value <= 0) continue
-    byCategory.set(asset.category, (byCategory.get(asset.category) ?? 0) + value)
+    byCategory.set(asset.category, sumTL([byCategory.get(asset.category), value]))
   }
 
   // Bank-card balances are TL cash — fold them into the Nakit bucket.
-  const bankBalance = cards
-    .filter((card) => card.card_type === 'banka_karti')
-    .reduce((total, card) => total + (Number(card.current_balance) || 0), 0)
+  const bankBalance = sumTL(
+    cards
+      .filter((card) => card.card_type === 'banka_karti')
+      .map((card) => Number(card.current_balance) || 0),
+  )
   if (bankBalance > 0) {
-    byCategory.set(CASH_CATEGORY, (byCategory.get(CASH_CATEGORY) ?? 0) + bankBalance)
+    byCategory.set(CASH_CATEGORY, sumTL([byCategory.get(CASH_CATEGORY), bankBalance]))
   }
 
   let protectedValue = 0
@@ -59,14 +61,14 @@ export function buildInflationShield(assets: Asset[], cards: Card[]): InflationS
     const value = round2(rawValue)
     if (value <= 0) continue
     const bucket: ShieldBucket = category === CASH_CATEGORY ? 'melting' : 'protected'
-    if (bucket === 'melting') meltingValue += value
-    else protectedValue += value
+    if (bucket === 'melting') meltingValue = sumTL([meltingValue, value])
+    else protectedValue = sumTL([protectedValue, value])
     categories.push({ category, bucket, value })
   }
 
   categories.sort((a, b) => b.value - a.value)
 
-  const totalValue = round2(protectedValue + meltingValue)
+  const totalValue = sumTL([protectedValue, meltingValue])
   return {
     protectedValue: round2(protectedValue),
     meltingValue: round2(meltingValue),

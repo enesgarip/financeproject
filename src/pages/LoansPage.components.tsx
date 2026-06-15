@@ -6,14 +6,15 @@ import { Progress } from '../components/ui/progress'
 import type { Loan, LoanInstallment } from '../types/database'
 import { formatDate } from '../utils/date'
 import { formatCurrency } from '../utils/formatCurrency'
+import { sumTL } from '../utils/money'
 import { loanProgress, nextPendingInstallment } from './LoansPage.helpers'
 
 export function LoanOverview({ loans, installments }: { loans: Loan[]; installments: LoanInstallment[] }) {
   const activeLoans = loans.filter((loan) => loan.status === 'active')
   if (activeLoans.length === 0) return null
 
-  const totalRemaining = activeLoans.reduce((total, loan) => total + loan.remaining_amount, 0)
-  const totalMonthly = activeLoans.reduce((total, loan) => total + loan.monthly_payment, 0)
+  const totalRemaining = sumTL(activeLoans.map((loan) => loan.remaining_amount))
+  const totalMonthly = sumTL(activeLoans.map((loan) => loan.monthly_payment))
   const nextItems = activeLoans
     .map((loan) => ({ loan, item: nextPendingInstallment(loan, installments) }))
     .filter((entry): entry is { loan: Loan; item: LoanInstallment } => Boolean(entry.item))

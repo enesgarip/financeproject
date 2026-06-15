@@ -27,7 +27,7 @@ import {
 } from '../utils/goldLedger'
 import { syncGoldLedgerAssets } from '../utils/goldLedgerSync'
 import type { MarketRatesSnapshot } from '../utils/marketRates'
-import { roundTL as round2 } from '../utils/money'
+import { diffTL, roundTL as round2, sumTL } from '../utils/money'
 import { valueAsset } from '../utils/valuation'
 
 const goldFields: FormField[] = [
@@ -119,13 +119,13 @@ function sumGoldValues(
   snapshot: MarketRatesSnapshot | null,
   quantity: 'totalQuantity' | 'knownQuantity',
 ): number | null {
-  let total = 0
+  const values: number[] = []
   for (const summary of summaries) {
     const value = goldValue(summary.goldType, summary[quantity], snapshot)
     if (value === null) return null
-    total += value
+    values.push(value)
   }
-  return round2(total)
+  return sumTL(values)
 }
 
 function buildChartData(lots: GoldLot[], snapshot: MarketRatesSnapshot | null): ChartPoint[] {
@@ -140,7 +140,7 @@ function buildChartData(lots: GoldLot[], snapshot: MarketRatesSnapshot | null): 
   return dated.map((lot) => {
     if (lot.gold_type === 'gram') gram += lot.quantity
     if (lot.gold_type === 'ceyrek') ceyrek += lot.quantity
-    if (lot.unit_price != null) cost += lot.quantity * lot.unit_price
+    if (lot.unit_price != null) cost = sumTL([cost, lot.quantity * lot.unit_price])
 
     const gramValue = goldValue('gram', gram, snapshot)
     const ceyrekValue = goldValue('ceyrek', ceyrek, snapshot)
@@ -151,7 +151,7 @@ function buildChartData(lots: GoldLot[], snapshot: MarketRatesSnapshot | null): 
       gram: round2(gram),
       ceyrek: round2(ceyrek),
       cost: round2(cost),
-      market: gramValue === null || ceyrekValue === null ? null : round2(gramValue + ceyrekValue),
+      market: gramValue === null || ceyrekValue === null ? null : sumTL([gramValue, ceyrekValue]),
     }
   })
 }
@@ -207,10 +207,10 @@ function GoldOverview({ rows, snapshot }: { rows: GoldLot[]; snapshot: MarketRat
   const summaries = useMemo(() => summarizeGold(rows), [rows])
   if (summaries.length === 0) return null
 
-  const totalKnownCost = round2(summaries.reduce((sum, summary) => sum + summary.knownCost, 0))
+  const totalKnownCost = sumTL(summaries.map((summary) => summary.knownCost))
   const totalLiveValue = sumGoldValues(summaries, snapshot, 'totalQuantity')
   const knownLiveValue = sumGoldValues(summaries, snapshot, 'knownQuantity')
-  const profit = knownLiveValue === null || totalKnownCost <= 0 ? null : round2(knownLiveValue - totalKnownCost)
+  const profit = knownLiveValue === null || totalKnownCost <= 0 ? null : diffTL(knownLiveValue, totalKnownCost)
   const profitPct = profit === null || totalKnownCost <= 0 ? null : round2((profit / totalKnownCost) * 100)
   const totalValueLabel = totalLiveValue === null ? 'Kur bekleniyor' : formatCurrency(totalLiveValue)
   const gramSummary = summaries.find((summary) => summary.goldType === 'gram')

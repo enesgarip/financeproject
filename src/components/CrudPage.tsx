@@ -6,6 +6,7 @@ import { useAuth } from '../auth/useAuth'
 import { deleteCrudRow, fetchCrudRows, saveCrudRow } from '../data/repositories/crudRepo'
 import { cn, openNativePicker } from '../lib/utils'
 import type { InsertFor, RowFor, TableName, UpdateFor } from '../types/database'
+import { normalizeSearchText } from '../utils/searchText'
 import { EmptyState } from './EmptyState'
 import { FormSection } from './finance/FinanceUI'
 import { SimpleModal } from './SimpleModal'
@@ -153,7 +154,7 @@ export function CrudPage<T extends TableName>({
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
   const visibleFields = fields.filter((field) => isFieldVisible(field, formValues))
-  const normalizedQuery = query.trim().toLocaleLowerCase('tr-TR')
+  const normalizedQuery = normalizeSearchText(query)
   const rowMeta = useMemo(() => {
     const map = new Map<string, RowMeta>()
 
@@ -167,7 +168,7 @@ export function CrudPage<T extends TableName>({
         subtitle,
         details,
         note,
-        searchText: [title, subtitle, ...details, note].join(' ').toLocaleLowerCase('tr-TR'),
+        searchText: normalizeSearchText([title, subtitle, ...details, note].join(' ')),
       })
     }
 
@@ -416,7 +417,7 @@ export function CrudPage<T extends TableName>({
                     subtitle,
                     details,
                     note,
-                    searchText: meta?.searchText ?? [title, subtitle, ...details, note].join(' ').toLocaleLowerCase('tr-TR'),
+                    searchText: meta?.searchText ?? normalizeSearchText([title, subtitle, ...details, note].join(' ')),
                   }
                   const rowMenu = hasMenu ? (
                     <div className="relative shrink-0">

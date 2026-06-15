@@ -18,6 +18,7 @@ import type {
 import { balanceDrift, projectAccountBalance, type AccountLedgerEvent } from '../utils/accountLedger'
 import { ledgerDrift, projectCardDebt, type CardLedgerEvent } from '../utils/cardLedger'
 import { dateInputValue, formatDate } from '../utils/date'
+import { normalizeSearchText } from '../utils/searchText'
 import {
   buildCreditLimitGroups,
   cardDebtBreakdown,
@@ -28,7 +29,7 @@ import {
   scheduledCardInstallmentTotalsByCard,
 } from '../utils/financeSummary'
 import { formatCurrency } from '../utils/formatCurrency'
-import { exceedsTL, moneyDiffers, roundTL } from '../utils/money'
+import { diffTL, exceedsTL, moneyDiffers, roundTL, sumTL } from '../utils/money'
 import { formatComponentAmount, formatSavingsGoalAmount, savingsGoalBelowTarget, savingsGoalTargetReached, savingsGoalValueTypeLabel } from '../utils/savingsGoal'
 
 export type HealthData = {
@@ -315,7 +316,7 @@ export function buildIssues(data: HealthData): HealthIssue[] {
   const budgetsByMonthCategory = new Map<string, Budget[]>()
   for (const budget of data.budgets) {
     const normalizedMonth = monthStart(budget.month)
-    const duplicateKey = `${normalizedMonth}:${budget.category.trim().toLocaleLowerCase('tr-TR')}`
+    const duplicateKey = `${normalizedMonth}:${normalizeSearchText(budget.category)}`
     budgetsByMonthCategory.set(duplicateKey, [...(budgetsByMonthCategory.get(duplicateKey) ?? []), budget])
 
     if (!isMonthStart(budget.month)) {
@@ -487,7 +488,7 @@ export function buildIssues(data: HealthData): HealthIssue[] {
         kind: 'cardDebtSplit',
         payload: {
           cardId: card.id,
-          statementDebt: roundTL(card.statement_debt_amount + unexplained),
+          statementDebt: sumTL([card.statement_debt_amount, unexplained]),
           currentPeriod: card.current_period_spending,
           provisionAmount: cardProvisionAmount(card),
         },
@@ -633,7 +634,7 @@ export function buildIssues(data: HealthData): HealthIssue[] {
 
   for (const [cardId, rows] of scheduledByCard) {
     const card = cardsById.get(cardId)
-    const total = rows.reduce((sum, item) => sum + item.amount, 0)
+    const total = sumTL(rows.map((item) => item.amount))
     const pastCount = rows.filter((item) => item.due_month < monthStartNow).length
 
     issues.push({
@@ -867,15 +868,15 @@ export function buildIssues(data: HealthData): HealthIssue[] {
 
     if (missingNos.length === 0 && extraRows.length === 0 && rows.length > 0) {
       const relevantRows = rows.filter((row) => expectedNos.includes(row.installment_no))
-      const plannedTotal = roundTL(relevantRows.reduce((total, row) => total + row.amount, 0))
+      const plannedTotal = sumTL(relevantRows.map((row) => row.amount))
       const baseAmount = roundTL(expense.installment_amount || expense.amount / expense.installment_count)
       const expectedPlannedTotal = roundTL(
         expectedNos.reduce((total, installmentNo) => {
           const amount =
             installmentNo === expense.installment_count
-              ? roundTL(expense.amount - baseAmount * (expense.installment_count - 1))
+              ? diffTL(expense.amount, baseAmount * (expense.installment_count - 1))
               : baseAmount
-          return total + amount
+          return sumTL([total, amount])
         }, 0),
       )
 

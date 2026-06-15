@@ -1,5 +1,6 @@
 import type { Card, CardInstallment } from '../types/database'
 import { addMonths, dateInputValue, startOfMonth } from './date'
+import { sumTL } from './money'
 
 export type CardInstallmentMonthRow = {
   cardId: string
@@ -38,7 +39,7 @@ export function buildCardInstallmentCalendar(
       const existing = byCard.get(item.card_id)
 
       if (existing) {
-        existing.amount += item.amount
+        existing.amount = sumTL([existing.amount, item.amount])
         existing.count += 1
       } else {
         byCard.set(item.card_id, { cardId: item.card_id, cardLabel, amount: item.amount, count: 1 })
@@ -46,12 +47,12 @@ export function buildCardInstallmentCalendar(
     }
 
     const rows = Array.from(byCard.values()).sort((a, b) => b.amount - a.amount)
-    const total = rows.reduce((sum, row) => sum + row.amount, 0)
+    const total = sumTL(rows.map((row) => row.amount))
 
     return { monthKey, monthLabel: monthLabel(monthKey), total, rows }
   })
 }
 
 export function totalScheduledInstallments(installments: CardInstallment[]) {
-  return installments.filter((item) => item.status === 'scheduled').reduce((sum, item) => sum + item.amount, 0)
+  return sumTL(installments.filter((item) => item.status === 'scheduled').map((item) => item.amount))
 }

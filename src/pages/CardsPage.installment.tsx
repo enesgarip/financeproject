@@ -12,6 +12,7 @@ import { expenseCategoryOptions } from '../utils/categories'
 import { getLastUsed, setLastUsed } from '../utils/lastUsed'
 import { addMonthsToMonth, cardOptionLabel, formatMonthLabel, isMonthValue, monthInputValue, parseInstallmentNumber } from './CardsPage.helpers'
 import { formatCurrency, parseNumber } from '../utils/formatCurrency'
+import { roundTL } from '../utils/money'
 
 export function LegacyInstallmentPanel({
   rows,
@@ -40,7 +41,7 @@ export function LegacyInstallmentPanel({
   const parsedTotalInstallments = Math.max(2, Math.min(36, parseInstallmentNumber(totalInstallments, 2)))
   const parsedPaidInstallments = Math.max(0, Math.min(parsedTotalInstallments - 1, parseInstallmentNumber(paidInstallments, 0)))
   const remainingCount = Math.max(1, parsedTotalInstallments - parsedPaidInstallments)
-  const remainingAmount = Number((parsedInstallmentAmount * remainingCount).toFixed(2))
+  const remainingAmount = roundTL(parsedInstallmentAmount * remainingCount)
   const canSubmitLegacyInstallment =
     Boolean(selectedCard) &&
     parsedInstallmentAmount > 0 &&

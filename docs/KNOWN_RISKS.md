@@ -96,3 +96,9 @@ Risk:
 
 - future contributors may incorrectly aggregate limits
 - dashboard and card page calculations can diverge if this rule is forgotten
+
+## 9. Turkish Search Normalization (mitigated)
+
+Filtering/matching text with `toLocaleLowerCase('tr-TR')` can miss all-caps bank or merchant names such as `MIGROS`, `BIM`, and `IS BANKASI` because plain ASCII `I` lowercases to dotless `ı`.
+
+Use `src/utils/searchText.ts` for search/filter keys. The 2026-06-16 component audit moved shared CRUD search, quick actions, dashboard history search, Analysis export search, category inference, bank branding, and card bank-name normalization onto that helper.

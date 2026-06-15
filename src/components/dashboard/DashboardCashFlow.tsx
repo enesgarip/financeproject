@@ -14,7 +14,7 @@ import { Progress } from '../ui/progress'
 import type { DashboardMonthlyLoadSummary, DashboardUpcomingItem } from '../../utils/dashboardUpcoming'
 import { formatDate } from '../../utils/date'
 import { formatCurrency } from '../../utils/formatCurrency'
-import { roundTL } from '../../utils/money'
+import { diffTL, sumTL } from '../../utils/money'
 import {
   sum,
   type CashFlowSummary,
@@ -196,9 +196,9 @@ function buildCashFlowCalendarGroups(items: UpcomingItem[], startingCash: number
     groups.set(dayKey, {
       dayKey,
       dateLabel: formatDate(dayKey),
-      amount: roundTL((current?.amount ?? 0) + item.amount),
-      cashImpactAmount: roundTL((current?.cashImpactAmount ?? 0) + item.cashImpactAmount),
-      cardSettledAmount: roundTL((current?.cardSettledAmount ?? 0) + (item.settlement === 'credit_card' ? item.amount : 0)),
+      amount: sumTL([current?.amount, item.amount]),
+      cashImpactAmount: sumTL([current?.cashImpactAmount, item.cashImpactAmount]),
+      cardSettledAmount: sumTL([current?.cardSettledAmount, item.settlement === 'credit_card' ? item.amount : 0]),
       count: nextItems.length,
       kinds: new Set([...(current?.kinds ?? []), item.kind]),
       items: nextItems,
@@ -209,7 +209,7 @@ function buildCashFlowCalendarGroups(items: UpcomingItem[], startingCash: number
   return Array.from(groups.values())
     .sort((a, b) => a.dayKey.localeCompare(b.dayKey))
     .map((group) => {
-      runningCash = roundTL(runningCash - group.cashImpactAmount)
+      runningCash = diffTL(runningCash, group.cashImpactAmount)
       return { ...group, cashAfter: runningCash }
     })
 }
@@ -229,7 +229,7 @@ export function CashFlowCalendarPanel({ items, cashFlow }: { items: UpcomingItem
   const selectedGroup = visibleGroups.find((group) => group.dayKey === selectedDayKey) ?? visibleGroups[0] ?? null
   const totalUpcoming = sum(items, (item) => item.amount)
   const totalCashImpact = sum(items, (item) => item.cashImpactAmount)
-  const totalCardSettled = roundTL(Math.max(0, totalUpcoming - totalCashImpact))
+  const totalCardSettled = Math.max(0, diffTL(totalUpcoming, totalCashImpact))
   const lowestCash = groups.reduce((lowest, group) => Math.min(lowest, group.cashAfter), cashFlow.cashAssets)
 
   return (

@@ -1,5 +1,6 @@
 import type { Card } from '../../types/database'
 import { formatCurrency } from '../../utils/formatCurrency'
+import { diffTL, sumTL } from '../../utils/money'
 import { Select } from '../ui/input'
 
 type AccountSelectorProps = {
@@ -21,12 +22,12 @@ export function AccountSelector({
 }: AccountSelectorProps) {
   const selectedAccount = accounts.find((account) => account.id === value)
   const selectedIsCreditCard = selectedAccount?.card_type === 'kredi_karti'
-  const remainingBalance = selectedAccount && !selectedIsCreditCard ? selectedAccount.current_balance - amount : null
-  const nextDebtAmount = selectedAccount && selectedIsCreditCard ? selectedAccount.debt_amount + amount : null
+  const remainingBalance = selectedAccount && !selectedIsCreditCard ? diffTL(selectedAccount.current_balance, amount) : null
+  const nextDebtAmount = selectedAccount && selectedIsCreditCard ? sumTL([selectedAccount.debt_amount, amount]) : null
   const availableLimit = selectedAccount && selectedIsCreditCard && selectedAccount.credit_limit > 0
-    ? selectedAccount.credit_limit - selectedAccount.debt_amount
+    ? diffTL(selectedAccount.credit_limit, selectedAccount.debt_amount)
     : null
-  const nextAvailableLimit = availableLimit !== null ? availableLimit - amount : null
+  const nextAvailableLimit = availableLimit !== null ? diffTL(availableLimit, amount) : null
   const hasInsufficientBalance = remainingBalance !== null && remainingBalance < 0
 
   function getAccountOptionLabel(account: Card) {

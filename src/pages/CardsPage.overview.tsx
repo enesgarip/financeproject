@@ -8,6 +8,7 @@ import { Progress } from '../components/ui/progress'
 import type { Card } from '../types/database'
 import { cardPayableDebt, cardProvisionAmount } from '../utils/financeSummary'
 import { formatCurrency } from '../utils/formatCurrency'
+import { diffTL, sumTL } from '../utils/money'
 import { OverviewStat } from './CardsPage.atoms'
 import { cardHelp } from './CardsPage.help'
 import { buildLimitGroupSummaries } from './CardsPage.helpers'
@@ -17,14 +18,14 @@ export function CreditCardOverview({ rows }: { rows: Card[] }) {
   const bankCards = rows.filter((row) => row.card_type === 'banka_karti')
   if (groups.length === 0 && bankCards.length === 0) return null
 
-  const totalLimit = groups.reduce((total, group) => total + group.limit, 0)
-  const totalDebt = groups.reduce((total, group) => total + group.debt, 0)
-  const totalStatementDebt = groups.reduce((total, group) => total + group.statementDebt, 0)
-  const totalCurrentPeriod = groups.reduce((total, group) => total + group.currentPeriod, 0)
-  const totalProvision = groups.reduce((total, group) => total + group.provision, 0)
-  const totalAvailable = Math.max(0, totalLimit - totalDebt)
+  const totalLimit = sumTL(groups.map((group) => group.limit))
+  const totalDebt = sumTL(groups.map((group) => group.debt))
+  const totalStatementDebt = sumTL(groups.map((group) => group.statementDebt))
+  const totalCurrentPeriod = sumTL(groups.map((group) => group.currentPeriod))
+  const totalProvision = sumTL(groups.map((group) => group.provision))
+  const totalAvailable = Math.max(0, diffTL(totalLimit, totalDebt))
   const totalUsageRate = totalLimit > 0 ? Math.min(100, (totalDebt / totalLimit) * 100) : 0
-  const cashBalance = bankCards.reduce((total, card) => total + card.current_balance, 0)
+  const cashBalance = sumTL(bankCards.map((card) => card.current_balance))
 
   return (
     <div className="flex flex-col gap-3">
@@ -118,14 +119,14 @@ export function AccountHubPanel({
   const creditCards = rows.filter((row) => row.card_type === 'kredi_karti')
   if (accounts.length === 0 && creditCards.length === 0) return null
 
-  const accountBalance = accounts.reduce((total, account) => total + account.current_balance, 0)
-  const cardDebt = creditCards.reduce((total, card) => total + card.debt_amount, 0)
-  const payableCardDebt = creditCards.reduce((total, card) => total + cardPayableDebt(card), 0)
+  const accountBalance = sumTL(accounts.map((account) => account.current_balance))
+  const cardDebt = sumTL(creditCards.map((card) => card.debt_amount))
+  const payableCardDebt = sumTL(creditCards.map((card) => cardPayableDebt(card)))
   const banks = Array.from(
     accounts.reduce((map, account) => {
       const current = map.get(account.bank_name) ?? { balance: 0, count: 0 }
       map.set(account.bank_name, {
-        balance: current.balance + account.current_balance,
+        balance: sumTL([current.balance, account.current_balance]),
         count: current.count + 1,
       })
       return map

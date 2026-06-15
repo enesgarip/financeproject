@@ -1,6 +1,6 @@
 import type { Budget, CardExpense } from '../types/database'
 import { dateInputValue, isDateInMonth, startOfMonth } from './date'
-import { exceedsTL } from './money'
+import { diffTL, exceedsTL, sumTL } from './money'
 
 export type BudgetAlertStatus = 'over' | 'warning' | 'ok'
 
@@ -38,7 +38,7 @@ export function buildBudgetUsage(budgets: Budget[], expenses: CardExpense[], mon
   return monthlyBudgets.map((budget) => {
     const spent = monthlyExpenses
       .filter((expense) => (expense.category ?? UNCATEGORISED) === budget.category)
-      .reduce((total, expense) => total + expense.amount, 0)
+      .reduce((total, expense) => sumTL([total, expense.amount]), 0)
     const usageRate = budget.limit_amount > 0 ? (spent / budget.limit_amount) * 100 : spent > 0 ? 100 : 0
     let status: BudgetAlertStatus = 'ok'
 
@@ -52,7 +52,7 @@ export function buildBudgetUsage(budgets: Budget[], expenses: CardExpense[], mon
       limit: budget.limit_amount,
       usageRate,
       status,
-      remaining: Math.max(0, budget.limit_amount - spent),
+      remaining: Math.max(0, diffTL(budget.limit_amount, spent)),
     }
   })
 }

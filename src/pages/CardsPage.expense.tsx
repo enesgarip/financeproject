@@ -12,6 +12,7 @@ import { getCardStatementPeriod } from '../utils/cardStatement'
 import { dateInputValue, formatDate } from '../utils/date'
 import { cardProvisionAmount } from '../utils/financeSummary'
 import { getLastUsed, setLastUsed } from '../utils/lastUsed'
+import { diffTL } from '../utils/money'
 import { isMissingSupabaseCapabilityError, missingSupabaseCapabilityMessage } from '../utils/supabaseErrors'
 import { openNativePicker } from '../lib/utils'
 import { cardOptionLabel, moneyShare } from './CardsPage.helpers'
@@ -53,7 +54,7 @@ export function QuickExpensePanel({
   const trimmedDescription = description.trim()
   const statementPreview = useMemo(() => getCardStatementPeriod(selectedCard, spentAt), [selectedCard, spentAt])
   const firstPeriodAmount = parsedInstallmentCount > 1 ? moneyShare(parsedAmount, parsedInstallmentCount) : parsedAmount
-  const debitPreview = Math.max(0, (selectedCard?.current_balance ?? 0) - parsedAmount)
+  const debitPreview = Math.max(0, diffTL(selectedCard?.current_balance, parsedAmount))
   const isProvision = expenseStatus === 'provision'
   const canSubmitQuickExpense = Boolean(selectedCard) && parsedAmount > 0 && trimmedDescription.length > 0 && !saving
 

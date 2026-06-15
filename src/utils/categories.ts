@@ -1,3 +1,5 @@
+import { normalizeSearchText } from './searchText'
+
 export const expenseCategories = [
   'Market',
   'Yemek',
@@ -55,7 +57,7 @@ export function normalizeDescription(description: string) {
   // lowercasing folds 'I' → dotless 'ı', so ALL-CAPS bank-statement merchants
   // like "MIGROS"/"BIM"/"NETFLIX" became "mıgros"/"bım"/"netflıx" and never
   // matched the dotted-i keywords. ş/ğ/ç/ö/ü still fold correctly via toLowerCase.
-  return description.trim().replace(/[Iİ]/g, 'i').toLowerCase().replace(/\s+/g, ' ')
+  return normalizeSearchText(description)
 }
 
 function escapeRegExp(value: string) {

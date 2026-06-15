@@ -12,6 +12,7 @@ import { formatDate } from '../utils/date'
 import { formatCurrency, formatNumber, parseNumber } from '../utils/formatCurrency'
 import { useFinancePaymentDrawer } from '../hooks/useFinancePaymentDrawer'
 import type { MarketRatesSnapshot } from '../utils/marketRates'
+import { diffTL, sumTL } from '../utils/money'
 import { debtRateSymbol, effectiveDebtValue, valueDebt } from '../utils/valuation'
 
 /** Gold or non-TRY foreign-currency debts can be auto-valued from live rates. */
@@ -165,14 +166,10 @@ function DebtsOverview({ rows, snapshot }: { rows: Debt[]; snapshot: MarketRates
   if (openRows.length === 0) return null
 
   const valueOf = (row: Debt) => effectiveDebtValue(row, snapshot)
-  const borrowed = openRows
-    .filter((row) => row.direction === 'borç_aldım')
-    .reduce((sum, row) => sum + valueOf(row), 0)
-  const receivable = openRows
-    .filter((row) => row.direction === 'borç_verdim')
-    .reduce((sum, row) => sum + valueOf(row), 0)
-  const total = borrowed + receivable
-  const net = receivable - borrowed
+  const borrowed = sumTL(openRows.filter((row) => row.direction === 'borç_aldım').map(valueOf))
+  const receivable = sumTL(openRows.filter((row) => row.direction === 'borç_verdim').map(valueOf))
+  const total = sumTL([borrowed, receivable])
+  const net = diffTL(receivable, borrowed)
   const borrowedRate = total > 0 ? Math.min(100, (borrowed / total) * 100) : 0
   const upcoming = openRows
     .filter((row) => row.due_date)

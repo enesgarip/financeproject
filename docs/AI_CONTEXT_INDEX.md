@@ -1,6 +1,6 @@
 # AI Context Index
 
-Last reviewed: 2026-06-15
+Last reviewed: 2026-06-16
 
 This file is the cheapest starting point for future AI/Codex sessions. Its job
 is to reduce repeated repo discovery: read this first, choose the smallest
@@ -86,6 +86,7 @@ ESLint blocks `src/{pages,components,utils,hooks}` from importing
 | Where does dashboard data come from? | `src/app/useFinanceSnapshot.ts` and `src/data/repositories/financeSnapshotRepo.ts` |
 | Where should dashboard calculations live? | `docs/DASHBOARD_ARCHITECTURE.md`; start with its Page-Local vs Shared Calculations table |
 | How should money be rounded/compared? | `src/utils/money.ts`; avoid new ad hoc tolerances |
+| How should search text be normalized? | `src/utils/searchText.ts`; use it instead of `toLocaleLowerCase('tr-TR')` for matching/filtering |
 | How are shared credit limits grouped? | `buildCreditLimitGroups` in `src/utils/financeSummary.ts` |
 | How is loan summary projected? | `projectLoanSummary` in `src/utils/financeSummary.ts` plus DB trigger `sync_loan_summary` |
 | How are card/account ledgers projected? | `src/utils/cardLedger.ts`, `src/utils/accountLedger.ts` |
@@ -208,6 +209,7 @@ paylaşır; her sayfa süpersetini client-side daraltır). Query client: `src/ap
 | İş / konu | Önce bak (domain/util) | Veri katmanı | UI |
 |---|---|---|---|
 | **Para hesabı/yuvarlama** | `utils/money.ts` (+ `money.test.ts`, `money.property.test.ts`) | — | — |
+| **Arama / metin normalizasyonu** | `utils/searchText.ts`, `utils/categories.ts`, `utils/bankBranding.ts` | — | `components/CrudPage.tsx`, `components/QuickActions.tsx`, `components/dashboard/DashboardCards.tsx`, `pages/AnalysisPage.reports.tsx` |
 | **Kart borcu / breakdown** | `utils/cardLedger.ts`, `utils/financeSummary.ts` (`clampCardBreakdown`) | `data/repositories/cardsRepo.ts`, `services/cardLedgerActions.ts` | `pages/CardsPage.tsx` (+ `.crud.tsx`, `.helpers.ts`, `.sections.tsx`, `.overview.tsx`, `.statements.tsx`, `.list.tsx`) |
 | **Ekstre / statement döngüsü** | `utils/cardStatement.ts`, `utils/statementCycle.ts`, `utils/statementReminder.ts` | `data/repositories/cardsRepo.ts` | `pages/CardsPage.tsx` |
 | **Taksit takvimi** | `utils/cardInstallmentCalendar.ts` | `data/repositories/cardsRepo.ts` | `pages/CardsPage.tsx` |

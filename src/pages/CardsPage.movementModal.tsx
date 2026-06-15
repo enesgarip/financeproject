@@ -1,6 +1,7 @@
 import { SimpleModal } from '../components/SimpleModal'
 import type { Card } from '../types/database'
 import { formatCurrency, parseNumber } from '../utils/formatCurrency'
+import { diffTL, sumTL } from '../utils/money'
 
 export function MovementModal({
   card,
@@ -91,9 +92,9 @@ export function MovementModal({
             {target ? (
               <div className="grid grid-cols-2 gap-2 rounded-xl bg-muted/45 px-3 py-2 text-xs text-muted-foreground">
                 <span>
-                  Kaynak sonrası: {formatCurrency((card?.current_balance ?? 0) - amountValue)}
+                  Kaynak sonrası: {formatCurrency(diffTL(card?.current_balance, amountValue))}
                 </span>
-                <span>Hedef sonrası: {formatCurrency(target.current_balance + amountValue)}</span>
+                <span>Hedef sonrası: {formatCurrency(sumTL([target.current_balance, amountValue]))}</span>
               </div>
             ) : null}
           </>

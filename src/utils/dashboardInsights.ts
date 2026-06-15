@@ -166,7 +166,7 @@ export function buildFocusActions(
     if (rows.length === 0) return false
 
     const pending = rows.filter((item) => item.status !== 'ödendi')
-    const remainingAmount = pending.reduce((total, item) => total + item.amount, 0)
+    const remainingAmount = sum(pending, (item) => item.amount)
     const expectedStatus = pending.length === 0 ? 'closed' : 'active'
 
     return moneyDiffers(loan.remaining_amount, remainingAmount) || loan.remaining_installments !== pending.length || loan.status !== expectedStatus

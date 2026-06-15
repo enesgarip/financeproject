@@ -6,6 +6,7 @@ import { HelpTooltip, type HelpTooltipContent } from '../ui/help-tooltip'
 import type { Card as FinanceCard, CardStatementArchive } from '../../types/database'
 import { formatCurrency } from '../../utils/formatCurrency'
 import { formatDate } from '../../utils/date'
+import { diffTL } from '../../utils/money'
 
 type ReconciliationPanelProps = {
   cards: FinanceCard[]
@@ -39,7 +40,7 @@ function buildItems(cards: FinanceCard[], statements: CardStatementArchive[]): R
     const cardLabel = card ? `${card.bank_name} · ${card.card_name}` : 'Kart'
 
     if (statement.reconciled_at && statement.reconciled_bank_amount != null) {
-      const delta = statement.reconciled_bank_amount - statement.statement_debt_amount
+      const delta = diffTL(statement.reconciled_bank_amount, statement.statement_debt_amount)
       if (Math.abs(delta) > DELTA_THRESHOLD) {
         items.push({ statementId: statement.id, cardLabel, statementDate: statement.statement_date, kind: 'delta', delta })
       }

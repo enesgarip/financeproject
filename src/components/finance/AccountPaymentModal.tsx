@@ -1,6 +1,7 @@
 import { useMemo, useState, type ReactNode } from 'react'
 import type { Card } from '../../types/database'
 import { formatCurrency, parseNumber } from '../../utils/formatCurrency'
+import { diffTL } from '../../utils/money'
 import { SimpleModal } from '../SimpleModal'
 import { Alert } from '../ui/alert'
 import { Button } from '../ui/button'
@@ -43,7 +44,7 @@ function accountCanCover(account: Card, effectAmount: number) {
     return account.current_balance >= effectAmount ? null : 'Kaynak hesap bakiyesi yetersiz.'
   }
 
-  const availableLimit = account.credit_limit > 0 ? account.credit_limit - account.debt_amount : null
+  const availableLimit = account.credit_limit > 0 ? diffTL(account.credit_limit, account.debt_amount) : null
   if (availableLimit !== null && availableLimit < effectAmount) return 'Kredi kartı limiti yetersiz.'
   return null
 }

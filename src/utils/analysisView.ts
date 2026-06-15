@@ -22,7 +22,7 @@ import {
   type FinanceObligationsInput,
 } from './obligations'
 import type { FinanceSummaryInput } from './financeSummary'
-import { sumTL } from './money'
+import { diffTL, sumTL } from './money'
 
 /**
  * Analiz sayfasının saf türetme çekirdeği (view-model'ler): arama/CSV listesi,
@@ -246,9 +246,9 @@ export function buildCategoryInsights(data: AnalysisData): CategoryInsight[] {
     const expenseMonth = monthKeyFor(expense.spent_at)
 
     if (expenseMonth === currentMonth) {
-      currentTotals.set(category, (currentTotals.get(category) ?? 0) + expense.amount)
+      currentTotals.set(category, sumTL([currentTotals.get(category), expense.amount]))
     } else if (previousMonths.includes(expenseMonth)) {
-      previousTotals.set(category, (previousTotals.get(category) ?? 0) + expense.amount)
+      previousTotals.set(category, sumTL([previousTotals.get(category), expense.amount]))
     }
   }
 
@@ -272,7 +272,7 @@ export function buildCategoryInsights(data: AnalysisData): CategoryInsight[] {
       return {
         category,
         title: `Limitin %${Math.round(limitRate * 100)} doldu`,
-        description: `${formatCurrency(Math.max(0, budget.limit_amount - amount))} alan kaldı.`,
+        description: `${formatCurrency(Math.max(0, diffTL(budget.limit_amount, amount)))} alan kaldı.`,
         tone: 'amber' as const,
         priority: 2,
         amount,
@@ -294,7 +294,7 @@ export function buildCategoryInsights(data: AnalysisData): CategoryInsight[] {
       return {
         category,
         title: 'Ortalamanın altında',
-        description: `Bu ay tempo ${formatCurrency(average - amount)} daha düşük görünüyor.`,
+        description: `Bu ay tempo ${formatCurrency(diffTL(average, amount))} daha düşük görünüyor.`,
         tone: 'emerald' as const,
         priority: 6,
         amount,

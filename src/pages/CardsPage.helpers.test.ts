@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { Card } from '../types/database'
+import type { Card, CardStatementArchive } from '../types/database'
 import {
   addMonthsToMonth,
   formatMonthLabel,
@@ -8,7 +8,9 @@ import {
   monthDateValue,
   monthInputValue,
   moneyShare,
+  openStatementAmount,
   parseInstallmentNumber,
+  visibleOpenStatementAmount,
 } from './CardsPage.helpers'
 
 function creditCard(overrides: Partial<Card> = {}): Card {
@@ -33,6 +35,31 @@ function creditCard(overrides: Partial<Card> = {}): Card {
     updated_at: '2026-01-01',
     ...overrides,
   } as Card
+}
+
+function statement(overrides: Partial<CardStatementArchive> = {}): CardStatementArchive {
+  return {
+    id: 's1',
+    user_id: 'u1',
+    card_id: 'c1',
+    period_year: 2026,
+    period_month: 6,
+    statement_date: '2026-06-01',
+    due_date: '2026-06-10',
+    statement_debt_amount: 0,
+    current_period_spending: 0,
+    total_debt_amount: 0,
+    status: 'open',
+    paid_at: null,
+    payment_source_card_id: null,
+    reconciled_bank_amount: null,
+    reconciled_at: null,
+    reconciliation_note: null,
+    note: null,
+    created_at: '2026-06-01',
+    updated_at: '2026-06-01',
+    ...overrides,
+  }
 }
 
 describe('getCreditCardStatus', () => {
@@ -92,6 +119,27 @@ describe('moneyShare', () => {
 
   it('treats zero pieces as a single share', () => {
     expect(moneyShare(120, 0)).toBe(120)
+  })
+})
+
+describe('open statement amount helpers', () => {
+  it('sums open statement archives for the card at kuruş precision', () => {
+    const card = creditCard({ id: 'c1', statement_debt_amount: 500 })
+    const statements = [
+      statement({ id: 's1', card_id: 'c1', statement_debt_amount: 100.1 }),
+      statement({ id: 's2', card_id: 'c1', statement_debt_amount: 200.2 }),
+      statement({ id: 's3', card_id: 'c1', statement_debt_amount: 999, status: 'paid' }),
+      statement({ id: 's4', card_id: 'other', statement_debt_amount: 999 }),
+    ]
+
+    expect(openStatementAmount(card, statements)).toBe(300.3)
+    expect(visibleOpenStatementAmount(card, statements)).toBe(300.3)
+  })
+
+  it('falls back to the card statement debt when there is no open archive', () => {
+    const card = creditCard({ statement_debt_amount: 500 })
+
+    expect(visibleOpenStatementAmount(card, [])).toBe(500)
   })
 })
 

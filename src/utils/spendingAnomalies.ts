@@ -1,4 +1,5 @@
 import type { CardExpense } from '../types/database'
+import { sumTL } from './money'
 
 export type CategoryAnomaly = {
   category: string
@@ -56,7 +57,7 @@ export function detectCategoryAnomalies(
     const key = monthPrefix(expense.spent_at)
     if (!byCategory.has(expense.category)) byCategory.set(expense.category, new Map())
     const monthMap = byCategory.get(expense.category)!
-    monthMap.set(key, (monthMap.get(key) ?? 0) + expense.amount)
+    monthMap.set(key, sumTL([monthMap.get(key), expense.amount]))
   }
 
   const anomalies: CategoryAnomaly[] = []
@@ -73,7 +74,7 @@ export function detectCategoryAnomalies(
     }
     if (prevTotals.length === 0) continue
 
-    const threeMonthAvg = prevTotals.reduce((a, b) => a + b, 0) / prevTotals.length
+    const threeMonthAvg = sumTL(prevTotals) / prevTotals.length
     if (threeMonthAvg === 0) continue
 
     const ratio = currentMonth / threeMonthAvg

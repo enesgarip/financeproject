@@ -3,7 +3,8 @@ import type { FormField } from '../components/CrudPage'
 import type { Card, CardInstallment, CardStatementArchive } from '../types/database'
 import { buildCreditLimitGroups, cardPayableDebt, creditLimitGroupKey } from '../utils/financeSummary'
 import { daysUntil, nextMonthlyDate } from '../utils/date'
-import { roundTL } from '../utils/money'
+import { roundTL, sumTL } from '../utils/money'
+import { normalizeSearchText } from '../utils/searchText'
 import { canCutCurrentStatement } from '../utils/statementCycle'
 
 export const fields: FormField[] = [
@@ -105,7 +106,7 @@ export function cardGroupLabel(row: Card) {
 }
 
 function normalizeBankName(bankName: string) {
-  return bankName.trim().toLocaleLowerCase('tr-TR')
+  return normalizeSearchText(bankName)
 }
 
 function bankHue(bankName: string, rows: Card[]) {
@@ -222,9 +223,16 @@ export function activeInstallmentCount(card: Card, installments: CardInstallment
 }
 
 export function openStatementAmount(card: Card, statements: CardStatementArchive[]) {
-  return statements
-    .filter((statement) => statement.card_id === card.id && statement.status === 'open')
-    .reduce((total, statement) => total + statement.statement_debt_amount, 0)
+  return sumTL(
+    statements
+      .filter((statement) => statement.card_id === card.id && statement.status === 'open')
+      .map((statement) => statement.statement_debt_amount),
+  )
+}
+
+export function visibleOpenStatementAmount(card: Card, statements: CardStatementArchive[]) {
+  const openAmount = openStatementAmount(card, statements)
+  return openAmount > 0 ? openAmount : card.statement_debt_amount
 }
 
 export function cardOptionLabel(card: Card) {
