@@ -1,6 +1,6 @@
 import { supabase } from '../lib/supabase'
 import type { Card } from '../types/database'
-import { isMissingSupabaseCapabilityError, type SupabaseLikeError } from '../utils/supabaseErrors'
+import { isMissingSupabaseCapabilityError, missingSupabaseCapabilityMessage, type SupabaseLikeError } from '../utils/supabaseErrors'
 
 export type AccountMovementType = 'in' | 'out' | 'transfer'
 
@@ -34,7 +34,7 @@ export async function submitAccountMovement({
 
     return {
       error: error && isMissingSupabaseCapabilityError(error)
-        ? { message: 'Transfer altyapısı canlı veritabanına uygulanmamış. Migration çalışınca bu işlem açılacak.', code: error.code }
+        ? { message: missingSupabaseCapabilityMessage('Transfer altyapısı', error), code: error.code }
         : error,
     }
   }
@@ -54,7 +54,7 @@ export async function submitAccountMovement({
 
   return {
     error: error && isMissingSupabaseCapabilityError(error)
-      ? { message: 'Para giriş/çıkış altyapısı canlı veritabanına uygulanmamış. Migration çalışınca bu işlem açılacak.', code: error.code }
+      ? { message: missingSupabaseCapabilityMessage('Para giriş/çıkış altyapısı', error), code: error.code }
       : error,
   }
 }

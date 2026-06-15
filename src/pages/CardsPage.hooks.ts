@@ -10,7 +10,7 @@ import {
 import { submitAccountMovement } from '../services/accountMovements'
 import type { Card, CardExpense, CardInstallment, CardStatementArchive } from '../types/database'
 import { parseNumber } from '../utils/formatCurrency'
-import { isMissingSupabaseCapabilityError } from '../utils/supabaseErrors'
+import { isMissingSupabaseCapabilityError, missingSupabaseCapabilityMessage } from '../utils/supabaseErrors'
 import type { CardSection } from './CardsPage.sections'
 
 type ReloadCards = (() => Promise<void>) | null
@@ -74,7 +74,7 @@ export function useCardsPageData() {
       setProvisions([])
       setProvisionError(
         isMissingSupabaseCapabilityError(result.error)
-          ? 'Provizyon altyapısı henüz canlı veritabanında yok. Migration uygulanınca bu liste açılacak.'
+          ? missingSupabaseCapabilityMessage('Provizyon altyapısı', result.error)
           : result.error.message ?? 'Provizyonlar yüklenemedi.',
       )
     } else {
@@ -92,7 +92,7 @@ export function useCardsPageData() {
       setStatements([])
       setStatementError(
         isMissingSupabaseCapabilityError(result.error)
-          ? 'Ekstre odeme altyapisi henuz canli veritabaninda yok. Migration uygulaninca bu panel acilacak.'
+          ? missingSupabaseCapabilityMessage('Ekstre arşivi altyapısı', result.error)
           : result.error.message ?? 'Ekstreler yüklenemedi.',
       )
     } else {
@@ -145,7 +145,7 @@ export function useCardsPageData() {
 
     if (!result.ok) {
       const message = isMissingSupabaseCapabilityError(result.error)
-        ? 'Provizyon altyapısı canlı veritabanına uygulanmamış. Migration çalışınca bu işlem açılacak.'
+        ? missingSupabaseCapabilityMessage('Provizyon altyapısı', result.error)
         : result.error.message ?? 'Provizyon işlemi tamamlanamadı.'
       setError(message)
       setProvisionActionId(null)
@@ -169,7 +169,7 @@ export function useCardsPageData() {
       if (!result.ok) {
         setError(
           isMissingSupabaseCapabilityError(result.error)
-            ? 'Provizyon altyapısı canlı veritabanına uygulanmamış. Migration çalışınca bu işlem açılacak.'
+            ? missingSupabaseCapabilityMessage('Provizyon altyapısı', result.error)
             : result.error.message ?? 'Provizyon işlemi tamamlanamadı.',
         )
         await refreshCardsAndProvisions(reload)

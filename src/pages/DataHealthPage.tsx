@@ -27,7 +27,7 @@ import {
   type UndoBatch,
   type UndoEntry,
 } from './DataHealth.logic'
-import { isMissingSupabaseCapabilityError } from '../utils/supabaseErrors'
+import { isMissingSupabaseCapabilityError, missingSupabaseCapabilityMessage } from '../utils/supabaseErrors'
 import { fixIssue } from './DataHealthPage.actions'
 import {
   FixAllModal,
@@ -176,7 +176,7 @@ export function DataHealthPage() {
     if (!resetError.ok) {
       setError(
         isMissingSupabaseCapabilityError(resetError.error)
-          ? 'Sıfırlama altyapısı canlı veritabanına uygulanmamış. Migration çalışınca bu işlem açılacak.'
+          ? missingSupabaseCapabilityMessage('Sıfırlama altyapısı', resetError.error)
           : resetError.error.message ?? 'Tüm veri silinemedi.',
       )
       setResetting(false)

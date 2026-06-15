@@ -40,6 +40,10 @@ If the change affects money movement, also update:
 - Update repository/service wrappers before page code consumes the new contract.
 - Decide whether a schema-cache/RPC fallback is still needed. If yes, keep the
   fallback narrow and add a note for removing it after production catches up.
+- For user-visible missing schema/RPC states, use
+  `missingSupabaseCapabilityMessage` from `src/utils/supabaseErrors.ts` so the
+  UI clearly says this is a migration/RPC deployment mismatch and includes the
+  Supabase code when available.
 - Make sure production order is safe: the deploy workflow applies migrations and
   edge functions before triggering the Vercel deploy hook.
 - If preview deployments can run against an older database, avoid hard failures

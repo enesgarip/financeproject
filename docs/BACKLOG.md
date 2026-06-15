@@ -22,7 +22,8 @@
 ## P1 - Product / Reliability
 
 - Reduce fallback logic that depends on missing Supabase schema cache or missing RPC deployment.
-- Improve visibility of migration/version mismatches between frontend expectations and live database state.
+- ~~Improve visibility of migration/version mismatches between frontend expectations and live database state.~~ DONE.
+  - Missing schema/RPC errors now share `missingSupabaseCapabilityMessage`, which calls out migration/RPC deployment drift and includes Supabase codes when available.
 - ~~Document and standardize transaction history side effects for all finance mutations.~~ DONE.
   - `docs/TRANSACTION_HISTORY.md` now defines activity-feed role, type/source conventions, current RPC side effects, and no-history repair rules.
 - Review whether recurring payments, loan installments, and card installments can be unified under a clearer planning model.
@@ -69,6 +70,7 @@
 - Transaction-history side effects are now standardized in `docs/TRANSACTION_HISTORY.md` and linked from the RPC/action reference.
 - Migration compatibility checklist now reflects the Lighthouse CI budget added to the release workflow.
 - Missing Supabase schema/RPC detection now centralizes on `utils/supabaseErrors.ts`; page-local schema-cache wrapper aliases were removed.
+- Missing schema/RPC user messages now use a shared deployment-mismatch helper with Supabase code visibility.
 - `roundMoney` alias was removed; money rounding/comparison helpers now live in `utils/money.ts`.
 - Card debt split classification now shares `financeSummary.ts` helpers for Dashboard focus actions and Data Health issues.
 - `CardsPage.sections.tsx` is now a thin nav/automation module; overview, statement/provision panels, and help copy live in focused `CardsPage.*` files.

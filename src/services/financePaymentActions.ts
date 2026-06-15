@@ -1,10 +1,18 @@
 import { supabase } from '../lib/supabase'
 import type { Card } from '../types/database'
 import type { FinanceObligation } from '../utils/obligations'
-import { isMissingSupabaseCapabilityError, type SupabaseLikeError } from '../utils/supabaseErrors'
+import { isMissingSupabaseCapabilityError, missingSupabaseCapabilityMessage, type SupabaseLikeError } from '../utils/supabaseErrors'
 
 export type FinancePaymentResult = {
   error: SupabaseLikeError | null
+}
+
+function missingCapabilityFeatureForObligation(obligation: FinanceObligation) {
+  if (obligation.action === 'pay_card_statement') return 'Ekstre ödeme altyapısı'
+  if (obligation.action === 'pay_card_debt') return 'Kart borcu ödeme altyapısı'
+  if (obligation.action === 'pay_loan_installment') return 'Kredi taksiti ödeme altyapısı'
+  if (obligation.action === 'settle_debt' || obligation.action === 'collect_debt') return 'Borç/alacak kapatma altyapısı'
+  return 'Ödeme altyapısı'
 }
 
 export function sortPaymentAccounts(cards: Card[]) {
@@ -133,6 +141,15 @@ export async function submitFinanceObligationPayment({
       p_account_card_id: account.id,
     })
     submitError = error
+  }
+
+  if (submitError && isMissingSupabaseCapabilityError(submitError)) {
+    return {
+      error: {
+        ...submitError,
+        message: missingSupabaseCapabilityMessage(missingCapabilityFeatureForObligation(obligation), submitError),
+      },
+    }
   }
 
   return { error: submitError }

@@ -15,7 +15,7 @@ import type { Card, CardExpense, CardInstallment } from '../../types/database'
 import { expenseCategoryOptions } from '../../utils/categories'
 import { formatDate } from '../../utils/date'
 import { formatCurrency, parseNumber } from '../../utils/formatCurrency'
-import { isMissingSupabaseCapabilityError } from '../../utils/supabaseErrors'
+import { isMissingSupabaseCapabilityError, missingSupabaseCapabilityMessage } from '../../utils/supabaseErrors'
 
 function historicalPaidInstallmentCount(expense: CardExpense) {
   const match = expense.note?.match(/^([0-9]+)\/([0-9]+) taksiti uygulama/i)
@@ -185,7 +185,7 @@ export function CardInstallmentExpensesPanel({ cards, reload, setError }: CardIn
 
     if (!result.ok) {
       const message = isMissingSupabaseCapabilityError(result.error)
-        ? 'Harcama duzenleme henuz veritabaninda yok. Migration uygulaninca bu islem acilacak.'
+        ? missingSupabaseCapabilityMessage('Harcama düzenleme altyapısı', result.error)
         : result.error.message ?? 'Taksitli harcama güncellenemedi.'
       setLocalError(message)
       return

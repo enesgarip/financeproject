@@ -6,7 +6,7 @@ import { CardInstallmentCalendarPanel } from '../components/finance/CardInstallm
 import { CardInstallmentExpensesPanel } from '../components/finance/CardInstallmentExpensesPanel'
 import type { Card, CardStatementArchive } from '../types/database'
 import { formatDate } from '../utils/date'
-import { isMissingSupabaseCapabilityError } from '../utils/supabaseErrors'
+import { isMissingSupabaseCapabilityError, missingSupabaseCapabilityMessage } from '../utils/supabaseErrors'
 import { useFinancePaymentDrawer } from '../hooks/useFinancePaymentDrawer'
 import {
   AccountHubPanel,
@@ -109,7 +109,7 @@ export function CardsPage() {
         ),
         formatSubmitError: (error) =>
           isMissingSupabaseCapabilityError(error)
-            ? 'Ekstre odeme altyapisi canli veritabanina uygulanmamis. Migration calisinca bu islem acilacak.'
+            ? missingSupabaseCapabilityMessage('Ekstre ödeme altyapısı', error)
             : error.message ?? 'Ekstre ödenemedi.',
         onSubmitEnd: () => setStatementActionId(null),
         onSubmitStart: () => setStatementActionId(statement.id),

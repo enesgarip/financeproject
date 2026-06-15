@@ -18,3 +18,8 @@ export function isMissingSupabaseCapabilityError(error: SupabaseLikeError | null
     message.includes('Could not find the function')
   )
 }
+
+export function missingSupabaseCapabilityMessage(featureLabel: string, error?: SupabaseLikeError | null) {
+  const code = error?.code ? ` Supabase kodu: ${error.code}.` : ''
+  return `${featureLabel} canlı veritabanında henüz görünmüyor. Beklenen migration/RPC deploy edilince bu işlem açılacak.${code}`
+}
