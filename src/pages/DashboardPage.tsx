@@ -29,6 +29,7 @@ import {
   CreditLimitSection,
   CurrentDebtTotalsPanel,
   DashboardHero,
+  DataHealthBadge,
   FocusActionPanel,
   GoalProgressCommand,
   HistorySection,
@@ -55,6 +56,7 @@ import {
   totalCreditLimit,
 } from '../utils/financeSummary'
 import { buildAttentionLine } from '../utils/attention'
+import { buildHealthCounts } from '../utils/dataHealthSummary'
 import { buildSmartInsights, buildFocusActions, reconciliationDriftCount } from '../utils/dashboardInsights'
 import { buildDashboardMonthlyLoad, buildDashboardUpcomingItems } from '../utils/dashboardUpcoming'
 import { formatCurrency } from '../utils/formatCurrency'
@@ -207,6 +209,7 @@ export function DashboardPage() {
     [data, summary.cashFlow, summary.creditUsageRate, upcomingItems],
   )
   const attentionLine = useMemo(() => buildAttentionLine(data, upcomingItems), [data, upcomingItems])
+  const healthCounts = useMemo(() => buildHealthCounts(data), [data])
 
   if (loading) {
     return <SkeletonDashboard />
@@ -250,6 +253,10 @@ export function DashboardPage() {
           </p>
         </motion.div>
       ) : null}
+
+      <motion.div variants={fadeUp} className="min-w-0 lg:col-span-12">
+        <DataHealthBadge errors={healthCounts.errors} warnings={healthCounts.warnings} total={healthCounts.total} />
+      </motion.div>
 
       <motion.div variants={fadeUp} className="min-w-0 lg:col-span-8">
         <DashboardHero

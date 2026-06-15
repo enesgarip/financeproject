@@ -10,6 +10,7 @@ import {
   Lightbulb,
   ListChecks,
   Search,
+  ShieldAlert,
   ShieldCheck,
   TrendingUp,
 } from 'lucide-react'
@@ -69,6 +70,40 @@ export type FocusAction = {
   tone: 'emerald' | 'amber' | 'rose' | 'indigo' | 'stone'
   icon: 'alert' | 'calendar' | 'card' | 'check' | 'health' | 'loan'
   priority: number
+}
+
+export function DataHealthBadge({ errors, warnings, total }: { errors: number; warnings: number; total: number }) {
+  if (total === 0) {
+    return (
+      <Link
+        to="/veri-sagligi"
+        className="flex items-center gap-2 rounded-xl bg-emerald-500/8 px-4 py-2.5 text-sm font-medium text-emerald-600 ring-1 ring-emerald-500/20 transition hover:bg-emerald-500/15 dark:text-emerald-400"
+      >
+        <ShieldCheck size={16} className="shrink-0" />
+        <span>Veri sağlığı temiz</span>
+      </Link>
+    )
+  }
+
+  const tone = errors > 0 ? 'destructive' : 'warning'
+  const parts: string[] = []
+  if (errors > 0) parts.push(`${errors} hata`)
+  if (warnings > 0) parts.push(`${warnings} uyarı`)
+
+  return (
+    <Link
+      to="/veri-sagligi"
+      className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium ring-1 transition hover:opacity-90 ${
+        tone === 'destructive'
+          ? 'bg-destructive/8 text-destructive ring-destructive/20'
+          : 'bg-warning/8 text-warning ring-warning/20'
+      }`}
+    >
+      <ShieldAlert size={16} className="shrink-0" />
+      <span>Veri sağlığı: {parts.join(' · ')}</span>
+      <span className="ml-auto text-xs opacity-70">Kontrol et →</span>
+    </Link>
+  )
 }
 
 export function DashboardHero({

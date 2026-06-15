@@ -212,7 +212,7 @@ paylaşır; her sayfa süpersetini client-side daraltır). Query client: `src/ap
 | **Maaş geçmişi** | `utils/lastUsed.ts` | `data/repositories/crudRepo.ts` | `pages/SalaryPage.tsx` |
 | **Birikim hedefleri** | `utils/savingsGoal.ts` | `data/repositories/savingsGoalsRepo.ts` | (Assets/Dashboard) |
 | **Bütçe uyarıları** | `utils/budgetAlerts.ts` | `data/repositories/crudRepo.ts` | `pages/CardsPage.tsx` |
-| **Dashboard özet/insight** | `utils/dashboardInsights.ts`, `utils/cashFlowForecast.ts`, `utils/dashboardUpcoming.ts`, `utils/obligations.ts`, `utils/netWorthSeries.ts` | `data/repositories/financeSnapshotRepo.ts` | `pages/DashboardPage.tsx` |
+| **Dashboard özet/insight** | `utils/dashboardInsights.ts`, `utils/cashFlowForecast.ts`, `utils/dashboardUpcoming.ts`, `utils/obligations.ts`, `utils/netWorthSeries.ts`, `utils/dataHealthSummary.ts` | `data/repositories/financeSnapshotRepo.ts` | `pages/DashboardPage.tsx` |
 | **Analiz / raporlar** | `utils/analysisView.ts`, `utils/spendingAnomalies.ts`, `utils/priceIncreaseRadar.ts` | `data/repositories/analysisRepo.ts` | `pages/AnalysisPage.tsx` |
 | **Finansal rapor (PDF/AI paylaşım)** | `utils/financialReport.ts` | — | `pages/AnalysisPage.tsx` |
 | **Forecast / senaryo / FIRE / enflasyon** | `utils/cashFlowForecast.ts`, `utils/scenarioForecast.ts`, `utils/fire.ts`, `utils/inflationShield.ts` | `financeSnapshotRepo.ts` | `pages/DashboardPage.tsx`, `AnalysisPage.tsx` |

@@ -47,6 +47,10 @@
 - ~~Audit Turkish copy and encoding consistency across UI strings and docs.~~ DONE.
   - 2026-06-15 guard run passed and a manual mojibake signature scan found no hits across 305 source/doc/migration files.
 
+- ~~Add data health trust badge to dashboard.~~ DONE.
+  - `utils/dataHealthSummary.ts` runs lightweight card-debt-split + loan-totals + limit checks from snapshot data.
+  - `DataHealthBadge` component: green "temiz" or amber/red issue count with link to `/veri-sagligi`.
+
 ## P3 - Nice to Have
 
 - Add guided import/restore flow for personal finance data.
