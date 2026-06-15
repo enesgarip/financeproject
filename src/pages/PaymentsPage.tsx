@@ -205,6 +205,11 @@ function PaymentsOverview({ rows }: { rows: Payment[] }) {
     return remaining !== null && remaining < 0
   }).length
   const nextPayment = [...pending].sort((a, b) => a.due_date.localeCompare(b.due_date))[0]
+  const statusLabel = overdueCount > 0
+    ? `${overdueCount} geciken`
+    : pending.length > 0
+      ? `${pending.length} bekleyen`
+      : 'Takvim temiz'
 
   return (
     <Card variant="elevated" className="overflow-hidden">
@@ -218,17 +223,15 @@ function PaymentsOverview({ rows }: { rows: Payment[] }) {
               {pending.length} bekleyen · {recurringCount} aylık tekrar
             </p>
           </div>
-          <Badge variant={overdueCount > 0 ? 'destructive' : 'success'}>
-            {overdueCount > 0 ? `${overdueCount} geciken` : `${paidCount}/${rows.length} ödendi`}
-          </Badge>
+          <Badge variant={overdueCount > 0 ? 'destructive' : pending.length > 0 ? 'warning' : 'success'}>{statusLabel}</Badge>
         </div>
-        <div className="mt-4">
+        {paidCount > 0 ? <div className="mt-4">
           <div className="mb-1.5 flex justify-between text-xs">
-            <span className="text-muted-foreground">Tamamlanma</span>
+            <span className="text-muted-foreground">Ödenen kayıtlar</span>
             <span className="font-mono font-semibold tabular-nums text-foreground">%{Math.round(paidRate)}</span>
           </div>
           <Progress value={paidRate} color="success" size="default" />
-        </div>
+        </div> : null}
         {nextPayment ? (
           <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-border/60 bg-muted/30 px-3 py-2.5 text-sm">
             <div className="min-w-0">
