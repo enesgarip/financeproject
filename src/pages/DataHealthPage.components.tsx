@@ -4,13 +4,13 @@ import { SimpleModal } from '../components/SimpleModal'
 import { Badge } from '../components/ui/badge'
 import { Card as SurfaceCard, CardContent } from '../components/ui/card'
 import { BACKUP_TABLE_LABELS, type ParsedBackup } from '../utils/backup'
+import type { HealthIssue } from './DataHealth.logic'
 import {
   buildIssueGuide,
   issuePreviewDetails,
   navigationAction,
   severityClass,
-  type HealthIssue,
-} from './DataHealth.logic'
+} from './DataHealth.guide'
 
 export function HealthStat({ label, value, tone = 'neutral' }: { label: string; value: number; tone?: 'neutral' | 'danger' | 'warning' | 'info' }) {
   const toneClass =

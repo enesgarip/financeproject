@@ -72,7 +72,7 @@ ESLint blocks `src/{pages,components,utils,hooks}` from importing
 | `/varliklar` assets | `src/pages/AssetsPage.tsx`, `src/pages/AssetsHub.tsx` | `src/data/repositories/valuationRepo.ts`, `src/utils/valuation*`, `src/utils/marketRates.ts` |
 | `/varliklar/maas` salary | `src/pages/SalaryPage.tsx` | `src/utils/financeSummary.ts` salary helpers |
 | `/analiz` reports | `src/pages/AnalysisPage.tsx`, `src/pages/AnalysisPage.panels.tsx`, `src/pages/AnalysisPage.atoms.tsx`, `src/pages/AnalysisPage.reports.tsx`, `src/pages/AnalysisPage.trends.tsx`, `src/pages/AnalysisPage.wealth.tsx` | `src/app/useFinanceSnapshot.ts`, `src/data/repositories/analysisRepo.ts`, `src/utils/analysisView.ts`, charts |
-| `/veri-sagligi` data health | `docs/DATA_HEALTH_ARCHITECTURE.md`, `src/pages/DataHealthPage.tsx`, `src/pages/DataHealthPage.actions.ts`, `src/pages/DataHealth.logic.ts` | `src/data/repositories/dataHealthRepo.ts`, ledger utilities, finance invariants |
+| `/veri-sagligi` data health | `docs/DATA_HEALTH_ARCHITECTURE.md`, `src/pages/DataHealthPage.tsx`, `src/pages/DataHealthPage.actions.ts`, `src/pages/DataHealth.logic.ts`, `src/pages/DataHealth.guide.ts`, `src/pages/DataHealth.actions.ts` | `src/data/repositories/dataHealthRepo.ts`, ledger utilities, finance invariants |
 | `/login` auth | `src/pages/LoginPage.tsx`, `src/auth/*` | `src/lib/supabase.ts` |
 
 ## Source-Of-Truth Matrix

@@ -10,14 +10,13 @@ import { recomputeCardDebt } from '../services/cardLedgerActions'
 import { roundTL } from '../utils/money'
 import {
   addMonthsToMonthStart,
-  captureUndoRows,
   currentMonthStart,
-  makeUndoBatch,
   type HealthIssue,
   type UndoBatch,
   type UndoEntry,
   type UndoTable,
 } from './DataHealth.logic'
+import { captureUndoRows, makeUndoBatch } from './DataHealth.actions'
 
 export async function fixIssue(issue: HealthIssue): Promise<UndoBatch | null> {
   const payload = issue.payload

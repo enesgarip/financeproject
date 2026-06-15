@@ -17,16 +17,18 @@ import {
   resetUserFinanceData,
 } from '../data/repositories/dataHealthRepo'
 import {
-  applyUndoEntry,
   buildIssues,
-  downloadDataCsv,
-  emptyData,
-  makeUndoBatch,
   type HealthData,
   type HealthIssue,
   type UndoBatch,
   type UndoEntry,
 } from './DataHealth.logic'
+import {
+  applyUndoEntry,
+  downloadDataCsv,
+  emptyData,
+  makeUndoBatch,
+} from './DataHealth.actions'
 import { isMissingSupabaseCapabilityError, missingSupabaseCapabilityMessage } from '../utils/supabaseErrors'
 import { fixIssue } from './DataHealthPage.actions'
 import {

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { AccountLedger, Asset, Card, CardInstallment, CardLedger } from '../types/database'
-import { buildIssues, emptyData } from './DataHealth.logic'
+import { buildIssues } from './DataHealth.logic'
+import { emptyData } from './DataHealth.actions'
 
 const base = {
   id: 'asset-1',
