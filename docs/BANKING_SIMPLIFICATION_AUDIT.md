@@ -74,13 +74,22 @@
   - Before: "Tüm veriyi sil" warned that reset was irreversible, but the user had to remember to take a JSON backup first.
   - Now: the reset flow downloads a full `financeproject-sifirlama-oncesi` JSON backup before calling the destructive reset RPC; if backup fails, the reset does not start.
 
-## Remaining Simplification Candidates
+## Closeout Status
+
+No P0 banking-simplification candidate remains open as of 2026-06-15. The
+daily banking flows now share the account-backed payment drawer, bank-account
+movement helpers, normalized obligation read model, clearer account/card
+navigation, and safer data reset preflight backup.
+
+Future work below is maintenance guidance, not an active P0 backlog item.
+
+## Future Maintenance Notes
 
 - **Planning model unification**
   - Recurring payments, loan installments, card statement debt, and card installments all appear as upcoming obligations.
   - The pure `utils/obligations.ts` view now feeds dashboard upcoming items, analysis calendar events, payment drawer intents, cash-flow forecast buckets, and dashboard monthly-load totals.
   - Reviewed in `docs/PLANNING_MODEL_REVIEW.md`: keep separate write tables and use `FinanceObligation` as the shared read-side projection.
-  - Remaining cleanup is mostly dead-code and naming polish rather than a separate planning model.
+  - Any future cleanup should be limited to dead-code and naming polish rather than a separate planning model.
 
 - **Data-health maintenance UX polish**
   - Turkish copy and encoding are guarded, and the full-reset flow now has a preflight backup.

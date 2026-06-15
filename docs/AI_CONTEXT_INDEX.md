@@ -41,7 +41,7 @@ frontend -> RPC, or RPC -> migration.
 | Transaction history side effects | `docs/TRANSACTION_HISTORY.md` | `docs/RPC_ACTION_REFERENCE.md`, latest finance RPC migrations, dashboard/analysis history consumers | Type/source/amount conventions for user-facing activity feed rows |
 | Shared payment drawer | `docs/SHARED_PAYMENT_DRAWER_PLAN.md` | `src/hooks/useFinancePaymentDrawer.ts`, `src/components/finance/FinancePaymentDrawer.tsx`, `src/components/finance/AccountPaymentModal.tsx`, `src/services/financePaymentActions.ts`, payment-owning pages | Plan and shared implementation for account-backed payment modals without changing RPC behavior |
 | Release/migration compatibility | `docs/MIGRATION_COMPATIBILITY_CHECKLIST.md` | `.github/workflows/ci.yml`, `.github/workflows/deploy.yml`, `supabase/migrations/*` | Use for schema, RLS, RPC, edge function, or generated type changes |
-| Banking simplification | `docs/BANKING_SIMPLIFICATION_AUDIT.md` | `src/pages/CardsPage*.tsx`, `src/components/finance/*`, `docs/CARDS_ARCHITECTURE.md` | Tracks completed banking simplifications and remaining polish candidates |
+| Banking simplification | `docs/BANKING_SIMPLIFICATION_AUDIT.md` | `src/pages/CardsPage*.tsx`, `src/components/finance/*`, `docs/CARDS_ARCHITECTURE.md` | Tracks completed banking simplifications and future maintenance notes |
 | Pipeline/deploy | `docs/PIPELINE.md` | GitHub workflow files and package scripts | CI, deploy, secrets, branch flow |
 
 ## Architecture Map
@@ -150,7 +150,9 @@ Read:
 2. `docs/DATA_HEALTH_ARCHITECTURE.md`
 3. `src/pages/DataHealth.logic.test.ts`
 4. `docs/KNOWN_RISKS.md`
-5. Relevant invariant helper in `src/utils/*`
+5. `src/pages/DataHealth.guide.ts` for issue copy/presentation
+6. `src/pages/DataHealth.actions.ts` for undo/export helpers
+7. Relevant invariant helper in `src/utils/*`
 
 Treat data-health fixes as operational writes against real user data. Prefer a
 shared helper/DB invariant over a page-only corrective formula.
@@ -180,13 +182,19 @@ Choose the smallest ladder that matches the risk:
 | Migration/RPC/RLS change | Previous row plus `npm run db:reset:local`, `npm run db:lint:local`, `npm run db:audit:rls:local` when local Supabase is available |
 | Release-critical change | `npm run ci:local` and CI green |
 
-## Open Cost-Saving Work
+## Cost-Saving Status
 
-- Add short architecture notes for `DashboardPage`, `CardsPage`, and
-  `DataHealthPage` before large refactors.
-- Keep dashboard calculation ownership aligned with `docs/DASHBOARD_ARCHITECTURE.md`.
-- Keep docs current when behavior changes; stale docs increase AI cost more
-  than no docs.
+The original cost-saving work is complete as of 2026-06-15:
+
+- architecture notes exist for `DashboardPage`, `CardsPage`, and
+  `DataHealthPage`
+- dashboard calculation ownership is documented in
+  `docs/DASHBOARD_ARCHITECTURE.md`
+- route/component maps include the current Dashboard and DataHealth splits
+
+Going forward, keep docs current in the same change that moves behavior,
+modules, routes, repositories, or RPC contracts. Stale docs increase AI cost
+more than no docs.
 
 ## Konu → Dosya (hızlı Türkçe tablo)
 

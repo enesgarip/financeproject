@@ -12,16 +12,18 @@
 - ~~Extract shared account movement helpers for account-backed RPCs.~~ DONE.
   - Bank debit/credit row locking, ownership checks, type checks, balance validation, and balance updates now live in internal `private.debit_bank_account` / `private.credit_bank_account` helpers.
   - User-facing RPCs keep their existing contracts and transaction-history writes; helpers are not exposed as public RPCs.
-- Maintain the documented source of truth for card debt transitions in `docs/CARD_DEBT_TRANSITIONS.md`.
+- ~~Maintain the documented source of truth for card debt transitions in `docs/CARD_DEBT_TRANSITIONS.md`.~~ DONE.
   - expense added
   - provision posted
   - statement cut
   - debt paid
   - 2026-06-15 review added credit-card funded `pay_payment`, ledger repair/correction, reset flow, and shared debt-breakdown helpers.
-- Continue banking simplification from `docs/BANKING_SIMPLIFICATION_AUDIT.md`.
+  - 2026-06-15 follow-up verified the transition matrix against `docs/RPC_ACTION_REFERENCE.md`, current card repositories/services, and latest card migrations; future behavior changes should update the source-of-truth doc in the same change.
+- ~~Continue banking simplification from `docs/BANKING_SIMPLIFICATION_AUDIT.md`.~~ DONE.
   - ~~normalized upcoming obligations view~~ DONE for dashboard upcoming, analysis calendar, payment drawer intents, forecast buckets, and dashboard monthly load.
   - 2026-06-15 audit refresh moved the completed CardsPage module split out of remaining work and narrowed the open banking UX candidate to data-health maintenance polish.
   - 2026-06-15 data reset flow now takes an automatic JSON backup before calling the destructive reset RPC.
+  - 2026-06-15 audit closeout moved the last notes into future-maintenance guidance; no P0 banking simplification candidate remains open.
 
 ## P1 - Product / Reliability
 
@@ -40,7 +42,8 @@
 ## P2 - UX / Maintainability
 
 - ~~Add a concise developer-oriented architecture note for each major page.~~ DONE for DashboardPage, CardsPage, and DataHealthPage.
-- Keep `docs/AI_CONTEXT_INDEX.md` current so future AI sessions can route to the right files with less repo scanning.
+- ~~Keep `docs/AI_CONTEXT_INDEX.md` current so future AI sessions can route to the right files with less repo scanning.~~ DONE.
+  - 2026-06-15 context index reflects current route/module splits, DataHealth guide/action modules, dashboard component modules, backup utilities, data-health summary, and verification playbooks.
 - ~~Reduce repeated split-total helper logic.~~ DONE.
   - Card debt split, scheduled installment, and unclassified debt classification now share `financeSummary.ts` helpers across Dashboard and Data Health.
 - ~~Clarify where dashboard calculations belong versus page-local calculations.~~ DONE.
@@ -113,3 +116,4 @@
 - Data Health "Tüm veriyi sil" now downloads a reset-before JSON backup before the destructive reset call and tells the user this preflight will happen.
 - Data Health JSON backup restore already exists; the remaining P3 import work is narrowed to a guided CSV/manual mapping flow.
 - Dashboard presentation panels were split into focused modules without changing dashboard data ownership or utility boundaries.
+- P0/P2 closeout completed: card-debt source truth, banking audit, and AI context index are current as of 2026-06-15; future drift should be handled in the change that creates it.
