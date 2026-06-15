@@ -14,6 +14,10 @@
   - Before: account balances, card overview, quick spending, provisions, installment migration, installment calendar, and installment payments were stacked with similar visual weight.
   - Now: the page starts with an account center, then credit card overview, then daily actions. Legacy installment migration is pushed into a lower-frequency details section.
 
+- **Cards page module split**
+  - Before: `CardsPage.tsx` mixed route orchestration with account center, expense entry, statements, installment migration, CRUD metadata, and account movement presentation.
+  - Now: `CardsPage.tsx` is route composition; focused `CardsPage.*` modules own hooks, overview, expense entry, statements, list rows, installment migration, CRUD helpers, and movement modal presentation. See `docs/CARDS_ARCHITECTURE.md` for the current ownership map.
+
 - **Navigation language**
   - Before: the route was labeled as only cards.
   - Now: navigation uses "Hesaplar" / "Hesaplar ve kartlar" to match bank-account management.
@@ -74,10 +78,6 @@
   - Reviewed in `docs/PLANNING_MODEL_REVIEW.md`: keep separate write tables and use `FinanceObligation` as the shared read-side projection.
   - Remaining cleanup is mostly dead-code and naming polish rather than a separate planning model.
 
-- **Cards page module split**
-  - `CardsPage.tsx` still owns too much domain behavior.
-  - Next best split: account center, quick expense, provisions, card debt payment, and legacy installment migration into focused modules.
-
-- **Data-health copy cleanup**
-  - `DataHealthPage.tsx` still contains some older ASCII-only explanatory strings.
-  - It is now less prominent, but a focused wording pass would make the maintenance screen feel as polished as the daily banking surfaces.
+- **Data-health maintenance UX polish**
+  - Turkish copy and encoding are guarded, but future wording changes should stay concrete and action-oriented because this screen can modify real user data.
+  - Prefer small copy/flow improvements tied to a specific data-health issue instead of broad maintenance-screen rewrites.

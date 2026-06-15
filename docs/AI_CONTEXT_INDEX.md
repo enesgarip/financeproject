@@ -41,7 +41,7 @@ frontend -> RPC, or RPC -> migration.
 | Transaction history side effects | `docs/TRANSACTION_HISTORY.md` | `docs/RPC_ACTION_REFERENCE.md`, latest finance RPC migrations, dashboard/analysis history consumers | Type/source/amount conventions for user-facing activity feed rows |
 | Shared payment drawer | `docs/SHARED_PAYMENT_DRAWER_PLAN.md` | `src/hooks/useFinancePaymentDrawer.ts`, `src/components/finance/FinancePaymentDrawer.tsx`, `src/components/finance/AccountPaymentModal.tsx`, `src/services/financePaymentActions.ts`, payment-owning pages | Plan and shared implementation for account-backed payment modals without changing RPC behavior |
 | Release/migration compatibility | `docs/MIGRATION_COMPATIBILITY_CHECKLIST.md` | `.github/workflows/ci.yml`, `.github/workflows/deploy.yml`, `supabase/migrations/*` | Use for schema, RLS, RPC, edge function, or generated type changes |
-| Banking simplification | `docs/BANKING_SIMPLIFICATION_AUDIT.md` | `src/pages/CardsPage.tsx`, `src/pages/CardsPage.sections.tsx`, `src/pages/CardsPage.overview.tsx`, `src/pages/CardsPage.statements.tsx`, `src/components/finance/*` | Tracks what was simplified and what remains |
+| Banking simplification | `docs/BANKING_SIMPLIFICATION_AUDIT.md` | `src/pages/CardsPage*.tsx`, `src/components/finance/*`, `docs/CARDS_ARCHITECTURE.md` | Tracks completed banking simplifications and remaining polish candidates |
 | Pipeline/deploy | `docs/PIPELINE.md` | GitHub workflow files and package scripts | CI, deploy, secrets, branch flow |
 
 ## Architecture Map
