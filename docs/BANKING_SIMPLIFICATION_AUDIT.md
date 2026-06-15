@@ -70,6 +70,10 @@
   - Before: `cashFlowForecast` duplicated recurring payment, loan installment, card debt, card installment, and personal debt filters.
   - Now: forecast buckets are derived from `utils/obligations.ts`, so dashboard upcoming items, analysis calendar events, shared payment drawer intents, and forward cash projection agree on the same dated obligation rows.
 
+- **Data reset preflight backup**
+  - Before: "Tüm veriyi sil" warned that reset was irreversible, but the user had to remember to take a JSON backup first.
+  - Now: the reset flow downloads a full `financeproject-sifirlama-oncesi` JSON backup before calling the destructive reset RPC; if backup fails, the reset does not start.
+
 ## Remaining Simplification Candidates
 
 - **Planning model unification**
@@ -79,5 +83,5 @@
   - Remaining cleanup is mostly dead-code and naming polish rather than a separate planning model.
 
 - **Data-health maintenance UX polish**
-  - Turkish copy and encoding are guarded, but future wording changes should stay concrete and action-oriented because this screen can modify real user data.
-  - Prefer small copy/flow improvements tied to a specific data-health issue instead of broad maintenance-screen rewrites.
+  - Turkish copy and encoding are guarded, and the full-reset flow now has a preflight backup.
+  - Future wording changes should stay concrete and action-oriented because this screen can modify real user data.

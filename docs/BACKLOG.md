@@ -20,6 +20,7 @@
 - Continue banking simplification from `docs/BANKING_SIMPLIFICATION_AUDIT.md`.
   - ~~normalized upcoming obligations view~~ DONE for dashboard upcoming, analysis calendar, payment drawer intents, forecast buckets, and dashboard monthly load.
   - 2026-06-15 audit refresh moved the completed CardsPage module split out of remaining work and narrowed the open banking UX candidate to data-health maintenance polish.
+  - 2026-06-15 data reset flow now takes an automatic JSON backup before calling the destructive reset RPC.
 
 ## P1 - Product / Reliability
 
@@ -98,3 +99,4 @@
 - All four large page files split into focused modules: `CardsPage` (hooks/sections/crud), `LoansPage` (helpers/components), `AnalysisPage` (panels/atoms/reports/trends/wealth), `DataHealthPage` (logic/components/actions). No file exceeds ~450 lines.
 - `docs/BANKING_SIMPLIFICATION_AUDIT.md` now reflects the completed CardsPage module split and no longer lists it as remaining banking-simplification work.
 - `docs/RPC_ACTION_REFERENCE.md` now mirrors the refreshed card debt transition source of truth for planned card-funded payments, card resets, and ledger repair/correction.
+- Data Health "Tüm veriyi sil" now downloads a reset-before JSON backup before the destructive reset call and tells the user this preflight will happen.

@@ -205,6 +205,9 @@ export function ResetDataModal({
                 Varlıklar, kartlar, harcamalar, ekstre arşivi, krediler, borç/alacaklar, ödemeler, bütçeler, hedefler,
                 maaş geçmişi ve işlem geçmişi silinir.
               </p>
+              <p className="mt-2">
+                Silme başlamadan önce tam JSON yedek otomatik indirilir; yedek alınamazsa işlem durur.
+              </p>
             </div>
           </div>
         </div>

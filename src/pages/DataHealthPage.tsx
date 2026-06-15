@@ -172,24 +172,31 @@ export function DataHealthPage() {
     setError('')
     setMessage('')
 
-    const resetError = await resetUserFinanceData()
-    if (!resetError.ok) {
-      setError(
-        isMissingSupabaseCapabilityError(resetError.error)
-          ? missingSupabaseCapabilityMessage('Sıfırlama altyapısı', resetError.error)
-          : resetError.error.message ?? 'Tüm veri silinemedi.',
-      )
-      setResetting(false)
-      return
-    }
+    try {
+      const { payload, totalRows } = await buildBackupPayload()
+      downloadBackupFile(payload, 'financeproject-sifirlama-oncesi')
 
-    setUndoStack([])
-    setData(emptyData)
-    setResetConfirm('')
-    setResetOpen(false)
-    setResetting(false)
-    await loadData()
-    setMessage('Tüm finans verisi silindi. Sıfırdan veri girebilirsin.')
+      const resetError = await resetUserFinanceData()
+      if (!resetError.ok) {
+        setError(
+          isMissingSupabaseCapabilityError(resetError.error)
+            ? missingSupabaseCapabilityMessage('Sıfırlama altyapısı', resetError.error)
+            : resetError.error.message ?? 'Tüm veri silinemedi.',
+        )
+        return
+      }
+
+      setUndoStack([])
+      setData(emptyData)
+      setResetConfirm('')
+      setResetOpen(false)
+      await loadData()
+      setMessage(`Tüm finans verisi silindi. Sıfırlama öncesi JSON yedek indirildi (${totalRows} kayıt).`)
+    } catch (resetError) {
+      setError(resetError instanceof Error ? resetError.message : 'Sıfırlama öncesi yedek alınamadı. Veri silinmedi.')
+    } finally {
+      setResetting(false)
+    }
   }
 
   async function handleFullExport() {
