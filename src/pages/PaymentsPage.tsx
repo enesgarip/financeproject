@@ -17,9 +17,10 @@ import type {
   PaymentCategory,
   PaymentMethod,
 } from '../types/database'
-import { daysUntil, formatDate } from '../utils/date'
+import { addMonths, daysUntil, formatDate, startOfMonth } from '../utils/date'
 import { formatCurrency, parseNumber } from '../utils/formatCurrency'
-import { paymentCashOutflowAmount, paymentUsesCreditCard } from '../utils/financeSummary'
+import { paymentCashOutflowAmount, paymentOccurrenceInMonth, paymentUsesCreditCard } from '../utils/financeSummary'
+import { sumTL } from '../utils/money'
 import type { FinanceObligation, FinanceObligationsInput } from '../utils/obligations'
 import { useFinancePaymentDrawer } from '../hooks/useFinancePaymentDrawer'
 import { useCallback, useEffect, useMemo, useRef } from 'react'
@@ -193,22 +194,43 @@ function getPaymentAmountLabel(payment: Payment) {
 }
 
 function PaymentsOverview({ rows }: { rows: Payment[] }) {
-  const pending = rows.filter((row) => row.status === 'bekliyor')
   if (rows.length === 0) return null
 
-  const pendingTotal = pending.reduce((sum, row) => sum + row.amount, 0)
+  const currentMonth = startOfMonth(new Date())
+  const nextMonthStart = startOfMonth(addMonths(currentMonth, 1))
+
+  // Bu ay vadesi olan ve henüz ödenmemiş ödemeler
+  const pendingThisMonth = rows.filter((row) => paymentOccurrenceInMonth(row, currentMonth) !== null)
+
+  // Bu ay ödenen aylık ödemeler: due_date bir sonraki aya ilerlemiş (pay_payment RPC bunu yapar)
+  const paidMonthlyThisMonth = rows.filter((row) =>
+    row.recurrence === 'monthly' &&
+    row.status === 'bekliyor' &&
+    paymentOccurrenceInMonth(row, currentMonth) === null &&
+    paymentOccurrenceInMonth(row, nextMonthStart) !== null,
+  )
+
+  // Bu ay ödenen tek seferlik ödemeler
+  const paidOneTimeThisMonth = rows.filter((row) =>
+    row.recurrence !== 'monthly' &&
+    row.status === 'ödendi',
+  )
+
+  const paidThisMonthCount = paidMonthlyThisMonth.length + paidOneTimeThisMonth.length
+  const totalThisMonth = pendingThisMonth.length + paidThisMonthCount
+
+  const pendingTotal = sumTL(pendingThisMonth.map((row) => row.amount))
   const recurringCount = rows.filter((row) => row.recurrence === 'monthly').length
-  const paidCount = rows.filter((row) => row.status === 'ödendi').length
-  const paidRate = rows.length > 0 ? Math.min(100, (paidCount / rows.length) * 100) : 0
-  const overdueCount = pending.filter((row) => {
+  const paidRate = totalThisMonth > 0 ? Math.min(100, (paidThisMonthCount / totalThisMonth) * 100) : 0
+  const overdueCount = pendingThisMonth.filter((row) => {
     const remaining = daysUntil(row.due_date)
     return remaining !== null && remaining < 0
   }).length
-  const nextPayment = [...pending].sort((a, b) => a.due_date.localeCompare(b.due_date))[0]
+  const nextPayment = [...pendingThisMonth].sort((a, b) => a.due_date.localeCompare(b.due_date))[0]
   const statusLabel = overdueCount > 0
     ? `${overdueCount} geciken`
-    : pending.length > 0
-      ? `${pending.length} bekleyen`
+    : pendingThisMonth.length > 0
+      ? `${pendingThisMonth.length} bekleyen`
       : 'Takvim temiz'
 
   return (
@@ -220,12 +242,12 @@ function PaymentsOverview({ rows }: { rows: Payment[] }) {
             <p className="finance-label">Bekleyen Ödemeler</p>
             <p className="finance-value mt-1.5 text-[clamp(1.5rem,6vw,2.1rem)] font-bold leading-none text-foreground">{formatCurrency(pendingTotal)}</p>
             <p className="mt-1.5 text-xs text-muted-foreground">
-              {pending.length} bekleyen · {recurringCount} aylık tekrar
+              {pendingThisMonth.length} bekleyen · {recurringCount} aylık tekrar
             </p>
           </div>
-          <Badge variant={overdueCount > 0 ? 'destructive' : pending.length > 0 ? 'warning' : 'success'}>{statusLabel}</Badge>
+          <Badge variant={overdueCount > 0 ? 'destructive' : pendingThisMonth.length > 0 ? 'warning' : 'success'}>{statusLabel}</Badge>
         </div>
-        {paidCount > 0 ? <div className="mt-4">
+        {paidThisMonthCount > 0 ? <div className="mt-4">
           <div className="mb-1.5 flex justify-between text-xs">
             <span className="text-muted-foreground">Ödenen kayıtlar</span>
             <span className="font-mono font-semibold tabular-nums text-foreground">%{Math.round(paidRate)}</span>
