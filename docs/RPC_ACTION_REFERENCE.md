@@ -27,7 +27,7 @@ repair rules, keep `docs/TRANSACTION_HISTORY.md` aligned with this file.
 | `cut_card_statement` | `cutCardStatement` in `cardsRepo` | Low-frequency/manual statement cut helper | Creates or returns the period archive and moves current-period spending into open statement debt |
 | `set_statement_reconciliation` | `setStatementReconciliation` in `cardsRepo` | Statement import/reconciliation | Stores bank statement reconciliation amount and note for a card period |
 | `record_card_installment_carryover` | `recordCardInstallmentCarryover` in `cardsRepo` | Cards page: legacy installment carryover | Imports remaining pre-app installments as card debt plus installment planning rows |
-| `reset_card_data` | `resetCardData` in `cardsRepo` | Cards/data-health repair flow | Clears one card's dependent card data and resets card debt fields |
+| `reset_card_data` | `resetCardData` in `cardsRepo` | Cards/data-health repair flow | Deletes the card's expenses, installments, statement archives, and related history; resets card debt fields to zero |
 
 The detailed field transitions for these RPCs live in
 `docs/CARD_DEBT_TRANSITIONS.md`.
@@ -36,7 +36,7 @@ The detailed field transitions for these RPCs live in
 
 | RPC | Called From | User-Visible Action | Main Effect |
 | --- | --- | --- | --- |
-| `pay_payment` | `submitFinanceObligationPayment` | Planned payments page/dashboard obligation modal | Marks one payment paid or advances monthly recurrence; bank source debits `current_balance`, credit-card source creates posted card spending |
+| `pay_payment` | `submitFinanceObligationPayment` | Planned payments page/dashboard obligation modal | Marks one payment paid or advances monthly recurrence; bank source debits `current_balance`, credit-card source increases `debt_amount` / `current_period_spending` and creates posted card spending |
 | `pay_card_statement` | `submitFinanceObligationPayment` | Pay open credit-card statement | Debits a bank account, reduces card debt and statement debt, marks statement paid, marks linked installments paid |
 | `pay_card_debt` | `submitFinanceObligationPayment` | Manual/legacy credit-card debt payment | Debits a bank account, reduces `debt_amount`, then reduces statement debt before current-period spending |
 | `pay_loan_installment` | `submitFinanceObligationPayment` | Pay loan installment | Debits a bank account, marks installment paid, syncs loan summary through DB invariants |
@@ -57,8 +57,8 @@ installment payment outside the statement flow.
 
 | RPC | Called From | User-Visible Action | Main Effect |
 | --- | --- | --- | --- |
-| `recompute_card_debt_from_ledger` | `recomputeCardDebt` | Card ledger panel repair | Resets `cards.debt_amount` to the exact card-ledger projection |
-| `post_card_debt_correction` | `postCardDebtCorrection` | Card ledger panel correction | Applies a signed card debt adjustment with an auditable note |
+| `recompute_card_debt_from_ledger` | `recomputeCardDebt` | Card ledger panel repair | Resets `cards.debt_amount` to the exact card-ledger projection while suppressing a duplicate ledger event |
+| `post_card_debt_correction` | `postCardDebtCorrection` | Card ledger panel correction | Applies a signed card debt adjustment; the card-ledger trigger records it as an auditable `adjustment` note |
 | `recompute_account_balance_from_ledger` | `recomputeAccountBalance` | Account ledger panel repair | Resets bank-account balance to the exact account-ledger projection |
 | `post_account_balance_correction` | `postAccountBalanceCorrection` | Account ledger panel correction | Applies a signed bank-account balance adjustment with an auditable note |
 
