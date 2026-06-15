@@ -1,5 +1,5 @@
 import type { AccountReconciliation, Card, ReconciliationTarget } from '../types/database'
-import { diffTL, equalsTL } from './money'
+import { diffTL, equalsTL, sumKurus, toTL } from './money'
 
 /**
  * Live-balance reconciliation (roadmap A3): compare the app's current figure for
@@ -81,6 +81,32 @@ export function buildReconciliationItems(
   })
 
   return items.sort((a, b) => rank[a.status] - rank[b.status])
+}
+
+export type DriftCauseEvent = {
+  occurred_at: string
+  kind: string
+  amountTL: number
+  note: string | null
+}
+
+export type DriftCauseSummary = {
+  events: DriftCauseEvent[]
+  totalChangeTL: number
+  eventCount: number
+}
+
+export function buildDriftCauseSummary(
+  ledgerEvents: Array<{ occurred_at: string; kind: string; amount_kurus: number; note: string | null }>,
+): DriftCauseSummary {
+  const events = ledgerEvents.map((e) => ({
+    occurred_at: e.occurred_at,
+    kind: e.kind,
+    amountTL: toTL(e.amount_kurus),
+    note: e.note,
+  }))
+  const totalChangeTL = toTL(sumKurus(ledgerEvents.map((e) => e.amount_kurus)))
+  return { events, totalChangeTL, eventCount: ledgerEvents.length }
 }
 
 /** Pick the most recent reconciliation per card_id from a flat list. */

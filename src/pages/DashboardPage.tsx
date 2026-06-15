@@ -4,6 +4,7 @@ import { useMemo } from 'react'
 import { useAuth } from '../auth/useAuth'
 import { useFinanceSnapshot } from '../app/useFinanceSnapshot'
 import type {
+  AccountReconciliation,
   Asset,
   Budget,
   Card as FinanceCard,
@@ -54,7 +55,7 @@ import {
   totalCreditLimit,
 } from '../utils/financeSummary'
 import { buildAttentionLine } from '../utils/attention'
-import { buildSmartInsights, buildFocusActions } from '../utils/dashboardInsights'
+import { buildSmartInsights, buildFocusActions, reconciliationDriftCount } from '../utils/dashboardInsights'
 import { buildDashboardMonthlyLoad, buildDashboardUpcomingItems } from '../utils/dashboardUpcoming'
 import { formatCurrency } from '../utils/formatCurrency'
 import { SkeletonDashboard } from '../components/ui/skeleton'
@@ -74,6 +75,7 @@ type DashboardData = {
   cardStatements: CardStatementArchive[]
   savingsGoals: SavingsGoal[]
   savingsGoalComponents: SavingsGoalComponent[]
+  accountReconciliations: AccountReconciliation[]
 }
 
 const emptyData: DashboardData = {
@@ -91,6 +93,7 @@ const emptyData: DashboardData = {
   cardStatements: [],
   savingsGoals: [],
   savingsGoalComponents: [],
+  accountReconciliations: [],
 }
 
 const UPCOMING_DAYS = 30
@@ -128,6 +131,7 @@ export function DashboardPage() {
       cardStatements: snapshot.cardStatements,
       savingsGoals: snapshot.savingsGoals,
       savingsGoalComponents: snapshot.savingsGoalComponents,
+      accountReconciliations: snapshot.accountReconciliations,
     }
   }, [snapshotQuery.data])
 
@@ -142,7 +146,8 @@ export function DashboardPage() {
     debts: data.debts,
     cardInstallments: data.cardInstallments,
     cardStatements: data.cardStatements,
-  }), [data.cardInstallments, data.cardStatements, data.cards, data.debts, data.loanInstallments, data.loans, data.payments])
+    accountReconciliations: data.accountReconciliations,
+  }), [data.accountReconciliations, data.cardInstallments, data.cardStatements, data.cards, data.debts, data.loanInstallments, data.loans, data.payments])
 
   const summary = useMemo(() => {
     const position = buildFinancialPosition(data)
@@ -189,9 +194,13 @@ export function DashboardPage() {
     })
   }, [summary, upcomingItems])
 
+  const reconDriftCount = useMemo(
+    () => reconciliationDriftCount(data.cards, data.accountReconciliations),
+    [data.cards, data.accountReconciliations],
+  )
   const insights = useMemo(
-    () => buildSmartInsights(summary.cashFlow, summary.creditUsageRate, summary.totalDebts, summary.totalReceivables, upcomingItems),
-    [summary.cashFlow, summary.creditUsageRate, summary.totalDebts, summary.totalReceivables, upcomingItems],
+    () => buildSmartInsights(summary.cashFlow, summary.creditUsageRate, summary.totalDebts, summary.totalReceivables, upcomingItems, reconDriftCount),
+    [summary.cashFlow, summary.creditUsageRate, summary.totalDebts, summary.totalReceivables, upcomingItems, reconDriftCount],
   )
   const focusActions = useMemo(
     () => buildFocusActions(data, summary.cashFlow, summary.creditUsageRate, upcomingItems),

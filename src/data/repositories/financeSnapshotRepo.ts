@@ -1,6 +1,7 @@
 import { ensureRatesLoaded } from '../../lib/marketRatesClient'
 import { supabase } from '../../lib/supabase'
 import type {
+  AccountReconciliation,
   Asset,
   Budget,
   Card,
@@ -41,6 +42,7 @@ export type FinanceSnapshot = {
   cardStatements: CardStatementArchive[]
   savingsGoals: SavingsGoal[]
   savingsGoalComponents: SavingsGoalComponent[]
+  accountReconciliations: AccountReconciliation[]
   /** Şemada henüz olmayan opsiyonel tablolar (migration bekleyen ortamlar). */
   missingTables: string[]
 }
@@ -85,6 +87,7 @@ export async function fetchFinanceSnapshot(): Promise<FinanceSnapshot> {
     cardStatements,
     savingsGoals,
     savingsGoalComponents,
+    accountReconciliations,
   ] = await Promise.all([
     supabase.from('assets').select('*'),
     supabase.from('cards').select('*'),
@@ -100,6 +103,7 @@ export async function fetchFinanceSnapshot(): Promise<FinanceSnapshot> {
     supabase.from('card_statement_archives').select('*').order('statement_date', { ascending: false }).limit(STATEMENT_ARCHIVE_LIMIT),
     supabase.from('savings_goals').select('*').order('created_at', { ascending: false }),
     supabase.from('savings_goal_components').select('*'),
+    supabase.from('account_reconciliations').select('*').order('reconciled_at', { ascending: false }),
   ])
 
   const missingTables: string[] = []
@@ -119,6 +123,7 @@ export async function fetchFinanceSnapshot(): Promise<FinanceSnapshot> {
     cardStatements: optionalRows(cardStatements, 'card_statement_archives', missingTables),
     savingsGoals: optionalRows(savingsGoals, 'savings_goals', missingTables),
     savingsGoalComponents: optionalRows(savingsGoalComponents, 'savings_goal_components', missingTables),
+    accountReconciliations: optionalRows(accountReconciliations, 'account_reconciliations', missingTables),
     missingTables,
   }
 }

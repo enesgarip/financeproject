@@ -1,5 +1,6 @@
 import type { FocusAction, SmartInsight } from '../components/dashboard/DashboardPanels'
 import type {
+  AccountReconciliation,
   Card as FinanceCard,
   CardInstallment,
   CardStatementArchive,
@@ -20,6 +21,7 @@ import {
   type CashFlowSummary,
 } from './financeSummary'
 import { formatCurrency } from './formatCurrency'
+import { buildReconciliationItems, latestReconciliationByCard, STALE_AFTER_DAYS } from './reconciliation'
 import { canCutCurrentStatement } from './statementCycle'
 
 /**
@@ -39,6 +41,13 @@ export type FocusActionsInput = {
   cardInstallments: CardInstallment[]
   cardStatements: CardStatementArchive[]
   salaryHistory: SalaryHistory[]
+  accountReconciliations: AccountReconciliation[]
+}
+
+export function reconciliationDriftCount(cards: FinanceCard[], reconciliations: AccountReconciliation[]): number {
+  const reconcilable = cards.filter((c) => c.card_type === 'banka_karti' || c.card_type === 'kredi_karti')
+  const items = buildReconciliationItems(reconcilable, latestReconciliationByCard(reconciliations))
+  return items.filter((i) => i.status === 'drift').length
 }
 
 export function buildSmartInsights(
@@ -47,6 +56,7 @@ export function buildSmartInsights(
   totalDebts: number,
   totalReceivables: number,
   upcomingItems: UpcomingItem[],
+  reconDriftCount = 0,
 ): SmartInsight[] {
   const insights: SmartInsight[] = []
   const urgentCount = upcomingItems.filter((item) => {
@@ -101,6 +111,14 @@ export function buildSmartInsights(
       title: 'Alacaklar borcu dengeleyebilir',
       description: `${formatCurrency(totalReceivables)} açık alacak var. Tahsilat tarihleri nakit açığını yumuşatabilir.`,
       tone: 'stone',
+    })
+  }
+
+  if (reconDriftCount > 0) {
+    insights.push({
+      title: 'Bakiye mutabakatında fark var',
+      description: `${reconDriftCount} hesapta app ile banka rakamı uyuşmuyor. Veri Sağlığı'ndan detay görebilirsin.`,
+      tone: 'amber',
     })
   }
 
@@ -288,6 +306,49 @@ export function buildFocusActions(
       icon: 'card',
       priority: 7,
     })
+  }
+
+  const reconcilable = [...bankAccounts, ...creditCards]
+  if (reconcilable.length > 0) {
+    const reconItems = buildReconciliationItems(reconcilable, latestReconciliationByCard(data.accountReconciliations))
+    const reconDrift = reconItems.filter((i) => i.status === 'drift').length
+    const reconNever = reconItems.filter((i) => i.status === 'never').length
+    const reconStale = reconItems.filter((i) => i.status === 'stale').length
+
+    if (reconDrift > 0) {
+      actions.push({
+        id: 'reconciliation-drift',
+        title: `${reconDrift} hesapta bakiye farkı var`,
+        description: 'Son mutabakatta app ile banka arasında fark tespit edildi. Farkın kaynağını incelemek iyi olur.',
+        to: '/veri-sagligi',
+        cta: 'Mutabakata git',
+        tone: 'rose',
+        icon: 'alert',
+        priority: 8,
+      })
+    } else if (reconNever > 0) {
+      actions.push({
+        id: 'reconciliation-never',
+        title: `${reconNever} hesap hiç mutabık olmadı`,
+        description: 'Banka ile en az bir kez karşılaştır; sessiz kaymaları erken yakala.',
+        to: '/veri-sagligi',
+        cta: 'Mutabakata git',
+        tone: 'amber',
+        icon: 'health',
+        priority: 8.5,
+      })
+    } else if (reconStale > 0) {
+      actions.push({
+        id: 'reconciliation-stale',
+        title: `${reconStale} hesapta mutabakat ${STALE_AFTER_DAYS}+ gün önce`,
+        description: 'Düzenli mutabakat kaçak işlemleri erken yakalar. Bankadaki gerçek rakamla karşılaştır.',
+        to: '/veri-sagligi',
+        cta: 'Mutabakata git',
+        tone: 'stone',
+        icon: 'calendar',
+        priority: 9,
+      })
+    }
   }
 
   if (!data.salaryHistory.length) {

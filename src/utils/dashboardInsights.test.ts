@@ -51,6 +51,7 @@ const emptyInput: FocusActionsInput = {
   cardInstallments: [],
   cardStatements: [],
   salaryHistory: [],
+  accountReconciliations: [],
 }
 
 describe('buildSmartInsights', () => {
@@ -75,7 +76,12 @@ describe('buildFocusActions', () => {
   })
 
   it('falls back to the all-clear action and sorts by priority', () => {
-    const input: FocusActionsInput = { ...emptyInput, cards: [card({ card_type: 'banka_karti' })], salaryHistory: [{ ...base, title: 'Maaş', amount: 1, effective_date: '2026-01-01', note: null }] }
+    const input: FocusActionsInput = {
+      ...emptyInput,
+      cards: [card({ card_type: 'banka_karti' })],
+      salaryHistory: [{ ...base, title: 'Maaş', amount: 1, effective_date: '2026-01-01', note: null }],
+      accountReconciliations: [{ ...base, card_id: 'id', reconciled_at: new Date().toISOString(), target: 'balance' as const, app_amount: 0, real_amount: 0, drift: 0, note: null }],
+    }
     const actions = buildFocusActions(input, cashFlow(), 0, [])
     expect(actions).toHaveLength(1)
     expect(actions[0].id).toBe('all-clear')

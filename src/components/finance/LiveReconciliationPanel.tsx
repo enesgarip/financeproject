@@ -1,15 +1,22 @@
-import { Scale } from 'lucide-react'
+import { ChevronDown, ChevronUp, Scale } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAuth } from '../../auth/useAuth'
-import { fetchAccountReconciliations, insertAccountReconciliation } from '../../data/repositories/financePanelsRepo'
-import type { AccountReconciliation, Card, InsertFor } from '../../types/database'
+import {
+  fetchAccountLedgerEventsSince,
+  fetchAccountReconciliations,
+  fetchCardLedgerEventsSince,
+  insertAccountReconciliation,
+} from '../../data/repositories/financePanelsRepo'
+import type { AccountReconciliation, Card, InsertFor, ReconciliationTarget } from '../../types/database'
 import { formatDate } from '../../utils/date'
 import { formatCurrency, parseNumber } from '../../utils/formatCurrency'
 import {
+  buildDriftCauseSummary,
   buildReconciliationItems,
   computeDrift,
   isReconciled,
   latestReconciliationByCard,
+  type DriftCauseSummary,
   type ReconcileStatus,
 } from '../../utils/reconciliation'
 import { isMissingSupabaseCapabilityError } from '../../utils/supabaseErrors'
@@ -45,6 +52,9 @@ export function LiveReconciliationPanel({ cards }: LiveReconciliationPanelProps)
   const [inputs, setInputs] = useState<Record<string, string>>({})
   const [savingId, setSavingId] = useState<string | null>(null)
   const [error, setError] = useState('')
+  const [driftDetails, setDriftDetails] = useState<Record<string, DriftCauseSummary | null>>({})
+  const [loadingDrift, setLoadingDrift] = useState<Record<string, boolean>>({})
+  const [expandedDrift, setExpandedDrift] = useState<Record<string, boolean>>({})
 
   const reconcilable = useMemo(
     () => cards.filter((card) => card.card_type === 'banka_karti' || card.card_type === 'kredi_karti'),
@@ -71,6 +81,22 @@ export function LiveReconciliationPanel({ cards }: LiveReconciliationPanelProps)
     () => buildReconciliationItems(reconcilable, latestReconciliationByCard(rows)),
     [reconcilable, rows],
   )
+
+  async function loadDriftCause(cardId: string, target: ReconciliationTarget, since: string) {
+    if (driftDetails[cardId] !== undefined) {
+      setExpandedDrift((prev) => ({ ...prev, [cardId]: !prev[cardId] }))
+      return
+    }
+    setExpandedDrift((prev) => ({ ...prev, [cardId]: true }))
+    setLoadingDrift((prev) => ({ ...prev, [cardId]: true }))
+    const result = target === 'debt'
+      ? await fetchCardLedgerEventsSince(cardId, since)
+      : await fetchAccountLedgerEventsSince(cardId, since)
+    if (result.ok) {
+      setDriftDetails((prev) => ({ ...prev, [cardId]: buildDriftCauseSummary(result.data) }))
+    }
+    setLoadingDrift((prev) => ({ ...prev, [cardId]: false }))
+  }
 
   async function handleSave(cardId: string, app: number, target: 'balance' | 'debt') {
     const raw = inputs[cardId]
@@ -153,6 +179,57 @@ export function LiveReconciliationPanel({ cards }: LiveReconciliationPanelProps)
                   </p>
                 </div>
               </div>
+
+              {item.status === 'drift' && item.last ? (
+                <div className="mt-2">
+                  <button
+                    type="button"
+                    className="flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
+                    onClick={() => loadDriftCause(item.card.id, item.target, item.last!.reconciled_at)}
+                  >
+                    {expandedDrift[item.card.id] ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                    Son mutabakatten bu yana hareketler
+                  </button>
+                  {expandedDrift[item.card.id] ? (
+                    <div className="mt-1.5 rounded-md bg-background/60 px-2.5 py-2 text-xs">
+                      {(() => {
+                        if (loadingDrift[item.card.id]) return <p className="text-muted-foreground">Yükleniyor…</p>
+                        const summary = driftDetails[item.card.id]
+                        if (!summary) return null
+                        if (summary.eventCount === 0) {
+                          return (
+                            <p className="text-muted-foreground">
+                              Bu tarihten bu yana kayıtlı hareket bulunamadı — fark uygulama dışı bir işlemden kaynaklanıyor olabilir.
+                            </p>
+                          )
+                        }
+                        return (
+                          <>
+                            <div className="max-h-40 space-y-1 overflow-y-auto">
+                              {summary.events.map((event, index) => (
+                                <div key={index} className="flex items-center justify-between gap-2 text-muted-foreground">
+                                  <span className="truncate">
+                                    {formatDate(event.occurred_at.slice(0, 10))} · {event.kind}
+                                    {event.note ? ` · ${event.note}` : ''}
+                                  </span>
+                                  <span className={`shrink-0 tabular-nums font-semibold ${event.amountTL >= 0 ? 'text-foreground' : 'text-success'}`}>
+                                    {event.amountTL >= 0 ? '+' : ''}{formatCurrency(event.amountTL)}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                            <p className="mt-1.5 border-t pt-1.5 font-semibold text-foreground">
+                              {summary.eventCount} hareket, toplam{' '}
+                              {summary.totalChangeTL >= 0 ? '+' : ''}
+                              {formatCurrency(summary.totalChangeTL)} değişim
+                            </p>
+                          </>
+                        )
+                      })()}
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
 
               <div className="mt-2 flex flex-wrap items-end gap-2">
                 <label className="flex-1 min-w-[140px] text-xs font-semibold text-muted-foreground">

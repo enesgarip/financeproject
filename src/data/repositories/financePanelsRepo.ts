@@ -24,6 +24,30 @@ export async function fetchCardLedgerEvents(cardId: string): Promise<Result<Card
   return resultFromSupabase((data ?? []) as CardLedger[], error, 'Kart borc hareketleri yuklenemedi.')
 }
 
+export async function fetchCardLedgerEventsSince(cardId: string, since: string): Promise<Result<CardLedger[]>> {
+  const { data, error } = await supabase
+    .from('card_ledger')
+    .select('*')
+    .eq('card_id', cardId)
+    .gte('occurred_at', since)
+    .order('occurred_at', { ascending: false })
+    .limit(200)
+
+  return resultFromSupabase((data ?? []) as CardLedger[], error, 'Kart borc hareketleri yuklenemedi.')
+}
+
+export async function fetchAccountLedgerEventsSince(cardId: string, since: string): Promise<Result<AccountLedger[]>> {
+  const { data, error } = await supabase
+    .from('account_ledger')
+    .select('*')
+    .eq('card_id', cardId)
+    .gte('occurred_at', since)
+    .order('occurred_at', { ascending: false })
+    .limit(200)
+
+  return resultFromSupabase((data ?? []) as AccountLedger[], error, 'Hesap hareketleri yuklenemedi.')
+}
+
 export async function fetchAccountReconciliations(): Promise<Result<AccountReconciliation[]>> {
   const { data, error } = await supabase
     .from('account_reconciliations')
