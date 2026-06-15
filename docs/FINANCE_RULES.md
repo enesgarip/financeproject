@@ -2,7 +2,7 @@
 
 ## Scope
 
-This file records the current business rules inferred from the codebase as of 2026-06-02. If code and this file diverge, update both intentionally.
+This file records the current business rules inferred from the codebase as of 2026-06-15. If code and this file diverge, update both intentionally.
 
 ## Money and Formatting
 
@@ -146,6 +146,15 @@ From `src/utils/cardInstallmentCalendar.ts` and page logic:
   - source and target cannot be the same account
   - source balance must be enough for the transfer amount
   - source balance decreases, target balance increases, and one `transfer` history row is written
+
+## Transaction History Rules
+
+Detailed history side effects are documented in `docs/TRANSACTION_HISTORY.md`.
+Treat `transaction_history` as the user-facing activity feed, not the accounting
+source of truth. Balance/card-debt invariants come from ledger tables, card
+fields, statement archives, and trigger/RPC rules. New finance mutations should
+write history in the same database transaction as the state change, with the
+public RPC owning the feed row.
 
 ## Budget Alert Rules
 

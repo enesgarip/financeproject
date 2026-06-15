@@ -6,6 +6,9 @@ This file maps Supabase RPCs to the user-visible actions that call them. Keep it
 updated whenever a page action, repository wrapper, or migration changes an RPC
 contract.
 
+For `transaction_history` side effects, type/source conventions, and no-history
+repair rules, keep `docs/TRANSACTION_HISTORY.md` aligned with this file.
+
 ## Daily Maintenance
 
 | RPC | Called From | User-Visible Action | Main Effect |

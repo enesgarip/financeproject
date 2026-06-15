@@ -1,6 +1,6 @@
 # AI Context Index
 
-Last reviewed: 2026-06-14
+Last reviewed: 2026-06-15
 
 This file is the cheapest starting point for future AI/Codex sessions. Its job
 is to reduce repeated repo discovery: read this first, choose the smallest
@@ -38,6 +38,7 @@ frontend -> RPC, or RPC -> migration.
 | Card debt fields and transitions | `docs/CARD_DEBT_TRANSITIONS.md` | `src/utils/financeSummary.ts`, `src/pages/CardsPage*.tsx`, latest card migrations | Use this before touching `debt_amount`, `statement_debt_amount`, `current_period_spending`, `provision_amount`, or card installments |
 | General finance rules | `docs/FINANCE_RULES.md` | Matching utility under `src/utils/*` | Broad business semantics: assets, cards, payments, loans, debts, goals, dashboard |
 | RPC-backed actions | `docs/RPC_ACTION_REFERENCE.md` | `src/data/repositories/*`, `src/services/*`, `src/types/database.ts`, migrations | Maps Supabase RPCs to user-visible actions and side effects |
+| Transaction history side effects | `docs/TRANSACTION_HISTORY.md` | `docs/RPC_ACTION_REFERENCE.md`, latest finance RPC migrations, dashboard/analysis history consumers | Type/source/amount conventions for user-facing activity feed rows |
 | Shared payment drawer | `docs/SHARED_PAYMENT_DRAWER_PLAN.md` | `src/hooks/useFinancePaymentDrawer.ts`, `src/components/finance/FinancePaymentDrawer.tsx`, `src/components/finance/AccountPaymentModal.tsx`, `src/services/financePaymentActions.ts`, payment-owning pages | Plan and shared implementation for account-backed payment modals without changing RPC behavior |
 | Release/migration compatibility | `docs/MIGRATION_COMPATIBILITY_CHECKLIST.md` | `.github/workflows/ci.yml`, `.github/workflows/deploy.yml`, `supabase/migrations/*` | Use for schema, RLS, RPC, edge function, or generated type changes |
 | Banking simplification | `docs/BANKING_SIMPLIFICATION_AUDIT.md` | `src/pages/CardsPage.tsx`, `src/pages/CardsPage.sections.tsx`, `src/pages/CardsPage.overview.tsx`, `src/pages/CardsPage.statements.tsx`, `src/components/finance/*` | Tracks what was simplified and what remains |
@@ -80,6 +81,7 @@ ESLint blocks `src/{pages,components,utils,hooks}` from importing
 | --- | --- |
 | How is card debt supposed to move? | `docs/CARD_DEBT_TRANSITIONS.md` |
 | Which user action calls which RPC? | `docs/RPC_ACTION_REFERENCE.md` |
+| Which finance action writes transaction history? | `docs/TRANSACTION_HISTORY.md` |
 | Is this migration safe to release? | `docs/MIGRATION_COMPATIBILITY_CHECKLIST.md` |
 | Where does dashboard data come from? | `src/app/useFinanceSnapshot.ts` and `src/data/repositories/financeSnapshotRepo.ts` |
 | Where should dashboard calculations live? | `docs/DASHBOARD_ARCHITECTURE.md`; start with its Page-Local vs Shared Calculations table |

@@ -23,7 +23,8 @@
 
 - Reduce fallback logic that depends on missing Supabase schema cache or missing RPC deployment.
 - Improve visibility of migration/version mismatches between frontend expectations and live database state.
-- Document and standardize transaction history side effects for all finance mutations.
+- ~~Document and standardize transaction history side effects for all finance mutations.~~ DONE.
+  - `docs/TRANSACTION_HISTORY.md` now defines activity-feed role, type/source conventions, current RPC side effects, and no-history repair rules.
 - Review whether recurring payments, loan installments, and card installments can be unified under a clearer planning model.
 
 ## P2 - UX / Maintainability
@@ -65,6 +66,7 @@
 - `docs/CARDS_ARCHITECTURE.md` and `docs/DATA_HEALTH_ARCHITECTURE.md` now document page module boundaries, side-effect ownership, and verification routes for the remaining high-risk pages.
 - DataHealth copy polish pass completed for the older ASCII Turkish user-visible strings; encoding guard remains green.
 - Turkish copy/encoding audit repeated on 2026-06-15: `encoding.guard.test.ts`, `docs.guard.test.ts`, and a manual mojibake signature scan were clean.
+- Transaction-history side effects are now standardized in `docs/TRANSACTION_HISTORY.md` and linked from the RPC/action reference.
 - Migration compatibility checklist now reflects the Lighthouse CI budget added to the release workflow.
 - Missing Supabase schema/RPC detection now centralizes on `utils/supabaseErrors.ts`; page-local schema-cache wrapper aliases were removed.
 - `roundMoney` alias was removed; money rounding/comparison helpers now live in `utils/money.ts`.
