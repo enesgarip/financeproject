@@ -26,7 +26,7 @@ import { HelpTooltip, type HelpTooltipContent } from '../ui/help-tooltip'
 import { Input } from '../ui/input'
 import { Progress } from '../ui/progress'
 import type { Card as FinanceCard, CardExpense, TransactionHistory, TransactionHistoryType } from '../../types/database'
-import type { DashboardUpcomingItem } from '../../utils/dashboardUpcoming'
+import type { DashboardMonthlyLoadSummary, DashboardUpcomingItem } from '../../utils/dashboardUpcoming'
 import { daysUntil, formatDate, nextMonthlyDate } from '../../utils/date'
 import { formatCurrency } from '../../utils/formatCurrency'
 import { detectSpendingAnomalies } from '../../utils/spendingAnomalies'
@@ -39,7 +39,6 @@ import {
   type CreditLimitGroup,
   type FinancialHealthSummary,
   type GoalProgressSummary,
-  type MonthlyLoadSummary,
 } from '../../utils/financeSummary'
 
 type UpcomingItem = DashboardUpcomingItem
@@ -125,7 +124,7 @@ export function MonthlyPaymentLoadPanel({
   upcomingCount,
 }: {
   cashFlow: CashFlowSummary
-  nextMonthLoad: MonthlyLoadSummary
+  nextMonthLoad: DashboardMonthlyLoadSummary
   upcomingTotal: number
   upcomingCount: number
 }) {

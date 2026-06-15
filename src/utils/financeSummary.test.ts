@@ -1,12 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import type { Asset, Card, CardInstallment, Debt, Loan, LoanInstallment, Payment, SalaryHistory, SavingsGoal } from '../types/database'
+import type { Asset, Card, Debt, Loan, LoanInstallment, Payment, SalaryHistory, SavingsGoal } from '../types/database'
 import {
   buildCreditLimitGroups,
   buildFinancialHealth,
   buildFinancialPosition,
   buildGoalProgressSummary,
   buildMonthlyCashFlow,
-  buildMonthlyLoad,
   cardPayableDebt,
   cardProvisionAmount,
   cardSplitTotal,
@@ -85,15 +84,6 @@ function payment(overrides: Partial<Payment>): Payment {
 
 function salary(overrides: Partial<SalaryHistory>): SalaryHistory {
   return { ...base, title: 'Maaş', amount: 0, effective_date: '2026-01-01', note: null, ...overrides }
-}
-
-function cardInstallment(overrides: Partial<CardInstallment>): CardInstallment {
-  return {
-    ...base, card_id: 'c1', card_expense_id: null, statement_archive_id: null,
-    installment_no: 1, installment_count: 3, due_month: '2026-06-01', amount: 0,
-    description: 'Taksit', category: 'Diğer', status: 'scheduled',
-    posted_at: null, paid_at: null, note: null, ...overrides,
-  }
 }
 
 function goal(overrides: Partial<SavingsGoal>): SavingsGoal {
@@ -637,46 +627,6 @@ describe('buildMonthlyCashFlow', () => {
     expect(flow.outflow).toBe(0.1)
     expect(flow.netFlow).toBe(0.1)
     expect(flow.projectedCash).toBe(0.2)
-  })
-})
-
-// ── buildMonthlyLoad ───────────────────────────────────────────────────────
-
-describe('buildMonthlyLoad', () => {
-  it('sums all obligation types for the month', () => {
-    const card = creditCard({ statement_debt_amount: 2000, due_day: 10 })
-    const ci = cardInstallment({ amount: 500, status: 'scheduled', due_month: '2026-06-01' })
-    const p = payment({ amount: 800, due_date: '2026-06-20', status: 'bekliyor' })
-    const load = buildMonthlyLoad({ ...emptyInput, cards: [card], cardInstallments: [ci], payments: [p] }, JUNE)
-    expect(load.cardStatements).toBe(2000)
-    expect(load.cardInstallments).toBe(500)
-    expect(load.payments).toBe(800)
-    expect(load.total).toBe(3300)
-  })
-
-  it('excludes paid card installments', () => {
-    const ci = cardInstallment({ amount: 500, status: 'paid', due_month: '2026-06-01' })
-    const load = buildMonthlyLoad({ ...emptyInput, cardInstallments: [ci] }, JUNE)
-    expect(load.cardInstallments).toBe(0)
-  })
-
-  it('excludes paid payments', () => {
-    const p = payment({ amount: 1000, due_date: '2026-06-10', status: 'ödendi' })
-    const load = buildMonthlyLoad({ ...emptyInput, payments: [p] }, JUNE)
-    expect(load.payments).toBe(0)
-  })
-
-  it('excludes installments from other months', () => {
-    const ci = cardInstallment({ amount: 500, status: 'scheduled', due_month: '2026-07-01' })
-    const load = buildMonthlyLoad({ ...emptyInput, cardInstallments: [ci] }, JUNE)
-    expect(load.cardInstallments).toBe(0)
-  })
-
-  it('includes personal debts due in month in total', () => {
-    const d = debt({ direction: 'borç_aldım', estimated_value_try: 3000, due_date: '2026-06-25', status: 'açık' })
-    const load = buildMonthlyLoad({ ...emptyInput, debts: [d] }, JUNE)
-    expect(load.personalDebts).toBe(3000)
-    expect(load.total).toBe(3000)
   })
 })
 

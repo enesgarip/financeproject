@@ -3,6 +3,7 @@ import type {
   Asset,
   Card,
   CardInstallment,
+  CardStatementArchive,
   Debt,
   Loan,
   LoanInstallment,
@@ -64,6 +65,28 @@ function cardInstallment(overrides: Partial<CardInstallment>): CardInstallment {
   return { ...base, card_id: 'c', card_expense_id: null, statement_archive_id: null, installment_no: 1, installment_count: 1, due_month: '2026-06-01', amount: 0, description: 'Taksit', category: 'Diğer', status: 'scheduled', posted_at: null, paid_at: null, note: null, ...overrides }
 }
 
+function statement(overrides: Partial<CardStatementArchive>): CardStatementArchive {
+  return {
+    ...base,
+    card_id: 'cc',
+    period_year: 2026,
+    period_month: 6,
+    statement_date: '2026-06-01',
+    due_date: '2026-06-10',
+    statement_debt_amount: 0,
+    current_period_spending: 0,
+    total_debt_amount: 0,
+    status: 'open',
+    paid_at: null,
+    payment_source_card_id: null,
+    reconciled_bank_amount: null,
+    reconciled_at: null,
+    reconciliation_note: null,
+    note: null,
+    ...overrides,
+  }
+}
+
 function buildInput(overrides: Partial<FinanceSummaryInput> = {}): FinanceSummaryInput {
   return { assets: [], cards: [], loans: [], loanInstallments: [], debts: [], payments: [], salaryHistory: [], cardInstallments: [], ...overrides }
 }
@@ -107,6 +130,18 @@ describe('buildCashFlowForecast', () => {
       { from: FROM, horizonMonths: 3 },
     )
     expect(forecast.months.map((m) => m.cardOutflow)).toEqual([3000, 1000, 0])
+  })
+
+  it('uses open statement archives as the card outflow source when present', () => {
+    const forecast = buildCashFlowForecast(
+      buildInput({
+        cards: [card({ id: 'cc', card_type: 'kredi_karti', statement_day: 1, due_day: 10, statement_debt_amount: 5000, current_period_spending: 1000 })],
+        cardStatements: [statement({ card_id: 'cc', statement_debt_amount: 3000, due_date: '2026-06-10' })],
+      }),
+      { from: FROM, horizonMonths: 2 },
+    )
+
+    expect(forecast.months.map((m) => m.cardOutflow)).toEqual([3000, 1000])
   })
 
   it('decrements a legacy loan over its remaining installments', () => {

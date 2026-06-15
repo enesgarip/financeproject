@@ -2,6 +2,7 @@ import type {
   Asset,
   Card,
   CardInstallment,
+  CardStatementArchive,
   Debt,
   Loan,
   LoanInstallment,
@@ -10,7 +11,7 @@ import type {
   SavingsGoal,
   SavingsGoalComponent,
 } from '../types/database'
-import { dateInputValue, endOfMonth, isDateInMonth, monthlyOccurrenceDate, startOfMonth } from './date'
+import { endOfMonth, isDateInMonth, monthlyOccurrenceDate, startOfMonth } from './date'
 import { diffTL, roundTL, sumTL, toKurus, toTL } from './money'
 import { savingsGoalProgressRate } from './savingsGoal'
 
@@ -23,6 +24,7 @@ export type FinanceSummaryInput = {
   payments: Payment[]
   salaryHistory: SalaryHistory[]
   cardInstallments: CardInstallment[]
+  cardStatements?: CardStatementArchive[]
   savingsGoals?: SavingsGoal[]
   savingsGoalComponents?: SavingsGoalComponent[]
 }
@@ -72,17 +74,6 @@ export type CashFlowSummary = {
   loanOutflow: number
   paymentOutflow: number
   debtOutflow: number
-}
-
-export type MonthlyLoadSummary = {
-  monthLabel: string
-  total: number
-  payments: number
-  cardStatements: number
-  cardInstallments: number
-  loanInstallments: number
-  legacyLoanInstallments: number
-  personalDebts: number
 }
 
 export type GoalProgressSummary = {
@@ -391,55 +382,6 @@ export function buildMonthlyCashFlow(data: FinanceSummaryInput, month = new Date
     loanOutflow,
     paymentOutflow,
     debtOutflow,
-  }
-}
-
-export function buildMonthlyLoad(data: FinanceSummaryInput, month: Date): MonthlyLoadSummary {
-  const monthStart = startOfMonth(month)
-  const monthPrefix = dateInputValue(monthStart).slice(0, 7)
-  const monthLabel = new Intl.DateTimeFormat('tr-TR', { month: 'long', year: 'numeric' }).format(monthStart)
-  const plannedLoanIds = new Set(data.loanInstallments.map((installment) => installment.loan_id))
-  const inTargetMonth = (value: string | null | undefined) => Boolean(value && value.slice(0, 7) === monthPrefix)
-  const payments = sum(
-    data.payments.filter((payment) => paymentOccurrenceInMonth(payment, monthStart)),
-    (payment) => payment.amount,
-  )
-  const cardStatements = sum(
-    data.cards.filter((card) => {
-      const dueDate = monthlyOccurrenceDate(card.due_day, monthStart)
-      return card.card_type === 'kredi_karti' && cardMonthlyPaymentAmount(card) > 0 && dueDate !== null && isDateInMonth(dueDate, monthStart)
-    }),
-    cardMonthlyPaymentAmount,
-  )
-  const cardInstallments = sum(
-    data.cardInstallments.filter((installment) => installment.status === 'scheduled' && inTargetMonth(installment.due_month)),
-    (installment) => installment.amount,
-  )
-  const loanInstallments = sum(
-    data.loanInstallments.filter((installment) => installment.status === 'bekliyor' && isDateInMonth(installment.due_date, monthStart)),
-    (installment) => installment.amount,
-  )
-  const legacyLoanInstallments = sum(
-    data.loans.filter((loan) => {
-      const dueDate = monthlyOccurrenceDate(loan.installment_day, monthStart)
-      return !plannedLoanIds.has(loan.id) && loan.status === 'active' && loan.remaining_installments > 0 && dueDate !== null
-    }),
-    (loan) => loan.monthly_payment,
-  )
-  const personalDebts = sum(
-    data.debts.filter((debt) => debt.direction === 'borç_aldım' && debt.status === 'açık' && isDateInMonth(debt.due_date, monthStart)),
-    (debt) => debt.estimated_value_try,
-  )
-
-  return {
-    monthLabel,
-    total: sumTL([payments, cardStatements, cardInstallments, loanInstallments, legacyLoanInstallments, personalDebts]),
-    payments,
-    cardStatements,
-    cardInstallments,
-    loanInstallments,
-    legacyLoanInstallments,
-    personalDebts,
   }
 }
 

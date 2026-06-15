@@ -62,11 +62,16 @@
   - Manual deposit, withdrawal, transfer, bill payment, debt settlement, and loan payment all update balances and history.
   - Now: bank debit/credit row locking, ownership checks, type checks, balance validation, and balance updates are shared through internal `private.debit_bank_account` / `private.credit_bank_account` helpers, while each public RPC still owns its domain side effects and transaction-history insert.
 
+- **Forecast reads normalized obligations**
+  - Before: `cashFlowForecast` duplicated recurring payment, loan installment, card debt, card installment, and personal debt filters.
+  - Now: forecast buckets are derived from `utils/obligations.ts`, so dashboard upcoming items, analysis calendar events, shared payment drawer intents, and forward cash projection agree on the same dated obligation rows.
+
 ## Remaining Simplification Candidates
 
 - **Planning model unification**
   - Recurring payments, loan installments, card statement debt, and card installments all appear as upcoming obligations.
-  - A normalized "obligations" view could simplify dashboard/analysis math without changing existing tables first.
+  - The pure `utils/obligations.ts` view now feeds dashboard upcoming items, analysis calendar events, payment drawer intents, cash-flow forecast buckets, and dashboard monthly-load totals.
+  - Remaining cleanup is mostly dead-code and naming polish rather than a separate planning model.
 
 - **Cards page module split**
   - `CardsPage.tsx` still owns too much domain behavior.

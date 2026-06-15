@@ -3,6 +3,7 @@ import type {
   Asset,
   Card,
   CardInstallment,
+  CardStatementArchive,
   Debt,
   Loan,
   LoanInstallment,
@@ -16,11 +17,11 @@ import {
   buildFinancialPosition,
   buildGoalProgressSummary,
   buildMonthlyCashFlow,
-  buildMonthlyLoad,
   cardPayableDebt,
   totalCreditLimit,
   type FinanceSummaryInput,
 } from '../../src/utils/financeSummary'
+import { buildDashboardMonthlyLoad } from '../../src/utils/dashboardUpcoming'
 
 const user_id = 'user-1'
 const now = '2026-06-02T12:00:00.000Z'
@@ -83,6 +84,28 @@ function cardInstallment(overrides: Partial<CardInstallment>): CardInstallment {
     status: 'scheduled',
     posted_at: null,
     paid_at: null,
+    note: null,
+    ...overrides,
+  }
+}
+
+function cardStatement(overrides: Partial<CardStatementArchive>): CardStatementArchive {
+  return {
+    ...base(overrides.id ?? crypto.randomUUID()),
+    card_id: 'card-1',
+    period_year: 2026,
+    period_month: 7,
+    statement_date: '2026-07-01',
+    due_date: '2026-07-20',
+    statement_debt_amount: 0,
+    current_period_spending: 0,
+    total_debt_amount: 0,
+    status: 'open',
+    paid_at: null,
+    payment_source_card_id: null,
+    reconciled_bank_amount: null,
+    reconciled_at: null,
+    reconciliation_note: null,
     note: null,
     ...overrides,
   }
@@ -205,6 +228,7 @@ function data(overrides: Partial<FinanceSummaryInput>): FinanceSummaryInput {
     payments: [],
     salaryHistory: [] as SalaryHistory[],
     cardInstallments: [],
+    cardStatements: [],
     savingsGoals: [],
     savingsGoalComponents: [],
     ...overrides,
@@ -266,16 +290,27 @@ test('card payable debt excludes future installments and provisions', () => {
 
 test('next month load separates open statements from card installment planning', () => {
   const loanId = 'loan-1'
-  const load = buildMonthlyLoad(
-    data({
-      cards: [card({ id: 'card-1', statement_debt_amount: 5_000, debt_amount: 30_000, due_day: 20 })],
-      cardInstallments: [cardInstallment({ card_id: 'card-1', due_month: '2026-07-01', amount: 5_000 })],
-      loanInstallments: [loanInstallment({ loan_id: loanId, due_date: '2026-07-15', amount: 2_500 })],
-      loans: [loan({ id: loanId, remaining_amount: 10_000, monthly_payment: 2_500, remaining_installments: 4 })],
-      payments: [payment({ due_date: '2026-07-05', amount: 750 })],
-      debts: [debt({ due_date: '2026-07-12', estimated_value_try: 1_250 })],
-    }),
+  const input = data({
+    cards: [card({ id: 'card-1', statement_debt_amount: 9_999, debt_amount: 30_000, due_day: 20 })],
+    cardStatements: [cardStatement({ card_id: 'card-1', statement_debt_amount: 5_000, due_date: '2026-07-20' })],
+    cardInstallments: [cardInstallment({ card_id: 'card-1', due_month: '2026-07-01', amount: 5_000 })],
+    loanInstallments: [loanInstallment({ loan_id: loanId, due_date: '2026-07-15', amount: 2_500 })],
+    loans: [loan({ id: loanId, remaining_amount: 10_000, monthly_payment: 2_500, remaining_installments: 4 })],
+    payments: [payment({ due_date: '2026-07-05', amount: 750 })],
+    debts: [debt({ due_date: '2026-07-12', estimated_value_try: 1_250 })],
+  })
+  const load = buildDashboardMonthlyLoad(
+    {
+      cards: input.cards,
+      payments: input.payments,
+      loans: input.loans,
+      loanInstallments: input.loanInstallments,
+      debts: input.debts,
+      cardInstallments: input.cardInstallments,
+      cardStatements: input.cardStatements ?? [],
+    },
     new Date('2026-07-01T00:00:00'),
+    new Date('2026-06-01T00:00:00'),
   )
 
   expect(load.cardStatements).toBe(5_000)

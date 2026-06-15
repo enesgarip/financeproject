@@ -1,15 +1,16 @@
-import type { Card } from '../types/database'
-import { getNextCardPaymentDueDate } from './cardStatement'
-import { addMonths, dateInputValue, isDateInMonth, startOfMonth } from './date'
+import { addMonths, dateInputValue, startOfMonth } from './date'
 import {
   buildFinancialPosition,
   getCurrentSalary,
-  paymentCashOutflowAmount,
-  paymentOccurrenceInMonth,
   roundMoney,
-  sum,
   type FinanceSummaryInput,
 } from './financeSummary'
+import { diffTL, sumTL } from './money'
+import {
+  buildFinanceObligationsForMonth,
+  type FinanceObligation,
+  type FinanceObligationsInput,
+} from './obligations'
 
 /**
  * Forward-looking cash-flow projection.
@@ -61,27 +62,55 @@ function monthKeyOf(date: Date) {
   return dateInputValue(startOfMonth(date))
 }
 
-/**
- * Map each credit card's already-known debt to the month it actually falls due,
- * counted once. Statement debt lands on the next due date; the open period's
- * spending lands on the following cycle's due date (when it will be billed).
- */
-function cardOutflowByMonth(cards: Card[], from: Date): Map<string, number> {
-  const byMonth = new Map<string, number>()
-  const add = (key: string, amount: number) => {
-    if (amount > 0) byMonth.set(key, (byMonth.get(key) ?? 0) + amount)
+function obligationsInput(data: FinanceSummaryInput): FinanceObligationsInput {
+  return {
+    cards: data.cards,
+    payments: data.payments,
+    loans: data.loans,
+    loanInstallments: data.loanInstallments,
+    debts: data.debts,
+    cardInstallments: data.cardInstallments,
+    cardStatements: data.cardStatements ?? [],
+  }
+}
+
+function forecastBuckets(items: FinanceObligation[]) {
+  const receivables: number[] = []
+  const paymentOutflow: number[] = []
+  const cardOutflow: number[] = []
+  const loanOutflow: number[] = []
+  const installmentOutflow: number[] = []
+  const debtOutflow: number[] = []
+
+  for (const item of items) {
+    if (item.kind === 'personal_receivable') {
+      receivables.push(item.amount)
+      continue
+    }
+
+    if (item.direction !== 'outflow') continue
+
+    if (item.kind === 'payment') {
+      paymentOutflow.push(item.cashImpactAmount ?? item.amount)
+    } else if (item.kind === 'card_statement' || item.kind === 'card_debt') {
+      cardOutflow.push(item.amount)
+    } else if (item.kind === 'card_installment') {
+      installmentOutflow.push(item.amount)
+    } else if (item.kind === 'loan_installment' || item.kind === 'legacy_loan_installment') {
+      loanOutflow.push(item.amount)
+    } else if (item.kind === 'personal_debt') {
+      debtOutflow.push(item.amount)
+    }
   }
 
-  for (const card of cards) {
-    if (card.card_type !== 'kredi_karti' || !card.due_day) continue
-    const nextDue = getNextCardPaymentDueDate(card, from)
-    if (!nextDue) continue
-    const nextDueDate = new Date(`${nextDue}T00:00:00`)
-    add(monthKeyOf(nextDueDate), card.statement_debt_amount)
-    add(monthKeyOf(addMonths(nextDueDate, 1)), card.current_period_spending)
+  return {
+    receivables: sumTL(receivables),
+    paymentOutflow: sumTL(paymentOutflow),
+    cardOutflow: sumTL(cardOutflow),
+    loanOutflow: sumTL(loanOutflow),
+    installmentOutflow: sumTL(installmentOutflow),
+    debtOutflow: sumTL(debtOutflow),
   }
-
-  return byMonth
 }
 
 export function buildCashFlowForecast(
@@ -94,9 +123,7 @@ export function buildCashFlowForecast(
 
   const startingBalance = roundMoney(buildFinancialPosition(data).totalCashAssets)
   const salary = roundMoney(getCurrentSalary(data.salaryHistory)?.amount ?? 0)
-  const cardByMonth = cardOutflowByMonth(data.cards, from)
-  const plannedLoanIds = new Set(data.loanInstallments.map((installment) => installment.loan_id))
-  const openDebts = data.debts.filter((debt) => debt.status === 'açık')
+  const obligationInput = obligationsInput(data)
 
   const months: CashFlowForecastMonth[] = []
   let runningBalance = startingBalance
@@ -108,51 +135,14 @@ export function buildCashFlowForecast(
     const monthKey = monthKeyOf(monthDate)
     const monthLabel = MONTH_LABEL.format(monthDate)
 
-    const receivables = roundMoney(
-      sum(
-        openDebts.filter((debt) => debt.direction === 'borç_verdim' && isDateInMonth(debt.due_date, monthDate)),
-        (debt) => debt.estimated_value_try,
-      ),
-    )
-    const paymentOutflow = roundMoney(
-      sum(
-        data.payments.filter((payment) => paymentOccurrenceInMonth(payment, monthDate)),
-        paymentCashOutflowAmount,
-      ),
-    )
-    const scheduledLoanOutflow = sum(
-      data.loanInstallments.filter((installment) => installment.status === 'bekliyor' && isDateInMonth(installment.due_date, monthDate)),
-      (installment) => installment.amount,
-    )
-    const legacyLoanOutflow = sum(
-      data.loans.filter(
-        (loan) =>
-          !plannedLoanIds.has(loan.id) &&
-          loan.status === 'active' &&
-          loan.installment_day !== null &&
-          offset < loan.remaining_installments,
-      ),
-      (loan) => loan.monthly_payment,
-    )
-    const loanOutflow = roundMoney(scheduledLoanOutflow + legacyLoanOutflow)
-    const installmentOutflow = roundMoney(
-      sum(
-        data.cardInstallments.filter((installment) => installment.status === 'scheduled' && installment.due_month === monthKey),
-        (installment) => installment.amount,
-      ),
-    )
-    const cardOutflow = roundMoney(cardByMonth.get(monthKey) ?? 0)
-    const debtOutflow = roundMoney(
-      sum(
-        openDebts.filter((debt) => debt.direction === 'borç_aldım' && isDateInMonth(debt.due_date, monthDate)),
-        (debt) => debt.estimated_value_try,
-      ),
+    const { receivables, paymentOutflow, cardOutflow, loanOutflow, installmentOutflow, debtOutflow } = forecastBuckets(
+      buildFinanceObligationsForMonth(obligationInput, monthDate, { from }),
     )
 
-    const income = roundMoney(salary + receivables)
-    const outflow = roundMoney(paymentOutflow + cardOutflow + loanOutflow + installmentOutflow + debtOutflow)
-    const net = roundMoney(income - outflow)
-    runningBalance = roundMoney(runningBalance + net)
+    const income = sumTL([salary, receivables])
+    const outflow = sumTL([paymentOutflow, cardOutflow, loanOutflow, installmentOutflow, debtOutflow])
+    const net = diffTL(income, outflow)
+    runningBalance = sumTL([runningBalance, net])
 
     months.push({
       monthKey,

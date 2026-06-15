@@ -49,14 +49,13 @@ import {
   buildFinancialPosition,
   buildGoalProgressSummary,
   buildMonthlyCashFlow,
-  buildMonthlyLoad,
   getSalaryTrend,
   sum,
   totalCreditLimit,
 } from '../utils/financeSummary'
 import { buildAttentionLine } from '../utils/attention'
 import { buildSmartInsights, buildFocusActions } from '../utils/dashboardInsights'
-import { buildDashboardUpcomingItems } from '../utils/dashboardUpcoming'
+import { buildDashboardMonthlyLoad, buildDashboardUpcomingItems } from '../utils/dashboardUpcoming'
 import { formatCurrency } from '../utils/formatCurrency'
 import { SkeletonDashboard } from '../components/ui/skeleton'
 
@@ -135,6 +134,16 @@ export function DashboardPage() {
   const loading = snapshotQuery.isPending
   const error = snapshotQuery.error instanceof Error ? snapshotQuery.error.message : ''
 
+  const obligationInput = useMemo(() => ({
+    cards: data.cards,
+    payments: data.payments,
+    loans: data.loans,
+    loanInstallments: data.loanInstallments,
+    debts: data.debts,
+    cardInstallments: data.cardInstallments,
+    cardStatements: data.cardStatements,
+  }), [data.cardInstallments, data.cardStatements, data.cards, data.debts, data.loanInstallments, data.loans, data.payments])
+
   const summary = useMemo(() => {
     const position = buildFinancialPosition(data)
     const totalSharedCreditLimit = totalCreditLimit(data.cards)
@@ -146,7 +155,7 @@ export function DashboardPage() {
     const salaryTrend = getSalaryTrend(data.salaryHistory)
     const creditLimitGroups = buildCreditLimitGroups(data.cards)
     const cashFlow = buildMonthlyCashFlow(data)
-    const nextMonthLoad = buildMonthlyLoad(data, addMonths(startOfMonth(), 1))
+    const nextMonthLoad = buildDashboardMonthlyLoad(obligationInput, addMonths(startOfMonth(), 1), startOfMonth())
     const goalProgress = buildGoalProgressSummary(data.savingsGoals, data.savingsGoalComponents)
 
     return {
@@ -160,19 +169,11 @@ export function DashboardPage() {
       nextMonthLoad,
       goalProgress,
     }
-  }, [data])
+  }, [data, obligationInput])
 
   const upcomingItems = useMemo(() => {
-    return buildDashboardUpcomingItems({
-      cards: data.cards,
-      payments: data.payments,
-      loans: data.loans,
-      loanInstallments: data.loanInstallments,
-      debts: data.debts,
-      cardInstallments: data.cardInstallments,
-      cardStatements: data.cardStatements,
-    }, UPCOMING_DAYS)
-  }, [data.cardInstallments, data.cardStatements, data.cards, data.debts, data.loanInstallments, data.loans, data.payments])
+    return buildDashboardUpcomingItems(obligationInput, UPCOMING_DAYS)
+  }, [obligationInput])
   const financialHealth = useMemo(() => {
     const urgentUpcomingCount = upcomingItems.filter((item) => {
       const remaining = daysUntil(new Date(item.sortTime))
@@ -358,4 +359,3 @@ export function DashboardPage() {
     </motion.section>
   )
 }
-
