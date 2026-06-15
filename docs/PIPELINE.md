@@ -41,6 +41,8 @@ Checks:
 
 - lint
 - build
+- bundle size budget
+- Lighthouse performance/accessibility/best-practices budget
 - Playwright smoke test
 - Supabase local migration reset + lint
 
@@ -58,7 +60,7 @@ Order:
 4. **Vercel** — frontend deploy hook
 
 Ek otomasyon:
-- `ci.yml`: Lint+Build (required), Playwright smoke, Supabase Migration Check, RLS denetimi.
+- `ci.yml`: Lint+Build (required), bundle budget, Lighthouse budget, Playwright smoke, Supabase Migration Check, RLS denetimi.
 - Dependabot patch/minor PR'larını CI yeşilse otomatik squash-merge eder (major elde kalır).
 - Günlük şifreli DB yedeği cron'u (`db-backup.yml`).
 
