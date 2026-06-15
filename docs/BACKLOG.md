@@ -28,7 +28,8 @@
   - Missing schema/RPC errors now share `missingSupabaseCapabilityMessage`, which calls out migration/RPC deployment drift and includes Supabase codes when available.
 - ~~Document and standardize transaction history side effects for all finance mutations.~~ DONE.
   - `docs/TRANSACTION_HISTORY.md` now defines activity-feed role, type/source conventions, current RPC side effects, and no-history repair rules.
-- Review whether recurring payments, loan installments, and card installments can be unified under a clearer planning model.
+- ~~Review whether recurring payments, loan installments, and card installments can be unified under a clearer planning model.~~ DONE.
+  - `docs/PLANNING_MODEL_REVIEW.md` keeps separate write tables, names `FinanceObligation` as the shared read-side projection, and lists the remaining low-risk cleanup.
 
 ## P2 - UX / Maintainability
 
@@ -70,6 +71,7 @@
 - DataHealth copy polish pass completed for the older ASCII Turkish user-visible strings; encoding guard remains green.
 - Turkish copy/encoding audit repeated on 2026-06-15: `encoding.guard.test.ts`, `docs.guard.test.ts`, and a manual mojibake signature scan were clean.
 - Transaction-history side effects are now standardized in `docs/TRANSACTION_HISTORY.md` and linked from the RPC/action reference.
+- Planning model review completed: recurring payments, loan installments, card statements, card installments, and debt due dates should share `FinanceObligation` as a read-side projection rather than a new write table.
 - Migration compatibility checklist now reflects the Lighthouse CI budget added to the release workflow.
 - Missing Supabase schema/RPC detection now centralizes on `utils/supabaseErrors.ts`; page-local schema-cache wrapper aliases were removed.
 - Missing schema/RPC user messages now use a shared deployment-mismatch helper with Supabase code visibility.

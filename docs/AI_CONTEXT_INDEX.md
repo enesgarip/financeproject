@@ -66,7 +66,7 @@ ESLint blocks `src/{pages,components,utils,hooks}` from importing
 | --- | --- | --- |
 | `/` dashboard | `docs/DASHBOARD_ARCHITECTURE.md`, `src/pages/DashboardPage.tsx`, `src/components/dashboard/*` | `src/app/useFinanceSnapshot.ts`, `src/data/repositories/financeSnapshotRepo.ts`, `src/utils/dashboard*`, `src/utils/financeSummary.ts`, `src/utils/obligations.ts` |
 | `/kartlar` accounts/cards | `docs/CARDS_ARCHITECTURE.md`, `src/pages/CardsPage.tsx`, `src/pages/CardsPage.hooks.ts`, `src/pages/CardsPage.crud.tsx`, `src/pages/CardsPage.sections.tsx`, `src/pages/CardsPage.overview.tsx`, `src/pages/CardsPage.statements.tsx`, `src/pages/CardsPage.expense.tsx`, `src/pages/CardsPage.list.tsx`, `src/pages/CardsPage.installment.tsx`, `src/pages/CardsPage.helpers.ts` | `src/data/repositories/cardsRepo.ts`, `src/services/accountMovements.ts`, `src/utils/cardStatement.ts`, `src/utils/financeSummary.ts` |
-| `/odemeler` planned payments | `src/pages/PaymentsPage.tsx` | `src/data/repositories/paymentsRepo.ts`, `src/services/financePaymentActions.ts`, `src/utils/obligations.ts`, `docs/SHARED_PAYMENT_DRAWER_PLAN.md` |
+| `/odemeler` planned payments | `src/pages/PaymentsPage.tsx` | `src/data/repositories/paymentsRepo.ts`, `src/services/financePaymentActions.ts`, `src/utils/obligations.ts`, `docs/PLANNING_MODEL_REVIEW.md`, `docs/SHARED_PAYMENT_DRAWER_PLAN.md` |
 | `/borclar/krediler` loans | `src/pages/LoansPage.tsx`, `src/pages/LoansPage.helpers.ts`, `src/pages/LoansPage.components.tsx` | `src/data/repositories/loansRepo.ts`, `src/services/financePaymentActions.ts`, `src/utils/financeSummary.ts`, `docs/SHARED_PAYMENT_DRAWER_PLAN.md` |
 | `/borclar/kisiler` personal debts | `src/pages/DebtsPage.tsx` | `src/data/repositories/debtsRepo.ts`, `src/services/financePaymentActions.ts`, `docs/SHARED_PAYMENT_DRAWER_PLAN.md` |
 | `/varliklar` assets | `src/pages/AssetsPage.tsx`, `src/pages/AssetsHub.tsx` | `src/data/repositories/valuationRepo.ts`, `src/utils/valuation*`, `src/utils/marketRates.ts` |
@@ -89,7 +89,7 @@ ESLint blocks `src/{pages,components,utils,hooks}` from importing
 | How are shared credit limits grouped? | `buildCreditLimitGroups` in `src/utils/financeSummary.ts` |
 | How is loan summary projected? | `projectLoanSummary` in `src/utils/financeSummary.ts` plus DB trigger `sync_loan_summary` |
 | How are card/account ledgers projected? | `src/utils/cardLedger.ts`, `src/utils/accountLedger.ts` |
-| How are monthly obligations built? | `src/utils/obligations.ts`; dashboard upcoming, monthly load, analysis calendar, and cash-flow forecast consume it |
+| How are monthly obligations built? | `src/utils/obligations.ts`; see `docs/PLANNING_MODEL_REVIEW.md` for why this stays a read-side projection instead of one write table |
 | How are Turkish calendar presets defined? | `src/utils/obligationPresets.ts`, `src/components/finance/TurkishCalendarPresets.tsx` |
 
 ## Common Task Playbooks

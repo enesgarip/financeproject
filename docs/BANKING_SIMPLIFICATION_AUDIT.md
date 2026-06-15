@@ -71,6 +71,7 @@
 - **Planning model unification**
   - Recurring payments, loan installments, card statement debt, and card installments all appear as upcoming obligations.
   - The pure `utils/obligations.ts` view now feeds dashboard upcoming items, analysis calendar events, payment drawer intents, cash-flow forecast buckets, and dashboard monthly-load totals.
+  - Reviewed in `docs/PLANNING_MODEL_REVIEW.md`: keep separate write tables and use `FinanceObligation` as the shared read-side projection.
   - Remaining cleanup is mostly dead-code and naming polish rather than a separate planning model.
 
 - **Cards page module split**
