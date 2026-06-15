@@ -49,7 +49,9 @@
 
 ## P3 - Nice to Have
 
-- Add guided import/restore flow for personal finance data. JSON/CSV export now exists in the data health screen.
+- Add guided import/restore flow for personal finance data.
+  - JSON export/restore exists in Data Health, including a pre-restore safety backup.
+  - CSV export exists; remaining import work is a guided CSV/manual mapping flow if that becomes useful.
 - Add stronger historical analytics for cash flow and debt trend.
 - Add better scenario planning around next-month and multi-month obligations.
 
@@ -100,3 +102,4 @@
 - `docs/BANKING_SIMPLIFICATION_AUDIT.md` now reflects the completed CardsPage module split and no longer lists it as remaining banking-simplification work.
 - `docs/RPC_ACTION_REFERENCE.md` now mirrors the refreshed card debt transition source of truth for planned card-funded payments, card resets, and ledger repair/correction.
 - Data Health "Tüm veriyi sil" now downloads a reset-before JSON backup before the destructive reset call and tells the user this preflight will happen.
+- Data Health JSON backup restore already exists; the remaining P3 import work is narrowed to a guided CSV/manual mapping flow.
