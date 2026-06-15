@@ -22,6 +22,7 @@ import {
   type FinanceObligationsInput,
 } from './obligations'
 import type { FinanceSummaryInput } from './financeSummary'
+import { sumTL } from './money'
 
 /**
  * Analiz sayfasının saf türetme çekirdeği (view-model'ler): arama/CSV listesi,
@@ -58,6 +59,9 @@ export type CalendarEvent = {
   date: string
   title: string
   amount: number
+  cashImpactAmount: number
+  direction: FinanceObligation['direction']
+  settlement: NonNullable<FinanceObligation['settlement']>
   tone: 'emerald' | 'rose' | 'amber' | 'stone'
 }
 
@@ -204,14 +208,26 @@ export function obligationCalendarTone(item: FinanceObligation): CalendarEvent['
   return 'rose'
 }
 
+export function calendarEventCashDelta(event: Pick<CalendarEvent, 'cashImpactAmount' | 'direction'>): number {
+  if (event.cashImpactAmount === 0) return 0
+  return event.direction === 'inflow' ? event.cashImpactAmount : -event.cashImpactAmount
+}
+
+export function calendarEventsCashDelta(events: Pick<CalendarEvent, 'cashImpactAmount' | 'direction'>[]): number {
+  return sumTL(events.map(calendarEventCashDelta))
+}
+
 // Reads the same obligation engine as the dashboard cash calendar, so both
-// screens list the identical items, dates and amounts for the month.
+// screens list the identical items, dates, amounts and cash impact for the month.
 export function buildCalendarEvents(data: AnalysisData): CalendarEvent[] {
   return buildFinanceObligationsForMonth(analysisObligationsInput(data), startOfMonth()).map((item) => ({
     id: item.id,
     date: item.date,
     title: item.title,
     amount: item.amount,
+    cashImpactAmount: item.cashImpactAmount ?? item.amount,
+    direction: item.direction,
+    settlement: item.settlement ?? 'cash',
     tone: obligationCalendarTone(item),
   }))
 }

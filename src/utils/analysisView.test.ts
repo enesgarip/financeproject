@@ -1,7 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { Asset, Budget, Card, CardExpense, Debt } from '../types/database'
+import type { Asset, Budget, Card, CardExpense, CardInstallment, Debt, Payment } from '../types/database'
 import {
+  buildCalendarEvents,
   buildCategoryInsights,
+  calendarEventCashDelta,
+  calendarEventsCashDelta,
   analysisFinanceSummaryInput,
   buildSearchCsv,
   buildSearchItems,
@@ -113,6 +116,45 @@ function debt(overrides: Partial<Debt>): Debt {
   } as Debt
 }
 
+function payment(overrides: Partial<Payment>): Payment {
+  return {
+    ...base,
+    title: 'Odeme',
+    category: 'Fatura',
+    amount: 0,
+    amount_status: 'exact',
+    due_date: '2026-06-10',
+    status: 'bekliyor',
+    payment_method: 'manual',
+    recurrence: 'none',
+    recurrence_day: null,
+    recurrence_end_date: null,
+    auto_source_card_id: null,
+    note: null,
+    ...overrides,
+  }
+}
+
+function cardInstallment(overrides: Partial<CardInstallment>): CardInstallment {
+  return {
+    ...base,
+    card_id: 'cc',
+    card_expense_id: null,
+    statement_archive_id: null,
+    installment_no: 1,
+    installment_count: 3,
+    due_month: '2026-06-01',
+    amount: 0,
+    description: 'Taksit',
+    category: 'Diger',
+    status: 'scheduled',
+    posted_at: null,
+    paid_at: null,
+    note: null,
+    ...overrides,
+  }
+}
+
 describe('formatMonth', () => {
   it('renders a Turkish "month year" label from an ISO date', () => {
     expect(formatMonth('2026-06-01')).toBe('Haziran 2026')
@@ -206,6 +248,91 @@ describe('analysisFinanceSummaryInput', () => {
     })
 
     expect(analysisFinanceSummaryInput(source).cardStatements).toEqual(source.cardStatementArchives)
+  })
+})
+
+describe('buildCalendarEvents', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date(2026, 5, 12))
+  })
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('preserves cash impact and settlement for calendar totals', () => {
+    const source = data({
+      cards: [card({ id: 'cc', card_name: 'World', due_day: 20 })],
+      payments: [
+        payment({
+          id: 'p-card',
+          title: 'Dijital uyelik',
+          amount: 200,
+          payment_method: 'bank_auto',
+          auto_source_card_id: 'cc',
+        }),
+        payment({ id: 'p-cash', title: 'Kira', amount: 500 }),
+      ],
+      cardInstallments: [cardInstallment({ id: 'i1', amount: 300, description: 'Telefon taksidi' })],
+      debts: [debt({ id: 'd1', person_name: 'Ayse', direction: 'borç_verdim', estimated_value_try: 100, due_date: '2026-06-10' })],
+    })
+
+    const events = buildCalendarEvents(source)
+    const cardPayment = events.find((event) => event.id.startsWith('payment-p-card-'))
+    const cardInstallmentEvent = events.find((event) => event.id === 'card-installment-i1')
+    const cashPayment = events.find((event) => event.id.startsWith('payment-p-cash-'))
+    const receivable = events.find((event) => event.id === 'debt-d1')
+
+    expect(cardPayment).toMatchObject({
+      amount: 200,
+      cashImpactAmount: 0,
+      direction: 'outflow',
+      settlement: 'credit_card',
+      tone: 'stone',
+    })
+    expect(cardInstallmentEvent).toMatchObject({
+      amount: 300,
+      cashImpactAmount: 0,
+      direction: 'outflow',
+      settlement: 'credit_card',
+      tone: 'stone',
+    })
+    expect(cashPayment).toMatchObject({
+      amount: 500,
+      cashImpactAmount: 500,
+      direction: 'outflow',
+      settlement: 'cash',
+      tone: 'rose',
+    })
+    expect(receivable).toMatchObject({
+      amount: 100,
+      cashImpactAmount: 100,
+      direction: 'inflow',
+      settlement: 'cash',
+      tone: 'emerald',
+    })
+  })
+
+  it('computes calendar day totals from cash impact, not raw card load', () => {
+    const source = data({
+      cards: [card({ id: 'cc', due_day: 20 })],
+      payments: [
+        payment({
+          id: 'p-card',
+          amount: 200,
+          payment_method: 'bank_auto',
+          auto_source_card_id: 'cc',
+        }),
+        payment({ id: 'p-cash', amount: 500 }),
+      ],
+      debts: [debt({ id: 'd1', direction: 'borç_verdim', estimated_value_try: 100, due_date: '2026-06-10' })],
+    })
+
+    const dayEvents = buildCalendarEvents(source).filter((event) => event.date === '2026-06-10')
+    const cardPayment = dayEvents.find((event) => event.id.startsWith('payment-p-card-'))
+
+    expect(cardPayment ? calendarEventCashDelta(cardPayment) : null).toBe(0)
+    expect(calendarEventsCashDelta(dayEvents)).toBe(-400)
   })
 })
 

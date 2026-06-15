@@ -61,6 +61,11 @@ Forecast guardrail: running cash projections must subtract `cashImpactAmount`,
 not raw `amount`, for credit-card-settled obligations. Scheduled card
 installments are planning/card-debt rows, not immediate bank-cash outflows.
 
+Analysis calendar guardrail: daily net totals must also use `cashImpactAmount`
+instead of raw `amount`. The calendar can still list credit-card-settled loads
+with their full `amount`, but the signed day total should represent bank-cash
+movement.
+
 ## Remaining Cleanup
 
 The model is already unified enough for product behavior. Remaining work is

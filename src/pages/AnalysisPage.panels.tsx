@@ -10,6 +10,7 @@ import { getCurrentSalary, sum } from '../utils/financeSummary'
 import {
   analysisObligationsInput,
   buildCalendarEvents,
+  calendarEventsCashDelta,
   formatMonth,
   type AnalysisData,
   type CalendarEvent,
@@ -171,7 +172,7 @@ export function FinancialCalendar({ data }: { data: AnalysisData }) {
         <div className="flex items-start justify-between gap-3">
           <div>
             <CardTitle>Finans takvimi</CardTitle>
-            <p className="mt-1 text-sm text-muted-foreground">{formatMonth(dateInputValue(monthStart))} içindeki nakit hareketleri.</p>
+            <p className="mt-1 text-sm text-muted-foreground">{formatMonth(dateInputValue(monthStart))} için nakit etkisi ve karta işlenen yükler.</p>
           </div>
           <CalendarDays className="text-success" />
         </div>
@@ -190,7 +191,7 @@ export function FinancialCalendar({ data }: { data: AnalysisData }) {
             const day = index + 1
             const date = dateInputValue(new Date(monthStart.getFullYear(), monthStart.getMonth(), day))
             const dayEvents = eventsByDate.get(date) ?? []
-            const dayTotal = dayEvents.reduce((total, event) => total + (event.tone === 'emerald' ? event.amount : -event.amount), 0)
+            const dayTotal = calendarEventsCashDelta(dayEvents)
 
             return (
               <div key={date} className="min-h-[6.25rem] rounded-lg bg-muted/45 p-1.5 ring-1 ring-transparent min-[560px]:min-h-[7rem]">
@@ -216,7 +217,7 @@ export function FinancialCalendar({ data }: { data: AnalysisData }) {
         {busyDays.length > 0 ? (
           <div className="grid gap-2 min-[560px]:grid-cols-2">
             {busyDays.map(([date, dayEvents]) => {
-              const dayTotal = dayEvents.reduce((total, event) => total + (event.tone === 'emerald' ? event.amount : -event.amount), 0)
+              const dayTotal = calendarEventsCashDelta(dayEvents)
 
               return (
                 <div key={`detail-${date}`} className="rounded-lg bg-muted/45 p-2.5 text-xs">

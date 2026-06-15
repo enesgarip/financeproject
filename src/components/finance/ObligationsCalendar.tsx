@@ -12,6 +12,7 @@ import { useMemo, useState } from 'react'
 import { cn } from '../../lib/utils'
 import { dateInputValue, formatDate, isDateInMonth, startOfMonth } from '../../utils/date'
 import { formatCurrency } from '../../utils/formatCurrency'
+import { sumTL } from '../../utils/money'
 import {
   buildFinanceObligationsForMonth,
   groupFinanceObligationsByDate,
@@ -96,14 +97,10 @@ function obligationIcon(item: FinanceObligation) {
 }
 
 function dayTotals(items: FinanceObligation[]) {
-  return items.reduce(
-    (total, item) => {
-      if (item.direction === 'inflow') total.inflow += item.amount
-      else total.outflow += item.amount
-      return total
-    },
-    { outflow: 0, inflow: 0 },
-  )
+  return {
+    outflow: sumTL(items.filter((item) => item.direction === 'outflow').map((item) => item.amount)),
+    inflow: sumTL(items.filter((item) => item.direction === 'inflow').map((item) => item.amount)),
+  }
 }
 
 function SummaryStat({ label, value, tone = 'neutral' }: { label: string; value: string; tone?: 'neutral' | 'danger' | 'success' }) {

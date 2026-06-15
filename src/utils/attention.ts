@@ -2,7 +2,7 @@ import { buildCashFlowForecast } from './cashFlowForecast'
 import { dateInputValue } from './date'
 import { buildFinancialPosition, type FinanceSummaryInput } from './financeSummary'
 import { formatCurrency } from './formatCurrency'
-import { diffTL, greaterThanTL } from './money'
+import { diffTL, greaterThanTL, sumTL } from './money'
 
 /**
  * The single most important sentence of the day (roadmap C7).
@@ -45,7 +45,7 @@ export function buildAttentionLine(
   const dueSoon = upcomingItems.filter(
     (item) => item.settlement === 'cash' && item.cashImpactAmount > 0 && item.sortTime >= from.getTime() - 86_400_000 && item.sortTime <= windowEnd,
   )
-  const dueSoonTotal = dueSoon.reduce((total, item) => total + item.cashImpactAmount, 0)
+  const dueSoonTotal = sumTL(dueSoon.map((item) => item.cashImpactAmount))
   if (dueSoon.length > 0 && greaterThanTL(dueSoonTotal, cash)) {
     const gap = diffTL(dueSoonTotal, cash)
     return {
