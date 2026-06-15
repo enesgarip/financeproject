@@ -16,6 +16,7 @@
   - provision posted
   - statement cut
   - debt paid
+  - 2026-06-15 review added credit-card funded `pay_payment`, ledger repair/correction, reset flow, and shared debt-breakdown helpers.
 - Continue banking simplification from `docs/BANKING_SIMPLIFICATION_AUDIT.md`.
   - ~~normalized upcoming obligations view~~ DONE for dashboard upcoming, analysis calendar, payment drawer intents, forecast buckets, and dashboard monthly load.
 
@@ -81,6 +82,7 @@
 - Finance maintenance now reports missing scheduled-maintenance RPC deployment instead of silently skipping those app-start jobs.
 - Cards-page due statement automation now surfaces missing statement-cut RPC deployment through the shared migration-drift message.
 - Ledger and live-reconciliation panels now surface missing table deployment through the shared migration-drift message instead of silently hiding.
+- `docs/CARD_DEBT_TRANSITIONS.md` now documents credit-card funded planned payments, card-ledger repair/correction flows, reset behavior, and the shared debt-breakdown helpers.
 - `roundMoney` alias was removed; money rounding/comparison helpers now live in `utils/money.ts`.
 - Card debt split classification now shares `financeSummary.ts` helpers for Dashboard focus actions and Data Health issues.
 - `CardsPage.sections.tsx` is now a thin nav/automation module; overview, statement/provision panels, and help copy live in focused `CardsPage.*` files.

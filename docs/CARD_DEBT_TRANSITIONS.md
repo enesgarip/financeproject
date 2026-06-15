@@ -1,6 +1,6 @@
 # Card Debt Transitions
 
-Last reviewed: 2026-06-13
+Last reviewed: 2026-06-15
 
 This file is the working source of truth for how credit-card debt moves through
 the app. If an RPC, page action, or data-health fix changes one of these rules,
@@ -36,6 +36,8 @@ Use `src/utils/financeSummary.ts` instead of reimplementing card math in pages:
 
 - `cardProvisionAmount(card)`
 - `cardSplitTotal(statementDebt, currentPeriod, provisionAmount)`
+- `scheduledCardInstallmentTotalsByCard(installments)`
+- `cardDebtBreakdown(card, scheduledTotal)`
 - `cardPayableDebt(card)`
 - `buildCreditLimitGroups(cards)`
 - `clampCardBreakdown(debt, statement, current, provision)`
@@ -55,8 +57,12 @@ member `debt_amount` values.
 | Statement cut | `cut_card_statement` / `cut_due_card_statements` | `statement_debt_amount += current_period_spending`; `current_period_spending = next period scheduled installment total`; `debt_amount` unchanged | Inserts or returns an open `card_statement_archives` row; links posted expenses/installments to the archive; posts next-period scheduled installments |
 | Statement paid | `pay_card_statement` | Source bank account `current_balance -= statement amount`; card `debt_amount -= statement amount`; card `statement_debt_amount -= statement amount` | Marks the statement `paid`; marks linked card installments `paid` |
 | Manual card debt paid | `pay_card_debt` | Source bank account `current_balance -= amount`; card `debt_amount -= amount`; statement debt is reduced first, then current-period spending | Does not close statement archive rows; does not change provisions or future scheduled installments |
+| Planned payment paid from credit card | `pay_payment` with a credit-card source | Source credit card `debt_amount += paid amount`; `current_period_spending += paid amount` | Inserts a posted `card_expenses` row for the planned payment; advances or closes the payment row |
 | Posted expense edited | `update_card_expense` | Reverses the previous posted impact, then applies the new posted impact | Recreates installment rows for the edited expense |
 | Legacy installment carried over | `record_card_installment_carryover` | `debt_amount += remaining installment total`; `current_period_spending += installment amount` only when the next due month is the current month | Inserts one posted expense and remaining installment rows |
+| Card debt recomputed from ledger | `recompute_card_debt_from_ledger` | `debt_amount = sum(card_ledger.amount_kurus) / 100`; split fields may be clamped by the breakdown invariant if they exceed the repaired total | Suppresses the ledger trigger for this repair write so no duplicate event is emitted |
+| Card debt manual correction | `post_card_debt_correction` | `debt_amount += signed correction`; split fields may be clamped if the correction lowers total debt below the visible split | Writes an auditable `card_ledger.kind='adjustment'` event with the required reason note |
+| Card data reset | `reset_card_data` | Sets `debt_amount`, `statement_debt_amount`, `current_period_spending`, and `provision_amount` to `0` | Deletes dependent card expenses, installments, statement archives, and related history for that card |
 
 ## Statement Boundary
 
@@ -86,6 +92,26 @@ payable through statement cutting, not by adding them again to dashboard debt.
 The preferred user flow is paying an open statement with `pay_card_statement`.
 `pay_card_debt` remains a manual/legacy escape hatch for posted debt that is not
 represented by an open statement.
+
+When `pay_payment` is funded by a credit card instead of a bank account, it is
+card spending, not cash outflow: the selected credit card receives a posted
+expense and its `debt_amount` / `current_period_spending` increase by the paid
+amount.
+
+## Ledger Authority
+
+`card_ledger` is the append-only audit trail for `cards.debt_amount`. Ordinary
+RPCs continue to update `cards.debt_amount`; the trigger records each delta as
+integer kuruş. Repair flows follow the same append-only rule:
+
+- `recompute_card_debt_from_ledger` pulls `debt_amount` back to the exact ledger
+  projection and suppresses the trigger for that repair write.
+- `post_card_debt_correction` is the preferred manual fix. It changes
+  `debt_amount` through a signed adjustment and records the reason in
+  `card_ledger`.
+
+Do not patch `debt_amount` directly from page code or data-health logic. Use the
+ledger correction RPCs or fix the upstream transition that created the drift.
 
 ## Data-Health Expectations
 
