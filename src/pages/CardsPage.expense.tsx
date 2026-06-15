@@ -12,8 +12,9 @@ import { getCardStatementPeriod } from '../utils/cardStatement'
 import { dateInputValue, formatDate } from '../utils/date'
 import { cardProvisionAmount } from '../utils/financeSummary'
 import { getLastUsed, setLastUsed } from '../utils/lastUsed'
+import { isMissingSupabaseCapabilityError } from '../utils/supabaseErrors'
 import { openNativePicker } from '../lib/utils'
-import { cardOptionLabel, isSchemaCacheError, moneyShare } from './CardsPage.helpers'
+import { cardOptionLabel, moneyShare } from './CardsPage.helpers'
 import { OverviewStat } from './CardsPage.atoms'
 import { formatCurrency, parseNumber } from '../utils/formatCurrency'
 import { parseReceiptImage } from '../lib/receiptParseClient'
@@ -119,7 +120,7 @@ export function QuickExpensePanel({
     setSaving(false)
     if (!submitResult.ok) {
       setLocalError(
-        isSchemaCacheError(submitResult.error)
+        isMissingSupabaseCapabilityError(submitResult.error)
           ? 'Provizyon/taksit altyapısı canlı veritabanına uygulanmamış. Migration çalışınca bu işlem açılacak.'
           : submitResult.error.message ?? 'Harcama kaydedilemedi.',
       )

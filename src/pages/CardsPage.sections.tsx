@@ -8,7 +8,8 @@ import { useEffect } from 'react'
 import { cutDueCardStatements } from '../data/repositories/cardsRepo'
 import type { Card, CardStatementArchive } from '../types/database'
 import { cn } from '../lib/utils'
-import { isSchemaCacheError, shouldRunStatementCut } from './CardsPage.helpers'
+import { isMissingSupabaseCapabilityError } from '../utils/supabaseErrors'
+import { shouldRunStatementCut } from './CardsPage.helpers'
 
 export { AccountHubPanel, CreditCardOverview } from './CardsPage.overview'
 export { ProvisionPanel, StatementPanel } from './CardsPage.statements'
@@ -96,7 +97,7 @@ export function DueStatementAutomation({
       const cutResult = await cutDueCardStatements()
 
       if (!cutResult.ok) {
-        if (!isSchemaCacheError(cutResult.error)) setError(cutResult.error.message ?? 'Ekstre kesimi başarısız.')
+        if (!isMissingSupabaseCapabilityError(cutResult.error)) setError(cutResult.error.message ?? 'Ekstre kesimi başarısız.')
         return
       }
 

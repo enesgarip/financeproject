@@ -5,7 +5,6 @@ import { buildCreditLimitGroups, cardPayableDebt, creditLimitGroupKey } from '..
 import { daysUntil, nextMonthlyDate } from '../utils/date'
 import { roundTL } from '../utils/money'
 import { canCutCurrentStatement } from '../utils/statementCycle'
-import { isMissingSupabaseCapabilityError } from '../utils/supabaseErrors'
 
 export const fields: FormField[] = [
   { name: 'bank_name', label: 'Banka', type: 'text', required: true },
@@ -120,10 +119,6 @@ function bankHue(bankName: string, rows: Card[]) {
 
 export function bankHueStyle(bankName: string, rows: Card[]) {
   return { '--bank-hue': String(bankHue(bankName, rows)) } as CSSProperties
-}
-
-export function isSchemaCacheError(error: { code?: string; message?: string } | null | undefined) {
-  return isMissingSupabaseCapabilityError(error)
 }
 
 export function limitGroupKey(card: Card) {

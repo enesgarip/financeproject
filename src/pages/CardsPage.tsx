@@ -6,6 +6,7 @@ import { CardInstallmentCalendarPanel } from '../components/finance/CardInstallm
 import { CardInstallmentExpensesPanel } from '../components/finance/CardInstallmentExpensesPanel'
 import type { Card, CardStatementArchive } from '../types/database'
 import { formatDate } from '../utils/date'
+import { isMissingSupabaseCapabilityError } from '../utils/supabaseErrors'
 import { useFinancePaymentDrawer } from '../hooks/useFinancePaymentDrawer'
 import {
   AccountHubPanel,
@@ -37,7 +38,6 @@ import {
 } from './CardsPage.crud'
 import {
   fields,
-  isSchemaCacheError,
   statementPeriodLabel,
 } from './CardsPage.helpers'
 
@@ -108,7 +108,7 @@ export function CardsPage() {
           </>
         ),
         formatSubmitError: (error) =>
-          isSchemaCacheError(error)
+          isMissingSupabaseCapabilityError(error)
             ? 'Ekstre odeme altyapisi canli veritabanina uygulanmamis. Migration calisinca bu islem acilacak.'
             : error.message ?? 'Ekstre ödenemedi.',
         onSubmitEnd: () => setStatementActionId(null),

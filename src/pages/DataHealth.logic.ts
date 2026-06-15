@@ -23,7 +23,6 @@ import { buildCreditLimitGroups, cardProvisionAmount, cardSplitTotal, clampCardB
 import { formatCurrency } from '../utils/formatCurrency'
 import { exceedsTL } from '../utils/money'
 import { formatComponentAmount, formatSavingsGoalAmount, savingsGoalBelowTarget, savingsGoalTargetReached, savingsGoalValueTypeLabel } from '../utils/savingsGoal'
-import { isMissingSupabaseCapabilityError } from '../utils/supabaseErrors'
 
 export type HealthData = {
   assets: Asset[]
@@ -179,10 +178,6 @@ const exportTables = [
   { key: 'savingsGoals', table: 'savings_goals' },
   { key: 'savingsGoalComponents', table: 'savings_goal_components' },
 ] satisfies Array<{ key: keyof HealthData; table: string }>
-
-export function isSchemaCacheError(error: { code?: string; message?: string } | null | undefined) {
-  return isMissingSupabaseCapabilityError(error)
-}
 
 export function currentMonthStart() {
   const today = new Date()

@@ -21,13 +21,13 @@ import {
   buildIssues,
   downloadDataCsv,
   emptyData,
-  isSchemaCacheError,
   makeUndoBatch,
   type HealthData,
   type HealthIssue,
   type UndoBatch,
   type UndoEntry,
 } from './DataHealth.logic'
+import { isMissingSupabaseCapabilityError } from '../utils/supabaseErrors'
 import { fixIssue } from './DataHealthPage.actions'
 import {
   FixAllModal,
@@ -175,7 +175,7 @@ export function DataHealthPage() {
     const resetError = await resetUserFinanceData()
     if (!resetError.ok) {
       setError(
-        isSchemaCacheError(resetError.error)
+        isMissingSupabaseCapabilityError(resetError.error)
           ? 'Sıfırlama altyapısı canlı veritabanına uygulanmamış. Migration çalışınca bu işlem açılacak.'
           : resetError.error.message ?? 'Tüm veri silinemedi.',
       )

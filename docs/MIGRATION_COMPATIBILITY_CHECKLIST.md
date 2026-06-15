@@ -1,6 +1,6 @@
 # Migration Compatibility Checklist
 
-Last reviewed: 2026-06-13
+Last reviewed: 2026-06-15
 
 Use this checklist before merging any change that touches Supabase migrations,
 RPC contracts, RLS policies, edge functions, generated database types, or
@@ -80,6 +80,7 @@ guardrail.
   - unit coverage gate
   - build
   - bundle budget
+  - Lighthouse performance/accessibility/best-practices budget
   - Playwright smoke
   - Supabase local reset/lint/RLS audit
 - Review the migration plan in CI or with `supabase db push --linked --dry-run

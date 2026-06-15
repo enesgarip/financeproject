@@ -30,7 +30,7 @@
 
 - ~~Add a concise developer-oriented architecture note for each major page.~~ DONE for DashboardPage, CardsPage, and DataHealthPage.
 - Keep `docs/AI_CONTEXT_INDEX.md` current so future AI sessions can route to the right files with less repo scanning.
-- Reduce repeated money helper logic such as `roundMoney`, split-total helpers, and schema-cache checks.
+- Reduce repeated money helper logic such as `roundMoney` and split-total helpers.
 - Clarify where dashboard calculations belong versus page-local calculations.
 - Audit Turkish copy and encoding consistency across UI strings and docs.
 
@@ -42,9 +42,9 @@
 
 ## Suggested Next Tasks for Codex
 
-1. Reduce repeated money helper logic such as `roundMoney`, split-total helpers, and schema-cache checks.
+1. Reduce repeated money helper logic such as `roundMoney` and split-total helpers.
 2. Keep `docs/RPC_ACTION_REFERENCE.md` aligned when Supabase RPCs or user-visible actions change.
-3. Keep `docs/MIGRATION_COMPATIBILITY_CHECKLIST.md` aligned with release workflow changes.
+3. ~~Keep `docs/MIGRATION_COMPATIBILITY_CHECKLIST.md` aligned with release workflow changes.~~ DONE.
 4. ~~Continue shrinking the remaining large route files.~~ DONE — all four large page files are now split into focused modules.
 
 ## Recently Cleared / No Longer First Next Task
@@ -60,6 +60,8 @@
 - `docs/DASHBOARD_ARCHITECTURE.md` now documents dashboard data flow, utility ownership, normalized obligation input, panel boundaries, and verification.
 - `docs/CARDS_ARCHITECTURE.md` and `docs/DATA_HEALTH_ARCHITECTURE.md` now document page module boundaries, side-effect ownership, and verification routes for the remaining high-risk pages.
 - DataHealth copy polish pass completed for the older ASCII Turkish user-visible strings; encoding guard remains green.
+- Migration compatibility checklist now reflects the Lighthouse CI budget added to the release workflow.
+- Missing Supabase schema/RPC detection now centralizes on `utils/supabaseErrors.ts`; page-local schema-cache wrapper aliases were removed.
 - `CardsPage.sections.tsx` is now a thin nav/automation module; overview, statement/provision panels, and help copy live in focused `CardsPage.*` files.
 - `CardsPage.tsx` data loading, account movement, statement payment, and section navigation orchestration now lives in `CardsPage.hooks.ts`.
 - `CardsPage.tsx` CRUD form mapping, card metadata renderers, limit usage extra block, bank hue styling, grouping, and row action button now live in `CardsPage.crud.tsx`; the route file is mostly orchestration and modal wiring.

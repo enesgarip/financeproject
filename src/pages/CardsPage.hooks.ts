@@ -10,7 +10,7 @@ import {
 import { submitAccountMovement } from '../services/accountMovements'
 import type { Card, CardExpense, CardInstallment, CardStatementArchive } from '../types/database'
 import { parseNumber } from '../utils/formatCurrency'
-import { isSchemaCacheError } from './CardsPage.helpers'
+import { isMissingSupabaseCapabilityError } from '../utils/supabaseErrors'
 import type { CardSection } from './CardsPage.sections'
 
 type ReloadCards = (() => Promise<void>) | null
@@ -73,7 +73,7 @@ export function useCardsPageData() {
     if (!result.ok) {
       setProvisions([])
       setProvisionError(
-        isSchemaCacheError(result.error)
+        isMissingSupabaseCapabilityError(result.error)
           ? 'Provizyon altyapısı henüz canlı veritabanında yok. Migration uygulanınca bu liste açılacak.'
           : result.error.message ?? 'Provizyonlar yüklenemedi.',
       )
@@ -91,7 +91,7 @@ export function useCardsPageData() {
     if (!result.ok) {
       setStatements([])
       setStatementError(
-        isSchemaCacheError(result.error)
+        isMissingSupabaseCapabilityError(result.error)
           ? 'Ekstre odeme altyapisi henuz canli veritabaninda yok. Migration uygulaninca bu panel acilacak.'
           : result.error.message ?? 'Ekstreler yüklenemedi.',
       )
@@ -144,7 +144,7 @@ export function useCardsPageData() {
     const result = await applyCardProvision(expense.id, action)
 
     if (!result.ok) {
-      const message = isSchemaCacheError(result.error)
+      const message = isMissingSupabaseCapabilityError(result.error)
         ? 'Provizyon altyapısı canlı veritabanına uygulanmamış. Migration çalışınca bu işlem açılacak.'
         : result.error.message ?? 'Provizyon işlemi tamamlanamadı.'
       setError(message)
@@ -168,7 +168,7 @@ export function useCardsPageData() {
       const result = await applyCardProvision(expense.id, 'post')
       if (!result.ok) {
         setError(
-          isSchemaCacheError(result.error)
+          isMissingSupabaseCapabilityError(result.error)
             ? 'Provizyon altyapısı canlı veritabanına uygulanmamış. Migration çalışınca bu işlem açılacak.'
             : result.error.message ?? 'Provizyon işlemi tamamlanamadı.',
         )

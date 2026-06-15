@@ -15,12 +15,7 @@ import type { Card, CardExpense, CardInstallment } from '../../types/database'
 import { expenseCategoryOptions } from '../../utils/categories'
 import { formatDate } from '../../utils/date'
 import { formatCurrency, parseNumber } from '../../utils/formatCurrency'
-
-function isSchemaCacheError(error: { code?: string; message?: string } | null | undefined) {
-  if (!error) return false
-  const message = error.message ?? ''
-  return error.code === 'PGRST202' || error.code === 'PGRST205' || message.includes('schema cache') || message.includes('Could not find the function')
-}
+import { isMissingSupabaseCapabilityError } from '../../utils/supabaseErrors'
 
 function historicalPaidInstallmentCount(expense: CardExpense) {
   const match = expense.note?.match(/^([0-9]+)\/([0-9]+) taksiti uygulama/i)
@@ -189,7 +184,7 @@ export function CardInstallmentExpensesPanel({ cards, reload, setError }: CardIn
     setSaving(false)
 
     if (!result.ok) {
-      const message = isSchemaCacheError(result.error)
+      const message = isMissingSupabaseCapabilityError(result.error)
         ? 'Harcama duzenleme henuz veritabaninda yok. Migration uygulaninca bu islem acilacak.'
         : result.error.message ?? 'Taksitli harcama güncellenemedi.'
       setLocalError(message)
