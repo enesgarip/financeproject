@@ -2,7 +2,7 @@
 
 ## 1. Encoding / Mojibake (mitigated)
 
-A repo-wide scan on 2026-06-05 found **no** UTF-8 mojibake in `src`, `docs`, the SQL migrations, or `README.md` — Turkish characters render correctly. Earlier reports were most likely a terminal display artifact rather than corrupted bytes.
+A repo-wide scan on 2026-06-05 found **no** UTF-8 mojibake in `src`, `docs`, the SQL migrations, or `README.md` — Turkish characters render correctly. The audit was repeated on 2026-06-15 with the encoding guard plus a manual signature scan across 305 source/doc/migration files; no mojibake signatures were found. Earlier reports were most likely a terminal display artifact rather than corrupted bytes.
 
 A regression guard now runs in CI: `src/utils/encoding.guard.test.ts` (part of `npm run test:unit`) reads every source/doc/migration file via Vite's `?raw` glob and fails if the tell-tale mojibake digraphs (the garbled two-character forms Turkish letters degrade into) or the Unicode replacement character reappear. The guard file itself lists the exact signatures and is the only file excluded from the scan.
 

@@ -34,7 +34,8 @@
   - Card debt split, scheduled installment, and unclassified debt classification now share `financeSummary.ts` helpers across Dashboard and Data Health.
 - ~~Clarify where dashboard calculations belong versus page-local calculations.~~ DONE.
   - `docs/DASHBOARD_ARCHITECTURE.md` now has a Page-Local vs Shared Calculations decision table.
-- Audit Turkish copy and encoding consistency across UI strings and docs.
+- ~~Audit Turkish copy and encoding consistency across UI strings and docs.~~ DONE.
+  - 2026-06-15 guard run passed and a manual mojibake signature scan found no hits across 305 source/doc/migration files.
 
 ## P3 - Nice to Have
 
@@ -63,6 +64,7 @@
 - Dashboard calculation ownership is now explicit: page-local glue stays in `DashboardPage`, finance/domain math moves to the documented utility owner.
 - `docs/CARDS_ARCHITECTURE.md` and `docs/DATA_HEALTH_ARCHITECTURE.md` now document page module boundaries, side-effect ownership, and verification routes for the remaining high-risk pages.
 - DataHealth copy polish pass completed for the older ASCII Turkish user-visible strings; encoding guard remains green.
+- Turkish copy/encoding audit repeated on 2026-06-15: `encoding.guard.test.ts`, `docs.guard.test.ts`, and a manual mojibake signature scan were clean.
 - Migration compatibility checklist now reflects the Lighthouse CI budget added to the release workflow.
 - Missing Supabase schema/RPC detection now centralizes on `utils/supabaseErrors.ts`; page-local schema-cache wrapper aliases were removed.
 - `roundMoney` alias was removed; money rounding/comparison helpers now live in `utils/money.ts`.
