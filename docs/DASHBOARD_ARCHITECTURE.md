@@ -49,6 +49,32 @@ Use these owners before adding dashboard math:
 Money aggregation must use `src/utils/money.ts` helpers, or existing
 `financeSummary.sum()` where the local pattern already uses it.
 
+## Page-Local vs Shared Calculations
+
+Keep `DashboardPage` calculations limited to orchestration glue:
+
+- narrowing the shared snapshot to dashboard windows, such as recent history or
+  current-month budgets
+- combining already-derived utility results into a dashboard view model
+- tiny presentation flags or counts, such as whether a panel should render
+- memo dependency wiring for route-level state
+
+Move a calculation out of `DashboardPage` when it answers a finance question,
+depends on money arithmetic, repeats in another route, affects Data Health, or
+needs a test name of its own. Use this default target:
+
+| Calculation Kind | Owner |
+| --- | --- |
+| Product-wide financial totals, card debt splits, credit limits, salary, goals | `src/utils/financeSummary.ts` |
+| Dated obligations, cash impact, next-month load | `src/utils/obligations.ts` and `src/utils/dashboardUpcoming.ts` |
+| Dashboard-only insight/action ranking | `src/utils/dashboardInsights.ts` |
+| Cross-screen forecast or scenario math | `src/utils/cashFlowForecast.ts` or another focused `src/utils/*` module |
+| Formatting, icons, badges, visual tone | `src/components/dashboard/*` |
+
+If a value must match Analysis, Cards, Data Health, or an RPC/trigger invariant,
+the page is only a consumer. Put the rule in the shared utility and add focused
+Vitest coverage there.
+
 ## Obligation Input
 
 Dashboard upcoming items and next-month load use the same normalized obligation

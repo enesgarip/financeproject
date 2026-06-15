@@ -82,6 +82,7 @@ ESLint blocks `src/{pages,components,utils,hooks}` from importing
 | Which user action calls which RPC? | `docs/RPC_ACTION_REFERENCE.md` |
 | Is this migration safe to release? | `docs/MIGRATION_COMPATIBILITY_CHECKLIST.md` |
 | Where does dashboard data come from? | `src/app/useFinanceSnapshot.ts` and `src/data/repositories/financeSnapshotRepo.ts` |
+| Where should dashboard calculations live? | `docs/DASHBOARD_ARCHITECTURE.md`; start with its Page-Local vs Shared Calculations table |
 | How should money be rounded/compared? | `src/utils/money.ts`; avoid new ad hoc tolerances |
 | How are shared credit limits grouped? | `buildCreditLimitGroups` in `src/utils/financeSummary.ts` |
 | How is loan summary projected? | `projectLoanSummary` in `src/utils/financeSummary.ts` plus DB trigger `sync_loan_summary` |
@@ -181,7 +182,7 @@ Choose the smallest ladder that matches the risk:
 
 - Add short architecture notes for `DashboardPage`, `CardsPage`, and
   `DataHealthPage` before large refactors.
-- Continue moving page-local finance math into tested utilities.
+- Keep dashboard calculation ownership aligned with `docs/DASHBOARD_ARCHITECTURE.md`.
 - Keep docs current when behavior changes; stale docs increase AI cost more
   than no docs.
 

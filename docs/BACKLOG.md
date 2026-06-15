@@ -32,7 +32,8 @@
 - Keep `docs/AI_CONTEXT_INDEX.md` current so future AI sessions can route to the right files with less repo scanning.
 - ~~Reduce repeated split-total helper logic.~~ DONE.
   - Card debt split, scheduled installment, and unclassified debt classification now share `financeSummary.ts` helpers across Dashboard and Data Health.
-- Clarify where dashboard calculations belong versus page-local calculations.
+- ~~Clarify where dashboard calculations belong versus page-local calculations.~~ DONE.
+  - `docs/DASHBOARD_ARCHITECTURE.md` now has a Page-Local vs Shared Calculations decision table.
 - Audit Turkish copy and encoding consistency across UI strings and docs.
 
 ## P3 - Nice to Have
@@ -59,6 +60,7 @@
 - Cash-flow forecast now derives payment/card/loan/debt buckets from the normalized `utils/obligations.ts` engine, including open statement archives when available.
 - Legacy obligation cleanup pass completed: analysis month-close payment checks now consume the normalized obligation engine, and dashboard obligation mapping no longer exposes an unused public helper.
 - `docs/DASHBOARD_ARCHITECTURE.md` now documents dashboard data flow, utility ownership, normalized obligation input, panel boundaries, and verification.
+- Dashboard calculation ownership is now explicit: page-local glue stays in `DashboardPage`, finance/domain math moves to the documented utility owner.
 - `docs/CARDS_ARCHITECTURE.md` and `docs/DATA_HEALTH_ARCHITECTURE.md` now document page module boundaries, side-effect ownership, and verification routes for the remaining high-risk pages.
 - DataHealth copy polish pass completed for the older ASCII Turkish user-visible strings; encoding guard remains green.
 - Migration compatibility checklist now reflects the Lighthouse CI budget added to the release workflow.
