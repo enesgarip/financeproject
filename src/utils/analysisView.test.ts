@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Asset, Budget, Card, CardExpense, Debt } from '../types/database'
 import {
   buildCategoryInsights,
+  analysisFinanceSummaryInput,
   buildSearchCsv,
   buildSearchItems,
   formatMonth,
@@ -177,6 +178,34 @@ describe('buildSearchCsv', () => {
     expect(lines[1]).toBe('"Kart","X ""Y""","Kredi kartı","1200","2026-06-09"')
     // Null amount/date become empty quoted cells.
     expect(lines[2]).toBe('"Ödeme","Kira","Kira / aidat","",""')
+  })
+})
+
+describe('analysisFinanceSummaryInput', () => {
+  it('carries statement archives into forecast/summary projections', () => {
+    const source = data({
+      cards: [card({ id: 'cc', statement_debt_amount: 5000 })],
+      cardStatementArchives: [{
+        ...base,
+        card_id: 'cc',
+        period_year: 2026,
+        period_month: 6,
+        statement_date: '2026-06-01',
+        due_date: '2026-06-10',
+        statement_debt_amount: 3000,
+        current_period_spending: 0,
+        total_debt_amount: 5000,
+        status: 'open',
+        paid_at: null,
+        payment_source_card_id: null,
+        reconciled_bank_amount: null,
+        reconciled_at: null,
+        reconciliation_note: null,
+        note: null,
+      }],
+    })
+
+    expect(analysisFinanceSummaryInput(source).cardStatements).toEqual(source.cardStatementArchives)
   })
 })
 

@@ -94,7 +94,9 @@ function forecastBuckets(items: FinanceObligation[]) {
     } else if (item.kind === 'card_statement' || item.kind === 'card_debt') {
       cardOutflow.push(item.amount)
     } else if (item.kind === 'card_installment') {
-      installmentOutflow.push(item.amount)
+      // Scheduled card installments increase future card debt; they are not a
+      // bank-cash movement until a statement/card-debt obligation is paid.
+      installmentOutflow.push(item.cashImpactAmount ?? 0)
     } else if (item.kind === 'loan_installment' || item.kind === 'legacy_loan_installment') {
       loanOutflow.push(item.amount)
     } else if (item.kind === 'personal_debt') {

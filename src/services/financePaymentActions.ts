@@ -100,22 +100,6 @@ export async function submitFinanceObligationPayment({
 
     submitError = error
 
-    if (submitError && isMissingSupabaseCapabilityError(submitError)) {
-      const { error: updateError } = await supabase
-        .from('payments')
-        .update({ amount, updated_at: new Date().toISOString() })
-        .eq('id', obligation.sourceId)
-
-      if (updateError) {
-        submitError = updateError
-      } else {
-        const { error: legacyError } = await supabase.rpc('pay_payment', {
-          p_payment_id: obligation.sourceId,
-          p_source_card_id: account.id,
-        })
-        submitError = legacyError
-      }
-    }
   } else if (obligation.action === 'pay_card_statement') {
     const { error } = await supabase.rpc('pay_card_statement', {
       p_statement_id: obligation.sourceId,

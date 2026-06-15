@@ -1,14 +1,27 @@
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Card } from '../types/database'
+import { supabase } from '../lib/supabase'
 import {
   getAccountsForObligation,
   lastUsedKeyForObligation,
   obligationAmountEditable,
+  submitFinanceObligationPayment,
   submitLabelForObligation,
 } from './financePaymentActions'
 import type { FinanceObligation } from '../utils/obligations'
 
+vi.mock('../lib/supabase', () => ({
+  supabase: {
+    rpc: vi.fn(),
+  },
+}))
+
 const base = { id: 'id', user_id: 'u', created_at: '2026-06-01T00:00:00.000Z', updated_at: '2026-06-01T00:00:00.000Z' }
+const rpcMock = vi.mocked(supabase.rpc)
+
+beforeEach(() => {
+  rpcMock.mockReset()
+})
 
 function card(overrides: Partial<Card>): Card {
   return {
@@ -81,5 +94,26 @@ describe('finance payment action helpers', () => {
     expect(lastUsedKeyForObligation(obligation({ action: 'pay_loan_installment' }))).toBe('loanAccount')
     expect(lastUsedKeyForObligation(obligation({ action: 'settle_debt' }))).toBe('debtAccount')
     expect(submitLabelForObligation(obligation({ action: 'pay_card_statement' }))).toBe('Ekstreyi öde')
+  })
+
+  it('does not retry pay_payment with a retired RPC signature when deployment is missing', async () => {
+    rpcMock.mockResolvedValueOnce({
+      data: null,
+      error: { code: 'PGRST202', message: 'Could not find the function public.pay_payment' },
+    } as never)
+
+    const result = await submitFinanceObligationPayment({
+      obligation: obligation({ action: 'pay_payment' }),
+      account: card({ id: 'bank' }),
+      amount: 125,
+    })
+
+    expect(rpcMock).toHaveBeenCalledTimes(1)
+    expect(rpcMock).toHaveBeenCalledWith('pay_payment', {
+      p_payment_id: 'source',
+      p_source_card_id: 'bank',
+      p_paid_amount: 125,
+    })
+    expect(result.error?.message).toContain('PGRST202')
   })
 })

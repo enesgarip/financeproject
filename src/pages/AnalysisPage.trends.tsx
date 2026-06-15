@@ -8,7 +8,7 @@ import { isDateInMonth, monthlyOccurrenceDate } from '../utils/date'
 import { formatCurrency } from '../utils/formatCurrency'
 import { buildCashFlowForecast } from '../utils/cashFlowForecast'
 import { getCurrentSalary, sum } from '../utils/financeSummary'
-import { type AnalysisData } from '../utils/analysisView'
+import { analysisFinanceSummaryInput, type AnalysisData } from '../utils/analysisView'
 import { activeExpense as activeCardExpense } from '../utils/budgetAlerts'
 import { type MarketRatesSnapshot } from '../utils/marketRates'
 import { convertNetWorth, formatRealValue, realValueChangeBadge, type RealUnit, REAL_UNIT_LABELS } from '../utils/realValue'
@@ -52,8 +52,8 @@ export function CashFlowTrend({ data }: { data: AnalysisData }) {
       <CardHeader className="pb-0">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <CardTitle>6 aylık nakit akışı</CardTitle>
-            <p className="mt-1 text-xs text-muted-foreground">Gelir ve planlı çıkışların aylık karşılaştırması.</p>
+            <CardTitle>6 aylık harcama ve yük görünümü</CardTitle>
+            <p className="mt-1 text-xs text-muted-foreground">Gelir, kart harcaması ve planlı çıkışların aylık karşılaştırması.</p>
           </div>
           <Badge variant={totalNet >= 0 ? 'success' : 'destructive'}>
             {totalNet >= 0 ? 'Pozitif' : 'Negatif'}
@@ -265,19 +265,7 @@ export function ForwardForecast({ data }: { data: AnalysisData }) {
   const [scenarioOpen, setScenarioOpen] = useState(false)
   const [removedIds, setRemovedIds] = useState<Set<string>>(new Set())
 
-  const forecastInput = useMemo(
-    () => ({
-      assets: data.assets,
-      cards: data.cards,
-      loans: data.loans,
-      loanInstallments: data.loanInstallments,
-      debts: data.debts,
-      payments: data.payments,
-      salaryHistory: data.salaryHistory,
-      cardInstallments: data.cardInstallments,
-    }),
-    [data],
-  )
+  const forecastInput = useMemo(() => analysisFinanceSummaryInput(data), [data])
 
   const forecast = useMemo(() => buildCashFlowForecast(forecastInput, { horizonMonths: 6 }), [forecastInput])
 

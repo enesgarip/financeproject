@@ -57,6 +57,10 @@ Guardrail: do not re-enable direct card-installment payment in the shared
 drawer. Card installments become payable through the statement archive that
 contains them.
 
+Forecast guardrail: running cash projections must subtract `cashImpactAmount`,
+not raw `amount`, for credit-card-settled obligations. Scheduled card
+installments are planning/card-debt rows, not immediate bank-cash outflows.
+
 ## Remaining Cleanup
 
 The model is already unified enough for product behavior. Remaining work is

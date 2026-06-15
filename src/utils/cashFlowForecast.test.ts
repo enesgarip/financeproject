@@ -176,6 +176,19 @@ describe('buildCashFlowForecast', () => {
     expect(forecast.months[0]).toMatchObject({ paymentOutflow: 300, outflow: 300 })
   })
 
+  it('keeps scheduled card installments out of running cash until they become payable debt', () => {
+    const forecast = buildCashFlowForecast(
+      buildInput({
+        assets: [asset({ category: 'Nakit', estimated_value_try: 1000 })],
+        cards: [card({ id: 'cc', card_type: 'kredi_karti', due_day: 10 })],
+        cardInstallments: [cardInstallment({ card_id: 'cc', due_month: '2026-06-01', amount: 400 })],
+      }),
+      { from: FROM, horizonMonths: 1 },
+    )
+
+    expect(forecast.months[0]).toMatchObject({ installmentOutflow: 0, outflow: 0, endingBalance: 1000 })
+  })
+
   it('projects a full picture with running balance, lowest point, and no deficit', () => {
     const forecast = buildCashFlowForecast(
       buildInput({
@@ -200,13 +213,13 @@ describe('buildCashFlowForecast', () => {
     )
 
     expect(forecast.startingBalance).toBe(15000)
-    expect(forecast.months.map((m) => m.endingBalance)).toEqual([26000, 47000, 58500, 70500, 88500, 106500])
-    expect(forecast.endingBalance).toBe(106500)
+    expect(forecast.months.map((m) => m.endingBalance)).toEqual([26000, 47000, 60000, 72000, 90000, 108000])
+    expect(forecast.endingBalance).toBe(108000)
     expect(forecast.firstNegative).toBeNull()
     expect(forecast.lowest).toMatchObject({ monthKey: '2026-06-01', balance: 26000 })
 
     expect(forecast.months[1]).toMatchObject({ receivables: 8000, cardOutflow: 1000, income: 28000, outflow: 7000, net: 21000 })
-    expect(forecast.months[2]).toMatchObject({ paymentOutflow: 7000, installmentOutflow: 1500, outflow: 8500 })
+    expect(forecast.months[2]).toMatchObject({ paymentOutflow: 7000, installmentOutflow: 0, outflow: 7000 })
     expect(forecast.months[3]).toMatchObject({ debtOutflow: 6000, outflow: 8000 })
   })
 

@@ -21,6 +21,7 @@ import {
   type FinanceObligation,
   type FinanceObligationsInput,
 } from './obligations'
+import type { FinanceSummaryInput } from './financeSummary'
 
 /**
  * Analiz sayfasının saf türetme çekirdeği (view-model'ler): arama/CSV listesi,
@@ -178,6 +179,21 @@ export function analysisObligationsInput(data: AnalysisData): FinanceObligations
     debts: data.debts,
     cardInstallments: data.cardInstallments,
     cardStatements: data.cardStatementArchives,
+  }
+}
+
+export function analysisFinanceSummaryInput(data: AnalysisData): FinanceSummaryInput {
+  return {
+    assets: data.assets,
+    cards: data.cards,
+    loans: data.loans,
+    loanInstallments: data.loanInstallments,
+    debts: data.debts,
+    payments: data.payments,
+    salaryHistory: data.salaryHistory,
+    cardInstallments: data.cardInstallments,
+    cardStatements: data.cardStatementArchives,
+    savingsGoals: data.savingsGoals,
   }
 }
 
