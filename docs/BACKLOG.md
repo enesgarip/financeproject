@@ -22,6 +22,7 @@
 ## P1 - Product / Reliability
 
 - Reduce fallback logic that depends on missing Supabase schema cache or missing RPC deployment.
+  - Legacy `add_card_expense` retry against the retired 4-argument RPC signature was removed; the canonical RPC now surfaces missing-capability instead of silently falling back.
 - ~~Improve visibility of migration/version mismatches between frontend expectations and live database state.~~ DONE.
   - Missing schema/RPC errors now share `missingSupabaseCapabilityMessage`, which calls out migration/RPC deployment drift and includes Supabase codes when available.
 - ~~Document and standardize transaction history side effects for all finance mutations.~~ DONE.
@@ -71,6 +72,7 @@
 - Migration compatibility checklist now reflects the Lighthouse CI budget added to the release workflow.
 - Missing Supabase schema/RPC detection now centralizes on `utils/supabaseErrors.ts`; page-local schema-cache wrapper aliases were removed.
 - Missing schema/RPC user messages now use a shared deployment-mismatch helper with Supabase code visibility.
+- Legacy `add_card_expense` RPC signature fallback was removed; missing canonical RPC deployment now follows the standard missing-capability path.
 - `roundMoney` alias was removed; money rounding/comparison helpers now live in `utils/money.ts`.
 - Card debt split classification now shares `financeSummary.ts` helpers for Dashboard focus actions and Data Health issues.
 - `CardsPage.sections.tsx` is now a thin nav/automation module; overview, statement/provision panels, and help copy live in focused `CardsPage.*` files.

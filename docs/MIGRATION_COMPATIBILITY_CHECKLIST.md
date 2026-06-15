@@ -44,6 +44,9 @@ If the change affects money movement, also update:
   `missingSupabaseCapabilityMessage` from `src/utils/supabaseErrors.ts` so the
   UI clearly says this is a migration/RPC deployment mismatch and includes the
   Supabase code when available.
+- Do not retry retired RPC signatures as an implicit compatibility fallback.
+  If the live database is behind the frontend, surface the missing capability
+  path and let the deploy order/migration status be fixed explicitly.
 - Make sure production order is safe: the deploy workflow applies migrations and
   edge functions before triggering the Vercel deploy hook.
 - If preview deployments can run against an older database, avoid hard failures

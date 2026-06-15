@@ -1,6 +1,5 @@
 import { supabase } from '../../lib/supabase'
 import type { Card, CardExpense, CardInstallment, CardStatementArchive } from '../../types/database'
-import { isMissingSupabaseCapabilityError } from '../../utils/supabaseErrors'
 import { ok, resultFromSupabase, voidResultFromSupabase, type Result } from '../result'
 
 export type ExpenseMatchRow = Pick<CardExpense, 'spent_at' | 'amount' | 'status'>
@@ -98,16 +97,6 @@ export async function addCardExpense(input: AddCardExpenseInput): Promise<Result
     p_installment_count: input.installmentCount,
     p_status: input.status,
   })
-
-  if (error && isMissingSupabaseCapabilityError(error) && input.installmentCount === 1 && input.status === 'posted') {
-    const { error: legacyError } = await supabase.rpc('add_card_expense', {
-      p_card_id: input.cardId,
-      p_amount: input.amount,
-      p_description: input.description,
-      p_spent_at: input.spentAt,
-    })
-    return voidResultFromSupabase(legacyError, 'Harcama kaydedilemedi.')
-  }
 
   return voidResultFromSupabase(error, 'Harcama kaydedilemedi.')
 }
