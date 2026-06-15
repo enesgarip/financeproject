@@ -26,6 +26,8 @@ frontend -> RPC, or RPC -> migration.
 | `docs/CODEX_GUIDE.md` | A Codex session needs working rules and finish checklist | How to work in this repo with low regression risk |
 | `docs/PROJECT_CONTEXT.md` | You need the product map or route/table overview | Product purpose, app structure, important domains, route model |
 | `docs/DASHBOARD_ARCHITECTURE.md` | You are changing `/` dashboard orchestration or dashboard-specific derived math | Dashboard data flow, utility ownership, obligation input, panel boundaries |
+| `docs/CARDS_ARCHITECTURE.md` | You are changing `/kartlar` orchestration, card/account panels, or card page module boundaries | Cards page data flow, module map, side-effect boundaries, payment flow |
+| `docs/DATA_HEALTH_ARCHITECTURE.md` | You are changing `/veri-sagligi`, data-health checks, safe fixes, undo, backup, or reset flows | Data-health lifecycle, issue/fix ownership, write safety, invariant sources |
 | `docs/KNOWN_RISKS.md` | You are choosing risk level or reviewing a change | Known failure modes and where to be extra cautious |
 | `docs/BACKLOG.md` | You need the next useful task | Priority backlog and suggested Codex tasks |
 
@@ -62,14 +64,14 @@ ESLint blocks `src/{pages,components,utils,hooks}` from importing
 | Route | Main Files | Data/Utility Neighbors |
 | --- | --- | --- |
 | `/` dashboard | `docs/DASHBOARD_ARCHITECTURE.md`, `src/pages/DashboardPage.tsx`, `src/components/dashboard/*` | `src/app/useFinanceSnapshot.ts`, `src/data/repositories/financeSnapshotRepo.ts`, `src/utils/dashboard*`, `src/utils/financeSummary.ts`, `src/utils/obligations.ts` |
-| `/kartlar` accounts/cards | `src/pages/CardsPage.tsx`, `src/pages/CardsPage.hooks.ts`, `src/pages/CardsPage.crud.tsx`, `src/pages/CardsPage.sections.tsx`, `src/pages/CardsPage.overview.tsx`, `src/pages/CardsPage.statements.tsx`, `src/pages/CardsPage.expense.tsx`, `src/pages/CardsPage.list.tsx`, `src/pages/CardsPage.installment.tsx`, `src/pages/CardsPage.helpers.ts` | `src/data/repositories/cardsRepo.ts`, `src/services/accountMovements.ts`, `src/utils/cardStatement.ts`, `src/utils/financeSummary.ts` |
+| `/kartlar` accounts/cards | `docs/CARDS_ARCHITECTURE.md`, `src/pages/CardsPage.tsx`, `src/pages/CardsPage.hooks.ts`, `src/pages/CardsPage.crud.tsx`, `src/pages/CardsPage.sections.tsx`, `src/pages/CardsPage.overview.tsx`, `src/pages/CardsPage.statements.tsx`, `src/pages/CardsPage.expense.tsx`, `src/pages/CardsPage.list.tsx`, `src/pages/CardsPage.installment.tsx`, `src/pages/CardsPage.helpers.ts` | `src/data/repositories/cardsRepo.ts`, `src/services/accountMovements.ts`, `src/utils/cardStatement.ts`, `src/utils/financeSummary.ts` |
 | `/odemeler` planned payments | `src/pages/PaymentsPage.tsx` | `src/data/repositories/paymentsRepo.ts`, `src/services/financePaymentActions.ts`, `src/utils/obligations.ts`, `docs/SHARED_PAYMENT_DRAWER_PLAN.md` |
 | `/borclar/krediler` loans | `src/pages/LoansPage.tsx`, `src/pages/LoansPage.helpers.ts`, `src/pages/LoansPage.components.tsx` | `src/data/repositories/loansRepo.ts`, `src/services/financePaymentActions.ts`, `src/utils/financeSummary.ts`, `docs/SHARED_PAYMENT_DRAWER_PLAN.md` |
 | `/borclar/kisiler` personal debts | `src/pages/DebtsPage.tsx` | `src/data/repositories/debtsRepo.ts`, `src/services/financePaymentActions.ts`, `docs/SHARED_PAYMENT_DRAWER_PLAN.md` |
 | `/varliklar` assets | `src/pages/AssetsPage.tsx`, `src/pages/AssetsHub.tsx` | `src/data/repositories/valuationRepo.ts`, `src/utils/valuation*`, `src/utils/marketRates.ts` |
 | `/varliklar/maas` salary | `src/pages/SalaryPage.tsx` | `src/utils/financeSummary.ts` salary helpers |
 | `/analiz` reports | `src/pages/AnalysisPage.tsx`, `src/pages/AnalysisPage.panels.tsx`, `src/pages/AnalysisPage.atoms.tsx`, `src/pages/AnalysisPage.reports.tsx`, `src/pages/AnalysisPage.trends.tsx`, `src/pages/AnalysisPage.wealth.tsx` | `src/app/useFinanceSnapshot.ts`, `src/data/repositories/analysisRepo.ts`, `src/utils/analysisView.ts`, charts |
-| `/veri-sagligi` data health | `src/pages/DataHealthPage.tsx`, `src/pages/DataHealthPage.actions.ts`, `src/pages/DataHealth.logic.ts` | `src/data/repositories/dataHealthRepo.ts`, ledger utilities, finance invariants |
+| `/veri-sagligi` data health | `docs/DATA_HEALTH_ARCHITECTURE.md`, `src/pages/DataHealthPage.tsx`, `src/pages/DataHealthPage.actions.ts`, `src/pages/DataHealth.logic.ts` | `src/data/repositories/dataHealthRepo.ts`, ledger utilities, finance invariants |
 | `/login` auth | `src/pages/LoginPage.tsx`, `src/auth/*` | `src/lib/supabase.ts` |
 
 ## Source-Of-Truth Matrix
@@ -94,10 +96,11 @@ ESLint blocks `src/{pages,components,utils,hooks}` from importing
 Read:
 
 1. `docs/CARD_DEBT_TRANSITIONS.md`
-2. `src/utils/financeSummary.ts`
-3. `src/pages/CardsPage.helpers.ts`
-4. The relevant `CardsPage.*.tsx` presentation module (`crud`, `sections`, `overview`, `statements`, `expense`, `list`, or `installment`)
-5. Latest card-related migrations if RPC behavior changes
+2. `docs/CARDS_ARCHITECTURE.md`
+3. `src/utils/financeSummary.ts`
+4. `src/pages/CardsPage.helpers.ts`
+5. The relevant `CardsPage.*.tsx` presentation module (`crud`, `sections`, `overview`, `statements`, `expense`, `list`, or `installment`)
+6. Latest card-related migrations if RPC behavior changes
 
 Verify:
 
@@ -141,9 +144,10 @@ removes real duplication or isolates domain behavior.
 Read:
 
 1. `src/pages/DataHealth.logic.ts`
-2. `src/pages/DataHealth.logic.test.ts`
-3. `docs/KNOWN_RISKS.md`
-4. Relevant invariant helper in `src/utils/*`
+2. `docs/DATA_HEALTH_ARCHITECTURE.md`
+3. `src/pages/DataHealth.logic.test.ts`
+4. `docs/KNOWN_RISKS.md`
+5. Relevant invariant helper in `src/utils/*`
 
 Treat data-health fixes as operational writes against real user data. Prefer a
 shared helper/DB invariant over a page-only corrective formula.
