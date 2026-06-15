@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { Card } from '../types/database'
+import type { Card, CardInstallment } from '../types/database'
 import type { DashboardUpcomingItem } from './dashboardUpcoming'
 import { buildFocusActions, buildSmartInsights, type FocusActionsInput } from './dashboardInsights'
 import type { CashFlowSummary } from './financeSummary'
@@ -38,6 +38,26 @@ function card(over: Partial<Card> & Pick<Card, 'card_type'>): Card {
     provision_amount: 0,
     statement_day: null,
     due_day: null,
+    note: null,
+    ...over,
+  }
+}
+
+function cardInstallment(over: Partial<CardInstallment>): CardInstallment {
+  return {
+    ...base,
+    card_id: 'credit-1',
+    card_expense_id: null,
+    statement_archive_id: null,
+    installment_no: 1,
+    installment_count: 1,
+    due_month: '2026-06-01',
+    amount: 0,
+    description: 'Taksit',
+    category: 'Genel',
+    status: 'scheduled',
+    posted_at: null,
+    paid_at: null,
     note: null,
     ...over,
   }
@@ -95,5 +115,25 @@ describe('buildFocusActions', () => {
     }
     const actions = buildFocusActions(input, cashFlow(), 0, [])
     expect(actions.some((a) => a.id === 'overdue-payments')).toBe(true)
+  })
+
+  it('counts shared card debt breakdown issues in the data health action', () => {
+    const input: FocusActionsInput = {
+      ...emptyInput,
+      cards: [
+        card({ id: 'bank-1', card_type: 'banka_karti' }),
+        card({
+          id: 'credit-1',
+          card_type: 'kredi_karti',
+          debt_amount: 250,
+          statement_debt_amount: 200,
+          current_period_spending: 50,
+        }),
+      ],
+      cardInstallments: [cardInstallment({ amount: 100 })],
+    }
+
+    const actions = buildFocusActions(input, cashFlow(), 0, [])
+    expect(actions.find((action) => action.id === 'data-health')?.description).toContain('1 kayıt')
   })
 })

@@ -10,11 +10,12 @@ import type {
   SalaryHistory,
 } from '../types/database'
 import { daysUntil } from './date'
-import { exceedsTL, moneyDiffers, roundTL } from './money'
+import { moneyDiffers } from './money'
 import type { DashboardUpcomingItem } from './dashboardUpcoming'
 import {
+  cardDebtBreakdown,
   cardProvisionAmount,
-  cardSplitTotal,
+  scheduledCardInstallmentTotalsByCard,
   sum,
   type CashFlowSummary,
 } from './financeSummary'
@@ -144,27 +145,11 @@ export function buildFocusActions(
     const remaining = daysUntil(new Date(item.sortTime))
     return remaining !== null && remaining >= 0 && remaining <= 3
   }).length
-  const scheduledInstallmentsByCard = new Map<string, number>()
-  for (const item of data.cardInstallments) {
-    if (item.status !== 'scheduled') continue
-    scheduledInstallmentsByCard.set(item.card_id, roundTL((scheduledInstallmentsByCard.get(item.card_id) ?? 0) + item.amount))
-  }
-
-  const cardSplitIssues = creditCards.filter(
-    (card) => exceedsTL(cardSplitTotal(card.statement_debt_amount, card.current_period_spending, cardProvisionAmount(card)), card.debt_amount),
-  )
-  const cardScheduledDebtIssues = creditCards.filter((card) => {
-    const splitTotal = cardSplitTotal(card.statement_debt_amount, card.current_period_spending, cardProvisionAmount(card))
-    const scheduledTotal = scheduledInstallmentsByCard.get(card.id) ?? 0
-    return exceedsTL(scheduledTotal, 0) && !exceedsTL(card.debt_amount, splitTotal)
-  })
-  const unclassifiedCardDebts = creditCards.filter((card) => {
-    const splitTotal = cardSplitTotal(card.statement_debt_amount, card.current_period_spending, cardProvisionAmount(card))
-    const scheduledTotal = scheduledInstallmentsByCard.get(card.id) ?? 0
-    const unclassifiedAmount = roundTL(card.debt_amount - splitTotal)
-    const unexplainedAmount = roundTL(unclassifiedAmount - Math.min(unclassifiedAmount, scheduledTotal))
-    return exceedsTL(unexplainedAmount, 0)
-  })
+  const scheduledInstallmentsByCard = scheduledCardInstallmentTotalsByCard(data.cardInstallments)
+  const cardDebtBreakdowns = creditCards.map((card) => cardDebtBreakdown(card, scheduledInstallmentsByCard.get(card.id) ?? 0))
+  const cardSplitIssues = cardDebtBreakdowns.filter((breakdown) => breakdown.hasSplitOverflow)
+  const cardScheduledDebtIssues = cardDebtBreakdowns.filter((breakdown) => breakdown.hasScheduledDebtGap)
+  const unclassifiedCardDebts = cardDebtBreakdowns.filter((breakdown) => breakdown.hasUnexplainedDebt)
   const cardsWithProvisions = creditCards.filter((card) => cardProvisionAmount(card) > 0)
   const totalProvision = sum(cardsWithProvisions, cardProvisionAmount)
   const statementReadyCards = creditCards.filter((card) => canCutCurrentStatement(card, data.cardStatements))

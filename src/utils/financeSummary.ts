@@ -12,7 +12,7 @@ import type {
   SavingsGoalComponent,
 } from '../types/database'
 import { endOfMonth, isDateInMonth, monthlyOccurrenceDate, startOfMonth } from './date'
-import { diffTL, roundTL, sumTL, toKurus, toTL } from './money'
+import { diffTL, exceedsTL, roundTL, sumTL, toKurus, toTL } from './money'
 import { savingsGoalProgressRate } from './savingsGoal'
 
 export type FinanceSummaryInput = {
@@ -102,6 +102,52 @@ export function cardProvisionAmount(card: Pick<Card, 'provision_amount'>) {
 
 export function cardSplitTotal(statementDebt: number, currentPeriod: number, provisionAmount: number) {
   return sumTL([statementDebt, currentPeriod, provisionAmount])
+}
+
+export function scheduledCardInstallmentTotalsByCard(installments: Pick<CardInstallment, 'card_id' | 'amount' | 'status'>[]) {
+  const totals = new Map<string, number>()
+
+  for (const installment of installments) {
+    if (installment.status !== 'scheduled') continue
+    totals.set(installment.card_id, sumTL([totals.get(installment.card_id), installment.amount]))
+  }
+
+  return totals
+}
+
+export type CardDebtBreakdown = {
+  splitTotal: number
+  scheduledTotal: number
+  unclassifiedAmount: number
+  unexplainedAmount: number
+  nextDebtAmount: number
+  hasSplitOverflow: boolean
+  hasScheduledDebtGap: boolean
+  hasUnexplainedDebt: boolean
+}
+
+export function cardDebtBreakdown(
+  card: Pick<Card, 'debt_amount' | 'statement_debt_amount' | 'current_period_spending' | 'provision_amount'>,
+  scheduledTotal = 0,
+): CardDebtBreakdown {
+  const splitTotal = cardSplitTotal(card.statement_debt_amount, card.current_period_spending, cardProvisionAmount(card))
+  const normalizedScheduledTotal = roundTL(scheduledTotal)
+  const unclassifiedAmount = diffTL(card.debt_amount, splitTotal)
+  const unexplainedAmount = diffTL(unclassifiedAmount, Math.min(unclassifiedAmount, normalizedScheduledTotal))
+
+  const hasSplitOverflow = exceedsTL(splitTotal, card.debt_amount)
+  const hasDebtBeyondSplit = exceedsTL(card.debt_amount, splitTotal)
+
+  return {
+    splitTotal,
+    scheduledTotal: normalizedScheduledTotal,
+    unclassifiedAmount,
+    unexplainedAmount,
+    nextDebtAmount: sumTL([card.debt_amount, normalizedScheduledTotal]),
+    hasSplitOverflow,
+    hasScheduledDebtGap: exceedsTL(normalizedScheduledTotal, 0) && !hasDebtBeyondSplit,
+    hasUnexplainedDebt: hasDebtBeyondSplit && exceedsTL(unexplainedAmount, 0),
+  }
 }
 
 export function cardPayableDebt(card: Pick<Card, 'statement_debt_amount' | 'current_period_spending'>) {

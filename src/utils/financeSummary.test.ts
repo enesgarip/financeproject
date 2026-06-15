@@ -1,17 +1,19 @@
 import { describe, expect, it } from 'vitest'
-import type { Asset, Card, Debt, Loan, LoanInstallment, Payment, SalaryHistory, SavingsGoal } from '../types/database'
+import type { Asset, Card, CardInstallment, Debt, Loan, LoanInstallment, Payment, SalaryHistory, SavingsGoal } from '../types/database'
 import {
   buildCreditLimitGroups,
   buildFinancialHealth,
   buildFinancialPosition,
   buildGoalProgressSummary,
   buildMonthlyCashFlow,
+  cardDebtBreakdown,
   cardPayableDebt,
   cardProvisionAmount,
   cardSplitTotal,
   clampCardBreakdown,
   expectedInstallmentAmount,
   projectLoanSummary,
+  scheduledCardInstallmentTotalsByCard,
   getCurrentSalary,
   getSalaryTrend,
   paymentCashOutflowAmount,
@@ -62,6 +64,26 @@ function loan(overrides: Partial<Loan>): Loan {
 
 function loanInstallment(overrides: Partial<LoanInstallment>): LoanInstallment {
   return { ...base, loan_id: 'l1', installment_no: 1, due_date: '2026-06-10', amount: 0, status: 'bekliyor', paid_at: null, note: null, ...overrides }
+}
+
+function cardInstallment(overrides: Partial<CardInstallment>): CardInstallment {
+  return {
+    ...base,
+    card_id: 'c1',
+    card_expense_id: null,
+    statement_archive_id: null,
+    installment_no: 1,
+    installment_count: 1,
+    due_month: '2026-06-01',
+    amount: 0,
+    description: 'Taksit',
+    category: 'Genel',
+    status: 'scheduled',
+    posted_at: null,
+    paid_at: null,
+    note: null,
+    ...overrides,
+  }
 }
 
 function debt(overrides: Partial<Debt>): Debt {
@@ -126,6 +148,65 @@ describe('cardSplitTotal', () => {
   })
   it('keeps split totals at exact kurus precision', () => {
     expect(cardSplitTotal(0.1, 0.2, 0.3)).toBe(0.6)
+  })
+})
+
+describe('scheduledCardInstallmentTotalsByCard', () => {
+  it('sums only scheduled card installments by card at kurus precision', () => {
+    const totals = scheduledCardInstallmentTotalsByCard([
+      cardInstallment({ id: 'i1', card_id: 'c1', amount: 0.1 }),
+      cardInstallment({ id: 'i2', card_id: 'c1', amount: 0.2 }),
+      cardInstallment({ id: 'i3', card_id: 'c1', amount: 99, status: 'posted' }),
+      cardInstallment({ id: 'i4', card_id: 'c2', amount: 10 }),
+    ])
+
+    expect(totals.get('c1')).toBe(0.3)
+    expect(totals.get('c2')).toBe(10)
+  })
+})
+
+describe('cardDebtBreakdown', () => {
+  it('flags split totals that exceed stored card debt', () => {
+    const breakdown = cardDebtBreakdown(creditCard({
+      debt_amount: 100,
+      statement_debt_amount: 80,
+      current_period_spending: 30,
+      provision_amount: 0,
+    }))
+
+    expect(breakdown.splitTotal).toBe(110)
+    expect(breakdown.hasSplitOverflow).toBe(true)
+    expect(breakdown.hasScheduledDebtGap).toBe(false)
+    expect(breakdown.hasUnexplainedDebt).toBe(false)
+  })
+
+  it('flags scheduled installments that are not reflected in card debt', () => {
+    const breakdown = cardDebtBreakdown(creditCard({
+      debt_amount: 250,
+      statement_debt_amount: 200,
+      current_period_spending: 50,
+      provision_amount: 0,
+    }), 0.1 + 0.2)
+
+    expect(breakdown.scheduledTotal).toBe(0.3)
+    expect(breakdown.nextDebtAmount).toBe(250.3)
+    expect(breakdown.hasScheduledDebtGap).toBe(true)
+    expect(breakdown.hasUnexplainedDebt).toBe(false)
+  })
+
+  it('separates scheduled future debt from unexplained card debt', () => {
+    const breakdown = cardDebtBreakdown(creditCard({
+      debt_amount: 500,
+      statement_debt_amount: 100,
+      current_period_spending: 100,
+      provision_amount: 50,
+    }), 200)
+
+    expect(breakdown.splitTotal).toBe(250)
+    expect(breakdown.unclassifiedAmount).toBe(250)
+    expect(breakdown.unexplainedAmount).toBe(50)
+    expect(breakdown.hasScheduledDebtGap).toBe(false)
+    expect(breakdown.hasUnexplainedDebt).toBe(true)
   })
 })
 

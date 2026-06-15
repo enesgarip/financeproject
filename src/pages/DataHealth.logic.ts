@@ -19,7 +19,15 @@ import type {
 import { balanceDrift, projectAccountBalance, type AccountLedgerEvent } from '../utils/accountLedger'
 import { ledgerDrift, projectCardDebt, type CardLedgerEvent } from '../utils/cardLedger'
 import { dateInputValue, formatDate } from '../utils/date'
-import { buildCreditLimitGroups, cardProvisionAmount, cardSplitTotal, clampCardBreakdown, expectedInstallmentAmount, projectLoanSummary } from '../utils/financeSummary'
+import {
+  buildCreditLimitGroups,
+  cardDebtBreakdown,
+  cardProvisionAmount,
+  clampCardBreakdown,
+  expectedInstallmentAmount,
+  projectLoanSummary,
+  scheduledCardInstallmentTotalsByCard,
+} from '../utils/financeSummary'
 import { formatCurrency } from '../utils/formatCurrency'
 import { exceedsTL, moneyDiffers, roundTL } from '../utils/money'
 import { formatComponentAmount, formatSavingsGoalAmount, savingsGoalBelowTarget, savingsGoalTargetReached, savingsGoalValueTypeLabel } from '../utils/savingsGoal'
@@ -583,11 +591,7 @@ export function buildIssues(data: HealthData): HealthIssue[] {
     componentsByGoal.set(item.goal_id, [...(componentsByGoal.get(item.goal_id) ?? []), item])
   }
 
-  const scheduledInstallmentsByCard = new Map<string, number>()
-  for (const item of data.cardInstallments) {
-    if (item.status !== 'scheduled') continue
-    scheduledInstallmentsByCard.set(item.card_id, roundTL((scheduledInstallmentsByCard.get(item.card_id) ?? 0) + item.amount))
-  }
+  const scheduledInstallmentsByCard = scheduledCardInstallmentTotalsByCard(data.cardInstallments)
 
   for (const asset of data.assets) {
     const updates: Record<string, string | number | null> = {}
@@ -784,11 +788,11 @@ export function buildIssues(data: HealthData): HealthIssue[] {
       })
     }
 
-    const splitTotal = cardSplitTotal(card.statement_debt_amount, card.current_period_spending, cardProvisionAmount(card))
-    const scheduledTotal = scheduledInstallmentsByCard.get(card.id) ?? 0
+    const debtBreakdown = cardDebtBreakdown(card, scheduledInstallmentsByCard.get(card.id) ?? 0)
+    const { splitTotal, scheduledTotal } = debtBreakdown
 
-    if (exceedsTL(scheduledTotal, 0) && !exceedsTL(card.debt_amount, splitTotal)) {
-      const nextDebtAmount = roundTL(card.debt_amount + scheduledTotal)
+    if (debtBreakdown.hasScheduledDebtGap) {
+      const nextDebtAmount = debtBreakdown.nextDebtAmount
 
       issues.push({
         id: `card-scheduled-debt-${card.id}`,
@@ -808,43 +812,40 @@ export function buildIssues(data: HealthData): HealthIssue[] {
       })
     }
 
-    if (exceedsTL(card.debt_amount, splitTotal)) {
-      const unclassifiedAmount = roundTL(card.debt_amount - splitTotal)
-      const unexplained = roundTL(unclassifiedAmount - Math.min(unclassifiedAmount, scheduledTotal))
+    if (debtBreakdown.hasUnexplainedDebt) {
+      const unexplained = debtBreakdown.unexplainedAmount
       const hasInstallmentExpenses = data.cardExpenses.some(
         (expense) => expense.card_id === card.id && expense.status === 'posted' && expense.installment_count > 1,
       )
 
-      if (exceedsTL(unexplained, 0)) {
-        issues.push({
-          id: `card-unclassified-debt-${card.id}`,
-          area: 'Kartlar',
-          severity: scheduledTotal > 0 ? 'warning' : 'info',
-          title: `${cardLabel(card)} borç kırılımında eksik pay`,
-          description:
-            scheduledTotal > 0
-              ? 'Toplam borç gelecek taksitleri de içerir; bu farkın çoğu planlı taksitlerden gelir ve dönem içine yazılmamalıdır.'
-              : 'Toplam borç, ekstre + dönem içi + provizyon toplamından yüksek. Farkı ekstre borcuna aktarmak daha güvenlidir.',
-          details: [
-            `Toplam borç: ${formatCurrency(card.debt_amount)}`,
-            `Ekstre + dönem + provizyon: ${formatCurrency(splitTotal)}`,
-            scheduledTotal > 0 ? `Planlı taksit (beklenen fark): ${formatCurrency(scheduledTotal)}` : null,
-            `Düzeltilmesi gereken: ${formatCurrency(unexplained)}`,
-            hasInstallmentExpenses && !exceedsTL(scheduledTotal, 0)
-              ? 'Taksitli harcama var ama plan satırı eksik olabilir; eksik taksit uyarılarına da bak.'
-              : null,
-          ].filter((item): item is string => Boolean(item)),
-          fixable: true,
-          fixLabel: 'Ekstre borcuna aktar',
-          kind: 'cardDebtSplit',
-          payload: {
-            cardId: card.id,
-            statementDebt: roundTL(card.statement_debt_amount + unexplained),
-            currentPeriod: card.current_period_spending,
-            provisionAmount: cardProvisionAmount(card),
-          },
-        })
-      }
+      issues.push({
+        id: `card-unclassified-debt-${card.id}`,
+        area: 'Kartlar',
+        severity: scheduledTotal > 0 ? 'warning' : 'info',
+        title: `${cardLabel(card)} borç kırılımında eksik pay`,
+        description:
+          scheduledTotal > 0
+            ? 'Toplam borç gelecek taksitleri de içerir; bu farkın çoğu planlı taksitlerden gelir ve dönem içine yazılmamalıdır.'
+            : 'Toplam borç, ekstre + dönem içi + provizyon toplamından yüksek. Farkı ekstre borcuna aktarmak daha güvenlidir.',
+        details: [
+          `Toplam borç: ${formatCurrency(card.debt_amount)}`,
+          `Ekstre + dönem + provizyon: ${formatCurrency(splitTotal)}`,
+          scheduledTotal > 0 ? `Planlı taksit (beklenen fark): ${formatCurrency(scheduledTotal)}` : null,
+          `Düzeltilmesi gereken: ${formatCurrency(unexplained)}`,
+          hasInstallmentExpenses && !exceedsTL(scheduledTotal, 0)
+            ? 'Taksitli harcama var ama plan satırı eksik olabilir; eksik taksit uyarılarına da bak.'
+            : null,
+        ].filter((item): item is string => Boolean(item)),
+        fixable: true,
+        fixLabel: 'Ekstre borcuna aktar',
+        kind: 'cardDebtSplit',
+        payload: {
+          cardId: card.id,
+          statementDebt: roundTL(card.statement_debt_amount + unexplained),
+          currentPeriod: card.current_period_spending,
+          provisionAmount: cardProvisionAmount(card),
+        },
+      })
     }
 
     if (card.debt_amount > 0 && (!card.statement_day || !card.due_day)) {

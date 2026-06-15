@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { AccountLedger, Asset, Card, CardLedger } from '../types/database'
+import type { AccountLedger, Asset, Card, CardInstallment, CardLedger } from '../types/database'
 import { buildIssues, emptyData } from './DataHealth.logic'
 
 const base = {
@@ -113,6 +113,95 @@ function creditCard(overrides: Partial<Card> = {}): Card {
     ...overrides,
   }
 }
+
+function cardInstallment(overrides: Partial<CardInstallment> = {}): CardInstallment {
+  return {
+    ...base,
+    id: 'installment-1',
+    card_id: 'card-1',
+    card_expense_id: null,
+    statement_archive_id: null,
+    installment_no: 1,
+    installment_count: 1,
+    due_month: '2026-06-01',
+    amount: 0,
+    description: 'Taksit',
+    category: 'Genel',
+    status: 'scheduled',
+    posted_at: null,
+    paid_at: null,
+    note: null,
+    ...overrides,
+  }
+}
+
+describe('buildIssues card debt breakdown', () => {
+  it('flags scheduled installments missing from card debt', () => {
+    const issues = buildIssues({
+      ...emptyData,
+      cards: [
+        creditCard({
+          debt_amount: 250,
+          statement_debt_amount: 200,
+          current_period_spending: 50,
+        }),
+      ],
+      cardInstallments: [
+        cardInstallment({ id: 'installment-1', amount: 0.1 }),
+        cardInstallment({ id: 'installment-2', amount: 0.2 }),
+      ],
+    })
+
+    const issue = issues.find((item) => item.id === 'card-scheduled-debt-card-1')
+    expect(issue?.kind).toBe('cardScheduledDebt')
+    expect(issue?.payload).toMatchObject({
+      cardId: 'card-1',
+      scheduledTotal: 0.3,
+      nextDebtAmount: 250.3,
+    })
+  })
+
+  it('does not flag planned installment debt as unclassified', () => {
+    const issues = buildIssues({
+      ...emptyData,
+      cards: [
+        creditCard({
+          debt_amount: 450,
+          statement_debt_amount: 200,
+          current_period_spending: 50,
+        }),
+      ],
+      cardInstallments: [cardInstallment({ amount: 200 })],
+    })
+
+    expect(issues.find((item) => item.id === 'card-unclassified-debt-card-1')).toBeUndefined()
+  })
+
+  it('flags only debt beyond scheduled installments as unclassified', () => {
+    const issues = buildIssues({
+      ...emptyData,
+      cards: [
+        creditCard({
+          debt_amount: 500,
+          statement_debt_amount: 100,
+          current_period_spending: 100,
+          provision_amount: 50,
+        }),
+      ],
+      cardInstallments: [cardInstallment({ amount: 200 })],
+    })
+
+    const issue = issues.find((item) => item.id === 'card-unclassified-debt-card-1')
+    expect(issue?.kind).toBe('cardDebtSplit')
+    expect(issue?.severity).toBe('warning')
+    expect(issue?.payload).toMatchObject({
+      cardId: 'card-1',
+      statementDebt: 150,
+      currentPeriod: 100,
+      provisionAmount: 50,
+    })
+  })
+})
 
 function ledgerEvent(overrides: Partial<CardLedger> = {}): CardLedger {
   return {
