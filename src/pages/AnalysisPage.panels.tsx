@@ -20,7 +20,7 @@ import { PRICE_RADAR_MONTHS } from '../data/repositories/analysisRepo'
 import { type PriceTrend } from '../utils/priceIncreaseRadar'
 import { canCutCurrentStatement } from '../utils/statementCycle'
 import { buildFinanceObligationsForMonth } from '../utils/obligations'
-import { diffTL, sumTL } from '../utils/money'
+import { diffTL, greaterThanTL, sumTL } from '../utils/money'
 import { StatPill } from './AnalysisPage.atoms'
 
 export function UpcomingInstallments({ data }: { data: AnalysisData }) {
@@ -339,7 +339,7 @@ export function PeopleLedger({ debts }: { debts: Debt[] }) {
           <p className="rounded-xl bg-muted/45 p-3 text-sm text-muted-foreground">Açık kişi borcu veya alacağı yok.</p>
         ) : (
           rows.slice(0, 6).map((row) => {
-            const net = row.receivable - row.borrowed
+            const net = diffTL(row.receivable, row.borrowed)
             return (
               <div key={row.person} className="rounded-xl bg-muted/45 p-3">
                 <div className="flex items-start justify-between gap-3">
@@ -381,7 +381,7 @@ export function MonthCloseAssistant({ data, missingTables }: { data: AnalysisDat
       currentMonthExpenses.filter((expense) => (expense.category || 'Diğer') === budget.category),
       (expense) => expense.amount,
     )
-    return spent > budget.limit_amount
+    return greaterThanTL(spent, budget.limit_amount)
   }).length
   const checks = [
     { label: 'Ekstreler kontrol edildi', done: statementDayPassedCards.length === 0, detail: statementDayPassedCards.length > 0 ? `${statementDayPassedCards.length} kart bekliyor` : 'Kesim günü geçmiş açık dönem yok' },

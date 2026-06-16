@@ -24,10 +24,10 @@ export function AnimatedNumber({
   className,
   formatter,
 }: AnimatedNumberProps) {
-  const [displayValue, setDisplayValue] = useState(0)
+  const [displayValue, setDisplayValue] = useState(value)
   const startRef = useRef<number | null>(null)
   // Track the "from" value across renders so RAF closure captures a stable snapshot
-  const startValueRef = useRef(0)
+  const startValueRef = useRef(value)
   const rafRef = useRef<number | null>(null)
 
   useEffect(() => {
@@ -41,10 +41,8 @@ export function AnimatedNumber({
       return () => cancelAnimationFrame(raf)
     }
 
-    // Snapshot current value as start; update ref for the next render cycle
     const startVal = startValueRef.current
     startRef.current = null
-    startValueRef.current = value // will be overwritten on next value change
 
     if (rafRef.current !== null) {
       cancelAnimationFrame(rafRef.current)
@@ -65,6 +63,7 @@ export function AnimatedNumber({
       if (progress < 1) {
         rafRef.current = requestAnimationFrame(tick)
       } else {
+        startValueRef.current = value
         setDisplayValue(value)
       }
     }

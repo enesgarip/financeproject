@@ -12,7 +12,7 @@ import {
 import type { Card } from '../../types/database'
 import { formatCurrency } from '../../utils/formatCurrency'
 import { parseDenizBankStatement, matchTransactions, expenseTotalAmount, type ParsedTransaction } from '../../utils/denizBankStatementParser'
-import { diffTL, roundTL, sumTL } from '../../utils/money'
+import { diffTL, equalsTL, roundTL, sumTL } from '../../utils/money'
 import { parseStatementText } from '../../lib/statementParseClient'
 
 /**
@@ -460,7 +460,7 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
                     <div className="h-px bg-border" />
                     <div className="flex justify-between">
                       <span className="font-bold text-muted-foreground">Fark</span>
-                      <span className={`font-black ${Math.abs(diff) < 1 ? 'text-success' : 'text-destructive'}`}>
+                      <span className={`font-black ${equalsTL(statementTotal, appCardDebt) ? 'text-success' : 'text-destructive'}`}>
                         {diff >= 0 ? '+' : ''}{formatCurrency(diff)}
                       </span>
                     </div>

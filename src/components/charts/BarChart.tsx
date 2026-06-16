@@ -109,9 +109,9 @@ export function BarChart({
         <Tooltip content={<CustomTooltip /> as any} cursor={{ fill: 'var(--muted)', opacity: 0.3 }} />
 
         <Bar dataKey="value" name="Tutar" radius={[6, 6, 0, 0]} animationDuration={600}>
-          {data.map((entry, index) => (
+          {data.map((entry) => (
             <Cell
-              key={`cell-${index}`}
+              key={entry.label}
               fill={entry.color ?? (entry.value >= 0 ? positiveColor : negativeColor)}
               opacity={0.85}
             />

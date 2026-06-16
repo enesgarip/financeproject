@@ -14,7 +14,7 @@ import { activeExpense as activeCardExpense } from '../utils/budgetAlerts'
 import { type MarketRatesSnapshot } from '../utils/marketRates'
 import { computeFire, estimateMonthlySavingsFromNetWorth } from '../utils/fire'
 import { buildInflationShield } from '../utils/inflationShield'
-import { diffTL, sumTL } from '../utils/money'
+import { diffTL, roundTL, sumTL } from '../utils/money'
 import { computeZakat } from '../utils/zakat'
 import { StatPill } from './AnalysisPage.atoms'
 
@@ -43,7 +43,7 @@ export function FireCalculator({ data, snapshots }: { data: AnalysisData; snapsh
   const defaultExpenses = useMemo(() => {
     const active = data.cardExpenses.filter(activeCardExpense)
     const monthCount = Math.max(1, new Set(active.map((expense) => expense.spent_at.slice(0, 7))).size)
-    const avgCard = sum(active, (expense) => expense.amount) / monthCount
+    const avgCard = roundTL(sum(active, (expense) => expense.amount) / monthCount)
     const monthlyRecurring = sum(data.payments.filter((payment) => payment.recurrence === 'monthly'), (payment) => payment.amount)
     return sumTL([avgCard, monthlyRecurring])
   }, [data.cardExpenses, data.payments])

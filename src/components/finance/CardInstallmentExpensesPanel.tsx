@@ -30,9 +30,9 @@ function historicalPaidInstallmentCount(expense: CardExpense) {
 }
 
 function installmentStatusLabel(item: CardInstallment) {
-  if (item.status === 'paid') return 'Odendi'
-  if (item.status === 'posted') return item.statement_archive_id ? 'Acik ekstrede' : 'Bu donem'
-  return 'Planli'
+  if (item.status === 'paid') return 'Ödendi'
+  if (item.status === 'posted') return item.statement_archive_id ? 'Açık ekstrede' : 'Bu dönem'
+  return 'Planlı'
 }
 
 type CardInstallmentExpensesPanelProps = {
@@ -42,9 +42,9 @@ type CardInstallmentExpensesPanelProps = {
 }
 
 const installmentExpensesHelp = {
-  calculation: 'Taksit sayisi 1den buyuk olan kesinlesmis kart harcamalari ve bagli taksit satirlari gosterilir.',
-  importance: 'Kredi karti taksitleri ayri borc degildir; kart ekstresi odendiginde ilgili taksitler otomatik kapanir.',
-  source: 'Kart harcamalari, kart taksit kayitlari ve ekstre arsivi.',
+  calculation: 'Taksit sayısı 1\'den büyük olan kesinleşmiş kart harcamaları ve bağlı taksit satırları gösterilir.',
+  importance: 'Kredi kartı taksitleri ayrı borç değildir; kart ekstresi ödendiğinde ilgili taksitler otomatik kapanır.',
+  source: 'Kart harcamaları, kart taksit kayıtları ve ekstre arşivi.',
 } satisfies HelpTooltipContent
 
 export function CardInstallmentExpensesPanel({ cards, reload, setError }: CardInstallmentExpensesPanelProps) {
@@ -132,7 +132,7 @@ export function CardInstallmentExpensesPanel({ cards, reload, setError }: CardIn
     const expenseInstallments = installmentsByExpense.get(expense.id) ?? []
     const locked = expenseInstallments.some((item) => item.status === 'paid' || item.statement_archive_id)
     if (locked) {
-      setError('Ekstreye baglanmis veya odenmis taksitli harcama duzenlenemez.')
+      setError('Ekstreye bağlanmış veya ödenmiş taksitli harcama düzenlenemez.')
       return
     }
 
@@ -160,11 +160,11 @@ export function CardInstallmentExpensesPanel({ cards, reload, setError }: CardIn
     const trimmedDescription = description.trim()
 
     if (parsedAmount <= 0) {
-      setLocalError('Tutar 0 dan buyuk olmali.')
+      setLocalError('Tutar 0\'dan büyük olmalı.')
       return
     }
     if (!trimmedDescription) {
-      setLocalError('Aciklama yazmalisin.')
+      setLocalError('Açıklama yazmalısın.')
       return
     }
 
@@ -199,7 +199,7 @@ export function CardInstallmentExpensesPanel({ cards, reload, setError }: CardIn
   if (loading) {
     return (
       <SurfaceCard className="border-border/70 shadow-[var(--shadow-card)]">
-        <CardContent className="p-4 text-sm text-muted-foreground">Taksitli harcamalar yukleniyor...</CardContent>
+        <CardContent className="p-4 text-sm text-muted-foreground">Taksitli harcamalar yükleniyor...</CardContent>
       </SurfaceCard>
     )
   }
@@ -227,17 +227,17 @@ export function CardInstallmentExpensesPanel({ cards, reload, setError }: CardIn
             </p>
             <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] font-semibold">
               <span className="rounded-full bg-muted px-2 py-1 text-muted-foreground">
-                {paidCount}/{expense.installment_count} odendi
+                {paidCount}/{expense.installment_count} ödendi
               </span>
               <span className="rounded-full bg-muted px-2 py-1 text-muted-foreground">
                 {remainingInstallments.length} taksit izleniyor
               </span>
               <span className="rounded-full bg-muted px-2 py-1 text-muted-foreground">
-                {formatCurrency(remainingAmount)} bilgi amacli
+                {formatCurrency(remainingAmount)} bilgi amaçlı
               </span>
             </div>
             {isLocked ? (
-              <p className="mt-2 text-xs text-warning">Ekstreye baglandigi veya odendigi icin bu harcama duzenlemeye kapali.</p>
+              <p className="mt-2 text-xs text-warning">Ekstreye bağlandığı veya ödendiği için bu harcama düzenlemeye kapalı.</p>
             ) : null}
           </div>
           <button
@@ -247,13 +247,13 @@ export function CardInstallmentExpensesPanel({ cards, reload, setError }: CardIn
             className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-border bg-card px-2.5 py-1.5 text-xs font-semibold text-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Pencil size={13} />
-            Duzenle
+            Düzenle
           </button>
         </div>
 
         <div className="mt-3 space-y-2">
           {expenseInstallments.length === 0 ? (
-            <p className="rounded-lg border border-border/50 bg-muted/30 px-3 py-2 text-xs text-muted-foreground">Taksit satiri bulunamadi.</p>
+            <p className="rounded-lg border border-border/50 bg-muted/30 px-3 py-2 text-xs text-muted-foreground">Taksit satırı bulunamadı.</p>
           ) : (
             expenseInstallments.map((item) => {
               const isPaid = item.status === 'paid'
@@ -314,7 +314,7 @@ export function CardInstallmentExpensesPanel({ cards, reload, setError }: CardIn
                 Taksitli harcamalar
                 <HelpTooltip title="Taksitli harcamalar" content={installmentExpensesHelp} />
               </CardTitle>
-              <p className="mt-1 text-xs text-muted-foreground">Kart taksitleri ayri borc degildir; bagli ekstre odendiginde otomatik kapanir.</p>
+              <p className="mt-1 text-xs text-muted-foreground">Kart taksitleri ayrı borç değildir; bağlı ekstre ödendiğinde otomatik kapanır.</p>
             </div>
             <Badge variant="secondary">{activeExpenses.length}</Badge>
           </div>
@@ -350,11 +350,11 @@ export function CardInstallmentExpensesPanel({ cards, reload, setError }: CardIn
         </CardContent>
       </SurfaceCard>
 
-      <SimpleModal title="Taksitli harcamayi duzenle" open={Boolean(editing)} onClose={closeEdit}>
+      <SimpleModal title="Taksitli harcamayı düzenle" open={Boolean(editing)} onClose={closeEdit}>
         <form onSubmit={handleSave} className="space-y-4">
           <MoneyInput label="Toplam tutar" value={amount} onValueChange={setAmount} required />
           <label className="block text-sm font-semibold text-foreground">
-            Aciklama
+            Açıklama
             <input
               value={description}
               onChange={(event) => setDescription(event.target.value)}
@@ -365,7 +365,7 @@ export function CardInstallmentExpensesPanel({ cards, reload, setError }: CardIn
           </label>
           <div className="grid grid-cols-2 gap-3">
             <label className="block text-sm font-semibold text-foreground">
-              Harcama tarihi
+              Harcama Tarihi
               <input
                 value={spentAt}
                 onChange={(event) => setSpentAt(event.target.value)}
@@ -375,7 +375,7 @@ export function CardInstallmentExpensesPanel({ cards, reload, setError }: CardIn
               />
             </label>
             <label className="block text-sm font-semibold text-foreground">
-              Taksit sayisi
+              Taksit sayısı
               <input
                 value={installmentCount}
                 onChange={(event) => setInstallmentCount(event.target.value)}
@@ -399,7 +399,7 @@ export function CardInstallmentExpensesPanel({ cards, reload, setError }: CardIn
             />
           </label>
           <p className="rounded-xl border border-warning/20 bg-warning/8 p-3 text-xs font-medium text-warning">
-            Duzenleme sonrasi kalan taksit plani yeniden kurulur. Ekstreye baglanmis veya odemesi kapanmis kayitlar degistirilemez.
+            Düzenleme sonrası kalan taksit planı yeniden kurulur. Ekstreye bağlanmış veya ödemesi kapanmış kayıtlar değiştirilemez.
           </p>
           {localError ? <p className="rounded-xl border border-destructive/20 bg-destructive/8 p-3 text-sm font-medium text-destructive">{localError}</p> : null}
           <button
@@ -407,7 +407,7 @@ export function CardInstallmentExpensesPanel({ cards, reload, setError }: CardIn
             disabled={saving}
             className="h-12 w-full rounded-xl bg-success px-4 text-sm font-semibold text-success-foreground shadow-[0_2px_8px_color-mix(in_srgb,var(--success)_28%,transparent)] transition hover:bg-success/90 active:scale-[0.99] disabled:opacity-50"
           >
-            {saving ? 'Kaydediliyor...' : 'Degisiklikleri kaydet'}
+            {saving ? 'Kaydediliyor...' : 'Değişiklikleri kaydet'}
           </button>
         </form>
       </SimpleModal>

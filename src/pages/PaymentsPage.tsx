@@ -17,7 +17,7 @@ import type {
   PaymentCategory,
   PaymentMethod,
 } from '../types/database'
-import { addMonths, daysUntil, formatDate, startOfMonth } from '../utils/date'
+import { addMonths, dateInputValue, daysUntil, formatDate, startOfMonth } from '../utils/date'
 import { formatCurrency, parseNumber } from '../utils/formatCurrency'
 import { paymentCashOutflowAmount, paymentOccurrenceInMonth, paymentUsesCreditCard } from '../utils/financeSummary'
 import { sumTL } from '../utils/money'
@@ -210,10 +210,13 @@ function PaymentsOverview({ rows }: { rows: Payment[] }) {
     paymentOccurrenceInMonth(row, nextMonthStart) !== null,
   )
 
-  // Bu ay ödenen tek seferlik ödemeler
+  // Bu ay ödenen tek seferlik ödemeler (vade tarihi bu ayda olanlar)
+  const monthStart = dateInputValue(currentMonth)
+  const monthEnd = dateInputValue(nextMonthStart)
   const paidOneTimeThisMonth = rows.filter((row) =>
     row.recurrence !== 'monthly' &&
-    row.status === 'ödendi',
+    row.status === 'ödendi' &&
+    row.due_date >= monthStart && row.due_date < monthEnd,
   )
 
   const paidThisMonthCount = paidMonthlyThisMonth.length + paidOneTimeThisMonth.length

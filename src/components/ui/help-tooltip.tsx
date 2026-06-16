@@ -24,6 +24,7 @@ const helpRows = [
 export function HelpTooltip({ title, content, className }: HelpTooltipProps) {
   const tooltipId = React.useId()
   const rootRef = React.useRef<HTMLSpanElement>(null)
+  const tooltipRef = React.useRef<HTMLDivElement>(null)
   const buttonRef = React.useRef<HTMLButtonElement>(null)
   const [hovered, setHovered] = React.useState(false)
   const [locked, setLocked] = React.useState(false)
@@ -71,7 +72,7 @@ export function HelpTooltip({ title, content, className }: HelpTooltipProps) {
 
     function handlePointerDown(event: PointerEvent) {
       const target = event.target as Node | null
-      if (target && rootRef.current?.contains(target)) return
+      if (target && (rootRef.current?.contains(target) || tooltipRef.current?.contains(target))) return
       setLocked(false)
     }
 
@@ -92,11 +93,12 @@ export function HelpTooltip({ title, content, className }: HelpTooltipProps) {
     visible && position && typeof document !== "undefined"
       ? createPortal(
           <div
+            ref={tooltipRef}
             id={tooltipId}
             role="tooltip"
             style={{ top: position.top, left: position.left, width: position.width }}
             className={cn(
-              "pointer-events-none fixed z-[60] rounded-lg border border-border bg-popover p-3 text-left text-xs text-popover-foreground shadow-[var(--shadow-elevated)] ring-1 ring-black/[0.025] dark:ring-white/[0.06]",
+              "fixed z-[60] rounded-lg border border-border bg-popover p-3 text-left text-xs text-popover-foreground shadow-[var(--shadow-elevated)] ring-1 ring-black/[0.025] dark:ring-white/[0.06]",
               position.placement === "top" && "-translate-y-full",
             )}
           >

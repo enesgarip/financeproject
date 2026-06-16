@@ -69,12 +69,13 @@ export function CardLedgerPanel({ card, onChanged }: { card: Card; onChanged?: (
     setBusy(true)
     setError('')
     const { error: rpcError } = await recomputeCardDebt(card.id)
-    setBusy(false)
     if (rpcError) {
       setError(rpcError.message ?? 'Borç yeniden hesaplanamadı.')
+      setBusy(false)
       return
     }
     await afterMutation()
+    setBusy(false)
   }
 
   async function handleCorrection() {
@@ -87,15 +88,16 @@ export function CardLedgerPanel({ card, onChanged }: { card: Card; onChanged?: (
     setBusy(true)
     setError('')
     const { error: rpcError } = await postCardDebtCorrection(card.id, signed, note)
-    setBusy(false)
     if (rpcError) {
       setError(rpcError.message ?? 'Düzeltme kaydedilemedi.')
+      setBusy(false)
       return
     }
     setAmount('')
     setNote('')
     setFormOpen(false)
     await afterMutation()
+    setBusy(false)
   }
 
   if (loadError) return <Alert variant="warning" className="mt-3">{loadError}</Alert>

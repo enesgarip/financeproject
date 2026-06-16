@@ -160,7 +160,6 @@ export function LoansPage() {
 
   function renderPaymentPlan(loan: Loan, reload: () => Promise<void>, setError: (message: string) => void) {
     const loanInstallments = installments.filter((item) => item.loan_id === loan.id)
-    const undoPaidActionId: string | null = null
     if (loanInstallments.length === 0) {
       return (
         <section className="mt-4 rounded-2xl border border-dashed border-border/70 bg-muted/20 p-3">
@@ -224,7 +223,7 @@ export function LoansPage() {
                   {item.installment_no}. taksit · <span className="font-mono">{formatCurrency(item.amount)}</span>
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  {formatDate(item.due_date)} · {item.status === 'ödendi' ? (undoPaidActionId === item.id ? 'Geri alınıyor...' : 'Ödendi') : 'Bekliyor'}
+                  {formatDate(item.due_date)} · {item.status === 'ödendi' ? 'Ödendi' : 'Bekliyor'}
                 </p>
               </div>
               <div className="relative shrink-0">
@@ -299,17 +298,17 @@ export function LoansPage() {
           status: row?.status ?? 'active',
           note: row?.note ?? '',
         })}
-        mapForm={(formData, userId) => ({
+        mapForm={(formData, userId, existingRow) => ({
           user_id: userId,
           bank_name: String(formData.get('bank_name') ?? '').trim(),
           loan_name: String(formData.get('loan_name') ?? '').trim(),
           total_amount: parseNumber(formData.get('total_amount')),
-          remaining_amount: parseNumber(formData.get('total_amount')),
+          remaining_amount: existingRow ? (existingRow as Loan).remaining_amount : parseNumber(formData.get('total_amount')),
           monthly_payment: parseNumber(formData.get('monthly_payment')),
           installment_day: optionalDay(formData.get('installment_day')),
           start_date: optionalDate(formData.get('start_date')),
           end_date: optionalDate(formData.get('end_date')),
-          remaining_installments: 0,
+          remaining_installments: existingRow ? (existingRow as Loan).remaining_installments : 0,
           status: formData.get('status') as Loan['status'],
           note: String(formData.get('note') ?? '') || null,
         })}

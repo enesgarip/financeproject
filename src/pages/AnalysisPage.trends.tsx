@@ -169,7 +169,7 @@ export function NetWorthTrend({
   const minSnap = view.reduce((a, b) => (b.net_worth < a.net_worth ? b : a))
   const maxSnap = view.reduce((a, b) => (b.net_worth > a.net_worth ? b : a))
 
-  const changeTry = latest.net_worth - first.net_worth
+  const changeTry = diffTL(latest.net_worth, first.net_worth)
   const changeBadge =
     unit === 'TRY'
       ? `${changeTry >= 0 ? '+' : ''}${formatCurrency(changeTry)}`
@@ -312,7 +312,7 @@ export function ForwardForecast({ data }: { data: AnalysisData }) {
     })
   }
 
-  const endingDelta = scenarioForecast ? scenarioForecast.endingBalance - forecast.endingBalance : null
+  const endingDelta = scenarioForecast ? diffTL(scenarioForecast.endingBalance, forecast.endingBalance) : null
 
   return (
     <Card className="border-border/70 shadow-[var(--shadow-card)] lg:col-span-12">

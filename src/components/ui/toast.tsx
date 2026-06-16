@@ -1,5 +1,5 @@
 import { AlertCircle, CheckCircle2, Info, X, XCircle } from 'lucide-react'
-import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 
 type ToastType = 'success' | 'error' | 'warning' | 'info'
@@ -113,13 +113,13 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     setToasts((prev) => [...prev.slice(-4), { ...opts, id }])
   }, [])
 
-  const ctx: ToastContextValue = {
+  const ctx: ToastContextValue = useMemo(() => ({
     toast: addToast,
-    success: (title, description) => addToast({ type: 'success', title, description }),
-    error:   (title, description) => addToast({ type: 'error',   title, description }),
-    warning: (title, description) => addToast({ type: 'warning', title, description }),
-    info:    (title, description) => addToast({ type: 'info',    title, description }),
-  }
+    success: (title: string, description?: string) => addToast({ type: 'success', title, description }),
+    error:   (title: string, description?: string) => addToast({ type: 'error',   title, description }),
+    warning: (title: string, description?: string) => addToast({ type: 'warning', title, description }),
+    info:    (title: string, description?: string) => addToast({ type: 'info',    title, description }),
+  }), [addToast])
 
   return (
     <ToastContext.Provider value={ctx}>

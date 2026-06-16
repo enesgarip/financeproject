@@ -140,7 +140,7 @@ function buildChartData(lots: GoldLot[], snapshot: MarketRatesSnapshot | null): 
   return dated.map((lot) => {
     if (lot.gold_type === 'gram') gram += lot.quantity
     if (lot.gold_type === 'ceyrek') ceyrek += lot.quantity
-    if (lot.unit_price != null) cost = sumTL([cost, lot.quantity * lot.unit_price])
+    if (lot.unit_price != null) cost = sumTL([cost, round2(lot.quantity * lot.unit_price)])
 
     const gramValue = goldValue('gram', gram, snapshot)
     const ceyrekValue = goldValue('ceyrek', ceyrek, snapshot)

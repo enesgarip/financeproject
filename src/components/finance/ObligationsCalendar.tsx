@@ -175,7 +175,7 @@ export function ObligationsCalendar({ data, loading = false, onPayObligation }: 
             <div className="grid grid-cols-2 gap-2 min-[720px]:grid-cols-4">
               <SummaryStat label="Ay yükü" value={formatCurrency(summary.outflow)} tone="danger" />
               <SummaryStat label="Beklenen giriş" value={formatCurrency(summary.inflow)} tone="success" />
-              <SummaryStat label="Net etki" value={formatCurrency(Math.abs(summary.net))} tone={summary.net >= 0 ? 'success' : 'danger'} />
+              <SummaryStat label="Net etki" value={`${summary.net < 0 ? '−' : ''}${formatCurrency(Math.abs(summary.net))}`} tone={summary.net >= 0 ? 'success' : 'danger'} />
               <SummaryStat label="Aksiyon" value={`${summary.payableCount}/${summary.itemCount}`} />
             </div>
 

@@ -28,8 +28,9 @@ export function MoneyInput({
       return
     }
 
-    onValueChange(parsedValue > 0 ? String(parsedValue) : '')
-    onParsedChange?.(parsedValue)
+    const effective = parsedValue > 0 ? parsedValue : 0
+    onValueChange(effective > 0 ? String(effective) : '')
+    onParsedChange?.(effective)
   }
 
   return (

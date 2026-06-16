@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 
@@ -16,9 +16,18 @@ type ConfirmRequest = ConfirmOptions & {
 
 function useConfirmDialog() {
   const [request, setRequest] = useState<ConfirmRequest | null>(null)
+  const resolveRef = useRef<((value: boolean) => void) | null>(null)
+
+  useEffect(() => {
+    return () => {
+      resolveRef.current?.(false)
+      resolveRef.current = null
+    }
+  }, [])
 
   const confirm = useCallback((options: ConfirmOptions) => {
     return new Promise<boolean>((resolve) => {
+      resolveRef.current = resolve
       setRequest({ ...options, resolve })
     })
   }, [])

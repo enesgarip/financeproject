@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react"
 import { createPortal } from "react-dom"
 import { AlertTriangle, X } from "lucide-react"
 
@@ -28,7 +29,42 @@ function ConfirmDialog({
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
+  const sectionRef = useRef<HTMLElement>(null)
   useBodyScrollLock(open)
+
+  useEffect(() => {
+    if (!open) return
+    const section = sectionRef.current
+    if (!section) return
+
+    const focusable = section.querySelectorAll<HTMLElement>(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+    )
+    const first = focusable[0]
+    const last = focusable[focusable.length - 1]
+
+    first?.focus()
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        event.stopPropagation()
+        onCancel()
+        return
+      }
+      if (event.key === 'Tab' && focusable.length > 0) {
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault()
+          last?.focus()
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault()
+          first?.focus()
+        }
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [open, onCancel])
 
   if (!open) return null
 
@@ -37,6 +73,7 @@ function ConfirmDialog({
   return createPortal(
     <div className="fixed inset-0 z-[90] flex items-end bg-slate-950/45 px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] backdrop-blur-sm sm:items-center sm:justify-center sm:p-6">
       <section
+        ref={sectionRef}
         role="alertdialog"
         aria-modal="true"
         aria-labelledby="confirm-dialog-title"

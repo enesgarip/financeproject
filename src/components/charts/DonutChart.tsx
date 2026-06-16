@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Cell, Pie, PieChart } from 'recharts'
 import { formatCurrency } from '@/utils/formatCurrency'
 import { cn } from '@/lib/utils'
+import { sumTL } from '@/utils/money'
 
 export type DonutSlice = {
   name: string
@@ -37,7 +38,7 @@ export function DonutChart({
 }: DonutChartProps) {
   const [activeIndex, setActiveIndex] = useState<number | null>(null)
 
-  const total = data.reduce((sum, d) => sum + d.value, 0)
+  const total = sumTL(data.map((d) => d.value))
   const active = activeIndex !== null ? data[activeIndex] : null
   const centerValue = active ? formatCurrency(active.value) : formatCurrency(total)
   const centerLabel = active ? active.name : totalLabel
@@ -106,7 +107,7 @@ export function DonutChart({
 
               return (
                 <Cell
-                  key={`cell-${index}`}
+                  key={entry.name}
                   fill={color}
                   stroke="transparent"
                   opacity={isAnyActive && !isActive ? 0.35 : 1}
