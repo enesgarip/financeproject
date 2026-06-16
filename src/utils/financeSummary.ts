@@ -272,7 +272,13 @@ export function getSalaryTrend(rows: SalaryHistory[]) {
 export function getCurrentSalary(rows: SalaryHistory[]) {
   const today = new Date().toLocaleDateString('sv-SE')
   const ordered = [...rows].sort((a, b) => a.effective_date.localeCompare(b.effective_date))
-  return ordered.filter((row) => row.effective_date <= today).at(-1) ?? ordered.at(-1) ?? null
+  return getSalaryForDate(ordered, today) ?? ordered.at(-1) ?? null
+}
+
+export function getSalaryForDate(rows: SalaryHistory[], date: Date | string) {
+  const cutoff = typeof date === 'string' ? date.slice(0, 10) : date.toLocaleDateString('sv-SE')
+  const ordered = [...rows].sort((a, b) => a.effective_date.localeCompare(b.effective_date))
+  return ordered.filter((row) => row.effective_date <= cutoff).at(-1) ?? null
 }
 
 export function paymentOccurrenceInMonth(payment: Payment, month = new Date()) {

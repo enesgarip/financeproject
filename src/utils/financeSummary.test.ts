@@ -15,6 +15,7 @@ import {
   projectLoanSummary,
   scheduledCardInstallmentTotalsByCard,
   getCurrentSalary,
+  getSalaryForDate,
   getSalaryTrend,
   paymentCashOutflowAmount,
   paymentOccurrenceInMonth,
@@ -393,6 +394,23 @@ describe('getCurrentSalary', () => {
 
   it('returns null for empty array', () => {
     expect(getCurrentSalary([])).toBeNull()
+  })
+})
+
+describe('getSalaryForDate', () => {
+  it('returns the salary effective at the requested date', () => {
+    const rows = [
+      salary({ id: 's1', effective_date: '2026-01-01', amount: 50000 }),
+      salary({ id: 's2', effective_date: '2026-04-15', amount: 60000 }),
+      salary({ id: 's3', effective_date: '2026-08-01', amount: 70000 }),
+    ]
+
+    expect(getSalaryForDate(rows, new Date(2026, 2, 31))?.id).toBe('s1')
+    expect(getSalaryForDate(rows, '2026-04-30')?.id).toBe('s2')
+  })
+
+  it('returns null before the first known effective date', () => {
+    expect(getSalaryForDate([salary({ effective_date: '2026-06-01', amount: 50000 })], '2026-05-31')).toBeNull()
   })
 })
 

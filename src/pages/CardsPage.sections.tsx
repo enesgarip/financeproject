@@ -4,7 +4,7 @@ import {
   LayoutGrid,
   ReceiptText,
 } from 'lucide-react'
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { cutDueCardStatements } from '../data/repositories/cardsRepo'
 import type { Card, CardStatementArchive } from '../types/database'
 import { cn } from '../lib/utils'
@@ -87,26 +87,48 @@ export function DueStatementAutomation({
   loadStatements: () => Promise<void>
   setError: (message: string) => void
 }) {
+  const activeRunKeyRef = useRef<string | null>(null)
+  const completedRunKeyRef = useRef<string | null>(null)
+
   useEffect(() => {
     if (statementsLoading) return
-    if (!rows.some((card) => shouldRunStatementCut(card, statements))) return
+    const dueCards = rows.filter((card) => shouldRunStatementCut(card, statements))
+    if (dueCards.length === 0) {
+      if (!activeRunKeyRef.current) completedRunKeyRef.current = null
+      return
+    }
+
+    const runKey = dueCards
+      .map((card) => `${card.id}:${card.current_period_spending}:${card.statement_day ?? ''}:${card.due_day ?? ''}`)
+      .sort()
+      .join('|')
+    if (activeRunKeyRef.current === runKey || completedRunKeyRef.current === runKey) return
+
+    activeRunKeyRef.current = runKey
 
     let cancelled = false
 
     async function runDueStatementCut() {
-      const cutResult = await cutDueCardStatements()
+      try {
+        const cutResult = await cutDueCardStatements()
 
-      if (!cutResult.ok) {
-        setError(
-          isMissingSupabaseCapabilityError(cutResult.error)
-            ? missingSupabaseCapabilityMessage('Ekstre kesimi altyapısı', cutResult.error)
-            : cutResult.error.message ?? 'Ekstre kesimi başarısız.',
-        )
-        return
-      }
+        if (!cutResult.ok) {
+          setError(
+            isMissingSupabaseCapabilityError(cutResult.error)
+              ? missingSupabaseCapabilityMessage('Ekstre kesimi altyapısı', cutResult.error)
+              : cutResult.error.message ?? 'Ekstre kesimi başarısız.',
+          )
+          return
+        }
 
-      if (!cancelled && cutResult.data > 0) {
-        await Promise.all([reload(), loadStatements()])
+        if (!cancelled && cutResult.data > 0) {
+          await Promise.all([reload(), loadStatements()])
+        }
+      } finally {
+        if (activeRunKeyRef.current === runKey) {
+          activeRunKeyRef.current = null
+          completedRunKeyRef.current = runKey
+        }
       }
     }
 

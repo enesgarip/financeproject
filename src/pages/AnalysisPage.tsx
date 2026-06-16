@@ -120,6 +120,10 @@ export function AnalysisPage() {
       savingsGoals: snapshot.savingsGoals,
     }
   }, [snapshotQuery.data])
+  const dataRef = useRef<AnalysisData>(emptyAnalysisData)
+  useEffect(() => {
+    dataRef.current = data
+  }, [data])
 
   const loading = snapshotQuery.isPending
   const error = snapshotQuery.error instanceof Error ? snapshotQuery.error.message : ''
@@ -134,7 +138,7 @@ export function AnalysisPage() {
     staleTime: Infinity,
     queryFn: async () => {
       try {
-        return (await loadNetWorthSnapshots(userId as string, data, ratesSnapshotRef.current)) ?? []
+        return (await loadNetWorthSnapshots(userId as string, dataRef.current, ratesSnapshotRef.current)) ?? []
       } catch {
         return [] as NetWorthSnapshot[]
       }
@@ -152,9 +156,10 @@ export function AnalysisPage() {
         if (!radarResult.ok) return [] as PriceTrend[]
 
         const radar = radarResult.data
+        const latestData = dataRef.current
         const observations = buildPriceObservations({
           transactionHistory: radar.transactionHistory,
-          payments: data.payments,
+          payments: latestData.payments,
           cardExpenses: radar.cardExpenses,
         })
         return detectPriceIncreases(observations)

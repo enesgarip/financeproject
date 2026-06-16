@@ -9,8 +9,26 @@ import {
 
 export type { FinanceSnapshot }
 
+const FINANCE_MAINTENANCE_THROTTLE_MS = 5 * 60 * 1000
+let lastFinanceMaintenanceAt = 0
+let financeMaintenancePromise: Promise<void> | null = null
+
 export function financeSnapshotKey(userId: string | undefined) {
   return ['finance-snapshot', userId ?? 'anonymous'] as const
+}
+
+async function runFinanceMaintenanceForSnapshot() {
+  if (Date.now() - lastFinanceMaintenanceAt < FINANCE_MAINTENANCE_THROTTLE_MS) return
+
+  financeMaintenancePromise ??= runFinanceMaintenance()
+    .then(() => {
+      lastFinanceMaintenanceAt = Date.now()
+    })
+    .finally(() => {
+      financeMaintenancePromise = null
+    })
+
+  await financeMaintenancePromise
 }
 
 /**
@@ -25,7 +43,7 @@ export function useFinanceSnapshot() {
     queryKey: financeSnapshotKey(user?.id),
     enabled: Boolean(user),
     queryFn: async () => {
-      await runFinanceMaintenance()
+      await runFinanceMaintenanceForSnapshot()
       return fetchFinanceSnapshot()
     },
   })

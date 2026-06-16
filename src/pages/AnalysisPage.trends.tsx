@@ -4,10 +4,10 @@ import { CashFlowChart, type CashFlowPoint } from '../components/charts/CashFlow
 import { Badge } from '../components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import type { NetWorthSnapshot } from '../types/database'
-import { isDateInMonth, monthlyOccurrenceDate } from '../utils/date'
+import { endOfMonth, isDateInMonth, monthlyOccurrenceDate } from '../utils/date'
 import { formatCurrency } from '../utils/formatCurrency'
 import { buildCashFlowForecast } from '../utils/cashFlowForecast'
-import { getCurrentSalary, sum } from '../utils/financeSummary'
+import { getSalaryForDate, sum } from '../utils/financeSummary'
 import { analysisFinanceSummaryInput, type AnalysisData } from '../utils/analysisView'
 import { activeExpense as activeCardExpense } from '../utils/budgetAlerts'
 import { type MarketRatesSnapshot } from '../utils/marketRates'
@@ -19,10 +19,10 @@ import { StatPill } from './AnalysisPage.atoms'
 
 export function CashFlowTrend({ data }: { data: AnalysisData }) {
   const chartData: CashFlowPoint[] = useMemo(() => {
-    const salary = getCurrentSalary(data.salaryHistory)?.amount ?? 0
     const months = Array.from({ length: 6 }, (_, index) => new Date(new Date().getFullYear(), new Date().getMonth() - 5 + index, 1))
 
     return months.map((month) => {
+      const salary = getSalaryForDate(data.salaryHistory, endOfMonth(month))?.amount ?? 0
       const income = sumTL([
         salary,
         sum(

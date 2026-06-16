@@ -59,20 +59,21 @@ export function QuickExpensePanel({
   const canSubmitQuickExpense = Boolean(selectedCard) && parsedAmount > 0 && trimmedDescription.length > 0 && !saving
 
   // "Harcama ekle / Taksit ekle" kısayolundan gelen kartı ve modu önceden seç.
+  const focusCardId = focus?.cardId
+  const focusMode = focus?.mode
   const focusNonce = focus?.nonce
   useEffect(() => {
-    if (!focus) return
-    const targetCard = cards.find((card) => card.id === focus.cardId)
+    if (!focusCardId || !focusMode) return
+    const targetCard = cards.find((card) => card.id === focusCardId)
     if (!targetCard) return
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setCardId(targetCard.id)
     setLastUsed('expenseCard', targetCard.id)
-    if (focus.mode === 'installment' && targetCard.card_type === 'kredi_karti') {
+    if (focusMode === 'installment' && targetCard.card_type === 'kredi_karti') {
       setPaymentMode('installment')
       setInstallmentCount((current) => (Number(current) < 2 ? '2' : current))
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [focusNonce])
+  }, [cards, focusCardId, focusMode, focusNonce])
 
   async function handleScanFile(file: File) {
     setScanning(true)

@@ -47,6 +47,11 @@ function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: (id: string)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const { wrapper, icon } = toastStyles[toast.type]
 
+  const dismiss = useCallback(() => {
+    setLeaving(true)
+    setTimeout(() => onDismiss(toast.id), 300)
+  }, [onDismiss, toast.id])
+
   useEffect(() => {
     // Enter animation
     const enterTimer = setTimeout(() => setVisible(true), 16)
@@ -59,13 +64,7 @@ function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: (id: string)
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [toast.duration])
-
-  function dismiss() {
-    setLeaving(true)
-    setTimeout(() => onDismiss(toast.id), 300)
-  }
+  }, [dismiss, toast.duration])
 
   return (
     <div
