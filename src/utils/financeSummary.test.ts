@@ -578,6 +578,17 @@ describe('buildFinancialPosition', () => {
     expect(pos.totalPaymentLiabilities).toBe(500)
   })
 
+  it('excludes card-settled payments from totalPaymentLiabilities', () => {
+    const pos = buildFinancialPosition({
+      ...emptyInput,
+      payments: [
+        payment({ amount: 500, status: 'bekliyor', payment_method: 'manual' }),
+        payment({ amount: 300, status: 'bekliyor', payment_method: 'bank_auto', auto_source_card_id: 'card-1' }),
+      ],
+    })
+    expect(pos.totalPaymentLiabilities).toBe(500)
+  })
+
   it('computes netWorth as assets minus debts', () => {
     const pos = buildFinancialPosition({
       ...emptyInput,

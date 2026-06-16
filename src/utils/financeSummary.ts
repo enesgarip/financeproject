@@ -255,7 +255,10 @@ export function buildCreditLimitGroups(cards: Card[]): CreditLimitGroup[] {
 }
 
 export function getSalaryTrend(rows: SalaryHistory[]) {
-  const ordered = [...rows].sort((a, b) => a.effective_date.localeCompare(b.effective_date))
+  const today = new Date().toLocaleDateString('sv-SE')
+  const ordered = [...rows]
+    .filter((row) => row.effective_date <= today)
+    .sort((a, b) => a.effective_date.localeCompare(b.effective_date))
   const current = ordered.at(-1) ?? null
   const previous = ordered.at(-2) ?? null
 
@@ -339,7 +342,7 @@ export function buildFinancialPosition(data: FinanceSummaryInput): FinancialPosi
   )
   const totalPaymentLiabilities = sum(
     data.payments.filter((payment) => payment.status === 'bekliyor'),
-    (payment) => payment.amount,
+    paymentCashOutflowAmount,
   )
   const totalDebts = sumTL([totalCreditCardDebt, totalLoanDebt, totalPersonalDebts, totalPaymentLiabilities])
   const netWorth = diffTL(totalAssets, totalDebts)

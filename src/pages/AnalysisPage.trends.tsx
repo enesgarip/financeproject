@@ -4,12 +4,10 @@ import { CashFlowChart, type CashFlowPoint } from '../components/charts/CashFlow
 import { Badge } from '../components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import type { NetWorthSnapshot } from '../types/database'
-import { endOfMonth, isDateInMonth, monthlyOccurrenceDate } from '../utils/date'
 import { formatCurrency } from '../utils/formatCurrency'
 import { buildCashFlowForecast } from '../utils/cashFlowForecast'
-import { getSalaryForDate, sum } from '../utils/financeSummary'
+import { buildMonthlyCashFlow } from '../utils/financeSummary'
 import { analysisFinanceSummaryInput, type AnalysisData } from '../utils/analysisView'
-import { activeExpense as activeCardExpense } from '../utils/budgetAlerts'
 import { type MarketRatesSnapshot } from '../utils/marketRates'
 import { diffTL, sumTL } from '../utils/money'
 import { convertNetWorth, formatRealValue, realValueChangeBadge, type RealUnit, REAL_UNIT_LABELS } from '../utils/realValue'
@@ -18,37 +16,21 @@ import { applyScenario, type ScenarioMutation } from '../utils/scenarioForecast'
 import { StatPill } from './AnalysisPage.atoms'
 
 export function CashFlowTrend({ data }: { data: AnalysisData }) {
+  const summaryInput = useMemo(() => analysisFinanceSummaryInput(data), [data])
+
   const chartData: CashFlowPoint[] = useMemo(() => {
     const months = Array.from({ length: 6 }, (_, index) => new Date(new Date().getFullYear(), new Date().getMonth() - 5 + index, 1))
 
     return months.map((month) => {
-      const salary = getSalaryForDate(data.salaryHistory, endOfMonth(month))?.amount ?? 0
-      const income = sumTL([
-        salary,
-        sum(
-          data.debts.filter((debt) => debt.direction === 'borç_verdim' && debt.status === 'açık' && isDateInMonth(debt.due_date, month)),
-          (debt) => debt.estimated_value_try,
-        ),
-      ])
-      const outflow = sumTL([
-        sum(data.cardExpenses.filter((expense) => activeCardExpense(expense) && isDateInMonth(expense.spent_at, month)), (expense) => expense.amount),
-        sum(data.payments.filter((payment) => {
-          if (payment.status !== 'bekliyor') return false
-          if (payment.recurrence === 'monthly') return Boolean(monthlyOccurrenceDate(payment.recurrence_day, month))
-          return isDateInMonth(payment.due_date, month)
-        }), (payment) => payment.amount),
-        sum(data.loanInstallments.filter((installment) => isDateInMonth(installment.due_date, month)), (installment) => installment.amount),
-        sum(data.debts.filter((debt) => debt.direction === 'borç_aldım' && debt.status === 'açık' && isDateInMonth(debt.due_date, month)), (debt) => debt.estimated_value_try),
-      ])
-
+      const cf = buildMonthlyCashFlow(summaryInput, month)
       return {
         label: new Intl.DateTimeFormat('tr-TR', { month: 'short' }).format(month),
-        income,
-        outflow,
-        net: diffTL(income, outflow),
+        income: cf.income,
+        outflow: cf.outflow,
+        net: cf.netFlow,
       }
     })
-  }, [data.cardExpenses, data.debts, data.loanInstallments, data.payments, data.salaryHistory])
+  }, [summaryInput])
 
   const totalNet = useMemo(() => sumTL(chartData.map((row) => row.net)), [chartData])
 
