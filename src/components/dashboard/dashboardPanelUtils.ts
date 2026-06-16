@@ -8,7 +8,7 @@ export const dashboardHelp = {
     source: 'Varlıklar, banka kartları, kredi kartları, krediler, planlı ödemeler ve borç/alacak kayıtları.',
   },
   cashFlow: {
-    calculation: 'Bu ayki maaş ve alacaklardan; kart ekstresi, kredi, ödeme ve kişisel borç çıkışları düşülür.',
+    calculation: 'Maaş geçmişindeki bu ay geçerli net maaş, ayda bir düzenli gelir kabul edilir; alacaklar eklenir, kart ekstresi, kredi, ödeme ve kişisel borç çıkışları düşülür.',
     importance: 'Ay bitmeden nakit açığı oluşup oluşmayacağını erkenden görmeni sağlar.',
     source: 'Maaş geçmişi, ödemeler, kart son ödeme günleri, krediler ve borç kayıtları.',
   },

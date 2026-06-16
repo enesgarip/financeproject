@@ -36,6 +36,7 @@ export function buildHealthCounts(data: HealthCountInput): HealthSummary {
   for (const card of data.cards.filter((c) => c.card_type === 'kredi_karti')) {
     const breakdown = cardDebtBreakdown(card, scheduledByCard.get(card.id) ?? 0)
     if (breakdown.hasSplitOverflow) errors++
+    if (breakdown.hasScheduledDebtGap) errors++
     if (breakdown.hasUnexplainedDebt) warnings++
   }
 

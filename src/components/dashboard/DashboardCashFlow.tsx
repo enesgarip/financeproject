@@ -156,6 +156,7 @@ export function CashFlowPanel({ cashFlow }: { cashFlow: CashFlowSummary }) {
           <span>📋 Kredi: <span className="font-mono font-medium text-foreground">{formatCurrency(cashFlow.loanOutflow)}</span></span>
           <span>🧾 Fatura: <span className="font-mono font-medium text-foreground">{formatCurrency(cashFlow.paymentOutflow)}</span></span>
           <span>👤 Kişisel: <span className="font-mono font-medium text-foreground">{formatCurrency(cashFlow.debtOutflow)}</span></span>
+          <span>Maaş: <span className="font-mono font-medium text-success">{formatCurrency(cashFlow.salaryIncome)}</span></span>
           {cashFlow.receivableIncome > 0 ? (
             <span>📥 Tahsilat: <span className="font-mono font-medium text-success">{formatCurrency(cashFlow.receivableIncome)}</span></span>
           ) : null}

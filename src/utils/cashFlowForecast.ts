@@ -1,7 +1,7 @@
-import { addMonths, dateInputValue, startOfMonth } from './date'
+import { addMonths, dateInputValue, endOfMonth, startOfMonth } from './date'
 import {
   buildFinancialPosition,
-  getCurrentSalary,
+  getSalaryForDate,
   type FinanceSummaryInput,
 } from './financeSummary'
 import { diffTL, roundTL, sumTL } from './money'
@@ -123,7 +123,6 @@ export function buildCashFlowForecast(
   const firstMonth = startOfMonth(from)
 
   const startingBalance = roundTL(buildFinancialPosition(data).totalCashAssets)
-  const salary = roundTL(getCurrentSalary(data.salaryHistory)?.amount ?? 0)
   const obligationInput = obligationsInput(data)
 
   const months: CashFlowForecastMonth[] = []
@@ -135,6 +134,7 @@ export function buildCashFlowForecast(
     const monthDate = addMonths(firstMonth, offset)
     const monthKey = monthKeyOf(monthDate)
     const monthLabel = MONTH_LABEL.format(monthDate)
+    const salary = roundTL(getSalaryForDate(data.salaryHistory, endOfMonth(monthDate))?.amount ?? 0)
 
     const { receivables, paymentOutflow, cardOutflow, loanOutflow, installmentOutflow, debtOutflow } = forecastBuckets(
       buildFinanceObligationsForMonth(obligationInput, monthDate, { from }),

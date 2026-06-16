@@ -64,6 +64,7 @@ export type CashFlowSummary = {
   monthLabel: string
   cashAssets: number
   income: number
+  salaryIncome: number
   receivableIncome: number
   outflow: number
   netFlow: number
@@ -365,7 +366,7 @@ export function buildMonthlyCashFlow(data: FinanceSummaryInput, month = new Date
   const monthStart = startOfMonth(month)
   const monthEnd = endOfMonth(month)
   const monthLabel = new Intl.DateTimeFormat('tr-TR', { month: 'long', year: 'numeric' }).format(monthStart)
-  const currentSalary = getCurrentSalary(data.salaryHistory)
+  const salaryIncome = roundTL(getSalaryForDate(data.salaryHistory, monthEnd)?.amount ?? 0)
   const cashAssets = buildFinancialPosition(data).totalCashAssets
   const openDebts = data.debts.filter((debt) => debt.status === 'açık')
   const receivableIncome = sum(
@@ -405,7 +406,7 @@ export function buildMonthlyCashFlow(data: FinanceSummaryInput, month = new Date
     openDebts.filter((debt) => debt.direction === 'borç_aldım' && isDateInMonth(debt.due_date, monthStart)),
     (debt) => debt.estimated_value_try,
   )
-  const income = sumTL([currentSalary?.amount, receivableIncome])
+  const income = sumTL([salaryIncome, receivableIncome])
   const outflow = sumTL([paymentOutflow, cardOutflow, loanOutflow, debtOutflow])
   const netFlow = diffTL(income, outflow)
 
@@ -413,6 +414,7 @@ export function buildMonthlyCashFlow(data: FinanceSummaryInput, month = new Date
     monthLabel,
     cashAssets,
     income,
+    salaryIncome,
     receivableIncome,
     outflow,
     netFlow,

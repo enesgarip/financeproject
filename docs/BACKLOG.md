@@ -52,7 +52,7 @@
   - 2026-06-15 guard run passed and a manual mojibake signature scan found no hits across 305 source/doc/migration files.
 
 - ~~Add data health trust badge to dashboard.~~ DONE.
-  - `utils/dataHealthSummary.ts` runs lightweight card-debt-split + loan-totals + limit checks from snapshot data.
+  - `utils/dataHealthSummary.ts` runs lightweight card-debt-split/scheduled-debt + loan-totals + limit checks from snapshot data.
   - `DataHealthBadge` component: green "temiz" or amber/red issue count with link to `/veri-sagligi`.
 
 - ~~Split dashboard presentation panels into focused component modules.~~ DONE.
@@ -122,3 +122,4 @@
 - 2026-06-15 follow-up data-correctness audit fixed the Analysis financial calendar day totals: calendar events now carry settlement/cash-impact metadata, and daily net totals use `cashImpactAmount` instead of raw card load. The same pass moved attention-line and planned-obligation daily totals onto `sumTL` instead of bare `reduce` additions.
 - 2026-06-16 component data-correctness audit covered all page/component TSX files by risk bucket. Fixed shared search normalization for all-caps Turkish merchant/bank names, aligned card open-statement display/tone to one visible source, and moved the remaining component-facing TL totals/deltas onto `money.ts` helpers.
 - 2026-06-16 remaining component audit notes closed: `LoansPage` undo reference was verified absent/build-green, finance snapshot maintenance is throttled/deduped, Analysis cash-flow trend uses the salary effective for each month, due statement automation has a run-key guard, and stale closure risks in quick-expense focus, toast timers, and Analysis async queries were removed.
+- 2026-06-16 salary cash-flow semantics clarified: monthly summaries and forward forecasts use the salary effective for each target month, and Dashboard exposes salary as a separate income line.

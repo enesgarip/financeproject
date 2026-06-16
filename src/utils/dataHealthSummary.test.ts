@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { buildHealthCounts } from './dataHealthSummary'
-import type { Card, Loan, LoanInstallment } from '../types/database'
+import type { Card, CardInstallment, Loan, LoanInstallment } from '../types/database'
 
 function makeCard(overrides: Partial<Card> = {}): Card {
   return {
@@ -60,6 +60,29 @@ function makeLoanInstallment(overrides: Partial<LoanInstallment> = {}): LoanInst
   } as LoanInstallment
 }
 
+function makeCardInstallment(overrides: Partial<CardInstallment> = {}): CardInstallment {
+  return {
+    id: 'ci1',
+    user_id: 'u1',
+    card_id: 'c1',
+    card_expense_id: null,
+    statement_archive_id: null,
+    installment_no: 1,
+    installment_count: 1,
+    due_month: '2026-02-01',
+    amount: 250,
+    description: 'Taksit',
+    category: 'Genel',
+    status: 'scheduled',
+    posted_at: null,
+    paid_at: null,
+    note: null,
+    created_at: '2026-01-01',
+    updated_at: '2026-01-01',
+    ...overrides,
+  } as CardInstallment
+}
+
 const emptyInput = {
   cards: [],
   cardExpenses: [],
@@ -83,6 +106,16 @@ describe('buildHealthCounts', () => {
   it('detects card debt split overflow as error', () => {
     const card = makeCard({ debt_amount: 100, statement_debt_amount: 300, current_period_spending: 200, provision_amount: 0 })
     const result = buildHealthCounts({ ...emptyInput, cards: [card] })
+    expect(result.errors).toBeGreaterThanOrEqual(1)
+  })
+
+  it('detects scheduled installment debt missing from card debt as error', () => {
+    const card = makeCard({ debt_amount: 500, statement_debt_amount: 300, current_period_spending: 200, provision_amount: 0 })
+    const result = buildHealthCounts({
+      ...emptyInput,
+      cards: [card],
+      cardInstallments: [makeCardInstallment({ amount: 250 })],
+    })
     expect(result.errors).toBeGreaterThanOrEqual(1)
   })
 

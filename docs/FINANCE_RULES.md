@@ -181,6 +181,17 @@ From `src/utils/budgetAlerts.ts`:
   - one-off payments due in the month
   - recurring monthly payments whose occurrence lands in the month
 
+## Salary
+
+- `salary_history` records the monthly net salary amount that becomes effective
+  on `effective_date`; it is not a one-off deposit history.
+- Monthly cash-flow summaries count one salary income for the target month using
+  the salary record effective by that month's end.
+- Forward cash projections repeat the salary each month until a newer effective
+  salary record applies. A future salary record does not affect earlier months.
+- The daily cash calendar shows upcoming obligations and cash impact; it does
+  not create a daily salary deposit event from `salary_history`.
+
 ## Loans
 
 - loans may be tracked with explicit `loan_installments`

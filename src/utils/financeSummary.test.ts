@@ -620,6 +620,14 @@ describe('buildMonthlyCashFlow', () => {
       JUNE,
     )
     expect(flow.income).toBe(75000)
+    expect(flow.salaryIncome).toBe(75000)
+  })
+
+  it('uses the salary effective for the requested month', () => {
+    const salaryHistory = [salary({ amount: 90000, effective_date: '2026-07-01' })]
+
+    expect(buildMonthlyCashFlow({ ...emptyInput, salaryHistory }, JUNE).salaryIncome).toBe(0)
+    expect(buildMonthlyCashFlow({ ...emptyInput, salaryHistory }, new Date(2026, 6, 1)).salaryIncome).toBe(90000)
   })
 
   it('includes due receivables in income', () => {
