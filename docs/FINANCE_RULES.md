@@ -203,6 +203,28 @@ From `src/utils/budgetAlerts.ts`:
   - `status`
   - installment row state when installment rows exist
 
+## Loan Affordability
+
+`src/utils/loanAffordability.ts` is a decision-support calculator, not a bank
+approval engine. It answers: "With the current app data, would a new consumer
+loan installment strain monthly cash flow?"
+
+- Stable income is the current effective salary from `salary_history`; one-off
+  receivables are not treated as stable credit capacity.
+- Existing load is conservative: the higher of near-term peak outflow and the
+  forward forecast's average monthly outflow is used.
+- Safe installment capacity is capped by a target income/load ratio and by
+  available monthly surplus; weak cash buffers reduce the safe installment.
+- Maximum principal is derived from the safe installment, user-entered monthly
+  interest rate, and term using the standard amortized-loan formula.
+- The balanced recommendation scans standard terms at the current monthly
+  interest rate and uses roughly 85% of the safe installment capacity, so it is
+  a comfort scenario rather than the absolute maximum the calculator can derive.
+- The selected loan scenario is stressed against the forward cash projection;
+  if the projection can go negative, the recommendation becomes "zorlayıcı."
+- The first installment is assumed to start next month. Fees, insurance, bank
+  campaign terms, and credit-score approval are outside the app model.
+
 ## Debts / Receivables
 
 - `borç_aldım` behaves like money owed by the user

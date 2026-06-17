@@ -20,8 +20,8 @@ export type NavItem = {
 
 /**
  * Role-based information architecture:
- *   Özet → Hesaplar (transactional) → Varlıklar (holdings) → Borçlar (liabilities) → Planlı (flow) → Raporlar (insight)
- * Varlıklar and Borçlar are hubs with sub-tabs; see *HubTabs below.
+ *   Özet -> Hesaplar -> Birikim -> Borçlar -> Takvim -> Analiz
+ * Hubs own their local tabs; the mobile bottom bar stays capped at five slots.
  *
  * This module is the single source of truth for navigation: the bottom bar,
  * the header overflow menu, page titles and content widths are all derived
@@ -30,21 +30,21 @@ export type NavItem = {
 export const primaryNavItems: readonly NavItem[] = [
   { to: '/', label: 'Özet', icon: Home },
   { to: '/kartlar', label: 'Hesaplar', icon: CreditCard },
-  { to: '/varliklar', label: 'Varlıklar', icon: Wallet },
+  { to: '/varliklar', label: 'Birikim', icon: Wallet },
   { to: '/borclar/krediler', label: 'Borçlar', icon: HandCoins, activePaths: ['/borclar/kisiler'] },
-  { to: '/odemeler', label: 'Planlı', icon: WalletCards, activePaths: ['/odemeler/hedefler'] },
-  { to: '/analiz', label: 'Raporlar', icon: BarChart3 },
+  { to: '/odemeler', label: 'Takvim', icon: WalletCards, activePaths: ['/odemeler/hedefler'] },
+  { to: '/analiz', label: 'Analiz', icon: BarChart3 },
 ]
 
 /** Utility / maintenance destinations that live outside the primary role-based flow. */
 export const secondaryNavItems: readonly NavItem[] = [
-  { to: '/veri-sagligi', label: 'Veri Kontrolü', icon: ShieldCheck },
+  { to: '/veri-sagligi', label: 'Kontrol', icon: ShieldCheck },
 ]
 
-/** Mobile bottom bar holds 5 slots; Raporlar spills into the header overflow menu. */
+/** Mobile bottom bar holds 5 slots; Analiz spills into the header overflow menu. */
 export const bottomNavItems: readonly NavItem[] = primaryNavItems.filter((item) => item.to !== '/analiz')
 
-/** Header "…" overflow on mobile: primary items that don't fit the bottom bar, then utilities. */
+/** Header overflow on mobile: primary items that don't fit the bottom bar, then utilities. */
 const bottomPaths = new Set(bottomNavItems.map((item) => item.to))
 export const overflowNavItems: readonly NavItem[] = [
   ...primaryNavItems.filter((item) => !bottomPaths.has(item.to)),
@@ -65,11 +65,22 @@ export const liabilitiesHubTabs: HubTab[] = [
 ]
 
 export const planningHubTabs: HubTab[] = [
-  { to: '/odemeler', label: 'Ödemeler', end: true },
+  { to: '/odemeler', label: 'Takvim', end: true },
   { to: '/odemeler/hedefler', label: 'Hedefler' },
 ]
 
-// ── Route metadata (titles + content width) ───────────────────────────────
+export const analysisHubTabs: HubTab[] = [
+  { to: '/analiz', label: 'Genel', end: true },
+  { to: '/analiz/trendler', label: 'Trendler' },
+  { to: '/analiz/servet', label: 'Servet' },
+  { to: '/analiz/kayitlar', label: 'Kayıtlar' },
+]
+
+export const dataHealthHubTabs: HubTab[] = [
+  { to: '/veri-sagligi', label: 'Bulgular', end: true },
+  { to: '/veri-sagligi/islemler', label: 'Yedek & Ayarlar' },
+]
+
 type RouteWidth = 'wide' | 'medium' | 'narrow'
 
 const routeMeta: Record<string, { title: string; width: RouteWidth }> = {
@@ -80,10 +91,14 @@ const routeMeta: Record<string, { title: string; width: RouteWidth }> = {
   '/varliklar/altin': { title: 'Altın', width: 'narrow' },
   '/borclar/krediler': { title: 'Krediler', width: 'wide' },
   '/borclar/kisiler': { title: 'Kişiler', width: 'medium' },
-  '/odemeler': { title: 'Planlı Ödemeler', width: 'medium' },
+  '/odemeler': { title: 'Ödeme Takvimi', width: 'medium' },
   '/odemeler/hedefler': { title: 'Bütçe & Hedefler', width: 'medium' },
-  '/analiz': { title: 'Raporlar', width: 'wide' },
+  '/analiz': { title: 'Analiz', width: 'wide' },
+  '/analiz/trendler': { title: 'Trendler', width: 'wide' },
+  '/analiz/servet': { title: 'Servet Analizi', width: 'wide' },
+  '/analiz/kayitlar': { title: 'Kayıtlar', width: 'wide' },
   '/veri-sagligi': { title: 'Veri Kontrolü', width: 'wide' },
+  '/veri-sagligi/islemler': { title: 'Yedek ve Ayarlar', width: 'medium' },
 }
 
 const WIDTH_CLASS: Record<RouteWidth, string> = {

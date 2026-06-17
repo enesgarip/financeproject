@@ -49,9 +49,9 @@ The main product goal is to make monthly financial load visible before due dates
   - `AssetsPage.tsx` (Varlıklar hub: `AssetsHub.tsx` → varlıklar + `SalaryPage.tsx` + `GoldPage.tsx`)
   - `CardsPage.tsx`
   - `LoansPage.tsx` / `DebtsPage.tsx` (Borçlar hub: `LiabilitiesHub.tsx`)
-  - `PaymentsPage.tsx`
-  - `AnalysisPage.tsx`
-  - `DataHealthPage.tsx`
+  - `PaymentsPage.tsx` / `PlanningPage.tsx` (Planlama hub: `PlanningHub.tsx`)
+  - `AnalysisPage.tsx` / `AnalysisTrendsPage.tsx` / `AnalysisWealthPage.tsx` / `AnalysisRecordsPage.tsx` (Analiz hub: `AnalysisHub.tsx`)
+  - `DataHealthPage.tsx` / `DataHealthOperationsPage.tsx` (Veri Kontrolü hub: `DataHealthHub.tsx`)
   - `LoginPage.tsx`
 
 ## Backend / Data (katmanlı — ESLint ile zorlanır)
@@ -133,15 +133,15 @@ tablosundadır; burada tekrarlamak drift yaratır.
 - `/kartlar` (Hesaplar)
 - `/varliklar` hub → index (Varlıklar) + `/varliklar/maas` (Maaş)
 - `/borclar` hub → `/borclar/krediler` (Krediler) + `/borclar/kisiler` (Kişiler); bare `/borclar` redirects to krediler
-- `/odemeler`
-- `/analiz` (Raporlar)
-- `/veri-sagligi`
+- `/odemeler` hub -> index (Ödeme Takvimi) + `/odemeler/hedefler` (Bütçe & Hedefler)
+- `/analiz` hub -> index (Genel) + `/analiz/trendler` + `/analiz/servet` + `/analiz/kayitlar`
+- `/veri-sagligi` hub -> index (Bulgular) + `/veri-sagligi/islemler` (Yedek ve Ayarlar)
 - `/login`
 - Legacy redirects: `/krediler` → `/borclar/krediler`, `/daha` → `/`
 
 All app routes except `/login` are protected by `ProtectedRoute`.
 
-Navigation (`src/components/navigation.ts`): bottom bar (mobile, 5) = Özet · Hesaplar · Varlıklar · Borçlar · Planlı; desktop sidebar adds Raporlar; Raporlar + Veri Kontrolü + Çıkış live in the mobile header menu.
+Navigation (`src/components/navigation.ts`): bottom bar (mobile, 5) = Özet · Hesaplar · Birikim · Borçlar · Takvim; desktop sidebar adds Analiz; Analiz + Kontrol + Çıkış live in the mobile header menu.
 
 ## Database Notes
 
@@ -172,6 +172,7 @@ This is not just a simple CRUD app anymore. It has evolved into:
 - a personal ledger
 - a monthly planning tool
 - a credit card statement/installment tracker
+- a loan-affordability decision support surface
 - a data quality repair surface
 
 Any new work should preserve that direction instead of reducing the app back to plain list management.

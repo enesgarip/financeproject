@@ -6,7 +6,9 @@ import { queryClient } from './app/queryClient'
 import { AuthProvider } from './auth/AuthProvider'
 import { ProtectedRoute } from './auth/ProtectedRoute'
 import { Layout } from './components/Layout'
+import { AnalysisHub } from './pages/AnalysisHub'
 import { AssetsHub } from './pages/AssetsHub'
+import { DataHealthHub } from './pages/DataHealthHub'
 import { LiabilitiesHub } from './pages/LiabilitiesHub'
 import { PlanningHub } from './pages/PlanningHub'
 import { ToastProvider } from './components/ui/toast'
@@ -49,6 +51,15 @@ const SalaryPage = lazyWithReload(() =>
 const AnalysisPage = lazyWithReload(() =>
   import('./pages/AnalysisPage').then((m) => ({ default: m.AnalysisPage })),
 )
+const AnalysisRecordsPage = lazyWithReload(() =>
+  import('./pages/AnalysisRecordsPage').then((m) => ({ default: m.AnalysisRecordsPage })),
+)
+const AnalysisTrendsPage = lazyWithReload(() =>
+  import('./pages/AnalysisTrendsPage').then((m) => ({ default: m.AnalysisTrendsPage })),
+)
+const AnalysisWealthPage = lazyWithReload(() =>
+  import('./pages/AnalysisWealthPage').then((m) => ({ default: m.AnalysisWealthPage })),
+)
 const CardsPage = lazyWithReload(() =>
   import('./pages/CardsPage').then((m) => ({ default: m.CardsPage })),
 )
@@ -57,6 +68,9 @@ const DashboardPage = lazyWithReload(() =>
 )
 const DataHealthPage = lazyWithReload(() =>
   import('./pages/DataHealthPage').then((m) => ({ default: m.DataHealthPage })),
+)
+const DataHealthOperationsPage = lazyWithReload(() =>
+  import('./pages/DataHealthOperationsPage').then((m) => ({ default: m.DataHealthOperationsPage })),
 )
 const DebtsPage = lazyWithReload(() =>
   import('./pages/DebtsPage').then((m) => ({ default: m.DebtsPage })),
@@ -151,8 +165,17 @@ function AnimatedRoutes() {
           <Route index element={routeElement(<PaymentsPage />, 'odemeler')} />
           <Route path="hedefler" element={routeElement(<PlanningPage />, 'odemeler-hedefler')} />
         </Route>
-        <Route path="analiz" element={routeElement(<AnalysisPage />, 'analiz')} />
-        <Route path="veri-sagligi" element={routeElement(<DataHealthPage />, 'veri-sagligi')} />
+        <Route path="analiz" element={<AnalysisHub />}>
+          <Route index element={routeElement(<AnalysisPage />, 'analiz')} />
+          <Route path="trendler" element={routeElement(<AnalysisTrendsPage />, 'analiz-trendler')} />
+          <Route path="servet" element={routeElement(<AnalysisWealthPage />, 'analiz-servet')} />
+          <Route path="kayitlar" element={routeElement(<AnalysisRecordsPage />, 'analiz-kayitlar')} />
+        </Route>
+
+        <Route path="veri-sagligi" element={<DataHealthHub />}>
+          <Route index element={routeElement(<DataHealthPage />, 'veri-sagligi')} />
+          <Route path="islemler" element={routeElement(<DataHealthOperationsPage />, 'veri-sagligi-islemler')} />
+        </Route>
 
         {/* Legacy redirect: loans moved from /krediler to /borclar/krediler. */}
         <Route path="krediler" element={<Navigate to="/borclar/krediler" replace />} />

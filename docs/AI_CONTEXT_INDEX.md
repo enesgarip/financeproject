@@ -1,6 +1,6 @@
 # AI Context Index
 
-Last reviewed: 2026-06-17
+Last reviewed: 2026-06-18
 
 This file is the cheapest starting point for future AI/Codex sessions. Its job
 is to reduce repeated repo discovery: read this first, choose the smallest
@@ -66,13 +66,13 @@ ESLint blocks `src/{pages,components,utils,hooks}` from importing
 | --- | --- | --- |
 | `/` dashboard | `docs/DASHBOARD_ARCHITECTURE.md`, `src/pages/DashboardPage.tsx`, `src/components/dashboard/*` | `src/app/useFinanceSnapshot.ts`, `src/data/repositories/financeSnapshotRepo.ts`, `src/utils/dashboard*`, `src/utils/financeSummary.ts`, `src/utils/obligations.ts` |
 | `/kartlar` accounts/cards | `docs/CARDS_ARCHITECTURE.md`, `src/pages/CardsPage.tsx`, `src/pages/CardsPage.hooks.ts`, `src/pages/CardsPage.crud.tsx`, `src/pages/CardsPage.sections.tsx`, `src/pages/CardsPage.overview.tsx`, `src/pages/CardsPage.statements.tsx`, `src/pages/CardsPage.expense.tsx`, `src/pages/CardsPage.list.tsx`, `src/pages/CardsPage.installment.tsx`, `src/pages/CardsPage.helpers.ts` | `src/data/repositories/cardsRepo.ts`, `src/services/accountMovements.ts`, `src/utils/cardStatement.ts`, `src/utils/financeSummary.ts` |
-| `/odemeler` planned payments | `src/pages/PaymentsPage.tsx` | `src/data/repositories/paymentsRepo.ts`, `src/services/financePaymentActions.ts`, `src/utils/obligations.ts`, `docs/PLANNING_MODEL_REVIEW.md`, `docs/SHARED_PAYMENT_DRAWER_PLAN.md` |
+| `/odemeler` planned payments | `src/pages/PlanningHub.tsx`, `src/pages/PaymentsPage.tsx` | `src/data/repositories/paymentsRepo.ts`, `src/services/financePaymentActions.ts`, `src/utils/obligations.ts`, `docs/PLANNING_MODEL_REVIEW.md`, `docs/SHARED_PAYMENT_DRAWER_PLAN.md` |
 | `/borclar/krediler` loans | `src/pages/LoansPage.tsx`, `src/pages/LoansPage.helpers.ts`, `src/pages/LoansPage.components.tsx` | `src/data/repositories/loansRepo.ts`, `src/services/financePaymentActions.ts`, `src/utils/financeSummary.ts`, `docs/SHARED_PAYMENT_DRAWER_PLAN.md` |
 | `/borclar/kisiler` personal debts | `src/pages/DebtsPage.tsx` | `src/data/repositories/debtsRepo.ts`, `src/services/financePaymentActions.ts`, `docs/SHARED_PAYMENT_DRAWER_PLAN.md` |
 | `/varliklar` assets | `src/pages/AssetsPage.tsx`, `src/pages/AssetsHub.tsx` | `src/data/repositories/valuationRepo.ts`, `src/utils/valuation*`, `src/utils/marketRates.ts` |
 | `/varliklar/maas` salary | `src/pages/SalaryPage.tsx` | `src/utils/financeSummary.ts` salary helpers |
-| `/analiz` reports | `src/pages/AnalysisPage.tsx`, `src/pages/AnalysisPage.panels.tsx`, `src/pages/AnalysisPage.atoms.tsx`, `src/pages/AnalysisPage.reports.tsx`, `src/pages/AnalysisPage.trends.tsx`, `src/pages/AnalysisPage.wealth.tsx` | `src/app/useFinanceSnapshot.ts`, `src/data/repositories/analysisRepo.ts`, `src/utils/analysisView.ts`, charts |
-| `/veri-sagligi` data health | `docs/DATA_HEALTH_ARCHITECTURE.md`, `src/pages/DataHealthPage.tsx`, `src/pages/DataHealthPage.actions.ts`, `src/pages/DataHealth.logic.ts`, `src/pages/DataHealth.checks.ts`, `src/pages/DataHealth.guide.ts`, `src/pages/DataHealth.actions.ts` | `src/data/repositories/dataHealthRepo.ts`, ledger utilities, finance invariants |
+| `/analiz` reports hub | `src/pages/AnalysisHub.tsx`, `src/pages/AnalysisPage.tsx`, `src/pages/AnalysisTrendsPage.tsx`, `src/pages/AnalysisWealthPage.tsx`, `src/pages/AnalysisRecordsPage.tsx`, `src/pages/AnalysisPage.data.ts`, `src/pages/AnalysisPage.loan.tsx`, `src/pages/AnalysisPage.panels.tsx`, `src/pages/AnalysisPage.reports.tsx`, `src/pages/AnalysisPage.trends.tsx`, `src/pages/AnalysisPage.wealth.tsx` | `src/app/useFinanceSnapshot.ts`, `src/data/repositories/analysisRepo.ts`, `src/utils/analysisView.ts`, `src/utils/loanAffordability.ts`, charts |
+| `/veri-sagligi` data health hub | `docs/DATA_HEALTH_ARCHITECTURE.md`, `src/pages/DataHealthHub.tsx`, `src/pages/DataHealthPage.tsx`, `src/pages/DataHealthOperationsPage.tsx`, `src/pages/DataHealthPage.actions.ts`, `src/pages/DataHealth.logic.ts`, `src/pages/DataHealth.checks.ts`, `src/pages/DataHealth.guide.ts`, `src/pages/DataHealth.actions.ts` | `src/data/repositories/dataHealthRepo.ts`, ledger utilities, finance invariants |
 | `/login` auth | `src/pages/LoginPage.tsx`, `src/auth/*` | `src/lib/supabase.ts` |
 
 ## Source-Of-Truth Matrix
@@ -91,6 +91,7 @@ ESLint blocks `src/{pages,components,utils,hooks}` from importing
 | How is loan summary projected? | `projectLoanSummary` in `src/utils/financeSummary.ts` plus DB trigger `sync_loan_summary` |
 | How are card/account ledgers projected? | `src/utils/cardLedger.ts`, `src/utils/accountLedger.ts` |
 | How are monthly obligations built? | `src/utils/obligations.ts`; see `docs/PLANNING_MODEL_REVIEW.md` for why this stays a read-side projection instead of one write table |
+| How is new-loan affordability estimated? | `src/utils/loanAffordability.ts`; safe installment, balanced recommendation, decision support only, not bank approval |
 | How are Turkish calendar presets defined? | `src/utils/obligationPresets.ts`, `src/components/finance/TurkishCalendarPresets.tsx` |
 
 ## Common Task Playbooks
@@ -216,6 +217,7 @@ paylaşır; her sayfa süpersetini client-side daraltır). Query client: `src/ap
 | **Taksit takvimi** | `utils/cardInstallmentCalendar.ts` | `data/repositories/cardsRepo.ts` | `pages/CardsPage.tsx` |
 | **Banka bakiyesi / hareket / mutabakat** | `utils/accountLedger.ts`, `utils/reconciliation.ts` | `data/repositories/financePanelsRepo.ts`, `services/accountLedgerActions.ts`, `services/accountMovements.ts` | `pages/CardsPage.tsx` |
 | **Kredi & taksitleri** | `utils/financeSummary.ts` (`projectLoanSummary`) | `data/repositories/loansRepo.ts` | `pages/LoansPage.tsx` |
+| **Yeni kredi uygunluğu** | `utils/loanAffordability.ts` (+ `loanAffordability.test.ts`) | `financeSnapshotRepo.ts` | `pages/AnalysisWealthPage.tsx`, `pages/AnalysisPage.loan.tsx` |
 | **Kişisel borç/alacak** | `utils/obligations.ts`, `utils/obligationPresets.ts` | `data/repositories/debtsRepo.ts` | `pages/DebtsPage.tsx`, `LiabilitiesHub.tsx` |
 | **Planlı ödemeler** | `utils/dashboardUpcoming.ts`, `utils/attention.ts` | `data/repositories/paymentsRepo.ts`, `services/financePaymentActions.ts` | `pages/PaymentsPage.tsx` |
 | **Varlıklar / değerleme** | `utils/valuation.ts`, `utils/valuationSync.ts`, `utils/realValue.ts` | `data/repositories/valuationRepo.ts`, `analysisRepo.ts` | `pages/AssetsPage.tsx`, `AssetsHub.tsx` |
@@ -224,9 +226,9 @@ paylaşır; her sayfa süpersetini client-side daraltır). Query client: `src/ap
 | **Birikim hedefleri** | `utils/savingsGoal.ts` | `data/repositories/savingsGoalsRepo.ts` | (Assets/Dashboard) |
 | **Bütçe uyarıları** | `utils/budgetAlerts.ts` | `data/repositories/crudRepo.ts` | `pages/CardsPage.tsx` |
 | **Dashboard özet/insight** | `utils/dashboardInsights.ts`, `utils/cashFlowForecast.ts`, `utils/dashboardUpcoming.ts`, `utils/obligations.ts`, `utils/netWorthSeries.ts`, `utils/dataHealthSummary.ts` | `data/repositories/financeSnapshotRepo.ts` | `pages/DashboardPage.tsx` |
-| **Analiz / raporlar** | `utils/analysisView.ts`, `utils/spendingAnomalies.ts`, `utils/priceIncreaseRadar.ts` | `data/repositories/analysisRepo.ts` | `pages/AnalysisPage.tsx` |
+| **Analiz / raporlar** | `utils/analysisView.ts`, `utils/spendingAnomalies.ts`, `utils/priceIncreaseRadar.ts` | `data/repositories/analysisRepo.ts` | `pages/AnalysisHub.tsx`, `pages/AnalysisPage.tsx`, `pages/AnalysisTrendsPage.tsx`, `pages/AnalysisWealthPage.tsx`, `pages/AnalysisRecordsPage.tsx` |
 | **Bütçe & birikim hedefleri (planlama)** | `utils/savingsGoal.ts`, `utils/budgetAlerts.ts` | `data/repositories/savingsGoalsRepo.ts` | `pages/PlanningHub.tsx`, `pages/PlanningPage.tsx`, `components/finance/SavingsGoalsPanel.tsx` |
-| **Finansal rapor (PDF/AI paylaşım)** | `utils/financialReport.ts` | — | `pages/AnalysisPage.tsx` |
+| **Finansal rapor (PDF/AI paylaşım)** | `utils/financialReport.ts` | — | `pages/AnalysisRecordsPage.tsx`, `pages/AnalysisPage.reports.tsx` |
 | **Sessiz gün analizi** | `utils/quietDays.ts` | — | `pages/AnalysisPage.panels.tsx` (QuietDaysPanel) |
 | **Aylık özet / kategori dağılımı** | `utils/monthlySummary.ts` | — | `pages/AnalysisPage.reports.tsx` (MonthlyReport) |
 | **Nakit akış takvimi (tam ay)** | `utils/fullMonthCalendar.ts` | — | `pages/AnalysisPage.calendar.tsx` (FullMonthCalendarPanel) |
@@ -235,8 +237,8 @@ paylaşır; her sayfa süpersetini client-side daraltır). Query client: `src/ap
 | **Abonelik / sabit gider yönetimi** | `utils/subscriptions.ts` | — | `pages/AnalysisPage.panels.tsx` (SubscriptionsPanel) |
 | **Paylaşılabilir özet kartı** | `utils/shareableCard.ts` | — | `pages/AnalysisPage.reports.tsx` (MonthlyReport "Kart" butonu) |
 | **Yıl sonu finansal rapor** | `utils/yearEndReport.ts` | — | `pages/AnalysisPage.reports.tsx` (YearEndReport) |
-| **Forecast / senaryo / FIRE / enflasyon** | `utils/cashFlowForecast.ts`, `utils/scenarioForecast.ts`, `utils/fire.ts`, `utils/inflationShield.ts` | `financeSnapshotRepo.ts` | `pages/DashboardPage.tsx`, `AnalysisPage.tsx` |
-| **Veri sağlığı / onarım** | `pages/DataHealth.logic.ts` (types + orchestrator), `pages/DataHealth.checks.ts` (domain checks), `utils/financeSummary.ts` (trigger TS ikizleri) | `data/repositories/dataHealthRepo.ts` | `pages/DataHealthPage.tsx` |
+| **Forecast / senaryo / FIRE / enflasyon** | `utils/cashFlowForecast.ts`, `utils/scenarioForecast.ts`, `utils/fire.ts`, `utils/inflationShield.ts`, `utils/loanAffordability.ts` | `financeSnapshotRepo.ts` | `pages/DashboardPage.tsx`, `pages/AnalysisTrendsPage.tsx`, `pages/AnalysisWealthPage.tsx` |
+| **Veri sağlığı / onarım** | `pages/DataHealth.logic.ts` (types + orchestrator), `pages/DataHealth.checks.ts` (domain checks), `utils/financeSummary.ts` (trigger TS ikizleri) | `data/repositories/dataHealthRepo.ts` | `pages/DataHealthHub.tsx`, `pages/DataHealthPage.tsx`, `pages/DataHealthOperationsPage.tsx` |
 | **Kategori eşleme (tr-TR tuzağı)** | `utils/categories.ts` (`normalizeDescription`) | `data/repositories/categoryMemoryRepo.ts` | — |
 | **Yedek / backup** | `utils/backup.ts` | `data/repositories/backupRepo.ts` | (DataHealth) |
 | **Push bildirim** | — | `data/repositories/pushSubscriptionsRepo.ts`, `supabase/migrations/20260617102826_add_notification_log.sql`, `.github/workflows/push-notify.yml` | `supabase/functions/push-notify`, `public/sw.js`, `components/finance/NotificationSettings.tsx` |

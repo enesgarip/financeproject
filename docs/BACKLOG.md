@@ -115,6 +115,8 @@
 
 ## Recently Cleared / No Longer First Next Task
 
+- 2026-06-18 added loan-affordability decision support under `Analiz > Servet`: `utils/loanAffordability.ts` estimates safe monthly installment, maximum principal, a balanced recommended scenario, selected-loan payment, stress balance, and a suitable/caution/not-recommended verdict from salary, current load, cash buffer, and forward cash projection.
+- 2026-06-18 UX information architecture pass split the longest scroll surfaces into hubs: Analysis now has Genel/Trendler/Servet/Kayıtlar routes, Data Health separates Bulgular from Yedek & Ayarlar, and the bottom navigation labels now read Özet/Hesaplar/Birikim/Borçlar/Takvim.
 - Targeted tests now exist for `cardStatement`, `budgetAlerts`, and savings goal progress.
 - `financeSummary.test.ts` covers shared credit limit grouping, payable card debt excluding provision, and recurring payment month occurrence.
 - A narrow Faz C pass replaced savings-goal `+0.01` comparisons and obvious TL amount rounding sites with `money.ts` helpers.
