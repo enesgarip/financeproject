@@ -8,6 +8,7 @@ import { ProtectedRoute } from './auth/ProtectedRoute'
 import { Layout } from './components/Layout'
 import { AssetsHub } from './pages/AssetsHub'
 import { LiabilitiesHub } from './pages/LiabilitiesHub'
+import { PlanningHub } from './pages/PlanningHub'
 import { ToastProvider } from './components/ui/toast'
 
 // A failed dynamic import almost always means a new deploy changed the chunk
@@ -146,8 +147,10 @@ function AnimatedRoutes() {
           <Route path="kisiler" element={routeElement(<DebtsPage />, 'borclar-kisiler')} />
         </Route>
 
-        <Route path="odemeler" element={routeElement(<PaymentsPage />, 'odemeler')} />
-        <Route path="hedefler" element={routeElement(<PlanningPage />, 'hedefler')} />
+        <Route path="odemeler" element={<PlanningHub />}>
+          <Route index element={routeElement(<PaymentsPage />, 'odemeler')} />
+          <Route path="hedefler" element={routeElement(<PlanningPage />, 'odemeler-hedefler')} />
+        </Route>
         <Route path="analiz" element={routeElement(<AnalysisPage />, 'analiz')} />
         <Route path="veri-sagligi" element={routeElement(<DataHealthPage />, 'veri-sagligi')} />
 
