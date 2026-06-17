@@ -4,10 +4,10 @@ module.exports = {
     collect: {
       staticDistDir: './dist',
       isSinglePageApplication: true,
-      url: ['http://localhost'],
+      url: ['http://localhost/login'],
       numberOfRuns: 1,
       settings: {
-        chromeFlags: '--no-sandbox',
+        chromeFlags: '--no-sandbox --disable-dev-shm-usage --disable-gpu',
       },
     },
     assert: {

@@ -51,6 +51,10 @@ token'ını `LHCI_GITHUB_TOKEN` olarak alır. Bu, "GitHub token not set" uyarıs
 ayrı bir personal access token oluşturmadan giderir; detaylı HTML raporu yine
 `.lighthouseci` artifact'i olarak yüklenir.
 
+Lighthouse budget, CI placeholder Supabase değerleriyle oturum açmadan çalışan
+`/login` rotasını ölçer. Bu rota auth redirect beklemeden paint verdiği için
+headless Chrome'daki `NO_FCP` hatasına karşı daha deterministiktir.
+
 ## Deploy workflow
 
 File: `.github/workflows/deploy.yml`

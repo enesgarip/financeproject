@@ -116,6 +116,7 @@
 ## Recently Cleared / No Longer First Next Task
 
 - 2026-06-18 Lighthouse CI now maps the GitHub Actions token to `LHCI_GITHUB_TOKEN` with job-scoped status permission, so LHCI can publish GitHub status without an extra PAT while still uploading `.lighthouseci` reports as artifacts.
+- 2026-06-18 Lighthouse CI target changed to `/login` and Chrome flags were hardened after GitHub runner logs showed `NO_FCP` on the protected root redirect path.
 - 2026-06-18 added loan-affordability decision support under `Analiz > Servet`: `utils/loanAffordability.ts` estimates safe monthly installment, maximum principal, a balanced recommended scenario, selected-loan payment, stress balance, and a suitable/caution/not-recommended verdict from salary, current load, cash buffer, and forward cash projection.
 - 2026-06-18 UX information architecture pass split the longest scroll surfaces into hubs: Analysis now has Genel/Trendler/Servet/Kayıtlar routes, Data Health separates Bulgular from Yedek & Ayarlar, and the bottom navigation labels now read Özet/Hesaplar/Birikim/Borçlar/Takvim.
 - Targeted tests now exist for `cardStatement`, `budgetAlerts`, and savings goal progress.
