@@ -8,19 +8,15 @@ A regression guard now runs in CI: `src/utils/encoding.guard.test.ts` (part of `
 
 Residual risk is low: keep editors and tooling on UTF-8.
 
-## 2. Domain Logic Concentration in Large Page Files
+## 2. Domain Logic Concentration in Large Page Files (mitigated)
 
-Important finance behavior lives inside very large page components, especially:
+All four original large page files have been split into focused modules. The last
+remaining monolith (`DataHealth.logic.ts`, 1413 lines) was split into a thin
+orchestrator (~160 lines) and `DataHealth.checks.ts` (~900 lines of domain check
+functions). No page file now exceeds ~460 lines.
 
-- `src/pages/DashboardPage.tsx`
-- `src/pages/CardsPage.tsx`
-- `src/pages/DataHealthPage.tsx`
-
-Risk:
-
-- UI edits can accidentally change business logic
-- reasoning about side effects is expensive
-- testability is lower than it should be
+Residual risk: `DataHealth.checks.ts` is still the largest single logic file, but
+each check function is self-contained and independently testable.
 
 ## 3. Frontend Assumes Certain Migrations/RPCs Already Exist (mitigated)
 

@@ -1,6 +1,6 @@
 # AI Context Index
 
-Last reviewed: 2026-06-16
+Last reviewed: 2026-06-17
 
 This file is the cheapest starting point for future AI/Codex sessions. Its job
 is to reduce repeated repo discovery: read this first, choose the smallest
@@ -72,7 +72,7 @@ ESLint blocks `src/{pages,components,utils,hooks}` from importing
 | `/varliklar` assets | `src/pages/AssetsPage.tsx`, `src/pages/AssetsHub.tsx` | `src/data/repositories/valuationRepo.ts`, `src/utils/valuation*`, `src/utils/marketRates.ts` |
 | `/varliklar/maas` salary | `src/pages/SalaryPage.tsx` | `src/utils/financeSummary.ts` salary helpers |
 | `/analiz` reports | `src/pages/AnalysisPage.tsx`, `src/pages/AnalysisPage.panels.tsx`, `src/pages/AnalysisPage.atoms.tsx`, `src/pages/AnalysisPage.reports.tsx`, `src/pages/AnalysisPage.trends.tsx`, `src/pages/AnalysisPage.wealth.tsx` | `src/app/useFinanceSnapshot.ts`, `src/data/repositories/analysisRepo.ts`, `src/utils/analysisView.ts`, charts |
-| `/veri-sagligi` data health | `docs/DATA_HEALTH_ARCHITECTURE.md`, `src/pages/DataHealthPage.tsx`, `src/pages/DataHealthPage.actions.ts`, `src/pages/DataHealth.logic.ts`, `src/pages/DataHealth.guide.ts`, `src/pages/DataHealth.actions.ts` | `src/data/repositories/dataHealthRepo.ts`, ledger utilities, finance invariants |
+| `/veri-sagligi` data health | `docs/DATA_HEALTH_ARCHITECTURE.md`, `src/pages/DataHealthPage.tsx`, `src/pages/DataHealthPage.actions.ts`, `src/pages/DataHealth.logic.ts`, `src/pages/DataHealth.checks.ts`, `src/pages/DataHealth.guide.ts`, `src/pages/DataHealth.actions.ts` | `src/data/repositories/dataHealthRepo.ts`, ledger utilities, finance invariants |
 | `/login` auth | `src/pages/LoginPage.tsx`, `src/auth/*` | `src/lib/supabase.ts` |
 
 ## Source-Of-Truth Matrix
@@ -147,13 +147,14 @@ removes real duplication or isolates domain behavior.
 
 Read:
 
-1. `src/pages/DataHealth.logic.ts`
-2. `docs/DATA_HEALTH_ARCHITECTURE.md`
-3. `src/pages/DataHealth.logic.test.ts`
-4. `docs/KNOWN_RISKS.md`
-5. `src/pages/DataHealth.guide.ts` for issue copy/presentation
-6. `src/pages/DataHealth.actions.ts` for undo/export helpers
-7. Relevant invariant helper in `src/utils/*`
+1. `src/pages/DataHealth.logic.ts` (types + thin orchestrator)
+2. `src/pages/DataHealth.checks.ts` (domain check functions)
+3. `docs/DATA_HEALTH_ARCHITECTURE.md`
+4. `src/pages/DataHealth.logic.test.ts`
+5. `docs/KNOWN_RISKS.md`
+6. `src/pages/DataHealth.guide.ts` for issue copy/presentation
+7. `src/pages/DataHealth.actions.ts` for undo/export helpers
+8. Relevant invariant helper in `src/utils/*`
 
 Treat data-health fixes as operational writes against real user data. Prefer a
 shared helper/DB invariant over a page-only corrective formula.
@@ -226,7 +227,7 @@ paylaşır; her sayfa süpersetini client-side daraltır). Query client: `src/ap
 | **Analiz / raporlar** | `utils/analysisView.ts`, `utils/spendingAnomalies.ts`, `utils/priceIncreaseRadar.ts` | `data/repositories/analysisRepo.ts` | `pages/AnalysisPage.tsx` |
 | **Finansal rapor (PDF/AI paylaşım)** | `utils/financialReport.ts` | — | `pages/AnalysisPage.tsx` |
 | **Forecast / senaryo / FIRE / enflasyon** | `utils/cashFlowForecast.ts`, `utils/scenarioForecast.ts`, `utils/fire.ts`, `utils/inflationShield.ts` | `financeSnapshotRepo.ts` | `pages/DashboardPage.tsx`, `AnalysisPage.tsx` |
-| **Veri sağlığı / onarım** | `pages/DataHealth.logic.ts`, `utils/financeSummary.ts` (trigger TS ikizleri) | `data/repositories/dataHealthRepo.ts` | `pages/DataHealthPage.tsx` |
+| **Veri sağlığı / onarım** | `pages/DataHealth.logic.ts` (types + orchestrator), `pages/DataHealth.checks.ts` (domain checks), `utils/financeSummary.ts` (trigger TS ikizleri) | `data/repositories/dataHealthRepo.ts` | `pages/DataHealthPage.tsx` |
 | **Kategori eşleme (tr-TR tuzağı)** | `utils/categories.ts` (`normalizeDescription`) | `data/repositories/categoryMemoryRepo.ts` | — |
 | **Yedek / backup** | `utils/backup.ts` | `data/repositories/backupRepo.ts` | (DataHealth) |
 | **Push bildirim** | — | `data/repositories/pushSubscriptionsRepo.ts` | `supabase/functions/*` |
