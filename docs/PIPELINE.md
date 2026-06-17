@@ -53,7 +53,10 @@ ayrı bir personal access token oluşturmadan giderir; detaylı HTML raporu yine
 
 Lighthouse budget, CI placeholder Supabase değerleriyle oturum açmadan çalışan
 `/login` rotasını ölçer. Bu rota auth redirect beklemeden paint verdiği için
-headless Chrome'daki `NO_FCP` hatasına karşı daha deterministiktir.
+headless Chrome'daki `NO_FCP` hatasına karşı daha deterministiktir. GitHub
+runner'da Lighthouse `provided` throttling ve daha uzun FCP/load bekleme limiti
+kullanır; bu job'ın amacı üretim metriklerini birebir simüle etmekten çok
+CI'da bariz performans/accessibility/best-practices regresyonlarını yakalamaktır.
 
 ## Deploy workflow
 

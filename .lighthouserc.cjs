@@ -1,3 +1,6 @@
+const ciChromeFlags = '--headless=new --no-sandbox --disable-dev-shm-usage --disable-gpu'
+const localChromeFlags = '--no-sandbox --disable-dev-shm-usage --disable-gpu'
+
 /** @type {import('@lhci/utils/src/lighthouserc').Config} */
 module.exports = {
   ci: {
@@ -7,7 +10,10 @@ module.exports = {
       url: ['http://localhost/login'],
       numberOfRuns: 1,
       settings: {
-        chromeFlags: '--no-sandbox --disable-dev-shm-usage --disable-gpu',
+        chromeFlags: process.env.CI ? ciChromeFlags : localChromeFlags,
+        throttlingMethod: 'provided',
+        maxWaitForFcp: 90000,
+        maxWaitForLoad: 90000,
       },
     },
     assert: {
