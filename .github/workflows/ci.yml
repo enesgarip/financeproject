@@ -48,6 +48,9 @@ jobs:
   lighthouse:
     name: Lighthouse
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      statuses: write
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -69,6 +72,8 @@ jobs:
 
       - name: Lighthouse CI
         run: npx --yes @lhci/cli@0.14.x autorun
+        env:
+          LHCI_GITHUB_TOKEN: ${{ github.token }}
 
       - name: Upload Lighthouse report
         if: always()

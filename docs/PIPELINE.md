@@ -46,6 +46,11 @@ Checks:
 - Playwright smoke test
 - Supabase local migration reset + lint
 
+Lighthouse CI, GitHub status sonucunu yazabilsin diye job-scoped GitHub Actions
+token'ını `LHCI_GITHUB_TOKEN` olarak alır. Bu, "GitHub token not set" uyarısını
+ayrı bir personal access token oluşturmadan giderir; detaylı HTML raporu yine
+`.lighthouseci` artifact'i olarak yüklenir.
+
 ## Deploy workflow
 
 File: `.github/workflows/deploy.yml`
@@ -75,6 +80,12 @@ These are already needed by the frontend runtime:
 - `VITE_SUPABASE_ANON_KEY`
 
 Note: CI smoke tests use safe placeholder values because they only verify unauthenticated routing and login form rendering.
+
+## CI reporting
+
+- No extra Lighthouse secret is required. `.github/workflows/ci.yml` maps the
+  built-in `github.token` to `LHCI_GITHUB_TOKEN` for the Lighthouse status
+  check, with job-scoped `statuses: write` permission.
 
 ## Production migration
 
