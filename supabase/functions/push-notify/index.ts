@@ -78,6 +78,13 @@ type CardRow = {
   current_period_spending: number | string
 }
 
+type CardExpenseRow = {
+  user_id: string
+  amount: number | string
+  category: string
+  spent_at: string
+}
+
 type StatementArchiveRow = {
   card_id: string
   period_year: number
@@ -715,32 +722,101 @@ async function loadCandidates(
   }
 
   if (weekday === 'Mon') {
-    const weeklyByUser = new Map<string, { count: number; totalKurus: number }>()
+    const prevWeekStartIso = addDaysIso(weekStartIso, -7)
+    const prevWeekEndIso = addDaysIso(prevWeekStartIso, 6)
+
+    const [lastWeekExpenses, prevWeekExpenses] = await Promise.all([
+      db.select<CardExpenseRow>('card_expenses', {
+        select: 'user_id,amount,category,spent_at',
+        user_id: userFilter,
+        status: 'eq.posted',
+        spent_at: [`gte.${weekStartIso}`, `lte.${weekEndIso}`],
+      }),
+      db.select<CardExpenseRow>('card_expenses', {
+        select: 'user_id,amount,category,spent_at',
+        user_id: userFilter,
+        status: 'eq.posted',
+        spent_at: [`gte.${prevWeekStartIso}`, `lte.${prevWeekEndIso}`],
+      }),
+    ])
+
+    type WeeklySpending = { totalKurus: number; categories: Map<string, number> }
+    const spendingByUser = new Map<string, WeeklySpending>()
+    const prevSpendingByUser = new Map<string, number>()
+
+    for (const expense of lastWeekExpenses) {
+      const entry = spendingByUser.get(expense.user_id) ?? { totalKurus: 0, categories: new Map() }
+      const amountKurus = toKurus(expense.amount)
+      entry.totalKurus += amountKurus
+      const cat = expense.category || 'Diğer'
+      entry.categories.set(cat, (entry.categories.get(cat) ?? 0) + amountKurus)
+      spendingByUser.set(expense.user_id, entry)
+    }
+
+    for (const expense of prevWeekExpenses) {
+      prevSpendingByUser.set(expense.user_id, (prevSpendingByUser.get(expense.user_id) ?? 0) + toKurus(expense.amount))
+    }
+
+    type WeeklySummary = { paymentCount: number; paymentTotalKurus: number }
+    const weeklyByUser = new Map<string, WeeklySummary>()
 
     for (const payment of paymentsThisWeek) {
-      const summary = weeklyByUser.get(payment.user_id) ?? { count: 0, totalKurus: 0 }
-      summary.count += 1
-      summary.totalKurus += toKurus(payment.amount)
+      const summary = weeklyByUser.get(payment.user_id) ?? { paymentCount: 0, paymentTotalKurus: 0 }
+      summary.paymentCount += 1
+      summary.paymentTotalKurus += toKurus(payment.amount)
       weeklyByUser.set(payment.user_id, summary)
     }
 
     for (const installment of loanInstallmentsThisWeek) {
-      const summary = weeklyByUser.get(installment.user_id) ?? { count: 0, totalKurus: 0 }
-      summary.count += 1
-      summary.totalKurus += toKurus(installment.amount)
+      const summary = weeklyByUser.get(installment.user_id) ?? { paymentCount: 0, paymentTotalKurus: 0 }
+      summary.paymentCount += 1
+      summary.paymentTotalKurus += toKurus(installment.amount)
       weeklyByUser.set(installment.user_id, summary)
     }
 
-    for (const [userId, summary] of weeklyByUser) {
-      if (summary.count <= 0 || summary.totalKurus <= 0) continue
+    const allUserIds = new Set([...weeklyByUser.keys(), ...spendingByUser.keys()])
+
+    for (const userId of allUserIds) {
+      const payments = weeklyByUser.get(userId)
+      const spending = spendingByUser.get(userId)
+      const prevTotal = prevSpendingByUser.get(userId) ?? 0
+
+      if (!payments && !spending) continue
+
+      const parts: string[] = []
+
+      if (spending && spending.totalKurus > 0) {
+        parts.push(`${formatTL(spending.totalKurus / 100)} ₺ harcadın`)
+        if (prevTotal > 0) {
+          const changePct = Math.round(((spending.totalKurus - prevTotal) / prevTotal) * 100)
+          if (changePct > 0) parts.push(`geçen haftadan %${changePct} fazla`)
+          else if (changePct < 0) parts.push(`geçen haftadan %${Math.abs(changePct)} az`)
+        }
+      }
+
+      let topCategory = ''
+      if (spending && spending.categories.size > 0) {
+        let maxKurus = 0
+        for (const [cat, kurus] of spending.categories) {
+          if (kurus > maxKurus) { maxKurus = kurus; topCategory = cat }
+        }
+      }
+
+      const title = spending && spending.totalKurus > 0
+        ? `Bu hafta ${parts.join(', ')}`
+        : `Bu hafta: ${payments?.paymentCount ?? 0} ödeme, toplam ${formatTL((payments?.paymentTotalKurus ?? 0) / 100)} ₺`
+
+      const bodyParts: string[] = []
+      if (topCategory) bodyParts.push(`En büyük kalem: ${topCategory}`)
+      if (payments && payments.paymentCount > 0) bodyParts.push(`${payments.paymentCount} yaklaşan ödeme`)
 
       candidates.push({
         userId,
         notificationType: 'weekly_summary',
         referenceId: `week:${weekStartIso}`,
         payload: {
-          title: `Bu hafta: ${summary.count} ödeme, toplam ${formatTL(summary.totalKurus / 100)} ₺`,
-          body: 'Haftalık ödeme planı hazır.',
+          title,
+          body: bodyParts.length > 0 ? bodyParts.join('. ') + '.' : 'Haftalık özet hazır.',
           url: '/',
           tag: `weekly-summary-${weekStartIso}`,
         },

@@ -72,6 +72,27 @@
   - `DashboardPanels.tsx` now keeps hero/goal/metric/pulse pieces and shared panel types.
   - `DashboardCards.tsx`, `DashboardCashFlow.tsx`, and `DashboardInsights.tsx` own card/debt/history, cash-flow, and insight/action panels.
 
+## P2 - UX / Maintainability (yeni fikirler)
+
+- ~~Add monthly financial summary report ("Aylık Finansal Özet").~~ DONE.
+  - `utils/monthlySummary.ts` + MonthlyReport paneli kategori dağılımı, ay-ay değişim, paylaşılabilir kart.
+- ~~Add full-month financial calendar view ("Nakit Akış Takvimi — tam ay görünümü").~~ DONE.
+  - `utils/fullMonthCalendar.ts` + `AnalysisPage.calendar.tsx`: 7 sütun takvim grid, renk kodlu günler, gün detayı, haftalık net akış, bakiye projeksiyonu.
+- ~~Add financial milestones and achievements ("Finansal Başarımlar").~~ DONE.
+  - `utils/milestones.ts` + MilestonesPanel: nakit eşikleri, sıfır borç, tamamlanan hedefler, net değer ATH, 3-ay düşüş serisi, sağlıklı kredi kullanımı.
+- ~~Add weekly mini report via push ("Haftalık Mini Rapor").~~ DONE.
+  - `push-notify/index.ts` haftalık özeti zenginleştirildi: harcama toplamı, hafta-hafta değişim %, en büyük kategori.
+- ~~Add comparative period analysis ("Karşılaştırmalı Dönem Analizi").~~ DONE.
+  - `utils/periodComparison.ts` + PeriodComparisonPanel: ay/çeyrek/yıl modları, kategori bazlı karşılaştırma grid.
+- ~~Add subscription/fixed expense management ("Abonelik & Sabit Gider Yönetimi").~~ DONE.
+  - `utils/subscriptions.ts` + SubscriptionsPanel: tekrarlayan harcama tespiti, aylık toplam, gelire oran.
+- ~~Add shareable financial summary card ("Paylaşılabilir Finansal Özet Kartı").~~ DONE.
+  - `utils/shareableCard.ts` + MonthlyReport "Kart" butonu: Canvas 2x retina dark-theme PNG indirme.
+- ~~Add quiet day analysis ("Sessiz Gün Analizi").~~ DONE.
+  - `utils/quietDays.ts` + QuietDaysPanel: sessiz gün sayısı, mevcut seri, en iyi seri, aktif gün ortalama harcaması.
+- ~~Add year-end financial report ("Yıl Sonu Finansal Rapor").~~ DONE.
+  - `utils/yearEndReport.ts` + YearEndReport paneli: yıllık harcama, aylık bar chart, en pahalı/ucuz ay, top kategoriler, net değer değişimi.
+
 ## P3 - Nice to Have
 
 - Add goal-based automatic saving suggestions.

@@ -226,6 +226,14 @@ paylaşır; her sayfa süpersetini client-side daraltır). Query client: `src/ap
 | **Dashboard özet/insight** | `utils/dashboardInsights.ts`, `utils/cashFlowForecast.ts`, `utils/dashboardUpcoming.ts`, `utils/obligations.ts`, `utils/netWorthSeries.ts`, `utils/dataHealthSummary.ts` | `data/repositories/financeSnapshotRepo.ts` | `pages/DashboardPage.tsx` |
 | **Analiz / raporlar** | `utils/analysisView.ts`, `utils/spendingAnomalies.ts`, `utils/priceIncreaseRadar.ts` | `data/repositories/analysisRepo.ts` | `pages/AnalysisPage.tsx` |
 | **Finansal rapor (PDF/AI paylaşım)** | `utils/financialReport.ts` | — | `pages/AnalysisPage.tsx` |
+| **Sessiz gün analizi** | `utils/quietDays.ts` | — | `pages/AnalysisPage.panels.tsx` (QuietDaysPanel) |
+| **Aylık özet / kategori dağılımı** | `utils/monthlySummary.ts` | — | `pages/AnalysisPage.reports.tsx` (MonthlyReport) |
+| **Nakit akış takvimi (tam ay)** | `utils/fullMonthCalendar.ts` | — | `pages/AnalysisPage.calendar.tsx` (FullMonthCalendarPanel) |
+| **Finansal başarımlar (milestone)** | `utils/milestones.ts` | — | `pages/AnalysisPage.panels.tsx` (MilestonesPanel) |
+| **Karşılaştırmalı dönem analizi** | `utils/periodComparison.ts` | — | `pages/AnalysisPage.panels.tsx` (PeriodComparisonPanel) |
+| **Abonelik / sabit gider yönetimi** | `utils/subscriptions.ts` | — | `pages/AnalysisPage.panels.tsx` (SubscriptionsPanel) |
+| **Paylaşılabilir özet kartı** | `utils/shareableCard.ts` | — | `pages/AnalysisPage.reports.tsx` (MonthlyReport "Kart" butonu) |
+| **Yıl sonu finansal rapor** | `utils/yearEndReport.ts` | — | `pages/AnalysisPage.reports.tsx` (YearEndReport) |
 | **Forecast / senaryo / FIRE / enflasyon** | `utils/cashFlowForecast.ts`, `utils/scenarioForecast.ts`, `utils/fire.ts`, `utils/inflationShield.ts` | `financeSnapshotRepo.ts` | `pages/DashboardPage.tsx`, `AnalysisPage.tsx` |
 | **Veri sağlığı / onarım** | `pages/DataHealth.logic.ts` (types + orchestrator), `pages/DataHealth.checks.ts` (domain checks), `utils/financeSummary.ts` (trigger TS ikizleri) | `data/repositories/dataHealthRepo.ts` | `pages/DataHealthPage.tsx` |
 | **Kategori eşleme (tr-TR tuzağı)** | `utils/categories.ts` (`normalizeDescription`) | `data/repositories/categoryMemoryRepo.ts` | — |

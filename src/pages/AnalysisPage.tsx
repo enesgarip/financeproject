@@ -18,16 +18,21 @@ import {
 import { useMarketRates } from '../hooks/useMarketRates'
 import { type MarketRatesSnapshot } from '../utils/marketRates'
 import { buildPriceObservations, detectPriceIncreases, type PriceTrend } from '../utils/priceIncreaseRadar'
-import { MonthlyReport, SearchExport, StatementArchive } from './AnalysisPage.reports'
+import { MonthlyReport, SearchExport, StatementArchive, YearEndReport } from './AnalysisPage.reports'
+import { FullMonthCalendarPanel } from './AnalysisPage.calendar'
 import { CashFlowTrend, ForwardForecast, NetWorthTrend } from './AnalysisPage.trends'
 import { CategorySpendingChart, FireCalculator, InflationShieldPanel, ZakatPanel } from './AnalysisPage.wealth'
 import {
   BudgetProgress,
   FinancialCalendar,
+  MilestonesPanel,
   MonthCloseAssistant,
   PeopleLedger,
+  PeriodComparisonPanel,
   PriceIncreaseRadar,
+  QuietDaysPanel,
   SchemaMigrationNotice,
+  SubscriptionsPanel,
   UpcomingInstallments,
 } from './AnalysisPage.panels'
 
@@ -187,6 +192,7 @@ export function AnalysisPage() {
         <UpcomingInstallments data={data} />
         <FinancialCalendar data={data} />
         <CategorySpendingChart data={data} />
+        <PeriodComparisonPanel data={data} />
         <PriceIncreaseRadar trends={priceTrends} />
         <CashFlowTrend data={data} />
         <NetWorthTrend snapshots={snapshots} ratesSnapshot={ratesSnapshot} />
@@ -194,7 +200,12 @@ export function AnalysisPage() {
         <ZakatPanel data={data} ratesSnapshot={ratesSnapshot} />
         <ForwardForecast data={data} />
         <FireCalculator data={data} snapshots={snapshots} />
+        <SubscriptionsPanel data={data} />
+        <MilestonesPanel data={data} snapshots={snapshots} />
+        <QuietDaysPanel data={data} />
+        <FullMonthCalendarPanel data={data} />
         <PeopleLedger debts={data.debts} />
+        <YearEndReport data={data} snapshots={snapshots} />
         <SearchExport items={searchItems} />
         <StatementArchive data={data} />
       </div>

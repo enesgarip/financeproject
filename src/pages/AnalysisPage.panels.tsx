@@ -1,9 +1,9 @@
-import { CalendarDays, CheckCircle2, TrendingUp, Users, WalletCards } from 'lucide-react'
-import { useMemo } from 'react'
+import { Award, CalendarDays, CheckCircle2, Moon, Repeat, TrendingUp, Users, WalletCards } from 'lucide-react'
+import { useMemo, useState } from 'react'
 import { Badge } from '../components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Progress } from '../components/ui/progress'
-import type { Budget, CardExpense, Debt } from '../types/database'
+import type { Budget, CardExpense, Debt, NetWorthSnapshot } from '../types/database'
 import { dateInputValue, daysUntil, formatDate, isDateInMonth, startOfMonth } from '../utils/date'
 import { formatCurrency } from '../utils/formatCurrency'
 import { getCurrentSalary, sum } from '../utils/financeSummary'
@@ -20,7 +20,11 @@ import { PRICE_RADAR_MONTHS } from '../data/repositories/analysisRepo'
 import { type PriceTrend } from '../utils/priceIncreaseRadar'
 import { canCutCurrentStatement } from '../utils/statementCycle'
 import { buildFinanceObligationsForMonth } from '../utils/obligations'
+import { detectMilestones, type MilestoneInput } from '../utils/milestones'
+import { comparePeriods, type ComparisonMode } from '../utils/periodComparison'
+import { buildSubscriptionSummary } from '../utils/subscriptions'
 import { diffTL, greaterThanTL, sumTL } from '../utils/money'
+import { analyzeQuietDays } from '../utils/quietDays'
 import { StatPill } from './AnalysisPage.atoms'
 
 export function UpcomingInstallments({ data }: { data: AnalysisData }) {
@@ -413,6 +417,238 @@ export function MonthCloseAssistant({ data, missingTables }: { data: AnalysisDat
             </div>
           ))}
         </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+const milestoneIconClass: Record<string, string> = {
+  trophy: 'text-amber-500',
+  target: 'text-indigo-500',
+  shield: 'text-emerald-500',
+  'trending-up': 'text-emerald-500',
+  zap: 'text-indigo-500',
+  star: 'text-amber-500',
+}
+
+const milestoneToneClass: Record<string, string> = {
+  emerald: 'bg-success/10 ring-success/20',
+  amber: 'bg-warning/10 ring-warning/20',
+  indigo: 'bg-indigo-500/10 ring-indigo-500/20',
+  rose: 'bg-destructive/10 ring-destructive/20',
+}
+
+export function MilestonesPanel({ data, snapshots }: { data: AnalysisData; snapshots: NetWorthSnapshot[] }) {
+  const input: MilestoneInput = useMemo(() => ({
+    assets: data.assets,
+    cards: data.cards,
+    loans: data.loans,
+    cardExpenses: data.cardExpenses,
+    savingsGoals: data.savingsGoals,
+    netWorthSnapshots: snapshots,
+  }), [data, snapshots])
+
+  const milestones = useMemo(() => detectMilestones(input), [input])
+
+  if (milestones.length === 0) return null
+
+  return (
+    <Card className="border-border/70 shadow-[var(--shadow-card)] lg:col-span-5">
+      <CardHeader className="pb-0">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <CardTitle>Finansal başarımlar</CardTitle>
+            <p className="mt-1 text-sm text-muted-foreground">{milestones.length} aktif başarım</p>
+          </div>
+          <Award className="text-amber-500" />
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-2 pt-2">
+        {milestones.map((m) => (
+          <div key={m.id} className={`rounded-xl px-3 py-2.5 ring-1 ${milestoneToneClass[m.tone] ?? 'bg-muted/45 ring-border/60'}`}>
+            <div className="flex items-start gap-2.5">
+              <span className={`mt-0.5 text-sm ${milestoneIconClass[m.icon] ?? 'text-muted-foreground'}`}>
+                {m.icon === 'trophy' ? '🏆' : m.icon === 'target' ? '🎯' : m.icon === 'shield' ? '🛡️' : m.icon === 'trending-up' ? '📈' : m.icon === 'zap' ? '⚡' : '⭐'}
+              </span>
+              <div className="min-w-0">
+                <p className="text-sm font-bold text-foreground">{m.title}</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">{m.description}</p>
+              </div>
+            </div>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  )
+}
+
+export function QuietDaysPanel({ data }: { data: AnalysisData }) {
+  const result = useMemo(() => analyzeQuietDays(data.cardExpenses, data.transactionHistory), [data.cardExpenses, data.transactionHistory])
+
+  const quietRate = result.totalDaysThisMonth > 0 ? Math.round((result.quietDaysThisMonth / result.totalDaysThisMonth) * 100) : 0
+  const lastMonthRate = result.totalDaysLastMonth > 0 ? Math.round((result.quietDaysLastMonth / result.totalDaysLastMonth) * 100) : 0
+  const diff = quietRate - lastMonthRate
+  const toneClass = diff > 0 ? 'text-success' : diff < 0 ? 'text-destructive' : 'text-muted-foreground'
+
+  return (
+    <Card className="border-border/70 shadow-[var(--shadow-card)] lg:col-span-5">
+      <CardHeader className="pb-0">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <CardTitle>Sessiz gün analizi</CardTitle>
+            <p className="mt-1 text-sm text-muted-foreground">Harcama yapılmayan günler</p>
+          </div>
+          <Moon className="text-success" />
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-3 pt-2">
+        <div className="grid grid-cols-3 gap-2">
+          <StatPill label="Sessiz gün" value={`${result.quietDaysThisMonth}/${result.totalDaysThisMonth}`} tone="emerald" />
+          <StatPill label="Seri (şu an)" value={`${result.currentStreak} gün`} tone={result.currentStreak >= 2 ? 'emerald' : 'stone'} />
+          <StatPill label="En uzun seri" value={`${result.bestStreakAllTime} gün`} tone="stone" />
+        </div>
+        <div className="space-y-2">
+          <div className="flex items-center justify-between gap-3 rounded-xl bg-muted/45 px-3 py-2 text-sm">
+            <span className="text-muted-foreground">Bu ay sessiz gün oranı</span>
+            <span className="font-bold tabular-nums text-foreground">%{quietRate}</span>
+          </div>
+          <div className="flex items-center justify-between gap-3 rounded-xl bg-muted/45 px-3 py-2 text-sm">
+            <span className="text-muted-foreground">Geçen ay</span>
+            <span className="font-bold tabular-nums text-foreground">%{lastMonthRate} ({result.quietDaysLastMonth}/{result.totalDaysLastMonth})</span>
+          </div>
+          <div className="flex items-center justify-between gap-3 rounded-xl bg-muted/45 px-3 py-2 text-sm">
+            <span className="text-muted-foreground">Değişim</span>
+            <span className={`font-bold tabular-nums ${toneClass}`}>
+              {diff > 0 ? '+' : ''}{diff} puan
+            </span>
+          </div>
+          {result.avgSpendingOnActiveDay > 0 ? (
+            <div className="flex items-center justify-between gap-3 rounded-xl bg-muted/45 px-3 py-2 text-sm">
+              <span className="text-muted-foreground">Harcama günü ortalaması</span>
+              <span className="font-bold tabular-nums text-foreground">{formatCurrency(result.avgSpendingOnActiveDay)}</span>
+            </div>
+          ) : null}
+          {result.bestStreakThisMonth >= 2 ? (
+            <p className="rounded-xl bg-success/10 px-3 py-2 text-xs font-medium text-success">
+              Bu ay en uzun sessiz serin {result.bestStreakThisMonth} gün — harika gidiyorsun!
+            </p>
+          ) : null}
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+export function SubscriptionsPanel({ data }: { data: AnalysisData }) {
+  const salary = getCurrentSalary(data.salaryHistory)
+  const result = useMemo(
+    () => buildSubscriptionSummary(data.cardExpenses, data.payments, salary?.amount ?? null),
+    [data.cardExpenses, data.payments, salary],
+  )
+
+  return (
+    <Card className="border-border/70 shadow-[var(--shadow-card)] lg:col-span-5">
+      <CardHeader className="pb-0">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <CardTitle>Abonelik & sabit giderler</CardTitle>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {result.items.filter((i) => i.isActive).length} aktif · toplam {formatCurrency(result.monthlyTotal)}/ay
+              {result.incomeRatio !== null ? ` · gelirin %${result.incomeRatio}'i` : ''}
+            </p>
+          </div>
+          <Repeat className="text-success" />
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-2 pt-2">
+        {result.items.length === 0 ? (
+          <p className="rounded-xl bg-muted/45 p-3 text-sm text-muted-foreground">Tekrarlayan harcama veya ödeme tespit edilmedi.</p>
+        ) : (
+          result.items.slice(0, 8).map((item) => (
+            <div key={item.id} className={`rounded-xl px-3 py-2 text-sm ${item.isActive ? 'bg-muted/45' : 'bg-muted/25 opacity-60'}`}>
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="truncate font-semibold text-foreground">{item.title}</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    {item.category}
+                    {item.source === 'recurring_expense' ? ` · ${item.monthCount} aydır tekrarlıyor` : ' · planlı ödeme'}
+                    {!item.isActive ? ' · durdurulmuş olabilir' : ''}
+                  </p>
+                </div>
+                <span className="shrink-0 whitespace-nowrap rounded-lg bg-muted px-2 py-1 font-mono text-xs font-bold tabular-nums text-foreground ring-1 ring-border/60">
+                  {formatCurrency(item.amount)}
+                </span>
+              </div>
+            </div>
+          ))
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
+const comparisonModeLabels: Record<ComparisonMode, string> = {
+  month: 'Aylık',
+  quarter: 'Çeyreklik',
+  year: 'Yıllık',
+}
+
+export function PeriodComparisonPanel({ data }: { data: AnalysisData }) {
+  const [mode, setMode] = useState<ComparisonMode>('month')
+  const result = useMemo(() => comparePeriods(data.cardExpenses, mode), [data.cardExpenses, mode])
+
+  const changeLabel = result.totalChangePercent === null ? '—' : `${result.totalChangePercent > 0 ? '+' : ''}%${result.totalChangePercent}`
+
+  return (
+    <Card className="border-border/70 shadow-[var(--shadow-card)] lg:col-span-7">
+      <CardHeader className="pb-0">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <CardTitle>Dönem karşılaştırması</CardTitle>
+            <p className="mt-1 text-sm text-muted-foreground">{result.currentLabel} vs {result.previousLabel}</p>
+          </div>
+          <div className="flex shrink-0 gap-1">
+            {(['month', 'quarter', 'year'] as ComparisonMode[]).map((m) => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => setMode(m)}
+                className={`rounded-lg px-2.5 py-1 text-xs font-bold transition-colors ${mode === m ? 'bg-foreground/10 text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+              >
+                {comparisonModeLabels[m]}
+              </button>
+            ))}
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-3 pt-2">
+        <div className="grid grid-cols-3 gap-2">
+          <StatPill label={result.currentLabel} value={formatCurrency(result.currentTotal)} tone="stone" />
+          <StatPill label={result.previousLabel} value={formatCurrency(result.previousTotal)} tone="stone" />
+          <StatPill label="Değişim" value={changeLabel} tone={result.totalChangePercent !== null && result.totalChangePercent <= 0 ? 'emerald' : 'rose'} />
+        </div>
+        {result.rows.length > 0 ? (
+          <div className="space-y-1.5">
+            <div className="grid grid-cols-[1fr_auto_auto_auto] gap-3 px-1 text-[11px] font-bold uppercase text-muted-foreground">
+              <span>Kategori</span>
+              <span className="text-right">Şimdi</span>
+              <span className="text-right">Önceki</span>
+              <span className="text-right">Fark</span>
+            </div>
+            {result.rows.slice(0, 8).map((row) => (
+              <div key={row.category} className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-3 rounded-xl bg-muted/45 px-3 py-2 text-sm">
+                <span className="min-w-0 truncate text-muted-foreground">{row.category}</span>
+                <span className="shrink-0 whitespace-nowrap text-right font-bold tabular-nums text-foreground">{formatCurrency(row.currentAmount)}</span>
+                <span className="shrink-0 whitespace-nowrap text-right tabular-nums text-muted-foreground">{formatCurrency(row.previousAmount)}</span>
+                <span className={`shrink-0 whitespace-nowrap text-right text-xs font-bold tabular-nums ${row.direction === 'down' ? 'text-success' : row.direction === 'up' ? 'text-destructive' : 'text-muted-foreground'}`}>
+                  {row.changePercent !== null ? `${row.changePercent > 0 ? '+' : ''}%${row.changePercent}` : row.direction === 'new' ? 'Yeni' : '—'}
+                </span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="rounded-xl bg-muted/45 p-3 text-sm text-muted-foreground">Karşılaştırma için yeterli harcama verisi yok.</p>
+        )}
       </CardContent>
     </Card>
   )

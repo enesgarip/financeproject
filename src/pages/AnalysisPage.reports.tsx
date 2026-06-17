@@ -1,15 +1,19 @@
-import { Archive, BarChart3, Check, Copy, Download, Search, Sparkles } from 'lucide-react'
+import { Archive, BarChart3, CalendarRange, Check, Copy, Download, ImageDown, Search, Sparkles } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Button } from '../components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { SimpleModal } from '../components/SimpleModal'
+import type { NetWorthSnapshot } from '../types/database'
 import { buildSearchCsv, type AnalysisData, type SearchItem } from '../utils/analysisView'
 import { buildFinancialReport, reportToMarkdown, type FinancialReport } from '../utils/financialReport'
 import { buildMonthlyCashFlow, sum } from '../utils/financeSummary'
 import { activeExpense as activeCardExpense } from '../utils/budgetAlerts'
 import { formatDate, isDateInMonth } from '../utils/date'
 import { formatCurrency } from '../utils/formatCurrency'
+import { buildMonthlySummary } from '../utils/monthlySummary'
+import { downloadShareableCard, renderShareableCard } from '../utils/shareableCard'
 import { normalizeSearchText } from '../utils/searchText'
+import { buildYearEndReport } from '../utils/yearEndReport'
 import { StatPill } from './AnalysisPage.atoms'
 
 function escapeHtml(value: string) {
@@ -139,6 +143,7 @@ export function MonthlyReport({ data }: { data: AnalysisData }) {
     data.cardExpenses.filter((expense) => activeCardExpense(expense) && isDateInMonth(expense.spent_at)),
     (expense) => expense.amount,
   )
+  const summary = useMemo(() => buildMonthlySummary(data.cardExpenses), [data.cardExpenses])
   const income = cashFlow.income
   const outflow = cashFlow.outflow
   const net = cashFlow.netFlow
@@ -148,6 +153,8 @@ export function MonthlyReport({ data }: { data: AnalysisData }) {
     { label: 'Kredi taksidi', value: cashFlow.loanOutflow },
     { label: 'Kişisel borç', value: cashFlow.debtOutflow },
   ]
+  const changeTone = summary.changePercent === null ? 'stone' : summary.changePercent > 0 ? 'rose' : 'emerald'
+  const changeLabel = summary.changePercent === null ? '—' : `${summary.changePercent > 0 ? '+' : ''}%${summary.changePercent}`
 
   return (
     <Card className="border-border/70 shadow-[var(--shadow-card)] lg:col-span-7">
@@ -159,6 +166,13 @@ export function MonthlyReport({ data }: { data: AnalysisData }) {
           </div>
           <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
             <AiSummaryButton data={data} />
+            <Button type="button" variant="outline" onClick={() => {
+              const canvas = renderShareableCard({ cashFlow, summary })
+              downloadShareableCard(canvas, cashFlow.monthLabel)
+            }}>
+              <ImageDown />
+              Kart
+            </Button>
             <Button type="button" variant="outline" onClick={() => window.print()}>
               <Download />
               PDF
@@ -183,6 +197,31 @@ export function MonthlyReport({ data }: { data: AnalysisData }) {
             </div>
           ))}
         </div>
+
+        {summary.categories.length > 0 ? (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-xs font-bold uppercase text-muted-foreground">Kategori dağılımı</p>
+              <span className={`text-xs font-bold tabular-nums ${changeTone === 'emerald' ? 'text-success' : changeTone === 'rose' ? 'text-destructive' : 'text-muted-foreground'}`}>
+                Geçen aya göre: {changeLabel}
+              </span>
+            </div>
+            {summary.categories.slice(0, 6).map((cat) => (
+              <div key={cat.category} className="space-y-1">
+                <div className="flex items-center justify-between gap-3 text-sm">
+                  <span className="min-w-0 truncate text-muted-foreground">{cat.category}</span>
+                  <span className="shrink-0 whitespace-nowrap font-bold tabular-nums text-foreground">
+                    {formatCurrency(cat.amount)} <span className="text-xs font-normal text-muted-foreground">(%{cat.percentage})</span>
+                  </span>
+                </div>
+                <div className="h-1.5 overflow-hidden rounded-full bg-muted/60">
+                  <div className="h-full rounded-full bg-foreground/20" style={{ width: `${Math.min(100, cat.percentage)}%` }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : null}
+
         <p className="text-xs text-muted-foreground">
           Kart harcaması toplamı: {formatCurrency(cardSpending)} · Bütçeler kategori bazlı harcama tutarını kullanır.
         </p>
@@ -226,6 +265,78 @@ export function StatementArchive({ data }: { data: AnalysisData }) {
             </div>
           ))
         )}
+      </CardContent>
+    </Card>
+  )
+}
+
+export function YearEndReport({ data, snapshots }: { data: AnalysisData; snapshots: NetWorthSnapshot[] }) {
+  const report = useMemo(() => buildYearEndReport(data.cardExpenses, snapshots), [data.cardExpenses, snapshots])
+
+  if (report.totalSpending === 0) return null
+
+  return (
+    <Card className="border-border/70 shadow-[var(--shadow-card)] lg:col-span-12">
+      <CardHeader className="pb-0">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <CardTitle>{report.year} yılı finansal özet</CardTitle>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Yıllık harcama: {formatCurrency(report.totalSpending)} · Aylık ortalama: {formatCurrency(report.avgMonthlySpending)}
+            </p>
+          </div>
+          <CalendarRange className="text-success" />
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4 pt-2">
+        <div className="grid gap-2 min-[520px]:grid-cols-2 min-[900px]:grid-cols-4">
+          <StatPill label="Toplam harcama" value={formatCurrency(report.totalSpending)} tone="rose" />
+          <StatPill label="Aylık ortalama" value={formatCurrency(report.avgMonthlySpending)} tone="stone" />
+          {report.mostExpensiveMonth ? (
+            <StatPill label={`En pahalı: ${report.mostExpensiveMonth.label}`} value={formatCurrency(report.mostExpensiveMonth.amount)} tone="rose" />
+          ) : null}
+          {report.netWorthChange !== null ? (
+            <StatPill label="Net değer değişimi" value={`${report.netWorthChange >= 0 ? '+' : ''}${formatCurrency(report.netWorthChange)}`} tone={report.netWorthChange >= 0 ? 'emerald' : 'rose'} />
+          ) : null}
+        </div>
+
+        <div className="space-y-2">
+          <p className="text-xs font-bold uppercase text-muted-foreground">Aylık harcama trendi</p>
+          <div className="grid grid-cols-6 gap-1.5 min-[760px]:grid-cols-12">
+            {report.monthlyTotals.map((m) => {
+              const maxAmount = report.mostExpensiveMonth?.amount ?? 1
+              const heightPct = maxAmount > 0 ? Math.max(4, (m.amount / maxAmount) * 100) : 4
+              return (
+                <div key={m.month} className="flex flex-col items-center gap-1">
+                  <div className="flex h-16 w-full items-end justify-center">
+                    <div
+                      className="w-full rounded-t-md bg-foreground/15"
+                      style={{ height: `${heightPct}%` }}
+                      title={`${m.label}: ${formatCurrency(m.amount)}`}
+                    />
+                  </div>
+                  <span className="text-[10px] font-bold text-muted-foreground">{m.label.slice(0, 3)}</span>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+
+        {report.topCategories.length > 0 ? (
+          <div className="space-y-2">
+            <p className="text-xs font-bold uppercase text-muted-foreground">En çok harcanan kategoriler</p>
+            <div className="grid gap-2 min-[520px]:grid-cols-2 min-[900px]:grid-cols-3">
+              {report.topCategories.slice(0, 6).map((cat) => (
+                <div key={cat.category} className="flex items-center justify-between gap-3 rounded-xl bg-muted/45 px-3 py-2 text-sm">
+                  <span className="min-w-0 truncate text-muted-foreground">{cat.category}</span>
+                  <span className="shrink-0 whitespace-nowrap font-bold tabular-nums text-foreground">
+                    {formatCurrency(cat.amount)} <span className="text-xs font-normal text-muted-foreground">(%{cat.percentage})</span>
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
       </CardContent>
     </Card>
   )
