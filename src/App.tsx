@@ -69,6 +69,9 @@ const LoginPage = lazyWithReload(() =>
 const PaymentsPage = lazyWithReload(() =>
   import('./pages/PaymentsPage').then((m) => ({ default: m.PaymentsPage })),
 )
+const PlanningPage = lazyWithReload(() =>
+  import('./pages/PlanningPage').then((m) => ({ default: m.PlanningPage })),
+)
 
 function PageTransition({ children }: { children: ReactNode }) {
   return (
@@ -144,6 +147,7 @@ function AnimatedRoutes() {
         </Route>
 
         <Route path="odemeler" element={routeElement(<PaymentsPage />, 'odemeler')} />
+        <Route path="hedefler" element={routeElement(<PlanningPage />, 'hedefler')} />
         <Route path="analiz" element={routeElement(<AnalysisPage />, 'analiz')} />
         <Route path="veri-sagligi" element={routeElement(<DataHealthPage />, 'veri-sagligi')} />
 

@@ -4,6 +4,7 @@ import {
   HandCoins,
   Home,
   ShieldCheck,
+  Target,
   WalletCards,
   Wallet,
   type LucideIcon,
@@ -33,6 +34,7 @@ export const primaryNavItems: readonly NavItem[] = [
   { to: '/varliklar', label: 'Varlıklar', icon: Wallet },
   { to: '/borclar/krediler', label: 'Borçlar', icon: HandCoins, activePaths: ['/borclar/kisiler'] },
   { to: '/odemeler', label: 'Planlı', icon: WalletCards },
+  { to: '/hedefler', label: 'Hedefler', icon: Target },
   { to: '/analiz', label: 'Raporlar', icon: BarChart3 },
 ]
 
@@ -41,8 +43,8 @@ export const secondaryNavItems: readonly NavItem[] = [
   { to: '/veri-sagligi', label: 'Veri Kontrolü', icon: ShieldCheck },
 ]
 
-/** Mobile bottom bar holds 5 slots; Raporlar spills into the header overflow menu. */
-export const bottomNavItems: readonly NavItem[] = primaryNavItems.filter((item) => item.to !== '/analiz')
+/** Mobile bottom bar holds 5 slots; Hedefler + Raporlar spill into the header overflow menu. */
+export const bottomNavItems: readonly NavItem[] = primaryNavItems.filter((item) => item.to !== '/analiz' && item.to !== '/hedefler')
 
 /** Header "…" overflow on mobile: primary items that don't fit the bottom bar, then utilities. */
 const bottomPaths = new Set(bottomNavItems.map((item) => item.to))
@@ -76,6 +78,7 @@ const routeMeta: Record<string, { title: string; width: RouteWidth }> = {
   '/borclar/krediler': { title: 'Krediler', width: 'wide' },
   '/borclar/kisiler': { title: 'Kişiler', width: 'medium' },
   '/odemeler': { title: 'Planlı Ödemeler', width: 'medium' },
+  '/hedefler': { title: 'Bütçe & Hedefler', width: 'medium' },
   '/analiz': { title: 'Raporlar', width: 'wide' },
   '/veri-sagligi': { title: 'Veri Kontrolü', width: 'wide' },
 }

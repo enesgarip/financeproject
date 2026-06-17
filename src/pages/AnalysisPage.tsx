@@ -3,16 +3,10 @@ import { useEffect, useMemo, useRef } from 'react'
 import { useAuth } from '../auth/useAuth'
 import { useFinanceSnapshot } from '../app/useFinanceSnapshot'
 import { fetchPriceRadarRows, upsertAndLoadNetWorthSnapshots } from '../data/repositories/analysisRepo'
-import { CrudPage, type FormField } from '../components/CrudPage'
-import type { Budget, NetWorthSnapshot } from '../types/database'
-import { SavingsGoalsPanel } from '../components/finance/SavingsGoalsPanel'
-import { expenseCategoryOptions } from '../utils/categories'
-import { dateInputValue, startOfMonth } from '../utils/date'
-import { formatCurrency, parseNumber } from '../utils/formatCurrency'
+import type { NetWorthSnapshot } from '../types/database'
 import { buildFinancialPosition } from '../utils/financeSummary'
 import {
   buildSearchItems,
-  formatMonth,
   type AnalysisData,
 } from '../utils/analysisView'
 import { useMarketRates } from '../hooks/useMarketRates'
@@ -23,7 +17,6 @@ import { FullMonthCalendarPanel } from './AnalysisPage.calendar'
 import { CashFlowTrend, ForwardForecast, NetWorthTrend } from './AnalysisPage.trends'
 import { CategorySpendingChart, FireCalculator, InflationShieldPanel, ZakatPanel } from './AnalysisPage.wealth'
 import {
-  BudgetProgress,
   FinancialCalendar,
   MilestonesPanel,
   MonthCloseAssistant,
@@ -55,23 +48,9 @@ const emptyAnalysisData: AnalysisData = {
 const optionalTableLabels: Record<string, string> = {
   card_installments: 'kart taksitleri',
   card_statement_archives: 'ekstre arşivi',
-  budgets: 'bütçeler',
-  savings_goals: 'birikim hedefleri',
 }
 
 const STATEMENT_ARCHIVE_LIMIT = 48
-
-const budgetFields: FormField[] = [
-  { name: 'month', label: 'Ay', type: 'date', required: true },
-  { name: 'category', label: 'Kategori', type: 'select', options: expenseCategoryOptions },
-  { name: 'limit_amount', label: 'Aylık limit', type: 'number', min: '0', step: '0.01', required: true },
-  { name: 'note', label: 'Not', type: 'textarea' },
-]
-
-function monthStartValue(value: FormDataEntryValue | null) {
-  const date = value ? new Date(`${String(value)}T00:00:00`) : new Date()
-  return dateInputValue(startOfMonth(Number.isNaN(date.getTime()) ? new Date() : date))
-}
 
 async function loadNetWorthSnapshots(
   userId: string,
@@ -176,8 +155,6 @@ export function AnalysisPage() {
   const priceTrends = priceTrendsQuery.data ?? []
 
   const searchItems = useMemo(() => buildSearchItems(data), [data])
-  const canManageBudgets = !missingTables.includes('budgets')
-  const canManageGoals = !missingTables.includes('savings_goals')
 
   if (error) {
     return <p className="rounded-xl border border-destructive/20 bg-destructive/8 p-3 text-sm font-medium text-destructive">{error}</p>
@@ -211,40 +188,6 @@ export function AnalysisPage() {
       </div>
 
       {loading ? <p className="rounded-xl border border-border/60 bg-card p-4 text-sm text-muted-foreground">Analiz verileri yükleniyor...</p> : null}
-
-      {canManageBudgets ? (
-      <CrudPage
-        table="budgets"
-        pageTitle="Bütçeler"
-        addLabel="Bütçe ekle"
-        fields={budgetFields}
-        emptyTitle="Henüz bütçe yok"
-        emptyDescription="Kategori bazlı aylık limit ekleyerek harcama takibini başlatabilirsin."
-        orderBy="month"
-        orderAscending={false}
-        renderBeforeList={({ loading, rows }) =>
-          !loading ? <BudgetProgress budgets={rows as Budget[]} expenses={data.cardExpenses} /> : null
-        }
-        getInitialValues={(row?: Budget) => ({
-          month: row?.month ?? dateInputValue(startOfMonth()),
-          category: row?.category ?? expenseCategoryOptions[0]?.value ?? 'Diğer',
-          limit_amount: row?.limit_amount ?? 0,
-          note: row?.note ?? '',
-        })}
-        mapForm={(formData, userId) => ({
-          user_id: userId,
-          month: monthStartValue(formData.get('month')),
-          category: String(formData.get('category') ?? 'Diğer'),
-          limit_amount: parseNumber(formData.get('limit_amount')),
-          note: String(formData.get('note') ?? '') || null,
-        })}
-        renderTitle={(row) => row.category}
-        renderSubtitle={(row) => formatMonth(row.month)}
-        renderDetails={(row) => [`Limit: ${formatCurrency(row.limit_amount)}`]}
-      />
-      ) : null}
-
-      {canManageGoals ? <SavingsGoalsPanel /> : null}
     </section>
   )
 }
