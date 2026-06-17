@@ -48,6 +48,8 @@ jobs:
   lighthouse:
     name: Lighthouse
     runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.60.0-noble
     permissions:
       contents: read
       statuses: write
@@ -63,6 +65,13 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Use Playwright Chromium for Lighthouse
+        run: |
+          CHROME_PATH="$(node -e "const { chromium } = require('playwright'); console.log(chromium.executablePath())")"
+          test -x "$CHROME_PATH"
+          echo "CHROME_PATH=$CHROME_PATH" >> "$GITHUB_ENV"
+          echo "Using Chromium at $CHROME_PATH"
 
       - name: Build
         run: npm run build
