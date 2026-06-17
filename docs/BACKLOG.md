@@ -31,6 +31,11 @@
   - `push-notify` Supabase Edge Function sends VAPID-signed Web Push notifications for tomorrow's planned payments, tomorrow's loan installments, 3-day card statement cut reminders, and Monday weekly summaries.
   - `notification_log` prevents duplicate user/type/reference sends, and stale 404/410 endpoints are removed from `push_subscriptions`.
   - GitHub Actions invokes the sender daily at 04:00 UTC (07:00 Turkey time).
+- Add Web Push v1.1 controls and observability.
+  - Add a "test bildirimi gönder" action from the notification settings UI.
+  - Let the user enable/disable payment, loan installment, statement cut, and weekly summary notifications separately.
+  - Show last push run / last sent notification status in the settings card.
+  - Add quiet-hours handling so scheduled notifications are not sent during user-defined silent hours.
 - ~~Reduce fallback logic that depends on missing Supabase schema cache or missing RPC deployment.~~ DONE.
   - Legacy `add_card_expense` retry against the retired 4-argument RPC signature was removed; the canonical RPC now surfaces missing-capability instead of silently falling back.
   - App-start finance maintenance no longer suppresses missing `post_due_card_auto_payments` / `cut_due_card_statements`; migration drift now surfaces through the shared missing-capability message.
@@ -45,6 +50,10 @@
 
 ## P2 - UX / Maintainability
 
+- Add "kasa modu" / spendable balance planning.
+  - Let bank balances be mentally allocated into buckets such as emergency fund, taxes/insurance, vacation, investment, and spendable cash.
+  - Keep the underlying bank balance unchanged; this is a planning overlay, not a ledger movement.
+  - Surface "harcanabilir bakiye" on Dashboard so the user sees what is safe to spend after reserved buckets.
 - ~~Add a concise developer-oriented architecture note for each major page.~~ DONE for DashboardPage, CardsPage, and DataHealthPage.
 - ~~Keep `docs/AI_CONTEXT_INDEX.md` current so future AI sessions can route to the right files with less repo scanning.~~ DONE.
   - 2026-06-15 context index reflects current route/module splits, DataHealth guide/action modules, dashboard component modules, backup utilities, data-health summary, and verification playbooks.
@@ -65,6 +74,10 @@
 
 ## P3 - Nice to Have
 
+- Add goal-based automatic saving suggestions.
+  - For each active savings goal, show the monthly amount needed to hit the target date.
+  - Adjust suggestions against upcoming obligations so the app can say "bu ay hedefe ara ver" or "bu ay fazladan X ₺ ayırabilirsin."
+  - Reuse existing savings goals and cash-flow/obligation projections before adding any new write model.
 - Add guided import/restore flow for personal finance data.
   - JSON export/restore exists in Data Health, including a pre-restore safety backup.
   - CSV export exists; remaining import work is a guided CSV/manual mapping flow if that becomes useful.
