@@ -105,7 +105,7 @@ function AiSummaryButton({ data }: { data: AnalysisData }) {
 
   return (
     <>
-      <Button type="button" variant="outline" onClick={() => setOpen(true)}>
+      <Button type="button" variant="outline" size="sm" onClick={() => setOpen(true)}>
         <Sparkles />
         AI özeti
       </Button>
@@ -164,26 +164,26 @@ export function MonthlyReport({ data }: { data: AnalysisData }) {
             <CardTitle>Aylık rapor</CardTitle>
             <p className="mt-1 text-sm text-muted-foreground">{cashFlow.monthLabel}</p>
           </div>
-          <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
-            <AiSummaryButton data={data} />
-            <Button type="button" variant="outline" onClick={() => {
-              const canvas = renderShareableCard({ cashFlow, summary })
-              downloadShareableCard(canvas, cashFlow.monthLabel)
-            }}>
-              <ImageDown />
-              Kart
-            </Button>
-            <Button type="button" variant="outline" onClick={() => window.print()}>
-              <Download />
-              PDF
-            </Button>
-            <div className="grid size-11 place-items-center rounded-xl bg-success/12 text-success">
-              <BarChart3 />
-            </div>
+          <div className="grid size-11 shrink-0 place-items-center rounded-xl bg-success/12 text-success">
+            <BarChart3 />
           </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-4 pt-2">
+        <div className="flex flex-wrap gap-2">
+          <AiSummaryButton data={data} />
+          <Button type="button" variant="outline" size="sm" onClick={() => {
+            const canvas = renderShareableCard({ cashFlow, summary })
+            downloadShareableCard(canvas, cashFlow.monthLabel)
+          }}>
+            <ImageDown />
+            Kart
+          </Button>
+          <Button type="button" variant="outline" size="sm" onClick={() => window.print()}>
+            <Download />
+            PDF
+          </Button>
+        </div>
         <div className="grid grid-cols-3 gap-2">
           <StatPill label="Gelir" value={formatCurrency(income)} tone="emerald" />
           <StatPill label="Çıkış" value={formatCurrency(outflow)} tone="rose" />

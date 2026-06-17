@@ -54,6 +54,14 @@ export type FullMonthCalendarResult = {
   quietDayCount: number
 }
 
+function firstBusinessDayOfMonth(year: number, monthIndex: number): number {
+  for (let d = 1; d <= 7; d++) {
+    const dow = new Date(year, monthIndex, d).getDay()
+    if (dow >= 1 && dow <= 5) return d
+  }
+  return 1
+}
+
 function buildDayEvents(obligations: FinanceObligation[], date: string): CalendarDayEvent[] {
   return obligations
     .filter((o) => o.date === date)
@@ -86,7 +94,7 @@ export function buildFullMonthCalendar(
 
   const salary = getSalaryForDate(salaryHistory, new Date(year, monthIndex + 1, 0))
   const salaryAmount = salary?.amount ?? 0
-  const salaryDay = salary ? new Date(`${salary.effective_date}T00:00:00`).getDate() : null
+  const salaryDay = salary ? firstBusinessDayOfMonth(year, monthIndex) : null
 
   const todayStr = dateInputValue(now)
 
