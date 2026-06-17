@@ -1,13 +1,16 @@
 const ciChromeFlags = '--headless=new --no-sandbox --disable-dev-shm-usage --disable-gpu'
 const localChromeFlags = '--no-sandbox --disable-dev-shm-usage --disable-gpu'
+const previewHost = '127.0.0.1'
+const previewPort = 4173
 
 /** @type {import('@lhci/utils/src/lighthouserc').Config} */
 module.exports = {
   ci: {
     collect: {
-      staticDistDir: './dist',
-      isSinglePageApplication: true,
-      url: ['http://localhost/login'],
+      startServerCommand: `npm run preview -- --host ${previewHost} --port ${previewPort} --strictPort`,
+      startServerReadyPattern: 'Local',
+      startServerReadyTimeout: 30000,
+      url: [`http://${previewHost}:${previewPort}/login`],
       numberOfRuns: 1,
       settings: {
         chromeFlags: process.env.CI ? ciChromeFlags : localChromeFlags,

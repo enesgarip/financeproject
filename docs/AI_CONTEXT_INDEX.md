@@ -42,7 +42,7 @@ frontend -> RPC, or RPC -> migration.
 | Shared payment drawer | `docs/SHARED_PAYMENT_DRAWER_PLAN.md` | `src/hooks/useFinancePaymentDrawer.ts`, `src/components/finance/FinancePaymentDrawer.tsx`, `src/components/finance/AccountPaymentModal.tsx`, `src/services/financePaymentActions.ts`, payment-owning pages | Plan and shared implementation for account-backed payment modals without changing RPC behavior |
 | Release/migration compatibility | `docs/MIGRATION_COMPATIBILITY_CHECKLIST.md` | `.github/workflows/ci.yml`, `.github/workflows/deploy.yml`, `supabase/migrations/*` | Use for schema, RLS, RPC, edge function, or generated type changes |
 | Banking simplification | `docs/BANKING_SIMPLIFICATION_AUDIT.md` | `src/pages/CardsPage*.tsx`, `src/components/finance/*`, `docs/CARDS_ARCHITECTURE.md` | Tracks completed banking simplifications and future maintenance notes |
-| Pipeline/deploy | `docs/PIPELINE.md` | GitHub workflow files and package scripts | CI, deploy, secrets, branch flow |
+| Pipeline/deploy | `docs/PIPELINE.md` | GitHub workflow files, `.lighthouserc.cjs`, and package scripts | CI, deploy, secrets, branch flow |
 
 ## Architecture Map
 
@@ -168,6 +168,7 @@ Read:
 2. `docs/PIPELINE.md`
 3. `.github/workflows/ci.yml`
 4. `.github/workflows/deploy.yml`
+5. `.lighthouserc.cjs` when changing Lighthouse collection/assertion behavior
 
 Use local Supabase checks when available. Production deploy order is migration
 and edge functions first, Vercel deploy hook second.
