@@ -56,13 +56,14 @@ Order:
 
 1. **Detect** — migration değişti mi? (değişmediyse backup atlanır, frontend yine deploy olur)
 2. **Pre-migration backup** — şifreli DB yedeği (yalnız migration varsa)
-3. **Migration** — `supabase db push` + edge functions deploy (`bist-quote`, `parse-receipt`)
+3. **Migration** — `supabase db push` + edge functions deploy (`bist-quote`, `parse-receipt`, `parse-statement`, `push-notify`)
 4. **Vercel** — frontend deploy hook
 
 Ek otomasyon:
 - `ci.yml`: Lint+Build (required), bundle budget, Lighthouse budget, Playwright smoke, Supabase Migration Check, RLS denetimi.
 - Dependabot patch/minor PR'larını CI yeşilse otomatik squash-merge eder (major elde kalır).
 - Günlük şifreli DB yedeği cron'u (`db-backup.yml`).
+- Günlük Web Push gönderici cron'u (`push-notify.yml`): 04:00 UTC / 07:00 TR, `push-notify` edge fonksiyonunu service-role ile invoke eder.
 
 ## Required GitHub Secrets
 
@@ -88,6 +89,12 @@ Note: CI smoke tests use safe placeholder values because they only verify unauth
 - `VERCEL_DEPLOY_HOOK_URL`
 
 This should be the deploy hook for the production branch.
+
+## Push notification sender
+
+- `SUPABASE_SERVICE_ROLE_KEY` (GitHub Actions secret, only for `.github/workflows/push-notify.yml`)
+- `VAPID_PRIVATE_KEY` (Supabase Edge Function secret)
+- `VAPID_SUBJECT` (Supabase Edge Function secret, e.g. `mailto:you@example.com`)
 
 ## Optional Vercel CLI Secrets
 

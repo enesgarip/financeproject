@@ -27,6 +27,10 @@
 
 ## P1 - Product / Reliability
 
+- ~~Complete roadmap Y1 server-side Web Push sender.~~ DONE.
+  - `push-notify` Supabase Edge Function sends VAPID-signed Web Push notifications for tomorrow's planned payments, tomorrow's loan installments, 3-day card statement cut reminders, and Monday weekly summaries.
+  - `notification_log` prevents duplicate user/type/reference sends, and stale 404/410 endpoints are removed from `push_subscriptions`.
+  - GitHub Actions invokes the sender daily at 04:00 UTC (07:00 Turkey time).
 - ~~Reduce fallback logic that depends on missing Supabase schema cache or missing RPC deployment.~~ DONE.
   - Legacy `add_card_expense` retry against the retired 4-argument RPC signature was removed; the canonical RPC now surfaces missing-capability instead of silently falling back.
   - App-start finance maintenance no longer suppresses missing `post_due_card_auto_payments` / `cut_due_card_statements`; migration drift now surfaces through the shared missing-capability message.

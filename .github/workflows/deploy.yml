@@ -105,6 +105,7 @@ jobs:
           supabase functions deploy bist-quote --project-ref "$SUPABASE_PROJECT_REF"
           supabase functions deploy parse-receipt --project-ref "$SUPABASE_PROJECT_REF"
           supabase functions deploy parse-statement --project-ref "$SUPABASE_PROJECT_REF"
+          supabase functions deploy push-notify --project-ref "$SUPABASE_PROJECT_REF"
 
   deploy:
     name: Trigger Vercel Deploy Hook

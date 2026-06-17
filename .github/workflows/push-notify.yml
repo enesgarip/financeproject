@@ -1,0 +1,36 @@
+name: Push Notifications
+
+on:
+  schedule:
+    # 07:00 Europe/Istanbul (UTC+3) = 04:00 UTC.
+    - cron: '0 4 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: push-notify-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  invoke:
+    name: Invoke push-notify
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+    steps:
+      - name: Call edge function
+        run: |
+          if [ -z "$SUPABASE_PROJECT_REF" ] || [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then
+            echo "::error::SUPABASE_PROJECT_REF and SUPABASE_SERVICE_ROLE_KEY secrets are required."
+            exit 1
+          fi
+
+          curl --fail-with-body --show-error --silent \
+            --request POST "https://${SUPABASE_PROJECT_REF}.functions.supabase.co/push-notify" \
+            --header "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
+            --header "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
+            --header "Content-Type: application/json" \
+            --data '{}'

@@ -55,7 +55,7 @@ frontend -> RPC, or RPC -> migration.
 | Pages | `src/pages/*` | Route-level orchestration and UI state. Avoid burying new domain math here. |
 | Components | `src/components/*` | Reusable UI, finance panels, charts, selectors, modals. |
 | Database | `supabase/migrations/*` | Schema, RLS, triggers, RPCs. Treat migrations as forward-only after production. |
-| Edge functions | `supabase/functions/*` | External parsing/quote services. Use `_shared/edge.ts` conventions. |
+| Edge functions | `supabase/functions/*` | External parsing/quote/push services. Use `_shared/edge.ts` conventions. |
 
 ESLint blocks `src/{pages,components,utils,hooks}` from importing
 `src/lib/supabase`. If UI needs data, add or reuse a repository/service wrapper.
@@ -230,7 +230,7 @@ paylaşır; her sayfa süpersetini client-side daraltır). Query client: `src/ap
 | **Veri sağlığı / onarım** | `pages/DataHealth.logic.ts` (types + orchestrator), `pages/DataHealth.checks.ts` (domain checks), `utils/financeSummary.ts` (trigger TS ikizleri) | `data/repositories/dataHealthRepo.ts` | `pages/DataHealthPage.tsx` |
 | **Kategori eşleme (tr-TR tuzağı)** | `utils/categories.ts` (`normalizeDescription`) | `data/repositories/categoryMemoryRepo.ts` | — |
 | **Yedek / backup** | `utils/backup.ts` | `data/repositories/backupRepo.ts` | (DataHealth) |
-| **Push bildirim** | — | `data/repositories/pushSubscriptionsRepo.ts` | `supabase/functions/*` |
+| **Push bildirim** | — | `data/repositories/pushSubscriptionsRepo.ts`, `supabase/migrations/20260617102826_add_notification_log.sql`, `.github/workflows/push-notify.yml` | `supabase/functions/push-notify`, `public/sw.js`, `components/finance/NotificationSettings.tsx` |
 | **Piyasa kuru / BIST** | `utils/marketRates.ts` | — | `supabase/functions/bist-quote` |
 | **Şema / tip / RPC kontratı** | — | `src/types/database.ts` | — |
 | **Migration / trigger** | `utils/financeSummary.ts` (saf TS ikizleri) | `supabase/migrations/*` | — |

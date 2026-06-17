@@ -100,7 +100,7 @@ Düzeltme = **ters kayıt** (append-only history bozulmaz). GUC ile yönlendiril
 `main`'e **push = üretim deploy** (`.github/workflows/deploy.yml`):
 1. **Detect** — migration değişti mi? (değişmediyse backup atlanır, frontend yine deploy olur)
 2. **Pre-migration backup** — şifreli DB yedeği (yalnız migration varsa)
-3. **Migration** — `supabase db push` + edge functions deploy (bist-quote, parse-receipt)
+3. **Migration** — `supabase db push` + edge functions deploy (bist-quote, parse-receipt, parse-statement, push-notify)
 4. **Vercel** — frontend deploy hook
 
 CI (`ci.yml`): Lint+Build (required), Playwright smoke, Supabase Migration Check.

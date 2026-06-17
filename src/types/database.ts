@@ -263,6 +263,14 @@ export type PushSubscription = BaseRow & {
   user_agent: string | null
 }
 
+export type NotificationLog = {
+  id: string
+  user_id: string
+  notification_type: string
+  reference_id: string
+  sent_at: string
+}
+
 export type ReconciliationTarget = 'balance' | 'debt'
 
 /**
@@ -352,6 +360,11 @@ export type Database = {
         WithBaseUpdate<AccountReconciliation>
       >
       push_subscriptions: Table<PushSubscription, WithBaseInsert<PushSubscription>, WithBaseUpdate<PushSubscription>>
+      notification_log: Table<
+        NotificationLog,
+        Omit<NotificationLog, 'id' | 'sent_at'> & { id?: string; sent_at?: string },
+        Partial<Omit<NotificationLog, 'id' | 'user_id'>>
+      >
       dismissed_upcoming_items: Table<
         DismissedUpcomingItem,
         Omit<DismissedUpcomingItem, 'id' | 'created_at'> & { id?: string; created_at?: string },
