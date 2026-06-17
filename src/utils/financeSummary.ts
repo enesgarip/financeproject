@@ -230,6 +230,7 @@ export function buildCreditLimitGroups(cards: Card[]): CreditLimitGroup[] {
   }
 
   return Array.from(groups, ([key, groupCards]) => {
+    // Shared-limit banks expose one limit across cards — take max, not sum
     const limit = Math.max(...groupCards.map((card) => card.credit_limit), 0)
     const debt = sum(groupCards, (card) => card.debt_amount)
     const statementDebt = sum(groupCards, (card) => card.statement_debt_amount)
