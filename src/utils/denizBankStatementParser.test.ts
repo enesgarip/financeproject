@@ -282,8 +282,14 @@ describe('matchTransactions', () => {
     expect(result.matched).toHaveLength(1)
   })
 
-  it('does not match different dates', () => {
+  it('matches the same amount inside a short date window', () => {
     const result = matchTransactions([tx('2026-06-03', 170)], [exp('2026-06-04', 170)])
+    expect(result.matched).toHaveLength(1)
+    expect(result.unmatched).toHaveLength(0)
+  })
+
+  it('does not match dates outside the import date window', () => {
+    const result = matchTransactions([tx('2026-06-03', 170)], [exp('2026-06-10', 170)])
     expect(result.unmatched).toHaveLength(1)
   })
 
@@ -292,6 +298,15 @@ describe('matchTransactions', () => {
     const result = matchTransactions(
       [installmentTx('2026-05-19', 21666.67, 3, 1)],
       [exp('2026-05-19', 65000)],
+    )
+    expect(result.matched).toHaveLength(1)
+    expect(result.unmatched).toHaveLength(0)
+  })
+
+  it('matches an installment total inside the short date window', () => {
+    const result = matchTransactions(
+      [installmentTx('2026-05-19', 21666.67, 3, 1)],
+      [exp('2026-05-21', 65000)],
     )
     expect(result.matched).toHaveLength(1)
     expect(result.unmatched).toHaveLength(0)

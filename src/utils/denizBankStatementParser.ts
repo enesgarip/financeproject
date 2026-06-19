@@ -1,5 +1,5 @@
 import { suggestExpenseCategory } from './categories'
-import { roundTL } from './money'
+import { diffTL, roundTL } from './money'
 
 export type ParsedTransaction = {
   date: string
@@ -45,6 +45,7 @@ const SECTION_CATEGORY: Record<string, string> = {
 }
 
 const SECTION_KEYS = Object.keys(SECTION_CATEGORY)
+const LOOSE_DATE_MATCH_WINDOW_DAYS = 3
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -70,6 +71,20 @@ function sectionCategoryFor(line: string): string | null {
   const upper = line.toUpperCase()
   const key = SECTION_KEYS.find((k) => upper.includes(k))
   return key ? (SECTION_CATEGORY[key] ?? null) : null
+}
+
+function isoDayNumber(value: string): number | null {
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  if (!match) return null
+  const [, year, month, day] = match
+  return Date.UTC(Number(year), Number(month) - 1, Number(day)) / 86_400_000
+}
+
+function dateDistanceDays(left: string, right: string): number | null {
+  const leftDay = isoDayNumber(left)
+  const rightDay = isoDayNumber(right)
+  if (leftDay == null || rightDay == null) return null
+  return Math.abs(leftDay - rightDay)
 }
 
 // ── Main parser ────────────────────────────────────────────────────────────
@@ -197,20 +212,27 @@ export function matchTransactions(
     // Taksitli işlem app'te orijinal tarih + TOPLAM tutarla bir harcama olarak
     // durur; bu yüzden eşleştirmede toplam tutarı kullanırız.
     const compareAmount = expenseTotalAmount(tx)
-    let found = false
+    const exactDateCandidates: number[] = []
+    const looseDateCandidates: Array<{ index: number; distance: number }> = []
     for (let i = 0; i < active.length; i++) {
       if (usedIndices.has(i)) continue
       const exp = active[i]
-      const sameDate = exp.spent_at === tx.date
-      const sameAmount = Math.abs(exp.amount - compareAmount) < 0.5
-      if (sameDate && sameAmount) {
-        usedIndices.add(i)
-        found = true
-        break
+      const sameAmount = Math.abs(diffTL(exp.amount, compareAmount)) <= 0.5
+      if (!sameAmount) continue
+
+      const distance = dateDistanceDays(exp.spent_at, tx.date)
+      if (distance === 0) exactDateCandidates.push(i)
+      else if (distance != null && distance <= LOOSE_DATE_MATCH_WINDOW_DAYS) {
+        looseDateCandidates.push({ index: i, distance })
       }
     }
-    if (found) matched.push(tx)
-    else unmatched.push(tx)
+    const foundIndex = exactDateCandidates[0] ?? looseDateCandidates.sort((left, right) => left.distance - right.distance)[0]?.index
+    if (foundIndex == null) {
+      unmatched.push(tx)
+    } else {
+      usedIndices.add(foundIndex)
+      matched.push(tx)
+    }
   }
 
   return { matched, unmatched }

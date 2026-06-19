@@ -52,6 +52,8 @@ export type MovementExpenseMatchRow = {
   description?: string | null
 }
 
+const LOOSE_DATE_MATCH_WINDOW_DAYS = 3
+
 const KNOWN_DETAILS = [
   'Otomatik Kredi Kartı Fatura Ödemesi',
   'Taksitli Satış',
@@ -139,6 +141,20 @@ function descriptionsCompatible(left: string, right: string | null | undefined) 
   return common >= Math.min(2, rightTokens.length)
 }
 
+function isoDayNumber(value: string): number | null {
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  if (!match) return null
+  const [, year, month, day] = match
+  return Date.UTC(Number(year), Number(month) - 1, Number(day)) / 86_400_000
+}
+
+function dateDistanceDays(left: string, right: string): number | null {
+  const leftDay = isoDayNumber(left)
+  const rightDay = isoDayNumber(right)
+  if (leftDay == null || rightDay == null) return null
+  return Math.abs(leftDay - rightDay)
+}
+
 export function parseDenizBankMovementPdf(text: string): ParsedDenizBankMovementFile {
   const lines = text.split('\n').map((line) => line.trim()).filter(Boolean)
   const movements: ParsedDenizBankMovement[] = []
@@ -198,18 +214,28 @@ export function matchDenizBankMovements(
   const unmatched: ParsedDenizBankMovement[] = []
 
   for (const movement of bankMovements) {
-    const candidates: number[] = []
+    const exactDateCandidates: number[] = []
+    const looseDateCandidates: Array<{ index: number; distance: number }> = []
     for (let index = 0; index < active.length; index++) {
       if (usedIndices.has(index)) continue
       const expense = active[index]
-      const sameDate = expense.spent_at === movement.date
       const sameAmount = Math.abs(diffTL(expense.amount, movement.amount)) <= 0.5
-      if (sameDate && sameAmount) candidates.push(index)
+      if (!sameAmount) continue
+
+      const distance = dateDistanceDays(expense.spent_at, movement.date)
+      if (distance === 0) exactDateCandidates.push(index)
+      else if (distance != null && distance <= LOOSE_DATE_MATCH_WINDOW_DAYS) {
+        looseDateCandidates.push({ index, distance })
+      }
     }
 
-    const preferred = candidates.find((index) => descriptionsCompatible(movement.description, active[index].description))
-    const fallback = candidates[0]
-    const foundIndex = preferred ?? fallback
+    const preferred = exactDateCandidates.find((index) => descriptionsCompatible(movement.description, active[index].description))
+    const fallback = exactDateCandidates[0]
+    const loosePreferred = looseDateCandidates
+      .sort((left, right) => left.distance - right.distance)
+      .find(({ index }) => descriptionsCompatible(movement.description, active[index].description))?.index
+    const looseFallback = looseDateCandidates[0]?.index
+    const foundIndex = preferred ?? fallback ?? loosePreferred ?? looseFallback
 
     if (foundIndex == null) {
       unmatched.push(movement)

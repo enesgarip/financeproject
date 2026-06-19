@@ -102,4 +102,24 @@ describe('matchDenizBankMovements', () => {
     expect(result.matched).toEqual([petrol])
     expect(result.unmatched).toHaveLength(0)
   })
+
+  it('matches user-written descriptions when date and amount are the same', () => {
+    const result = matchDenizBankMovements(
+      [petrol],
+      [{ spent_at: '2026-06-19', amount: 535, status: 'provision', description: 'Benzin aldım' }],
+    )
+
+    expect(result.matched).toEqual([petrol])
+    expect(result.unmatched).toHaveLength(0)
+  })
+
+  it('matches same amount within a short date window when bank posting date differs', () => {
+    const result = matchDenizBankMovements(
+      [petrol],
+      [{ spent_at: '2026-06-17', amount: 535, status: 'posted', description: 'Araba yakıt' }],
+    )
+
+    expect(result.matched).toEqual([petrol])
+    expect(result.unmatched).toHaveLength(0)
+  })
 })
