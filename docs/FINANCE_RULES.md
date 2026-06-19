@@ -122,6 +122,14 @@ On the cards page:
 - installment expense creation may generate `card_installments`
 - single-installment data is treated differently from multi-installment planning and is checked in data health
 
+Current movement reconciliation:
+
+- DenizBank internet-banking movement PDFs are an intra-period reconciliation source, not a statement cut.
+- `Bekleyen İşlem` rows import as `provision`; `Dönem İçi` spending rows import as `posted`.
+- `Hesaptan Ödeme` rows are not imported as card expenses.
+- `Taksitli Satış` rows are shown for manual review; the first implementation does not infer or recreate installment plans from current movement exports.
+- Imports use the existing `add_card_expense` RPC so card debt, provision/current-period fields, ledger events, and transaction history stay under the audited mutation path.
+
 ## Card Installment Rules
 
 From `src/utils/cardInstallmentCalendar.ts` and page logic:

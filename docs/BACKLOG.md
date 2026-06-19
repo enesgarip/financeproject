@@ -50,6 +50,9 @@
 
 ## P2 - UX / Maintainability
 
+- ~~Add DenizBank current movement PDF reconciliation.~~ DONE.
+  - Cards page now opens a current movement import flow for DenizBank internet banking PDFs.
+  - Pending rows import as provisions, posted spending imports as current-period expenses, payment rows are excluded, and installment rows are left for manual review.
 - Add "kasa modu" / spendable balance planning.
   - Let bank balances be mentally allocated into buckets such as emergency fund, taxes/insurance, vacation, investment, and spendable cash.
   - Keep the underlying bank balance unchanged; this is a planning overlay, not a ledger movement.

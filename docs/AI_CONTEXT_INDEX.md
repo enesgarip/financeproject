@@ -215,6 +215,7 @@ paylaşır; her sayfa süpersetini client-side daraltır). Query client: `src/ap
 | **Arama / metin normalizasyonu** | `utils/searchText.ts`, `utils/categories.ts`, `utils/bankBranding.ts` | — | `components/CrudPage.tsx`, `components/QuickActions.tsx`, `components/dashboard/DashboardCards.tsx`, `pages/AnalysisPage.reports.tsx` |
 | **Kart borcu / breakdown** | `utils/cardLedger.ts`, `utils/financeSummary.ts` (`clampCardBreakdown`) | `data/repositories/cardsRepo.ts`, `services/cardLedgerActions.ts` | `pages/CardsPage.tsx` (+ `.crud.tsx`, `.helpers.ts`, `.sections.tsx`, `.overview.tsx`, `.statements.tsx`, `.list.tsx`) |
 | **Ekstre / statement döngüsü** | `utils/cardStatement.ts`, `utils/statementCycle.ts`, `utils/statementReminder.ts` | `data/repositories/cardsRepo.ts` | `pages/CardsPage.tsx` |
+| **DenizBank güncel hareket mutabakatı** | `utils/denizBankMovementParser.ts` (+ `.test.ts`) | `data/repositories/cardsRepo.ts` (`fetchCardExpenseMatchRows`, `addCardExpense`) | `components/finance/CurrentMovementImportModal.tsx`, `pages/CardsPage.tsx`, `pages/CardsPage.list.tsx` |
 | **Taksit takvimi** | `utils/cardInstallmentCalendar.ts` | `data/repositories/cardsRepo.ts` | `pages/CardsPage.tsx` |
 | **Banka bakiyesi / hareket / mutabakat** | `utils/accountLedger.ts`, `utils/reconciliation.ts` | `data/repositories/financePanelsRepo.ts`, `services/accountLedgerActions.ts`, `services/accountMovements.ts` | `pages/CardsPage.tsx` |
 | **Kredi & taksitleri** | `utils/financeSummary.ts` (`projectLoanSummary`) | `data/repositories/loansRepo.ts` | `pages/LoansPage.tsx` |

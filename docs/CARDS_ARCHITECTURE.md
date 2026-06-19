@@ -30,6 +30,8 @@ repositories, services, or focused `CardsPage.*` modules.
 - `CardsPage.crud.tsx`: CRUD form mapping, grouping, row actions, list metadata
 - `CardsPage.helpers.ts`: card-specific pure helpers and date/month utilities
 - `CardsPage.movementModal.tsx`: account movement modal presentation
+- `components/finance/CurrentMovementImportModal.tsx`: DenizBank current movement
+  PDF reconciliation review/import flow
 
 Keep new UI in the closest focused module. Add a new module only when an
 existing module would start mixing unrelated responsibilities.
@@ -41,6 +43,9 @@ actions should use the repository/service layer:
 
 - card/provision/statement reads and provision actions:
   `src/data/repositories/cardsRepo.ts`
+- current movement reconciliation parses PDFs in
+  `src/utils/denizBankMovementParser.ts`, matches via
+  `fetchCardExpenseMatchRows`, and writes only through `add_card_expense`
 - account deposit, withdrawal, and account-to-account transfer:
   `src/services/accountMovements.ts`
 - card/account ledger recomputation actions:

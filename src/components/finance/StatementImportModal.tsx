@@ -14,6 +14,7 @@ import { formatCurrency } from '../../utils/formatCurrency'
 import { parseDenizBankStatement, matchTransactions, expenseTotalAmount, type ParsedTransaction } from '../../utils/denizBankStatementParser'
 import { diffTL, equalsTL, roundTL, sumTL } from '../../utils/money'
 import { parseStatementText } from '../../lib/statementParseClient'
+import { extractPdfText } from '../../lib/pdfText'
 
 /**
  * App'e güvenle otomatik aktarılabilen işlem mi?
@@ -25,56 +26,6 @@ import { parseStatementText } from '../../lib/statementParseClient'
 function isImportable(tx: ParsedTransaction): boolean {
   if (!tx.isInstallment) return true
   return tx.installmentNo === 1 && tx.installmentCount > 1
-}
-
-// ── PDF text extraction (lazy-loads pdfjs-dist) ───────────────────────────
-
-async function extractPdfText(file: File): Promise<string> {
-  const pdfjsLib = await import('pdfjs-dist')
-  pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
-    'pdfjs-dist/build/pdf.worker.min.mjs',
-    import.meta.url,
-  ).toString()
-
-  const buffer = await file.arrayBuffer()
-  const pdf = await pdfjsLib.getDocument({ data: buffer }).promise
-  const pageTexts: string[] = []
-
-  for (let p = 1; p <= pdf.numPages; p++) {
-    const page = await pdf.getPage(p)
-    const content = await page.getTextContent()
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const items = (content.items as any[]).filter(
-      (i) => typeof i.str === 'string' && Array.isArray(i.transform),
-    ) as Array<{ str: string; transform: number[] }>
-
-    // Sort: Y descending (PDF origin is bottom-left), then X ascending
-    items.sort((a, b) => {
-      const dy = b.transform[5] - a.transform[5]
-      if (Math.abs(dy) > 3) return dy
-      return a.transform[4] - b.transform[4]
-    })
-
-    // Group into rows by Y proximity
-    const rows: string[][] = []
-    let currentRow: string[] = []
-    let lastY: number | null = null
-    for (const item of items) {
-      const y = item.transform[5]
-      if (lastY !== null && Math.abs(y - lastY) > 3) {
-        if (currentRow.length) rows.push(currentRow)
-        currentRow = []
-      }
-      if (item.str.trim()) currentRow.push(item.str.trim())
-      lastY = y
-    }
-    if (currentRow.length) rows.push(currentRow)
-
-    pageTexts.push(rows.map((r) => r.join(' ')).join('\n'))
-  }
-
-  return pageTexts.join('\n')
 }
 
 // ── Component ─────────────────────────────────────────────────────────────

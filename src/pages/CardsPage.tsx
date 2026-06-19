@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { CrudPage } from '../components/CrudPage'
+import { CurrentMovementImportModal } from '../components/finance/CurrentMovementImportModal'
 import { FinancePaymentDrawer } from '../components/finance/FinancePaymentDrawer'
 import { StatementImportModal } from '../components/finance/StatementImportModal'
 import { CardInstallmentCalendarPanel } from '../components/finance/CardInstallmentCalendarPanel'
@@ -79,6 +80,7 @@ export function CardsPage() {
   } = useAccountMovementModal({ invalidateSnapshot, reloadCards, setReloadCards })
   const { drawerProps, openPaymentDrawer } = useFinancePaymentDrawer()
   const [importCard, setImportCard] = useState<Card | null>(null)
+  const [movementImportCard, setMovementImportCard] = useState<Card | null>(null)
 
   async function openStatementPayment(statement: CardStatementArchive, card: Card, cards: Card[], reload: () => Promise<void>) {
     await openPaymentDrawer(
@@ -231,6 +233,7 @@ export function CardsPage() {
             onTransfer={(source) => openTransaction(source, helpers.reload, helpers.rows as Card[], 'transfer')}
             onAddExpense={focusQuickExpense}
             onImportStatement={setImportCard}
+            onImportMovements={setMovementImportCard}
             onChanged={() => refreshCardsAndProvisions(helpers.reload)}
           />
         )}
@@ -264,6 +267,17 @@ export function CardsPage() {
           onClose={() => setImportCard(null)}
           onSuccess={() => {
             setImportCard(null)
+            void Promise.all([reloadCards?.(), loadStatements(), loadInstallments(), invalidateSnapshot()])
+          }}
+        />
+      )}
+
+      {movementImportCard && (
+        <CurrentMovementImportModal
+          card={movementImportCard}
+          onClose={() => setMovementImportCard(null)}
+          onSuccess={() => {
+            setMovementImportCard(null)
             void Promise.all([reloadCards?.(), loadStatements(), loadInstallments(), invalidateSnapshot()])
           }}
         />

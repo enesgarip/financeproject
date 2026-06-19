@@ -32,6 +32,7 @@ export function CreditAccountListCard({
   onTransfer,
   onAddExpense,
   onImportStatement,
+  onImportMovements,
   onChanged,
 }: {
   row: Card
@@ -43,6 +44,7 @@ export function CreditAccountListCard({
   onTransfer: (source: Card) => void
   onAddExpense: (card: Card, mode: 'cash' | 'installment') => void
   onImportStatement: (card: Card) => void
+  onImportMovements: (card: Card) => void
   onChanged?: () => void | Promise<void>
 }) {
   const [detailsOpen, setDetailsOpen] = useState(false)
@@ -190,7 +192,7 @@ export function CreditAccountListCard({
         </div>
       </div>
 
-      <div className="mt-3 grid grid-cols-2 gap-2 min-[520px]:grid-cols-4">
+      <div className="mt-3 grid grid-cols-2 gap-2 min-[620px]:grid-cols-5">
         <button
           type="button"
           onClick={() => setDetailsOpen((current) => !current)}
@@ -212,6 +214,13 @@ export function CreditAccountListCard({
           className="finance-touch-target inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-xs font-black text-foreground shadow-sm transition hover:bg-muted"
         >
           Ekstre içe aktar
+        </button>
+        <button
+          type="button"
+          onClick={() => onImportMovements(row)}
+          className="finance-touch-target inline-flex items-center justify-center rounded-lg border border-border bg-card px-3 py-2 text-xs font-black text-foreground shadow-sm transition hover:bg-muted"
+        >
+          Mutabakat
         </button>
         <button
           type="button"

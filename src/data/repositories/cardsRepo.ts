@@ -2,7 +2,7 @@ import { supabase } from '../../lib/supabase'
 import type { Card, CardExpense, CardInstallment, CardStatementArchive } from '../../types/database'
 import { ok, resultFromSupabase, voidResultFromSupabase, type Result } from '../result'
 
-export type ExpenseMatchRow = Pick<CardExpense, 'spent_at' | 'amount' | 'status'>
+export type ExpenseMatchRow = Pick<CardExpense, 'spent_at' | 'amount' | 'status' | 'description'>
 
 export async function fetchCards(): Promise<Result<Card[]>> {
   const { data, error } = await supabase.from('cards').select('*')
@@ -71,7 +71,7 @@ export async function fetchPostedInstallmentExpenses(limit: number): Promise<Res
 export async function fetchCardExpenseMatchRows(cardId: string): Promise<Result<ExpenseMatchRow[]>> {
   const { data, error } = await supabase
     .from('card_expenses')
-    .select('spent_at, amount, status')
+    .select('spent_at, amount, status, description')
     .eq('card_id', cardId)
 
   return resultFromSupabase((data ?? []) as ExpenseMatchRow[], error, 'Kart harcamalari yuklenemedi.')
