@@ -7,6 +7,7 @@ import {
   fetchCardExpenseMatchRows,
   fetchCardPaymentMatchRows,
   payPaymentFromCardImport,
+  resetCardData,
   type ExpenseMatchRow,
   type PaymentMatchRow,
 } from '../../data/repositories/cardsRepo'
@@ -72,6 +73,7 @@ function isMobileDevice() {
   return window.innerWidth < 768
 }
 
+
 export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) {
   useBodyScrollLock(true)
 
@@ -92,6 +94,9 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
   const [payments, setPayments] = useState<ParsedDenizBankPayment[]>([])
   const [ignoredCount, setIgnoredCount] = useState(0)
   const [periodLabel, setPeriodLabel] = useState('')
+
+  const [cleanImport, setCleanImport] = useState(false)
+  const [allMovements, setAllMovements] = useState<ParsedDenizBankMovement[]>([])
 
   const [selectedImport, setSelectedImport] = useState<Set<string>>(new Set())
   const [selectedCancel, setSelectedCancel] = useState<Set<string>>(new Set())
@@ -114,6 +119,22 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
       const parsed = parseDenizBankMovementPdf(text)
       if (!parsed.movements.length && !parsed.payments.length) {
         setParseError('DenizBank hareket tablosu okunamadı.')
+        return
+      }
+
+      setAllMovements(parsed.movements)
+      setPayments(parsed.payments)
+      setIgnoredCount(parsed.ignoredRows.length)
+
+      if (cleanImport) {
+        setMatched([])
+        setMatches([])
+        setBankOnly([])
+        setAppOnly([])
+        setManualReview([])
+        setPlannedPaymentMatches([])
+        setPeriodLabel('')
+        setStep('review')
         return
       }
 
@@ -170,8 +191,6 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
       setBankOnly(nextBankOnly)
       setAppOnly(nextAppOnly)
       setManualReview(nextManual)
-      setPayments(parsed.payments)
-      setIgnoredCount(parsed.ignoredRows.length)
       setSelectedImport(new Set())
       setSelectedCancel(new Set())
       setStep('review')
@@ -180,7 +199,7 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
     } finally {
       setParsing(false)
     }
-  }, [card])
+  }, [card, cleanImport])
 
   function toggleImportAll() {
     if (selectedImport.size === bankOnly.length) setSelectedImport(new Set())
@@ -208,6 +227,47 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
       else next.add(key)
       return next
     })
+  }
+
+  async function handleCleanImport() {
+    if (!allMovements.length) return
+
+    setApplying(true)
+    setApplyError('')
+
+    const resetResult = await resetCardData(card.id)
+    if (!resetResult.ok) {
+      setApplyError(`Sıfırlama başarısız: ${resetResult.error.message ?? 'Bilinmeyen hata.'}`)
+      setApplying(false)
+      return
+    }
+
+    let successCount = 0
+    const errors: string[] = []
+
+    for (const movement of allMovements) {
+      const result = await addCardExpense({
+        cardId: card.id,
+        amount: movement.amount,
+        description: movement.description,
+        spentAt: movement.date,
+        installmentCount: 1,
+        category: movement.category,
+        status: movement.appStatus,
+      })
+      if (!result.ok) errors.push(`${movement.description}: ${result.error.message ?? 'Bilinmeyen hata.'}`)
+      else successCount++
+    }
+
+    if (!successCount) {
+      setApplyError(`İçe aktarma başarısız: ${errors[0] ?? 'Bilinmeyen hata.'}`)
+      setApplying(false)
+      return
+    }
+
+    setResultMessage(`Kart sıfırlandı, ${successCount} hareket içe aktarıldı`)
+    setApplying(false)
+    setStep('done')
   }
 
   async function handleApply() {
@@ -303,9 +363,26 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
             ) : (
               <>
                 <p className="text-sm text-muted-foreground">
-                  DenizBank internet bankacılığından alınan kredi kartı hareket PDF'ini seç.
-                  Banka hareketleri ile app kayıtları karşılaştırılacak.
+                  DenizBank internet bankacılığından alınan kredi kartı hareket PDF&apos;ini seç.
+                  {cleanImport
+                    ? ' Kartın tüm verileri sıfırlanıp PDF\'ten yeniden kurulacak.'
+                    : ' Banka hareketleri ile app kayıtları karşılaştırılacak.'}
                 </p>
+
+                <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-border bg-muted/30 p-3">
+                  <input
+                    type="checkbox"
+                    checked={cleanImport}
+                    onChange={(e) => setCleanImport(e.target.checked)}
+                    className="size-4 accent-warning"
+                  />
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-foreground">Sıfırlayıp PDF&apos;ten kur</p>
+                    <p className="text-[11px] text-muted-foreground">
+                      Kartın mevcut harcamaları silinir, PDF&apos;teki tüm hareketler baştan yüklenir.
+                    </p>
+                  </div>
+                </label>
 
                 <button
                   type="button"
@@ -346,8 +423,62 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
           </div>
         )}
 
+        {/* Review step — clean import view */}
+        {step === 'review' && cleanImport && (
+          <div className="flex max-h-[76vh] flex-col">
+            <div className="space-y-3 border-b border-border p-4">
+              <div className="flex items-start gap-2 rounded-lg bg-warning/10 p-3 text-sm text-warning">
+                <AlertCircle size={15} className="mt-0.5 shrink-0" />
+                <div>
+                  <p className="font-bold">Kartın tüm harcamaları silinecek</p>
+                  <p className="mt-0.5 text-xs text-warning/80">
+                    Mevcut harcamalar, taksitler ve ekstre arşivleri kaldırılıp aşağıdaki {allMovements.length} hareket baştan yüklenecek.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto">
+              {allMovements.map((movement, index) => (
+                <div
+                  key={`clean-${movement.date}-${movement.amount}-${index}`}
+                  className="flex items-center gap-3 border-b border-border/50 px-4 py-2.5"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-xs font-bold text-foreground">{movement.description}</p>
+                    <p className="text-[11px] text-muted-foreground">
+                      {formatShortDate(movement.date)} · {movement.category}
+                      {movement.isInstallment && ` · ${movement.detail || 'Taksitli'}`}
+                    </p>
+                  </div>
+                  <span className="shrink-0 text-xs font-black text-foreground">{formatCurrency(movement.amount)}</span>
+                </div>
+              ))}
+            </div>
+
+            {applyError && (
+              <p className="mx-4 mt-2 flex items-center gap-2 rounded-lg bg-destructive/10 p-3 text-xs text-destructive">
+                <AlertCircle size={13} className="shrink-0" />
+                {applyError}
+              </p>
+            )}
+
+            <div className="border-t border-border p-4">
+              <button
+                type="button"
+                disabled={applying || !allMovements.length}
+                onClick={() => void handleCleanImport()}
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-warning py-3 text-sm font-black text-white disabled:opacity-55"
+              >
+                {applying && <Loader2 size={15} className="animate-spin" />}
+                {applying ? 'Sıfırlanıyor...' : `Sıfırla ve ${allMovements.length} hareketi aktar`}
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Review step — conflict-resolution view */}
-        {step === 'review' && (
+        {step === 'review' && !cleanImport && (
           <div className="flex max-h-[76vh] flex-col">
             {/* Summary */}
             <div className="space-y-3 border-b border-border p-4">
