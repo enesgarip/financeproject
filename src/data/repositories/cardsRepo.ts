@@ -173,6 +173,28 @@ export async function cutCardStatement(cardId: string): Promise<Result<void>> {
   return voidResultFromSupabase(error, 'Ekstre kesilemedi.')
 }
 
+export async function insertGuardStatementArchive(
+  userId: string,
+  cardId: string,
+  periodYear: number,
+  periodMonth: number,
+  statementDate: string,
+): Promise<Result<void>> {
+  const { error } = await supabase.from('card_statement_archives').insert({
+    user_id: userId,
+    card_id: cardId,
+    period_year: periodYear,
+    period_month: periodMonth,
+    statement_date: statementDate,
+    statement_debt_amount: 0,
+    current_period_spending: 0,
+    total_debt_amount: 0,
+    status: 'paid',
+    note: 'Clean import guard — ekstre kesimi engellendi.',
+  })
+  return voidResultFromSupabase(error, 'Guard arsiv kaydedilemedi.')
+}
+
 export type StatementReconciliationInput = {
   cardId: string
   periodYear: number

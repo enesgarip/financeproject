@@ -6,6 +6,7 @@ import {
   cancelCardExpense,
   fetchCardExpenseMatchRows,
   fetchCardPaymentMatchRows,
+  insertGuardStatementArchive,
   payPaymentFromCardImport,
   resetCardData,
   type ExpenseMatchRow,
@@ -276,6 +277,27 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
     }
 
     if (user) {
+      // Guard archive: prevent cut_due_card_statements from auto-cutting
+      if (card.card_type === 'kredi_karti' && card.statement_day) {
+        const now = new Date()
+        const y = now.getFullYear()
+        const m = now.getMonth()
+        const lastDay = new Date(y, m + 1, 0).getDate()
+        const sd = Math.min(card.statement_day, lastDay)
+        const boundary = new Date(y, m, sd)
+        if (now > boundary) {
+          const dateStr = boundary.toISOString().slice(0, 10)
+          await insertGuardStatementArchive(user.id, card.id, y, m + 1, dateStr)
+        } else {
+          const prev = new Date(y, m - 1, 1)
+          const prevLastDay = new Date(prev.getFullYear(), prev.getMonth() + 1, 0).getDate()
+          const prevSd = Math.min(card.statement_day, prevLastDay)
+          const prevBoundary = new Date(prev.getFullYear(), prev.getMonth(), prevSd)
+          const dateStr = prevBoundary.toISOString().slice(0, 10)
+          await insertGuardStatementArchive(user.id, card.id, prev.getFullYear(), prev.getMonth() + 1, dateStr)
+        }
+      }
+
       const pdfTotal = sumTL(allMovements.map((m) => {
         const tc = installmentCounts.get(allMovements.indexOf(m)) ?? m.installmentCount
         const knownP = m.isInstallment && tc > 1
