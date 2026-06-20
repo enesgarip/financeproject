@@ -354,13 +354,15 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
 
                 <div className="flex-1 overflow-y-auto">
                   {importable.map((movement, index) => (
-                    <label
+                    <div
                       key={`${movement.date}-${movement.description}-${movement.amount}-${index}`}
+                      onClick={() => toggleRow(index)}
                       className="flex cursor-pointer items-center gap-3 border-b border-border/50 px-4 py-2.5 hover:bg-muted/30"
                     >
                       <input
                         type="checkbox"
                         checked={selected.has(index)}
+                        onClick={(event) => event.stopPropagation()}
                         onChange={() => toggleRow(index)}
                         className="size-4 accent-primary"
                       />
@@ -378,7 +380,7 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
                       <span className="shrink-0 text-right text-xs font-black text-foreground">
                         {formatCurrency(movement.amount)}
                       </span>
-                    </label>
+                    </div>
                   ))}
                 </div>
 

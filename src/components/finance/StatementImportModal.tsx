@@ -577,13 +577,15 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
                       ? roundTL(tx.amount * planCount)
                       : tx.amount
                     return (
-                      <label
+                      <div
                         key={i}
+                        onClick={() => toggleRow(i)}
                         className="flex cursor-pointer items-center gap-3 border-b border-border/50 px-4 py-2.5 hover:bg-muted/30"
                       >
                         <input
                           type="checkbox"
                           checked={selected.has(i)}
+                          onClick={(event) => event.stopPropagation()}
                           onChange={() => toggleRow(i)}
                           className="size-4 accent-primary"
                         />
@@ -602,7 +604,7 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
                             </span>
                           )}
                         </span>
-                      </label>
+                      </div>
                     )
                   })}
                 </div>
