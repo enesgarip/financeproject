@@ -65,6 +65,22 @@ describe('parseDenizBankMovementPdf', () => {
       'BEYLER OPTİK Peş. Taksit 2.Tk Anapara',
     ])
   })
+
+  it('parses installment number from "Peş. Taksit N.Tk" format', () => {
+    const result = parseDenizBankMovementPdf(SAMPLE_TEXT)
+    const mediaMarkt = result.movements.find((m) => m.description.includes('MEDIA MARKT'))
+    const beyler = result.movements.find((m) => m.description.includes('BEYLER OPTİK'))
+
+    expect(mediaMarkt).toMatchObject({ installmentNo: 1, installmentCount: 0 })
+    expect(beyler).toMatchObject({ installmentNo: 2, installmentCount: 0 })
+  })
+
+  it('sets installmentNo=1 and installmentCount=1 for non-installment rows', () => {
+    const result = parseDenizBankMovementPdf(SAMPLE_TEXT)
+    const flexStore = result.movements.find((m) => m.description.includes('FLEX STORE'))
+
+    expect(flexStore).toMatchObject({ installmentNo: 1, installmentCount: 1, isInstallment: false })
+  })
 })
 
 describe('matchDenizBankMovements', () => {

@@ -156,8 +156,12 @@ function isInstallmentRow(description: string, detail: string): boolean {
 
 function parseInstallmentInfo(description: string, detail: string): { no: number; count: number } {
   const combined = `${description} ${detail}`
-  const match = combined.match(/(\d+)\s*\/\s*(\d+)\s*taksit/i)
-  if (match) return { no: Math.max(1, Number(match[1])), count: Math.max(1, Number(match[2])) }
+  // "2/6 taksit" formatı (ekstre)
+  const slashMatch = combined.match(/(\d+)\s*\/\s*(\d+)\s*taksit/i)
+  if (slashMatch) return { no: Math.max(1, Number(slashMatch[1])), count: Math.max(1, Number(slashMatch[2])) }
+  // "Peş. Taksit 2.Tk" formatı (güncel hareket PDF) — toplam taksit sayısı PDF'te yok
+  const tkMatch = combined.match(/taksit\s+(\d+)\.?\s*tk/i)
+  if (tkMatch) return { no: Math.max(1, Number(tkMatch[1])), count: 0 }
   return { no: 1, count: 1 }
 }
 

@@ -452,7 +452,9 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
                     <p className="truncate text-xs font-bold text-foreground">{movement.description}</p>
                     <p className="text-[11px] text-muted-foreground">
                       {formatShortDate(movement.date)} · {movement.category}
-                      {movement.isInstallment && ` · ${movement.installmentNo}/${movement.installmentCount} taksit (kalan ${Math.max(1, movement.installmentCount - movement.installmentNo + 1)})`}
+                      {movement.isInstallment && (movement.installmentCount > 1
+                        ? ` · ${movement.installmentNo}/${movement.installmentCount} taksit (kalan ${Math.max(1, movement.installmentCount - movement.installmentNo + 1)})`
+                        : ` · ${movement.installmentNo}. taksit`)}
                     </p>
                   </div>
                   <span className="shrink-0 text-xs font-black text-foreground">{formatCurrency(movement.amount)}</span>
