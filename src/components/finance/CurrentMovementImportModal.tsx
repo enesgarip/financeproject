@@ -24,7 +24,7 @@ import {
 } from '../../utils/denizBankMovementParser'
 import { formatCurrency } from '../../utils/formatCurrency'
 import { dateRangeFromIsoDates, rowsInReviewPeriod } from '../../utils/importReviewPeriod'
-import { sumTL } from '../../utils/money'
+import { roundTL, sumTL } from '../../utils/money'
 import { getCardStatementPeriod } from '../../utils/cardStatement'
 import { useBodyScrollLock } from '../ui/use-body-scroll-lock'
 
@@ -245,13 +245,17 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
     let successCount = 0
     const errors: string[] = []
 
+    const today = new Date().toISOString().slice(0, 10)
+
     for (const movement of allMovements) {
+      const knownPlan = movement.isInstallment && movement.installmentCount > 1
+      const remaining = knownPlan ? Math.max(1, movement.installmentCount - movement.installmentNo + 1) : 1
       const result = await addCardExpense({
         cardId: card.id,
-        amount: movement.amount,
+        amount: knownPlan ? roundTL(movement.amount * remaining) : movement.amount,
         description: movement.description,
-        spentAt: movement.date,
-        installmentCount: 1,
+        spentAt: knownPlan ? today : movement.date,
+        installmentCount: knownPlan ? remaining : 1,
         category: movement.category,
         status: movement.appStatus,
       })
@@ -448,7 +452,7 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
                     <p className="truncate text-xs font-bold text-foreground">{movement.description}</p>
                     <p className="text-[11px] text-muted-foreground">
                       {formatShortDate(movement.date)} · {movement.category}
-                      {movement.isInstallment && ` · ${movement.detail || 'Taksitli'}`}
+                      {movement.isInstallment && ` · ${movement.installmentNo}/${movement.installmentCount} taksit (kalan ${Math.max(1, movement.installmentCount - movement.installmentNo + 1)})`}
                     </p>
                   </div>
                   <span className="shrink-0 text-xs font-black text-foreground">{formatCurrency(movement.amount)}</span>

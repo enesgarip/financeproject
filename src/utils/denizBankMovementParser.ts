@@ -18,6 +18,8 @@ export type ParsedDenizBankMovement = {
   bonus: number
   category: string
   isInstallment: boolean
+  installmentNo: number
+  installmentCount: number
   rawLine: string
 }
 
@@ -152,6 +154,13 @@ function isInstallmentRow(description: string, detail: string): boolean {
   return normalizeSearchText(`${description} ${detail}`).includes('taksit')
 }
 
+function parseInstallmentInfo(description: string, detail: string): { no: number; count: number } {
+  const combined = `${description} ${detail}`
+  const match = combined.match(/(\d+)\s*\/\s*(\d+)\s*taksit/i)
+  if (match) return { no: Math.max(1, Number(match[1])), count: Math.max(1, Number(match[2])) }
+  return { no: 1, count: 1 }
+}
+
 function cardLastFour(cardNo: string): string {
   return cardNo.replace(/\s/g, '').slice(-4)
 }
@@ -241,11 +250,16 @@ export function parseDenizBankMovementPdf(text: string): ParsedDenizBankMovement
       continue
     }
 
+    const isInstallment = isInstallmentRow(description, detail)
+    const installmentInfo = isInstallment ? parseInstallmentInfo(description, detail) : { no: 1, count: 1 }
+
     movements.push({
       ...base,
       appStatus,
       category: suggestExpenseCategory(description) ?? 'Diğer',
-      isInstallment: isInstallmentRow(description, detail),
+      isInstallment,
+      installmentNo: installmentInfo.no,
+      installmentCount: installmentInfo.count,
     })
   }
 

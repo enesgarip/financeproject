@@ -79,6 +79,8 @@ function transactionMovementAdapter(tx: ParsedTransaction, index: number): Parse
     bonus: 0,
     category: tx.category,
     isInstallment: tx.isInstallment,
+    installmentNo: tx.installmentNo,
+    installmentCount: tx.installmentCount,
     rawLine: String(index),
   }
 }
