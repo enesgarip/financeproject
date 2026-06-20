@@ -110,6 +110,10 @@
   - `pages/AnalysisPage.activity.tsx`: ActivityFeedPanel — kaynak filtresi, pagination, renk kodlu yön (inflow/outflow).
   - `data/repositories/financePanelsRepo.ts`: tüm ledger'ları çeken `fetchRecentCardLedgerEvents` / `fetchRecentAccountLedgerEvents`.
 
+- ~~Veri modeli sadeleştirme — türetilmiş alan tutarlılık özeti.~~ DONE.
+  - DataHealth sayfasına "Türetilmiş alan tutarlılığı" kartı eklendi: kart borcu, hesap bakiye, borç kırılımı ve kredi özeti sapma sayıları tek bakışta görünür.
+  - Mevcut DataHealth kontrolleri (`checkLedgerDrift`, `checkCards` split, `checkLoans` totals) zaten kapsamlı; yeni kart bunları özetliyor.
+
 ## P3 - Nice to Have
 
 - Add goal-based automatic saving suggestions.

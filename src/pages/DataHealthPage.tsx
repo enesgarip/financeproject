@@ -71,6 +71,26 @@ export function DataHealthPage() {
     missingDescriptions: visibleIssues.find((issue) => issue.id === 'card-expense-missing-description')?.payload?.ids?.length ?? 0,
     missingCategories: visibleIssues.find((issue) => issue.id === 'card-expense-missing-category')?.payload?.ids?.length ?? 0,
   }
+  const derivedFieldStats = useMemo(() => {
+    const creditCards = data.cards.filter((c) => c.card_type === 'kredi_karti')
+    const bankCards = data.cards.filter((c) => c.card_type === 'banka_karti')
+    const debtDriftCount = visibleIssues.filter((issue) => issue.id.startsWith('card-ledger-drift-')).length
+    const balanceDriftCount = visibleIssues.filter((issue) => issue.id.startsWith('account-ledger-drift-')).length
+    const splitDriftCount = visibleIssues.filter((issue) => issue.id.startsWith('card-split-')).length
+    const loanDriftCount = visibleIssues.filter((issue) => issue.id.startsWith('loan-totals-')).length
+    return {
+      debtOk: creditCards.length - debtDriftCount,
+      debtDrift: debtDriftCount,
+      balanceOk: bankCards.length - balanceDriftCount,
+      balanceDrift: balanceDriftCount,
+      splitOk: creditCards.length - splitDriftCount,
+      splitDrift: splitDriftCount,
+      loanOk: data.loans.length - loanDriftCount,
+      loanDrift: loanDriftCount,
+      totalChecked: creditCards.length + bankCards.length + data.loans.length,
+      totalDrift: debtDriftCount + balanceDriftCount + splitDriftCount + loanDriftCount,
+    }
+  }, [data.cards, data.loans, visibleIssues])
 
   async function handleFix(issue: HealthIssue) {
     setFixingId(issue.id)
@@ -223,6 +243,28 @@ export function DataHealthPage() {
         </SurfaceCard>
 
         {!loading && data.cards.length > 0 ? <LiveReconciliationPanel cards={data.cards} /> : null}
+
+        {!loading ? (
+          <SurfaceCard variant="default">
+            <CardContent className="space-y-3 p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h2 className="font-bold text-foreground">Türetilmiş alan tutarlılığı</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">DB'deki özet alanları (borç, bakiye, kredi kalanı) kaynak verilerle eşleşiyor mu?</p>
+                </div>
+                <Badge variant={derivedFieldStats.totalDrift > 0 ? 'warning' : 'success'}>
+                  {derivedFieldStats.totalDrift === 0 ? 'Tutarlı' : `${derivedFieldStats.totalDrift} sapma`}
+                </Badge>
+              </div>
+              <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+                <HealthStat label="Kart borcu" value={derivedFieldStats.debtOk} tone={derivedFieldStats.debtDrift > 0 ? 'warning' : 'neutral'} />
+                <HealthStat label="Hesap bakiye" value={derivedFieldStats.balanceOk} tone={derivedFieldStats.balanceDrift > 0 ? 'warning' : 'neutral'} />
+                <HealthStat label="Borç kırılımı" value={derivedFieldStats.splitOk} tone={derivedFieldStats.splitDrift > 0 ? 'warning' : 'neutral'} />
+                <HealthStat label="Kredi özeti" value={derivedFieldStats.loanOk} tone={derivedFieldStats.loanDrift > 0 ? 'warning' : 'neutral'} />
+              </div>
+            </CardContent>
+          </SurfaceCard>
+        ) : null}
 
         {!loading ? (
           <SurfaceCard variant="default">
