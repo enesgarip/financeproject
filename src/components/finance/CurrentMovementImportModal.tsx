@@ -11,6 +11,8 @@ import {
   type ExpenseMatchRow,
   type PaymentMatchRow,
 } from '../../data/repositories/cardsRepo'
+import { useAuth } from '../../auth/useAuth'
+import { insertAccountReconciliation } from '../../data/repositories/financePanelsRepo'
 import { extractPdfText } from '../../lib/pdfText'
 import type { Card } from '../../types/database'
 import {
@@ -76,6 +78,7 @@ function isMobileDevice() {
 
 export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) {
   useBodyScrollLock(true)
+  const { user } = useAuth()
 
   const [step, setStep] = useState<Step>('upload')
   const [parsing, setParsing] = useState(false)
@@ -270,6 +273,24 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
       setApplyError(`İçe aktarma başarısız: ${errors[0] ?? 'Bilinmeyen hata.'}`)
       setApplying(false)
       return
+    }
+
+    if (user) {
+      const pdfTotal = sumTL(allMovements.map((m) => {
+        const tc = installmentCounts.get(allMovements.indexOf(m)) ?? m.installmentCount
+        const knownP = m.isInstallment && tc > 1
+        const rem = knownP ? Math.max(1, tc - m.installmentNo + 1) : 1
+        return knownP ? roundTL(m.amount * rem) : m.amount
+      }))
+      await insertAccountReconciliation({
+        user_id: user.id,
+        card_id: card.id,
+        target: 'debt',
+        app_amount: pdfTotal,
+        real_amount: pdfTotal,
+        drift: 0,
+        reconciled_at: new Date().toISOString(),
+      })
     }
 
     setResultMessage(`Kart sıfırlandı, ${successCount} hareket içe aktarıldı`)
