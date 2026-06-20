@@ -33,6 +33,7 @@ type ObligationsCalendarProps = {
 
 const WEEK_DAYS = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz']
 const MONTH_LABEL = new Intl.DateTimeFormat('tr-TR', { month: 'long', year: 'numeric' })
+const COMPACT_AMOUNT_FORMAT = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 0 })
 
 function addDays(value: Date, days: number) {
   const next = new Date(value)
@@ -97,10 +98,34 @@ function obligationIcon(item: FinanceObligation) {
 }
 
 function dayTotals(items: FinanceObligation[]) {
+  const cashImpact = (item: FinanceObligation) => item.cashImpactAmount ?? item.amount
+
   return {
-    outflow: sumTL(items.filter((item) => item.direction === 'outflow').map((item) => item.amount)),
-    inflow: sumTL(items.filter((item) => item.direction === 'inflow').map((item) => item.amount)),
+    outflow: sumTL(items.filter((item) => item.direction === 'outflow').map(cashImpact)),
+    inflow: sumTL(items.filter((item) => item.direction === 'inflow').map(cashImpact)),
+    cardSettled: sumTL(items.filter((item) => item.settlement === 'credit_card').map((item) => item.amount)),
   }
+}
+
+function formatCalendarCellAmount(value: number) {
+  if (value >= 1000) return `₺${COMPACT_AMOUNT_FORMAT.format(value / 1000)}K`
+  return `₺${COMPACT_AMOUNT_FORMAT.format(value)}`
+}
+
+function calendarCellAmountLabel(totals: ReturnType<typeof dayTotals>) {
+  if (totals.outflow > 0) {
+    return { compact: formatCalendarCellAmount(totals.outflow), full: formatCurrency(totals.outflow) }
+  }
+
+  if (totals.inflow > 0) {
+    return { compact: formatCalendarCellAmount(totals.inflow), full: formatCurrency(totals.inflow) }
+  }
+
+  if (totals.cardSettled > 0) {
+    return { compact: formatCalendarCellAmount(totals.cardSettled), full: `Kart ${formatCurrency(totals.cardSettled)}` }
+  }
+
+  return null
 }
 
 function SummaryStat({ label, value, tone = 'neutral' }: { label: string; value: string; tone?: 'neutral' | 'danger' | 'success' }) {
@@ -187,6 +212,7 @@ export function ObligationsCalendar({ data, loading = false, onPayObligation }: 
               {cells.map((cell) => {
                 const dayItems = groupedByDate.get(cell.key) ?? []
                 const totals = dayTotals(dayItems)
+                const amountLabel = calendarCellAmountLabel(totals)
                 const isSelected = cell.key === selectedDateInMonth
                 const isToday = cell.key === today
                 const hasItems = dayItems.length > 0
@@ -208,12 +234,26 @@ export function ObligationsCalendar({ data, loading = false, onPayObligation }: 
                     </span>
                     {hasItems ? (
                       <span className="mt-auto flex min-w-0 flex-col gap-1">
-                        <span className="truncate text-[10px] font-bold tabular-nums text-destructive sm:text-xs">
-                          {totals.outflow > 0 ? formatCurrency(totals.outflow) : totals.inflow > 0 ? formatCurrency(totals.inflow) : ''}
+                        <span className={cn(
+                          'truncate text-[10px] font-bold tabular-nums sm:text-xs',
+                          totals.outflow > 0 ? 'text-destructive' : totals.inflow > 0 ? 'text-success' : 'text-info',
+                        )}>
+                          {amountLabel ? (
+                            <>
+                              <span className="sm:hidden">{amountLabel.compact}</span>
+                              <span className="hidden sm:inline">{amountLabel.full}</span>
+                            </>
+                          ) : null}
                         </span>
                         <span className="flex items-center gap-1">
-                          <span className={cn('size-1.5 rounded-full', totals.outflow > 0 ? 'bg-destructive' : 'bg-success')} />
-                          <span className="truncate text-[10px] font-semibold text-muted-foreground">{dayItems.length} kayıt</span>
+                          <span className={cn(
+                            'size-1.5 rounded-full',
+                            totals.outflow > 0 ? 'bg-destructive' : totals.inflow > 0 ? 'bg-success' : 'bg-info',
+                          )} />
+                          <span className="truncate text-[10px] font-semibold text-muted-foreground">
+                            <span className="sm:hidden">{dayItems.length}</span>
+                            <span className="hidden sm:inline">{dayItems.length} kayıt</span>
+                          </span>
                         </span>
                       </span>
                     ) : null}

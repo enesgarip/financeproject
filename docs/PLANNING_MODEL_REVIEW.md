@@ -17,6 +17,7 @@ In practice, the shared model is `FinanceObligation`:
 - payments-page obligation calendar
 - shared payment drawer intents
 - cash-flow forecast buckets
+- monthly cash-flow summaries
 
 All of those surfaces should continue to consume `buildFinanceObligationsForMonth`
 or `buildFinanceObligationsForRange` instead of re-implementing date/amount
@@ -66,6 +67,22 @@ instead of raw `amount`. The calendar can still list credit-card-settled loads
 with their full `amount`, but the signed day total should represent bank-cash
 movement.
 
+Payments calendar guardrail: the `/odemeler` planned-load calendar uses the
+same cash-impact semantics for "Ay yuku", "Beklenen giris", "Net etki", and
+daily cash totals. Credit-card-settled rows can still be shown as card load, but
+they must not inflate cash outflow.
+
+## Completed Cleanup
+
+- `buildMonthlyCashFlow` now reads payment/card/loan/debt buckets from the same
+  `FinanceObligation` projection. The small payment/card helper rules needed by
+  both `financeSummary.ts` and `obligations.ts` live in
+  `src/utils/financeObligationRules.ts`, so the shared projection can be reused
+  without a circular import.
+- `summarizeFinanceObligations` and the payments-page obligation calendar now
+  summarize by `cashImpactAmount`, so credit-card automatic payments and
+  scheduled card installments remain visible without double-counting bank cash.
+
 ## Remaining Cleanup
 
 The model is already unified enough for product behavior. Remaining work is
@@ -73,9 +90,6 @@ maintenance polish:
 
 - Move any future planning math into `src/utils/obligations.ts` first, then
   adapt page-specific presentation around it.
-- If `buildMonthlyCashFlow` in `src/utils/financeSummary.ts` is refactored, avoid
-  a circular import with `obligations.ts`; extract only the small shared date or
-  cash-impact helpers needed by both modules.
 - Keep legacy loan estimates (`legacy_loan_installment`) until every active loan
   reliably has `loan_installments`; do not mix legacy estimates with materialized
   rows for the same loan.

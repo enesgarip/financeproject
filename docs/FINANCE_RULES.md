@@ -198,9 +198,20 @@ From `src/utils/budgetAlerts.ts`:
   - bank cards decrease `current_balance`
   - credit cards create a posted `card_expenses` row and increase `debt_amount` plus `current_period_spending`
 - DenizBank statement/current movement imports can reconcile a card-paid planned payment through `pay_payment_from_card_import`; this is credit-card-funded payment semantics with the bank import date preserved on the generated expense.
+- `src/utils/financeObligationRules.ts` owns the small shared helpers for payment
+  occurrence and cash impact; both monthly cash-flow and dated obligation
+  projections use those helpers.
 - dashboard monthly load includes:
   - one-off payments due in the month
   - recurring monthly payments whose occurrence lands in the month
+- monthly cash-flow summaries derive payment/card/loan/debt buckets from the
+  normalized obligation projection. Card statement debt is counted when payable;
+  current-period card spending is counted on the next card cycle; scheduled card
+  installments remain a card load, not an immediate bank-cash outflow.
+- The payments-page planned-load calendar also summarizes by obligation cash
+  impact. Card-funded automatic payments and scheduled card installments can
+  appear on their calendar date as card load, but they must not increase "Ay
+  yuku" or "Net etki" cash totals.
 
 ## Salary
 

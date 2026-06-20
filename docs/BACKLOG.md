@@ -20,7 +20,7 @@
   - 2026-06-15 review added credit-card funded `pay_payment`, ledger repair/correction, reset flow, and shared debt-breakdown helpers.
   - 2026-06-15 follow-up verified the transition matrix against `docs/RPC_ACTION_REFERENCE.md`, current card repositories/services, and latest card migrations; future behavior changes should update the source-of-truth doc in the same change.
 - ~~Continue banking simplification from `docs/BANKING_SIMPLIFICATION_AUDIT.md`.~~ DONE.
-  - ~~normalized upcoming obligations view~~ DONE for dashboard upcoming, analysis calendar, payment drawer intents, forecast buckets, and dashboard monthly load.
+  - ~~normalized upcoming obligations view~~ DONE for dashboard upcoming, analysis calendar, payments-page obligation calendar, payment drawer intents, forecast buckets, and dashboard monthly load.
   - 2026-06-15 audit refresh moved the completed CardsPage module split out of remaining work and narrowed the open banking UX candidate to data-health maintenance polish.
   - 2026-06-15 data reset flow now takes an automatic JSON backup before calling the destructive reset RPC.
   - 2026-06-15 audit closeout moved the last notes into future-maintenance guidance; no P0 banking simplification candidate remains open.
@@ -159,6 +159,8 @@
 - Faz C integer-kuruş conversion completed: `financeSummary.ts` `sum()` now delegates to `sumTL`; all direct float TL additions/subtractions replaced with `sumTL`/`diffTL`; `clampCardBreakdown` operates in kuruş internally. Repo/service layers were already clean.
 - Account-backed money RPCs now share internal bank-account debit/credit helpers while keeping public RPC contracts unchanged.
 - Cash-flow forecast now derives payment/card/loan/debt buckets from the normalized `utils/obligations.ts` engine, including open statement archives when available.
+- Monthly cash-flow summaries now derive payment/card/loan/debt buckets from the same normalized obligation engine; shared payment/card cash-impact helpers were extracted to `utils/financeObligationRules.ts` to avoid a circular import.
+- Local DB lint/advisor cleanup redefined the affected card RPCs without unused/shadowed PL/pgSQL loop variables, fixed `net_worth_snapshots` RLS init-plan warnings, and pinned `touch_updated_at` search_path; no public function signatures changed.
 - Legacy obligation cleanup pass completed: analysis month-close payment checks now consume the normalized obligation engine, and dashboard obligation mapping no longer exposes an unused public helper.
 - `docs/DASHBOARD_ARCHITECTURE.md` now documents dashboard data flow, utility ownership, normalized obligation input, panel boundaries, and verification.
 - Dashboard calculation ownership is now explicit: page-local glue stays in `DashboardPage`, finance/domain math moves to the documented utility owner.

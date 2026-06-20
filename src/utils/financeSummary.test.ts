@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { Asset, Card, CardInstallment, Debt, Loan, LoanInstallment, Payment, SalaryHistory, SavingsGoal } from '../types/database'
+import type { Asset, Card, CardInstallment, CardStatementArchive, Debt, Loan, LoanInstallment, Payment, SalaryHistory, SavingsGoal } from '../types/database'
 import {
   buildCreditLimitGroups,
   buildFinancialHealth,
@@ -25,7 +25,10 @@ import {
 import { roundTL } from './money'
 
 const base = { id: 'id', user_id: 'u', created_at: '2026-01-01T00:00:00Z', updated_at: '2026-01-01T00:00:00Z' }
+const JUNE_START = new Date(2026, 5, 1)
 const JUNE = new Date(2026, 5, 15) // June 15, 2026
+const JULY = new Date(2026, 6, 15)
+const AUGUST = new Date(2026, 7, 15)
 
 // ── Factories ──────────────────────────────────────────────────────────────
 
@@ -82,6 +85,28 @@ function cardInstallment(overrides: Partial<CardInstallment>): CardInstallment {
     status: 'scheduled',
     posted_at: null,
     paid_at: null,
+    note: null,
+    ...overrides,
+  }
+}
+
+function statement(overrides: Partial<CardStatementArchive>): CardStatementArchive {
+  return {
+    ...base,
+    card_id: 'c1',
+    period_year: 2026,
+    period_month: 6,
+    statement_date: '2026-06-01',
+    due_date: '2026-06-10',
+    statement_debt_amount: 0,
+    current_period_spending: 0,
+    total_debt_amount: 0,
+    status: 'open',
+    paid_at: null,
+    payment_source_card_id: null,
+    reconciled_bank_amount: null,
+    reconciled_at: null,
+    reconciliation_note: null,
     note: null,
     ...overrides,
   }
@@ -680,6 +705,47 @@ describe('buildMonthlyCashFlow', () => {
       JUNE,
     )
     expect(flow.paymentOutflow).toBe(300)
+  })
+
+  it('counts card statement debt once and current-period spending on the next cycle', () => {
+    const input = {
+      ...emptyInput,
+      cards: [creditCard({ id: 'c1', statement_debt_amount: 3000, current_period_spending: 1000 })],
+    }
+
+    expect(buildMonthlyCashFlow(input, JUNE, { from: JUNE_START }).cardOutflow).toBe(3000)
+    expect(buildMonthlyCashFlow(input, JULY, { from: JUNE_START }).cardOutflow).toBe(1000)
+    expect(buildMonthlyCashFlow(input, AUGUST, { from: JUNE_START }).cardOutflow).toBe(0)
+  })
+
+  it('uses open statement archives as the monthly card outflow source when present', () => {
+    const flow = buildMonthlyCashFlow(
+      {
+        ...emptyInput,
+        cards: [creditCard({ id: 'c1', statement_debt_amount: 3000, current_period_spending: 1000 })],
+        cardStatements: [statement({ card_id: 'c1', statement_debt_amount: 2200, due_date: '2026-06-10' })],
+      },
+      JUNE,
+      { from: JUNE_START },
+    )
+
+    expect(flow.cardOutflow).toBe(2200)
+    expect(flow.outflow).toBe(2200)
+  })
+
+  it('keeps scheduled card installments out of cash outflow until a card debt is payable', () => {
+    const flow = buildMonthlyCashFlow(
+      {
+        ...emptyInput,
+        cards: [creditCard({ id: 'c1' })],
+        cardInstallments: [cardInstallment({ card_id: 'c1', amount: 450, due_month: '2026-06-01' })],
+      },
+      JUNE,
+      { from: JUNE_START },
+    )
+
+    expect(flow.cardOutflow).toBe(0)
+    expect(flow.outflow).toBe(0)
   })
 
   it('includes scheduled loan installments in outflow', () => {

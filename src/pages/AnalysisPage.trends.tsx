@@ -4,6 +4,7 @@ import { CashFlowChart, type CashFlowPoint } from '../components/charts/CashFlow
 import { Badge } from '../components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import type { NetWorthSnapshot } from '../types/database'
+import { startOfMonth } from '../utils/date'
 import { formatCurrency } from '../utils/formatCurrency'
 import { buildCashFlowForecast } from '../utils/cashFlowForecast'
 import { buildMonthlyCashFlow } from '../utils/financeSummary'
@@ -19,10 +20,11 @@ export function CashFlowTrend({ data }: { data: AnalysisData }) {
   const summaryInput = useMemo(() => analysisFinanceSummaryInput(data), [data])
 
   const chartData: CashFlowPoint[] = useMemo(() => {
-    const months = Array.from({ length: 6 }, (_, index) => new Date(new Date().getFullYear(), new Date().getMonth() - 5 + index, 1))
+    const from = startOfMonth()
+    const months = Array.from({ length: 6 }, (_, index) => new Date(from.getFullYear(), from.getMonth() - 5 + index, 1))
 
     return months.map((month) => {
-      const cf = buildMonthlyCashFlow(summaryInput, month)
+      const cf = buildMonthlyCashFlow(summaryInput, month, { from })
       return {
         label: new Intl.DateTimeFormat('tr-TR', { month: 'short' }).format(month),
         income: cf.income,

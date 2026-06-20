@@ -173,8 +173,8 @@ export function AmountDisplay({
 }) {
   const sizeClass = {
     sm: 'text-base',
-    md: 'text-[clamp(1.1rem,3.5vw,1.5rem)]',
-    lg: 'text-[clamp(1.75rem,7vw,3rem)]',
+    md: 'text-xl sm:text-2xl',
+    lg: 'text-3xl sm:text-4xl',
   }[size]
 
   return (

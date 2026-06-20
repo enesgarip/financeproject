@@ -221,13 +221,13 @@ paylaşır; her sayfa süpersetini client-side daraltır). Query client: `src/ap
 | **Kredi & taksitleri** | `utils/financeSummary.ts` (`projectLoanSummary`) | `data/repositories/loansRepo.ts` | `pages/LoansPage.tsx` |
 | **Yeni kredi uygunluğu** | `utils/loanAffordability.ts` (+ `loanAffordability.test.ts`) | `financeSnapshotRepo.ts` | `pages/AnalysisDetailPage.tsx`, `pages/AnalysisPage.loan.tsx` |
 | **Kişisel borç/alacak** | `utils/obligations.ts`, `utils/obligationPresets.ts` | `data/repositories/debtsRepo.ts` | `pages/DebtsPage.tsx`, `LiabilitiesHub.tsx` |
-| **Planlı ödemeler** | `utils/dashboardUpcoming.ts`, `utils/attention.ts` | `data/repositories/paymentsRepo.ts`, `services/financePaymentActions.ts` | `pages/PaymentsPage.tsx` |
+| **Planlı ödemeler** | `utils/dashboardUpcoming.ts`, `utils/attention.ts`, `utils/financeObligationRules.ts` | `data/repositories/paymentsRepo.ts`, `services/financePaymentActions.ts` | `pages/PaymentsPage.tsx` |
 | **Varlıklar / değerleme** | `utils/valuation.ts`, `utils/valuationSync.ts`, `utils/realValue.ts` | `data/repositories/valuationRepo.ts`, `analysisRepo.ts` | `pages/AssetsPage.tsx`, `AssetsHub.tsx` |
 | **Altın (gram/ledger)** | `utils/goldLedger.ts`, `utils/goldLedgerSync.ts`, `utils/zakat.ts` | `data/repositories/goldLedgerRepo.ts` | `pages/GoldPage.tsx` |
 | **Maaş geçmişi** | `utils/lastUsed.ts` | `data/repositories/crudRepo.ts` | `pages/SalaryPage.tsx` |
 | **Birikim hedefleri** | `utils/savingsGoal.ts` | `data/repositories/savingsGoalsRepo.ts` | (Assets/Dashboard) |
 | **Bütçe uyarıları** | `utils/budgetAlerts.ts` | `data/repositories/crudRepo.ts` | `pages/CardsPage.tsx` |
-| **Dashboard özet/insight** | `utils/dashboardInsights.ts`, `utils/cashFlowForecast.ts`, `utils/dashboardUpcoming.ts`, `utils/obligations.ts`, `utils/netWorthSeries.ts`, `utils/dataHealthSummary.ts` | `data/repositories/financeSnapshotRepo.ts` | `pages/DashboardPage.tsx` |
+| **Dashboard özet/insight** | `utils/dashboardInsights.ts`, `utils/cashFlowForecast.ts`, `utils/dashboardUpcoming.ts`, `utils/obligations.ts`, `utils/financeObligationRules.ts`, `utils/netWorthSeries.ts`, `utils/dataHealthSummary.ts` | `data/repositories/financeSnapshotRepo.ts` | `pages/DashboardPage.tsx` |
 | **Analiz / raporlar** | `utils/analysisView.ts`, `utils/spendingAnomalies.ts`, `utils/priceIncreaseRadar.ts` | `data/repositories/analysisRepo.ts` | `pages/AnalysisHub.tsx`, `pages/AnalysisPage.tsx`, `pages/AnalysisDetailPage.tsx` |
 | **Aktivite akışı (audit trail)** | `utils/activityFeed.ts` | `data/repositories/financePanelsRepo.ts` | `pages/AnalysisPage.activity.tsx` (ActivityFeedPanel) |
 | **Kart tutarlılık skoru** | `utils/cardConsistency.ts` (+ test) | — | `pages/CardsPage.list.tsx` (skor badge) |
@@ -241,7 +241,7 @@ paylaşır; her sayfa süpersetini client-side daraltır). Query client: `src/ap
 | **Abonelik / sabit gider yönetimi** | `utils/subscriptions.ts` | — | `pages/AnalysisPage.panels.tsx` (SubscriptionsPanel) |
 | **Paylaşılabilir özet kartı** | `utils/shareableCard.ts` | — | `pages/AnalysisPage.reports.tsx` (MonthlyReport "Kart" butonu) |
 | **Yıl sonu finansal rapor** | `utils/yearEndReport.ts` | — | `pages/AnalysisPage.reports.tsx` (YearEndReport) |
-| **Forecast / senaryo / FIRE / enflasyon** | `utils/cashFlowForecast.ts`, `utils/scenarioForecast.ts`, `utils/fire.ts`, `utils/inflationShield.ts`, `utils/loanAffordability.ts` | `financeSnapshotRepo.ts` | `pages/DashboardPage.tsx`, `pages/AnalysisPage.tsx`, `pages/AnalysisDetailPage.tsx` |
+| **Forecast / senaryo / FIRE / enflasyon** | `utils/cashFlowForecast.ts`, `utils/scenarioForecast.ts`, `utils/financeObligationRules.ts`, `utils/fire.ts`, `utils/inflationShield.ts`, `utils/loanAffordability.ts` | `financeSnapshotRepo.ts` | `pages/DashboardPage.tsx`, `pages/AnalysisPage.tsx`, `pages/AnalysisDetailPage.tsx` |
 | **Veri sağlığı / onarım** | `pages/DataHealth.logic.ts` (types + orchestrator), `pages/DataHealth.checks.ts` (domain checks), `utils/financeSummary.ts` (trigger TS ikizleri), `utils/transactionFingerprint.ts` (kart harcaması duplicate/fingerprint) | `data/repositories/dataHealthRepo.ts` | `pages/DataHealthHub.tsx`, `pages/DataHealthPage.tsx`, `pages/DataHealthOperationsPage.tsx` |
 | **Kategori eşleme (tr-TR tuzağı)** | `utils/categories.ts` (`normalizeDescription`) | `data/repositories/categoryMemoryRepo.ts` | — |
 | **Yedek / backup** | `utils/backup.ts` | `data/repositories/backupRepo.ts` | (DataHealth) |

@@ -9,8 +9,8 @@ import type {
 } from '../types/database'
 import { getNextCardPaymentDueDate } from './cardStatement'
 import { addMonths, dateInMonth, dateInputValue, isDateInMonth, monthlyOccurrenceDate, startOfDay, startOfMonth } from './date'
-import { cardMonthlyPaymentAmount, paymentCashOutflowAmount, paymentOccurrenceInMonth, paymentUsesCreditCard, sum } from './financeSummary'
-import { roundTL } from './money'
+import { cardMonthlyPaymentAmount, paymentCashOutflowAmount, paymentOccurrenceInMonth, paymentUsesCreditCard } from './financeObligationRules'
+import { roundTL, sumTL } from './money'
 
 export type FinanceObligationKind =
   | 'payment'
@@ -65,6 +65,10 @@ export type FinanceObligationMonthSummary = {
   net: number
   payableCount: number
   itemCount: number
+}
+
+function obligationCashImpact(item: FinanceObligation) {
+  return item.cashImpactAmount ?? item.amount
 }
 
 function monthDistance(from: Date, target: Date) {
@@ -310,8 +314,8 @@ export function buildFinanceObligationsForMonth(
 }
 
 export function summarizeFinanceObligations(items: FinanceObligation[]): FinanceObligationMonthSummary {
-  const outflow = roundTL(sum(items.filter((item) => item.direction === 'outflow'), (item) => item.amount))
-  const inflow = roundTL(sum(items.filter((item) => item.direction === 'inflow'), (item) => item.amount))
+  const outflow = roundTL(sumTL(items.filter((item) => item.direction === 'outflow').map(obligationCashImpact)))
+  const inflow = roundTL(sumTL(items.filter((item) => item.direction === 'inflow').map(obligationCashImpact)))
 
   return {
     outflow,

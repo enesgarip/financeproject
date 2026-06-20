@@ -11,9 +11,18 @@ import type {
   SavingsGoal,
   SavingsGoalComponent,
 } from '../types/database'
-import { endOfMonth, isDateInMonth, monthlyOccurrenceDate, startOfMonth } from './date'
+import { endOfMonth, startOfMonth } from './date'
+import { paymentCashOutflowAmount } from './financeObligationRules'
 import { diffTL, exceedsTL, roundTL, sumTL, toKurus, toTL } from './money'
+import { buildFinanceObligationsForMonth, type FinanceObligation, type FinanceObligationsInput } from './obligations'
 import { savingsGoalProgressRate } from './savingsGoal'
+
+export {
+  cardMonthlyPaymentAmount,
+  paymentCashOutflowAmount,
+  paymentOccurrenceInMonth,
+  paymentUsesCreditCard,
+} from './financeObligationRules'
 
 export type FinanceSummaryInput = {
   assets: Asset[]
@@ -170,10 +179,6 @@ export function clampCardBreakdown(debt: number, statement: number, current: num
   return { statement: toTL(clampedStatementK), provision: toTL(clampedProvisionK), current: toTL(clampedCurrentK) }
 }
 
-export function cardMonthlyPaymentAmount(card: Pick<Card, 'statement_debt_amount'>) {
-  return card.statement_debt_amount
-}
-
 /**
  * Projects a loan's summary from its installment plan (roadmap "güven" Faz 2).
  * remaining = sum of unpaid (status != 'ödendi') amounts, remaining_installments
@@ -286,31 +291,6 @@ export function getSalaryForDate(rows: SalaryHistory[], date: Date | string) {
   return ordered.filter((row) => row.effective_date <= cutoff).at(-1) ?? null
 }
 
-export function paymentOccurrenceInMonth(payment: Payment, month = new Date()) {
-  if (payment.status !== 'bekliyor') return null
-
-  if (payment.recurrence === 'monthly') {
-    const occurrence = monthlyOccurrenceDate(payment.recurrence_day, month)
-    if (!occurrence) return null
-
-    const dueDate = new Date(`${payment.due_date}T00:00:00`)
-    const endDate = payment.recurrence_end_date ? new Date(`${payment.recurrence_end_date}T00:00:00`) : null
-    if (occurrence < dueDate) return null
-    if (endDate && occurrence > endDate) return null
-    return occurrence
-  }
-
-  return isDateInMonth(payment.due_date, month) ? new Date(`${payment.due_date}T00:00:00`) : null
-}
-
-export function paymentUsesCreditCard(payment: Pick<Payment, 'payment_method' | 'auto_source_card_id'>) {
-  return payment.payment_method === 'bank_auto' && Boolean(payment.auto_source_card_id)
-}
-
-export function paymentCashOutflowAmount(payment: Pick<Payment, 'amount' | 'payment_method' | 'auto_source_card_id'>) {
-  return paymentUsesCreditCard(payment) ? 0 : payment.amount
-}
-
 export function buildFinancialPosition(data: FinanceSummaryInput): FinancialPositionSummary {
   const bankCards = data.cards.filter((card) => card.card_type === 'banka_karti')
   const creditCards = data.cards.filter((card) => card.card_type === 'kredi_karti')
@@ -366,50 +346,55 @@ export function buildFinancialPosition(data: FinanceSummaryInput): FinancialPosi
   }
 }
 
-export function buildMonthlyCashFlow(data: FinanceSummaryInput, month = new Date()): CashFlowSummary {
+function obligationsInput(data: FinanceSummaryInput): FinanceObligationsInput {
+  return {
+    cards: data.cards,
+    payments: data.payments,
+    loans: data.loans,
+    loanInstallments: data.loanInstallments,
+    debts: data.debts,
+    cardInstallments: data.cardInstallments,
+    cardStatements: data.cardStatements ?? [],
+  }
+}
+
+function obligationSum(
+  items: FinanceObligation[],
+  predicate: (item: FinanceObligation) => boolean,
+  selector: (item: FinanceObligation) => number = (item) => item.amount,
+) {
+  return sumTL(items.filter(predicate).map(selector))
+}
+
+export function buildMonthlyCashFlow(
+  data: FinanceSummaryInput,
+  month = new Date(),
+  options: { from?: Date } = {},
+): CashFlowSummary {
   const monthStart = startOfMonth(month)
   const monthEnd = endOfMonth(month)
   const monthLabel = new Intl.DateTimeFormat('tr-TR', { month: 'long', year: 'numeric' }).format(monthStart)
   const salaryIncome = roundTL(getSalaryForDate(data.salaryHistory, monthEnd)?.amount ?? 0)
   const cashAssets = buildFinancialPosition(data).totalCashAssets
-  const openDebts = data.debts.filter((debt) => debt.status === 'açık')
-  const receivableIncome = sum(
-    openDebts.filter((debt) => debt.direction === 'borç_verdim' && isDateInMonth(debt.due_date, monthStart)),
-    (debt) => debt.estimated_value_try,
-  )
-  const paymentOutflow = sum(
-    data.payments.filter((payment) => paymentOccurrenceInMonth(payment, monthStart)),
-    paymentCashOutflowAmount,
+  const from = options.from ?? monthStart
+  const obligations = buildFinanceObligationsForMonth(obligationsInput(data), monthStart, { from })
+  const receivableIncome = obligationSum(obligations, (item) => item.kind === 'personal_receivable')
+  const paymentOutflow = obligationSum(
+    obligations,
+    (item) => item.kind === 'payment',
+    (item) => item.cashImpactAmount ?? item.amount,
   )
   const recurringPayments = data.payments.filter((payment) => payment.recurrence === 'monthly' && payment.status === 'bekliyor').length
-  const cardStatementDebt = sum(
-    data.cards.filter((card) => card.card_type === 'kredi_karti'),
-    cardMonthlyPaymentAmount,
+  const cardOutflow = obligationSum(
+    obligations,
+    (item) => item.kind === 'card_statement' || item.kind === 'card_debt',
   )
-  const cardOutflow = sum(
-    data.cards.filter((card) => {
-      const dueDate = monthlyOccurrenceDate(card.due_day, monthStart)
-      return card.card_type === 'kredi_karti' && cardMonthlyPaymentAmount(card) > 0 && dueDate !== null && dueDate >= monthStart && dueDate <= monthEnd
-    }),
-    cardMonthlyPaymentAmount,
+  const cardStatementDebt = cardOutflow
+  const loanOutflow = obligationSum(
+    obligations,
+    (item) => item.kind === 'loan_installment' || item.kind === 'legacy_loan_installment',
   )
-  const plannedLoanIds = new Set(data.loanInstallments.map((installment) => installment.loan_id))
-  const scheduledLoanOutflow = sum(
-    data.loanInstallments.filter((installment) => installment.status === 'bekliyor' && isDateInMonth(installment.due_date, monthStart)),
-    (installment) => installment.amount,
-  )
-  const legacyLoanOutflow = sum(
-    data.loans.filter((loan) => {
-      const dueDate = monthlyOccurrenceDate(loan.installment_day, monthStart)
-      return !plannedLoanIds.has(loan.id) && loan.status === 'active' && loan.remaining_installments > 0 && dueDate !== null && dueDate >= monthStart && dueDate <= monthEnd
-    }),
-    (loan) => loan.monthly_payment,
-  )
-  const loanOutflow = sumTL([scheduledLoanOutflow, legacyLoanOutflow])
-  const debtOutflow = sum(
-    openDebts.filter((debt) => debt.direction === 'borç_aldım' && isDateInMonth(debt.due_date, monthStart)),
-    (debt) => debt.estimated_value_try,
-  )
+  const debtOutflow = obligationSum(obligations, (item) => item.kind === 'personal_debt')
   const income = sumTL([salaryIncome, receivableIncome])
   const outflow = sumTL([paymentOutflow, cardOutflow, loanOutflow, debtOutflow])
   const netFlow = diffTL(income, outflow)

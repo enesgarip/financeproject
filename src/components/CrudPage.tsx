@@ -562,7 +562,7 @@ export function CrudPage<T extends TableName>({
                         >
                           {parsedDetail ? (
                             <>
-                              <dt className="finance-label truncate">{parsedDetail.label}</dt>
+                              <dt className="finance-label break-words leading-tight">{parsedDetail.label}</dt>
                               <dd className="mt-1 break-words font-mono text-sm font-bold leading-snug text-foreground">{parsedDetail.value}</dd>
                             </>
                           ) : (

@@ -217,6 +217,37 @@ describe('buildFinanceObligationsForMonth', () => {
     })
   })
 
+  it('summarizes monthly totals from cash impact, not raw card-settled load', () => {
+    const items = buildFinanceObligationsForMonth(
+      input({
+        cards: [card({ id: 'credit-card', card_type: 'kredi_karti', due_day: 20 })],
+        payments: [
+          payment({ id: 'cash-payment', amount: 500, due_date: '2026-06-10' }),
+          payment({
+            id: 'card-payment',
+            amount: 200,
+            due_date: '2026-06-10',
+            payment_method: 'bank_auto',
+            auto_source_card_id: 'credit-card',
+          }),
+        ],
+        cardInstallments: [
+          cardInstallment({ id: 'future-card-load', card_id: 'credit-card', due_month: '2026-06-01', amount: 300 }),
+        ],
+      }),
+      FROM,
+      { from: FROM },
+    )
+
+    expect(summarizeFinanceObligations(items)).toMatchObject({
+      outflow: 500,
+      inflow: 0,
+      net: -500,
+      payableCount: 2,
+      itemCount: 3,
+    })
+  })
+
   it('places card installments and legacy loan estimates on their calendar days', () => {
     const july = new Date(2026, 6, 1)
     const items = buildFinanceObligationsForMonth(
