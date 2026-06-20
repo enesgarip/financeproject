@@ -1,6 +1,6 @@
 # Data Health Architecture Note
 
-Last reviewed: 2026-06-15
+Last reviewed: 2026-06-20
 
 This note maps `/veri-sagligi` (`DataHealthPage`). Treat this route as an
 operational repair surface, not a debug page: fixes can modify real finance
@@ -30,6 +30,9 @@ issue detection in `DataHealth.logic.ts` and writes in
 - `DataHealthPage.components.tsx`: issue cards, stats, and confirmation modals
 - `src/data/repositories/dataHealthRepo.ts`: table reads/writes and reset RPC
 - `src/utils/backup.ts`: JSON backup parsing, export payloads, and restore flow
+- `src/utils/transactionFingerprint.ts`: deterministic transaction description
+  normalization, card-expense fingerprint fallback, and duplicate-candidate
+  similarity scoring
 - ledger utilities: `src/utils/cardLedger.ts`, `src/utils/accountLedger.ts`,
   `src/utils/financeSummary.ts`
 
@@ -58,6 +61,9 @@ Use existing source-of-truth helpers before adding new checks:
   `src/utils/accountLedger.ts`
 - loan summary drift:
   `projectLoanSummary` in `src/utils/financeSummary.ts`
+- card-expense duplicate signals:
+  `src/utils/transactionFingerprint.ts` and the database-generated
+  `card_expenses.transaction_fingerprint`
 - savings goal comparisons:
   `src/utils/savingsGoal.ts`
 - money comparison and rounding:

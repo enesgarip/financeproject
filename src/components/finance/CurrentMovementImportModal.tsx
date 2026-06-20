@@ -30,6 +30,7 @@ import { useBodyScrollLock } from '../ui/use-body-scroll-lock'
 type Step = 'upload' | 'review' | 'success'
 
 type ImportableMovement = {
+  selectionKey: string
   movement: ParsedDenizBankMovement
   plannedPayment: PaymentMatchRow | null
 }
@@ -80,7 +81,7 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
   const [manualReview, setManualReview] = useState<ParsedDenizBankMovement[]>([])
   const [payments, setPayments] = useState<ParsedDenizBankPayment[]>([])
   const [ignoredCount, setIgnoredCount] = useState(0)
-  const [selected, setSelected] = useState<Set<number>>(new Set())
+  const [selected, setSelected] = useState<Set<string>>(new Set())
   const [importedCount, setImportedCount] = useState(0)
   const fileRef = useRef<HTMLInputElement>(null)
 
@@ -127,7 +128,8 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
       const plannedPaymentByMovement = new Map<string, PaymentMatchRow>(
         paymentMatchResult.matches.map(({ movement, payment }) => [movement.rawLine, payment as PaymentMatchRow]),
       )
-      const nextImportable = unmatchedNonInstallments.map((movement) => ({
+      const nextImportable = unmatchedNonInstallments.map((movement, index) => ({
+        selectionKey: `${index}:${movement.rawLine}`,
         movement,
         plannedPayment: plannedPaymentByMovement.get(movement.rawLine) ?? null,
       }))
@@ -154,20 +156,20 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
 
   function toggleAll() {
     if (selected.size === importable.length) setSelected(new Set())
-    else setSelected(new Set(importable.map((_, index) => index)))
+    else setSelected(new Set(importable.map((item) => item.selectionKey)))
   }
 
-  function toggleRow(index: number) {
+  function toggleRow(selectionKey: string) {
     setSelected((current) => {
       const next = new Set(current)
-      if (next.has(index)) next.delete(index)
-      else next.add(index)
+      if (next.has(selectionKey)) next.delete(selectionKey)
+      else next.add(selectionKey)
       return next
     })
   }
 
   async function handleImport() {
-    const toImport = importable.filter((_, index) => selected.has(index))
+    const toImport = importable.filter((item) => selected.has(item.selectionKey))
     if (!toImport.length) return
 
     setImporting(true)
@@ -212,7 +214,7 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
   }
 
   const importableTotal = sumTL(importable.map(({ movement }) => movement.amount))
-  const selectedTotal = sumTL(importable.filter((_, index) => selected.has(index)).map(({ movement }) => movement.amount))
+  const selectedTotal = sumTL(importable.filter((item) => selected.has(item.selectionKey)).map(({ movement }) => movement.amount))
   const manualTotal = sumTL(manualReview.map((movement) => movement.amount))
 
   return createPortal(
@@ -401,14 +403,15 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
                 </div>
 
                 <div className="flex-1 overflow-y-auto">
-                  {importable.map((item, index) => {
+                  {importable.map((item) => {
                     const { movement, plannedPayment } = item
-                    const isSelected = selected.has(index)
+                    const isSelected = selected.has(item.selectionKey)
                     return (
                       <button
                         type="button"
-                        key={`${movement.date}-${movement.description}-${movement.amount}-${index}`}
-                        onClick={() => toggleRow(index)}
+                        key={item.selectionKey}
+                        data-testid="current-movement-import-row"
+                        onClick={() => toggleRow(item.selectionKey)}
                         aria-pressed={isSelected}
                         className="flex w-full cursor-pointer items-center gap-3 border-b border-border/50 px-4 py-2.5 text-left hover:bg-muted/30"
                       >

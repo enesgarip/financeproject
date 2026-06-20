@@ -27,8 +27,9 @@ import {
   scheduledCardInstallmentTotalsByCard,
 } from '../utils/financeSummary'
 import { formatCurrency } from '../utils/formatCurrency'
-import { diffTL, exceedsTL, moneyDiffers, roundTL, sumTL } from '../utils/money'
+import { diffTL, exceedsTL, moneyDiffers, roundTL, sumTL, toKurus } from '../utils/money'
 import { formatComponentAmount, formatSavingsGoalAmount, savingsGoalBelowTarget, savingsGoalTargetReached, savingsGoalValueTypeLabel } from '../utils/savingsGoal'
+import { buildTransactionFingerprint, descriptionSimilarity, normalizedTransactionDescription } from '../utils/transactionFingerprint'
 import type { HealthIssue } from './DataHealth.logic'
 import { addMonthsToMonthStart, currentMonthStart } from './DataHealth.logic'
 
@@ -419,6 +420,139 @@ export function checkCards(
         kind: 'manual',
       })
     }
+  }
+
+  return issues
+}
+
+function cardExpenseFingerprint(expense: CardExpense): string {
+  return expense.transaction_fingerprint ?? buildTransactionFingerprint({
+    accountId: expense.card_id,
+    date: expense.spent_at,
+    amount: expense.amount,
+    description: expense.description,
+    type: expense.status,
+  })
+}
+
+function cardExpenseDetail(expense: CardExpense) {
+  const description = expense.description?.trim() || 'Açıklama yok'
+  return `${formatDate(expense.spent_at)} · ${description} · ${formatCurrency(expense.amount)} · ${expense.status}`
+}
+
+function groupBy<T>(rows: T[], keyOf: (row: T) => string): Map<string, T[]> {
+  const grouped = new Map<string, T[]>()
+  for (const row of rows) {
+    const key = keyOf(row)
+    grouped.set(key, [...(grouped.get(key) ?? []), row])
+  }
+  return grouped
+}
+
+export function checkCardExpenseDuplicates(cards: Card[], cardExpenses: CardExpense[]): HealthIssue[] {
+  const issues: HealthIssue[] = []
+  const cardsById = new Map(cards.map((card) => [card.id, card]))
+  const activeExpenses = cardExpenses.filter(activeCardExpense)
+  const exactDuplicateIdSets = new Set<string>()
+
+  for (const [fingerprint, rows] of groupBy(activeExpenses, cardExpenseFingerprint)) {
+    if (rows.length <= 1) continue
+    const ids = rows.map((row) => row.id).sort()
+    exactDuplicateIdSets.add(ids.join('|'))
+    const card = cardsById.get(rows[0]?.card_id ?? '')
+
+    issues.push({
+      id: `card-expense-duplicate-exact-${ids.join('-')}`,
+      area: 'Kartlar',
+      severity: 'warning',
+      title: `${cardLabel(card)} kesin duplicate harcama adayı`,
+      description: 'Aynı kart, tarih, tutar, durum ve normalize açıklamaya sahip birden fazla harcama var. Otomatik silinmez; önce kullanıcı kararı gerekir.',
+      details: [
+        `Güven: %98`,
+        `Fingerprint: ${fingerprint}`,
+        ...rows.slice(0, 5).map(cardExpenseDetail),
+        rows.length > 5 ? `+${rows.length - 5} kayıt daha` : null,
+      ].filter((item): item is string => Boolean(item)),
+      fixable: false,
+      kind: 'duplicateTransactionCandidate',
+      payload: { ids, duplicateLevel: 'exact', confidence: 0.98, transactionFingerprint: fingerprint },
+    })
+  }
+
+  for (const [looseKey, rows] of groupBy(activeExpenses, (expense) => (
+    `${expense.card_id}|${expense.spent_at}|${expense.status}|${toKurus(expense.amount)}`
+  ))) {
+    if (rows.length <= 1) continue
+    const ids = rows.map((row) => row.id).sort()
+    if (exactDuplicateIdSets.has(ids.join('|'))) continue
+
+    let maxSimilarity = 0
+    for (let left = 0; left < rows.length; left++) {
+      for (let right = left + 1; right < rows.length; right++) {
+        maxSimilarity = Math.max(maxSimilarity, descriptionSimilarity(rows[left].description, rows[right].description))
+      }
+    }
+
+    const hasBlankDescription = rows.some((row) => !normalizedTransactionDescription(row.description))
+    if (maxSimilarity < 0.3 && !hasBlankDescription) continue
+
+    const card = cardsById.get(rows[0]?.card_id ?? '')
+    issues.push({
+      id: `card-expense-duplicate-possible-${ids.join('-')}`,
+      area: 'Kartlar',
+      severity: 'info',
+      title: `${cardLabel(card)} muhtemel duplicate harcama adayı`,
+      description: 'Aynı kartta aynı gün, aynı tutar ve aynı durumla birden fazla harcama var. Açıklamalar birebir aynı değil; elle karşılaştırılmalı.',
+      details: [
+        `Güven: %${Math.round((hasBlankDescription ? 0.55 : 0.65 + maxSimilarity * 0.25) * 100)}`,
+        `Grup: ${looseKey}`,
+        ...rows.slice(0, 5).map(cardExpenseDetail),
+        rows.length > 5 ? `+${rows.length - 5} kayıt daha` : null,
+      ].filter((item): item is string => Boolean(item)),
+      fixable: false,
+      kind: 'duplicateTransactionCandidate',
+      payload: {
+        ids,
+        duplicateLevel: 'possible',
+        confidence: hasBlankDescription ? 0.55 : 0.65 + maxSimilarity * 0.25,
+      },
+    })
+  }
+
+  const missingDescriptions = activeExpenses.filter((expense) => !normalizedTransactionDescription(expense.description))
+  if (missingDescriptions.length > 0) {
+    issues.push({
+      id: 'card-expense-missing-description',
+      area: 'Kartlar',
+      severity: 'info',
+      title: 'Açıklaması olmayan kart harcamaları var',
+      description: 'Açıklama olmadığında import/mutabakat eşleşmesi zayıflar ve duplicate analizi daha belirsiz olur.',
+      details: [
+        `Kayıt sayısı: ${missingDescriptions.length}`,
+        ...missingDescriptions.slice(0, 5).map(cardExpenseDetail),
+      ],
+      fixable: false,
+      kind: 'cardExpenseDataQuality',
+      payload: { ids: missingDescriptions.map((expense) => expense.id) },
+    })
+  }
+
+  const missingCategories = activeExpenses.filter((expense) => !expense.category?.trim())
+  if (missingCategories.length > 0) {
+    issues.push({
+      id: 'card-expense-missing-category',
+      area: 'Kartlar',
+      severity: 'info',
+      title: 'Kategorisi olmayan kart harcamaları var',
+      description: 'Kategori boş olduğunda bütçe ve analiz ekranları bu harcamaları doğru gruplayamaz.',
+      details: [
+        `Kayıt sayısı: ${missingCategories.length}`,
+        ...missingCategories.slice(0, 5).map(cardExpenseDetail),
+      ],
+      fixable: false,
+      kind: 'cardExpenseDataQuality',
+      payload: { ids: missingCategories.map((expense) => expense.id) },
+    })
   }
 
   return issues

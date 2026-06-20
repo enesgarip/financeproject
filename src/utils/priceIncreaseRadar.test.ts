@@ -47,6 +47,7 @@ function cardExpenseRow(overrides: Partial<CardExpense> & { id: string; spent_at
     posted_at: overrides.spent_at,
     note: null,
     ...overrides,
+    transaction_fingerprint: overrides.transaction_fingerprint ?? null,
   }
 }
 

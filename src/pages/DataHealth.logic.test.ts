@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { AccountLedger, Asset, Card, CardInstallment, CardLedger } from '../types/database'
+import type { AccountLedger, Asset, Card, CardExpense, CardInstallment, CardLedger } from '../types/database'
 import { buildIssues } from './DataHealth.logic'
 import { emptyData } from './DataHealth.actions'
 
@@ -136,6 +136,26 @@ function cardInstallment(overrides: Partial<CardInstallment> = {}): CardInstallm
   }
 }
 
+function cardExpense(overrides: Partial<CardExpense> = {}): CardExpense {
+  return {
+    ...base,
+    id: 'expense-1',
+    card_id: 'card-1',
+    statement_archive_id: null,
+    spent_at: '2026-06-15',
+    amount: 520,
+    description: 'Migros',
+    category: 'Market',
+    installment_count: 1,
+    installment_amount: 520,
+    status: 'posted',
+    posted_at: '2026-06-15T12:00:00.000Z',
+    note: null,
+    ...overrides,
+    transaction_fingerprint: overrides.transaction_fingerprint ?? null,
+  }
+}
+
 describe('buildIssues card debt breakdown', () => {
   it('flags scheduled installments missing from card debt', () => {
     const issues = buildIssues({
@@ -201,6 +221,51 @@ describe('buildIssues card debt breakdown', () => {
       currentPeriod: 100,
       provisionAmount: 50,
     })
+  })
+})
+
+describe('buildIssues card expense duplicate analysis', () => {
+  it('flags exact duplicate card expenses', () => {
+    const issues = buildIssues({
+      ...emptyData,
+      cards: [creditCard()],
+      cardExpenses: [
+        cardExpense({ id: 'expense-1', description: 'Migros Sanal POS' }),
+        cardExpense({ id: 'expense-2', description: 'Migros Sanal POS' }),
+      ],
+    })
+
+    const duplicate = issues.find((issue) => issue.kind === 'duplicateTransactionCandidate')
+    expect(duplicate?.payload?.duplicateLevel).toBe('exact')
+    expect(duplicate?.payload?.ids).toEqual(['expense-1', 'expense-2'])
+  })
+
+  it('flags possible duplicates with the same day and amount but similar descriptions', () => {
+    const issues = buildIssues({
+      ...emptyData,
+      cards: [creditCard()],
+      cardExpenses: [
+        cardExpense({ id: 'expense-1', description: 'Migros Sanal POS' }),
+        cardExpense({ id: 'expense-2', description: 'Migros' }),
+      ],
+    })
+
+    const duplicate = issues.find((issue) => issue.kind === 'duplicateTransactionCandidate')
+    expect(duplicate?.payload?.duplicateLevel).toBe('possible')
+    expect(duplicate?.severity).toBe('info')
+  })
+
+  it('reports card expenses without description or category', () => {
+    const issues = buildIssues({
+      ...emptyData,
+      cards: [creditCard()],
+      cardExpenses: [
+        cardExpense({ id: 'expense-1', description: '', category: '' }),
+      ],
+    })
+
+    expect(issues.find((issue) => issue.id === 'card-expense-missing-description')?.payload?.ids).toEqual(['expense-1'])
+    expect(issues.find((issue) => issue.id === 'card-expense-missing-category')?.payload?.ids).toEqual(['expense-1'])
   })
 })
 

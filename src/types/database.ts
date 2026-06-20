@@ -89,6 +89,7 @@ export type CardExpense = BaseRow & {
   status: CardExpenseStatus
   posted_at: string | null
   note: string | null
+  transaction_fingerprint: string | null
 }
 
 export type Budget = BaseRow & {

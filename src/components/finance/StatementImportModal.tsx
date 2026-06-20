@@ -54,6 +54,7 @@ function appExpenseStatusLabel(status: string) {
 type Step = 'upload' | 'review' | 'success'
 
 type StatementImportRow = {
+  selectionKey: string
   transaction: ParsedTransaction
   plannedPayment: PaymentMatchRow | null
 }
@@ -97,6 +98,7 @@ function attachPlannedPayments(
   )
 
   return transactions.map((transaction, index) => ({
+    selectionKey: `${index}:${transaction.date}:${transaction.amount}:${transaction.description}:${transaction.installmentNo}:${transaction.installmentCount}`,
     transaction,
     plannedPayment: paymentByIndex.get(index) ?? null,
   }))
@@ -124,7 +126,7 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
   const [unmatched, setUnmatched] = useState<StatementImportRow[]>([])
   const [manualReview, setManualReview] = useState<ParsedTransaction[]>([])
   const [plannedPaymentMatches, setPlannedPaymentMatches] = useState(0)
-  const [selected, setSelected] = useState<Set<number>>(new Set())
+  const [selected, setSelected] = useState<Set<string>>(new Set())
   const [importedCount, setImportedCount] = useState(0)
 
   const [reconciling, setReconciling] = useState(false)
@@ -235,7 +237,7 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
   }
 
   async function handleCleanImport() {
-    const toImport = unmatched.filter((_, i) => selected.has(i))
+    const toImport = unmatched.filter((item) => selected.has(item.selectionKey))
     if (!toImport.length) return
 
     setImporting(true)
@@ -319,7 +321,7 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
       return
     }
 
-    const toImport = unmatched.filter((_, i) => selected.has(i))
+    const toImport = unmatched.filter((item) => selected.has(item.selectionKey))
     if (!toImport.length) return
 
     setImporting(true)
@@ -384,14 +386,14 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
 
   function toggleAll() {
     if (selected.size === unmatched.length) setSelected(new Set())
-    else setSelected(new Set(unmatched.map((_, i) => i)))
+    else setSelected(new Set(unmatched.map((item) => item.selectionKey)))
   }
 
-  function toggleRow(i: number) {
+  function toggleRow(selectionKey: string) {
     setSelected((prev) => {
       const next = new Set(prev)
-      if (next.has(i)) next.delete(i)
-      else next.add(i)
+      if (next.has(selectionKey)) next.delete(selectionKey)
+      else next.add(selectionKey)
       return next
     })
   }
@@ -649,7 +651,7 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
                 </div>
 
                 <div className="flex-1 overflow-y-auto">
-                  {unmatched.map((item, i) => {
+                  {unmatched.map((item) => {
                     const { transaction: tx, plannedPayment } = item
                     const knownPlan = tx.isInstallment && tx.installmentCount > 1
                     // Clean modda plan-ortası taksitten yalnızca kalan adet kurulur.
@@ -659,12 +661,13 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
                     const rowTotal = knownPlan
                       ? roundTL(tx.amount * planCount)
                       : tx.amount
-                    const isSelected = selected.has(i)
+                    const isSelected = selected.has(item.selectionKey)
                     return (
                       <button
                         type="button"
-                        key={i}
-                        onClick={() => toggleRow(i)}
+                        key={item.selectionKey}
+                        data-testid="statement-import-row"
+                        onClick={() => toggleRow(item.selectionKey)}
                         aria-pressed={isSelected}
                         className="flex w-full cursor-pointer items-center gap-3 border-b border-border/50 px-4 py-2.5 text-left hover:bg-muted/30"
                       >

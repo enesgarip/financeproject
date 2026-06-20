@@ -24,6 +24,7 @@ function expense(overrides: Partial<CardExpense>): CardExpense {
     posted_at: null,
     note: null,
     ...overrides,
+    transaction_fingerprint: overrides.transaction_fingerprint ?? null,
   }
 }
 

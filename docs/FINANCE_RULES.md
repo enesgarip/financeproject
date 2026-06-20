@@ -122,6 +122,13 @@ On the cards page:
 - cancelled expenses should not count toward budget alerts
 - installment expense creation may generate `card_installments`
 - single-installment data is treated differently from multi-installment planning and is checked in data health
+- `card_expenses.transaction_fingerprint` is generated from card, date, amount,
+  normalized description, and status. It is used as a deterministic duplicate
+  signal for import reconciliation and Data Health; it must not change card debt
+  or ledger balances by itself.
+- Data Health reports exact duplicate card expenses by fingerprint and possible
+  duplicates by same card/date/status/amount plus similar or blank descriptions.
+  These are review signals only, not automatic deletes.
 
 Current movement reconciliation:
 
@@ -130,6 +137,8 @@ Current movement reconciliation:
 - `Hesaptan Ödeme` rows are not imported as card expenses.
 - `Taksitli Satış` rows are shown for manual review; the first implementation does not infer or recreate installment plans from current movement exports.
 - Review screens show the app's spending history for the detected period, keep matched bank/app record pairs collapsed by default, and leave missing rows unselected until the user chooses which rows to import.
+- Importable rows are selected by a stable per-row key instead of array position,
+  so identical-looking bank rows can be selected one by one.
 - Imports use `add_card_expense` for ordinary card spending so card debt, provision/current-period fields, ledger events, and transaction history stay under the audited mutation path.
 - If a missing bank row matches a still-open planned payment by amount and due/movement date, the import uses `pay_payment_from_card_import` instead. This creates the card expense on the bank row date and advances/closes the planned payment, preventing the same bill from remaining as a separate pending obligation.
 

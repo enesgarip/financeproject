@@ -73,6 +73,24 @@ export function buildIssueGuide(issue: HealthIssue): IssueGuide {
     }
   }
 
+  if (issue.kind === 'duplicateTransactionCandidate') {
+    return {
+      problem: issue.payload?.duplicateLevel === 'exact'
+        ? 'Aynı kartta aynı tarih, tutar, durum ve açıklama parmak izine sahip birden fazla harcama var.'
+        : 'Aynı kartta aynı gün ve aynı tutarda, açıklaması benzer ya da eksik olan harcamalar var.',
+      whyItMatters: 'Duplicate kayıtlar kart borcunu, kategori harcamasını, bütçe uyarılarını ve mutabakat sonucunu olduğundan yüksek gösterebilir.',
+      nextStep: 'Kartlar ekranında satırları yan yana kontrol et. İkisi de doğruysa bırak; değilse birini düzelt, iptal et veya silmeden önce neyin tekrar sayıldığını netleştir.',
+    }
+  }
+
+  if (issue.kind === 'cardExpenseDataQuality') {
+    return {
+      problem: 'Bazı kart harcamalarında açıklama veya kategori eksik.',
+      whyItMatters: 'Eksik açıklama/kategori, import eşleştirme kalitesini düşürür ve analizlerde harcamaların yanlış gruba düşmesine neden olur.',
+      nextStep: 'Kartlar ekranında ilgili harcamaları açıp açıklama ve kategori alanlarını tamamla.',
+    }
+  }
+
   if (issue.kind === 'loanTotals' || issue.kind === 'loanInstallmentDueDay') {
     return {
       problem: 'Kredi özeti ile taksit planı birbirinden kopmuş görünüyor.',
@@ -132,7 +150,7 @@ export function navigationAction(issue: HealthIssue) {
   if (issue.id.includes('stale-installment')) return { to: '/kartlar?section=islemler', label: 'Döneme dahil et' }
   if (issue.id.includes('no-plan')) return { to: '/borclar/krediler', label: 'Planı oluştur' }
 
-  if (issue.kind.startsWith('card') || issue.kind === 'cardTypeFields') return { to: '/kartlar?section=kartlar', label: 'Kartlara git' }
+  if (issue.kind.startsWith('card') || issue.kind === 'cardTypeFields' || issue.kind === 'duplicateTransactionCandidate') return { to: '/kartlar?section=kartlar', label: 'Kartlara git' }
   if (issue.kind.startsWith('loan')) return { to: '/borclar/krediler', label: 'Kredilere git' }
   if (issue.kind.startsWith('payment')) {
     return { to: '/odemeler', label: normalizedTitle.includes('vadesi ge') ? 'Ödendi işaretle' : 'Ödemelere git' }

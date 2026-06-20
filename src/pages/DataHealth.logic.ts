@@ -20,6 +20,7 @@ import {
   checkAssets,
   checkBudgets,
   checkCardInstallments,
+  checkCardExpenseDuplicates,
   checkCards,
   checkDebts,
   checkGoals,
@@ -68,6 +69,8 @@ export type HealthIssue = {
     | 'cardStatementTotals'
     | 'cardScheduledDebt'
     | 'cardLedgerDrift'
+    | 'duplicateTransactionCandidate'
+    | 'cardExpenseDataQuality'
     | 'accountLedgerDrift'
     | 'assetShape'
     | 'budgetMonth'
@@ -108,6 +111,9 @@ export type HealthIssue = {
     totalAmount?: number
     description?: string
     category?: string
+    duplicateLevel?: 'exact' | 'possible'
+    confidence?: number
+    transactionFingerprint?: string
   }
 }
 
@@ -161,6 +167,7 @@ export function buildIssues(data: HealthData): HealthIssue[] {
     ...checkAssets(data.assets),
     ...checkBudgets(data.budgets),
     ...checkCards(data.cards, data.cardInstallments, data.cardStatementArchives),
+    ...checkCardExpenseDuplicates(data.cards, data.cardExpenses),
     ...checkLedgerDrift(data.cards, data.cardLedger, data.accountLedger),
     ...checkCardInstallments(data.cards, data.cardExpenses, data.cardInstallments),
     ...checkLoans(data.loans, data.loanInstallments),

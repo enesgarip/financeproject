@@ -65,6 +65,12 @@ export function DataHealthPage() {
     warnings: visibleIssues.filter((issue) => issue.severity === 'warning').length,
     info: visibleIssues.filter((issue) => issue.severity === 'info').length,
   }
+  const integrityStats = {
+    exactDuplicates: visibleIssues.filter((issue) => issue.kind === 'duplicateTransactionCandidate' && issue.payload?.duplicateLevel === 'exact').length,
+    possibleDuplicates: visibleIssues.filter((issue) => issue.kind === 'duplicateTransactionCandidate' && issue.payload?.duplicateLevel === 'possible').length,
+    missingDescriptions: visibleIssues.find((issue) => issue.id === 'card-expense-missing-description')?.payload?.ids?.length ?? 0,
+    missingCategories: visibleIssues.find((issue) => issue.id === 'card-expense-missing-category')?.payload?.ids?.length ?? 0,
+  }
 
   async function handleFix(issue: HealthIssue) {
     setFixingId(issue.id)
@@ -217,6 +223,28 @@ export function DataHealthPage() {
         </SurfaceCard>
 
         {!loading && data.cards.length > 0 ? <LiveReconciliationPanel cards={data.cards} /> : null}
+
+        {!loading ? (
+          <SurfaceCard variant="default">
+            <CardContent className="space-y-3 p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h2 className="font-bold text-foreground">İşlem güvenilirliği</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">Kart harcamalarında duplicate ve eksik sınıflandırma sinyalleri.</p>
+                </div>
+                <Badge variant={integrityStats.exactDuplicates > 0 || integrityStats.possibleDuplicates > 0 ? 'warning' : 'success'}>
+                  Mutabakat
+                </Badge>
+              </div>
+              <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+                <HealthStat label="Kesin duplicate" value={integrityStats.exactDuplicates} tone={integrityStats.exactDuplicates > 0 ? 'warning' : 'neutral'} />
+                <HealthStat label="Muhtemel duplicate" value={integrityStats.possibleDuplicates} tone={integrityStats.possibleDuplicates > 0 ? 'info' : 'neutral'} />
+                <HealthStat label="Açıklamasız" value={integrityStats.missingDescriptions} tone={integrityStats.missingDescriptions > 0 ? 'info' : 'neutral'} />
+                <HealthStat label="Kategorisiz" value={integrityStats.missingCategories} tone={integrityStats.missingCategories > 0 ? 'info' : 'neutral'} />
+              </div>
+            </CardContent>
+          </SurfaceCard>
+        ) : null}
 
         {loading ? (
           <div className="skeleton-shimmer h-32 rounded-2xl" />
