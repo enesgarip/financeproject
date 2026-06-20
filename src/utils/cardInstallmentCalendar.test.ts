@@ -113,7 +113,7 @@ describe('buildCardInstallmentCalendar', () => {
 })
 
 describe('buildCardInstallmentTotalsByCard', () => {
-  it('groups unpaid installments by card and returns a grand total', () => {
+  it('groups scheduled installments by card and returns a grand total', () => {
     const cards = [
       makeCard({ id: 'card-1' }),
       makeCard({ id: 'card-2', bank_name: 'Diger Bank', card_name: 'Bonus' }),
@@ -127,15 +127,16 @@ describe('buildCardInstallmentTotalsByCard', () => {
 
     const result = buildCardInstallmentTotalsByCard(installments, cards)
 
-    expect(result.total).toBe(525.25)
+    expect(result.total).toBe(400)
     expect(result.rows).toHaveLength(2)
     expect(result.rows[0]).toMatchObject({ cardId: 'card-2', amount: 300, count: 1 })
-    expect(result.rows[1]).toMatchObject({ cardId: 'card-1', amount: 225.25, count: 2 })
+    expect(result.rows[1]).toMatchObject({ cardId: 'card-1', amount: 100, count: 1 })
   })
 
-  it('returns empty rows when all installments are paid', () => {
+  it('returns empty rows when all installments are already consumed', () => {
     const result = buildCardInstallmentTotalsByCard([
       makeInstallment({ id: 'i1', amount: 100, status: 'paid' }),
+      makeInstallment({ id: 'i2', amount: 125, status: 'posted' }),
     ], [makeCard({ id: 'card-1' })])
 
     expect(result.total).toBe(0)

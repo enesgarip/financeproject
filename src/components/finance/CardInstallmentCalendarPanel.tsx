@@ -75,7 +75,7 @@ export function CardInstallmentCalendarPanel({ cards }: CardInstallmentCalendarP
           <section className="rounded-xl border border-border/70 bg-card/80 p-3">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="min-w-0">
-                <p className="text-xs font-black uppercase text-muted-foreground">Devam eden taksit toplamı</p>
+                <p className="text-xs font-black uppercase text-muted-foreground">Gelecek taksit toplamı</p>
                 <p className="finance-value mt-1 text-xl font-black leading-none text-foreground">{formatCurrency(cardTotals.total)}</p>
               </div>
               <Badge variant="warning">{cardTotals.rows.length} kart</Badge>

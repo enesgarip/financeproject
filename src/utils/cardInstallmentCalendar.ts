@@ -77,7 +77,7 @@ export function buildCardInstallmentTotalsByCard(
   const byCard = new Map<string, CardInstallmentCardTotal>()
 
   for (const item of installments) {
-    if (item.status === 'paid') continue
+    if (item.status !== 'scheduled') continue
     const card = cardsById.get(item.card_id)
     const existing = byCard.get(item.card_id)
 
