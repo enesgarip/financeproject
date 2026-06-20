@@ -114,6 +114,11 @@
   - DataHealth sayfasına "Türetilmiş alan tutarlılığı" kartı eklendi: kart borcu, hesap bakiye, borç kırılımı ve kredi özeti sapma sayıları tek bakışta görünür.
   - Mevcut DataHealth kontrolleri (`checkLedgerDrift`, `checkCards` split, `checkLoans` totals) zaten kapsamlı; yeni kart bunları özetliyor.
 
+- ~~Kart bazlı tutarlılık skoru — her kart için split/limit/taksit kontrolü.~~ DONE.
+  - `utils/cardConsistency.ts`: kart başına borç kırılımı, limit aşımı, planlı taksit kontrolü → %0-100 skor.
+  - `pages/CardsPage.list.tsx`: her kredi kartında skor badge'i (yeşil/sarı/kırmızı, tooltip ile detay).
+  - 4 unit test.
+
 ## P3 - Nice to Have
 
 - Add goal-based automatic saving suggestions.

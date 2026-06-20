@@ -1,4 +1,4 @@
-import { AlertTriangle, ArrowRightLeft, CheckCircle2 } from 'lucide-react'
+import { AlertTriangle, ArrowRightLeft, CheckCircle2, ShieldCheck } from 'lucide-react'
 import { useState } from 'react'
 import { BankLogo } from '../components/finance/BankLogo'
 import { AccountLedgerPanel } from '../components/finance/AccountLedgerPanel'
@@ -7,6 +7,7 @@ import { MiniStat, SectionHeader, StatusBadge } from '../components/finance/Fina
 import type { Card, CardInstallment, CardStatementArchive } from '../types/database'
 import { nextMonthlyDate } from '../utils/date'
 import { cardPayableDebt } from '../utils/financeSummary'
+import { quickCardConsistencyScore } from '../utils/cardConsistency'
 import { bankBrandGradient, getBankBrand } from '../utils/bankBranding'
 import {
   activeInstallmentCount,
@@ -116,6 +117,7 @@ export function CreditAccountListCard({
   const cardInstallments = installments
     .filter((installment) => installment.card_id === row.id && installment.status !== 'paid')
     .sort((left, right) => left.due_month.localeCompare(right.due_month))
+  const consistency = quickCardConsistencyScore(row, installments)
 
   return (
     <article
@@ -172,6 +174,19 @@ export function CreditAccountListCard({
         </span>
         <span className="rounded-lg bg-muted px-2.5 py-1 text-xs font-bold text-muted-foreground">{status.description}</span>
         {stats.isShared ? <span className="rounded-lg bg-info/10 px-2.5 py-1 text-xs font-bold text-info">Ortak limit</span> : null}
+        <span
+          className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-bold ${
+            consistency.score >= 100
+              ? 'bg-success/10 text-success'
+              : consistency.score >= 75
+                ? 'bg-warning/10 text-warning'
+                : 'bg-destructive/10 text-destructive'
+          }`}
+          title={consistency.checks.map((c) => `${c.ok ? '✓' : '✗'} ${c.label}`).join('\n')}
+        >
+          <ShieldCheck size={12} />
+          %{consistency.score}
+        </span>
       </div>
 
       <div className="mt-3 grid grid-cols-2 gap-2">
