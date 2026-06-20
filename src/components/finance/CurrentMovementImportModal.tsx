@@ -97,6 +97,7 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
 
   const [cleanImport, setCleanImport] = useState(false)
   const [allMovements, setAllMovements] = useState<ParsedDenizBankMovement[]>([])
+  const [installmentCounts, setInstallmentCounts] = useState<Map<number, number>>(new Map())
 
   const [selectedImport, setSelectedImport] = useState<Set<string>>(new Set())
   const [selectedCancel, setSelectedCancel] = useState<Set<string>>(new Set())
@@ -247,9 +248,11 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
 
     const today = new Date().toISOString().slice(0, 10)
 
-    for (const movement of allMovements) {
-      const knownPlan = movement.isInstallment && movement.installmentCount > 1
-      const remaining = knownPlan ? Math.max(1, movement.installmentCount - movement.installmentNo + 1) : 1
+    for (let i = 0; i < allMovements.length; i++) {
+      const movement = allMovements[i]
+      const totalCount = installmentCounts.get(i) ?? movement.installmentCount
+      const knownPlan = movement.isInstallment && totalCount > 1
+      const remaining = knownPlan ? Math.max(1, totalCount - movement.installmentNo + 1) : 1
       const result = await addCardExpense({
         cardId: card.id,
         amount: knownPlan ? roundTL(movement.amount * remaining) : movement.amount,
@@ -443,23 +446,60 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
             </div>
 
             <div className="flex-1 overflow-y-auto">
-              {allMovements.map((movement, index) => (
-                <div
-                  key={`clean-${movement.date}-${movement.amount}-${index}`}
-                  className="flex items-center gap-3 border-b border-border/50 px-4 py-2.5"
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-xs font-bold text-foreground">{movement.description}</p>
-                    <p className="text-[11px] text-muted-foreground">
-                      {formatShortDate(movement.date)} · {movement.category}
-                      {movement.isInstallment && (movement.installmentCount > 1
-                        ? ` · ${movement.installmentNo}/${movement.installmentCount} taksit (kalan ${Math.max(1, movement.installmentCount - movement.installmentNo + 1)})`
-                        : ` · ${movement.installmentNo}. taksit`)}
-                    </p>
+              {allMovements.map((movement, index) => {
+                const userCount = installmentCounts.get(index)
+                const effectiveCount = userCount ?? movement.installmentCount
+                const remaining = effectiveCount > 1 ? Math.max(1, effectiveCount - movement.installmentNo + 1) : 1
+
+                return (
+                  <div
+                    key={`clean-${movement.date}-${movement.amount}-${index}`}
+                    className="border-b border-border/50 px-4 py-2.5"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-xs font-bold text-foreground">{movement.description}</p>
+                        <p className="text-[11px] text-muted-foreground">
+                          {formatShortDate(movement.date)} · {movement.category}
+                        </p>
+                      </div>
+                      <span className="shrink-0 text-xs font-black text-foreground">{formatCurrency(movement.amount)}</span>
+                    </div>
+
+                    {movement.isInstallment && (
+                      <div className="mt-1.5 flex items-center gap-2 rounded-lg bg-muted/40 px-2.5 py-1.5">
+                        <span className="text-[11px] text-muted-foreground">{movement.installmentNo}. taksit ·</span>
+                        <label className="flex items-center gap-1 text-[11px] font-bold text-foreground">
+                          Toplam
+                          <input
+                            type="number"
+                            min={movement.installmentNo}
+                            max={60}
+                            placeholder="?"
+                            value={userCount ?? ''}
+                            onChange={(e) => {
+                              const val = e.target.value ? Math.max(movement.installmentNo, Number(e.target.value)) : undefined
+                              setInstallmentCounts((prev) => {
+                                const next = new Map(prev)
+                                if (val) next.set(index, val)
+                                else next.delete(index)
+                                return next
+                              })
+                            }}
+                            className="w-12 rounded border border-border bg-background px-1.5 py-0.5 text-center text-[11px] font-bold text-foreground"
+                          />
+                          taksit
+                        </label>
+                        {effectiveCount > 1 && (
+                          <span className="text-[11px] text-success">
+                            → kalan {remaining}, toplam {formatCurrency(roundTL(movement.amount * remaining))}
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
-                  <span className="shrink-0 text-xs font-black text-foreground">{formatCurrency(movement.amount)}</span>
-                </div>
-              ))}
+                )
+              })}
             </div>
 
             {applyError && (
