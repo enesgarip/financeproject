@@ -1,6 +1,14 @@
 -- Cancel any card expense (provision or posted) and reverse its effect on card balances.
 -- Unlike cancel_card_provision which only handles provisions, this works for any status.
 
+-- Extend the transaction_history type check to include 'correction'.
+alter table public.transaction_history
+drop constraint if exists transaction_history_type_check;
+
+alter table public.transaction_history
+add constraint transaction_history_type_check
+check (type in ('payment', 'transfer', 'loan', 'debt', 'card', 'correction'));
+
 create or replace function public.cancel_card_expense(
   p_expense_id uuid
 )
