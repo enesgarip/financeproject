@@ -537,6 +537,15 @@ export type Database = {
         }
         Returns: Payment
       }
+      pay_payment_from_card_import: {
+        Args: {
+          p_payment_id: string
+          p_source_card_id: string
+          p_paid_amount: number
+          p_spent_at?: string
+        }
+        Returns: Payment
+      }
       settle_personal_debt: {
         Args: {
           p_debt_id: string

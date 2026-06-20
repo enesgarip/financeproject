@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { matchDenizBankMovements, parseDenizBankMovementPdf } from './denizBankMovementParser'
+import { matchDenizBankMovementPayments, matchDenizBankMovements, parseDenizBankMovementPdf } from './denizBankMovementParser'
 
 const SAMPLE_TEXT = `
 6/19/26, 10:32 PM DenizBank İnternet Bankacılığı
@@ -135,5 +135,93 @@ describe('matchDenizBankMovements', () => {
 
     expect(result.matched).toEqual([petrol])
     expect(result.unmatched).toHaveLength(0)
+  })
+})
+describe('DenizBank movement planned payment reconciliation', () => {
+  const invoice = parseDenizBankMovementPdf(SAMPLE_TEXT).movements.find((movement) => movement.amount === 685)!
+
+  it('matches payment-created card expenses by the due date stored in note', () => {
+    const result = matchDenizBankMovements(
+      [invoice],
+      [
+        {
+          spent_at: '2026-06-20',
+          amount: 685,
+          status: 'posted',
+          description: invoice.description,
+          note: 'Odeme kaydindan olusturuldu. Vade: 2026-06-15',
+        },
+      ],
+    )
+
+    expect(result.matched).toEqual([invoice])
+    expect(result.unmatched).toHaveLength(0)
+  })
+
+  it('matches still-open planned payments by amount, due date, and title', () => {
+    const result = matchDenizBankMovementPayments(
+      [invoice],
+      [
+        {
+          id: 'payment-1',
+          title: invoice.description,
+          amount: 685,
+          amount_status: 'exact',
+          due_date: '2026-06-15',
+          status: 'bekliyor',
+          payment_method: 'manual',
+          auto_source_card_id: null,
+        },
+      ],
+      'card-1',
+    )
+
+    expect(result.matched).toEqual([invoice])
+    expect(result.unmatched).toHaveLength(0)
+    expect(result.matches[0]?.payment.id).toBe('payment-1')
+  })
+
+  it('matches planned payments even when the user wrote a custom title', () => {
+    const result = matchDenizBankMovementPayments(
+      [invoice],
+      [
+        {
+          id: 'payment-custom-title',
+          title: 'internet faturasi',
+          amount: 685,
+          amount_status: 'exact',
+          due_date: '2026-06-15',
+          status: 'bekliyor',
+          payment_method: 'manual',
+          auto_source_card_id: null,
+        },
+      ],
+      'card-1',
+    )
+
+    expect(result.matched).toEqual([invoice])
+    expect(result.unmatched).toHaveLength(0)
+  })
+
+  it('does not match planned payments tied to another card', () => {
+    const result = matchDenizBankMovementPayments(
+      [invoice],
+      [
+        {
+          id: 'payment-2',
+          title: invoice.description,
+          amount: 685,
+          amount_status: 'exact',
+          due_date: '2026-06-15',
+          status: 'bekliyor',
+          payment_method: 'manual',
+          auto_source_card_id: 'other-card',
+        },
+      ],
+      'card-1',
+    )
+
+    expect(result.matched).toHaveLength(0)
+    expect(result.unmatched).toEqual([invoice])
   })
 })

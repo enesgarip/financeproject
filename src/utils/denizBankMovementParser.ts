@@ -56,9 +56,33 @@ export type MovementExpenseMatchRow = {
   amount: number
   status: string
   description?: string | null
+  note?: string | null
+}
+
+export type MovementPaymentMatchRow = {
+  id: string
+  title: string
+  amount: number
+  amount_status: string
+  due_date: string
+  status: string
+  payment_method: string
+  auto_source_card_id: string | null
+}
+
+export type MovementPaymentMatchResult = {
+  matched: ParsedDenizBankMovement[]
+  unmatched: ParsedDenizBankMovement[]
+  matches: DenizBankMovementPaymentMatch[]
+}
+
+export type DenizBankMovementPaymentMatch = {
+  movement: ParsedDenizBankMovement
+  payment: MovementPaymentMatchRow
 }
 
 const LOOSE_DATE_MATCH_WINDOW_DAYS = 3
+const PAYMENT_DATE_MATCH_WINDOW_DAYS = 7
 const AMOUNT_MATCH_TOLERANCE_TL = 1
 
 const KNOWN_DETAILS = [
@@ -162,6 +186,21 @@ function dateDistanceDays(left: string, right: string): number | null {
   return Math.abs(leftDay - rightDay)
 }
 
+function paymentDueDateFromExpenseNote(note: string | null | undefined): string | null {
+  const match = note?.match(/Vade:\s*(\d{4}-\d{2}-\d{2})/i)
+  return match?.[1] ?? null
+}
+
+function expenseDateDistance(expense: MovementExpenseMatchRow, movementDate: string): number | null {
+  const spentDistance = dateDistanceDays(expense.spent_at, movementDate)
+  const paymentDueDate = paymentDueDateFromExpenseNote(expense.note)
+  const dueDistance = paymentDueDate ? dateDistanceDays(paymentDueDate, movementDate) : null
+
+  if (spentDistance == null) return dueDistance
+  if (dueDistance == null) return spentDistance
+  return Math.min(spentDistance, dueDistance)
+}
+
 export function parseDenizBankMovementPdf(text: string): ParsedDenizBankMovementFile {
   const lines = text.split('\n').map((line) => line.trim()).filter(Boolean)
   const movements: ParsedDenizBankMovement[] = []
@@ -230,7 +269,7 @@ export function matchDenizBankMovements(
       const sameAmount = Math.abs(diffTL(expense.amount, movement.amount)) <= AMOUNT_MATCH_TOLERANCE_TL
       if (!sameAmount) continue
 
-      const distance = dateDistanceDays(expense.spent_at, movement.date)
+      const distance = expenseDateDistance(expense, movement.date)
       if (distance === 0) exactDateCandidates.push(index)
       else if (distance != null && distance <= LOOSE_DATE_MATCH_WINDOW_DAYS) {
         looseDateCandidates.push({ index, distance })
@@ -251,6 +290,58 @@ export function matchDenizBankMovements(
       usedIndices.add(foundIndex)
       matched.push(movement)
       matches.push({ movement, expense: active[foundIndex] })
+    }
+  }
+
+  return { matched, unmatched, matches }
+}
+
+export function matchDenizBankMovementPayments(
+  bankMovements: ParsedDenizBankMovement[],
+  plannedPayments: MovementPaymentMatchRow[],
+  cardId: string,
+): MovementPaymentMatchResult {
+  const active = plannedPayments.filter((payment) => (
+    payment.status === 'bekliyor' &&
+    payment.amount > 0 &&
+    (!payment.auto_source_card_id || payment.auto_source_card_id === cardId)
+  ))
+  const usedIndices = new Set<number>()
+  const matched: ParsedDenizBankMovement[] = []
+  const unmatched: ParsedDenizBankMovement[] = []
+  const matches: DenizBankMovementPaymentMatch[] = []
+
+  for (const movement of bankMovements) {
+    const candidates: Array<{ index: number; distance: number; titleCompatible: boolean; tiedToThisCard: boolean }> = []
+
+    for (let index = 0; index < active.length; index++) {
+      if (usedIndices.has(index)) continue
+      const payment = active[index]
+      const sameAmount = Math.abs(diffTL(payment.amount, movement.amount)) <= AMOUNT_MATCH_TOLERANCE_TL
+      if (!sameAmount) continue
+
+      const distance = dateDistanceDays(payment.due_date, movement.date)
+      if (distance == null || distance > PAYMENT_DATE_MATCH_WINDOW_DAYS) continue
+
+      const titleCompatible = descriptionsCompatible(movement.description, payment.title)
+      const tiedToThisCard = payment.auto_source_card_id === cardId
+
+      candidates.push({ index, distance, titleCompatible, tiedToThisCard })
+    }
+
+    const foundIndex = candidates
+      .sort((left, right) => (
+        Number(right.titleCompatible) - Number(left.titleCompatible) ||
+        Number(right.tiedToThisCard) - Number(left.tiedToThisCard) ||
+        left.distance - right.distance
+      ))[0]?.index
+
+    if (foundIndex == null) {
+      unmatched.push(movement)
+    } else {
+      usedIndices.add(foundIndex)
+      matched.push(movement)
+      matches.push({ movement, payment: active[foundIndex] })
     }
   }
 

@@ -1,6 +1,6 @@
 # Card Debt Transitions
 
-Last reviewed: 2026-06-15
+Last reviewed: 2026-06-20
 
 This file is the working source of truth for how credit-card debt moves through
 the app. If an RPC, page action, or data-health fix changes one of these rules,
@@ -58,6 +58,7 @@ member `debt_amount` values.
 | Statement paid | `pay_card_statement` | Source bank account `current_balance -= statement amount`; card `debt_amount -= statement amount`; card `statement_debt_amount -= statement amount` | Marks the statement `paid`; marks linked card installments `paid` |
 | Manual card debt paid | `pay_card_debt` | Source bank account `current_balance -= amount`; card `debt_amount -= amount`; statement debt is reduced first, then current-period spending | Does not close statement archive rows; does not change provisions or future scheduled installments |
 | Planned payment paid from credit card | `pay_payment` with a credit-card source | Source credit card `debt_amount += paid amount`; `current_period_spending += paid amount` | Inserts a posted `card_expenses` row for the planned payment; advances or closes the payment row |
+| Planned payment reconciled from card import | `pay_payment_from_card_import` | Source credit card `debt_amount += paid amount`; `current_period_spending += paid amount` | Inserts a posted `card_expenses` row using the bank movement/statement date; advances or closes the matched payment row |
 | Posted expense edited | `update_card_expense` | Reverses the previous posted impact, then applies the new posted impact | Recreates installment rows for the edited expense |
 | Legacy installment carried over | `record_card_installment_carryover` | `debt_amount += remaining installment total`; `current_period_spending += installment amount` only when the next due month is the current month | Inserts one posted expense and remaining installment rows |
 | Card debt recomputed from ledger | `recompute_card_debt_from_ledger` | `debt_amount = sum(card_ledger.amount_kurus) / 100`; split fields may be clamped by the breakdown invariant if they exceed the repaired total | Suppresses the ledger trigger for this repair write so no duplicate event is emitted |
@@ -97,6 +98,12 @@ When `pay_payment` is funded by a credit card instead of a bank account, it is
 card spending, not cash outflow: the selected credit card receives a posted
 expense and its `debt_amount` / `current_period_spending` increase by the paid
 amount.
+
+DenizBank statement/current movement imports use `pay_payment_from_card_import`
+for rows that match a still-open planned payment. It is the same credit-card
+spending semantics as `pay_payment`, but the generated `card_expenses.spent_at`
+uses the bank row date and the note keeps the planned-payment due date. This
+prevents a bill from staying pending after its card movement is imported.
 
 ## Ledger Authority
 

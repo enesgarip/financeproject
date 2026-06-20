@@ -1,13 +1,22 @@
-import { AlertCircle, CheckCircle2, ChevronDown, FileUp, Loader2, Scale, X } from 'lucide-react'
+import { AlertCircle, Check, CheckCircle2, ChevronDown, FileUp, Loader2, Scale, X } from 'lucide-react'
 import { useCallback, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { addCardExpense, fetchCardExpenseMatchRows, type ExpenseMatchRow } from '../../data/repositories/cardsRepo'
+import {
+  addCardExpense,
+  fetchCardExpenseMatchRows,
+  fetchCardPaymentMatchRows,
+  payPaymentFromCardImport,
+  type ExpenseMatchRow,
+  type PaymentMatchRow,
+} from '../../data/repositories/cardsRepo'
 import { extractPdfText } from '../../lib/pdfText'
 import type { Card } from '../../types/database'
 import {
   matchDenizBankMovements,
+  matchDenizBankMovementPayments,
   parseDenizBankMovementPdf,
   type DenizBankMovementMatch,
+  type DenizBankMovementPaymentMatch,
   type ParsedDenizBankMovement,
   type ParsedDenizBankPayment,
 } from '../../utils/denizBankMovementParser'
@@ -19,6 +28,11 @@ import { CardExpenseHistorySection } from './CardExpenseHistorySection'
 import { useBodyScrollLock } from '../ui/use-body-scroll-lock'
 
 type Step = 'upload' | 'review' | 'success'
+
+type ImportableMovement = {
+  movement: ParsedDenizBankMovement
+  plannedPayment: PaymentMatchRow | null
+}
 
 type Props = {
   card: Card
@@ -58,10 +72,11 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
   const [importError, setImportError] = useState('')
   const [matched, setMatched] = useState<ParsedDenizBankMovement[]>([])
   const [matches, setMatches] = useState<DenizBankMovementMatch[]>([])
+  const [plannedPaymentMatches, setPlannedPaymentMatches] = useState<DenizBankMovementPaymentMatch[]>([])
   const [showMatches, setShowMatches] = useState(false)
   const [periodExpenses, setPeriodExpenses] = useState<ExpenseMatchRow[]>([])
   const [periodLabel, setPeriodLabel] = useState('')
-  const [importable, setImportable] = useState<ParsedDenizBankMovement[]>([])
+  const [importable, setImportable] = useState<ImportableMovement[]>([])
   const [manualReview, setManualReview] = useState<ParsedDenizBankMovement[]>([])
   const [payments, setPayments] = useState<ParsedDenizBankPayment[]>([])
   const [ignoredCount, setIgnoredCount] = useState(0)
@@ -87,9 +102,17 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
         return
       }
 
-      const expensesResult = await fetchCardExpenseMatchRows(card.id)
+      const [expensesResult, paymentsResult] = await Promise.all([
+        fetchCardExpenseMatchRows(card.id),
+        fetchCardPaymentMatchRows(card.id),
+      ])
       if (!expensesResult.ok) {
         setParseError(expensesResult.error.message ?? 'Kart harcamaları yüklenemedi.')
+        return
+      }
+
+      if (!paymentsResult.ok) {
+        setParseError(paymentsResult.error.message ?? 'Planli odemeler yuklenemedi.')
         return
       }
 
@@ -99,11 +122,20 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
       const reviewPeriod = cardPeriod
         ? { start: cardPeriod.periodStart, end: cardPeriod.periodEnd, label: cardPeriod.periodLabel }
         : fallbackPeriod
-      const nextImportable = result.unmatched.filter((movement) => !movement.isInstallment)
+      const unmatchedNonInstallments = result.unmatched.filter((movement) => !movement.isInstallment)
+      const paymentMatchResult = matchDenizBankMovementPayments(unmatchedNonInstallments, paymentsResult.data, card.id)
+      const plannedPaymentByMovement = new Map<string, PaymentMatchRow>(
+        paymentMatchResult.matches.map(({ movement, payment }) => [movement.rawLine, payment as PaymentMatchRow]),
+      )
+      const nextImportable = unmatchedNonInstallments.map((movement) => ({
+        movement,
+        plannedPayment: plannedPaymentByMovement.get(movement.rawLine) ?? null,
+      }))
       const nextManual = result.unmatched.filter((movement) => movement.isInstallment)
 
       setMatched(result.matched)
       setMatches(result.matches)
+      setPlannedPaymentMatches(paymentMatchResult.matches)
       setShowMatches(false)
       setPeriodLabel(reviewPeriod?.label ?? '')
       setPeriodExpenses(rowsInReviewPeriod(expensesResult.data, reviewPeriod))
@@ -144,18 +176,27 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
     let successCount = 0
     const errors: string[] = []
 
-    for (const movement of toImport) {
-      const result = await addCardExpense({
-        cardId: card.id,
-        amount: movement.amount,
-        description: movement.description,
-        spentAt: movement.date,
-        category: movement.category,
-        installmentCount: 1,
-        status: movement.appStatus,
-      })
+    for (const item of toImport) {
+      const { movement, plannedPayment } = item
+      const result = plannedPayment
+        ? await payPaymentFromCardImport({
+          paymentId: plannedPayment.id,
+          sourceCardId: card.id,
+          amount: movement.amount,
+          spentAt: movement.date,
+        })
+        : await addCardExpense({
+          cardId: card.id,
+          amount: movement.amount,
+          description: movement.description,
+          spentAt: movement.date,
+          category: movement.category,
+          installmentCount: 1,
+          status: movement.appStatus,
+        })
 
-      if (!result.ok) errors.push(`${movement.description}: ${result.error.message ?? 'Bilinmeyen hata.'}`)
+      const errorTitle = plannedPayment ? `${plannedPayment.title} / ${movement.description}` : movement.description
+      if (!result.ok) errors.push(`${errorTitle}: ${result.error.message ?? 'Bilinmeyen hata.'}`)
       else successCount++
     }
 
@@ -170,8 +211,8 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
     setStep('success')
   }
 
-  const importableTotal = sumTL(importable.map((movement) => movement.amount))
-  const selectedTotal = sumTL(importable.filter((_, index) => selected.has(index)).map((movement) => movement.amount))
+  const importableTotal = sumTL(importable.map(({ movement }) => movement.amount))
+  const selectedTotal = sumTL(importable.filter((_, index) => selected.has(index)).map(({ movement }) => movement.amount))
   const manualTotal = sumTL(manualReview.map((movement) => movement.amount))
 
   return createPortal(
@@ -283,6 +324,13 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
                 </p>
               ) : null}
 
+              {plannedPaymentMatches.length > 0 ? (
+                <p className="flex items-start gap-2 rounded-lg bg-success/10 p-2.5 text-[11px] font-medium text-success">
+                  <CheckCircle2 size={13} className="mt-0.5 shrink-0" />
+                  {plannedPaymentMatches.length} satır planlı ödeme ile eşleşti; seçilirse fatura kaydı da güncellenecek.
+                </p>
+              ) : null}
+
               {ignoredCount > 0 ? (
                 <p className="flex items-start gap-2 rounded-lg bg-warning/10 p-2.5 text-[11px] font-medium text-warning">
                   <AlertCircle size={13} className="mt-0.5 shrink-0" />
@@ -353,35 +401,55 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
                 </div>
 
                 <div className="flex-1 overflow-y-auto">
-                  {importable.map((movement, index) => (
-                    <div
-                      key={`${movement.date}-${movement.description}-${movement.amount}-${index}`}
-                      onClick={() => toggleRow(index)}
-                      className="flex cursor-pointer items-center gap-3 border-b border-border/50 px-4 py-2.5 hover:bg-muted/30"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selected.has(index)}
-                        onClick={(event) => event.stopPropagation()}
-                        onChange={() => toggleRow(index)}
-                        className="size-4 accent-primary"
-                      />
-                      <div className="min-w-0 flex-1">
-                        <div className="flex min-w-0 flex-wrap items-center gap-2">
-                          <p className="min-w-0 truncate text-xs font-bold text-foreground">{movement.description}</p>
-                          <span className={`rounded-md px-2 py-0.5 text-[10px] font-black ${statusClassName(movement)}`}>
-                            {statusLabel(movement)}
-                          </span>
+                  {importable.map((item, index) => {
+                    const { movement, plannedPayment } = item
+                    const isSelected = selected.has(index)
+                    return (
+                      <button
+                        type="button"
+                        key={`${movement.date}-${movement.description}-${movement.amount}-${index}`}
+                        onClick={() => toggleRow(index)}
+                        aria-pressed={isSelected}
+                        className="flex w-full cursor-pointer items-center gap-3 border-b border-border/50 px-4 py-2.5 text-left hover:bg-muted/30"
+                      >
+                        <span
+                          aria-hidden="true"
+                          className={`grid size-4 shrink-0 place-items-center rounded border ${
+                            isSelected
+                              ? 'border-primary bg-primary text-primary-foreground'
+                              : 'border-border bg-background'
+                          }`}
+                        >
+                          {isSelected ? <Check size={12} strokeWidth={3} /> : null}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex min-w-0 flex-wrap items-center gap-2">
+                            <p className="min-w-0 truncate text-xs font-bold text-foreground">{movement.description}</p>
+                            <span className={`rounded-md px-2 py-0.5 text-[10px] font-black ${statusClassName(movement)}`}>
+                              {statusLabel(movement)}
+                            </span>
+                            {plannedPayment ? (
+                              <span className="rounded-md bg-info/10 px-2 py-0.5 text-[10px] font-black text-info">
+                                Planlı ödeme
+                              </span>
+                            ) : null}
+                          </div>
+                          {plannedPayment ? (
+                            <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
+                              {formatShortDate(movement.date)} · {movement.category} · Plan: {plannedPayment.title} · vade {formatShortDate(plannedPayment.due_date)}
+                            </p>
+                          ) : (
+                            <p className="mt-0.5 text-[11px] text-muted-foreground">
+                              {formatShortDate(movement.date)} · {movement.category} · **** {movement.cardLastFour}
+                            </p>
+                          )}
                         </div>
-                        <p className="mt-0.5 text-[11px] text-muted-foreground">
-                          {formatShortDate(movement.date)} · {movement.category} · **** {movement.cardLastFour}
-                        </p>
-                      </div>
-                      <span className="shrink-0 text-right text-xs font-black text-foreground">
-                        {formatCurrency(movement.amount)}
-                      </span>
-                    </div>
-                  ))}
+                        <span className="shrink-0 text-right text-xs font-black text-foreground">
+                          {formatCurrency(movement.amount)}
+                        </span>
+                      </button>
+                    )
+                  })}
                 </div>
 
                 {importError && (

@@ -37,6 +37,7 @@ export type StatementExpenseMatchRow = {
   amount: number
   status: string
   description?: string | null
+  note?: string | null
 }
 
 // ── PDF section headers → app categories ──────────────────────────────────
@@ -99,6 +100,21 @@ function dateDistanceDays(left: string, right: string): number | null {
   const rightDay = isoDayNumber(right)
   if (leftDay == null || rightDay == null) return null
   return Math.abs(leftDay - rightDay)
+}
+
+function paymentDueDateFromExpenseNote(note: string | null | undefined): string | null {
+  const match = note?.match(/Vade:\s*(\d{4}-\d{2}-\d{2})/i)
+  return match?.[1] ?? null
+}
+
+function expenseDateDistance(expense: StatementExpenseMatchRow, transactionDate: string): number | null {
+  const spentDistance = dateDistanceDays(expense.spent_at, transactionDate)
+  const paymentDueDate = paymentDueDateFromExpenseNote(expense.note)
+  const dueDistance = paymentDueDate ? dateDistanceDays(paymentDueDate, transactionDate) : null
+
+  if (spentDistance == null) return dueDistance
+  if (dueDistance == null) return spentDistance
+  return Math.min(spentDistance, dueDistance)
 }
 
 // ── Main parser ────────────────────────────────────────────────────────────
@@ -235,7 +251,7 @@ export function matchTransactions(
       const sameAmount = Math.abs(diffTL(exp.amount, compareAmount)) <= AMOUNT_MATCH_TOLERANCE_TL
       if (!sameAmount) continue
 
-      const distance = dateDistanceDays(exp.spent_at, tx.date)
+      const distance = expenseDateDistance(exp, tx.date)
       if (distance === 0) exactDateCandidates.push(i)
       else if (distance != null && distance <= LOOSE_DATE_MATCH_WINDOW_DAYS) {
         looseDateCandidates.push({ index: i, distance })

@@ -54,6 +54,7 @@
   - Cards page now opens a current movement import flow for DenizBank internet banking PDFs.
   - Pending rows import as provisions, posted spending imports as current-period expenses, payment rows are excluded, and installment rows are left for manual review.
   - Review now lists the detected period's app spending history, keeps matched bank/app pairs collapsed by default, and starts importable rows unselected for deliberate row-by-row import.
+  - 2026-06-20 update: statement/current movement imports match still-open planned payments and use `pay_payment_from_card_import`, so card-paid bills do not remain as duplicate pending obligations after import.
 - Add "kasa modu" / spendable balance planning.
   - Let bank balances be mentally allocated into buckets such as emergency fund, taxes/insurance, vacation, investment, and spendable cash.
   - Keep the underlying bank balance unchanged; this is a planning overlay, not a ledger movement.

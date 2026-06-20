@@ -2,7 +2,7 @@
 
 ## Scope
 
-This file records the current business rules inferred from the codebase as of 2026-06-15. If code and this file diverge, update both intentionally.
+This file records the current business rules inferred from the codebase as of 2026-06-20. If code and this file diverge, update both intentionally.
 
 ## Money and Formatting
 
@@ -130,7 +130,8 @@ Current movement reconciliation:
 - `Hesaptan Ödeme` rows are not imported as card expenses.
 - `Taksitli Satış` rows are shown for manual review; the first implementation does not infer or recreate installment plans from current movement exports.
 - Review screens show the app's spending history for the detected period, keep matched bank/app record pairs collapsed by default, and leave missing rows unselected until the user chooses which rows to import.
-- Imports use the existing `add_card_expense` RPC so card debt, provision/current-period fields, ledger events, and transaction history stay under the audited mutation path.
+- Imports use `add_card_expense` for ordinary card spending so card debt, provision/current-period fields, ledger events, and transaction history stay under the audited mutation path.
+- If a missing bank row matches a still-open planned payment by amount and due/movement date, the import uses `pay_payment_from_card_import` instead. This creates the card expense on the bank row date and advances/closes the planned payment, preventing the same bill from remaining as a separate pending obligation.
 
 ## Card Installment Rules
 
@@ -187,6 +188,7 @@ From `src/utils/budgetAlerts.ts`:
 - marking a payment paid can use a bank card or credit card:
   - bank cards decrease `current_balance`
   - credit cards create a posted `card_expenses` row and increase `debt_amount` plus `current_period_spending`
+- DenizBank statement/current movement imports can reconcile a card-paid planned payment through `pay_payment_from_card_import`; this is credit-card-funded payment semantics with the bank import date preserved on the generated expense.
 - dashboard monthly load includes:
   - one-off payments due in the month
   - recurring monthly payments whose occurrence lands in the month

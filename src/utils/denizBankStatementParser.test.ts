@@ -295,6 +295,22 @@ describe('matchTransactions', () => {
     expect(result.unmatched).toHaveLength(0)
   })
 
+  it('matches payment-created expenses by the due date stored in note', () => {
+    const result = matchTransactions(
+      [tx('2026-06-03', 170)],
+      [{
+        spent_at: '2026-06-20',
+        amount: 170,
+        status: 'posted',
+        description: 'Internet faturasi',
+        note: 'Odeme kaydindan olusturuldu. Vade: 2026-06-03',
+      }],
+    )
+
+    expect(result.matched).toHaveLength(1)
+    expect(result.unmatched).toHaveLength(0)
+  })
+
   it('does not match dates outside the import date window', () => {
     const result = matchTransactions([tx('2026-06-03', 170)], [exp('2026-06-10', 170)])
     expect(result.unmatched).toHaveLength(1)

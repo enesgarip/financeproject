@@ -1,6 +1,6 @@
 # Cards Architecture Note
 
-Last reviewed: 2026-06-15
+Last reviewed: 2026-06-20
 
 This note maps `/kartlar` (`CardsPage`) after the page split. Start with
 `CLAUDE.md`, `docs/AI_CONTEXT_INDEX.md`, and `docs/CARD_DEBT_TRANSITIONS.md`
@@ -30,6 +30,7 @@ repositories, services, or focused `CardsPage.*` modules.
 - `CardsPage.crud.tsx`: CRUD form mapping, grouping, row actions, list metadata
 - `CardsPage.helpers.ts`: card-specific pure helpers and date/month utilities
 - `CardsPage.movementModal.tsx`: account movement modal presentation
+- `components/finance/StatementImportModal.tsx`: statement PDF reconciliation/import flow
 - `components/finance/CurrentMovementImportModal.tsx`: DenizBank current movement
   PDF reconciliation review/import flow
 
@@ -47,7 +48,12 @@ actions should use the repository/service layer:
   `src/utils/denizBankMovementParser.ts`, matches via
   `fetchCardExpenseMatchRows`, shows the detected period's app spending
   history plus collapsed matched bank/app pairs in the review UI, and writes
-  only through `add_card_expense`
+  spending through `add_card_expense`
+- statement/current movement imports also load planned-payment match rows via
+  `fetchCardPaymentMatchRows`; when a bank row matches a still-open planned
+  payment, the import calls `pay_payment_from_card_import` so the card expense
+  and payment recurrence/status update happen in one RPC instead of double
+  counting the bill as both card spending and a pending obligation
 - account deposit, withdrawal, and account-to-account transfer:
   `src/services/accountMovements.ts`
 - card/account ledger recomputation actions:

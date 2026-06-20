@@ -1,4 +1,4 @@
-import { FileUp, X, CheckCircle2, AlertCircle, Loader2, FileText, ChevronDown } from 'lucide-react'
+import { FileUp, X, Check, CheckCircle2, AlertCircle, Loader2, FileText, ChevronDown } from 'lucide-react'
 import { useCallback, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useBodyScrollLock } from '../ui/use-body-scroll-lock'
@@ -6,9 +6,12 @@ import {
   addCardExpense,
   cutCardStatement,
   fetchCardExpenseMatchRows,
+  fetchCardPaymentMatchRows,
+  payPaymentFromCardImport,
   resetCardData,
   setStatementReconciliation,
   type ExpenseMatchRow,
+  type PaymentMatchRow,
 } from '../../data/repositories/cardsRepo'
 import type { Card } from '../../types/database'
 import { getCardStatementPeriod } from '../../utils/cardStatement'
@@ -21,6 +24,7 @@ import {
   type ParsedTransaction,
   type StatementTransactionMatch,
 } from '../../utils/denizBankStatementParser'
+import { matchDenizBankMovementPayments, type ParsedDenizBankMovement } from '../../utils/denizBankMovementParser'
 import { diffTL, equalsTL, roundTL, sumTL } from '../../utils/money'
 import { parseStatementText } from '../../lib/statementParseClient'
 import { extractPdfText } from '../../lib/pdfText'
@@ -49,10 +53,53 @@ function appExpenseStatusLabel(status: string) {
 
 type Step = 'upload' | 'review' | 'success'
 
+type StatementImportRow = {
+  transaction: ParsedTransaction
+  plannedPayment: PaymentMatchRow | null
+}
+
 type Props = {
   card: Card
   onClose: () => void
   onSuccess: () => void
+}
+
+function transactionMovementAdapter(tx: ParsedTransaction, index: number): ParsedDenizBankMovement {
+  return {
+    bankStatus: 'posted',
+    appStatus: 'posted',
+    date: tx.date,
+    description: tx.description,
+    detail: '',
+    cardNo: '',
+    cardLastFour: '',
+    cardType: '',
+    amount: tx.amount,
+    bonus: 0,
+    category: tx.category,
+    isInstallment: tx.isInstallment,
+    rawLine: String(index),
+  }
+}
+
+function attachPlannedPayments(
+  transactions: ParsedTransaction[],
+  plannedPayments: PaymentMatchRow[],
+  cardId: string,
+): StatementImportRow[] {
+  const movementRows = transactions
+    .map((transaction, index) => ({ transaction, index }))
+    .filter(({ transaction }) => !transaction.isInstallment)
+    .map(({ transaction, index }) => transactionMovementAdapter(transaction, index))
+  const paymentMatchResult = matchDenizBankMovementPayments(movementRows, plannedPayments, cardId)
+  const paymentByIndex = new Map<number, PaymentMatchRow>(
+    paymentMatchResult.matches.map(({ movement, payment }) => [Number(movement.rawLine), payment as PaymentMatchRow]),
+  )
+
+  return transactions.map((transaction, index) => ({
+    transaction,
+    plannedPayment: paymentByIndex.get(index) ?? null,
+  }))
 }
 
 export function StatementImportModal({ card, onClose, onSuccess }: Props) {
@@ -74,8 +121,9 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
   const [showMatches, setShowMatches] = useState(false)
   const [periodExpenses, setPeriodExpenses] = useState<ExpenseMatchRow[]>([])
   const [periodLabel, setPeriodLabel] = useState('')
-  const [unmatched, setUnmatched] = useState<ParsedTransaction[]>([])
+  const [unmatched, setUnmatched] = useState<StatementImportRow[]>([])
   const [manualReview, setManualReview] = useState<ParsedTransaction[]>([])
+  const [plannedPaymentMatches, setPlannedPaymentMatches] = useState(0)
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const [importedCount, setImportedCount] = useState(0)
 
@@ -116,7 +164,15 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
 
       // Load existing app expenses once: matching and the period history panel
       // share the same snapshot.
-      const expensesResult = await fetchCardExpenseMatchRows(card.id)
+      const [expensesResult, paymentsResult] = await Promise.all([
+        fetchCardExpenseMatchRows(card.id),
+        fetchCardPaymentMatchRows(card.id),
+      ])
+      if (!paymentsResult.ok) {
+        setParseError(paymentsResult.error.message ?? 'Planli odemeler yuklenemedi.')
+        setParsing(false)
+        return
+      }
       const expenses = expensesResult.ok ? expensesResult.data : []
       const fallbackPeriod = dateRangeFromIsoDates(parsed.transactions.map((tx) => tx.date))
       const periodAnchor = parsed.statementDate || fallbackPeriod?.end || null
@@ -131,11 +187,13 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
       // Temiz içe aktarma: kart sıfırlanacağı için eşleştirme yapılmaz; tüm
       // işlemler (peşin + taksit) baştan kurulur.
       if (cleanImport) {
+        const importRows = attachPlannedPayments(parsed.transactions, paymentsResult.data, card.id)
         setMatched([])
         setMatches([])
         setShowMatches(false)
         setManualReview([])
-        setUnmatched(parsed.transactions)
+        setUnmatched(importRows)
+        setPlannedPaymentMatches(importRows.filter(({ plannedPayment }) => plannedPayment).length)
         setSelected(new Set())
         setStep('review')
         return
@@ -147,12 +205,14 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
       // plan-ortası/eksik bilgili taksitler (manuel kontrol gerektirir).
       const importable = result.unmatched.filter(isImportable)
       const manual = result.unmatched.filter((tx) => !isImportable(tx))
+      const importRows = attachPlannedPayments(importable, paymentsResult.data, card.id)
 
       setMatched(result.matched)
       setMatches(result.matches)
       setShowMatches(false)
-      setUnmatched(importable)
+      setUnmatched(importRows)
       setManualReview(manual)
+      setPlannedPaymentMatches(importRows.filter(({ plannedPayment }) => plannedPayment).length)
       setSelected(new Set())
       setStep('review')
     } catch (err) {
@@ -194,11 +254,19 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
     let successCount = 0
     const errors: string[] = []
 
-    for (const tx of toImport) {
+    for (const item of toImport) {
+      const { transaction: tx, plannedPayment } = item
       const knownPlan = tx.isInstallment && tx.installmentCount > 1
       // Plan-ortası taksitte kalan adet bu aydan itibaren kurulur.
       const remaining = knownPlan ? Math.max(1, tx.installmentCount - tx.installmentNo + 1) : 1
-      const result = await addCardExpense({
+      const result = plannedPayment
+        ? await payPaymentFromCardImport({
+          paymentId: plannedPayment.id,
+          sourceCardId: card.id,
+          amount: tx.amount,
+          spentAt: tx.date,
+        })
+        : await addCardExpense({
         cardId: card.id,
         amount: knownPlan ? roundTL(tx.amount * remaining) : tx.amount,
         description: tx.description,
@@ -260,9 +328,17 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
     let successCount = 0
     const errors: string[] = []
 
-    for (const tx of toImport) {
+    for (const item of toImport) {
+      const { transaction: tx, plannedPayment } = item
       const installment = tx.isInstallment && tx.installmentCount > 1
-      const result = await addCardExpense({
+      const result = plannedPayment
+        ? await payPaymentFromCardImport({
+          paymentId: plannedPayment.id,
+          sourceCardId: card.id,
+          amount: tx.amount,
+          spentAt: tx.date,
+        })
+        : await addCardExpense({
         cardId: card.id,
         // Taksitli işlemde ekstre aylık tutarı taşır; harcamayı TOPLAM tutarla aç.
         amount: installment ? expenseTotalAmount(tx) : tx.amount,
@@ -491,6 +567,12 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
                     <AlertCircle size={12} />
                     {unmatched.length} eksik
                   </span>
+                  {plannedPaymentMatches > 0 && (
+                    <span className="flex items-center gap-1 rounded-md bg-info/10 px-2 py-1 font-bold text-info">
+                      <CheckCircle2 size={12} />
+                      {plannedPaymentMatches} planlı ödeme
+                    </span>
+                  )}
                   {manualReview.length > 0 && (
                     <span className="flex items-center gap-1 rounded-md bg-info/10 px-2 py-1 font-bold text-info">
                       <AlertCircle size={12} />
@@ -567,7 +649,8 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
                 </div>
 
                 <div className="flex-1 overflow-y-auto">
-                  {unmatched.map((tx, i) => {
+                  {unmatched.map((item, i) => {
+                    const { transaction: tx, plannedPayment } = item
                     const knownPlan = tx.isInstallment && tx.installmentCount > 1
                     // Clean modda plan-ortası taksitten yalnızca kalan adet kurulur.
                     const planCount = cleanImport && knownPlan
@@ -576,25 +659,42 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
                     const rowTotal = knownPlan
                       ? roundTL(tx.amount * planCount)
                       : tx.amount
+                    const isSelected = selected.has(i)
                     return (
-                      <div
+                      <button
+                        type="button"
                         key={i}
                         onClick={() => toggleRow(i)}
-                        className="flex cursor-pointer items-center gap-3 border-b border-border/50 px-4 py-2.5 hover:bg-muted/30"
+                        aria-pressed={isSelected}
+                        className="flex w-full cursor-pointer items-center gap-3 border-b border-border/50 px-4 py-2.5 text-left hover:bg-muted/30"
                       >
-                        <input
-                          type="checkbox"
-                          checked={selected.has(i)}
-                          onClick={(event) => event.stopPropagation()}
-                          onChange={() => toggleRow(i)}
-                          className="size-4 accent-primary"
-                        />
+                        <span
+                          aria-hidden="true"
+                          className={`grid size-4 shrink-0 place-items-center rounded border ${
+                            isSelected
+                              ? 'border-primary bg-primary text-primary-foreground'
+                              : 'border-border bg-background'
+                          }`}
+                        >
+                          {isSelected ? <Check size={12} strokeWidth={3} /> : null}
+                        </span>
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-xs font-bold text-foreground">{tx.description}</p>
-                          <p className="text-[11px] text-muted-foreground">
-                            {formatShortDate(tx.date)} · {tx.category}
-                            {tx.isInstallment ? ` · ${cleanImport && knownPlan ? `${planCount} taksit kalan` : `${tx.installmentCount} taksit`}` : ''}
-                          </p>
+                          {plannedPayment ? (
+                            <span className="mt-1 inline-flex rounded-md bg-info/10 px-2 py-0.5 text-[10px] font-black text-info">
+                              Planlı ödeme
+                            </span>
+                          ) : null}
+                          {plannedPayment ? (
+                            <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
+                              {formatShortDate(tx.date)} · {tx.category} · Plan: {plannedPayment.title} · vade {formatShortDate(plannedPayment.due_date)}
+                            </p>
+                          ) : (
+                            <p className="text-[11px] text-muted-foreground">
+                              {formatShortDate(tx.date)} · {tx.category}
+                              {tx.isInstallment ? ` · ${cleanImport && knownPlan ? `${planCount} taksit kalan` : `${tx.installmentCount} taksit`}` : ''}
+                            </p>
+                          )}
                         </div>
                         <span className="shrink-0 text-right text-xs font-black text-foreground">
                           {formatCurrency(rowTotal)}
@@ -604,7 +704,7 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
                             </span>
                           )}
                         </span>
-                      </div>
+                      </button>
                     )
                   })}
                 </div>

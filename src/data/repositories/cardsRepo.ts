@@ -1,8 +1,12 @@
 import { supabase } from '../../lib/supabase'
-import type { Card, CardExpense, CardInstallment, CardStatementArchive } from '../../types/database'
+import type { Card, CardExpense, CardInstallment, CardStatementArchive, Payment } from '../../types/database'
 import { ok, resultFromSupabase, voidResultFromSupabase, type Result } from '../result'
 
-export type ExpenseMatchRow = Pick<CardExpense, 'id' | 'spent_at' | 'amount' | 'status' | 'description' | 'category' | 'installment_count'>
+export type ExpenseMatchRow = Pick<CardExpense, 'id' | 'spent_at' | 'amount' | 'status' | 'description' | 'category' | 'installment_count' | 'note'>
+export type PaymentMatchRow = Pick<
+  Payment,
+  'id' | 'title' | 'amount' | 'amount_status' | 'due_date' | 'status' | 'payment_method' | 'auto_source_card_id' | 'category' | 'recurrence' | 'recurrence_day' | 'recurrence_end_date'
+>
 
 export async function fetchCards(): Promise<Result<Card[]>> {
   const { data, error } = await supabase.from('cards').select('*')
@@ -71,10 +75,21 @@ export async function fetchPostedInstallmentExpenses(limit: number): Promise<Res
 export async function fetchCardExpenseMatchRows(cardId: string): Promise<Result<ExpenseMatchRow[]>> {
   const { data, error } = await supabase
     .from('card_expenses')
-    .select('id, spent_at, amount, status, description, category, installment_count')
+    .select('id, spent_at, amount, status, description, category, installment_count, note')
     .eq('card_id', cardId)
 
   return resultFromSupabase((data ?? []) as ExpenseMatchRow[], error, 'Kart harcamalari yuklenemedi.')
+}
+
+export async function fetchCardPaymentMatchRows(cardId: string): Promise<Result<PaymentMatchRow[]>> {
+  const { data, error } = await supabase
+    .from('payments')
+    .select('id, title, amount, amount_status, due_date, status, payment_method, auto_source_card_id, category, recurrence, recurrence_day, recurrence_end_date')
+    .eq('status', 'bekliyor')
+    .gt('amount', 0)
+    .or(`auto_source_card_id.is.null,auto_source_card_id.eq.${cardId}`)
+
+  return resultFromSupabase((data ?? []) as PaymentMatchRow[], error, 'Planli odemeler yuklenemedi.')
 }
 
 export type AddCardExpenseInput = {
@@ -99,6 +114,24 @@ export async function addCardExpense(input: AddCardExpenseInput): Promise<Result
   })
 
   return voidResultFromSupabase(error, 'Harcama kaydedilemedi.')
+}
+
+export type PayPaymentFromCardImportInput = {
+  paymentId: string
+  sourceCardId: string
+  amount: number
+  spentAt: string
+}
+
+export async function payPaymentFromCardImport(input: PayPaymentFromCardImportInput): Promise<Result<void>> {
+  const { error } = await supabase.rpc('pay_payment_from_card_import', {
+    p_payment_id: input.paymentId,
+    p_source_card_id: input.sourceCardId,
+    p_paid_amount: input.amount,
+    p_spent_at: input.spentAt,
+  })
+
+  return voidResultFromSupabase(error, 'Planli odeme kart hareketine islenemedi.')
 }
 
 export type CardInstallmentCarryoverInput = {

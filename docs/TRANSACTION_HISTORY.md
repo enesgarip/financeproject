@@ -1,6 +1,6 @@
 # Transaction History Side Effects
 
-Last reviewed: 2026-06-15
+Last reviewed: 2026-06-20
 
 This document is the source of truth for `transaction_history` side effects. Read
 it before changing a finance mutation, RPC wrapper, payment drawer action, or
@@ -60,6 +60,7 @@ otherwise:
 | `cut_card_statement` / `cut_due_card_statements` | `card` | `card_statement_archives.id` | Statement amount | Statement cutting logs the movement into billed debt; installments are not logged separately. |
 | `record_card_installment_carryover` | `card` | Imported `card_expenses.id` | Remaining imported amount | Captures pre-app paid/remaining installment context in `note`. |
 | `pay_payment` | `payment` | `payments.id` | Paid amount | Bank source debits cash; credit-card source creates posted card spending. |
+| `pay_payment_from_card_import` | `payment` | `payments.id` | Paid amount | Statement/current movement import path for a matched planned payment; credit-card source creates posted card spending on the bank row date. |
 | `post_due_card_auto_payments` | `payment` | `payments.id` | Paid amount | Maintenance wrapper reuses `pay_payment`, so the same feed row contract applies. |
 | `pay_card_statement` | `payment` | `card_statement_archives.id` | Paid statement amount | Linked installments are marked paid but do not get separate history rows. |
 | `pay_card_debt` | `payment` | `cards.id` | Paid amount | Manual/legacy card debt payment; future scheduled installments are not closed. |
