@@ -44,6 +44,7 @@ export type MovementMatchResult = {
   matched: ParsedDenizBankMovement[]
   unmatched: ParsedDenizBankMovement[]
   matches: DenizBankMovementMatch[]
+  appOnly: MovementExpenseMatchRow[]
 }
 
 export type DenizBankMovementMatch = {
@@ -52,6 +53,7 @@ export type DenizBankMovementMatch = {
 }
 
 export type MovementExpenseMatchRow = {
+  id?: string
   spent_at: string
   amount: number
   status: string
@@ -253,6 +255,7 @@ export function parseDenizBankMovementPdf(text: string): ParsedDenizBankMovement
 export function matchDenizBankMovements(
   bankMovements: ParsedDenizBankMovement[],
   existingExpenses: MovementExpenseMatchRow[],
+  periodExpenses?: MovementExpenseMatchRow[],
 ): MovementMatchResult {
   const active = existingExpenses.filter((expense) => expense.status !== 'cancelled')
   const usedIndices = new Set<number>()
@@ -293,7 +296,11 @@ export function matchDenizBankMovements(
     }
   }
 
-  return { matched, unmatched, matches }
+  const matchedExpenseRefs = new Set(matches.map(({ expense }) => expense))
+  const periodActive = (periodExpenses ?? []).filter((expense) => expense.status !== 'cancelled')
+  const appOnly = periodActive.filter((expense) => !matchedExpenseRefs.has(expense))
+
+  return { matched, unmatched, matches, appOnly }
 }
 
 export function matchDenizBankMovementPayments(

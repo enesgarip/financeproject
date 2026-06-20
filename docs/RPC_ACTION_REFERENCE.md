@@ -24,6 +24,7 @@ repair rules, keep `docs/TRANSACTION_HISTORY.md` aligned with this file.
 | `update_card_expense` | `updateCardExpense` in `cardsRepo` | Cards page: edit a posted expense | Reverses previous posted impact, writes new expense values, recreates installment rows |
 | `post_card_provision` | `applyCardProvision` in `cardsRepo` | Cards page: post a provision | Moves all or part of a provision into posted current-period spending |
 | `cancel_card_provision` | `applyCardProvision` in `cardsRepo` | Cards page: cancel a provision | Removes provision from card debt/limit impact and marks the expense `cancelled` |
+| `cancel_card_expense` | `cancelCardExpense` in `cardsRepo` | Reconciliation: cancel any expense | Cancels a posted or provision expense, reverses debt/spending impact, removes installments, logs correction |
 | `cut_card_statement` | `cutCardStatement` in `cardsRepo` | Low-frequency/manual statement cut helper | Creates or returns the period archive and moves current-period spending into open statement debt |
 | `set_statement_reconciliation` | `setStatementReconciliation` in `cardsRepo` | Statement import/reconciliation | Stores bank statement reconciliation amount and note for a card period |
 | `pay_payment_from_card_import` | `payPaymentFromCardImport` in `cardsRepo` | Statement/current movement import: matched planned payment row | Adds the matched bill as posted credit-card spending on the bank row date and advances/closes the planned payment |

@@ -1,8 +1,9 @@
-import { AlertCircle, Check, CheckCircle2, ChevronDown, FileUp, Loader2, Scale, X } from 'lucide-react'
+import { AlertCircle, Check, CheckCircle2, ChevronDown, FileUp, Loader2, Monitor, Scale, X, XCircle } from 'lucide-react'
 import { useCallback, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import {
   addCardExpense,
+  cancelCardExpense,
   fetchCardExpenseMatchRows,
   fetchCardPaymentMatchRows,
   payPaymentFromCardImport,
@@ -24,15 +25,19 @@ import { formatCurrency } from '../../utils/formatCurrency'
 import { dateRangeFromIsoDates, rowsInReviewPeriod } from '../../utils/importReviewPeriod'
 import { sumTL } from '../../utils/money'
 import { getCardStatementPeriod } from '../../utils/cardStatement'
-import { CardExpenseHistorySection } from './CardExpenseHistorySection'
 import { useBodyScrollLock } from '../ui/use-body-scroll-lock'
 
-type Step = 'upload' | 'review' | 'success'
+type Step = 'upload' | 'review' | 'done'
 
 type ImportableMovement = {
   selectionKey: string
   movement: ParsedDenizBankMovement
   plannedPayment: PaymentMatchRow | null
+}
+
+type CancellableExpense = {
+  selectionKey: string
+  expense: ExpenseMatchRow
 }
 
 type Props = {
@@ -63,26 +68,35 @@ function appExpenseStatusLabel(status: string) {
   return status
 }
 
+function isMobileDevice() {
+  return window.innerWidth < 768
+}
+
 export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) {
   useBodyScrollLock(true)
 
   const [step, setStep] = useState<Step>('upload')
   const [parsing, setParsing] = useState(false)
   const [parseError, setParseError] = useState('')
-  const [importing, setImporting] = useState(false)
-  const [importError, setImportError] = useState('')
+  const [applying, setApplying] = useState(false)
+  const [applyError, setApplyError] = useState('')
+
   const [matched, setMatched] = useState<ParsedDenizBankMovement[]>([])
   const [matches, setMatches] = useState<DenizBankMovementMatch[]>([])
+  const [showMatched, setShowMatched] = useState(false)
   const [plannedPaymentMatches, setPlannedPaymentMatches] = useState<DenizBankMovementPaymentMatch[]>([])
-  const [showMatches, setShowMatches] = useState(false)
-  const [periodExpenses, setPeriodExpenses] = useState<ExpenseMatchRow[]>([])
-  const [periodLabel, setPeriodLabel] = useState('')
-  const [importable, setImportable] = useState<ImportableMovement[]>([])
+
+  const [bankOnly, setBankOnly] = useState<ImportableMovement[]>([])
+  const [appOnly, setAppOnly] = useState<CancellableExpense[]>([])
   const [manualReview, setManualReview] = useState<ParsedDenizBankMovement[]>([])
   const [payments, setPayments] = useState<ParsedDenizBankPayment[]>([])
   const [ignoredCount, setIgnoredCount] = useState(0)
-  const [selected, setSelected] = useState<Set<string>>(new Set())
-  const [importedCount, setImportedCount] = useState(0)
+  const [periodLabel, setPeriodLabel] = useState('')
+
+  const [selectedImport, setSelectedImport] = useState<Set<string>>(new Set())
+  const [selectedCancel, setSelectedCancel] = useState<Set<string>>(new Set())
+  const [resultMessage, setResultMessage] = useState('')
+
   const fileRef = useRef<HTMLInputElement>(null)
 
   const handleFile = useCallback(async (file: File) => {
@@ -93,7 +107,7 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
 
     setParsing(true)
     setParseError('')
-    setImportError('')
+    setApplyError('')
 
     try {
       const text = await extractPdfText(file)
@@ -111,41 +125,55 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
         setParseError(expensesResult.error.message ?? 'Kart harcamaları yüklenemedi.')
         return
       }
-
       if (!paymentsResult.ok) {
-        setParseError(paymentsResult.error.message ?? 'Planli odemeler yuklenemedi.')
+        setParseError(paymentsResult.error.message ?? 'Planlı ödemeler yüklenemedi.')
         return
       }
 
-      const result = matchDenizBankMovements(parsed.movements, expensesResult.data)
-      const fallbackPeriod = dateRangeFromIsoDates([...parsed.movements.map((movement) => movement.date), ...parsed.payments.map((payment) => payment.date)])
+      const fallbackPeriod = dateRangeFromIsoDates([
+        ...parsed.movements.map((m) => m.date),
+        ...parsed.payments.map((p) => p.date),
+      ])
       const cardPeriod = getCardStatementPeriod(card, fallbackPeriod?.end ?? null)
       const reviewPeriod = cardPeriod
         ? { start: cardPeriod.periodStart, end: cardPeriod.periodEnd, label: cardPeriod.periodLabel }
         : fallbackPeriod
-      const unmatchedNonInstallments = result.unmatched.filter((movement) => !movement.isInstallment)
+
+      const periodExpenses = rowsInReviewPeriod(expensesResult.data, reviewPeriod)
+
+      const result = matchDenizBankMovements(parsed.movements, expensesResult.data, periodExpenses)
+
+      const unmatchedNonInstallments = result.unmatched.filter((m) => !m.isInstallment)
       const paymentMatchResult = matchDenizBankMovementPayments(unmatchedNonInstallments, paymentsResult.data, card.id)
       const plannedPaymentByMovement = new Map<string, PaymentMatchRow>(
         paymentMatchResult.matches.map(({ movement, payment }) => [movement.rawLine, payment as PaymentMatchRow]),
       )
-      const nextImportable = unmatchedNonInstallments.map((movement, index) => ({
-        selectionKey: `${index}:${movement.rawLine}`,
+
+      const nextBankOnly = unmatchedNonInstallments.map((movement, index) => ({
+        selectionKey: `bank-${index}:${movement.rawLine}`,
         movement,
         plannedPayment: plannedPaymentByMovement.get(movement.rawLine) ?? null,
       }))
-      const nextManual = result.unmatched.filter((movement) => movement.isInstallment)
+      const nextManual = result.unmatched.filter((m) => m.isInstallment)
+      const nextAppOnly = result.appOnly
+        .filter((expense): expense is ExpenseMatchRow => 'id' in expense && typeof expense.id === 'string')
+        .map((expense, index) => ({
+          selectionKey: `app-${index}:${expense.id}`,
+          expense,
+        }))
 
       setMatched(result.matched)
       setMatches(result.matches)
+      setShowMatched(false)
       setPlannedPaymentMatches(paymentMatchResult.matches)
-      setShowMatches(false)
       setPeriodLabel(reviewPeriod?.label ?? '')
-      setPeriodExpenses(rowsInReviewPeriod(expensesResult.data, reviewPeriod))
-      setImportable(nextImportable)
+      setBankOnly(nextBankOnly)
+      setAppOnly(nextAppOnly)
       setManualReview(nextManual)
       setPayments(parsed.payments)
       setIgnoredCount(parsed.ignoredRows.length)
-      setSelected(new Set())
+      setSelectedImport(new Set())
+      setSelectedCancel(new Set())
       setStep('review')
     } catch (error) {
       setParseError(error instanceof Error ? error.message : 'PDF işlenirken bir hata oluştu.')
@@ -154,28 +182,44 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
     }
   }, [card])
 
-  function toggleAll() {
-    if (selected.size === importable.length) setSelected(new Set())
-    else setSelected(new Set(importable.map((item) => item.selectionKey)))
+  function toggleImportAll() {
+    if (selectedImport.size === bankOnly.length) setSelectedImport(new Set())
+    else setSelectedImport(new Set(bankOnly.map((item) => item.selectionKey)))
   }
 
-  function toggleRow(selectionKey: string) {
-    setSelected((current) => {
-      const next = new Set(current)
-      if (next.has(selectionKey)) next.delete(selectionKey)
-      else next.add(selectionKey)
+  function toggleImportRow(key: string) {
+    setSelectedImport((prev) => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
       return next
     })
   }
 
-  async function handleImport() {
-    const toImport = importable.filter((item) => selected.has(item.selectionKey))
-    if (!toImport.length) return
+  function toggleCancelAll() {
+    if (selectedCancel.size === appOnly.length) setSelectedCancel(new Set())
+    else setSelectedCancel(new Set(appOnly.map((item) => item.selectionKey)))
+  }
 
-    setImporting(true)
-    setImportError('')
+  function toggleCancelRow(key: string) {
+    setSelectedCancel((prev) => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
+  }
 
-    let successCount = 0
+  async function handleApply() {
+    const toImport = bankOnly.filter((item) => selectedImport.has(item.selectionKey))
+    const toCancel = appOnly.filter((item) => selectedCancel.has(item.selectionKey))
+    if (!toImport.length && !toCancel.length) return
+
+    setApplying(true)
+    setApplyError('')
+
+    let importedCount = 0
+    let cancelledCount = 0
     const errors: string[] = []
 
     for (const item of toImport) {
@@ -196,34 +240,42 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
           installmentCount: 1,
           status: movement.appStatus,
         })
-
-      const errorTitle = plannedPayment ? `${plannedPayment.title} / ${movement.description}` : movement.description
-      if (!result.ok) errors.push(`${errorTitle}: ${result.error.message ?? 'Bilinmeyen hata.'}`)
-      else successCount++
+      if (!result.ok) errors.push(`${movement.description}: ${result.error.message ?? 'Bilinmeyen hata.'}`)
+      else importedCount++
     }
 
-    setImportedCount(successCount)
-    setImporting(false)
+    for (const item of toCancel) {
+      const result = await cancelCardExpense(item.expense.id)
+      if (!result.ok) errors.push(`${item.expense.description ?? 'Harcama'} iptal: ${result.error.message ?? 'Bilinmeyen hata.'}`)
+      else cancelledCount++
+    }
 
-    if (!successCount) {
-      setImportError(`İçe aktarma başarısız: ${errors[0] ?? 'Bilinmeyen hata.'}`)
+    if (!importedCount && !cancelledCount) {
+      setApplyError(`İşlem başarısız: ${errors[0] ?? 'Bilinmeyen hata.'}`)
+      setApplying(false)
       return
     }
 
-    setStep('success')
+    const parts: string[] = []
+    if (importedCount) parts.push(`${importedCount} hareket içe aktarıldı`)
+    if (cancelledCount) parts.push(`${cancelledCount} harcama iptal edildi`)
+    setResultMessage(parts.join(', '))
+    setApplying(false)
+    setStep('done')
   }
 
-  const importableTotal = sumTL(importable.map(({ movement }) => movement.amount))
-  const selectedTotal = sumTL(importable.filter((item) => selected.has(item.selectionKey)).map(({ movement }) => movement.amount))
-  const manualTotal = sumTL(manualReview.map((movement) => movement.amount))
+  const totalSelectedActions = selectedImport.size + selectedCancel.size
+  const bankOnlyTotal = sumTL(bankOnly.map(({ movement }) => movement.amount))
+  const appOnlyTotal = sumTL(appOnly.map(({ expense }) => expense.amount))
 
   return createPortal(
     <div className="fixed inset-0 z-[80] flex items-start justify-center overflow-y-auto bg-black/50 px-3 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-[calc(env(safe-area-inset-top)+1rem)] backdrop-blur-sm sm:items-center sm:p-6">
       <div className="max-h-[88svh] w-full max-w-2xl overflow-x-hidden overflow-y-auto rounded-2xl bg-card shadow-xl sm:max-h-[92svh]">
+        {/* Header */}
         <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-card/95 px-4 py-3 backdrop-blur">
           <div className="flex min-w-0 items-center gap-2">
             <Scale size={16} className="shrink-0 text-primary" />
-            <span className="truncate text-sm font-black text-foreground">Güncel hareket mutabakatı</span>
+            <span className="truncate text-sm font-black text-foreground">Hareket mutabakatı</span>
             <span className="hidden rounded-md bg-muted px-2 py-0.5 text-xs font-bold text-muted-foreground sm:inline">
               {card.card_name}
             </span>
@@ -237,39 +289,53 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
           </button>
         </div>
 
+        {/* Upload step */}
         {step === 'upload' && (
           <div className="space-y-4 p-4">
-            <p className="text-sm text-muted-foreground">
-              DenizBank internet bankacılığından alınan kredi kartı hareket PDF'ini seç.
-            </p>
+            {isMobileDevice() ? (
+              <div className="flex flex-col items-center gap-3 rounded-xl border border-border bg-muted/30 p-6 text-center">
+                <Monitor size={32} className="text-muted-foreground" />
+                <p className="text-sm font-bold text-foreground">Bu özellik masaüstü tarayıcıda kullanılabilir</p>
+                <p className="text-xs text-muted-foreground">
+                  PDF işleme altyapısı mobil tarayıcılarda desteklenmiyor. Lütfen bilgisayarından dene.
+                </p>
+              </div>
+            ) : (
+              <>
+                <p className="text-sm text-muted-foreground">
+                  DenizBank internet bankacılığından alınan kredi kartı hareket PDF'ini seç.
+                  Banka hareketleri ile app kayıtları karşılaştırılacak.
+                </p>
 
-            <button
-              type="button"
-              disabled={parsing}
-              onClick={() => fileRef.current?.click()}
-              className="flex w-full flex-col items-center gap-3 rounded-xl border-2 border-dashed border-border bg-muted/30 p-6 transition hover:bg-muted/50 disabled:opacity-60"
-            >
-              {parsing ? (
-                <Loader2 size={24} className="animate-spin text-primary" />
-              ) : (
-                <FileUp size={24} className="text-muted-foreground" />
-              )}
-              <span className="text-sm font-bold text-foreground">
-                {parsing ? 'PDF okunuyor...' : 'PDF seç'}
-              </span>
-              <span className="text-xs text-muted-foreground">DenizBank İnternet Bankacılığı.pdf</span>
-            </button>
+                <button
+                  type="button"
+                  disabled={parsing}
+                  onClick={() => fileRef.current?.click()}
+                  className="flex w-full flex-col items-center gap-3 rounded-xl border-2 border-dashed border-border bg-muted/30 p-6 transition hover:bg-muted/50 disabled:opacity-60"
+                >
+                  {parsing ? (
+                    <Loader2 size={24} className="animate-spin text-primary" />
+                  ) : (
+                    <FileUp size={24} className="text-muted-foreground" />
+                  )}
+                  <span className="text-sm font-bold text-foreground">
+                    {parsing ? 'PDF okunuyor...' : 'PDF seç'}
+                  </span>
+                  <span className="text-xs text-muted-foreground">DenizBank İnternet Bankacılığı.pdf</span>
+                </button>
 
-            <input
-              ref={fileRef}
-              type="file"
-              accept=".pdf,application/pdf"
-              className="hidden"
-              onChange={(event) => {
-                const file = event.target.files?.[0]
-                if (file) void handleFile(file)
-              }}
-            />
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept=".pdf,application/pdf"
+                  className="hidden"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0]
+                    if (file) void handleFile(file)
+                  }}
+                />
+              </>
+            )}
 
             {parseError && (
               <p className="flex items-center gap-2 rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
@@ -280,172 +346,165 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
           </div>
         )}
 
+        {/* Review step — conflict-resolution view */}
         {step === 'review' && (
           <div className="flex max-h-[76vh] flex-col">
+            {/* Summary */}
             <div className="space-y-3 border-b border-border p-4">
               <div className="grid grid-cols-2 gap-2 text-xs min-[560px]:grid-cols-4">
-                <div className="rounded-lg bg-muted/40 p-2.5">
-                  <p className="font-bold text-muted-foreground">Eşleşen</p>
+                <div className="rounded-lg bg-success/10 p-2.5">
+                  <p className="font-bold text-success">Eşleşen</p>
                   <p className="mt-0.5 font-black text-foreground">{matched.length}</p>
                 </div>
-                <div className="rounded-lg bg-muted/40 p-2.5">
-                  <p className="font-bold text-muted-foreground">Aktarılacak</p>
-                  <p className="mt-0.5 font-black text-foreground">{importable.length}</p>
+                <div className="rounded-lg bg-info/10 p-2.5">
+                  <p className="font-bold text-info">Sadece bankada</p>
+                  <p className="mt-0.5 font-black text-foreground">{bankOnly.length}</p>
+                </div>
+                <div className="rounded-lg bg-warning/10 p-2.5">
+                  <p className="font-bold text-warning">Sadece app'te</p>
+                  <p className="mt-0.5 font-black text-foreground">{appOnly.length}</p>
                 </div>
                 <div className="rounded-lg bg-muted/40 p-2.5">
                   <p className="font-bold text-muted-foreground">Manuel</p>
                   <p className="mt-0.5 font-black text-foreground">{manualReview.length}</p>
                 </div>
-                <div className="rounded-lg bg-muted/40 p-2.5">
-                  <p className="font-bold text-muted-foreground">Ödeme</p>
-                  <p className="mt-0.5 font-black text-foreground">{payments.length}</p>
-                </div>
               </div>
 
-              <div className="rounded-xl bg-muted/40 p-3 text-xs">
-                <div className="flex justify-between gap-3">
-                  <span className="text-muted-foreground">Seçili tutar</span>
-                  <span className="font-black text-foreground">{formatCurrency(selectedTotal)}</span>
-                </div>
-                <div className="mt-1 flex justify-between gap-3">
-                  <span className="text-muted-foreground">Aktarılabilir toplam</span>
-                  <span className="font-black text-foreground">{formatCurrency(importableTotal)}</span>
-                </div>
-                {manualReview.length > 0 ? (
-                  <div className="mt-1 flex justify-between gap-3">
-                    <span className="text-muted-foreground">Manuel kontrol tutarı</span>
-                    <span className="font-black text-foreground">{formatCurrency(manualTotal)}</span>
-                  </div>
-                ) : null}
-              </div>
+              {periodLabel && (
+                <p className="text-[11px] font-bold text-muted-foreground">Dönem: {periodLabel}</p>
+              )}
 
-              {payments.length > 0 ? (
+              {payments.length > 0 && (
                 <p className="flex items-start gap-2 rounded-lg bg-info/10 p-2.5 text-[11px] font-medium text-info">
                   <AlertCircle size={13} className="mt-0.5 shrink-0" />
                   {payments.length} ödeme satırı harcama olarak aktarılmadı.
                 </p>
-              ) : null}
+              )}
 
-              {plannedPaymentMatches.length > 0 ? (
+              {plannedPaymentMatches.length > 0 && (
                 <p className="flex items-start gap-2 rounded-lg bg-success/10 p-2.5 text-[11px] font-medium text-success">
                   <CheckCircle2 size={13} className="mt-0.5 shrink-0" />
-                  {plannedPaymentMatches.length} satır planlı ödeme ile eşleşti; seçilirse fatura kaydı da güncellenecek.
+                  {plannedPaymentMatches.length} satır planlı ödeme ile eşleşti.
                 </p>
-              ) : null}
+              )}
 
-              {ignoredCount > 0 ? (
+              {ignoredCount > 0 && (
                 <p className="flex items-start gap-2 rounded-lg bg-warning/10 p-2.5 text-[11px] font-medium text-warning">
                   <AlertCircle size={13} className="mt-0.5 shrink-0" />
-                  {ignoredCount} satır okunamadı; dosya formatı değişmiş olabilir.
+                  {ignoredCount} satır okunamadı.
                 </p>
-              ) : null}
+              )}
             </div>
 
-            <CardExpenseHistorySection expenses={periodExpenses} periodLabel={periodLabel} />
-
-            {matches.length > 0 && (
-              <div className="border-b border-border">
-                <button
-                  type="button"
-                  onClick={() => setShowMatches((value) => !value)}
-                  className="flex w-full items-center justify-between gap-3 px-4 py-2 text-left hover:bg-muted/30"
-                  aria-expanded={showMatches}
-                >
-                  <span className="min-w-0">
-                    <span className="block text-xs font-bold text-muted-foreground">Eşleşen kayıtlar</span>
-                    <span className="mt-0.5 block text-[11px] text-muted-foreground">
-                      {matches.length} kayıt gizli. Banka hareketi ile app'teki kaydı birlikte görmek için aç.
+            {/* Scrollable content */}
+            <div className="flex-1 overflow-y-auto">
+              {/* ── Matched section (collapsible) ── */}
+              {matches.length > 0 && (
+                <div className="border-b border-border">
+                  <button
+                    type="button"
+                    onClick={() => setShowMatched((v) => !v)}
+                    className="flex w-full items-center justify-between gap-3 px-4 py-2 text-left hover:bg-muted/30"
+                    aria-expanded={showMatched}
+                  >
+                    <span className="min-w-0">
+                      <span className="block text-xs font-bold text-success">Eşleşen kayıtlar ({matches.length})</span>
+                      <span className="mt-0.5 block text-[11px] text-muted-foreground">
+                        Banka hareketi ile app kaydı uyuşuyor — aksiyon gerekmez.
+                      </span>
                     </span>
-                  </span>
-                  <ChevronDown size={16} className={`shrink-0 text-muted-foreground transition-transform ${showMatches ? 'rotate-180' : ''}`} />
-                </button>
-                {showMatches ? (
-                  <div className="max-h-48 overflow-y-auto">
-                    {matches.map(({ movement, expense }, index) => (
-                      <div
-                        key={`${movement.date}-${movement.description}-${movement.amount}-${index}`}
-                        className="border-b border-border/50 px-4 py-2.5"
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <div className="flex min-w-0 flex-wrap items-center gap-2">
-                              <p className="min-w-0 truncate text-xs font-bold text-foreground">{movement.description}</p>
-                              <span className={`rounded-md px-2 py-0.5 text-[10px] font-black ${statusClassName(movement)}`}>
-                                {statusLabel(movement)}
-                              </span>
+                    <ChevronDown size={16} className={`shrink-0 text-muted-foreground transition-transform ${showMatched ? 'rotate-180' : ''}`} />
+                  </button>
+                  {showMatched && (
+                    <div className="max-h-60 overflow-y-auto">
+                      {matches.map(({ movement, expense }, index) => (
+                        <div
+                          key={`match-${movement.date}-${movement.amount}-${index}`}
+                          className="border-b border-border/50 px-4 py-2.5"
+                        >
+                          <div className="flex items-start gap-3">
+                            <CheckCircle2 size={14} className="mt-0.5 shrink-0 text-success" />
+                            <div className="min-w-0 flex-1">
+                              <div className="grid gap-1 min-[500px]:grid-cols-2">
+                                <div className="min-w-0">
+                                  <p className="text-[10px] font-bold uppercase text-info">Banka</p>
+                                  <p className="truncate text-xs font-bold text-foreground">{movement.description}</p>
+                                  <p className="text-[11px] text-muted-foreground">
+                                    {formatShortDate(movement.date)} · {formatCurrency(movement.amount)}
+                                  </p>
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="text-[10px] font-bold uppercase text-primary">App</p>
+                                  <p className="truncate text-xs font-bold text-foreground">{expense.description || 'Açıklama yok'}</p>
+                                  <p className="text-[11px] text-muted-foreground">
+                                    {formatShortDate(expense.spent_at)} · {formatCurrency(expense.amount)} · {appExpenseStatusLabel(expense.status)}
+                                  </p>
+                                </div>
+                              </div>
                             </div>
-                            <p className="mt-0.5 text-[11px] text-muted-foreground">
-                              Banka: {formatShortDate(movement.date)} · **** {movement.cardLastFour}
-                            </p>
-                            <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
-                              App: {expense.description || 'Açıklama yok'} · {formatShortDate(expense.spent_at)} · {appExpenseStatusLabel(expense.status)}
-                            </p>
-                          </div>
-                          <div className="shrink-0 text-right">
-                            <p className="text-xs font-black text-foreground">{formatCurrency(movement.amount)}</p>
-                            <p className="text-[10px] font-bold text-muted-foreground">App {formatCurrency(expense.amount)}</p>
                           </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : null}
-              </div>
-            )}
-
-            {importable.length > 0 && (
-              <>
-                <div className="flex items-center justify-between border-b border-border px-4 py-2">
-                  <span className="text-xs font-bold text-muted-foreground">App'te olmayan hareketler</span>
-                  <button type="button" onClick={toggleAll} className="text-xs font-bold text-primary">
-                    {selected.size === importable.length ? 'Tümünü kaldır' : 'Tümünü seç'}
-                  </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
+              )}
 
-                <div className="flex-1 overflow-y-auto">
-                  {importable.map((item) => {
+              {/* ── Bank only section (importable) ── */}
+              {bankOnly.length > 0 && (
+                <div className="border-b border-border">
+                  <div className="flex items-center justify-between px-4 py-2">
+                    <div className="min-w-0">
+                      <span className="block text-xs font-bold text-info">Sadece bankada ({bankOnly.length})</span>
+                      <span className="mt-0.5 block text-[11px] text-muted-foreground">
+                        PDF'te var ama app'te yok — seçtiklerini içe aktar. Toplam {formatCurrency(bankOnlyTotal)}
+                      </span>
+                    </div>
+                    <button type="button" onClick={toggleImportAll} className="shrink-0 text-xs font-bold text-primary">
+                      {selectedImport.size === bankOnly.length ? 'Kaldır' : 'Tümünü seç'}
+                    </button>
+                  </div>
+                  {bankOnly.map((item) => {
                     const { movement, plannedPayment } = item
-                    const isSelected = selected.has(item.selectionKey)
+                    const isSelected = selectedImport.has(item.selectionKey)
                     return (
                       <button
                         type="button"
                         key={item.selectionKey}
-                        data-testid="current-movement-import-row"
-                        onClick={() => toggleRow(item.selectionKey)}
+                        onClick={() => toggleImportRow(item.selectionKey)}
                         aria-pressed={isSelected}
                         className="flex w-full cursor-pointer items-center gap-3 border-b border-border/50 px-4 py-2.5 text-left hover:bg-muted/30"
                       >
                         <span
                           aria-hidden="true"
                           className={`grid size-4 shrink-0 place-items-center rounded border ${
-                            isSelected
-                              ? 'border-primary bg-primary text-primary-foreground'
-                              : 'border-border bg-background'
+                            isSelected ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-background'
                           }`}
                         >
                           {isSelected ? <Check size={12} strokeWidth={3} /> : null}
                         </span>
                         <div className="min-w-0 flex-1">
-                          <div className="flex min-w-0 flex-wrap items-center gap-2">
-                            <p className="min-w-0 truncate text-xs font-bold text-foreground">{movement.description}</p>
-                            <span className={`rounded-md px-2 py-0.5 text-[10px] font-black ${statusClassName(movement)}`}>
-                              {statusLabel(movement)}
-                            </span>
-                            {plannedPayment ? (
-                              <span className="rounded-md bg-info/10 px-2 py-0.5 text-[10px] font-black text-info">
-                                Planlı ödeme
-                              </span>
-                            ) : null}
+                          <div className="grid gap-1 min-[500px]:grid-cols-2">
+                            <div className="min-w-0">
+                              <p className="text-[10px] font-bold uppercase text-info">Banka</p>
+                              <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                                <p className="min-w-0 truncate text-xs font-bold text-foreground">{movement.description}</p>
+                                <span className={`rounded-md px-1.5 py-0.5 text-[10px] font-black ${statusClassName(movement)}`}>
+                                  {statusLabel(movement)}
+                                </span>
+                                {plannedPayment && (
+                                  <span className="rounded-md bg-info/10 px-1.5 py-0.5 text-[10px] font-black text-info">Planlı</span>
+                                )}
+                              </div>
+                              <p className="text-[11px] text-muted-foreground">
+                                {formatShortDate(movement.date)} · {movement.category}
+                              </p>
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-[10px] font-bold uppercase text-primary">App</p>
+                              <p className="text-xs italic text-muted-foreground">Kayıt yok</p>
+                            </div>
                           </div>
-                          {plannedPayment ? (
-                            <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
-                              {formatShortDate(movement.date)} · {movement.category} · Plan: {plannedPayment.title} · vade {formatShortDate(plannedPayment.due_date)}
-                            </p>
-                          ) : (
-                            <p className="mt-0.5 text-[11px] text-muted-foreground">
-                              {formatShortDate(movement.date)} · {movement.category} · **** {movement.cardLastFour}
-                            </p>
-                          )}
                         </div>
                         <span className="shrink-0 text-right text-xs font-black text-foreground">
                           {formatCurrency(movement.amount)}
@@ -454,65 +513,129 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
                     )
                   })}
                 </div>
+              )}
 
-                {importError && (
-                  <p className="mx-4 mt-2 flex items-center gap-2 rounded-lg bg-destructive/10 p-3 text-xs text-destructive">
-                    <AlertCircle size={13} className="shrink-0" />
-                    {importError}
-                  </p>
-                )}
-
-                <div className="border-t border-border p-4">
-                  <button
-                    type="button"
-                    disabled={selected.size === 0 || importing}
-                    onClick={() => void handleImport()}
-                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3 text-sm font-black text-primary-foreground disabled:opacity-55"
-                  >
-                    {importing && <Loader2 size={15} className="animate-spin" />}
-                    {importing ? 'İçe aktarılıyor...' : `${selected.size} hareketi içe aktar`}
-                  </button>
-                </div>
-              </>
-            )}
-
-            {manualReview.length > 0 && (
-              <div className="border-t border-border">
-                <div className="px-4 py-2">
-                  <span className="text-xs font-bold text-muted-foreground">Manuel kontrol gerekli</span>
-                  <p className="mt-0.5 text-[11px] text-muted-foreground">
-                    Taksitli satırlar otomatik aktarılmadı.
-                  </p>
-                </div>
-                <div className="max-h-44 overflow-y-auto">
-                  {manualReview.map((movement, index) => (
-                    <div
-                      key={`${movement.date}-${movement.description}-${index}`}
-                      className="flex items-center gap-3 border-b border-border/50 px-4 py-2.5"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-xs font-bold text-foreground">{movement.description}</p>
-                        <p className="text-[11px] text-muted-foreground">
-                          {formatShortDate(movement.date)} · {movement.detail || 'Taksitli işlem'} · **** {movement.cardLastFour}
-                        </p>
-                      </div>
-                      <span className="shrink-0 text-xs font-black text-foreground">{formatCurrency(movement.amount)}</span>
+              {/* ── App only section (cancellable) ── */}
+              {appOnly.length > 0 && (
+                <div className="border-b border-border">
+                  <div className="flex items-center justify-between px-4 py-2">
+                    <div className="min-w-0">
+                      <span className="block text-xs font-bold text-warning">Sadece app'te ({appOnly.length})</span>
+                      <span className="mt-0.5 block text-[11px] text-muted-foreground">
+                        App'te var ama bankada yok — çift sayılmış olabilir. Toplam {formatCurrency(appOnlyTotal)}
+                      </span>
                     </div>
-                  ))}
+                    <button type="button" onClick={toggleCancelAll} className="shrink-0 text-xs font-bold text-warning">
+                      {selectedCancel.size === appOnly.length ? 'Kaldır' : 'Tümünü seç'}
+                    </button>
+                  </div>
+                  {appOnly.map((item) => {
+                    const { expense } = item
+                    const isSelected = selectedCancel.has(item.selectionKey)
+                    return (
+                      <button
+                        type="button"
+                        key={item.selectionKey}
+                        onClick={() => toggleCancelRow(item.selectionKey)}
+                        aria-pressed={isSelected}
+                        className="flex w-full cursor-pointer items-center gap-3 border-b border-border/50 px-4 py-2.5 text-left hover:bg-muted/30"
+                      >
+                        <span
+                          aria-hidden="true"
+                          className={`grid size-4 shrink-0 place-items-center rounded border ${
+                            isSelected ? 'border-warning bg-warning text-white' : 'border-border bg-background'
+                          }`}
+                        >
+                          {isSelected ? <XCircle size={12} strokeWidth={3} /> : null}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <div className="grid gap-1 min-[500px]:grid-cols-2">
+                            <div className="min-w-0">
+                              <p className="text-[10px] font-bold uppercase text-info">Banka</p>
+                              <p className="text-xs italic text-muted-foreground">Kayıt yok</p>
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-[10px] font-bold uppercase text-primary">App</p>
+                              <p className="min-w-0 truncate text-xs font-bold text-foreground">{expense.description || 'Açıklama yok'}</p>
+                              <p className="text-[11px] text-muted-foreground">
+                                {formatShortDate(expense.spent_at)} · {expense.category || ''} · {appExpenseStatusLabel(expense.status)}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                        <span className="shrink-0 text-right text-xs font-black text-foreground">
+                          {formatCurrency(expense.amount)}
+                        </span>
+                      </button>
+                    )
+                  })}
                 </div>
-              </div>
+              )}
+
+              {/* ── Manual review (installments) ── */}
+              {manualReview.length > 0 && (
+                <div className="border-b border-border">
+                  <div className="px-4 py-2">
+                    <span className="text-xs font-bold text-muted-foreground">Manuel kontrol gerekli ({manualReview.length})</span>
+                    <p className="mt-0.5 text-[11px] text-muted-foreground">
+                      Taksitli satırlar otomatik aktarılmadı.
+                    </p>
+                  </div>
+                  <div className="max-h-44 overflow-y-auto">
+                    {manualReview.map((movement, index) => (
+                      <div
+                        key={`manual-${movement.date}-${movement.description}-${index}`}
+                        className="flex items-center gap-3 border-b border-border/50 px-4 py-2.5"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-xs font-bold text-foreground">{movement.description}</p>
+                          <p className="text-[11px] text-muted-foreground">
+                            {formatShortDate(movement.date)} · {movement.detail || 'Taksitli işlem'} · **** {movement.cardLastFour}
+                          </p>
+                        </div>
+                        <span className="shrink-0 text-xs font-black text-foreground">{formatCurrency(movement.amount)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* All reconciled */}
+              {bankOnly.length === 0 && appOnly.length === 0 && manualReview.length === 0 && (
+                <div className="p-6 text-center">
+                  <CheckCircle2 size={32} className="mx-auto text-success" />
+                  <p className="mt-2 text-sm font-bold text-foreground">Tüm hareketler eşleşiyor</p>
+                  <p className="mt-1 text-xs text-muted-foreground">Mutabakat tamam.</p>
+                </div>
+              )}
+            </div>
+
+            {/* Action bar */}
+            {applyError && (
+              <p className="mx-4 mt-2 flex items-center gap-2 rounded-lg bg-destructive/10 p-3 text-xs text-destructive">
+                <AlertCircle size={13} className="shrink-0" />
+                {applyError}
+              </p>
             )}
 
-            {importable.length === 0 && manualReview.length === 0 && (
-              <div className="p-6 text-center">
-                <CheckCircle2 size={32} className="mx-auto text-success" />
-                <p className="mt-2 text-sm font-bold text-foreground">PDF'teki harcamalar app'te kayıtlı</p>
-                <p className="mt-1 text-xs text-muted-foreground">Mutabakat tamam.</p>
-              </div>
-            )}
-
-            {importable.length === 0 && (
-              <div className="border-t border-border p-4">
+            <div className="border-t border-border p-4">
+              {totalSelectedActions > 0 ? (
+                <button
+                  type="button"
+                  disabled={applying}
+                  onClick={() => void handleApply()}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3 text-sm font-black text-primary-foreground disabled:opacity-55"
+                >
+                  {applying && <Loader2 size={15} className="animate-spin" />}
+                  {applying ? 'Uygulanıyor...' : (
+                    <>
+                      {selectedImport.size > 0 && `${selectedImport.size} içe aktar`}
+                      {selectedImport.size > 0 && selectedCancel.size > 0 && ' · '}
+                      {selectedCancel.size > 0 && `${selectedCancel.size} iptal et`}
+                    </>
+                  )}
+                </button>
+              ) : (
                 <button
                   type="button"
                   onClick={onClose}
@@ -520,16 +643,17 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
                 >
                   Kapat
                 </button>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         )}
 
-        {step === 'success' && (
+        {/* Done step */}
+        {step === 'done' && (
           <div className="space-y-3 p-6 text-center">
             <CheckCircle2 size={40} className="mx-auto text-success" />
-            <p className="text-base font-black text-foreground">{importedCount} hareket içe aktarıldı</p>
-            <p className="text-sm text-muted-foreground">Kart hareketleri güncellendi.</p>
+            <p className="text-base font-black text-foreground">{resultMessage}</p>
+            <p className="text-sm text-muted-foreground">Kart bakiyesi güncellendi.</p>
             <button
               type="button"
               onClick={onSuccess}

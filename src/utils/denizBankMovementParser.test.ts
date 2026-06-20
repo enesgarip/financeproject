@@ -136,6 +136,38 @@ describe('matchDenizBankMovements', () => {
     expect(result.matched).toEqual([petrol])
     expect(result.unmatched).toHaveLength(0)
   })
+
+  it('returns appOnly expenses from the period that did not match any bank movement', () => {
+    const periodExpenses = [
+      { id: 'e1', spent_at: '2026-06-19', amount: 535, status: 'provision', description: 'UNDEM PETROL' },
+      { id: 'e2', spent_at: '2026-06-18', amount: 460, status: 'posted', description: 'FLEX STORE' },
+      { id: 'e3', spent_at: '2026-06-15', amount: 685, status: 'posted', description: 'İnternet faturası' },
+    ]
+    const result = matchDenizBankMovements(
+      [petrol, flex],
+      periodExpenses,
+      periodExpenses,
+    )
+
+    expect(result.matched).toEqual([petrol, flex])
+    expect(result.appOnly).toHaveLength(1)
+    expect(result.appOnly[0]).toMatchObject({ id: 'e3', description: 'İnternet faturası' })
+  })
+
+  it('excludes cancelled expenses from appOnly', () => {
+    const periodExpenses = [
+      { id: 'e1', spent_at: '2026-06-15', amount: 100, status: 'cancelled', description: 'Cancelled item' },
+    ]
+    const result = matchDenizBankMovements([], [], periodExpenses)
+
+    expect(result.appOnly).toHaveLength(0)
+  })
+
+  it('returns empty appOnly when periodExpenses is omitted', () => {
+    const result = matchDenizBankMovements([petrol], [])
+
+    expect(result.appOnly).toHaveLength(0)
+  })
 })
 describe('DenizBank movement planned payment reconciliation', () => {
   const invoice = parseDenizBankMovementPdf(SAMPLE_TEXT).movements.find((movement) => movement.amount === 685)!

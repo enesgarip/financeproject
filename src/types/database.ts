@@ -386,6 +386,12 @@ export type Database = {
         }
         Returns: CardExpense
       }
+      cancel_card_expense: {
+        Args: {
+          p_expense_id: string
+        }
+        Returns: CardExpense
+      }
       cancel_card_provision: {
         Args: {
           p_expense_id: string

@@ -199,6 +199,11 @@ export async function applyCardProvision(expenseId: string, action: 'post' | 'ca
   return voidResultFromSupabase(error, 'Provizyon islemi tamamlanamadi.')
 }
 
+export async function cancelCardExpense(expenseId: string): Promise<Result<void>> {
+  const { error } = await supabase.rpc('cancel_card_expense', { p_expense_id: expenseId })
+  return voidResultFromSupabase(error, 'Harcama iptal edilemedi.')
+}
+
 export type UpdateCardExpenseInput = {
   expenseId: string
   amount: number
