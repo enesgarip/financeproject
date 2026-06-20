@@ -16,8 +16,24 @@ export type CardInstallmentMonthSummary = {
   rows: CardInstallmentMonthRow[]
 }
 
+export type CardInstallmentCardTotal = {
+  cardId: string
+  cardLabel: string
+  amount: number
+  count: number
+}
+
+export type CardInstallmentCardTotalsSummary = {
+  total: number
+  rows: CardInstallmentCardTotal[]
+}
+
 function monthLabel(monthKey: string) {
   return new Intl.DateTimeFormat('tr-TR', { month: 'long', year: 'numeric' }).format(new Date(`${monthKey}T00:00:00`))
+}
+
+function formatCardLabel(card: Card | undefined) {
+  return card ? `${card.bank_name} · ${card.card_name}` : 'Kart'
 }
 
 export function buildCardInstallmentCalendar(
@@ -51,6 +67,33 @@ export function buildCardInstallmentCalendar(
 
     return { monthKey, monthLabel: monthLabel(monthKey), total, rows }
   })
+}
+
+export function buildCardInstallmentTotalsByCard(
+  installments: CardInstallment[],
+  cards: Card[],
+): CardInstallmentCardTotalsSummary {
+  const cardsById = new Map(cards.map((card) => [card.id, card]))
+  const byCard = new Map<string, CardInstallmentCardTotal>()
+
+  for (const item of installments) {
+    if (item.status === 'paid') continue
+    const card = cardsById.get(item.card_id)
+    const existing = byCard.get(item.card_id)
+
+    if (existing) {
+      existing.amount = sumTL([existing.amount, item.amount])
+      existing.count += 1
+    } else {
+      byCard.set(item.card_id, { cardId: item.card_id, cardLabel: formatCardLabel(card), amount: item.amount, count: 1 })
+    }
+  }
+
+  const rows = Array.from(byCard.values()).sort((a, b) => b.amount - a.amount)
+  return {
+    total: sumTL(rows.map((row) => row.amount)),
+    rows,
+  }
 }
 
 export function totalScheduledInstallments(installments: CardInstallment[]) {

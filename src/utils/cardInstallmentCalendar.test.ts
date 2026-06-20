@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Card, CardInstallment } from '../types/database'
-import { buildCardInstallmentCalendar, totalScheduledInstallments } from './cardInstallmentCalendar'
+import { buildCardInstallmentCalendar, buildCardInstallmentTotalsByCard, totalScheduledInstallments } from './cardInstallmentCalendar'
 
 const base = { id: 'id', user_id: 'u', created_at: '2026-01-01T00:00:00Z', updated_at: '2026-01-01T00:00:00Z' }
 
@@ -109,6 +109,37 @@ describe('buildCardInstallmentCalendar', () => {
     const result = buildCardInstallmentCalendar(installments, cards, 1)
     expect(result[0].rows[0].cardId).toBe('card-2')
     expect(result[0].rows[1].cardId).toBe('card-1')
+  })
+})
+
+describe('buildCardInstallmentTotalsByCard', () => {
+  it('groups unpaid installments by card and returns a grand total', () => {
+    const cards = [
+      makeCard({ id: 'card-1' }),
+      makeCard({ id: 'card-2', bank_name: 'Diger Bank', card_name: 'Bonus' }),
+    ]
+    const installments = [
+      makeInstallment({ id: 'i1', card_id: 'card-1', amount: 100, status: 'scheduled' }),
+      makeInstallment({ id: 'i2', card_id: 'card-1', amount: 125.25, status: 'posted' }),
+      makeInstallment({ id: 'i3', card_id: 'card-2', amount: 300, status: 'scheduled' }),
+      makeInstallment({ id: 'i4', card_id: 'card-2', amount: 900, status: 'paid' }),
+    ]
+
+    const result = buildCardInstallmentTotalsByCard(installments, cards)
+
+    expect(result.total).toBe(525.25)
+    expect(result.rows).toHaveLength(2)
+    expect(result.rows[0]).toMatchObject({ cardId: 'card-2', amount: 300, count: 1 })
+    expect(result.rows[1]).toMatchObject({ cardId: 'card-1', amount: 225.25, count: 2 })
+  })
+
+  it('returns empty rows when all installments are paid', () => {
+    const result = buildCardInstallmentTotalsByCard([
+      makeInstallment({ id: 'i1', amount: 100, status: 'paid' }),
+    ], [makeCard({ id: 'card-1' })])
+
+    expect(result.total).toBe(0)
+    expect(result.rows).toEqual([])
   })
 })
 
