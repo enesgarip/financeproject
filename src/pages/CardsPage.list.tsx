@@ -19,7 +19,7 @@ import {
   statementPeriodLabel,
   visibleOpenStatementAmount,
 } from './CardsPage.helpers'
-import { CardDatum } from './CardsPage.atoms'
+import { CardDatum } from './CardsPage.overview'
 import { formatCurrency } from '../utils/formatCurrency'
 
 export function CreditAccountListCard({

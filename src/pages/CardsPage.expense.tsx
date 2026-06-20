@@ -16,7 +16,7 @@ import { diffTL } from '../utils/money'
 import { isMissingSupabaseCapabilityError, missingSupabaseCapabilityMessage } from '../utils/supabaseErrors'
 import { openNativePicker } from '../lib/utils'
 import { cardOptionLabel, moneyShare } from './CardsPage.helpers'
-import { OverviewStat } from './CardsPage.atoms'
+import { OverviewStat } from './CardsPage.overview'
 import { formatCurrency, parseNumber } from '../utils/formatCurrency'
 import { parseReceiptImage } from '../lib/receiptParseClient'
 

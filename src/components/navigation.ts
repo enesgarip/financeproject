@@ -70,10 +70,8 @@ export const planningHubTabs: HubTab[] = [
 ]
 
 export const analysisHubTabs: HubTab[] = [
-  { to: '/analiz', label: 'Genel', end: true },
-  { to: '/analiz/trendler', label: 'Trendler' },
-  { to: '/analiz/servet', label: 'Servet' },
-  { to: '/analiz/kayitlar', label: 'Kayıtlar' },
+  { to: '/analiz', label: 'Analiz', end: true },
+  { to: '/analiz/detay', label: 'Detay' },
 ]
 
 export const dataHealthHubTabs: HubTab[] = [
@@ -94,9 +92,7 @@ const routeMeta: Record<string, { title: string; width: RouteWidth }> = {
   '/odemeler': { title: 'Ödeme Takvimi', width: 'medium' },
   '/odemeler/hedefler': { title: 'Bütçe & Hedefler', width: 'medium' },
   '/analiz': { title: 'Analiz', width: 'wide' },
-  '/analiz/trendler': { title: 'Trendler', width: 'wide' },
-  '/analiz/servet': { title: 'Servet Analizi', width: 'wide' },
-  '/analiz/kayitlar': { title: 'Kayıtlar', width: 'wide' },
+  '/analiz/detay': { title: 'Detay', width: 'wide' },
   '/veri-sagligi': { title: 'Veri Kontrolü', width: 'wide' },
   '/veri-sagligi/islemler': { title: 'Yedek ve Ayarlar', width: 'medium' },
 }

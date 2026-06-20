@@ -100,6 +100,11 @@
 - ~~Add year-end financial report ("Yıl Sonu Finansal Rapor").~~ DONE.
   - `utils/yearEndReport.ts` + YearEndReport paneli: yıllık harcama, aylık bar chart, en pahalı/ucuz ay, top kategoriler, net değer değişimi.
 
+- ~~UI basitleştirme — progressive disclosure + dosya sadeleştirme.~~ DONE.
+  - Dashboard 20 panel → 7 günlük + 13 detay; `localStorage` toggle ile gizle/göster, AnimatePresence animasyonu.
+  - CardsPage `atoms.tsx` kaldırıldı (overview'e taşındı), `sections.tsx` re-export'ları temizlendi.
+  - Analiz 4 sekme → 2 sekme: `AnalysisPage` (Genel+Trendler), `AnalysisDetailPage` (Servet+Kayıtlar). Eski route'lar redirect eder.
+
 ## P3 - Nice to Have
 
 - Add goal-based automatic saving suggestions.

@@ -51,14 +51,8 @@ const SalaryPage = lazyWithReload(() =>
 const AnalysisPage = lazyWithReload(() =>
   import('./pages/AnalysisPage').then((m) => ({ default: m.AnalysisPage })),
 )
-const AnalysisRecordsPage = lazyWithReload(() =>
-  import('./pages/AnalysisRecordsPage').then((m) => ({ default: m.AnalysisRecordsPage })),
-)
-const AnalysisTrendsPage = lazyWithReload(() =>
-  import('./pages/AnalysisTrendsPage').then((m) => ({ default: m.AnalysisTrendsPage })),
-)
-const AnalysisWealthPage = lazyWithReload(() =>
-  import('./pages/AnalysisWealthPage').then((m) => ({ default: m.AnalysisWealthPage })),
+const AnalysisDetailPage = lazyWithReload(() =>
+  import('./pages/AnalysisDetailPage').then((m) => ({ default: m.AnalysisDetailPage })),
 )
 const CardsPage = lazyWithReload(() =>
   import('./pages/CardsPage').then((m) => ({ default: m.CardsPage })),
@@ -167,9 +161,10 @@ function AnimatedRoutes() {
         </Route>
         <Route path="analiz" element={<AnalysisHub />}>
           <Route index element={routeElement(<AnalysisPage />, 'analiz')} />
-          <Route path="trendler" element={routeElement(<AnalysisTrendsPage />, 'analiz-trendler')} />
-          <Route path="servet" element={routeElement(<AnalysisWealthPage />, 'analiz-servet')} />
-          <Route path="kayitlar" element={routeElement(<AnalysisRecordsPage />, 'analiz-kayitlar')} />
+          <Route path="detay" element={routeElement(<AnalysisDetailPage />, 'analiz-detay')} />
+          <Route path="trendler" element={<Navigate to="/analiz" replace />} />
+          <Route path="servet" element={<Navigate to="/analiz/detay" replace />} />
+          <Route path="kayitlar" element={<Navigate to="/analiz/detay" replace />} />
         </Route>
 
         <Route path="veri-sagligi" element={<DataHealthHub />}>

@@ -1,6 +1,6 @@
-import { AlertTriangle, ArrowUpRight, CalendarDays, CreditCard, Landmark } from 'lucide-react'
-import { motion, type Variants } from 'framer-motion'
-import { useMemo } from 'react'
+import { AlertTriangle, ArrowUpRight, CalendarDays, ChevronDown, CreditCard, Landmark } from 'lucide-react'
+import { AnimatePresence, motion, type Variants } from 'framer-motion'
+import { useCallback, useMemo, useState } from 'react'
 import { useAuth } from '../auth/useAuth'
 import { useFinanceSnapshot } from '../app/useFinanceSnapshot'
 import type {
@@ -217,6 +217,18 @@ export function DashboardPage() {
   const attentionLine = useMemo(() => buildAttentionLine(data, upcomingItems), [data, upcomingItems])
   const healthCounts = useMemo(() => buildHealthCounts(data), [data])
 
+  const [showDetails, setShowDetails] = useState(() => {
+    try { return localStorage.getItem('dashboard-details') === '1' } catch { return false }
+  })
+
+  const toggleDetails = useCallback(() => {
+    setShowDetails((prev) => {
+      const next = !prev
+      try { localStorage.setItem('dashboard-details', next ? '1' : '0') } catch { /* noop */ }
+      return next
+    })
+  }, [])
+
   if (loading) {
     return <SkeletonDashboard />
   }
@@ -244,6 +256,8 @@ export function DashboardPage() {
       animate="visible"
       className="grid gap-5 lg:grid-cols-12 lg:items-start"
     >
+      {/* ── Günlük katman (her zaman görünür) ── */}
+
       {attentionLine ? (
         <motion.div variants={fadeUp} className="min-w-0 lg:col-span-12">
           <p
@@ -296,25 +310,6 @@ export function DashboardPage() {
       </motion.div>
 
       <motion.div variants={fadeUp} className="min-w-0 lg:col-span-7">
-        <CashFlowCalendarPanel items={upcomingItems} cashFlow={summary.cashFlow} />
-      </motion.div>
-
-      <motion.div variants={fadeUp} className="min-w-0 lg:col-span-4">
-        <GoalProgressCommand goalProgress={summary.goalProgress} />
-      </motion.div>
-
-      <motion.div variants={fadeUp} className="min-w-0 lg:col-span-8">
-        <AnalyticsSnapshotPanel
-          cashFlow={summary.cashFlow}
-          totalAssets={summary.totalAssets}
-          totalDebts={summary.totalDebts}
-          cardDebt={summary.totalCreditCardDebt}
-          loanDebt={summary.totalLoanDebt}
-          personalDebt={summary.totalPersonalDebts}
-        />
-      </motion.div>
-
-      <motion.div variants={fadeUp} className="min-w-0 lg:col-span-12">
         <FocusActionPanel actions={focusActions} cashFlow={summary.cashFlow} />
       </motion.div>
 
@@ -323,61 +318,111 @@ export function DashboardPage() {
         <BudgetAlertPanel budgets={data.budgets} expenses={data.cardExpenses} />
       </motion.div>
 
-      <motion.div variants={fadeUp} className="min-w-0 lg:col-span-12">
-        <ReconciliationPanel cards={data.cards} statements={data.cardStatements.filter((statement) => statement.status === 'open')} />
-      </motion.div>
+      {/* ── Detay toggle ── */}
 
       <motion.div variants={fadeUp} className="min-w-0 lg:col-span-12">
-        <SpendingRadarPanel expenses={data.cardExpenses} />
+        <button
+          type="button"
+          onClick={toggleDetails}
+          className="flex w-full items-center justify-center gap-2 rounded-xl border border-border/60 bg-card/80 px-4 py-2.5 text-sm font-bold text-muted-foreground transition hover:bg-muted/50 hover:text-foreground"
+        >
+          <span>{showDetails ? 'Detayları gizle' : 'Detayları göster'}</span>
+          <ChevronDown
+            size={16}
+            className={`transition-transform ${showDetails ? 'rotate-180' : ''}`}
+          />
+        </button>
       </motion.div>
 
-      <motion.div variants={fadeUp} className="min-w-0 lg:col-span-7">
-        <CashFlowPanel cashFlow={summary.cashFlow} />
-      </motion.div>
+      {/* ── Detay katmanı (toggle ile açılır) ── */}
 
-      <motion.div variants={fadeUp} className="min-w-0 lg:col-span-5">
-        <CurrentDebtTotalsPanel
-          totalDebt={summary.totalDebts}
-          cardDebt={summary.totalCreditCardDebt}
-          loanDebt={summary.totalLoanDebt}
-          personalDebt={summary.totalPersonalDebts}
-          paymentDebt={summary.totalPaymentLiabilities}
-        />
-      </motion.div>
+      <AnimatePresence initial={false}>
+        {showDetails ? (
+          <motion.div
+            key="dashboard-details"
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.3, ease: 'easeInOut' }}
+            className="grid min-w-0 gap-5 overflow-hidden lg:col-span-12 lg:grid-cols-12 lg:items-start"
+          >
+            <div className="min-w-0 lg:col-span-7">
+              <CashFlowCalendarPanel items={upcomingItems} cashFlow={summary.cashFlow} />
+            </div>
 
-      <motion.div variants={fadeUp} className="min-w-0 lg:col-span-12">
-        <SmartInsightsPanel insights={insights} />
-      </motion.div>
+            <div className="min-w-0 lg:col-span-5">
+              <GoalProgressCommand goalProgress={summary.goalProgress} />
+            </div>
 
-      <motion.div variants={fadeUp} className="grid min-w-0 gap-3 min-[520px]:grid-cols-3 lg:col-span-12">
-        <MetricTile label="Toplam limit" value={formatCurrency(summary.totalCreditLimit)} icon={<CreditCard />} tone="indigo" help={dashboardHelp.totalLimit} />
-        <MetricTile label="Kredi ödemesi" value={formatCurrency(summary.totalLoanMonthlyPayment)} icon={<CalendarDays />} tone="stone" help={dashboardHelp.loanPayment} />
-        <MetricTile label="Tahsilat" value={formatCurrency(summary.totalReceivables)} icon={<ArrowUpRight />} tone="emerald" help={dashboardHelp.receivable} />
-      </motion.div>
+            <div className="min-w-0 lg:col-span-8">
+              <AnalyticsSnapshotPanel
+                cashFlow={summary.cashFlow}
+                totalAssets={summary.totalAssets}
+                totalDebts={summary.totalDebts}
+                cardDebt={summary.totalCreditCardDebt}
+                loanDebt={summary.totalLoanDebt}
+                personalDebt={summary.totalPersonalDebts}
+              />
+            </div>
 
-      <UpcomingAlertPanel items={upcomingItems} />
+            <div className="min-w-0 lg:col-span-4">
+              <CurrentDebtTotalsPanel
+                totalDebt={summary.totalDebts}
+                cardDebt={summary.totalCreditCardDebt}
+                loanDebt={summary.totalLoanDebt}
+                personalDebt={summary.totalPersonalDebts}
+                paymentDebt={summary.totalPaymentLiabilities}
+              />
+            </div>
 
-      {hasCreditLimitGroups ? (
-        <motion.div variants={fadeUp} className="min-w-0 lg:col-span-7">
-          <CreditLimitSection groups={summary.creditLimitGroups} totalUsageRate={summary.creditUsageRate} />
-        </motion.div>
-      ) : null}
+            <div className="min-w-0 lg:col-span-12">
+              <ReconciliationPanel cards={data.cards} statements={data.cardStatements.filter((statement) => statement.status === 'open')} />
+            </div>
 
-      <motion.div variants={fadeUp} className={`grid min-w-0 gap-3 min-[520px]:grid-cols-2 ${hasCreditLimitGroups ? 'lg:col-span-5 lg:grid-cols-1' : 'lg:col-span-12'}`}>
-        <PulseCard
-          title="Kredi ritmi"
-          label="Aylık ödeme"
-          value={formatCurrency(summary.totalLoanMonthlyPayment)}
-          description={`${formatCurrency(summary.totalLoanDebt)} aktif kredi borcu`}
-          icon={<Landmark />}
-          tone="rose"
-        />
-        <SalaryPulse trend={summary.salaryTrend} />
-      </motion.div>
+            <div className="min-w-0 lg:col-span-12">
+              <SpendingRadarPanel expenses={data.cardExpenses} />
+            </div>
 
-      <motion.div variants={fadeUp} className="min-w-0 lg:col-span-12">
-        <HistorySection rows={data.transactionHistory} />
-      </motion.div>
+            <div className="min-w-0 lg:col-span-7">
+              <CashFlowPanel cashFlow={summary.cashFlow} />
+            </div>
+
+            <div className="min-w-0 lg:col-span-5">
+              <SmartInsightsPanel insights={insights} />
+            </div>
+
+            <div className="grid min-w-0 gap-3 min-[520px]:grid-cols-3 lg:col-span-12">
+              <MetricTile label="Toplam limit" value={formatCurrency(summary.totalCreditLimit)} icon={<CreditCard />} tone="indigo" help={dashboardHelp.totalLimit} />
+              <MetricTile label="Kredi ödemesi" value={formatCurrency(summary.totalLoanMonthlyPayment)} icon={<CalendarDays />} tone="stone" help={dashboardHelp.loanPayment} />
+              <MetricTile label="Tahsilat" value={formatCurrency(summary.totalReceivables)} icon={<ArrowUpRight />} tone="emerald" help={dashboardHelp.receivable} />
+            </div>
+
+            <UpcomingAlertPanel items={upcomingItems} />
+
+            {hasCreditLimitGroups ? (
+              <div className="min-w-0 lg:col-span-7">
+                <CreditLimitSection groups={summary.creditLimitGroups} totalUsageRate={summary.creditUsageRate} />
+              </div>
+            ) : null}
+
+            <div className={`grid min-w-0 gap-3 min-[520px]:grid-cols-2 ${hasCreditLimitGroups ? 'lg:col-span-5 lg:grid-cols-1' : 'lg:col-span-12'}`}>
+              <PulseCard
+                title="Kredi ritmi"
+                label="Aylık ödeme"
+                value={formatCurrency(summary.totalLoanMonthlyPayment)}
+                description={`${formatCurrency(summary.totalLoanDebt)} aktif kredi borcu`}
+                icon={<Landmark />}
+                tone="rose"
+              />
+              <SalaryPulse trend={summary.salaryTrend} />
+            </div>
+
+            <div className="min-w-0 lg:col-span-12">
+              <HistorySection rows={data.transactionHistory} />
+            </div>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
     </motion.section>
   )
 }

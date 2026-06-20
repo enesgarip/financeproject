@@ -5,13 +5,18 @@ import {
 } from './AnalysisPage.wealth'
 import { LoanAffordabilityPanel } from './AnalysisPage.loan'
 import {
+  SearchExport,
+  StatementArchive,
+  YearEndReport,
+} from './AnalysisPage.reports'
+import {
   MilestonesPanel,
   PeopleLedger,
 } from './AnalysisPage.panels'
 import { useAnalysisPageData } from './AnalysisPage.data'
 
-export function AnalysisWealthPage() {
-  const { data, error, loading, ratesSnapshot, snapshots } = useAnalysisPageData()
+export function AnalysisDetailPage() {
+  const { data, error, loading, ratesSnapshot, searchItems, snapshots } = useAnalysisPageData()
 
   if (error) {
     return <p className="rounded-xl border border-destructive/20 bg-destructive/8 p-3 text-sm font-medium text-destructive">{error}</p>
@@ -26,9 +31,12 @@ export function AnalysisWealthPage() {
         <FireCalculator data={data} snapshots={snapshots} />
         <MilestonesPanel data={data} snapshots={snapshots} />
         <PeopleLedger debts={data.debts} />
+        <YearEndReport data={data} snapshots={snapshots} />
+        <SearchExport items={searchItems} />
+        <StatementArchive data={data} />
       </div>
 
-      {loading ? <p className="rounded-xl border border-border/60 bg-card p-4 text-sm text-muted-foreground">Servet verileri yükleniyor...</p> : null}
+      {loading ? <p className="rounded-xl border border-border/60 bg-card p-4 text-sm text-muted-foreground">Detay verileri yükleniyor...</p> : null}
     </section>
   )
 }

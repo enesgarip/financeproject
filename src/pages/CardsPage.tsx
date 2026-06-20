@@ -9,13 +9,11 @@ import type { Card, CardStatementArchive } from '../types/database'
 import { formatDate } from '../utils/date'
 import { isMissingSupabaseCapabilityError, missingSupabaseCapabilityMessage } from '../utils/supabaseErrors'
 import { useFinancePaymentDrawer } from '../hooks/useFinancePaymentDrawer'
+import { AccountHubPanel, CreditCardOverview } from './CardsPage.overview'
+import { ProvisionPanel, StatementPanel } from './CardsPage.statements'
 import {
-  AccountHubPanel,
   CardSectionNav,
-  CreditCardOverview,
   DueStatementAutomation,
-  ProvisionPanel,
-  StatementPanel,
   type CardSection,
 } from './CardsPage.sections'
 import { QuickExpensePanel } from './CardsPage.expense'

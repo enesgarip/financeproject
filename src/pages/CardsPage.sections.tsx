@@ -11,8 +11,6 @@ import { cn } from '../lib/utils'
 import { isMissingSupabaseCapabilityError, missingSupabaseCapabilityMessage } from '../utils/supabaseErrors'
 import { shouldRunStatementCut } from './CardsPage.helpers'
 
-export { AccountHubPanel, CreditCardOverview } from './CardsPage.overview'
-export { ProvisionPanel, StatementPanel } from './CardsPage.statements'
 
 export type CardSection = 'ozet' | 'kartlar' | 'islemler' | 'ekstreler'
 
