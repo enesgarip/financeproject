@@ -43,6 +43,12 @@ export type ParsedDenizBankMovementFile = {
 export type MovementMatchResult = {
   matched: ParsedDenizBankMovement[]
   unmatched: ParsedDenizBankMovement[]
+  matches: DenizBankMovementMatch[]
+}
+
+export type DenizBankMovementMatch = {
+  movement: ParsedDenizBankMovement
+  expense: MovementExpenseMatchRow
 }
 
 export type MovementExpenseMatchRow = {
@@ -53,6 +59,7 @@ export type MovementExpenseMatchRow = {
 }
 
 const LOOSE_DATE_MATCH_WINDOW_DAYS = 3
+const AMOUNT_MATCH_TOLERANCE_TL = 1
 
 const KNOWN_DETAILS = [
   'Otomatik Kredi Kartı Fatura Ödemesi',
@@ -212,6 +219,7 @@ export function matchDenizBankMovements(
   const usedIndices = new Set<number>()
   const matched: ParsedDenizBankMovement[] = []
   const unmatched: ParsedDenizBankMovement[] = []
+  const matches: DenizBankMovementMatch[] = []
 
   for (const movement of bankMovements) {
     const exactDateCandidates: number[] = []
@@ -219,7 +227,7 @@ export function matchDenizBankMovements(
     for (let index = 0; index < active.length; index++) {
       if (usedIndices.has(index)) continue
       const expense = active[index]
-      const sameAmount = Math.abs(diffTL(expense.amount, movement.amount)) <= 0.5
+      const sameAmount = Math.abs(diffTL(expense.amount, movement.amount)) <= AMOUNT_MATCH_TOLERANCE_TL
       if (!sameAmount) continue
 
       const distance = dateDistanceDays(expense.spent_at, movement.date)
@@ -242,8 +250,9 @@ export function matchDenizBankMovements(
     } else {
       usedIndices.add(foundIndex)
       matched.push(movement)
+      matches.push({ movement, expense: active[foundIndex] })
     }
   }
 
-  return { matched, unmatched }
+  return { matched, unmatched, matches }
 }

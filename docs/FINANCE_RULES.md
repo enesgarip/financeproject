@@ -85,7 +85,7 @@ Statement archive behavior:
 - statement amount is the posted current-period spending at cut time
 - cutting a statement links posted card expenses and posted card installments through `statement_archive_id`
 - statements are cut automatically the day **after** the statement day (like banks), so the statement day's own spending is included; the dashboard/cards page calls `cut_due_card_statements` on load and the daily `pg_cron` job runs it server-side. There is no manual "cut statement" action.
-- statement/current movement imports match existing app expenses primarily by amount and same-or-near date, not by identical merchant text. This lets the user keep personal descriptions while avoiding duplicate imports when bank posting dates drift by a few days.
+- statement/current movement imports match existing app expenses primarily by amount and same-or-near date, not by identical merchant text. The amount tolerance is 1 TL and the loose date window is 3 days. This lets the user keep personal descriptions while avoiding duplicate imports when bank posting dates drift by a few days.
 
 ## Scheduled Card Maintenance (server-side)
 
@@ -129,6 +129,7 @@ Current movement reconciliation:
 - `Bekleyen İşlem` rows import as `provision`; `Dönem İçi` spending rows import as `posted`.
 - `Hesaptan Ödeme` rows are not imported as card expenses.
 - `Taksitli Satış` rows are shown for manual review; the first implementation does not infer or recreate installment plans from current movement exports.
+- Review screens show the app's spending history for the detected period, matched bank/app record pairs, and missing rows, so custom app descriptions can be audited before importing anything new.
 - Imports use the existing `add_card_expense` RPC so card debt, provision/current-period fields, ledger events, and transaction history stay under the audited mutation path.
 
 ## Card Installment Rules

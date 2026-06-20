@@ -45,7 +45,9 @@ actions should use the repository/service layer:
   `src/data/repositories/cardsRepo.ts`
 - current movement reconciliation parses PDFs in
   `src/utils/denizBankMovementParser.ts`, matches via
-  `fetchCardExpenseMatchRows`, and writes only through `add_card_expense`
+  `fetchCardExpenseMatchRows`, shows the detected period's app spending
+  history plus matched bank/app pairs in the review UI, and writes only
+  through `add_card_expense`
 - account deposit, withdrawal, and account-to-account transfer:
   `src/services/accountMovements.ts`
 - card/account ledger recomputation actions:

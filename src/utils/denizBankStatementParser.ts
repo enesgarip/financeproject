@@ -24,6 +24,19 @@ export type ParsedStatement = {
 export type MatchResult = {
   matched: ParsedTransaction[]
   unmatched: ParsedTransaction[]
+  matches: StatementTransactionMatch[]
+}
+
+export type StatementTransactionMatch = {
+  transaction: ParsedTransaction
+  expense: StatementExpenseMatchRow
+}
+
+export type StatementExpenseMatchRow = {
+  spent_at: string
+  amount: number
+  status: string
+  description?: string | null
 }
 
 // ── PDF section headers → app categories ──────────────────────────────────
@@ -46,6 +59,7 @@ const SECTION_CATEGORY: Record<string, string> = {
 
 const SECTION_KEYS = Object.keys(SECTION_CATEGORY)
 const LOOSE_DATE_MATCH_WINDOW_DAYS = 3
+const AMOUNT_MATCH_TOLERANCE_TL = 1
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -201,12 +215,13 @@ export function expenseTotalAmount(tx: ParsedTransaction): number {
 
 export function matchTransactions(
   pdfTransactions: ParsedTransaction[],
-  existingExpenses: Array<{ spent_at: string; amount: number; status: string }>,
+  existingExpenses: StatementExpenseMatchRow[],
 ): MatchResult {
   const active = existingExpenses.filter((e) => e.status !== 'cancelled')
   const usedIndices = new Set<number>()
   const matched: ParsedTransaction[] = []
   const unmatched: ParsedTransaction[] = []
+  const matches: StatementTransactionMatch[] = []
 
   for (const tx of pdfTransactions) {
     // Taksitli işlem app'te orijinal tarih + TOPLAM tutarla bir harcama olarak
@@ -217,7 +232,7 @@ export function matchTransactions(
     for (let i = 0; i < active.length; i++) {
       if (usedIndices.has(i)) continue
       const exp = active[i]
-      const sameAmount = Math.abs(diffTL(exp.amount, compareAmount)) <= 0.5
+      const sameAmount = Math.abs(diffTL(exp.amount, compareAmount)) <= AMOUNT_MATCH_TOLERANCE_TL
       if (!sameAmount) continue
 
       const distance = dateDistanceDays(exp.spent_at, tx.date)
@@ -232,8 +247,9 @@ export function matchTransactions(
     } else {
       usedIndices.add(foundIndex)
       matched.push(tx)
+      matches.push({ transaction: tx, expense: active[foundIndex] })
     }
   }
 
-  return { matched, unmatched }
+  return { matched, unmatched, matches }
 }

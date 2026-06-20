@@ -246,10 +246,11 @@ describe('matchTransactions', () => {
     installmentCount: count,
   })
 
-  const exp = (spent_at: string, amount: number, status = 'posted') => ({
+  const exp = (spent_at: string, amount: number, status = 'posted', description = 'App kaydı') => ({
     spent_at,
     amount,
     status,
+    description,
   })
 
   it('matches by same date and amount', () => {
@@ -277,9 +278,15 @@ describe('matchTransactions', () => {
     expect(result.unmatched).toHaveLength(1)
   })
 
-  it('tolerates 0.5 TL rounding difference', () => {
-    const result = matchTransactions([tx('2026-06-03', 170.00)], [exp('2026-06-03', 170.40)])
+  it('tolerates a 1 TL amount difference', () => {
+    const result = matchTransactions([tx('2026-06-03', 170.00)], [exp('2026-06-03', 170.95)])
     expect(result.matched).toHaveLength(1)
+    expect(result.matches[0]?.expense.description).toBe('App kaydı')
+  })
+
+  it('does not match amount differences above 1 TL', () => {
+    const result = matchTransactions([tx('2026-06-03', 170.00)], [exp('2026-06-03', 171.01)])
+    expect(result.unmatched).toHaveLength(1)
   })
 
   it('matches the same amount inside a short date window', () => {

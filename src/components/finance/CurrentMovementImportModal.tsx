@@ -1,17 +1,21 @@
 import { AlertCircle, CheckCircle2, FileUp, Loader2, Scale, X } from 'lucide-react'
 import { useCallback, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { addCardExpense, fetchCardExpenseMatchRows } from '../../data/repositories/cardsRepo'
+import { addCardExpense, fetchCardExpenseMatchRows, type ExpenseMatchRow } from '../../data/repositories/cardsRepo'
 import { extractPdfText } from '../../lib/pdfText'
 import type { Card } from '../../types/database'
 import {
   matchDenizBankMovements,
   parseDenizBankMovementPdf,
+  type DenizBankMovementMatch,
   type ParsedDenizBankMovement,
   type ParsedDenizBankPayment,
 } from '../../utils/denizBankMovementParser'
 import { formatCurrency } from '../../utils/formatCurrency'
+import { dateRangeFromIsoDates, rowsInReviewPeriod } from '../../utils/importReviewPeriod'
 import { sumTL } from '../../utils/money'
+import { getCardStatementPeriod } from '../../utils/cardStatement'
+import { CardExpenseHistorySection } from './CardExpenseHistorySection'
 import { useBodyScrollLock } from '../ui/use-body-scroll-lock'
 
 type Step = 'upload' | 'review' | 'success'
@@ -37,6 +41,13 @@ function statusClassName(movement: ParsedDenizBankMovement) {
     : 'bg-success/10 text-success'
 }
 
+function appExpenseStatusLabel(status: string) {
+  if (status === 'provision') return 'Provizyon'
+  if (status === 'posted') return 'Dönem içi'
+  if (status === 'cancelled') return 'İptal'
+  return status
+}
+
 export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) {
   useBodyScrollLock(true)
 
@@ -46,6 +57,9 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
   const [importing, setImporting] = useState(false)
   const [importError, setImportError] = useState('')
   const [matched, setMatched] = useState<ParsedDenizBankMovement[]>([])
+  const [matches, setMatches] = useState<DenizBankMovementMatch[]>([])
+  const [periodExpenses, setPeriodExpenses] = useState<ExpenseMatchRow[]>([])
+  const [periodLabel, setPeriodLabel] = useState('')
   const [importable, setImportable] = useState<ParsedDenizBankMovement[]>([])
   const [manualReview, setManualReview] = useState<ParsedDenizBankMovement[]>([])
   const [payments, setPayments] = useState<ParsedDenizBankPayment[]>([])
@@ -79,10 +93,18 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
       }
 
       const result = matchDenizBankMovements(parsed.movements, expensesResult.data)
+      const fallbackPeriod = dateRangeFromIsoDates([...parsed.movements.map((movement) => movement.date), ...parsed.payments.map((payment) => payment.date)])
+      const cardPeriod = getCardStatementPeriod(card, fallbackPeriod?.end ?? null)
+      const reviewPeriod = cardPeriod
+        ? { start: cardPeriod.periodStart, end: cardPeriod.periodEnd, label: cardPeriod.periodLabel }
+        : fallbackPeriod
       const nextImportable = result.unmatched.filter((movement) => !movement.isInstallment)
       const nextManual = result.unmatched.filter((movement) => movement.isInstallment)
 
       setMatched(result.matched)
+      setMatches(result.matches)
+      setPeriodLabel(reviewPeriod?.label ?? '')
+      setPeriodExpenses(rowsInReviewPeriod(expensesResult.data, reviewPeriod))
       setImportable(nextImportable)
       setManualReview(nextManual)
       setPayments(parsed.payments)
@@ -94,7 +116,7 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
     } finally {
       setParsing(false)
     }
-  }, [card.id])
+  }, [card])
 
   function toggleAll() {
     if (selected.size === importable.length) setSelected(new Set())
@@ -266,6 +288,48 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
                 </p>
               ) : null}
             </div>
+
+            <CardExpenseHistorySection expenses={periodExpenses} periodLabel={periodLabel} />
+
+            {matches.length > 0 && (
+              <div className="border-b border-border">
+                <div className="px-4 py-2">
+                  <span className="text-xs font-bold text-muted-foreground">Eşleşen kayıtlar</span>
+                  <p className="mt-0.5 text-[11px] text-muted-foreground">
+                    Banka hareketi ile app'teki kayıt birlikte gösterilir.
+                  </p>
+                </div>
+                <div className="max-h-48 overflow-y-auto">
+                  {matches.map(({ movement, expense }, index) => (
+                    <div
+                      key={`${movement.date}-${movement.description}-${movement.amount}-${index}`}
+                      className="border-b border-border/50 px-4 py-2.5"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="flex min-w-0 flex-wrap items-center gap-2">
+                            <p className="min-w-0 truncate text-xs font-bold text-foreground">{movement.description}</p>
+                            <span className={`rounded-md px-2 py-0.5 text-[10px] font-black ${statusClassName(movement)}`}>
+                              {statusLabel(movement)}
+                            </span>
+                          </div>
+                          <p className="mt-0.5 text-[11px] text-muted-foreground">
+                            Banka: {formatShortDate(movement.date)} · **** {movement.cardLastFour}
+                          </p>
+                          <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
+                            App: {expense.description || 'Açıklama yok'} · {formatShortDate(expense.spent_at)} · {appExpenseStatusLabel(expense.status)}
+                          </p>
+                        </div>
+                        <div className="shrink-0 text-right">
+                          <p className="text-xs font-black text-foreground">{formatCurrency(movement.amount)}</p>
+                          <p className="text-[10px] font-bold text-muted-foreground">App {formatCurrency(expense.amount)}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {importable.length > 0 && (
               <>

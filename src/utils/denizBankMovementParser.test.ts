@@ -93,14 +93,28 @@ describe('matchDenizBankMovements', () => {
     expect(result.unmatched).toEqual([petrol])
   })
 
-  it('tolerates small rounding differences from bank exports', () => {
+  it('tolerates a 1 TL amount difference from bank exports', () => {
     const result = matchDenizBankMovements(
       [petrol],
-      [{ spent_at: '2026-06-19', amount: 535.4, status: 'provision', description: 'UNDEM PETROL' }],
+      [{ spent_at: '2026-06-19', amount: 535.9, status: 'provision', description: 'UNDEM PETROL' }],
     )
 
     expect(result.matched).toEqual([petrol])
     expect(result.unmatched).toHaveLength(0)
+    expect(result.matches[0]).toMatchObject({
+      movement: petrol,
+      expense: { description: 'UNDEM PETROL' },
+    })
+  })
+
+  it('does not match amount differences above 1 TL', () => {
+    const result = matchDenizBankMovements(
+      [petrol],
+      [{ spent_at: '2026-06-19', amount: 536.01, status: 'provision', description: 'UNDEM PETROL' }],
+    )
+
+    expect(result.matched).toHaveLength(0)
+    expect(result.unmatched).toEqual([petrol])
   })
 
   it('matches user-written descriptions when date and amount are the same', () => {

@@ -8,13 +8,23 @@ import {
   fetchCardExpenseMatchRows,
   resetCardData,
   setStatementReconciliation,
+  type ExpenseMatchRow,
 } from '../../data/repositories/cardsRepo'
 import type { Card } from '../../types/database'
+import { getCardStatementPeriod } from '../../utils/cardStatement'
 import { formatCurrency } from '../../utils/formatCurrency'
-import { parseDenizBankStatement, matchTransactions, expenseTotalAmount, type ParsedTransaction } from '../../utils/denizBankStatementParser'
+import { dateRangeFromIsoDates, rowsInReviewPeriod } from '../../utils/importReviewPeriod'
+import {
+  parseDenizBankStatement,
+  matchTransactions,
+  expenseTotalAmount,
+  type ParsedTransaction,
+  type StatementTransactionMatch,
+} from '../../utils/denizBankStatementParser'
 import { diffTL, equalsTL, roundTL, sumTL } from '../../utils/money'
 import { parseStatementText } from '../../lib/statementParseClient'
 import { extractPdfText } from '../../lib/pdfText'
+import { CardExpenseHistorySection } from './CardExpenseHistorySection'
 
 /**
  * App'e güvenle otomatik aktarılabilen işlem mi?
@@ -29,6 +39,13 @@ function isImportable(tx: ParsedTransaction): boolean {
 }
 
 // ── Component ─────────────────────────────────────────────────────────────
+
+function appExpenseStatusLabel(status: string) {
+  if (status === 'provision') return 'Provizyon'
+  if (status === 'posted') return 'Dönem içi'
+  if (status === 'cancelled') return 'İptal'
+  return status
+}
 
 type Step = 'upload' | 'review' | 'success'
 
@@ -53,6 +70,9 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
   const [statementDate, setStatementDate] = useState('')
   const [dueDate, setDueDate] = useState('')
   const [matched, setMatched] = useState<ParsedTransaction[]>([])
+  const [matches, setMatches] = useState<StatementTransactionMatch[]>([])
+  const [periodExpenses, setPeriodExpenses] = useState<ExpenseMatchRow[]>([])
+  const [periodLabel, setPeriodLabel] = useState('')
   const [unmatched, setUnmatched] = useState<ParsedTransaction[]>([])
   const [manualReview, setManualReview] = useState<ParsedTransaction[]>([])
   const [selected, setSelected] = useState<Set<number>>(new Set())
@@ -93,20 +113,31 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
       setStatementDate(parsed.statementDate)
       setDueDate(parsed.dueDate)
 
+      // Load existing app expenses once: matching and the period history panel
+      // share the same snapshot.
+      const expensesResult = await fetchCardExpenseMatchRows(card.id)
+      const expenses = expensesResult.ok ? expensesResult.data : []
+      const fallbackPeriod = dateRangeFromIsoDates(parsed.transactions.map((tx) => tx.date))
+      const periodAnchor = parsed.statementDate || fallbackPeriod?.end || null
+      const cardPeriod = getCardStatementPeriod(card, periodAnchor)
+      const reviewPeriod = cardPeriod
+        ? { start: cardPeriod.periodStart, end: cardPeriod.periodEnd, label: cardPeriod.periodLabel }
+        : fallbackPeriod
+
+      setPeriodLabel(reviewPeriod?.label ?? '')
+      setPeriodExpenses(rowsInReviewPeriod(expenses, reviewPeriod))
+
       // Temiz içe aktarma: kart sıfırlanacağı için eşleştirme yapılmaz; tüm
       // işlemler (peşin + taksit) baştan kurulur.
       if (cleanImport) {
         setMatched([])
+        setMatches([])
         setManualReview([])
         setUnmatched(parsed.transactions)
         setSelected(new Set(parsed.transactions.map((_, i) => i)))
         setStep('review')
         return
       }
-
-      // Load existing expenses for this card to match against
-      const expensesResult = await fetchCardExpenseMatchRows(card.id)
-      const expenses = expensesResult.ok ? expensesResult.data : []
 
       const result = matchTransactions(parsed.transactions, expenses)
 
@@ -116,6 +147,7 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
       const manual = result.unmatched.filter((tx) => !isImportable(tx))
 
       setMatched(result.matched)
+      setMatches(result.matches)
       setUnmatched(importable)
       setManualReview(manual)
       setSelected(new Set(importable.map((_, i) => i)))
@@ -125,7 +157,7 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
     } finally {
       setParsing(false)
     }
-  }, [card.id, cleanImport])
+  }, [card, cleanImport])
 
   function todayIso() {
     const now = new Date()
@@ -465,6 +497,47 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
                 </div>
               )}
             </div>
+
+            <CardExpenseHistorySection expenses={periodExpenses} periodLabel={periodLabel} />
+
+            {!cleanImport && matches.length > 0 && (
+              <div className="border-b border-border">
+                <div className="px-4 py-2">
+                  <span className="text-xs font-bold text-muted-foreground">Eşleşen kayıtlar</span>
+                  <p className="mt-0.5 text-[11px] text-muted-foreground">
+                    Ekstre işlemi ile app'teki kayıt birlikte gösterilir.
+                  </p>
+                </div>
+                <div className="max-h-48 overflow-y-auto">
+                  {matches.map(({ transaction, expense }, index) => {
+                    const bankTotal = expenseTotalAmount(transaction)
+                    return (
+                      <div
+                        key={`${transaction.date}-${transaction.description}-${transaction.amount}-${index}`}
+                        className="border-b border-border/50 px-4 py-2.5"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="truncate text-xs font-bold text-foreground">{transaction.description}</p>
+                            <p className="mt-0.5 text-[11px] text-muted-foreground">
+                              Ekstre: {formatShortDate(transaction.date)} · {transaction.category}
+                              {transaction.isInstallment ? ` · ${transaction.installmentNo}${transaction.installmentCount ? `/${transaction.installmentCount}` : ''}. taksit` : ''}
+                            </p>
+                            <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
+                              App: {expense.description || 'Açıklama yok'} · {formatShortDate(expense.spent_at)} · {appExpenseStatusLabel(expense.status)}
+                            </p>
+                          </div>
+                          <div className="shrink-0 text-right">
+                            <p className="text-xs font-black text-foreground">{formatCurrency(bankTotal)}</p>
+                            <p className="text-[10px] font-bold text-muted-foreground">App {formatCurrency(expense.amount)}</p>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* Importable (otomatik aktarılabilir) işlemler */}
             {unmatched.length > 0 && (
