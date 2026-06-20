@@ -1,4 +1,4 @@
-import { FileUp, X, CheckCircle2, AlertCircle, Loader2, FileText } from 'lucide-react'
+import { FileUp, X, CheckCircle2, AlertCircle, Loader2, FileText, ChevronDown } from 'lucide-react'
 import { useCallback, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useBodyScrollLock } from '../ui/use-body-scroll-lock'
@@ -71,6 +71,7 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
   const [dueDate, setDueDate] = useState('')
   const [matched, setMatched] = useState<ParsedTransaction[]>([])
   const [matches, setMatches] = useState<StatementTransactionMatch[]>([])
+  const [showMatches, setShowMatches] = useState(false)
   const [periodExpenses, setPeriodExpenses] = useState<ExpenseMatchRow[]>([])
   const [periodLabel, setPeriodLabel] = useState('')
   const [unmatched, setUnmatched] = useState<ParsedTransaction[]>([])
@@ -132,9 +133,10 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
       if (cleanImport) {
         setMatched([])
         setMatches([])
+        setShowMatches(false)
         setManualReview([])
         setUnmatched(parsed.transactions)
-        setSelected(new Set(parsed.transactions.map((_, i) => i)))
+        setSelected(new Set())
         setStep('review')
         return
       }
@@ -148,9 +150,10 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
 
       setMatched(result.matched)
       setMatches(result.matches)
+      setShowMatches(false)
       setUnmatched(importable)
       setManualReview(manual)
-      setSelected(new Set(importable.map((_, i) => i)))
+      setSelected(new Set())
       setStep('review')
     } catch (err) {
       setParseError(err instanceof Error ? err.message : 'PDF işlenirken bir hata oluştu.')
@@ -502,40 +505,50 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
 
             {!cleanImport && matches.length > 0 && (
               <div className="border-b border-border">
-                <div className="px-4 py-2">
-                  <span className="text-xs font-bold text-muted-foreground">Eşleşen kayıtlar</span>
-                  <p className="mt-0.5 text-[11px] text-muted-foreground">
-                    Ekstre işlemi ile app'teki kayıt birlikte gösterilir.
-                  </p>
-                </div>
-                <div className="max-h-48 overflow-y-auto">
-                  {matches.map(({ transaction, expense }, index) => {
-                    const bankTotal = expenseTotalAmount(transaction)
-                    return (
-                      <div
-                        key={`${transaction.date}-${transaction.description}-${transaction.amount}-${index}`}
-                        className="border-b border-border/50 px-4 py-2.5"
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <p className="truncate text-xs font-bold text-foreground">{transaction.description}</p>
-                            <p className="mt-0.5 text-[11px] text-muted-foreground">
-                              Ekstre: {formatShortDate(transaction.date)} · {transaction.category}
-                              {transaction.isInstallment ? ` · ${transaction.installmentNo}${transaction.installmentCount ? `/${transaction.installmentCount}` : ''}. taksit` : ''}
-                            </p>
-                            <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
-                              App: {expense.description || 'Açıklama yok'} · {formatShortDate(expense.spent_at)} · {appExpenseStatusLabel(expense.status)}
-                            </p>
-                          </div>
-                          <div className="shrink-0 text-right">
-                            <p className="text-xs font-black text-foreground">{formatCurrency(bankTotal)}</p>
-                            <p className="text-[10px] font-bold text-muted-foreground">App {formatCurrency(expense.amount)}</p>
+                <button
+                  type="button"
+                  onClick={() => setShowMatches((value) => !value)}
+                  className="flex w-full items-center justify-between gap-3 px-4 py-2 text-left hover:bg-muted/30"
+                  aria-expanded={showMatches}
+                >
+                  <span className="min-w-0">
+                    <span className="block text-xs font-bold text-muted-foreground">Eşleşen kayıtlar</span>
+                    <span className="mt-0.5 block text-[11px] text-muted-foreground">
+                      {matches.length} kayıt gizli. Ekstre işlemi ile app'teki kaydı birlikte görmek için aç.
+                    </span>
+                  </span>
+                  <ChevronDown size={16} className={`shrink-0 text-muted-foreground transition-transform ${showMatches ? 'rotate-180' : ''}`} />
+                </button>
+                {showMatches ? (
+                  <div className="max-h-48 overflow-y-auto">
+                    {matches.map(({ transaction, expense }, index) => {
+                      const bankTotal = expenseTotalAmount(transaction)
+                      return (
+                        <div
+                          key={`${transaction.date}-${transaction.description}-${transaction.amount}-${index}`}
+                          className="border-b border-border/50 px-4 py-2.5"
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className="truncate text-xs font-bold text-foreground">{transaction.description}</p>
+                              <p className="mt-0.5 text-[11px] text-muted-foreground">
+                                Ekstre: {formatShortDate(transaction.date)} · {transaction.category}
+                                {transaction.isInstallment ? ` · ${transaction.installmentNo}${transaction.installmentCount ? `/${transaction.installmentCount}` : ''}. taksit` : ''}
+                              </p>
+                              <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
+                                App: {expense.description || 'Açıklama yok'} · {formatShortDate(expense.spent_at)} · {appExpenseStatusLabel(expense.status)}
+                              </p>
+                            </div>
+                            <div className="shrink-0 text-right">
+                              <p className="text-xs font-black text-foreground">{formatCurrency(bankTotal)}</p>
+                              <p className="text-[10px] font-bold text-muted-foreground">App {formatCurrency(expense.amount)}</p>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    )
-                  })}
-                </div>
+                      )
+                    })}
+                  </div>
+                ) : null}
               </div>
             )}
 

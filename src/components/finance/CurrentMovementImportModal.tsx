@@ -1,4 +1,4 @@
-import { AlertCircle, CheckCircle2, FileUp, Loader2, Scale, X } from 'lucide-react'
+import { AlertCircle, CheckCircle2, ChevronDown, FileUp, Loader2, Scale, X } from 'lucide-react'
 import { useCallback, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { addCardExpense, fetchCardExpenseMatchRows, type ExpenseMatchRow } from '../../data/repositories/cardsRepo'
@@ -58,6 +58,7 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
   const [importError, setImportError] = useState('')
   const [matched, setMatched] = useState<ParsedDenizBankMovement[]>([])
   const [matches, setMatches] = useState<DenizBankMovementMatch[]>([])
+  const [showMatches, setShowMatches] = useState(false)
   const [periodExpenses, setPeriodExpenses] = useState<ExpenseMatchRow[]>([])
   const [periodLabel, setPeriodLabel] = useState('')
   const [importable, setImportable] = useState<ParsedDenizBankMovement[]>([])
@@ -103,13 +104,14 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
 
       setMatched(result.matched)
       setMatches(result.matches)
+      setShowMatches(false)
       setPeriodLabel(reviewPeriod?.label ?? '')
       setPeriodExpenses(rowsInReviewPeriod(expensesResult.data, reviewPeriod))
       setImportable(nextImportable)
       setManualReview(nextManual)
       setPayments(parsed.payments)
       setIgnoredCount(parsed.ignoredRows.length)
-      setSelected(new Set(nextImportable.map((_, index) => index)))
+      setSelected(new Set())
       setStep('review')
     } catch (error) {
       setParseError(error instanceof Error ? error.message : 'PDF işlenirken bir hata oluştu.')
@@ -293,41 +295,51 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
 
             {matches.length > 0 && (
               <div className="border-b border-border">
-                <div className="px-4 py-2">
-                  <span className="text-xs font-bold text-muted-foreground">Eşleşen kayıtlar</span>
-                  <p className="mt-0.5 text-[11px] text-muted-foreground">
-                    Banka hareketi ile app'teki kayıt birlikte gösterilir.
-                  </p>
-                </div>
-                <div className="max-h-48 overflow-y-auto">
-                  {matches.map(({ movement, expense }, index) => (
-                    <div
-                      key={`${movement.date}-${movement.description}-${movement.amount}-${index}`}
-                      className="border-b border-border/50 px-4 py-2.5"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <div className="flex min-w-0 flex-wrap items-center gap-2">
-                            <p className="min-w-0 truncate text-xs font-bold text-foreground">{movement.description}</p>
-                            <span className={`rounded-md px-2 py-0.5 text-[10px] font-black ${statusClassName(movement)}`}>
-                              {statusLabel(movement)}
-                            </span>
+                <button
+                  type="button"
+                  onClick={() => setShowMatches((value) => !value)}
+                  className="flex w-full items-center justify-between gap-3 px-4 py-2 text-left hover:bg-muted/30"
+                  aria-expanded={showMatches}
+                >
+                  <span className="min-w-0">
+                    <span className="block text-xs font-bold text-muted-foreground">Eşleşen kayıtlar</span>
+                    <span className="mt-0.5 block text-[11px] text-muted-foreground">
+                      {matches.length} kayıt gizli. Banka hareketi ile app'teki kaydı birlikte görmek için aç.
+                    </span>
+                  </span>
+                  <ChevronDown size={16} className={`shrink-0 text-muted-foreground transition-transform ${showMatches ? 'rotate-180' : ''}`} />
+                </button>
+                {showMatches ? (
+                  <div className="max-h-48 overflow-y-auto">
+                    {matches.map(({ movement, expense }, index) => (
+                      <div
+                        key={`${movement.date}-${movement.description}-${movement.amount}-${index}`}
+                        className="border-b border-border/50 px-4 py-2.5"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="flex min-w-0 flex-wrap items-center gap-2">
+                              <p className="min-w-0 truncate text-xs font-bold text-foreground">{movement.description}</p>
+                              <span className={`rounded-md px-2 py-0.5 text-[10px] font-black ${statusClassName(movement)}`}>
+                                {statusLabel(movement)}
+                              </span>
+                            </div>
+                            <p className="mt-0.5 text-[11px] text-muted-foreground">
+                              Banka: {formatShortDate(movement.date)} · **** {movement.cardLastFour}
+                            </p>
+                            <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
+                              App: {expense.description || 'Açıklama yok'} · {formatShortDate(expense.spent_at)} · {appExpenseStatusLabel(expense.status)}
+                            </p>
                           </div>
-                          <p className="mt-0.5 text-[11px] text-muted-foreground">
-                            Banka: {formatShortDate(movement.date)} · **** {movement.cardLastFour}
-                          </p>
-                          <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
-                            App: {expense.description || 'Açıklama yok'} · {formatShortDate(expense.spent_at)} · {appExpenseStatusLabel(expense.status)}
-                          </p>
-                        </div>
-                        <div className="shrink-0 text-right">
-                          <p className="text-xs font-black text-foreground">{formatCurrency(movement.amount)}</p>
-                          <p className="text-[10px] font-bold text-muted-foreground">App {formatCurrency(expense.amount)}</p>
+                          <div className="shrink-0 text-right">
+                            <p className="text-xs font-black text-foreground">{formatCurrency(movement.amount)}</p>
+                            <p className="text-[10px] font-bold text-muted-foreground">App {formatCurrency(expense.amount)}</p>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                ) : null}
               </div>
             )}
 

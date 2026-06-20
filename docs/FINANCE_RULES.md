@@ -129,7 +129,7 @@ Current movement reconciliation:
 - `Bekleyen İşlem` rows import as `provision`; `Dönem İçi` spending rows import as `posted`.
 - `Hesaptan Ödeme` rows are not imported as card expenses.
 - `Taksitli Satış` rows are shown for manual review; the first implementation does not infer or recreate installment plans from current movement exports.
-- Review screens show the app's spending history for the detected period, matched bank/app record pairs, and missing rows, so custom app descriptions can be audited before importing anything new.
+- Review screens show the app's spending history for the detected period, keep matched bank/app record pairs collapsed by default, and leave missing rows unselected until the user chooses which rows to import.
 - Imports use the existing `add_card_expense` RPC so card debt, provision/current-period fields, ledger events, and transaction history stay under the audited mutation path.
 
 ## Card Installment Rules
