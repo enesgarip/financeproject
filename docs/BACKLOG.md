@@ -105,6 +105,11 @@
   - CardsPage `atoms.tsx` kaldırıldı (overview'e taşındı), `sections.tsx` re-export'ları temizlendi.
   - Analiz 4 sekme → 2 sekme: `AnalysisPage` (Genel+Trendler), `AnalysisDetailPage` (Servet+Kayıtlar). Eski route'lar redirect eder.
 
+- ~~Aktivite akışı (audit trail) — tüm veri değişikliklerini tek akışta göster.~~ DONE.
+  - `utils/activityFeed.ts`: card_ledger + account_ledger + transaction_history'yi birleşik timeline'a çevirir, filtreleme + tarih gruplama.
+  - `pages/AnalysisPage.activity.tsx`: ActivityFeedPanel — kaynak filtresi, pagination, renk kodlu yön (inflow/outflow).
+  - `data/repositories/financePanelsRepo.ts`: tüm ledger'ları çeken `fetchRecentCardLedgerEvents` / `fetchRecentAccountLedgerEvents`.
+
 ## P3 - Nice to Have
 
 - Add goal-based automatic saving suggestions.

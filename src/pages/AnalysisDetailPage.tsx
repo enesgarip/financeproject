@@ -13,6 +13,7 @@ import {
   MilestonesPanel,
   PeopleLedger,
 } from './AnalysisPage.panels'
+import { ActivityFeedPanel } from './AnalysisPage.activity'
 import { useAnalysisPageData } from './AnalysisPage.data'
 
 export function AnalysisDetailPage() {
@@ -32,6 +33,7 @@ export function AnalysisDetailPage() {
         <MilestonesPanel data={data} snapshots={snapshots} />
         <PeopleLedger debts={data.debts} />
         <YearEndReport data={data} snapshots={snapshots} />
+        <ActivityFeedPanel data={data} />
         <SearchExport items={searchItems} />
         <StatementArchive data={data} />
       </div>

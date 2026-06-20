@@ -229,6 +229,7 @@ paylaşır; her sayfa süpersetini client-side daraltır). Query client: `src/ap
 | **Bütçe uyarıları** | `utils/budgetAlerts.ts` | `data/repositories/crudRepo.ts` | `pages/CardsPage.tsx` |
 | **Dashboard özet/insight** | `utils/dashboardInsights.ts`, `utils/cashFlowForecast.ts`, `utils/dashboardUpcoming.ts`, `utils/obligations.ts`, `utils/netWorthSeries.ts`, `utils/dataHealthSummary.ts` | `data/repositories/financeSnapshotRepo.ts` | `pages/DashboardPage.tsx` |
 | **Analiz / raporlar** | `utils/analysisView.ts`, `utils/spendingAnomalies.ts`, `utils/priceIncreaseRadar.ts` | `data/repositories/analysisRepo.ts` | `pages/AnalysisHub.tsx`, `pages/AnalysisPage.tsx`, `pages/AnalysisDetailPage.tsx` |
+| **Aktivite akışı (audit trail)** | `utils/activityFeed.ts` | `data/repositories/financePanelsRepo.ts` | `pages/AnalysisPage.activity.tsx` (ActivityFeedPanel) |
 | **Bütçe & birikim hedefleri (planlama)** | `utils/savingsGoal.ts`, `utils/budgetAlerts.ts` | `data/repositories/savingsGoalsRepo.ts` | `pages/PlanningHub.tsx`, `pages/PlanningPage.tsx`, `components/finance/SavingsGoalsPanel.tsx` |
 | **Finansal rapor (PDF/AI paylaşım)** | `utils/financialReport.ts` | — | `pages/AnalysisDetailPage.tsx`, `pages/AnalysisPage.reports.tsx` |
 | **Sessiz gün analizi** | `utils/quietDays.ts` | — | `pages/AnalysisPage.panels.tsx` (QuietDaysPanel) |

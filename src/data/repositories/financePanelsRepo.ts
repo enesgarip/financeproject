@@ -48,6 +48,26 @@ export async function fetchAccountLedgerEventsSince(cardId: string, since: strin
   return resultFromSupabase((data ?? []) as AccountLedger[], error, 'Hesap hareketleri yuklenemedi.')
 }
 
+export async function fetchRecentCardLedgerEvents(limit = 100): Promise<Result<CardLedger[]>> {
+  const { data, error } = await supabase
+    .from('card_ledger')
+    .select('*')
+    .order('occurred_at', { ascending: false })
+    .limit(limit)
+
+  return resultFromSupabase((data ?? []) as CardLedger[], error, 'Kart borc hareketleri yuklenemedi.')
+}
+
+export async function fetchRecentAccountLedgerEvents(limit = 100): Promise<Result<AccountLedger[]>> {
+  const { data, error } = await supabase
+    .from('account_ledger')
+    .select('*')
+    .order('occurred_at', { ascending: false })
+    .limit(limit)
+
+  return resultFromSupabase((data ?? []) as AccountLedger[], error, 'Hesap hareketleri yuklenemedi.')
+}
+
 export async function fetchAccountReconciliations(): Promise<Result<AccountReconciliation[]>> {
   const { data, error } = await supabase
     .from('account_reconciliations')
