@@ -1,4 +1,6 @@
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
+import { Link } from 'react-router-dom'
+import { ShieldCheck } from 'lucide-react'
 import { CrudPage } from '../components/CrudPage'
 import { CurrentMovementImportModal } from '../components/finance/CurrentMovementImportModal'
 import { FinancePaymentDrawer } from '../components/finance/FinancePaymentDrawer'
@@ -79,6 +81,13 @@ export function CardsPage() {
   const { drawerProps, openPaymentDrawer } = useFinancePaymentDrawer()
   const [importCard, setImportCard] = useState<Card | null>(null)
   const [movementImportCard, setMovementImportCard] = useState<Card | null>(null)
+  const [postImportBanner, setPostImportBanner] = useState(false)
+
+  const handleImportSuccess = useCallback(async (setter: (v: null) => void) => {
+    setter(null)
+    await Promise.all([reloadCards?.(), loadStatements(), loadInstallments(), invalidateSnapshot()])
+    setPostImportBanner(true)
+  }, [reloadCards, loadStatements, loadInstallments, invalidateSnapshot])
 
   async function openStatementPayment(statement: CardStatementArchive, card: Card, cards: Card[], reload: () => Promise<void>) {
     await openPaymentDrawer(
@@ -145,6 +154,22 @@ export function CardsPage() {
 
           return (
             <div className="flex flex-col gap-3">
+              {postImportBanner ? (
+                <div className="flex items-center gap-3 rounded-xl border border-info/25 bg-info/8 p-3">
+                  <ShieldCheck size={18} className="shrink-0 text-info" />
+                  <p className="flex-1 text-sm font-medium text-info">İçe aktarma tamamlandı. Veri tutarlılığını kontrol etmeni öneriyoruz.</p>
+                  <Link
+                    to="/veri-sagligi"
+                    className="shrink-0 rounded-lg bg-info px-3 py-1.5 text-xs font-bold text-white transition hover:bg-info/90"
+                    onClick={() => setPostImportBanner(false)}
+                  >
+                    Kontrol et
+                  </Link>
+                  <button type="button" onClick={() => setPostImportBanner(false)} className="shrink-0 text-xs font-bold text-info hover:underline">
+                    Kapat
+                  </button>
+                </div>
+              ) : null}
               <CardSectionNav section={section} onSelect={handleSectionChange} counts={counts} />
               {!loading ? (
                 <DueStatementAutomation
@@ -263,10 +288,7 @@ export function CardsPage() {
         <StatementImportModal
           card={importCard}
           onClose={() => setImportCard(null)}
-          onSuccess={() => {
-            setImportCard(null)
-            void Promise.all([reloadCards?.(), loadStatements(), loadInstallments(), invalidateSnapshot()])
-          }}
+          onSuccess={() => void handleImportSuccess(setImportCard)}
         />
       )}
 
@@ -274,10 +296,7 @@ export function CardsPage() {
         <CurrentMovementImportModal
           card={movementImportCard}
           onClose={() => setMovementImportCard(null)}
-          onSuccess={() => {
-            setMovementImportCard(null)
-            void Promise.all([reloadCards?.(), loadStatements(), loadInstallments(), invalidateSnapshot()])
-          }}
+          onSuccess={() => void handleImportSuccess(setMovementImportCard)}
         />
       )}
 

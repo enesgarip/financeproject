@@ -119,6 +119,11 @@
   - `pages/CardsPage.list.tsx`: her kredi kartında skor badge'i (yeşil/sarı/kırmızı, tooltip ile detay).
   - 4 unit test.
 
+- ~~3 katmanlı savunma — import sonrası otomatik kontrol yönlendirmesi.~~ DONE.
+  - Import (ekstre/hareket) sonrası CardsPage'de "Veri tutarlılığını kontrol et" banner'ı gösterilir.
+  - Banner, DataHealth sayfasına tek tıkla yönlendirir; "Güvenli düzeltmeleri uygula" ile toplu fix zaten mevcut.
+  - Mevcut 3-katman: import (StatementImportModal / CurrentMovementImportModal) → detect (DataHealth 22 check) → fix (fixIssue + undo stack).
+
 ## P3 - Nice to Have
 
 - Add goal-based automatic saving suggestions.
