@@ -168,6 +168,7 @@ export function DashboardPage() {
     const salaryTrend = getSalaryTrend(data.salaryHistory)
     const creditLimitGroups = buildCreditLimitGroups(data.cards)
     const cashFlow = buildMonthlyCashFlow(data)
+    const nextMonthCashFlow = buildMonthlyCashFlow(data, addMonths(startOfMonth(), 1))
     const nextMonthLoad = buildDashboardMonthlyLoad(obligationInput, addMonths(startOfMonth(), 1), startOfMonth())
     const goalProgress = buildGoalProgressSummary(data.savingsGoals, data.savingsGoalComponents)
 
@@ -179,6 +180,7 @@ export function DashboardPage() {
       totalLoanMonthlyPayment,
       salaryTrend,
       cashFlow,
+      nextMonthCashFlow,
       nextMonthLoad,
       goalProgress,
     }
@@ -293,7 +295,7 @@ export function DashboardPage() {
       <motion.div variants={fadeUp} className="min-w-0 lg:col-span-4">
         <MonthlyPaymentLoadPanel
           cashFlow={summary.cashFlow}
-          nextMonthLoad={summary.nextMonthLoad}
+          nextMonthOutflow={summary.nextMonthCashFlow.outflow}
           upcomingTotal={upcomingTotal}
           upcomingCount={upcomingItems.length}
         />

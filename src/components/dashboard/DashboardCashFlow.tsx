@@ -11,7 +11,7 @@ import { Badge } from '../ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card'
 import { HelpTooltip } from '../ui/help-tooltip'
 import { Progress } from '../ui/progress'
-import type { DashboardMonthlyLoadSummary, DashboardUpcomingItem } from '../../utils/dashboardUpcoming'
+import type { DashboardUpcomingItem } from '../../utils/dashboardUpcoming'
 import { formatDate } from '../../utils/date'
 import { formatCurrency } from '../../utils/formatCurrency'
 import { diffTL, sumTL } from '../../utils/money'
@@ -39,12 +39,12 @@ export function CashFlowMetric({ label, value, tone }: { label: string; value: s
 
 export function MonthlyPaymentLoadPanel({
   cashFlow,
-  nextMonthLoad,
+  nextMonthOutflow,
   upcomingTotal,
   upcomingCount,
 }: {
   cashFlow: CashFlowSummary
-  nextMonthLoad: DashboardMonthlyLoadSummary
+  nextMonthOutflow: number
   upcomingTotal: number
   upcomingCount: number
 }) {
@@ -63,7 +63,7 @@ export function MonthlyPaymentLoadPanel({
       </div>
       <div className="mt-5 grid grid-cols-2 gap-2">
         <MiniStat label="Yaklaşan toplam" value={upcomingCount > 0 ? formatCurrency(upcomingTotal) : 'Yok'} tone={upcomingCount > 0 ? 'warning' : 'good'} />
-        <MiniStat label="Gelecek ay" value={formatCurrency(nextMonthLoad.total)} tone={nextMonthLoad.total > cashFlow.outflow ? 'warning' : 'neutral'} />
+        <MiniStat label="Gelecek ay" value={formatCurrency(nextMonthOutflow)} tone={nextMonthOutflow > cashFlow.outflow ? 'warning' : 'neutral'} />
       </div>
       <div className="mt-5">
         <ProgressStrip label="Gelire göre çıkış" value={loadRate} tone={tone} />
