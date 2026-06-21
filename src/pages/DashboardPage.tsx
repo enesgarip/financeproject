@@ -329,12 +329,12 @@ export function DashboardPage() {
         <button
           type="button"
           onClick={toggleDetails}
-          className="flex w-full items-center justify-center gap-2 rounded-xl border border-border/60 bg-card/80 px-4 py-2.5 text-sm font-bold text-muted-foreground transition hover:bg-muted/50 hover:text-foreground"
+          className="group flex w-full items-center justify-center gap-2 rounded-xl border border-border/60 bg-card/80 px-4 py-3 text-sm font-bold text-muted-foreground transition hover:border-primary/30 hover:bg-primary/5 hover:text-foreground"
         >
-          <span>{showDetails ? 'Detayları gizle' : 'Detayları göster'}</span>
+          <span>{showDetails ? 'Detayları gizle' : 'Tüm detayları göster'}</span>
           <ChevronDown
             size={16}
-            className={`transition-transform ${showDetails ? 'rotate-180' : ''}`}
+            className={`transition-transform duration-200 ${showDetails ? 'rotate-180' : 'group-hover:translate-y-0.5'}`}
           />
         </button>
       </motion.div>

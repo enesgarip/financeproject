@@ -81,20 +81,20 @@ export const dataHealthHubTabs: HubTab[] = [
 
 type RouteWidth = 'wide' | 'medium' | 'narrow'
 
-const routeMeta: Record<string, { title: string; width: RouteWidth }> = {
-  '/': { title: 'Finans Özeti', width: 'wide' },
-  '/kartlar': { title: 'Hesaplar ve Kartlar', width: 'wide' },
-  '/varliklar': { title: 'Varlıklar', width: 'medium' },
-  '/varliklar/maas': { title: 'Maaş', width: 'medium' },
-  '/varliklar/altin': { title: 'Altın', width: 'narrow' },
-  '/borclar/krediler': { title: 'Krediler', width: 'wide' },
-  '/borclar/kisiler': { title: 'Kişiler', width: 'medium' },
-  '/odemeler': { title: 'Ödeme Takvimi', width: 'medium' },
-  '/odemeler/hedefler': { title: 'Bütçe & Hedefler', width: 'medium' },
-  '/analiz': { title: 'Analiz', width: 'wide' },
-  '/analiz/detay': { title: 'Detay', width: 'wide' },
-  '/veri-sagligi': { title: 'Veri Kontrolü', width: 'wide' },
-  '/veri-sagligi/islemler': { title: 'Yedek ve Ayarlar', width: 'medium' },
+const routeMeta: Record<string, { title: string; subtitle?: string; width: RouteWidth }> = {
+  '/': { title: 'Finans Özeti', subtitle: 'Genel bakış ve günlük durum', width: 'wide' },
+  '/kartlar': { title: 'Hesaplar ve Kartlar', subtitle: 'Banka hesapları, kartlar ve işlemler', width: 'wide' },
+  '/varliklar': { title: 'Varlıklar', subtitle: 'Nakit, yatırım ve birikimler', width: 'medium' },
+  '/varliklar/maas': { title: 'Maaş', subtitle: 'Maaş geçmişi ve trend', width: 'medium' },
+  '/varliklar/altin': { title: 'Altın', subtitle: 'Altın varlıkları ve değerleme', width: 'narrow' },
+  '/borclar/krediler': { title: 'Krediler', subtitle: 'Aktif krediler ve taksit planları', width: 'wide' },
+  '/borclar/kisiler': { title: 'Kişiler', subtitle: 'Kişisel borç ve alacaklar', width: 'medium' },
+  '/odemeler': { title: 'Ödeme Takvimi', subtitle: 'Planlı ödemeler ve vadeler', width: 'medium' },
+  '/odemeler/hedefler': { title: 'Bütçe & Hedefler', subtitle: 'Birikim hedefleri ve bütçe takibi', width: 'medium' },
+  '/analiz': { title: 'Analiz', subtitle: 'Aylık rapor ve ay kapanış kontrolü', width: 'wide' },
+  '/analiz/detay': { title: 'Detay', subtitle: 'Gelir/gider dağılımı ve trendler', width: 'wide' },
+  '/veri-sagligi': { title: 'Veri Kontrolü', subtitle: 'Tutarlılık denetimi ve bulgular', width: 'wide' },
+  '/veri-sagligi/islemler': { title: 'Yedek ve Ayarlar', subtitle: 'Veri yedekleme ve bakım', width: 'medium' },
 }
 
 const WIDTH_CLASS: Record<RouteWidth, string> = {
@@ -105,6 +105,10 @@ const WIDTH_CLASS: Record<RouteWidth, string> = {
 
 export function routeTitle(pathname: string): string {
   return routeMeta[pathname]?.title ?? 'Denge'
+}
+
+export function routeSubtitle(pathname: string): string | undefined {
+  return routeMeta[pathname]?.subtitle
 }
 
 export function contentWidthClass(pathname: string): string {

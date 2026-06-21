@@ -4,7 +4,7 @@ import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
 import { cn } from '../lib/utils'
 import { BottomNav } from './BottomNav'
-import { contentWidthClass, overflowNavItems, primaryNavItems, routeTitle, secondaryNavItems } from './navigation'
+import { contentWidthClass, overflowNavItems, primaryNavItems, routeSubtitle, routeTitle, secondaryNavItems } from './navigation'
 import { QuickActions } from './QuickActions'
 import { AppMark } from './AppMark'
 
@@ -145,9 +145,11 @@ export function Layout() {
               <h1 className="truncate text-base font-bold leading-tight tracking-tight text-foreground lg:text-lg">
                 {routeTitle(pathname)}
               </h1>
-              <p className="hidden truncate text-xs text-muted-foreground lg:block">
-                Hesaplarını, planlı ödemelerini ve kişileri tek yerden yönet.
-              </p>
+              {routeSubtitle(pathname) ? (
+                <p className="hidden truncate text-xs text-muted-foreground lg:block">
+                  {routeSubtitle(pathname)}
+                </p>
+              ) : null}
             </div>
 
             <div className="flex shrink-0 items-center gap-2">
