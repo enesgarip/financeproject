@@ -1,13 +1,11 @@
-import { CalendarDays, Landmark } from 'lucide-react'
-import { BankLogo } from '../components/finance/BankLogo'
+import { Landmark } from 'lucide-react'
 import { Badge } from '../components/ui/badge'
-import { Card as SurfaceCard, CardContent, CardHeader, CardTitle } from '../components/ui/card'
-import { Progress } from '../components/ui/progress'
+import { Card as SurfaceCard, CardContent } from '../components/ui/card'
 import type { Loan, LoanInstallment } from '../types/database'
 import { formatDate } from '../utils/date'
 import { formatCurrency } from '../utils/formatCurrency'
 import { sumTL } from '../utils/money'
-import { loanProgress, nextPendingInstallment } from './LoansPage.helpers'
+import { nextPendingInstallment } from './LoansPage.helpers'
 
 export function LoanOverview({ loans, installments }: { loans: Loan[]; installments: LoanInstallment[] }) {
   const activeLoans = loans.filter((loan) => loan.status === 'active')
@@ -51,41 +49,6 @@ export function LoanOverview({ loans, installments }: { loans: Loan[]; installme
           ) : null}
         </CardContent>
       </SurfaceCard>
-
-      <div className="grid gap-3 min-[680px]:grid-cols-2 xl:grid-cols-3">
-        {activeLoans.map((loan) => {
-          const progress = loanProgress(loan, installments)
-          return (
-            <SurfaceCard key={loan.id} variant="interactive">
-              <CardHeader className="pb-0">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex min-w-0 items-start gap-3">
-                    <BankLogo bankName={loan.bank_name} size="sm" />
-                    <div className="min-w-0">
-                      <CardTitle className="truncate text-base">{loan.loan_name}</CardTitle>
-                      <p className="mt-1 truncate text-xs text-muted-foreground">{loan.bank_name}</p>
-                    </div>
-                  </div>
-                  <Badge variant={progress.next ? 'warning' : 'success'}>
-                    {progress.totalCount ? `${progress.paidCount}/${progress.totalCount}` : `${loan.remaining_installments} kaldı`}
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent className="pt-1">
-                <Progress value={progress.progressRate} color="primary" size="default" />
-                <div className="mt-3 grid grid-cols-2 gap-2">
-                  <OverviewStat label="Kalan Borç" value={formatCurrency(loan.remaining_amount)} tone="danger" />
-                  <OverviewStat label="Taksit" value={formatCurrency(loan.monthly_payment)} />
-                </div>
-                <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
-                  <CalendarDays size={14} />
-                  {progress.next ? formatDate(progress.next.due_date) : 'Bekleyen taksit yok'}
-                </div>
-              </CardContent>
-            </SurfaceCard>
-          )
-        })}
-      </div>
     </div>
   )
 }

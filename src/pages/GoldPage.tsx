@@ -413,27 +413,54 @@ export function GoldPage() {
       }}
       renderTitle={(row) => GOLD_TYPE_LABELS[row.gold_type]}
       renderSubtitle={(row) => formatDate(row.purchase_date)}
-      renderDetails={(row) => {
-        const totalCost = row.unit_price == null ? null : round2(row.quantity * row.unit_price)
-        return [
-          `Miktar: ${formatQuantity(row.quantity, row.gold_type)}`,
-          `Birim maliyet: ${row.unit_price == null ? 'Maliyet bilinmiyor' : formatCurrency(row.unit_price)}`,
-          `Toplam maliyet: ${totalCost == null ? 'Maliyet bilinmiyor' : formatCurrency(totalCost)}`,
-          `Ayar: ${row.ayar ?? 'Belirtilmedi'}`,
-        ]
+      renderDetails={(row) => [`Miktar: ${formatQuantity(row.quantity, row.gold_type)}`]}
+      renderCard={(row, { menu }) => {
+        const lot = row as GoldLot
+        const totalCost = lot.unit_price == null ? null : round2(lot.quantity * lot.unit_price)
+        const noCost = lot.unit_price == null
+
+        return (
+          <article className={`rounded-2xl border p-4 shadow-[var(--shadow-card)] transition-all duration-250 hover:-translate-y-0.5 hover:shadow-[var(--shadow-lifted)] dark:ring-1 dark:ring-white/[0.04] min-[390px]:p-5 ${noCost ? 'border-warning/30 bg-warning/5 dark:bg-warning/10' : 'border-warning/20 bg-warning/5 dark:bg-warning/8'}`}>
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-3">
+                <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-warning/15 text-warning">
+                  <Coins className="size-5" />
+                </div>
+                <div className="min-w-0">
+                  <h2 className="truncate text-base font-black text-foreground">{GOLD_TYPE_LABELS[lot.gold_type]}</h2>
+                  <p className="mt-0.5 text-xs text-muted-foreground">{formatDate(lot.purchase_date)}</p>
+                </div>
+              </div>
+              {menu}
+            </div>
+
+            <div className="mt-4 flex flex-wrap items-end gap-x-6 gap-y-2">
+              <div className="min-w-0">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Miktar</p>
+                <p className="mt-0.5 font-mono text-lg font-black tabular-nums text-foreground">{formatQuantity(lot.quantity, lot.gold_type)}</p>
+              </div>
+              <div className="min-w-0">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Birim maliyet</p>
+                <p className={`mt-0.5 font-mono text-sm font-bold tabular-nums ${noCost ? 'text-muted-foreground' : 'text-foreground'}`}>
+                  {noCost ? 'Bilinmiyor' : formatCurrency(lot.unit_price!)}
+                </p>
+              </div>
+              {totalCost != null ? (
+                <div className="min-w-0">
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Toplam</p>
+                  <p className="mt-0.5 font-mono text-sm font-bold tabular-nums text-foreground">{formatCurrency(totalCost)}</p>
+                </div>
+              ) : null}
+            </div>
+
+            {noCost ? (
+              <p className="mt-3 rounded-lg border border-warning/20 bg-warning/8 px-2.5 py-2 text-xs font-semibold text-warning">
+                Maliyet bilinmiyor — adede dahil, kâr/zarar hesabına dahil değil.
+              </p>
+            ) : null}
+          </article>
+        )
       }}
-      renderExtra={(row) =>
-        row.unit_price == null ? (
-          <Alert variant="warning" className="mt-3">
-            Bu işlem adede dahil; ortalama maliyet ve kâr/zarar hesabına dahil değil.
-          </Alert>
-        ) : null
-      }
-      getCardClassName={(row) =>
-        row.unit_price == null
-          ? 'border-warning/30 bg-warning/5 dark:bg-warning/10'
-          : 'border-warning/20 bg-warning/5 dark:bg-warning/8'
-      }
       groupBy={(row) => GOLD_TYPE_LABELS[row.gold_type]}
     />
   )

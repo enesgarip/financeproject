@@ -411,42 +411,64 @@ export function AssetsPage() {
           if (isGoldLedgerAsset(row)) return `${row.category} · defter`
           return row.category === 'Hisse' && row.symbol ? `${row.category} · ${row.symbol}` : row.category
         }}
-        renderDetails={(row) => {
-          const value = effectiveAssetValue(row, snapshot, stockPrices)
-          const details = [`Değer: ${formatCurrency(value)}`]
-          if (row.category === 'Altın') {
-            details.unshift(`Miktar: ${formatNumber(row.amount)} ${row.unit === 'adet' ? 'çeyrek' : row.unit}`)
-            if (row.unit_cost != null) {
-              details.push(`Ort. maliyet: ${formatCurrency(row.unit_cost)}/${row.unit === 'adet' ? 'çeyrek' : 'gr'}`)
-            }
-            if (isGoldLedgerAsset(row)) details.push('Kaynak: Altın defteri')
-          }
-          if (row.category === 'Hisse') {
-            details.unshift(`Adet: ${formatNumber(row.amount)}`)
-            const cost = stockCostBasis(row)
-            if (cost !== null) details.push(`Maliyet: ${formatCurrency(row.unit_cost ?? 0)}/adet · ${formatCurrency(cost)} toplam`)
-          }
-          if (row.category === 'Nakit') {
-            details.unshift(
-              row.auto_valued && row.currency && row.currency !== 'TRY'
-                ? `Tutar: ${formatNumber(row.amount)} ${row.currency}`
-                : `Para birimi: ${row.currency ?? 'TRY'}`,
-            )
-          }
-          if (row.auto_valued) details.push('Canlı fiyatla otomatik')
-          return details
-        }}
+        renderDetails={(row) => [`Değer: ${formatCurrency(effectiveAssetValue(row, snapshot, stockPrices))}`]}
         canEditRow={(row) => row.category !== 'Altın'}
         canDeleteRow={(row) => !isGoldLedgerAsset(row)}
-        renderExtra={(row) => {
-          if (row.category !== 'Hisse') return null
-          const value = effectiveAssetValue(row, snapshot, stockPrices)
-          const pl = stockProfit(value, row)
-          if (!pl) return null
-          return <ProfitBadge profit={pl.profit} profitPct={pl.profitPct} />
+        renderCard={(row, { menu }) => {
+          const asset = row as Asset
+          const value = effectiveAssetValue(asset, snapshot, stockPrices)
+          const meta = categoryMeta[asset.category]
+          const Icon = meta.icon
+          const pl = asset.category === 'Hisse' ? stockProfit(value, asset) : null
+
+          return (
+            <article className={`rounded-2xl border p-4 shadow-[var(--shadow-card)] transition-all duration-250 hover:-translate-y-0.5 hover:shadow-[var(--shadow-lifted)] dark:ring-1 dark:ring-white/[0.04] min-[390px]:p-5 ${categoryCardTint[asset.category]}`}>
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex min-w-0 items-center gap-3">
+                  <div className="grid size-10 shrink-0 place-items-center rounded-xl" style={{ backgroundColor: `color-mix(in srgb, ${meta.color} 15%, transparent)`, color: meta.color }}>
+                    <Icon className="size-5" />
+                  </div>
+                  <div className="min-w-0">
+                    <h2 className="truncate text-base font-black text-foreground">{asset.name}</h2>
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      {isGoldLedgerAsset(asset) ? `${asset.category} · defter` : asset.category === 'Hisse' && asset.symbol ? `${asset.category} · ${asset.symbol}` : asset.category}
+                    </p>
+                  </div>
+                </div>
+                {menu}
+              </div>
+
+              <div className="mt-4 flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
+                <div className="min-w-0">
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Değer</p>
+                  <p className="mt-0.5 font-mono text-lg font-black tabular-nums text-foreground">{formatCurrency(value)}</p>
+                </div>
+                {(asset.category === 'Altın' || asset.category === 'Hisse') && asset.amount > 0 ? (
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                      {asset.category === 'Altın' ? 'Miktar' : 'Adet'}
+                    </p>
+                    <p className="mt-0.5 font-mono text-sm font-bold tabular-nums text-foreground">
+                      {formatNumber(asset.amount)} {asset.category === 'Altın' ? (asset.unit === 'adet' ? 'çeyrek' : asset.unit) : 'adet'}
+                    </p>
+                  </div>
+                ) : null}
+                {asset.category === 'Nakit' && asset.currency && asset.currency !== 'TRY' ? (
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Tutar</p>
+                    <p className="mt-0.5 font-mono text-sm font-bold tabular-nums text-foreground">{formatNumber(asset.amount)} {asset.currency}</p>
+                  </div>
+                ) : null}
+              </div>
+
+              {asset.auto_valued ? (
+                <p className="mt-2.5 text-[11px] font-semibold text-muted-foreground/70">Canlı fiyatla otomatik</p>
+              ) : null}
+
+              {pl ? <ProfitBadge profit={pl.profit} profitPct={pl.profitPct} /> : null}
+            </article>
+          )
         }}
-        getCardClassName={(row) => categoryCardTint[row.category]}
-        getDetailClassName={() => 'bg-muted/40'}
         groupBy={(row) => row.category}
       />
   )

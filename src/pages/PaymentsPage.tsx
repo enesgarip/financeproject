@@ -1,3 +1,4 @@
+import { CalendarDays, CreditCard, Receipt, RefreshCw } from 'lucide-react'
 import { CrudPage, type FormField } from '../components/CrudPage'
 import { FinancePaymentDrawer } from '../components/finance/FinancePaymentDrawer'
 import { ObligationsCalendar } from '../components/finance/ObligationsCalendar'
@@ -151,10 +152,6 @@ function getPaymentScheduleLabel(payment: Payment) {
   return `Aylık · Her ayın ${payment.recurrence_day ?? '-'}. günü${endDate}`
 }
 
-function getPaymentMethodLabel(payment: Payment) {
-  return payment.payment_method === 'bank_auto' ? 'Banka talimatı' : 'Manuel ödeme'
-}
-
 // Banka talimatı + kredi kartı + bilinen tutar → vade gelince otomatik postalanır;
 // bu kayıtlarda manuel "Öde" butonu gösterilmez.
 function isAutoPostedPayment(payment: Payment) {
@@ -181,10 +178,6 @@ function DueAutoPaymentsAutomation({ reload }: { reload: () => Promise<void> }) 
   }, [reload])
 
   return null
-}
-
-function getAmountStatusLabel(payment: Payment) {
-  return payment.amount_status === 'estimated' ? 'Tahmini' : 'Kesin'
 }
 
 function getPaymentAmountLabel(payment: Payment) {
@@ -420,33 +413,71 @@ export function PaymentsPage() {
           }
         }}
         renderTitle={(row) => row.title}
-        renderSubtitle={(row) => `${row.category} · ${row.status} · ${getPaymentScheduleLabel(row)}`}
-        renderDetails={(row) => {
-          const details = [
-            `Tutar: ${getPaymentAmountLabel(row)}`,
-            `Durum: ${getAmountStatusLabel(row)} · ${getPaymentMethodLabel(row)}`,
-            `Sıradaki tarih: ${formatDate(row.due_date)}`,
-          ]
-          const autoCard = cardLabelById(row.auto_source_card_id)
-          if (row.payment_method === 'bank_auto' && autoCard) {
-            details.push(isAutoPostedPayment(row)
-              ? `Otomatik karta işlenir: ${autoCard}`
-              : `Otomatik kart: ${autoCard} (tutar girilince işlenir)`)
-          }
-          return details
-        }}
+        renderSubtitle={(row) => `${row.category} · ${row.status}`}
+        renderDetails={(row) => [`Tutar: ${getPaymentAmountLabel(row)}`]}
         groupBy={(row) => row.category}
-        renderRowActions={(row, helpers) =>
-          row.status === 'bekliyor' && !isAutoPostedPayment(row) ? (
-            <button
-              type="button"
-              onClick={() => void openObligationPayment(paymentToObligation(row), helpers.reload)}
-              className="rounded-lg bg-success px-3 py-2 text-xs font-semibold text-success-foreground shadow-[0_2px_8px_color-mix(in_srgb,var(--success)_28%,transparent)] transition hover:bg-success/90 active:scale-[0.97]"
-            >
-              Öde
-            </button>
-          ) : null
-        }
+        renderCard={(row, { menu, reload }) => {
+          const payment = row as Payment
+          const autoCard = cardLabelById(payment.auto_source_card_id)
+          const isAuto = payment.payment_method === 'bank_auto'
+          const isPaid = payment.status === 'ödendi'
+          const isRecurring = payment.recurrence === 'monthly'
+          const remaining = daysUntil(new Date(`${payment.due_date}T00:00:00`))
+          const isUrgent = remaining !== null && remaining >= 0 && remaining <= 3
+
+          return (
+            <article className={`rounded-2xl border bg-card p-4 shadow-[var(--shadow-card)] transition-all duration-250 hover:-translate-y-0.5 hover:shadow-[var(--shadow-lifted)] dark:ring-1 dark:ring-white/[0.04] min-[390px]:p-5 ${isPaid ? 'border-success/20 opacity-70' : isUrgent ? 'border-warning/40' : 'border-border/75'}`}>
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex min-w-0 items-center gap-3">
+                  <div className={`grid size-10 shrink-0 place-items-center rounded-xl ${isPaid ? 'bg-success/12 text-success' : isAuto ? 'bg-info/12 text-info' : 'bg-muted text-muted-foreground'}`}>
+                    {isAuto ? <CreditCard className="size-5" /> : <Receipt className="size-5" />}
+                  </div>
+                  <div className="min-w-0">
+                    <h2 className="truncate text-base font-black text-foreground">{payment.title}</h2>
+                    <p className="mt-0.5 text-xs text-muted-foreground">{payment.category} · {getPaymentScheduleLabel(payment)}</p>
+                  </div>
+                </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  {isPaid ? <Badge variant="success">Ödendi</Badge> : null}
+                  {isRecurring && !isPaid ? <RefreshCw size={13} className="text-muted-foreground" /> : null}
+                  {payment.amount_status === 'estimated' && !isPaid ? <Badge variant="outline">Tahmini</Badge> : null}
+                  {menu}
+                </div>
+              </div>
+
+              <div className="mt-4 flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
+                <div className="min-w-0">
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Tutar</p>
+                  <p className="mt-0.5 font-mono text-lg font-black tabular-nums text-foreground">{getPaymentAmountLabel(payment)}</p>
+                </div>
+                <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+                  <CalendarDays size={14} />
+                  <span>{formatDate(payment.due_date)}</span>
+                  {isUrgent && !isPaid ? <Badge variant="warning" className="ml-1">{remaining} gün</Badge> : null}
+                </div>
+              </div>
+
+              {isAuto && autoCard ? (
+                <p className="mt-2.5 text-[11px] font-semibold text-info/70">
+                  <CreditCard size={11} className="mr-1 inline" />
+                  {autoCard}
+                </p>
+              ) : null}
+
+              {!isPaid && !isAutoPostedPayment(payment) ? (
+                <div className="mt-3">
+                  <button
+                    type="button"
+                    onClick={() => void openObligationPayment(paymentToObligation(payment), reload)}
+                    className="rounded-lg bg-success px-3 py-2 text-xs font-semibold text-success-foreground shadow-[0_2px_8px_color-mix(in_srgb,var(--success)_28%,transparent)] transition hover:bg-success/90 active:scale-[0.97]"
+                  >
+                    Öde
+                  </button>
+                </div>
+              ) : null}
+            </article>
+          )
+        }}
       />
 
       <FinancePaymentDrawer {...drawerProps} />
