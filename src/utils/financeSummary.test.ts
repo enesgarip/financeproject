@@ -693,7 +693,7 @@ describe('buildMonthlyCashFlow', () => {
     expect(flow.outflow).toBeGreaterThanOrEqual(1200)
   })
 
-  it('does not count credit-card automatic payments as immediate cash outflow', () => {
+  it('counts credit-card automatic payments in total outflow', () => {
     const flow = buildMonthlyCashFlow(
       {
         ...emptyInput,
@@ -704,7 +704,7 @@ describe('buildMonthlyCashFlow', () => {
       },
       JUNE,
     )
-    expect(flow.paymentOutflow).toBe(300)
+    expect(flow.paymentOutflow).toBe(1500)
   })
 
   it('counts card statement debt once and current-period spending on the next cycle', () => {
