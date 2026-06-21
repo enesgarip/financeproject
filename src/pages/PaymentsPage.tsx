@@ -292,6 +292,7 @@ export function PaymentsPage() {
       debts: [...snapshot.debts].sort(byDueDate),
       cardInstallments: snapshot.cardInstallments,
       cardStatements: snapshot.cardStatements.filter((statement) => statement.status === 'open').sort(byDueDate),
+      salaryHistory: snapshot.salaryHistory,
     }
   }, [snapshotQuery.data])
 

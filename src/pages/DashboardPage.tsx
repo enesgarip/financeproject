@@ -154,8 +154,9 @@ export function DashboardPage() {
     debts: data.debts,
     cardInstallments: data.cardInstallments,
     cardStatements: data.cardStatements,
+    salaryHistory: data.salaryHistory,
     accountReconciliations: data.accountReconciliations,
-  }), [data.accountReconciliations, data.cardInstallments, data.cardStatements, data.cards, data.debts, data.loanInstallments, data.loans, data.payments])
+  }), [data.accountReconciliations, data.cardInstallments, data.cardStatements, data.cards, data.debts, data.loanInstallments, data.loans, data.payments, data.salaryHistory])
 
   const summary = useMemo(() => {
     const position = buildFinancialPosition(data)

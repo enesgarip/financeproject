@@ -6,9 +6,10 @@ import type {
   Loan,
   LoanInstallment,
   Payment,
+  SalaryHistory,
 } from '../types/database'
 import { getNextCardPaymentDueDate } from './cardStatement'
-import { addMonths, dateInMonth, dateInputValue, isDateInMonth, monthlyOccurrenceDate, startOfDay, startOfMonth } from './date'
+import { addMonths, dateInMonth, dateInputValue, endOfMonth, isDateInMonth, monthlyOccurrenceDate, startOfDay, startOfMonth } from './date'
 import { cardMonthlyPaymentAmount, paymentCashOutflowAmount, paymentOccurrenceInMonth, paymentUsesCreditCard } from './financeObligationRules'
 import { roundTL, sumTL } from './money'
 
@@ -21,6 +22,7 @@ export type FinanceObligationKind =
   | 'legacy_loan_installment'
   | 'personal_debt'
   | 'personal_receivable'
+  | 'salary'
 
 export type FinanceObligationAction =
   | 'pay_payment'
@@ -57,6 +59,7 @@ export type FinanceObligationsInput = {
   debts: Debt[]
   cardInstallments: CardInstallment[]
   cardStatements: CardStatementArchive[]
+  salaryHistory?: SalaryHistory[]
 }
 
 export type FinanceObligationMonthSummary = {
@@ -79,6 +82,14 @@ function addDays(value: Date, days: number) {
   const next = new Date(value)
   next.setDate(value.getDate() + days)
   return next
+}
+
+function getFirstBusinessDay(month: Date) {
+  const first = startOfMonth(month)
+  const day = first.getDay()
+  if (day === 0) return addDays(first, 1)
+  if (day === 6) return addDays(first, 2)
+  return first
 }
 
 function monthsInRange(from: Date, to: Date) {
@@ -303,6 +314,26 @@ export function buildFinanceObligationsForMonth(
       direction: isBorrowed ? 'outflow' : 'inflow',
       isEstimate: debt.auto_valued,
     })
+  }
+
+  if (data.salaryHistory?.length) {
+    const monthEnd = endOfMonth(monthStart)
+    const salaryRows = [...data.salaryHistory].sort((a, b) => a.effective_date.localeCompare(b.effective_date))
+    const salary = salaryRows.filter((row) => row.effective_date <= dateInputValue(monthEnd)).at(-1)
+    if (salary && salary.amount > 0) {
+      const firstBusinessDay = getFirstBusinessDay(monthStart)
+      addObligation(items, {
+        id: `salary-${dateInputValue(monthStart)}`,
+        kind: 'salary',
+        action: null,
+        sourceId: salary.id,
+        title: salary.title || 'Maaş',
+        subtitle: 'Aylık maaş',
+        date: dateInputValue(firstBusinessDay),
+        amount: salary.amount,
+        direction: 'inflow',
+      })
+    }
   }
 
   return items.sort((left, right) => (
