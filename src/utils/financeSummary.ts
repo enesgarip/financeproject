@@ -386,7 +386,7 @@ export function buildMonthlyCashFlow(
   const recurringPayments = data.payments.filter((payment) => payment.recurrence === 'monthly' && payment.status === 'bekliyor').length
   const cardOutflow = obligationSum(
     obligations,
-    (item) => item.kind === 'card_statement' || item.kind === 'card_debt',
+    (item) => item.kind === 'card_statement' || item.kind === 'card_debt' || item.kind === 'card_installment',
   )
   const cardStatementDebt = cardOutflow
   const loanOutflow = obligationSum(

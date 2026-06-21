@@ -733,7 +733,7 @@ describe('buildMonthlyCashFlow', () => {
     expect(flow.outflow).toBe(2200)
   })
 
-  it('keeps scheduled card installments out of cash outflow until a card debt is payable', () => {
+  it('includes scheduled card installments in total outflow', () => {
     const flow = buildMonthlyCashFlow(
       {
         ...emptyInput,
@@ -744,8 +744,8 @@ describe('buildMonthlyCashFlow', () => {
       { from: JUNE_START },
     )
 
-    expect(flow.cardOutflow).toBe(0)
-    expect(flow.outflow).toBe(0)
+    expect(flow.cardOutflow).toBe(450)
+    expect(flow.outflow).toBe(450)
   })
 
   it('includes scheduled loan installments in outflow', () => {
