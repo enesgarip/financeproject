@@ -13,6 +13,7 @@ import {
 } from '../../data/repositories/cardsRepo'
 import type { Card, CardExpense, CardInstallment } from '../../types/database'
 import { expenseCategoryOptions } from '../../utils/categories'
+import { formatMonth } from '../../utils/analysisView'
 import { formatDate } from '../../utils/date'
 import { formatCurrency, parseNumber } from '../../utils/formatCurrency'
 import { sumTL } from '../../utils/money'
@@ -287,7 +288,7 @@ export function CardInstallmentExpensesPanel({ cards, reload, setError }: CardIn
                       {item.installment_no}/{item.installment_count}. taksit - {formatCurrency(item.amount)}
                     </p>
                     <p className={`text-xs ${isPaid ? 'text-success/80' : 'text-muted-foreground'}`}>
-                      {formatDate(item.due_month)} - {installmentStatusLabel(item)}
+                      {formatMonth(item.due_month)} - {installmentStatusLabel(item)}
                     </p>
                     {!isPaid ? (
                       <p className="mt-1 text-[11px] leading-4 text-muted-foreground">
