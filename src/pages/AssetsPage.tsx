@@ -1,4 +1,4 @@
-import { ArrowDownRight, ArrowUpRight, Banknote, Coins, Landmark, LineChart, PiggyBank, TrendingUp, Wallet } from 'lucide-react'
+import { ArrowDownRight, ArrowUpRight, Banknote, Coins, Landmark, LineChart, ShieldCheck, TrendingUp, Wallet } from 'lucide-react'
 import { useEffect, useMemo, useState, type ComponentType } from 'react'
 import { CrudPage, type FormField } from '../components/CrudPage'
 import { DonutChart, type DonutSlice } from '../components/charts/DonutChart'
@@ -28,7 +28,7 @@ const categoryMeta: Record<Asset['category'], { color: string; icon: ComponentTy
   Fon:   { color: 'var(--info)',        icon: LineChart },
   Hisse: { color: 'var(--primary)',     icon: TrendingUp },
   Araç:  { color: '#fb923c',            icon: Wallet },
-  BES:   { color: '#2dd4bf',            icon: PiggyBank },
+  BES:   { color: '#2dd4bf',            icon: ShieldCheck },
   Diğer: { color: 'var(--muted-foreground)', icon: Landmark },
 }
 
