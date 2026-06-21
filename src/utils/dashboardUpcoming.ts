@@ -17,7 +17,8 @@ export type DashboardUpcomingItem = {
   amount: number
   cashImpactAmount: number
   settlement: FinanceObligationSettlement
-  kind: 'payment' | 'card' | 'loan' | 'debt'
+  kind: 'payment' | 'card' | 'loan' | 'debt' | 'salary'
+  direction: 'inflow' | 'outflow'
   date: string
   sortTime: number
 }
@@ -37,6 +38,7 @@ function obligationKindToDashboardKind(kind: FinanceObligation['kind']): Dashboa
   if (kind === 'payment') return 'payment'
   if (kind === 'loan_installment' || kind === 'legacy_loan_installment') return 'loan'
   if (kind === 'personal_debt' || kind === 'personal_receivable') return 'debt'
+  if (kind === 'salary') return 'salary'
   return 'card'
 }
 
@@ -50,6 +52,7 @@ function obligationToDashboardUpcomingItem(item: FinanceObligation): DashboardUp
     cashImpactAmount: item.cashImpactAmount ?? item.amount,
     settlement: item.settlement ?? 'cash',
     kind: obligationKindToDashboardKind(item.kind),
+    direction: item.direction ?? 'outflow',
     date: formatDate(item.date),
     sortTime: new Date(`${item.date}T00:00:00`).getTime(),
   }
@@ -57,7 +60,7 @@ function obligationToDashboardUpcomingItem(item: FinanceObligation): DashboardUp
 
 export function buildDashboardUpcomingItems(data: FinanceObligationsInput, days = 30, from = new Date()): DashboardUpcomingItem[] {
   return buildFinanceObligationsForRange(data, { days, from })
-    .filter((item) => item.direction === 'outflow')
+    .filter((item) => item.direction === 'outflow' || item.kind === 'salary')
     .map(obligationToDashboardUpcomingItem)
 }
 

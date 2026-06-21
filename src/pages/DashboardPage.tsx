@@ -190,8 +190,10 @@ export function DashboardPage() {
   const upcomingItems = useMemo(() => {
     return buildDashboardUpcomingItems(obligationInput, UPCOMING_DAYS)
   }, [obligationInput])
+  const outflowUpcoming = useMemo(() => upcomingItems.filter((item) => item.direction === 'outflow'), [upcomingItems])
+
   const financialHealth = useMemo(() => {
-    const urgentUpcomingCount = upcomingItems.filter((item) => {
+    const urgentUpcomingCount = outflowUpcoming.filter((item) => {
       const remaining = daysUntil(new Date(item.sortTime))
       return remaining !== null && remaining >= 0 && remaining <= 7
     }).length
@@ -203,21 +205,21 @@ export function DashboardPage() {
       urgentUpcomingCount,
       averageGoalProgress: summary.goalProgress.averageProgress,
     })
-  }, [summary, upcomingItems])
+  }, [summary, outflowUpcoming])
 
   const reconDriftCount = useMemo(
     () => reconciliationDriftCount(data.cards, data.accountReconciliations),
     [data.cards, data.accountReconciliations],
   )
   const insights = useMemo(
-    () => buildSmartInsights(summary.cashFlow, summary.creditUsageRate, summary.totalDebts, summary.totalReceivables, upcomingItems, reconDriftCount),
-    [summary.cashFlow, summary.creditUsageRate, summary.totalDebts, summary.totalReceivables, upcomingItems, reconDriftCount],
+    () => buildSmartInsights(summary.cashFlow, summary.creditUsageRate, summary.totalDebts, summary.totalReceivables, outflowUpcoming, reconDriftCount),
+    [summary.cashFlow, summary.creditUsageRate, summary.totalDebts, summary.totalReceivables, outflowUpcoming, reconDriftCount],
   )
   const focusActions = useMemo(
-    () => buildFocusActions(data, summary.cashFlow, summary.creditUsageRate, upcomingItems),
-    [data, summary.cashFlow, summary.creditUsageRate, upcomingItems],
+    () => buildFocusActions(data, summary.cashFlow, summary.creditUsageRate, outflowUpcoming),
+    [data, summary.cashFlow, summary.creditUsageRate, outflowUpcoming],
   )
-  const attentionLine = useMemo(() => buildAttentionLine(data, upcomingItems), [data, upcomingItems])
+  const attentionLine = useMemo(() => buildAttentionLine(data, outflowUpcoming), [data, outflowUpcoming])
   const healthCounts = useMemo(() => buildHealthCounts(data), [data])
 
   const [showDetails, setShowDetails] = useState(() => {
@@ -241,7 +243,7 @@ export function DashboardPage() {
   }
 
   const hasCreditLimitGroups = summary.creditLimitGroups.length > 0
-  const upcomingTotal = sum(upcomingItems, (item) => item.amount)
+  const upcomingTotal = sum(outflowUpcoming, (item) => item.amount)
 
   const stagger: Variants = {
     hidden: {},
@@ -298,7 +300,7 @@ export function DashboardPage() {
           cashFlow={summary.cashFlow}
           nextMonthOutflow={summary.nextMonthCashFlow.outflow}
           upcomingTotal={upcomingTotal}
-          upcomingCount={upcomingItems.length}
+          upcomingCount={outflowUpcoming.length}
         />
       </motion.div>
 
@@ -389,7 +391,7 @@ export function DashboardPage() {
               <SmartInsightsPanel insights={insights} />
             </div>
 
-            <UpcomingAlertPanel items={upcomingItems} />
+            <UpcomingAlertPanel items={outflowUpcoming} />
 
             {/* Birikim & harcama */}
             <div className="min-w-0 lg:col-span-5">

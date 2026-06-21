@@ -17,6 +17,7 @@ function upcoming(daysFromNow: number): DashboardUpcomingItem {
     cashImpactAmount: 100,
     settlement: 'cash',
     kind: 'payment',
+    direction: 'outflow',
     date: '',
     sortTime: Date.now() + daysFromNow * 86_400_000,
   }

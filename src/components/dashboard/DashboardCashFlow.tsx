@@ -194,11 +194,13 @@ function buildCashFlowCalendarGroups(items: UpcomingItem[], startingCash: number
     const dayKey = new Date(item.sortTime).toLocaleDateString('sv-SE')
     const current = groups.get(dayKey)
     const nextItems = [...(current?.items ?? []), item]
+    const isInflow = item.direction === 'inflow'
+    const signedCashImpact = isInflow ? -(item.cashImpactAmount) : item.cashImpactAmount
     groups.set(dayKey, {
       dayKey,
       dateLabel: formatDate(dayKey),
       amount: sumTL([current?.amount, item.amount]),
-      cashImpactAmount: sumTL([current?.cashImpactAmount, item.cashImpactAmount]),
+      cashImpactAmount: sumTL([current?.cashImpactAmount, signedCashImpact]),
       cardSettledAmount: sumTL([current?.cardSettledAmount, item.settlement === 'credit_card' ? item.amount : 0]),
       count: nextItems.length,
       kinds: new Set([...(current?.kinds ?? []), item.kind]),
@@ -219,6 +221,7 @@ function kindLabel(kind: UpcomingItem['kind']) {
   if (kind === 'payment') return 'Ödeme'
   if (kind === 'card') return 'Kart'
   if (kind === 'loan') return 'Kredi'
+  if (kind === 'salary') return 'Maaş'
   return 'Borç'
 }
 
@@ -228,8 +231,9 @@ export function CashFlowCalendarPanel({ items, cashFlow }: { items: UpcomingItem
   const groups = useMemo(() => buildCashFlowCalendarGroups(items, cashFlow.cashAssets), [cashFlow.cashAssets, items])
   const visibleGroups = showAll ? groups : groups.slice(0, 4)
   const selectedGroup = visibleGroups.find((group) => group.dayKey === selectedDayKey) ?? visibleGroups[0] ?? null
-  const totalUpcoming = sum(items, (item) => item.amount)
-  const totalCashImpact = sum(items, (item) => item.cashImpactAmount)
+  const outflowItems = items.filter((item) => item.direction === 'outflow')
+  const totalUpcoming = sum(outflowItems, (item) => item.amount)
+  const totalCashImpact = sum(outflowItems, (item) => item.cashImpactAmount)
   const totalCardSettled = Math.max(0, diffTL(totalUpcoming, totalCashImpact))
   const lowestCash = groups.reduce((lowest, group) => Math.min(lowest, group.cashAfter), cashFlow.cashAssets)
 
@@ -286,7 +290,7 @@ export function CashFlowCalendarPanel({ items, cashFlow }: { items: UpcomingItem
                       </div>
                       <div className="flex shrink-0 flex-col items-end gap-1">
                         <span className={`rounded-lg px-2 py-1 text-xs font-black tabular-nums ${cashBadgeClass}`}>
-                          {group.cashImpactAmount > 0 ? `Nakit ${formatCurrency(group.cashImpactAmount)}` : 'Nakit etkisi yok'}
+                          {group.cashImpactAmount > 0 ? `Nakit ${formatCurrency(group.cashImpactAmount)}` : group.cashImpactAmount < 0 ? `Giriş ${formatCurrency(Math.abs(group.cashImpactAmount))}` : 'Nakit etkisi yok'}
                         </span>
                         {group.cardSettledAmount > 0 ? (
                           <span className="rounded-lg bg-info/10 px-2 py-1 text-[11px] font-black tabular-nums text-info">
