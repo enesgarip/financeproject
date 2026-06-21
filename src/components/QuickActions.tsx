@@ -92,11 +92,19 @@ export function QuickActions() {
         aria-expanded={open}
         aria-label={open ? 'Hızlı işlem menüsünü kapat' : 'Hızlı işlem menüsünü aç'}
         className={cn(
-          'grid size-14 place-items-center rounded-full bg-primary text-primary-foreground shadow-xl shadow-primary/30 ring-1 ring-white/25 transition hover:bg-primary/90',
+          'group flex items-center gap-2 rounded-full bg-primary text-primary-foreground shadow-xl shadow-primary/30 ring-1 ring-white/25 transition-all hover:bg-primary/90',
+          open ? 'size-14 justify-center' : 'h-14 pl-5 pr-4',
           tucked && 'pointer-events-none translate-y-3 scale-90 opacity-0 sm:pointer-events-auto sm:translate-y-0 sm:scale-100 sm:opacity-100',
         )}
       >
-        {open ? <X size={24} /> : <Plus size={26} />}
+        {open ? (
+          <X size={24} />
+        ) : (
+          <>
+            <Plus size={22} strokeWidth={2.5} />
+            <span className="text-sm font-bold">İşlem</span>
+          </>
+        )}
       </button>
     </div>
   )

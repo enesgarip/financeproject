@@ -39,7 +39,7 @@ export function DataHealthBadge({ errors, warnings, total }: { errors: number; w
     return (
       <Link
         to="/veri-sagligi"
-        className="flex items-center gap-2 rounded-xl bg-emerald-500/8 px-4 py-2.5 text-sm font-medium text-emerald-600 ring-1 ring-emerald-500/20 transition hover:bg-emerald-500/15 dark:text-emerald-400"
+        className="flex items-center gap-2 rounded-xl bg-emerald-500/15 px-4 py-2.5 text-sm font-semibold text-emerald-700 ring-1 ring-emerald-500/30 transition hover:bg-emerald-500/20 dark:text-emerald-400 dark:ring-emerald-500/25"
       >
         <ShieldCheck size={16} className="shrink-0" />
         <span>Veri sağlığı temiz</span>
@@ -55,10 +55,10 @@ export function DataHealthBadge({ errors, warnings, total }: { errors: number; w
   return (
     <Link
       to="/veri-sagligi"
-      className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium ring-1 transition hover:opacity-90 ${
+      className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold ring-1 transition hover:opacity-90 ${
         tone === 'destructive'
-          ? 'bg-destructive/8 text-destructive ring-destructive/20'
-          : 'bg-warning/8 text-warning ring-warning/20'
+          ? 'bg-destructive/12 text-destructive ring-destructive/25'
+          : 'bg-warning/12 text-warning ring-warning/25'
       }`}
     >
       <ShieldAlert size={16} className="shrink-0" />
