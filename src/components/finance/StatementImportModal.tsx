@@ -8,6 +8,7 @@ import {
   fetchCardExpenseMatchRows,
   fetchCardPaymentMatchRows,
   payPaymentFromCardImport,
+  recordCardInstallmentCarryover,
   resetCardData,
   setStatementReconciliation,
   type ExpenseMatchRow,
@@ -26,20 +27,22 @@ import {
 } from '../../utils/denizBankStatementParser'
 import { matchDenizBankMovementPayments, type ParsedDenizBankMovement } from '../../utils/denizBankMovementParser'
 import { diffTL, equalsTL, roundTL, sumTL } from '../../utils/money'
+import { addMonthsToMonth, monthInputValue } from '../../pages/CardsPage.helpers'
 import { parseStatementText } from '../../lib/statementParseClient'
 import { extractPdfText } from '../../lib/pdfText'
 import { CardExpenseHistorySection } from './CardExpenseHistorySection'
 
 /**
  * App'e güvenle otomatik aktarılabilen işlem mi?
- * - Peşin/tek çekim → her zaman aktarılabilir (tek harcama).
- * - Yeni taksitli (1. taksit, toplam taksit sayısı biliniyor) → tam plan kurulabilir.
- * - Plan-ortası taksit (no>1) veya toplam sayısı bilinmeyen → otomatik kurmak
- *   geçmişi çift sayar; bunlar manuel kontrole bırakılır.
+ * - Peşin/tek çekim → her zaman aktarılabilir.
+ * - Taksitli (toplam sayı biliniyor) → aktarılabilir. 1. taksit tam plan kurar;
+ *   plan-ortası (no>1) carryover RPC ile geçmiş taksitleri ödendi olarak ekler;
+ *   son taksit (no=count) tek ödeme olarak eklenir.
+ * - Toplam sayısı bilinmeyen → manuel kontrol.
  */
 function isImportable(tx: ParsedTransaction): boolean {
   if (!tx.isInstallment) return true
-  return tx.installmentNo === 1 && tx.installmentCount > 1
+  return tx.installmentCount > 1
 }
 
 // ── Component ─────────────────────────────────────────────────────────────
@@ -335,23 +338,37 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
     for (const item of toImport) {
       const { transaction: tx, plannedPayment } = item
       const installment = tx.isInstallment && tx.installmentCount > 1
-      const result = plannedPayment
-        ? await payPaymentFromCardImport({
+      const isMidPlan = installment && tx.installmentNo > 1 && tx.installmentNo < tx.installmentCount
+      const isLastInstallment = installment && tx.installmentNo === tx.installmentCount
+      let result
+      if (plannedPayment) {
+        result = await payPaymentFromCardImport({
           paymentId: plannedPayment.id,
           sourceCardId: card.id,
           amount: tx.amount,
           spentAt: tx.date,
         })
-        : await addCardExpense({
-        cardId: card.id,
-        // Taksitli işlemde ekstre aylık tutarı taşır; harcamayı TOPLAM tutarla aç.
-        amount: installment ? expenseTotalAmount(tx) : tx.amount,
-        description: tx.description,
-        spentAt: tx.date,
-        installmentCount: installment ? tx.installmentCount : 1,
-        category: tx.category,
-        status: 'posted',
-      })
+      } else if (isMidPlan) {
+        result = await recordCardInstallmentCarryover({
+          cardId: card.id,
+          description: tx.description,
+          installmentAmount: tx.amount,
+          totalInstallments: tx.installmentCount,
+          paidInstallments: tx.installmentNo,
+          nextDueMonth: addMonthsToMonth(monthInputValue(), 1),
+          category: tx.category,
+        })
+      } else {
+        result = await addCardExpense({
+          cardId: card.id,
+          amount: installment && !isLastInstallment ? expenseTotalAmount(tx) : tx.amount,
+          description: tx.description,
+          spentAt: tx.date,
+          installmentCount: installment && !isLastInstallment ? tx.installmentCount : 1,
+          category: tx.category,
+          status: 'posted',
+        })
+      }
       if (!result.ok) errors.push(`${tx.description}: ${result.error.message ?? 'Bilinmeyen hata.'}`)
       else successCount++
     }
@@ -656,11 +673,14 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
                   {unmatched.map((item) => {
                     const { transaction: tx, plannedPayment } = item
                     const knownPlan = tx.isInstallment && tx.installmentCount > 1
-                    // Clean modda plan-ortası taksitten yalnızca kalan adet kurulur.
-                    const planCount = cleanImport && knownPlan
-                      ? Math.max(1, tx.installmentCount - tx.installmentNo + 1)
+                    const isMidPlan = knownPlan && tx.installmentNo > 1 && tx.installmentNo < tx.installmentCount
+                    const isLastInstallment = knownPlan && tx.installmentNo === tx.installmentCount
+                    // Clean modda veya plan-ortası devride kalan adet hesaplanır.
+                    const remainingCount = Math.max(1, tx.installmentCount - tx.installmentNo)
+                    const planCount = (cleanImport || isMidPlan) && knownPlan
+                      ? (cleanImport ? Math.max(1, tx.installmentCount - tx.installmentNo + 1) : remainingCount)
                       : tx.installmentCount
-                    const rowTotal = knownPlan
+                    const rowTotal = knownPlan && !isLastInstallment
                       ? roundTL(tx.amount * planCount)
                       : tx.amount
                     const isSelected = selected.has(item.selectionKey)
@@ -697,7 +717,11 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
                           ) : (
                             <p className="text-[11px] text-muted-foreground">
                               {formatShortDate(tx.date)} · {tx.category}
-                              {tx.isInstallment ? ` · ${cleanImport && knownPlan ? `${planCount} taksit kalan` : `${tx.installmentCount} taksit`}` : ''}
+                              {tx.isInstallment ? ` · ${
+                                isLastInstallment ? `${tx.installmentNo}/${tx.installmentCount} son taksit`
+                                : (cleanImport || isMidPlan) && knownPlan ? `${tx.installmentNo}/${tx.installmentCount}. taksit, ${planCount} kalan`
+                                : `${tx.installmentCount} taksit`
+                              }` : ''}
                             </p>
                           )}
                         </div>

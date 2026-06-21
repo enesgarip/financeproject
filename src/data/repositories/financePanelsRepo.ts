@@ -10,7 +10,7 @@ export async function fetchAccountLedgerEvents(cardId: string): Promise<Result<A
     .order('occurred_at', { ascending: false })
     .limit(200)
 
-  return resultFromSupabase((data ?? []) as AccountLedger[], error, 'Hesap hareketleri yuklenemedi.')
+  return resultFromSupabase((data ?? []) as AccountLedger[], error, 'Hesap hareketleri yüklenemedi.')
 }
 
 export async function fetchCardLedgerEvents(cardId: string): Promise<Result<CardLedger[]>> {
@@ -21,7 +21,7 @@ export async function fetchCardLedgerEvents(cardId: string): Promise<Result<Card
     .order('occurred_at', { ascending: false })
     .limit(200)
 
-  return resultFromSupabase((data ?? []) as CardLedger[], error, 'Kart borc hareketleri yuklenemedi.')
+  return resultFromSupabase((data ?? []) as CardLedger[], error, 'Kart borç hareketleri yüklenemedi.')
 }
 
 export async function fetchCardLedgerEventsSince(cardId: string, since: string): Promise<Result<CardLedger[]>> {
@@ -33,7 +33,7 @@ export async function fetchCardLedgerEventsSince(cardId: string, since: string):
     .order('occurred_at', { ascending: false })
     .limit(200)
 
-  return resultFromSupabase((data ?? []) as CardLedger[], error, 'Kart borc hareketleri yuklenemedi.')
+  return resultFromSupabase((data ?? []) as CardLedger[], error, 'Kart borç hareketleri yüklenemedi.')
 }
 
 export async function fetchAccountLedgerEventsSince(cardId: string, since: string): Promise<Result<AccountLedger[]>> {
@@ -45,7 +45,7 @@ export async function fetchAccountLedgerEventsSince(cardId: string, since: strin
     .order('occurred_at', { ascending: false })
     .limit(200)
 
-  return resultFromSupabase((data ?? []) as AccountLedger[], error, 'Hesap hareketleri yuklenemedi.')
+  return resultFromSupabase((data ?? []) as AccountLedger[], error, 'Hesap hareketleri yüklenemedi.')
 }
 
 export async function fetchRecentCardLedgerEvents(limit = 100): Promise<Result<CardLedger[]>> {
@@ -55,7 +55,7 @@ export async function fetchRecentCardLedgerEvents(limit = 100): Promise<Result<C
     .order('occurred_at', { ascending: false })
     .limit(limit)
 
-  return resultFromSupabase((data ?? []) as CardLedger[], error, 'Kart borc hareketleri yuklenemedi.')
+  return resultFromSupabase((data ?? []) as CardLedger[], error, 'Kart borç hareketleri yüklenemedi.')
 }
 
 export async function fetchRecentAccountLedgerEvents(limit = 100): Promise<Result<AccountLedger[]>> {
@@ -65,7 +65,7 @@ export async function fetchRecentAccountLedgerEvents(limit = 100): Promise<Resul
     .order('occurred_at', { ascending: false })
     .limit(limit)
 
-  return resultFromSupabase((data ?? []) as AccountLedger[], error, 'Hesap hareketleri yuklenemedi.')
+  return resultFromSupabase((data ?? []) as AccountLedger[], error, 'Hesap hareketleri yüklenemedi.')
 }
 
 export async function fetchAccountReconciliations(): Promise<Result<AccountReconciliation[]>> {
@@ -74,7 +74,7 @@ export async function fetchAccountReconciliations(): Promise<Result<AccountRecon
     .select('*')
     .order('reconciled_at', { ascending: false })
 
-  return resultFromSupabase((data ?? []) as AccountReconciliation[], error, 'Mutabakat kayitlari yuklenemedi.')
+  return resultFromSupabase((data ?? []) as AccountReconciliation[], error, 'Mutabakat kayıtları yüklenemedi.')
 }
 
 export async function insertAccountReconciliation(

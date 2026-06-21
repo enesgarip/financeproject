@@ -29,7 +29,7 @@ export async function upsertAndLoadNetWorthSnapshots(
     )
 
   if (isMissingSupabaseCapabilityError(upsertRes.error)) return ok(null)
-  const upsertResult = voidResultFromSupabase(upsertRes.error, 'Net deger snapshot kaydedilemedi.')
+  const upsertResult = voidResultFromSupabase(upsertRes.error, 'Net değer snapshot kaydedilemedi.')
   if (!upsertResult.ok) return upsertResult
 
   const snapshotRes = await supabase
@@ -39,7 +39,7 @@ export async function upsertAndLoadNetWorthSnapshots(
     .limit(NET_WORTH_SNAPSHOT_LIMIT)
 
   if (isMissingSupabaseCapabilityError(snapshotRes.error)) return ok(null)
-  return resultFromSupabase([...(snapshotRes.data ?? [])].reverse() as NetWorthSnapshot[], snapshotRes.error, 'Net deger serisi yuklenemedi.')
+  return resultFromSupabase([...(snapshotRes.data ?? [])].reverse() as NetWorthSnapshot[], snapshotRes.error, 'Net değer serisi yüklenemedi.')
 }
 
 export type PriceRadarRows = {
@@ -72,6 +72,6 @@ export async function fetchPriceRadarRows(): Promise<Result<PriceRadarRows>> {
       cardExpenses: (expenses.data ?? []) as CardExpense[],
     },
     error,
-    'Zam radari verileri yuklenemedi.',
+    'Zam radarı verileri yüklenemedi.',
   )
 }

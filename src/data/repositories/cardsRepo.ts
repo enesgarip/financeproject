@@ -10,12 +10,12 @@ export type PaymentMatchRow = Pick<
 
 export async function fetchCards(): Promise<Result<Card[]>> {
   const { data, error } = await supabase.from('cards').select('*')
-  return resultFromSupabase((data as Card[]) ?? [], error, 'Kartlar yuklenemedi.')
+  return resultFromSupabase((data as Card[]) ?? [], error, 'Kartlar yüklenemedi.')
 }
 
 export async function fetchCardsByType(cardType: Card['card_type']): Promise<Result<Card[]>> {
   const { data, error } = await supabase.from('cards').select('*').eq('card_type', cardType)
-  return resultFromSupabase((data as Card[]) ?? [], error, 'Kartlar yuklenemedi.')
+  return resultFromSupabase((data as Card[]) ?? [], error, 'Kartlar yüklenemedi.')
 }
 
 export async function fetchProvisionExpenses(): Promise<Result<CardExpense[]>> {
@@ -25,7 +25,7 @@ export async function fetchProvisionExpenses(): Promise<Result<CardExpense[]>> {
     .eq('status', 'provision')
     .order('spent_at', { ascending: false })
 
-  return resultFromSupabase((data ?? []) as CardExpense[], error, 'Provizyonlar yuklenemedi.')
+  return resultFromSupabase((data ?? []) as CardExpense[], error, 'Provizyonlar yüklenemedi.')
 }
 
 export async function fetchStatementArchives(limit: number): Promise<Result<CardStatementArchive[]>> {
@@ -35,7 +35,7 @@ export async function fetchStatementArchives(limit: number): Promise<Result<Card
     .order('statement_date', { ascending: false })
     .limit(limit)
 
-  return resultFromSupabase((data ?? []) as CardStatementArchive[], error, 'Ekstreler yuklenemedi.')
+  return resultFromSupabase((data ?? []) as CardStatementArchive[], error, 'Ekstreler yüklenemedi.')
 }
 
 export async function fetchCardInstallments(): Promise<Result<CardInstallment[]>> {
@@ -44,7 +44,7 @@ export async function fetchCardInstallments(): Promise<Result<CardInstallment[]>
     .select('*')
     .order('due_month', { ascending: true })
 
-  return resultFromSupabase((data ?? []) as CardInstallment[], error, 'Kart taksitleri yuklenemedi.')
+  return resultFromSupabase((data ?? []) as CardInstallment[], error, 'Kart taksitleri yüklenemedi.')
 }
 
 export async function fetchCardInstallmentsByExpenseIds(expenseIds: string[]): Promise<Result<CardInstallment[]>> {
@@ -57,7 +57,7 @@ export async function fetchCardInstallmentsByExpenseIds(expenseIds: string[]): P
     .order('due_month', { ascending: true })
     .order('installment_no', { ascending: true })
 
-  return resultFromSupabase((data ?? []) as CardInstallment[], error, 'Kart taksitleri yuklenemedi.')
+  return resultFromSupabase((data ?? []) as CardInstallment[], error, 'Kart taksitleri yüklenemedi.')
 }
 
 export async function fetchPostedInstallmentExpenses(limit: number): Promise<Result<CardExpense[]>> {
@@ -69,7 +69,7 @@ export async function fetchPostedInstallmentExpenses(limit: number): Promise<Res
     .order('spent_at', { ascending: false })
     .limit(limit)
 
-  return resultFromSupabase((data ?? []) as CardExpense[], error, 'Taksitli harcamalar yuklenemedi.')
+  return resultFromSupabase((data ?? []) as CardExpense[], error, 'Taksitli harcamalar yüklenemedi.')
 }
 
 export async function fetchCardExpenseMatchRows(cardId: string): Promise<Result<ExpenseMatchRow[]>> {
@@ -78,7 +78,7 @@ export async function fetchCardExpenseMatchRows(cardId: string): Promise<Result<
     .select('id, spent_at, amount, status, description, category, installment_count, note')
     .eq('card_id', cardId)
 
-  return resultFromSupabase((data ?? []) as ExpenseMatchRow[], error, 'Kart harcamalari yuklenemedi.')
+  return resultFromSupabase((data ?? []) as ExpenseMatchRow[], error, 'Kart harcamaları yüklenemedi.')
 }
 
 export async function fetchCardPaymentMatchRows(cardId: string): Promise<Result<PaymentMatchRow[]>> {
@@ -89,7 +89,7 @@ export async function fetchCardPaymentMatchRows(cardId: string): Promise<Result<
     .gt('amount', 0)
     .or(`auto_source_card_id.is.null,auto_source_card_id.eq.${cardId}`)
 
-  return resultFromSupabase((data ?? []) as PaymentMatchRow[], error, 'Planli odemeler yuklenemedi.')
+  return resultFromSupabase((data ?? []) as PaymentMatchRow[], error, 'Planlı ödemeler yüklenemedi.')
 }
 
 export type AddCardExpenseInput = {
@@ -131,7 +131,7 @@ export async function payPaymentFromCardImport(input: PayPaymentFromCardImportIn
     p_spent_at: input.spentAt,
   })
 
-  return voidResultFromSupabase(error, 'Planli odeme kart hareketine islenemedi.')
+  return voidResultFromSupabase(error, 'Planlı ödeme kart hareketine işlenemedi.')
 }
 
 export type CardInstallmentCarryoverInput = {
@@ -160,12 +160,12 @@ export async function recordCardInstallmentCarryover(input: CardInstallmentCarry
 
 export async function cutDueCardStatements(): Promise<Result<number>> {
   const { data, error } = await supabase.rpc('cut_due_card_statements')
-  return resultFromSupabase(data ?? 0, error, 'Ekstre kesimi basarisiz.')
+  return resultFromSupabase(data ?? 0, error, 'Ekstre kesimi başarısız.')
 }
 
 export async function resetCardData(cardId: string): Promise<Result<void>> {
   const { error } = await supabase.rpc('reset_card_data', { p_card_id: cardId })
-  return voidResultFromSupabase(error, 'Kart sifirlanamadi.')
+  return voidResultFromSupabase(error, 'Kart sıfırlanamadı.')
 }
 
 export async function cutCardStatement(cardId: string): Promise<Result<void>> {
@@ -192,7 +192,7 @@ export async function insertGuardStatementArchive(
     status: 'paid',
     note: 'Clean import guard — ekstre kesimi engellendi.',
   })
-  return voidResultFromSupabase(error, 'Guard arsiv kaydedilemedi.')
+  return voidResultFromSupabase(error, 'Guard arşiv kaydedilemedi.')
 }
 
 export type StatementReconciliationInput = {

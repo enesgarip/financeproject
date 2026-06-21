@@ -9,12 +9,12 @@ export async function fetchLoanInstallments(): Promise<Result<LoanInstallment[]>
     .order('due_date', { ascending: true })
     .order('installment_no', { ascending: true })
 
-  return resultFromSupabase((data ?? []) as LoanInstallment[], error, 'Kredi taksitleri yuklenemedi.')
+  return resultFromSupabase((data ?? []) as LoanInstallment[], error, 'Kredi taksitleri yüklenemedi.')
 }
 
 export async function fetchLoanInstallmentsByLoan(loanId: string): Promise<Result<LoanInstallment[]>> {
   const { data, error } = await supabase.from('loan_installments').select('*').eq('loan_id', loanId)
-  return resultFromSupabase((data ?? []) as LoanInstallment[], error, 'Kredi taksitleri yuklenemedi.')
+  return resultFromSupabase((data ?? []) as LoanInstallment[], error, 'Kredi taksitleri yüklenemedi.')
 }
 
 export async function upsertLoanInstallments(payload: InsertFor<'loan_installments'>[]): Promise<Result<void>> {

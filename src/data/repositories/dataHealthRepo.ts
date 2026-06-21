@@ -123,7 +123,7 @@ export async function fetchDataHealthRows(): Promise<Result<DataHealthRows>> {
       savingsGoalComponents: (savingsGoalComponents.data ?? []) as SavingsGoalComponent[],
     },
     error,
-    'Veri sagligi kayitlari yuklenemedi.',
+    'Veri sağlığı kayıtları yüklenemedi.',
   )
 }
 
@@ -137,7 +137,7 @@ export async function updateDataHealthRow<T extends TableName>(
     .update({ ...(updates as object), updated_at: new Date().toISOString() } as never)
     .eq('id', id)
 
-  return voidResultFromSupabase(error, 'Kayit guncellenemedi.')
+  return voidResultFromSupabase(error, 'Kayıt güncellenemedi.')
 }
 
 export async function updateDataHealthRows<T extends TableName>(
@@ -152,14 +152,14 @@ export async function updateDataHealthRows<T extends TableName>(
     .update({ ...(updates as object), updated_at: new Date().toISOString() } as never)
     .in('id', ids)
 
-  return voidResultFromSupabase(error, 'Kayitlar guncellenemedi.')
+  return voidResultFromSupabase(error, 'Kayıtlar güncellenemedi.')
 }
 
 export async function deleteDataHealthRows(table: UndoTableName, ids: string[]): Promise<Result<void>> {
   if (ids.length === 0) return ok(undefined)
 
   const { error } = await supabase.from(table as never).delete().in('id', ids)
-  return voidResultFromSupabase(error, 'Kayitlar silinemedi.')
+  return voidResultFromSupabase(error, 'Kayıtlar silinemedi.')
 }
 
 export async function insertCardInstallments(rows: InsertFor<'card_installments'>[]): Promise<Result<string[]>> {
@@ -171,19 +171,19 @@ export async function insertCardInstallments(rows: InsertFor<'card_installments'
 
 export async function resetUserFinanceData(): Promise<Result<void>> {
   const { error } = await supabase.rpc('reset_user_finance_data', {})
-  return voidResultFromSupabase(error, 'Tum veri silinemedi.')
+  return voidResultFromSupabase(error, 'Tüm veri silinemedi.')
 }
 
 export async function fetchUndoRows(table: UndoTableName, ids: string[]): Promise<Result<UndoRepositoryRow[]>> {
   if (ids.length === 0) return ok([])
 
   const { data, error } = await supabase.from(table as never).select('*').in('id', ids)
-  return resultFromSupabase((data ?? []) as unknown as UndoRepositoryRow[], error, 'Geri alma satirlari yuklenemedi.')
+  return resultFromSupabase((data ?? []) as unknown as UndoRepositoryRow[], error, 'Geri alma satırları yüklenemedi.')
 }
 
 export async function restoreUndoRows(table: UndoTableName, rows: UndoRepositoryRow[]): Promise<Result<void>> {
   if (rows.length === 0) return ok(undefined)
 
   const { error } = await supabase.from(table as never).upsert(rows as never)
-  return voidResultFromSupabase(error, 'Geri alma satirlari geri yuklenemedi.')
+  return voidResultFromSupabase(error, 'Geri alma satırları geri yüklenemedi.')
 }

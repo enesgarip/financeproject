@@ -58,6 +58,7 @@
   - 2026-06-20 update: statement/current movement imports match still-open planned payments and use `pay_payment_from_card_import`, so card-paid bills do not remain as duplicate pending obligations after import.
   - 2026-06-20 follow-up: import review selection now uses stable per-row keys, so identical-looking rows can be selected one by one; Data Health also flags exact/possible duplicate card expenses using transaction fingerprints.
   - 2026-06-20 v2: Mutabakat ekranı conflict-resolution tarzına dönüştürüldü — eşleşen/sadece bankada/sadece app'te kategorileri yan yana gösterilir, app-only harcamalar direkt iptal edilebilir (`cancel_card_expense` RPC). Mobil tarayıcılarda PDF import devre dışı.
+  - 2026-06-21: Plan-ortası taksitler (2/12, 3/12 gibi) artık normal import'ta otomatik aktarılır — `recordCardInstallmentCarryover` ile geçmiş taksitler ödendi olarak, gelecek olanlar planlanmış olarak eklenir. Son taksit (12/12 gibi) tek ödeme olarak import edilir.
 - Add "kasa modu" / spendable balance planning.
   - Let bank balances be mentally allocated into buckets such as emergency fund, taxes/insurance, vacation, investment, and spendable cash.
   - Keep the underlying bank balance unchanged; this is a planning overlay, not a ledger movement.
@@ -71,6 +72,7 @@
   - `docs/DASHBOARD_ARCHITECTURE.md` now has a Page-Local vs Shared Calculations decision table.
 - ~~Audit Turkish copy and encoding consistency across UI strings and docs.~~ DONE.
   - 2026-06-15 guard run passed and a manual mojibake signature scan found no hits across 305 source/doc/migration files.
+  - 2026-06-21: RPC raise exception mesajları + note string'leri düzgün Türkçe karaktere (`ö`, `ü`, `ş`, `ı`, `ğ`, `ç`) çevrildi (migration `20260621200000`). `update_card_expense` regex'i hem eski (ASCII) hem yeni note formatını eşleştirir. Repo katmanı hata mesajları (`yuklenemedi` → `yüklenemedi` vb.) düzeltildi.
 
 - ~~Add data health trust badge to dashboard.~~ DONE.
   - `utils/dataHealthSummary.ts` runs lightweight card-debt-split/scheduled-debt + loan-totals + limit checks from snapshot data.

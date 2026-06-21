@@ -24,13 +24,13 @@ export async function fetchSavingsGoalsRows(): Promise<Result<SavingsGoalsRows>>
     supabase.from('savings_goal_components').select('*').order('sort_order', { ascending: true }),
   ])
 
-  if (goalsResult.error) return fail(appErrorFromSupabase(goalsResult.error, 'Birikim hedefleri yuklenemedi.'))
+  if (goalsResult.error) return fail(appErrorFromSupabase(goalsResult.error, 'Birikim hedefleri yüklenemedi.'))
 
   return ok({
     goals: (goalsResult.data ?? []) as SavingsGoal[],
     components: (componentsResult.data ?? []) as SavingsGoalComponent[],
     componentsError: componentsResult.error
-      ? appErrorFromSupabase(componentsResult.error, 'Hedef bilesenleri yuklenemedi.')
+      ? appErrorFromSupabase(componentsResult.error, 'Hedef bileşenleri yüklenemedi.')
       : null,
   })
 }
@@ -62,25 +62,25 @@ export async function upsertSavingsGoalWithComponents(input: {
       .select('id')
       .single()
     if (error) return voidResultFromSupabase(error, 'Hedef kaydedilemedi.')
-    if (!data) return fail({ type: 'unknown', message: 'Hedef kimligi olusturulamadi.' })
+    if (!data) return fail({ type: 'unknown', message: 'Hedef kimliği oluşturulamadı.' })
     goalId = data.id
   }
 
-  if (!goalId) return fail({ type: 'unknown', message: 'Hedef kimligi olusturulamadi.' })
+  if (!goalId) return fail({ type: 'unknown', message: 'Hedef kimliği oluşturulamadı.' })
 
   if (input.isComposite) {
     const deleteResult = await supabase.from('savings_goal_components').delete().eq('goal_id', goalId)
-    if (deleteResult.error) return voidResultFromSupabase(deleteResult.error, 'Hedef bilesenleri temizlenemedi.')
+    if (deleteResult.error) return voidResultFromSupabase(deleteResult.error, 'Hedef bileşenleri temizlenemedi.')
 
     const insertResult = await supabase.from('savings_goal_components').insert(
       input.components.map((row) => ({ ...row, goal_id: goalId })),
     )
-    return voidResultFromSupabase(insertResult.error, 'Hedef bilesenleri kaydedilemedi.')
+    return voidResultFromSupabase(insertResult.error, 'Hedef bileşenleri kaydedilemedi.')
   }
 
   if (input.editingGoal?.value_type === 'composite') {
     const { error } = await supabase.from('savings_goal_components').delete().eq('goal_id', goalId)
-    return voidResultFromSupabase(error, 'Hedef bilesenleri temizlenemedi.')
+    return voidResultFromSupabase(error, 'Hedef bileşenleri temizlenemedi.')
   }
 
   return resultFromSupabase(undefined, null)

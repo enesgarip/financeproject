@@ -138,7 +138,7 @@ export async function fetchFinanceSnapshot(): Promise<FinanceSnapshot> {
 /** Vadesi gelen banka talimatlarını karta borç olarak işler; işlenen kayıt sayısını döndürür. */
 export async function postDueCardAutoPayments(): Promise<Result<number>> {
   const { data, error } = await supabase.rpc('post_due_card_auto_payments')
-  return resultFromSupabase(data ?? 0, error, 'Otomatik odemeler islenemedi.')
+  return resultFromSupabase(data ?? 0, error, 'Otomatik ödemeler işlenemedi.')
 }
 
 /**

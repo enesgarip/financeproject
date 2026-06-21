@@ -12,12 +12,12 @@ export async function fetchCrudRows<T extends TableName>(
     .select('*')
     .order(orderBy, { ascending })
 
-  return resultFromSupabase((data ?? []) as unknown as RowFor<T>[], error, 'Kayitlar yuklenemedi.')
+  return resultFromSupabase((data ?? []) as unknown as RowFor<T>[], error, 'Kayıtlar yüklenemedi.')
 }
 
 export async function deleteCrudRow<T extends TableName>(table: T, id: string): Promise<Result<void>> {
   const { error } = await supabase.from(table as never).delete().eq('id', id)
-  return voidResultFromSupabase(error, 'Kayit silinemedi.')
+  return voidResultFromSupabase(error, 'Kayıt silinemedi.')
 }
 
 export async function saveCrudRow<T extends TableName>(
@@ -38,6 +38,6 @@ export async function saveCrudRow<T extends TableName>(
   return resultFromSupabase(
     savedResponse.data ? (savedResponse.data as RowFor<T>) : null,
     savedResponse.error,
-    'Kayit kaydedilemedi.',
+    'Kayıt kaydedilemedi.',
   )
 }
