@@ -32,7 +32,8 @@
   - `notification_log` prevents duplicate user/type/reference sends, and stale 404/410 endpoints are removed from `push_subscriptions`.
   - GitHub Actions invokes the sender daily at 04:00 UTC (07:00 Turkey time).
 - Add Web Push v1.1 controls and observability.
-  - Add a "test bildirimi gönder" action from the notification settings UI.
+  - ~~Add a "test bildirimi gönder" action from the notification settings UI.~~ DONE.
+    - 2026-06-21: Bildirim ayar kartı mevcut browser aboneliğini Supabase kaydıyla self-heal eder; VAPID public key değişmişse cihaz aboneliğini yeniler. `push-notify` authenticated test mode, kullanıcının kendi endpoint'ine gerçek Web Push payload'u gönderir.
   - Let the user enable/disable payment, loan installment, statement cut, and weekly summary notifications separately.
   - Show last push run / last sent notification status in the settings card.
   - Add quiet-hours handling so scheduled notifications are not sent during user-defined silent hours.

@@ -81,6 +81,7 @@ Ek otomasyon:
 - Dependabot patch/minor PR'larını CI yeşilse otomatik squash-merge eder (major elde kalır).
 - Günlük şifreli DB yedeği cron'u (`db-backup.yml`).
 - Günlük Web Push gönderici cron'u (`push-notify.yml`): 04:00 UTC / 07:00 TR, `push-notify` edge fonksiyonunu service-role ile invoke eder.
+  - Aynı edge function, ayar ekranındaki "test bildirimi gönder" için authenticated user JWT ile yalnızca o kullanıcının kendi endpoint'ine tek test payload'u yollar. Cron yolunda aday varsa ve tüm teslim denemeleri başarısız olursa workflow kırmızıya dönebilir.
 
 ## Required GitHub Secrets
 

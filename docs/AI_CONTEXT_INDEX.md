@@ -1,6 +1,6 @@
 # AI Context Index
 
-Last reviewed: 2026-06-20
+Last reviewed: 2026-06-21
 
 This file is the cheapest starting point for future AI/Codex sessions. Its job
 is to reduce repeated repo discovery: read this first, choose the smallest
@@ -245,7 +245,7 @@ paylaşır; her sayfa süpersetini client-side daraltır). Query client: `src/ap
 | **Veri sağlığı / onarım** | `pages/DataHealth.logic.ts` (types + orchestrator), `pages/DataHealth.checks.ts` (domain checks), `utils/financeSummary.ts` (trigger TS ikizleri), `utils/transactionFingerprint.ts` (kart harcaması duplicate/fingerprint) | `data/repositories/dataHealthRepo.ts` | `pages/DataHealthHub.tsx`, `pages/DataHealthPage.tsx`, `pages/DataHealthOperationsPage.tsx` |
 | **Kategori eşleme (tr-TR tuzağı)** | `utils/categories.ts` (`normalizeDescription`) | `data/repositories/categoryMemoryRepo.ts` | — |
 | **Yedek / backup** | `utils/backup.ts` | `data/repositories/backupRepo.ts` | (DataHealth) |
-| **Push bildirim** | — | `data/repositories/pushSubscriptionsRepo.ts`, `supabase/migrations/20260617102826_add_notification_log.sql`, `.github/workflows/push-notify.yml` | `supabase/functions/push-notify`, `public/sw.js`, `components/finance/NotificationSettings.tsx` |
+| **Push bildirim** | — | `data/repositories/pushSubscriptionsRepo.ts`, `services/pushNotifications.ts`, `supabase/migrations/20260617102826_add_notification_log.sql`, `.github/workflows/push-notify.yml` | `supabase/functions/push-notify`, `public/sw.js`, `components/finance/NotificationSettings.tsx` |
 | **Piyasa kuru / BIST** | `utils/marketRates.ts` | — | `supabase/functions/bist-quote` |
 | **Şema / tip / RPC kontratı** | — | `src/types/database.ts` | — |
 | **Migration / trigger** | `utils/financeSummary.ts` (saf TS ikizleri) | `supabase/migrations/*` | — |

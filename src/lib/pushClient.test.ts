@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { urlBase64ToUint8Array } from './pushClient'
+import { applicationServerKeyMatches, urlBase64ToUint8Array } from './pushClient'
 
 describe('urlBase64ToUint8Array', () => {
   it('decodes a url-safe base64 VAPID key to the correct bytes', () => {
@@ -19,5 +19,15 @@ describe('urlBase64ToUint8Array', () => {
     const key = 'B' + 'A'.repeat(86)
     const result = urlBase64ToUint8Array(key)
     expect(result.length).toBe(65)
+  })
+
+  it('compares an existing applicationServerKey with the configured VAPID public key', () => {
+    const key = urlBase64ToUint8Array('aGVsbG8')
+    expect(applicationServerKeyMatches(key.buffer, 'aGVsbG8')).toBe(true)
+    expect(applicationServerKeyMatches(key.buffer, 'aGVsbGE')).toBe(false)
+  })
+
+  it('treats missing browser key metadata as compatible', () => {
+    expect(applicationServerKeyMatches(null, 'aGVsbG8')).toBe(true)
   })
 })

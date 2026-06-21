@@ -111,6 +111,18 @@ type NotificationCandidate = {
   payload: PushPayload
 }
 
+type PushNotifyRequest = {
+  mode?: 'test'
+  endpoint?: string | null
+}
+
+type DeliverySummary = {
+  sent: number
+  deviceDeliveries: number
+  staleDeleted: number
+  failed: number
+}
+
 type RestClient = {
   select<T>(table: string, params: Record<string, string | string[]>): Promise<T[]>
   insert(table: string, rows: Record<string, unknown>[]): Promise<void>
@@ -153,9 +165,51 @@ function getServiceRoleKey(): string | null {
 }
 
 function isAuthorized(req: Request, serviceRoleKey: string): boolean {
-  const authHeader = req.headers.get('authorization') ?? ''
-  const bearer = authHeader.match(/^Bearer\s+(.+)$/i)?.[1]?.trim()
+  const bearer = bearerToken(req)
   return bearer === serviceRoleKey || req.headers.get('apikey') === serviceRoleKey
+}
+
+function bearerToken(req: Request): string | null {
+  const authHeader = req.headers.get('authorization') ?? ''
+  return authHeader.match(/^Bearer\s+(.+)$/i)?.[1]?.trim() ?? null
+}
+
+async function readRequestBody(req: Request): Promise<PushNotifyRequest> {
+  try {
+    const parsed = await req.json()
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {}
+    const body = parsed as Record<string, unknown>
+    return {
+      mode: body.mode === 'test' ? 'test' : undefined,
+      endpoint: typeof body.endpoint === 'string' && body.endpoint.trim() ? body.endpoint.trim() : null,
+    }
+  } catch {
+    return {}
+  }
+}
+
+async function authenticatedUserId(
+  supabaseUrl: string,
+  serviceRoleKey: string,
+  req: Request,
+): Promise<string | null> {
+  const bearer = bearerToken(req)
+  if (!bearer || bearer === serviceRoleKey) return null
+
+  const res = await fetchWithTimeout(
+    `${supabaseUrl.replace(/\/+$/, '')}/auth/v1/user`,
+    {
+      headers: {
+        apikey: serviceRoleKey,
+        Authorization: `Bearer ${bearer}`,
+      },
+    },
+    DB_TIMEOUT_MS,
+  )
+
+  if (!res.ok) return null
+  const user = await res.json() as { id?: unknown }
+  return typeof user.id === 'string' && user.id ? user.id : null
 }
 
 function createRestClient(supabaseUrl: string, serviceRoleKey: string): RestClient {
@@ -856,10 +910,100 @@ async function filterAlreadySent(db: RestClient, candidates: NotificationCandida
   return candidates.filter((candidate) => !sentKeys.has(logKey(candidate)))
 }
 
+function groupSubscriptionsByUser(subscriptions: PushSubscriptionRow[]): Map<string, PushSubscriptionRow[]> {
+  const subscriptionsByUser = new Map<string, PushSubscriptionRow[]>()
+  for (const subscription of subscriptions) {
+    subscriptionsByUser.set(subscription.user_id, [
+      ...(subscriptionsByUser.get(subscription.user_id) ?? []),
+      subscription,
+    ])
+  }
+  return subscriptionsByUser
+}
+
+async function deliverCandidates(
+  db: RestClient,
+  subscriptionsByUser: Map<string, PushSubscriptionRow[]>,
+  candidates: NotificationCandidate[],
+  vapidKeys: VapidKeys,
+  vapidSubject: string,
+  shouldWriteLog: boolean,
+): Promise<DeliverySummary> {
+  const sentLogs: Record<string, unknown>[] = []
+  let sent = 0
+  let delivered = 0
+  let staleDeleted = 0
+  let failed = 0
+
+  for (const candidate of candidates) {
+    const userSubscriptions = subscriptionsByUser.get(candidate.userId) ?? []
+    let candidateDelivered = 0
+
+    for (const subscription of userSubscriptions) {
+      try {
+        const res = await sendWebPush(subscription, candidate.payload, vapidKeys, vapidSubject)
+        if (res.status === 404 || res.status === 410) {
+          await db.deleteById('push_subscriptions', subscription.id)
+          staleDeleted += 1
+          continue
+        }
+
+        if (res.ok) {
+          delivered += 1
+          candidateDelivered += 1
+          continue
+        }
+
+        failed += 1
+        console.error(`Push failed ${res.status} for ${subscription.endpoint}: ${await res.text()}`)
+      } catch (error) {
+        failed += 1
+        console.error('Push send failed', error)
+      }
+    }
+
+    if (candidateDelivered > 0) {
+      sent += 1
+      if (shouldWriteLog) {
+        sentLogs.push({
+          user_id: candidate.userId,
+          notification_type: candidate.notificationType,
+          reference_id: candidate.referenceId,
+        })
+      }
+    }
+  }
+
+  await db.insert('notification_log', sentLogs)
+
+  return {
+    sent,
+    deviceDeliveries: delivered,
+    staleDeleted,
+    failed,
+  }
+}
+
+function buildTestCandidate(userId: string): NotificationCandidate {
+  const referenceId = `manual:${new Date().toISOString()}`
+  return {
+    userId,
+    notificationType: 'test',
+    referenceId,
+    payload: {
+      title: 'Denge test bildirimi',
+      body: 'Bu cihaz Web Push bildirimlerini alıyor.',
+      url: '/veri-sagligi/islemler',
+      tag: `push-test-${referenceId}`,
+    },
+  }
+}
+
 Deno.serve(async (req: Request) => {
   const preflight = handlePreflight(req)
   if (preflight) return preflight
   if (req.method !== 'POST') return jsonResponse({ error: 'Method not allowed' }, 405)
+  const body = await readRequestBody(req)
 
   const supabaseUrl = env('SUPABASE_URL')
   const serviceRoleKey = getServiceRoleKey()
@@ -876,7 +1020,14 @@ Deno.serve(async (req: Request) => {
     )
   }
 
-  if (!isAuthorized(req, serviceRoleKey)) return jsonResponse({ error: 'Unauthorized' }, 401)
+  const testUserId = body.mode === 'test'
+    ? await authenticatedUserId(supabaseUrl, serviceRoleKey, req)
+    : null
+  if (body.mode === 'test') {
+    if (!testUserId) return jsonResponse({ error: 'Unauthorized' }, 401)
+  } else if (!isAuthorized(req, serviceRoleKey)) {
+    return jsonResponse({ error: 'Unauthorized' }, 401)
+  }
 
   const db = createRestClient(supabaseUrl, serviceRoleKey)
   const vapidKeys = await getVapidKeys(vapidPrivateKey)
@@ -884,6 +1035,44 @@ Deno.serve(async (req: Request) => {
   const weekday = weekdayInTimeZone()
 
   try {
+    if (body.mode === 'test') {
+      const subscriptionFilters: Record<string, string> = {
+        select: 'id,user_id,endpoint,p256dh,auth',
+        user_id: `eq.${testUserId}`,
+      }
+      if (body.endpoint) subscriptionFilters.endpoint = `eq.${body.endpoint}`
+
+      const subscriptions = await db.select<PushSubscriptionRow>('push_subscriptions', subscriptionFilters)
+
+      if (subscriptions.length === 0) {
+        return jsonResponse({
+          ok: false,
+          mode: 'test',
+          reason: 'no_subscription',
+          sent: 0,
+          deviceDeliveries: 0,
+          staleDeleted: 0,
+          failed: 0,
+        })
+      }
+
+      const result = await deliverCandidates(
+        db,
+        groupSubscriptionsByUser(subscriptions),
+        [buildTestCandidate(testUserId!)],
+        vapidKeys,
+        vapidSubject,
+        false,
+      )
+
+      return jsonResponse({
+        ok: result.sent > 0,
+        mode: 'test',
+        reason: result.sent > 0 ? undefined : 'delivery_failed',
+        ...result,
+      })
+    }
+
     const subscriptions = await db.select<PushSubscriptionRow>('push_subscriptions', {
       select: 'id,user_id,endpoint,p256dh,auth',
     })
@@ -899,71 +1088,27 @@ Deno.serve(async (req: Request) => {
       })
     }
 
-    const subscriptionsByUser = new Map<string, PushSubscriptionRow[]>()
-    for (const subscription of subscriptions) {
-      subscriptionsByUser.set(subscription.user_id, [
-        ...(subscriptionsByUser.get(subscription.user_id) ?? []),
-        subscription,
-      ])
-    }
-
     const candidates = await filterAlreadySent(
       db,
       await loadCandidates(db, subscriptions, todayIso, weekday),
     )
-    const sentLogs: Record<string, unknown>[] = []
-    let delivered = 0
-    let staleDeleted = 0
-    let failed = 0
-
-    for (const candidate of candidates) {
-      const userSubscriptions = subscriptionsByUser.get(candidate.userId) ?? []
-      let candidateDelivered = 0
-
-      for (const subscription of userSubscriptions) {
-        try {
-          const res = await sendWebPush(subscription, candidate.payload, vapidKeys, vapidSubject)
-          if (res.status === 404 || res.status === 410) {
-            await db.deleteById('push_subscriptions', subscription.id)
-            staleDeleted += 1
-            continue
-          }
-
-          if (res.ok) {
-            delivered += 1
-            candidateDelivered += 1
-            continue
-          }
-
-          failed += 1
-          console.error(`Push failed ${res.status} for ${subscription.endpoint}: ${await res.text()}`)
-        } catch (error) {
-          failed += 1
-          console.error('Push send failed', error)
-        }
-      }
-
-      if (candidateDelivered > 0) {
-        sentLogs.push({
-          user_id: candidate.userId,
-          notification_type: candidate.notificationType,
-          reference_id: candidate.referenceId,
-        })
-      }
-    }
-
-    await db.insert('notification_log', sentLogs)
+    const result = await deliverCandidates(
+      db,
+      groupSubscriptionsByUser(subscriptions),
+      candidates,
+      vapidKeys,
+      vapidSubject,
+      true,
+    )
+    const failedEveryDelivery = candidates.length > 0 && result.sent === 0 && result.failed > 0
 
     return jsonResponse({
-      ok: true,
+      ok: !failedEveryDelivery,
       today: todayIso,
       weekday,
       candidates: candidates.length,
-      sent: sentLogs.length,
-      deviceDeliveries: delivered,
-      staleDeleted,
-      failed,
-    })
+      ...result,
+    }, failedEveryDelivery ? 502 : 200)
   } catch (error) {
     console.error('push-notify failed', error)
     return jsonResponse({ error: 'Push bildirimleri gönderilemedi.' }, 500)

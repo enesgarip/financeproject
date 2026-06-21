@@ -1,6 +1,8 @@
 import {
   savePushSubscription,
   deletePushSubscription,
+  hasPushSubscription,
+  type PushSubscriptionPayload,
 } from '../data/repositories/pushSubscriptionsRepo'
 
 /**
@@ -42,6 +44,22 @@ export function urlBase64ToUint8Array(base64String: string): Uint8Array<ArrayBuf
   return output
 }
 
+function bufferToBytes(buffer: BufferSource): Uint8Array {
+  if (buffer instanceof ArrayBuffer) return new Uint8Array(buffer)
+  return new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength)
+}
+
+export function applicationServerKeyMatches(
+  applicationServerKey: BufferSource | null,
+  expectedPublicKey: string | undefined,
+): boolean {
+  if (!applicationServerKey || !expectedPublicKey) return true
+  const actual = bufferToBytes(applicationServerKey)
+  const expected = urlBase64ToUint8Array(expectedPublicKey)
+  if (actual.length !== expected.length) return false
+  return actual.every((byte, index) => byte === expected[index])
+}
+
 /** ArrayBuffer'ı base64url'e çevirir (abonelik anahtarlarını DB'ye yazarken). */
 function arrayBufferToBase64Url(buffer: ArrayBuffer | null): string {
   if (!buffer) return ''
@@ -55,6 +73,37 @@ async function ensureRegistration(): Promise<ServiceWorkerRegistration> {
   const existing = await navigator.serviceWorker.getRegistration()
   if (existing) return existing
   return navigator.serviceWorker.register('/sw.js')
+}
+
+function subscriptionToPayload(subscription: PushSubscription): PushSubscriptionPayload {
+  return {
+    endpoint: subscription.endpoint,
+    p256dh: arrayBufferToBase64Url(subscription.getKey('p256dh')),
+    auth: arrayBufferToBase64Url(subscription.getKey('auth')),
+  }
+}
+
+async function getCompatibleSubscription(
+  registration: ServiceWorkerRegistration,
+  userId: string,
+): Promise<PushSubscription | null> {
+  const subscription = await registration.pushManager.getSubscription()
+  if (!subscription) return null
+
+  if (applicationServerKeyMatches(subscription.options.applicationServerKey, VAPID_PUBLIC_KEY)) {
+    return subscription
+  }
+
+  const staleEndpoint = subscription.endpoint
+  await subscription.unsubscribe()
+  await deletePushSubscription(userId, staleEndpoint).catch(() => undefined)
+
+  if (Notification.permission !== 'granted' || !VAPID_PUBLIC_KEY) return null
+
+  return registration.pushManager.subscribe({
+    userVisibleOnly: true,
+    applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+  })
 }
 
 /**
@@ -71,7 +120,7 @@ export async function subscribeToPush(userId: string): Promise<void> {
   const registration = await ensureRegistration()
   await navigator.serviceWorker.ready
 
-  let subscription = await registration.pushManager.getSubscription()
+  let subscription = await getCompatibleSubscription(registration, userId)
   if (!subscription) {
     subscription = await registration.pushManager.subscribe({
       userVisibleOnly: true,
@@ -79,11 +128,7 @@ export async function subscribeToPush(userId: string): Promise<void> {
     })
   }
 
-  await savePushSubscription(userId, {
-    endpoint: subscription.endpoint,
-    p256dh: arrayBufferToBase64Url(subscription.getKey('p256dh')),
-    auth: arrayBufferToBase64Url(subscription.getKey('auth')),
-  })
+  await savePushSubscription(userId, subscriptionToPayload(subscription))
 }
 
 /** Aboneliği iptal eder ve DB'den siler. */
@@ -97,10 +142,28 @@ export async function unsubscribeFromPush(userId: string): Promise<void> {
   await deletePushSubscription(userId, endpoint)
 }
 
-/** Bu cihaz şu an abone mi (tarayıcı tarafı kontrolü)? */
-export async function isSubscribedOnThisDevice(): Promise<boolean> {
+/**
+ * Bu cihaz şu an abone mi? Varsa tarayıcı aboneliğini DB satırıyla da senkronlar;
+ * böylece eski/eksik server kaydı yüzünden "açık görünüp gelmeyen" bildirim kalmaz.
+ */
+export async function isSubscribedOnThisDevice(userId?: string): Promise<boolean> {
   if (!isPushSupported()) return false
   const registration = await navigator.serviceWorker.getRegistration()
   const subscription = await registration?.pushManager.getSubscription()
-  return Boolean(subscription)
+  if (!subscription || !registration) return false
+  if (!userId) return true
+
+  const compatibleSubscription = await getCompatibleSubscription(registration, userId)
+  if (!compatibleSubscription) return false
+
+  const registered = await hasPushSubscription(userId, compatibleSubscription.endpoint)
+  if (!registered) await savePushSubscription(userId, subscriptionToPayload(compatibleSubscription))
+  return true
+}
+
+export async function getCurrentPushEndpoint(): Promise<string | null> {
+  if (!isPushSupported()) return null
+  const registration = await navigator.serviceWorker.getRegistration()
+  const subscription = await registration?.pushManager.getSubscription()
+  return subscription?.endpoint ?? null
 }
