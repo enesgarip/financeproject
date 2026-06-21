@@ -351,7 +351,9 @@ export function DashboardPage() {
             transition={{ duration: 0.3, ease: 'easeInOut' }}
             className="grid min-w-0 gap-5 overflow-hidden lg:col-span-12 lg:grid-cols-12 lg:items-start"
           >
-            {/* Nakit akışı — en acil */}
+            {/* ─ Nakit akışı bölümü ─ */}
+            <DetailSectionDivider label="Nakit akışı" />
+
             <div className="min-w-0 lg:col-span-7">
               <CashFlowCalendarPanel items={upcomingItems} cashFlow={summary.cashFlow} />
             </div>
@@ -360,7 +362,9 @@ export function DashboardPage() {
               <CashFlowPanel cashFlow={summary.cashFlow} />
             </div>
 
-            {/* Borçlar & tahsilat — yan yana */}
+            {/* ─ Borç & tahsilat bölümü ─ */}
+            <DetailSectionDivider label="Borçlar ve tahsilat" />
+
             <div className="min-w-0 lg:col-span-8">
               <CurrentDebtTotalsPanel
                 totalDebt={summary.totalDebts}
@@ -375,7 +379,9 @@ export function DashboardPage() {
               <MetricTile label="Tahsilat" value={formatCurrency(summary.totalReceivables)} icon={<ArrowUpRight />} tone="emerald" help={dashboardHelp.receivable} />
             </div>
 
-            {/* Analiz & öneriler */}
+            {/* ─ Analiz bölümü ─ */}
+            <DetailSectionDivider label="Analiz ve öneriler" />
+
             <div className="min-w-0 lg:col-span-8">
               <AnalyticsSnapshotPanel
                 cashFlow={summary.cashFlow}
@@ -393,7 +399,9 @@ export function DashboardPage() {
 
             <UpcomingAlertPanel items={outflowUpcoming} />
 
-            {/* Birikim & harcama */}
+            {/* ─ Birikim & harcama bölümü ─ */}
+            <DetailSectionDivider label="Birikim ve harcama" />
+
             <div className="min-w-0 lg:col-span-5">
               <GoalProgressCommand goalProgress={summary.goalProgress} />
             </div>
@@ -402,12 +410,14 @@ export function DashboardPage() {
               <SpendingRadarPanel expenses={data.cardExpenses} />
             </div>
 
-            {/* Mutabakat */}
+            {/* ─ Mutabakat ─ */}
             <div className="min-w-0 lg:col-span-12">
               <ReconciliationPanel cards={data.cards} statements={data.cardStatements.filter((statement) => statement.status === 'open')} />
             </div>
 
-            {/* Limit & kredi ritmi */}
+            {/* ─ Limit & kredi ritmi bölümü ─ */}
+            <DetailSectionDivider label="Limitler ve kredi ritmi" />
+
             {hasCreditLimitGroups ? (
               <div className="min-w-0 lg:col-span-7">
                 <CreditLimitSection groups={summary.creditLimitGroups} totalUsageRate={summary.creditUsageRate} />
@@ -431,7 +441,9 @@ export function DashboardPage() {
               <MetricTile label="Kredi ödemesi" value={formatCurrency(summary.totalLoanMonthlyPayment)} icon={<CalendarDays />} tone="stone" help={dashboardHelp.loanPayment} />
             </div>
 
-            {/* Geçmiş — en altta */}
+            {/* ─ Geçmiş ─ */}
+            <DetailSectionDivider label="Geçmiş işlemler" />
+
             <div className="min-w-0 lg:col-span-12">
               <HistorySection rows={data.transactionHistory} />
             </div>
@@ -439,5 +451,15 @@ export function DashboardPage() {
         ) : null}
       </AnimatePresence>
     </motion.section>
+  )
+}
+
+function DetailSectionDivider({ label }: { label: string }) {
+  return (
+    <div className="flex items-center gap-3 lg:col-span-12">
+      <div className="h-px flex-1 bg-border/50" />
+      <span className="shrink-0 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/70">{label}</span>
+      <div className="h-px flex-1 bg-border/50" />
+    </div>
   )
 }
