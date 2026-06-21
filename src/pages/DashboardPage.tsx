@@ -349,14 +349,31 @@ export function DashboardPage() {
             transition={{ duration: 0.3, ease: 'easeInOut' }}
             className="grid min-w-0 gap-5 overflow-hidden lg:col-span-12 lg:grid-cols-12 lg:items-start"
           >
+            {/* Nakit akışı — en acil */}
             <div className="min-w-0 lg:col-span-7">
               <CashFlowCalendarPanel items={upcomingItems} cashFlow={summary.cashFlow} />
             </div>
 
             <div className="min-w-0 lg:col-span-5">
-              <GoalProgressCommand goalProgress={summary.goalProgress} />
+              <CashFlowPanel cashFlow={summary.cashFlow} />
             </div>
 
+            {/* Borçlar & tahsilat — yan yana */}
+            <div className="min-w-0 lg:col-span-8">
+              <CurrentDebtTotalsPanel
+                totalDebt={summary.totalDebts}
+                cardDebt={summary.totalCreditCardDebt}
+                loanDebt={summary.totalLoanDebt}
+                personalDebt={summary.totalPersonalDebts}
+                paymentDebt={summary.totalPaymentLiabilities}
+              />
+            </div>
+
+            <div className="grid min-w-0 gap-3 lg:col-span-4">
+              <MetricTile label="Tahsilat" value={formatCurrency(summary.totalReceivables)} icon={<ArrowUpRight />} tone="emerald" help={dashboardHelp.receivable} />
+            </div>
+
+            {/* Analiz & öneriler */}
             <div className="min-w-0 lg:col-span-8">
               <AnalyticsSnapshotPanel
                 cashFlow={summary.cashFlow}
@@ -369,39 +386,26 @@ export function DashboardPage() {
             </div>
 
             <div className="min-w-0 lg:col-span-4">
-              <CurrentDebtTotalsPanel
-                totalDebt={summary.totalDebts}
-                cardDebt={summary.totalCreditCardDebt}
-                loanDebt={summary.totalLoanDebt}
-                personalDebt={summary.totalPersonalDebts}
-                paymentDebt={summary.totalPaymentLiabilities}
-              />
-            </div>
-
-            <div className="min-w-0 lg:col-span-12">
-              <ReconciliationPanel cards={data.cards} statements={data.cardStatements.filter((statement) => statement.status === 'open')} />
-            </div>
-
-            <div className="min-w-0 lg:col-span-12">
-              <SpendingRadarPanel expenses={data.cardExpenses} />
-            </div>
-
-            <div className="min-w-0 lg:col-span-7">
-              <CashFlowPanel cashFlow={summary.cashFlow} />
-            </div>
-
-            <div className="min-w-0 lg:col-span-5">
               <SmartInsightsPanel insights={insights} />
-            </div>
-
-            <div className="grid min-w-0 gap-3 min-[520px]:grid-cols-3 lg:col-span-12">
-              <MetricTile label="Toplam limit" value={formatCurrency(summary.totalCreditLimit)} icon={<CreditCard />} tone="indigo" help={dashboardHelp.totalLimit} />
-              <MetricTile label="Kredi ödemesi" value={formatCurrency(summary.totalLoanMonthlyPayment)} icon={<CalendarDays />} tone="stone" help={dashboardHelp.loanPayment} />
-              <MetricTile label="Tahsilat" value={formatCurrency(summary.totalReceivables)} icon={<ArrowUpRight />} tone="emerald" help={dashboardHelp.receivable} />
             </div>
 
             <UpcomingAlertPanel items={upcomingItems} />
 
+            {/* Birikim & harcama */}
+            <div className="min-w-0 lg:col-span-5">
+              <GoalProgressCommand goalProgress={summary.goalProgress} />
+            </div>
+
+            <div className="min-w-0 lg:col-span-7">
+              <SpendingRadarPanel expenses={data.cardExpenses} />
+            </div>
+
+            {/* Mutabakat */}
+            <div className="min-w-0 lg:col-span-12">
+              <ReconciliationPanel cards={data.cards} statements={data.cardStatements.filter((statement) => statement.status === 'open')} />
+            </div>
+
+            {/* Limit & kredi ritmi */}
             {hasCreditLimitGroups ? (
               <div className="min-w-0 lg:col-span-7">
                 <CreditLimitSection groups={summary.creditLimitGroups} totalUsageRate={summary.creditUsageRate} />
@@ -420,6 +424,12 @@ export function DashboardPage() {
               <SalaryPulse trend={summary.salaryTrend} />
             </div>
 
+            <div className="grid min-w-0 gap-3 min-[520px]:grid-cols-2 lg:col-span-12">
+              <MetricTile label="Toplam limit" value={formatCurrency(summary.totalCreditLimit)} icon={<CreditCard />} tone="indigo" help={dashboardHelp.totalLimit} />
+              <MetricTile label="Kredi ödemesi" value={formatCurrency(summary.totalLoanMonthlyPayment)} icon={<CalendarDays />} tone="stone" help={dashboardHelp.loanPayment} />
+            </div>
+
+            {/* Geçmiş — en altta */}
             <div className="min-w-0 lg:col-span-12">
               <HistorySection rows={data.transactionHistory} />
             </div>
