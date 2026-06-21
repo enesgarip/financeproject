@@ -104,8 +104,10 @@ export async function fixIssue(issue: HealthIssue): Promise<UndoBatch | null> {
   }
 
   if (issue.kind === 'cardMissingInstallments' && payload.userId && payload.cardId && payload.cardExpenseId && payload.installmentNos && payload.baseMonth) {
+    const nowIso = currentMonthStart()
     const rows: InsertFor<'card_installments'>[] = payload.installmentNos.map((installmentNo) => {
       const dueMonth = addMonthsToMonthStart(payload.baseMonth ?? currentMonthStart(), installmentNo - 1)
+      const isPast = dueMonth <= nowIso
       const baseAmount = payload.amount ?? 0
       const installmentCount = payload.installmentCount ?? 1
       const amount =
@@ -123,10 +125,10 @@ export async function fixIssue(issue: HealthIssue): Promise<UndoBatch | null> {
         amount,
         description: payload.description ?? 'Taksit',
         category: payload.category ?? 'Diğer',
-        status: 'scheduled',
-        posted_at: null,
-        paid_at: null,
-        note: 'Veri sağlığı kontrolüyle tamamlandı.',
+        status: isPast ? 'posted' : 'scheduled',
+        posted_at: isPast ? dueMonth : null,
+        paid_at: isPast ? dueMonth : null,
+        note: isPast ? 'Geçmiş taksit — veri sağlığı kontrolüyle ödendi olarak eklendi.' : 'Veri sağlığı kontrolüyle tamamlandı.',
       }
     })
 

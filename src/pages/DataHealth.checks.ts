@@ -67,7 +67,7 @@ function activeCardExpense(expense: CardExpense) {
 }
 
 function parseLegacyPaidCount(expense: CardExpense) {
-  const match = expense.note?.match(/(\d+)\/(\d+)\s+taksiti uygulama öncesinde/)
+  const match = expense.note?.match(/(\d+)\/(\d+)\s+taksiti uygulama [öo]ncesinde/)
   if (!match) return 0
   const paid = Number(match[1])
   const total = Number(match[2])
@@ -840,6 +840,7 @@ export function checkCardInstallments(
     const card = cardsById.get(expense.card_id)
 
     if (missingNos.length > 0) {
+      const pastMissingNos = missingNos.filter((installmentNo) => !futureMissingNos.includes(installmentNo))
       issues.push({
         id: `card-expense-missing-${expense.id}`,
         area: 'Kartlar',
@@ -850,25 +851,23 @@ export function checkCardInstallments(
           `Kart: ${cardLabel(card)}`,
           `Eksik: ${missingNos.map((item) => `${item}/${expense.installment_count}`).join(', ')}`,
           paidBefore > 0 ? `${paidBefore} taksit uygulama öncesi ödenmiş işaretli.` : `Başlangıç: ${formatDate(expense.spent_at)}`,
-        ],
-        fixable: futureMissingNos.length > 0,
-        fixLabel: futureMissingNos.length > 0 ? 'Eksik gelecek taksitleri ekle' : undefined,
-        kind: futureMissingNos.length > 0 ? 'cardMissingInstallments' : 'manual',
-        payload:
-          futureMissingNos.length > 0
-            ? {
-                userId: expense.user_id,
-                cardId: expense.card_id,
-                cardExpenseId: expense.id,
-                installmentNos: futureMissingNos,
-                installmentCount: expense.installment_count,
-                baseMonth,
-                amount: roundTL(expense.installment_amount || expense.amount / expense.installment_count),
-                totalAmount: expense.amount,
-                description: expense.description,
-                category: expense.category,
-              }
-            : undefined,
+          pastMissingNos.length > 0 && futureMissingNos.length === 0 ? 'Geçmiş taksitler ödendi olarak eklenecek.' : null,
+        ].filter((item): item is string => Boolean(item)),
+        fixable: true,
+        fixLabel: futureMissingNos.length > 0 ? 'Eksik taksitleri ekle' : 'Geçmiş taksitleri ödendi olarak ekle',
+        kind: 'cardMissingInstallments',
+        payload: {
+          userId: expense.user_id,
+          cardId: expense.card_id,
+          cardExpenseId: expense.id,
+          installmentNos: missingNos,
+          installmentCount: expense.installment_count,
+          baseMonth,
+          amount: roundTL(expense.installment_amount || expense.amount / expense.installment_count),
+          totalAmount: expense.amount,
+          description: expense.description,
+          category: expense.category,
+        },
       })
     }
 
