@@ -275,7 +275,7 @@ export function getSalaryTrend(rows: SalaryHistory[]) {
     current,
     previous,
     difference,
-    percentage: (difference / previous.amount) * 100,
+    percentage: previous.amount > 0 ? (difference / previous.amount) * 100 : 0,
   }
 }
 

@@ -68,8 +68,9 @@ export function summarizeCardLedger(events: CardLedgerEvent[]): CardLedgerSummar
   let debitKurus = 0
   let creditKurus = 0
   for (const event of events) {
-    if (event.amount_kurus >= 0) debitKurus += event.amount_kurus
-    else creditKurus += event.amount_kurus
+    const k = Math.trunc(event.amount_kurus)
+    if (k >= 0) debitKurus += k
+    else creditKurus += k
   }
   return {
     count: events.length,

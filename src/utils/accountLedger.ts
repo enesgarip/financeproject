@@ -68,8 +68,9 @@ export function summarizeAccountLedger(events: AccountLedgerEvent[]): AccountLed
   let inKurus = 0
   let outKurus = 0
   for (const event of events) {
-    if (event.amount_kurus >= 0) inKurus += event.amount_kurus
-    else outKurus += event.amount_kurus
+    const k = Math.trunc(event.amount_kurus)
+    if (k >= 0) inKurus += k
+    else outKurus += k
   }
   return {
     count: events.length,
