@@ -39,9 +39,9 @@ export function DataHealthBadge({ errors, warnings, total }: { errors: number; w
     return (
       <Link
         to="/veri-sagligi"
-        className="flex items-center gap-2 rounded-xl bg-emerald-500/15 px-4 py-2.5 text-sm font-semibold text-emerald-700 ring-1 ring-emerald-500/30 transition hover:bg-emerald-500/20 dark:text-emerald-400 dark:ring-emerald-500/25"
+        className="flex min-h-11 items-center gap-2 rounded-xl bg-emerald-500/15 px-4 py-2.5 text-sm font-semibold text-emerald-700 ring-1 ring-emerald-500/30 transition hover:bg-emerald-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background dark:text-emerald-400 dark:ring-emerald-500/25"
       >
-        <ShieldCheck size={16} className="shrink-0" />
+        <ShieldCheck size={16} className="shrink-0" aria-hidden="true" />
         <span>Veri sağlığı temiz</span>
       </Link>
     )
@@ -55,13 +55,13 @@ export function DataHealthBadge({ errors, warnings, total }: { errors: number; w
   return (
     <Link
       to="/veri-sagligi"
-      className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold ring-1 transition hover:opacity-90 ${
+      className={`flex min-h-11 items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold ring-1 transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background ${
         tone === 'destructive'
           ? 'bg-destructive/12 text-destructive ring-destructive/25'
           : 'bg-warning/12 text-warning ring-warning/25'
       }`}
     >
-      <ShieldAlert size={16} className="shrink-0" />
+      <ShieldAlert size={16} className="shrink-0" aria-hidden="true" />
       <span>Veri sağlığı: {parts.join(' · ')}</span>
       <span className="ml-auto text-xs opacity-70">Kontrol et →</span>
     </Link>
@@ -164,9 +164,14 @@ export function MetricTile({
             <p className="truncate text-[11px] font-bold uppercase text-muted-foreground">{label}</p>
             {help ? <HelpTooltip title={label} content={help} /> : null}
           </div>
-          <p className="mt-1 whitespace-nowrap text-[clamp(0.78rem,3.3vw,1.25rem)] font-extrabold leading-tight tabular-nums text-foreground">{value}</p>
+          <p
+            title={value}
+            className="mt-1 block max-w-full truncate whitespace-nowrap text-[clamp(0.78rem,3.3vw,1.25rem)] font-extrabold leading-tight tabular-nums text-foreground"
+          >
+            {value}
+          </p>
         </div>
-        <div className={`grid size-9 shrink-0 place-items-center rounded-lg ring-1 ${toneClass}`}>{icon}</div>
+        <div className={`grid size-9 shrink-0 place-items-center rounded-lg ring-1 ${toneClass}`} aria-hidden="true">{icon}</div>
       </CardContent>
     </Card>
   )

@@ -66,7 +66,7 @@ export function StatementReminderPanel({ cards, statements }: StatementReminderP
               </div>
               <Link
                 to="/kartlar?section=ekstreler"
-                className="shrink-0 rounded-lg bg-card px-2.5 py-1.5 text-xs font-semibold text-info ring-1 ring-info/20 transition hover:bg-info/10"
+                className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-lg bg-card px-3 py-1.5 text-xs font-semibold text-info ring-1 ring-info/20 transition hover:bg-info/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background"
               >
                 Kartlara git
               </Link>

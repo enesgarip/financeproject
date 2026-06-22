@@ -53,10 +53,14 @@ export function DonutChart({
     8,
     Math.min(10, Math.floor((centerMaxWidth / Math.max(centerLabel.length, 1)) * 1.6)),
   )
+  const chartSummary = `${totalLabel}: ${formatCurrency(total)}. ${data
+    .map((slice) => `${slice.name} ${formatCurrency(slice.value)}`)
+    .join(', ')}.`
 
   if (data.length === 0 || total === 0) {
     return (
       <div
+        role="status"
         className="flex items-center justify-center rounded-xl bg-muted/30 text-sm text-muted-foreground"
         style={{ height: size }}
       >
@@ -68,7 +72,12 @@ export function DonutChart({
   return (
     <div className="flex flex-col gap-4">
       {/* Chart */}
-      <div className="relative mx-auto min-w-0" style={{ width: size, height: size, minHeight: size }}>
+      <div
+        className="relative mx-auto min-w-0"
+        role="img"
+        aria-label={chartSummary}
+        style={{ width: size, height: size, minHeight: size }}
+      >
         {/* Center label overlay */}
         <div
           className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-0.5"
@@ -140,14 +149,17 @@ export function DonutChart({
               <li
                 key={entry.name}
                 className={cn(
-                  'flex cursor-default items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-xs transition-colors',
+                  'flex cursor-default items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background',
                   isActive ? 'bg-muted/60' : 'hover:bg-muted/40',
                 )}
+                tabIndex={0}
                 onMouseEnter={() => setActiveIndex(index)}
                 onMouseLeave={() => setActiveIndex(null)}
+                onFocus={() => setActiveIndex(index)}
+                onBlur={() => setActiveIndex(null)}
               >
                 <span className="flex min-w-0 items-center gap-1.5">
-                  <span className="size-2 shrink-0 rounded-full" style={{ background: color }} />
+                  <span className="size-2 shrink-0 rounded-full" style={{ background: color }} aria-hidden="true" />
                   <span className="truncate text-muted-foreground">{entry.name}</span>
                 </span>
                 <span className="flex shrink-0 items-center gap-2">

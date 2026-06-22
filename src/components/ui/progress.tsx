@@ -33,7 +33,8 @@ function Progress({
   size?: "xs" | "sm" | "default" | "lg"
   animated?: boolean
 }) {
-  const resolvedColor = color ?? (autoColor ? getAutoColor(value ?? 0) : "primary")
+  const safeValue = Math.min(100, Math.max(0, value ?? 0))
+  const resolvedColor = color ?? (autoColor ? getAutoColor(safeValue) : "primary")
   const colorClass = colorMap[resolvedColor]
 
   const heightClass = {
@@ -52,6 +53,7 @@ function Progress({
         heightClass,
         className,
       )}
+      value={safeValue}
       {...props}
     >
       <ProgressPrimitive.Indicator
@@ -61,7 +63,7 @@ function Progress({
           colorClass,
           animated && "transition-transform duration-700 ease-out",
         )}
-        style={{ transform: `translateX(-${100 - (value || 0)}%)` }}
+        style={{ transform: `translateX(-${100 - safeValue}%)` }}
       />
     </ProgressPrimitive.Root>
   )

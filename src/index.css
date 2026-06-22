@@ -81,9 +81,9 @@
   --accent-foreground:    #3730a3;
   --destructive:          #dc2626;
   --destructive-foreground: #ffffff;
-  --success:              #059669;
+  --success:              #047857;
   --success-foreground:   #ffffff;
-  --warning:              #d97706;
+  --warning:              #92400e;
   --warning-foreground:   #fefce8;
   --info:                 #2563eb;
   --info-foreground:      #eff6ff;
@@ -431,6 +431,13 @@ button:disabled {
 @keyframes pulse-border {
   0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--destructive) 35%, transparent); }
   50%       { box-shadow: 0 0 0 4px color-mix(in srgb, var(--destructive) 10%, transparent); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-shimmer,
+  .pulse-border {
+    animation: none;
+  }
 }
 
 @keyframes fade-in-up {

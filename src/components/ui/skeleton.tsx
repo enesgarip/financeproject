@@ -1,10 +1,11 @@
 import { cn } from "@/lib/utils"
 
 /** Single skeleton block with shimmer sweep animation */
-function Skeleton({ className, ...props }: React.ComponentProps<"div">) {
+function Skeleton({ className, "aria-hidden": ariaHidden = true, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="skeleton"
+      aria-hidden={ariaHidden}
       className={cn("skeleton-shimmer rounded-xl", className)}
       {...props}
     />
@@ -90,7 +91,14 @@ function SkeletonTable({ rows = 5 }: { rows?: number }) {
 
 function SkeletonDashboard() {
   return (
-    <div className="grid gap-5 lg:grid-cols-12 lg:items-start">
+    <div
+      role="status"
+      aria-live="polite"
+      aria-busy="true"
+      aria-label="Dashboard yükleniyor"
+      className="grid gap-5 lg:grid-cols-12 lg:items-start"
+    >
+      <span className="sr-only">Dashboard yükleniyor</span>
       {/* Veri sağlığı badge */}
       <div className="lg:col-span-12">
         <Skeleton className="h-10 w-48 rounded-full" />

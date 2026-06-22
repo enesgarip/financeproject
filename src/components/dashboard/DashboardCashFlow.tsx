@@ -30,7 +30,7 @@ export function CashFlowMetric({ label, value, tone }: { label: string; value: s
   return (
     <div className="min-w-0 rounded-lg bg-muted/55 px-2.5 py-2 min-[430px]:px-3">
       <p className="truncate text-[11px] font-bold uppercase text-muted-foreground">{label}</p>
-      <p className={`mt-1 whitespace-nowrap text-[clamp(0.7rem,3vw,1rem)] font-extrabold leading-tight tabular-nums ${toneClass}`}>
+      <p title={value} className={`mt-1 block max-w-full truncate whitespace-nowrap text-[clamp(0.7rem,3vw,1rem)] font-extrabold leading-tight tabular-nums ${toneClass}`}>
         {value}
       </p>
     </div>
@@ -147,18 +147,18 @@ export function CashFlowPanel({ cashFlow }: { cashFlow: CashFlowSummary }) {
             <span className="text-muted-foreground">Gelire göre çıkış</span>
             <span className="font-mono font-semibold tabular-nums text-foreground">%{Math.round(outflowRate)}</span>
           </div>
-          <Progress value={outflowRate} autoColor size="default" />
+          <Progress value={outflowRate} autoColor size="default" aria-label={`Gelire göre çıkış %${Math.round(outflowRate)}`} />
         </div>
 
         {/* Detail grid */}
         <div className="grid gap-1.5 text-xs text-muted-foreground min-[430px]:grid-cols-2">
-          <span>🏦 Kart: <span className="font-mono font-medium text-foreground">{formatCurrency(cashFlow.cardOutflow)}</span></span>
-          <span>📋 Kredi: <span className="font-mono font-medium text-foreground">{formatCurrency(cashFlow.loanOutflow)}</span></span>
-          <span>🧾 Fatura: <span className="font-mono font-medium text-foreground">{formatCurrency(cashFlow.paymentOutflow)}</span></span>
-          <span>👤 Kişisel: <span className="font-mono font-medium text-foreground">{formatCurrency(cashFlow.debtOutflow)}</span></span>
+          <span>Kart: <span className="font-mono font-medium text-foreground">{formatCurrency(cashFlow.cardOutflow)}</span></span>
+          <span>Kredi: <span className="font-mono font-medium text-foreground">{formatCurrency(cashFlow.loanOutflow)}</span></span>
+          <span>Fatura: <span className="font-mono font-medium text-foreground">{formatCurrency(cashFlow.paymentOutflow)}</span></span>
+          <span>Kişisel: <span className="font-mono font-medium text-foreground">{formatCurrency(cashFlow.debtOutflow)}</span></span>
           <span>Maaş: <span className="font-mono font-medium text-success">{formatCurrency(cashFlow.salaryIncome)}</span></span>
           {cashFlow.receivableIncome > 0 ? (
-            <span>📥 Tahsilat: <span className="font-mono font-medium text-success">{formatCurrency(cashFlow.receivableIncome)}</span></span>
+            <span>Tahsilat: <span className="font-mono font-medium text-success">{formatCurrency(cashFlow.receivableIncome)}</span></span>
           ) : null}
         </div>
 
@@ -256,7 +256,7 @@ export function CashFlowCalendarPanel({ items, cashFlow }: { items: UpcomingItem
       <CardContent className="space-y-3 pt-0">
         {groups.length === 0 ? (
           <div className="flex items-center gap-3 rounded-lg bg-success/10 px-3 py-3 text-sm text-success">
-            <CheckCircle2 className="size-5 shrink-0" />
+            <CheckCircle2 className="size-5 shrink-0" aria-hidden="true" />
             <span>Yaklaşan ödeme yok; bu dönem nakit takvimi sakin görünüyor.</span>
           </div>
         ) : (
@@ -275,7 +275,7 @@ export function CashFlowCalendarPanel({ items, cashFlow }: { items: UpcomingItem
                     type="button"
                     onClick={() => setSelectedDayKey(group.dayKey)}
                     aria-pressed={isSelected}
-                    className={`rounded-lg border p-3 text-left transition ${
+                    className={`rounded-lg border p-3 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background ${
                       isSelected
                         ? 'border-emerald-300 bg-emerald-50/80 ring-1 ring-emerald-200 dark:border-emerald-900/80 dark:bg-emerald-950/25 dark:ring-emerald-900/70'
                         : 'border-border bg-card/70 hover:bg-muted/45'
@@ -329,7 +329,7 @@ export function CashFlowCalendarPanel({ items, cashFlow }: { items: UpcomingItem
                         </p>
                       </div>
                       <div className="flex shrink-0 flex-col items-end gap-1">
-                        <span className={`whitespace-nowrap rounded-lg px-2 py-1 text-xs font-black tabular-nums ${
+                        <span title={item.value} className={`max-w-[9rem] truncate whitespace-nowrap rounded-lg px-2 py-1 text-xs font-black tabular-nums ${
                           item.settlement === 'credit_card'
                             ? 'bg-info/10 text-info'
                             : 'bg-emerald-100 text-emerald-900 dark:bg-emerald-900/45 dark:text-emerald-100'
@@ -350,9 +350,9 @@ export function CashFlowCalendarPanel({ items, cashFlow }: { items: UpcomingItem
                 type="button"
                 onClick={() => setShowAll((current) => !current)}
                 aria-expanded={showAll}
-                className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-muted/55 px-3 py-2 text-xs font-black text-muted-foreground shadow-sm transition hover:bg-muted hover:text-foreground"
+                className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-border bg-muted/55 px-3 py-2 text-xs font-black text-muted-foreground shadow-sm transition hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background"
               >
-                {showAll ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+                {showAll ? <ChevronUp size={15} aria-hidden="true" /> : <ChevronDown size={15} aria-hidden="true" />}
                 {showAll ? 'Takvimi daralt' : `Tüm günleri göster (${groups.length})`}
               </button>
             ) : null}

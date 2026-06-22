@@ -75,9 +75,9 @@ export function FocusActionPanel({ actions, cashFlow }: { actions: FocusAction[]
                 type="button"
                 onClick={() => setShowAll((current) => !current)}
                 aria-expanded={showAll}
-                className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-muted/55 px-3 py-2 text-xs font-black text-muted-foreground shadow-sm transition hover:bg-muted hover:text-foreground"
+                className="mt-2 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-border bg-muted/55 px-3 py-2 text-xs font-black text-muted-foreground shadow-sm transition hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background"
               >
-                {showAll ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+                {showAll ? <ChevronUp size={15} aria-hidden="true" /> : <ChevronDown size={15} aria-hidden="true" />}
                 {showAll ? 'Aksiyonları daralt' : `Tüm aksiyonları göster (${actions.length})`}
               </button>
             ) : null}
@@ -115,10 +115,10 @@ function FocusActionCard({ action }: { action: FocusAction }) {
   return (
     <Link
       to={action.to}
-      className={`group flex min-w-0 flex-col justify-between rounded-lg border p-3 shadow-sm ring-1 transition hover:-translate-y-0.5 hover:shadow-[var(--shadow-card)] ${toneClass}`}
+      className={`group flex min-w-0 flex-col justify-between rounded-lg border p-3 shadow-sm ring-1 transition hover:-translate-y-0.5 hover:shadow-[var(--shadow-card)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background ${toneClass}`}
     >
       <div className="flex items-start gap-3">
-        <div className={`grid size-10 shrink-0 place-items-center rounded-lg ${iconClass}`}>
+        <div className={`grid size-10 shrink-0 place-items-center rounded-lg ${iconClass}`} aria-hidden="true">
           <Icon size={18} />
         </div>
         <div className="min-w-0">
@@ -138,7 +138,25 @@ export function SpendingRadarPanel({ expenses }: { expenses: CardExpense[] }) {
   const { anomalies, recurring } = useMemo(() => detectSpendingAnomalies(expenses), [expenses])
 
   const hasContent = anomalies.length > 0 || recurring.length > 0
-  if (!hasContent) return null
+  if (!hasContent) {
+    return (
+      <Card className="border-0 shadow-[var(--shadow-card)] ring-1 ring-border/80">
+        <CardHeader className="pb-1">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <CardTitle className="text-base">Harcama radarı</CardTitle>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {expenses.length === 0
+                  ? 'Henüz kart harcaması yok; ilk kayıtlar geldikçe burada sinyal oluşur.'
+                  : 'Sıradışı kategori artışı veya tekrar eden yeni gider görünmüyor.'}
+              </p>
+            </div>
+            <CheckCircle2 size={16} className="mt-0.5 shrink-0 text-success" aria-hidden="true" />
+          </div>
+        </CardHeader>
+      </Card>
+    )
+  }
 
   return (
     <Card className="border-0 shadow-[var(--shadow-card)] ring-1 ring-border/80">
@@ -148,7 +166,7 @@ export function SpendingRadarPanel({ expenses }: { expenses: CardExpense[] }) {
             <CardTitle className="text-base">Harcama radari</CardTitle>
             <p className="mt-1 text-xs text-muted-foreground">Ortalamayı aşan kategoriler ve tekrar eden giderler.</p>
           </div>
-          <Lightbulb size={16} className="mt-0.5 shrink-0 text-amber-500" />
+          <Lightbulb size={16} className="mt-0.5 shrink-0 text-amber-500" aria-hidden="true" />
         </div>
       </CardHeader>
       <CardContent className="space-y-3 pt-1">
@@ -282,9 +300,9 @@ export function UpcomingAlertPanel({ items }: { items: UpcomingItem[] }) {
                 type="button"
                 onClick={() => setShowAll((current) => !current)}
                 aria-expanded={showAll}
-                className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-amber-200 bg-card/70 px-3 py-2 text-xs font-bold text-amber-900 shadow-sm transition hover:bg-card dark:border-amber-900/70 dark:text-amber-100"
+                className="mt-2 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-amber-200 bg-card/70 px-3 py-2 text-xs font-bold text-amber-900 shadow-sm transition hover:bg-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background dark:border-amber-900/70 dark:text-amber-100"
               >
-                {showAll ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+                {showAll ? <ChevronUp size={15} aria-hidden="true" /> : <ChevronDown size={15} aria-hidden="true" />}
                 {showAll ? 'Daralt' : `Tümünü göster (${items.length})`}
               </button>
             ) : null}

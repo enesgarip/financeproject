@@ -359,6 +359,7 @@ export function ProgressStrip({
       </div>
       <Progress
         value={clampedValue}
+        aria-label={`${label}: %${Math.round(clampedValue)}`}
         color={progressColor as 'primary' | 'success' | 'warning' | 'danger' | 'info'}
         size={size === 'lg' ? 'lg' : size === 'sm' ? 'sm' : 'default'}
       />

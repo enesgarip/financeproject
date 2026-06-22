@@ -1,4 +1,4 @@
-import { AlertTriangle, ArrowUpRight, CalendarDays, ChevronDown, CreditCard, Landmark } from 'lucide-react'
+import { AlertTriangle, ArrowUpRight, CalendarDays, ChevronDown, CreditCard, Landmark, RefreshCw } from 'lucide-react'
 import { AnimatePresence, motion, useReducedMotion, type Variants } from 'framer-motion'
 import { useCallback, useMemo, useState } from 'react'
 import { useAuth } from '../auth/useAuth'
@@ -62,10 +62,12 @@ import {
   totalCreditLimit,
 } from '../utils/financeSummary'
 import { buildAttentionLine } from '../utils/attention'
+import { buildBudgetAlerts } from '../utils/budgetAlerts'
 import { buildHealthCounts } from '../utils/dataHealthSummary'
 import { buildSmartInsights, buildFocusActions, reconciliationDriftCount } from '../utils/dashboardInsights'
 import { buildDashboardMonthlyLoad, buildDashboardUpcomingItems } from '../utils/dashboardUpcoming'
 import { formatCurrency } from '../utils/formatCurrency'
+import { buildStatementReminders } from '../utils/statementReminder'
 import { SkeletonDashboard } from '../components/ui/skeleton'
 
 type DashboardData = {
@@ -235,6 +237,14 @@ export function DashboardPage() {
   )
   const attentionLine = useMemo(() => buildAttentionLine(data, outflowUpcoming), [data, outflowUpcoming])
   const healthCounts = useMemo(() => buildHealthCounts(data), [data])
+  const hasStatementReminders = useMemo(
+    () => buildStatementReminders(data.cards, data.cardStatements).length > 0,
+    [data.cards, data.cardStatements],
+  )
+  const hasBudgetAlerts = useMemo(
+    () => buildBudgetAlerts(data.budgets, data.cardExpenses).length > 0,
+    [data.budgets, data.cardExpenses],
+  )
 
   const [showDetails, setShowDetails] = useState(() => {
     try { return localStorage.getItem('dashboard-details') === '1' } catch { return false }
@@ -253,12 +263,39 @@ export function DashboardPage() {
   }
 
   if (error) {
-    return <p className="rounded-xl border border-destructive/20 bg-destructive/8 p-3 text-sm font-medium text-destructive">{error}</p>
+    return (
+      <section
+        role="alert"
+        aria-live="assertive"
+        className="rounded-2xl border border-destructive/20 bg-destructive/8 p-4 text-sm text-destructive shadow-[var(--shadow-card)]"
+      >
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex min-w-0 gap-3">
+            <AlertTriangle className="mt-0.5 size-5 shrink-0" aria-hidden="true" />
+            <div className="min-w-0">
+              <h2 className="font-black text-destructive">Dashboard verileri yüklenemedi</h2>
+              <p className="mt-1 leading-6 text-destructive/85">{error}</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => void snapshotQuery.refetch()}
+            disabled={snapshotQuery.isFetching}
+            className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl border border-destructive/25 bg-card px-4 text-sm font-black text-destructive transition hover:bg-destructive/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <RefreshCw className={`size-4 ${snapshotQuery.isFetching ? 'animate-spin' : ''}`} aria-hidden="true" />
+            {snapshotQuery.isFetching ? 'Yenileniyor' : 'Tekrar dene'}
+          </button>
+        </div>
+      </section>
+    )
   }
 
   const hasCreditLimitGroups = summary.creditLimitGroups.length > 0
+  const hasCompanionPanels = hasStatementReminders || hasBudgetAlerts
   const upcomingTotal = sum(outflowUpcoming, (item) => item.amount)
   const itemVariant = prefersReduced ? noMotion : fadeUp
+  const detailsPanelId = 'dashboard-details-panel'
 
   return (
     <motion.section
@@ -279,7 +316,7 @@ export function DashboardPage() {
                 : 'bg-warning/8 text-warning ring-warning/25'
             }`}
           >
-            <AlertTriangle size={17} className="mt-0.5 shrink-0" />
+            <AlertTriangle size={17} className="mt-0.5 shrink-0" aria-hidden="true" />
             <span className="min-w-0">{attentionLine.text}</span>
           </p>
         </motion.div>
@@ -324,10 +361,17 @@ export function DashboardPage() {
         <FocusActionPanel actions={focusActions} cashFlow={summary.cashFlow} />
       </motion.div>
 
-      <motion.div variants={itemVariant} className="grid min-w-0 gap-3 min-[760px]:grid-cols-2 lg:col-span-12">
-        <StatementReminderPanel cards={data.cards} statements={data.cardStatements} />
-        <BudgetAlertPanel budgets={data.budgets} expenses={data.cardExpenses} />
-      </motion.div>
+      {hasCompanionPanels ? (
+        <motion.div
+          variants={itemVariant}
+          className={`grid min-w-0 gap-3 lg:col-span-12 ${
+            hasStatementReminders && hasBudgetAlerts ? 'min-[760px]:grid-cols-2' : ''
+          }`}
+        >
+          {hasStatementReminders ? <StatementReminderPanel cards={data.cards} statements={data.cardStatements} /> : null}
+          {hasBudgetAlerts ? <BudgetAlertPanel budgets={data.budgets} expenses={data.cardExpenses} /> : null}
+        </motion.div>
+      ) : null}
 
       {/* ── Detay toggle ── */}
 
@@ -335,11 +379,14 @@ export function DashboardPage() {
         <button
           type="button"
           onClick={toggleDetails}
-          className="group flex w-full items-center justify-center gap-2 rounded-xl border border-border/60 bg-card/80 px-4 py-3 text-sm font-bold text-muted-foreground transition hover:border-primary/30 hover:bg-primary/5 hover:text-foreground"
+          aria-expanded={showDetails}
+          aria-controls={detailsPanelId}
+          className="group flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-border/60 bg-card/80 px-4 py-3 text-sm font-bold text-muted-foreground transition hover:border-primary/30 hover:bg-primary/5 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background"
         >
           <span>{showDetails ? 'Detayları gizle' : 'Tüm detayları göster'}</span>
           <ChevronDown
             size={16}
+            aria-hidden="true"
             className={`transition-transform duration-200 ${showDetails ? 'rotate-180' : 'group-hover:translate-y-0.5'}`}
           />
         </button>
@@ -351,10 +398,11 @@ export function DashboardPage() {
         {showDetails ? (
           <motion.div
             key="dashboard-details"
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.3, ease: 'easeInOut' }}
+            id={detailsPanelId}
+            initial={prefersReduced ? false : { opacity: 0, height: 0 }}
+            animate={prefersReduced ? { opacity: 1 } : { opacity: 1, height: 'auto' }}
+            exit={prefersReduced ? { opacity: 1 } : { opacity: 0, height: 0 }}
+            transition={prefersReduced ? { duration: 0 } : { duration: 0.3, ease: 'easeInOut' }}
             className="grid min-w-0 gap-5 overflow-hidden lg:col-span-12 lg:grid-cols-12 lg:items-start"
           >
             {/* ─ Nakit akışı bölümü ─ */}

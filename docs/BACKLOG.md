@@ -82,6 +82,8 @@
 - ~~Split dashboard presentation panels into focused component modules.~~ DONE.
   - `DashboardPanels.tsx` now keeps hero/goal/metric/pulse pieces and shared panel types.
   - `DashboardCards.tsx`, `DashboardCashFlow.tsx`, and `DashboardInsights.tsx` own card/debt/history, cash-flow, and insight/action panels.
+- ~~Dashboard UX/accessibility audit fixes.~~ DONE.
+  - 2026-06-22: Dashboard loading/error states, optional alert wrappers, detail toggle ARIA/reduced-motion behavior, chart/progress labels, small touch targets, and semantic contrast tokens were tightened.
 
 ## P2 - UX / Maintainability (yeni fikirler)
 

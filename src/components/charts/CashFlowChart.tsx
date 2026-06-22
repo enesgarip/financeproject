@@ -66,10 +66,14 @@ type CashFlowChartProps = {
 
 export function CashFlowChart({ data, height = 220 }: CashFlowChartProps) {
   const [chartRef, chartWidth] = useChartWidth()
+  const chartSummary = data
+    .map((point) => `${point.label}: gelir ${formatCurrency(point.income)}, gider ${formatCurrency(point.outflow)}, net ${formatCurrency(point.net)}`)
+    .join('; ')
 
   if (data.length === 0) {
     return (
       <div
+        role="status"
         className="flex items-center justify-center rounded-xl bg-muted/30 text-sm text-muted-foreground"
         style={{ height }}
       >
@@ -79,7 +83,13 @@ export function CashFlowChart({ data, height = 220 }: CashFlowChartProps) {
   }
 
   return (
-    <div ref={chartRef} className="min-w-0" style={{ height, minHeight: height }}>
+    <div
+      ref={chartRef}
+      role="img"
+      aria-label={`Nakit akışı grafiği. ${chartSummary}`}
+      className="min-w-0"
+      style={{ height, minHeight: height }}
+    >
       {chartWidth > 0 ? (
         <AreaChart width={chartWidth} height={height} data={data} margin={{ top: 8, right: 4, left: 0, bottom: 0 }}>
         <defs>

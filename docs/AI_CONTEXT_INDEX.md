@@ -1,6 +1,6 @@
 # AI Context Index
 
-Last reviewed: 2026-06-21
+Last reviewed: 2026-06-22
 
 This file is the cheapest starting point for future AI/Codex sessions. Its job
 is to reduce repeated repo discovery: read this first, choose the smallest
@@ -25,7 +25,7 @@ frontend -> RPC, or RPC -> migration.
 | `CLAUDE.md` | A new AI agent needs persistent repo rules before acting | Stack summary, layer boundaries, money-model warnings, deployment gotchas |
 | `docs/CODEX_GUIDE.md` | A Codex session needs working rules and finish checklist | How to work in this repo with low regression risk |
 | `docs/PROJECT_CONTEXT.md` | You need the product map or route/table overview | Product purpose, app structure, important domains, route model |
-| `docs/DASHBOARD_ARCHITECTURE.md` | You are changing `/` dashboard orchestration or dashboard-specific derived math | Dashboard data flow, utility ownership, obligation input, panel boundaries |
+| `docs/DASHBOARD_ARCHITECTURE.md` | You are changing `/` dashboard orchestration, dashboard-specific derived math, or dashboard UX/a11y behavior | Dashboard data flow, utility ownership, obligation input, panel boundaries, UX/a11y contract |
 | `docs/CARDS_ARCHITECTURE.md` | You are changing `/kartlar` orchestration, card/account panels, or card page module boundaries | Cards page data flow, module map, side-effect boundaries, payment flow |
 | `docs/DATA_HEALTH_ARCHITECTURE.md` | You are changing `/veri-sagligi`, data-health checks, safe fixes, undo, backup, or reset flows | Data-health lifecycle, issue/fix ownership, write safety, invariant sources |
 | `docs/KNOWN_RISKS.md` | You are choosing risk level or reviewing a change | Known failure modes and where to be extra cautious |
@@ -85,6 +85,7 @@ ESLint blocks `src/{pages,components,utils,hooks}` from importing
 | Is this migration safe to release? | `docs/MIGRATION_COMPATIBILITY_CHECKLIST.md` |
 | Where does dashboard data come from? | `src/app/useFinanceSnapshot.ts` and `src/data/repositories/financeSnapshotRepo.ts` |
 | Where should dashboard calculations live? | `docs/DASHBOARD_ARCHITECTURE.md`; start with its Page-Local vs Shared Calculations table |
+| How should dashboard loading/error/empty/chart states behave? | `docs/DASHBOARD_ARCHITECTURE.md`; see its UX And Accessibility Contract |
 | How should money be rounded/compared? | `src/utils/money.ts`; avoid new ad hoc tolerances |
 | How should search text be normalized? | `src/utils/searchText.ts`; use it instead of `toLocaleLowerCase('tr-TR')` for matching/filtering |
 | How are shared credit limits grouped? | `buildCreditLimitGroups` in `src/utils/financeSummary.ts` |

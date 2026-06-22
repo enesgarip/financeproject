@@ -1,6 +1,6 @@
 # Dashboard Architecture Note
 
-Last reviewed: 2026-06-15
+Last reviewed: 2026-06-22
 
 This note is a quick map for changes touching `/` (`DashboardPage`). Start with
 `CLAUDE.md` and `docs/AI_CONTEXT_INDEX.md`; use this file after you know the
@@ -112,6 +112,26 @@ Current module split:
 
 If a panel grows a complex local calculation, extract it to a utility and cover
 it with focused Vitest tests.
+
+## UX And Accessibility Contract
+
+Dashboard panels are dense operational UI, so keep the interaction contract
+predictable:
+
+- The loading dashboard skeleton must expose a polite loading state
+  (`role="status"` / `aria-busy`) while individual skeleton blocks stay
+  decorative.
+- Route-level load errors must be actionable. Show a clear failure title, the
+  underlying message, and a retry action wired to the snapshot query.
+- Optional alert panels should not leave empty grid rows or columns when there
+  is no alert content. Either render the wrapper conditionally or show a useful
+  positive empty state.
+- Custom links/buttons used as actions, filters, or show-more toggles should
+  keep a visible focus ring and a minimum 44px touch target.
+- Progress bars and charts need accessible labels or summaries. Visual tooltip
+  content must not be the only way to understand a chart.
+- Respect `prefers-reduced-motion` for route/detail animations and CSS shimmer
+  effects.
 
 ## Verification
 
