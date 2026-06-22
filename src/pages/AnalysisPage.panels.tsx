@@ -28,45 +28,47 @@ import { analyzeQuietDays } from '../utils/quietDays'
 import { StatPill } from './AnalysisPage.atoms'
 
 export function UpcomingInstallments({ data }: { data: AnalysisData }) {
-  const cardsById = new Map(data.cards.map((card) => [card.id, card]))
-  const loansById = new Map(data.loans.map((loan) => [loan.id, loan]))
-  const monthKey = dateInputValue(startOfMonth())
-  const cardItems = data.cardInstallments
-    .filter((item) => item.status !== 'paid' && (item.status === 'scheduled' || item.due_month >= monthKey))
-    .map((item) => {
-      const isPastScheduled = item.status === 'scheduled' && item.due_month < monthKey
-      const statusLabel = isPastScheduled ? 'Geçmiş dönem' : item.status === 'posted' ? 'Bu dönem' : 'Planlı'
+  const upcoming = useMemo(() => {
+    const cardsById = new Map(data.cards.map((card) => [card.id, card]))
+    const loansById = new Map(data.loans.map((loan) => [loan.id, loan]))
+    const monthKey = dateInputValue(startOfMonth())
+    const cardItems = data.cardInstallments
+      .filter((item) => item.status !== 'paid' && (item.status === 'scheduled' || item.due_month >= monthKey))
+      .map((item) => {
+        const isPastScheduled = item.status === 'scheduled' && item.due_month < monthKey
+        const statusLabel = isPastScheduled ? 'Geçmiş dönem' : item.status === 'posted' ? 'Bu dönem' : 'Planlı'
 
-      return {
-        id: `card-${item.id}`,
-        title: item.description,
-        subtitle: `${cardsById.get(item.card_id)?.card_name ?? 'Kart'} · ${formatMonth(item.due_month)} · ${item.installment_no}/${item.installment_count}`,
-        amount: item.amount,
-        sortDate: item.due_month,
-        statusLabel,
-        tone: isPastScheduled ? 'destructive' : item.status === 'posted' ? 'default' : 'secondary',
-      }
-    })
-  const loanItems = data.loanInstallments
-    .filter((item) => item.status === 'bekliyor')
-    .map((item) => {
-      const loan = loansById.get(item.loan_id)
-      const remaining = daysUntil(item.due_date)
-      const statusLabel = remaining !== null && remaining < 0 ? 'Gecikmiş' : remaining === 0 ? 'Bugün' : 'Bekliyor'
+        return {
+          id: `card-${item.id}`,
+          title: item.description,
+          subtitle: `${cardsById.get(item.card_id)?.card_name ?? 'Kart'} · ${formatMonth(item.due_month)} · ${item.installment_no}/${item.installment_count}`,
+          amount: item.amount,
+          sortDate: item.due_month,
+          statusLabel,
+          tone: isPastScheduled ? 'destructive' : item.status === 'posted' ? 'default' : 'secondary',
+        }
+      })
+    const loanItems = data.loanInstallments
+      .filter((item) => item.status === 'bekliyor')
+      .map((item) => {
+        const loan = loansById.get(item.loan_id)
+        const remaining = daysUntil(item.due_date)
+        const statusLabel = remaining !== null && remaining < 0 ? 'Gecikmiş' : remaining === 0 ? 'Bugün' : 'Bekliyor'
 
-      return {
-        id: `loan-${item.id}`,
-        title: loan ? loan.loan_name : 'Kredi taksidi',
-        subtitle: `${loan?.bank_name ?? 'Kredi'} · ${formatDate(item.due_date)} · ${item.installment_no}. taksit`,
-        amount: item.amount,
-        sortDate: item.due_date,
-        statusLabel,
-        tone: remaining !== null && remaining < 0 ? 'destructive' : 'outline',
-      }
-    })
-  const upcoming = [...cardItems, ...loanItems]
-    .sort((a, b) => a.sortDate.localeCompare(b.sortDate) || b.amount - a.amount)
-    .slice(0, 8)
+        return {
+          id: `loan-${item.id}`,
+          title: loan ? loan.loan_name : 'Kredi taksidi',
+          subtitle: `${loan?.bank_name ?? 'Kredi'} · ${formatDate(item.due_date)} · ${item.installment_no}. taksit`,
+          amount: item.amount,
+          sortDate: item.due_date,
+          statusLabel,
+          tone: remaining !== null && remaining < 0 ? 'destructive' : 'outline',
+        }
+      })
+    return [...cardItems, ...loanItems]
+      .sort((a, b) => a.sortDate.localeCompare(b.sortDate) || b.amount - a.amount)
+      .slice(0, 8)
+  }, [data.cards, data.loans, data.cardInstallments, data.loanInstallments])
 
   return (
     <Card className="border-border/70 shadow-[var(--shadow-card)] lg:col-span-5">

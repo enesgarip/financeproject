@@ -187,47 +187,52 @@ function getPaymentAmountLabel(payment: Payment) {
 }
 
 function PaymentsOverview({ rows }: { rows: Payment[] }) {
-  if (rows.length === 0) return null
+  const summary = useMemo(() => {
+    if (rows.length === 0) return null
 
-  const currentMonth = startOfMonth(new Date())
-  const nextMonthStart = startOfMonth(addMonths(currentMonth, 1))
+    const currentMonth = startOfMonth(new Date())
+    const nextMonthStart = startOfMonth(addMonths(currentMonth, 1))
 
-  // Bu ay vadesi olan ve henüz ödenmemiş ödemeler
-  const pendingThisMonth = rows.filter((row) => paymentOccurrenceInMonth(row, currentMonth) !== null)
+    const pendingThisMonth = rows.filter((row) => paymentOccurrenceInMonth(row, currentMonth) !== null)
 
-  // Bu ay ödenen aylık ödemeler: due_date bir sonraki aya ilerlemiş (pay_payment RPC bunu yapar)
-  const paidMonthlyThisMonth = rows.filter((row) =>
-    row.recurrence === 'monthly' &&
-    row.status === 'bekliyor' &&
-    paymentOccurrenceInMonth(row, currentMonth) === null &&
-    paymentOccurrenceInMonth(row, nextMonthStart) !== null,
-  )
+    const paidMonthlyThisMonth = rows.filter((row) =>
+      row.recurrence === 'monthly' &&
+      row.status === 'bekliyor' &&
+      paymentOccurrenceInMonth(row, currentMonth) === null &&
+      paymentOccurrenceInMonth(row, nextMonthStart) !== null,
+    )
 
-  // Bu ay ödenen tek seferlik ödemeler (vade tarihi bu ayda olanlar)
-  const monthStart = dateInputValue(currentMonth)
-  const monthEnd = dateInputValue(nextMonthStart)
-  const paidOneTimeThisMonth = rows.filter((row) =>
-    row.recurrence !== 'monthly' &&
-    row.status === 'ödendi' &&
-    row.due_date >= monthStart && row.due_date < monthEnd,
-  )
+    const monthStart = dateInputValue(currentMonth)
+    const monthEnd = dateInputValue(nextMonthStart)
+    const paidOneTimeThisMonth = rows.filter((row) =>
+      row.recurrence !== 'monthly' &&
+      row.status === 'ödendi' &&
+      row.due_date >= monthStart && row.due_date < monthEnd,
+    )
 
-  const paidThisMonthCount = paidMonthlyThisMonth.length + paidOneTimeThisMonth.length
-  const totalThisMonth = pendingThisMonth.length + paidThisMonthCount
+    const paidThisMonthCount = paidMonthlyThisMonth.length + paidOneTimeThisMonth.length
+    const totalThisMonth = pendingThisMonth.length + paidThisMonthCount
 
-  const pendingTotal = sumTL(pendingThisMonth.map((row) => row.amount))
-  const recurringCount = rows.filter((row) => row.recurrence === 'monthly').length
-  const paidRate = totalThisMonth > 0 ? Math.min(100, (paidThisMonthCount / totalThisMonth) * 100) : 0
-  const overdueCount = pendingThisMonth.filter((row) => {
-    const remaining = daysUntil(row.due_date)
-    return remaining !== null && remaining < 0
-  }).length
-  const nextPayment = [...pendingThisMonth].sort((a, b) => a.due_date.localeCompare(b.due_date))[0]
-  const statusLabel = overdueCount > 0
-    ? `${overdueCount} geciken`
-    : pendingThisMonth.length > 0
-      ? `${pendingThisMonth.length} bekleyen`
-      : 'Takvim temiz'
+    const pendingTotal = sumTL(pendingThisMonth.map((row) => row.amount))
+    const recurringCount = rows.filter((row) => row.recurrence === 'monthly').length
+    const paidRate = totalThisMonth > 0 ? Math.min(100, (paidThisMonthCount / totalThisMonth) * 100) : 0
+    const overdueCount = pendingThisMonth.filter((row) => {
+      const remaining = daysUntil(row.due_date)
+      return remaining !== null && remaining < 0
+    }).length
+    const nextPayment = [...pendingThisMonth].sort((a, b) => a.due_date.localeCompare(b.due_date))[0] as Payment | undefined
+    const statusLabel = overdueCount > 0
+      ? `${overdueCount} geciken`
+      : pendingThisMonth.length > 0
+        ? `${pendingThisMonth.length} bekleyen`
+        : 'Takvim temiz'
+
+    return { pendingThisMonth, paidThisMonthCount, pendingTotal, recurringCount, paidRate, overdueCount, nextPayment, statusLabel }
+  }, [rows])
+
+  if (!summary) return null
+
+  const { pendingThisMonth, paidThisMonthCount, pendingTotal, recurringCount, paidRate, overdueCount, nextPayment, statusLabel } = summary
 
   return (
     <Card variant="elevated" className="overflow-hidden">

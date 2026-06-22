@@ -2,7 +2,7 @@ import {
   Search,
   TrendingUp,
 } from 'lucide-react'
-import { useState } from 'react'
+import { useDeferredValue, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { EmptyState } from '../EmptyState'
 import { dashboardHelp } from './dashboardPanelUtils'
@@ -234,11 +234,15 @@ export function CreditLimitSection({ groups, totalUsageRate }: { groups: CreditL
 export function HistorySection({ rows }: { rows: TransactionHistory[] }) {
   const [activeType, setActiveType] = useState<TransactionHistoryType | 'all'>('all')
   const [query, setQuery] = useState('')
-  const normalizedQuery = normalizeSearchText(query)
-  const filteredRows = (activeType === 'all' ? rows : rows.filter((row) => row.type === activeType)).filter((row) =>
-    normalizedQuery ? normalizeSearchText(`${row.title} ${row.note ?? ''} ${row.type}`).includes(normalizedQuery) : true,
+  const deferredQuery = useDeferredValue(query)
+  const normalizedQuery = normalizeSearchText(deferredQuery)
+  const filteredRows = useMemo(
+    () => (activeType === 'all' ? rows : rows.filter((row) => row.type === activeType)).filter((row) =>
+      normalizedQuery ? normalizeSearchText(`${row.title} ${row.note ?? ''} ${row.type}`).includes(normalizedQuery) : true,
+    ),
+    [rows, activeType, normalizedQuery],
   )
-  const groupedRows = groupHistoryRows(filteredRows.slice(0, 40))
+  const groupedRows = useMemo(() => groupHistoryRows(filteredRows.slice(0, 40)), [filteredRows])
 
   return (
     <Card className="border-0 shadow-[var(--shadow-card)] ring-1 ring-border/80">
