@@ -1,5 +1,5 @@
 import { ArrowRightLeft, Banknote, HandCoins, Landmark, Plus, ReceiptText, Search, WalletCards, X } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { cn } from '../lib/utils'
 import { normalizeSearchText } from '../utils/searchText'
@@ -25,6 +25,8 @@ export function QuickActions() {
   const [openPath, setOpenPath] = useState<string | null>(null)
   const [query, setQuery] = useState('')
   const [formFocused, setFormFocused] = useState(false)
+  const [scrolled, setScrolled] = useState(false)
+  const lastScrollY = useRef(0)
   const location = useLocation()
   const open = openPath === location.pathname
   const currentRootPath = location.pathname === '/' ? '/' : `/${location.pathname.split('/')[1]}`
@@ -36,6 +38,17 @@ export function QuickActions() {
       : availableActions
   }, [currentRootPath, query])
   const tucked = formFocused && !open
+
+  const handleScroll = useCallback(() => {
+    const y = window.scrollY
+    setScrolled(y > 100 && y > lastScrollY.current)
+    lastScrollY.current = y
+  }, [])
+
+  useEffect(() => {
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [handleScroll])
 
   useEffect(() => {
     const syncFocus = () => setFormFocused(isFormElementActive())
@@ -92,8 +105,8 @@ export function QuickActions() {
         aria-expanded={open}
         aria-label={open ? 'Hızlı işlem menüsünü kapat' : 'Hızlı işlem menüsünü aç'}
         className={cn(
-          'group flex items-center gap-2 rounded-full bg-primary text-primary-foreground shadow-xl shadow-primary/30 ring-1 ring-white/25 transition-all hover:bg-primary/90',
-          open ? 'size-14 justify-center' : 'h-14 pl-5 pr-4',
+          'group flex items-center gap-2 rounded-full bg-primary text-primary-foreground shadow-xl shadow-primary/30 ring-1 ring-white/25 transition-all duration-200 hover:bg-primary/90',
+          open ? 'size-14 justify-center' : scrolled ? 'size-12 justify-center' : 'h-14 pl-5 pr-4',
           tucked && 'pointer-events-none translate-y-3 scale-90 opacity-0 sm:pointer-events-auto sm:translate-y-0 sm:scale-100 sm:opacity-100',
         )}
       >
@@ -101,8 +114,8 @@ export function QuickActions() {
           <X size={24} />
         ) : (
           <>
-            <Plus size={22} strokeWidth={2.5} />
-            <span className="text-sm font-bold">İşlem</span>
+            <Plus size={scrolled ? 20 : 22} strokeWidth={2.5} />
+            {scrolled ? null : <span className="text-sm font-bold">İşlem</span>}
           </>
         )}
       </button>
