@@ -1,5 +1,5 @@
 import { AlertTriangle, ArrowUpRight, CalendarDays, ChevronDown, CreditCard, Landmark } from 'lucide-react'
-import { AnimatePresence, motion, type Variants } from 'framer-motion'
+import { AnimatePresence, motion, useReducedMotion, type Variants } from 'framer-motion'
 import { useCallback, useMemo, useState } from 'react'
 import { useAuth } from '../auth/useAuth'
 import { useFinanceSnapshot } from '../app/useFinanceSnapshot'
@@ -108,10 +108,24 @@ const UPCOMING_DAYS = 30
 const DASHBOARD_HISTORY_MONTHS = 3
 const DASHBOARD_SPENDING_MONTHS = 4
 
+const stagger: Variants = {
+  hidden: {},
+  visible: { transition: { staggerChildren: 0.06 } },
+}
+const fadeUp: Variants = {
+  hidden:  { opacity: 0, y: 14 },
+  visible: { opacity: 1, y: 0 },
+}
+const noMotion: Variants = {
+  hidden:  { opacity: 1, y: 0 },
+  visible: { opacity: 1, y: 0 },
+}
+
 export function DashboardPage() {
   const { user } = useAuth()
   const snapshotQuery = useFinanceSnapshot()
   const displayName = useMemo(() => getUserDisplayName(user), [user])
+  const prefersReduced = useReducedMotion()
 
   // Snapshot 6 aylık süperset taşır; dashboard kendi dar penceresine indirger
   // (geçmiş 3 ay, harcamalar 4 ay, bütçe yalnızca içinde bulunulan ay).
@@ -244,19 +258,11 @@ export function DashboardPage() {
 
   const hasCreditLimitGroups = summary.creditLimitGroups.length > 0
   const upcomingTotal = sum(outflowUpcoming, (item) => item.amount)
-
-  const stagger: Variants = {
-    hidden: {},
-    visible: { transition: { staggerChildren: 0.06 } },
-  }
-  const fadeUp: Variants = {
-    hidden:  { opacity: 0, y: 14 },
-    visible: { opacity: 1, y: 0 },
-  }
+  const itemVariant = prefersReduced ? noMotion : fadeUp
 
   return (
     <motion.section
-      variants={stagger}
+      variants={prefersReduced ? noMotion : stagger}
       initial="hidden"
       animate="visible"
       className="grid gap-5 lg:grid-cols-12 lg:items-start"
@@ -264,7 +270,7 @@ export function DashboardPage() {
       {/* ── Günlük katman (her zaman görünür) ── */}
 
       {attentionLine ? (
-        <motion.div variants={fadeUp} className="min-w-0 lg:col-span-12">
+        <motion.div variants={itemVariant} className="min-w-0 lg:col-span-12">
           <p
             role="status"
             className={`flex items-start gap-2.5 rounded-xl px-4 py-3 text-sm font-semibold ring-1 ${
@@ -279,11 +285,11 @@ export function DashboardPage() {
         </motion.div>
       ) : null}
 
-      <motion.div variants={fadeUp} className="min-w-0 lg:col-span-12">
+      <motion.div variants={itemVariant} className="min-w-0 lg:col-span-12">
         <DataHealthBadge errors={healthCounts.errors} warnings={healthCounts.warnings} total={healthCounts.total} />
       </motion.div>
 
-      <motion.div variants={fadeUp} className="min-w-0 lg:col-span-8">
+      <motion.div variants={itemVariant} className="min-w-0 lg:col-span-8">
         <DashboardHero
           displayName={displayName}
           netWorth={summary.netWorth}
@@ -295,7 +301,7 @@ export function DashboardPage() {
         />
       </motion.div>
 
-      <motion.div variants={fadeUp} className="min-w-0 lg:col-span-4">
+      <motion.div variants={itemVariant} className="min-w-0 lg:col-span-4">
         <MonthlyPaymentLoadPanel
           cashFlow={summary.cashFlow}
           nextMonthOutflow={summary.nextMonthCashFlow.outflow}
@@ -304,7 +310,7 @@ export function DashboardPage() {
         />
       </motion.div>
 
-      <motion.div variants={fadeUp} className="min-w-0 lg:col-span-5">
+      <motion.div variants={itemVariant} className="min-w-0 lg:col-span-5">
         <CreditCardSnapshotPanel
           cards={data.cards}
           totalDebt={summary.totalCreditCardDebt}
@@ -314,18 +320,18 @@ export function DashboardPage() {
         />
       </motion.div>
 
-      <motion.div variants={fadeUp} className="min-w-0 lg:col-span-7">
+      <motion.div variants={itemVariant} className="min-w-0 lg:col-span-7">
         <FocusActionPanel actions={focusActions} cashFlow={summary.cashFlow} />
       </motion.div>
 
-      <motion.div variants={fadeUp} className="grid min-w-0 gap-3 min-[760px]:grid-cols-2 lg:col-span-12">
+      <motion.div variants={itemVariant} className="grid min-w-0 gap-3 min-[760px]:grid-cols-2 lg:col-span-12">
         <StatementReminderPanel cards={data.cards} statements={data.cardStatements} />
         <BudgetAlertPanel budgets={data.budgets} expenses={data.cardExpenses} />
       </motion.div>
 
       {/* ── Detay toggle ── */}
 
-      <motion.div variants={fadeUp} className="min-w-0 lg:col-span-12">
+      <motion.div variants={itemVariant} className="min-w-0 lg:col-span-12">
         <button
           type="button"
           onClick={toggleDetails}
