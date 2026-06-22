@@ -60,7 +60,7 @@ installment payment outside the statement flow.
 | RPC | Called From | User-Visible Action | Main Effect |
 | --- | --- | --- | --- |
 | `recompute_card_debt_from_ledger` | `recomputeCardDebt` | Card ledger panel repair | Resets `cards.debt_amount` to the exact card-ledger projection while suppressing a duplicate ledger event |
-| `post_card_debt_correction` | `postCardDebtCorrection` | Card ledger panel correction | Applies a signed card debt adjustment; the card-ledger trigger records it as an auditable `adjustment` note |
+| `post_card_debt_correction` | `postCardDebtCorrection` | Card ledger panel correction | Applies a signed card debt adjustment; a reduction also lowers the visible split (current period first, then provision, then statement); the card-ledger trigger records it as an auditable `adjustment` note |
 | `recompute_account_balance_from_ledger` | `recomputeAccountBalance` | Account ledger panel repair | Resets bank-account balance to the exact account-ledger projection |
 | `post_account_balance_correction` | `postAccountBalanceCorrection` | Account ledger panel correction | Applies a signed bank-account balance adjustment with an auditable note |
 
