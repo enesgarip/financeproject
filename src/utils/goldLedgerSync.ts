@@ -4,6 +4,7 @@ import {
   insertGoldLedgerAsset,
   updateGoldLedgerAsset,
 } from '../data/repositories/goldLedgerRepo'
+import type { Result } from '../data/result'
 import type { Asset, GoldLot, GoldType, InsertFor, UpdateFor } from '../types/database'
 import {
   GOLD_LEDGER_SOURCE,
@@ -20,6 +21,11 @@ export type GoldLedgerAssetSyncResult = {
   inserted: number
   updated: number
   deleted: number
+}
+
+function unwrap<T>(result: Result<T>, context: string): T {
+  if (!result.ok) throw new Error(`${context}: ${result.error.message}`)
+  return result.data
 }
 
 function quantityLabel(summary: GoldTypeSummary): string {
@@ -100,7 +106,7 @@ export async function syncGoldLedgerAssets(
 ): Promise<GoldLedgerAssetSyncResult> {
   const summaries = summarizeGold(lots)
   const wantedTypes = new Set(summaries.map((summary) => summary.goldType))
-  const existing = await fetchGoldLedgerAssets(userId)
+  const existing = unwrap(await fetchGoldLedgerAssets(userId), 'Altın varlıkları')
   const existingByType = new Map<GoldType, Asset>()
   for (const asset of existing) {
     const type = goldTypeFromAsset(asset)
@@ -116,21 +122,21 @@ export async function syncGoldLedgerAssets(
     const payload = buildGoldLedgerAssetPayload(summary, userId, snapshot, current?.estimated_value_try)
 
     if (!current) {
-      await insertGoldLedgerAsset(payload)
+      unwrap(await insertGoldLedgerAsset(payload), 'Altın varlık ekleme')
       inserted += 1
       continue
     }
 
     if (!differs(payload, current)) continue
     const updatePayload: UpdateFor<'assets'> = { ...payload, updated_at: new Date().toISOString() }
-    await updateGoldLedgerAsset(current.id, updatePayload)
+    unwrap(await updateGoldLedgerAsset(current.id, updatePayload), 'Altın varlık güncelleme')
     updated += 1
   }
 
   for (const asset of existing) {
     const type = goldTypeFromAsset(asset)
     if (!type || wantedTypes.has(type)) continue
-    await deleteGoldLedgerAsset(asset.id)
+    unwrap(await deleteGoldLedgerAsset(asset.id), 'Altın varlık silme')
     deleted += 1
   }
 

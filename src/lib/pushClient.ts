@@ -96,7 +96,7 @@ async function getCompatibleSubscription(
 
   const staleEndpoint = subscription.endpoint
   await subscription.unsubscribe()
-  await deletePushSubscription(userId, staleEndpoint).catch(() => undefined)
+  await deletePushSubscription(userId, staleEndpoint).then(() => undefined, () => undefined)
 
   if (Notification.permission !== 'granted' || !VAPID_PUBLIC_KEY) return null
 
@@ -128,7 +128,8 @@ export async function subscribeToPush(userId: string): Promise<void> {
     })
   }
 
-  await savePushSubscription(userId, subscriptionToPayload(subscription))
+  const saveResult = await savePushSubscription(userId, subscriptionToPayload(subscription))
+  if (!saveResult.ok) throw new Error(saveResult.error.message)
 }
 
 /** Aboneliği iptal eder ve DB'den siler. */
@@ -139,7 +140,8 @@ export async function unsubscribeFromPush(userId: string): Promise<void> {
   if (!subscription) return
   const endpoint = subscription.endpoint
   await subscription.unsubscribe()
-  await deletePushSubscription(userId, endpoint)
+  const result = await deletePushSubscription(userId, endpoint)
+  if (!result.ok) throw new Error(result.error.message)
 }
 
 /**
@@ -156,7 +158,8 @@ export async function isSubscribedOnThisDevice(userId?: string): Promise<boolean
   const compatibleSubscription = await getCompatibleSubscription(registration, userId)
   if (!compatibleSubscription) return false
 
-  const registered = await hasPushSubscription(userId, compatibleSubscription.endpoint)
+  const hasResult = await hasPushSubscription(userId, compatibleSubscription.endpoint)
+  const registered = hasResult.ok && hasResult.data
   if (!registered) await savePushSubscription(userId, subscriptionToPayload(compatibleSubscription))
   return true
 }

@@ -33,10 +33,14 @@ function changed(next: number, current: number | null | undefined): boolean {
 }
 
 async function syncAssets(snapshot: MarketRatesSnapshot): Promise<number> {
-  const rows = await fetchAutoValuedAssets()
+  const result = await fetchAutoValuedAssets()
+  if (!result.ok) {
+    console.warn('[valuationSync] assets:', result.error.message)
+    return 0
+  }
+  const rows = result.data
   if (rows.length === 0) return 0
 
-  // Stocks are priced via the bist-quote edge function (one batched call).
   const stockRows = rows.filter(assetIsStock)
   const stockPrices = stockRows.length
     ? await fetchStockPrices(stockRows.map((asset) => asset.symbol!))
@@ -51,12 +55,18 @@ async function syncAssets(snapshot: MarketRatesSnapshot): Promise<number> {
     .filter((entry) => entry.value !== null && changed(entry.value, entry.current))
     .map(({ id, value }) => ({ id, value: value as number }))
 
-  await persistEstimatedValues('assets', updates)
+  const persistResult = await persistEstimatedValues('assets', updates)
+  if (!persistResult.ok) console.warn('[valuationSync] persist assets:', persistResult.error.message)
   return updates.length
 }
 
 async function syncDebts(snapshot: MarketRatesSnapshot): Promise<number> {
-  const rows = await fetchAutoValuedDebts()
+  const result = await fetchAutoValuedDebts()
+  if (!result.ok) {
+    console.warn('[valuationSync] debts:', result.error.message)
+    return 0
+  }
+  const rows = result.data
   if (rows.length === 0) return 0
 
   const updates: EstimatedValueUpdate[] = rows
@@ -64,12 +74,18 @@ async function syncDebts(snapshot: MarketRatesSnapshot): Promise<number> {
     .filter((entry) => entry.value !== null && changed(entry.value, entry.current))
     .map(({ id, value }) => ({ id, value: value as number }))
 
-  await persistEstimatedValues('debts', updates)
+  const persistResult = await persistEstimatedValues('debts', updates)
+  if (!persistResult.ok) console.warn('[valuationSync] persist debts:', persistResult.error.message)
   return updates.length
 }
 
 async function syncGoals(snapshot: MarketRatesSnapshot): Promise<number> {
-  const rows = await fetchAutoValuedGoals()
+  const result = await fetchAutoValuedGoals()
+  if (!result.ok) {
+    console.warn('[valuationSync] goals:', result.error.message)
+    return 0
+  }
+  const rows = result.data
   if (rows.length === 0) return 0
 
   const updates: EstimatedValueUpdate[] = rows
@@ -77,7 +93,8 @@ async function syncGoals(snapshot: MarketRatesSnapshot): Promise<number> {
     .filter((entry) => entry.value !== null && changed(entry.value, entry.current))
     .map(({ id, value }) => ({ id, value: value as number }))
 
-  await persistEstimatedValues('savings_goals', updates)
+  const persistResult = await persistEstimatedValues('savings_goals', updates)
+  if (!persistResult.ok) console.warn('[valuationSync] persist goals:', persistResult.error.message)
   return updates.length
 }
 

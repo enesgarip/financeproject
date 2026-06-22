@@ -13,7 +13,12 @@ let cache: CategoryMemory | null = null
 let inflight: Promise<CategoryMemory> | null = null
 
 async function loadMemory(): Promise<CategoryMemory> {
-  return buildCategoryMemory(await fetchCategoryMemoryRows())
+  const result = await fetchCategoryMemoryRows()
+  if (!result.ok) {
+    console.warn('[useCategoryMemory]', result.error.message)
+    return new Map()
+  }
+  return buildCategoryMemory(result.data)
 }
 
 export function invalidateCategoryMemory() {

@@ -88,7 +88,7 @@ export async function fetchDataHealthRows(): Promise<Result<DataHealthRows>> {
     supabase.from('account_ledger').select('*'),
   ])
 
-  const error = [
+  const errors = [
     assets.error,
     budgets.error,
     cards.error,
@@ -102,7 +102,12 @@ export async function fetchDataHealthRows(): Promise<Result<DataHealthRows>> {
     salaryHistory.error,
     savingsGoals.error,
     savingsGoalComponents.error,
-  ].find(Boolean) ?? null
+    cardLedger.error,
+    accountLedger.error,
+  ].filter(Boolean)
+  const error = errors.length > 0
+    ? { ...errors[0]!, message: errors.map((e) => e!.message).join('; ') }
+    : null
 
   return resultFromSupabase(
     {

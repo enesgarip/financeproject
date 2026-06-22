@@ -38,7 +38,8 @@ export function TurkishCalendarPresets({ existing, onAdded }: Props) {
         setMessage(`${preset.title} zaten ekli.`)
         return
       }
-      await insertPayments(rows)
+      const result = await insertPayments(rows)
+      if (!result.ok) throw new Error(result.error.message)
       await onAdded()
       setMessage(`${preset.title} eklendi (${rows.length} taksit). Tutarı düzenlemeyi unutma.`)
     } catch (e) {

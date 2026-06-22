@@ -1,4 +1,5 @@
 import { supabase } from '../../lib/supabase'
+import { resultFromSupabase, voidResultFromSupabase, type Result } from '../result'
 
 /**
  * Web Push aboneliklerinin veri erişimi (roadmap Y1). Tarayıcı izin/abonelik
@@ -15,7 +16,7 @@ export type PushSubscriptionPayload = {
 export async function savePushSubscription(
   userId: string,
   sub: PushSubscriptionPayload,
-): Promise<void> {
+): Promise<Result<void>> {
   const { error } = await supabase
     .from('push_subscriptions')
     .upsert(
@@ -28,27 +29,26 @@ export async function savePushSubscription(
       } as never,
       { onConflict: 'user_id,endpoint' },
     )
-  if (error) throw error
+  return voidResultFromSupabase(error, 'Push aboneliği kaydedilemedi.')
 }
 
 /** Bir cihazın aboneliğini siler (kullanıcı bildirimi kapatınca). */
-export async function deletePushSubscription(userId: string, endpoint: string): Promise<void> {
+export async function deletePushSubscription(userId: string, endpoint: string): Promise<Result<void>> {
   const { error } = await supabase
     .from('push_subscriptions')
     .delete()
     .eq('user_id', userId)
     .eq('endpoint', endpoint)
-  if (error) throw error
+  return voidResultFromSupabase(error, 'Push aboneliği silinemedi.')
 }
 
 /** Bu kullanıcının bu cihaz için kayıtlı aboneliği var mı? */
-export async function hasPushSubscription(userId: string, endpoint: string): Promise<boolean> {
+export async function hasPushSubscription(userId: string, endpoint: string): Promise<Result<boolean>> {
   const { data, error } = await supabase
     .from('push_subscriptions')
     .select('id')
     .eq('user_id', userId)
     .eq('endpoint', endpoint)
     .maybeSingle()
-  if (error) throw error
-  return Boolean(data)
+  return resultFromSupabase(Boolean(data), error, 'Push abonelik durumu sorgulanamadı.')
 }
