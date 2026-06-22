@@ -2,6 +2,7 @@ import { ReceiptText } from 'lucide-react'
 import type { Card, InsertFor, UpdateFor } from '../types/database'
 import { cardProvisionAmount, cardSplitTotal } from '../utils/financeSummary'
 import { formatCurrency, parseNumber } from '../utils/formatCurrency'
+import { equalsTL } from '../utils/money'
 import {
   bankHueStyle,
   cardGroupLabel,
@@ -37,30 +38,64 @@ export function getCardInitialValues(row?: Card) {
   }
 }
 
-export function mapCardForm(formData: FormData, userId: string): CardPayload {
+export function mapCardForm(formData: FormData, userId: string, editing: Card | null = null): CardPayload {
   const cardType = formData.get('card_type') as Card['card_type']
   const isCreditCard = cardType === 'kredi_karti'
   const statementDebt = isCreditCard ? parseNumber(formData.get('statement_debt_amount')) : 0
   const currentPeriod = isCreditCard ? parseNumber(formData.get('current_period_spending')) : 0
   const provisionAmount = isCreditCard ? parseNumber(formData.get('provision_amount')) : 0
+  const currentBalance = isCreditCard ? 0 : parseNumber(formData.get('current_balance'))
+  const cardTypeChanged = Boolean(editing && editing.card_type !== cardType)
+  const debtSplitChanged = !editing ||
+    !equalsTL(statementDebt, editing.statement_debt_amount) ||
+    !equalsTL(currentPeriod, editing.current_period_spending) ||
+    !equalsTL(provisionAmount, editing.provision_amount)
 
-  return {
-    user_id: userId,
+  const base = {
     bank_name: String(formData.get('bank_name') ?? ''),
     card_name: String(formData.get('card_name') ?? ''),
     card_type: cardType,
     holder_name: isCreditCard ? String(formData.get('holder_name') ?? '').trim() || null : null,
     limit_group_name: isCreditCard ? String(formData.get('limit_group_name') ?? '').trim() || null : null,
-    current_balance: isCreditCard ? 0 : parseNumber(formData.get('current_balance')),
     credit_limit: isCreditCard ? parseNumber(formData.get('credit_limit')) : 0,
-    debt_amount: isCreditCard ? cardSplitTotal(statementDebt, currentPeriod, provisionAmount) : 0,
-    statement_debt_amount: statementDebt,
-    current_period_spending: currentPeriod,
-    provision_amount: provisionAmount,
     statement_day: isCreditCard ? optionalDay(formData.get('statement_day')) : null,
     due_day: isCreditCard ? optionalDay(formData.get('due_day')) : null,
     note: String(formData.get('note') ?? '') || null,
   }
+
+  if (!editing) {
+    return {
+      user_id: userId,
+      ...base,
+      current_balance: currentBalance,
+      debt_amount: isCreditCard ? cardSplitTotal(statementDebt, currentPeriod, provisionAmount) : 0,
+      statement_debt_amount: statementDebt,
+      current_period_spending: currentPeriod,
+      provision_amount: provisionAmount,
+    }
+  }
+
+  const payload: UpdateFor<'cards'> = { ...base }
+
+  if (isCreditCard) {
+    if (cardTypeChanged || debtSplitChanged) {
+      payload.current_balance = 0
+      payload.debt_amount = cardSplitTotal(statementDebt, currentPeriod, provisionAmount)
+      payload.statement_debt_amount = statementDebt
+      payload.current_period_spending = currentPeriod
+      payload.provision_amount = provisionAmount
+    }
+  } else if (cardTypeChanged) {
+    payload.current_balance = currentBalance
+    payload.debt_amount = 0
+    payload.statement_debt_amount = 0
+    payload.current_period_spending = 0
+    payload.provision_amount = 0
+  } else if (!equalsTL(currentBalance, editing.current_balance)) {
+    payload.current_balance = currentBalance
+  }
+
+  return payload
 }
 
 export function renderCardTitle(row: Card) {

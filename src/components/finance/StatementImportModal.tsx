@@ -175,12 +175,17 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
         fetchCardExpenseMatchRows(card.id),
         fetchCardPaymentMatchRows(card.id),
       ])
-      if (!paymentsResult.ok) {
-        setParseError(paymentsResult.error.message ?? 'Planli odemeler yuklenemedi.')
+      if (!expensesResult.ok) {
+        setParseError(expensesResult.error.message ?? 'Kart harcamaları yüklenemedi.')
         setParsing(false)
         return
       }
-      const expenses = expensesResult.ok ? expensesResult.data : []
+      if (!paymentsResult.ok) {
+        setParseError(paymentsResult.error.message ?? 'Planlı ödemeler yüklenemedi.')
+        setParsing(false)
+        return
+      }
+      const expenses = expensesResult.data
       const fallbackPeriod = dateRangeFromIsoDates(parsed.transactions.map((tx) => tx.date))
       const periodAnchor = parsed.statementDate || fallbackPeriod?.end || null
       const cardPeriod = getCardStatementPeriod(card, periodAnchor)
