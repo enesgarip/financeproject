@@ -494,6 +494,28 @@ button:disabled {
   }
 }
 
+/* ─── DASHBOARD ANIMATIONS ─── */
+.dashboard-item {
+  animation: fade-in-up var(--motion-normal) both;
+  animation-delay: calc(var(--di, 0) * 60ms);
+}
+
+.dashboard-details-wrapper {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition: grid-template-rows 300ms ease-in-out, opacity 300ms ease-in-out;
+}
+
+.dashboard-details-wrapper > div {
+  overflow: hidden;
+}
+
+.dashboard-details-wrapper.dashboard-details-open {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+
 /* ─── PRINT ─── */
 @media print {
   nav,

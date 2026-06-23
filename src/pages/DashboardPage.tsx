@@ -1,5 +1,4 @@
 import { AlertTriangle, ArrowUpRight, CalendarDays, ChevronDown, CreditCard, Landmark, RefreshCw } from 'lucide-react'
-import { AnimatePresence, motion, useReducedMotion, type Variants } from 'framer-motion'
 import { useCallback, useMemo, useState } from 'react'
 import { useAuth } from '../auth/useAuth'
 import { useFinanceSnapshot } from '../app/useFinanceSnapshot'
@@ -110,24 +109,10 @@ const UPCOMING_DAYS = 30
 const DASHBOARD_HISTORY_MONTHS = 3
 const DASHBOARD_SPENDING_MONTHS = 4
 
-const stagger: Variants = {
-  hidden: {},
-  visible: { transition: { staggerChildren: 0.06 } },
-}
-const fadeUp: Variants = {
-  hidden:  { opacity: 0, y: 14 },
-  visible: { opacity: 1, y: 0 },
-}
-const noMotion: Variants = {
-  hidden:  { opacity: 1, y: 0 },
-  visible: { opacity: 1, y: 0 },
-}
-
 export function DashboardPage() {
   const { user } = useAuth()
   const snapshotQuery = useFinanceSnapshot()
   const displayName = useMemo(() => getUserDisplayName(user), [user])
-  const prefersReduced = useReducedMotion()
 
   // Snapshot 6 aylık süperset taşır; dashboard kendi dar penceresine indirger
   // (geçmiş 3 ay, harcamalar 4 ay, bütçe yalnızca içinde bulunulan ay).
@@ -294,20 +279,15 @@ export function DashboardPage() {
   const hasCreditLimitGroups = summary.creditLimitGroups.length > 0
   const hasCompanionPanels = hasStatementReminders || hasBudgetAlerts
   const upcomingTotal = sum(outflowUpcoming, (item) => item.amount)
-  const itemVariant = prefersReduced ? noMotion : fadeUp
   const detailsPanelId = 'dashboard-details-panel'
+  let itemIndex = 0
 
   return (
-    <motion.section
-      variants={prefersReduced ? noMotion : stagger}
-      initial="hidden"
-      animate="visible"
-      className="grid gap-5 lg:grid-cols-12 lg:items-start"
-    >
+    <section className="grid gap-5 lg:grid-cols-12 lg:items-start">
       {/* ── Günlük katman (her zaman görünür) ── */}
 
       {attentionLine ? (
-        <motion.div variants={itemVariant} className="min-w-0 lg:col-span-12">
+        <div className="dashboard-item min-w-0 lg:col-span-12" style={{ '--di': itemIndex++ } as React.CSSProperties}>
           <p
             role="status"
             className={`flex items-start gap-2.5 rounded-xl px-4 py-3 text-sm font-semibold ring-1 ${
@@ -319,14 +299,14 @@ export function DashboardPage() {
             <AlertTriangle size={17} className="mt-0.5 shrink-0" aria-hidden="true" />
             <span className="min-w-0">{attentionLine.text}</span>
           </p>
-        </motion.div>
+        </div>
       ) : null}
 
-      <motion.div variants={itemVariant} className="min-w-0 lg:col-span-12">
+      <div className="dashboard-item min-w-0 lg:col-span-12" style={{ '--di': itemIndex++ } as React.CSSProperties}>
         <DataHealthBadge errors={healthCounts.errors} warnings={healthCounts.warnings} total={healthCounts.total} />
-      </motion.div>
+      </div>
 
-      <motion.div variants={itemVariant} className="min-w-0 lg:col-span-8">
+      <div className="dashboard-item min-w-0 lg:col-span-8" style={{ '--di': itemIndex++ } as React.CSSProperties}>
         <DashboardHero
           displayName={displayName}
           netWorth={summary.netWorth}
@@ -336,18 +316,18 @@ export function DashboardPage() {
           cashFlow={summary.cashFlow}
           health={financialHealth}
         />
-      </motion.div>
+      </div>
 
-      <motion.div variants={itemVariant} className="min-w-0 lg:col-span-4">
+      <div className="dashboard-item min-w-0 lg:col-span-4" style={{ '--di': itemIndex++ } as React.CSSProperties}>
         <MonthlyPaymentLoadPanel
           cashFlow={summary.cashFlow}
           nextMonthOutflow={summary.nextMonthCashFlow.outflow}
           upcomingTotal={upcomingTotal}
           upcomingCount={outflowUpcoming.length}
         />
-      </motion.div>
+      </div>
 
-      <motion.div variants={itemVariant} className="min-w-0 lg:col-span-5">
+      <div className="dashboard-item min-w-0 lg:col-span-5" style={{ '--di': itemIndex++ } as React.CSSProperties}>
         <CreditCardSnapshotPanel
           cards={data.cards}
           totalDebt={summary.totalCreditCardDebt}
@@ -355,27 +335,27 @@ export function DashboardPage() {
           totalLimit={summary.totalCreditLimit}
           usageRate={summary.creditUsageRate}
         />
-      </motion.div>
+      </div>
 
-      <motion.div variants={itemVariant} className="min-w-0 lg:col-span-7">
+      <div className="dashboard-item min-w-0 lg:col-span-7" style={{ '--di': itemIndex++ } as React.CSSProperties}>
         <FocusActionPanel actions={focusActions} cashFlow={summary.cashFlow} />
-      </motion.div>
+      </div>
 
       {hasCompanionPanels ? (
-        <motion.div
-          variants={itemVariant}
-          className={`grid min-w-0 gap-3 lg:col-span-12 ${
+        <div
+          className={`dashboard-item grid min-w-0 gap-3 lg:col-span-12 ${
             hasStatementReminders && hasBudgetAlerts ? 'min-[760px]:grid-cols-2' : ''
           }`}
+          style={{ '--di': itemIndex++ } as React.CSSProperties}
         >
           {hasStatementReminders ? <StatementReminderPanel cards={data.cards} statements={data.cardStatements} /> : null}
           {hasBudgetAlerts ? <BudgetAlertPanel budgets={data.budgets} expenses={data.cardExpenses} /> : null}
-        </motion.div>
+        </div>
       ) : null}
 
       {/* ── Detay toggle ── */}
 
-      <motion.div variants={itemVariant} className="min-w-0 lg:col-span-12">
+      <div className="dashboard-item min-w-0 lg:col-span-12" style={{ '--di': itemIndex } as React.CSSProperties}>
         <button
           type="button"
           onClick={toggleDetails}
@@ -390,121 +370,114 @@ export function DashboardPage() {
             className={`transition-transform duration-200 ${showDetails ? 'rotate-180' : 'group-hover:translate-y-0.5'}`}
           />
         </button>
-      </motion.div>
+      </div>
 
       {/* ── Detay katmanı (toggle ile açılır) ── */}
 
-      <AnimatePresence initial={false}>
-        {showDetails ? (
-          <motion.div
-            key="dashboard-details"
-            id={detailsPanelId}
-            initial={prefersReduced ? false : { opacity: 0, height: 0 }}
-            animate={prefersReduced ? { opacity: 1 } : { opacity: 1, height: 'auto' }}
-            exit={prefersReduced ? { opacity: 1 } : { opacity: 0, height: 0 }}
-            transition={prefersReduced ? { duration: 0 } : { duration: 0.3, ease: 'easeInOut' }}
-            className="grid min-w-0 gap-5 overflow-hidden lg:col-span-12 lg:grid-cols-12 lg:items-start"
-          >
-            {/* ─ Nakit akışı bölümü ─ */}
-            <DetailSectionDivider label="Nakit akışı" />
+      <div
+        id={detailsPanelId}
+        className={`dashboard-details-wrapper lg:col-span-12 ${showDetails ? 'dashboard-details-open' : ''}`}
+      >
+        <div className="grid min-w-0 gap-5 lg:grid-cols-12 lg:items-start">
+          {/* ─ Nakit akışı bölümü ─ */}
+          <DetailSectionDivider label="Nakit akışı" />
 
+          <div className="min-w-0 lg:col-span-7">
+            <CashFlowCalendarPanel items={upcomingItems} cashFlow={summary.cashFlow} />
+          </div>
+
+          <div className="min-w-0 lg:col-span-5">
+            <CashFlowPanel cashFlow={summary.cashFlow} />
+          </div>
+
+          {/* ─ Borç & tahsilat bölümü ─ */}
+          <DetailSectionDivider label="Borçlar ve tahsilat" />
+
+          <div className="min-w-0 lg:col-span-8">
+            <CurrentDebtTotalsPanel
+              totalDebt={summary.totalDebts}
+              cardDebt={summary.totalCreditCardDebt}
+              loanDebt={summary.totalLoanDebt}
+              personalDebt={summary.totalPersonalDebts}
+              paymentDebt={summary.totalPaymentLiabilities}
+            />
+          </div>
+
+          <div className="grid min-w-0 gap-3 lg:col-span-4">
+            <MetricTile label="Tahsilat" value={formatCurrency(summary.totalReceivables)} icon={<ArrowUpRight />} tone="emerald" help={dashboardHelp.receivable} />
+          </div>
+
+          {/* ─ Analiz bölümü ─ */}
+          <DetailSectionDivider label="Analiz ve öneriler" />
+
+          <div className="min-w-0 lg:col-span-8">
+            <AnalyticsSnapshotPanel
+              cashFlow={summary.cashFlow}
+              totalAssets={summary.totalAssets}
+              totalDebts={summary.totalDebts}
+              cardDebt={summary.totalCreditCardDebt}
+              loanDebt={summary.totalLoanDebt}
+              personalDebt={summary.totalPersonalDebts}
+            />
+          </div>
+
+          <div className="min-w-0 lg:col-span-4">
+            <SmartInsightsPanel insights={insights} />
+          </div>
+
+          <UpcomingAlertPanel items={outflowUpcoming} />
+
+          {/* ─ Birikim & harcama bölümü ─ */}
+          <DetailSectionDivider label="Birikim ve harcama" />
+
+          <div className="min-w-0 lg:col-span-5">
+            <GoalProgressCommand goalProgress={summary.goalProgress} />
+          </div>
+
+          <div className="min-w-0 lg:col-span-7">
+            <SpendingRadarPanel expenses={data.cardExpenses} />
+          </div>
+
+          {/* ─ Mutabakat ─ */}
+          <div className="min-w-0 lg:col-span-12">
+            <ReconciliationPanel cards={data.cards} statements={data.cardStatements.filter((statement) => statement.status === 'open')} />
+          </div>
+
+          {/* ─ Limit & kredi ritmi bölümü ─ */}
+          <DetailSectionDivider label="Limitler ve kredi ritmi" />
+
+          {hasCreditLimitGroups ? (
             <div className="min-w-0 lg:col-span-7">
-              <CashFlowCalendarPanel items={upcomingItems} cashFlow={summary.cashFlow} />
+              <CreditLimitSection groups={summary.creditLimitGroups} totalUsageRate={summary.creditUsageRate} />
             </div>
+          ) : null}
 
-            <div className="min-w-0 lg:col-span-5">
-              <CashFlowPanel cashFlow={summary.cashFlow} />
-            </div>
+          <div className={`grid min-w-0 gap-3 min-[520px]:grid-cols-2 ${hasCreditLimitGroups ? 'lg:col-span-5 lg:grid-cols-1' : 'lg:col-span-12'}`}>
+            <PulseCard
+              title="Kredi ritmi"
+              label="Aylık ödeme"
+              value={formatCurrency(summary.totalLoanMonthlyPayment)}
+              description={`${formatCurrency(summary.totalLoanDebt)} aktif kredi borcu`}
+              icon={<Landmark />}
+              tone="rose"
+            />
+            <SalaryPulse trend={summary.salaryTrend} />
+          </div>
 
-            {/* ─ Borç & tahsilat bölümü ─ */}
-            <DetailSectionDivider label="Borçlar ve tahsilat" />
+          <div className="grid min-w-0 gap-3 min-[520px]:grid-cols-2 lg:col-span-12">
+            <MetricTile label="Toplam limit" value={formatCurrency(summary.totalCreditLimit)} icon={<CreditCard />} tone="indigo" help={dashboardHelp.totalLimit} />
+            <MetricTile label="Kredi ödemesi" value={formatCurrency(summary.totalLoanMonthlyPayment)} icon={<CalendarDays />} tone="stone" help={dashboardHelp.loanPayment} />
+          </div>
 
-            <div className="min-w-0 lg:col-span-8">
-              <CurrentDebtTotalsPanel
-                totalDebt={summary.totalDebts}
-                cardDebt={summary.totalCreditCardDebt}
-                loanDebt={summary.totalLoanDebt}
-                personalDebt={summary.totalPersonalDebts}
-                paymentDebt={summary.totalPaymentLiabilities}
-              />
-            </div>
+          {/* ─ Geçmiş ─ */}
+          <DetailSectionDivider label="Geçmiş işlemler" />
 
-            <div className="grid min-w-0 gap-3 lg:col-span-4">
-              <MetricTile label="Tahsilat" value={formatCurrency(summary.totalReceivables)} icon={<ArrowUpRight />} tone="emerald" help={dashboardHelp.receivable} />
-            </div>
-
-            {/* ─ Analiz bölümü ─ */}
-            <DetailSectionDivider label="Analiz ve öneriler" />
-
-            <div className="min-w-0 lg:col-span-8">
-              <AnalyticsSnapshotPanel
-                cashFlow={summary.cashFlow}
-                totalAssets={summary.totalAssets}
-                totalDebts={summary.totalDebts}
-                cardDebt={summary.totalCreditCardDebt}
-                loanDebt={summary.totalLoanDebt}
-                personalDebt={summary.totalPersonalDebts}
-              />
-            </div>
-
-            <div className="min-w-0 lg:col-span-4">
-              <SmartInsightsPanel insights={insights} />
-            </div>
-
-            <UpcomingAlertPanel items={outflowUpcoming} />
-
-            {/* ─ Birikim & harcama bölümü ─ */}
-            <DetailSectionDivider label="Birikim ve harcama" />
-
-            <div className="min-w-0 lg:col-span-5">
-              <GoalProgressCommand goalProgress={summary.goalProgress} />
-            </div>
-
-            <div className="min-w-0 lg:col-span-7">
-              <SpendingRadarPanel expenses={data.cardExpenses} />
-            </div>
-
-            {/* ─ Mutabakat ─ */}
-            <div className="min-w-0 lg:col-span-12">
-              <ReconciliationPanel cards={data.cards} statements={data.cardStatements.filter((statement) => statement.status === 'open')} />
-            </div>
-
-            {/* ─ Limit & kredi ritmi bölümü ─ */}
-            <DetailSectionDivider label="Limitler ve kredi ritmi" />
-
-            {hasCreditLimitGroups ? (
-              <div className="min-w-0 lg:col-span-7">
-                <CreditLimitSection groups={summary.creditLimitGroups} totalUsageRate={summary.creditUsageRate} />
-              </div>
-            ) : null}
-
-            <div className={`grid min-w-0 gap-3 min-[520px]:grid-cols-2 ${hasCreditLimitGroups ? 'lg:col-span-5 lg:grid-cols-1' : 'lg:col-span-12'}`}>
-              <PulseCard
-                title="Kredi ritmi"
-                label="Aylık ödeme"
-                value={formatCurrency(summary.totalLoanMonthlyPayment)}
-                description={`${formatCurrency(summary.totalLoanDebt)} aktif kredi borcu`}
-                icon={<Landmark />}
-                tone="rose"
-              />
-              <SalaryPulse trend={summary.salaryTrend} />
-            </div>
-
-            <div className="grid min-w-0 gap-3 min-[520px]:grid-cols-2 lg:col-span-12">
-              <MetricTile label="Toplam limit" value={formatCurrency(summary.totalCreditLimit)} icon={<CreditCard />} tone="indigo" help={dashboardHelp.totalLimit} />
-              <MetricTile label="Kredi ödemesi" value={formatCurrency(summary.totalLoanMonthlyPayment)} icon={<CalendarDays />} tone="stone" help={dashboardHelp.loanPayment} />
-            </div>
-
-            {/* ─ Geçmiş ─ */}
-            <DetailSectionDivider label="Geçmiş işlemler" />
-
-            <div className="min-w-0 lg:col-span-12">
-              <HistorySection rows={data.transactionHistory} />
-            </div>
-          </motion.div>
-        ) : null}
-      </AnimatePresence>
-    </motion.section>
+          <div className="min-w-0 lg:col-span-12">
+            <HistorySection rows={data.transactionHistory} />
+          </div>
+        </div>
+      </div>
+    </section>
   )
 }
 

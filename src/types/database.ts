@@ -499,6 +499,23 @@ export type Database = {
         }
         Returns: Card
       }
+      upsert_savings_goal: {
+        Args: {
+          p_goal_id?: string | null
+          p_name?: string | null
+          p_value_type?: string
+          p_target_amount?: number
+          p_current_amount?: number
+          p_estimated_value_try?: number | null
+          p_auto_valued?: boolean
+          p_target_date?: string | null
+          p_status?: string
+          p_note?: string | null
+          p_is_composite?: boolean
+          p_components?: Json
+        }
+        Returns: string
+      }
       update_card_expense: {
         Args: {
           p_expense_id: string

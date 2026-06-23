@@ -1,5 +1,5 @@
 import { supabase } from '../../lib/supabase'
-import type { InsertFor, SavingsGoal, SavingsGoalComponent, UpdateFor } from '../../types/database'
+import type { InsertFor, SavingsGoal, SavingsGoalComponent } from '../../types/database'
 import {
   appErrorFromSupabase,
   fail,
@@ -47,41 +47,31 @@ export async function upsertSavingsGoalWithComponents(input: {
   components: InsertFor<'savings_goal_components'>[]
   isComposite: boolean
 }): Promise<Result<void>> {
-  let goalId = input.editingGoal?.id
+  const { data, error } = await supabase.rpc('upsert_savings_goal', {
+    p_goal_id: input.editingGoal?.id ?? null,
+    p_name: input.goalFields.name,
+    p_value_type: input.goalFields.value_type,
+    p_target_amount: input.goalFields.target_amount,
+    p_current_amount: input.goalFields.current_amount,
+    p_estimated_value_try: input.goalFields.estimated_value_try ?? null,
+    p_auto_valued: input.goalFields.auto_valued,
+    p_target_date: input.goalFields.target_date ?? null,
+    p_status: input.goalFields.status,
+    p_note: input.goalFields.note ?? null,
+    p_is_composite: input.isComposite,
+    p_components: input.isComposite
+      ? input.components.map((c) => ({
+          label: c.label,
+          value_type: c.value_type,
+          target_amount: c.target_amount,
+          current_amount: c.current_amount,
+          sort_order: c.sort_order ?? 0,
+        }))
+      : [],
+  })
 
-  if (input.editingGoal) {
-    const { error } = await supabase
-      .from('savings_goals')
-      .update({ ...input.goalFields, updated_at: new Date().toISOString() } satisfies UpdateFor<'savings_goals'>)
-      .eq('id', input.editingGoal.id)
-    if (error) return voidResultFromSupabase(error, 'Hedef kaydedilemedi.')
-  } else {
-    const { data, error } = await supabase
-      .from('savings_goals')
-      .insert({ user_id: input.userId, ...input.goalFields } satisfies InsertFor<'savings_goals'>)
-      .select('id')
-      .single()
-    if (error) return voidResultFromSupabase(error, 'Hedef kaydedilemedi.')
-    if (!data) return fail({ type: 'unknown', message: 'Hedef kimliği oluşturulamadı.' })
-    goalId = data.id
-  }
-
-  if (!goalId) return fail({ type: 'unknown', message: 'Hedef kimliği oluşturulamadı.' })
-
-  if (input.isComposite) {
-    const deleteResult = await supabase.from('savings_goal_components').delete().eq('goal_id', goalId)
-    if (deleteResult.error) return voidResultFromSupabase(deleteResult.error, 'Hedef bileşenleri temizlenemedi.')
-
-    const insertResult = await supabase.from('savings_goal_components').insert(
-      input.components.map((row) => ({ ...row, goal_id: goalId })),
-    )
-    return voidResultFromSupabase(insertResult.error, 'Hedef bileşenleri kaydedilemedi.')
-  }
-
-  if (input.editingGoal?.value_type === 'composite') {
-    const { error } = await supabase.from('savings_goal_components').delete().eq('goal_id', goalId)
-    return voidResultFromSupabase(error, 'Hedef bileşenleri temizlenemedi.')
-  }
+  if (error) return voidResultFromSupabase(error, 'Hedef kaydedilemedi.')
+  if (!data) return fail({ type: 'unknown', message: 'Hedef kimliği oluşturulamadı.' })
 
   return resultFromSupabase(undefined, null)
 }

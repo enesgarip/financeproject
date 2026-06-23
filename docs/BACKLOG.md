@@ -143,20 +143,20 @@ pattern'ler ve açık düzeltme planı yer alıyor.
 | 2 | Domain (P2) | Orta | Ledger summarize boş dizi koruması, salary trend defensive hardening | ✅ `664f6d8` |
 | 3 | Data (P3) | Orta | 5 repo Result\<T\> tutarsızlığı (throw/silent → Result) | ✅ `785925d` |
 | 4 | Data (P3) | Orta | dataHealthRepo hata aggregation maskeleme | ✅ `785925d` |
-| 5 | Data (P3) | Orta | savingsGoalsRepo — sıralı yazma, DB transaction yok | 🔶 Açık |
-| 6 | Data (P3) | Orta | accountMovements TOCTOU — bakiye kontrolü row-lock'suz | 🔶 Açık |
+| 5 | Data (P3) | Orta | savingsGoalsRepo — sıralı yazma, DB transaction yok | ✅ Atomik RPC |
+| 6 | Data (P3) | Orta | accountMovements TOCTOU — bakiye kontrolü row-lock'suz | ✅ Server FOR UPDATE yeterli |
 | 7 | Perf (P4) | Orta | HistorySection filtreleme/gruplama useMemo + debounce eksik | ✅ `aa775f3` |
 | 8 | Perf (P4) | Orta | PaymentsOverview 6 filter/sort zinciri useMemo eksik | ✅ `aa775f3` |
 | 9 | Perf (P4) | Düşük | UpcomingInstallments hesaplaması useMemo eksik | ✅ `aa775f3` |
-| 10 | Perf (P4) | Düşük | framer-motion vendor chunk (126KB) ilk yüklemede | 🔶 Açık |
+| 10 | Perf (P4) | Düşük | framer-motion vendor chunk (126KB) ilk yüklemede | ✅ CSS transition |
 | 11 | Perf (P4) | Düşük | Maintenance + 15 sorgu ilk açılış latency'si | 🔶 Açık |
 | 12 | Perf (P4) | Düşük | Liste virtualization yok | 🔶 Açık |
 | 13 | Perf (P4) | Düşük | vendor-recharts 392KB chunk | 🔶 Açık |
 | 14 | Akış (P5) | Orta | Ekstre import partial failure feedback eksik | ✅ `73d535b` |
 | 15 | Akış (P5) | Düşük | cancel\_card\_expense RPC Türkçe karakter | ✅ `73d535b` |
-| 16 | Akış (P5) | Düşük | Import sırasında stale snapshot | 🔶 Açık |
+| 16 | Akış (P5) | Düşük | Import sırasında stale snapshot | ✅ Mevcut invalidation yeterli |
 
-**Özet: 16 bulgu → 10 düzeltildi, 6 açık (0 kritik, 2 orta, 4 düşük)**
+**Özet: 16 bulgu → 13 düzeltildi, 3 açık (0 kritik, 0 orta, 3 düşük)**
 
 ### Tekrar eden pattern'ler
 
@@ -165,22 +165,22 @@ pattern'ler ve açık düzeltme planı yer alıyor.
 | Result\<T\> tutarsızlığı — repo'lar throw/swallow/Result karışık | 5 repo + 6 caller | ✅ Tamamlandı |
 | useMemo eksikliği — render-path'te ağır hesaplama sarılmamış | HistorySection, PaymentsOverview, UpcomingInstallments | ✅ Tamamlandı |
 | Türkçe karakter tutarsızlığı — RPC hata mesajlarında ASCII | add/update/cancel\_card\_expense, carryover, repo mesajları | ✅ Tamamlandı |
-| Sıralı yazma transaction gap — birden fazla DB yazma atomik değil | savingsGoalsRepo, accountMovements | 🔶 2 açık madde |
-| Vendor bundle boyutu — büyük 3rd-party chunk'lar | recharts (392KB), framer-motion (126KB) | 🔶 Tasarım trade-off |
+| Sıralı yazma transaction gap — birden fazla DB yazma atomik değil | savingsGoalsRepo, accountMovements | ✅ Tamamlandı |
+| Vendor bundle boyutu — büyük 3rd-party chunk'lar | recharts (392KB), ~~framer-motion (126KB)~~ | 🔶 recharts açık |
 
 ### Açık düzeltme planı (bağımlılık sıralı)
 
-| # | Madde | Seviye | Efor | Quick-win? |
-|---|-------|--------|------|------------|
-| 5 | savingsGoalsRepo: `addGoalWithComponents` 2 INSERT client-side sıralı, DB transaction yok → tek PL/pgSQL RPC yaz | Orta | M | — |
-| 6 | accountMovements: `submitAccountMovement` bakiye kontrolü JS'te, güncelleme ayrı → servisi tek RPC'ye indirge | Orta | M | — |
-| 10 | framer-motion 126KB Dashboard default route'ta → CSS `@starting-style` + `transition` ile değiştir, chunk kalkar | Düşük | M | — |
-| 16 | Import sırasında stale snapshot → import başlangıcında `invalidateSnapshot()` ekle | Düşük | S | ⚡ |
-| 12 | Liste virtualization yok → `@tanstack/react-virtual` (history + DataHealth), ölçek büyüyünce | Düşük | M | — |
-| 11 | Maintenance-before-snapshot ilk açılış latency → background'a taşı (stale-data trade-off) | Düşük | L | — |
-| 13 | recharts 392KB → lightweight chart lib (uPlot ~35KB), 4 chart component yeniden yazılır | Düşük | L | — |
+| # | Madde | Seviye | Efor | Durum |
+|---|-------|--------|------|-------|
+| 5 | savingsGoalsRepo: tek PL/pgSQL RPC ile atomik upsert | Orta | M | ✅ `upsert_savings_goal` RPC |
+| 6 | accountMovements: server-side FOR UPDATE locks zaten yeterli | Orta | M | ✅ Kapatıldı |
+| 10 | framer-motion → CSS transition, paket kaldırıldı (−126KB) | Düşük | M | ✅ CSS dashboard-item |
+| 16 | Stale snapshot → mevcut invalidation + refetchOnWindowFocus yeterli | Düşük | S | ✅ Kapatıldı |
+| 12 | Liste virtualization yok → `@tanstack/react-virtual` (history + DataHealth), ölçek büyüyünce | Düşük | M | 🔶 Ertelendi |
+| 11 | Maintenance-before-snapshot ilk açılış latency → background'a taşı (stale-data trade-off) | Düşük | L | 🔶 Ertelendi |
+| 13 | recharts 392KB → lightweight chart lib (uPlot ~35KB), 4 chart component yeniden yazılır | Düşük | L | 🔶 Ertelendi |
 
-**Öncelik:** #5 → #6 (veri güvenliği) > #16 (quick-win) > #10 (bundle) > #12 (UX ölçek) > #11, #13 (mimari/lib)
+**Kalan 3 açık madde (#12, #11, #13) düşük öncelikli, ölçek/kullanım verisine göre ele alınacak.**
 
 ## P3 - Nice to Have
 
