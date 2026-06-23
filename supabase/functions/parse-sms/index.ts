@@ -140,28 +140,33 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({ error: 'SMS formatı tanınamadı.', sms: smsText.slice(0, 100) }, 422)
   }
 
-  // Supabase REST API ile kartı bul (last_four_digits eşleşmesi)
+  // Supabase REST API ile kartı bul (card_aliases tablosu üzerinden)
   const headers = {
     'Content-Type': 'application/json',
     'Authorization': `Bearer ${serviceRoleKey}`,
     'apikey': serviceRoleKey,
   }
 
-  const cardUrl = `${supabaseUrl}/rest/v1/cards?last_four_digits=eq.${parsed.lastFour}&select=id,card_name,bank_name,user_id`
-  const cardRes = await fetch(cardUrl, { headers })
-  if (!cardRes.ok) {
+  // card_aliases → cards join: son 4 hane ile ana kartı bul
+  const aliasUrl = `${supabaseUrl}/rest/v1/card_aliases?last_four_digits=eq.${parsed.lastFour}&select=card_id,label,cards(id,card_name,bank_name,user_id)`
+  const aliasRes = await fetch(aliasUrl, { headers })
+  if (!aliasRes.ok) {
     return jsonResponse({ error: 'Kart sorgusu başarısız.' }, 502)
   }
 
-  const cards = await cardRes.json() as Array<{ id: string; card_name: string; bank_name: string; user_id: string }>
-  if (cards.length === 0) {
+  const aliases = await aliasRes.json() as Array<{
+    card_id: string
+    label: string | null
+    cards: { id: string; card_name: string; bank_name: string; user_id: string }
+  }>
+  if (aliases.length === 0) {
     return jsonResponse({
-      error: `Son 4 hanesi "${parsed.lastFour}" olan kart bulunamadı. Kartın last_four_digits alanını doldurun.`,
+      error: `Son 4 hanesi "${parsed.lastFour}" olan kart takma adı bulunamadı. card_aliases tablosuna kayıt ekleyin.`,
       parsed,
     }, 404)
   }
 
-  const card = cards[0]!
+  const card = aliases[0]!.cards
   const category = inferCategory(parsed.merchant)
 
   // add_card_expense RPC çağrısı

@@ -72,7 +72,6 @@ function card(overrides: Partial<Card>): Card {
     statement_day: null,
     due_day: null,
     note: null,
-    last_four_digits: null,
     ...overrides,
   }
 }

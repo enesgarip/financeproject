@@ -111,7 +111,6 @@ function creditCard(overrides: Partial<Card> = {}): Card {
     statement_day: 1,
     due_day: 10,
     note: null,
-    last_four_digits: null,
     ...overrides,
   }
 }

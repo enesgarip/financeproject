@@ -13,7 +13,7 @@ function bankCard(overrides: Partial<Card>): Card {
     ...base, bank_name: 'Banka', card_name: 'Banka Kartı', card_type: 'banka_karti',
     holder_name: null, limit_group_name: null, current_balance: 0, credit_limit: 0, debt_amount: 0,
     statement_debt_amount: 0, current_period_spending: 0, provision_amount: 0,
-    statement_day: null, due_day: null, note: null, last_four_digits: null, ...overrides,
+    statement_day: null, due_day: null, note: null, ...overrides,
   }
 }
 

@@ -10,10 +10,10 @@ function asset(o: Partial<Asset>): Asset {
   return { ...base, name: 'Varlık', category: 'Nakit', amount: 0, unit: 'TRY', currency: null, symbol: null, unit_cost: null, estimated_value_try: 0, auto_valued: false, source: null, note: null, ...o }
 }
 function bankCard(o: Partial<Card>): Card {
-  return { ...base, bank_name: 'Banka', card_name: 'Banka Kartı', card_type: 'banka_karti', holder_name: null, limit_group_name: null, current_balance: 0, credit_limit: 0, debt_amount: 0, statement_debt_amount: 0, current_period_spending: 0, provision_amount: 0, statement_day: null, due_day: null, note: null, last_four_digits: null, ...o }
+  return { ...base, bank_name: 'Banka', card_name: 'Banka Kartı', card_type: 'banka_karti', holder_name: null, limit_group_name: null, current_balance: 0, credit_limit: 0, debt_amount: 0, statement_debt_amount: 0, current_period_spending: 0, provision_amount: 0, statement_day: null, due_day: null, note: null, ...o }
 }
 function creditCard(o: Partial<Card>): Card {
-  return { ...base, bank_name: 'Banka', card_name: 'Kredi Kartı', card_type: 'kredi_karti', holder_name: null, limit_group_name: null, current_balance: 0, credit_limit: 10000, debt_amount: 0, statement_debt_amount: 0, current_period_spending: 0, provision_amount: 0, statement_day: 1, due_day: 10, note: null, last_four_digits: null, ...o }
+  return { ...base, bank_name: 'Banka', card_name: 'Kredi Kartı', card_type: 'kredi_karti', holder_name: null, limit_group_name: null, current_balance: 0, credit_limit: 10000, debt_amount: 0, statement_debt_amount: 0, current_period_spending: 0, provision_amount: 0, statement_day: 1, due_day: 10, note: null, ...o }
 }
 function loan(o: Partial<Loan>): Loan {
   return { ...base, bank_name: 'Banka', loan_name: 'Kredi', total_amount: 0, remaining_amount: 0, monthly_payment: 0, installment_day: null, start_date: null, end_date: null, remaining_installments: 0, status: 'active', note: null, ...o }
