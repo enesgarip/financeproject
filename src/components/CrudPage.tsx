@@ -475,6 +475,7 @@ export function CrudPage<T extends TableName>({
                     return (
                       <div key={row.id} className="min-w-0">
                         {renderCard(row, { meta: resolvedMeta, reload: loadRows, setError, rows, menu: rowMenu, rowActions })}
+                        {renderExtra ? renderExtra(row, { reload: loadRows, setError, rows }) : null}
                       </div>
                     )
                   }
