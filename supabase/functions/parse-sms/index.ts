@@ -182,6 +182,7 @@ Deno.serve(async (req: Request) => {
       p_category: category,
       p_installment_count: 1,
       p_status: 'provision',
+      p_user_id: card.user_id,
     }),
   })
 
