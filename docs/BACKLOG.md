@@ -130,6 +130,58 @@
   - Banner, DataHealth sayfasına tek tıkla yönlendirir; "Güvenli düzeltmeleri uygula" ile toplu fix zaten mevcut.
   - Mevcut 3-katman: import (StatementImportModal / CurrentMovementImportModal) → detect (DataHealth 22 check) → fix (fixIssue + undo stack).
 
+## 6-Geçiş Denetim Sentezi (2026-06-23)
+
+6 geçişlik sistematik denetim tamamlandı. Aşağıda tüm bulgular, tekrar eden
+pattern'ler ve açık düzeltme planı yer alıyor.
+
+### Tüm bulgular
+
+| # | Geçiş | Seviye | Bulgu | Durum |
+|---|--------|--------|-------|-------|
+| 1 | UX (P1) | Orta | Dashboard loading/error/ARIA/reduced-motion/touch-target | ✅ `6e51418` |
+| 2 | Domain (P2) | Orta | Ledger summarize boş dizi koruması, salary trend defensive hardening | ✅ `664f6d8` |
+| 3 | Data (P3) | Orta | 5 repo Result\<T\> tutarsızlığı (throw/silent → Result) | ✅ `785925d` |
+| 4 | Data (P3) | Orta | dataHealthRepo hata aggregation maskeleme | ✅ `785925d` |
+| 5 | Data (P3) | Orta | savingsGoalsRepo — sıralı yazma, DB transaction yok | 🔶 Açık |
+| 6 | Data (P3) | Orta | accountMovements TOCTOU — bakiye kontrolü row-lock'suz | 🔶 Açık |
+| 7 | Perf (P4) | Orta | HistorySection filtreleme/gruplama useMemo + debounce eksik | ✅ `aa775f3` |
+| 8 | Perf (P4) | Orta | PaymentsOverview 6 filter/sort zinciri useMemo eksik | ✅ `aa775f3` |
+| 9 | Perf (P4) | Düşük | UpcomingInstallments hesaplaması useMemo eksik | ✅ `aa775f3` |
+| 10 | Perf (P4) | Düşük | framer-motion vendor chunk (126KB) ilk yüklemede | 🔶 Açık |
+| 11 | Perf (P4) | Düşük | Maintenance + 15 sorgu ilk açılış latency'si | 🔶 Açık |
+| 12 | Perf (P4) | Düşük | Liste virtualization yok | 🔶 Açık |
+| 13 | Perf (P4) | Düşük | vendor-recharts 392KB chunk | 🔶 Açık |
+| 14 | Akış (P5) | Orta | Ekstre import partial failure feedback eksik | ✅ `73d535b` |
+| 15 | Akış (P5) | Düşük | cancel\_card\_expense RPC Türkçe karakter | ✅ `73d535b` |
+| 16 | Akış (P5) | Düşük | Import sırasında stale snapshot | 🔶 Açık |
+
+**Özet: 16 bulgu → 10 düzeltildi, 6 açık (0 kritik, 2 orta, 4 düşük)**
+
+### Tekrar eden pattern'ler
+
+| Pattern | Etkilenen alanlar | Durum |
+|---------|------------------|-------|
+| Result\<T\> tutarsızlığı — repo'lar throw/swallow/Result karışık | 5 repo + 6 caller | ✅ Tamamlandı |
+| useMemo eksikliği — render-path'te ağır hesaplama sarılmamış | HistorySection, PaymentsOverview, UpcomingInstallments | ✅ Tamamlandı |
+| Türkçe karakter tutarsızlığı — RPC hata mesajlarında ASCII | add/update/cancel\_card\_expense, carryover, repo mesajları | ✅ Tamamlandı |
+| Sıralı yazma transaction gap — birden fazla DB yazma atomik değil | savingsGoalsRepo, accountMovements | 🔶 2 açık madde |
+| Vendor bundle boyutu — büyük 3rd-party chunk'lar | recharts (392KB), framer-motion (126KB) | 🔶 Tasarım trade-off |
+
+### Açık düzeltme planı (bağımlılık sıralı)
+
+| # | Madde | Seviye | Efor | Quick-win? |
+|---|-------|--------|------|------------|
+| 5 | savingsGoalsRepo: `addGoalWithComponents` 2 INSERT client-side sıralı, DB transaction yok → tek PL/pgSQL RPC yaz | Orta | M | — |
+| 6 | accountMovements: `submitAccountMovement` bakiye kontrolü JS'te, güncelleme ayrı → servisi tek RPC'ye indirge | Orta | M | — |
+| 10 | framer-motion 126KB Dashboard default route'ta → CSS `@starting-style` + `transition` ile değiştir, chunk kalkar | Düşük | M | — |
+| 16 | Import sırasında stale snapshot → import başlangıcında `invalidateSnapshot()` ekle | Düşük | S | ⚡ |
+| 12 | Liste virtualization yok → `@tanstack/react-virtual` (history + DataHealth), ölçek büyüyünce | Düşük | M | — |
+| 11 | Maintenance-before-snapshot ilk açılış latency → background'a taşı (stale-data trade-off) | Düşük | L | — |
+| 13 | recharts 392KB → lightweight chart lib (uPlot ~35KB), 4 chart component yeniden yazılır | Düşük | L | — |
+
+**Öncelik:** #5 → #6 (veri güvenliği) > #16 (quick-win) > #10 (bundle) > #12 (UX ölçek) > #11, #13 (mimari/lib)
+
 ## P3 - Nice to Have
 
 - Add goal-based automatic saving suggestions.

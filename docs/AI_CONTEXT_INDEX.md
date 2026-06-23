@@ -29,7 +29,7 @@ frontend -> RPC, or RPC -> migration.
 | `docs/CARDS_ARCHITECTURE.md` | You are changing `/kartlar` orchestration, card/account panels, or card page module boundaries | Cards page data flow, module map, side-effect boundaries, payment flow |
 | `docs/DATA_HEALTH_ARCHITECTURE.md` | You are changing `/veri-sagligi`, data-health checks, safe fixes, undo, backup, or reset flows | Data-health lifecycle, issue/fix ownership, write safety, invariant sources |
 | `docs/KNOWN_RISKS.md` | You are choosing risk level or reviewing a change | Known failure modes and where to be extra cautious |
-| `docs/BACKLOG.md` | You need the next useful task | Priority backlog and suggested Codex tasks |
+| `docs/BACKLOG.md` | You need the next useful task | Priority backlog, 6-geçiş denetim sentezi (2026-06-23), suggested Codex tasks |
 
 ## Domain Source Of Truth
 
