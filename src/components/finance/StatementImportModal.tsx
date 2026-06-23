@@ -133,6 +133,7 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
   const [plannedPaymentMatches, setPlannedPaymentMatches] = useState(0)
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [importedCount, setImportedCount] = useState(0)
+  const [failedCount, setFailedCount] = useState(0)
 
   const [reconciling, setReconciling] = useState(false)
   const [reconciled, setReconciled] = useState(false)
@@ -293,11 +294,16 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
     }
 
     setImportedCount(successCount)
+    setFailedCount(errors.length)
 
     if (!successCount) {
       setImportError(`İçe aktarma başarısız: ${errors[0] ?? 'Bilinmeyen hata.'}`)
       setImporting(false)
       return
+    }
+
+    if (errors.length) {
+      setImportError(`${errors.length} işlem aktarılamadı: ${errors[0]}`)
     }
 
     // 3) Ekstreyi kes → dönem içi tutar açık ekstreye (statement_debt_amount) taşınır.
@@ -379,11 +385,16 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
     }
 
     setImportedCount(successCount)
+    setFailedCount(errors.length)
 
     if (errors.length && !successCount) {
       setImportError(`İçe aktarma başarısız: ${errors[0]}`)
       setImporting(false)
       return
+    }
+
+    if (errors.length) {
+      setImportError(`${errors.length} işlem aktarılamadı: ${errors[0]}`)
     }
 
     setImporting(false)
@@ -826,13 +837,19 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
         {/* Success step */}
         {step === 'success' && (
           <div className="p-6 text-center space-y-3">
-            <CheckCircle2 size={40} className="mx-auto text-success" />
+            <CheckCircle2 size={40} className={`mx-auto ${failedCount > 0 ? 'text-warning' : 'text-success'}`} />
             <p className="text-base font-black text-foreground">
               {importedCount} işlem içe aktarıldı
             </p>
-            <p className="text-sm text-muted-foreground">
-              Kart bakiyesi güncellendi.
-            </p>
+            {failedCount > 0 ? (
+              <p className="text-sm font-medium text-warning">
+                {failedCount} işlem aktarılamadı. Kartlar ekranından kontrol et.
+              </p>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Kart bakiyesi güncellendi.
+              </p>
+            )}
             <button
               type="button"
               onClick={onSuccess}
