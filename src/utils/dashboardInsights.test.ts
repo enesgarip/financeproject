@@ -40,6 +40,7 @@ function card(over: Partial<Card> & Pick<Card, 'card_type'>): Card {
     statement_day: null,
     due_day: null,
     note: null,
+    last_four_digits: null,
     ...over,
   }
 }

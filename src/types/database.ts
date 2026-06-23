@@ -75,6 +75,7 @@ export type Card = BaseRow & {
   statement_day: number | null
   due_day: number | null
   note: string | null
+  last_four_digits: string | null
 }
 
 export type CardExpense = BaseRow & {
