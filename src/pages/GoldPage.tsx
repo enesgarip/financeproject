@@ -1,16 +1,8 @@
-import { Coins, LineChart, Scale, TrendingUp } from 'lucide-react'
-import { useEffect, useMemo, useRef } from 'react'
-import {
-  CartesianGrid,
-  Line,
-  LineChart as ReLineChart,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts'
+import { Coins, LineChart as LineChartIcon, Scale, TrendingUp } from 'lucide-react'
+import { useMemo, useEffect, useRef } from 'react'
 import { useAuth } from '../auth/useAuth'
 import { CrudPage, type FormField } from '../components/CrudPage'
-import { useChartWidth } from '../components/charts/useChartWidth'
+import { LineChart } from '../components/charts/LineChart'
 import { RatesBanner } from '../components/finance/RatesBanner'
 import { MetricCard, SectionHeader } from '../components/finance/FinanceUI'
 import { Alert } from '../components/ui/alert'
@@ -76,14 +68,6 @@ type ChartPoint = {
   cost: number
   market: number | null
 }
-
-type TooltipPayload = {
-  dataKey: string
-  name: string
-  value: number | null
-  stroke?: string
-}
-
 
 function formatDate(value: string | null): string {
   if (!value) return 'Tarih bilinmiyor'
@@ -241,7 +225,7 @@ function GoldOverview({ rows, snapshot }: { rows: GoldLot[]; snapshot: MarketRat
           deltaLabel={profit === null ? 'flat' : profit > 0 ? 'up' : profit < 0 ? 'down' : 'flat'}
           description="kayıtlı maliyet üzerinden"
           tone={profit === null ? 'neutral' : profit >= 0 ? 'good' : 'danger'}
-          icon={LineChart}
+          icon={LineChartIcon}
         />
         <MetricCard
           label="Birikim"
@@ -267,34 +251,16 @@ function GoldOverview({ rows, snapshot }: { rows: GoldLot[]; snapshot: MarketRat
   )
 }
 
-function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: TooltipPayload[]; label?: string }) {
-  if (!active || !payload?.length) return null
-
-  return (
-    <div className="min-w-[180px] rounded-xl border border-border/70 bg-card p-3 shadow-[var(--shadow-floating)]">
-      <p className="mb-2 text-xs font-semibold uppercase text-muted-foreground">{label}</p>
-      {payload
-        .filter((entry) => entry.value != null)
-        .map((entry) => (
-          <div key={entry.dataKey} className="flex items-center justify-between gap-4 text-xs">
-            <span className="flex min-w-0 items-center gap-1.5 text-muted-foreground">
-              <span className="size-1.5 shrink-0 rounded-full" style={{ background: entry.stroke }} />
-              <span className="truncate">{entry.name}</span>
-            </span>
-            <span className="font-mono font-semibold tabular-nums text-foreground">
-              {formatCurrency(entry.value)}
-            </span>
-          </div>
-        ))}
-    </div>
-  )
-}
+const GOLD_CHART_SERIES = [
+  { key: 'cost', name: 'Bilinen maliyet', stroke: 'var(--warning)' },
+  { key: 'market', name: 'Piyasa değeri', stroke: 'var(--success)', connectNulls: true },
+]
 
 function GoldAccumulationChart({ rows, snapshot }: { rows: GoldLot[]; snapshot: MarketRatesSnapshot | null }) {
   const data = useMemo(() => buildChartData(rows, snapshot), [rows, snapshot])
-  const [chartRef, chartWidth] = useChartWidth()
   const undatedCount = rows.filter((row) => !row.purchase_date).length
   const hasMarket = data.some((point) => point.market !== null)
+  const series = hasMarket ? GOLD_CHART_SERIES : GOLD_CHART_SERIES.slice(0, 1)
 
   return (
     <Card variant="elevated" className="border-warning/20">
@@ -312,50 +278,7 @@ function GoldAccumulationChart({ rows, snapshot }: { rows: GoldLot[]; snapshot: 
             Tarihli işlem yok
           </div>
         ) : (
-          <div ref={chartRef} className="min-w-0" style={{ height: 260, minHeight: 260 }}>
-            {chartWidth > 0 ? (
-              <ReLineChart width={chartWidth} height={260} data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" strokeOpacity={0.5} vertical={false} />
-                <XAxis
-                  dataKey="label"
-                  tick={{ fill: 'var(--muted-foreground)', fontSize: 11 }}
-                  axisLine={false}
-                  tickLine={false}
-                  dy={8}
-                />
-                <YAxis
-                  width={66}
-                  tick={{ fill: 'var(--muted-foreground)', fontSize: 11 }}
-                  axisLine={false}
-                  tickLine={false}
-                  tickFormatter={(value: number) => (value >= 1000 ? `₺${(value / 1000).toFixed(0)}K` : `₺${value}`)}
-                />
-                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                <Tooltip content={<ChartTooltip /> as any} cursor={{ stroke: 'var(--muted-foreground)', strokeOpacity: 0.25 }} />
-                <Line
-                  type="monotone"
-                  dataKey="cost"
-                  name="Bilinen maliyet"
-                  stroke="var(--warning)"
-                  strokeWidth={2.5}
-                  dot={{ r: 3 }}
-                  activeDot={{ r: 5 }}
-                />
-                {hasMarket ? (
-                  <Line
-                    type="monotone"
-                    dataKey="market"
-                    name="Piyasa değeri"
-                    stroke="var(--success)"
-                    strokeWidth={2.5}
-                    dot={{ r: 3 }}
-                    activeDot={{ r: 5 }}
-                    connectNulls
-                  />
-                ) : null}
-              </ReLineChart>
-            ) : null}
-          </div>
+          <LineChart data={data} series={series} height={260} />
         )}
       </CardContent>
     </Card>

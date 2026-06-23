@@ -11,40 +11,43 @@ export type { FinanceSnapshot }
 
 const FINANCE_MAINTENANCE_THROTTLE_MS = 5 * 60 * 1000
 let lastFinanceMaintenanceAt = 0
-let financeMaintenancePromise: Promise<void> | null = null
+let financeMaintenancePromise: Promise<boolean> | null = null
 
 export function financeSnapshotKey(userId: string | undefined) {
   return ['finance-snapshot', userId ?? 'anonymous'] as const
 }
 
-async function runFinanceMaintenanceForSnapshot() {
-  if (Date.now() - lastFinanceMaintenanceAt < FINANCE_MAINTENANCE_THROTTLE_MS) return
+/** Returns true if maintenance actually ran, false if throttled/skipped. */
+async function runFinanceMaintenanceInBackground(): Promise<boolean> {
+  if (Date.now() - lastFinanceMaintenanceAt < FINANCE_MAINTENANCE_THROTTLE_MS) return false
 
   financeMaintenancePromise ??= runFinanceMaintenance()
     .then(() => {
       lastFinanceMaintenanceAt = Date.now()
+      return true
     })
+    .catch(() => false)
     .finally(() => {
       financeMaintenancePromise = null
     })
 
-  await financeMaintenancePromise
+  return financeMaintenancePromise
 }
 
-/**
- * Dashboard + Analiz'in ortak veri kaynağı. Aynı cache'i paylaşır: ilk giren
- * sayfa veriyi çeker, diğeri anında render eder. Pencere odağına dönüşte
- * TanStack Query bayat veriyi kendisi tazeler (eski manuel focus listener'larının yerine).
- */
 export function useFinanceSnapshot() {
   const { user } = useAuth()
+  const queryClient = useQueryClient()
+  const userId = user?.id
 
   return useQuery({
-    queryKey: financeSnapshotKey(user?.id),
+    queryKey: financeSnapshotKey(userId),
     enabled: Boolean(user),
     queryFn: async () => {
-      await runFinanceMaintenanceForSnapshot()
-      return fetchFinanceSnapshot()
+      const snapshotPromise = fetchFinanceSnapshot()
+      runFinanceMaintenanceInBackground().then((didRun) => {
+        if (didRun) queryClient.invalidateQueries({ queryKey: financeSnapshotKey(userId) })
+      })
+      return snapshotPromise
     },
   })
 }

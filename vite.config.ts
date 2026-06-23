@@ -40,7 +40,6 @@ export default defineConfig({
         manualChunks: {
           'vendor-react': ['react', 'react-dom', 'react-router-dom'],
           'vendor-ui-utils': ['class-variance-authority', 'clsx', 'tailwind-merge'],
-          'vendor-recharts': ['recharts'],
           'vendor-radix': ['radix-ui'],
         },
       },

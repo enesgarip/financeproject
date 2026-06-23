@@ -149,14 +149,14 @@ pattern'ler ve açık düzeltme planı yer alıyor.
 | 8 | Perf (P4) | Orta | PaymentsOverview 6 filter/sort zinciri useMemo eksik | ✅ `aa775f3` |
 | 9 | Perf (P4) | Düşük | UpcomingInstallments hesaplaması useMemo eksik | ✅ `aa775f3` |
 | 10 | Perf (P4) | Düşük | framer-motion vendor chunk (126KB) ilk yüklemede | ✅ CSS transition |
-| 11 | Perf (P4) | Düşük | Maintenance + 15 sorgu ilk açılış latency'si | 🔶 Açık |
-| 12 | Perf (P4) | Düşük | Liste virtualization yok | 🔶 Açık |
-| 13 | Perf (P4) | Düşük | vendor-recharts 392KB chunk | 🔶 Açık |
+| 11 | Perf (P4) | Düşük | Maintenance + 15 sorgu ilk açılış latency'si | ✅ Background maintenance |
+| 12 | Perf (P4) | Düşük | Liste virtualization yok | ✅ Mevcut slice(40) yeterli |
+| 13 | Perf (P4) | Düşük | vendor-recharts 392KB chunk | ✅ Saf SVG chart |
 | 14 | Akış (P5) | Orta | Ekstre import partial failure feedback eksik | ✅ `73d535b` |
 | 15 | Akış (P5) | Düşük | cancel\_card\_expense RPC Türkçe karakter | ✅ `73d535b` |
 | 16 | Akış (P5) | Düşük | Import sırasında stale snapshot | ✅ Mevcut invalidation yeterli |
 
-**Özet: 16 bulgu → 13 düzeltildi, 3 açık (0 kritik, 0 orta, 3 düşük)**
+**Özet: 16 bulgu → 16 düzeltildi, 0 açık**
 
 ### Tekrar eden pattern'ler
 
@@ -166,7 +166,7 @@ pattern'ler ve açık düzeltme planı yer alıyor.
 | useMemo eksikliği — render-path'te ağır hesaplama sarılmamış | HistorySection, PaymentsOverview, UpcomingInstallments | ✅ Tamamlandı |
 | Türkçe karakter tutarsızlığı — RPC hata mesajlarında ASCII | add/update/cancel\_card\_expense, carryover, repo mesajları | ✅ Tamamlandı |
 | Sıralı yazma transaction gap — birden fazla DB yazma atomik değil | savingsGoalsRepo, accountMovements | ✅ Tamamlandı |
-| Vendor bundle boyutu — büyük 3rd-party chunk'lar | recharts (392KB), ~~framer-motion (126KB)~~ | 🔶 recharts açık |
+| Vendor bundle boyutu — büyük 3rd-party chunk'lar | ~~recharts (392KB)~~, ~~framer-motion (126KB)~~ | ✅ Saf SVG/CSS |
 
 ### Açık düzeltme planı (bağımlılık sıralı)
 
@@ -176,11 +176,11 @@ pattern'ler ve açık düzeltme planı yer alıyor.
 | 6 | accountMovements: server-side FOR UPDATE locks zaten yeterli | Orta | M | ✅ Kapatıldı |
 | 10 | framer-motion → CSS transition, paket kaldırıldı (−126KB) | Düşük | M | ✅ CSS dashboard-item |
 | 16 | Stale snapshot → mevcut invalidation + refetchOnWindowFocus yeterli | Düşük | S | ✅ Kapatıldı |
-| 12 | Liste virtualization yok → `@tanstack/react-virtual` (history + DataHealth), ölçek büyüyünce | Düşük | M | 🔶 Ertelendi |
-| 11 | Maintenance-before-snapshot ilk açılış latency → background'a taşı (stale-data trade-off) | Düşük | L | 🔶 Ertelendi |
-| 13 | recharts 392KB → lightweight chart lib (uPlot ~35KB), 4 chart component yeniden yazılır | Düşük | L | 🔶 Ertelendi |
+| 12 | HistorySection zaten .slice(0,40) ile sınırlı, virtualization gereksiz | Düşük | — | ✅ Kapatıldı |
+| 11 | Maintenance → background: snapshot hemen döner, maintenance bitince invalidate | Düşük | S | ✅ Background fire-and-forget |
+| 13 | recharts → saf SVG chart components (DonutChart, BarChart, CashFlowChart, LineChart) | Düşük | L | ✅ −392KB vendor chunk |
 
-**Kalan 3 açık madde (#12, #11, #13) düşük öncelikli, ölçek/kullanım verisine göre ele alınacak.**
+**Tüm 16 bulgu kapatıldı. Toplam kaldırılan vendor ağırlığı: ~518KB (recharts 392KB + framer-motion 126KB).**
 
 ## P3 - Nice to Have
 

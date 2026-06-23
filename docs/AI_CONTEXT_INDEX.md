@@ -53,7 +53,7 @@ frontend -> RPC, or RPC -> migration.
 | Services | `src/services/*` | RPC wrappers and cross-table mutation actions. Direct Supabase calls are intentional here. |
 | App hooks | `src/app/*` | TanStack Query cache and use-case hooks. |
 | Pages | `src/pages/*` | Route-level orchestration and UI state. Avoid burying new domain math here. |
-| Components | `src/components/*` | Reusable UI, finance panels, charts, selectors, modals. |
+| Components | `src/components/*` | Reusable UI, finance panels, charts (saf SVG: DonutChart, BarChart, CashFlowChart, LineChart + chartUtils), selectors, modals. |
 | Database | `supabase/migrations/*` | Schema, RLS, triggers, RPCs. Treat migrations as forward-only after production. |
 | Edge functions | `supabase/functions/*` | External parsing/quote/push services. Use `_shared/edge.ts` conventions. |
 

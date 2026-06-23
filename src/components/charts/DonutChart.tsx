@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { Cell, Pie, PieChart } from 'recharts'
 import { formatCurrency } from '@/utils/formatCurrency'
 import { cn } from '@/lib/utils'
 import { sumTL } from '@/utils/money'
@@ -27,6 +26,17 @@ type DonutChartProps = {
   innerRadius?: number
   showLegend?: boolean
   totalLabel?: string
+}
+
+function describeArc(cx: number, cy: number, r: number, startAngle: number, endAngle: number): string {
+  const startRad = ((startAngle - 90) * Math.PI) / 180
+  const endRad = ((endAngle - 90) * Math.PI) / 180
+  const x1 = cx + r * Math.cos(startRad)
+  const y1 = cy + r * Math.sin(startRad)
+  const x2 = cx + r * Math.cos(endRad)
+  const y2 = cy + r * Math.sin(endRad)
+  const largeArc = endAngle - startAngle > 180 ? 1 : 0
+  return `M ${x1} ${y1} A ${r} ${r} 0 ${largeArc} 1 ${x2} ${y2}`
 }
 
 export function DonutChart({
@@ -69,16 +79,28 @@ export function DonutChart({
     )
   }
 
+  const cx = size / 2
+  const cy = size / 2
+  const midRadius = (innerRadius + outerRadius) / 2
+  const gap = 2
+
+  const slices = data.map((slice, i) => {
+    const startAngle = data.slice(0, i).reduce((sum, s) => sum + (s.value / total) * 360, 0)
+    const sliceAngle = (slice.value / total) * 360
+    const paddedStart = startAngle + gap / 2
+    const paddedEnd = startAngle + sliceAngle - gap / 2
+    const arc = sliceAngle > gap ? describeArc(cx, cy, midRadius, paddedStart, paddedEnd) : ''
+    return { ...slice, arc, index: i }
+  })
+
   return (
     <div className="flex flex-col gap-4">
-      {/* Chart */}
       <div
         className="relative mx-auto min-w-0"
         role="img"
         aria-label={chartSummary}
         style={{ width: size, height: size, minHeight: size }}
       >
-        {/* Center label overlay */}
         <div
           className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-0.5"
           aria-hidden
@@ -97,47 +119,36 @@ export function DonutChart({
           </span>
         </div>
 
-        <PieChart width={size} height={size}>
-          <Pie
-            data={data}
-            cx="50%"
-            cy="50%"
-            innerRadius={innerRadius}
-            outerRadius={outerRadius}
-            dataKey="value"
-            paddingAngle={2}
-            animationBegin={0}
-            animationDuration={700}
-          >
-            {data.map((entry, index) => {
-              const isActive = activeIndex === index
-              const isAnyActive = activeIndex !== null
-              const color = entry.color ?? DEFAULT_COLORS[index % DEFAULT_COLORS.length]
-
-              return (
-                <Cell
-                  key={entry.name}
-                  fill={color}
-                  stroke="transparent"
-                  opacity={isAnyActive && !isActive ? 0.35 : 1}
-                  style={{
-                    cursor: 'pointer',
-                    transition: 'opacity 0.18s, r 0.18s',
-                    // Expand active slice via filter
-                    filter: isActive
-                      ? 'drop-shadow(0 0 6px color-mix(in srgb, currentColor 40%, transparent))'
-                      : undefined,
-                  }}
-                  onMouseEnter={() => setActiveIndex(index)}
-                  onMouseLeave={() => setActiveIndex(null)}
-                />
-              )
-            })}
-          </Pie>
-        </PieChart>
+        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+          {slices.map((slice) => {
+            if (!slice.arc) return null
+            const isActive = activeIndex === slice.index
+            const isAnyActive = activeIndex !== null
+            const color = slice.color ?? DEFAULT_COLORS[slice.index % DEFAULT_COLORS.length]
+            return (
+              <path
+                key={slice.name}
+                d={slice.arc}
+                fill="none"
+                stroke={color}
+                strokeWidth={outerRadius - innerRadius}
+                strokeLinecap="round"
+                opacity={isAnyActive && !isActive ? 0.35 : 1}
+                style={{
+                  cursor: 'pointer',
+                  transition: 'opacity 0.18s',
+                  filter: isActive
+                    ? 'drop-shadow(0 0 6px color-mix(in srgb, currentColor 40%, transparent))'
+                    : undefined,
+                }}
+                onMouseEnter={() => setActiveIndex(slice.index)}
+                onMouseLeave={() => setActiveIndex(null)}
+              />
+            )
+          })}
+        </svg>
       </div>
 
-      {/* Legend */}
       {showLegend && (
         <ul className="flex flex-col gap-1" role="list">
           {data.slice(0, 6).map((entry, index) => {
