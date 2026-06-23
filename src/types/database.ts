@@ -77,6 +77,12 @@ export type Card = BaseRow & {
   note: string | null
 }
 
+export type CardAlias = BaseRow & {
+  card_id: string
+  last_four_digits: string
+  label: string | null
+}
+
 export type CardExpense = BaseRow & {
   card_id: string
   statement_archive_id: string | null
@@ -339,6 +345,7 @@ export type Database = {
     Tables: {
       assets: Table<Asset, WithBaseInsert<Asset>, WithBaseUpdate<Asset>>
       cards: Table<Card, WithBaseInsert<Card>, WithBaseUpdate<Card>>
+      card_aliases: Table<CardAlias, WithBaseInsert<CardAlias>, WithBaseUpdate<CardAlias>>
       card_expenses: Table<CardExpense, WithBaseInsert<CardExpense>, WithBaseUpdate<CardExpense>>
       budgets: Table<Budget, WithBaseInsert<Budget>, WithBaseUpdate<Budget>>
       savings_goals: Table<SavingsGoal, WithBaseInsert<SavingsGoal>, WithBaseUpdate<SavingsGoal>>

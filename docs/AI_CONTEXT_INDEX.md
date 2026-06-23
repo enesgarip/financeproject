@@ -247,7 +247,7 @@ paylaşır; her sayfa süpersetini client-side daraltır). Query client: `src/ap
 | **Kategori eşleme (tr-TR tuzağı)** | `utils/categories.ts` (`normalizeDescription`) | `data/repositories/categoryMemoryRepo.ts` | — |
 | **Yedek / backup** | `utils/backup.ts` | `data/repositories/backupRepo.ts` | (DataHealth) |
 | **Push bildirim** | — | `data/repositories/pushSubscriptionsRepo.ts`, `services/pushNotifications.ts`, `supabase/migrations/20260617102826_add_notification_log.sql`, `.github/workflows/push-notify.yml` | `supabase/functions/push-notify`, `public/sw.js`, `components/finance/NotificationSettings.tsx` |
-| **SMS harcama otomasyonu** | `utils/categories.ts` (inferExpenseCategory) | — | `supabase/functions/parse-sms` |
+| **SMS harcama otomasyonu** | `utils/categories.ts` (inferExpenseCategory) | `data/repositories/cardAliasesRepo.ts` | `supabase/functions/parse-sms`, `components/finance/CardAliasPanel.tsx` |
 | **Piyasa kuru / BIST** | `utils/marketRates.ts` | — | `supabase/functions/bist-quote` |
 | **Şema / tip / RPC kontratı** | — | `src/types/database.ts` | — |
 | **Migration / trigger** | `utils/financeSummary.ts` (saf TS ikizleri) | `supabase/migrations/*` | — |

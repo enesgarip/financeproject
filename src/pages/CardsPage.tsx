@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { ShieldCheck } from 'lucide-react'
 import { CrudPage } from '../components/CrudPage'
+import { CardAliasPanel } from '../components/finance/CardAliasPanel'
 import { CurrentMovementImportModal } from '../components/finance/CurrentMovementImportModal'
 import { FinancePaymentDrawer } from '../components/finance/FinancePaymentDrawer'
 import { StatementImportModal } from '../components/finance/StatementImportModal'
@@ -260,7 +261,12 @@ export function CardsPage() {
             onChanged={() => refreshCardsAndProvisions(helpers.reload)}
           />
         )}
-        renderExtra={renderCardExtra}
+        renderExtra={(row, helpers) => (
+          <>
+            {renderCardExtra(row, helpers)}
+            <CardAliasPanel card={row} />
+          </>
+        )}
         getCardClassName={getCardClassName}
         getDetailClassName={getDetailClassName}
         getCardStyle={getCardStyle}
