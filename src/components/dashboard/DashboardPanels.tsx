@@ -115,7 +115,22 @@ export function DashboardHero({
 }
 
 export function GoalProgressCommand({ goalProgress }: { goalProgress: GoalProgressSummary }) {
-  const tone = goalProgress.activeCount === 0 ? 'info' : goalProgress.averageProgress >= 70 ? 'good' : goalProgress.averageProgress >= 35 ? 'warning' : 'info'
+  if (goalProgress.activeCount === 0) {
+    return (
+      <FinancePanel tone="info" className="p-4 sm:p-5">
+        <SectionHeader
+          title="Hedef ilerlemeleri"
+          description="Henüz aktif birikim hedefi yok."
+          action={<StatusBadge tone="info">0 hedef</StatusBadge>}
+        />
+        <p className="mt-5 rounded-lg bg-background/65 p-3 text-sm text-muted-foreground ring-1 ring-border/70">
+          Birikim ekranından yeni hedef ekleyince ilerleme takibi burada görünür.
+        </p>
+      </FinancePanel>
+    )
+  }
+
+  const tone = goalProgress.averageProgress >= 70 ? 'good' : goalProgress.averageProgress >= 35 ? 'warning' : 'info'
 
   return (
     <FinancePanel tone={tone} className="p-4 sm:p-5">
@@ -183,7 +198,7 @@ export function PulseCard({ title, label, value, description, icon, tone }: { ti
   return (
     <Card className="border-0 shadow-[var(--shadow-card)] ring-1 ring-border/80">
       <CardContent className="flex items-center gap-3 p-4">
-        <div className={`grid size-10 shrink-0 place-items-center rounded-lg ${toneClass}`}>{icon}</div>
+        <div className={`grid size-10 shrink-0 place-items-center rounded-lg ${toneClass}`} aria-hidden="true">{icon}</div>
         <div className="min-w-0">
           <p className="text-xs font-bold uppercase text-muted-foreground">{title}</p>
           <p className="mt-1 text-sm text-muted-foreground">{label}</p>

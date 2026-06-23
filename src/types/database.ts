@@ -19,7 +19,7 @@ export type CardExpenseStatus = 'provision' | 'posted' | 'cancelled'
 export type CardStatementStatus = 'open' | 'paid'
 export type SavingsGoalStatus = 'active' | 'completed'
 export type SavingsGoalValueType = 'TRY' | 'gram_altin' | 'ceyrek_altin' | 'composite'
-export type TransactionHistoryType = 'payment' | 'transfer' | 'loan' | 'debt' | 'card'
+export type TransactionHistoryType = 'payment' | 'transfer' | 'loan' | 'debt' | 'card' | 'correction'
 export type UpcomingDismissalSource = 'payment' | 'card' | 'loan_installment' | 'debt'
 
 export type BaseRow = {

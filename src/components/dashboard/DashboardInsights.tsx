@@ -46,7 +46,7 @@ export function FocusActionPanel({ actions, cashFlow }: { actions: FocusAction[]
                   En önemli finans aksiyonlarını vade, bakiye ve limit durumuna göre sıraladım.
                 </p>
               </div>
-              <div className="grid size-11 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary ring-1 ring-primary/15">
+              <div className="grid size-11 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary ring-1 ring-primary/15" aria-hidden="true">
                 <ListChecks size={21} />
               </div>
             </div>
@@ -163,7 +163,7 @@ export function SpendingRadarPanel({ expenses }: { expenses: CardExpense[] }) {
       <CardHeader className="pb-1">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <CardTitle className="text-base">Harcama radari</CardTitle>
+            <CardTitle className="text-base">Harcama radarı</CardTitle>
             <p className="mt-1 text-xs text-muted-foreground">Ortalamayı aşan kategoriler ve tekrar eden giderler.</p>
           </div>
           <Lightbulb size={16} className="mt-0.5 shrink-0 text-amber-500" aria-hidden="true" />
@@ -219,7 +219,7 @@ export function SmartInsightsPanel({ insights }: { insights: SmartInsight[] }) {
             <CardTitle>Akıllı uyarılar</CardTitle>
             <p className="mt-1 text-sm text-muted-foreground">Bu ay karar vermeyi hızlandıran kısa finans sinyalleri.</p>
           </div>
-          <Lightbulb className="text-emerald-700 dark:text-emerald-300" />
+          <Lightbulb className="text-emerald-700 dark:text-emerald-300" aria-hidden="true" />
         </div>
       </CardHeader>
       <CardContent className="grid gap-2 pt-2 min-[560px]:grid-cols-2">

@@ -510,10 +510,10 @@ export function DashboardPage() {
 
 function DetailSectionDivider({ label }: { label: string }) {
   return (
-    <div className="flex items-center gap-3 lg:col-span-12">
-      <div className="h-px flex-1 bg-border/50" />
+    <div role="separator" aria-label={label} className="flex items-center gap-3 lg:col-span-12">
+      <div className="h-px flex-1 bg-border/50" aria-hidden="true" />
       <span className="shrink-0 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/70">{label}</span>
-      <div className="h-px flex-1 bg-border/50" />
+      <div className="h-px flex-1 bg-border/50" aria-hidden="true" />
     </div>
   )
 }

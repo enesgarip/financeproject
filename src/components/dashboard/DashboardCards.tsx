@@ -32,6 +32,7 @@ const historyFilters: Array<{ label: string; value: TransactionHistoryType | 'al
   { label: 'Kredi', value: 'loan' },
   { label: 'Borç', value: 'debt' },
   { label: 'Kart', value: 'card' },
+  { label: 'Düzeltme', value: 'correction' },
 ]
 
 export function CreditCardSnapshotPanel({
@@ -372,6 +373,7 @@ function historyDotClass(type: TransactionHistoryType) {
     loan: 'bg-rose-500',
     debt: 'bg-violet-500',
     card: 'bg-emerald-500',
+    correction: 'bg-stone-500',
   }
 
   return classes[type]
