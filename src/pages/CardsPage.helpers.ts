@@ -80,6 +80,12 @@ export const fields: FormField[] = [
     visibleWhen: { field: 'card_type', value: 'kredi_karti' },
   },
   {
+    name: 'account_number',
+    label: 'Hesap numarası',
+    type: 'text',
+    visibleWhen: { field: 'card_type', value: 'banka_karti' },
+  },
+  {
     name: 'current_balance',
     label: 'Bakiye',
     type: 'number',
