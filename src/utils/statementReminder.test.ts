@@ -12,6 +12,7 @@ function card(overrides: Partial<Card> = {}): Card {
     card_name: 'Card',
     card_type: 'kredi_karti',
     holder_name: null,
+    account_number: null,
     limit_group_name: null,
     current_balance: 0,
     credit_limit: 10000,

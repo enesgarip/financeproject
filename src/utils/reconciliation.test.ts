@@ -16,7 +16,7 @@ function card(over: Partial<Card> & Pick<Card, 'id' | 'card_type'>): Card {
     updated_at: '2026-01-01',
     bank_name: 'Bank',
     card_name: 'Card',
-    holder_name: null,
+    holder_name: null, account_number: null,
     limit_group_name: null,
     current_balance: 0,
     credit_limit: 0,

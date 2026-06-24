@@ -19,7 +19,7 @@ function makeCard(overrides: Partial<Card> = {}): Card {
     statement_day: 15,
     due_day: 5,
     current_balance: 0,
-    holder_name: null,
+    holder_name: null, account_number: null,
     limit_group_name: null,
     note: null,
     ...overrides,

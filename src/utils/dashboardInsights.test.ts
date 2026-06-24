@@ -29,7 +29,7 @@ function card(over: Partial<Card> & Pick<Card, 'card_type'>): Card {
     ...base,
     bank_name: 'B',
     card_name: 'K',
-    holder_name: null,
+    holder_name: null, account_number: null,
     limit_group_name: null,
     current_balance: 0,
     credit_limit: 0,

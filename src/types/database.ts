@@ -65,6 +65,7 @@ export type Card = BaseRow & {
   card_name: string
   card_type: CardType
   holder_name: string | null
+  account_number: string | null
   limit_group_name: string | null
   current_balance: number
   credit_limit: number

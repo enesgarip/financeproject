@@ -8,7 +8,7 @@ function creditCard(overrides: Partial<Card> = {}): Card {
     user_id: 'user-1',
     bank_name: 'Test Bank',
     card_name: 'Kart',
-    holder_name: null,
+    holder_name: null, account_number: null,
     card_type: 'kredi_karti',
     limit_group_name: null,
     current_balance: 0,

@@ -11,7 +11,7 @@ function asset(overrides: Partial<Asset>): Asset {
 
 function creditCard(overrides: Partial<Card>): Card {
   return {
-    ...base, bank_name: 'B', card_name: 'KK', card_type: 'kredi_karti', holder_name: null, limit_group_name: null,
+    ...base, bank_name: 'B', card_name: 'KK', card_type: 'kredi_karti', holder_name: null, account_number: null, limit_group_name: null,
     current_balance: 0, credit_limit: 100000, debt_amount: 0, statement_debt_amount: 0, current_period_spending: 0,
     provision_amount: 0, statement_day: 1, due_day: 10, note: null, ...overrides,
   }

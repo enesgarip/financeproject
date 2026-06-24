@@ -19,7 +19,7 @@ function creditCard(overrides: Partial<Card> = {}): Card {
     user_id: 'u1',
     bank_name: 'Test Bankası',
     card_name: 'Kart',
-    holder_name: null,
+    holder_name: null, account_number: null,
     card_type: 'kredi_karti',
     limit_group_name: null,
     credit_limit: 10000,

@@ -40,7 +40,7 @@ function bankCard(overrides: Partial<Card>): Card {
   return {
     ...base,
     bank_name: 'Banka', card_name: 'Banka Kartı', card_type: 'banka_karti',
-    holder_name: null, limit_group_name: null,
+    holder_name: null, account_number: null, limit_group_name: null,
     current_balance: 0, credit_limit: 0, debt_amount: 0,
     statement_debt_amount: 0, current_period_spending: 0, provision_amount: 0,
     statement_day: null, due_day: null, note: null, ...overrides,
@@ -51,7 +51,7 @@ function creditCard(overrides: Partial<Card>): Card {
   return {
     ...base,
     bank_name: 'Banka', card_name: 'Kredi Kartı', card_type: 'kredi_karti',
-    holder_name: null, limit_group_name: null,
+    holder_name: null, account_number: null, limit_group_name: null,
     current_balance: 0, credit_limit: 10000, debt_amount: 0,
     statement_debt_amount: 0, current_period_spending: 0, provision_amount: 0,
     statement_day: 1, due_day: 10, note: null, ...overrides,
