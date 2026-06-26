@@ -5,6 +5,7 @@ import { useAuth } from '../auth/useAuth'
 import { cn } from '../lib/utils'
 import { BottomNav } from './BottomNav'
 import { contentWidthClass, overflowNavItems, primaryNavItems, routeSubtitle, routeTitle, secondaryNavItems } from './navigation'
+import { PullToRefresh } from './PullToRefresh'
 import { QuickActions } from './QuickActions'
 import { AppMark } from './AppMark'
 
@@ -221,7 +222,9 @@ export function Layout() {
           'pb-[calc(env(safe-area-inset-bottom)+11rem)] lg:pb-14',
           contentWidth,
         )}>
-          <Outlet />
+          <PullToRefresh>
+            <Outlet />
+          </PullToRefresh>
         </main>
 
         <QuickActions />
