@@ -177,6 +177,40 @@ function getServiceRoleKey(): string | null {
   return null
 }
 
+// --- SMS log -----------------------------------------------------------
+
+async function logSms(
+  supabaseUrl: string,
+  headers: Record<string, string>,
+  entry: {
+    userId?: string | null
+    smsType: 'card_expense' | 'account_movement' | 'unrecognized'
+    status: 'success' | 'error'
+    summary?: string | null
+    amount?: number | null
+    errorMessage?: string | null
+    rawSms: string
+  },
+): Promise<void> {
+  try {
+    await fetch(`${supabaseUrl}/rest/v1/sms_log`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        user_id: entry.userId ?? null,
+        sms_type: entry.smsType,
+        status: entry.status,
+        summary: entry.summary ?? null,
+        amount: entry.amount ?? null,
+        error_message: entry.errorMessage ?? null,
+        raw_sms: entry.rawSms,
+      }),
+    })
+  } catch {
+    // SMS log yazımı başarısızsa ana akışı bozma — sadece görünürlük kaybolur.
+  }
+}
+
 // --- Handler ---------------------------------------------------------------
 
 Deno.serve(async (req: Request) => {
@@ -215,22 +249,28 @@ Deno.serve(async (req: Request) => {
   const smsText = typeof body.sms === 'string' ? body.sms : ''
   if (!smsText) return jsonResponse({ error: 'SMS metni boş.' }, 400)
 
-  // SMS'i parse et (DenizBank kart/hesap + Yapı Kredi kart)
-  const parsed = parseSms(smsText)
-  if (!parsed) {
-    return jsonResponse({ error: 'SMS formatı tanınamadı.', sms: smsText.slice(0, 100) }, 422)
-  }
-
   const headers = {
     'Content-Type': 'application/json',
     'Authorization': `Bearer ${serviceRoleKey}`,
     'apikey': serviceRoleKey,
   }
 
+  // SMS'i parse et (DenizBank kart/hesap + Yapı Kredi kart)
+  const parsed = parseSms(smsText)
+  if (!parsed) {
+    await logSms(supabaseUrl, headers, {
+      smsType: 'unrecognized',
+      status: 'error',
+      errorMessage: 'SMS formatı tanınamadı.',
+      rawSms: smsText,
+    })
+    return jsonResponse({ error: 'SMS formatı tanınamadı.', sms: smsText.slice(0, 100) }, 422)
+  }
+
   if (parsed.type === 'card') {
-    return handleCardSms(parsed, supabaseUrl, headers)
+    return handleCardSms(parsed, smsText, supabaseUrl, headers)
   } else {
-    return handleAccountSms(parsed, supabaseUrl, headers)
+    return handleAccountSms(parsed, smsText, supabaseUrl, headers)
   }
 })
 
@@ -238,12 +278,21 @@ Deno.serve(async (req: Request) => {
 
 async function handleCardSms(
   parsed: ParsedCardSms,
+  rawSms: string,
   supabaseUrl: string,
   headers: Record<string, string>,
 ): Promise<Response> {
   const aliasUrl = `${supabaseUrl}/rest/v1/card_aliases?last_four_digits=eq.${parsed.lastFour}&select=card_id,label,cards(id,card_name,bank_name,user_id)`
   const aliasRes = await fetch(aliasUrl, { headers })
   if (!aliasRes.ok) {
+    await logSms(supabaseUrl, headers, {
+      smsType: 'card_expense',
+      status: 'error',
+      errorMessage: 'Kart sorgusu başarısız.',
+      amount: parsed.amount,
+      summary: parsed.merchant,
+      rawSms,
+    })
     return jsonResponse({ error: 'Kart sorgusu başarısız.' }, 502)
   }
 
@@ -253,6 +302,14 @@ async function handleCardSms(
     cards: { id: string; card_name: string; bank_name: string; user_id: string }
   }>
   if (aliases.length === 0) {
+    await logSms(supabaseUrl, headers, {
+      smsType: 'card_expense',
+      status: 'error',
+      errorMessage: `Son 4 hanesi "${parsed.lastFour}" olan kart takma adı bulunamadı.`,
+      amount: parsed.amount,
+      summary: parsed.merchant,
+      rawSms,
+    })
     return jsonResponse({
       error: `Son 4 hanesi "${parsed.lastFour}" olan kart takma adı bulunamadı. card_aliases tablosuna kayıt ekleyin.`,
       parsed,
@@ -280,8 +337,26 @@ async function handleCardSms(
 
   if (!rpcRes.ok) {
     const errBody = await rpcRes.text()
+    await logSms(supabaseUrl, headers, {
+      userId: card.user_id,
+      smsType: 'card_expense',
+      status: 'error',
+      errorMessage: `Harcama kaydedilemedi: ${errBody}`,
+      amount: parsed.amount,
+      summary: `${card.card_name} · ${parsed.merchant}`,
+      rawSms,
+    })
     return jsonResponse({ error: 'Harcama kaydedilemedi.', detail: errBody }, 502)
   }
+
+  await logSms(supabaseUrl, headers, {
+    userId: card.user_id,
+    smsType: 'card_expense',
+    status: 'success',
+    amount: parsed.amount,
+    summary: `${card.card_name} · ${parsed.merchant}`,
+    rawSms,
+  })
 
   return jsonResponse({
     ok: true,
@@ -298,6 +373,7 @@ async function handleCardSms(
 
 async function handleAccountSms(
   parsed: ParsedAccountSms,
+  rawSms: string,
   supabaseUrl: string,
   headers: Record<string, string>,
 ): Promise<Response> {
@@ -317,8 +393,26 @@ async function handleAccountSms(
 
   if (!rpcRes.ok) {
     const errBody = await rpcRes.text()
+    await logSms(supabaseUrl, headers, {
+      smsType: 'account_movement',
+      status: 'error',
+      errorMessage: `Hesap hareketi kaydedilemedi: ${errBody}`,
+      amount: parsed.amount,
+      summary: parsed.counterparty,
+      rawSms,
+    })
     return jsonResponse({ error: 'Hesap hareketi kaydedilemedi.', detail: errBody }, 502)
   }
+
+  const card = await rpcRes.json() as { user_id?: string; card_name?: string }
+  await logSms(supabaseUrl, headers, {
+    userId: card.user_id,
+    smsType: 'account_movement',
+    status: 'success',
+    amount: parsed.amount,
+    summary: `${card.card_name ?? ''} · ${parsed.counterparty}`,
+    rawSms,
+  })
 
   return jsonResponse({
     ok: true,

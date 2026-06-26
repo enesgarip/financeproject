@@ -27,6 +27,8 @@
 
 ## P1 - Product / Reliability
 
+- ~~Add success/error visibility for the SMS automation pipeline.~~ DONE.
+  - 2026-06-26: `sms_log` table records every `parse-sms` outcome (card_expense/account_movement/unrecognized, success/error + error detail). New `SmsLogPanel` (collapsed by default, error-count badge) renders the last 20 entries on `/veri-sagligi/islemler`, kept off the frequently-opened `CardsPage`/`CardAliasPanel`.
 - ~~Complete roadmap Y1 server-side Web Push sender.~~ DONE.
   - `push-notify` Supabase Edge Function sends VAPID-signed Web Push notifications for tomorrow's planned payments, tomorrow's loan installments, 3-day card statement cut reminders, and Monday weekly summaries.
   - `notification_log` prevents duplicate user/type/reference sends, and stale 404/410 endpoints are removed from `push_subscriptions`.

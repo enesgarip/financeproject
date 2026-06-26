@@ -84,6 +84,21 @@ export type CardAlias = BaseRow & {
   label: string | null
 }
 
+export type SmsLogType = 'card_expense' | 'account_movement' | 'unrecognized'
+export type SmsLogStatus = 'success' | 'error'
+
+export type SmsLog = {
+  id: string
+  user_id: string | null
+  created_at: string
+  sms_type: SmsLogType
+  status: SmsLogStatus
+  summary: string | null
+  amount: number | null
+  error_message: string | null
+  raw_sms: string
+}
+
 export type CardExpense = BaseRow & {
   card_id: string
   statement_archive_id: string | null
@@ -373,6 +388,11 @@ export type Database = {
         NotificationLog,
         Omit<NotificationLog, 'id' | 'sent_at'> & { id?: string; sent_at?: string },
         Partial<Omit<NotificationLog, 'id' | 'user_id'>>
+      >
+      sms_log: Table<
+        SmsLog,
+        Omit<SmsLog, 'id' | 'created_at'> & { id?: string; created_at?: string },
+        Partial<Omit<SmsLog, 'id'>>
       >
       dismissed_upcoming_items: Table<
         DismissedUpcomingItem,

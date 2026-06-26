@@ -2,6 +2,7 @@ import { DatabaseZap, Download, Settings, Upload } from 'lucide-react'
 import { useRef, useState, type ChangeEvent, type FormEvent } from 'react'
 import { useAuth } from '../auth/useAuth'
 import { NotificationSettings } from '../components/finance/NotificationSettings'
+import { SmsLogPanel } from '../components/finance/SmsLogPanel'
 import { Alert } from '../components/ui/alert'
 import { Card as SurfaceCard, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import {
@@ -223,6 +224,7 @@ export function DataHealthOperationsPage() {
         </SurfaceCard>
 
         <NotificationSettings />
+        <SmsLogPanel />
       </section>
 
       <ResetDataModal
