@@ -12,12 +12,28 @@
 import { handlePreflight, jsonResponse, rateLimit } from '../_shared/edge.ts'
 
 // --- SMS parsing -----------------------------------------------------------
+// Parsing mantığı src/utils/smsParser.ts ile senkronize tutulmalı (testler orada).
+
+// -- Helpers --
+
+/** SMS metinlerindeki satır sonlarını ve çoklu boşlukları tek boşluğa indirger. */
+function normalizeSmsWhitespace(text: string): string {
+  return text.replace(/\r?\n/g, ' ').replace(/\s+/g, ' ').trim()
+}
+
+function parseAmount(raw: string): number | null {
+  const amount = parseFloat(raw.replace(/\./g, '').replace(',', '.'))
+  if (!Number.isFinite(amount) || amount <= 0) return null
+  return Math.round(amount * 100) / 100
+}
+
+function toIsoDate(datePart: string, timePart: string): string {
+  const [d, mo, y] = datePart.split('.')
+  return `${y}-${mo}-${d}T${timePart}`
+}
 
 // -- Kart harcama SMS'leri --
 
-// DenizBank harcama SMS formatı:
-// "Degerli Musterimiz, 23.06.2026 15:18:21 tarihinde 9032 ile biten kartinizla,
-//  FINDEKS FINANSAL YONETI firmasindan, 200 TL islem yapilmistir."
 const DENIZBANK_CARD_REGEX =
   /(\d{2}\.\d{2}\.\d{4})\s+(\d{2}:\d{2}:\d{2})\s+tarihinde\s+(\d{4})\s+ile\s+biten\s+kartinizla,\s+(.+?)\s+firmasindan,\s+([\d.,]+)\s+TL\s+islem/i
 
@@ -30,59 +46,46 @@ type ParsedCardSms = {
 }
 
 function parseDenizbankCardSms(text: string): ParsedCardSms | null {
-  const m = text.match(DENIZBANK_CARD_REGEX)
+  const normalized = normalizeSmsWhitespace(text)
+  const m = normalized.match(DENIZBANK_CARD_REGEX)
   if (!m) return null
 
   const [, datePart, timePart, lastFour, merchant, amountStr] = m
-  const [d, mo, y] = datePart!.split('.')
-  const isoDate = `${y}-${mo}-${d}T${timePart}`
-
-  const amount = parseFloat(amountStr!.replace(/\./g, '').replace(',', '.'))
-  if (!Number.isFinite(amount) || amount <= 0) return null
+  const amount = parseAmount(amountStr!)
+  if (amount === null) return null
 
   return {
     type: 'card',
-    spentAt: isoDate,
+    spentAt: toIsoDate(datePart!, timePart!),
     lastFour: lastFour!,
     merchant: merchant!.trim(),
-    amount: Math.round(amount * 100) / 100,
+    amount,
   }
 }
 
-// Yapı Kredi harcama SMS formatı:
-// "Sayin ENES GARIP, 7735 ile biten Hepsiburada Worldcard kartinizla
-//  23.03.2026 saat 10:30'de,HEPSIPAY *HEPSIBURADA is yerinden 31.834,00 TL
-//  islem yapilmistir."
 const YAPIKREDI_CARD_REGEX =
   /(\d{4})\s+ile\s+biten\s+.+?\s+kartinizla\s+(\d{2}\.\d{2}\.\d{4})\s+saat\s+(\d{2}:\d{2})'de,\s*(.+?)\s+is\s+yerinden\s+([\d.,]+)\s+TL\s+islem/i
 
 function parseYapikrediCardSms(text: string): ParsedCardSms | null {
-  const m = text.match(YAPIKREDI_CARD_REGEX)
+  const normalized = normalizeSmsWhitespace(text)
+  const m = normalized.match(YAPIKREDI_CARD_REGEX)
   if (!m) return null
 
   const [, lastFour, datePart, timePart, merchant, amountStr] = m
-  const [d, mo, y] = datePart!.split('.')
-  const isoDate = `${y}-${mo}-${d}T${timePart}`
-
-  const amount = parseFloat(amountStr!.replace(/\./g, '').replace(',', '.'))
-  if (!Number.isFinite(amount) || amount <= 0) return null
+  const amount = parseAmount(amountStr!)
+  if (amount === null) return null
 
   return {
     type: 'card',
-    spentAt: isoDate,
+    spentAt: toIsoDate(datePart!, timePart!),
     lastFour: lastFour!,
     merchant: merchant!.trim(),
-    amount: Math.round(amount * 100) / 100,
+    amount,
   }
 }
 
 // -- Hesap hareketi SMS'leri --
 
-// DenizBank hesap hareketi SMS formatı:
-// Giden: "... 24.06.2026 21:40:15'da Ipek Bayram alicisina 4230-13300128-351
-//         numarali hesabinizdan 600,00 TL tutarinda FAST islemi gerceklesmistir."
-// Gelen: "... 24.06.2026 21:40:15'da Ipek Bayram gondericisinden 4230-13300128-351
-//         numarali hesabiniza 600,00 TL tutarinda FAST islemi gerceklesmistir."
 const DENIZBANK_ACCOUNT_REGEX =
   /(\d{2}\.\d{2}\.\d{4})\s+(\d{2}:\d{2}:\d{2})'da\s+(.+?)\s+(?:alicisina|gondericisinden)\s+([\d-]+)\s+numarali\s+hesabiniz(dan|a)\s+([\d.,]+)\s+TL\s+tutarinda\s+(\w+)\s+islemi/i
 
@@ -97,22 +100,20 @@ type ParsedAccountSms = {
 }
 
 function parseDenizbankAccountSms(text: string): ParsedAccountSms | null {
-  const m = text.match(DENIZBANK_ACCOUNT_REGEX)
+  const normalized = normalizeSmsWhitespace(text)
+  const m = normalized.match(DENIZBANK_ACCOUNT_REGEX)
   if (!m) return null
 
   const [, datePart, timePart, counterparty, accountNumber, dirSuffix, amountStr, txType] = m
-  const [d, mo, y] = datePart!.split('.')
-  const isoDate = `${y}-${mo}-${d}T${timePart}`
-
-  const amount = parseFloat(amountStr!.replace(/\./g, '').replace(',', '.'))
-  if (!Number.isFinite(amount) || amount <= 0) return null
+  const amount = parseAmount(amountStr!)
+  if (amount === null) return null
 
   return {
     type: 'account',
-    occurredAt: isoDate,
+    occurredAt: toIsoDate(datePart!, timePart!),
     accountNumber: accountNumber!,
     counterparty: counterparty!.trim(),
-    amount: Math.round(amount * 100) / 100,
+    amount,
     direction: dirSuffix === 'dan' ? 'out' : 'in',
     transactionType: txType!,
   }
