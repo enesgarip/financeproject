@@ -109,7 +109,7 @@ jobs:
           supabase functions deploy push-notify --project-ref "$SUPABASE_PROJECT_REF"
 
   deploy:
-    name: Trigger Vercel Deploy Hook
+    name: Vercel Production Deploy
     runs-on: ubuntu-latest
     needs:
       - migrate
@@ -117,7 +117,9 @@ jobs:
     # deploy. Run whenever migration succeeded.
     if: ${{ !cancelled() && needs.migrate.result == 'success' }}
     env:
-      VERCEL_DEPLOY_HOOK_URL: ${{ secrets.VERCEL_DEPLOY_HOOK_URL }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -127,5 +129,14 @@ jobs:
         with:
           node-version: 22
 
-      - name: Trigger production deploy
-        run: node ./scripts/trigger-vercel-deploy.mjs
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Pull Vercel environment
+        run: npx vercel pull --yes --environment production --token "$VERCEL_TOKEN"
+
+      - name: Build
+        run: npx vercel build --prod --token "$VERCEL_TOKEN"
+
+      - name: Deploy prebuilt to production
+        run: npx vercel deploy --prebuilt --prod --token "$VERCEL_TOKEN"
