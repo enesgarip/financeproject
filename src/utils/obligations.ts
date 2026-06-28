@@ -9,7 +9,7 @@ import type {
   SalaryHistory,
 } from '../types/database'
 import { getNextCardPaymentDueDate } from './cardStatement'
-import { addMonths, dateInMonth, dateInputValue, endOfMonth, isDateInMonth, monthlyOccurrenceDate, startOfDay, startOfMonth } from './date'
+import { dateInMonth, dateInputValue, endOfMonth, isDateInMonth, monthlyOccurrenceDate, startOfDay, startOfMonth } from './date'
 import { cardMonthlyPaymentAmount, paymentCashOutflowAmount, paymentOccurrenceInMonth, paymentUsesCreditCard } from './financeObligationRules'
 import { roundTL, sumTL } from './money'
 
@@ -205,18 +205,18 @@ export function buildFinanceObligationsForMonth(
       })
     }
 
-    if (nextDue && card.current_period_spending > 0) {
-      const currentPeriodDueDate = dateInputValue(addMonths(new Date(`${nextDue}T00:00:00`), 1))
-      if (isDateInMonth(currentPeriodDueDate, monthStart)) {
+    if (card.current_period_spending > 0) {
+      const fromDate = options.from ?? new Date()
+      if (isDateInMonth(dateInputValue(fromDate), monthStart)) {
         addObligation(items, {
-          id: `card-debt-current-${card.id}-${currentPeriodDueDate}`,
+          id: `card-debt-current-${card.id}-${dateInputValue(monthStart)}`,
           kind: 'card_debt',
-          action: 'pay_card_debt',
+          action: null,
           sourceId: card.id,
           relatedCardId: card.id,
           title: `${card.card_name} dönem içi borç`,
-          subtitle: `${card.bank_name} - kesinleşmiş harcama`,
-          date: currentPeriodDueDate,
+          subtitle: `${card.bank_name} - güncel harcama`,
+          date: dateInputValue(fromDate),
           amount: card.current_period_spending,
           direction: 'outflow',
         })
