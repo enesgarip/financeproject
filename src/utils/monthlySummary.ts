@@ -1,4 +1,5 @@
 import type { CardExpense } from '../types/database'
+import { dayOfMonthCutoff, isWithinDayOfMonth } from './monthToDate'
 import { sumTL } from './money'
 
 export type CategorySpending = {
@@ -30,10 +31,15 @@ export function buildMonthlySummary(
   const prevKey = monthKey(prevDate)
 
   const posted = expenses.filter((e) => e.status !== 'cancelled')
+  // Fair month-over-month: today is only N days in, so the % change compares
+  // this month so far against the previous month *through the same day* — not a
+  // full prior month, which would understate the change early in the month.
+  const throughDay = dayOfMonthCutoff(now)
 
   const categoryMap = new Map<string, number>()
   let currentMonthTotal = 0
   let previousMonthTotal = 0
+  let previousMonthToDateTotal = 0
   const activeDaySet = new Set<string>()
 
   for (const e of posted) {
@@ -45,6 +51,9 @@ export function buildMonthlySummary(
       activeDaySet.add(e.spent_at.slice(0, 10))
     } else if (eMonth === prevKey) {
       previousMonthTotal = sumTL([previousMonthTotal, e.amount])
+      if (isWithinDayOfMonth(e.spent_at, throughDay)) {
+        previousMonthToDateTotal = sumTL([previousMonthToDateTotal, e.amount])
+      }
     }
   }
 
@@ -57,8 +66,8 @@ export function buildMonthlySummary(
     .sort((a, b) => b.amount - a.amount)
 
   const changePercent =
-    previousMonthTotal > 0
-      ? Math.round(((currentMonthTotal - previousMonthTotal) / previousMonthTotal) * 100)
+    previousMonthToDateTotal > 0
+      ? Math.round(((currentMonthTotal - previousMonthToDateTotal) / previousMonthToDateTotal) * 100)
       : null
 
   const totalDays = now.getDate()

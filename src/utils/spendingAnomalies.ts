@@ -1,4 +1,5 @@
 import type { CardExpense } from '../types/database'
+import { dayOfMonthCutoff, isWithinDayOfMonth } from './monthToDate'
 import { sumTL } from './money'
 
 export type CategoryAnomaly = {
@@ -49,7 +50,13 @@ export function detectCategoryAnomalies(
   from: Date = new Date(),
 ): CategoryAnomaly[] {
   const currentKey = offsetMonthPrefix(from, 0)
-  const posted = expenses.filter((e) => e.status === 'posted' && e.category)
+  // Fair comparison: the current month is only N days in, so clip every month
+  // (current and the prior baseline months) to the same day-of-month window.
+  // Otherwise a partial current month always looks low against full prior months.
+  const throughDay = dayOfMonthCutoff(from)
+  const posted = expenses.filter(
+    (e) => e.status === 'posted' && e.category && isWithinDayOfMonth(e.spent_at, throughDay),
+  )
 
   // category → monthKey → total
   const byCategory = new Map<string, Map<string, number>>()

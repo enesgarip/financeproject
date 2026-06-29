@@ -15,6 +15,7 @@ import type {
 } from '../types/database'
 import { dateInputValue, startOfMonth } from './date'
 import { formatCurrency } from './formatCurrency'
+import { dayOfMonthCutoff, isWithinDayOfMonth } from './monthToDate'
 import { activeExpense as activeCardExpense } from './budgetAlerts'
 import {
   buildFinanceObligationsForMonth,
@@ -235,6 +236,10 @@ export function buildCalendarEvents(data: AnalysisData): CalendarEvent[] {
 export function buildCategoryInsights(data: AnalysisData): CategoryInsight[] {
   const currentMonth = dateInputValue(startOfMonth())
   const previousMonths = previousMonthKeys(3)
+  // Fair comparison: clip the current month and the 3 baseline months to the
+  // same day-of-month window so a partial current month is not measured against
+  // full prior months.
+  const throughDay = dayOfMonthCutoff()
   const currentTotals = new Map<string, number>()
   const previousTotals = new Map<string, number>()
   const budgetsByCategory = new Map(
@@ -242,6 +247,7 @@ export function buildCategoryInsights(data: AnalysisData): CategoryInsight[] {
   )
 
   for (const expense of data.cardExpenses.filter(activeCardExpense)) {
+    if (!isWithinDayOfMonth(expense.spent_at, throughDay)) continue
     const category = expense.category || 'Diğer'
     const expenseMonth = monthKeyFor(expense.spent_at)
 
