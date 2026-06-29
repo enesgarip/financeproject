@@ -33,8 +33,11 @@ function monthKey(date: string): string {
 export function detectMilestones(data: MilestoneInput): Milestone[] {
   const milestones: Milestone[] = []
 
-  const cashAssets = data.assets.filter((a) => a.category === 'Nakit')
-  const totalCash = sumTL(cashAssets.map((a) => a.estimated_value_try))
+  // Cash = Nakit assets + bank-card balances, matching totalCashAssets elsewhere
+  // (the threshold ignored bank balances before, under-counting real savings).
+  const cashFromAssets = sumTL(data.assets.filter((a) => a.category === 'Nakit').map((a) => a.estimated_value_try))
+  const bankBalance = sumTL(data.cards.filter((c) => c.card_type === 'banka_karti').map((c) => c.current_balance ?? 0))
+  const totalCash = sumTL([cashFromAssets, bankBalance])
 
   const cashThresholds = [100_000, 50_000, 25_000, 10_000]
   for (const threshold of cashThresholds) {
