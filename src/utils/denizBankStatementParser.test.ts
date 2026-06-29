@@ -1,5 +1,23 @@
 import { describe, expect, it } from 'vitest'
-import { expenseTotalAmount, matchTransactions, parseDenizBankStatement } from './denizBankStatementParser'
+import { expenseTotalAmount, matchTransactions, parseAmount, parseDenizBankStatement } from './denizBankStatementParser'
+
+describe('parseAmount (locale-robust)', () => {
+  it('parses English-formatted statement amounts', () => {
+    expect(parseAmount('43,333.33')).toBeCloseTo(43333.33)
+    expect(parseAmount('100.00')).toBeCloseTo(100)
+    expect(parseAmount('484,000.00')).toBeCloseTo(484000)
+  })
+
+  it('does not silently corrupt a Turkish-formatted amount', () => {
+    // old code: "1.234,56".replace(/,/g,'') → "1.234.56" → parseFloat → 1.234
+    expect(parseAmount('1.234,56')).toBeCloseTo(1234.56)
+    expect(parseAmount('100,00')).toBeCloseTo(100)
+  })
+
+  it('returns 0 for unparseable input', () => {
+    expect(parseAmount('abc')).toBe(0)
+  })
+})
 
 // Realistic Denizbank PDF text fixture (based on actual statement format)
 const SAMPLE_TEXT = `

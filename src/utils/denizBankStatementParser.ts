@@ -64,8 +64,23 @@ const AMOUNT_MATCH_TOLERANCE_TL = 1
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
-function parseAmount(s: string): number {
-  return parseFloat(s.replace(/,/g, ''))
+/**
+ * Parse a money string robustly for BOTH locales. The decimal separator is
+ * whichever of '.' / ',' appears LAST; the other is the thousands separator.
+ * Statement PDFs use English "1,234.56", but this guards against silent
+ * corruption if a Turkish-formatted "1.234,56" ever slips in (the old
+ * comma-strip + parseFloat turned "1.234,56" → "1.234.56" → 1.234).
+ */
+export function parseAmount(s: string): number {
+  const trimmed = s.trim()
+  const lastComma = trimmed.lastIndexOf(',')
+  const lastDot = trimmed.lastIndexOf('.')
+  const normalized =
+    lastComma > lastDot
+      ? trimmed.replace(/\./g, '').replace(',', '.') // Turkish: '.' thousands, ',' decimal
+      : trimmed.replace(/,/g, '') // English: ',' thousands, '.' decimal
+  const parsed = parseFloat(normalized)
+  return Number.isFinite(parsed) ? parsed : 0
 }
 
 function parseDate(s: string): string {
