@@ -79,7 +79,7 @@ export function LoginPage() {
                 </div>
               </div>
               <div className="relative mt-5 grid grid-cols-3 gap-2">
-                {['Gelir', 'Gider', 'Net'].map((label, index) => (
+                {['Gelir', 'Nakit çıkışı', 'Net'].map((label, index) => (
                   <div key={label} className="rounded-xl bg-white/10 px-3 py-2 ring-1 ring-white/10">
                     <p className="text-[10px] font-bold uppercase tracking-wide text-white/55">{label}</p>
                     <p className={`mt-1 font-mono text-sm font-bold tabular-nums ${index === 1 ? 'text-rose-200' : 'text-emerald-200'}`}>

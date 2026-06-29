@@ -126,9 +126,9 @@ export function AnalyticsSnapshotPanel({
       <div className="mt-4 grid gap-3 min-[720px]:grid-cols-3">
         {/* Net flow card */}
         <MetricCard
-          label="Gelir / Gider"
+          label="Nakit dengesi"
           value={`${cashFlow.netFlow >= 0 ? '+' : ''}${formatCurrency(cashFlow.netFlow)}`}
-          description={`Gelir ${formatCurrency(cashFlow.income)} · Çıkış ${formatCurrency(cashFlow.outflow)}`}
+          description={`Gelir ${formatCurrency(cashFlow.income)} · Nakit çıkışı ${formatCurrency(cashFlow.outflow)}`}
           tone={cashFlow.netFlow >= 0 ? 'good' : 'danger'}
           icon={TrendingUp}
           deltaLabel={cashFlow.netFlow >= 0 ? 'up' : 'down'}

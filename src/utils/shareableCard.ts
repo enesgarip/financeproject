@@ -41,12 +41,13 @@ export function renderShareableCard(input: ShareableCardInput): HTMLCanvasElemen
   ctx.fillText(`Oluşturulma: ${new Date().toLocaleDateString('tr-TR')}`, 40, 78)
 
   const statY = 108
-  const statW = (W - 80 - 24) / 3
+  const statW = (W - 80 - 36) / 4
 
   const stats = [
     { label: 'GELİR', value: `${formatTL(cashFlow.income)} ₺`, color: '#22c55e' },
-    { label: 'ÇIKIŞ', value: `${formatTL(cashFlow.outflow)} ₺`, color: '#ef4444' },
-    { label: 'NET', value: `${cashFlow.netFlow >= 0 ? '+' : ''}${formatTL(cashFlow.netFlow)} ₺`, color: cashFlow.netFlow >= 0 ? '#22c55e' : '#ef4444' },
+    { label: 'KART HARCAMASI', value: `${formatTL(summary.currentMonthTotal)} ₺`, color: '#ef4444' },
+    { label: 'NAKİT ÇIKIŞI', value: `${formatTL(cashFlow.outflow)} ₺`, color: '#ef4444' },
+    { label: 'NET NAKİT', value: `${cashFlow.netFlow >= 0 ? '+' : ''}${formatTL(cashFlow.netFlow)} ₺`, color: cashFlow.netFlow >= 0 ? '#22c55e' : '#ef4444' },
   ]
 
   stats.forEach((stat, i) => {

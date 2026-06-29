@@ -26,7 +26,7 @@ type SeriesConfig = {
 
 const SERIES: SeriesConfig[] = [
   { key: 'income', name: 'Gelir', stroke: 'var(--success)', gradId: 'cfIncome', opacity: 0.18 },
-  { key: 'outflow', name: 'Gider', stroke: 'var(--destructive)', gradId: 'cfOutflow', opacity: 0.15 },
+  { key: 'outflow', name: 'Nakit çıkışı', stroke: 'var(--destructive)', gradId: 'cfOutflow', opacity: 0.15 },
   { key: 'net', name: 'Net', stroke: 'var(--primary)', gradId: 'cfNet', opacity: 0.2, dash: '5 3' },
 ]
 
@@ -35,7 +35,7 @@ export function CashFlowChart({ data, height = 220 }: CashFlowChartProps) {
   const [hoverIndex, setHoverIndex] = useState<number | null>(null)
 
   const chartSummary = data
-    .map((p) => `${p.label}: gelir ${formatCurrency(p.income)}, gider ${formatCurrency(p.outflow)}, net ${formatCurrency(p.net)}`)
+    .map((p) => `${p.label}: gelir ${formatCurrency(p.income)}, nakit çıkışı ${formatCurrency(p.outflow)}, net ${formatCurrency(p.net)}`)
     .join('; ')
 
   if (data.length === 0) {

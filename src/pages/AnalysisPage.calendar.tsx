@@ -92,8 +92,8 @@ function DayDetail({ day }: { day: CalendarDay }) {
             <div className="min-w-0">
               <p className="font-semibold text-foreground">{event.title}</p>
               <p className="mt-0.5 text-muted-foreground">
-                {event.direction === 'inflow' ? 'Gelir' : 'Gider'}
-                {event.settlement === 'credit_card' ? ' · kredi kartı' : ' · nakit'}
+                {event.direction === 'inflow' ? 'Gelir' : event.settlement === 'credit_card' ? 'Kart yükü' : 'Nakit çıkışı'}
+                {event.settlement === 'credit_card' ? ' · nakit etkisi yok' : ' · nakit'}
               </p>
             </div>
             <span className={`shrink-0 font-bold tabular-nums ${event.direction === 'inflow' ? 'text-success' : 'text-destructive'}`}>
@@ -142,7 +142,7 @@ export function FullMonthCalendarPanel({ data }: { data: AnalysisData }) {
         <div className="grid grid-cols-2 gap-2 min-[520px]:grid-cols-4">
           <StatPill label="Başlangıç bakiye" value={formatCurrency(calendar.startBalance)} tone="stone" />
           <StatPill label="Gelir" value={formatCurrency(calendar.totalIncome)} tone="emerald" />
-          <StatPill label="Gider" value={formatCurrency(calendar.totalExpense)} tone="rose" />
+          <StatPill label="Nakit çıkışı" value={formatCurrency(calendar.totalExpense)} tone="rose" />
           <StatPill label="Ay sonu tahmini" value={formatCurrency(calendar.endBalance)} tone={calendar.endBalance >= 0 ? 'emerald' : 'rose'} />
         </div>
 

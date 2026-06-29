@@ -208,6 +208,10 @@ From `src/utils/budgetAlerts.ts`:
   normalized obligation projection. Card statement debt is counted when payable;
   current-period card spending is counted on the next card cycle; scheduled card
   installments remain a card load, not an immediate bank-cash outflow.
+- UI labels must preserve the same split: "Nakit çıkışı" / "Kart ödemesi"
+  means bank cash impact, while "Kart harcaması" means card consumption on
+  `card_expenses.spent_at`. Do not merge them into one "gider" bucket or card
+  spending will either look missing or be counted twice when the statement is paid.
 - The payments-page planned-load calendar also summarizes by obligation cash
   impact. Card-funded automatic payments and scheduled card installments can
   appear on their calendar date as card load, but they must not increase "Ay

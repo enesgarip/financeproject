@@ -66,7 +66,7 @@ export function MonthlyPaymentLoadPanel({
         <MiniStat label="Gelecek ay" value={formatCurrency(nextMonthOutflow)} tone={nextMonthOutflow > cashFlow.outflow ? 'warning' : 'neutral'} />
       </div>
       <div className="mt-5">
-        <ProgressStrip label="Gelire göre çıkış" value={loadRate} tone={tone} />
+        <ProgressStrip label="Gelire göre nakit çıkışı" value={loadRate} tone={tone} />
       </div>
     </FinancePanel>
   )
@@ -130,7 +130,7 @@ export function CashFlowPanel({ cashFlow }: { cashFlow: CashFlowSummary }) {
         {/* Summary pills */}
         <div className="grid grid-cols-3 gap-2">
           <CashFlowMetric label="Gelir" value={formatCurrency(cashFlow.income)} tone="emerald" />
-          <CashFlowMetric label="Çıkış" value={formatCurrency(cashFlow.outflow)} tone="rose" />
+          <CashFlowMetric label="Nakit çıkışı" value={formatCurrency(cashFlow.outflow)} tone="rose" />
           <CashFlowMetric label="Ay sonu" value={formatCurrency(cashFlow.projectedCash)} tone={cashFlow.projectedCash >= 0 ? 'emerald' : 'rose'} />
         </div>
 
@@ -144,15 +144,15 @@ export function CashFlowPanel({ cashFlow }: { cashFlow: CashFlowSummary }) {
         {/* Outflow rate */}
         <div>
           <div className="mb-1.5 flex items-center justify-between text-xs">
-            <span className="text-muted-foreground">Gelire göre çıkış</span>
+            <span className="text-muted-foreground">Gelire göre nakit çıkışı</span>
             <span className="font-mono font-semibold tabular-nums text-foreground">%{Math.round(outflowRate)}</span>
           </div>
-          <Progress value={outflowRate} autoColor size="default" aria-label={`Gelire göre çıkış %${Math.round(outflowRate)}`} />
+          <Progress value={outflowRate} autoColor size="default" aria-label={`Gelire göre nakit çıkışı %${Math.round(outflowRate)}`} />
         </div>
 
         {/* Detail grid */}
         <div className="grid gap-1.5 text-xs text-muted-foreground min-[430px]:grid-cols-2">
-          <span>Kart: <span className="font-mono font-medium text-foreground">{formatCurrency(cashFlow.cardOutflow)}</span></span>
+          <span>Kart ödemesi: <span className="font-mono font-medium text-foreground">{formatCurrency(cashFlow.cardOutflow)}</span></span>
           <span>Kredi: <span className="font-mono font-medium text-foreground">{formatCurrency(cashFlow.loanOutflow)}</span></span>
           <span>Fatura: <span className="font-mono font-medium text-foreground">{formatCurrency(cashFlow.paymentOutflow)}</span></span>
           <span>Kişisel: <span className="font-mono font-medium text-foreground">{formatCurrency(cashFlow.debtOutflow)}</span></span>

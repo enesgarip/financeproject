@@ -135,7 +135,7 @@ function AiSummaryButton({ data }: { data: AnalysisData }) {
 }
 
 export function MonthlyReport({ data }: { data: AnalysisData }) {
-  // Same engine the dashboard cash-flow card uses, so "Gelir / Çıkış / Net" here
+  // Same engine the dashboard cash-flow card uses, so "Gelir / Nakit çıkışı / Net" here
   // can never disagree with the dashboard for the same month (credit-card auto
   // payments are excluded from cash outflow exactly like there).
   const cashFlow = buildMonthlyCashFlow(data)
@@ -184,10 +184,11 @@ export function MonthlyReport({ data }: { data: AnalysisData }) {
             PDF
           </Button>
         </div>
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 gap-2 min-[520px]:grid-cols-4">
           <StatPill label="Gelir" value={formatCurrency(income)} tone="emerald" />
-          <StatPill label="Çıkış" value={formatCurrency(outflow)} tone="rose" />
-          <StatPill label="Net" value={formatCurrency(net)} tone={net >= 0 ? 'emerald' : 'rose'} />
+          <StatPill label="Kart harcaması" value={formatCurrency(cardSpending)} tone="rose" />
+          <StatPill label="Nakit çıkışı" value={formatCurrency(outflow)} tone="rose" />
+          <StatPill label="Net nakit" value={formatCurrency(net)} tone={net >= 0 ? 'emerald' : 'rose'} />
         </div>
         <div className="grid gap-2 min-[520px]:grid-cols-2">
           {reportRows.map((row) => (
@@ -223,7 +224,7 @@ export function MonthlyReport({ data }: { data: AnalysisData }) {
         ) : null}
 
         <p className="text-xs text-muted-foreground">
-          Kart harcaması toplamı: {formatCurrency(cardSpending)} · Bütçeler kategori bazlı harcama tutarını kullanır.
+          Kart harcamaları alışveriş tarihinde, nakit çıkışı ekstre veya ödeme tarihinde izlenir.
         </p>
       </CardContent>
     </Card>

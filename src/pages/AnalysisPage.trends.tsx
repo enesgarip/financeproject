@@ -41,8 +41,8 @@ export function CashFlowTrend({ data }: { data: AnalysisData }) {
       <CardHeader className="pb-0">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <CardTitle>6 aylık harcama ve yük görünümü</CardTitle>
-            <p className="mt-1 text-xs text-muted-foreground">Gelir, kart harcaması ve planlı çıkışların aylık karşılaştırması.</p>
+            <CardTitle>6 aylık gelir ve ödeme yükü</CardTitle>
+            <p className="mt-1 text-xs text-muted-foreground">Gelir, kart ödemesi ve planlı nakit çıkışlarının aylık karşılaştırması.</p>
           </div>
           <Badge variant={totalNet >= 0 ? 'success' : 'destructive'}>
             {totalNet >= 0 ? 'Pozitif' : 'Negatif'}
@@ -60,7 +60,7 @@ export function CashFlowTrend({ data }: { data: AnalysisData }) {
           </span>
           <span className="flex items-center gap-1.5">
             <span className="size-2 rounded-full bg-destructive" />
-            Gider
+            Nakit çıkışı
           </span>
           <span className="flex items-center gap-1.5">
             <span className="size-2 rounded-full bg-primary" />

@@ -105,7 +105,7 @@ export function buildFinancialReport(data: FinanceSummaryInput, options: Financi
     heading: `Bu Ay Nakit Akışı (${monthly.monthLabel})`,
     lines: [
       `Gelir: ${tl(monthly.income)}`,
-      `Gider: ${tl(monthly.outflow)}`,
+      `Nakit çıkışı: ${tl(monthly.outflow)}`,
       `Net: ${tl(monthly.netFlow)}`,
       `Tahmini ay sonu nakit: ${tl(monthly.projectedCash)}`,
     ],
@@ -123,7 +123,7 @@ export function buildFinancialReport(data: FinanceSummaryInput, options: Financi
         : 'Projeksiyonda negatife düşen ay yok.',
     ].filter((line): line is string => line !== null),
     table: {
-      headers: ['Ay', 'Gelir', 'Gider', 'Net', 'Ay sonu bakiye'],
+      headers: ['Ay', 'Gelir', 'Nakit çıkışı', 'Net', 'Ay sonu bakiye'],
       rows: forecast.months.map((m) => [m.monthLabel, tl(m.income), tl(m.outflow), tl(m.net), tl(m.endingBalance)]),
     },
   }
@@ -138,8 +138,8 @@ export function buildFinancialReport(data: FinanceSummaryInput, options: Financi
     sections.push({
       heading: 'Servet Kapsama (FIRE göstergesi)',
       lines: [
-        `Tahmini yıllık gider: ${tl(annualExpenses)} (son ${horizonMonths} ay ort. ×12)`,
-        `Net değer / yıllık gider: ${coverageYears.toFixed(1)} yıl`,
+        `Tahmini yıllık nakit çıkışı: ${tl(annualExpenses)} (son ${horizonMonths} ay ort. ×12)`,
+        `Net değer / yıllık nakit çıkışı: ${coverageYears.toFixed(1)} yıl`,
       ],
       note: 'Kaba gösterge; getiri/enflasyon varsayımı içermez, hawl/taksit dağılımına göre değişir.',
     })
