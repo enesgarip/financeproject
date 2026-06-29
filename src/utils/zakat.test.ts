@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import type { Asset, Card, Debt } from '../types/database'
 import type { FinanceSummaryInput } from './financeSummary'
+import type { MarketRatesSnapshot } from './marketRates'
 import { computeZakat, ZAKAT_NISAB_GOLD_GRAMS } from './zakat'
+
+function snap(gramBuying: number): MarketRatesSnapshot {
+  return { rates: { GRA: { buying: gramBuying, selling: gramBuying } }, asOf: null, fetchedAt: '2026-01-01T00:00:00Z' }
+}
 
 const base = { id: 'id', user_id: 'u', created_at: '2026-01-01T00:00:00Z', updated_at: '2026-01-01T00:00:00Z' }
 
@@ -35,14 +40,14 @@ const GRAM = 1000 // → nisab = 80.18 * 1000 = 80,180 TL
 
 describe('computeZakat', () => {
   it('computes nisab from the live gram-gold price', () => {
-    const z = computeZakat(input({}), GRAM)
+    const z = computeZakat(input({}), snap(GRAM))
     expect(z.nisabTry).toBe(ZAKAT_NISAB_GOLD_GRAMS * GRAM)
     expect(z.meetsNisab).toBe(false)
     expect(z.zakatDue).toBe(0)
   })
 
   it('charges 2.5% when net wealth is at/above nisab', () => {
-    const z = computeZakat(input({ assets: [asset({ category: 'Nakit', estimated_value_try: 100000 })] }), GRAM)
+    const z = computeZakat(input({ assets: [asset({ category: 'Nakit', estimated_value_try: 100000 })] }), snap(GRAM))
     expect(z.zakatableAssets).toBe(100000)
     expect(z.netWealth).toBe(100000)
     expect(z.meetsNisab).toBe(true)
@@ -50,7 +55,7 @@ describe('computeZakat', () => {
   })
 
   it('does not charge below nisab', () => {
-    const z = computeZakat(input({ assets: [asset({ category: 'Nakit', estimated_value_try: 50000 })] }), GRAM)
+    const z = computeZakat(input({ assets: [asset({ category: 'Nakit', estimated_value_try: 50000 })] }), snap(GRAM))
     expect(z.meetsNisab).toBe(false)
     expect(z.zakatDue).toBe(0)
   })
@@ -74,7 +79,7 @@ describe('computeZakat', () => {
           asset({ category: 'Diğer', estimated_value_try: 9000 }),
         ],
       }),
-      GRAM,
+      snap(GRAM),
     )
     expect(z.zakatableAssets).toBe(90000) // 40k + 30k + 20k, car & other excluded
   })
@@ -85,7 +90,7 @@ describe('computeZakat', () => {
         assets: [asset({ category: 'Nakit', estimated_value_try: 100000 })],
         cards: [creditCard({ debt_amount: 30000 })],
       }),
-      GRAM,
+      snap(GRAM),
     )
     expect(z.deductibleDebts).toBe(30000)
     expect(z.netWealth).toBe(70000) // below nisab now
@@ -98,7 +103,7 @@ describe('computeZakat', () => {
         assets: [asset({ category: 'Nakit', estimated_value_try: 100000 })],
         cards: [creditCard({ debt_amount: 30000 })],
       }),
-      GRAM,
+      snap(GRAM),
       { deductDebts: false },
     )
     expect(z.deductibleDebts).toBe(0)
@@ -111,13 +116,26 @@ describe('computeZakat', () => {
       assets: [asset({ category: 'Nakit', estimated_value_try: 50000 })],
       debts: [debt({ direction: 'borç_verdim', estimated_value_try: 50000 })],
     })
-    expect(computeZakat(data, GRAM, { includeReceivables: true }).zakatableAssets).toBe(100000)
-    expect(computeZakat(data, GRAM, { includeReceivables: false }).zakatableAssets).toBe(50000)
+    expect(computeZakat(data, snap(GRAM), { includeReceivables: true }).zakatableAssets).toBe(100000)
+    expect(computeZakat(data, snap(GRAM), { includeReceivables: false }).zakatableAssets).toBe(50000)
   })
 
   it('honors the BES toggle', () => {
     const data = input({ assets: [asset({ category: 'BES', estimated_value_try: 120000 })] })
-    expect(computeZakat(data, GRAM, { includeBes: false }).zakatableAssets).toBe(0)
-    expect(computeZakat(data, GRAM, { includeBes: true }).zakatableAssets).toBe(120000)
+    expect(computeZakat(data, snap(GRAM), { includeBes: false }).zakatableAssets).toBe(0)
+    expect(computeZakat(data, snap(GRAM), { includeBes: true }).zakatableAssets).toBe(120000)
+  })
+
+  it('values gold from the live snapshot so the holding and nisab move together', () => {
+    // 100 g auto-valued gold; stored value is deliberately stale (1 TL).
+    const goldAsset = asset({ category: 'Altın', unit: 'gram', amount: 100, auto_valued: true, estimated_value_try: 1 })
+
+    const z = computeZakat(input({ assets: [goldAsset] }), snap(1000))
+    // Gold is valued live (100 g × 1000), NOT from the stale stored 1 TL.
+    expect(z.zakatableAssets).toBe(100000)
+    expect(z.nisabTry).toBe(ZAKAT_NISAB_GOLD_GRAMS * 1000)
+    // 100 g > 80.18 g nisab → meets at any price, because gold and nisab share
+    // the same live source (the old bug could flip this with a stale stored value).
+    expect(z.meetsNisab).toBe(true)
   })
 })

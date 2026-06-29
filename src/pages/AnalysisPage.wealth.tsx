@@ -258,7 +258,6 @@ export function ZakatPanel({ data, ratesSnapshot }: { data: AnalysisData; ratesS
   const [includeBes, setIncludeBes] = useState(false)
   const [deductDebts, setDeductDebts] = useState(true)
 
-  const gramGoldPrice = ratesSnapshot?.rates?.GRA?.buying ?? null
   const zakat = useMemo(
     () =>
       computeZakat(
@@ -272,10 +271,10 @@ export function ZakatPanel({ data, ratesSnapshot }: { data: AnalysisData; ratesS
           salaryHistory: data.salaryHistory,
           cardInstallments: data.cardInstallments,
         },
-        gramGoldPrice,
+        ratesSnapshot,
         { includeReceivables, includeBes, deductDebts },
       ),
-    [data, gramGoldPrice, includeReceivables, includeBes, deductDebts],
+    [data, ratesSnapshot, includeReceivables, includeBes, deductDebts],
   )
 
   if (zakat.zakatableAssets <= 0) return null

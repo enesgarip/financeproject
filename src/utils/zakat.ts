@@ -1,6 +1,8 @@
 import type { Asset } from '../types/database'
 import { buildFinancialPosition, sum, type FinanceSummaryInput } from './financeSummary'
+import type { MarketRatesSnapshot } from './marketRates'
 import { roundTL } from './money'
+import { effectiveAssetValue } from './valuation'
 
 /**
  * Zakat estimator aligned with the Diyanet (TR) ruling:
@@ -54,7 +56,7 @@ function categoryTotal(assets: Asset[], match: (category: string) => boolean): n
 
 export function computeZakat(
   data: FinanceSummaryInput,
-  gramGoldPrice: number | null | undefined,
+  snapshot: MarketRatesSnapshot | null | undefined,
   options: ZakatOptions = {},
 ): ZakatSummary {
   const includeReceivables = options.includeReceivables ?? true
@@ -64,7 +66,10 @@ export function computeZakat(
   const position = buildFinancialPosition(data)
 
   const cash = position.totalCashAssets // Nakit assets + bank-card balances
-  const gold = categoryTotal(data.assets, (c) => c === 'Altın')
+  // Gold is valued from the SAME live snapshot that sets the nisab, so a gold
+  // price move shifts the holding and the nisab threshold together. Auto-valued
+  // rows use the live price; manual rows fall back to their stored value.
+  const gold = sum(data.assets.filter((asset) => asset.category === 'Altın'), (asset) => effectiveAssetValue(asset, snapshot))
   const tradeable = categoryTotal(data.assets, (c) => TRADEABLE_CATEGORIES.has(c))
   const bes = categoryTotal(data.assets, (c) => c === 'BES')
   const receivables = position.totalReceivables
@@ -93,9 +98,10 @@ export function computeZakat(
 
   const netWealth = roundTL(zakatableAssets - deductibleDebts)
 
+  const gramGoldPrice = snapshot?.rates?.GRA?.buying ?? null
   const hasPrice = typeof gramGoldPrice === 'number' && Number.isFinite(gramGoldPrice) && gramGoldPrice > 0
-  const gramGoldPriceValue = hasPrice ? gramGoldPrice! : null
-  const nisabTry = hasPrice ? roundTL(ZAKAT_NISAB_GOLD_GRAMS * gramGoldPrice!) : null
+  const gramGoldPriceValue = hasPrice ? gramGoldPrice : null
+  const nisabTry = hasPrice ? roundTL(ZAKAT_NISAB_GOLD_GRAMS * gramGoldPrice) : null
   const meetsNisab = nisabTry !== null && netWealth >= nisabTry
   const zakatDue = meetsNisab ? roundTL(netWealth * ZAKAT_RATE) : 0
 
