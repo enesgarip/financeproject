@@ -110,6 +110,18 @@ describe('estimateMonthlySavingsFromNetWorth', () => {
     expect(result!).toBeLessThan(21000)
   })
 
+  it('strips investment returns so the figure is pure contributions, not double-counted growth', () => {
+    const snaps = [
+      { snapshot_date: '2026-01-01', net_worth: 100000 },
+      { snapshot_date: '2026-07-01', net_worth: 220000 },
+    ]
+    const raw = estimateMonthlySavingsFromNetWorth(snaps, 0)!
+    const adjusted = estimateMonthlySavingsFromNetWorth(snaps, 10)!
+    // part of the growth was investment return, so net contributions are lower
+    expect(adjusted).toBeLessThan(raw)
+    expect(adjusted).toBeGreaterThan(0)
+  })
+
   it('reports negative savings when net worth shrinks', () => {
     const result = estimateMonthlySavingsFromNetWorth([
       { snapshot_date: '2026-01-01', net_worth: 200000 },

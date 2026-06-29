@@ -110,12 +110,18 @@ export function computeFire(inputs: FireInputs, from: Date = new Date()): FireRe
 }
 
 /**
- * Net değer snapshot geçmişinden ortalama aylık birikim hızını tahmin et.
+ * Net değer snapshot geçmişinden ortalama aylık birikim (KATKI) hızını tahmin et.
  * En az 2 snapshot ve ~1 aylık aralık gerekir; yoksa null döner.
  * Negatif (servet eriyor) sonucu olduğu gibi döndürür.
+ *
+ * Net değer artışı = katkı + yatırım getirisi. `annualRealReturnPct` verilirse,
+ * bakiyenin dönem boyunca kazandığı getiri çıkarılır → sonuç saf aylık katkıdır.
+ * computeFire aynı getiriyi zaten bileşik uyguladığından, bu çıkarma olmadan
+ * getiri iki kez sayılır (çift sayım). Varsayılan 0 → ham net-değer artışı (geri uyumlu).
  */
 export function estimateMonthlySavingsFromNetWorth(
   snapshots: Array<{ snapshot_date: string; net_worth: number }>,
+  annualRealReturnPct = 0,
 ): number | null {
   if (snapshots.length < 2) return null
   const sorted = [...snapshots].sort((a, b) => a.snapshot_date.localeCompare(b.snapshot_date))
@@ -124,5 +130,8 @@ export function estimateMonthlySavingsFromNetWorth(
   const days = (new Date(last.snapshot_date).getTime() - new Date(first.snapshot_date).getTime()) / 86_400_000
   const months = days / 30.44
   if (months < 1) return null
-  return round((last.net_worth - first.net_worth) / months)
+
+  const monthlyRate = Math.pow(1 + annualRealReturnPct / 100, 1 / 12) - 1
+  const estimatedReturns = ((first.net_worth + last.net_worth) / 2) * monthlyRate * months
+  return round((last.net_worth - first.net_worth - estimatedReturns) / months)
 }

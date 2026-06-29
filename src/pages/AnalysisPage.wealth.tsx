@@ -49,12 +49,13 @@ export function FireCalculator({ data, snapshots }: { data: AnalysisData; snapsh
   }, [data.cardExpenses, data.payments])
 
   const salary = getCurrentSalary(data.salaryHistory)?.amount ?? 0
-  const snapshotSavings = useMemo(() => estimateMonthlySavingsFromNetWorth(snapshots), [snapshots])
-  const defaultSavings = snapshotSavings ?? diffTL(salary, defaultExpenses)
-  const savingsSource = snapshotSavings !== null ? 'net değer trendi' : 'maaş − gider'
-
   const [realReturn, setRealReturn] = useState(4)
   const [withdrawal, setWithdrawal] = useState(4)
+  // Net-worth trend already includes returns; strip them so the figure fed to
+  // computeFire is pure contributions (computeFire compounds the return itself).
+  const snapshotSavings = useMemo(() => estimateMonthlySavingsFromNetWorth(snapshots, realReturn), [snapshots, realReturn])
+  const defaultSavings = snapshotSavings ?? diffTL(salary, defaultExpenses)
+  const savingsSource = snapshotSavings !== null ? 'net değer trendi' : 'maaş − gider'
   // null override = follow the data-derived default (survives async data load).
   const [expensesOverride, setExpensesOverride] = useState<number | null>(null)
   const [savingsOverride, setSavingsOverride] = useState<number | null>(null)
