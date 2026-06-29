@@ -322,7 +322,10 @@ export function buildFinancialPosition(data: FinanceSummaryInput): FinancialPosi
     (debt) => debt.estimated_value_try,
   )
   const totalPaymentLiabilities = sum(
-    data.payments.filter((payment) => payment.status === 'bekliyor'),
+    // Only one-off pending bills are a balance-sheet liability. Recurring monthly
+    // payments are ongoing expenses (captured in the cash-flow / monthly load),
+    // not debt principal, so they must not reduce net worth.
+    data.payments.filter((payment) => payment.status === 'bekliyor' && payment.recurrence !== 'monthly'),
     paymentCashOutflowAmount,
   )
   const totalDebts = sumTL([totalCreditCardDebt, totalLoanDebt, totalPersonalDebts, totalPaymentLiabilities])

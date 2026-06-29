@@ -614,6 +614,20 @@ describe('buildFinancialPosition', () => {
     expect(pos.totalPaymentLiabilities).toBe(500)
   })
 
+  it('excludes recurring monthly bills from net-worth liabilities (cash-flow, not debt)', () => {
+    const pos = buildFinancialPosition({
+      ...emptyInput,
+      assets: [asset({ category: 'Nakit', estimated_value_try: 10000 })],
+      payments: [
+        payment({ amount: 700, status: 'bekliyor', recurrence: 'none' }), // one-off bill → liability
+        payment({ amount: 250, status: 'bekliyor', recurrence: 'monthly', recurrence_day: 5 }), // subscription → not debt
+      ],
+    })
+    expect(pos.totalPaymentLiabilities).toBe(700)
+    expect(pos.totalDebts).toBe(700)
+    expect(pos.netWorth).toBe(9300)
+  })
+
   it('computes netWorth as assets minus debts', () => {
     const pos = buildFinancialPosition({
       ...emptyInput,
