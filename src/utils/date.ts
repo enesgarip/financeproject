@@ -69,6 +69,10 @@ export function monthlyOccurrenceDate(day: number | null | undefined, month = ne
   return dateInMonth(month.getFullYear(), month.getMonth(), day)
 }
 
+export function addDays(value: Date, days: number) {
+  return new Date(value.getFullYear(), value.getMonth(), value.getDate() + days)
+}
+
 export function dateInMonth(year: number, month: number, day: number) {
   const lastDay = new Date(year, month + 1, 0).getDate()
   return new Date(year, month, Math.min(day, lastDay))

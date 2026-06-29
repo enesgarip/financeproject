@@ -9,7 +9,7 @@ import type {
   SalaryHistory,
 } from '../types/database'
 import { getNextCardPaymentDueDate } from './cardStatement'
-import { dateInMonth, dateInputValue, endOfMonth, isDateInMonth, monthlyOccurrenceDate, startOfDay, startOfMonth } from './date'
+import { addDays, addMonths, dateInMonth, dateInputValue, endOfMonth, isDateInMonth, monthlyOccurrenceDate, startOfDay, startOfMonth } from './date'
 import { cardMonthlyPaymentAmount, paymentCashOutflowAmount, paymentOccurrenceInMonth, paymentUsesCreditCard } from './financeObligationRules'
 import { roundTL, sumTL } from './money'
 
@@ -76,12 +76,6 @@ function obligationCashImpact(item: FinanceObligation) {
 
 function monthDistance(from: Date, target: Date) {
   return (target.getFullYear() - from.getFullYear()) * 12 + target.getMonth() - from.getMonth()
-}
-
-function addDays(value: Date, days: number) {
-  const next = new Date(value)
-  next.setDate(value.getDate() + days)
-  return next
 }
 
 function getFirstBusinessDay(month: Date) {
@@ -205,18 +199,22 @@ export function buildFinanceObligationsForMonth(
       })
     }
 
-    if (card.current_period_spending > 0) {
-      const fromDate = options.from ?? new Date()
-      if (isDateInMonth(dateInputValue(fromDate), monthStart)) {
+    // Dönem içi harcama henüz ekstreye girmedi: gerçek nakit çıkışı bir sonraki
+    // ekstrenin son ödeme gününde olur (statement borcunun vadesinden +1 çevrim).
+    // Bankacılık gerçeğiyle uyum için harcama ayına değil o vadeye yazılır.
+    // action: null — ekstre kesilmeden ödenecek bir kalem yok (sadece projeksiyon).
+    if (nextDue && card.current_period_spending > 0) {
+      const currentPeriodDueDate = dateInputValue(addMonths(new Date(`${nextDue}T00:00:00`), 1))
+      if (isDateInMonth(currentPeriodDueDate, monthStart)) {
         addObligation(items, {
-          id: `card-debt-current-${card.id}-${dateInputValue(monthStart)}`,
+          id: `card-debt-current-${card.id}-${currentPeriodDueDate}`,
           kind: 'card_debt',
           action: null,
           sourceId: card.id,
           relatedCardId: card.id,
           title: `${card.card_name} dönem içi borç`,
-          subtitle: `${card.bank_name} - güncel harcama`,
-          date: dateInputValue(fromDate),
+          subtitle: `${card.bank_name} - sonraki ekstre`,
+          date: currentPeriodDueDate,
           amount: card.current_period_spending,
           direction: 'outflow',
         })

@@ -10,7 +10,7 @@ import {
 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { cn } from '../../lib/utils'
-import { dateInputValue, formatDate, isDateInMonth, startOfMonth } from '../../utils/date'
+import { addDays, dateInputValue, formatDate, isDateInMonth, startOfMonth } from '../../utils/date'
 import { formatCurrency } from '../../utils/formatCurrency'
 import { sumTL } from '../../utils/money'
 import {
@@ -34,12 +34,6 @@ type ObligationsCalendarProps = {
 const WEEK_DAYS = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz']
 const MONTH_LABEL = new Intl.DateTimeFormat('tr-TR', { month: 'long', year: 'numeric' })
 const COMPACT_AMOUNT_FORMAT = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 0 })
-
-function addDays(value: Date, days: number) {
-  const next = new Date(value)
-  next.setDate(value.getDate() + days)
-  return next
-}
 
 function addCalendarMonths(value: Date, months: number) {
   return new Date(value.getFullYear(), value.getMonth() + months, 1)

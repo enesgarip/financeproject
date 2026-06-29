@@ -1,5 +1,5 @@
 import type { Card } from '../types/database'
-import { dateInputValue } from './date'
+import { addDays, dateInMonth, dateInputValue, startOfDay } from './date'
 
 export type CardStatementPeriod = {
   periodStart: string
@@ -12,12 +12,6 @@ export type CardStatementPeriod = {
 
 type StatementCard = Pick<Card, 'card_type' | 'statement_day' | 'due_day'>
 
-function startOfDay(value: Date) {
-  const date = new Date(value)
-  date.setHours(0, 0, 0, 0)
-  return date
-}
-
 function safeDate(value: Date | string | null | undefined) {
   if (value instanceof Date) return startOfDay(value)
   if (typeof value === 'string' && value) {
@@ -25,15 +19,6 @@ function safeDate(value: Date | string | null | undefined) {
     if (!Number.isNaN(parsed.getTime())) return startOfDay(parsed)
   }
   return startOfDay(new Date())
-}
-
-function dateInMonth(year: number, month: number, preferredDay: number) {
-  const lastDay = new Date(year, month + 1, 0).getDate()
-  return new Date(year, month, Math.min(preferredDay, lastDay))
-}
-
-function addDays(value: Date, days: number) {
-  return new Date(value.getFullYear(), value.getMonth(), value.getDate() + days)
 }
 
 function shortDate(value: Date) {
