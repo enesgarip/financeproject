@@ -267,31 +267,34 @@ pattern'ler ve açık düzeltme planı yer alıyor.
 
 Tüm `src/utils` hesaplama katmanı + SQL trigger'lar + DataHealth tek tek okundu.
 Çekirdek muhasebe sağlam (para kuruş-hassas, ledger event-sourced + trigger-korumalı,
-SQL trigger↔TS ikiz 3'ü de eşleşiyor, nakit-akışı tek motorda). Açık bulgular,
-şiddet sırasıyla — `A→B→C→D` sırasıyla düzeltiliyor:
+SQL trigger↔TS ikiz 3'ü de eşleşiyor, nakit-akışı tek motorda). **Tüm bulgular
+2026-06-29'da `A→B→C→D` sırasıyla düzeltildi (her biri ayrı commit + test).**
 
 **Tema A — Kısmi "bu ay" vs tam geçmiş baz** (Orta): bugüne kadarki kısmi ay,
-tam geçmiş ay/ortalama ile kıyaslanıyor → metrik ay-içi yanıltıcı.
-- [ ] `monthlySummary.ts:59` (changePercent), `periodComparison.ts:73-123`,
-  `spendingAnomalies.ts:66` (anomali oranı), `analysisView.ts:248` (kategori içgörü).
-  Çözüm: ortak `monthToDate` helper ile current ve prior'ı aynı gün-penceresine clip et.
-  *(IN PROGRESS — `utils/monthToDate.ts` eklendi.)*
+tam geçmiş ay/ortalama ile kıyaslanıyordu → metrik ay-içi yanıltıcı.
+- [x] `monthlySummary.ts`, `periodComparison.ts`, `spendingAnomalies.ts`, `analysisView.ts`:
+  ortak `utils/monthToDate.ts` (dayOfMonthCutoff + isWithinDayOfMonth) ile current ve
+  prior aynı gün-penceresine clip; periodComparison etiketleri "ilk N gün" notu taşır.
 
 **Tema B — Aynı kavram, farklı hesap** (Orta-düşük):
-- [ ] 3-ay ortalama: `analysisView.ts:257` ÷3 sabit ↔ `spendingAnomalies.ts:77` ÷aktif-ay.
-- [ ] Medyan: `subscriptions.ts:66` + `spendingAnomalies.ts:127` üst-orta ↔
-  `priceIncreaseRadar.ts:74` ortalama. Ortak `median` helper'a bağla.
+- [x] 3-ay ortalama: ortak `utils/spendingStats.ts → averageOverActiveMonths()` (÷aktif-ay);
+  analysisView ÷3 sabitinden buna çekildi, spendingAnomalies de aynı helper'a bağlandı.
+- [x] Medyan: `spendingStats.median()` (doğru tanım); subscriptions/spendingAnomalies/
+  priceIncreaseRadar üçü de buna bağlandı.
 
 **Tema C — Değerleme / modelleme:**
-- [ ] Zekât (Orta): `zakat.ts:67` altın değeri stored `estimated_value_try`'dan ama
-  `zakat.ts:98` nisab canlı altın fiyatından → `meetsNisab` yanlış flip. Aynı kaynağa hizala.
-- [ ] Net değer (Düşük-Orta): `financeSummary.ts:324` bekleyen ödemeleri borç sayıyor.
-- [ ] FIRE (Düşük): `fire.ts:117` net-değer farkı zaten getiri içerir, `computeFire` üstüne ekler.
-- [ ] Milestone (Düşük): `milestones.ts:36` birikim eşiği banka bakiyesini saymıyor.
+- [x] Zekât: `computeZakat` artık snapshot alır, altını `effectiveAssetValue` ile
+  nisab ile aynı canlı kaynaktan değerler (stale flip giderildi).
+- [x] Net değer: tekrarlayan aylık ödemeler net-değer borcundan çıkarıldı (yalnız
+  tek-seferlik bekleyen faturalar yükümlülük).
+- [x] FIRE: `estimateMonthlySavingsFromNetWorth` getiriyi çıkarıp saf katkı döndürür;
+  çağıran realReturn'ü geçirir (çift sayım giderildi).
+- [x] Milestone: nakit eşiği Nakit + banka bakiyesi (totalCashAssets ile tutarlı).
 
 **Tema D — Kırılgan ama şu an doğru** (Düşük):
-- [ ] Parser locale çatallı: `denizBankStatementParser.ts:67` İngilizce format varsayar
-  (movement ise Türkçe) — format ihlalinde sessiz bozulma; guard ekle.
-- [ ] Import fallback: `denizBankMovementParser.ts:300` açıklamasız eşleşme yanlış işlem eşleyebilir.
-- [ ] Kart taksiti gösterim günü: `obligations.ts:232` `due_day` kullanır (nakit etkilemez,
-  `cashImpactAmount:0`; regresyon testi ile sabitlendi). İncele/teyit et.
+- [x] Parser locale: `denizBankStatementParser.parseAmount` ondalık ayıracını konumdan
+  tespit eder (iki format da güvenli).
+- [x] Import fallback: açıklamasız exact/loose eşleşme yalnız tek aday varken devreye girer
+  (belirsiz same-day/same-amount keyfi eşleşme önlendi).
+- [x] Kart taksiti gösterim günü (`obligations.ts:232`): KASITLI ve doğru teyit edildi
+  (due_month ay-başı, ödeme due_day'de, `cashImpactAmount:0`); kod değişikliği gerekmedi.
