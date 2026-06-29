@@ -1,6 +1,7 @@
 import type { CardExpense } from '../types/database'
 import { dayOfMonthCutoff, isWithinDayOfMonth } from './monthToDate'
 import { sumTL } from './money'
+import { averageOverActiveMonths } from './spendingStats'
 
 export type CategoryAnomaly = {
   category: string
@@ -73,15 +74,8 @@ export function detectCategoryAnomalies(
     const currentMonth = monthMap.get(currentKey) ?? 0
     if (currentMonth === 0) continue
 
-    const prevTotals: number[] = []
-    for (let i = 1; i <= 3; i++) {
-      const key = offsetMonthPrefix(from, -i)
-      const val = monthMap.get(key) ?? 0
-      if (val > 0) prevTotals.push(val)
-    }
-    if (prevTotals.length === 0) continue
-
-    const threeMonthAvg = sumTL(prevTotals) / prevTotals.length
+    const prevTotals = [1, 2, 3].map((i) => monthMap.get(offsetMonthPrefix(from, -i)) ?? 0)
+    const threeMonthAvg = averageOverActiveMonths(prevTotals)
     if (threeMonthAvg === 0) continue
 
     const ratio = currentMonth / threeMonthAvg

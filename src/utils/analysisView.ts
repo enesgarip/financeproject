@@ -16,6 +16,7 @@ import type {
 import { dateInputValue, startOfMonth } from './date'
 import { formatCurrency } from './formatCurrency'
 import { dayOfMonthCutoff, isWithinDayOfMonth } from './monthToDate'
+import { averageOverActiveMonths } from './spendingStats'
 import { activeExpense as activeCardExpense } from './budgetAlerts'
 import {
   buildFinanceObligationsForMonth,
@@ -241,7 +242,10 @@ export function buildCategoryInsights(data: AnalysisData): CategoryInsight[] {
   // full prior months.
   const throughDay = dayOfMonthCutoff()
   const currentTotals = new Map<string, number>()
-  const previousTotals = new Map<string, number>()
+  // category → (prior month → total): kept per-month so the baseline averages
+  // over the months that actually had spending (not a fixed ÷3 that understates
+  // categories appearing in only some months). Shared with spendingAnomalies.
+  const previousByMonth = new Map<string, Map<string, number>>()
   const budgetsByCategory = new Map(
     data.budgets.filter((budget) => budget.month === currentMonth).map((budget) => [budget.category, budget]),
   )
@@ -254,13 +258,15 @@ export function buildCategoryInsights(data: AnalysisData): CategoryInsight[] {
     if (expenseMonth === currentMonth) {
       currentTotals.set(category, sumTL([currentTotals.get(category), expense.amount]))
     } else if (previousMonths.includes(expenseMonth)) {
-      previousTotals.set(category, sumTL([previousTotals.get(category), expense.amount]))
+      if (!previousByMonth.has(category)) previousByMonth.set(category, new Map())
+      const monthly = previousByMonth.get(category)!
+      monthly.set(expenseMonth, sumTL([monthly.get(expenseMonth), expense.amount]))
     }
   }
 
   return Array.from(currentTotals, ([category, amount]) => {
     const budget = budgetsByCategory.get(category)
-    const average = (previousTotals.get(category) ?? 0) / 3
+    const average = averageOverActiveMonths([...(previousByMonth.get(category)?.values() ?? [])])
     const limitRate = budget && budget.limit_amount > 0 ? amount / budget.limit_amount : 0
 
     if (budget && limitRate >= 1) {
