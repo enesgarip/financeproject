@@ -1,5 +1,6 @@
 import type { CardExpense, Payment } from '../types/database'
 import { sumTL } from './money'
+import { median } from './spendingStats'
 
 export type SubscriptionItem = {
   id: string
@@ -62,10 +63,9 @@ export function buildSubscriptionSummary(
     const recentMonths = [...bucket.months].filter((m) => m >= cutoffKey && m <= currentKey)
     if (recentMonths.length < 2) continue
 
-    const sorted = [...bucket.amounts].sort((a, b) => a - b)
-    const median = sorted[Math.floor(sorted.length / 2)]
-    if (!median || median === 0) continue
-    const consistent = bucket.amounts.every((a) => Math.abs(a - median) / median <= TOLERANCE)
+    const med = median(bucket.amounts)
+    if (med === 0) continue
+    const consistent = bucket.amounts.every((a) => Math.abs(a - med) / med <= TOLERANCE)
     if (!consistent) continue
 
     const desc = rawDesc.charAt(0).toUpperCase() + rawDesc.slice(1)
@@ -76,7 +76,7 @@ export function buildSubscriptionSummary(
       source: 'recurring_expense',
       title: desc,
       category: bucket.category || 'Diğer',
-      amount: median,
+      amount: med,
       monthCount: recentMonths.length,
       isActive,
     })

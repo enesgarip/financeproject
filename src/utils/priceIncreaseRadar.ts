@@ -8,6 +8,7 @@
  */
 
 import type { CardExpense, Payment, TransactionHistory } from '../types/database'
+import { median } from './spendingStats'
 
 export type PriceObservation = {
   /** Stable grouping key (e.g. payment id, normalized card-expense description). */
@@ -69,12 +70,6 @@ function monthsBetween(firstMonth: string, lastMonth: string): number {
   const [fy, fm] = firstMonth.split('-').map(Number)
   const [ly, lm] = lastMonth.split('-').map(Number)
   return (ly - fy) * 12 + (lm - fm)
-}
-
-function median(values: number[]): number {
-  const sorted = [...values].sort((a, b) => a - b)
-  const mid = Math.floor(sorted.length / 2)
-  return sorted.length % 2 === 0 ? (sorted[mid - 1]! + sorted[mid]!) / 2 : sorted[mid]!
 }
 
 /**

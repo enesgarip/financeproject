@@ -15,3 +15,15 @@ export function averageOverActiveMonths(monthlyTotals: number[]): number {
   const active = monthlyTotals.filter((value) => value > 0)
   return active.length > 0 ? sumTL(active) / active.length : 0
 }
+
+/**
+ * Median of a numeric list — the proper definition (average of the two middle
+ * values for an even count), so recurring-amount detection uses ONE median
+ * everywhere instead of some sites taking the upper-middle element. Empty → 0.
+ */
+export function median(values: number[]): number {
+  if (values.length === 0) return 0
+  const sorted = [...values].sort((a, b) => a - b)
+  const mid = Math.floor(sorted.length / 2)
+  return sorted.length % 2 === 0 ? (sorted[mid - 1]! + sorted[mid]!) / 2 : sorted[mid]!
+}

@@ -1,7 +1,7 @@
 import type { CardExpense } from '../types/database'
 import { dayOfMonthCutoff, isWithinDayOfMonth } from './monthToDate'
 import { sumTL } from './money'
-import { averageOverActiveMonths } from './spendingStats'
+import { averageOverActiveMonths, median } from './spendingStats'
 
 export type CategoryAnomaly = {
   category: string
@@ -123,17 +123,16 @@ export function detectRecurringExpenses(
     )
     if (recentMonths.length < RECURRING_MIN_MONTHS) continue
 
-    // Check amount consistency: all amounts within tolerance of median
-    const sorted = [...bucket.amounts].sort((a, b) => a - b)
-    const median = sorted[Math.floor(sorted.length / 2)]!
-    if (median === 0) continue
+    // Check amount consistency: all amounts within tolerance of the median
+    const med = median(bucket.amounts)
+    if (med === 0) continue
     const consistent = bucket.amounts.every(
-      (a) => Math.abs(a - median) / median <= AMOUNT_TOLERANCE,
+      (a) => Math.abs(a - med) / med <= AMOUNT_TOLERANCE,
     )
     if (!consistent) continue
 
     const desc = rawDesc.charAt(0).toUpperCase() + rawDesc.slice(1)
-    result.push({ description: desc, category: bucket.category, amount: median, monthCount: recentMonths.length })
+    result.push({ description: desc, category: bucket.category, amount: med, monthCount: recentMonths.length })
   }
 
   return result.sort((a, b) => b.monthCount - a.monthCount || b.amount - a.amount)
