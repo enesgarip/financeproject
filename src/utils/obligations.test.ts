@@ -306,3 +306,76 @@ describe('buildFinanceObligationsForMonth', () => {
     expect(items.map((item) => item.sourceId)).toEqual(['inside'])
   })
 })
+
+// Guards the "wrong month" bug class (regression: c1bf46f put current-period
+// spending in the spending month instead of the next cycle). Every cash-impacting
+// obligation must land on a billing-cycle-correct date. Card statement debt is
+// counted on its next due date; current-period spending one cycle later.
+describe('cash-impacting obligation date placement (billing-cycle correctness)', () => {
+  const creditFrom = new Date(2026, 5, 1) // 1 June 2026
+
+  function creditCard(overrides: Partial<Card>): Card {
+    return card({ card_type: 'kredi_karti', statement_day: 15, due_day: 25, ...overrides })
+  }
+
+  function cardDebtItems(data: FinanceObligationsInput, month: Date, from = creditFrom) {
+    return buildFinanceObligationsForMonth(data, month, { from }).filter((item) => item.kind === 'card_debt')
+  }
+
+  it('places statement debt on its due date and current-period spending one cycle later (due_day > statement_day)', () => {
+    const data = input({
+      cards: [creditCard({ id: 'c', statement_day: 15, due_day: 25, statement_debt_amount: 3000, current_period_spending: 1000 })],
+    })
+
+    expect(cardDebtItems(data, new Date(2026, 5, 1)).map((i) => [i.date, i.amount, i.action]))
+      .toEqual([['2026-06-25', 3000, 'pay_card_debt']])
+    expect(cardDebtItems(data, new Date(2026, 6, 1)).map((i) => [i.date, i.amount, i.action]))
+      .toEqual([['2026-07-25', 1000, null]])
+  })
+
+  it('keeps the same one-cycle separation when the due day precedes the statement day (typical TR card)', () => {
+    const data = input({
+      cards: [creditCard({ id: 'c', statement_day: 26, due_day: 6, statement_debt_amount: 3000, current_period_spending: 1000 })],
+    })
+
+    expect(cardDebtItems(data, new Date(2026, 5, 1)).map((i) => [i.date, i.amount])).toEqual([['2026-06-06', 3000]])
+    expect(cardDebtItems(data, new Date(2026, 6, 1)).map((i) => [i.date, i.amount])).toEqual([['2026-07-06', 1000]])
+  })
+
+  it('never reports statement debt and current-period spending in the same month', () => {
+    const data = input({
+      cards: [creditCard({ id: 'c', statement_day: 10, due_day: 20, statement_debt_amount: 2000, current_period_spending: 500 })],
+    })
+
+    const monthly = [0, 1, 2, 3].map((offset) => cardDebtItems(data, new Date(2026, 5 + offset, 1)))
+
+    // No month may carry both the statement-debt and the current-period card_debt for one card.
+    for (const monthItems of monthly) expect(monthItems.length).toBeLessThanOrEqual(1)
+    expect(monthly[0].map((i) => i.amount)).toEqual([2000]) // June: statement debt
+    expect(monthly[1].map((i) => i.amount)).toEqual([500]) // July: current-period, one cycle later
+  })
+
+  it('clamps the current-period due date at month end across a short month', () => {
+    const data = input({
+      cards: [creditCard({ id: 'c', statement_day: 31, due_day: 31, statement_debt_amount: 3000, current_period_spending: 1000 })],
+    })
+
+    expect(cardDebtItems(data, new Date(2026, 1, 1), new Date(2026, 0, 1)).map((i) => [i.date, i.amount, i.action]))
+      .toEqual([['2026-02-28', 1000, null]])
+  })
+
+  it('treats card installments as non-cash and clamps their display day at month end', () => {
+    const data = input({
+      cards: [card({ id: 'c', card_type: 'kredi_karti', due_day: 31 })],
+      cardInstallments: [cardInstallment({ id: 'i', card_id: 'c', due_month: '2026-02-01', amount: 400 })],
+    })
+    const items = buildFinanceObligationsForMonth(data, new Date(2026, 1, 1), { from: new Date(2026, 1, 1) })
+
+    expect(items.find((i) => i.kind === 'card_installment')).toMatchObject({
+      date: '2026-02-28',
+      cashImpactAmount: 0,
+      settlement: 'credit_card',
+    })
+    expect(summarizeFinanceObligations(items).outflow).toBe(0)
+  })
+})
