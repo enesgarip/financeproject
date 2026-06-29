@@ -262,3 +262,36 @@ pattern'ler ve açık düzeltme planı yer alıyor.
 - 2026-06-16 remaining component audit notes closed: `LoansPage` undo reference was verified absent/build-green, finance snapshot maintenance is throttled/deduped, Analysis cash-flow trend uses the salary effective for each month, due statement automation has a run-key guard, and stale closure risks in quick-expense focus, toast timers, and Analysis async queries were removed.
 - 2026-06-16 salary cash-flow semantics clarified: monthly summaries and forward forecasts use the salary effective for each target month, and Dashboard exposes salary as a separate income line.
 - 2026-06-29 regression fix: current-period card spending is again placed on the next card cycle's due date in `utils/obligations.ts` (it had been moved into the spending month, double-loading the current month and emptying the cycle where the cash actually leaves). This restores alignment with FINANCE_RULES.md ("counted on the next card cycle") and turns the 5 red cash-flow/monthly-summary tests green. Same pass de-duplicated date helpers (`addDays`, `startOfDay`, `dateInMonth`) into `utils/date.ts` so card-statement/obligation/calendar code shares one source.
+
+## Mantık Denetimi Bulguları (2026-06-29)
+
+Tüm `src/utils` hesaplama katmanı + SQL trigger'lar + DataHealth tek tek okundu.
+Çekirdek muhasebe sağlam (para kuruş-hassas, ledger event-sourced + trigger-korumalı,
+SQL trigger↔TS ikiz 3'ü de eşleşiyor, nakit-akışı tek motorda). Açık bulgular,
+şiddet sırasıyla — `A→B→C→D` sırasıyla düzeltiliyor:
+
+**Tema A — Kısmi "bu ay" vs tam geçmiş baz** (Orta): bugüne kadarki kısmi ay,
+tam geçmiş ay/ortalama ile kıyaslanıyor → metrik ay-içi yanıltıcı.
+- [ ] `monthlySummary.ts:59` (changePercent), `periodComparison.ts:73-123`,
+  `spendingAnomalies.ts:66` (anomali oranı), `analysisView.ts:248` (kategori içgörü).
+  Çözüm: ortak `monthToDate` helper ile current ve prior'ı aynı gün-penceresine clip et.
+  *(IN PROGRESS — `utils/monthToDate.ts` eklendi.)*
+
+**Tema B — Aynı kavram, farklı hesap** (Orta-düşük):
+- [ ] 3-ay ortalama: `analysisView.ts:257` ÷3 sabit ↔ `spendingAnomalies.ts:77` ÷aktif-ay.
+- [ ] Medyan: `subscriptions.ts:66` + `spendingAnomalies.ts:127` üst-orta ↔
+  `priceIncreaseRadar.ts:74` ortalama. Ortak `median` helper'a bağla.
+
+**Tema C — Değerleme / modelleme:**
+- [ ] Zekât (Orta): `zakat.ts:67` altın değeri stored `estimated_value_try`'dan ama
+  `zakat.ts:98` nisab canlı altın fiyatından → `meetsNisab` yanlış flip. Aynı kaynağa hizala.
+- [ ] Net değer (Düşük-Orta): `financeSummary.ts:324` bekleyen ödemeleri borç sayıyor.
+- [ ] FIRE (Düşük): `fire.ts:117` net-değer farkı zaten getiri içerir, `computeFire` üstüne ekler.
+- [ ] Milestone (Düşük): `milestones.ts:36` birikim eşiği banka bakiyesini saymıyor.
+
+**Tema D — Kırılgan ama şu an doğru** (Düşük):
+- [ ] Parser locale çatallı: `denizBankStatementParser.ts:67` İngilizce format varsayar
+  (movement ise Türkçe) — format ihlalinde sessiz bozulma; guard ekle.
+- [ ] Import fallback: `denizBankMovementParser.ts:300` açıklamasız eşleşme yanlış işlem eşleyebilir.
+- [ ] Kart taksiti gösterim günü: `obligations.ts:232` `due_day` kullanır (nakit etkilemez,
+  `cashImpactAmount:0`; regresyon testi ile sabitlendi). İncele/teyit et.
