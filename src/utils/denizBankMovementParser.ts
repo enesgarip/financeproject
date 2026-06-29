@@ -298,11 +298,13 @@ export function matchDenizBankMovements(
     }
 
     const preferred = exactDateCandidates.find((index) => descriptionsCompatible(movement.description, active[index].description))
-    const fallback = exactDateCandidates[0]
+    // A description-blind exact-date match is only safe when unambiguous; with two
+    // same-amount, same-day expenses we must not pick one arbitrarily.
+    const fallback = exactDateCandidates.length === 1 ? exactDateCandidates[0] : undefined
     const loosePreferred = looseDateCandidates
       .sort((left, right) => left.distance - right.distance)
       .find(({ index }) => descriptionsCompatible(movement.description, active[index].description))?.index
-    const looseFallback = looseDateCandidates[0]?.index
+    const looseFallback = looseDateCandidates.length === 1 ? looseDateCandidates[0]?.index : undefined
     const foundIndex = preferred ?? fallback ?? loosePreferred ?? looseFallback
 
     if (foundIndex == null) {

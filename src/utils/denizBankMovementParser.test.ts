@@ -143,6 +143,19 @@ describe('matchDenizBankMovements', () => {
     expect(result.unmatched).toHaveLength(0)
   })
 
+  it('does not arbitrarily match when two same-day, same-amount expenses are ambiguous', () => {
+    const result = matchDenizBankMovements(
+      [petrol], // 535 TL on 2026-06-19
+      [
+        { spent_at: '2026-06-19', amount: 535, status: 'provision', description: 'Market alışverişi' },
+        { spent_at: '2026-06-19', amount: 535, status: 'provision', description: 'Eczane' },
+      ],
+    )
+    // neither description is compatible and the date/amount alone is ambiguous → leave unmatched
+    expect(result.matched).toHaveLength(0)
+    expect(result.unmatched).toHaveLength(1)
+  })
+
   it('matches same amount within a short date window when bank posting date differs', () => {
     const result = matchDenizBankMovements(
       [petrol],
