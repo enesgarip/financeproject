@@ -24,8 +24,8 @@ export function AnalysisDetailPage() {
   }
 
   return (
-    <section className="space-y-5">
-      <div className="grid gap-5 lg:grid-cols-12">
+    <section className="min-w-0 space-y-5">
+      <div className="grid min-w-0 gap-5 lg:grid-cols-12 [&>*]:min-w-0">
         <LoanAffordabilityPanel data={data} />
         <InflationShieldPanel data={data} />
         <ZakatPanel data={data} ratesSnapshot={ratesSnapshot} />
