@@ -1,3 +1,13 @@
+/**
+ * Aylık harcama özeti: bu ayın toplamı, kategori dağılımı, aktif gün sayısı ve
+ * geçen aya göre adil yüzde değişimi.
+ *
+ * "Adil" kısmı kritik: bugün ayın sadece N'inci günü olduğundan, bu ayın
+ * kısmi toplamını geçen ayın TAM toplamıyla kıyaslamak ay başında değişimi
+ * olduğundan küçük gösterir. Bu yüzden geçen ayın da yalnızca aynı güne kadarki
+ * kısmı (previousMonthToDate) ile karşılaştırırız (bkz. monthToDate.ts).
+ * İptal edilen harcamalar (status === 'cancelled') hariç tutulur.
+ */
 import type { CardExpense } from '../types/database'
 import { dayOfMonthCutoff, isWithinDayOfMonth } from './monthToDate'
 import { sumTL } from './money'

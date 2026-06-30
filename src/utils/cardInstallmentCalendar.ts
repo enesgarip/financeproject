@@ -1,3 +1,10 @@
+/**
+ * Kart taksitlerini iki görünüme toplar:
+ *  - buildCardInstallmentCalendar    → önümüzdeki N ay, ay başına kart kırılımı
+ *    ("Haziran: X bankası 3 taksit Y TL"). Ödenmiş taksitler hariç.
+ *  - buildCardInstallmentTotalsByCard → kart başına toplam planlı taksit yükü.
+ * Saf gruplama/toplama; tutarlar sumTL ile toplanır.
+ */
 import type { Card, CardInstallment } from '../types/database'
 import { addMonths, dateInputValue, startOfMonth } from './date'
 import { sumTL } from './money'

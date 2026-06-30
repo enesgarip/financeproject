@@ -1,3 +1,11 @@
+/**
+ * DenizBank EKSTRE metnini yapısal işlemlere ayrıştırır (kopyala-yapıştır PDF/
+ * metin → ParsedTransaction[]). Taksit notasyonunu (X/Y) yakalar, kategoriyi
+ * categories.ts ile tahmin eder ve mevcut kayıtlarla eşleştirir (MatchResult).
+ *
+ * Bu yalnız metin AYRIŞTIRMA; ledger'a yazma cardsRepo/StatementImportModal işi.
+ * Karşılaştırma money.ts ile (tutar eşleşmesinde float toleransı yaratma).
+ */
 import { suggestExpenseCategory } from './categories'
 import { diffTL, roundTL } from './money'
 

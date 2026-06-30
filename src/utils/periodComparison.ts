@@ -1,3 +1,9 @@
+/**
+ * İki dönemi kategori bazında karşılaştırır (ay↔ay, çeyrek↔çeyrek, yıl↔yıl).
+ * Her kategori için bu dönem vs önceki dönem tutarı + yüzde değişim + yön
+ * (up/down/same/new). Önceki dönemde olmayan kategori 'new' işaretlenir
+ * (yüzde hesaplanamaz). Saf; AnalysisPage karşılaştırma panelinde kullanılır.
+ */
 import type { CardExpense } from '../types/database'
 import { sumTL } from './money'
 

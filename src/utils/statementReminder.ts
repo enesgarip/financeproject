@@ -1,3 +1,11 @@
+/**
+ * Dashboard ekstre hatırlatıcıları: "ekstren X gün sonra kesilecek" (upcoming)
+ * veya "ekstren otomatik kesiliyor" (ready).
+ *
+ * Yalnızca dönem içi harcaması olan kredi kartları için üretilir. "ready" durumu
+ * ekstre günü GEÇİNCE (remaining < 0) gösterilir — kesim ertesi gün olduğu için
+ * (bkz. statementCycle.ts). Eşik: 3 gün kala uyarı başlar. Saf; sadece görüntü metni üretir.
+ */
 import type { Card, CardStatementArchive } from '../types/database'
 import { dateInputValue, formatDate, nextMonthlyDate } from './date'
 import { formatCurrency } from './formatCurrency'

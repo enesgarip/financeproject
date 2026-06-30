@@ -1,3 +1,11 @@
+/**
+ * Kategori bütçesi kullanımı ve uyarıları. "Bu ay X kategorisinde bütçenin ne
+ * kadarı harcandı?" sorusunun tek kaynağı: hem dashboard uyarı paneli hem analiz
+ * sayfasının bütçe listesi buradan okur, böylece iki ekran asla ayrışmaz.
+ *
+ * Status eşikleri: harcama limiti aştıysa 'over', %80+ ise 'warning', yoksa 'ok'.
+ * Kategorisiz harcamalar 'Diğer' kovasına düşer. Karşılaştırmalar money.ts ile.
+ */
 import type { Budget, CardExpense } from '../types/database'
 import { dateInputValue, isDateInMonth, startOfMonth } from './date'
 import { diffTL, exceedsTL, sumTL } from './money'

@@ -1,3 +1,11 @@
+/**
+ * "Bu özellik henüz canlıda yok" durumunu zarifçe yakalama. Frontend bazen
+ * arka uçtan (migration/RPC) önce deploy olur; o zaman Supabase tablo/fonksiyon
+ * bulamadı hatası döner. Bunu çökme yerine kibar bir mesaja çeviririz.
+ *
+ * isMissingSupabaseCapabilityError: PostgREST'in "şema cache'inde yok" kodlarını
+ * (PGRST202/204/205) ve mesaj kalıplarını tanır.
+ */
 export type SupabaseLikeError = {
   code?: string
   message?: string

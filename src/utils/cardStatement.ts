@@ -1,3 +1,12 @@
+/**
+ * Bir harcama tarihinin hangi ekstre dönemine düştüğünü ve o ekstrenin son
+ * ödeme gününü hesaplar.
+ *
+ * Dönem mantığı: harcama, statement_day'i geçmişse bir sonraki ayın ekstresine
+ * girer. Son ödeme günü (due_day) ekstre gününden küçük/eşitse bir sonraki aya
+ * taşar (due_day <= statement_day → +1 ay). `getNextCardPaymentDueDate` ise
+ * obligations.ts'in kart borcu projeksiyonunda "bir sonraki ödeme günü" için kullanılır.
+ */
 import type { Card } from '../types/database'
 import { addDays, dateInMonth, dateInputValue, startOfDay } from './date'
 

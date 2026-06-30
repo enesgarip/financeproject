@@ -1,3 +1,11 @@
+/**
+ * Tam ay nakit akış takvimi: bir ayın her gününe yükümlülükleri (obligations.ts)
+ * yerleştirir ve gün gün ilerleyen projekte bakiyeyi hesaplar.
+ *
+ * Her gün için giriş/çıkış, net nakit etkisi (cashImpact bazlı) ve o güne kadarki
+ * projekte bakiye tutulur; bakiyenin negatife döndüğü günler "rose" tonuyla
+ * işaretlenir. Haftalara da bölünür (takvim grid'i için firstWeekdayOffset ile).
+ */
 import type { CardExpense, SalaryHistory } from '../types/database'
 import { dateInputValue, startOfMonth } from './date'
 import {

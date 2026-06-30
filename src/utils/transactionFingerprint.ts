@@ -1,3 +1,12 @@
+/**
+ * İçe aktarmada DUPLICATE (mükerrer) işlem tespiti için parmak izi üretir.
+ *
+ * Parmak izi = hesap + tarih + kuruş tutar + normalize açıklama + tür. Aynı
+ * parmak izli iki satır büyük olasılıkla aynı harcamadır → tekrar eklenmez.
+ * `descriptionSimilarity` ise iki açıklamanın token örtüşmesini (Jaccard, 0-1)
+ * verir; parmak izi birebir tutmadığında "yakın mı?" kararına yardım eder.
+ * Tutar kuruşa çevrilir (toKurus) ki float farkı sahte ayrım yaratmasın.
+ */
 import { toKurus } from './money'
 import { normalizeSearchText } from './searchText'
 

@@ -1,3 +1,12 @@
+/**
+ * Birikim hedefi ilerleme/etiket hesapları (saf).
+ *
+ * Hedefler farklı birimlerde tutulabilir: TRY, gram altın, çeyrek altın veya
+ * "composite" (birden çok bileşenden oluşan karma hedef). İlerleme oranı
+ * composite'te bileşenlerin oranlarının ortalamasıdır, diğerlerinde
+ * current/target. Karşılaştırmalar money.ts (exceedsTL) ile yapılır ki
+ * float kalıntısı "hedefe ulaşıldı mı?" kararını bozmasın.
+ */
 import type { SavingsGoal, SavingsGoalComponent, SavingsGoalValueType } from '../types/database'
 import { formatCurrency, formatNumber } from './formatCurrency'
 import { exceedsTL } from './money'

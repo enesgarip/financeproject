@@ -1,3 +1,11 @@
+/**
+ * Harcama anomalisi tespiti, iki ürün:
+ *  - anomalies: bu ay bir kategorinin 3 aylık ortalamanın %40+ üstüne çıktığı
+ *    durumlar (eşik ANOMALY_THRESHOLD = 1.4). Ay başında haksız alarm olmasın
+ *    diye ay-bugüne kadar penceresiyle karşılaştırılır (bkz. monthToDate.ts).
+ *  - recurring: aynı açıklamayla ≥2 ay tutarlı tutarda (±%5) tekrar eden harcamalar.
+ * "Rolling average" tanımı spendingStats.ts'ten paylaşılır ki ekranlar ayrışmasın.
+ */
 import type { CardExpense } from '../types/database'
 import { dayOfMonthCutoff, isWithinDayOfMonth } from './monthToDate'
 import { sumTL } from './money'

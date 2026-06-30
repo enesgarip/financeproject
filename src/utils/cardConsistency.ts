@@ -1,3 +1,13 @@
+/**
+ * Tek bir kartın "tutarlılık skoru" (0-100): geçen kontrol / toplam kontrol.
+ * CardsPage'deki kart başına güven rozetini besler.
+ *
+ * Kredi kartı kontrolleri: borç↔ledger uyumu, borç kırılımı clamp'le aynı mı,
+ * limit aşımı yok mu, planlı taksit borca yansımış mı. Banka kartı: bakiye↔ledger,
+ * kredi alanları sıfır mı. Tüm kurallar paylaşılan util/ledger fonksiyonlarından
+ * gelir (clampCardBreakdown, ledgerDrift, balanceDrift) — burada yeni kural yok.
+ * `quickCardConsistencyScore` ledger verisi olmadan sadece kart-içi kontroller yapar.
+ */
 import type { Card, CardInstallment } from '../types/database'
 import { moneyDiffers, exceedsTL, roundTL } from './money'
 import {

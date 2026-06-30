@@ -1,3 +1,11 @@
+/**
+ * Abonelik / düzenli gider tespiti. İki kaynaktan:
+ *  - Kart harcamaları: aynı açıklamayla son ~6 ayda ≥2 ay tekrar eden VE tutarı
+ *    tutarlı (medyandan ±%15 sapma içinde) olanlar otomatik abonelik sayılır.
+ *    Medyan kullanılır ki tek seferlik sıçrama ortalamayı bozmasın.
+ *  - Aylık tekrarlı bekleyen ödemeler (Payment): doğrudan abonelik kabul edilir.
+ * isActive = son 1 ay içinde görülmüş mü. incomeRatio = aylık abonelik / gelir.
+ */
 import type { CardExpense, Payment } from '../types/database'
 import { sumTL } from './money'
 import { median } from './spendingStats'

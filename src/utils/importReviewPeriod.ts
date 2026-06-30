@@ -1,3 +1,10 @@
+/**
+ * İçe aktarma (ekstre/hareket) mutabakatında "inceleme dönemi" yardımcıları.
+ *
+ * Yüklenen satırların tarihlerinden min-max bir aralık türetir; mutabakat
+ * yalnızca bu aralıktaki mevcut kayıtlarla karşılaştırılır ki aralık dışı eski
+ * kayıtlar yanlışlıkla "eksik" sayılmasın. Saf; Supabase görmez.
+ */
 export type ImportReviewPeriod = {
   start: string
   end: string

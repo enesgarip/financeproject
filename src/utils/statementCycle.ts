@@ -1,3 +1,12 @@
+/**
+ * Ekstre kesim döngüsü zamanlaması: "bu kartın ekstresi ne zaman kesilir,
+ * şimdi kesilebilir mi, bu dönem için arşiv var mı?"
+ *
+ * Kritik kural (bankalar gibi): ekstre, ekstre gününün ERTESİ günü kesilir —
+ * ekstre gününün harcaması o ekstreye dahildir (bkz. canCutCurrentStatement).
+ * Bu yüzden statementReminder.ts "kesiliyor" durumunu remaining < 0'da gösterir.
+ * Saf zamanlama; gerçek kesim/yazma DB tarafında.
+ */
 import type { Card, CardStatementArchive } from '../types/database'
 import { dateInMonth, startOfDay } from './date'
 

@@ -1,3 +1,12 @@
+/**
+ * Birleşik aktivite akışı (audit trail). Üç farklı olay kaynağını tek
+ * kronolojik listeye (en yeni üstte) birleştirir:
+ *  - card_ledger        → kart borcu olayları (opening/debit/credit/adjustment)
+ *  - account_ledger     → banka bakiyesi olayları (deposit/withdrawal...)
+ *  - transaction_history→ kullanıcıya dönük genel işlem geçmişi
+ * Ledger tutarları kuruş (bigint) tutulur → toTL ile gösterime çevrilir; işaret
+ * yönü (inflow/outflow) belirler. Saf; sadece okuyup birleştirir.
+ */
 import type { AccountLedger, CardLedger, TransactionHistory } from '../types/database'
 
 type CardLike = { id: string; card_name: string }

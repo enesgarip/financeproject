@@ -1,3 +1,12 @@
+/**
+ * obligations.ts'in ham yükümlülük listesini dashboard'ın iki bileşenine uyarlar:
+ *  - buildDashboardUpcomingItems → "yaklaşan hareketler" listesi (önümüzdeki N gün;
+ *    çıkışlar + maaş girişi). Her kalemi UI'nin beklediği şekle (formatlı tutar,
+ *    sadeleştirilmiş kind) çevirir.
+ *  - buildDashboardMonthlyLoad  → bir ayın toplam ödeme yükünü kategori
+ *    bazında (ödeme/ekstre/taksit/kredi/borç) toplar.
+ * Burada iş kuralı YOK; sadece obligations çıktısının sunum dönüşümü.
+ */
 import { formatDate, startOfMonth } from './date'
 import { formatCurrency } from './formatCurrency'
 import { sumTL } from './money'

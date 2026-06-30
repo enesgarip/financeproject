@@ -1,3 +1,10 @@
+/**
+ * Aylık finansal özeti paylaşılabilir bir PNG kartına çizer (canvas).
+ *
+ * Gizlilik kuralı: kart çıktısı HESAP/BANKA/KİŞİ adı içermez — yalnız toplam
+ * rakamlar ve kategori dağılımı. Sosyal paylaşım için güvenli olsun diye.
+ * Retina netliği için canvas 2x ölçekte çizilir. `downloadShareableCard` PNG indirir.
+ */
 import type { CashFlowSummary } from './financeSummary'
 import type { MonthlySummaryResult } from './monthlySummary'
 import { roundTL } from './money'

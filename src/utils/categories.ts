@@ -1,3 +1,15 @@
+/**
+ * Harcama kategorisi tahmini. İki kaynak, öncelik sırasıyla:
+ *  1. Kullanıcının geçmişi (CategoryMemory) — aynı açıklamaya daha önce hangi
+ *     kategoriyi verdiyse onu öğrenir (en sık kullanılan kazanır).
+ *  2. Yerleşik anahtar kelime sözlüğü (categoryRules) — "migros"→Market gibi.
+ *
+ * İki incelik:
+ *  - normalizeDescription tr-TR büyük-I tuzağını çözer (bkz. searchText.ts).
+ *  - Eşleşme TAM KELİME sınırıyla yapılır (substring değil): "taksi" anahtarı
+ *    "taksit"e yapışmasın diye (eskiden tüm taksitli alışveriş Ulaşım'a düşüyordu).
+ * SMS harcama otomasyonu da inferExpenseCategory'yi kullanır.
+ */
 import { normalizeSearchText } from './searchText'
 
 export const expenseCategories = [

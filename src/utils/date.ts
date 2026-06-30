@@ -1,3 +1,14 @@
+/**
+ * Tarih yardımcıları (saf). Uygulamadaki tüm tarih hesabı buradan geçer;
+ * tutarlı timezone/locale davranışı için elle `new Date()` aritmetiği yapma.
+ *
+ * İki tuzak:
+ *  - YYYY-MM-DD string'leri yerelde gün kayması yaşamasın diye hep `T00:00:00`
+ *    ekleyerek parse ediyoruz (UTC yerine yerel gün başı).
+ *  - `dateInMonth` ay taşmasını güvenli yapar: 31 Şubat istenirse o ayın son
+ *    gününe kırpar (Math.min). Aylık tekrarlı ödeme tarihleri bunu kullanır.
+ *  - `dateInputValue` 'sv-SE' locale ile YYYY-MM-DD üretir (input[type=date] formatı).
+ */
 export function formatDate(value: string | null | undefined) {
   if (!value) return '-'
   return new Intl.DateTimeFormat('tr-TR', {

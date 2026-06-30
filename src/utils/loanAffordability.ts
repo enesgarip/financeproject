@@ -1,3 +1,12 @@
+/**
+ * Yeni kredi uygunluğu / karar desteği. "Bu krediyi rahat öder miyim?" sorusuna
+ * gelir, nakit tamponu ve mevcut yükü baz alarak güvenli taksit + önerilen anapara
+ * hesaplar; nakit akışı projeksiyonuyla (cashFlowForecast) stres testi yapar.
+ *
+ * ÖNEMLİ: Bu bir BANKA ONAY KRİTERİ DEĞİL — kullanıcıya yön gösteren karar
+ * desteğidir. Çıktı üç seviyeli (suitable/caution/not_recommended) ve gerekçeli.
+ * Eşikler (yük oranı, min nakit tamponu) ürün kararıdır, assumptions ile ayarlanır.
+ */
 import { buildCashFlowForecast } from './cashFlowForecast'
 import {
   buildFinancialPosition,

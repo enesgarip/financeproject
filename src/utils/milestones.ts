@@ -1,3 +1,12 @@
+/**
+ * Finansal "başarım" (milestone) tespiti — kullanıcıyı motive eden rozetler:
+ * birikim eşikleri, sıfır kart borcu, tüm kredilerin kapanması, tamamlanan
+ * hedefler, net değer rekoru, 3 ay üst üste harcama düşüşü, sağlıklı limit
+ * kullanımı. Hepsi eldeki snapshot'tan türetilir; yazma yok.
+ *
+ * Not: nakit = Nakit varlıklar + banka kartı bakiyeleri (totalCashAssets ile
+ * aynı tanım) — sadece "Nakit" kategorisine bakmak gerçek birikimi eksik sayardı.
+ */
 import type {
   Asset,
   Card,

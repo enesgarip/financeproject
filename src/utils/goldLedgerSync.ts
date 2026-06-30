@@ -1,3 +1,12 @@
+/**
+ * Altın ledger'ını (lot bazlı alım kayıtları) `assets` tablosundaki özet altın
+ * varlık satırlarıyla senkronize eder: altın türü başına bir Asset satırı,
+ * güncel piyasa kuruyla değerlenmiş. Lot eklenince/silinince Asset'leri ekler/
+ * günceller/siler ve kaç işlem yapıldığını döner.
+ *
+ * NOT: Bu dosya repo katmanını çağırır (saf değil) — bilerek; ledger→özet
+ * köprüsü. Para karşılaştırması moneyDiffers ile (gereksiz yazma yapmamak için).
+ */
 import {
   deleteGoldLedgerAsset,
   fetchGoldLedgerAssets,

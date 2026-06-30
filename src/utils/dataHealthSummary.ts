@@ -1,3 +1,12 @@
+/**
+ * Dashboard'daki veri-sağlığı rozeti için hafif sayım: kaç hata / kaç uyarı var?
+ *
+ * Tam DataHealth sayfası ayrıntılı kontrolleri yapar; bu dosya aynı invariant
+ * ikizlerini (financeSummary.ts'ten cardDebtBreakdown / projectLoanSummary /
+ * expectedInstallmentAmount) kullanarak sadece SAYIYI üretir. DRY: kural tek
+ * kaynakta, burada yeniden uygulanmaz. errors = mutlaka düzeltilmeli,
+ * warnings = göz atılmalı.
+ */
 import type {
   Card,
   CardExpense,

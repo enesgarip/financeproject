@@ -1,3 +1,9 @@
+/**
+ * "Sessiz gün" analizi: harcama yapılmayan günleri ve serileri sayar — harcama
+ * disiplinini oyunlaştıran bir metrik. Bu ayki/geçen ayki sessiz gün sayısı,
+ * devam eden seri, bu ayın/tüm zamanların en uzun serisi ve harcama yapılan
+ * günlerin ortalaması. "posted" harcamalar + işlem geçmişi birlikte değerlendirilir.
+ */
 import type { CardExpense, TransactionHistory } from '../types/database'
 import { sumTL } from './money'
 

@@ -1,3 +1,8 @@
+/**
+ * Yıl sonu finansal rapor: bir yılın aylık harcama toplamları, en pahalı/en ucuz
+ * ay, en çok harcanan kategoriler ve net değer değişimi (yıl başı→yıl sonu
+ * snapshot farkı). İptal edilen harcamalar hariç. Saf; AnalysisPage raporlarında kullanılır.
+ */
 import type { CardExpense, NetWorthSnapshot } from '../types/database'
 import { roundTL, sumTL } from './money'
 

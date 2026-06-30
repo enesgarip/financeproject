@@ -1,3 +1,11 @@
+/**
+ * DenizBank GÜNCEL HAREKET (henüz ekstreye girmemiş işlemler) metnini ayrıştırır
+ * ve mevcut kayıtlarla mutabakat yapar. Ekstre parser'ından farkı: hareketler
+ * "pending" (bekleyen/bloke) veya "posted" (kesinleşmiş) durumda olabilir; bu
+ * modül banka durumunu uygulama durumuna (provision/posted) eşler.
+ *
+ * Yalnız ayrıştırma + eşleştirme; yazma cardsRepo/CurrentMovementImportModal'da.
+ */
 import { suggestExpenseCategory } from './categories'
 import { diffTL, roundTL } from './money'
 import { normalizeSearchText } from './searchText'

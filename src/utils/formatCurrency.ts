@@ -1,3 +1,11 @@
+/**
+ * TL para/sayı biçimleme (gösterim) ve serbest metinden sayı ayrıştırma (giriş).
+ *
+ * `parseNumber` Türkçe kullanıcı girdisinin dağınıklığını tolere eder: "1.234,56",
+ * "1234.56", "₺1.000", "5k" (=5000) gibi yazımları tek sayıya çevirir. Binlik/ondalık
+ * ayıracını son ayıracın konumundan tahmin eder (TR'de virgül ondalık, nokta binlik).
+ * Not: bu sadece GİRİŞ ayrıştırması; para hesap/yuvarlama hâlâ money.ts'in işi.
+ */
 export function formatCurrency(value: number | null | undefined) {
   return new Intl.NumberFormat('tr-TR', {
     style: 'currency',
