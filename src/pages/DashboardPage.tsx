@@ -1,3 +1,16 @@
+/**
+ * `/` ana sayfa orkestratörü. Görevi: veriyi tek snapshot'tan çekmek, saf
+ * util'lere hesaplatmak ve sonucu panel bileşenlerine dağıtmak. Burada AĞIR
+ * İŞ KURALI/MATEMATİK YAZMA — yeni hesap gerekiyorsa `src/utils/*`'a koy, buradan
+ * çağır (bilanço/akış/sağlık için financeSummary.ts, yaklaşanlar için
+ * dashboardUpcoming.ts, içgörü için dashboardInsights.ts...).
+ *
+ * Veri kaynağı: `useFinanceSnapshot` (TanStack Query). AYNI cache'i AnalysisPage
+ * de paylaşır; bu sayfa süperseti kendi penceresine client-side daraltır.
+ *
+ * Hesap ownership tablosu ve UX/a11y sözleşmesi: docs/DASHBOARD_ARCHITECTURE.md
+ * (yeni panel/hesap eklemeden önce oraya bak).
+ */
 import { AlertTriangle, ArrowUpRight, CalendarDays, ChevronDown, CreditCard, Landmark, RefreshCw } from 'lucide-react'
 import { useCallback, useMemo, useState } from 'react'
 import { useAuth } from '../auth/useAuth'

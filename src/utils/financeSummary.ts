@@ -1,3 +1,22 @@
+/**
+ * Finansal özetin matematik çekirdeği. Saf hesap (Supabase görmez), yoğun test
+ * edilir. Üç ana çıktı üretir, hepsi tek `FinanceSummaryInput`'tan:
+ *
+ *  1. buildFinancialPosition  → BİLANÇO anlık görüntüsü (varlık, borç, net değer).
+ *     "Şu an ne kadar zenginim?" — stok büyüklükleri.
+ *  2. buildMonthlyCashFlow    → bir ayın NAKİT AKIŞI (gelir, çıkış, net, projeksiyon).
+ *     "Bu ay para nasıl akıyor?" — akış büyüklükleri. Yükümlülükleri
+ *     `obligations.ts`'ten alır, nakit etkisini (cashImpact) toplar.
+ *  3. buildFinancialHealth    → 0-100 sağlık skoru + açıklayıcı faktörler.
+ *
+ * Ayrıca DB trigger'larının SAF TS İKİZLERİ burada yaşar: `clampCardBreakdown`,
+ * `projectLoanSummary`, `expectedInstallmentAmount`. Bunlar invariant'ın tek
+ * kaynağıdır; aynı kod hem DataHealth kontrolünde hem testte kullanılır
+ * (bkz. CLAUDE.md "Ledger & trigger invariant'ları").
+ *
+ * Para kuralı: tüm yuvarlama/karşılaştırma money.ts üzerinden (roundTL, diffTL,
+ * sumTL, exceedsTL...). Çıplak Math.round veya +0.01 toleransı YAZMA.
+ */
 import type {
   Asset,
   Card,
@@ -136,6 +155,19 @@ export type CardDebtBreakdown = {
   hasUnexplainedDebt: boolean
 }
 
+/**
+ * Bir kredi kartının toplam borcunu (`debt_amount`) parçalarına ayırıp
+ * tutarsızlık var mı diye bakar. Mantık:
+ *  - splitTotal       = ekstre + dönem içi + provizyon (kartın "açıklanmış" borcu).
+ *  - unclassified     = toplam borç − splitTotal (henüz parçalara yazılmamış kısım).
+ *  - scheduledTotal   = ileri tarihli taksitler; unclassified'ın bu kadarı normaldir.
+ *  - unexplained      = taksitlerle de açıklanamayan, yani "kayıp" borç (alarm).
+ *
+ * Üç bayrak DataHealth uyarılarını besler:
+ *  - hasSplitOverflow    → parçalar toplamı borcu aşıyor (clamp gerekiyor).
+ *  - hasScheduledDebtGap → taksit var ama borca yansımamış.
+ *  - hasUnexplainedDebt  → ne parça ne taksitle açıklanan fazla borç.
+ */
 export function cardDebtBreakdown(
   card: Pick<Card, 'debt_amount' | 'statement_debt_amount' | 'current_period_spending' | 'provision_amount'>,
   scheduledTotal = 0,
@@ -307,6 +339,7 @@ export function buildFinancialPosition(data: FinanceSummaryInput): FinancialPosi
   const totalCardCurrentPeriod = sum(creditCards, (card) => card.current_period_spending)
   const totalCardProvision = sum(creditCards, cardProvisionAmount)
   const totalCardSplitDebt = cardSplitTotal(totalCardStatementDebt, totalCardCurrentPeriod, totalCardProvision)
+  // Toplam borcun ekstre+dönem+provizyon ile açıklanmayan kısmı = ileri tarihli taksitler.
   const totalCardFutureInstallmentDebt = Math.max(0, diffTL(totalCreditCardDebt, totalCardSplitDebt))
   const totalLoanDebt = sum(
     data.loans.filter((loan) => loan.status === 'active'),
@@ -464,8 +497,13 @@ export function buildFinancialHealth({
   urgentUpcomingCount: number
   averageGoalProgress: number
 }): FinancialHealthSummary {
+  // 100'den başlar, risk faktörlerine göre puan düşürülür (birkaçı ekleyebilir).
+  // Her dal hem skoru ayarlar hem kullanıcıya gösterilecek bir açıklama (factor) ekler.
+  // Eşikler ürün kararı; banka onay kriteri değil, kullanıcıya yön gösterir.
   let score = 100
   const factors: string[] = []
+  // Varlık yokken borç varsa oranı yapay olarak yükseğe (1.5) çekeriz ki skor cezalansın;
+  // bölme-sıfır yerine en kötü senaryoyu varsayar.
   const debtToAssetRatio = position.totalAssets > 0 ? position.totalDebts / position.totalAssets : position.totalDebts > 0 ? 1.5 : 0
   const outflowRatio = cashFlow.income > 0 ? cashFlow.outflow / cashFlow.income : cashFlow.outflow > 0 ? 1.2 : 0
   const cashBufferMonths = cashFlow.outflow > 0 ? position.totalCashAssets / cashFlow.outflow : position.totalCashAssets > 0 ? 6 : 0

@@ -1,3 +1,20 @@
+/**
+ * `/kartlar` orkestratörü: kredi kartları + banka hesapları sayfası. Bu dosya
+ * sadece üst seviye akışı kurar; gerçek parçalar ayrı modüllere bölünmüştür ki
+ * tek dev dosya olmasın:
+ *   .hooks      → veri çekme/state (useCardsPageData, modal hook'ları)
+ *   .crud       → CrudPage için kart formu/satır render'ları
+ *   .overview / .statements / .sections / .expense / .list / .installment
+ *               → ekrandaki panel grupları
+ *   .helpers    → alan tanımları, küçük saf yardımcılar
+ * Kart borcu matematiği util'lerde (financeSummary.ts, cardStatement.ts,
+ * cardLedger.ts); yazma işlemleri repo/servis katmanında (cardsRepo.ts,
+ * accountMovements.ts).
+ *
+ * Kart borç alanları nasıl hareket eder (debt_amount, statement_debt_amount,
+ * current_period_spending, provision_amount): docs/CARD_DEBT_TRANSITIONS.md.
+ * Sayfa veri akışı ve modül haritası: docs/CARDS_ARCHITECTURE.md.
+ */
 import { useState, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { ShieldCheck } from 'lucide-react'

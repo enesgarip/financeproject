@@ -1,3 +1,28 @@
+/**
+ * "Bu ay (veya şu tarih aralığında) ne ödenecek / ne tahsil edilecek?"
+ * sorusunun tek kaynağı. Saf okuma-tarafı projeksiyon: hiçbir şey yazmaz,
+ * Supabase görmez; eldeki kart/kredi/ödeme/borç/maaş verisinden bir ayın
+ * yükümlülük listesini (`FinanceObligation[]`) türetir.
+ *
+ * Neden tek tablo değil de projeksiyon: yükümlülükler farklı tablolardan
+ * (ekstre, kredi taksiti, kişisel borç, talimatlı ödeme...) gelir ve sürekli
+ * değişir. Tek bir "yapılacaklar" tablosu tutmak senkronizasyon borcu yaratırdı;
+ * bunun yerine her okumada kaynak veriden yeniden hesaplıyoruz. Gerekçe:
+ * docs/PLANNING_MODEL_REVIEW.md.
+ *
+ * İki para alanı ayrımı (önemli):
+ *  - `amount`        → kalemin nominal tutarı (ekranda "X TL borç" diye gösterilir).
+ *  - `cashImpactAmount` → bu ay bankadan gerçekten çıkacak nakit. Karta yazılan
+ *    taksit/ödeme için 0'dır (çıkış değil, kart borcuna dönüşür). Nakit akışı
+ *    toplamları (`summarizeFinanceObligations`) cashImpact'i kullanır, amount'u değil.
+ *
+ * Kart borcu modeli "Option A" (bilinen veri): kesilmiş ekstre bir kez kendi
+ * son ödeme gününde, dönem içi harcama bir kez sonraki çevrimde sayılır — ay ay
+ * tekrar etmez. Detay aşağıda card_debt projeksiyonunda.
+ *
+ * Ana giriş: `buildFinanceObligationsForMonth` (tek ay). Aralık için
+ * `buildFinanceObligationsForRange` onu aylara bölüp çağırır.
+ */
 import type {
   Card,
   CardInstallment,
@@ -44,11 +69,11 @@ export type FinanceObligation = {
   title: string
   subtitle: string
   date: string
-  amount: number
-  cashImpactAmount?: number
+  amount: number // nominal tutar (ekranda gösterilen borç/tahsilat)
+  cashImpactAmount?: number // bu ay bankadan çıkacak gerçek nakit (karta yazılırsa 0); yoksa amount kabul edilir
   direction: FinanceObligationDirection
   settlement?: FinanceObligationSettlement
-  isEstimate?: boolean
+  isEstimate?: boolean // tutar tahmini/otomatik değerlenmiş mi (kesin değil)
 }
 
 export type FinanceObligationsInput = {
@@ -108,6 +133,9 @@ function cardLabel(card: Card | undefined) {
   return card ? `${card.bank_name} - ${card.card_name}` : 'Kart'
 }
 
+// Listeye kalem ekleme tek kapısı: tutarı negatife düşürmez ve cashImpact'i
+// normalize eder. allowZero=true sadece tutarı tahmini olan kalemler için
+// (henüz tutarı belirsiz ama vadesi gelen ödeme listede görünmeli).
 function addObligation(items: FinanceObligation[], item: FinanceObligation, options: { allowZero?: boolean } = {}) {
   if (!options.allowZero && item.amount <= 0) return
   const amount = roundTL(Math.max(0, item.amount))
@@ -250,6 +278,9 @@ export function buildFinanceObligationsForMonth(
     })
   }
 
+  // Kredilerin gerçek taksit planı (loan_installments) varsa onu kullanırız.
+  // plannedLoanIds = planı olan krediler; bunları aşağıdaki "legacy" tahminden
+  // hariç tutarız ki aynı taksit iki kez sayılmasın.
   const plannedLoanIds = new Set(data.loanInstallments.map((installment) => installment.loan_id))
 
   for (const installment of data.loanInstallments) {
@@ -269,6 +300,10 @@ export function buildFinanceObligationsForMonth(
     })
   }
 
+  // Legacy/yedek dal: taksit planı OLUŞTURULMAMIŞ aktif krediler. Plan yoksa
+  // kalan taksit sayısı + aylık ödeme + taksit gününden tahmini taksitler türetilir
+  // (isEstimate). offset = bu ayın krediden kaç ay sonra olduğu; remaining_installments'ı
+  // aşan veya start/end tarih penceresi dışına düşen aylar atlanır.
   for (const loan of data.loans) {
     if (
       plannedLoanIds.has(loan.id) ||
