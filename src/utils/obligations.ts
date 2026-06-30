@@ -199,12 +199,18 @@ export function buildFinanceObligationsForMonth(
       })
     }
 
-    // Dönem içi harcama henüz ekstreye girmedi: gerçek nakit çıkışı bir sonraki
-    // ekstrenin son ödeme gününde olur (statement borcunun vadesinden +1 çevrim).
-    // Bankacılık gerçeğiyle uyum için harcama ayına değil o vadeye yazılır.
+    // Dönem içi harcama henüz ekstreye girmedi; gerçek nakit çıkışı, açık dönemin
+    // kesileceği ekstrenin son ödeme gününde olur.
+    //  - Bekleyen ekstre VARSA (statement_debt > 0 veya açık ekstre arşivi): o ekstre
+    //    nextDue'da ödenir; açık dönem bir sonraki çevrimde → addMonths(nextDue, 1).
+    //  - Bekleyen ekstre YOKSA: nextDue zaten açık dönemin son ödeme günüdür → nextDue.
+    //    (due_day > statement_day kartlarında +1 çevrim bir cycle fazla ileri atıyordu.)
     // action: null — ekstre kesilmeden ödenecek bir kalem yok (sadece projeksiyon).
     if (nextDue && card.current_period_spending > 0) {
-      const currentPeriodDueDate = dateInputValue(addMonths(new Date(`${nextDue}T00:00:00`), 1))
+      const hasPendingStatement = cardsWithOpenStatements.has(card.id) || card.statement_debt_amount > 0
+      const currentPeriodDueDate = hasPendingStatement
+        ? dateInputValue(addMonths(new Date(`${nextDue}T00:00:00`), 1))
+        : nextDue
       if (isDateInMonth(currentPeriodDueDate, monthStart)) {
         addObligation(items, {
           id: `card-debt-current-${card.id}-${currentPeriodDueDate}`,
