@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { AccountLedger, Asset, Card, CardExpense, CardInstallment, CardLedger } from '../types/database'
+import type { AccountLedger, Asset, Card, CardExpense, CardInstallment, CardLedger, CardStatementArchive } from '../types/database'
 import { buildIssues } from './DataHealth.logic'
 import { emptyData } from './DataHealth.actions'
 
@@ -156,6 +156,29 @@ function cardExpense(overrides: Partial<CardExpense> = {}): CardExpense {
   }
 }
 
+function cardStatementArchive(overrides: Partial<CardStatementArchive> = {}): CardStatementArchive {
+  return {
+    ...base,
+    id: 'statement-1',
+    card_id: 'card-1',
+    period_year: 2026,
+    period_month: 1,
+    statement_date: '2026-01-01',
+    due_date: '2026-01-10',
+    statement_debt_amount: 1200,
+    current_period_spending: 0,
+    total_debt_amount: 1200,
+    status: 'open',
+    paid_at: null,
+    payment_source_card_id: null,
+    reconciled_bank_amount: null,
+    reconciled_at: null,
+    reconciliation_note: null,
+    note: null,
+    ...overrides,
+  }
+}
+
 describe('buildIssues card debt breakdown', () => {
   it('flags scheduled installments missing from card debt', () => {
     const issues = buildIssues({
@@ -220,6 +243,24 @@ describe('buildIssues card debt breakdown', () => {
       statementDebt: 150,
       currentPeriod: 100,
       provisionAmount: 50,
+    })
+  })
+})
+
+describe('buildIssues overdue card statements', () => {
+  it('flags an open statement whose due date has passed', () => {
+    const issues = buildIssues({
+      ...emptyData,
+      cards: [creditCard()],
+      cardStatementArchives: [cardStatementArchive()],
+    })
+
+    const issue = issues.find((item) => item.id === 'card-overdue-statement-statement-1')
+    expect(issue?.kind).toBe('cardOverduePayment')
+    expect(issue?.payload).toMatchObject({
+      cardId: 'card-1',
+      statementArchiveId: 'statement-1',
+      amount: 1200,
     })
   })
 })

@@ -40,7 +40,13 @@ export function CardDatum({ label, value, tone = 'neutral' }: { label: string; v
 }
 import { buildLimitGroupSummaries } from './CardsPage.helpers'
 
-export function CreditCardOverview({ rows }: { rows: Card[] }) {
+export function CreditCardOverview({
+  rows,
+  formatAmount = formatCurrency,
+}: {
+  rows: Card[]
+  formatAmount?: (value: number | null | undefined) => string
+}) {
   const groups = buildLimitGroupSummaries(rows)
   const bankCards = rows.filter((row) => row.card_type === 'banka_karti')
   if (groups.length === 0 && bankCards.length === 0) return null
@@ -69,18 +75,18 @@ export function CreditCardOverview({ rows }: { rows: Card[] }) {
         />
         <div className="mt-5 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] lg:items-end">
           <div className="min-w-0">
-            <AmountDisplay label="Toplam kart borcu" value={formatCurrency(totalDebt)} tone={totalDebt > 0 ? 'warning' : 'good'} size="lg" />
+            <AmountDisplay label="Toplam kart borcu" value={formatAmount(totalDebt)} tone={totalDebt > 0 ? 'warning' : 'good'} size="lg" />
             <div className="mt-4">
               <ProgressStrip label="Limit kullanımı" value={totalUsageRate} tone={totalUsageRate >= 80 ? 'danger' : totalUsageRate >= 55 ? 'warning' : 'good'} />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-2 min-[520px]:grid-cols-3">
-            <MiniStat label="Ekstre borcu" value={formatCurrency(totalStatementDebt)} tone={totalStatementDebt > 0 ? 'warning' : 'good'} />
-            <MiniStat label="Dönem içi" value={formatCurrency(totalCurrentPeriod)} tone="info" />
-            <MiniStat label="Provizyon" value={formatCurrency(totalProvision)} tone={totalProvision > 0 ? 'warning' : 'neutral'} />
-            <MiniStat label="Kalan limit" value={formatCurrency(totalAvailable)} tone="good" />
-            <MiniStat label="Limit" value={formatCurrency(totalLimit)} tone="neutral" />
-            <MiniStat label="Hesap bakiyesi" value={formatCurrency(cashBalance)} tone="premium" />
+            <MiniStat label="Ekstre borcu" value={formatAmount(totalStatementDebt)} tone={totalStatementDebt > 0 ? 'warning' : 'good'} />
+            <MiniStat label="Dönem içi" value={formatAmount(totalCurrentPeriod)} tone="info" />
+            <MiniStat label="Provizyon" value={formatAmount(totalProvision)} tone={totalProvision > 0 ? 'warning' : 'neutral'} />
+            <MiniStat label="Kalan limit" value={formatAmount(totalAvailable)} tone="good" />
+            <MiniStat label="Limit" value={formatAmount(totalLimit)} tone="neutral" />
+            <MiniStat label="Hesap bakiyesi" value={formatAmount(cashBalance)} tone="premium" />
           </div>
         </div>
       </FinancePanel>
@@ -103,15 +109,15 @@ export function CreditCardOverview({ rows }: { rows: Card[] }) {
               </CardHeader>
               <CardContent className="flex flex-col gap-3 pt-1">
                 <div className="grid grid-cols-2 gap-2 text-xs min-[460px]:grid-cols-4">
-                  <OverviewStat label="Toplam" value={formatCurrency(group.debt)} help={cardHelp.totalDebt} />
-                  <OverviewStat label="Ekstre" value={formatCurrency(group.statementDebt)} help={cardHelp.statementDebt} />
-                  <OverviewStat label="Dönem içi" value={formatCurrency(group.currentPeriod)} help={cardHelp.currentPeriod} />
-                  <OverviewStat label="Provizyon" value={formatCurrency(group.provision)} help={cardHelp.provision} />
+                  <OverviewStat label="Toplam" value={formatAmount(group.debt)} help={cardHelp.totalDebt} />
+                  <OverviewStat label="Ekstre" value={formatAmount(group.statementDebt)} help={cardHelp.statementDebt} />
+                  <OverviewStat label="Dönem içi" value={formatAmount(group.currentPeriod)} help={cardHelp.currentPeriod} />
+                  <OverviewStat label="Provizyon" value={formatAmount(group.provision)} help={cardHelp.provision} />
                 </div>
                 <Progress value={group.usageRate} className="h-1.5" />
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span>Limit {formatCurrency(group.limit)}</span>
-                  <span>Kalan {formatCurrency(group.available)}</span>
+                  <span>Limit {formatAmount(group.limit)}</span>
+                  <span>Kalan {formatAmount(group.available)}</span>
                 </div>
                 <div className="flex flex-col gap-2">
                   {group.cards.map((card) => (
@@ -120,8 +126,8 @@ export function CreditCardOverview({ rows }: { rows: Card[] }) {
                         {card.holder_name || card.card_name}
                       </span>
                       <span className="shrink-0 tabular-nums text-muted-foreground">
-                        {formatCurrency(card.debt_amount)}
-                        {cardProvisionAmount(card) > 0 ? ` · prov. ${formatCurrency(cardProvisionAmount(card))}` : ''}
+                        {formatAmount(card.debt_amount)}
+                        {cardProvisionAmount(card) > 0 ? ` · prov. ${formatAmount(cardProvisionAmount(card))}` : ''}
                       </span>
                     </div>
                   ))}
@@ -138,9 +144,11 @@ export function CreditCardOverview({ rows }: { rows: Card[] }) {
 export function AccountHubPanel({
   rows,
   onOpenTransfer,
+  formatAmount = formatCurrency,
 }: {
   rows: Card[]
   onOpenTransfer: (source: Card) => void
+  formatAmount?: (value: number | null | undefined) => string
 }) {
   const accounts = rows.filter((row) => row.card_type === 'banka_karti')
   const creditCards = rows.filter((row) => row.card_type === 'kredi_karti')
@@ -171,9 +179,9 @@ export function AccountHubPanel({
       </CardHeader>
       <CardContent className="flex flex-col gap-3 pt-3">
         <div className="grid grid-cols-2 gap-2 min-[620px]:grid-cols-4">
-          <OverviewStat label="Hesap bakiyesi" value={formatCurrency(accountBalance)} help={cardHelp.cashBalance} />
-          <OverviewStat label="Kredi kartı borcu" value={formatCurrency(cardDebt)} help={cardHelp.totalDebt} />
-          <OverviewStat label="Ödenebilir borç" value={formatCurrency(payableCardDebt)} help={cardHelp.statementDebt} />
+          <OverviewStat label="Hesap bakiyesi" value={formatAmount(accountBalance)} help={cardHelp.cashBalance} />
+          <OverviewStat label="Kredi kartı borcu" value={formatAmount(cardDebt)} help={cardHelp.totalDebt} />
+          <OverviewStat label="Ödenebilir borç" value={formatAmount(payableCardDebt)} help={cardHelp.statementDebt} />
           <OverviewStat label="Banka sayısı" value={String(banks.length)} />
         </div>
 
@@ -189,7 +197,7 @@ export function AccountHubPanel({
                   </div>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
-                  <span className="text-sm font-extrabold tabular-nums text-foreground">{formatCurrency(account.current_balance)}</span>
+                  <span className="text-sm font-extrabold tabular-nums text-foreground">{formatAmount(account.current_balance)}</span>
                   <button
                     type="button"
                     onClick={() => onOpenTransfer(account)}
@@ -211,7 +219,7 @@ export function AccountHubPanel({
           <div className="flex flex-wrap gap-2">
             {banks.map(([bankName, bank]) => (
               <Badge key={bankName} variant="outline">
-                {bankName} · {formatCurrency(bank.balance)}
+                {bankName} · {formatAmount(bank.balance)}
               </Badge>
             ))}
           </div>

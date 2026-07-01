@@ -86,6 +86,12 @@ export const fields: FormField[] = [
     visibleWhen: { field: 'card_type', value: 'banka_karti' },
   },
   {
+    name: 'iban',
+    label: 'IBAN',
+    type: 'text',
+    visibleWhen: { field: 'card_type', value: 'banka_karti' },
+  },
+  {
     name: 'current_balance',
     label: 'Bakiye',
     type: 'number',
@@ -244,6 +250,11 @@ export function visibleOpenStatementAmount(card: Card, statements: CardStatement
 export function cardOptionLabel(card: Card) {
   const owner = card.holder_name ? ` · ${card.holder_name}` : ''
   return `${card.bank_name} · ${card.card_name}${owner}`
+}
+
+export function formatIban(value: string | null | undefined) {
+  const cleaned = String(value ?? '').replace(/\s+/g, '').toUpperCase()
+  return cleaned.replace(/(.{4})/g, '$1 ').trim()
 }
 
 export function monthInputValue(value = new Date()) {

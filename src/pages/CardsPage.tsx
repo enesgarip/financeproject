@@ -17,9 +17,8 @@
  */
 import { useState, useCallback } from 'react'
 import { Link } from 'react-router-dom'
-import { History, ShieldCheck } from 'lucide-react'
+import { CalendarClock, Eye, EyeOff, FileText, History, Info, ScanSearch, ShieldCheck } from 'lucide-react'
 import { CrudPage } from '../components/CrudPage'
-import { CardAliasPanel } from '../components/finance/CardAliasPanel'
 import { CurrentMovementImportModal } from '../components/finance/CurrentMovementImportModal'
 import { FinancePaymentDrawer } from '../components/finance/FinancePaymentDrawer'
 import { StatementImportModal } from '../components/finance/StatementImportModal'
@@ -28,9 +27,9 @@ import { CardInstallmentExpensesPanel } from '../components/finance/CardInstallm
 import type { Card, CardStatementArchive } from '../types/database'
 import { dateInputValue, formatDate } from '../utils/date'
 import { cardPayableDebt } from '../utils/financeSummary'
-import { formatCurrency } from '../utils/formatCurrency'
 import { isMissingSupabaseCapabilityError, missingSupabaseCapabilityMessage } from '../utils/supabaseErrors'
 import { useFinancePaymentDrawer } from '../hooks/useFinancePaymentDrawer'
+import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
 import { AccountHubPanel, CreditCardOverview } from './CardsPage.overview'
 import { ProvisionPanel, StatementPanel } from './CardsPage.statements'
 import {
@@ -40,7 +39,6 @@ import {
 } from './CardsPage.sections'
 import { QuickExpensePanel } from './CardsPage.expense'
 import { CreditAccountListCard } from './CardsPage.list'
-import { LegacyInstallmentPanel } from './CardsPage.installment'
 import { MovementModal } from './CardsPage.movementModal'
 import { useAccountMovementModal, useCardSectionNavigation, useCardsPageData } from './CardsPage.hooks'
 import {
@@ -52,7 +50,6 @@ import {
   groupCard,
   mapCardForm,
   renderCardDetails,
-  renderCardExtra,
   renderCardRowActions,
   renderCardSubtitle,
   renderCardTitle,
@@ -64,6 +61,7 @@ import {
 
 export function CardsPage() {
   const { focusQuickExpense, handleSectionChange, quickExpenseFocus, section } = useCardSectionNavigation()
+  const { formatAmount, hidden: balancesHidden, toggleHidden: toggleBalancesHidden } = useBalancePrivacy()
   const {
     installments,
     invalidateSnapshot,
@@ -105,9 +103,19 @@ export function CardsPage() {
   // Banka hesabı hareket paneli ⋮ menüden açılır; hangi hesapların paneli
   // açık, satır bileşeni yerine burada tutulur (menü CrudPage'de render edilir).
   const [ledgerOpenIds, setLedgerOpenIds] = useState<Set<string>>(new Set())
+  const [detailOpenIds, setDetailOpenIds] = useState<Set<string>>(new Set())
 
   const toggleLedgerPanel = useCallback((cardId: string) => {
     setLedgerOpenIds((current) => {
+      const next = new Set(current)
+      if (next.has(cardId)) next.delete(cardId)
+      else next.add(cardId)
+      return next
+    })
+  }, [])
+
+  const toggleDetailPanel = useCallback((cardId: string) => {
+    setDetailOpenIds((current) => {
       const next = new Set(current)
       if (next.has(cardId)) next.delete(cardId)
       else next.add(cardId)
@@ -184,11 +192,11 @@ export function CardsPage() {
         detail: (
           <>
             <p className="font-semibold text-foreground">{card.card_name}</p>
-            <p>Ekstre borcu: {formatCurrency(card.statement_debt_amount)}</p>
-            <p>Dönem içi harcama: {formatCurrency(card.current_period_spending)}</p>
+            <p>Ekstre borcu: {formatAmount(card.statement_debt_amount)}</p>
+            <p>Dönem içi harcama: {formatAmount(card.current_period_spending)}</p>
             <p>
               Ödenebilir toplam:{' '}
-              <span className="font-mono font-semibold text-foreground">{formatCurrency(cardPayableDebt(card))}</span>
+              <span className="font-mono font-semibold text-foreground">{formatAmount(cardPayableDebt(card))}</span>
             </p>
           </>
         ),
@@ -228,6 +236,17 @@ export function CardsPage() {
 
           return (
             <div className="flex flex-col gap-3">
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={toggleBalancesHidden}
+                  aria-pressed={balancesHidden}
+                  className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-xs font-bold text-foreground transition hover:bg-muted"
+                >
+                  {balancesHidden ? <Eye size={15} /> : <EyeOff size={15} />}
+                  {balancesHidden ? 'Tutarları göster' : 'Tutarları gizle'}
+                </button>
+              </div>
               {postImportBanner ? (
                 <div className="flex items-center gap-3 rounded-xl border border-info/25 bg-info/8 p-3">
                   <ShieldCheck size={18} className="shrink-0 text-info" />
@@ -260,27 +279,19 @@ export function CardsPage() {
 
               {!loading && section === 'ozet' ? (
                 <>
-                  <AccountHubPanel rows={cardRows} onOpenTransfer={(source) => openTransaction(source, reload, cardRows, 'transfer')} />
-                  <CreditCardOverview rows={cardRows} />
+                  <AccountHubPanel rows={cardRows} onOpenTransfer={(source) => openTransaction(source, reload, cardRows, 'transfer')} formatAmount={formatAmount} />
+                  <CreditCardOverview rows={cardRows} formatAmount={formatAmount} />
                 </>
               ) : null}
 
               {!loading && section === 'islemler' ? (
                 <>
-                  <QuickExpensePanel rows={cardRows} reload={() => refreshCardsAndProvisions(reload)} setError={setError} focus={quickExpenseFocus} />
+                  <QuickExpensePanel rows={cardRows} reload={() => refreshCardsAndProvisions(reload)} setError={setError} focus={quickExpenseFocus} formatAmount={formatAmount} />
                   <CardInstallmentExpensesPanel
                     cards={cardRows}
                     reload={() => refreshCardsAndProvisions(reload)}
                     setError={setError}
                   />
-                  {cardRows.some((row) => row.card_type === 'kredi_karti') ? (
-                    <details className="rounded-lg border border-border/75 bg-card/80 p-3 shadow-sm">
-                      <summary className="cursor-pointer text-sm font-bold text-foreground">Eski taksit devri</summary>
-                      <div className="mt-3">
-                        <LegacyInstallmentPanel rows={cardRows} reload={() => refreshCardsAndProvisions(reload)} setError={setError} />
-                      </div>
-                    </details>
-                  ) : null}
                 </>
               ) : null}
 
@@ -328,18 +339,13 @@ export function CardsPage() {
             menu={helpers.menu}
             rowActions={helpers.rowActions}
             ledgerOpen={ledgerOpenIds.has(row.id)}
+            detailsOpen={detailOpenIds.has(row.id)}
+            balancesHidden={balancesHidden}
+            formatAmount={formatAmount}
             onPayDebt={(card) => void openDebtPayment(card, helpers.rows as Card[], helpers.reload)}
             onAddExpense={focusQuickExpense}
-            onImportStatement={setImportCard}
-            onImportMovements={setMovementImportCard}
             onChanged={() => refreshCardsAndProvisions(helpers.reload)}
           />
-        )}
-        renderExtra={(row, helpers) => (
-          <>
-            {renderCardExtra(row, helpers)}
-            <CardAliasPanel card={row} />
-          </>
         )}
         getCardClassName={getCardClassName}
         getDetailClassName={getDetailClassName}
@@ -349,6 +355,60 @@ export function CardsPage() {
         renderRowActions={(row, helpers) => renderCardRowActions(row, helpers, openTransaction)}
         renderMenuActions={(row, menuHelpers) => {
           const card = row as Card
+          if (card.card_type === 'kredi_karti') {
+            return (
+              <>
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    menuHelpers.closeMenu()
+                    toggleDetailPanel(card.id)
+                  }}
+                  className="flex w-full items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted"
+                >
+                  <Info size={14} />
+                  {detailOpenIds.has(card.id) ? 'Detayı gizle' : 'Detay'}
+                </button>
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    menuHelpers.closeMenu()
+                    focusQuickExpense(card, 'installment')
+                  }}
+                  className="flex w-full items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted"
+                >
+                  <CalendarClock size={14} />
+                  Taksit ekle
+                </button>
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    menuHelpers.closeMenu()
+                    setImportCard(card)
+                  }}
+                  className="flex w-full items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted"
+                >
+                  <FileText size={14} />
+                  Ekstre içe aktar
+                </button>
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    menuHelpers.closeMenu()
+                    setMovementImportCard(card)
+                  }}
+                  className="flex w-full items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted"
+                >
+                  <ScanSearch size={14} />
+                  Mutabakat
+                </button>
+              </>
+            )
+          }
           if (card.card_type !== 'banka_karti') return null
           return (
             <button

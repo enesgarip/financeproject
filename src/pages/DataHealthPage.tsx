@@ -1,12 +1,17 @@
 import { Activity, CheckCircle2, RefreshCw, Settings, ShieldCheck, Undo2, Wrench } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { FinancePaymentDrawer } from '../components/finance/FinancePaymentDrawer'
 import { LiveReconciliationPanel } from '../components/finance/LiveReconciliationPanel'
 import { Badge } from '../components/ui/badge'
 import { Card as SurfaceCard, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import {
   fetchDataHealthRows,
 } from '../data/repositories/dataHealthRepo'
+import { useFinancePaymentDrawer } from '../hooks/useFinancePaymentDrawer'
+import { formatDate } from '../utils/date'
+import { formatCurrency } from '../utils/formatCurrency'
+import { isMissingSupabaseCapabilityError, missingSupabaseCapabilityMessage } from '../utils/supabaseErrors'
 import {
   buildIssues,
   type HealthData,
@@ -36,6 +41,7 @@ export function DataHealthPage() {
   const [error, setError] = useState('')
   const [snoozedIssueIds, setSnoozedIssueIds] = useState<string[]>([])
   const [fixAllOpen, setFixAllOpen] = useState(false)
+  const { drawerProps, openPaymentDrawer } = useFinancePaymentDrawer()
 
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -163,6 +169,47 @@ export function DataHealthPage() {
     } finally {
       setUndoing(false)
     }
+  }
+
+  async function handlePayIssue(issue: HealthIssue) {
+    if (issue.kind !== 'cardOverduePayment') return
+
+    const statement = data.cardStatementArchives.find((item) => item.id === issue.payload?.statementArchiveId)
+    const card = data.cards.find((item) => item.id === issue.payload?.cardId)
+    if (!statement || !card) {
+      setError('Ödeme çekmecesi açılamadı: ekstre veya kart kaydı bulunamadı.')
+      return
+    }
+
+    await openPaymentDrawer(
+      {
+        id: `data-health-card-statement-${statement.id}`,
+        kind: 'card_statement',
+        action: 'pay_card_statement',
+        sourceId: statement.id,
+        relatedCardId: card.id,
+        title: `${card.card_name} ekstresi`,
+        subtitle: card.bank_name,
+        date: statement.due_date ?? statement.statement_date,
+        amount: statement.statement_debt_amount,
+        direction: 'outflow',
+      },
+      {
+        cards: data.cards,
+        reload: loadData,
+        detail: (
+          <>
+            <p className="font-semibold text-foreground">{card.card_name}</p>
+            <p>Son ödeme: {formatDate(statement.due_date)}</p>
+            <p>Ekstre tutarı: <span className="font-mono font-semibold text-foreground">{formatCurrency(statement.statement_debt_amount)}</span></p>
+          </>
+        ),
+        formatSubmitError: (error) =>
+          isMissingSupabaseCapabilityError(error)
+            ? missingSupabaseCapabilityMessage('Ekstre ödeme altyapısı', error)
+            : error.message ?? 'Ekstre ödenemedi.',
+      },
+    )
   }
 
   return (
@@ -323,6 +370,7 @@ export function DataHealthPage() {
                 fixingId={fixingId}
                 undoing={undoing}
                 onFix={(target) => void handleFix(target)}
+                onPayIssue={(target) => void handlePayIssue(target)}
                 onSnooze={(issueId) => setSnoozedIssueIds((current) => (current.includes(issueId) ? current : [...current, issueId]))}
               />
             ))}
@@ -338,6 +386,7 @@ export function DataHealthPage() {
         undoing={undoing}
         onConfirm={() => void handleFixAll()}
       />
+      <FinancePaymentDrawer {...drawerProps} />
     </>
   )
 }

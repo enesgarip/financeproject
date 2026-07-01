@@ -1,6 +1,6 @@
 # Data Health Architecture Note
 
-Last reviewed: 2026-06-20
+Last reviewed: 2026-07-02
 
 This note maps `/veri-sagligi` (`DataHealthPage`). Treat this route as an
 operational repair surface, not a debug page: fixes can modify real finance
@@ -12,7 +12,8 @@ data.
 
 - load all data-health rows from the repository
 - derive visible issues through pure logic
-- coordinate fix, fix-all, undo, export, restore, and reset UI state
+- coordinate fix, fix-all, undo, export, restore, reset, and guided payment UI
+  state
 - render panels and modals from `DataHealthPage.components.tsx`
 
 It should not contain new invariant formulas or direct Supabase calls. Keep
@@ -28,6 +29,9 @@ issue detection in `DataHealth.logic.ts` and writes in
 - `DataHealthPage.actions.ts`: safe-fix execution and undo capture for each
   fixable `HealthIssue`
 - `DataHealthPage.components.tsx`: issue cards, stats, and confirmation modals
+- `src/hooks/useFinancePaymentDrawer.ts` and
+  `src/components/finance/FinancePaymentDrawer.tsx`: guided payment actions for
+  issues such as overdue open card statements
 - `src/data/repositories/dataHealthRepo.ts`: table reads/writes and reset RPC
 - `src/utils/backup.ts`: JSON backup parsing, export payloads, and restore flow
 - `src/utils/transactionFingerprint.ts`: deterministic transaction description
@@ -43,9 +47,12 @@ The normal flow is:
 1. `fetchDataHealthRows()` loads rows from the repository.
 2. `buildIssues(data)` derives deterministic `HealthIssue` objects.
 3. `HealthIssueCard` presents the issue, guide, details, and optional fix.
-4. `fixIssue(issue)` captures undo rows before each write.
-5. `applyUndoEntry()` restores the latest in-session undo batch when requested.
-6. `loadData()` refreshes the page after writes.
+4. Guided actions that are normal domain operations (for example paying an
+   overdue open statement) should open the shared domain drawer instead of
+   inventing a Data Health-only write path.
+5. `fixIssue(issue)` captures undo rows before each direct repair write.
+6. `applyUndoEntry()` restores the latest in-session undo batch when requested.
+7. `loadData()` refreshes the page after writes.
 
 Do not add a fixable issue without an undo strategy unless the action is an
 RPC recomputation with a clear backing source of truth. If a fix can delete or
@@ -64,6 +71,9 @@ Use existing source-of-truth helpers before adding new checks:
 - card-expense duplicate signals:
   `src/utils/transactionFingerprint.ts` and the database-generated
   `card_expenses.transaction_fingerprint`
+- overdue open card statements:
+  `card_statement_archives.status`, `due_date`, and the existing
+  `pay_card_statement` shared payment path
 - savings goal comparisons:
   `src/utils/savingsGoal.ts`
 - money comparison and rounding:

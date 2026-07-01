@@ -1,6 +1,6 @@
 # Supabase RPC Action Reference
 
-Last reviewed: 2026-06-20
+Last reviewed: 2026-07-02
 
 This file maps Supabase RPCs to the user-visible actions that call them. Keep it
 updated whenever a page action, repository wrapper, or migration changes an RPC
@@ -28,7 +28,7 @@ repair rules, keep `docs/TRANSACTION_HISTORY.md` aligned with this file.
 | `cut_card_statement` | `cutCardStatement` in `cardsRepo` | Low-frequency/manual statement cut helper | Creates or returns the period archive and moves current-period spending into open statement debt |
 | `set_statement_reconciliation` | `setStatementReconciliation` in `cardsRepo` | Statement import/reconciliation | Stores bank statement reconciliation amount and note for a card period |
 | `pay_payment_from_card_import` | `payPaymentFromCardImport` in `cardsRepo` | Statement/current movement import: matched planned payment row | Adds the matched bill as posted credit-card spending on the bank row date and advances/closes the planned payment |
-| `record_card_installment_carryover` | `recordCardInstallmentCarryover` in `cardsRepo` | Cards page: legacy installment carryover | Imports remaining pre-app installments as card debt plus installment planning rows |
+| `record_card_installment_carryover` | `recordCardInstallmentCarryover` in `cardsRepo` | Cards page: unified installment form when paid installments so far is positive | Imports remaining pre-app installments as card debt plus installment planning rows, while preserving already-paid historical installments |
 | `reset_card_data` | `resetCardData` in `cardsRepo` | Cards/data-health repair flow | Deletes the card's expenses, installments, statement archives, and related history; resets card debt fields to zero |
 
 The detailed field transitions for these RPCs live in

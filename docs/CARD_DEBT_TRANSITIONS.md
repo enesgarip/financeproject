@@ -1,6 +1,6 @@
 # Card Debt Transitions
 
-Last reviewed: 2026-06-20
+Last reviewed: 2026-07-02
 
 This file is the working source of truth for how credit-card debt moves through
 the app. If an RPC, page action, or data-health fix changes one of these rules,
@@ -61,7 +61,7 @@ member `debt_amount` values.
 | Planned payment paid from credit card | `pay_payment` with a credit-card source | Source credit card `debt_amount += paid amount`; `current_period_spending += paid amount` | Inserts a posted `card_expenses` row for the planned payment; advances or closes the payment row |
 | Planned payment reconciled from card import | `pay_payment_from_card_import` | Source credit card `debt_amount += paid amount`; `current_period_spending += paid amount` | Inserts a posted `card_expenses` row using the bank movement/statement date; advances or closes the matched payment row |
 | Posted expense edited | `update_card_expense` | Reverses the previous posted impact, then applies the new posted impact | Recreates installment rows for the edited expense |
-| Legacy installment carried over | `record_card_installment_carryover` | `debt_amount += remaining installment total`; `current_period_spending += installment amount` only when the next due month is the current month | Inserts one posted expense and remaining installment rows |
+| Old installment plan carried over | `record_card_installment_carryover` | `debt_amount += remaining installment total`; `current_period_spending += installment amount` only when the next due month is the current month | Called by the unified installment form when "paid installments so far" is positive; inserts one posted expense, paid historical installment rows, and remaining installment rows |
 | Card debt recomputed from ledger | `recompute_card_debt_from_ledger` | `debt_amount = sum(card_ledger.amount_kurus) / 100`; if the projection lowers total debt, visible split is reduced from current period first, then statement, then provision | Suppresses the ledger trigger for this repair write so no duplicate event is emitted |
 | Card debt manual correction | `post_card_debt_correction` | `debt_amount += signed correction`; positive corrections add to current-period spending, negative reverse entries reduce current period first, then statement, then provision | Writes an auditable `card_ledger.kind='adjustment'` event with the required reason note |
 | Card data reset | `reset_card_data` | Sets `debt_amount`, `statement_debt_amount`, `current_period_spending`, and `provision_amount` to `0` | Deletes dependent card expenses, installments, statement archives, and related history for that card |
@@ -137,6 +137,7 @@ Data health may flag:
   scheduled installments
 - cards over shared/individual limit
 - statement/archive mismatches
+- overdue open statement archives that likely need a `pay_card_statement` flow
 - ledger drift between `card_ledger` projection and `cards.debt_amount`
 
 When fixing one of these, keep the field transition above intact and prefer a

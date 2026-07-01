@@ -5,17 +5,17 @@ import { MoneyInput } from '../components/finance/MoneyInput'
 import { Badge } from '../components/ui/badge'
 import { Card as SurfaceCard, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { invalidateCategoryMemory, useCategoryMemory } from '../hooks/useCategoryMemory'
-import { addCardExpense } from '../data/repositories/cardsRepo'
+import { addCardExpense, recordCardInstallmentCarryover } from '../data/repositories/cardsRepo'
 import type { Card, CardExpenseStatus } from '../types/database'
 import { expenseCategoryOptions } from '../utils/categories'
 import { getCardStatementPeriod } from '../utils/cardStatement'
 import { dateInputValue, formatDate } from '../utils/date'
 import { cardProvisionAmount } from '../utils/financeSummary'
 import { getLastUsed, setLastUsed } from '../utils/lastUsed'
-import { diffTL } from '../utils/money'
+import { diffTL, sumTL } from '../utils/money'
 import { isMissingSupabaseCapabilityError, missingSupabaseCapabilityMessage } from '../utils/supabaseErrors'
 import { openNativePicker } from '../lib/utils'
-import { cardOptionLabel, moneyShare } from './CardsPage.helpers'
+import { cardOptionLabel, isMonthValue, moneyShare, monthDateValue, monthInputValue } from './CardsPage.helpers'
 import { OverviewStat } from './CardsPage.overview'
 import { formatCurrency, parseNumber } from '../utils/formatCurrency'
 import { parseReceiptImage } from '../lib/receiptParseClient'
@@ -25,11 +25,13 @@ export function QuickExpensePanel({
   reload,
   setError,
   focus,
+  formatAmount,
 }: {
   rows: Card[]
   reload: () => Promise<void>
   setError: (message: string) => void
   focus?: { cardId: string; mode: 'cash' | 'installment'; nonce: number } | null
+  formatAmount?: (value: number | null | undefined) => string
 }) {
   const [cardId, setCardId] = useState(() => getLastUsed('expenseCard'))
   const [amount, setAmount] = useState('')
@@ -38,6 +40,8 @@ export function QuickExpensePanel({
   const [category, setCategory] = useState(expenseCategoryOptions[0]?.value ?? 'Diğer')
   const [paymentMode, setPaymentMode] = useState<'cash' | 'installment'>('cash')
   const [installmentCount, setInstallmentCount] = useState('1')
+  const [paidInstallments, setPaidInstallments] = useState('0')
+  const [nextDueMonth, setNextDueMonth] = useState(monthInputValue())
   const [expenseStatus, setExpenseStatus] = useState<CardExpenseStatus>('posted')
   const [localError, setLocalError] = useState('')
   const [saving, setSaving] = useState(false)
@@ -51,12 +55,24 @@ export function QuickExpensePanel({
   const canUseInstallments = selectedCard?.card_type === 'kredi_karti'
   const parsedAmount = parseNumber(amount)
   const parsedInstallmentCount = canUseInstallments && paymentMode === 'installment' ? Math.max(2, Math.min(36, Number(installmentCount) || 2)) : 1
+  const parsedPaidInstallments = canUseInstallments && paymentMode === 'installment'
+    ? Math.max(0, Math.min(parsedInstallmentCount - 1, Math.trunc(Number(paidInstallments) || 0)))
+    : 0
   const trimmedDescription = description.trim()
-  const statementPreview = useMemo(() => getCardStatementPeriod(selectedCard, spentAt), [selectedCard, spentAt])
   const firstPeriodAmount = parsedInstallmentCount > 1 ? moneyShare(parsedAmount, parsedInstallmentCount) : parsedAmount
+  const remainingInstallmentCount = Math.max(1, parsedInstallmentCount - parsedPaidInstallments)
+  const carryoverAmount = sumTL(Array.from({ length: remainingInstallmentCount }, () => firstPeriodAmount))
+  const isCarryover = parsedInstallmentCount > 1 && parsedPaidInstallments > 0
+  const previewDate = isCarryover ? monthDateValue(nextDueMonth) : spentAt
+  const statementPreview = useMemo(() => getCardStatementPeriod(selectedCard, previewDate), [selectedCard, previewDate])
   const debitPreview = Math.max(0, diffTL(selectedCard?.current_balance, parsedAmount))
   const isProvision = expenseStatus === 'provision'
-  const canSubmitQuickExpense = Boolean(selectedCard) && parsedAmount > 0 && trimmedDescription.length > 0 && !saving
+  const displayAmount = formatAmount ?? formatCurrency
+  const canSubmitQuickExpense = Boolean(selectedCard) &&
+    parsedAmount > 0 &&
+    trimmedDescription.length > 0 &&
+    !saving &&
+    (!isCarryover || (isMonthValue(nextDueMonth) && nextDueMonth >= monthInputValue()))
 
   // "Harcama ekle / Taksit ekle" kısayolundan gelen kartı ve modu önceden seç.
   const focusCardId = focus?.cardId
@@ -106,25 +122,43 @@ export function QuickExpensePanel({
       setLocalError('Açıklama yazmalısın.')
       return
     }
+    if (isCarryover && !isMonthValue(nextDueMonth)) {
+      setLocalError('Sıradaki taksit ayını seçmelisin.')
+      return
+    }
+    if (isCarryover && nextDueMonth < monthInputValue()) {
+      setLocalError('Sıradaki taksit ayı geçmiş olamaz.')
+      return
+    }
     setSaving(true)
     setLocalError('')
     setError('')
-    const submitResult = await addCardExpense({
-      cardId: selectedCard.id,
-      amount: parsedAmount,
-      description: trimmedDescription,
-      spentAt,
-      category,
-      installmentCount: parsedInstallmentCount,
-      status: expenseStatus,
-    })
+    const submitResult = isCarryover
+      ? await recordCardInstallmentCarryover({
+        cardId: selectedCard.id,
+        description: trimmedDescription,
+        installmentAmount: firstPeriodAmount,
+        totalInstallments: parsedInstallmentCount,
+        paidInstallments: parsedPaidInstallments,
+        nextDueMonth,
+        category,
+      })
+      : await addCardExpense({
+        cardId: selectedCard.id,
+        amount: parsedAmount,
+        description: trimmedDescription,
+        spentAt,
+        category,
+        installmentCount: parsedInstallmentCount,
+        status: expenseStatus,
+      })
 
     setSaving(false)
     if (!submitResult.ok) {
       setLocalError(
         isMissingSupabaseCapabilityError(submitResult.error)
           ? missingSupabaseCapabilityMessage('Provizyon/taksit altyapısı', submitResult.error)
-          : submitResult.error.message ?? 'Harcama kaydedilemedi.',
+          : submitResult.error.message ?? (isCarryover ? 'Taksit devri kaydedilemedi.' : 'Harcama kaydedilemedi.'),
       )
       return
     }
@@ -138,6 +172,8 @@ export function QuickExpensePanel({
     setCategory(expenseCategoryOptions[0]?.value ?? 'Diğer')
     setPaymentMode('cash')
     setInstallmentCount('1')
+    setPaidInstallments('0')
+    setNextDueMonth(monthInputValue())
     setExpenseStatus('posted')
     await reload()
   }
@@ -156,9 +192,9 @@ export function QuickExpensePanel({
             <Badge variant={selectedCard.card_type === 'kredi_karti' ? 'secondary' : 'outline'}>
               {selectedCard.card_type === 'kredi_karti'
                 ? cardProvisionAmount(selectedCard) > 0
-                  ? `Provizyon ${formatCurrency(cardProvisionAmount(selectedCard))}`
-                  : `Toplam ${formatCurrency(selectedCard.debt_amount)}`
-                : `Bakiye ${formatCurrency(selectedCard.current_balance)}`}
+                  ? `Provizyon ${displayAmount(cardProvisionAmount(selectedCard))}`
+                  : `Toplam ${displayAmount(selectedCard.debt_amount)}`
+                : `Bakiye ${displayAmount(selectedCard.current_balance)}`}
             </Badge>
           ) : null}
         </div>
@@ -222,6 +258,7 @@ export function QuickExpensePanel({
                 setCardId(nextCardId)
                 setLastUsed('expenseCard', nextCardId)
                 setPaymentMode('cash')
+                setPaidInstallments('0')
                 setLocalError('')
               }}
               className="mt-1 w-full rounded-lg border border-input bg-white px-3 py-2.5 outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 dark:bg-card/50 dark:text-foreground"
@@ -283,6 +320,7 @@ export function QuickExpensePanel({
                   const nextMode = event.target.value as 'cash' | 'installment'
                   setPaymentMode(nextMode)
                   if (nextMode === 'installment' && Number(installmentCount) < 2) setInstallmentCount('2')
+                  if (nextMode === 'cash') setPaidInstallments('0')
                   setLocalError('')
                 }}
                 disabled={!canUseInstallments}
@@ -295,11 +333,12 @@ export function QuickExpensePanel({
             <label className="block min-w-0 text-sm font-semibold text-foreground">
               Durum
               <select
-                value={expenseStatus}
+                value={isCarryover ? 'posted' : expenseStatus}
                 onChange={(event) => {
                   setExpenseStatus(event.target.value as CardExpenseStatus)
                   setLocalError('')
                 }}
+                disabled={isCarryover}
                 className="mt-1 w-full min-w-0 rounded-lg border border-input bg-white px-3 py-2.5 outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 dark:bg-card/50 dark:text-foreground"
               >
                 <option value="posted">Kesinleşmiş</option>
@@ -313,7 +352,9 @@ export function QuickExpensePanel({
               <input
                 value={installmentCount}
                 onChange={(event) => {
+                  const nextCount = Math.max(2, Math.min(36, Math.trunc(Number(event.target.value) || 2)))
                   setInstallmentCount(event.target.value)
+                  setPaidInstallments((current) => String(Math.min(Math.max(0, Number(current) || 0), nextCount - 1)))
                   setLocalError('')
                 }}
                 type="number"
@@ -324,6 +365,42 @@ export function QuickExpensePanel({
               />
             </label>
           ) : null}
+          {canUseInstallments && paymentMode === 'installment' ? (
+            <div className="grid grid-cols-1 gap-2.5 min-[520px]:grid-cols-2">
+              <label className="block text-sm font-semibold text-foreground">
+                Şu ana kadar ödenen taksit
+                <input
+                  value={paidInstallments}
+                  onChange={(event) => {
+                    setPaidInstallments(event.target.value)
+                    if (Number(event.target.value) > 0) setExpenseStatus('posted')
+                    setLocalError('')
+                  }}
+                  type="number"
+                  min="0"
+                  max={Math.max(0, parsedInstallmentCount - 1)}
+                  step="1"
+                  className="mt-1 w-full rounded-lg border border-input px-3 py-2.5 outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 dark:bg-card/50 dark:text-foreground"
+                />
+              </label>
+              {isCarryover ? (
+                <label className="block min-w-0 text-sm font-semibold text-foreground">
+                  Sıradaki taksit ayı
+                  <input
+                    value={nextDueMonth}
+                    onChange={(event) => {
+                      setNextDueMonth(event.target.value)
+                      setLocalError('')
+                    }}
+                    type="month"
+                    min={monthInputValue()}
+                    className="mt-1 block w-full min-w-0 rounded-lg border border-input px-3 py-2.5 outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 dark:bg-card/50 dark:text-foreground"
+                    required
+                  />
+                </label>
+              ) : null}
+            </div>
+          ) : null}
           {selectedCard?.card_type === 'kredi_karti' ? (
             <div className="rounded-xl border border-success/20 bg-success/8 p-3">
               <div className="grid grid-cols-2 gap-2 min-[430px]:grid-cols-4">
@@ -331,13 +408,15 @@ export function QuickExpensePanel({
                 <OverviewStat label="Ekstre" value={statementPreview ? formatDate(statementPreview.statementDate) : 'Gün eksik'} />
                 <OverviewStat label="Son ödeme" value={statementPreview ? formatDate(statementPreview.dueDate) : 'Gün eksik'} />
                 <OverviewStat
-                  label={isProvision ? 'Durum' : parsedInstallmentCount > 1 ? 'İlk yansıma' : 'Yansıma'}
-                  value={isProvision ? 'Provizyon' : formatCurrency(firstPeriodAmount)}
+                  label={isCarryover ? 'Kalan borç' : isProvision ? 'Durum' : parsedInstallmentCount > 1 ? 'İlk yansıma' : 'Yansıma'}
+                  value={isCarryover ? displayAmount(carryoverAmount) : isProvision ? 'Provizyon' : displayAmount(firstPeriodAmount)}
                 />
               </div>
               {statementPreview ? (
                 <p className="mt-2 text-xs font-medium text-success">
-                  {isProvision
+                  {isCarryover
+                    ? `${parsedPaidInstallments}/${parsedInstallmentCount} taksit ödenmiş kabul edilir; kart borcuna kalan ${remainingInstallmentCount} taksit eklenir.`
+                    : isProvision
                     ? `Bu işlem şimdilik sadece limitten düşer; kesinleşince ${statementPreview.statementMonthLabel} dönemine alınır.`
                     : `Bu işlem ${statementPreview.statementMonthLabel} ekstresine girer; ödeme planı ${formatDate(statementPreview.dueDate)} tarihine bağlanır.`}
                 </p>
@@ -349,8 +428,8 @@ export function QuickExpensePanel({
             </div>
           ) : selectedCard ? (
             <div className="grid grid-cols-2 gap-2 rounded-xl border border-border/60 bg-muted/30 p-3">
-              <OverviewStat label="Mevcut bakiye" value={formatCurrency(selectedCard.current_balance)} />
-              <OverviewStat label="İşlem sonrası" value={formatCurrency(debitPreview)} />
+              <OverviewStat label="Mevcut bakiye" value={displayAmount(selectedCard.current_balance)} />
+              <OverviewStat label="İşlem sonrası" value={displayAmount(debitPreview)} />
             </div>
           ) : null}
           {localError ? <p className="rounded-xl border border-destructive/20 bg-destructive/8 p-3 text-sm font-medium text-destructive">{localError}</p> : null}

@@ -3,6 +3,7 @@ import {
   accountLabelForObligation,
   amountLabelForObligation,
   emptyAccountMessageForObligation,
+  estimatedMinimumCardPayment,
   modalTitleForObligation,
   obligationAmountEditable,
   submitLabelForObligation,
@@ -64,6 +65,26 @@ export function FinancePaymentDrawer({
   externalError = '',
   detail,
 }: FinancePaymentDrawerProps) {
+  const minimumPayment = intent?.action === 'pay_card_debt' ? estimatedMinimumCardPayment(intent.amount) : 0
+  const quickAmounts = intent?.action === 'pay_card_debt' ? (
+    <div className="flex flex-wrap gap-2">
+      <button
+        type="button"
+        onClick={() => onAmountValueChange(String(minimumPayment))}
+        className="rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-bold text-foreground transition hover:bg-muted"
+      >
+        Asgari tahmini ({formatCurrency(minimumPayment)})
+      </button>
+      <button
+        type="button"
+        onClick={() => onAmountValueChange(String(intent.amount))}
+        className="rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-bold text-foreground transition hover:bg-muted"
+      >
+        Tamamı ({formatCurrency(intent.amount)})
+      </button>
+    </div>
+  ) : null
+
   return (
     <AccountPaymentModal
       title={modalTitleForObligation(intent)}
@@ -75,6 +96,7 @@ export function FinancePaymentDrawer({
       amountValue={amountValue}
       onAmountValueChange={onAmountValueChange}
       amountLabel={amountLabelForObligation(intent)}
+      amountActions={quickAmounts}
       accountLabel={accountLabelForObligation(intent)}
       emptyMessage={emptyAccountMessageForObligation(intent)}
       submitLabel={submitLabelForObligation(intent)}

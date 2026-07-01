@@ -1,5 +1,5 @@
 import type { AccountLedger } from '../types/database'
-import { diffTL, sumKurus, toTL } from './money'
+import { diffTL, sumKurus, toKurus, toTL } from './money'
 
 /**
  * Projection over the append-only bank-account balance ledger (roadmap Faz 3).
@@ -50,6 +50,30 @@ export function projectBalanceByAccount(events: AccountLedgerEvent[]): Map<strin
  */
 export function balanceDrift(events: AccountLedgerEvent[], storedBalance: number): number {
   return diffTL(storedBalance, projectAccountBalance(events))
+}
+
+export type AccountLedgerBalanceRow<TEvent extends AccountLedgerEvent = AccountLedgerEvent> = {
+  event: TEvent
+  balanceAfter: number
+}
+
+/**
+ * Events are queried newest-first in the UI. Given the current stored balance,
+ * walk backwards to show the bank-style "balance after this transaction" value
+ * for each row without trusting float arithmetic.
+ */
+export function buildAccountLedgerBalanceRows<TEvent extends AccountLedgerEvent>(
+  eventsNewestFirst: TEvent[],
+  currentBalance: number,
+): AccountLedgerBalanceRow<TEvent>[] {
+  let newerEventTotalKurus = 0
+  const currentBalanceKurus = toKurus(currentBalance)
+
+  return eventsNewestFirst.map((event) => {
+    const balanceAfter = toTL(currentBalanceKurus - newerEventTotalKurus)
+    newerEventTotalKurus += Math.trunc(event.amount_kurus)
+    return { event, balanceAfter }
+  })
 }
 
 export type AccountLedgerSummary = {

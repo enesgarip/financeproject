@@ -232,6 +232,7 @@ export function checkCards(
   cardStatementArchives: CardStatementArchive[],
 ): HealthIssue[] {
   const issues: HealthIssue[] = []
+  const today = todayValue()
   const cardsById = new Map(cards.map((card) => [card.id, card]))
   const scheduledInstallmentsByCard = scheduledCardInstallmentTotalsByCard(cardInstallments)
 
@@ -408,6 +409,27 @@ export function checkCards(
 
   for (const archive of cardStatementArchives) {
     const card = cardsById.get(archive.card_id)
+    if (archive.status === 'open' && archive.due_date && archive.due_date < today) {
+      issues.push({
+        id: `card-overdue-statement-${archive.id}`,
+        area: 'Kartlar',
+        severity: 'warning',
+        title: `${cardLabel(card)} vadesi geçmiş açık ekstre`,
+        description: 'Ekstre son ödeme tarihi geçmiş ama uygulamada hâlâ açık görünüyor. Bankada ödendiyse uygulamada da kapatılmalı.',
+        details: [
+          `Son ödeme: ${formatDate(archive.due_date)}`,
+          `Ekstre tutarı: ${formatCurrency(archive.statement_debt_amount)}`,
+        ],
+        fixable: false,
+        kind: 'cardOverduePayment',
+        payload: {
+          cardId: archive.card_id,
+          statementArchiveId: archive.id,
+          amount: archive.statement_debt_amount,
+          dueDate: archive.due_date,
+        },
+      })
+    }
     if (archive.due_date && archive.due_date < archive.statement_date) {
       issues.push({
         id: `card-archive-date-order-${archive.id}`,

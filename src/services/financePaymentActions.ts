@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase'
 import type { Card } from '../types/database'
+import { roundTL } from '../utils/money'
 import type { FinanceObligation } from '../utils/obligations'
 import { isMissingSupabaseCapabilityError, missingSupabaseCapabilityMessage, type SupabaseLikeError } from '../utils/supabaseErrors'
 
@@ -76,6 +77,10 @@ export function emptyAccountMessageForObligation(obligation: FinanceObligation |
 
 export function obligationAmountEditable(obligation: FinanceObligation | null) {
   return obligation?.action === 'pay_payment' || obligation?.action === 'pay_card_debt'
+}
+
+export function estimatedMinimumCardPayment(amount: number, rate = 0.2) {
+  return roundTL(Math.max(0, amount) * rate)
 }
 
 export async function submitFinanceObligationPayment({

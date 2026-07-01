@@ -31,12 +31,14 @@ export function HealthIssueCard({
   fixingId,
   undoing,
   onFix,
+  onPayIssue,
   onSnooze,
 }: {
   issue: HealthIssue
   fixingId: string | null
   undoing: boolean
   onFix: (issue: HealthIssue) => void
+  onPayIssue?: (issue: HealthIssue) => void
   onSnooze: (issueId: string) => void
 }) {
   const guide = buildIssueGuide(issue)
@@ -103,6 +105,16 @@ export function HealthIssueCard({
                   <Link to={quickLink.to} className="rounded-lg border border-border bg-card px-3 py-2 text-xs font-semibold text-foreground transition hover:bg-muted">
                     {quickLink.label}
                   </Link>
+                ) : null}
+                {issue.kind === 'cardOverduePayment' && onPayIssue ? (
+                  <button
+                    type="button"
+                    onClick={() => onPayIssue(issue)}
+                    disabled={Boolean(fixingId) || undoing}
+                    className="rounded-lg bg-success px-3 py-2 text-xs font-semibold text-success-foreground transition hover:bg-success/90 disabled:opacity-50"
+                  >
+                    Ödeme çekmecesini aç
+                  </button>
                 ) : null}
                 <button
                   type="button"

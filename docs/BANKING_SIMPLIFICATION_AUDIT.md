@@ -2,6 +2,22 @@
 
 ## Fixed In This Pass
 
+- **Unified installment entry (2026-07-02)**
+  - Before: normal installment entry could not express already-paid installments, while old-installment carryover existed in a separate low-visibility panel.
+  - Now: the main installment form has a "paid installments so far" field. Zero uses `add_card_expense`; a positive value routes to `record_card_installment_carryover`, keeps numbering such as 3/9, and adds only the remaining debt.
+
+- **Credit-card row simplified (2026-07-02)**
+  - Before: each credit-card row exposed status badges, consistency score, statement boxes, six visible actions, and always-visible SMS alias management.
+  - Now: primary actions are "Borc ode" and "Harcama ekle"; import, reconciliation, installment entry, and detail live in the row menu. Consistency, aliases, statement day, and lower-frequency metadata live in the detail panel.
+
+- **Classic banking affordances (2026-07-02)**
+  - Before: bank accounts lacked shareable IBAN/copy UI, amount privacy, statement-like balance-after rows, recent row movements, and card-face masked numbers.
+  - Now: bank accounts can store/copy IBAN, all major balances can be masked from one eye toggle, account ledger rows show "balance after", bank rows show the last three movements, and credit-card visuals use SMS alias digits for masked card numbers when available.
+
+- **Data Health overdue statement payment (2026-07-02)**
+  - Before: a statement paid at the real bank but left open in the app was easy to miss unless the user manually inspected cards.
+  - Now: Data Health flags overdue open card statements and opens the shared statement-payment drawer directly from the issue card.
+
 - **Bank account row actions consolidated (2026-07-02)**
   - Before: each bank account row showed three buttons ("Transfer yap", "Hareketler", "Para hareketi") with two separate modal entries.
   - Now: one "Para hareketi" button opens a single movement modal whose type selector covers money in, money out, and account-to-account transfer (transfer option is disabled without a second account). The ledger panel ("Hareketler") moved into the row's ⋮ menu.

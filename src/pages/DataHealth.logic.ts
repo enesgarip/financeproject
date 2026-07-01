@@ -67,6 +67,7 @@ export type HealthIssue = {
     | 'cardInstallmentPostedAt'
     | 'cardInstallmentCount'
     | 'cardStatementTotals'
+    | 'cardOverduePayment'
     | 'cardScheduledDebt'
     | 'cardLedgerDrift'
     | 'duplicateTransactionCandidate'

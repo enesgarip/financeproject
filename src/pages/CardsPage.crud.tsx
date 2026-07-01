@@ -27,6 +27,7 @@ export function getCardInitialValues(row?: Card) {
     card_type: row?.card_type ?? 'kredi_karti',
     holder_name: row?.holder_name ?? '',
     account_number: row?.account_number ?? '',
+    iban: row?.iban ?? '',
     limit_group_name: row?.limit_group_name ?? '',
     current_balance: row?.current_balance ?? 0,
     credit_limit: row?.credit_limit ?? 0,
@@ -58,6 +59,7 @@ export function mapCardForm(formData: FormData, userId: string, editing: Card | 
     card_type: cardType,
     holder_name: isCreditCard ? String(formData.get('holder_name') ?? '').trim() || null : null,
     account_number: !isCreditCard ? String(formData.get('account_number') ?? '').trim() || null : null,
+    iban: !isCreditCard ? String(formData.get('iban') ?? '').replace(/\s+/g, '').toUpperCase() || null : null,
     limit_group_name: isCreditCard ? String(formData.get('limit_group_name') ?? '').trim() || null : null,
     credit_limit: isCreditCard ? parseNumber(formData.get('credit_limit')) : 0,
     statement_day: isCreditCard ? optionalDay(formData.get('statement_day')) : null,
@@ -109,7 +111,13 @@ export function renderCardSubtitle(row: Card) {
 }
 
 export function renderCardDetails(row: Card) {
-  if (row.card_type !== 'kredi_karti') return [`Bakiye: ${formatCurrency(row.current_balance)}`]
+  if (row.card_type !== 'kredi_karti') {
+    return [
+      `Bakiye: ${formatCurrency(row.current_balance)}`,
+      row.iban ? `IBAN: ${row.iban}` : 'IBAN: -',
+      row.account_number ? `Hesap no: ${row.account_number}` : 'Hesap no: -',
+    ]
+  }
 
   return [
     row.holder_name ? `Kart sahibi: ${row.holder_name}` : 'Kart sahibi: -',

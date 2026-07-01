@@ -1,6 +1,6 @@
 # Cards Architecture Note
 
-Last reviewed: 2026-06-20
+Last reviewed: 2026-07-02
 
 This note maps `/kartlar` (`CardsPage`) after the page split. Start with
 `CLAUDE.md`, `docs/AI_CONTEXT_INDEX.md`, and `docs/CARD_DEBT_TRANSITIONS.md`
@@ -23,10 +23,16 @@ repositories, services, or focused `CardsPage.*` modules.
   statement action state, account movement modal state
 - `CardsPage.sections.tsx`: section navigation and due-statement automation
 - `CardsPage.overview.tsx`: account hub and credit-card overview panels
-- `CardsPage.expense.tsx`: quick expense and installment expense entry surface
+- `CardsPage.expense.tsx`: quick expense and installment expense entry
+  surface; routes paid-count installment imports to
+  `record_card_installment_carryover`
 - `CardsPage.statements.tsx`: open statement and provision presentation panels
-- `CardsPage.list.tsx`: account/card list item presentation
-- `CardsPage.installment.tsx`: legacy installment migration UI
+- `CardsPage.list.tsx`: account/card list item presentation, row action menus,
+  bank IBAN/copy affordance, masked card number, recent bank movements, and
+  ledger/detail panels
+- `CardsPage.installment.tsx`: legacy installment migration fallback/reference;
+  the primary user flow is now the unified installment form in
+  `CardsPage.expense.tsx`
 - `CardsPage.crud.tsx`: CRUD form mapping, grouping, row actions, list metadata
 - `CardsPage.helpers.ts`: card-specific pure helpers and date/month utilities
 - `CardsPage.movementModal.tsx`: account movement modal presentation
@@ -61,9 +67,18 @@ actions should use the repository/service layer:
 - account-backed payments:
   `src/hooks/useFinancePaymentDrawer.ts` and
   `src/components/finance/FinancePaymentDrawer.tsx`
+- balance privacy:
+  `src/hooks/useBalancePrivacy.ts`; pass its formatter down instead of adding
+  page-local masking logic
 
 Do not import `src/lib/supabase` from page, component, hook, or utility code.
 If a new query is needed, add it to the repository or service layer.
+
+For old installment plans that started before the app, do not expose a second
+top-level migration panel by default. The quick installment form has a
+"paid installments so far" field: zero uses `add_card_expense`; a positive
+value uses `record_card_installment_carryover`, writes the already-paid rows as
+paid history, and adds only the remaining debt.
 
 ## Card Debt Boundaries
 
@@ -95,6 +110,11 @@ the amount at statement + current-period debt and reduces statement debt first.
 The button is disabled while the card has an open statement archive; that case
 belongs to the statement payment flow, because `pay_card_debt` does not close
 archive rows.
+
+The shared payment modal may provide amount shortcuts, but the RPC remains the
+authority. For card debt payment the shortcuts are presentation-only
+("estimated minimum" and "full amount") and still submit through the same
+editable amount field.
 
 When a card action changes balances or statement/installment state, refresh:
 

@@ -59,8 +59,14 @@
   - 2026-07-02: `record_sms_account_movement` artık birebir rakam eşleşmesi bulamazsa karşılıklı içerme ile eşleştirir (SMS "4230-13300128-351" ↔ kayıtlı "13300128-351" gibi kısmi girişler çalışır; kısa taraf ≥ 6 hane). Birden fazla hesap eşleşirse işlem reddedilir; eşleşme yoksa hata mesajı kullanıcıyı "Hesap numarası" alanını doldurmaya yönlendirir. Migration: `20260702120000_tolerant_sms_account_matching.sql`.
 - ~~Consolidate bank account row actions into one movement modal.~~ DONE.
   - 2026-07-02: "Transfer yap" butonu kaldırıldı; tek "Para hareketi" butonu, işlem tipi seçicisinde para geldi / para gitti / hesaplar arası transferi birlikte sunan MovementModal'ı açar (ikinci hesap yoksa transfer seçeneği pasif). "Hareketler" (account ledger paneli) satırın ⋮ menüsüne taşındı (`renderMenuActions`, `ledgerOpenIds` CardsPage'de).
+- ~~Unify old-installment carryover with normal installment entry.~~ DONE.
+  - 2026-07-02: `CardsPage.expense.tsx` taksit formuna "su ana kadar odenen taksit" alani eklendi. Deger 0 ise `add_card_expense`, 0'dan buyukse `record_card_installment_carryover` calisir; kalan borc eklenir ve taksit numarasi toplam plana gore devam eder.
 - ~~Let card debt be paid before the statement is cut.~~ DONE.
   - 2026-07-02: Kart satırına "Borç öde" butonu eklendi (`CardsPage.openDebtPayment`). Paylaşılan ödeme çekmecesi `pay_card_debt` RPC'sini kullanır: kaynak banka hesabı seçilir, tutar düzenlenebilir (varsayılan `cardPayableDebt` = ekstre + dönem içi), ödeme önce ekstre borcundan düşülür. Ekstre kesilmeden dönem içi borç ödenebilir; provizyon ve gelecek taksitler kapsam dışı (RPC guard). Açık ekstre arşivi varken buton devre dışı — `pay_card_debt` arşiv satırını kapatmadığı için o durum ekstre ödeme akışına ait.
+- ~~Add classic banking polish to account/card rows.~~ DONE.
+  - 2026-07-02: Kredi karti satiri iki ana aksiyona indi; detay/import/mutabakat/taksit menude. Banka hesaplarina IBAN + kopyala, son 3 hareket ve hareket sonrasi bakiye eklendi. `useBalancePrivacy` tek goz ikonuyla tutarlari maskeler; kredi karti gorseli SMS alias son hanelerinden maskeli numara gosterir.
+- ~~Flag overdue open card statements in Data Health.~~ DONE.
+  - 2026-07-02: `DataHealth.checks.ts` vadesi gecmis acik ekstre arsivlerini uyarir; issue karti paylasilan `FinancePaymentDrawer` ile dogrudan ekstre odeme akisini acar.
 - ~~Add DenizBank current movement PDF reconciliation.~~ DONE.
   - Cards page now opens a current movement import flow for DenizBank internet banking PDFs.
   - Pending rows import as provisions, posted spending imports as current-period expenses, payment rows are excluded, and installment rows are left for manual review.

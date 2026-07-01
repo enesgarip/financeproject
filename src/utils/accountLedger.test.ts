@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   balanceDrift,
+  buildAccountLedgerBalanceRows,
   groupEventsByAccount,
   projectAccountBalance,
   projectAccountBalanceKurus,
@@ -78,5 +79,19 @@ describe('summarizeAccountLedger', () => {
 
   it('is empty-safe', () => {
     expect(summarizeAccountLedger([])).toEqual({ count: 0, totalIn: 0, totalOut: 0, net: 0 })
+  })
+})
+
+describe('buildAccountLedgerBalanceRows', () => {
+  it('shows bank-style balance after each newest-first event', () => {
+    const events = [
+      ev('a', -2000, 'withdrawal'),
+      ev('a', 5000, 'deposit'),
+      ev('a', 100000, 'opening'),
+    ]
+
+    const rows = buildAccountLedgerBalanceRows(events, 1030)
+
+    expect(rows.map((row) => row.balanceAfter)).toEqual([1030, 1050, 1000])
   })
 })

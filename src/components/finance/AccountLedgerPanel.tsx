@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { fetchAccountLedgerEvents } from '../../data/repositories/financePanelsRepo'
 import { postAccountBalanceCorrection, recomputeAccountBalance } from '../../services/accountLedgerActions'
 import type { AccountLedger, Card } from '../../types/database'
-import { balanceDrift, summarizeAccountLedger } from '../../utils/accountLedger'
+import { balanceDrift, buildAccountLedgerBalanceRows, summarizeAccountLedger } from '../../utils/accountLedger'
 import { formatDate } from '../../utils/date'
 import { formatCurrency, parseNumber } from '../../utils/formatCurrency'
 import { toTL } from '../../utils/money'
@@ -29,7 +29,15 @@ const VISIBLE_EVENTS = 8
  * balance back to the projection ("Ledger'a göre düzelt"), and post a manual fix
  * as an auditable 'adjustment' event with a reason ("Düzelt (ters kayıt)").
  */
-export function AccountLedgerPanel({ card, onChanged }: { card: Card; onChanged?: () => void | Promise<void> }) {
+export function AccountLedgerPanel({
+  card,
+  onChanged,
+  formatAmount = formatCurrency,
+}: {
+  card: Card
+  onChanged?: () => void | Promise<void>
+  formatAmount?: (value: number | null | undefined) => string
+}) {
   const [events, setEvents] = useState<AccountLedger[] | null>(null)
   const [loadError, setLoadError] = useState('')
   const [busy, setBusy] = useState(false)
@@ -105,21 +113,22 @@ export function AccountLedgerPanel({ card, onChanged }: { card: Card; onChanged?
   const summary = summarizeAccountLedger(events)
   // Events arrive newest-first; order doesn't matter for the sums.
   const drift = balanceDrift(events, card.current_balance)
+  const balanceRows = buildAccountLedgerBalanceRows(events, card.current_balance)
 
   return (
     <div className="mt-3 rounded-lg bg-card/80 p-3 ring-1 ring-border/70">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-xs font-black uppercase text-muted-foreground">Hesap hareketleri</p>
         <p className="text-xs font-semibold text-muted-foreground">
-          {summary.count} hareket · Giriş {formatCurrency(summary.totalIn)} − Çıkış {formatCurrency(summary.totalOut)} ={' '}
-          <span className="font-black text-foreground">{formatCurrency(summary.net)}</span>
+          {summary.count} hareket · Giriş {formatAmount(summary.totalIn)} − Çıkış {formatAmount(summary.totalOut)} ={' '}
+          <span className="font-black text-foreground">{formatAmount(summary.net)}</span>
         </p>
       </div>
 
       {drift !== 0 ? (
         <div className="mt-2 rounded-lg bg-warning/8 px-3 py-2 ring-1 ring-warning/20">
           <p className="text-xs font-semibold text-warning" aria-live="polite">
-            {formatCurrency(Math.abs(drift))} hareketlerle açıklanamıyor — kayıt dışı bir {drift > 0 ? 'giriş' : 'çıkış'} olabilir.
+            {formatAmount(Math.abs(drift))} hareketlerle açıklanamıyor — kayıt dışı bir {drift > 0 ? 'giriş' : 'çıkış'} olabilir.
           </p>
           <Button
             type="button"
@@ -137,7 +146,7 @@ export function AccountLedgerPanel({ card, onChanged }: { card: Card; onChanged?
 
       {events.length > 0 ? (
         <div className="mt-3 flex flex-col gap-2">
-          {events.slice(0, VISIBLE_EVENTS).map((event) => {
+          {balanceRows.slice(0, VISIBLE_EVENTS).map(({ event, balanceAfter }) => {
             const meta = KIND_LABELS[event.kind]
             const amountTL = toTL(event.amount_kurus)
             return (
@@ -151,7 +160,8 @@ export function AccountLedgerPanel({ card, onChanged }: { card: Card; onChanged?
                 </span>
                 <span className={`shrink-0 font-black tabular-nums ${meta.className}`}>
                   {amountTL > 0 ? '+' : ''}
-                  {formatCurrency(amountTL)}
+                  {formatAmount(amountTL)}
+                  <span className="ml-2 font-semibold text-muted-foreground">Sonrası {formatAmount(balanceAfter)}</span>
                 </span>
               </div>
             )

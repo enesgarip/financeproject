@@ -3,6 +3,7 @@ import type { Card } from '../types/database'
 import { supabase } from '../lib/supabase'
 import {
   getAccountsForObligation,
+  estimatedMinimumCardPayment,
   lastUsedKeyForObligation,
   obligationAmountEditable,
   submitFinanceObligationPayment,
@@ -115,5 +116,11 @@ describe('finance payment action helpers', () => {
       p_paid_amount: 125,
     })
     expect(result.error?.message).toContain('PGRST202')
+  })
+
+  it('computes the estimated minimum card payment with TL rounding', () => {
+    expect(estimatedMinimumCardPayment(1000)).toBe(200)
+    expect(estimatedMinimumCardPayment(333.33)).toBe(66.67)
+    expect(estimatedMinimumCardPayment(-100)).toBe(0)
   })
 })

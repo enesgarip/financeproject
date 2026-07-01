@@ -29,6 +29,7 @@ type AccountPaymentModalProps = {
   saving?: boolean
   externalError?: string
   amountEditable?: boolean
+  amountActions?: ReactNode
   accountPreviewAmount?: (amount: number) => number
   emptyMessage?: string
   info?: ReactNode
@@ -65,6 +66,7 @@ export function AccountPaymentModal({
   saving = false,
   externalError = '',
   amountEditable = true,
+  amountActions,
   accountPreviewAmount,
   emptyMessage = 'Kullanılabilir banka hesabı yok.',
   info,
@@ -122,7 +124,10 @@ export function AccountPaymentModal({
         ) : null}
 
         {amountEditable ? (
-          <MoneyInput label={amountLabel} value={amountValue} onValueChange={onAmountValueChange} required />
+          <div className="space-y-2">
+            <MoneyInput label={amountLabel} value={amountValue} onValueChange={onAmountValueChange} required />
+            {amountActions}
+          </div>
         ) : (
           <div className="rounded-lg border border-border/60 bg-card/80 px-3 py-2.5">
             <p className="finance-label">{amountLabel}</p>

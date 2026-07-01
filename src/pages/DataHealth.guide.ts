@@ -56,6 +56,14 @@ export function buildIssueGuide(issue: HealthIssue): IssueGuide {
     }
   }
 
+  if (issue.kind === 'cardOverduePayment') {
+    return {
+      problem: 'Açık ekstre son ödeme tarihini geçmiş.',
+      whyItMatters: 'Bankada ödeme yapıldıysa uygulama açık bırakır; taksitler ve ekstre borcu yanlış açık görünür.',
+      nextStep: 'Ekstre gerçekten ödendiyse ödeme çekmecesini açıp kaynak hesabı seçerek uygulamada da kapat.',
+    }
+  }
+
   if (
     issue.kind === 'cardExpenseAmount' ||
     issue.kind === 'cardSingleInstallments' ||
@@ -150,6 +158,7 @@ export function navigationAction(issue: HealthIssue) {
   if (issue.id.includes('stale-installment')) return { to: '/kartlar?section=islemler', label: 'Döneme dahil et' }
   if (issue.id.includes('no-plan')) return { to: '/borclar/krediler', label: 'Planı oluştur' }
 
+  if (issue.kind === 'cardOverduePayment') return { to: '/kartlar?section=ekstreler', label: 'Ekstreleri aç' }
   if (issue.kind.startsWith('card') || issue.kind === 'cardTypeFields' || issue.kind === 'duplicateTransactionCandidate') return { to: '/kartlar?section=kartlar', label: 'Kartlara git' }
   if (issue.kind.startsWith('loan')) return { to: '/borclar/krediler', label: 'Kredilere git' }
   if (issue.kind.startsWith('payment')) {
