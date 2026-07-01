@@ -1,4 +1,4 @@
-import { CalendarDays, MoreVertical, Pencil, Plus, Search, Trash2 } from 'lucide-react'
+import { CalendarDays, Check, ChevronDown, MoreVertical, Pencil, Plus, Search, Trash2 } from 'lucide-react'
 import type { CSSProperties, ReactNode } from 'react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
@@ -81,6 +81,12 @@ type CrudPageProps<T extends TableName> = {
   getDetailStyle?: (row: RowFor<T>, rows: RowFor<T>[]) => CSSProperties
   groupBy?: (row: RowFor<T>) => string
   getGroupClassName?: (group: string) => string
+  /**
+   * Bu isimdeki gruplar listenin sonuna alınır ve varsayılan kapalı,
+   * tıklayınca açılan bir "Tamamlananlar (N)" bölümü olarak çizilir
+   * (taksitli harcamalardaki tamamlananlar deseniyle aynı).
+   */
+  collapsibleGroups?: string[]
   canEditRow?: (row: RowFor<T>, rows: RowFor<T>[]) => boolean
   canDeleteRow?: (row: RowFor<T>, rows: RowFor<T>[]) => boolean
   renderRowActions?: (row: RowFor<T>, helpers: { reload: () => Promise<void>; setError: (message: string) => void; rows: RowFor<T>[] }) => ReactNode
@@ -127,6 +133,7 @@ export function CrudPage<T extends TableName>({
   getDetailStyle,
   groupBy,
   getGroupClassName,
+  collapsibleGroups,
   canEditRow,
   canDeleteRow,
   renderRowActions,
@@ -178,7 +185,25 @@ export function CrudPage<T extends TableName>({
     () => (normalizedQuery ? rows.filter((row) => rowMeta.get(row.id)?.searchText.includes(normalizedQuery)) : rows),
     [normalizedQuery, rowMeta, rows],
   )
-  const groupedVisibleRows = useMemo(() => groupRows(visibleRows, groupBy), [groupBy, visibleRows])
+  const groupedVisibleRows = useMemo(() => {
+    const groups = groupRows(visibleRows, groupBy)
+    if (!collapsibleGroups?.length) return groups
+    // Katlanabilir gruplar (örn. tamamlananlar) her zaman listenin sonunda dursun.
+    return [
+      ...groups.filter(({ group }) => !collapsibleGroups.includes(group)),
+      ...groups.filter(({ group }) => collapsibleGroups.includes(group)),
+    ]
+  }, [collapsibleGroups, groupBy, visibleRows])
+  const [openCollapsibleGroups, setOpenCollapsibleGroups] = useState<Set<string>>(new Set())
+
+  const toggleCollapsibleGroup = useCallback((group: string) => {
+    setOpenCollapsibleGroups((current) => {
+      const next = new Set(current)
+      if (next.has(group)) next.delete(group)
+      else next.add(group)
+      return next
+    })
+  }, [])
 
   useEffect(() => {
     function handleClickOutside() {
@@ -390,18 +415,10 @@ export function CrudPage<T extends TableName>({
         <EmptyState title="Eşleşen kayıt yok" description="Arama metnini temizleyerek tüm kayıtları tekrar görebilirsin." />
       ) : (
         <div className="flex flex-col gap-5">
-          {groupedVisibleRows.map(({ group, items }) => (
-            <section key={group} className="flex flex-col gap-3">
-              {groupBy ? (
-                <div className="flex items-center gap-3 px-1 py-1">
-                  <h2
-                    className={cn('shrink-0 text-xs font-black uppercase text-muted-foreground', getGroupClassName?.(group))}
-                  >
-                    {group}
-                  </h2>
-                  <span className="h-px flex-1 bg-gradient-to-r from-border via-border/60 to-transparent" />
-                </div>
-              ) : null}
+          {groupedVisibleRows.map(({ group, items }) => {
+            const isCollapsible = Boolean(groupBy && collapsibleGroups?.includes(group))
+            const isGroupOpen = openCollapsibleGroups.has(group)
+            const grid = (
               <div className="grid gap-3 min-[760px]:grid-cols-2 xl:grid-cols-3">
                 {items.map((row) => {
                   const meta = rowMeta.get(row.id)
@@ -578,9 +595,45 @@ export function CrudPage<T extends TableName>({
                 </article>
                   )
                 })}
-            </div>
-            </section>
-          ))}
+              </div>
+            )
+
+            if (isCollapsible) {
+              return (
+                <section key={group} className="rounded-xl border border-border/60 bg-card/60">
+                  <button
+                    type="button"
+                    onClick={() => toggleCollapsibleGroup(group)}
+                    aria-expanded={isGroupOpen}
+                    className="flex w-full items-center justify-between gap-2 px-3 py-2.5 text-sm font-semibold text-foreground transition hover:bg-muted/50"
+                  >
+                    <span className="inline-flex items-center gap-2">
+                      <Check size={15} className="text-success" />
+                      {group} ({items.length})
+                    </span>
+                    <ChevronDown size={16} className={`shrink-0 text-muted-foreground transition-transform ${isGroupOpen ? 'rotate-180' : ''}`} />
+                  </button>
+                  {isGroupOpen ? <div className="border-t border-border/60 p-3">{grid}</div> : null}
+                </section>
+              )
+            }
+
+            return (
+              <section key={group} className="flex flex-col gap-3">
+                {groupBy && group ? (
+                  <div className="flex items-center gap-3 px-1 py-1">
+                    <h2
+                      className={cn('shrink-0 text-xs font-black uppercase text-muted-foreground', getGroupClassName?.(group))}
+                    >
+                      {group}
+                    </h2>
+                    <span className="h-px flex-1 bg-gradient-to-r from-border via-border/60 to-transparent" />
+                  </div>
+                ) : null}
+                {grid}
+              </section>
+            )
+          })}
         </div>
       )}
 

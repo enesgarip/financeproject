@@ -53,6 +53,8 @@
 
 ## P2 - UX / Maintainability
 
+- ~~Show completed loans in a collapsed "Tamamlananlar" section.~~ DONE.
+  - 2026-07-02: `CrudPage` opsiyonel `collapsibleGroups` prop'u kazandı: bu gruplar listenin sonuna alınır ve taksitli harcamalardaki desenle aynı, varsayılan kapalı "Tamamlananlar (N)" bölümü olarak çizilir (boş grup adı = başlıksız normal liste). `LoansPage` bunu kullanır: aktif krediler başlıksız üstte, `status='closed'` krediler (sync_loan_summary trigger'ı kapatır) katlanır bölümde.
 - ~~Make SMS account movement matching tolerant.~~ DONE.
   - 2026-07-02: `record_sms_account_movement` artık birebir rakam eşleşmesi bulamazsa karşılıklı içerme ile eşleştirir (SMS "4230-13300128-351" ↔ kayıtlı "13300128-351" gibi kısmi girişler çalışır; kısa taraf ≥ 6 hane). Birden fazla hesap eşleşirse işlem reddedilir; eşleşme yoksa hata mesajı kullanıcıyı "Hesap numarası" alanını doldurmaya yönlendirir. Migration: `20260702120000_tolerant_sms_account_matching.sql`.
 - ~~Consolidate bank account row actions into one movement modal.~~ DONE.

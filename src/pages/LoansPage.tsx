@@ -34,6 +34,10 @@ import {
 // üzerindeki sync_loan_summary trigger'ından türetiliyor (Faz 2). İstemci tarafı
 // recompute fazlalıktı ve float topluyordu; kaldırıldı, trigger numeric ile kesin hesaplar.
 
+// Tüm taksitleri ödenen krediyi trigger 'closed' yapar; kapalı krediler listede
+// aktiflerin altında, varsayılan kapalı bir "Tamamlananlar" bölümünde toplanır.
+const COMPLETED_LOAN_GROUPS = ['Tamamlananlar']
+
 export function LoansPage() {
   const { confirm, confirmDialog } = useConfirmDialog()
   const { drawerProps, openPaymentDrawer } = useFinancePaymentDrawer()
@@ -283,6 +287,8 @@ export function LoansPage() {
         emptyTitle="Henüz kredi yok"
         emptyDescription="Aktif veya kapanmış kredilerini, taksit günleriyle birlikte ekleyebilirsin."
         validateForm={validateLoanForm}
+        groupBy={(row) => (row.status === 'active' ? '' : 'Tamamlananlar')}
+        collapsibleGroups={COMPLETED_LOAN_GROUPS}
         renderBeforeList={({ loading, rows }) => (!loading ? <LoanOverview loans={rows as Loan[]} installments={installments} /> : null)}
         afterSave={async (row) => {
           await syncLoanInstallmentPlan(row as Loan)
