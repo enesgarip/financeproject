@@ -87,6 +87,15 @@ Statement payment uses the shared finance payment drawer by building a
 path. Keep new account-backed card payments on this path unless the RPC contract
 is materially different.
 
+Manual card debt payment follows the same pattern: the "Borç öde" button on a
+credit-card row (`CardsPage.openDebtPayment`) builds a `pay_card_debt`
+obligation with an editable amount defaulting to `cardPayableDebt(card)`, so
+debt can be paid from a bank account before the statement is cut. The RPC caps
+the amount at statement + current-period debt and reduces statement debt first.
+The button is disabled while the card has an open statement archive; that case
+belongs to the statement payment flow, because `pay_card_debt` does not close
+archive rows.
+
 When a card action changes balances or statement/installment state, refresh:
 
 - the card CRUD rows

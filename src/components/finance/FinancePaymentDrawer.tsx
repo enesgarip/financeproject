@@ -83,7 +83,13 @@ export function FinancePaymentDrawer({
       amountEditable={obligationAmountEditable(intent)}
       accountPreviewAmount={(amount) => intent?.action === 'collect_debt' ? -amount : amount}
       successAction={intent?.action === 'collect_debt' || intent?.action === 'pay_card_statement'}
-      info={intent?.action === 'pay_card_statement' ? 'Bu ekstre kapandığında ekstreye bağlı kredi kartı taksitleri otomatik ödenmiş olur.' : null}
+      info={
+        intent?.action === 'pay_card_statement'
+          ? 'Bu ekstre kapandığında ekstreye bağlı kredi kartı taksitleri otomatik ödenmiş olur.'
+          : intent?.action === 'pay_card_debt'
+            ? 'Ödeme önce ekstre borcundan, kalanı dönem içi harcamadan düşülür. Provizyon ve gelecek taksitler bu tutara dahil değildir.'
+            : null
+      }
       validate={({ amount }) => {
         if (intent?.action === 'pay_card_debt' && exceedsTL(amount, intent.amount)) {
           return 'Ödeme tutarı ödenebilir kart borcundan büyük olamaz.'

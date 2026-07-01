@@ -92,8 +92,15 @@ provision must be posted before it becomes payable. Future installments become
 payable through statement cutting, not by adding them again to dashboard debt.
 
 The preferred user flow is paying an open statement with `pay_card_statement`.
-`pay_card_debt` remains a manual/legacy escape hatch for posted debt that is not
-represented by an open statement.
+`pay_card_debt` is the manual payment path for posted debt that is not
+represented by an open statement — including current-period spending before the
+statement is cut. The cards page exposes it as a "Borç öde" button on each
+credit-card row (shared payment drawer, editable amount defaulting to
+`cardPayableDebt`, bank-account source). The button is disabled while the card
+has an open statement archive, because `pay_card_debt` lowers
+`statement_debt_amount` without closing the archive row (data health would flag
+the mismatch) — the same reason the obligations calendar only emits its
+`pay_card_debt` item for cards without an open statement.
 
 When `pay_payment` is funded by a credit card instead of a bank account, it is
 card spending, not cash outflow: the selected credit card receives a posted

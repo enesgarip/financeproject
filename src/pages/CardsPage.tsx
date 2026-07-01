@@ -26,7 +26,9 @@ import { StatementImportModal } from '../components/finance/StatementImportModal
 import { CardInstallmentCalendarPanel } from '../components/finance/CardInstallmentCalendarPanel'
 import { CardInstallmentExpensesPanel } from '../components/finance/CardInstallmentExpensesPanel'
 import type { Card, CardStatementArchive } from '../types/database'
-import { formatDate } from '../utils/date'
+import { dateInputValue, formatDate } from '../utils/date'
+import { cardPayableDebt } from '../utils/financeSummary'
+import { formatCurrency } from '../utils/formatCurrency'
 import { isMissingSupabaseCapabilityError, missingSupabaseCapabilityMessage } from '../utils/supabaseErrors'
 import { useFinancePaymentDrawer } from '../hooks/useFinancePaymentDrawer'
 import { AccountHubPanel, CreditCardOverview } from './CardsPage.overview'
@@ -140,6 +142,48 @@ export function CardsPage() {
             : error.message ?? 'Ekstre ödenemedi.',
         onSubmitEnd: () => setStatementActionId(null),
         onSubmitStart: () => setStatementActionId(statement.id),
+      },
+    )
+  }
+
+  // Ekstre kesilmesini beklemeden kart borcu ödeme: pay_card_debt RPC'si önce
+  // ekstre borcunu, kalanı dönem içi harcamayı düşer; üst sınır ödenebilir borç
+  // (provizyon + gelecek taksitler hariç). Tutar çekmecede düzenlenebilir.
+  async function openDebtPayment(card: Card, cards: Card[], reload: () => Promise<void>) {
+    await openPaymentDrawer(
+      {
+        id: `card-debt-manual-${card.id}`,
+        kind: 'card_debt',
+        action: 'pay_card_debt',
+        sourceId: card.id,
+        relatedCardId: card.id,
+        title: `${card.card_name} kart borcu`,
+        subtitle: card.bank_name,
+        date: dateInputValue(new Date()),
+        amount: cardPayableDebt(card),
+        direction: 'outflow',
+      },
+      {
+        cards,
+        reload,
+        afterSuccess: async () => {
+          await Promise.all([loadStatements(), loadInstallments(), invalidateSnapshot()])
+        },
+        detail: (
+          <>
+            <p className="font-semibold text-foreground">{card.card_name}</p>
+            <p>Ekstre borcu: {formatCurrency(card.statement_debt_amount)}</p>
+            <p>Dönem içi harcama: {formatCurrency(card.current_period_spending)}</p>
+            <p>
+              Ödenebilir toplam:{' '}
+              <span className="font-mono font-semibold text-foreground">{formatCurrency(cardPayableDebt(card))}</span>
+            </p>
+          </>
+        ),
+        formatSubmitError: (error) =>
+          isMissingSupabaseCapabilityError(error)
+            ? missingSupabaseCapabilityMessage('Kart borcu ödeme altyapısı', error)
+            : error.message ?? 'Kart borcu ödenemedi.',
       },
     )
   }
@@ -272,6 +316,7 @@ export function CardsPage() {
             menu={helpers.menu}
             rowActions={helpers.rowActions}
             onTransfer={(source) => openTransaction(source, helpers.reload, helpers.rows as Card[], 'transfer')}
+            onPayDebt={(card) => void openDebtPayment(card, helpers.rows as Card[], helpers.reload)}
             onAddExpense={focusQuickExpense}
             onImportStatement={setImportCard}
             onImportMovements={setMovementImportCard}

@@ -53,6 +53,8 @@
 
 ## P2 - UX / Maintainability
 
+- ~~Let card debt be paid before the statement is cut.~~ DONE.
+  - 2026-07-02: Kart satırına "Borç öde" butonu eklendi (`CardsPage.openDebtPayment`). Paylaşılan ödeme çekmecesi `pay_card_debt` RPC'sini kullanır: kaynak banka hesabı seçilir, tutar düzenlenebilir (varsayılan `cardPayableDebt` = ekstre + dönem içi), ödeme önce ekstre borcundan düşülür. Ekstre kesilmeden dönem içi borç ödenebilir; provizyon ve gelecek taksitler kapsam dışı (RPC guard). Açık ekstre arşivi varken buton devre dışı — `pay_card_debt` arşiv satırını kapatmadığı için o durum ekstre ödeme akışına ait.
 - ~~Add DenizBank current movement PDF reconciliation.~~ DONE.
   - Cards page now opens a current movement import flow for DenizBank internet banking PDFs.
   - Pending rows import as provisions, posted spending imports as current-period expenses, payment rows are excluded, and installment rows are left for manual review.

@@ -1,4 +1,4 @@
-import { AlertTriangle, ArrowRightLeft, CheckCircle2, ShieldCheck } from 'lucide-react'
+import { AlertTriangle, ArrowRightLeft, Banknote, CheckCircle2, ShieldCheck } from 'lucide-react'
 import { useState } from 'react'
 import { BankLogo } from '../components/finance/BankLogo'
 import { AccountLedgerPanel } from '../components/finance/AccountLedgerPanel'
@@ -31,6 +31,7 @@ export function CreditAccountListCard({
   menu,
   rowActions,
   onTransfer,
+  onPayDebt,
   onAddExpense,
   onImportStatement,
   onImportMovements,
@@ -43,6 +44,7 @@ export function CreditAccountListCard({
   menu: React.ReactNode
   rowActions: React.ReactNode
   onTransfer: (source: Card) => void
+  onPayDebt: (card: Card) => void
   onAddExpense: (card: Card, mode: 'cash' | 'installment') => void
   onImportStatement: (card: Card) => void
   onImportMovements: (card: Card) => void
@@ -207,7 +209,23 @@ export function CreditAccountListCard({
         </div>
       </div>
 
-      <div className="mt-3 grid grid-cols-2 gap-2 min-[620px]:grid-cols-5">
+      <div className="mt-3 grid grid-cols-2 gap-2 min-[620px]:grid-cols-3">
+        <button
+          type="button"
+          onClick={() => onPayDebt(row)}
+          disabled={payableDebt <= 0 || openStatements.length > 0}
+          title={
+            openStatements.length > 0
+              ? 'Açık ekstre var — Ekstreler sekmesinden "Ekstreyi öde" ile kapat'
+              : payableDebt <= 0
+                ? 'Ödenebilir kesinleşmiş borç yok'
+                : undefined
+          }
+          className="finance-touch-target inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-3 py-2 text-xs font-black text-primary-foreground shadow-sm transition hover:bg-primary/90 disabled:opacity-55"
+        >
+          <Banknote size={15} />
+          Borç öde
+        </button>
         <button
           type="button"
           onClick={() => setDetailsOpen((current) => !current)}
