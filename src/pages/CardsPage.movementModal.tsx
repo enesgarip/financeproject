@@ -25,7 +25,7 @@ export function MovementModal({
   error: string
   saving: boolean
   onClose: () => void
-  onTypeChange: (value: 'in' | 'out') => void
+  onTypeChange: (value: 'in' | 'out' | 'transfer') => void
   onAmountChange: (value: string) => void
   onTargetCardChange: (value: string) => void
   onSubmit: (event: React.FormEvent<HTMLFormElement>) => void
@@ -41,24 +41,20 @@ export function MovementModal({
           <p className="font-semibold text-foreground">{card?.card_name}</p>
           <p>Mevcut bakiye: {formatCurrency(card?.current_balance ?? 0)}</p>
         </div>
-        {isTransfer ? (
-          <div className="rounded-xl border border-border/60 bg-muted/30 p-3 text-sm">
-            <p className="text-xs font-bold uppercase text-muted-foreground">İşlem tipi</p>
-            <p className="mt-1 font-semibold text-foreground">Hesaplar arası transfer</p>
-          </div>
-        ) : (
-          <label className="block text-sm font-semibold text-foreground">
-            İşlem tipi
-            <select
-              value={type}
-              onChange={(event) => onTypeChange(event.target.value as 'in' | 'out')}
-              className="mt-1 w-full rounded-lg border border-input bg-white px-3 py-3 outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 dark:bg-card/50 dark:text-foreground"
-            >
-              <option value="in">Para geldi</option>
-              <option value="out">Para gitti</option>
-            </select>
-          </label>
-        )}
+        <label className="block text-sm font-semibold text-foreground">
+          İşlem tipi
+          <select
+            value={type}
+            onChange={(event) => onTypeChange(event.target.value as 'in' | 'out' | 'transfer')}
+            className="mt-1 w-full rounded-lg border border-input bg-white px-3 py-3 outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 dark:bg-card/50 dark:text-foreground"
+          >
+            <option value="in">Para geldi</option>
+            <option value="out">Para gitti</option>
+            <option value="transfer" disabled={targetAccounts.length === 0}>
+              {targetAccounts.length === 0 ? 'Hesaplar arası transfer (ikinci hesap gerekli)' : 'Hesaplar arası transfer'}
+            </option>
+          </select>
+        </label>
         <label className="block text-sm font-semibold text-foreground">
           Tutar
           <input

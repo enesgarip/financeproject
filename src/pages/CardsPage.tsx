@@ -17,7 +17,7 @@
  */
 import { useState, useCallback } from 'react'
 import { Link } from 'react-router-dom'
-import { ShieldCheck } from 'lucide-react'
+import { History, ShieldCheck } from 'lucide-react'
 import { CrudPage } from '../components/CrudPage'
 import { CardAliasPanel } from '../components/finance/CardAliasPanel'
 import { CurrentMovementImportModal } from '../components/finance/CurrentMovementImportModal'
@@ -102,6 +102,18 @@ export function CardsPage() {
   const [importCard, setImportCard] = useState<Card | null>(null)
   const [movementImportCard, setMovementImportCard] = useState<Card | null>(null)
   const [postImportBanner, setPostImportBanner] = useState(false)
+  // Banka hesabı hareket paneli ⋮ menüden açılır; hangi hesapların paneli
+  // açık, satır bileşeni yerine burada tutulur (menü CrudPage'de render edilir).
+  const [ledgerOpenIds, setLedgerOpenIds] = useState<Set<string>>(new Set())
+
+  const toggleLedgerPanel = useCallback((cardId: string) => {
+    setLedgerOpenIds((current) => {
+      const next = new Set(current)
+      if (next.has(cardId)) next.delete(cardId)
+      else next.add(cardId)
+      return next
+    })
+  }, [])
 
   const handleImportSuccess = useCallback(async (setter: (v: null) => void) => {
     setter(null)
@@ -315,7 +327,7 @@ export function CardsPage() {
             installments={installments}
             menu={helpers.menu}
             rowActions={helpers.rowActions}
-            onTransfer={(source) => openTransaction(source, helpers.reload, helpers.rows as Card[], 'transfer')}
+            ledgerOpen={ledgerOpenIds.has(row.id)}
             onPayDebt={(card) => void openDebtPayment(card, helpers.rows as Card[], helpers.reload)}
             onAddExpense={focusQuickExpense}
             onImportStatement={setImportCard}
@@ -335,6 +347,24 @@ export function CardsPage() {
         getDetailStyle={getDetailStyle}
         groupBy={groupCard}
         renderRowActions={(row, helpers) => renderCardRowActions(row, helpers, openTransaction)}
+        renderMenuActions={(row, menuHelpers) => {
+          const card = row as Card
+          if (card.card_type !== 'banka_karti') return null
+          return (
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation()
+                menuHelpers.closeMenu()
+                toggleLedgerPanel(card.id)
+              }}
+              className="flex w-full items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted"
+            >
+              <History size={14} />
+              {ledgerOpenIds.has(card.id) ? 'Hareketleri gizle' : 'Hareketler'}
+            </button>
+          )
+        }}
       />
 
       <MovementModal

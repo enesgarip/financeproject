@@ -2,6 +2,10 @@
 
 ## Fixed In This Pass
 
+- **Bank account row actions consolidated (2026-07-02)**
+  - Before: each bank account row showed three buttons ("Transfer yap", "Hareketler", "Para hareketi") with two separate modal entries.
+  - Now: one "Para hareketi" button opens a single movement modal whose type selector covers money in, money out, and account-to-account transfer (transfer option is disabled without a second account). The ledger panel ("Hareketler") moved into the row's ⋮ menu.
+
 - **Card installment payment vs card debt payment**
   - Before: an installment could be marked paid without selecting the account that funded it.
   - Now: installment payment requires a source bank account, debits that account, reduces card debt, and writes history.

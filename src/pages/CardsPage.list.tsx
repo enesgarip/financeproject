@@ -1,4 +1,4 @@
-import { AlertTriangle, ArrowRightLeft, Banknote, CheckCircle2, ShieldCheck } from 'lucide-react'
+import { AlertTriangle, Banknote, CheckCircle2, ShieldCheck } from 'lucide-react'
 import { useState } from 'react'
 import { BankLogo } from '../components/finance/BankLogo'
 import { AccountLedgerPanel } from '../components/finance/AccountLedgerPanel'
@@ -30,7 +30,7 @@ export function CreditAccountListCard({
   installments,
   menu,
   rowActions,
-  onTransfer,
+  ledgerOpen = false,
   onPayDebt,
   onAddExpense,
   onImportStatement,
@@ -43,7 +43,7 @@ export function CreditAccountListCard({
   installments: CardInstallment[]
   menu: React.ReactNode
   rowActions: React.ReactNode
-  onTransfer: (source: Card) => void
+  ledgerOpen?: boolean
   onPayDebt: (card: Card) => void
   onAddExpense: (card: Card, mode: 'cash' | 'installment') => void
   onImportStatement: (card: Card) => void
@@ -53,8 +53,6 @@ export function CreditAccountListCard({
   const [detailsOpen, setDetailsOpen] = useState(false)
 
   if (row.card_type === 'banka_karti') {
-    const accountCount = rows.filter((card) => card.card_type === 'banka_karti').length
-
     return (
       <article
         style={bankHueStyle(row.bank_name, rows)}
@@ -83,26 +81,7 @@ export function CreditAccountListCard({
           <CardDatum label="Not" value={row.note || '-'} />
         </div>
 
-        <div className="mt-3 grid grid-cols-2 gap-2">
-          <button
-            type="button"
-            onClick={() => onTransfer(row)}
-            disabled={accountCount < 2}
-            className="finance-touch-target inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-3 py-2 text-xs font-black text-primary-foreground shadow-sm transition hover:bg-primary/90 disabled:opacity-55"
-          >
-            <ArrowRightLeft size={15} />
-            Transfer yap
-          </button>
-          <button
-            type="button"
-            onClick={() => setDetailsOpen((current) => !current)}
-            aria-expanded={detailsOpen}
-            className="finance-touch-target inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-xs font-black text-foreground shadow-sm transition hover:bg-muted"
-          >
-            Hareketler
-          </button>
-        </div>
-        {detailsOpen ? <AccountLedgerPanel card={row} onChanged={onChanged} /> : null}
+        {ledgerOpen ? <AccountLedgerPanel card={row} onChanged={onChanged} /> : null}
         {rowActions}
       </article>
     )
