@@ -54,6 +54,7 @@ installment payment outside the statement flow.
 | --- | --- | --- | --- |
 | `transfer_between_accounts` | `submitAccountMovement` | Cards page/account center: bank-to-bank transfer | Moves money between two `banka_karti` accounts and writes history |
 | `record_manual_account_movement` | `submitAccountMovement` | Cards page/account center: manual deposit/withdrawal | Applies one account balance delta and writes history in one transaction |
+| `record_sms_account_movement` | `parse-sms` edge function (service role) | SMS automation: bank account in/out movement | Matches `cards.account_number` against the SMS account number (digits-only exact match, then tolerant mutual-containment match with a 6-digit minimum; ambiguous matches are rejected), applies the balance delta, and writes history |
 
 ## Ledger Repair
 

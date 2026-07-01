@@ -53,6 +53,10 @@
 
 ## P2 - UX / Maintainability
 
+- ~~Make SMS account movement matching tolerant.~~ DONE.
+  - 2026-07-02: `record_sms_account_movement` artık birebir rakam eşleşmesi bulamazsa karşılıklı içerme ile eşleştirir (SMS "4230-13300128-351" ↔ kayıtlı "13300128-351" gibi kısmi girişler çalışır; kısa taraf ≥ 6 hane). Birden fazla hesap eşleşirse işlem reddedilir; eşleşme yoksa hata mesajı kullanıcıyı "Hesap numarası" alanını doldurmaya yönlendirir. Migration: `20260702120000_tolerant_sms_account_matching.sql`.
+- ~~Consolidate bank account row actions into one movement modal.~~ DONE.
+  - 2026-07-02: "Transfer yap" butonu kaldırıldı; tek "Para hareketi" butonu, işlem tipi seçicisinde para geldi / para gitti / hesaplar arası transferi birlikte sunan MovementModal'ı açar (ikinci hesap yoksa transfer seçeneği pasif). "Hareketler" (account ledger paneli) satırın ⋮ menüsüne taşındı (`renderMenuActions`, `ledgerOpenIds` CardsPage'de).
 - ~~Let card debt be paid before the statement is cut.~~ DONE.
   - 2026-07-02: Kart satırına "Borç öde" butonu eklendi (`CardsPage.openDebtPayment`). Paylaşılan ödeme çekmecesi `pay_card_debt` RPC'sini kullanır: kaynak banka hesabı seçilir, tutar düzenlenebilir (varsayılan `cardPayableDebt` = ekstre + dönem içi), ödeme önce ekstre borcundan düşülür. Ekstre kesilmeden dönem içi borç ödenebilir; provizyon ve gelecek taksitler kapsam dışı (RPC guard). Açık ekstre arşivi varken buton devre dışı — `pay_card_debt` arşiv satırını kapatmadığı için o durum ekstre ödeme akışına ait.
 - ~~Add DenizBank current movement PDF reconciliation.~~ DONE.
