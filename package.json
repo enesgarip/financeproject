@@ -59,7 +59,7 @@
     "tailwindcss": "^4.2.4",
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.61.1",
-    "vite": "^7.3.2",
+    "vite": "^8.1.0",
     "vitest": "^4.1.8"
   },
   "overrides": {
