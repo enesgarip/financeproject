@@ -20,6 +20,7 @@ import type {
 } from '../types/database'
 import { addMonths, dateInputValue, daysUntil, formatDate, startOfMonth } from '../utils/date'
 import { formatCurrency, parseNumber } from '../utils/formatCurrency'
+import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
 import { paymentCashOutflowAmount, paymentOccurrenceInMonth, paymentUsesCreditCard } from '../utils/financeSummary'
 import { sumTL } from '../utils/money'
 import type { FinanceObligation, FinanceObligationsInput } from '../utils/obligations'
@@ -187,6 +188,7 @@ function getPaymentAmountLabel(payment: Payment) {
 }
 
 function PaymentsOverview({ rows }: { rows: Payment[] }) {
+  const { formatAmount } = useBalancePrivacy()
   const summary = useMemo(() => {
     if (rows.length === 0) return null
 
@@ -241,7 +243,7 @@ function PaymentsOverview({ rows }: { rows: Payment[] }) {
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="finance-label">Bekleyen Ödemeler</p>
-            <p className="finance-value mt-1.5 text-[clamp(1.5rem,6vw,2.1rem)] font-bold leading-none text-foreground">{formatCurrency(pendingTotal)}</p>
+            <p className="finance-value mt-1.5 text-[clamp(1.5rem,6vw,2.1rem)] font-bold leading-none text-foreground">{formatAmount(pendingTotal)}</p>
             <p className="mt-1.5 text-xs text-muted-foreground">
               {pendingThisMonth.length} bekleyen · {recurringCount} aylık tekrar
             </p>

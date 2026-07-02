@@ -9,7 +9,7 @@ import { buildFinancialReport, reportToMarkdown, type FinancialReport } from '..
 import { buildMonthlyCashFlow, sum } from '../utils/financeSummary'
 import { activeExpense as activeCardExpense } from '../utils/budgetAlerts'
 import { formatDate, isDateInMonth } from '../utils/date'
-import { formatCurrency } from '../utils/formatCurrency'
+import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
 import { buildMonthlySummary } from '../utils/monthlySummary'
 import { downloadShareableCard, renderShareableCard } from '../utils/shareableCard'
 import { normalizeSearchText } from '../utils/searchText'
@@ -135,6 +135,7 @@ function AiSummaryButton({ data }: { data: AnalysisData }) {
 }
 
 export function MonthlyReport({ data }: { data: AnalysisData }) {
+  const { formatAmount } = useBalancePrivacy()
   // Same engine the dashboard cash-flow card uses, so "Gelir / Nakit çıkışı / Net" here
   // can never disagree with the dashboard for the same month (credit-card auto
   // payments are excluded from cash outflow exactly like there).
@@ -185,16 +186,16 @@ export function MonthlyReport({ data }: { data: AnalysisData }) {
           </Button>
         </div>
         <div className="grid grid-cols-2 gap-2 min-[520px]:grid-cols-4">
-          <StatPill label="Gelir" value={formatCurrency(income)} tone="emerald" />
-          <StatPill label="Kart harcaması" value={formatCurrency(cardSpending)} tone="rose" />
-          <StatPill label="Nakit çıkışı" value={formatCurrency(outflow)} tone="rose" />
-          <StatPill label="Net nakit" value={formatCurrency(net)} tone={net >= 0 ? 'emerald' : 'rose'} />
+          <StatPill label="Gelir" value={formatAmount(income)} tone="emerald" />
+          <StatPill label="Kart harcaması" value={formatAmount(cardSpending)} tone="rose" />
+          <StatPill label="Nakit çıkışı" value={formatAmount(outflow)} tone="rose" />
+          <StatPill label="Net nakit" value={formatAmount(net)} tone={net >= 0 ? 'emerald' : 'rose'} />
         </div>
         <div className="grid gap-2 min-[520px]:grid-cols-2">
           {reportRows.map((row) => (
             <div key={row.label} className="flex min-w-0 items-center justify-between gap-3 rounded-xl bg-muted/45 px-3 py-2 text-sm">
               <span className="min-w-0 truncate text-muted-foreground">{row.label}</span>
-              <span className="shrink-0 whitespace-nowrap font-bold tabular-nums text-foreground">{formatCurrency(row.value)}</span>
+              <span className="shrink-0 whitespace-nowrap font-bold tabular-nums text-foreground">{formatAmount(row.value)}</span>
             </div>
           ))}
         </div>
@@ -212,7 +213,7 @@ export function MonthlyReport({ data }: { data: AnalysisData }) {
                 <div className="flex items-center justify-between gap-3 text-sm">
                   <span className="min-w-0 truncate text-muted-foreground">{cat.category}</span>
                   <span className="shrink-0 whitespace-nowrap font-bold tabular-nums text-foreground">
-                    {formatCurrency(cat.amount)} <span className="text-xs font-normal text-muted-foreground">(%{cat.percentage})</span>
+                    {formatAmount(cat.amount)} <span className="text-xs font-normal text-muted-foreground">(%{cat.percentage})</span>
                   </span>
                 </div>
                 <div className="h-1.5 overflow-hidden rounded-full bg-muted/60">
@@ -232,6 +233,7 @@ export function MonthlyReport({ data }: { data: AnalysisData }) {
 }
 
 export function StatementArchive({ data }: { data: AnalysisData }) {
+  const { formatAmount } = useBalancePrivacy()
   const cardsById = new Map(data.cards.map((card) => [card.id, card]))
   const archives = data.cardStatementArchives.slice(0, 6)
 
@@ -260,7 +262,7 @@ export function StatementArchive({ data }: { data: AnalysisData }) {
                   </p>
                 </div>
                 <span className="shrink-0 whitespace-nowrap rounded-lg bg-muted px-2 py-1 font-mono text-xs font-bold tabular-nums text-foreground ring-1 ring-border/60">
-                  {formatCurrency(archive.statement_debt_amount)}
+                  {formatAmount(archive.statement_debt_amount)}
                 </span>
               </div>
             </div>
@@ -272,6 +274,7 @@ export function StatementArchive({ data }: { data: AnalysisData }) {
 }
 
 export function YearEndReport({ data, snapshots }: { data: AnalysisData; snapshots: NetWorthSnapshot[] }) {
+  const { formatAmount } = useBalancePrivacy()
   const report = useMemo(() => buildYearEndReport(data.cardExpenses, snapshots), [data.cardExpenses, snapshots])
 
   if (report.totalSpending === 0) return null
@@ -283,7 +286,7 @@ export function YearEndReport({ data, snapshots }: { data: AnalysisData; snapsho
           <div>
             <CardTitle>{report.year} yılı finansal özet</CardTitle>
             <p className="mt-1 text-sm text-muted-foreground">
-              Yıllık harcama: {formatCurrency(report.totalSpending)} · Aylık ortalama: {formatCurrency(report.avgMonthlySpending)}
+              Yıllık harcama: {formatAmount(report.totalSpending)} · Aylık ortalama: {formatAmount(report.avgMonthlySpending)}
             </p>
           </div>
           <CalendarRange className="text-success" />
@@ -291,13 +294,13 @@ export function YearEndReport({ data, snapshots }: { data: AnalysisData; snapsho
       </CardHeader>
       <CardContent className="space-y-4 pt-2">
         <div className="grid gap-2 min-[520px]:grid-cols-2 min-[900px]:grid-cols-4">
-          <StatPill label="Toplam harcama" value={formatCurrency(report.totalSpending)} tone="rose" />
-          <StatPill label="Aylık ortalama" value={formatCurrency(report.avgMonthlySpending)} tone="stone" />
+          <StatPill label="Toplam harcama" value={formatAmount(report.totalSpending)} tone="rose" />
+          <StatPill label="Aylık ortalama" value={formatAmount(report.avgMonthlySpending)} tone="stone" />
           {report.mostExpensiveMonth ? (
-            <StatPill label={`En pahalı: ${report.mostExpensiveMonth.label}`} value={formatCurrency(report.mostExpensiveMonth.amount)} tone="rose" />
+            <StatPill label={`En pahalı: ${report.mostExpensiveMonth.label}`} value={formatAmount(report.mostExpensiveMonth.amount)} tone="rose" />
           ) : null}
           {report.netWorthChange !== null ? (
-            <StatPill label="Net değer değişimi" value={`${report.netWorthChange >= 0 ? '+' : ''}${formatCurrency(report.netWorthChange)}`} tone={report.netWorthChange >= 0 ? 'emerald' : 'rose'} />
+            <StatPill label="Net değer değişimi" value={`${report.netWorthChange >= 0 ? '+' : ''}${formatAmount(report.netWorthChange)}`} tone={report.netWorthChange >= 0 ? 'emerald' : 'rose'} />
           ) : null}
         </div>
 
@@ -313,7 +316,7 @@ export function YearEndReport({ data, snapshots }: { data: AnalysisData; snapsho
                     <div
                       className="w-full rounded-t-md bg-foreground/15"
                       style={{ height: `${heightPct}%` }}
-                      title={`${m.label}: ${formatCurrency(m.amount)}`}
+                      title={`${m.label}: ${formatAmount(m.amount)}`}
                     />
                   </div>
                   <span className="text-[10px] font-bold text-muted-foreground">{m.label.slice(0, 3)}</span>
@@ -331,7 +334,7 @@ export function YearEndReport({ data, snapshots }: { data: AnalysisData; snapsho
                 <div key={cat.category} className="flex items-center justify-between gap-3 rounded-xl bg-muted/45 px-3 py-2 text-sm">
                   <span className="min-w-0 truncate text-muted-foreground">{cat.category}</span>
                   <span className="shrink-0 whitespace-nowrap font-bold tabular-nums text-foreground">
-                    {formatCurrency(cat.amount)} <span className="text-xs font-normal text-muted-foreground">(%{cat.percentage})</span>
+                    {formatAmount(cat.amount)} <span className="text-xs font-normal text-muted-foreground">(%{cat.percentage})</span>
                   </span>
                 </div>
               ))}
@@ -344,6 +347,7 @@ export function YearEndReport({ data, snapshots }: { data: AnalysisData; snapsho
 }
 
 export function SearchExport({ items }: { items: SearchItem[] }) {
+  const { formatAmount } = useBalancePrivacy()
   const [query, setQuery] = useState('')
   const normalizedQuery = normalizeSearchText(query)
   const filteredItems = useMemo(
@@ -389,7 +393,7 @@ export function SearchExport({ items }: { items: SearchItem[] }) {
               </div>
               {item.amount !== null ? (
                 <span className="shrink-0 whitespace-nowrap rounded-lg bg-muted px-2 py-1 font-mono text-xs font-bold tabular-nums text-foreground ring-1 ring-border/60">
-                  {formatCurrency(item.amount)}
+                  {formatAmount(item.amount)}
                 </span>
               ) : null}
             </div>

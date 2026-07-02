@@ -1,6 +1,6 @@
 import { useMemo, useState, type ReactNode } from 'react'
 import type { Card } from '../../types/database'
-import { formatCurrency, parseNumber } from '../../utils/formatCurrency'
+import { parseNumber } from '../../utils/formatCurrency'
 import { diffTL, greaterThanTL } from '../../utils/money'
 import { SimpleModal } from '../SimpleModal'
 import { Alert } from '../ui/alert'
@@ -131,7 +131,7 @@ export function AccountPaymentModal({
         ) : (
           <div className="rounded-lg border border-border/60 bg-card/80 px-3 py-2.5">
             <p className="finance-label">{amountLabel}</p>
-            <p className="finance-value mt-1 text-base font-black tabular-nums text-foreground">{formatCurrency(amount)}</p>
+            <p className="finance-value mt-1 text-base font-black tabular-nums text-foreground">{formatAmount(amount)}</p>
           </div>
         )}
 

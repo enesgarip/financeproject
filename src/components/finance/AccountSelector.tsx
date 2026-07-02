@@ -1,5 +1,4 @@
 import type { Card } from '../../types/database'
-import { formatCurrency } from '../../utils/formatCurrency'
 import { diffTL, sumTL } from '../../utils/money'
 import { Select } from '../ui/input'
 
@@ -32,11 +31,11 @@ export function AccountSelector({
 
   function getAccountOptionLabel(account: Card) {
     if (account.card_type === 'kredi_karti') {
-      const limitLabel = account.credit_limit > 0 ? ` · Limit ${formatCurrency(account.credit_limit)}` : ''
-      return `${account.card_name} (Kredi kartı · Borç ${formatCurrency(account.debt_amount)}${limitLabel})`
+      const limitLabel = account.credit_limit > 0 ? ` · Limit ${formatAmount(account.credit_limit)}` : ''
+      return `${account.card_name} (Kredi kartı · Borç ${formatAmount(account.debt_amount)}${limitLabel})`
     }
 
-    return `${account.card_name} (Banka hesabı · ${formatCurrency(account.current_balance)})`
+    return `${account.card_name} (Banka hesabı · ${formatAmount(account.current_balance)})`
   }
 
   return (
@@ -69,19 +68,19 @@ export function AccountSelector({
         >
           {selectedIsCreditCard ? (
             <>
-              <span>Borç: {formatCurrency(selectedAccount.debt_amount)}</span>
-              <span>Sonrası: {formatCurrency(nextDebtAmount)}</span>
+              <span>Borç: {formatAmount(selectedAccount.debt_amount)}</span>
+              <span>Sonrası: {formatAmount(nextDebtAmount)}</span>
               {availableLimit !== null ? (
                 <>
-                  <span>Limit boşluğu: {formatCurrency(availableLimit)}</span>
-                  <span>Sonrası: {formatCurrency(nextAvailableLimit)}</span>
+                  <span>Limit boşluğu: {formatAmount(availableLimit)}</span>
+                  <span>Sonrası: {formatAmount(nextAvailableLimit)}</span>
                 </>
               ) : null}
             </>
           ) : (
             <>
-              <span>Bakiye: {formatCurrency(selectedAccount.current_balance)}</span>
-              <span>İşlem sonrası: {formatCurrency(remainingBalance)}</span>
+              <span>Bakiye: {formatAmount(selectedAccount.current_balance)}</span>
+              <span>İşlem sonrası: {formatAmount(remainingBalance)}</span>
             </>
           )}
         </div>

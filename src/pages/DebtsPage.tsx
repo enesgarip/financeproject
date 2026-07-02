@@ -10,6 +10,7 @@ import { fetchCardsByType } from '../data/repositories/cardsRepo'
 import type { Card as FinanceCard, Debt } from '../types/database'
 import { formatDate } from '../utils/date'
 import { formatCurrency, formatNumber, parseNumber } from '../utils/formatCurrency'
+import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
 import { useFinancePaymentDrawer } from '../hooks/useFinancePaymentDrawer'
 import type { MarketRatesSnapshot } from '../utils/marketRates'
 import { diffTL, sumTL } from '../utils/money'
@@ -183,15 +184,15 @@ function DebtsOverview({ rows, snapshot }: { rows: Debt[]; snapshot: MarketRates
           <div className="min-w-0">
             <p className="finance-label">Borç Dengesi</p>
             <p className={`finance-value mt-1.5 text-[clamp(1.5rem,6vw,2.1rem)] font-bold leading-none ${net >= 0 ? 'text-success' : 'text-destructive'}`}>
-              {formatCurrency(Math.abs(net))}
+              {formatAmount(Math.abs(net))}
             </p>
             <p className="mt-1.5 text-xs text-muted-foreground">{net >= 0 ? 'Net alacak' : 'Net borç'}</p>
           </div>
           <Badge variant={net >= 0 ? 'success' : 'destructive'}>{openRows.length} açık kayıt</Badge>
         </div>
         <div className="mt-4 grid grid-cols-2 gap-2">
-          <OverviewStat label="Borç" value={formatCurrency(borrowed)} tone="danger" />
-          <OverviewStat label="Alacak" value={formatCurrency(receivable)} tone="success" />
+          <OverviewStat label="Borç" value={formatAmount(borrowed)} tone="danger" />
+          <OverviewStat label="Alacak" value={formatAmount(receivable)} tone="success" />
         </div>
         <div className="mt-4">
           <div className="mb-1.5 flex justify-between text-xs">
@@ -228,6 +229,7 @@ async function getBankaKartlari(): Promise<FinanceCard[]> {
 }
 
 export function DebtsPage() {
+  const { formatAmount } = useBalancePrivacy()
   const { snapshot } = useMarketRates()
   const invalidateSnapshot = useInvalidateFinanceSnapshot()
   const { drawerProps, openPaymentDrawer } = useFinancePaymentDrawer()
@@ -331,7 +333,7 @@ export function DebtsPage() {
         renderTitle={(row) => row.person_name}
         renderSubtitle={(row) => `${directionLabel(row.direction)} · ${valueTypeLabel(row)} · ${row.status}`}
         renderDetails={(row) => {
-          const details = [`Değer: ${formatCurrency(effectiveDebtValue(row, snapshot))}`, `Vade: ${formatDate(row.due_date)}`]
+          const details = [`Değer: ${formatAmount(effectiveDebtValue(row, snapshot))}`, `Vade: ${formatDate(row.due_date)}`]
           if (isGoldDebt(row)) details.unshift(`Miktar: ${formatNumber(row.amount)} ${valueTypeLabel(row)}`)
           if (row.value_type === 'doviz') {
             details.unshift(row.auto_valued ? `Tutar: ${formatNumber(row.amount)} ${row.currency ?? '-'}` : `Para birimi: ${row.currency ?? '-'}`)

@@ -10,7 +10,7 @@ import {
 } from '../../services/financePaymentActions'
 import type { Card } from '../../types/database'
 import { formatDate } from '../../utils/date'
-import { formatCurrency } from '../../utils/formatCurrency'
+import { useBalancePrivacy } from '../../hooks/useBalancePrivacy'
 import { exceedsTL } from '../../utils/money'
 import type { FinanceObligation } from '../../utils/obligations'
 import { AccountPaymentModal } from './AccountPaymentModal'
@@ -45,7 +45,7 @@ function defaultPaymentDetail(intent: FinanceObligation | null) {
       <p className="mt-0.5">Tarih: {formatDate(intent.date)}</p>
       <p className="mt-0.5">
         Planlanan tutar:{' '}
-        <span className="font-mono font-semibold text-foreground">{formatCurrency(intent.amount)}</span>
+        <span className="font-mono font-semibold text-foreground">{formatAmount(intent.amount)}</span>
       </p>
     </>
   )
@@ -65,6 +65,7 @@ export function FinancePaymentDrawer({
   externalError = '',
   detail,
 }: FinancePaymentDrawerProps) {
+  const { formatAmount } = useBalancePrivacy()
   const minimumPayment = intent?.action === 'pay_card_debt' ? estimatedMinimumCardPayment(intent.amount) : 0
   const quickAmounts = intent?.action === 'pay_card_debt' ? (
     <div className="flex flex-wrap gap-2">
@@ -73,14 +74,14 @@ export function FinancePaymentDrawer({
         onClick={() => onAmountValueChange(String(minimumPayment))}
         className="rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-bold text-foreground transition hover:bg-muted"
       >
-        Asgari tahmini ({formatCurrency(minimumPayment)})
+        Asgari tahmini ({formatAmount(minimumPayment)})
       </button>
       <button
         type="button"
         onClick={() => onAmountValueChange(String(intent.amount))}
         className="rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-bold text-foreground transition hover:bg-muted"
       >
-        Tamamı ({formatCurrency(intent.amount)})
+        Tamamı ({formatAmount(intent.amount)})
       </button>
     </div>
   ) : null

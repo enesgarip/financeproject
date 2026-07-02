@@ -78,7 +78,7 @@ import { buildBudgetAlerts } from '../utils/budgetAlerts'
 import { buildHealthCounts } from '../utils/dataHealthSummary'
 import { buildSmartInsights, buildFocusActions, reconciliationDriftCount } from '../utils/dashboardInsights'
 import { buildDashboardMonthlyLoad, buildDashboardUpcomingItems } from '../utils/dashboardUpcoming'
-import { formatCurrency } from '../utils/formatCurrency'
+import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
 import { buildStatementReminders } from '../utils/statementReminder'
 import { SkeletonDashboard } from '../components/ui/skeleton'
 
@@ -124,6 +124,7 @@ const DASHBOARD_SPENDING_MONTHS = 4
 
 export function DashboardPage() {
   const { user } = useAuth()
+  const { formatAmount } = useBalancePrivacy()
   const snapshotQuery = useFinanceSnapshot()
   const displayName = useMemo(() => getUserDisplayName(user), [user])
 
@@ -417,7 +418,7 @@ export function DashboardPage() {
           </div>
 
           <div className="grid min-w-0 gap-3 lg:col-span-4">
-            <MetricTile label="Tahsilat" value={formatCurrency(summary.totalReceivables)} icon={<ArrowUpRight />} tone="emerald" help={dashboardHelp.receivable} />
+            <MetricTile label="Tahsilat" value={formatAmount(summary.totalReceivables)} icon={<ArrowUpRight />} tone="emerald" help={dashboardHelp.receivable} />
           </div>
 
           {/* ─ Analiz bölümü ─ */}
@@ -469,8 +470,8 @@ export function DashboardPage() {
             <PulseCard
               title="Kredi ritmi"
               label="Aylık ödeme"
-              value={formatCurrency(summary.totalLoanMonthlyPayment)}
-              description={`${formatCurrency(summary.totalLoanDebt)} aktif kredi borcu`}
+              value={formatAmount(summary.totalLoanMonthlyPayment)}
+              description={`${formatAmount(summary.totalLoanDebt)} aktif kredi borcu`}
               icon={<Landmark />}
               tone="rose"
             />
@@ -478,8 +479,8 @@ export function DashboardPage() {
           </div>
 
           <div className="grid min-w-0 gap-3 min-[520px]:grid-cols-2 lg:col-span-12">
-            <MetricTile label="Toplam limit" value={formatCurrency(summary.totalCreditLimit)} icon={<CreditCard />} tone="indigo" help={dashboardHelp.totalLimit} />
-            <MetricTile label="Kredi ödemesi" value={formatCurrency(summary.totalLoanMonthlyPayment)} icon={<CalendarDays />} tone="stone" help={dashboardHelp.loanPayment} />
+            <MetricTile label="Toplam limit" value={formatAmount(summary.totalCreditLimit)} icon={<CreditCard />} tone="indigo" help={dashboardHelp.totalLimit} />
+            <MetricTile label="Kredi ödemesi" value={formatAmount(summary.totalLoanMonthlyPayment)} icon={<CalendarDays />} tone="stone" help={dashboardHelp.loanPayment} />
           </div>
 
           {/* ─ Geçmiş ─ */}

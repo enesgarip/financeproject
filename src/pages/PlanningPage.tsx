@@ -5,7 +5,8 @@ import { SavingsGoalsPanel } from '../components/finance/SavingsGoalsPanel'
 import type { Budget } from '../types/database'
 import { expenseCategoryOptions } from '../utils/categories'
 import { dateInputValue, startOfMonth } from '../utils/date'
-import { formatCurrency, parseNumber } from '../utils/formatCurrency'
+import { parseNumber } from '../utils/formatCurrency'
+import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
 import { formatMonth } from '../utils/analysisView'
 import { BudgetProgress } from './AnalysisPage.panels'
 
@@ -22,6 +23,7 @@ function monthStartValue(value: FormDataEntryValue | null) {
 }
 
 export function PlanningPage() {
+  const { formatAmount } = useBalancePrivacy()
   const snapshotQuery = useFinanceSnapshot()
   const loading = snapshotQuery.isPending
 
@@ -74,7 +76,7 @@ export function PlanningPage() {
           })}
           renderTitle={(row) => row.category}
           renderSubtitle={(row) => formatMonth(row.month)}
-          renderDetails={(row) => [`Limit: ${formatCurrency(row.limit_amount)}`]}
+          renderDetails={(row) => [`Limit: ${formatAmount(row.limit_amount)}`]}
         />
       ) : null}
     </section>

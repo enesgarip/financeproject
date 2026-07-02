@@ -3,11 +3,12 @@ import { Badge } from '../components/ui/badge'
 import { Card as SurfaceCard, CardContent } from '../components/ui/card'
 import type { Loan, LoanInstallment } from '../types/database'
 import { formatDate } from '../utils/date'
-import { formatCurrency } from '../utils/formatCurrency'
+import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
 import { sumTL } from '../utils/money'
 import { nextPendingInstallment } from './LoansPage.helpers'
 
 export function LoanOverview({ loans, installments }: { loans: Loan[]; installments: LoanInstallment[] }) {
+  const { formatAmount } = useBalancePrivacy()
   const activeLoans = loans.filter((loan) => loan.status === 'active')
   if (activeLoans.length === 0) return null
 
@@ -27,7 +28,7 @@ export function LoanOverview({ loans, installments }: { loans: Loan[]; installme
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <p className="finance-label">Aylık Ödeme Yükü</p>
-              <p className="finance-value mt-1.5 text-[clamp(1.5rem,6vw,2.1rem)] font-bold leading-none text-foreground">{formatCurrency(totalMonthly)}</p>
+              <p className="finance-value mt-1.5 text-[clamp(1.5rem,6vw,2.1rem)] font-bold leading-none text-foreground">{formatAmount(totalMonthly)}</p>
               <p className="mt-1.5 text-xs text-muted-foreground">Aktif kredilerin toplam taksiti</p>
             </div>
             <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-destructive/12 text-destructive">
@@ -35,7 +36,7 @@ export function LoanOverview({ loans, installments }: { loans: Loan[]; installme
             </div>
           </div>
           <div className="mt-4 grid grid-cols-2 gap-2">
-            <OverviewStat label="Kalan Borç" value={formatCurrency(totalRemaining)} tone="danger" />
+            <OverviewStat label="Kalan Borç" value={formatAmount(totalRemaining)} tone="danger" />
             <OverviewStat label="Aktif Kredi" value={`${activeLoans.length} kayıt`} />
           </div>
           {nextPayment ? (
@@ -44,7 +45,7 @@ export function LoanOverview({ loans, installments }: { loans: Loan[]; installme
                 <p className="truncate font-semibold text-foreground">{nextPayment.loan.loan_name}</p>
                 <p className="text-xs text-muted-foreground">Sıradaki taksit · {formatDate(nextPayment.item.due_date)}</p>
               </div>
-              <Badge variant="warning">{formatCurrency(nextPayment.item.amount)}</Badge>
+              <Badge variant="warning">{formatAmount(nextPayment.item.amount)}</Badge>
             </div>
           ) : null}
         </CardContent>

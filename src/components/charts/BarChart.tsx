@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { formatCurrency } from '@/utils/formatCurrency'
 import { useChartWidth } from './useChartWidth'
 import { DEFAULT_PADDING, formatTickValue, niceScale } from './chartUtils'
 
@@ -165,14 +164,14 @@ export function BarChart({
                 <div className="flex items-center justify-between gap-3">
                   <span className="text-[10px] text-muted-foreground">Tutar</span>
                   <span className="font-mono text-[10px] font-semibold tabular-nums text-foreground">
-                    {formatCurrency(hovered.value)}
+                    {formatAmount(hovered.value)}
                   </span>
                 </div>
                 {grouped && hovered.prevValue != null ? (
                   <div className="flex items-center justify-between gap-3">
                     <span className="text-[10px] text-muted-foreground">Önceki Ay</span>
                     <span className="font-mono text-[10px] font-semibold tabular-nums text-foreground">
-                      {formatCurrency(hovered.prevValue)}
+                      {formatAmount(hovered.prevValue)}
                     </span>
                   </div>
                 ) : null}

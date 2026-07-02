@@ -9,7 +9,7 @@ import { FinancePanel, MiniStat, PageHero, ProgressStrip, SectionHeader, StatusB
 import { Card, CardContent } from '../ui/card'
 import { HelpTooltip, type HelpTooltipContent } from '../ui/help-tooltip'
 import { formatDate } from '../../utils/date'
-import { formatCurrency } from '../../utils/formatCurrency'
+import { useBalancePrivacy } from '../../hooks/useBalancePrivacy'
 import {
   getSalaryTrend,
   type CashFlowSummary,
@@ -85,6 +85,7 @@ export function DashboardHero({
   cashFlow: CashFlowSummary
   health: FinancialHealthSummary
 }) {
+  const { formatAmount } = useBalancePrivacy()
   const netWorthTone = netWorth >= 0 ? 'good' : 'danger'
   const debtPressure = totalAssets > 0 ? Math.min(100, (totalDebts / totalAssets) * 100) : totalDebts > 0 ? 100 : 0
   const projectedTone = cashFlow.projectedCash >= 0 ? 'good' : 'danger'
@@ -93,16 +94,16 @@ export function DashboardHero({
     <PageHero
       label="Finansal durum"
       title={displayName ? `Merhaba, ${displayName}` : 'Bugünkü finans tablon'}
-      amount={formatCurrency(netWorth)}
+      amount={formatAmount(netWorth)}
       tone={netWorthTone}
       description={`${cashFlow.monthLabel} için net varlık, borç baskısı ve nakit projeksiyonu tek bakışta.`}
       action={<StatusBadge tone={health.tone === 'emerald' ? 'good' : health.tone === 'amber' ? 'warning' : 'danger'}>{health.label}</StatusBadge>}
     >
       <div className="grid gap-2 min-[520px]:grid-cols-4">
-        <MiniStat label="Toplam varlık" value={formatCurrency(totalAssets)} tone="good" />
-        <MiniStat label="Toplam borç" value={formatCurrency(totalDebts)} tone={totalDebts > 0 ? 'danger' : 'good'} />
-        <MiniStat label="Ay sonu nakit" value={formatCurrency(cashFlow.projectedCash)} tone={projectedTone} />
-        <MiniStat label="Bekleyen tahsilat" value={formatCurrency(totalReceivables)} tone={totalReceivables > 0 ? 'info' : 'neutral'} />
+        <MiniStat label="Toplam varlık" value={formatAmount(totalAssets)} tone="good" />
+        <MiniStat label="Toplam borç" value={formatAmount(totalDebts)} tone={totalDebts > 0 ? 'danger' : 'good'} />
+        <MiniStat label="Ay sonu nakit" value={formatAmount(cashFlow.projectedCash)} tone={projectedTone} />
+        <MiniStat label="Bekleyen tahsilat" value={formatAmount(totalReceivables)} tone={totalReceivables > 0 ? 'info' : 'neutral'} />
       </div>
       <ProgressStrip
         label="Borç / varlık baskısı"
@@ -115,6 +116,7 @@ export function DashboardHero({
 }
 
 export function GoalProgressCommand({ goalProgress }: { goalProgress: GoalProgressSummary }) {
+  const { formatAmount } = useBalancePrivacy()
   if (goalProgress.activeCount === 0) {
     return (
       <FinancePanel tone="info" className="p-4 sm:p-5">
@@ -144,7 +146,7 @@ export function GoalProgressCommand({ goalProgress }: { goalProgress: GoalProgre
       </div>
       <div className="mt-5 grid grid-cols-2 gap-2">
         <MiniStat label="Sıradaki hedef" value={goalProgress.nextGoalName ?? 'Henüz yok'} tone={goalProgress.nextGoalName ? 'premium' : 'neutral'} />
-        <MiniStat label="Aylık ihtiyaç" value={formatCurrency(goalProgress.nextGoalMonthlyNeed)} tone={goalProgress.nextGoalMonthlyNeed > 0 ? 'warning' : 'neutral'} />
+        <MiniStat label="Aylık ihtiyaç" value={formatAmount(goalProgress.nextGoalMonthlyNeed)} tone={goalProgress.nextGoalMonthlyNeed > 0 ? 'warning' : 'neutral'} />
       </div>
     </FinancePanel>
   )
@@ -211,6 +213,7 @@ export function PulseCard({ title, label, value, description, icon, tone }: { ti
 }
 
 export function SalaryPulse({ trend }: { trend: ReturnType<typeof getSalaryTrend> }) {
+  const { formatAmount } = useBalancePrivacy()
   if (!trend.current) {
     return (
       <PulseCard
@@ -225,14 +228,14 @@ export function SalaryPulse({ trend }: { trend: ReturnType<typeof getSalaryTrend
   }
 
   const trendLabel = trend.previous
-    ? `${trend.difference >= 0 ? '+' : ''}${formatCurrency(trend.difference)} · ${trend.percentage >= 0 ? '+' : ''}${trend.percentage.toFixed(1)}%`
+    ? `${trend.difference >= 0 ? '+' : ''}${formatAmount(trend.difference)} · ${trend.percentage >= 0 ? '+' : ''}${trend.percentage.toFixed(1)}%`
     : 'İlk maaş kaydı'
 
   return (
     <PulseCard
       title="Maaş trendi"
       label={formatDate(trend.current.effective_date)}
-      value={formatCurrency(trend.current.amount)}
+      value={formatAmount(trend.current.amount)}
       description={trendLabel}
       icon={<TrendingUp />}
       tone="emerald"

@@ -5,7 +5,6 @@ import { Card as SurfaceCard, CardContent, CardHeader, CardTitle } from '../comp
 import { HelpTooltip } from '../components/ui/help-tooltip'
 import type { Card, CardExpense, CardStatementArchive } from '../types/database'
 import { formatDate } from '../utils/date'
-import { formatCurrency } from '../utils/formatCurrency'
 import { sumTL } from '../utils/money'
 import { cardHelp } from './CardsPage.help'
 import { statementPeriodLabel } from './CardsPage.helpers'
@@ -53,7 +52,7 @@ export function ProvisionPanel({
             <p className="mt-1 text-xs text-muted-foreground">Kesinleşince dönem içine alınır, iptal edilirse limitten çıkarılır.</p>
           </div>
           <div className="flex shrink-0 flex-col items-end gap-2">
-            <Badge variant="secondary">{formatCurrency(totalProvision)}</Badge>
+            <Badge variant="secondary">{formatAmount(totalProvision)}</Badge>
             <button
               type="button"
               onClick={() => onPostAll(pending)}
@@ -82,7 +81,7 @@ export function ProvisionPanel({
                   </p>
                 </div>
                 <span className="shrink-0 rounded-lg bg-card px-2 py-1 text-xs font-bold tabular-nums text-foreground ring-1 ring-border/60">
-                  {formatCurrency(expense.amount)}
+                  {formatAmount(expense.amount)}
                 </span>
               </div>
               <div className="mt-2 grid grid-cols-2 gap-2">
@@ -153,7 +152,7 @@ export function StatementPanel({
             </CardTitle>
             <p className="mt-1 text-xs text-muted-foreground">Ekstre odendiginde bu ekstreye bagli kart taksitleri otomatik kapanir.</p>
           </div>
-          <Badge variant="secondary">{formatCurrency(totalOpenAmount)}</Badge>
+          <Badge variant="secondary">{formatAmount(totalOpenAmount)}</Badge>
         </div>
       </CardHeader>
       <CardContent className="space-y-2 pt-2">
@@ -171,7 +170,7 @@ export function StatementPanel({
                   </p>
                 </div>
                 <span className="shrink-0 rounded-lg bg-card px-2 py-1 text-xs font-bold tabular-nums text-foreground ring-1 ring-border/60">
-                  {formatCurrency(statement.statement_debt_amount)}
+                  {formatAmount(statement.statement_debt_amount)}
                 </span>
               </div>
               <div className="mt-3 grid gap-2 min-[520px]:grid-cols-[minmax(0,1fr)_auto] min-[520px]:items-center">

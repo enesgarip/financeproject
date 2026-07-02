@@ -10,7 +10,7 @@ import {
 } from '../data/repositories/dataHealthRepo'
 import { useFinancePaymentDrawer } from '../hooks/useFinancePaymentDrawer'
 import { formatDate } from '../utils/date'
-import { formatCurrency } from '../utils/formatCurrency'
+import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
 import { isMissingSupabaseCapabilityError, missingSupabaseCapabilityMessage } from '../utils/supabaseErrors'
 import {
   buildIssues,
@@ -32,6 +32,7 @@ import {
 } from './DataHealthPage.components'
 
 export function DataHealthPage() {
+  const { formatAmount } = useBalancePrivacy()
   const [data, setData] = useState<HealthData>(emptyData)
   const [loading, setLoading] = useState(true)
   const [fixingId, setFixingId] = useState<string | null>(null)
@@ -201,7 +202,7 @@ export function DataHealthPage() {
           <>
             <p className="font-semibold text-foreground">{card.card_name}</p>
             <p>Son ödeme: {formatDate(statement.due_date)}</p>
-            <p>Ekstre tutarı: <span className="font-mono font-semibold text-foreground">{formatCurrency(statement.statement_debt_amount)}</span></p>
+            <p>Ekstre tutarı: <span className="font-mono font-semibold text-foreground">{formatAmount(statement.statement_debt_amount)}</span></p>
           </>
         ),
         formatSubmitError: (error) =>

@@ -1,4 +1,4 @@
-import { formatCurrency, parseNumber } from '../../utils/formatCurrency'
+import { parseNumber } from '../../utils/formatCurrency'
 import { Input } from '../ui/input'
 
 type MoneyInputProps = {
@@ -46,7 +46,7 @@ export function MoneyInput({
         placeholder={placeholder}
         className="mt-1 tabular-nums"
       />
-      {parsedValue > 0 ? <span className="mt-1 block text-xs font-semibold text-muted-foreground">{formatCurrency(parsedValue)}</span> : null}
+      {parsedValue > 0 ? <span className="mt-1 block text-xs font-semibold text-muted-foreground">{formatAmount(parsedValue)}</span> : null}
     </label>
   )
 }

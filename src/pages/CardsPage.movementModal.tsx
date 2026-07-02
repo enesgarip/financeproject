@@ -1,6 +1,6 @@
 import { SimpleModal } from '../components/SimpleModal'
 import type { Card } from '../types/database'
-import { formatCurrency, parseNumber } from '../utils/formatCurrency'
+import { parseNumber } from '../utils/formatCurrency'
 import { diffTL, sumTL } from '../utils/money'
 
 export function MovementModal({
@@ -39,7 +39,7 @@ export function MovementModal({
       <form onSubmit={onSubmit} className="space-y-4">
         <div className="rounded-xl border border-border/60 bg-muted/30 p-3 text-sm text-muted-foreground">
           <p className="font-semibold text-foreground">{card?.card_name}</p>
-          <p>Mevcut bakiye: {formatCurrency(card?.current_balance ?? 0)}</p>
+          <p>Mevcut bakiye: {formatAmount(card?.current_balance ?? 0)}</p>
         </div>
         <label className="block text-sm font-semibold text-foreground">
           İşlem tipi
@@ -80,7 +80,7 @@ export function MovementModal({
                 <option value="">{targetAccounts.length > 0 ? 'Hedef hesap seç' : 'Transfer için ikinci hesap gerekli'}</option>
                 {targetAccounts.map((account) => (
                   <option key={account.id} value={account.id}>
-                    {account.bank_name} · {account.card_name} ({formatCurrency(account.current_balance)})
+                    {account.bank_name} · {account.card_name} ({formatAmount(account.current_balance)})
                   </option>
                 ))}
               </select>
@@ -88,9 +88,9 @@ export function MovementModal({
             {target ? (
               <div className="grid grid-cols-2 gap-2 rounded-xl bg-muted/45 px-3 py-2 text-xs text-muted-foreground">
                 <span>
-                  Kaynak sonrası: {formatCurrency(diffTL(card?.current_balance, amountValue))}
+                  Kaynak sonrası: {formatAmount(diffTL(card?.current_balance, amountValue))}
                 </span>
-                <span>Hedef sonrası: {formatCurrency(sumTL([target.current_balance, amountValue]))}</span>
+                <span>Hedef sonrası: {formatAmount(sumTL([target.current_balance, amountValue]))}</span>
               </div>
             ) : null}
           </>

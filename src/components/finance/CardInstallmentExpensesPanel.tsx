@@ -15,7 +15,7 @@ import type { Card, CardExpense, CardInstallment } from '../../types/database'
 import { expenseCategoryOptions } from '../../utils/categories'
 import { formatMonth } from '../../utils/analysisView'
 import { formatDate } from '../../utils/date'
-import { formatCurrency, parseNumber } from '../../utils/formatCurrency'
+import { parseNumber } from '../../utils/formatCurrency'
 import { sumTL } from '../../utils/money'
 import { isMissingSupabaseCapabilityError, missingSupabaseCapabilityMessage } from '../../utils/supabaseErrors'
 
@@ -234,7 +234,7 @@ export function CardInstallmentExpensesPanel({ cards, reload, setError }: CardIn
                 {remainingInstallments.length} taksit izleniyor
               </span>
               <span className="rounded-full bg-muted px-2 py-1 text-muted-foreground">
-                {formatCurrency(remainingAmount)} bilgi amaçlı
+                {formatAmount(remainingAmount)} bilgi amaçlı
               </span>
             </div>
             {isLocked ? (
@@ -285,7 +285,7 @@ export function CardInstallmentExpensesPanel({ cards, reload, setError }: CardIn
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className={`truncate font-semibold ${isPaid ? 'text-success' : 'text-foreground'}`}>
-                      {item.installment_no}/{item.installment_count}. taksit - {formatCurrency(item.amount)}
+                      {item.installment_no}/{item.installment_count}. taksit - {formatAmount(item.amount)}
                     </p>
                     <p className={`text-xs ${isPaid ? 'text-success/80' : 'text-muted-foreground'}`}>
                       {formatMonth(item.due_month)} - {installmentStatusLabel(item)}

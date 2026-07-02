@@ -1,4 +1,4 @@
-import { formatCurrency } from '../../utils/formatCurrency'
+import { useBalancePrivacy } from '../../hooks/useBalancePrivacy'
 
 type InstallmentPlannerProps = {
   remainingCount: number
@@ -17,13 +17,14 @@ export function InstallmentPlanner({
   monthlyAmount,
   compact = false,
 }: InstallmentPlannerProps) {
+  const { formatAmount } = useBalancePrivacy()
   return (
     <div className="rounded-xl border border-warning/20 bg-warning/8 p-3">
       <div className={`grid gap-2 text-xs ${compact ? 'grid-cols-3' : 'grid-cols-2 min-[460px]:grid-cols-4'}`}>
         <InstallmentStat label="Kalan" value={`${remainingCount}/${totalInstallments}`} />
-        <InstallmentStat label="Toplam" value={formatCurrency(remainingAmount)} />
+        <InstallmentStat label="Toplam" value={formatAmount(remainingAmount)} />
         <InstallmentStat label="İlk dönem" value={firstLabel} />
-        {monthlyAmount !== undefined ? <InstallmentStat label="Aylık" value={formatCurrency(monthlyAmount)} /> : null}
+        {monthlyAmount !== undefined ? <InstallmentStat label="Aylık" value={formatAmount(monthlyAmount)} /> : null}
       </div>
     </div>
   )

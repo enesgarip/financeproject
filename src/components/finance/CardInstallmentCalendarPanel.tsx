@@ -6,7 +6,6 @@ import { HelpTooltip, type HelpTooltipContent } from '../ui/help-tooltip'
 import { fetchCardInstallments } from '../../data/repositories/cardsRepo'
 import type { Card, CardInstallment } from '../../types/database'
 import { buildCardInstallmentCalendar, buildCardInstallmentTotalsByCard } from '../../utils/cardInstallmentCalendar'
-import { formatCurrency } from '../../utils/formatCurrency'
 
 type CardInstallmentCalendarPanelProps = {
   cards: Card[]
@@ -76,7 +75,7 @@ export function CardInstallmentCalendarPanel({ cards }: CardInstallmentCalendarP
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="text-xs font-black uppercase text-muted-foreground">Gelecek taksit toplamı</p>
-                <p className="finance-value mt-1 text-xl font-black leading-none text-foreground">{formatCurrency(cardTotals.total)}</p>
+                <p className="finance-value mt-1 text-xl font-black leading-none text-foreground">{formatAmount(cardTotals.total)}</p>
               </div>
               <Badge variant="warning">{cardTotals.rows.length} kart</Badge>
             </div>
@@ -85,7 +84,7 @@ export function CardInstallmentCalendarPanel({ cards }: CardInstallmentCalendarP
                 <div key={row.cardId} className="flex min-w-0 items-center justify-between gap-3 rounded-lg bg-muted/45 px-3 py-2 text-xs">
                   <span className="min-w-0 truncate font-semibold text-foreground">{row.cardLabel}</span>
                   <span className="shrink-0 text-right font-black tabular-nums text-foreground">
-                    {formatCurrency(row.amount)}
+                    {formatAmount(row.amount)}
                     <span className="ml-1 font-semibold text-muted-foreground">
                       {row.count > 1 ? `· ${row.count} taksit` : '· 1 taksit'}
                     </span>
@@ -106,7 +105,7 @@ export function CardInstallmentCalendarPanel({ cards }: CardInstallmentCalendarP
                 <div className="mb-2 flex items-center justify-between gap-2">
                   <p className="text-sm font-bold capitalize text-foreground">{month.monthLabel}</p>
                   <span className="shrink-0 rounded-lg bg-card px-2 py-1 font-mono text-xs font-bold tabular-nums text-foreground ring-1 ring-border/60">
-                    {formatCurrency(month.total)}
+                    {formatAmount(month.total)}
                   </span>
                 </div>
                 {month.rows.length === 0 ? (
@@ -117,7 +116,7 @@ export function CardInstallmentCalendarPanel({ cards }: CardInstallmentCalendarP
                       <li key={`${month.monthKey}-${row.cardId}`} className="flex items-center justify-between gap-2 text-xs">
                         <span className="min-w-0 truncate text-muted-foreground">{row.cardLabel}</span>
                         <span className="shrink-0 font-semibold tabular-nums text-foreground">
-                          {formatCurrency(row.amount)}
+                          {formatAmount(row.amount)}
                           {row.count > 1 ? ` · ${row.count} taksit` : ''}
                         </span>
                       </li>

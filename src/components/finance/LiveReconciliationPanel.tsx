@@ -9,7 +9,7 @@ import {
 } from '../../data/repositories/financePanelsRepo'
 import type { AccountReconciliation, Card, InsertFor, ReconciliationTarget } from '../../types/database'
 import { formatDate } from '../../utils/date'
-import { formatCurrency, parseNumber } from '../../utils/formatCurrency'
+import { parseNumber } from '../../utils/formatCurrency'
 import {
   buildDriftCauseSummary,
   buildReconciliationItems,
@@ -183,14 +183,14 @@ export function LiveReconciliationPanel({ cards }: LiveReconciliationPanelProps)
                     <Badge variant="outline">{item.target === 'debt' ? 'Borç' : 'Bakiye'}</Badge>
                   </div>
                   <p className="mt-0.5 text-xs text-muted-foreground">
-                    App: <span className="font-semibold text-foreground">{formatCurrency(item.app)}</span>
+                    App: <span className="font-semibold text-foreground">{formatAmount(item.app)}</span>
                     {item.last
                       ? ` · Son mutabakat: ${formatDate(item.last.reconciled_at.slice(0, 10))}${
                           item.daysSince != null ? ` (${item.daysSince} gün önce)` : ''
                         }`
                       : ' · Henüz mutabakat yok'}
                     {item.status === 'drift' && item.last
-                      ? ` · Kayıtlı fark ${item.last.drift >= 0 ? '+' : ''}${formatCurrency(item.last.drift)}`
+                      ? ` · Kayıtlı fark ${item.last.drift >= 0 ? '+' : ''}${formatAmount(item.last.drift)}`
                       : ''}
                   </p>
                 </div>
@@ -229,7 +229,7 @@ export function LiveReconciliationPanel({ cards }: LiveReconciliationPanelProps)
                                     {event.note ? ` · ${event.note}` : ''}
                                   </span>
                                   <span className={`shrink-0 tabular-nums font-semibold ${event.amountTL >= 0 ? 'text-foreground' : 'text-success'}`}>
-                                    {event.amountTL >= 0 ? '+' : ''}{formatCurrency(event.amountTL)}
+                                    {event.amountTL >= 0 ? '+' : ''}{formatAmount(event.amountTL)}
                                   </span>
                                 </div>
                               ))}
@@ -237,7 +237,7 @@ export function LiveReconciliationPanel({ cards }: LiveReconciliationPanelProps)
                             <p className="mt-1.5 border-t pt-1.5 font-semibold text-foreground">
                               {summary.eventCount} hareket, toplam{' '}
                               {summary.totalChangeTL >= 0 ? '+' : ''}
-                              {formatCurrency(summary.totalChangeTL)} değişim
+                              {formatAmount(summary.totalChangeTL)} değişim
                             </p>
                           </>
                         )
@@ -267,7 +267,7 @@ export function LiveReconciliationPanel({ cards }: LiveReconciliationPanelProps)
                       reconciledNow ? 'text-success' : 'text-destructive'
                     }`}
                   >
-                    {reconciledNow ? 'Mutabık ✓' : `Fark ${liveDrift >= 0 ? '+' : ''}${formatCurrency(liveDrift)}`}
+                    {reconciledNow ? 'Mutabık ✓' : `Fark ${liveDrift >= 0 ? '+' : ''}${formatAmount(liveDrift)}`}
                   </span>
                 ) : null}
                 <Button

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { formatCurrency } from '@/utils/formatCurrency'
+import { useBalancePrivacy } from '../../hooks/useBalancePrivacy'
 import { cn } from '@/lib/utils'
 import { sumTL } from '@/utils/money'
 
@@ -46,11 +46,12 @@ export function DonutChart({
   showLegend = true,
   totalLabel = 'Toplam',
 }: DonutChartProps) {
+  const { formatAmount } = useBalancePrivacy()
   const [activeIndex, setActiveIndex] = useState<number | null>(null)
 
   const total = sumTL(data.map((d) => d.value))
   const active = activeIndex !== null ? data[activeIndex] : null
-  const centerValue = active ? formatCurrency(active.value) : formatCurrency(total)
+  const centerValue = active ? formatAmount(active.value) : formatAmount(total)
   const centerLabel = active ? active.name : totalLabel
   const availableOuterRadius = Math.max(innerRadius + 8, size / 2 - 8)
   const outerRadius = Math.min(innerRadius + 32, availableOuterRadius)
@@ -63,8 +64,8 @@ export function DonutChart({
     8,
     Math.min(10, Math.floor((centerMaxWidth / Math.max(centerLabel.length, 1)) * 1.6)),
   )
-  const chartSummary = `${totalLabel}: ${formatCurrency(total)}. ${data
-    .map((slice) => `${slice.name} ${formatCurrency(slice.value)}`)
+  const chartSummary = `${totalLabel}: ${formatAmount(total)}. ${data
+    .map((slice) => `${slice.name} ${formatAmount(slice.value)}`)
     .join(', ')}.`
 
   if (data.length === 0 || total === 0) {
@@ -174,7 +175,7 @@ export function DonutChart({
                   <span className="truncate text-muted-foreground">{entry.name}</span>
                 </span>
                 <span className="flex shrink-0 items-center gap-2">
-                  <span className="font-mono tabular-nums text-foreground">{formatCurrency(entry.value)}</span>
+                  <span className="font-mono tabular-nums text-foreground">{formatAmount(entry.value)}</span>
                   <span className="w-8 text-right font-medium text-muted-foreground">%{pct}</span>
                 </span>
               </li>

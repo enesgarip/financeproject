@@ -7,7 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Progress } from '../components/ui/progress'
 import type { NetWorthSnapshot } from '../types/database'
 import { formatDate, isDateInMonth } from '../utils/date'
-import { formatCurrency, parseNumber } from '../utils/formatCurrency'
+import { parseNumber } from '../utils/formatCurrency'
+import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
 import { buildFinancialPosition, getCurrentSalary, sum } from '../utils/financeSummary'
 import { buildCategoryInsights, type AnalysisData } from '../utils/analysisView'
 import { activeExpense as activeCardExpense } from '../utils/budgetAlerts'
@@ -24,6 +25,7 @@ const CATEGORY_PALETTE = [
 ]
 
 export function FireCalculator({ data, snapshots }: { data: AnalysisData; snapshots: NetWorthSnapshot[] }) {
+  const { formatAmount } = useBalancePrivacy()
   const position = useMemo(
     () =>
       buildFinancialPosition({
@@ -108,21 +110,21 @@ export function FireCalculator({ data, snapshots }: { data: AnalysisData; snapsh
       </CardHeader>
       <CardContent className="space-y-4 pt-3">
         <div className="grid gap-2 min-[560px]:grid-cols-4">
-          <StatPill label="Hedef servet" value={formatCurrency(result.fireNumber)} />
+          <StatPill label="Hedef servet" value={formatAmount(result.fireNumber)} />
           <StatPill label="İlerleme" value={`%${Math.round(result.progressPct)}`} tone={result.progressPct >= 100 ? 'emerald' : 'stone'} />
           <StatPill
             label="Kalan süre"
             value={result.yearsToFire === null ? '—' : result.yearsToFire < 1 ? '<1 yıl' : `${result.yearsToFire.toFixed(1)} yıl`}
             tone={result.alreadyReached ? 'emerald' : result.monthsToFire === null ? 'rose' : 'stone'}
           />
-          <StatPill label="Aylık birikim" value={formatCurrency(monthlySavings)} tone={monthlySavings >= 0 ? 'emerald' : 'rose'} />
+          <StatPill label="Aylık birikim" value={formatAmount(monthlySavings)} tone={monthlySavings >= 0 ? 'emerald' : 'rose'} />
         </div>
 
         <div>
           <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2 text-xs">
             <span className="text-muted-foreground">{headline}</span>
             <span className="font-mono font-semibold tabular-nums text-foreground">
-              {formatCurrency(position.netWorth)} / {formatCurrency(result.fireNumber)}
+              {formatAmount(position.netWorth)} / {formatAmount(result.fireNumber)}
             </span>
           </div>
           <Progress value={result.progressPct} autoColor size="default" />
@@ -255,6 +257,7 @@ function ZakatToggle({ checked, onChange, label }: { checked: boolean; onChange:
 }
 
 export function ZakatPanel({ data, ratesSnapshot }: { data: AnalysisData; ratesSnapshot: MarketRatesSnapshot | null }) {
+  const { formatAmount } = useBalancePrivacy()
   const [includeReceivables, setIncludeReceivables] = useState(true)
   const [includeBes, setIncludeBes] = useState(false)
   const [deductDebts, setDeductDebts] = useState(true)
@@ -293,11 +296,11 @@ export function ZakatPanel({ data, ratesSnapshot }: { data: AnalysisData; ratesS
       </CardHeader>
       <CardContent className="space-y-4 pt-3">
         <div className="grid gap-2 min-[560px]:grid-cols-3">
-          <StatPill label="Zekâta tabi net servet" value={formatCurrency(zakat.netWealth)} />
-          <StatPill label="Nisab (80,18 gr altın)" value={zakat.nisabTry === null ? '—' : formatCurrency(zakat.nisabTry)} />
+          <StatPill label="Zekâta tabi net servet" value={formatAmount(zakat.netWealth)} />
+          <StatPill label="Nisab (80,18 gr altın)" value={zakat.nisabTry === null ? '—' : formatAmount(zakat.nisabTry)} />
           <StatPill
             label="Hesaplanan zekât"
-            value={formatCurrency(zakat.zakatDue)}
+            value={formatAmount(zakat.zakatDue)}
             tone={zakat.meetsNisab ? 'emerald' : 'stone'}
           />
         </div>
@@ -317,7 +320,7 @@ export function ZakatPanel({ data, ratesSnapshot }: { data: AnalysisData; ratesS
               <div key={component.key} className="flex items-center justify-between gap-3 text-sm">
                 <span className="text-muted-foreground">{component.sign < 0 ? '− ' : '+ '}{component.label}</span>
                 <span className={`font-mono tabular-nums ${component.sign < 0 ? 'text-destructive' : 'text-foreground'}`}>
-                  {component.sign < 0 ? '-' : ''}{formatCurrency(component.amount)}
+                  {component.sign < 0 ? '-' : ''}{formatAmount(component.amount)}
                 </span>
               </div>
             ))}
@@ -340,6 +343,7 @@ export function ZakatPanel({ data, ratesSnapshot }: { data: AnalysisData; ratesS
 }
 
 export function CategorySpendingChart({ data }: { data: AnalysisData }) {
+  const { formatAmount } = useBalancePrivacy()
   const monthlyExpenses = useMemo(
     () => data.cardExpenses.filter((expense) => activeCardExpense(expense) && isDateInMonth(expense.spent_at)),
     [data.cardExpenses],
@@ -388,7 +392,7 @@ export function CategorySpendingChart({ data }: { data: AnalysisData }) {
                     <p className="mt-0.5 text-xs text-muted-foreground">{insight.title} · {insight.description}</p>
                   </div>
                   <Badge variant={insight.tone === 'rose' ? 'destructive' : insight.tone === 'amber' ? 'warning' : 'success'}>
-                    {formatCurrency(insight.amount)}
+                    {formatAmount(insight.amount)}
                   </Badge>
                 </div>
               ))}

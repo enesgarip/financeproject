@@ -1,6 +1,5 @@
 import { useMemo } from 'react'
 import type { ExpenseMatchRow } from '../../data/repositories/cardsRepo'
-import { formatCurrency } from '../../utils/formatCurrency'
 import { sumTL } from '../../utils/money'
 
 type Props = {
@@ -45,7 +44,7 @@ export function CardExpenseHistorySection({ expenses, periodLabel }: Props) {
             <p className="mt-0.5 text-[11px] text-muted-foreground">{periodLabel || 'Dönem belirlenemedi'}</p>
           </div>
           <div className="shrink-0 text-right">
-            <p className="text-xs font-black text-foreground">{formatCurrency(activeTotal)}</p>
+            <p className="text-xs font-black text-foreground">{formatAmount(activeTotal)}</p>
             <p className="text-[10px] font-bold text-muted-foreground">{expenses.length} kayıt</p>
           </div>
         </div>
@@ -76,7 +75,7 @@ export function CardExpenseHistorySection({ expenses, periodLabel }: Props) {
                   </p>
                 </div>
                 <span className={`shrink-0 text-right text-xs font-black ${expense.status === 'cancelled' ? 'text-muted-foreground line-through' : 'text-foreground'}`}>
-                  {formatCurrency(expense.amount)}
+                  {formatAmount(expense.amount)}
                 </span>
               </div>
             ))}

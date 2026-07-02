@@ -11,7 +11,7 @@ import type { Card } from '../types/database'
 import { expenseCategoryOptions } from '../utils/categories'
 import { getLastUsed, setLastUsed } from '../utils/lastUsed'
 import { addMonthsToMonth, cardOptionLabel, formatMonthLabel, isMonthValue, monthInputValue, parseInstallmentNumber } from './CardsPage.helpers'
-import { formatCurrency, parseNumber } from '../utils/formatCurrency'
+import { parseNumber } from '../utils/formatCurrency'
 import { roundTL } from '../utils/money'
 
 export function LegacyInstallmentPanel({
@@ -223,7 +223,7 @@ export function LegacyInstallmentPanel({
             <CategoryPicker description={description} value={category} onChange={setCategory} memory={categoryMemory} autoApply />
           </div>
           <p className="rounded-xl border border-warning/20 bg-warning/8 px-3 py-2.5 text-xs font-medium text-warning">
-            Kalan {formatCurrency(remainingAmount)} tutarı otomatik olarak kart borcuna eklenir; böylece gelecek taksitler limit hesabına yansır.
+            Kalan {formatAmount(remainingAmount)} tutarı otomatik olarak kart borcuna eklenir; böylece gelecek taksitler limit hesabına yansır.
           </p>
           <InstallmentPlanner
             compact

@@ -13,7 +13,7 @@ import { HelpTooltip } from '../ui/help-tooltip'
 import { Progress } from '../ui/progress'
 import type { DashboardUpcomingItem } from '../../utils/dashboardUpcoming'
 import { formatDate } from '../../utils/date'
-import { formatCurrency } from '../../utils/formatCurrency'
+import { useBalancePrivacy } from '../../hooks/useBalancePrivacy'
 import { diffTL, sumTL } from '../../utils/money'
 import {
   sum,
@@ -48,6 +48,7 @@ export function MonthlyPaymentLoadPanel({
   upcomingTotal: number
   upcomingCount: number
 }) {
+  const { formatAmount } = useBalancePrivacy()
   const loadRate = cashFlow.income > 0 ? Math.min(100, (cashFlow.outflow / cashFlow.income) * 100) : cashFlow.outflow > 0 ? 100 : 0
   const tone = loadRate >= 90 ? 'danger' : loadRate >= 65 ? 'warning' : 'good'
 
@@ -59,11 +60,11 @@ export function MonthlyPaymentLoadPanel({
         action={<StatusBadge tone={tone}>{upcomingCount > 0 ? `${upcomingCount} vade` : 'Takvim temiz'}</StatusBadge>}
       />
       <div className="mt-5">
-        <AmountDisplay label={cashFlow.monthLabel} value={formatCurrency(cashFlow.outflow)} tone={tone} size="lg" />
+        <AmountDisplay label={cashFlow.monthLabel} value={formatAmount(cashFlow.outflow)} tone={tone} size="lg" />
       </div>
       <div className="mt-5 grid grid-cols-2 gap-2">
-        <MiniStat label="Yaklaşan toplam" value={upcomingCount > 0 ? formatCurrency(upcomingTotal) : 'Yok'} tone={upcomingCount > 0 ? 'warning' : 'good'} />
-        <MiniStat label="Gelecek ay" value={formatCurrency(nextMonthOutflow)} tone={nextMonthOutflow > cashFlow.outflow ? 'warning' : 'neutral'} />
+        <MiniStat label="Yaklaşan toplam" value={upcomingCount > 0 ? formatAmount(upcomingTotal) : 'Yok'} tone={upcomingCount > 0 ? 'warning' : 'good'} />
+        <MiniStat label="Gelecek ay" value={formatAmount(nextMonthOutflow)} tone={nextMonthOutflow > cashFlow.outflow ? 'warning' : 'neutral'} />
       </div>
       <div className="mt-5">
         <ProgressStrip label="Gelire göre nakit çıkışı" value={loadRate} tone={tone} />
@@ -73,6 +74,7 @@ export function MonthlyPaymentLoadPanel({
 }
 
 export function CashFlowPanel({ cashFlow }: { cashFlow: CashFlowSummary }) {
+  const { formatAmount } = useBalancePrivacy()
   const outflowRate = cashFlow.income > 0 ? Math.min(100, (cashFlow.outflow / cashFlow.income) * 100) : 0
   const isPositive = cashFlow.netFlow >= 0
 
@@ -129,9 +131,9 @@ export function CashFlowPanel({ cashFlow }: { cashFlow: CashFlowSummary }) {
       <CardContent className="space-y-4 pt-3">
         {/* Summary pills */}
         <div className="grid grid-cols-3 gap-2">
-          <CashFlowMetric label="Gelir" value={formatCurrency(cashFlow.income)} tone="emerald" />
-          <CashFlowMetric label="Nakit çıkışı" value={formatCurrency(cashFlow.outflow)} tone="rose" />
-          <CashFlowMetric label="Ay sonu" value={formatCurrency(cashFlow.projectedCash)} tone={cashFlow.projectedCash >= 0 ? 'emerald' : 'rose'} />
+          <CashFlowMetric label="Gelir" value={formatAmount(cashFlow.income)} tone="emerald" />
+          <CashFlowMetric label="Nakit çıkışı" value={formatAmount(cashFlow.outflow)} tone="rose" />
+          <CashFlowMetric label="Ay sonu" value={formatAmount(cashFlow.projectedCash)} tone={cashFlow.projectedCash >= 0 ? 'emerald' : 'rose'} />
         </div>
 
         {/* Area chart */}
@@ -152,22 +154,22 @@ export function CashFlowPanel({ cashFlow }: { cashFlow: CashFlowSummary }) {
 
         {/* Detail grid */}
         <div className="grid gap-1.5 text-xs text-muted-foreground min-[430px]:grid-cols-2">
-          <span>Kart ödemesi: <span className="font-mono font-medium text-foreground">{formatCurrency(cashFlow.cardOutflow)}</span></span>
-          <span>Kredi: <span className="font-mono font-medium text-foreground">{formatCurrency(cashFlow.loanOutflow)}</span></span>
-          <span>Fatura: <span className="font-mono font-medium text-foreground">{formatCurrency(cashFlow.paymentOutflow)}</span></span>
-          <span>Kişisel: <span className="font-mono font-medium text-foreground">{formatCurrency(cashFlow.debtOutflow)}</span></span>
-          <span>Maaş: <span className="font-mono font-medium text-success">{formatCurrency(cashFlow.salaryIncome)}</span></span>
+          <span>Kart ödemesi: <span className="font-mono font-medium text-foreground">{formatAmount(cashFlow.cardOutflow)}</span></span>
+          <span>Kredi: <span className="font-mono font-medium text-foreground">{formatAmount(cashFlow.loanOutflow)}</span></span>
+          <span>Fatura: <span className="font-mono font-medium text-foreground">{formatAmount(cashFlow.paymentOutflow)}</span></span>
+          <span>Kişisel: <span className="font-mono font-medium text-foreground">{formatAmount(cashFlow.debtOutflow)}</span></span>
+          <span>Maaş: <span className="font-mono font-medium text-success">{formatAmount(cashFlow.salaryIncome)}</span></span>
           {cashFlow.receivableIncome > 0 ? (
-            <span>Tahsilat: <span className="font-mono font-medium text-success">{formatCurrency(cashFlow.receivableIncome)}</span></span>
+            <span>Tahsilat: <span className="font-mono font-medium text-success">{formatAmount(cashFlow.receivableIncome)}</span></span>
           ) : null}
         </div>
 
         <div className="rounded-xl bg-muted/40 px-3 py-2.5 text-sm">
           <p className="text-xs text-muted-foreground">
-            Hesap nakdi {formatCurrency(cashFlow.cashAssets)} · {cashFlow.recurringPayments} aylık ödeme
+            Hesap nakdi {formatAmount(cashFlow.cashAssets)} · {cashFlow.recurringPayments} aylık ödeme
           </p>
           <p className={`mt-0.5 font-mono text-sm font-semibold tabular-nums ${isPositive ? 'text-success' : 'text-destructive'}`}>
-            Net akış: {cashFlow.netFlow >= 0 ? '+' : ''}{formatCurrency(cashFlow.netFlow)}
+            Net akış: {cashFlow.netFlow >= 0 ? '+' : ''}{formatAmount(cashFlow.netFlow)}
           </p>
         </div>
       </CardContent>
@@ -226,6 +228,7 @@ function kindLabel(kind: UpcomingItem['kind']) {
 }
 
 export function CashFlowCalendarPanel({ items, cashFlow }: { items: UpcomingItem[]; cashFlow: CashFlowSummary }) {
+  const { formatAmount } = useBalancePrivacy()
   const [showAll, setShowAll] = useState(false)
   const [selectedDayKey, setSelectedDayKey] = useState<string | null>(null)
   const groups = useMemo(() => buildCashFlowCalendarGroups(items, cashFlow.cashAssets), [cashFlow.cashAssets, items])
@@ -247,9 +250,9 @@ export function CashFlowCalendarPanel({ items, cashFlow }: { items: UpcomingItem
           </div>
           <div className="flex flex-wrap justify-end gap-2">
             <Badge variant={lowestCash < 0 ? 'destructive' : 'secondary'}>
-              {groups.length > 0 ? `${groups.length} gün · nakit ${formatCurrency(totalCashImpact)}` : 'Takvim temiz'}
+              {groups.length > 0 ? `${groups.length} gün · nakit ${formatAmount(totalCashImpact)}` : 'Takvim temiz'}
             </Badge>
-            {totalCardSettled > 0 ? <Badge variant="info">Kart {formatCurrency(totalCardSettled)}</Badge> : null}
+            {totalCardSettled > 0 ? <Badge variant="info">Kart {formatAmount(totalCardSettled)}</Badge> : null}
           </div>
         </div>
       </CardHeader>
@@ -290,16 +293,16 @@ export function CashFlowCalendarPanel({ items, cashFlow }: { items: UpcomingItem
                       </div>
                       <div className="flex shrink-0 flex-col items-end gap-1">
                         <span className={`rounded-lg px-2 py-1 text-xs font-black tabular-nums ${cashBadgeClass}`}>
-                          {group.cashImpactAmount > 0 ? `Nakit ${formatCurrency(group.cashImpactAmount)}` : group.cashImpactAmount < 0 ? `Giriş ${formatCurrency(Math.abs(group.cashImpactAmount))}` : 'Nakit etkisi yok'}
+                          {group.cashImpactAmount > 0 ? `Nakit ${formatAmount(group.cashImpactAmount)}` : group.cashImpactAmount < 0 ? `Giriş ${formatAmount(Math.abs(group.cashImpactAmount))}` : 'Nakit etkisi yok'}
                         </span>
                         {group.cardSettledAmount > 0 ? (
                           <span className="rounded-lg bg-info/10 px-2 py-1 text-[11px] font-black tabular-nums text-info">
-                            Kart {formatCurrency(group.cardSettledAmount)}
+                            Kart {formatAmount(group.cardSettledAmount)}
                           </span>
                         ) : null}
                       </div>
                     </div>
-                    <p className={`mt-3 text-xs font-bold tabular-nums ${cashTone}`}>Bu gün sonrası tahmini nakit: {formatCurrency(group.cashAfter)}</p>
+                    <p className={`mt-3 text-xs font-bold tabular-nums ${cashTone}`}>Bu gün sonrası tahmini nakit: {formatAmount(group.cashAfter)}</p>
                   </button>
                 )
               })}
@@ -310,12 +313,12 @@ export function CashFlowCalendarPanel({ items, cashFlow }: { items: UpcomingItem
                   <div className="min-w-0">
                     <p className="text-sm font-black text-emerald-950 dark:text-emerald-50">{selectedGroup.dateLabel}</p>
                     <p className="mt-1 text-xs text-emerald-900/70 dark:text-emerald-100/70">
-                      {selectedGroup.count} kayıt · nakit etkisi {formatCurrency(selectedGroup.cashImpactAmount)}
-                      {selectedGroup.cardSettledAmount > 0 ? ` · kart ${formatCurrency(selectedGroup.cardSettledAmount)}` : ''}
+                      {selectedGroup.count} kayıt · nakit etkisi {formatAmount(selectedGroup.cashImpactAmount)}
+                      {selectedGroup.cardSettledAmount > 0 ? ` · kart ${formatAmount(selectedGroup.cardSettledAmount)}` : ''}
                     </p>
                   </div>
                   <Badge variant={selectedGroup.cashAfter < 0 ? 'destructive' : 'secondary'}>
-                    Sonra {formatCurrency(selectedGroup.cashAfter)}
+                    Sonra {formatAmount(selectedGroup.cashAfter)}
                   </Badge>
                 </div>
                 <div className="mt-3 grid gap-2">
@@ -337,7 +340,7 @@ export function CashFlowCalendarPanel({ items, cashFlow }: { items: UpcomingItem
                           {item.settlement === 'credit_card' ? 'Kart ' : ''}{item.value}
                         </span>
                         {item.cashImpactAmount !== item.amount ? (
-                          <span className="text-[10px] font-bold text-muted-foreground">Nakit {formatCurrency(item.cashImpactAmount)}</span>
+                          <span className="text-[10px] font-bold text-muted-foreground">Nakit {formatAmount(item.cashImpactAmount)}</span>
                         ) : null}
                       </div>
                     </div>

@@ -2,7 +2,7 @@ import { CalendarDays } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { formatDate } from '../utils/date'
-import { formatCurrency } from '../utils/formatCurrency'
+import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
 import { buildFinancialPosition } from '../utils/financeSummary'
 import { buildFullMonthCalendar, type CalendarDay } from '../utils/fullMonthCalendar'
 import { analysisObligationsInput, analysisFinanceSummaryInput, type AnalysisData } from '../utils/analysisView'
@@ -39,7 +39,7 @@ function DayCell({ day, onSelect, isSelected }: { day: CalendarDay; onSelect: (d
         </span>
         {hasEvents && day.netCashImpact !== 0 ? (
           <span className={`hidden text-[10px] font-bold tabular-nums min-[560px]:inline ${toneText[day.tone]}`}>
-            {day.netCashImpact > 0 ? '+' : ''}{formatCurrency(day.netCashImpact).replace(',00', '')}
+            {day.netCashImpact > 0 ? '+' : ''}{formatAmount(day.netCashImpact).replace(',00', '')}
           </span>
         ) : null}
       </div>
@@ -60,7 +60,7 @@ function DayCell({ day, onSelect, isSelected }: { day: CalendarDay; onSelect: (d
       ) : null}
       <div className="mt-auto pt-1">
         <p className={`text-[9px] font-bold tabular-nums min-[560px]:text-[10px] ${day.projectedBalance >= 0 ? 'text-muted-foreground/60' : 'text-destructive/70'}`}>
-          {formatCurrency(day.projectedBalance).replace(',00', '')}
+          {formatAmount(day.projectedBalance).replace(',00', '')}
         </p>
       </div>
     </button>
@@ -73,7 +73,7 @@ function DayDetail({ day }: { day: CalendarDay }) {
       <div className="rounded-xl bg-muted/45 p-3 text-sm text-muted-foreground">
         <p className="font-bold text-foreground">{formatDate(day.date)}</p>
         <p className="mt-1">Bu günde yükümlülük veya gelir yok.</p>
-        <p className="mt-1 text-xs">Tahmini bakiye: {formatCurrency(day.projectedBalance)}</p>
+        <p className="mt-1 text-xs">Tahmini bakiye: {formatAmount(day.projectedBalance)}</p>
       </div>
     )
   }
@@ -83,7 +83,7 @@ function DayDetail({ day }: { day: CalendarDay }) {
       <div className="flex items-center justify-between gap-3">
         <p className="text-sm font-bold text-foreground">{formatDate(day.date)}</p>
         <span className={`text-xs font-bold tabular-nums ${day.netCashImpact >= 0 ? 'text-success' : 'text-destructive'}`}>
-          Net: {day.netCashImpact >= 0 ? '+' : ''}{formatCurrency(day.netCashImpact)}
+          Net: {day.netCashImpact >= 0 ? '+' : ''}{formatAmount(day.netCashImpact)}
         </span>
       </div>
       <div className="mt-2 space-y-1.5">
@@ -97,19 +97,20 @@ function DayDetail({ day }: { day: CalendarDay }) {
               </p>
             </div>
             <span className={`shrink-0 font-bold tabular-nums ${event.direction === 'inflow' ? 'text-success' : 'text-destructive'}`}>
-              {event.direction === 'inflow' ? '+' : '-'}{formatCurrency(event.amount)}
+              {event.direction === 'inflow' ? '+' : '-'}{formatAmount(event.amount)}
             </span>
           </div>
         ))}
       </div>
       <p className="mt-2 text-xs text-muted-foreground">
-        Gün sonu tahmini bakiye: <span className={`font-bold ${day.projectedBalance >= 0 ? 'text-foreground' : 'text-destructive'}`}>{formatCurrency(day.projectedBalance)}</span>
+        Gün sonu tahmini bakiye: <span className={`font-bold ${day.projectedBalance >= 0 ? 'text-foreground' : 'text-destructive'}`}>{formatAmount(day.projectedBalance)}</span>
       </p>
     </div>
   )
 }
 
 export function FullMonthCalendarPanel({ data }: { data: AnalysisData }) {
+  const { formatAmount } = useBalancePrivacy()
   const [selectedDay, setSelectedDay] = useState<CalendarDay | null>(null)
 
   const calendar = useMemo(() => {
@@ -140,10 +141,10 @@ export function FullMonthCalendarPanel({ data }: { data: AnalysisData }) {
       </CardHeader>
       <CardContent className="space-y-4 pt-2">
         <div className="grid grid-cols-2 gap-2 min-[520px]:grid-cols-4">
-          <StatPill label="Başlangıç bakiye" value={formatCurrency(calendar.startBalance)} tone="stone" />
-          <StatPill label="Gelir" value={formatCurrency(calendar.totalIncome)} tone="emerald" />
-          <StatPill label="Nakit çıkışı" value={formatCurrency(calendar.totalExpense)} tone="rose" />
-          <StatPill label="Ay sonu tahmini" value={formatCurrency(calendar.endBalance)} tone={calendar.endBalance >= 0 ? 'emerald' : 'rose'} />
+          <StatPill label="Başlangıç bakiye" value={formatAmount(calendar.startBalance)} tone="stone" />
+          <StatPill label="Gelir" value={formatAmount(calendar.totalIncome)} tone="emerald" />
+          <StatPill label="Nakit çıkışı" value={formatAmount(calendar.totalExpense)} tone="rose" />
+          <StatPill label="Ay sonu tahmini" value={formatAmount(calendar.endBalance)} tone={calendar.endBalance >= 0 ? 'emerald' : 'rose'} />
         </div>
 
         <div>
@@ -173,7 +174,7 @@ export function FullMonthCalendarPanel({ data }: { data: AnalysisData }) {
               <div key={week.weekNumber} className="flex items-center justify-between gap-2 rounded-lg bg-muted/45 px-3 py-2 text-xs">
                 <span className="font-bold text-muted-foreground">{week.weekNumber}. hafta</span>
                 <span className={`font-bold tabular-nums ${week.weeklyNetFlow >= 0 ? 'text-success' : 'text-destructive'}`}>
-                  {week.weeklyNetFlow >= 0 ? '+' : ''}{formatCurrency(week.weeklyNetFlow)}
+                  {week.weeklyNetFlow >= 0 ? '+' : ''}{formatAmount(week.weeklyNetFlow)}
                 </span>
               </div>
             ))}

@@ -6,7 +6,7 @@ import { HelpTooltip, type HelpTooltipContent } from '../ui/help-tooltip'
 import { Progress } from '../ui/progress'
 import type { Budget, CardExpense } from '../../types/database'
 import { buildBudgetAlerts } from '../../utils/budgetAlerts'
-import { formatCurrency } from '../../utils/formatCurrency'
+import { useBalancePrivacy } from '../../hooks/useBalancePrivacy'
 import { diffTL } from '../../utils/money'
 
 type BudgetAlertPanelProps = {
@@ -21,6 +21,7 @@ const budgetAlertHelp = {
 } satisfies HelpTooltipContent
 
 export function BudgetAlertPanel({ budgets, expenses }: BudgetAlertPanelProps) {
+  const { formatAmount } = useBalancePrivacy()
   const alerts = buildBudgetAlerts(budgets, expenses)
 
   if (alerts.length === 0) return null
@@ -58,10 +59,10 @@ export function BudgetAlertPanel({ budgets, expenses }: BudgetAlertPanelProps) {
                     </Badge>
                   </div>
                   <p className="mt-0.5 text-xs text-muted-foreground">
-                    {formatCurrency(alert.spent)} / {formatCurrency(alert.limit)}
+                    {formatAmount(alert.spent)} / {formatAmount(alert.limit)}
                     {alert.status === 'over'
-                      ? ` · ${formatCurrency(diffTL(alert.spent, alert.limit))} fazla`
-                      : ` · kalan ${formatCurrency(alert.remaining)}`}
+                      ? ` · ${formatAmount(diffTL(alert.spent, alert.limit))} fazla`
+                      : ` · kalan ${formatAmount(alert.remaining)}`}
                   </p>
                 </div>
                 <Link

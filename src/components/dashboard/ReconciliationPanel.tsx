@@ -4,7 +4,7 @@ import { Badge } from '../ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card'
 import { HelpTooltip, type HelpTooltipContent } from '../ui/help-tooltip'
 import type { Card as FinanceCard, CardStatementArchive } from '../../types/database'
-import { formatCurrency } from '../../utils/formatCurrency'
+import { useBalancePrivacy } from '../../hooks/useBalancePrivacy'
 import { formatDate } from '../../utils/date'
 import { diffTL } from '../../utils/money'
 
@@ -55,6 +55,7 @@ function buildItems(cards: FinanceCard[], statements: CardStatementArchive[]): R
 }
 
 export function ReconciliationPanel({ cards, statements }: ReconciliationPanelProps) {
+  const { formatAmount } = useBalancePrivacy()
   const items = buildItems(cards, statements)
 
   if (items.length === 0) return null
@@ -86,7 +87,7 @@ export function ReconciliationPanel({ cards, statements }: ReconciliationPanelPr
                   <p className="font-semibold text-foreground">{item.cardLabel}</p>
                   <Badge variant={item.kind === 'delta' ? 'destructive' : 'secondary'}>
                     {item.kind === 'delta'
-                      ? `Fark ${item.delta >= 0 ? '+' : ''}${formatCurrency(item.delta)}`
+                      ? `Fark ${item.delta >= 0 ? '+' : ''}${formatAmount(item.delta)}`
                       : 'Mutabakat bekliyor'}
                   </Badge>
                 </div>

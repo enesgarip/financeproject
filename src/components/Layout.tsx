@@ -1,8 +1,8 @@
-import { CalendarDays, LogOut, Moon, MoreHorizontal, Sun } from 'lucide-react'
+import { CalendarDays, Eye, EyeOff, LogOut, Moon, MoreHorizontal, Sun } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
-import { HeaderActionsProvider, useHeaderActions } from '../contexts/HeaderActionsContext'
+import { BalancePrivacyProvider, useBalancePrivacy } from '../hooks/useBalancePrivacy'
 import { cn } from '../lib/utils'
 import { BottomNav } from './BottomNav'
 import { contentWidthClass, overflowNavItems, primaryNavItems, routeSubtitle, routeTitle, secondaryNavItems } from './navigation'
@@ -18,13 +18,15 @@ function currentDateLabel() {
   }).format(new Date())
 }
 
-/** Renders page-specific action buttons injected via useHeaderActions. */
-function PageHeaderActions() {
-  const { actions } = useHeaderActions()
-  return <>{actions}</>
+export function Layout() {
+  return (
+    <BalancePrivacyProvider>
+      <LayoutInner />
+    </BalancePrivacyProvider>
+  )
 }
 
-export function Layout() {
+function LayoutInner() {
   const { pathname } = useLocation()
   const { signOut, user } = useAuth()
   const contentWidth = contentWidthClass(pathname)
@@ -33,6 +35,7 @@ export function Layout() {
     return storedTheme ? storedTheme === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches
   })
   const [menuOpen, setMenuOpen] = useState(false)
+  const { hidden: balancesHidden, toggleHidden: toggleBalancesHidden } = useBalancePrivacy()
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', isDark)
@@ -42,7 +45,6 @@ export function Layout() {
   const userInitial = user?.email?.[0]?.toUpperCase() ?? '?'
 
   return (
-    <HeaderActionsProvider>
     <div className="min-h-dvh bg-background text-foreground">
       {/* ── Desktop Sidebar ── */}
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col lg:flex">
@@ -167,7 +169,15 @@ export function Layout() {
                 <span>{currentDateLabel()}</span>
               </div>
 
-              <PageHeaderActions />
+              <button
+                type="button"
+                onClick={toggleBalancesHidden}
+                aria-pressed={balancesHidden}
+                className="grid size-9 place-items-center rounded-xl border border-border/70 bg-card/80 text-muted-foreground backdrop-blur-sm transition hover:bg-muted hover:text-foreground"
+                aria-label={balancesHidden ? 'Tutarları göster' : 'Tutarları gizle'}
+              >
+                {balancesHidden ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
 
               <button
                 type="button"
@@ -241,6 +251,5 @@ export function Layout() {
         <BottomNav />
       </div>
     </div>
-    </HeaderActionsProvider>
   )
 }

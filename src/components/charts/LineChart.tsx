@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { formatCurrency } from '@/utils/formatCurrency'
 import { useChartWidth } from './useChartWidth'
 import { DEFAULT_PADDING, buildPathD, formatTickValue, niceScale } from './chartUtils'
 
@@ -186,7 +185,7 @@ export function LineChart({ data, series, height = 260 }: LineChartProps) {
                         <span className="truncate">{s.name}</span>
                       </span>
                       <span className="font-mono font-semibold tabular-nums text-foreground">
-                        {formatCurrency(v as number)}
+                        {formatAmount(v as number)}
                       </span>
                     </div>
                   )

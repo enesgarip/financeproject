@@ -10,6 +10,7 @@ import { useStockPrices } from '../hooks/useStockPrices'
 import { normalizeTicker, type StockPrices } from '../lib/stockQuotesClient'
 import type { Asset } from '../types/database'
 import { formatCurrency, formatNumber, parseNumber } from '../utils/formatCurrency'
+import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
 import { GOLD_LEDGER_SOURCE } from '../utils/goldLedger'
 import type { MarketRatesSnapshot } from '../utils/marketRates'
 import { diffTL, sumTL, roundTL } from '../utils/money'
@@ -219,7 +220,7 @@ function ProfitBadge({ profit, profitPct }: { profit: number; profitPct: number 
     <div className={`mt-3 flex items-center gap-1.5 rounded-xl border px-3 py-2 text-sm ${up ? 'border-success/20 bg-success/8 text-success' : 'border-destructive/20 bg-destructive/8 text-destructive'}`}>
       {up ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
       <span className="font-mono font-semibold tabular-nums">
-        {profit >= 0 ? '+' : ''}{formatCurrency(profit)} ({profitPct >= 0 ? '+' : ''}{profitPct.toFixed(1)}%)
+        {profit >= 0 ? '+' : ''}{formatAmount(profit)} ({profitPct >= 0 ? '+' : ''}{profitPct.toFixed(1)}%)
       </span>
     </div>
   )
@@ -282,7 +283,7 @@ function AssetsOverview({ rows, snapshot, stockPrices }: { rows: Asset[]; snapsh
               <div className="min-w-0">
                 <p className="finance-label">Toplam Varlık</p>
                 <p className="finance-value mt-1.5 text-[clamp(1.75rem,7vw,2.5rem)] font-bold leading-none text-foreground">
-                  {formatCurrency(total)}
+                  {formatAmount(total)}
                 </p>
               </div>
               <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/12 text-primary">
@@ -293,7 +294,7 @@ function AssetsOverview({ rows, snapshot, stockPrices }: { rows: Asset[]; snapsh
             <div className="mt-4 grid grid-cols-2 gap-2">
               <div className="min-w-0 rounded-xl border border-border/60 bg-muted/30 px-3 py-2.5">
                 <p className="finance-label truncate">Nakit</p>
-                <p className="finance-value mt-1 truncate text-sm font-bold text-success">{formatCurrency(cashTotal)}</p>
+                <p className="finance-value mt-1 truncate text-sm font-bold text-success">{formatAmount(cashTotal)}</p>
               </div>
               <div className="min-w-0 rounded-xl border border-border/60 bg-muted/30 px-3 py-2.5">
                 <p className="finance-label truncate">En Büyük Kalem</p>
@@ -307,7 +308,7 @@ function AssetsOverview({ rows, snapshot, stockPrices }: { rows: Asset[]; snapsh
               <div className="mt-2 min-w-0 rounded-xl border border-border/60 bg-muted/30 px-3 py-2.5">
                 <p className="finance-label truncate">Hisse Kâr / Zarar</p>
                 <p className={`finance-value mt-1 truncate text-sm font-bold tabular-nums ${stockProfitTotal >= 0 ? 'text-success' : 'text-destructive'}`}>
-                  {stockProfitTotal >= 0 ? '+' : ''}{formatCurrency(stockProfitTotal)} ({stockProfitPct >= 0 ? '+' : ''}{stockProfitPct.toFixed(1)}%)
+                  {stockProfitTotal >= 0 ? '+' : ''}{formatAmount(stockProfitTotal)} ({stockProfitPct >= 0 ? '+' : ''}{stockProfitPct.toFixed(1)}%)
                 </p>
               </div>
             ) : null}
@@ -329,6 +330,7 @@ function AssetsOverview({ rows, snapshot, stockPrices }: { rows: Asset[]; snapsh
 }
 
 export function AssetsPage() {
+  const { formatAmount } = useBalancePrivacy()
   const { snapshot } = useMarketRates()
   const [stockPrices, setStockPrices] = useState<StockPrices>({})
   const fieldContext = useMemo<FieldCtx>(() => ({ snapshot, stockPrices }), [snapshot, stockPrices])
@@ -411,7 +413,7 @@ export function AssetsPage() {
           if (isGoldLedgerAsset(row)) return `${row.category} · defter`
           return row.category === 'Hisse' && row.symbol ? `${row.category} · ${row.symbol}` : row.category
         }}
-        renderDetails={(row) => [`Değer: ${formatCurrency(effectiveAssetValue(row, snapshot, stockPrices))}`]}
+        renderDetails={(row) => [`Değer: ${formatAmount(effectiveAssetValue(row, snapshot, stockPrices))}`]}
         canEditRow={(row) => row.category !== 'Altın'}
         canDeleteRow={(row) => !isGoldLedgerAsset(row)}
         renderCard={(row, { menu }) => {
@@ -441,7 +443,7 @@ export function AssetsPage() {
               <div className="mt-4 flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
                 <div className="min-w-0">
                   <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Değer</p>
-                  <p className="mt-0.5 font-mono text-lg font-black tabular-nums text-foreground">{formatCurrency(value)}</p>
+                  <p className="mt-0.5 font-mono text-lg font-black tabular-nums text-foreground">{formatAmount(value)}</p>
                 </div>
                 {(asset.category === 'Altın' || asset.category === 'Hisse') && asset.amount > 0 ? (
                   <div className="min-w-0">

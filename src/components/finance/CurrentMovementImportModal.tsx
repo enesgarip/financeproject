@@ -25,7 +25,6 @@ import {
   type ParsedDenizBankMovement,
   type ParsedDenizBankPayment,
 } from '../../utils/denizBankMovementParser'
-import { formatCurrency } from '../../utils/formatCurrency'
 import { dateRangeFromIsoDates, rowsInReviewPeriod } from '../../utils/importReviewPeriod'
 import { roundTL, sumTL } from '../../utils/money'
 import { getCardStatementPeriod } from '../../utils/cardStatement'
@@ -506,7 +505,7 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
                           {formatShortDate(movement.date)} · {movement.category}
                         </p>
                       </div>
-                      <span className="shrink-0 text-xs font-black text-foreground">{formatCurrency(movement.amount)}</span>
+                      <span className="shrink-0 text-xs font-black text-foreground">{formatAmount(movement.amount)}</span>
                     </div>
 
                     {movement.isInstallment && (
@@ -535,7 +534,7 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
                         </label>
                         {effectiveCount > 1 && (
                           <span className="text-[11px] text-success">
-                            → kalan {remaining}, toplam {formatCurrency(roundTL(movement.amount * remaining))}
+                            → kalan {remaining}, toplam {formatAmount(roundTL(movement.amount * remaining))}
                           </span>
                         )}
                       </div>
@@ -650,14 +649,14 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
                                   <p className="text-[10px] font-bold uppercase text-info">Banka</p>
                                   <p className="truncate text-xs font-bold text-foreground">{movement.description}</p>
                                   <p className="text-[11px] text-muted-foreground">
-                                    {formatShortDate(movement.date)} · {formatCurrency(movement.amount)}
+                                    {formatShortDate(movement.date)} · {formatAmount(movement.amount)}
                                   </p>
                                 </div>
                                 <div className="min-w-0">
                                   <p className="text-[10px] font-bold uppercase text-primary">App</p>
                                   <p className="truncate text-xs font-bold text-foreground">{expense.description || 'Açıklama yok'}</p>
                                   <p className="text-[11px] text-muted-foreground">
-                                    {formatShortDate(expense.spent_at)} · {formatCurrency(expense.amount)} · {appExpenseStatusLabel(expense.status)}
+                                    {formatShortDate(expense.spent_at)} · {formatAmount(expense.amount)} · {appExpenseStatusLabel(expense.status)}
                                   </p>
                                 </div>
                               </div>
@@ -677,7 +676,7 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
                     <div className="min-w-0">
                       <span className="block text-xs font-bold text-info">Sadece bankada ({bankOnly.length})</span>
                       <span className="mt-0.5 block text-[11px] text-muted-foreground">
-                        PDF'te var ama app'te yok — seçtiklerini içe aktar. Toplam {formatCurrency(bankOnlyTotal)}
+                        PDF'te var ama app'te yok — seçtiklerini içe aktar. Toplam {formatAmount(bankOnlyTotal)}
                       </span>
                     </div>
                     <button type="button" onClick={toggleImportAll} className="shrink-0 text-xs font-bold text-primary">
@@ -727,7 +726,7 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
                           </div>
                         </div>
                         <span className="shrink-0 text-right text-xs font-black text-foreground">
-                          {formatCurrency(movement.amount)}
+                          {formatAmount(movement.amount)}
                         </span>
                       </button>
                     )
@@ -742,7 +741,7 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
                     <div className="min-w-0">
                       <span className="block text-xs font-bold text-warning">Sadece app'te ({appOnly.length})</span>
                       <span className="mt-0.5 block text-[11px] text-muted-foreground">
-                        App'te var ama bankada yok — çift sayılmış olabilir. Toplam {formatCurrency(appOnlyTotal)}
+                        App'te var ama bankada yok — çift sayılmış olabilir. Toplam {formatAmount(appOnlyTotal)}
                       </span>
                     </div>
                     <button type="button" onClick={toggleCancelAll} className="shrink-0 text-xs font-bold text-warning">
@@ -784,7 +783,7 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
                           </div>
                         </div>
                         <span className="shrink-0 text-right text-xs font-black text-foreground">
-                          {formatCurrency(expense.amount)}
+                          {formatAmount(expense.amount)}
                         </span>
                       </button>
                     )
@@ -813,7 +812,7 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
                             {formatShortDate(movement.date)} · {movement.detail || 'Taksitli işlem'} · **** {movement.cardLastFour}
                           </p>
                         </div>
-                        <span className="shrink-0 text-xs font-black text-foreground">{formatCurrency(movement.amount)}</span>
+                        <span className="shrink-0 text-xs font-black text-foreground">{formatAmount(movement.amount)}</span>
                       </div>
                     ))}
                   </div>

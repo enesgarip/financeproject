@@ -16,7 +16,7 @@ import { Input } from '../ui/input'
 import { Progress } from '../ui/progress'
 import type { Card as FinanceCard, TransactionHistory, TransactionHistoryType } from '../../types/database'
 import { daysUntil, nextMonthlyDate } from '../../utils/date'
-import { formatCurrency } from '../../utils/formatCurrency'
+import { useBalancePrivacy } from '../../hooks/useBalancePrivacy'
 import { diffTL } from '../../utils/money'
 import { normalizeSearchText } from '../../utils/searchText'
 import {
@@ -48,6 +48,7 @@ export function CreditCardSnapshotPanel({
   totalLimit: number
   usageRate: number
 }) {
+  const { formatAmount } = useBalancePrivacy()
   const creditCards = cards.filter((card) => card.card_type === 'kredi_karti')
   const visibleCards = [...creditCards].sort((left, right) => right.debt_amount - left.debt_amount).slice(0, 3)
   const availableLimit = Math.max(0, diffTL(totalLimit, totalDebt))
@@ -65,11 +66,11 @@ export function CreditCardSnapshotPanel({
         action={<StatusBadge tone={dueSoonCount > 0 ? 'warning' : 'good'}>{dueSoonCount > 0 ? `${dueSoonCount} yakın vade` : 'Kontrol altında'}</StatusBadge>}
       />
       <div className="mt-5">
-        <AmountDisplay label="Toplam kart borcu" value={formatCurrency(totalDebt)} tone={tone} size="lg" />
+        <AmountDisplay label="Toplam kart borcu" value={formatAmount(totalDebt)} tone={tone} size="lg" />
       </div>
       <div className="mt-5 grid grid-cols-2 gap-2">
-        <MiniStat label="Açık ekstre" value={formatCurrency(statementDebt)} tone={statementDebt > 0 ? 'warning' : 'good'} />
-        <MiniStat label="Kullanılabilir" value={formatCurrency(availableLimit)} tone="good" />
+        <MiniStat label="Açık ekstre" value={formatAmount(statementDebt)} tone={statementDebt > 0 ? 'warning' : 'good'} />
+        <MiniStat label="Kullanılabilir" value={formatAmount(availableLimit)} tone="good" />
       </div>
       <div className="mt-5">
         <ProgressStrip label="Limit kullanımı" value={usageRate} tone={tone} detail={`${creditCards.length} kredi kartı takipte`} />
@@ -86,7 +87,7 @@ export function CreditCardSnapshotPanel({
                 <p className="truncate text-sm font-black text-foreground">{card.card_name}</p>
                 <p className="truncate text-xs text-muted-foreground">{card.bank_name}</p>
               </div>
-              <p title={formatCurrency(card.debt_amount)} className="finance-value max-w-[45%] shrink-0 truncate text-sm font-black text-foreground">{formatCurrency(card.debt_amount)}</p>
+              <p title={formatAmount(card.debt_amount)} className="finance-value max-w-[45%] shrink-0 truncate text-sm font-black text-foreground">{formatAmount(card.debt_amount)}</p>
             </Link>
           ))}
         </div>
@@ -112,6 +113,7 @@ export function AnalyticsSnapshotPanel({
   loanDebt: number
   personalDebt: number
 }) {
+  const { formatAmount } = useBalancePrivacy()
   const assetDebtRatio = totalAssets > 0 ? Math.min(100, (totalDebts / totalAssets) * 100) : totalDebts > 0 ? 100 : 0
 
   const donutData: DonutSlice[] = [
@@ -127,8 +129,8 @@ export function AnalyticsSnapshotPanel({
         {/* Net flow card */}
         <MetricCard
           label="Nakit dengesi"
-          value={`${cashFlow.netFlow >= 0 ? '+' : ''}${formatCurrency(cashFlow.netFlow)}`}
-          description={`Gelir ${formatCurrency(cashFlow.income)} · Nakit çıkışı ${formatCurrency(cashFlow.outflow)}`}
+          value={`${cashFlow.netFlow >= 0 ? '+' : ''}${formatAmount(cashFlow.netFlow)}`}
+          description={`Gelir ${formatAmount(cashFlow.income)} · Nakit çıkışı ${formatAmount(cashFlow.outflow)}`}
           tone={cashFlow.netFlow >= 0 ? 'good' : 'danger'}
           icon={TrendingUp}
           deltaLabel={cashFlow.netFlow >= 0 ? 'up' : 'down'}
@@ -155,7 +157,7 @@ export function AnalyticsSnapshotPanel({
             tone={assetDebtRatio >= 80 ? 'danger' : assetDebtRatio >= 45 ? 'warning' : 'good'}
           />
           <p className="mt-2 text-xs text-muted-foreground">
-            Varlık {formatCurrency(totalAssets)} · Borç {formatCurrency(totalDebts)}
+            Varlık {formatAmount(totalAssets)} · Borç {formatAmount(totalDebts)}
           </p>
           <div className="mt-4 flex flex-col gap-3">
             <ProgressStrip label="Borç Baskısı" value={assetDebtRatio} tone={assetDebtRatio >= 80 ? 'danger' : assetDebtRatio >= 45 ? 'warning' : 'good'} />
@@ -179,6 +181,7 @@ export function CurrentDebtTotalsPanel({
   personalDebt: number
   paymentDebt: number
 }) {
+  const { formatAmount } = useBalancePrivacy()
   return (
     <Card className="border-0 shadow-[var(--shadow-card)] ring-1 ring-border/80">
       <CardHeader className="pb-2">
@@ -188,17 +191,18 @@ export function CurrentDebtTotalsPanel({
         </CardTitle>
       </CardHeader>
       <CardContent className="grid grid-cols-[repeat(2,minmax(0,1fr))] gap-2 pt-0">
-        <CashFlowMetric label="Toplam borç" value={formatCurrency(totalDebt)} tone="rose" />
-        <CashFlowMetric label="Kart borcu" value={formatCurrency(cardDebt)} tone="rose" />
-        <CashFlowMetric label="Kredi borcu" value={formatCurrency(loanDebt)} tone="rose" />
-        <CashFlowMetric label="Kişisel borç" value={formatCurrency(personalDebt)} tone="rose" />
-        <CashFlowMetric label="Fatura/ödeme" value={formatCurrency(paymentDebt)} tone="rose" />
+        <CashFlowMetric label="Toplam borç" value={formatAmount(totalDebt)} tone="rose" />
+        <CashFlowMetric label="Kart borcu" value={formatAmount(cardDebt)} tone="rose" />
+        <CashFlowMetric label="Kredi borcu" value={formatAmount(loanDebt)} tone="rose" />
+        <CashFlowMetric label="Kişisel borç" value={formatAmount(personalDebt)} tone="rose" />
+        <CashFlowMetric label="Fatura/ödeme" value={formatAmount(paymentDebt)} tone="rose" />
       </CardContent>
     </Card>
   )
 }
 
 export function CreditLimitSection({ groups, totalUsageRate }: { groups: CreditLimitGroup[]; totalUsageRate: number }) {
+  const { formatAmount } = useBalancePrivacy()
   if (groups.length === 0) return null
 
   return (
@@ -219,14 +223,14 @@ export function CreditLimitSection({ groups, totalUsageRate }: { groups: CreditL
               <div className="min-w-0">
                 <p className="truncate text-sm font-bold text-foreground">{group.label}</p>
                 <p className="mt-0.5 text-xs text-muted-foreground">
-                  {group.cards.length} kart · kalan {formatCurrency(group.available)}
+                  {group.cards.length} kart · kalan {formatAmount(group.available)}
                 </p>
               </div>
-              <p className="shrink-0 text-sm font-extrabold tabular-nums text-foreground">{formatCurrency(group.debt)}</p>
+              <p className="shrink-0 text-sm font-extrabold tabular-nums text-foreground">{formatAmount(group.debt)}</p>
             </div>
             <Progress value={group.usageRate} className="mt-3 h-1.5" aria-label={`${group.label} limit kullanımı %${Math.round(group.usageRate)}`} />
             <div className="mt-2 flex items-center justify-between text-[11px] font-medium text-muted-foreground">
-              <span>Limit {formatCurrency(group.limit)}</span>
+              <span>Limit {formatAmount(group.limit)}</span>
               <span>%{Math.round(group.usageRate)}</span>
             </div>
           </div>
@@ -242,6 +246,7 @@ export function CreditLimitSection({ groups, totalUsageRate }: { groups: CreditL
 }
 
 export function HistorySection({ rows }: { rows: TransactionHistory[] }) {
+  const { formatAmount } = useBalancePrivacy()
   const [activeType, setActiveType] = useState<TransactionHistoryType | 'all'>('all')
   const [query, setQuery] = useState('')
   const deferredQuery = useDeferredValue(query)
@@ -320,8 +325,8 @@ export function HistorySection({ rows }: { rows: TransactionHistory[] }) {
                           <p className="mt-0.5 text-xs text-muted-foreground">{formatHistoryDate(row.occurred_at)}</p>
                         </div>
                         {row.amount !== null ? (
-                          <span title={formatCurrency(row.amount)} className="finance-value max-w-[45%] shrink-0 truncate rounded-lg bg-muted px-2.5 py-1 text-xs font-bold text-foreground">
-                            {formatCurrency(row.amount)}
+                          <span title={formatAmount(row.amount)} className="finance-value max-w-[45%] shrink-0 truncate rounded-lg bg-muted px-2.5 py-1 text-xs font-bold text-foreground">
+                            {formatAmount(row.amount)}
                           </span>
                         ) : null}
                       </div>

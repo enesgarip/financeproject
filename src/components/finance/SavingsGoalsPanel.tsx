@@ -13,7 +13,7 @@ import { deleteSavingsGoal, fetchSavingsGoalsRows, upsertSavingsGoalWithComponen
 import type { InsertFor, SavingsGoal, SavingsGoalComponent, SavingsGoalValueType } from '../../types/database'
 import { useMarketRates } from '../../hooks/useMarketRates'
 import { formatDate } from '../../utils/date'
-import { formatCurrency, parseNumber } from '../../utils/formatCurrency'
+import { parseNumber } from '../../utils/formatCurrency'
 import {
   formatComponentAmount,
   formatSavingsGoalProgress,
@@ -364,7 +364,7 @@ export function SavingsGoalsPanel() {
                       <p className="mt-1.5 text-xs font-semibold tabular-nums text-muted-foreground">{formatSavingsGoalProgress(goal, goalComponents)}</p>
                       {goal.value_type !== 'TRY' && goal.value_type !== 'composite' && (goal.auto_valued || goal.estimated_value_try) ? (
                         <p className="mt-0.5 text-xs text-muted-foreground">
-                          {goal.auto_valued ? 'Güncel' : 'Tahmini'}: <span className="font-semibold tabular-nums text-foreground">{formatCurrency(effectiveGoalValue(goal, snapshot))}</span>
+                          {goal.auto_valued ? 'Güncel' : 'Tahmini'}: <span className="font-semibold tabular-nums text-foreground">{formatAmount(effectiveGoalValue(goal, snapshot))}</span>
                         </p>
                       ) : null}
                       {goal.target_date ? <p className="mt-0.5 text-[11px] text-muted-foreground">Hedef: {formatDate(goal.target_date)}</p> : null}
@@ -518,7 +518,7 @@ export function SavingsGoalsPanel() {
                       <span className="font-mono font-semibold tabular-nums text-foreground">
                         {(() => {
                           const live = valueGoal({ value_type: valueType, current_amount: parseNumber(currentAmount) }, snapshot)
-                          return live === null ? 'Kur bekleniyor…' : formatCurrency(live)
+                          return live === null ? 'Kur bekleniyor…' : formatAmount(live)
                         })()}
                       </span>
                     </div>

@@ -18,7 +18,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/card'
 import type { CardExpense } from '../../types/database'
 import type { DashboardUpcomingItem } from '../../utils/dashboardUpcoming'
 import { daysUntil } from '../../utils/date'
-import { formatCurrency } from '../../utils/formatCurrency'
+import { useBalancePrivacy } from '../../hooks/useBalancePrivacy'
 import { detectSpendingAnomalies } from '../../utils/spendingAnomalies'
 import type { CashFlowSummary } from '../../utils/financeSummary'
 import type { FocusAction, SmartInsight } from './DashboardPanels'
@@ -26,6 +26,7 @@ import type { FocusAction, SmartInsight } from './DashboardPanels'
 type UpcomingItem = DashboardUpcomingItem
 
 export function FocusActionPanel({ actions, cashFlow }: { actions: FocusAction[]; cashFlow: CashFlowSummary }) {
+  const { formatAmount } = useBalancePrivacy()
   const [showAll, setShowAll] = useState(false)
   const primaryAction = actions[0]
   const cashIsPositive = cashFlow.projectedCash >= 0
@@ -54,7 +55,7 @@ export function FocusActionPanel({ actions, cashFlow }: { actions: FocusAction[]
               <div className="rounded-lg bg-card/80 px-3 py-2 ring-1 ring-border/70">
                 <p className="font-bold uppercase text-muted-foreground">Ay sonu</p>
                 <p className={`finance-value mt-1 truncate text-sm font-extrabold ${cashIsPositive ? 'text-success' : 'text-destructive'}`}>
-                  {formatCurrency(cashFlow.projectedCash)}
+                  {formatAmount(cashFlow.projectedCash)}
                 </p>
               </div>
               <div className="rounded-lg bg-card/80 px-3 py-2 ring-1 ring-border/70">
@@ -135,6 +136,7 @@ function FocusActionCard({ action }: { action: FocusAction }) {
 }
 
 export function SpendingRadarPanel({ expenses }: { expenses: CardExpense[] }) {
+  const { formatAmount } = useBalancePrivacy()
   const { anomalies, recurring } = useMemo(() => detectSpendingAnomalies(expenses), [expenses])
 
   const hasContent = anomalies.length > 0 || recurring.length > 0
@@ -179,7 +181,7 @@ export function SpendingRadarPanel({ expenses }: { expenses: CardExpense[] }) {
               </span>
             </div>
             <p className="mt-0.5 text-[11px] text-amber-700/80 dark:text-amber-300/70">
-              Bu ay {formatCurrency(anomaly.currentMonth)} · ort. {formatCurrency(anomaly.threeMonthAvg)}
+              Bu ay {formatAmount(anomaly.currentMonth)} · ort. {formatAmount(anomaly.threeMonthAvg)}
             </p>
           </div>
         ))}
@@ -189,7 +191,7 @@ export function SpendingRadarPanel({ expenses }: { expenses: CardExpense[] }) {
               <p className="truncate text-xs font-semibold text-foreground">{item.description}</p>
               <p className="text-[11px] text-muted-foreground">{item.monthCount} ay tekrar · {item.category}</p>
             </div>
-            <span className="shrink-0 text-xs font-bold tabular-nums text-foreground">{formatCurrency(item.amount)}</span>
+            <span className="shrink-0 text-xs font-bold tabular-nums text-foreground">{formatAmount(item.amount)}</span>
           </div>
         ))}
       </CardContent>

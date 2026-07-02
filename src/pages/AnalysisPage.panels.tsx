@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Progress } from '../components/ui/progress'
 import type { Budget, CardExpense, Debt, NetWorthSnapshot } from '../types/database'
 import { dateInputValue, daysUntil, formatDate, isDateInMonth, startOfMonth } from '../utils/date'
-import { formatCurrency } from '../utils/formatCurrency'
+import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
 import { getCurrentSalary, sum } from '../utils/financeSummary'
 import {
   analysisObligationsInput,
@@ -28,6 +28,7 @@ import { analyzeQuietDays } from '../utils/quietDays'
 import { StatPill } from './AnalysisPage.atoms'
 
 export function UpcomingInstallments({ data }: { data: AnalysisData }) {
+  const { formatAmount } = useBalancePrivacy()
   const upcoming = useMemo(() => {
     const cardsById = new Map(data.cards.map((card) => [card.id, card]))
     const loansById = new Map(data.loans.map((loan) => [loan.id, loan]))
@@ -98,7 +99,7 @@ export function UpcomingInstallments({ data }: { data: AnalysisData }) {
                   </p>
                 </div>
                 <span className="shrink-0 whitespace-nowrap rounded-lg bg-muted px-2 py-1 font-mono text-xs font-bold tabular-nums text-foreground ring-1 ring-border/60">
-                  {formatCurrency(item.amount)}
+                  {formatAmount(item.amount)}
                 </span>
               </div>
             </div>
@@ -110,6 +111,7 @@ export function UpcomingInstallments({ data }: { data: AnalysisData }) {
 }
 
 export function BudgetProgress({ budgets, expenses }: { budgets: Budget[]; expenses: CardExpense[] }) {
+  const { formatAmount } = useBalancePrivacy()
   const usage = useMemo(() => buildBudgetUsage(budgets, expenses), [budgets, expenses])
 
   if (usage.length === 0) {
@@ -131,11 +133,11 @@ export function BudgetProgress({ budgets, expenses }: { budgets: Budget[]; expen
               <div className="min-w-0">
                 <p className="truncate text-sm font-bold text-foreground">{budget.category}</p>
                 <p className="mt-0.5 text-xs text-muted-foreground">
-                  {formatCurrency(budget.spent)} / {formatCurrency(budget.limit)}
+                  {formatAmount(budget.spent)} / {formatAmount(budget.limit)}
                 </p>
                 {isOver ? (
                   <p className="mt-0.5 text-xs font-medium text-destructive">
-                    Limit {formatCurrency(diffTL(budget.spent, budget.limit))} aşıldı
+                    Limit {formatAmount(diffTL(budget.spent, budget.limit))} aşıldı
                   </p>
                 ) : isWarning ? (
                   <p className="mt-0.5 text-xs font-medium text-warning">Limite yaklaşıyor</p>
@@ -152,6 +154,7 @@ export function BudgetProgress({ budgets, expenses }: { budgets: Budget[]; expen
 }
 
 export function FinancialCalendar({ data }: { data: AnalysisData }) {
+  const { formatAmount } = useBalancePrivacy()
   const { monthStart, daysInMonth, firstOffset, eventsByDate, busyDays } = useMemo(() => {
     const monthStart = startOfMonth()
     const daysInMonth = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0).getDate()
@@ -207,7 +210,7 @@ export function FinancialCalendar({ data }: { data: AnalysisData }) {
                   {dayEvents.length > 0 ? (
                     <span className={`hidden text-[10px] font-bold tabular-nums min-[560px]:inline ${dayTotal >= 0 ? 'text-success' : 'text-destructive'}`}>
                       {dayTotal >= 0 ? '+' : ''}
-                      {formatCurrency(dayTotal).replace(',00', '')}
+                      {formatAmount(dayTotal).replace(',00', '')}
                     </span>
                   ) : null}
                 </div>
@@ -232,14 +235,14 @@ export function FinancialCalendar({ data }: { data: AnalysisData }) {
                     <span className="font-bold text-foreground">{formatDate(date)}</span>
                     <span className={`shrink-0 font-bold tabular-nums ${dayTotal >= 0 ? 'text-success' : 'text-destructive'}`}>
                       {dayTotal >= 0 ? '+' : ''}
-                      {formatCurrency(dayTotal)}
+                      {formatAmount(dayTotal)}
                     </span>
                   </div>
                   <div className="mt-2 flex flex-col gap-1.5">
                     {dayEvents.map((event) => (
                       <div key={`detail-${event.id}`} className="flex min-w-0 items-start justify-between gap-2 rounded-md bg-background/70 px-2 py-1.5">
                         <span className="min-w-0 break-words font-semibold text-foreground">{event.title}</span>
-                        <span className="shrink-0 font-bold tabular-nums text-muted-foreground">{formatCurrency(event.amount)}</span>
+                        <span className="shrink-0 font-bold tabular-nums text-muted-foreground">{formatAmount(event.amount)}</span>
                       </div>
                     ))}
                   </div>
@@ -263,7 +266,7 @@ function CalendarEventPill({ event }: { event: CalendarEvent }) {
 
   return (
     <p
-      title={`${event.title} - ${formatCurrency(event.amount)}`}
+      title={`${event.title} - ${formatAmount(event.amount)}`}
       className={`rounded-md px-1.5 py-1 text-[8.5px] font-semibold leading-[1.12] [overflow-wrap:anywhere] min-[560px]:text-[10px] ${toneClass}`}
     >
       {event.title}
@@ -272,6 +275,7 @@ function CalendarEventPill({ event }: { event: CalendarEvent }) {
 }
 
 export function PriceIncreaseRadar({ trends }: { trends: PriceTrend[] }) {
+  const { formatAmount } = useBalancePrivacy()
   if (trends.length === 0) return null
   const visible = trends.slice(0, 6)
 
@@ -304,7 +308,7 @@ export function PriceIncreaseRadar({ trends }: { trends: PriceTrend[] }) {
               </span>
             </div>
             <p className="mt-1 text-[11px] text-amber-700/80 dark:text-amber-300/70">
-              {formatCurrency(trend.firstAmount)} → {formatCurrency(trend.lastAmount)} · {trend.monthsSpan} ayda
+              {formatAmount(trend.firstAmount)} → {formatAmount(trend.lastAmount)} · {trend.monthsSpan} ayda
               {trend.monthsSpan >= 3 ? ` · yıllık ~%${Math.round(trend.annualizedPct)}` : ''}
             </p>
           </div>
@@ -315,6 +319,7 @@ export function PriceIncreaseRadar({ trends }: { trends: PriceTrend[] }) {
 }
 
 export function PeopleLedger({ debts }: { debts: Debt[] }) {
+  const { formatAmount } = useBalancePrivacy()
   const rows = Array.from(
     debts
       .filter((debt) => debt.status === 'açık')
@@ -356,8 +361,8 @@ export function PeopleLedger({ debts }: { debts: Debt[] }) {
                   <Badge variant={net >= 0 ? 'default' : 'destructive'}>{net >= 0 ? 'Alacak' : 'Borç'}</Badge>
                 </div>
                 <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
-                  <StatPill label="Alacak" value={formatCurrency(row.receivable)} tone="emerald" />
-                  <StatPill label="Borç" value={formatCurrency(row.borrowed)} tone="rose" />
+                  <StatPill label="Alacak" value={formatAmount(row.receivable)} tone="emerald" />
+                  <StatPill label="Borç" value={formatAmount(row.borrowed)} tone="rose" />
                 </div>
               </div>
             )
@@ -369,6 +374,7 @@ export function PeopleLedger({ debts }: { debts: Debt[] }) {
 }
 
 export function MonthCloseAssistant({ data, missingTables }: { data: AnalysisData; missingTables: string[] }) {
+  const { formatAmount } = useBalancePrivacy()
   const monthKey = dateInputValue(startOfMonth())
   const today = new Date()
   const currentMonthExpenses = data.cardExpenses.filter((expense) => activeCardExpense(expense) && isDateInMonth(expense.spent_at))
@@ -392,7 +398,7 @@ export function MonthCloseAssistant({ data, missingTables }: { data: AnalysisDat
   const checks = [
     { label: 'Ekstreler kontrol edildi', done: statementDayPassedCards.length === 0, detail: statementDayPassedCards.length > 0 ? `${statementDayPassedCards.length} kart bekliyor` : 'Kesim günü geçmiş açık dönem yok' },
     { label: 'Taksitler işlendi', done: staleInstallments === 0, detail: staleInstallments > 0 ? `${staleInstallments} taksit planlı kaldı` : 'Bu aya kadar planlı taksit yok' },
-    { label: 'Maaş kaydı güncel', done: Boolean(getCurrentSalary(data.salaryHistory)), detail: getCurrentSalary(data.salaryHistory) ? formatCurrency(getCurrentSalary(data.salaryHistory)?.amount ?? 0) : 'Maaş eklenmedi' },
+    { label: 'Maaş kaydı güncel', done: Boolean(getCurrentSalary(data.salaryHistory)), detail: getCurrentSalary(data.salaryHistory) ? formatAmount(getCurrentSalary(data.salaryHistory)?.amount ?? 0) : 'Maaş eklenmedi' },
     { label: 'Faturalar kapandı', done: openPaymentCount === 0, detail: openPaymentCount > 0 ? `${openPaymentCount} açık ödeme` : 'Açık vade görünmüyor' },
     { label: 'Bütçe aşımı yok', done: budgetOverruns === 0, detail: budgetOverruns > 0 ? `${budgetOverruns} kategori limit üstü` : 'Limitler sakin' },
     { label: 'Veri altyapısı hazır', done: missingTables.length === 0, detail: missingTables.length > 0 ? `${missingTables.length} migration bekliyor` : 'Tablolar erişilebilir' },
@@ -485,6 +491,7 @@ export function MilestonesPanel({ data, snapshots }: { data: AnalysisData; snaps
 }
 
 export function QuietDaysPanel({ data }: { data: AnalysisData }) {
+  const { formatAmount } = useBalancePrivacy()
   const result = useMemo(() => analyzeQuietDays(data.cardExpenses, data.transactionHistory), [data.cardExpenses, data.transactionHistory])
 
   const quietRate = result.totalDaysThisMonth > 0 ? Math.round((result.quietDaysThisMonth / result.totalDaysThisMonth) * 100) : 0
@@ -527,7 +534,7 @@ export function QuietDaysPanel({ data }: { data: AnalysisData }) {
           {result.avgSpendingOnActiveDay > 0 ? (
             <div className="flex items-center justify-between gap-3 rounded-xl bg-muted/45 px-3 py-2 text-sm">
               <span className="text-muted-foreground">Harcama günü ortalaması</span>
-              <span className="font-bold tabular-nums text-foreground">{formatCurrency(result.avgSpendingOnActiveDay)}</span>
+              <span className="font-bold tabular-nums text-foreground">{formatAmount(result.avgSpendingOnActiveDay)}</span>
             </div>
           ) : null}
           {result.bestStreakThisMonth >= 2 ? (
@@ -542,6 +549,7 @@ export function QuietDaysPanel({ data }: { data: AnalysisData }) {
 }
 
 export function SubscriptionsPanel({ data }: { data: AnalysisData }) {
+  const { formatAmount } = useBalancePrivacy()
   const salary = getCurrentSalary(data.salaryHistory)
   const result = useMemo(
     () => buildSubscriptionSummary(data.cardExpenses, data.payments, salary?.amount ?? null),
@@ -555,7 +563,7 @@ export function SubscriptionsPanel({ data }: { data: AnalysisData }) {
           <div>
             <CardTitle>Abonelik & sabit giderler</CardTitle>
             <p className="mt-1 text-sm text-muted-foreground">
-              {result.items.filter((i) => i.isActive).length} aktif · toplam {formatCurrency(result.monthlyTotal)}/ay
+              {result.items.filter((i) => i.isActive).length} aktif · toplam {formatAmount(result.monthlyTotal)}/ay
               {result.incomeRatio !== null ? ` · gelirin %${result.incomeRatio}'i` : ''}
             </p>
           </div>
@@ -578,7 +586,7 @@ export function SubscriptionsPanel({ data }: { data: AnalysisData }) {
                   </p>
                 </div>
                 <span className="shrink-0 whitespace-nowrap rounded-lg bg-muted px-2 py-1 font-mono text-xs font-bold tabular-nums text-foreground ring-1 ring-border/60">
-                  {formatCurrency(item.amount)}
+                  {formatAmount(item.amount)}
                 </span>
               </div>
             </div>
@@ -596,6 +604,7 @@ const comparisonModeLabels: Record<ComparisonMode, string> = {
 }
 
 export function PeriodComparisonPanel({ data }: { data: AnalysisData }) {
+  const { formatAmount } = useBalancePrivacy()
   const [mode, setMode] = useState<ComparisonMode>('month')
   const result = useMemo(() => comparePeriods(data.cardExpenses, mode), [data.cardExpenses, mode])
 
@@ -625,8 +634,8 @@ export function PeriodComparisonPanel({ data }: { data: AnalysisData }) {
       </CardHeader>
       <CardContent className="space-y-3 pt-2">
         <div className="grid grid-cols-3 gap-2">
-          <StatPill label={result.currentLabel} value={formatCurrency(result.currentTotal)} tone="stone" />
-          <StatPill label={result.previousLabel} value={formatCurrency(result.previousTotal)} tone="stone" />
+          <StatPill label={result.currentLabel} value={formatAmount(result.currentTotal)} tone="stone" />
+          <StatPill label={result.previousLabel} value={formatAmount(result.previousTotal)} tone="stone" />
           <StatPill label="Değişim" value={changeLabel} tone={result.totalChangePercent !== null && result.totalChangePercent <= 0 ? 'emerald' : 'rose'} />
         </div>
         {result.rows.length > 0 ? (
@@ -640,8 +649,8 @@ export function PeriodComparisonPanel({ data }: { data: AnalysisData }) {
             {result.rows.slice(0, 8).map((row) => (
               <div key={row.category} className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-3 rounded-xl bg-muted/45 px-3 py-2 text-sm">
                 <span className="min-w-0 truncate text-muted-foreground">{row.category}</span>
-                <span className="shrink-0 whitespace-nowrap text-right font-bold tabular-nums text-foreground">{formatCurrency(row.currentAmount)}</span>
-                <span className="shrink-0 whitespace-nowrap text-right tabular-nums text-muted-foreground">{formatCurrency(row.previousAmount)}</span>
+                <span className="shrink-0 whitespace-nowrap text-right font-bold tabular-nums text-foreground">{formatAmount(row.currentAmount)}</span>
+                <span className="shrink-0 whitespace-nowrap text-right tabular-nums text-muted-foreground">{formatAmount(row.previousAmount)}</span>
                 <span className={`shrink-0 whitespace-nowrap text-right text-xs font-bold tabular-nums ${row.direction === 'down' ? 'text-success' : row.direction === 'up' ? 'text-destructive' : 'text-muted-foreground'}`}>
                   {row.changePercent !== null ? `${row.changePercent > 0 ? '+' : ''}%${row.changePercent}` : row.direction === 'new' ? 'Yeni' : '—'}
                 </span>

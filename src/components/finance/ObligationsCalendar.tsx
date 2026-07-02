@@ -11,7 +11,6 @@ import {
 import { useMemo, useState } from 'react'
 import { cn } from '../../lib/utils'
 import { addDays, dateInputValue, formatDate, isDateInMonth, startOfMonth } from '../../utils/date'
-import { formatCurrency } from '../../utils/formatCurrency'
 import { sumTL } from '../../utils/money'
 import {
   buildFinanceObligationsForMonth,
@@ -108,15 +107,15 @@ function formatCalendarCellAmount(value: number) {
 
 function calendarCellAmountLabel(totals: ReturnType<typeof dayTotals>) {
   if (totals.outflow > 0) {
-    return { compact: formatCalendarCellAmount(totals.outflow), full: formatCurrency(totals.outflow) }
+    return { compact: formatCalendarCellAmount(totals.outflow), full: formatAmount(totals.outflow) }
   }
 
   if (totals.inflow > 0) {
-    return { compact: formatCalendarCellAmount(totals.inflow), full: formatCurrency(totals.inflow) }
+    return { compact: formatCalendarCellAmount(totals.inflow), full: formatAmount(totals.inflow) }
   }
 
   if (totals.cardSettled > 0) {
-    return { compact: formatCalendarCellAmount(totals.cardSettled), full: `Kart ${formatCurrency(totals.cardSettled)}` }
+    return { compact: formatCalendarCellAmount(totals.cardSettled), full: `Kart ${formatAmount(totals.cardSettled)}` }
   }
 
   return null
@@ -192,9 +191,9 @@ export function ObligationsCalendar({ data, loading = false, onPayObligation }: 
         ) : (
           <>
             <div className="grid grid-cols-2 gap-2 min-[720px]:grid-cols-4">
-              <SummaryStat label="Ay yükü" value={formatCurrency(summary.outflow)} tone="danger" />
-              <SummaryStat label="Beklenen giriş" value={formatCurrency(summary.inflow)} tone="success" />
-              <SummaryStat label="Net etki" value={`${summary.net < 0 ? '−' : ''}${formatCurrency(Math.abs(summary.net))}`} tone={summary.net >= 0 ? 'success' : 'danger'} />
+              <SummaryStat label="Ay yükü" value={formatAmount(summary.outflow)} tone="danger" />
+              <SummaryStat label="Beklenen giriş" value={formatAmount(summary.inflow)} tone="success" />
+              <SummaryStat label="Net etki" value={`${summary.net < 0 ? '−' : ''}${formatAmount(Math.abs(summary.net))}`} tone={summary.net >= 0 ? 'success' : 'danger'} />
               <SummaryStat label="Aksiyon" value={`${summary.payableCount}/${summary.itemCount}`} />
             </div>
 
@@ -290,7 +289,7 @@ export function ObligationsCalendar({ data, loading = false, onPayObligation }: 
                         </div>
                         <div className="flex shrink-0 items-center justify-between gap-3 sm:justify-end">
                           <span className={cn('finance-value text-sm font-black tabular-nums', item.direction === 'inflow' ? 'text-success' : 'text-foreground')}>
-                            {item.direction === 'inflow' ? '+' : ''}{formatCurrency(item.amount)}
+                            {item.direction === 'inflow' ? '+' : ''}{formatAmount(item.amount)}
                           </span>
                           {item.action && onPayObligation ? (
                             <Button type="button" size="sm" variant={item.direction === 'inflow' ? 'success' : 'default'} onClick={() => onPayObligation(item)}>

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { formatCurrency } from '@/utils/formatCurrency'
+import { useBalancePrivacy } from '../../hooks/useBalancePrivacy'
 import { useChartWidth } from './useChartWidth'
 import { DEFAULT_PADDING, buildAreaD, buildPathD, formatTickValue, niceScale } from './chartUtils'
 
@@ -31,11 +31,12 @@ const SERIES: SeriesConfig[] = [
 ]
 
 export function CashFlowChart({ data, height = 220 }: CashFlowChartProps) {
+  const { formatAmount } = useBalancePrivacy()
   const [chartRef, chartWidth] = useChartWidth()
   const [hoverIndex, setHoverIndex] = useState<number | null>(null)
 
   const chartSummary = data
-    .map((p) => `${p.label}: gelir ${formatCurrency(p.income)}, nakit çıkışı ${formatCurrency(p.outflow)}, net ${formatCurrency(p.net)}`)
+    .map((p) => `${p.label}: gelir ${formatAmount(p.income)}, nakit çıkışı ${formatAmount(p.outflow)}, net ${formatAmount(p.net)}`)
     .join('; ')
 
   if (data.length === 0) {
@@ -204,7 +205,7 @@ export function CashFlowChart({ data, height = 220 }: CashFlowChartProps) {
                       {s.name}
                     </span>
                     <span className="font-mono text-[10px] font-semibold tabular-nums text-foreground">
-                      {formatCurrency(hovered[s.key])}
+                      {formatAmount(hovered[s.key])}
                     </span>
                   </div>
                 ))}

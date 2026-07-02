@@ -5,7 +5,8 @@ import { Button } from '../components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Progress } from '../components/ui/progress'
 import { analysisFinanceSummaryInput, type AnalysisData } from '../utils/analysisView'
-import { formatCurrency, parseNumber } from '../utils/formatCurrency'
+import { parseNumber } from '../utils/formatCurrency'
+import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
 import { buildLoanAffordability } from '../utils/loanAffordability'
 import { StatPill } from './AnalysisPage.atoms'
 
@@ -26,6 +27,7 @@ function pct(value: number) {
 }
 
 export function LoanAffordabilityPanel({ data }: { data: AnalysisData }) {
+  const { formatAmount } = useBalancePrivacy()
   const [requestedPrincipal, setRequestedPrincipal] = useState(100000)
   const [termMonths, setTermMonths] = useState(24)
   const [monthlyInterestRatePct, setMonthlyInterestRatePct] = useState(3.5)
@@ -64,9 +66,9 @@ export function LoanAffordabilityPanel({ data }: { data: AnalysisData }) {
       </CardHeader>
       <CardContent className="space-y-4 pt-3">
         <div className="grid gap-2 min-[560px]:grid-cols-4">
-          <StatPill label="Güvenli taksit alanı" value={formatCurrency(maxMonthlyPayment)} tone={maxMonthlyPayment > 0 ? 'emerald' : 'rose'} />
-          <StatPill label="Tahmini maks. kredi" value={formatCurrency(result.maxPrincipal)} tone={result.maxPrincipal > 0 ? 'emerald' : 'rose'} />
-          <StatPill label="Seçilen kredi taksiti" value={formatCurrency(result.requestedMonthlyPayment)} tone={decisionTone} />
+          <StatPill label="Güvenli taksit alanı" value={formatAmount(maxMonthlyPayment)} tone={maxMonthlyPayment > 0 ? 'emerald' : 'rose'} />
+          <StatPill label="Tahmini maks. kredi" value={formatAmount(result.maxPrincipal)} tone={result.maxPrincipal > 0 ? 'emerald' : 'rose'} />
+          <StatPill label="Seçilen kredi taksiti" value={formatAmount(result.requestedMonthlyPayment)} tone={decisionTone} />
           <StatPill label="Kredi sonrası yük" value={pct(result.requestedLoadRatio)} tone={decisionTone} />
         </div>
 
@@ -86,8 +88,8 @@ export function LoanAffordabilityPanel({ data }: { data: AnalysisData }) {
           </div>
           <Progress value={loadPct} autoColor size="default" />
           <div className="mt-3 grid gap-2 min-[760px]:grid-cols-3">
-            <StatPill label="Düzenli maaş" value={formatCurrency(result.stableMonthlyIncome)} />
-            <StatPill label="Ölçülen aylık yük" value={formatCurrency(result.assessedMonthlyLoad)} />
+            <StatPill label="Düzenli maaş" value={formatAmount(result.stableMonthlyIncome)} />
+            <StatPill label="Ölçülen aylık yük" value={formatAmount(result.assessedMonthlyLoad)} />
             <StatPill label="Nakit tamponu" value={`${result.cashBufferMonths.toFixed(1)} ay`} tone={result.cashBufferMonths >= 1 ? 'emerald' : 'rose'} />
           </div>
         </div>
@@ -108,10 +110,10 @@ export function LoanAffordabilityPanel({ data }: { data: AnalysisData }) {
               </Button>
             </div>
             <div className="mt-3 grid gap-2 min-[560px]:grid-cols-4">
-              <StatPill label="Önerilen tutar" value={formatCurrency(recommendation.principal)} tone="emerald" />
+              <StatPill label="Önerilen tutar" value={formatAmount(recommendation.principal)} tone="emerald" />
               <StatPill label="Önerilen vade" value={`${recommendation.termMonths} ay`} />
-              <StatPill label="Aylık taksit" value={formatCurrency(recommendation.monthlyPayment)} tone="emerald" />
-              <StatPill label="Toplam maliyet" value={formatCurrency(recommendation.totalInterest)} />
+              <StatPill label="Aylık taksit" value={formatAmount(recommendation.monthlyPayment)} tone="emerald" />
+              <StatPill label="Toplam maliyet" value={formatAmount(recommendation.totalInterest)} />
             </div>
           </div>
         ) : (
@@ -183,16 +185,16 @@ export function LoanAffordabilityPanel({ data }: { data: AnalysisData }) {
             <div className="mt-2 grid gap-1.5 text-sm">
               <div className="flex items-center justify-between gap-3">
                 <span className="text-muted-foreground">Toplam geri ödeme</span>
-                <span className="font-mono font-semibold tabular-nums text-foreground">{formatCurrency(result.requestedTotalPayment)}</span>
+                <span className="font-mono font-semibold tabular-nums text-foreground">{formatAmount(result.requestedTotalPayment)}</span>
               </div>
               <div className="flex items-center justify-between gap-3">
                 <span className="text-muted-foreground">Tahmini faiz maliyeti</span>
-                <span className="font-mono font-semibold tabular-nums text-foreground">{formatCurrency(result.requestedTotalInterest)}</span>
+                <span className="font-mono font-semibold tabular-nums text-foreground">{formatAmount(result.requestedTotalInterest)}</span>
               </div>
               <div className="flex items-center justify-between gap-3">
                 <span className="text-muted-foreground">En düşük stres bakiyesi</span>
                 <span className="font-mono font-semibold tabular-nums text-foreground">
-                  {result.requestedStressLowestBalance === null ? '—' : formatCurrency(result.requestedStressLowestBalance)}
+                  {result.requestedStressLowestBalance === null ? '—' : formatAmount(result.requestedStressLowestBalance)}
                 </span>
               </div>
             </div>

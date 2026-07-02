@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ArrowDownCircle, ArrowUpCircle, CreditCard, Landmark, Minus, Receipt, RefreshCw, Repeat } from 'lucide-react'
 import { formatDate } from '../utils/date'
-import { formatCurrency } from '../utils/formatCurrency'
+import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
 import {
   buildActivityFeed,
   groupByDate,
@@ -133,6 +133,7 @@ export function ActivityFeedPanel({ data }: { data: AnalysisData }) {
 }
 
 function ActivityRow({ item }: { item: ActivityItem }) {
+  const { formatAmount } = useBalancePrivacy()
   const Icon = ICON_MAP[item.icon] ?? Minus
   return (
     <div className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 hover:bg-muted/40 transition">
@@ -160,7 +161,7 @@ function ActivityRow({ item }: { item: ActivityItem }) {
           'text-muted-foreground',
         )}>
           {item.direction === 'inflow' ? '+' : item.direction === 'outflow' ? '−' : ''}
-          {formatCurrency(Math.abs(item.amountTL))}
+          {formatAmount(Math.abs(item.amountTL))}
         </span>
       ) : null}
     </div>

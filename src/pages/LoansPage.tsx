@@ -12,7 +12,8 @@ import {
 } from '../data/repositories/loansRepo'
 import type { Loan, LoanInstallment } from '../types/database'
 import { formatDate } from '../utils/date'
-import { formatCurrency, parseNumber } from '../utils/formatCurrency'
+import { parseNumber } from '../utils/formatCurrency'
+import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
 import { useFinancePaymentDrawer } from '../hooks/useFinancePaymentDrawer'
 import { BankLogo } from '../components/finance/BankLogo'
 import { Badge } from '../components/ui/badge'
@@ -39,6 +40,7 @@ import {
 const COMPLETED_LOAN_GROUPS = ['Tamamlananlar']
 
 export function LoansPage() {
+  const { formatAmount } = useBalancePrivacy()
   const { confirm, confirmDialog } = useConfirmDialog()
   const { drawerProps, openPaymentDrawer } = useFinancePaymentDrawer()
   const [reloadLoans, setReloadLoans] = useState<(() => Promise<void>) | null>(null)
@@ -228,7 +230,7 @@ export function LoansPage() {
               )}
               <div className="min-w-0 flex-1">
                 <p className="truncate font-semibold text-foreground">
-                  {item.installment_no}. taksit · <span className="font-mono">{formatCurrency(item.amount)}</span>
+                  {item.installment_no}. taksit · <span className="font-mono">{formatAmount(item.amount)}</span>
                 </p>
                 <p className="text-xs text-muted-foreground">
                   {formatDate(item.due_date)} · {item.status === 'ödendi' ? 'Ödendi' : 'Bekliyor'}
@@ -326,8 +328,8 @@ export function LoansPage() {
         renderSubtitle={(row) => `${row.bank_name} · ${row.status === 'active' ? 'Aktif kredi' : 'Kapalı kredi'}`}
         renderDetails={(row) => {
           const details = [
-            `Kalan borç: ${formatCurrency(row.remaining_amount)}`,
-            `Aylık ödeme: ${formatCurrency(row.monthly_payment)}`,
+            `Kalan borç: ${formatAmount(row.remaining_amount)}`,
+            `Aylık ödeme: ${formatAmount(row.monthly_payment)}`,
           ]
           return details
         }}
@@ -366,11 +368,11 @@ export function LoansPage() {
               <div className="mt-4 flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
                 <div className="min-w-0">
                   <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Kalan borç</p>
-                  <p className="mt-0.5 font-mono text-lg font-black tabular-nums text-destructive">{formatCurrency(loan.remaining_amount)}</p>
+                  <p className="mt-0.5 font-mono text-lg font-black tabular-nums text-destructive">{formatAmount(loan.remaining_amount)}</p>
                 </div>
                 <div className="min-w-0">
                   <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Aylık taksit</p>
-                  <p className="mt-0.5 font-mono text-lg font-black tabular-nums text-foreground">{formatCurrency(loan.monthly_payment)}</p>
+                  <p className="mt-0.5 font-mono text-lg font-black tabular-nums text-foreground">{formatAmount(loan.monthly_payment)}</p>
                 </div>
                 {nextPaymentDate ? (
                   <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">

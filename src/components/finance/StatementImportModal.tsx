@@ -16,7 +16,6 @@ import {
 } from '../../data/repositories/cardsRepo'
 import type { Card } from '../../types/database'
 import { getCardStatementPeriod } from '../../utils/cardStatement'
-import { formatCurrency } from '../../utils/formatCurrency'
 import { dateRangeFromIsoDates, rowsInReviewPeriod } from '../../utils/importReviewPeriod'
 import {
   parseDenizBankStatement,
@@ -548,19 +547,19 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
               <div className="rounded-xl bg-muted/40 p-3 text-xs space-y-1.5">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Bankadan gelen</span>
-                  <span className="font-black text-foreground">{formatCurrency(statementTotal)}</span>
+                  <span className="font-black text-foreground">{formatAmount(statementTotal)}</span>
                 </div>
                 {!cleanImport && (
                   <>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">App hesabı</span>
-                      <span className="font-black text-foreground">{formatCurrency(appCardDebt)}</span>
+                      <span className="font-black text-foreground">{formatAmount(appCardDebt)}</span>
                     </div>
                     <div className="h-px bg-border" />
                     <div className="flex justify-between">
                       <span className="font-bold text-muted-foreground">Fark</span>
                       <span className={`font-black ${equalsTL(statementTotal, appCardDebt) ? 'text-success' : 'text-destructive'}`}>
-                        {diff >= 0 ? '+' : ''}{formatCurrency(diff)}
+                        {diff >= 0 ? '+' : ''}{formatAmount(diff)}
                       </span>
                     </div>
                   </>
@@ -659,8 +658,8 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
                               </p>
                             </div>
                             <div className="shrink-0 text-right">
-                              <p className="text-xs font-black text-foreground">{formatCurrency(bankTotal)}</p>
-                              <p className="text-[10px] font-bold text-muted-foreground">App {formatCurrency(expense.amount)}</p>
+                              <p className="text-xs font-black text-foreground">{formatAmount(bankTotal)}</p>
+                              <p className="text-[10px] font-bold text-muted-foreground">App {formatAmount(expense.amount)}</p>
                             </div>
                           </div>
                         </div>
@@ -742,10 +741,10 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
                           )}
                         </div>
                         <span className="shrink-0 text-right text-xs font-black text-foreground">
-                          {formatCurrency(rowTotal)}
+                          {formatAmount(rowTotal)}
                           {tx.isInstallment && (
                             <span className="block text-[10px] font-bold text-muted-foreground">
-                              {formatCurrency(tx.amount)}/ay
+                              {formatAmount(tx.amount)}/ay
                             </span>
                           )}
                         </span>
@@ -802,7 +801,7 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
                         </p>
                       </div>
                       <span className="shrink-0 text-xs font-black text-foreground">
-                        {formatCurrency(tx.amount)}
+                        {formatAmount(tx.amount)}
                       </span>
                     </div>
                   ))}

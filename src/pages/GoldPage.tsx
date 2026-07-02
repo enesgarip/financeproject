@@ -10,7 +10,8 @@ import { Badge } from '../components/ui/badge'
 import { Card, CardContent } from '../components/ui/card'
 import { useMarketRates } from '../hooks/useMarketRates'
 import type { GoldLot, GoldType } from '../types/database'
-import { formatCurrency, formatNumber, parseNumber } from '../utils/formatCurrency'
+import { formatNumber, parseNumber } from '../utils/formatCurrency'
+import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
 import {
   GOLD_TYPE_LABELS,
   GOLD_TYPE_UNIT,
@@ -196,7 +197,7 @@ function GoldOverview({ rows, snapshot }: { rows: GoldLot[]; snapshot: MarketRat
   const knownLiveValue = sumGoldValues(summaries, snapshot, 'knownQuantity')
   const profit = knownLiveValue === null || totalKnownCost <= 0 ? null : diffTL(knownLiveValue, totalKnownCost)
   const profitPct = profit === null || totalKnownCost <= 0 ? null : round2((profit / totalKnownCost) * 100)
-  const totalValueLabel = totalLiveValue === null ? 'Kur bekleniyor' : formatCurrency(totalLiveValue)
+  const totalValueLabel = totalLiveValue === null ? 'Kur bekleniyor' : formatAmount(totalLiveValue)
   const gramSummary = summaries.find((summary) => summary.goldType === 'gram')
   const ceyrekSummary = summaries.find((summary) => summary.goldType === 'ceyrek')
   const unknownSummaries = summaries.filter((summary) => summary.unknownQuantity > 0)
@@ -213,14 +214,14 @@ function GoldOverview({ rows, snapshot }: { rows: GoldLot[]; snapshot: MarketRat
         />
         <MetricCard
           label="Toplam maliyet"
-          value={formatCurrency(totalKnownCost)}
+          value={formatAmount(totalKnownCost)}
           description="maliyeti kayıtlı alımlar"
           tone="neutral"
           icon={Coins}
         />
         <MetricCard
           label="Kâr / zarar"
-          value={profit === null ? 'Kur bekleniyor' : `${profit >= 0 ? '+' : ''}${formatCurrency(profit)}`}
+          value={profit === null ? 'Kur bekleniyor' : `${profit >= 0 ? '+' : ''}${formatAmount(profit)}`}
           delta={profitPct === null ? undefined : `${profitPct >= 0 ? '+' : ''}%${profitPct.toFixed(1)}`}
           deltaLabel={profit === null ? 'flat' : profit > 0 ? 'up' : profit < 0 ? 'down' : 'flat'}
           description="kayıtlı maliyet üzerinden"
@@ -293,6 +294,7 @@ function validateGoldLot(formData: FormData): Record<string, string> {
 }
 
 export function GoldPage() {
+  const { formatAmount } = useBalancePrivacy()
   const { snapshot } = useMarketRates()
 
   return (
@@ -365,13 +367,13 @@ export function GoldPage() {
               <div className="min-w-0">
                 <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Birim maliyet</p>
                 <p className={`mt-0.5 font-mono text-sm font-bold tabular-nums ${noCost ? 'text-muted-foreground' : 'text-foreground'}`}>
-                  {noCost ? 'Bilinmiyor' : formatCurrency(lot.unit_price!)}
+                  {noCost ? 'Bilinmiyor' : formatAmount(lot.unit_price!)}
                 </p>
               </div>
               {totalCost != null ? (
                 <div className="min-w-0">
                   <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Toplam</p>
-                  <p className="mt-0.5 font-mono text-sm font-bold tabular-nums text-foreground">{formatCurrency(totalCost)}</p>
+                  <p className="mt-0.5 font-mono text-sm font-bold tabular-nums text-foreground">{formatAmount(totalCost)}</p>
                 </div>
               ) : null}
             </div>

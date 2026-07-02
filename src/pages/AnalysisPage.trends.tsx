@@ -5,7 +5,7 @@ import { Badge } from '../components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import type { NetWorthSnapshot } from '../types/database'
 import { startOfMonth } from '../utils/date'
-import { formatCurrency } from '../utils/formatCurrency'
+import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
 import { buildCashFlowForecast } from '../utils/cashFlowForecast'
 import { buildMonthlyCashFlow } from '../utils/financeSummary'
 import { analysisFinanceSummaryInput, type AnalysisData } from '../utils/analysisView'
@@ -83,6 +83,7 @@ export function NetWorthTrend({
   snapshots: NetWorthSnapshot[]
   ratesSnapshot: MarketRatesSnapshot | null
 }) {
+  const { formatAmount } = useBalancePrivacy()
   const [unit, setUnit] = useState<RealUnit>('TRY')
   const [range, setRange] = useState<NetWorthRange>('90d')
   const { series: derived, aggregated } = useMemo(
@@ -131,7 +132,7 @@ export function NetWorthTrend({
   }
 
   function displayValue(tryAmount: number, rates: { goldTry?: number | null; usdTry?: number | null }): string {
-    if (unit === 'TRY') return formatCurrency(tryAmount)
+    if (unit === 'TRY') return formatAmount(tryAmount)
     const converted = convertNetWorth(tryAmount, unit, rates)
     if (converted === null) return '—'
     return formatRealValue(converted, unit)
@@ -156,7 +157,7 @@ export function NetWorthTrend({
   const changeTry = diffTL(latest.net_worth, first.net_worth)
   const changeBadge =
     unit === 'TRY'
-      ? `${changeTry >= 0 ? '+' : ''}${formatCurrency(changeTry)}`
+      ? `${changeTry >= 0 ? '+' : ''}${formatAmount(changeTry)}`
       : (realValueChangeBadge(changeTry, unit, currentRates) ??
         (latestConverted !== null && firstConverted !== null
           ? `${latestConverted - firstConverted >= 0 ? '+' : ''}${formatRealValue(latestConverted - firstConverted, unit)}`
@@ -251,6 +252,7 @@ export function NetWorthTrend({
 }
 
 export function ForwardForecast({ data }: { data: AnalysisData }) {
+  const { formatAmount } = useBalancePrivacy()
   const [scenarioOpen, setScenarioOpen] = useState(false)
   const [removedIds, setRemovedIds] = useState<Set<string>>(new Set())
 
@@ -311,15 +313,15 @@ export function ForwardForecast({ data }: { data: AnalysisData }) {
       </CardHeader>
       <CardContent className="space-y-4 pt-3">
         <div className="grid grid-cols-3 gap-2">
-          <StatPill label="Başlangıç" value={formatCurrency(activeForBarChart.startingBalance)} />
+          <StatPill label="Başlangıç" value={formatAmount(activeForBarChart.startingBalance)} />
           <StatPill
             label={activeForBarChart.lowest ? `En düşük · ${shortMonth(activeForBarChart.lowest.monthKey)}` : 'En düşük'}
-            value={formatCurrency(activeForBarChart.lowest?.balance ?? activeForBarChart.startingBalance)}
+            value={formatAmount(activeForBarChart.lowest?.balance ?? activeForBarChart.startingBalance)}
             tone={(activeForBarChart.lowest?.balance ?? 0) < 0 ? 'rose' : 'stone'}
           />
           <StatPill
             label="6 ay sonu"
-            value={formatCurrency(activeForBarChart.endingBalance)}
+            value={formatAmount(activeForBarChart.endingBalance)}
             tone={activeForBarChart.endingBalance >= activeForBarChart.startingBalance ? 'emerald' : 'rose'}
           />
         </div>
@@ -328,7 +330,7 @@ export function ForwardForecast({ data }: { data: AnalysisData }) {
           <div className="rounded-xl border border-destructive/20 bg-destructive/8 p-3">
             <p className="text-sm font-bold text-destructive">{activeForBarChart.firstNegative.monthLabel} içinde nakit açığa düşüyor</p>
             <p className="mt-0.5 text-xs text-destructive/80">
-              Tahmini bakiye {formatCurrency(activeForBarChart.firstNegative.balance)}. Büyük ödemeleri veya tahsilatı öne almak iyi olur.
+              Tahmini bakiye {formatAmount(activeForBarChart.firstNegative.balance)}. Büyük ödemeleri veya tahsilatı öne almak iyi olur.
             </p>
           </div>
         ) : null}
@@ -353,14 +355,14 @@ export function ForwardForecast({ data }: { data: AnalysisData }) {
                   Net{' '}
                   <span className={month.net >= 0 ? 'text-success' : 'text-destructive'}>
                     {month.net >= 0 ? '+' : ''}
-                    {formatCurrency(month.net)}
+                    {formatAmount(month.net)}
                   </span>
                 </p>
               </div>
               <span
                 className={`shrink-0 whitespace-nowrap rounded-lg px-2 py-1 font-mono text-xs font-bold tabular-nums ring-1 ring-border/60 ${month.endingBalance < 0 ? 'bg-destructive/10 text-destructive' : 'bg-muted text-foreground'}`}
               >
-                {formatCurrency(month.endingBalance)}
+                {formatAmount(month.endingBalance)}
               </span>
             </div>
           ))}
@@ -378,7 +380,7 @@ export function ForwardForecast({ data }: { data: AnalysisData }) {
               <span className="flex items-center gap-2">
                 {removedIds.size > 0 && endingDelta !== null ? (
                   <Badge variant={endingDelta >= 0 ? 'success' : 'destructive'}>
-                    {endingDelta >= 0 ? '+' : ''}{formatCurrency(endingDelta)}
+                    {endingDelta >= 0 ? '+' : ''}{formatAmount(endingDelta)}
                   </Badge>
                 ) : null}
                 <span className="text-xs text-muted-foreground">{scenarioOpen ? '▲' : '▼'}</span>
@@ -401,7 +403,7 @@ export function ForwardForecast({ data }: { data: AnalysisData }) {
                             aria-label={`${loan.loan_name} kredisini kaldır`}
                           />
                           <span className="min-w-0 flex-1 truncate text-sm text-foreground">{loan.loan_name}</span>
-                          <span className="shrink-0 text-xs text-muted-foreground">{formatCurrency(loan.monthly_payment)}/ay</span>
+                          <span className="shrink-0 text-xs text-muted-foreground">{formatAmount(loan.monthly_payment)}/ay</span>
                         </label>
                       ))}
                     </div>
@@ -422,7 +424,7 @@ export function ForwardForecast({ data }: { data: AnalysisData }) {
                             aria-label={`${payment.title} ödemesini kaldır`}
                           />
                           <span className="min-w-0 flex-1 truncate text-sm text-foreground">{payment.title}</span>
-                          <span className="shrink-0 text-xs text-muted-foreground">{formatCurrency(payment.amount)}/ay</span>
+                          <span className="shrink-0 text-xs text-muted-foreground">{formatAmount(payment.amount)}/ay</span>
                         </label>
                       ))}
                     </div>
