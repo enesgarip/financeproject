@@ -15,9 +15,10 @@
  * current_period_spending, provision_amount): docs/CARD_DEBT_TRANSITIONS.md.
  * Sayfa veri akışı ve modül haritası: docs/CARDS_ARCHITECTURE.md.
  */
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { CalendarClock, Eye, EyeOff, FileText, History, Info, ScanSearch, ShieldCheck } from 'lucide-react'
+import { useHeaderActions } from '../contexts/HeaderActionsContext'
 import { CrudPage } from '../components/CrudPage'
 import { CurrentMovementImportModal } from '../components/finance/CurrentMovementImportModal'
 import { FinancePaymentDrawer } from '../components/finance/FinancePaymentDrawer'
@@ -62,6 +63,22 @@ import {
 export function CardsPage() {
   const { focusQuickExpense, handleSectionChange, quickExpenseFocus, section } = useCardSectionNavigation()
   const { formatAmount, hidden: balancesHidden, toggleHidden: toggleBalancesHidden } = useBalancePrivacy()
+  const { setActions, clearActions } = useHeaderActions()
+
+  useEffect(() => {
+    setActions(
+      <button
+        type="button"
+        onClick={toggleBalancesHidden}
+        aria-pressed={balancesHidden}
+        className="grid size-9 place-items-center rounded-xl border border-border/70 bg-card/80 text-muted-foreground backdrop-blur-sm transition hover:bg-muted hover:text-foreground"
+        aria-label={balancesHidden ? 'Tutarları göster' : 'Tutarları gizle'}
+      >
+        {balancesHidden ? <EyeOff size={16} /> : <Eye size={16} />}
+      </button>,
+    )
+    return clearActions
+  }, [balancesHidden, toggleBalancesHidden, setActions, clearActions])
   const {
     installments,
     invalidateSnapshot,
@@ -236,17 +253,6 @@ export function CardsPage() {
 
           return (
             <div className="flex flex-col gap-3">
-              <div className="flex justify-end">
-                <button
-                  type="button"
-                  onClick={toggleBalancesHidden}
-                  aria-pressed={balancesHidden}
-                  className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-xs font-bold text-foreground transition hover:bg-muted"
-                >
-                  {balancesHidden ? <Eye size={15} /> : <EyeOff size={15} />}
-                  {balancesHidden ? 'Tutarları göster' : 'Tutarları gizle'}
-                </button>
-              </div>
               {postImportBanner ? (
                 <div className="flex items-center gap-3 rounded-xl border border-info/25 bg-info/8 p-3">
                   <ShieldCheck size={18} className="shrink-0 text-info" />

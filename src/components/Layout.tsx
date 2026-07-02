@@ -2,6 +2,7 @@ import { CalendarDays, LogOut, Moon, MoreHorizontal, Sun } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
+import { HeaderActionsProvider, useHeaderActions } from '../contexts/HeaderActionsContext'
 import { cn } from '../lib/utils'
 import { BottomNav } from './BottomNav'
 import { contentWidthClass, overflowNavItems, primaryNavItems, routeSubtitle, routeTitle, secondaryNavItems } from './navigation'
@@ -15,6 +16,12 @@ function currentDateLabel() {
     month: 'long',
     year: 'numeric',
   }).format(new Date())
+}
+
+/** Renders page-specific action buttons injected via useHeaderActions. */
+function PageHeaderActions() {
+  const { actions } = useHeaderActions()
+  return <>{actions}</>
 }
 
 export function Layout() {
@@ -35,6 +42,7 @@ export function Layout() {
   const userInitial = user?.email?.[0]?.toUpperCase() ?? '?'
 
   return (
+    <HeaderActionsProvider>
     <div className="min-h-dvh bg-background text-foreground">
       {/* ── Desktop Sidebar ── */}
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col lg:flex">
@@ -159,6 +167,8 @@ export function Layout() {
                 <span>{currentDateLabel()}</span>
               </div>
 
+              <PageHeaderActions />
+
               <button
                 type="button"
                 onClick={() => setIsDark((c) => !c)}
@@ -231,5 +241,6 @@ export function Layout() {
         <BottomNav />
       </div>
     </div>
+    </HeaderActionsProvider>
   )
 }
