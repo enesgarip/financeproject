@@ -49,7 +49,7 @@ jobs:
     name: Lighthouse
     runs-on: ubuntu-latest
     container:
-      image: mcr.microsoft.com/playwright:v1.60.0-noble
+      image: mcr.microsoft.com/playwright:v1.61.0-noble
     permissions:
       contents: read
       statuses: write
@@ -96,7 +96,7 @@ jobs:
     name: Playwright Smoke
     runs-on: ubuntu-latest
     container:
-      image: mcr.microsoft.com/playwright:v1.60.0-noble
+      image: mcr.microsoft.com/playwright:v1.61.0-noble
     steps:
       - name: Checkout
         uses: actions/checkout@v5
