@@ -48,8 +48,6 @@ jobs:
   lighthouse:
     name: Lighthouse
     runs-on: ubuntu-latest
-    container:
-      image: mcr.microsoft.com/playwright:v1.61.0-noble
     permissions:
       contents: read
       statuses: write
@@ -65,6 +63,13 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      # Tarayıcı, package-lock'taki Playwright sürümünden kurulur. Sabit sürümlü
+      # docker imajı kullanılmaz: Dependabot playwright'ı yükselttiğinde imaj
+      # etiketi geride kalıyor ve tarayıcı binary'si bulunamayıp CI günlerce
+      # kırmızı kalıyordu (2026-06-22..07-02 arızası).
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
 
       - name: Use Playwright Chromium for Lighthouse
         run: |
@@ -95,8 +100,6 @@ jobs:
   e2e:
     name: Playwright Smoke
     runs-on: ubuntu-latest
-    container:
-      image: mcr.microsoft.com/playwright:v1.61.0-noble
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -109,6 +112,11 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      # Sürüm her zaman package-lock ile eşleşsin diye tarayıcı paketten kurulur
+      # (sabit imaj etiketi yok; gerekçe için lighthouse job'ındaki nota bak).
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
 
       - name: Run Playwright smoke tests
         run: npm run test:e2e

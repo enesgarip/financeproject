@@ -98,12 +98,16 @@ Düzeltme = **ters kayıt** (append-only history bozulmaz). GUC ile yönlendiril
 ## Deploy hattı (otomatik)
 
 `main`'e **push = üretim deploy** (`.github/workflows/deploy.yml`):
-1. **Detect** — migration değişti mi? (değişmediyse backup atlanır, frontend yine deploy olur)
-2. **Pre-migration backup** — şifreli DB yedeği (yalnız migration varsa)
-3. **Migration** — `supabase db push` + edge functions deploy (bist-quote, parse-receipt, parse-statement, push-notify)
-4. **Vercel** — frontend deploy hook
+1. **Verify** — lint + unit test + build kapısı (kırık push migration/Vercel'i tetiklemez)
+2. **Detect** — migration değişti mi? (değişmediyse backup atlanır, frontend yine deploy olur)
+3. **Pre-migration backup** — şifreli DB yedeği (yalnız migration varsa)
+4. **Migration** — `supabase db push` + edge functions deploy (bist-quote, parse-receipt, parse-statement, push-notify)
+5. **Vercel** — frontend deploy hook
 
 CI (`ci.yml`): Lint+Build (required), Playwright smoke, Supabase Migration Check.
+Playwright/Lighthouse job'ları tarayıcıyı package-lock sürümünden kurar
+(`npx playwright install`); sabit sürümlü playwright docker imajı KULLANMA —
+Dependabot paket sürümünü yükselttiğinde imaj geride kalıp CI'ı kırıyor.
 Dependabot patch/minor PR'larını CI yeşilse otomatik squash-merge eder (major elde kalır).
 Günlük şifreli DB yedeği cron'u var (`db-backup.yml`).
 

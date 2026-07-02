@@ -53,6 +53,8 @@
 
 ## P2 - UX / Maintainability
 
+- ~~Fix chronic CI failures and gate deploys.~~ DONE.
+  - 2026-07-02: Kök neden = Dependabot'un playwright'ı yükseltmesi ama ci.yml'deki sabit `mcr.microsoft.com/playwright:vX-noble` imajının geride kalması; 22 Haziran'dan beri her CI koşusu Playwright Smoke + Lighthouse'ta kırmızıydı ve deploy CI'a bağlı olmadığı için fark edilmiyordu. Düzeltme: (1) tarayıcı artık `npx playwright install --with-deps chromium` ile package-lock sürümünden kuruluyor (sabit imaj kaldırıldı); (2) deploy.yml'e `verify` kapısı (lint+test+build) eklendi — kırık push migration/Vercel'i tetiklemiyor. Öneri (elle yapılacak): "Playwright Smoke"u branch protection zorunlu kontrolüne ekle ki Dependabot auto-merge onu da beklesin.
 - ~~Show completed loans in a collapsed "Tamamlananlar" section.~~ DONE.
   - 2026-07-02: `CrudPage` opsiyonel `collapsibleGroups` prop'u kazandı: bu gruplar listenin sonuna alınır ve taksitli harcamalardaki desenle aynı, varsayılan kapalı "Tamamlananlar (N)" bölümü olarak çizilir (boş grup adı = başlıksız normal liste). `LoansPage` bunu kullanır: aktif krediler başlıksız üstte, `status='closed'` krediler (sync_loan_summary trigger'ı kapatır) katlanır bölümde.
 - ~~Make SMS account movement matching tolerant.~~ DONE.

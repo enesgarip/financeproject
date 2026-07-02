@@ -17,6 +17,38 @@ permissions:
   actions: write
 
 jobs:
+  # Hızlı doğrulama kapısı: kırık bir push migration'ları ve Vercel hook'unu
+  # tetiklemesin. CI ayrıca koşar ama deploy ona bağlı değildi; 2026-06-22..07-02
+  # arasında CI 10 gün kırmızıyken deploy'un sorunsuz görünmesi bu yüzdendi.
+  # Kapı bilinçli olarak hafif tutuldu (lint + unit test + build ≈ 2 dk).
+  verify:
+    name: Verify (lint + test + build)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Unit tests
+        run: npm run test:unit
+
+      - name: Build
+        run: npm run build
+        env:
+          VITE_SUPABASE_URL: https://example.supabase.co
+          VITE_SUPABASE_ANON_KEY: ci-anon-key
+
   # Detect whether this push touched any migration file. The pre-migration
   # backup only runs when it did, so UI/edge-only deploys don't take (and crowd
   # out) backups. The daily scheduled backup still covers everything else.
@@ -58,10 +90,10 @@ jobs:
 
   migrate:
     name: Supabase Production Migration
-    needs: [changes, backup]
-    # Proceed unless a required backup failed; a skipped backup (no migration
-    # change) is fine.
-    if: ${{ !cancelled() && needs.backup.result != 'failure' }}
+    needs: [verify, changes, backup]
+    # Proceed unless verify failed or a required backup failed; a skipped
+    # backup (no migration change) is fine.
+    if: ${{ !cancelled() && needs.verify.result == 'success' && needs.backup.result != 'failure' }}
     runs-on: ubuntu-latest
     env:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
