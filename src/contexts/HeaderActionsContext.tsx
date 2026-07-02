@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useState, type ReactNode } from 'react'
 
 type HeaderActionsContextValue = {
   actions: ReactNode
@@ -24,6 +24,7 @@ export function HeaderActionsProvider({ children }: { children: ReactNode }) {
  * dark-mode toggle.  Call `setActions(<button …/>)` on mount and
  * `clearActions()` on unmount to keep the header tidy.
  */
+// eslint-disable-next-line react-refresh/only-export-components
 export function useHeaderActions() {
   const ctx = useContext(HeaderActionsContext)
   if (!ctx) throw new Error('useHeaderActions must be used inside HeaderActionsProvider')
