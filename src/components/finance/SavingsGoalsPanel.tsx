@@ -11,6 +11,7 @@ import { Progress } from '../ui/progress'
 import { useConfirmDialog } from '../ui/use-confirm-dialog'
 import { deleteSavingsGoal, fetchSavingsGoalsRows, upsertSavingsGoalWithComponents } from '../../data/repositories/savingsGoalsRepo'
 import type { InsertFor, SavingsGoal, SavingsGoalComponent, SavingsGoalValueType } from '../../types/database'
+import { useBalancePrivacy } from '../../hooks/useBalancePrivacy'
 import { useMarketRates } from '../../hooks/useMarketRates'
 import { formatDate } from '../../utils/date'
 import { parseNumber } from '../../utils/formatCurrency'
@@ -46,6 +47,7 @@ function defaultCompositeDrafts() {
 }
 
 export function SavingsGoalsPanel() {
+  const { formatAmount } = useBalancePrivacy()
   const { user } = useAuth()
   const { snapshot } = useMarketRates()
   const { confirm, confirmDialog } = useConfirmDialog()

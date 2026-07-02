@@ -7,6 +7,7 @@ import {
   fetchCardLedgerEventsSince,
   insertAccountReconciliation,
 } from '../../data/repositories/financePanelsRepo'
+import { useBalancePrivacy } from '../../hooks/useBalancePrivacy'
 import type { AccountReconciliation, Card, InsertFor, ReconciliationTarget } from '../../types/database'
 import { formatDate } from '../../utils/date'
 import { parseNumber } from '../../utils/formatCurrency'
@@ -47,6 +48,7 @@ const STATUS_META: Record<ReconcileStatus, { variant: 'destructive' | 'secondary
 }
 
 export function LiveReconciliationPanel({ cards }: LiveReconciliationPanelProps) {
+  const { formatAmount } = useBalancePrivacy()
   const { user } = useAuth()
   const [rows, setRows] = useState<AccountReconciliation[]>([])
   const [loadError, setLoadError] = useState('')

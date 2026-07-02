@@ -11,6 +11,7 @@ import {
   fetchPostedInstallmentExpenses,
   updateCardExpense,
 } from '../../data/repositories/cardsRepo'
+import { useBalancePrivacy } from '../../hooks/useBalancePrivacy'
 import type { Card, CardExpense, CardInstallment } from '../../types/database'
 import { expenseCategoryOptions } from '../../utils/categories'
 import { formatMonth } from '../../utils/analysisView'
@@ -49,6 +50,7 @@ const installmentExpensesHelp = {
 } satisfies HelpTooltipContent
 
 export function CardInstallmentExpensesPanel({ cards, reload, setError }: CardInstallmentExpensesPanelProps) {
+  const { formatAmount } = useBalancePrivacy()
   const [expenses, setExpenses] = useState<CardExpense[]>([])
   const [installments, setInstallments] = useState<CardInstallment[]>([])
   const [loading, setLoading] = useState(true)

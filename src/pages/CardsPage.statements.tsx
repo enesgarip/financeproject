@@ -3,6 +3,7 @@ import { useMemo } from 'react'
 import { Badge } from '../components/ui/badge'
 import { Card as SurfaceCard, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { HelpTooltip } from '../components/ui/help-tooltip'
+import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
 import type { Card, CardExpense, CardStatementArchive } from '../types/database'
 import { formatDate } from '../utils/date'
 import { sumTL } from '../utils/money'
@@ -26,6 +27,7 @@ export function ProvisionPanel({
   onPostAll: (expenses: CardExpense[]) => void
   onCancel: (expense: CardExpense) => void
 }) {
+  const { formatAmount } = useBalancePrivacy()
   const pending = provisions.filter((expense) => expense.status === 'provision')
   const cardsById = useMemo(() => new Map(rows.map((card) => [card.id, card])), [rows])
   const totalProvision = sumTL(pending.map((expense) => expense.amount))
@@ -125,6 +127,7 @@ export function StatementPanel({
   actionId: string | null
   onPay: (statement: CardStatementArchive, card: Card) => void
 }) {
+  const { formatAmount } = useBalancePrivacy()
   const cardsById = useMemo(() => new Map(rows.map((card) => [card.id, card])), [rows])
   const openStatements = statements
     .filter((statement) => statement.status === 'open')

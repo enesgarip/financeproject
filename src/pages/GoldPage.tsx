@@ -189,6 +189,7 @@ function GoldLedgerAssetSync({
 }
 
 function GoldOverview({ rows, snapshot }: { rows: GoldLot[]; snapshot: MarketRatesSnapshot | null }) {
+  const { formatAmount } = useBalancePrivacy()
   const summaries = useMemo(() => summarizeGold(rows), [rows])
   if (summaries.length === 0) return null
 

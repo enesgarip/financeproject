@@ -1,3 +1,4 @@
+import { useBalancePrivacy } from '../../hooks/useBalancePrivacy'
 import type { Card } from '../../types/database'
 import { diffTL, sumTL } from '../../utils/money'
 import { Select } from '../ui/input'
@@ -19,6 +20,7 @@ export function AccountSelector({
   label = 'Kaynak hesap',
   emptyMessage = 'Kullanılabilir banka hesabı yok.',
 }: AccountSelectorProps) {
+  const { formatAmount } = useBalancePrivacy()
   const selectedAccount = accounts.find((account) => account.id === value)
   const selectedIsCreditCard = selectedAccount?.card_type === 'kredi_karti'
   const remainingBalance = selectedAccount && !selectedIsCreditCard ? diffTL(selectedAccount.current_balance, amount) : null

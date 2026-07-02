@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import type { ExpenseMatchRow } from '../../data/repositories/cardsRepo'
+import { useBalancePrivacy } from '../../hooks/useBalancePrivacy'
 import { sumTL } from '../../utils/money'
 
 type Props = {
@@ -26,6 +27,7 @@ function statusClassName(status: string) {
 }
 
 export function CardExpenseHistorySection({ expenses, periodLabel }: Props) {
+  const { formatAmount } = useBalancePrivacy()
   const { activeTotal, sortedExpenses } = useMemo(() => {
     const sorted = [...expenses].sort((left, right) => right.spent_at.localeCompare(left.spent_at))
     const active = sorted.filter((expense) => expense.status !== 'cancelled')

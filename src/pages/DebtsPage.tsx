@@ -163,6 +163,7 @@ const debtTone: Record<Debt['direction'], { card: string; detail: string }> = {
 }
 
 function DebtsOverview({ rows, snapshot }: { rows: Debt[]; snapshot: MarketRatesSnapshot | null }) {
+  const { formatAmount } = useBalancePrivacy()
   const openRows = rows.filter((row) => row.status === 'açık')
   if (openRows.length === 0) return null
 

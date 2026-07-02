@@ -14,6 +14,7 @@ import {
   type ExpenseMatchRow,
   type PaymentMatchRow,
 } from '../../data/repositories/cardsRepo'
+import { useBalancePrivacy } from '../../hooks/useBalancePrivacy'
 import type { Card } from '../../types/database'
 import { getCardStatementPeriod } from '../../utils/cardStatement'
 import { dateRangeFromIsoDates, rowsInReviewPeriod } from '../../utils/importReviewPeriod'
@@ -109,6 +110,7 @@ function attachPlannedPayments(
 }
 
 export function StatementImportModal({ card, onClose, onSuccess }: Props) {
+  const { formatAmount } = useBalancePrivacy()
   // Modal açıkken arka plan sayfasının kaymasını engelle (ortak kilit kalıbı).
   useBodyScrollLock(true)
 

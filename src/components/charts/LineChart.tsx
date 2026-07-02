@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useBalancePrivacy } from '../../hooks/useBalancePrivacy'
 import { useChartWidth } from './useChartWidth'
 import { DEFAULT_PADDING, buildPathD, formatTickValue, niceScale } from './chartUtils'
 
@@ -18,6 +19,7 @@ type LineChartProps = {
 }
 
 export function LineChart({ data, series, height = 260 }: LineChartProps) {
+  const { formatAmount } = useBalancePrivacy()
   const [chartRef, chartWidth] = useChartWidth()
   const [hoverIndex, setHoverIndex] = useState<number | null>(null)
 

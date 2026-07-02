@@ -15,6 +15,7 @@ const salaryFields: FormField[] = [
 ]
 
 function SalaryOverview({ rows }: { rows: SalaryHistory[] }) {
+  const { formatAmount } = useBalancePrivacy()
   if (rows.length === 0) return null
 
   const ordered = [...rows].sort((a, b) => a.effective_date.localeCompare(b.effective_date))

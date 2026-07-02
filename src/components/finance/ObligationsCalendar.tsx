@@ -9,6 +9,7 @@ import {
   WalletCards,
 } from 'lucide-react'
 import { useMemo, useState } from 'react'
+import { useBalancePrivacy } from '../../hooks/useBalancePrivacy'
 import { cn } from '../../lib/utils'
 import { addDays, dateInputValue, formatDate, isDateInMonth, startOfMonth } from '../../utils/date'
 import { sumTL } from '../../utils/money'
@@ -105,7 +106,7 @@ function formatCalendarCellAmount(value: number) {
   return `₺${COMPACT_AMOUNT_FORMAT.format(value)}`
 }
 
-function calendarCellAmountLabel(totals: ReturnType<typeof dayTotals>) {
+function calendarCellAmountLabel(totals: ReturnType<typeof dayTotals>, formatAmount: (value: number | null | undefined) => string) {
   if (totals.outflow > 0) {
     return { compact: formatCalendarCellAmount(totals.outflow), full: formatAmount(totals.outflow) }
   }
@@ -133,6 +134,7 @@ function SummaryStat({ label, value, tone = 'neutral' }: { label: string; value:
 }
 
 export function ObligationsCalendar({ data, loading = false, onPayObligation }: ObligationsCalendarProps) {
+  const { formatAmount } = useBalancePrivacy()
   const today = dateInputValue(new Date())
   const [visibleMonth, setVisibleMonth] = useState(() => startOfMonth(new Date()))
   const [selectedDate, setSelectedDate] = useState(today)
@@ -205,7 +207,7 @@ export function ObligationsCalendar({ data, loading = false, onPayObligation }: 
               {cells.map((cell) => {
                 const dayItems = groupedByDate.get(cell.key) ?? []
                 const totals = dayTotals(dayItems)
-                const amountLabel = calendarCellAmountLabel(totals)
+                const amountLabel = calendarCellAmountLabel(totals, formatAmount)
                 const isSelected = cell.key === selectedDateInMonth
                 const isToday = cell.key === today
                 const hasItems = dayItems.length > 0

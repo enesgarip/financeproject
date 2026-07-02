@@ -25,6 +25,7 @@ const toneText: Record<string, string> = {
 }
 
 function DayCell({ day, onSelect, isSelected }: { day: CalendarDay; onSelect: (day: CalendarDay) => void; isSelected: boolean }) {
+  const { formatAmount } = useBalancePrivacy()
   const hasEvents = day.events.length > 0
 
   return (
@@ -68,6 +69,7 @@ function DayCell({ day, onSelect, isSelected }: { day: CalendarDay; onSelect: (d
 }
 
 function DayDetail({ day }: { day: CalendarDay }) {
+  const { formatAmount } = useBalancePrivacy()
   if (day.events.length === 0) {
     return (
       <div className="rounded-xl bg-muted/45 p-3 text-sm text-muted-foreground">

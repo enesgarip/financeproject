@@ -1,4 +1,5 @@
 import { SimpleModal } from '../components/SimpleModal'
+import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
 import type { Card } from '../types/database'
 import { parseNumber } from '../utils/formatCurrency'
 import { diffTL, sumTL } from '../utils/money'
@@ -30,6 +31,7 @@ export function MovementModal({
   onTargetCardChange: (value: string) => void
   onSubmit: (event: React.FormEvent<HTMLFormElement>) => void
 }) {
+  const { formatAmount } = useBalancePrivacy()
   const isTransfer = type === 'transfer'
   const amountValue = parseNumber(amount)
   const target = targetAccounts.find((account) => account.id === targetCardId)

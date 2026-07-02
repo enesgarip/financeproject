@@ -6,6 +6,7 @@ import { MoneyInput } from '../components/finance/MoneyInput'
 import { Badge } from '../components/ui/badge'
 import { Card as SurfaceCard, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { invalidateCategoryMemory, useCategoryMemory } from '../hooks/useCategoryMemory'
+import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
 import { recordCardInstallmentCarryover } from '../data/repositories/cardsRepo'
 import type { Card } from '../types/database'
 import { expenseCategoryOptions } from '../utils/categories'
@@ -23,6 +24,7 @@ export function LegacyInstallmentPanel({
   reload: () => Promise<void>
   setError: (message: string) => void
 }) {
+  const { formatAmount } = useBalancePrivacy()
   const [cardId, setCardId] = useState(() => getLastUsed('expenseCard'))
   const [installmentAmount, setInstallmentAmount] = useState('')
   const [description, setDescription] = useState('')

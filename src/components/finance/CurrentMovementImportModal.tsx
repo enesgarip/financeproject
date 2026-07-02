@@ -14,6 +14,7 @@ import {
 } from '../../data/repositories/cardsRepo'
 import { useAuth } from '../../auth/useAuth'
 import { insertAccountReconciliation } from '../../data/repositories/financePanelsRepo'
+import { useBalancePrivacy } from '../../hooks/useBalancePrivacy'
 import { extractPdfText } from '../../lib/pdfText'
 import type { Card } from '../../types/database'
 import {
@@ -77,6 +78,7 @@ function isMobileDevice() {
 
 
 export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) {
+  const { formatAmount } = useBalancePrivacy()
   useBodyScrollLock(true)
   const { user } = useAuth()
 

@@ -4,6 +4,7 @@ import { Badge } from '../ui/badge'
 import { Card as SurfaceCard, CardContent, CardHeader, CardTitle } from '../ui/card'
 import { HelpTooltip, type HelpTooltipContent } from '../ui/help-tooltip'
 import { fetchCardInstallments } from '../../data/repositories/cardsRepo'
+import { useBalancePrivacy } from '../../hooks/useBalancePrivacy'
 import type { Card, CardInstallment } from '../../types/database'
 import { buildCardInstallmentCalendar, buildCardInstallmentTotalsByCard } from '../../utils/cardInstallmentCalendar'
 
@@ -18,6 +19,7 @@ const installmentCalendarHelp = {
 } satisfies HelpTooltipContent
 
 export function CardInstallmentCalendarPanel({ cards }: CardInstallmentCalendarPanelProps) {
+  const { formatAmount } = useBalancePrivacy()
   const [installments, setInstallments] = useState<CardInstallment[]>([])
   const [loading, setLoading] = useState(true)
 

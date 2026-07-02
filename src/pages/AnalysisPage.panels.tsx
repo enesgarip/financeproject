@@ -257,6 +257,7 @@ export function FinancialCalendar({ data }: { data: AnalysisData }) {
 }
 
 function CalendarEventPill({ event }: { event: CalendarEvent }) {
+  const { formatAmount } = useBalancePrivacy()
   const toneClass = {
     emerald: 'bg-success/12 text-success',
     rose: 'bg-destructive/12 text-destructive',

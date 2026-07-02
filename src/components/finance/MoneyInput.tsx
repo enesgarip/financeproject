@@ -1,3 +1,4 @@
+import { useBalancePrivacy } from '../../hooks/useBalancePrivacy'
 import { parseNumber } from '../../utils/formatCurrency'
 import { Input } from '../ui/input'
 
@@ -20,6 +21,7 @@ export function MoneyInput({
   className = '',
   onParsedChange,
 }: MoneyInputProps) {
+  const { formatAmount } = useBalancePrivacy()
   const parsedValue = parseNumber(value)
 
   function handleBlur() {

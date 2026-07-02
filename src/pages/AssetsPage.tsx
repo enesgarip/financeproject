@@ -215,6 +215,7 @@ function StockPriceSync({ rows, onPrices }: { rows: Asset[]; onPrices: (prices: 
 }
 
 function ProfitBadge({ profit, profitPct }: { profit: number; profitPct: number }) {
+  const { formatAmount } = useBalancePrivacy()
   const up = profit >= 0
   return (
     <div className={`mt-3 flex items-center gap-1.5 rounded-xl border px-3 py-2 text-sm ${up ? 'border-success/20 bg-success/8 text-success' : 'border-destructive/20 bg-destructive/8 text-destructive'}`}>
@@ -233,6 +234,7 @@ function validateAssetForm(formData: FormData): Record<string, string> {
 }
 
 function AssetsOverview({ rows, snapshot, stockPrices }: { rows: Asset[]; snapshot: MarketRatesSnapshot | null; stockPrices: StockPrices }) {
+  const { formatAmount } = useBalancePrivacy()
   if (rows.length === 0) return null
 
   const valueOf = (row: Asset) => effectiveAssetValue(row, snapshot, stockPrices)

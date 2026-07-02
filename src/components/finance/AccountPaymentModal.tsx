@@ -1,4 +1,5 @@
 import { useMemo, useState, type ReactNode } from 'react'
+import { useBalancePrivacy } from '../../hooks/useBalancePrivacy'
 import type { Card } from '../../types/database'
 import { parseNumber } from '../../utils/formatCurrency'
 import { diffTL, greaterThanTL } from '../../utils/money'
@@ -74,6 +75,7 @@ export function AccountPaymentModal({
   validate,
   successAction = false,
 }: AccountPaymentModalProps) {
+  const { formatAmount } = useBalancePrivacy()
   const [validationError, setValidationError] = useState('')
   const amount = useMemo(() => parseNumber(amountValue), [amountValue])
   const previewAmount = accountPreviewAmount?.(amount) ?? amount

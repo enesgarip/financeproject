@@ -35,7 +35,7 @@ type FinancePaymentDrawerProps = {
   detail?: ReactNode
 }
 
-function defaultPaymentDetail(intent: FinanceObligation | null) {
+function defaultPaymentDetail(intent: FinanceObligation | null, formatAmount: (value: number | null | undefined) => string) {
   if (!intent) return null
 
   return (
@@ -121,7 +121,7 @@ export function FinancePaymentDrawer({
       }}
       onSubmit={onSubmit}
     >
-      {detail ?? defaultPaymentDetail(intent)}
+      {detail ?? defaultPaymentDetail(intent, formatAmount)}
     </AccountPaymentModal>
   )
 }
