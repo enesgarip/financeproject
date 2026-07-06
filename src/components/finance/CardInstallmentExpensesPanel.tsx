@@ -14,7 +14,6 @@ import {
 import { useBalancePrivacy } from '../../hooks/useBalancePrivacy'
 import type { Card, CardExpense, CardInstallment } from '../../types/database'
 import { expenseCategoryOptions } from '../../utils/categories'
-import { formatMonth } from '../../utils/analysisView'
 import { formatDate } from '../../utils/date'
 import { parseNumber } from '../../utils/formatCurrency'
 import { sumTL } from '../../utils/money'
@@ -58,7 +57,7 @@ export function CardInstallmentExpensesPanel({ cards, reload, setError }: CardIn
   const [amount, setAmount] = useState('')
   const [description, setDescription] = useState('')
   const [spentAt, setSpentAt] = useState('')
-  const [category, setCategory] = useState(expenseCategoryOptions[0]?.value ?? 'Diger')
+  const [category, setCategory] = useState(expenseCategoryOptions[0]?.value ?? 'Diğer')
   const [installmentCount, setInstallmentCount] = useState('2')
   const [note, setNote] = useState('')
   const [localError, setLocalError] = useState('')
@@ -290,7 +289,7 @@ export function CardInstallmentExpensesPanel({ cards, reload, setError }: CardIn
                       {item.installment_no}/{item.installment_count}. taksit - {formatAmount(item.amount)}
                     </p>
                     <p className={`text-xs ${isPaid ? 'text-success/80' : 'text-muted-foreground'}`}>
-                      {formatMonth(item.due_month)} - {installmentStatusLabel(item)}
+                      {formatDate(item.due_month)} - {installmentStatusLabel(item)}
                     </p>
                     {!isPaid ? (
                       <p className="mt-1 text-[11px] leading-4 text-muted-foreground">

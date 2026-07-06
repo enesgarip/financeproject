@@ -1,6 +1,6 @@
 # AI Context Index
 
-Last reviewed: 2026-06-22
+Last reviewed: 2026-07-06
 
 This file is the cheapest starting point for future AI/Codex sessions. Its job
 is to reduce repeated repo discovery: read this first, choose the smallest
@@ -217,7 +217,7 @@ paylaşır; her sayfa süpersetini client-side daraltır). Query client: `src/ap
 | **Kart borcu / breakdown** | `utils/cardLedger.ts`, `utils/financeSummary.ts` (`clampCardBreakdown`) | `data/repositories/cardsRepo.ts`, `services/cardLedgerActions.ts` | `pages/CardsPage.tsx` (+ `.crud.tsx`, `.helpers.ts`, `.sections.tsx`, `.overview.tsx`, `.statements.tsx`, `.list.tsx`) |
 | **Ekstre / statement döngüsü** | `utils/cardStatement.ts`, `utils/statementCycle.ts`, `utils/statementReminder.ts`, `utils/importReviewPeriod.ts`, `utils/denizBankStatementParser.ts` (+ `.test.ts`), `utils/transactionFingerprint.ts` | `data/repositories/cardsRepo.ts` (`fetchCardExpenseMatchRows`, `fetchCardPaymentMatchRows`, `addCardExpense`, `payPaymentFromCardImport`) | `components/finance/StatementImportModal.tsx`, `pages/CardsPage.tsx` |
 | **DenizBank güncel hareket mutabakatı** | `utils/denizBankMovementParser.ts` (+ `.test.ts`), `utils/importReviewPeriod.ts`, `utils/transactionFingerprint.ts` | `data/repositories/cardsRepo.ts` (`fetchCardExpenseMatchRows`, `fetchCardPaymentMatchRows`, `addCardExpense`, `payPaymentFromCardImport`, `cancelCardExpense`) | `components/finance/CurrentMovementImportModal.tsx`, `pages/CardsPage.tsx`, `pages/CardsPage.list.tsx` |
-| **Taksit takvimi** | `utils/cardInstallmentCalendar.ts` | `data/repositories/cardsRepo.ts` (`addCardExpense`, `recordCardInstallmentCarryover`) | `pages/CardsPage.tsx`, `pages/CardsPage.expense.tsx` |
+| **Taksit takvimi** | `utils/cardInstallmentCalendar.ts` | `data/repositories/cardsRepo.ts` (`addCardExpense`, `recordCardInstallmentCarryover`; `due_month` legacy ad, gerçek taksit tarihini taşır) | `pages/CardsPage.tsx`, `pages/CardsPage.expense.tsx` |
 | **Banka bakiyesi / hareket / mutabakat** | `utils/accountLedger.ts`, `utils/reconciliation.ts` | `data/repositories/financePanelsRepo.ts`, `services/accountLedgerActions.ts`, `services/accountMovements.ts` | `pages/CardsPage.tsx`, `pages/CardsPage.list.tsx`, `components/finance/AccountLedgerPanel.tsx` |
 | **Klasik banka/kart UX (IBAN, maskeleme, son hareketler, bakiye gizleme)** | `utils/accountLedger.ts`, `hooks/useBalancePrivacy.tsx`, `pages/CardsPage.helpers.ts` | `data/repositories/cardAliasesRepo.ts`, `data/repositories/financePanelsRepo.ts` | `pages/CardsPage.tsx`, `pages/CardsPage.list.tsx`, `pages/CardsPage.crud.tsx`, `components/finance/FinancePaymentDrawer.tsx` |
 | **Kredi & taksitleri** | `utils/financeSummary.ts` (`projectLoanSummary`) | `data/repositories/loansRepo.ts` | `pages/LoansPage.tsx` |

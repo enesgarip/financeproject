@@ -15,7 +15,7 @@ import { getLastUsed, setLastUsed } from '../utils/lastUsed'
 import { diffTL, sumTL } from '../utils/money'
 import { isMissingSupabaseCapabilityError, missingSupabaseCapabilityMessage } from '../utils/supabaseErrors'
 import { openNativePicker } from '../lib/utils'
-import { cardOptionLabel, isMonthValue, moneyShare, monthDateValue, monthInputValue } from './CardsPage.helpers'
+import { cardOptionLabel, moneyShare } from './CardsPage.helpers'
 import { OverviewStat } from './CardsPage.overview'
 import { formatCurrency, parseNumber } from '../utils/formatCurrency'
 import { parseReceiptImage } from '../lib/receiptParseClient'
@@ -41,7 +41,7 @@ export function QuickExpensePanel({
   const [paymentMode, setPaymentMode] = useState<'cash' | 'installment'>('cash')
   const [installmentCount, setInstallmentCount] = useState('1')
   const [paidInstallments, setPaidInstallments] = useState('0')
-  const [nextDueMonth, setNextDueMonth] = useState(monthInputValue())
+  const [nextDueDate, setNextDueDate] = useState(dateInputValue(new Date()))
   const [expenseStatus, setExpenseStatus] = useState<CardExpenseStatus>('posted')
   const [localError, setLocalError] = useState('')
   const [saving, setSaving] = useState(false)
@@ -63,7 +63,7 @@ export function QuickExpensePanel({
   const remainingInstallmentCount = Math.max(1, parsedInstallmentCount - parsedPaidInstallments)
   const carryoverAmount = sumTL(Array.from({ length: remainingInstallmentCount }, () => firstPeriodAmount))
   const isCarryover = parsedInstallmentCount > 1 && parsedPaidInstallments > 0
-  const previewDate = isCarryover ? monthDateValue(nextDueMonth) : spentAt
+  const previewDate = isCarryover ? nextDueDate : spentAt
   const statementPreview = useMemo(() => getCardStatementPeriod(selectedCard, previewDate), [selectedCard, previewDate])
   const debitPreview = Math.max(0, diffTL(selectedCard?.current_balance, parsedAmount))
   const isProvision = expenseStatus === 'provision'
@@ -72,7 +72,7 @@ export function QuickExpensePanel({
     parsedAmount > 0 &&
     trimmedDescription.length > 0 &&
     !saving &&
-    (!isCarryover || (isMonthValue(nextDueMonth) && nextDueMonth >= monthInputValue()))
+    (!isCarryover || Boolean(nextDueDate))
 
   // "Harcama ekle / Taksit ekle" kısayolundan gelen kartı ve modu önceden seç.
   const focusCardId = focus?.cardId
@@ -122,12 +122,8 @@ export function QuickExpensePanel({
       setLocalError('Açıklama yazmalısın.')
       return
     }
-    if (isCarryover && !isMonthValue(nextDueMonth)) {
-      setLocalError('Sıradaki taksit ayını seçmelisin.')
-      return
-    }
-    if (isCarryover && nextDueMonth < monthInputValue()) {
-      setLocalError('Sıradaki taksit ayı geçmiş olamaz.')
+    if (isCarryover && !nextDueDate) {
+      setLocalError('Sıradaki taksit tarihini seçmelisin.')
       return
     }
     setSaving(true)
@@ -140,7 +136,7 @@ export function QuickExpensePanel({
         installmentAmount: firstPeriodAmount,
         totalInstallments: parsedInstallmentCount,
         paidInstallments: parsedPaidInstallments,
-        nextDueMonth,
+        nextDueDate,
         category,
       })
       : await addCardExpense({
@@ -173,7 +169,7 @@ export function QuickExpensePanel({
     setPaymentMode('cash')
     setInstallmentCount('1')
     setPaidInstallments('0')
-    setNextDueMonth(monthInputValue())
+    setNextDueDate(dateInputValue(new Date()))
     setExpenseStatus('posted')
     await reload()
   }
@@ -385,15 +381,16 @@ export function QuickExpensePanel({
               </label>
               {isCarryover ? (
                 <label className="block min-w-0 text-sm font-semibold text-foreground">
-                  Sıradaki taksit ayı
+                  Sıradaki taksit tarihi
                   <input
-                    value={nextDueMonth}
+                    value={nextDueDate}
                     onChange={(event) => {
-                      setNextDueMonth(event.target.value)
+                      setNextDueDate(event.target.value)
                       setLocalError('')
                     }}
-                    type="month"
-                    min={monthInputValue()}
+                    onClick={(event) => openNativePicker(event.currentTarget)}
+                    onFocus={(event) => openNativePicker(event.currentTarget)}
+                    type="date"
                     className="mt-1 block w-full min-w-0 rounded-lg border border-input px-3 py-2.5 outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 dark:bg-card/50 dark:text-foreground"
                     required
                   />

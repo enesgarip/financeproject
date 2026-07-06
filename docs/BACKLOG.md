@@ -224,6 +224,11 @@ pattern'ler ve açık düzeltme planı yer alıyor.
 
 ## Recently Cleared / No Longer First Next Task
 
+- 2026-07-06 card-installment due-date fix: installment rows now preserve the
+  transaction day instead of normalizing to the 1st of the month, and
+  `post_due_card_installments` moves only due scheduled rows into
+  `current_period_spending` before statement cutting so boundary-day billing stays
+  correct.
 - 2026-06-18 Lighthouse CI now maps the GitHub Actions token to `LHCI_GITHUB_TOKEN` with job-scoped status permission, so LHCI can publish GitHub status without an extra PAT while still uploading `.lighthouseci` reports as artifacts.
 - 2026-06-18 Lighthouse CI target changed to `/login`; Chrome flags, throttling mode, and FCP/load waits were hardened after GitHub runner logs showed `NO_FCP` on the unauthenticated route audit.
 - 2026-06-18 Lighthouse CI now serves the built app through `npm run preview` on `127.0.0.1:4173` instead of LHCI's random-port static server, aligning it with the Playwright smoke-test network pattern after repeated GitHub runner `NO_FCP` failures.

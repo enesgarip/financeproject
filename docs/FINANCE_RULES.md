@@ -2,7 +2,7 @@
 
 ## Scope
 
-This file records the current business rules inferred from the codebase as of 2026-06-20. If code and this file diverge, update both intentionally.
+This file records the current business rules inferred from the codebase as of 2026-07-06. If code and this file diverge, update both intentionally.
 
 ## Money and Formatting
 
@@ -93,10 +93,15 @@ A daily `pg_cron` job runs `run_scheduled_card_maintenance()` so time-based card
 transitions happen on the correct day even if the app is never opened.
 
 - It impersonates each credit-card user (sets the JWT `sub` claim) and calls the
-  existing, audited RPCs — `cut_due_card_statements` and `post_card_provision` —
-  so there is no duplicated money logic.
+  existing, audited RPCs — `post_due_card_installments`,
+  `cut_due_card_statements`, and `post_card_provision` — so there is no
+  duplicated money logic.
 - Statement cutting is idempotent (one archive per user/card/month); the client
   still calls `cut_due_card_statements` on app open as an immediate fallback.
+- Scheduled card installments keep the transaction day as their due date. They
+  become `current_period_spending` only after that exact date passes. Maintenance
+  posts due rows before statement cutting; the statement cut then bills rows on
+  or before the boundary and leaves later due dates in the new period.
 - Provisions still pending after a threshold (default 7 days) are treated as
   cleared and posted into the current period. This is the one transition that
   mutates state on an assumption; it is logged to `transaction_history`.
@@ -146,10 +151,16 @@ Current movement reconciliation:
 
 From `src/utils/cardInstallmentCalendar.ts` and page logic:
 
-- scheduled installments are summarized by `due_month`
+- scheduled installments are summarized by `due_month`; the column name is
+  legacy, and the value is now the exact installment due date rather than always
+  the first day of the month
 - installment calendar defaults to upcoming months from the current month
 - only `scheduled` installments count in scheduled-total style calculations
-- `posted` installments represent already-posted/consumed rows
+- `posted` installments represent already-posted/consumed rows after their due
+  date has passed
+- when a multi-installment card expense is created or a provision is posted, only
+  installment rows whose exact due date is on/before today are posted immediately;
+  later rows stay scheduled
 - credit-card installments are not separate debt
 - the unpaid installment total is informational/planning data and must not be added on top of card debt
 - posted installments become payable as part of the card statement

@@ -29,7 +29,6 @@ import {
 } from '../../utils/denizBankStatementParser'
 import { matchDenizBankMovementPayments, type ParsedDenizBankMovement } from '../../utils/denizBankMovementParser'
 import { diffTL, equalsTL, roundTL, sumTL } from '../../utils/money'
-import { addMonthsToMonth, monthInputValue } from '../../pages/CardsPage.helpers'
 import { parseStatementText } from '../../lib/statementParseClient'
 import { extractPdfText } from '../../lib/pdfText'
 import { CardExpenseHistorySection } from './CardExpenseHistorySection'
@@ -259,11 +258,6 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
     return statementDate ? new Date(`${statementDate}T00:00:00`) : new Date()
   }
 
-  function todayIso() {
-    const now = new Date()
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
-  }
-
   async function handleCleanImport() {
     const toImport = unmatched.filter((item) => selected.has(item.selectionKey))
     const toAdjust = adjustments.filter((item) => selected.has(item.selectionKey))
@@ -279,7 +273,6 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
       return
     }
 
-    const today = todayIso()
     let successCount = 0
     const errors: string[] = []
 
@@ -298,7 +291,7 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
           cardId: card.id,
           amount: knownPlan ? roundTL(tx.amount * remaining) : tx.amount,
           description: tx.description,
-          spentAt: knownPlan ? today : tx.date,
+          spentAt: tx.date,
           installmentCount: knownPlan ? remaining : 1,
           category: tx.category,
           status: 'posted',
@@ -389,8 +382,8 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
           description: tx.description,
           installmentAmount: tx.amount,
           totalInstallments: tx.installmentCount,
-          paidInstallments: tx.installmentNo,
-          nextDueMonth: addMonthsToMonth(monthInputValue(), 1),
+          paidInstallments: tx.installmentNo - 1,
+          nextDueDate: tx.date,
           category: tx.category,
         })
       } else {

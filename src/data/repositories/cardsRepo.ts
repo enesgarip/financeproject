@@ -140,7 +140,7 @@ export type CardInstallmentCarryoverInput = {
   installmentAmount: number
   totalInstallments: number
   paidInstallments: number
-  nextDueMonth: string
+  nextDueDate: string
   category: string
 }
 
@@ -151,7 +151,7 @@ export async function recordCardInstallmentCarryover(input: CardInstallmentCarry
     p_installment_amount: input.installmentAmount,
     p_total_installments: input.totalInstallments,
     p_paid_installments: input.paidInstallments,
-    p_next_due_month: input.nextDueMonth,
+    p_next_due_month: input.nextDueDate,
     p_category: input.category,
   })
 

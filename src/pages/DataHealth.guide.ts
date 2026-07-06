@@ -218,7 +218,7 @@ export function issuePreviewDetails(issue: HealthIssue) {
     previews.push(`${affectedRows} taksit planı satırı silinir.`)
   } else if (issue.kind === 'cardMissingInstallments') {
     previews.push(`${payload.installmentNos?.length ?? 0} eksik taksit satırı eklenecek.`)
-    previews.push(`Başlangıç ayı: ${payload.baseMonth ? formatDate(payload.baseMonth) : 'hesaplanamadı'}`)
+    previews.push(`Başlangıç tarihi: ${payload.baseDate ? formatDate(payload.baseDate) : 'hesaplanamadı'}`)
     previews.push('Geçmiş taksitler ödendi olarak, gelecek olanlar planlı olarak eklenir.')
   } else if (issue.kind === 'cardDebtSplit') {
     previews.push(`Ekstre borcu: ${formatCurrency(payload.statementDebt ?? 0)}`)

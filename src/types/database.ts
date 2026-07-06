@@ -626,6 +626,10 @@ export type Database = {
         Args: Record<string, never>
         Returns: number
       }
+      post_due_card_installments: {
+        Args: Record<string, never>
+        Returns: number
+      }
     }
     Enums: Record<string, never>
     CompositeTypes: Record<string, never>

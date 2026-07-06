@@ -248,12 +248,12 @@ describe('buildFinanceObligationsForMonth', () => {
     })
   })
 
-  it('places card installments and legacy loan estimates on their calendar days', () => {
+  it('places card installments on their due date and legacy loan estimates on their calendar days', () => {
     const july = new Date(2026, 6, 1)
     const items = buildFinanceObligationsForMonth(
       input({
         cards: [card({ id: 'card', card_type: 'kredi_karti', due_day: 12 })],
-        cardInstallments: [cardInstallment({ id: 'installment', card_id: 'card', due_month: '2026-07-01', amount: 400 })],
+        cardInstallments: [cardInstallment({ id: 'installment', card_id: 'card', due_month: '2026-07-15', amount: 400 })],
         loans: [loan({ id: 'legacy', monthly_payment: 2000, installment_day: 7, remaining_installments: 2 })],
       }),
       july,
@@ -262,7 +262,7 @@ describe('buildFinanceObligationsForMonth', () => {
 
     expect(items.map((item) => [item.kind, item.date, item.amount, item.action])).toEqual([
       ['legacy_loan_installment', '2026-07-07', 2000, null],
-      ['card_installment', '2026-07-12', 400, null],
+      ['card_installment', '2026-07-15', 400, null],
     ])
     expect(items.find((item) => item.kind === 'card_installment')).toMatchObject({ cashImpactAmount: 0, settlement: 'credit_card' })
   })
@@ -387,10 +387,10 @@ describe('cash-impacting obligation date placement (billing-cycle correctness)',
       .toEqual([['2026-02-28', 1000, null]])
   })
 
-  it('treats card installments as non-cash and clamps their display day at month end', () => {
+  it('treats card installments as non-cash on their own due date', () => {
     const data = input({
       cards: [card({ id: 'c', card_type: 'kredi_karti', due_day: 31 })],
-      cardInstallments: [cardInstallment({ id: 'i', card_id: 'c', due_month: '2026-02-01', amount: 400 })],
+      cardInstallments: [cardInstallment({ id: 'i', card_id: 'c', due_month: '2026-02-28', amount: 400 })],
     })
     const items = buildFinanceObligationsForMonth(data, new Date(2026, 1, 1), { from: new Date(2026, 1, 1) })
 

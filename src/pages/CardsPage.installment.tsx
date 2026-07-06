@@ -10,8 +10,10 @@ import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
 import { recordCardInstallmentCarryover } from '../data/repositories/cardsRepo'
 import type { Card } from '../types/database'
 import { expenseCategoryOptions } from '../utils/categories'
+import { dateInputValue, formatDate } from '../utils/date'
 import { getLastUsed, setLastUsed } from '../utils/lastUsed'
-import { addMonthsToMonth, cardOptionLabel, formatMonthLabel, isMonthValue, monthInputValue, parseInstallmentNumber } from './CardsPage.helpers'
+import { openNativePicker } from '../lib/utils'
+import { cardOptionLabel, parseInstallmentNumber } from './CardsPage.helpers'
 import { parseNumber } from '../utils/formatCurrency'
 import { roundTL } from '../utils/money'
 
@@ -31,7 +33,7 @@ export function LegacyInstallmentPanel({
   const [category, setCategory] = useState(expenseCategoryOptions[0]?.value ?? 'Diğer')
   const [totalInstallments, setTotalInstallments] = useState('9')
   const [paidInstallments, setPaidInstallments] = useState('3')
-  const [nextDueMonth, setNextDueMonth] = useState(monthInputValue())
+  const [nextDueDate, setNextDueDate] = useState(dateInputValue(new Date()))
   const [localError, setLocalError] = useState('')
   const [saving, setSaving] = useState(false)
   const categoryMemory = useCategoryMemory()
@@ -49,14 +51,12 @@ export function LegacyInstallmentPanel({
     parsedInstallmentAmount > 0 &&
     description.trim().length > 0 &&
     parsedPaidInstallments < parsedTotalInstallments &&
-    isMonthValue(nextDueMonth) &&
-    nextDueMonth >= monthInputValue()
+    Boolean(nextDueDate)
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
     const trimmedDescription = description.trim()
-    const currentMonth = monthInputValue()
     if (!selectedCard) {
       setLocalError('Kredi kartı seçmelisin.')
       return
@@ -73,15 +73,10 @@ export function LegacyInstallmentPanel({
       setLocalError('Ödenen taksit toplam taksitten küçük olmalı.')
       return
     }
-    if (!isMonthValue(nextDueMonth)) {
-      setLocalError('Sıradaki taksit ayını seçmelisin.')
+    if (!nextDueDate) {
+      setLocalError('Sıradaki taksit tarihini seçmelisin.')
       return
     }
-    if (nextDueMonth < currentMonth) {
-      setLocalError('Sıradaki taksit ayı geçmiş olamaz.')
-      return
-    }
-
     setSaving(true)
     setLocalError('')
     setError('')
@@ -92,7 +87,7 @@ export function LegacyInstallmentPanel({
       installmentAmount: parsedInstallmentAmount,
       totalInstallments: parsedTotalInstallments,
       paidInstallments: parsedPaidInstallments,
-      nextDueMonth: addMonthsToMonth(nextDueMonth, 0),
+      nextDueDate,
       category,
     })
 
@@ -111,7 +106,7 @@ export function LegacyInstallmentPanel({
     setCategory(expenseCategoryOptions[0]?.value ?? 'Diğer')
     setTotalInstallments('9')
     setPaidInstallments('3')
-    setNextDueMonth(monthInputValue())
+    setNextDueDate(dateInputValue(new Date()))
     await reload()
   }
 
@@ -209,15 +204,16 @@ export function LegacyInstallmentPanel({
           </div>
           <div className="grid grid-cols-1 gap-2.5 min-[480px]:grid-cols-2">
             <label className="block min-w-0 text-sm font-semibold text-foreground">
-              Sıradaki ay
+              Sıradaki tarih
               <input
-                value={nextDueMonth}
+                value={nextDueDate}
                 onChange={(event) => {
-                  setNextDueMonth(event.target.value)
+                  setNextDueDate(event.target.value)
                   setLocalError('')
                 }}
-                type="month"
-                min={monthInputValue()}
+                onClick={(event) => openNativePicker(event.currentTarget)}
+                onFocus={(event) => openNativePicker(event.currentTarget)}
+                type="date"
                 className="mt-1 block w-full min-w-0 max-w-[10.75rem] appearance-none rounded-lg border border-input px-3 py-2.5 outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 min-[480px]:max-w-full dark:bg-card/50 dark:text-foreground"
                 required
               />
@@ -232,7 +228,7 @@ export function LegacyInstallmentPanel({
             remainingCount={remainingCount}
             totalInstallments={parsedTotalInstallments}
             remainingAmount={remainingAmount}
-            firstLabel={formatMonthLabel(nextDueMonth)}
+            firstLabel={formatDate(nextDueDate)}
             monthlyAmount={parsedInstallmentAmount}
           />
           {localError ? <p className="rounded-xl border border-destructive/20 bg-destructive/8 p-3 text-sm font-medium text-destructive">{localError}</p> : null}

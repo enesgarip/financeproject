@@ -18,7 +18,6 @@ import {
   activeInstallmentCount,
   bankHueStyle,
   formatIban,
-  formatMonthLabel,
   formatMonthlyDay,
   formatShortDate,
   getCreditCardStatus,
@@ -337,7 +336,7 @@ export function CreditAccountListCard({
                     <div key={installment.id} className="flex min-w-0 items-center justify-between gap-3 rounded-lg bg-muted/55 px-3 py-2 text-xs">
                       <span className="min-w-0 truncate font-bold text-foreground">{installment.description}</span>
                       <span className="shrink-0 font-black tabular-nums text-foreground">
-                        {formatAmount(installment.amount)} · {formatMonthLabel(installment.due_month.slice(0, 7))}
+                        {formatAmount(installment.amount)} · {formatDate(installment.due_month)}
                       </span>
                     </div>
                   ))}

@@ -108,7 +108,7 @@ export type HealthIssue = {
     cardExpenseId?: string
     installmentNos?: number[]
     installmentCount?: number
-    baseMonth?: string
+    baseDate?: string
     amount?: number
     totalAmount?: number
     description?: string
@@ -157,11 +157,11 @@ export function currentMonthStart() {
   return dateInputValue(new Date(today.getFullYear(), today.getMonth(), 1))
 }
 
-export function addMonthsToMonthStart(value: string, months: number) {
-  const monthStartValue = `${value.slice(0, 7)}-01`
-  const [year, month] = monthStartValue.slice(0, 7).split('-').map(Number)
+export function addMonthsToDate(value: string, months: number) {
+  const [year, month, day] = value.split('-').map(Number)
   if (!year || !month) return currentMonthStart()
-  return dateInputValue(new Date(year, month - 1 + months, 1))
+  const targetMonthLastDay = new Date(year, month - 1 + months + 1, 0).getDate()
+  return dateInputValue(new Date(year, month - 1 + months, Math.min(day || 1, targetMonthLastDay)))
 }
 
 export function buildIssues(data: HealthData): HealthIssue[] {

@@ -42,7 +42,7 @@ export function UpcomingInstallments({ data }: { data: AnalysisData }) {
         return {
           id: `card-${item.id}`,
           title: item.description,
-          subtitle: `${cardsById.get(item.card_id)?.card_name ?? 'Kart'} · ${formatMonth(item.due_month)} · ${item.installment_no}/${item.installment_count}`,
+          subtitle: `${cardsById.get(item.card_id)?.card_name ?? 'Kart'} · ${formatDate(item.due_month)} · ${item.installment_no}/${item.installment_count}`,
           amount: item.amount,
           sortDate: item.due_month,
           statusLabel,

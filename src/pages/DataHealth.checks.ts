@@ -31,7 +31,7 @@ import { diffTL, exceedsTL, moneyDiffers, roundTL, sumTL, toKurus } from '../uti
 import { formatComponentAmount, formatSavingsGoalAmount, savingsGoalBelowTarget, savingsGoalTargetReached, savingsGoalValueTypeLabel } from '../utils/savingsGoal'
 import { buildTransactionFingerprint, descriptionSimilarity, normalizedTransactionDescription } from '../utils/transactionFingerprint'
 import type { HealthIssue } from './DataHealth.logic'
-import { addMonthsToMonthStart, currentMonthStart } from './DataHealth.logic'
+import { addMonthsToDate, currentMonthStart } from './DataHealth.logic'
 
 function todayValue() {
   return dateInputValue(new Date())
@@ -81,10 +81,10 @@ function parseLegacyPaidCount(expense: CardExpense) {
   return Math.max(0, Math.min(expense.installment_count - 1, paid))
 }
 
-function inferInstallmentBaseMonth(expense: CardExpense, rows: CardInstallment[]) {
-  if (rows.length === 0) return monthStart(expense.spent_at)
+function inferInstallmentBaseDate(expense: CardExpense, rows: CardInstallment[]) {
+  if (rows.length === 0) return expense.spent_at
   const earliest = [...rows].sort((a, b) => a.installment_no - b.installment_no)[0]
-  return addMonthsToMonthStart(earliest.due_month, 1 - earliest.installment_no)
+  return addMonthsToDate(earliest.due_month, 1 - earliest.installment_no)
 }
 
 function formatGoalComponentProgress(component: SavingsGoalComponent) {
@@ -690,7 +690,7 @@ export function checkCardInstallments(
   cardInstallments: CardInstallment[],
 ): HealthIssue[] {
   const issues: HealthIssue[] = []
-  const monthStartNow = currentMonthStart()
+  const today = todayValue()
   const cardsById = new Map(cards.map((card) => [card.id, card]))
   const expensesById = new Map(cardExpenses.map((expense) => [expense.id, expense]))
   const installmentsByExpense = new Map<string, CardInstallment[]>()
@@ -701,14 +701,14 @@ export function checkCardInstallments(
   }
 
   const scheduledByCard = new Map<string, CardInstallment[]>()
-  for (const item of cardInstallments.filter((row) => row.status === 'scheduled' && row.due_month <= monthStartNow)) {
+  for (const item of cardInstallments.filter((row) => row.status === 'scheduled' && row.due_month <= today)) {
     scheduledByCard.set(item.card_id, [...(scheduledByCard.get(item.card_id) ?? []), item])
   }
 
   for (const [cardId, rows] of scheduledByCard) {
     const card = cardsById.get(cardId)
     const total = sumTL(rows.map((item) => item.amount))
-    const pastCount = rows.filter((item) => item.due_month < monthStartNow).length
+    const pastCount = rows.filter((item) => item.due_month < today).length
 
     issues.push({
       id: `card-scheduled-${cardId}`,
@@ -716,7 +716,7 @@ export function checkCardInstallments(
       severity: pastCount > 0 ? 'warning' : 'info',
       title: `${cardLabel(card)} dönem içine alınmamış taksit`,
       description: 'Bu taksitler hâlâ planlı görünüyor; dönem/ekstre durumunu elle kontrol etmek daha güvenli.',
-      details: [`Taksit sayısı: ${rows.length}`, `Toplam: ${formatCurrency(total)}`, pastCount > 0 ? `${pastCount} tanesi geçmiş ayda.` : 'Bu ay içinde.'],
+      details: [`Taksit sayısı: ${rows.length}`, `Toplam: ${formatCurrency(total)}`, pastCount > 0 ? `${pastCount} tanesinin tarihi geçmiş.` : 'Bugün dönem içine alınmalı.'],
       fixable: false,
       kind: 'manual',
     })
@@ -808,21 +808,6 @@ export function checkCardInstallments(
       })
     }
 
-    if (!isMonthStart(installment.due_month)) {
-      issues.push({
-        id: `card-installment-month-${installment.id}`,
-        area: 'Kartlar',
-        severity: 'warning',
-        title: `${installment.description} taksit ayı ay başı değil`,
-        description: 'Kart taksitleri ay bazlı hesaplandığı için due_month alanı ayın 1. günü olmalı.',
-        details: [`Tarih: ${formatDate(installment.due_month)} → ${formatDate(monthStart(installment.due_month))}`],
-        fixable: true,
-        fixLabel: 'Taksit ayını düzelt',
-        kind: 'cardInstallmentDueMonth',
-        payload: { ids: [installment.id], updates: { due_month: monthStart(installment.due_month) } },
-      })
-    }
-
     if (installment.status === 'posted' && !installment.posted_at) {
       issues.push({
         id: `card-installment-posted-at-${installment.id}`,
@@ -889,8 +874,8 @@ export function checkCardInstallments(
     const expectedNos = range(paidBefore + 1, expense.installment_count)
     const missingNos = expectedNos.filter((installmentNo) => !existingNos.has(installmentNo))
     const extraRows = rows.filter((row) => row.installment_no <= paidBefore || row.installment_no > expense.installment_count)
-    const baseMonth = inferInstallmentBaseMonth(expense, rows)
-    const futureMissingNos = missingNos.filter((installmentNo) => addMonthsToMonthStart(baseMonth, installmentNo - 1) > monthStartNow)
+    const baseDate = inferInstallmentBaseDate(expense, rows)
+    const futureMissingNos = missingNos.filter((installmentNo) => addMonthsToDate(baseDate, installmentNo - 1) > today)
     const card = cardsById.get(expense.card_id)
 
     if (missingNos.length > 0) {
@@ -916,7 +901,7 @@ export function checkCardInstallments(
           cardExpenseId: expense.id,
           installmentNos: missingNos,
           installmentCount: expense.installment_count,
-          baseMonth,
+          baseDate,
           amount: roundTL(expense.installment_amount || expense.amount / expense.installment_count),
           totalAmount: expense.amount,
           description: expense.description,

@@ -30,15 +30,17 @@ describe('financeSnapshotRepo.runFinanceMaintenance', () => {
     mocks.syncAutoValuedRows.mockResolvedValue(undefined)
   })
 
-  it('runs both maintenance RPCs and best-effort valuation sync', async () => {
+  it('runs maintenance RPCs and best-effort valuation sync', async () => {
     mocks.rpc
       .mockResolvedValueOnce({ data: 1, error: null })
       .mockResolvedValueOnce({ data: 2, error: null })
+      .mockResolvedValueOnce({ data: 3, error: null })
 
     await expect(runFinanceMaintenance()).resolves.toBeUndefined()
 
     expect(mocks.rpc).toHaveBeenNthCalledWith(1, 'post_due_card_auto_payments')
-    expect(mocks.rpc).toHaveBeenNthCalledWith(2, 'cut_due_card_statements')
+    expect(mocks.rpc).toHaveBeenNthCalledWith(2, 'post_due_card_installments')
+    expect(mocks.rpc).toHaveBeenNthCalledWith(3, 'cut_due_card_statements')
     expect(mocks.ensureRatesLoaded).toHaveBeenCalledTimes(1)
     expect(mocks.syncAutoValuedRows).toHaveBeenCalledWith({ rates: 'snapshot' })
   })
@@ -49,6 +51,7 @@ describe('financeSnapshotRepo.runFinanceMaintenance', () => {
         data: null,
         error: { code: 'PGRST202', message: 'Could not find the function public.post_due_card_auto_payments in the schema cache' },
       })
+      .mockResolvedValueOnce({ data: 0, error: null })
       .mockResolvedValueOnce({ data: 0, error: null })
 
     await expect(runFinanceMaintenance()).rejects.toThrow(

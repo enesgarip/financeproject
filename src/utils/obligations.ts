@@ -34,7 +34,7 @@ import type {
   SalaryHistory,
 } from '../types/database'
 import { getNextCardPaymentDueDate } from './cardStatement'
-import { addDays, addMonths, dateInMonth, dateInputValue, endOfMonth, isDateInMonth, monthlyOccurrenceDate, startOfDay, startOfMonth } from './date'
+import { addDays, addMonths, dateInputValue, endOfMonth, isDateInMonth, monthlyOccurrenceDate, startOfDay, startOfMonth } from './date'
 import { cardMonthlyPaymentAmount, paymentCashOutflowAmount, paymentOccurrenceInMonth, paymentUsesCreditCard } from './financeObligationRules'
 import { roundTL, sumTL } from './money'
 
@@ -260,8 +260,6 @@ export function buildFinanceObligationsForMonth(
     if (installment.status !== 'scheduled' || !isDateInMonth(installment.due_month, monthStart)) continue
 
     const card = cardsById.get(installment.card_id)
-    const dueMonth = new Date(`${installment.due_month}T00:00:00`)
-    const displayDate = dateInputValue(dateInMonth(dueMonth.getFullYear(), dueMonth.getMonth(), card?.due_day ?? 1))
     addObligation(items, {
       id: `card-installment-${installment.id}`,
       kind: 'card_installment',
@@ -270,7 +268,7 @@ export function buildFinanceObligationsForMonth(
       relatedCardId: installment.card_id,
       title: installment.description,
       subtitle: `${cardLabel(card)} - ${installment.installment_no}/${installment.installment_count}. taksit`,
-      date: displayDate,
+      date: installment.due_month,
       amount: installment.amount,
       cashImpactAmount: 0,
       direction: 'outflow',

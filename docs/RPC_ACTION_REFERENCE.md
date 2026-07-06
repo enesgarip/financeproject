@@ -1,6 +1,6 @@
 # Supabase RPC Action Reference
 
-Last reviewed: 2026-07-02
+Last reviewed: 2026-07-06
 
 This file maps Supabase RPCs to the user-visible actions that call them. Keep it
 updated whenever a page action, repository wrapper, or migration changes an RPC
@@ -14,7 +14,8 @@ repair rules, keep `docs/TRANSACTION_HISTORY.md` aligned with this file.
 | RPC | Called From | User-Visible Action | Main Effect |
 | --- | --- | --- | --- |
 | `post_due_card_auto_payments` | `runFinanceMaintenance` in `financeSnapshotRepo` | App open/dashboard snapshot maintenance | Posts due `bank_auto` payments to their selected credit cards by reusing `pay_payment`; returns processed count |
-| `cut_due_card_statements` | `runFinanceMaintenance`, `cutDueCardStatements` | App open/cards page maintenance | Cuts any due credit-card statements for the signed-in user; returns cut count |
+| `post_due_card_installments` | `runFinanceMaintenance`, `run_scheduled_card_maintenance` | App open/server daily maintenance | Moves scheduled card installments whose exact due date has passed into `current_period_spending`; returns processed row count |
+| `cut_due_card_statements` | `runFinanceMaintenance`, `cutDueCardStatements` | App open/cards page maintenance | Cuts any due credit-card statements for the signed-in user after due installments have been posted; returns cut count |
 
 ## Cards And Statements
 
@@ -23,6 +24,7 @@ repair rules, keep `docs/TRANSACTION_HISTORY.md` aligned with this file.
 | `add_card_expense` | `addCardExpense` in `cardsRepo` | Cards page: add card expense/provision/installment expense | Inserts `card_expenses`; updates credit-card `debt_amount`, `current_period_spending`, and/or `provision_amount`; bank-card spending debits `current_balance` |
 | `update_card_expense` | `updateCardExpense` in `cardsRepo` | Cards page: edit a posted expense | Reverses previous posted impact, writes new expense values, recreates installment rows |
 | `post_card_provision` | `applyCardProvision` in `cardsRepo` | Cards page: post a provision | Moves all or part of a provision into posted current-period spending |
+| `post_due_card_installments` | Finance maintenance | Time-based installment posting | Changes due scheduled card-installment rows to `posted` and adds their amount to current-period spending without changing total debt |
 | `cancel_card_provision` | `applyCardProvision` in `cardsRepo` | Cards page: cancel a provision | Removes provision from card debt/limit impact and marks the expense `cancelled` |
 | `cancel_card_expense` | `cancelCardExpense` in `cardsRepo` | Reconciliation: cancel any expense | Cancels a posted or provision expense, reverses total debt plus the exact visible split bucket, removes installments, logs correction |
 | `cut_card_statement` | `cutCardStatement` in `cardsRepo` | Low-frequency/manual statement cut helper | Creates or returns the period archive and moves current-period spending into open statement debt |

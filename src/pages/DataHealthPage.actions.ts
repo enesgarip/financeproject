@@ -7,9 +7,10 @@ import {
 import type { InsertFor, UpdateFor } from '../types/database'
 import { recomputeAccountBalance } from '../services/accountLedgerActions'
 import { recomputeCardDebt } from '../services/cardLedgerActions'
+import { dateInputValue } from '../utils/date'
 import { roundTL } from '../utils/money'
 import {
-  addMonthsToMonthStart,
+  addMonthsToDate,
   currentMonthStart,
   type HealthIssue,
   type UndoBatch,
@@ -103,10 +104,10 @@ export async function fixIssue(issue: HealthIssue): Promise<UndoBatch | null> {
     if (!updateError.ok) throw new Error(updateError.error.message ?? 'Ekstre arşivi güncellenemedi.')
   }
 
-  if (issue.kind === 'cardMissingInstallments' && payload.userId && payload.cardId && payload.cardExpenseId && payload.installmentNos && payload.baseMonth) {
-    const nowIso = currentMonthStart()
+  if (issue.kind === 'cardMissingInstallments' && payload.userId && payload.cardId && payload.cardExpenseId && payload.installmentNos && payload.baseDate) {
+    const nowIso = dateInputValue(new Date())
     const rows: InsertFor<'card_installments'>[] = payload.installmentNos.map((installmentNo) => {
-      const dueMonth = addMonthsToMonthStart(payload.baseMonth ?? currentMonthStart(), installmentNo - 1)
+      const dueMonth = addMonthsToDate(payload.baseDate ?? currentMonthStart(), installmentNo - 1)
       const isPast = dueMonth <= nowIso
       const baseAmount = payload.amount ?? 0
       const installmentCount = payload.installmentCount ?? 1
