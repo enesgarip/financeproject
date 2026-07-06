@@ -168,6 +168,11 @@ export async function resetCardData(cardId: string): Promise<Result<void>> {
   return voidResultFromSupabase(error, 'Kart sıfırlanamadı.')
 }
 
+export async function resetCardImportData(cardId: string): Promise<Result<void>> {
+  const { error } = await supabase.rpc('reset_card_import_data', { p_card_id: cardId })
+  return voidResultFromSupabase(error, 'Kart import verisi sifirlanamadi.')
+}
+
 export async function cutCardStatement(cardId: string): Promise<Result<void>> {
   const { error } = await supabase.rpc('cut_card_statement', { p_card_id: cardId })
   return voidResultFromSupabase(error, 'Ekstre kesilemedi.')

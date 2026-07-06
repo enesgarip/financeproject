@@ -69,6 +69,7 @@
   - 2026-07-02: Kredi karti satiri iki ana aksiyona indi; detay/import/mutabakat/taksit menude. Banka hesaplarina IBAN + kopyala, son 3 hareket ve hareket sonrasi bakiye eklendi. `useBalancePrivacy` tek goz ikonuyla tutarlari maskeler; kredi karti gorseli SMS alias son hanelerinden maskeli numara gosterir.
 - ~~Flag overdue open card statements in Data Health.~~ DONE.
   - 2026-07-02: `DataHealth.checks.ts` vadesi gecmis acik ekstre arsivlerini uyarir; issue karti paylasilan `FinancePaymentDrawer` ile dogrudan ekstre odeme akisini acar.
+  - 2026-07-06: Data Health runtime'da `open`/`paid` disi legacy/pasif ekstre statüsü görürse tek aksiyonla kaydı borca yeniden bindirmeden `paid` geçmiş arşive normalize eder.
 - ~~Add DenizBank current movement PDF reconciliation.~~ DONE.
   - Cards page now opens a current movement import flow for DenizBank internet banking PDFs.
   - Pending rows import as provisions, posted spending imports as current-period expenses, payment rows are excluded, and installment rows are left for manual review.
@@ -78,6 +79,7 @@
   - 2026-06-20 v2: Mutabakat ekranı conflict-resolution tarzına dönüştürüldü — eşleşen/sadece bankada/sadece app'te kategorileri yan yana gösterilir, app-only harcamalar direkt iptal edilebilir (`cancel_card_expense` RPC). Mobil tarayıcılarda PDF import devre dışı.
   - 2026-06-21: Plan-ortası taksitler (2/12, 3/12 gibi) artık normal import'ta otomatik aktarılır — `recordCardInstallmentCarryover` ile geçmiş taksitler ödendi olarak, gelecek olanlar planlanmış olarak eklenir. Son taksit (12/12 gibi) tek ödeme olarak import edilir.
   - 2026-06-22 follow-up: `cancel_card_expense` taksitli harcamalarda toplam borcu tam terslerken yalnız ilgili görünür split kovasını azaltır; ekstre import, app harcamaları okunamazsa duplicate riskine girmeden durur.
+  - 2026-07-06 follow-up: Ekstre/güncel hareket importlarında temiz import korundu ama artık `reset_card_import_data` kullanır; geçmiş ödenmiş ekstre arşivleri ve bağlı eski satırlar silinmez. DenizBank ekstrelerindeki `+ TL` alacak/iade satırları `post_card_debt_correction` ile negatif ledger düzeltmesi olarak işlenir, bu yüzden banka dönem borcu net tutarla eşleşir.
 - Add "kasa modu" / spendable balance planning.
   - Let bank balances be mentally allocated into buckets such as emergency fund, taxes/insurance, vacation, investment, and spendable cash.
   - Keep the underlying bank balance unchanged; this is a planning overlay, not a ledger movement.

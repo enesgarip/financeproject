@@ -61,6 +61,7 @@ ECZANE
 01/06/2026 DEFNE ECZANESİ BURSA TR 245.74 TL
 DİĞER İŞLEM VE HARCAMALARINIZ
 03/06/2026 ÖDEAL//PETPAL BURSA TR 2,481.00 TL
+15/06/2026 IYZICO/ATOLYE.BURSA.COM BURSA TR 2,500.00+ TL
 NAKİT AVANS BİLGİLERİ
 01/04/2026 Taksit. Nakit İSTANBUL MBL 3.Tk Anapara 8,524.62 TL
 01/04/2026 Taksit. Nakit İSTANBUL MBL 3.Tk Faiz 362.30 TL
@@ -106,6 +107,19 @@ describe('parseDenizBankStatement — transaction filtering', () => {
     const result = parseDenizBankStatement(SAMPLE_TEXT)
     const hasPayment = result.transactions.some((t) => t.description.includes('Hesaptan Ödeme'))
     expect(hasPayment).toBe(false)
+  })
+
+  it('captures non-payment plus rows as statement adjustments', () => {
+    const result = parseDenizBankStatement(SAMPLE_TEXT)
+
+    expect(result.adjustments).toEqual([
+      expect.objectContaining({
+        date: '2026-06-15',
+        description: 'IYZICO/ATOLYE.BURSA.COM',
+        amount: 2500,
+      }),
+    ])
+    expect(result.transactions.some((t) => t.description.includes('ATOLYE'))).toBe(false)
   })
 
   it('skips zero-amount bonus entries', () => {

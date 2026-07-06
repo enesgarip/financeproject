@@ -53,6 +53,12 @@ function dateInMonthValue(sourceDate: string, preferredDay: number) {
   return dateInputValue(new Date(year, month - 1, Math.min(preferredDay, lastDay)))
 }
 
+function dateStartIso(value: string | null | undefined) {
+  if (!value) return new Date().toISOString()
+  if (value.includes('T')) return value
+  return `${value}T00:00:00.000Z`
+}
+
 function range(from: number, to: number) {
   return Array.from({ length: Math.max(0, to - from + 1) }, (_, index) => from + index)
 }
@@ -409,6 +415,32 @@ export function checkCards(
 
   for (const archive of cardStatementArchives) {
     const card = cardsById.get(archive.card_id)
+    const archiveStatus = String(archive.status)
+    if (archiveStatus !== 'open' && archiveStatus !== 'paid') {
+      issues.push({
+        id: `card-archive-status-${archive.id}`,
+        area: 'Kartlar',
+        severity: 'warning',
+        title: `${cardLabel(card)} ekstre arşivi pasif/geçersiz statüde`,
+        description: 'Ekstre arşiv statüsü beklenen open/paid değerlerinden farklı. Geçmiş kayıt korunur, hızlı düzeltme bunu ödenmiş arşive alır.',
+        details: [
+          `Statü: ${archiveStatus || '-'}`,
+          `Ekstre: ${formatDate(archive.statement_date)}`,
+          `Ekstre tutarı: ${formatCurrency(archive.statement_debt_amount)}`,
+        ],
+        fixable: true,
+        fixLabel: 'Ödenmiş arşive al',
+        kind: 'cardStatementStatus',
+        payload: {
+          cardId: archive.card_id,
+          statementArchiveId: archive.id,
+          updates: {
+            status: 'paid',
+            paid_at: archive.paid_at ?? dateStartIso(archive.due_date ?? archive.statement_date),
+          },
+        },
+      })
+    }
     if (archive.status === 'open' && archive.due_date && archive.due_date < today) {
       issues.push({
         id: `card-overdue-statement-${archive.id}`,

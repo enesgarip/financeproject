@@ -616,6 +616,12 @@ export type Database = {
         }
         Returns: void
       }
+      reset_card_import_data: {
+        Args: {
+          p_card_id: string
+        }
+        Returns: void
+      }
       post_due_card_auto_payments: {
         Args: Record<string, never>
         Returns: number

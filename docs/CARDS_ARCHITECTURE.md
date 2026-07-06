@@ -60,6 +60,15 @@ actions should use the repository/service layer:
   payment, the import calls `pay_payment_from_card_import` so the card expense
   and payment recurrence/status update happen in one RPC instead of double
   counting the bill as both card spending and a pending obligation
+- DenizBank statement rows ending with `+ TL` are credits/refunds. Statement
+  import shows them as selectable "alacak/iade" rows and applies them through
+  `post_card_debt_correction` so the card debt is reduced with an audited
+  reverse entry instead of importing the row as spending.
+- Clean import in statement/current-movement modals uses
+  `reset_card_import_data`, not the destructive `reset_card_data` flow. It
+  clears the open/current import scope and preserves paid historical statement
+  archives plus the old rows linked to those archives, so reports keep their
+  history.
 - account deposit, withdrawal, and account-to-account transfer:
   `src/services/accountMovements.ts`
 - card/account ledger recomputation actions:

@@ -46,6 +46,16 @@ export function buildIssueGuide(issue: HealthIssue): IssueGuide {
     }
   }
 
+  if (issue.kind === 'cardStatementStatus') {
+    return {
+      problem: 'Ekstre arşivi beklenen open/paid dışı bir statüde.',
+      whyItMatters: 'Bu kayıt geçmiş arşivde duruyor olsa bile raporlar ve sağlık kontrolleri statüyü güvenilir yorumlayamaz.',
+      nextStep: issue.fixable
+        ? 'Hızlı düzeltmeyle kaydı borca yeniden bindirmeden ödenmiş geçmiş arşive al.'
+        : 'Kartlar ekranında ilgili ekstre arşivini kontrol et.',
+    }
+  }
+
   if (issue.kind === 'cardDebtSplit' || issue.kind === 'cardStatementTotals') {
     return {
       problem: 'Kart borcunun ekstre, dönem içi veya arşiv kırılımında tutarsızlık var.',
@@ -171,6 +181,14 @@ export function navigationAction(issue: HealthIssue) {
   if (issue.kind === 'budgetMonth' || normalizedTitle.includes('hedef') || normalizedTitle.includes('maa')) {
     return { to: '/analiz', label: 'Kaydı aç' }
   }
+
+  if (issue.area === 'Kartlar') return { to: '/kartlar?section=kartlar', label: 'Kartlara git' }
+  if (issue.area === 'Krediler') return { to: '/borclar/krediler', label: 'Kredilere git' }
+  if (issue.area === 'Kişiler') return { to: '/borclar/kisiler', label: 'Borçlara git' }
+  if (issue.area === 'Planlı') return { to: '/odemeler', label: 'Ödemelere git' }
+  if (issue.area === 'Varlıklar') return { to: '/varliklar', label: 'Varlıklara git' }
+  if (issue.area === 'Bütçeler' || issue.area === 'Hedefler') return { to: '/odemeler/hedefler', label: 'Planlamaya git' }
+  if (issue.area === 'Maaş') return { to: '/varliklar/maas', label: 'Maaşa git' }
 
   return null
 }

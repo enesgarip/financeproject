@@ -93,7 +93,7 @@ export async function fixIssue(issue: HealthIssue): Promise<UndoBatch | null> {
     if (!updateError.ok) throw new Error(updateError.error.message ?? 'Kart taksitleri güncellenemedi.')
   }
 
-  if (issue.kind === 'cardStatementTotals' && payload.statementArchiveId && payload.updates) {
+  if ((issue.kind === 'cardStatementTotals' || issue.kind === 'cardStatementStatus') && payload.statementArchiveId && payload.updates) {
     await addUndo('card_statement_archives', [payload.statementArchiveId])
     const updateError = await updateDataHealthRow(
       'card_statement_archives',

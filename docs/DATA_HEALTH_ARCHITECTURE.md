@@ -50,9 +50,11 @@ The normal flow is:
 4. Guided actions that are normal domain operations (for example paying an
    overdue open statement) should open the shared domain drawer instead of
    inventing a Data Health-only write path.
-5. `fixIssue(issue)` captures undo rows before each direct repair write.
-6. `applyUndoEntry()` restores the latest in-session undo batch when requested.
-7. `loadData()` refreshes the page after writes.
+5. Manual issues that do not have a safe write should still expose a quick
+   navigation action to the owning product area when possible.
+6. `fixIssue(issue)` captures undo rows before each direct repair write.
+7. `applyUndoEntry()` restores the latest in-session undo batch when requested.
+8. `loadData()` refreshes the page after writes.
 
 Do not add a fixable issue without an undo strategy unless the action is an
 RPC recomputation with a clear backing source of truth. If a fix can delete or
@@ -74,6 +76,10 @@ Use existing source-of-truth helpers before adding new checks:
 - overdue open card statements:
   `card_statement_archives.status`, `due_date`, and the existing
   `pay_card_statement` shared payment path
+- legacy/passive statement statuses:
+  runtime `card_statement_archives.status` values outside `open`/`paid` are
+  reported as fixable data drift and normalized to `paid` without recreating
+  current debt
 - savings goal comparisons:
   `src/utils/savingsGoal.ts`
 - money comparison and rounding:

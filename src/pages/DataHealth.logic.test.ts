@@ -263,6 +263,30 @@ describe('buildIssues overdue card statements', () => {
       amount: 1200,
     })
   })
+
+  it('flags legacy inactive statement status and offers a paid archive repair', () => {
+    const issues = buildIssues({
+      ...emptyData,
+      cards: [creditCard()],
+      cardStatementArchives: [
+        cardStatementArchive({
+          status: 'inactive' as CardStatementArchive['status'],
+        }),
+      ],
+    })
+
+    const issue = issues.find((item) => item.id === 'card-archive-status-statement-1')
+    expect(issue?.kind).toBe('cardStatementStatus')
+    expect(issue?.fixable).toBe(true)
+    expect(issue?.payload).toMatchObject({
+      cardId: 'card-1',
+      statementArchiveId: 'statement-1',
+      updates: {
+        status: 'paid',
+        paid_at: '2026-01-10T00:00:00.000Z',
+      },
+    })
+  })
 })
 
 describe('buildIssues card expense duplicate analysis', () => {

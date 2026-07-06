@@ -21,12 +21,20 @@ export type ParsedTransaction = {
   installmentCount: number
 }
 
+export type ParsedStatementAdjustment = {
+  date: string
+  description: string
+  amount: number
+  category: string
+}
+
 export type ParsedStatement = {
   cardLastFour: string
   statementDate: string
   dueDate: string
   totalDebt: number
   transactions: ParsedTransaction[]
+  adjustments?: ParsedStatementAdjustment[]
 }
 
 export type MatchResult = {
@@ -165,10 +173,11 @@ export function parseDenizBankStatement(text: string): ParsedStatement {
 
   // Transaction parsing
   const transactions: ParsedTransaction[] = []
+  const adjustments: ParsedStatementAdjustment[] = []
   let sectionCategory = 'Diğer'
 
   const DATE_PREFIX = /^\d{2}\/\d{2}\/\d{4}/
-  const AMOUNT_SUFFIX = /([\d.,]+)\s+TL$/
+  const AMOUNT_SUFFIX = /([\d.,]+)(\+?)\s+TL$/
 
   for (const line of lines) {
     // Non-date lines: check for section header, then skip
@@ -177,9 +186,6 @@ export function parseDenizBankStatement(text: string): ParsedStatement {
       if (secCat !== null) sectionCategory = secCat
       continue
     }
-
-    // Skip payment lines (amount followed by + sign)
-    if (/[\d.,]+\+\s*TL/.test(line)) continue
 
     // Nakit avansın faiz/BSMV/KKDF satırları Dönem Borcu'na dahildir; bunlar
     // peşin masraf olarak içeri alınır (atlanırsa toplam eksik kalır).
@@ -198,6 +204,7 @@ export function parseDenizBankStatement(text: string): ParsedStatement {
     if (!amountMatch) continue
     const amount = parseAmount(amountMatch[1])
     if (amount <= 0) continue
+    const isCredit = amountMatch[2] === '+'
 
     // Extract date
     const date = parseDate(line.substring(0, 10))
@@ -232,10 +239,15 @@ export function parseDenizBankStatement(text: string): ParsedStatement {
     // Category: prefer suggestExpenseCategory (learns from history), fall back to section
     const category = suggestExpenseCategory(description) ?? sectionCategory
 
+    if (isCredit) {
+      adjustments.push({ date, description, amount, category })
+      continue
+    }
+
     transactions.push({ date, description, amount, category, isInstallment, installmentNo, installmentCount })
   }
 
-  return { cardLastFour, statementDate, dueDate, totalDebt, transactions }
+  return { cardLastFour, statementDate, dueDate, totalDebt, transactions, adjustments }
 }
 
 // ── Matching ───────────────────────────────────────────────────────────────

@@ -69,6 +69,7 @@ otherwise:
 | `record_manual_account_movement` | `transfer` | `cards.id` | Movement amount | Manual bank-account in/out uses the affected account as source. |
 | `transfer_between_accounts` | `transfer` | Source `cards.id` | Transfer amount | One feed row represents both debit and credit sides. |
 | `reset_card_data` | deletes scoped history | Related card rows | n/a | Removes history tied to deleted card expenses/installments/statements. |
+| `reset_card_import_data` | deletes scoped history | Open/current import rows | n/a | Removes history tied to the open/current import scope only; paid historical statement archives and their linked rows stay available for reports. |
 | `reset_user_finance_data` | deletes all user history | User data reset | n/a | Full reset removes the feed with the rest of the user's finance data. |
 | Ledger recompute/correction RPCs | none | Ledger tables | none | Card/account ledgers are the audit trail; dashboard history is not duplicated. |
 | Data Health direct fixes | none | Direct table updates/deletes | none | Safe-fix preview/undo is Data Health state, not activity feed history. |

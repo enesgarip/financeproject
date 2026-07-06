@@ -8,7 +8,7 @@ import {
   fetchCardPaymentMatchRows,
   insertGuardStatementArchive,
   payPaymentFromCardImport,
-  resetCardData,
+  resetCardImportData,
   type ExpenseMatchRow,
   type PaymentMatchRow,
 } from '../../data/repositories/cardsRepo'
@@ -166,7 +166,10 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
         ? { start: cardPeriod.periodStart, end: cardPeriod.periodEnd, label: cardPeriod.periodLabel }
         : fallbackPeriod
 
-      const periodExpenses = rowsInReviewPeriod(expensesResult.data, reviewPeriod)
+      const cardPeriodExpenses = rowsInReviewPeriod(expensesResult.data, reviewPeriod)
+      const fallbackPeriodExpenses = rowsInReviewPeriod(expensesResult.data, fallbackPeriod)
+      const useFallbackPeriod = cardPeriodExpenses.length === 0 && fallbackPeriodExpenses.length > 0
+      const periodExpenses = useFallbackPeriod ? fallbackPeriodExpenses : cardPeriodExpenses
 
       const result = matchDenizBankMovements(parsed.movements, expensesResult.data, periodExpenses)
 
@@ -193,7 +196,7 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
       setMatches(result.matches)
       setShowMatched(false)
       setPlannedPaymentMatches(paymentMatchResult.matches)
-      setPeriodLabel(reviewPeriod?.label ?? '')
+      setPeriodLabel((useFallbackPeriod ? fallbackPeriod?.label : reviewPeriod?.label) ?? '')
       setBankOnly(nextBankOnly)
       setAppOnly(nextAppOnly)
       setManualReview(nextManual)
@@ -241,7 +244,7 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
     setApplying(true)
     setApplyError('')
 
-    const resetResult = await resetCardData(card.id)
+    const resetResult = await resetCardImportData(card.id)
     if (!resetResult.ok) {
       setApplyError(`Sıfırlama başarısız: ${resetResult.error.message ?? 'Bilinmeyen hata.'}`)
       setApplying(false)
@@ -250,7 +253,6 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
 
     let successCount = 0
     const errors: string[] = []
-
     const today = new Date().toISOString().slice(0, 10)
 
     for (let i = 0; i < allMovements.length; i++) {
@@ -278,7 +280,6 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
     }
 
     if (user) {
-      // Guard archive: prevent cut_due_card_statements from auto-cutting
       if (card.card_type === 'kredi_karti' && card.statement_day) {
         const now = new Date()
         const y = now.getFullYear()
@@ -299,11 +300,11 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
         }
       }
 
-      const pdfTotal = sumTL(allMovements.map((m) => {
-        const tc = installmentCounts.get(allMovements.indexOf(m)) ?? m.installmentCount
-        const knownP = m.isInstallment && tc > 1
-        const rem = knownP ? Math.max(1, tc - m.installmentNo + 1) : 1
-        return knownP ? roundTL(m.amount * rem) : m.amount
+      const pdfTotal = sumTL(allMovements.map((movement, index) => {
+        const totalCount = installmentCounts.get(index) ?? movement.installmentCount
+        const knownPlan = movement.isInstallment && totalCount > 1
+        const remaining = knownPlan ? Math.max(1, totalCount - movement.installmentNo + 1) : 1
+        return knownPlan ? roundTL(movement.amount * remaining) : movement.amount
       }))
       await insertAccountReconciliation({
         user_id: user.id,
@@ -316,12 +317,17 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
       })
     }
 
-    setResultMessage(`Kart sıfırlandı, ${successCount} hareket içe aktarıldı`)
+    setResultMessage(`Kart import kapsamında sıfırlandı, ${successCount} hareket içe aktarıldı`)
     setApplying(false)
     setStep('done')
   }
 
   async function handleApply() {
+    if (cleanImport) {
+      await handleCleanImport()
+      return
+    }
+
     const toImport = bankOnly.filter((item) => selectedImport.has(item.selectionKey))
     const toCancel = appOnly.filter((item) => selectedCancel.has(item.selectionKey))
     if (!toImport.length && !toCancel.length) return
@@ -415,9 +421,7 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
               <>
                 <p className="text-sm text-muted-foreground">
                   DenizBank internet bankacılığından alınan kredi kartı hareket PDF&apos;ini seç.
-                  {cleanImport
-                    ? ' Kartın tüm verileri sıfırlanıp PDF\'ten yeniden kurulacak.'
-                    : ' Banka hareketleri ile app kayıtları karşılaştırılacak.'}
+                  {' '}Banka hareketleri ile app kayıtları karşılaştırılacak.
                 </p>
 
                 <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-border bg-muted/30 p-3">
@@ -428,9 +432,9 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
                     className="size-4 accent-warning"
                   />
                   <div className="min-w-0">
-                    <p className="text-sm font-bold text-foreground">Sıfırlayıp PDF&apos;ten kur</p>
+                    <p className="text-sm font-bold text-foreground">Import kapsamını sıfırlayıp PDF'ten kur</p>
                     <p className="text-[11px] text-muted-foreground">
-                      Kartın mevcut harcamaları silinir, PDF&apos;teki tüm hareketler baştan yüklenir.
+                      Açık/güncel harcama ve taksitler silinir; geçmiş ödenmiş ekstre arşivi korunur.
                     </p>
                   </div>
                 </label>
@@ -481,9 +485,9 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
               <div className="flex items-start gap-2 rounded-lg bg-warning/10 p-3 text-sm text-warning">
                 <AlertCircle size={15} className="mt-0.5 shrink-0" />
                 <div>
-                  <p className="font-bold">Kartın tüm harcamaları silinecek</p>
+                  <p className="font-bold">Açık/güncel kart verisi yeniden kurulacak</p>
                   <p className="mt-0.5 text-xs text-warning/80">
-                    Mevcut harcamalar, taksitler ve ekstre arşivleri kaldırılıp aşağıdaki {allMovements.length} hareket baştan yüklenecek.
+                    Geçmiş ödenmiş ekstre arşivi korunur; aşağıdaki {allMovements.length} hareket import kapsamına alınır.
                   </p>
                 </div>
               </div>
@@ -536,7 +540,7 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
                         </label>
                         {effectiveCount > 1 && (
                           <span className="text-[11px] text-success">
-                            → kalan {remaining}, toplam {formatAmount(roundTL(movement.amount * remaining))}
+                            kalan {remaining}, toplam {formatAmount(roundTL(movement.amount * remaining))}
                           </span>
                         )}
                       </div>
@@ -557,7 +561,7 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
               <button
                 type="button"
                 disabled={applying || !allMovements.length}
-                onClick={() => void handleCleanImport()}
+                onClick={() => void handleApply()}
                 className="flex w-full items-center justify-center gap-2 rounded-xl bg-warning py-3 text-sm font-black text-white disabled:opacity-55"
               >
                 {applying && <Loader2 size={15} className="animate-spin" />}
@@ -567,7 +571,6 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
           </div>
         )}
 
-        {/* Review step — conflict-resolution view */}
         {step === 'review' && !cleanImport && (
           <div className="flex max-h-[76vh] flex-col">
             {/* Summary */}

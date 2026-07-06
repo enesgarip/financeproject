@@ -29,10 +29,15 @@ repair rules, keep `docs/TRANSACTION_HISTORY.md` aligned with this file.
 | `set_statement_reconciliation` | `setStatementReconciliation` in `cardsRepo` | Statement import/reconciliation | Stores bank statement reconciliation amount and note for a card period |
 | `pay_payment_from_card_import` | `payPaymentFromCardImport` in `cardsRepo` | Statement/current movement import: matched planned payment row | Adds the matched bill as posted credit-card spending on the bank row date and advances/closes the planned payment |
 | `record_card_installment_carryover` | `recordCardInstallmentCarryover` in `cardsRepo` | Cards page: unified installment form when paid installments so far is positive | Imports remaining pre-app installments as card debt plus installment planning rows, while preserving already-paid historical installments |
-| `reset_card_data` | `resetCardData` in `cardsRepo` | Cards/data-health repair flow | Deletes the card's expenses, installments, statement archives, and related history; resets card debt fields to zero |
+| `reset_card_import_data` | `resetCardImportData` in `cardsRepo` | Statement/current movement clean import | Clears the open/current import scope and resets visible card debt fields before rebuilding from the bank PDF; preserves paid historical statement archives and linked old rows |
+| `reset_card_data` | `resetCardData` in `cardsRepo` | Manual/data-health repair helper only | Deletes the card's expenses, installments, statement archives, and related history; resets card debt fields to zero. Import modals must not call it. |
 
 The detailed field transitions for these RPCs live in
 `docs/CARD_DEBT_TRANSITIONS.md`.
+
+Statement import also uses `post_card_debt_correction` for DenizBank `+ TL`
+credit/refund rows so the net statement total matches the bank archive without
+rewriting historical expenses.
 
 ## Payments And Obligations
 
