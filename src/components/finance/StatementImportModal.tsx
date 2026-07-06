@@ -532,9 +532,9 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
                 className="mt-0.5 size-4 accent-warning"
               />
               <span className="text-xs">
-                <span className="block font-bold text-foreground">Bu kartı import kapsamı için sıfırla</span>
+                <span className="block font-bold text-foreground">Bu kartı sıfırlayıp ekstreyi baştan kur</span>
                 <span className="mt-0.5 block text-muted-foreground">
-                  Güncel/açık kart verisi PDF'ten baştan kurulur; geçmiş ödenmiş ekstre arşivleri ve bağlı eski satırlar korunur.
+                  Import kapsamındaki harcama ve taksitler PDF'ten baştan kurulur; geçmiş ödenmiş ekstre arşivleri ve bağlı eski satırlar korunur.
                 </span>
               </span>
             </label>
@@ -565,7 +565,7 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
             {cleanImport && (
               <p className="flex items-start gap-2 border-b border-border bg-warning/10 px-4 py-3 text-xs font-bold text-warning">
                 <AlertCircle size={15} className="mt-0.5 shrink-0" />
-                Import kapsamındaki açık/güncel kart verisi silinip seçili PDF satırlarıyla baştan kurulacak. Geçmiş ödenmiş ekstre arşivleri korunur.
+                Import kapsamındaki mevcut kart harcama ve taksitleri seçili PDF satırlarıyla baştan kurulacak. Geçmiş ödenmiş ekstre arşivleri korunur.
               </p>
             )}
             {/* Reconciliation summary */}
@@ -586,36 +586,42 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
                   <span className="text-muted-foreground">Bankadan gelen</span>
                   <span className="font-black text-foreground">{formatAmount(statementTotal)}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">App hesabı</span>
-                  <span className="font-black text-foreground">{formatAmount(appCardDebt)}</span>
-                </div>
-                <div className="h-px bg-border" />
-                <div className="flex justify-between">
-                  <span className="font-bold text-muted-foreground">Fark</span>
-                  <span className={`font-black ${equalsTL(statementTotal, appCardDebt) ? 'text-success' : 'text-destructive'}`}>
-                    {diff >= 0 ? '+' : ''}{formatAmount(diff)}
-                  </span>
-                </div>
+                {!cleanImport && (
+                  <>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">App hesabı</span>
+                      <span className="font-black text-foreground">{formatAmount(appCardDebt)}</span>
+                    </div>
+                    <div className="h-px bg-border" />
+                    <div className="flex justify-between">
+                      <span className="font-bold text-muted-foreground">Fark</span>
+                      <span className={`font-black ${equalsTL(statementTotal, appCardDebt) ? 'text-success' : 'text-destructive'}`}>
+                        {diff >= 0 ? '+' : ''}{formatAmount(diff)}
+                      </span>
+                    </div>
+                  </>
+                )}
               </div>
 
-              <button
-                type="button"
-                disabled={cleanImport || reconciling || reconciled || !statementTotal}
-                onClick={() => void handleReconcile()}
-                className="flex w-full items-center justify-center gap-2 rounded-xl border border-border py-2.5 text-xs font-black text-foreground transition hover:bg-muted/50 disabled:opacity-55"
-              >
-                {reconciling && <Loader2 size={13} className="animate-spin" />}
-                {reconciled ? (
-                  <>
-                    <CheckCircle2 size={13} className="text-success" /> Mutabık kaydedildi
-                  </>
-                ) : reconciling ? (
-                  'Kaydediliyor…'
-                ) : (
-                  'Bu ekstreyi mutabık olarak kaydet'
-                )}
-              </button>
+              {!cleanImport && (
+                <button
+                  type="button"
+                  disabled={reconciling || reconciled || !statementTotal}
+                  onClick={() => void handleReconcile()}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-border py-2.5 text-xs font-black text-foreground transition hover:bg-muted/50 disabled:opacity-55"
+                >
+                  {reconciling && <Loader2 size={13} className="animate-spin" />}
+                  {reconciled ? (
+                    <>
+                      <CheckCircle2 size={13} className="text-success" /> Mutabık kaydedildi
+                    </>
+                  ) : reconciling ? (
+                    'Kaydediliyor…'
+                  ) : (
+                    'Bu ekstreyi mutabık olarak kaydet'
+                  )}
+                </button>
+              )}
 
               {reconcileError && (
                 <p className="flex items-center gap-2 rounded-lg bg-destructive/10 p-2.5 text-[11px] text-destructive">
@@ -624,39 +630,41 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
                 </p>
               )}
 
-              <div className="flex flex-wrap gap-2 text-xs">
-                <span className="flex items-center gap-1 rounded-md bg-success/10 px-2 py-1 font-bold text-success">
-                  <CheckCircle2 size={12} />
-                  {matched.length} eşleşti
-                </span>
-                <span className="flex items-center gap-1 rounded-md bg-warning/10 px-2 py-1 font-bold text-warning">
-                  <AlertCircle size={12} />
-                  {unmatched.length} eksik
-                </span>
-                {adjustments.length > 0 && (
-                  <span className="flex items-center gap-1 rounded-md bg-info/10 px-2 py-1 font-bold text-info">
+              {!cleanImport && (
+                <div className="flex flex-wrap gap-2 text-xs">
+                  <span className="flex items-center gap-1 rounded-md bg-success/10 px-2 py-1 font-bold text-success">
                     <CheckCircle2 size={12} />
-                    {adjustments.length} alacak/iade
+                    {matched.length} eşleşti
                   </span>
-                )}
-                {plannedPaymentMatches > 0 && (
-                  <span className="flex items-center gap-1 rounded-md bg-info/10 px-2 py-1 font-bold text-info">
-                    <CheckCircle2 size={12} />
-                    {plannedPaymentMatches} planlı ödeme
-                  </span>
-                )}
-                {manualReview.length > 0 && (
-                  <span className="flex items-center gap-1 rounded-md bg-info/10 px-2 py-1 font-bold text-info">
+                  <span className="flex items-center gap-1 rounded-md bg-warning/10 px-2 py-1 font-bold text-warning">
                     <AlertCircle size={12} />
-                    {manualReview.length} manuel
+                    {unmatched.length} eksik
                   </span>
-                )}
-              </div>
+                  {adjustments.length > 0 && (
+                    <span className="flex items-center gap-1 rounded-md bg-info/10 px-2 py-1 font-bold text-info">
+                      <CheckCircle2 size={12} />
+                      {adjustments.length} alacak/iade
+                    </span>
+                  )}
+                  {plannedPaymentMatches > 0 && (
+                    <span className="flex items-center gap-1 rounded-md bg-info/10 px-2 py-1 font-bold text-info">
+                      <CheckCircle2 size={12} />
+                      {plannedPaymentMatches} planlı ödeme
+                    </span>
+                  )}
+                  {manualReview.length > 0 && (
+                    <span className="flex items-center gap-1 rounded-md bg-info/10 px-2 py-1 font-bold text-info">
+                      <AlertCircle size={12} />
+                      {manualReview.length} manuel
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
 
             <CardExpenseHistorySection expenses={periodExpenses} periodLabel={periodLabel} />
 
-            {matches.length > 0 && (
+            {!cleanImport && matches.length > 0 && (
               <div className="border-b border-border">
                 <button
                   type="button"
@@ -709,7 +717,9 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
             {importableCount > 0 && (
               <>
                 <div className="flex items-center justify-between border-b border-border px-4 py-2">
-                  <span className="text-xs font-bold text-muted-foreground">App'te olmayan işlemler ve alacaklar</span>
+                  <span className="text-xs font-bold text-muted-foreground">
+                    {cleanImport ? 'İçe aktarılacak ekstre satırları' : "App'te olmayan işlemler ve alacaklar"}
+                  </span>
                   <button
                     type="button"
                     onClick={toggleAll}
@@ -719,7 +729,7 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
                   </button>
                 </div>
 
-                <div className="flex-1 overflow-y-auto">
+                <div className="max-h-64 overflow-y-auto">
                   {unmatched.map((item) => {
                     const { transaction: tx, plannedPayment } = item
                     const knownPlan = tx.isInstallment && tx.installmentCount > 1
