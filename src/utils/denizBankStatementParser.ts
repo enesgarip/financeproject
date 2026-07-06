@@ -7,6 +7,7 @@
  * Karşılaştırma money.ts ile (tutar eşleşmesinde float toleransı yaratma).
  */
 import { suggestExpenseCategory } from './categories'
+import { addMonths, dateInputValue } from './date'
 import { diffTL, roundTL } from './money'
 
 export type ParsedTransaction = {
@@ -262,6 +263,11 @@ export function expenseTotalAmount(tx: ParsedTransaction): number {
     return roundTL(tx.amount * tx.installmentCount)
   }
   return tx.amount
+}
+
+export function statementInstallmentDueDate(tx: ParsedTransaction): string {
+  if (!tx.isInstallment || tx.installmentCount <= 1) return tx.date
+  return dateInputValue(addMonths(new Date(`${tx.date}T00:00:00`), Math.max(0, tx.installmentNo - 1)))
 }
 
 export function matchTransactions(

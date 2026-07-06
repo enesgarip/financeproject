@@ -23,6 +23,7 @@ import {
   parseDenizBankStatement,
   matchTransactions,
   expenseTotalAmount,
+  statementInstallmentDueDate,
   type ParsedTransaction,
   type ParsedStatementAdjustment,
   type StatementTransactionMatch,
@@ -280,6 +281,7 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
       const { transaction: tx, plannedPayment } = item
       const knownPlan = tx.isInstallment && tx.installmentCount > 1
       const remaining = knownPlan ? Math.max(1, tx.installmentCount - tx.installmentNo + 1) : 1
+      const installmentDueDate = knownPlan ? statementInstallmentDueDate(tx) : tx.date
       const result = plannedPayment
         ? await payPaymentFromCardImport({
           paymentId: plannedPayment.id,
@@ -291,7 +293,7 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
           cardId: card.id,
           amount: knownPlan ? roundTL(tx.amount * remaining) : tx.amount,
           description: tx.description,
-          spentAt: tx.date,
+          spentAt: installmentDueDate,
           installmentCount: knownPlan ? remaining : 1,
           category: tx.category,
           status: 'posted',
@@ -368,6 +370,7 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
       const installment = tx.isInstallment && tx.installmentCount > 1
       const isMidPlan = installment && tx.installmentNo > 1 && tx.installmentNo < tx.installmentCount
       const isLastInstallment = installment && tx.installmentNo === tx.installmentCount
+      const installmentDueDate = installment ? statementInstallmentDueDate(tx) : tx.date
       let result
       if (plannedPayment) {
         result = await payPaymentFromCardImport({
@@ -383,7 +386,7 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
           installmentAmount: tx.amount,
           totalInstallments: tx.installmentCount,
           paidInstallments: tx.installmentNo - 1,
-          nextDueDate: tx.date,
+          nextDueDate: installmentDueDate,
           category: tx.category,
         })
       } else {
@@ -391,7 +394,7 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
           cardId: card.id,
           amount: installment && !isLastInstallment ? expenseTotalAmount(tx) : tx.amount,
           description: tx.description,
-          spentAt: tx.date,
+          spentAt: installment ? installmentDueDate : tx.date,
           installmentCount: installment && !isLastInstallment ? tx.installmentCount : 1,
           category: tx.category,
           status: 'posted',

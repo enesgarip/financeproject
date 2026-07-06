@@ -146,6 +146,11 @@ Current movement reconciliation:
   so identical-looking bank rows can be selected one by one.
 - Imports use `add_card_expense` for ordinary card spending so card debt, provision/current-period fields, ledger events, and transaction history stay under the audited mutation path.
 - If a missing bank row matches a still-open planned payment by amount and due/movement date, the import uses `pay_payment_from_card_import` instead. This creates the card expense on the bank row date and advances/closes the planned payment, preventing the same bill from remaining as a separate pending obligation.
+- DenizBank statement installment rows show the original purchase date even for
+  later installments. Import derives the current installment due date as
+  `original date + (installment_no - 1 months)` before creating carryover or
+  clean-import installment rows; otherwise future installments can be pulled into
+  the current statement too early.
 
 ## Card Installment Rules
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { expenseTotalAmount, matchTransactions, parseAmount, parseDenizBankStatement } from './denizBankStatementParser'
+import { expenseTotalAmount, matchTransactions, parseAmount, parseDenizBankStatement, statementInstallmentDueDate } from './denizBankStatementParser'
 
 describe('parseAmount (locale-robust)', () => {
   it('parses English-formatted statement amounts', () => {
@@ -230,6 +230,34 @@ describe('parseDenizBankStatement — installments', () => {
     const result = parseDenizBankStatement(SAMPLE_TEXT)
     const beyler = result.transactions.find((t) => t.description.includes('BEYLER OPTİK'))!
     expect(expenseTotalAmount(beyler)).toBeCloseTo(65000.01)
+  })
+
+  it('derives the statement installment due date from original date plus installment offset', () => {
+    expect(statementInstallmentDueDate({
+      date: '2026-05-19',
+      description: 'BEYLER OPTİK',
+      amount: 21666.67,
+      category: 'Diğer',
+      isInstallment: true,
+      installmentNo: 2,
+      installmentCount: 3,
+    })).toBe('2026-06-19')
+
+    expect(statementInstallmentDueDate({
+      date: '2026-03-26',
+      description: 'NEOVA SİGORTA',
+      amount: 2005.61,
+      category: 'Diğer',
+      isInstallment: true,
+      installmentNo: 4,
+      installmentCount: 9,
+    })).toBe('2026-06-26')
+  })
+
+  it('keeps first installment due date on the original transaction date', () => {
+    const result = parseDenizBankStatement(SAMPLE_TEXT)
+    const beyler = result.transactions.find((t) => t.description.includes('BEYLER OPTİK'))!
+    expect(statementInstallmentDueDate(beyler)).toBe('2026-05-19')
   })
 
   it('marks regular transactions as non-installment with count 1', () => {

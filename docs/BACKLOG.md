@@ -224,6 +224,9 @@ pattern'ler ve açık düzeltme planı yer alıyor.
 
 ## Recently Cleared / No Longer First Next Task
 
+- 2026-07-06 statement-import installment offset fix: DenizBank statement rows
+  keep the original purchase date for later installments, so import now derives
+  the current installment due date from `installment_no` before creating rows.
 - 2026-07-06 card-installment due-date fix: installment rows now preserve the
   transaction day instead of normalizing to the 1st of the month, and
   `post_due_card_installments` moves only due scheduled rows into
