@@ -15,7 +15,7 @@ import { toTL } from './money'
 export type ActivityItem = {
   id: string
   timestamp: string
-  icon: 'card' | 'account' | 'payment' | 'transfer' | 'loan' | 'debt'
+  icon: 'card' | 'account' | 'payment' | 'transfer' | 'loan' | 'debt' | 'asset'
   title: string
   detail: string | null
   amountTL: number | null
@@ -77,6 +77,16 @@ const TX_TYPE_ICON: Record<string, ActivityItem['icon']> = {
   loan: 'loan',
   debt: 'debt',
   card: 'card',
+  asset: 'asset',
+}
+
+function transactionDirection(tx: TransactionHistory): ActivityItem['direction'] {
+  if (tx.type === 'asset') {
+    if (tx.title.endsWith(' alındı')) return 'outflow'
+    if (tx.title.endsWith(' satıldı')) return 'inflow'
+    return 'neutral'
+  }
+  return tx.amount != null && tx.amount < 0 ? 'outflow' : tx.amount != null && tx.amount > 0 ? 'inflow' : 'neutral'
 }
 
 function transactionToActivity(tx: TransactionHistory): ActivityItem {
@@ -87,7 +97,7 @@ function transactionToActivity(tx: TransactionHistory): ActivityItem {
     title: tx.title,
     detail: tx.note,
     amountTL: tx.amount,
-    direction: tx.amount != null && tx.amount < 0 ? 'outflow' : tx.amount != null && tx.amount > 0 ? 'inflow' : 'neutral',
+    direction: transactionDirection(tx),
     source: 'transaction_history',
   }
 }

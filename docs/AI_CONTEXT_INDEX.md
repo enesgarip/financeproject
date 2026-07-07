@@ -1,6 +1,6 @@
 # AI Context Index
 
-Last reviewed: 2026-07-06
+Last reviewed: 2026-07-07
 
 This file is the cheapest starting point for future AI/Codex sessions. Its job
 is to reduce repeated repo discovery: read this first, choose the smallest
@@ -69,7 +69,7 @@ ESLint blocks `src/{pages,components,utils,hooks}` from importing
 | `/odemeler` planned payments | `src/pages/PlanningHub.tsx`, `src/pages/PaymentsPage.tsx` | `src/data/repositories/paymentsRepo.ts`, `src/services/financePaymentActions.ts`, `src/utils/obligations.ts`, `docs/PLANNING_MODEL_REVIEW.md`, `docs/SHARED_PAYMENT_DRAWER_PLAN.md` |
 | `/borclar/krediler` loans | `src/pages/LoansPage.tsx`, `src/pages/LoansPage.helpers.ts`, `src/pages/LoansPage.components.tsx` | `src/data/repositories/loansRepo.ts`, `src/services/financePaymentActions.ts`, `src/utils/financeSummary.ts`, `docs/SHARED_PAYMENT_DRAWER_PLAN.md` |
 | `/borclar/kisiler` personal debts | `src/pages/DebtsPage.tsx` | `src/data/repositories/debtsRepo.ts`, `src/services/financePaymentActions.ts`, `docs/SHARED_PAYMENT_DRAWER_PLAN.md` |
-| `/varliklar` assets | `src/pages/AssetsPage.tsx`, `src/pages/AssetsHub.tsx` | `src/data/repositories/valuationRepo.ts`, `src/utils/valuation*`, `src/utils/marketRates.ts` |
+| `/varliklar` assets | `src/pages/AssetsPage.tsx`, `src/pages/AssetsPage.tradeModal.tsx`, `src/pages/AssetsHub.tsx` | `src/data/repositories/valuationRepo.ts`, `src/services/assetTrades.ts`, `src/utils/valuation*`, `src/utils/marketRates.ts` |
 | `/varliklar/maas` salary | `src/pages/SalaryPage.tsx` | `src/utils/financeSummary.ts` salary helpers |
 | `/analiz` reports hub | `src/pages/AnalysisHub.tsx`, `src/pages/AnalysisPage.tsx`, `src/pages/AnalysisDetailPage.tsx`, `src/pages/AnalysisPage.data.ts`, `src/pages/AnalysisPage.loan.tsx`, `src/pages/AnalysisPage.panels.tsx`, `src/pages/AnalysisPage.reports.tsx`, `src/pages/AnalysisPage.trends.tsx`, `src/pages/AnalysisPage.wealth.tsx`, `src/pages/AnalysisPage.calendar.tsx` | `src/app/useFinanceSnapshot.ts`, `src/data/repositories/analysisRepo.ts`, `src/utils/analysisView.ts`, `src/utils/loanAffordability.ts`, charts |
 | `/veri-sagligi` data health hub | `docs/DATA_HEALTH_ARCHITECTURE.md`, `src/pages/DataHealthHub.tsx`, `src/pages/DataHealthPage.tsx`, `src/pages/DataHealthOperationsPage.tsx`, `src/pages/DataHealthPage.actions.ts`, `src/pages/DataHealth.logic.ts`, `src/pages/DataHealth.checks.ts`, `src/pages/DataHealth.guide.ts`, `src/pages/DataHealth.actions.ts` | `src/data/repositories/dataHealthRepo.ts`, `src/hooks/useFinancePaymentDrawer.ts`, ledger utilities, finance invariants |
@@ -224,7 +224,7 @@ paylaşır; her sayfa süpersetini client-side daraltır). Query client: `src/ap
 | **Yeni kredi uygunluğu** | `utils/loanAffordability.ts` (+ `loanAffordability.test.ts`) | `financeSnapshotRepo.ts` | `pages/AnalysisDetailPage.tsx`, `pages/AnalysisPage.loan.tsx` |
 | **Kişisel borç/alacak** | `utils/obligations.ts`, `utils/obligationPresets.ts` | `data/repositories/debtsRepo.ts` | `pages/DebtsPage.tsx`, `LiabilitiesHub.tsx` |
 | **Planlı ödemeler** | `utils/dashboardUpcoming.ts`, `utils/attention.ts`, `utils/financeObligationRules.ts` | `data/repositories/paymentsRepo.ts`, `services/financePaymentActions.ts` | `pages/PaymentsPage.tsx` |
-| **Varlıklar / değerleme** | `utils/valuation.ts`, `utils/valuationSync.ts`, `utils/realValue.ts` | `data/repositories/valuationRepo.ts`, `analysisRepo.ts` | `pages/AssetsPage.tsx`, `AssetsHub.tsx` |
+| **Varlıklar / değerleme / al-sat** | `utils/valuation.ts`, `utils/valuationSync.ts`, `utils/realValue.ts` | `data/repositories/valuationRepo.ts`, `services/assetTrades.ts`, `analysisRepo.ts` | `pages/AssetsPage.tsx`, `pages/AssetsPage.tradeModal.tsx`, `AssetsHub.tsx` |
 | **Altın (gram/ledger)** | `utils/goldLedger.ts`, `utils/goldLedgerSync.ts`, `utils/zakat.ts` | `data/repositories/goldLedgerRepo.ts` | `pages/GoldPage.tsx` |
 | **Maaş geçmişi** | `utils/lastUsed.ts` | `data/repositories/crudRepo.ts` | `pages/SalaryPage.tsx` |
 | **Birikim hedefleri** | `utils/savingsGoal.ts` | `data/repositories/savingsGoalsRepo.ts` | (Assets/Dashboard) |

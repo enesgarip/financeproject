@@ -19,7 +19,7 @@ export type CardExpenseStatus = 'provision' | 'posted' | 'cancelled'
 export type CardStatementStatus = 'open' | 'paid'
 export type SavingsGoalStatus = 'active' | 'completed'
 export type SavingsGoalValueType = 'TRY' | 'gram_altin' | 'ceyrek_altin' | 'composite'
-export type TransactionHistoryType = 'payment' | 'transfer' | 'loan' | 'debt' | 'card' | 'correction'
+export type TransactionHistoryType = 'payment' | 'transfer' | 'loan' | 'debt' | 'card' | 'correction' | 'asset'
 export type UpcomingDismissalSource = 'payment' | 'card' | 'loan_installment' | 'debt'
 
 export type BaseRow = {
@@ -527,6 +527,17 @@ export type Database = {
           p_note?: string | null
         }
         Returns: Card
+      }
+      trade_asset_with_account: {
+        Args: {
+          p_asset_id: string
+          p_account_card_id: string
+          p_direction: 'buy' | 'sell'
+          p_amount: number
+          p_quantity?: number | null
+          p_note?: string | null
+        }
+        Returns: Asset
       }
       upsert_savings_goal: {
         Args: {

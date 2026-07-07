@@ -1,20 +1,24 @@
-import { ArrowDownRight, ArrowUpRight, Banknote, Coins, Landmark, LineChart, ShieldCheck, TrendingUp, Wallet } from 'lucide-react'
-import { useEffect, useMemo, useState, type ComponentType } from 'react'
+import { ArrowDownRight, ArrowUpRight, Banknote, Coins, Landmark, LineChart, Minus, Plus, ShieldCheck, TrendingUp, Wallet } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useState, type ComponentType, type FormEvent } from 'react'
 import { CrudPage, type FormField } from '../components/CrudPage'
 import { DonutChart, type DonutSlice } from '../components/charts/DonutChart'
 import { RatesBanner } from '../components/finance/RatesBanner'
 import { Badge } from '../components/ui/badge'
+import { Button } from '../components/ui/button'
 import { Card, CardContent } from '../components/ui/card'
+import { fetchCrudRows } from '../data/repositories/crudRepo'
 import { useMarketRates } from '../hooks/useMarketRates'
 import { useStockPrices } from '../hooks/useStockPrices'
 import { normalizeTicker, type StockPrices } from '../lib/stockQuotesClient'
-import type { Asset } from '../types/database'
+import { assetTradeRequiresQuantity, submitAssetTrade, type AssetTradeDirection } from '../services/assetTrades'
+import type { Asset, Card as FinanceCard } from '../types/database'
 import { formatCurrency, formatNumber, parseNumber } from '../utils/formatCurrency'
 import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
 import { GOLD_LEDGER_SOURCE } from '../utils/goldLedger'
 import type { MarketRatesSnapshot } from '../utils/marketRates'
-import { diffTL, sumTL, roundTL } from '../utils/money'
+import { diffTL, greaterThanTL, sumTL, roundTL } from '../utils/money'
 import { assetRateSymbol, effectiveAssetValue, stockCostBasis, stockProfit, valueAsset, valueStock } from '../utils/valuation'
+import { AssetTradeModal, type AssetTradeDraft } from './AssetsPage.tradeModal'
 
 const categoryOptions: Asset['category'][] = ['Nakit', 'Altın', 'Fon', 'Hisse', 'Araç', 'BES', 'Diğer']
 const formCategoryOptions = categoryOptions.filter((category) => category !== 'Altın')
@@ -46,6 +50,10 @@ const categoryCardTint: Record<Asset['category'], string> = {
 
 function isGoldLedgerAsset(row: Asset): boolean {
   return row.source === GOLD_LEDGER_SOURCE
+}
+
+function canTradeAsset(row: Asset): boolean {
+  return row.category !== 'Altın' && !isGoldLedgerAsset(row)
 }
 
 /** A row is auto-valuable when its category maps to a market symbol or BIST ticker. */
@@ -335,7 +343,113 @@ export function AssetsPage() {
   const { formatAmount } = useBalancePrivacy()
   const { snapshot } = useMarketRates()
   const [stockPrices, setStockPrices] = useState<StockPrices>({})
+  const [accounts, setAccounts] = useState<FinanceCard[]>([])
+  const [trade, setTrade] = useState<AssetTradeDraft | null>(null)
+  const [tradeAccountId, setTradeAccountId] = useState('')
+  const [tradeAmount, setTradeAmount] = useState('')
+  const [tradeQuantity, setTradeQuantity] = useState('')
+  const [tradeNote, setTradeNote] = useState('')
+  const [tradeError, setTradeError] = useState('')
+  const [tradeSaving, setTradeSaving] = useState(false)
   const fieldContext = useMemo<FieldCtx>(() => ({ snapshot, stockPrices }), [snapshot, stockPrices])
+  const bankAccounts = useMemo(
+    () => accounts.filter((account) => account.card_type === 'banka_karti'),
+    [accounts],
+  )
+
+  const loadAccounts = useCallback(async () => {
+    const result = await fetchCrudRows('cards', 'created_at', false)
+    if (!result.ok) {
+      setTradeError(result.error.message ?? 'Banka hesapları yüklenemedi.')
+      setAccounts([])
+      return
+    }
+    setAccounts(result.data)
+  }, [])
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void loadAccounts()
+  }, [loadAccounts])
+
+  function openTrade(asset: Asset, direction: AssetTradeDirection) {
+    setTrade({ asset, direction })
+    setTradeAccountId(bankAccounts[0]?.id ?? '')
+    setTradeAmount(direction === 'sell' && greaterThanTL(asset.estimated_value_try, 0) ? String(asset.estimated_value_try) : '')
+    setTradeQuantity(direction === 'sell' && assetTradeRequiresQuantity(asset) && asset.amount > 0 ? String(asset.amount) : '')
+    setTradeNote('')
+    setTradeError('')
+    void loadAccounts()
+  }
+
+  function closeTrade() {
+    if (tradeSaving) return
+    setTrade(null)
+    setTradeError('')
+  }
+
+  async function handleTradeSubmit(
+    event: FormEvent<HTMLFormElement>,
+    reloadAssets: () => Promise<void>,
+    setPageError: (message: string) => void,
+  ) {
+    event.preventDefault()
+    if (!trade) return
+
+    const selectedAccount = bankAccounts.find((account) => account.id === tradeAccountId)
+    const amount = parseNumber(tradeAmount)
+    const quantity = tradeQuantity.trim() ? parseNumber(tradeQuantity) : null
+
+    if (!selectedAccount) {
+      setTradeError(trade.direction === 'buy' ? 'Kaynak hesap seçmelisin.' : 'Tahsilat hesabı seçmelisin.')
+      return
+    }
+    if (!greaterThanTL(amount, 0)) {
+      setTradeError('İşlem tutarı 0’dan büyük olmalı.')
+      return
+    }
+    if (trade.direction === 'buy' && greaterThanTL(amount, selectedAccount.current_balance)) {
+      setTradeError('Kaynak hesap bakiyesi yetersiz.')
+      return
+    }
+    if (trade.direction === 'sell' && greaterThanTL(amount, trade.asset.estimated_value_try)) {
+      setTradeError('Satış tutarı varlığın kayıtlı değerinden büyük olamaz.')
+      return
+    }
+    if (assetTradeRequiresQuantity(trade.asset) && (!quantity || quantity <= 0)) {
+      setTradeError('Hisse işlemlerinde adet girilmeli.')
+      return
+    }
+    if (trade.direction === 'sell' && quantity !== null && quantity > trade.asset.amount) {
+      setTradeError('Satış miktarı mevcut miktardan büyük olamaz.')
+      return
+    }
+
+    setTradeSaving(true)
+    setTradeError('')
+    const result = await submitAssetTrade({
+      assetId: trade.asset.id,
+      accountId: selectedAccount.id,
+      direction: trade.direction,
+      amount,
+      quantity,
+      note: tradeNote.trim() || null,
+    })
+
+    if (result.error) {
+      setTradeError(result.error.message ?? 'Varlık işlemi tamamlanamadı.')
+      setTradeSaving(false)
+      return
+    }
+
+    setTrade(null)
+    setTradeSaving(false)
+    try {
+      await Promise.all([reloadAssets(), loadAccounts()])
+    } catch (reloadError) {
+      setPageError(reloadError instanceof Error ? reloadError.message : 'İşlem tamamlandı ama liste yenilenemedi.')
+    }
+  }
 
   return (
     <CrudPage
@@ -347,8 +461,24 @@ export function AssetsPage() {
         validateForm={validateAssetForm}
         emptyTitle="Henüz varlık yok"
         emptyDescription="Nakit, fon, hisse veya diğer varlıklarını buradan ekleyebilirsin. Altın işlemleri ayrı Altın sekmesinde tutulur."
-        renderBeforeList={({ loading, rows, reload }) => (
+        renderBeforeList={({ loading, rows, reload, setError }) => (
           <div className="space-y-3">
+            <AssetTradeModal
+              trade={trade}
+              accounts={bankAccounts}
+              accountId={tradeAccountId}
+              amount={tradeAmount}
+              quantity={tradeQuantity}
+              note={tradeNote}
+              error={tradeError}
+              saving={tradeSaving}
+              onClose={closeTrade}
+              onAccountChange={setTradeAccountId}
+              onAmountChange={setTradeAmount}
+              onQuantityChange={setTradeQuantity}
+              onNoteChange={setTradeNote}
+              onSubmit={(event) => void handleTradeSubmit(event, reload, setError)}
+            />
             <StockPriceSync rows={rows as Asset[]} onPrices={setStockPrices} />
             <RatesBanner
               onSynced={reload}
@@ -416,9 +546,31 @@ export function AssetsPage() {
           return row.category === 'Hisse' && row.symbol ? `${row.category} · ${row.symbol}` : row.category
         }}
         renderDetails={(row) => [`Değer: ${formatAmount(effectiveAssetValue(row, snapshot, stockPrices))}`]}
+        renderRowActions={(row) => {
+          const asset = row as Asset
+          if (!canTradeAsset(asset)) return null
+          return (
+            <>
+              <Button type="button" variant="secondary" size="sm" onClick={() => openTrade(asset, 'buy')}>
+                <Plus />
+                Al
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => openTrade(asset, 'sell')}
+                disabled={!greaterThanTL(asset.estimated_value_try, 0)}
+              >
+                <Minus />
+                Sat
+              </Button>
+            </>
+          )
+        }}
         canEditRow={(row) => row.category !== 'Altın'}
         canDeleteRow={(row) => !isGoldLedgerAsset(row)}
-        renderCard={(row, { menu }) => {
+        renderCard={(row, { menu, rowActions }) => {
           const asset = row as Asset
           const value = effectiveAssetValue(asset, snapshot, stockPrices)
           const meta = categoryMeta[asset.category]
@@ -441,6 +593,8 @@ export function AssetsPage() {
                 </div>
                 {menu}
               </div>
+
+              {rowActions}
 
               <div className="mt-4 flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
                 <div className="min-w-0">

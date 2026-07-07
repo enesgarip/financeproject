@@ -1,6 +1,6 @@
 # Supabase RPC Action Reference
 
-Last reviewed: 2026-07-06
+Last reviewed: 2026-07-07
 
 This file maps Supabase RPCs to the user-visible actions that call them. Keep it
 updated whenever a page action, repository wrapper, or migration changes an RPC
@@ -62,6 +62,12 @@ installment payment outside the statement flow.
 | `transfer_between_accounts` | `submitAccountMovement` | Cards page/account center: bank-to-bank transfer | Moves money between two `banka_karti` accounts and writes history |
 | `record_manual_account_movement` | `submitAccountMovement` | Cards page/account center: manual deposit/withdrawal | Applies one account balance delta and writes history in one transaction |
 | `record_sms_account_movement` | `parse-sms` edge function (service role) | SMS automation: bank account in/out movement | Matches `cards.account_number` against the SMS account number (digits-only exact match, then tolerant mutual-containment match with a 6-digit minimum; ambiguous matches are rejected), applies the balance delta, and writes history |
+
+## Assets
+
+| RPC | Called From | User-Visible Action | Main Effect |
+| --- | --- | --- | --- |
+| `trade_asset_with_account` | `submitAssetTrade` | Assets page: buy/sell an existing asset with a selected bank account | Buy debits a `banka_karti` and increases asset value/quantity; sell credits a `banka_karti` and decreases asset value/quantity; writes one asset history row |
 
 ## Ledger Repair
 

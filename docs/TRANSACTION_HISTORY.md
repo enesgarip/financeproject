@@ -1,6 +1,6 @@
 # Transaction History Side Effects
 
-Last reviewed: 2026-06-20
+Last reviewed: 2026-07-07
 
 This document is the source of truth for `transaction_history` side effects. Read
 it before changing a finance mutation, RPC wrapper, payment drawer action, or
@@ -48,6 +48,7 @@ otherwise:
 | `loan` | Loan installment payment |
 | `debt` | Personal debt settlement or receivable collection |
 | `card` | Card expense/provision/statement/carryover lifecycle events |
+| `asset` | Asset buy/sell actions backed by a selected bank account |
 
 ## Current RPC Side Effects
 
@@ -68,6 +69,7 @@ otherwise:
 | `settle_personal_debt` | `debt` | `debts.id` | `estimated_value_try` | Covers both paying debt and collecting receivable; direction is in `note`. |
 | `record_manual_account_movement` | `transfer` | `cards.id` | Movement amount | Manual bank-account in/out uses the affected account as source. |
 | `transfer_between_accounts` | `transfer` | Source `cards.id` | Transfer amount | One feed row represents both debit and credit sides. |
+| `trade_asset_with_account` | `asset` | `assets.id` | Trade amount | Buy debits the selected bank account; sell credits it. Asset value/quantity updates and account balance movement commit together. |
 | `reset_card_data` | deletes scoped history | Related card rows | n/a | Removes history tied to deleted card expenses/installments/statements. |
 | `reset_card_import_data` | deletes scoped history | Open/current import rows | n/a | Removes history tied to the open/current import scope only; paid historical statement archives and their linked rows stay available for reports. |
 | `reset_user_finance_data` | deletes all user history | User data reset | n/a | Full reset removes the feed with the rest of the user's finance data. |

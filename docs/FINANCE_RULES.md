@@ -2,7 +2,7 @@
 
 ## Scope
 
-This file records the current business rules inferred from the codebase as of 2026-07-06. If code and this file diverge, update both intentionally.
+This file records the current business rules inferred from the codebase as of 2026-07-07. If code and this file diverge, update both intentionally.
 
 ## Money and Formatting
 
@@ -14,6 +14,17 @@ This file records the current business rules inferred from the codebase as of 20
 - Cash assets use category `Nakit`.
 - Asset estimated worth is normalized into TRY with `estimated_value_try`.
 - Non-TRY assets may still be represented through an estimated TRY value for summaries.
+- Existing assets can be bought or sold from the Assets page through
+  `trade_asset_with_account`.
+  - Buy requires a selected `banka_karti`, debits that account, and increases the
+    asset's TRY value. If quantity is supplied, the asset amount also increases.
+  - Sell requires a selected `banka_karti`, credits that account, and decreases
+    the asset's TRY value. If quantity is supplied, the asset amount also
+    decreases.
+  - Stock (`Hisse`) trades require quantity so share count and weighted unit
+    cost stay coherent.
+  - Ledger-managed gold asset rows stay outside this flow; gold is managed from
+    the Gold page/ledger.
 
 ## Market Rates & Auto-Valuation
 

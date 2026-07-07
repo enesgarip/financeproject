@@ -224,6 +224,11 @@ pattern'ler ve açık düzeltme planı yer alıyor.
 
 ## Recently Cleared / No Longer First Next Task
 
+- 2026-07-07 varlık al/sat akışı: Assets page mevcut varlıklarda Al/Sat aksiyonları
+  gösterir; kullanıcı banka hesabı seçerek alışta hesabı borçlandırıp varlığı
+  artırır, satışta hesabı alacaklandırıp varlığı azaltır. `trade_asset_with_account`
+  RPC'si varlık, banka bakiyesi, account ledger ve transaction history kaydını tek
+  transaction'da işler.
 - 2026-07-06 statement-import installment offset fix: DenizBank statement rows
   keep the original purchase date for later installments, so import now derives
   the current installment due date from `installment_no` before creating rows.

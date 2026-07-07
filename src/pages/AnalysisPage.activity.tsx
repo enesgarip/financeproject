@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { ArrowDownCircle, ArrowUpCircle, CreditCard, Landmark, Minus, Receipt, RefreshCw, Repeat } from 'lucide-react'
+import { ArrowDownCircle, ArrowUpCircle, CreditCard, Landmark, Minus, PiggyBank, Receipt, RefreshCw, Repeat } from 'lucide-react'
 import { formatDate } from '../utils/date'
 import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
 import {
@@ -19,6 +19,7 @@ const ICON_MAP: Record<ActivityItem['icon'], typeof CreditCard> = {
   transfer: Repeat,
   loan: ArrowDownCircle,
   debt: ArrowUpCircle,
+  asset: PiggyBank,
 }
 
 const FILTER_OPTIONS: { value: ActivityFilter; label: string }[] = [
