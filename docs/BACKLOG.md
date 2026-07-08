@@ -224,6 +224,11 @@ pattern'ler ve açık düzeltme planı yer alıyor.
 
 ## Recently Cleared / No Longer First Next Task
 
+- 2026-07-08 paid-statement calendar fix: `utils/obligations.ts` now derives
+  current-period card cash due dates from the active statement period when there
+  is no pending statement. If a July 14 statement was paid early after the July 4
+  cut, new current-period spending no longer appears as a July 14 cash outflow;
+  it moves to the next cycle. Covered by `obligations.test.ts`.
 - 2026-07-07 varlık al/sat akışı: Assets page mevcut varlıklarda Al/Sat aksiyonları
   gösterir; kullanıcı banka hesabı seçerek alışta hesabı borçlandırıp varlığı
   artırır, satışta hesabı alacaklandırıp varlığı azaltır. `trade_asset_with_account`

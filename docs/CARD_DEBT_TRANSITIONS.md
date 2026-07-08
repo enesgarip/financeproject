@@ -1,6 +1,6 @@
 # Card Debt Transitions
 
-Last reviewed: 2026-07-06
+Last reviewed: 2026-07-08
 
 This file is the working source of truth for how credit-card debt moves through
 the app. If an RPC, page action, or data-health fix changes one of these rules,
@@ -108,6 +108,14 @@ has an open statement archive, because `pay_card_debt` lowers
 `statement_debt_amount` without closing the archive row (data health would flag
 the mismatch) — the same reason the obligations calendar only emits its
 `pay_card_debt` item for cards without an open statement.
+
+Cash-flow/obligation projections must not reuse a paid statement's old due date
+for new current-period spending. When no statement is pending, the current-period
+cash due date comes from the card's active statement period; after the statement
+day has passed, a paid statement due date (for example July 14) belongs to the
+old statement, while new current-period spending moves to the next cycle (for
+example August 14). When a statement is still pending, current-period spending
+remains one cycle after that pending statement so both loads never collide.
 
 When `pay_payment` is funded by a credit card instead of a bank account, it is
 card spending, not cash outflow: the selected credit card receives a posted

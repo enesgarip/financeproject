@@ -234,12 +234,13 @@ From `src/utils/budgetAlerts.ts`:
 - monthly cash-flow summaries derive payment/card/loan/debt buckets from the
   normalized obligation projection. Card statement debt is counted when payable;
   current-period card spending is counted on the open period's statement due date
-  — the next payment due date when no statement is pending (`statement_debt = 0`
-  and no open archive), or the cycle after when a statement is already pending (so
-  the pending statement and the open period never collide). For the common
-  `due_day > statement_day` card the unpaid current period is therefore due next
-  month, not two cycles out; scheduled card installments remain a card load, not
-  an immediate bank-cash outflow.
+  — derived from the card's statement period when no statement is pending
+  (`statement_debt = 0` and no open archive), or the cycle after when a statement
+  is already pending (so the pending statement and the open period never collide).
+  If the statement day has passed and that statement was paid early, the old due
+  date is not reused for new current-period spending; the spending moves to the
+  next cycle's due date. Scheduled card installments remain a card load, not an
+  immediate bank-cash outflow.
 - UI labels must preserve the same split: "Nakit çıkışı" / "Kart ödemesi"
   means bank cash impact, while "Kart harcaması" means card consumption on
   `card_expenses.spent_at`. Do not merge them into one "gider" bucket or card

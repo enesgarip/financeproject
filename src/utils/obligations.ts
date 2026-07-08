@@ -33,7 +33,7 @@ import type {
   Payment,
   SalaryHistory,
 } from '../types/database'
-import { getNextCardPaymentDueDate } from './cardStatement'
+import { getCardStatementPeriod, getNextCardPaymentDueDate } from './cardStatement'
 import { addDays, addMonths, dateInputValue, endOfMonth, isDateInMonth, monthlyOccurrenceDate, startOfDay, startOfMonth } from './date'
 import { cardMonthlyPaymentAmount, paymentCashOutflowAmount, paymentOccurrenceInMonth, paymentUsesCreditCard } from './financeObligationRules'
 import { roundTL, sumTL } from './money'
@@ -133,6 +133,14 @@ function cardLabel(card: Card | undefined) {
   return card ? `${card.bank_name} - ${card.card_name}` : 'Kart'
 }
 
+function currentPeriodPaymentDueDate(card: Card, nextDue: string, from: Date | undefined, hasPendingStatement: boolean) {
+  if (hasPendingStatement) {
+    return dateInputValue(addMonths(new Date(`${nextDue}T00:00:00`), 1))
+  }
+
+  return getCardStatementPeriod(card, from)?.dueDate ?? nextDue
+}
+
 // Listeye kalem ekleme tek kapısı: tutarı negatife düşürmez ve cashImpact'i
 // normalize eder. allowZero=true sadece tutarı tahmini olan kalemler için
 // (henüz tutarı belirsiz ama vadesi gelen ödeme listede görünmeli).
@@ -228,17 +236,15 @@ export function buildFinanceObligationsForMonth(
     }
 
     // Dönem içi harcama henüz ekstreye girmedi; gerçek nakit çıkışı, açık dönemin
-    // kesileceği ekstrenin son ödeme gününde olur.
-    //  - Bekleyen ekstre VARSA (statement_debt > 0 veya açık ekstre arşivi): o ekstre
-    //    nextDue'da ödenir; açık dönem bir sonraki çevrimde → addMonths(nextDue, 1).
-    //  - Bekleyen ekstre YOKSA: nextDue zaten açık dönemin son ödeme günüdür → nextDue.
-    //    (due_day > statement_day kartlarında +1 çevrim bir cycle fazla ileri atıyordu.)
+    // kesileceği ekstrenin son ödeme gününde olur. Bekleyen ekstre varsa mevcut
+    // vade o ekstreye aittir; açık dönem bir sonraki çevrimde ödenir. Bekleyen
+    // ekstre yoksa tarihi kartın kesim/vade periyodundan türetiriz; böylece
+    // son ekstre erken ödendikten sonra bugünkü dönem içi harcama eski vade gününe
+    // (ör. 14 Temmuz) tekrar bindirilmez.
     // action: null — ekstre kesilmeden ödenecek bir kalem yok (sadece projeksiyon).
     if (nextDue && card.current_period_spending > 0) {
       const hasPendingStatement = cardsWithOpenStatements.has(card.id) || card.statement_debt_amount > 0
-      const currentPeriodDueDate = hasPendingStatement
-        ? dateInputValue(addMonths(new Date(`${nextDue}T00:00:00`), 1))
-        : nextDue
+      const currentPeriodDueDate = currentPeriodPaymentDueDate(card, nextDue, options.from, hasPendingStatement)
       if (isDateInMonth(currentPeriodDueDate, monthStart)) {
         addObligation(items, {
           id: `card-debt-current-${card.id}-${currentPeriodDueDate}`,

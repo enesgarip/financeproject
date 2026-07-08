@@ -369,6 +369,41 @@ describe('cash-impacting obligation date placement (billing-cycle correctness)',
     expect(cardDebtItems(data, new Date(2026, 6, 1))).toEqual([])
   })
 
+  it('moves current-period spending to the next cycle after the statement day has passed', () => {
+    // 4 Temmuz ekstresi ödendikten sonra 14 Temmuz hâlâ eski ekstrenin vadesidir.
+    // 8 Temmuz'daki dönem içi borç açık döneme aittir ve Ağustos vadesine gider.
+    const from = new Date(2026, 6, 8)
+    const data = input({
+      cards: [creditCard({ id: 'c', statement_day: 4, due_day: 14, statement_debt_amount: 0, current_period_spending: 1000 })],
+      cardStatements: [
+        statement({
+          id: 'paid-july-statement',
+          card_id: 'c',
+          statement_date: '2026-07-04',
+          due_date: '2026-07-14',
+          statement_debt_amount: 3000,
+          status: 'paid',
+          paid_at: '2026-07-04T12:00:00.000Z',
+        }),
+      ],
+    })
+
+    expect(cardDebtItems(data, new Date(2026, 6, 1), from)).toEqual([])
+    expect(cardDebtItems(data, new Date(2026, 7, 1), from).map((i) => [i.date, i.amount, i.action]))
+      .toEqual([['2026-08-14', 1000, null]])
+  })
+
+  it('uses the statement-derived due date when the due day precedes the statement day', () => {
+    const data = input({
+      cards: [creditCard({ id: 'c', statement_day: 26, due_day: 6, statement_debt_amount: 0, current_period_spending: 1000 })],
+    })
+
+    expect(cardDebtItems(data, new Date(2026, 5, 1)).map((i) => [i.date, i.amount, i.action]))
+      .toEqual([])
+    expect(cardDebtItems(data, new Date(2026, 6, 1)).map((i) => [i.date, i.amount, i.action]))
+      .toEqual([['2026-07-06', 1000, null]])
+  })
+
   it('still defers current-period one cycle when a statement is pending (statement_debt > 0)', () => {
     const data = input({
       cards: [creditCard({ id: 'c', statement_day: 4, due_day: 14, statement_debt_amount: 3000, current_period_spending: 1000 })],
