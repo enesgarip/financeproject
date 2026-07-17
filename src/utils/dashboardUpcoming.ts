@@ -87,12 +87,13 @@ export function buildDashboardMonthlyLoad(
   const legacyLoanInstallmentItems = items.filter((item) => item.kind === 'legacy_loan_installment')
   const personalDebtItems = items.filter((item) => item.kind === 'personal_debt')
 
-  const payments = sumTL(paymentItems.map((item) => item.amount))
-  const cardStatements = sumTL(cardStatementItems.map((item) => item.amount))
-  const cardInstallments = sumTL(cardInstallmentItems.map((item) => item.amount))
-  const loanInstallments = sumTL(loanInstallmentItems.map((item) => item.amount))
-  const legacyLoanInstallments = sumTL(legacyLoanInstallmentItems.map((item) => item.amount))
-  const personalDebts = sumTL(personalDebtItems.map((item) => item.amount))
+  const cashImpact = (item: FinanceObligation) => item.cashImpactAmount ?? item.amount
+  const payments = sumTL(paymentItems.map(cashImpact))
+  const cardStatements = sumTL(cardStatementItems.map(cashImpact))
+  const cardInstallments = sumTL(cardInstallmentItems.map(cashImpact))
+  const loanInstallments = sumTL(loanInstallmentItems.map(cashImpact))
+  const legacyLoanInstallments = sumTL(legacyLoanInstallmentItems.map(cashImpact))
+  const personalDebts = sumTL(personalDebtItems.map(cashImpact))
 
   return {
     monthLabel: new Intl.DateTimeFormat('tr-TR', { month: 'long', year: 'numeric' }).format(monthStart),

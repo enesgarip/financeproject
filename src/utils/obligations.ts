@@ -103,7 +103,7 @@ function monthDistance(from: Date, target: Date) {
   return (target.getFullYear() - from.getFullYear()) * 12 + target.getMonth() - from.getMonth()
 }
 
-function getFirstBusinessDay(month: Date) {
+export function getFirstBusinessDay(month: Date) {
   const first = startOfMonth(month)
   const day = first.getDay()
   if (day === 0) return addDays(first, 1)

@@ -219,6 +219,7 @@ export function DashboardPage() {
       creditUsageRate: summary.creditUsageRate,
       urgentUpcomingCount,
       averageGoalProgress: summary.goalProgress.averageProgress,
+      typicalMonthlyOutflow: summary.nextMonthCashFlow.outflow,
     })
   }, [summary, outflowUpcoming])
 

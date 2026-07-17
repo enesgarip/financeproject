@@ -7,6 +7,7 @@ import {
 import { diffTL, roundTL, sumTL } from './money'
 import {
   buildFinanceObligationsForMonth,
+  getFirstBusinessDay,
   type FinanceObligation,
   type FinanceObligationsInput,
 } from './obligations'
@@ -83,25 +84,25 @@ function forecastBuckets(items: FinanceObligation[]) {
   const debtOutflow: number[] = []
 
   for (const item of items) {
+    const cashImpact = item.cashImpactAmount ?? item.amount
+
     if (item.kind === 'personal_receivable') {
-      receivables.push(item.amount)
+      receivables.push(cashImpact)
       continue
     }
 
     if (item.direction !== 'outflow') continue
 
     if (item.kind === 'payment') {
-      paymentOutflow.push(item.cashImpactAmount ?? item.amount)
+      paymentOutflow.push(cashImpact)
     } else if (item.kind === 'card_statement' || item.kind === 'card_debt') {
-      cardOutflow.push(item.amount)
+      cardOutflow.push(cashImpact)
     } else if (item.kind === 'card_installment') {
-      // Scheduled card installments increase future card debt; they are not a
-      // bank-cash movement until a statement/card-debt obligation is paid.
       installmentOutflow.push(item.cashImpactAmount ?? 0)
     } else if (item.kind === 'loan_installment' || item.kind === 'legacy_loan_installment') {
-      loanOutflow.push(item.amount)
+      loanOutflow.push(cashImpact)
     } else if (item.kind === 'personal_debt') {
-      debtOutflow.push(item.amount)
+      debtOutflow.push(cashImpact)
     }
   }
 
@@ -135,7 +136,9 @@ export function buildCashFlowForecast(
     const monthDate = addMonths(firstMonth, offset)
     const monthKey = monthKeyOf(monthDate)
     const monthLabel = MONTH_LABEL.format(monthDate)
-    const salary = roundTL(getSalaryForDate(data.salaryHistory, endOfMonth(monthDate))?.amount ?? 0)
+    const salaryAmount = roundTL(getSalaryForDate(data.salaryHistory, endOfMonth(monthDate))?.amount ?? 0)
+    const salaryLikelyReceived = offset === 0 && from > getFirstBusinessDay(monthDate)
+    const salary = salaryLikelyReceived ? 0 : salaryAmount
 
     const { receivables, paymentOutflow, cardOutflow, loanOutflow, installmentOutflow, debtOutflow } = forecastBuckets(
       buildFinanceObligationsForMonth(obligationInput, monthDate, { from }),

@@ -707,7 +707,7 @@ describe('buildMonthlyCashFlow', () => {
     expect(flow.outflow).toBeGreaterThanOrEqual(1200)
   })
 
-  it('counts credit-card automatic payments in total outflow', () => {
+  it('counts credit-card automatic payments at cash impact (0) in outflow', () => {
     const flow = buildMonthlyCashFlow(
       {
         ...emptyInput,
@@ -718,7 +718,7 @@ describe('buildMonthlyCashFlow', () => {
       },
       JUNE,
     )
-    expect(flow.paymentOutflow).toBe(1500)
+    expect(flow.paymentOutflow).toBe(300)
   })
 
   it('counts card statement debt once and current-period spending on the next cycle', () => {
@@ -747,7 +747,7 @@ describe('buildMonthlyCashFlow', () => {
     expect(flow.outflow).toBe(2200)
   })
 
-  it('includes scheduled card installments in total outflow', () => {
+  it('scheduled card installments have zero cash impact (debt stays on card)', () => {
     const flow = buildMonthlyCashFlow(
       {
         ...emptyInput,
@@ -758,8 +758,8 @@ describe('buildMonthlyCashFlow', () => {
       { from: JUNE_START },
     )
 
-    expect(flow.cardOutflow).toBe(450)
-    expect(flow.outflow).toBe(450)
+    expect(flow.cardOutflow).toBe(0)
+    expect(flow.outflow).toBe(0)
   })
 
   it('includes scheduled loan installments in outflow', () => {
@@ -787,6 +787,39 @@ describe('buildMonthlyCashFlow', () => {
       JUNE,
     )
     expect(flow.projectedCash).toBeCloseTo(flow.cashAssets + flow.netFlow)
+  })
+
+  it('excludes salary from projectedCash when current month salary date has passed', () => {
+    const now = new Date()
+    const thisMonth = new Date(now.getFullYear(), now.getMonth(), 15)
+    const flow = buildMonthlyCashFlow(
+      {
+        ...emptyInput,
+        assets: [asset({ category: 'Nakit', estimated_value_try: 50000 })],
+        salaryHistory: [salary({ amount: 20000, effective_date: '2020-01-01' })],
+        payments: [payment({ amount: 5000, due_date: `${thisMonth.toLocaleDateString('sv-SE').slice(0, 8)}15`, status: 'bekliyor' })],
+      },
+      thisMonth,
+    )
+    expect(flow.salaryIncome).toBe(20000)
+    expect(flow.income).toBe(20000)
+    expect(flow.projectedCash).toBe(45000)
+  })
+
+  it('includes salary in projectedCash for a future month', () => {
+    const now = new Date()
+    const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 15)
+    const flow = buildMonthlyCashFlow(
+      {
+        ...emptyInput,
+        assets: [asset({ category: 'Nakit', estimated_value_try: 50000 })],
+        salaryHistory: [salary({ amount: 20000, effective_date: '2020-01-01' })],
+        payments: [payment({ amount: 5000, due_date: `${nextMonth.toLocaleDateString('sv-SE').slice(0, 8)}15`, status: 'bekliyor' })],
+      },
+      nextMonth,
+    )
+    expect(flow.salaryIncome).toBe(20000)
+    expect(flow.projectedCash).toBe(65000)
   })
 
   it('keeps projected cash exact at kurus precision', () => {
@@ -914,5 +947,23 @@ describe('buildFinancialHealth', () => {
     const result = buildFinancialHealth(healthInput())
     expect(result.factors.length).toBeLessThanOrEqual(5)
     expect(result.factors.length).toBeGreaterThan(0)
+  })
+
+  it('uses typicalMonthlyOutflow for cashBufferMonths when provided', () => {
+    const position = buildFinancialPosition({
+      ...emptyInput,
+      assets: [asset({ category: 'Nakit', estimated_value_try: 60000 })],
+    })
+    const cashFlow = buildMonthlyCashFlow({
+      ...emptyInput,
+      assets: [asset({ category: 'Nakit', estimated_value_try: 60000 })],
+      salaryHistory: [salary({ amount: 50000, effective_date: '2026-01-01' })],
+      payments: [payment({ amount: 3000, due_date: '2026-06-25', status: 'bekliyor' })],
+    }, JUNE)
+
+    const withoutTypical = buildFinancialHealth({ position, cashFlow, creditUsageRate: 0, urgentUpcomingCount: 0, averageGoalProgress: 0 })
+    const withTypical = buildFinancialHealth({ position, cashFlow, creditUsageRate: 0, urgentUpcomingCount: 0, averageGoalProgress: 0, typicalMonthlyOutflow: 50000 })
+
+    expect(withoutTypical.score).toBeGreaterThan(withTypical.score)
   })
 })

@@ -33,7 +33,7 @@ import type {
 import { endOfMonth, startOfMonth } from './date'
 import { paymentCashOutflowAmount } from './financeObligationRules'
 import { diffTL, exceedsTL, roundTL, sumTL, toKurus, toTL } from './money'
-import { buildFinanceObligationsForMonth, type FinanceObligation, type FinanceObligationsInput } from './obligations'
+import { buildFinanceObligationsForMonth, getFirstBusinessDay, type FinanceObligation, type FinanceObligationsInput } from './obligations'
 import { savingsGoalProgressRate } from './savingsGoal'
 
 export {
@@ -395,10 +395,14 @@ function obligationsInput(data: FinanceSummaryInput): FinanceObligationsInput {
   }
 }
 
+function obligationCashImpact(item: FinanceObligation) {
+  return item.cashImpactAmount ?? item.amount
+}
+
 function obligationSum(
   items: FinanceObligation[],
   predicate: (item: FinanceObligation) => boolean,
-  selector: (item: FinanceObligation) => number = (item) => item.amount,
+  selector: (item: FinanceObligation) => number = obligationCashImpact,
 ) {
   return sumTL(items.filter(predicate).map(selector))
 }
@@ -435,6 +439,11 @@ export function buildMonthlyCashFlow(
   const outflow = sumTL([paymentOutflow, cardOutflow, loanOutflow, debtOutflow])
   const netFlow = diffTL(income, outflow)
 
+  const today = new Date()
+  const isCurrentMonth = monthStart.getTime() === startOfMonth(today).getTime()
+  const salaryLikelyReceived = isCurrentMonth && today > getFirstBusinessDay(monthStart)
+  const projectedIncome = sumTL([salaryLikelyReceived ? 0 : salaryIncome, receivableIncome])
+
   return {
     monthLabel,
     cashAssets,
@@ -443,7 +452,7 @@ export function buildMonthlyCashFlow(
     receivableIncome,
     outflow,
     netFlow,
-    projectedCash: sumTL([cashAssets, netFlow]),
+    projectedCash: sumTL([cashAssets, diffTL(projectedIncome, outflow)]),
     recurringPayments,
     cardStatementDebt,
     cardOutflow,
@@ -490,23 +499,26 @@ export function buildFinancialHealth({
   creditUsageRate,
   urgentUpcomingCount,
   averageGoalProgress,
+  typicalMonthlyOutflow,
 }: {
   position: FinancialPositionSummary
   cashFlow: CashFlowSummary
   creditUsageRate: number
   urgentUpcomingCount: number
   averageGoalProgress: number
+  typicalMonthlyOutflow?: number
 }): FinancialHealthSummary {
   // 100'den başlar, risk faktörlerine göre puan düşürülür (birkaçı ekleyebilir).
   // Her dal hem skoru ayarlar hem kullanıcıya gösterilecek bir açıklama (factor) ekler.
   // Eşikler ürün kararı; banka onay kriteri değil, kullanıcıya yön gösterir.
   let score = 100
   const factors: string[] = []
+  const stableOutflow = typicalMonthlyOutflow ?? cashFlow.outflow
   // Varlık yokken borç varsa oranı yapay olarak yükseğe (1.5) çekeriz ki skor cezalansın;
   // bölme-sıfır yerine en kötü senaryoyu varsayar.
   const debtToAssetRatio = position.totalAssets > 0 ? position.totalDebts / position.totalAssets : position.totalDebts > 0 ? 1.5 : 0
-  const outflowRatio = cashFlow.income > 0 ? cashFlow.outflow / cashFlow.income : cashFlow.outflow > 0 ? 1.2 : 0
-  const cashBufferMonths = cashFlow.outflow > 0 ? position.totalCashAssets / cashFlow.outflow : position.totalCashAssets > 0 ? 6 : 0
+  const outflowRatio = cashFlow.income > 0 ? stableOutflow / cashFlow.income : stableOutflow > 0 ? 1.2 : 0
+  const cashBufferMonths = stableOutflow > 0 ? position.totalCashAssets / stableOutflow : position.totalCashAssets > 0 ? 6 : 0
 
   if (debtToAssetRatio >= 1) {
     score -= 30

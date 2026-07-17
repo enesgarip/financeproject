@@ -122,6 +122,18 @@ describe('buildCashFlowForecast', () => {
     expect(forecast.months.map((m) => m.endingBalance)).toEqual([21000, 41000, 61000])
   })
 
+  it('skips salary in month 0 when from is past the first business day', () => {
+    const forecast = buildCashFlowForecast(
+      buildInput({
+        assets: [asset({ category: 'Nakit', estimated_value_try: 1000 })],
+        salaryHistory: [salary({ amount: 20000 })],
+      }),
+      { from: new Date(2026, 5, 3), horizonMonths: 3 },
+    )
+    expect(forecast.months.map((m) => m.salary)).toEqual([0, 20000, 20000])
+    expect(forecast.months.map((m) => m.endingBalance)).toEqual([1000, 21000, 41000])
+  })
+
   it('starts future salary records in their effective month', () => {
     const forecast = buildCashFlowForecast(
       buildInput({

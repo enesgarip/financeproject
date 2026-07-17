@@ -212,13 +212,13 @@ describe('buildDashboardMonthlyLoad', () => {
     )
 
     expect(load).toMatchObject({
-      payments: 150,
+      payments: 100,
       cardStatements: 400,
-      cardInstallments: 70,
+      cardInstallments: 0,
       loanInstallments: 200,
       legacyLoanInstallments: 300,
       personalDebts: 80,
-      total: 1200,
+      total: 1080,
     })
   })
 })

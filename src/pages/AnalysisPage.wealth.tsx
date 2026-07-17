@@ -9,7 +9,7 @@ import type { NetWorthSnapshot } from '../types/database'
 import { formatDate, isDateInMonth } from '../utils/date'
 import { parseNumber } from '../utils/formatCurrency'
 import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
-import { buildFinancialPosition, getCurrentSalary, sum } from '../utils/financeSummary'
+import { buildFinancialPosition, getCurrentSalary, paymentUsesCreditCard, sum } from '../utils/financeSummary'
 import { buildCategoryInsights, type AnalysisData } from '../utils/analysisView'
 import { activeExpense as activeCardExpense } from '../utils/budgetAlerts'
 import { type MarketRatesSnapshot } from '../utils/marketRates'
@@ -46,7 +46,7 @@ export function FireCalculator({ data, snapshots }: { data: AnalysisData; snapsh
     const active = data.cardExpenses.filter(activeCardExpense)
     const monthCount = Math.max(1, new Set(active.map((expense) => expense.spent_at.slice(0, 7))).size)
     const avgCard = roundTL(sum(active, (expense) => expense.amount) / monthCount)
-    const monthlyRecurring = sum(data.payments.filter((payment) => payment.recurrence === 'monthly'), (payment) => payment.amount)
+    const monthlyRecurring = sum(data.payments.filter((payment) => payment.recurrence === 'monthly' && !paymentUsesCreditCard(payment)), (payment) => payment.amount)
     return sumTL([avgCard, monthlyRecurring])
   }, [data.cardExpenses, data.payments])
 
