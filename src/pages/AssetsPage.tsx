@@ -53,7 +53,9 @@ function isGoldLedgerAsset(row: Asset): boolean {
 }
 
 function canTradeAsset(row: Asset): boolean {
-  return row.category !== 'Altın' && !isGoldLedgerAsset(row)
+  if (row.category === 'Altın' || isGoldLedgerAsset(row)) return false
+  if (row.category === 'BES' || row.category === 'Araç') return false
+  return true
 }
 
 /** A row is auto-valuable when its category maps to a market symbol or BIST ticker. */

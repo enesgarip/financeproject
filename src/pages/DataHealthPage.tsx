@@ -41,6 +41,10 @@ export function DataHealthPage() {
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
   const [snoozedIssueIds, setSnoozedIssueIds] = useState<string[]>([])
+  const [dismissedIssueIds, setDismissedIssueIds] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem('datahealth:dismissed') ?? '[]') }
+    catch { return [] }
+  })
   const [fixAllOpen, setFixAllOpen] = useState(false)
   const { drawerProps, openPaymentDrawer } = useFinancePaymentDrawer()
 
@@ -65,7 +69,21 @@ export function DataHealthPage() {
   }, [loadData])
 
   const issues = useMemo(() => buildIssues(data), [data])
-  const visibleIssues = useMemo(() => issues.filter((issue) => !snoozedIssueIds.includes(issue.id)), [issues, snoozedIssueIds])
+  const dismissIssue = useCallback((issueId: string) => {
+    setDismissedIssueIds((current) => {
+      if (current.includes(issueId)) return current
+      const next = [...current, issueId]
+      localStorage.setItem('datahealth:dismissed', JSON.stringify(next))
+      return next
+    })
+  }, [])
+
+  const undismissAll = useCallback(() => {
+    setDismissedIssueIds([])
+    localStorage.removeItem('datahealth:dismissed')
+  }, [])
+
+  const visibleIssues = useMemo(() => issues.filter((issue) => !snoozedIssueIds.includes(issue.id) && !dismissedIssueIds.includes(issue.id)), [issues, snoozedIssueIds, dismissedIssueIds])
   const fixableIssues = visibleIssues.filter((issue) => issue.fixable)
   const stats = {
     errors: visibleIssues.filter((issue) => issue.severity === 'error').length,
@@ -266,6 +284,17 @@ export function DataHealthPage() {
                   {snoozedIssueIds.length} ertelenen uyarıyı geri getir
                 </button>
               ) : null}
+              {dismissedIssueIds.length > 0 ? (
+                <button
+                  type="button"
+                  onClick={undismissAll}
+                  disabled={loading || Boolean(fixingId) || undoing}
+                  className="inline-flex items-center gap-2 rounded-xl border border-border/60 bg-muted/30 px-3 py-2 text-sm font-semibold text-muted-foreground transition hover:bg-muted disabled:opacity-50"
+                >
+                  <Activity size={15} />
+                  {dismissedIssueIds.length} kapatılan uyarıyı geri getir
+                </button>
+              ) : null}
               {undoStack[0] ? (
                 <button
                   type="button"
@@ -373,6 +402,7 @@ export function DataHealthPage() {
                 onFix={(target) => void handleFix(target)}
                 onPayIssue={(target) => void handlePayIssue(target)}
                 onSnooze={(issueId) => setSnoozedIssueIds((current) => (current.includes(issueId) ? current : [...current, issueId]))}
+                onDismiss={dismissIssue}
               />
             ))}
           </div>

@@ -33,6 +33,7 @@ export function HealthIssueCard({
   onFix,
   onPayIssue,
   onSnooze,
+  onDismiss,
 }: {
   issue: HealthIssue
   fixingId: string | null
@@ -40,6 +41,7 @@ export function HealthIssueCard({
   onFix: (issue: HealthIssue) => void
   onPayIssue?: (issue: HealthIssue) => void
   onSnooze: (issueId: string) => void
+  onDismiss?: (issueId: string) => void
 }) {
   const guide = buildIssueGuide(issue)
   const quickLink = navigationAction(issue)
@@ -124,6 +126,16 @@ export function HealthIssueCard({
                 >
                   Daha sonra hatırlat
                 </button>
+                {onDismiss ? (
+                  <button
+                    type="button"
+                    onClick={() => onDismiss(issue.id)}
+                    disabled={Boolean(fixingId) || undoing}
+                    className="rounded-lg border border-border/60 bg-muted/30 px-3 py-2 text-xs font-semibold text-muted-foreground transition hover:bg-muted disabled:opacity-50"
+                  >
+                    Bu doğru, kapat
+                  </button>
+                ) : null}
               </div>
             </div>
           </div>
