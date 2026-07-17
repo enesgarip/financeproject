@@ -11,6 +11,7 @@ import type { AccountLedger, CardLedger, TransactionHistory } from '../types/dat
 
 type CardLike = { id: string; card_name: string }
 import { toTL } from './money'
+import { normalizeSearchText } from './searchText'
 
 export type ActivityItem = {
   id: string
@@ -81,12 +82,32 @@ const TX_TYPE_ICON: Record<string, ActivityItem['icon']> = {
 }
 
 function transactionDirection(tx: TransactionHistory): ActivityItem['direction'] {
+  const text = normalizeSearchText(`${tx.title} ${tx.note ?? ''}`)
+  const has = (...values: string[]) => values.some((value) => text.includes(value))
+  if (has('geri alındı', 'geri alindi')) return 'neutral'
+
   if (tx.type === 'asset') {
-    if (tx.title.endsWith(' alındı')) return 'outflow'
-    if (tx.title.endsWith(' satıldı')) return 'inflow'
+    if (has(' alındı', ' alindi')) return 'outflow'
+    if (has(' satıldı', ' satildi')) return 'inflow'
     return 'neutral'
   }
-  return tx.amount != null && tx.amount < 0 ? 'outflow' : tx.amount != null && tx.amount > 0 ? 'inflow' : 'neutral'
+  if (tx.type === 'transfer') {
+    if (has('para girişi', 'para girisi')) return 'inflow'
+    if (has('para çıkışı', 'para cikisi')) return 'outflow'
+    return 'neutral'
+  }
+  if (tx.type === 'debt') {
+    if (has('hesabına', 'hesabina', 'tahsil')) return 'inflow'
+    if (has('hesabından', 'hesabindan', 'ödendi', 'odendi')) return 'outflow'
+    return 'neutral'
+  }
+  if (tx.type === 'card') {
+    if (text.includes('iptal') || text.includes('iade')) return 'inflow'
+    if (tx.source_table === 'card_statement_archives') return 'neutral'
+    return tx.amount != null ? 'outflow' : 'neutral'
+  }
+  if (tx.type === 'payment' || tx.type === 'loan') return tx.amount != null ? 'outflow' : 'neutral'
+  return 'neutral'
 }
 
 function transactionToActivity(tx: TransactionHistory): ActivityItem {

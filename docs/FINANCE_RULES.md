@@ -249,6 +249,12 @@ From `src/utils/budgetAlerts.ts`:
   impact. Card-funded automatic payments and scheduled card installments can
   appear on their calendar date as card load, but they must not increase "Ay
   yuku" or "Net etki" cash totals.
+- Balance-sheet liabilities include every pending one-off payment at its nominal
+  amount, including card-funded ones. Funding method changes cash timing, not the
+  existence of the liability. Monthly recurring payments remain cash-flow load.
+- Payments-page monthly paid counts come from `transaction_history` rows whose
+  source is `payments`; a recurring row merely having advanced into next month is
+  not proof that it was paid in the current month.
 
 ## Salary
 
@@ -258,6 +264,8 @@ From `src/utils/budgetAlerts.ts`:
   the salary record effective by that month's end.
 - Forward cash projections repeat the salary each month until a newer effective
   salary record applies. A future salary record does not affect earlier months.
+- "Current salary" UI and affordability/FIRE consumers also require
+  `effective_date <= today`; an all-future salary history has no current salary.
 - The daily cash calendar shows upcoming obligations and cash impact; it does
   not create a daily salary deposit event from `salary_history`.
 
@@ -271,6 +279,9 @@ From `src/utils/budgetAlerts.ts`:
   - `remaining_installments`
   - `status`
   - installment row state when installment rows exist
+- Editing a loan schedule may rewrite or remove only pending installments.
+  Already-paid installment due dates, amounts, payment metadata, and extra rows
+  are historical facts and must be preserved.
 
 ## Loan Affordability
 
@@ -334,3 +345,17 @@ Current dashboard behavior includes:
 - history grouping and filtering
 
 This means any change in card, loan, debt, or payment semantics likely affects dashboard math.
+
+## Reporting and projection windows
+
+- The shared finance snapshot loads 24 completed months plus the current month,
+  so current-year and previous-year reports have a complete source window.
+- The full-month calendar starts from today's current cash balance. Past events
+  remain visible but are not applied again; otherwise received salary and paid
+  obligations would be double-counted in projected month-end cash.
+- FIRE's card-spending default averages the last five completed calendar months,
+  includes zero-spend months in the denominator, and excludes the partial current
+  month and cancelled expenses.
+- Quiet-day spending counts card purchases on their purchase date. Card statement
+  payments and the matching history row for a card-funded planned payment are not
+  new spending and must not be counted again.

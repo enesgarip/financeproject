@@ -31,7 +31,6 @@ import type {
   SavingsGoalComponent,
 } from '../types/database'
 import { endOfMonth, startOfMonth } from './date'
-import { paymentCashOutflowAmount } from './financeObligationRules'
 import { diffTL, exceedsTL, roundTL, sumTL, toKurus, toTL } from './money'
 import { buildFinanceObligationsForMonth, getFirstBusinessDay, type FinanceObligation, type FinanceObligationsInput } from './obligations'
 import { savingsGoalProgressRate } from './savingsGoal'
@@ -313,8 +312,7 @@ export function getSalaryTrend(rows: SalaryHistory[]) {
 
 export function getCurrentSalary(rows: SalaryHistory[]) {
   const today = new Date().toLocaleDateString('sv-SE')
-  const ordered = [...rows].sort((a, b) => a.effective_date.localeCompare(b.effective_date))
-  return getSalaryForDate(ordered, today) ?? ordered.at(-1) ?? null
+  return getSalaryForDate(rows, today)
 }
 
 export function getSalaryForDate(rows: SalaryHistory[], date: Date | string) {
@@ -359,7 +357,7 @@ export function buildFinancialPosition(data: FinanceSummaryInput): FinancialPosi
     // payments are ongoing expenses (captured in the cash-flow / monthly load),
     // not debt principal, so they must not reduce net worth.
     data.payments.filter((payment) => payment.status === 'bekliyor' && payment.recurrence !== 'monthly'),
-    paymentCashOutflowAmount,
+    (payment) => payment.amount,
   )
   const totalDebts = sumTL([totalCreditCardDebt, totalLoanDebt, totalPersonalDebts, totalPaymentLiabilities])
   const netWorth = diffTL(totalAssets, totalDebts)

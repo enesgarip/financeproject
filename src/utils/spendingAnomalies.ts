@@ -46,7 +46,7 @@ function offsetMonthPrefix(from: Date, offsetMonths: number): string {
   const d = new Date(from)
   d.setDate(1)
   d.setMonth(d.getMonth() + offsetMonths)
-  return d.toISOString().slice(0, 7)
+  return d.toLocaleDateString('sv-SE').slice(0, 7)
 }
 
 /**

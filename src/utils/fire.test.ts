@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { computeFire, estimateMonthlySavingsFromNetWorth, type FireInputs } from './fire'
+import { computeFire, estimateAverageMonthlyCardSpending, estimateMonthlySavingsFromNetWorth, type FireInputs } from './fire'
 
 const base: FireInputs = {
   currentNetWorth: 0,
@@ -8,6 +8,26 @@ const base: FireInputs = {
   annualRealReturnPct: 4,
   withdrawalRatePct: 4,
 }
+
+describe('estimateAverageMonthlyCardSpending', () => {
+  const expense = (spent_at: string, amount: number, status: 'posted' | 'cancelled' = 'posted') => ({ spent_at, amount, status })
+
+  it('excludes the partial current month and includes zero-spend months in the denominator', () => {
+    const result = estimateAverageMonthlyCardSpending([
+      expense('2026-02-10', 500),
+      expense('2026-04-10', 1_000),
+      expense('2026-07-02', 9_000),
+    ], new Date(2026, 6, 18), 5)
+
+    expect(result).toBe(300)
+  })
+
+  it('ignores cancelled expenses', () => {
+    expect(estimateAverageMonthlyCardSpending([
+      expense('2026-06-10', 1_000, 'cancelled'),
+    ], new Date(2026, 6, 18), 1)).toBe(0)
+  })
+})
 
 describe('computeFire', () => {
   it('derives the FIRE number from expenses and withdrawal rate (25× at 4 %)', () => {

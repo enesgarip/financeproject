@@ -412,9 +412,9 @@ describe('getCurrentSalary', () => {
     expect(result?.id).toBe('s2')
   })
 
-  it('falls back to earliest when all are future', () => {
+  it('does not treat a future salary as current', () => {
     const future = salary({ id: 'f1', effective_date: '2099-01-01', amount: 1 })
-    expect(getCurrentSalary([future])?.id).toBe('f1')
+    expect(getCurrentSalary([future])).toBeNull()
   })
 
   it('returns null for empty array', () => {
@@ -603,7 +603,7 @@ describe('buildFinancialPosition', () => {
     expect(pos.totalPaymentLiabilities).toBe(500)
   })
 
-  it('excludes card-settled payments from totalPaymentLiabilities', () => {
+  it('includes card-settled one-off payments in totalPaymentLiabilities', () => {
     const pos = buildFinancialPosition({
       ...emptyInput,
       payments: [
@@ -611,7 +611,7 @@ describe('buildFinancialPosition', () => {
         payment({ amount: 300, status: 'bekliyor', payment_method: 'bank_auto', auto_source_card_id: 'card-1' }),
       ],
     })
-    expect(pos.totalPaymentLiabilities).toBe(500)
+    expect(pos.totalPaymentLiabilities).toBe(800)
   })
 
   it('excludes recurring monthly bills from net-worth liabilities (cash-flow, not debt)', () => {

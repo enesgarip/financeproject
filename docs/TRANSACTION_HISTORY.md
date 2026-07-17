@@ -39,6 +39,16 @@ otherwise:
 - Repairs that merely recompute from ledger projection should not add history;
   the ledger tables are the audit source for those corrections.
 
+### Read-side direction
+
+Because `amount` is a positive magnitude, activity consumers must derive visual
+direction from event semantics: payments and loan installments are outflows;
+manual account movement titles distinguish inflow/outflow; account-to-account
+transfers and statement cutting are neutral; debt notes distinguish collection
+from payment; asset titles distinguish buy from sell. Never infer direction from
+the sign of `transaction_history.amount`. “Payment undone” audit rows are neutral
+because the current undo flows explicitly do not refund cash automatically.
+
 ## Type Mapping
 
 | Type | Use For |

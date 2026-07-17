@@ -14,7 +14,7 @@ import {
   type FinanceObligationsInput,
 } from './obligations'
 import { getSalaryForDate } from './financeSummary'
-import { roundTL, sumTL } from './money'
+import { diffTL, roundTL, sumTL } from './money'
 
 export type CalendarDayEvent = {
   id: string
@@ -138,17 +138,23 @@ export function buildFullMonthCalendar(
       })
     }
 
+    // cashBalance bugünün güncel bakiyesidir. Geçmiş olayları (ve bugün zaten
+    // bakiyeye yansımış maaşı) yeniden uygulamak ay sonunu çift saydırır.
+    const projectedEvents = isPast
+      ? []
+      : events.filter((event) => !(isToday && event.kind === 'salary'))
+
     let totalInflow = 0
     let totalOutflow = 0
 
-    for (const event of events) {
+    for (const event of projectedEvents) {
       if (event.settlement !== 'cash') continue
       if (event.direction === 'inflow') totalInflow = sumTL([totalInflow, event.amount])
       else totalOutflow = sumTL([totalOutflow, event.amount])
     }
 
-    const netCashImpact = roundTL(totalInflow - totalOutflow)
-    runningBalance = roundTL(runningBalance + netCashImpact)
+    const netCashImpact = diffTL(totalInflow, totalOutflow)
+    runningBalance = sumTL([runningBalance, netCashImpact])
 
     const tone: CalendarDay['tone'] =
       events.length === 0 ? 'neutral'

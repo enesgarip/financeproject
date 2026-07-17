@@ -148,19 +148,30 @@ export async function getBankaKartlari(): Promise<Card[]> {
   return result.ok ? result.data : []
 }
 
-export async function syncLoanInstallmentPlan(loan: Loan) {
-  const schedule = buildLoanSchedule(loan)
-  if (schedule.length === 0) return
-
-  const existingResult = await fetchLoanInstallmentsByLoan(loan.id)
-  if (!existingResult.ok) throw new Error(existingResult.error.message)
-
-  const existing = existingResult.data
+export function mergeLoanInstallmentSchedule(
+  existing: LoanInstallment[],
+  schedule: InsertFor<'loan_installments'>[],
+): { payload: InsertFor<'loan_installments'>[]; extraIds: string[] } {
   const existingByNo = new Map(existing.map((item) => [item.installment_no, item]))
   const desiredNumbers = new Set(schedule.map((item) => item.installment_no))
   const payload = schedule.map((item) => {
     const current = existingByNo.get(item.installment_no)
-    const result: InsertFor<'loan_installments'> = {
+    // Ödenmiş kayıt muhasebe geçmişidir: plan düzenlemesi tarihini, tutarını
+    // veya ödeme bilgisini geriye dönük değiştiremez.
+    if (current?.status === 'ödendi') {
+      return {
+        id: current.id,
+        user_id: current.user_id,
+        loan_id: current.loan_id,
+        installment_no: current.installment_no,
+        due_date: current.due_date,
+        amount: current.amount,
+        status: current.status,
+        paid_at: current.paid_at,
+        note: current.note,
+      }
+    }
+    return {
       id: current?.id ?? item.id ?? crypto.randomUUID(),
       user_id: item.user_id,
       loan_id: item.loan_id,
@@ -171,13 +182,26 @@ export async function syncLoanInstallmentPlan(loan: Loan) {
       paid_at: current?.paid_at ?? item.paid_at,
       note: current?.note ?? item.note,
     }
-    return result
   })
+
+  const extraIds = existing
+    .filter((item) => item.status !== 'ödendi' && !desiredNumbers.has(item.installment_no))
+    .map((item) => item.id)
+  return { payload, extraIds }
+}
+
+export async function syncLoanInstallmentPlan(loan: Loan) {
+  const schedule = buildLoanSchedule(loan)
+  if (schedule.length === 0) return
+
+  const existingResult = await fetchLoanInstallmentsByLoan(loan.id)
+  if (!existingResult.ok) throw new Error(existingResult.error.message)
+
+  const { payload, extraIds } = mergeLoanInstallmentSchedule(existingResult.data, schedule)
 
   const upsertResult = await upsertLoanInstallments(payload)
   if (!upsertResult.ok) throw new Error(upsertResult.error.message)
 
-  const extraIds = existing.filter((item) => !desiredNumbers.has(item.installment_no)).map((item) => item.id)
   const deleteExtraResult = await deleteLoanInstallmentsByIds(extraIds)
   if (!deleteExtraResult.ok) throw new Error(deleteExtraResult.error.message)
 }

@@ -63,8 +63,6 @@ function statement(overrides: Partial<CardStatementArchive> = {}): CardStatement
 }
 
 describe('getCreditCardStatus', () => {
-  // Not: ödeme tarihi dalları enjekte edilemeyen new Date() kullanır; deterministik
-  // kalmak için payableDebt=0 senaryolarını test ediyoruz (tarih dalları atlanır).
   it('marks high usage without payable debt as limit-heavy', () => {
     const card = creditCard({ statement_debt_amount: 0, current_period_spending: 0, due_day: 28 })
     const status = getCreditCardStatus(card, 85)
@@ -77,6 +75,15 @@ describe('getCreditCardStatus', () => {
     const status = getCreditCardStatus(card, 20)
     expect(status.label).toBe('Normal')
     expect(status.description).toBe('Ödenebilir borç yok')
+  })
+
+  it('marks an unpaid open statement past its due date as overdue', () => {
+    const card = creditCard({ statement_debt_amount: 1_000, debt_amount: 1_000 })
+    const open = statement({ statement_debt_amount: 1_000, due_date: '2026-07-10' })
+    const status = getCreditCardStatus(card, 10, [open], new Date(2026, 6, 18))
+
+    expect(status.label).toBe('Gecikmiş')
+    expect(status.description).toBe('8 gün geçti')
   })
 })
 

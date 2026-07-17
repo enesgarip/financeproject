@@ -8,7 +8,7 @@ import { useMarketRates } from '../hooks/useMarketRates'
 import { useInvalidateFinanceSnapshot } from '../app/useFinanceSnapshot'
 import { fetchCardsByType } from '../data/repositories/cardsRepo'
 import type { Card as FinanceCard, Debt } from '../types/database'
-import { formatDate } from '../utils/date'
+import { dateInputValue, formatDate } from '../utils/date'
 import { formatCurrency, formatNumber, parseNumber } from '../utils/formatCurrency'
 import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
 import { useFinancePaymentDrawer } from '../hooks/useFinancePaymentDrawer'
@@ -245,7 +245,7 @@ export function DebtsPage() {
         sourceId: debt.id,
         title: debt.person_name,
         subtitle: isBorrowed ? 'Kişisel borç' : 'Beklenen tahsilat',
-        date: debt.due_date ?? new Date().toISOString().slice(0, 10),
+        date: debt.due_date ?? dateInputValue(new Date()),
         amount: effectiveDebtValue(debt, snapshot),
         direction: isBorrowed ? 'outflow' : 'inflow',
         isEstimate: debt.auto_valued,

@@ -8,6 +8,10 @@
  * parametrelidir.
  */
 
+import type { CardExpense } from '../types/database'
+import { addMonths, dateInputValue, startOfMonth } from './date'
+import { roundTL, sumTL } from './money'
+
 export type FireInputs = {
   /** Şu anki yatırılabilir net değer (TRY). */
   currentNetWorth: number
@@ -44,6 +48,24 @@ export type FireResult = {
 
 const MAX_MONTHS = 1200 // 100 yıllık üst sınır — sonsuz döngüyü engeller
 const FALLBACK_HORIZON = 360 // ulaşılamayınca grafiğin gösterileceği 30 yıllık ufuk
+
+/** Son tamamlanmış ayların kart harcaması ortalaması; cari kısmi ay hariçtir. */
+export function estimateAverageMonthlyCardSpending(
+  expenses: Array<Pick<CardExpense, 'spent_at' | 'amount' | 'status'>>,
+  now: Date = new Date(),
+  completedMonths = 5,
+): number {
+  const monthCount = Math.max(1, Math.trunc(completedMonths))
+  const currentMonthStart = startOfMonth(now)
+  const rangeStart = dateInputValue(addMonths(currentMonthStart, -monthCount))
+  const rangeEnd = dateInputValue(currentMonthStart)
+  const total = sumTL(
+    expenses
+      .filter((expense) => expense.status !== 'cancelled' && expense.spent_at >= rangeStart && expense.spent_at < rangeEnd)
+      .map((expense) => expense.amount),
+  )
+  return roundTL(total / monthCount)
+}
 
 // Kasıtlı olarak money.ts DEĞİL: bunlar ledger'a girmeyen, on yıllar sonrasına
 // dönük spekülatif projeksiyon/yüzde değerleri; yuvarlama yalnız grafik için

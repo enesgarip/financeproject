@@ -153,6 +153,9 @@ Data health may flag:
 - cards over shared/individual limit
 - statement/archive mismatches
 - overdue open statement archives that likely need a `pay_card_statement` flow
+- Card-list due-date and overdue badges use the earliest unpaid open archive's
+  `due_date`. `nextMonthlyDate(due_day)` is only a fallback when no payable open
+  archive exists; it cannot be used to detect an already overdue statement.
 - ledger drift between `card_ledger` projection and `cards.debt_amount`
 
 When fixing one of these, keep the field transition above intact and prefer a

@@ -2,7 +2,7 @@ import type { CSSProperties } from 'react'
 import type { FormField } from '../components/CrudPage'
 import type { Card, CardInstallment, CardStatementArchive } from '../types/database'
 import { buildCreditLimitGroups, cardPayableDebt, creditLimitGroupKey } from '../utils/financeSummary'
-import { daysUntil, nextMonthlyDate } from '../utils/date'
+import { nextMonthlyDateFrom, startOfDay } from '../utils/date'
 import { roundTL, sumTL } from '../utils/money'
 import { normalizeSearchText } from '../utils/searchText'
 import { canCutCurrentStatement } from '../utils/statementCycle'
@@ -185,10 +185,24 @@ export type CreditCardStatus = {
   className: string
 }
 
-export function getCreditCardStatus(card: Card, usageRate: number): CreditCardStatus {
+export function getCreditCardDueDate(card: Card, statements: CardStatementArchive[], now: Date = new Date()): Date | null {
+  const openStatement = statements
+    .filter((statement) => statement.card_id === card.id && statement.status === 'open' && statement.statement_debt_amount > 0 && statement.due_date)
+    .sort((a, b) => (a.due_date ?? '').localeCompare(b.due_date ?? ''))[0]
+  return openStatement?.due_date ? new Date(`${openStatement.due_date}T00:00:00`) : nextMonthlyDateFrom(card.due_day, now)
+}
+
+export function getCreditCardStatus(
+  card: Card,
+  usageRate: number,
+  statements: CardStatementArchive[] = [],
+  now: Date = new Date(),
+): CreditCardStatus {
   const payableDebt = cardPayableDebt(card)
-  const dueDate = nextMonthlyDate(card.due_day)
-  const remainingDays = daysUntil(dueDate)
+  const dueDate = getCreditCardDueDate(card, statements, now)
+  const remainingDays = dueDate
+    ? Math.ceil((dueDate.getTime() - startOfDay(now).getTime()) / 86_400_000)
+    : null
 
   if (payableDebt > 0 && remainingDays !== null && remainingDays < 0) {
     return {

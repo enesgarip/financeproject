@@ -27,6 +27,7 @@ import {
   type ParsedDenizBankPayment,
 } from '../../utils/denizBankMovementParser'
 import { dateRangeFromIsoDates, rowsInReviewPeriod } from '../../utils/importReviewPeriod'
+import { dateInputValue } from '../../utils/date'
 import { roundTL, sumTL } from '../../utils/money'
 import { getCardStatementPeriod } from '../../utils/cardStatement'
 import { useBodyScrollLock } from '../ui/use-body-scroll-lock'
@@ -253,7 +254,7 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
 
     let successCount = 0
     const errors: string[] = []
-    const today = new Date().toISOString().slice(0, 10)
+    const today = dateInputValue(new Date())
 
     for (let i = 0; i < allMovements.length; i++) {
       const movement = allMovements[i]
@@ -288,14 +289,14 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
         const sd = Math.min(card.statement_day, lastDay)
         const boundary = new Date(y, m, sd)
         if (now > boundary) {
-          const dateStr = boundary.toISOString().slice(0, 10)
+          const dateStr = dateInputValue(boundary)
           await insertGuardStatementArchive(user.id, card.id, y, m + 1, dateStr)
         } else {
           const prev = new Date(y, m - 1, 1)
           const prevLastDay = new Date(prev.getFullYear(), prev.getMonth() + 1, 0).getDate()
           const prevSd = Math.min(card.statement_day, prevLastDay)
           const prevBoundary = new Date(prev.getFullYear(), prev.getMonth(), prevSd)
-          const dateStr = prevBoundary.toISOString().slice(0, 10)
+          const dateStr = dateInputValue(prevBoundary)
           await insertGuardStatementArchive(user.id, card.id, prev.getFullYear(), prev.getMonth() + 1, dateStr)
         }
       }

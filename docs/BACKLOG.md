@@ -300,6 +300,20 @@ pattern'ler ve açık düzeltme planı yer alıyor.
 - 2026-06-29 regression fix: current-period card spending is again placed on the next card cycle's due date in `utils/obligations.ts` (it had been moved into the spending month, double-loading the current month and emptying the cycle where the cash actually leaves). This restores alignment with FINANCE_RULES.md ("counted on the next card cycle") and turns the 5 red cash-flow/monthly-summary tests green. Same pass de-duplicated date helpers (`addDays`, `startOfDay`, `dateInMonth`) into `utils/date.ts` so card-statement/obligation/calendar code shares one source.
 - 2026-06-30 terminology follow-up: Dashboard/Analysis cash-flow labels now say "Nakit çıkışı" / "Kart ödemesi" for bank-cash impact, while Monthly Report surfaces "Kart harcaması" separately from existing `card_expenses` data. No accounting engine change; this avoids the false "no spending" impression without double-counting statement payments.
 
+## Veri doğruluğu denetimi (2026-07-18)
+
+- [x] Kartla finanse edilen tek seferlik bekleyen ödemeler net değer borcuna dahil edildi.
+- [x] Gelecek tarihli maaşların güncel maaş/FIRE/kredi uygunluğu hesabına sızması engellendi.
+- [x] Form ve kart-import tarihleri UTC yerine ortak yerel tarih formatına geçirildi.
+- [x] FIRE kart gideri varsayımı beş tamamlanmış ayı (harcamasız aylar dahil) kullanıyor.
+- [x] Yıllık raporlar için snapshot penceresi cari ay + 24 tamamlanmış aya genişletildi.
+- [x] Tam-ay takvimi güncel bakiyeye geçmiş maaş ve yükümlülükleri tekrar uygulamıyor.
+- [x] Aktivite yönü pozitif history tutarının işaretinden değil olay semantiğinden türetiliyor.
+- [x] Kredi planı düzenlemesi ödenmiş taksitleri değiştiremiyor veya silemiyor.
+- [x] Kredi kartı gecikme durumu açık ekstrenin gerçek son ödeme tarihini kullanıyor.
+- [x] Aylık ödenen planlı ödeme sayısı gelecek vadeden değil gerçek history kaydından geliyor.
+- [x] Sessiz gün ortalaması kartla ödenen faturayı ve ekstre ödemesini ikinci kez saymıyor.
+
 ## Mantık Denetimi Bulguları (2026-06-29)
 
 Tüm `src/utils` hesaplama katmanı + SQL trigger'lar + DataHealth tek tek okundu.

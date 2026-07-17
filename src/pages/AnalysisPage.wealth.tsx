@@ -13,9 +13,9 @@ import { buildFinancialPosition, getCurrentSalary, paymentUsesCreditCard, sum } 
 import { buildCategoryInsights, type AnalysisData } from '../utils/analysisView'
 import { activeExpense as activeCardExpense } from '../utils/budgetAlerts'
 import { type MarketRatesSnapshot } from '../utils/marketRates'
-import { computeFire, estimateMonthlySavingsFromNetWorth } from '../utils/fire'
+import { computeFire, estimateAverageMonthlyCardSpending, estimateMonthlySavingsFromNetWorth } from '../utils/fire'
 import { buildInflationShield } from '../utils/inflationShield'
-import { diffTL, roundTL, sumTL } from '../utils/money'
+import { diffTL, sumTL } from '../utils/money'
 import { computeZakat } from '../utils/zakat'
 import { StatPill } from './AnalysisPage.atoms'
 
@@ -43,9 +43,7 @@ export function FireCalculator({ data, snapshots }: { data: AnalysisData; snapsh
 
   // Living-cost proxy: average monthly card spending + steady monthly bills.
   const defaultExpenses = useMemo(() => {
-    const active = data.cardExpenses.filter(activeCardExpense)
-    const monthCount = Math.max(1, new Set(active.map((expense) => expense.spent_at.slice(0, 7))).size)
-    const avgCard = roundTL(sum(active, (expense) => expense.amount) / monthCount)
+    const avgCard = estimateAverageMonthlyCardSpending(data.cardExpenses)
     const monthlyRecurring = sum(data.payments.filter((payment) => payment.recurrence === 'monthly' && !paymentUsesCreditCard(payment)), (payment) => payment.amount)
     return sumTL([avgCard, monthlyRecurring])
   }, [data.cardExpenses, data.payments])

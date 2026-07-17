@@ -8,7 +8,7 @@ import { MiniStat, SectionHeader, StatusBadge } from '../components/finance/Fina
 import { fetchCardAliases } from '../data/repositories/cardAliasesRepo'
 import { fetchAccountLedgerEvents } from '../data/repositories/financePanelsRepo'
 import type { AccountLedger, Card, CardInstallment, CardStatementArchive } from '../types/database'
-import { formatDate, nextMonthlyDate } from '../utils/date'
+import { formatDate } from '../utils/date'
 import { cardPayableDebt } from '../utils/financeSummary'
 import { quickCardConsistencyScore } from '../utils/cardConsistency'
 import { bankBrandGradient, getBankBrand } from '../utils/bankBranding'
@@ -20,6 +20,7 @@ import {
   formatIban,
   formatMonthlyDay,
   formatShortDate,
+  getCreditCardDueDate,
   getCreditCardStatus,
   limitGroupStats,
   statementPeriodLabel,
@@ -197,8 +198,8 @@ export function CreditAccountListCard({
 
   const stats = limitGroupStats(row, rows)
   const usageRate = Math.round(stats.usageRate)
-  const dueDate = nextMonthlyDate(row.due_day)
-  const status = getCreditCardStatus(row, stats.usageRate)
+  const dueDate = getCreditCardDueDate(row, statements)
+  const status = getCreditCardStatus(row, stats.usageRate, statements)
   const displayedOpenStatementAmount = visibleOpenStatementAmount(row, statements)
   const installmentCount = activeInstallmentCount(row, installments)
   const payableDebt = cardPayableDebt(row)

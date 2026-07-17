@@ -22,9 +22,9 @@ import { isMissingSupabaseCapabilityError, missingSupabaseCapabilityMessage, typ
 import { syncAutoValuedRows } from '../../utils/valuationSync'
 import { resultFromSupabase, type Result } from '../result'
 
-// Dashboard (3-4 ay) ile Analiz (6 ay) pencerelerinin süperseti: tek sorgu seti
-// iki sayfayı da besler, sayfalar kendi penceresini client tarafında daraltır.
-export const SNAPSHOT_HISTORY_MONTHS = 6
+// Yıllık raporun cari ve önceki takvim yılını her ay eksiksiz karşılaştırabilmesi
+// için 24 tamamlanmış ay + cari ay yüklenir. Ekranlar kendi penceresini daraltır.
+export const SNAPSHOT_HISTORY_MONTHS = 25
 const STATEMENT_ARCHIVE_LIMIT = 120
 
 export type FinanceSnapshot = {

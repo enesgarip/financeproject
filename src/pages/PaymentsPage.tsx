@@ -17,12 +17,14 @@ import type {
   PaymentAmountStatus,
   PaymentCategory,
   PaymentMethod,
+  TransactionHistory,
 } from '../types/database'
 import { addMonths, dateInputValue, daysUntil, formatDate, startOfMonth } from '../utils/date'
 import { formatCurrency, parseNumber } from '../utils/formatCurrency'
 import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
 import { paymentCashOutflowAmount, paymentOccurrenceInMonth, paymentUsesCreditCard } from '../utils/financeSummary'
 import { sumTL } from '../utils/money'
+import { paidPaymentIdsInMonth } from '../utils/paymentHistory'
 import type { FinanceObligation, FinanceObligationsInput } from '../utils/obligations'
 import { useFinancePaymentDrawer } from '../hooks/useFinancePaymentDrawer'
 import { useCallback, useEffect, useMemo, useRef } from 'react'
@@ -187,7 +189,7 @@ function getPaymentAmountLabel(payment: Payment) {
   return `${prefix}${formatCurrency(payment.amount)}`
 }
 
-function PaymentsOverview({ rows }: { rows: Payment[] }) {
+function PaymentsOverview({ rows, transactionHistory }: { rows: Payment[]; transactionHistory: TransactionHistory[] }) {
   const { formatAmount } = useBalancePrivacy()
   const summary = useMemo(() => {
     if (rows.length === 0) return null
@@ -197,12 +199,7 @@ function PaymentsOverview({ rows }: { rows: Payment[] }) {
 
     const pendingThisMonth = rows.filter((row) => paymentOccurrenceInMonth(row, currentMonth) !== null)
 
-    const paidMonthlyThisMonth = rows.filter((row) =>
-      row.recurrence === 'monthly' &&
-      row.status === 'bekliyor' &&
-      paymentOccurrenceInMonth(row, currentMonth) === null &&
-      paymentOccurrenceInMonth(row, nextMonthStart) !== null,
-    )
+    const paidIds = paidPaymentIdsInMonth(transactionHistory, currentMonth)
 
     const monthStart = dateInputValue(currentMonth)
     const monthEnd = dateInputValue(nextMonthStart)
@@ -212,7 +209,10 @@ function PaymentsOverview({ rows }: { rows: Payment[] }) {
       row.due_date >= monthStart && row.due_date < monthEnd,
     )
 
-    const paidThisMonthCount = paidMonthlyThisMonth.length + paidOneTimeThisMonth.length
+    const paidThisMonthCount = new Set([
+      ...rows.filter((row) => paidIds.has(row.id)).map((row) => row.id),
+      ...paidOneTimeThisMonth.map((row) => row.id),
+    ]).size
     const totalThisMonth = pendingThisMonth.length + paidThisMonthCount
 
     const pendingTotal = sumTL(pendingThisMonth.map((row) => row.amount))
@@ -230,7 +230,7 @@ function PaymentsOverview({ rows }: { rows: Payment[] }) {
         : 'Takvim temiz'
 
     return { pendingThisMonth, paidThisMonthCount, pendingTotal, recurringCount, paidRate, overdueCount, nextPayment, statusLabel }
-  }, [rows])
+  }, [rows, transactionHistory])
 
   if (!summary) return null
 
@@ -378,7 +378,7 @@ export function PaymentsPage() {
                 data={{ ...planningData, payments }}
                 onPayObligation={(obligation) => void openObligationPayment(obligation, reload)}
               />
-              {!loading ? <PaymentsOverview rows={payments} /> : null}
+              {!loading ? <PaymentsOverview rows={payments} transactionHistory={snapshotQuery.data?.transactionHistory ?? []} /> : null}
             </div>
           )
         }}
@@ -388,7 +388,7 @@ export function PaymentsPage() {
           payment_method: row?.payment_method ?? 'manual',
           amount_status: row?.amount_status ?? (row?.category === 'Fatura' ? 'estimated' : 'exact'),
           amount: row?.amount ?? 0,
-          due_date: row?.due_date ?? new Date().toISOString().slice(0, 10),
+          due_date: row?.due_date ?? dateInputValue(new Date()),
           recurrence: row?.recurrence ?? 'none',
           recurrence_day: row?.recurrence_day ?? (row?.due_date ? new Date(`${row.due_date}T00:00:00`).getDate() : new Date().getDate()),
           recurrence_end_date: row?.recurrence_end_date ?? '',

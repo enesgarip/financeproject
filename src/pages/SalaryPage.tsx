@@ -5,6 +5,7 @@ import type { SalaryHistory } from '../types/database'
 import { formatDate } from '../utils/date'
 import { parseNumber } from '../utils/formatCurrency'
 import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
+import { getSalaryTrend } from '../utils/financeSummary'
 import { diffTL } from '../utils/money'
 
 const salaryFields: FormField[] = [
@@ -18,13 +19,8 @@ function SalaryOverview({ rows }: { rows: SalaryHistory[] }) {
   const { formatAmount } = useBalancePrivacy()
   if (rows.length === 0) return null
 
-  const ordered = [...rows].sort((a, b) => a.effective_date.localeCompare(b.effective_date))
-  const current = ordered.at(-1)
-  const previous = ordered.at(-2)
+  const { current, previous, difference, percentage } = getSalaryTrend(rows)
   if (!current) return null
-
-  const difference = previous ? diffTL(current.amount, previous.amount) : 0
-  const percentage = previous && previous.amount > 0 ? (difference / previous.amount) * 100 : 0
   const isUp = difference > 0
   const isDown = difference < 0
   const DeltaIcon = isUp ? ArrowUpRight : isDown ? ArrowDownRight : Minus

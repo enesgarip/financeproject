@@ -128,7 +128,7 @@ export function DashboardPage() {
   const snapshotQuery = useFinanceSnapshot()
   const displayName = useMemo(() => getUserDisplayName(user), [user])
 
-  // Snapshot 6 aylık süperset taşır; dashboard kendi dar penceresine indirger
+  // Snapshot yıllık raporlar için geniş bir süperset taşır; dashboard daraltır.
   // (geçmiş 3 ay, harcamalar 4 ay, bütçe yalnızca içinde bulunulan ay).
   const data: DashboardData = useMemo(() => {
     const snapshot = snapshotQuery.data

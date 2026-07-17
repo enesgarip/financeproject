@@ -6,6 +6,7 @@
  */
 import type { CardExpense, TransactionHistory } from '../types/database'
 import { sumTL } from './money'
+import { normalizeSearchText } from './searchText'
 
 export type QuietDaysResult = {
   /** Bu ay harcama yapılmayan gün sayısı */
@@ -44,6 +45,11 @@ function buildSpendingDaySet(
 
   for (const t of transactionHistory) {
     if (t.type !== 'payment' || !t.amount || t.amount <= 0) continue
+    // Kart ekstresi/borcu ödemesi yeni tüketim değildir; kart harcaması zaten
+    // harcama tarihinde sayılmıştır. Planlı ödeme karta yazıldıysa aynı eylem
+    // card_expenses'ta da bulunduğundan history satırını ikinci kez toplama.
+    if (t.source_table === 'card_statement_archives' || t.source_table === 'cards') continue
+    if (t.source_table === 'payments' && normalizeSearchText(t.note).includes('kredi kart')) continue
     const key = t.occurred_at.slice(0, 10)
     dayTotals.set(key, sumTL([dayTotals.get(key), t.amount]))
   }
