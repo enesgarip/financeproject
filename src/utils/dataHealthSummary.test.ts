@@ -146,4 +146,11 @@ describe('buildHealthCounts', () => {
     const result = buildHealthCounts({ ...emptyInput, cards: [card] })
     expect(result.warnings).toBeGreaterThanOrEqual(1)
   })
+
+  it('detects a shared limit exceeded by the combined group debt', () => {
+    const first = makeCard({ id: 'c1', limit_group_name: 'Ortak', debt_amount: 12000, statement_debt_amount: 12000, credit_limit: 20000 })
+    const second = makeCard({ id: 'c2', limit_group_name: 'Ortak', debt_amount: 12000, statement_debt_amount: 12000, credit_limit: 20000 })
+    const result = buildHealthCounts({ ...emptyInput, cards: [first, second] })
+    expect(result.warnings).toBeGreaterThanOrEqual(1)
+  })
 })

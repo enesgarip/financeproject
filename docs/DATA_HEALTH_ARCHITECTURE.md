@@ -102,6 +102,13 @@ Every fix should be narrow and explainable:
 Avoid hiding schema/RPC drift. If a missing migration makes a fix impossible,
 surface the error clearly rather than silently skipping a broken invariant.
 
+JSON backup restores user-owned finance/support rows including card aliases,
+dismissed upcoming items, and push subscriptions. Append-only `card_ledger` /
+`account_ledger` plus user-owned notification/SMS logs are export-only; restoring
+cards creates honest opening events at the restore point instead of replaying
+history. Unowned `sms_log` diagnostics remain service-role-only and never enter a
+user's backup.
+
 ## Verification
 
 For data-health changes, usually run:

@@ -9,6 +9,7 @@
 
 import type { CardExpense, Payment, TransactionHistory } from '../types/database'
 import { median } from './spendingStats'
+import { normalizeSearchText } from './searchText'
 
 export type PriceObservation = {
   /** Stable grouping key (e.g. payment id, normalized card-expense description). */
@@ -165,11 +166,11 @@ export function buildPriceObservations(input: {
   const observations: PriceObservation[] = []
 
   for (const row of input.transactionHistory) {
-    if (row.type !== 'payment') continue
+    if (row.type !== 'payment' || row.source_table !== 'payments') continue
     if (typeof row.amount !== 'number' || !Number.isFinite(row.amount) || row.amount <= 0) continue
     const payment = row.source_id ? paymentsById.get(row.source_id) : undefined
     observations.push({
-      key: row.source_id ? `pay:${row.source_id}` : `paytitle:${cleanPaymentTitle(row.title).toLowerCase()}`,
+      key: row.source_id ? `pay:${row.source_id}` : `paytitle:${normalizeSearchText(cleanPaymentTitle(row.title))}`,
       label: payment?.title ?? cleanPaymentTitle(row.title),
       category: payment?.category ?? null,
       amount: row.amount,
@@ -181,7 +182,7 @@ export function buildPriceObservations(input: {
     if (expense.status !== 'posted' || expense.installment_count > 1) continue
     if (!Number.isFinite(expense.amount) || expense.amount <= 0) continue
     observations.push({
-      key: `card:${expense.description.trim().toLowerCase()}`,
+      key: `card:${normalizeSearchText(expense.description)}`,
       label: expense.description,
       category: expense.category,
       amount: expense.amount,

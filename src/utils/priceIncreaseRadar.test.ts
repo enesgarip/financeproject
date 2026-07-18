@@ -189,6 +189,14 @@ describe('buildPriceObservations', () => {
     expect(buildPriceObservations({ transactionHistory, payments: [], cardExpenses: [] })).toHaveLength(0)
   })
 
+  it('skips card debt and statement payment history', () => {
+    const transactionHistory = [
+      historyRow({ id: 'card', source_table: 'cards', source_id: 'c1' }),
+      historyRow({ id: 'statement', source_table: 'card_statement_archives', source_id: 's1' }),
+    ]
+    expect(buildPriceObservations({ transactionHistory, payments: [], cardExpenses: [] })).toHaveLength(0)
+  })
+
   it('includes posted non-installment card expenses keyed by description', () => {
     const cardExpenses = [
       cardExpenseRow({ id: 'e1', spent_at: '2026-05-10', amount: 150, description: 'Spotify', category: 'Dijital üyelik' }),

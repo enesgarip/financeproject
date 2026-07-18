@@ -10,6 +10,7 @@ import type { CardExpense } from '../types/database'
 import { dayOfMonthCutoff, isWithinDayOfMonth } from './monthToDate'
 import { sumTL } from './money'
 import { averageOverActiveMonths, median } from './spendingStats'
+import { normalizeSearchText } from './searchText'
 
 export type CategoryAnomaly = {
   category: string
@@ -105,42 +106,47 @@ export function detectRecurringExpenses(
   from: Date = new Date(),
 ): RecurringExpense[] {
   const currentKey = offsetMonthPrefix(from, 0)
-  const cutoffKey = offsetMonthPrefix(from, -4)
+  const cutoffKey = offsetMonthPrefix(from, -3)
 
   const posted = expenses.filter(
     (e) => e.status === 'posted' && e.installment_count <= 1,
   )
 
-  type Bucket = { months: Set<string>; amounts: number[]; category: string }
+  type Observation = { month: string; amount: number; category: string; description: string }
+  type Bucket = { observations: Observation[] }
   const byDesc = new Map<string, Bucket>()
 
   for (const expense of posted) {
-    const key = expense.description.trim().toLowerCase()
-    if (!byDesc.has(key)) byDesc.set(key, { months: new Set(), amounts: [], category: expense.category })
+    const key = normalizeSearchText(expense.description)
+    if (!key) continue
+    if (!byDesc.has(key)) byDesc.set(key, { observations: [] })
     const bucket = byDesc.get(key)!
-    bucket.months.add(monthPrefix(expense.spent_at))
-    bucket.amounts.push(expense.amount)
-    bucket.category = expense.category
+    bucket.observations.push({
+      month: monthPrefix(expense.spent_at),
+      amount: expense.amount,
+      category: expense.category,
+      description: expense.description.trim(),
+    })
   }
 
   const result: RecurringExpense[] = []
 
-  for (const [rawDesc, bucket] of byDesc) {
-    const recentMonths = [...bucket.months].filter(
-      (m) => m >= cutoffKey && m <= currentKey,
-    )
-    if (recentMonths.length < RECURRING_MIN_MONTHS) continue
+  for (const bucket of byDesc.values()) {
+    const recent = bucket.observations.filter((item) => item.month >= cutoffKey && item.month <= currentKey)
+    const recentMonths = new Set(recent.map((item) => item.month))
+    if (recentMonths.size < RECURRING_MIN_MONTHS) continue
 
     // Check amount consistency: all amounts within tolerance of the median
-    const med = median(bucket.amounts)
+    const amounts = recent.map((item) => item.amount)
+    const med = median(amounts)
     if (med === 0) continue
-    const consistent = bucket.amounts.every(
+    const consistent = amounts.every(
       (a) => Math.abs(a - med) / med <= AMOUNT_TOLERANCE,
     )
     if (!consistent) continue
 
-    const desc = rawDesc.charAt(0).toUpperCase() + rawDesc.slice(1)
-    result.push({ description: desc, category: bucket.category, amount: med, monthCount: recentMonths.length })
+    const latest = [...recent].sort((a, b) => b.month.localeCompare(a.month))[0]!
+    result.push({ description: latest.description, category: latest.category, amount: med, monthCount: recentMonths.size })
   }
 
   return result.sort((a, b) => b.monthCount - a.monthCount || b.amount - a.amount)

@@ -16,6 +16,8 @@ import type {
   SavingsGoal,
 } from '../types/database'
 import { sumTL } from './money'
+import { buildCreditLimitGroups } from './financeSummary'
+import { aggregateNetWorthByMonth } from './netWorthSeries'
 
 export type Milestone = {
   id: string
@@ -39,7 +41,12 @@ function monthKey(date: string): string {
   return date.slice(0, 7)
 }
 
-export function detectMilestones(data: MilestoneInput): Milestone[] {
+function offsetMonthKey(from: Date, offset: number): string {
+  const date = new Date(from.getFullYear(), from.getMonth() + offset, 1)
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+}
+
+export function detectMilestones(data: MilestoneInput, now: Date = new Date()): Milestone[] {
   const milestones: Milestone[] = []
 
   // Cash = Nakit assets + bank-card balances, matching totalCashAssets elsewhere
@@ -100,11 +107,13 @@ export function detectMilestones(data: MilestoneInput): Milestone[] {
     })
   }
 
-  if (data.netWorthSnapshots.length >= 2) {
-    const sorted = [...data.netWorthSnapshots].sort((a, b) => a.snapshot_date.localeCompare(b.snapshot_date))
+  const sortedMonthlySnapshots = aggregateNetWorthByMonth(data.netWorthSnapshots)
+  if (sortedMonthlySnapshots.length >= 2) {
+    const sorted = sortedMonthlySnapshots
     const latest = sorted[sorted.length - 1]
     const previous = sorted[sorted.length - 2]
-    if (latest.net_worth > previous.net_worth) {
+    const previousCalendarMonth = offsetMonthKey(new Date(`${latest.snapshot_date}T00:00:00`), -1)
+    if (previous.snapshot_date.slice(0, 7) === previousCalendarMonth && latest.net_worth > previous.net_worth) {
       milestones.push({
         id: 'net-worth-up',
         icon: 'trending-up',
@@ -114,8 +123,8 @@ export function detectMilestones(data: MilestoneInput): Milestone[] {
       })
     }
 
-    const allTimeHigh = sorted.every((s, i) => i === sorted.length - 1 || s.net_worth <= latest.net_worth)
-    if (allTimeHigh && sorted.length >= 3) {
+    const allTimeHigh = data.netWorthSnapshots.every((snapshot) => snapshot.snapshot_date === latest.snapshot_date || snapshot.net_worth <= latest.net_worth)
+    if (allTimeHigh && data.netWorthSnapshots.length >= 3) {
       milestones.push({
         id: 'net-worth-ath',
         icon: 'zap',
@@ -132,9 +141,9 @@ export function detectMilestones(data: MilestoneInput): Milestone[] {
     const m = monthKey(e.spent_at)
     monthTotals.set(m, sumTL([monthTotals.get(m), e.amount]))
   }
-  const sortedMonths = [...monthTotals.entries()].sort(([a], [b]) => a.localeCompare(b))
-  if (sortedMonths.length >= 3) {
-    const last3 = sortedMonths.slice(-3)
+  const completedMonthKeys = [-3, -2, -1].map((offset) => offsetMonthKey(now, offset))
+  if (completedMonthKeys.every((key) => monthTotals.has(key))) {
+    const last3 = completedMonthKeys.map((key) => [key, monthTotals.get(key)!] as const)
     const isDecreasing = last3.every((entry, i) => i === 0 || entry[1] < last3[i - 1][1])
     if (isDecreasing) {
       milestones.push({
@@ -147,7 +156,7 @@ export function detectMilestones(data: MilestoneInput): Milestone[] {
     }
   }
 
-  const totalLimit = sumTL(creditCards.map((c) => c.credit_limit ?? 0))
+  const totalLimit = sumTL(buildCreditLimitGroups(creditCards).map((group) => group.limit))
   if (totalLimit > 0) {
     const usage = (totalCardDebt / totalLimit) * 100
     if (usage <= 30) {

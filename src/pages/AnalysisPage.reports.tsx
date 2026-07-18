@@ -309,7 +309,7 @@ export function YearEndReport({ data, snapshots }: { data: AnalysisData; snapsho
           <div className="grid grid-cols-6 gap-1.5 min-[760px]:grid-cols-12">
             {report.monthlyTotals.map((m) => {
               const maxAmount = report.mostExpensiveMonth?.amount ?? 1
-              const heightPct = maxAmount > 0 ? Math.max(4, (m.amount / maxAmount) * 100) : 4
+              const heightPct = m.amount > 0 && maxAmount > 0 ? Math.max(4, (m.amount / maxAmount) * 100) : 0
               return (
                 <div key={m.month} className="flex flex-col items-center gap-1">
                   <div className="flex h-16 w-full items-end justify-center">

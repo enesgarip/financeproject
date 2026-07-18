@@ -9,6 +9,7 @@
 import type { CardExpense, Payment } from '../types/database'
 import { sumTL } from './money'
 import { median } from './spendingStats'
+import { normalizeSearchText } from './searchText'
 
 export type SubscriptionItem = {
   id: string
@@ -51,41 +52,52 @@ export function buildSubscriptionSummary(
     (e) => e.status === 'posted' && e.installment_count <= 1,
   )
 
-  type Bucket = { months: Set<string>; amounts: number[]; category: string; latestMonth: string }
+  type Observation = { month: string; amount: number; category: string; description: string }
+  type Bucket = { observations: Observation[] }
   const byDesc = new Map<string, Bucket>()
 
+  // Credit-card funded recurring payments create a matching card_expenses row
+  // when posted. The payment itself is already listed below, so exclude that
+  // generated expense from automatic subscription discovery.
+  const cardFundedPaymentKeys = new Set(
+    payments
+      .filter((payment) => payment.recurrence === 'monthly' && Boolean(payment.auto_source_card_id))
+      .map((payment) => normalizeSearchText(payment.title)),
+  )
+
   for (const expense of posted) {
-    const key = expense.description.trim().toLowerCase()
-    if (!byDesc.has(key)) byDesc.set(key, { months: new Set(), amounts: [], category: expense.category, latestMonth: '' })
+    const key = normalizeSearchText(expense.description)
+    const generatedFromPayment = normalizeSearchText(expense.note).includes('odeme kaydindan olusturuldu')
+    if (!key || (generatedFromPayment && cardFundedPaymentKeys.has(key))) continue
+    if (!byDesc.has(key)) byDesc.set(key, { observations: [] })
     const bucket = byDesc.get(key)!
     const m = monthPrefix(expense.spent_at)
-    bucket.months.add(m)
-    bucket.amounts.push(expense.amount)
-    bucket.category = expense.category
-    if (m > bucket.latestMonth) bucket.latestMonth = m
+    bucket.observations.push({ month: m, amount: expense.amount, category: expense.category, description: expense.description.trim() })
   }
 
   const TOLERANCE = 0.15
 
-  for (const [rawDesc, bucket] of byDesc) {
-    const recentMonths = [...bucket.months].filter((m) => m >= cutoffKey && m <= currentKey)
-    if (recentMonths.length < 2) continue
+  for (const [key, bucket] of byDesc) {
+    const recent = bucket.observations.filter((item) => item.month >= cutoffKey && item.month <= currentKey)
+    const recentMonths = new Set(recent.map((item) => item.month))
+    if (recentMonths.size < 2) continue
 
-    const med = median(bucket.amounts)
+    const amounts = recent.map((item) => item.amount)
+    const med = median(amounts)
     if (med === 0) continue
-    const consistent = bucket.amounts.every((a) => Math.abs(a - med) / med <= TOLERANCE)
+    const consistent = amounts.every((a) => Math.abs(a - med) / med <= TOLERANCE)
     if (!consistent) continue
 
-    const desc = rawDesc.charAt(0).toUpperCase() + rawDesc.slice(1)
-    const isActive = bucket.latestMonth >= offsetMonthPrefix(now, -1)
+    const latest = [...recent].sort((a, b) => b.month.localeCompare(a.month))[0]!
+    const isActive = latest.month >= offsetMonthPrefix(now, -1)
 
     items.push({
-      id: `expense:${rawDesc}`,
+      id: `expense:${key}`,
       source: 'recurring_expense',
-      title: desc,
-      category: bucket.category || 'Diğer',
+      title: latest.description,
+      category: latest.category || 'Diğer',
       amount: med,
-      monthCount: recentMonths.length,
+      monthCount: recentMonths.size,
       isActive,
     })
   }

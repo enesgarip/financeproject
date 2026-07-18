@@ -33,6 +33,12 @@ Remaining allowed fallbacks are intentionally narrow: Analysis reports optional
 missing tables through `SchemaMigrationNotice`, and backup/restore skips tables
 that are not deployed in the target environment.
 
+User backups include support tables added after the original backup feature:
+card aliases, dismissals, and push subscriptions are restorable; user-owned
+SMS/notification logs and both ledgers are audit exports only. Ledgers restart
+with opening events after restore. Ownerless raw SMS diagnostics are
+service-role-only, never user-readable.
+
 ## 4. Card Debt Math Has Multiple Derived Fields (mitigated)
 
 Credit card debt depends on several related fields (`debt_amount`,

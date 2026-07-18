@@ -21,8 +21,10 @@ This file records the current business rules inferred from the codebase as of 20
   - Sell requires a selected `banka_karti`, credits that account, and decreases
     the asset's TRY value. If quantity is supplied, the asset amount also
     decreases.
-  - Stock (`Hisse`) trades require quantity so share count and weighted unit
-    cost stay coherent.
+  - Stock (`Hisse`), fund (`Fon`), and non-TRY cash trades require quantity so
+    the source holding amount moves with the bank-account cash leg. This is
+    mandatory for auto-valued FX because the next rate sync derives value from
+    `amount`.
   - Ledger-managed gold asset rows stay outside this flow; gold is managed from
     the Gold page/ledger.
 

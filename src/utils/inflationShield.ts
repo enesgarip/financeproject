@@ -5,8 +5,8 @@ import { roundTL as round2, sumTL } from './money'
  * "Enflasyon kalkanı" — how much of your wealth sits in real/hard assets that
  * hold value vs. melting TL cash that inflation erodes.
  *
- * Melting  = TL cash: assets in the `Nakit` category + bank-card balances.
- * Protected = everything else (Altın, Hisse, Fon, BES, Araç, Diğer) — non-cash
+ * Melting  = TRY cash: TRY assets in the `Nakit` category + bank-card balances.
+ * Protected = foreign cash and everything else (Altın, Hisse, Fon, BES, Araç, Diğer) — non-TRY
  *             holdings that track real value better than cash.
  *
  * Pure and side-effect-free. Uses each asset's already-live `estimated_value_try`
@@ -35,12 +35,16 @@ export type InflationShieldSummary = {
 const CASH_CATEGORY = 'Nakit'
 
 export function buildInflationShield(assets: Asset[], cards: Card[]): InflationShieldSummary {
-  const byCategory = new Map<string, number>()
+  const byCategory = new Map<string, { value: number; bucket: ShieldBucket }>()
 
   for (const asset of assets) {
     const value = Number(asset.estimated_value_try) || 0
     if (value <= 0) continue
-    byCategory.set(asset.category, sumTL([byCategory.get(asset.category), value]))
+    const isForeignCash = asset.category === CASH_CATEGORY && Boolean(asset.currency) && asset.currency !== 'TRY'
+    const category = isForeignCash ? `${CASH_CATEGORY} (${asset.currency})` : asset.category
+    const bucket: ShieldBucket = asset.category === CASH_CATEGORY && !isForeignCash ? 'melting' : 'protected'
+    const current = byCategory.get(category)
+    byCategory.set(category, { value: sumTL([current?.value, value]), bucket })
   }
 
   // Bank-card balances are TL cash — fold them into the Nakit bucket.
@@ -50,17 +54,18 @@ export function buildInflationShield(assets: Asset[], cards: Card[]): InflationS
       .map((card) => Number(card.current_balance) || 0),
   )
   if (bankBalance > 0) {
-    byCategory.set(CASH_CATEGORY, sumTL([byCategory.get(CASH_CATEGORY), bankBalance]))
+    const current = byCategory.get(CASH_CATEGORY)
+    byCategory.set(CASH_CATEGORY, { value: sumTL([current?.value, bankBalance]), bucket: 'melting' })
   }
 
   let protectedValue = 0
   let meltingValue = 0
   const categories: InflationShieldCategory[] = []
 
-  for (const [category, rawValue] of byCategory) {
-    const value = round2(rawValue)
+  for (const [category, entry] of byCategory) {
+    const value = round2(entry.value)
     if (value <= 0) continue
-    const bucket: ShieldBucket = category === CASH_CATEGORY ? 'melting' : 'protected'
+    const bucket = entry.bucket
     if (bucket === 'melting') meltingValue = sumTL([meltingValue, value])
     else protectedValue = sumTL([protectedValue, value])
     categories.push({ category, bucket, value })

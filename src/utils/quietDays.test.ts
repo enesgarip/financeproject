@@ -41,6 +41,12 @@ function payment(note: string, source_table = 'payments'): TransactionHistory {
 }
 
 describe('analyzeQuietDays', () => {
+  it('returns consistent zero streaks when there is no observed spending history', () => {
+    const result = analyzeQuietDays([], [], new Date(2026, 6, 10))
+    expect(result.currentStreak).toBe(0)
+    expect(result.bestStreakAllTime).toBe(0)
+  })
+
   it('does not double count a planned payment posted to a credit card', () => {
     const result = analyzeQuietDays(
       [expense(500)],

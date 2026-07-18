@@ -207,7 +207,7 @@ export function CreditAccountListCard({
   const cardInstallments = installments
     .filter((installment) => installment.card_id === row.id && installment.status !== 'paid')
     .sort((left, right) => left.due_month.localeCompare(right.due_month))
-  const consistency = quickCardConsistencyScore(row, installments)
+  const consistency = quickCardConsistencyScore(row, installments, rows)
 
   return (
     <article

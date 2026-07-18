@@ -6,9 +6,9 @@ import {
 } from '../data/repositories/backupRepo'
 
 /**
- * Full-data backup & restore (roadmap D8).
+ * Full finance-data backup & restore (roadmap D8).
  *
- * Export: every user table → one JSON file (`financeproject-v2`). Restore:
+ * Export: user-owned finance/support tables → one JSON file (`financeproject-v2`). Restore:
  * wipe own rows child-first, insert backup rows parent-first (FK-safe), with
  * user_id rewritten to the signed-in user so a backup survives an account
  * re-create. Also accepts the older DataHealth export (`financeproject-v1`).
@@ -21,6 +21,7 @@ import {
 /** Insert order, parents first; wipe runs in reverse. */
 export const RESTORE_TABLE_ORDER = [
   'cards',
+  'card_aliases',
   'assets',
   'loans',
   'savings_goals',
@@ -37,12 +38,14 @@ export const RESTORE_TABLE_ORDER = [
   'payments',
   'transaction_history',
   'account_reconciliations',
+  'dismissed_upcoming_items',
+  'push_subscriptions',
 ] as const
 
 export type RestoreTable = (typeof RESTORE_TABLE_ORDER)[number]
 
 /** Exported but intentionally never restored. */
-const EXPORT_ONLY_TABLES = ['card_ledger'] as const
+const EXPORT_ONLY_TABLES = ['card_ledger', 'account_ledger', 'sms_log', 'notification_log'] as const
 
 const BACKUP_SCHEMA_V2 = 'financeproject-v2'
 const BACKUP_SCHEMA_V1 = 'financeproject-v1'
@@ -199,6 +202,7 @@ export async function restoreBackup(
 
 export const BACKUP_TABLE_LABELS: Record<RestoreTable, string> = {
   cards: 'Hesap/Kart',
+  card_aliases: 'Kart takma adı',
   assets: 'Varlık',
   loans: 'Kredi',
   savings_goals: 'Hedef',
@@ -215,4 +219,6 @@ export const BACKUP_TABLE_LABELS: Record<RestoreTable, string> = {
   payments: 'Planlı ödeme',
   transaction_history: 'İşlem geçmişi',
   account_reconciliations: 'Mutabakat kaydı',
+  dismissed_upcoming_items: 'Gizlenen yaklaşan kayıt',
+  push_subscriptions: 'Push aboneliği',
 }

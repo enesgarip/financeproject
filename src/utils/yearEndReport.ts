@@ -30,8 +30,9 @@ export function buildYearEndReport(
   expenses: CardExpense[],
   snapshots: NetWorthSnapshot[],
   year?: number,
+  now: Date = new Date(),
 ): YearEndReportResult {
-  const targetYear = year ?? new Date().getFullYear()
+  const targetYear = year ?? now.getFullYear()
   const yearPrefix = String(targetYear)
 
   const posted = expenses.filter(
@@ -77,7 +78,12 @@ export function buildYearEndReport(
     }))
     .sort((a, b) => b.amount - a.amount)
 
-  const avgMonthlySpending = activeMonths.length > 0 ? roundTL(totalSpending / activeMonths.length) : 0
+  const elapsedMonthCount = targetYear < now.getFullYear()
+    ? 12
+    : targetYear === now.getFullYear()
+      ? now.getMonth() + 1
+      : 0
+  const avgMonthlySpending = elapsedMonthCount > 0 ? roundTL(totalSpending / elapsedMonthCount) : 0
 
   const yearSnapshots = snapshots
     .filter((s) => s.snapshot_date.startsWith(yearPrefix))

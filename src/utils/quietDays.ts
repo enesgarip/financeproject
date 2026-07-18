@@ -98,14 +98,16 @@ function longestStreak(
 }
 
 function currentStreakFromToday(dayTotals: Map<string, number>, today: Date): number {
+  const observedKeys = [...dayTotals.keys()].filter((key) => key <= dateKey(today)).sort()
+  if (observedKeys.length === 0) return 0
+  const firstObserved = observedKeys[0]!
   let streak = 0
   const d = new Date(today)
-  while (true) {
+  while (dateKey(d) >= firstObserved) {
     const key = dateKey(d)
     if (dayTotals.has(key)) break
     streak++
     d.setDate(d.getDate() - 1)
-    if (d.getFullYear() < today.getFullYear() - 1) break
   }
   return streak
 }

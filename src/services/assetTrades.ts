@@ -10,8 +10,8 @@ export type AssetTradeResult = {
   error: SupabaseLikeError | null
 }
 
-export function assetTradeRequiresQuantity(asset: Pick<Asset, 'category'>): boolean {
-  return asset.category === 'Hisse'
+export function assetTradeRequiresQuantity(asset: Pick<Asset, 'category' | 'currency'>): boolean {
+  return asset.category === 'Hisse' || asset.category === 'Fon' || (asset.category === 'Nakit' && Boolean(asset.currency) && asset.currency !== 'TRY')
 }
 
 export async function submitAssetTrade({

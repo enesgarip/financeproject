@@ -55,6 +55,13 @@ describe('cardConsistencyScore', () => {
     expect(limitCheck?.ok).toBe(false)
   })
 
+  it('detects a shared-limit overflow from the combined card group', () => {
+    const first = makeCard({ id: 'c1', limit_group_name: 'Ortak', credit_limit: 20000, debt_amount: 12000, statement_debt_amount: 12000, current_period_spending: 0 })
+    const second = makeCard({ id: 'c2', limit_group_name: 'Ortak', credit_limit: 20000, debt_amount: 12000, statement_debt_amount: 12000, current_period_spending: 0 })
+    const result = cardConsistencyScore(first, [], [], [], [first, second])
+    expect(result.checks.find((c) => c.label === 'Limit aşımı')?.ok).toBe(false)
+  })
+
   it('scores bank card correctly', () => {
     const card = makeCard({
       card_type: 'banka_karti',

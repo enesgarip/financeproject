@@ -224,6 +224,15 @@ pattern'ler ve açık düzeltme planı yer alıyor.
 
 ## Recently Cleared / No Longer First Next Task
 
+- 2026-07-18 full logic-accuracy audit closed 12 findings plus one discovered
+  privacy gap: quantity is mandatory for stock/fund/FX account-backed trades;
+  recurring analytics use only their declared windows and avoid card-funded
+  payment duplication; price radar scopes payment history; shared card limits
+  feed milestones/health/consistency; milestone month comparisons, FX inflation
+  classification, year average, quiet streaks and zero-value bars are corrected;
+  backup coverage includes newly added user tables and exports both ledgers; null
+  owner SMS diagnostics are no longer readable by authenticated users. Regression
+  tests cover each calculation/source-boundary change.
 - 2026-07-08 paid-statement calendar fix: `utils/obligations.ts` now derives
   current-period card cash due dates from the active statement period when there
   is no pending statement. If a July 14 statement was paid early after the July 4

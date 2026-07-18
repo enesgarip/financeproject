@@ -33,6 +33,16 @@ describe('buildInflationShield', () => {
     expect(s.meltingRatio).toBe(1)
   })
 
+  it('treats foreign-currency cash as protected instead of TRY cash', () => {
+    const s = buildInflationShield([
+      asset({ category: 'Nakit', currency: 'USD', amount: 1000, estimated_value_try: 40000 }),
+      asset({ id: 'try', category: 'Nakit', currency: 'TRY', estimated_value_try: 10000 }),
+    ], [])
+    expect(s.protectedValue).toBe(40000)
+    expect(s.meltingValue).toBe(10000)
+    expect(s.categories.find((item) => item.category === 'Nakit (USD)')?.bucket).toBe('protected')
+  })
+
   it('treats gold/stocks/other as protected', () => {
     const s = buildInflationShield(
       [

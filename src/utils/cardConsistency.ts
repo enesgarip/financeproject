@@ -14,6 +14,7 @@ import {
   clampCardBreakdown,
   cardProvisionAmount,
   cardDebtBreakdown,
+  buildCreditLimitGroups,
   scheduledCardInstallmentTotalsByCard,
 } from './financeSummary'
 import { ledgerDrift, type CardLedgerEvent } from './cardLedger'
@@ -34,6 +35,7 @@ export function cardConsistencyScore(
   cardLedger: CardLedgerEvent[],
   accountLedger: AccountLedgerEvent[],
   cardInstallments: CardInstallment[],
+  allCards: Card[] = [card],
 ): ConsistencyScore {
   const checks: ConsistencyCheck[] = []
 
@@ -59,10 +61,11 @@ export function cardConsistencyScore(
           !moneyDiffers(provision, cardProvisionAmount(card)),
     })
 
-    if (card.credit_limit > 0) {
+    const limitGroup = buildCreditLimitGroups(allCards).find((group) => group.cards.some((item) => item.id === card.id))
+    if (limitGroup && limitGroup.limit > 0) {
       checks.push({
         label: 'Limit aşımı',
-        ok: !exceedsTL(card.debt_amount, card.credit_limit),
+        ok: !exceedsTL(limitGroup.debt, limitGroup.limit),
       })
     }
 
@@ -98,6 +101,7 @@ export function cardConsistencyScore(
 export function quickCardConsistencyScore(
   card: Card,
   cardInstallments: CardInstallment[],
+  allCards: Card[] = [card],
 ): ConsistencyScore {
-  return cardConsistencyScore(card, [], [], cardInstallments)
+  return cardConsistencyScore(card, [], [], cardInstallments, allCards)
 }

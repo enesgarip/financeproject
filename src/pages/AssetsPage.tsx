@@ -419,7 +419,7 @@ export function AssetsPage() {
       return
     }
     if (assetTradeRequiresQuantity(trade.asset) && (!quantity || quantity <= 0)) {
-      setTradeError('Hisse işlemlerinde adet girilmeli.')
+      setTradeError('Hisse, fon ve döviz işlemlerinde miktar girilmeli.')
       return
     }
     if (trade.direction === 'sell' && quantity !== null && quantity > trade.asset.amount) {

@@ -71,6 +71,7 @@ describe('RESTORE_TABLE_ORDER FK safety', () => {
     for (const child of ['card_expenses', 'card_statement_archives', 'card_installments', 'payments', 'account_reconciliations']) {
       expect(pos(child)).toBeGreaterThan(pos('cards'))
     }
+    expect(pos('card_aliases')).toBeGreaterThan(pos('cards'))
     expect(pos('card_expenses')).toBeGreaterThan(pos('card_statement_archives')) // statement_archive_id
     expect(pos('card_installments')).toBeGreaterThan(pos('card_expenses')) // card_expense_id
     expect(pos('loan_installments')).toBeGreaterThan(pos('loans'))

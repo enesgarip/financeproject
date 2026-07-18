@@ -16,6 +16,7 @@ import type {
 } from '../types/database'
 import { exceedsTL, moneyDiffers } from './money'
 import {
+  buildCreditLimitGroups,
   cardDebtBreakdown,
   expectedInstallmentAmount,
   projectLoanSummary,
@@ -74,8 +75,8 @@ export function buildHealthCounts(data: HealthCountInput): HealthSummary {
     if (moneyDiffers(expense.installment_amount, expected)) warnings++
   }
 
-  for (const card of data.cards.filter((c) => c.card_type === 'kredi_karti')) {
-    if (card.credit_limit > 0 && exceedsTL(card.debt_amount, card.credit_limit)) warnings++
+  for (const group of buildCreditLimitGroups(data.cards)) {
+    if (group.limit > 0 && exceedsTL(group.debt, group.limit)) warnings++
   }
 
   return { errors, warnings, total: errors + warnings }

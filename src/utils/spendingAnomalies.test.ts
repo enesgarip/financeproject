@@ -132,6 +132,18 @@ describe('detectRecurringExpenses', () => {
     const result = detectRecurringExpenses(mixed, FROM)
     expect(result).toHaveLength(1)
   })
+
+  it('ignores old amounts outside the recent consistency window and normalizes Turkish text', () => {
+    const rows = [
+      expense({ id: 'old', spent_at: '2025-10-01', amount: 100, category: 'Fatura', description: 'İGDAŞ' }),
+      expense({ id: 'new-1', spent_at: '2026-05-01', amount: 200, category: 'Fatura', description: 'igdaş' }),
+      expense({ id: 'new-2', spent_at: '2026-06-01', amount: 200, category: 'Fatura', description: 'İGDAŞ' }),
+    ]
+    const result = detectRecurringExpenses(rows, FROM)
+    expect(result).toHaveLength(1)
+    expect(result[0]!.amount).toBe(200)
+    expect(result[0]!.monthCount).toBe(2)
+  })
 })
 
 describe('detectSpendingAnomalies', () => {
