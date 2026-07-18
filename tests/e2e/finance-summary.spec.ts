@@ -288,7 +288,7 @@ test('card payable debt excludes future installments and provisions', () => {
   expect(cardPayableDebt(bonus)).toBe(6_000)
 })
 
-test('next month load separates open statements from card installment planning', () => {
+test('next month cash load does not count card installments before statement payment', () => {
   const loanId = 'loan-1'
   const input = data({
     cards: [card({ id: 'card-1', statement_debt_amount: 9_999, debt_amount: 30_000, due_day: 20 })],
@@ -314,7 +314,7 @@ test('next month load separates open statements from card installment planning',
   )
 
   expect(load.cardStatements).toBe(5_000)
-  expect(load.cardInstallments).toBe(5_000)
+  expect(load.cardInstallments).toBe(0)
   expect(load.loanInstallments).toBe(2_500)
   expect(load.legacyLoanInstallments).toBe(0)
   expect(load.payments).toBe(750)
@@ -327,7 +327,7 @@ test('next month load separates open statements from card installment planning',
       load.payments +
       load.personalDebts,
   )
-  expect(load.total).toBe(14_500)
+  expect(load.total).toBe(9_500)
 })
 
 test('shared credit limits are counted once per group', () => {
