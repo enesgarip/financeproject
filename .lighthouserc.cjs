@@ -11,7 +11,7 @@ module.exports = {
       startServerReadyPattern: 'Local',
       startServerReadyTimeout: 30000,
       url: [`http://${previewHost}:${previewPort}/login`],
-      numberOfRuns: 1,
+      numberOfRuns: 3,
       settings: {
         chromeFlags: process.env.CI ? ciChromeFlags : localChromeFlags,
         throttlingMethod: 'provided',

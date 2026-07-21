@@ -85,7 +85,13 @@ jobs:
           VITE_SUPABASE_ANON_KEY: ci-anon-key
 
       - name: Lighthouse CI
-        run: npx --yes @lhci/cli@0.14.x autorun
+        run: |
+          # Lighthouse is sensitive to CI machine performance; retry once on failure.
+          npx --yes @lhci/cli@0.14.x autorun || {
+            echo "::warning::First Lighthouse run failed — retrying…"
+            rm -rf .lighthouseci
+            npx @lhci/cli@0.14.x autorun
+          }
         env:
           LHCI_GITHUB_TOKEN: ${{ github.token }}
 
