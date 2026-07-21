@@ -265,8 +265,14 @@ export function useAccountMovementModal({
       return
     }
 
+    const cardId = transactionCard.id
     setTransactionCard(null)
     await Promise.all([reloadCards?.(), invalidateSnapshot()])
+    // After data reloads, scroll back to the card the user was working with
+    requestAnimationFrame(() => {
+      const el = document.querySelector(`[data-card-id="${cardId}"]`)
+      el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    })
   }
 
   const transactionTargetAccounts = movementAccounts.filter((card) => card.id !== transactionCard?.id)

@@ -70,7 +70,7 @@ type CrudPageProps<T extends TableName> = {
   /** Arbitrary context (e.g. live market rates) forwarded to computed fields and mapForm. */
   fieldContext?: FieldContext
   validateForm?: (formData: FormData, values: Record<string, string>, editing: RowFor<T> | null) => FormErrors
-  afterSave?: (row: RowFor<T>, action: SaveAction, helpers: { reload: () => Promise<void>; setError: (message: string) => void }) => Promise<void> | void
+  afterSave?: (row: RowFor<T>, action: SaveAction, helpers: { reload: () => Promise<void>; setError: (message: string) => void; previousRow: RowFor<T> | null }) => Promise<void> | void
   afterDelete?: (row: RowFor<T> | null, helpers: { reload: () => Promise<void>; setError: (message: string) => void }) => Promise<void> | void
   renderTitle: (row: RowFor<T>) => string
   renderSubtitle?: (row: RowFor<T>) => string
@@ -340,7 +340,7 @@ export function CrudPage<T extends TableName>({
     const savedRow = saveResult.data
     if (savedRow) {
       try {
-        await afterSave?.(savedRow, action, { reload: loadRows, setError })
+        await afterSave?.(savedRow, action, { reload: loadRows, setError, previousRow: editing })
       } catch (saveError) {
         setError(saveError instanceof Error ? saveError.message : 'Kayıt sonrası işlem tamamlanamadı.')
         setSaving(false)
@@ -490,7 +490,7 @@ export function CrudPage<T extends TableName>({
 
                   if (renderCard) {
                     return (
-                      <div key={row.id} className="min-w-0">
+                      <div key={row.id} data-card-id={row.id} className="min-w-0">
                         {renderCard(row, { meta: resolvedMeta, reload: loadRows, setError, rows, menu: rowMenu, rowActions })}
                         {renderExtra ? renderExtra(row, { reload: loadRows, setError, rows }) : null}
                       </div>
@@ -500,6 +500,7 @@ export function CrudPage<T extends TableName>({
                   return (
                     <article
                       key={row.id}
+                      data-card-id={row.id}
                       style={getCardStyle?.(row, rows)}
                       className={cn(
                         'min-w-0 rounded-2xl border bg-card p-4 shadow-[var(--shadow-card)] transition-all duration-250 hover:-translate-y-0.5 hover:shadow-[var(--shadow-lifted)] dark:ring-1 dark:ring-white/[0.04] min-[390px]:p-5',
