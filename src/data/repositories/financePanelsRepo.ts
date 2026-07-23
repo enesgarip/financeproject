@@ -8,7 +8,6 @@ export async function fetchAccountLedgerEvents(cardId: string): Promise<Result<A
     .select('*')
     .eq('card_id', cardId)
     .order('occurred_at', { ascending: false })
-    .limit(200)
 
   return resultFromSupabase((data ?? []) as AccountLedger[], error, 'Hesap hareketleri yüklenemedi.')
 }
@@ -19,7 +18,6 @@ export async function fetchCardLedgerEvents(cardId: string): Promise<Result<Card
     .select('*')
     .eq('card_id', cardId)
     .order('occurred_at', { ascending: false })
-    .limit(200)
 
   return resultFromSupabase((data ?? []) as CardLedger[], error, 'Kart borç hareketleri yüklenemedi.')
 }
@@ -31,7 +29,6 @@ export async function fetchCardLedgerEventsSince(cardId: string, since: string):
     .eq('card_id', cardId)
     .gte('occurred_at', since)
     .order('occurred_at', { ascending: false })
-    .limit(200)
 
   return resultFromSupabase((data ?? []) as CardLedger[], error, 'Kart borç hareketleri yüklenemedi.')
 }
@@ -43,7 +40,6 @@ export async function fetchAccountLedgerEventsSince(cardId: string, since: strin
     .eq('card_id', cardId)
     .gte('occurred_at', since)
     .order('occurred_at', { ascending: false })
-    .limit(200)
 
   return resultFromSupabase((data ?? []) as AccountLedger[], error, 'Hesap hareketleri yüklenemedi.')
 }

@@ -14,7 +14,7 @@ import type {
   SavingsGoalComponent,
 } from '../types/database'
 import { balanceDrift, projectAccountBalance, type AccountLedgerEvent } from '../utils/accountLedger'
-import { ledgerDrift, projectCardDebt, type CardLedgerEvent } from '../utils/cardLedger'
+import { ledgerDrift, projectCardDebt, projectCardSplit, type CardLedgerEvent } from '../utils/cardLedger'
 import { dateInputValue, formatDate } from '../utils/date'
 import { normalizeSearchText } from '../utils/searchText'
 import {
@@ -629,25 +629,57 @@ export function checkLedgerDrift(
     if (!cardEvents || cardEvents.length === 0) continue
 
     const drift = ledgerDrift(cardEvents, card.debt_amount)
-    if (drift === 0) continue
+    if (drift !== 0) {
+      const projection = projectCardDebt(cardEvents)
+      issues.push({
+        id: `card-ledger-drift-${card.id}`,
+        area: 'Kartlar',
+        severity: 'error',
+        title: `${cardLabel(card)} borcu hareket geçmişiyle uyuşmuyor`,
+        description: 'Kayıtlı borç, borç hareketleri toplamından farklı; kayıt dışı bir değişiklik olmuş olabilir.',
+        details: [
+          `Kayıtlı borç: ${formatCurrency(card.debt_amount)}`,
+          `Hareket toplamı: ${formatCurrency(projection)}`,
+          `Fark: ${drift > 0 ? '+' : ''}${formatCurrency(drift)}`,
+        ],
+        fixable: true,
+        fixLabel: 'Hareketlere göre düzelt',
+        kind: 'cardLedgerDrift',
+        payload: { cardId: card.id, nextDebtAmount: projection },
+      })
+    }
 
-    const projection = projectCardDebt(cardEvents)
-    issues.push({
-      id: `card-ledger-drift-${card.id}`,
-      area: 'Kartlar',
-      severity: 'error',
-      title: `${cardLabel(card)} borcu hareket geçmişiyle uyuşmuyor`,
-      description: 'Kayıtlı borç, borç hareketleri toplamından farklı; kayıt dışı bir değişiklik olmuş olabilir.',
-      details: [
-        `Kayıtlı borç: ${formatCurrency(card.debt_amount)}`,
-        `Hareket toplamı: ${formatCurrency(projection)}`,
-        `Fark: ${drift > 0 ? '+' : ''}${formatCurrency(drift)}`,
-      ],
-      fixable: true,
-      fixLabel: 'Hareketlere göre düzelt',
-      kind: 'cardLedgerDrift',
-      payload: { cardId: card.id, nextDebtAmount: projection },
-    })
+    const splitProjection = projectCardSplit(cardEvents)
+    if (splitProjection.complete) {
+      const clamped = clampCardBreakdown(
+        card.debt_amount,
+        splitProjection.statement,
+        splitProjection.current,
+        splitProjection.provision,
+      )
+      if (
+        moneyDiffers(clamped.statement, card.statement_debt_amount) ||
+        moneyDiffers(clamped.current, card.current_period_spending) ||
+        moneyDiffers(clamped.provision, cardProvisionAmount(card))
+      ) {
+        issues.push({
+          id: `card-split-drift-${card.id}`,
+          area: 'Kartlar',
+          severity: 'warning',
+          title: `${cardLabel(card)} borç kırılımı hareketlerle uyuşmuyor`,
+          description: 'Ekstre/dönem/provizyon dağılımı hareket geçmişinden hesaplanan projeksiyonla farklı.',
+          details: [
+            `Ekstre: ${formatCurrency(card.statement_debt_amount)} → ${formatCurrency(clamped.statement)}`,
+            `Dönem içi: ${formatCurrency(card.current_period_spending)} → ${formatCurrency(clamped.current)}`,
+            `Provizyon: ${formatCurrency(cardProvisionAmount(card))} → ${formatCurrency(clamped.provision)}`,
+          ],
+          fixable: true,
+          fixLabel: 'Kırılımı hareketlere göre düzelt',
+          kind: 'cardSplitDrift',
+          payload: { cardId: card.id },
+        })
+      }
+    }
   }
 
   const accountEventsByCard = new Map<string, AccountLedgerEvent[]>()

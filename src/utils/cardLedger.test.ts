@@ -4,13 +4,27 @@ import {
   ledgerDrift,
   projectCardDebt,
   projectCardDebtKurus,
+  projectCardSplit,
   projectDebtByCard,
   summarizeCardLedger,
   type CardLedgerEvent,
 } from './cardLedger'
 
-function ev(card_id: string, amount_kurus: number, kind: CardLedgerEvent['kind'] = 'debit'): CardLedgerEvent {
-  return { card_id, amount_kurus, kind, occurred_at: '2026-06-10T00:00:00Z' }
+function ev(
+  card_id: string,
+  amount_kurus: number,
+  kind: CardLedgerEvent['kind'] = 'debit',
+  buckets?: { stmt?: number; curr?: number; prov?: number },
+): CardLedgerEvent {
+  return {
+    card_id,
+    amount_kurus,
+    kind,
+    occurred_at: '2026-06-10T00:00:00Z',
+    statement_delta_kurus: buckets ? (buckets.stmt ?? 0) : null,
+    current_delta_kurus: buckets ? (buckets.curr ?? 0) : null,
+    provision_delta_kurus: buckets ? (buckets.prov ?? 0) : null,
+  }
 }
 
 describe('projectCardDebtKurus / projectCardDebt', () => {
@@ -78,5 +92,70 @@ describe('summarizeCardLedger', () => {
 
   it('is empty-safe', () => {
     expect(summarizeCardLedger([])).toEqual({ count: 0, totalDebit: 0, totalCredit: 0, net: 0 })
+  })
+})
+
+describe('projectCardSplit', () => {
+  it('sums bucket deltas from events with full data', () => {
+    const events = [
+      ev('a', 100000, 'opening', { stmt: 50000, curr: 30000, prov: 20000 }),
+      ev('a', -10000, 'credit', { stmt: -10000 }),
+    ]
+    const split = projectCardSplit(events)
+    expect(split.statement).toBe(400)
+    expect(split.current).toBe(300)
+    expect(split.provision).toBe(200)
+    expect(split.complete).toBe(true)
+  })
+
+  it('marks incomplete when some events lack bucket deltas', () => {
+    const events = [
+      ev('a', 100000, 'opening'),
+      ev('a', 5000, 'debit', { curr: 5000 }),
+    ]
+    const split = projectCardSplit(events)
+    expect(split.complete).toBe(false)
+    expect(split.current).toBe(50)
+    expect(split.statement).toBe(0)
+    expect(split.provision).toBe(0)
+  })
+
+  it('handles empty events', () => {
+    const split = projectCardSplit([])
+    expect(split).toEqual({ statement: 0, current: 0, provision: 0, complete: true })
+  })
+
+  it('handles reclass events (zero total delta, non-zero bucket deltas)', () => {
+    const events = [
+      ev('a', 100000, 'opening', { curr: 100000 }),
+      ev('a', 0, 'reclass', { stmt: 50000, curr: -50000 }),
+    ]
+    const split = projectCardSplit(events)
+    expect(split.statement).toBe(500)
+    expect(split.current).toBe(500)
+    expect(split.provision).toBe(0)
+    expect(split.complete).toBe(true)
+  })
+
+  it('handles multiple cards independently via grouping', () => {
+    const events = [
+      ev('a', 50000, 'opening', { curr: 50000 }),
+      ev('b', 30000, 'opening', { stmt: 30000 }),
+    ]
+    const splitA = projectCardSplit(events.filter((e) => e.card_id === 'a'))
+    const splitB = projectCardSplit(events.filter((e) => e.card_id === 'b'))
+    expect(splitA.current).toBe(500)
+    expect(splitB.statement).toBe(300)
+  })
+
+  it('provision-only event tracks correctly', () => {
+    const events = [
+      ev('a', 20000, 'debit', { prov: 20000 }),
+      ev('a', 0, 'reclass', { prov: -20000, curr: 20000 }),
+    ]
+    const split = projectCardSplit(events)
+    expect(split.provision).toBe(0)
+    expect(split.current).toBe(200)
+    expect(split.complete).toBe(true)
   })
 })

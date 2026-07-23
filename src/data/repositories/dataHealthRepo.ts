@@ -84,8 +84,8 @@ export async function fetchDataHealthRows(): Promise<Result<DataHealthRows>> {
     supabase.from('salary_history').select('*'),
     supabase.from('savings_goals').select('*'),
     supabase.from('savings_goal_components').select('*'),
-    supabase.from('card_ledger').select('*'),
-    supabase.from('account_ledger').select('*'),
+    supabase.from('card_ledger').select('*').limit(10000),
+    supabase.from('account_ledger').select('*').limit(10000),
   ])
 
   const errors = [

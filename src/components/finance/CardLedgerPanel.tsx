@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { fetchCardLedgerEvents } from '../../data/repositories/financePanelsRepo'
 import { postCardDebtCorrection, recomputeCardDebt } from '../../services/cardLedgerActions'
 import type { Card, CardLedger } from '../../types/database'
-import { ledgerDrift, summarizeCardLedger } from '../../utils/cardLedger'
+import { ledgerDrift, projectCardSplit, summarizeCardLedger } from '../../utils/cardLedger'
 import { formatDate } from '../../utils/date'
 import { formatCurrency, parseNumber } from '../../utils/formatCurrency'
 import { toTL } from '../../utils/money'
@@ -16,6 +16,7 @@ const KIND_LABELS: Record<CardLedger['kind'], { label: string; className: string
   debit: { label: 'Borç arttı', className: 'text-destructive' },
   credit: { label: 'Ödeme/azalış', className: 'text-success' },
   adjustment: { label: 'Düzeltme', className: 'text-info' },
+  reclass: { label: 'Kırılım değişikliği', className: 'text-muted-foreground' },
 }
 
 const VISIBLE_EVENTS = 8
@@ -114,6 +115,7 @@ export function CardLedgerPanel({
   const summary = summarizeCardLedger(events)
   // Events arrive newest-first; order doesn't matter for the sums.
   const drift = ledgerDrift(events, card.debt_amount)
+  const splitProjection = projectCardSplit(events)
 
   return (
     <div className="mt-3 rounded-lg bg-card/80 p-3 ring-1 ring-border/70">
@@ -124,6 +126,12 @@ export function CardLedgerPanel({
           <span className="font-black text-foreground">{formatAmount(summary.net)}</span>
         </p>
       </div>
+
+      {splitProjection.complete && summary.count > 0 ? (
+        <p className="mt-1 text-xs text-muted-foreground">
+          Kova projeksiyonu: Ekstre {formatAmount(splitProjection.statement)} · Dönem {formatAmount(splitProjection.current)} · Provizyon {formatAmount(splitProjection.provision)}
+        </p>
+      ) : null}
 
       {drift !== 0 ? (
         <div className="mt-2 rounded-lg bg-warning/8 px-3 py-2 ring-1 ring-warning/20">
@@ -150,18 +158,31 @@ export function CardLedgerPanel({
             const meta = KIND_LABELS[event.kind]
             const amountTL = toTL(event.amount_kurus)
             return (
-              <div key={event.id} className="flex min-w-0 items-center justify-between gap-3 rounded-lg bg-muted/55 px-3 py-2 text-xs">
-                <span className="min-w-0 truncate">
-                  <span className={`font-black ${meta.className}`}>{meta.label}</span>
-                  <span className="ml-2 text-muted-foreground">{formatDate(event.occurred_at.slice(0, 10))}</span>
-                  {event.kind === 'adjustment' && event.note ? (
-                    <span className="ml-2 italic text-muted-foreground">· {event.note}</span>
-                  ) : null}
-                </span>
-                <span className={`shrink-0 font-black tabular-nums ${meta.className}`}>
-                  {amountTL > 0 ? '+' : ''}
-                  {formatAmount(amountTL)}
-                </span>
+              <div key={event.id} className="rounded-lg bg-muted/55 px-3 py-2 text-xs">
+                <div className="flex min-w-0 items-center justify-between gap-3">
+                  <span className="min-w-0 truncate">
+                    <span className={`font-black ${meta.className}`}>{meta.label}</span>
+                    <span className="ml-2 text-muted-foreground">{formatDate(event.occurred_at.slice(0, 10))}</span>
+                    {(event.kind === 'adjustment' || event.kind === 'reclass') && event.note ? (
+                      <span className="ml-2 italic text-muted-foreground">· {event.note}</span>
+                    ) : null}
+                  </span>
+                  <span className={`shrink-0 font-black tabular-nums ${meta.className}`}>
+                    {amountTL > 0 ? '+' : ''}
+                    {formatAmount(amountTL)}
+                  </span>
+                </div>
+                {event.statement_delta_kurus != null || event.current_delta_kurus != null || event.provision_delta_kurus != null ? (() => {
+                  const parts: string[] = []
+                  const s = toTL(event.statement_delta_kurus ?? 0)
+                  const c = toTL(event.current_delta_kurus ?? 0)
+                  const p = toTL(event.provision_delta_kurus ?? 0)
+                  if (s !== 0) parts.push(`ekstre ${s > 0 ? '+' : ''}${formatAmount(s)}`)
+                  if (c !== 0) parts.push(`dönem ${c > 0 ? '+' : ''}${formatAmount(c)}`)
+                  if (p !== 0) parts.push(`provizyon ${p > 0 ? '+' : ''}${formatAmount(p)}`)
+                  if (parts.length === 0) return null
+                  return <p className="mt-0.5 text-[10px] text-muted-foreground">{parts.join(' · ')}</p>
+                })() : null}
               </div>
             )
           })}

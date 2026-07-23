@@ -80,6 +80,8 @@
   - 2026-06-21: Plan-ortası taksitler (2/12, 3/12 gibi) artık normal import'ta otomatik aktarılır — `recordCardInstallmentCarryover` ile geçmiş taksitler ödendi olarak, gelecek olanlar planlanmış olarak eklenir. Son taksit (12/12 gibi) tek ödeme olarak import edilir.
   - 2026-06-22 follow-up: `cancel_card_expense` taksitli harcamalarda toplam borcu tam terslerken yalnız ilgili görünür split kovasını azaltır; ekstre import, app harcamaları okunamazsa duplicate riskine girmeden durur.
   - 2026-07-06 follow-up: Ekstre/güncel hareket importlarında temiz import korundu ama artık `reset_card_import_data` kullanır; geçmiş ödenmiş ekstre arşivleri ve bağlı eski satırlar silinmez. DenizBank ekstrelerindeki `+ TL` alacak/iade satırları `post_card_debt_correction` ile negatif ledger düzeltmesi olarak işlenir, bu yüzden banka dönem borcu net tutarla eşleşir.
+- ~~Add bucket tracking to card_ledger for derivable debt breakdown.~~ DONE.
+  - 2026-07-24: `card_ledger`'a 3 nullable bucket delta sütunu (`statement_delta_kurus`, `current_delta_kurus`, `provision_delta_kurus`) ve `reclass` kind eklendi. AFTER trigger her yazımda kova deltalarını otomatik kaydeder. `projectCardSplit(events)` TS projeksiyonu, DataHealth bucket drift kontrolü, `recompute_card_debt_from_ledger` bucket-aware RPC. 200-satır ledger fetch limiti kaldırıldı. `LiveReconciliationPanel`'a hızlı mutabakat ("Farkı düzelt") butonu eklendi — banka rakamını girip tek tıkla auditable correction, PDF import'suz.
 - Add "kasa modu" / spendable balance planning.
   - Let bank balances be mentally allocated into buckets such as emergency fund, taxes/insurance, vacation, investment, and spendable cash.
   - Keep the underlying bank balance unchanged; this is a planning overlay, not a ledger movement.

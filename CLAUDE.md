@@ -83,6 +83,10 @@ böylece tutarsızlık matematiksel olarak imkânsız:
 - **Kart borcu** → `card_ledger` (append-only). `cards` üzerindeki AFTER trigger
   (`record_card_debt_event`) her `debt_amount` değişimini opening/debit/credit olayına
   çevirir. Borç = olayların toplamı (projeksiyon, `src/utils/cardLedger.ts`).
+  Trigger ayrıca **kova deltalarını** (`statement_delta_kurus`, `current_delta_kurus`,
+  `provision_delta_kurus`) kaydeder — borç kırılımı da event'lerden türetilebilir
+  (`projectCardSplit`). `reclass` kind'ı borç değişmeden kova kaymasını yakalar
+  (ekstre kesimi gibi). Eski event'lerde delta NULL'dur; `complete` flag bunu yönetir.
 - **Banka bakiyesi** → `account_ledger` (aynı desen, `record_account_balance_event`).
 - **Kart borç kırılımı** → BEFORE trigger `clamp_card_breakdown` (split ≤ debt garanti).
 - **Kredi özeti** → `loan_installments` AFTER trigger `sync_loan_summary` (özet = ödenmemiş

@@ -9,9 +9,22 @@ import { diffTL, sumKurus, toTL } from './money'
  * is the read side of the event-sourced money model: the stored
  * `cards.debt_amount` can be reconciled against (and eventually replaced by)
  * `projectCardDebt(events)`.
+ *
+ * Bucket deltas (`statement_delta_kurus`, `current_delta_kurus`,
+ * `provision_delta_kurus`) track which breakdown bucket each change affected.
+ * `projectCardSplit(events)` projects the bucket breakdown from these deltas.
  */
 
-export type CardLedgerEvent = Pick<CardLedger, 'card_id' | 'kind' | 'amount_kurus' | 'occurred_at'>
+export type CardLedgerEvent = Pick<
+  CardLedger,
+  | 'card_id'
+  | 'kind'
+  | 'amount_kurus'
+  | 'occurred_at'
+  | 'statement_delta_kurus'
+  | 'current_delta_kurus'
+  | 'provision_delta_kurus'
+>
 
 /** Projected debt for a set of events, in integer kuruş (exact). */
 export function projectCardDebtKurus(events: CardLedgerEvent[]): number {
@@ -77,5 +90,47 @@ export function summarizeCardLedger(events: CardLedgerEvent[]): CardLedgerSummar
     totalDebit: toTL(debitKurus),
     totalCredit: toTL(-creditKurus),
     net: toTL(debitKurus + creditKurus),
+  }
+}
+
+export type CardSplitProjection = {
+  statement: number
+  current: number
+  provision: number
+  /** True when all events had bucket deltas (full-fidelity projection). */
+  complete: boolean
+}
+
+/**
+ * Projects the debt breakdown from bucket deltas — the split analog of
+ * `projectCardDebt`. When `complete` is true, the projection covers the full
+ * event history and can replace the stored breakdown. When false, some events
+ * had null deltas (pre-migration) and the caller should fall back to stored values.
+ */
+export function projectCardSplit(events: CardLedgerEvent[]): CardSplitProjection {
+  let statementKurus = 0
+  let currentKurus = 0
+  let provisionKurus = 0
+  let complete = true
+
+  for (const event of events) {
+    if (
+      event.statement_delta_kurus == null &&
+      event.current_delta_kurus == null &&
+      event.provision_delta_kurus == null
+    ) {
+      complete = false
+      continue
+    }
+    statementKurus += Math.trunc(event.statement_delta_kurus ?? 0)
+    currentKurus += Math.trunc(event.current_delta_kurus ?? 0)
+    provisionKurus += Math.trunc(event.provision_delta_kurus ?? 0)
+  }
+
+  return {
+    statement: toTL(statementKurus),
+    current: toTL(currentKurus),
+    provision: toTL(provisionKurus),
+    complete,
   }
 }

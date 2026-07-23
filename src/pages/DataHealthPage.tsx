@@ -319,7 +319,7 @@ export function DataHealthPage() {
           </CardContent>
         </SurfaceCard>
 
-        {!loading && data.cards.length > 0 ? <LiveReconciliationPanel cards={data.cards} /> : null}
+        {!loading && data.cards.length > 0 ? <LiveReconciliationPanel cards={data.cards} onChanged={loadData} /> : null}
 
         {!loading ? (
           <SurfaceCard variant="default">

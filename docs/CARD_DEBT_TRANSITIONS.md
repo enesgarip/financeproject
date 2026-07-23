@@ -143,6 +143,25 @@ integer kuruş. Repair flows follow the same append-only rule:
 Do not patch `debt_amount` directly from page code or data-health logic. Use the
 ledger correction RPCs or fix the upstream transition that created the drift.
 
+### Bucket Tracking
+
+Each `card_ledger` event now carries three nullable bucket deltas:
+`statement_delta_kurus`, `current_delta_kurus`, `provision_delta_kurus`. These
+are computed automatically by the AFTER trigger from `OLD` vs `NEW` breakdown
+fields — no RPC changes needed.
+
+- `'reclass'` kind captures zero-debt-delta bucket shifts (e.g. statement cut
+  moves current → statement without changing total debt).
+- `projectCardSplit(events)` in `src/utils/cardLedger.ts` is the TS projection.
+  `complete: true` means all events had bucket deltas (full-fidelity).
+- `recompute_card_debt_from_ledger` uses bucket projections when all events have
+  deltas, falling back to the current → statement → provision heuristic otherwise.
+- Pre-migration events have null deltas and cannot be backfilled.
+
+The `LiveReconciliationPanel` on `/veri-sagligi` now offers a "Farkı düzelt"
+button for credit cards: user enters the bank's real debt, and the difference
+is applied as an auditable `post_card_debt_correction` — no PDF import needed.
+
 ## Data-Health Expectations
 
 Data health may flag:

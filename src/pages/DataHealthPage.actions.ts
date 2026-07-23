@@ -58,7 +58,7 @@ export async function fixIssue(issue: HealthIssue): Promise<UndoBatch | null> {
     if (!updateError.ok) throw new Error(updateError.error.message ?? 'Kart borcu güncellenemedi.')
   }
 
-  if (issue.kind === 'cardLedgerDrift' && payload.cardId) {
+  if ((issue.kind === 'cardLedgerDrift' || issue.kind === 'cardSplitDrift') && payload.cardId) {
     await addUndo('cards', [payload.cardId])
     const { error: rpcError } = await recomputeCardDebt(payload.cardId)
     if (rpcError) throw new Error(rpcError.message ?? 'Borç yeniden hesaplanamadı.')

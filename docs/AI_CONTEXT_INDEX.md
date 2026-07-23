@@ -90,7 +90,7 @@ ESLint blocks `src/{pages,components,utils,hooks}` from importing
 | How should search text be normalized? | `src/utils/searchText.ts`; use it instead of `toLocaleLowerCase('tr-TR')` for matching/filtering |
 | How are shared credit limits grouped? | `buildCreditLimitGroups` in `src/utils/financeSummary.ts` |
 | How is loan summary projected? | `projectLoanSummary` in `src/utils/financeSummary.ts` plus DB trigger `sync_loan_summary` |
-| How are card/account ledgers projected? | `src/utils/cardLedger.ts`, `src/utils/accountLedger.ts` |
+| How are card/account ledgers projected? | `src/utils/cardLedger.ts` (`projectCardDebt`, `projectCardSplit`), `src/utils/accountLedger.ts` |
 | How are monthly obligations built? | `src/utils/obligations.ts`; see `docs/PLANNING_MODEL_REVIEW.md` for why this stays a read-side projection instead of one write table. Card current-period cash dates derive from `utils/cardStatement.ts` so paid statement due dates are not reused. |
 | How is new-loan affordability estimated? | `src/utils/loanAffordability.ts`; safe installment, balanced recommendation, decision support only, not bank approval |
 | How are Turkish calendar presets defined? | `src/utils/obligationPresets.ts`, `src/components/finance/TurkishCalendarPresets.tsx` |

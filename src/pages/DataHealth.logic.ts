@@ -71,6 +71,7 @@ export type HealthIssue = {
     | 'cardOverduePayment'
     | 'cardScheduledDebt'
     | 'cardLedgerDrift'
+    | 'cardSplitDrift'
     | 'duplicateTransactionCandidate'
     | 'cardExpenseDataQuality'
     | 'accountLedgerDrift'

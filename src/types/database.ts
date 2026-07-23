@@ -239,19 +239,26 @@ export type TransactionHistory = BaseRow & {
   note: string | null
 }
 
-export type CardLedgerKind = 'opening' | 'debit' | 'credit' | 'adjustment'
+export type CardLedgerKind = 'opening' | 'debit' | 'credit' | 'adjustment' | 'reclass'
 
 /**
  * Append-only event log of credit-card debt changes (roadmap A2). Each row is
  * one change captured atomically by a trigger on `cards`. `amount_kurus` is
  * signed integer kuruş: +debit (debt up), -credit (debt down). The card's debt
  * equals the sum of its events (see utils/cardLedger.ts).
+ *
+ * Bucket deltas track which breakdown bucket each change affected. Pre-migration
+ * events have null deltas; new events always populate them. `reclass` events
+ * capture zero-debt-delta bucket shifts (e.g. statement cut).
  */
 export type CardLedger = BaseRow & {
   card_id: string
   occurred_at: string
   kind: CardLedgerKind
   amount_kurus: number
+  statement_delta_kurus: number | null
+  current_delta_kurus: number | null
+  provision_delta_kurus: number | null
   note: string | null
   source_table: string | null
   source_id: string | null

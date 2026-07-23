@@ -8,9 +8,11 @@ import {
   insertAccountReconciliation,
 } from '../../data/repositories/financePanelsRepo'
 import { useBalancePrivacy } from '../../hooks/useBalancePrivacy'
+import { postCardDebtCorrection } from '../../services/cardLedgerActions'
 import type { AccountReconciliation, Card, InsertFor, ReconciliationTarget } from '../../types/database'
 import { formatDate } from '../../utils/date'
 import { parseNumber } from '../../utils/formatCurrency'
+import { toKurus } from '../../utils/money'
 import {
   buildDriftCauseSummary,
   buildReconciliationItems,
@@ -30,6 +32,7 @@ import { Input } from '../ui/input'
 
 type LiveReconciliationPanelProps = {
   cards: Card[]
+  onChanged?: () => void | Promise<void>
 }
 
 const help = {
@@ -47,13 +50,14 @@ const STATUS_META: Record<ReconcileStatus, { variant: 'destructive' | 'secondary
   ok: { variant: 'success', label: 'Mutabık' },
 }
 
-export function LiveReconciliationPanel({ cards }: LiveReconciliationPanelProps) {
+export function LiveReconciliationPanel({ cards, onChanged }: LiveReconciliationPanelProps) {
   const { formatAmount } = useBalancePrivacy()
   const { user } = useAuth()
   const [rows, setRows] = useState<AccountReconciliation[]>([])
   const [loadError, setLoadError] = useState('')
   const [inputs, setInputs] = useState<Record<string, string>>({})
   const [savingId, setSavingId] = useState<string | null>(null)
+  const [correctingId, setCorrectingId] = useState<string | null>(null)
   const [error, setError] = useState('')
   const [driftDetails, setDriftDetails] = useState<Record<string, DriftCauseSummary | null>>({})
   const [loadingDrift, setLoadingDrift] = useState<Record<string, boolean>>({})
@@ -68,7 +72,6 @@ export function LiveReconciliationPanel({ cards }: LiveReconciliationPanelProps)
     const loadResult = await fetchAccountReconciliations()
 
     if (!loadResult.ok) {
-      // Missing table/RPC drift stays visible; this panel should not disappear silently.
       setLoadError(
         isMissingSupabaseCapabilityError(loadResult.error)
           ? missingSupabaseCapabilityMessage('Canlı mutabakat altyapısı', loadResult.error)
@@ -133,6 +136,43 @@ export function LiveReconciliationPanel({ cards }: LiveReconciliationPanelProps)
     await load()
   }
 
+  async function handleQuickReconcile(cardId: string, app: number, target: 'balance' | 'debt') {
+    const raw = inputs[cardId]
+    if (!user || raw == null || raw.trim() === '' || target !== 'debt') return
+    const real = parseNumber(raw)
+    const drift = computeDrift(app, real)
+    if (isReconciled(app, real) || toKurus(drift) === 0) return
+
+    setCorrectingId(cardId)
+    setError('')
+
+    const correctionTL = -drift
+    const note = `Mutabakat düzeltmesi: banka farkı ${drift >= 0 ? '+' : ''}${drift.toFixed(2)} TL`
+
+    const { error: rpcError } = await postCardDebtCorrection(cardId, correctionTL, note)
+    if (rpcError) {
+      setError(rpcError.message ?? 'Fark düzeltilemedi.')
+      setCorrectingId(null)
+      return
+    }
+
+    const payload: InsertFor<'account_reconciliations'> = {
+      user_id: user.id,
+      card_id: cardId,
+      target,
+      app_amount: real,
+      real_amount: real,
+      drift: 0,
+      reconciled_at: new Date().toISOString(),
+    }
+    await insertAccountReconciliation(payload)
+
+    setInputs((prev) => ({ ...prev, [cardId]: '' }))
+    setCorrectingId(null)
+    await load()
+    await onChanged?.()
+  }
+
   if (reconcilable.length === 0) return null
 
   if (loadError) {
@@ -172,6 +212,8 @@ export function LiveReconciliationPanel({ cards }: LiveReconciliationPanelProps)
           const hasInput = raw.trim() !== ''
           const liveDrift = hasInput ? computeDrift(item.app, parseNumber(raw)) : null
           const reconciledNow = hasInput && isReconciled(item.app, parseNumber(raw))
+          const isBusy = savingId === item.card.id || correctingId === item.card.id
+          const canQuickReconcile = liveDrift != null && !reconciledNow && item.target === 'debt' && item.card.card_type === 'kredi_karti'
 
           return (
             <div key={item.card.id} className="rounded-lg bg-muted/40 px-3 py-2.5">
@@ -276,12 +318,24 @@ export function LiveReconciliationPanel({ cards }: LiveReconciliationPanelProps)
                   type="button"
                   variant="outline"
                   size="sm"
-                  disabled={!hasInput || savingId === item.card.id}
+                  disabled={!hasInput || isBusy}
                   onClick={() => handleSave(item.card.id, item.app, item.target)}
                   aria-label={`${item.card.bank_name} ${item.card.card_name} mutabakatını kaydet`}
                 >
                   {savingId === item.card.id ? 'Kaydediliyor…' : 'Mutabık kaydet'}
                 </Button>
+                {canQuickReconcile ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={isBusy}
+                    onClick={() => handleQuickReconcile(item.card.id, item.app, item.target)}
+                    aria-label={`${item.card.bank_name} ${item.card.card_name} farkı düzelt`}
+                  >
+                    {correctingId === item.card.id ? 'Düzeltiliyor…' : 'Farkı düzelt'}
+                  </Button>
+                ) : null}
               </div>
             </div>
           )
