@@ -21,6 +21,7 @@ import { CalendarClock, FileText, History, Info, ScanSearch, ShieldCheck } from 
 import { CrudPage } from '../components/CrudPage'
 import { CurrentMovementImportModal } from '../components/finance/CurrentMovementImportModal'
 import { FinancePaymentDrawer } from '../components/finance/FinancePaymentDrawer'
+import { LiveReconciliationPanel } from '../components/finance/LiveReconciliationPanel'
 import { StatementImportModal } from '../components/finance/StatementImportModal'
 import { CardInstallmentCalendarPanel } from '../components/finance/CardInstallmentCalendarPanel'
 import { CardInstallmentExpensesPanel } from '../components/finance/CardInstallmentExpensesPanel'
@@ -31,6 +32,7 @@ import { isMissingSupabaseCapabilityError, missingSupabaseCapabilityMessage } fr
 import { useFinancePaymentDrawer } from '../hooks/useFinancePaymentDrawer'
 import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
 import { AccountHubPanel, CreditCardOverview } from './CardsPage.overview'
+import { CardControlCenter } from './CardsPage.control'
 import { ProvisionPanel, StatementPanel } from './CardsPage.statements'
 import {
   CardSectionNav,
@@ -66,11 +68,13 @@ export function CardsPage() {
     installments,
     invalidateSnapshot,
     loadInstallments,
+    loadReconciliations,
     loadStatements,
     provisionActionId,
     provisionError,
     provisions,
     provisionsLoading,
+    reconciliations,
     refreshCardsAndProvisions,
     statementActionId,
     statementError,
@@ -125,9 +129,9 @@ export function CardsPage() {
 
   const handleImportSuccess = useCallback(async (setter: (v: null) => void) => {
     setter(null)
-    await Promise.all([reloadCards?.(), loadStatements(), loadInstallments(), invalidateSnapshot()])
+    await Promise.all([reloadCards?.(), loadStatements(), loadInstallments(), loadReconciliations(), invalidateSnapshot()])
     setPostImportBanner(true)
-  }, [reloadCards, loadStatements, loadInstallments, invalidateSnapshot])
+  }, [reloadCards, loadStatements, loadInstallments, loadReconciliations, invalidateSnapshot])
 
   async function openStatementPayment(statement: CardStatementArchive, card: Card, cards: Card[], reload: () => Promise<void>) {
     await openPaymentDrawer(
@@ -268,6 +272,21 @@ export function CardsPage() {
 
               {!loading && section === 'ozet' ? (
                 <>
+                  <CardControlCenter
+                    rows={cardRows}
+                    statements={statements}
+                    installments={installments}
+                    reconciliations={reconciliations}
+                    onReconcile={setMovementImportCard}
+                    onImportStatement={setImportCard}
+                    formatAmount={formatAmount}
+                  />
+                  <LiveReconciliationPanel
+                    cards={cardRows.filter((card) => card.card_type === 'kredi_karti')}
+                    onChanged={async () => {
+                      await Promise.all([reload(), loadReconciliations(), invalidateSnapshot()])
+                    }}
+                  />
                   <AccountHubPanel rows={cardRows} onOpenTransfer={(source) => openTransaction(source, reload, cardRows, 'transfer')} formatAmount={formatAmount} />
                   <CreditCardOverview rows={cardRows} formatAmount={formatAmount} />
                 </>

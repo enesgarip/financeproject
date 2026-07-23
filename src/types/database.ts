@@ -103,6 +103,7 @@ export type SmsLog = {
 export type CardExpense = BaseRow & {
   card_id: string
   statement_archive_id: string | null
+  current_settlement_id?: string | null
   spent_at: string
   amount: number
   description: string
@@ -147,6 +148,7 @@ export type CardInstallment = BaseRow & {
   card_id: string
   card_expense_id: string | null
   statement_archive_id: string | null
+  current_settlement_id?: string | null
   installment_no: number
   installment_count: number
   due_month: string
@@ -156,6 +158,14 @@ export type CardInstallment = BaseRow & {
   status: CardInstallmentStatus
   posted_at: string | null
   paid_at: string | null
+  note: string | null
+}
+
+export type CardCurrentSettlement = BaseRow & {
+  card_id: string
+  source_card_id: string
+  amount: number
+  settled_at: string
   note: string | null
 }
 
@@ -371,6 +381,11 @@ export type Database = {
       cards: Table<Card, WithBaseInsert<Card>, WithBaseUpdate<Card>>
       card_aliases: Table<CardAlias, WithBaseInsert<CardAlias>, WithBaseUpdate<CardAlias>>
       card_expenses: Table<CardExpense, WithBaseInsert<CardExpense>, WithBaseUpdate<CardExpense>>
+      card_current_settlements: Table<
+        CardCurrentSettlement,
+        WithBaseInsert<CardCurrentSettlement>,
+        WithBaseUpdate<CardCurrentSettlement>
+      >
       budgets: Table<Budget, WithBaseInsert<Budget>, WithBaseUpdate<Budget>>
       savings_goals: Table<SavingsGoal, WithBaseInsert<SavingsGoal>, WithBaseUpdate<SavingsGoal>>
       savings_goal_components: Table<SavingsGoalComponent, WithBaseInsert<SavingsGoalComponent>, WithBaseUpdate<SavingsGoalComponent>>

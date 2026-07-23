@@ -68,7 +68,7 @@ describe('RESTORE_TABLE_ORDER FK safety', () => {
   it('inserts parents before their children', () => {
     const pos = (t: string) => RESTORE_TABLE_ORDER.indexOf(t as (typeof RESTORE_TABLE_ORDER)[number])
     // children referencing cards
-    for (const child of ['card_expenses', 'card_statement_archives', 'card_installments', 'payments', 'account_reconciliations']) {
+    for (const child of ['card_current_settlements', 'card_expenses', 'card_statement_archives', 'card_installments', 'payments', 'account_reconciliations']) {
       expect(pos(child)).toBeGreaterThan(pos('cards'))
     }
     expect(pos('card_aliases')).toBeGreaterThan(pos('cards'))

@@ -1,6 +1,6 @@
 # Card Debt Transitions
 
-Last reviewed: 2026-07-08
+Last reviewed: 2026-07-24
 
 This file is the working source of truth for how credit-card debt moves through
 the app. If an RPC, page action, or data-health fix changes one of these rules,
@@ -60,7 +60,7 @@ member `debt_amount` values.
 | Scheduled installment due date reached | `post_due_card_installments` / finance maintenance | `current_period_spending += due scheduled installment total`; `debt_amount` unchanged | Changes due `card_installments` from `scheduled` to `posted`; maintenance runs this before statement cutting, and statement cutting keeps posted installment rows after the statement boundary in the new period |
 | Statement cut | `cut_card_statement` / `cut_due_card_statements` | `statement_debt_amount += statement-period current spending`; `current_period_spending` keeps only already-posted rows after the statement boundary; `debt_amount` unchanged | Inserts or returns an open `card_statement_archives` row; links posted expenses/installments whose dates are on or before the statement boundary |
 | Statement paid | `pay_card_statement` | Source bank account `current_balance -= statement amount`; card `debt_amount -= statement amount`; card `statement_debt_amount -= statement amount` | Marks the statement `paid`; marks linked card installments `paid` |
-| Manual card debt paid | `pay_card_debt` | Source bank account `current_balance -= amount`; card `debt_amount -= amount`; statement debt is reduced first, then current-period spending | Does not close statement archive rows; does not change provisions or future scheduled installments |
+| Manual card debt paid | `pay_card_debt` | Source bank account `current_balance -= amount`; card `debt_amount -= amount`; statement debt is reduced first, then current-period spending | If there is no statement debt and the payment equals the full current-period balance, inserts `card_current_settlements`, allocates every posted/unstatemented expense, and marks due posted installments paid; future scheduled installments stay open. Other manual payments keep the legacy aggregate-only behavior. |
 | Planned payment paid from credit card | `pay_payment` with a credit-card source | Source credit card `debt_amount += paid amount`; `current_period_spending += paid amount` | Inserts a posted `card_expenses` row for the planned payment; advances or closes the payment row |
 | Planned payment reconciled from card import | `pay_payment_from_card_import` | Source credit card `debt_amount += paid amount`; `current_period_spending += paid amount` | Inserts a posted `card_expenses` row using the bank movement/statement date; advances or closes the matched payment row |
 | Statement import credit/refund row | `StatementImportModal` + `post_card_debt_correction` | Card `debt_amount -= amount`; negative correction reduces current-period spending first, then statement debt, then provision | DenizBank statement rows ending with `+ TL` are imported as auditable reverse entries instead of positive spending, so bank statement totals stay net of refunds/credits |
@@ -68,7 +68,7 @@ member `debt_amount` values.
 | Old installment plan carried over | `record_card_installment_carryover` | `debt_amount += remaining installment total`; `current_period_spending += remaining installments whose exact due date has passed` | Called by the unified installment form when "paid installments so far" is positive; inserts one posted expense, paid historical installment rows, and remaining exact-date installment rows |
 | Card debt recomputed from ledger | `recompute_card_debt_from_ledger` | `debt_amount = sum(card_ledger.amount_kurus) / 100`; if the projection lowers total debt, visible split is reduced from current period first, then statement, then provision | Suppresses the ledger trigger for this repair write so no duplicate event is emitted |
 | Card debt manual correction | `post_card_debt_correction` | `debt_amount += signed correction`; positive corrections add to current-period spending, negative reverse entries reduce current period first, then statement, then provision | Writes an auditable `card_ledger.kind='adjustment'` event with the required reason note |
-| Card import reset | `reset_card_import_data` | Sets `debt_amount`, `statement_debt_amount`, `current_period_spending`, and `provision_amount` to `0` before a clean import rebuilds the open/current scope | Deletes unarchived/open/current-period card expenses, installments, current/open statement archives, and their history; preserves paid historical statement archives and rows linked to them |
+| Card import reset | `reset_card_import_data` | Sets `debt_amount`, `statement_debt_amount`, `current_period_spending`, and `provision_amount` to `0` before a clean import rebuilds the open/current scope | Deletes unarchived/open-scope card expenses, installments, open statement archives, and their history; every paid statement archive and every row linked to one is preserved, including a paid archive in the active statement period |
 | Card data reset | `reset_card_data` | Sets `debt_amount`, `statement_debt_amount`, `current_period_spending`, and `provision_amount` to `0` | Deletes dependent card expenses, installments, statement archives, and related history for that card. Statement/current movement import modals must not call this flow. |
 
 ## Statement Boundary
@@ -98,16 +98,27 @@ provision must be posted before it becomes payable. Future installments first
 become current-period debt when their own due date passes, then become payable
 through the normal statement cut; they are not added again to dashboard debt.
 
-The preferred user flow is paying an open statement with `pay_card_statement`.
-`pay_card_debt` is the manual payment path for posted debt that is not
-represented by an open statement — including current-period spending before the
-statement is cut. The cards page exposes it as a "Borç öde" button on each
+The preferred user flow is paying an open statement with `pay_card_statement`
+(the DenizBank pattern). `pay_card_debt` is the manual payment path for posted
+debt that is not represented by an open statement — including the full
+current-period balance before the statement is cut (the Yapı Kredi pattern).
+The cards page exposes it as a "Borç öde" button on each
 credit-card row (shared payment drawer, editable amount defaulting to
 `cardPayableDebt`, bank-account source). The button is disabled while the card
 has an open statement archive, because `pay_card_debt` lowers
 `statement_debt_amount` without closing the archive row (data health would flag
 the mismatch) — the same reason the obligations calendar only emits its
 `pay_card_debt` item for cards without an open statement.
+
+When `pay_card_debt` closes the full current-period balance, the database must
+be able to allocate that amount exactly to posted, unstatemented single expenses
+and posted installment rows. The allocation is recorded through
+`card_current_settlements` and `current_settlement_id`; allocated single expenses
+are excluded from later statement cuts and allocated installment rows become
+`paid`. This prevents an early-paid movement from returning on the next
+statement. Settled rows are historical evidence and cannot be edited or
+deleted. A partial current-period payment remains aggregate-only and therefore
+does not claim individual movement rows.
 
 Cash-flow/obligation projections must not reuse a paid statement's old due date
 for new current-period spending. When no statement is pending, the current-period

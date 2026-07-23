@@ -5,20 +5,22 @@ import {
   addCardExpense,
   cancelCardExpense,
   fetchCardExpenseMatchRows,
+  fetchCardInstallmentMatchRows,
   fetchCardPaymentMatchRows,
   insertGuardStatementArchive,
   payPaymentFromCardImport,
+  recordCardInstallmentCarryover,
   resetCardImportData,
   type ExpenseMatchRow,
   type PaymentMatchRow,
 } from '../../data/repositories/cardsRepo'
 import { useAuth } from '../../auth/useAuth'
-import { insertAccountReconciliation } from '../../data/repositories/financePanelsRepo'
 import { useBalancePrivacy } from '../../hooks/useBalancePrivacy'
 import { extractPdfText } from '../../lib/pdfText'
 import type { Card } from '../../types/database'
 import {
   matchDenizBankMovements,
+  matchDenizBankInstallmentMovements,
   matchDenizBankMovementPayments,
   parseDenizBankMovementPdf,
   type DenizBankMovementMatch,
@@ -30,6 +32,7 @@ import { dateRangeFromIsoDates, rowsInReviewPeriod } from '../../utils/importRev
 import { dateInputValue } from '../../utils/date'
 import { roundTL, sumTL } from '../../utils/money'
 import { getCardStatementPeriod } from '../../utils/cardStatement'
+import { buildImportedInstallmentPlan } from '../../utils/importedInstallmentPlan'
 import { useBodyScrollLock } from '../ui/use-body-scroll-lock'
 
 type Step = 'upload' | 'review' | 'done'
@@ -101,11 +104,12 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
   const [ignoredCount, setIgnoredCount] = useState(0)
   const [periodLabel, setPeriodLabel] = useState('')
 
-  const [cleanImport, setCleanImport] = useState(false)
+  const cleanImport = false
   const [allMovements, setAllMovements] = useState<ParsedDenizBankMovement[]>([])
   const [installmentCounts, setInstallmentCounts] = useState<Map<number, number>>(new Map())
 
   const [selectedImport, setSelectedImport] = useState<Set<string>>(new Set())
+  const [selectedInstallments, setSelectedInstallments] = useState<Set<number>>(new Set())
   const [selectedCancel, setSelectedCancel] = useState<Set<string>>(new Set())
   const [resultMessage, setResultMessage] = useState('')
 
@@ -145,8 +149,9 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
         return
       }
 
-      const [expensesResult, paymentsResult] = await Promise.all([
+      const [expensesResult, installmentsResult, paymentsResult] = await Promise.all([
         fetchCardExpenseMatchRows(card.id),
+        fetchCardInstallmentMatchRows(card.id),
         fetchCardPaymentMatchRows(card.id),
       ])
       if (!expensesResult.ok) {
@@ -155,6 +160,10 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
       }
       if (!paymentsResult.ok) {
         setParseError(paymentsResult.error.message ?? 'Planlı ödemeler yüklenemedi.')
+        return
+      }
+      if (!installmentsResult.ok) {
+        setParseError(installmentsResult.error.message ?? 'Kart taksitleri yüklenemedi.')
         return
       }
 
@@ -170,9 +179,31 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
       const cardPeriodExpenses = rowsInReviewPeriod(expensesResult.data, reviewPeriod)
       const fallbackPeriodExpenses = rowsInReviewPeriod(expensesResult.data, fallbackPeriod)
       const useFallbackPeriod = cardPeriodExpenses.length === 0 && fallbackPeriodExpenses.length > 0
-      const periodExpenses = useFallbackPeriod ? fallbackPeriodExpenses : cardPeriodExpenses
+      const periodExpenses = (useFallbackPeriod ? fallbackPeriodExpenses : cardPeriodExpenses)
+        .filter((expense) => expense.installment_count <= 1)
 
-      const result = matchDenizBankMovements(parsed.movements, expensesResult.data, periodExpenses)
+      const installmentResult = matchDenizBankInstallmentMovements(
+        parsed.movements.filter((movement) => movement.isInstallment),
+        installmentsResult.data,
+      )
+      const result = matchDenizBankMovements(
+        parsed.movements.filter((movement) => !movement.isInstallment),
+        expensesResult.data.filter((expense) => expense.installment_count <= 1),
+        periodExpenses,
+      )
+      const installmentMatches: DenizBankMovementMatch[] = installmentResult.matches.map(({ movement, installment }) => ({
+        movement,
+        expense: {
+          id: installment.id,
+          spent_at: installment.due_month,
+          amount: installment.amount,
+          status: installment.status,
+          description: installment.description,
+          category: 'Taksit',
+          installment_count: installment.installment_count,
+          note: `${installment.installment_no}/${installment.installment_count}. taksit`,
+        },
+      }))
 
       const unmatchedNonInstallments = result.unmatched.filter((m) => !m.isInstallment)
       const paymentMatchResult = matchDenizBankMovementPayments(unmatchedNonInstallments, paymentsResult.data, card.id)
@@ -185,7 +216,7 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
         movement,
         plannedPayment: plannedPaymentByMovement.get(movement.rawLine) ?? null,
       }))
-      const nextManual = result.unmatched.filter((m) => m.isInstallment)
+      const nextManual = installmentResult.unmatched
       const nextAppOnly = result.appOnly
         .filter((expense): expense is ExpenseMatchRow => 'id' in expense && typeof expense.id === 'string')
         .map((expense, index) => ({
@@ -193,8 +224,8 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
           expense,
         }))
 
-      setMatched(result.matched)
-      setMatches(result.matches)
+      setMatched([...result.matched, ...installmentResult.matches.map(({ movement }) => movement)])
+      setMatches([...result.matches, ...installmentMatches])
       setShowMatched(false)
       setPlannedPaymentMatches(paymentMatchResult.matches)
       setPeriodLabel((useFallbackPeriod ? fallbackPeriod?.label : reviewPeriod?.label) ?? '')
@@ -202,6 +233,7 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
       setAppOnly(nextAppOnly)
       setManualReview(nextManual)
       setSelectedImport(new Set())
+      setSelectedInstallments(new Set())
       setSelectedCancel(new Set())
       setStep('review')
     } catch (error) {
@@ -232,6 +264,15 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
 
   function toggleCancelRow(key: string) {
     setSelectedCancel((prev) => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
+  }
+
+  function toggleInstallmentRow(key: number) {
+    setSelectedInstallments((prev) => {
       const next = new Set(prev)
       if (next.has(key)) next.delete(key)
       else next.add(key)
@@ -301,21 +342,6 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
         }
       }
 
-      const pdfTotal = sumTL(allMovements.map((movement, index) => {
-        const totalCount = installmentCounts.get(index) ?? movement.installmentCount
-        const knownPlan = movement.isInstallment && totalCount > 1
-        const remaining = knownPlan ? Math.max(1, totalCount - movement.installmentNo + 1) : 1
-        return knownPlan ? roundTL(movement.amount * remaining) : movement.amount
-      }))
-      await insertAccountReconciliation({
-        user_id: user.id,
-        card_id: card.id,
-        target: 'debt',
-        app_amount: pdfTotal,
-        real_amount: pdfTotal,
-        drift: 0,
-        reconciled_at: new Date().toISOString(),
-      })
     }
 
     setResultMessage(`Kart import kapsamında sıfırlandı, ${successCount} hareket içe aktarıldı`)
@@ -331,7 +357,12 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
 
     const toImport = bankOnly.filter((item) => selectedImport.has(item.selectionKey))
     const toCancel = appOnly.filter((item) => selectedCancel.has(item.selectionKey))
-    if (!toImport.length && !toCancel.length) return
+    const toImportInstallments = manualReview.filter((movement) => {
+      const index = allMovements.indexOf(movement)
+      const totalCount = installmentCounts.get(index) ?? 0
+      return selectedInstallments.has(index) && totalCount >= movement.installmentNo
+    })
+    if (!toImport.length && !toCancel.length && !toImportInstallments.length) return
 
     setApplying(true)
     setApplyError('')
@@ -362,6 +393,38 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
       else importedCount++
     }
 
+    for (const movement of toImportInstallments) {
+      const index = allMovements.indexOf(movement)
+      const totalCount = installmentCounts.get(index) ?? 0
+      const plan = buildImportedInstallmentPlan({
+        originalDate: movement.date,
+        installmentNo: movement.installmentNo,
+        totalInstallments: totalCount,
+        installmentAmount: movement.amount,
+      })
+      const result = plan.paidInstallments > 0
+        ? await recordCardInstallmentCarryover({
+          cardId: card.id,
+          description: movement.description,
+          installmentAmount: movement.amount,
+          totalInstallments: plan.totalInstallments,
+          paidInstallments: plan.paidInstallments,
+          nextDueDate: plan.currentInstallmentDate,
+          category: movement.category,
+        })
+        : await addCardExpense({
+          cardId: card.id,
+          amount: plan.totalAmount,
+          description: movement.description,
+          spentAt: plan.originalDate,
+          installmentCount: plan.totalInstallments,
+          category: movement.category,
+          status: movement.appStatus,
+        })
+      if (!result.ok) errors.push(`${movement.description}: ${result.error.message ?? 'Bilinmeyen hata.'}`)
+      else importedCount++
+    }
+
     for (const item of toCancel) {
       const result = await cancelCardExpense(item.expense.id)
       if (!result.ok) errors.push(`${item.expense.description ?? 'Harcama'} iptal: ${result.error.message ?? 'Bilinmeyen hata.'}`)
@@ -382,7 +445,7 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
     setStep('done')
   }
 
-  const totalSelectedActions = selectedImport.size + selectedCancel.size
+  const totalSelectedActions = selectedImport.size + selectedCancel.size + selectedInstallments.size
   const bankOnlyTotal = sumTL(bankOnly.map(({ movement }) => movement.amount))
   const appOnlyTotal = sumTL(appOnly.map(({ expense }) => expense.amount))
 
@@ -425,20 +488,9 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
                   {' '}Banka hareketleri ile app kayıtları karşılaştırılacak.
                 </p>
 
-                <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-border bg-muted/30 p-3">
-                  <input
-                    type="checkbox"
-                    checked={cleanImport}
-                    onChange={(e) => setCleanImport(e.target.checked)}
-                    className="size-4 accent-warning"
-                  />
-                  <div className="min-w-0">
-                    <p className="text-sm font-bold text-foreground">Import kapsamını sıfırlayıp PDF'ten kur</p>
-                    <p className="text-[11px] text-muted-foreground">
-                      Açık/güncel harcama ve taksitler silinir; geçmiş ödenmiş ekstre arşivi korunur.
-                    </p>
-                  </div>
-                </label>
+                <p className="rounded-xl border border-success/20 bg-success/8 p-3 text-xs text-success">
+                  Güvenli eşleştirme kullanılır; geçmiş kayıtlar silinmez, yalnız eksik seçili hareketler eklenir.
+                </p>
 
                 <button
                   type="button"
@@ -488,7 +540,7 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
                 <div>
                   <p className="font-bold">Açık/güncel kart verisi yeniden kurulacak</p>
                   <p className="mt-0.5 text-xs text-warning/80">
-                    Geçmiş ödenmiş ekstre arşivi korunur; aşağıdaki {allMovements.length} hareket import kapsamına alınır.
+                    Tüm ödenmiş ekstre arşivleri ve bağlı geçmiş kayıtlar korunur; aşağıdaki {allMovements.length} hareket açık dönem kapsamında yeniden kurulur.
                   </p>
                 </div>
               </div>
@@ -801,26 +853,91 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
               {manualReview.length > 0 && (
                 <div className="border-b border-border">
                   <div className="px-4 py-2">
-                    <span className="text-xs font-bold text-muted-foreground">Manuel kontrol gerekli ({manualReview.length})</span>
+                    <span className="text-xs font-bold text-muted-foreground">Taksit planını doğrula ({manualReview.length})</span>
                     <p className="mt-0.5 text-[11px] text-muted-foreground">
-                      Taksitli satırlar otomatik aktarılmadı.
+                      Banka toplam taksit sayısını vermiyor. Toplamı gir; tarih ve önceki/gelecek durumları otomatik kurulacak.
                     </p>
                   </div>
                   <div className="max-h-44 overflow-y-auto">
-                    {manualReview.map((movement, index) => (
-                      <div
-                        key={`manual-${movement.date}-${movement.description}-${index}`}
-                        className="flex items-center gap-3 border-b border-border/50 px-4 py-2.5"
-                      >
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-xs font-bold text-foreground">{movement.description}</p>
-                          <p className="text-[11px] text-muted-foreground">
-                            {formatShortDate(movement.date)} · {movement.detail || 'Taksitli işlem'} · **** {movement.cardLastFour}
-                          </p>
+                    {manualReview.map((movement, manualIndex) => {
+                      const movementIndex = allMovements.indexOf(movement)
+                      const totalCount = installmentCounts.get(movementIndex) ?? 0
+                      const validCount = totalCount >= movement.installmentNo
+                      const selected = selectedInstallments.has(movementIndex)
+                      const plan = validCount
+                        ? buildImportedInstallmentPlan({
+                          originalDate: movement.date,
+                          installmentNo: movement.installmentNo,
+                          totalInstallments: totalCount,
+                          installmentAmount: movement.amount,
+                        })
+                        : null
+
+                      return (
+                        <div
+                          key={`manual-${movement.date}-${movement.description}-${manualIndex}`}
+                          className="border-b border-border/50 px-4 py-2.5"
+                        >
+                          <div className="flex items-center gap-3">
+                            <button
+                              type="button"
+                              disabled={!validCount}
+                              onClick={() => toggleInstallmentRow(movementIndex)}
+                              aria-pressed={selected}
+                              className={`grid size-5 shrink-0 place-items-center rounded border ${
+                                selected ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-background'
+                              } disabled:cursor-not-allowed disabled:opacity-40`}
+                              aria-label={`${movement.description} taksit planını içe aktar`}
+                            >
+                              {selected ? <Check size={12} strokeWidth={3} /> : null}
+                            </button>
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-xs font-bold text-foreground">{movement.description}</p>
+                              <p className="text-[11px] text-muted-foreground">
+                                İşlem {formatShortDate(movement.date)} · {movement.installmentNo}. taksit · **** {movement.cardLastFour}
+                              </p>
+                            </div>
+                            <span className="shrink-0 text-xs font-black text-foreground">{formatAmount(movement.amount)}</span>
+                          </div>
+                          <div className="mt-2 flex flex-wrap items-center gap-2 pl-8 text-[11px]">
+                            <label className="flex items-center gap-1 font-bold text-foreground">
+                              Toplam
+                              <input
+                                type="number"
+                                min={movement.installmentNo}
+                                max={60}
+                                placeholder="?"
+                                value={totalCount || ''}
+                                onChange={(event) => {
+                                  const value = event.target.value
+                                    ? Math.max(movement.installmentNo, Number(event.target.value))
+                                    : undefined
+                                  setInstallmentCounts((previous) => {
+                                    const next = new Map(previous)
+                                    if (value) next.set(movementIndex, value)
+                                    else next.delete(movementIndex)
+                                    return next
+                                  })
+                                  setSelectedInstallments((previous) => {
+                                    const next = new Set(previous)
+                                    next.delete(movementIndex)
+                                    return next
+                                  })
+                                }}
+                                className="w-14 rounded border border-border bg-background px-1.5 py-1 text-center font-bold text-foreground"
+                              />
+                            </label>
+                            {plan ? (
+                              <span className="text-muted-foreground">
+                                Bu taksit {formatShortDate(plan.currentInstallmentDate)} · önceki {plan.paidInstallments} ödendi · kalan {plan.remainingInstallments}
+                              </span>
+                            ) : (
+                              <span className="text-warning">Aktarmak için toplam taksit sayısını gir.</span>
+                            )}
+                          </div>
                         </div>
-                        <span className="shrink-0 text-xs font-black text-foreground">{formatAmount(movement.amount)}</span>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 </div>
               )}

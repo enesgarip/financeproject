@@ -914,6 +914,27 @@ export function checkCardInstallments(
       })
     }
 
+    if (expense?.installment_count && expense.installment_count > 1 && !installment.current_settlement_id) {
+      const expectedDueDate = addMonthsToDate(expense.spent_at, installment.installment_no - 1)
+      if (installment.due_month !== expectedDueDate) {
+        issues.push({
+          id: `card-installment-date-${installment.id}`,
+          area: 'Kartlar',
+          severity: 'warning',
+          title: `${installment.description} taksit tarihi uyuşmuyor`,
+          description: 'Taksit tarihi, alışveriş günü ve taksit sırasından beklenen tam tarihle aynı değil.',
+          details: [
+            `Taksit: ${installment.installment_no}/${installment.installment_count}`,
+            `Kayıtlı: ${formatDate(installment.due_month)} → Beklenen: ${formatDate(expectedDueDate)}`,
+          ],
+          fixable: true,
+          fixLabel: 'Taksit tarihini düzelt',
+          kind: 'cardInstallmentDueMonth',
+          payload: { ids: [installment.id], updates: { due_month: expectedDueDate } },
+        })
+      }
+    }
+
     if (installment.amount <= 0) {
       issues.push({
         id: `card-installment-zero-${installment.id}`,

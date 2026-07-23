@@ -22,6 +22,7 @@ import {
 export const RESTORE_TABLE_ORDER = [
   'cards',
   'card_aliases',
+  'card_current_settlements',
   'assets',
   'loans',
   'savings_goals',
@@ -213,6 +214,7 @@ export const BACKUP_TABLE_LABELS: Record<RestoreTable, string> = {
   net_worth_snapshots: 'Net değer fotoğrafı',
   card_statement_archives: 'Ekstre arşivi',
   card_expenses: 'Kart harcaması',
+  card_current_settlements: 'Erken kart ödemesi',
   card_installments: 'Kart taksidi',
   loan_installments: 'Kredi taksidi',
   savings_goal_components: 'Hedef bileşeni',

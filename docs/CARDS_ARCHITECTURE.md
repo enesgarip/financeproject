@@ -1,6 +1,6 @@
 # Cards Architecture Note
 
-Last reviewed: 2026-07-02
+Last reviewed: 2026-07-24
 
 This note maps `/kartlar` (`CardsPage`) after the page split. Start with
 `CLAUDE.md`, `docs/AI_CONTEXT_INDEX.md`, and `docs/CARD_DEBT_TRANSITIONS.md`
@@ -23,6 +23,12 @@ repositories, services, or focused `CardsPage.*` modules.
   statement action state, account movement modal state
 - `CardsPage.sections.tsx`: section navigation and due-statement automation
 - `CardsPage.overview.tsx`: account hub and credit-card overview panels
+- `CardsPage.control.tsx`: card-first control center; combines statement/current/
+  provision/scheduled-installment buckets with the latest real-bank debt
+  reconciliation and exposes import/reconciliation actions
+- `components/finance/LiveReconciliationPanel.tsx`: reused on the cards summary
+  with credit-card rows only, so the real bank debt can be entered and corrected
+  without leaving the card-first flow
 - `CardsPage.expense.tsx`: quick expense and installment expense entry
   surface; routes paid-count installment imports to
   `record_card_installment_carryover`
@@ -51,10 +57,11 @@ actions should use the repository/service layer:
 - card/provision/statement reads and provision actions:
   `src/data/repositories/cardsRepo.ts`
 - current movement reconciliation parses PDFs in
-  `src/utils/denizBankMovementParser.ts`, matches via
-  `fetchCardExpenseMatchRows`, shows the detected period's app spending
-  history plus collapsed matched bank/app pairs in the review UI, and writes
-  spending through `add_card_expense`
+  `src/utils/denizBankMovementParser.ts`, matches ordinary expenses and
+  installment rows via `fetchCardExpenseMatchRows` /
+  `fetchCardInstallmentMatchRows`, shows collapsed bank/app pairs in the review
+  UI, and writes spending through `add_card_expense` or
+  `record_card_installment_carryover`
 - statement/current movement imports also load planned-payment match rows via
   `fetchCardPaymentMatchRows`; when a bank row matches a still-open planned
   payment, the import calls `pay_payment_from_card_import` so the card expense
@@ -64,11 +71,17 @@ actions should use the repository/service layer:
   import shows them as selectable "alacak/iade" rows and applies them through
   `post_card_debt_correction` so the card debt is reduced with an audited
   reverse entry instead of importing the row as spending.
-- Clean import in statement/current-movement modals uses
-  `reset_card_import_data`, not the destructive `reset_card_data` flow. It
-  clears the open/current import scope and preserves paid historical statement
-  archives plus the old rows linked to those archives, so reports keep their
-  history.
+- Statement/current-movement modals expose non-destructive reconciliation only.
+  The lower-level `reset_card_import_data` maintenance RPC remains safer than
+  `reset_card_data`: it preserves every paid statement archive and linked row,
+  including a paid archive in the active period.
+- Both importers use `src/utils/importedInstallmentPlan.ts` to preserve the
+  original bank transaction date, derive the exact current installment date,
+  and retain numbering such as 5/12 instead of rebuilding it as 1/8.
+- Current-movement PDFs do not provide an independent real-bank total debt.
+  Rebuilding from such a PDF must therefore not write a synthetic zero-drift
+  `account_reconciliations` row. The card control center can say "Bankayla
+  mutabık" only after a real bank amount was captured.
 - account deposit, withdrawal, and account-to-account transfer:
   `src/services/accountMovements.ts`
 - card/account ledger recomputation actions:
@@ -99,6 +112,7 @@ Before changing any of these fields, read `docs/CARD_DEBT_TRANSITIONS.md`:
 - `provision_amount`
 - `card_installments`
 - `card_statement_archives`
+- `card_current_settlements`
 
 Frontend helpers may display or validate these values, but durable balance
 changes should be append-only ledger/RPC actions. Data fixes should prefer
@@ -119,6 +133,13 @@ the amount at statement + current-period debt and reduces statement debt first.
 The button is disabled while the card has an open statement archive; that case
 belongs to the statement payment flow, because `pay_card_debt` does not close
 archive rows.
+
+If there is no statement debt and the user pays the exact full current-period
+amount, `pay_card_debt` records a `card_current_settlements` row and allocates
+the payment to posted, unstatemented movements. Due installment rows become
+paid, future scheduled installments remain scheduled, and allocated movements
+are excluded from subsequent statement cuts. Settled historical rows are
+guarded against update/delete.
 
 The shared payment modal may provide amount shortcuts, but the RPC remains the
 authority. For card debt payment the shortcuts are presentation-only

@@ -10,6 +10,24 @@
   - Before: each credit-card row exposed status badges, consistency score, statement boxes, six visible actions, and always-visible SMS alias management.
   - Now: primary actions are "Borc ode" and "Harcama ekle"; import, reconciliation, installment entry, and detail live in the row menu. Consistency, aliases, statement day, and lower-frequency metadata live in the detail panel.
 
+- **Card-first control center and archive-safe rebuild (2026-07-24)**
+  - `/kartlar` summary now leads with statement, current-period, provision,
+    scheduled-installment, and real-bank reconciliation status per credit card.
+  - The existing live-reconciliation entry/fix flow is available directly below
+    the control center for credit cards, rather than requiring a Data Health detour.
+  - The old percentage is labeled "İç veri sağlığı" so it cannot be mistaken
+    for bank reconciliation.
+  - Clean import always preserves paid archives and their linked history; a
+    current-movement PDF no longer creates a synthetic "mutabık" snapshot.
+  - The destructive clean-import switch is no longer exposed. Statement and
+    current-movement imports reconcile safely, preserve the bank's installment
+    number/date, and let unmatched installment rows create the correct remaining
+    plan after the total count is supplied.
+  - Full pre-statement current-balance payments (the Yapı Kredi pattern) are
+    allocated to posted movements through `card_current_settlements`; due
+    installments become paid and settled rows cannot be billed again. Statement
+    payment (the DenizBank pattern) continues to close its statement archive.
+
 - **Classic banking affordances (2026-07-02)**
   - Before: bank accounts lacked shareable IBAN/copy UI, amount privacy, statement-like balance-after rows, recent row movements, and card-face masked numbers.
   - Now: bank accounts can store/copy IBAN, all major balances can be masked from one eye toggle, account ledger rows show "balance after", bank rows show the last three movements, and credit-card visuals use SMS alias digits for masked card numbers when available.

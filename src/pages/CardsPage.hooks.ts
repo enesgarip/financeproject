@@ -7,8 +7,9 @@ import {
   fetchProvisionExpenses,
   fetchStatementArchives,
 } from '../data/repositories/cardsRepo'
+import { fetchAccountReconciliations } from '../data/repositories/financePanelsRepo'
 import { submitAccountMovement } from '../services/accountMovements'
-import type { Card, CardExpense, CardInstallment, CardStatementArchive } from '../types/database'
+import type { AccountReconciliation, Card, CardExpense, CardInstallment, CardStatementArchive } from '../types/database'
 import { parseNumber } from '../utils/formatCurrency'
 import { isMissingSupabaseCapabilityError, missingSupabaseCapabilityMessage } from '../utils/supabaseErrors'
 import type { CardSection } from './CardsPage.sections'
@@ -64,6 +65,7 @@ export function useCardsPageData() {
   const [statementError, setStatementError] = useState('')
   const [statementActionId, setStatementActionId] = useState<string | null>(null)
   const [installments, setInstallments] = useState<CardInstallment[]>([])
+  const [reconciliations, setReconciliations] = useState<AccountReconciliation[]>([])
 
   const loadProvisions = useCallback(async () => {
     setProvisionsLoading(true)
@@ -112,6 +114,11 @@ export function useCardsPageData() {
     setInstallments(result.data)
   }, [])
 
+  const loadReconciliations = useCallback(async () => {
+    const result = await fetchAccountReconciliations()
+    setReconciliations(result.ok ? result.data : [])
+  }, [])
+
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadProvisions()
@@ -127,8 +134,13 @@ export function useCardsPageData() {
     void loadInstallments()
   }, [loadInstallments])
 
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void loadReconciliations()
+  }, [loadReconciliations])
+
   async function refreshCardsAndProvisions(reload: () => Promise<void>) {
-    await Promise.all([reload(), loadProvisions(), loadStatements(), loadInstallments(), invalidateSnapshot()])
+    await Promise.all([reload(), loadProvisions(), loadStatements(), loadInstallments(), loadReconciliations(), invalidateSnapshot()])
   }
 
   async function handleProvisionAction(
@@ -186,11 +198,13 @@ export function useCardsPageData() {
     installments,
     invalidateSnapshot,
     loadInstallments,
+    loadReconciliations,
     loadStatements,
     provisionActionId,
     provisionError,
     provisions,
     provisionsLoading,
+    reconciliations,
     refreshCardsAndProvisions,
     statementActionId,
     statementError,

@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { matchDenizBankMovementPayments, matchDenizBankMovements, parseDenizBankMovementPdf } from './denizBankMovementParser'
+import {
+  matchDenizBankInstallmentMovements,
+  matchDenizBankMovementPayments,
+  matchDenizBankMovements,
+  parseDenizBankMovementPdf,
+} from './denizBankMovementParser'
 
 const SAMPLE_TEXT = `
 6/19/26, 10:32 PM DenizBank İnternet Bankacılığı
@@ -196,6 +201,40 @@ describe('matchDenizBankMovements', () => {
     const result = matchDenizBankMovements([petrol], [])
 
     expect(result.appOnly).toHaveLength(0)
+  })
+})
+
+describe('matchDenizBankInstallmentMovements', () => {
+  it('matches the bank original date and installment number to the exact derived installment date', () => {
+    const movement = parseDenizBankMovementPdf(SAMPLE_TEXT).movements.find((item) => item.description.includes('BEYLER'))!
+    const result = matchDenizBankInstallmentMovements([movement], [{
+      id: 'i-2',
+      due_month: '2026-06-19',
+      amount: 21_666.67,
+      status: 'posted',
+      description: 'Beyler Optik',
+      installment_no: 2,
+      installment_count: 3,
+    }])
+
+    expect(result.matches).toHaveLength(1)
+    expect(result.unmatched).toHaveLength(0)
+  })
+
+  it('does not match an old first-of-month installment date', () => {
+    const movement = parseDenizBankMovementPdf(SAMPLE_TEXT).movements.find((item) => item.description.includes('BEYLER'))!
+    const result = matchDenizBankInstallmentMovements([movement], [{
+      id: 'i-2',
+      due_month: '2026-06-01',
+      amount: 21_666.67,
+      status: 'posted',
+      description: 'Beyler Optik',
+      installment_no: 2,
+      installment_count: 3,
+    }])
+
+    expect(result.matches).toHaveLength(0)
+    expect(result.unmatched).toHaveLength(1)
   })
 })
 describe('DenizBank movement planned payment reconciliation', () => {
