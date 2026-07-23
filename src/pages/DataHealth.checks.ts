@@ -413,6 +413,35 @@ export function checkCards(
     }
   }
 
+  const openArchivesByCard = new Set(
+    cardStatementArchives.filter((sa) => sa.status === 'open').map((sa) => sa.card_id),
+  )
+
+  for (const card of cards.filter((item) => item.card_type === 'kredi_karti')) {
+    if (card.statement_debt_amount > 0 && !openArchivesByCard.has(card.id)) {
+      issues.push({
+        id: `card-orphan-statement-debt-${card.id}`,
+        area: 'Kartlar',
+        severity: 'warning',
+        title: `${cardLabel(card)} açık ekstresi yok ama ekstre borcu var`,
+        description: 'Ekstre ödendi/kapatıldı ama kartın ekstre borcu sıfırlanmamış. Fark dönem içi harcamaya aktarılacak.',
+        details: [
+          `Ekstre borcu: ${formatCurrency(card.statement_debt_amount)}`,
+          `Dönem içi: ${formatCurrency(card.current_period_spending)} → ${formatCurrency(sumTL([card.current_period_spending, card.statement_debt_amount]))}`,
+        ],
+        fixable: true,
+        fixLabel: 'Ekstre borcunu dönem içine aktar',
+        kind: 'cardDebtSplit',
+        payload: {
+          cardId: card.id,
+          statementDebt: 0,
+          currentPeriod: sumTL([card.current_period_spending, card.statement_debt_amount]),
+          provisionAmount: cardProvisionAmount(card),
+        },
+      })
+    }
+  }
+
   for (const archive of cardStatementArchives) {
     const card = cardsById.get(archive.card_id)
     const archiveStatus = String(archive.status)

@@ -289,6 +289,57 @@ describe('buildIssues overdue card statements', () => {
   })
 })
 
+describe('buildIssues orphan statement debt', () => {
+  it('flags statement_debt > 0 when no open archive exists', () => {
+    const issues = buildIssues({
+      ...emptyData,
+      cards: [creditCard({
+        debt_amount: 500,
+        statement_debt_amount: 200,
+        current_period_spending: 300,
+      })],
+      cardStatementArchives: [cardStatementArchive({ status: 'paid' })],
+    })
+
+    const issue = issues.find((item) => item.id === 'card-orphan-statement-debt-card-1')
+    expect(issue?.kind).toBe('cardDebtSplit')
+    expect(issue?.fixable).toBe(true)
+    expect(issue?.payload).toMatchObject({
+      cardId: 'card-1',
+      statementDebt: 0,
+      currentPeriod: 500,
+    })
+  })
+
+  it('does not flag when an open archive exists', () => {
+    const issues = buildIssues({
+      ...emptyData,
+      cards: [creditCard({
+        debt_amount: 500,
+        statement_debt_amount: 200,
+        current_period_spending: 300,
+      })],
+      cardStatementArchives: [cardStatementArchive({ status: 'open' })],
+    })
+
+    expect(issues.find((item) => item.id === 'card-orphan-statement-debt-card-1')).toBeUndefined()
+  })
+
+  it('does not flag when statement_debt is 0', () => {
+    const issues = buildIssues({
+      ...emptyData,
+      cards: [creditCard({
+        debt_amount: 300,
+        statement_debt_amount: 0,
+        current_period_spending: 300,
+      })],
+      cardStatementArchives: [],
+    })
+
+    expect(issues.find((item) => item.id === 'card-orphan-statement-debt-card-1')).toBeUndefined()
+  })
+})
+
 describe('buildIssues card expense duplicate analysis', () => {
   it('flags exact duplicate card expenses', () => {
     const issues = buildIssues({
