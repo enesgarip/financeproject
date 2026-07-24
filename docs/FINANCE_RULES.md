@@ -153,10 +153,21 @@ Current movement reconciliation:
 - DenizBank internet-banking movement PDFs are an intra-period reconciliation source, not a statement cut.
 - `Bekleyen İşlem` rows import as `provision`; `Dönem İçi` spending rows import as `posted`.
 - `Hesaptan Ödeme` rows are not imported as card expenses.
-- `Taksitli Satış` rows are shown for manual review; the first implementation does not infer or recreate installment plans from current movement exports.
+- `Taksitli Satış` rows are matched to existing installment rows by amount,
+  installment number, derived exact date, and description. Unmatched rows can
+  be selected after the user enters the total installment count; the importer
+  then creates a first-installment plan or a mid-plan carryover without
+  renumbering the bank's installment sequence.
 - Review screens show the app's spending history for the detected period, keep matched bank/app record pairs collapsed by default, and leave missing rows unselected until the user chooses which rows to import.
 - Importable rows are selected by a stable per-row key instead of array position,
   so identical-looking bank rows can be selected one by one.
+- A current-movement PDF is transaction evidence, not an independent total-debt
+  snapshot. Rebuilding the open period from it must not record a synthetic
+  zero-drift debt reconciliation; "bankayla mutabık" requires a real bank amount.
+- The import UI uses non-destructive matching and does not expose the old clean
+  import switch. The lower-level reset RPC remains archive-safe: if used by a
+  maintenance flow, it never deletes a paid statement archive or rows linked to
+  one, even when that paid archive is in the active statement period.
 - Imports use `add_card_expense` for ordinary card spending so card debt, provision/current-period fields, ledger events, and transaction history stay under the audited mutation path.
 - If a missing bank row matches a still-open planned payment by amount and due/movement date, the import uses `pay_payment_from_card_import` instead. This creates the card expense on the bank row date and advances/closes the planned payment, preventing the same bill from remaining as a separate pending obligation.
 - DenizBank statement installment rows show the original purchase date even for
@@ -183,8 +194,15 @@ From `src/utils/cardInstallmentCalendar.ts` and page logic:
 - the unpaid installment total is informational/planning data and must not be added on top of card debt
 - posted installments become payable as part of the card statement
 - paying the linked statement marks included installments `paid`
+- paying the full current-period balance before statement cut records a
+  `card_current_settlements` allocation, marks due posted installments `paid`,
+  and prevents the allocated movements from entering a later statement;
+  future scheduled installments remain scheduled
 - credit-card installments are not manually paid; manual payment is limited to the card's statement/current-period debt
 - locked installments, meaning paid or linked to a statement, should not be edited from the UI
+- Data Health checks that each linked installment date equals the original
+  transaction date plus `(installment_no - 1)` months; legacy first-of-month
+  dates are offered as a targeted repair.
 
 ## Bank Account / Transfer Rules
 

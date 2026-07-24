@@ -23,12 +23,12 @@ import {
   parseDenizBankStatement,
   matchTransactions,
   expenseTotalAmount,
-  statementInstallmentDueDate,
   type ParsedTransaction,
   type ParsedStatementAdjustment,
   type StatementTransactionMatch,
 } from '../../utils/denizBankStatementParser'
 import { matchDenizBankMovementPayments, type ParsedDenizBankMovement } from '../../utils/denizBankMovementParser'
+import { buildImportedInstallmentPlan } from '../../utils/importedInstallmentPlan'
 import { diffTL, equalsTL, roundTL, sumTL } from '../../utils/money'
 import { parseStatementText } from '../../lib/statementParseClient'
 import { extractPdfText } from '../../lib/pdfText'
@@ -129,7 +129,7 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
   useBodyScrollLock(true)
 
   const [step, setStep] = useState<Step>('upload')
-  const [cleanImport, setCleanImport] = useState(false)
+  const cleanImport = false
   const [parsing, setParsing] = useState(false)
   const [parseError, setParseError] = useState('')
   const [importing, setImporting] = useState(false)
@@ -280,8 +280,14 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
     for (const item of toImport) {
       const { transaction: tx, plannedPayment } = item
       const knownPlan = tx.isInstallment && tx.installmentCount > 1
-      const remaining = knownPlan ? Math.max(1, tx.installmentCount - tx.installmentNo + 1) : 1
-      const installmentDueDate = knownPlan ? statementInstallmentDueDate(tx) : tx.date
+      const plan = knownPlan
+        ? buildImportedInstallmentPlan({
+          originalDate: tx.date,
+          installmentNo: tx.installmentNo,
+          totalInstallments: tx.installmentCount,
+          installmentAmount: tx.amount,
+        })
+        : null
       const result = plannedPayment
         ? await payPaymentFromCardImport({
           paymentId: plannedPayment.id,
@@ -289,15 +295,25 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
           amount: tx.amount,
           spentAt: tx.date,
         })
-        : await addCardExpense({
-          cardId: card.id,
-          amount: knownPlan ? roundTL(tx.amount * remaining) : tx.amount,
-          description: tx.description,
-          spentAt: installmentDueDate,
-          installmentCount: knownPlan ? remaining : 1,
-          category: tx.category,
-          status: 'posted',
-        })
+        : plan && plan.paidInstallments > 0
+          ? await recordCardInstallmentCarryover({
+            cardId: card.id,
+            description: tx.description,
+            installmentAmount: tx.amount,
+            totalInstallments: plan.totalInstallments,
+            paidInstallments: plan.paidInstallments,
+            nextDueDate: plan.currentInstallmentDate,
+            category: tx.category,
+          })
+          : await addCardExpense({
+            cardId: card.id,
+            amount: plan?.totalAmount ?? tx.amount,
+            description: tx.description,
+            spentAt: plan?.originalDate ?? tx.date,
+            installmentCount: plan?.totalInstallments ?? 1,
+            category: tx.category,
+            status: 'posted',
+          })
       if (!result.ok) errors.push(`${tx.description}: ${result.error.message ?? 'Bilinmeyen hata.'}`)
       else successCount++
     }
@@ -368,9 +384,14 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
     for (const item of toImport) {
       const { transaction: tx, plannedPayment } = item
       const installment = tx.isInstallment && tx.installmentCount > 1
-      const isMidPlan = installment && tx.installmentNo > 1 && tx.installmentNo < tx.installmentCount
-      const isLastInstallment = installment && tx.installmentNo === tx.installmentCount
-      const installmentDueDate = installment ? statementInstallmentDueDate(tx) : tx.date
+      const plan = installment
+        ? buildImportedInstallmentPlan({
+          originalDate: tx.date,
+          installmentNo: tx.installmentNo,
+          totalInstallments: tx.installmentCount,
+          installmentAmount: tx.amount,
+        })
+        : null
       let result
       if (plannedPayment) {
         result = await payPaymentFromCardImport({
@@ -379,23 +400,23 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
           amount: tx.amount,
           spentAt: tx.date,
         })
-      } else if (isMidPlan) {
+      } else if (plan && plan.paidInstallments > 0) {
         result = await recordCardInstallmentCarryover({
           cardId: card.id,
           description: tx.description,
           installmentAmount: tx.amount,
-          totalInstallments: tx.installmentCount,
-          paidInstallments: tx.installmentNo - 1,
-          nextDueDate: installmentDueDate,
+          totalInstallments: plan.totalInstallments,
+          paidInstallments: plan.paidInstallments,
+          nextDueDate: plan.currentInstallmentDate,
           category: tx.category,
         })
       } else {
         result = await addCardExpense({
           cardId: card.id,
-          amount: installment && !isLastInstallment ? expenseTotalAmount(tx) : tx.amount,
+          amount: plan?.totalAmount ?? tx.amount,
           description: tx.description,
-          spentAt: installment ? installmentDueDate : tx.date,
-          installmentCount: installment && !isLastInstallment ? tx.installmentCount : 1,
+          spentAt: plan?.originalDate ?? tx.date,
+          installmentCount: plan?.totalInstallments ?? 1,
           category: tx.category,
           status: 'posted',
         })
@@ -520,20 +541,9 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
               <span className="text-xs text-muted-foreground">kk_hesap_ekstresi_*.pdf</span>
             </button>
 
-            <label className="flex cursor-pointer items-start gap-2.5 rounded-xl border border-border bg-muted/30 p-3">
-              <input
-                type="checkbox"
-                checked={cleanImport}
-                onChange={(e) => setCleanImport(e.target.checked)}
-                className="mt-0.5 size-4 accent-warning"
-              />
-              <span className="text-xs">
-                <span className="block font-bold text-foreground">Bu kartı sıfırlayıp ekstreyi baştan kur</span>
-                <span className="mt-0.5 block text-muted-foreground">
-                  Import kapsamındaki harcama ve taksitler PDF'ten baştan kurulur; geçmiş ödenmiş ekstre arşivleri ve bağlı eski satırlar korunur.
-                </span>
-              </span>
-            </label>
+            <p className="rounded-xl border border-success/20 bg-success/8 p-3 text-xs text-success">
+              Güvenli eşleştirme kullanılır; geçmiş kayıtlar silinmez, yalnız eksik seçili ekstre satırları eklenir.
+            </p>
 
             <input
               ref={fileRef}
@@ -561,7 +571,7 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
             {cleanImport && (
               <p className="flex items-start gap-2 border-b border-border bg-warning/10 px-4 py-3 text-xs font-bold text-warning">
                 <AlertCircle size={15} className="mt-0.5 shrink-0" />
-                Import kapsamındaki mevcut kart harcama ve taksitleri seçili PDF satırlarıyla baştan kurulacak. Geçmiş ödenmiş ekstre arşivleri korunur.
+                Açık/güncel kart harcama ve taksitleri seçili PDF satırlarıyla yeniden kurulacak. Tüm ödenmiş ekstre arşivleri ve bağlı geçmiş kayıtlar korunur.
               </p>
             )}
             {/* Reconciliation summary */}

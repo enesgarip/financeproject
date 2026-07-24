@@ -31,7 +31,7 @@ repair rules, keep `docs/TRANSACTION_HISTORY.md` aligned with this file.
 | `set_statement_reconciliation` | `setStatementReconciliation` in `cardsRepo` | Statement import/reconciliation | Stores bank statement reconciliation amount and note for a card period |
 | `pay_payment_from_card_import` | `payPaymentFromCardImport` in `cardsRepo` | Statement/current movement import: matched planned payment row | Adds the matched bill as posted credit-card spending on the bank row date and advances/closes the planned payment |
 | `record_card_installment_carryover` | `recordCardInstallmentCarryover` in `cardsRepo` | Cards page: unified installment form when paid installments so far is positive | Imports remaining pre-app installments as card debt plus installment planning rows, while preserving already-paid historical installments |
-| `reset_card_import_data` | `resetCardImportData` in `cardsRepo` | Statement/current movement clean import | Clears the open/current import scope and resets visible card debt fields before rebuilding from the bank PDF; preserves paid historical statement archives and linked old rows |
+| `reset_card_import_data` | `resetCardImportData` in `cardsRepo` | Archive-safe maintenance helper (the import UI no longer exposes destructive clean import) | Clears the open/current import scope and resets visible card debt fields before rebuilding; always preserves every paid statement archive and its linked rows, including the active period |
 | `reset_card_data` | `resetCardData` in `cardsRepo` | Manual/data-health repair helper only | Deletes the card's expenses, installments, statement archives, and related history; resets card debt fields to zero. Import modals must not call it. |
 
 The detailed field transitions for these RPCs live in
@@ -47,7 +47,7 @@ rewriting historical expenses.
 | --- | --- | --- | --- |
 | `pay_payment` | `submitFinanceObligationPayment` | Planned payments page/dashboard obligation modal | Marks one payment paid or advances monthly recurrence; bank source debits `current_balance`, credit-card source increases `debt_amount` / `current_period_spending` and creates posted card spending |
 | `pay_card_statement` | `submitFinanceObligationPayment` | Pay open credit-card statement | Debits a bank account, reduces card debt and statement debt, marks statement paid, marks linked installments paid |
-| `pay_card_debt` | `submitFinanceObligationPayment` | Manual credit-card debt payment ("Borç öde" on the cards page card row, plus the obligations calendar item) | Debits a bank account, reduces `debt_amount`, then reduces statement debt before current-period spending; works before a statement is cut because payable = statement + current period |
+| `pay_card_debt` | `submitFinanceObligationPayment` | Manual credit-card debt payment ("Borç öde" on the cards page card row, plus the obligations calendar item) | Debits a bank account and reduces card debt. A full current-period payment with no statement debt is allocated through `card_current_settlements`: posted movements are marked settled, due installments become paid, and those rows cannot enter a later statement. Partial/statement-bearing manual payments retain aggregate reduction semantics. |
 | `pay_loan_installment` | `submitFinanceObligationPayment` | Pay loan installment | Debits a bank account, marks installment paid, syncs loan summary through DB invariants |
 | `settle_personal_debt` | `submitFinanceObligationPayment` | Settle personal debt or collect receivable | Updates bank-account balance and closes the debt row |
 

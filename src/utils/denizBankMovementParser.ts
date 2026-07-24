@@ -7,6 +7,7 @@
  * Yalnız ayrıştırma + eşleştirme; yazma cardsRepo/CurrentMovementImportModal'da.
  */
 import { suggestExpenseCategory } from './categories'
+import { addMonths, dateInputValue } from './date'
 import { diffTL, roundTL } from './money'
 import { normalizeSearchText } from './searchText'
 
@@ -69,6 +70,21 @@ export type MovementExpenseMatchRow = {
   status: string
   description?: string | null
   note?: string | null
+}
+
+export type MovementInstallmentMatchRow = {
+  id: string
+  due_month: string
+  amount: number
+  status: string
+  description: string
+  installment_no: number
+  installment_count: number
+}
+
+export type DenizBankInstallmentMatch = {
+  movement: ParsedDenizBankMovement
+  installment: MovementInstallmentMatchRow
 }
 
 export type MovementPaymentMatchRow = {
@@ -329,6 +345,40 @@ export function matchDenizBankMovements(
   const appOnly = periodActive.filter((expense) => !matchedExpenseRefs.has(expense))
 
   return { matched, unmatched, matches, appOnly }
+}
+
+export function matchDenizBankInstallmentMovements(
+  bankMovements: ParsedDenizBankMovement[],
+  installments: MovementInstallmentMatchRow[],
+): { matches: DenizBankInstallmentMatch[]; unmatched: ParsedDenizBankMovement[] } {
+  const available = installments.filter((installment) => installment.status !== 'scheduled')
+  const usedIds = new Set<string>()
+  const matches: DenizBankInstallmentMatch[] = []
+  const unmatched: ParsedDenizBankMovement[] = []
+
+  for (const movement of bankMovements) {
+    const currentInstallmentDate = dateInputValue(
+      addMonths(new Date(`${movement.date}T00:00:00`), Math.max(0, movement.installmentNo - 1)),
+    )
+    const candidates = available.filter((installment) => (
+      !usedIds.has(installment.id) &&
+      installment.installment_no === movement.installmentNo &&
+      installment.due_month === currentInstallmentDate &&
+      Math.abs(diffTL(installment.amount, movement.amount)) <= AMOUNT_MATCH_TOLERANCE_TL
+    ))
+    const preferred = candidates.find((installment) => descriptionsCompatible(movement.description, installment.description))
+    const found = preferred ?? (candidates.length === 1 ? candidates[0] : undefined)
+
+    if (!found) {
+      unmatched.push(movement)
+      continue
+    }
+
+    usedIds.add(found.id)
+    matches.push({ movement, installment: found })
+  }
+
+  return { matches, unmatched }
 }
 
 export function matchDenizBankMovementPayments(

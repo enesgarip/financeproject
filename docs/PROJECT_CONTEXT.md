@@ -106,6 +106,7 @@ Supporting tables/features:
 - `card_expenses`
 - `card_installments`
 - `card_statement_archives`
+- `card_current_settlements` (full current-period payments made before statement cut)
 - card-related RPCs such as `add_card_expense`, `post_card_provision`, `cut_card_statement`, `cut_due_card_statements`, `pay_card_statement`, `pay_card_debt`
 
 Credit-card installments are planning rows inside the card statement flow. They are not separate debt, and a linked statement payment is responsible for closing the included installment rows.
@@ -155,6 +156,7 @@ From the current typed schema, main tables are:
 - `savings_goal_components`
 - `card_installments`
 - `card_statement_archives`
+- `card_current_settlements`
 - `loans`
 - `loan_installments`
 - `debts`

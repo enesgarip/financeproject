@@ -313,13 +313,13 @@ export function CreditAccountListCard({
             <MiniStat label="Limit kullanımı" value={`%${usageRate}`} tone={usageRate >= 80 ? 'danger' : usageRate >= 55 ? 'warning' : 'good'} />
             <MiniStat label="Devam eden taksit" value={`${installmentCount} işlem`} tone={installmentCount > 0 ? 'warning' : 'neutral'} />
             <MiniStat label="Limit tipi" value={stats.isShared ? 'Ortak limit' : 'Tekil limit'} tone={stats.isShared ? 'info' : 'neutral'} />
-            <MiniStat label="Tutarlılık" value={`%${consistency.score}`} tone={consistency.score >= 100 ? 'good' : consistency.score >= 75 ? 'warning' : 'danger'} />
+            <MiniStat label="İç veri sağlığı" value={`%${consistency.score}`} tone={consistency.score >= 100 ? 'good' : consistency.score >= 75 ? 'warning' : 'danger'} />
           </div>
           <div className="mt-3 rounded-lg bg-card/80 p-3 ring-1 ring-border/70">
             <div className="flex items-start gap-2">
               <ShieldCheck size={15} className={consistency.score >= 100 ? 'mt-0.5 text-success' : consistency.score >= 75 ? 'mt-0.5 text-warning' : 'mt-0.5 text-destructive'} />
               <div className="min-w-0">
-                <p className="text-xs font-black uppercase text-muted-foreground">Tutarlılık kontrolleri</p>
+                <p className="text-xs font-black uppercase text-muted-foreground">İç veri sağlığı kontrolleri</p>
                 <div className="mt-2 grid gap-1 text-xs text-muted-foreground">
                   {consistency.checks.map((check) => (
                     <span key={check.label}>{check.ok ? '✓' : '✗'} {check.label}</span>

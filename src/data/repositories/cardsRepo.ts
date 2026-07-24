@@ -3,6 +3,7 @@ import type { Card, CardExpense, CardInstallment, CardStatementArchive, Payment 
 import { ok, resultFromSupabase, voidResultFromSupabase, type Result } from '../result'
 
 export type ExpenseMatchRow = Pick<CardExpense, 'id' | 'spent_at' | 'amount' | 'status' | 'description' | 'category' | 'installment_count' | 'note'>
+export type InstallmentMatchRow = Pick<CardInstallment, 'id' | 'due_month' | 'amount' | 'status' | 'description' | 'installment_no' | 'installment_count'>
 export type PaymentMatchRow = Pick<
   Payment,
   'id' | 'title' | 'amount' | 'amount_status' | 'due_date' | 'status' | 'payment_method' | 'auto_source_card_id' | 'category' | 'recurrence' | 'recurrence_day' | 'recurrence_end_date'
@@ -142,6 +143,15 @@ export type CardInstallmentCarryoverInput = {
   paidInstallments: number
   nextDueDate: string
   category: string
+}
+
+export async function fetchCardInstallmentMatchRows(cardId: string): Promise<Result<InstallmentMatchRow[]>> {
+  const { data, error } = await supabase
+    .from('card_installments')
+    .select('id, due_month, amount, status, description, installment_no, installment_count')
+    .eq('card_id', cardId)
+
+  return resultFromSupabase((data ?? []) as InstallmentMatchRow[], error, 'Kart taksitleri yüklenemedi.')
 }
 
 export async function recordCardInstallmentCarryover(input: CardInstallmentCarryoverInput): Promise<Result<void>> {

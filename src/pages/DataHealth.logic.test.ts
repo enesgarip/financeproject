@@ -247,6 +247,66 @@ describe('buildIssues card debt breakdown', () => {
   })
 })
 
+describe('buildIssues card installment dates', () => {
+  it('flags an installment date that does not preserve the original transaction day', () => {
+    const issues = buildIssues({
+      ...emptyData,
+      cards: [creditCard({ debt_amount: 300, current_period_spending: 100 })],
+      cardExpenses: [
+        cardExpense({
+          amount: 300,
+          installment_count: 3,
+          installment_amount: 100,
+          spent_at: '2026-05-19',
+        }),
+      ],
+      cardInstallments: [
+        cardInstallment({
+          card_expense_id: 'expense-1',
+          installment_no: 2,
+          installment_count: 3,
+          amount: 100,
+          due_month: '2026-06-01',
+          status: 'posted',
+        }),
+      ],
+    })
+
+    expect(issues.find((issue) => issue.id === 'card-installment-date-installment-1')).toMatchObject({
+      kind: 'cardInstallmentDueMonth',
+      payload: { updates: { due_month: '2026-06-19' } },
+    })
+  })
+
+  it('does not offer a date rewrite for an installment locked by an early settlement', () => {
+    const issues = buildIssues({
+      ...emptyData,
+      cards: [creditCard({ debt_amount: 100 })],
+      cardExpenses: [
+        cardExpense({
+          amount: 300,
+          installment_count: 3,
+          installment_amount: 100,
+          spent_at: '2026-05-19',
+        }),
+      ],
+      cardInstallments: [
+        cardInstallment({
+          card_expense_id: 'expense-1',
+          current_settlement_id: 'settlement-1',
+          installment_no: 2,
+          installment_count: 3,
+          amount: 100,
+          due_month: '2026-06-01',
+          status: 'paid',
+        }),
+      ],
+    })
+
+    expect(issues.some((issue) => issue.id === 'card-installment-date-installment-1')).toBe(false)
+  })
+})
+
 describe('buildIssues overdue card statements', () => {
   it('flags an open statement whose due date has passed', () => {
     const issues = buildIssues({
