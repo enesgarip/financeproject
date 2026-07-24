@@ -335,6 +335,15 @@ export type DismissedUpcomingItem = {
   source: UpcomingDismissalSource
 }
 
+export type WishlistItem = BaseRow & {
+  name: string
+  estimated_price: number | null
+  is_purchased: boolean
+  purchased_at: string | null
+  sort_order: number
+  note: string | null
+}
+
 export type SalaryHistory = BaseRow & {
   title: string
   amount: number
@@ -381,6 +390,7 @@ export type Database = {
       debts: Table<Debt, WithBaseInsert<Debt>, WithBaseUpdate<Debt>>
       payments: Table<Payment, WithBaseInsert<Payment>, WithBaseUpdate<Payment>>
       transaction_history: Table<TransactionHistory, WithBaseInsert<TransactionHistory>, WithBaseUpdate<TransactionHistory>>
+      wishlist_items: Table<WishlistItem, WithBaseInsert<WishlistItem>, WithBaseUpdate<WishlistItem>>
       salary_history: Table<SalaryHistory, WithBaseInsert<SalaryHistory>, WithBaseUpdate<SalaryHistory>>
       net_worth_snapshots: Table<NetWorthSnapshot, WithBaseInsert<NetWorthSnapshot>, WithBaseUpdate<NetWorthSnapshot>>
       gold_lots: Table<GoldLot, WithBaseInsert<GoldLot>, WithBaseUpdate<GoldLot>>

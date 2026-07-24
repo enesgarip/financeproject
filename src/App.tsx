@@ -81,6 +81,9 @@ const PaymentsPage = lazyWithReload(() =>
 const PlanningPage = lazyWithReload(() =>
   import('./pages/PlanningPage').then((m) => ({ default: m.PlanningPage })),
 )
+const WishlistPage = lazyWithReload(() =>
+  import('./pages/WishlistPage').then((m) => ({ default: m.WishlistPage })),
+)
 
 function PageTransition({ children }: { children: ReactNode }) {
   return (
@@ -158,6 +161,7 @@ function AnimatedRoutes() {
         <Route path="odemeler" element={<PlanningHub />}>
           <Route index element={routeElement(<PaymentsPage />, 'odemeler')} />
           <Route path="hedefler" element={routeElement(<PlanningPage />, 'odemeler-hedefler')} />
+          <Route path="liste" element={routeElement(<WishlistPage />, 'odemeler-liste')} />
         </Route>
         <Route path="analiz" element={<AnalysisHub />}>
           <Route index element={routeElement(<AnalysisPage />, 'analiz')} />
