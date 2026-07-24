@@ -32,7 +32,7 @@ export const primaryNavItems: readonly NavItem[] = [
   { to: '/kartlar', label: 'Hesaplar', icon: CreditCard },
   { to: '/varliklar', label: 'Birikim', icon: Wallet },
   { to: '/borclar/krediler', label: 'Borçlar', icon: HandCoins, activePaths: ['/borclar/kisiler'] },
-  { to: '/odemeler', label: 'Takvim', icon: WalletCards, activePaths: ['/odemeler/hedefler'] },
+  { to: '/odemeler', label: 'Takvim', icon: WalletCards, activePaths: ['/odemeler/hedefler', '/odemeler/liste'] },
   { to: '/analiz', label: 'Analiz', icon: BarChart3 },
 ]
 
@@ -67,6 +67,7 @@ export const liabilitiesHubTabs: HubTab[] = [
 export const planningHubTabs: HubTab[] = [
   { to: '/odemeler', label: 'Takvim', end: true },
   { to: '/odemeler/hedefler', label: 'Hedefler' },
+  { to: '/odemeler/liste', label: 'Liste' },
 ]
 
 export const analysisHubTabs: HubTab[] = [
@@ -91,6 +92,7 @@ const routeMeta: Record<string, { title: string; subtitle?: string; width: Route
   '/borclar/kisiler': { title: 'Kişiler', subtitle: 'Kişisel borç ve alacaklar', width: 'medium' },
   '/odemeler': { title: 'Ödeme Takvimi', subtitle: 'Planlı ödemeler ve vadeler', width: 'medium' },
   '/odemeler/hedefler': { title: 'Bütçe & Hedefler', subtitle: 'Birikim hedefleri ve bütçe takibi', width: 'medium' },
+  '/odemeler/liste': { title: 'Alışveriş Listesi', subtitle: 'Almak istediğin şeyler', width: 'medium' },
   '/analiz': { title: 'Analiz', subtitle: 'Aylık rapor ve ay kapanış kontrolü', width: 'wide' },
   '/analiz/detay': { title: 'Detay', subtitle: 'Gelir/gider dağılımı ve trendler', width: 'wide' },
   '/veri-sagligi': { title: 'Veri Kontrolü', subtitle: 'Tutarlılık denetimi ve bulgular', width: 'wide' },

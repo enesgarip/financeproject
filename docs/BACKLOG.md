@@ -152,6 +152,9 @@
   - Banner, DataHealth sayfasına tek tıkla yönlendirir; "Güvenli düzeltmeleri uygula" ile toplu fix zaten mevcut.
   - Mevcut 3-katman: import (StatementImportModal / CurrentMovementImportModal) → detect (DataHealth 22 check) → fix (fixIssue + undo stack).
 
+- ~~Add wishlist / shopping list ("Alışveriş Listesi").~~ DONE.
+  - 2026-07-24: `wishlist_items` tablosu (RLS + own-row), `wishlistRepo.ts` CRUD, `WishlistPage.tsx`. PlanningHub'a "Liste" tab'ı eklendi (`/odemeler/liste`). Alınanlar ayrı bölümde üstü çizili + tarihli, geri alınabilir.
+
 ## 6-Geçiş Denetim Sentezi (2026-06-23)
 
 6 geçişlik sistematik denetim tamamlandı. Aşağıda tüm bulgular, tekrar eden
