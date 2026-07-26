@@ -272,15 +272,17 @@ export function CardsPage() {
 
               {!loading && section === 'ozet' ? (
                 <>
-                  <CardControlCenter
-                    rows={cardRows}
-                    statements={statements}
-                    installments={installments}
-                    reconciliations={reconciliations}
-                    onReconcile={setMovementImportCard}
-                    onImportStatement={setImportCard}
-                    formatAmount={formatAmount}
-                  />
+                  <div className="hidden md:block">
+                    <CardControlCenter
+                      rows={cardRows}
+                      statements={statements}
+                      installments={installments}
+                      reconciliations={reconciliations}
+                      onReconcile={setMovementImportCard}
+                      onImportStatement={setImportCard}
+                      formatAmount={formatAmount}
+                    />
+                  </div>
                   <LiveReconciliationPanel
                     cards={cardRows.filter((card) => card.card_type === 'kredi_karti')}
                     onChanged={async () => {
