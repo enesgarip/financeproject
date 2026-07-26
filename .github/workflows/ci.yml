@@ -183,3 +183,13 @@ jobs:
 
       - name: RLS policy audit
         run: docker exec -i supabase_db_financeproject psql -U postgres -d postgres -v ON_ERROR_STOP=1 -f - < supabase/tests/rls_audit.sql
+
+      # Policy'si olup grant'i olmayan tablo = ölü policy; migration'lardan
+      # kurulan ortam üretimden sapar (2026-07-27 drift'i).
+      - name: Table grant audit
+        run: docker exec -i supabase_db_financeproject psql -U postgres -d postgres -v ON_ERROR_STOP=1 -f - < supabase/tests/grants_audit.sql
+
+      - name: Maintenance catch-up idempotency
+        run: |
+          supabase db reset --local
+          docker exec -i supabase_db_financeproject psql -U postgres -d postgres -v ON_ERROR_STOP=1 -f - < supabase/tests/maintenance_catchup.sql
