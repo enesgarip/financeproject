@@ -47,6 +47,7 @@ export type Asset = BaseRow & {
 }
 
 export type GoldType = 'gram' | 'ceyrek'
+export type GoldDirection = 'buy' | 'sell'
 
 export type GoldLot = BaseRow & {
   /** Purchase date; null when unknown. */
@@ -55,8 +56,9 @@ export type GoldLot = BaseRow & {
   /** Karat (e.g. 24, 22); informational. */
   ayar: number | null
   quantity: number
-  /** TRY paid per unit at purchase; null when the cost is unknown. */
+  /** TRY paid per unit at purchase (buy) or received per unit (sell); null when unknown. */
   unit_price: number | null
+  direction: GoldDirection
   note: string | null
 }
 

@@ -50,19 +50,20 @@ export function summarizeGoldType(lots: GoldLot[], goldType: GoldType): GoldType
 
   for (const lot of rows) {
     const qty = Number(lot.quantity) || 0
-    totalQuantity += qty
+    const sign = lot.direction === 'sell' ? -1 : 1
+    totalQuantity += qty * sign
     if (lot.unit_price != null && Number.isFinite(lot.unit_price)) {
-      knownQuantity += qty
-      knownCost += qty * lot.unit_price
+      knownQuantity += qty * sign
+      knownCost += qty * lot.unit_price * sign
     }
   }
 
   return {
     goldType,
-    totalQuantity: round4(totalQuantity),
-    knownQuantity: round4(knownQuantity),
-    unknownQuantity: round4(totalQuantity - knownQuantity),
-    knownCost: round2(knownCost),
+    totalQuantity: round4(Math.max(0, totalQuantity)),
+    knownQuantity: round4(Math.max(0, knownQuantity)),
+    unknownQuantity: round4(Math.max(0, totalQuantity - knownQuantity)),
+    knownCost: round2(Math.max(0, knownCost)),
     avgUnitCost: knownQuantity > 0 ? round2(knownCost / knownQuantity) : null,
   }
 }
@@ -96,9 +97,10 @@ export function buildGoldAccumulation(lots: GoldLot[], goldType?: GoldType): Gol
   const points: GoldAccumulationPoint[] = []
 
   for (const lot of dated) {
-    cumulativeQuantity += Number(lot.quantity) || 0
+    const sign = lot.direction === 'sell' ? -1 : 1
+    cumulativeQuantity += (Number(lot.quantity) || 0) * sign
     if (lot.unit_price != null && Number.isFinite(lot.unit_price)) {
-      cumulativeCost += (Number(lot.quantity) || 0) * lot.unit_price
+      cumulativeCost += (Number(lot.quantity) || 0) * lot.unit_price * sign
     }
     points.push({
       date: String(lot.purchase_date),

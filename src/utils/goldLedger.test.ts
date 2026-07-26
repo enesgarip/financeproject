@@ -17,6 +17,7 @@ function lot(overrides: Partial<GoldLot>): GoldLot {
     ayar: 24,
     quantity: 1,
     unit_price: 1000,
+    direction: 'buy',
     note: null,
     ...overrides,
   }
@@ -40,6 +41,20 @@ describe('gold ledger summaries', () => {
       knownCost: 70000,
       avgUnitCost: 2500,
     })
+  })
+
+  it('subtracts sell lots from quantity and cost', () => {
+    const summary = summarizeGoldType(
+      [
+        lot({ quantity: 5, unit_price: 3000 }),
+        lot({ id: 'sell1', quantity: 2, unit_price: 3500, direction: 'sell' }),
+      ],
+      'gram',
+    )
+
+    expect(summary.totalQuantity).toBe(3)
+    expect(summary.knownQuantity).toBe(3)
+    expect(summary.knownCost).toBe(8000)
   })
 
   it('returns one summary per used type in stable gram/ceyrek order', () => {

@@ -9,7 +9,7 @@ import { Alert } from '../components/ui/alert'
 import { Badge } from '../components/ui/badge'
 import { Card, CardContent } from '../components/ui/card'
 import { useMarketRates } from '../hooks/useMarketRates'
-import type { GoldLot, GoldType } from '../types/database'
+import type { GoldDirection, GoldLot, GoldType } from '../types/database'
 import { formatNumber, parseNumber } from '../utils/formatCurrency'
 import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
 import {
@@ -24,7 +24,16 @@ import { diffTL, roundTL as round2, sumTL } from '../utils/money'
 import { valueAsset } from '../utils/valuation'
 
 const goldFields: FormField[] = [
-  { name: 'purchase_date', label: 'Alım tarihi', type: 'date' },
+  {
+    name: 'direction',
+    label: 'İşlem türü',
+    type: 'select',
+    options: [
+      { label: 'Alım', value: 'buy' },
+      { label: 'Satım', value: 'sell' },
+    ],
+  },
+  { name: 'purchase_date', label: 'Tarih', type: 'date' },
   {
     name: 'gold_type',
     label: 'Tür',
@@ -56,7 +65,7 @@ const goldFields: FormField[] = [
     type: 'number',
     min: '0',
     step: '0.01',
-    hint: () => 'Boş bırakırsan adet sayılır, maliyet ortalamasına katılmaz.',
+    hint: () => 'Alımda ödenen, satımda alınan birim fiyat. Boş bırakırsan adet sayılır.',
   },
   { name: 'note', label: 'Not', type: 'textarea' },
 ]
@@ -123,9 +132,10 @@ function buildChartData(lots: GoldLot[], snapshot: MarketRatesSnapshot | null): 
   let cost = 0
 
   return dated.map((lot) => {
-    if (lot.gold_type === 'gram') gram += lot.quantity
-    if (lot.gold_type === 'ceyrek') ceyrek += lot.quantity
-    if (lot.unit_price != null) cost = sumTL([cost, round2(lot.quantity * lot.unit_price)])
+    const sign = lot.direction === 'sell' ? -1 : 1
+    if (lot.gold_type === 'gram') gram += lot.quantity * sign
+    if (lot.gold_type === 'ceyrek') ceyrek += lot.quantity * sign
+    if (lot.unit_price != null) cost = sumTL([cost, round2(lot.quantity * lot.unit_price * sign)])
 
     const gramValue = goldValue('gram', gram, snapshot)
     const ceyrekValue = goldValue('ceyrek', ceyrek, snapshot)
@@ -302,7 +312,7 @@ export function GoldPage() {
     <CrudPage
       table="gold_lots"
       pageTitle="Altın"
-      addLabel="İşlem ekle"
+      addLabel="Alım / satım ekle"
       fields={goldFields}
       orderBy="purchase_date"
       orderAscending={false}
@@ -310,6 +320,7 @@ export function GoldPage() {
       emptyDescription="Gram veya çeyrek alımlarını işlem olarak ekleyince toplam adet, ortalama maliyet ve net değer otomatik güncellenir."
       validateForm={validateGoldLot}
       getInitialValues={(row?: GoldLot) => ({
+        direction: row?.direction ?? 'buy',
         purchase_date: row?.purchase_date ?? '',
         gold_type: row?.gold_type ?? 'gram',
         ayar: row?.ayar ?? '',
@@ -319,6 +330,7 @@ export function GoldPage() {
       })}
       mapForm={(formData, userId) => ({
         user_id: userId,
+        direction: (formData.get('direction') as GoldDirection) || 'buy',
         purchase_date: String(formData.get('purchase_date') ?? '') || null,
         gold_type: formData.get('gold_type') as GoldType,
         ayar: optionalNumber(formData, 'ayar'),
@@ -337,7 +349,7 @@ export function GoldPage() {
           </div>
         )
       }}
-      renderTitle={(row) => GOLD_TYPE_LABELS[row.gold_type]}
+      renderTitle={(row) => `${GOLD_TYPE_LABELS[row.gold_type]}${row.direction === 'sell' ? ' (satış)' : ''}`}
       renderSubtitle={(row) => formatDate(row.purchase_date)}
       renderDetails={(row) => [`Miktar: ${formatQuantity(row.quantity, row.gold_type)}`]}
       renderCard={(row, { menu }) => {
@@ -353,7 +365,10 @@ export function GoldPage() {
                   <Coins className="size-5" />
                 </div>
                 <div className="min-w-0">
-                  <h2 className="truncate text-base font-black text-foreground">{GOLD_TYPE_LABELS[lot.gold_type]}</h2>
+                  <h2 className="truncate text-base font-black text-foreground">
+                    {GOLD_TYPE_LABELS[lot.gold_type]}
+                    {lot.direction === 'sell' && <span className="ml-1.5 text-xs font-bold text-destructive">Satış</span>}
+                  </h2>
                   <p className="mt-0.5 text-xs text-muted-foreground">{formatDate(lot.purchase_date)}</p>
                 </div>
               </div>
@@ -366,7 +381,7 @@ export function GoldPage() {
                 <p className="mt-0.5 font-mono text-lg font-black tabular-nums text-foreground">{formatQuantity(lot.quantity, lot.gold_type)}</p>
               </div>
               <div className="min-w-0">
-                <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Birim maliyet</p>
+                <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">{lot.direction === 'sell' ? 'Birim fiyat' : 'Birim maliyet'}</p>
                 <p className={`mt-0.5 font-mono text-sm font-bold tabular-nums ${noCost ? 'text-muted-foreground' : 'text-foreground'}`}>
                   {noCost ? 'Bilinmiyor' : formatAmount(lot.unit_price!)}
                 </p>
