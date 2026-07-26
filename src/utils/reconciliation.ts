@@ -7,8 +7,13 @@ import { diffTL, equalsTL, sumKurus, toTL } from './money'
  * ritual ("last reconciled N days ago", drift trend). Pure and money.ts-backed.
  */
 
-/** Days after which a reconciliation is considered stale and worth repeating. */
-export const STALE_AFTER_DAYS = 30
+/**
+ * Days after which a reconciliation is considered stale and worth repeating.
+ * 7 gün: uygulama manuel olduğu için app ile banka arasında sürekli küçük fark
+ * birikiyor. Haftalık kadans farkı büyümeden yakalar (30 gün çok geçti).
+ * Aynı eşik push-notify'ın haftalık mutabakat hatırlatmasında da kullanılır.
+ */
+export const STALE_AFTER_DAYS = 7
 
 /** Which figure a card reconciles: bank accounts → balance, credit cards → debt. */
 export function reconcileTarget(card: Pick<Card, 'card_type'>): ReconciliationTarget {

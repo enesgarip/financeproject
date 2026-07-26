@@ -1,5 +1,63 @@
 # Priority Backlog
 
+## 2026-07-27 — Güvenilirlik paketi A/B/C/D (DONE)
+
+Risk haritasından çıkan dört paket. En büyük iki kazanç: property testinin
+bulduğu gerçek tarih bug'ı ve migration/üretim grant sapması.
+
+**A — Görünürlük & tutarlılık**
+- ~~Aylık rapor "Nakit çıkışı" artık GERÇEKLEŞEN ödemelerden.~~ Yeni saf util
+  `utils/realizedCashFlow.ts` (+5 test) işlem geçmişini okur; kart talimatlı
+  ödemeler nakit sayılmaz, "geri alındı" satırları netleştirilir. Projeksiyon
+  (dashboard kalan yükü) ile rapor artık bilinçli olarak ayrı ve etiketli.
+- ~~Net değer snapshot'ı app açılışına taşındı.~~ `app/useDailyNetWorthSnapshot.ts`
+  Layout'a bağlı, günde bir; cache doluysa ek ağ turu yok. Analiz sayfası artık
+  yalnız okur (`fetchNetWorthSnapshots`). Seri artık Analiz hiç açılmasa da dolar.
+- ~~Bayat kur rozeti.~~ `formatSnapshotAge` (+test) + RatesBanner'da amber rozet
+  ("Güncellenemedi · 3 gün önce"); bayat kur sessizce yanlış varlık değeri
+  göstermesin.
+- ~~Import'ta atlanan satır görünürlüğü.~~ Okunamayan satırlar artık sayı değil
+  liste: açılır dökümle ham satırlar gösterilir.
+
+**B — Test güvence ağı**
+- ~~Tarih sınırı property testleri.~~ `utils/dateBoundaries.property.test.ts`
+  (fast-check, 3000 koşu): kırpma, dönem kapsama, ardışıklık, vade sınırları.
+  **GERÇEK BUG BULDU:** kesim günü 30 / vade günü 31 olan kartta 30 çeken aylarda
+  ve Şubat'ta son ödeme tarihi ekstre tarihiyle AYNI güne düşüyordu ("bugün
+  kesildi, bugün son ödeme"). `cardStatement.ts` düzeltildi + hedefli regresyon
+  testi eklendi.
+- ~~Parser golden-file altyapısı.~~ `utils/__fixtures__/parsers/*.txt` +
+  `parserFixtures.test.ts`: yeni banka formatı eklemek = dizine dosya bırakmak.
+  Yapısal invariantlar (tarih/tutar/kategori/taksit tutarlılığı, atlanan satır yok).
+- ~~Bakım catch-up idempotency testi.~~ `supabase/tests/maintenance_catchup.sql`
+  + `npm run db:test:catchup`: bakım RPC'leri iki kez koşturulur, ikinci koşu
+  yeni ekstre/borç/ledger olayı üretmemeli. CI'ın migration job'una eklendi.
+
+**B3b — Migration/üretim grant sapması (yeni bulgu)**
+- ~~`authenticated` rolü için eksik tablo yetkileri migration'a alındı.~~
+  Yerel docker'da `select ... from public.cards` **permission denied** veriyordu:
+  erken tablolar (cards, assets, payments, card_expenses, transaction_history,
+  net_worth_snapshots ...) üretimde arayüzden oluşturulduğu için yetkiliydi ama
+  migration dosyalarında `grant` satırı yoktu. Üretim çalışırken yerel çalışmıyor
+  = **yerel doğrulama yanıltıcıydı**. Yeni migration
+  `20260727120000_grant_authenticated_table_privileges.sql` (grant idempotent,
+  üretimde no-op). Denetim `supabase/tests/grants_audit.sql` +
+  `npm run db:audit:grants:local` + CI adımı: policy'si olup grant'i olmayan
+  tablo = ölü policy → kırmızı. Denetim ayrıca `wishlist_items`'ı da yakaladı.
+
+**C — Akış**
+- ~~Hareket importuna akış-içi mutabakat.~~ Import bittiğinde "bankadaki gerçek
+  borç" sorulur; `Farkı kaydet` / `Farkı düzelt` (ters kayıt) aynı ekranda.
+  Doğrulama için ayrı ekrana gitme ihtiyacı kalktı.
+- ~~Mutabakat kadansı 7 güne indi + haftalık push.~~ `STALE_AFTER_DAYS` 30→7;
+  `push-notify` Pazartesi bildirimi (`reconciliation_stale_weekly`, referenceId
+  hafta başı → haftada en fazla bir kez).
+
+**D — Süreç**
+- ~~Restore tatbikat runbook'u.~~ `docs/RESTORE_DRILL.md`: şifreli artifact →
+  gpg çöz → yerel docker'a yükle → RLS/grant denetimi → uygulamayı yedekle aç →
+  veri sağlığı. Sonuç kaydı tablosu içinde; ilk tatbikat henüz koşulmadı.
+
 ## 2026-07-26 — Prod inceleme turu düzeltme paketi (DONE)
 
 Canlı uygulama + kod incelemesinden çıkan bulgular tek pakette kapatıldı:

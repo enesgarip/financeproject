@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom'
 import {
   addCardExpense,
   cancelCardExpense,
+  fetchCards,
   fetchCardExpenseMatchRows,
   fetchCardInstallmentMatchRows,
   fetchCardPaymentMatchRows,
@@ -30,7 +31,9 @@ import {
 } from '../../utils/denizBankMovementParser'
 import { dateRangeFromIsoDates, rowsInReviewPeriod } from '../../utils/importReviewPeriod'
 import { dateInputValue } from '../../utils/date'
-import { roundTL, sumTL } from '../../utils/money'
+import { insertAccountReconciliation } from '../../data/repositories/financePanelsRepo'
+import { computeDrift } from '../../utils/reconciliation'
+import { roundTL, sumTL, toKurus } from '../../utils/money'
 import { getCardStatementPeriod } from '../../utils/cardStatement'
 import { buildImportedInstallmentPlan } from '../../utils/importedInstallmentPlan'
 import { postCardDebtCorrection } from '../../services/cardLedgerActions'
@@ -103,7 +106,10 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
   const [appOnly, setAppOnly] = useState<CancellableExpense[]>([])
   const [manualReview, setManualReview] = useState<ParsedDenizBankMovement[]>([])
   const [payments, setPayments] = useState<ParsedDenizBankPayment[]>([])
-  const [ignoredCount, setIgnoredCount] = useState(0)
+  // Sadece sayı değil satırın kendisi tutulur: okunamayan satır sessiz veri
+  // kaybıdır, kullanıcı ham metni görmeden eksiği fark edemez.
+  const [ignoredRows, setIgnoredRows] = useState<string[]>([])
+  const [ignoredOpen, setIgnoredOpen] = useState(false)
   const [periodLabel, setPeriodLabel] = useState('')
 
   const cleanImport = false
@@ -116,6 +122,15 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
   const [resultMessage, setResultMessage] = useState('')
   const [matchDriftTL, setMatchDriftTL] = useState(0)
   const [driftCorrected, setDriftCorrected] = useState(false)
+
+  // Import sonrası akış-içi mutabakat: kullanıcıyı ayrı ekrana göndermek yerine
+  // "banka ne diyor?" sorusunu burada sorarız — import bittiği an app borcunun
+  // doğru olduğu tek doğrulama noktası budur.
+  const [appDebtAfterImport, setAppDebtAfterImport] = useState<number | null>(null)
+  const [realDebtInput, setRealDebtInput] = useState('')
+  const [reconcileSaving, setReconcileSaving] = useState(false)
+  const [reconcileError, setReconcileError] = useState('')
+  const [reconcileDone, setReconcileDone] = useState<'matched' | 'corrected' | null>(null)
 
   const fileRef = useRef<HTMLInputElement>(null)
   // Geçmiş harcamalardan öğrenilen kategori hafızası import önerilerine de akar.
@@ -141,7 +156,7 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
 
       setAllMovements(parsed.movements)
       setPayments(parsed.payments)
-      setIgnoredCount(parsed.ignoredRows.length)
+      setIgnoredRows(parsed.ignoredRows)
 
       if (cleanImport) {
         setMatched([])
@@ -354,6 +369,7 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
 
     setResultMessage(`Kart import kapsamında sıfırlandı, ${successCount} hareket içe aktarıldı`)
     setApplying(false)
+    await loadAppDebtAfterImport()
     setStep('done')
   }
 
@@ -459,7 +475,61 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
     if (cancelledCount) parts.push(`${cancelledCount} harcama iptal edildi`)
     setResultMessage(parts.join(', '))
     setApplying(false)
+    await loadAppDebtAfterImport()
     setStep('done')
+  }
+
+  /** Mutabakat adımı için import sonrası GÜNCEL app borcunu okur (card prop'u bayat). */
+  async function loadAppDebtAfterImport() {
+    const result = await fetchCards()
+    if (!result.ok) return
+    const fresh = result.data.find((row) => row.id === card.id)
+    if (fresh) setAppDebtAfterImport(fresh.debt_amount)
+  }
+
+  async function handleReconcile(mode: 'save' | 'correct') {
+    if (!user || appDebtAfterImport === null) return
+    const raw = realDebtInput.trim()
+    if (!raw) return
+
+    const real = Number(raw.replace(/\./g, '').replace(',', '.'))
+    if (!Number.isFinite(real)) {
+      setReconcileError('Geçerli bir tutar gir.')
+      return
+    }
+
+    setReconcileSaving(true)
+    setReconcileError('')
+
+    const drift = computeDrift(appDebtAfterImport, real)
+
+    if (mode === 'correct' && toKurus(drift) !== 0) {
+      const note = `Import sonrası mutabakat düzeltmesi: banka farkı ${drift >= 0 ? '+' : ''}${drift.toFixed(2)} TL`
+      const { error: rpcError } = await postCardDebtCorrection(card.id, -drift, note)
+      if (rpcError) {
+        setReconcileError(rpcError.message ?? 'Fark düzeltilemedi.')
+        setReconcileSaving(false)
+        return
+      }
+    }
+
+    const corrected = mode === 'correct' && toKurus(drift) !== 0
+    const saveResult = await insertAccountReconciliation({
+      user_id: user.id,
+      card_id: card.id,
+      target: 'debt',
+      app_amount: corrected ? real : appDebtAfterImport,
+      real_amount: real,
+      drift: corrected ? 0 : drift,
+      reconciled_at: new Date().toISOString(),
+    })
+
+    setReconcileSaving(false)
+    if (!saveResult.ok) {
+      setReconcileError(saveResult.error.message ?? 'Mutabakat kaydedilemedi.')
+      return
+    }
+    setReconcileDone(corrected ? 'corrected' : 'matched')
   }
 
   const totalSelectedActions = selectedImport.size + selectedCancel.size + selectedInstallments.size
@@ -682,11 +752,34 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
                 </p>
               )}
 
-              {ignoredCount > 0 && (
-                <p className="flex items-start gap-2 rounded-lg bg-warning/10 p-2.5 text-[11px] font-medium text-warning">
-                  <AlertCircle size={13} className="mt-0.5 shrink-0" />
-                  {ignoredCount} satır okunamadı.
-                </p>
+              {ignoredRows.length > 0 && (
+                <div className="rounded-lg border border-warning/30 bg-warning/10 p-2.5">
+                  <div className="flex items-start gap-2 text-[11px] font-bold text-warning">
+                    <AlertCircle size={13} className="mt-0.5 shrink-0" />
+                    <span className="flex-1">
+                      {ignoredRows.length} satır okunamadı ve içe aktarılmadı. Tutar farkı görürsen sebebi bu olabilir.
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setIgnoredOpen((open) => !open)}
+                      className="shrink-0 underline underline-offset-2"
+                    >
+                      {ignoredOpen ? 'Gizle' : 'Satırları gör'}
+                    </button>
+                  </div>
+                  {ignoredOpen && (
+                    <ul className="mt-2 max-h-32 space-y-1 overflow-y-auto">
+                      {ignoredRows.map((line, index) => (
+                        <li
+                          key={`${index}-${line.slice(0, 24)}`}
+                          className="break-all rounded bg-background/70 px-2 py-1 font-mono text-[10px] text-muted-foreground"
+                        >
+                          {line}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
               )}
             </div>
 
@@ -1018,6 +1111,60 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
                 Eşleşen işlemlerdeki {formatAmount(Math.abs(matchDriftTL))} tutar farkı otomatik düzeltildi.
               </p>
             )}
+
+            {/* Akış-içi mutabakat: doğrulama için ayrı ekrana gitmeye gerek yok. */}
+            {appDebtAfterImport !== null && (
+              <div className="mt-1 rounded-xl border border-border bg-muted/40 p-3 text-left">
+                {reconcileDone ? (
+                  <p className="flex items-start gap-2 text-sm font-bold text-success">
+                    <CheckCircle2 size={15} className="mt-0.5 shrink-0" />
+                    {reconcileDone === 'corrected'
+                      ? 'Fark düzeltildi ve mutabakat kaydedildi.'
+                      : 'Mutabakat kaydedildi — app ve banka aynı.'}
+                  </p>
+                ) : (
+                  <>
+                    <p className="text-xs font-bold uppercase text-muted-foreground">Son kontrol</p>
+                    <p className="mt-1 text-sm text-foreground">
+                      App'teki güncel borç:{' '}
+                      <span className="font-black tabular-nums">{formatAmount(appDebtAfterImport)}</span>
+                    </p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      Bankadaki gerçek borcu yaz; import doğru okumuş mu şimdi anlaşılır.
+                    </p>
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      value={realDebtInput}
+                      onChange={(event) => setRealDebtInput(event.target.value)}
+                      placeholder="Bankadaki gerçek borç"
+                      aria-label="Bankadaki gerçek borç"
+                      className="mt-2 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm tabular-nums"
+                    />
+                    {reconcileError && <p className="mt-1.5 text-xs font-medium text-destructive">{reconcileError}</p>}
+                    <div className="mt-2 grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => void handleReconcile('save')}
+                        disabled={reconcileSaving || !realDebtInput.trim()}
+                        className="min-h-10 rounded-lg border border-border bg-card px-3 py-2 text-xs font-bold text-foreground disabled:opacity-50"
+                      >
+                        {reconcileSaving ? 'Kaydediliyor...' : 'Farkı kaydet'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void handleReconcile('correct')}
+                        disabled={reconcileSaving || !realDebtInput.trim()}
+                        className="min-h-10 rounded-lg bg-primary px-3 py-2 text-xs font-bold text-primary-foreground disabled:opacity-50"
+                      >
+                        Farkı düzelt
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+
             <button
               type="button"
               onClick={onSuccess}

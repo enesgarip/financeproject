@@ -91,6 +91,20 @@ type StatementArchiveRow = {
   period_month: number
 }
 
+type ReconcilableCardRow = {
+  id: string
+  user_id: string
+}
+
+type ReconciliationRow = {
+  card_id: string
+  user_id: string
+  reconciled_at: string
+}
+
+// src/utils/reconciliation.ts STALE_AFTER_DAYS ile aynı tutulmalı.
+const RECONCILE_STALE_AFTER_DAYS = 7
+
 type NotificationLogRow = {
   user_id: string
   notification_type: string
@@ -873,6 +887,48 @@ async function loadCandidates(
           body: bodyParts.length > 0 ? bodyParts.join('. ') + '.' : 'Haftalık özet hazır.',
           url: '/',
           tag: `weekly-summary-${weekStartIso}`,
+        },
+      })
+    }
+
+    // Haftalık mutabakat hatırlatması. Uygulama manuel olduğu için app ile banka
+    // arasında sürekli küçük fark birikir; haftalık kontrol farkı büyümeden
+    // yakalar. referenceId hafta başı → haftada en fazla bir bildirim.
+    const [reconcilableCards, reconciliations] = await Promise.all([
+      db.select<ReconcilableCardRow>('cards', {
+        select: 'id,user_id',
+        user_id: userFilter,
+      }),
+      db.select<ReconciliationRow>('account_reconciliations', {
+        select: 'card_id,user_id,reconciled_at',
+        user_id: userFilter,
+      }),
+    ])
+
+    const latestReconciledAt = new Map<string, string>()
+    for (const row of reconciliations) {
+      const current = latestReconciledAt.get(row.card_id)
+      if (!current || row.reconciled_at > current) latestReconciledAt.set(row.card_id, row.reconciled_at)
+    }
+
+    const staleCountByUser = new Map<string, number>()
+    for (const card of reconcilableCards) {
+      const last = latestReconciledAt.get(card.id)
+      const isStale = !last || daysBetweenIso(last.slice(0, 10), todayIso) > RECONCILE_STALE_AFTER_DAYS
+      if (!isStale) continue
+      staleCountByUser.set(card.user_id, (staleCountByUser.get(card.user_id) ?? 0) + 1)
+    }
+
+    for (const [userId, staleCount] of staleCountByUser) {
+      candidates.push({
+        userId,
+        notificationType: 'reconciliation_stale_weekly',
+        referenceId: `week:${weekStartIso}`,
+        payload: {
+          title: `${staleCount} hesapta mutabakat zamanı`,
+          body: 'Bankadaki gerçek rakamla karşılaştır; fark varsa tek tıkla düzelt.',
+          url: '/veri-sagligi',
+          tag: `reconciliation-stale-${weekStartIso}`,
         },
       })
     }
