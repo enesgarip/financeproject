@@ -111,7 +111,7 @@ export type DenizBankMovementPaymentMatch = {
 
 const LOOSE_DATE_MATCH_WINDOW_DAYS = 3
 const PAYMENT_DATE_MATCH_WINDOW_DAYS = 7
-const AMOUNT_MATCH_TOLERANCE_TL = 1
+const AMOUNT_MATCH_TOLERANCE_TL = 5
 
 const KNOWN_DETAILS = [
   'Otomatik Kredi Kartı Fatura Ödemesi',

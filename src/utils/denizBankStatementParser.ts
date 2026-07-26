@@ -42,6 +42,8 @@ export type MatchResult = {
   matched: ParsedTransaction[]
   unmatched: ParsedTransaction[]
   matches: StatementTransactionMatch[]
+  /** App'teki tutar ile PDF'teki tutar arasındaki toplam fark (app − PDF). */
+  matchDriftTL: number
 }
 
 export type StatementTransactionMatch = {
@@ -77,7 +79,7 @@ const SECTION_CATEGORY: Record<string, string> = {
 
 const SECTION_KEYS = Object.keys(SECTION_CATEGORY)
 const LOOSE_DATE_MATCH_WINDOW_DAYS = 3
-const AMOUNT_MATCH_TOLERANCE_TL = 1
+const AMOUNT_MATCH_TOLERANCE_TL = 5
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -308,5 +310,10 @@ export function matchTransactions(
     }
   }
 
-  return { matched, unmatched, matches }
+  let matchDriftTL = 0
+  for (const m of matches) {
+    matchDriftTL += diffTL(m.expense.amount, expenseTotalAmount(m.transaction))
+  }
+
+  return { matched, unmatched, matches, matchDriftTL }
 }

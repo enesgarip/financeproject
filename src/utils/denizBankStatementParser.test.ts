@@ -338,14 +338,14 @@ describe('matchTransactions', () => {
     expect(result.unmatched).toHaveLength(1)
   })
 
-  it('tolerates a 1 TL amount difference', () => {
-    const result = matchTransactions([tx('2026-06-03', 170.00)], [exp('2026-06-03', 170.95)])
+  it('tolerates a 5 TL amount difference', () => {
+    const result = matchTransactions([tx('2026-06-03', 170.00)], [exp('2026-06-03', 174.50)])
     expect(result.matched).toHaveLength(1)
     expect(result.matches[0]?.expense.description).toBe('App kaydı')
   })
 
-  it('does not match amount differences above 1 TL', () => {
-    const result = matchTransactions([tx('2026-06-03', 170.00)], [exp('2026-06-03', 171.01)])
+  it('does not match amount differences above 5 TL', () => {
+    const result = matchTransactions([tx('2026-06-03', 170.00)], [exp('2026-06-03', 175.01)])
     expect(result.unmatched).toHaveLength(1)
   })
 

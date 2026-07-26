@@ -128,10 +128,10 @@ describe('matchDenizBankMovements', () => {
     })
   })
 
-  it('does not match amount differences above 1 TL', () => {
+  it('does not match amount differences above 5 TL', () => {
     const result = matchDenizBankMovements(
       [petrol],
-      [{ spent_at: '2026-06-19', amount: 536.01, status: 'provision', description: 'UNDEM PETROL' }],
+      [{ spent_at: '2026-06-19', amount: 540.01, status: 'provision', description: 'UNDEM PETROL' }],
     )
 
     expect(result.matched).toHaveLength(0)

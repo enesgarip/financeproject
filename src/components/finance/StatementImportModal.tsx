@@ -147,6 +147,8 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
   const [adjustments, setAdjustments] = useState<StatementAdjustmentRow[]>([])
   const [manualReview, setManualReview] = useState<ParsedTransaction[]>([])
   const [plannedPaymentMatches, setPlannedPaymentMatches] = useState(0)
+  const [matchDriftTL, setMatchDriftTL] = useState(0)
+  const [driftCorrected, setDriftCorrected] = useState(false)
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [importedCount, setImportedCount] = useState(0)
   const [failedCount, setFailedCount] = useState(0)
@@ -240,6 +242,7 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
 
       setMatched(result.matched)
       setMatches(result.matches)
+      setMatchDriftTL(result.matchDriftTL)
       setShowMatches(false)
       setUnmatched(importRows)
       setAdjustments(adjustmentRows)
@@ -447,6 +450,15 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
 
     if (errors.length) {
       setImportError(`${errors.length} işlem aktarılamadı: ${errors[0]}`)
+    }
+
+    if (matchDriftTL !== 0) {
+      const correction = await postCardDebtCorrection(
+        card.id,
+        -matchDriftTL,
+        `Ekstre import eslesmelerindeki tutar farki duzeltmesi (${matched.length} islem, toplam ${matchDriftTL > 0 ? '+' : ''}${roundTL(matchDriftTL)} TL fark)`,
+      )
+      if (!correction.error) setDriftCorrected(true)
     }
 
     setImporting(false)
@@ -937,6 +949,11 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
             ) : (
               <p className="text-sm text-muted-foreground">
                 Kart bakiyesi güncellendi.
+              </p>
+            )}
+            {driftCorrected && (
+              <p className="text-sm text-info">
+                Eşleşen işlemlerdeki {formatAmount(Math.abs(matchDriftTL))} tutar farkı otomatik düzeltildi.
               </p>
             )}
             <button

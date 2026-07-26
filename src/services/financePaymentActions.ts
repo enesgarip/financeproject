@@ -83,6 +83,19 @@ export function estimatedMinimumCardPayment(amount: number, rate = 0.2) {
   return roundTL(Math.max(0, amount) * rate)
 }
 
+export async function payPaymentFromCard(
+  paymentId: string,
+  cardId: string,
+  amount: number,
+): Promise<FinancePaymentResult> {
+  const { error } = await supabase.rpc('pay_payment', {
+    p_payment_id: paymentId,
+    p_source_card_id: cardId,
+    p_paid_amount: amount,
+  })
+  return { error }
+}
+
 export async function submitFinanceObligationPayment({
   obligation,
   account,
