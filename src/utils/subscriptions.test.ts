@@ -5,7 +5,7 @@ import { buildSubscriptionSummary } from './subscriptions'
 const base = { user_id: 'u', created_at: '2026-01-01', updated_at: '2026-01-01' }
 
 function expense(id: string, spent_at: string, amount: number, description = 'İGDAŞ'): CardExpense {
-  return { ...base, id, card_id: 'c', statement_archive_id: null, spent_at, amount, description, category: 'Fatura', installment_count: 1, installment_amount: amount, status: 'posted', posted_at: `${spent_at}T10:00:00Z`, note: null, transaction_fingerprint: null }
+  return { ...base, id, card_id: 'c', statement_archive_id: null, spent_at, amount, description, category: 'Fatura', installment_count: 1, installment_amount: amount, status: 'posted', posted_at: `${spent_at}T10:00:00Z`, note: null, transaction_fingerprint: null, source: null }
 }
 
 function payment(overrides: Partial<Payment> = {}): Payment {

@@ -336,6 +336,7 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
             installmentCount: plan?.totalInstallments ?? 1,
             category: tx.category,
             status: 'posted',
+            source: 'statement_import',
           })
       if (!result.ok) errors.push(`${tx.description}: ${result.error.message ?? 'Bilinmeyen hata.'}`)
       else successCount++
@@ -442,6 +443,7 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
           installmentCount: plan?.totalInstallments ?? 1,
           category: tx.category,
           status: 'posted',
+          source: 'statement_import',
         })
       }
       if (!result.ok) errors.push(`${tx.description}: ${result.error.message ?? 'Bilinmeyen hata.'}`)

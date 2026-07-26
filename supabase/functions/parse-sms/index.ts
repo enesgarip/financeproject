@@ -333,6 +333,7 @@ async function handleCardSms(
       p_installment_count: 1,
       p_status: 'provision',
       p_user_id: card.user_id,
+      p_source: 'sms',
     }),
   })
 

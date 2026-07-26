@@ -41,7 +41,19 @@ describe('cardsRepo.addCardExpense', () => {
       p_category: 'Market',
       p_installment_count: 1,
       p_status: 'posted',
+      p_source: 'manual',
     })
+  })
+
+  it('kaynak verilmezse manual, verilirse geçileni gönderir', async () => {
+    supabaseMocks.rpc.mockResolvedValue({ error: null })
+
+    await addCardExpense({ ...input, source: 'statement_import' })
+
+    expect(supabaseMocks.rpc).toHaveBeenCalledWith(
+      'add_card_expense',
+      expect.objectContaining({ p_source: 'statement_import' }),
+    )
   })
 
   it('does not retry the retired legacy RPC signature on missing capability', async () => {

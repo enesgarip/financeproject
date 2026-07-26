@@ -333,6 +333,7 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
         installmentCount: knownPlan ? remaining : 1,
         category: movement.category,
         status: movement.appStatus,
+        source: 'movement_import',
       })
       if (!result.ok) errors.push(`${movement.description}: ${result.error.message ?? 'Bilinmeyen hata.'}`)
       else successCount++
@@ -412,6 +413,7 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
           category: movement.category,
           installmentCount: 1,
           status: movement.appStatus,
+          source: 'movement_import',
         })
       if (!result.ok) errors.push(`${movement.description}: ${result.error.message ?? 'Bilinmeyen hata.'}`)
       else importedCount++
@@ -444,6 +446,7 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
           installmentCount: plan.totalInstallments,
           category: movement.category,
           status: movement.appStatus,
+          source: 'movement_import',
         })
       if (!result.ok) errors.push(`${movement.description}: ${result.error.message ?? 'Bilinmeyen hata.'}`)
       else importedCount++

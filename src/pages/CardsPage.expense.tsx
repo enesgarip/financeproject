@@ -46,6 +46,7 @@ export function QuickExpensePanel({
   const [localError, setLocalError] = useState('')
   const [saving, setSaving] = useState(false)
   const [scanning, setScanning] = useState(false)
+  const [prefilledByScan, setPrefilledByScan] = useState(false)
   const cameraInputRef = useRef<HTMLInputElement>(null)
   const galleryInputRef = useRef<HTMLInputElement>(null)
   const categoryMemory = useCategoryMemory()
@@ -100,6 +101,9 @@ export function QuickExpensePanel({
       if (result.merchant) setDescription(result.merchant)
       if (result.category) setCategory(result.category)
       if (result.date) setSpentAt(result.date)
+      // Kaynak ölçümü: form fişten dolduruldu; kullanıcı düzeltse bile kaydın
+      // kökeni taramadır (otomasyon kapsamı bunu elle giriş saymamalı).
+      setPrefilledByScan(true)
     } catch (scanError) {
       setLocalError(scanError instanceof Error ? scanError.message : 'Fiş okunamadı, tekrar dene.')
     } finally {
@@ -147,6 +151,7 @@ export function QuickExpensePanel({
         category,
         installmentCount: parsedInstallmentCount,
         status: expenseStatus,
+        source: prefilledByScan ? 'receipt_scan' : 'manual',
       })
 
     setSaving(false)
@@ -171,6 +176,7 @@ export function QuickExpensePanel({
     setPaidInstallments('0')
     setNextDueDate(dateInputValue(new Date()))
     setExpenseStatus('posted')
+    setPrefilledByScan(false)
     await reload()
   }
 

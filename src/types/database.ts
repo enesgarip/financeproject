@@ -16,6 +16,14 @@ export type PaymentAmountStatus = 'exact' | 'estimated'
 export type LoanInstallmentStatus = 'bekliyor' | 'ödendi'
 export type CardInstallmentStatus = 'scheduled' | 'posted' | 'paid'
 export type CardExpenseStatus = 'provision' | 'posted' | 'cancelled'
+export type CardExpenseSource =
+  | 'manual'
+  | 'sms'
+  | 'statement_import'
+  | 'movement_import'
+  | 'receipt_scan'
+  | 'payment_auto'
+  | 'carryover'
 export type CardStatementStatus = 'open' | 'paid'
 export type SavingsGoalStatus = 'active' | 'completed'
 export type SavingsGoalValueType = 'TRY' | 'gram_altin' | 'ceyrek_altin' | 'composite'
@@ -116,6 +124,8 @@ export type CardExpense = BaseRow & {
   posted_at: string | null
   note: string | null
   transaction_fingerprint: string | null
+  /** Kaydın nereden geldiği (otomasyon kapsamı ölçümü). NULL = eski kayıt. */
+  source: CardExpenseSource | null
 }
 
 export type Budget = BaseRow & {
@@ -446,6 +456,7 @@ export type Database = {
           p_installment_count?: number
           p_category?: string
           p_status?: CardExpenseStatus
+          p_source?: CardExpenseSource
         }
         Returns: CardExpense
       }

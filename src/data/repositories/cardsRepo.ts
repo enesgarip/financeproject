@@ -1,5 +1,5 @@
 import { supabase } from '../../lib/supabase'
-import type { Card, CardExpense, CardInstallment, CardStatementArchive, Payment } from '../../types/database'
+import type { Card, CardExpense, CardExpenseSource, CardInstallment, CardStatementArchive, Payment } from '../../types/database'
 import { ok, resultFromSupabase, voidResultFromSupabase, type Result } from '../result'
 
 export type ExpenseMatchRow = Pick<CardExpense, 'id' | 'spent_at' | 'amount' | 'status' | 'description' | 'category' | 'installment_count' | 'note'>
@@ -101,6 +101,8 @@ export type AddCardExpenseInput = {
   category: string
   installmentCount: number
   status: CardExpense['status']
+  /** Kaydın kaynağı; verilmezse 'manual'. Otomasyon kapsamı bundan ölçülür. */
+  source?: CardExpenseSource
 }
 
 export async function addCardExpense(input: AddCardExpenseInput): Promise<Result<void>> {
@@ -112,6 +114,7 @@ export async function addCardExpense(input: AddCardExpenseInput): Promise<Result
     p_category: input.category,
     p_installment_count: input.installmentCount,
     p_status: input.status,
+    p_source: input.source ?? 'manual',
   })
 
   return voidResultFromSupabase(error, 'Harcama kaydedilemedi.')
@@ -291,4 +294,17 @@ export async function fetchUncategorizedExpenses(limit: number): Promise<Result<
 export async function updateCardExpenseCategory(expenseId: string, category: string): Promise<Result<void>> {
   const { error } = await supabase.from('card_expenses').update({ category }).eq('id', expenseId)
   return voidResultFromSupabase(error, 'Kategori güncellenemedi.')
+}
+
+/** Otomasyon kapsamı ölçümü için son harcamaların kaynak/nota bilgisi. */
+export type ExpenseSourceRow = Pick<CardExpense, 'source' | 'note' | 'amount' | 'status' | 'spent_at'>
+
+export async function fetchExpenseSourceRows(sinceIso: string): Promise<Result<ExpenseSourceRow[]>> {
+  const { data, error } = await supabase
+    .from('card_expenses')
+    .select('source, note, amount, status, spent_at')
+    .gte('spent_at', sinceIso)
+    .order('spent_at', { ascending: false })
+
+  return resultFromSupabase((data ?? []) as ExpenseSourceRow[], error, 'Harcama kaynakları yüklenemedi.')
 }

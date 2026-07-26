@@ -1,5 +1,31 @@
 # Priority Backlog
 
+## 2026-07-27 — "En iyi versiyon" yol haritası (F serisi, DEVAM EDİYOR)
+
+Hedef değişti: daha çok özellik değil, **daha az manuel emek + hâlâ dürüst
+rakamlar**. Durma kriteri (kullanıcıyla kararlaştırıldı): aylık manuel giriş
+< 10 dk, haftalık mutabakat farkı < ₺50, "Diğer" kategori oranı < %15.
+
+- ~~**F1 — Harcama kaynağı ölçümü.**~~ DONE. `card_expenses.source` kolonu
+  (migration `20260727140000`, check constraint + index). `add_card_expense`
+  RPC'ye `p_source` eklendi (eski 8 argümanlı imza düşürüldü — aksi halde
+  aşırı yük belirsizliği). Yazma yolları etiketlendi: hızlı harcama `manual`,
+  fişten dolduruldu ise `receipt_scan`, ekstre import `statement_import`,
+  hareket import `movement_import`, parse-sms `sms`. `pay_payment`/carryover
+  yolları kolonu yazmaz (yeniden yazmak yüksek riskli) — istemci tarafı note
+  metninden türetir.
+- ~~**F2 — Otomasyon kapsamı paneli.**~~ DONE. `utils/automationCoverage.ts`
+  (+7 test): kaynak dağılımı, otomasyon oranı (bilinmeyen kayıtlar paydaya
+  KATILMAZ, eski veri oranı haksız düşürmesin). `AutomationCoveragePanel`
+  `/veri-sagligi/islemler` altında. `fetchUnrecognizedSmsLog` ile kaçan SMS
+  formatları çıkarılabilir.
+- **F3 — Güven kalibrasyonu** (kesin / tahmini / bayat görsel dili): SIRADA.
+- **F4 — Tek sayı: harcanabilir tutar** (likit − kalan yükümlülük − tampon).
+- **F5 — Karar anı**: "bunu taksitle alsam 6 ayım nasıl görünür".
+- **F6 — Mobil gerçeklik turu.**
+- **Beklemede (kullanıcı kararı):** kullanılmayan panellerin ayıklanması —
+  hangi panele son 3 ayda bakıp karar değiştirdiği bilgisi olmadan silinmez.
+
 ## 2026-07-27 — Güvenilirlik paketi A/B/C/D (DONE)
 
 Risk haritasından çıkan dört paket. En büyük iki kazanç: property testinin

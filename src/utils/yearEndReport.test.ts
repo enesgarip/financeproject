@@ -3,7 +3,7 @@ import type { CardExpense } from '../types/database'
 import { buildYearEndReport } from './yearEndReport'
 
 function expense(id: string, spent_at: string, amount: number): CardExpense {
-  return { id, user_id: 'u', created_at: spent_at, updated_at: spent_at, card_id: 'c', statement_archive_id: null, spent_at, amount, description: 'Harcama', category: 'Market', installment_count: 1, installment_amount: amount, status: 'posted', posted_at: spent_at, note: null, transaction_fingerprint: null }
+  return { id, user_id: 'u', created_at: spent_at, updated_at: spent_at, card_id: 'c', statement_archive_id: null, spent_at, amount, description: 'Harcama', category: 'Market', installment_count: 1, installment_amount: amount, status: 'posted', posted_at: spent_at, note: null, transaction_fingerprint: null, source: null }
 }
 
 describe('buildYearEndReport monthly average', () => {
