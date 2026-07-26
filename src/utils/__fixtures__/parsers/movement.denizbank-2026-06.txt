@@ -1,0 +1,12 @@
+
+6/19/26, 10:32 PM DenizBank İnternet Bankacılığı
+DENİZBANK A.Ş Genel Müdürlük: Büyükdere Cad. No: 141 34394 Esentepe/İstanbul
+İşlem Türü İşlem Tarihi İşlem İşlem Detayı Kart No Kart Tipi İşlem Tutarı Bonus
+Bekleyen İşlem 19.06.2026 UNDEM PETROL 5555 74** **** 0189 Asıl Kart 535,00 TL 0,00 TL
+Dönem İçi 18.06.2026 FLEX STORE BURSA TR Peşin Satış 5555 74** **** 0189 Asıl Kart 460,00 TL 0,00 TL
+Dönem İçi 18.06.2026 PETROV KAFE BURSA TR Peşin Satış 5555 74** **** 0189 Asıl Kart 310,00 TL 0,00 TL
+Dönem İçi 17.06.2026 İYZİCO/UDEMY.COM İSTANBUL TR Peşin Satış 5203 03** **** 9032 Sanal 349,99 TL 0,00 TL
+Dönem İçi 16.06.2026 MEDIA MARKT -MEDİA Peş. Taksit 1.Tk Anapara Taksitli Satış 5203 03** **** 9032 Sanal 2.749,50 TL 2,75 TL
+Dönem İçi 15.06.2026 TÜRK TELEKOM İNTERNET 704 İSTANBUL TR Otomatik Kredi Kartı Fatura Ödemesi 5555 74** **** 0189 Asıl Kart 685,00 TL 0,00 TL
+Dönem İçi 09.06.2026 Hesaptan Ödeme Hesaptan Ödeme 5555 74** **** 0189 Asıl Kart 82.653,51 TL 0,00 TL
+Dönem İçi 19.05.2026 BEYLER OPTİK Peş. Taksit 2.Tk Anapara Taksitli Satış 5555 74** **** 0189 Asıl Kart 21.666,67 TL 0,00 TL
