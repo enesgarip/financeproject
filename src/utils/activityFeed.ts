@@ -29,6 +29,7 @@ const CARD_LEDGER_KIND_LABEL: Record<string, string> = {
   debit: 'Borç artışı',
   credit: 'Borç azalışı',
   adjustment: 'Düzeltme',
+  reclass: 'Borç kırılımı kayması',
 }
 
 const ACCOUNT_LEDGER_KIND_LABEL: Record<string, string> = {
@@ -52,7 +53,9 @@ function cardLedgerToActivity(event: CardLedger, cards: CardLike[]): ActivityIte
     title: CARD_LEDGER_KIND_LABEL[event.kind] ?? event.kind,
     detail: `${cardName(event.card_id, cards)}${event.note ? ` — ${event.note}` : ''}`,
     amountTL,
-    direction: isCredit ? 'inflow' : 'outflow',
+    // Tutarı sıfır olan olay (ör. reclass: borç değişmeden kova kayması) yön
+    // taşımaz; aksi halde UI "−₺0,00" basıyordu.
+    direction: event.amount_kurus === 0 ? 'neutral' : isCredit ? 'inflow' : 'outflow',
     source: 'card_ledger',
   }
 }
@@ -67,7 +70,7 @@ function accountLedgerToActivity(event: AccountLedger, cards: CardLike[]): Activ
     title: ACCOUNT_LEDGER_KIND_LABEL[event.kind] ?? event.kind,
     detail: `${cardName(event.card_id, cards)}${event.note ? ` — ${event.note}` : ''}`,
     amountTL,
-    direction: isDeposit ? 'inflow' : 'outflow',
+    direction: event.amount_kurus === 0 ? 'neutral' : isDeposit ? 'inflow' : 'outflow',
     source: 'account_ledger',
   }
 }

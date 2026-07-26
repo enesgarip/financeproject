@@ -49,4 +49,16 @@ describe('transaction history activity directions', () => {
     expect(direction(tx('card', 'Kart ekstresi kesildi', null, 'card_statement_archives'))).toBe('neutral')
     expect(direction(tx('card', 'Market harcaması iptal edildi', null, 'card_expenses'))).toBe('inflow')
   })
+
+  it('sıfır tutarlı ledger olayı (reclass) yönsüzdür — UI "−₺0,00" basmasın', () => {
+    const ledgerBase = { user_id: 'u', created_at: '2026-07-01T12:00:00Z', updated_at: '2026-07-01T12:00:00Z', card_id: 'c1', occurred_at: '2026-07-01T12:00:00Z', note: null, source_table: null, source_id: null }
+    const [reclass] = buildActivityFeed(
+      [{ ...ledgerBase, id: 'e1', kind: 'reclass', amount_kurus: 0, statement_delta_kurus: -23000, current_delta_kurus: 0, provision_delta_kurus: 23000 }],
+      [],
+      [],
+      [{ id: 'c1', card_name: 'Black' }],
+    )
+    expect(reclass!.direction).toBe('neutral')
+    expect(reclass!.title).toBe('Borç kırılımı kayması')
+  })
 })

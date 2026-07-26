@@ -1,8 +1,10 @@
 /**
  * Abonelik / düzenli gider tespiti. İki kaynaktan:
- *  - Kart harcamaları: aynı açıklamayla son ~6 ayda ≥2 ay tekrar eden VE tutarı
+ *  - Kart harcamaları: aynı açıklamayla son ~6 ayda ≥3 ay tekrar eden VE tutarı
  *    tutarlı (medyandan ±%15 sapma içinde) olanlar otomatik abonelik sayılır.
- *    Medyan kullanılır ki tek seferlik sıçrama ortalamayı bozmasın.
+ *    Medyan kullanılır ki tek seferlik sıçrama ortalamayı bozmasın. 2 ay eşiği
+ *    benzin/market gibi tesadüfen tutarlı tekrarları abonelik sanıyordu (ör. OPET);
+ *    o yüzden eşik 3 ay.
  *  - Aylık tekrarlı bekleyen ödemeler (Payment): doğrudan abonelik kabul edilir.
  * isActive = son 1 ay içinde görülmüş mü. incomeRatio = aylık abonelik / gelir.
  */
@@ -80,7 +82,7 @@ export function buildSubscriptionSummary(
   for (const [key, bucket] of byDesc) {
     const recent = bucket.observations.filter((item) => item.month >= cutoffKey && item.month <= currentKey)
     const recentMonths = new Set(recent.map((item) => item.month))
-    if (recentMonths.size < 2) continue
+    if (recentMonths.size < 3) continue
 
     const amounts = recent.map((item) => item.amount)
     const med = median(amounts)
