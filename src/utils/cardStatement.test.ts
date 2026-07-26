@@ -48,6 +48,14 @@ describe('getCardStatementPeriod', () => {
     expect(period?.dueDate).toBe('2026-03-10')
   })
 
+  // Regresyon: ay sonu kırpması kesim ve vadeyi aynı güne düşürüyordu
+  // (kesim 30 / vade 31 → Nisan'da ikisi de 30). Property testi yakaladı.
+  it('ay sonu kırpması kesim ile vadeyi aynı güne düşürmez', () => {
+    const period = getCardStatementPeriod(credit(30, 31), '2026-04-15')
+    expect(period?.statementDate).toBe('2026-04-30')
+    expect(period?.dueDate).toBe('2026-05-31')
+  })
+
   it('fills human-readable labels', () => {
     const period = getCardStatementPeriod(credit(15, 5), '2026-06-10')
     expect(period?.statementMonthLabel).toContain('2026')

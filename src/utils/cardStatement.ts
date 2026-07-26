@@ -52,11 +52,17 @@ export function getCardStatementPeriod(
       : dateInMonth(spentAt.getFullYear(), spentAt.getMonth() + 1, card.statement_day)
   const previousStatementDate = dateInMonth(statementDate.getFullYear(), statementDate.getMonth() - 1, card.statement_day)
   const periodStart = addDays(previousStatementDate, 1)
-  const dueDate = dateInMonth(
+  let dueDate = dateInMonth(
     statementDate.getFullYear(),
     statementDate.getMonth() + (card.due_day <= card.statement_day ? 1 : 0),
     card.due_day,
   )
+  // Ay sonu kırpması iki tarihi aynı güne düşürebilir (ör. kesim 30 / vade 31 →
+  // Nisan'da ikisi de 30). Vade ekstre gününden sonra olmak zorunda; çakışırsa
+  // bir ay ileri alınır. Aksi halde "aynı gün kesildi ve son ödeme" çıkıyordu.
+  if (dueDate <= statementDate) {
+    dueDate = dateInMonth(statementDate.getFullYear(), statementDate.getMonth() + 1, card.due_day)
+  }
 
   return {
     periodStart: dateInputValue(periodStart),
