@@ -32,7 +32,7 @@ function DayCell({ day, onSelect, isSelected }: { day: CalendarDay; onSelect: (d
     <button
       type="button"
       onClick={() => onSelect(day)}
-      className={`relative flex min-h-[5.5rem] flex-col rounded-lg p-1.5 text-left ring-1 transition-all min-[560px]:min-h-[6.5rem] ${toneBg[day.tone]} ${isSelected ? 'ring-2 ring-foreground/30' : ''} ${day.isToday ? 'ring-2 ring-foreground/50' : ''}`}
+      className={`relative flex min-h-[5.5rem] flex-col rounded-lg p-1.5 text-left ring-1 transition-all min-[560px]:min-h-[6.5rem] ${toneBg[day.tone]} ${isSelected ? 'ring-2 ring-foreground/30' : ''} ${day.isToday ? 'ring-2 ring-foreground/50' : ''} ${day.isPast && !day.isToday ? 'opacity-55' : ''}`}
     >
       <div className="flex items-center justify-between gap-1">
         <span className={`text-xs font-bold ${day.isToday ? 'rounded-md bg-foreground px-1.5 py-0.5 text-background' : day.isPast ? 'text-muted-foreground' : 'text-foreground'}`}>
@@ -59,11 +59,15 @@ function DayCell({ day, onSelect, isSelected }: { day: CalendarDay; onSelect: (d
           ) : null}
         </div>
       ) : null}
-      <div className="mt-auto pt-1">
-        <p className={`text-[9px] font-bold tabular-nums min-[560px]:text-[10px] ${day.projectedBalance >= 0 ? 'text-muted-foreground/60' : 'text-destructive/70'}`}>
-          {formatAmount(day.projectedBalance).replace(',00', '')}
-        </p>
-      </div>
+      {/* Geçmiş günlerde bakiye basılmaz: projeksiyon bugünden başlar, dünün
+          kutusunda bugünün bakiyesini göstermek "ay boyunca düz" yanılsaması veriyordu. */}
+      {!day.isPast || day.isToday ? (
+        <div className="mt-auto pt-1">
+          <p className={`text-[9px] font-bold tabular-nums min-[560px]:text-[10px] ${day.projectedBalance >= 0 ? 'text-muted-foreground/60' : 'text-destructive/70'}`}>
+            {formatAmount(day.projectedBalance).replace(',00', '')}
+          </p>
+        </div>
+      ) : null}
     </button>
   )
 }
@@ -134,7 +138,7 @@ export function FullMonthCalendarPanel({ data }: { data: AnalysisData }) {
           <div>
             <CardTitle>Nakit akış takvimi — {calendar.monthLabel}</CardTitle>
             <p className="mt-1 text-sm text-muted-foreground">
-              Günlük bakiye projeksiyonu · {calendar.quietDayCount} sessiz gün
+              Bugünden ay sonuna bakiye projeksiyonu; geçmiş günler soluk gösterilir
               {calendar.salaryDay ? ` · maaş günü: ${calendar.salaryDay}` : ''}
             </p>
           </div>
@@ -143,9 +147,9 @@ export function FullMonthCalendarPanel({ data }: { data: AnalysisData }) {
       </CardHeader>
       <CardContent className="space-y-4 pt-2">
         <div className="grid grid-cols-2 gap-2 min-[520px]:grid-cols-4">
-          <StatPill label="Başlangıç bakiye" value={formatAmount(calendar.startBalance)} tone="stone" />
-          <StatPill label="Gelir" value={formatAmount(calendar.totalIncome)} tone="emerald" />
-          <StatPill label="Nakit çıkışı" value={formatAmount(calendar.totalExpense)} tone="rose" />
+          <StatPill label="Bugünkü bakiye" value={formatAmount(calendar.startBalance)} tone="stone" />
+          <StatPill label="Kalan gelir" value={formatAmount(calendar.totalIncome)} tone="emerald" />
+          <StatPill label="Kalan çıkış" value={formatAmount(calendar.totalExpense)} tone="rose" />
           <StatPill label="Ay sonu tahmini" value={formatAmount(calendar.endBalance)} tone={calendar.endBalance >= 0 ? 'emerald' : 'rose'} />
         </div>
 

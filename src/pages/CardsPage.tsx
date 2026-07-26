@@ -21,6 +21,7 @@ import { CalendarClock, FileText, History, Info, ScanSearch, ShieldCheck } from 
 import { useFinanceSnapshot } from '../app/useFinanceSnapshot'
 import { CrudPage } from '../components/CrudPage'
 import { AutoPaymentConfirmation } from '../components/finance/AutoPaymentConfirmation'
+import { CategoryCleanupPanel } from '../components/finance/CategoryCleanupPanel'
 import { CurrentMovementImportModal } from '../components/finance/CurrentMovementImportModal'
 import { FinancePaymentDrawer } from '../components/finance/FinancePaymentDrawer'
 import { LiveReconciliationPanel } from '../components/finance/LiveReconciliationPanel'
@@ -36,7 +37,7 @@ import { useFinancePaymentDrawer } from '../hooks/useFinancePaymentDrawer'
 import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
 import { AccountHubPanel, CreditCardOverview } from './CardsPage.overview'
 import { CardControlCenter } from './CardsPage.control'
-import { ProvisionPanel, StatementPanel } from './CardsPage.statements'
+import { ProvisionPanel, StatementArchivePanel, StatementPanel } from './CardsPage.statements'
 import {
   CardSectionNav,
   DueStatementAutomation,
@@ -313,6 +314,7 @@ export function CardsPage() {
               {!loading && section === 'islemler' ? (
                 <>
                   <QuickExpensePanel rows={cardRows} reload={() => refreshCardsAndProvisions(reload)} setError={setError} focus={quickExpenseFocus} formatAmount={formatAmount} />
+                  <CategoryCleanupPanel />
                   <CardInstallmentExpensesPanel
                     cards={cardRows}
                     reload={() => refreshCardsAndProvisions(reload)}
@@ -346,6 +348,7 @@ export function CardsPage() {
                     onCancel={(expense) => void handleProvisionAction(expense, 'cancel', reload, setError)}
                   />
                   <CardInstallmentCalendarPanel cards={cardRows} />
+                  <StatementArchivePanel rows={cardRows} statements={statements} />
                 </>
               ) : null}
             </div>

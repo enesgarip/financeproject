@@ -244,12 +244,14 @@ function validateAssetForm(formData: FormData): Record<string, string> {
   return {}
 }
 
-function AssetsOverview({ rows, snapshot, stockPrices }: { rows: Asset[]; snapshot: MarketRatesSnapshot | null; stockPrices: StockPrices }) {
+function AssetsOverview({ rows, snapshot, stockPrices, bankCash }: { rows: Asset[]; snapshot: MarketRatesSnapshot | null; stockPrices: StockPrices; bankCash: number }) {
   const { formatAmount } = useBalancePrivacy()
   if (rows.length === 0) return null
 
   const valueOf = (row: Asset) => effectiveAssetValue(row, snapshot, stockPrices)
-  const total = sumTL(rows.map(valueOf))
+  // Toplam, dashboard'daki "Toplam varlık" ile aynı tanımı kullanır (varlık
+  // kayıtları + banka bakiyeleri); iki sayfa farklı toplam göstermesin.
+  const total = sumTL([...rows.map(valueOf), bankCash])
   const categoryTotals = categoryOptions
     .map((category) => ({
       category,
@@ -258,7 +260,7 @@ function AssetsOverview({ rows, snapshot, stockPrices }: { rows: Asset[]; snapsh
     .filter((item) => item.total > 0)
     .sort((a, b) => b.total - a.total)
 
-  const cashTotal = categoryTotals.find((item) => item.category === 'Nakit')?.total ?? 0
+  const cashTotal = sumTL([categoryTotals.find((item) => item.category === 'Nakit')?.total ?? 0, bankCash])
   const topCategory = categoryTotals[0]
 
   // Aggregate stock profit/loss across all priced holdings with a cost basis.
@@ -278,11 +280,14 @@ function AssetsOverview({ rows, snapshot, stockPrices }: { rows: Asset[]; snapsh
   const stockProfitTotal = diffTL(stockValue, stockCost)
   const stockProfitPct = stockCost > 0 ? (stockProfitTotal / stockCost) * 100 : 0
 
-  const donutData: DonutSlice[] = categoryTotals.map((item) => ({
-    name: item.category,
-    value: item.total,
-    color: categoryMeta[item.category].color,
-  }))
+  const donutData: DonutSlice[] = [
+    ...categoryTotals.map((item) => ({
+      name: item.category,
+      value: item.total,
+      color: categoryMeta[item.category].color,
+    })),
+    ...(bankCash > 0 ? [{ name: 'Banka', value: bankCash, color: 'var(--info)' }] : []),
+  ]
 
   return (
     <Card variant="elevated" className="overflow-hidden border-primary/15">
@@ -306,7 +311,7 @@ function AssetsOverview({ rows, snapshot, stockPrices }: { rows: Asset[]; snapsh
 
             <div className="mt-4 grid grid-cols-2 gap-2">
               <div className="min-w-0 rounded-xl border border-border/60 bg-muted/30 px-3 py-2.5">
-                <p className="finance-label truncate">Nakit</p>
+                <p className="finance-label truncate">Nakit (banka dahil)</p>
                 <p className="finance-value mt-1 truncate text-sm font-bold text-success">{formatAmount(cashTotal)}</p>
               </div>
               <div className="min-w-0 rounded-xl border border-border/60 bg-muted/30 px-3 py-2.5">
@@ -555,7 +560,14 @@ export function AssetsPage() {
                   : undefined
               }
             />
-            {!loading ? <AssetsOverview rows={rows as Asset[]} snapshot={snapshot} stockPrices={stockPrices} /> : null}
+            {!loading ? (
+              <AssetsOverview
+                rows={rows as Asset[]}
+                snapshot={snapshot}
+                stockPrices={stockPrices}
+                bankCash={sumTL(accounts.filter((account) => account.card_type === 'banka_karti').map((account) => account.current_balance))}
+              />
+            ) : null}
           </div>
         )}
         getInitialValues={(row?: Asset) => ({

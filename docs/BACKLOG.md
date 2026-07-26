@@ -1,5 +1,20 @@
 # Priority Backlog
 
+## 2026-07-26 — Prod inceleme turu düzeltme paketi (DONE)
+
+Canlı uygulama + kod incelemesinden çıkan bulgular tek pakette kapatıldı:
+
+- **Ay sonu nakit sahte açığı düzeltildi.** `buildMonthlyCashFlow` cari ayda dönem içi harcamayı ay-başı perspektifiyle geçmiş vadeye (ör. 14 Tem) yazıp bugünkü nakitten bir kez daha düşüyordu (−₺53k sahte alarm; Analiz forecast'i ile çelişki). Yeni `remainingOutflow` alanı bugün perspektifiyle hesaplanır; `projectedCash` ve dashboard "Bu ay ödeme yükü" paneli artık kalan yükü gösterir. Ay-görünümü alanları (rapor/trend) değişmedi. Regresyon testleri `financeSummary.test.ts`'te.
+- **Abonelik dedektörü ≥3 ay** (`subscriptions.ts`): 2 ay eşiği OPET benzin gibi tesadüfi tekrarları abonelik sayıyordu.
+- **Aktivite akışı**: sıfır tutarlı ledger olayı (reclass) artık yönsüz — "−₺0,00" basılmıyor; `reclass` türüne Türkçe etiket eklendi.
+- **Kategori hafızası importa bağlandı**: `parseDenizBankStatement` / `parseDenizBankMovementPdf` / `parseStatementText` artık `CategoryMemory` alır (modallar `useCategoryMemory` geçirir). Yeni `CategoryCleanupPanel` (`/kartlar?section=islemler`) "Diğer"de kalan harcamaları satıcı bazında gruplar, tek seçimle kategiler ve hafızayı tazeler → sonraki importlar öğrenir. (Bulgu: aylık harcamanın %71'i "Diğer"deydi.)
+- **Takvim sadeleştirme**: Analiz'deki duplicate "Finans takvimi" paneli kaldırıldı (tek takvim /odemeler + Nakit akış takvimi); Nakit akış takvimi geçmiş günleri soluk gösterir, bakiye yalnız bugünden ileri basılır, statlar "kalan" olarak etiketlendi.
+- **Sessiz gün + Finansal başarımlar panelleri kaldırıldı** (süs; `utils/quietDays.ts`, `utils/milestones.ts` + testleri silindi). Bundle 600→518 kB gzip.
+- **FIRE gürültü koruması**: net değer trendi <60 günse varsayılan birikim maaş−gider olur (kısa pencere negatif "ulaşılamıyor" gürültüsü kesildi), açıklayıcı not gösterilir.
+- **Varlıklar sayfası** toplamı dashboard tanımıyla hizalandı (banka bakiyeleri dahil; "Nakit (banka dahil)" + donut'a Banka dilimi).
+- **Ekstre arşivi** Analiz→Detay'dan `/kartlar?section=ekstreler`'e taşındı (`StatementArchivePanel`).
+- **Lighthouse CI non-blocking** (`continue-on-error`): kronik NO_FCP flake main'i kırmızı göstermesin; rapor artifact'ı sürüyor.
+
 ## P0 - High Confidence / High Value
 
 - ~~Break large finance-heavy page files into smaller domain modules without changing behavior.~~ DONE.

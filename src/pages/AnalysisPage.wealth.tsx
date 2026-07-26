@@ -54,8 +54,17 @@ export function FireCalculator({ data, snapshots }: { data: AnalysisData; snapsh
   // Net-worth trend already includes returns; strip them so the figure fed to
   // computeFire is pure contributions (computeFire compounds the return itself).
   const snapshotSavings = useMemo(() => estimateMonthlySavingsFromNetWorth(snapshots, realReturn), [snapshots, realReturn])
-  const defaultSavings = snapshotSavings ?? diffTL(salary, defaultExpenses)
-  const savingsSource = snapshotSavings !== null ? 'net değer trendi' : 'maaş − gider'
+  // Kısa snapshot penceresi piyasa oynaklığını "birikim" sanıp negatif varsayılan
+  // üretiyor ve panel kalıcı "ulaşılamıyor" gürültüsüne dönüyordu; trend ancak
+  // ≥60 günlük pencerede varsayılan olur, yoksa maaş − gider kullanılır.
+  const snapshotSpanDays = useMemo(() => {
+    if (snapshots.length < 2) return 0
+    const dates = snapshots.map((row) => row.snapshot_date).sort()
+    return Math.round((new Date(dates[dates.length - 1]!).getTime() - new Date(dates[0]!).getTime()) / 86_400_000)
+  }, [snapshots])
+  const trendReliable = snapshotSavings !== null && snapshotSpanDays >= 60
+  const defaultSavings = trendReliable ? snapshotSavings : diffTL(salary, defaultExpenses)
+  const savingsSource = trendReliable ? 'net değer trendi' : 'maaş − gider'
   // null override = follow the data-derived default (survives async data load).
   const [expensesOverride, setExpensesOverride] = useState<number | null>(null)
   const [savingsOverride, setSavingsOverride] = useState<number | null>(null)
@@ -185,6 +194,12 @@ export function FireCalculator({ data, snapshots }: { data: AnalysisData; snapsh
             />
           </label>
         </div>
+
+        {!trendReliable && snapshotSavings !== null ? (
+          <p className="rounded-xl bg-muted/40 p-3 text-xs text-muted-foreground">
+            Net değer trendi henüz {snapshotSpanDays} günlük; kısa pencere piyasa oynaklığına duyarlı olduğu için varsayılan birikim maaş − gider üzerinden alındı. 60 günü geçince trend otomatik devreye girer.
+          </p>
+        ) : null}
 
         <div className="rounded-xl bg-muted/20 p-2">
           <BarChart data={chartData} height={200} />

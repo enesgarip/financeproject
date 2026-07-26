@@ -7,11 +7,9 @@ import {
 import { MonthlyReport } from './AnalysisPage.reports'
 import { CategorySpendingChart } from './AnalysisPage.wealth'
 import {
-  FinancialCalendar,
   MonthCloseAssistant,
   PeriodComparisonPanel,
   PriceIncreaseRadar,
-  QuietDaysPanel,
   SchemaMigrationNotice,
   SubscriptionsPanel,
   UpcomingInstallments,
@@ -32,7 +30,6 @@ export function AnalysisPage() {
         <MonthCloseAssistant data={data} missingTables={missingTables} />
         <MonthlyReport data={data} />
         <UpcomingInstallments data={data} />
-        <FinancialCalendar data={data} />
         <CategorySpendingChart data={data} />
         <PeriodComparisonPanel data={data} />
         <PriceIncreaseRadar trends={priceTrends} />
@@ -40,7 +37,6 @@ export function AnalysisPage() {
         <NetWorthTrend snapshots={snapshots} ratesSnapshot={ratesSnapshot} />
         <ForwardForecast data={data} />
         <SubscriptionsPanel data={data} />
-        <QuietDaysPanel data={data} />
         <FullMonthCalendarPanel data={data} />
       </div>
 

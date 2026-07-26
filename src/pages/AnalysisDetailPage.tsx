@@ -6,13 +6,9 @@ import {
 import { LoanAffordabilityPanel } from './AnalysisPage.loan'
 import {
   SearchExport,
-  StatementArchive,
   YearEndReport,
 } from './AnalysisPage.reports'
-import {
-  MilestonesPanel,
-  PeopleLedger,
-} from './AnalysisPage.panels'
+import { PeopleLedger } from './AnalysisPage.panels'
 import { ActivityFeedPanel } from './AnalysisPage.activity'
 import { useAnalysisPageData } from './AnalysisPage.data'
 
@@ -30,12 +26,10 @@ export function AnalysisDetailPage() {
         <InflationShieldPanel data={data} />
         <ZakatPanel data={data} ratesSnapshot={ratesSnapshot} />
         <FireCalculator data={data} snapshots={snapshots} />
-        <MilestonesPanel data={data} snapshots={snapshots} />
         <PeopleLedger debts={data.debts} />
         <YearEndReport data={data} snapshots={snapshots} />
         <ActivityFeedPanel data={data} />
         <SearchExport items={searchItems} />
-        <StatementArchive data={data} />
       </div>
 
       {loading ? <p className="rounded-xl border border-border/60 bg-card p-4 text-sm text-muted-foreground">Detay verileri yükleniyor...</p> : null}

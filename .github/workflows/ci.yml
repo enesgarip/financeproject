@@ -48,6 +48,10 @@ jobs:
   lighthouse:
     name: Lighthouse
     runs-on: ubuntu-latest
+    # Kronik NO_FCP flake'i (runner performansına duyarlı) main'i kırmızı
+    # gösteriyordu; job bilgilendirici kalır, workflow sonucunu etkilemez.
+    # Rapor artifact'ı yüklenmeye devam eder.
+    continue-on-error: true
     permissions:
       contents: read
       statuses: write

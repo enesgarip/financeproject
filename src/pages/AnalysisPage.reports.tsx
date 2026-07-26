@@ -1,4 +1,4 @@
-import { Archive, BarChart3, CalendarRange, Check, Copy, Download, ImageDown, Search, Sparkles } from 'lucide-react'
+import { BarChart3, CalendarRange, Check, Copy, Download, ImageDown, Search, Sparkles } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Button } from '../components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
@@ -8,7 +8,7 @@ import { buildSearchCsv, type AnalysisData, type SearchItem } from '../utils/ana
 import { buildFinancialReport, reportToMarkdown, type FinancialReport } from '../utils/financialReport'
 import { buildMonthlyCashFlow, sum } from '../utils/financeSummary'
 import { activeExpense as activeCardExpense } from '../utils/budgetAlerts'
-import { formatDate, isDateInMonth } from '../utils/date'
+import { isDateInMonth } from '../utils/date'
 import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
 import { buildMonthlySummary } from '../utils/monthlySummary'
 import { downloadShareableCard, renderShareableCard } from '../utils/shareableCard'
@@ -232,46 +232,8 @@ export function MonthlyReport({ data }: { data: AnalysisData }) {
   )
 }
 
-export function StatementArchive({ data }: { data: AnalysisData }) {
-  const { formatAmount } = useBalancePrivacy()
-  const cardsById = new Map(data.cards.map((card) => [card.id, card]))
-  const archives = data.cardStatementArchives.slice(0, 6)
-
-  return (
-    <Card className="border-border/70 shadow-[var(--shadow-card)] lg:col-span-5">
-      <CardHeader className="pb-0">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <CardTitle>Ekstre arşivi</CardTitle>
-            <p className="mt-1 text-sm text-muted-foreground">{archives.length} son kayıt</p>
-          </div>
-          <Archive className="text-success" />
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-2 pt-2">
-        {archives.length === 0 ? (
-          <p className="rounded-xl bg-muted/45 p-3 text-sm text-muted-foreground">Ekstre kesildiğinde arşiv burada tutulacak.</p>
-        ) : (
-          archives.map((archive) => (
-            <div key={archive.id} className="rounded-xl bg-muted/45 px-3 py-2 text-sm">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="truncate font-semibold text-foreground">{cardsById.get(archive.card_id)?.card_name ?? 'Kart'}</p>
-                  <p className="mt-0.5 text-xs text-muted-foreground">
-                    {formatDate(archive.statement_date)} · son ödeme {formatDate(archive.due_date)}
-                  </p>
-                </div>
-                <span className="shrink-0 whitespace-nowrap rounded-lg bg-muted px-2 py-1 font-mono text-xs font-bold tabular-nums text-foreground ring-1 ring-border/60">
-                  {formatAmount(archive.statement_debt_amount)}
-                </span>
-              </div>
-            </div>
-          ))
-        )}
-      </CardContent>
-    </Card>
-  )
-}
+// Ekstre arşivi paneli /kartlar?section=ekstreler altına taşındı
+// (CardsPage.statements.tsx → StatementArchivePanel); asıl yeri orası.
 
 export function YearEndReport({ data, snapshots }: { data: AnalysisData; snapshots: NetWorthSnapshot[] }) {
   const { formatAmount } = useBalancePrivacy()

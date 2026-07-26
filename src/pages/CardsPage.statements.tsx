@@ -197,3 +197,59 @@ export function StatementPanel({
     </SurfaceCard>
   )
 }
+
+/** Kesilmiş ekstre arşivi (açık + ödenmiş). Ekstreler sekmesinin kalıcı içeriği;
+ *  daha önce Analiz → Detay'ın dibinde saklanıyordu, asıl yeri burası. */
+export function StatementArchivePanel({ rows, statements }: { rows: Card[]; statements: CardStatementArchive[] }) {
+  const { formatAmount } = useBalancePrivacy()
+  const cardsById = useMemo(() => new Map(rows.map((card) => [card.id, card])), [rows])
+  const archives = [...statements]
+    .sort((a, b) => b.statement_date.localeCompare(a.statement_date))
+    .slice(0, 8)
+
+  return (
+    <SurfaceCard className="border-border/70 shadow-[var(--shadow-card)]">
+      <CardHeader className="pb-0">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <ReceiptText size={17} />
+              Ekstre arşivi
+            </CardTitle>
+            <p className="mt-1 text-xs text-muted-foreground">Kesilmiş son ekstreler; açık olanlar yukarıdaki panelden ödenir.</p>
+          </div>
+          <Badge variant="secondary">{archives.length} kayıt</Badge>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-2 pt-2">
+        {archives.length === 0 ? (
+          <p className="rounded-xl bg-muted/45 p-3 text-sm text-muted-foreground">Ekstre kesildiğinde arşiv burada tutulur.</p>
+        ) : (
+          archives.map((archive) => {
+            const card = cardsById.get(archive.card_id)
+            return (
+              <div key={archive.id} className="rounded-xl bg-muted/45 px-3 py-2 text-sm">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate font-semibold text-foreground">{card?.card_name ?? 'Kart'}</p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      {formatDate(archive.statement_date)} · son ödeme {formatDate(archive.due_date)}
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <Badge variant={archive.status === 'open' ? 'secondary' : 'outline'}>
+                      {archive.status === 'open' ? 'Açık' : 'Ödendi'}
+                    </Badge>
+                    <span className="whitespace-nowrap rounded-lg bg-muted px-2 py-1 font-mono text-xs font-bold tabular-nums text-foreground ring-1 ring-border/60">
+                      {formatAmount(archive.statement_debt_amount)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )
+          })
+        )}
+      </CardContent>
+    </SurfaceCard>
+  )
+}
