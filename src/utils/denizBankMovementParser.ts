@@ -6,7 +6,7 @@
  *
  * Yalnız ayrıştırma + eşleştirme; yazma cardsRepo/CurrentMovementImportModal'da.
  */
-import { suggestExpenseCategory } from './categories'
+import { suggestExpenseCategory, type CategoryMemory } from './categories'
 import { addMonths, dateInputValue } from './date'
 import { diffTL, roundTL } from './money'
 import { normalizeSearchText } from './searchText'
@@ -242,7 +242,7 @@ function expenseDateDistance(expense: MovementExpenseMatchRow, movementDate: str
   return Math.min(spentDistance, dueDistance)
 }
 
-export function parseDenizBankMovementPdf(text: string): ParsedDenizBankMovementFile {
+export function parseDenizBankMovementPdf(text: string, memory?: CategoryMemory): ParsedDenizBankMovementFile {
   const lines = text.split('\n').map((line) => line.trim()).filter(Boolean)
   const movements: ParsedDenizBankMovement[] = []
   const payments: ParsedDenizBankPayment[] = []
@@ -286,7 +286,7 @@ export function parseDenizBankMovementPdf(text: string): ParsedDenizBankMovement
     movements.push({
       ...base,
       appStatus,
-      category: suggestExpenseCategory(description) ?? 'Diğer',
+      category: suggestExpenseCategory(description, memory) ?? 'Diğer',
       isInstallment,
       installmentNo: installmentInfo.no,
       installmentCount: installmentInfo.count,

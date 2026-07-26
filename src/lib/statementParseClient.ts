@@ -1,5 +1,5 @@
 import { supabase } from './supabase'
-import { suggestExpenseCategory } from '../utils/categories'
+import { suggestExpenseCategory, type CategoryMemory } from '../utils/categories'
 import type { ParsedStatement, ParsedTransaction } from '../utils/denizBankStatementParser'
 
 /**
@@ -28,8 +28,10 @@ type RawStatement = {
   transactions: RawTx[]
 }
 
-/** Edge fonksiyonu sonucunu (kategorisiz) uygulamanın ParsedStatement tipine çevirir. */
-export function mapStatementResult(raw: RawStatement): ParsedStatement {
+/** Edge fonksiyonu sonucunu (kategorisiz) uygulamanın ParsedStatement tipine çevirir.
+ *  memory: kullanıcının geçmiş harcamalarından öğrenilen (açıklama → kategori) haritası;
+ *  verilmezse yalnız anahtar kelime sözlüğü kullanılır. */
+export function mapStatementResult(raw: RawStatement, memory?: CategoryMemory): ParsedStatement {
   const transactions: ParsedTransaction[] = raw.transactions
     .filter((tx) => Number.isFinite(tx.amount) && tx.amount > 0)
     .map((tx) => {
@@ -40,7 +42,7 @@ export function mapStatementResult(raw: RawStatement): ParsedStatement {
         date: tx.date ?? '',
         description,
         amount: tx.amount,
-        category: suggestExpenseCategory(description) ?? 'Diğer',
+        category: suggestExpenseCategory(description, memory) ?? 'Diğer',
         isInstallment: count > 1,
         installmentNo: no,
         installmentCount: count,
@@ -57,7 +59,7 @@ export function mapStatementResult(raw: RawStatement): ParsedStatement {
 }
 
 /** Ekstre metnini edge fonksiyonuna gönderir ve ParsedStatement döndürür. */
-export async function parseStatementText(text: string): Promise<ParsedStatement> {
+export async function parseStatementText(text: string, memory?: CategoryMemory): Promise<ParsedStatement> {
   const { data, error } = await supabase.functions.invoke('parse-statement', {
     body: { text },
   })
@@ -68,5 +70,5 @@ export async function parseStatementText(text: string): Promise<ParsedStatement>
   }
   const result = (data as { result?: RawStatement } | null)?.result
   if (!result) throw new Error('Ekstre çözümlenemedi.')
-  return mapStatementResult(result)
+  return mapStatementResult(result, memory)
 }

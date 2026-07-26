@@ -2,6 +2,7 @@ import { FileUp, X, Check, CheckCircle2, AlertCircle, Loader2, FileText, Chevron
 import { useCallback, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useBodyScrollLock } from '../ui/use-body-scroll-lock'
+import { useCategoryMemory } from '../../hooks/useCategoryMemory'
 import {
   addCardExpense,
   cutCardStatement,
@@ -166,6 +167,9 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
   const [reconcileError, setReconcileError] = useState('')
 
   const fileRef = useRef<HTMLInputElement>(null)
+  // Geçmiş harcamalardan öğrenilen kategori hafızası: import önerileri de
+  // kullanıcının düzeltmelerinden faydalansın (yalnız keyword sözlüğü değil).
+  const categoryMemory = useCategoryMemory()
 
   const handleFile = useCallback(async (file: File) => {
     if (!file.name.endsWith('.pdf')) {
@@ -178,12 +182,12 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
 
     try {
       const text = await extractPdfText(file)
-      let parsed = parseDenizBankStatement(text)
+      let parsed = parseDenizBankStatement(text, categoryMemory)
 
       // DenizBank formatı tanınmadıysa banka-bağımsız çözümleyiciye düş (Y3):
       // metin parse-statement edge fonksiyonuna (Gemini) gönderilir.
       if (!parsed.totalDebt && !parsed.transactions.length) {
-        parsed = await parseStatementText(text)
+        parsed = await parseStatementText(text, categoryMemory)
       }
 
       if (!parsed.totalDebt && !parsed.transactions.length) {
@@ -271,7 +275,7 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
     } finally {
       setParsing(false)
     }
-  }, [card, cleanImport])
+  }, [card, cleanImport, categoryMemory])
 
   function reconcilePeriodDate() {
     if (cleanImport) return new Date()

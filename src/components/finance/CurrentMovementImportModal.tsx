@@ -35,6 +35,7 @@ import { getCardStatementPeriod } from '../../utils/cardStatement'
 import { buildImportedInstallmentPlan } from '../../utils/importedInstallmentPlan'
 import { postCardDebtCorrection } from '../../services/cardLedgerActions'
 import { useBodyScrollLock } from '../ui/use-body-scroll-lock'
+import { useCategoryMemory } from '../../hooks/useCategoryMemory'
 
 type Step = 'upload' | 'review' | 'done'
 
@@ -117,6 +118,8 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
   const [driftCorrected, setDriftCorrected] = useState(false)
 
   const fileRef = useRef<HTMLInputElement>(null)
+  // Geçmiş harcamalardan öğrenilen kategori hafızası import önerilerine de akar.
+  const categoryMemory = useCategoryMemory()
 
   const handleFile = useCallback(async (file: File) => {
     if (!file.name.toLocaleLowerCase('tr-TR').endsWith('.pdf')) {
@@ -130,7 +133,7 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
 
     try {
       const text = await extractPdfText(file)
-      const parsed = parseDenizBankMovementPdf(text)
+      const parsed = parseDenizBankMovementPdf(text, categoryMemory)
       if (!parsed.movements.length && !parsed.payments.length) {
         setParseError('DenizBank hareket tablosu okunamadı.')
         return
@@ -246,7 +249,7 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
     } finally {
       setParsing(false)
     }
-  }, [card, cleanImport])
+  }, [card, cleanImport, categoryMemory])
 
   function toggleImportAll() {
     if (selectedImport.size === bankOnly.length) setSelectedImport(new Set())

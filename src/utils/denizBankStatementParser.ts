@@ -6,7 +6,7 @@
  * Bu yalnız metin AYRIŞTIRMA; ledger'a yazma cardsRepo/StatementImportModal işi.
  * Karşılaştırma money.ts ile (tutar eşleşmesinde float toleransı yaratma).
  */
-import { suggestExpenseCategory } from './categories'
+import { suggestExpenseCategory, type CategoryMemory } from './categories'
 import { addMonths, dateInputValue } from './date'
 import { diffTL, roundTL } from './money'
 import { normalizeSearchText } from './searchText'
@@ -154,7 +154,7 @@ function expenseDateDistance(expense: StatementExpenseMatchRow, transactionDate:
 
 // ── Main parser ────────────────────────────────────────────────────────────
 
-export function parseDenizBankStatement(text: string): ParsedStatement {
+export function parseDenizBankStatement(text: string, memory?: CategoryMemory): ParsedStatement {
   const lines = text.split('\n').map((l) => l.trim()).filter(Boolean)
 
   // Header fields
@@ -241,7 +241,7 @@ export function parseDenizBankStatement(text: string): ParsedStatement {
     if (!description) continue
 
     // Category: prefer suggestExpenseCategory (learns from history), fall back to section
-    const category = suggestExpenseCategory(description) ?? sectionCategory
+    const category = suggestExpenseCategory(description, memory) ?? sectionCategory
 
     if (isCredit) {
       adjustments.push({ date, description, amount, category })

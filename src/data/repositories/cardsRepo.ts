@@ -273,3 +273,22 @@ export async function updateCardExpense(input: UpdateCardExpenseInput): Promise<
 
   return voidResultFromSupabase(error, 'Harcama guncellenemedi.')
 }
+
+/** "Diğer" kategorisinde kalmış son kesin harcamalar (hızlı kategorileme paneli için). */
+export async function fetchUncategorizedExpenses(limit: number): Promise<Result<CardExpense[]>> {
+  const { data, error } = await supabase
+    .from('card_expenses')
+    .select('*')
+    .eq('status', 'posted')
+    .eq('category', 'Diğer')
+    .order('spent_at', { ascending: false })
+    .limit(limit)
+
+  return resultFromSupabase((data ?? []) as CardExpense[], error, 'Kategorisiz harcamalar yüklenemedi.')
+}
+
+/** Yalnız kategori alanını günceller; tutar/taksit/borç alanlarına dokunmaz. */
+export async function updateCardExpenseCategory(expenseId: string, category: string): Promise<Result<void>> {
+  const { error } = await supabase.from('card_expenses').update({ category }).eq('id', expenseId)
+  return voidResultFromSupabase(error, 'Kategori güncellenemedi.')
+}
