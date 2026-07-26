@@ -49,22 +49,22 @@ export function MonthlyPaymentLoadPanel({
   upcomingCount: number
 }) {
   const { formatAmount } = useBalancePrivacy()
-  const loadRate = cashFlow.income > 0 ? Math.min(100, (cashFlow.outflow / cashFlow.income) * 100) : cashFlow.outflow > 0 ? 100 : 0
+  const loadRate = cashFlow.income > 0 ? Math.min(100, (cashFlow.remainingOutflow / cashFlow.income) * 100) : cashFlow.remainingOutflow > 0 ? 100 : 0
   const tone = loadRate >= 90 ? 'danger' : loadRate >= 65 ? 'warning' : 'good'
 
   return (
     <FinancePanel tone={tone} className="p-4 sm:p-5">
       <SectionHeader
         title="Bu ay ödeme yükü"
-        description="Kart, kredi, fatura ve kişisel borç baskısı."
+        description="Bugünden ay sonuna kalan kart, kredi, fatura ve kişisel borç baskısı."
         action={<StatusBadge tone={tone}>{upcomingCount > 0 ? `${upcomingCount} vade` : 'Takvim temiz'}</StatusBadge>}
       />
       <div className="mt-5">
-        <AmountDisplay label={cashFlow.monthLabel} value={formatAmount(cashFlow.outflow)} tone={tone} size="lg" />
+        <AmountDisplay label={`${cashFlow.monthLabel} · kalan`} value={formatAmount(cashFlow.remainingOutflow)} tone={tone} size="lg" />
       </div>
       <div className="mt-5 grid grid-cols-2 gap-2">
         <MiniStat label="Yaklaşan toplam" value={upcomingCount > 0 ? formatAmount(upcomingTotal) : 'Yok'} tone={upcomingCount > 0 ? 'warning' : 'good'} />
-        <MiniStat label="Gelecek ay" value={formatAmount(nextMonthOutflow)} tone={nextMonthOutflow > cashFlow.outflow ? 'warning' : 'neutral'} />
+        <MiniStat label="Gelecek ay" value={formatAmount(nextMonthOutflow)} tone={nextMonthOutflow > cashFlow.remainingOutflow ? 'warning' : 'neutral'} />
       </div>
       <div className="mt-5">
         <ProgressStrip label="Gelire göre nakit çıkışı" value={loadRate} tone={tone} />

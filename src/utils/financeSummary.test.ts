@@ -806,6 +806,46 @@ describe('buildMonthlyCashFlow', () => {
     expect(flow.projectedCash).toBe(45000)
   })
 
+  it('ödenmiş ekstre sonrası dönem içi harcamayı kalan yükte ve projectedCash içinde saymaz', () => {
+    // Ekstre 4 Tem'de kesilip ödendi; dönem içi harcamanın gerçek vadesi 14 Ağustos.
+    // Ay-başı görünümü (outflow) bunu 14 Tem'e yazmaya devam eder ama bugün
+    // perspektifli remainingOutflow/projectedCash saymamalı — aksi halde dashboard
+    // "ay sonu nakit açığı" sahte alarmı üretir.
+    const today = new Date(2026, 6, 26)
+    const flow = buildMonthlyCashFlow(
+      {
+        ...emptyInput,
+        cards: [
+          bankCard({ id: 'b1', current_balance: 46000 }),
+          creditCard({ id: 'c1', statement_day: 4, due_day: 14, debt_amount: 60000, statement_debt_amount: 0, current_period_spending: 60000 }),
+        ],
+      },
+      new Date(2026, 6, 15),
+      { today },
+    )
+    expect(flow.outflow).toBe(60000)
+    expect(flow.remainingOutflow).toBe(0)
+    expect(flow.projectedCash).toBe(46000)
+  })
+
+  it('bu ay vadeli ödenmemiş açık ekstre kalan yükte kalır', () => {
+    const today = new Date(2026, 6, 26)
+    const flow = buildMonthlyCashFlow(
+      {
+        ...emptyInput,
+        cards: [
+          bankCard({ id: 'b1', current_balance: 46000 }),
+          creditCard({ id: 'c1', statement_day: 4, due_day: 28, debt_amount: 5000, statement_debt_amount: 5000 }),
+        ],
+        cardStatements: [statement({ card_id: 'c1', statement_debt_amount: 5000, statement_date: '2026-07-04', due_date: '2026-07-28', period_month: 7 })],
+      },
+      new Date(2026, 6, 15),
+      { today },
+    )
+    expect(flow.remainingOutflow).toBe(5000)
+    expect(flow.projectedCash).toBe(41000)
+  })
+
   it('includes salary in projectedCash for a future month', () => {
     const now = new Date()
     const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 15)
