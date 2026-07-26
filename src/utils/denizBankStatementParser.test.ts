@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { expenseTotalAmount, matchTransactions, parseAmount, parseDenizBankStatement, statementInstallmentDueDate } from './denizBankStatementParser'
+import { checkStatementInstallments, expenseTotalAmount, matchTransactions, parseAmount, parseDenizBankStatement, statementInstallmentDueDate, type StatementInstallmentMatchRow } from './denizBankStatementParser'
 
 describe('parseAmount (locale-robust)', () => {
   it('parses English-formatted statement amounts', () => {
@@ -407,5 +407,129 @@ describe('matchTransactions', () => {
       [exp('2026-05-19', 21666.67)],
     )
     expect(result.unmatched).toHaveLength(1)
+  })
+})
+
+describe('checkStatementInstallments', () => {
+  const pdfTx = (date: string, amount: number, no: number, count: number, description = 'BEYLER OPTİK') => ({
+    date,
+    description,
+    amount,
+    category: 'Diğer',
+    isInstallment: true,
+    installmentNo: no,
+    installmentCount: count,
+  })
+
+  const appInst = (overrides: Partial<StatementInstallmentMatchRow> = {}): StatementInstallmentMatchRow => ({
+    id: 'inst-1',
+    due_month: '2026-06-19',
+    amount: 21666.67,
+    status: 'scheduled',
+    description: 'BEYLER OPTİK',
+    installment_no: 2,
+    installment_count: 3,
+    ...overrides,
+  })
+
+  it('matches PDF installment to app installment by installment_no and due_month', () => {
+    const result = checkStatementInstallments(
+      [pdfTx('2026-05-19', 21666.67, 2, 3)],
+      [appInst()],
+      '2026-06-04',
+    )
+    expect(result.matched).toHaveLength(1)
+    expect(result.amountMismatches).toHaveLength(0)
+    expect(result.pdfOnly).toHaveLength(0)
+  })
+
+  it('detects amount mismatch above tolerance', () => {
+    const result = checkStatementInstallments(
+      [pdfTx('2026-05-19', 21666.67, 2, 3)],
+      [appInst({ amount: 21680 })],
+      '2026-06-04',
+    )
+    expect(result.matched).toHaveLength(0)
+    expect(result.amountMismatches).toHaveLength(1)
+    expect(result.amountMismatches[0].diffTL).toBeCloseTo(13.33)
+  })
+
+  it('tolerates small amount differences', () => {
+    const result = checkStatementInstallments(
+      [pdfTx('2026-05-19', 21666.67, 2, 3)],
+      [appInst({ amount: 21670 })],
+      '2026-06-04',
+    )
+    expect(result.matched).toHaveLength(1)
+    expect(result.amountMismatches).toHaveLength(0)
+  })
+
+  it('reports PDF-only when no app installment matches', () => {
+    const result = checkStatementInstallments(
+      [pdfTx('2026-05-19', 21666.67, 2, 3)],
+      [],
+      '2026-06-04',
+    )
+    expect(result.pdfOnly).toHaveLength(1)
+  })
+
+  it('reports app-only for unmatched installments in the statement month', () => {
+    const result = checkStatementInstallments(
+      [],
+      [appInst()],
+      '2026-06-04',
+    )
+    expect(result.appOnly).toHaveLength(1)
+  })
+
+  it('skips cancelled app installments', () => {
+    const result = checkStatementInstallments(
+      [],
+      [appInst({ status: 'cancelled' })],
+      '2026-06-04',
+    )
+    expect(result.appOnly).toHaveLength(0)
+  })
+
+  it('skips paid app installments from appOnly', () => {
+    const result = checkStatementInstallments(
+      [],
+      [appInst({ status: 'paid' })],
+      '2026-06-04',
+    )
+    expect(result.appOnly).toHaveLength(0)
+  })
+
+  it('ignores non-installment transactions', () => {
+    const nonInstallment = {
+      date: '2026-06-03',
+      description: 'CAFE',
+      amount: 170,
+      category: 'Yemek',
+      isInstallment: false,
+      installmentNo: 1,
+      installmentCount: 1,
+    }
+    const result = checkStatementInstallments(
+      [nonInstallment],
+      [appInst()],
+      '2026-06-04',
+    )
+    expect(result.matched).toHaveLength(0)
+    expect(result.pdfOnly).toHaveLength(0)
+    expect(result.appOnly).toHaveLength(1)
+  })
+
+  it('prefers description-compatible match when multiple candidates exist', () => {
+    const result = checkStatementInstallments(
+      [pdfTx('2026-05-19', 21666.67, 2, 3, 'BEYLER OPTİK')],
+      [
+        appInst({ id: 'wrong', description: 'NEOVA SİGORTA' }),
+        appInst({ id: 'right', description: 'BEYLER OPTİK' }),
+      ],
+      '2026-06-04',
+    )
+    expect(result.matched).toHaveLength(1)
+    expect(result.matched[0].installment.id).toBe('right')
   })
 })

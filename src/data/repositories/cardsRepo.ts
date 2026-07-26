@@ -154,6 +154,15 @@ export async function fetchCardInstallmentMatchRows(cardId: string): Promise<Res
   return resultFromSupabase((data ?? []) as InstallmentMatchRow[], error, 'Kart taksitleri yüklenemedi.')
 }
 
+export async function updateCardInstallmentAmount(installmentId: string, newAmount: number): Promise<Result<void>> {
+  const { error } = await supabase
+    .from('card_installments')
+    .update({ amount: newAmount, updated_at: new Date().toISOString() })
+    .eq('id', installmentId)
+
+  return voidResultFromSupabase(error, 'Taksit tutarı güncellenemedi.')
+}
+
 export async function recordCardInstallmentCarryover(input: CardInstallmentCarryoverInput): Promise<Result<void>> {
   const { error } = await supabase.rpc('record_card_installment_carryover', {
     p_card_id: input.cardId,

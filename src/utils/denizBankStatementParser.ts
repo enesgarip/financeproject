@@ -9,6 +9,7 @@
 import { suggestExpenseCategory } from './categories'
 import { addMonths, dateInputValue } from './date'
 import { diffTL, roundTL } from './money'
+import { normalizeSearchText } from './searchText'
 
 export type ParsedTransaction = {
   date: string
@@ -316,4 +317,107 @@ export function matchTransactions(
   }
 
   return { matched, unmatched, matches, matchDriftTL }
+}
+
+// ── Installment verification ──────────────────────────────────────────────
+
+export type StatementInstallmentMatchRow = {
+  id: string
+  due_month: string
+  amount: number
+  status: string
+  description: string
+  installment_no: number
+  installment_count: number
+}
+
+export type StatementInstallmentMatch = {
+  transaction: ParsedTransaction
+  installment: StatementInstallmentMatchRow
+}
+
+export type StatementInstallmentMismatch = {
+  transaction: ParsedTransaction
+  installment: StatementInstallmentMatchRow
+  diffTL: number
+}
+
+export type StatementInstallmentCheckResult = {
+  matched: StatementInstallmentMatch[]
+  amountMismatches: StatementInstallmentMismatch[]
+  pdfOnly: ParsedTransaction[]
+  appOnly: StatementInstallmentMatchRow[]
+}
+
+function installmentDescriptionKey(value: string): string {
+  return normalizeSearchText(
+    cleanDescription(value),
+  )
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .trim()
+}
+
+function installmentDescriptionsCompatible(left: string, right: string | null | undefined): boolean {
+  const leftKey = installmentDescriptionKey(left)
+  const rightKey = installmentDescriptionKey(right ?? '')
+  if (!leftKey || !rightKey) return true
+  if (leftKey.includes(rightKey) || rightKey.includes(leftKey)) return true
+
+  const leftTokens = new Set(leftKey.split(' ').filter((t) => t.length >= 3))
+  const rightTokens = rightKey.split(' ').filter((t) => t.length >= 3)
+  const common = rightTokens.filter((t) => leftTokens.has(t)).length
+  return common >= Math.min(2, rightTokens.length)
+}
+
+/**
+ * PDF'deki taksit satırlarını app'teki card_installments ile karşılaştırır.
+ * Tutar farkları, eksik/fazla taksitler tespit edilir.
+ */
+export function checkStatementInstallments(
+  pdfTransactions: ParsedTransaction[],
+  appInstallments: StatementInstallmentMatchRow[],
+  statementDate: string,
+): StatementInstallmentCheckResult {
+  const installmentTxs = pdfTransactions.filter((tx) => tx.isInstallment)
+  const active = appInstallments.filter((inst) => inst.status !== 'cancelled')
+  const usedIds = new Set<string>()
+  const matched: StatementInstallmentMatch[] = []
+  const amountMismatches: StatementInstallmentMismatch[] = []
+  const pdfOnly: ParsedTransaction[] = []
+
+  for (const tx of installmentTxs) {
+    const expectedDueMonth = statementInstallmentDueDate(tx)
+
+    const candidates = active.filter((inst) => (
+      !usedIds.has(inst.id) &&
+      inst.installment_no === tx.installmentNo &&
+      (inst.due_month === expectedDueMonth || inst.due_month.slice(0, 7) === expectedDueMonth.slice(0, 7))
+    ))
+
+    const preferred = candidates.find((inst) => installmentDescriptionsCompatible(tx.description, inst.description))
+    const found = preferred ?? (candidates.length === 1 ? candidates[0] : undefined)
+
+    if (!found) {
+      pdfOnly.push(tx)
+      continue
+    }
+
+    usedIds.add(found.id)
+    const diff = diffTL(found.amount, tx.amount)
+
+    if (Math.abs(diff) > AMOUNT_MATCH_TOLERANCE_TL) {
+      amountMismatches.push({ transaction: tx, installment: found, diffTL: diff })
+    } else {
+      matched.push({ transaction: tx, installment: found })
+    }
+  }
+
+  const periodMonth = statementDate.slice(0, 7)
+  const appOnly = active.filter((inst) => (
+    !usedIds.has(inst.id) &&
+    inst.due_month.slice(0, 7) === periodMonth &&
+    inst.status !== 'paid'
+  ))
+
+  return { matched, amountMismatches, pdfOnly, appOnly }
 }

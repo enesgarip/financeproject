@@ -6,11 +6,13 @@ import {
   addCardExpense,
   cutCardStatement,
   fetchCardExpenseMatchRows,
+  fetchCardInstallmentMatchRows,
   fetchCardPaymentMatchRows,
   payPaymentFromCardImport,
   recordCardInstallmentCarryover,
   resetCardImportData,
   setStatementReconciliation,
+  updateCardInstallmentAmount,
   type ExpenseMatchRow,
   type PaymentMatchRow,
 } from '../../data/repositories/cardsRepo'
@@ -22,10 +24,12 @@ import { dateRangeFromIsoDates, rowsInReviewPeriod } from '../../utils/importRev
 import {
   parseDenizBankStatement,
   matchTransactions,
+  checkStatementInstallments,
   expenseTotalAmount,
   type ParsedTransaction,
   type ParsedStatementAdjustment,
   type StatementTransactionMatch,
+  type StatementInstallmentCheckResult,
 } from '../../utils/denizBankStatementParser'
 import { matchDenizBankMovementPayments, type ParsedDenizBankMovement } from '../../utils/denizBankMovementParser'
 import { buildImportedInstallmentPlan } from '../../utils/importedInstallmentPlan'
@@ -149,6 +153,10 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
   const [plannedPaymentMatches, setPlannedPaymentMatches] = useState(0)
   const [matchDriftTL, setMatchDriftTL] = useState(0)
   const [driftCorrected, setDriftCorrected] = useState(false)
+  const [installmentCheck, setInstallmentCheck] = useState<StatementInstallmentCheckResult | null>(null)
+  const [showInstallmentCheck, setShowInstallmentCheck] = useState(false)
+  const [installmentFixing, setInstallmentFixing] = useState<Set<string>>(new Set())
+  const [installmentFixed, setInstallmentFixed] = useState<Set<string>>(new Set())
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [importedCount, setImportedCount] = useState(0)
   const [failedCount, setFailedCount] = useState(0)
@@ -190,9 +198,10 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
 
       // Load existing app expenses once: matching and the period history panel
       // share the same snapshot.
-      const [expensesResult, paymentsResult] = await Promise.all([
+      const [expensesResult, paymentsResult, installmentsResult] = await Promise.all([
         fetchCardExpenseMatchRows(card.id),
         fetchCardPaymentMatchRows(card.id),
+        fetchCardInstallmentMatchRows(card.id),
       ])
       if (!expensesResult.ok) {
         setParseError(expensesResult.error.message ?? 'Kart harcamaları yüklenemedi.')
@@ -214,6 +223,13 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
 
       setPeriodLabel(reviewPeriod?.label ?? '')
       setPeriodExpenses(rowsInReviewPeriod(expenses, reviewPeriod))
+
+      if (installmentsResult.ok) {
+        const instCheck = checkStatementInstallments(parsed.transactions, installmentsResult.data, parsed.statementDate)
+        const hasIssues = instCheck.amountMismatches.length > 0 || instCheck.appOnly.length > 0
+        setInstallmentCheck(instCheck)
+        setShowInstallmentCheck(hasIssues)
+      }
 
       if (cleanImport) {
         const importRows = attachPlannedPayments(parsed.transactions, paymentsResult.data, card.id)
@@ -731,6 +747,123 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
               </div>
             )}
 
+            {/* Taksit kontrolü */}
+            {installmentCheck && (installmentCheck.matched.length > 0 || installmentCheck.amountMismatches.length > 0 || installmentCheck.appOnly.length > 0) && (
+              <div className="border-b border-border">
+                <button
+                  type="button"
+                  onClick={() => setShowInstallmentCheck((v) => !v)}
+                  className="flex w-full items-center justify-between gap-3 px-4 py-2 text-left hover:bg-muted/30"
+                  aria-expanded={showInstallmentCheck}
+                >
+                  <span className="min-w-0">
+                    <span className="block text-xs font-bold text-muted-foreground">Taksit kontrolü</span>
+                    <span className="mt-0.5 block text-[11px] text-muted-foreground">
+                      {installmentCheck.matched.length} doğrulandı
+                      {installmentCheck.amountMismatches.length > 0 && `, ${installmentCheck.amountMismatches.length} tutar farkı`}
+                      {installmentCheck.appOnly.length > 0 && `, ${installmentCheck.appOnly.length} ekstre dışı`}
+                    </span>
+                  </span>
+                  <div className="flex items-center gap-2">
+                    {installmentCheck.amountMismatches.length > 0 || installmentCheck.appOnly.length > 0 ? (
+                      <span className="flex items-center gap-1 rounded-md bg-warning/10 px-2 py-0.5 text-[10px] font-black text-warning">
+                        <AlertCircle size={10} />
+                        {installmentCheck.amountMismatches.length + installmentCheck.appOnly.length}
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-1 rounded-md bg-success/10 px-2 py-0.5 text-[10px] font-black text-success">
+                        <CheckCircle2 size={10} />
+                        OK
+                      </span>
+                    )}
+                    <ChevronDown size={16} className={`shrink-0 text-muted-foreground transition-transform ${showInstallmentCheck ? 'rotate-180' : ''}`} />
+                  </div>
+                </button>
+                {showInstallmentCheck && (
+                  <div className="max-h-56 overflow-y-auto">
+                    {installmentCheck.amountMismatches.map(({ transaction: tx, installment: inst, diffTL: diff }) => (
+                      <div
+                        key={inst.id}
+                        className="flex items-center gap-3 border-b border-border/50 px-4 py-2.5"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-xs font-bold text-foreground">{tx.description}</p>
+                          <p className="text-[11px] text-muted-foreground">
+                            {tx.installmentNo}/{tx.installmentCount}. taksit · Ekstre: {formatAmount(tx.amount)} · App: {formatAmount(inst.amount)}
+                          </p>
+                          <p className="text-[11px] font-bold text-warning">
+                            Fark: {diff > 0 ? '+' : ''}{formatAmount(diff)}
+                          </p>
+                        </div>
+                        <div className="shrink-0">
+                          {installmentFixed.has(inst.id) ? (
+                            <span className="flex items-center gap-1 text-[11px] font-bold text-success">
+                              <CheckCircle2 size={12} /> Düzeltildi
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              disabled={installmentFixing.has(inst.id)}
+                              onClick={async () => {
+                                setInstallmentFixing((prev) => new Set(prev).add(inst.id))
+                                const result = await updateCardInstallmentAmount(inst.id, tx.amount)
+                                if (result.ok) {
+                                  setInstallmentFixed((prev) => new Set(prev).add(inst.id))
+                                }
+                                setInstallmentFixing((prev) => {
+                                  const next = new Set(prev)
+                                  next.delete(inst.id)
+                                  return next
+                                })
+                              }}
+                              className="flex items-center gap-1 rounded-lg bg-primary/10 px-2.5 py-1.5 text-[11px] font-bold text-primary hover:bg-primary/20 disabled:opacity-55"
+                            >
+                              {installmentFixing.has(inst.id) ? (
+                                <Loader2 size={11} className="animate-spin" />
+                              ) : null}
+                              {formatAmount(tx.amount)} yap
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                    {installmentCheck.appOnly.map((inst) => (
+                      <div
+                        key={inst.id}
+                        className="flex items-center gap-3 border-b border-border/50 px-4 py-2.5"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-xs font-bold text-foreground">{inst.description}</p>
+                          <p className="text-[11px] text-muted-foreground">
+                            {inst.installment_no}/{inst.installment_count}. taksit · {formatAmount(inst.amount)}/ay
+                          </p>
+                          <p className="text-[11px] font-bold text-warning">
+                            Ekstrede yok — kontrol et
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                    {installmentCheck.matched.map(({ transaction: tx, installment: inst }) => (
+                      <div
+                        key={inst.id}
+                        className="flex items-center gap-3 border-b border-border/50 px-4 py-2.5"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-xs font-bold text-foreground">{tx.description}</p>
+                          <p className="text-[11px] text-muted-foreground">
+                            {tx.installmentNo}/{tx.installmentCount}. taksit · {formatAmount(tx.amount)}/ay
+                          </p>
+                        </div>
+                        <span className="shrink-0 text-[11px] font-bold text-success">
+                          <CheckCircle2 size={12} className="inline" /> OK
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Importable (otomatik aktarılabilir) işlemler */}
             {importableCount > 0 && (
               <>
@@ -954,6 +1087,11 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
             {driftCorrected && (
               <p className="text-sm text-info">
                 Eşleşen işlemlerdeki {formatAmount(Math.abs(matchDriftTL))} tutar farkı otomatik düzeltildi.
+              </p>
+            )}
+            {installmentFixed.size > 0 && (
+              <p className="text-sm text-info">
+                {installmentFixed.size} taksit tutarı ekstre ile eşleşecek şekilde düzeltildi.
               </p>
             )}
             <button
