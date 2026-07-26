@@ -70,6 +70,7 @@ export type HealthIssue = {
     | 'cardStatementStatus'
     | 'cardOverduePayment'
     | 'cardScheduledDebt'
+    | 'cardInstallmentOverflow'
     | 'cardLedgerDrift'
     | 'cardSplitDrift'
     | 'duplicateTransactionCandidate'

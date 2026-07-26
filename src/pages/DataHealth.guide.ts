@@ -26,6 +26,16 @@ export function buildIssueGuide(issue: HealthIssue): IssueGuide {
     }
   }
 
+  if (issue.kind === 'cardInstallmentOverflow') {
+    return {
+      problem: 'Planlı taksitlerin toplamı kartın güncel borcundan yüksek.',
+      whyItMatters: 'Borç, taksitlerin gerçekte ne kadar ödeneceğini yansıtmıyor; borç fazla düşük görünüyor veya bazı taksitler artık geçersiz.',
+      nextStep: issue.fixable
+        ? 'Borcu taksit toplamına eşitlemek için hızlı düzeltmeyi uygula.'
+        : 'Taksit planını kontrol et; ödenen veya iptal edilmesi gereken taksitler olabilir.',
+    }
+  }
+
   if (issue.kind === 'cardLedgerDrift') {
     return {
       problem: 'Kartın kayıtlı borcu, borç hareketleri toplamından farklı.',
@@ -227,6 +237,9 @@ export function issuePreviewDetails(issue: HealthIssue) {
   } else if (issue.kind === 'cardScheduledDebt') {
     previews.push(`Yeni toplam borç: ${formatCurrency(payload.nextDebtAmount ?? 0)}`)
     previews.push(`Planlı taksit tutarı borca eklenecek.`)
+  } else if (issue.kind === 'cardInstallmentOverflow') {
+    previews.push(`Yeni toplam borç: ${formatCurrency(payload.nextDebtAmount ?? 0)}`)
+    previews.push('Borç, planlı taksit toplamına yükseltilecek.')
   } else if (issue.kind === 'cardLedgerDrift') {
     previews.push(`Borç hareket toplamına çekilecek: ${formatCurrency(payload.nextDebtAmount ?? 0)}`)
     previews.push('Yeni bir hareket yazılmaz; borç projeksiyona eşitlenir.')

@@ -335,6 +335,26 @@ export function checkCards(
       })
     }
 
+    if (exceedsTL(scheduledTotal, card.debt_amount) && card.debt_amount > 0) {
+      const overflow = roundTL(scheduledTotal - card.debt_amount)
+      issues.push({
+        id: `card-installment-overflow-${card.id}`,
+        area: 'Kartlar',
+        severity: 'warning',
+        title: `${cardLabel(card)} planlı taksitler borçtan yüksek`,
+        description: 'Planlı taksitlerin toplamı kartın güncel borcunu aşıyor. Ödenen/iptal edilmesi gereken taksitler olabilir.',
+        details: [
+          `Planlı taksit toplamı: ${formatCurrency(scheduledTotal)}`,
+          `Güncel borç: ${formatCurrency(card.debt_amount)}`,
+          `Fazla: ${formatCurrency(overflow)}`,
+        ],
+        fixable: true,
+        fixLabel: 'Borcu taksit toplamına eşitle',
+        kind: 'cardInstallmentOverflow',
+        payload: { cardId: card.id, nextDebtAmount: scheduledTotal },
+      })
+    }
+
     if (debtBreakdown.hasUnexplainedDebt) {
       const unexplained = debtBreakdown.unexplainedAmount
       const hasInstallmentExpenses = cardInstallments.some(

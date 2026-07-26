@@ -33,6 +33,7 @@ import { dateInputValue } from '../../utils/date'
 import { roundTL, sumTL } from '../../utils/money'
 import { getCardStatementPeriod } from '../../utils/cardStatement'
 import { buildImportedInstallmentPlan } from '../../utils/importedInstallmentPlan'
+import { postCardDebtCorrection } from '../../services/cardLedgerActions'
 import { useBodyScrollLock } from '../ui/use-body-scroll-lock'
 
 type Step = 'upload' | 'review' | 'done'
@@ -112,6 +113,8 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
   const [selectedInstallments, setSelectedInstallments] = useState<Set<number>>(new Set())
   const [selectedCancel, setSelectedCancel] = useState<Set<string>>(new Set())
   const [resultMessage, setResultMessage] = useState('')
+  const [matchDriftTL, setMatchDriftTL] = useState(0)
+  const [driftCorrected, setDriftCorrected] = useState(false)
 
   const fileRef = useRef<HTMLInputElement>(null)
 
@@ -232,6 +235,8 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
       setBankOnly(nextBankOnly)
       setAppOnly(nextAppOnly)
       setManualReview(nextManual)
+      setMatchDriftTL(result.matchDriftTL)
+      setDriftCorrected(false)
       setSelectedImport(new Set())
       setSelectedInstallments(new Set())
       setSelectedCancel(new Set())
@@ -435,6 +440,15 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
       setApplyError(`İşlem başarısız: ${errors[0] ?? 'Bilinmeyen hata.'}`)
       setApplying(false)
       return
+    }
+
+    if (matchDriftTL !== 0) {
+      const correction = await postCardDebtCorrection(
+        card.id,
+        -matchDriftTL,
+        `Hareket import eşleşmelerindeki tutar farkı düzeltmesi (${matches.length} işlem, toplam ${matchDriftTL > 0 ? '+' : ''}${roundTL(matchDriftTL)} TL fark)`,
+      )
+      if (!correction.error) setDriftCorrected(true)
     }
 
     const parts: string[] = []
@@ -996,6 +1010,11 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
             <CheckCircle2 size={40} className="mx-auto text-success" />
             <p className="text-base font-black text-foreground">{resultMessage}</p>
             <p className="text-sm text-muted-foreground">Kart bakiyesi güncellendi.</p>
+            {driftCorrected && (
+              <p className="text-sm text-info">
+                Eşleşen işlemlerdeki {formatAmount(Math.abs(matchDriftTL))} tutar farkı otomatik düzeltildi.
+              </p>
+            )}
             <button
               type="button"
               onClick={onSuccess}

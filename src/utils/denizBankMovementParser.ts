@@ -56,6 +56,8 @@ export type MovementMatchResult = {
   unmatched: ParsedDenizBankMovement[]
   matches: DenizBankMovementMatch[]
   appOnly: MovementExpenseMatchRow[]
+  /** App'teki tutar ile banka hareketindeki tutar arasındaki toplam fark (app − banka). */
+  matchDriftTL: number
 }
 
 export type DenizBankMovementMatch = {
@@ -344,7 +346,12 @@ export function matchDenizBankMovements(
   const periodActive = (periodExpenses ?? []).filter((expense) => expense.status !== 'cancelled')
   const appOnly = periodActive.filter((expense) => !matchedExpenseRefs.has(expense))
 
-  return { matched, unmatched, matches, appOnly }
+  let matchDriftTL = 0
+  for (const m of matches) {
+    matchDriftTL += diffTL(m.expense.amount, m.movement.amount)
+  }
+
+  return { matched, unmatched, matches, appOnly, matchDriftTL }
 }
 
 export function matchDenizBankInstallmentMovements(

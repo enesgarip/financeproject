@@ -50,7 +50,7 @@ export async function fixIssue(issue: HealthIssue): Promise<UndoBatch | null> {
     if (!updateError.ok) throw new Error(updateError.error.message ?? 'Kart borç kırılımı güncellenemedi.')
   }
 
-  if (issue.kind === 'cardScheduledDebt' && payload.cardId && payload.nextDebtAmount !== undefined) {
+  if ((issue.kind === 'cardScheduledDebt' || issue.kind === 'cardInstallmentOverflow') && payload.cardId && payload.nextDebtAmount !== undefined) {
     await addUndo('cards', [payload.cardId])
     const updateError = await updateDataHealthRow('cards', payload.cardId, {
         debt_amount: payload.nextDebtAmount,
