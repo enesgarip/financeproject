@@ -223,6 +223,22 @@ export function isSnapshotStale(
   return age > maxHours
 }
 
+/**
+ * Snapshot yaşının insan okunur etiketi ("3 saat önce", "2 gün önce").
+ * Bayat kur, varlık değerlerini sessizce yanlış gösterir; rozet bunu görünür kılar.
+ */
+export function formatSnapshotAge(
+  snapshot: MarketRatesSnapshot | null | undefined,
+  now: Date = new Date(),
+): string | null {
+  const age = snapshotAgeHours(snapshot, now)
+  if (age === null) return null
+  if (age < 0) return 'az önce'
+  if (age < 1) return 'az önce'
+  if (age < 24) return `${Math.floor(age)} saat önce`
+  return `${Math.floor(age / 24)} gün önce`
+}
+
 // Kur değeri yuvarlaması (para değil) — money.ts'e bağlama; rate precision (Faz C).
 function round2(value: number) {
   return Math.round((value + Number.EPSILON) * 100) / 100

@@ -2,14 +2,13 @@ import { useQuery } from '@tanstack/react-query'
 import { useEffect, useMemo, useRef } from 'react'
 import { useFinanceSnapshot } from '../app/useFinanceSnapshot'
 import { useAuth } from '../auth/useAuth'
-import { fetchPriceRadarRows, upsertAndLoadNetWorthSnapshots } from '../data/repositories/analysisRepo'
+import { fetchNetWorthSnapshots, fetchPriceRadarRows } from '../data/repositories/analysisRepo'
 import { useMarketRates } from '../hooks/useMarketRates'
 import type { NetWorthSnapshot } from '../types/database'
 import {
   buildSearchItems,
   type AnalysisData,
 } from '../utils/analysisView'
-import { buildFinancialPosition } from '../utils/financeSummary'
 import { type MarketRatesSnapshot } from '../utils/marketRates'
 import { buildPriceObservations, detectPriceIncreases, type PriceTrend } from '../utils/priceIncreaseRadar'
 
@@ -36,30 +35,8 @@ const optionalTableLabels: Record<string, string> = {
 
 const STATEMENT_ARCHIVE_LIMIT = 48
 
-async function loadNetWorthSnapshots(
-  userId: string,
-  loadedData: AnalysisData,
-  ratesSnapshot: MarketRatesSnapshot | null,
-): Promise<NetWorthSnapshot[] | null> {
-  const position = buildFinancialPosition({
-    assets: loadedData.assets,
-    cards: loadedData.cards,
-    loans: loadedData.loans,
-    loanInstallments: loadedData.loanInstallments,
-    debts: loadedData.debts,
-    payments: loadedData.payments,
-    salaryHistory: loadedData.salaryHistory,
-    cardInstallments: loadedData.cardInstallments,
-  })
-  const result = await upsertAndLoadNetWorthSnapshots(userId, {
-    netWorth: position.netWorth,
-    goldTry: ratesSnapshot?.rates?.GRA?.buying ?? null,
-    usdTry: ratesSnapshot?.rates?.USD?.buying ?? null,
-  })
-
-  return result.ok ? result.data : null
-}
-
+// Bu sayfa artık yalnız OKUR. Günlük snapshot kaydı app/useDailyNetWorthSnapshot
+// içinde Layout'a bağlıdır; böylece seri Analiz sayfası hiç açılmasa da dolar.
 export function useAnalysisPageData() {
   const { user } = useAuth()
   const { snapshot: ratesSnapshot } = useMarketRates()
@@ -104,7 +81,8 @@ export function useAnalysisPageData() {
     staleTime: Infinity,
     queryFn: async () => {
       try {
-        return (await loadNetWorthSnapshots(userId as string, dataRef.current, ratesSnapshotRef.current)) ?? []
+        const result = await fetchNetWorthSnapshots()
+        return (result.ok ? result.data : null) ?? []
       } catch {
         return [] as NetWorthSnapshot[]
       }

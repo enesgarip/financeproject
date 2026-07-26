@@ -10,7 +10,9 @@ import { buildMonthlyCashFlow, sum } from '../utils/financeSummary'
 import { activeExpense as activeCardExpense } from '../utils/budgetAlerts'
 import { isDateInMonth } from '../utils/date'
 import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
+import { diffTL } from '../utils/money'
 import { buildMonthlySummary } from '../utils/monthlySummary'
+import { buildRealizedMonthlyOutflow } from '../utils/realizedCashFlow'
 import { downloadShareableCard, renderShareableCard } from '../utils/shareableCard'
 import { normalizeSearchText } from '../utils/searchText'
 import { buildYearEndReport } from '../utils/yearEndReport'
@@ -136,23 +138,26 @@ function AiSummaryButton({ data }: { data: AnalysisData }) {
 
 export function MonthlyReport({ data }: { data: AnalysisData }) {
   const { formatAmount } = useBalancePrivacy()
-  // Same engine the dashboard cash-flow card uses, so "Gelir / Nakit çıkışı / Net" here
-  // can never disagree with the dashboard for the same month (credit-card auto
-  // payments are excluded from cash outflow exactly like there).
   const cashFlow = buildMonthlyCashFlow(data)
   const cardSpending = sum(
     data.cardExpenses.filter((expense) => activeCardExpense(expense) && isDateInMonth(expense.spent_at)),
     (expense) => expense.amount,
   )
   const summary = useMemo(() => buildMonthlySummary(data.cardExpenses), [data.cardExpenses])
+  // "Nakit çıkışı" projeksiyon değil GERÇEKLEŞEN ödemelerdir (işlem geçmişi).
+  // Projeksiyon dashboard'ın işi (kalan yük); rapor ayın fiilen olan bitenini anlatır.
+  const realized = useMemo(
+    () => buildRealizedMonthlyOutflow(data.transactionHistory, data.payments),
+    [data.transactionHistory, data.payments],
+  )
   const income = cashFlow.income
-  const outflow = cashFlow.outflow
-  const net = cashFlow.netFlow
+  const outflow = realized.totalCash
+  const net = diffTL(income, outflow)
   const reportRows = [
-    { label: 'Kart ödemesi', value: cashFlow.cardOutflow },
-    { label: 'Fatura/ödeme', value: cashFlow.paymentOutflow },
-    { label: 'Kredi taksidi', value: cashFlow.loanOutflow },
-    { label: 'Kişisel borç', value: cashFlow.debtOutflow },
+    { label: 'Kart ödemesi', value: realized.cardPayments },
+    { label: 'Fatura/ödeme', value: realized.billPayments },
+    { label: 'Kredi taksidi', value: realized.loanPayments },
+    { label: 'Kişisel borç', value: realized.debtPayments },
   ]
   const changeTone = summary.changePercent === null ? 'stone' : summary.changePercent > 0 ? 'rose' : 'emerald'
   const changeLabel = summary.changePercent === null ? '—' : `${summary.changePercent > 0 ? '+' : ''}%${summary.changePercent}`
@@ -188,7 +193,7 @@ export function MonthlyReport({ data }: { data: AnalysisData }) {
         <div className="grid grid-cols-2 gap-2 min-[520px]:grid-cols-4">
           <StatPill label="Gelir" value={formatAmount(income)} tone="emerald" />
           <StatPill label="Kart harcaması" value={formatAmount(cardSpending)} tone="rose" />
-          <StatPill label="Nakit çıkışı" value={formatAmount(outflow)} tone="rose" />
+          <StatPill label="Nakit çıkışı (gerçekleşen)" value={formatAmount(outflow)} tone="rose" />
           <StatPill label="Net nakit" value={formatAmount(net)} tone={net >= 0 ? 'emerald' : 'rose'} />
         </div>
         <div className="grid gap-2 min-[520px]:grid-cols-2">
@@ -225,7 +230,7 @@ export function MonthlyReport({ data }: { data: AnalysisData }) {
         ) : null}
 
         <p className="text-xs text-muted-foreground">
-          Kart harcamaları alışveriş tarihinde, nakit çıkışı ekstre veya ödeme tarihinde izlenir.
+          Kart harcamaları alışveriş tarihinde izlenir; nakit çıkışı bu ay fiilen yapılmış ödemelerden (işlem geçmişi) gelir.
         </p>
       </CardContent>
     </Card>

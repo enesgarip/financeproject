@@ -7,15 +7,14 @@ import {
   type FinanceSnapshot,
 } from '../data/repositories/financeSnapshotRepo'
 
+import { financeSnapshotKey } from './financeSnapshotKey'
+
 export type { FinanceSnapshot }
+export { financeSnapshotKey }
 
 const FINANCE_MAINTENANCE_THROTTLE_MS = 5 * 60 * 1000
 let lastFinanceMaintenanceAt = 0
 let financeMaintenancePromise: Promise<boolean> | null = null
-
-export function financeSnapshotKey(userId: string | undefined) {
-  return ['finance-snapshot', userId ?? 'anonymous'] as const
-}
 
 /** Returns true if maintenance actually ran, false if throttled/skipped. */
 async function runFinanceMaintenanceInBackground(): Promise<boolean> {

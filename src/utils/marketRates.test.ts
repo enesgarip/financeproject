@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   convertToTry,
+  formatSnapshotAge,
   isSnapshotStale,
   type MarketRatesSnapshot,
   parseTruncgilFeed,
@@ -141,6 +142,13 @@ describe('staleness', () => {
     expect(isSnapshotStale(SNAPSHOT, 24, now)).toBe(true)
     expect(isSnapshotStale(SNAPSHOT, 24, new Date('2026-06-04T09:00:00.000Z'))).toBe(false)
     expect(isSnapshotStale(null)).toBe(true)
+  })
+
+  it('yaşı rozet için insan okunur etikete çevirir', () => {
+    expect(formatSnapshotAge(SNAPSHOT, new Date('2026-06-03T21:50:00.000Z'))).toBe('az önce')
+    expect(formatSnapshotAge(SNAPSHOT, new Date('2026-06-04T00:21:01.000Z'))).toBe('3 saat önce')
+    expect(formatSnapshotAge(SNAPSHOT, new Date('2026-06-06T09:21:01.000Z'))).toBe('2 gün önce')
+    expect(formatSnapshotAge(null)).toBeNull()
   })
 })
 

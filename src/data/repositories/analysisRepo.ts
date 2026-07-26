@@ -16,30 +16,35 @@ export type NetWorthSnapshotInput = {
   usdTry: number | null
 }
 
-export async function upsertAndLoadNetWorthSnapshots(
+/** Bugünün net değer noktasını yazar (idempotent upsert). Kayıt app açılışında
+ *  alınır (app/useDailyNetWorthSnapshot); okuma tarafı ayrıdır. */
+export async function recordNetWorthSnapshot(
   userId: string,
   input: NetWorthSnapshotInput,
-): Promise<Result<NetWorthSnapshot[] | null>> {
+): Promise<Result<boolean>> {
   const today = new Date().toLocaleDateString('sv-SE')
-  const upsertRes = await supabase
+  const { error } = await supabase
     .from('net_worth_snapshots')
     .upsert(
       { user_id: userId, snapshot_date: today, net_worth: input.netWorth, gold_try: input.goldTry, usd_try: input.usdTry },
       { onConflict: 'user_id,snapshot_date' },
     )
 
-  if (isMissingSupabaseCapabilityError(upsertRes.error)) return ok(null)
-  const upsertResult = voidResultFromSupabase(upsertRes.error, 'Net değer snapshot kaydedilemedi.')
-  if (!upsertResult.ok) return upsertResult
+  // Tablo deploy edilmemişse sessizce geç (migration drift'i kullanıcıyı bloklamaz).
+  if (isMissingSupabaseCapabilityError(error)) return ok(false)
+  const result = voidResultFromSupabase(error, 'Net değer snapshot kaydedilemedi.')
+  return result.ok ? ok(true) : result
+}
 
-  const snapshotRes = await supabase
+export async function fetchNetWorthSnapshots(): Promise<Result<NetWorthSnapshot[] | null>> {
+  const { data, error } = await supabase
     .from('net_worth_snapshots')
     .select('*')
     .order('snapshot_date', { ascending: false })
     .limit(NET_WORTH_SNAPSHOT_LIMIT)
 
-  if (isMissingSupabaseCapabilityError(snapshotRes.error)) return ok(null)
-  return resultFromSupabase([...(snapshotRes.data ?? [])].reverse() as NetWorthSnapshot[], snapshotRes.error, 'Net değer serisi yüklenemedi.')
+  if (isMissingSupabaseCapabilityError(error)) return ok(null)
+  return resultFromSupabase([...(data ?? [])].reverse() as NetWorthSnapshot[], error, 'Net değer serisi yüklenemedi.')
 }
 
 export type PriceRadarRows = {

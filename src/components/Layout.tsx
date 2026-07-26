@@ -1,6 +1,7 @@
 import { CalendarDays, Eye, EyeOff, LogOut, Moon, MoreHorizontal, Sun } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
+import { useDailyNetWorthSnapshot } from '../app/useDailyNetWorthSnapshot'
 import { useAuth } from '../auth/useAuth'
 import { BalancePrivacyProvider, useBalancePrivacy } from '../hooks/useBalancePrivacy'
 import { cn } from '../lib/utils'
@@ -29,6 +30,8 @@ export function Layout() {
 function LayoutInner() {
   const { pathname } = useLocation()
   const { signOut, user } = useAuth()
+  // Günlük net değer fotoğrafı: hangi sayfayla açılırsa açılsın alınır.
+  useDailyNetWorthSnapshot()
   const contentWidth = contentWidthClass(pathname)
   const [isDark, setIsDark] = useState(() => {
     const storedTheme = localStorage.getItem('theme')

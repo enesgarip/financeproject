@@ -1,6 +1,7 @@
 import { RefreshCw, TrendingUp, TriangleAlert } from 'lucide-react'
 import { useEffect, useRef } from 'react'
 import { useMarketRates } from '../../hooks/useMarketRates'
+import { formatSnapshotAge } from '../../utils/marketRates'
 import { syncAutoValuedRows } from '../../utils/valuationSync'
 
 function formatAsOf(iso: string | null): string {
@@ -45,6 +46,7 @@ export function RatesBanner({ onSynced, note }: { onSynced?: () => void | Promis
 
   const offline = source === 'cache' || isStale
   const noData = !snapshot
+  const ageLabel = formatSnapshotAge(snapshot)
 
   return (
     <div className="flex items-center justify-between gap-3 rounded-2xl border border-border/70 bg-card px-3.5 py-2.5">
@@ -57,13 +59,21 @@ export function RatesBanner({ onSynced, note }: { onSynced?: () => void | Promis
           {offline || noData ? <TriangleAlert className="size-4" /> : <TrendingUp className="size-4" />}
         </span>
         <div className="min-w-0">
-          <p className="text-sm font-semibold text-foreground">Canlı altın & döviz kuru</p>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <p className="text-sm font-semibold text-foreground">Canlı altın & döviz kuru</p>
+            {/* Bayat kur varlık değerlerini sessizce yanlış gösterir; açık rozetle uyar. */}
+            {noData || offline ? (
+              <span className="shrink-0 rounded-md bg-warning/15 px-1.5 py-0.5 text-[11px] font-bold text-warning ring-1 ring-warning/25">
+                {noData
+                  ? 'Kur yok'
+                  : source === 'cache'
+                    ? `Çevrimdışı kopya${ageLabel ? ` · ${ageLabel}` : ''}`
+                    : `Güncellenemedi${ageLabel ? ` · ${ageLabel}` : ''}`}
+              </span>
+            ) : null}
+          </div>
           <p className="truncate text-xs text-muted-foreground">
-            {noData
-              ? 'Kur verisi henüz yüklenmedi'
-              : `truncgil.com · ${formatAsOf(asOf)} itibarıyla${source === 'cache' ? ' · çevrimdışı kopya' : ''}${
-                  isStale && source !== 'cache' ? ' · güncel olmayabilir' : ''
-                }`}
+            {noData ? 'Kur verisi henüz yüklenmedi' : `truncgil.com · ${formatAsOf(asOf)} itibarıyla`}
           </p>
           {note ? <p className="truncate text-xs text-muted-foreground/80">{note}</p> : null}
         </div>
