@@ -22,6 +22,7 @@ do $$
 declare
   v_user uuid := '11111111-1111-1111-1111-111111111111';
   v_card uuid;
+  v_next_period_card uuid;
   v_statement_day integer;
   v_archives_after_first integer;
   v_archives_after_second integer;
@@ -49,6 +50,32 @@ begin
   )
   returning id into v_card;
 
+  -- Kartta dönem içi toplam var ama harcamanın tamamı kesim sınırından sonra:
+  -- otomatik bakım bunu hata vermeden sonraki ekstreye bırakmalı.
+  insert into public.cards (
+    user_id, bank_name, card_name, card_type, credit_limit,
+    debt_amount, statement_debt_amount, current_period_spending, provision_amount,
+    statement_day, due_day, current_balance
+  )
+  values (
+    v_user, 'Test Bank', 'Next Period Test Karti', 'kredi_karti', 50000,
+    0, 0, 0, 0,
+    v_statement_day, least(v_statement_day + 5, 28), 0
+  )
+  returning id into v_next_period_card;
+
+  perform public.add_card_expense(
+    v_next_period_card,
+    500,
+    'Sonraki donem harcamasi',
+    current_date,
+    1,
+    'Diğer',
+    'posted',
+    v_user,
+    'manual'
+  );
+
   -- ── 1. koşu ───────────────────────────────────────────────────────────────
   perform public.post_due_card_auto_payments();
   perform public.post_due_card_installments();
@@ -66,6 +93,12 @@ begin
 
   if v_archives_after_first <> 1 then
     v_failures := v_failures || format('  - ilk kosuda 1 ekstre bekleniyordu, %s olustu', v_archives_after_first);
+  end if;
+
+  if exists (
+    select 1 from public.card_statement_archives where card_id = v_next_period_card
+  ) then
+    v_failures := v_failures || '  - sonraki donem harcamasi icin bos ekstre olusturuldu';
   end if;
 
   if v_statement_debt <> 1500 then

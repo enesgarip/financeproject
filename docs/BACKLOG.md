@@ -1,6 +1,6 @@
 # Priority Backlog
 
-## 2026-07-27 — "En iyi versiyon" yol haritası (F serisi, DEVAM EDİYOR)
+## 2026-07-27 — "En iyi versiyon" yol haritası (F serisi, TAMAMLANDI)
 
 Hedef değişti: daha çok özellik değil, **daha az manuel emek + hâlâ dürüst
 rakamlar**. Durma kriteri (kullanıcıyla kararlaştırıldı): aylık manuel giriş
@@ -368,6 +368,11 @@ pattern'ler ve açık düzeltme planı yer alıyor.
 
 ## Recently Cleared / No Longer First Next Task
 
+- 2026-07-27 empty due-statement handling: automatic statement maintenance now
+  skips cards whose current-period spending belongs entirely to the next
+  statement. The expected no-op no longer appears as a red error or prevents
+  other due cards from being cut; the maintenance catch-up SQL test covers the
+  mixed skip-and-cut case.
 - 2026-07-18 full logic-accuracy audit closed 12 findings plus one discovered
   privacy gap: quantity is mandatory for stock/fund/FX account-backed trades;
   recurring analytics use only their declared windows and avoid card-funded
