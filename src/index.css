@@ -253,7 +253,9 @@
   --ring:                 #46e0aa;
 
   /* Aynı sekiz renk, koyu zemin için yeniden basamaklandı — otomatik çevirme değil.
-     Doğrulandı (dark, zemin #13161d): CVD ΔE 8.4, normal görüş ΔE 19.3, hepsi 3:1 üstü. */
+     Grafik paleti kasıtlı olarak markadan (jade) bağımsız kategorik kimliktir.
+     Nocturne obsidyen zeminine karşı yeniden doğrulandı (dark, zemin #131a17):
+     CVD ΔE 8.4, normal görüş ΔE 19.3, hepsi 3:1 üstü. */
   --viz-1: #3987e5;
   --viz-2: #d95926;
   --viz-3: #199e70;
@@ -507,6 +509,22 @@ button:disabled {
     -webkit-text-fill-color: transparent;
   }
 
+  /* İmza aurora sayısı — uygulamanın TEK gradyan anı. Jade→safir, yumuşak ışıma.
+     Yalnız imza yüzeylerdeki ana rakamda kullanılır (dashboard net değeri gibi);
+     her yere serpme (görsel ilke 2: viewport'ta tek imza anı). */
+  .aurora-value {
+    background: linear-gradient(
+      105deg,
+      var(--primary),
+      color-mix(in srgb, var(--primary) 55%, var(--info)) 46%,
+      var(--info)
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 0 22px color-mix(in srgb, var(--primary) 26%, transparent));
+  }
+
   /* Progress bar states */
   .progress-safe     { --progress-color: var(--success); }
   .progress-warn     { --progress-color: var(--warning); }
@@ -546,6 +564,22 @@ button:disabled {
   .trend-up   { color: var(--success); }
   .trend-down { color: var(--destructive); }
   .trend-flat { color: var(--muted-foreground); }
+
+  /* Aksiyon kartı anlam-şeridi: sol kenarda parlayan ince çubuk. Renk durumu
+     (risk/uyarı/bilgi/iyi) tek bakışta okutur — bilgi tasarımı, dekorasyon değil.
+     Işıma koyu temada belirgin, açık temada nazik kalır. */
+  .accent-stripe {
+    position: absolute;
+    inset: 0.6rem auto 0.6rem 0;
+    width: 3px;
+    border-radius: 3px;
+    pointer-events: none;
+  }
+  .accent-stripe-emerald { background: var(--success); box-shadow: 0 0 12px 0 color-mix(in srgb, var(--success) 55%, transparent); }
+  .accent-stripe-amber   { background: var(--warning); box-shadow: 0 0 12px 0 color-mix(in srgb, var(--warning) 55%, transparent); }
+  .accent-stripe-rose    { background: var(--destructive); box-shadow: 0 0 12px 0 color-mix(in srgb, var(--destructive) 55%, transparent); }
+  .accent-stripe-indigo  { background: var(--info); box-shadow: 0 0 12px 0 color-mix(in srgb, var(--info) 55%, transparent); }
+  .accent-stripe-stone   { background: var(--muted-foreground); }
 }
 
 /* ─── KEYFRAMES ─── */
