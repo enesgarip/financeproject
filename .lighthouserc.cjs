@@ -11,7 +11,8 @@ module.exports = {
       startServerReadyPattern: 'Local',
       startServerReadyTimeout: 30000,
       url: [`http://${previewHost}:${previewPort}/login`],
-      numberOfRuns: 3,
+      // Fast PR feedback uses one run; the scheduled CI audit sets this to 3.
+      numberOfRuns: Number(process.env.LHCI_NUMBER_OF_RUNS ?? 1),
       settings: {
         chromeFlags: process.env.CI ? ciChromeFlags : localChromeFlags,
         throttlingMethod: 'provided',

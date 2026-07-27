@@ -4,18 +4,64 @@ on:
   pull_request:
   push:
     branches:
-      - main
       - develop
-      - 'feature/**'
-      - 'codex/**'
+  schedule:
+    - cron: '30 1 * * *'
+  workflow_dispatch:
 
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.head.ref || github.ref }}
   cancel-in-progress: true
 
 jobs:
+  changes:
+    name: Detect relevant changes
+    runs-on: ubuntu-latest
+    outputs:
+      frontend: ${{ steps.detect.outputs.frontend }}
+      database: ${{ steps.detect.outputs.database }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Classify changes
+        id: detect
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          frontend=false
+          database=false
+
+          if [ "$EVENT_NAME" = "schedule" ] || [ "$EVENT_NAME" = "workflow_dispatch" ] \
+            || [ -z "$BASE_SHA" ] || [ "$BASE_SHA" = "0000000000000000000000000000000000000000" ]; then
+            frontend=true
+            database=true
+          else
+            changed=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA")
+            while IFS= read -r file; do
+              case "$file" in
+                src/*|public/*|tests/e2e/*|index.html|package.json|package-lock.json|vite.config.*|vitest.config.*|playwright.config.*|tsconfig*.json|eslint.config.*|.lighthouserc.cjs|vercel.json)
+                  frontend=true
+                  ;;
+              esac
+              case "$file" in
+                supabase/migrations/*|supabase/tests/*|supabase/seed.sql|supabase/config.toml)
+                  database=true
+                  ;;
+              esac
+            done <<< "$changed"
+          fi
+
+          echo "frontend=$frontend" >> "$GITHUB_OUTPUT"
+          echo "database=$database" >> "$GITHUB_OUTPUT"
+
   quality:
     name: Lint and Build
+    if: ${{ github.event_name != 'schedule' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -24,11 +70,21 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v7
         with:
-          node-version: 22
+          node-version: 24
           cache: npm
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Restore quality caches
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules/.cache/eslint
+            node_modules/.tmp/*.tsbuildinfo
+          key: quality-${{ runner.os }}-node24-${{ hashFiles('package-lock.json') }}-${{ github.sha }}
+          restore-keys: |
+            quality-${{ runner.os }}-node24-${{ hashFiles('package-lock.json') }}-
 
       - name: Lint
         run: npm run lint
@@ -47,10 +103,10 @@ jobs:
 
   lighthouse:
     name: Lighthouse
+    needs: changes
+    if: ${{ github.event_name == 'schedule' || needs.changes.outputs.frontend == 'true' }}
     runs-on: ubuntu-latest
-    # Kronik NO_FCP flake'i (runner performansına duyarlı) main'i kırmızı
-    # gösteriyordu; job bilgilendirici kalır, workflow sonucunu etkilemez.
-    # Rapor artifact'ı yüklenmeye devam eder.
+    timeout-minutes: 5
     continue-on-error: true
     permissions:
       contents: read
@@ -62,25 +118,31 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v7
         with:
-          node-version: 22
+          node-version: 24
           cache: npm
 
       - name: Install dependencies
         run: npm ci
 
-      # Tarayıcı, package-lock'taki Playwright sürümünden kurulur. Sabit sürümlü
-      # docker imajı kullanılmaz: Dependabot playwright'ı yükselttiğinde imaj
-      # etiketi geride kalıyor ve tarayıcı binary'si bulunamayıp CI günlerce
-      # kırmızı kalıyordu (2026-06-22..07-02 arızası).
+      - name: Restore Playwright Chromium
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Install Chromium system dependencies
+        run: npx playwright install-deps chromium
+
       - name: Install Playwright Chromium
-        run: npx playwright install --with-deps chromium
+        if: ${{ steps.playwright-cache.outputs.cache-hit != 'true' }}
+        run: npx playwright install chromium
 
       - name: Use Playwright Chromium for Lighthouse
         run: |
           CHROME_PATH="$(node -e "const { chromium } = require('playwright'); console.log(chromium.executablePath())")"
           test -x "$CHROME_PATH"
           echo "CHROME_PATH=$CHROME_PATH" >> "$GITHUB_ENV"
-          echo "Using Chromium at $CHROME_PATH"
 
       - name: Build
         run: npm run build
@@ -90,14 +152,14 @@ jobs:
 
       - name: Lighthouse CI
         run: |
-          # Lighthouse is sensitive to CI machine performance; retry once on failure.
           npx --yes @lhci/cli@0.14.x autorun || {
-            echo "::warning::First Lighthouse run failed — retrying…"
+            echo "::warning::First Lighthouse run failed — retrying once…"
             rm -rf .lighthouseci
             npx @lhci/cli@0.14.x autorun
           }
         env:
           LHCI_GITHUB_TOKEN: ${{ github.token }}
+          LHCI_NUMBER_OF_RUNS: ${{ github.event_name == 'schedule' && '3' || '1' }}
 
       - name: Upload Lighthouse report
         if: always()
@@ -109,6 +171,8 @@ jobs:
 
   e2e:
     name: Playwright Smoke
+    needs: changes
+    if: ${{ github.event_name != 'schedule' && needs.changes.outputs.frontend == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -117,16 +181,25 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v7
         with:
-          node-version: 22
+          node-version: 24
           cache: npm
 
       - name: Install dependencies
         run: npm ci
 
-      # Sürüm her zaman package-lock ile eşleşsin diye tarayıcı paketten kurulur
-      # (sabit imaj etiketi yok; gerekçe için lighthouse job'ındaki nota bak).
+      - name: Restore Playwright Chromium
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Install Chromium system dependencies
+        run: npx playwright install-deps chromium
+
       - name: Install Playwright Chromium
-        run: npx playwright install --with-deps chromium
+        if: ${{ steps.playwright-cache.outputs.cache-hit != 'true' }}
+        run: npx playwright install chromium
 
       - name: Run Playwright smoke tests
         run: npm run test:e2e
@@ -147,6 +220,8 @@ jobs:
 
   supabase:
     name: Supabase Migration Check
+    needs: changes
+    if: ${{ github.event_name != 'schedule' && needs.changes.outputs.database == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -166,8 +241,6 @@ jobs:
           [ "$ok" = 1 ] || { echo "::error::Supabase CLI download failed after 5 attempts"; exit 1; }
           rm -rf /tmp/sbcli && mkdir -p /tmp/sbcli
           tar -xzf supabase.tar.gz -C /tmp/sbcli
-          # Recent releases ship a `supabase` shim plus a `supabase-go` binary;
-          # install both, co-located, so the shim can find its backend.
           sudo cp /tmp/sbcli/supabase* /usr/local/bin/
           sudo chmod +x /usr/local/bin/supabase*
           supabase --version
@@ -175,8 +248,8 @@ jobs:
       - name: Start local Supabase
         run: supabase db start
 
-      - name: Reapply migrations locally
-        run: supabase db reset --local --no-seed
+      - name: Reapply migrations and seed
+        run: supabase db reset --local
 
       - name: Lint local database
         run: supabase db lint --local --fail-on error
@@ -184,12 +257,8 @@ jobs:
       - name: RLS policy audit
         run: docker exec -i supabase_db_financeproject psql -U postgres -d postgres -v ON_ERROR_STOP=1 -f - < supabase/tests/rls_audit.sql
 
-      # Policy'si olup grant'i olmayan tablo = ölü policy; migration'lardan
-      # kurulan ortam üretimden sapar (2026-07-27 drift'i).
       - name: Table grant audit
         run: docker exec -i supabase_db_financeproject psql -U postgres -d postgres -v ON_ERROR_STOP=1 -f - < supabase/tests/grants_audit.sql
 
       - name: Maintenance catch-up idempotency
-        run: |
-          supabase db reset --local
-          docker exec -i supabase_db_financeproject psql -U postgres -d postgres -v ON_ERROR_STOP=1 -f - < supabase/tests/maintenance_catchup.sql
+        run: docker exec -i supabase_db_financeproject psql -U postgres -d postgres -v ON_ERROR_STOP=1 -f - < supabase/tests/maintenance_catchup.sql

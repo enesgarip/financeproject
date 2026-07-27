@@ -10,19 +10,73 @@ concurrency:
   group: deploy-production
   cancel-in-progress: false
 
-# contents: read for checkout; actions: write so the pre-migration backup
-# (reusable db-backup workflow) can prune old artifacts.
 permissions:
   contents: read
   actions: write
 
 jobs:
-  # Hızlı doğrulama kapısı: kırık bir push migration'ları ve Vercel hook'unu
-  # tetiklemesin. CI ayrıca koşar ama deploy ona bağlı değildi; 2026-06-22..07-02
-  # arasında CI 10 gün kırmızıyken deploy'un sorunsuz görünmesi bu yüzdendi.
-  # Kapı bilinçli olarak hafif tutuldu (lint + unit test + build ≈ 2 dk).
+  changes:
+    name: Classify release changes
+    runs-on: ubuntu-latest
+    outputs:
+      frontend: ${{ steps.detect.outputs.frontend }}
+      database: ${{ steps.detect.outputs.database }}
+      migrations: ${{ steps.detect.outputs.migrations }}
+      edge: ${{ steps.detect.outputs.edge }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Classify changes
+        id: detect
+        env:
+          BEFORE: ${{ github.event.before }}
+          SHA: ${{ github.sha }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          frontend=false
+          database=false
+          migrations=false
+          edge=false
+
+          if [ "$EVENT_NAME" = "workflow_dispatch" ] || [ -z "$BEFORE" ] \
+            || [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
+            frontend=true
+            database=true
+            migrations=true
+            edge=true
+          else
+            changed=$(git diff --name-only "$BEFORE" "$SHA")
+            while IFS= read -r file; do
+              case "$file" in
+                src/*|public/*|index.html|package.json|package-lock.json|vite.config.*|tsconfig*.json|vercel.json)
+                  frontend=true
+                  ;;
+              esac
+              case "$file" in
+                supabase/migrations/*)
+                  database=true
+                  migrations=true
+                  ;;
+                supabase/seed.sql|supabase/config.toml|supabase/tests/*)
+                  database=true
+                  ;;
+                supabase/functions/*)
+                  edge=true
+                  ;;
+              esac
+            done <<< "$changed"
+          fi
+
+          echo "frontend=$frontend" >> "$GITHUB_OUTPUT"
+          echo "database=$database" >> "$GITHUB_OUTPUT"
+          echo "migrations=$migrations" >> "$GITHUB_OUTPUT"
+          echo "edge=$edge" >> "$GITHUB_OUTPUT"
+
   verify:
-    name: Verify (lint + test + build)
+    name: Lint and Build
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -31,17 +85,27 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v7
         with:
-          node-version: 22
+          node-version: 24
           cache: npm
 
       - name: Install dependencies
         run: npm ci
 
+      - name: Restore quality caches
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules/.cache/eslint
+            node_modules/.tmp/*.tsbuildinfo
+          key: quality-${{ runner.os }}-node24-${{ hashFiles('package-lock.json') }}-${{ github.sha }}
+          restore-keys: |
+            quality-${{ runner.os }}-node24-${{ hashFiles('package-lock.json') }}-
+
       - name: Lint
         run: npm run lint
 
-      - name: Unit tests
-        run: npm run test:unit
+      - name: Unit tests (with coverage gate)
+        run: npm run test:coverage
 
       - name: Build
         run: npm run build
@@ -49,56 +113,48 @@ jobs:
           VITE_SUPABASE_URL: https://example.supabase.co
           VITE_SUPABASE_ANON_KEY: ci-anon-key
 
-  # Detect whether this push touched any migration file. The pre-migration
-  # backup only runs when it did, so UI/edge-only deploys don't take (and crowd
-  # out) backups. The daily scheduled backup still covers everything else.
-  changes:
-    name: Detect migration changes
+      - name: Bundle size budget
+        run: npm run check:bundle
+
+  stage_frontend:
+    name: Build staged Vercel production
+    needs: changes
+    if: ${{ needs.changes.outputs.frontend == 'true' }}
     runs-on: ubuntu-latest
     outputs:
-      migrations: ${{ steps.detect.outputs.migrations }}
+      url: ${{ steps.stage.outputs.url }}
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
         with:
-          fetch-depth: 0
-      - name: Detect migration changes
-        id: detect
-        env:
-          BEFORE: ${{ github.event.before }}
-          SHA: ${{ github.sha }}
+          node-version: 24
+
+      - name: Install pinned Vercel CLI
+        run: npm install --global vercel@54.9.1
+
+      - name: Build staged production deployment
+        id: stage
         run: |
-          if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
-            echo "migrations=true" >> "$GITHUB_OUTPUT" # manual/first run: back up to be safe
-            exit 0
-          fi
-          changed=$(git diff --name-only "$BEFORE" "$SHA" -- supabase/migrations 2>/dev/null || echo ERROR)
-          if [ "$changed" = "ERROR" ] || [ -n "$changed" ]; then
-            echo "migrations=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "migrations=false" >> "$GITHUB_OUTPUT"
-          fi
+          url=$(vercel deploy --prod --skip-domain --yes --no-color --token "$VERCEL_TOKEN")
+          url=$(printf '%s\n' "$url" | tail -n 1)
+          case "$url" in
+            https://*) ;;
+            *) echo "::error::Vercel staged deployment URL alınamadı."; exit 1 ;;
+          esac
+          echo "url=$url" >> "$GITHUB_OUTPUT"
 
-  # Encrypted backup before migrations run (only when a migration actually
-  # changed), so a bad migration always has a pre-migration restore point.
-  backup:
-    name: Pre-migration backup
+  database_check:
+    name: Supabase Migration Check
     needs: changes
-    if: ${{ needs.changes.outputs.migrations == 'true' }}
-    uses: ./.github/workflows/db-backup.yml
-    secrets: inherit
-
-  migrate:
-    name: Supabase Production Migration
-    needs: [verify, changes, backup]
-    # Proceed unless verify failed or a required backup failed; a skipped
-    # backup (no migration change) is fine.
-    if: ${{ !cancelled() && needs.verify.result == 'success' && needs.backup.result != 'failure' }}
+    if: ${{ needs.changes.outputs.database == 'true' }}
     runs-on: ubuntu-latest
-    env:
-      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-      SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
-      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -117,47 +173,153 @@ jobs:
           [ "$ok" = 1 ] || { echo "::error::Supabase CLI download failed after 5 attempts"; exit 1; }
           rm -rf /tmp/sbcli && mkdir -p /tmp/sbcli
           tar -xzf supabase.tar.gz -C /tmp/sbcli
-          # Recent releases ship a `supabase` shim plus a `supabase-go` binary;
-          # install both, co-located, so the shim can find its backend.
+          sudo cp /tmp/sbcli/supabase* /usr/local/bin/
+          sudo chmod +x /usr/local/bin/supabase*
+          supabase --version
+
+      - name: Start local Supabase
+        run: supabase db start
+
+      - name: Reapply migrations and seed
+        run: supabase db reset --local
+
+      - name: Lint local database
+        run: supabase db lint --local --fail-on error
+
+      - name: RLS policy audit
+        run: docker exec -i supabase_db_financeproject psql -U postgres -d postgres -v ON_ERROR_STOP=1 -f - < supabase/tests/rls_audit.sql
+
+      - name: Table grant audit
+        run: docker exec -i supabase_db_financeproject psql -U postgres -d postgres -v ON_ERROR_STOP=1 -f - < supabase/tests/grants_audit.sql
+
+      - name: Maintenance catch-up idempotency
+        run: docker exec -i supabase_db_financeproject psql -U postgres -d postgres -v ON_ERROR_STOP=1 -f - < supabase/tests/maintenance_catchup.sql
+
+  backup:
+    name: Pre-migration backup
+    needs: changes
+    if: ${{ needs.changes.outputs.migrations == 'true' }}
+    uses: ./.github/workflows/db-backup.yml
+    secrets: inherit
+
+  release_supabase:
+    name: Release Supabase changes
+    needs: [changes, verify, database_check, backup]
+    if: >-
+      ${{
+        always() &&
+        !cancelled() &&
+        needs.verify.result == 'success' &&
+        needs.database_check.result != 'failure' &&
+        needs.backup.result != 'failure' &&
+        (needs.changes.outputs.migrations == 'true' || needs.changes.outputs.edge == 'true')
+      }}
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Install Supabase CLI (with retry)
+        run: |
+          VERSION=2.101.0
+          ok=0
+          for i in 1 2 3 4 5; do
+            if curl -fSL "https://github.com/supabase/cli/releases/download/v${VERSION}/supabase_linux_amd64.tar.gz" -o supabase.tar.gz; then
+              ok=1; break
+            fi
+            echo "Supabase CLI download attempt $i failed; retrying in 15s..."
+            sleep 15
+          done
+          [ "$ok" = 1 ] || { echo "::error::Supabase CLI download failed after 5 attempts"; exit 1; }
+          rm -rf /tmp/sbcli && mkdir -p /tmp/sbcli
+          tar -xzf supabase.tar.gz -C /tmp/sbcli
           sudo cp /tmp/sbcli/supabase* /usr/local/bin/
           sudo chmod +x /usr/local/bin/supabase*
           supabase --version
 
       - name: Link project
+        if: ${{ needs.changes.outputs.migrations == 'true' }}
         run: supabase link --project-ref "$SUPABASE_PROJECT_REF" --yes
 
       - name: Show migration plan
+        if: ${{ needs.changes.outputs.migrations == 'true' }}
         run: supabase db push --linked --dry-run --include-all
 
       - name: Apply production migrations
+        if: ${{ needs.changes.outputs.migrations == 'true' }}
         run: supabase db push --linked --include-all
 
-      - name: Deploy edge functions
+      - name: Deploy changed edge functions
+        if: ${{ needs.changes.outputs.edge == 'true' }}
+        env:
+          BEFORE: ${{ github.event.before }}
+          SHA: ${{ github.sha }}
+          EVENT_NAME: ${{ github.event_name }}
         run: |
-          supabase functions deploy bist-quote --project-ref "$SUPABASE_PROJECT_REF"
-          supabase functions deploy parse-receipt --project-ref "$SUPABASE_PROJECT_REF"
-          supabase functions deploy parse-statement --project-ref "$SUPABASE_PROJECT_REF"
-          supabase functions deploy parse-sms --project-ref "$SUPABASE_PROJECT_REF"
-          supabase functions deploy push-notify --project-ref "$SUPABASE_PROJECT_REF"
+          if [ "$EVENT_NAME" = "workflow_dispatch" ] || [ -z "$BEFORE" ] \
+            || [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
+            changed="ALL"
+          else
+            changed=$(git diff --name-only "$BEFORE" "$SHA" -- supabase/functions)
+          fi
 
-  deploy:
-    name: Trigger Vercel Deploy Hook
+          if [ "$changed" = "ALL" ] \
+            || printf '%s\n' "$changed" | grep -q '^supabase/functions/_shared/' \
+            || printf '%s\n' "$changed" | grep -q '^supabase/functions/[^/]*$'; then
+            mapfile -t functions < <(
+              find supabase/functions -mindepth 1 -maxdepth 1 -type d \
+                ! -name '_shared' -printf '%f\n' | sort
+            )
+          else
+            mapfile -t functions < <(
+              printf '%s\n' "$changed" \
+                | awk -F/ '/^supabase\/functions\/[^/]+\// { print $3 }' \
+                | grep -v '^_shared$' \
+                | sort -u
+            )
+          fi
+
+          [ "${#functions[@]}" -gt 0 ] || {
+            echo "::error::Değişen edge function belirlenemedi."
+            exit 1
+          }
+
+          for function in "${functions[@]}"; do
+            echo "Deploying edge function: $function"
+            supabase functions deploy "$function" --project-ref "$SUPABASE_PROJECT_REF"
+          done
+
+  publish_frontend:
+    name: Promote staged Vercel production
+    needs: [changes, verify, stage_frontend, release_supabase]
+    if: >-
+      ${{
+        always() &&
+        !cancelled() &&
+        needs.changes.outputs.frontend == 'true' &&
+        needs.verify.result == 'success' &&
+        needs.stage_frontend.result == 'success' &&
+        needs.release_supabase.result != 'failure'
+      }}
     runs-on: ubuntu-latest
-    needs:
-      - migrate
-    # Explicit condition: a skipped backup upstream must not skip the frontend
-    # deploy. Run whenever migration succeeded.
-    if: ${{ !cancelled() && needs.migrate.result == 'success' }}
     env:
-      VERCEL_DEPLOY_HOOK_URL: ${{ secrets.VERCEL_DEPLOY_HOOK_URL }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-
       - name: Setup Node
         uses: actions/setup-node@v7
         with:
-          node-version: 22
+          node-version: 24
 
-      - name: Trigger production deploy
-        run: node ./scripts/trigger-vercel-deploy.mjs
+      - name: Install pinned Vercel CLI
+        run: npm install --global vercel@54.9.1
+
+      - name: Promote exact staged deployment
+        env:
+          DEPLOYMENT_URL: ${{ needs.stage_frontend.outputs.url }}
+        run: vercel promote "$DEPLOYMENT_URL" --yes --no-color --token "$VERCEL_TOKEN"

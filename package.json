@@ -8,7 +8,7 @@
     "dev:local": "node scripts/dev-local.mjs",
     "dev:local:stop": "supabase stop",
     "build": "tsc -b && vite build",
-    "lint": "eslint .",
+    "lint": "eslint . --cache --cache-location node_modules/.cache/eslint/.eslintcache",
     "preview": "vite preview",
     "test:unit": "vitest run",
     "test:unit:watch": "vitest",

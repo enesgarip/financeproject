@@ -368,6 +368,14 @@ pattern'ler ve açık düzeltme planı yer alıyor.
 
 ## Recently Cleared / No Longer First Next Task
 
+- 2026-07-27 CI/CD performance pass: PR CI no longer duplicates feature-branch
+  push runs; E2E/Lighthouse/Supabase jobs are path-aware; Chromium, ESLint, and
+  TypeScript incremental state are cached; per-change Lighthouse uses one run
+  with a hard timeout while the scheduled audit keeps three. Main release runs
+  the quality gate once, validates a changed database with one seeded reset,
+  backs up only migrations, deploys only changed edge functions, and builds one
+  unaliased staged Vercel production in parallel before exact promotion. The
+  former Git-auto + deploy-hook double production build is removed.
 - 2026-07-27 empty due-statement handling: automatic statement maintenance now
   skips cards whose current-period spending belongs entirely to the next
   statement. The expected no-op no longer appears as a red error or prevents
