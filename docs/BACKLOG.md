@@ -94,6 +94,20 @@
   - `formatCompactCurrency` ortak: eksen `₺1.787.291`'i "₺1787K" yazıyordu, milyon
     basamağı ve işaret yoktu; takvim hücresindeki kopya biçimlendirici kaldırıldı.
 
+- ~~İmza yüzeylerinde dekorasyon içeriğin üstüne biniyordu + Lighthouse kırılganlığı.~~ DONE.
+  Tarayıcıda gözle bakınca çıktı; ölçüm denetimleri kaçırmıştı (katmanlı gradient
+  zeminde arka plan çözümlenemiyor):
+  - `.dashboard-signature-hero::after` / `.accounts-signature-hub::after` dekoratif
+    halkaları `z-index:auto` ile ağaç sırasında en son boyanıyor, yani **içeriğin
+    üstüne** geliyordu; 40/80px yayılan box-shadow'ları sağ-alttaki istatistik
+    kutusunu yıkıyordu. `isolation:isolate` + `z-index:-1` ile arkaya alındı.
+  - Aynı kartlarda `--info` yeniden basamaklandırılmamıştı (diğer semantikler
+    öyleyken); "Bekleyen tahsilat" küresel orta maviyle yazılıp koyu zeminde
+    kayboluyordu → `#93c5fd` (~9:1).
+  - Lighthouse exit 124 ile düşüyordu: `npx @lhci/cli` **ölçüm penceresinin içinde**
+    indiriliyor, indirme 90 sn'lik bütçeyi yiyordu. Prefetch adımı + `~/.npm/_npx`
+    cache'i ile indirme pencerenin dışına alındı; sürüm `LHCI_VERSION` job env'inde.
+
 ## 2026-07-27 — "En iyi versiyon" yol haritası (F serisi, TAMAMLANDI)
 
 Hedef değişti: daha çok özellik değil, **daha az manuel emek + hâlâ dürüst
