@@ -118,7 +118,9 @@ hazır Chrome'u kullanır ve PR ölçümü komut seviyesinde 90 saniyeyle sını
 job timeout'u tüm workflow'u iptal edemez. Playwright smoke tarayıcısı package-lock
 sürümünden kurulur ve browser cache'i kullanır; sabit sürümlü Playwright docker
 imajı KULLANMA — Dependabot paket sürümünü yükselttiğinde imaj geride kalıp CI'ı kırıyor.
-Dependabot patch/minor PR'larını CI yeşilse otomatik squash-merge eder (major elde kalır).
+Dependabot rutin version-update'larda yalnız patch/minor PR açar, bunları gruplar
+ve CI yeşilse otomatik squash-merge eder. Security update'lar bu SemVer filtresinden
+muaf kalır; major güvenlik yükseltmesi açılırsa kırılma riski nedeniyle elde incelenir.
 Günlük şifreli DB yedeği cron'u var (`db-backup.yml`).
 
 ## İş akışı (kullanıcı tercihi)
