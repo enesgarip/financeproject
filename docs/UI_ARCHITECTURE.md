@@ -32,6 +32,7 @@ kalmasını sağlar.
 | Karar/özet yüzeyi | `PageHero`, `FinancePanel`, `FinanceMetric` | Birincil rakam ve karar bağlamı; domain hesabı içermez |
 | Finans varlık kartı | `premium-entity-card` + route-specific content | Kimlik başlığı, tek ana değer kuyusu, kısa metrikler, opsiyonel aktivite ve ana aksiyon |
 | Form ve aksiyonlar | `src/components/ui/input.tsx`, `button.tsx`, `card.tsx` | Ham form kontrolü yerine erişilebilir ortak primitive |
+| Dokunma hedefi | `.tap-target`, `.hover-actions` in `src/index.css` | Görsel boyutu bozmadan 44px hit alanı; hover'sız cihazda görünür aksiyon |
 
 ## Finans Kartı Anatomisi
 
@@ -62,7 +63,18 @@ Daha kompakt lot kartları route ihtiyacına göre iki veya üç sütun olabilir
 
 ## Responsive ve Erişilebilirlik
 
-- Ana dokunma hedefi en az 44px olmalıdır.
+- Ana dokunma hedefi en az 44px olmalıdır. İkon-only butonlarda görsel boyutu
+  büyütmek yerine `.tap-target` kullan: `::after` ile hit alanını 44px'e çıkarır,
+  düzeni bozmaz. `Button`'ın `icon`, `icon-sm`, `icon-xs` boyutlarında hazır
+  gelir; ham `<button>` yazıyorsan sınıfı elle ekle.
+- **Bitişik ikon çiftlerinde `.tap-target` tek başına yetmez.** Genişletilmiş
+  alan komşunun görünür kutusunu örtüp yanlış aksiyonu tetikleyebilir (sil vs
+  düzenle). Çift kullanıyorsan butona gerçek boyut (`size-9`) ve en az `gap-1.5`
+  ver. Şüpheliysen `document.elementFromPoint` ile butonun kendi kutusunun
+  kendine düştüğünü doğrula.
+- Hover ile beliren satır aksiyonları dokunmatikte erişilemez. `opacity-0 +
+  group-hover` kullanıyorsan `hover-actions` sınıfını da ekle; `@media
+  (hover: none)` altında kalıcı görünür olur.
 - Hub navigation dar ekranda kırılmak yerine yatay taşar.
 - Mobil ana navigasyon içerik üstüne binmemesi için safe-area boşluğu kullanır.
 - İkon-only aksiyonların erişilebilir adı olmalıdır.

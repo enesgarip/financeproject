@@ -70,7 +70,8 @@ export function ActivityFeedPanel({ data }: { data: AnalysisData }) {
         <button
           type="button"
           onClick={() => void loadLedgers()}
-          className="rounded-md p-1.5 text-muted-foreground hover:bg-muted/60 hover:text-foreground transition"
+          className="tap-target rounded-md p-1.5 text-muted-foreground hover:bg-muted/60 hover:text-foreground transition"
+          aria-label="Aktivite akışını yenile"
           title="Yenile"
         >
           <RefreshCw size={14} />

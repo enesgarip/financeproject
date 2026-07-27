@@ -231,7 +231,7 @@ function WishlistRow({
       <button
         type="button"
         onClick={onToggle}
-        className={`grid size-7 shrink-0 place-items-center rounded-lg border transition ${
+        className={`tap-target grid size-7 shrink-0 place-items-center rounded-lg border transition ${
           purchased
             ? 'border-primary/40 bg-primary/10 text-primary'
             : 'border-border bg-background text-transparent hover:border-primary/60 hover:text-primary/40'
@@ -254,12 +254,12 @@ function WishlistRow({
         )}
       </div>
 
-      <div className="flex shrink-0 items-center gap-1 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100">
+      <div className="hover-actions flex shrink-0 items-center gap-2 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100">
         {purchased && (
           <button
             type="button"
             onClick={onToggle}
-            className="grid size-8 place-items-center rounded-lg text-muted-foreground transition hover:bg-muted hover:text-foreground"
+            className="tap-target grid size-8 place-items-center rounded-lg text-muted-foreground transition hover:bg-muted hover:text-foreground"
             aria-label="Geri al"
           >
             <Undo2 size={14} />
@@ -268,7 +268,7 @@ function WishlistRow({
         <button
           type="button"
           onClick={onDelete}
-          className="grid size-8 place-items-center rounded-lg text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive"
+          className="tap-target grid size-8 place-items-center rounded-lg text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive"
           aria-label="Sil"
         >
           <Trash2 size={14} />

@@ -55,9 +55,11 @@ const buttonVariants = cva(
         default: "h-10 px-4    text-sm",
         lg:      "h-11 px-5    text-sm",
         xl:      "h-12 px-6    text-base font-bold",
-        icon:        "size-10 rounded-lg",
-        "icon-xs":   "size-7  rounded-md [&_svg:not([class*='size-'])]:size-3",
-        "icon-sm":   "size-9  rounded-md [&_svg:not([class*='size-'])]:size-3.5",
+        // İkon butonları iki boyutta da küçük; görsel ölçü korunurken dokunma
+        // alanı tap-target ile 44px'e çıkar (metinli boyutlar zaten yeterince geniş).
+        icon:        "tap-target size-10 rounded-lg",
+        "icon-xs":   "tap-target size-7  rounded-md [&_svg:not([class*='size-'])]:size-3",
+        "icon-sm":   "tap-target size-9  rounded-md [&_svg:not([class*='size-'])]:size-3.5",
         "icon-lg":   "size-11 rounded-lg",
       },
     },

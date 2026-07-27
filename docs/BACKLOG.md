@@ -40,6 +40,27 @@
   kartları iki sütun, mobilde tam genişlik. Ortak aksiyonlarda `Button`
   primitive'i kullanılıyor; finans davranışı değişmedi. Local gerçek veriyle
   1440px masaüstü ve 390px mobil doğrulandı.
+- ~~Etkileşim kalitesi denetimi, beşinci dilim.~~ DONE. Görsel mimari yerinde
+  ama dokunma/erişilebilirlik katmanı geride kalmıştı; 14 route 1440px ve 390px'te
+  tarayıcıda ölçüldü (taşma, hedef boyutu, erişilebilir ad, kontrast):
+  - Ortak `.tap-target` yardımcısı (`index.css`): görsel boyut korunurken dokunma
+    alanı 44px'e çıkar. `Button`'ın `icon`/`icon-sm`/`icon-xs` boyutlarına
+    uygulandı — tek yerden bütün ikon butonları kapsıyor. Metinli boyutlar
+    zaten yeterince geniş olduğu için kapsam dışı.
+  - Nokta düzeltmeler: kredi taksit menüsü (32px), hedef düzenle/sil (26px,
+    üstelik **adsız**), alışveriş listesi işaretle/sil, hesap transfer butonu,
+    aktivite yenile, CrudPage satır menüsü (`aria-label="Menu"` → satır adlı).
+  - **Dokunmatikte erişilemeyen aksiyon:** alışveriş listesi sil/geri al yalnız
+    `group-hover` ile görünüyordu → `hover-actions` + `@media (hover: none)`.
+  - Bitişik ikon çiftlerinde genişletilmiş alan komşunun görünür kutusunu
+    çalıyordu (sil, düzenle'nin sağ kenarını kapıyordu); çiftlere sahte
+    genişletme yerine gerçek boyut + aralık verildi. `elementFromPoint` ile
+    bütün route'larda doğrulandı.
+  - `--muted-foreground` açık temada beyazda 4.94:1 ama muted yüzeyde 4.37:1
+    kalıyordu → `#697084` → `#646b7f` (muted üstünde 4.70:1). Her iki temada
+    ölçülebilir kontrast hatası kalmadı.
+  - `SafeToSpendCard` yüzde ekini kaldırdı: Türkçe iyelik eki sayının okunuşuna
+    göre değişiyor (%6'sı / %18'i), sabit `'i` yanlıştı.
 
 ## 2026-07-27 — "En iyi versiyon" yol haritası (F serisi, TAMAMLANDI)
 

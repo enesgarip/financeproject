@@ -146,7 +146,9 @@
   --secondary:            #eef0f6;
   --secondary-foreground: #292d3d;
   --muted:                #eff1f6;
-  --muted-foreground:     #697084;
+  /* Beyaz üstünde 4.94:1 idi ama muted yüzeyde 4.37'ye düşüyordu (AA sınırı 4.5).
+     Bir tık koyultunca chip/sekme zeminlerinde de 4.70:1 ile geçiyor. */
+  --muted-foreground:     #646b7f;
   --accent:               #ececff;
   --accent-foreground:    #4142b7;
   --destructive:          #dc2626;
@@ -399,6 +401,30 @@ button:disabled {
   /* Typography helpers */
   .finance-touch-target {
     min-height: 2.75rem;
+  }
+
+  /* İkon butonları görsel olarak küçük kalır ama dokunma alanı 44px'e çıkar.
+     Düzeni bozmadan mobil hedefi büyütür (HelpTooltip'teki desenin ortak hâli). */
+  .tap-target {
+    position: relative;
+  }
+
+  .tap-target::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: max(100%, 2.75rem);
+    height: max(100%, 2.75rem);
+    transform: translate(-50%, -50%);
+  }
+
+  /* Satır üstüne gelince beliren aksiyonlar dokunmatikte erişilemez kalıyordu;
+     hover'ı olmayan cihazlarda kalıcı görünür yap. */
+  @media (hover: none) {
+    .hover-actions {
+      opacity: 1 !important;
+    }
   }
 
   .finance-value {

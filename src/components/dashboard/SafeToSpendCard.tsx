@@ -89,7 +89,9 @@ export function SafeToSpendCard({ cashFlow, liquidCash }: { cashFlow: CashFlowSu
         <div className="mt-5">
           <Progress value={Math.min(100, result.pressurePct)} autoColor size="sm" />
           <p className="mt-1 text-[11px] text-muted-foreground">
-            Kalan yükümlülük, kullanılabilir paranın %{result.pressurePct}'i
+            {/* Yüzdeye ek çekmiyoruz: Türkçe iyelik eki sayının okunuşuna göre
+                değişir (%6'sı, %18'i, %20'si) — cümleyi eksiz kuruyoruz. */}
+            Kalan yükümlülük, kullanılabilir paranın %{result.pressurePct} seviyesinde
           </p>
         </div>
 
