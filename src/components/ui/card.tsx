@@ -18,12 +18,14 @@ function Card({
     default: [
       "border border-border/85 bg-card text-card-foreground",
       "shadow-[var(--shadow-card)]",
-      "dark:ring-1 dark:ring-white/[0.04]",
+      // Koyu temada üstten ince aydınlatma: obsidyen yüzeye işlenmiş-metal his.
+      "dark:shadow-[var(--shadow-card),inset_0_1px_0_rgba(255,255,255,0.045)] dark:ring-1 dark:ring-white/[0.04]",
     ].join(" "),
     elevated: [
       "border border-border/60 bg-card text-card-foreground",
       "shadow-[var(--shadow-lifted)]",
-      "dark:bg-[#1a1d26] dark:ring-1 dark:ring-white/[0.06]",
+      // Obsidyen yükseltilmiş yüzey (eski soğuk-gri #1a1d26 kalıntısı kaldırıldı).
+      "dark:bg-surface-elevated dark:shadow-[var(--shadow-lifted),inset_0_1px_0_rgba(255,255,255,0.06)] dark:ring-1 dark:ring-white/[0.06]",
     ].join(" "),
     glass: [
       "border border-border/60 text-card-foreground",
