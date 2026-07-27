@@ -4,6 +4,10 @@ import { Check, ChevronDown, ChevronUp, Plus, Trash2, Undo2 } from 'lucide-react
 import { useAuth } from '../auth/useAuth'
 import { useConfirmDialog } from '../components/ui/use-confirm-dialog'
 import { useToast } from '../components/ui/toast'
+import { PageCommandHeader } from '../components/finance/FinanceUI'
+import { Button } from '../components/ui/button'
+import { Card, CardContent } from '../components/ui/card'
+import { Input } from '../components/ui/input'
 import {
   deleteWishlistItem,
   fetchWishlistItems,
@@ -114,36 +118,48 @@ export function WishlistPage() {
 
   return (
     <div className="flex flex-col gap-5">
+      <PageCommandHeader
+        label="İstek planı"
+        title="Alışveriş listesi"
+        description="İsteklerini tahmini fiyatıyla kaydet; satın alma kararını bütçeden ayrı ama görünür tut."
+        meta={`${pending.length} bekleyen · ${purchased.length} tamamlanan`}
+      />
+
       {/* Yeni madde ekleme */}
-      <form onSubmit={handleSubmit} className="flex items-end gap-2">
-        <div className="flex min-w-0 flex-1 flex-col gap-1">
-          <input
-            ref={nameInputRef}
-            type="text"
-            placeholder="Ne almak istiyorsun?"
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            className="h-11 rounded-xl border border-border bg-background px-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none"
-          />
-        </div>
-        <div className="flex w-28 flex-col gap-1 sm:w-32">
-          <input
-            type="text"
-            inputMode="decimal"
-            placeholder="Fiyat (opsiyonel)"
-            value={newPrice}
-            onChange={(e) => setNewPrice(e.target.value)}
-            className="h-11 rounded-xl border border-border bg-background px-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none"
-          />
-        </div>
-        <button
-          type="submit"
-          disabled={!newName.trim() || addMutation.isPending}
-          className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground transition hover:bg-primary/90 disabled:opacity-40"
-        >
-          <Plus size={18} />
-        </button>
-      </form>
+      <Card className="border-primary/15">
+        <CardContent>
+          <form onSubmit={handleSubmit} className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_10rem_auto] sm:items-center">
+            <Input
+              ref={nameInputRef}
+              type="text"
+              placeholder="Ne almak istiyorsun?"
+              aria-label="Alışveriş listesi maddesi"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              className="h-11"
+            />
+            <Input
+              type="text"
+              inputMode="decimal"
+              placeholder="Tahmini fiyat"
+              aria-label="Tahmini fiyat"
+              value={newPrice}
+              onChange={(e) => setNewPrice(e.target.value)}
+              className="h-11"
+            />
+            <Button
+              type="submit"
+              size="lg"
+              disabled={!newName.trim() || addMutation.isPending}
+              aria-label="Listeye ekle"
+              className="w-full sm:w-auto"
+            >
+              <Plus />
+              <span className="sm:hidden">Listeye ekle</span>
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
 
       {/* Alınacaklar */}
       {pending.length === 0 && purchased.length === 0 && (
@@ -211,7 +227,7 @@ function WishlistRow({
   const purchasedDate = item.purchased_at ? new Date(item.purchased_at).toLocaleDateString('tr-TR') : null
 
   return (
-    <li className="group flex items-center gap-3 rounded-xl border border-border/70 bg-card px-3 py-2.5 transition hover:border-border">
+    <li className="finance-list-row group flex items-center gap-3 rounded-xl border border-border/70 bg-card px-3 py-3 transition">
       <button
         type="button"
         onClick={onToggle}
@@ -238,7 +254,7 @@ function WishlistRow({
         )}
       </div>
 
-      <div className="flex shrink-0 items-center gap-1 opacity-0 transition group-hover:opacity-100">
+      <div className="flex shrink-0 items-center gap-1 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100">
         {purchased && (
           <button
             type="button"

@@ -284,6 +284,8 @@ export function LoansPage() {
       <CrudPage
         table="loans"
         pageTitle="Krediler"
+        pageLabel="Borç yönetimi"
+        pageDescription="Aktif kredi yükünü, kalan taksitleri ve kapanan planları aynı yaşam döngüsünde yönet."
         addLabel="Kredi ekle"
         fields={loanFields}
         emptyTitle="Henüz kredi yok"

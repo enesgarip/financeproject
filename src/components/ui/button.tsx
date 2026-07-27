@@ -2,7 +2,7 @@ import * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
 import { Slot } from "radix-ui"
 
-import { cn } from "@/lib/utils"
+import { cn } from "../../lib/utils"
 
 const buttonVariants = cva(
   [
@@ -10,7 +10,7 @@ const buttonVariants = cva(
     "bg-clip-padding text-sm font-semibold whitespace-nowrap select-none",
     "transition-all outline-none",
     "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background",
-    "active:scale-[0.97] active:not-aria-[haspopup]:translate-y-px",
+    "active:translate-y-px",
     "disabled:pointer-events-none disabled:opacity-40",
     "aria-invalid:border-destructive aria-invalid:ring-2 aria-invalid:ring-destructive/20",
     "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
@@ -20,8 +20,8 @@ const buttonVariants = cva(
       variant: {
         default: [
           "bg-primary text-primary-foreground",
-          "shadow-[0_2px_8px_color-mix(in_srgb,var(--primary)_30%,transparent)]",
-          "hover:bg-primary/90 hover:shadow-[0_4px_16px_color-mix(in_srgb,var(--primary)_40%,transparent)]",
+          "shadow-[0_1px_2px_color-mix(in_srgb,var(--primary)_28%,transparent)]",
+          "hover:bg-primary/90 hover:shadow-[0_5px_14px_color-mix(in_srgb,var(--primary)_22%,transparent)]",
         ].join(" "),
         outline: [
           "border-border bg-card/80 text-foreground",

@@ -49,16 +49,16 @@ export function SafeToSpendCard({ cashFlow, liquidCash }: { cashFlow: CashFlowSu
   return (
     <Card
       variant="elevated"
-      className={`overflow-hidden ${
+      className={`safe-spend-card overflow-hidden shadow-[var(--shadow-card)] ${
         tone === 'danger' ? 'border-destructive/25' : tone === 'warning' ? 'border-warning/25' : 'border-success/25'
       }`}
     >
-      <CardContent className="p-4 sm:p-5">
+      <CardContent className="flex h-full flex-col p-5 sm:p-6">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="finance-label">Bu ay harcanabilir</p>
             <p
-              className={`finance-value mt-1.5 text-[clamp(1.85rem,7.5vw,2.75rem)] font-black leading-none ${
+              className={`finance-value mt-2 whitespace-nowrap text-[clamp(2rem,6vw,3.25rem)] font-black leading-none tracking-[-0.04em] ${
                 result.negativeCause === 'obligations' ? 'text-destructive' : 'text-foreground'
               }`}
             >
@@ -78,7 +78,7 @@ export function SafeToSpendCard({ cashFlow, liquidCash }: { cashFlow: CashFlowSu
           </span>
         </div>
 
-        <p className="mt-2 text-xs text-muted-foreground">
+        <p className="mt-3 text-sm leading-6 text-muted-foreground">
           {result.negativeCause === 'obligations'
             ? 'Bu ayın kalan yükümlülükleri eldeki parayı aşıyor — büyük harcamayı ertele veya tahsilatı öne al.'
             : result.negativeCause === 'buffer'
@@ -86,14 +86,14 @@ export function SafeToSpendCard({ cashFlow, liquidCash }: { cashFlow: CashFlowSu
               : `Likit para ve kalan gelirden bu ayın kalan yükümlülükleri (${formatAmount(cashFlow.remainingOutflow)}) ve tamponun düşüldü.`}
         </p>
 
-        <div className="mt-3">
+        <div className="mt-5">
           <Progress value={Math.min(100, result.pressurePct)} autoColor size="sm" />
           <p className="mt-1 text-[11px] text-muted-foreground">
             Kalan yükümlülük, kullanılabilir paranın %{result.pressurePct}'i
           </p>
         </div>
 
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl bg-muted/45 px-3 py-2">
+        <div className="mt-auto flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border/60 bg-muted/35 px-3 py-2.5">
           <span className="text-xs text-muted-foreground">Güvenlik tamponu</span>
           {editing ? (
             <span className="flex items-center gap-1.5">

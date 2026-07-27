@@ -67,6 +67,8 @@ export function SalaryPage() {
     <CrudPage
       table="salary_history"
       pageTitle="Maaş geçmişi"
+      pageLabel="Gelir merkezi"
+      pageDescription="Gelir değişimini tarihsel olarak izle ve nakit projeksiyonunun güncel maaşı kullanmasını sağla."
       addLabel="Maaş ekle"
       fields={salaryFields}
       emptyTitle="Henüz maaş kaydı yok"

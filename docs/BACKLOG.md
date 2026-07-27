@@ -1,5 +1,46 @@
 # Priority Backlog
 
+## 2026-07-27 — Modern UI/UX dönüşümü, ilk dilim (DONE)
+
+- ~~Ortak tasarım dili ve uygulama kabuğu.~~ DONE. Açık/koyu tema token'ları
+  soft-neutral/premium-fintech yönünde hizalandı; gölge, radius, border ve hareket
+  dili sadeleştirildi. Masaüstü sidebar/header ile mobil yüzen bottom-nav aynı
+  görsel sisteme geçirildi. İlk görsel geri bildirim sonrasında ayrışma
+  güçlendirildi: masaüstü sidebar kalıcı koyu yüzeye, dashboard karar kartları
+  indigo ve ink imza yüzeylerine geçirildi. Bu sınıflar normal tema kapsamında
+  çalışır; `prefers-reduced-motion` bloğuna taşınmamalıdır.
+- ~~Dashboard pilotu.~~ DONE. "Bu ay harcanabilir" ve finansal durum aynı karar
+  katmanında yan yana; bugünün odağı ikinci katmanda. Mobil hero metrikleri iki
+  sütun ve negatif harcanabilir tutar tek satır. Finans matematiği/veri akışı
+  değişmedi.
+- ~~Font yükleme optimizasyonu.~~ DONE. Google Fonts + Fontshare render-blocking
+  CSS istekleri kaldırıldı; Türkçe latin/latin-ext kapsamlı DM Sans, Manrope ve
+  JetBrains Mono variable fontları uygulamadan yerel sunuluyor.
+- ~~Kart import araçlarını talep anında yükle.~~ DONE. Ekstre ve güncel hareket
+  import modalları ayrı lazy chunk. `CardsPage` 177,42 → 117,62 kB; gzip
+  44,31 → 30,67 kB (yaklaşık %31 azalma).
+- Yerel seed ile 390px mobil ve masaüstü dashboard; ayrıca Hesaplar mobil ekranı
+  açık/koyu temada tarayıcıda doğrulandı.
+- ~~Ortak sayfa şablonu + Hesaplar finans merkezi, ikinci dilim.~~ DONE.
+  `PageCommandHeader` CRUD tabanlı sayfalara ortak başlık/açıklama/meta/araç
+  hiyerarşisi sağlıyor. Hesaplar özetinde koyu imza yüzeyi; hesap bakiyesi,
+  ödenebilir kart borcu ve `borç sonrası nakit` (`diffTL`) ilişkisini transfer
+  aksiyonlarıyla birlikte gösteriyor. Kredi kartı yoksa sıfır değerli kart özeti
+  çizilmiyor. Gerçek yerel hesap verisiyle masaüstü ve 390px mobil doğrulandı.
+- ~~Uygulama çapı premium fintech görsel mimari, üçüncü dilim.~~ DONE.
+  İkonlu `HubNav`; Analiz, Veri Sağlığı, Alışveriş Kararı ve Alışveriş Listesi
+  için ortak `PageCommandHeader`; bütün CRUD route'larında domain label/açıklama;
+  login, karar ve liste formlarında ortak `Input`/`Button`/`Card` primitive'leri
+  kullanılıyor. Görsel sözleşme `docs/UI_ARCHITECTURE.md` altında kalıcılaştırıldı.
+  Finans matematiği, repository çağrıları ve mutation davranışı değişmedi.
+- ~~Finans varlık kartları, dördüncü dilim.~~ DONE. Hesap, kredi kartı ve altın
+  lotları ortak `premium-entity-card` okuma sırasına geçti: güçlü kimlik,
+  büyütülmüş ana tutar, kısa destek metrikleri, opsiyonel son hareketler ve ana
+  aksiyon. Hesap/kredi kartı ızgarası masaüstünde en fazla iki sütun; Altın
+  kartları iki sütun, mobilde tam genişlik. Ortak aksiyonlarda `Button`
+  primitive'i kullanılıyor; finans davranışı değişmedi. Local gerçek veriyle
+  1440px masaüstü ve 390px mobil doğrulandı.
+
 ## 2026-07-27 — "En iyi versiyon" yol haritası (F serisi, TAMAMLANDI)
 
 Hedef değişti: daha çok özellik değil, **daha az manuel emek + hâlâ dürüst

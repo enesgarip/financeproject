@@ -88,8 +88,9 @@ export function DashboardHero({
       tone={netWorthTone}
       description={`${cashFlow.monthLabel} için net varlık, borç baskısı ve nakit projeksiyonu tek bakışta.`}
       action={<StatusBadge tone={health.tone === 'emerald' ? 'good' : health.tone === 'amber' ? 'warning' : 'danger'}>{health.label}</StatusBadge>}
+      className="dashboard-signature-hero"
     >
-      <div className="grid gap-2 min-[520px]:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 min-[520px]:grid-cols-4">
         <MiniStat label="Toplam varlık" value={formatAmount(totalAssets)} tone="good" />
         <MiniStat label="Toplam borç" value={formatAmount(totalDebts)} tone={totalDebts > 0 ? 'danger' : 'good'} />
         <MiniStat label="Ay sonu nakit" value={formatAmount(cashFlow.projectedCash)} tone={projectedTone} />

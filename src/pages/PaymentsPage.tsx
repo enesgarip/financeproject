@@ -351,6 +351,8 @@ export function PaymentsPage() {
       <CrudPage
         table="payments"
         pageTitle="Planlı ödemeler"
+        pageLabel="Nakit takvimi"
+        pageDescription="Fatura, kira ve tek seferlik yükümlülükleri vadeye göre planla ve ödeme akışını yönet."
         addLabel="Planlı ödeme ekle"
         fields={formFields}
         emptyTitle="Henüz planlı ödeme yok"

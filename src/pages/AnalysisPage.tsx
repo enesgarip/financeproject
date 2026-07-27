@@ -9,6 +9,7 @@ import {
   UpcomingInstallments,
 } from './AnalysisPage.panels'
 import { useAnalysisPageData } from './AnalysisPage.data'
+import { PageCommandHeader } from '../components/finance/FinanceUI'
 
 export function AnalysisPage() {
   const { data, error, loading, missingTables, priceTrends, ratesSnapshot, snapshots } = useAnalysisPageData()
@@ -19,6 +20,12 @@ export function AnalysisPage() {
 
   return (
     <section className="space-y-5">
+      <PageCommandHeader
+        label="Finansal istihbarat"
+        title="Aylık karar merkezi"
+        description="Ay kapanışı, harcama dağılımı, yaklaşan yük ve ileriye dönük nakit görünümünü birlikte değerlendir."
+        meta={loading ? 'Veriler güncelleniyor' : 'Güncel finans görünümü'}
+      />
       <div className="grid gap-5 lg:grid-cols-12">
         <SchemaMigrationNotice missingTables={missingTables} />
         <MonthCloseAssistant data={data} missingTables={missingTables} />

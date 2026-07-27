@@ -312,6 +312,8 @@ export function GoldPage() {
     <CrudPage
       table="gold_lots"
       pageTitle="Altın"
+      pageLabel="Değer saklama"
+      pageDescription="Alım ve satım geçmişini maliyet, miktar ve güncel piyasa değeriyle birlikte izle."
       addLabel="Alım / satım ekle"
       fields={goldFields}
       orderBy="purchase_date"
@@ -358,51 +360,58 @@ export function GoldPage() {
         const noCost = lot.unit_price == null
 
         return (
-          <article className={`rounded-2xl border p-4 shadow-[var(--shadow-card)] transition-all duration-250 hover:-translate-y-0.5 hover:shadow-[var(--shadow-lifted)] dark:ring-1 dark:ring-white/[0.04] min-[390px]:p-5 ${noCost ? 'border-warning/30 bg-warning/5 dark:bg-warning/10' : 'border-warning/20 bg-warning/5 dark:bg-warning/8'}`}>
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex min-w-0 items-center gap-3">
-                <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-warning/15 text-warning">
-                  <Coins className="size-5" />
+          <article className={`premium-entity-card gold-entity-card relative overflow-hidden rounded-2xl border p-4 shadow-[var(--shadow-card)] transition-[border-color,box-shadow,transform] duration-250 hover:-translate-y-0.5 hover:shadow-[var(--shadow-lifted)] min-[390px]:p-5 ${noCost ? 'border-warning/35' : 'border-warning/22'}`}>
+            <div className="relative flex items-start justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-3.5">
+                <div className="grid size-12 shrink-0 place-items-center rounded-2xl bg-warning/14 text-warning ring-1 ring-warning/16">
+                  <Coins className="size-5.5" />
                 </div>
                 <div className="min-w-0">
-                  <h2 className="truncate text-base font-black text-foreground">
+                  <h2 className="truncate font-display text-lg font-bold tracking-tight text-foreground">
                     {GOLD_TYPE_LABELS[lot.gold_type]}
-                    {lot.direction === 'sell' && <span className="ml-1.5 text-xs font-bold text-destructive">Satış</span>}
                   </h2>
-                  <p className="mt-0.5 text-xs text-muted-foreground">{formatDate(lot.purchase_date)}</p>
+                  <div className="mt-1 flex flex-wrap items-center gap-2">
+                    <p className="text-xs font-medium text-muted-foreground">{formatDate(lot.purchase_date)}</p>
+                    <Badge variant={lot.direction === 'sell' ? 'destructive' : 'secondary'}>
+                      {lot.direction === 'sell' ? 'Satış' : 'Alım'}
+                    </Badge>
+                  </div>
                 </div>
               </div>
-              {menu}
+              <div className="entity-card-menu">{menu}</div>
             </div>
 
-            <div className="mt-4 flex flex-wrap items-end gap-x-6 gap-y-2">
-              <div className="min-w-0">
-                <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Miktar</p>
-                <p className="mt-0.5 font-mono text-lg font-black tabular-nums text-foreground">{formatQuantity(lot.quantity, lot.gold_type)}</p>
+            <div className="gold-value-well relative mt-5 overflow-hidden rounded-2xl border border-warning/18 bg-warning/[0.055] p-4 dark:bg-warning/[0.075]">
+              <p className="finance-label">{lot.direction === 'sell' ? 'Satış toplamı' : 'İşlem toplamı'}</p>
+              <p className={`finance-value mt-2 truncate text-[clamp(1.65rem,6vw,2.35rem)] font-bold leading-none tracking-tight ${noCost ? 'text-muted-foreground' : 'text-foreground'}`}>
+                {totalCost == null ? 'Maliyet bilinmiyor' : formatAmount(totalCost)}
+              </p>
+            </div>
+
+            <div className="mt-3 grid grid-cols-2 gap-2.5">
+              <div className="finance-field min-w-0 rounded-xl px-3 py-2.5">
+                <p className="finance-label">Miktar</p>
+                <p className="finance-value mt-1.5 truncate text-base font-bold text-foreground">{formatQuantity(lot.quantity, lot.gold_type)}</p>
               </div>
-              <div className="min-w-0">
-                <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">{lot.direction === 'sell' ? 'Birim fiyat' : 'Birim maliyet'}</p>
-                <p className={`mt-0.5 font-mono text-sm font-bold tabular-nums ${noCost ? 'text-muted-foreground' : 'text-foreground'}`}>
+              <div className="finance-field min-w-0 rounded-xl px-3 py-2.5">
+                <p className="finance-label">{lot.direction === 'sell' ? 'Birim fiyat' : 'Birim maliyet'}</p>
+                <p className={`finance-value mt-1.5 truncate text-base font-bold ${noCost ? 'text-muted-foreground' : 'text-foreground'}`}>
                   {noCost ? 'Bilinmiyor' : formatAmount(lot.unit_price!)}
                 </p>
               </div>
-              {totalCost != null ? (
-                <div className="min-w-0">
-                  <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Toplam</p>
-                  <p className="mt-0.5 font-mono text-sm font-bold tabular-nums text-foreground">{formatAmount(totalCost)}</p>
-                </div>
-              ) : null}
             </div>
 
             {noCost ? (
-              <p className="mt-3 rounded-lg border border-warning/20 bg-warning/8 px-2.5 py-2 text-xs font-semibold text-warning">
+              <p className="mt-3 rounded-xl border border-warning/20 bg-warning/8 px-3 py-2.5 text-xs font-semibold text-warning">
                 Maliyet bilinmiyor — adede dahil, kâr/zarar hesabına dahil değil.
               </p>
             ) : null}
+            {lot.note ? <p className="mt-3 line-clamp-2 text-xs leading-relaxed text-muted-foreground">{lot.note}</p> : null}
           </article>
         )
       }}
       groupBy={(row) => GOLD_TYPE_LABELS[row.gold_type]}
+      listGridClassName="grid gap-4 min-[680px]:grid-cols-2 xl:grid-cols-2"
     />
   )
 }

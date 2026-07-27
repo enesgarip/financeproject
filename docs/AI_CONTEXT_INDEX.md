@@ -1,6 +1,6 @@
 # AI Context Index
 
-Last reviewed: 2026-07-08
+Last reviewed: 2026-07-27
 
 This file is the cheapest starting point for future AI/Codex sessions. Its job
 is to reduce repeated repo discovery: read this first, choose the smallest
@@ -25,6 +25,7 @@ frontend -> RPC, or RPC -> migration.
 | `CLAUDE.md` | A new AI agent needs persistent repo rules before acting | Stack summary, layer boundaries, money-model warnings, deployment gotchas |
 | `docs/CODEX_GUIDE.md` | A Codex session needs working rules and finish checklist | How to work in this repo with low regression risk |
 | `docs/PROJECT_CONTEXT.md` | You need the product map or route/table overview | Product purpose, app structure, important domains, route model |
+| `docs/UI_ARCHITECTURE.md` | You are changing shared visual language, route shells, navigation, page hierarchy, or UI primitives | Premium-fintech principles, shared templates, route patterns, responsive/a11y contract |
 | `docs/DASHBOARD_ARCHITECTURE.md` | You are changing `/` dashboard orchestration, dashboard-specific derived math, or dashboard UX/a11y behavior | Dashboard data flow, utility ownership, obligation input, panel boundaries, UX/a11y contract |
 | `docs/CARDS_ARCHITECTURE.md` | You are changing `/kartlar` orchestration, card/account panels, or card page module boundaries | Cards page data flow, module map, side-effect boundaries, payment flow |
 | `docs/DATA_HEALTH_ARCHITECTURE.md` | You are changing `/veri-sagligi`, data-health checks, safe fixes, undo, backup, or reset flows | Data-health lifecycle, issue/fix ownership, write safety, invariant sources |
@@ -215,6 +216,7 @@ paylaşır; her sayfa süpersetini client-side daraltır). Query client: `src/ap
 
 | İş / konu | Önce bak (domain/util) | Veri katmanı | UI |
 |---|---|---|---|
+| **Ortak UI/UX tasarım sistemi, sayfa şablonu ve performans** | `docs/UI_ARCHITECTURE.md`, `index.css`, `lib/lazyWithReload.ts` | — | `components/Layout.tsx`, `components/BottomNav.tsx`, `components/HubNav.tsx`, `components/navigation.ts`, `components/CrudPage.tsx`, `components/ui/*`, `components/finance/FinanceUI.tsx`, `pages/LoginPage.tsx` |
 | **Para hesabı/yuvarlama** | `utils/money.ts` (+ `money.test.ts`, `money.property.test.ts`) | — | — |
 | **Arama / metin normalizasyonu** | `utils/searchText.ts`, `utils/categories.ts`, `utils/bankBranding.ts` | — | `components/CrudPage.tsx`, `components/QuickActions.tsx`, `components/dashboard/DashboardCards.tsx`, `pages/AnalysisPage.reports.tsx` |
 | **Kart borcu / breakdown** | `utils/cardLedger.ts`, `utils/financeSummary.ts` (`clampCardBreakdown`) | `data/repositories/cardsRepo.ts`, `services/cardLedgerActions.ts` | `pages/CardsPage.tsx` (+ `.crud.tsx`, `.helpers.ts`, `.sections.tsx`, `.overview.tsx`, `.control.tsx`, `.statements.tsx`, `.list.tsx`) |

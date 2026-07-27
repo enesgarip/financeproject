@@ -1,4 +1,4 @@
-import { ArrowRightLeft } from 'lucide-react'
+import { ArrowRightLeft, Landmark } from 'lucide-react'
 import { BankLogo } from '../components/finance/BankLogo'
 import { AmountDisplay, FinancePanel, MiniStat, ProgressStrip, SectionHeader, StatusBadge } from '../components/finance/FinanceUI'
 import { Badge } from '../components/ui/badge'
@@ -49,7 +49,7 @@ export function CreditCardOverview({
 }) {
   const groups = buildLimitGroupSummaries(rows)
   const bankCards = rows.filter((row) => row.card_type === 'banka_karti')
-  if (groups.length === 0 && bankCards.length === 0) return null
+  if (groups.length === 0) return null
 
   const totalLimit = sumTL(groups.map((group) => group.limit))
   const totalDebt = sumTL(groups.map((group) => group.debt))
@@ -157,6 +157,7 @@ export function AccountHubPanel({
   const accountBalance = sumTL(accounts.map((account) => account.current_balance))
   const cardDebt = sumTL(creditCards.map((card) => card.debt_amount))
   const payableCardDebt = sumTL(creditCards.map((card) => cardPayableDebt(card)))
+  const balanceAfterPayableDebt = diffTL(accountBalance, payableCardDebt)
   const banks = Array.from(
     accounts.reduce((map, account) => {
       const current = map.get(account.bank_name) ?? { balance: 0, count: 0 }
@@ -170,25 +171,44 @@ export function AccountHubPanel({
   const canTransfer = accounts.length > 1
 
   return (
-    <SurfaceCard id="hesap-merkezi" className="border-0 shadow-sm ring-1 ring-primary/18">
-      <CardHeader className="pb-0">
-        <div className="min-w-0">
-          <CardTitle className="text-base">Hesap merkezi</CardTitle>
-          <p className="mt-1 text-xs text-muted-foreground">Banka hesapları, kredi kartı yükü ve transferler tek yerde.</p>
+    <SurfaceCard id="hesap-merkezi" className="accounts-signature-hub overflow-hidden border-0">
+      <CardHeader className="relative z-[1] pb-0">
+        <div className="flex min-w-0 items-start justify-between gap-4">
+          <div className="min-w-0">
+            <p className="finance-label">Nakit ve borç merkezi</p>
+            <CardTitle className="font-display mt-2 text-xl font-semibold sm:text-2xl">Paranın bugünkü konumu</CardTitle>
+            <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted-foreground">
+              Banka hesapları, ödenebilir kart borcu ve transfer aksiyonları tek yerde.
+            </p>
+          </div>
+          <div className="grid size-11 shrink-0 place-items-center rounded-xl bg-white/10 text-primary ring-1 ring-white/15">
+            <Landmark size={20} />
+          </div>
         </div>
       </CardHeader>
-      <CardContent className="flex flex-col gap-3 pt-3">
-        <div className="grid grid-cols-2 gap-2 min-[620px]:grid-cols-4">
-          <OverviewStat label="Hesap bakiyesi" value={formatAmount(accountBalance)} help={cardHelp.cashBalance} />
-          <OverviewStat label="Kredi kartı borcu" value={formatAmount(cardDebt)} help={cardHelp.totalDebt} />
-          <OverviewStat label="Ödenebilir borç" value={formatAmount(payableCardDebt)} help={cardHelp.statementDebt} />
-          <OverviewStat label="Banka sayısı" value={String(banks.length)} />
+      <CardContent className="relative z-[1] flex flex-col gap-5 pt-4">
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.35fr)] lg:items-end">
+          <div className="min-w-0 rounded-xl bg-white/[0.065] p-4 ring-1 ring-white/10">
+            <p className="finance-label">Borç sonrası nakit</p>
+            <p className={`finance-value mt-3 truncate text-3xl font-bold leading-none sm:text-4xl ${balanceAfterPayableDebt >= 0 ? 'text-success' : 'text-destructive'}`}>
+              {formatAmount(balanceAfterPayableDebt)}
+            </p>
+            <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
+              Hesap bakiyesi eksi bugün ödenebilir kredi kartı borcu.
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-2 min-[620px]:grid-cols-4">
+            <OverviewStat label="Hesap bakiyesi" value={formatAmount(accountBalance)} help={cardHelp.cashBalance} />
+            <OverviewStat label="Kart borcu" value={formatAmount(cardDebt)} help={cardHelp.totalDebt} />
+            <OverviewStat label="Ödenebilir" value={formatAmount(payableCardDebt)} help={cardHelp.statementDebt} />
+            <OverviewStat label="Banka" value={String(banks.length)} />
+          </div>
         </div>
 
         {accounts.length > 0 ? (
           <div className="grid gap-2 min-[760px]:grid-cols-2">
             {accounts.map((account) => (
-              <div key={account.id} className="flex items-center justify-between gap-3 rounded-lg bg-muted/55 px-3 py-2.5">
+              <div key={account.id} className="accounts-bank-tile flex items-center justify-between gap-3 rounded-xl px-3 py-3">
                 <div className="flex min-w-0 items-center gap-3">
                   <BankLogo bankName={account.bank_name} size="sm" />
                   <div className="min-w-0">
@@ -202,7 +222,7 @@ export function AccountHubPanel({
                     type="button"
                     onClick={() => onOpenTransfer(account)}
                     disabled={!canTransfer}
-                    className="grid size-8 place-items-center rounded-lg border border-border bg-card text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:opacity-45"
+                    className="grid size-9 place-items-center rounded-lg border border-white/12 bg-white/8 text-muted-foreground transition hover:bg-white/14 hover:text-foreground disabled:opacity-45"
                     aria-label={`${account.card_name} hesabından transfer yap`}
                   >
                     <ArrowRightLeft size={15} />

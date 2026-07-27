@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, type ComponentType, type ReactNode } from 'react'
+import { Suspense, useEffect, type ReactNode } from 'react'
 import { Navigate, Route, Routes, useLocation } from 'react-router'
 import { Analytics } from '@vercel/analytics/react'
 import { QueryClientProvider } from '@tanstack/react-query'
@@ -12,33 +12,13 @@ import { DataHealthHub } from './pages/DataHealthHub'
 import { LiabilitiesHub } from './pages/LiabilitiesHub'
 import { PlanningHub } from './pages/PlanningHub'
 import { ToastProvider } from './components/ui/toast'
+import { lazyWithReload } from './lib/lazyWithReload'
 
 // A failed dynamic import almost always means a new deploy changed the chunk
 // hashes while this tab still references the old ones (Vercel then serves
 // index.html for the missing /assets/*.js, hence the "not a valid MIME type"
 // errors). Reload once to pull the fresh index.html and new chunk URLs; the
 // per-tab guard prevents a reload loop if the chunk is genuinely unreachable.
-const CHUNK_RELOAD_KEY = 'chunk-reload-attempted'
-
-function lazyWithReload<T extends ComponentType<unknown>>(factory: () => Promise<{ default: T }>) {
-  return lazy(async () => {
-    try {
-      const mod = await factory()
-      sessionStorage.removeItem(CHUNK_RELOAD_KEY)
-      return mod
-    } catch (error) {
-      if (!sessionStorage.getItem(CHUNK_RELOAD_KEY)) {
-        sessionStorage.setItem(CHUNK_RELOAD_KEY, '1')
-        window.location.reload()
-        // Keep Suspense pending until the reload happens instead of flashing the
-        // error boundary.
-        return new Promise<{ default: T }>(() => {})
-      }
-      throw error
-    }
-  })
-}
-
 const AssetsPage = lazyWithReload(() =>
   import('./pages/AssetsPage').then((m) => ({ default: m.AssetsPage })),
 )
