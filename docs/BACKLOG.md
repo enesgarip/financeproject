@@ -40,6 +40,82 @@
   kartları iki sütun, mobilde tam genişlik. Ortak aksiyonlarda `Button`
   primitive'i kullanılıyor; finans davranışı değişmedi. Local gerçek veriyle
   1440px masaüstü ve 390px mobil doğrulandı.
+- ~~Etkileşim kalitesi denetimi, beşinci dilim.~~ DONE. Görsel mimari yerinde
+  ama dokunma/erişilebilirlik katmanı geride kalmıştı; 14 route 1440px ve 390px'te
+  tarayıcıda ölçüldü (taşma, hedef boyutu, erişilebilir ad, kontrast):
+  - Ortak `.tap-target` yardımcısı (`index.css`): görsel boyut korunurken dokunma
+    alanı 44px'e çıkar. `Button`'ın `icon`/`icon-sm`/`icon-xs` boyutlarına
+    uygulandı — tek yerden bütün ikon butonları kapsıyor. Metinli boyutlar
+    zaten yeterince geniş olduğu için kapsam dışı.
+  - Nokta düzeltmeler: kredi taksit menüsü (32px), hedef düzenle/sil (26px,
+    üstelik **adsız**), alışveriş listesi işaretle/sil, hesap transfer butonu,
+    aktivite yenile, CrudPage satır menüsü (`aria-label="Menu"` → satır adlı).
+  - **Dokunmatikte erişilemeyen aksiyon:** alışveriş listesi sil/geri al yalnız
+    `group-hover` ile görünüyordu → `hover-actions` + `@media (hover: none)`.
+  - Bitişik ikon çiftlerinde genişletilmiş alan komşunun görünür kutusunu
+    çalıyordu (sil, düzenle'nin sağ kenarını kapıyordu); çiftlere sahte
+    genişletme yerine gerçek boyut + aralık verildi. `elementFromPoint` ile
+    bütün route'larda doğrulandı.
+  - `--muted-foreground` açık temada beyazda 4.94:1 ama muted yüzeyde 4.37:1
+    kalıyordu → `#697084` → `#646b7f` (muted üstünde 4.70:1). Her iki temada
+    ölçülebilir kontrast hatası kalmadı.
+  - `SafeToSpendCard` yüzde ekini kaldırdı: Türkçe iyelik eki sayının okunuşuna
+    göre değişiyor (%6'sı / %18'i), sabit `'i` yanlıştı.
+
+- ~~Grafik renk sistemi ve parça-bütün formu, altıncı dilim.~~ DONE. Grafik rengi
+  dosya başına zevk meselesiydi; üç ayrı yerde (DonutChart, AnalysisPage.wealth,
+  AssetsPage) yarı-token yarı-hardcoded palet kopyalanmıştı. Ölçülen sorunlar:
+  - **Durum rengi kimlik taşıyordu:** kategori dilimleri `--success`/`--warning`/
+    `--destructive` ile boyanıyordu; kırmızı "Ulaşım" dilimi "kötü" diye okunuyor
+    ve görsel ilke 4'ü ihlal ediyordu. `#a78bfa`/`#fb923c`/`#2dd4bf` gibi sabit
+    hex'ler koyu temaya uyum sağlamıyordu; `--muted-foreground` gri olduğu için
+    kimlik işi yapmıyordu.
+  - **Renk veri sıralamasına bağlıydı** (`dizi[i % n]`): ayın en büyük kalemi
+    değişince Market mavi'den turuncuya atlıyordu. Dokuzuncu kategori birinciyle
+    aynı renge düşüyordu.
+  - **"Banka" dilimi `--info` ile boyanıyordu** ve slot-1 "Nakit" ile normal
+    görüşte ΔE 9.3 kalıyordu (eşik 15) — anlamca bitişik iki kavram, iki mavi.
+  - Çözüm: `--viz-1..8` + `--viz-other` token'ları (doğrulanmış palet, iki tema
+    ayrı basamaklandı) ve `charts/vizPalette.ts` — kanonik anahtardan sabit atama,
+    döngü yok, nötr artık kovası. `dataviz` skill'inin doğrulayıcısıyla projenin
+    kendi `--card` zeminlerine karşı ölçüldü: light CVD ΔE 9.1 / normal 19.6,
+    dark 8.4 / 19.3, hepsi geçer.
+  - **Form değişikliği:** parça-bütün için halka (donut) bırakıldı,
+    `CompositionBar` (yatay yığın + sıralı etiketli satırlar) geldi. Gerekçe
+    ölçüldü: halka sarmalı doğrusal dizide olmayan bir komşuluk üretiyor (son
+    dilim ilk dilime değiyor) ve koyu temada slot-7↔slot-1 protanopide ΔE 1.9'a
+    düşüyordu; ayrıca yay açısı büyüklük karşılaştırması için kötü bir kanal
+    (%6,5 ile %5,0 halkada okunmuyor) ve "Nakit (USD)" gibi uzun adlar halka
+    çevresine sığmıyordu. Yığında sarmal yok → komşuluk = doğrulanmış slot
+    komşuluğu; kapasite kısıtı da ortadan kalktı (7 kategori de görünüyor).
+    `DonutChart.tsx` silindi.
+  - Efsane satırları artık gerçek buton: dilimler yalnız hover ile seçilebiliyordu,
+    dokunmatikte hiçbir dilim etkinleştirilemiyordu.
+  - `formatCompactCurrency` ortak: eksen `₺1.787.291`'i "₺1787K" yazıyordu, milyon
+    basamağı ve işaret yoktu; takvim hücresindeki kopya biçimlendirici kaldırıldı.
+
+- ~~İmza yüzeylerinde dekorasyon içeriğin üstüne biniyordu + Lighthouse kırılganlığı.~~ DONE.
+  Tarayıcıda gözle bakınca çıktı; ölçüm denetimleri kaçırmıştı (katmanlı gradient
+  zeminde arka plan çözümlenemiyor):
+  - `.dashboard-signature-hero::after` / `.accounts-signature-hub::after` dekoratif
+    halkaları `z-index:auto` ile ağaç sırasında en son boyanıyor, yani **içeriğin
+    üstüne** geliyordu; 40/80px yayılan box-shadow'ları sağ-alttaki istatistik
+    kutusunu yıkıyordu. `isolation:isolate` + `z-index:-1` ile arkaya alındı.
+  - Aynı kartlarda `--info` yeniden basamaklandırılmamıştı (diğer semantikler
+    öyleyken); "Bekleyen tahsilat" küresel orta maviyle yazılıp koyu zeminde
+    kayboluyordu → `#93c5fd` (~9:1).
+  - Lighthouse exit 124 ile düşüyordu: `npx @lhci/cli` **ölçüm penceresinin içinde**
+    indiriliyor, indirme 90 sn'lik bütçeyi yiyordu. Prefetch adımı + `~/.npm/_npx`
+    cache'i ile indirme pencerenin dışına alındı; sürüm `LHCI_VERSION` job env'inde.
+    Soğuk cache'te prefetch 10,7 sn sürdü — eskiden bu süre ölçümden çalınıyordu.
+  - `ÖDEME ALARMI` kartında `items-start` sol sütunu tepeye çivileyip altında
+    ~180px boşluk bırakıyordu → dikey ortalandı.
+  - **Yüzde biçimi Türkçe değildi:** tutarlar `₺1.150.000,00` iken yüzdeler
+    `%59.9` / `(+16.2%)` çıkıyordu (nokta ondalık, % sayının arkasında). Ortak
+    `formatPercent` eklendi: `%59,9`, `+%16,2`.
+  - PR incelemesinde iki sınır vakası kapatıldı: kısa para biçimi milyon eşiğinde
+    `₺1.000K` yerine `₺1M` üretir; `CompositionBar` hover/focus önizlemesini
+    kalıcı dokunma/klavye seçiminden ayrı tutar, böylece click seçimi geri kapanmaz.
 
 ## 2026-07-27 — "En iyi versiyon" yol haritası (F serisi, TAMAMLANDI)
 

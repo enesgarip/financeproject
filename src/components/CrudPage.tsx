@@ -448,8 +448,8 @@ export function CrudPage<T extends TableName>({
                           e.stopPropagation()
                           setMenuOpenId(menuOpenId === row.id ? null : row.id)
                         }}
-                        className="grid size-10 place-items-center rounded-lg border border-border/70 bg-background/55 text-muted-foreground transition hover:bg-muted hover:text-foreground"
-                        aria-label="Menu"
+                        className="tap-target grid size-10 place-items-center rounded-lg border border-border/70 bg-background/55 text-muted-foreground transition hover:bg-muted hover:text-foreground"
+                        aria-label={`${title} işlemleri`}
                       >
                         <MoreVertical size={18} />
                       </button>
@@ -526,8 +526,8 @@ export function CrudPage<T extends TableName>({
                             e.stopPropagation()
                             setMenuOpenId(menuOpenId === row.id ? null : row.id)
                           }}
-                          className="grid size-10 place-items-center rounded-lg border border-border/70 bg-background/55 text-muted-foreground transition hover:bg-muted hover:text-foreground"
-                          aria-label="Menü"
+                          className="tap-target grid size-10 place-items-center rounded-lg border border-border/70 bg-background/55 text-muted-foreground transition hover:bg-muted hover:text-foreground"
+                          aria-label={`${title} işlemleri`}
                         >
                           <MoreVertical size={18} />
                         </button>

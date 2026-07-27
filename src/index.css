@@ -146,7 +146,9 @@
   --secondary:            #eef0f6;
   --secondary-foreground: #292d3d;
   --muted:                #eff1f6;
-  --muted-foreground:     #697084;
+  /* Beyaz üstünde 4.94:1 idi ama muted yüzeyde 4.37'ye düşüyordu (AA sınırı 4.5).
+     Bir tık koyultunca chip/sekme zeminlerinde de 4.70:1 ile geçiyor. */
+  --muted-foreground:     #646b7f;
   --accent:               #ececff;
   --accent-foreground:    #4142b7;
   --destructive:          #dc2626;
@@ -162,6 +164,23 @@
   --border:               #e1e4ec;
   --input:                #d7dbe6;
   --ring:                 #6869e6;
+
+  /* Grafik kategori renkleri (kimlik) — sıra CVD güvenliğinin mekanizması,
+     kozmetik değil; slot sırasını değiştirme, döngüye sokma.
+     Durum renkleri (success/warning/destructive) BURAYA girmez: kırmızı bir
+     dilim "kötü" demektir, "üçüncü kategori" değil.
+     Doğrulandı (light, zemin #ffffff): CVD ΔE 9.1, normal görüş ΔE 19.6.
+     viz-3/4/5 açık temada 3:1 altında — efsane/etiket zorunlu (relief kuralı). */
+  --viz-1: #2a78d6;
+  --viz-2: #eb6834;
+  --viz-3: #1baf7a;
+  --viz-4: #eda100;
+  --viz-5: #e87ba4;
+  --viz-6: #008300;
+  --viz-7: #4a3aa7;
+  --viz-8: #e34948;
+  /* "Diğer" artık kategori değil, artık kova — kasıtlı olarak nötr ve geri planda. */
+  --viz-other: var(--muted-foreground);
 
   /* Shadows */
   --shadow-subtle:  0 1px 2px rgba(21, 24, 36, 0.035);
@@ -229,6 +248,17 @@
   --border-strong:        #3a3f4e;
   --input:                #303541;
   --ring:                 #999afa;
+
+  /* Aynı sekiz renk, koyu zemin için yeniden basamaklandı — otomatik çevirme değil.
+     Doğrulandı (dark, zemin #13161d): CVD ΔE 8.4, normal görüş ΔE 19.3, hepsi 3:1 üstü. */
+  --viz-1: #3987e5;
+  --viz-2: #d95926;
+  --viz-3: #199e70;
+  --viz-4: #c98500;
+  --viz-5: #d55181;
+  --viz-6: #008300;
+  --viz-7: #9085e9;
+  --viz-8: #e66767;
 
   /* Dark shadows */
   --shadow-subtle:   0 1px 3px rgba(0, 0, 0, 0.25);
@@ -399,6 +429,30 @@ button:disabled {
   /* Typography helpers */
   .finance-touch-target {
     min-height: 2.75rem;
+  }
+
+  /* İkon butonları görsel olarak küçük kalır ama dokunma alanı 44px'e çıkar.
+     Düzeni bozmadan mobil hedefi büyütür (HelpTooltip'teki desenin ortak hâli). */
+  .tap-target {
+    position: relative;
+  }
+
+  .tap-target::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: max(100%, 2.75rem);
+    height: max(100%, 2.75rem);
+    transform: translate(-50%, -50%);
+  }
+
+  /* Satır üstüne gelince beliren aksiyonlar dokunmatikte erişilemez kalıyordu;
+     hover'ı olmayan cihazlarda kalıcı görünür yap. */
+  @media (hover: none) {
+    .hover-actions {
+      opacity: 1 !important;
+    }
   }
 
   .finance-value {
@@ -603,7 +657,13 @@ button:disabled {
     --success: #6ee7b7;
     --warning: #fcd477;
     --destructive: #fda4af;
+    /* Diğer semantikler bu koyu yüzey için yeniden basamaklandırılmışken --info
+       atlanmıştı; "Bekleyen tahsilat" küresel orta maviyle yazılıyordu. */
+    --info: #93c5fd;
     position: relative;
+    /* Dekoratif halka içeriğin ÜSTÜNE boyanıyordu (::after, z-index:auto → ağaç
+       sırasında en son). Yığın bağlamı açıp halkayı arkaya alıyoruz. */
+    isolation: isolate;
     background:
       radial-gradient(circle at 95% 0%, rgba(121, 124, 240, 0.28), transparent 34%),
       linear-gradient(145deg, #171a24, #20243a) !important;
@@ -614,6 +674,7 @@ button:disabled {
   .dashboard-signature-hero::after {
     content: '';
     position: absolute;
+    z-index: -1;
     right: -4rem;
     bottom: -7rem;
     width: 17rem;
@@ -647,7 +708,10 @@ button:disabled {
   --primary-foreground: #17183b;
   --success: #72e4b7;
   --destructive: #fda4af;
+  --info: #93c5fd;
   position: relative;
+  /* Dekoratif halka içeriğin üstüne binmesin (bkz. dashboard-signature-hero). */
+  isolation: isolate;
   color: var(--foreground);
   background:
     radial-gradient(circle at 92% 5%, rgba(126, 128, 244, 0.3), transparent 31%),
@@ -659,6 +723,7 @@ button:disabled {
 .accounts-signature-hub::after {
   content: '';
   position: absolute;
+  z-index: -1;
   right: -5rem;
   bottom: -8rem;
   width: 19rem;

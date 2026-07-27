@@ -55,7 +55,7 @@ export function TurkishCalendarPresets({ existing, onAdded }: Props) {
         <button
           type="button"
           onClick={() => setOpen((v) => !v)}
-          className="flex w-full items-center justify-between gap-2 text-left"
+          className="finance-touch-target flex w-full items-center justify-between gap-2 text-left"
           aria-expanded={open}
         >
           <span className="flex items-center gap-2 text-sm font-bold text-foreground">

@@ -222,7 +222,7 @@ export function AccountHubPanel({
                     type="button"
                     onClick={() => onOpenTransfer(account)}
                     disabled={!canTransfer}
-                    className="grid size-9 place-items-center rounded-lg border border-white/12 bg-white/8 text-muted-foreground transition hover:bg-white/14 hover:text-foreground disabled:opacity-45"
+                    className="tap-target grid size-9 place-items-center rounded-lg border border-white/12 bg-white/8 text-muted-foreground transition hover:bg-white/14 hover:text-foreground disabled:opacity-45"
                     aria-label={`${account.card_name} hesabından transfer yap`}
                   >
                     <ArrowRightLeft size={15} />

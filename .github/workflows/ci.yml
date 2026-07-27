@@ -111,6 +111,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     continue-on-error: true
+    env:
+      LHCI_VERSION: 0.14.0
     permissions:
       contents: read
       statuses: write
@@ -140,8 +142,20 @@ jobs:
           VITE_SUPABASE_URL: https://example.supabase.co
           VITE_SUPABASE_ANON_KEY: ci-anon-key
 
+      # lhci paketi eskiden ölçüm penceresinin İÇİNDE indiriliyordu; npx indirmesi
+      # 90 sn'lik bütçeden yiyip ölçümü exit 124 (timeout) ile düşürüyordu — skor
+      # hatası değil, kurulum süresi. İndirmeyi pencerenin dışına alıp cache'liyoruz.
+      - name: Restore Lighthouse CI cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm/_npx
+          key: lhci-${{ runner.os }}-node24-${{ env.LHCI_VERSION }}
+
+      - name: Prefetch Lighthouse CI
+        run: npx --yes "@lhci/cli@${LHCI_VERSION}" --help > /dev/null
+
       - name: Lighthouse CI
-        run: timeout --signal=TERM "${LIGHTHOUSE_TIMEOUT_SECONDS}s" npx --yes @lhci/cli@0.14.0 autorun
+        run: timeout --signal=TERM "${LIGHTHOUSE_TIMEOUT_SECONDS}s" npx --yes "@lhci/cli@${LHCI_VERSION}" autorun
         env:
           LHCI_GITHUB_TOKEN: ${{ github.token }}
           LHCI_NUMBER_OF_RUNS: ${{ github.event_name == 'schedule' && '3' || '1' }}

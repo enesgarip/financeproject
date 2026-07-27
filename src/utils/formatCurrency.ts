@@ -15,6 +15,43 @@ export function formatCurrency(value: number | null | undefined) {
   }).format(value ?? 0)
 }
 
+const COMPACT_FORMAT = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 1 })
+
+/**
+ * Dar alan için kısa TL (eksen etiketi, takvim hücresi).
+ * Milyon basamağı şart: ₺1.787.291 "₺1787K" diye yazılıyordu. Ondalık ayıracı
+ * tr-TR (virgül). İşaret korunur — negatif bakiye eksende görünmeliydi.
+ */
+export function formatCompactCurrency(value: number | null | undefined) {
+  const v = value ?? 0
+  const abs = Math.abs(v)
+  const sign = v < 0 ? '-' : ''
+  if (abs >= 1_000_000) return `${sign}₺${COMPACT_FORMAT.format(abs / 1_000_000)}M`
+  if (abs >= 1_000) {
+    const roundedThousands = Math.round(abs / 1_000)
+    if (roundedThousands >= 1_000) {
+      return `${sign}₺${COMPACT_FORMAT.format(abs / 1_000_000)}M`
+    }
+    return `${sign}₺${COMPACT_FORMAT.format(roundedThousands)}K`
+  }
+  return `${sign}₺${COMPACT_FORMAT.format(abs)}`
+}
+
+const PERCENT_FORMAT = new Intl.NumberFormat('tr-TR', {
+  minimumFractionDigits: 1,
+  maximumFractionDigits: 1,
+})
+
+/**
+ * tr-TR yüzde: işaret önde, **% sayıdan önce**, ondalık virgül → "%16,2".
+ * İngilizce dizilim ("16.2%") aynı satırdaki ₺1.150.000,00 ile çelişiyordu.
+ */
+export function formatPercent(value: number | null | undefined, options?: { signed?: boolean }) {
+  const v = value ?? 0
+  const sign = v < 0 ? '-' : options?.signed && v > 0 ? '+' : ''
+  return `${sign}%${PERCENT_FORMAT.format(Math.abs(v))}`
+}
+
 export function formatNumber(value: number | null | undefined) {
   return new Intl.NumberFormat('tr-TR', {
     maximumFractionDigits: 2,

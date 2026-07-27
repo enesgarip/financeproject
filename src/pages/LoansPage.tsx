@@ -243,7 +243,7 @@ export function LoansPage() {
                     event.stopPropagation()
                     setPlanMenuOpenId(planMenuOpenId === item.id ? null : item.id)
                   }}
-                  className="grid size-8 place-items-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground"
+                  className="tap-target grid size-8 place-items-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground"
                   aria-label="Taksit menüsü"
                 >
                   <MoreVertical size={16} />

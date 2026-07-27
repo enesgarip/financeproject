@@ -1,12 +1,14 @@
 import { HandCoins, PieChart, ShieldCheck } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import { DonutChart, type DonutSlice } from '../components/charts/DonutChart'
+import { CompositionBar, type CompositionSlice } from '../components/charts/CompositionBar'
+import { buildVizColorMap, orderSlicesCanonically, vizColor } from '../components/charts/vizPalette'
 import { Badge } from '../components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { isDateInMonth } from '../utils/date'
 import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
 
 import { buildCategoryInsights, type AnalysisData } from '../utils/analysisView'
+import { expenseCategories } from '../utils/categories'
 import { activeExpense as activeCardExpense } from '../utils/budgetAlerts'
 import { type MarketRatesSnapshot } from '../utils/marketRates'
 import { buildInflationShield } from '../utils/inflationShield'
@@ -14,20 +16,22 @@ import { sumTL } from '../utils/money'
 import { computeZakat } from '../utils/zakat'
 import { StatPill } from './AnalysisPage.atoms'
 
-const CATEGORY_PALETTE = [
-  'var(--primary)', 'var(--success)', 'var(--warning)', 'var(--destructive)',
-  'var(--info)', '#a78bfa', '#fb923c', '#38bdf8',
-]
+/* Harcama kategorisi rengi kanonik listeden gelir, veri sıralamasından değil —
+   ayın en büyük kalemi değişince renkler yer değiştirmesin. */
+const CATEGORY_COLORS = buildVizColorMap(expenseCategories, ['Diğer'])
 
-const SHIELD_COLORS: Record<string, string> = {
-  Nakit: 'var(--warning)',
-  Altın: '#f59e0b',
-  Hisse: 'var(--primary)',
-  Fon: 'var(--info)',
-  BES: '#a78bfa',
-  Araç: '#94a3b8',
-  Diğer: '#64748b',
-}
+/* Enflasyon kalkanı da kimlik gösterir (hangi varlık sınıfı), durum değil;
+   "eriyen/korumalı" ayrımını panelin kendi metni ve yüzdeleri taşıyor.
+   buildInflationShield dövizli nakdi ayrı kova olarak üretir ("Nakit (USD)"),
+   o yüzden kanonik liste para birimi türevlerini de içermeli — yoksa hepsi
+   aynı nötr griye düşüp birbirinden ayırt edilemiyordu.
+   Sekiz slot dolduğu için Nakit (GBP) nötre düşer; aynı anda üç dövizin birden
+   görünmesi pratikte olmuyor, olursa da efsane satırı adı taşıyor. */
+const SHIELD_ORDER = [
+  'Nakit', 'Altın', 'Hisse', 'Fon', 'BES', 'Araç',
+  'Nakit (USD)', 'Nakit (EUR)', 'Nakit (GBP)', 'Diğer',
+] as const
+const SHIELD_COLORS = buildVizColorMap(SHIELD_ORDER, ['Diğer'])
 
 export function InflationShieldPanel({ data }: { data: AnalysisData }) {
   const shield = useMemo(() => buildInflationShield(data.assets, data.cards), [data.assets, data.cards])
@@ -35,11 +39,14 @@ export function InflationShieldPanel({ data }: { data: AnalysisData }) {
 
   const protectedPct = Math.round(shield.protectedRatio * 100)
   const meltingPct = 100 - protectedPct
-  const donutData: DonutSlice[] = shield.categories.map((category) => ({
-    name: category.category,
-    value: category.value,
-    color: SHIELD_COLORS[category.category] ?? (category.bucket === 'melting' ? 'var(--warning)' : 'var(--primary)'),
-  }))
+  const donutData: CompositionSlice[] = orderSlicesCanonically(
+    shield.categories.map((category) => ({
+      name: category.category,
+      value: category.value,
+      color: vizColor(SHIELD_COLORS, category.category),
+    })),
+    SHIELD_ORDER,
+  )
   const headline =
     protectedPct >= 60
       ? 'Servetinin büyük kısmı enflasyona karşı reel varlıkta.'
@@ -64,7 +71,7 @@ export function InflationShieldPanel({ data }: { data: AnalysisData }) {
           <StatPill label="Eriyen TL nakit" value={`%${meltingPct}`} tone={meltingPct > 65 ? 'rose' : 'stone'} />
         </div>
         <div className="rounded-xl bg-muted/40 p-3 text-xs text-muted-foreground">{headline}</div>
-        <DonutChart data={donutData} size={180} innerRadius={50} totalLabel="Varlık" />
+        <CompositionBar data={donutData} totalLabel="Varlık" />
       </CardContent>
     </Card>
   )
@@ -181,11 +188,15 @@ export function CategorySpendingChart({ data }: { data: AnalysisData }) {
     ([category, amount]) => ({ category, amount }),
   ).sort((a, b) => b.amount - a.amount)
 
-  const donutData: DonutSlice[] = categoryTotals.slice(0, 7).map((item, i) => ({
-    name:  item.category,
-    value: item.amount,
-    color: CATEGORY_PALETTE[i % CATEGORY_PALETTE.length],
-  }))
+  // En büyük 7 kalem tutara göre seçilir, sonra halka kanonik sıraya dizilir.
+  const donutData: CompositionSlice[] = orderSlicesCanonically(
+    categoryTotals.slice(0, 7).map((item) => ({
+      name:  item.category,
+      value: item.amount,
+      color: vizColor(CATEGORY_COLORS, item.category),
+    })),
+    expenseCategories,
+  )
 
   return (
     <Card className="border-border/70 lg:col-span-5">
@@ -202,7 +213,7 @@ export function CategorySpendingChart({ data }: { data: AnalysisData }) {
         {donutData.length === 0 ? (
           <p className="rounded-xl bg-muted/45 p-3 text-sm text-muted-foreground">Bu ay kategorili kart harcaması yok.</p>
         ) : (
-          <DonutChart data={donutData} size={180} innerRadius={50} totalLabel="Bu ay" />
+          <CompositionBar data={donutData} totalLabel="Bu ay" />
         )}
         {insights.length > 0 ? (
           <div className="rounded-xl bg-muted/40 p-3">

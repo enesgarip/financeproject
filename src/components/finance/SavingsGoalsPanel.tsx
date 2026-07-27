@@ -354,11 +354,23 @@ export function SavingsGoalsPanel() {
                             ) : null}
                           </div>
                         </div>
-                        <div className="flex shrink-0 gap-0.5">
-                          <button type="button" onClick={() => openEdit(goal)} className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground">
+                        {/* Sil düzenlemenin yanında; hedefler birbirinin görünür
+                            alanını örtmesin diye gerçek boyut + net aralık. */}
+                        <div className="flex shrink-0 gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => openEdit(goal)}
+                            aria-label={`${goal.name} hedefini düzenle`}
+                            className="tap-target grid size-9 place-items-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground"
+                          >
                             <Pencil size={14} />
                           </button>
-                          <button type="button" onClick={() => void handleDelete(goal)} className="rounded-lg p-1.5 text-destructive/60 hover:bg-destructive/10 hover:text-destructive">
+                          <button
+                            type="button"
+                            onClick={() => void handleDelete(goal)}
+                            aria-label={`${goal.name} hedefini sil`}
+                            className="tap-target grid size-9 place-items-center rounded-lg text-destructive/60 hover:bg-destructive/10 hover:text-destructive"
+                          >
                             <Trash2 size={14} />
                           </button>
                         </div>
