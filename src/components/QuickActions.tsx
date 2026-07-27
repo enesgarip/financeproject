@@ -1,6 +1,6 @@
 import { ArrowRightLeft, Banknote, HandCoins, Landmark, Plus, ReceiptText, Search, ShoppingCart, WalletCards, X } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation } from 'react-router'
 import { cn } from '../lib/utils'
 import { normalizeSearchText } from '../utils/searchText'
 import { Input } from './ui/input'

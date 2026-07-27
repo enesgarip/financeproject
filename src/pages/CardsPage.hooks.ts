@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type Dispatch, type FormEvent, type SetStateAction } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams } from 'react-router'
 import { useInvalidateFinanceSnapshot } from '../app/useFinanceSnapshot'
 import {
   applyCardProvision,

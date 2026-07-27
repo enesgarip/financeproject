@@ -102,14 +102,14 @@ Düzeltme = **ters kayıt** (append-only history bozulmaz). GUC ile yönlendiril
 ## Deploy hattı (otomatik)
 
 `main`'e **push = üretim deploy** (`.github/workflows/deploy.yml`):
-1. **Classify + verify** — değişiklik alanlarını ayır; lint + coverage + build + bundle kapısı
-2. **Stage frontend** — frontend değiştiyse production build'i domainsiz hazırla (paralel)
+1. **Classify + verify** — değişiklik alanlarını ayır; lint + coverage + production dependency audit kapısı
+2. **Tek artifact** — frontend değiştiyse production env'i çek, bir kez `vercel build --prod` ile build et, bundle bütçesini doğrula ve `--prebuilt --skip-domain` ile staged yükle
 3. **DB check + backup** — DB değiştiyse yerel gerçek Postgres kontrolü; migration varsa şifreli yedek
 4. **Supabase release** — yalnız migration değiştiyse `db push`; yalnız değişen edge function'ları deploy et
-5. **Vercel promote** — doğrulamalar/release yeşilse aynı staged build'i yeniden build etmeden canlıya al
+5. **Vercel promote + smoke** — resmi scoped API ile aynı staged build'i canlıya al; `/login` smoke başarısızsa önceki production deployment'a otomatik rollback yap
 
 Vercel Git auto-deploy'u `vercel.json` ile `main` için kapalıdır; production'ı
-yalnız workflow'daki staged CLI deploy + promote yönetir (çift deploy YAPMA).
+yalnız workflow'daki prebuilt staged deploy + scoped API promotion yönetir (çift deploy YAPMA).
 
 CI (`ci.yml`): PR ve `develop` push'larında Lint+Build (required); Playwright,
 Lighthouse ve Supabase kontrolleri yalnız ilgili dosya alanı değiştiyse çalışır.

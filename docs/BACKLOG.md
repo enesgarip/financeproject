@@ -373,9 +373,13 @@ pattern'ler ve açık düzeltme planı yer alıyor.
   TypeScript incremental state are cached; per-change Lighthouse uses one run
   with a hard timeout while the scheduled audit keeps three. Main release runs
   the quality gate once, validates a changed database with one seeded reset,
-  backs up only migrations, deploys only changed edge functions, and builds one
-  unaliased staged Vercel production in parallel before exact promotion. The
-  former Git-auto + deploy-hook double production build is removed.
+  backs up only migrations, deploys only changed edge functions, and verifies
+  one production-env artifact before a prebuilt staged upload. Scoped API
+  promotion runs a production smoke check and automatically rolls back on
+  failure. The former Git-auto + deploy-hook double production build and second
+  promotion-time CLI install are removed. Production dependency audit is now a
+  release gate; React Router moved to patched v8 and direct-main branch
+  protection requires the PR flow.
 - 2026-07-27 empty due-statement handling: automatic statement maintenance now
   skips cards whose current-period spending belongs entirely to the next
   statement. The expected no-op no longer appears as a red error or prevents

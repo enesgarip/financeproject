@@ -25,7 +25,7 @@ The main product goal is to make monthly financial load visible before due dates
 
 - Frontend: React 19 + TypeScript + Vite 7
 - Data fetching/cache: **TanStack Query** (use-case hook'ları `src/app/*`)
-- Routing: `react-router-dom`
+- Routing: `react-router` v8 (declarative mode; `react-router-dom` re-export package is not used)
 - Styling: Tailwind CSS v4
 - UI primitives: local `src/components/ui/*` wrappers plus Radix-based patterns
 - Icons: `lucide-react`
@@ -33,7 +33,7 @@ The main product goal is to make monthly financial load visible before due dates
 - Auth: Supabase Auth (email/password)
 - Database: Postgres via Supabase, with RLS (her public tablo RLS açık, CI denetler)
 - Error tracking: **Sentry** (yalnız frontend; edge'de yok)
-- Deployment target: Vercel (`main`'e push = üretim deploy)
+- Deployment target: Vercel (protected `main` merge = production deploy)
 - PWA assets: `public/manifest.webmanifest`, `public/sw.js`
 
 ## App Structure

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { ArrowRight, ShieldCheck, TrendingUp, WalletCards } from 'lucide-react'
-import { Navigate, useLocation } from 'react-router-dom'
+import { Navigate, useLocation } from 'react-router'
 import { useAuth } from '../auth/useAuth'
 import { Button } from '../components/ui/button'
 import { Card, CardContent } from '../components/ui/card'

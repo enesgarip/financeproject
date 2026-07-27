@@ -16,7 +16,7 @@
  * Sayfa veri akışı ve modül haritası: docs/CARDS_ARCHITECTURE.md.
  */
 import { useState, useCallback } from 'react'
-import { Link } from 'react-router-dom'
+import { Link } from 'react-router'
 import { CalendarClock, FileText, History, Info, ScanSearch, ShieldCheck } from 'lucide-react'
 import { useFinanceSnapshot } from '../app/useFinanceSnapshot'
 import { CrudPage } from '../components/CrudPage'

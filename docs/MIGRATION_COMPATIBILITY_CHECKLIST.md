@@ -47,9 +47,9 @@ If the change affects money movement, also update:
 - Do not retry retired RPC signatures as an implicit compatibility fallback.
   If the live database is behind the frontend, surface the missing capability
   path and let the deploy order/migration status be fixed explicitly.
-- Make sure production order is safe: the deploy workflow may build an
-  unaliased staged frontend in parallel, but applies migrations and changed edge
-  functions before promoting that exact Vercel deployment.
+- Make sure production order is safe: the deploy workflow verifies one
+  production-env artifact and uploads it as an unaliased prebuilt deployment,
+  but applies migrations and changed edge functions before promoting it.
 - If preview deployments can run against an older database, avoid hard failures
   for non-critical optional tables or functions.
 
@@ -102,17 +102,19 @@ guardrail.
 The `Deploy Production` workflow currently does this on `main`:
 
 1. Classify frontend, migration/database, and edge-function changes.
-2. Run lint, coverage, build, and bundle-size verification once.
-3. Build frontend changes as an unaliased staged production deployment in
-   parallel.
+2. Run lint, coverage, and production dependency verification once.
+3. Pull production environment values, build once, verify the bundle, and
+   upload that exact artifact as an unaliased prebuilt production deployment.
 4. Rebuild the local seeded database and run lint/RLS/grant/catch-up checks when
    database files changed.
 5. Run an encrypted pre-migration backup when migrations changed.
 6. Show the production migration dry run and apply pending migrations with
    `--include-all` only when migration files changed.
 7. Deploy only changed edge functions (`_shared` changes redeploy all).
-8. Promote the exact staged Vercel deployment after required Supabase work
-   succeeds; promotion does not rebuild.
+8. Promote the exact staged Vercel deployment through the team-scoped API after
+   required Supabase work succeeds; promotion does not rebuild.
+9. Smoke-test the canonical production `/login` route and automatically roll
+   traffic back to the previous deployment when the smoke check fails.
 
 Do not bypass this order for schema/RPC changes. The app should see the new
 database contract before the new frontend goes live.

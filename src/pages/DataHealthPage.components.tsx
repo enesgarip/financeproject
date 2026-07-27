@@ -1,5 +1,5 @@
 import { Activity, AlertTriangle, DatabaseZap, Trash2, Upload, Wrench } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { Link } from 'react-router'
 import { SimpleModal } from '../components/SimpleModal'
 import { Badge } from '../components/ui/badge'
 import { Card as SurfaceCard, CardContent } from '../components/ui/card'

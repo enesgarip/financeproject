@@ -1,7 +1,7 @@
 import { CalendarDays, Check, ChevronDown, MoreVertical, Pencil, Plus, Search, Trash2 } from 'lucide-react'
 import type { CSSProperties, ReactNode } from 'react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router'
 import { useAuth } from '../auth/useAuth'
 import { deleteCrudRow, fetchCrudRows, saveCrudRow } from '../data/repositories/crudRepo'
 import { cn, openNativePicker } from '../lib/utils'

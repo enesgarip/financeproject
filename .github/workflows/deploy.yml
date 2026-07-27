@@ -51,7 +51,7 @@ jobs:
             changed=$(git diff --name-only "$BEFORE" "$SHA")
             while IFS= read -r file; do
               case "$file" in
-                src/*|public/*|index.html|package.json|package-lock.json|vite.config.*|tsconfig*.json|vercel.json)
+                src/*|public/*|index.html|package.json|package-lock.json|vite.config.*|tsconfig*.json|vercel.json|scripts/check-bundle-size.mjs|scripts/promote-vercel-deployment.mjs|.github/workflows/deploy.yml)
                   frontend=true
                   ;;
               esac
@@ -77,7 +77,15 @@ jobs:
 
   verify:
     name: Lint and Build
+    needs: changes
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      deployment_url: ${{ steps.stage.outputs.url }}
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -107,7 +115,23 @@ jobs:
       - name: Unit tests (with coverage gate)
         run: npm run test:coverage
 
-      - name: Build
+      - name: Production dependency audit
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: Install pinned Vercel CLI
+        if: ${{ needs.changes.outputs.frontend == 'true' }}
+        run: npm install --global vercel@54.9.1
+
+      - name: Pull Vercel production environment
+        if: ${{ needs.changes.outputs.frontend == 'true' }}
+        run: vercel pull --yes --environment=production --no-color --token "$VERCEL_TOKEN"
+
+      - name: Build exact production artifact
+        if: ${{ needs.changes.outputs.frontend == 'true' }}
+        run: vercel build --prod --yes --no-color --token "$VERCEL_TOKEN"
+
+      - name: Build non-frontend changes
+        if: ${{ needs.changes.outputs.frontend != 'true' }}
         run: npm run build
         env:
           VITE_SUPABASE_URL: https://example.supabase.co
@@ -116,33 +140,11 @@ jobs:
       - name: Bundle size budget
         run: npm run check:bundle
 
-  stage_frontend:
-    name: Build staged Vercel production
-    needs: changes
-    if: ${{ needs.changes.outputs.frontend == 'true' }}
-    runs-on: ubuntu-latest
-    outputs:
-      url: ${{ steps.stage.outputs.url }}
-    env:
-      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-
-      - name: Setup Node
-        uses: actions/setup-node@v7
-        with:
-          node-version: 24
-
-      - name: Install pinned Vercel CLI
-        run: npm install --global vercel@54.9.1
-
-      - name: Build staged production deployment
+      - name: Upload staged prebuilt production
+        if: ${{ needs.changes.outputs.frontend == 'true' }}
         id: stage
         run: |
-          url=$(vercel deploy --prod --skip-domain --yes --no-color --token "$VERCEL_TOKEN")
+          url=$(vercel deploy --prebuilt --prod --skip-domain --archive=tgz --yes --no-color --token "$VERCEL_TOKEN")
           url=$(printf '%s\n' "$url" | tail -n 1)
           case "$url" in
             https://*) ;;
@@ -297,29 +299,31 @@ jobs:
 
   publish_frontend:
     name: Promote staged Vercel production
-    needs: [changes, verify, stage_frontend, release_supabase]
+    needs: [changes, verify, release_supabase]
     if: >-
       ${{
         always() &&
         !cancelled() &&
         needs.changes.outputs.frontend == 'true' &&
         needs.verify.result == 'success' &&
-        needs.stage_frontend.result == 'success' &&
+        needs.verify.outputs.deployment_url != '' &&
         needs.release_supabase.result != 'failure'
       }}
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     env:
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      DEPLOYMENT_URL: ${{ needs.verify.outputs.deployment_url }}
     steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
       - name: Setup Node
         uses: actions/setup-node@v7
         with:
           node-version: 24
 
-      - name: Install pinned Vercel CLI
-        run: npm install --global vercel@54.9.1
-
-      - name: Promote exact staged deployment
-        env:
-          DEPLOYMENT_URL: ${{ needs.stage_frontend.outputs.url }}
-        run: vercel promote "$DEPLOYMENT_URL" --yes --no-color --token "$VERCEL_TOKEN"
+      - name: Promote, smoke test, and rollback on failure
+        run: node scripts/promote-vercel-deployment.mjs

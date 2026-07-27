@@ -4,15 +4,16 @@
 
 ## Goal
 
-Gerçek akış: **`main`'e push = üretim deploy.** Push yalnız kullanıcı isteyince yapılır.
+Gerçek akış: **`main` güncellemesi = üretim deploy.** `main` korumalıdır; değişiklik
+PR üzerinden merge edilir ve production release bu merge push'uyla başlar.
 
-1. çalış (genelde `main`, gerekirse feature branch)
+1. `codex/...` veya `feature/...` dalında çalış
 2. yerel kalite kontrolü: `npm run lint && npm run test:unit && npm run build`
 3. migration/trigger değiştiyse yerel Postgres'te doğrula (`npm run db:seed:local`)
 4. commit (Türkçe + faz/madde etiketli)
-5. `main`'e push → `deploy.yml` otomatik çalışır (aşağı bak)
+5. PR aç, CI yeşilken `main`'e merge et → `deploy.yml` otomatik çalışır
 
-PR akışı (feature branch → PR → CI → merge) opsiyoneldir; `ci.yml` PR'larda ve
+PR akışı (feature branch → PR → CI → merge) zorunludur; `ci.yml` PR'larda ve
 `develop` push'larında koşar. Feature/codex dallarında push + PR çift CI
 oluşmaması için branch push tetikleyicisi yoktur.
 
@@ -43,6 +44,7 @@ does not run the quality suite twice.
 Checks:
 
 - lint
+- production dependency audit (`npm audit --omit=dev`)
 - build
 - bundle size budget
 - Lighthouse performance/accessibility/best-practices budget (frontend paths)
@@ -82,20 +84,22 @@ Runs on push to `main` or manual dispatch.
 Order/parallel graph:
 
 1. **Classify** — frontend, database/migration, and edge-function paths
-2. **Verify** — lint + coverage + build + bundle budget (always; single main quality gate)
-3. **Stage frontend** — when frontend changed, build one production deployment
-   with `--skip-domain` in parallel; it cannot serve production yet
-4. **Database check + backup** — one seeded local reset and DB audits when
+2. **Verify + artifact** — lint + coverage + production dependency audit; pull
+   production env, build once with `vercel build --prod`, verify the bundle, and
+   upload that exact output with `--prebuilt --skip-domain`
+3. **Database check + backup** — one seeded local reset and DB audits when
    database paths changed; encrypted backup only for migration changes
-5. **Supabase release** — dry-run/push only when migrations changed; deploy only
+4. **Supabase release** — dry-run/push only when migrations changed; deploy only
    changed edge functions (`_shared` means all)
-6. **Promote frontend** — after verify and required Supabase work, promote the
-   exact staged URL without rebuilding
+5. **Promote + smoke** — after required Supabase work, use Vercel's team-scoped
+   promotion API, smoke-test the canonical production `/login` route, and roll
+   back to the previous deployment automatically when smoke fails
 
 `vercel.json` disables Vercel Git auto-deploy for `main`. The deploy hook is no
-longer used. This prevents duplicate production builds and keeps new frontend
-code off production until its database contract is ready. Non-production
-branches keep Vercel Git preview deployments.
+longer used. The workflow uses one verified prebuilt artifact and does not
+install Vercel CLI again for promotion. This prevents duplicate production
+builds and keeps new frontend code off production until its database contract
+is ready. Non-production branches keep Vercel Git preview deployments.
 
 Ek otomasyon:
 - `ci.yml`: PR/develop Lint+Build (required); path-aware Lighthouse, Playwright,
@@ -136,8 +140,9 @@ Note: CI smoke tests use safe placeholder values because they only verify unauth
 - `VERCEL_ORG_ID`
 - `VERCEL_PROJECT_ID`
 
-The workflow pins Vercel CLI `54.9.1`, creates an unaliased staged production
-build, and promotes that exact URL after the release gates pass.
+The workflow pins Vercel CLI `54.9.1`, creates one production-env build, uploads
+it as an unaliased prebuilt deployment, and uses the official project promotion
+and rollback APIs after the release gates pass.
 
 ## Push notification sender
 
@@ -161,15 +166,15 @@ build, and promotes that exact URL after the release gates pass.
 3. Store `VERCEL_TOKEN`, `VERCEL_ORG_ID`, and `VERCEL_PROJECT_ID` as GitHub
    Actions secrets.
 
-## Recommended Branch Flow
+## Required Branch Flow
 
 1. Create branch: `feature/...`
 2. Implement change
 3. Run `npm run ci:local`
 4. Push branch
 5. Open PR
-6. Wait for `CI` workflow to pass
-7. Merge to `main`
+6. Wait for required `Lint and Build` to pass
+7. Merge to protected `main` (merge queue when enabled)
 8. `Deploy Production` runs automatically
 
 ## Notes and Guardrails
@@ -181,4 +186,6 @@ build, and promotes that exact URL after the release gates pass.
   is active; that would recreate duplicate production builds and bypass release
   ordering.
 - Do not replace the pinned Vercel CLI version with `latest`.
+- Keep `scripts/promote-vercel-deployment.mjs` team-scoped and preserve its
+  production smoke + rollback behavior.
 - The Playwright suite is intentionally a smoke layer right now. Expand it gradually around stable user flows.
