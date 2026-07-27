@@ -1,6 +1,6 @@
 import { Activity, CheckCircle2, RefreshCw, Settings, ShieldCheck, Undo2, Wrench } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link } from 'react-router'
 import { FinancePaymentDrawer } from '../components/finance/FinancePaymentDrawer'
 import { LiveReconciliationPanel } from '../components/finance/LiveReconciliationPanel'
 import { Badge } from '../components/ui/badge'

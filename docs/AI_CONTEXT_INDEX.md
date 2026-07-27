@@ -170,9 +170,10 @@ Read:
 4. `.github/workflows/deploy.yml`
 5. `.lighthouserc.cjs` when changing Lighthouse collection/assertion behavior
 
-Use local Supabase checks when available. The production frontend build is
-created without domains in parallel; migrations and changed edge functions
-must finish before that exact staged Vercel deployment is promoted.
+Use local Supabase checks when available. Build the production frontend once,
+verify that artifact, and upload it with `--prebuilt --skip-domain`. Migrations
+and changed edge functions must finish before scoped API promotion; a failed
+production smoke check rolls traffic back to the previous deployment.
 
 ## Verification Ladder
 

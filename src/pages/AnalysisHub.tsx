@@ -1,4 +1,4 @@
-import { Outlet } from 'react-router-dom'
+import { Outlet } from 'react-router'
 import { HubNav } from '../components/HubNav'
 import { analysisHubTabs } from '../components/navigation'
 

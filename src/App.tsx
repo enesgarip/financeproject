@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, type ComponentType, type ReactNode } from 'react'
-import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
+import { Navigate, Route, Routes, useLocation } from 'react-router'
 import { Analytics } from '@vercel/analytics/react'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClient } from './app/queryClient'

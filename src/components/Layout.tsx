@@ -1,6 +1,6 @@
 import { CalendarDays, Eye, EyeOff, LogOut, Moon, MoreHorizontal, Sun } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
+import { Link, NavLink, Outlet, useLocation } from 'react-router'
 import { useDailyNetWorthSnapshot } from '../app/useDailyNetWorthSnapshot'
 import { useAuth } from '../auth/useAuth'
 import { BalancePrivacyProvider, useBalancePrivacy } from '../hooks/useBalancePrivacy'

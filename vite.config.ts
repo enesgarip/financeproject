@@ -38,7 +38,7 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          'vendor-react': ['react', 'react-dom', 'react-router'],
           'vendor-ui-utils': ['class-variance-authority', 'clsx', 'tailwind-merge'],
           'vendor-radix': ['radix-ui'],
         },

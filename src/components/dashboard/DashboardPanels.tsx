@@ -1,6 +1,6 @@
 import { ShieldAlert, ShieldCheck } from 'lucide-react'
 import { type ReactNode } from 'react'
-import { Link } from 'react-router-dom'
+import { Link } from 'react-router'
 import { MiniStat, PageHero, ProgressStrip, StatusBadge } from '../finance/FinanceUI'
 import { Card, CardContent } from '../ui/card'
 import { HelpTooltip, type HelpTooltipContent } from '../ui/help-tooltip'
@@ -164,4 +164,3 @@ export function PulseCard({ title, label, value, description, icon, tone }: { ti
     </Card>
   )
 }
-

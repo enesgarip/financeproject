@@ -2,6 +2,7 @@ const ciChromeFlags = '--headless=new --no-sandbox --disable-dev-shm-usage --dis
 const localChromeFlags = '--no-sandbox --disable-dev-shm-usage --disable-gpu'
 const previewHost = '127.0.0.1'
 const previewPort = 4173
+const maxWaitMs = Number(process.env.LHCI_MAX_WAIT_MS ?? 45000)
 
 /** @type {import('@lhci/utils/src/lighthouserc').Config} */
 module.exports = {
@@ -16,8 +17,8 @@ module.exports = {
       settings: {
         chromeFlags: process.env.CI ? ciChromeFlags : localChromeFlags,
         throttlingMethod: 'provided',
-        maxWaitForFcp: 90000,
-        maxWaitForLoad: 90000,
+        maxWaitForFcp: maxWaitMs,
+        maxWaitForLoad: maxWaitMs,
       },
     },
     assert: {
