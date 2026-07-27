@@ -1,4 +1,4 @@
-import type { FocusAction, SmartInsight } from '../components/dashboard/DashboardPanels'
+import type { FocusAction } from '../components/dashboard/DashboardPanels'
 import type {
   AccountReconciliation,
   Card as FinanceCard,
@@ -47,81 +47,6 @@ export function reconciliationDriftCount(cards: FinanceCard[], reconciliations: 
   const reconcilable = cards.filter((c) => c.card_type === 'banka_karti' || c.card_type === 'kredi_karti')
   const items = buildReconciliationItems(reconcilable, latestReconciliationByCard(reconciliations))
   return items.filter((i) => i.status === 'drift').length
-}
-
-export function buildSmartInsights(
-  cashFlow: CashFlowSummary,
-  creditUsageRate: number,
-  totalDebts: number,
-  totalReceivables: number,
-  upcomingItems: UpcomingItem[],
-  reconDriftCount = 0,
-): SmartInsight[] {
-  const insights: SmartInsight[] = []
-  const urgentCount = upcomingItems.filter((item) => {
-    const remaining = daysUntil(new Date(item.sortTime))
-    return remaining !== null && remaining <= 7
-  }).length
-
-  if (cashFlow.projectedCash < 0) {
-    insights.push({
-      title: 'Ay sonu nakit açığı görünüyor',
-      description: `${cashFlow.monthLabel} projeksiyonu ${formatCurrency(cashFlow.projectedCash)}. Büyük ödemeleri veya tahsilatı öne almak iyi olur.`,
-      tone: 'rose',
-    })
-  } else if (cashFlow.netFlow < 0) {
-    insights.push({
-      title: 'Bu ay nakit azalıyor',
-      description: `Net akış ${formatCurrency(cashFlow.netFlow)}. Ay sonu pozitif kalsa da çıkış temposu gelirden yüksek.`,
-      tone: 'amber',
-    })
-  } else {
-    insights.push({
-      title: 'Bu ay nakit akışı rahat',
-      description: `Tahmini net akış +${formatCurrency(cashFlow.netFlow)}. Fazlayı kart borcu, hedef veya yatırım tarafına ayırabilirsin.`,
-      tone: 'emerald',
-    })
-  }
-
-  if (urgentCount > 0) {
-    insights.push({
-      title: `${urgentCount} yakın vade var`,
-      description: 'Önümüzdeki 7 gün içinde ödeme takibi gerekiyor. En yakın kalemleri ödeme alarmında öne aldım.',
-      tone: urgentCount >= 3 ? 'rose' : 'amber',
-    })
-  }
-
-  if (creditUsageRate >= 80) {
-    insights.push({
-      title: 'Kart limit kullanımı yüksek',
-      description: `Toplam limitin yaklaşık %${Math.round(creditUsageRate)} kullanılıyor. Yeni harcamalarda taksit ve limit grubuna dikkat.`,
-      tone: 'rose',
-    })
-  } else if (creditUsageRate >= 55) {
-    insights.push({
-      title: 'Kart kullanımı izlenmeli',
-      description: `Limit kullanımın %${Math.round(creditUsageRate)} seviyesinde. Ekstre kesilmeden önce dönem içi harcamayı kontrol etmek iyi olur.`,
-      tone: 'amber',
-    })
-  }
-
-  if (totalReceivables > 0 && totalDebts > 0) {
-    insights.push({
-      title: 'Alacaklar borcu dengeleyebilir',
-      description: `${formatCurrency(totalReceivables)} açık alacak var. Tahsilat tarihleri nakit açığını yumuşatabilir.`,
-      tone: 'stone',
-    })
-  }
-
-  if (reconDriftCount > 0) {
-    insights.push({
-      title: 'Bakiye mutabakatında fark var',
-      description: `${reconDriftCount} hesapta app ile banka rakamı uyuşmuyor. Veri Sağlığı'ndan detay görebilirsin.`,
-      tone: 'amber',
-    })
-  }
-
-  return insights.slice(0, 4)
 }
 
 export function buildFocusActions(

@@ -1,5 +1,5 @@
 import { CheckCircle2, Repeat, TrendingUp, Users, WalletCards } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { Badge } from '../components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Progress } from '../components/ui/progress'
@@ -13,7 +13,7 @@ import { PRICE_RADAR_MONTHS } from '../data/repositories/analysisRepo'
 import { type PriceTrend } from '../utils/priceIncreaseRadar'
 import { canCutCurrentStatement } from '../utils/statementCycle'
 import { buildFinanceObligationsForMonth } from '../utils/obligations'
-import { comparePeriods, type ComparisonMode } from '../utils/periodComparison'
+
 import { buildSubscriptionSummary } from '../utils/subscriptions'
 import { diffTL, greaterThanTL, sumTL } from '../utils/money'
 import { StatPill } from './AnalysisPage.atoms'
@@ -348,75 +348,6 @@ export function SubscriptionsPanel({ data }: { data: AnalysisData }) {
     </Card>
   )
 }
-
-const comparisonModeLabels: Record<ComparisonMode, string> = {
-  month: 'Aylık',
-  quarter: 'Çeyreklik',
-  year: 'Yıllık',
-}
-
-export function PeriodComparisonPanel({ data }: { data: AnalysisData }) {
-  const { formatAmount } = useBalancePrivacy()
-  const [mode, setMode] = useState<ComparisonMode>('month')
-  const result = useMemo(() => comparePeriods(data.cardExpenses, mode), [data.cardExpenses, mode])
-
-  const changeLabel = result.totalChangePercent === null ? '—' : `${result.totalChangePercent > 0 ? '+' : ''}%${result.totalChangePercent}`
-
-  return (
-    <Card className="border-border/70 shadow-[var(--shadow-card)] lg:col-span-7">
-      <CardHeader className="pb-0">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <CardTitle>Dönem karşılaştırması</CardTitle>
-            <p className="mt-1 text-sm text-muted-foreground">{result.currentLabel} vs {result.previousLabel}</p>
-          </div>
-          <div className="flex shrink-0 gap-1">
-            {(['month', 'quarter', 'year'] as ComparisonMode[]).map((m) => (
-              <button
-                key={m}
-                type="button"
-                onClick={() => setMode(m)}
-                className={`rounded-lg px-2.5 py-1 text-xs font-bold transition-colors ${mode === m ? 'bg-foreground/10 text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
-              >
-                {comparisonModeLabels[m]}
-              </button>
-            ))}
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-3 pt-2">
-        <div className="grid grid-cols-3 gap-2">
-          <StatPill label={result.currentLabel} value={formatAmount(result.currentTotal)} tone="stone" />
-          <StatPill label={result.previousLabel} value={formatAmount(result.previousTotal)} tone="stone" />
-          <StatPill label="Değişim" value={changeLabel} tone={result.totalChangePercent !== null && result.totalChangePercent <= 0 ? 'emerald' : 'rose'} />
-        </div>
-        {result.rows.length > 0 ? (
-          <div className="space-y-1.5">
-            <div className="grid grid-cols-[1fr_auto_auto_auto] gap-3 px-1 text-[11px] font-bold uppercase text-muted-foreground">
-              <span>Kategori</span>
-              <span className="text-right">Şimdi</span>
-              <span className="text-right">Önceki</span>
-              <span className="text-right">Fark</span>
-            </div>
-            {result.rows.slice(0, 8).map((row) => (
-              <div key={row.category} className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-3 rounded-xl bg-muted/45 px-3 py-2 text-sm">
-                <span className="min-w-0 truncate text-muted-foreground">{row.category}</span>
-                <span className="shrink-0 whitespace-nowrap text-right font-bold tabular-nums text-foreground">{formatAmount(row.currentAmount)}</span>
-                <span className="shrink-0 whitespace-nowrap text-right tabular-nums text-muted-foreground">{formatAmount(row.previousAmount)}</span>
-                <span className={`shrink-0 whitespace-nowrap text-right text-xs font-bold tabular-nums ${row.direction === 'down' ? 'text-success' : row.direction === 'up' ? 'text-destructive' : 'text-muted-foreground'}`}>
-                  {row.changePercent !== null ? `${row.changePercent > 0 ? '+' : ''}%${row.changePercent}` : row.direction === 'new' ? 'Yeni' : '—'}
-                </span>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="rounded-xl bg-muted/45 p-3 text-sm text-muted-foreground">Karşılaştırma için yeterli harcama verisi yok.</p>
-        )}
-      </CardContent>
-    </Card>
-  )
-}
-
 export function SchemaMigrationNotice({ missingTables }: { missingTables: string[] }) {
   if (missingTables.length === 0) return null
 

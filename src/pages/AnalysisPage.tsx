@@ -1,14 +1,8 @@
-import { FullMonthCalendarPanel } from './AnalysisPage.calendar'
-import {
-  CashFlowTrend,
-  ForwardForecast,
-  NetWorthTrend,
-} from './AnalysisPage.trends'
+import { ForwardForecast, NetWorthTrend } from './AnalysisPage.trends'
 import { MonthlyReport } from './AnalysisPage.reports'
 import { CategorySpendingChart } from './AnalysisPage.wealth'
 import {
   MonthCloseAssistant,
-  PeriodComparisonPanel,
   PriceIncreaseRadar,
   SchemaMigrationNotice,
   SubscriptionsPanel,
@@ -31,13 +25,10 @@ export function AnalysisPage() {
         <MonthlyReport data={data} />
         <UpcomingInstallments data={data} />
         <CategorySpendingChart data={data} />
-        <PeriodComparisonPanel data={data} />
         <PriceIncreaseRadar trends={priceTrends} />
-        <CashFlowTrend data={data} />
         <NetWorthTrend snapshots={snapshots} ratesSnapshot={ratesSnapshot} />
         <ForwardForecast data={data} />
         <SubscriptionsPanel data={data} />
-        <FullMonthCalendarPanel data={data} />
       </div>
 
       {loading ? <p className="rounded-xl border border-border/60 bg-card p-4 text-sm text-muted-foreground">Analiz verileri yükleniyor...</p> : null}

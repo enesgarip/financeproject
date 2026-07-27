@@ -7,21 +7,18 @@ import {
   ChevronUp,
   CreditCard,
   Landmark,
-  Lightbulb,
   ListChecks,
   ShieldCheck,
 } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Badge } from '../ui/badge'
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card'
-import type { CardExpense } from '../../types/database'
+import { Card, CardContent } from '../ui/card'
 import type { DashboardUpcomingItem } from '../../utils/dashboardUpcoming'
 import { daysUntil } from '../../utils/date'
 import { useBalancePrivacy } from '../../hooks/useBalancePrivacy'
-import { detectSpendingAnomalies } from '../../utils/spendingAnomalies'
 import type { CashFlowSummary } from '../../utils/financeSummary'
-import type { FocusAction, SmartInsight } from './DashboardPanels'
+import type { FocusAction } from './DashboardPanels'
 
 type UpcomingItem = DashboardUpcomingItem
 
@@ -135,127 +132,6 @@ function FocusActionCard({ action }: { action: FocusAction }) {
   )
 }
 
-export function SpendingRadarPanel({ expenses }: { expenses: CardExpense[] }) {
-  const { formatAmount } = useBalancePrivacy()
-  const { anomalies, recurring } = useMemo(() => detectSpendingAnomalies(expenses), [expenses])
-
-  const hasContent = anomalies.length > 0 || recurring.length > 0
-  if (!hasContent) {
-    return (
-      <Card className="border-0 shadow-[var(--shadow-card)] ring-1 ring-border/80">
-        <CardHeader className="pb-1">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <CardTitle className="text-base">Harcama radarı</CardTitle>
-              <p className="mt-1 text-xs text-muted-foreground">
-                {expenses.length === 0
-                  ? 'Henüz kart harcaması yok; ilk kayıtlar geldikçe burada sinyal oluşur.'
-                  : 'Sıradışı kategori artışı veya tekrar eden yeni gider görünmüyor.'}
-              </p>
-            </div>
-            <CheckCircle2 size={16} className="mt-0.5 shrink-0 text-success" aria-hidden="true" />
-          </div>
-        </CardHeader>
-      </Card>
-    )
-  }
-
-  return (
-    <Card className="border-0 shadow-[var(--shadow-card)] ring-1 ring-border/80">
-      <CardHeader className="pb-1">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <CardTitle className="text-base">Harcama radarı</CardTitle>
-            <p className="mt-1 text-xs text-muted-foreground">Ortalamayı aşan kategoriler ve tekrar eden giderler.</p>
-          </div>
-          <Lightbulb size={16} className="mt-0.5 shrink-0 text-amber-500" aria-hidden="true" />
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-3 pt-1">
-        {anomalies.slice(0, 3).map((anomaly) => (
-          <div key={anomaly.category} className="rounded-lg bg-amber-50/70 px-3 py-2 ring-1 ring-amber-200/60 dark:bg-amber-950/20 dark:ring-amber-900/40">
-            <div className="flex items-start justify-between gap-2">
-              <p className="text-xs font-bold text-amber-900 dark:text-amber-100">{anomaly.category}</p>
-              <span className="shrink-0 rounded-md bg-amber-200/70 px-1.5 py-0.5 text-[10px] font-bold text-amber-800 dark:bg-amber-900/50 dark:text-amber-200">
-                +{Math.round((anomaly.ratio - 1) * 100)}%
-              </span>
-            </div>
-            <p className="mt-0.5 text-[11px] text-amber-700/80 dark:text-amber-300/70">
-              Bu ay {formatAmount(anomaly.currentMonth)} · ort. {formatAmount(anomaly.threeMonthAvg)}
-            </p>
-          </div>
-        ))}
-        {recurring.slice(0, 3).map((item) => (
-          <div key={item.description} className="flex items-center justify-between gap-3 rounded-lg bg-muted/50 px-3 py-2">
-            <div className="min-w-0">
-              <p className="truncate text-xs font-semibold text-foreground">{item.description}</p>
-              <p className="text-[11px] text-muted-foreground">{item.monthCount} ay tekrar · {item.category}</p>
-            </div>
-            <span className="shrink-0 text-xs font-bold tabular-nums text-foreground">{formatAmount(item.amount)}</span>
-          </div>
-        ))}
-      </CardContent>
-    </Card>
-  )
-}
-
-export function SmartInsightsPanel({ insights }: { insights: SmartInsight[] }) {
-  const toneClass = {
-    emerald: 'border-emerald-200 bg-emerald-50/70 text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950/25 dark:text-emerald-100',
-    amber: 'border-amber-200 bg-amber-50/75 text-amber-950 dark:border-amber-900 dark:bg-amber-950/25 dark:text-amber-100',
-    rose: 'border-rose-200 bg-rose-50/75 text-rose-950 dark:border-rose-900 dark:bg-rose-950/25 dark:text-rose-100',
-    stone: 'border-border bg-card text-foreground',
-  }
-  const iconClass = {
-    emerald: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/70 dark:text-emerald-300',
-    amber: 'bg-amber-100 text-amber-700 dark:bg-amber-950/70 dark:text-amber-300',
-    rose: 'bg-rose-100 text-rose-700 dark:bg-rose-950/70 dark:text-rose-300',
-    stone: 'bg-muted text-muted-foreground',
-  }
-
-  return (
-    <Card className="border-0 shadow-[var(--shadow-card)] ring-1 ring-border/80">
-      <CardHeader className="pb-0">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <CardTitle>Akıllı uyarılar</CardTitle>
-            <p className="mt-1 text-sm text-muted-foreground">Bu ay karar vermeyi hızlandıran kısa finans sinyalleri.</p>
-          </div>
-          <Lightbulb className="text-emerald-700 dark:text-emerald-300" aria-hidden="true" />
-        </div>
-      </CardHeader>
-      <CardContent className="grid gap-2 pt-2 min-[560px]:grid-cols-2">
-        {insights.map((insight) => {
-          const Icon = insight.tone === 'rose' ? AlertTriangle : insight.tone === 'emerald' ? ShieldCheck : Lightbulb
-
-          return (
-            <article key={insight.title} className={`rounded-lg border p-3 ${toneClass[insight.tone]}`}>
-              <div className="flex items-start gap-3">
-                <div className={`grid size-9 shrink-0 place-items-center rounded-lg ${iconClass[insight.tone]}`}>
-                  <Icon size={17} />
-                </div>
-                <div className="min-w-0">
-                  <h3 className="text-sm font-extrabold leading-snug">{insight.title}</h3>
-                  <p className="mt-1 text-xs leading-5 opacity-75">{insight.description}</p>
-                </div>
-              </div>
-            </article>
-          )
-        })}
-      </CardContent>
-    </Card>
-  )
-}
-
-function upcomingDayLabel(sortTime: number) {
-  const remaining = daysUntil(new Date(sortTime))
-  if (remaining === null) return 'Tarih yok'
-  if (remaining < 0) return `${Math.abs(remaining)} gün geçti`
-  if (remaining === 0) return 'Bugün'
-  if (remaining === 1) return 'Yarın'
-  return `${remaining} gün kaldı`
-}
-
 export function UpcomingAlertPanel({ items }: { items: UpcomingItem[] }) {
   const [showAll, setShowAll] = useState(false)
 
@@ -313,4 +189,13 @@ export function UpcomingAlertPanel({ items }: { items: UpcomingItem[] }) {
       </CardContent>
     </Card>
   )
+}
+
+function upcomingDayLabel(sortTime: number) {
+  const remaining = daysUntil(new Date(sortTime))
+  if (remaining === null) return 'Tarih yok'
+  if (remaining < 0) return `${Math.abs(remaining)} gün geçti`
+  if (remaining === 0) return 'Bugün'
+  if (remaining === 1) return 'Yarın'
+  return `${remaining} gün kaldı`
 }

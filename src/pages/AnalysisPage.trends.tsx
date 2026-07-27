@@ -1,80 +1,17 @@
 import { useMemo, useState } from 'react'
 import { BarChart, type BarDataPoint } from '../components/charts/BarChart'
-import { CashFlowChart, type CashFlowPoint } from '../components/charts/CashFlowChart'
 import { Badge } from '../components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import type { NetWorthSnapshot } from '../types/database'
-import { startOfMonth } from '../utils/date'
 import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
 import { buildCashFlowForecast } from '../utils/cashFlowForecast'
-import { buildMonthlyCashFlow } from '../utils/financeSummary'
 import { analysisFinanceSummaryInput, type AnalysisData } from '../utils/analysisView'
 import { type MarketRatesSnapshot } from '../utils/marketRates'
-import { diffTL, sumTL } from '../utils/money'
+import { diffTL } from '../utils/money'
 import { convertNetWorth, formatRealValue, realValueChangeBadge, type RealUnit, REAL_UNIT_LABELS } from '../utils/realValue'
 import { selectNetWorthSeries, type NetWorthRange } from '../utils/netWorthSeries'
 import { applyScenario, type ScenarioMutation } from '../utils/scenarioForecast'
 import { StatPill } from './AnalysisPage.atoms'
-
-export function CashFlowTrend({ data }: { data: AnalysisData }) {
-  const summaryInput = useMemo(() => analysisFinanceSummaryInput(data), [data])
-
-  const chartData: CashFlowPoint[] = useMemo(() => {
-    const from = startOfMonth()
-    const months = Array.from({ length: 6 }, (_, index) => new Date(from.getFullYear(), from.getMonth() - 5 + index, 1))
-
-    return months.map((month) => {
-      const cf = buildMonthlyCashFlow(summaryInput, month, { from })
-      return {
-        label: new Intl.DateTimeFormat('tr-TR', { month: 'short' }).format(month),
-        income: cf.income,
-        outflow: cf.outflow,
-        net: cf.netFlow,
-      }
-    })
-  }, [summaryInput])
-
-  const totalNet = useMemo(() => sumTL(chartData.map((row) => row.net)), [chartData])
-
-  return (
-    <Card className="border-border/70 lg:col-span-7">
-      <CardHeader className="pb-0">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <CardTitle>6 aylık gelir ve ödeme yükü</CardTitle>
-            <p className="mt-1 text-xs text-muted-foreground">Gelir, kart ödemesi ve planlı nakit çıkışlarının aylık karşılaştırması.</p>
-          </div>
-          <Badge variant={totalNet >= 0 ? 'success' : 'destructive'}>
-            {totalNet >= 0 ? 'Pozitif' : 'Negatif'}
-          </Badge>
-        </div>
-      </CardHeader>
-      <CardContent className="pt-3">
-        <div className="rounded-xl bg-muted/20 p-2">
-          <CashFlowChart data={chartData} height={220} />
-        </div>
-        <div className="mt-3 flex items-center gap-4 text-xs text-muted-foreground">
-          <span className="flex items-center gap-1.5">
-            <span className="size-2 rounded-full bg-success" />
-            Gelir
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className="size-2 rounded-full bg-destructive" />
-            Nakit çıkışı
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className="size-2 rounded-full bg-primary" />
-            Net
-          </span>
-        </div>
-      </CardContent>
-    </Card>
-  )
-}
-
-function shortMonth(monthKey: string) {
-  return new Intl.DateTimeFormat('tr-TR', { month: 'short' }).format(new Date(`${monthKey}T00:00:00`))
-}
 
 export function NetWorthTrend({
   snapshots,
@@ -446,4 +383,8 @@ export function ForwardForecast({ data }: { data: AnalysisData }) {
       </CardContent>
     </Card>
   )
+}
+
+function shortMonth(monthKey: string) {
+  return new Intl.DateTimeFormat('tr-TR', { month: 'short' }).format(new Date(`${monthKey}T00:00:00`))
 }

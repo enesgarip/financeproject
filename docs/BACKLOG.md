@@ -40,8 +40,27 @@ rakamlar**. Durma kriteri (kullanıcıyla kararlaştırıldı): aylık manuel gi
   **Ayrıca yerel giriş bozukmuş:** `seed.sql` `gen_salt('bf')` cost 6 üretiyor,
   güncel GoTrue reddediyor ("Invalid login credentials", DB'de hash doğru
   görünürken) → cost 10 verildi. Belgelenmiş `dev:local` akışı yeniden çalışıyor.
-- **Beklemede (kullanıcı kararı):** kullanılmayan panellerin ayıklanması —
-  hangi panele son 3 ayda bakıp karar değiştirdiği bilgisi olmadan silinmez.
+- ~~**P — Panel ayıklama.**~~ DONE (2026-07-27, kullanıcı 40 panellik listeyi
+  gözden geçirip "önerilerin tamamını uygula" dedi). **17 panel kaldırıldı,
+  2 panel katlandı.**
+  - *Özet (20 → 8):* kaldırılan — Bu ay ödeme yükü, Kredi kartları, Bütçe
+    uyarıları, Nakit takvimi (30 gün), Aylık nakit akışı, Güncel borç toplamları,
+    Analiz özeti, Akıllı içgörüler, Hedef ilerlemeleri, Harcama radarı, Limit
+    grupları, Maaş nabzı. Kalan: veri sağlığı şeridi, **Bu ay harcanabilir**,
+    Finansal durum, Bugünün odağı, Ekstre hatırlatma, Yaklaşan vadeler,
+    Ekstre mutabakatı, Son işlemler (+ borç/limit metrik kutuları).
+  - *Analiz (12 → 9):* kaldırılan — Dönem karşılaştırması, 6 aylık gelir/ödeme
+    yükü, Nakit akış takvimi (Özet'teki takvimle çakışıyordu).
+  - *Detay (8 → 4 + 2 katlı):* kaldırılan — Kredi uygunluğu, FIRE. Katlandı
+    (istenince açılır) — Yıl sonu özeti, Zekât hesaplayıcı.
+  - Silinen util'ler: `periodComparison`, `fullMonthCalendar`,
+    `loanAffordability`, `fire` (+ testleri) ve `buildSmartInsights`.
+    `spendingAnomalies` KALDI (analysisView hâlâ kullanıyor).
+  - Bundle 528 → **510 kB** gzip; Özet sayfası hesaplama yükü de azaldı
+    (creditLimitGroups/salaryTrend/nextMonthLoad artık hesaplanmıyor).
+  - Gerekçe: aynı soruya cevap veren paneller çakışıyordu (harcanabilir tutar
+    ödeme yüküyle, hero borçla, odak içgörüyle). Silinenlerin verisi kaybolmadı;
+    hepsi kendi sayfasında (kartlar, ödemeler/hedefler, analiz) duruyor.
 
 ## 2026-07-27 — Güvenilirlik paketi A/B/C/D (DONE)
 

@@ -32,53 +32,33 @@ import type {
   SavingsGoalComponent,
   TransactionHistory,
 } from '../types/database'
-import { BudgetAlertPanel } from '../components/dashboard/BudgetAlertPanel'
 import {
   DashboardHero,
   DataHealthBadge,
-  GoalProgressCommand,
   MetricTile,
   PulseCard,
-  SalaryPulse,
 } from '../components/dashboard/DashboardPanels'
 import { SafeToSpendCard } from '../components/dashboard/SafeToSpendCard'
-import {
-  AnalyticsSnapshotPanel,
-  CreditCardSnapshotPanel,
-  CreditLimitSection,
-  CurrentDebtTotalsPanel,
-  HistorySection,
-} from '../components/dashboard/DashboardCards'
-import {
-  CashFlowCalendarPanel,
-  CashFlowPanel,
-  MonthlyPaymentLoadPanel,
-} from '../components/dashboard/DashboardCashFlow'
-import {
-  FocusActionPanel,
-  SmartInsightsPanel,
-  SpendingRadarPanel,
-  UpcomingAlertPanel,
-} from '../components/dashboard/DashboardInsights'
+import { HistorySection } from '../components/dashboard/DashboardCards'
+import { FocusActionPanel, UpcomingAlertPanel } from '../components/dashboard/DashboardInsights'
 import { dashboardHelp, getUserDisplayName } from '../components/dashboard/dashboardPanelUtils'
 import { StatementReminderPanel } from '../components/dashboard/StatementReminderPanel'
 import { ReconciliationPanel } from '../components/dashboard/ReconciliationPanel'
 import { addMonths, dateInputValue, daysUntil, startOfMonth } from '../utils/date'
 import {
-  buildCreditLimitGroups,
+
   buildFinancialHealth,
   buildFinancialPosition,
   buildGoalProgressSummary,
   buildMonthlyCashFlow,
-  getSalaryTrend,
+
   sum,
   totalCreditLimit,
 } from '../utils/financeSummary'
 import { buildAttentionLine } from '../utils/attention'
-import { buildBudgetAlerts } from '../utils/budgetAlerts'
 import { buildHealthCounts } from '../utils/dataHealthSummary'
-import { buildSmartInsights, buildFocusActions, reconciliationDriftCount } from '../utils/dashboardInsights'
-import { buildDashboardMonthlyLoad, buildDashboardUpcomingItems } from '../utils/dashboardUpcoming'
+import { buildFocusActions } from '../utils/dashboardInsights'
+import { buildDashboardUpcomingItems } from '../utils/dashboardUpcoming'
 import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
 import { buildStatementReminders } from '../utils/statementReminder'
 import { SkeletonDashboard } from '../components/ui/skeleton'
@@ -182,26 +162,20 @@ export function DashboardPage() {
       (loan) => loan.monthly_payment,
     )
     const creditUsageRate = totalSharedCreditLimit > 0 ? Math.min(100, (position.totalCreditCardDebt / totalSharedCreditLimit) * 100) : 0
-    const salaryTrend = getSalaryTrend(data.salaryHistory)
-    const creditLimitGroups = buildCreditLimitGroups(data.cards)
     const cashFlow = buildMonthlyCashFlow(data)
     const nextMonthCashFlow = buildMonthlyCashFlow(data, addMonths(startOfMonth(), 1))
-    const nextMonthLoad = buildDashboardMonthlyLoad(obligationInput, addMonths(startOfMonth(), 1), startOfMonth())
     const goalProgress = buildGoalProgressSummary(data.savingsGoals, data.savingsGoalComponents)
 
     return {
       ...position,
       totalCreditLimit: totalSharedCreditLimit,
       creditUsageRate,
-      creditLimitGroups,
       totalLoanMonthlyPayment,
-      salaryTrend,
       cashFlow,
       nextMonthCashFlow,
-      nextMonthLoad,
       goalProgress,
     }
-  }, [data, obligationInput])
+  }, [data])
 
   const upcomingItems = useMemo(() => {
     return buildDashboardUpcomingItems(obligationInput, UPCOMING_DAYS)
@@ -224,14 +198,6 @@ export function DashboardPage() {
     })
   }, [summary, outflowUpcoming])
 
-  const reconDriftCount = useMemo(
-    () => reconciliationDriftCount(data.cards, data.accountReconciliations),
-    [data.cards, data.accountReconciliations],
-  )
-  const insights = useMemo(
-    () => buildSmartInsights(summary.cashFlow, summary.creditUsageRate, summary.totalDebts, summary.totalReceivables, outflowUpcoming, reconDriftCount),
-    [summary.cashFlow, summary.creditUsageRate, summary.totalDebts, summary.totalReceivables, outflowUpcoming, reconDriftCount],
-  )
   const focusActions = useMemo(
     () => buildFocusActions(data, summary.cashFlow, summary.creditUsageRate, outflowUpcoming),
     [data, summary.cashFlow, summary.creditUsageRate, outflowUpcoming],
@@ -241,10 +207,6 @@ export function DashboardPage() {
   const hasStatementReminders = useMemo(
     () => buildStatementReminders(data.cards, data.cardStatements).length > 0,
     [data.cards, data.cardStatements],
-  )
-  const hasBudgetAlerts = useMemo(
-    () => buildBudgetAlerts(data.budgets, data.cardExpenses).length > 0,
-    [data.budgets, data.cardExpenses],
   )
 
   const [showDetails, setShowDetails] = useState(() => {
@@ -292,9 +254,6 @@ export function DashboardPage() {
     )
   }
 
-  const hasCreditLimitGroups = summary.creditLimitGroups.length > 0
-  const hasCompanionPanels = hasStatementReminders || hasBudgetAlerts
-  const upcomingTotal = sum(outflowUpcoming, (item) => item.amount)
   const detailsPanelId = 'dashboard-details-panel'
   let itemIndex = 0
 
@@ -340,37 +299,12 @@ export function DashboardPage() {
       </div>
 
       <div className="dashboard-item min-w-0 lg:col-span-4" style={{ '--di': itemIndex++ } as React.CSSProperties}>
-        <MonthlyPaymentLoadPanel
-          cashFlow={summary.cashFlow}
-          nextMonthOutflow={summary.nextMonthCashFlow.outflow}
-          upcomingTotal={upcomingTotal}
-          upcomingCount={outflowUpcoming.length}
-        />
-      </div>
-
-      <div className="dashboard-item min-w-0 lg:col-span-5" style={{ '--di': itemIndex++ } as React.CSSProperties}>
-        <CreditCardSnapshotPanel
-          cards={data.cards}
-          totalDebt={summary.totalCreditCardDebt}
-          statementDebt={summary.totalCardStatementDebt}
-          totalLimit={summary.totalCreditLimit}
-          usageRate={summary.creditUsageRate}
-        />
-      </div>
-
-      <div className="dashboard-item min-w-0 lg:col-span-7" style={{ '--di': itemIndex++ } as React.CSSProperties}>
         <FocusActionPanel actions={focusActions} cashFlow={summary.cashFlow} />
       </div>
 
-      {hasCompanionPanels ? (
-        <div
-          className={`dashboard-item grid min-w-0 gap-3 lg:col-span-12 ${
-            hasStatementReminders && hasBudgetAlerts ? 'min-[760px]:grid-cols-2' : ''
-          }`}
-          style={{ '--di': itemIndex++ } as React.CSSProperties}
-        >
-          {hasStatementReminders ? <StatementReminderPanel cards={data.cards} statements={data.cardStatements} /> : null}
-          {hasBudgetAlerts ? <BudgetAlertPanel budgets={data.budgets} expenses={data.cardExpenses} /> : null}
+      {hasStatementReminders ? (
+        <div className="dashboard-item min-w-0 lg:col-span-12" style={{ '--di': itemIndex++ } as React.CSSProperties}>
+          <StatementReminderPanel cards={data.cards} statements={data.cardStatements} />
         </div>
       ) : null}
 
@@ -400,80 +334,22 @@ export function DashboardPage() {
         className={`dashboard-details-wrapper lg:col-span-12 ${showDetails ? 'dashboard-details-open' : ''}`}
       >
         <div className="grid min-w-0 gap-5 lg:grid-cols-12 lg:items-start">
-          {/* ─ Nakit akışı bölümü ─ */}
-          <DetailSectionDivider label="Nakit akışı" />
-
-          <div className="min-w-0 lg:col-span-7">
-            <CashFlowCalendarPanel items={upcomingItems} cashFlow={summary.cashFlow} />
-          </div>
-
-          <div className="min-w-0 lg:col-span-5">
-            <CashFlowPanel cashFlow={summary.cashFlow} />
-          </div>
-
-          {/* ─ Borç & tahsilat bölümü ─ */}
-          <DetailSectionDivider label="Borçlar ve tahsilat" />
-
-          <div className="min-w-0 lg:col-span-8">
-            <CurrentDebtTotalsPanel
-              totalDebt={summary.totalDebts}
-              cardDebt={summary.totalCreditCardDebt}
-              loanDebt={summary.totalLoanDebt}
-              personalDebt={summary.totalPersonalDebts}
-              paymentDebt={summary.totalPaymentLiabilities}
-            />
-          </div>
-
-          <div className="grid min-w-0 gap-3 lg:col-span-4">
-            <MetricTile label="Tahsilat" value={formatAmount(summary.totalReceivables)} icon={<ArrowUpRight />} tone="emerald" help={dashboardHelp.receivable} />
-          </div>
-
-          {/* ─ Analiz bölümü ─ */}
-          <DetailSectionDivider label="Analiz ve öneriler" />
-
-          <div className="min-w-0 lg:col-span-8">
-            <AnalyticsSnapshotPanel
-              cashFlow={summary.cashFlow}
-              totalAssets={summary.totalAssets}
-              totalDebts={summary.totalDebts}
-              cardDebt={summary.totalCreditCardDebt}
-              loanDebt={summary.totalLoanDebt}
-              personalDebt={summary.totalPersonalDebts}
-            />
-          </div>
-
-          <div className="min-w-0 lg:col-span-4">
-            <SmartInsightsPanel insights={insights} />
-          </div>
+          {/* ─ Vadeler ve mutabakat ─ */}
+          <DetailSectionDivider label="Vadeler ve mutabakat" />
 
           <UpcomingAlertPanel items={outflowUpcoming} />
 
-          {/* ─ Birikim & harcama bölümü ─ */}
-          <DetailSectionDivider label="Birikim ve harcama" />
-
-          <div className="min-w-0 lg:col-span-5">
-            <GoalProgressCommand goalProgress={summary.goalProgress} />
-          </div>
-
-          <div className="min-w-0 lg:col-span-7">
-            <SpendingRadarPanel expenses={data.cardExpenses} />
-          </div>
-
-          {/* ─ Mutabakat ─ */}
           <div className="min-w-0 lg:col-span-12">
             <ReconciliationPanel cards={data.cards} statements={data.cardStatements.filter((statement) => statement.status === 'open')} />
           </div>
 
-          {/* ─ Limit & kredi ritmi bölümü ─ */}
-          <DetailSectionDivider label="Limitler ve kredi ritmi" />
+          {/* ─ Borç ve limit özeti ─ */}
+          <DetailSectionDivider label="Borç ve limit" />
 
-          {hasCreditLimitGroups ? (
-            <div className="min-w-0 lg:col-span-7">
-              <CreditLimitSection groups={summary.creditLimitGroups} totalUsageRate={summary.creditUsageRate} />
-            </div>
-          ) : null}
-
-          <div className={`grid min-w-0 gap-3 min-[520px]:grid-cols-2 ${hasCreditLimitGroups ? 'lg:col-span-5 lg:grid-cols-1' : 'lg:col-span-12'}`}>
+          <div className="grid min-w-0 gap-3 min-[520px]:grid-cols-2 lg:col-span-12 lg:grid-cols-4">
+            <MetricTile label="Tahsilat" value={formatAmount(summary.totalReceivables)} icon={<ArrowUpRight />} tone="emerald" help={dashboardHelp.receivable} />
+            <MetricTile label="Toplam limit" value={formatAmount(summary.totalCreditLimit)} icon={<CreditCard />} tone="indigo" help={dashboardHelp.totalLimit} />
+            <MetricTile label="Kredi ödemesi" value={formatAmount(summary.totalLoanMonthlyPayment)} icon={<CalendarDays />} tone="stone" help={dashboardHelp.loanPayment} />
             <PulseCard
               title="Kredi ritmi"
               label="Aylık ödeme"
@@ -482,12 +358,6 @@ export function DashboardPage() {
               icon={<Landmark />}
               tone="rose"
             />
-            <SalaryPulse trend={summary.salaryTrend} />
-          </div>
-
-          <div className="grid min-w-0 gap-3 min-[520px]:grid-cols-2 lg:col-span-12">
-            <MetricTile label="Toplam limit" value={formatAmount(summary.totalCreditLimit)} icon={<CreditCard />} tone="indigo" help={dashboardHelp.totalLimit} />
-            <MetricTile label="Kredi ödemesi" value={formatAmount(summary.totalLoanMonthlyPayment)} icon={<CalendarDays />} tone="stone" help={dashboardHelp.loanPayment} />
           </div>
 
           {/* ─ Geçmiş ─ */}

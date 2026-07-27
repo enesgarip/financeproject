@@ -1,21 +1,11 @@
-import {
-  ShieldAlert,
-  ShieldCheck,
-  TrendingUp,
-} from 'lucide-react'
+import { ShieldAlert, ShieldCheck } from 'lucide-react'
 import { type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { FinancePanel, MiniStat, PageHero, ProgressStrip, SectionHeader, StatusBadge } from '../finance/FinanceUI'
+import { MiniStat, PageHero, ProgressStrip, StatusBadge } from '../finance/FinanceUI'
 import { Card, CardContent } from '../ui/card'
 import { HelpTooltip, type HelpTooltipContent } from '../ui/help-tooltip'
-import { formatDate } from '../../utils/date'
 import { useBalancePrivacy } from '../../hooks/useBalancePrivacy'
-import {
-  getSalaryTrend,
-  type CashFlowSummary,
-  type FinancialHealthSummary,
-  type GoalProgressSummary,
-} from '../../utils/financeSummary'
+import type { CashFlowSummary, FinancialHealthSummary } from '../../utils/financeSummary'
 
 export type SmartInsight = {
   title: string
@@ -115,43 +105,6 @@ export function DashboardHero({
   )
 }
 
-export function GoalProgressCommand({ goalProgress }: { goalProgress: GoalProgressSummary }) {
-  const { formatAmount } = useBalancePrivacy()
-  if (goalProgress.activeCount === 0) {
-    return (
-      <FinancePanel tone="info" className="p-4 sm:p-5">
-        <SectionHeader
-          title="Hedef ilerlemeleri"
-          description="Henüz aktif birikim hedefi yok."
-          action={<StatusBadge tone="info">0 hedef</StatusBadge>}
-        />
-        <p className="mt-5 rounded-lg bg-background/65 p-3 text-sm text-muted-foreground ring-1 ring-border/70">
-          Birikim ekranından yeni hedef ekleyince ilerleme takibi burada görünür.
-        </p>
-      </FinancePanel>
-    )
-  }
-
-  const tone = goalProgress.averageProgress >= 70 ? 'good' : goalProgress.averageProgress >= 35 ? 'warning' : 'info'
-
-  return (
-    <FinancePanel tone={tone} className="p-4 sm:p-5">
-      <SectionHeader
-        title="Hedef ilerlemeleri"
-        description="Aktif hedeflerin ortalama ilerleme durumu."
-        action={<StatusBadge tone={tone}>{goalProgress.activeCount} hedef</StatusBadge>}
-      />
-      <div className="mt-5">
-        <ProgressStrip label="Ortalama ilerleme" value={goalProgress.averageProgress} tone={tone} />
-      </div>
-      <div className="mt-5 grid grid-cols-2 gap-2">
-        <MiniStat label="Sıradaki hedef" value={goalProgress.nextGoalName ?? 'Henüz yok'} tone={goalProgress.nextGoalName ? 'premium' : 'neutral'} />
-        <MiniStat label="Aylık ihtiyaç" value={formatAmount(goalProgress.nextGoalMonthlyNeed)} tone={goalProgress.nextGoalMonthlyNeed > 0 ? 'warning' : 'neutral'} />
-      </div>
-    </FinancePanel>
-  )
-}
-
 export function MetricTile({
   label,
   value,
@@ -212,33 +165,3 @@ export function PulseCard({ title, label, value, description, icon, tone }: { ti
   )
 }
 
-export function SalaryPulse({ trend }: { trend: ReturnType<typeof getSalaryTrend> }) {
-  const { formatAmount } = useBalancePrivacy()
-  if (!trend.current) {
-    return (
-      <PulseCard
-        title="Maaş trendi"
-        label="Henüz kayıt yok"
-        value="-"
-        description="Maaş geçmişi varlıklara dahil edilmez"
-        icon={<TrendingUp />}
-        tone="emerald"
-      />
-    )
-  }
-
-  const trendLabel = trend.previous
-    ? `${trend.difference >= 0 ? '+' : ''}${formatAmount(trend.difference)} · ${trend.percentage >= 0 ? '+' : ''}${trend.percentage.toFixed(1)}%`
-    : 'İlk maaş kaydı'
-
-  return (
-    <PulseCard
-      title="Maaş trendi"
-      label={formatDate(trend.current.effective_date)}
-      value={formatAmount(trend.current.amount)}
-      description={trendLabel}
-      icon={<TrendingUp />}
-      tone="emerald"
-    />
-  )
-}
