@@ -104,7 +104,10 @@ is ready. Non-production branches keep Vercel Git preview deployments.
 Ek otomasyon:
 - `ci.yml`: PR/develop Lint+Build (required); path-aware Lighthouse, Playwright,
   and Supabase checks; nightly three-run Lighthouse audit.
-- Dependabot patch/minor PR'larını CI yeşilse otomatik squash-merge eder (major elde kalır).
+- Dependabot routine version-update'larda yalnız patch/minor PR açar, ekosistem
+  bazında gruplar ve required CI yeşilse otomatik squash-merge eder. Version major
+  PR'ları üretilmez; security update'lar SemVer filtresinden muaftır ve major
+  güvenlik yükseltmeleri manuel incelemeye kalır.
 - Günlük şifreli DB yedeği cron'u (`db-backup.yml`).
 - Günlük Web Push gönderici cron'u (`push-notify.yml`): 04:00 UTC / 07:00 TR, `push-notify` edge fonksiyonunu service-role ile invoke eder.
   - Aynı edge function, ayar ekranındaki "test bildirimi gönder" için authenticated user JWT ile yalnızca o kullanıcının kendi endpoint'ine tek test payload'u yollar. Cron yolunda aday varsa ve tüm teslim denemeleri başarısız olursa workflow kırmızıya dönebilir.

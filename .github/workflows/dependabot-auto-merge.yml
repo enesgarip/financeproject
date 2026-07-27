@@ -1,9 +1,10 @@
 name: Dependabot auto-merge
 
 # Auto-merges Dependabot PRs for patch & minor updates once CI passes.
-# Major updates are left open for manual review (they may contain breaking
-# changes). Merging waits for the required "Lint and Build" check via GitHub's
-# native auto-merge, and the branch is deleted automatically afterwards.
+# Routine version-update majors are filtered in dependabot.yml. A major security
+# update can still be opened and remains manual because it may be breaking.
+# Merging waits for the required "Lint and Build" check via GitHub's native
+# auto-merge, and the branch is deleted automatically afterwards.
 
 on: pull_request
 

@@ -6,12 +6,27 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
+    allow:
+      # Routine version-update PRs stay low risk and fully automatable.
+      # Dependabot security updates are not restricted by update-types.
+      - dependency-name: "*"
+        update-types:
+          - "version-update:semver-minor"
+          - "version-update:semver-patch"
     groups:
       # Bundle low-risk updates into a single PR to cut noise.
       minor-and-patch:
+        applies-to: "version-updates"
+        patterns:
+          - "*"
         update-types:
           - "minor"
           - "patch"
+      # Keep security fixes visible even when the safe version crosses a major.
+      security-updates:
+        applies-to: "security-updates"
+        patterns:
+          - "*"
     labels:
       - "dependencies"
 
@@ -21,6 +36,19 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
+    allow:
+      - dependency-name: "*"
+        update-types:
+          - "version-update:semver-minor"
+          - "version-update:semver-patch"
+    groups:
+      minor-and-patch:
+        applies-to: "version-updates"
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
     labels:
       - "dependencies"
       - "ci"

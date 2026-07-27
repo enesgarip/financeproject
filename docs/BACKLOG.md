@@ -386,6 +386,10 @@ pattern'ler ve açık düzeltme planı yer alıyor.
   preinstalled Chrome (no second browser setup) and a 90-second command timeout
   on PRs / 240 seconds nightly, so an informational measurement cannot cancel
   otherwise-green required checks.
+- 2026-07-27 Dependabot PR hygiene: patch/minor version updates remain grouped
+  and auto-merge after required CI, while routine major version updates are no
+  longer opened and left stale. Security updates bypass the SemVer allow filter;
+  a major security upgrade remains a deliberate manual review.
 - 2026-07-27 empty due-statement handling: automatic statement maintenance now
   skips cards whose current-period spending belongs entirely to the next
   statement. The expected no-op no longer appears as a red error or prevents
