@@ -113,10 +113,11 @@ yalnız workflow'daki prebuilt staged deploy + scoped API promotion yönetir (ç
 
 CI (`ci.yml`): PR ve `develop` push'larında Lint+Build (required); Playwright,
 Lighthouse ve Supabase kontrolleri yalnız ilgili dosya alanı değiştiyse çalışır.
-Gece Lighthouse denetimi 3 koşu, PR hızlı denetimi 1 koşudur.
-Playwright/Lighthouse job'ları tarayıcıyı package-lock sürümünden kurar
-(`npx playwright install`) ve browser cache'i kullanır; sabit sürümlü playwright docker imajı KULLANMA —
-Dependabot paket sürümünü yükselttiğinde imaj geride kalıp CI'ı kırıyor.
+Gece Lighthouse denetimi 3 koşu, PR hızlı denetimi 1 koşudur. Lighthouse runner'da
+hazır Chrome'u kullanır ve PR ölçümü komut seviyesinde 90 saniyeyle sınırlıdır;
+job timeout'u tüm workflow'u iptal edemez. Playwright smoke tarayıcısı package-lock
+sürümünden kurulur ve browser cache'i kullanır; sabit sürümlü Playwright docker
+imajı KULLANMA — Dependabot paket sürümünü yükselttiğinde imaj geride kalıp CI'ı kırıyor.
 Dependabot patch/minor PR'larını CI yeşilse otomatik squash-merge eder (major elde kalır).
 Günlük şifreli DB yedeği cron'u var (`db-backup.yml`).
 

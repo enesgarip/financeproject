@@ -58,19 +58,19 @@ ayrı bir personal access token oluşturmadan giderir; detaylı HTML raporu yine
 
 Lighthouse budget, CI placeholder Supabase değerleriyle oturum açmadan çalışan
 `/login` rotasını ölçer. PR/değişiklik geri bildirimi tek ölçüm kullanır; gece
-01:30 UTC denetimi üç ölçüm kullanır. Job'ın 5 dakika sınırı vardır; kronik
-FCP bekleme kuyruğu workflow'u 10–15 dakika açık tutamaz. LHCI, build çıktısını kendi random portlu statik
-sunucusu yerine `npm run preview -- --host 127.0.0.1 --port 4173 --strictPort`
-ile açar; bu, Playwright smoke testleriyle aynı yerel ağ desenini kullanır ve
-GitHub runner'da görülen `NO_FCP` flake'ini azaltır. Lighthouse ve Playwright
-smoke job'ları sabit sürümlü Playwright container'ı KULLANMAZ: tarayıcı,
-package-lock sürümüne anahtarlanmış Actions cache'inden alınır; cache miss'te
-`npx playwright install chromium` ile kurulur ve LHCI'ye `CHROME_PATH` ile
-gösterilir. Sistem bağımlılıkları her runner'da ayrıca doğrulanır. (Eski desen sabit
-`mcr.microsoft.com/playwright:vX-noble` imajıydı; Dependabot playwright'ı
-yükselttiğinde imaj geride kalıyor ve tarayıcı binary'si bulunamayıp CI
-günlerce kırmızı kalıyordu — 2026-06-22..07-02 arızası. İmaj etiketini geri
-getirme.)
+01:30 UTC denetimi üç ölçüm kullanır. Job'ın 5 dakika sınırı yanında PR LHCI
+komutu 90 saniyelik süreç sınırına sahiptir; tarayıcı kilitlenirse
+`continue-on-error` bunu normal bir bilgilendirici job hatası olarak yutar ve job
+timeout'u tüm workflow'u `cancelled` yapamaz. Gece denetiminin süreç sınırı 240
+saniyedir. LHCI, build çıktısını kendi random portlu statik sunucusu yerine
+`npm run preview -- --host 127.0.0.1 --port 4173 --strictPort` ile açar.
+Lighthouse, ayrı Playwright tarayıcısı indirmek yerine GitHub runner'da hazır
+Chrome'u kullanır; bu hem browser kurulumunu kaldırır hem de LHCI/Playwright
+Chromium kilitlenmesini önler. Playwright smoke ise package-lock sürümüne
+anahtarlanmış Actions cache'ini ve cache miss'te `npx playwright install
+chromium` desenini korur. Sabit `mcr.microsoft.com/playwright:vX-noble` imajını
+geri getirme: Dependabot paket sürümünü yükselttiğinde imaj geride kalıp CI'ı
+günlerce kırmızı bırakmıştı (2026-06-22..07-02).
 GitHub runner'da Lighthouse `provided` throttling ve daha uzun FCP/load bekleme
 limiti kullanır; bu job'ın amacı üretim metriklerini birebir simüle etmekten çok
 CI'da bariz performans/accessibility/best-practices regresyonlarını yakalamaktır.

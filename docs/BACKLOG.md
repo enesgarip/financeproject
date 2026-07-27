@@ -380,6 +380,12 @@ pattern'ler ve açık düzeltme planı yer alıyor.
   promotion-time CLI install are removed. Production dependency audit is now a
   release gate; React Router moved to patched v8 and direct-main branch
   protection requires the PR flow.
+- 2026-07-27 Lighthouse follow-up: Playwright Chromium completed app smoke tests
+  but hung inside LHCI until the 5-minute job timeout, cancelling the whole CI
+  run despite `continue-on-error`. Lighthouse now uses the GitHub runner's
+  preinstalled Chrome (no second browser setup) and a 90-second command timeout
+  on PRs / 240 seconds nightly, so an informational measurement cannot cancel
+  otherwise-green required checks.
 - 2026-07-27 empty due-statement handling: automatic statement maintenance now
   skips cards whose current-period spending belongs entirely to the next
   statement. The expected no-op no longer appears as a red error or prevents
