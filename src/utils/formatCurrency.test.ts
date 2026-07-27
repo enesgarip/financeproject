@@ -28,6 +28,11 @@ describe('formatCompactCurrency', () => {
     expect(formatCompactCurrency(1_787_291)).toBe('₺1,8M')
   })
 
+  it('bine yuvarlama milyon eşiğini aşınca "₺1.000K" üretmez', () => {
+    expect(formatCompactCurrency(999_500)).toBe('₺1M')
+    expect(formatCompactCurrency(-999_500)).toBe('-₺1M')
+  })
+
   it('bini K ile kısaltır', () => {
     expect(formatCompactCurrency(95_000)).toBe('₺95K')
     expect(formatCompactCurrency(18_500)).toBe('₺19K')

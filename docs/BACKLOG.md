@@ -113,6 +113,9 @@
   - **Yüzde biçimi Türkçe değildi:** tutarlar `₺1.150.000,00` iken yüzdeler
     `%59.9` / `(+16.2%)` çıkıyordu (nokta ondalık, % sayının arkasında). Ortak
     `formatPercent` eklendi: `%59,9`, `+%16,2`.
+  - PR incelemesinde iki sınır vakası kapatıldı: kısa para biçimi milyon eşiğinde
+    `₺1.000K` yerine `₺1M` üretir; `CompositionBar` hover/focus önizlemesini
+    kalıcı dokunma/klavye seçiminden ayrı tutar, böylece click seçimi geri kapanmaz.
 
 ## 2026-07-27 — "En iyi versiyon" yol haritası (F serisi, TAMAMLANDI)
 

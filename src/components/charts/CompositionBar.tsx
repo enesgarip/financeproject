@@ -48,7 +48,8 @@ export function CompositionBar({
   showRows = true,
 }: CompositionBarProps) {
   const { formatAmount } = useBalancePrivacy()
-  const [activeName, setActiveName] = useState<string | null>(null)
+  const [selectedName, setSelectedName] = useState<string | null>(null)
+  const [previewName, setPreviewName] = useState<string | null>(null)
 
   const total = sumTL(data.map((d) => d.value))
 
@@ -74,6 +75,7 @@ export function CompositionBar({
     .map((s) => `${s.name} ${formatAmount(s.value)}`)
     .join(', ')}.`
 
+  const activeName = previewName ?? selectedName
   const active = activeName ? withColor.find((s) => s.name === activeName) ?? null : null
 
   return (
@@ -103,21 +105,21 @@ export function CompositionBar({
       {showRows && (
         <ul className="flex flex-col gap-0.5" role="list">
           {rows.map((slice) => {
-            const isActive = activeName === slice.name
+            const isSelected = selectedName === slice.name
             return (
               <li key={slice.name}>
                 <button
                   type="button"
-                  aria-pressed={isActive}
+                  aria-pressed={isSelected}
                   className={cn(
                     'finance-touch-target flex w-full items-center justify-between gap-3 rounded-lg px-2 text-left text-xs transition-colors',
-                    isActive ? 'bg-muted/60' : 'hover:bg-muted/40',
+                    activeName === slice.name ? 'bg-muted/60' : 'hover:bg-muted/40',
                   )}
-                  onClick={() => setActiveName((current) => (current === slice.name ? null : slice.name))}
-                  onMouseEnter={() => setActiveName(slice.name)}
-                  onMouseLeave={() => setActiveName(null)}
-                  onFocus={() => setActiveName(slice.name)}
-                  onBlur={() => setActiveName(null)}
+                  onClick={() => setSelectedName((current) => (current === slice.name ? null : slice.name))}
+                  onMouseEnter={() => setPreviewName(slice.name)}
+                  onMouseLeave={() => setPreviewName(null)}
+                  onFocus={() => setPreviewName(slice.name)}
+                  onBlur={() => setPreviewName(null)}
                 >
                   <span className="flex min-w-0 items-center gap-2">
                     <span

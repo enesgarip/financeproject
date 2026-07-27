@@ -27,7 +27,13 @@ export function formatCompactCurrency(value: number | null | undefined) {
   const abs = Math.abs(v)
   const sign = v < 0 ? '-' : ''
   if (abs >= 1_000_000) return `${sign}₺${COMPACT_FORMAT.format(abs / 1_000_000)}M`
-  if (abs >= 1_000) return `${sign}₺${COMPACT_FORMAT.format(Math.round(abs / 1_000))}K`
+  if (abs >= 1_000) {
+    const roundedThousands = Math.round(abs / 1_000)
+    if (roundedThousands >= 1_000) {
+      return `${sign}₺${COMPACT_FORMAT.format(abs / 1_000_000)}M`
+    }
+    return `${sign}₺${COMPACT_FORMAT.format(roundedThousands)}K`
+  }
   return `${sign}₺${COMPACT_FORMAT.format(abs)}`
 }
 
