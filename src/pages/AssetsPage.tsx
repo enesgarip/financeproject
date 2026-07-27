@@ -242,7 +242,7 @@ function ProfitBadge({ profit, profitPct }: { profit: number; profitPct: number 
     <div className={`mt-3 flex items-center gap-1.5 rounded-xl border px-3 py-2 text-sm ${up ? 'border-success/20 bg-success/8 text-success' : 'border-destructive/20 bg-destructive/8 text-destructive'}`}>
       {up ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
       <span className="font-mono font-semibold tabular-nums">
-        {profit >= 0 ? '+' : ''}{formatAmount(profit)} ({profitPct >= 0 ? '+' : ''}{profitPct.toFixed(1)}%)
+        {profit >= 0 ? '+' : ''}{formatAmount(profit)} ({formatPercent(profitPct, { signed: true })})
       </span>
     </div>
   )

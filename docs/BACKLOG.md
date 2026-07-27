@@ -112,7 +112,10 @@
     ~180px boşluk bırakıyordu → dikey ortalandı.
   - **Yüzde biçimi Türkçe değildi:** tutarlar `₺1.150.000,00` iken yüzdeler
     `%59.9` / `(+16.2%)` çıkıyordu (nokta ondalık, % sayının arkasında). Ortak
-    `formatPercent` eklendi: `%59,9`, `+%16,2`.
+    `formatPercent` eklendi: `%59,9`, `+%16,2`. Tarama sonrası aynı sınıf 4 yerde
+    daha kapatıldı: `AssetsPage` hisse + `GoldPage` altın kâr/zarar, `SalaryPage`
+    maaş farkı (iki yer). Kalan `%${Math.round()}` kullanımları tam sayı olduğu
+    için ondalık ayıracı sorunu yaşamaz; dokunulmadı.
   - PR incelemesinde iki sınır vakası kapatıldı: kısa para biçimi milyon eşiğinde
     `₺1.000K` yerine `₺1M` üretir; `CompositionBar` hover/focus önizlemesini
     kalıcı dokunma/klavye seçiminden ayrı tutar, böylece click seçimi geri kapanmaz.

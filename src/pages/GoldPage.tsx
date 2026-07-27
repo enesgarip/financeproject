@@ -10,7 +10,7 @@ import { Badge } from '../components/ui/badge'
 import { Card, CardContent } from '../components/ui/card'
 import { useMarketRates } from '../hooks/useMarketRates'
 import type { GoldDirection, GoldLot, GoldType } from '../types/database'
-import { formatNumber, parseNumber } from '../utils/formatCurrency'
+import { formatNumber, formatPercent, parseNumber } from '../utils/formatCurrency'
 import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
 import {
   GOLD_TYPE_LABELS,
@@ -233,7 +233,7 @@ function GoldOverview({ rows, snapshot }: { rows: GoldLot[]; snapshot: MarketRat
         <MetricCard
           label="Kâr / zarar"
           value={profit === null ? 'Kur bekleniyor' : `${profit >= 0 ? '+' : ''}${formatAmount(profit)}`}
-          delta={profitPct === null ? undefined : `${profitPct >= 0 ? '+' : ''}%${profitPct.toFixed(1)}`}
+          delta={profitPct === null ? undefined : formatPercent(profitPct, { signed: true })}
           deltaLabel={profit === null ? 'flat' : profit > 0 ? 'up' : profit < 0 ? 'down' : 'flat'}
           description="kayıtlı maliyet üzerinden"
           tone={profit === null ? 'neutral' : profit >= 0 ? 'good' : 'danger'}

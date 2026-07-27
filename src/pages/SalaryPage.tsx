@@ -3,7 +3,7 @@ import { CrudPage, type FormField } from '../components/CrudPage'
 import { Card, CardContent } from '../components/ui/card'
 import type { SalaryHistory } from '../types/database'
 import { formatDate } from '../utils/date'
-import { parseNumber } from '../utils/formatCurrency'
+import { formatPercent, parseNumber } from '../utils/formatCurrency'
 import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
 import { getSalaryTrend } from '../utils/financeSummary'
 import { diffTL } from '../utils/money'
@@ -48,7 +48,7 @@ function SalaryOverview({ rows }: { rows: SalaryHistory[] }) {
             <span className={`flex items-center gap-1 font-mono text-sm font-semibold tabular-nums ${deltaColor}`}>
               <DeltaIcon size={14} />
               {difference >= 0 ? '+' : ''}{formatAmount(difference)}
-              <span className="ml-1 text-xs">({percentage >= 0 ? '+' : ''}{percentage.toFixed(1)}%)</span>
+              <span className="ml-1 text-xs">({formatPercent(percentage, { signed: true })})</span>
             </span>
           </div>
         ) : (
@@ -105,7 +105,7 @@ export function SalaryPage() {
           <div className={`mt-3 flex items-center gap-1.5 rounded-xl border px-3 py-2 text-sm ${isUp ? 'border-success/20 bg-success/8 text-success' : 'border-destructive/20 bg-destructive/8 text-destructive'}`}>
             {isUp ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
             <span className="font-mono font-semibold tabular-nums">
-              {difference >= 0 ? '+' : ''}{formatAmount(difference)} ({percentage >= 0 ? '+' : ''}{percentage.toFixed(1)}%)
+              {difference >= 0 ? '+' : ''}{formatAmount(difference)} ({formatPercent(percentage, { signed: true })})
             </span>
           </div>
         )
