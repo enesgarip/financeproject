@@ -7,11 +7,11 @@ export function BottomNav() {
 
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-30 border-t border-border/60 px-3 pb-[max(env(safe-area-inset-bottom),0.5rem)] pt-2 lg:hidden"
+      className="fixed inset-x-3 bottom-[max(env(safe-area-inset-bottom),0.75rem)] z-30 rounded-2xl border border-border/75 p-1.5 lg:hidden"
       style={{
-        background: 'color-mix(in srgb, var(--card) 92%, transparent)',
+        background: 'color-mix(in srgb, var(--card) 90%, transparent)',
         backdropFilter: 'blur(24px)',
-        boxShadow: '0 -8px 32px rgba(0,0,0,0.12)',
+        boxShadow: 'var(--shadow-floating)',
       }}
     >
       <div className="mx-auto grid max-w-md grid-cols-5 gap-1">
@@ -26,14 +26,13 @@ export function BottomNav() {
                 ('activePaths' in item &&
                   (item.activePaths as readonly string[]).includes(pathname))
               return cn(
-                'flex min-h-[3.25rem] min-w-0 flex-col items-center justify-center gap-1 rounded-xl px-1',
+                'relative flex min-h-[3.35rem] min-w-0 flex-col items-center justify-center gap-1 rounded-xl px-1',
                 'text-[10px] font-semibold leading-none transition-all',
                 itemIsActive
                   ? [
-                      'bg-primary/15 text-primary',
-                      'dark:bg-primary/20',
+                      'bg-primary text-primary-foreground shadow-[0_4px_12px_color-mix(in_srgb,var(--primary)_24%,transparent)]',
                     ].join(' ')
-                  : 'text-muted-foreground active:bg-muted',
+                  : 'text-muted-foreground hover:bg-muted/70 active:bg-muted',
               )
             }}
           >
@@ -47,9 +46,9 @@ export function BottomNav() {
                   <item.icon
                     size={19}
                     strokeWidth={itemIsActive ? 2.5 : 1.8}
-                    className={itemIsActive ? 'text-primary' : 'text-muted-foreground'}
+                    className={itemIsActive ? 'text-primary-foreground' : 'text-muted-foreground'}
                   />
-                  <span className={cn('truncate', itemIsActive ? 'text-primary' : '')}>
+                  <span className={cn('truncate', itemIsActive ? 'text-primary-foreground' : '')}>
                     {item.label}
                   </span>
                 </>

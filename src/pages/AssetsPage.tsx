@@ -518,6 +518,8 @@ export function AssetsPage() {
     <CrudPage
         table="assets"
         pageTitle="Varlıklar"
+        pageLabel="Servet merkezi"
+        pageDescription="Nakit, yatırım ve fiziksel varlıklarının güncel değerini tek portföy görünümünde yönet."
         addLabel="Varlık ekle"
         fields={fields}
         fieldContext={fieldContext}

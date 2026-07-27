@@ -2,6 +2,7 @@ import { Activity, CheckCircle2, RefreshCw, Settings, ShieldCheck, Undo2, Wrench
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router'
 import { FinancePaymentDrawer } from '../components/finance/FinancePaymentDrawer'
+import { PageCommandHeader } from '../components/finance/FinanceUI'
 import { LiveReconciliationPanel } from '../components/finance/LiveReconciliationPanel'
 import { Badge } from '../components/ui/badge'
 import { Card as SurfaceCard, CardContent, CardHeader, CardTitle } from '../components/ui/card'
@@ -234,6 +235,12 @@ export function DataHealthPage() {
   return (
     <>
       <section className="space-y-4">
+        <PageCommandHeader
+          label="Güven ve bütünlük"
+          title="Finans verin kontrol altında"
+          description="Ledger, bakiye, borç kırılımı ve işlem sınıflandırmalarındaki sapmaları güvenli biçimde izle."
+          meta={loading ? 'Kontroller çalışıyor' : `${visibleIssues.length} aktif bulgu`}
+        />
         <SurfaceCard variant="elevated" className="overflow-hidden">
           <div className="pointer-events-none -mt-4 mb-1 h-[2px] bg-gradient-to-r from-info via-primary to-success opacity-80" />
           <CardHeader className="pb-2">

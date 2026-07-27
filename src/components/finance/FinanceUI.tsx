@@ -44,6 +44,46 @@ export function AppPage({ className, children }: { className?: string; children:
   return <section className={cn('flex min-w-0 flex-col gap-4 sm:gap-6', className)}>{children}</section>
 }
 
+/* ─── Shared page command header ─── */
+export function PageCommandHeader({
+  label,
+  title,
+  description,
+  meta,
+  tools,
+  className,
+}: {
+  label?: string
+  title: string
+  description?: string
+  meta?: string
+  tools?: ReactNode
+  className?: string
+}) {
+  return (
+    <header
+      className={cn(
+        'finance-page-command relative overflow-hidden rounded-2xl border border-border/70 bg-card p-4',
+        'shadow-[var(--shadow-card)] sm:p-5',
+        className,
+      )}
+    >
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-primary/80 via-info/55 to-transparent" />
+      <div className="flex min-w-0 flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div className="min-w-0">
+          {label ? <p className="finance-label text-primary">{label}</p> : null}
+          <h2 className={cn('font-display text-xl font-semibold leading-tight tracking-tight text-foreground sm:text-2xl', label && 'mt-2')}>
+            {title}
+          </h2>
+          {description ? <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">{description}</p> : null}
+          {meta ? <p className="mt-2 text-xs font-semibold text-muted-foreground">{meta}</p> : null}
+        </div>
+        {tools ? <div className="min-w-0 shrink-0">{tools}</div> : null}
+      </div>
+    </header>
+  )
+}
+
 /* ─── Finance Panel ─── */
 export function FinancePanel({
   className,
@@ -57,8 +97,8 @@ export function FinancePanel({
   return (
     <div
       className={cn(
-        'min-w-0 rounded-2xl border shadow-[var(--shadow-card)] transition-shadow',
-        'hover:shadow-[var(--shadow-lifted)]',
+        'min-w-0 rounded-2xl border shadow-[var(--shadow-card)] transition-[border-color,box-shadow]',
+        'hover:border-primary/15 hover:shadow-[var(--shadow-card-hover)]',
         toneSurfaceClass[tone],
         className,
       )}
@@ -91,26 +131,19 @@ export function PageHero({
   return (
     <div
       className={cn(
-        'relative min-w-0 overflow-hidden rounded-2xl border p-5 sm:p-7',
-        'shadow-[var(--shadow-lifted)]',
+        'finance-hero-card relative min-w-0 overflow-hidden rounded-2xl border p-5 sm:p-7',
+        'shadow-[var(--shadow-card)]',
         toneSurfaceClass[tone],
         className,
       )}
-      style={{
-        background: 'linear-gradient(135deg, color-mix(in srgb, var(--card) 94%, var(--primary) 6%), color-mix(in srgb, var(--accent) 55%, var(--card) 45%))',
-      }}
     >
-      {/* Top accent line */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-primary via-info to-warning opacity-80" />
-
-      {/* Background glow */}
-      <div className="pointer-events-none absolute -right-16 -top-16 size-64 rounded-full bg-primary/5 blur-3xl" />
+      <div className="pointer-events-none absolute inset-y-6 left-0 w-0.5 rounded-full bg-primary/70" />
 
       <div className="relative flex min-w-0 flex-col gap-5">
         <div className="flex min-w-0 items-start justify-between gap-4">
           <div className="min-w-0">
             <p className="finance-label">{label}</p>
-            <h2 className="mt-2 text-[clamp(1.35rem,5vw,2.5rem)] font-bold leading-none tracking-tight text-foreground">
+            <h2 className="font-display mt-2 text-[clamp(1.35rem,5vw,2.5rem)] font-semibold leading-none tracking-tight text-foreground">
               {title}
             </h2>
             {amount ? (
@@ -223,8 +256,8 @@ export function MetricCard({
     <div
       className={cn(
         'group/metric relative min-w-0 overflow-hidden rounded-2xl border border-border/70 bg-card p-4 sm:p-5',
-        'shadow-[var(--shadow-card)] transition-all duration-250',
-        'hover:-translate-y-0.5 hover:shadow-[var(--shadow-lifted)] hover:border-primary/20',
+        'shadow-[var(--shadow-card)] transition-[border-color,box-shadow] duration-250',
+        'hover:shadow-[var(--shadow-card-hover)] hover:border-primary/20',
         'dark:ring-1 dark:ring-white/[0.04]',
         className,
       )}

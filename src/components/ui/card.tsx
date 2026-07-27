@@ -16,7 +16,7 @@ function Card({
 }) {
   const variantClass: Record<CardVariant, string> = {
     default: [
-      "border border-border/80 bg-card text-card-foreground",
+      "border border-border/85 bg-card text-card-foreground",
       "shadow-[var(--shadow-card)]",
       "dark:ring-1 dark:ring-white/[0.04]",
     ].join(" "),
@@ -35,7 +35,7 @@ function Card({
       "border border-border/80 bg-card text-card-foreground cursor-pointer",
       "shadow-[var(--shadow-card)]",
       "transition-all duration-250",
-      "hover:-translate-y-0.5 hover:shadow-[var(--shadow-floating)] hover:border-primary/25",
+      "hover:border-primary/25 hover:shadow-[var(--shadow-card-hover)]",
       "active:translate-y-0 active:shadow-[var(--shadow-card)]",
       "dark:ring-1 dark:ring-white/[0.04]",
     ].join(" "),
@@ -56,7 +56,7 @@ function Card({
       data-size={size}
       data-variant={variant}
       className={cn(
-        "group/card flex flex-col overflow-hidden text-sm transition-shadow",
+        "group/card flex flex-col overflow-hidden text-sm transition-[border-color,box-shadow]",
         sizeClass[size],
         variantClass[variant],
         className,

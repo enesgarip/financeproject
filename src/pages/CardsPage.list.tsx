@@ -31,6 +31,7 @@ import {
 } from './CardsPage.helpers'
 import { CardDatum } from './CardsPage.overview'
 import { formatCurrency } from '../utils/formatCurrency'
+import { Button } from '../components/ui/button'
 
 function AccountRecentTransactions({
   card,
@@ -57,15 +58,19 @@ function AccountRecentTransactions({
   const rows = buildAccountLedgerBalanceRows(events, card.current_balance)
 
   return (
-    <div className="mt-3 rounded-lg bg-card/70 p-3 ring-1 ring-border/60">
-      <p className="text-[11px] font-black uppercase text-muted-foreground">Son 3 hareket</p>
-      <div className="mt-2 flex flex-col gap-1.5">
+    <section className="account-activity-panel mt-4 rounded-2xl border border-border/65 bg-card/70 p-3.5">
+      <div className="flex items-center justify-between gap-3">
+        <p className="finance-label">Son 3 hareket</p>
+        <span className="text-[11px] font-semibold text-muted-foreground">{rows.length} kayıt</span>
+      </div>
+      <div className="mt-2.5 divide-y divide-border/55">
         {rows.map(({ event, balanceAfter }) => {
           const amount = toTL(event.amount_kurus)
           const isInflow = amount >= 0
           return (
-            <div key={event.id} className="flex min-w-0 items-center justify-between gap-3 rounded-lg bg-muted/45 px-2.5 py-2 text-xs">
-              <span className="min-w-0 truncate">
+            <div key={event.id} className="flex min-w-0 items-center justify-between gap-3 py-2.5 text-xs first:pt-1">
+              <span className="flex min-w-0 items-center gap-2 truncate">
+                <span className={isInflow ? 'size-2 shrink-0 rounded-full bg-success' : 'size-2 shrink-0 rounded-full bg-destructive'} />
                 <span className={isInflow ? 'font-black text-success' : 'font-black text-destructive'}>
                   {isInflow ? 'Giriş' : 'Çıkış'}
                 </span>
@@ -75,13 +80,13 @@ function AccountRecentTransactions({
                 <span className={isInflow ? 'font-black text-success' : 'font-black text-destructive'}>
                   {amount > 0 ? '+' : ''}{formatAmount(amount)}
                 </span>
-                <span className="ml-2 text-muted-foreground">Sonrası {formatAmount(balanceAfter)}</span>
+                <span className="ml-2 hidden text-muted-foreground min-[460px]:inline">Sonrası {formatAmount(balanceAfter)}</span>
               </span>
             </div>
           )
         })}
       </div>
-    </div>
+    </section>
   )
 }
 
@@ -154,44 +159,44 @@ export function CreditAccountListCard({
     return (
       <article
         style={bankHueStyle(row.bank_name, rows)}
-        className="finance-panel min-w-0 rounded-lg p-4 ring-1 ring-[hsl(var(--bank-hue)_42%_82%/0.55)] dark:ring-[hsl(var(--bank-hue)_40%_42%/0.45)]"
+        className="premium-entity-card account-entity-card finance-panel relative min-w-0 overflow-hidden rounded-2xl border-[hsl(var(--bank-hue)_45%_82%/0.72)] p-4 min-[390px]:p-5 dark:border-[hsl(var(--bank-hue)_35%_38%/0.55)]"
       >
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex min-w-0 items-start gap-3">
-            <BankLogo bankName={row.bank_name} size="md" />
+        <div className="relative flex items-start justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3.5">
+            <BankLogo bankName={row.bank_name} size="lg" className="size-14 rounded-2xl text-sm shadow-md" />
             <div className="min-w-0">
-              <h2 className="truncate text-base font-black text-foreground">{row.card_name}</h2>
-              <p className="mt-1 truncate text-sm text-muted-foreground">{row.bank_name} · banka hesabı</p>
+              <h2 className="truncate font-display text-lg font-bold tracking-tight text-foreground">{row.card_name}</h2>
+              <p className="mt-1 truncate text-sm font-medium text-muted-foreground">{row.bank_name} · banka hesabı</p>
             </div>
           </div>
-          {menu}
+          <div className="entity-card-menu">{menu}</div>
         </div>
 
-        <div className="mt-4 rounded-lg bg-[hsl(var(--bank-hue)_58%_97%)] p-3 ring-1 ring-[hsl(var(--bank-hue)_50%_84%/0.7)] dark:bg-[hsl(var(--bank-hue)_40%_16%)] dark:ring-[hsl(var(--bank-hue)_36%_34%)]">
-          <p className="text-[11px] font-bold uppercase text-muted-foreground">Kullanılabilir bakiye</p>
-          <p className="finance-value mt-1 truncate text-[clamp(1.35rem,6vw,2rem)] font-black leading-none text-foreground">
+        <div className="account-balance-well relative mt-5 overflow-hidden rounded-2xl border border-[hsl(var(--bank-hue)_45%_84%/0.76)] bg-[hsl(var(--bank-hue)_55%_97%)] p-4 dark:border-[hsl(var(--bank-hue)_34%_33%/0.64)] dark:bg-[hsl(var(--bank-hue)_35%_16%)]">
+          <p className="finance-label">Kullanılabilir bakiye</p>
+          <p className="finance-value mt-2 truncate text-[clamp(1.8rem,7vw,2.75rem)] font-bold leading-none tracking-tight text-foreground">
             {formatAmount(row.current_balance)}
           </p>
         </div>
 
+        <div className="mt-3 grid grid-cols-2 gap-2.5">
+          <CardDatum label="Tür" value="Banka hesabı" />
+          <CardDatum label="Not" value={row.note || '-'} />
+        </div>
+
         {row.iban ? (
-          <div className="mt-3 rounded-lg bg-muted/50 px-3 py-2 ring-1 ring-border/60">
-            <p className="text-[11px] font-bold uppercase text-muted-foreground">IBAN</p>
+          <div className="mt-3 rounded-xl border border-border/60 bg-muted/35 px-3 py-2.5">
+            <p className="finance-label">IBAN</p>
             <button
               type="button"
               onClick={handleCopyIban}
-              className="mt-1 flex w-full min-w-0 items-center justify-between gap-2 rounded-md text-left font-mono text-xs font-black tabular-nums text-foreground transition hover:text-primary"
+              className="mt-1.5 flex min-h-7 w-full min-w-0 items-center justify-between gap-2 rounded-md text-left font-mono text-xs font-bold tabular-nums text-foreground transition hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <span className="min-w-0 truncate">{balancesHidden ? '••••' : formatIban(row.iban)}</span>
               {ibanCopied ? <Check size={14} className="shrink-0 text-success" /> : <Copy size={14} className="shrink-0 text-muted-foreground" />}
             </button>
           </div>
         ) : null}
-
-        <div className="mt-3 grid grid-cols-2 gap-2">
-          <CardDatum label="Tür" value="Banka hesabı" />
-          <CardDatum label="Not" value={row.note || '-'} />
-        </div>
 
         <AccountRecentTransactions card={row} formatAmount={formatAmount} />
 
@@ -227,13 +232,13 @@ export function CreditAccountListCard({
   return (
     <article
       style={bankHueStyle(row.bank_name, rows)}
-      className="finance-panel min-w-0 rounded-lg bg-card/96 p-4 ring-1 ring-[hsl(var(--bank-hue)_42%_82%/0.55)] dark:ring-[hsl(var(--bank-hue)_40%_42%/0.45)]"
+      className="premium-entity-card credit-entity-card finance-panel relative min-w-0 overflow-hidden rounded-2xl bg-card/96 p-4 ring-1 ring-[hsl(var(--bank-hue)_42%_82%/0.55)] dark:ring-[hsl(var(--bank-hue)_40%_42%/0.45)]"
     >
       <div
         style={{ backgroundImage: bankBrandGradient(row.bank_name) }}
-        className="relative rounded-lg p-4 text-white shadow-sm"
+        className="relative overflow-hidden rounded-2xl p-4 text-white shadow-sm"
       >
-        <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-lg">
+        <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-2xl">
           <div className="absolute inset-x-0 top-0 h-px bg-white/35" />
           <div className="absolute -right-8 -top-10 size-32 rounded-full bg-white/10 blur-2xl" />
         </div>
@@ -299,8 +304,9 @@ export function CreditAccountListCard({
       </div>
 
       <div className="mt-3 grid grid-cols-2 gap-2">
-        <button
+        <Button
           type="button"
+          size="lg"
           onClick={() => onPayDebt(row)}
           disabled={payableDebt <= 0 || openStatements.length > 0}
           title={
@@ -310,18 +316,20 @@ export function CreditAccountListCard({
                 ? 'Ödenebilir kesinleşmiş borç yok'
                 : undefined
           }
-          className="finance-touch-target inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-3 py-2 text-xs font-black text-primary-foreground shadow-sm transition hover:bg-primary/90 disabled:opacity-55"
+          className="finance-touch-target px-3 text-xs"
         >
-          <Banknote size={15} />
+          <Banknote />
           Borç öde
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
+          size="lg"
+          variant="outline"
           onClick={() => onAddExpense(row, 'cash')}
-          className="finance-touch-target inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-xs font-black text-foreground shadow-sm transition hover:bg-muted"
+          className="finance-touch-target px-3 text-xs"
         >
           Harcama ekle
-        </button>
+        </Button>
       </div>
       {detailsOpen ? (
         <div className="mt-4 rounded-lg border border-border/80 bg-surface-muted/70 p-3 ring-1 ring-border/60">

@@ -5,6 +5,7 @@ import { useAuth } from '../auth/useAuth'
 import { Button } from '../components/ui/button'
 import { Card, CardContent } from '../components/ui/card'
 import { Tabs, TabsList, TabsTrigger } from '../components/ui/tabs'
+import { Input } from '../components/ui/input'
 import { AppMark } from '../components/AppMark'
 
 export function LoginPage() {
@@ -51,7 +52,7 @@ export function LoginPage() {
   return (
     <main className="flex min-h-dvh items-center justify-center overflow-x-hidden bg-background px-4 py-8 text-foreground">
       <div className="grid w-full max-w-5xl items-stretch gap-5 lg:grid-cols-[1.05fr_0.95fr]">
-        <section className="relative hidden overflow-hidden rounded-2xl border border-border/60 bg-card p-5 shadow-[var(--shadow-lifted)] lg:flex lg:flex-col lg:justify-between">
+        <section className="login-signature-panel relative hidden overflow-hidden rounded-2xl border p-5 shadow-[var(--shadow-lifted)] lg:flex lg:flex-col lg:justify-between">
           <div className="pointer-events-none absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-primary via-info to-warning opacity-80" />
           <div>
             <div className="flex items-center gap-3">
@@ -64,8 +65,7 @@ export function LoginPage() {
 
             {/* Demo cash-flow card — brand gradient */}
             <div
-              className="relative mt-8 overflow-hidden rounded-2xl p-5 text-white shadow-[var(--shadow-floating)]"
-              style={{ background: 'linear-gradient(135deg, var(--brand-900, #312e81), var(--brand-700, #4338ca))' }}
+              className="login-cash-preview relative mt-8 overflow-hidden rounded-2xl p-5 text-white shadow-[var(--shadow-floating)]"
             >
               <div className="pointer-events-none absolute -right-12 -top-12 size-40 rounded-full bg-white/10 blur-2xl" />
               <div className="relative flex items-start justify-between gap-4">
@@ -151,37 +151,37 @@ export function LoginPage() {
             {mode === 'register' ? (
               <label className="block text-sm font-semibold text-foreground">
               Ad soyad
-                <input
+                <Input
                   required
                   type="text"
                   autoComplete="name"
                   value={fullName}
                   onChange={(event) => setFullName(event.target.value)}
-                  className="mt-1 h-11 w-full rounded-xl border border-input bg-card/80 px-3 text-sm text-foreground outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 dark:bg-card/50"
+                  className="mt-1 h-11"
                 />
               </label>
             ) : null}
             <label className="block text-sm font-semibold text-foreground">
             E-posta adresi
-              <input
+              <Input
                 required
                 type="email"
                 autoComplete="email"
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
-                className="mt-1 h-11 w-full rounded-xl border border-input bg-card/80 px-3 text-sm text-foreground outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 dark:bg-card/50"
+                className="mt-1 h-11"
               />
             </label>
             <label className="block text-sm font-semibold text-foreground">
             Şifre
-              <input
+              <Input
                 required
                 minLength={6}
                 type="password"
                 autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
-                className="mt-1 h-11 w-full rounded-xl border border-input bg-card/80 px-3 text-sm text-foreground outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 dark:bg-card/50"
+                className="mt-1 h-11"
               />
             </label>
             {message ? <p className="rounded-xl border border-warning/25 bg-warning/8 p-3 text-sm font-medium text-warning">{message}</p> : null}

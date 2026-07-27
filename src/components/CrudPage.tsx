@@ -8,7 +8,7 @@ import { cn, openNativePicker } from '../lib/utils'
 import type { InsertFor, RowFor, TableName, UpdateFor } from '../types/database'
 import { normalizeSearchText } from '../utils/searchText'
 import { EmptyState } from './EmptyState'
-import { FormSection } from './finance/FinanceUI'
+import { FormSection, PageCommandHeader } from './finance/FinanceUI'
 import { SimpleModal } from './SimpleModal'
 import { Alert } from './ui/alert'
 import { Button } from './ui/button'
@@ -60,6 +60,8 @@ type CrudPageProps<T extends TableName> = {
   table: T
   addLabel: string
   pageTitle?: string
+  pageLabel?: string
+  pageDescription?: string
   fields: FormField[]
   emptyTitle: string
   emptyDescription: string
@@ -81,6 +83,8 @@ type CrudPageProps<T extends TableName> = {
   getDetailStyle?: (row: RowFor<T>, rows: RowFor<T>[]) => CSSProperties
   groupBy?: (row: RowFor<T>) => string
   getGroupClassName?: (group: string) => string
+  /** Route-specific card density while preserving the shared list/group behavior. */
+  listGridClassName?: string
   /**
    * Bu isimdeki gruplar listenin sonuna alınır ve varsayılan kapalı,
    * tıklayınca açılan bir "Tamamlananlar (N)" bölümü olarak çizilir
@@ -113,6 +117,8 @@ export function CrudPage<T extends TableName>({
   table,
   addLabel,
   pageTitle,
+  pageLabel,
+  pageDescription,
   fields,
   emptyTitle,
   emptyDescription,
@@ -133,6 +139,7 @@ export function CrudPage<T extends TableName>({
   getDetailStyle,
   groupBy,
   getGroupClassName,
+  listGridClassName,
   collapsibleGroups,
   canEditRow,
   canDeleteRow,
@@ -357,15 +364,12 @@ export function CrudPage<T extends TableName>({
 
   return (
     <section className="flex flex-col gap-5">
-      <div className="finance-hero-panel relative overflow-hidden rounded-2xl p-4 sm:p-5">
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-primary via-info to-warning opacity-80" />
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div className="min-w-0">
-            <h1 className="text-xl font-bold leading-tight tracking-tight text-foreground">{pageTitle ?? addLabel}</h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {normalizedQuery ? `${visibleRows.length} / ${rows.length} kayıt gösteriliyor` : `${rows.length} kayıt bulundu`}
-            </p>
-          </div>
+      <PageCommandHeader
+        label={pageLabel}
+        title={pageTitle ?? addLabel}
+        description={pageDescription}
+        meta={normalizedQuery ? `${visibleRows.length} / ${rows.length} kayıt gösteriliyor` : `${rows.length} kayıt bulundu`}
+        tools={
           <div className="grid gap-2 sm:grid-cols-[minmax(14rem,18rem)_auto] sm:items-center">
             <label className="relative block">
               <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -381,8 +385,8 @@ export function CrudPage<T extends TableName>({
               {addLabel}
             </Button>
           </div>
-        </div>
-      </div>
+        }
+      />
 
       {error ? <Alert variant="destructive">{error}</Alert> : null}
       {renderBeforeList ? renderBeforeList({ loading, rows, reload: loadRows, setError }) : null}
@@ -419,7 +423,7 @@ export function CrudPage<T extends TableName>({
             const isCollapsible = Boolean(groupBy && collapsibleGroups?.includes(group))
             const isGroupOpen = openCollapsibleGroups.has(group)
             const grid = (
-              <div className="grid gap-3 min-[760px]:grid-cols-2 xl:grid-cols-3">
+              <div className={cn('grid gap-3 min-[760px]:grid-cols-2 xl:grid-cols-3', listGridClassName)}>
                 {items.map((row) => {
                   const meta = rowMeta.get(row.id)
                   const title = meta?.title ?? renderTitle(row)

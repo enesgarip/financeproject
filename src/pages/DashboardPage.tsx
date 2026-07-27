@@ -262,7 +262,7 @@ export function DashboardPage() {
       {/* ── Günlük katman (her zaman görünür) ── */}
 
       {attentionLine ? (
-        <div className="dashboard-item min-w-0 lg:col-span-12" style={{ '--di': itemIndex++ } as React.CSSProperties}>
+        <div className="dashboard-item min-w-0 lg:col-span-8" style={{ '--di': itemIndex++ } as React.CSSProperties}>
           <p
             role="status"
             className={`flex items-start gap-2.5 rounded-xl px-4 py-3 text-sm font-semibold ring-1 ${
@@ -277,16 +277,16 @@ export function DashboardPage() {
         </div>
       ) : null}
 
-      <div className="dashboard-item min-w-0 lg:col-span-12" style={{ '--di': itemIndex++ } as React.CSSProperties}>
+      <div className={`dashboard-item min-w-0 ${attentionLine ? 'lg:col-span-4' : 'lg:col-span-12'}`} style={{ '--di': itemIndex++ } as React.CSSProperties}>
         <DataHealthBadge errors={healthCounts.errors} warnings={healthCounts.warnings} total={healthCounts.total} />
       </div>
 
       {/* Tek sayı: durumu anlatan panellerden önce "ne kadar harcayabilirim". */}
-      <div className="dashboard-item min-w-0 lg:col-span-12" style={{ '--di': itemIndex++ } as React.CSSProperties}>
+      <div className="dashboard-item min-w-0 lg:col-span-5" style={{ '--di': itemIndex++ } as React.CSSProperties}>
         <SafeToSpendCard cashFlow={summary.cashFlow} liquidCash={summary.totalCashAssets} />
       </div>
 
-      <div className="dashboard-item min-w-0 lg:col-span-8" style={{ '--di': itemIndex++ } as React.CSSProperties}>
+      <div className="dashboard-item min-w-0 lg:col-span-7" style={{ '--di': itemIndex++ } as React.CSSProperties}>
         <DashboardHero
           displayName={displayName}
           netWorth={summary.netWorth}
@@ -298,7 +298,7 @@ export function DashboardPage() {
         />
       </div>
 
-      <div className="dashboard-item min-w-0 lg:col-span-4" style={{ '--di': itemIndex++ } as React.CSSProperties}>
+      <div className="dashboard-item min-w-0 lg:col-span-12" style={{ '--di': itemIndex++ } as React.CSSProperties}>
         <FocusActionPanel actions={focusActions} cashFlow={summary.cashFlow} />
       </div>
 

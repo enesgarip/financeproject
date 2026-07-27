@@ -269,6 +269,8 @@ export function DebtsPage() {
       <CrudPage
         table="debts"
         pageTitle="Kişiler"
+        pageLabel="Kişisel bakiye"
+        pageDescription="Kimden alacaklı veya kime borçlu olduğunu vade ve ödeme durumuyla birlikte takip et."
         addLabel="Borç / alacak ekle"
         fields={fields}
         fieldContext={snapshot}

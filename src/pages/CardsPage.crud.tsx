@@ -1,4 +1,5 @@
 import { ReceiptText } from 'lucide-react'
+import { Button } from '../components/ui/button'
 import type { Card, InsertFor, UpdateFor } from '../types/database'
 import { cardProvisionAmount, cardSplitTotal } from '../utils/financeSummary'
 import { formatCurrency, parseNumber } from '../utils/formatCurrency'
@@ -183,13 +184,14 @@ export function renderCardRowActions(row: Card, helpers: CardRowsHelper, openTra
   if (row.card_type !== 'banka_karti') return null
 
   return (
-    <button
+    <Button
       type="button"
+      size="lg"
       onClick={() => openTransaction(row, helpers.reload, helpers.rows)}
-      className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground shadow-[0_2px_8px_color-mix(in_srgb,var(--primary)_30%,transparent)] transition hover:bg-primary/90 active:scale-[0.97]"
+      className="w-full min-[440px]:w-auto"
     >
-      <ReceiptText size={14} />
+      <ReceiptText />
       Para hareketi
-    </button>
+    </Button>
   )
 }

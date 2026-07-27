@@ -1,6 +1,6 @@
 # Cards Architecture Note
 
-Last reviewed: 2026-07-24
+Last reviewed: 2026-07-27
 
 This note maps `/kartlar` (`CardsPage`) after the page split. Start with
 `CLAUDE.md`, `docs/AI_CONTEXT_INDEX.md`, and `docs/CARD_DEBT_TRANSITIONS.md`
@@ -48,6 +48,30 @@ repositories, services, or focused `CardsPage.*` modules.
 
 Keep new UI in the closest focused module. Add a new module only when an
 existing module would start mixing unrelated responsibilities.
+
+Both PDF import modals are loaded through `src/lib/lazyWithReload.ts` only when
+their selected-card state is open. Keep these tools out of the initial
+`CardsPage` chunk; use the same designed loading overlay when changing their
+lazy boundary.
+
+## Visual Hierarchy
+
+- `CrudPage` supplies the shared `PageCommandHeader`; `/kartlar` labels this
+  surface "Finans merkezi" and keeps search/create tools in the same command
+  layer.
+- On the summary section, `AccountHubPanel` is the first persistent decision
+  surface. It shows account balance, payable card debt, and "borç sonrası
+  nakit" (`diffTL(accountBalance, payableCardDebt)`) before reconciliation and
+  detailed card panels.
+- `accounts-signature-hub` is a scoped dark signature surface in both app
+  themes. Keep its foreground/card contrast tokens local.
+- Account and credit-card list surfaces use the shared `premium-entity-card`
+  anatomy: identity, one primary value, supporting metrics/activity, then the
+  primary action. Their list is capped at two desktop columns so balance,
+  movement, statement, and limit information never collapses into a narrow
+  tile.
+- Do not render `CreditCardOverview` when there is no credit-card limit group;
+  the account hub already owns cash-only summary.
 
 ## Data And Side Effects
 

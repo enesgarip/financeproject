@@ -15,17 +15,15 @@
  * current_period_spending, provision_amount): docs/CARD_DEBT_TRANSITIONS.md.
  * Sayfa veri akışı ve modül haritası: docs/CARDS_ARCHITECTURE.md.
  */
-import { useState, useCallback } from 'react'
+import { Suspense, useState, useCallback } from 'react'
 import { Link } from 'react-router'
 import { CalendarClock, FileText, History, Info, ScanSearch, ShieldCheck } from 'lucide-react'
 import { useFinanceSnapshot } from '../app/useFinanceSnapshot'
 import { CrudPage } from '../components/CrudPage'
 import { AutoPaymentConfirmation } from '../components/finance/AutoPaymentConfirmation'
 import { CategoryCleanupPanel } from '../components/finance/CategoryCleanupPanel'
-import { CurrentMovementImportModal } from '../components/finance/CurrentMovementImportModal'
 import { FinancePaymentDrawer } from '../components/finance/FinancePaymentDrawer'
 import { LiveReconciliationPanel } from '../components/finance/LiveReconciliationPanel'
-import { StatementImportModal } from '../components/finance/StatementImportModal'
 import { CardInstallmentCalendarPanel } from '../components/finance/CardInstallmentCalendarPanel'
 import { CardInstallmentExpensesPanel } from '../components/finance/CardInstallmentExpensesPanel'
 import { useAutoPayments } from '../hooks/useAutoPayments'
@@ -35,6 +33,7 @@ import { cardPayableDebt } from '../utils/financeSummary'
 import { isMissingSupabaseCapabilityError, missingSupabaseCapabilityMessage } from '../utils/supabaseErrors'
 import { useFinancePaymentDrawer } from '../hooks/useFinancePaymentDrawer'
 import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
+import { lazyWithReload } from '../lib/lazyWithReload'
 import { AccountHubPanel, CreditCardOverview } from './CardsPage.overview'
 import { CardControlCenter } from './CardsPage.control'
 import { ProvisionPanel, StatementArchivePanel, StatementPanel } from './CardsPage.statements'
@@ -43,6 +42,7 @@ import {
   DueStatementAutomation,
   type CardSection,
 } from './CardsPage.sections'
+
 import { QuickExpensePanel } from './CardsPage.expense'
 import { CreditAccountListCard } from './CardsPage.list'
 import { MovementModal } from './CardsPage.movementModal'
@@ -64,6 +64,18 @@ import {
   fields,
   statementPeriodLabel,
 } from './CardsPage.helpers'
+
+const StatementImportModal = lazyWithReload(() =>
+  import('../components/finance/StatementImportModal').then((module) => ({
+    default: module.StatementImportModal,
+  })),
+)
+
+const CurrentMovementImportModal = lazyWithReload(() =>
+  import('../components/finance/CurrentMovementImportModal').then((module) => ({
+    default: module.CurrentMovementImportModal,
+  })),
+)
 
 export function CardsPage() {
   const { focusQuickExpense, handleSectionChange, quickExpenseFocus, section } = useCardSectionNavigation()
@@ -225,6 +237,8 @@ export function CardsPage() {
       <CrudPage
         table="cards"
         pageTitle="Hesaplar ve kartlar"
+        pageLabel="Finans merkezi"
+        pageDescription="Nakit, kredi kartı yükü, transfer ve günlük işlemleri tek karar düzeninde yönet."
         addLabel="Hesap / kart ekle"
         fields={fields}
         emptyTitle="Henüz kart yok"
@@ -289,6 +303,7 @@ export function CardsPage() {
                       await reload()
                     }}
                   />
+                  <AccountHubPanel rows={cardRows} onOpenTransfer={(source) => openTransaction(source, reload, cardRows, 'transfer')} formatAmount={formatAmount} />
                   <div className="hidden md:block">
                     <CardControlCenter
                       rows={cardRows}
@@ -306,7 +321,6 @@ export function CardsPage() {
                       await Promise.all([reload(), loadReconciliations(), invalidateSnapshot()])
                     }}
                   />
-                  <AccountHubPanel rows={cardRows} onOpenTransfer={(source) => openTransaction(source, reload, cardRows, 'transfer')} formatAmount={formatAmount} />
                   <CreditCardOverview rows={cardRows} formatAmount={formatAmount} />
                 </>
               ) : null}
@@ -382,6 +396,7 @@ export function CardsPage() {
         getCardStyle={getCardStyle}
         getDetailStyle={getDetailStyle}
         groupBy={groupCard}
+        listGridClassName="grid gap-4 min-[900px]:grid-cols-2 xl:grid-cols-2"
         renderRowActions={(row, helpers) => renderCardRowActions(row, helpers, openTransaction)}
         renderMenuActions={(row, menuHelpers) => {
           const card = row as Card
@@ -473,22 +488,36 @@ export function CardsPage() {
       />
 
       {importCard && (
-        <StatementImportModal
-          card={importCard}
-          onClose={() => setImportCard(null)}
-          onSuccess={() => void handleImportSuccess(setImportCard)}
-        />
+        <Suspense fallback={<ImportModalFallback />}>
+          <StatementImportModal
+            card={importCard}
+            onClose={() => setImportCard(null)}
+            onSuccess={() => void handleImportSuccess(setImportCard)}
+          />
+        </Suspense>
       )}
 
       {movementImportCard && (
-        <CurrentMovementImportModal
-          card={movementImportCard}
-          onClose={() => setMovementImportCard(null)}
-          onSuccess={() => void handleImportSuccess(setMovementImportCard)}
-        />
+        <Suspense fallback={<ImportModalFallback />}>
+          <CurrentMovementImportModal
+            card={movementImportCard}
+            onClose={() => setMovementImportCard(null)}
+            onSuccess={() => void handleImportSuccess(setMovementImportCard)}
+          />
+        </Suspense>
       )}
 
       <FinancePaymentDrawer {...drawerProps} />
     </>
+  )
+}
+
+function ImportModalFallback() {
+  return (
+    <div className="fixed inset-0 z-[80] grid place-items-center bg-black/45 p-4 backdrop-blur-sm">
+      <div role="status" aria-live="polite" className="rounded-2xl border border-border bg-card px-5 py-4 text-sm font-semibold text-foreground shadow-[var(--shadow-floating)]">
+        İçe aktarma aracı hazırlanıyor...
+      </div>
+    </div>
   )
 }

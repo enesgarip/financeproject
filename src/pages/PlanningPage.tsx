@@ -52,6 +52,8 @@ export function PlanningPage() {
         <CrudPage
           table="budgets"
           pageTitle="Bütçeler"
+          pageLabel="Plan ve hedef"
+          pageDescription="Kategori limitlerini ve birikim hedeflerini aylık ilerlemeyle birlikte yönet."
           addLabel="Bütçe ekle"
           fields={budgetFields}
           emptyTitle="Henüz bütçe yok"

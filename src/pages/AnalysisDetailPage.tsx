@@ -5,6 +5,7 @@ import { SearchExport, YearEndReport } from './AnalysisPage.reports'
 import { PeopleLedger } from './AnalysisPage.panels'
 import { ActivityFeedPanel } from './AnalysisPage.activity'
 import { useAnalysisPageData } from './AnalysisPage.data'
+import { PageCommandHeader } from '../components/finance/FinanceUI'
 
 /**
  * Yılda bir bakılan paneller (zekât, yıl sonu özeti) katlanır durur: sayfayı
@@ -38,6 +39,12 @@ export function AnalysisDetailPage() {
 
   return (
     <section className="min-w-0 space-y-5">
+      <PageCommandHeader
+        label="Derin analiz"
+        title="Servet, kayıt ve dönemsel görünüm"
+        description="Aktivite geçmişini, kişi bakiyelerini, enflasyon etkisini ve uzun dönem raporlarını incele."
+        meta={loading ? 'Detaylar güncelleniyor' : 'Denetlenebilir finans geçmişi'}
+      />
       <div className="grid min-w-0 gap-5 lg:grid-cols-12 [&>*]:min-w-0">
         <InflationShieldPanel data={data} />
         <PeopleLedger debts={data.debts} />

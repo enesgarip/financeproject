@@ -1,9 +1,20 @@
 import {
   BarChart3,
+  Banknote,
+  CalendarDays,
+  ChartNoAxesCombined,
+  CircleGauge,
+  Coins,
   CreditCard,
+  DatabaseBackup,
+  Gem,
   HandCoins,
   Home,
+  Landmark,
+  ListChecks,
   ShieldCheck,
+  Target,
+  UsersRound,
   WalletCards,
   Wallet,
   type LucideIcon,
@@ -51,33 +62,33 @@ export const overflowNavItems: readonly NavItem[] = [
   ...secondaryNavItems,
 ]
 
-export type HubTab = { to: string; label: string; end?: boolean }
+export type HubTab = { to: string; label: string; icon: LucideIcon; end?: boolean }
 
 export const assetsHubTabs: HubTab[] = [
-  { to: '/varliklar', label: 'Varlıklar', end: true },
-  { to: '/varliklar/maas', label: 'Maaş' },
-  { to: '/varliklar/altin', label: 'Altın' },
+  { to: '/varliklar', label: 'Varlıklar', icon: Gem, end: true },
+  { to: '/varliklar/maas', label: 'Maaş', icon: Banknote },
+  { to: '/varliklar/altin', label: 'Altın', icon: Coins },
 ]
 
 export const liabilitiesHubTabs: HubTab[] = [
-  { to: '/borclar/krediler', label: 'Krediler' },
-  { to: '/borclar/kisiler', label: 'Kişiler' },
+  { to: '/borclar/krediler', label: 'Krediler', icon: Landmark },
+  { to: '/borclar/kisiler', label: 'Kişiler', icon: UsersRound },
 ]
 
 export const planningHubTabs: HubTab[] = [
-  { to: '/odemeler', label: 'Takvim', end: true },
-  { to: '/odemeler/hedefler', label: 'Hedefler' },
-  { to: '/odemeler/liste', label: 'Liste' },
+  { to: '/odemeler', label: 'Takvim', icon: CalendarDays, end: true },
+  { to: '/odemeler/hedefler', label: 'Hedefler', icon: Target },
+  { to: '/odemeler/liste', label: 'Liste', icon: ListChecks },
 ]
 
 export const analysisHubTabs: HubTab[] = [
-  { to: '/analiz', label: 'Analiz', end: true },
-  { to: '/analiz/detay', label: 'Detay' },
+  { to: '/analiz', label: 'Analiz', icon: ChartNoAxesCombined, end: true },
+  { to: '/analiz/detay', label: 'Detay', icon: CircleGauge },
 ]
 
 export const dataHealthHubTabs: HubTab[] = [
-  { to: '/veri-sagligi', label: 'Bulgular', end: true },
-  { to: '/veri-sagligi/islemler', label: 'Yedek & Ayarlar' },
+  { to: '/veri-sagligi', label: 'Bulgular', icon: ShieldCheck, end: true },
+  { to: '/veri-sagligi/islemler', label: 'Yedek & Ayarlar', icon: DatabaseBackup },
 ]
 
 type RouteWidth = 'wide' | 'medium' | 'narrow'
