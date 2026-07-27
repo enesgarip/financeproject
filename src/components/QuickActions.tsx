@@ -1,4 +1,4 @@
-import { ArrowRightLeft, Banknote, HandCoins, Landmark, Plus, ReceiptText, Search, WalletCards, X } from 'lucide-react'
+import { ArrowRightLeft, Banknote, HandCoins, Landmark, Plus, ReceiptText, Search, ShoppingCart, WalletCards, X } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { cn } from '../lib/utils'
@@ -6,6 +6,7 @@ import { normalizeSearchText } from '../utils/searchText'
 import { Input } from './ui/input'
 
 const actions = [
+  { to: '/alsam-mi', label: 'Alsam mı?', description: 'Alışverişin aylara etkisini gör', icon: ShoppingCart, hiddenOnPaths: ['/alsam-mi'] },
   { to: '/kartlar?section=islemler#hizli-harcama', label: 'Harcama', description: 'Hesaptan veya karttan harca', icon: WalletCards, hiddenOnPaths: ['/kartlar'] },
   { to: '/kartlar#hesap-merkezi', label: 'Transfer', description: 'Hesaptan hesaba aktar', icon: ArrowRightLeft, hiddenOnPaths: ['/kartlar'] },
   { to: '/odemeler?new=1', label: 'Planlı', description: 'Fatura, kira veya abonelik', icon: ReceiptText, hiddenOnPaths: ['/odemeler'] },

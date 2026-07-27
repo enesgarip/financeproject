@@ -19,10 +19,27 @@ rakamlar**. Durma kriteri (kullanıcıyla kararlaştırıldı): aylık manuel gi
   KATILMAZ, eski veri oranı haksız düşürmesin). `AutomationCoveragePanel`
   `/veri-sagligi/islemler` altında. `fetchUnrecognizedSmsLog` ile kaçan SMS
   formatları çıkarılabilir.
-- **F3 — Güven kalibrasyonu** (kesin / tahmini / bayat görsel dili): SIRADA.
-- **F4 — Tek sayı: harcanabilir tutar** (likit − kalan yükümlülük − tampon).
-- **F5 — Karar anı**: "bunu taksitle alsam 6 ayım nasıl görünür".
-- **F6 — Mobil gerçeklik turu.**
+- ~~**F3 — Güven kalibrasyonu.**~~ DONE. `utils/dataConfidence.ts` (+5 test):
+  üç seviye (`exact` / `estimate` / `stale`); `exact` rozet BASMAZ (güvenilir
+  rakamı işaretlemek gürültü). `components/ui/confidence-badge.tsx` ortak dil;
+  kart kontrol merkezi ve kart listesindeki borç rakamları mutabakat yaşına göre
+  etiketlenir (`RatesBanner`'daki bayat kur rozetiyle aynı dil).
+- ~~**F4 — Tek sayı: harcanabilir tutar.**~~ DONE. `utils/safeToSpend.ts`
+  (+7 test) + `SafeToSpendCard` dashboard'un tepesinde; tampon localStorage'da
+  düzenlenebilir. `CashFlowSummary.expectedIncome` eklendi. **Mobil turda bug
+  yakalandı ve düzeltildi:** boş hesapta tutar tampon yüzünden negatif çıkıp
+  "yükümlülükler parayı aşıyor" sahte alarmı veriyordu → `negativeCause`
+  ('obligations' | 'buffer') ayrımı; yalnız gerçek açık kırmızı.
+- ~~**F5 — Karar anı.**~~ DONE. `utils/purchaseImpact.ts` (+6 test) +
+  `/alsam-mi` (QuickActions'ta ilk sıra). Kartla alımda ilk taksitin bir sonraki
+  ekstrede nakde döndüğü modellenir. Yeni matematik yok; forecast + safeToSpend
+  üstüne kurulu.
+- ~~**F6 — Mobil gerçeklik turu.**~~ DONE (375px, yerel dev + seed). 10 rotada
+  yatay taşma **0**. Dokunma hedefi düzeltmeleri: tampon butonu 90x20 → min 36px,
+  HelpTooltip görsel boyut korunarak hit alanı 40px, SMS panel toggle 28 → 44px.
+  **Ayrıca yerel giriş bozukmuş:** `seed.sql` `gen_salt('bf')` cost 6 üretiyor,
+  güncel GoTrue reddediyor ("Invalid login credentials", DB'de hash doğru
+  görünürken) → cost 10 verildi. Belgelenmiş `dev:local` akışı yeniden çalışıyor.
 - **Beklemede (kullanıcı kararı):** kullanılmayan panellerin ayıklanması —
   hangi panele son 3 ayda bakıp karar değiştirdiği bilgisi olmadan silinmez.
 

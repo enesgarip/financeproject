@@ -54,7 +54,7 @@ export function SmsLogPanel() {
         <button
           type="button"
           onClick={() => setOpen((v) => !v)}
-          className="flex w-full items-center justify-between gap-2 text-left"
+          className="flex min-h-11 w-full items-center justify-between gap-2 text-left"
         >
           <CardTitle className="flex items-center gap-2 text-lg">
             <MessageSquareText size={20} className="text-primary" />

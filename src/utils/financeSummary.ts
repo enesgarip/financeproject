@@ -96,6 +96,8 @@ export type CashFlowSummary = {
   outflow: number
   /** Cari ayda bugünden ay sonuna kalan çıkış; geçmiş aylar için outflow ile aynı. */
   remainingOutflow: number
+  /** Henüz girmemiş gelir (maaş yatmadıysa + kalan tahsilat). */
+  expectedIncome: number
   netFlow: number
   projectedCash: number
   recurringPayments: number
@@ -472,6 +474,7 @@ export function buildMonthlyCashFlow(
     receivableIncome,
     outflow,
     remainingOutflow,
+    expectedIncome: projectedIncome,
     netFlow,
     projectedCash: sumTL([cashAssets, diffTL(projectedIncome, remainingOutflow)]),
     recurringPayments,

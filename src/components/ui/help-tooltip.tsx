@@ -137,7 +137,9 @@ export function HelpTooltip({ title, content, className }: HelpTooltipProps) {
         }}
         onFocus={() => setHovered(true)}
         onBlur={() => setHovered(false)}
-        className="inline-grid size-7 shrink-0 place-items-center rounded-full text-[15px] font-black leading-none text-muted-foreground transition hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/30"
+        // Görsel daire 28px kalır; dokunma alanı before pseudo-element ile
+        // 40px'e çıkar — düzen bozulmadan mobil hedef büyür.
+        className="relative inline-grid size-7 shrink-0 place-items-center rounded-full text-[15px] font-black leading-none text-muted-foreground transition before:absolute before:left-1/2 before:top-1/2 before:size-10 before:-translate-x-1/2 before:-translate-y-1/2 before:content-[''] hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/30"
       >
         <span aria-hidden="true">ⓘ</span>
       </button>

@@ -17,7 +17,10 @@ values (
   '00000000-0000-0000-0000-000000000000',
   '11111111-1111-1111-1111-111111111111',
   'authenticated', 'authenticated', 't@t.com',
-  extensions.crypt('password123', extensions.gen_salt('bf')),
+  -- GOTCHA: gen_salt('bf') varsayılanı cost 6 üretir ve güncel GoTrue bunu
+  -- reddeder ("Invalid login credentials" — DB'de hash doğru görünse bile).
+  -- Cost'u açıkça 10 ver; yerel giriş aksi halde sessizce çalışmaz.
+  extensions.crypt('password123', extensions.gen_salt('bf', 10)),
   now(), now(), now(),
   '{"provider":"email","providers":["email"]}', '{}',
   '', '', '', ''

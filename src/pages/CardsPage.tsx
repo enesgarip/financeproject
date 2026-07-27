@@ -365,6 +365,7 @@ export function CardsPage() {
             rows={helpers.rows as Card[]}
             statements={statements}
             installments={installments}
+            reconciliations={reconciliations}
             menu={helpers.menu}
             rowActions={helpers.rowActions}
             ledgerOpen={ledgerOpenIds.has(row.id)}

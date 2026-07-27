@@ -93,6 +93,7 @@ const routeMeta: Record<string, { title: string; subtitle?: string; width: Route
   '/odemeler': { title: 'Ödeme Takvimi', subtitle: 'Planlı ödemeler ve vadeler', width: 'medium' },
   '/odemeler/hedefler': { title: 'Bütçe & Hedefler', subtitle: 'Birikim hedefleri ve bütçe takibi', width: 'medium' },
   '/odemeler/liste': { title: 'Alışveriş Listesi', subtitle: 'Almak istediğin şeyler', width: 'medium' },
+  '/alsam-mi': { title: 'Alsam mı?', subtitle: 'Alışverişin önümüzdeki aylara etkisi', width: 'narrow' },
   '/analiz': { title: 'Analiz', subtitle: 'Aylık rapor ve ay kapanış kontrolü', width: 'wide' },
   '/analiz/detay': { title: 'Detay', subtitle: 'Gelir/gider dağılımı ve trendler', width: 'wide' },
   '/veri-sagligi': { title: 'Veri Kontrolü', subtitle: 'Tutarlılık denetimi ve bulgular', width: 'wide' },

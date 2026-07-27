@@ -41,6 +41,7 @@ import {
   PulseCard,
   SalaryPulse,
 } from '../components/dashboard/DashboardPanels'
+import { SafeToSpendCard } from '../components/dashboard/SafeToSpendCard'
 import {
   AnalyticsSnapshotPanel,
   CreditCardSnapshotPanel,
@@ -319,6 +320,11 @@ export function DashboardPage() {
 
       <div className="dashboard-item min-w-0 lg:col-span-12" style={{ '--di': itemIndex++ } as React.CSSProperties}>
         <DataHealthBadge errors={healthCounts.errors} warnings={healthCounts.warnings} total={healthCounts.total} />
+      </div>
+
+      {/* Tek sayı: durumu anlatan panellerden önce "ne kadar harcayabilirim". */}
+      <div className="dashboard-item min-w-0 lg:col-span-12" style={{ '--di': itemIndex++ } as React.CSSProperties}>
+        <SafeToSpendCard cashFlow={summary.cashFlow} liquidCash={summary.totalCashAssets} />
       </div>
 
       <div className="dashboard-item min-w-0 lg:col-span-8" style={{ '--di': itemIndex++ } as React.CSSProperties}>

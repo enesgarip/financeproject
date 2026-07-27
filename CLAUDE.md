@@ -141,6 +141,12 @@ Günlük şifreli DB yedeği cron'u var (`db-backup.yml`).
   `SUPABASE_DB_PASSWORD` env var kullan.
 - **Elle eklenen `auth.users`:** confirmation_token/recovery_token/email_change* NULL
   kalırsa login "Database error querying schema" verir → boş string'e çek (bkz. seed.sql).
+- **`gen_salt('bf')` varsayılanı cost 6** üretir; güncel GoTrue bunu reddedip
+  "Invalid login credentials" der (DB'de hash doğru doğrulanıyor olsa bile).
+  Seed'de cost'u açıkça ver: `gen_salt('bf', 10)`.
+- **Yeni tablo migration'ı `grant` içermeli.** Üretimde arayüzden açılan tablolar
+  yetkili gelir ama migration'lardan kurulan ortam (yerel docker, kurtarma)
+  gelmez → `npm run db:audit:grants:local` CI'da bunu kırar.
 - **`@sentry/deno` edge'e KONMADI** (bundle'ı 3kB→1MB şişiriyor); edge için Supabase
   fonksiyon logları yeterli. Sentry yalnız frontend.
 - **timestamptz'i `formatDate`'e verme** (date-only bekler) → `.slice(0,10)`.

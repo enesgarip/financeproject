@@ -8,7 +8,10 @@ import type {
   CardStatementArchive,
 } from '../types/database'
 import { buildCardControlItems, type CardBankReconciliationStatus } from '../utils/cardControlCenter'
-import { formatDate } from '../utils/date'
+import { ConfidenceBadge } from '../components/ui/confidence-badge'
+import { daysUntil, formatDate } from '../utils/date'
+import { freshnessConfidence } from '../utils/dataConfidence'
+import { STALE_AFTER_DAYS } from '../utils/reconciliation'
 import { cardProvisionAmount } from '../utils/financeSummary'
 import { formatCurrency } from '../utils/formatCurrency'
 import { diffTL, sumTL } from '../utils/money'
@@ -73,6 +76,12 @@ export function CardControlCenter({
           const drift = latestReconciliation
             ? diffTL(latestReconciliation.app_amount, latestReconciliation.real_amount)
             : null
+          // Borç rakamı kesin görünür ama uzun süredir bankayla karşılaştırılmadıysa
+          // güvenilirliği düşer; aynı görsel dil kur/tahmin rozetleriyle paylaşılır.
+          const daysSinceCheck = latestReconciliation
+            ? -(daysUntil(latestReconciliation.reconciled_at.slice(0, 10)) ?? 0)
+            : null
+          const confidence = freshnessConfidence(daysSinceCheck, STALE_AFTER_DAYS, 'Bu kartın borcu')
 
           return (
             <article key={card.id} className="rounded-xl bg-card/85 p-3 ring-1 ring-border/75">
@@ -84,7 +93,10 @@ export function CardControlCenter({
                     <p className="truncate text-xs text-muted-foreground">{card.bank_name}</p>
                   </div>
                 </div>
-                <StatusBadge tone={status.tone}>{status.label}</StatusBadge>
+                <div className="flex shrink-0 items-center gap-1.5">
+                  <ConfidenceBadge confidence={confidence} />
+                  <StatusBadge tone={status.tone}>{status.label}</StatusBadge>
+                </div>
               </div>
 
               <div className="mt-3 grid grid-cols-2 gap-2 min-[620px]:grid-cols-4 xl:grid-cols-2 2xl:grid-cols-4">

@@ -7,7 +7,10 @@ import { CardLedgerPanel } from '../components/finance/CardLedgerPanel'
 import { MiniStat, SectionHeader, StatusBadge } from '../components/finance/FinanceUI'
 import { fetchCardAliases } from '../data/repositories/cardAliasesRepo'
 import { fetchAccountLedgerEvents } from '../data/repositories/financePanelsRepo'
-import type { AccountLedger, Card, CardInstallment, CardStatementArchive } from '../types/database'
+import type { AccountLedger, AccountReconciliation, Card, CardInstallment, CardStatementArchive } from '../types/database'
+import { daysUntil } from '../utils/date'
+import { freshnessConfidence } from '../utils/dataConfidence'
+import { STALE_AFTER_DAYS } from '../utils/reconciliation'
 import { formatDate } from '../utils/date'
 import { cardPayableDebt } from '../utils/financeSummary'
 import { quickCardConsistencyScore } from '../utils/cardConsistency'
@@ -108,6 +111,7 @@ export function CreditAccountListCard({
   rows,
   statements,
   installments,
+  reconciliations = [],
   menu,
   rowActions,
   ledgerOpen = false,
@@ -122,6 +126,7 @@ export function CreditAccountListCard({
   rows: Card[]
   statements: CardStatementArchive[]
   installments: CardInstallment[]
+  reconciliations?: AccountReconciliation[]
   menu: React.ReactNode
   rowActions: React.ReactNode
   ledgerOpen?: boolean
@@ -198,6 +203,16 @@ export function CreditAccountListCard({
 
   const stats = limitGroupStats(row, rows)
   const usageRate = Math.round(stats.usageRate)
+  const lastReconciledAt = reconciliations
+    .filter((item) => item.card_id === row.id)
+    .map((item) => item.reconciled_at)
+    .sort()
+    .at(-1)
+  const debtConfidence = freshnessConfidence(
+    lastReconciledAt ? -(daysUntil(lastReconciledAt.slice(0, 10)) ?? 0) : null,
+    STALE_AFTER_DAYS,
+    'Bu kartın borcu',
+  )
   const dueDate = getCreditCardDueDate(row, statements)
   const status = getCreditCardStatus(row, stats.usageRate, statements)
   const displayedOpenStatementAmount = visibleOpenStatementAmount(row, statements)
@@ -241,7 +256,18 @@ export function CreditAccountListCard({
 
         <div className="mt-6 grid grid-cols-[minmax(0,1fr)_auto] items-end gap-3">
           <div className="min-w-0">
-            <p className="text-[11px] font-bold uppercase text-white/65">Güncel borç</p>
+            <div className="flex flex-wrap items-center gap-1.5">
+              <p className="text-[11px] font-bold uppercase text-white/65">Güncel borç</p>
+              {/* Rakam kesin görünür ama uzun süre doğrulanmadıysa güveni düşer. */}
+              {debtConfidence.level !== 'exact' ? (
+                <span
+                  title={debtConfidence.reason}
+                  className="rounded-md bg-white/18 px-1.5 py-0.5 text-[10px] font-bold text-white ring-1 ring-white/25"
+                >
+                  {debtConfidence.label}
+                </span>
+              ) : null}
+            </div>
             <p className="finance-value mt-1 truncate text-[clamp(1.45rem,6vw,2.15rem)] font-black leading-none">{formatAmount(row.debt_amount)}</p>
           </div>
           <span className="rounded-lg bg-white/14 px-2.5 py-1 text-xs font-black ring-1 ring-white/18">%{usageRate}</span>
