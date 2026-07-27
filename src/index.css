@@ -165,6 +165,23 @@
   --input:                #d7dbe6;
   --ring:                 #6869e6;
 
+  /* Grafik kategori renkleri (kimlik) — sıra CVD güvenliğinin mekanizması,
+     kozmetik değil; slot sırasını değiştirme, döngüye sokma.
+     Durum renkleri (success/warning/destructive) BURAYA girmez: kırmızı bir
+     dilim "kötü" demektir, "üçüncü kategori" değil.
+     Doğrulandı (light, zemin #ffffff): CVD ΔE 9.1, normal görüş ΔE 19.6.
+     viz-3/4/5 açık temada 3:1 altında — efsane/etiket zorunlu (relief kuralı). */
+  --viz-1: #2a78d6;
+  --viz-2: #eb6834;
+  --viz-3: #1baf7a;
+  --viz-4: #eda100;
+  --viz-5: #e87ba4;
+  --viz-6: #008300;
+  --viz-7: #4a3aa7;
+  --viz-8: #e34948;
+  /* "Diğer" artık kategori değil, artık kova — kasıtlı olarak nötr ve geri planda. */
+  --viz-other: var(--muted-foreground);
+
   /* Shadows */
   --shadow-subtle:  0 1px 2px rgba(21, 24, 36, 0.035);
   --shadow-card:    0 1px 2px rgba(21, 24, 36, 0.035), 0 8px 24px rgba(21, 24, 36, 0.035);
@@ -231,6 +248,17 @@
   --border-strong:        #3a3f4e;
   --input:                #303541;
   --ring:                 #999afa;
+
+  /* Aynı sekiz renk, koyu zemin için yeniden basamaklandı — otomatik çevirme değil.
+     Doğrulandı (dark, zemin #13161d): CVD ΔE 8.4, normal görüş ΔE 19.3, hepsi 3:1 üstü. */
+  --viz-1: #3987e5;
+  --viz-2: #d95926;
+  --viz-3: #199e70;
+  --viz-4: #c98500;
+  --viz-5: #d55181;
+  --viz-6: #008300;
+  --viz-7: #9085e9;
+  --viz-8: #e66767;
 
   /* Dark shadows */
   --shadow-subtle:   0 1px 3px rgba(0, 0, 0, 0.25);

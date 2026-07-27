@@ -62,6 +62,38 @@
   - `SafeToSpendCard` yüzde ekini kaldırdı: Türkçe iyelik eki sayının okunuşuna
     göre değişiyor (%6'sı / %18'i), sabit `'i` yanlıştı.
 
+- ~~Grafik renk sistemi ve parça-bütün formu, altıncı dilim.~~ DONE. Grafik rengi
+  dosya başına zevk meselesiydi; üç ayrı yerde (DonutChart, AnalysisPage.wealth,
+  AssetsPage) yarı-token yarı-hardcoded palet kopyalanmıştı. Ölçülen sorunlar:
+  - **Durum rengi kimlik taşıyordu:** kategori dilimleri `--success`/`--warning`/
+    `--destructive` ile boyanıyordu; kırmızı "Ulaşım" dilimi "kötü" diye okunuyor
+    ve görsel ilke 4'ü ihlal ediyordu. `#a78bfa`/`#fb923c`/`#2dd4bf` gibi sabit
+    hex'ler koyu temaya uyum sağlamıyordu; `--muted-foreground` gri olduğu için
+    kimlik işi yapmıyordu.
+  - **Renk veri sıralamasına bağlıydı** (`dizi[i % n]`): ayın en büyük kalemi
+    değişince Market mavi'den turuncuya atlıyordu. Dokuzuncu kategori birinciyle
+    aynı renge düşüyordu.
+  - **"Banka" dilimi `--info` ile boyanıyordu** ve slot-1 "Nakit" ile normal
+    görüşte ΔE 9.3 kalıyordu (eşik 15) — anlamca bitişik iki kavram, iki mavi.
+  - Çözüm: `--viz-1..8` + `--viz-other` token'ları (doğrulanmış palet, iki tema
+    ayrı basamaklandı) ve `charts/vizPalette.ts` — kanonik anahtardan sabit atama,
+    döngü yok, nötr artık kovası. `dataviz` skill'inin doğrulayıcısıyla projenin
+    kendi `--card` zeminlerine karşı ölçüldü: light CVD ΔE 9.1 / normal 19.6,
+    dark 8.4 / 19.3, hepsi geçer.
+  - **Form değişikliği:** parça-bütün için halka (donut) bırakıldı,
+    `CompositionBar` (yatay yığın + sıralı etiketli satırlar) geldi. Gerekçe
+    ölçüldü: halka sarmalı doğrusal dizide olmayan bir komşuluk üretiyor (son
+    dilim ilk dilime değiyor) ve koyu temada slot-7↔slot-1 protanopide ΔE 1.9'a
+    düşüyordu; ayrıca yay açısı büyüklük karşılaştırması için kötü bir kanal
+    (%6,5 ile %5,0 halkada okunmuyor) ve "Nakit (USD)" gibi uzun adlar halka
+    çevresine sığmıyordu. Yığında sarmal yok → komşuluk = doğrulanmış slot
+    komşuluğu; kapasite kısıtı da ortadan kalktı (7 kategori de görünüyor).
+    `DonutChart.tsx` silindi.
+  - Efsane satırları artık gerçek buton: dilimler yalnız hover ile seçilebiliyordu,
+    dokunmatikte hiçbir dilim etkinleştirilemiyordu.
+  - `formatCompactCurrency` ortak: eksen `₺1.787.291`'i "₺1787K" yazıyordu, milyon
+    basamağı ve işaret yoktu; takvim hücresindeki kopya biçimlendirici kaldırıldı.
+
 ## 2026-07-27 — "En iyi versiyon" yol haritası (F serisi, TAMAMLANDI)
 
 Hedef değişti: daha çok özellik değil, **daha az manuel emek + hâlâ dürüst

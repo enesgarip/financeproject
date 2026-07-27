@@ -1,3 +1,5 @@
+import { formatCompactCurrency } from '@/utils/formatCurrency'
+
 export type Padding = { top: number; right: number; bottom: number; left: number }
 
 export const DEFAULT_PADDING: Padding = { top: 8, right: 8, left: 60, bottom: 28 }
@@ -23,10 +25,8 @@ export function niceScale(min: number, max: number, ticks = 5): number[] {
   return result
 }
 
-export function formatTickValue(v: number): string {
-  if (Math.abs(v) >= 1000) return `₺${(v / 1000).toFixed(0)}K`
-  return `₺${v}`
-}
+/** Eksen etiketi ortak kısa TL biçimini kullanır (bkz. formatCompactCurrency). */
+export const formatTickValue = formatCompactCurrency
 
 export function buildPathD(points: { x: number; y: number }[], smooth = true): string {
   if (points.length === 0) return ''

@@ -15,6 +15,22 @@ export function formatCurrency(value: number | null | undefined) {
   }).format(value ?? 0)
 }
 
+const COMPACT_FORMAT = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 1 })
+
+/**
+ * Dar alan için kısa TL (eksen etiketi, takvim hücresi).
+ * Milyon basamağı şart: ₺1.787.291 "₺1787K" diye yazılıyordu. Ondalık ayıracı
+ * tr-TR (virgül). İşaret korunur — negatif bakiye eksende görünmeliydi.
+ */
+export function formatCompactCurrency(value: number | null | undefined) {
+  const v = value ?? 0
+  const abs = Math.abs(v)
+  const sign = v < 0 ? '-' : ''
+  if (abs >= 1_000_000) return `${sign}₺${COMPACT_FORMAT.format(abs / 1_000_000)}M`
+  if (abs >= 1_000) return `${sign}₺${COMPACT_FORMAT.format(Math.round(abs / 1_000))}K`
+  return `${sign}₺${COMPACT_FORMAT.format(abs)}`
+}
+
 export function formatNumber(value: number | null | undefined) {
   return new Intl.NumberFormat('tr-TR', {
     maximumFractionDigits: 2,

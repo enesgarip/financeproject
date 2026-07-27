@@ -12,6 +12,7 @@ import { useMemo, useState } from 'react'
 import { useBalancePrivacy } from '../../hooks/useBalancePrivacy'
 import { cn } from '../../lib/utils'
 import { addDays, dateInputValue, formatDate, isDateInMonth, startOfMonth } from '../../utils/date'
+import { formatCompactCurrency } from '../../utils/formatCurrency'
 import { sumTL } from '../../utils/money'
 import {
   buildFinanceObligationsForMonth,
@@ -33,7 +34,6 @@ type ObligationsCalendarProps = {
 
 const WEEK_DAYS = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz']
 const MONTH_LABEL = new Intl.DateTimeFormat('tr-TR', { month: 'long', year: 'numeric' })
-const COMPACT_AMOUNT_FORMAT = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 0 })
 
 function addCalendarMonths(value: Date, months: number) {
   return new Date(value.getFullYear(), value.getMonth() + months, 1)
@@ -101,10 +101,8 @@ function dayTotals(items: FinanceObligation[]) {
   }
 }
 
-function formatCalendarCellAmount(value: number) {
-  if (value >= 1000) return `₺${COMPACT_AMOUNT_FORMAT.format(value / 1000)}K`
-  return `₺${COMPACT_AMOUNT_FORMAT.format(value)}`
-}
+/** Ortak kısa TL biçimi — eksen etiketiyle aynı eşikleri kullanır. */
+const formatCalendarCellAmount = formatCompactCurrency
 
 function calendarCellAmountLabel(totals: ReturnType<typeof dayTotals>, formatAmount: (value: number | null | undefined) => string) {
   if (totals.outflow > 0) {

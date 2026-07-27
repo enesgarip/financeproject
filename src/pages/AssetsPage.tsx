@@ -1,7 +1,8 @@
 import { ArrowDownRight, ArrowUpRight, Banknote, ChevronDown, ChevronUp, Coins, Landmark, LineChart, Minus, Plus, ShieldCheck, TrendingUp, Wallet } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState, type ComponentType, type FormEvent } from 'react'
 import { CrudPage, type FormField } from '../components/CrudPage'
-import { DonutChart, type DonutSlice } from '../components/charts/DonutChart'
+import { CompositionBar, type CompositionSlice } from '../components/charts/CompositionBar'
+import { buildVizColorMap, orderSlicesCanonically } from '../components/charts/vizPalette'
 import { RatesBanner } from '../components/finance/RatesBanner'
 import { Badge } from '../components/ui/badge'
 import { Button } from '../components/ui/button'
@@ -27,15 +28,24 @@ const formCategoryOptions = categoryOptions.filter((category) => category !== 'A
 /** Context passed to form fields: live FX rates + live BIST prices. */
 type FieldCtx = { snapshot: MarketRatesSnapshot | null; stockPrices: StockPrices }
 
-/* Category → colour + icon mapping driven by design tokens */
+/* Varlık sınıfı → renk + ikon.
+   Renk kimlik taşır, durum değil: eskiden Nakit yeşil (=başarı), Altın amber
+   (=uyarı) okunuyordu ve #fb923c/#2dd4bf koyu temaya uyum sağlamıyordu.
+   Artık doğrulanmış kimlik slotları; "Diğer" kasıtlı nötr.
+   "Banka" sentetik bir dilim ama kimliği var: eskiden var(--info) ile boyanıyordu
+   ve slot-1 "Nakit" ile normal görüşte ΔE 9.3 kalıyordu (eşik 15) — yan yana iki
+   mavi, üstelik anlamca da bitişik iki kavram. Artık kendi slotu var. */
+const ASSET_ORDER = ['Nakit', 'Banka', 'Altın', 'Fon', 'Hisse', 'Araç', 'BES', 'Diğer'] as const
+const ASSET_COLORS = buildVizColorMap(ASSET_ORDER, ['Diğer'])
+
 const categoryMeta: Record<Asset['category'], { color: string; icon: ComponentType<{ className?: string }> }> = {
-  Nakit: { color: 'var(--success)',     icon: Banknote },
-  Altın: { color: 'var(--warning)',     icon: Coins },
-  Fon:   { color: 'var(--info)',        icon: LineChart },
-  Hisse: { color: 'var(--primary)',     icon: TrendingUp },
-  Araç:  { color: '#fb923c',            icon: Wallet },
-  BES:   { color: '#2dd4bf',            icon: ShieldCheck },
-  Diğer: { color: 'var(--muted-foreground)', icon: Landmark },
+  Nakit: { color: ASSET_COLORS['Nakit'], icon: Banknote },
+  Altın: { color: ASSET_COLORS['Altın'], icon: Coins },
+  Fon:   { color: ASSET_COLORS['Fon'],   icon: LineChart },
+  Hisse: { color: ASSET_COLORS['Hisse'], icon: TrendingUp },
+  Araç:  { color: ASSET_COLORS['Araç'],  icon: Wallet },
+  BES:   { color: ASSET_COLORS['BES'],   icon: ShieldCheck },
+  Diğer: { color: ASSET_COLORS['Diğer'], icon: Landmark },
 }
 
 /* Soft tinted card backgrounds per category (token-based, dark-safe) */
@@ -280,14 +290,18 @@ function AssetsOverview({ rows, snapshot, stockPrices, bankCash }: { rows: Asset
   const stockProfitTotal = diffTL(stockValue, stockCost)
   const stockProfitPct = stockCost > 0 ? (stockProfitTotal / stockCost) * 100 : 0
 
-  const donutData: DonutSlice[] = [
-    ...categoryTotals.map((item) => ({
-      name: item.category,
-      value: item.total,
-      color: categoryMeta[item.category].color,
-    })),
-    ...(bankCash > 0 ? [{ name: 'Banka', value: bankCash, color: 'var(--info)' }] : []),
-  ]
+  // Halka kanonik sırada: renk komşuluğu doğrulanmış kalsın (bkz. vizPalette).
+  const donutData: CompositionSlice[] = orderSlicesCanonically(
+    [
+      ...categoryTotals.map((item) => ({
+        name: item.category,
+        value: item.total,
+        color: categoryMeta[item.category].color,
+      })),
+      ...(bankCash > 0 ? [{ name: 'Banka', value: bankCash, color: ASSET_COLORS['Banka'] }] : []),
+    ],
+    ASSET_ORDER,
+  )
 
   return (
     <Card variant="elevated" className="overflow-hidden border-primary/15">
@@ -337,9 +351,9 @@ function AssetsOverview({ rows, snapshot, stockPrices, bankCash }: { rows: Asset
             </div>
           </div>
 
-          {/* Right: donut composition */}
+          {/* Right: composition — yatay yığın, büyüklük karşılaştırması için */}
           <div className="min-w-0">
-            <DonutChart data={donutData} size={170} innerRadius={48} totalLabel="Varlık" />
+            <CompositionBar data={donutData} totalLabel="Varlık" />
           </div>
         </div>
       </CardContent>
