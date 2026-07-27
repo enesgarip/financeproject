@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useBalancePrivacy } from '../../hooks/useBalancePrivacy'
 import { cn } from '@/lib/utils'
+import { formatPercent } from '@/utils/formatCurrency'
 import { sumTL } from '@/utils/money'
 import { VIZ_NEUTRAL, VIZ_SERIES } from './vizPalette'
 
@@ -39,6 +40,7 @@ type CompositionBarProps = {
 function fallbackColor(index: number): string {
   return index < VIZ_SERIES.length ? VIZ_SERIES[index] : VIZ_NEUTRAL
 }
+
 
 export function CompositionBar({
   data,
@@ -127,8 +129,8 @@ export function CompositionBar({
                   </span>
                   <span className="flex shrink-0 items-center gap-2.5">
                     <span className="finance-value text-foreground">{formatAmount(slice.value)}</span>
-                    <span className="w-10 text-right font-semibold tabular-nums text-muted-foreground">
-                      %{slice.pct.toFixed(1)}
+                    <span className="w-12 text-right font-semibold tabular-nums text-muted-foreground">
+                      {formatPercent(slice.pct)}
                     </span>
                   </span>
                 </button>

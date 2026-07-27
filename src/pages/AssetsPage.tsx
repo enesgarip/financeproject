@@ -14,7 +14,7 @@ import { normalizeTicker, type StockPrices } from '../lib/stockQuotesClient'
 import { assetTradeRequiresQuantity, submitAssetTrade, type AssetTradeDirection } from '../services/assetTrades'
 import { fetchAssetValueHistory, recordAssetValueChange } from '../services/assetValueHistory'
 import type { Asset, Card as FinanceCard } from '../types/database'
-import { formatCurrency, formatNumber, parseNumber } from '../utils/formatCurrency'
+import { formatCurrency, formatNumber, formatPercent, parseNumber } from '../utils/formatCurrency'
 import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
 import { GOLD_LEDGER_SOURCE } from '../utils/goldLedger'
 import type { MarketRatesSnapshot } from '../utils/marketRates'
@@ -340,7 +340,7 @@ function AssetsOverview({ rows, snapshot, stockPrices, bankCash }: { rows: Asset
               <div className="mt-2 min-w-0 rounded-xl border border-border/60 bg-muted/30 px-3 py-2.5">
                 <p className="finance-label truncate">Hisse Kâr / Zarar</p>
                 <p className={`finance-value mt-1 truncate text-sm font-bold tabular-nums ${stockProfitTotal >= 0 ? 'text-success' : 'text-destructive'}`}>
-                  {stockProfitTotal >= 0 ? '+' : ''}{formatAmount(stockProfitTotal)} ({stockProfitPct >= 0 ? '+' : ''}{stockProfitPct.toFixed(1)}%)
+                  {stockProfitTotal >= 0 ? '+' : ''}{formatAmount(stockProfitTotal)} ({formatPercent(stockProfitPct, { signed: true })})
                 </p>
               </div>
             ) : null}

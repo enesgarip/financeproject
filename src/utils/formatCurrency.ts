@@ -31,6 +31,21 @@ export function formatCompactCurrency(value: number | null | undefined) {
   return `${sign}₺${COMPACT_FORMAT.format(abs)}`
 }
 
+const PERCENT_FORMAT = new Intl.NumberFormat('tr-TR', {
+  minimumFractionDigits: 1,
+  maximumFractionDigits: 1,
+})
+
+/**
+ * tr-TR yüzde: işaret önde, **% sayıdan önce**, ondalık virgül → "%16,2".
+ * İngilizce dizilim ("16.2%") aynı satırdaki ₺1.150.000,00 ile çelişiyordu.
+ */
+export function formatPercent(value: number | null | undefined, options?: { signed?: boolean }) {
+  const v = value ?? 0
+  const sign = v < 0 ? '-' : options?.signed && v > 0 ? '+' : ''
+  return `${sign}%${PERCENT_FORMAT.format(Math.abs(v))}`
+}
+
 export function formatNumber(value: number | null | undefined) {
   return new Intl.NumberFormat('tr-TR', {
     maximumFractionDigits: 2,

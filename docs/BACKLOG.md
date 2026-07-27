@@ -107,6 +107,12 @@
   - Lighthouse exit 124 ile düşüyordu: `npx @lhci/cli` **ölçüm penceresinin içinde**
     indiriliyor, indirme 90 sn'lik bütçeyi yiyordu. Prefetch adımı + `~/.npm/_npx`
     cache'i ile indirme pencerenin dışına alındı; sürüm `LHCI_VERSION` job env'inde.
+    Soğuk cache'te prefetch 10,7 sn sürdü — eskiden bu süre ölçümden çalınıyordu.
+  - `ÖDEME ALARMI` kartında `items-start` sol sütunu tepeye çivileyip altında
+    ~180px boşluk bırakıyordu → dikey ortalandı.
+  - **Yüzde biçimi Türkçe değildi:** tutarlar `₺1.150.000,00` iken yüzdeler
+    `%59.9` / `(+16.2%)` çıkıyordu (nokta ondalık, % sayının arkasında). Ortak
+    `formatPercent` eklendi: `%59,9`, `+%16,2`.
 
 ## 2026-07-27 — "En iyi versiyon" yol haritası (F serisi, TAMAMLANDI)
 

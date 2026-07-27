@@ -147,7 +147,9 @@ export function UpcomingAlertPanel({ items }: { items: UpcomingItem[] }) {
   return (
     <Card className="min-w-0 border-amber-200 bg-amber-50/70 py-0 shadow-sm ring-1 ring-amber-200/80 dark:border-amber-900 dark:bg-amber-950/20 dark:ring-amber-900/70 lg:col-span-12">
       <CardContent className="p-4">
-        <div className="flex flex-col gap-3 min-[760px]:flex-row min-[760px]:items-start min-[760px]:justify-between">
+        {/* Sol sütun kısa bir başlık bloğu, sağ sütun uzun bir liste; items-start
+            sol tarafı tepeye çivileyip altında ~180px boşluk bırakıyordu. */}
+        <div className="flex flex-col gap-3 min-[760px]:flex-row min-[760px]:items-center min-[760px]:justify-between">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <p className="text-sm font-bold uppercase text-amber-800 dark:text-amber-200">Ödeme alarmı</p>
