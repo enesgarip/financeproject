@@ -109,12 +109,20 @@ function FocusActionCard({ action }: { action: FocusAction }) {
     indigo: 'bg-info/10 text-info',
     stone: 'bg-muted text-muted-foreground',
   }[action.tone]
+  const stripeClass = {
+    emerald: 'accent-stripe-emerald',
+    amber: 'accent-stripe-amber',
+    rose: 'accent-stripe-rose',
+    indigo: 'accent-stripe-indigo',
+    stone: 'accent-stripe-stone',
+  }[action.tone]
 
   return (
     <Link
       to={action.to}
-      className={`group flex min-w-0 flex-col justify-between rounded-lg border p-3 shadow-sm ring-1 transition hover:-translate-y-0.5 hover:shadow-[var(--shadow-card)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background ${toneClass}`}
+      className={`group relative flex min-w-0 flex-col justify-between overflow-hidden rounded-lg border p-3 pl-4 shadow-sm ring-1 transition hover:-translate-y-0.5 hover:shadow-[var(--shadow-card)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background ${toneClass}`}
     >
+      <span className={`accent-stripe ${stripeClass}`} aria-hidden="true" />
       <div className="flex items-start gap-3">
         <div className={`grid size-10 shrink-0 place-items-center rounded-lg ${iconClass}`} aria-hidden="true">
           <Icon size={18} />

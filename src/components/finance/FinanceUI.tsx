@@ -118,6 +118,7 @@ export function PageHero({
   children,
   action,
   className,
+  amountClassName,
 }: {
   label: string
   title: string
@@ -127,6 +128,8 @@ export function PageHero({
   children?: ReactNode
   action?: ReactNode
   className?: string
+  /** İmza aurora sayısı gibi hedefli süsleme için (ör. dashboard net değeri). */
+  amountClassName?: string
 }) {
   return (
     <div
@@ -150,6 +153,7 @@ export function PageHero({
               <p className={cn(
                 'finance-value mt-3 text-[clamp(1.75rem,9vw,3.5rem)] font-bold leading-none',
                 toneTextClass[tone],
+                amountClassName,
               )}>
                 {amount}
               </p>

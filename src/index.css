@@ -104,6 +104,7 @@
   --color-info-foreground: var(--info-foreground);
   --color-surface: var(--surface);
   --color-surface-muted: var(--surface-muted);
+  --color-surface-elevated: var(--surface-elevated);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
@@ -121,49 +122,50 @@
   --font-family-body: 'Denge Sans', ui-sans-serif, -apple-system, sans-serif;
   --font-family-mono: 'Denge Mono', ui-monospace, monospace;
 
-  /* Brand palette — Cobalt blue */
-  --brand-50:  #eef2ff;
-  --brand-100: #e0e7ff;
-  --brand-200: #c7d2fe;
-  --brand-300: #a5b4fc;
-  --brand-400: #818cf8;
-  --brand-500: #6366f1;
-  --brand-600: #4f46e5;
-  --brand-700: #4338ca;
-  --brand-800: #3730a3;
-  --brand-900: #312e81;
-  --brand-950: #1e1b4b;
+  /* Brand palette — Jade (Nocturne). Yeşim: para = büyüme = denge. */
+  --brand-50:  #e9faf3;
+  --brand-100: #cbf4e1;
+  --brand-200: #9de8c8;
+  --brand-300: #62d7ab;
+  --brand-400: #2fbf8d;
+  --brand-500: #12a37a;
+  --brand-600: #0a8562;
+  --brand-700: #0a6b4f;
+  --brand-800: #0b5642;
+  --brand-900: #0c4737;
+  --brand-950: #052a20;
 
-  /* Semantic tokens */
-  --background:           #f6f7fb;
-  --foreground:           #151824;
+  /* Semantic tokens — daylight jade (açık tema birinci sınıf).
+     Sıcak porselen zemin (hafif yeşil eğilimli), imza jade, anlam renkleri
+     yalnız paraya. */
+  --background:           #f1f5f3;
+  --foreground:           #101a16;
   --card:                 #ffffff;
-  --card-foreground:      #151824;
+  --card-foreground:      #101a16;
   --popover:              #ffffff;
-  --popover-foreground:   #151824;
-  --primary:              #5556d9;
+  --popover-foreground:   #101a16;
+  --primary:              #097352;
   --primary-foreground:   #ffffff;
-  --secondary:            #eef0f6;
-  --secondary-foreground: #292d3d;
-  --muted:                #eff1f6;
-  /* Beyaz üstünde 4.94:1 idi ama muted yüzeyde 4.37'ye düşüyordu (AA sınırı 4.5).
-     Bir tık koyultunca chip/sekme zeminlerinde de 4.70:1 ile geçiyor. */
-  --muted-foreground:     #646b7f;
-  --accent:               #ececff;
-  --accent-foreground:    #4142b7;
-  --destructive:          #dc2626;
+  --secondary:            #e7efea;
+  --secondary-foreground: #26332d;
+  --muted:                #e9f1ec;
+  /* Jade eğilimli slate. Beyazda ~5.4:1, muted yüzeyde ~4.9:1 (AA ≥ 4.5). */
+  --muted-foreground:     #536860;
+  --accent:               #d7f2e6;
+  --accent-foreground:    #0a6b4f;
+  --destructive:          #d64545;
   --destructive-foreground: #ffffff;
-  --success:              #047857;
+  --success:              #097352;
   --success-foreground:   #ffffff;
-  --warning:              #92400e;
-  --warning-foreground:   #fefce8;
-  --info:                 #2563eb;
+  --warning:              #a86a0f;
+  --warning-foreground:   #fffbeb;
+  --info:                 #2b74d8;
   --info-foreground:      #eff6ff;
   --surface:              #ffffff;
-  --surface-muted:        #f8f9fc;
-  --border:               #e1e4ec;
-  --input:                #d7dbe6;
-  --ring:                 #6869e6;
+  --surface-muted:        #f5faf7;
+  --border:               #dfe8e3;
+  --input:                #d3ddd7;
+  --ring:                 #0fae7e;
 
   /* Grafik kategori renkleri (kimlik) — sıra CVD güvenliğinin mekanizması,
      kozmetik değil; slot sırasını değiştirme, döngüye sokma.
@@ -212,45 +214,49 @@
 
 /* ─── DARK MODE ─── */
 :root.dark {
-  /* Background stack */
-  --background:           #0c0e13;
-  --card:                 #13161d;
-  --card-foreground:      #f1f3fa;
-  --popover:              #151820;
-  --popover-foreground:   #f1f3fa;
-  --surface:              #13161d;
-  --surface-muted:        #101218;
-  --surface-elevated:     #1a1e28;
+  /* Background stack — warm obsidian (hafif yeşil-arduvaz eğilimli).
+     Katmanlar parlaklıkla yükselir; imza tema budur. */
+  --background:           #0a0d0c;
+  --card:                 #131a17;
+  --card-foreground:      #e9efec;
+  --popover:              #141c19;
+  --popover-foreground:   #e9efec;
+  --surface:              #131a17;
+  --surface-muted:        #0e1412;
+  --surface-elevated:     #1b231f;
 
   /* Foreground */
-  --foreground:           #f1f3fa;
-  --muted-foreground:     #959bad;
+  --foreground:           #e9efec;
+  --muted-foreground:     #8b978f;
 
-  /* Brand — Royal blue */
-  --primary:              #8b8cf6;
-  --primary-foreground:   #101126;
+  /* Brand — Jade */
+  --primary:              #3ddca0;
+  --primary-foreground:   #04140e;
 
-  /* Semantic */
-  --secondary:            #1b1f29;
-  --secondary-foreground: #e8eaf0;
-  --muted:                #1a1d25;
-  --accent:               #24244b;
-  --accent-foreground:    #b4b5ff;
-  --destructive:          #f87171;
-  --destructive-foreground: #fff1f2;
-  --success:              #34d399;
-  --success-foreground:   #052e1a;
-  --warning:              #fbbf24;
+  /* Semantic — anlam renkleri yalnız paraya. Artı = jade (marka ile bir),
+     eksi = mercan, uyarı/altın = kehribar, bilgi = safir. */
+  --secondary:            #182019;
+  --secondary-foreground: #dfe8e2;
+  --muted:                #161d1a;
+  --accent:               #133026;
+  --accent-foreground:    #7ff0c6;
+  --destructive:          #ff6f6f;
+  --destructive-foreground: #2a0808;
+  --success:              #3ddca0;
+  --success-foreground:   #04140e;
+  --warning:              #f2b64a;
   --warning-foreground:   #241a05;
-  --info:                 #60a5fa;
+  --info:                 #58a9ff;
   --info-foreground:      #06111f;
-  --border:               #272b36;
-  --border-strong:        #3a3f4e;
-  --input:                #303541;
-  --ring:                 #999afa;
+  --border:               #242c29;
+  --border-strong:        #38423d;
+  --input:                #2a332f;
+  --ring:                 #46e0aa;
 
   /* Aynı sekiz renk, koyu zemin için yeniden basamaklandı — otomatik çevirme değil.
-     Doğrulandı (dark, zemin #13161d): CVD ΔE 8.4, normal görüş ΔE 19.3, hepsi 3:1 üstü. */
+     Grafik paleti kasıtlı olarak markadan (jade) bağımsız kategorik kimliktir.
+     Nocturne obsidyen zeminine karşı yeniden doğrulandı (dark, zemin #131a17):
+     CVD ΔE 8.4, normal görüş ΔE 19.3, hepsi 3:1 üstü. */
   --viz-1: #3987e5;
   --viz-2: #d95926;
   --viz-3: #199e70;
@@ -504,6 +510,22 @@ button:disabled {
     -webkit-text-fill-color: transparent;
   }
 
+  /* İmza aurora sayısı — uygulamanın TEK gradyan anı. Jade→safir, yumuşak ışıma.
+     Yalnız imza yüzeylerdeki ana rakamda kullanılır (dashboard net değeri gibi);
+     her yere serpme (görsel ilke 2: viewport'ta tek imza anı). */
+  .aurora-value {
+    background: linear-gradient(
+      105deg,
+      var(--primary),
+      color-mix(in srgb, var(--primary) 55%, var(--info)) 46%,
+      var(--info)
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 0 22px color-mix(in srgb, var(--primary) 26%, transparent));
+  }
+
   /* Progress bar states */
   .progress-safe     { --progress-color: var(--success); }
   .progress-warn     { --progress-color: var(--warning); }
@@ -543,6 +565,22 @@ button:disabled {
   .trend-up   { color: var(--success); }
   .trend-down { color: var(--destructive); }
   .trend-flat { color: var(--muted-foreground); }
+
+  /* Aksiyon kartı anlam-şeridi: sol kenarda parlayan ince çubuk. Renk durumu
+     (risk/uyarı/bilgi/iyi) tek bakışta okutur — bilgi tasarımı, dekorasyon değil.
+     Işıma koyu temada belirgin, açık temada nazik kalır. */
+  .accent-stripe {
+    position: absolute;
+    inset: 0.6rem auto 0.6rem 0;
+    width: 3px;
+    border-radius: 3px;
+    pointer-events: none;
+  }
+  .accent-stripe-emerald { background: var(--success); box-shadow: 0 0 12px 0 color-mix(in srgb, var(--success) 55%, transparent); }
+  .accent-stripe-amber   { background: var(--warning); box-shadow: 0 0 12px 0 color-mix(in srgb, var(--warning) 55%, transparent); }
+  .accent-stripe-rose    { background: var(--destructive); box-shadow: 0 0 12px 0 color-mix(in srgb, var(--destructive) 55%, transparent); }
+  .accent-stripe-indigo  { background: var(--info); box-shadow: 0 0 12px 0 color-mix(in srgb, var(--info) 55%, transparent); }
+  .accent-stripe-stone   { background: var(--muted-foreground); }
 }
 
 /* ─── KEYFRAMES ─── */
@@ -564,18 +602,18 @@ button:disabled {
 }
 
 .app-sidebar {
-    --background: #0d0f16;
-    --foreground: #f4f5fa;
-    --card: #141720;
-    --muted: #1c202b;
-    --muted-foreground: #9399aa;
-    --border: #292d39;
-    --primary: #9b9cf8;
-    --primary-foreground: #111226;
-    border-right: 1px solid #252934;
+    --background: #090c0b;
+    --foreground: #eef3f0;
+    --card: #121815;
+    --muted: #1a221e;
+    --muted-foreground: #8f9a92;
+    --border: #232b27;
+    --primary: #46e0aa;
+    --primary-foreground: #04140e;
+    border-right: 1px solid #1f2723;
     background:
-      radial-gradient(circle at 15% 4%, rgba(123, 125, 242, 0.12), transparent 27%),
-      #0d0f16;
+      radial-gradient(circle at 15% 4%, rgba(63, 220, 160, 0.11), transparent 27%),
+      #090c0b;
     box-shadow: inset -1px 0 rgba(255, 255, 255, 0.025);
   }
 
@@ -609,25 +647,25 @@ button:disabled {
   }
 
   .safe-spend-card {
-    --background: #292b65;
+    --background: #0c2c21;
     --foreground: #ffffff;
-    --card: #2d3070;
+    --card: #103b2c;
     --muted: #ffffff;
-    --muted-foreground: #d0d3f0;
+    --muted-foreground: #bfe9d7;
     --border: rgba(255, 255, 255, 0.18);
     --input: rgba(255, 255, 255, 0.2);
-    --primary: #b8b9ff;
-    --primary-foreground: #1b1c46;
+    --primary: #7ff0c6;
+    --primary-foreground: #04241a;
     --destructive: #ff9b9b;
     --warning: #ffd477;
     position: relative;
     background:
-      radial-gradient(circle at 95% 2%, rgba(182, 184, 255, 0.38), transparent 34%),
-      radial-gradient(circle at 5% 100%, rgba(91, 216, 174, 0.14), transparent 36%),
-      linear-gradient(145deg, #24265d, #3a3d91) !important;
+      radial-gradient(circle at 95% 2%, rgba(90, 230, 180, 0.34), transparent 36%),
+      radial-gradient(circle at 4% 100%, rgba(88, 169, 255, 0.12), transparent 40%),
+      linear-gradient(150deg, #0a2a1f, #12503a) !important;
     border-color: rgba(255, 255, 255, 0.2) !important;
     color: var(--foreground);
-    box-shadow: 0 22px 54px rgba(48, 50, 133, 0.25), inset 0 1px rgba(255, 255, 255, 0.08);
+    box-shadow: 0 22px 54px rgba(10, 60, 44, 0.34), inset 0 1px rgba(255, 255, 255, 0.08);
   }
 
   .safe-spend-card::before {
@@ -644,31 +682,31 @@ button:disabled {
   }
 
   .safe-spend-card .finance-label {
-    color: #d6d8f5;
+    color: #c7ecdb;
   }
 
   .dashboard-signature-hero {
     --foreground: #ffffff;
-    --card: #171a24;
+    --card: #121815;
     --muted: #ffffff;
-    --muted-foreground: #b5bbca;
-    --border: rgba(255, 255, 255, 0.13);
-    --primary: #9fa1ff;
-    --success: #6ee7b7;
+    --muted-foreground: #b7c3bb;
+    --border: rgba(255, 255, 255, 0.12);
+    --primary: #4fe3ad;
+    --success: #6ff0c0;
     --warning: #fcd477;
-    --destructive: #fda4af;
+    --destructive: #ffa4a4;
     /* Diğer semantikler bu koyu yüzey için yeniden basamaklandırılmışken --info
        atlanmıştı; "Bekleyen tahsilat" küresel orta maviyle yazılıyordu. */
-    --info: #93c5fd;
+    --info: #8ac2ff;
     position: relative;
     /* Dekoratif halka içeriğin ÜSTÜNE boyanıyordu (::after, z-index:auto → ağaç
        sırasında en son). Yığın bağlamı açıp halkayı arkaya alıyoruz. */
     isolation: isolate;
     background:
-      radial-gradient(circle at 95% 0%, rgba(121, 124, 240, 0.28), transparent 34%),
-      linear-gradient(145deg, #171a24, #20243a) !important;
-    border-color: rgba(255, 255, 255, 0.13) !important;
-    box-shadow: 0 22px 54px rgba(13, 16, 28, 0.22), inset 0 1px rgba(255, 255, 255, 0.055);
+      radial-gradient(circle at 95% 0%, rgba(63, 220, 160, 0.24), transparent 36%),
+      linear-gradient(145deg, #0e1512, #16221c) !important;
+    border-color: rgba(255, 255, 255, 0.12) !important;
+    box-shadow: 0 22px 54px rgba(6, 14, 10, 0.4), inset 0 1px rgba(255, 255, 255, 0.055);
   }
 
   .dashboard-signature-hero::after {
@@ -680,15 +718,15 @@ button:disabled {
     width: 17rem;
     height: 17rem;
     pointer-events: none;
-    border: 1px solid rgba(159, 161, 255, 0.18);
+    border: 1px solid rgba(79, 227, 173, 0.18);
     border-radius: 999px;
     box-shadow:
-      0 0 0 2.5rem rgba(159, 161, 255, 0.035),
-      0 0 0 5rem rgba(159, 161, 255, 0.025);
+      0 0 0 2.5rem rgba(79, 227, 173, 0.035),
+      0 0 0 5rem rgba(79, 227, 173, 0.022);
   }
 
 .dashboard-signature-hero .finance-label {
-  color: #bfc4d3;
+  color: #bcccc2;
 }
 
 .finance-page-command {
@@ -699,25 +737,25 @@ button:disabled {
 
 .accounts-signature-hub {
   --foreground: #ffffff;
-  --card: #171a24;
+  --card: #121815;
   --card-foreground: #ffffff;
   --muted: rgba(255, 255, 255, 0.09);
-  --muted-foreground: #b9becd;
-  --border: rgba(255, 255, 255, 0.13);
-  --primary: #a6a8ff;
-  --primary-foreground: #17183b;
-  --success: #72e4b7;
-  --destructive: #fda4af;
-  --info: #93c5fd;
+  --muted-foreground: #bcc7bf;
+  --border: rgba(255, 255, 255, 0.12);
+  --primary: #6ff0c0;
+  --primary-foreground: #04241a;
+  --success: #6ff0c0;
+  --destructive: #ffa4a4;
+  --info: #8ac2ff;
   position: relative;
   /* Dekoratif halka içeriğin üstüne binmesin (bkz. dashboard-signature-hero). */
   isolation: isolate;
   color: var(--foreground);
   background:
-    radial-gradient(circle at 92% 5%, rgba(126, 128, 244, 0.3), transparent 31%),
-    radial-gradient(circle at 0% 100%, rgba(79, 209, 165, 0.1), transparent 32%),
-    linear-gradient(145deg, #171a24, #20243a) !important;
-  box-shadow: 0 22px 54px rgba(13, 16, 28, 0.2), inset 0 1px rgba(255, 255, 255, 0.06);
+    radial-gradient(circle at 92% 5%, rgba(63, 220, 160, 0.26), transparent 33%),
+    radial-gradient(circle at 0% 100%, rgba(88, 169, 255, 0.09), transparent 34%),
+    linear-gradient(145deg, #0e1512, #16221c) !important;
+  box-shadow: 0 22px 54px rgba(6, 14, 10, 0.36), inset 0 1px rgba(255, 255, 255, 0.06);
 }
 
 .accounts-signature-hub::after {
@@ -728,16 +766,16 @@ button:disabled {
   bottom: -8rem;
   width: 19rem;
   height: 19rem;
-  border: 1px solid rgba(166, 168, 255, 0.14);
+  border: 1px solid rgba(79, 227, 173, 0.14);
   border-radius: 999px;
   box-shadow:
-    0 0 0 3rem rgba(166, 168, 255, 0.025),
-    0 0 0 6rem rgba(166, 168, 255, 0.018);
+    0 0 0 3rem rgba(79, 227, 173, 0.024),
+    0 0 0 6rem rgba(79, 227, 173, 0.016);
   pointer-events: none;
 }
 
 .accounts-signature-hub .finance-label {
-  color: #c3c8d7;
+  color: #c2cec6;
 }
 
 .accounts-bank-tile {
@@ -823,24 +861,24 @@ button:disabled {
 }
 
 .login-signature-panel {
-  --foreground: #f7f7fb;
-  --card: #151821;
-  --card-foreground: #f7f7fb;
-  --muted: #202430;
-  --muted-foreground: #aeb4c4;
+  --foreground: #f2f7f4;
+  --card: #121815;
+  --card-foreground: #f2f7f4;
+  --muted: #1b231e;
+  --muted-foreground: #aeb9b1;
   --border: rgba(255, 255, 255, 0.12);
-  --primary: #aaaaff;
-  --success: #6ee7b7;
+  --primary: #6ff0c0;
+  --success: #6ff0c0;
   color: var(--foreground);
   background:
-    radial-gradient(circle at 8% 0%, rgba(126, 128, 244, 0.24), transparent 29%),
-    linear-gradient(145deg, #11131a, #1b1e2b);
+    radial-gradient(circle at 8% 0%, rgba(63, 220, 160, 0.22), transparent 30%),
+    linear-gradient(145deg, #0b100d, #16201a);
 }
 
 .login-cash-preview {
   background:
-    radial-gradient(circle at 95% 0%, rgba(186, 188, 255, 0.3), transparent 35%),
-    linear-gradient(135deg, #292b65, #4a4eb0);
+    radial-gradient(circle at 95% 0%, rgba(111, 240, 192, 0.28), transparent 36%),
+    linear-gradient(135deg, #0a2a1f, #10684c);
 }
 
 @keyframes fade-in-up {
