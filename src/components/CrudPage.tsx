@@ -5,7 +5,7 @@ import { useLocation, useNavigate } from 'react-router'
 import { useAuth } from '../auth/useAuth'
 import { deleteCrudRow, fetchCrudRows, saveCrudRow } from '../data/repositories/crudRepo'
 import { cn, openNativePicker } from '../lib/utils'
-import type { InsertFor, RowFor, TableName, UpdateFor } from '../types/database'
+import type { CrudTableName, InsertFor, RowFor, UpdateFor } from '../types/database'
 import { normalizeSearchText } from '../utils/searchText'
 import { EmptyState } from './EmptyState'
 import { FormSection, PageCommandHeader } from './finance/FinanceUI'
@@ -56,7 +56,7 @@ export type FormField = {
   hint?: (values: Record<string, string>, context: FieldContext) => string | null
 }
 
-type CrudPageProps<T extends TableName> = {
+type CrudPageProps<T extends CrudTableName> = {
   table: T
   addLabel: string
   pageTitle?: string
@@ -113,7 +113,7 @@ type CrudPageProps<T extends TableName> = {
   showList?: boolean
 }
 
-export function CrudPage<T extends TableName>({
+export function CrudPage<T extends CrudTableName>({
   table,
   addLabel,
   pageTitle,

@@ -33,6 +33,11 @@ const weekdayFormatter = new Intl.DateTimeFormat('en-US', {
   timeZone: TIME_ZONE,
   weekday: 'short',
 })
+const hourFormatter = new Intl.DateTimeFormat('en-GB', {
+  timeZone: TIME_ZONE,
+  hour: '2-digit',
+  hourCycle: 'h23',
+})
 const moneyFormatter = new Intl.NumberFormat('tr-TR', {
   minimumFractionDigits: 2,
   maximumFractionDigits: 2,
@@ -109,6 +114,42 @@ type NotificationLogRow = {
   user_id: string
   notification_type: string
   reference_id: string
+}
+
+// Kullanıcı bazlı tür tercihleri + sessiz saatler.
+type NotificationPreferenceRow = {
+  user_id: string
+  payments_enabled: boolean
+  loans_enabled: boolean
+  statements_enabled: boolean
+  weekly_enabled: boolean
+  quiet_hours_start: number | null
+  quiet_hours_end: number | null
+}
+
+type PreferenceFlagKey = 'payments_enabled' | 'loans_enabled' | 'statements_enabled' | 'weekly_enabled'
+
+// src/utils/notificationPreferences.ts ikizleri (Deno import edemez; testli mantık orada).
+function notificationTypeToPrefKey(notificationType: string): PreferenceFlagKey | null {
+  switch (notificationType) {
+    case 'payment_due_tomorrow':
+      return 'payments_enabled'
+    case 'loan_installment_due_tomorrow':
+      return 'loans_enabled'
+    case 'card_statement_cut_3d':
+      return 'statements_enabled'
+    case 'weekly_summary':
+    case 'reconciliation_stale_weekly':
+      return 'weekly_enabled'
+    default:
+      return null
+  }
+}
+
+function isWithinQuietHours(hour: number, start: number | null, end: number | null): boolean {
+  if (start == null || end == null || start === end) return false
+  if (start < end) return hour >= start && hour < end
+  return hour >= start || hour < end
 }
 
 type PushPayload = {
@@ -598,6 +639,37 @@ function dateOnlyInTimeZone(now = new Date()): string {
 
 function weekdayInTimeZone(now = new Date()): string {
   return weekdayFormatter.format(now)
+}
+
+function currentHourInTimeZone(now = new Date()): number {
+  const hour = Number(hourFormatter.format(now))
+  return Number.isFinite(hour) ? hour % 24 : 0
+}
+
+// Gönderim öncesi kapı: kapalı türü ve sessiz saat penceresindeki kullanıcıyı ele.
+// Tercih satırı yoksa varsayılan hepsi açık (opt-out modeli).
+function applyPreferences(
+  candidates: NotificationCandidate[],
+  preferencesByUser: Map<string, NotificationPreferenceRow>,
+  currentHour: number,
+): NotificationCandidate[] {
+  return candidates.filter((candidate) => {
+    const prefs = preferencesByUser.get(candidate.userId)
+    if (!prefs) return true
+    if (isWithinQuietHours(currentHour, prefs.quiet_hours_start, prefs.quiet_hours_end)) return false
+    const key = notificationTypeToPrefKey(candidate.notificationType)
+    if (!key) return true
+    return prefs[key] !== false
+  })
+}
+
+async function loadPreferences(db: RestClient, userIds: string[]): Promise<Map<string, NotificationPreferenceRow>> {
+  if (userIds.length === 0) return new Map()
+  const rows = await db.select<NotificationPreferenceRow>('notification_preferences', {
+    select: 'user_id,payments_enabled,loans_enabled,statements_enabled,weekly_enabled,quiet_hours_start,quiet_hours_end',
+    user_id: inFilter(userIds),
+  })
+  return new Map(rows.map((row) => [row.user_id, row]))
 }
 
 function parseIsoDate(iso: string): { year: number; month: number; day: number } {
@@ -1144,10 +1216,16 @@ Deno.serve(async (req: Request) => {
       })
     }
 
-    const candidates = await filterAlreadySent(
+    const preferencesByUser = await loadPreferences(
       db,
-      await loadCandidates(db, subscriptions, todayIso, weekday),
+      Array.from(new Set(subscriptions.map((row) => row.user_id))),
     )
+    const allowedCandidates = applyPreferences(
+      await loadCandidates(db, subscriptions, todayIso, weekday),
+      preferencesByUser,
+      currentHourInTimeZone(),
+    )
+    const candidates = await filterAlreadySent(db, allowedCandidates)
     const result = await deliverCandidates(
       db,
       groupSubscriptionsByUser(subscriptions),

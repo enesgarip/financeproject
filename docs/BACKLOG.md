@@ -1,5 +1,74 @@
 # Priority Backlog
 
+## 2026-07-28 — Fonksiyonel revizyon (Faz G, devam ediyor)
+
+Görsel revizyondan (Nocturne) sonra fonksiyonel tur. Canlı denetimde (yerel seed +
+tarayıcı) çıkan iki kalıp: (a) panel ayıklaması dashboard'a uygulanmış ama Hesaplar
+ve Analiz'de aynı rakamlar tekrar ediyordu; (b) birkaç gerçek boşluk (kasa modu,
+hedef önerisi, push v1.1) hâlâ açıktı. Kullanıcı dört yönü de kapsama aldı; sıralı
+plan G1→G5.
+
+- ~~**G1 — Hesaplar Özet + Analiz tekrar ayıklama.**~~ DONE. Masaüstünde kart borcu
+  kırılımı 4 yerde (CardControlCenter, CreditCardOverview, LiveReconciliation +
+  kompakt tekrar), Analiz'de kategori dağılımı 2 yerde görünüyordu. Kök neden:
+  `CreditCardOverview` her viewport'ta, `CardControlCenter` yalnız `md:block` →
+  masaüstünde ikisi birden. Çözüm: `CreditCardOverview` artık `md:hidden` (mobil
+  yüzey; masaüstünde CardControlCenter asıl yüzey, 2026-07-24'te öyle kurulmuştu).
+  Masaüstünde kaybolmasın diye limit kullanımı (`buildLimitGroupSummaries` ile
+  paylaşımlı limit doğru toplanır) `CardControlCenter`'a taşındı. Analiz'de
+  `MonthlyReport`'un inline "Kategori dağılımı" listesi kaldırıldı; kategori tek
+  yerde (`CategorySpendingChart` — CompositionBar + içgörü). "Geçen aya göre"
+  değişim özeti korundu. PDF (`window.print`) ve paylaşım kartı (`renderShareableCard`
+  `summary` nesnesinden) DOM'a bağlı olmadığı için export'lar etkilenmedi. 1280px ve
+  375px tarayıcıda doğrulandı; finans matematiği değişmedi.
+- ~~**G2 — Ödeme Alarmı'nda yerinde tek-tıkla ödeme.**~~ DONE. "Bugünün Odağı"
+  aksiyonları toplu (ör. "2 geciken ödeme") olduğu için tekil ödeme için uygun
+  değildi; asıl inline kazanç dashboard "Ödeme Alarmı" (yaklaşan vadeler)
+  panelindeki tekil kalemlerdi. `DashboardUpcomingItem` artık kaynak
+  `FinanceObligation`'ı taşıyor; `action` taşıyan (ödenebilir) kalemlerde "Öde"
+  butonu paylaşılan `useFinancePaymentDrawer` + `FinancePaymentDrawer`'ı sayfa
+  değiştirmeden açar (PaymentsPage/LoansPage ile aynı çekmece). Ödeme sonrası
+  `useInvalidateFinanceSnapshot` ile cache tazelenir. Tarayıcıda uçtan uca
+  doğrulandı: Kira ödendi → listeden düştü, sıradaki vade öne geldi. Yeni finans
+  matematiği yok.
+- **G3 — Hedef bazlı birikim önerisi + Kasa modu.** (Kullanıcı: Supabase tablo +
+  ikisini de.) İki parça:
+  - ~~**G3a — Birikim önerisi.**~~ DONE. `utils/savingsSuggestion.ts` (+10 test):
+    `buildSavingsSuggestion` hedefe/hedef tarihe göre aylık gerekli tutarı verir
+    (TRY tutar, altın birim, composite desteklenmez); `buildSavingsCashflowAdvice`
+    bu ayki harcanabilirle (safeToSpend, PlanningPage'ten geçer) kıyaslayıp
+    ayır/kısmi/ara-ver önerir (yapısal döner, mesajı panel `formatAmount` ile kurar
+    → bakiye gizlemeye saygılı). `SavingsGoalsPanel` kart başına "Aylık gerekli"
+    satırı + üstte tavsiye banner'ı. Tarayıcıda doğrulandı.
+  - ~~**G3b — Kasa modu.**~~ DONE. Yeni `kasa_buckets` tablosu (migration
+    `20260728120000`, RLS own-row + explicit grant + `set_updated_at` trigger;
+    yerel docker'da `db:reset` + RLS/grant denetimi temiz). `kasaBucketsRepo`
+    (CRUD, Result<T>), `utils/kasaMode.ts` (+4 test: `totalReservedTL`,
+    `spendableAfterReserves` — likit − rezerve, aşırı ayırmada negatif). Yönetim
+    UI'ı `KasaModuPanel` (PlanningPage'de, Likit/Rezerve/Harcanabilir + CRUD).
+    Dashboard `SafeToSpendCard` kovaları çekip rezervi "bu ay harcanabilir"den
+    düşer (`safeToSpend.ts`'e `reserved` alanı + 2 test). Planlama katmanı;
+    gerçek bakiye/ledger DEĞİŞMEZ. Bu, "kasa modu / spendable balance" P2 açık
+    maddesini kapatır.
+- ~~**G4 — Tekrar eden kart harcaması / son harcamayı tekrarla.**~~ DONE.
+  `cardsRepo.fetchRecentCardExpenses` son 40 kesinleşmiş hareketi veri katmanından
+  yükler; `utils/expenseRepeat.ts` yalnız peşin hareketleri açıklama bazında
+  Türkçe arama normalizasyonuyla tekilleştirip en yeni 6 öneriyi üretir. Hızlı
+  harcama panelindeki çip tek dokunuşla kart, tutar, açıklama ve kategoriyi forma
+  doldurur; kullanıcı kaydetmeden önce alanları değiştirebilir. Taksit/provizyon
+  akışları bilinçli olarak tekrar önerisine girmez. Kayıt sonrasında öneriler
+  tazelenir; saf seçim davranışı 4 birim testiyle korunur.
+- ~~**G5 — Web Push v1.1: tür toggle'ları + sessiz saatler + son gönderim.**~~ DONE.
+  Yeni `notification_preferences` tablosu (migration `20260729120000`, user_id PK,
+  RLS own-row + grant + `set_updated_at`; yerel docker + authenticated REST
+  round-trip ile doğrulandı). `notificationPreferencesRepo` (get/upsert +
+  `fetchLastNotification`). `utils/notificationPreferences.ts` (+6 test): tür→tercih
+  eşleme + sessiz saat (gece devri dahil); `push-notify` edge fonksiyonu ikizini
+  gönderim öncesi uygular (kapalı türü ve sessiz saatteki kullanıcıyı eler; test
+  modu bypass; `deno check` temiz). `NotificationSettings` 4 tür toggle + sessiz
+  saat aralığı + "son gönderilen" satırı (notification_log'dan). Açık P1 v1.1
+  maddelerini kapatır.
+
 ## 2026-07-27 — Modern UI/UX dönüşümü, ilk dilim (DONE)
 
 - ~~Ortak tasarım dili ve uygulama kabuğu.~~ DONE. Açık/koyu tema token'ları
@@ -288,9 +357,9 @@ Canlı uygulama + kod incelemesinden çıkan bulgular tek pakette kapatıldı:
 - Add Web Push v1.1 controls and observability.
   - ~~Add a "test bildirimi gönder" action from the notification settings UI.~~ DONE.
     - 2026-06-21: Bildirim ayar kartı mevcut browser aboneliğini Supabase kaydıyla self-heal eder; VAPID public key değişmişse cihaz aboneliğini yeniler. `push-notify` authenticated test mode, kullanıcının kendi endpoint'ine gerçek Web Push payload'u gönderir.
-  - Let the user enable/disable payment, loan installment, statement cut, and weekly summary notifications separately.
-  - Show last push run / last sent notification status in the settings card.
-  - Add quiet-hours handling so scheduled notifications are not sent during user-defined silent hours.
+  - ~~Let the user enable/disable payment, loan installment, statement cut, and weekly summary notifications separately.~~ DONE (2026-07-29, Faz G/Madde 5): 4 tür toggle `notification_preferences`'te; edge fonksiyonu kapalı türü eler.
+  - ~~Show last push run / last sent notification status in the settings card.~~ DONE: ayar kartı `notification_log`'dan son gönderilen tür + tarihi gösterir.
+  - ~~Add quiet-hours handling so scheduled notifications are not sent during user-defined silent hours.~~ DONE: sessiz saat aralığı (gece devri dahil); edge fonksiyonu Istanbul saatiyle pencereyi atlar.
 - ~~Reduce fallback logic that depends on missing Supabase schema cache or missing RPC deployment.~~ DONE.
   - Legacy `add_card_expense` retry against the retired 4-argument RPC signature was removed; the canonical RPC now surfaces missing-capability instead of silently falling back.
   - App-start finance maintenance no longer suppresses missing `post_due_card_auto_payments` / `cut_due_card_statements`; migration drift now surfaces through the shared missing-capability message.
@@ -338,10 +407,10 @@ Canlı uygulama + kod incelemesinden çıkan bulgular tek pakette kapatıldı:
   - 2026-07-24: `/kartlar` özetinin başına ekstre, dönem içi, provizyon, gelecek taksit ve son gerçek banka mutabakatını kart bazında birleştiren `CardControlCenter` eklendi. Durumlar `mutabık / fark var / kontrol zamanı / hiç kontrol edilmedi`; gerçek banka borcu aynı özet içindeki `LiveReconciliationPanel` ile girilip düzeltilebilir. Eski kart içi yüzde etiketi bankayla karışmaması için "İç veri sağlığı" oldu.
 - ~~Add bucket tracking to card_ledger for derivable debt breakdown.~~ DONE.
   - 2026-07-24: `card_ledger`'a 3 nullable bucket delta sütunu (`statement_delta_kurus`, `current_delta_kurus`, `provision_delta_kurus`) ve `reclass` kind eklendi. AFTER trigger her yazımda kova deltalarını otomatik kaydeder. `projectCardSplit(events)` TS projeksiyonu, DataHealth bucket drift kontrolü, `recompute_card_debt_from_ledger` bucket-aware RPC. 200-satır ledger fetch limiti kaldırıldı. `LiveReconciliationPanel`'a hızlı mutabakat ("Farkı düzelt") butonu eklendi — banka rakamını girip tek tıkla auditable correction, PDF import'suz.
-- Add "kasa modu" / spendable balance planning.
-  - Let bank balances be mentally allocated into buckets such as emergency fund, taxes/insurance, vacation, investment, and spendable cash.
-  - Keep the underlying bank balance unchanged; this is a planning overlay, not a ledger movement.
-  - Surface "harcanabilir bakiye" on Dashboard so the user sees what is safe to spend after reserved buckets.
+- ~~Add "kasa modu" / spendable balance planning.~~ DONE (2026-07-28, Faz G/Madde 3b).
+  - `kasa_buckets` tablosu + `KasaModuPanel` (PlanningPage): banka bakiyesi acil fon,
+    vergi, tatil gibi kovalara ayrılır; gerçek bakiye değişmez (planlama overlay'i).
+  - Dashboard `SafeToSpendCard` rezerve kovaları "bu ay harcanabilir"den düşer.
 - ~~Add a concise developer-oriented architecture note for each major page.~~ DONE for DashboardPage, CardsPage, and DataHealthPage.
 - ~~Keep `docs/AI_CONTEXT_INDEX.md` current so future AI sessions can route to the right files with less repo scanning.~~ DONE.
   - 2026-06-15 context index reflects current route/module splits, DataHealth guide/action modules, dashboard component modules, backup utilities, data-health summary, and verification playbooks.

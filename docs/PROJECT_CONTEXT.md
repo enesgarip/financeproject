@@ -164,6 +164,8 @@ From the current typed schema, main tables are:
 - `transaction_history`
 - `salary_history`
 - `dismissed_upcoming_items`
+- `kasa_buckets` (kasa modu: bakiye kova ayırma — planlama overlay'i, ledger değil)
+- `notification_preferences` (Web Push tür tercihleri + sessiz saatler; user_id PK)
 
 Most rows are user-scoped with `user_id`. RLS is a core security assumption.
 

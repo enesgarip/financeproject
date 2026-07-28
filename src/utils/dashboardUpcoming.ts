@@ -30,6 +30,9 @@ export type DashboardUpcomingItem = {
   direction: 'inflow' | 'outflow'
   date: string
   sortTime: number
+  // Kaynak yükümlülük: dashboard'dan yerinde ödeme çekmecesini açmak için taşınır
+  // (yalnız `action` taşıyan kalemler ödenebilir). Sunum alanları yukarıda türetilir.
+  obligation: FinanceObligation
 }
 
 export type DashboardMonthlyLoadSummary = {
@@ -64,6 +67,7 @@ function obligationToDashboardUpcomingItem(item: FinanceObligation): DashboardUp
     direction: item.direction ?? 'outflow',
     date: formatDate(item.date),
     sortTime: new Date(`${item.date}T00:00:00`).getTime(),
+    obligation: item,
   }
 }
 

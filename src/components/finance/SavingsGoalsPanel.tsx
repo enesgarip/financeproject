@@ -17,11 +17,13 @@ import { formatDate } from '../../utils/date'
 import { parseNumber } from '../../utils/formatCurrency'
 import {
   formatComponentAmount,
+  formatSavingsGoalAmount,
   formatSavingsGoalProgress,
   savingsGoalTargetReached,
   savingsGoalProgressRate,
   savingsGoalValueTypeLabel,
 } from '../../utils/savingsGoal'
+import { buildSavingsCashflowAdvice, buildSavingsSuggestion } from '../../utils/savingsSuggestion'
 import { effectiveGoalValue, valueGoal } from '../../utils/valuation'
 
 type ComponentDraft = {
@@ -46,7 +48,7 @@ function defaultCompositeDrafts() {
   return [newComponentDraft({ label: 'Gram altın', value_type: 'gram_altin' }), newComponentDraft({ label: 'Çeyrek altın', value_type: 'ceyrek_altin' })]
 }
 
-export function SavingsGoalsPanel() {
+export function SavingsGoalsPanel({ monthlySurplus }: { monthlySurplus?: number } = {}) {
   const { formatAmount } = useBalancePrivacy()
   const { user } = useAuth()
   const { snapshot } = useMarketRates()
@@ -267,6 +269,16 @@ export function SavingsGoalsPanel() {
   const activeGoals = goals.filter((g) => g.status === 'active')
   const completedGoals = goals.filter((g) => g.status === 'completed')
 
+  // Aktif TRY hedeflerinin toplam aylık gerekliğini bu ayki harcanabilirle (surplus)
+  // kıyaslayıp "ayır / kısıtlı ayır / ara ver" önerir. Surplus geçilmezse gösterilmez.
+  const savingsAdvice = useMemo(() => {
+    if (monthlySurplus === undefined) return null
+    const totalNeeded = goals
+      .filter((g) => g.status === 'active' && g.value_type === 'TRY')
+      .reduce((total, g) => total + (buildSavingsSuggestion(g).monthlyNeeded ?? 0), 0)
+    return buildSavingsCashflowAdvice(totalNeeded, monthlySurplus)
+  }, [goals, monthlySurplus])
+
   return (
     <section className="space-y-4">
       <Card className="border-border/70 shadow-[var(--shadow-card)]">
@@ -294,6 +306,26 @@ export function SavingsGoalsPanel() {
       </Card>
 
       {error ? <Alert variant="destructive">{error}</Alert> : null}
+
+      {savingsAdvice ? (
+        <div
+          className={`rounded-xl border p-3 text-sm font-medium ${
+            savingsAdvice.tone === 'success'
+              ? 'border-success/25 bg-success/8 text-success'
+              : savingsAdvice.tone === 'warning'
+                ? 'border-warning/25 bg-warning/10 text-warning'
+                : 'border-destructive/25 bg-destructive/8 text-destructive'
+          }`}
+        >
+          {savingsAdvice.kind === 'pause'
+            ? 'Bu ay nakit akışı gergin; hedeflere ara vermek güvenli.'
+            : savingsAdvice.kind === 'partial'
+              ? `Bu ay hedeflere ancak ${formatAmount(savingsAdvice.affordable)} ayırabilirsin (gereken ${formatAmount(savingsAdvice.needed)}).`
+              : savingsAdvice.extra > 0
+                ? `Bu ay gereken ${formatAmount(savingsAdvice.needed)} ayrılıp ${formatAmount(savingsAdvice.extra)} fazladan biriktirilebilir.`
+                : `Bu ay hedeflere gereken ${formatAmount(savingsAdvice.needed)} rahatça ayırabilirsin.`}
+        </div>
+      ) : null}
 
       {loading ? (
         <p className="text-sm text-muted-foreground">Hedefler yükleniyor...</p>
@@ -382,6 +414,27 @@ export function SavingsGoalsPanel() {
                         </p>
                       ) : null}
                       {goal.target_date ? <p className="mt-0.5 text-[11px] text-muted-foreground">Hedef: {formatDate(goal.target_date)}</p> : null}
+                      {!isCompleted ? (() => {
+                        const suggestion = buildSavingsSuggestion(goal)
+                        if (suggestion.pace === 'active' && suggestion.monthlyNeeded != null) {
+                          return (
+                            <p className="mt-1 text-[11px] font-bold text-primary">
+                              Aylık gerekli: {formatSavingsGoalAmount(goal, suggestion.monthlyNeeded)} · {suggestion.monthsRemaining} ay
+                            </p>
+                          )
+                        }
+                        if (suggestion.pace === 'overdue') {
+                          return (
+                            <p className="mt-1 text-[11px] font-bold text-warning">
+                              Hedef tarihi geçti · kalan {formatSavingsGoalAmount(goal, suggestion.remaining)}
+                            </p>
+                          )
+                        }
+                        if (suggestion.pace === 'no-date' && suggestion.remaining > 0) {
+                          return <p className="mt-1 text-[11px] text-muted-foreground">Hedef tarih ekle → aylık plan çıkar</p>
+                        }
+                        return null
+                      })() : null}
                     </div>
                   </div>
                   {goal.value_type === 'composite' && goalComponents.length > 0 ? (

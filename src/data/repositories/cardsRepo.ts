@@ -73,6 +73,17 @@ export async function fetchPostedInstallmentExpenses(limit: number): Promise<Res
   return resultFromSupabase((data ?? []) as CardExpense[], error, 'Taksitli harcamalar yüklenemedi.')
 }
 
+export async function fetchRecentCardExpenses(limit: number): Promise<Result<CardExpense[]>> {
+  const { data, error } = await supabase
+    .from('card_expenses')
+    .select('*')
+    .eq('status', 'posted')
+    .order('created_at', { ascending: false })
+    .limit(limit)
+
+  return resultFromSupabase((data ?? []) as CardExpense[], error, 'Son harcamalar yüklenemedi.')
+}
+
 export async function fetchCardExpenseMatchRows(cardId: string): Promise<Result<ExpenseMatchRow[]>> {
   const { data, error } = await supabase
     .from('card_expenses')

@@ -1,6 +1,6 @@
 # Cards Architecture Note
 
-Last reviewed: 2026-07-27
+Last reviewed: 2026-07-28
 
 This note maps `/kartlar` (`CardsPage`) after the page split. Start with
 `CLAUDE.md`, `docs/AI_CONTEXT_INDEX.md`, and `docs/CARD_DEBT_TRANSITIONS.md`
@@ -30,8 +30,8 @@ repositories, services, or focused `CardsPage.*` modules.
   with credit-card rows only, so the real bank debt can be entered and corrected
   without leaving the card-first flow
 - `CardsPage.expense.tsx`: quick expense and installment expense entry
-  surface; routes paid-count installment imports to
-  `record_card_installment_carryover`
+  surface; loads editable repeat suggestions for recent cash expenses and
+  routes paid-count installment imports to `record_card_installment_carryover`
 - `CardsPage.statements.tsx`: open statement and provision presentation panels
 - `CardsPage.list.tsx`: account/card list item presentation, row action menus,
   bank IBAN/copy affordance, masked card number, recent bank movements, and
@@ -80,6 +80,10 @@ actions should use the repository/service layer:
 
 - card/provision/statement reads and provision actions:
   `src/data/repositories/cardsRepo.ts`
+- quick-expense repeat suggestions read the latest posted expenses through
+  `fetchRecentCardExpenses`; `src/utils/expenseRepeat.ts` excludes installment
+  and provision flows, deduplicates descriptions, and keeps suggestion
+  selection as pure presentation logic until the user submits the form
 - current movement reconciliation parses PDFs in
   `src/utils/denizBankMovementParser.ts`, matches ordinary expenses and
   installment rows via `fetchCardExpenseMatchRows` /

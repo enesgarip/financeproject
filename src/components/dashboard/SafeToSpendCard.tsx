@@ -1,7 +1,9 @@
 import { Check, Pencil, Wallet } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { fetchKasaBuckets } from '../../data/repositories/kasaBucketsRepo'
 import { useBalancePrivacy } from '../../hooks/useBalancePrivacy'
 import type { CashFlowSummary } from '../../utils/financeSummary'
+import { totalReservedTL } from '../../utils/kasaMode'
 import { buildSafeToSpend, DEFAULT_BUFFER } from '../../utils/safeToSpend'
 import { Card, CardContent } from '../ui/card'
 import { Progress } from '../ui/progress'
@@ -25,12 +27,26 @@ export function SafeToSpendCard({ cashFlow, liquidCash }: { cashFlow: CashFlowSu
   const [buffer, setBuffer] = useState(readBuffer)
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState('')
+  // Kasa modu kovalarında ayrılan toplam "harcanabilir"den düşülür (planlama katmanı;
+  // gerçek bakiye değişmez). Tablo yoksa/boşsa 0 kalır, kart yine çalışır.
+  const [reserved, setReserved] = useState(0)
+
+  useEffect(() => {
+    let active = true
+    void fetchKasaBuckets().then((result) => {
+      if (active && result.ok) setReserved(totalReservedTL(result.data))
+    })
+    return () => {
+      active = false
+    }
+  }, [])
 
   const result = buildSafeToSpend({
     liquidCash,
     expectedIncome: cashFlow.expectedIncome,
     remainingOutflow: cashFlow.remainingOutflow,
     buffer,
+    reserved,
   })
 
   function saveBuffer() {
@@ -94,6 +110,12 @@ export function SafeToSpendCard({ cashFlow, liquidCash }: { cashFlow: CashFlowSu
             Kalan yükümlülük, kullanılabilir paranın %{result.pressurePct} seviyesinde
           </p>
         </div>
+
+        {reserved > 0 ? (
+          <p className="mt-3 text-[11px] text-muted-foreground">
+            Kasa kovalarında ayrılan <span className="font-semibold tabular-nums text-foreground">{formatAmount(reserved)}</span> düşüldü.
+          </p>
+        ) : null}
 
         <div className="mt-auto flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border/60 bg-muted/35 px-3 py-2.5">
           <span className="text-xs text-muted-foreground">Güvenlik tamponu</span>

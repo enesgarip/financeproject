@@ -205,27 +205,14 @@ export function MonthlyReport({ data }: { data: AnalysisData }) {
           ))}
         </div>
 
-        {summary.categories.length > 0 ? (
-          <div className="space-y-2">
-            <div className="flex items-center justify-between gap-3">
-              <p className="text-xs font-bold uppercase text-muted-foreground">Kategori dağılımı</p>
-              <span className={`text-xs font-bold tabular-nums ${changeTone === 'emerald' ? 'text-success' : changeTone === 'rose' ? 'text-destructive' : 'text-muted-foreground'}`}>
-                Geçen aya göre: {changeLabel}
-              </span>
-            </div>
-            {summary.categories.slice(0, 6).map((cat) => (
-              <div key={cat.category} className="space-y-1">
-                <div className="flex items-center justify-between gap-3 text-sm">
-                  <span className="min-w-0 truncate text-muted-foreground">{cat.category}</span>
-                  <span className="shrink-0 whitespace-nowrap font-bold tabular-nums text-foreground">
-                    {formatAmount(cat.amount)} <span className="text-xs font-normal text-muted-foreground">(%{cat.percentage})</span>
-                  </span>
-                </div>
-                <div className="h-1.5 overflow-hidden rounded-full bg-muted/60">
-                  <div className="h-full rounded-full bg-foreground/20" style={{ width: `${Math.min(100, cat.percentage)}%` }} />
-                </div>
-              </div>
-            ))}
+        {/* Kategori kırılımı yandaki "Kategori harcaması" panelinde (CompositionBar + içgörü)
+            tek yerde; burada yalnız aya göre değişim özeti kalır, tekrar edilmez. */}
+        {summary.changePercent !== null ? (
+          <div className="flex items-center justify-between gap-3 rounded-xl bg-muted/45 px-3 py-2 text-sm">
+            <span className="text-muted-foreground">Geçen aya göre harcama</span>
+            <span className={`font-bold tabular-nums ${changeTone === 'emerald' ? 'text-success' : changeTone === 'rose' ? 'text-destructive' : 'text-muted-foreground'}`}>
+              {changeLabel}
+            </span>
           </div>
         ) : null}
 
