@@ -373,6 +373,19 @@ export type KasaBucket = BaseRow & {
   note: string | null
 }
 
+// user_id birincil anahtar (kullanıcı başına tek satır); BaseRow'daki id yok.
+export type NotificationPreferences = {
+  user_id: string
+  created_at: string
+  updated_at: string
+  payments_enabled: boolean
+  loans_enabled: boolean
+  statements_enabled: boolean
+  weekly_enabled: boolean
+  quiet_hours_start: number | null
+  quiet_hours_end: number | null
+}
+
 export type SalaryHistory = BaseRow & {
   title: string
   amount: number
@@ -426,6 +439,11 @@ export type Database = {
       transaction_history: Table<TransactionHistory, WithBaseInsert<TransactionHistory>, WithBaseUpdate<TransactionHistory>>
       wishlist_items: Table<WishlistItem, WithBaseInsert<WishlistItem>, WithBaseUpdate<WishlistItem>>
       kasa_buckets: Table<KasaBucket, WithBaseInsert<KasaBucket>, WithBaseUpdate<KasaBucket>>
+      notification_preferences: Table<
+        NotificationPreferences,
+        WithBaseInsert<NotificationPreferences>,
+        WithBaseUpdate<NotificationPreferences>
+      >
       salary_history: Table<SalaryHistory, WithBaseInsert<SalaryHistory>, WithBaseUpdate<SalaryHistory>>
       net_worth_snapshots: Table<NetWorthSnapshot, WithBaseInsert<NetWorthSnapshot>, WithBaseUpdate<NetWorthSnapshot>>
       gold_lots: Table<GoldLot, WithBaseInsert<GoldLot>, WithBaseUpdate<GoldLot>>
@@ -702,5 +720,8 @@ export type Database = {
 
 export type TableName = keyof Database['public']['Tables']
 export type RowFor<T extends TableName> = Database['public']['Tables'][T]['Row']
+// CrudPage yalnız `id` birincil anahtarlı tablolarla çalışır; user_id-PK tablolar
+// (notification_preferences gibi) generic CRUD kabuğuna girmez.
+export type CrudTableName = { [K in TableName]: 'id' extends keyof RowFor<K> ? K : never }[TableName]
 export type InsertFor<T extends TableName> = Database['public']['Tables'][T]['Insert']
 export type UpdateFor<T extends TableName> = Database['public']['Tables'][T]['Update']

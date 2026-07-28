@@ -58,7 +58,16 @@ plan G1→G5.
   doldurur; kullanıcı kaydetmeden önce alanları değiştirebilir. Taksit/provizyon
   akışları bilinçli olarak tekrar önerisine girmez. Kayıt sonrasında öneriler
   tazelenir; saf seçim davranışı 4 birim testiyle korunur.
-- **G5 — Web Push v1.1: tür toggle'ları + sessiz saatler + son çalışma durumu.**
+- ~~**G5 — Web Push v1.1: tür toggle'ları + sessiz saatler + son gönderim.**~~ DONE.
+  Yeni `notification_preferences` tablosu (migration `20260729120000`, user_id PK,
+  RLS own-row + grant + `set_updated_at`; yerel docker + authenticated REST
+  round-trip ile doğrulandı). `notificationPreferencesRepo` (get/upsert +
+  `fetchLastNotification`). `utils/notificationPreferences.ts` (+6 test): tür→tercih
+  eşleme + sessiz saat (gece devri dahil); `push-notify` edge fonksiyonu ikizini
+  gönderim öncesi uygular (kapalı türü ve sessiz saatteki kullanıcıyı eler; test
+  modu bypass; `deno check` temiz). `NotificationSettings` 4 tür toggle + sessiz
+  saat aralığı + "son gönderilen" satırı (notification_log'dan). Açık P1 v1.1
+  maddelerini kapatır.
 
 ## 2026-07-27 — Modern UI/UX dönüşümü, ilk dilim (DONE)
 
@@ -348,9 +357,9 @@ Canlı uygulama + kod incelemesinden çıkan bulgular tek pakette kapatıldı:
 - Add Web Push v1.1 controls and observability.
   - ~~Add a "test bildirimi gönder" action from the notification settings UI.~~ DONE.
     - 2026-06-21: Bildirim ayar kartı mevcut browser aboneliğini Supabase kaydıyla self-heal eder; VAPID public key değişmişse cihaz aboneliğini yeniler. `push-notify` authenticated test mode, kullanıcının kendi endpoint'ine gerçek Web Push payload'u gönderir.
-  - Let the user enable/disable payment, loan installment, statement cut, and weekly summary notifications separately.
-  - Show last push run / last sent notification status in the settings card.
-  - Add quiet-hours handling so scheduled notifications are not sent during user-defined silent hours.
+  - ~~Let the user enable/disable payment, loan installment, statement cut, and weekly summary notifications separately.~~ DONE (2026-07-29, Faz G/Madde 5): 4 tür toggle `notification_preferences`'te; edge fonksiyonu kapalı türü eler.
+  - ~~Show last push run / last sent notification status in the settings card.~~ DONE: ayar kartı `notification_log`'dan son gönderilen tür + tarihi gösterir.
+  - ~~Add quiet-hours handling so scheduled notifications are not sent during user-defined silent hours.~~ DONE: sessiz saat aralığı (gece devri dahil); edge fonksiyonu Istanbul saatiyle pencereyi atlar.
 - ~~Reduce fallback logic that depends on missing Supabase schema cache or missing RPC deployment.~~ DONE.
   - Legacy `add_card_expense` retry against the retired 4-argument RPC signature was removed; the canonical RPC now surfaces missing-capability instead of silently falling back.
   - App-start finance maintenance no longer suppresses missing `post_due_card_auto_payments` / `cut_due_card_statements`; migration drift now surfaces through the shared missing-capability message.
