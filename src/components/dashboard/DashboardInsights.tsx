@@ -18,6 +18,7 @@ import type { DashboardUpcomingItem } from '../../utils/dashboardUpcoming'
 import { daysUntil } from '../../utils/date'
 import { useBalancePrivacy } from '../../hooks/useBalancePrivacy'
 import type { CashFlowSummary } from '../../utils/financeSummary'
+import type { FinanceObligation } from '../../utils/obligations'
 import type { FocusAction } from './DashboardPanels'
 
 type UpcomingItem = DashboardUpcomingItem
@@ -140,7 +141,7 @@ function FocusActionCard({ action }: { action: FocusAction }) {
   )
 }
 
-export function UpcomingAlertPanel({ items }: { items: UpcomingItem[] }) {
+export function UpcomingAlertPanel({ items, onPay }: { items: UpcomingItem[]; onPay?: (obligation: FinanceObligation) => void }) {
   const [showAll, setShowAll] = useState(false)
 
   if (items.length === 0) return null
@@ -169,19 +170,34 @@ export function UpcomingAlertPanel({ items }: { items: UpcomingItem[] }) {
           </div>
           <div className="min-w-0 flex-1 min-[760px]:max-w-xl">
             <div className={`grid gap-2 ${showAll ? 'max-h-80 overflow-y-auto pr-1' : ''}`}>
-              {visibleItems.map((item) => (
-                <div key={item.id} className="flex min-w-0 items-center justify-between gap-3 rounded-lg bg-card/80 px-3 py-2 text-sm">
-                  <div className="min-w-0">
-                    <p className="truncate font-semibold text-foreground">{item.title}</p>
-                    <p className="mt-0.5 text-xs text-muted-foreground">
-                      {item.date} · {upcomingDayLabel(item.sortTime)}
-                    </p>
+              {visibleItems.map((item) => {
+                const payable = Boolean(onPay && item.obligation.action)
+                return (
+                  <div key={item.id} className="flex min-w-0 items-center justify-between gap-3 rounded-lg bg-card/80 px-3 py-2 text-sm">
+                    <div className="min-w-0">
+                      <p className="truncate font-semibold text-foreground">{item.title}</p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        {item.date} · {upcomingDayLabel(item.sortTime)}
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <span className="whitespace-nowrap rounded-lg bg-amber-100 px-2 py-1 text-xs font-bold tabular-nums text-amber-900 dark:bg-amber-900/45 dark:text-amber-100">
+                        {item.value}
+                      </span>
+                      {payable ? (
+                        <button
+                          type="button"
+                          onClick={() => onPay?.(item.obligation)}
+                          className="tap-target inline-flex min-h-8 items-center rounded-lg bg-primary px-2.5 text-xs font-bold text-primary-foreground transition hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background"
+                          aria-label={`${item.title} öde`}
+                        >
+                          Öde
+                        </button>
+                      ) : null}
+                    </div>
                   </div>
-                  <span className="shrink-0 whitespace-nowrap rounded-lg bg-amber-100 px-2 py-1 text-xs font-bold tabular-nums text-amber-900 dark:bg-amber-900/45 dark:text-amber-100">
-                    {item.value}
-                  </span>
-                </div>
-              ))}
+                )
+              })}
             </div>
             {hiddenCount > 0 ? (
               <button

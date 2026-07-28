@@ -14,7 +14,7 @@
 import { AlertTriangle, ArrowUpRight, CalendarDays, ChevronDown, CreditCard, Landmark, RefreshCw } from 'lucide-react'
 import { useCallback, useMemo, useState } from 'react'
 import { useAuth } from '../auth/useAuth'
-import { useFinanceSnapshot } from '../app/useFinanceSnapshot'
+import { useFinanceSnapshot, useInvalidateFinanceSnapshot } from '../app/useFinanceSnapshot'
 import type {
   AccountReconciliation,
   Asset,
@@ -41,6 +41,9 @@ import {
 import { SafeToSpendCard } from '../components/dashboard/SafeToSpendCard'
 import { HistorySection } from '../components/dashboard/DashboardCards'
 import { FocusActionPanel, UpcomingAlertPanel } from '../components/dashboard/DashboardInsights'
+import { FinancePaymentDrawer } from '../components/finance/FinancePaymentDrawer'
+import { useFinancePaymentDrawer } from '../hooks/useFinancePaymentDrawer'
+import type { FinanceObligation } from '../utils/obligations'
 import { dashboardHelp, getUserDisplayName } from '../components/dashboard/dashboardPanelUtils'
 import { StatementReminderPanel } from '../components/dashboard/StatementReminderPanel'
 import { ReconciliationPanel } from '../components/dashboard/ReconciliationPanel'
@@ -203,6 +206,23 @@ export function DashboardPage() {
     [data, summary.cashFlow, summary.creditUsageRate, outflowUpcoming],
   )
   const attentionLine = useMemo(() => buildAttentionLine(data, outflowUpcoming), [data, outflowUpcoming])
+
+  // Ödeme Alarmı'ndaki tekil vadeler yerinde ödensin: paylaşılan çekmece
+  // (PaymentsPage/LoansPage ile aynı) sayfa değiştirmeden açılır, ödeme sonrası
+  // snapshot cache'i tazelenir.
+  const invalidateSnapshot = useInvalidateFinanceSnapshot()
+  const { drawerProps, openPaymentDrawer } = useFinancePaymentDrawer()
+  const handleUpcomingPay = useCallback(
+    (obligation: FinanceObligation) => {
+      void openPaymentDrawer(obligation, {
+        cards: data.cards,
+        reload: async () => {
+          await invalidateSnapshot()
+        },
+      })
+    },
+    [openPaymentDrawer, data.cards, invalidateSnapshot],
+  )
   const healthCounts = useMemo(() => buildHealthCounts(data), [data])
   const hasStatementReminders = useMemo(
     () => buildStatementReminders(data.cards, data.cardStatements).length > 0,
@@ -337,7 +357,7 @@ export function DashboardPage() {
           {/* ─ Vadeler ve mutabakat ─ */}
           <DetailSectionDivider label="Vadeler ve mutabakat" />
 
-          <UpcomingAlertPanel items={outflowUpcoming} />
+          <UpcomingAlertPanel items={outflowUpcoming} onPay={handleUpcomingPay} />
 
           <div className="min-w-0 lg:col-span-12">
             <ReconciliationPanel cards={data.cards} statements={data.cardStatements.filter((statement) => statement.status === 'open')} />
@@ -368,6 +388,7 @@ export function DashboardPage() {
           </div>
         </div>
       </div>
+      <FinancePaymentDrawer {...drawerProps} />
     </section>
   )
 }

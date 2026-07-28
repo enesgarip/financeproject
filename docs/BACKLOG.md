@@ -21,7 +21,16 @@ plan G1→G5.
   değişim özeti korundu. PDF (`window.print`) ve paylaşım kartı (`renderShareableCard`
   `summary` nesnesinden) DOM'a bağlı olmadığı için export'lar etkilenmedi. 1280px ve
   375px tarayıcıda doğrulandı; finans matematiği değişmedi.
-- **G2 — Bugünün Odağı'na yerinde tek-tıkla ödeme/mutabakat.** (Sırada)
+- ~~**G2 — Ödeme Alarmı'nda yerinde tek-tıkla ödeme.**~~ DONE. "Bugünün Odağı"
+  aksiyonları toplu (ör. "2 geciken ödeme") olduğu için tekil ödeme için uygun
+  değildi; asıl inline kazanç dashboard "Ödeme Alarmı" (yaklaşan vadeler)
+  panelindeki tekil kalemlerdi. `DashboardUpcomingItem` artık kaynak
+  `FinanceObligation`'ı taşıyor; `action` taşıyan (ödenebilir) kalemlerde "Öde"
+  butonu paylaşılan `useFinancePaymentDrawer` + `FinancePaymentDrawer`'ı sayfa
+  değiştirmeden açar (PaymentsPage/LoansPage ile aynı çekmece). Ödeme sonrası
+  `useInvalidateFinanceSnapshot` ile cache tazelenir. Tarayıcıda uçtan uca
+  doğrulandı: Kira ödendi → listeden düştü, sıradaki vade öne geldi. Yeni finans
+  matematiği yok.
 - **G3 — Hedef bazlı birikim önerisi + Kasa modu (bucket → gerçek harcanabilir).**
 - **G4 — Tekrar eden kart harcaması / son harcamayı tekrarla.**
 - **G5 — Web Push v1.1: tür toggle'ları + sessiz saatler + son çalışma durumu.**
