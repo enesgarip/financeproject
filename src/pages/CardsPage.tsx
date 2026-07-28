@@ -321,7 +321,11 @@ export function CardsPage() {
                       await Promise.all([reload(), loadReconciliations(), invalidateSnapshot()])
                     }}
                   />
-                  <CreditCardOverview rows={cardRows} formatAmount={formatAmount} />
+                  {/* Masaüstünde CardControlCenter asıl kart yüzeyi; CreditCardOverview yalnız
+                      mobilde (CardControlCenter orada gizli) aynı kırılımı tekrar etmesin diye. */}
+                  <div className="md:hidden">
+                    <CreditCardOverview rows={cardRows} formatAmount={formatAmount} />
+                  </div>
                 </>
               ) : null}
 

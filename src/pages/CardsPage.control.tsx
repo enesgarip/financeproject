@@ -1,6 +1,6 @@
 import { FileText, ScanSearch, ShieldCheck } from 'lucide-react'
 import { BankLogo } from '../components/finance/BankLogo'
-import { FinancePanel, MiniStat, SectionHeader, StatusBadge } from '../components/finance/FinanceUI'
+import { FinancePanel, MiniStat, ProgressStrip, SectionHeader, StatusBadge } from '../components/finance/FinanceUI'
 import type {
   AccountReconciliation,
   Card,
@@ -8,6 +8,7 @@ import type {
   CardStatementArchive,
 } from '../types/database'
 import { buildCardControlItems, type CardBankReconciliationStatus } from '../utils/cardControlCenter'
+import { buildLimitGroupSummaries } from './CardsPage.helpers'
 import { ConfidenceBadge } from '../components/ui/confidence-badge'
 import { daysUntil, formatDate } from '../utils/date'
 import { freshnessConfidence } from '../utils/dataConfidence'
@@ -51,6 +52,13 @@ export function CardControlCenter({
   const totalScheduled = sumTL(items.map(({ scheduledInstallmentTotal }) => scheduledInstallmentTotal))
   const attentionCount = items.filter(({ reconciliationStatus }) => reconciliationStatus !== 'matched').length
 
+  // Limit kullanımı: paylaşımlı limit gruplarını doğru topla (kart başına toplama çift saymaz).
+  const limitGroups = buildLimitGroupSummaries(rows)
+  const totalLimit = sumTL(limitGroups.map((group) => group.limit))
+  const totalGroupDebt = sumTL(limitGroups.map((group) => group.debt))
+  const totalAvailable = Math.max(0, diffTL(totalLimit, totalGroupDebt))
+  const usageRate = totalLimit > 0 ? Math.min(100, (totalGroupDebt / totalLimit) * 100) : 0
+
   return (
     <FinancePanel tone={attentionCount > 0 ? 'warning' : 'premium'} className="p-4 sm:p-5">
       <SectionHeader
@@ -69,6 +77,20 @@ export function CardControlCenter({
         <MiniStat label="Provizyon" value={formatAmount(totalProvision)} tone={totalProvision > 0 ? 'warning' : 'neutral'} />
         <MiniStat label="Gelecek taksit" value={formatAmount(totalScheduled)} tone={totalScheduled > 0 ? 'warning' : 'neutral'} />
       </div>
+
+      {totalLimit > 0 ? (
+        <div className="mt-4">
+          <ProgressStrip
+            label="Limit kullanımı"
+            value={usageRate}
+            tone={usageRate >= 80 ? 'danger' : usageRate >= 55 ? 'warning' : 'good'}
+          />
+          <div className="mt-1.5 flex items-center justify-between text-xs tabular-nums text-muted-foreground">
+            <span>Kalan {formatAmount(totalAvailable)}</span>
+            <span>Limit {formatAmount(totalLimit)}</span>
+          </div>
+        </div>
+      ) : null}
 
       <div className="mt-4 grid gap-3 xl:grid-cols-2">
         {items.map(({ card, latestReconciliation, openStatement, reconciliationStatus, scheduledInstallmentTotal }) => {

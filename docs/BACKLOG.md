@@ -1,5 +1,31 @@
 # Priority Backlog
 
+## 2026-07-28 — Fonksiyonel revizyon (Faz G, devam ediyor)
+
+Görsel revizyondan (Nocturne) sonra fonksiyonel tur. Canlı denetimde (yerel seed +
+tarayıcı) çıkan iki kalıp: (a) panel ayıklaması dashboard'a uygulanmış ama Hesaplar
+ve Analiz'de aynı rakamlar tekrar ediyordu; (b) birkaç gerçek boşluk (kasa modu,
+hedef önerisi, push v1.1) hâlâ açıktı. Kullanıcı dört yönü de kapsama aldı; sıralı
+plan G1→G5.
+
+- ~~**G1 — Hesaplar Özet + Analiz tekrar ayıklama.**~~ DONE. Masaüstünde kart borcu
+  kırılımı 4 yerde (CardControlCenter, CreditCardOverview, LiveReconciliation +
+  kompakt tekrar), Analiz'de kategori dağılımı 2 yerde görünüyordu. Kök neden:
+  `CreditCardOverview` her viewport'ta, `CardControlCenter` yalnız `md:block` →
+  masaüstünde ikisi birden. Çözüm: `CreditCardOverview` artık `md:hidden` (mobil
+  yüzey; masaüstünde CardControlCenter asıl yüzey, 2026-07-24'te öyle kurulmuştu).
+  Masaüstünde kaybolmasın diye limit kullanımı (`buildLimitGroupSummaries` ile
+  paylaşımlı limit doğru toplanır) `CardControlCenter`'a taşındı. Analiz'de
+  `MonthlyReport`'un inline "Kategori dağılımı" listesi kaldırıldı; kategori tek
+  yerde (`CategorySpendingChart` — CompositionBar + içgörü). "Geçen aya göre"
+  değişim özeti korundu. PDF (`window.print`) ve paylaşım kartı (`renderShareableCard`
+  `summary` nesnesinden) DOM'a bağlı olmadığı için export'lar etkilenmedi. 1280px ve
+  375px tarayıcıda doğrulandı; finans matematiği değişmedi.
+- **G2 — Bugünün Odağı'na yerinde tek-tıkla ödeme/mutabakat.** (Sırada)
+- **G3 — Hedef bazlı birikim önerisi + Kasa modu (bucket → gerçek harcanabilir).**
+- **G4 — Tekrar eden kart harcaması / son harcamayı tekrarla.**
+- **G5 — Web Push v1.1: tür toggle'ları + sessiz saatler + son çalışma durumu.**
+
 ## 2026-07-27 — Modern UI/UX dönüşümü, ilk dilim (DONE)
 
 - ~~Ortak tasarım dili ve uygulama kabuğu.~~ DONE. Açık/koyu tema token'ları
