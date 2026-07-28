@@ -50,7 +50,14 @@ plan G1→G5.
     düşer (`safeToSpend.ts`'e `reserved` alanı + 2 test). Planlama katmanı;
     gerçek bakiye/ledger DEĞİŞMEZ. Bu, "kasa modu / spendable balance" P2 açık
     maddesini kapatır.
-- **G4 — Tekrar eden kart harcaması / son harcamayı tekrarla.**
+- ~~**G4 — Tekrar eden kart harcaması / son harcamayı tekrarla.**~~ DONE.
+  `cardsRepo.fetchRecentCardExpenses` son 40 kesinleşmiş hareketi veri katmanından
+  yükler; `utils/expenseRepeat.ts` yalnız peşin hareketleri açıklama bazında
+  Türkçe arama normalizasyonuyla tekilleştirip en yeni 6 öneriyi üretir. Hızlı
+  harcama panelindeki çip tek dokunuşla kart, tutar, açıklama ve kategoriyi forma
+  doldurur; kullanıcı kaydetmeden önce alanları değiştirebilir. Taksit/provizyon
+  akışları bilinçli olarak tekrar önerisine girmez. Kayıt sonrasında öneriler
+  tazelenir; saf seçim davranışı 4 birim testiyle korunur.
 - **G5 — Web Push v1.1: tür toggle'ları + sessiz saatler + son çalışma durumu.**
 
 ## 2026-07-27 — Modern UI/UX dönüşümü, ilk dilim (DONE)

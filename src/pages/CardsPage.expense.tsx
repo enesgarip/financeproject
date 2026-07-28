@@ -1,12 +1,13 @@
-import { Camera, Image as ImageIcon, ScanLine } from 'lucide-react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { Camera, Image as ImageIcon, RotateCcw, ScanLine } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { CategoryPicker } from '../components/finance/CategoryPicker'
 import { MoneyInput } from '../components/finance/MoneyInput'
 import { Badge } from '../components/ui/badge'
 import { Card as SurfaceCard, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { invalidateCategoryMemory, useCategoryMemory } from '../hooks/useCategoryMemory'
-import { addCardExpense, recordCardInstallmentCarryover } from '../data/repositories/cardsRepo'
-import type { Card, CardExpenseStatus } from '../types/database'
+import { addCardExpense, fetchRecentCardExpenses, recordCardInstallmentCarryover } from '../data/repositories/cardsRepo'
+import type { Card, CardExpense, CardExpenseStatus } from '../types/database'
+import { buildRepeatSuggestions, type RepeatSuggestion } from '../utils/expenseRepeat'
 import { expenseCategoryOptions } from '../utils/categories'
 import { getCardStatementPeriod } from '../utils/cardStatement'
 import { dateInputValue, formatDate } from '../utils/date'
@@ -50,7 +51,9 @@ export function QuickExpensePanel({
   const cameraInputRef = useRef<HTMLInputElement>(null)
   const galleryInputRef = useRef<HTMLInputElement>(null)
   const categoryMemory = useCategoryMemory()
+  const [recentExpenses, setRecentExpenses] = useState<CardExpense[]>([])
   const cards = useMemo(() => rows.filter((row) => row.card_type === 'kredi_karti' || row.card_type === 'banka_karti'), [rows])
+  const repeatSuggestions = useMemo(() => buildRepeatSuggestions(recentExpenses), [recentExpenses])
   const activeCardId = cards.some((card) => card.id === cardId) ? cardId : (cards[0]?.id ?? '')
   const selectedCard = cards.find((card) => card.id === activeCardId)
   const canUseInstallments = selectedCard?.card_type === 'kredi_karti'
@@ -91,6 +94,32 @@ export function QuickExpensePanel({
       setInstallmentCount((current) => (Number(current) < 2 ? '2' : current))
     }
   }, [cards, focusCardId, focusMode, focusNonce])
+
+  // Son harcamalar "tekrarla" çipleri için; kaydettikten sonra da tazelenir.
+  const loadRecent = useCallback(async () => {
+    const result = await fetchRecentCardExpenses(40)
+    if (result.ok) setRecentExpenses(result.data)
+  }, [])
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void loadRecent()
+  }, [loadRecent])
+
+  function applyRepeat(suggestion: RepeatSuggestion) {
+    if (cards.some((card) => card.id === suggestion.cardId)) {
+      setCardId(suggestion.cardId)
+      setLastUsed('expenseCard', suggestion.cardId)
+    }
+    setAmount(String(suggestion.amount))
+    setDescription(suggestion.description)
+    setCategory(suggestion.category)
+    setPaymentMode('cash')
+    setPaidInstallments('0')
+    setExpenseStatus('posted')
+    setPrefilledByScan(false)
+    setLocalError('')
+  }
 
   async function handleScanFile(file: File) {
     setScanning(true)
@@ -177,7 +206,7 @@ export function QuickExpensePanel({
     setNextDueDate(dateInputValue(new Date()))
     setExpenseStatus('posted')
     setPrefilledByScan(false)
-    await reload()
+    await Promise.all([reload(), loadRecent()])
   }
 
   if (cards.length === 0) return null
@@ -251,6 +280,26 @@ export function QuickExpensePanel({
               </button>
             </div>
           )}
+          {repeatSuggestions.length > 0 ? (
+            <div className="flex flex-col gap-1.5">
+              <p className="text-xs font-semibold text-muted-foreground">Son harcamalar · tek dokunuşla tekrarla</p>
+              <div className="flex flex-wrap gap-1.5">
+                {repeatSuggestions.map((suggestion) => (
+                  <button
+                    key={`${suggestion.description}-${suggestion.amount}`}
+                    type="button"
+                    onClick={() => applyRepeat(suggestion)}
+                    className="tap-target inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground transition hover:border-success/40 hover:bg-success/8"
+                    aria-label={`${suggestion.description} harcamasını tekrarla`}
+                  >
+                    <RotateCcw size={12} className="text-muted-foreground" />
+                    <span className="max-w-[9rem] truncate">{suggestion.description}</span>
+                    <span className="tabular-nums text-muted-foreground">{displayAmount(suggestion.amount)}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
           <label className="block text-sm font-semibold text-foreground">
             Kart
             <select
