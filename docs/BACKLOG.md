@@ -40,9 +40,16 @@ plan G1→G5.
     ayır/kısmi/ara-ver önerir (yapısal döner, mesajı panel `formatAmount` ile kurar
     → bakiye gizlemeye saygılı). `SavingsGoalsPanel` kart başına "Aylık gerekli"
     satırı + üstte tavsiye banner'ı. Tarayıcıda doğrulandı.
-  - **G3b — Kasa modu.** (Sırada) Yeni `kasa_buckets` tablosu (RLS + grant),
-    repo, banka bakiyesini kovalara ayıran UI, dashboard'da "gerçek harcanabilir".
-    Migration = üretim DB; yerel Postgres'te RLS/grant denetimiyle doğrulanacak.
+  - ~~**G3b — Kasa modu.**~~ DONE. Yeni `kasa_buckets` tablosu (migration
+    `20260728120000`, RLS own-row + explicit grant + `set_updated_at` trigger;
+    yerel docker'da `db:reset` + RLS/grant denetimi temiz). `kasaBucketsRepo`
+    (CRUD, Result<T>), `utils/kasaMode.ts` (+4 test: `totalReservedTL`,
+    `spendableAfterReserves` — likit − rezerve, aşırı ayırmada negatif). Yönetim
+    UI'ı `KasaModuPanel` (PlanningPage'de, Likit/Rezerve/Harcanabilir + CRUD).
+    Dashboard `SafeToSpendCard` kovaları çekip rezervi "bu ay harcanabilir"den
+    düşer (`safeToSpend.ts`'e `reserved` alanı + 2 test). Planlama katmanı;
+    gerçek bakiye/ledger DEĞİŞMEZ. Bu, "kasa modu / spendable balance" P2 açık
+    maddesini kapatır.
 - **G4 — Tekrar eden kart harcaması / son harcamayı tekrarla.**
 - **G5 — Web Push v1.1: tür toggle'ları + sessiz saatler + son çalışma durumu.**
 
@@ -384,10 +391,10 @@ Canlı uygulama + kod incelemesinden çıkan bulgular tek pakette kapatıldı:
   - 2026-07-24: `/kartlar` özetinin başına ekstre, dönem içi, provizyon, gelecek taksit ve son gerçek banka mutabakatını kart bazında birleştiren `CardControlCenter` eklendi. Durumlar `mutabık / fark var / kontrol zamanı / hiç kontrol edilmedi`; gerçek banka borcu aynı özet içindeki `LiveReconciliationPanel` ile girilip düzeltilebilir. Eski kart içi yüzde etiketi bankayla karışmaması için "İç veri sağlığı" oldu.
 - ~~Add bucket tracking to card_ledger for derivable debt breakdown.~~ DONE.
   - 2026-07-24: `card_ledger`'a 3 nullable bucket delta sütunu (`statement_delta_kurus`, `current_delta_kurus`, `provision_delta_kurus`) ve `reclass` kind eklendi. AFTER trigger her yazımda kova deltalarını otomatik kaydeder. `projectCardSplit(events)` TS projeksiyonu, DataHealth bucket drift kontrolü, `recompute_card_debt_from_ledger` bucket-aware RPC. 200-satır ledger fetch limiti kaldırıldı. `LiveReconciliationPanel`'a hızlı mutabakat ("Farkı düzelt") butonu eklendi — banka rakamını girip tek tıkla auditable correction, PDF import'suz.
-- Add "kasa modu" / spendable balance planning.
-  - Let bank balances be mentally allocated into buckets such as emergency fund, taxes/insurance, vacation, investment, and spendable cash.
-  - Keep the underlying bank balance unchanged; this is a planning overlay, not a ledger movement.
-  - Surface "harcanabilir bakiye" on Dashboard so the user sees what is safe to spend after reserved buckets.
+- ~~Add "kasa modu" / spendable balance planning.~~ DONE (2026-07-28, Faz G/Madde 3b).
+  - `kasa_buckets` tablosu + `KasaModuPanel` (PlanningPage): banka bakiyesi acil fon,
+    vergi, tatil gibi kovalara ayrılır; gerçek bakiye değişmez (planlama overlay'i).
+  - Dashboard `SafeToSpendCard` rezerve kovaları "bu ay harcanabilir"den düşer.
 - ~~Add a concise developer-oriented architecture note for each major page.~~ DONE for DashboardPage, CardsPage, and DataHealthPage.
 - ~~Keep `docs/AI_CONTEXT_INDEX.md` current so future AI sessions can route to the right files with less repo scanning.~~ DONE.
   - 2026-06-15 context index reflects current route/module splits, DataHealth guide/action modules, dashboard component modules, backup utilities, data-health summary, and verification playbooks.

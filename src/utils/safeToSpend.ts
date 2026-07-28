@@ -26,6 +26,8 @@ export type SafeToSpendInput = {
   remainingOutflow: number
   /** Kullanıcının dokunulmaz tamponu. */
   buffer: number
+  /** Kasa modu kovalarında ayrılan toplam (varsa); tampon gibi düşülür. */
+  reserved?: number
 }
 
 export type SafeToSpendResult = {
@@ -49,7 +51,9 @@ export function buildSafeToSpend(input: SafeToSpendInput): SafeToSpendResult {
   const available = sumTL([Math.max(0, input.liquidCash), Math.max(0, input.expectedIncome)])
   const outflow = Math.max(0, input.remainingOutflow)
   const beforeBuffer = diffTL(available, outflow)
-  const amount = diffTL(beforeBuffer, Math.max(0, input.buffer))
+  // Tampon + kasa rezervi birlikte düşülür; ikisi de "dokunulmaz ayrılmış" para.
+  const reserves = sumTL([Math.max(0, input.buffer), Math.max(0, input.reserved ?? 0)])
+  const amount = diffTL(beforeBuffer, reserves)
 
   return {
     amount: roundTL(amount),

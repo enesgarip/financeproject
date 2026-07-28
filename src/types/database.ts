@@ -366,6 +366,13 @@ export type WishlistItem = BaseRow & {
   note: string | null
 }
 
+export type KasaBucket = BaseRow & {
+  name: string
+  reserved_amount: number
+  sort_order: number
+  note: string | null
+}
+
 export type SalaryHistory = BaseRow & {
   title: string
   amount: number
@@ -418,6 +425,7 @@ export type Database = {
       payments: Table<Payment, WithBaseInsert<Payment>, WithBaseUpdate<Payment>>
       transaction_history: Table<TransactionHistory, WithBaseInsert<TransactionHistory>, WithBaseUpdate<TransactionHistory>>
       wishlist_items: Table<WishlistItem, WithBaseInsert<WishlistItem>, WithBaseUpdate<WishlistItem>>
+      kasa_buckets: Table<KasaBucket, WithBaseInsert<KasaBucket>, WithBaseUpdate<KasaBucket>>
       salary_history: Table<SalaryHistory, WithBaseInsert<SalaryHistory>, WithBaseUpdate<SalaryHistory>>
       net_worth_snapshots: Table<NetWorthSnapshot, WithBaseInsert<NetWorthSnapshot>, WithBaseUpdate<NetWorthSnapshot>>
       gold_lots: Table<GoldLot, WithBaseInsert<GoldLot>, WithBaseUpdate<GoldLot>>

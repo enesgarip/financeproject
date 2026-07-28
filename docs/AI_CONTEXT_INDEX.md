@@ -241,6 +241,7 @@ paylaşır; her sayfa süpersetini client-side daraltır). Query client: `src/ap
 | **Aktivite akışı (audit trail)** | `utils/activityFeed.ts` | `data/repositories/financePanelsRepo.ts` | `pages/AnalysisPage.activity.tsx` (ActivityFeedPanel) |
 | **Kart tutarlılık skoru** | `utils/cardConsistency.ts` (+ test) | — | `pages/CardsPage.list.tsx` (skor badge) |
 | **Bütçe & birikim hedefleri (planlama)** | `utils/savingsGoal.ts`, `utils/budgetAlerts.ts` | `data/repositories/savingsGoalsRepo.ts` | `pages/PlanningHub.tsx`, `pages/PlanningPage.tsx`, `components/finance/SavingsGoalsPanel.tsx` |
+| **Kasa modu (bucket → gerçek harcanabilir)** | `utils/kasaMode.ts` (+test; likit − rezerve), `utils/safeToSpend.ts` (`reserved` alanı) | `data/repositories/kasaBucketsRepo.ts`, `supabase/migrations/20260728120000_add_kasa_buckets.sql` | `components/finance/KasaModuPanel.tsx` (PlanningPage), `components/dashboard/SafeToSpendCard.tsx` (rezerve düşülür) |
 | **Alışveriş listesi** | — | `data/repositories/wishlistRepo.ts` | `pages/WishlistPage.tsx` |
 | **Finansal rapor (PDF/AI paylaşım)** | `utils/financialReport.ts` | — | `pages/AnalysisDetailPage.tsx`, `pages/AnalysisPage.reports.tsx` |
 | **Aylık özet / kategori dağılımı** | `utils/monthlySummary.ts` | — | `pages/AnalysisPage.reports.tsx` (MonthlyReport) |

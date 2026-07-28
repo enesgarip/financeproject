@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { useFinanceSnapshot } from '../app/useFinanceSnapshot'
 import { CrudPage, type FormField } from '../components/CrudPage'
+import { KasaModuPanel } from '../components/finance/KasaModuPanel'
 import { SavingsGoalsPanel } from '../components/finance/SavingsGoalsPanel'
 import type { Budget } from '../types/database'
 import { expenseCategoryOptions } from '../utils/categories'
@@ -52,19 +53,21 @@ export function PlanningPage() {
     [snapshotQuery.data],
   )
 
-  // Bu ayki harcanabilir (safeToSpend) — birikim önerisine "bu ay ayır / ara ver"
-  // bağlamı verir. Dashboard SafeToSpendCard ile aynı hesap.
-  const monthlySurplus = useMemo(() => {
+  // Likit nakit (banka + nakit varlık) ve bu ayki harcanabilir (safeToSpend).
+  // Likit → kasa modu kova hesabı; surplus → birikim önerisi "ayır / ara ver" bağlamı.
+  // Dashboard SafeToSpendCard ile aynı hesap.
+  const { liquidCash, monthlySurplus } = useMemo(() => {
     const data = snapshotQuery.data
-    if (!data) return undefined
+    if (!data) return { liquidCash: 0, monthlySurplus: undefined as number | undefined }
     const position = buildFinancialPosition(data)
     const cashFlow = buildMonthlyCashFlow(data)
-    return buildSafeToSpend({
+    const surplus = buildSafeToSpend({
       liquidCash: position.totalCashAssets,
       expectedIncome: cashFlow.expectedIncome,
       remainingOutflow: cashFlow.remainingOutflow,
       buffer: readSafeToSpendBuffer(),
     }).amount
+    return { liquidCash: position.totalCashAssets, monthlySurplus: surplus }
   }, [snapshotQuery.data])
 
   const canManageBudgets = !missingTables.includes('budgets')
@@ -77,6 +80,8 @@ export function PlanningPage() {
   return (
     <section className="space-y-8">
       {canManageGoals ? <SavingsGoalsPanel monthlySurplus={monthlySurplus} /> : null}
+
+      <KasaModuPanel liquidCash={liquidCash} />
 
       {canManageBudgets ? (
         <CrudPage

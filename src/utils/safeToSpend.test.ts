@@ -14,6 +14,31 @@ describe('buildSafeToSpend', () => {
     expect(result.isNegative).toBe(false)
   })
 
+  it('kasa rezervi tampon gibi düşülür', () => {
+    const result = buildSafeToSpend({
+      liquidCash: 60000,
+      expectedIncome: 0,
+      remainingOutflow: 10000,
+      buffer: 5000,
+      reserved: 25000,
+    })
+    // 60000 − 10000 − 5000 − 25000 = 20000
+    expect(result.amount).toBe(20000)
+    expect(result.isNegative).toBe(false)
+  })
+
+  it('rezerve fazlaysa negatiflik obligation değil buffer sebeplidir', () => {
+    const result = buildSafeToSpend({
+      liquidCash: 20000,
+      expectedIncome: 0,
+      remainingOutflow: 0,
+      buffer: 5000,
+      reserved: 30000,
+    })
+    expect(result.isNegative).toBe(true)
+    expect(result.negativeCause).toBe('buffer')
+  })
+
   it('maaş henüz yatmadıysa beklenen geliri ekler', () => {
     const result = buildSafeToSpend({
       liquidCash: 10000,
