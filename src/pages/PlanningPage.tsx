@@ -8,7 +8,22 @@ import { dateInputValue, startOfMonth } from '../utils/date'
 import { parseNumber } from '../utils/formatCurrency'
 import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
 import { formatMonth } from '../utils/analysisView'
+import { buildFinancialPosition, buildMonthlyCashFlow } from '../utils/financeSummary'
+import { buildSafeToSpend, DEFAULT_BUFFER } from '../utils/safeToSpend'
 import { BudgetProgress } from './AnalysisPage.panels'
+
+// SafeToSpendCard ile aynı localStorage anahtarı (tampon kullanıcı tercihi, cihaza özel).
+const BUFFER_KEY = 'denge:safe-to-spend-buffer'
+
+function readSafeToSpendBuffer() {
+  try {
+    const raw = localStorage.getItem(BUFFER_KEY)
+    const parsed = raw != null ? Number(raw) : Number.NaN
+    return Number.isFinite(parsed) && parsed >= 0 ? parsed : DEFAULT_BUFFER
+  } catch {
+    return DEFAULT_BUFFER
+  }
+}
 
 const budgetFields: FormField[] = [
   { name: 'month', label: 'Ay', type: 'date', required: true },
@@ -37,6 +52,21 @@ export function PlanningPage() {
     [snapshotQuery.data],
   )
 
+  // Bu ayki harcanabilir (safeToSpend) — birikim önerisine "bu ay ayır / ara ver"
+  // bağlamı verir. Dashboard SafeToSpendCard ile aynı hesap.
+  const monthlySurplus = useMemo(() => {
+    const data = snapshotQuery.data
+    if (!data) return undefined
+    const position = buildFinancialPosition(data)
+    const cashFlow = buildMonthlyCashFlow(data)
+    return buildSafeToSpend({
+      liquidCash: position.totalCashAssets,
+      expectedIncome: cashFlow.expectedIncome,
+      remainingOutflow: cashFlow.remainingOutflow,
+      buffer: readSafeToSpendBuffer(),
+    }).amount
+  }, [snapshotQuery.data])
+
   const canManageBudgets = !missingTables.includes('budgets')
   const canManageGoals = !missingTables.includes('savings_goals')
 
@@ -46,7 +76,7 @@ export function PlanningPage() {
 
   return (
     <section className="space-y-8">
-      {canManageGoals ? <SavingsGoalsPanel /> : null}
+      {canManageGoals ? <SavingsGoalsPanel monthlySurplus={monthlySurplus} /> : null}
 
       {canManageBudgets ? (
         <CrudPage

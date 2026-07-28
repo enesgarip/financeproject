@@ -232,7 +232,7 @@ paylaşır; her sayfa süpersetini client-side daraltır). Query client: `src/ap
 | **Varlıklar / değerleme / al-sat** | `utils/valuation.ts`, `utils/valuationSync.ts`, `utils/realValue.ts` | `data/repositories/valuationRepo.ts`, `services/assetTrades.ts`, `analysisRepo.ts` | `pages/AssetsPage.tsx`, `pages/AssetsPage.tradeModal.tsx`, `AssetsHub.tsx` |
 | **Altın (gram/ledger)** | `utils/goldLedger.ts`, `utils/goldLedgerSync.ts`, `utils/zakat.ts` | `data/repositories/goldLedgerRepo.ts` | `pages/GoldPage.tsx` |
 | **Maaş geçmişi** | `utils/lastUsed.ts`, `utils/financeSummary.ts` (`getCurrentSalary`, `getSalaryTrend`) | `data/repositories/crudRepo.ts` | `pages/SalaryPage.tsx` |
-| **Birikim hedefleri** | `utils/savingsGoal.ts` | `data/repositories/savingsGoalsRepo.ts` | (Assets/Dashboard) |
+| **Birikim hedefleri** | `utils/savingsGoal.ts`, `utils/savingsSuggestion.ts` (aylık gerekli + nakit-akışı tavsiyesi) | `data/repositories/savingsGoalsRepo.ts` | `components/finance/SavingsGoalsPanel.tsx` (Assets/Dashboard); surplus `pages/PlanningPage.tsx`'ten geçer |
 | **Bütçe uyarıları** | `utils/budgetAlerts.ts` | `data/repositories/crudRepo.ts` | `pages/CardsPage.tsx` |
 | **Dashboard özet/insight** | `utils/dashboardInsights.ts`, `utils/cashFlowForecast.ts`, `utils/dashboardUpcoming.ts`, `utils/obligations.ts`, `utils/financeObligationRules.ts`, `utils/netWorthSeries.ts`, `utils/dataHealthSummary.ts` | `data/repositories/financeSnapshotRepo.ts` | `pages/DashboardPage.tsx` |
 | **Gerçekleşen nakit çıkışı (rapor)** | `utils/realizedCashFlow.ts` (+ test; projeksiyon DEĞİL, işlem geçmişinden) | `financeSnapshotRepo.ts` | `pages/AnalysisPage.reports.tsx` (MonthlyReport) |

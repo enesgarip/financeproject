@@ -31,7 +31,18 @@ plan G1→G5.
   `useInvalidateFinanceSnapshot` ile cache tazelenir. Tarayıcıda uçtan uca
   doğrulandı: Kira ödendi → listeden düştü, sıradaki vade öne geldi. Yeni finans
   matematiği yok.
-- **G3 — Hedef bazlı birikim önerisi + Kasa modu (bucket → gerçek harcanabilir).**
+- **G3 — Hedef bazlı birikim önerisi + Kasa modu.** (Kullanıcı: Supabase tablo +
+  ikisini de.) İki parça:
+  - ~~**G3a — Birikim önerisi.**~~ DONE. `utils/savingsSuggestion.ts` (+10 test):
+    `buildSavingsSuggestion` hedefe/hedef tarihe göre aylık gerekli tutarı verir
+    (TRY tutar, altın birim, composite desteklenmez); `buildSavingsCashflowAdvice`
+    bu ayki harcanabilirle (safeToSpend, PlanningPage'ten geçer) kıyaslayıp
+    ayır/kısmi/ara-ver önerir (yapısal döner, mesajı panel `formatAmount` ile kurar
+    → bakiye gizlemeye saygılı). `SavingsGoalsPanel` kart başına "Aylık gerekli"
+    satırı + üstte tavsiye banner'ı. Tarayıcıda doğrulandı.
+  - **G3b — Kasa modu.** (Sırada) Yeni `kasa_buckets` tablosu (RLS + grant),
+    repo, banka bakiyesini kovalara ayıran UI, dashboard'da "gerçek harcanabilir".
+    Migration = üretim DB; yerel Postgres'te RLS/grant denetimiyle doğrulanacak.
 - **G4 — Tekrar eden kart harcaması / son harcamayı tekrarla.**
 - **G5 — Web Push v1.1: tür toggle'ları + sessiz saatler + son çalışma durumu.**
 
