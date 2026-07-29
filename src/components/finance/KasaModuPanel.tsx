@@ -1,4 +1,4 @@
-import { PiggyBank, Plus, Pencil, Trash2, Wallet } from 'lucide-react'
+import { Boxes, Plus, Pencil, Trash2, Wallet } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { useAuth } from '../../auth/useAuth'
 import {
@@ -174,7 +174,7 @@ export function KasaModuPanel({ liquidCash }: { liquidCash: number }) {
         <Card className="border border-dashed border-border/70 bg-muted/20 shadow-none">
           <CardContent className="flex flex-col items-center gap-2 p-8 text-center">
             <div className="grid size-14 place-items-center rounded-2xl bg-primary/8 text-primary/60">
-              <PiggyBank size={28} />
+              <Boxes size={28} />
             </div>
             <p className="text-sm font-semibold text-foreground">Henüz kova yok</p>
             <p className="text-xs text-muted-foreground">Acil fon, vergi, tatil gibi kovalar ekleyerek başla.</p>
