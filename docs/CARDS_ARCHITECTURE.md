@@ -70,6 +70,9 @@ lazy boundary.
   primary action. Their list is capped at two desktop columns so balance,
   movement, statement, and limit information never collapses into a narrow
   tile.
+- The credit-card signature surface must leave overflow visible because the row
+  action menu is anchored inside it. Keep decorative clipping on the dedicated
+  absolute decoration layer so mobile menus can extend beyond the blue surface.
 - Do not render `CreditCardOverview` when there is no credit-card limit group;
   the account hub already owns cash-only summary.
 

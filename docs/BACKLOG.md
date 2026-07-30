@@ -109,6 +109,9 @@ plan G1→G5.
   kartları iki sütun, mobilde tam genişlik. Ortak aksiyonlarda `Button`
   primitive'i kullanılıyor; finans davranışı değişmedi. Local gerçek veriyle
   1440px masaüstü ve 390px mobil doğrulandı.
+- 2026-07-30 mobil regresyonu: kredi kartı satır menüsü mavi imza yüzeyinin
+  `overflow-hidden` kuralıyla kesiliyordu. Dekorasyon kendi katmanında kırpılmaya
+  devam ederken imza yüzeyi menü taşmasına açıldı.
 - ~~Etkileşim kalitesi denetimi, beşinci dilim.~~ DONE. Görsel mimari yerinde
   ama dokunma/erişilebilirlik katmanı geride kalmıştı; 14 route 1440px ve 390px'te
   tarayıcıda ölçüldü (taşma, hedef boyutu, erişilebilir ad, kontrast):
