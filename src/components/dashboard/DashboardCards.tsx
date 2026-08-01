@@ -1,5 +1,6 @@
-import { Search } from 'lucide-react'
+import { ArrowRightLeft, CreditCard, HandCoins, Landmark, Receipt, Search, Wallet, Wrench, type LucideIcon } from 'lucide-react'
 import { useDeferredValue, useMemo, useState } from 'react'
+import { cn } from '../../lib/utils'
 import { EmptyState } from '../EmptyState'
 import { Badge } from '../ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card'
@@ -89,9 +90,13 @@ export function HistorySection({ rows }: { rows: TransactionHistory[] }) {
                 <span className="h-px flex-1 bg-gradient-to-r from-border to-transparent" />
               </div>
               <div className="space-y-2">
-                {group.rows.map((row) => (
+                {group.rows.map((row) => {
+                  const meta = historyTypeMeta[row.type]
+                  return (
                   <article key={row.id} className="flex gap-3 rounded-lg border border-border/75 bg-card/80 p-3 shadow-sm">
-                    <div className={`mt-1 size-2.5 shrink-0 rounded-full ${historyDotClass(row.type)}`} aria-hidden="true" />
+                    <div className={cn('mt-0.5 grid size-7 shrink-0 place-items-center rounded-lg', meta.chip)} aria-label={meta.label}>
+                      <meta.icon size={15} strokeWidth={2.25} />
+                    </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
@@ -107,7 +112,8 @@ export function HistorySection({ rows }: { rows: TransactionHistory[] }) {
                       {row.note ? <p className="mt-2 text-xs leading-5 text-muted-foreground">{row.note}</p> : null}
                     </div>
                   </article>
-                ))}
+                  )
+                })}
               </div>
             </section>
           ))}
@@ -145,18 +151,17 @@ function formatHistoryDay(value: string) {
   }).format(date)
 }
 
-function historyDotClass(type: TransactionHistoryType) {
-  const classes: Record<TransactionHistoryType, string> = {
-    payment: 'bg-amber-500',
-    transfer: 'bg-sky-500',
-    loan: 'bg-rose-500',
-    debt: 'bg-violet-500',
-    card: 'bg-emerald-500',
-    correction: 'bg-stone-500',
-    asset: 'bg-teal-500',
-  }
-
-  return classes[type]
+// İşlem türü → ikon + tonlu chip. Renk kimliği aynı kaldı (tür rengi), üstüne
+// tanınabilir bir ikon eklendi: uzun akışta tür tek bakışta ayrışsın (renk tek
+// başına taşımasın — renk körü-güvenli ikincil kanal).
+const historyTypeMeta: Record<TransactionHistoryType, { icon: LucideIcon; chip: string; label: string }> = {
+  payment:    { icon: Receipt,        chip: 'bg-amber-500/12 text-amber-500',   label: 'Ödeme' },
+  transfer:   { icon: ArrowRightLeft, chip: 'bg-sky-500/12 text-sky-500',       label: 'Transfer' },
+  loan:       { icon: Landmark,       chip: 'bg-rose-500/12 text-rose-500',     label: 'Kredi' },
+  debt:       { icon: HandCoins,      chip: 'bg-violet-500/12 text-violet-500', label: 'Borç' },
+  card:       { icon: CreditCard,     chip: 'bg-emerald-500/12 text-emerald-500', label: 'Kart' },
+  correction: { icon: Wrench,         chip: 'bg-stone-500/12 text-stone-500',   label: 'Düzeltme' },
+  asset:      { icon: Wallet,         chip: 'bg-teal-500/12 text-teal-500',     label: 'Varlık' },
 }
 
 function formatHistoryDate(value: string) {
