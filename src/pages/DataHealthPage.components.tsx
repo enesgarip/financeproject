@@ -13,7 +13,10 @@ import {
 } from './DataHealth.guide'
 
 export function HealthStat({ label, value, tone = 'neutral' }: { label: string; value: number; tone?: 'neutral' | 'danger' | 'warning' | 'info' }) {
+  // Sıfır sayaç olumlu bir durum: "0 kritik" kırmızı yanıp göze batmasın —
+  // renk yalnızca gerçekten kayıt varken (value > 0) anlam taşır.
   const toneClass =
+    value === 0 ? 'text-muted-foreground' :
     tone === 'danger' ? 'text-destructive' :
     tone === 'warning' ? 'text-warning' :
     tone === 'info' ? 'text-info' :

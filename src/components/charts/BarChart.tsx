@@ -57,6 +57,11 @@ export function BarChart({
   const barPad = barGroupWidth * 0.32
   const barWidth = grouped ? (barGroupWidth - barPad * 2) / 2 : barGroupWidth - barPad * 2
 
+  // X ekseni etiket seyreltme: uzun serilerde (ör. 30 günlük) her noktaya etiket
+  // basınca yazılar üst üste biniyordu. Etiket başına ~44px ayır, aradan atla —
+  // ilk ve son nokta her zaman etiketli kalır.
+  const labelStep = Math.max(1, Math.ceil(data.length / Math.max(1, Math.floor(plotW / 44))))
+
   const hovered = hoverIndex !== null ? data[hoverIndex] : null
   const hoverX = hoverIndex !== null ? pad.left + hoverIndex * barGroupWidth + barGroupWidth / 2 : 0
 
@@ -138,16 +143,18 @@ export function BarChart({
                   />
                 ) : null}
 
-                {/* X label */}
-                <text
-                  x={groupX + barGroupWidth / 2}
-                  y={height - 4}
-                  textAnchor="middle"
-                  fill="var(--muted-foreground)"
-                  fontSize={11}
-                >
-                  {point.label}
-                </text>
+                {/* X label — seyreltilmiş (ilk/son daima) */}
+                {i % labelStep === 0 || i === data.length - 1 ? (
+                  <text
+                    x={groupX + barGroupWidth / 2}
+                    y={height - 4}
+                    textAnchor="middle"
+                    fill="var(--muted-foreground)"
+                    fontSize={11}
+                  >
+                    {point.label}
+                  </text>
+                ) : null}
               </g>
             )
           })}

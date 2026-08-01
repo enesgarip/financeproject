@@ -193,7 +193,7 @@ export function MonthlyReport({ data }: { data: AnalysisData }) {
         <div className="grid grid-cols-2 gap-2 min-[520px]:grid-cols-4">
           <StatPill label="Gelir" value={formatAmount(income)} tone="emerald" />
           <StatPill label="Kart harcaması" value={formatAmount(cardSpending)} tone="rose" />
-          <StatPill label="Nakit çıkışı (gerçekleşen)" value={formatAmount(outflow)} tone="rose" />
+          <StatPill label="Nakit çıkışı" value={formatAmount(outflow)} tone="rose" />
           <StatPill label="Net nakit" value={formatAmount(net)} tone={net >= 0 ? 'emerald' : 'rose'} />
         </div>
         <div className="grid gap-2 min-[520px]:grid-cols-2">
