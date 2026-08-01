@@ -65,6 +65,18 @@ export function QuickActions() {
   }, [])
 
   return (
+    <>
+      {/* Menü açıkken hafif karartma + dışa tıklayınca kapat: odağı menüye topla
+          ve tek çıkış yolu (X) olmasın. */}
+      {open ? (
+        <button
+          type="button"
+          aria-hidden
+          tabIndex={-1}
+          onClick={() => setOpenPath(null)}
+          className="fixed inset-0 z-30 cursor-default bg-black/30 backdrop-blur-[1px]"
+        />
+      ) : null}
     <div className="fixed bottom-[calc(env(safe-area-inset-bottom)+5.45rem)] right-4 z-40 flex flex-col items-end gap-3 lg:bottom-6 lg:right-6">
       {open ? (
         <div className="finance-command-surface w-[min(calc(100vw-2rem),24rem)] rounded-lg p-2">
@@ -121,5 +133,6 @@ export function QuickActions() {
         )}
       </button>
     </div>
+    </>
   )
 }

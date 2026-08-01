@@ -1,4 +1,4 @@
-import { Landmark } from 'lucide-react'
+import { CheckCircle2, Landmark } from 'lucide-react'
 import { Badge } from '../components/ui/badge'
 import { Card as SurfaceCard, CardContent } from '../components/ui/card'
 import type { Loan, LoanInstallment } from '../types/database'
@@ -10,7 +10,26 @@ import { nextPendingInstallment } from './LoansPage.helpers'
 export function LoanOverview({ loans, installments }: { loans: Loan[]; installments: LoanInstallment[] }) {
   const { formatAmount } = useBalancePrivacy()
   const activeLoans = loans.filter((loan) => loan.status === 'active')
-  if (activeLoans.length === 0) return null
+  if (activeLoans.length === 0) {
+    // Hiç kredi yoksa CrudPage'in kendi boş durumu devreye girer. Burada yalnızca
+    // "kredileri olan ama hepsi kapanmış" için büyük boşluk yerine olumlu bir kart.
+    if (loans.length === 0) return null
+    return (
+      <SurfaceCard variant="elevated" className="overflow-hidden">
+        <CardContent className="flex items-center gap-4 p-4 sm:p-5">
+          <div className="grid size-12 shrink-0 place-items-center rounded-2xl bg-success/12 text-success">
+            <CheckCircle2 className="size-6" />
+          </div>
+          <div className="min-w-0">
+            <p className="font-display text-base font-bold text-foreground sm:text-lg">Aktif kredin yok</p>
+            <p className="mt-0.5 text-sm text-muted-foreground">
+              Tüm kredilerin kapandı — aylık taksit yükün ₺0. Geçmiş planlar aşağıda.
+            </p>
+          </div>
+        </CardContent>
+      </SurfaceCard>
+    )
+  }
 
   const totalRemaining = sumTL(activeLoans.map((loan) => loan.remaining_amount))
   const totalMonthly = sumTL(activeLoans.map((loan) => loan.monthly_payment))

@@ -370,7 +370,8 @@ export function LoansPage() {
               <div className="mt-4 flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
                 <div className="min-w-0">
                   <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Kalan borç</p>
-                  <p className="mt-0.5 font-mono text-lg font-black tabular-nums text-destructive">{formatAmount(loan.remaining_amount)}</p>
+                  {/* Kapanmış kredide kalan borç 0 → olumlu durum; kırmızı yerine yeşil. */}
+                  <p className={`mt-0.5 font-mono text-lg font-black tabular-nums ${loan.remaining_amount > 0 ? 'text-destructive' : 'text-success'}`}>{formatAmount(loan.remaining_amount)}</p>
                 </div>
                 <div className="min-w-0">
                   <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Aylık taksit</p>

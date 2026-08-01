@@ -259,7 +259,7 @@ export function MetricCard({
   return (
     <div
       className={cn(
-        'group/metric relative min-w-0 overflow-hidden rounded-2xl border border-border/70 bg-card p-4 sm:p-5',
+        '@container/metric group/metric relative min-w-0 overflow-hidden rounded-2xl border border-border/70 bg-card p-4 sm:p-5',
         'shadow-[var(--shadow-card)] transition-[border-color,box-shadow] duration-250',
         'hover:shadow-[var(--shadow-card-hover)] hover:border-primary/20',
         'dark:ring-1 dark:ring-white/[0.04]',
@@ -284,8 +284,10 @@ export function MetricCard({
           ) : null}
         </div>
 
+        {/* Değer kartın KENDİ genişliğine göre ölçeklenir (cqi): 4 sütunlu dar
+            gridde 6+ haneli TL tutarları kırpılmadan/taşmadan sığsın. */}
         <p className={cn(
-          'finance-value text-[clamp(1.25rem,4vw,1.75rem)] font-bold leading-none',
+          'finance-value text-[clamp(1.1rem,7cqi,1.75rem)] font-bold leading-tight',
           toneTextClass[tone],
         )}>
           {value}
