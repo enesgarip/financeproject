@@ -792,6 +792,9 @@ describe('buildMonthlyCashFlow', () => {
   it('excludes salary from projectedCash when current month salary date has passed', () => {
     const now = new Date()
     const thisMonth = new Date(now.getFullYear(), now.getMonth(), 15)
+    // `today`'i açıkça ayın 15'ine sabitliyoruz: aksi halde gerçek duvar-saatine
+    // düşer ve ayın ilk iş gününden önce çalıştırılırsa (ör. hafta sonuna denk gelen
+    // ayın 1'i) salaryLikelyReceived=false olup maaş çift sayılır, test zamana bağlı kırılır.
     const flow = buildMonthlyCashFlow(
       {
         ...emptyInput,
@@ -800,6 +803,7 @@ describe('buildMonthlyCashFlow', () => {
         payments: [payment({ amount: 5000, due_date: `${thisMonth.toLocaleDateString('sv-SE').slice(0, 8)}15`, status: 'bekliyor' })],
       },
       thisMonth,
+      { today: thisMonth },
     )
     expect(flow.salaryIncome).toBe(20000)
     expect(flow.income).toBe(20000)

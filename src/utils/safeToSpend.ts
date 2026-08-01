@@ -53,10 +53,13 @@ export function buildSafeToSpend(input: SafeToSpendInput): SafeToSpendResult {
   const beforeBuffer = diffTL(available, outflow)
   // Tampon + kasa rezervi birlikte düşülür; ikisi de "dokunulmaz ayrılmış" para.
   const reserves = sumTL([Math.max(0, input.buffer), Math.max(0, input.reserved ?? 0)])
-  const amount = diffTL(beforeBuffer, reserves)
+  // Yuvarlamayı bir kez yap: isNegative/negativeCause ile gösterilen `amount`
+  // aynı değere baksın. Aksi halde -0.004 gibi bir uçta ekran "0 TL" gösterip
+  // isNegative=true verir (sahte kırmızı).
+  const amount = roundTL(diffTL(beforeBuffer, reserves))
 
   return {
-    amount: roundTL(amount),
+    amount,
     isNegative: amount < 0,
     negativeCause: amount >= 0 ? null : beforeBuffer < 0 ? 'obligations' : 'buffer',
     beforeBuffer: roundTL(beforeBuffer),

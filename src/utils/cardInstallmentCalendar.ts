@@ -53,7 +53,10 @@ export function buildCardInstallmentCalendar(
   const monthKeys = Array.from({ length: monthCount }, (_, index) => dateInputValue(addMonths(new Date(`${start}T00:00:00`), index)))
 
   return monthKeys.map((monthKey) => {
-    const monthInstallments = installments.filter((item) => item.status !== 'paid' && item.due_month.slice(0, 7) === monthKey.slice(0, 7))
+    // Yalnız 'scheduled' (gelecek, henüz borca girmemiş) taksitler. 'posted' zaten
+    // kartın dönem-içi/ekstre borcunda sayılıyor; takvime katarsak o ayı çift şişirir
+    // ve aynı panelin "kart başına toplam"ı (=== 'scheduled') ile çelişir.
+    const monthInstallments = installments.filter((item) => item.status === 'scheduled' && item.due_month.slice(0, 7) === monthKey.slice(0, 7))
     const byCard = new Map<string, CardInstallmentMonthRow>()
 
     for (const item of monthInstallments) {

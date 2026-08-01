@@ -46,7 +46,11 @@ export function summarizeGoldType(lots: GoldLot[], goldType: GoldType): GoldType
   const rows = lots.filter((lot) => lot.gold_type === goldType)
   let totalQuantity = 0
   let knownQuantity = 0
-  let knownCost = 0
+  // Ağırlıklı ortalama maliyet yöntemi: ortalama YALNIZ alışlardan türetilir.
+  // Satış elde kalanın maliyetini değiştirmez (satış fiyatı ortalamaya karışırsa,
+  // kârlı satış kalan altının maliyetini yapay düşürüp k/z'yi şişirir).
+  let buyQuantity = 0
+  let buyCost = 0
 
   for (const lot of rows) {
     const qty = Number(lot.quantity) || 0
@@ -54,17 +58,25 @@ export function summarizeGoldType(lots: GoldLot[], goldType: GoldType): GoldType
     totalQuantity += qty * sign
     if (lot.unit_price != null && Number.isFinite(lot.unit_price)) {
       knownQuantity += qty * sign
-      knownCost += qty * lot.unit_price * sign
+      if (lot.direction !== 'sell') {
+        buyQuantity += qty
+        buyCost += qty * lot.unit_price
+      }
     }
   }
+
+  const avgUnitCost = buyQuantity > 0 ? round2(buyCost / buyQuantity) : null
+  const heldKnownQuantity = Math.max(0, knownQuantity)
+  // Elde kalan bilinen-maliyetli miktarın maliyet tabanı = ortalama alış × kalan adet.
+  const knownCost = avgUnitCost != null ? round2(avgUnitCost * heldKnownQuantity) : 0
 
   return {
     goldType,
     totalQuantity: round4(Math.max(0, totalQuantity)),
-    knownQuantity: round4(Math.max(0, knownQuantity)),
+    knownQuantity: round4(heldKnownQuantity),
     unknownQuantity: round4(Math.max(0, totalQuantity - knownQuantity)),
-    knownCost: round2(Math.max(0, knownCost)),
-    avgUnitCost: knownQuantity > 0 ? round2(knownCost / knownQuantity) : null,
+    knownCost,
+    avgUnitCost,
   }
 }
 
@@ -93,19 +105,31 @@ export function buildGoldAccumulation(lots: GoldLot[], goldType?: GoldType): Gol
     .sort((a, b) => String(a.purchase_date).localeCompare(String(b.purchase_date)))
 
   let cumulativeQuantity = 0
-  let cumulativeCost = 0
+  // Maliyet havuzu ağırlıklı ortalama ile yürütülür: satış, maliyeti o anki
+  // ortalamadan düşer (satış fiyatından değil) — özet ile aynı yöntem.
+  let costPoolQuantity = 0
+  let costPool = 0
   const points: GoldAccumulationPoint[] = []
 
   for (const lot of dated) {
-    const sign = lot.direction === 'sell' ? -1 : 1
-    cumulativeQuantity += (Number(lot.quantity) || 0) * sign
+    const qty = Number(lot.quantity) || 0
+    const isSell = lot.direction === 'sell'
+    cumulativeQuantity += qty * (isSell ? -1 : 1)
     if (lot.unit_price != null && Number.isFinite(lot.unit_price)) {
-      cumulativeCost += (Number(lot.quantity) || 0) * lot.unit_price * sign
+      if (isSell) {
+        const avg = costPoolQuantity > 0 ? costPool / costPoolQuantity : 0
+        const removed = Math.min(qty, costPoolQuantity)
+        costPool -= avg * removed
+        costPoolQuantity -= removed
+      } else {
+        costPool += qty * lot.unit_price
+        costPoolQuantity += qty
+      }
     }
     points.push({
       date: String(lot.purchase_date),
       cumulativeQuantity: round4(cumulativeQuantity),
-      cumulativeCost: round2(cumulativeCost),
+      cumulativeCost: round2(Math.max(0, costPool)),
     })
   }
 

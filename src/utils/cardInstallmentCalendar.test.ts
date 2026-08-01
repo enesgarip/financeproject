@@ -78,14 +78,16 @@ describe('buildCardInstallmentCalendar', () => {
     expect(card2Row.count).toBe(1)
   })
 
-  it('excludes paid installments', () => {
+  it('excludes paid and posted installments (only scheduled = gelecek yük)', () => {
     const cards = [makeCard({ id: 'card-1' })]
     const now = new Date()
     const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
 
     const installments = [
       makeInstallment({ id: 'i1', card_id: 'card-1', amount: 100, due_month: currentMonth, status: 'paid' }),
-      makeInstallment({ id: 'i2', card_id: 'card-1', amount: 200, due_month: currentMonth, status: 'scheduled' }),
+      // 'posted' zaten kart borcunda; takvime katılmamalı (aksi halde çift sayım).
+      makeInstallment({ id: 'i2', card_id: 'card-1', amount: 300, due_month: currentMonth, status: 'posted' }),
+      makeInstallment({ id: 'i3', card_id: 'card-1', amount: 200, due_month: currentMonth, status: 'scheduled' }),
     ]
 
     const result = buildCardInstallmentCalendar(installments, cards, 1)
