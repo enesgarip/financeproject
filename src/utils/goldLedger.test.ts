@@ -43,7 +43,7 @@ describe('gold ledger summaries', () => {
     })
   })
 
-  it('subtracts sell lots from quantity and cost', () => {
+  it('sells reduce quantity but keep average buy cost (ağırlıklı ortalama)', () => {
     const summary = summarizeGoldType(
       [
         lot({ quantity: 5, unit_price: 3000 }),
@@ -54,7 +54,10 @@ describe('gold ledger summaries', () => {
 
     expect(summary.totalQuantity).toBe(3)
     expect(summary.knownQuantity).toBe(3)
-    expect(summary.knownCost).toBe(8000)
+    // Kalan 3 gramın maliyeti ortalama ALIŞ fiyatından: 3 × 3000 = 9000.
+    // Kârlı satış fiyatı (3500) kalan maliyeti düşürmez.
+    expect(summary.knownCost).toBe(9000)
+    expect(summary.avgUnitCost).toBe(3000)
   })
 
   it('returns one summary per used type in stable gram/ceyrek order', () => {
@@ -84,6 +87,22 @@ describe('gold accumulation chart data', () => {
       { date: '2026-06-01', cumulativeQuantity: 1, cumulativeCost: 2500 },
       { date: '2026-06-10', cumulativeQuantity: 3, cumulativeCost: 8500 },
       { date: '2026-06-15', cumulativeQuantity: 4, cumulativeCost: 8500 },
+    ])
+  })
+
+  it('satışta maliyeti o anki ortalamadan düşer (satış fiyatından değil)', () => {
+    const points = buildGoldAccumulation(
+      [
+        lot({ id: 'buy', purchase_date: '2026-06-01', quantity: 4, unit_price: 2000 }),
+        lot({ id: 'sell', purchase_date: '2026-06-10', quantity: 1, unit_price: 5000, direction: 'sell' }),
+      ],
+      'gram',
+    )
+
+    expect(points).toEqual([
+      { date: '2026-06-01', cumulativeQuantity: 4, cumulativeCost: 8000 },
+      // 1 gram satıldı → maliyet 8000/4 = 2000 düşer → 6000 (satış fiyatı 5000 değil).
+      { date: '2026-06-10', cumulativeQuantity: 3, cumulativeCost: 6000 },
     ])
   })
 })
