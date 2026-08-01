@@ -1,5 +1,27 @@
 import { describe, expect, it } from 'vitest'
-import { formatCompactCurrency, formatPercent } from './formatCurrency'
+import { formatCompactCurrency, formatPercent, parseNumber } from './formatCurrency'
+
+describe('parseNumber', () => {
+  it('"k" kısaltmasını 1000 ile çarpar (eskiden çarpan uygulanmıyordu → "5k" 5 veriyordu)', () => {
+    expect(parseNumber('5k')).toBe(5000)
+    expect(parseNumber('5K')).toBe(5000)
+    expect(parseNumber('2,5k')).toBe(2500)
+    expect(parseNumber('10k')).toBe(10000)
+  })
+
+  it('Türkçe ve İngilizce yazımı tek sayıya çevirir', () => {
+    expect(parseNumber('1.234,56')).toBe(1234.56)
+    expect(parseNumber('1234.56')).toBe(1234.56)
+    expect(parseNumber('₺1.000')).toBe(1000)
+    expect(parseNumber('1.500 TL')).toBe(1500)
+  })
+
+  it('boş/geçersiz girdi 0', () => {
+    expect(parseNumber('')).toBe(0)
+    expect(parseNumber(null)).toBe(0)
+    expect(parseNumber('abc')).toBe(0)
+  })
+})
 
 describe('formatPercent', () => {
   it('% sayıdan önce ve ondalık virgül (eskiden "16.2%" idi)', () => {

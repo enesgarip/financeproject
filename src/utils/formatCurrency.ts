@@ -85,5 +85,7 @@ export function parseNumber(value: FormDataEntryValue | null) {
   }
 
   const parsed = Number(normalized)
-  return Number.isFinite(parsed) ? parsed : 0
+  // multiplier ("5k" → 5000) sonuca uygulanır. Önceden hesaplanıp yalnız 'k'
+  // harfini kesmek için kullanılıyor, çarpılmıyordu → "5k" 5000 yerine 5 veriyordu.
+  return Number.isFinite(parsed) ? parsed * multiplier : 0
 }
