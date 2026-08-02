@@ -32,6 +32,15 @@ The database trigger `clamp_card_breakdown()` enforces this on writes. Its
 priority is statement first, then provision, then current period. The TypeScript
 twin is `clampCardBreakdown()` in `src/utils/financeSummary.ts`.
 
+> **2026-08-02 düzeltme (INC-01):** 20260625 migration'ı provizyonu geçici olarak
+> `debt_amount`'tan ayırmıştı (`add_card_expense` provizyonda `debt += 0`), ancak
+> `clamp_card_breakdown` hâlâ `statement + current + provision <= debt` istediği için
+> boş/düşük-borç kartta provizyon clamp ile 0'a düşüp kayboluyor ya da current'ı
+> yiyordu. Migration `20260802130000` bunu tersine çevirir: **provizyon yine toplam
+> borcu artırır** (`add_card_expense` provizyonda `debt += amount`), `post_card_provision`
+> ise posting'de borç EKLEMEZ (borç create'te eklendiği için yalnız `provision → current`
+> taşınır). Böylece yukarıdaki matris + clamp tutarlı olur.
+
 ## Display Helpers
 
 Use `src/utils/financeSummary.ts` instead of reimplementing card math in pages:

@@ -1,5 +1,28 @@
 # Priority Backlog
 
+## 2026-08-02 — Uçtan uca fonksiyonel kabul testi (yerel)
+
+Yerel Supabase'de gerçek RPC'ler kullanıcı-impersonation ile çağrılıp tablo/ledger/
+history kuruş hassasiyetinde doğrulandı (15+ senaryo PASS: taksit, ekstre, transfer,
+kartla-ödeme çift-sayım, varlık al-sat, kredi, borç/alacak, negatifler). Bir P2 hata
+bulundu ve düzeltildi:
+
+- ~~**INC-01 — Provizyon toplam borcu artırmıyordu (kayboluyordu).**~~ DONE.
+  20260625 provizyonu `debt_amount`'tan ayırmıştı ama `clamp_card_breakdown` hâlâ
+  `statement+current+provision ≤ debt` istediği için boş/düşük-borç kartta provizyon
+  clamp'le 0'a düşüp **kayboluyor** ya da current'ı yiyordu (hızlı harcama "Provizyonda"
+  + DenizBank bekleyen-işlem yollarıyla kullanıcıya açık). Kullanıcı kararı: provizyon
+  toplam borcu artırmalı (CARD_DEBT_TRANSITIONS.md ile uyumlu). Migration
+  `20260802130000_provision_increases_debt.sql` (forward-only, imza/grant korunur):
+  `add_card_expense` provizyonda `debt += amount`; `post_card_provision` posting'de
+  borç eklemez (create'te eklendi, yalnız provision→current taşır). Yerel docker'da
+  tam yaşam-döngüsü doğrulandı (boş kart create→post→cancel + normal kart
+  cannibalization yok + regresyon posted). Regresyon: `supabase/tests/provision_debt.sql`
+  + `npm run db:test:provision`. db lint/rls/grants temiz. Doküman güncellendi.
+- **OBS-01 (açık, P2/P3):** `add_card_expense` idempotent değil — aynı harcama 2× →
+  2 satır + borç 2×; çift-gönderim koruması yalnız UI disabled-buton. RPC-idempotency
+  eklensin mi kararı bekliyor.
+
 ## 2026-08-02 — Tam uygulama denetimi + kontrollü iyileştirme
 
 Kanıta dayalı tam denetim (rapor: `docs/APPLICATION_AUDIT_2026-08-02.md`). Olgun kod
