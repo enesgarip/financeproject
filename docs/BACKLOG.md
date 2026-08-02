@@ -366,9 +366,12 @@ plan G1→G5.
     **ölçüm penceresinin dışına** alındı: prefetch + `~/.npm/_npx` cache'i ve açık
     `LHCI_VERSION` job env'i eklendi. Takip koşularında indirme tamamlanmasına rağmen
     runner Chrome 150 + LHCI 0.14.0 ölçümü 90 saniye sınırına tekrar ulaştı. Araç
-    0.15.1'e yükseltildi; PR/gece ölçüm sınırları 180/420 saniye ve job sınırı 10
-    dakika yapıldı. Böylece gerçek skor/assert raporu üretilecek zamanı bulurken
-    takılan süreç TERM + 15 saniyelik KILL ile hâlâ sonlu kalır.
+    0.15.1'e yükseltilip pencere genişletilince gerçek hata görünür oldu: çalışan
+    login formuna rağmen headless sekme `NO_FCP` üretiyordu. LHCI artık resmî
+    `headful` seçeneğiyle Xvfb sanal ekranında çalışır; renderer görünürlük
+    bayrakları da arka plana alınmayı kapatır. PR/gece ölçüm sınırları 180/420
+    saniye ve job sınırı 10 dakikadır; takılan süreç TERM + 15 saniyelik KILL ile
+    hâlâ sonlu kalır.
   - `ÖDEME ALARMI` kartında `items-start` sol sütunu tepeye çivileyip altında
     ~180px boşluk bırakıyordu → dikey ortalandı.
   - **Yüzde biçimi Türkçe değildi:** tutarlar `₺1.150.000,00` iken yüzdeler
@@ -763,9 +766,11 @@ pattern'ler ve açık düzeltme planı yer alıyor.
   run despite `continue-on-error`. Lighthouse now uses the GitHub runner's
   preinstalled Chrome (no second browser setup). Repeated runner Chrome 150 runs
   then exhausted the former LHCI 0.14.0 / 90-second capture window even with a
-  prefetched package. LHCI is now 0.15.1 with a 180-second PR / 420-second nightly
-  command timeout, a 10-minute job ceiling, and TERM→KILL cleanup, so the report
-  has a realistic measurement window without becoming unbounded.
+  prefetched package. The wider LHCI 0.15.1 run exposed `NO_FCP`: Chrome 150 was
+  backgrounding the headless tab although Playwright saw the same login form.
+  LHCI now uses its official headful mode inside Xvfb, plus renderer-visibility
+  flags, a 180-second PR / 420-second nightly command timeout, a 10-minute job
+  ceiling, and TERM→KILL cleanup.
 - 2026-07-27 Dependabot PR hygiene: patch/minor version updates remain grouped
   and auto-merge after required CI, while routine major version updates are no
   longer opened and left stale. Security updates bypass the SemVer allow filter;

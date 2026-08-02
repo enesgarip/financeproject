@@ -114,14 +114,16 @@ yalnız workflow'daki prebuilt staged deploy + scoped API promotion yönetir (ç
 CI (`ci.yml`): PR ve `develop` push'larında Lint+Build (required); Playwright,
 Lighthouse ve Supabase kontrolleri yalnız ilgili dosya alanı değiştiyse çalışır.
 Gece Lighthouse denetimi 3 koşu, PR hızlı denetimi 1 koşudur. Lighthouse runner'da
-hazır Chrome'u kullanır. LHCI 0.15.1'e sabitlenir; PR/gece ölçümü komut seviyesinde
-180/420 saniye, job ise 10 dakika ile sınırlıdır. TERM sonrasında 15 saniyede
-kapanmayan süreç KILL ile temizlenir; job timeout'u tüm workflow'u iptal edemez.
+hazır Chrome'u Xvfb sanal ekranında headful çalıştırır; runner Chrome 150'nin
+headless sekmeyi arka planda sayıp `NO_FCP` üretmesi bu şekilde engellenir. LHCI
+0.15.1'e sabitlenir; PR/gece ölçümü komut seviyesinde 180/420 saniye, job ise 10
+dakika ile sınırlıdır. TERM sonrasında 15 saniyede kapanmayan süreç KILL ile
+temizlenir; job timeout'u tüm workflow'u iptal edemez.
 **lhci paketi ölçüm penceresinin DIŞINDA indirilir** (`Prefetch Lighthouse CI` +
 `~/.npm/_npx` cache'i, sürüm `LHCI_VERSION` job env'inde tek yerde). İlk exit 124
-kaynağı indirme gecikmesiydi; sonraki runner Chrome 150 koşuları prefetch'e rağmen
-eski LHCI 0.14.0 / 90 saniye penceresini tüketti. Bunları skor hatası sanıp
-kovalama; önce rapor üretilip üretilmediğini kontrol et.
+kaynağı indirme gecikmesiydi; sonraki runner Chrome 150 koşuları prefetch'e ve
+LHCI 0.15.1'e rağmen headless görünürlük nedeniyle `NO_FCP` üretti. Bunları skor
+hatası sanıp kovalama; önce rapor üretilip üretilmediğini kontrol et.
 Playwright smoke tarayıcısı package-lock
 sürümünden kurulur ve browser cache'i kullanır; sabit sürümlü Playwright docker
 imajı KULLANMA — Dependabot paket sürümünü yükselttiğinde imaj geride kalıp CI'ı kırıyor.

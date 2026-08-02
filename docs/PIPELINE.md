@@ -68,11 +68,16 @@ komutu 180 saniyelik süreç sınırına sahiptir; tarayıcı kilitlenirse
 timeout'u tüm workflow'u `cancelled` yapamaz. Gece denetiminin süreç sınırı 420
 saniyedir. TERM sonrasında 15 saniye içinde kapanmayan süreç KILL ile temizlenir.
 LHCI 0.15.1, runner'ın ilerleyen Chrome sürümünü eski 0.14.0 motoruna bağlamamak
-için açıkça sabitlenmiştir. LHCI, build çıktısını kendi random portlu statik sunucusu yerine
+için açıkça sabitlenmiştir. Runner Chrome 150 headless koşularda çalışan login
+formuna rağmen sekmeyi arka planda sayıp `NO_FCP` ürettiği için LHCI, resmî
+`headful` seçeneğiyle `xvfb-run` sanal ekranında çalışır; görünürlük koruma
+bayrakları renderer'ın arka plana alınmasını da kapatır. LHCI, build çıktısını
+kendi random portlu statik sunucusu yerine
 `npm run preview -- --host 127.0.0.1 --port 4173 --strictPort` ile açar.
 Lighthouse, ayrı Playwright tarayıcısı indirmek yerine GitHub runner'da hazır
-Chrome'u kullanır; bu hem browser kurulumunu kaldırır hem de LHCI/Playwright
-Chromium kilitlenmesini önler. Playwright smoke ise package-lock sürümüne
+Chrome'u kullanır; Xvfb yalnız sanal görüntü sağlar. Bu hem browser kurulumunu
+kaldırır hem de LHCI/Playwright Chromium kilitlenmesini önler. Playwright smoke
+ise package-lock sürümüne
 anahtarlanmış Actions cache'ini ve cache miss'te `npx playwright install
 chromium` desenini korur. Sabit `mcr.microsoft.com/playwright:vX-noble` imajını
 geri getirme: Dependabot paket sürümünü yükselttiğinde imaj geride kalıp CI'ı
