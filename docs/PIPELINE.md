@@ -62,11 +62,13 @@ ayrı bir personal access token oluşturmadan giderir; detaylı HTML raporu yine
 
 Lighthouse budget, CI placeholder Supabase değerleriyle oturum açmadan çalışan
 `/login` rotasını ölçer. PR/değişiklik geri bildirimi tek ölçüm kullanır; gece
-01:30 UTC denetimi üç ölçüm kullanır. Job'ın 5 dakika sınırı yanında PR LHCI
-komutu 90 saniyelik süreç sınırına sahiptir; tarayıcı kilitlenirse
+01:30 UTC denetimi üç ölçüm kullanır. Job'ın 10 dakika sınırı yanında PR LHCI
+komutu 180 saniyelik süreç sınırına sahiptir; tarayıcı kilitlenirse
 `continue-on-error` bunu normal bir bilgilendirici job hatası olarak yutar ve job
-timeout'u tüm workflow'u `cancelled` yapamaz. Gece denetiminin süreç sınırı 240
-saniyedir. LHCI, build çıktısını kendi random portlu statik sunucusu yerine
+timeout'u tüm workflow'u `cancelled` yapamaz. Gece denetiminin süreç sınırı 420
+saniyedir. TERM sonrasında 15 saniye içinde kapanmayan süreç KILL ile temizlenir.
+LHCI 0.15.1, runner'ın ilerleyen Chrome sürümünü eski 0.14.0 motoruna bağlamamak
+için açıkça sabitlenmiştir. LHCI, build çıktısını kendi random portlu statik sunucusu yerine
 `npm run preview -- --host 127.0.0.1 --port 4173 --strictPort` ile açar.
 Lighthouse, ayrı Playwright tarayıcısı indirmek yerine GitHub runner'da hazır
 Chrome'u kullanır; bu hem browser kurulumunu kaldırır hem de LHCI/Playwright

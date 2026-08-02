@@ -362,10 +362,13 @@ plan G1→G5.
   - Aynı kartlarda `--info` yeniden basamaklandırılmamıştı (diğer semantikler
     öyleyken); "Bekleyen tahsilat" küresel orta maviyle yazılıp koyu zeminde
     kayboluyordu → `#93c5fd` (~9:1).
-  - Lighthouse exit 124 ile düşüyordu: `npx @lhci/cli` **ölçüm penceresinin içinde**
-    indiriliyor, indirme 90 sn'lik bütçeyi yiyordu. Prefetch adımı + `~/.npm/_npx`
-    cache'i ile indirme pencerenin dışına alındı; sürüm `LHCI_VERSION` job env'inde.
-    Soğuk cache'te prefetch 10,7 sn sürdü — eskiden bu süre ölçümden çalınıyordu.
+  - Lighthouse exit 124 takibinin ilk adımında `npx @lhci/cli` indirmesi
+    **ölçüm penceresinin dışına** alındı: prefetch + `~/.npm/_npx` cache'i ve açık
+    `LHCI_VERSION` job env'i eklendi. Takip koşularında indirme tamamlanmasına rağmen
+    runner Chrome 150 + LHCI 0.14.0 ölçümü 90 saniye sınırına tekrar ulaştı. Araç
+    0.15.1'e yükseltildi; PR/gece ölçüm sınırları 180/420 saniye ve job sınırı 10
+    dakika yapıldı. Böylece gerçek skor/assert raporu üretilecek zamanı bulurken
+    takılan süreç TERM + 15 saniyelik KILL ile hâlâ sonlu kalır.
   - `ÖDEME ALARMI` kartında `items-start` sol sütunu tepeye çivileyip altında
     ~180px boşluk bırakıyordu → dikey ortalandı.
   - **Yüzde biçimi Türkçe değildi:** tutarlar `₺1.150.000,00` iken yüzdeler
@@ -755,12 +758,14 @@ pattern'ler ve açık düzeltme planı yer alıyor.
   promotion-time CLI install are removed. Production dependency audit is now a
   release gate; React Router moved to patched v8 and direct-main branch
   protection requires the PR flow.
-- 2026-07-27 Lighthouse follow-up: Playwright Chromium completed app smoke tests
+- 2026-08-03 Lighthouse follow-up: Playwright Chromium completed app smoke tests
   but hung inside LHCI until the 5-minute job timeout, cancelling the whole CI
   run despite `continue-on-error`. Lighthouse now uses the GitHub runner's
-  preinstalled Chrome (no second browser setup) and a 90-second command timeout
-  on PRs / 240 seconds nightly, so an informational measurement cannot cancel
-  otherwise-green required checks.
+  preinstalled Chrome (no second browser setup). Repeated runner Chrome 150 runs
+  then exhausted the former LHCI 0.14.0 / 90-second capture window even with a
+  prefetched package. LHCI is now 0.15.1 with a 180-second PR / 420-second nightly
+  command timeout, a 10-minute job ceiling, and TERM→KILL cleanup, so the report
+  has a realistic measurement window without becoming unbounded.
 - 2026-07-27 Dependabot PR hygiene: patch/minor version updates remain grouped
   and auto-merge after required CI, while routine major version updates are no
   longer opened and left stale. Security updates bypass the SemVer allow filter;
