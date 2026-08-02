@@ -103,7 +103,7 @@ export function buildIssueGuide(issue: HealthIssue): IssueGuide {
 
   if (issue.kind === 'duplicateTransactionCandidate') {
     return {
-      problem: issue.payload?.duplicateLevel === 'exact'
+      problem: issue.payload?.duplicateLevel === 'same_fingerprint'
         ? 'Aynı kartta aynı tarih, tutar, durum ve açıklama parmak izine sahip birden fazla harcama var.'
         : 'Aynı kartta aynı gün ve aynı tutarda, açıklaması benzer ya da eksik olan harcamalar var.',
       whyItMatters: 'Duplicate kayıtlar kart borcunu, kategori harcamasını, bütçe uyarılarını ve mutabakat sonucunu olduğundan yüksek gösterebilir.',

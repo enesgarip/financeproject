@@ -89,9 +89,10 @@ reset all user finance data through RPC. Three safety layers exist:
 A Vitest unit suite now covers the core pure finance utilities — statement period math (`cardStatement`), budget alerts (`budgetAlerts`), savings-goal progress (`savingsGoal`), live valuation (`valuation`), market-rate parsing (`marketRates`), category inference (`categories`), last-used memory (`lastUsed`), card installment calendar (`cardInstallmentCalendar`), statement reminders (`statementReminder`), and financial summary aggregations (`financeSummary`) — and runs in CI via `npm run test:unit`.
 
 DataHealth check logic is tested in `DataHealth.logic.test.ts`. The remaining
-uncovered areas are page components (UI-level side effects) and Supabase RPC
-mutations (require a running database). These are covered by the Playwright
-smoke suite and manual verification against the local Supabase docker.
+uncovered areas are mainly page-component UI side effects. Supabase money RPC
+invariants that need a real database are exercised by SQL regressions under
+`supabase/tests/`, including card-expense source-event idempotency; Playwright
+and targeted local-Docker verification cover the remaining flow boundary.
 
 ## 8. Shared Credit Limit Semantics (mitigated)
 
@@ -108,3 +109,14 @@ detects over-limit groups at runtime.
 Filtering/matching text with `toLocaleLowerCase('tr-TR')` can miss all-caps bank or merchant names such as `MIGROS`, `BIM`, and `IS BANKASI` because plain ASCII `I` lowercases to dotless `ı`.
 
 Use `src/utils/searchText.ts` for search/filter keys. The 2026-06-16 component audit moved shared CRUD search, quick actions, dashboard history search, Analysis export search, category inference, bank branding, and card bank-name normalization onto that helper.
+
+## 10. SMS Identity Without A Provider Message ID (partially mitigated)
+
+`parse-sms` accepts a stable source identity through body `eventId` or the
+`x-source-event-id` header. Callers should send the device/provider's immutable
+message ID when available. For backward compatibility, callers that send only
+the SMS text fall back to a normalized raw-message SHA-256. This safely absorbs
+network retries, and bank transaction timestamps normally distinguish consecutive
+transactions. However, two byte-identical legitimate bank SMS messages (including
+the same second) are fundamentally indistinguishable without an external message
+ID and would share the fallback identity. Do not remove caller-supplied ID support.

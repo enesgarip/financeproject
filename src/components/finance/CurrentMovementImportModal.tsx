@@ -39,11 +39,13 @@ import { buildImportedInstallmentPlan } from '../../utils/importedInstallmentPla
 import { postCardDebtCorrection } from '../../services/cardLedgerActions'
 import { useBodyScrollLock } from '../ui/use-body-scroll-lock'
 import { useCategoryMemory } from '../../hooks/useCategoryMemory'
+import { importedRowEventIds, sha256Hex } from '../../utils/sourceEventId'
 
 type Step = 'upload' | 'review' | 'done'
 
 type ImportableMovement = {
   selectionKey: string
+  sourceEventId: string
   movement: ParsedDenizBankMovement
   plannedPayment: PaymentMatchRow | null
 }
@@ -114,6 +116,7 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
 
   const cleanImport = false
   const [allMovements, setAllMovements] = useState<ParsedDenizBankMovement[]>([])
+  const [sourceEventIds, setSourceEventIds] = useState<string[]>([])
   const [installmentCounts, setInstallmentCounts] = useState<Map<number, number>>(new Map())
 
   const [selectedImport, setSelectedImport] = useState<Set<string>>(new Set())
@@ -155,6 +158,16 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
       }
 
       setAllMovements(parsed.movements)
+      const nextArtifactHash = await sha256Hex(text)
+      const nextSourceEventIds = await importedRowEventIds(nextArtifactHash, parsed.movements.map((movement) => JSON.stringify({
+        date: movement.date,
+        amount: movement.amount,
+        description: movement.description,
+        status: movement.appStatus,
+        installmentNo: movement.installmentNo,
+        installmentCount: movement.installmentCount,
+      })))
+      setSourceEventIds(nextSourceEventIds)
       setPayments(parsed.payments)
       setIgnoredRows(parsed.ignoredRows)
 
@@ -234,6 +247,7 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
 
       const nextBankOnly = unmatchedNonInstallments.map((movement, index) => ({
         selectionKey: `bank-${index}:${movement.rawLine}`,
+        sourceEventId: nextSourceEventIds[parsed.movements.indexOf(movement)]!,
         movement,
         plannedPayment: plannedPaymentByMovement.get(movement.rawLine) ?? null,
       }))
@@ -334,6 +348,7 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
         category: movement.category,
         status: movement.appStatus,
         source: 'movement_import',
+        sourceEventId: sourceEventIds[i]!,
       })
       if (!result.ok) errors.push(`${movement.description}: ${result.error.message ?? 'Bilinmeyen hata.'}`)
       else successCount++
@@ -397,13 +412,15 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
     const errors: string[] = []
 
     for (const item of toImport) {
-      const { movement, plannedPayment } = item
+      const { movement, plannedPayment, sourceEventId } = item
       const result = plannedPayment
         ? await payPaymentFromCardImport({
           paymentId: plannedPayment.id,
           sourceCardId: card.id,
           amount: movement.amount,
           spentAt: movement.date,
+          sourceEventId,
+          source: 'movement_import',
         })
         : await addCardExpense({
           cardId: card.id,
@@ -414,6 +431,7 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
           installmentCount: 1,
           status: movement.appStatus,
           source: 'movement_import',
+          sourceEventId,
         })
       if (!result.ok) errors.push(`${movement.description}: ${result.error.message ?? 'Bilinmeyen hata.'}`)
       else importedCount++
@@ -421,6 +439,7 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
 
     for (const movement of toImportInstallments) {
       const index = allMovements.indexOf(movement)
+      const sourceEventId = sourceEventIds[index]!
       const totalCount = installmentCounts.get(index) ?? 0
       const plan = buildImportedInstallmentPlan({
         originalDate: movement.date,
@@ -437,6 +456,7 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
           paidInstallments: plan.paidInstallments,
           nextDueDate: plan.currentInstallmentDate,
           category: movement.category,
+          sourceEventId,
         })
         : await addCardExpense({
           cardId: card.id,
@@ -447,6 +467,7 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
           category: movement.category,
           status: movement.appStatus,
           source: 'movement_import',
+          sourceEventId,
         })
       if (!result.ok) errors.push(`${movement.description}: ${result.error.message ?? 'Bilinmeyen hata.'}`)
       else importedCount++

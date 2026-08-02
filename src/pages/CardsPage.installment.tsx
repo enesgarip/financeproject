@@ -1,5 +1,5 @@
 import { CalendarClock } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { CategoryPicker } from '../components/finance/CategoryPicker'
 import { InstallmentPlanner } from '../components/finance/InstallmentPlanner'
 import { MoneyInput } from '../components/finance/MoneyInput'
@@ -36,6 +36,8 @@ export function LegacyInstallmentPanel({
   const [nextDueDate, setNextDueDate] = useState(dateInputValue(new Date()))
   const [localError, setLocalError] = useState('')
   const [saving, setSaving] = useState(false)
+  const submittingRef = useRef(false)
+  const submissionIdentityRef = useRef<{ signature: string; eventId: string } | null>(null)
   const categoryMemory = useCategoryMemory()
 
   const creditCards = useMemo(() => rows.filter((row) => row.card_type === 'kredi_karti'), [rows])
@@ -55,6 +57,7 @@ export function LegacyInstallmentPanel({
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    if (submittingRef.current) return
 
     const trimmedDescription = description.trim()
     if (!selectedCard) {
@@ -77,6 +80,20 @@ export function LegacyInstallmentPanel({
       setLocalError('Sıradaki taksit tarihini seçmelisin.')
       return
     }
+    const signature = JSON.stringify({
+      cardId: selectedCard.id,
+      description: trimmedDescription,
+      installmentAmount: parsedInstallmentAmount,
+      totalInstallments: parsedTotalInstallments,
+      paidInstallments: parsedPaidInstallments,
+      nextDueDate,
+      category,
+    })
+    if (!submissionIdentityRef.current || submissionIdentityRef.current.signature !== signature) {
+      submissionIdentityRef.current = { signature, eventId: crypto.randomUUID() }
+    }
+
+    submittingRef.current = true
     setSaving(true)
     setLocalError('')
     setError('')
@@ -89,7 +106,10 @@ export function LegacyInstallmentPanel({
       paidInstallments: parsedPaidInstallments,
       nextDueDate,
       category,
+      sourceEventId: submissionIdentityRef.current.eventId,
     })
+
+    submittingRef.current = false
 
     if (!carryoverResult.ok) {
       setSaving(false)
@@ -107,6 +127,7 @@ export function LegacyInstallmentPanel({
     setTotalInstallments('9')
     setPaidInstallments('3')
     setNextDueDate(dateInputValue(new Date()))
+    submissionIdentityRef.current = null
     await reload()
   }
 

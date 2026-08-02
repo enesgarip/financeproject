@@ -455,8 +455,11 @@ describe('buildIssues card expense duplicate analysis', () => {
     })
 
     const duplicate = issues.find((issue) => issue.kind === 'duplicateTransactionCandidate')
-    expect(duplicate?.payload?.duplicateLevel).toBe('exact')
+    expect(duplicate?.payload?.duplicateLevel).toBe('same_fingerprint')
     expect(duplicate?.payload?.ids).toEqual(['expense-1', 'expense-2'])
+    expect(duplicate?.title).not.toContain('kesin')
+    expect(duplicate?.details).not.toContain('Güven: %98')
+    expect(duplicate?.description).toContain('duplicate kanıtı değildir')
   })
 
   it('flags possible duplicates with the same day and amount but similar descriptions', () => {

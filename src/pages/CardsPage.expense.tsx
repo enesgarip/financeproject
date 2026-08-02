@@ -20,6 +20,7 @@ import { cardOptionLabel, moneyShare } from './CardsPage.helpers'
 import { OverviewStat } from './CardsPage.overview'
 import { formatCurrency, parseNumber } from '../utils/formatCurrency'
 import { parseReceiptImage } from '../lib/receiptParseClient'
+import { sha256Hex } from '../utils/sourceEventId'
 
 export function QuickExpensePanel({
   rows,
@@ -48,8 +49,11 @@ export function QuickExpensePanel({
   const [saving, setSaving] = useState(false)
   const [scanning, setScanning] = useState(false)
   const [prefilledByScan, setPrefilledByScan] = useState(false)
+  const [scanEventId, setScanEventId] = useState<string | null>(null)
   const cameraInputRef = useRef<HTMLInputElement>(null)
   const galleryInputRef = useRef<HTMLInputElement>(null)
+  const submittingRef = useRef(false)
+  const submissionIdentityRef = useRef<{ signature: string; eventId: string } | null>(null)
   const categoryMemory = useCategoryMemory()
   const [recentExpenses, setRecentExpenses] = useState<CardExpense[]>([])
   const cards = useMemo(() => rows.filter((row) => row.card_type === 'kredi_karti' || row.card_type === 'banka_karti'), [rows])
@@ -118,6 +122,7 @@ export function QuickExpensePanel({
     setPaidInstallments('0')
     setExpenseStatus('posted')
     setPrefilledByScan(false)
+    setScanEventId(null)
     setLocalError('')
   }
 
@@ -125,7 +130,10 @@ export function QuickExpensePanel({
     setScanning(true)
     setLocalError('')
     try {
-      const result = await parseReceiptImage(file)
+      const [result, artifactHash] = await Promise.all([
+        parseReceiptImage(file),
+        file.arrayBuffer().then(sha256Hex),
+      ])
       setAmount(String(result.amount))
       if (result.merchant) setDescription(result.merchant)
       if (result.category) setCategory(result.category)
@@ -133,6 +141,7 @@ export function QuickExpensePanel({
       // Kaynak ölçümü: form fişten dolduruldu; kullanıcı düzeltse bile kaydın
       // kökeni taramadır (otomasyon kapsamı bunu elle giriş saymamalı).
       setPrefilledByScan(true)
+      setScanEventId(artifactHash)
     } catch (scanError) {
       setLocalError(scanError instanceof Error ? scanError.message : 'Fiş okunamadı, tekrar dene.')
     } finally {
@@ -142,6 +151,7 @@ export function QuickExpensePanel({
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    if (submittingRef.current) return
 
     if (!selectedCard) {
       setLocalError('Kart seçmelisin.')
@@ -159,6 +169,26 @@ export function QuickExpensePanel({
       setLocalError('Sıradaki taksit tarihini seçmelisin.')
       return
     }
+    const source = prefilledByScan ? 'receipt_scan' : 'manual'
+    const signature = JSON.stringify({
+      cardId: selectedCard.id,
+      amount: parsedAmount,
+      description: trimmedDescription,
+      spentAt,
+      category,
+      paymentMode,
+      installmentCount: parsedInstallmentCount,
+      paidInstallments: parsedPaidInstallments,
+      nextDueDate,
+      status: expenseStatus,
+      source,
+    })
+    if (!submissionIdentityRef.current || submissionIdentityRef.current.signature !== signature) {
+      submissionIdentityRef.current = { signature, eventId: crypto.randomUUID() }
+    }
+    const sourceEventId = scanEventId ?? submissionIdentityRef.current.eventId
+
+    submittingRef.current = true
     setSaving(true)
     setLocalError('')
     setError('')
@@ -171,6 +201,7 @@ export function QuickExpensePanel({
         paidInstallments: parsedPaidInstallments,
         nextDueDate,
         category,
+        sourceEventId,
       })
       : await addCardExpense({
         cardId: selectedCard.id,
@@ -180,9 +211,11 @@ export function QuickExpensePanel({
         category,
         installmentCount: parsedInstallmentCount,
         status: expenseStatus,
-        source: prefilledByScan ? 'receipt_scan' : 'manual',
+        source,
+        sourceEventId,
       })
 
+    submittingRef.current = false
     setSaving(false)
     if (!submitResult.ok) {
       setLocalError(
@@ -206,6 +239,8 @@ export function QuickExpensePanel({
     setNextDueDate(dateInputValue(new Date()))
     setExpenseStatus('posted')
     setPrefilledByScan(false)
+    setScanEventId(null)
+    submissionIdentityRef.current = null
     await Promise.all([reload(), loadRecent()])
   }
 

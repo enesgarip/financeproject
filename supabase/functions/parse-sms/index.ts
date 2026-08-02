@@ -21,6 +21,11 @@ function normalizeSmsWhitespace(text: string): string {
   return text.replace(/\r?\n/g, ' ').replace(/\s+/g, ' ').trim()
 }
 
+async function sha256Hex(text: string): Promise<string> {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text))
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('')
+}
+
 function parseAmount(raw: string): number | null {
   const amount = parseFloat(raw.replace(/\./g, '').replace(',', '.'))
   if (!Number.isFinite(amount) || amount <= 0) return null
@@ -248,7 +253,7 @@ Deno.serve(async (req: Request) => {
   }
 
   // İstek gövdesini oku
-  let body: { sms?: unknown }
+  let body: { sms?: unknown; eventId?: unknown }
   try {
     body = await req.json()
   } catch {
@@ -264,6 +269,13 @@ Deno.serve(async (req: Request) => {
     'apikey': serviceRoleKey,
   }
 
+  const callerEventId = typeof body.eventId === 'string' && body.eventId.trim()
+    ? body.eventId.trim()
+    : req.headers.get('x-source-event-id')?.trim()
+  // Shortcut aynı SMS'i ağ retry'ı nedeniyle yeniden yollarsa ham mesaj hash'i
+  // değişmez. Banka SMS'lerindeki işlem saati ise gerçek arka arkaya işlemleri ayırır.
+  const sourceEventId = callerEventId || await sha256Hex(normalizeSmsWhitespace(smsText))
+
   // SMS'i parse et (DenizBank kart/hesap + Yapı Kredi kart)
   const parsed = parseSms(smsText)
   if (!parsed) {
@@ -277,7 +289,7 @@ Deno.serve(async (req: Request) => {
   }
 
   if (parsed.type === 'card') {
-    return handleCardSms(parsed, smsText, supabaseUrl, headers)
+    return handleCardSms(parsed, smsText, sourceEventId, supabaseUrl, headers)
   } else {
     return handleAccountSms(parsed, smsText, supabaseUrl, headers)
   }
@@ -288,6 +300,7 @@ Deno.serve(async (req: Request) => {
 async function handleCardSms(
   parsed: ParsedCardSms,
   rawSms: string,
+  sourceEventId: string,
   supabaseUrl: string,
   headers: Record<string, string>,
 ): Promise<Response> {
@@ -342,6 +355,7 @@ async function handleCardSms(
       p_status: 'provision',
       p_user_id: card.user_id,
       p_source: 'sms',
+      p_source_event_id: sourceEventId,
     }),
   })
 

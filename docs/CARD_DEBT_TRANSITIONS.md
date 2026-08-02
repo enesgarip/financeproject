@@ -61,7 +61,7 @@ member `debt_amount` values.
 
 | Action | Owner | Card field changes | Related rows |
 | --- | --- | --- | --- |
-| Posted expense added | `add_card_expense` | `debt_amount += amount`; `current_period_spending += installments whose due date has passed` | Inserts `card_expenses`; multi-installment expenses create exact-date installment rows, posting only rows due on/before today |
+| Posted expense added | `add_card_expense` | `debt_amount += amount`; `current_period_spending += installments whose due date has passed` | Inserts `card_expenses`; multi-installment expenses create exact-date installment rows, posting only rows due on/before today. A repeated non-null `(user, source, source_event_id)` returns the existing expense and repeats no effect. |
 | Provision expense added | `add_card_expense` with `status='provision'` | `debt_amount += amount`; `provision_amount += amount` | Inserts a provision `card_expenses` row; no installment rows are created until posting |
 | Provision posted | `post_card_provision` | `provision_amount -= posted amount`; `current_period_spending += installments whose due date has passed` | Full post updates the same expense; partial post leaves the original provision with the remaining amount and inserts a posted expense; multi-installment posted provisions create exact-date installment rows |
 | Provision cancelled | `cancel_card_provision` | `debt_amount -= amount`; `provision_amount -= amount` | Marks the expense `cancelled`; removes related installment rows if any |
@@ -147,6 +147,12 @@ for rows that match a still-open planned payment. It is the same credit-card
 spending semantics as `pay_payment`, but the generated `card_expenses.spent_at`
 uses the bank row date and the note keeps the planned-payment due date. This
 prevents a bill from staying pending after its card movement is imported.
+
+All card-expense-producing import paths carry a stable source event identity.
+Statement/current-movement PDFs use the document-text SHA-256 plus a canonical row
+content hash and that content's occurrence ordinal. The occurrence is intentionally
+part of the identity: two identical rows in one document are two events, but
+retrying/reimporting either row is a no-op; reordering different rows does not change IDs.
 
 ## Ledger Authority
 
