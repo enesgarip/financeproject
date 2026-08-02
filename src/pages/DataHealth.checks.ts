@@ -975,7 +975,11 @@ export function checkCardInstallments(
     const paidBefore = parseLegacyPaidCount(expense)
     const expectedNos = range(paidBefore + 1, expense.installment_count)
     const missingNos = expectedNos.filter((installmentNo) => !existingNos.has(installmentNo))
-    const extraRows = rows.filter((row) => row.installment_no <= paidBefore || row.installment_no > expense.installment_count)
+    // DH-01: Carryover geçmiş taksit satırları (installment_no <= paidBefore, `posted`)
+    // MEŞRUDUR — `record_card_installment_carryover` onları bilerek yaratır (plan zaman
+    // çizelgesi). Eski `installment_no <= paidBefore` kuralı bunları "fazla" diye yanlış
+    // pozitif işaretliyordu. Yalnız gerçekten geçersiz (plan üstü / 1'den küçük) numaraları say.
+    const extraRows = rows.filter((row) => row.installment_no > expense.installment_count || row.installment_no < 1)
     const baseDate = inferInstallmentBaseDate(expense, rows)
     const futureMissingNos = missingNos.filter((installmentNo) => addMonthsToDate(baseDate, installmentNo - 1) > today)
     const card = cardsById.get(expense.card_id)

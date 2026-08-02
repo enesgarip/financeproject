@@ -19,9 +19,21 @@ bulundu ve düzeltildi:
   tam yaşam-döngüsü doğrulandı (boş kart create→post→cancel + normal kart
   cannibalization yok + regresyon posted). Regresyon: `supabase/tests/provision_debt.sql`
   + `npm run db:test:provision`. db lint/rls/grants temiz. Doküman güncellendi.
+- ~~**DH-01 — Carryover geçmiş taksit satırları "fazla" yanlış pozitifi.**~~ DONE.
+  Kullanıcı prod'da "çift harcama gibi gözüken" bir kayıt bildirdi; canlı inceleme
+  (salt-okunur) duplicate sayaçlarının 0 olduğunu, işaretin aslında "OLKA SPOR ...
+  fazla taksit satırı (1/3, 2/3)" olduğunu gösterdi. Kök neden:
+  `record_card_installment_carryover` geçmiş taksitleri (installment_no ≤ paidBefore)
+  `posted` satır olarak bilerek yaratır, ama `checkCardInstallments`
+  (`DataHealth.checks.ts`) `extraRows = installment_no <= paidBefore` ile bunları
+  "fazla" sanıyordu (yerelde carryover üretilip doğrulandı: 1/3,2/3 posted + 3/3
+  scheduled). Fix: `extraRows` artık yalnız gerçekten geçersiz numaraları
+  (`> installment_count` veya `< 1`) işaretler. TS-katmanı, migration yok. Regresyon:
+  `DataHealth.logic.test.ts` "DH-01" (yanlış pozitif gitti + gerçek plan-dışı hâlâ
+  yakalanır). Gerçek veri kaybı/çift-sayım yoktu — yalnız yanıltıcı uyarı.
 - **OBS-01 (açık, P2/P3):** `add_card_expense` idempotent değil — aynı harcama 2× →
-  2 satır + borç 2×; çift-gönderim koruması yalnız UI disabled-buton. RPC-idempotency
-  eklensin mi kararı bekliyor.
+  2 satır + borç 2×; çift-gönderim koruması yalnız UI disabled-buton. Pratikte hiç
+  gerçek çift harcama olmadı; RPC-idempotency eklensin mi kararı bekliyor (düşük öncelik).
 
 ## 2026-08-02 — Tam uygulama denetimi + kontrollü iyileştirme
 
