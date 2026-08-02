@@ -115,7 +115,7 @@ export type HealthIssue = {
     totalAmount?: number
     description?: string
     category?: string
-    duplicateLevel?: 'exact' | 'possible'
+    duplicateLevel?: 'same_fingerprint' | 'possible'
     confidence?: number
     transactionFingerprint?: string
   }

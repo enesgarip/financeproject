@@ -1,6 +1,6 @@
 # Migration Compatibility Checklist
 
-Last reviewed: 2026-06-15
+Last reviewed: 2026-08-02
 
 Use this checklist before merging any change that touches Supabase migrations,
 RPC contracts, RLS policies, edge functions, generated database types, or
@@ -105,8 +105,8 @@ The `Deploy Production` workflow currently does this on `main`:
 2. Run lint, coverage, and production dependency verification once.
 3. Pull production environment values, build once, verify the bundle, and
    upload that exact artifact as an unaliased prebuilt production deployment.
-4. Rebuild the local seeded database and run lint/RLS/grant/catch-up checks when
-   database files changed.
+4. Rebuild the local seeded database and run lint/RLS/grant/catch-up plus
+   card-expense source-event idempotency checks when database files changed.
 5. Run an encrypted pre-migration backup when migrations changed.
 6. Show the production migration dry run and apply pending migrations with
    `--include-all` only when migration files changed.

@@ -31,9 +31,18 @@ bulundu ve düzeltildi:
   (`> installment_count` veya `< 1`) işaretler. TS-katmanı, migration yok. Regresyon:
   `DataHealth.logic.test.ts` "DH-01" (yanlış pozitif gitti + gerçek plan-dışı hâlâ
   yakalanır). Gerçek veri kaybı/çift-sayım yoktu — yalnız yanıltıcı uyarı.
-- **OBS-01 (açık, P2/P3):** `add_card_expense` idempotent değil — aynı harcama 2× →
-  2 satır + borç 2×; çift-gönderim koruması yalnız UI disabled-buton. Pratikte hiç
-  gerçek çift harcama olmadı; RPC-idempotency eklensin mi kararı bekliyor (düşük öncelik).
+- ~~**DH-02 / OBS-01 — Kart harcaması kaynak-olay idempotency'si.**~~ DONE.
+  Denizbank Black'teki aynı gün/tutar/açıklamalı iki BURULAŞ satırının kullanıcı
+  tarafından doğrulanan iki ayrı arka arkaya işlem olduğu ortaya çıktı. Kaba
+  `transaction_fingerprint` artık "kesin duplicate / %98" diye sunulmaz; yalnız
+  manuel inceleme sinyalidir. Gerçek retry ayrımı için `card_expenses.source_event_id`
+  + kısmi unique index eklendi (`20260802140000_card_expense_source_event_id.sql`).
+  Manuel formlar mantıksal submission UUID'si, fiş/SMS artefakt hash'i, PDF importları
+  belge hash'i + satır içeriği hash'i + occurrence sırası kullanır. Aynı dosyadaki birebir eş iki satır
+  ayrı kalır; aynı satırın retry/reimport'ı borç, taksit, ledger veya history'yi ikinci
+  kez üretmez. Eski RPC istemcileri opsiyonel/yeni overload sözleşmesiyle uyumludur.
+  Regresyon: `supabase/tests/card_expense_idempotency.sql` +
+  `npm run db:test:card-expense-idempotency`; CI ve deploy migration gate'ine bağlıdır.
 
 ## 2026-08-02 — Tam uygulama denetimi + kontrollü iyileştirme
 

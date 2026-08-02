@@ -540,7 +540,11 @@ function cardExpenseFingerprint(expense: CardExpense): string {
 
 function cardExpenseDetail(expense: CardExpense) {
   const description = expense.description?.trim() || 'Açıklama yok'
-  return `${formatDate(expense.spent_at)} · ${description} · ${formatCurrency(expense.amount)} · ${expense.status}`
+  const createdAt = new Intl.DateTimeFormat('tr-TR', {
+    dateStyle: 'short',
+    timeStyle: 'medium',
+  }).format(new Date(expense.created_at))
+  return `${formatDate(expense.spent_at)} · ${description} · ${formatCurrency(expense.amount)} · ${expense.status} · Kaynak: ${expense.source ?? 'bilinmiyor'} · Kayıt: ${createdAt}`
 }
 
 function groupBy<T>(rows: T[], keyOf: (row: T) => string): Map<string, T[]> {
@@ -568,17 +572,17 @@ export function checkCardExpenseDuplicates(cards: Card[], cardExpenses: CardExpe
       id: `card-expense-duplicate-exact-${ids.join('-')}`,
       area: 'Kartlar',
       severity: 'warning',
-      title: `${cardLabel(card)} kesin duplicate harcama adayı`,
-      description: 'Aynı kart, tarih, tutar, durum ve normalize açıklamaya sahip birden fazla harcama var. Otomatik silinmez; önce kullanıcı kararı gerekir.',
+      title: `${cardLabel(card)} aynı fingerprint'e sahip harcamalar`,
+      description: 'Aynı kart, tarih, tutar, durum ve normalize açıklamaya sahip birden fazla harcama var. Bu eşleşme duplicate kanıtı değildir; arka arkaya yapılan iki ayrı işlem de aynı fingerprint\'i üretebilir.',
       details: [
-        `Güven: %98`,
+        'Karar: Satırları kullanıcı karşılaştırmalı; otomatik silme yapılmaz.',
         `Fingerprint: ${fingerprint}`,
         ...rows.slice(0, 5).map(cardExpenseDetail),
         rows.length > 5 ? `+${rows.length - 5} kayıt daha` : null,
       ].filter((item): item is string => Boolean(item)),
       fixable: false,
       kind: 'duplicateTransactionCandidate',
-      payload: { ids, duplicateLevel: 'exact', confidence: 0.98, transactionFingerprint: fingerprint },
+      payload: { ids, duplicateLevel: 'same_fingerprint', transactionFingerprint: fingerprint },
     })
   }
 

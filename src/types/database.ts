@@ -126,6 +126,8 @@ export type CardExpense = BaseRow & {
   transaction_fingerprint: string | null
   /** Kaydın nereden geldiği (otomasyon kapsamı ölçümü). NULL = eski kayıt. */
   source: CardExpenseSource | null
+  /** Kaynak sistemdeki mantıksal olay; retry tekilleştirmesi için kullanılır. */
+  source_event_id?: string | null
 }
 
 export type Budget = BaseRow & {
@@ -483,6 +485,7 @@ export type Database = {
           p_category?: string
           p_status?: CardExpenseStatus
           p_source?: CardExpenseSource
+          p_source_event_id?: string | null
         }
         Returns: CardExpense
       }
@@ -648,6 +651,7 @@ export type Database = {
           p_paid_installments: number
           p_next_due_month: string
           p_category?: string
+          p_source_event_id?: string | null
         }
         Returns: CardExpense
       }
@@ -678,6 +682,8 @@ export type Database = {
           p_source_card_id: string
           p_paid_amount: number
           p_spent_at?: string
+          p_source_event_id?: string
+          p_source: Extract<CardExpenseSource, 'statement_import' | 'movement_import'>
         }
         Returns: Payment
       }

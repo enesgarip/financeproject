@@ -263,3 +263,6 @@ jobs:
 
       - name: Maintenance catch-up idempotency
         run: docker exec -i supabase_db_financeproject psql -U postgres -d postgres -v ON_ERROR_STOP=1 -f - < supabase/tests/maintenance_catchup.sql
+
+      - name: Card expense source-event idempotency
+        run: docker exec -i supabase_db_financeproject psql -U postgres -d postgres -v ON_ERROR_STOP=1 -f - < supabase/tests/card_expense_idempotency.sql

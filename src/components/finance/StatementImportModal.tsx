@@ -38,6 +38,7 @@ import { diffTL, equalsTL, roundTL, sumTL } from '../../utils/money'
 import { parseStatementText } from '../../lib/statementParseClient'
 import { extractPdfText } from '../../lib/pdfText'
 import { CardExpenseHistorySection } from './CardExpenseHistorySection'
+import { importedRowEventIds, sha256Hex } from '../../utils/sourceEventId'
 
 /**
  * App'e güvenle otomatik aktarılabilen işlem mi?
@@ -65,6 +66,7 @@ type Step = 'upload' | 'review' | 'success'
 
 type StatementImportRow = {
   selectionKey: string
+  sourceEventId: string
   transaction: ParsedTransaction
   plannedPayment: PaymentMatchRow | null
 }
@@ -104,6 +106,7 @@ function attachPlannedPayments(
   transactions: ParsedTransaction[],
   plannedPayments: PaymentMatchRow[],
   cardId: string,
+  sourceEventIds: ReadonlyMap<ParsedTransaction, string>,
 ): StatementImportRow[] {
   const movementRows = transactions
     .map((transaction, index) => ({ transaction, index }))
@@ -116,6 +119,7 @@ function attachPlannedPayments(
 
   return transactions.map((transaction, index) => ({
     selectionKey: `${index}:${transaction.date}:${transaction.amount}:${transaction.description}:${transaction.installmentNo}:${transaction.installmentCount}`,
+    sourceEventId: sourceEventIds.get(transaction)!,
     transaction,
     plannedPayment: paymentByIndex.get(index) ?? null,
   }))
@@ -190,6 +194,18 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
         parsed = await parseStatementText(text, categoryMemory)
       }
 
+      const artifactHash = await sha256Hex(text)
+      const rowEventIds = await importedRowEventIds(artifactHash, parsed.transactions.map((transaction) => JSON.stringify({
+        date: transaction.date,
+        amount: transaction.amount,
+        description: transaction.description,
+        installmentNo: transaction.installmentNo,
+        installmentCount: transaction.installmentCount,
+      })))
+      const sourceEventIds = new Map(
+        parsed.transactions.map((transaction, index) => [transaction, rowEventIds[index]!] as const),
+      )
+
       if (!parsed.totalDebt && !parsed.transactions.length) {
         setParseError('Ekstre okunamadı veya desteklenmeyen bir format.')
         setParsing(false)
@@ -236,7 +252,7 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
       }
 
       if (cleanImport) {
-        const importRows = attachPlannedPayments(parsed.transactions, paymentsResult.data, card.id)
+        const importRows = attachPlannedPayments(parsed.transactions, paymentsResult.data, card.id, sourceEventIds)
         const adjustmentRows = attachStatementAdjustments(parsed.adjustments ?? [])
 
         setMatched([])
@@ -257,7 +273,7 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
       // plan-ortası/eksik bilgili taksitler (manuel kontrol gerektirir).
       const importable = result.unmatched.filter(isImportable)
       const manual = result.unmatched.filter((tx) => !isImportable(tx))
-      const importRows = attachPlannedPayments(importable, paymentsResult.data, card.id)
+      const importRows = attachPlannedPayments(importable, paymentsResult.data, card.id, sourceEventIds)
       const adjustmentRows = attachStatementAdjustments(parsed.adjustments ?? [])
 
       setMatched(result.matched)
@@ -301,7 +317,7 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
     const errors: string[] = []
 
     for (const item of toImport) {
-      const { transaction: tx, plannedPayment } = item
+      const { transaction: tx, plannedPayment, sourceEventId } = item
       const knownPlan = tx.isInstallment && tx.installmentCount > 1
       const plan = knownPlan
         ? buildImportedInstallmentPlan({
@@ -317,6 +333,8 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
           sourceCardId: card.id,
           amount: tx.amount,
           spentAt: tx.date,
+          sourceEventId,
+          source: 'statement_import',
         })
         : plan && plan.paidInstallments > 0
           ? await recordCardInstallmentCarryover({
@@ -327,6 +345,7 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
             paidInstallments: plan.paidInstallments,
             nextDueDate: plan.currentInstallmentDate,
             category: tx.category,
+            sourceEventId,
           })
           : await addCardExpense({
             cardId: card.id,
@@ -337,6 +356,7 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
             category: tx.category,
             status: 'posted',
             source: 'statement_import',
+            sourceEventId,
           })
       if (!result.ok) errors.push(`${tx.description}: ${result.error.message ?? 'Bilinmeyen hata.'}`)
       else successCount++
@@ -406,7 +426,7 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
     const errors: string[] = []
 
     for (const item of toImport) {
-      const { transaction: tx, plannedPayment } = item
+      const { transaction: tx, plannedPayment, sourceEventId } = item
       const installment = tx.isInstallment && tx.installmentCount > 1
       const plan = installment
         ? buildImportedInstallmentPlan({
@@ -423,6 +443,8 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
           sourceCardId: card.id,
           amount: tx.amount,
           spentAt: tx.date,
+          sourceEventId,
+          source: 'statement_import',
         })
       } else if (plan && plan.paidInstallments > 0) {
         result = await recordCardInstallmentCarryover({
@@ -433,6 +455,7 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
           paidInstallments: plan.paidInstallments,
           nextDueDate: plan.currentInstallmentDate,
           category: tx.category,
+          sourceEventId,
         })
       } else {
         result = await addCardExpense({
@@ -444,6 +467,7 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
           category: tx.category,
           status: 'posted',
           source: 'statement_import',
+          sourceEventId,
         })
       }
       if (!result.ok) errors.push(`${tx.description}: ${result.error.message ?? 'Bilinmeyen hata.'}`)

@@ -114,6 +114,8 @@ export type AddCardExpenseInput = {
   status: CardExpense['status']
   /** Kaydın kaynağı; verilmezse 'manual'. Otomasyon kapsamı bundan ölçülür. */
   source?: CardExpenseSource
+  /** Aynı mantıksal kaynak olayının retry'larını tekilleştiren kararlı kimlik. */
+  sourceEventId?: string
 }
 
 export async function addCardExpense(input: AddCardExpenseInput): Promise<Result<void>> {
@@ -126,6 +128,7 @@ export async function addCardExpense(input: AddCardExpenseInput): Promise<Result
     p_installment_count: input.installmentCount,
     p_status: input.status,
     p_source: input.source ?? 'manual',
+    p_source_event_id: input.sourceEventId ?? null,
   })
 
   return voidResultFromSupabase(error, 'Harcama kaydedilemedi.')
@@ -136,6 +139,8 @@ export type PayPaymentFromCardImportInput = {
   sourceCardId: string
   amount: number
   spentAt: string
+  sourceEventId: string
+  source: Extract<CardExpenseSource, 'statement_import' | 'movement_import'>
 }
 
 export async function payPaymentFromCardImport(input: PayPaymentFromCardImportInput): Promise<Result<void>> {
@@ -144,6 +149,8 @@ export async function payPaymentFromCardImport(input: PayPaymentFromCardImportIn
     p_source_card_id: input.sourceCardId,
     p_paid_amount: input.amount,
     p_spent_at: input.spentAt,
+    p_source_event_id: input.sourceEventId,
+    p_source: input.source,
   })
 
   return voidResultFromSupabase(error, 'Planlı ödeme kart hareketine işlenemedi.')
@@ -157,6 +164,7 @@ export type CardInstallmentCarryoverInput = {
   paidInstallments: number
   nextDueDate: string
   category: string
+  sourceEventId?: string
 }
 
 export async function fetchCardInstallmentMatchRows(cardId: string): Promise<Result<InstallmentMatchRow[]>> {
@@ -186,6 +194,7 @@ export async function recordCardInstallmentCarryover(input: CardInstallmentCarry
     p_paid_installments: input.paidInstallments,
     p_next_due_month: input.nextDueDate,
     p_category: input.category,
+    p_source_event_id: input.sourceEventId ?? null,
   })
 
   return voidResultFromSupabase(error, 'Taksit devri kaydedilemedi.')

@@ -21,7 +21,7 @@ repair rules, keep `docs/TRANSACTION_HISTORY.md` aligned with this file.
 
 | RPC | Called From | User-Visible Action | Main Effect |
 | --- | --- | --- | --- |
-| `add_card_expense` | `addCardExpense` in `cardsRepo` | Cards page: add card expense/provision/installment expense | Inserts `card_expenses`; updates credit-card `debt_amount`, `current_period_spending`, and/or `provision_amount`; bank-card spending debits `current_balance` |
+| `add_card_expense` | `addCardExpense` in `cardsRepo` | Cards page: add card expense/provision/installment expense | Inserts `card_expenses`; updates credit-card `debt_amount`, `current_period_spending`, and/or `provision_amount`; bank-card spending debits `current_balance`. Optional `p_source_event_id` makes a retry return the existing row without repeating any financial effect. |
 | `update_card_expense` | `updateCardExpense` in `cardsRepo` | Cards page: edit a posted expense | Reverses previous posted impact, writes new expense values, recreates installment rows |
 | `post_card_provision` | `applyCardProvision` in `cardsRepo` | Cards page: post a provision | Moves all or part of a provision into posted current-period spending |
 | `post_due_card_installments` | Finance maintenance | Time-based installment posting | Changes due scheduled card-installment rows to `posted` and adds their amount to current-period spending without changing total debt |
@@ -29,8 +29,8 @@ repair rules, keep `docs/TRANSACTION_HISTORY.md` aligned with this file.
 | `cancel_card_expense` | `cancelCardExpense` in `cardsRepo` | Reconciliation: cancel any expense | Cancels a posted or provision expense, reverses total debt plus the exact visible split bucket, removes installments, logs correction |
 | `cut_card_statement` | `cutCardStatement` in `cardsRepo` | Low-frequency/manual statement cut helper | Creates or returns the period archive and moves current-period spending into open statement debt |
 | `set_statement_reconciliation` | `setStatementReconciliation` in `cardsRepo` | Statement import/reconciliation | Stores bank statement reconciliation amount and note for a card period |
-| `pay_payment_from_card_import` | `payPaymentFromCardImport` in `cardsRepo` | Statement/current movement import: matched planned payment row | Adds the matched bill as posted credit-card spending on the bank row date and advances/closes the planned payment |
-| `record_card_installment_carryover` | `recordCardInstallmentCarryover` in `cardsRepo` | Cards page: unified installment form when paid installments so far is positive | Imports remaining pre-app installments as card debt plus installment planning rows, while preserving already-paid historical installments |
+| `pay_payment_from_card_import` | `payPaymentFromCardImport` in `cardsRepo` | Statement/current movement import: matched planned payment row | Adds the matched bill as posted credit-card spending on the bank row date and advances/closes the planned payment; source event retries are no-ops. |
+| `record_card_installment_carryover` | `recordCardInstallmentCarryover` in `cardsRepo` | Cards page: unified installment form when paid installments so far is positive | Imports remaining pre-app installments as card debt plus installment planning rows, while preserving already-paid historical installments; source event retries do not recreate the plan. |
 | `reset_card_import_data` | `resetCardImportData` in `cardsRepo` | Archive-safe maintenance helper (the import UI no longer exposes destructive clean import) | Clears the open/current import scope and resets visible card debt fields before rebuilding; always preserves every paid statement archive and its linked rows, including the active period |
 | `reset_card_data` | `resetCardData` in `cardsRepo` | Manual/data-health repair helper only | Deletes the card's expenses, installments, statement archives, and related history; resets card debt fields to zero. Import modals must not call it. |
 

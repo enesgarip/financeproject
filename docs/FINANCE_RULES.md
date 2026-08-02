@@ -141,10 +141,14 @@ On the cards page:
 - installment expense creation may generate `card_installments`
 - single-installment data is treated differently from multi-installment planning and is checked in data health
 - `card_expenses.transaction_fingerprint` is generated from card, date, amount,
-  normalized description, and status. It is used as a deterministic duplicate
-  signal for import reconciliation and Data Health; it must not change card debt
-  or ledger balances by itself.
-- Data Health reports exact duplicate card expenses by fingerprint and possible
+  normalized description, and status. It is a coarse similarity signal for import
+  reconciliation and Data Health, never proof of a duplicate and never a uniqueness
+  key; it must not change card debt or ledger balances by itself.
+- `card_expenses.source_event_id`, namespaced by user and `source`, is the retry
+  idempotency key. Reusing it returns the existing expense without repeating card,
+  installment, ledger, payment, or transaction-history effects. Different event IDs
+  remain separate even when every fingerprint field is identical.
+- Data Health reports same-fingerprint card expenses and possible
   duplicates by same card/date/status/amount plus similar or blank descriptions.
   These are review signals only, not automatic deletes.
 
@@ -161,6 +165,10 @@ Current movement reconciliation:
 - Review screens show the app's spending history for the detected period, keep matched bank/app record pairs collapsed by default, and leave missing rows unselected until the user chooses which rows to import.
 - Importable rows are selected by a stable per-row key instead of array position,
   so identical-looking bank rows can be selected one by one.
+- Import writes use PDF text hash + canonical row-content hash + same-content
+  occurrence ordinal as `source_event_id`. Reimporting one source row is idempotent,
+  while two identical rows in the same PDF have different occurrences and remain two
+  legitimate transactions; reordering non-identical parser output does not change IDs.
 - A current-movement PDF is transaction evidence, not an independent total-debt
   snapshot. Rebuilding the open period from it must not record a synthetic
   zero-drift debt reconciliation; "bankayla mutabık" requires a real bank amount.
