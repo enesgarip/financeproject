@@ -268,15 +268,16 @@ DOM'suz kalır). `SimpleModal.test.tsx` (5 test): focus-into-dialog, Escape,
 Tab/Shift+Tab trap, focus-restore. Coverage `src/utils/**` olduğu için eşik
 etkilenmez.
 
-**F-04 (incelendi — onay bekliyor).** Kullanıcı "incele sonra karar ver" dedi.
-Kanıt: `record_sms_account_movement` gövdesi (migration `20260702120000`, satır
-17-133) `p_occurred_at`'i HİÇ kullanmıyor; `transaction_history` INSERT'i tarih
-kolonu içermediği için satır `now()` alır, aynı `current_balance` update'i
-`account_ledger` trigger'ını `now()` zamanıyla tetikler. Etki: bakiye DOĞRU;
-yalnız aktivite/ledger zaman damgası işlem-anı yerine işleme-anı (gecikmeli/retry
-SMS'te sapar) — P3. Düzeltme forward migration gerektirir (history + ledger event
-zamanı `p_occurred_at`'ten türetilmeli); ayrı onayla planlanacak. Bu turda
-DOKUNULMADI.
+**F-04 (uygulandı).** `record_sms_account_movement` `p_occurred_at`'i kullanmıyordu;
+`transaction_history` INSERT'i `occurred_at` kolonunu yazmadığı için satır `now()`
+alıyordu. Edge (`parse-sms`) gerçek SMS zamanını zaten `p_occurred_at` olarak
+geçiriyordu; tablo `occurred_at` kolonuna sahipti; aktivite akışı (`activityFeed.ts`)
+ve `financePanelsRepo` `occurred_at`'e göre sıralayıp/filtrelediği için gecikmeli SMS
+yanlış günde görünüyordu. Forward migration `20260802120000` INSERT'e
+`occurred_at = coalesce(p_occurred_at, now())` ekledi (imza/security/grant birebir
+korundu). account_ledger olayı bilinçli olarak sistem-zamanı (`now()`) ile append-only
+kalır. Yerel docker doğrulaması: RPC geçirilen 3-gün-önceki tarihi yazdı
+(`occurred_at≠created_at`), db lint uyarısı kalktı, RLS/grants/catchup yeşil.
 
 **R-2 (tamam).** `npm audit --omit=dev` → **0 açık**.
 
