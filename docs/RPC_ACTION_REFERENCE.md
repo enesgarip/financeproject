@@ -1,6 +1,6 @@
 # Supabase RPC Action Reference
 
-Last reviewed: 2026-07-07
+Last reviewed: 2026-08-02
 
 This file maps Supabase RPCs to the user-visible actions that call them. Keep it
 updated whenever a page action, repository wrapper, or migration changes an RPC
@@ -22,17 +22,20 @@ repair rules, keep `docs/TRANSACTION_HISTORY.md` aligned with this file.
 | RPC | Called From | User-Visible Action | Main Effect |
 | --- | --- | --- | --- |
 | `add_card_expense` | `addCardExpense` in `cardsRepo` | Cards page: add card expense/provision/installment expense | Inserts `card_expenses`; updates credit-card `debt_amount`, `current_period_spending`, and/or `provision_amount`; bank-card spending debits `current_balance`. Optional `p_source_event_id` makes a retry return the existing row without repeating any financial effect. |
-| `update_card_expense` | `updateCardExpense` in `cardsRepo` | Cards page: edit a posted expense | Reverses previous posted impact, writes new expense values, recreates installment rows |
+| `update_card_expense` | `updateCardExpense` in `cardsRepo` | Cards page: edit an unstatemented posted expense | Reverses previous posted impact, writes new expense values, recreates installment rows. Rejects a directly archived expense or an installment parent with any archived child. |
 | `post_card_provision` | `applyCardProvision` in `cardsRepo` | Cards page: post a provision | Moves all or part of a provision into posted current-period spending |
 | `post_due_card_installments` | Finance maintenance | Time-based installment posting | Changes due scheduled card-installment rows to `posted` and adds their amount to current-period spending without changing total debt |
 | `cancel_card_provision` | `applyCardProvision` in `cardsRepo` | Cards page: cancel a provision | Removes provision from card debt/limit impact and marks the expense `cancelled` |
 | `cancel_card_expense` | `cancelCardExpense` in `cardsRepo` | Reconciliation: cancel any expense | Cancels a posted or provision expense, reverses total debt plus the exact visible split bucket, removes installments, logs correction |
-| `cut_card_statement` | `cutCardStatement` in `cardsRepo` | Low-frequency/manual statement cut helper | Creates or returns the period archive and moves current-period spending into open statement debt |
+| `cut_card_statement` | `cutCardStatement` in `cardsRepo` | Low-frequency/manual statement cut helper | Creates or returns the period archive and moves current-period spending into open statement debt; eligible child rows are attached under a transaction-local guarded context so direct reassignment cannot bypass aggregate movement |
 | `set_statement_reconciliation` | `setStatementReconciliation` in `cardsRepo` | Statement import/reconciliation | Stores bank statement reconciliation amount and note for a card period |
 | `pay_payment_from_card_import` | `payPaymentFromCardImport` in `cardsRepo` | Statement/current movement import: matched planned payment row | Adds the matched bill as posted credit-card spending on the bank row date and advances/closes the planned payment; source event retries are no-ops. |
 | `record_card_installment_carryover` | `recordCardInstallmentCarryover` in `cardsRepo` | Cards page: unified installment form when paid installments so far is positive | Imports remaining pre-app installments as card debt plus installment planning rows, while preserving already-paid historical installments; source event retries do not recreate the plan. |
-| `reset_card_import_data` | `resetCardImportData` in `cardsRepo` | Archive-safe maintenance helper (the import UI no longer exposes destructive clean import) | Clears the open/current import scope and resets visible card debt fields before rebuilding; always preserves every paid statement archive and its linked rows, including the active period |
-| `reset_card_data` | `resetCardData` in `cardsRepo` | Manual/data-health repair helper only | Deletes the card's expenses, installments, statement archives, and related history; resets card debt fields to zero. Import modals must not call it. |
+| `reset_card_import_data` | `resetCardImportData` in `cardsRepo` | Guarded maintenance helper (the import UI no longer exposes destructive clean import) | Clears only the non-paid/open working scope under a user/card-bound DB context. It fails before mutation when current-settlement or paid-statement installment history would require reconstructing immutable evidence. |
+
+`reset_card_data` and its repository helper were removed in the 2026-08-02
+hardening pass because that legacy RPC could not safely erase immutable statement/
+current-settlement evidence. Full user reset is the supported destructive reset.
 
 The detailed field transitions for these RPCs live in
 `docs/CARD_DEBT_TRANSITIONS.md`.
@@ -47,7 +50,7 @@ rewriting historical expenses.
 | --- | --- | --- | --- |
 | `pay_payment` | `submitFinanceObligationPayment` | Planned payments page/dashboard obligation modal | Marks one payment paid or advances monthly recurrence; bank source debits `current_balance`, credit-card source increases `debt_amount` / `current_period_spending` and creates posted card spending |
 | `pay_card_statement` | `submitFinanceObligationPayment` | Pay open credit-card statement | Debits a bank account, reduces card debt and statement debt, marks statement paid, marks linked installments paid |
-| `pay_card_debt` | `submitFinanceObligationPayment` | Manual credit-card debt payment ("Borç öde" on the cards page card row, plus the obligations calendar item) | Debits a bank account and reduces card debt. A full current-period payment with no statement debt is allocated through `card_current_settlements`: posted movements are marked settled, due installments become paid, and those rows cannot enter a later statement. Partial/statement-bearing manual payments retain aggregate reduction semantics. |
+| `pay_card_debt` | `submitFinanceObligationPayment` | Manual credit-card debt payment ("Borç öde" on the cards page card row, plus the obligations calendar item) | Debits a bank account and reduces card debt. A full current-period payment with no statement debt is allocated through `card_current_settlements` under a transaction-local guarded context: posted movements are marked settled, due installments become paid, and those rows cannot enter a later statement. Direct child marker writes are rejected. Partial/statement-bearing manual payments retain aggregate reduction semantics. |
 | `pay_loan_installment` | `submitFinanceObligationPayment` | Pay loan installment | Debits a bank account, marks installment paid, syncs loan summary through DB invariants |
 | `settle_personal_debt` | `submitFinanceObligationPayment` | Settle personal debt or collect receivable | Updates bank-account balance and closes the debt row |
 
@@ -61,7 +64,7 @@ installment payment outside the statement flow.
 | --- | --- | --- | --- |
 | `transfer_between_accounts` | `submitAccountMovement` | Cards page/account center: bank-to-bank transfer | Moves money between two `banka_karti` accounts and writes history |
 | `record_manual_account_movement` | `submitAccountMovement` | Cards page/account center: manual deposit/withdrawal | Applies one account balance delta and writes history in one transaction |
-| `record_sms_account_movement` | `parse-sms` edge function (service role) | SMS automation: bank account in/out movement | Matches `cards.account_number` against the SMS account number (digits-only exact match, then tolerant mutual-containment match with a 6-digit minimum; ambiguous matches are rejected), applies the balance delta, and writes history |
+| `record_sms_account_movement` | `parse-sms` edge function (service role only) | SMS automation: bank account in/out movement | Matches `cards.account_number` against the SMS account number (digits-only exact match, then tolerant mutual-containment with a 6-digit minimum; ambiguous/cross-user global matches are rejected), applies the balance delta, and writes history at the explicit Turkey-offset SMS time. Optional `p_source_event_id` makes retries no-ops under the card lock + unique index. Minute-only SMS requires an external stable event ID. |
 
 ## Assets
 
@@ -82,7 +85,7 @@ installment payment outside the statement flow.
 
 | RPC | Called From | User-Visible Action | Main Effect |
 | --- | --- | --- | --- |
-| `reset_user_finance_data` | `dataHealthRepo` | Data health: reset all finance data | Deletes the signed-in user's finance rows child-first |
+| `reset_user_finance_data` | `dataHealthRepo`, `backupRepo` | Data health reset / restore pre-wipe | In one auth.uid-bound transaction deletes the signed-in user's finance/support rows child-first, safely breaks settlement RESTRICT links, and clears owner SMS/notification logs while preserving ownerless diagnostics |
 
 Most other data-health fixes use direct table updates/deletes through
 `dataHealthRepo`; they are not RPC-backed.
@@ -97,6 +100,7 @@ These functions are database infrastructure, not direct app actions:
 - `record_account_balance_event`
 - `private.debit_bank_account`
 - `private.credit_bank_account`
+- `private.guard_current_settlement_allocation`
 - `clamp_card_breakdown`
 - `sync_loan_summary`
 - `derive_card_expense_installment_amount`

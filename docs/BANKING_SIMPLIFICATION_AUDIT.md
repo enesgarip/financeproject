@@ -2,6 +2,31 @@
 
 ## Fixed In This Pass
 
+- **Prod consistency hardening (2026-08-02)**
+  - Data Health and JSON backup now read 1000+ row tables with immutable-PK
+    keyset pagination instead of relying on PostgREST's implicit row cap.
+  - Scheduled-debt gaps, partial overlap, and installment overflow remain visible
+    but no longer overwrite aggregate card debt without bank truth.
+  - Legacy provision composition is repaired only when independent projections
+    agree exactly; reconciliation cancellation now reverses provision debt too.
+  - Backup/restore/reset includes wishlist, cash buckets, and notification
+    preferences. Reset is one auth-bound transaction and clears owner operation
+    logs; immutable settlement/ledger evidence remains audit-only on restore.
+  - Account SMS retries carry the same stable source-event identity as card SMS,
+    and local bank timestamps are persisted with explicit Turkey offset.
+  - Existing expense/installment rows cannot be attached to an old same-card
+    settlement or statement directly; guarded canonical pay/cut RPCs perform child
+    allocation together with aggregate movement and clear their scoped context.
+  - A statement-linked expense, including an installment parent with any archived
+    child, cannot be sent back through the current-period edit algorithm. Raw
+    archived amount/plan edits are DB-rejected; statement installment amount
+    mismatches remain visible but no longer expose a one-row automatic write.
+  - Archived child/parent DELETE and lifecycle writes are DB-rejected. Only the
+    exact statement-payment context can close an archive and its installments;
+    archived cancellation is routed to append-only correction/reconciliation.
+    The unused unsafe whole-card reset was removed, while clean-import maintenance
+    fails before touching immutable early-payment/paid-installment evidence.
+
 - **Unified installment entry (2026-07-02)**
   - Before: normal installment entry could not express already-paid installments, while old-installment carryover existed in a separate low-visibility panel.
   - Now: the main installment form has a "paid installments so far" field. Zero uses `add_card_expense`; a positive value routes to `record_card_installment_carryover`, keeps numbering such as 3/9, and adds only the remaining debt.

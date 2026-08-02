@@ -329,6 +329,7 @@ export type StatementInstallmentMatchRow = {
   description: string
   installment_no: number
   installment_count: number
+  statement_archive_id: string | null
 }
 
 export type StatementInstallmentMatch = {

@@ -13,7 +13,6 @@ import {
   recordCardInstallmentCarryover,
   resetCardImportData,
   setStatementReconciliation,
-  updateCardInstallmentAmount,
   type ExpenseMatchRow,
   type PaymentMatchRow,
 } from '../../data/repositories/cardsRepo'
@@ -160,8 +159,6 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
   const [driftCorrected, setDriftCorrected] = useState(false)
   const [installmentCheck, setInstallmentCheck] = useState<StatementInstallmentCheckResult | null>(null)
   const [showInstallmentCheck, setShowInstallmentCheck] = useState(false)
-  const [installmentFixing, setInstallmentFixing] = useState<Set<string>>(new Set())
-  const [installmentFixed, setInstallmentFixed] = useState<Set<string>>(new Set())
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [importedCount, setImportedCount] = useState(0)
   const [failedCount, setFailedCount] = useState(0)
@@ -825,36 +822,11 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
                             Fark: {diff > 0 ? '+' : ''}{formatAmount(diff)}
                           </p>
                         </div>
-                        <div className="shrink-0">
-                          {installmentFixed.has(inst.id) ? (
-                            <span className="flex items-center gap-1 text-[11px] font-bold text-success">
-                              <CheckCircle2 size={12} /> Düzeltildi
-                            </span>
-                          ) : (
-                            <button
-                              type="button"
-                              disabled={installmentFixing.has(inst.id)}
-                              onClick={async () => {
-                                setInstallmentFixing((prev) => new Set(prev).add(inst.id))
-                                const result = await updateCardInstallmentAmount(inst.id, tx.amount)
-                                if (result.ok) {
-                                  setInstallmentFixed((prev) => new Set(prev).add(inst.id))
-                                }
-                                setInstallmentFixing((prev) => {
-                                  const next = new Set(prev)
-                                  next.delete(inst.id)
-                                  return next
-                                })
-                              }}
-                              className="flex items-center gap-1 rounded-lg bg-primary/10 px-2.5 py-1.5 text-[11px] font-bold text-primary hover:bg-primary/20 disabled:opacity-55"
-                            >
-                              {installmentFixing.has(inst.id) ? (
-                                <Loader2 size={11} className="animate-spin" />
-                              ) : null}
-                              {formatAmount(tx.amount)} yap
-                            </button>
-                          )}
-                        </div>
+                        <span className="shrink-0 text-right text-[11px] font-bold text-muted-foreground">
+                          {inst.statement_archive_id !== null || inst.status === 'paid'
+                            ? 'Arşiv kaydı değiştirilemez'
+                            : 'Manuel uzlaştırma gerekli'}
+                        </span>
                       </div>
                     ))}
                     {installmentCheck.appOnly.map((inst) => (
@@ -1117,11 +1089,6 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
             {driftCorrected && (
               <p className="text-sm text-info">
                 Eşleşen işlemlerdeki {formatAmount(Math.abs(matchDriftTL))} tutar farkı otomatik düzeltildi.
-              </p>
-            )}
-            {installmentFixed.size > 0 && (
-              <p className="text-sm text-info">
-                {installmentFixed.size} taksit tutarı ekstre ile eşleşecek şekilde düzeltildi.
               </p>
             )}
             <button

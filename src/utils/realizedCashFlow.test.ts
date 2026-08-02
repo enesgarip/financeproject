@@ -14,6 +14,7 @@ function row(overrides: Partial<TransactionHistory>): TransactionHistory {
     amount: 100,
     source_table: 'payments',
     source_id: 'p1',
+    source_event_id: null,
     note: null,
     ...overrides,
   }

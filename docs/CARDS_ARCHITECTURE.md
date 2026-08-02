@@ -103,9 +103,10 @@ actions should use the repository/service layer:
   `post_card_debt_correction` so the card debt is reduced with an audited
   reverse entry instead of importing the row as spending.
 - Statement/current-movement modals expose non-destructive reconciliation only.
-  The lower-level `reset_card_import_data` maintenance RPC remains safer than
-  `reset_card_data`: it preserves every paid statement archive and linked row,
-  including a paid archive in the active period.
+  The lower-level `reset_card_import_data` maintenance RPC is user/card guarded
+  and refuses scopes containing immutable current-settlement or paid-installment
+  evidence. The unsafe legacy `reset_card_data` RPC/helper was removed; full user
+  reset is the supported destructive path.
 - Both importers use `src/utils/importedInstallmentPlan.ts` to preserve the
   original bank transaction date, derive the exact current installment date,
   and retain numbering such as 5/12 instead of rebuilding it as 1/8.

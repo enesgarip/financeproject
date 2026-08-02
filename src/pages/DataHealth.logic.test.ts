@@ -199,11 +199,28 @@ describe('buildIssues card debt breakdown', () => {
 
     const issue = issues.find((item) => item.id === 'card-scheduled-debt-card-1')
     expect(issue?.kind).toBe('cardScheduledDebt')
+    expect(issue?.fixable).toBe(false)
     expect(issue?.payload).toMatchObject({
       cardId: 'card-1',
       scheduledTotal: 0.3,
-      nextDebtAmount: 250.3,
     })
+    expect(issue?.payload?.nextDebtAmount).toBeUndefined()
+  })
+
+  it('flags installment overflow without guessing a new card debt', () => {
+    const issues = buildIssues({
+      ...emptyData,
+      cards: [creditCard({ debt_amount: 100 })],
+      cardInstallments: [cardInstallment({ amount: 120 })],
+    })
+
+    const issue = issues.find((item) => item.id === 'card-installment-overflow-card-1')
+    expect(issue).toMatchObject({
+      kind: 'cardInstallmentOverflow',
+      fixable: false,
+      payload: { cardId: 'card-1', scheduledTotal: 120, amount: 20 },
+    })
+    expect(issue?.payload?.nextDebtAmount).toBeUndefined()
   })
 
   it('does not flag planned installment debt as unclassified', () => {
@@ -245,6 +262,51 @@ describe('buildIssues card debt breakdown', () => {
       currentPeriod: 100,
       provisionAmount: 50,
     })
+  })
+
+  it('flags a partial scheduled-debt overlap without offering an automatic fix', () => {
+    const issues = buildIssues({
+      ...emptyData,
+      cards: [
+        creditCard({
+          debt_amount: 83_316.62,
+          statement_debt_amount: 20_168.53,
+          current_period_spending: 0,
+        }),
+      ],
+      cardInstallments: [cardInstallment({ amount: 63_446.29 })],
+    })
+
+    const issue = issues.find((item) => item.id === 'card-scheduled-debt-overlap-card-1')
+    expect(issue).toMatchObject({
+      kind: 'cardScheduledDebtOverlap',
+      severity: 'warning',
+      fixable: false,
+      payload: {
+        cardId: 'card-1',
+        scheduledTotal: 63_446.29,
+        amount: 298.2,
+      },
+    })
+    expect(issues.find((item) => item.id === 'card-scheduled-debt-card-1')).toBeUndefined()
+  })
+
+  it('does not double-report scheduled overlap when the visible split itself overflows debt', () => {
+    const issues = buildIssues({
+      ...emptyData,
+      cards: [
+        creditCard({
+          debt_amount: 100,
+          statement_debt_amount: 80,
+          current_period_spending: 30,
+        }),
+      ],
+      cardInstallments: [cardInstallment({ amount: 20 })],
+    })
+
+    expect(issues.find((item) => item.id === 'card-split-card-1')).toBeDefined()
+    expect(issues.find((item) => item.id === 'card-scheduled-debt-card-1')).toBeUndefined()
+    expect(issues.find((item) => item.id === 'card-scheduled-debt-overlap-card-1')).toBeUndefined()
   })
 })
 
@@ -308,6 +370,80 @@ describe('buildIssues card installment dates', () => {
   })
 })
 
+describe('buildIssues archived installment structure safety', () => {
+  it('keeps every archive-linked structural repair manual, including siblings and missing rows', () => {
+    const issues = buildIssues({
+      ...emptyData,
+      cards: [creditCard({ debt_amount: 400, statement_debt_amount: 200 })],
+      cardExpenses: [
+        cardExpense({
+          id: 'archived-single',
+          amount: 100,
+          installment_count: 1,
+          installment_amount: 90,
+          statement_archive_id: 'statement-1',
+        }),
+        cardExpense({
+          id: 'archived-plan',
+          amount: 300,
+          installment_count: 3,
+          installment_amount: 90,
+          spent_at: '2026-05-19',
+        }),
+      ],
+      cardInstallments: [
+        cardInstallment({
+          id: 'single-child',
+          card_expense_id: 'archived-single',
+          statement_archive_id: 'statement-1',
+          amount: 100,
+        }),
+        cardInstallment({
+          id: 'archived-child',
+          card_expense_id: 'archived-plan',
+          statement_archive_id: 'statement-1',
+          installment_no: 1,
+          installment_count: 2,
+          amount: 100,
+          due_month: '2026-06-01',
+          status: 'posted',
+          posted_at: null,
+        }),
+        cardInstallment({
+          id: 'archive-sibling',
+          card_expense_id: 'archived-plan',
+          installment_no: 2,
+          installment_count: 3,
+          amount: 100,
+          due_month: '2026-07-01',
+          status: 'scheduled',
+          posted_at: '2026-07-01T00:00:00.000Z',
+        }),
+      ],
+    })
+
+    const protectedIssueIds = [
+      'card-expense-single-has-installments-archived-single',
+      'card-expense-amount-archived-single',
+      'card-expense-amount-archived-plan',
+      'card-installment-posted-at-archived-child',
+      'card-installment-count-archived-child',
+      'card-installment-date-archived-child',
+      'card-installment-clear-posted-at-archive-sibling',
+      'card-installment-date-archive-sibling',
+      'card-expense-missing-archived-plan',
+    ]
+
+    for (const id of protectedIssueIds) {
+      expect(issues.find((issue) => issue.id === id)).toMatchObject({
+        fixable: false,
+        kind: 'manual',
+      })
+      expect(issues.find((issue) => issue.id === id)?.payload).toBeUndefined()
+    }
+  })
+})
+
 describe('buildIssues carryover installment history (DH-01)', () => {
   it('does not flag carryover past installment rows as extra', () => {
     // record_card_installment_carryover 1/3 ve 2/3'ü `posted` geçmiş satırı olarak
@@ -367,7 +503,7 @@ describe('buildIssues overdue card statements', () => {
     })
   })
 
-  it('flags legacy inactive statement status and offers a paid archive repair', () => {
+  it('flags legacy inactive statement status for manual reconciliation', () => {
     const issues = buildIssues({
       ...emptyData,
       cards: [creditCard()],
@@ -380,15 +516,12 @@ describe('buildIssues overdue card statements', () => {
 
     const issue = issues.find((item) => item.id === 'card-archive-status-statement-1')
     expect(issue?.kind).toBe('cardStatementStatus')
-    expect(issue?.fixable).toBe(true)
+    expect(issue?.fixable).toBe(false)
     expect(issue?.payload).toMatchObject({
       cardId: 'card-1',
       statementArchiveId: 'statement-1',
-      updates: {
-        status: 'paid',
-        paid_at: '2026-01-10T00:00:00.000Z',
-      },
     })
+    expect(issue?.payload?.updates).toBeUndefined()
   })
 })
 

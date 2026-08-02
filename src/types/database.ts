@@ -260,6 +260,7 @@ export type TransactionHistory = BaseRow & {
   amount: number | null
   source_table: string | null
   source_id: string | null
+  source_event_id: string | null
   note: string | null
 }
 
@@ -696,12 +697,6 @@ export type Database = {
       }
       reset_user_finance_data: {
         Args: Record<string, never>
-        Returns: void
-      }
-      reset_card_data: {
-        Args: {
-          p_card_id: string
-        }
         Returns: void
       }
       reset_card_import_data: {

@@ -34,10 +34,16 @@ missing tables through `SchemaMigrationNotice`, and backup/restore skips tables
 that are not deployed in the target environment.
 
 User backups include support tables added after the original backup feature:
-card aliases, dismissals, and push subscriptions are restorable; user-owned
-SMS/notification logs and both ledgers are audit exports only. Ledgers restart
-with opening events after restore. Ownerless raw SMS diagnostics are
+card aliases, dismissals, push subscriptions, wishlist items, cash buckets, and
+notification preferences are restorable. User-owned SMS/notification logs, both
+ledgers, and immutable current-settlement evidence are audit exports only. Ledgers
+restart with opening events after restore. Ownerless raw SMS diagnostics are
 service-role-only, never user-readable.
+
+Backup and Data Health use immutable-PK keyset pagination, so they no longer rely
+on PostgREST's implicit 1000-row cap or offset boundaries. Multiple pages/tables
+are still not a transaction snapshot: concurrent inserts/deletes may change export
+membership. Do not describe a live export as point-in-time consistent.
 
 ## 4. Card Debt Math Has Multiple Derived Fields (mitigated)
 
@@ -47,10 +53,24 @@ scheduled installments). Three layers now prevent inconsistency:
 
 1. **DB triggers**: `clamp_card_breakdown` BEFORE trigger enforces
    split ≤ debt on every write; `record_card_debt_event` AFTER trigger
-   appends every change to the append-only `card_ledger`.
+   appends every change to the append-only `card_ledger`. Child allocation
+   triggers prevent direct existing-row NULL→settlement/archive reassignment;
+   only canonical payment/statement RPC contexts can attach existing rows.
+   Historical archive-marker INSERT stays restore-compatible under same-user/
+   same-card RLS until restore becomes transactional. The expense edit RPC
+   rejects both directly archived expenses and installment parents with any
+   archived child, so current-period reversal logic cannot rewrite statement rows.
+   Trigger-level field guards also reject raw REST amount/date/card/plan edits on
+   archived expense/installment rows. Archive parent financial/lifecycle fields,
+   archived lifecycle updates, and archived plan DELETEs are also guarded while
+   canonical statement payment may perform the exact open→paid transition.
+   Statement installment amount mismatches are
+   review-only; changing one child without parent/card/ledger effects is unsafe.
 2. **DataHealth checks**: `checkCards` detects split inconsistency,
-   scheduled-debt gaps, unclassified debt; `checkLedgerDrift` catches
-   ledger projection ≠ stored debt.
+   scheduled-debt gaps, partial scheduled overlap, installment overflow, and
+   unclassified debt; `checkLedgerDrift` catches ledger projection ≠ stored debt.
+   Ambiguous scheduled composition issues are non-fixable and never overwrite
+   aggregate debt without bank truth.
 3. **Unit tests**: `clampCardBreakdown`, `cardDebtBreakdown`,
    `buildCreditLimitGroups`, and DataHealth card-drift checks are all
    tested in `financeSummary.test.ts` and `DataHealth.logic.test.ts`.
@@ -84,6 +104,21 @@ reset all user finance data through RPC. Three safety layers exist:
    asset normalization, card debt breakdown, card/account ledger drift,
    and more — false-positive checks break CI before reaching production.
 
+Statement-archived expenses and any installment plan with an archived sibling are
+excluded from structural auto-fixes. Their amount/count/date/posted-state and
+missing-row findings remain manual so Data Health cannot rebuild historical
+statement membership through DELETE/INSERT operations.
+
+Restore validates table arrays, plain row objects, immutable keys, and duplicate
+keys before reset. It does not yet validate every column type/enum/FK against a
+runtime schema, and row replay over REST is non-transactional. The automatic
+safety export makes a later insert failure recoverable, but a future restore
+protocol should be a single transactional server operation for atomicity.
+Historical statement-linked children must currently retain their archive marker
+during direct REST replay. RLS verifies that marker's parent belongs to the same
+user and card, but direct same-card INSERT provenance cannot be distinguished from
+a genuine restore until replay moves into that transactional server operation.
+
 ## 7. Limited Safety Net from Tests (mitigated)
 
 A Vitest unit suite now covers the core pure finance utilities — statement period math (`cardStatement`), budget alerts (`budgetAlerts`), savings-goal progress (`savingsGoal`), live valuation (`valuation`), market-rate parsing (`marketRates`), category inference (`categories`), last-used memory (`lastUsed`), card installment calendar (`cardInstallmentCalendar`), statement reminders (`statementReminder`), and financial summary aggregations (`financeSummary`) — and runs in CI via `npm run test:unit`.
@@ -91,7 +126,8 @@ A Vitest unit suite now covers the core pure finance utilities — statement per
 DataHealth check logic is tested in `DataHealth.logic.test.ts`. The remaining
 uncovered areas are mainly page-component UI side effects. Supabase money RPC
 invariants that need a real database are exercised by SQL regressions under
-`supabase/tests/`, including card-expense source-event idempotency; Playwright
+`supabase/tests/`, including provision transitions, complete reset, guarded child
+allocation, and card/account source-event idempotency; Playwright
 and targeted local-Docker verification cover the remaining flow boundary.
 
 ## 8. Shared Credit Limit Semantics (mitigated)
@@ -119,4 +155,7 @@ the SMS text fall back to a normalized raw-message SHA-256. This safely absorbs
 network retries, and bank transaction timestamps normally distinguish consecutive
 transactions. However, two byte-identical legitimate bank SMS messages (including
 the same second) are fundamentally indistinguishable without an external message
-ID and would share the fallback identity. Do not remove caller-supplied ID support.
+ID and would share the fallback identity. Minute-precision account SMS messages
+have a materially higher collision risk, so `parse-sms` rejects them unless the
+caller supplies a stable `eventId`/`x-source-event-id`. Do not remove caller-supplied
+ID support or re-enable content-hash finance writes for minute-only account events.

@@ -30,6 +30,7 @@ function historyRow(overrides: Partial<TransactionHistory> & { id: string }): Tr
     amount: 100,
     source_table: 'payments',
     source_id: null,
+    source_event_id: null,
     note: null,
     ...overrides,
   }

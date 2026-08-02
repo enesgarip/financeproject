@@ -19,7 +19,49 @@ import type {
   TableName,
   UpdateFor,
 } from '../../types/database'
+import type { SupabaseLikeError } from '../../utils/supabaseErrors'
 import { ok, resultFromSupabase, voidResultFromSupabase, type Result } from '../result'
+
+const PAGE_SIZE = 500
+
+type PagedRows<T> = {
+  data: T[]
+  error: SupabaseLikeError | null
+}
+
+async function fetchAllRows<T>(table: TableName): Promise<PagedRows<T>> {
+  const rows: T[] = []
+  let beforeId: string | null = null
+
+  // Descending keyset pagination gives the first page a practical immutable-PK
+  // upper bound. Requests are not one transaction snapshot, so concurrent
+  // inserts/deletes may change membership; immutable cursors prevent offset
+  // boundary shifts from skipping or duplicating rows that remain visible.
+  for (;;) {
+    let query = supabase
+      .from(table as 'cards')
+      .select('*')
+      .order('id', { ascending: false })
+
+    if (beforeId !== null) query = query.lt('id', beforeId)
+    const { data, error } = await query.limit(PAGE_SIZE)
+
+    if (error) return { data: rows.reverse(), error }
+
+    const page = (data ?? []) as unknown as T[]
+    rows.push(...page)
+    if (page.length < PAGE_SIZE) return { data: rows.reverse(), error: null }
+
+    const nextBeforeId = (page.at(-1) as { id?: unknown } | undefined)?.id
+    if (typeof nextBeforeId !== 'string') {
+      return {
+        data: rows.reverse(),
+        error: { message: `${table} sayfalama anahtarı okunamadı.` },
+      }
+    }
+    beforeId = nextBeforeId
+  }
+}
 
 export type DataHealthRows = {
   assets: Asset[]
@@ -71,21 +113,21 @@ export async function fetchDataHealthRows(): Promise<Result<DataHealthRows>> {
     cardLedger,
     accountLedger,
   ] = await Promise.all([
-    supabase.from('assets').select('*'),
-    supabase.from('budgets').select('*'),
-    supabase.from('cards').select('*'),
-    supabase.from('card_expenses').select('*'),
-    supabase.from('card_installments').select('*'),
-    supabase.from('card_statement_archives').select('*'),
-    supabase.from('debts').select('*'),
-    supabase.from('loans').select('*'),
-    supabase.from('loan_installments').select('*'),
-    supabase.from('payments').select('*'),
-    supabase.from('salary_history').select('*'),
-    supabase.from('savings_goals').select('*'),
-    supabase.from('savings_goal_components').select('*'),
-    supabase.from('card_ledger').select('*').limit(10000),
-    supabase.from('account_ledger').select('*').limit(10000),
+    fetchAllRows<Asset>('assets'),
+    fetchAllRows<Budget>('budgets'),
+    fetchAllRows<Card>('cards'),
+    fetchAllRows<CardExpense>('card_expenses'),
+    fetchAllRows<CardInstallment>('card_installments'),
+    fetchAllRows<CardStatementArchive>('card_statement_archives'),
+    fetchAllRows<Debt>('debts'),
+    fetchAllRows<Loan>('loans'),
+    fetchAllRows<LoanInstallment>('loan_installments'),
+    fetchAllRows<Payment>('payments'),
+    fetchAllRows<SalaryHistory>('salary_history'),
+    fetchAllRows<SavingsGoal>('savings_goals'),
+    fetchAllRows<SavingsGoalComponent>('savings_goal_components'),
+    fetchAllRows<CardLedger>('card_ledger'),
+    fetchAllRows<AccountLedger>('account_ledger'),
   ])
 
   const errors = [

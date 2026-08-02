@@ -1,5 +1,81 @@
 # Priority Backlog
 
+## 2026-08-02 — Prod veri tutarlılığı denetimi ve düzeltme paketi
+
+Salt-okunur prod denetiminde kart borç bileşimi, 1000+ satırlı ledger yükleme,
+yedek kapsamı ve SMS otomasyonu birlikte kontrol edildi. Düzeltmeler yerelde
+hazırdır; **prod deployment/main push kullanıcı açıkça istemeden yapılmayacaktır.**
+
+- ~~**INC-02 — Eski provizyon modelinden kalan kesin toplam-borç farkı.**~~
+  IMPLEMENTED LOCALLY. `20260802160000_repair_legacy_provision_debt.sql` yalnız
+  aktif provizyon satırları, kartın provizyon kovası ve görünür bölünüm + planlı
+  taksit projeksiyonu kuruşu kuruşuna aynı farkı doğruladığında toplam borca
+  append-only adjustment ekler. Belirsiz kartlara dokunmaz; kart kilidinden sonra
+  bütün projeksiyonları tekrar hesaplar.
+- ~~**INC-03 — Mutabakat iptalinde provizyon borcu terslenmiyordu.**~~ IMPLEMENTED
+  LOCALLY. `20260802165000_cancel_expense_reverses_provision_debt.sql`, geçici
+  provizyon-ayrık davranışını kaldırır; `cancel_card_expense` provizyonda hem
+  `debt_amount` hem `provision_amount` etkisini tersler. Gerçek Postgres regresyonu
+  `provision_debt.sql` içinde CI/deploy DB gate'ine bağlandı.
+- ~~**DH-03 — Data Health ve JSON backup satır sınırı.**~~ DONE. Offset/örtük
+  PostgREST limiti yerine immutable PK keyset sayfalama kullanılır; 1000+ ledger
+  ve backup satırı test edilir. Çoklu REST istekleri transaction snapshot değildir;
+  concurrent üyelik değişimi bilinen residualdır, mevcut satırlar offset kaymasıyla
+  atlanmaz/çift okunmaz.
+- ~~**DH-04 — Kart borcu/taksit kısmi örtüşmesi ve riskli otomatik fix.**~~ DONE.
+  `cardDebtBreakdown` kısmi planlı-borç örtüşmesini ayrı uyarı olarak üretir.
+  `cardScheduledDebt` ve `cardInstallmentOverflow` banka gerçeği olmadan artık
+  otomatik `debt_amount` yazmaz; legacy payload verilse dahi write yapılmaz.
+  Ekstre arşivine doğrudan veya aynı taksit planındaki bir sibling üzerinden bağlı
+  yapısal taksit sorunları da tarihsel satırları silip yeniden üretmez; Data Health
+  bunları manuel inceleme olarak gösterir.
+- ~~**D8 — Eksik backup/reset tabloları.**~~ IMPLEMENTED LOCALLY. Wishlist, kasa
+  kovaları ve bildirim tercihleri export/restore/reset kapsamındadır. Restore önce
+  FK-güvenli tek reset RPC'si çağırır. Ledger/log ve immutable current-settlement
+  kanıtı export-only kalır; parent settlement olmadan güvenle taşınamayan child
+  satırları v2 ve legacy v1 formatlarında konservatif normalize edilir. Reset owner
+  SMS/notification loglarını da siler; eski notification dedupe anahtarları restore
+  edilmiş kayıtları bloke etmez.
+- ~~**SMS-01 — Yeni DenizBank formatları, saat ve hesap retry idempotency'si.**~~
+  IMPLEMENTED LOCALLY. Tam maskeli kart, otomatik ödeme ve gelen FAST/HAVALE/EFT
+  formatları tanınır; karma tutar ayraçları kuruş hassasiyetinde ayrıştırılır ve SMS
+  saati açık `+03:00` taşır. `20260802180000` hesap webhook'unu
+  `(user, source_table, source_event_id)` ile tekilleştirir, kart satırı kilidi +
+  unique index kullanır ve RPC'yi yalnız service role'a açar.
+- ~~**SEC-01 — Aynı-kart parent id ile sahte child allocation.**~~ IMPLEMENTED
+  LOCALLY. `20260802190000_protect_card_allocation_paths.sql`, expense/installment
+  satırlarının eski bir erken-ödeme veya ekstre parent'ına doğrudan `UPDATE` ile
+  bağlanmasını engeller. Bu alanları yalnız aynı transaction'da kart toplamlarını da
+  taşıyan `pay_card_debt` / `cut_card_statement` açabilir; transaction-local bağlam
+  kullanıcı, satır sahibi, kart ve parent ile doğrulanıp hemen temizlenir. Current
+  settlement marker'lı doğrudan child `INSERT` de reddedilir. Tarihsel ekstre-marker'lı
+  `INSERT`, mevcut JSON restore doğrudan replay yaptığı için same-user/same-card RLS
+  kontrolünde kalır; tam provenance gelecekte transactional restore RPC gerektirir.
+- ~~**INC-04 — Ekstreye kesilmiş harcama current-period edit algoritmasına
+  girebiliyordu.**~~ IMPLEMENTED LOCALLY. `20260802200000`, doğrudan archive'a
+  bağlı tek çekim harcamayı ve herhangi bir child taksiti archive'a bağlanmış
+  taksit parent'ını `update_card_expense` içinde değişmez kılar. Böylece edit eski
+  tutarı yanlış kovadan tersleyip statement kovasını clamp'leyemez ve satır eski
+  archive toplamına bağlı kalamaz. DB guard ayrıca arşivlenmiş expense/installment'ın
+  tutar, tarih, kart ve plan alanlarını raw REST `UPDATE`'ine karşı korur. Tek child
+  tutarını parent/card/ledger etkisi olmadan değiştiren statement-import otomatik fix'i
+  kaldırıldı; fark manuel uzlaştırma sinyali olarak kalır. Kanonik ekstre ödemesinin
+  `status/paid_at` geçişi korunur. Single + installment gerçek DB regresyonu vardır.
+- ~~**SEC-02 — Ekstre lifecycle/DELETE yolları arşiv toplamını atlayabiliyordu.**~~
+  IMPLEMENTED LOCALLY. `20260802190000`, arşivlenmiş expense/installment ve ekstre
+  parent'ının ham DELETE, finans alanı ve lifecycle değişikliklerini reddeder; yalnız
+  user+statement bağlı `pay_card_statement` ile exact `open→paid` geçişine izin verir.
+  Arşivlenmiş harcama iptali düzeltme/uzlaştırma akışına yönlendirilir. Pay/cut/edit/
+  cancel/import-reset aynı card→child kilit sırasını kullanır. Geçersiz legacy arşiv
+  statüsü banka debit'i olmadan `paid` yapılmaz; Data Health bunu manuel gösterir.
+  Current-settlement veya ödenmiş-ekstre taksit geçmişi bulunan kart clean-import
+  resetinden önce güvenle reddedilir. Kullanılmayan ve immutable geçmişi tanımayan
+  `reset_card_data` RPC/helper'ı kaldırıldı.
+- **Açık manuel uzlaştırma:** Prod'daki bir kartta ₺298,20 kısmi taksit/borç
+  örtüşmesinin hangi tarafta eski olduğu banka ekstresi olmadan belirlenemez.
+  Tarihsel tanınmayan SMS'lerde de mevcut kayıtla kesin eşleşmeyen adaylar vardır;
+  iptal/manual kayıt ihtimali nedeniyle otomatik backfill yapılmayacaktır.
+
 ## 2026-08-02 — Uçtan uca fonksiyonel kabul testi (yerel)
 
 Yerel Supabase'de gerçek RPC'ler kullanıcı-impersonation ile çağrılıp tablo/ledger/
@@ -467,7 +543,7 @@ Canlı uygulama + kod incelemesinden çıkan bulgular tek pakette kapatıldı:
   - 2026-07-02: Kredi karti satiri iki ana aksiyona indi; detay/import/mutabakat/taksit menude. Banka hesaplarina IBAN + kopyala, son 3 hareket ve hareket sonrasi bakiye eklendi. `useBalancePrivacy` tek goz ikonuyla tutarlari maskeler; kredi karti gorseli SMS alias son hanelerinden maskeli numara gosterir.
 - ~~Flag overdue open card statements in Data Health.~~ DONE.
   - 2026-07-02: `DataHealth.checks.ts` vadesi gecmis acik ekstre arsivlerini uyarir; issue karti paylasilan `FinancePaymentDrawer` ile dogrudan ekstre odeme akisini acar.
-  - 2026-07-06: Data Health runtime'da `open`/`paid` disi legacy/pasif ekstre statüsü görürse tek aksiyonla kaydı borca yeniden bindirmeden `paid` geçmiş arşive normalize eder.
+  - 2026-07-06: Data Health runtime'da `open`/`paid` dışı legacy/pasif ekstre statüsünü görünür kılar. 2026-08-02 hardening sonrasında banka debit'i ve kart borcu hareketi olmadan `paid` normalizasyonu yapılmaz; konu manuel uzlaştırmadır.
 - ~~Add DenizBank current movement PDF reconciliation.~~ DONE.
   - Cards page now opens a current movement import flow for DenizBank internet banking PDFs.
   - Pending rows import as provisions, posted spending imports as current-period expenses, payment rows are excluded, and installment rows are matched/imported with their bank installment number and exact derived date.

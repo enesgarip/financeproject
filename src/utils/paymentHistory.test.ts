@@ -14,6 +14,7 @@ function history(overrides: Partial<TransactionHistory> = {}): TransactionHistor
     amount: 500,
     source_table: 'payments',
     source_id: 'payment-1',
+    source_event_id: null,
     note: null,
     ...overrides,
   }

@@ -1,8 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import {
+  accountSmsNeedsExternalEventId,
   normalizeSmsWhitespace,
   parseDenizbankAccountSms,
+  parseDenizbankCardTransactionSms,
   parseDenizbankCardSms,
+  parseDenizbankIncomingAccountSms,
+  parseDenizbankMaskedCardSms,
   parseSms,
   parseYapikrediCardSms,
 } from './smsParser'
@@ -32,7 +36,7 @@ describe('parseDenizbankCardSms', () => {
     const result = parseDenizbankCardSms(SAMPLE)
     expect(result).toEqual({
       type: 'card',
-      spentAt: '2026-06-23T15:18:21',
+      spentAt: '2026-06-23T15:18:21+03:00',
       lastFour: '9032',
       merchant: 'FINDEKS FINANSAL YONETI',
       amount: 200,
@@ -79,6 +83,35 @@ describe('parseDenizbankCardSms', () => {
   })
 })
 
+describe('DenizBank alternatif kart SMS formatları', () => {
+  it('tam maskeli kart ve noktalı TRY tutarını parse eder', () => {
+    const sms = 'Degerli Musterimiz 123456******9032 kartinizla 1.08.2026 09:13:42 tarihinde MAGAZA isyerinden yapilan 123.45 TRY tutarindaki islem bilginiz disindaysa bankanizi arayiniz.'
+    expect(parseDenizbankMaskedCardSms(sms)).toEqual({
+      type: 'card',
+      spentAt: '2026-08-01T09:13:42+03:00',
+      lastFour: '9032',
+      merchant: 'MAGAZA',
+      amount: 123.45,
+    })
+  })
+
+  it('İngilizce karma binlik/ondalık ayracını kuruş hassasiyetinde parse eder', () => {
+    const sms = 'Degerli Musterimiz 123456******9032 kartinizla 1.08.2026 09:13:42 tarihinde MAGAZA isyerinden yapilan 1,234.56 TRY tutarindaki islem bilginiz disindaysa bankanizi arayiniz.'
+    expect(parseDenizbankMaskedCardSms(sms)?.amount).toBe(1234.56)
+  })
+
+  it('tutarı merchant bilgisinden önce yazan kart SMSini parse eder', () => {
+    const sms = 'Degerli Musterimiz 9032 ile biten kartinizla, 31.07.2026 09:13:42 tarihinde,203,50 TL tutarinda, INTERNET MAGAZA kurumuna ait otomatik odeme talimatiniz gerceklestirilmistir.'
+    expect(parseDenizbankCardTransactionSms(sms)).toEqual({
+      type: 'card',
+      spentAt: '2026-07-31T09:13:42+03:00',
+      lastFour: '9032',
+      merchant: 'INTERNET MAGAZA',
+      amount: 203.5,
+    })
+  })
+})
+
 // -- Yapı Kredi kart SMS'leri -------------------------------------------------
 
 describe('parseYapikrediCardSms', () => {
@@ -88,7 +121,7 @@ describe('parseYapikrediCardSms', () => {
     const result = parseYapikrediCardSms(SAMPLE)
     expect(result).toEqual({
       type: 'card',
-      spentAt: '2026-03-23T10:30',
+      spentAt: '2026-03-23T10:30+03:00',
       lastFour: '7735',
       merchant: 'HEPSIPAY *HEPSIBURADA',
       amount: 31834,
@@ -127,7 +160,7 @@ describe('parseDenizbankAccountSms', () => {
     const result = parseDenizbankAccountSms(OUTGOING)
     expect(result).toEqual({
       type: 'account',
-      occurredAt: '2026-06-24T21:40:15',
+      occurredAt: '2026-06-24T21:40:15+03:00',
       accountNumber: '4230-13300128-351',
       counterparty: 'Ipek Bayram',
       amount: 600,
@@ -153,6 +186,30 @@ describe('parseDenizbankAccountSms', () => {
 
   it('eşleşmeyen metin için null döner', () => {
     expect(parseDenizbankAccountSms('kart harcamasi mesaji')).toBeNull()
+  })
+})
+
+describe('parseDenizbankIncomingAccountSms', () => {
+  it('FAST ile gelen yeni hesap bildirimini parse eder', () => {
+    const sms = "Degerli Musterimiz 31.07.2026 09:13:42'da ALI VELI gondericisinden 4230-13300128-351 numarali hesabiniza FAST ile 1.234,56 TL tutarinda para girisi gerceklesmistir."
+    const parsed = parseDenizbankIncomingAccountSms(sms)
+    expect(parsed).toEqual({
+      type: 'account',
+      occurredAt: '2026-07-31T09:13:42+03:00',
+      accountNumber: '4230-13300128-351',
+      counterparty: 'ALI VELI',
+      amount: 1234.56,
+      direction: 'in',
+      transactionType: 'FAST',
+    })
+    expect(accountSmsNeedsExternalEventId(parsed!)).toBe(false)
+  })
+
+  it('dakika hassasiyetli TRY havale bildirimini parse eder', () => {
+    const sms = "Sayin MUSTERI, 31.07.2026 09:13'da SIRKET gondericisinden 4230-13300128-351 numarali hesabiniza HAVALE ile 600,00 TRY tutarinda para girisi gerceklesmistir."
+    const parsed = parseDenizbankIncomingAccountSms(sms)
+    expect(parsed?.occurredAt).toBe('2026-07-31T09:13+03:00')
+    expect(accountSmsNeedsExternalEventId(parsed!)).toBe(true)
   })
 })
 

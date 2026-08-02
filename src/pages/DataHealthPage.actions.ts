@@ -50,14 +50,6 @@ export async function fixIssue(issue: HealthIssue): Promise<UndoBatch | null> {
     if (!updateError.ok) throw new Error(updateError.error.message ?? 'Kart borç kırılımı güncellenemedi.')
   }
 
-  if ((issue.kind === 'cardScheduledDebt' || issue.kind === 'cardInstallmentOverflow') && payload.cardId && payload.nextDebtAmount !== undefined) {
-    await addUndo('cards', [payload.cardId])
-    const updateError = await updateDataHealthRow('cards', payload.cardId, {
-        debt_amount: payload.nextDebtAmount,
-      })
-    if (!updateError.ok) throw new Error(updateError.error.message ?? 'Kart borcu güncellenemedi.')
-  }
-
   if ((issue.kind === 'cardLedgerDrift' || issue.kind === 'cardSplitDrift') && payload.cardId) {
     await addUndo('cards', [payload.cardId])
     const { error: rpcError } = await recomputeCardDebt(payload.cardId)
@@ -94,7 +86,7 @@ export async function fixIssue(issue: HealthIssue): Promise<UndoBatch | null> {
     if (!updateError.ok) throw new Error(updateError.error.message ?? 'Kart taksitleri güncellenemedi.')
   }
 
-  if ((issue.kind === 'cardStatementTotals' || issue.kind === 'cardStatementStatus') && payload.statementArchiveId && payload.updates) {
+  if (issue.kind === 'cardStatementTotals' && payload.statementArchiveId && payload.updates) {
     await addUndo('card_statement_archives', [payload.statementArchiveId])
     const updateError = await updateDataHealthRow(
       'card_statement_archives',

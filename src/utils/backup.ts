@@ -1,7 +1,7 @@
 import {
-  deleteOwnRows,
   fetchTableRows,
   insertRows,
+  resetOwnFinanceData,
   type BackupRow,
 } from '../data/repositories/backupRepo'
 
@@ -22,11 +22,12 @@ import {
 export const RESTORE_TABLE_ORDER = [
   'cards',
   'card_aliases',
-  'card_current_settlements',
   'assets',
   'loans',
   'savings_goals',
   'budgets',
+  'kasa_buckets',
+  'wishlist_items',
   'debts',
   'salary_history',
   'gold_lots',
@@ -41,12 +42,19 @@ export const RESTORE_TABLE_ORDER = [
   'account_reconciliations',
   'dismissed_upcoming_items',
   'push_subscriptions',
+  'notification_preferences',
 ] as const
 
 export type RestoreTable = (typeof RESTORE_TABLE_ORDER)[number]
 
 /** Exported but intentionally never restored. */
-const EXPORT_ONLY_TABLES = ['card_ledger', 'account_ledger', 'sms_log', 'notification_log'] as const
+const EXPORT_ONLY_TABLES = [
+  'card_current_settlements',
+  'card_ledger',
+  'account_ledger',
+  'sms_log',
+  'notification_log',
+] as const
 
 const BACKUP_SCHEMA_V2 = 'financeproject-v2'
 const BACKUP_SCHEMA_V1 = 'financeproject-v1'
@@ -81,6 +89,54 @@ export type ParsedBackup = {
 }
 
 /**
+ * Settlement rows are audit-only. Restoring their FK marker without the
+ * immutable parent would either fail or make a paid movement billable again.
+ * Keep paid installments as historical rows with the marker removed; omit
+ * allocated posted expenses and malformed linked installments conservatively.
+ */
+function rowsSafeWithoutSettlements(table: RestoreTable, rows: BackupRow[]): BackupRow[] {
+  if (table === 'card_expenses') {
+    return rows.filter((row) => row.current_settlement_id == null)
+  }
+
+  if (table === 'card_installments') {
+    return rows.flatMap((row) => {
+      if (row.current_settlement_id == null) return [row]
+      if (row.status === 'paid') return [{ ...row, current_settlement_id: null }]
+      return []
+    })
+  }
+
+  return rows
+}
+
+function validateBackupRows(table: RestoreTable, value: unknown): BackupRow[] {
+  if (!Array.isArray(value)) {
+    throw new Error(`Yedek dosyasında ${table} kayıtları liste değil.`)
+  }
+
+  const key = table === 'notification_preferences' ? 'user_id' : 'id'
+  const seen = new Set<string>()
+
+  return value.map((valueRow, index) => {
+    if (typeof valueRow !== 'object' || valueRow === null || Array.isArray(valueRow)) {
+      throw new Error(`Yedek dosyasında ${table}[${index}] geçerli bir kayıt değil.`)
+    }
+
+    const row = valueRow as BackupRow
+    const rowKey = row[key]
+    if (typeof rowKey !== 'string' || rowKey.trim() === '') {
+      throw new Error(`Yedek dosyasında ${table}[${index}] için ${key} eksik.`)
+    }
+    if (seen.has(rowKey)) {
+      throw new Error(`Yedek dosyasında ${table} için yinelenen ${key}: ${rowKey}`)
+    }
+    seen.add(rowKey)
+    return row
+  })
+}
+
+/**
  * Parse and validate a backup file. Throws a Turkish error message when the
  * file is not a recognisable backup.
  */
@@ -101,15 +157,24 @@ export function parseBackup(text: string): ParsedBackup {
   if (schema === BACKUP_SCHEMA_V2 && typeof root.tables === 'object' && root.tables !== null) {
     for (const table of RESTORE_TABLE_ORDER) {
       const rows = (root.tables as Record<string, unknown>)[table]
-      if (Array.isArray(rows)) tables[table] = rows as BackupRow[]
+      if (rows !== undefined) tables[table] = rowsSafeWithoutSettlements(table, validateBackupRows(table, rows))
     }
   } else if (schema === BACKUP_SCHEMA_V1 && typeof root.data === 'object' && root.data !== null) {
     for (const [key, table] of Object.entries(V1_KEY_TO_TABLE)) {
       const rows = (root.data as Record<string, unknown>)[key]
-      if (Array.isArray(rows)) tables[table] = rows as BackupRow[]
+      if (rows !== undefined) tables[table] = rowsSafeWithoutSettlements(table, validateBackupRows(table, rows))
     }
   } else {
     throw new Error('Tanınmayan yedek formatı. "JSON yedek" ile alınmış bir dosya seç.')
+  }
+
+  if (tables.card_installments && tables.card_expenses) {
+    const expenseIds = new Set(
+      tables.card_expenses.map((row) => row.id).filter((id): id is string => typeof id === 'string'),
+    )
+    tables.card_installments = tables.card_installments.filter(
+      (row) => row.card_expense_id == null || (typeof row.card_expense_id === 'string' && expenseIds.has(row.card_expense_id)),
+    )
   }
 
   const counts = RESTORE_TABLE_ORDER.filter((table) => (tables[table]?.length ?? 0) > 0).map((table) => ({
@@ -170,7 +235,8 @@ export function downloadBackupFile(payload: string, prefix = 'financeproject-bac
 export type RestoreProgress = { step: string; done: number; total: number }
 
 /**
- * Wipe own data (reverse FK order) and insert the backup (FK order, chunked).
+ * Wipe own data transactionally through the reset RPC, then insert the backup
+ * (FK order, chunked).
  * NOT transactional over REST — the caller must take a safety export first and
  * warn the user. RLS scopes every statement to the signed-in user.
  */
@@ -179,14 +245,11 @@ export async function restoreBackup(
   userId: string,
   onProgress?: (progress: RestoreProgress) => void,
 ): Promise<void> {
-  const steps = RESTORE_TABLE_ORDER.length * 2
-  let done = 0
+  const steps = RESTORE_TABLE_ORDER.length + 1
+  let done = 1
 
-  // Wipe child-first. Missing tables (not deployed) are skipped.
-  for (const table of [...RESTORE_TABLE_ORDER].reverse()) {
-    onProgress?.({ step: `${table} temizleniyor`, done: ++done, total: steps })
-    await deleteOwnRows(table, userId)
-  }
+  onProgress?.({ step: 'Mevcut veriler temizleniyor', done, total: steps })
+  await resetOwnFinanceData()
 
   // Insert parent-first.
   for (const table of RESTORE_TABLE_ORDER) {
@@ -208,13 +271,14 @@ export const BACKUP_TABLE_LABELS: Record<RestoreTable, string> = {
   loans: 'Kredi',
   savings_goals: 'Hedef',
   budgets: 'Bütçe',
+  kasa_buckets: 'Kasa kovası',
+  wishlist_items: 'İstek listesi kaydı',
   debts: 'Kişi borcu/alacağı',
   salary_history: 'Maaş kaydı',
   gold_lots: 'Altın alımı',
   net_worth_snapshots: 'Net değer fotoğrafı',
   card_statement_archives: 'Ekstre arşivi',
   card_expenses: 'Kart harcaması',
-  card_current_settlements: 'Erken kart ödemesi',
   card_installments: 'Kart taksidi',
   loan_installments: 'Kredi taksidi',
   savings_goal_components: 'Hedef bileşeni',
@@ -223,4 +287,5 @@ export const BACKUP_TABLE_LABELS: Record<RestoreTable, string> = {
   account_reconciliations: 'Mutabakat kaydı',
   dismissed_upcoming_items: 'Gizlenen yaklaşan kayıt',
   push_subscriptions: 'Push aboneliği',
+  notification_preferences: 'Bildirim tercihi',
 }
