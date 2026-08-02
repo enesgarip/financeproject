@@ -373,6 +373,8 @@ plan G1→G5.
     ilerlemeyince sayfa hiç boyanmıyordu. Route geçişi opacity içermeyen
     `route-slide-in` animasyonuna taşındı. PR/gece ölçüm sınırları 180/420 saniye,
     job sınırı 10 dakikadır; takılan süreç TERM + 15 saniyelik KILL ile sonlu kalır.
+    Gizli `.lighthouseci` çıktısı artifact filtresinden kaçmasın diye hidden-file
+    upload açıldı ve rapor eksikliği artık job'ı kırar.
   - `ÖDEME ALARMI` kartında `items-start` sol sütunu tepeye çivileyip altında
     ~180px boşluk bırakıyordu → dikey ortalandı.
   - **Yüzde biçimi Türkçe değildi:** tutarlar `₺1.150.000,00` iken yüzdeler

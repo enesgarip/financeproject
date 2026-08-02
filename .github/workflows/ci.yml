@@ -168,7 +168,8 @@ jobs:
         with:
           name: lighthouse-report
           path: .lighthouseci
-          if-no-files-found: ignore
+          include-hidden-files: true
+          if-no-files-found: error
 
   e2e:
     name: Playwright Smoke

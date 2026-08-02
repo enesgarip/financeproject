@@ -58,7 +58,9 @@ Checks:
 Lighthouse CI, GitHub status sonucunu yazabilsin diye job-scoped GitHub Actions
 token'ını `LHCI_GITHUB_TOKEN` olarak alır. Bu, "GitHub token not set" uyarısını
 ayrı bir personal access token oluşturmadan giderir; detaylı HTML raporu yine
-`.lighthouseci` artifact'i olarak yüklenir.
+`.lighthouseci` içinden `lighthouse-report` artifact'i olarak yüklenir. Klasör
+gizli olduğu için upload adımı `include-hidden-files: true` kullanır ve rapor
+yoksa hata verir; yeşil Lighthouse job'ı kanıtsız kalamaz.
 
 Lighthouse budget, CI placeholder Supabase değerleriyle oturum açmadan çalışan
 `/login` rotasını ölçer. PR/değişiklik geri bildirimi tek ölçüm kullanır; gece
