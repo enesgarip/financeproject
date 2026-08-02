@@ -1,6 +1,6 @@
 # Data Health Architecture Note
 
-Last reviewed: 2026-08-02
+Last reviewed: 2026-08-03
 
 This note maps `/veri-sagligi` (`DataHealthPage`). Treat this route as an
 operational repair surface, not a debug page: fixes can modify real finance
@@ -24,18 +24,25 @@ issue detection in `DataHealth.logic.ts` and writes in
 
 - `DataHealthPage.tsx`: orchestration, local UI state, loading, messages,
   modal wiring
-- `DataHealth.logic.ts`: thin pure issue orchestrator, issue/view-model types,
-  undo batch helpers, CSV export helpers, schema-cache detection
+- `DataHealth.logic.ts`: thin pure issue orchestrator, issue/view-model and undo
+  types, and shared date helpers
 - `DataHealth.checks.ts`: domain-specific pure issue detection, including card
   scheduled-debt gap and partial-overlap checks
-- `DataHealthPage.actions.ts`: safe-fix execution and undo capture for each
-  fixable `HealthIssue`
+- `DataHealthPage.actions.ts`: primary-action authorization, safe-repair RPC
+  execution, guarded technical writes, and undo capture where available
+- `DataHealth.resolution.ts`: exhaustive policy for every issue kind; assigns
+  automatic, guarded, guided-domain, manual-reconciliation, or informational
+  resolution and its primary action
 - `DataHealthPage.components.tsx`: issue cards, stats, and confirmation modals
+- `DataHealthCardExpenseReview.tsx`: concrete duplicate comparison and missing
+  description/category editor for the exact `payload.ids` candidates
 - `src/hooks/useFinancePaymentDrawer.ts` and
   `src/components/finance/FinancePaymentDrawer.tsx`: guided payment actions for
   issues such as overdue open card statements
 - `src/data/repositories/dataHealthRepo.ts`: immutable-PK keyset table reads,
-  narrow writes, and reset RPC
+  optimistic singleton writes, and reset RPC
+- `src/services/dataHealthRepairs.ts`: typed client for the transactional safe
+  repair RPC and its persistent receipt
 - `src/utils/backup.ts`: JSON backup parsing, export payloads, and restore flow
 - `src/utils/transactionFingerprint.ts`: deterministic transaction description
   normalization, card-expense fingerprint fallback, and duplicate-candidate
@@ -51,19 +58,32 @@ The normal flow is:
    pages are not one transaction snapshot; concurrent inserts/deletes may change
    membership, but offset boundary shifts cannot skip/duplicate remaining rows.
 2. `buildIssues(data)` derives deterministic `HealthIssue` objects.
-3. `HealthIssueCard` presents the issue, guide, details, and optional fix.
-4. Guided actions that are normal domain operations (for example paying an
+3. `resolveHealthIssue(issue)` assigns one explicit resolution mode and primary
+   action. Every emitted issue has either a real fix/payment/review action and a
+   route to its owning area; legacy `fixable` alone never exposes a write button.
+4. `HealthIssueCard` presents the issue, source of truth, preview, and action.
+5. Guided actions that are normal domain operations (for example paying an
    overdue open statement) should open the shared domain drawer instead of
    inventing a Data Health-only write path.
-5. Manual issues that do not have a safe write should still expose a quick
-   navigation action to the owning product area when possible.
-6. `fixIssue(issue)` captures undo rows before each direct repair write.
-7. `applyUndoEntry()` restores the latest in-session undo batch when requested.
-8. `loadData()` refreshes the page after writes.
+6. Ambiguous issues expose a concrete owner/reconciliation action. Duplicate
+   candidates can be compared in place and a user-confirmed duplicate is
+   reversed through `cancel_card_expense`; flagged metadata rows are edited by
+   exact ID through a non-financial guarded RPC.
+7. Bulk repair submits only deterministic card/account projections and the card
+   split clamp to `apply_data_health_safe_repairs`. The server validates the
+   entire optimistic snapshot under locks before any mutation and returns an
+   immutable run/step receipt. `loanTotals` uses the same RPC as an individual
+   one-item loan-domain plan but is deliberately not bulk-eligible, so card and
+   loan lock domains are never mixed.
+8. `data_health_repair_runs` binds the canonical request to its idempotency key;
+   `data_health_repair_steps` stores per-target before/after results. Authenticated
+   clients can read only their own receipts and cannot mutate either table.
+9. `loadData()` refreshes the page after every write or failure.
 
-Do not add a fixable issue without an undo strategy unless the action is an
-RPC recomputation with a clear backing source of truth. If a fix can delete or
-rewrite user-visible rows, make the preview explicit.
+Do not add a write action without a source of truth, stale-data guard, and an
+explicit resolution policy. If a finding can only be resolved with bank/user
+truth, keep it guided/manual and provide the exact next action instead of
+inventing a value.
 
 ## Invariant Ownership
 
@@ -101,19 +121,31 @@ not create parallel formulas in page code.
 
 Every fix should be narrow and explainable:
 
-- capture undo rows before updates/deletes
+- capture only the fields touched by a guarded singleton update and bind session
+  undo to the exact post-fix `updated_at`; if the row changes afterward, abort
+  undo rather than overwriting a newer domain edit. Deterministic RPC
+  recomputations rely on their immutable server receipt instead of session undo
 - update only the affected table and IDs
 - use repository helpers for direct table writes
 - use service/RPC helpers for ledger recomputation
+- authenticated clients have no direct INSERT grant/policy on `card_ledger` or
+  `account_ledger`; authority events remain trigger/correction-RPC owned
+- safe-repair plans contain 1..100 entries, are duplicate-free, bound to their
+  idempotency key, single-domain, user-serialized against full reset, and
+  all-or-none on a stale target. The UI previews only the first 100 repairs as
+  one atomic transaction and explicitly leaves any remainder for a fresh next
+  preview; it never silently truncates a submitted preview
 - never write aggregate card debt from scheduled-debt gap/overlap or installment
   overflow warnings; those issues are intentionally non-fixable
-- never auto-rewrite installment structure when the expense or any sibling child
-  is linked to a statement archive; amount/count/date/posted-state and missing-row
-  findings for that plan are manual review issues
+- never auto-rewrite installment structure through REST. Amount/count/date/
+  posted-state and missing-row findings navigate to the canonical card-plan edit
+  flow, which owns parent/sibling locks and rebuild rules. Historical or allocated
+  plans remain manual reconciliation.
 - never directly mutate a statement archive's financial/lifecycle fields or
   delete archived rows; canonical payment/reset RPCs carry narrow user/card/
   statement-bound contexts that database triggers validate
-- keep bulk fix tolerant of partial success by preserving undo entries
+- never continue a bulk repair after a conflict; the server rolls back the whole
+  submitted domain plan and records the conflict receipt
 - reload data after success or failure
 
 Avoid hiding schema/RPC drift. If a missing migration makes a fix impossible,
@@ -122,9 +154,11 @@ surface the error clearly rather than silently skipping a broken invariant.
 JSON backup restores user-owned finance/support rows including card aliases,
 dismissed upcoming items, push subscriptions, wishlist items, cash buckets, and
 notification preferences. Export reads use immutable-PK keysets. Append-only
-`card_ledger` / `account_ledger`, user-owned notification/SMS logs, and immutable
-`card_current_settlements` are export-only; restoring cards creates honest opening
-events instead of replaying history. Settlement-linked children that cannot be
+`card_ledger` / `account_ledger`, `data_health_repair_runs` /
+`data_health_repair_steps`, user-owned notification/SMS logs, and immutable
+`card_current_settlements` are export-only;
+restoring cards creates honest opening events instead of replaying history.
+Settlement-linked children that cannot be
 safe without their parent are conservatively omitted/normalized in both v2 and
 legacy Data Health v1 backup parsing. Unowned `sms_log`
 diagnostics remain service-role-only and never enter a user's backup.
@@ -133,8 +167,9 @@ Restore parsing rejects non-array tables, non-object/keyless rows, and duplicate
 row keys before the transactional reset starts. Row-by-row replay over REST is
 still not one transaction; the UI safety-export remains the recovery path for a
 later schema/type/FK insert failure. `reset_user_finance_data()` itself is one
-auth.uid-bound transaction and clears newly added support rows plus owner operation
-logs so restored IDs cannot inherit stale notification-dedupe state.
+auth.uid-bound transaction and clears repair receipts, newly added support rows,
+and owner operation logs so restored IDs cannot inherit stale repair keys or
+notification-dedupe state.
 Current-settlement markers are normalized away because their immutable parent is
 export-only. Historical archive markers are retained and same-user/same-card RLS
 validated during replay; proving that such an INSERT came from restore rather than
@@ -149,6 +184,7 @@ For data-health changes, usually run:
 
 ```bash
 npm exec -- vitest run src/pages/DataHealth.logic.test.ts src/utils/cardLedger.test.ts src/utils/accountLedger.test.ts src/utils/financeSummary.test.ts
+npm run db:test:data-health-safe-repairs
 npm run lint
 npm run test:unit
 npm run build

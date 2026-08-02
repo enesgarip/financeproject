@@ -1,6 +1,6 @@
 # Card Debt Transitions
 
-Last reviewed: 2026-08-02
+Last reviewed: 2026-08-03
 
 This file is the working source of truth for how credit-card debt moves through
 the app. If an RPC, page action, or data-health fix changes one of these rules,
@@ -205,15 +205,25 @@ integer kuruş. Repair flows follow the same append-only rule:
 - `post_card_debt_correction` is the preferred manual fix. It changes
   `debt_amount` through a signed adjustment and records the reason in
   `card_ledger`.
+- Data Health's `apply_data_health_safe_repairs` may invoke the recompute or
+  clamp invariant only after locking every submitted card and validating the
+  exact scan-time `updated_at`; the whole card/account plan rolls back on one
+  stale target and records a conflict receipt. Applied/skipped targets receive
+  immutable before/after step receipts.
+
+Authenticated REST clients have no `card_ledger` INSERT grant or policy. Ledger
+events are produced only by hardened trigger/correction paths; an owner-readable
+append-only table is not client-writable aggregate authority.
 
 Do not patch `debt_amount` directly from page code or data-health logic. Use the
 ledger correction RPCs or fix the upstream transition that created the drift.
 Scheduled-debt gaps, partial scheduled overlaps, and installment overflow do not
 identify which side is stale without bank truth; Data Health reports them as
 non-fixable review issues and must not derive/write a replacement debt total.
-Structural installment findings are also non-fixable when the expense or any
-sibling child is statement-archived; rebuilding that plan would rewrite historical
-statement membership.
+Structural installment findings never use generic Data Health REST writes.
+Current, unallocated plans navigate to the canonical parent-plan editor that
+owns sibling locks/rebuilds; archived, settled, or ambiguous history remains
+manual reconciliation because rebuilding it would rewrite historical membership.
 
 ### Bucket Tracking
 

@@ -23,6 +23,9 @@ oluşmaması için branch push tetikleyicisi yoktur.
 - `npm run build`
 - `npm run test:e2e`
 - `npm run ci:local`
+- `npm run db:seed:local` (reapply migrations + seed in local Supabase)
+- `npm run db:test:data-health-safe-repairs` (transaction, idempotency, audit RLS,
+  and ledger-write boundary regression)
 
 ## Optional Docker Parity
 
@@ -49,24 +52,33 @@ Checks:
 - bundle size budget
 - Lighthouse performance/accessibility/best-practices budget (frontend paths)
 - Playwright smoke test (frontend paths)
-- Supabase local migration reset + lint/RLS/grant/catch-up (database paths)
+- Supabase local migration reset + lint/RLS/grant and financial SQL regressions
+  (database paths), including `supabase/tests/data_health_safe_repairs.sql`
 
 Lighthouse CI, GitHub status sonucunu yazabilsin diye job-scoped GitHub Actions
 token'ını `LHCI_GITHUB_TOKEN` olarak alır. Bu, "GitHub token not set" uyarısını
 ayrı bir personal access token oluşturmadan giderir; detaylı HTML raporu yine
-`.lighthouseci` artifact'i olarak yüklenir.
+`.lighthouseci` içinden `lighthouse-report` artifact'i olarak yüklenir. Klasör
+gizli olduğu için upload adımı `include-hidden-files: true` kullanır ve rapor
+yoksa hata verir; yeşil Lighthouse job'ı kanıtsız kalamaz.
 
 Lighthouse budget, CI placeholder Supabase değerleriyle oturum açmadan çalışan
 `/login` rotasını ölçer. PR/değişiklik geri bildirimi tek ölçüm kullanır; gece
-01:30 UTC denetimi üç ölçüm kullanır. Job'ın 5 dakika sınırı yanında PR LHCI
-komutu 90 saniyelik süreç sınırına sahiptir; tarayıcı kilitlenirse
+01:30 UTC denetimi üç ölçüm kullanır. Job'ın 10 dakika sınırı yanında PR LHCI
+komutu 180 saniyelik süreç sınırına sahiptir; tarayıcı kilitlenirse
 `continue-on-error` bunu normal bir bilgilendirici job hatası olarak yutar ve job
-timeout'u tüm workflow'u `cancelled` yapamaz. Gece denetiminin süreç sınırı 240
-saniyedir. LHCI, build çıktısını kendi random portlu statik sunucusu yerine
+timeout'u tüm workflow'u `cancelled` yapamaz. Gece denetiminin süreç sınırı 420
+saniyedir. TERM sonrasında 15 saniye içinde kapanmayan süreç KILL ile temizlenir.
+LHCI 0.15.1, runner'ın ilerleyen Chrome sürümünü eski 0.14.0 motoruna bağlamamak
+için açıkça sabitlenmiştir. Route giriş animasyonu içerikten bağımsız yalnız
+konum geçişi yapar; bütün sayfayı ilk karede `opacity:0` ile gizleme. Audit
+sekmesi arka planda kaldığında animasyon ilerlemeyip çalışan login formu için
+`NO_FCP` üretmişti. LHCI, build çıktısını kendi random portlu statik sunucusu yerine
 `npm run preview -- --host 127.0.0.1 --port 4173 --strictPort` ile açar.
 Lighthouse, ayrı Playwright tarayıcısı indirmek yerine GitHub runner'da hazır
-Chrome'u kullanır; bu hem browser kurulumunu kaldırır hem de LHCI/Playwright
-Chromium kilitlenmesini önler. Playwright smoke ise package-lock sürümüne
+Chrome'u headless kullanır; bu hem browser kurulumunu kaldırır hem de
+LHCI/Playwright Chromium kilitlenmesini önler. Playwright smoke ise package-lock
+sürümüne
 anahtarlanmış Actions cache'ini ve cache miss'te `npx playwright install
 chromium` desenini korur. Sabit `mcr.microsoft.com/playwright:vX-noble` imajını
 geri getirme: Dependabot paket sürümünü yükselttiğinde imaj geride kalıp CI'ı
@@ -94,6 +106,11 @@ Order/parallel graph:
 5. **Promote + smoke** — after required Supabase work, use Vercel's team-scoped
    promotion API, smoke-test the canonical production `/login` route, and roll
    back to the previous deployment automatically when smoke fails
+
+The path-aware database check in both `ci.yml` and `deploy.yml` explicitly runs
+`supabase/tests/data_health_safe_repairs.sql` after a clean migration reset. It
+guards plan prevalidation, all-or-none stale handling, domain separation,
+request-bound idempotency, receipt RLS, and revoked direct ledger INSERT access.
 
 `vercel.json` disables Vercel Git auto-deploy for `main`. The deploy hook is no
 longer used. The workflow uses one verified prebuilt artifact and does not

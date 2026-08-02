@@ -114,11 +114,17 @@ yalnız workflow'daki prebuilt staged deploy + scoped API promotion yönetir (ç
 CI (`ci.yml`): PR ve `develop` push'larında Lint+Build (required); Playwright,
 Lighthouse ve Supabase kontrolleri yalnız ilgili dosya alanı değiştiyse çalışır.
 Gece Lighthouse denetimi 3 koşu, PR hızlı denetimi 1 koşudur. Lighthouse runner'da
-hazır Chrome'u kullanır ve PR ölçümü komut seviyesinde 90 saniyeyle sınırlıdır;
-job timeout'u tüm workflow'u iptal edemez. **lhci paketi ölçüm penceresinin DIŞINDA
-indirilir** (`Prefetch Lighthouse CI` + `~/.npm/_npx` cache'i, sürüm `LHCI_VERSION`
-job env'inde tek yerde): indirme timeout'un içinde kalınca 90 sn'lik bütçeyi yiyip
-ölçümü exit 124 ile düşürüyordu — skor hatası sanılıp kovalanmasın.
+hazır Chrome'u headless kullanır. Route seviyesindeki giriş animasyonu ilk karede
+içeriği boyanabilir tutar; tüm sayfayı `opacity:0` ile başlatma, audit sekmesi
+arka planda kaldığında `NO_FCP` üretir. LHCI 0.15.1'e sabitlenir; PR/gece ölçümü
+komut seviyesinde 180/420 saniye, job ise 10 dakika ile sınırlıdır. TERM sonrasında
+15 saniyede kapanmayan süreç KILL ile temizlenir; job timeout'u tüm workflow'u
+iptal edemez.
+**lhci paketi ölçüm penceresinin DIŞINDA indirilir** (`Prefetch Lighthouse CI` +
+`~/.npm/_npx` cache'i, sürüm `LHCI_VERSION` job env'inde tek yerde). İlk exit 124
+kaynağı indirme gecikmesiydi; sonraki runner Chrome 150 koşularında gerçek neden
+tüm rotayı ilk karede görünmez yapan page transition'dı. Bunları skor hatası sanıp
+kovalama; önce rapor üretilip üretilmediğini kontrol et.
 Playwright smoke tarayıcısı package-lock
 sürümünden kurulur ve browser cache'i kullanır; sabit sürümlü Playwright docker
 imajı KULLANMA — Dependabot paket sürümünü yükselttiğinde imaj geride kalıp CI'ı kırıyor.

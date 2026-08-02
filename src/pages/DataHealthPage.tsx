@@ -9,7 +9,17 @@ import { Card as SurfaceCard, CardContent, CardHeader, CardTitle } from '../comp
 import {
   fetchDataHealthRows,
 } from '../data/repositories/dataHealthRepo'
+import {
+  cancelCardExpense,
+  updateCardExpenseHealthMetadata,
+  type UpdateCardExpenseHealthMetadataInput,
+} from '../data/repositories/cardsRepo'
 import { useFinancePaymentDrawer } from '../hooks/useFinancePaymentDrawer'
+import {
+  applyDataHealthSafeRepairs,
+  createDataHealthRepairIdempotencyKey,
+  type DataHealthSafeRepair,
+} from '../services/dataHealthRepairs'
 import { formatDate } from '../utils/date'
 import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
 import { isMissingSupabaseCapabilityError, missingSupabaseCapabilityMessage } from '../utils/supabaseErrors'
@@ -18,19 +28,23 @@ import {
   type HealthData,
   type HealthIssue,
   type UndoBatch,
-  type UndoEntry,
 } from './DataHealth.logic'
 import {
   applyUndoEntry,
   emptyData,
-  makeUndoBatch,
 } from './DataHealth.actions'
-import { fixIssue } from './DataHealthPage.actions'
+import {
+  fixIssue,
+  safeRepairBatchForIssues,
+  safeRepairPlanForIssues,
+} from './DataHealthPage.actions'
 import {
   FixAllModal,
   HealthIssueCard,
   HealthStat,
 } from './DataHealthPage.components'
+import { resolveHealthIssue } from './DataHealth.resolution'
+import { DataHealthCardExpenseReview } from './DataHealthCardExpenseReview'
 
 export function DataHealthPage() {
   const { formatAmount } = useBalancePrivacy()
@@ -47,6 +61,15 @@ export function DataHealthPage() {
     catch { return [] }
   })
   const [fixAllOpen, setFixAllOpen] = useState(false)
+  const [fixAllRequest, setFixAllRequest] = useState<{
+    repairs: DataHealthSafeRepair[]
+    issues: HealthIssue[]
+    idempotencyKey: string
+    remainingRepairCount: number
+  } | null>(null)
+  const [reviewIssue, setReviewIssue] = useState<HealthIssue | null>(null)
+  const [reviewBusy, setReviewBusy] = useState(false)
+  const [reviewError, setReviewError] = useState('')
   const { drawerProps, openPaymentDrawer } = useFinancePaymentDrawer()
 
   const loadData = useCallback(async () => {
@@ -57,11 +80,14 @@ export function DataHealthPage() {
     const result = await fetchDataHealthRows()
     if (!result.ok) {
       setError(result.error.message ?? 'Veri sağlığı kayıtları yüklenemedi.')
+      setLoading(false)
+      return null
     } else {
       setData(result.data)
     }
 
     setLoading(false)
+    return result.data
   }, [])
 
   useEffect(() => {
@@ -85,7 +111,8 @@ export function DataHealthPage() {
   }, [])
 
   const visibleIssues = useMemo(() => issues.filter((issue) => !snoozedIssueIds.includes(issue.id) && !dismissedIssueIds.includes(issue.id)), [issues, snoozedIssueIds, dismissedIssueIds])
-  const fixableIssues = visibleIssues.filter((issue) => issue.fixable)
+  const bulkIssues = visibleIssues.filter((issue) => resolveHealthIssue(issue).bulkEligible)
+  const safeRepairPlan = useMemo(() => safeRepairPlanForIssues(visibleIssues), [visibleIssues])
   const stats = {
     errors: visibleIssues.filter((issue) => issue.severity === 'error').length,
     warnings: visibleIssues.filter((issue) => issue.severity === 'warning').length,
@@ -129,7 +156,14 @@ export function DataHealthPage() {
         setUndoStack((current) => [undoBatch, ...current].slice(0, 5))
       }
       await loadData()
-      setMessage('Düzeltme uygulandı. Bu oturumda geri alabilirsin.')
+      const resolution = resolveHealthIssue(issue)
+      setMessage(
+        undoBatch
+          ? 'Düzeltme uygulandı. Bu oturumda geri alabilirsin.'
+          : resolution.undoPolicy === 'not_available'
+            ? 'Düzeltme kaynak veriden yeniden hesaplandı ve denetim fişine kaydedildi.'
+            : 'Kart bakımı uygulandı; kayıtlar yeniden tarandı.',
+      )
     } catch (fixError) {
       setError(fixError instanceof Error ? fixError.message : 'Düzeltme uygulanamadı.')
     } finally {
@@ -138,37 +172,72 @@ export function DataHealthPage() {
   }
 
   async function handleFixAll() {
+    if (!fixAllRequest) {
+      setError('Güvenli düzeltme önizlemesi bulunamadı; veriyi yenileyip tekrar dene.')
+      return
+    }
+
     setFixAllOpen(false)
     setFixingId('all')
     setError('')
     setMessage('')
-    const undoEntries: UndoEntry[] = []
-
     try {
-      for (const issue of fixableIssues) {
-        const undoBatch = await fixIssue(issue)
-        if (undoBatch) undoEntries.push(...undoBatch.entries)
-      }
-      const batch = makeUndoBatch('Toplu veri sağlığı düzeltmesi', undoEntries)
-      if (batch) {
-        setUndoStack((current) => [batch, ...current].slice(0, 5))
-      }
+      const result = await applyDataHealthSafeRepairs(
+        fixAllRequest.repairs,
+        fixAllRequest.idempotencyKey,
+      )
+      if (result.error) throw new Error(result.error.message ?? 'Güvenli düzeltmeler uygulanamadı.')
+      if (!result.receipt) throw new Error('Güvenli düzeltme sonucu alınamadı.')
+
       await loadData()
-      setMessage(`${fixableIssues.length} güvenli düzeltme uygulandı. Toplu işlem geri alınabilir.`)
-    } catch (fixError) {
-      const partialBatch = makeUndoBatch('Kısmi veri sağlığı düzeltmesi', undoEntries)
-      if (partialBatch) {
-        setUndoStack((current) => [partialBatch, ...current].slice(0, 5))
+      if (result.receipt.status === 'running') {
+        setError('Aynı güvenli düzeltme hâlâ sunucuda çalışıyor. Bulguları yenileyerek sonucu kontrol et.')
+      } else if (result.receipt.status === 'conflict') {
+        setError('Plan önizlendikten sonra veri değişti. Hiçbir düzeltme uygulanmadı; güncel bulguları tekrar incele.')
+      } else if (result.receipt.status === 'failed') {
+        setError(result.receipt.message ?? 'Toplu güvenli düzeltme tamamlanamadı; finans verisine dokunulmadı.')
+      } else {
+        const remainingMessage = fixAllRequest.remainingRepairCount > 0
+          ? ` Kalan ${fixAllRequest.remainingRepairCount} çözüm güncel veriden sonraki turda önizlenebilir.`
+          : ''
+        setMessage(
+          `${result.receipt.applied} güvenli düzeltme uygulandı, ${result.receipt.skipped} kayıt zaten tutarlıydı. Denetim: ${result.receipt.runId.slice(0, 8)}.${remainingMessage}`,
+        )
       }
+      setFixAllRequest(null)
+    } catch (fixError) {
       await loadData()
       setError(
         fixError instanceof Error
-          ? `${fixError.message} Önceki başarılı adımlar geri alınabilir.`
-          : 'Toplu düzeltme tamamlanamadı. Önceki başarılı adımlar geri alınabilir.',
+          ? fixError.message
+          : 'Toplu düzeltme tamamlanamadı; finans verisine dokunulmadı.',
       )
+      // Yanıt ağda kaybolmuş olabilir. Aynı plan ve aynı işlem anahtarıyla
+      // tekrar onaylamak sunucudan özgün denetim fişini güvenle döndürür.
+      setFixAllOpen(true)
     } finally {
       setFixingId(null)
     }
+  }
+
+  async function openFixAllPreview() {
+    const freshData = await loadData()
+    if (!freshData) return
+
+    const freshVisibleIssues = buildIssues(freshData).filter(
+      (issue) => !snoozedIssueIds.includes(issue.id) && !dismissedIssueIds.includes(issue.id),
+    )
+    const batch = safeRepairBatchForIssues(freshVisibleIssues)
+    if (batch.repairs.length === 0) {
+      setMessage('Güncel kontrolde toplu uygulanabilecek güvenli bir çözüm kalmadı.')
+      return
+    }
+
+    setFixAllRequest({
+      ...batch,
+      idempotencyKey: createDataHealthRepairIdempotencyKey(),
+    })
+    setFixAllOpen(true)
   }
 
   async function handleUndo(batch: UndoBatch) {
@@ -216,7 +285,9 @@ export function DataHealthPage() {
       },
       {
         cards: data.cards,
-        reload: loadData,
+        reload: async () => {
+          await loadData()
+        },
         detail: (
           <>
             <p className="font-semibold text-foreground">{card.card_name}</p>
@@ -230,6 +301,58 @@ export function DataHealthPage() {
             : error.message ?? 'Ekstre ödenemedi.',
       },
     )
+  }
+
+  async function handleCancelDuplicate(expenseId: string) {
+    setReviewBusy(true)
+    setReviewError('')
+    try {
+      const result = await cancelCardExpense(expenseId)
+      if (!result.ok) {
+        setReviewError(result.error.message ?? 'Tekrarlanan harcama iptal edilemedi.')
+        return
+      }
+
+      const loaded = await loadData()
+      if (!loaded) {
+        setReviewError('Harcama iptal edildi ancak güncel kontroller yüklenemedi. Sayfayı yenile.')
+        return
+      }
+      setReviewIssue(null)
+      setMessage('Seçili tekrarlanan kayıt, geçmiş silinmeden finans kuralına uygun iptalle terslendi.')
+    } catch (cancelError) {
+      setReviewError(
+        cancelError instanceof Error ? cancelError.message : 'Tekrarlanan harcama iptal edilemedi.',
+      )
+    } finally {
+      setReviewBusy(false)
+    }
+  }
+
+  async function handleUpdateExpenseMetadata(input: UpdateCardExpenseHealthMetadataInput) {
+    setReviewBusy(true)
+    setReviewError('')
+    try {
+      const result = await updateCardExpenseHealthMetadata(input)
+      if (!result.ok) {
+        setReviewError(result.error.message ?? 'Harcama bilgileri güncellenemedi.')
+        return
+      }
+
+      const loaded = await loadData()
+      if (!loaded) {
+        setReviewError('Harcama güncellendi ancak güncel kontroller yüklenemedi. Sayfayı yenile.')
+        return
+      }
+      setReviewIssue(null)
+      setMessage('Harcama açıklaması ve kategorisi güncellendi; kontroller yeniden çalıştı.')
+    } catch (metadataError) {
+      setReviewError(
+        metadataError instanceof Error ? metadataError.message : 'Harcama bilgileri güncellenemedi.',
+      )
+    } finally {
+      setReviewBusy(false)
+    }
   }
 
   return (
@@ -273,12 +396,12 @@ export function DataHealthPage() {
               </button>
               <button
                 type="button"
-                onClick={() => setFixAllOpen(true)}
-                disabled={loading || Boolean(fixingId) || undoing || fixableIssues.length === 0}
+                onClick={() => void openFixAllPreview()}
+                disabled={loading || Boolean(fixingId) || undoing || safeRepairPlan.length === 0}
                 className="inline-flex items-center gap-2 rounded-xl bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground shadow-[0_2px_8px_color-mix(in_srgb,var(--primary)_30%,transparent)] transition hover:bg-primary/90 active:scale-[0.97] disabled:opacity-50"
               >
                 <Wrench size={15} />
-                Güvenli düzeltmeleri uygula
+                Önizle ve güvenli çözümleri uygula
               </button>
               {snoozedIssueIds.length > 0 ? (
                 <button
@@ -326,7 +449,14 @@ export function DataHealthPage() {
           </CardContent>
         </SurfaceCard>
 
-        {!loading && data.cards.length > 0 ? <LiveReconciliationPanel cards={data.cards} onChanged={loadData} /> : null}
+        {!loading && data.cards.length > 0 ? (
+          <LiveReconciliationPanel
+            cards={data.cards}
+            onChanged={async () => {
+              await loadData()
+            }}
+          />
+        ) : null}
 
         {!loading ? (
           <SurfaceCard variant="default">
@@ -334,7 +464,7 @@ export function DataHealthPage() {
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <h2 className="font-bold text-foreground">Türetilmiş alan tutarlılığı</h2>
-                  <p className="mt-1 text-sm text-muted-foreground">DB'deki özet alanları (borç, bakiye, kredi kalanı) kaynak verilerle eşleşiyor mu?</p>
+                  <p className="mt-1 text-sm text-muted-foreground">Veritabanındaki özet alanları (borç, bakiye, kredi kalanı) kaynak verilerle eşleşiyor mu?</p>
                 </div>
                 <Badge variant={derivedFieldStats.totalDrift > 0 ? 'warning' : 'success'}>
                   {derivedFieldStats.totalDrift === 0 ? 'Tutarlı' : `${derivedFieldStats.totalDrift} sapma`}
@@ -356,15 +486,15 @@ export function DataHealthPage() {
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <h2 className="font-bold text-foreground">İşlem güvenilirliği</h2>
-                  <p className="mt-1 text-sm text-muted-foreground">Kart harcamalarında duplicate ve eksik sınıflandırma sinyalleri.</p>
+                  <p className="mt-1 text-sm text-muted-foreground">Kart harcamalarında tekrar olasılığı ve eksik sınıflandırma sinyalleri.</p>
                 </div>
                 <Badge variant={integrityStats.sameFingerprint > 0 || integrityStats.possibleDuplicates > 0 ? 'warning' : 'success'}>
                   Mutabakat
                 </Badge>
               </div>
               <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
-                <HealthStat label="Aynı fingerprint" value={integrityStats.sameFingerprint} tone={integrityStats.sameFingerprint > 0 ? 'warning' : 'neutral'} />
-                <HealthStat label="Muhtemel duplicate" value={integrityStats.possibleDuplicates} tone={integrityStats.possibleDuplicates > 0 ? 'info' : 'neutral'} />
+                <HealthStat label="Aynı işlem izi" value={integrityStats.sameFingerprint} tone={integrityStats.sameFingerprint > 0 ? 'warning' : 'neutral'} />
+                <HealthStat label="Olası tekrar" value={integrityStats.possibleDuplicates} tone={integrityStats.possibleDuplicates > 0 ? 'info' : 'neutral'} />
                 <HealthStat label="Açıklamasız" value={integrityStats.missingDescriptions} tone={integrityStats.missingDescriptions > 0 ? 'info' : 'neutral'} />
                 <HealthStat label="Kategorisiz" value={integrityStats.missingCategories} tone={integrityStats.missingCategories > 0 ? 'info' : 'neutral'} />
               </div>
@@ -408,6 +538,10 @@ export function DataHealthPage() {
                 undoing={undoing}
                 onFix={(target) => void handleFix(target)}
                 onPayIssue={(target) => void handlePayIssue(target)}
+                onReviewIssue={(target) => {
+                  setReviewError('')
+                  setReviewIssue(target)
+                }}
                 onSnooze={(issueId) => setSnoozedIssueIds((current) => (current.includes(issueId) ? current : [...current, issueId]))}
                 onDismiss={dismissIssue}
               />
@@ -418,12 +552,31 @@ export function DataHealthPage() {
 
       <FixAllModal
         open={fixAllOpen}
-        onClose={() => setFixAllOpen(false)}
-        fixableIssues={fixableIssues}
+        onClose={() => {
+          setFixAllOpen(false)
+          setFixAllRequest(null)
+        }}
+        safeIssues={fixAllRequest?.issues ?? bulkIssues}
+        repairCount={fixAllRequest?.repairs.length ?? 0}
+        remainingRepairCount={fixAllRequest?.remainingRepairCount ?? 0}
         fixingId={fixingId}
         undoing={undoing}
         onConfirm={() => void handleFixAll()}
       />
+      {reviewIssue ? (
+        <DataHealthCardExpenseReview
+          issue={reviewIssue}
+          expenses={data.cardExpenses}
+          cards={data.cards}
+          busy={reviewBusy}
+          error={reviewError}
+          onClose={() => {
+            if (!reviewBusy) setReviewIssue(null)
+          }}
+          onCancelDuplicate={(expenseId) => void handleCancelDuplicate(expenseId)}
+          onUpdateMetadata={(input) => void handleUpdateExpenseMetadata(input)}
+        />
+      ) : null}
       <FinancePaymentDrawer {...drawerProps} />
     </>
   )

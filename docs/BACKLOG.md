@@ -1,5 +1,41 @@
 # Priority Backlog
 
+## 2026-08-03 — Veri Sağlığı çözüm aksiyonları ve güvenli otomasyon
+
+- ~~**DH-05 — Her sağlık bulgusuna gerçek çözüm aksiyonu.**~~ DONE.
+  `DataHealth.resolution.ts` tüm issue kind'larını exhaustive biçimde otomatik
+  yeniden hesaplama, korumalı tek-tık, domain akışına yönlendirme, manuel
+  uzlaştırma veya bilgi inceleme moduna ayırır. Eski `fixable` alanı tek başına
+  yazma butonu açmaz. Aktif 69 id deseninin tamamında fix/ödeme/sayfa-içi review
+  veya sahip ekran aksiyonu vardır.
+- ~~**DH-06 — Deterministik düzeltmeler için transaction/audit sınırı.**~~ DONE.
+  `apply_data_health_safe_repairs` kart/account ledger projeksiyonu, kredi plan
+  özeti ve kart borç kırılımı clamp'ini exact `updated_at` CAS + hedef kilitleriyle
+  uygular. Planlar 1..100, duplicate-free ve tek domain'dir; stale bir hedef tüm
+  planı finans yazısı olmadan conflict'e düşürür. Idempotency key kanonik isteğe
+  bağlıdır; `data_health_repair_runs` / `data_health_repair_steps` before-after
+  fişleri istemciye karşı immutable ve yalnız sahibine görünür. `loanTotals` aynı
+  RPC'yi bireysel loan-domain aksiyonda kullanır ve toplu seçime girmez.
+  Repair/reset kullanıcı bazında transaction mutex ile lineerleştirilir.
+- ~~**SEC-03 — Ledger aggregate yetkisi istemciden forge edilebiliyordu.**~~ DONE.
+  Authenticated doğrudan INSERT policy/grant'ları `card_ledger` ve
+  `account_ledger` için kaldırıldı. Event üretimi trigger ve kanonik correction
+  RPC'lerinde kalır; `supabase/tests/data_health_safe_repairs.sql` gerçek Postgres
+  runtime permission denial'ını CI/deploy DB gate'inde doğrular.
+- ~~**DH-07 — Duplicate ve eksik metadata yönlendirmeleri işlevsizdi.**~~ DONE.
+  Data Health exact `payload.ids` kayıtlarını yan yana gösterir. Kullanıcı
+  gerçekten duplicate olan satırı iki-aşamalı onayla `cancel_card_expense`
+  üzerinden append-only tersler; açıklama/kategori yalnız finans alanı kabul
+  etmeyen, owner/stale guard'lı metadata RPC'siyle düzenlenir; sınıflandırma
+  finansal archive/settlement toplamlarını değiştirmez.
+- **DH-08 — Yapısal taksitleri sessiz/tek-tık tamamlama (opsiyonel sonraki faz).**
+  Generic REST amount/count/date/posted/missing-row düzeltmeleri parent/sibling
+  yarışında güvenli olmadığı için kaldırıldı. Hiçbiri aksiyonsuz değildir:
+  kanonik Kartlar plan editörüne gider ve kilitli domain rebuild ile çözülür.
+  Gelecekte ayrı bir card→expense→siblings lock'lu RPC yazılırsa future-only
+  satırlar yeniden tek-tık adayı olabilir; geçmiş için banka gerçeği olmadan
+  otomasyon yapılmayacaktır.
+
 ## 2026-08-02 — Prod veri tutarlılığı denetimi ve düzeltme paketi
 
 Salt-okunur prod denetiminde kart borç bileşimi, 1000+ satırlı ledger yükleme,
@@ -326,10 +362,19 @@ plan G1→G5.
   - Aynı kartlarda `--info` yeniden basamaklandırılmamıştı (diğer semantikler
     öyleyken); "Bekleyen tahsilat" küresel orta maviyle yazılıp koyu zeminde
     kayboluyordu → `#93c5fd` (~9:1).
-  - Lighthouse exit 124 ile düşüyordu: `npx @lhci/cli` **ölçüm penceresinin içinde**
-    indiriliyor, indirme 90 sn'lik bütçeyi yiyordu. Prefetch adımı + `~/.npm/_npx`
-    cache'i ile indirme pencerenin dışına alındı; sürüm `LHCI_VERSION` job env'inde.
-    Soğuk cache'te prefetch 10,7 sn sürdü — eskiden bu süre ölçümden çalınıyordu.
+  - Lighthouse exit 124 takibinin ilk adımında `npx @lhci/cli` indirmesi
+    **ölçüm penceresinin dışına** alındı: prefetch + `~/.npm/_npx` cache'i ve açık
+    `LHCI_VERSION` job env'i eklendi. Takip koşularında indirme tamamlanmasına rağmen
+    runner Chrome 150 + LHCI 0.14.0 ölçümü 90 saniye sınırına tekrar ulaştı. Araç
+    0.15.1'e yükseltilip pencere genişletilince gerçek hata görünür oldu: çalışan
+    login formuna rağmen sekme `NO_FCP` üretiyordu. Headful + Xvfb koşusu da aynı
+    sonucu vererek Chrome görünürlük varsayımını eledi. Kök neden tüm rotayı
+    `fade-in-up` ile ilk karede `opacity:0` yapan page transition'dı; audit sekmesi
+    ilerlemeyince sayfa hiç boyanmıyordu. Route geçişi opacity içermeyen
+    `route-slide-in` animasyonuna taşındı. PR/gece ölçüm sınırları 180/420 saniye,
+    job sınırı 10 dakikadır; takılan süreç TERM + 15 saniyelik KILL ile sonlu kalır.
+    Gizli `.lighthouseci` çıktısı artifact filtresinden kaçmasın diye hidden-file
+    upload açıldı ve rapor eksikliği artık job'ı kırar.
   - `ÖDEME ALARMI` kartında `items-start` sol sütunu tepeye çivileyip altında
     ~180px boşluk bırakıyordu → dikey ortalandı.
   - **Yüzde biçimi Türkçe değildi:** tutarlar `₺1.150.000,00` iken yüzdeler
@@ -719,12 +764,17 @@ pattern'ler ve açık düzeltme planı yer alıyor.
   promotion-time CLI install are removed. Production dependency audit is now a
   release gate; React Router moved to patched v8 and direct-main branch
   protection requires the PR flow.
-- 2026-07-27 Lighthouse follow-up: Playwright Chromium completed app smoke tests
+- 2026-08-03 Lighthouse follow-up: Playwright Chromium completed app smoke tests
   but hung inside LHCI until the 5-minute job timeout, cancelling the whole CI
   run despite `continue-on-error`. Lighthouse now uses the GitHub runner's
-  preinstalled Chrome (no second browser setup) and a 90-second command timeout
-  on PRs / 240 seconds nightly, so an informational measurement cannot cancel
-  otherwise-green required checks.
+  preinstalled Chrome (no second browser setup). Repeated runner Chrome 150 runs
+  then exhausted the former LHCI 0.14.0 / 90-second capture window even with a
+  prefetched package. The wider LHCI 0.15.1 run exposed `NO_FCP`; a headful Xvfb
+  run reproduced it and ruled out the headless Chrome hypothesis. The route
+  wrapper's page-wide fade started at `opacity:0` and could remain frozen in an
+  audit tab, so it now uses a transform-only slide that paints on frame one.
+  The 180-second PR / 420-second nightly command timeout, 10-minute job ceiling,
+  and TERM→KILL cleanup remain bounded safeguards.
 - 2026-07-27 Dependabot PR hygiene: patch/minor version updates remain grouped
   and auto-merge after required CI, while routine major version updates are no
   longer opened and left stale. Security updates bypass the SemVer allow filter;

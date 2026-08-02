@@ -1,4 +1,8 @@
-import { deleteDataHealthRows, fetchUndoRows, restoreUndoRows as restoreUndoRepositoryRows } from '../data/repositories/dataHealthRepo'
+import {
+  deleteDataHealthRows,
+  fetchUndoRows,
+  restoreDataHealthFields,
+} from '../data/repositories/dataHealthRepo'
 import { dateInputValue } from '../utils/date'
 import type { HealthData, UndoBatch, UndoEntry, UndoRow, UndoTable } from './DataHealth.logic'
 
@@ -121,14 +125,41 @@ export async function captureUndoRows(table: UndoTable, ids: string[]): Promise<
 
   const result = await fetchUndoRows(table, uniqueIds)
   if (!result.ok) throw new Error(result.error.message ?? 'Geri alma satırları yüklenemedi.')
+  if (result.data.length !== uniqueIds.length) {
+    throw new Error('Geri alma anlık görüntüsü eksik; düzeltme uygulanmadı.')
+  }
 
   return { action: 'restoreRows', table, rows: result.data }
 }
 
-async function restoreUndoRows(table: UndoTable, rows: UndoRow[]) {
-  if (rows.length === 0) return
-  const result = await restoreUndoRepositoryRows(table, rows)
-  if (!result.ok) throw new Error(result.error.message ?? 'Geri alma satırları geri yüklenemedi.')
+async function restoreUndoRows(
+  table: UndoTable,
+  rows: UndoRow[],
+  fields: string[] | undefined,
+  expectedUpdatedAtById: Record<string, string> | undefined,
+) {
+  if (rows.length !== 1 || !fields || fields.length === 0 || !expectedUpdatedAtById) {
+    throw new Error('Bu geri alma kaydı güvenli sürüm bilgisi içermiyor; işlem uygulanmadı.')
+  }
+
+  const row = rows[0]
+  if (!row) throw new Error('Geri alınacak kayıt bulunamadı.')
+
+  const expectedUpdatedAt = expectedUpdatedAtById[row.id]
+  if (!expectedUpdatedAt) {
+    throw new Error('Geri alma için beklenen kayıt sürümü bulunamadı; işlem uygulanmadı.')
+  }
+
+  const previousValues: Record<string, unknown> = {}
+  for (const field of [...new Set(fields)]) {
+    if (!Object.hasOwn(row, field)) {
+      throw new Error(`Geri alma alanı eski kayıtta bulunamadı: ${field}`)
+    }
+    previousValues[field] = row[field]
+  }
+
+  const result = await restoreDataHealthFields(table, row.id, previousValues, expectedUpdatedAt)
+  if (!result.ok) throw new Error(result.error.message ?? 'Geri alma alanları uygulanamadı.')
 }
 
 async function deleteUndoRows(table: UndoTable, ids: string[]) {
@@ -146,7 +177,12 @@ async function deleteUndoRows(table: UndoTable, ids: string[]) {
 
 export async function applyUndoEntry(entry: UndoEntry) {
   if (entry.action === 'restoreRows') {
-    await restoreUndoRows(entry.table, entry.rows)
+    await restoreUndoRows(
+      entry.table,
+      entry.rows,
+      entry.fields,
+      entry.expectedUpdatedAtById,
+    )
     return
   }
 

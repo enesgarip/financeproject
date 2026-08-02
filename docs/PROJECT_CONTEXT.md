@@ -122,6 +122,12 @@ The app has several planning-oriented layers already in place:
 - installment calendar summaries
 - data integrity checks and safe-fix workflows in `DataHealthPage`
 
+Deterministic Data Health recomputations use
+`apply_data_health_safe_repairs`: each 1..100-entry, duplicate-free plan is
+single-domain, owner/type checked, target-locked, exact-`updated_at` guarded, and
+bound to its idempotency key. The bulk UI includes only card/account repairs;
+loan summary drift is submitted as an individual loan-domain action.
+
 ## Key Utilities
 
 Para çekirdeği `src/utils/money.ts` (zorunlu — bkz. "Para modeli"). Konuya göre
@@ -164,10 +170,14 @@ From the current typed schema, main tables are:
 - `transaction_history`
 - `salary_history`
 - `dismissed_upcoming_items`
+- `data_health_repair_runs` (canonical request, idempotency, batch status/counts)
+- `data_health_repair_steps` (per-target before/after repair receipts)
 - `kasa_buckets` (kasa modu: bakiye kova ayırma — planlama overlay'i, ledger değil)
 - `notification_preferences` (Web Push tür tercihleri + sessiz saatler; user_id PK)
 
 Most rows are user-scoped with `user_id`. RLS is a core security assumption.
+Data Health repair receipt tables grant authenticated users own-row SELECT only;
+the security-definer repair/reset boundary owns their writes and cleanup.
 
 ## Current Product Shape
 

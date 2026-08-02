@@ -98,14 +98,15 @@ export function checkAssets(assets: Asset[]): HealthIssue[] {
     const details: string[] = []
 
     if (asset.category === 'Nakit') {
+      const isTryCash = !asset.currency || asset.currency === 'TRY'
       if (!asset.currency) {
         updates.currency = 'TRY'
         details.push('Nakit varlıkta para birimi boş → TRY')
       }
-      if (asset.amount !== 1 || asset.unit !== 'TRY') {
+      if (isTryCash && (asset.amount !== 1 || asset.unit !== 'TRY')) {
         updates.amount = 1
         updates.unit = 'TRY'
-        details.push('Nakit varlıkta miktar/birim teknik alanları normalize edilecek.')
+        details.push('TRY nakit varlıkta miktar/birim teknik alanları normalize edilecek.')
       }
     } else {
       if (asset.currency) {
@@ -161,7 +162,7 @@ export function checkAssets(assets: Asset[]): HealthIssue[] {
         fixable: true,
         fixLabel: 'Varlık alanlarını düzelt',
         kind: 'assetShape',
-        payload: { assetId: asset.id, updates },
+        payload: { assetId: asset.id, updates, expectedUpdatedAt: asset.updated_at },
       })
     }
   }
@@ -174,9 +175,17 @@ export function checkBudgets(budgets: Budget[]): HealthIssue[] {
   const budgetsByMonthCategory = new Map<string, Budget[]>()
 
   for (const budget of budgets) {
+    const duplicateKey = `${monthStart(budget.month)}:${normalizeSearchText(budget.category)}`
+    budgetsByMonthCategory.set(
+      duplicateKey,
+      [...(budgetsByMonthCategory.get(duplicateKey) ?? []), budget],
+    )
+  }
+
+  for (const budget of budgets) {
     const normalizedMonth = monthStart(budget.month)
     const duplicateKey = `${normalizedMonth}:${normalizeSearchText(budget.category)}`
-    budgetsByMonthCategory.set(duplicateKey, [...(budgetsByMonthCategory.get(duplicateKey) ?? []), budget])
+    const hasTargetCollision = (budgetsByMonthCategory.get(duplicateKey)?.length ?? 0) > 1
 
     if (!isMonthStart(budget.month)) {
       issues.push({
@@ -186,10 +195,18 @@ export function checkBudgets(budgets: Budget[]): HealthIssue[] {
         title: `${budget.category} bütçe ayı hizasız`,
         description: 'Bütçe ayı ayın ilk günü olmalı; aylık analizler bu formatla çalışıyor.',
         details: [`Ay: ${formatDate(budget.month)} → ${formatDate(normalizedMonth)}`],
-        fixable: true,
-        fixLabel: 'Bütçe ayını hizala',
-        kind: 'budgetMonth',
-        payload: { budgetId: budget.id, updates: { month: normalizedMonth } },
+        ...(hasTargetCollision
+          ? { fixable: false as const, kind: 'manual' as const }
+          : {
+              fixable: true as const,
+              fixLabel: 'Bütçe ayını hizala',
+              kind: 'budgetMonth' as const,
+              payload: {
+                budgetId: budget.id,
+                updates: { month: normalizedMonth },
+                expectedUpdatedAt: budget.updated_at,
+              },
+            }),
       })
     }
 
@@ -270,7 +287,7 @@ export function checkCards(
         fixable: true,
         fixLabel: 'Kart alanlarını normalize et',
         kind: 'cardTypeFields',
-        payload: { cardId: card.id, updates },
+        payload: { cardId: card.id, updates, expectedUpdatedAt: card.updated_at },
       })
     }
   }
@@ -303,7 +320,13 @@ export function checkCards(
         fixable: true,
         fixLabel: 'Borç kırılımını düzelt',
         kind: 'cardDebtSplit',
-        payload: { cardId: card.id, statementDebt, currentPeriod, provisionAmount },
+        payload: {
+          cardId: card.id,
+          statementDebt,
+          currentPeriod,
+          provisionAmount,
+          expectedUpdatedAt: card.updated_at,
+        },
       })
     }
 
@@ -383,18 +406,17 @@ export function checkCards(
         description:
           debtBreakdown.scheduledTotal > 0
             ? 'Toplam borç gelecek taksitleri de içerir; bu farkın çoğu planlı taksitlerden gelir ve dönem içine yazılmamalıdır.'
-            : 'Toplam borç, ekstre + dönem içi + provizyon toplamından yüksek. Farkı ekstre borcuna aktarmak daha güvenlidir.',
+            : 'Toplam borç, ekstre + dönem içi + provizyon toplamından yüksek. Farkın hangi borç bileşenine ait olduğu banka veya ekstre doğrulaması olmadan belirlenemez.',
         details: [
           `Toplam borç: ${formatCurrency(card.debt_amount)}`,
           `Ekstre + dönem + provizyon: ${formatCurrency(debtBreakdown.splitTotal)}`,
           debtBreakdown.scheduledTotal > 0 ? `Planlı taksit (beklenen fark): ${formatCurrency(debtBreakdown.scheduledTotal)}` : null,
-          `Düzeltilmesi gereken: ${formatCurrency(unexplained)}`,
+          `Açıklanamayan tutar: ${formatCurrency(unexplained)}`,
           hasInstallmentExpenses && !exceedsTL(debtBreakdown.scheduledTotal, 0)
             ? 'Taksitli harcama var ama plan satırı eksik olabilir; eksik taksit uyarılarına da bak.'
             : null,
         ].filter((item): item is string => Boolean(item)),
-        fixable: true,
-        fixLabel: 'Ekstre borcuna aktar',
+        fixable: false,
         kind: 'cardDebtSplit',
         payload: {
           cardId: card.id,
@@ -458,13 +480,12 @@ export function checkCards(
         area: 'Kartlar',
         severity: 'warning',
         title: `${cardLabel(card)} açık ekstresi yok ama ekstre borcu var`,
-        description: 'Ekstre ödendi/kapatıldı ama kartın ekstre borcu sıfırlanmamış. Fark dönem içi harcamaya aktarılacak.',
+        description: 'Ekstre ödenmiş/kapatılmış veya arşiv kaydı eksik olabilir. Borç bileşeni Kartlar ekranında ekstre geçmişiyle birlikte doğrulanmalıdır.',
         details: [
           `Ekstre borcu: ${formatCurrency(card.statement_debt_amount)}`,
           `Dönem içi: ${formatCurrency(card.current_period_spending)} → ${formatCurrency(sumTL([card.current_period_spending, card.statement_debt_amount]))}`,
         ],
-        fixable: true,
-        fixLabel: 'Ekstre borcunu dönem içine aktar',
+        fixable: false,
         kind: 'cardDebtSplit',
         payload: {
           cardId: card.id,
@@ -581,11 +602,11 @@ export function checkCardExpenseDuplicates(cards: Card[], cardExpenses: CardExpe
       id: `card-expense-duplicate-exact-${ids.join('-')}`,
       area: 'Kartlar',
       severity: 'warning',
-      title: `${cardLabel(card)} aynı fingerprint'e sahip harcamalar`,
-      description: 'Aynı kart, tarih, tutar, durum ve normalize açıklamaya sahip birden fazla harcama var. Bu eşleşme duplicate kanıtı değildir; arka arkaya yapılan iki ayrı işlem de aynı fingerprint\'i üretebilir.',
+      title: `${cardLabel(card)} aynı işlem izine sahip harcamalar`,
+      description: 'Aynı kart, tarih, tutar, durum ve normalize açıklamaya sahip birden fazla harcama var. Bu eşleşme tekrar kanıtı değildir; arka arkaya yapılan iki ayrı işlem de aynı işlem izini üretebilir.',
       details: [
         'Karar: Satırları kullanıcı karşılaştırmalı; otomatik silme yapılmaz.',
-        `Fingerprint: ${fingerprint}`,
+        `İşlem izi: ${fingerprint}`,
         ...rows.slice(0, 5).map(cardExpenseDetail),
         rows.length > 5 ? `+${rows.length - 5} kayıt daha` : null,
       ].filter((item): item is string => Boolean(item)),
@@ -617,7 +638,7 @@ export function checkCardExpenseDuplicates(cards: Card[], cardExpenses: CardExpe
       id: `card-expense-duplicate-possible-${ids.join('-')}`,
       area: 'Kartlar',
       severity: 'info',
-      title: `${cardLabel(card)} muhtemel duplicate harcama adayı`,
+      title: `${cardLabel(card)} olası tekrarlanan harcama adayı`,
       description: 'Aynı kartta aynı gün, aynı tutar ve aynı durumla birden fazla harcama var. Açıklamalar birebir aynı değil; elle karşılaştırılmalı.',
       details: [
         `Güven: %${Math.round((hasBlankDescription ? 0.55 : 0.65 + maxSimilarity * 0.25) * 100)}`,
@@ -642,7 +663,7 @@ export function checkCardExpenseDuplicates(cards: Card[], cardExpenses: CardExpe
       area: 'Kartlar',
       severity: 'info',
       title: 'Açıklaması olmayan kart harcamaları var',
-      description: 'Açıklama olmadığında import/mutabakat eşleşmesi zayıflar ve duplicate analizi daha belirsiz olur.',
+      description: 'Açıklama olmadığında içe aktarma ve mutabakat eşleşmesi zayıflar; tekrar analizi daha belirsiz olur.',
       details: [
         `Kayıt sayısı: ${missingDescriptions.length}`,
         ...missingDescriptions.slice(0, 5).map(cardExpenseDetail),
@@ -707,7 +728,7 @@ export function checkLedgerDrift(
         fixable: true,
         fixLabel: 'Hareketlere göre düzelt',
         kind: 'cardLedgerDrift',
-        payload: { cardId: card.id, nextDebtAmount: projection },
+        payload: { cardId: card.id, nextDebtAmount: projection, expectedUpdatedAt: card.updated_at },
       })
     }
 
@@ -738,7 +759,7 @@ export function checkLedgerDrift(
           fixable: true,
           fixLabel: 'Kırılımı hareketlere göre düzelt',
           kind: 'cardSplitDrift',
-          payload: { cardId: card.id },
+          payload: { cardId: card.id, expectedUpdatedAt: card.updated_at },
         })
       }
     }
@@ -771,21 +792,20 @@ export function checkLedgerDrift(
       fixable: true,
       fixLabel: 'Hareketlere göre düzelt',
       kind: 'accountLedgerDrift',
-      payload: { cardId: card.id, nextDebtAmount: projection },
+      payload: { cardId: card.id, nextDebtAmount: projection, expectedUpdatedAt: card.updated_at },
     })
   }
 
   return issues
 }
 
-function archiveAwareInstallmentFix(
+function archiveAwareInstallmentIssue(
   archiveProtected: boolean,
   kind: HealthIssue['kind'],
-  fixLabel: string,
   payload: NonNullable<HealthIssue['payload']>,
-): Pick<HealthIssue, 'fixable' | 'fixLabel' | 'kind' | 'payload'> {
+): Pick<HealthIssue, 'fixable' | 'kind' | 'payload'> {
   if (archiveProtected) return { fixable: false, kind: 'manual' }
-  return { fixable: true, fixLabel, kind, payload }
+  return { fixable: false, kind, payload }
 }
 
 export function checkCardInstallments(
@@ -819,7 +839,7 @@ export function checkCardInstallments(
       area: 'Kartlar',
       severity: pastCount > 0 ? 'warning' : 'info',
       title: `${cardLabel(card)} dönem içine alınmamış taksit`,
-      description: 'Bu taksitler hâlâ planlı görünüyor; dönem/ekstre durumunu elle kontrol etmek daha güvenli.',
+      description: 'Kart bakımı, tüm kartlardaki vadesi gelen plan satırlarını idempotent biçimde dönem içine alır ve ardından kontroller yeniden çalışır.',
       details: [`Taksit sayısı: ${rows.length}`, `Toplam: ${formatCurrency(total)}`, pastCount > 0 ? `${pastCount} tanesinin tarihi geçmiş.` : 'Bugün dönem içine alınmalı.'],
       fixable: false,
       kind: 'manual',
@@ -830,7 +850,9 @@ export function checkCardInstallments(
     const card = cardsById.get(expense.card_id)
     const rows = installmentsByExpense.get(expense.id) ?? []
     const expectedAmount = expectedInstallmentAmount(expense.amount, expense.installment_count)
-    const archiveProtected = expense.statement_archive_id != null || rows.some((row) => row.statement_archive_id != null)
+    const archiveProtected = expense.statement_archive_id != null
+      || expense.current_settlement_id != null
+      || rows.some((row) => row.statement_archive_id != null || row.current_settlement_id != null)
 
     if (card && card.card_type !== 'kredi_karti' && (expense.installment_count > 1 || rows.length > 0)) {
       issues.push({
@@ -864,18 +886,17 @@ export function checkCardInstallments(
         area: 'Kartlar',
         severity: 'warning',
         title: `${expense.description} tek çekim ama taksit satırı var`,
-        description: 'Bu işlem peşin görünüyor; harcama kaydı kalacak, sadece analizleri şişiren taksit planı satırları temizlenecek.',
+        description: 'Bu işlem peşin görünüyor; bağlı plan satırları Kartlar ekranında harcama ve tüm kardeş kayıtlarla birlikte incelenmeli.',
         details: [`Satır sayısı: ${rows.length}`, `Kart: ${cardLabel(card)}`, `Tutar: ${formatCurrency(expense.amount)}`],
-        ...archiveAwareInstallmentFix(
-          archiveProtected,
-          'cardSingleInstallments',
-          'Peşin plan satırlarını kaldır',
-          { ids: rows.map((row) => row.id) },
-        ),
+        fixable: false,
+        kind: 'cardSingleInstallments',
       })
     }
 
     if (moneyDiffers(expense.installment_amount, expectedAmount)) {
+      const historicalPlan = rows.some(
+        (row) => row.status !== 'scheduled' || row.due_month <= today || row.posted_at != null || row.paid_at != null,
+      )
       issues.push({
         id: `card-expense-amount-${expense.id}`,
         area: 'Kartlar',
@@ -887,11 +908,14 @@ export function checkCardInstallments(
           `Beklenen: ${formatCurrency(expectedAmount)}`,
           `Toplam: ${formatCurrency(expense.amount)} · ${expense.installment_count} taksit`,
         ],
-        ...archiveAwareInstallmentFix(
-          archiveProtected,
+        ...archiveAwareInstallmentIssue(
+          archiveProtected || historicalPlan,
           'cardExpenseAmount',
-          'Taksit tutarını düzelt',
-          { expenseId: expense.id, updates: { installment_amount: expectedAmount } },
+          {
+            expenseId: expense.id,
+            updates: { installment_amount: expectedAmount },
+            expectedUpdatedAt: expense.updated_at,
+          },
         ),
       })
     }
@@ -903,8 +927,10 @@ export function checkCardInstallments(
     const isSingleExpensePlan = Boolean(expense && expense.installment_count <= 1)
     const siblingRows = installment.card_expense_id ? (installmentsByExpense.get(installment.card_expense_id) ?? []) : []
     const archiveProtected = installment.statement_archive_id != null
+      || installment.current_settlement_id != null
       || expense?.statement_archive_id != null
-      || siblingRows.some((row) => row.statement_archive_id != null)
+      || expense?.current_settlement_id != null
+      || siblingRows.some((row) => row.statement_archive_id != null || row.current_settlement_id != null)
 
     if (isSingleExpensePlan) continue
 
@@ -929,12 +955,13 @@ export function checkCardInstallments(
         title: `${installment.description} işlenme tarihi eksik`,
         description: 'Döneme alınmış taksitlerde posted_at boş kalmış.',
         details: [`Taksit: ${installment.installment_no}/${installment.installment_count}`],
-        ...archiveAwareInstallmentFix(
-          archiveProtected,
-          'cardInstallmentPostedAt',
-          'İşlenme tarihini tamamla',
-          { ids: [installment.id], updates: { posted_at: new Date().toISOString() } },
-        ),
+        ...(archiveProtected
+          ? { fixable: false as const, kind: 'manual' as const }
+          : {
+              fixable: false as const,
+              kind: 'cardInstallmentPostedAt' as const,
+              payload: { ids: [installment.id] },
+            }),
       })
     }
 
@@ -946,11 +973,14 @@ export function checkCardInstallments(
         title: `${installment.description} planlı taksitte işlenme tarihi var`,
         description: 'Planlı taksitlerde posted_at boş olmalı.',
         details: [`Taksit: ${installment.installment_no}/${installment.installment_count}`],
-        ...archiveAwareInstallmentFix(
-          archiveProtected,
+        ...archiveAwareInstallmentIssue(
+          archiveProtected || installment.due_month <= today || installment.paid_at != null,
           'cardInstallmentPostedAt',
-          'İşlenme tarihini kaldır',
-          { ids: [installment.id], updates: { posted_at: null } },
+          {
+            ids: [installment.id],
+            updates: { posted_at: null },
+            expectedUpdatedAt: installment.updated_at,
+          },
         ),
       })
     }
@@ -963,11 +993,18 @@ export function checkCardInstallments(
         title: `${installment.description} taksit sayısı harcamayla uyuşmuyor`,
         description: 'Taksit satırındaki toplam taksit sayısı, bağlı harcama kaydından farklı.',
         details: [`Satır: ${installment.installment_count}`, `Harcama: ${expense.installment_count}`],
-        ...archiveAwareInstallmentFix(
-          archiveProtected,
+        ...archiveAwareInstallmentIssue(
+          archiveProtected
+            || installment.status !== 'scheduled'
+            || installment.due_month <= today
+            || installment.posted_at != null
+            || installment.paid_at != null,
           'cardInstallmentCount',
-          'Taksit sayısını düzelt',
-          { ids: [installment.id], updates: { installment_count: expense.installment_count } },
+          {
+            ids: [installment.id],
+            updates: { installment_count: expense.installment_count },
+            expectedUpdatedAt: installment.updated_at,
+          },
         ),
       })
     }
@@ -985,11 +1022,19 @@ export function checkCardInstallments(
             `Taksit: ${installment.installment_no}/${installment.installment_count}`,
             `Kayıtlı: ${formatDate(installment.due_month)} → Beklenen: ${formatDate(expectedDueDate)}`,
           ],
-          ...archiveAwareInstallmentFix(
-            archiveProtected,
+          ...archiveAwareInstallmentIssue(
+            archiveProtected
+              || installment.status !== 'scheduled'
+              || installment.due_month <= today
+              || installment.posted_at != null
+              || installment.paid_at != null
+              || !isMonthStart(installment.due_month),
             'cardInstallmentDueMonth',
-            'Taksit tarihini düzelt',
-            { ids: [installment.id], updates: { due_month: expectedDueDate } },
+            {
+              ids: [installment.id],
+              updates: { due_month: expectedDueDate },
+              expectedUpdatedAt: installment.updated_at,
+            },
           ),
         })
       }
@@ -1023,7 +1068,9 @@ export function checkCardInstallments(
     const baseDate = inferInstallmentBaseDate(expense, rows)
     const futureMissingNos = missingNos.filter((installmentNo) => addMonthsToDate(baseDate, installmentNo - 1) > today)
     const card = cardsById.get(expense.card_id)
-    const archiveProtected = expense.statement_archive_id != null || rows.some((row) => row.statement_archive_id != null)
+    const archiveProtected = expense.statement_archive_id != null
+      || expense.current_settlement_id != null
+      || rows.some((row) => row.statement_archive_id != null || row.current_settlement_id != null)
 
     if (missingNos.length > 0) {
       const pastMissingNos = missingNos.filter((installmentNo) => !futureMissingNos.includes(installmentNo))
@@ -1037,12 +1084,11 @@ export function checkCardInstallments(
           `Kart: ${cardLabel(card)}`,
           `Eksik: ${missingNos.map((item) => `${item}/${expense.installment_count}`).join(', ')}`,
           paidBefore > 0 ? `${paidBefore} taksit uygulama öncesi ödenmiş işaretli.` : `Başlangıç: ${formatDate(expense.spent_at)}`,
-          pastMissingNos.length > 0 && futureMissingNos.length === 0 ? 'Geçmiş taksitler ödendi olarak eklenecek.' : null,
+          pastMissingNos.length > 0 ? 'Geçmiş veya bugünkü eksik taksitler manuel doğrulanmalı.' : null,
         ].filter((item): item is string => Boolean(item)),
-        ...archiveAwareInstallmentFix(
-          archiveProtected,
+        ...archiveAwareInstallmentIssue(
+          archiveProtected || futureMissingNos.length !== missingNos.length,
           'cardMissingInstallments',
-          futureMissingNos.length > 0 ? 'Eksik taksitleri ekle' : 'Geçmiş taksitleri ödendi olarak ekle',
           {
             userId: expense.user_id,
             cardId: expense.card_id,
@@ -1054,6 +1100,7 @@ export function checkCardInstallments(
             totalAmount: expense.amount,
             description: expense.description,
             category: expense.category,
+            expectedUpdatedAt: expense.updated_at,
           },
         ),
       })
@@ -1136,7 +1183,13 @@ export function checkLoans(loans: Loan[], loanInstallments: LoanInstallment[]): 
         fixable: true,
         fixLabel: 'Kredi özetini düzelt',
         kind: 'loanTotals',
-        payload: { loanId: loan.id, remainingAmount, remainingInstallments, loanStatus },
+        payload: {
+          loanId: loan.id,
+          remainingAmount,
+          remainingInstallments,
+          loanStatus,
+          expectedUpdatedAt: loan.updated_at,
+        },
       })
     }
 
@@ -1236,8 +1289,9 @@ export function checkLoans(loans: Loan[], loanInstallments: LoanInstallment[]): 
           title: `${loan.loan_name} ${installment.installment_no}. taksit günü uyuşmuyor`,
           description: 'Kredi taksit tarihi, kredide tanımlı aylık ödeme günüyle hizalı değil.',
           details: [`Tarih: ${formatDate(installment.due_date)} → ${formatDate(expectedDueDate)}`, `Ödeme günü: ${loan.installment_day}`],
-          fixable: true,
-          fixLabel: 'Taksit gününü hizala',
+          ...(installment.status === 'ödendi'
+            ? { fixable: false as const }
+            : { fixable: true as const, fixLabel: 'Taksit gününü hizala' }),
           kind: 'loanInstallmentDueDay',
           payload: { ids: [installment.id], updates: { due_date: expectedDueDate } },
         })
@@ -1254,8 +1308,7 @@ export function checkLoans(loans: Loan[], loanInstallments: LoanInstallment[]): 
       title: 'Ödenmiş kredi taksitinde ödeme tarihi eksik',
       description: 'Ödenmiş görünen taksitlerde paid_at alanı boş kalmış.',
       details: [`Satır sayısı: ${paidWithoutDate.length}`],
-      fixable: true,
-      fixLabel: 'Ödeme tarihlerini tamamla',
+      fixable: false,
       kind: 'loanPaidAtMissing',
       payload: { ids: paidWithoutDate.map((item) => item.id) },
     })
@@ -1312,9 +1365,9 @@ export function checkDebts(debts: Debt[]): HealthIssue[] {
       })
     }
 
-    if (!isGold && debt.amount !== 1) {
+    if (debt.value_type === 'TRY' && debt.amount !== 1) {
       updates.amount = 1
-      details.push('Nakit/döviz borç kaydında miktar teknik alanı 1 olmalı.')
+      details.push('TRY borç kaydında miktar teknik alanı 1 olmalı.')
     }
 
     if (Object.keys(updates).length > 0) {
@@ -1328,7 +1381,7 @@ export function checkDebts(debts: Debt[]): HealthIssue[] {
         fixable: true,
         fixLabel: 'Borç alanlarını düzelt',
         kind: 'debtShape',
-        payload: { debtId: debt.id, updates },
+        payload: { debtId: debt.id, updates, expectedUpdatedAt: debt.updated_at },
       })
     }
 
@@ -1599,10 +1652,18 @@ export function checkPayments(payments: Payment[]): HealthIssue[] {
         title: `${payment.title} tekrar alanları temiz değil`,
         description: 'Tek seferlik ödeme kaydında aylık tekrar alanları dolu kalmış.',
         details: [`Gün: ${payment.recurrence_day ?? '-'}`, `Bitiş: ${formatDate(payment.recurrence_end_date)}`],
-        fixable: true,
-        fixLabel: 'Tekrar alanlarını temizle',
-        kind: 'paymentRecurrenceFields',
-        payload: { paymentId: payment.id, updates: { recurrence_day: null, recurrence_end_date: null } },
+        ...(payment.status === 'bekliyor'
+          ? {
+              fixable: true as const,
+              fixLabel: 'Tekrar alanlarını temizle',
+              kind: 'paymentRecurrenceFields' as const,
+              payload: {
+                paymentId: payment.id,
+                updates: { recurrence_day: null, recurrence_end_date: null },
+                expectedUpdatedAt: payment.updated_at,
+              },
+            }
+          : { fixable: false as const, kind: 'manual' as const }),
       })
     }
   }
@@ -1624,6 +1685,9 @@ export function checkPayments(payments: Payment[]): HealthIssue[] {
 
     const expectedDueDate = dateInMonthValue(payment.due_date, payment.recurrence_day)
     if (payment.due_date !== expectedDueDate) {
+      const canAlignFuturePending = payment.status === 'bekliyor'
+        && payment.due_date >= today
+        && expectedDueDate >= today
       issues.push({
         id: `payment-due-day-${payment.id}`,
         area: 'Planlı',
@@ -1631,10 +1695,18 @@ export function checkPayments(payments: Payment[]): HealthIssue[] {
         title: `${payment.title} tarihi tekrar günüyle uyuşmuyor`,
         description: 'Aylık ödeme tarihi, seçili tekrar gününe göre hizalanmamış.',
         details: [`Tarih: ${formatDate(payment.due_date)} → ${formatDate(expectedDueDate)}`, `Tekrar günü: ${payment.recurrence_day}`],
-        fixable: true,
-        fixLabel: 'Ödeme tarihini hizala',
-        kind: 'paymentDueDay',
-        payload: { paymentId: payment.id, dueDate: expectedDueDate },
+        ...(canAlignFuturePending
+          ? {
+              fixable: true as const,
+              fixLabel: 'Ödeme tarihini hizala',
+              kind: 'paymentDueDay' as const,
+              payload: {
+                paymentId: payment.id,
+                dueDate: expectedDueDate,
+                expectedUpdatedAt: payment.updated_at,
+              },
+            }
+          : { fixable: false as const, kind: 'manual' as const }),
       })
     }
 

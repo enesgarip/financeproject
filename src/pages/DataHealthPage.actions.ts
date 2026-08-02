@@ -1,183 +1,244 @@
 import {
-  deleteDataHealthRows,
-  insertCardInstallments,
   updateDataHealthRow,
-  updateDataHealthRows,
 } from '../data/repositories/dataHealthRepo'
-import type { InsertFor, UpdateFor } from '../types/database'
-import { recomputeAccountBalance } from '../services/accountLedgerActions'
-import { recomputeCardDebt } from '../services/cardLedgerActions'
-import { dateInputValue } from '../utils/date'
-import { roundTL } from '../utils/money'
+import type { UpdateFor } from '../types/database'
+import { postDueCardInstallments } from '../data/repositories/financeSnapshotRepo'
 import {
-  addMonthsToDate,
-  currentMonthStart,
+  applyDataHealthSafeRepairs,
+  type DataHealthSafeRepair,
+} from '../services/dataHealthRepairs'
+import {
   type HealthIssue,
   type UndoBatch,
   type UndoEntry,
   type UndoTable,
 } from './DataHealth.logic'
 import { captureUndoRows, makeUndoBatch } from './DataHealth.actions'
+import { resolveHealthIssue } from './DataHealth.resolution'
 
-export async function fixIssue(issue: HealthIssue): Promise<UndoBatch | null> {
+export const MAX_SAFE_REPAIR_BATCH_SIZE = 100
+
+export function safeRepairForIssue(issue: HealthIssue): DataHealthSafeRepair | null {
   const payload = issue.payload
-  if (!payload) return null
-  const undoEntries: UndoEntry[] = []
-  const addUndo = async (table: UndoTable, ids: string[]) => {
-    const entry = await captureUndoRows(table, ids)
-    if (entry) undoEntries.push(entry)
-  }
-
-  if (issue.kind === 'assetShape' && payload.assetId && payload.updates) {
-    await addUndo('assets', [payload.assetId])
-    const updateError = await updateDataHealthRow('assets', payload.assetId, payload.updates as UpdateFor<'assets'>)
-    if (!updateError.ok) throw new Error(updateError.error.message ?? 'Varlık güncellenemedi.')
-  }
-
-  if (issue.kind === 'budgetMonth' && payload.budgetId && payload.updates) {
-    await addUndo('budgets', [payload.budgetId])
-    const updateError = await updateDataHealthRow('budgets', payload.budgetId, payload.updates as UpdateFor<'budgets'>)
-    if (!updateError.ok) throw new Error(updateError.error.message ?? 'Bütçe güncellenemedi.')
-  }
-
-  if (issue.kind === 'cardDebtSplit' && payload.cardId) {
-    await addUndo('cards', [payload.cardId])
-    const updateError = await updateDataHealthRow('cards', payload.cardId, {
-        statement_debt_amount: payload.statementDebt ?? 0,
-        current_period_spending: payload.currentPeriod ?? 0,
-        provision_amount: payload.provisionAmount ?? 0,
-      })
-    if (!updateError.ok) throw new Error(updateError.error.message ?? 'Kart borç kırılımı güncellenemedi.')
-  }
+  const expectedUpdatedAt = payload?.expectedUpdatedAt
+  if (!payload || !expectedUpdatedAt) return null
 
   if ((issue.kind === 'cardLedgerDrift' || issue.kind === 'cardSplitDrift') && payload.cardId) {
-    await addUndo('cards', [payload.cardId])
-    const { error: rpcError } = await recomputeCardDebt(payload.cardId)
-    if (rpcError) throw new Error(rpcError.message ?? 'Borç yeniden hesaplanamadı.')
+    return { rule: 'card_ledger_recompute', targetId: payload.cardId, expectedUpdatedAt }
   }
 
   if (issue.kind === 'accountLedgerDrift' && payload.cardId) {
-    await addUndo('cards', [payload.cardId])
-    const { error: rpcError } = await recomputeAccountBalance(payload.cardId)
-    if (rpcError) throw new Error(rpcError.message ?? 'Bakiye yeniden hesaplanamadı.')
-  }
-
-  if (issue.kind === 'cardTypeFields' && payload.cardId && payload.updates) {
-    await addUndo('cards', [payload.cardId])
-    const updateError = await updateDataHealthRow('cards', payload.cardId, payload.updates as UpdateFor<'cards'>)
-    if (!updateError.ok) throw new Error(updateError.error.message ?? 'Kart alanları güncellenemedi.')
-  }
-
-  if (issue.kind === 'cardExpenseAmount' && payload.expenseId && payload.updates) {
-    await addUndo('card_expenses', [payload.expenseId])
-    const updateError = await updateDataHealthRow('card_expenses', payload.expenseId, payload.updates as UpdateFor<'card_expenses'>)
-    if (!updateError.ok) throw new Error(updateError.error.message ?? 'Kart harcaması güncellenemedi.')
-  }
-
-  if (issue.kind === 'cardSingleInstallments' && payload.ids?.length) {
-    await addUndo('card_installments', payload.ids)
-    const deleteError = await deleteDataHealthRows('card_installments', payload.ids)
-    if (!deleteError.ok) throw new Error(deleteError.error.message ?? 'Kart taksitleri silinemedi.')
-  }
-
-  if ((issue.kind === 'cardInstallmentDueMonth' || issue.kind === 'cardInstallmentPostedAt' || issue.kind === 'cardInstallmentCount') && payload.ids?.length && payload.updates) {
-    await addUndo('card_installments', payload.ids)
-    const updateError = await updateDataHealthRows('card_installments', payload.ids, payload.updates as UpdateFor<'card_installments'>)
-    if (!updateError.ok) throw new Error(updateError.error.message ?? 'Kart taksitleri güncellenemedi.')
-  }
-
-  if (issue.kind === 'cardStatementTotals' && payload.statementArchiveId && payload.updates) {
-    await addUndo('card_statement_archives', [payload.statementArchiveId])
-    const updateError = await updateDataHealthRow(
-      'card_statement_archives',
-      payload.statementArchiveId,
-      payload.updates as UpdateFor<'card_statement_archives'>,
-    )
-    if (!updateError.ok) throw new Error(updateError.error.message ?? 'Ekstre arşivi güncellenemedi.')
-  }
-
-  if (issue.kind === 'cardMissingInstallments' && payload.userId && payload.cardId && payload.cardExpenseId && payload.installmentNos && payload.baseDate) {
-    const nowIso = dateInputValue(new Date())
-    const rows: InsertFor<'card_installments'>[] = payload.installmentNos.map((installmentNo) => {
-      const dueMonth = addMonthsToDate(payload.baseDate ?? currentMonthStart(), installmentNo - 1)
-      const isPast = dueMonth <= nowIso
-      const baseAmount = payload.amount ?? 0
-      const installmentCount = payload.installmentCount ?? 1
-      const amount =
-        payload.totalAmount && installmentNo === installmentCount
-          ? roundTL(payload.totalAmount - baseAmount * (installmentCount - 1))
-          : baseAmount
-
-      return {
-        user_id: payload.userId ?? '',
-        card_id: payload.cardId ?? '',
-        card_expense_id: payload.cardExpenseId ?? null,
-        installment_no: installmentNo,
-        installment_count: installmentCount,
-        due_month: dueMonth,
-        amount,
-        description: payload.description ?? 'Taksit',
-        category: payload.category ?? 'Diğer',
-        status: isPast ? 'posted' : 'scheduled',
-        posted_at: isPast ? dueMonth : null,
-        paid_at: isPast ? dueMonth : null,
-        note: isPast ? 'Geçmiş taksit — veri sağlığı kontrolüyle ödendi olarak eklendi.' : 'Veri sağlığı kontrolüyle tamamlandı.',
-      }
-    })
-
-    const insertResult = await insertCardInstallments(rows)
-    if (!insertResult.ok) throw new Error(insertResult.error.message ?? 'Eksik taksitler eklenemedi.')
-
-    const insertedIds = insertResult.data
-    if (insertedIds.length > 0) {
-      undoEntries.push({ action: 'deleteRows', table: 'card_installments', ids: insertedIds })
-    }
-  }
-
-  if (issue.kind === 'debtShape' && payload.debtId && payload.updates) {
-    await addUndo('debts', [payload.debtId])
-    const updateError = await updateDataHealthRow('debts', payload.debtId, payload.updates as UpdateFor<'debts'>)
-    if (!updateError.ok) throw new Error(updateError.error.message ?? 'Borç/alacak kaydı güncellenemedi.')
+    return { rule: 'account_ledger_recompute', targetId: payload.cardId, expectedUpdatedAt }
   }
 
   if (issue.kind === 'loanTotals' && payload.loanId) {
-    await addUndo('loans', [payload.loanId])
-    const updateError = await updateDataHealthRow('loans', payload.loanId, {
-        remaining_amount: payload.remainingAmount ?? 0,
-        remaining_installments: payload.remainingInstallments ?? 0,
-        status: payload.loanStatus ?? 'active',
-      })
-    if (!updateError.ok) throw new Error(updateError.error.message ?? 'Kredi özeti güncellenemedi.')
+    return { rule: 'loan_summary_recompute', targetId: payload.loanId, expectedUpdatedAt }
   }
 
-  if (issue.kind === 'loanInstallmentDueDay' && payload.ids?.length && payload.updates) {
-    await addUndo('loan_installments', payload.ids)
-    const updateError = await updateDataHealthRows('loan_installments', payload.ids, payload.updates as UpdateFor<'loan_installments'>)
-    if (!updateError.ok) throw new Error(updateError.error.message ?? 'Kredi taksitleri güncellenemedi.')
+  if (issue.kind === 'cardDebtSplit' && issue.id.startsWith('card-split-') && payload.cardId) {
+    return { rule: 'card_split_clamp', targetId: payload.cardId, expectedUpdatedAt }
   }
 
-  if (issue.kind === 'loanPaidAtMissing' && payload.ids?.length) {
-    await addUndo('loan_installments', payload.ids)
-    const updateError = await updateDataHealthRows('loan_installments', payload.ids, { paid_at: new Date().toISOString() })
-    if (!updateError.ok) throw new Error(updateError.error.message ?? 'Kredi taksitleri güncellenemedi.')
+  return null
+}
+
+export function safeRepairPlanForIssues(issues: HealthIssue[]): DataHealthSafeRepair[] {
+  const repairs = new Map<string, DataHealthSafeRepair>()
+
+  for (const issue of issues) {
+    const resolution = resolveHealthIssue(issue)
+    if (!resolution.bulkEligible) continue
+
+    const repair = safeRepairForIssue(issue)
+    if (!repair) {
+      throw new Error(`Toplu çözüm politikası için yürütücü eksik: ${issue.id}`)
+    }
+
+    repairs.set(`${repair.rule}:${repair.targetId}`, repair)
   }
 
-  if (issue.kind === 'loanPendingPaidAt' && payload.ids?.length) {
-    await addUndo('loan_installments', payload.ids)
-    const updateError = await updateDataHealthRows('loan_installments', payload.ids, { paid_at: null })
-    if (!updateError.ok) throw new Error(updateError.error.message ?? 'Kredi taksitleri güncellenemedi.')
+  return [...repairs.values()].sort(
+    (left, right) => left.targetId.localeCompare(right.targetId) || left.rule.localeCompare(right.rule),
+  )
+}
+
+export function safeRepairBatchForIssues(issues: HealthIssue[]) {
+  const fullPlan = safeRepairPlanForIssues(issues)
+  const repairs = fullPlan.slice(0, MAX_SAFE_REPAIR_BATCH_SIZE)
+  const selectedKeys = new Set(
+    repairs.map((repair) => `${repair.rule}:${repair.targetId}`),
+  )
+  const selectedIssues = issues.filter((issue) => {
+    if (!resolveHealthIssue(issue).bulkEligible) return false
+    const repair = safeRepairForIssue(issue)
+    return repair ? selectedKeys.has(`${repair.rule}:${repair.targetId}`) : false
+  })
+
+  return {
+    repairs,
+    issues: selectedIssues,
+    remainingRepairCount: fullPlan.length - repairs.length,
+  }
+}
+
+function repairFailureMessage(status: 'conflict' | 'failed', message: string | null) {
+  if (status === 'conflict') {
+    return 'Kayıt kontrol sonrasında değişti. Hiçbir düzeltme uygulanmadı; veriyi yenileyip tekrar dene.'
+  }
+  return message ?? 'Güvenli düzeltme sunucuda tamamlanamadı.'
+}
+
+async function applySafeRepair(repair: DataHealthSafeRepair) {
+  const result = await applyDataHealthSafeRepairs([repair])
+  if (result.error) throw new Error(result.error.message ?? 'Güvenli düzeltme uygulanamadı.')
+  if (!result.receipt) throw new Error('Güvenli düzeltme sonucu alınamadı.')
+  if (result.receipt.status === 'running') {
+    throw new Error('Aynı güvenli düzeltme hâlâ sunucuda çalışıyor; sonucu görmek için veriyi yenile.')
+  }
+  if (result.receipt.status === 'conflict' || result.receipt.status === 'failed') {
+    throw new Error(repairFailureMessage(result.receipt.status, result.receipt.message))
+  }
+}
+
+export async function fixIssue(issue: HealthIssue): Promise<UndoBatch | null> {
+  const resolution = resolveHealthIssue(issue)
+  if (resolution.primaryAction !== 'fix') {
+    throw new Error('Bu bulgu otomatik yazmayla değil, ilgili inceleme akışında çözülmelidir.')
   }
 
-  if (issue.kind === 'paymentDueDay' && payload.paymentId && payload.dueDate) {
-    await addUndo('payments', [payload.paymentId])
-    const updateError = await updateDataHealthRow('payments', payload.paymentId, { due_date: payload.dueDate })
+  const safeRepair = safeRepairForIssue(issue)
+  if (safeRepair) {
+    await applySafeRepair(safeRepair)
+    return null
+  }
+
+  if (issue.kind === 'manual' && issue.id.startsWith('card-scheduled-')) {
+    const result = await postDueCardInstallments()
+    if (!result.ok) throw new Error(result.error.message ?? 'Kart taksit bakımı çalıştırılamadı.')
+    return null
+  }
+
+  if (resolution.mode !== 'guarded_one_click' || !issue.fixable) {
+    throw new Error('Bu bulgu mevcut haliyle tek tıkla güvenli biçimde düzeltilemez.')
+  }
+
+  const payload = issue.payload
+  if (!payload) throw new Error('Düzeltme için gerekli hedef bilgisi bulunamadı.')
+  const undoEntries: UndoEntry[] = []
+  let handled = false
+  const captureUndo = async (table: UndoTable, id: string) => {
+    const entry = await captureUndoRows(table, [id])
+    if (
+      !entry
+      || entry.action !== 'restoreRows'
+      || entry.rows.length !== 1
+      || entry.rows[0]?.id !== id
+    ) {
+      throw new Error('Geri alma anlık görüntüsü güvenli biçimde oluşturulamadı; düzeltme uygulanmadı.')
+    }
+    return entry
+  }
+  const addUndo = (
+    entry: Extract<UndoEntry, { action: 'restoreRows' }>,
+    id: string,
+    updates: object,
+    updatedAt: string,
+  ) => {
+    const fields = Object.keys(updates)
+    if (fields.length === 0) return
+    undoEntries.push({
+      ...entry,
+      fields,
+      expectedUpdatedAtById: { [id]: updatedAt },
+    })
+  }
+
+  if (issue.kind === 'assetShape' && payload.assetId && payload.updates && payload.expectedUpdatedAt) {
+    handled = true
+    const updates = payload.updates as UpdateFor<'assets'>
+    const undoEntry = await captureUndo('assets', payload.assetId)
+    const updateError = await updateDataHealthRow(
+      'assets',
+      payload.assetId,
+      updates,
+      payload.expectedUpdatedAt,
+    )
+    if (!updateError.ok) throw new Error(updateError.error.message ?? 'Varlık güncellenemedi.')
+    addUndo(undoEntry, payload.assetId, updates, updateError.data.updatedAt)
+  }
+
+  if (issue.kind === 'budgetMonth' && payload.budgetId && payload.updates && payload.expectedUpdatedAt) {
+    handled = true
+    const updates = payload.updates as UpdateFor<'budgets'>
+    const undoEntry = await captureUndo('budgets', payload.budgetId)
+    const updateError = await updateDataHealthRow(
+      'budgets',
+      payload.budgetId,
+      updates,
+      payload.expectedUpdatedAt,
+    )
+    if (!updateError.ok) throw new Error(updateError.error.message ?? 'Bütçe güncellenemedi.')
+    addUndo(undoEntry, payload.budgetId, updates, updateError.data.updatedAt)
+  }
+
+  if (issue.kind === 'cardTypeFields' && payload.cardId && payload.updates && payload.expectedUpdatedAt) {
+    handled = true
+    const updates = payload.updates as UpdateFor<'cards'>
+    const undoEntry = await captureUndo('cards', payload.cardId)
+    const updateError = await updateDataHealthRow(
+      'cards',
+      payload.cardId,
+      updates,
+      payload.expectedUpdatedAt,
+    )
+    if (!updateError.ok) throw new Error(updateError.error.message ?? 'Kart alanları güncellenemedi.')
+    addUndo(undoEntry, payload.cardId, updates, updateError.data.updatedAt)
+  }
+
+  if (issue.kind === 'debtShape' && payload.debtId && payload.updates && payload.expectedUpdatedAt) {
+    handled = true
+    const updates = payload.updates as UpdateFor<'debts'>
+    const undoEntry = await captureUndo('debts', payload.debtId)
+    const updateError = await updateDataHealthRow(
+      'debts',
+      payload.debtId,
+      updates,
+      payload.expectedUpdatedAt,
+    )
+    if (!updateError.ok) throw new Error(updateError.error.message ?? 'Borç/alacak kaydı güncellenemedi.')
+    addUndo(undoEntry, payload.debtId, updates, updateError.data.updatedAt)
+  }
+
+  if (issue.kind === 'paymentDueDay' && payload.paymentId && payload.dueDate && payload.expectedUpdatedAt) {
+    handled = true
+    const updates: UpdateFor<'payments'> = { due_date: payload.dueDate }
+    const undoEntry = await captureUndo('payments', payload.paymentId)
+    const updateError = await updateDataHealthRow(
+      'payments',
+      payload.paymentId,
+      updates,
+      payload.expectedUpdatedAt,
+    )
     if (!updateError.ok) throw new Error(updateError.error.message ?? 'Ödeme tarihi güncellenemedi.')
+    addUndo(undoEntry, payload.paymentId, updates, updateError.data.updatedAt)
   }
 
-  if (issue.kind === 'paymentRecurrenceFields' && payload.paymentId && payload.updates) {
-    await addUndo('payments', [payload.paymentId])
-    const updateError = await updateDataHealthRow('payments', payload.paymentId, payload.updates as UpdateFor<'payments'>)
+  if (issue.kind === 'paymentRecurrenceFields' && payload.paymentId && payload.updates && payload.expectedUpdatedAt) {
+    handled = true
+    const updates = payload.updates as UpdateFor<'payments'>
+    const undoEntry = await captureUndo('payments', payload.paymentId)
+    const updateError = await updateDataHealthRow(
+      'payments',
+      payload.paymentId,
+      updates,
+      payload.expectedUpdatedAt,
+    )
     if (!updateError.ok) throw new Error(updateError.error.message ?? 'Planlı ödeme güncellenemedi.')
+    addUndo(undoEntry, payload.paymentId, updates, updateError.data.updatedAt)
+  }
+
+  if (!handled) {
+    throw new Error('Bu bulgu için güvenli bir yürütücü tanımlı değil.')
   }
 
   return makeUndoBatch(issue.title, undoEntries)

@@ -150,7 +150,9 @@ On the cards page:
   remain separate even when every fingerprint field is identical.
 - Data Health reports same-fingerprint card expenses and possible
   duplicates by same card/date/status/amount plus similar or blank descriptions.
-  These are review signals only, not automatic deletes.
+  These are review signals, never automatic deletes. The user compares the exact
+  candidate IDs; a confirmed duplicate is reversed by the canonical
+  `cancel_card_expense` domain transition.
 
 Current movement reconciliation:
 
@@ -210,11 +212,15 @@ From `src/utils/cardInstallmentCalendar.ts` and page logic:
 - locked installments, meaning paid or linked to a statement, should not be edited from the UI
 - Data Health checks that each linked installment date equals the original
   transaction date plus `(installment_no - 1)` months; legacy first-of-month
-  dates are offered as a targeted repair.
+  dates and other structural plan drift navigate to the canonical parent-plan
+  editor. Generic REST writes must not mutate child amount/count/date/lifecycle
+  or invent missing historical rows without parent/sibling locks and bank truth.
 
 ## Bank Account / Transfer Rules
 
 - `cards.card_type = 'banka_karti'` represents a bank account balance in the app.
+- Authenticated clients cannot insert directly into `card_ledger` or
+  `account_ledger`; signed kuruş authority is trigger/correction-RPC owned.
 - Manual account inflow/outflow updates one account balance and writes `transaction_history`.
 - Bank-to-bank transfer uses `transfer_between_accounts`:
   - source and target must both be `banka_karti`

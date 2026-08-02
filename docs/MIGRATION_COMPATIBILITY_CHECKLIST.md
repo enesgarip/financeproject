@@ -1,6 +1,6 @@
 # Migration Compatibility Checklist
 
-Last reviewed: 2026-08-02
+Last reviewed: 2026-08-03
 
 Use this checklist before merging any change that touches Supabase migrations,
 RPC contracts, RLS policies, edge functions, generated database types, or
@@ -69,7 +69,15 @@ Migration checks when Supabase local is available:
 npm run db:reset:local
 npm run db:lint:local
 npm run db:audit:rls:local
+npm run db:audit:grants:local
+npm run db:test:data-health-safe-repairs
 ```
+
+For Data Health repair boundaries, the real-Postgres regression must cover
+owner/type isolation, direct-ledger grant denial, whole-plan stale rollback,
+request-bound idempotent replay, input limits/duplicates, card-loan domain
+separation, and audit RLS. A unit mock of the RPC is not sufficient for these
+invariants.
 
 Broader release check:
 
