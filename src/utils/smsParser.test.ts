@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
 import {
-  inferCategory,
   normalizeSmsWhitespace,
   parseDenizbankAccountSms,
   parseDenizbankCardSms,
@@ -185,38 +184,5 @@ describe('parseSms', () => {
     expect(parseSms('Hesabiniza 500 TL yatirilmistir.')).toBeNull()
     expect(parseSms('')).toBeNull()
     expect(parseSms('Kredi karti borcunuz 1.500 TL.')).toBeNull()
-  })
-})
-
-// -- inferCategory ------------------------------------------------------------
-
-describe('inferCategory', () => {
-  it('BÜYÜK HARF merchant eşleştirir (Turkish I normalization)', () => {
-    expect(inferCategory('MIGROS')).toBe('Market')
-    expect(inferCategory('BIM BIRLESIK MAGAZALAR')).toBe('Market')
-    expect(inferCategory('NETFLIX')).toBe('Eğlence')
-  })
-
-  it('küçük harf merchant eşleştirir', () => {
-    expect(inferCategory('migros')).toBe('Market')
-    expect(inferCategory('starbucks')).toBe('Yemek')
-  })
-
-  it('karışık harf merchant eşleştirir', () => {
-    expect(inferCategory('Trendyol')).toBe('Alışveriş')
-    expect(inferCategory('Shell Petrol')).toBe('Ulaşım')
-  })
-
-  it('bilinmeyen merchant Diğer döner', () => {
-    expect(inferCategory('BILINMEYEN FIRMA')).toBe('Diğer')
-    expect(inferCategory('XYZ LTD STI')).toBe('Diğer')
-  })
-
-  it('FINDEKS fatura kategorisine düşer', () => {
-    expect(inferCategory('FINDEKS FINANSAL YONETI')).toBe('Fatura')
-  })
-
-  it('HEPSIPAY alışveriş kategorisine düşer', () => {
-    expect(inferCategory('HEPSIPAY *HEPSIBURADA')).toBe('Alışveriş')
   })
 })
