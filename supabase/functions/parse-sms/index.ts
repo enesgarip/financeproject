@@ -131,11 +131,19 @@ const CATEGORY_RULES: Array<{ category: string; keywords: string[] }> = [
   { category: 'Market', keywords: ['market', 'migros', 'bim', 'a101', 'şok', 'sok', 'carrefour', 'carrefoursa', 'macrocenter', 'kasap', 'manav'] },
   { category: 'Yemek', keywords: ['yemek', 'restoran', 'restaurant', 'cafe', 'kahve', 'starbucks', 'yemeksepeti', 'getir yemek', 'burger', 'pizza', 'döner', 'doner', 'kebap'] },
   { category: 'Ulaşım', keywords: ['benzin', 'yakıt', 'yakit', 'petrol', 'shell', 'opet', 'bp', 'total', 'taksi', 'uber'] },
-  { category: 'Fatura', keywords: ['fatura', 'elektrik', 'dogalgaz', 'internet', 'abonelik', 'turkcell', 'vodafone', 'superonline', 'findeks'] },
+  // 'abonelik' Fatura'dan çıkarıldı → yeni Abonelik kuralına taşındı (kural sırası
+  // önce geldiği için Fatura'da kalsaydı Abonelik hiç eşleşemezdi). Bu blok
+  // src/utils/categories.ts categoryRules'un substring-güvenli aynasıdır.
+  { category: 'Fatura', keywords: ['fatura', 'elektrik', 'dogalgaz', 'internet', 'turkcell', 'vodafone', 'superonline', 'findeks'] },
   { category: 'Sağlık', keywords: ['eczane', 'hastane', 'doktor', 'medikal'] },
   { category: 'Eğitim', keywords: ['okul', 'kurs', 'kitap', 'udemy'] },
   { category: 'Eğlence', keywords: ['sinema', 'konser', 'netflix', 'spotify', 'oyun'] },
   { category: 'Alışveriş', keywords: ['trendyol', 'hepsiburada', 'hepsipay', 'amazon', 'n11', 'zara', 'lcw', 'teknosa', 'media markt'] },
+  { category: 'Konut', keywords: ['kira', 'aidat', 'emlak', 'ipotek'] },
+  { category: 'Abonelik', keywords: ['abonelik', 'icloud', 'blutv', 'exxen'] },
+  { category: 'İş', keywords: ['reklam', 'google ads', 'meta ads', 'hosting', 'komisyon'] },
+  { category: 'Kişisel Bakım', keywords: ['kuafor', 'berber', 'kozmetik', 'gratis', 'watsons', 'rossmann'] },
+  { category: 'Hediye', keywords: ['hediye', 'bagis', 'kizilay'] },
 ]
 
 function normalizeForCategory(text: string): string {
