@@ -16,11 +16,16 @@ tabanı; para/güvenlik/veri-bütünlüğü katmanları temiz doğrulandı (P0/P
   altyapısı kuruldu (`happy-dom` + `@testing-library/react`; per-file
   `@vitest-environment happy-dom` pragma, global env `node` korunur) ve
   `SimpleModal.test.tsx` (5 test: focus-into-dialog/Escape/Tab-trap/restore) eklendi.
-- **F-04 — `record_sms_account_movement` kullanılmayan `p_occurred_at`.** AÇIK (P3),
-  incelendi + kanıtlandı (migration `20260702120000`): RPC `p_occurred_at`'i
-  kullanmıyor → SMS hesap hareketi aktivite/ledger zaman damgası işlem-anı yerine
-  işleme-anını alır (bakiye doğru). Düzeltme forward migration gerektirir; ayrı onay
-  bekliyor.
+- ~~**F-04 — `record_sms_account_movement` kullanılmayan `p_occurred_at`.**~~ DONE
+  (P3). RPC `p_occurred_at`'i kullanmıyordu → `transaction_history.occurred_at`
+  `now()` alıyordu; aktivite akışı/financePanelsRepo `occurred_at`'e göre
+  sıraladığından gecikmeli/retry SMS yanlış günde görünüyordu. Forward migration
+  `20260802120000_sms_account_movement_use_occurred_at.sql`: INSERT'e `occurred_at`
+  eklendi (`coalesce(p_occurred_at, now())`); imza/security definer/search_path/grant
+  birebir korundu. Bakiye/ledger matematiği DEĞİŞMEDİ (account_ledger olayı sistem
+  kaydı olarak now()'da kalır). Yerel docker doğrulaması: RPC 3-gün-önceki tarihi
+  yazdı (occurred_at≠created_at), db lint uyarısı kalktı ("No schema errors"),
+  RLS/grants/catchup yeşil.
 - Denetim pass'leri: R-2 dependency audit 0 açık; R-3 primitive örneklemesi →
   refactor gerekmez; R-4 RLS/grants/lint/catchup yerel docker'da yeşil; R-1 canlı
   denetim login kabuğunda taşma-0 (auth-arkası kısım şifre-girme yasağıyla bloke).
