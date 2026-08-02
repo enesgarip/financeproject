@@ -1,11 +1,14 @@
 import { defineConfig } from 'vitest/config'
 
 // Unit tests (pure finance/util logic) live next to their source as
-// `src/**/*.test.ts`. Playwright e2e specs under `tests/e2e/*.spec.ts` are
-// intentionally excluded so the two runners never pick up each other's files.
+// `src/**/*.test.ts`. Component a11y tests use `.test.tsx` and opt into a DOM
+// environment per-file via a `// @vitest-environment happy-dom` pragma; the
+// default stays `node` so pure util tests keep their fast, DOM-free runtime.
+// Playwright e2e specs under `tests/e2e/*.spec.ts` are intentionally excluded
+// so the two runners never pick up each other's files.
 export default defineConfig({
   test: {
-    include: ['src/**/*.test.ts'],
+    include: ['src/**/*.test.{ts,tsx}'],
     environment: 'node',
     coverage: {
       provider: 'v8',

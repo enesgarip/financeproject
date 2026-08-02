@@ -114,33 +114,7 @@ export function parseSms(text: string): ParsedSms | null {
   return parseDenizbankCardSms(text) ?? parseYapikrediCardSms(text) ?? parseDenizbankAccountSms(text)
 }
 
-// --- Category inference (edge function ile senkronize) ----------------------
-
-const CATEGORY_RULES: Array<{ category: string; keywords: string[] }> = [
-  { category: 'Market', keywords: ['market', 'migros', 'bim', 'a101', 'şok', 'sok', 'carrefour', 'carrefoursa', 'macrocenter', 'kasap', 'manav'] },
-  { category: 'Yemek', keywords: ['yemek', 'restoran', 'restaurant', 'cafe', 'kahve', 'starbucks', 'yemeksepeti', 'getir yemek', 'burger', 'pizza', 'döner', 'doner', 'kebap'] },
-  { category: 'Ulaşım', keywords: ['benzin', 'yakıt', 'yakit', 'petrol', 'shell', 'opet', 'bp', 'total', 'taksi', 'uber'] },
-  { category: 'Fatura', keywords: ['fatura', 'elektrik', 'dogalgaz', 'internet', 'abonelik', 'turkcell', 'vodafone', 'superonline', 'findeks'] },
-  { category: 'Sağlık', keywords: ['eczane', 'hastane', 'doktor', 'medikal'] },
-  { category: 'Eğitim', keywords: ['okul', 'kurs', 'kitap', 'udemy'] },
-  { category: 'Eğlence', keywords: ['sinema', 'konser', 'netflix', 'spotify', 'oyun'] },
-  { category: 'Alışveriş', keywords: ['trendyol', 'hepsiburada', 'hepsipay', 'amazon', 'n11', 'zara', 'lcw', 'teknosa', 'media markt'] },
-]
-
-function normalizeForCategory(text: string): string {
-  return text
-    .replace(/[Iİ]/g, 'i')
-    .toLowerCase()
-    .replace(/[^a-zçğıöşü0-9\s]/g, ' ')
-    .trim()
-}
-
-export function inferCategory(merchant: string): string {
-  const normalized = normalizeForCategory(merchant)
-  for (const rule of CATEGORY_RULES) {
-    for (const kw of rule.keywords) {
-      if (normalized.includes(kw)) return rule.category
-    }
-  }
-  return 'Diğer'
-}
+// Kategori tahmini KASITLI olarak burada YOK. Kanonik kaynak src/utils/categories.ts
+// (inferExpenseCategory, 13 kategori, whole-word matcher). Edge fonksiyonu
+// (supabase/functions/parse-sms) kendi kategori aynasını categories.ts'ten türetir.
+// Bu dosya yalnız edge'in SMS PARSING regex'lerinin test edilebilir aynasıdır.

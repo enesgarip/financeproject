@@ -1,5 +1,30 @@
 # Priority Backlog
 
+## 2026-08-02 — Tam uygulama denetimi + kontrollü iyileştirme
+
+Kanıta dayalı tam denetim (rapor: `docs/APPLICATION_AUDIT_2026-08-02.md`). Olgun kod
+tabanı; para/güvenlik/veri-bütünlüğü katmanları temiz doğrulandı (P0/P1 hata yok).
+
+- ~~**F-01 — Ölü/stale SMS kategori ikizi.**~~ DONE. `utils/smsParser.ts`'teki
+  `inferCategory`+`CATEGORY_RULES` (8 kategori, uygulama kullanmıyor; kanonik motor
+  `categories.ts`, 13 kategori) ve `smsParser.test.ts`'teki 6 ölü test kaldırıldı.
+  Dosyanın PARSING kısmı canlı `parse-sms` edge fonksiyonunun test aynası olduğu için
+  KORUNDU (komple silme, SMS-parsing regresyon kapsamını yok ederdi).
+- ~~**F-02 — Modal a11y (SimpleModal focus yönetimi).**~~ DONE. `SimpleModal` (10
+  modalın tabanı; ödeme/al-sat/hareket modalları dahil) focus trap / Escape /
+  focus-restore kazandı (`confirm-dialog` deseni). Kullanıcı onayıyla komponent-test
+  altyapısı kuruldu (`happy-dom` + `@testing-library/react`; per-file
+  `@vitest-environment happy-dom` pragma, global env `node` korunur) ve
+  `SimpleModal.test.tsx` (5 test: focus-into-dialog/Escape/Tab-trap/restore) eklendi.
+- **F-04 — `record_sms_account_movement` kullanılmayan `p_occurred_at`.** AÇIK (P3),
+  incelendi + kanıtlandı (migration `20260702120000`): RPC `p_occurred_at`'i
+  kullanmıyor → SMS hesap hareketi aktivite/ledger zaman damgası işlem-anı yerine
+  işleme-anını alır (bakiye doğru). Düzeltme forward migration gerektirir; ayrı onay
+  bekliyor.
+- Denetim pass'leri: R-2 dependency audit 0 açık; R-3 primitive örneklemesi →
+  refactor gerekmez; R-4 RLS/grants/lint/catchup yerel docker'da yeşil; R-1 canlı
+  denetim login kabuğunda taşma-0 (auth-arkası kısım şifre-girme yasağıyla bloke).
+
 ## 2026-07-28 — Fonksiyonel revizyon (Faz G, devam ediyor)
 
 Görsel revizyondan (Nocturne) sonra fonksiyonel tur. Canlı denetimde (yerel seed +
