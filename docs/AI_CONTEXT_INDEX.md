@@ -1,6 +1,6 @@
 # AI Context Index
 
-Last reviewed: 2026-08-02
+Last reviewed: 2026-08-03
 
 This file is the cheapest starting point for future AI/Codex sessions. Its job
 is to reduce repeated repo discovery: read this first, choose the smallest
@@ -75,7 +75,7 @@ ESLint blocks `src/{pages,components,utils,hooks}` from importing
 | `/varliklar` assets | `src/pages/AssetsPage.tsx`, `src/pages/AssetsPage.tradeModal.tsx`, `src/pages/AssetsHub.tsx` | `src/data/repositories/valuationRepo.ts`, `src/services/assetTrades.ts`, `src/utils/valuation*`, `src/utils/marketRates.ts` |
 | `/varliklar/maas` salary | `src/pages/SalaryPage.tsx` | `src/utils/financeSummary.ts` salary helpers |
 | `/analiz` reports hub | `src/pages/AnalysisHub.tsx`, `src/pages/AnalysisPage.tsx`, `src/pages/AnalysisDetailPage.tsx`, `src/pages/AnalysisPage.data.ts`, `src/pages/AnalysisPage.panels.tsx`, `src/pages/AnalysisPage.reports.tsx`, `src/pages/AnalysisPage.trends.tsx`, `src/pages/AnalysisPage.wealth.tsx` | `src/app/useFinanceSnapshot.ts`, `src/data/repositories/analysisRepo.ts`, `src/utils/analysisView.ts`, charts |
-| `/veri-sagligi` data health hub | `docs/DATA_HEALTH_ARCHITECTURE.md`, `src/pages/DataHealthHub.tsx`, `src/pages/DataHealthPage.tsx`, `src/pages/DataHealthOperationsPage.tsx`, `src/pages/DataHealthPage.actions.ts`, `src/pages/DataHealth.logic.ts`, `src/pages/DataHealth.checks.ts`, `src/pages/DataHealth.guide.ts`, `src/pages/DataHealth.actions.ts` | `src/data/repositories/dataHealthRepo.ts` (immutable-PK keyset pagination), `src/hooks/useFinancePaymentDrawer.ts`, ledger utilities, `src/utils/financeSummary.ts` (scheduled-debt gap/partial-overlap detection), finance invariants |
+| `/veri-sagligi` data health hub | `docs/DATA_HEALTH_ARCHITECTURE.md`, `src/pages/DataHealthHub.tsx`, `src/pages/DataHealthPage.tsx`, `src/pages/DataHealthOperationsPage.tsx`, `src/pages/DataHealth.resolution.ts`, `src/pages/DataHealthPage.actions.ts`, `src/pages/DataHealthCardExpenseReview.tsx`, `src/pages/DataHealth.logic.ts`, `src/pages/DataHealth.checks.ts`, `src/pages/DataHealth.guide.ts`, `src/pages/DataHealth.actions.ts` | `src/data/repositories/dataHealthRepo.ts` (immutable-PK keyset pagination + optimistic singleton writes), `src/services/dataHealthRepairs.ts`, `supabase/migrations/20260803120000_data_health_safe_repairs.sql`, `supabase/tests/data_health_safe_repairs.sql`, payment drawer, ledger utilities, finance invariants |
 | `/login` auth | `src/pages/LoginPage.tsx`, `src/auth/*` | `src/lib/supabase.ts` |
 
 ## Source-Of-Truth Matrix
@@ -94,6 +94,7 @@ ESLint blocks `src/{pages,components,utils,hooks}` from importing
 | How are shared credit limits grouped? | `buildCreditLimitGroups` in `src/utils/financeSummary.ts` |
 | How is loan summary projected? | `projectLoanSummary` in `src/utils/financeSummary.ts` plus DB trigger `sync_loan_summary` |
 | How are card/account ledgers projected? | `src/utils/cardLedger.ts` (`projectCardDebt`, `projectCardSplit`), `src/utils/accountLedger.ts` |
+| How are Data Health writes authorized and audited? | `src/pages/DataHealth.resolution.ts`, `src/pages/DataHealthPage.actions.ts`, `src/services/dataHealthRepairs.ts`, and `supabase/migrations/20260803120000_data_health_safe_repairs.sql` (`data_health_repair_runs` / `data_health_repair_steps`); real-DB oracle: `supabase/tests/data_health_safe_repairs.sql` |
 | How are monthly obligations built? | `src/utils/obligations.ts`; see `docs/PLANNING_MODEL_REVIEW.md` for why this stays a read-side projection instead of one write table. Card current-period cash dates derive from `utils/cardStatement.ts` so paid statement due dates are not reused. |
 | How are Turkish calendar presets defined? | `src/utils/obligationPresets.ts`, `src/components/finance/TurkishCalendarPresets.tsx` |
 
@@ -157,13 +158,27 @@ Read:
 4. `src/pages/DataHealth.logic.test.ts`
 5. `docs/KNOWN_RISKS.md`
 6. `src/pages/DataHealth.guide.ts` for issue copy/presentation
-7. `src/pages/DataHealth.actions.ts` for undo/export helpers
-8. Relevant invariant helper in `src/utils/*`
+7. `src/pages/DataHealth.resolution.ts` for the exhaustive primary-action policy
+8. `src/pages/DataHealthCardExpenseReview.tsx` for duplicate/metadata review
+9. `src/services/dataHealthRepairs.ts` and the safe-repair migration/test for
+   deterministic server writes
+10. `src/pages/DataHealth.actions.ts` for undo/export helpers
+11. Relevant invariant helper in `src/utils/*`
 
 Treat data-health fixes as operational writes against real user data. Prefer a
 shared helper/DB invariant over a page-only corrective formula. If an expense or
 any sibling installment is statement-archived, structural installment findings
-must remain manual rather than rewriting historical rows.
+must remain manual rather than rewriting historical rows. Every new issue must
+resolve to a visible fix, payment, in-page review, or owner-route action; do not
+use `fixable` alone as the UI authorization boundary.
+
+For deterministic Data Health RPC changes, verify the migration and receipt/RLS
+contract in real Postgres:
+
+```bash
+npm run db:seed:local
+npm run db:test:data-health-safe-repairs
+```
 
 ### Migration Or Release Change
 

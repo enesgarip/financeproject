@@ -54,6 +54,8 @@ const EXPORT_ONLY_TABLES = [
   'account_ledger',
   'sms_log',
   'notification_log',
+  'data_health_repair_runs',
+  'data_health_repair_steps',
 ] as const
 
 const BACKUP_SCHEMA_V2 = 'financeproject-v2'

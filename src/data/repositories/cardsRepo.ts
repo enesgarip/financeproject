@@ -302,6 +302,31 @@ export async function updateCardExpenseCategory(expenseId: string, category: str
   return voidResultFromSupabase(error, 'Kategori güncellenemedi.')
 }
 
+export type UpdateCardExpenseHealthMetadataInput = {
+  expenseId: string
+  description: string
+  category: string
+  expectedUpdatedAt: string
+}
+
+/**
+ * Data Health'te kullanıcının doğruladığı açıklama/kategori düzeltmesi.
+ * RPC finansal alan kabul etmez; card -> expense kilidi ve stale sürüm
+ * doğrulaması sunucu tarafında uygulanır. Açıklama/kategori sınıflandırması
+ * finansal arşiv toplamını değiştirmediği için geçmiş kayıtlarda da düzeltilebilir.
+ */
+export async function updateCardExpenseHealthMetadata(
+  input: UpdateCardExpenseHealthMetadataInput,
+): Promise<Result<void>> {
+  const { error } = await supabase.rpc('update_card_expense_health_metadata', {
+    p_expense_id: input.expenseId,
+    p_description: input.description,
+    p_category: input.category,
+    p_expected_updated_at: input.expectedUpdatedAt,
+  })
+  return voidResultFromSupabase(error, 'Harcama açıklaması/kategorisi güncellenemedi.')
+}
+
 /** Otomasyon kapsamı ölçümü için son harcamaların kaynak/nota bilgisi. */
 export type ExpenseSourceRow = Pick<CardExpense, 'source' | 'note' | 'amount' | 'status' | 'spent_at'>
 

@@ -92,22 +92,35 @@ loan is counted via exactly one path.
 
 ## 6. Data Health Page Is Operationally Powerful (mitigated)
 
-`DataHealthPage` can apply bulk safe fixes, undo recent fix batches, and
-reset all user finance data through RPC. Three safety layers exist:
+`DataHealthPage` can apply deterministic repairs, guarded technical fixes,
+guided domain actions, and full user reset. Four safety layers exist:
 
-1. **Undo batches**: every `fixIssue` call captures pre-mutation row
-   snapshots in an `UndoBatch`; the user can roll back from the UI.
-2. **Export backup**: JSON and CSV data export is available before any
+1. **Exhaustive resolution policy**: every emitted issue is assigned a source of
+   truth and a real fix/payment/review/owner action. Ambiguous bank truth never
+   becomes an automatic amount/date/payment write.
+2. **Transactional safe-repair boundary**: deterministic card/account plans and
+   individual loan-domain repairs validate all targets under lock before
+   mutation, reject stale whole plans, bind idempotency keys to canonical
+   requests, and append immutable own-row run/step receipts.
+3. **Export backup**: JSON and CSV data export is available before any
    bulk operation; the "reset all data" flow takes an automatic JSON
    backup before calling the destructive RPC.
-3. **Test suite**: `DataHealth.logic.test.ts` covers check logic for
-   asset normalization, card debt breakdown, card/account ledger drift,
-   and more — false-positive checks break CI before reaching production.
+4. **Test suite**: unit/UI tests cover policy/action wiring and a real Postgres
+   regression covers grants, RLS, source projections, stale rollback,
+   idempotency, prevalidation, and audit visibility in CI/deploy.
 
-Statement-archived expenses and any installment plan with an archived sibling are
-excluded from structural auto-fixes. Their amount/count/date/posted-state and
-missing-row findings remain manual so Data Health cannot rebuild historical
-statement membership through DELETE/INSERT operations.
+Structural installment amount/count/date/posted-state and missing-row findings
+never use generic REST repair writes. They navigate to the canonical card-plan
+editor, where parent/sibling locks and lifecycle guards own the rebuild;
+historical/allocated plans remain manual reconciliation. Exact duplicate
+candidates have an in-page side-by-side choice and use append-only domain
+cancellation, while missing metadata uses an owner/stale-guarded non-financial
+RPC that does not change archived financial totals.
+
+Guarded technical fixes keep a session-only field snapshot. Undo patches only
+those fields and requires the exact post-fix row version; any intervening edit
+causes a visible conflict instead of a full-row overwrite. Bulk previews mirror
+the server's 100-repair cap and disclose repairs deferred to a fresh next turn.
 
 Restore validates table arrays, plain row objects, immutable keys, and duplicate
 keys before reset. It does not yet validate every column type/enum/FK against a

@@ -4,6 +4,7 @@ import {
   fetchCardInstallmentMatchRows,
   payPaymentFromCardImport,
   recordCardInstallmentCarryover,
+  updateCardExpenseHealthMetadata,
 } from './cardsRepo'
 
 const supabaseMocks = vi.hoisted(() => ({
@@ -161,4 +162,29 @@ describe('cardsRepo statement installment read safety', () => {
     expect(eq).toHaveBeenCalledWith('card_id', 'card-1')
   })
 
+})
+
+describe('cardsRepo Data Health metadata contract', () => {
+  it('sends only user-confirmed metadata and the optimistic row version', async () => {
+    supabaseMocks.rpc.mockReset()
+    supabaseMocks.rpc.mockResolvedValue({ data: null, error: null })
+
+    const result = await updateCardExpenseHealthMetadata({
+      expenseId: 'expense-1',
+      description: 'Market alışverişi',
+      category: 'Market',
+      expectedUpdatedAt: '2026-08-03T08:00:00.000Z',
+    })
+
+    expect(result.ok).toBe(true)
+    expect(supabaseMocks.rpc).toHaveBeenCalledWith(
+      'update_card_expense_health_metadata',
+      {
+        p_expense_id: 'expense-1',
+        p_description: 'Market alışverişi',
+        p_category: 'Market',
+        p_expected_updated_at: '2026-08-03T08:00:00.000Z',
+      },
+    )
+  })
 })

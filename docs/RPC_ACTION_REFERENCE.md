@@ -1,6 +1,6 @@
 # Supabase RPC Action Reference
 
-Last reviewed: 2026-08-02
+Last reviewed: 2026-08-03
 
 This file maps Supabase RPCs to the user-visible actions that call them. Keep it
 updated whenever a page action, repository wrapper, or migration changes an RPC
@@ -85,10 +85,20 @@ installment payment outside the statement flow.
 
 | RPC | Called From | User-Visible Action | Main Effect |
 | --- | --- | --- | --- |
-| `reset_user_finance_data` | `dataHealthRepo`, `backupRepo` | Data health reset / restore pre-wipe | In one auth.uid-bound transaction deletes the signed-in user's finance/support rows child-first, safely breaks settlement RESTRICT links, and clears owner SMS/notification logs while preserving ownerless diagnostics |
+| `apply_data_health_safe_repairs` | `dataHealthRepairs` / `DataHealthPage.actions` | Individual source recompute / previewed card-account bulk repair | Applies one 1..100-entry, duplicate-free card/account or loan domain plan after owner/type locks and exact `updated_at` validation; stale input rolls back the domain plan, while canonical request-bound idempotency returns the original receipt on replay |
+| `update_card_expense_health_metadata` | `cardsRepo` / `DataHealthCardExpenseReview` | Complete flagged description/category | Locks card → expense, rejects stale/cancelled rows, and updates only non-financial metadata without changing archive totals |
+| `reset_user_finance_data` | `dataHealthRepo`, `backupRepo` | Data health reset / restore pre-wipe | In one auth.uid-bound transaction deletes the signed-in user's finance/support rows child-first, safely breaks settlement RESTRICT links, and clears repair receipts plus owner SMS/notification logs while preserving ownerless diagnostics |
 
-Most other data-health fixes use direct table updates/deletes through
-`dataHealthRepo`; they are not RPC-backed.
+The bulk planner excludes `loanTotals`; an individual loan finding submits a
+loan-only plan so card and loan lock domains are never mixed. Each accepted new
+plan records one `data_health_repair_runs` row. Applied/skipped targets receive
+per-target `data_health_repair_steps` before/after receipts; a pre-mutation
+conflict/failure records one diagnostic step without fabricated snapshots.
+Authenticated clients have own-row SELECT only on those tables.
+
+Remaining guarded technical fixes use optimistic singleton updates through
+`dataHealthRepo`. Structural card-plan changes and ambiguous financial truth are
+sent to canonical domain/reconciliation actions instead of direct updates.
 
 ## Schema And Trigger Functions
 

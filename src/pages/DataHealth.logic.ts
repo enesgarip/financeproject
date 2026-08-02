@@ -119,6 +119,7 @@ export type HealthIssue = {
     duplicateLevel?: 'same_fingerprint' | 'possible'
     confidence?: number
     transactionFingerprint?: string
+    expectedUpdatedAt?: string
   }
 }
 
@@ -141,6 +142,8 @@ export type UndoEntry =
       action: 'restoreRows'
       table: UndoTable
       rows: UndoRow[]
+      fields?: string[]
+      expectedUpdatedAtById?: Record<string, string>
     }
   | {
       action: 'deleteRows'

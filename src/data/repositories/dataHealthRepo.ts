@@ -9,7 +9,6 @@ import type {
   CardLedger,
   CardStatementArchive,
   Debt,
-  InsertFor,
   Loan,
   LoanInstallment,
   Payment,
@@ -20,7 +19,7 @@ import type {
   UpdateFor,
 } from '../../types/database'
 import type { SupabaseLikeError } from '../../utils/supabaseErrors'
-import { ok, resultFromSupabase, voidResultFromSupabase, type Result } from '../result'
+import { appErrorFromSupabase, fail, ok, resultFromSupabase, voidResultFromSupabase, type Result } from '../result'
 
 const PAGE_SIZE = 500
 
@@ -94,6 +93,11 @@ export type UndoTableName =
   | 'payments'
 
 export type UndoRepositoryRow = Record<string, unknown> & { id: string }
+
+export type DataHealthWriteVersion = {
+  id: string
+  updatedAt: string
+}
 
 export async function fetchDataHealthRows(): Promise<Result<DataHealthRows>> {
   const [
@@ -178,42 +182,40 @@ export async function updateDataHealthRow<T extends TableName>(
   table: T,
   id: string,
   updates: UpdateFor<T>,
-): Promise<Result<void>> {
-  const { error } = await supabase
+  expectedUpdatedAt: string,
+): Promise<Result<DataHealthWriteVersion>> {
+  const { data, error } = await supabase
     .from(table as never)
     .update({ ...(updates as object), updated_at: new Date().toISOString() } as never)
     .eq('id', id)
+    .eq('updated_at', expectedUpdatedAt)
+    .select('id, updated_at')
 
-  return voidResultFromSupabase(error, 'Kayıt güncellenemedi.')
-}
+  if (error) return fail(appErrorFromSupabase(error, 'Kayıt güncellenemedi.'))
 
-export async function updateDataHealthRows<T extends TableName>(
-  table: T,
-  ids: string[],
-  updates: UpdateFor<T>,
-): Promise<Result<void>> {
-  if (ids.length === 0) return ok(undefined)
+  const rows = (data ?? []) as Array<{ id?: unknown; updated_at?: unknown }>
+  if (rows.length !== 1) {
+    return fail({ type: 'unknown', message: 'Kayıt değişmiş, silinmiş veya erişilemez; düzeltme uygulanmadı.' })
+  }
 
-  const { error } = await supabase
-    .from(table as never)
-    .update({ ...(updates as object), updated_at: new Date().toISOString() } as never)
-    .in('id', ids)
+  const row = rows[0]
+  if (typeof row?.id !== 'string' || typeof row.updated_at !== 'string') {
+    return fail({ type: 'unknown', message: 'Güncellenen kaydın sürümü okunamadı; geri alma oluşturulmadı.' })
+  }
 
-  return voidResultFromSupabase(error, 'Kayıtlar güncellenemedi.')
+  return ok({ id: row.id, updatedAt: row.updated_at })
 }
 
 export async function deleteDataHealthRows(table: UndoTableName, ids: string[]): Promise<Result<void>> {
   if (ids.length === 0) return ok(undefined)
 
-  const { error } = await supabase.from(table as never).delete().in('id', ids)
-  return voidResultFromSupabase(error, 'Kayıtlar silinemedi.')
-}
-
-export async function insertCardInstallments(rows: InsertFor<'card_installments'>[]): Promise<Result<string[]>> {
-  if (rows.length === 0) return ok([])
-
-  const { data, error } = await supabase.from('card_installments').insert(rows).select('id')
-  return resultFromSupabase((data ?? []).map((row) => row.id).filter(Boolean), error, 'Eksik taksitler eklenemedi.')
+  const uniqueIds = [...new Set(ids)]
+  const { data, error } = await supabase.from(table as never).delete().in('id', uniqueIds).select('id')
+  if (error) return voidResultFromSupabase(error, 'Kayıtlar silinemedi.')
+  if ((data ?? []).length !== uniqueIds.length) {
+    return fail({ type: 'unknown', message: 'Bazı kayıtlar silinemedi; sonuç yeniden taranmalıdır.' })
+  }
+  return ok(undefined)
 }
 
 export async function resetUserFinanceData(): Promise<Result<void>> {
@@ -228,9 +230,28 @@ export async function fetchUndoRows(table: UndoTableName, ids: string[]): Promis
   return resultFromSupabase((data ?? []) as unknown as UndoRepositoryRow[], error, 'Geri alma satırları yüklenemedi.')
 }
 
-export async function restoreUndoRows(table: UndoTableName, rows: UndoRepositoryRow[]): Promise<Result<void>> {
-  if (rows.length === 0) return ok(undefined)
+export async function restoreDataHealthFields(
+  table: UndoTableName,
+  id: string,
+  previousValues: Record<string, unknown>,
+  expectedUpdatedAt: string,
+): Promise<Result<void>> {
+  const fields = Object.keys(previousValues)
+  const immutableFields = new Set(['id', 'user_id', 'created_at', 'updated_at'])
+  if (fields.length === 0 || fields.some((field) => immutableFields.has(field))) {
+    return fail({ type: 'unknown', message: 'Geri alma alanları güvenli değil; işlem uygulanmadı.' })
+  }
 
-  const { error } = await supabase.from(table as never).upsert(rows as never)
-  return voidResultFromSupabase(error, 'Geri alma satırları geri yüklenemedi.')
+  const { data, error } = await supabase
+    .from(table as never)
+    .update({ ...previousValues, updated_at: new Date().toISOString() } as never)
+    .eq('id', id)
+    .eq('updated_at', expectedUpdatedAt)
+    .select('id')
+
+  if (error) return voidResultFromSupabase(error, 'Geri alma alanları uygulanamadı.')
+  if ((data ?? []).length !== 1) {
+    return fail({ type: 'unknown', message: 'Kayıt düzeltmeden sonra değişmiş; geri alma uygulanmadı.' })
+  }
+  return ok(undefined)
 }

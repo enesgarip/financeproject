@@ -307,6 +307,39 @@ export type AccountLedger = BaseRow & {
   source_id: string | null
 }
 
+export type DataHealthRepairRunStatus = 'running' | 'succeeded' | 'conflict' | 'failed'
+export type DataHealthRepairStepStatus = 'applied' | 'skipped' | 'conflict' | 'failed'
+
+/** Immutable receipt for one transactional Data Health safe-repair batch. */
+export type DataHealthRepairRun = {
+  id: string
+  user_id: string
+  idempotency_key: string
+  request_plan: Json
+  status: DataHealthRepairRunStatus
+  planned_count: number
+  applied_count: number
+  skipped_count: number
+  failure_reason: string | null
+  created_at: string
+  completed_at: string | null
+}
+
+/** Per-target before/after evidence owned by a Data Health repair run. */
+export type DataHealthRepairStep = {
+  id: string
+  run_id: string
+  user_id: string
+  rule: string
+  target_table: string
+  target_id: string | null
+  status: DataHealthRepairStepStatus
+  before_data: Json | null
+  after_data: Json | null
+  message: string | null
+  created_at: string
+}
+
 /**
  * One Web Push subscription (roadmap Y1). The browser's PushManager output:
  * `endpoint` + the two encryption keys (`p256dh`, `auth`). One row per device;
@@ -452,6 +485,28 @@ export type Database = {
       gold_lots: Table<GoldLot, WithBaseInsert<GoldLot>, WithBaseUpdate<GoldLot>>
       card_ledger: Table<CardLedger, WithBaseInsert<CardLedger>, WithBaseUpdate<CardLedger>>
       account_ledger: Table<AccountLedger, WithBaseInsert<AccountLedger>, WithBaseUpdate<AccountLedger>>
+      data_health_repair_runs: Table<
+        DataHealthRepairRun,
+        Omit<DataHealthRepairRun, 'id' | 'created_at' | 'completed_at' | 'failure_reason'> & {
+          id?: string
+          created_at?: string
+          completed_at?: string | null
+          failure_reason?: string | null
+        },
+        Partial<Omit<DataHealthRepairRun, 'id' | 'user_id' | 'created_at'>>
+      >
+      data_health_repair_steps: Table<
+        DataHealthRepairStep,
+        Omit<DataHealthRepairStep, 'id' | 'created_at' | 'target_id' | 'before_data' | 'after_data' | 'message'> & {
+          id?: string
+          created_at?: string
+          target_id?: string | null
+          before_data?: Json | null
+          after_data?: Json | null
+          message?: string | null
+        },
+        Partial<Omit<DataHealthRepairStep, 'id' | 'run_id' | 'user_id' | 'created_at'>>
+      >
       account_reconciliations: Table<
         AccountReconciliation,
         WithBaseInsert<AccountReconciliation>,
@@ -698,6 +753,22 @@ export type Database = {
       reset_user_finance_data: {
         Args: Record<string, never>
         Returns: void
+      }
+      apply_data_health_safe_repairs: {
+        Args: {
+          p_repairs: Json
+          p_idempotency_key: string
+        }
+        Returns: Json
+      }
+      update_card_expense_health_metadata: {
+        Args: {
+          p_expense_id: string
+          p_description: string
+          p_category: string
+          p_expected_updated_at: string
+        }
+        Returns: CardExpense
       }
       reset_card_import_data: {
         Args: {

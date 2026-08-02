@@ -1,5 +1,41 @@
 # Priority Backlog
 
+## 2026-08-03 — Veri Sağlığı çözüm aksiyonları ve güvenli otomasyon
+
+- ~~**DH-05 — Her sağlık bulgusuna gerçek çözüm aksiyonu.**~~ DONE.
+  `DataHealth.resolution.ts` tüm issue kind'larını exhaustive biçimde otomatik
+  yeniden hesaplama, korumalı tek-tık, domain akışına yönlendirme, manuel
+  uzlaştırma veya bilgi inceleme moduna ayırır. Eski `fixable` alanı tek başına
+  yazma butonu açmaz. Aktif 69 id deseninin tamamında fix/ödeme/sayfa-içi review
+  veya sahip ekran aksiyonu vardır.
+- ~~**DH-06 — Deterministik düzeltmeler için transaction/audit sınırı.**~~ DONE.
+  `apply_data_health_safe_repairs` kart/account ledger projeksiyonu, kredi plan
+  özeti ve kart borç kırılımı clamp'ini exact `updated_at` CAS + hedef kilitleriyle
+  uygular. Planlar 1..100, duplicate-free ve tek domain'dir; stale bir hedef tüm
+  planı finans yazısı olmadan conflict'e düşürür. Idempotency key kanonik isteğe
+  bağlıdır; `data_health_repair_runs` / `data_health_repair_steps` before-after
+  fişleri istemciye karşı immutable ve yalnız sahibine görünür. `loanTotals` aynı
+  RPC'yi bireysel loan-domain aksiyonda kullanır ve toplu seçime girmez.
+  Repair/reset kullanıcı bazında transaction mutex ile lineerleştirilir.
+- ~~**SEC-03 — Ledger aggregate yetkisi istemciden forge edilebiliyordu.**~~ DONE.
+  Authenticated doğrudan INSERT policy/grant'ları `card_ledger` ve
+  `account_ledger` için kaldırıldı. Event üretimi trigger ve kanonik correction
+  RPC'lerinde kalır; `supabase/tests/data_health_safe_repairs.sql` gerçek Postgres
+  runtime permission denial'ını CI/deploy DB gate'inde doğrular.
+- ~~**DH-07 — Duplicate ve eksik metadata yönlendirmeleri işlevsizdi.**~~ DONE.
+  Data Health exact `payload.ids` kayıtlarını yan yana gösterir. Kullanıcı
+  gerçekten duplicate olan satırı iki-aşamalı onayla `cancel_card_expense`
+  üzerinden append-only tersler; açıklama/kategori yalnız finans alanı kabul
+  etmeyen, owner/stale guard'lı metadata RPC'siyle düzenlenir; sınıflandırma
+  finansal archive/settlement toplamlarını değiştirmez.
+- **DH-08 — Yapısal taksitleri sessiz/tek-tık tamamlama (opsiyonel sonraki faz).**
+  Generic REST amount/count/date/posted/missing-row düzeltmeleri parent/sibling
+  yarışında güvenli olmadığı için kaldırıldı. Hiçbiri aksiyonsuz değildir:
+  kanonik Kartlar plan editörüne gider ve kilitli domain rebuild ile çözülür.
+  Gelecekte ayrı bir card→expense→siblings lock'lu RPC yazılırsa future-only
+  satırlar yeniden tek-tık adayı olabilir; geçmiş için banka gerçeği olmadan
+  otomasyon yapılmayacaktır.
+
 ## 2026-08-02 — Prod veri tutarlılığı denetimi ve düzeltme paketi
 
 Salt-okunur prod denetiminde kart borç bileşimi, 1000+ satırlı ledger yükleme,

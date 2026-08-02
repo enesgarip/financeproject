@@ -1,5 +1,19 @@
 import { describe, expect, it } from 'vitest'
-import type { AccountLedger, Asset, Card, CardExpense, CardInstallment, CardLedger, CardStatementArchive } from '../types/database'
+import type {
+  AccountLedger,
+  Asset,
+  Budget,
+  Card,
+  CardExpense,
+  CardInstallment,
+  CardLedger,
+  CardStatementArchive,
+  Debt,
+  Loan,
+  LoanInstallment,
+  Payment,
+} from '../types/database'
+import { dateInputValue } from '../utils/date'
 import { buildIssues } from './DataHealth.logic'
 import { emptyData } from './DataHealth.actions'
 
@@ -89,6 +103,117 @@ describe('buildIssues asset health checks', () => {
 
     expect(issues.find((issue) => issue.id === 'asset-shape-stock-unit-1')?.payload?.updates).toEqual({
       unit: 'TRY',
+    })
+  })
+
+  it('preserves foreign-currency cash quantity and unit as valuation source data', () => {
+    const issues = buildIssues({
+      ...emptyData,
+      assets: [
+        asset({
+          id: 'fx-cash-1',
+          name: 'Dolar',
+          category: 'Nakit',
+          currency: 'USD',
+          amount: 1250,
+          unit: 'adet',
+          auto_valued: true,
+        }),
+      ],
+    })
+
+    expect(issues.find((issue) => issue.id === 'asset-shape-fx-cash-1')).toBeUndefined()
+  })
+
+  it('still normalizes TRY cash technical quantity and unit fields', () => {
+    const issues = buildIssues({
+      ...emptyData,
+      assets: [asset({ id: 'try-cash-1', currency: 'TRY', amount: 1250, unit: 'adet' })],
+    })
+
+    expect(issues.find((issue) => issue.id === 'asset-shape-try-cash-1')?.payload?.updates).toEqual({
+      amount: 1,
+      unit: 'TRY',
+    })
+  })
+})
+
+function debt(overrides: Partial<Debt> = {}): Debt {
+  return {
+    ...base,
+    id: 'debt-1',
+    person_name: 'Kişi',
+    direction: 'borç_aldım',
+    value_type: 'TRY',
+    currency: 'TRY',
+    amount: 1,
+    estimated_value_try: 1000,
+    auto_valued: false,
+    due_date: null,
+    status: 'açık',
+    note: null,
+    ...overrides,
+  }
+}
+
+function budget(overrides: Partial<Budget> = {}): Budget {
+  return {
+    ...base,
+    id: 'budget-1',
+    month: '2999-08-15',
+    category: 'Market',
+    limit_amount: 1000,
+    note: null,
+    ...overrides,
+  }
+}
+
+function payment(overrides: Partial<Payment> = {}): Payment {
+  return {
+    ...base,
+    id: 'payment-1',
+    title: 'Ödeme',
+    category: 'Fatura',
+    amount: 100,
+    amount_status: 'exact',
+    due_date: '2999-08-15',
+    status: 'bekliyor',
+    payment_method: 'manual',
+    recurrence: 'monthly',
+    recurrence_day: 10,
+    recurrence_end_date: null,
+    auto_source_card_id: null,
+    note: null,
+    ...overrides,
+  }
+}
+
+describe('buildIssues debt source quantities', () => {
+  it('preserves foreign-currency debt amount as auto-valuation source data', () => {
+    const issues = buildIssues({
+      ...emptyData,
+      debts: [
+        debt({
+          value_type: 'doviz',
+          currency: 'USD',
+          amount: 125,
+          estimated_value_try: 5000,
+          auto_valued: true,
+        }),
+      ],
+    })
+
+    expect(issues.find((issue) => issue.id === 'debt-shape-debt-1')).toBeUndefined()
+  })
+
+  it('still normalizes the technical amount field for TRY debt', () => {
+    const issues = buildIssues({
+      ...emptyData,
+      debts: [debt({ amount: 125 })],
+    })
+
+    expect(issues.find((issue) => issue.id === 'debt-shape-debt-1')?.payload?.updates).toEqual({
+      amount: 1,
     })
   })
 })
@@ -256,6 +381,8 @@ describe('buildIssues card debt breakdown', () => {
     const issue = issues.find((item) => item.id === 'card-unclassified-debt-card-1')
     expect(issue?.kind).toBe('cardDebtSplit')
     expect(issue?.severity).toBe('warning')
+    expect(issue?.fixable).toBe(false)
+    expect(issue?.fixLabel).toBeUndefined()
     expect(issue?.payload).toMatchObject({
       cardId: 'card-1',
       statementDebt: 150,
@@ -311,7 +438,7 @@ describe('buildIssues card debt breakdown', () => {
 })
 
 describe('buildIssues card installment dates', () => {
-  it('flags an installment date that does not preserve the original transaction day', () => {
+  it('does not rewrite a historical posted date even when it has the legacy month-start shape', () => {
     const issues = buildIssues({
       ...emptyData,
       cards: [creditCard({ debt_amount: 300, current_period_spending: 100 })],
@@ -336,8 +463,42 @@ describe('buildIssues card installment dates', () => {
     })
 
     expect(issues.find((issue) => issue.id === 'card-installment-date-installment-1')).toMatchObject({
+      kind: 'manual',
+      fixable: false,
+    })
+  })
+
+  it('offers a guarded rewrite only for a future scheduled legacy month-start date', () => {
+    const issues = buildIssues({
+      ...emptyData,
+      cards: [creditCard({ debt_amount: 300 })],
+      cardExpenses: [
+        cardExpense({
+          amount: 300,
+          installment_count: 3,
+          installment_amount: 100,
+          spent_at: '2999-05-19',
+        }),
+      ],
+      cardInstallments: [
+        cardInstallment({
+          card_expense_id: 'expense-1',
+          installment_no: 2,
+          installment_count: 3,
+          amount: 100,
+          due_month: '2999-06-01',
+          status: 'scheduled',
+        }),
+      ],
+    })
+
+    expect(issues.find((issue) => issue.id === 'card-installment-date-installment-1')).toMatchObject({
       kind: 'cardInstallmentDueMonth',
-      payload: { updates: { due_month: '2026-06-19' } },
+      fixable: false,
+      payload: {
+        updates: { due_month: '2999-06-19' },
+        expectedUpdatedAt: '2026-06-01T00:00:00.000Z',
+      },
     })
   })
 
@@ -367,6 +528,145 @@ describe('buildIssues card installment dates', () => {
     })
 
     expect(issues.some((issue) => issue.id === 'card-installment-date-installment-1')).toBe(false)
+  })
+})
+
+describe('buildIssues card installment lifecycle repair safety', () => {
+  it('keeps a missing posted_at manual instead of inventing the current time', () => {
+    const issues = buildIssues({
+      ...emptyData,
+      cards: [creditCard()],
+      cardInstallments: [
+        cardInstallment({
+          installment_count: 2,
+          amount: 100,
+          status: 'posted',
+          posted_at: null,
+        }),
+      ],
+    })
+
+    const issue = issues.find((item) => item.id === 'card-installment-posted-at-installment-1')
+    expect(issue).toMatchObject({
+      kind: 'cardInstallmentPostedAt',
+      fixable: false,
+      payload: { ids: ['installment-1'] },
+    })
+    expect(issue?.payload?.updates).toBeUndefined()
+  })
+
+  it('keeps clearing an impossible posted_at in the guided owner flow', () => {
+    const issues = buildIssues({
+      ...emptyData,
+      cards: [creditCard()],
+      cardInstallments: [
+        cardInstallment({
+          installment_count: 2,
+          amount: 100,
+          status: 'scheduled',
+          due_month: '2999-06-01',
+          posted_at: '2026-06-01T12:00:00.000Z',
+        }),
+      ],
+    })
+
+    expect(issues.find((item) => item.id === 'card-installment-clear-posted-at-installment-1')).toMatchObject({
+      kind: 'cardInstallmentPostedAt',
+      fixable: false,
+      payload: { ids: ['installment-1'], updates: { posted_at: null } },
+    })
+  })
+
+  it('offers missing-installment repair only when every missing row is in the future', () => {
+    const futureIssues = buildIssues({
+      ...emptyData,
+      cards: [creditCard({ debt_amount: 300 })],
+      cardExpenses: [
+        cardExpense({
+          amount: 300,
+          installment_count: 3,
+          installment_amount: 100,
+          spent_at: '2999-01-15',
+        }),
+      ],
+    })
+
+    expect(futureIssues.find((item) => item.id === 'card-expense-missing-expense-1')).toMatchObject({
+      kind: 'cardMissingInstallments',
+      fixable: false,
+      payload: { installmentNos: [1, 2, 3], baseDate: '2999-01-15' },
+    })
+
+    const todayIssues = buildIssues({
+      ...emptyData,
+      cards: [creditCard({ debt_amount: 200 })],
+      cardExpenses: [
+        cardExpense({
+          amount: 200,
+          installment_count: 2,
+          installment_amount: 100,
+          spent_at: dateInputValue(new Date()),
+        }),
+      ],
+    })
+
+    const todayIssue = todayIssues.find((item) => item.id === 'card-expense-missing-expense-1')
+    expect(todayIssue).toMatchObject({ fixable: false, kind: 'manual' })
+    expect(todayIssue?.payload).toBeUndefined()
+  })
+
+  it('protects an entire plan from structural fixes when a sibling has current-settlement evidence', () => {
+    const issues = buildIssues({
+      ...emptyData,
+      cards: [creditCard({ debt_amount: 300 })],
+      cardExpenses: [
+        cardExpense({
+          amount: 300,
+          installment_count: 3,
+          installment_amount: 90,
+          spent_at: '2999-01-15',
+        }),
+      ],
+      cardInstallments: [
+        cardInstallment({
+          id: 'settled-child',
+          card_expense_id: 'expense-1',
+          current_settlement_id: 'settlement-1',
+          installment_no: 1,
+          installment_count: 3,
+          amount: 100,
+          due_month: '2999-01-15',
+          status: 'paid',
+          paid_at: '2999-01-15',
+        }),
+        cardInstallment({
+          id: 'current-sibling',
+          card_expense_id: 'expense-1',
+          installment_no: 2,
+          installment_count: 2,
+          amount: 100,
+          due_month: '2999-02-01',
+          status: 'scheduled',
+          posted_at: '2999-02-01T00:00:00.000Z',
+        }),
+      ],
+    })
+
+    const protectedIssueIds = [
+      'card-expense-amount-expense-1',
+      'card-installment-clear-posted-at-current-sibling',
+      'card-installment-count-current-sibling',
+      'card-installment-date-current-sibling',
+      'card-expense-missing-expense-1',
+    ]
+
+    for (const id of protectedIssueIds) {
+      expect(issues.find((issue) => issue.id === id)).toMatchObject({
+        fixable: false,
+        kind: 'manual',
+      })
+      expect(issues.find((issue) => issue.id === id)?.payload).toBeUndefined()
+    }
   })
 })
 
@@ -423,7 +723,6 @@ describe('buildIssues archived installment structure safety', () => {
     })
 
     const protectedIssueIds = [
-      'card-expense-single-has-installments-archived-single',
       'card-expense-amount-archived-single',
       'card-expense-amount-archived-plan',
       'card-installment-posted-at-archived-child',
@@ -441,6 +740,11 @@ describe('buildIssues archived installment structure safety', () => {
       })
       expect(issues.find((issue) => issue.id === id)?.payload).toBeUndefined()
     }
+
+    expect(issues.find((issue) => issue.id === 'card-expense-single-has-installments-archived-single')).toMatchObject({
+      fixable: false,
+      kind: 'cardSingleInstallments',
+    })
   })
 })
 
@@ -539,7 +843,8 @@ describe('buildIssues orphan statement debt', () => {
 
     const issue = issues.find((item) => item.id === 'card-orphan-statement-debt-card-1')
     expect(issue?.kind).toBe('cardDebtSplit')
-    expect(issue?.fixable).toBe(true)
+    expect(issue?.fixable).toBe(false)
+    expect(issue?.fixLabel).toBeUndefined()
     expect(issue?.payload).toMatchObject({
       cardId: 'card-1',
       statementDebt: 0,
@@ -592,7 +897,7 @@ describe('buildIssues card expense duplicate analysis', () => {
     expect(duplicate?.payload?.ids).toEqual(['expense-1', 'expense-2'])
     expect(duplicate?.title).not.toContain('kesin')
     expect(duplicate?.details).not.toContain('Güven: %98')
-    expect(duplicate?.description).toContain('duplicate kanıtı değildir')
+    expect(duplicate?.description).toContain('tekrar kanıtı değildir')
   })
 
   it('flags possible duplicates with the same day and amount but similar descriptions', () => {
@@ -621,6 +926,158 @@ describe('buildIssues card expense duplicate analysis', () => {
 
     expect(issues.find((issue) => issue.id === 'card-expense-missing-description')?.payload?.ids).toEqual(['expense-1'])
     expect(issues.find((issue) => issue.id === 'card-expense-missing-category')?.payload?.ids).toEqual(['expense-1'])
+  })
+})
+
+function loan(overrides: Partial<Loan> = {}): Loan {
+  return {
+    ...base,
+    id: 'loan-1',
+    bank_name: 'Banka',
+    loan_name: 'Kredi',
+    total_amount: 100,
+    remaining_amount: 100,
+    monthly_payment: 100,
+    installment_day: 10,
+    start_date: '2026-01-10',
+    end_date: '2026-12-10',
+    remaining_installments: 1,
+    status: 'active',
+    note: null,
+    ...overrides,
+  }
+}
+
+function loanInstallment(overrides: Partial<LoanInstallment> = {}): LoanInstallment {
+  return {
+    ...base,
+    id: 'loan-installment-1',
+    loan_id: 'loan-1',
+    installment_no: 1,
+    due_date: '2026-06-10',
+    amount: 100,
+    status: 'bekliyor',
+    paid_at: null,
+    note: null,
+    ...overrides,
+  }
+}
+
+describe('buildIssues loan historical-date repair safety', () => {
+  it('does not offer due-date auto-fix for an already paid installment', () => {
+    const issues = buildIssues({
+      ...emptyData,
+      loans: [loan({ remaining_amount: 0, remaining_installments: 0, status: 'closed' })],
+      loanInstallments: [
+        loanInstallment({
+          due_date: '2026-06-12',
+          status: 'ödendi',
+          paid_at: '2026-06-12T12:00:00.000Z',
+        }),
+      ],
+    })
+
+    expect(issues.find((item) => item.id === 'loan-installment-due-day-loan-installment-1')).toMatchObject({
+      kind: 'loanInstallmentDueDay',
+      fixable: false,
+      payload: { ids: ['loan-installment-1'], updates: { due_date: '2026-06-10' } },
+    })
+  })
+
+  it('keeps due-date alignment fixable for a pending installment', () => {
+    const issues = buildIssues({
+      ...emptyData,
+      loans: [loan()],
+      loanInstallments: [loanInstallment({ due_date: '2026-06-12' })],
+    })
+
+    expect(issues.find((item) => item.id === 'loan-installment-due-day-loan-installment-1')).toMatchObject({
+      kind: 'loanInstallmentDueDay',
+      fixable: true,
+      payload: { updates: { due_date: '2026-06-10' } },
+    })
+  })
+
+  it('keeps a missing paid_at manual instead of inventing a payment time', () => {
+    const issues = buildIssues({
+      ...emptyData,
+      loans: [loan({ remaining_amount: 0, remaining_installments: 0, status: 'closed' })],
+      loanInstallments: [loanInstallment({ status: 'ödendi', paid_at: null })],
+    })
+
+    expect(issues.find((item) => item.id === 'loan-paid-at-missing')).toMatchObject({
+      kind: 'loanPaidAtMissing',
+      fixable: false,
+      payload: { ids: ['loan-installment-1'] },
+    })
+  })
+})
+
+describe('buildIssues guarded optimistic repair preconditions', () => {
+  it('keeps budget month alignment automatic only when the target key is unique', () => {
+    const safeIssues = buildIssues({
+      ...emptyData,
+      budgets: [budget()],
+    })
+    expect(safeIssues.find((item) => item.id === 'budget-month-budget-1')).toMatchObject({
+      kind: 'budgetMonth',
+      fixable: true,
+      payload: { expectedUpdatedAt: base.updated_at },
+    })
+
+    const collisionIssues = buildIssues({
+      ...emptyData,
+      budgets: [
+        budget(),
+        budget({ id: 'budget-2', month: '2999-08-01' }),
+      ],
+    })
+    expect(collisionIssues.find((item) => item.id === 'budget-month-budget-1')).toMatchObject({
+      kind: 'manual',
+      fixable: false,
+    })
+  })
+
+  it('aligns only future pending monthly payment dates automatically', () => {
+    const safeIssues = buildIssues({
+      ...emptyData,
+      payments: [payment()],
+    })
+    expect(safeIssues.find((item) => item.id === 'payment-due-day-payment-1')).toMatchObject({
+      kind: 'paymentDueDay',
+      fixable: true,
+      payload: { dueDate: '2999-08-10', expectedUpdatedAt: base.updated_at },
+    })
+
+    for (const unsafePayment of [
+      payment({ status: 'ödendi' }),
+      payment({ due_date: '2020-08-15' }),
+    ]) {
+      const issues = buildIssues({ ...emptyData, payments: [unsafePayment] })
+      expect(issues.find((item) => item.id === 'payment-due-day-payment-1')).toMatchObject({
+        kind: 'manual',
+        fixable: false,
+      })
+    }
+  })
+
+  it('does not rewrite recurrence metadata on a paid historical payment', () => {
+    const issues = buildIssues({
+      ...emptyData,
+      payments: [
+        payment({
+          recurrence: 'none',
+          recurrence_day: 10,
+          recurrence_end_date: '2026-08-10',
+          status: 'ödendi',
+        }),
+      ],
+    })
+
+    expect(issues.find((item) => item.id === 'payment-recurrence-fields-payment-1')).toMatchObject({
+      kind: 'manual',
+      fixable: false,
+    })
   })
 })
 

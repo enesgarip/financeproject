@@ -11,6 +11,15 @@ import {
   navigationAction,
   severityClass,
 } from './DataHealth.guide'
+import { resolveHealthIssue, type HealthResolutionMode } from './DataHealth.resolution'
+
+const resolutionBadge: Record<HealthResolutionMode, { label: string; variant: 'success' | 'info' | 'warning' | 'outline' }> = {
+  auto_recompute: { label: 'Otomatik güvenli', variant: 'success' },
+  guarded_one_click: { label: 'Korumalı tek tık', variant: 'info' },
+  guided_domain_action: { label: 'Yönlendirmeli çözüm', variant: 'info' },
+  manual_reconciliation: { label: 'Mutabakat aksiyonu', variant: 'warning' },
+  informational: { label: 'İnceleme aksiyonu', variant: 'outline' },
+}
 
 export function HealthStat({ label, value, tone = 'neutral' }: { label: string; value: number; tone?: 'neutral' | 'danger' | 'warning' | 'info' }) {
   // Sıfır sayaç olumlu bir durum: "0 kritik" kırmızı yanıp göze batmasın —
@@ -35,6 +44,7 @@ export function HealthIssueCard({
   undoing,
   onFix,
   onPayIssue,
+  onReviewIssue,
   onSnooze,
   onDismiss,
 }: {
@@ -43,24 +53,30 @@ export function HealthIssueCard({
   undoing: boolean
   onFix: (issue: HealthIssue) => void
   onPayIssue?: (issue: HealthIssue) => void
+  onReviewIssue?: (issue: HealthIssue) => void
   onSnooze: (issueId: string) => void
   onDismiss?: (issueId: string) => void
 }) {
   const guide = buildIssueGuide(issue)
   const quickLink = navigationAction(issue)
-  const previewRows = issuePreviewDetails(issue)
+  const resolution = resolveHealthIssue(issue)
+  const badge = resolutionBadge[resolution.mode]
+  const canFix = resolution.primaryAction === 'fix'
+  const previewRows = canFix ? issuePreviewDetails(issue) : []
+  const hasCardExpenseReview = Boolean(onReviewIssue)
+    && (issue.kind === 'duplicateTransactionCandidate' || issue.kind === 'cardExpenseDataQuality')
 
   return (
     <SurfaceCard variant="default">
       <CardContent className="p-4">
         <div className="flex items-start gap-3">
           <div className={`grid size-10 shrink-0 place-items-center rounded-xl ${severityClass(issue.severity)}`}>
-            {issue.fixable ? <Wrench size={19} /> : issue.severity === 'info' ? <Activity size={19} /> : <AlertTriangle size={19} />}
+            {canFix ? <Wrench size={19} /> : issue.severity === 'info' ? <Activity size={19} /> : <AlertTriangle size={19} />}
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
               <Badge variant="outline">{issue.area}</Badge>
-              <Badge variant={issue.fixable ? 'success' : 'outline'}>{issue.fixable ? 'Hazır aksiyon var' : 'Elle inceleme gerekli'}</Badge>
+              <Badge variant={badge.variant}>{badge.label}</Badge>
             </div>
             <h2 className="mt-2 text-base font-bold text-foreground">{issue.title}</h2>
             <p className="mt-1 text-sm text-muted-foreground">{issue.description}</p>
@@ -83,6 +99,10 @@ export function HealthIssueCard({
                 <span key={detail}>{detail}</span>
               ))}
             </div>
+            <div className="mt-3 rounded-xl border border-primary/15 bg-primary/5 p-3 text-xs text-muted-foreground">
+              <p className="font-bold text-foreground">{resolution.title}</p>
+              <p className="mt-1">Kaynak gerçek: {resolution.sourceOfTruth}</p>
+            </div>
             {previewRows.length > 0 ? (
               <div className="mt-3 rounded-xl border border-success/20 bg-success/8 p-3 text-xs text-success">
                 <p className="font-bold">Düzeltme önizlemesi</p>
@@ -96,31 +116,52 @@ export function HealthIssueCard({
             <div className="mt-3">
               <p className="finance-label">Hızlı aksiyonlar</p>
               <div className="mt-2 flex flex-wrap gap-2">
-                {issue.fixable ? (
+                {canFix ? (
                   <button
                     type="button"
                     onClick={() => onFix(issue)}
                     disabled={Boolean(fixingId) || undoing}
                     className="rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground shadow-[0_2px_8px_color-mix(in_srgb,var(--primary)_30%,transparent)] transition hover:bg-primary/90 active:scale-[0.97] disabled:opacity-50"
                   >
-                    {fixingId === issue.id ? 'Düzeltiliyor...' : issue.fixLabel}
+                    {fixingId === issue.id ? 'Düzeltiliyor...' : resolution.label}
                   </button>
                 ) : null}
-                {quickLink ? (
-                  <Link to={quickLink.to} className="rounded-lg border border-border bg-card px-3 py-2 text-xs font-semibold text-foreground transition hover:bg-muted">
-                    {quickLink.label}
-                  </Link>
-                ) : null}
-                {issue.kind === 'cardOverduePayment' && onPayIssue ? (
+                {resolution.primaryAction === 'payment' && onPayIssue ? (
                   <button
                     type="button"
                     onClick={() => onPayIssue(issue)}
                     disabled={Boolean(fixingId) || undoing}
                     className="rounded-lg bg-success px-3 py-2 text-xs font-semibold text-success-foreground transition hover:bg-success/90 disabled:opacity-50"
                   >
-                    Ödeme çekmecesini aç
+                    {resolution.label}
                   </button>
                 ) : null}
+                {hasCardExpenseReview && onReviewIssue ? (
+                  <button
+                    type="button"
+                    onClick={() => onReviewIssue(issue)}
+                    disabled={Boolean(fixingId) || undoing}
+                    className="rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:opacity-50"
+                  >
+                    {resolution.label}
+                  </button>
+                ) : null}
+                <Link
+                  to={quickLink.to}
+                  className={`rounded-lg border px-3 py-2 text-xs font-semibold transition ${
+                    (resolution.primaryAction === 'navigate' || resolution.primaryAction === 'review')
+                      && !hasCardExpenseReview
+                      ? 'border-primary/25 bg-primary/8 text-primary hover:bg-primary/12'
+                      : 'border-border bg-card text-foreground hover:bg-muted'
+                  }`}
+                >
+                  {hasCardExpenseReview
+                    ? 'Kart işlemleri ekranını aç'
+                    : (resolution.primaryAction === 'navigate' || resolution.primaryAction === 'review')
+                    && !hasCardExpenseReview
+                    ? resolution.label
+                    : quickLink.label}
+                </Link>
                 <button
                   type="button"
                   onClick={() => onSnooze(issue.id)}
@@ -151,14 +192,18 @@ export function HealthIssueCard({
 export function FixAllModal({
   open,
   onClose,
-  fixableIssues,
+  safeIssues,
+  repairCount,
+  remainingRepairCount = 0,
   fixingId,
   undoing,
   onConfirm,
 }: {
   open: boolean
   onClose: () => void
-  fixableIssues: HealthIssue[]
+  safeIssues: HealthIssue[]
+  repairCount: number
+  remainingRepairCount?: number
   fixingId: string | null
   undoing: boolean
   onConfirm: () => void
@@ -170,35 +215,47 @@ export function FixAllModal({
           <div className="flex items-start gap-3">
             <AlertTriangle className="mt-0.5 size-5 shrink-0" />
             <div>
-              <p className="font-bold">Toplu işlem {fixableIssues.length} kaydı etkileyebilir.</p>
+              <p className="font-bold">{repairCount} deterministik çözüm yeniden doğrulanacak.</p>
               <p className="mt-1">
-                Her düzeltmeden önce ilgili satırların bu oturumluk geri alma görüntüsü alınır. İşlem yarıda kalırsa başarılı adımlar yine geri alınabilir.
+                Sunucu tüm hedefleri önce kilit altında kontrol eder. Bir kayıt önizlemeden sonra değiştiyse finans verisine hiç dokunulmaz; sonuç kalıcı denetim fişine yazılır.
               </p>
+              {remainingRepairCount > 0 ? (
+                <p className="mt-2 font-semibold">
+                  Bu tur en fazla 100 çözüm tek bir atomik veritabanı işlemi içinde uygulanır. Kalan {remainingRepairCount} çözüm, bu tur tamamlandıktan sonra güncel veriden yeniden önizlenir.
+                </p>
+              ) : null}
             </div>
           </div>
         </div>
         <div className="rounded-xl border border-border/70 bg-muted/30 p-3">
-          <p className="text-xs font-bold uppercase text-muted-foreground">İlk düzeltmeler</p>
+          <p className="text-xs font-bold uppercase text-muted-foreground">Uygulanacak güvenli çözümler</p>
           <div className="mt-2 grid gap-2">
-            {fixableIssues.slice(0, 5).map((issue) => (
+            {safeIssues.map((issue) => {
+              const resolution = resolveHealthIssue(issue)
+              const previews = issuePreviewDetails(issue)
+              return (
               <div key={issue.id} className="rounded-lg bg-card/80 px-3 py-2 text-sm ring-1 ring-border/60">
                 <p className="font-semibold text-foreground">{issue.title}</p>
-                <p className="mt-0.5 text-xs text-muted-foreground">{issue.fixLabel}</p>
+                <p className="mt-0.5 text-xs font-semibold text-success">{resolution.label}</p>
+                <p className="mt-1 text-xs text-muted-foreground">Kaynak: {resolution.sourceOfTruth}</p>
+                {previews.length > 0 ? (
+                  <div className="mt-1 grid gap-0.5 text-xs text-muted-foreground">
+                    {previews.map((preview, index) => <span key={`${issue.id}-${index}`}>{preview}</span>)}
+                  </div>
+                ) : null}
               </div>
-            ))}
-            {fixableIssues.length > 5 ? (
-              <p className="text-xs font-semibold text-muted-foreground">+{fixableIssues.length - 5} düzeltme daha</p>
-            ) : null}
+              )
+            })}
           </div>
         </div>
         <button
           type="button"
           onClick={onConfirm}
-          disabled={Boolean(fixingId) || undoing || fixableIssues.length === 0}
+          disabled={Boolean(fixingId) || undoing || repairCount === 0}
           className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-[0_2px_8px_color-mix(in_srgb,var(--primary)_30%,transparent)] transition hover:bg-primary/90 active:scale-[0.99] disabled:opacity-50"
         >
           <Wrench size={16} />
-          {fixingId === 'all' ? 'Düzeltiliyor...' : 'Toplu düzeltmeyi uygula'}
+          {fixingId === 'all' ? 'Düzeltiliyor...' : 'Güvenli çözümleri uygula'}
         </button>
       </div>
     </SimpleModal>
