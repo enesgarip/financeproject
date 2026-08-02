@@ -367,11 +367,12 @@ plan G1→G5.
     `LHCI_VERSION` job env'i eklendi. Takip koşularında indirme tamamlanmasına rağmen
     runner Chrome 150 + LHCI 0.14.0 ölçümü 90 saniye sınırına tekrar ulaştı. Araç
     0.15.1'e yükseltilip pencere genişletilince gerçek hata görünür oldu: çalışan
-    login formuna rağmen headless sekme `NO_FCP` üretiyordu. LHCI artık resmî
-    `headful` seçeneğiyle Xvfb sanal ekranında çalışır; renderer görünürlük
-    bayrakları da arka plana alınmayı kapatır. PR/gece ölçüm sınırları 180/420
-    saniye ve job sınırı 10 dakikadır; takılan süreç TERM + 15 saniyelik KILL ile
-    hâlâ sonlu kalır.
+    login formuna rağmen sekme `NO_FCP` üretiyordu. Headful + Xvfb koşusu da aynı
+    sonucu vererek Chrome görünürlük varsayımını eledi. Kök neden tüm rotayı
+    `fade-in-up` ile ilk karede `opacity:0` yapan page transition'dı; audit sekmesi
+    ilerlemeyince sayfa hiç boyanmıyordu. Route geçişi opacity içermeyen
+    `route-slide-in` animasyonuna taşındı. PR/gece ölçüm sınırları 180/420 saniye,
+    job sınırı 10 dakikadır; takılan süreç TERM + 15 saniyelik KILL ile sonlu kalır.
   - `ÖDEME ALARMI` kartında `items-start` sol sütunu tepeye çivileyip altında
     ~180px boşluk bırakıyordu → dikey ortalandı.
   - **Yüzde biçimi Türkçe değildi:** tutarlar `₺1.150.000,00` iken yüzdeler
@@ -766,11 +767,12 @@ pattern'ler ve açık düzeltme planı yer alıyor.
   run despite `continue-on-error`. Lighthouse now uses the GitHub runner's
   preinstalled Chrome (no second browser setup). Repeated runner Chrome 150 runs
   then exhausted the former LHCI 0.14.0 / 90-second capture window even with a
-  prefetched package. The wider LHCI 0.15.1 run exposed `NO_FCP`: Chrome 150 was
-  backgrounding the headless tab although Playwright saw the same login form.
-  LHCI now uses its official headful mode inside Xvfb, plus renderer-visibility
-  flags, a 180-second PR / 420-second nightly command timeout, a 10-minute job
-  ceiling, and TERM→KILL cleanup.
+  prefetched package. The wider LHCI 0.15.1 run exposed `NO_FCP`; a headful Xvfb
+  run reproduced it and ruled out the headless Chrome hypothesis. The route
+  wrapper's page-wide fade started at `opacity:0` and could remain frozen in an
+  audit tab, so it now uses a transform-only slide that paints on frame one.
+  The 180-second PR / 420-second nightly command timeout, 10-minute job ceiling,
+  and TERM→KILL cleanup remain bounded safeguards.
 - 2026-07-27 Dependabot PR hygiene: patch/minor version updates remain grouped
   and auto-merge after required CI, while routine major version updates are no
   longer opened and left stale. Security updates bypass the SemVer allow filter;

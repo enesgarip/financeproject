@@ -133,7 +133,6 @@ jobs:
         run: |
           CHROME_PATH="$(command -v google-chrome || command -v google-chrome-stable)"
           test -x "$CHROME_PATH"
-          command -v xvfb-run
           echo "CHROME_PATH=$CHROME_PATH" >> "$GITHUB_ENV"
           "$CHROME_PATH" --version
 
@@ -156,13 +155,12 @@ jobs:
         run: npx --yes "@lhci/cli@${LHCI_VERSION}" --help > /dev/null
 
       - name: Lighthouse CI
-        run: timeout --signal=TERM --kill-after=15s "${LIGHTHOUSE_TIMEOUT_SECONDS}s" xvfb-run --auto-servernum --server-args="-screen 0 1350x940x24" npx --yes "@lhci/cli@${LHCI_VERSION}" autorun
+        run: timeout --signal=TERM --kill-after=15s "${LIGHTHOUSE_TIMEOUT_SECONDS}s" npx --yes "@lhci/cli@${LHCI_VERSION}" autorun
         env:
           LHCI_GITHUB_TOKEN: ${{ github.token }}
           LHCI_NUMBER_OF_RUNS: ${{ github.event_name == 'schedule' && '3' || '1' }}
           LHCI_MAX_WAIT_MS: ${{ github.event_name == 'schedule' && '90000' || '45000' }}
           LIGHTHOUSE_TIMEOUT_SECONDS: ${{ github.event_name == 'schedule' && '420' || '180' }}
-          LIGHTHOUSE_HEADFUL: 'true'
 
       - name: Upload Lighthouse report
         if: always()

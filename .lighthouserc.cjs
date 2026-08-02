@@ -1,14 +1,4 @@
-const headful = process.env.LIGHTHOUSE_HEADFUL === 'true'
-const ciChromeFlags = [
-  headful ? '' : '--headless=new',
-  '--no-sandbox',
-  '--disable-dev-shm-usage',
-  '--disable-gpu',
-  '--disable-backgrounding-occluded-windows',
-  '--disable-renderer-backgrounding',
-]
-  .filter(Boolean)
-  .join(' ')
+const ciChromeFlags = '--headless=new --no-sandbox --disable-dev-shm-usage --disable-gpu'
 const localChromeFlags = '--no-sandbox --disable-dev-shm-usage --disable-gpu'
 const previewHost = '127.0.0.1'
 const previewPort = 4173
@@ -18,7 +8,6 @@ const maxWaitMs = Number(process.env.LHCI_MAX_WAIT_MS ?? 45000)
 module.exports = {
   ci: {
     collect: {
-      headful,
       startServerCommand: `npm run preview -- --host ${previewHost} --port ${previewPort} --strictPort`,
       startServerReadyPattern: 'Local',
       startServerReadyTimeout: 30000,
