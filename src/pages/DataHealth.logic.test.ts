@@ -308,6 +308,48 @@ describe('buildIssues card installment dates', () => {
   })
 })
 
+describe('buildIssues carryover installment history (DH-01)', () => {
+  it('does not flag carryover past installment rows as extra', () => {
+    // record_card_installment_carryover 1/3 ve 2/3'ü `posted` geçmiş satırı olarak
+    // KASITLI yaratır (note: "2/3 taksiti uygulama öncesinde ödendi."). Bunlar "fazla" sayılmamalı.
+    const issues = buildIssues({
+      ...emptyData,
+      cards: [creditCard({ debt_amount: 100 })],
+      cardExpenses: [
+        cardExpense({
+          amount: 300,
+          installment_count: 3,
+          installment_amount: 100,
+          spent_at: '2026-05-19',
+          note: '2/3 taksiti uygulama öncesinde ödendi.',
+        }),
+      ],
+      cardInstallments: [
+        cardInstallment({ id: 'i1', card_expense_id: 'expense-1', installment_no: 1, installment_count: 3, amount: 100, due_month: '2026-05-19', status: 'posted' }),
+        cardInstallment({ id: 'i2', card_expense_id: 'expense-1', installment_no: 2, installment_count: 3, amount: 100, due_month: '2026-06-19', status: 'posted' }),
+        cardInstallment({ id: 'i3', card_expense_id: 'expense-1', installment_no: 3, installment_count: 3, amount: 100, due_month: '2026-07-19', status: 'scheduled' }),
+      ],
+    })
+
+    expect(issues.some((issue) => issue.id === 'card-expense-extra-expense-1')).toBe(false)
+  })
+
+  it('still flags a genuinely out-of-range installment number', () => {
+    const issues = buildIssues({
+      ...emptyData,
+      cards: [creditCard({ debt_amount: 100 })],
+      cardExpenses: [
+        cardExpense({ amount: 300, installment_count: 3, installment_amount: 100, spent_at: '2026-05-19' }),
+      ],
+      cardInstallments: [
+        cardInstallment({ id: 'i4', card_expense_id: 'expense-1', installment_no: 4, installment_count: 3, amount: 100, due_month: '2026-08-19', status: 'scheduled' }),
+      ],
+    })
+
+    expect(issues.some((issue) => issue.id === 'card-expense-extra-expense-1')).toBe(true)
+  })
+})
+
 describe('buildIssues overdue card statements', () => {
   it('flags an open statement whose due date has passed', () => {
     const issues = buildIssues({
