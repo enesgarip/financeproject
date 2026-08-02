@@ -21,6 +21,14 @@ export const expenseCategories = [
   'Sağlık',
   'Eğlence',
   'Eğitim',
+  // Yeni kategoriler LİSTE SONUNA (Diğer'den önce) eklenir: vizPalette renkleri
+  // kanonik sıradan slot alır, yani ilk 8 kategori mevcut renklerini korur ve
+  // yeni gelenler viz-9..13'e düşer (renk kayması olmaz).
+  'Konut',
+  'Abonelik',
+  'İş',
+  'Kişisel Bakım',
+  'Hediye',
   'Diğer',
 ]
 
@@ -43,8 +51,10 @@ export const categoryRules: Array<{ category: string; keywords: string[] }> = [
     keywords: ['ulaşım', 'ulasim', 'benzin', 'yakıt', 'yakit', 'petrol', 'shell', 'opet', 'bp', 'total', 'taksi', 'uber', 'metro', 'marmaray', 'akbil', 'otobüs', 'otobus'],
   },
   {
+    // 'abonelik' kasıtlı olarak burada YOK → yeni Abonelik kategorisine taşındı
+    // (Fatura kuralı sırada önce geldiği için burada kalsaydı Abonelik hiç kazanamazdı).
     category: 'Fatura',
-    keywords: ['fatura', 'elektrik', 'su faturası', 'su faturasi', 'doğalgaz', 'dogalgaz', 'internet', 'abonelik', 'turkcell', 'vodafone', 'türk telekom', 'turk telekom', 'superonline'],
+    keywords: ['fatura', 'elektrik', 'su faturası', 'su faturasi', 'doğalgaz', 'dogalgaz', 'internet', 'turkcell', 'vodafone', 'türk telekom', 'turk telekom', 'superonline'],
   },
   {
     category: 'Sağlık',
@@ -61,6 +71,31 @@ export const categoryRules: Array<{ category: string; keywords: string[] }> = [
   {
     category: 'Alışveriş',
     keywords: ['alışveriş', 'alisveris', 'trendyol', 'hepsiburada', 'amazon', 'n11', 'giyim', 'zara', 'lcw', 'teknosa', 'media markt', 'telefon'],
+  },
+  {
+    // Konut = barınma sabit giderleri (kira/aidat/emlak). Elektrik/su/doğalgaz
+    // fatura olduğu için Fatura'da kalır; burada onlar YOK.
+    category: 'Konut',
+    keywords: ['kira', 'aidat', 'emlak', 'konut', 'apartman', 'ipotek'],
+  },
+  {
+    // Abonelik = yazılım/bulut/dijital abonelikler. Netflix/Spotify kasıtlı olarak
+    // Eğlence'de bırakıldı (mevcut geçmiş/memory bozulmasın) — burada YOK.
+    category: 'Abonelik',
+    keywords: ['abonelik', 'abone', 'icloud', 'google one', 'youtube premium', 'disney', 'blutv', 'exxen', 'gain'],
+  },
+  {
+    // İş = gelir getirici/işletme harcamaları (reklam, hosting, komisyon).
+    category: 'İş',
+    keywords: ['reklam', 'google ads', 'meta ads', 'hosting', 'domain', 'alan adı', 'alan adi', 'sunucu', 'komisyon'],
+  },
+  {
+    category: 'Kişisel Bakım',
+    keywords: ['kuaför', 'kuafor', 'berber', 'güzellik', 'guzellik', 'kozmetik', 'spa', 'masaj', 'gratis', 'sephora', 'watsons', 'rossmann', 'gym', 'fitness'],
+  },
+  {
+    category: 'Hediye',
+    keywords: ['hediye', 'bağış', 'bagis', 'çiçek', 'cicek', 'kızılay', 'kizilay', 'lösev', 'losev', 'ahbap'],
   },
 ]
 

@@ -63,6 +63,26 @@ const CATEGORY_CASES: Array<{ description: string; expected: string | null }> = 
   { description: 'Zara Store', expected: 'Alışveriş' },
   { description: 'Teknosa Telefon', expected: 'Alışveriş' },
 
+  // --- Konut ---
+  { description: 'Ev Kira Odemesi', expected: 'Konut' },
+  { description: 'SITE AIDAT AGUSTOS', expected: 'Konut' },
+
+  // --- Abonelik ---
+  { description: 'ICLOUD STORAGE', expected: 'Abonelik' },
+  { description: 'BluTV Abonelik', expected: 'Abonelik' },
+
+  // --- İş ---
+  { description: 'GOOGLE ADS REKLAM', expected: 'İş' },
+  { description: 'Natro Hosting Yenileme', expected: 'İş' },
+
+  // --- Kişisel Bakım ---
+  { description: 'KUAFOR SALON', expected: 'Kişisel Bakım' },
+  { description: 'GRATIS KADIKOY', expected: 'Kişisel Bakım' },
+
+  // --- Hediye ---
+  { description: 'Ciceksepeti Hediye', expected: 'Hediye' },
+  { description: 'KIZILAY BAGIS', expected: 'Hediye' },
+
   // --- Footguns: short keywords must NOT latch onto larger words ---
   // "taksi" inside "taksit" → instalment rows must NOT become Ulaşım (real bug).
   { description: 'BEYLER OPTİK Peş. Taksit 1.Tk Anapara', expected: null },
@@ -83,7 +103,7 @@ describe('categorisation golden set', () => {
 
   it('covers every expense category at least once (except Diğer)', () => {
     const covered = new Set(CATEGORY_CASES.map((c) => c.expected).filter((c): c is string => c != null))
-    for (const category of ['Market', 'Yemek', 'Ulaşım', 'Fatura', 'Sağlık', 'Eğitim', 'Eğlence', 'Alışveriş']) {
+    for (const category of ['Market', 'Yemek', 'Ulaşım', 'Fatura', 'Sağlık', 'Eğitim', 'Eğlence', 'Alışveriş', 'Konut', 'Abonelik', 'İş', 'Kişisel Bakım', 'Hediye']) {
       expect(covered.has(category)).toBe(true)
     }
   })

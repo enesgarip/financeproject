@@ -26,13 +26,15 @@ describe('buildVizColorMap', () => {
   })
 
   it('slotlar bitince döngüye girmez, nötre düşer', () => {
-    const keys = Array.from({ length: 10 }, (_, i) => `k${i}`)
+    // Palet uzunluğuna bağlı kalmadan: son slot dolar, sonrası nötre düşer.
+    const n = VIZ_SERIES.length
+    const keys = Array.from({ length: n + 2 }, (_, i) => `k${i}`)
     const map = buildVizColorMap(keys)
-    expect(map.k7).toBe(VIZ_SERIES[7])
-    expect(map.k8).toBe(VIZ_NEUTRAL)
-    expect(map.k9).toBe(VIZ_NEUTRAL)
-    // Dokuzuncu birinciyle aynı renge boyanmamalı.
-    expect(map.k8).not.toBe(map.k0)
+    expect(map[`k${n - 1}`]).toBe(VIZ_SERIES[n - 1])
+    expect(map[`k${n}`]).toBe(VIZ_NEUTRAL)
+    expect(map[`k${n + 1}`]).toBe(VIZ_NEUTRAL)
+    // Slot bitiminden sonraki anahtar birinciyle aynı renge boyanmamalı.
+    expect(map[`k${n}`]).not.toBe(map.k0)
   })
 
   it('hiçbir kimlik slotu durum rengi kullanmaz', () => {

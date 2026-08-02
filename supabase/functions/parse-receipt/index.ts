@@ -13,7 +13,7 @@
 import { fetchWithTimeout, handlePreflight, jsonResponse, rateLimit } from '../_shared/edge.ts'
 
 // Must mirror src/utils/categories.ts expenseCategories.
-const CATEGORIES = ['Market', 'Yemek', 'Ulaşım', 'Alışveriş', 'Fatura', 'Sağlık', 'Eğlence', 'Eğitim', 'Diğer']
+const CATEGORIES = ['Market', 'Yemek', 'Ulaşım', 'Alışveriş', 'Fatura', 'Sağlık', 'Eğlence', 'Eğitim', 'Konut', 'Abonelik', 'İş', 'Kişisel Bakım', 'Hediye', 'Diğer']
 const MODEL = 'gemini-2.5-flash'
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024 // ~8 MB of base64
 const GEMINI_TIMEOUT_MS = 25_000

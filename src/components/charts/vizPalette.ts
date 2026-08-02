@@ -27,6 +27,14 @@ export const VIZ_SERIES = [
   'var(--viz-6)',
   'var(--viz-7)',
   'var(--viz-8)',
+  // 9..13: harcama kategorileri 8'i aştığı için eklendi (Konut/Abonelik/İş/
+  // Kişisel Bakım/Hediye). Token'lar index.css'te; 8'den sonrası CVD-ayırt
+  // edilebilirliğin ucundadır, sırayı değiştirmeden önce paleti yeniden doğrula.
+  'var(--viz-9)',
+  'var(--viz-10)',
+  'var(--viz-11)',
+  'var(--viz-12)',
+  'var(--viz-13)',
 ] as const
 
 /** Artık kova: kategori değil, o yüzden kasıtlı olarak nötr. */
