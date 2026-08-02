@@ -152,9 +152,10 @@ export type CardDebtBreakdown = {
   scheduledTotal: number
   unclassifiedAmount: number
   unexplainedAmount: number
-  nextDebtAmount: number
+  scheduledDebtOverlapAmount: number
   hasSplitOverflow: boolean
   hasScheduledDebtGap: boolean
+  hasPartialScheduledDebtOverlap: boolean
   hasUnexplainedDebt: boolean
 }
 
@@ -166,9 +167,10 @@ export type CardDebtBreakdown = {
  *  - scheduledTotal   = ileri tarihli taksitler; unclassified'ın bu kadarı normaldir.
  *  - unexplained      = taksitlerle de açıklanamayan, yani "kayıp" borç (alarm).
  *
- * Üç bayrak DataHealth uyarılarını besler:
+ * Dört bayrak DataHealth uyarılarını besler:
  *  - hasSplitOverflow    → parçalar toplamı borcu aşıyor (clamp gerekiyor).
- *  - hasScheduledDebtGap → taksit var ama borca yansımamış.
+ *  - hasScheduledDebtGap → taksitlerin tamamı borcun dışında kalmış.
+ *  - hasPartialScheduledDebtOverlap → taksitlerin yalnız bir kısmı borçta açıklanabiliyor.
  *  - hasUnexplainedDebt  → ne parça ne taksitle açıklanan fazla borç.
  */
 export function cardDebtBreakdown(
@@ -182,15 +184,23 @@ export function cardDebtBreakdown(
 
   const hasSplitOverflow = exceedsTL(splitTotal, card.debt_amount)
   const hasDebtBeyondSplit = exceedsTL(card.debt_amount, splitTotal)
+  const hasPartialScheduledDebtOverlap =
+    !hasSplitOverflow &&
+    hasDebtBeyondSplit &&
+    exceedsTL(normalizedScheduledTotal, unclassifiedAmount)
+  const scheduledDebtOverlapAmount = hasPartialScheduledDebtOverlap
+    ? diffTL(normalizedScheduledTotal, unclassifiedAmount)
+    : 0
 
   return {
     splitTotal,
     scheduledTotal: normalizedScheduledTotal,
     unclassifiedAmount,
     unexplainedAmount,
-    nextDebtAmount: sumTL([card.debt_amount, normalizedScheduledTotal]),
+    scheduledDebtOverlapAmount,
     hasSplitOverflow,
-    hasScheduledDebtGap: exceedsTL(normalizedScheduledTotal, 0) && !hasDebtBeyondSplit,
+    hasScheduledDebtGap: exceedsTL(normalizedScheduledTotal, 0) && !hasSplitOverflow && !hasDebtBeyondSplit,
+    hasPartialScheduledDebtOverlap,
     hasUnexplainedDebt: hasDebtBeyondSplit && exceedsTL(unexplainedAmount, 0),
   }
 }

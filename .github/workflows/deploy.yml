@@ -200,6 +200,18 @@ jobs:
       - name: Card expense source-event idempotency
         run: docker exec -i supabase_db_financeproject psql -U postgres -d postgres -v ON_ERROR_STOP=1 -f - < supabase/tests/card_expense_idempotency.sql
 
+      - name: Provision debt transitions
+        run: docker exec -i supabase_db_financeproject psql -U postgres -d postgres -v ON_ERROR_STOP=1 -f - < supabase/tests/provision_debt.sql
+
+      - name: Complete finance-data reset
+        run: docker exec -i supabase_db_financeproject psql -U postgres -d postgres -v ON_ERROR_STOP=1 -f - < supabase/tests/reset_user_finance_data.sql
+
+      - name: Canonical card allocation security
+        run: docker exec -i supabase_db_financeproject psql -U postgres -d postgres -v ON_ERROR_STOP=1 -f - < supabase/tests/card_allocation_security.sql
+
+      - name: SMS account source-event idempotency
+        run: docker exec -i supabase_db_financeproject psql -U postgres -d postgres -v ON_ERROR_STOP=1 -f - < supabase/tests/sms_account_idempotency.sql
+
   backup:
     name: Pre-migration backup
     needs: changes

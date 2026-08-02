@@ -3,7 +3,7 @@ import type { Card, CardExpense, CardExpenseSource, CardInstallment, CardStateme
 import { ok, resultFromSupabase, voidResultFromSupabase, type Result } from '../result'
 
 export type ExpenseMatchRow = Pick<CardExpense, 'id' | 'spent_at' | 'amount' | 'status' | 'description' | 'category' | 'installment_count' | 'note'>
-export type InstallmentMatchRow = Pick<CardInstallment, 'id' | 'due_month' | 'amount' | 'status' | 'description' | 'installment_no' | 'installment_count'>
+export type InstallmentMatchRow = Pick<CardInstallment, 'id' | 'due_month' | 'amount' | 'status' | 'description' | 'installment_no' | 'installment_count' | 'statement_archive_id'>
 export type PaymentMatchRow = Pick<
   Payment,
   'id' | 'title' | 'amount' | 'amount_status' | 'due_date' | 'status' | 'payment_method' | 'auto_source_card_id' | 'category' | 'recurrence' | 'recurrence_day' | 'recurrence_end_date'
@@ -170,19 +170,10 @@ export type CardInstallmentCarryoverInput = {
 export async function fetchCardInstallmentMatchRows(cardId: string): Promise<Result<InstallmentMatchRow[]>> {
   const { data, error } = await supabase
     .from('card_installments')
-    .select('id, due_month, amount, status, description, installment_no, installment_count')
+    .select('id, due_month, amount, status, description, installment_no, installment_count, statement_archive_id')
     .eq('card_id', cardId)
 
   return resultFromSupabase((data ?? []) as InstallmentMatchRow[], error, 'Kart taksitleri yüklenemedi.')
-}
-
-export async function updateCardInstallmentAmount(installmentId: string, newAmount: number): Promise<Result<void>> {
-  const { error } = await supabase
-    .from('card_installments')
-    .update({ amount: newAmount, updated_at: new Date().toISOString() })
-    .eq('id', installmentId)
-
-  return voidResultFromSupabase(error, 'Taksit tutarı güncellenemedi.')
 }
 
 export async function recordCardInstallmentCarryover(input: CardInstallmentCarryoverInput): Promise<Result<void>> {
@@ -203,11 +194,6 @@ export async function recordCardInstallmentCarryover(input: CardInstallmentCarry
 export async function cutDueCardStatements(): Promise<Result<number>> {
   const { data, error } = await supabase.rpc('cut_due_card_statements')
   return resultFromSupabase(data ?? 0, error, 'Ekstre kesimi başarısız.')
-}
-
-export async function resetCardData(cardId: string): Promise<Result<void>> {
-  const { error } = await supabase.rpc('reset_card_data', { p_card_id: cardId })
-  return voidResultFromSupabase(error, 'Kart sıfırlanamadı.')
 }
 
 export async function resetCardImportData(cardId: string): Promise<Result<void>> {

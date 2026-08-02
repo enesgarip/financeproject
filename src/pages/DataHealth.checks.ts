@@ -53,12 +53,6 @@ function dateInMonthValue(sourceDate: string, preferredDay: number) {
   return dateInputValue(new Date(year, month - 1, Math.min(preferredDay, lastDay)))
 }
 
-function dateStartIso(value: string | null | undefined) {
-  if (!value) return new Date().toISOString()
-  if (value.includes('T')) return value
-  return `${value}T00:00:00.000Z`
-}
-
 function range(from: number, to: number) {
   return Array.from({ length: Math.max(0, to - from + 1) }, (_, index) => from + index)
 }
@@ -321,17 +315,38 @@ export function checkCards(
         id: `card-scheduled-debt-${card.id}`,
         area: 'Kartlar',
         severity: 'error',
-        title: `${cardLabel(card)} planlı taksitleri limitten düşmüyor`,
-        description: 'Gelecek taksitler kayıtlı ama kart borcuna eklenmemiş; kalan limit yanlış yüksek görünür.',
+        title: `${cardLabel(card)} planlı taksitleri toplam borçla uyuşmuyor`,
+        description: 'Gelecek taksitler borç bileşenlerinde görünmüyor. Borcun mu yoksa taksit durumlarının mı eski olduğu banka verisi olmadan belirlenemez.',
         details: [
           `Planlı taksit: ${formatCurrency(debtBreakdown.scheduledTotal)}`,
           `Güncel borç: ${formatCurrency(card.debt_amount)}`,
-          `Önerilen borç: ${formatCurrency(debtBreakdown.nextDebtAmount)}`,
         ],
-        fixable: true,
-        fixLabel: 'Planlı taksitleri borca ekle',
+        fixable: false,
         kind: 'cardScheduledDebt',
-        payload: { cardId: card.id, scheduledTotal: debtBreakdown.scheduledTotal, nextDebtAmount: debtBreakdown.nextDebtAmount },
+        payload: { cardId: card.id, scheduledTotal: debtBreakdown.scheduledTotal },
+      })
+    }
+
+    if (debtBreakdown.hasPartialScheduledDebtOverlap) {
+      issues.push({
+        id: `card-scheduled-debt-overlap-${card.id}`,
+        area: 'Kartlar',
+        severity: 'warning',
+        title: `${cardLabel(card)} borç bileşenleri taksit planıyla örtüşüyor`,
+        description: 'Ekstre + dönem içi + provizyon ve planlı taksitler birlikte toplam borcu aşıyor. Borcun mu yoksa bileşen/taksit durumlarının mı eski olduğu banka verisi olmadan belirlenemez.',
+        details: [
+          `Güncel borç: ${formatCurrency(card.debt_amount)}`,
+          `Ekstre + dönem + provizyon: ${formatCurrency(debtBreakdown.splitTotal)}`,
+          `Planlı taksit: ${formatCurrency(debtBreakdown.scheduledTotal)}`,
+          `Örtüşen/açıklanamayan tutar: ${formatCurrency(debtBreakdown.scheduledDebtOverlapAmount)}`,
+        ],
+        fixable: false,
+        kind: 'cardScheduledDebtOverlap',
+        payload: {
+          cardId: card.id,
+          scheduledTotal: debtBreakdown.scheduledTotal,
+          amount: debtBreakdown.scheduledDebtOverlapAmount,
+        },
       })
     }
 
@@ -348,10 +363,9 @@ export function checkCards(
           `Güncel borç: ${formatCurrency(card.debt_amount)}`,
           `Fazla: ${formatCurrency(overflow)}`,
         ],
-        fixable: true,
-        fixLabel: 'Borcu taksit toplamına eşitle',
+        fixable: false,
         kind: 'cardInstallmentOverflow',
-        payload: { cardId: card.id, nextDebtAmount: scheduledTotal },
+        payload: { cardId: card.id, scheduledTotal, amount: overflow },
       })
     }
 
@@ -471,22 +485,17 @@ export function checkCards(
         area: 'Kartlar',
         severity: 'warning',
         title: `${cardLabel(card)} ekstre arşivi pasif/geçersiz statüde`,
-        description: 'Ekstre arşiv statüsü beklenen open/paid değerlerinden farklı. Geçmiş kayıt korunur, hızlı düzeltme bunu ödenmiş arşive alır.',
+        description: 'Ekstre arşiv statüsü beklenen open/paid değerlerinden farklı. Ödenmişe çevirmek banka ve kart borcu hareketi gerektirdiği için kayıt manuel incelenmelidir.',
         details: [
           `Statü: ${archiveStatus || '-'}`,
           `Ekstre: ${formatDate(archive.statement_date)}`,
           `Ekstre tutarı: ${formatCurrency(archive.statement_debt_amount)}`,
         ],
-        fixable: true,
-        fixLabel: 'Ödenmiş arşive al',
+        fixable: false,
         kind: 'cardStatementStatus',
         payload: {
           cardId: archive.card_id,
           statementArchiveId: archive.id,
-          updates: {
-            status: 'paid',
-            paid_at: archive.paid_at ?? dateStartIso(archive.due_date ?? archive.statement_date),
-          },
         },
       })
     }
@@ -769,6 +778,16 @@ export function checkLedgerDrift(
   return issues
 }
 
+function archiveAwareInstallmentFix(
+  archiveProtected: boolean,
+  kind: HealthIssue['kind'],
+  fixLabel: string,
+  payload: NonNullable<HealthIssue['payload']>,
+): Pick<HealthIssue, 'fixable' | 'fixLabel' | 'kind' | 'payload'> {
+  if (archiveProtected) return { fixable: false, kind: 'manual' }
+  return { fixable: true, fixLabel, kind, payload }
+}
+
 export function checkCardInstallments(
   cards: Card[],
   cardExpenses: CardExpense[],
@@ -811,6 +830,7 @@ export function checkCardInstallments(
     const card = cardsById.get(expense.card_id)
     const rows = installmentsByExpense.get(expense.id) ?? []
     const expectedAmount = expectedInstallmentAmount(expense.amount, expense.installment_count)
+    const archiveProtected = expense.statement_archive_id != null || rows.some((row) => row.statement_archive_id != null)
 
     if (card && card.card_type !== 'kredi_karti' && (expense.installment_count > 1 || rows.length > 0)) {
       issues.push({
@@ -846,10 +866,12 @@ export function checkCardInstallments(
         title: `${expense.description} tek çekim ama taksit satırı var`,
         description: 'Bu işlem peşin görünüyor; harcama kaydı kalacak, sadece analizleri şişiren taksit planı satırları temizlenecek.',
         details: [`Satır sayısı: ${rows.length}`, `Kart: ${cardLabel(card)}`, `Tutar: ${formatCurrency(expense.amount)}`],
-        fixable: true,
-        fixLabel: 'Peşin plan satırlarını kaldır',
-        kind: 'cardSingleInstallments',
-        payload: { ids: rows.map((row) => row.id) },
+        ...archiveAwareInstallmentFix(
+          archiveProtected,
+          'cardSingleInstallments',
+          'Peşin plan satırlarını kaldır',
+          { ids: rows.map((row) => row.id) },
+        ),
       })
     }
 
@@ -865,10 +887,12 @@ export function checkCardInstallments(
           `Beklenen: ${formatCurrency(expectedAmount)}`,
           `Toplam: ${formatCurrency(expense.amount)} · ${expense.installment_count} taksit`,
         ],
-        fixable: true,
-        fixLabel: 'Taksit tutarını düzelt',
-        kind: 'cardExpenseAmount',
-        payload: { expenseId: expense.id, updates: { installment_amount: expectedAmount } },
+        ...archiveAwareInstallmentFix(
+          archiveProtected,
+          'cardExpenseAmount',
+          'Taksit tutarını düzelt',
+          { expenseId: expense.id, updates: { installment_amount: expectedAmount } },
+        ),
       })
     }
   }
@@ -877,6 +901,10 @@ export function checkCardInstallments(
     const expense = installment.card_expense_id ? expensesById.get(installment.card_expense_id) : null
     const card = cardsById.get(installment.card_id)
     const isSingleExpensePlan = Boolean(expense && expense.installment_count <= 1)
+    const siblingRows = installment.card_expense_id ? (installmentsByExpense.get(installment.card_expense_id) ?? []) : []
+    const archiveProtected = installment.statement_archive_id != null
+      || expense?.statement_archive_id != null
+      || siblingRows.some((row) => row.statement_archive_id != null)
 
     if (isSingleExpensePlan) continue
 
@@ -901,10 +929,12 @@ export function checkCardInstallments(
         title: `${installment.description} işlenme tarihi eksik`,
         description: 'Döneme alınmış taksitlerde posted_at boş kalmış.',
         details: [`Taksit: ${installment.installment_no}/${installment.installment_count}`],
-        fixable: true,
-        fixLabel: 'İşlenme tarihini tamamla',
-        kind: 'cardInstallmentPostedAt',
-        payload: { ids: [installment.id], updates: { posted_at: new Date().toISOString() } },
+        ...archiveAwareInstallmentFix(
+          archiveProtected,
+          'cardInstallmentPostedAt',
+          'İşlenme tarihini tamamla',
+          { ids: [installment.id], updates: { posted_at: new Date().toISOString() } },
+        ),
       })
     }
 
@@ -916,10 +946,12 @@ export function checkCardInstallments(
         title: `${installment.description} planlı taksitte işlenme tarihi var`,
         description: 'Planlı taksitlerde posted_at boş olmalı.',
         details: [`Taksit: ${installment.installment_no}/${installment.installment_count}`],
-        fixable: true,
-        fixLabel: 'İşlenme tarihini kaldır',
-        kind: 'cardInstallmentPostedAt',
-        payload: { ids: [installment.id], updates: { posted_at: null } },
+        ...archiveAwareInstallmentFix(
+          archiveProtected,
+          'cardInstallmentPostedAt',
+          'İşlenme tarihini kaldır',
+          { ids: [installment.id], updates: { posted_at: null } },
+        ),
       })
     }
 
@@ -931,10 +963,12 @@ export function checkCardInstallments(
         title: `${installment.description} taksit sayısı harcamayla uyuşmuyor`,
         description: 'Taksit satırındaki toplam taksit sayısı, bağlı harcama kaydından farklı.',
         details: [`Satır: ${installment.installment_count}`, `Harcama: ${expense.installment_count}`],
-        fixable: true,
-        fixLabel: 'Taksit sayısını düzelt',
-        kind: 'cardInstallmentCount',
-        payload: { ids: [installment.id], updates: { installment_count: expense.installment_count } },
+        ...archiveAwareInstallmentFix(
+          archiveProtected,
+          'cardInstallmentCount',
+          'Taksit sayısını düzelt',
+          { ids: [installment.id], updates: { installment_count: expense.installment_count } },
+        ),
       })
     }
 
@@ -951,10 +985,12 @@ export function checkCardInstallments(
             `Taksit: ${installment.installment_no}/${installment.installment_count}`,
             `Kayıtlı: ${formatDate(installment.due_month)} → Beklenen: ${formatDate(expectedDueDate)}`,
           ],
-          fixable: true,
-          fixLabel: 'Taksit tarihini düzelt',
-          kind: 'cardInstallmentDueMonth',
-          payload: { ids: [installment.id], updates: { due_month: expectedDueDate } },
+          ...archiveAwareInstallmentFix(
+            archiveProtected,
+            'cardInstallmentDueMonth',
+            'Taksit tarihini düzelt',
+            { ids: [installment.id], updates: { due_month: expectedDueDate } },
+          ),
         })
       }
     }
@@ -987,6 +1023,7 @@ export function checkCardInstallments(
     const baseDate = inferInstallmentBaseDate(expense, rows)
     const futureMissingNos = missingNos.filter((installmentNo) => addMonthsToDate(baseDate, installmentNo - 1) > today)
     const card = cardsById.get(expense.card_id)
+    const archiveProtected = expense.statement_archive_id != null || rows.some((row) => row.statement_archive_id != null)
 
     if (missingNos.length > 0) {
       const pastMissingNos = missingNos.filter((installmentNo) => !futureMissingNos.includes(installmentNo))
@@ -1002,21 +1039,23 @@ export function checkCardInstallments(
           paidBefore > 0 ? `${paidBefore} taksit uygulama öncesi ödenmiş işaretli.` : `Başlangıç: ${formatDate(expense.spent_at)}`,
           pastMissingNos.length > 0 && futureMissingNos.length === 0 ? 'Geçmiş taksitler ödendi olarak eklenecek.' : null,
         ].filter((item): item is string => Boolean(item)),
-        fixable: true,
-        fixLabel: futureMissingNos.length > 0 ? 'Eksik taksitleri ekle' : 'Geçmiş taksitleri ödendi olarak ekle',
-        kind: 'cardMissingInstallments',
-        payload: {
-          userId: expense.user_id,
-          cardId: expense.card_id,
-          cardExpenseId: expense.id,
-          installmentNos: missingNos,
-          installmentCount: expense.installment_count,
-          baseDate,
-          amount: roundTL(expense.installment_amount || expense.amount / expense.installment_count),
-          totalAmount: expense.amount,
-          description: expense.description,
-          category: expense.category,
-        },
+        ...archiveAwareInstallmentFix(
+          archiveProtected,
+          'cardMissingInstallments',
+          futureMissingNos.length > 0 ? 'Eksik taksitleri ekle' : 'Geçmiş taksitleri ödendi olarak ekle',
+          {
+            userId: expense.user_id,
+            cardId: expense.card_id,
+            cardExpenseId: expense.id,
+            installmentNos: missingNos,
+            installmentCount: expense.installment_count,
+            baseDate,
+            amount: roundTL(expense.installment_amount || expense.amount / expense.installment_count),
+            totalAmount: expense.amount,
+            description: expense.description,
+            category: expense.category,
+          },
+        ),
       })
     }
 

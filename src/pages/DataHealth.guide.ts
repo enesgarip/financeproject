@@ -18,21 +18,17 @@ export function severityClass(severity: HealthIssue['severity']) {
 export function buildIssueGuide(issue: HealthIssue): IssueGuide {
   if (issue.kind === 'cardScheduledDebt') {
     return {
-      problem: 'Planlı kart taksitleri kayıtlı, ama kart borcuna tam yansımıyor.',
-      whyItMatters: 'Kalan limit gerçekten daha yüksek görünür; bu da yeni harcama ve ödeme planını yanıltır.',
-      nextStep: issue.fixable
-        ? 'Kart borcunu taksit planıyla hizalamak için hızlı düzeltmeyi uygula.'
-        : 'Kart borcunu ve taksit planını birlikte kontrol et; gerekiyorsa Kartlar ekranından düzelt.',
+      problem: 'Planlı kart taksitleri ile kaydedilen toplam borç uyuşmuyor.',
+      whyItMatters: 'Banka doğrulaması olmadan borcun mu yoksa taksit durumlarının mı eski olduğu belirlenemez.',
+      nextStep: 'Kart borcunu ve taksit planını birlikte kontrol et; gerekiyorsa Kartlar ekranından düzelt.',
     }
   }
 
   if (issue.kind === 'cardInstallmentOverflow') {
     return {
       problem: 'Planlı taksitlerin toplamı kartın güncel borcundan yüksek.',
-      whyItMatters: 'Borç, taksitlerin gerçekte ne kadar ödeneceğini yansıtmıyor; borç fazla düşük görünüyor veya bazı taksitler artık geçersiz.',
-      nextStep: issue.fixable
-        ? 'Borcu taksit toplamına eşitlemek için hızlı düzeltmeyi uygula.'
-        : 'Taksit planını kontrol et; ödenen veya iptal edilmesi gereken taksitler olabilir.',
+      whyItMatters: 'Borç düşük kalmış olabilir veya bazı taksitler artık geçersizdir; iki olasılık da aynı veriden çıkarılamaz.',
+      nextStep: 'Taksit planını ve banka borcunu birlikte kontrol et; ödenen veya iptal edilmesi gereken taksitler olabilir.',
     }
   }
 
@@ -234,12 +230,6 @@ export function issuePreviewDetails(issue: HealthIssue) {
     previews.push(`Ekstre borcu: ${formatCurrency(payload.statementDebt ?? 0)}`)
     previews.push(`Dönem içi kesinleşen: ${formatCurrency(payload.currentPeriod ?? 0)}`)
     previews.push(`Provizyon: ${formatCurrency(payload.provisionAmount ?? 0)}`)
-  } else if (issue.kind === 'cardScheduledDebt') {
-    previews.push(`Yeni toplam borç: ${formatCurrency(payload.nextDebtAmount ?? 0)}`)
-    previews.push(`Planlı taksit tutarı borca eklenecek.`)
-  } else if (issue.kind === 'cardInstallmentOverflow') {
-    previews.push(`Yeni toplam borç: ${formatCurrency(payload.nextDebtAmount ?? 0)}`)
-    previews.push('Borç, planlı taksit toplamına yükseltilecek.')
   } else if (issue.kind === 'cardLedgerDrift') {
     previews.push(`Borç hareket toplamına çekilecek: ${formatCurrency(payload.nextDebtAmount ?? 0)}`)
     previews.push('Yeni bir hareket yazılmaz; borç projeksiyona eşitlenir.')

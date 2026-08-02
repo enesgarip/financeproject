@@ -26,21 +26,40 @@ async function sha256Hex(text: string): Promise<string> {
   return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('')
 }
 
+// src/utils/money.ts roundTL'nin Edge-runtime yerel ikizi.
+function roundTL(value: number): number {
+  if (!Number.isFinite(value)) return 0
+  const sign = value < 0 ? -1 : 1
+  return sign * Math.round(Math.abs(value) * 100 + 1e-6) / 100 || 0
+}
+
 function parseAmount(raw: string): number | null {
-  const amount = parseFloat(raw.replace(/\./g, '').replace(',', '.'))
+  const compact = raw.replace(/\s/g, '')
+  const decimalIndex = Math.max(compact.lastIndexOf(','), compact.lastIndexOf('.'))
+  const decimalDigits = decimalIndex >= 0 ? compact.length - decimalIndex - 1 : 0
+  const normalized = decimalIndex >= 0 && decimalDigits >= 1 && decimalDigits <= 2
+    ? `${compact.slice(0, decimalIndex).replace(/[.,]/g, '')}.${compact.slice(decimalIndex + 1)}`
+    : compact.replace(/[.,]/g, '')
+  const amount = parseFloat(normalized)
   if (!Number.isFinite(amount) || amount <= 0) return null
-  return Math.round(amount * 100) / 100
+  return roundTL(amount)
 }
 
 function toIsoDate(datePart: string, timePart: string): string {
   const [d, mo, y] = datePart.split('.')
-  return `${y}-${mo}-${d}T${timePart}`
+  return `${y}-${mo!.padStart(2, '0')}-${d!.padStart(2, '0')}T${timePart}+03:00`
 }
 
 // -- Kart harcama SMS'leri --
 
 const DENIZBANK_CARD_REGEX =
   /(\d{2}\.\d{2}\.\d{4})\s+(\d{2}:\d{2}:\d{2})\s+tarihinde\s+(\d{4})\s+ile\s+biten\s+kartinizla,\s+(.+?)\s+firmasindan,\s+([\d.,]+)\s+TL\s+islem/i
+
+const DENIZBANK_MASKED_CARD_REGEX =
+  /\d{6}\*+(\d{4})\s+kartinizla\s+(\d{1,2}\.\d{1,2}\.\d{4})\s+(\d{2}:\d{2}:\d{2})\s+tarihinde\s+(.+?)\s+isyerinden\s+yapilan\s+([\d.,]+)\s+TRY\s+tutarindaki\s+islem/i
+
+const DENIZBANK_CARD_TRANSACTION_REGEX =
+  /(\d{4})\s+ile\s+biten\s+kartinizla,?\s+(\d{1,2}\.\d{1,2}\.\d{4})\s+(\d{2}:\d{2}:\d{2})\s+tarihinde,?\s*([\d.,]+)\s+TL\s+tutarinda,?\s*(.+?)\s+kurumuna\s+ait\s+otomatik\s+odeme\s+talimatiniz\s+gerceklestirilmistir/i
 
 type ParsedCardSms = {
   type: 'card'
@@ -56,6 +75,42 @@ function parseDenizbankCardSms(text: string): ParsedCardSms | null {
   if (!m) return null
 
   const [, datePart, timePart, lastFour, merchant, amountStr] = m
+  const amount = parseAmount(amountStr!)
+  if (amount === null) return null
+
+  return {
+    type: 'card',
+    spentAt: toIsoDate(datePart!, timePart!),
+    lastFour: lastFour!,
+    merchant: merchant!.trim(),
+    amount,
+  }
+}
+
+function parseDenizbankMaskedCardSms(text: string): ParsedCardSms | null {
+  const normalized = normalizeSmsWhitespace(text)
+  const m = normalized.match(DENIZBANK_MASKED_CARD_REGEX)
+  if (!m) return null
+
+  const [, lastFour, datePart, timePart, merchant, amountStr] = m
+  const amount = parseAmount(amountStr!)
+  if (amount === null) return null
+
+  return {
+    type: 'card',
+    spentAt: toIsoDate(datePart!, timePart!),
+    lastFour: lastFour!,
+    merchant: merchant!.trim(),
+    amount,
+  }
+}
+
+function parseDenizbankCardTransactionSms(text: string): ParsedCardSms | null {
+  const normalized = normalizeSmsWhitespace(text)
+  const m = normalized.match(DENIZBANK_CARD_TRANSACTION_REGEX)
+  if (!m) return null
+
+  const [, lastFour, datePart, timePart, amountStr, merchant] = m
   const amount = parseAmount(amountStr!)
   if (amount === null) return null
 
@@ -94,6 +149,9 @@ function parseYapikrediCardSms(text: string): ParsedCardSms | null {
 const DENIZBANK_ACCOUNT_REGEX =
   /(\d{2}\.\d{2}\.\d{4})\s+(\d{2}:\d{2}:\d{2})'da\s+(.+?)\s+(?:alicisina|gondericisinden)\s+([\d-]+)\s+numarali\s+hesabiniz(dan|a)\s+([\d.,]+)\s+TL\s+tutarinda\s+(\w+)\s+islemi/i
 
+const DENIZBANK_INCOMING_ACCOUNT_REGEX =
+  /(\d{1,2}\.\d{1,2}\.\d{4})\s+(\d{2}:\d{2}(?::\d{2})?)'da\s+(.+?)\s+gondericisinden\s+([\d-]+)\s+numarali\s+hesabiniza\s+(FAST|HAVALE|EFT)\s+ile\s+([\d.,]+)\s+(?:TL|TRY)\s+tutarinda\s+para\s+girisi\s+gerceklesmistir/i
+
 type ParsedAccountSms = {
   type: 'account'
   occurredAt: string
@@ -124,10 +182,41 @@ function parseDenizbankAccountSms(text: string): ParsedAccountSms | null {
   }
 }
 
+function parseDenizbankIncomingAccountSms(text: string): ParsedAccountSms | null {
+  const normalized = normalizeSmsWhitespace(text)
+  const m = normalized.match(DENIZBANK_INCOMING_ACCOUNT_REGEX)
+  if (!m) return null
+
+  const [, datePart, timePart, counterparty, accountNumber, txType, amountStr] = m
+  const amount = parseAmount(amountStr!)
+  if (amount === null) return null
+
+  return {
+    type: 'account',
+    occurredAt: toIsoDate(datePart!, timePart!),
+    accountNumber: accountNumber!,
+    counterparty: counterparty!.trim(),
+    amount,
+    direction: 'in',
+    transactionType: txType!,
+  }
+}
+
 type ParsedSms = ParsedCardSms | ParsedAccountSms
 
 function parseSms(text: string): ParsedSms | null {
-  return parseDenizbankCardSms(text) ?? parseYapikrediCardSms(text) ?? parseDenizbankAccountSms(text)
+  return (
+    parseDenizbankCardSms(text) ??
+    parseDenizbankMaskedCardSms(text) ??
+    parseDenizbankCardTransactionSms(text) ??
+    parseYapikrediCardSms(text) ??
+    parseDenizbankAccountSms(text) ??
+    parseDenizbankIncomingAccountSms(text)
+  )
+}
+
+function accountSmsNeedsExternalEventId(parsed: ParsedSms): boolean {
+  return parsed.type === 'account' && /T\d{2}:\d{2}\+03:00$/.test(parsed.occurredAt)
 }
 
 // --- Category inference (mirrors src/utils/categories.ts) ------------------
@@ -272,9 +361,6 @@ Deno.serve(async (req: Request) => {
   const callerEventId = typeof body.eventId === 'string' && body.eventId.trim()
     ? body.eventId.trim()
     : req.headers.get('x-source-event-id')?.trim()
-  // Shortcut aynı SMS'i ağ retry'ı nedeniyle yeniden yollarsa ham mesaj hash'i
-  // değişmez. Banka SMS'lerindeki işlem saati ise gerçek arka arkaya işlemleri ayırır.
-  const sourceEventId = callerEventId || await sha256Hex(normalizeSmsWhitespace(smsText))
 
   // SMS'i parse et (DenizBank kart/hesap + Yapı Kredi kart)
   const parsed = parseSms(smsText)
@@ -288,10 +374,27 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({ error: 'SMS formatı tanınamadı.', sms: smsText.slice(0, 100) }, 422)
   }
 
+  if (accountSmsNeedsExternalEventId(parsed) && !callerEventId) {
+    const errorMessage = 'Saniyesiz hesap SMS’i için kararlı eventId zorunludur.'
+    await logSms(supabaseUrl, headers, {
+      smsType: 'account_movement',
+      status: 'error',
+      errorMessage,
+      amount: parsed.amount,
+      summary: parsed.counterparty,
+      rawSms: smsText,
+    })
+    return jsonResponse({ error: errorMessage }, 409)
+  }
+
+  // Saniyeli banka SMS'lerinde normalize ham-metin hash'i legacy retry
+  // fallback'ıdır. Saniyesiz hesap hareketleri yukarıda dış event ID ister.
+  const sourceEventId = callerEventId || await sha256Hex(normalizeSmsWhitespace(smsText))
+
   if (parsed.type === 'card') {
     return handleCardSms(parsed, smsText, sourceEventId, supabaseUrl, headers)
   } else {
-    return handleAccountSms(parsed, smsText, supabaseUrl, headers)
+    return handleAccountSms(parsed, smsText, sourceEventId, supabaseUrl, headers)
   }
 })
 
@@ -398,6 +501,7 @@ async function handleCardSms(
 async function handleAccountSms(
   parsed: ParsedAccountSms,
   rawSms: string,
+  sourceEventId: string,
   supabaseUrl: string,
   headers: Record<string, string>,
 ): Promise<Response> {
@@ -412,6 +516,7 @@ async function handleAccountSms(
       p_counterparty: parsed.counterparty,
       p_occurred_at: parsed.occurredAt,
       p_transaction_type: parsed.transactionType,
+      p_source_event_id: sourceEventId,
     }),
   })
 

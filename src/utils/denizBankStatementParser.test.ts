@@ -429,6 +429,7 @@ describe('checkStatementInstallments', () => {
     description: 'BEYLER OPTİK',
     installment_no: 2,
     installment_count: 3,
+    statement_archive_id: null,
     ...overrides,
   })
 

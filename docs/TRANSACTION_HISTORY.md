@@ -1,6 +1,6 @@
 # Transaction History Side Effects
 
-Last reviewed: 2026-07-07
+Last reviewed: 2026-08-02
 
 This document is the source of truth for `transaction_history` side effects. Read
 it before changing a finance mutation, RPC wrapper, payment drawer action, or
@@ -59,6 +59,7 @@ because the current undo flows explicitly do not refund cash automatically.
 | `debt` | Personal debt settlement or receivable collection |
 | `card` | Card expense/provision/statement/carryover lifecycle events |
 | `asset` | Asset buy/sell actions backed by a selected bank account |
+| `correction` | Auditable cancellation/reversal or one-time data repair; the corresponding append-only ledger remains the accounting source |
 
 ## Current RPC Side Effects
 
@@ -78,13 +79,14 @@ because the current undo flows explicitly do not refund cash automatically.
 | `pay_loan_installment` | `loan` | `loan_installments.id` | Installment amount | Bank source is recorded in `note`; loan summary sync is DB-owned. |
 | `settle_personal_debt` | `debt` | `debts.id` | `estimated_value_try` | Covers both paying debt and collecting receivable; direction is in `note`. |
 | `record_manual_account_movement` | `transfer` | `cards.id` | Movement amount | Manual bank-account in/out uses the affected account as source. |
+| `record_sms_account_movement` | `transfer` | `cards.id` | Movement amount | Service-role SMS path stores the bank-local timestamp with explicit offset. Non-null `source_event_id` makes retries return without repeating balance, ledger, or history effects. |
 | `transfer_between_accounts` | `transfer` | Source `cards.id` | Transfer amount | One feed row represents both debit and credit sides. |
 | `trade_asset_with_account` | `asset` | `assets.id` | Trade amount | Buy debits the selected bank account; sell credits it. Asset value/quantity updates and account balance movement commit together. |
-| `reset_card_data` | deletes scoped history | Related card rows | n/a | Removes history tied to deleted card expenses/installments/statements. |
-| `reset_card_import_data` | deletes scoped history | Open/current import rows | n/a | Removes history tied to the open/current import scope only; paid historical statement archives and their linked rows stay available for reports. |
+| `reset_card_import_data` | deletes scoped history | Non-paid/open import rows | n/a | Removes history tied only to a safely rebuildable working scope. It rejects cards whose current-settlement or paid-installment evidence would make historical replay unsafe. |
 | `reset_user_finance_data` | deletes all user history | User data reset | n/a | Full reset removes the feed with the rest of the user's finance data. |
 | Ledger recompute/correction RPCs | none | Ledger tables | none | Card/account ledgers are the audit trail; dashboard history is not duplicated. |
 | Data Health direct fixes | none | Direct table updates/deletes | none | Safe-fix preview/undo is Data Health state, not activity feed history. |
+| Legacy provision debt repair (`20260802160000`) | `correction` | `cards.id` | Exact repaired provision gap | Runs once only when independent projections agree; the card ledger adjustment is the accounting record. |
 
 ## Change Checklist
 

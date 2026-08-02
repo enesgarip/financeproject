@@ -1,13 +1,20 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { addCardExpense, payPaymentFromCardImport, recordCardInstallmentCarryover } from './cardsRepo'
+import {
+  addCardExpense,
+  fetchCardInstallmentMatchRows,
+  payPaymentFromCardImport,
+  recordCardInstallmentCarryover,
+} from './cardsRepo'
 
 const supabaseMocks = vi.hoisted(() => ({
   rpc: vi.fn(),
+  from: vi.fn(),
 }))
 
 vi.mock('../../lib/supabase', () => ({
   supabase: {
     rpc: supabaseMocks.rpc,
+    from: supabaseMocks.from,
   },
 }))
 
@@ -132,4 +139,26 @@ describe('cardsRepo import source-event RPC contracts', () => {
       p_source_event_id: 'request-1',
     })
   })
+})
+
+describe('cardsRepo statement installment read safety', () => {
+  beforeEach(() => {
+    supabaseMocks.from.mockReset()
+  })
+
+  it('loads the statement marker needed to label historical mismatches', async () => {
+    const eq = vi.fn().mockResolvedValue({ data: [], error: null })
+    const select = vi.fn(() => ({ eq }))
+    supabaseMocks.from.mockReturnValue({ select })
+
+    const result = await fetchCardInstallmentMatchRows('card-1')
+
+    expect(result.ok).toBe(true)
+    expect(supabaseMocks.from).toHaveBeenCalledWith('card_installments')
+    expect(select).toHaveBeenCalledWith(
+      'id, due_month, amount, status, description, installment_no, installment_count, statement_archive_id',
+    )
+    expect(eq).toHaveBeenCalledWith('card_id', 'card-1')
+  })
+
 })

@@ -7,8 +7,8 @@ set local request.jwt.claims to '{"sub":"11111111-1111-1111-1111-111111111111","
 
 do $$
 declare
-  c1 uuid; c2 uuid; c3 uuid;
-  e1 uuid;
+  c1 uuid; c2 uuid; c3 uuid; c4 uuid; c5 uuid;
+  e1 uuid; e2 uuid;
   v_debt numeric; v_curr numeric; v_prov numeric;
 begin
   -- 1) Bos kartta provizyon => debt=amount, provision=amount (KAYBOLMAZ)
@@ -37,6 +37,16 @@ begin
     raise exception 'FAIL cancel: beklenen debt=0/prov=0, gelen %/%', v_debt,v_prov;
   end if;
 
+  -- 3b) Mutabakat iptali de ayni provizyon borcunu tersine cevirir.
+  insert into public.cards (user_id,bank_name,card_name,card_type,credit_limit,statement_day,due_day)
+  values ('11111111-1111-1111-1111-111111111111','T','PROV-TEST-4','kredi_karti',50000,25,10) returning id into c4;
+  e1 := (public.add_card_expense(c4,175,'p','2026-08-01',1,'Market','provision')).id;
+  perform public.cancel_card_expense(e1);
+  select debt_amount,provision_amount into v_debt,v_prov from public.cards where id=c4;
+  if v_debt <> 0 or v_prov <> 0 then
+    raise exception 'FAIL reconciliation cancel: beklenen debt=0/prov=0, gelen %/%', v_debt,v_prov;
+  end if;
+
   -- 4) Normal kart: posted 300 + provizyon 200 => debt=500, current YENMEZ (300), split<=debt
   insert into public.cards (user_id,bank_name,card_name,card_type,credit_limit,statement_day,due_day)
   values ('11111111-1111-1111-1111-111111111111','T','PROV-TEST-3','kredi_karti',50000,25,10) returning id into c3;
@@ -50,7 +60,19 @@ begin
     raise exception 'FAIL invariant: split > debt';
   end if;
 
-  raise notice 'Provizyon-borc regresyonu OK: create/post/cancel/normal hepsi gecti.';
+  -- 5) Tümü gelecekte/scheduled olan taksitli expense iptali, başka current
+  -- harcamayı fallback installment tutarıyla azaltmamalı.
+  insert into public.cards (user_id,bank_name,card_name,card_type,credit_limit,statement_day,due_day)
+  values ('11111111-1111-1111-1111-111111111111','T','PROV-TEST-5','kredi_karti',50000,25,10) returning id into c5;
+  perform public.add_card_expense(c5,300,'unrelated current',current_date,1,'Market','posted');
+  e2 := (public.add_card_expense(c5,200,'future installments',current_date + 40,2,'Market','posted')).id;
+  perform public.cancel_card_expense(e2);
+  select debt_amount,current_period_spending into v_debt,v_curr from public.cards where id=c5;
+  if v_debt <> 300 or v_curr <> 300 then
+    raise exception 'FAIL future installment cancel: debt=300/curr=300 bekleniyordu, %/%', v_debt,v_curr;
+  end if;
+
+  raise notice 'Provizyon-borc regresyonu OK: create/post/cancel/normal/future cancel hepsi gecti.';
 end $$;
 
 rollback;

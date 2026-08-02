@@ -14,6 +14,7 @@ function tx(type: TransactionHistoryType, title: string, note: string | null = n
     amount: 500,
     source_table,
     source_id: 'source-1',
+    source_event_id: null,
     note,
   }
 }

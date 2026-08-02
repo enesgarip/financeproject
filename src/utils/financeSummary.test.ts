@@ -215,7 +215,6 @@ describe('cardDebtBreakdown', () => {
     }), 0.1 + 0.2)
 
     expect(breakdown.scheduledTotal).toBe(0.3)
-    expect(breakdown.nextDebtAmount).toBe(250.3)
     expect(breakdown.hasScheduledDebtGap).toBe(true)
     expect(breakdown.hasUnexplainedDebt).toBe(false)
   })
@@ -233,6 +232,35 @@ describe('cardDebtBreakdown', () => {
     expect(breakdown.unexplainedAmount).toBe(50)
     expect(breakdown.hasScheduledDebtGap).toBe(false)
     expect(breakdown.hasUnexplainedDebt).toBe(true)
+  })
+
+  it('flags only the missing part when scheduled debt is partially represented', () => {
+    const breakdown = cardDebtBreakdown(creditCard({
+      debt_amount: 83_316.62,
+      statement_debt_amount: 20_168.53,
+      current_period_spending: 0,
+      provision_amount: 0,
+    }), 63_446.29)
+
+    expect(breakdown.unclassifiedAmount).toBe(63_148.09)
+    expect(breakdown.scheduledDebtOverlapAmount).toBe(298.2)
+    expect(breakdown.hasScheduledDebtGap).toBe(false)
+    expect(breakdown.hasPartialScheduledDebtOverlap).toBe(true)
+    expect(breakdown.hasUnexplainedDebt).toBe(false)
+  })
+
+  it('does not infer a scheduled debt gap while the visible split already overflows debt', () => {
+    const breakdown = cardDebtBreakdown(creditCard({
+      debt_amount: 100,
+      statement_debt_amount: 80,
+      current_period_spending: 30,
+      provision_amount: 0,
+    }), 20)
+
+    expect(breakdown.hasSplitOverflow).toBe(true)
+    expect(breakdown.hasScheduledDebtGap).toBe(false)
+    expect(breakdown.hasPartialScheduledDebtOverlap).toBe(false)
+    expect(breakdown.scheduledDebtOverlapAmount).toBe(0)
   })
 })
 
