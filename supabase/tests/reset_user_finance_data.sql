@@ -211,6 +211,8 @@ begin
   on conflict (user_id) do update
   set weekly_enabled = excluded.weekly_enabled;
 
+  perform public.acknowledge_data_health_issues(array['reset-acknowledgement']);
+
   perform public.reset_user_finance_data();
 
   select
@@ -222,6 +224,7 @@ begin
     + (select count(*) from public.wishlist_items where user_id = v_user)
     + (select count(*) from public.kasa_buckets where user_id = v_user)
     + (select count(*) from public.notification_preferences where user_id = v_user)
+    + (select count(*) from public.data_health_issue_acknowledgements where user_id = v_user)
     + (select count(*) from public.notification_log where user_id = v_user)
     + (select count(*) from public.sms_log where user_id = v_user)
     + (select count(*) from public.card_ledger where user_id = v_user)

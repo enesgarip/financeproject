@@ -172,12 +172,15 @@ From the current typed schema, main tables are:
 - `dismissed_upcoming_items`
 - `data_health_repair_runs` (canonical request, idempotency, batch status/counts)
 - `data_health_repair_steps` (per-target before/after repair receipts)
+- `data_health_issue_acknowledgements` (reversible per-user accepted issue IDs)
 - `kasa_buckets` (kasa modu: bakiye kova ayırma — planlama overlay'i, ledger değil)
 - `notification_preferences` (Web Push tür tercihleri + sessiz saatler; user_id PK)
 
 Most rows are user-scoped with `user_id`. RLS is a core security assumption.
 Data Health repair receipt tables grant authenticated users own-row SELECT only;
 the security-definer repair/reset boundary owns their writes and cleanup.
+Issue acknowledgements follow the same own-row read + auth-bound RPC write model
+and are restored as user support preferences, never as finance history.
 
 ## Current Product Shape
 

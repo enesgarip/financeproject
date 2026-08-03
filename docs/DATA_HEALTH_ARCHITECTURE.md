@@ -23,7 +23,7 @@ issue detection in `DataHealth.logic.ts` and writes in
 ## Module Map
 
 - `DataHealthPage.tsx`: orchestration, local UI state, loading, messages,
-  modal wiring
+  modal wiring, and legacy browser-dismissal migration
 - `DataHealth.logic.ts`: thin pure issue orchestrator, issue/view-model and undo
   types, and shared date helpers
 - `DataHealth.checks.ts`: domain-specific pure issue detection, including card
@@ -40,7 +40,7 @@ issue detection in `DataHealth.logic.ts` and writes in
   `src/components/finance/FinancePaymentDrawer.tsx`: guided payment actions for
   issues such as overdue open card statements
 - `src/data/repositories/dataHealthRepo.ts`: immutable-PK keyset table reads,
-  optimistic singleton writes, and reset RPC
+  optimistic singleton writes, account-wide issue acknowledgements, and reset RPC
 - `src/services/dataHealthRepairs.ts`: typed client for the transactional safe
   repair RPC and its persistent receipt
 - `src/utils/backup.ts`: JSON backup parsing, export payloads, and restore flow
@@ -78,7 +78,12 @@ The normal flow is:
 8. `data_health_repair_runs` binds the canonical request to its idempotency key;
    `data_health_repair_steps` stores per-target before/after results. Authenticated
    clients can read only their own receipts and cannot mutate either table.
-9. `loadData()` refreshes the page after every write or failure.
+9. “Bu doğru, kapat” stores the exact issue ID in
+   `data_health_issue_acknowledgements`. The acknowledgement is user-scoped,
+   reversible, and shared by every signed-in device; it never changes finance
+   rows. Legacy `datahealth:dismissed` browser IDs are migrated once through the
+   same auth-bound RPC and then removed from localStorage.
+10. `loadData()` refreshes the page after every write or failure.
 
 Do not add a write action without a source of truth, stale-data guard, and an
 explicit resolution policy. If a finding can only be resolved with bank/user
@@ -152,8 +157,10 @@ Avoid hiding schema/RPC drift. If a missing migration makes a fix impossible,
 surface the error clearly rather than silently skipping a broken invariant.
 
 JSON backup restores user-owned finance/support rows including card aliases,
-dismissed upcoming items, push subscriptions, wishlist items, cash buckets, and
-notification preferences. Export reads use immutable-PK keysets. Append-only
+dismissed upcoming items, Data Health issue acknowledgements, push subscriptions,
+wishlist items, cash buckets, and notification preferences. Export reads use
+immutable-PK keysets. Acknowledgements are replayed through their auth-bound RPC,
+not by granting direct table writes. Append-only
 `card_ledger` / `account_ledger`, `data_health_repair_runs` /
 `data_health_repair_steps`, user-owned notification/SMS logs, and immutable
 `card_current_settlements` are export-only;

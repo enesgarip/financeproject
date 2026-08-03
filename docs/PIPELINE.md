@@ -26,6 +26,8 @@ oluşmaması için branch push tetikleyicisi yoktur.
 - `npm run db:seed:local` (reapply migrations + seed in local Supabase)
 - `npm run db:test:data-health-safe-repairs` (transaction, idempotency, audit RLS,
   and ledger-write boundary regression)
+- `npm run db:test:data-health-acknowledgements` (auth-bound write RPCs, own-row
+  visibility, direct-write denial, and cross-user clear isolation)
 
 ## Optional Docker Parity
 
@@ -53,7 +55,8 @@ Checks:
 - Lighthouse performance/accessibility/best-practices budget (frontend paths)
 - Playwright smoke test (frontend paths)
 - Supabase local migration reset + lint/RLS/grant and financial SQL regressions
-  (database paths), including `supabase/tests/data_health_safe_repairs.sql`
+  (database paths), including `supabase/tests/data_health_safe_repairs.sql` and
+  `supabase/tests/data_health_issue_acknowledgements.sql`
 
 Lighthouse CI, GitHub status sonucunu yazabilsin diye job-scoped GitHub Actions
 token'ını `LHCI_GITHUB_TOKEN` olarak alır. Bu, "GitHub token not set" uyarısını
@@ -111,6 +114,9 @@ The path-aware database check in both `ci.yml` and `deploy.yml` explicitly runs
 `supabase/tests/data_health_safe_repairs.sql` after a clean migration reset. It
 guards plan prevalidation, all-or-none stale handling, domain separation,
 request-bound idempotency, receipt RLS, and revoked direct ledger INSERT access.
+The same gate runs `supabase/tests/data_health_issue_acknowledgements.sql` to
+protect account-wide acceptance persistence, RPC grants, own-row RLS, and
+cross-user cleanup isolation.
 
 `vercel.json` disables Vercel Git auto-deploy for `main`. The deploy hook is no
 longer used. The workflow uses one verified prebuilt artifact and does not

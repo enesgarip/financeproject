@@ -11,6 +11,7 @@ describe('parseBackup', () => {
         kasa_buckets: [{ id: 'k1' }],
         wishlist_items: [{ id: 'w1' }],
         card_expenses: [{ id: 'e1' }],
+        data_health_issue_acknowledgements: [{ id: 'a1', issue_id: 'issue-1' }],
         notification_preferences: [{ user_id: 'u1' }],
         card_current_settlements: [{ id: 's1' }], // audit-only: must be dropped
         card_ledger: [{ id: 'l1' }], // export-only: must be dropped
@@ -24,15 +25,17 @@ describe('parseBackup', () => {
     expect(parsed.tables.kasa_buckets).toHaveLength(1)
     expect(parsed.tables.wishlist_items).toHaveLength(1)
     expect(parsed.tables.card_expenses).toHaveLength(1)
+    expect(parsed.tables.data_health_issue_acknowledgements).toHaveLength(1)
     expect(parsed.tables.notification_preferences).toHaveLength(1)
     expect('card_current_settlements' in parsed.tables).toBe(false)
     expect('card_ledger' in parsed.tables).toBe(false)
-    expect(parsed.totalRows).toBe(6)
+    expect(parsed.totalRows).toBe(7)
     expect(parsed.counts).toEqual([
       { table: 'cards', rows: 2 },
       { table: 'kasa_buckets', rows: 1 },
       { table: 'wishlist_items', rows: 1 },
       { table: 'card_expenses', rows: 1 },
+      { table: 'data_health_issue_acknowledgements', rows: 1 },
       { table: 'notification_preferences', rows: 1 },
     ])
   })
@@ -122,6 +125,19 @@ describe('parseBackup', () => {
     expect(() => parseBackup(backup([{ id: 'c1' }, { id: 'c1' }]))).toThrow(/yinelenen id/)
     expect(() => parseBackup(backup({ id: 'c1' }))).toThrow(/liste değil/)
   })
+
+  it('rejects malformed data-health acknowledgement issue ids before reset', () => {
+    const backup = (issueId: unknown) => JSON.stringify({
+      schema: 'financeproject-v2',
+      tables: {
+        data_health_issue_acknowledgements: [{ id: 'ack-1', issue_id: issueId }],
+      },
+    })
+
+    expect(() => parseBackup(backup('   '))).toThrow(/issue_id geçersiz/)
+    expect(() => parseBackup(backup('x'.repeat(2049)))).toThrow(/issue_id geçersiz/)
+    expect(() => parseBackup(backup(null))).toThrow(/issue_id geçersiz/)
+  })
 })
 
 describe('rowForInsert', () => {
@@ -154,7 +170,7 @@ describe('RESTORE_TABLE_ORDER FK safety', () => {
   })
 
   it('covers every user-owned table added after the original backup flow', () => {
-    for (const table of ['wishlist_items', 'kasa_buckets', 'notification_preferences'] as const) {
+    for (const table of ['wishlist_items', 'kasa_buckets', 'notification_preferences', 'data_health_issue_acknowledgements'] as const) {
       expect(RESTORE_TABLE_ORDER).toContain(table)
       expect(BACKUP_TABLE_LABELS[table]).toBeTruthy()
     }

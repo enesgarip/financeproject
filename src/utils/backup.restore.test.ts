@@ -28,10 +28,11 @@ describe('restoreBackup', () => {
         cards: [{ id: 'card-1', user_id: 'old-user' }],
         kasa_buckets: [{ id: 'bucket-1', user_id: 'old-user' }],
         wishlist_items: [{ id: 'wish-1', user_id: 'old-user' }],
+        data_health_issue_acknowledgements: [{ id: 'ack-1', user_id: 'old-user', issue_id: 'issue-1' }],
         notification_preferences: [{ user_id: 'old-user', weekly_enabled: false }],
       },
       counts: [],
-      totalRows: 4,
+      totalRows: 5,
     }
     const progress: RestoreProgress[] = []
 
@@ -42,6 +43,7 @@ describe('restoreBackup', () => {
       ['cards', [{ id: 'card-1', user_id: 'new-user' }]],
       ['kasa_buckets', [{ id: 'bucket-1', user_id: 'new-user' }]],
       ['wishlist_items', [{ id: 'wish-1', user_id: 'new-user' }]],
+      ['data_health_issue_acknowledgements', [{ id: 'ack-1', user_id: 'new-user', issue_id: 'issue-1' }]],
       ['notification_preferences', [{ user_id: 'new-user', weekly_enabled: false }]],
     ])
     expect(mocks.resetOwnFinanceData.mock.invocationCallOrder[0]).toBeLessThan(
