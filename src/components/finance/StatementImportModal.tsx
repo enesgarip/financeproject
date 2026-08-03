@@ -5,7 +5,9 @@ import { useBodyScrollLock } from '../ui/use-body-scroll-lock'
 import { useCategoryMemory } from '../../hooks/useCategoryMemory'
 import {
   addCardExpense,
+  cancelCardExpense,
   cutCardStatement,
+  fetchCardById,
   fetchCardExpenseMatchRows,
   fetchCardInstallmentMatchRows,
   fetchCardPaymentMatchRows,
@@ -34,6 +36,12 @@ import {
 import { matchDenizBankMovementPayments, type ParsedDenizBankMovement } from '../../utils/denizBankMovementParser'
 import { buildImportedInstallmentPlan } from '../../utils/importedInstallmentPlan'
 import { diffTL, equalsTL, roundTL, sumTL } from '../../utils/money'
+import {
+  findAppOnlyExpenses,
+  isFullyReconciled,
+  lockCorrectionNote,
+  reconcileResidualTL,
+} from '../../utils/statementReconcileReview'
 import { parseStatementText } from '../../lib/statementParseClient'
 import { extractPdfText } from '../../lib/pdfText'
 import { CardExpenseHistorySection } from './CardExpenseHistorySection'
@@ -73,6 +81,15 @@ type StatementImportRow = {
 type StatementAdjustmentRow = {
   selectionKey: string
   adjustment: ParsedStatementAdjustment
+}
+
+// Manuel kontrol gereken (toplam taksiti belirsiz) satır; sourceEventId'yi
+// taşır ki inline "elle ekle" idempotent olsun (aynı PDF iki kez yüklense çift
+// kayıt olmaz).
+type ManualReviewRow = {
+  key: string
+  transaction: ParsedTransaction
+  sourceEventId: string
 }
 
 type Props = {
@@ -153,7 +170,7 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
   const [periodLabel, setPeriodLabel] = useState('')
   const [unmatched, setUnmatched] = useState<StatementImportRow[]>([])
   const [adjustments, setAdjustments] = useState<StatementAdjustmentRow[]>([])
-  const [manualReview, setManualReview] = useState<ParsedTransaction[]>([])
+  const [manualReview, setManualReview] = useState<ManualReviewRow[]>([])
   const [plannedPaymentMatches, setPlannedPaymentMatches] = useState(0)
   const [matchDriftTL, setMatchDriftTL] = useState(0)
   const [driftCorrected, setDriftCorrected] = useState(false)
@@ -162,6 +179,26 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [importedCount, setImportedCount] = useState(0)
   const [failedCount, setFailedCount] = useState(0)
+
+  // Faz 2 — app'te olup ekstrede olmayan "fazla" harcamalar (iptal edilebilir).
+  const [appOnly, setAppOnly] = useState<ExpenseMatchRow[]>([])
+  const [cancelSelected, setCancelSelected] = useState<Set<string>>(new Set())
+  const [cancelledIds, setCancelledIds] = useState<Set<string>>(new Set())
+  const [cancelling, setCancelling] = useState(false)
+  const [cancelError, setCancelError] = useState('')
+
+  // Faz 3 — manuel taksitlere inline "elle ekle" (toplam adet girilince importable).
+  const [manualDrafts, setManualDrafts] = useState<Record<string, string>>({})
+  const [manualBusyKey, setManualBusyKey] = useState<string | null>(null)
+  const [manualAddedKeys, setManualAddedKeys] = useState<Set<string>>(new Set())
+  const [manualError, setManualError] = useState('')
+
+  // Faz 1 — banka toplamına kilit (import sonrası taze borç ile kalan fark).
+  const [appTotalAfter, setAppTotalAfter] = useState(0)
+  const [lockResidualTL, setLockResidualTL] = useState(0)
+  const [locking, setLocking] = useState(false)
+  const [locked, setLocked] = useState(false)
+  const [lockError, setLockError] = useState('')
 
   const [reconciling, setReconciling] = useState(false)
   const [reconciled, setReconciled] = useState(false)
@@ -269,9 +306,20 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
       // App'te olmayan işlemleri ikiye ayır: otomatik aktarılabilir olanlar ve
       // plan-ortası/eksik bilgili taksitler (manuel kontrol gerektirir).
       const importable = result.unmatched.filter(isImportable)
-      const manual = result.unmatched.filter((tx) => !isImportable(tx))
+      const manual: ManualReviewRow[] = result.unmatched
+        .filter((tx) => !isImportable(tx))
+        .map((transaction, index) => ({
+          key: `manual:${index}:${transaction.date}:${transaction.amount}:${transaction.description}`,
+          transaction,
+          sourceEventId: sourceEventIds.get(transaction)!,
+        }))
       const importRows = attachPlannedPayments(importable, paymentsResult.data, card.id, sourceEventIds)
       const adjustmentRows = attachStatementAdjustments(parsed.adjustments ?? [])
+
+      // Ekstre satırlarıyla eşleşen app harcamalarının id'leri; dönemdeki geri
+      // kalan tek-çekim posted kayıtlar "app'te fazla" (ekstrede yok) demektir.
+      const matchedExpenseIds = new Set(result.matches.map((match) => (match.expense as ExpenseMatchRow).id))
+      const appOnlyRows = findAppOnlyExpenses(rowsInReviewPeriod(expenses, reviewPeriod), matchedExpenseIds)
 
       setMatched(result.matched)
       setMatches(result.matches)
@@ -280,6 +328,11 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
       setUnmatched(importRows)
       setAdjustments(adjustmentRows)
       setManualReview(manual)
+      setAppOnly(appOnlyRows)
+      setCancelSelected(new Set())
+      setCancelledIds(new Set())
+      setManualDrafts({})
+      setManualAddedKeys(new Set())
       setPlannedPaymentMatches(importRows.filter(({ plannedPayment }) => plannedPayment).length)
       setSelected(new Set())
       setStep('review')
@@ -504,8 +557,107 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
       if (!correction.error) setDriftCorrected(true)
     }
 
+    // Import + tüm düzeltmeler sonrası TAZE borç kovalarını oku; banka toplamına
+    // kalan farkı hesapla. Kilit adımı success ekranında sunulur (son hamle).
+    if (statementTotal > 0) {
+      const fresh = await fetchCardById(card.id)
+      if (fresh.ok) {
+        const total = sumTL([fresh.data.statement_debt_amount, fresh.data.current_period_spending])
+        setAppTotalAfter(total)
+        setLockResidualTL(reconcileResidualTL(statementTotal, total))
+      }
+    }
+
     setImporting(false)
     setStep('success')
+  }
+
+  async function handleCancelAppOnly() {
+    const ids = appOnly
+      .filter((expense) => cancelSelected.has(expense.id) && !cancelledIds.has(expense.id))
+      .map((expense) => expense.id)
+    if (!ids.length) return
+
+    setCancelling(true)
+    setCancelError('')
+    const done = new Set(cancelledIds)
+    const errors: string[] = []
+    for (const id of ids) {
+      const result = await cancelCardExpense(id)
+      if (result.ok) done.add(id)
+      else errors.push(result.error.message ?? 'İptal edilemedi.')
+    }
+    setCancelledIds(done)
+    setCancelSelected(new Set())
+    if (errors.length) setCancelError(`${errors.length} kayıt iptal edilemedi: ${errors[0]}`)
+    setCancelling(false)
+  }
+
+  async function handleAddManual(row: ManualReviewRow) {
+    const totalInstallments = Number(manualDrafts[row.key] ?? '')
+    if (!Number.isInteger(totalInstallments) || totalInstallments < 1) {
+      setManualError('Geçerli bir toplam taksit sayısı gir (1 veya üzeri).')
+      return
+    }
+
+    setManualBusyKey(row.key)
+    setManualError('')
+    const tx = row.transaction
+    const plan = totalInstallments > 1
+      ? buildImportedInstallmentPlan({
+        originalDate: tx.date,
+        installmentNo: tx.installmentNo,
+        totalInstallments,
+        installmentAmount: tx.amount,
+      })
+      : null
+    const result = plan && plan.paidInstallments > 0
+      ? await recordCardInstallmentCarryover({
+        cardId: card.id,
+        description: tx.description,
+        installmentAmount: tx.amount,
+        totalInstallments: plan.totalInstallments,
+        paidInstallments: plan.paidInstallments,
+        nextDueDate: plan.currentInstallmentDate,
+        category: tx.category,
+        sourceEventId: row.sourceEventId,
+      })
+      : await addCardExpense({
+        cardId: card.id,
+        amount: plan?.totalAmount ?? tx.amount,
+        description: tx.description,
+        spentAt: plan?.originalDate ?? tx.date,
+        installmentCount: plan?.totalInstallments ?? 1,
+        category: tx.category,
+        status: 'posted',
+        source: 'statement_import',
+        sourceEventId: row.sourceEventId,
+      })
+    if (!result.ok) {
+      setManualError(`${tx.description}: ${result.error.message ?? 'Eklenemedi.'}`)
+      setManualBusyKey(null)
+      return
+    }
+    setManualAddedKeys((prev) => new Set(prev).add(row.key))
+    setManualBusyKey(null)
+  }
+
+  async function handleLock() {
+    if (!statementTotal || isFullyReconciled(statementTotal, appTotalAfter)) return
+
+    setLocking(true)
+    setLockError('')
+    const residual = reconcileResidualTL(statementTotal, appTotalAfter)
+    const result = await postCardDebtCorrection(card.id, residual, lockCorrectionNote(residual, periodLabel))
+    if (result.error) {
+      setLockError(result.error.message ?? 'Kilit uygulanamadı.')
+      setLocking(false)
+      return
+    }
+    setAppTotalAfter(statementTotal)
+    setLockResidualTL(0)
+    setLocked(true)
+    setLocking(false)
   }
 
   async function handleReconcile() {
@@ -537,6 +689,15 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
       const next = new Set(prev)
       if (next.has(selectionKey)) next.delete(selectionKey)
       else next.add(selectionKey)
+      return next
+    })
+  }
+
+  function toggleCancel(id: string) {
+    setCancelSelected((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
       return next
     })
   }
@@ -866,6 +1027,71 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
               </div>
             )}
 
+            {/* Faz 2 — App'te fazla (ekstrede yok): iptal edilebilir */}
+            {appOnly.length > 0 && (
+              <div className="border-b border-border">
+                <div className="px-4 py-2">
+                  <span className="text-xs font-bold text-warning">App'te fazla (ekstrede yok)</span>
+                  <p className="mt-0.5 text-[11px] text-muted-foreground">
+                    Bu dönem app'te olup ekstrede olmayan harcamalar (mükerrer / iptal edilmemiş). İptal edersen app bakiyesi bankayla eşleşir.
+                  </p>
+                </div>
+                <div className="max-h-48 overflow-y-auto">
+                  {appOnly.map((expense) => {
+                    const isCancelled = cancelledIds.has(expense.id)
+                    const isSel = cancelSelected.has(expense.id)
+                    return (
+                      <button
+                        type="button"
+                        key={expense.id}
+                        data-testid="statement-import-apponly-row"
+                        disabled={isCancelled}
+                        onClick={() => toggleCancel(expense.id)}
+                        aria-pressed={isSel}
+                        className="flex w-full items-center gap-3 border-b border-border/50 px-4 py-2.5 text-left hover:bg-muted/30 disabled:opacity-55"
+                      >
+                        <span
+                          aria-hidden="true"
+                          className={`grid size-4 shrink-0 place-items-center rounded border ${
+                            isSel ? 'border-destructive bg-destructive text-white' : 'border-border bg-background'
+                          }`}
+                        >
+                          {isSel ? <Check size={12} strokeWidth={3} /> : null}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-xs font-bold text-foreground">{expense.description || 'Açıklama yok'}</p>
+                          <p className="text-[11px] text-muted-foreground">
+                            {formatShortDate(expense.spent_at)} · {expense.category ?? 'Diğer'}
+                            {isCancelled ? ' · iptal edildi' : ''}
+                          </p>
+                        </div>
+                        <span className={`shrink-0 text-right text-xs font-black ${isCancelled ? 'text-muted-foreground line-through' : 'text-foreground'}`}>
+                          {formatAmount(expense.amount)}
+                        </span>
+                      </button>
+                    )
+                  })}
+                </div>
+                {cancelError && (
+                  <p className="mx-4 mt-2 flex items-center gap-2 rounded-lg bg-destructive/10 p-2.5 text-[11px] text-destructive">
+                    <AlertCircle size={13} className="shrink-0" />
+                    {cancelError}
+                  </p>
+                )}
+                <div className="p-4">
+                  <button
+                    type="button"
+                    disabled={cancelSelected.size === 0 || cancelling}
+                    onClick={() => void handleCancelAppOnly()}
+                    className="flex w-full items-center justify-center gap-2 rounded-xl border border-destructive/40 py-2.5 text-xs font-black text-destructive transition hover:bg-destructive/10 disabled:opacity-55"
+                  >
+                    {cancelling && <Loader2 size={13} className="animate-spin" />}
+                    {cancelling ? 'İptal ediliyor…' : `Seçili ${cancelSelected.size} kaydı iptal et`}
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Importable (otomatik aktarılabilir) işlemler */}
             {importableCount > 0 && (
               <>
@@ -1013,41 +1239,79 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
               </>
             )}
 
-            {/* Manuel kontrol gereken taksitler (plan-ortası / toplam taksiti belirsiz) */}
+            {/* Faz 3 — Manuel kontrol: toplam taksit girilince inline eklenir */}
             {manualReview.length > 0 && (
               <div className="border-t border-border">
                 <div className="px-4 py-2">
                   <span className="text-xs font-bold text-muted-foreground">Manuel kontrol gerekli</span>
                   <p className="mt-0.5 text-[11px] text-muted-foreground">
-                    Plan-ortası ya da toplam taksiti belirsiz işlemler otomatik aktarılmaz; gerekiyorsa Kartlar ekranından elle gir.
+                    Toplam taksiti belirsiz işlemler. Toplam taksit sayısını gir, buradan ekle (Kartlar'a gitmeye gerek yok).
                   </p>
                 </div>
-                <div className="max-h-40 overflow-y-auto">
-                  {manualReview.map((tx, i) => (
-                    <div
-                      key={i}
-                      className="flex items-center gap-3 border-b border-border/50 px-4 py-2.5"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-xs font-bold text-foreground">{tx.description}</p>
-                        <p className="text-[11px] text-muted-foreground">
-                          {formatShortDate(tx.date)} · {tx.category}
-                          {tx.isInstallment
-                            ? ` · ${tx.installmentNo}${tx.installmentCount ? `/${tx.installmentCount}` : ''}. taksit`
-                            : ''}
-                        </p>
+                <div className="max-h-56 overflow-y-auto">
+                  {manualReview.map((row) => {
+                    const tx = row.transaction
+                    const added = manualAddedKeys.has(row.key)
+                    const busy = manualBusyKey === row.key
+                    return (
+                      <div key={row.key} className="border-b border-border/50 px-4 py-2.5">
+                        <div className="flex items-center gap-3">
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-xs font-bold text-foreground">{tx.description}</p>
+                            <p className="text-[11px] text-muted-foreground">
+                              {formatShortDate(tx.date)} · {tx.category}
+                              {tx.isInstallment
+                                ? ` · ${tx.installmentNo}${tx.installmentCount ? `/${tx.installmentCount}` : ''}. taksit`
+                                : ''}
+                            </p>
+                          </div>
+                          <span className="shrink-0 text-xs font-black text-foreground">
+                            {formatAmount(tx.amount)}
+                            <span className="block text-[10px] font-bold text-muted-foreground">/ay</span>
+                          </span>
+                        </div>
+                        {added ? (
+                          <p className="mt-2 flex items-center gap-1 text-[11px] font-bold text-success">
+                            <CheckCircle2 size={12} /> Eklendi
+                          </p>
+                        ) : (
+                          <div className="mt-2 flex items-center gap-2">
+                            <label className="text-[11px] text-muted-foreground">Toplam taksit</label>
+                            <input
+                              type="number"
+                              min={1}
+                              inputMode="numeric"
+                              value={manualDrafts[row.key] ?? ''}
+                              onChange={(e) => setManualDrafts((prev) => ({ ...prev, [row.key]: e.target.value }))}
+                              placeholder={tx.installmentNo ? `≥${tx.installmentNo}` : '1'}
+                              className="w-16 rounded-md border border-border bg-background px-2 py-1 text-xs font-bold text-foreground"
+                            />
+                            <button
+                              type="button"
+                              disabled={busy}
+                              onClick={() => void handleAddManual(row)}
+                              className="ml-auto flex items-center gap-1 rounded-lg bg-primary px-3 py-1.5 text-[11px] font-black text-primary-foreground disabled:opacity-55"
+                            >
+                              {busy && <Loader2 size={12} className="animate-spin" />}
+                              {busy ? 'Ekleniyor…' : 'Elle ekle'}
+                            </button>
+                          </div>
+                        )}
                       </div>
-                      <span className="shrink-0 text-xs font-black text-foreground">
-                        {formatAmount(tx.amount)}
-                      </span>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
+                {manualError && (
+                  <p className="mx-4 my-2 flex items-center gap-2 rounded-lg bg-destructive/10 p-2.5 text-[11px] text-destructive">
+                    <AlertCircle size={13} className="shrink-0" />
+                    {manualError}
+                  </p>
+                )}
               </div>
             )}
 
             {/* Hiç eksik yok */}
-            {importableCount === 0 && manualReview.length === 0 && (
+            {importableCount === 0 && manualReview.length === 0 && appOnly.length === 0 && (
               <div className="p-6 text-center">
                 <CheckCircle2 size={32} className="mx-auto text-success" />
                 <p className="mt-2 text-sm font-bold text-foreground">Tüm işlemler app'te zaten kayıtlı</p>
@@ -1091,6 +1355,52 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
                 Eşleşen işlemlerdeki {formatAmount(Math.abs(matchDriftTL))} tutar farkı otomatik düzeltildi.
               </p>
             )}
+
+            {/* Faz 1 — Banka toplamına kilit (kalan farkı tek düzeltmeyle kapat) */}
+            {statementTotal > 0 && (
+              isFullyReconciled(statementTotal, appTotalAfter) ? (
+                <p className="flex items-center justify-center gap-1.5 rounded-xl bg-success/10 p-3 text-sm font-bold text-success">
+                  <CheckCircle2 size={15} />
+                  {locked ? 'Banka toplamına kilitlendi (app = banka)' : 'Tam mutabık — app = banka'}
+                </p>
+              ) : (
+                <div className="space-y-2 rounded-xl border border-border p-3 text-left">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">App</span>
+                    <span className="font-black text-foreground">{formatAmount(appTotalAfter)}</span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">Banka</span>
+                    <span className="font-black text-foreground">{formatAmount(statementTotal)}</span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="font-bold text-muted-foreground">Kalan fark</span>
+                    <span className="font-black text-destructive">
+                      {lockResidualTL >= 0 ? '+' : ''}{formatAmount(lockResidualTL)}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">
+                    Kilit, kalanı tek denetlenebilir düzeltmeyle banka toplamına çeker. Fark büyükse önce fazla/manuel kayıtları gözden geçir.
+                  </p>
+                  {lockError && (
+                    <p className="flex items-center gap-2 rounded-lg bg-destructive/10 p-2.5 text-[11px] text-destructive">
+                      <AlertCircle size={13} className="shrink-0" />
+                      {lockError}
+                    </p>
+                  )}
+                  <button
+                    type="button"
+                    disabled={locking}
+                    onClick={() => void handleLock()}
+                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-2.5 text-xs font-black text-primary-foreground disabled:opacity-55"
+                  >
+                    {locking && <Loader2 size={13} className="animate-spin" />}
+                    {locking ? 'Kilitleniyor…' : 'Banka toplamına kilitle'}
+                  </button>
+                </div>
+              )
+            )}
+
             <button
               type="button"
               onClick={onSuccess}

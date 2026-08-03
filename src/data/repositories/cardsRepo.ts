@@ -19,6 +19,16 @@ export async function fetchCardsByType(cardType: Card['card_type']): Promise<Res
   return resultFromSupabase((data as Card[]) ?? [], error, 'Kartlar yüklenemedi.')
 }
 
+/**
+ * Tek bir kartın güncel satırını çeker. Ekstre import kilidinde, içe aktarma +
+ * düzeltmeler sonrası TAZE borç kovalarını (statement/current) okumak için
+ * kullanılır; prop olarak gelen kart snapshot'ı bayatlamış olur.
+ */
+export async function fetchCardById(cardId: string): Promise<Result<Card>> {
+  const { data, error } = await supabase.from('cards').select('*').eq('id', cardId).single()
+  return resultFromSupabase(data as Card, error, 'Kart yüklenemedi.')
+}
+
 export async function fetchProvisionExpenses(): Promise<Result<CardExpense[]>> {
   const { data, error } = await supabase
     .from('card_expenses')

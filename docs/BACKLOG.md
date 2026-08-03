@@ -1,5 +1,32 @@
 # Priority Backlog
 
+## 2026-08-03 — Ekstre importunu aylık mutabakat çıpası yap
+
+Amaç: SMS otomasyonu anlık ama eksik olabildiği için ekstreyi aylık "kesin
+kapanış" yapmak — import bitince app ekstre borcu = bankanın bildirdiği toplam.
+
+- ~~**SI-01 — Banka toplamına kilit (çekirdek çıpa).**~~ DONE. Import + tüm
+  düzeltmeler sonrası `fetchCardById` ile TAZE borç kovaları okunur; kalan fark
+  (`reconcileResidualTL` = banka − app) success ekranında gösterilir ve tek
+  denetlenebilir ters-kayıtla (`postCardDebtCorrection`, `lockCorrectionNote`)
+  banka toplamına çekilir. `post_card_debt_correction` işaret-bazlı kova mantığı
+  (+ → current, − → önce current sonra statement) sayesinde kilit sonrası
+  `statement+current = banka` garanti. Yeni migration yok.
+- ~~**SI-02 — App'te fazla (ekstrede yok) harcamaları temizle.**~~ DONE.
+  `findAppOnlyExpenses` dönem içinde eşleşmeyen tek-çekim posted kayıtları bulur;
+  modal içinden çoklu seçim + `cancelCardExpense` ile append-only iptal. Taksitler
+  ayrı taksit kontrolünde kalır (arşiv bozulmasın).
+- ~~**SI-03 — Manuel taksitlere inline "elle ekle".**~~ DONE. Toplam taksiti
+  belirsiz satırlara modal içi adet inputu; `buildImportedInstallmentPlan` +
+  `addCardExpense`/`recordCardInstallmentCarryover` ile idempotent (row
+  `sourceEventId`) eklenir. Kartlar ekranına gitmeye gerek kalmaz.
+- **SI-04 — Çok bankalı cihaz-içi parser (DenizBank + 1-2 banka).** PENDING.
+  DenizBank dışı bankalar hâlâ Gemini edge'e düşüyor. Gerçek ekstre PDF örneği
+  gelince `denizBankStatementParser` deseninde banka-özel parser yazılacak.
+
+Saf domain: `utils/statementReconcileReview.ts` (+ test). UI:
+`components/finance/StatementImportModal.tsx`.
+
 ## 2026-08-03 — Veri Sağlığı çözüm aksiyonları ve güvenli otomasyon
 
 - ~~**DH-05 — Her sağlık bulgusuna gerçek çözüm aksiyonu.**~~ DONE.
