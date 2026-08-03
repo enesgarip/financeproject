@@ -48,6 +48,16 @@ export async function fetchTableRows(table: string): Promise<BackupRow[] | null>
 
 /** Tablo deploy edilmemişse false döner; çağıran o tablonun kalan satırlarını atlar. */
 export async function insertRows(table: string, rows: BackupRow[]): Promise<boolean> {
+  if (table === 'data_health_issue_acknowledgements') {
+    const issueIds = rows.map((row) => row.issue_id).filter((issueId): issueId is string => typeof issueId === 'string')
+    const { error } = await supabase.rpc('acknowledge_data_health_issues', { p_issue_ids: issueIds })
+    if (error) {
+      if (isMissingSupabaseCapabilityError(error)) return false
+      throw new Error(`${table} geri yüklenemedi: ${error.message}`)
+    }
+    return true
+  }
+
   const { error } = await supabase.from(table as 'cards').insert(rows as never)
   if (error) {
     if (isMissingSupabaseCapabilityError(error)) return false

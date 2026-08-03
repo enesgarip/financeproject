@@ -7,6 +7,9 @@ import { LiveReconciliationPanel } from '../components/finance/LiveReconciliatio
 import { Badge } from '../components/ui/badge'
 import { Card as SurfaceCard, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import {
+  acknowledgeDataHealthIssues,
+  clearDataHealthIssueAcknowledgements,
+  fetchDataHealthIssueAcknowledgements,
   fetchDataHealthRows,
 } from '../data/repositories/dataHealthRepo'
 import {
@@ -46,6 +49,21 @@ import {
 import { resolveHealthIssue } from './DataHealth.resolution'
 import { DataHealthCardExpenseReview } from './DataHealthCardExpenseReview'
 
+const LEGACY_DISMISSED_ISSUES_KEY = 'datahealth:dismissed'
+
+function readLegacyDismissedIssueIds(): string[] {
+  try {
+    const parsed: unknown = JSON.parse(localStorage.getItem(LEGACY_DISMISSED_ISSUES_KEY) ?? '[]')
+    if (!Array.isArray(parsed)) return []
+    return [...new Set(parsed
+      .filter((issueId): issueId is string => typeof issueId === 'string')
+      .map((issueId) => issueId.trim())
+      .filter(Boolean))]
+  } catch {
+    return []
+  }
+}
+
 export function DataHealthPage() {
   const { formatAmount } = useBalancePrivacy()
   const [data, setData] = useState<HealthData>(emptyData)
@@ -56,10 +74,8 @@ export function DataHealthPage() {
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
   const [snoozedIssueIds, setSnoozedIssueIds] = useState<string[]>([])
-  const [dismissedIssueIds, setDismissedIssueIds] = useState<string[]>(() => {
-    try { return JSON.parse(localStorage.getItem('datahealth:dismissed') ?? '[]') }
-    catch { return [] }
-  })
+  const [dismissedIssueIds, setDismissedIssueIds] = useState<string[]>(readLegacyDismissedIssueIds)
+  const [acknowledgementBusy, setAcknowledgementBusy] = useState(false)
   const [fixAllOpen, setFixAllOpen] = useState(false)
   const [fixAllRequest, setFixAllRequest] = useState<{
     repairs: DataHealthSafeRepair[]
@@ -77,14 +93,41 @@ export function DataHealthPage() {
     setError('')
     setMessage('')
 
-    const result = await fetchDataHealthRows()
+    const [result, acknowledgementResult] = await Promise.all([
+      fetchDataHealthRows(),
+      fetchDataHealthIssueAcknowledgements(),
+    ])
     if (!result.ok) {
       setError(result.error.message ?? 'Veri sağlığı kayıtları yüklenemedi.')
       setLoading(false)
       return null
-    } else {
-      setData(result.data)
     }
+
+    if (!acknowledgementResult.ok) {
+      setError(acknowledgementResult.error.message ?? 'Kapatılan veri sağlığı bulguları yüklenemedi.')
+      setLoading(false)
+      return null
+    }
+
+    setData(result.data)
+    const legacyIds = readLegacyDismissedIssueIds()
+    const serverIds = acknowledgementResult.data
+    const missingLegacyIds = legacyIds.filter((issueId) => !serverIds.includes(issueId))
+    let nextDismissedIds = [...new Set([...serverIds, ...legacyIds])]
+
+    if (missingLegacyIds.length > 0) {
+      const migrationResult = await acknowledgeDataHealthIssues(missingLegacyIds)
+      if (migrationResult.ok) {
+        localStorage.removeItem(LEGACY_DISMISSED_ISSUES_KEY)
+      } else {
+        setError(`${migrationResult.error.message} Bu cihazdaki eski kapatma seçimleri korunuyor.`)
+      }
+    } else if (legacyIds.length > 0) {
+      localStorage.removeItem(LEGACY_DISMISSED_ISSUES_KEY)
+      nextDismissedIds = serverIds
+    }
+
+    setDismissedIssueIds(nextDismissedIds)
 
     setLoading(false)
     return result.data
@@ -96,18 +139,31 @@ export function DataHealthPage() {
   }, [loadData])
 
   const issues = useMemo(() => buildIssues(data), [data])
-  const dismissIssue = useCallback((issueId: string) => {
-    setDismissedIssueIds((current) => {
-      if (current.includes(issueId)) return current
-      const next = [...current, issueId]
-      localStorage.setItem('datahealth:dismissed', JSON.stringify(next))
-      return next
-    })
+  const dismissIssue = useCallback(async (issueId: string) => {
+    setAcknowledgementBusy(true)
+    setError('')
+    const result = await acknowledgeDataHealthIssues([issueId])
+    if (result.ok) {
+      setDismissedIssueIds((current) => current.includes(issueId) ? current : [...current, issueId])
+      setMessage('Bulgu doğru olarak işaretlendi; bu hesapta tüm cihazlarda kapalı kalacak.')
+    } else {
+      setError(result.error.message ?? 'Bulgu doğru olarak işaretlenemedi.')
+    }
+    setAcknowledgementBusy(false)
   }, [])
 
-  const undismissAll = useCallback(() => {
-    setDismissedIssueIds([])
-    localStorage.removeItem('datahealth:dismissed')
+  const undismissAll = useCallback(async () => {
+    setAcknowledgementBusy(true)
+    setError('')
+    const result = await clearDataHealthIssueAcknowledgements()
+    if (result.ok) {
+      setDismissedIssueIds([])
+      localStorage.removeItem(LEGACY_DISMISSED_ISSUES_KEY)
+      setMessage('Kapatılan veri sağlığı bulguları bu hesap için geri getirildi.')
+    } else {
+      setError(result.error.message ?? 'Kapatılan bulgular geri getirilemedi.')
+    }
+    setAcknowledgementBusy(false)
   }, [])
 
   const visibleIssues = useMemo(() => issues.filter((issue) => !snoozedIssueIds.includes(issue.id) && !dismissedIssueIds.includes(issue.id)), [issues, snoozedIssueIds, dismissedIssueIds])
@@ -388,7 +444,7 @@ export function DataHealthPage() {
               <button
                 type="button"
                 onClick={() => void loadData()}
-                disabled={loading || Boolean(fixingId) || undoing}
+                disabled={loading || Boolean(fixingId) || undoing || acknowledgementBusy}
                 className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-sm font-semibold text-foreground transition hover:bg-muted disabled:opacity-50"
               >
                 <RefreshCw size={15} />
@@ -397,7 +453,7 @@ export function DataHealthPage() {
               <button
                 type="button"
                 onClick={() => void openFixAllPreview()}
-                disabled={loading || Boolean(fixingId) || undoing || safeRepairPlan.length === 0}
+                disabled={loading || Boolean(fixingId) || undoing || acknowledgementBusy || safeRepairPlan.length === 0}
                 className="inline-flex items-center gap-2 rounded-xl bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground shadow-[0_2px_8px_color-mix(in_srgb,var(--primary)_30%,transparent)] transition hover:bg-primary/90 active:scale-[0.97] disabled:opacity-50"
               >
                 <Wrench size={15} />
@@ -407,7 +463,7 @@ export function DataHealthPage() {
                 <button
                   type="button"
                   onClick={() => setSnoozedIssueIds([])}
-                  disabled={loading || Boolean(fixingId) || undoing}
+                  disabled={loading || Boolean(fixingId) || undoing || acknowledgementBusy}
                   className="inline-flex items-center gap-2 rounded-xl border border-info/25 bg-info/8 px-3 py-2 text-sm font-semibold text-info transition hover:bg-info/12 disabled:opacity-50"
                 >
                   <Activity size={15} />
@@ -417,8 +473,8 @@ export function DataHealthPage() {
               {dismissedIssueIds.length > 0 ? (
                 <button
                   type="button"
-                  onClick={undismissAll}
-                  disabled={loading || Boolean(fixingId) || undoing}
+                  onClick={() => void undismissAll()}
+                  disabled={loading || Boolean(fixingId) || undoing || acknowledgementBusy}
                   className="inline-flex items-center gap-2 rounded-xl border border-border/60 bg-muted/30 px-3 py-2 text-sm font-semibold text-muted-foreground transition hover:bg-muted disabled:opacity-50"
                 >
                   <Activity size={15} />
@@ -429,7 +485,7 @@ export function DataHealthPage() {
                 <button
                   type="button"
                   onClick={() => void handleUndo(undoStack[0])}
-                  disabled={loading || Boolean(fixingId) || undoing}
+                  disabled={loading || Boolean(fixingId) || undoing || acknowledgementBusy}
                   className="inline-flex items-center gap-2 rounded-xl border border-warning/25 bg-warning/8 px-3 py-2 text-sm font-semibold text-warning transition hover:bg-warning/12 disabled:opacity-50"
                 >
                   <Undo2 size={15} />
@@ -534,7 +590,7 @@ export function DataHealthPage() {
               <HealthIssueCard
                 key={issue.id}
                 issue={issue}
-                fixingId={fixingId}
+                fixingId={fixingId ?? (acknowledgementBusy ? 'acknowledgement' : null)}
                 undoing={undoing}
                 onFix={(target) => void handleFix(target)}
                 onPayIssue={(target) => void handlePayIssue(target)}
@@ -543,7 +599,7 @@ export function DataHealthPage() {
                   setReviewIssue(target)
                 }}
                 onSnooze={(issueId) => setSnoozedIssueIds((current) => (current.includes(issueId) ? current : [...current, issueId]))}
-                onDismiss={dismissIssue}
+                onDismiss={(issueId) => void dismissIssue(issueId)}
               />
             ))}
           </div>

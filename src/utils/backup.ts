@@ -41,6 +41,7 @@ export const RESTORE_TABLE_ORDER = [
   'transaction_history',
   'account_reconciliations',
   'dismissed_upcoming_items',
+  'data_health_issue_acknowledgements',
   'push_subscriptions',
   'notification_preferences',
 ] as const
@@ -133,6 +134,18 @@ function validateBackupRows(table: RestoreTable, value: unknown): BackupRow[] {
     if (seen.has(rowKey)) {
       throw new Error(`Yedek dosyasında ${table} için yinelenen ${key}: ${rowKey}`)
     }
+
+    if (table === 'data_health_issue_acknowledgements') {
+      const issueId = row.issue_id
+      if (
+        typeof issueId !== 'string'
+        || issueId.trim() === ''
+        || new TextEncoder().encode(issueId.trim()).length > 2048
+      ) {
+        throw new Error(`Yedek dosyasında ${table}[${index}] için issue_id geçersiz.`)
+      }
+    }
+
     seen.add(rowKey)
     return row
   })
@@ -288,6 +301,7 @@ export const BACKUP_TABLE_LABELS: Record<RestoreTable, string> = {
   transaction_history: 'İşlem geçmişi',
   account_reconciliations: 'Mutabakat kaydı',
   dismissed_upcoming_items: 'Gizlenen yaklaşan kayıt',
+  data_health_issue_acknowledgements: 'Kapatılan veri sağlığı bulgusu',
   push_subscriptions: 'Push aboneliği',
   notification_preferences: 'Bildirim tercihi',
 }

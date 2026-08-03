@@ -28,6 +28,13 @@
   üzerinden append-only tersler; açıklama/kategori yalnız finans alanı kabul
   etmeyen, owner/stale guard'lı metadata RPC'siyle düzenlenir; sınıflandırma
   finansal archive/settlement toplamlarını değiştirmez.
+- ~~**DH-09 — “Bu doğru, kapat” yalnız tek tarayıcıda kalıyordu.**~~ DONE.
+  `data_health_issue_acknowledgements` kabul edilen deterministik bulgu kimliklerini
+  kullanıcı hesabına bağlı saklar. Yazma/temizleme yalnız auth-bound RPC'lerden,
+  okuma own-row RLS üzerinden yapılır; böylece seçim tüm cihazlarda geçerlidir.
+  Eski `datahealth:dismissed` localStorage kayıtları ilk yüklemede sunucuya taşınır.
+  Kayıtlar tam yedek/restore ve kullanıcı reset kapsamındadır; finans satırlarını
+  veya immutable geçmişi değiştirmez.
 - **DH-08 — Yapısal taksitleri sessiz/tek-tık tamamlama (opsiyonel sonraki faz).**
   Generic REST amount/count/date/posted/missing-row düzeltmeleri parent/sibling
   yarışında güvenli olmadığı için kaldırıldı. Hiçbiri aksiyonsuz değildir:

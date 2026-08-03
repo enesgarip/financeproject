@@ -8,6 +8,7 @@ import type {
   CardInstallment,
   CardLedger,
   CardStatementArchive,
+  DataHealthIssueAcknowledgement,
   Debt,
   Loan,
   LoanInstallment,
@@ -176,6 +177,34 @@ export async function fetchDataHealthRows(): Promise<Result<DataHealthRows>> {
     error,
     'Veri sağlığı kayıtları yüklenemedi.',
   )
+}
+
+export async function fetchDataHealthIssueAcknowledgements(): Promise<Result<string[]>> {
+  const rows = await fetchAllRows<DataHealthIssueAcknowledgement>('data_health_issue_acknowledgements')
+  return resultFromSupabase(
+    rows.data.map((row) => row.issue_id),
+    rows.error,
+    'Kapatılan veri sağlığı bulguları yüklenemedi.',
+  )
+}
+
+export async function acknowledgeDataHealthIssues(issueIds: string[]): Promise<Result<void>> {
+  const normalizedIds = [...new Set(issueIds.map((issueId) => issueId.trim()).filter(Boolean))]
+  if (normalizedIds.length === 0) return ok(undefined)
+
+  for (let index = 0; index < normalizedIds.length; index += 500) {
+    const { error } = await supabase.rpc('acknowledge_data_health_issues', {
+      p_issue_ids: normalizedIds.slice(index, index + 500),
+    })
+    if (error) return voidResultFromSupabase(error, 'Veri sağlığı bulgusu kapatılamadı.')
+  }
+
+  return ok(undefined)
+}
+
+export async function clearDataHealthIssueAcknowledgements(): Promise<Result<void>> {
+  const { error } = await supabase.rpc('clear_data_health_issue_acknowledgements', {})
+  return voidResultFromSupabase(error, 'Kapatılan veri sağlığı bulguları geri getirilemedi.')
 }
 
 export async function updateDataHealthRow<T extends TableName>(

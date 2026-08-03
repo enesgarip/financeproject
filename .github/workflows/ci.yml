@@ -280,5 +280,8 @@ jobs:
       - name: Data Health safe-repair security
         run: docker exec -i supabase_db_financeproject psql -U postgres -d postgres -v ON_ERROR_STOP=1 -f - < supabase/tests/data_health_safe_repairs.sql
 
+      - name: Data Health acknowledgement persistence
+        run: docker exec -i supabase_db_financeproject psql -U postgres -d postgres -v ON_ERROR_STOP=1 -f - < supabase/tests/data_health_issue_acknowledgements.sql
+
       - name: SMS account source-event idempotency
         run: docker exec -i supabase_db_financeproject psql -U postgres -d postgres -v ON_ERROR_STOP=1 -f - < supabase/tests/sms_account_idempotency.sql

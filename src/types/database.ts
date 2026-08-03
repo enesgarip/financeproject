@@ -340,6 +340,14 @@ export type DataHealthRepairStep = {
   created_at: string
 }
 
+/** Reversible per-user acceptance of one deterministic Data Health issue ID. */
+export type DataHealthIssueAcknowledgement = {
+  id: string
+  user_id: string
+  issue_id: string
+  acknowledged_at: string
+}
+
 /**
  * One Web Push subscription (roadmap Y1). The browser's PushManager output:
  * `endpoint` + the two encryption keys (`p256dh`, `auth`). One row per device;
@@ -506,6 +514,14 @@ export type Database = {
           message?: string | null
         },
         Partial<Omit<DataHealthRepairStep, 'id' | 'run_id' | 'user_id' | 'created_at'>>
+      >
+      data_health_issue_acknowledgements: Table<
+        DataHealthIssueAcknowledgement,
+        Omit<DataHealthIssueAcknowledgement, 'id' | 'acknowledged_at'> & {
+          id?: string
+          acknowledged_at?: string
+        },
+        Partial<Omit<DataHealthIssueAcknowledgement, 'id' | 'user_id'>>
       >
       account_reconciliations: Table<
         AccountReconciliation,
@@ -751,6 +767,16 @@ export type Database = {
         Returns: Debt
       }
       reset_user_finance_data: {
+        Args: Record<string, never>
+        Returns: void
+      }
+      acknowledge_data_health_issues: {
+        Args: {
+          p_issue_ids: string[]
+        }
+        Returns: void
+      }
+      clear_data_health_issue_acknowledgements: {
         Args: Record<string, never>
         Returns: void
       }

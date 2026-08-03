@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { fetchDataHealthRows } from './dataHealthRepo'
+import { fetchDataHealthIssueAcknowledgements, fetchDataHealthRows } from './dataHealthRepo'
 
 type PageResponse = {
   data: unknown[] | null
@@ -108,5 +108,27 @@ describe('dataHealthRepo.fetchDataHealthRows', () => {
       { table: 'card_ledger', beforeId: null, limit: 500 },
       { table: 'card_ledger', beforeId: 'ledger-0000', limit: 500 },
     ])
+  })
+
+  it('loads persisted issue acknowledgements through the same immutable PK keyset', async () => {
+    const acknowledgements = [
+      { id: 'ack-0001', issue_id: 'issue-1' },
+      { id: 'ack-0002', issue_id: 'issue-2' },
+    ]
+    mocks.pageFor.mockImplementation((table, beforeId, limit) => ({
+      data: table === 'data_health_issue_acknowledgements'
+        ? descendingPage(acknowledgements, beforeId, limit)
+        : [],
+      error: null,
+    }))
+
+    const result = await fetchDataHealthIssueAcknowledgements()
+
+    expect(result).toEqual({ ok: true, data: ['issue-1', 'issue-2'] })
+    expect(mocks.pages).toEqual([{
+      table: 'data_health_issue_acknowledgements',
+      beforeId: null,
+      limit: 500,
+    }])
   })
 })

@@ -1,16 +1,23 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { restoreDataHealthFields, updateDataHealthRow } from './dataHealthRepo'
+import {
+  acknowledgeDataHealthIssues,
+  clearDataHealthIssueAcknowledgements,
+  restoreDataHealthFields,
+  updateDataHealthRow,
+} from './dataHealthRepo'
 
 const mocks = vi.hoisted(() => ({
   from: vi.fn(),
   update: vi.fn(),
   eq: vi.fn(),
   select: vi.fn(),
+  rpc: vi.fn(),
 }))
 
 vi.mock('../../lib/supabase', () => ({
   supabase: {
     from: mocks.from,
+    rpc: mocks.rpc,
   },
 }))
 
@@ -108,5 +115,42 @@ describe('data health optimistic writes', () => {
 
     expect(result.ok).toBe(false)
     expect(mocks.update).not.toHaveBeenCalled()
+  })
+})
+
+describe('data health issue acknowledgements', () => {
+  it('deduplicates IDs and chunks legacy browser migration writes at 500', async () => {
+    mocks.rpc.mockResolvedValue({ error: null })
+    const ids = Array.from({ length: 501 }, (_, index) => `issue-${index}`)
+
+    const result = await acknowledgeDataHealthIssues([...ids, ' issue-0 '])
+
+    expect(result.ok).toBe(true)
+    expect(mocks.rpc).toHaveBeenCalledTimes(2)
+    expect(mocks.rpc).toHaveBeenNthCalledWith(1, 'acknowledge_data_health_issues', {
+      p_issue_ids: ids.slice(0, 500),
+    })
+    expect(mocks.rpc).toHaveBeenNthCalledWith(2, 'acknowledge_data_health_issues', {
+      p_issue_ids: ids.slice(500),
+    })
+  })
+
+  it('clears only through the auth-bound server RPC', async () => {
+    mocks.rpc.mockResolvedValue({ error: null })
+
+    const result = await clearDataHealthIssueAcknowledgements()
+
+    expect(result.ok).toBe(true)
+    expect(mocks.rpc).toHaveBeenCalledWith('clear_data_health_issue_acknowledgements', {})
+  })
+
+  it('surfaces an acknowledgement RPC failure without pretending success', async () => {
+    mocks.rpc.mockResolvedValue({ error: { code: '42501', message: 'denied' } })
+
+    const result = await acknowledgeDataHealthIssues(['issue-1'])
+
+    expect(result.ok).toBe(false)
+    if (result.ok) throw new Error('Expected acknowledgement failure')
+    expect(result.error.message).toBe('denied')
   })
 })

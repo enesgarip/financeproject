@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { fetchTableRows } from './backupRepo'
+import { fetchTableRows, insertRows } from './backupRepo'
 
 type PageResponse = {
   data: unknown[] | null
@@ -8,6 +8,7 @@ type PageResponse = {
 
 const mocks = vi.hoisted(() => ({
   from: vi.fn(),
+  rpc: vi.fn(),
   pageFor: vi.fn<(table: string, beforeKey: string | null, limit: number) => PageResponse>(),
   orders: [] as Array<{ table: string; column: string; ascending: boolean | undefined }>,
   pages: [] as Array<{ table: string; beforeKey: string | null; limit: number }>,
@@ -16,6 +17,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock('../../lib/supabase', () => ({
   supabase: {
     from: mocks.from,
+    rpc: mocks.rpc,
   },
 }))
 
@@ -33,6 +35,7 @@ function descendingPage(rows: Array<{ id: string }>, beforeKey: string | null, l
 describe('backupRepo.fetchTableRows', () => {
   beforeEach(() => {
     mocks.from.mockReset()
+    mocks.rpc.mockReset()
     mocks.pageFor.mockReset()
     mocks.orders.length = 0
     mocks.pages.length = 0
@@ -113,4 +116,33 @@ describe('backupRepo.fetchTableRows', () => {
     ])
   })
 
+})
+
+describe('backupRepo.insertRows', () => {
+  beforeEach(() => {
+    mocks.from.mockReset()
+    mocks.rpc.mockReset()
+  })
+
+  it('restores data-health acknowledgements through the auth-bound RPC', async () => {
+    mocks.rpc.mockResolvedValue({ data: undefined, error: null })
+
+    await expect(insertRows('data_health_issue_acknowledgements', [
+      { id: 'ack-1', issue_id: 'issue-1', user_id: 'restored-user' },
+      { id: 'ack-2', issue_id: 'issue-2', user_id: 'restored-user' },
+    ])).resolves.toBe(true)
+
+    expect(mocks.rpc).toHaveBeenCalledWith('acknowledge_data_health_issues', {
+      p_issue_ids: ['issue-1', 'issue-2'],
+    })
+    expect(mocks.from).not.toHaveBeenCalled()
+  })
+
+  it('surfaces acknowledgement restore failures', async () => {
+    mocks.rpc.mockResolvedValue({ data: undefined, error: { message: 'RPC hatası' } })
+
+    await expect(insertRows('data_health_issue_acknowledgements', [
+      { id: 'ack-1', issue_id: 'issue-1' },
+    ])).rejects.toThrow('data_health_issue_acknowledgements geri yüklenemedi: RPC hatası')
+  })
 })
