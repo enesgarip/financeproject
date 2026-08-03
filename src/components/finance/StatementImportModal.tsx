@@ -34,6 +34,7 @@ import {
   type StatementInstallmentCheckResult,
 } from '../../utils/denizBankStatementParser'
 import { matchDenizBankMovementPayments, type ParsedDenizBankMovement } from '../../utils/denizBankMovementParser'
+import { parseYapiKrediStatement } from '../../utils/yapiKrediStatementParser'
 import { resolveStatementImportAction, type StatementImportAction } from '../../utils/statementImportPlan'
 import type { Result } from '../../data/result'
 import { diffTL, equalsTL, roundTL, sumTL } from '../../utils/money'
@@ -268,8 +269,13 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
       const text = await extractPdfText(file)
       let parsed = parseDenizBankStatement(text, categoryMemory)
 
-      // DenizBank formatı tanınmadıysa banka-bağımsız çözümleyiciye düş (Y3):
-      // metin parse-statement edge fonksiyonuna (Gemini) gönderilir.
+      // DenizBank tanınmadıysa YapıKredi'yi dene (cihaz-içi, metin sunucuya gitmez).
+      if (!parsed.totalDebt && !parsed.transactions.length) {
+        parsed = parseYapiKrediStatement(text, categoryMemory)
+      }
+
+      // O da tanınmadıysa banka-bağımsız çözümleyiciye düş (Y3): metin
+      // parse-statement edge fonksiyonuna (Gemini) gönderilir.
       if (!parsed.totalDebt && !parsed.transactions.length) {
         parsed = await parseStatementText(text, categoryMemory)
       }
@@ -675,8 +681,8 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
         {step === 'upload' && (
           <div className="p-4 space-y-4">
             <p className="text-sm text-muted-foreground">
-              Kredi kartı ekstre PDF'ini yükle. DenizBank ekstreleri tamamen cihazında okunur;
-              diğer bankalarda metin yalnız çözümleme için sunucuya gönderilir, saklanmaz.
+              Kredi kartı ekstre PDF'ini yükle. DenizBank ve YapıKredi ekstreleri tamamen
+              cihazında okunur; diğer bankalarda metin yalnız çözümleme için sunucuya gönderilir, saklanmaz.
             </p>
 
             <button

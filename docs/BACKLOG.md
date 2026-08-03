@@ -29,9 +29,15 @@ kapanış" yapmak — import bitince app ekstre borcu = bankanın bildirdiği to
   ödenmemiş toplam, ilk 3 `paid_at` işaretli; son taksit 12/12 → borç 250, ay-sonu
   vade (2026-07-31) doğru. İnvariant: kart borcu = ödenmemiş (`paid_at IS NULL`)
   taksit toplamı.
-- **SI-04 — Çok bankalı cihaz-içi parser (DenizBank + 1-2 banka).** PENDING.
-  DenizBank dışı bankalar hâlâ Gemini edge'e düşüyor. Gerçek ekstre PDF örneği
-  gelince `denizBankStatementParser` deseninde banka-özel parser yazılacak.
+- **SI-04 — Çok bankalı cihaz-içi parser.** YapıKredi DONE, diğerleri PENDING.
+  `utils/yapiKrediStatementParser.ts` (+ test) YapıKredi/Worldcard ekstresini
+  cihazda çözer: Türkçe ay-isimli tarih ("05 Mart 2026"), Türkçe sayı, taksit
+  bilgisi ALT satırda ("146.999,00 TL'lik işlemin 4/9 taksidi"), İşlem tablosu
+  bölge sınırı (WORLDPUAN tarih satırlarını sahte harcama saymaz). Modal DenizBank
+  → YapıKredi → Gemini sırasıyla dener; ikisi de cihaz-içi. amount AYLIK taksit
+  (DenizBank ile aynı semantik); aylık×adet ile ekstre toplamı arası ~kuruş
+  yuvarlaması mutabakat kilidinde kapanır. DenizBank + YapıKredi dışı bankalar hâlâ
+  Gemini edge'e düşüyor; yeni banka örneği gelince aynı desende parser eklenir.
 
 Saf domain: `utils/statementReconcileReview.ts` (+ test). UI:
 `components/finance/StatementImportModal.tsx`.
