@@ -371,9 +371,27 @@ describe('matchTransactions', () => {
     expect(result.unmatched).toHaveLength(0)
   })
 
-  it('does not match dates outside the import date window', () => {
-    const result = matchTransactions([tx('2026-06-03', 170)], [exp('2026-06-10', 170)])
+  it('matches inside the widened window (up to 7 days) when descriptions overlap', () => {
+    const result = matchTransactions([tx('2026-06-03', 170)], [exp('2026-06-09', 170, 'posted', 'Test market')])
+    expect(result.matched).toHaveLength(1)
+    expect(result.unmatched).toHaveLength(0)
+  })
+
+  it('does not blindly match in the widened window without description overlap', () => {
+    // 6 gün fark ama açıklamalar uyumsuz → uzak pencerede körlemesine eşleşme yok.
+    const result = matchTransactions([tx('2026-06-03', 170)], [exp('2026-06-09', 170, 'posted', 'Eczane')])
     expect(result.unmatched).toHaveLength(1)
+  })
+
+  it('does not match dates outside the import date window', () => {
+    const result = matchTransactions([tx('2026-06-03', 170)], [exp('2026-06-12', 170)])
+    expect(result.unmatched).toHaveLength(1)
+  })
+
+  it('tolerates a relative 1% amount drift on large statement lines', () => {
+    const result = matchTransactions([tx('2026-06-03', 10000)], [exp('2026-06-03', 10080)])
+    expect(result.matched).toHaveLength(1)
+    expect(result.unmatched).toHaveLength(0)
   })
 
   it('matches an installment line against the expense stored at its TOTAL amount', () => {

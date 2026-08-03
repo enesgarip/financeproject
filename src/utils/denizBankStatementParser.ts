@@ -8,6 +8,13 @@
  */
 import { suggestExpenseCategory, type CategoryMemory } from './categories'
 import { addMonths, dateInputValue } from './date'
+import {
+  amountsMatchForImport,
+  descriptionsCompatibleForImport,
+  LOOSE_DATE_MATCH_WINDOW_DAYS,
+  selectImportMatchIndex,
+  type ImportMatchCandidate,
+} from './importMatch'
 import { diffTL, roundTL } from './money'
 import { normalizeSearchText } from './searchText'
 
@@ -79,7 +86,6 @@ const SECTION_CATEGORY: Record<string, string> = {
 }
 
 const SECTION_KEYS = Object.keys(SECTION_CATEGORY)
-const LOOSE_DATE_MATCH_WINDOW_DAYS = 3
 const AMOUNT_MATCH_TOLERANCE_TL = 5
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -287,21 +293,21 @@ export function matchTransactions(
     // Taksitli işlem app'te orijinal tarih + TOPLAM tutarla bir harcama olarak
     // durur; bu yüzden eşleştirmede toplam tutarı kullanırız.
     const compareAmount = expenseTotalAmount(tx)
-    const exactDateCandidates: number[] = []
-    const looseDateCandidates: Array<{ index: number; distance: number }> = []
+    const candidates: ImportMatchCandidate[] = []
     for (let i = 0; i < active.length; i++) {
       if (usedIndices.has(i)) continue
       const exp = active[i]
-      const sameAmount = Math.abs(diffTL(exp.amount, compareAmount)) <= AMOUNT_MATCH_TOLERANCE_TL
-      if (!sameAmount) continue
+      if (!amountsMatchForImport(exp.amount, compareAmount)) continue
 
       const distance = expenseDateDistance(exp, tx.date)
-      if (distance === 0) exactDateCandidates.push(i)
-      else if (distance != null && distance <= LOOSE_DATE_MATCH_WINDOW_DAYS) {
-        looseDateCandidates.push({ index: i, distance })
-      }
+      if (distance == null || distance > LOOSE_DATE_MATCH_WINDOW_DAYS) continue
+      candidates.push({
+        index: i,
+        distance,
+        descriptionCompatible: descriptionsCompatibleForImport(tx.description, exp.description),
+      })
     }
-    const foundIndex = exactDateCandidates[0] ?? looseDateCandidates.sort((left, right) => left.distance - right.distance)[0]?.index
+    const foundIndex = selectImportMatchIndex(candidates)
     if (foundIndex == null) {
       unmatched.push(tx)
     } else {

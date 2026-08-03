@@ -1,5 +1,26 @@
 # Priority Backlog
 
+## 2026-08-04 — SMS provizyonu ↔ import mükerrer kaydını azalt
+
+Amaç: SMS anında açılan provizyon ile ekstre/güncel-hareket import'undan gelen
+aynı işlemin ikinci kez yazılmasını önlemek. Kök neden eksik dedup DEĞİL, eşleşme
+penceresinin darlığıydı (provizyon tarihi = harcama anı; banka post tarihi
+birkaç iş günü sonrası; döviz/bahşiş tutar sapması).
+
+- ~~**SM-01 — Eşleşme penceresini genişlet + göreli tolerans.**~~ DONE.
+  `utils/importMatch.ts` (yeni; + `importMatch.test.ts`) iki matcher'ın (güncel
+  hareket + ekstre) TEK tuning kaynağı: tarih penceresi 3→7 gün, tutar toleransı
+  `max(5 TL, %1)`, uzak pencerede (4-7 gün) açıklama uyumu ZORUNLU
+  (`selectImportMatchIndex`; körlemesine eşleşme yok → iki farklı işlemi
+  birleştirmez). `denizBankMovementParser.ts` + `denizBankStatementParser.ts` bu
+  modülü kullanır. Küçük tutarda taban 5 TL baskın (mevcut testler korunur).
+- ~~**SM-02 — Eşleşen provizyonu otomatik terfi.**~~ DONE. Güncel hareket
+  import'unda banka "Dönem İçi" (posted) + app kaydı provizyon eşleşince mevcut
+  provizyon `post_card_provision` (`applyCardProvision`) ile kesinleştirilir —
+  yeni satır AÇILMAZ, tek otoriter kayıt. Total borç değişmez (provizyon zaten
+  borcu artırmıştı; provizyon→posted bir kova reclass'ı). `CurrentMovementImportModal.tsx`.
+  Yeni migration yok.
+
 ## 2026-08-03 — Ekstre importunu aylık mutabakat çıpası yap
 
 Amaç: SMS otomasyonu anlık ama eksik olabildiği için ekstreyi aylık "kesin

@@ -128,10 +128,21 @@ describe('matchDenizBankMovements', () => {
     })
   })
 
-  it('does not match amount differences above 5 TL', () => {
+  it('tolerates a relative 1% amount drift on the transaction size', () => {
+    // 535 TL'nin %1'i = 5,35 TL → 5,01 TL sapma artık eşleşir (döviz/bahşiş sapması).
     const result = matchDenizBankMovements(
       [petrol],
       [{ spent_at: '2026-06-19', amount: 540.01, status: 'provision', description: 'UNDEM PETROL' }],
+    )
+
+    expect(result.matched).toEqual([petrol])
+    expect(result.unmatched).toHaveLength(0)
+  })
+
+  it('does not match amount differences beyond the tolerance', () => {
+    const result = matchDenizBankMovements(
+      [petrol],
+      [{ spent_at: '2026-06-19', amount: 542, status: 'provision', description: 'UNDEM PETROL' }],
     )
 
     expect(result.matched).toHaveLength(0)
@@ -169,6 +180,37 @@ describe('matchDenizBankMovements', () => {
 
     expect(result.matched).toEqual([petrol])
     expect(result.unmatched).toHaveLength(0)
+  })
+
+  it('matches within the widened window (up to 7 days) when descriptions overlap', () => {
+    // Provizyon tarihi ile banka post tarihi 6 gün farklı, açıklama uyumlu → tek kayıt.
+    const result = matchDenizBankMovements(
+      [petrol], // 2026-06-19, UNDEM PETROL
+      [{ spent_at: '2026-06-13', amount: 535, status: 'provision', description: 'UNDEM PETROL BURSA' }],
+    )
+
+    expect(result.matched).toEqual([petrol])
+    expect(result.unmatched).toHaveLength(0)
+  })
+
+  it('does not blindly match in the widened window without description overlap', () => {
+    const result = matchDenizBankMovements(
+      [petrol],
+      [{ spent_at: '2026-06-13', amount: 535, status: 'provision', description: 'Eczane' }],
+    )
+
+    expect(result.matched).toHaveLength(0)
+    expect(result.unmatched).toEqual([petrol])
+  })
+
+  it('does not match beyond the loose window even with compatible descriptions', () => {
+    const result = matchDenizBankMovements(
+      [petrol], // 2026-06-19
+      [{ spent_at: '2026-06-10', amount: 535, status: 'provision', description: 'UNDEM PETROL' }],
+    )
+
+    expect(result.matched).toHaveLength(0)
+    expect(result.unmatched).toEqual([petrol])
   })
 
   it('returns appOnly expenses from the period that did not match any bank movement', () => {
