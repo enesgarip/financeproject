@@ -1,5 +1,29 @@
 # Priority Backlog
 
+## 2026-08-04 — Taksit import doğruluğu: kalan-borç cross-check + belirsiz taksit koruması
+
+Amaç: Ekstreden taksit kurulumunda en büyük sessiz hata sınıfını kapatmak —
+toplam adedi körlemesine `aylık × adet` ile kurmak.
+
+- ~~**TI-01 — Notasyondaki kalan borcu yakala + tutarlılık invariant'ı.**~~ DONE.
+  `denizBankStatementParser.ts` artık `<kalan>/<toplam>-<sıra>` notasyonundaki
+  kalanı `ParsedTransaction.remainingDebt`'e okur (eskiden strip edilip atılıyordu).
+  `checkInstallmentNotation` (utils/importedInstallmentPlan.ts) invariant'ı:
+  `kalan ≈ aylık × (toplam − sıra)` (gerçek ekstrede bire bir; BEYLER
+  43.333,33 = 21.666,67×2, NEOVA 12.033,65 = 2.005,61×6). Tutmuyorsa adet şüpheli
+  → körlemesine toplam kurma.
+- ~~**TI-02 — Belirsiz/tutarsız taksit sessiz tek-harcama YAZMASIN.**~~ DONE.
+  `resolveStatementImportAction` yeni `needs-review` aksiyonu döner: (a) toplam
+  adet parser'dan belirsizken (override yok, count ≤ 1) — 12 taksit küçük bir
+  harcamaya dönüşmesin; (b) notasyon tutarsızken. Override (kullanıcı adedi elle
+  doğruladı) her ikisini de atlar. `StatementImportModal.isImportable` tutarsız
+  notasyonu manuel incelemeye düşürür; executor `needs-review`'ı yazmaz, hata döner.
+- **TI-03 (askıda) — Tüm-ekstre parse checksum'ı (satır toplamı = Dönem Borcu).**
+  Sentetik fixture'ın özet satırları kendi içinde tutmadığından denklem
+  kalibre edilemedi; gerçek (anonimleştirilmiş) bir DenizBank ekstresi gerekiyor.
+  Not: app-vs-banka toplam kilidi (SI-04) tüm-ekstre driftini zaten yakalıyor;
+  TI-03'ün ek değeri parser'ın bir satırı tümüyle DÜŞÜRDÜĞÜ durumu görmek.
+
 ## 2026-08-04 — SMS provizyonu ↔ import mükerrer kaydını azalt
 
 Amaç: SMS anında açılan provizyon ile ekstre/güncel-hareket import'undan gelen

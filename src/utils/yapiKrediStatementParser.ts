@@ -125,7 +125,9 @@ export function parseYapiKrediStatement(text: string, memory?: CategoryMemory): 
       continue
     }
 
-    transactions.push({ date, description, amount, category, isInstallment, installmentNo, installmentCount })
+    // YapıKredi taksit notasyonunda kalan borç yer almaz → null (tutarlılık
+    // kontrolü bu banka için çalışmaz, adede eskisi gibi güvenilir).
+    transactions.push({ date, description, amount, category, isInstallment, installmentNo, installmentCount, remainingDebt: null })
   }
 
   return { cardLastFour, statementDate, dueDate, totalDebt, transactions, adjustments }

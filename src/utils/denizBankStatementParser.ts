@@ -28,6 +28,12 @@ export type ParsedTransaction = {
   installmentNo: number
   /** Toplam taksit sayısı; ekstrede notasyon yoksa 0 (bilinmiyor). */
   installmentCount: number
+  /**
+   * Notasyondaki kalan borç (`<kalan>/<toplam>-<sıra>` içindeki <kalan>); bu
+   * taksit ödendikten SONRAKİ plan bakiyesi. Notasyon yoksa null. `aylık × adet`
+   * yeniden kurulumunu bağımsız doğrulamak için tutulur (bkz. checkInstallmentNotation).
+   */
+  remainingDebt: number | null
 }
 
 export type ParsedStatementAdjustment = {
@@ -225,12 +231,14 @@ export function parseDenizBankStatement(text: string, memory?: CategoryMemory): 
     const isInstallment = /taksit/i.test(descRegion)
 
     // "Kalan Borç / Taksit" notation e.g. "43,333.33/3-1" → <kalan>/<toplam>-<kaçıncı>
-    const installmentNotation = descRegion.match(/[\d.,]+\/(\d+)-(\d+)/)
+    const installmentNotation = descRegion.match(/([\d.,]+)\/(\d+)-(\d+)/)
     let installmentCount = isInstallment ? 0 : 1
     let installmentNo = 1
+    let remainingDebt: number | null = null
     if (installmentNotation) {
-      installmentCount = Number(installmentNotation[1])
-      installmentNo = Number(installmentNotation[2])
+      remainingDebt = parseAmount(installmentNotation[1])
+      installmentCount = Number(installmentNotation[2])
+      installmentNo = Number(installmentNotation[3])
     } else if (isInstallment) {
       // Fallback: açıklamadaki "3.Tk" gibi ifadeden sıra no'su (toplam bilinmez)
       const tkMatch = descRegion.match(/(\d+)\s*\.?\s*Tk\b/i)
@@ -254,7 +262,7 @@ export function parseDenizBankStatement(text: string, memory?: CategoryMemory): 
       continue
     }
 
-    transactions.push({ date, description, amount, category, isInstallment, installmentNo, installmentCount })
+    transactions.push({ date, description, amount, category, isInstallment, installmentNo, installmentCount, remainingDebt })
   }
 
   return { cardLastFour, statementDate, dueDate, totalDebt, transactions, adjustments }

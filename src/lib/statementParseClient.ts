@@ -46,6 +46,9 @@ export function mapStatementResult(raw: RawStatement, memory?: CategoryMemory): 
         isInstallment: count > 1,
         installmentNo: no,
         installmentCount: count,
+        // Edge (LLM) yolu kalan borç döndürmez → null; notasyon tutarlılık
+        // kontrolü bu yolda çalışmaz (adede eskisi gibi güvenilir).
+        remainingDebt: null,
       }
     })
 

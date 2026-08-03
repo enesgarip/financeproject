@@ -36,7 +36,7 @@ import {
 import { matchDenizBankMovementPayments, type ParsedDenizBankMovement } from '../../utils/denizBankMovementParser'
 import { parseYapiKrediStatement } from '../../utils/yapiKrediStatementParser'
 import { resolveStatementImportAction, type StatementImportAction } from '../../utils/statementImportPlan'
-import type { Result } from '../../data/result'
+import { fail, type Result } from '../../data/result'
 import { diffTL, equalsTL, roundTL, sumTL } from '../../utils/money'
 import {
   findAppOnlyExpenses,
@@ -44,6 +44,7 @@ import {
   lockCorrectionNote,
   reconcileResidualTL,
 } from '../../utils/statementReconcileReview'
+import { checkInstallmentNotation } from '../../utils/importedInstallmentPlan'
 import { parseStatementText } from '../../lib/statementParseClient'
 import { extractPdfText } from '../../lib/pdfText'
 import { CardExpenseHistorySection } from './CardExpenseHistorySection'
@@ -59,7 +60,18 @@ import { importedRowEventIds, sha256Hex } from '../../utils/sourceEventId'
  */
 function isImportable(tx: ParsedTransaction): boolean {
   if (!tx.isInstallment) return true
-  return tx.installmentCount > 1
+  if (tx.installmentCount <= 1) return false
+  // Notasyon kendi içinde tutarsızsa (kalan ≠ aylık × kalan-adet) adet yanlış
+  // okunmuş olabilir → otomatik yazma, manuel doğrulamaya düşür.
+  if (tx.remainingDebt != null) {
+    return checkInstallmentNotation({
+      installmentAmount: tx.amount,
+      installmentNo: tx.installmentNo,
+      totalInstallments: tx.installmentCount,
+      remainingDebt: tx.remainingDebt,
+    }).consistent
+  }
+  return true
 }
 
 // ── Component ─────────────────────────────────────────────────────────────
@@ -192,6 +204,19 @@ function runStatementImportAction(
         source: 'statement_import',
         sourceEventId: ctx.sourceEventId,
       })
+    case 'needs-review':
+      // Plancı bu satırı güvenle yazamayacağını söyledi (belirsiz adet / tutarsız
+      // notasyon). Sessizce yanlış tutar yazmaktansa hata dön; UI manuel yola
+      // düşürür. Otomatik akış bu satırları isImportable ile zaten eler.
+      return Promise.resolve(
+        fail({
+          type: 'unknown',
+          message:
+            action.reason === 'unknown-total-installments'
+              ? 'Taksit toplam adedi belirsiz — elle doğrulanmalı.'
+              : 'Taksit notasyonu tutarsız — elle doğrulanmalı.',
+        }),
+      )
   }
 }
 
