@@ -34,7 +34,8 @@ import {
   type StatementInstallmentCheckResult,
 } from '../../utils/denizBankStatementParser'
 import { matchDenizBankMovementPayments, type ParsedDenizBankMovement } from '../../utils/denizBankMovementParser'
-import { buildImportedInstallmentPlan } from '../../utils/importedInstallmentPlan'
+import { resolveStatementImportAction, type StatementImportAction } from '../../utils/statementImportPlan'
+import type { Result } from '../../data/result'
 import { diffTL, equalsTL, roundTL, sumTL } from '../../utils/money'
 import {
   findAppOnlyExpenses,
@@ -146,6 +147,51 @@ function attachStatementAdjustments(adjustments: ParsedStatementAdjustment[]): S
     selectionKey: `adjustment:${index}:${adjustment.date}:${adjustment.amount}:${adjustment.description}`,
     adjustment,
   }))
+}
+
+/**
+ * Plancının (resolveStatementImportAction) verdiği aksiyonu ilgili repo
+ * çağrısına yürütür. Karar SAF ve test edilir; burada yalnız bağlam alanları
+ * (description/category/sourceEventId) doldurulup yazma yapılır.
+ */
+function runStatementImportAction(
+  action: StatementImportAction,
+  ctx: { cardId: string; tx: ParsedTransaction; sourceEventId: string },
+): Promise<Result<void>> {
+  switch (action.kind) {
+    case 'payment':
+      return payPaymentFromCardImport({
+        paymentId: action.paymentId,
+        sourceCardId: ctx.cardId,
+        amount: action.amount,
+        spentAt: action.spentAt,
+        sourceEventId: ctx.sourceEventId,
+        source: 'statement_import',
+      })
+    case 'carryover':
+      return recordCardInstallmentCarryover({
+        cardId: ctx.cardId,
+        description: ctx.tx.description,
+        installmentAmount: action.installmentAmount,
+        totalInstallments: action.totalInstallments,
+        paidInstallments: action.paidInstallments,
+        nextDueDate: action.nextDueDate,
+        category: ctx.tx.category,
+        sourceEventId: ctx.sourceEventId,
+      })
+    case 'expense':
+      return addCardExpense({
+        cardId: ctx.cardId,
+        amount: action.amount,
+        description: ctx.tx.description,
+        spentAt: action.spentAt,
+        installmentCount: action.installmentCount,
+        category: ctx.tx.category,
+        status: 'posted',
+        source: 'statement_import',
+        sourceEventId: ctx.sourceEventId,
+      })
+  }
 }
 
 export function StatementImportModal({ card, onClose, onSuccess }: Props) {
@@ -368,46 +414,8 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
 
     for (const item of toImport) {
       const { transaction: tx, plannedPayment, sourceEventId } = item
-      const knownPlan = tx.isInstallment && tx.installmentCount > 1
-      const plan = knownPlan
-        ? buildImportedInstallmentPlan({
-          originalDate: tx.date,
-          installmentNo: tx.installmentNo,
-          totalInstallments: tx.installmentCount,
-          installmentAmount: tx.amount,
-        })
-        : null
-      const result = plannedPayment
-        ? await payPaymentFromCardImport({
-          paymentId: plannedPayment.id,
-          sourceCardId: card.id,
-          amount: tx.amount,
-          spentAt: tx.date,
-          sourceEventId,
-          source: 'statement_import',
-        })
-        : plan && plan.paidInstallments > 0
-          ? await recordCardInstallmentCarryover({
-            cardId: card.id,
-            description: tx.description,
-            installmentAmount: tx.amount,
-            totalInstallments: plan.totalInstallments,
-            paidInstallments: plan.paidInstallments,
-            nextDueDate: plan.currentInstallmentDate,
-            category: tx.category,
-            sourceEventId,
-          })
-          : await addCardExpense({
-            cardId: card.id,
-            amount: plan?.totalAmount ?? tx.amount,
-            description: tx.description,
-            spentAt: plan?.originalDate ?? tx.date,
-            installmentCount: plan?.totalInstallments ?? 1,
-            category: tx.category,
-            status: 'posted',
-            source: 'statement_import',
-            sourceEventId,
-          })
+      const action = resolveStatementImportAction({ transaction: tx, plannedPaymentId: plannedPayment?.id })
+      const result = await runStatementImportAction(action, { cardId: card.id, tx, sourceEventId })
       if (!result.ok) errors.push(`${tx.description}: ${result.error.message ?? 'Bilinmeyen hata.'}`)
       else successCount++
     }
@@ -477,49 +485,8 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
 
     for (const item of toImport) {
       const { transaction: tx, plannedPayment, sourceEventId } = item
-      const installment = tx.isInstallment && tx.installmentCount > 1
-      const plan = installment
-        ? buildImportedInstallmentPlan({
-          originalDate: tx.date,
-          installmentNo: tx.installmentNo,
-          totalInstallments: tx.installmentCount,
-          installmentAmount: tx.amount,
-        })
-        : null
-      let result
-      if (plannedPayment) {
-        result = await payPaymentFromCardImport({
-          paymentId: plannedPayment.id,
-          sourceCardId: card.id,
-          amount: tx.amount,
-          spentAt: tx.date,
-          sourceEventId,
-          source: 'statement_import',
-        })
-      } else if (plan && plan.paidInstallments > 0) {
-        result = await recordCardInstallmentCarryover({
-          cardId: card.id,
-          description: tx.description,
-          installmentAmount: tx.amount,
-          totalInstallments: plan.totalInstallments,
-          paidInstallments: plan.paidInstallments,
-          nextDueDate: plan.currentInstallmentDate,
-          category: tx.category,
-          sourceEventId,
-        })
-      } else {
-        result = await addCardExpense({
-          cardId: card.id,
-          amount: plan?.totalAmount ?? tx.amount,
-          description: tx.description,
-          spentAt: plan?.originalDate ?? tx.date,
-          installmentCount: plan?.totalInstallments ?? 1,
-          category: tx.category,
-          status: 'posted',
-          source: 'statement_import',
-          sourceEventId,
-        })
-      }
+      const action = resolveStatementImportAction({ transaction: tx, plannedPaymentId: plannedPayment?.id })
+      const result = await runStatementImportAction(action, { cardId: card.id, tx, sourceEventId })
       if (!result.ok) errors.push(`${tx.description}: ${result.error.message ?? 'Bilinmeyen hata.'}`)
       else successCount++
     }
@@ -603,36 +570,8 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
     setManualBusyKey(row.key)
     setManualError('')
     const tx = row.transaction
-    const plan = totalInstallments > 1
-      ? buildImportedInstallmentPlan({
-        originalDate: tx.date,
-        installmentNo: tx.installmentNo,
-        totalInstallments,
-        installmentAmount: tx.amount,
-      })
-      : null
-    const result = plan && plan.paidInstallments > 0
-      ? await recordCardInstallmentCarryover({
-        cardId: card.id,
-        description: tx.description,
-        installmentAmount: tx.amount,
-        totalInstallments: plan.totalInstallments,
-        paidInstallments: plan.paidInstallments,
-        nextDueDate: plan.currentInstallmentDate,
-        category: tx.category,
-        sourceEventId: row.sourceEventId,
-      })
-      : await addCardExpense({
-        cardId: card.id,
-        amount: plan?.totalAmount ?? tx.amount,
-        description: tx.description,
-        spentAt: plan?.originalDate ?? tx.date,
-        installmentCount: plan?.totalInstallments ?? 1,
-        category: tx.category,
-        status: 'posted',
-        source: 'statement_import',
-        sourceEventId: row.sourceEventId,
-      })
+    const action = resolveStatementImportAction({ transaction: tx, totalInstallmentsOverride: totalInstallments })
+    const result = await runStatementImportAction(action, { cardId: card.id, tx, sourceEventId: row.sourceEventId })
     if (!result.ok) {
       setManualError(`${tx.description}: ${result.error.message ?? 'Eklenemedi.'}`)
       setManualBusyKey(null)
