@@ -17,6 +17,15 @@ export function SimpleModal({ title, open, children, onClose }: SimpleModalProps
   const sectionRef = useRef<HTMLElement>(null)
   useBodyScrollLock(open)
 
+  // onClose'u ref'te tut: effect yalnız `open` değişince kurulmalı. Aksi halde
+  // çağıran inline `onClose={() => ...}` verdiğinde (her render'da yeni referans)
+  // effect her tuş vuruşunda yeniden kurulur, `section.focus()` odağı input'tan
+  // alır ve MOBİLDE KLAVYE KAPANIR (yazarken en sinir bozucu bug).
+  const onCloseRef = useRef(onClose)
+  useEffect(() => {
+    onCloseRef.current = onClose
+  })
+
   // A11y: focus'u modala taşı, arka plana kaçmayı engelle (Tab döngüsü), Escape ile
   // kapat ve kapanınca focus'u tetikleyen öğeye geri ver. Aynı desen confirm-dialog'da
   // da var; burada içerik form olduğu için focusable listesi HER Tab'da yeniden
@@ -32,7 +41,7 @@ export function SimpleModal({ title, open, children, onClose }: SimpleModalProps
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === 'Escape') {
         event.stopPropagation()
-        onClose()
+        onCloseRef.current()
         return
       }
       if (event.key !== 'Tab') return
@@ -62,7 +71,7 @@ export function SimpleModal({ title, open, children, onClose }: SimpleModalProps
       document.removeEventListener('keydown', handleKeyDown)
       previouslyFocused?.focus?.()
     }
-  }, [open, onClose])
+  }, [open])
 
   if (!open) return null
 

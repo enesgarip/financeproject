@@ -32,6 +32,14 @@ function ConfirmDialog({
   const sectionRef = useRef<HTMLElement>(null)
   useBodyScrollLock(open)
 
+  // onCancel'ı ref'te tut: effect yalnız `open` değişince kurulsun. Çağıran inline
+  // callback verdiğinde her render'da yeniden kurulup odağı çalıp klavyeyi kapatmasın
+  // (bkz. SimpleModal'daki aynı düzeltme).
+  const onCancelRef = useRef(onCancel)
+  useEffect(() => {
+    onCancelRef.current = onCancel
+  })
+
   useEffect(() => {
     if (!open) return
     const section = sectionRef.current
@@ -48,7 +56,7 @@ function ConfirmDialog({
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === 'Escape') {
         event.stopPropagation()
-        onCancel()
+        onCancelRef.current()
         return
       }
       if (event.key === 'Tab' && focusable.length > 0) {
@@ -64,7 +72,7 @@ function ConfirmDialog({
 
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [open, onCancel])
+  }, [open])
 
   if (!open) return null
 

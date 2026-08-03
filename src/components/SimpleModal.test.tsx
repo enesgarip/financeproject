@@ -77,6 +77,29 @@ describe('SimpleModal — a11y focus yönetimi', () => {
     expect(document.activeElement).toBe(last)
   })
 
+  it('yeniden render (yeni onClose referansı) input focus\'unu çalmaz — mobil klavye bug\'ı', () => {
+    // Regresyon: çağıranlar inline `onClose={() => ...}` verir (her render'da yeni
+    // referans). Focus effect'i onClose'a bağlıyken her tuş vuruşunda yeniden kurulup
+    // section.focus() ile odağı input'tan alıyordu → mobilde klavye kapanıyordu.
+    const { rerender } = render(
+      <SimpleModal title="Test" open onClose={() => {}}>
+        <Body />
+      </SimpleModal>,
+    )
+    const input = dialogFocusables().find((el) => el.tagName === 'INPUT')!
+    input.focus()
+    expect(document.activeElement).toBe(input)
+
+    // Kullanıcının yazması gibi: parent yeni bir onClose referansıyla yeniden render olur.
+    rerender(
+      <SimpleModal title="Test" open onClose={() => {}}>
+        <Body />
+      </SimpleModal>,
+    )
+    // Focus input'ta KALMALI (aksi halde mobilde klavye kapanırdı).
+    expect(document.activeElement).toBe(input)
+  })
+
   it('kapanınca focus tetikleyen öğeye geri döner', () => {
     const trigger = document.createElement('button')
     document.body.appendChild(trigger)
