@@ -285,3 +285,6 @@ jobs:
 
       - name: SMS account source-event idempotency
         run: docker exec -i supabase_db_financeproject psql -U postgres -d postgres -v ON_ERROR_STOP=1 -f - < supabase/tests/sms_account_idempotency.sql
+
+      - name: Statement import installment correctness
+        run: docker exec -i supabase_db_financeproject psql -U postgres -d postgres -v ON_ERROR_STOP=1 -f - < supabase/tests/statement_import_installments.sql

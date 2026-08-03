@@ -20,6 +20,15 @@ kapanış" yapmak — import bitince app ekstre borcu = bankanın bildirdiği to
   belirsiz satırlara modal içi adet inputu; `buildImportedInstallmentPlan` +
   `addCardExpense`/`recordCardInstallmentCarryover` ile idempotent (row
   `sourceEventId`) eklenir. Kartlar ekranına gitmeye gerek kalmaz.
+- ~~**SI-05 — Taksit import kararını saf plancıya çıkar + test et.**~~ DONE.
+  `resolveStatementImportAction` (utils/statementImportPlan.ts) ekstre satırını
+  payment/carryover/expense aksiyonuna çözer; modaldaki 3 inline tekrar tek
+  `runStatementImportAction` executor'ında birleşti. 9 birim senaryosu + gerçek
+  Postgres DB regresyonu (`supabase/tests/statement_import_installments.sql`,
+  CI+deploy DB gate'inde): 1. taksit 12×1000=12000; plan-ortası 4/12 → borç 9000 =
+  ödenmemiş toplam, ilk 3 `paid_at` işaretli; son taksit 12/12 → borç 250, ay-sonu
+  vade (2026-07-31) doğru. İnvariant: kart borcu = ödenmemiş (`paid_at IS NULL`)
+  taksit toplamı.
 - **SI-04 — Çok bankalı cihaz-içi parser (DenizBank + 1-2 banka).** PENDING.
   DenizBank dışı bankalar hâlâ Gemini edge'e düşüyor. Gerçek ekstre PDF örneği
   gelince `denizBankStatementParser` deseninde banka-özel parser yazılacak.
