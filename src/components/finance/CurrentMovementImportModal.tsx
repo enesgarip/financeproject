@@ -3,6 +3,7 @@ import { useCallback, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import {
   addCardExpense,
+  applyCardProvision,
   cancelCardExpense,
   fetchCards,
   fetchCardExpenseMatchRows,
@@ -106,6 +107,9 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
 
   const [bankOnly, setBankOnly] = useState<ImportableMovement[]>([])
   const [appOnly, setAppOnly] = useState<CancellableExpense[]>([])
+  // Banka "Dönem İçi" (posted) diyorsa ama app kaydı hâlâ provizyonsa: eşleşen
+  // provizyon kesinleşmiş olarak işaretlenir (yeni satır AÇILMAZ) — tek otoriter kayıt.
+  const [provisionPromotions, setProvisionPromotions] = useState<{ id: string; description: string }[]>([])
   const [manualReview, setManualReview] = useState<ParsedDenizBankMovement[]>([])
   const [payments, setPayments] = useState<ParsedDenizBankPayment[]>([])
   // Sadece sayı değil satırın kendisi tutulur: okunamayan satır sessiz veri
@@ -176,6 +180,7 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
         setMatches([])
         setBankOnly([])
         setAppOnly([])
+        setProvisionPromotions([])
         setManualReview([])
         setPlannedPaymentMatches([])
         setPeriodLabel('')
@@ -251,6 +256,16 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
         movement,
         plannedPayment: plannedPaymentByMovement.get(movement.rawLine) ?? null,
       }))
+      // Terfi adayları YALNIZ gerçek harcama eşleşmelerinden (taksit değil) türetilir:
+      // banka posted + app provizyon + kimliği olan. Body'de post_card_provision ile
+      // kesinleştirilir; total borç değişmez (provizyon zaten borcu artırmıştı).
+      const nextPromotions = result.matches
+        .filter(({ movement, expense }) =>
+          movement.appStatus === 'posted' && expense.status === 'provision' && typeof expense.id === 'string')
+        .map(({ movement, expense }) => ({
+          id: expense.id as string,
+          description: expense.description ?? movement.description,
+        }))
       const nextManual = installmentResult.unmatched
       const nextAppOnly = result.appOnly
         .filter((expense): expense is ExpenseMatchRow => 'id' in expense && typeof expense.id === 'string')
@@ -266,6 +281,7 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
       setPeriodLabel((useFallbackPeriod ? fallbackPeriod?.label : reviewPeriod?.label) ?? '')
       setBankOnly(nextBankOnly)
       setAppOnly(nextAppOnly)
+      setProvisionPromotions(nextPromotions)
       setManualReview(nextManual)
       setMatchDriftTL(result.matchDriftTL)
       setDriftCorrected(false)
@@ -402,13 +418,14 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
       const totalCount = installmentCounts.get(index) ?? 0
       return selectedInstallments.has(index) && totalCount >= movement.installmentNo
     })
-    if (!toImport.length && !toCancel.length && !toImportInstallments.length) return
+    if (!toImport.length && !toCancel.length && !toImportInstallments.length && !provisionPromotions.length) return
 
     setApplying(true)
     setApplyError('')
 
     let importedCount = 0
     let cancelledCount = 0
+    let promotedCount = 0
     const errors: string[] = []
 
     for (const item of toImport) {
@@ -479,7 +496,15 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
       else cancelledCount++
     }
 
-    if (!importedCount && !cancelledCount) {
+    // Banka'nın kesinleştirdiği (posted) eşleşen provizyonları terfi ettir: yeni
+    // satır yerine mevcut provizyon "posted" olur → mükerrer yok, tek otoriter kayıt.
+    for (const promotion of provisionPromotions) {
+      const result = await applyCardProvision(promotion.id, 'post')
+      if (!result.ok) errors.push(`${promotion.description} terfi: ${result.error.message ?? 'Bilinmeyen hata.'}`)
+      else promotedCount++
+    }
+
+    if (!importedCount && !cancelledCount && !promotedCount) {
       setApplyError(`İşlem başarısız: ${errors[0] ?? 'Bilinmeyen hata.'}`)
       setApplying(false)
       return
@@ -496,6 +521,7 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
 
     const parts: string[] = []
     if (importedCount) parts.push(`${importedCount} hareket içe aktarıldı`)
+    if (promotedCount) parts.push(`${promotedCount} provizyon kesinleşti`)
     if (cancelledCount) parts.push(`${cancelledCount} harcama iptal edildi`)
     setResultMessage(parts.join(', '))
     setApplying(false)
@@ -821,7 +847,9 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
                     <span className="min-w-0">
                       <span className="block text-xs font-bold text-success">Eşleşen kayıtlar ({matches.length})</span>
                       <span className="mt-0.5 block text-[11px] text-muted-foreground">
-                        Banka hareketi ile app kaydı uyuşuyor — aksiyon gerekmez.
+                        {provisionPromotions.length > 0
+                          ? `Banka hareketi ile app kaydı uyuşuyor. ${provisionPromotions.length} provizyon kesinleşmiş olarak işaretlenecek.`
+                          : 'Banka hareketi ile app kaydı uyuşuyor — aksiyon gerekmez.'}
                       </span>
                     </span>
                     <ChevronDown size={16} className={`shrink-0 text-muted-foreground transition-transform ${showMatched ? 'rotate-180' : ''}`} />

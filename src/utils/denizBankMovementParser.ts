@@ -8,6 +8,12 @@
  */
 import { suggestExpenseCategory, type CategoryMemory } from './categories'
 import { addMonths, dateInputValue } from './date'
+import {
+  amountsMatchForImport,
+  LOOSE_DATE_MATCH_WINDOW_DAYS,
+  selectImportMatchIndex,
+  type ImportMatchCandidate,
+} from './importMatch'
 import { diffTL, roundTL } from './money'
 import { normalizeSearchText } from './searchText'
 
@@ -111,7 +117,6 @@ export type DenizBankMovementPaymentMatch = {
   payment: MovementPaymentMatchRow
 }
 
-const LOOSE_DATE_MATCH_WINDOW_DAYS = 3
 const PAYMENT_DATE_MATCH_WINDOW_DAYS = 7
 const AMOUNT_MATCH_TOLERANCE_TL = 5
 
@@ -308,30 +313,22 @@ export function matchDenizBankMovements(
   const matches: DenizBankMovementMatch[] = []
 
   for (const movement of bankMovements) {
-    const exactDateCandidates: number[] = []
-    const looseDateCandidates: Array<{ index: number; distance: number }> = []
+    const candidates: ImportMatchCandidate[] = []
     for (let index = 0; index < active.length; index++) {
       if (usedIndices.has(index)) continue
       const expense = active[index]
-      const sameAmount = Math.abs(diffTL(expense.amount, movement.amount)) <= AMOUNT_MATCH_TOLERANCE_TL
-      if (!sameAmount) continue
+      if (!amountsMatchForImport(expense.amount, movement.amount)) continue
 
       const distance = expenseDateDistance(expense, movement.date)
-      if (distance === 0) exactDateCandidates.push(index)
-      else if (distance != null && distance <= LOOSE_DATE_MATCH_WINDOW_DAYS) {
-        looseDateCandidates.push({ index, distance })
-      }
+      if (distance == null || distance > LOOSE_DATE_MATCH_WINDOW_DAYS) continue
+      candidates.push({
+        index,
+        distance,
+        descriptionCompatible: descriptionsCompatible(movement.description, expense.description),
+      })
     }
 
-    const preferred = exactDateCandidates.find((index) => descriptionsCompatible(movement.description, active[index].description))
-    // A description-blind exact-date match is only safe when unambiguous; with two
-    // same-amount, same-day expenses we must not pick one arbitrarily.
-    const fallback = exactDateCandidates.length === 1 ? exactDateCandidates[0] : undefined
-    const loosePreferred = looseDateCandidates
-      .sort((left, right) => left.distance - right.distance)
-      .find(({ index }) => descriptionsCompatible(movement.description, active[index].description))?.index
-    const looseFallback = looseDateCandidates.length === 1 ? looseDateCandidates[0]?.index : undefined
-    const foundIndex = preferred ?? fallback ?? loosePreferred ?? looseFallback
+    const foundIndex = selectImportMatchIndex(candidates)
 
     if (foundIndex == null) {
       unmatched.push(movement)
