@@ -71,15 +71,62 @@ describe('resolveStatementImportAction', () => {
     ).toEqual({ kind: 'payment', paymentId: 'pay-1', amount: 500, spentAt: '2026-05-19' })
   })
 
-  it('toplam adet bilinmiyorsa (count 0) taksit değil, tek harcama gibi işlenir', () => {
-    // Ekstrede toplam adet yoksa buildImportedInstallmentPlan çağrılmaz; satır
-    // olduğu gibi (aylık tutar) tek harcama olur. (Bu satır aslında modalda
-    // "manuel kontrol"e düşer; plancı yine de güvenli davranmalı.)
+  it('toplam adet bilinmiyorsa (count 0) sessiz tek-harcama YAZMAZ → needs-review', () => {
+    // Ekstrede toplam adet yoksa aylık tutarla tek harcama yazmak 12 taksitlik
+    // alışverişi küçük bir harcamaya çevirirdi. Plancı bunu reddedip manuel
+    // doğrulamaya düşürür.
     expect(
       resolveStatementImportAction({
         transaction: tx({ isInstallment: true, installmentNo: 3, installmentCount: 0, amount: 500 }),
       }),
-    ).toMatchObject({ kind: 'expense', amount: 500, installmentCount: 1 })
+    ).toEqual({ kind: 'needs-review', reason: 'unknown-total-installments' })
+  })
+
+  it('notasyon tutarsızsa (kalan ≠ aylık × kalan-adet) → needs-review', () => {
+    // count 6 okunmuş ama kalan 3 taksitliği gösteriyor → adet şüpheli, körlemesine
+    // toplam kurma.
+    expect(
+      resolveStatementImportAction({
+        transaction: tx({
+          isInstallment: true,
+          installmentNo: 1,
+          installmentCount: 6,
+          amount: 1_000,
+          remainingDebt: 3_000,
+        }),
+      }),
+    ).toEqual({ kind: 'needs-review', reason: 'inconsistent-notation' })
+  })
+
+  it('notasyon tutarlıysa 1. taksit normal plan kurar', () => {
+    // BEYLER: kalan 43.333,33 ≈ 21.666,67 × 2 → tutarlı, plan kurulur.
+    expect(
+      resolveStatementImportAction({
+        transaction: tx({
+          isInstallment: true,
+          installmentNo: 1,
+          installmentCount: 3,
+          amount: 21666.67,
+          date: '2026-05-19',
+          remainingDebt: 43333.33,
+        }),
+      }),
+    ).toMatchObject({ kind: 'expense', installmentCount: 3 })
+  })
+
+  it('override verilince tutarsız notasyon görmezden gelinir (kullanıcı adedi doğruladı)', () => {
+    expect(
+      resolveStatementImportAction({
+        transaction: tx({
+          isInstallment: true,
+          installmentNo: 1,
+          installmentCount: 6,
+          amount: 1_000,
+          remainingDebt: 3_000,
+        }),
+        totalInstallmentsOverride: 3,
+      }),
+    ).toMatchObject({ kind: 'expense', amount: 3_000, installmentCount: 3 })
   })
 
   it('manuel akış: kullanıcı toplam adedi girince taksit planı kurulur (override)', () => {

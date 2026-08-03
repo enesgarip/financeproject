@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { checkStatementInstallments, expenseTotalAmount, matchTransactions, parseAmount, parseDenizBankStatement, statementInstallmentDueDate, type StatementInstallmentMatchRow } from './denizBankStatementParser'
+import { checkInstallmentNotation } from './importedInstallmentPlan'
 
 describe('parseAmount (locale-robust)', () => {
   it('parses English-formatted statement amounts', () => {
@@ -218,6 +219,38 @@ describe('parseDenizBankStatement — installments', () => {
     expect(neova?.installmentNo).toBe(3)
   })
 
+  it('captures remaining debt from the notation (X in <X>/<count>-<no>)', () => {
+    const result = parseDenizBankStatement(SAMPLE_TEXT)
+    const beyler = result.transactions.find((t) => t.description.includes('BEYLER OPTİK'))
+    expect(beyler?.remainingDebt).toBeCloseTo(43333.33)
+
+    const neova = result.transactions.find(
+      (t) => t.description.includes('NEOVA') && t.installmentCount === 9,
+    )
+    expect(neova?.remainingDebt).toBeCloseTo(12033.65)
+  })
+
+  it('leaves remainingDebt null when notation is absent', () => {
+    const result = parseDenizBankStatement(SAMPLE_TEXT)
+    const nakit = result.transactions.find((t) => t.description.toLowerCase().includes('nakit'))
+    expect(nakit?.remainingDebt).toBeNull()
+    const cafe = result.transactions.find((t) => t.description.includes('CAFE LİFE'))
+    expect(cafe?.remainingDebt).toBeNull()
+  })
+
+  it('remaining-debt notation reconciles with monthly × remaining-count', () => {
+    const result = parseDenizBankStatement(SAMPLE_TEXT)
+    // BEYLER 1.Tk: kalan (43.333,33) ≈ aylık (21.666,67) × (3 − 1)
+    const beyler = result.transactions.find((t) => t.description.includes('BEYLER OPTİK'))!
+    const check = checkInstallmentNotation({
+      installmentAmount: beyler.amount,
+      installmentNo: beyler.installmentNo,
+      totalInstallments: beyler.installmentCount,
+      remainingDebt: beyler.remainingDebt!,
+    })
+    expect(check.consistent).toBe(true)
+  })
+
   it('falls back to "N.Tk" for installment number when notation is absent', () => {
     const result = parseDenizBankStatement(SAMPLE_TEXT)
     const nakit = result.transactions.find((t) => t.description.toLowerCase().includes('nakit'))
@@ -241,6 +274,7 @@ describe('parseDenizBankStatement — installments', () => {
       isInstallment: true,
       installmentNo: 2,
       installmentCount: 3,
+      remainingDebt: null,
     })).toBe('2026-06-19')
 
     expect(statementInstallmentDueDate({
@@ -251,6 +285,7 @@ describe('parseDenizBankStatement — installments', () => {
       isInstallment: true,
       installmentNo: 4,
       installmentCount: 9,
+      remainingDebt: null,
     })).toBe('2026-06-26')
   })
 
@@ -294,6 +329,7 @@ describe('matchTransactions', () => {
     isInstallment: false,
     installmentNo: 1,
     installmentCount: 1,
+    remainingDebt: null,
   })
 
   const installmentTx = (date: string, monthly: number, count: number, no: number) => ({
@@ -304,6 +340,7 @@ describe('matchTransactions', () => {
     isInstallment: true,
     installmentNo: no,
     installmentCount: count,
+    remainingDebt: null,
   })
 
   const exp = (spent_at: string, amount: number, status = 'posted', description = 'App kaydı') => ({
@@ -437,6 +474,7 @@ describe('checkStatementInstallments', () => {
     isInstallment: true,
     installmentNo: no,
     installmentCount: count,
+    remainingDebt: null,
   })
 
   const appInst = (overrides: Partial<StatementInstallmentMatchRow> = {}): StatementInstallmentMatchRow => ({
@@ -528,6 +566,7 @@ describe('checkStatementInstallments', () => {
       isInstallment: false,
       installmentNo: 1,
       installmentCount: 1,
+      remainingDebt: null,
     }
     const result = checkStatementInstallments(
       [nonInstallment],
