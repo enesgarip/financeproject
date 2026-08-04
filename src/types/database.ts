@@ -29,7 +29,7 @@ export type SavingsGoalStatus = 'active' | 'completed'
 export type SavingsGoalValueType = 'TRY' | 'gram_altin' | 'ceyrek_altin' | 'composite'
 export type TransactionHistoryType = 'payment' | 'transfer' | 'loan' | 'debt' | 'card' | 'correction' | 'asset'
 export type UpcomingDismissalSource = 'payment' | 'card' | 'loan_installment' | 'debt'
-export type ExpenseContextKind = 'pet' | 'project'
+export type ExpenseContextKind = 'pet' | 'project' | 'travel' | 'health' | 'hobby' | 'business'
 
 export type BaseRow = {
   id: string

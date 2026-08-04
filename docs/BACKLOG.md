@@ -1,5 +1,18 @@
 # Priority Backlog
 
+## 2026-08-04 — Bağlam türleri + tür registry
+
+- ~~**Yeni bağlam türleri.**~~ DONE. `pet`/`project`'e ek: `health` (Sağlık),
+  `hobby` (Hobi), `business` (Yan iş/İşletme), `travel` (Seyahat/Tatil). Her
+  türün kendi kategori seti + süreli/süresiz davranışı. "Ev" bilerek eklenmedi
+  — düzenli fatura aboneliğe ait, bağlam düzensiz "şey maliyeti" içindir.
+- ~~**Tür registry (refactor).**~~ DONE. `EXPENSE_CONTEXT_KINDS`
+  (`utils/expenseContexts.ts`) tek kaynak: `{ label, categories, timeboxed }`.
+  Sayfa dropdown/kategori/tarih-görünürlüğü/ikon hep registry'den türer; elle
+  `kind === 'pet'` karşılaştırması kalmadı. Yeni tür = registry'ye bir satır +
+  CHECK'i genişleten migration + ikon eşlemesi. `expense_contexts_kind_check`
+  widened; mevcut satırlar geçerli, RLS/grant değişmez.
+
 ## 2026-08-04 — Süresiz bağlam + mobil hub menüsü
 
 - ~~**Süresiz bağlam.**~~ DONE. Bağlam formu tarihleri opsiyonel; evcil hayvan
