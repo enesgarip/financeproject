@@ -13,6 +13,8 @@ Bu doküman `/odemeler/baglamlar` ve `/varliklar/araclar` için davranış kayna
 
 `expense_contexts.kind` yalnız `pet` veya `project` olabilir. Evcil hayvan bağlamı kategori bazlı gider görünümü sunar. Proje bağlamı opsiyonel bütçe ve tarih aralığı taşır; burn-down tüm zamanlar birleşik giderinden hesaplanır.
 
+**Süre / süresizlik.** `starts_on` ve `ends_on` nullable; DB ve form tarihi zorunlu tutmaz. Evcil hayvan doğası gereği süresizdir — formu tarih alanı göstermez (`kind==='pet'`). Proje türünde tarihler opsiyoneldir; **bitiş boş bırakılırsa bağlam süresiz** sürer. `ends_on` null olan her bağlam özet kartında "Süresiz" rozetiyle işaretlenir.
+
 ## Yakıt ölçümü
 
 Litre ve odometre, hem manuel araç giderinde hem etiketli kart giderinde nullable annotation'dır. Tüketim ardışık ve artan odometreli dolumlar arasında hesaplanır:

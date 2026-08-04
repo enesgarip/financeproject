@@ -1,5 +1,17 @@
 # Priority Backlog
 
+## 2026-08-04 — Süresiz bağlam + mobil hub menüsü
+
+- ~~**Süresiz bağlam.**~~ DONE. Bağlam formu tarihleri opsiyonel; evcil hayvan
+  türünde tarih alanı hiç gösterilmez (doğası gereği süresiz), proje türünde
+  bitiş boş = süresiz. `ends_on` null olan bağlam özet kartında "Süresiz"
+  rozetiyle işaretlenir. Şema değişmedi (`starts_on`/`ends_on` zaten nullable) —
+  sorun form UX'iydi (çıplak datepicker'lar zorunlu gibi görünüyordu).
+- ~~**Mobil hub menüsü.**~~ DONE. `HubNav` `flex-1` → `flex-none` (mobil):
+  sekmeler içerik-boyunda ve yatay kaydırılır (44px dokunma alanı), aktif sekme
+  görüşe kaydırılır, scrollbar gizli; `sm:flex-1` ile desktop'ta şerit dolu
+  kalır. 5 sekmeli Plan hub'ında sıkışma çözüldü.
+
 ## 2026-08-04 — Gider bağlamları + Arabalarım v2
 
 - ~~**Evcil hayvan ve etkinlik/proje bağlamları.**~~ DONE. Genel bağlam modeli, kart annotation'ı, kart-dışı gider, proje bütçesi ve burn-down `/odemeler/baglamlar` altında.
