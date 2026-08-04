@@ -1,5 +1,26 @@
 # Priority Backlog
 
+## 2026-08-04 — Arabalarım: araç başına gider takibi + vergi takvimini kaldır
+
+Amaç: Araç giderlerini (yakıt, bakım, MTV, sigorta...) araç başına ayrı izlemek.
+Kullanıcı çoğu gideri aynı kartla ödüyor ama araç kırılımını ayrı istiyor; nakit/
+banka giderleri (MTV, sigorta) de kapsanmalı.
+
+- ~~**Vergi takvimini kaldır.**~~ DONE. "Türkiye finans takvimi" preset'leri
+  (`TurkishCalendarPresets` + `obligationPresets`) ve Ödeme Takvimi'ndeki kullanımı
+  silindi.
+- ~~**Arabalarım modülü.**~~ DONE. `/analiz/araclar` (Analiz hub alt-sekmesi).
+  Veri modeli çift saymayı yapısal olarak imkânsız kılar: kartla yapılan gider
+  bugünkü gibi `card_expenses`'te kalır, yalnız `car_id` ETIKETI düşülür (borç RPC'si
+  değişmez — dönen satıra ayrı UPDATE, `updateCardExpenseCategory` deseni). Kart-dışı
+  (nakit/banka) giderler ayrı `car_expenses` tablosunda. Bir gerçek harcama ya
+  kartta ya kart-dışı → ayrık kümeler → mükerrer yok. `car_expenses` net değer/nakit
+  akışı/yükümlülük matematiğine GİRMEZ (saf raporlama merceği). Etiketleme iki
+  yerden: Arabalarım sayfası + Hesaplar'daki Hızlı harcama formu araç seçici.
+  Saf toplama `utils/carExpenses.ts` (araç başına toplam/bu-ay/kategori kırılımı).
+  Yerel Postgres'te RLS/grant/lint + uçtan uca UI (borç 800 tek sayıldı, araç
+  toplamı 2300) doğrulandı.
+
 ## 2026-08-04 — Taksit import doğruluğu: kalan-borç cross-check + belirsiz taksit koruması
 
 Amaç: Ekstreden taksit kurulumunda en büyük sessiz hata sınıfını kapatmak —
