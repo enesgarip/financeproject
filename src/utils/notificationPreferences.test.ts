@@ -10,6 +10,7 @@ const allOn = {
   loans_enabled: true,
   statements_enabled: true,
   weekly_enabled: true,
+  cars_enabled: true,
 }
 
 describe('notificationTypeToPrefKey', () => {

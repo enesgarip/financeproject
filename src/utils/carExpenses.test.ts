@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import type { Car, CarExpense, CardExpense } from '../types/database'
-import { buildCarLedgerEntries, buildCarSummaries } from './carExpenses'
+import type { Car, CarExpense, CardExpense, CarReminder } from '../types/database'
+import { buildCarLedgerEntries, buildCarSummaries, carReminderState } from './carExpenses'
 
 function makeCar(id: string, name: string): Car {
-  return { id, user_id: 'u1', created_at: '', updated_at: '', name, plate: null, sort_order: 0, note: null }
+  return { id, user_id: 'u1', created_at: '', updated_at: '', name, plate: null, current_odometer_km: null, sort_order: 0, note: null }
 }
 
 function makeManual(over: Partial<CarExpense> & Pick<CarExpense, 'id' | 'car_id' | 'amount'>): CarExpense {
@@ -16,6 +16,8 @@ function makeManual(over: Partial<CarExpense> & Pick<CarExpense, 'id' | 'car_id'
     payment_method: 'nakit',
     description: '',
     note: null,
+    fuel_liters: null,
+    odometer_km: null,
     ...over,
   }
 }
@@ -115,5 +117,44 @@ describe('buildCarSummaries', () => {
     expect(clio.total).toBe(0)
     expect(clio.entryCount).toBe(0)
     expect(clio.categories).toEqual([])
+  })
+
+  it('yıllık TCO, günlük maliyet ve önceki yıl karşılaştırmasını üretir', () => {
+    const manual = [
+      makeManual({ id: 'm1', car_id: 'car1', amount: 3100, spent_at: '2026-01-10' }),
+      makeManual({ id: 'm2', car_id: 'car1', amount: 1200, spent_at: '2025-12-10' }),
+    ]
+    const golf = buildCarSummaries(cars, manual, [], new Date('2026-01-31T12:00:00')).find((s) => s.car.id === 'car1')!
+    expect(golf.yearTotal).toBe(3100)
+    expect(golf.previousYearTotal).toBe(1200)
+    expect(golf.costPerDay).toBe(100)
+  })
+
+  it('ardışık kilometreli dolumlardan litre/100km ve TL/km hesaplar', () => {
+    const manual = [
+      makeManual({ id: 'm1', car_id: 'car1', amount: 1000, spent_at: '2026-08-01', fuel_liters: 40, odometer_km: 10_000 }),
+      makeManual({ id: 'm2', car_id: 'car1', amount: 1200, spent_at: '2026-08-15', fuel_liters: 45, odometer_km: 10_600 }),
+    ]
+    const fuel = buildCarSummaries(cars, manual, [], new Date('2026-08-20')).find((s) => s.car.id === 'car1')!.fuel
+    expect(fuel.fillupCount).toBe(2)
+    expect(fuel.measuredDistanceKm).toBe(600)
+    expect(fuel.litersPer100Km).toBe(7.5)
+    expect(fuel.costPerKm).toBe(2)
+  })
+})
+
+describe('carReminderState', () => {
+  const car = { ...makeCar('car1', 'Golf'), current_odometer_km: 49_500 }
+  const reminder: CarReminder = {
+    id: 'r1', user_id: 'u1', created_at: '', updated_at: '', car_id: 'car1', title: 'Yağ', kind: 'bakim',
+    due_date: '2026-09-01', due_odometer_km: 50_000, repeat_months: 6, repeat_km: 10_000, note: null,
+  }
+
+  it('30 gün veya 1000 km içindeki işi yaklaşan sayar', () => {
+    expect(carReminderState(reminder, car, '2026-08-04')).toBe('due-soon')
+  })
+
+  it('tarih ya da kilometre geçince gecikmiş sayar', () => {
+    expect(carReminderState(reminder, { ...car, current_odometer_km: 50_001 }, '2026-08-04')).toBe('overdue')
   })
 })

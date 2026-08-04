@@ -28,11 +28,13 @@ type PrefFlags = {
   loans_enabled: boolean
   statements_enabled: boolean
   weekly_enabled: boolean
+  cars_enabled: boolean
   quiet_hours_start: number | null
   quiet_hours_end: number | null
 }
 
 const TYPE_TOGGLES: { key: NotificationTypeKey; label: string; hint: string }[] = [
+  { key: 'cars_enabled', label: 'Araç bakım & yenileme', hint: 'Tarihli araç işlerine 7 gün kala' },
   { key: 'payments_enabled', label: 'Ödeme vadeleri', hint: 'Yarın vadesi gelen planlı ödemeler' },
   { key: 'loans_enabled', label: 'Kredi taksitleri', hint: 'Yarın vadesi gelen kredi taksitleri' },
   { key: 'statements_enabled', label: 'Ekstre kesimi', hint: 'Kesime 3 gün kala hatırlatma' },
@@ -40,6 +42,7 @@ const TYPE_TOGGLES: { key: NotificationTypeKey; label: string; hint: string }[] 
 ]
 
 const NOTIFICATION_TYPE_LABELS: Record<string, string> = {
+  car_reminder_due_7d: 'Araç bakım / yenileme',
   payment_due_tomorrow: 'Ödeme vadesi',
   loan_installment_due_tomorrow: 'Kredi taksiti',
   card_statement_cut_3d: 'Ekstre kesimi',
@@ -95,6 +98,7 @@ export function NotificationSettings() {
         loans_enabled: row.loans_enabled,
         statements_enabled: row.statements_enabled,
         weekly_enabled: row.weekly_enabled,
+        cars_enabled: row.cars_enabled,
         quiet_hours_start: row.quiet_hours_start,
         quiet_hours_end: row.quiet_hours_end,
       })

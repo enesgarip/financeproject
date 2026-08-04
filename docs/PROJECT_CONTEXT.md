@@ -141,6 +141,7 @@ tablosundadır; burada tekrarlamak drift yaratır.
 - `/varliklar` hub → index (Varlıklar) + `/varliklar/maas` (Maaş)
 - `/borclar` hub → `/borclar/krediler` (Krediler) + `/borclar/kisiler` (Kişiler); bare `/borclar` redirects to krediler
 - `/odemeler` hub -> index (Ödeme Takvimi) + `/odemeler/hedefler` (Bütçe & Hedefler)
+- `/odemeler/baglamlar` (evcil hayvan ve etkinlik/proje gider bağlamları)
 - `/analiz` hub -> index (Genel) + `/analiz/trendler` + `/analiz/servet` + `/analiz/kayitlar`
 - `/veri-sagligi` hub -> index (Bulgular) + `/veri-sagligi/islemler` (Yedek ve Ayarlar)
 - `/login`
@@ -175,6 +176,8 @@ From the current typed schema, main tables are:
 - `data_health_issue_acknowledgements` (reversible per-user accepted issue IDs)
 - `kasa_buckets` (kasa modu: bakiye kova ayırma — planlama overlay'i, ledger değil)
 - `notification_preferences` (Web Push tür tercihleri + sessiz saatler; user_id PK)
+- `cars`, `car_expenses`, `car_reminders` (saf araç gideri, yakıt ve bakım/yenileme merceği)
+- `expense_contexts`, `context_expenses` (evcil hayvan / proje kart-dışı raporlama satırları)
 
 Most rows are user-scoped with `user_id`. RLS is a core security assumption.
 Data Health repair receipt tables grant authenticated users own-row SELECT only;

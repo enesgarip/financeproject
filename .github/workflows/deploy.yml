@@ -206,6 +206,9 @@ jobs:
       - name: Complete finance-data reset
         run: docker exec -i supabase_db_financeproject psql -U postgres -d postgres -v ON_ERROR_STOP=1 -f - < supabase/tests/reset_user_finance_data.sql
 
+      - name: Expense contexts and car operations security
+        run: docker exec -i supabase_db_financeproject psql -U postgres -d postgres -v ON_ERROR_STOP=1 -f - < supabase/tests/expense_contexts_and_cars.sql
+
       - name: Canonical card allocation security
         run: docker exec -i supabase_db_financeproject psql -U postgres -d postgres -v ON_ERROR_STOP=1 -f - < supabase/tests/card_allocation_security.sql
 

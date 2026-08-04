@@ -29,6 +29,7 @@ export type SavingsGoalStatus = 'active' | 'completed'
 export type SavingsGoalValueType = 'TRY' | 'gram_altin' | 'ceyrek_altin' | 'composite'
 export type TransactionHistoryType = 'payment' | 'transfer' | 'loan' | 'debt' | 'card' | 'correction' | 'asset'
 export type UpcomingDismissalSource = 'payment' | 'card' | 'loan_installment' | 'debt'
+export type ExpenseContextKind = 'pet' | 'project'
 
 export type BaseRow = {
   id: string
@@ -130,6 +131,9 @@ export type CardExpense = BaseRow & {
   source_event_id?: string | null
   /** Bu harcamayı bir araca etiketler (Arabalarım). Saf annotation; borca dokunmaz. */
   car_id?: string | null
+  fuel_liters?: number | null
+  odometer_km?: number | null
+  context_id?: string | null
 }
 
 export type Budget = BaseRow & {
@@ -422,6 +426,7 @@ export type KasaBucket = BaseRow & {
 export type Car = BaseRow & {
   name: string
   plate: string | null
+  current_odometer_km: number | null
   sort_order: number
   note: string | null
 }
@@ -442,6 +447,41 @@ export type CarExpense = BaseRow & {
   payment_method: CarPaymentMethod
   description: string
   note: string | null
+  fuel_liters: number | null
+  odometer_km: number | null
+}
+
+export type CarReminderKind = 'bakim' | 'mtv' | 'muayene' | 'sigorta' | 'kasko' | 'lastik' | 'diger'
+
+export type CarReminder = BaseRow & {
+  car_id: string
+  title: string
+  kind: CarReminderKind
+  due_date: string | null
+  due_odometer_km: number | null
+  repeat_months: number | null
+  repeat_km: number | null
+  note: string | null
+}
+
+export type ExpenseContext = BaseRow & {
+  kind: ExpenseContextKind
+  name: string
+  budget_amount: number | null
+  starts_on: string | null
+  ends_on: string | null
+  sort_order: number
+  note: string | null
+}
+
+export type ContextExpense = BaseRow & {
+  context_id: string
+  spent_at: string
+  amount: number
+  category: string
+  payment_method: CarPaymentMethod
+  description: string
+  note: string | null
 }
 
 // user_id birincil anahtar (kullanıcı başına tek satır); BaseRow'daki id yok.
@@ -453,6 +493,7 @@ export type NotificationPreferences = {
   loans_enabled: boolean
   statements_enabled: boolean
   weekly_enabled: boolean
+  cars_enabled: boolean
   quiet_hours_start: number | null
   quiet_hours_end: number | null
 }
@@ -512,6 +553,9 @@ export type Database = {
       kasa_buckets: Table<KasaBucket, WithBaseInsert<KasaBucket>, WithBaseUpdate<KasaBucket>>
       cars: Table<Car, WithBaseInsert<Car>, WithBaseUpdate<Car>>
       car_expenses: Table<CarExpense, WithBaseInsert<CarExpense>, WithBaseUpdate<CarExpense>>
+      car_reminders: Table<CarReminder, WithBaseInsert<CarReminder>, WithBaseUpdate<CarReminder>>
+      expense_contexts: Table<ExpenseContext, WithBaseInsert<ExpenseContext>, WithBaseUpdate<ExpenseContext>>
+      context_expenses: Table<ContextExpense, WithBaseInsert<ContextExpense>, WithBaseUpdate<ContextExpense>>
       notification_preferences: Table<
         NotificationPreferences,
         WithBaseInsert<NotificationPreferences>,

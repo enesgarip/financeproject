@@ -116,6 +116,16 @@ type NotificationLogRow = {
   reference_id: string
 }
 
+type CarReminderRow = {
+  id: string
+  user_id: string
+  car_id: string
+  title: string
+  due_date: string
+}
+
+type CarProfileRow = { id: string; name: string }
+
 // Kullanıcı bazlı tür tercihleri + sessiz saatler.
 type NotificationPreferenceRow = {
   user_id: string
@@ -123,11 +133,12 @@ type NotificationPreferenceRow = {
   loans_enabled: boolean
   statements_enabled: boolean
   weekly_enabled: boolean
+  cars_enabled: boolean
   quiet_hours_start: number | null
   quiet_hours_end: number | null
 }
 
-type PreferenceFlagKey = 'payments_enabled' | 'loans_enabled' | 'statements_enabled' | 'weekly_enabled'
+type PreferenceFlagKey = 'payments_enabled' | 'loans_enabled' | 'statements_enabled' | 'weekly_enabled' | 'cars_enabled'
 
 // src/utils/notificationPreferences.ts ikizleri (Deno import edemez; testli mantık orada).
 function notificationTypeToPrefKey(notificationType: string): PreferenceFlagKey | null {
@@ -141,6 +152,8 @@ function notificationTypeToPrefKey(notificationType: string): PreferenceFlagKey 
     case 'weekly_summary':
     case 'reconciliation_stale_weekly':
       return 'weekly_enabled'
+    case 'car_reminder_due_7d':
+      return 'cars_enabled'
     default:
       return null
   }
@@ -666,7 +679,7 @@ function applyPreferences(
 async function loadPreferences(db: RestClient, userIds: string[]): Promise<Map<string, NotificationPreferenceRow>> {
   if (userIds.length === 0) return new Map()
   const rows = await db.select<NotificationPreferenceRow>('notification_preferences', {
-    select: 'user_id,payments_enabled,loans_enabled,statements_enabled,weekly_enabled,quiet_hours_start,quiet_hours_end',
+    select: 'user_id,payments_enabled,loans_enabled,statements_enabled,weekly_enabled,cars_enabled,quiet_hours_start,quiet_hours_end',
     user_id: inFilter(userIds),
   })
   return new Map(rows.map((row) => [row.user_id, row]))
@@ -756,6 +769,7 @@ async function loadCandidates(
     loanInstallmentsTomorrow,
     loanInstallmentsThisWeek,
     cards,
+    carRemindersDue7d,
   ] = await Promise.all([
     db.select<PaymentRow>('payments', {
       select: 'id,user_id,title,amount,due_date',
@@ -788,6 +802,11 @@ async function loadCandidates(
       statement_day: 'not.is.null',
       current_period_spending: 'gt.0',
     }),
+    db.select<CarReminderRow>('car_reminders', {
+      select: 'id,user_id,car_id,title,due_date',
+      user_id: userFilter,
+      due_date: `eq.${addDaysIso(todayIso, 7)}`,
+    }),
   ])
 
   const loanIds = Array.from(
@@ -800,6 +819,12 @@ async function loadCandidates(
     })
     : []
   const loansById = new Map(loans.map((loan) => [loan.id, loan]))
+
+  const carIds = Array.from(new Set(carRemindersDue7d.map((row) => row.car_id)))
+  const carProfiles = carIds.length ? await db.select<CarProfileRow>('cars', {
+    select: 'id,name', id: inFilter(carIds),
+  }) : []
+  const carsById = new Map(carProfiles.map((car) => [car.id, car]))
 
   const statementArchives = cards.length
     ? await db.select<StatementArchiveRow>('card_statement_archives', {
@@ -839,6 +864,21 @@ async function loadCandidates(
         body: `${installment.installment_no}. taksit vadesi yaklaşıyor.`,
         url: '/borclar/krediler',
         tag: `loan-installment-due-${installment.id}-${installment.due_date}`,
+      },
+    })
+  }
+
+  for (const reminder of carRemindersDue7d) {
+    const carName = carsById.get(reminder.car_id)?.name ?? 'Aracın'
+    candidates.push({
+      userId: reminder.user_id,
+      notificationType: 'car_reminder_due_7d',
+      referenceId: `${reminder.id}:${reminder.due_date}`,
+      payload: {
+        title: `${carName}: ${reminder.title} 7 gün sonra`,
+        body: `Planlanan tarih: ${reminder.due_date.split('-').reverse().join('.')}`,
+        url: '/varliklar/araclar',
+        tag: `car-reminder-${reminder.id}-${reminder.due_date}`,
       },
     })
   }

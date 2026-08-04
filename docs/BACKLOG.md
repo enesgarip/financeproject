@@ -1,5 +1,12 @@
 # Priority Backlog
 
+## 2026-08-04 — Gider bağlamları + Arabalarım v2
+
+- ~~**Evcil hayvan ve etkinlik/proje bağlamları.**~~ DONE. Genel bağlam modeli, kart annotation'ı, kart-dışı gider, proje bütçesi ve burn-down `/odemeler/baglamlar` altında.
+- ~~**Yakıt takibi.**~~ DONE. Litre + odometre girişi, full-to-full L/100 km, TL/km ve aylık maliyet trendi.
+- ~~**Araç bakım/yenileme hatırlatıcıları.**~~ DONE. Tarih/km hedefi, ay/km tekrarı, yaklaşan/geciken durumları ve 7 gün kala tercih kontrollü Web Push.
+- ~~**Araç TCO karnesi.**~~ DONE. Yıllık toplam, günlük maliyet, önceki yıl ve gizlilik güvenli indirilebilir PNG.
+
 ## 2026-08-04 — Bağlam-odaklı navigasyon (IA) yeniden düzeni
 
 Amaç: "routinglerde kafam karışıyor" — her şey bağlamına göre yerleşsin, az
