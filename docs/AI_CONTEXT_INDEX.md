@@ -97,7 +97,6 @@ ESLint blocks `src/{pages,components,utils,hooks}` from importing
 | How are Data Health writes authorized and audited? | `src/pages/DataHealth.resolution.ts`, `src/pages/DataHealthPage.actions.ts`, `src/services/dataHealthRepairs.ts`, and `supabase/migrations/20260803120000_data_health_safe_repairs.sql` (`data_health_repair_runs` / `data_health_repair_steps`); real-DB oracle: `supabase/tests/data_health_safe_repairs.sql` |
 | How does “Bu doğru, kapat” persist across devices? | `src/pages/DataHealthPage.tsx`, `src/data/repositories/dataHealthRepo.ts`, `supabase/migrations/20260803130000_data_health_issue_acknowledgements.sql`; real-DB oracle: `supabase/tests/data_health_issue_acknowledgements.sql` |
 | How are monthly obligations built? | `src/utils/obligations.ts`; see `docs/PLANNING_MODEL_REVIEW.md` for why this stays a read-side projection instead of one write table. Card current-period cash dates derive from `utils/cardStatement.ts` so paid statement due dates are not reused. |
-| How are Turkish calendar presets defined? | `src/utils/obligationPresets.ts`, `src/components/finance/TurkishCalendarPresets.tsx` |
 
 ## Common Task Playbooks
 
@@ -246,7 +245,7 @@ paylaşır; her sayfa süpersetini client-side daraltır). Query client: `src/ap
 | **Banka bakiyesi / hareket / mutabakat** | `utils/accountLedger.ts`, `utils/reconciliation.ts` (`STALE_AFTER_DAYS`=7; push-notify haftalık hatırlatma aynı eşiği kullanır) | `data/repositories/financePanelsRepo.ts`, `services/accountLedgerActions.ts`, `services/accountMovements.ts` | `pages/CardsPage.tsx`, `pages/CardsPage.list.tsx`, `components/finance/AccountLedgerPanel.tsx`, `components/finance/CurrentMovementImportModal.tsx` (import sonrası akış-içi mutabakat) |
 | **Klasik banka/kart UX (IBAN, maskeleme, son hareketler, bakiye gizleme)** | `utils/accountLedger.ts`, `hooks/useBalancePrivacy.tsx`, `pages/CardsPage.helpers.ts` | `data/repositories/cardAliasesRepo.ts`, `data/repositories/financePanelsRepo.ts` | `pages/CardsPage.tsx`, `pages/CardsPage.list.tsx`, `pages/CardsPage.crud.tsx`, `components/finance/FinancePaymentDrawer.tsx` |
 | **Kredi & taksitleri** | `utils/financeSummary.ts` (`projectLoanSummary`), `pages/LoansPage.helpers.ts` (ödenmiş plan koruması) | `data/repositories/loansRepo.ts` | `pages/LoansPage.tsx` |
-| **Kişisel borç/alacak** | `utils/obligations.ts`, `utils/obligationPresets.ts` | `data/repositories/debtsRepo.ts` | `pages/DebtsPage.tsx`, `LiabilitiesHub.tsx` |
+| **Kişisel borç/alacak** | `utils/obligations.ts` | `data/repositories/debtsRepo.ts` | `pages/DebtsPage.tsx`, `LiabilitiesHub.tsx` |
 | **Planlı ödemeler** | `utils/dashboardUpcoming.ts`, `utils/attention.ts`, `utils/financeObligationRules.ts`, `utils/paymentHistory.ts` | `data/repositories/paymentsRepo.ts`, `services/financePaymentActions.ts` | `pages/PaymentsPage.tsx` |
 | **Varlıklar / değerleme / al-sat** | `utils/valuation.ts`, `utils/valuationSync.ts`, `utils/realValue.ts` | `data/repositories/valuationRepo.ts`, `services/assetTrades.ts`, `analysisRepo.ts` | `pages/AssetsPage.tsx`, `pages/AssetsPage.tradeModal.tsx`, `AssetsHub.tsx` |
 | **Altın (gram/ledger)** | `utils/goldLedger.ts`, `utils/goldLedgerSync.ts`, `utils/zakat.ts` | `data/repositories/goldLedgerRepo.ts` | `pages/GoldPage.tsx` |

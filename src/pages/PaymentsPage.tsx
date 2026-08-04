@@ -2,7 +2,6 @@ import { CalendarDays, CreditCard, Receipt, RefreshCw } from 'lucide-react'
 import { CrudPage, type FormField } from '../components/CrudPage'
 import { FinancePaymentDrawer } from '../components/finance/FinancePaymentDrawer'
 import { ObligationsCalendar } from '../components/finance/ObligationsCalendar'
-import { TurkishCalendarPresets } from '../components/finance/TurkishCalendarPresets'
 import { Alert } from '../components/ui/alert'
 import { Badge } from '../components/ui/badge'
 import { Card, CardContent } from '../components/ui/card'
@@ -370,10 +369,6 @@ export function PaymentsPage() {
           return (
             <div className="flex flex-col gap-3">
               <DueAutoPaymentsAutomation reload={async () => { await Promise.all([reload(), loadPlanningData()]) }} />
-              <TurkishCalendarPresets
-                existing={payments}
-                onAdded={async () => { await Promise.all([reload(), loadPlanningData(), invalidateSnapshot()]) }}
-              />
               {planningError ? <Alert variant="warning">{planningError}</Alert> : null}
               <ObligationsCalendar
                 loading={loading || planningLoading}
