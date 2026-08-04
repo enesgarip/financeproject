@@ -15,7 +15,7 @@ import {
   selectImportMatchIndex,
   type ImportMatchCandidate,
 } from './importMatch'
-import { diffTL, roundTL } from './money'
+import { diffTL, roundTL, sumTL } from './money'
 import { normalizeSearchText } from './searchText'
 
 export type ParsedTransaction = {
@@ -50,6 +50,17 @@ export type ParsedStatement = {
   totalDebt: number
   transactions: ParsedTransaction[]
   adjustments?: ParsedStatementAdjustment[]
+  /**
+   * Başlık özet alanları (parse doğrulama checksum'ı için; bkz.
+   * checkStatementParseTotals). Ekstrede yoksa null. Gerçek DenizBank
+   * ekstrelerinde bu alanlar iki bağımsız kimliği KESİN sağlar:
+   *  - Başlık: Dönem Borcu = Önceki − Ödemeler + Dönem İçi + Faiz
+   *  - Satır:  Σ(işlem) − Σ(iade) = Dönem İçi + Faiz
+   */
+  previousBalance?: number | null
+  payments?: number | null
+  periodSpending?: number | null
+  feesAndInterest?: number | null
 }
 
 export type MatchResult = {
@@ -174,6 +185,10 @@ export function parseDenizBankStatement(text: string, memory?: CategoryMemory): 
   let statementDate = ''
   let dueDate = ''
   let totalDebt = 0
+  let previousBalance: number | null = null
+  let payments: number | null = null
+  let periodSpending: number | null = null
+  let feesAndInterest: number | null = null
 
   const cardMatch = text.match(/Kart Numarası\s+\d{4}\s+\d{2}\*{2}\s+\*{4}\s+(\d{4})/)
   if (cardMatch) cardLastFour = cardMatch[1]
@@ -186,6 +201,17 @@ export function parseDenizBankStatement(text: string, memory?: CategoryMemory): 
 
   const totalMatch = text.match(/Dönem Borcu\s+([\d.,]+)\s+TL/)
   if (totalMatch) totalDebt = parseAmount(totalMatch[1])
+
+  // Özet başlık alanları (parse doğrulama checksum'ı için — 8 gerçek ekstrede
+  // kalibre edildi, bkz. checkStatementParseTotals).
+  const prevMatch = text.match(/Önceki Hesap Bakiyeniz\s+([\d.,]+)\s+TL/)
+  if (prevMatch) previousBalance = parseAmount(prevMatch[1])
+  const payMatch = text.match(/Ödemeler\s+([\d.,]+)\s+TL/)
+  if (payMatch) payments = parseAmount(payMatch[1])
+  const spendMatch = text.match(/Dönem İçi Harcamanız\s+([\d.,]+)\s+TL/)
+  if (spendMatch) periodSpending = parseAmount(spendMatch[1])
+  const feeMatch = text.match(/Toplam Faiz ve Ücretler\s+([\d.,]+)\s+TL/)
+  if (feeMatch) feesAndInterest = parseAmount(feeMatch[1])
 
   // Transaction parsing
   const transactions: ParsedTransaction[] = []
@@ -265,7 +291,73 @@ export function parseDenizBankStatement(text: string, memory?: CategoryMemory): 
     transactions.push({ date, description, amount, category, isInstallment, installmentNo, installmentCount, remainingDebt })
   }
 
-  return { cardLastFour, statementDate, dueDate, totalDebt, transactions, adjustments }
+  return {
+    cardLastFour, statementDate, dueDate, totalDebt, transactions, adjustments,
+    previousBalance, payments, periodSpending, feesAndInterest,
+  }
+}
+
+// ── Parse doğrulama checksum'ı ───────────────────────────────────────────────
+
+export type StatementParseCheck = {
+  /** Karşılaştırma yapılabildi mi (gerekli başlık alanları mevcut). */
+  checked: boolean
+  /** Beklenen − gerçek fark (TL, işaretli); 0 = tutarlı. */
+  residualTL: number
+  /** Tolerans içinde mi. */
+  consistent: boolean
+}
+
+export type StatementParseTotals = {
+  /** Başlık öz-tutarlılığı: Dönem Borcu ≈ Önceki − Ödemeler + Dönem İçi + Faiz. */
+  header: StatementParseCheck
+  /**
+   * Satır toplamı: Σ(işlem) − Σ(iade) ≈ Dönem İçi + Faiz. Tutmuyorsa parser bir
+   * satırı DÜŞÜRMÜŞ ya da yanlış okumuş olabilir (kategori/taksit/geçmiş sessizce
+   * bozulur — app-vs-banka kilidi bunu maskeler, o yüzden ayrı kontrol).
+   */
+  lines: StatementParseCheck
+}
+
+/** Fark bu eşiğin altındaysa tutarlı say. 8 gerçek ekstrede residual tam 0; eşik
+ *  yalnız tek-kuruş gürültüsüne karşı, düşen satır (≫ 1 TL) yakalanır. */
+export const STATEMENT_TOTAL_TOLERANCE_TL = 1
+
+/**
+ * Ekstre parse'ının kendi içinde tutarlı olup olmadığını iki bağımsız kimlikle
+ * doğrular (8 gerçek DenizBank ekstresinde kalibre edildi — her ikisi de residual 0).
+ * app-vs-banka mutabakat kilidinden (statementReconcileReview) FARKLIDIR: o app
+ * kaydını bankaya çeker; bu, PDF'ten OKUNAN verinin PDF'in kendi özetiyle tutup
+ * tutmadığını sorar. Gerekli alan yoksa `checked=false` (körlemesine geçme).
+ */
+export function checkStatementParseTotals(statement: ParsedStatement): StatementParseTotals {
+  const { totalDebt, previousBalance, payments, periodSpending, feesAndInterest } = statement
+
+  const headerChecked =
+    previousBalance != null && payments != null && periodSpending != null && feesAndInterest != null
+  const headerExpected = headerChecked
+    ? roundTL(previousBalance - payments + periodSpending + feesAndInterest)
+    : 0
+  const headerResidual = headerChecked ? diffTL(headerExpected, totalDebt) : 0
+
+  const txSum = sumTL(statement.transactions.map((t) => t.amount))
+  const adjSum = sumTL((statement.adjustments ?? []).map((a) => a.amount))
+  const linesChecked = periodSpending != null && feesAndInterest != null
+  const linesExpected = linesChecked ? roundTL(periodSpending + feesAndInterest) : 0
+  const linesResidual = linesChecked ? diffTL(linesExpected, roundTL(txSum - adjSum)) : 0
+
+  return {
+    header: {
+      checked: headerChecked,
+      residualTL: headerResidual,
+      consistent: Math.abs(headerResidual) <= STATEMENT_TOTAL_TOLERANCE_TL,
+    },
+    lines: {
+      checked: linesChecked,
+      residualTL: linesResidual,
+      consistent: Math.abs(linesResidual) <= STATEMENT_TOTAL_TOLERANCE_TL,
+    },
+  }
 }
 
 // ── Matching ───────────────────────────────────────────────────────────────
