@@ -27,7 +27,9 @@ import {
   parseDenizBankStatement,
   matchTransactions,
   checkStatementInstallments,
+  checkStatementParseTotals,
   expenseTotalAmount,
+  type ParsedStatement,
   type ParsedTransaction,
   type ParsedStatementAdjustment,
   type StatementTransactionMatch,
@@ -72,6 +74,25 @@ function isImportable(tx: ParsedTransaction): boolean {
     }).consistent
   }
   return true
+}
+
+/**
+ * PDF'in kendi özet toplamları okunan satırlarla tutmuyorsa engellemeyen bir
+ * uyarı metni üretir (yoksa null). İki bağımsız kimlik: başlık öz-tutarlılığı ve
+ * satır toplamı (bkz. checkStatementParseTotals). Satır uyuşmazlığı en kritik:
+ * parser bir satırı düşürmüş olabilir → kategori/taksit sessizce eksik kalır.
+ */
+function buildParseTotalsWarning(parsed: ParsedStatement): string | null {
+  const totals = checkStatementParseTotals(parsed)
+  if (totals.lines.checked && !totals.lines.consistent) {
+    const diff = roundTL(Math.abs(totals.lines.residualTL))
+    return `Ekstredeki işlem satırları özet tutarı ${diff} TL tutmuyor — PDF'ten bir satır eksik/yanlış okunmuş olabilir. İçe aktarabilirsin ama listeyi dikkatle kontrol et.`
+  }
+  if (totals.header.checked && !totals.header.consistent) {
+    const diff = roundTL(Math.abs(totals.header.residualTL))
+    return `Ekstre başlık toplamları ${diff} TL tutarsız — PDF eksik/bozuk okunmuş olabilir. Dikkatle incele.`
+  }
+  return null
 }
 
 // ── Component ─────────────────────────────────────────────────────────────
@@ -246,6 +267,9 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
   const [plannedPaymentMatches, setPlannedPaymentMatches] = useState(0)
   const [matchDriftTL, setMatchDriftTL] = useState(0)
   const [driftCorrected, setDriftCorrected] = useState(false)
+  // Parse doğrulama uyarısı (PDF'in kendi özet toplamları okunan satırlarla
+  // tutmuyorsa; engellemez, dikkat çeker). Bkz. checkStatementParseTotals.
+  const [parseTotalsWarning, setParseTotalsWarning] = useState<string | null>(null)
   const [installmentCheck, setInstallmentCheck] = useState<StatementInstallmentCheckResult | null>(null)
   const [showInstallmentCheck, setShowInstallmentCheck] = useState(false)
   const [selected, setSelected] = useState<Set<string>>(new Set())
@@ -326,6 +350,7 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
       setStatementTotal(parsed.totalDebt)
       setStatementDate(parsed.statementDate)
       setDueDate(parsed.dueDate)
+      setParseTotalsWarning(buildParseTotalsWarning(parsed))
 
       // Load existing app expenses once: matching and the period history panel
       // share the same snapshot.
@@ -758,6 +783,12 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
               <p className="flex items-start gap-2 border-b border-border bg-warning/10 px-4 py-3 text-xs font-bold text-warning">
                 <AlertCircle size={15} className="mt-0.5 shrink-0" />
                 Açık/güncel kart harcama ve taksitleri seçili PDF satırlarıyla yeniden kurulacak. Tüm ödenmiş ekstre arşivleri ve bağlı geçmiş kayıtlar korunur.
+              </p>
+            )}
+            {parseTotalsWarning && (
+              <p className="flex items-start gap-2 border-b border-border bg-destructive/10 px-4 py-3 text-xs font-bold text-destructive">
+                <AlertCircle size={15} className="mt-0.5 shrink-0" />
+                {parseTotalsWarning}
               </p>
             )}
             {/* Reconciliation summary */}

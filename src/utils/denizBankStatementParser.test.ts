@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { checkStatementInstallments, expenseTotalAmount, matchTransactions, parseAmount, parseDenizBankStatement, statementInstallmentDueDate, type StatementInstallmentMatchRow } from './denizBankStatementParser'
+import { checkStatementInstallments, checkStatementParseTotals, expenseTotalAmount, matchTransactions, parseAmount, parseDenizBankStatement, statementInstallmentDueDate, type StatementInstallmentMatchRow } from './denizBankStatementParser'
 import { checkInstallmentNotation } from './importedInstallmentPlan'
 
 describe('parseAmount (locale-robust)', () => {
@@ -100,6 +100,67 @@ describe('parseDenizBankStatement — header', () => {
   it('extracts total debt', () => {
     const result = parseDenizBankStatement(SAMPLE_TEXT)
     expect(result.totalDebt).toBeCloseTo(82653.51)
+  })
+
+  it('extracts summary header fields for the parse checksum', () => {
+    const result = parseDenizBankStatement(SAMPLE_TEXT)
+    expect(result.previousBalance).toBeCloseTo(65693.72)
+    expect(result.payments).toBeCloseTo(65693.72)
+    expect(result.periodSpending).toBeCloseTo(82182.51)
+    expect(result.feesAndInterest).toBeCloseTo(471)
+  })
+})
+
+// Küçük ama KENDİ İÇİNDE tutarlı ekstre (gerçek veriden kalibre edilen iki kimlik
+// de sağlanır): başlık 100−100+210+20=230; satır Σ(300)−iade(70)=230=210+20.
+const CONSISTENT_TEXT = `
+Hesap Kesim Tarihi 04/06/2026
+Son Ödeme Tarihi 15/06/2026
+Dönem Borcu 230.00 TL
+Önceki Hesap Bakiyeniz 100.00 TL
+Ödemeler 100.00 TL
+Dönem İçi Harcamanız 210.00 TL
+Toplam Faiz ve Ücretler 20.00 TL
+01/06/2026 MARKET A BURSA TR 200.00 TL
+02/06/2026 KAHVE B BURSA TR 80.00 TL
+03/06/2026 Nakit Faiz İSTANBUL MBL 20.00 TL
+04/06/2026 IADE B BURSA TR 70.00+ TL
+`
+
+describe('checkStatementParseTotals', () => {
+  it('reports both identities consistent on a self-consistent statement', () => {
+    const result = checkStatementParseTotals(parseDenizBankStatement(CONSISTENT_TEXT))
+    expect(result.header).toMatchObject({ checked: true, consistent: true })
+    expect(result.lines).toMatchObject({ checked: true, consistent: true })
+    expect(result.header.residualTL).toBeCloseTo(0)
+    expect(result.lines.residualTL).toBeCloseTo(0)
+  })
+
+  it('header identity holds even on the (line-truncated) sample fixture', () => {
+    // SAMPLE_TEXT başlık alanları gerçek ekstreden alınmış → başlık tutarlı.
+    const result = checkStatementParseTotals(parseDenizBankStatement(SAMPLE_TEXT))
+    expect(result.header).toMatchObject({ checked: true, consistent: true })
+  })
+
+  it('line checksum flags a statement whose transaction lines are incomplete', () => {
+    // SAMPLE_TEXT yalnız işlemlerin bir alt kümesini içerir → satır toplamı
+    // Dönem İçi + Faiz'i tutmaz. Parser bir satırı DÜŞÜRDÜĞÜNDE olan tam budur.
+    const result = checkStatementParseTotals(parseDenizBankStatement(SAMPLE_TEXT))
+    expect(result.lines.checked).toBe(true)
+    expect(result.lines.consistent).toBe(false)
+    expect(Math.abs(result.lines.residualTL)).toBeGreaterThan(1)
+  })
+
+  it('skips checks (checked=false) when summary fields are absent', () => {
+    const result = checkStatementParseTotals({
+      cardLastFour: '',
+      statementDate: '',
+      dueDate: '',
+      totalDebt: 500,
+      transactions: [],
+    })
+    expect(result.header.checked).toBe(false)
+    expect(result.lines.checked).toBe(false)
   })
 })
 

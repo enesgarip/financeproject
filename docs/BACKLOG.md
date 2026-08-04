@@ -18,11 +18,18 @@ toplam adedi körlemesine `aylık × adet` ile kurmak.
   harcamaya dönüşmesin; (b) notasyon tutarsızken. Override (kullanıcı adedi elle
   doğruladı) her ikisini de atlar. `StatementImportModal.isImportable` tutarsız
   notasyonu manuel incelemeye düşürür; executor `needs-review`'ı yazmaz, hata döner.
-- **TI-03 (askıda) — Tüm-ekstre parse checksum'ı (satır toplamı = Dönem Borcu).**
-  Sentetik fixture'ın özet satırları kendi içinde tutmadığından denklem
-  kalibre edilemedi; gerçek (anonimleştirilmiş) bir DenizBank ekstresi gerekiyor.
-  Not: app-vs-banka toplam kilidi (SI-04) tüm-ekstre driftini zaten yakalıyor;
-  TI-03'ün ek değeri parser'ın bir satırı tümüyle DÜŞÜRDÜĞÜ durumu görmek.
+- ~~**TI-03 — Tüm-ekstre parse checksum'ı.**~~ DONE. 8 gerçek DenizBank ekstresinde
+  kalibre edilen İKİ bağımsız kimlik (`checkStatementParseTotals`,
+  denizBankStatementParser.ts; her ikisi de 8/8 ekstrede residual 0):
+  - **Başlık:** `Dönem Borcu = Önceki − Ödemeler + Dönem İçi + Faiz` (parser başlık
+    alanını yanlış okursa tutmaz).
+  - **Satır:** `Σ(işlem) − Σ(iade) = Dönem İçi + Faiz` (parser bir satırı
+    DÜŞÜRÜR/yanlış okursa tutmaz — kategori/taksit sessizce eksik kalır). Dönem
+    İçi'ye dayandığı için ödenmemiş-önceki (carryover) durumunda da sağlam.
+  Parser artık `previousBalance/payments/periodSpending/feesAndInterest` başlık
+  alanlarını okur. `StatementImportModal` tutarsızlıkta engellemeyen kırmızı uyarı
+  gösterir (`buildParseTotalsWarning`). app-vs-banka kilidinden (SI-04) FARKLI: o app'i
+  bankaya çeker, bu PDF'in kendi iç tutarlılığını sorar (kilit satır-düşmesini maskeler).
 
 ## 2026-08-04 — SMS provizyonu ↔ import mükerrer kaydını azalt
 
