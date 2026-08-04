@@ -2,6 +2,7 @@ import {
   BarChart3,
   Banknote,
   CalendarDays,
+  Car,
   ChartNoAxesCombined,
   CircleGauge,
   Coins,
@@ -84,6 +85,7 @@ export const planningHubTabs: HubTab[] = [
 export const analysisHubTabs: HubTab[] = [
   { to: '/analiz', label: 'Analiz', icon: ChartNoAxesCombined, end: true },
   { to: '/analiz/detay', label: 'Detay', icon: CircleGauge },
+  { to: '/analiz/araclar', label: 'Arabalar', icon: Car },
 ]
 
 export const dataHealthHubTabs: HubTab[] = [
@@ -107,6 +109,7 @@ const routeMeta: Record<string, { title: string; subtitle?: string; width: Route
   '/alsam-mi': { title: 'Alsam mı?', subtitle: 'Alışverişin önümüzdeki aylara etkisi', width: 'narrow' },
   '/analiz': { title: 'Analiz', subtitle: 'Aylık rapor ve ay kapanış kontrolü', width: 'wide' },
   '/analiz/detay': { title: 'Detay', subtitle: 'Gelir/gider dağılımı ve trendler', width: 'wide' },
+  '/analiz/araclar': { title: 'Arabalarım', subtitle: 'Araç başına gider takibi ve dağılımı', width: 'wide' },
   '/veri-sagligi': { title: 'Veri Kontrolü', subtitle: 'Tutarlılık denetimi ve bulgular', width: 'wide' },
   '/veri-sagligi/islemler': { title: 'Yedek ve Ayarlar', subtitle: 'Veri yedekleme ve bakım', width: 'medium' },
 }

@@ -6,7 +6,8 @@ import { Badge } from '../components/ui/badge'
 import { Card as SurfaceCard, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { invalidateCategoryMemory, useCategoryMemory } from '../hooks/useCategoryMemory'
 import { addCardExpense, fetchRecentCardExpenses, recordCardInstallmentCarryover } from '../data/repositories/cardsRepo'
-import type { Card, CardExpense, CardExpenseStatus } from '../types/database'
+import { fetchCars } from '../data/repositories/carsRepo'
+import type { Car, Card, CardExpense, CardExpenseStatus } from '../types/database'
 import { buildRepeatSuggestions, type RepeatSuggestion } from '../utils/expenseRepeat'
 import { expenseCategoryOptions } from '../utils/categories'
 import { getCardStatementPeriod } from '../utils/cardStatement'
@@ -56,6 +57,8 @@ export function QuickExpensePanel({
   const submissionIdentityRef = useRef<{ signature: string; eventId: string } | null>(null)
   const categoryMemory = useCategoryMemory()
   const [recentExpenses, setRecentExpenses] = useState<CardExpense[]>([])
+  const [vehicles, setVehicles] = useState<Car[]>([])
+  const [carId, setCarId] = useState('')
   const cards = useMemo(() => rows.filter((row) => row.card_type === 'kredi_karti' || row.card_type === 'banka_karti'), [rows])
   const repeatSuggestions = useMemo(() => buildRepeatSuggestions(recentExpenses), [recentExpenses])
   const activeCardId = cards.some((card) => card.id === cardId) ? cardId : (cards[0]?.id ?? '')
@@ -109,6 +112,13 @@ export function QuickExpensePanel({
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadRecent()
   }, [loadRecent])
+
+  // Arabalarım: harcamayı girerken bir araca etiketleme seçeneği (opsiyonel).
+  useEffect(() => {
+    void fetchCars().then((result) => {
+      if (result.ok) setVehicles(result.data)
+    })
+  }, [])
 
   function applyRepeat(suggestion: RepeatSuggestion) {
     if (cards.some((card) => card.id === suggestion.cardId)) {
@@ -202,6 +212,7 @@ export function QuickExpensePanel({
         nextDueDate,
         category,
         sourceEventId,
+        carId: carId || null,
       })
       : await addCardExpense({
         cardId: selectedCard.id,
@@ -213,6 +224,7 @@ export function QuickExpensePanel({
         status: expenseStatus,
         source,
         sourceEventId,
+        carId: carId || null,
       })
 
     submittingRef.current = false
@@ -240,6 +252,7 @@ export function QuickExpensePanel({
     setExpenseStatus('posted')
     setPrefilledByScan(false)
     setScanEventId(null)
+    setCarId('')
     submissionIdentityRef.current = null
     await Promise.all([reload(), loadRecent()])
   }
@@ -432,6 +445,24 @@ export function QuickExpensePanel({
               </select>
             </label>
           </div>
+          {vehicles.length > 0 ? (
+            <label className="block text-sm font-semibold text-foreground">
+              Araç <span className="font-normal text-muted-foreground">(opsiyonel · Arabalarım)</span>
+              <select
+                value={carId}
+                onChange={(event) => setCarId(event.target.value)}
+                className="mt-1 w-full rounded-lg border border-input bg-white px-3 py-2.5 outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 dark:bg-card/50 dark:text-foreground"
+              >
+                <option value="">Araç yok</option>
+                {vehicles.map((vehicle) => (
+                  <option key={vehicle.id} value={vehicle.id}>
+                    {vehicle.name}
+                    {vehicle.plate ? ` · ${vehicle.plate}` : ''}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
           {canUseInstallments && paymentMode === 'installment' ? (
             <label className="block text-sm font-semibold text-foreground">
               Taksit sayısı

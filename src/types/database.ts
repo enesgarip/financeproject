@@ -128,6 +128,8 @@ export type CardExpense = BaseRow & {
   source: CardExpenseSource | null
   /** Kaynak sistemdeki mantıksal olay; retry tekilleştirmesi için kullanılır. */
   source_event_id?: string | null
+  /** Bu harcamayı bir araca etiketler (Arabalarım). Saf annotation; borca dokunmaz. */
+  car_id?: string | null
 }
 
 export type Budget = BaseRow & {
@@ -417,6 +419,31 @@ export type KasaBucket = BaseRow & {
   note: string | null
 }
 
+export type Car = BaseRow & {
+  name: string
+  plate: string | null
+  sort_order: number
+  note: string | null
+}
+
+/** Kart-dışı araç gideri ödeme yöntemi (kart giderleri card_expenses'te kalır). */
+export type CarPaymentMethod = 'nakit' | 'banka' | 'diger'
+
+/**
+ * Kart-dışı (nakit/banka) manuel araç gideri. Kartla yapılan giderler buraya
+ * GİRMEZ; onlar card_expenses + car_id etiketiyle izlenir. Bu satırlar net
+ * değer/nakit akışı matematiğine katılmaz — yalnız Arabalarım raporlaması.
+ */
+export type CarExpense = BaseRow & {
+  car_id: string
+  spent_at: string
+  amount: number
+  category: string
+  payment_method: CarPaymentMethod
+  description: string
+  note: string | null
+}
+
 // user_id birincil anahtar (kullanıcı başına tek satır); BaseRow'daki id yok.
 export type NotificationPreferences = {
   user_id: string
@@ -483,6 +510,8 @@ export type Database = {
       transaction_history: Table<TransactionHistory, WithBaseInsert<TransactionHistory>, WithBaseUpdate<TransactionHistory>>
       wishlist_items: Table<WishlistItem, WithBaseInsert<WishlistItem>, WithBaseUpdate<WishlistItem>>
       kasa_buckets: Table<KasaBucket, WithBaseInsert<KasaBucket>, WithBaseUpdate<KasaBucket>>
+      cars: Table<Car, WithBaseInsert<Car>, WithBaseUpdate<Car>>
+      car_expenses: Table<CarExpense, WithBaseInsert<CarExpense>, WithBaseUpdate<CarExpense>>
       notification_preferences: Table<
         NotificationPreferences,
         WithBaseInsert<NotificationPreferences>,
