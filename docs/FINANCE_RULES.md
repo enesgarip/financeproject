@@ -51,6 +51,14 @@ TRY value from live market rates instead of a hand-typed `estimated_value_try`.
 - If a rate is missing or the feed is offline, the stored `estimated_value_try`
   is used as a fallback.
 
+## Expense Contexts and Cars
+
+- Araç, evcil hayvan ve etkinlik/proje satırları saf raporlama annotation'ıdır; ledger, kart borcu, net değer veya nakit akışı yazmaz.
+- Kartla ödenen gerçek gider `card_expenses` içinde kalır ve yalnız `car_id` veya `context_id` ile etiketlenir. Kart-dışı gerçek gider ilgili manuel tabloda tutulur; aynı gider iki kaynağa birden girilmez.
+- Yakıt tüketimi ardışık kilometreli dolumlar arasında full-to-full ölçülür. İlk kilometreli dolum baz noktasıdır; tek başına tüketim üretmez.
+- Araç TCO'su birleşik gider merceğinin takvim-yılı toplamıdır; günlük maliyet yıl içinde geçen gün sayısına bölünür.
+- Hatırlatıcı tamamlandığında tekrar aralığı varsa hedef ileri taşınır; yoksa aktif listeden kaldırılır. Bu işlem finans geçmişini değiştirmez.
+
 ## Cards: Core Model
 
 Detailed field transitions are documented in `docs/CARD_DEBT_TRANSITIONS.md`.

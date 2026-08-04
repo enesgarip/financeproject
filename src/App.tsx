@@ -73,6 +73,9 @@ const WishlistPage = lazyWithReload(() =>
 const PurchaseDecisionPage = lazyWithReload(() =>
   import('./pages/PurchaseDecisionPage').then((m) => ({ default: m.PurchaseDecisionPage })),
 )
+const ExpenseContextsPage = lazyWithReload(() =>
+  import('./pages/ExpenseContextsPage').then((m) => ({ default: m.ExpenseContextsPage })),
+)
 
 function PageTransition({ children }: { children: ReactNode }) {
   return (
@@ -156,6 +159,7 @@ function AnimatedRoutes() {
           <Route path="hedefler" element={routeElement(<PlanningPage />, 'odemeler-hedefler')} />
           <Route path="alsam-mi" element={routeElement(<PurchaseDecisionPage />, 'odemeler-alsam-mi')} />
           <Route path="liste" element={routeElement(<WishlistPage />, 'odemeler-liste')} />
+          <Route path="baglamlar" element={routeElement(<ExpenseContextsPage />, 'odemeler-baglamlar')} />
         </Route>
         {/* Legacy redirect: purchase decision moved from /alsam-mi into the Plan hub. */}
         <Route path="alsam-mi" element={<Navigate to="/odemeler/alsam-mi" replace />} />

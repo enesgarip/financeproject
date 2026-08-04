@@ -7,13 +7,14 @@
  */
 import type { NotificationPreferences } from '../types/database'
 
-export type NotificationTypeKey = 'payments_enabled' | 'loans_enabled' | 'statements_enabled' | 'weekly_enabled'
+export type NotificationTypeKey = 'payments_enabled' | 'loans_enabled' | 'statements_enabled' | 'weekly_enabled' | 'cars_enabled'
 
 export const DEFAULT_NOTIFICATION_PREFERENCES = {
   payments_enabled: true,
   loans_enabled: true,
   statements_enabled: true,
   weekly_enabled: true,
+  cars_enabled: true,
   quiet_hours_start: null as number | null,
   quiet_hours_end: null as number | null,
 }
@@ -30,6 +31,8 @@ export function notificationTypeToPrefKey(notificationType: string): Notificatio
     case 'weekly_summary':
     case 'reconciliation_stale_weekly':
       return 'weekly_enabled'
+    case 'car_reminder_due_7d':
+      return 'cars_enabled'
     default:
       return null // bilinmeyen/test türü kapıya takılmaz
   }

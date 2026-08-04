@@ -28,6 +28,8 @@ oluşmaması için branch push tetikleyicisi yoktur.
   and ledger-write boundary regression)
 - `npm run db:test:data-health-acknowledgements` (auth-bound write RPCs, own-row
   visibility, direct-write denial, and cross-user clear isolation)
+- `npm run db:test:expense-contexts-cars` (gider bağlamı/araç own-row RLS,
+  kart annotation ownership ve manuel raporlama satırları)
 
 ## Optional Docker Parity
 
@@ -56,7 +58,8 @@ Checks:
 - Playwright smoke test (frontend paths)
 - Supabase local migration reset + lint/RLS/grant and financial SQL regressions
   (database paths), including `supabase/tests/data_health_safe_repairs.sql` and
-  `supabase/tests/data_health_issue_acknowledgements.sql`
+  `supabase/tests/data_health_issue_acknowledgements.sql`, plus
+  `supabase/tests/expense_contexts_and_cars.sql`
 
 Lighthouse CI, GitHub status sonucunu yazabilsin diye job-scoped GitHub Actions
 token'ını `LHCI_GITHUB_TOKEN` olarak alır. Bu, "GitHub token not set" uyarısını
@@ -117,6 +120,8 @@ request-bound idempotency, receipt RLS, and revoked direct ledger INSERT access.
 The same gate runs `supabase/tests/data_health_issue_acknowledgements.sql` to
 protect account-wide acceptance persistence, RPC grants, own-row RLS, and
 cross-user cleanup isolation.
+`supabase/tests/expense_contexts_and_cars.sql` additionally protects reporting
+tag ownership and rejects forged cross-user car/context annotations.
 
 `vercel.json` disables Vercel Git auto-deploy for `main`. The deploy hook is no
 longer used. The workflow uses one verified prebuilt artifact and does not
@@ -132,7 +137,7 @@ Ek otomasyon:
   PR'ları üretilmez; security update'lar SemVer filtresinden muaftır ve major
   güvenlik yükseltmeleri manuel incelemeye kalır.
 - Günlük şifreli DB yedeği cron'u (`db-backup.yml`).
-- Günlük Web Push gönderici cron'u (`push-notify.yml`): 04:00 UTC / 07:00 TR, `push-notify` edge fonksiyonunu service-role ile invoke eder.
+- Günlük Web Push gönderici cron'u (`push-notify.yml`): 04:00 UTC / 07:00 TR, `push-notify` edge fonksiyonunu service-role ile invoke eder. Tarihli araç bakım/yenileme işleri için 7 gün kala aday üretir ve `cars_enabled` tercihini uygular.
   - Aynı edge function, ayar ekranındaki "test bildirimi gönder" için authenticated user JWT ile yalnızca o kullanıcının kendi endpoint'ine tek test payload'u yollar. Cron yolunda aday varsa ve tüm teslim denemeleri başarısız olursa workflow kırmızıya dönebilir.
 
 ## Required GitHub Secrets

@@ -8,6 +8,7 @@ import {
   Coins,
   CreditCard,
   DatabaseBackup,
+  FolderKanban,
   Gem,
   HandCoins,
   Home,
@@ -46,7 +47,7 @@ export const primaryNavItems: readonly NavItem[] = [
   { to: '/kartlar', label: 'Hesaplar', icon: CreditCard },
   { to: '/varliklar', label: 'Varlıklar', icon: Wallet, activePaths: ['/varliklar/maas', '/varliklar/altin', '/varliklar/araclar'] },
   { to: '/borclar/krediler', label: 'Borçlar', icon: HandCoins, activePaths: ['/borclar/kisiler', '/borclar/kartlar'] },
-  { to: '/odemeler', label: 'Plan', icon: WalletCards, activePaths: ['/odemeler/hedefler', '/odemeler/liste', '/odemeler/alsam-mi'] },
+  { to: '/odemeler', label: 'Plan', icon: WalletCards, activePaths: ['/odemeler/hedefler', '/odemeler/liste', '/odemeler/alsam-mi', '/odemeler/baglamlar'] },
   { to: '/analiz', label: 'Analiz', icon: BarChart3 },
 ]
 
@@ -85,6 +86,7 @@ export const planningHubTabs: HubTab[] = [
   { to: '/odemeler/hedefler', label: 'Hedefler', icon: Target },
   { to: '/odemeler/alsam-mi', label: 'Alsam mı?', icon: ShoppingCart },
   { to: '/odemeler/liste', label: 'Liste', icon: ListChecks },
+  { to: '/odemeler/baglamlar', label: 'Bağlamlar', icon: FolderKanban },
 ]
 
 export const analysisHubTabs: HubTab[] = [
@@ -100,6 +102,7 @@ export const dataHealthHubTabs: HubTab[] = [
 type RouteWidth = 'wide' | 'medium' | 'narrow'
 
 const routeMeta: Record<string, { title: string; subtitle?: string; width: RouteWidth }> = {
+  '/odemeler/baglamlar': { title: 'Gider Bağlamları', subtitle: 'Evcil hayvan, etkinlik ve proje giderleri', width: 'wide' },
   '/': { title: 'Finans Özeti', subtitle: 'Genel bakış ve günlük durum', width: 'wide' },
   '/kartlar': { title: 'Hesaplar ve Kartlar', subtitle: 'Banka hesapları, kartlar ve işlemler', width: 'wide' },
   '/varliklar': { title: 'Varlıklar', subtitle: 'Nakit, yatırım ve birikimler', width: 'medium' },

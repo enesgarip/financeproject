@@ -211,6 +211,18 @@ begin
   on conflict (user_id) do update
   set weekly_enabled = excluded.weekly_enabled;
 
+  insert into public.cars (id, user_id, name)
+  values ('a0000000-0000-4000-8000-000000000015', v_user, 'Reset car');
+  insert into public.car_expenses (user_id, car_id, amount, description)
+  values (v_user, 'a0000000-0000-4000-8000-000000000015', 100, 'Reset car expense');
+  insert into public.car_reminders (user_id, car_id, title, due_date)
+  values (v_user, 'a0000000-0000-4000-8000-000000000015', 'Reset reminder', current_date + 7);
+
+  insert into public.expense_contexts (id, user_id, kind, name)
+  values ('a0000000-0000-4000-8000-000000000016', v_user, 'project', 'Reset context');
+  insert into public.context_expenses (user_id, context_id, amount, description)
+  values (v_user, 'a0000000-0000-4000-8000-000000000016', 200, 'Reset context expense');
+
   perform public.acknowledge_data_health_issues(array['reset-acknowledgement']);
 
   perform public.reset_user_finance_data();
@@ -224,6 +236,11 @@ begin
     + (select count(*) from public.wishlist_items where user_id = v_user)
     + (select count(*) from public.kasa_buckets where user_id = v_user)
     + (select count(*) from public.notification_preferences where user_id = v_user)
+    + (select count(*) from public.cars where user_id = v_user)
+    + (select count(*) from public.car_expenses where user_id = v_user)
+    + (select count(*) from public.car_reminders where user_id = v_user)
+    + (select count(*) from public.expense_contexts where user_id = v_user)
+    + (select count(*) from public.context_expenses where user_id = v_user)
     + (select count(*) from public.data_health_issue_acknowledgements where user_id = v_user)
     + (select count(*) from public.notification_log where user_id = v_user)
     + (select count(*) from public.sms_log where user_id = v_user)

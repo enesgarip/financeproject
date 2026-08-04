@@ -21,6 +21,8 @@ import {
 /** Insert order, parents first; wipe runs in reverse. */
 export const RESTORE_TABLE_ORDER = [
   'cards',
+  'cars',
+  'expense_contexts',
   'card_aliases',
   'assets',
   'loans',
@@ -33,6 +35,9 @@ export const RESTORE_TABLE_ORDER = [
   'gold_lots',
   'net_worth_snapshots',
   'card_statement_archives',
+  'car_reminders',
+  'car_expenses',
+  'context_expenses',
   'card_expenses',
   'card_installments',
   'loan_installments',
@@ -281,6 +286,11 @@ export async function restoreBackup(
 
 export const BACKUP_TABLE_LABELS: Record<RestoreTable, string> = {
   cards: 'Hesap/Kart',
+  cars: 'Araç',
+  expense_contexts: 'Gider bağlamı',
+  car_reminders: 'Araç hatırlatıcısı',
+  car_expenses: 'Kart dışı araç gideri',
+  context_expenses: 'Kart dışı bağlam gideri',
   card_aliases: 'Kart takma adı',
   assets: 'Varlık',
   loans: 'Kredi',
