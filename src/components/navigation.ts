@@ -14,6 +14,7 @@ import {
   Landmark,
   ListChecks,
   ShieldCheck,
+  ShoppingCart,
   Target,
   UsersRound,
   WalletCards,
@@ -31,9 +32,10 @@ export type NavItem = {
 }
 
 /**
- * Role-based information architecture:
- *   Özet -> Hesaplar -> Birikim -> Borçlar -> Takvim -> Analiz
- * Hubs own their local tabs; the mobile bottom bar stays capped at five slots.
+ * Context-based information architecture (her şey bağlamına göre):
+ *   Özet -> Hesaplar (yönetim) -> Varlıklar -> Borçlar -> Plan -> Analiz
+ * Nav etiketi = sayfa kimliği (Varlıklar/Plan). Hub'lar kendi sekmelerini taşır;
+ * mobil alt bar beş slotla sınırlı.
  *
  * This module is the single source of truth for navigation: the bottom bar,
  * the header overflow menu, page titles and content widths are all derived
@@ -42,9 +44,9 @@ export type NavItem = {
 export const primaryNavItems: readonly NavItem[] = [
   { to: '/', label: 'Özet', icon: Home },
   { to: '/kartlar', label: 'Hesaplar', icon: CreditCard },
-  { to: '/varliklar', label: 'Birikim', icon: Wallet },
-  { to: '/borclar/krediler', label: 'Borçlar', icon: HandCoins, activePaths: ['/borclar/kisiler'] },
-  { to: '/odemeler', label: 'Takvim', icon: WalletCards, activePaths: ['/odemeler/hedefler', '/odemeler/liste'] },
+  { to: '/varliklar', label: 'Varlıklar', icon: Wallet, activePaths: ['/varliklar/maas', '/varliklar/altin', '/varliklar/araclar'] },
+  { to: '/borclar/krediler', label: 'Borçlar', icon: HandCoins, activePaths: ['/borclar/kisiler', '/borclar/kartlar'] },
+  { to: '/odemeler', label: 'Plan', icon: WalletCards, activePaths: ['/odemeler/hedefler', '/odemeler/liste', '/odemeler/alsam-mi'] },
   { to: '/analiz', label: 'Analiz', icon: BarChart3 },
 ]
 
@@ -69,23 +71,25 @@ export const assetsHubTabs: HubTab[] = [
   { to: '/varliklar', label: 'Varlıklar', icon: Gem, end: true },
   { to: '/varliklar/maas', label: 'Maaş', icon: Banknote },
   { to: '/varliklar/altin', label: 'Altın', icon: Coins },
+  { to: '/varliklar/araclar', label: 'Arabalar', icon: Car },
 ]
 
 export const liabilitiesHubTabs: HubTab[] = [
   { to: '/borclar/krediler', label: 'Krediler', icon: Landmark },
   { to: '/borclar/kisiler', label: 'Kişiler', icon: UsersRound },
+  { to: '/borclar/kartlar', label: 'Kart Borcu', icon: CreditCard },
 ]
 
 export const planningHubTabs: HubTab[] = [
   { to: '/odemeler', label: 'Takvim', icon: CalendarDays, end: true },
   { to: '/odemeler/hedefler', label: 'Hedefler', icon: Target },
+  { to: '/odemeler/alsam-mi', label: 'Alsam mı?', icon: ShoppingCart },
   { to: '/odemeler/liste', label: 'Liste', icon: ListChecks },
 ]
 
 export const analysisHubTabs: HubTab[] = [
   { to: '/analiz', label: 'Analiz', icon: ChartNoAxesCombined, end: true },
   { to: '/analiz/detay', label: 'Detay', icon: CircleGauge },
-  { to: '/analiz/araclar', label: 'Arabalar', icon: Car },
 ]
 
 export const dataHealthHubTabs: HubTab[] = [
@@ -101,15 +105,16 @@ const routeMeta: Record<string, { title: string; subtitle?: string; width: Route
   '/varliklar': { title: 'Varlıklar', subtitle: 'Nakit, yatırım ve birikimler', width: 'medium' },
   '/varliklar/maas': { title: 'Maaş', subtitle: 'Maaş geçmişi ve trend', width: 'medium' },
   '/varliklar/altin': { title: 'Altın', subtitle: 'Altın varlıkları ve değerleme', width: 'narrow' },
+  '/varliklar/araclar': { title: 'Arabalarım', subtitle: 'Araç başına gider takibi ve dağılımı', width: 'wide' },
   '/borclar/krediler': { title: 'Krediler', subtitle: 'Aktif krediler ve taksit planları', width: 'wide' },
   '/borclar/kisiler': { title: 'Kişiler', subtitle: 'Kişisel borç ve alacaklar', width: 'medium' },
+  '/borclar/kartlar': { title: 'Kart Borcu', subtitle: 'Kredi kartı borçların ve ödeme', width: 'medium' },
   '/odemeler': { title: 'Ödeme Takvimi', subtitle: 'Planlı ödemeler ve vadeler', width: 'medium' },
   '/odemeler/hedefler': { title: 'Bütçe & Hedefler', subtitle: 'Birikim hedefleri ve bütçe takibi', width: 'medium' },
+  '/odemeler/alsam-mi': { title: 'Alsam mı?', subtitle: 'Alışverişin önümüzdeki aylara etkisi', width: 'narrow' },
   '/odemeler/liste': { title: 'Alışveriş Listesi', subtitle: 'Almak istediğin şeyler', width: 'medium' },
-  '/alsam-mi': { title: 'Alsam mı?', subtitle: 'Alışverişin önümüzdeki aylara etkisi', width: 'narrow' },
   '/analiz': { title: 'Analiz', subtitle: 'Aylık rapor ve ay kapanış kontrolü', width: 'wide' },
   '/analiz/detay': { title: 'Detay', subtitle: 'Gelir/gider dağılımı ve trendler', width: 'wide' },
-  '/analiz/araclar': { title: 'Arabalarım', subtitle: 'Araç başına gider takibi ve dağılımı', width: 'wide' },
   '/veri-sagligi': { title: 'Veri Kontrolü', subtitle: 'Tutarlılık denetimi ve bulgular', width: 'wide' },
   '/veri-sagligi/islemler': { title: 'Yedek ve Ayarlar', subtitle: 'Veri yedekleme ve bakım', width: 'medium' },
 }

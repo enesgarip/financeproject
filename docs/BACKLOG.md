@@ -1,5 +1,24 @@
 # Priority Backlog
 
+## 2026-08-04 — Bağlam-odaklı navigasyon (IA) yeniden düzeni
+
+Amaç: "routinglerde kafam karışıyor" — her şey bağlamına göre yerleşsin, az
+tıklama. URL mimarisi korunur (redirect'lerle), yalnız gruplama/isim/görünürlük
+değişir.
+
+- ~~**İsim hizalama.**~~ DONE. Nav etiketi = sayfa kimliği: "Birikim"→**Varlıklar**,
+  "Takvim"→**Plan**.
+- ~~**Arabalar → Varlıklar.**~~ DONE. `/analiz/araclar` → `/varliklar/araclar`
+  (araç = sahip olunan bağlam). Eski path redirect.
+- ~~**Alsam mı? görünür + Plan'a.**~~ DONE. `/alsam-mi` → `/odemeler/alsam-mi`,
+  Plan hub sekmesi oldu (eskiden sadece Hızlı işlemler'de). Eski path redirect.
+- ~~**Kredi kartı borcu → Borçlar.**~~ DONE. Yeni `/borclar/kartlar`
+  (`LiabilitiesCardsPage`): kart borcunu krediler/kişiler ile aynı "ne borçluyum"
+  bağlamında gösterir + ödetir. Kart borcunu OKUR, ödemeyi Hesaplar'daki
+  `openDebtPayment` deseni + aynı paylaşılan drawer + `pay_card_debt` RPC'siyle
+  yapar (mükerrer yazma yok). Kart ledger/ekstre döngüsü Hesaplar'da kalır.
+- **Açık:** mobil alt bardaki 5 slot kullanıcıyla ayarlanacak (6 ana alan var).
+
 ## 2026-08-04 — Arabalarım: araç başına gider takibi + vergi takvimini kaldır
 
 Amaç: Araç giderlerini (yakıt, bakım, MTV, sigorta...) araç başına ayrı izlemek.
