@@ -37,6 +37,9 @@ const AnalysisDetailPage = lazyWithReload(() =>
 const CarsPage = lazyWithReload(() =>
   import('./pages/CarsPage').then((m) => ({ default: m.CarsPage })),
 )
+const LiabilitiesCardsPage = lazyWithReload(() =>
+  import('./pages/LiabilitiesCardsPage').then((m) => ({ default: m.LiabilitiesCardsPage })),
+)
 const CardsPage = lazyWithReload(() =>
   import('./pages/CardsPage').then((m) => ({ default: m.CardsPage })),
 )
@@ -132,30 +135,35 @@ function AnimatedRoutes() {
         <Route index element={routeElement(<DashboardPage />, '/')} />
         <Route path="kartlar" element={routeElement(<CardsPage />, 'kartlar')} />
 
-        {/* Varlıklar hub: holdings + salary */}
+        {/* Varlıklar hub: holdings + salary + gold + cars (araç = sahip olunan bağlam) */}
         <Route path="varliklar" element={<AssetsHub />}>
           <Route index element={routeElement(<AssetsPage />, 'varliklar')} />
           <Route path="maas" element={routeElement(<SalaryPage />, 'varliklar-maas')} />
           <Route path="altin" element={routeElement(<GoldPage />, 'varliklar-altin')} />
+          <Route path="araclar" element={routeElement(<CarsPage />, 'varliklar-araclar')} />
         </Route>
 
-        {/* Borçlar hub: loans + personal debts */}
+        {/* Borçlar hub: loans + personal debts + credit-card debt */}
         <Route path="borclar" element={<LiabilitiesHub />}>
           <Route index element={<Navigate to="/borclar/krediler" replace />} />
           <Route path="krediler" element={routeElement(<LoansPage />, 'borclar-krediler')} />
           <Route path="kisiler" element={routeElement(<DebtsPage />, 'borclar-kisiler')} />
+          <Route path="kartlar" element={routeElement(<LiabilitiesCardsPage />, 'borclar-kartlar')} />
         </Route>
 
         <Route path="odemeler" element={<PlanningHub />}>
           <Route index element={routeElement(<PaymentsPage />, 'odemeler')} />
           <Route path="hedefler" element={routeElement(<PlanningPage />, 'odemeler-hedefler')} />
+          <Route path="alsam-mi" element={routeElement(<PurchaseDecisionPage />, 'odemeler-alsam-mi')} />
           <Route path="liste" element={routeElement(<WishlistPage />, 'odemeler-liste')} />
         </Route>
-        <Route path="alsam-mi" element={routeElement(<PurchaseDecisionPage />, 'alsam-mi')} />
+        {/* Legacy redirect: purchase decision moved from /alsam-mi into the Plan hub. */}
+        <Route path="alsam-mi" element={<Navigate to="/odemeler/alsam-mi" replace />} />
         <Route path="analiz" element={<AnalysisHub />}>
           <Route index element={routeElement(<AnalysisPage />, 'analiz')} />
           <Route path="detay" element={routeElement(<AnalysisDetailPage />, 'analiz-detay')} />
-          <Route path="araclar" element={routeElement(<CarsPage />, 'analiz-araclar')} />
+          {/* Legacy redirect: cars moved from Analiz to the Varlıklar hub. */}
+          <Route path="araclar" element={<Navigate to="/varliklar/araclar" replace />} />
           <Route path="trendler" element={<Navigate to="/analiz" replace />} />
           <Route path="servet" element={<Navigate to="/analiz/detay" replace />} />
           <Route path="kayitlar" element={<Navigate to="/analiz/detay" replace />} />
