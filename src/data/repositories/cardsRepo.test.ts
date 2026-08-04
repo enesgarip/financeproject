@@ -4,6 +4,7 @@ import {
   fetchCardInstallmentMatchRows,
   payPaymentFromCardImport,
   recordCardInstallmentCarryover,
+  setProvisionInstallments,
   updateCardExpenseHealthMetadata,
 } from './cardsRepo'
 
@@ -162,6 +163,48 @@ describe('cardsRepo statement installment read safety', () => {
     expect(eq).toHaveBeenCalledWith('card_id', 'card-1')
   })
 
+})
+
+describe('cardsRepo.setProvisionInstallments', () => {
+  function mockUpdateChain() {
+    const statusEq = vi.fn().mockResolvedValue({ error: null })
+    const idEq = vi.fn(() => ({ eq: statusEq }))
+    const update = vi.fn(() => ({ eq: idEq }))
+    supabaseMocks.from.mockReturnValue({ update })
+    return { update, idEq, statusEq }
+  }
+
+  beforeEach(() => {
+    supabaseMocks.from.mockReset()
+  })
+
+  it('yalnız provizyon satırında taksit adedini ve bölünmüş tutarı yazar', async () => {
+    const { update, idEq, statusEq } = mockUpdateChain()
+
+    const result = await setProvisionInstallments('expense-1', 300, 3)
+
+    expect(result.ok).toBe(true)
+    expect(supabaseMocks.from).toHaveBeenCalledWith('card_expenses')
+    expect(update).toHaveBeenCalledWith({ installment_count: 3, installment_amount: 100 })
+    expect(idEq).toHaveBeenCalledWith('id', 'expense-1')
+    expect(statusEq).toHaveBeenCalledWith('status', 'provision')
+  })
+
+  it('tek çekimde taksit tutarı toplam tutara eşittir', async () => {
+    const { update } = mockUpdateChain()
+
+    await setProvisionInstallments('expense-1', 249.9, 1)
+
+    expect(update).toHaveBeenCalledWith({ installment_count: 1, installment_amount: 249.9 })
+  })
+
+  it('taksit adedini 1..36 aralığına sıkıştırır', async () => {
+    const { update } = mockUpdateChain()
+
+    await setProvisionInstallments('expense-1', 120, 99)
+
+    expect(update).toHaveBeenCalledWith(expect.objectContaining({ installment_count: 36 }))
+  })
 })
 
 describe('cardsRepo Data Health metadata contract', () => {

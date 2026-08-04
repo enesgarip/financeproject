@@ -6,6 +6,7 @@ import {
   fetchCardInstallments,
   fetchProvisionExpenses,
   fetchStatementArchives,
+  setProvisionInstallments,
 } from '../data/repositories/cardsRepo'
 import { fetchAccountReconciliations } from '../data/repositories/financePanelsRepo'
 import { submitAccountMovement } from '../services/accountMovements'
@@ -168,6 +169,32 @@ export function useCardsPageData() {
     setProvisionActionId(null)
   }
 
+  async function handleSetProvisionInstallments(
+    expense: CardExpense,
+    installmentCount: number,
+    reload: () => Promise<void>,
+    setError: (message: string) => void,
+  ) {
+    if (installmentCount === expense.installment_count) return
+    setProvisionActionId(`installments-${expense.id}`)
+    setError('')
+    setProvisionError('')
+
+    const result = await setProvisionInstallments(expense.id, expense.amount, installmentCount)
+
+    if (!result.ok) {
+      const message = isMissingSupabaseCapabilityError(result.error)
+        ? missingSupabaseCapabilityMessage('Provizyon altyapısı', result.error)
+        : result.error.message ?? 'Taksit bilgisi kaydedilemedi.'
+      setError(message)
+      setProvisionActionId(null)
+      return
+    }
+
+    await refreshCardsAndProvisions(reload)
+    setProvisionActionId(null)
+  }
+
   async function handlePostAllProvisions(expenses: CardExpense[], reload: () => Promise<void>, setError: (message: string) => void) {
     const pendingExpenses = expenses.filter((expense) => expense.status === 'provision')
     if (pendingExpenses.length === 0) return
@@ -212,6 +239,7 @@ export function useCardsPageData() {
     statementsLoading,
     handlePostAllProvisions,
     handleProvisionAction,
+    handleSetProvisionInstallments,
     setStatementActionId,
   }
 }

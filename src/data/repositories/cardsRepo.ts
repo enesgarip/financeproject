@@ -1,6 +1,7 @@
 import { supabase } from '../../lib/supabase'
 import type { Card, CardExpense, CardExpenseSource, CardInstallment, CardStatementArchive, Payment } from '../../types/database'
 import { ok, resultFromSupabase, voidResultFromSupabase, type Result } from '../result'
+import { roundTL } from '../../utils/money'
 
 export type ExpenseMatchRow = Pick<CardExpense, 'id' | 'spent_at' | 'amount' | 'status' | 'description' | 'category' | 'installment_count' | 'note'>
 export type InstallmentMatchRow = Pick<CardInstallment, 'id' | 'due_month' | 'amount' | 'status' | 'description' | 'installment_no' | 'installment_count' | 'statement_archive_id'>
@@ -279,6 +280,29 @@ export async function applyCardProvision(expenseId: string, action: 'post' | 'ca
   const rpcName = action === 'post' ? 'post_card_provision' : 'cancel_card_provision'
   const { error } = await supabase.rpc(rpcName, { p_expense_id: expenseId })
   return voidResultFromSupabase(error, 'Provizyon islemi tamamlanamadi.')
+}
+
+/**
+ * Provizyonu kesinleştirmeden önce taksit adedini işaretler. Banka SMS'i toplam
+ * tutarla geldiği için provizyon `installment_count=1` açılır; kullanıcı burada
+ * "3 taksit" derse kesinleşmede (`post_card_provision`) plan doğru bölünür.
+ * Sadece bir etikettir: toplam borç ve provizyon kovası değişmez, taksit satırları
+ * yalnız kesinleşmede doğar. `status='provision'` filtresi kesinleşmiş/arşivli bir
+ * satıra dokunmayı imkânsız kılar (o yol `update_card_expense`'e aittir).
+ */
+export async function setProvisionInstallments(
+  expenseId: string,
+  amount: number,
+  installmentCount: number,
+): Promise<Result<void>> {
+  const count = Math.max(1, Math.min(36, Math.trunc(installmentCount) || 1))
+  const installmentAmount = count === 1 ? roundTL(amount) : roundTL(amount / count)
+  const { error } = await supabase
+    .from('card_expenses')
+    .update({ installment_count: count, installment_amount: installmentAmount })
+    .eq('id', expenseId)
+    .eq('status', 'provision')
+  return voidResultFromSupabase(error, 'Taksit bilgisi kaydedilemedi.')
 }
 
 export async function cancelCardExpense(expenseId: string): Promise<Result<void>> {

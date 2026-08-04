@@ -98,6 +98,7 @@ export function CardsPage() {
     statementsLoading,
     handlePostAllProvisions,
     handleProvisionAction,
+    handleSetProvisionInstallments,
     setStatementActionId,
   } = useCardsPageData()
   const snapshotQuery = useFinanceSnapshot()
@@ -364,6 +365,7 @@ export function CardsPage() {
                     onPost={(expense) => void handleProvisionAction(expense, 'post', reload, setError)}
                     onPostAll={(expenses) => void handlePostAllProvisions(expenses, reload, setError)}
                     onCancel={(expense) => void handleProvisionAction(expense, 'cancel', reload, setError)}
+                    onSetInstallments={(expense, count) => void handleSetProvisionInstallments(expense, count, reload, setError)}
                   />
                   <CardInstallmentCalendarPanel cards={cardRows} />
                   <StatementArchivePanel rows={cardRows} statements={statements} />

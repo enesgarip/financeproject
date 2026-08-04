@@ -10,6 +10,8 @@ import { sumTL } from '../utils/money'
 import { cardHelp } from './CardsPage.help'
 import { statementPeriodLabel } from './CardsPage.helpers'
 
+const INSTALLMENT_OPTIONS = [1, 2, 3, 4, 6, 9, 12]
+
 export function ProvisionPanel({
   rows,
   provisions,
@@ -18,6 +20,7 @@ export function ProvisionPanel({
   onPost,
   onPostAll,
   onCancel,
+  onSetInstallments,
 }: {
   rows: Card[]
   provisions: CardExpense[]
@@ -26,6 +29,7 @@ export function ProvisionPanel({
   onPost: (expense: CardExpense) => void
   onPostAll: (expenses: CardExpense[]) => void
   onCancel: (expense: CardExpense) => void
+  onSetInstallments: (expense: CardExpense, installmentCount: number) => void
 }) {
   const { formatAmount } = useBalancePrivacy()
   const pending = provisions.filter((expense) => expense.status === 'provision')
@@ -72,6 +76,12 @@ export function ProvisionPanel({
           const card = cardsById.get(expense.card_id)
           const postActionId = `post-${expense.id}`
           const cancelActionId = `cancel-${expense.id}`
+          const installmentsActionId = `installments-${expense.id}`
+          const canInstall = card?.card_type === 'kredi_karti'
+          const installmentCount = Math.max(1, expense.installment_count)
+          const installmentChoices = INSTALLMENT_OPTIONS.includes(installmentCount)
+            ? INSTALLMENT_OPTIONS
+            : [...INSTALLMENT_OPTIONS, installmentCount].sort((a, b) => a - b)
 
           return (
             <div key={expense.id} className="rounded-xl border border-warning/15 bg-warning/8 px-3 py-2.5">
@@ -86,6 +96,32 @@ export function ProvisionPanel({
                   {formatAmount(expense.amount)}
                 </span>
               </div>
+              {canInstall ? (
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                    Taksit
+                    <select
+                      value={installmentCount}
+                      onChange={(event) => onSetInstallments(expense, Number(event.target.value))}
+                      disabled={Boolean(actionId)}
+                      className="rounded-lg border border-border/60 bg-card px-2 py-1 text-xs font-semibold tabular-nums text-foreground disabled:opacity-60"
+                    >
+                      {installmentChoices.map((count) => (
+                        <option key={count} value={count}>
+                          {count === 1 ? 'Tek çekim' : `${count} taksit`}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  {actionId === installmentsActionId ? (
+                    <span className="text-xs text-muted-foreground">Kaydediliyor...</span>
+                  ) : installmentCount > 1 ? (
+                    <span className="text-xs text-muted-foreground tabular-nums">
+                      {installmentCount} × {formatAmount(expense.amount / installmentCount)}
+                    </span>
+                  ) : null}
+                </div>
+              ) : null}
               <div className="mt-2 grid grid-cols-2 gap-2">
                 <button
                   type="button"
