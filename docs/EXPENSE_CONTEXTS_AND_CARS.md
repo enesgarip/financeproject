@@ -11,7 +11,9 @@ Bu doküman `/odemeler/baglamlar` ve `/varliklar/araclar` için davranış kayna
 
 ## Genel gider bağlamları
 
-`expense_contexts.kind` yalnız `pet` veya `project` olabilir. Evcil hayvan bağlamı kategori bazlı gider görünümü sunar. Proje bağlamı opsiyonel bütçe ve tarih aralığı taşır; burn-down tüm zamanlar birleşik giderinden hesaplanır.
+`expense_contexts.kind` şu türlerden biridir: `pet`, `health`, `hobby`, `business`, `travel`, `project` (DB `expense_contexts_kind_check` bunu zorlar). Türler tek kaynakta — `EXPENSE_CONTEXT_KINDS` registry (`utils/expenseContexts.ts`) — `{ label, categories, timeboxed }` olarak tanımlıdır; kod başka yerde tür ismini elle karşılaştırmaz (kategori/tarih/ikon hep registry'den türer). Yeni tür eklemek: registry'ye bir satır + CHECK'i genişleten migration + sayfada ikon eşlemesi.
+
+`timeboxed: false` türler (pet/health/hobby/business) süresizdir — tarih göstermez, "Süresiz" rozeti taşır. `timeboxed: true` türler (travel/project) opsiyonel bütçe + tarih aralığı taşır; burn-down tüm zamanlar birleşik giderinden hesaplanır. Kural: **düzenli/tekrar eden giderler (kira, fatura) abonelik/Ödeme Takvimi'ne aittir; bağlam bir "şey"in (özellikle düzensiz) toplam maliyeti içindir.**
 
 **Süre / süresizlik.** `starts_on` ve `ends_on` nullable; DB ve form tarihi zorunlu tutmaz. Evcil hayvan doğası gereği süresizdir — formu tarih alanı göstermez (`kind==='pet'`). Proje türünde tarihler opsiyoneldir; **bitiş boş bırakılırsa bağlam süresiz** sürer. `ends_on` null olan her bağlam özet kartında "Süresiz" rozetiyle işaretlenir.
 

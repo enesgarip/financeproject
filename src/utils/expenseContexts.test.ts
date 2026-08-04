@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import type { CardExpense, ContextExpense, ExpenseContext } from '../types/database'
-import { buildExpenseContextSummaries } from './expenseContexts'
+import type { CardExpense, ContextExpense, ExpenseContext, ExpenseContextKind } from '../types/database'
+import {
+  EXPENSE_CONTEXT_KINDS,
+  buildExpenseContextSummaries,
+  contextCategories,
+  contextKindTimeboxed,
+} from './expenseContexts'
 
 const context: ExpenseContext = {
   id: 'ctx1', user_id: 'u1', created_at: '', updated_at: '', kind: 'project', name: 'Taşınma',
@@ -23,5 +28,23 @@ describe('buildExpenseContextSummaries', () => {
     expect(result.remainingBudget).toBe(6000)
     expect(result.budgetUsedRatio).toBe(0.4)
     expect(result.entries.map((entry) => entry.source).sort()).toEqual(['card', 'manual'])
+  })
+})
+
+describe('bağlam tür registry', () => {
+  it('altı türü kapsar ve her türün boş olmayan kategori seti vardır', () => {
+    const kinds = EXPENSE_CONTEXT_KINDS.map((entry) => entry.kind)
+    expect(kinds).toEqual(['pet', 'health', 'hobby', 'business', 'travel', 'project'])
+    for (const entry of EXPENSE_CONTEXT_KINDS) {
+      expect(entry.categories.length).toBeGreaterThan(0)
+      expect(contextCategories(entry.kind)).toBe(entry.categories)
+    }
+  })
+
+  it('süresiz/süreli eşlemesi doğru (yalnız travel + project tarihlidir)', () => {
+    const timeboxed: ExpenseContextKind[] = ['travel', 'project']
+    for (const entry of EXPENSE_CONTEXT_KINDS) {
+      expect(contextKindTimeboxed(entry.kind)).toBe(timeboxed.includes(entry.kind))
+    }
   })
 })
