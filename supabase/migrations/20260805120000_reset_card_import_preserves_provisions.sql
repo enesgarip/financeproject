@@ -71,6 +71,9 @@ begin
       or (source_table = 'card_statement_archives' and source_id = any(v_archive_ids))
     );
 
+  perform set_config('app.card_import_reset_user_id', v_user_id::text, true);
+  perform set_config('app.card_import_reset_card_id', p_card_id::text, true);
+
   delete from public.card_installments
   where id = any(v_installment_ids)
     and user_id = v_user_id;
@@ -82,6 +85,9 @@ begin
   delete from public.card_statement_archives
   where id = any(v_archive_ids)
     and user_id = v_user_id;
+
+  perform set_config('app.card_import_reset_card_id', '', true);
+  perform set_config('app.card_import_reset_user_id', '', true);
 
   -- Mevcut provizyon tutarını oku — sıfırlama sonrası borç = yalnız provizyonlar.
   select coalesce(provision_amount, 0)
