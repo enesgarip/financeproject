@@ -264,7 +264,7 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
   const [unmatched, setUnmatched] = useState<StatementImportRow[]>([])
   const [adjustments, setAdjustments] = useState<StatementAdjustmentRow[]>([])
   const [manualReview, setManualReview] = useState<ManualReviewRow[]>([])
-  const [plannedPaymentMatches, setPlannedPaymentMatches] = useState(0)
+
   const [matchDriftTL, setMatchDriftTL] = useState(0)
   const [driftCorrected, setDriftCorrected] = useState(false)
   // Parse doğrulama uyarısı (PDF'in kendi özet toplamları okunan satırlarla
@@ -299,6 +299,7 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
   const [reconciling, setReconciling] = useState(false)
   const [reconciled, setReconciled] = useState(false)
   const [reconcileError, setReconcileError] = useState('')
+  const [showAppExpenses, setShowAppExpenses] = useState(false)
 
   const fileRef = useRef<HTMLInputElement>(null)
   // Geçmiş harcamalardan öğrenilen kategori hafızası: import önerileri de
@@ -397,7 +398,7 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
         setUnmatched(importRows)
         setAdjustments(adjustmentRows)
         setManualReview([])
-        setPlannedPaymentMatches(importRows.filter(({ plannedPayment }) => plannedPayment).length)
+
         setSelected(new Set())
         setStep('review')
         return
@@ -435,7 +436,6 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
       setCancelledIds(new Set())
       setManualDrafts({})
       setManualAddedKeys(new Set())
-      setPlannedPaymentMatches(importRows.filter(({ plannedPayment }) => plannedPayment).length)
       setSelected(new Set())
       setStep('review')
     } catch (err) {
@@ -791,8 +791,9 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
                 {parseTotalsWarning}
               </p>
             )}
-            {/* Reconciliation summary */}
-            <div className="border-b border-border p-4 space-y-3">
+
+            {/* ── Kompakt özet ── */}
+            <div className="border-b border-border p-4 space-y-2">
               <div className="grid grid-cols-2 gap-2 text-xs">
                 <div className="rounded-lg bg-muted/40 p-2.5">
                   <p className="font-bold text-muted-foreground">Ekstre kesim</p>
@@ -803,7 +804,6 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
                   <p className="mt-0.5 font-black text-foreground">{formatShortDate(dueDate)}</p>
                 </div>
               </div>
-
               <div className="rounded-xl bg-muted/40 p-3 text-xs space-y-1.5">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Bankadan gelen</span>
@@ -825,498 +825,459 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
                   </>
                 )}
               </div>
+            </div>
 
-              {!cleanImport && (
-                <button
-                  type="button"
-                  disabled={reconciling || reconciled || !statementTotal}
-                  onClick={() => void handleReconcile()}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-border py-2.5 text-xs font-black text-foreground transition hover:bg-muted/50 disabled:opacity-55"
-                >
-                  {reconciling && <Loader2 size={13} className="animate-spin" />}
-                  {reconciled ? (
-                    <>
-                      <CheckCircle2 size={13} className="text-success" /> Mutabık kaydedildi
-                    </>
-                  ) : reconciling ? (
-                    'Kaydediliyor…'
-                  ) : (
-                    'Bu ekstreyi mutabık olarak kaydet'
-                  )}
-                </button>
-              )}
+            {/* ═══ AKSİYONLAR ═══ */}
 
-              {reconcileError && (
-                <p className="flex items-center gap-2 rounded-lg bg-destructive/10 p-2.5 text-[11px] text-destructive">
-                  <AlertCircle size={13} className="shrink-0" />
-                  {reconcileError}
-                </p>
-              )}
+            <div className="flex-1 overflow-y-auto">
 
-              {!cleanImport && (
-                <div className="flex flex-wrap gap-2 text-xs">
-                  <span className="flex items-center gap-1 rounded-md bg-success/10 px-2 py-1 font-bold text-success">
-                    <CheckCircle2 size={12} />
-                    {matched.length} eşleşti
-                  </span>
-                  <span className="flex items-center gap-1 rounded-md bg-warning/10 px-2 py-1 font-bold text-warning">
-                    <AlertCircle size={12} />
-                    {unmatched.length} eksik
-                  </span>
-                  {adjustments.length > 0 && (
-                    <span className="flex items-center gap-1 rounded-md bg-info/10 px-2 py-1 font-bold text-info">
-                      <CheckCircle2 size={12} />
-                      {adjustments.length} alacak/iade
+              {/* ── A1: Eksik işlemler → İçe aktar (ANA AKSİYON) ── */}
+              {importableCount > 0 && (
+                <div className="border-b border-border">
+                  <div className="flex items-center justify-between px-4 py-2">
+                    <span className="text-xs font-bold text-foreground">
+                      {cleanImport ? 'İçe aktarılacak ekstre satırları' : `Eksik işlemler (${importableCount})`}
                     </span>
-                  )}
-                  {plannedPaymentMatches > 0 && (
-                    <span className="flex items-center gap-1 rounded-md bg-info/10 px-2 py-1 font-bold text-info">
-                      <CheckCircle2 size={12} />
-                      {plannedPaymentMatches} planlı ödeme
-                    </span>
-                  )}
-                  {manualReview.length > 0 && (
-                    <span className="flex items-center gap-1 rounded-md bg-info/10 px-2 py-1 font-bold text-info">
-                      <AlertCircle size={12} />
-                      {manualReview.length} manuel
-                    </span>
+                    <div className="flex items-center gap-2 text-xs">
+                      <span className="font-bold text-muted-foreground">{selected.size}/{importableCount}</span>
+                      <button
+                        type="button"
+                        onClick={toggleAll}
+                        className="font-bold text-primary"
+                      >
+                        {selected.size === importableCount ? 'Kaldır' : 'Tümünü seç'}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="max-h-64 overflow-y-auto">
+                    {unmatched.map((item) => {
+                      const { transaction: tx, plannedPayment } = item
+                      const knownPlan = tx.isInstallment && tx.installmentCount > 1
+                      const isMidPlan = knownPlan && tx.installmentNo > 1 && tx.installmentNo < tx.installmentCount
+                      const isLastInstallment = knownPlan && tx.installmentNo === tx.installmentCount
+                      const remainingCount = Math.max(1, tx.installmentCount - tx.installmentNo)
+                      const planCount = cleanImport && knownPlan
+                        ? Math.max(1, tx.installmentCount - tx.installmentNo + 1)
+                        : isMidPlan && knownPlan
+                          ? remainingCount
+                          : tx.installmentCount
+                      const rowTotal = knownPlan && !isLastInstallment
+                        ? roundTL(tx.amount * planCount)
+                        : tx.amount
+                      const isSelected = selected.has(item.selectionKey)
+                      return (
+                        <button
+                          type="button"
+                          key={item.selectionKey}
+                          data-testid="statement-import-row"
+                          onClick={() => toggleRow(item.selectionKey)}
+                          aria-pressed={isSelected}
+                          className={`flex w-full cursor-pointer items-center gap-3 border-b border-border/50 px-4 py-2.5 text-left transition-colors ${isSelected ? 'bg-primary/5' : 'hover:bg-muted/30'}`}
+                        >
+                          <span
+                            aria-hidden="true"
+                            className={`grid size-4 shrink-0 place-items-center rounded border ${
+                              isSelected
+                                ? 'border-primary bg-primary text-primary-foreground'
+                                : 'border-border bg-background'
+                            }`}
+                          >
+                            {isSelected ? <Check size={12} strokeWidth={3} /> : null}
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-xs font-bold text-foreground">{tx.description}</p>
+                            {plannedPayment ? (
+                              <span className="mt-1 inline-flex rounded-md bg-info/10 px-2 py-0.5 text-[10px] font-black text-info">
+                                Planlı ödeme
+                              </span>
+                            ) : null}
+                            {plannedPayment ? (
+                              <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
+                                {formatShortDate(tx.date)} · {tx.category} · Plan: {plannedPayment.title} · vade {formatShortDate(plannedPayment.due_date)}
+                              </p>
+                            ) : (
+                              <p className="text-[11px] text-muted-foreground">
+                                {formatShortDate(tx.date)} · {tx.category}
+                                {tx.isInstallment ? ` · ${
+                                  isLastInstallment ? `${tx.installmentNo}/${tx.installmentCount} son taksit`
+                                  : (cleanImport || isMidPlan) && knownPlan ? `${tx.installmentNo}/${tx.installmentCount}. taksit, ${planCount} kalan`
+                                  : `${tx.installmentCount} taksit`
+                                }` : ''}
+                              </p>
+                            )}
+                          </div>
+                          <span className="shrink-0 text-right text-xs font-black text-foreground">
+                            {formatAmount(rowTotal)}
+                            {tx.isInstallment && (
+                              <span className="block text-[10px] font-bold text-muted-foreground">
+                                {formatAmount(tx.amount)}/ay
+                              </span>
+                            )}
+                          </span>
+                        </button>
+                      )
+                    })}
+                    {adjustments.map((item) => {
+                      const { adjustment } = item
+                      const isSelected = selected.has(item.selectionKey)
+                      return (
+                        <button
+                          type="button"
+                          key={item.selectionKey}
+                          data-testid="statement-import-adjustment-row"
+                          onClick={() => toggleRow(item.selectionKey)}
+                          aria-pressed={isSelected}
+                          className={`flex w-full cursor-pointer items-center gap-3 border-b border-border/50 px-4 py-2.5 text-left transition-colors ${isSelected ? 'bg-primary/5' : 'hover:bg-muted/30'}`}
+                        >
+                          <span
+                            aria-hidden="true"
+                            className={`grid size-4 shrink-0 place-items-center rounded border ${
+                              isSelected
+                                ? 'border-primary bg-primary text-primary-foreground'
+                                : 'border-border bg-background'
+                            }`}
+                          >
+                            {isSelected ? <Check size={12} strokeWidth={3} /> : null}
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-xs font-bold text-foreground">{adjustment.description}</p>
+                            <span className="mt-1 inline-flex rounded-md bg-info/10 px-2 py-0.5 text-[10px] font-black text-info">
+                              Ekstre alacağı/iade
+                            </span>
+                            <p className="mt-0.5 text-[11px] text-muted-foreground">
+                              {formatShortDate(adjustment.date)} · {adjustment.category}
+                            </p>
+                          </div>
+                          <span className="shrink-0 text-right text-xs font-black text-success">
+                            -{formatAmount(adjustment.amount)}
+                          </span>
+                        </button>
+                      )
+                    })}
+                  </div>
+
+                  {importError && (
+                    <p className="mx-4 mt-2 flex items-center gap-2 rounded-lg bg-destructive/10 p-3 text-xs text-destructive">
+                      <AlertCircle size={13} className="shrink-0" />
+                      {importError}
+                    </p>
                   )}
                 </div>
               )}
-            </div>
 
-            <CardExpenseHistorySection expenses={periodExpenses} periodLabel={periodLabel} />
-
-            {!cleanImport && matches.length > 0 && (
-              <div className="border-b border-border">
-                <button
-                  type="button"
-                  onClick={() => setShowMatches((value) => !value)}
-                  className="flex w-full items-center justify-between gap-3 px-4 py-2 text-left hover:bg-muted/30"
-                  aria-expanded={showMatches}
-                >
-                  <span className="min-w-0">
-                    <span className="block text-xs font-bold text-muted-foreground">Eşleşen kayıtlar</span>
-                    <span className="mt-0.5 block text-[11px] text-muted-foreground">
-                      {matches.length} kayıt gizli. Ekstre işlemi ile app'teki kaydı birlikte görmek için aç.
-                    </span>
-                  </span>
-                  <ChevronDown size={16} className={`shrink-0 text-muted-foreground transition-transform ${showMatches ? 'rotate-180' : ''}`} />
-                </button>
-                {showMatches ? (
+              {/* ── A2: App'te fazla (ekstrede yok) → İptal et ── */}
+              {appOnly.length > 0 && (
+                <div className="border-b border-border">
+                  <div className="px-4 py-2">
+                    <span className="text-xs font-bold text-warning">App'te fazla ({appOnly.length})</span>
+                    <p className="mt-0.5 text-[11px] text-muted-foreground">
+                      App'te olup ekstrede olmayan harcamalar. İptal edersen fark kapanır.
+                    </p>
+                  </div>
                   <div className="max-h-48 overflow-y-auto">
-                    {matches.map(({ transaction, expense }, index) => {
-                      const bankTotal = expenseTotalAmount(transaction)
+                    {appOnly.map((expense) => {
+                      const isCancelled = cancelledIds.has(expense.id)
+                      const isSel = cancelSelected.has(expense.id)
                       return (
-                        <div
-                          key={`${transaction.date}-${transaction.description}-${transaction.amount}-${index}`}
-                          className="border-b border-border/50 px-4 py-2.5"
+                        <button
+                          type="button"
+                          key={expense.id}
+                          data-testid="statement-import-apponly-row"
+                          disabled={isCancelled}
+                          onClick={() => toggleCancel(expense.id)}
+                          aria-pressed={isSel}
+                          className={`flex w-full items-center gap-3 border-b border-border/50 px-4 py-2.5 text-left disabled:opacity-55 ${isSel ? 'bg-destructive/5' : 'hover:bg-muted/30'}`}
                         >
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="min-w-0">
-                              <p className="truncate text-xs font-bold text-foreground">{transaction.description}</p>
-                              <p className="mt-0.5 text-[11px] text-muted-foreground">
-                                Ekstre: {formatShortDate(transaction.date)} · {transaction.category}
-                                {transaction.isInstallment ? ` · ${transaction.installmentNo}${transaction.installmentCount ? `/${transaction.installmentCount}` : ''}. taksit` : ''}
-                              </p>
-                              <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
-                                App: {expense.description || 'Açıklama yok'} · {formatShortDate(expense.spent_at)} · {appExpenseStatusLabel(expense.status)}
-                              </p>
-                            </div>
-                            <div className="shrink-0 text-right">
-                              <p className="text-xs font-black text-foreground">{formatAmount(bankTotal)}</p>
-                              <p className="text-[10px] font-bold text-muted-foreground">App {formatAmount(expense.amount)}</p>
-                            </div>
+                          <span
+                            aria-hidden="true"
+                            className={`grid size-4 shrink-0 place-items-center rounded border ${
+                              isSel ? 'border-destructive bg-destructive text-white' : 'border-border bg-background'
+                            }`}
+                          >
+                            {isSel ? <Check size={12} strokeWidth={3} /> : null}
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-xs font-bold text-foreground">{expense.description || 'Açıklama yok'}</p>
+                            <p className="text-[11px] text-muted-foreground">
+                              {formatShortDate(expense.spent_at)} · {expense.category ?? 'Diğer'}
+                              {isCancelled ? ' · iptal edildi' : ''}
+                            </p>
                           </div>
+                          <span className={`shrink-0 text-right text-xs font-black ${isCancelled ? 'text-muted-foreground line-through' : 'text-foreground'}`}>
+                            {formatAmount(expense.amount)}
+                          </span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                  {cancelError && (
+                    <p className="mx-4 mt-2 flex items-center gap-2 rounded-lg bg-destructive/10 p-2.5 text-[11px] text-destructive">
+                      <AlertCircle size={13} className="shrink-0" />
+                      {cancelError}
+                    </p>
+                  )}
+                  <div className="p-4">
+                    <button
+                      type="button"
+                      disabled={cancelSelected.size === 0 || cancelling}
+                      onClick={() => void handleCancelAppOnly()}
+                      className="flex w-full items-center justify-center gap-2 rounded-xl border border-destructive/40 py-2.5 text-xs font-black text-destructive transition hover:bg-destructive/10 disabled:opacity-55"
+                    >
+                      {cancelling && <Loader2 size={13} className="animate-spin" />}
+                      {cancelling ? 'İptal ediliyor…' : `Seçili ${cancelSelected.size} kaydı iptal et`}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* ── A3: Manuel kontrol ── */}
+              {manualReview.length > 0 && (
+                <div className="border-b border-border">
+                  <div className="px-4 py-2">
+                    <span className="text-xs font-bold text-muted-foreground">Manuel kontrol ({manualReview.length})</span>
+                    <p className="mt-0.5 text-[11px] text-muted-foreground">
+                      Toplam taksiti belirsiz. Sayısını gir, buradan ekle.
+                    </p>
+                  </div>
+                  <div className="max-h-56 overflow-y-auto">
+                    {manualReview.map((row) => {
+                      const tx = row.transaction
+                      const added = manualAddedKeys.has(row.key)
+                      const busy = manualBusyKey === row.key
+                      return (
+                        <div key={row.key} className="border-b border-border/50 px-4 py-2.5">
+                          <div className="flex items-center gap-3">
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-xs font-bold text-foreground">{tx.description}</p>
+                              <p className="text-[11px] text-muted-foreground">
+                                {formatShortDate(tx.date)} · {tx.category}
+                                {tx.isInstallment
+                                  ? ` · ${tx.installmentNo}${tx.installmentCount ? `/${tx.installmentCount}` : ''}. taksit`
+                                  : ''}
+                              </p>
+                            </div>
+                            <span className="shrink-0 text-xs font-black text-foreground">
+                              {formatAmount(tx.amount)}
+                              <span className="block text-[10px] font-bold text-muted-foreground">/ay</span>
+                            </span>
+                          </div>
+                          {added ? (
+                            <p className="mt-2 flex items-center gap-1 text-[11px] font-bold text-success">
+                              <CheckCircle2 size={12} /> Eklendi
+                            </p>
+                          ) : (
+                            <div className="mt-2 flex items-center gap-2">
+                              <label className="text-[11px] text-muted-foreground">Toplam taksit</label>
+                              <input
+                                type="number"
+                                min={1}
+                                inputMode="numeric"
+                                value={manualDrafts[row.key] ?? ''}
+                                onChange={(e) => setManualDrafts((prev) => ({ ...prev, [row.key]: e.target.value }))}
+                                placeholder={tx.installmentNo ? `≥${tx.installmentNo}` : '1'}
+                                className="w-16 rounded-md border border-border bg-background px-2 py-1 text-xs font-bold text-foreground"
+                              />
+                              <button
+                                type="button"
+                                disabled={busy}
+                                onClick={() => void handleAddManual(row)}
+                                className="ml-auto flex items-center gap-1 rounded-lg bg-primary px-3 py-1.5 text-[11px] font-black text-primary-foreground disabled:opacity-55"
+                              >
+                                {busy && <Loader2 size={12} className="animate-spin" />}
+                                {busy ? 'Ekleniyor…' : 'Elle ekle'}
+                              </button>
+                            </div>
+                          )}
                         </div>
                       )
                     })}
                   </div>
-                ) : null}
-              </div>
-            )}
+                  {manualError && (
+                    <p className="mx-4 my-2 flex items-center gap-2 rounded-lg bg-destructive/10 p-2.5 text-[11px] text-destructive">
+                      <AlertCircle size={13} className="shrink-0" />
+                      {manualError}
+                    </p>
+                  )}
+                </div>
+              )}
 
-            {/* Taksit kontrolü */}
-            {installmentCheck && (installmentCheck.matched.length > 0 || installmentCheck.amountMismatches.length > 0 || installmentCheck.appOnly.length > 0) && (
-              <div className="border-b border-border">
-                <button
-                  type="button"
-                  onClick={() => setShowInstallmentCheck((v) => !v)}
-                  className="flex w-full items-center justify-between gap-3 px-4 py-2 text-left hover:bg-muted/30"
-                  aria-expanded={showInstallmentCheck}
-                >
-                  <span className="min-w-0">
-                    <span className="block text-xs font-bold text-muted-foreground">Taksit kontrolü</span>
-                    <span className="mt-0.5 block text-[11px] text-muted-foreground">
-                      {installmentCheck.matched.length} doğrulandı
-                      {installmentCheck.amountMismatches.length > 0 && `, ${installmentCheck.amountMismatches.length} tutar farkı`}
-                      {installmentCheck.appOnly.length > 0 && `, ${installmentCheck.appOnly.length} ekstre dışı`}
+              {/* ═══ REFERANS (katlanır, varsayılan kapalı) ═══ */}
+
+              {/* ── B1: Eşleşen kayıtlar ── */}
+              {!cleanImport && matches.length > 0 && (
+                <div className="border-b border-border">
+                  <button
+                    type="button"
+                    onClick={() => setShowMatches((value) => !value)}
+                    className="flex w-full items-center justify-between gap-3 px-4 py-2 text-left hover:bg-muted/30"
+                    aria-expanded={showMatches}
+                  >
+                    <span className="text-xs font-bold text-muted-foreground">Eşleşen kayıtlar ({matches.length})</span>
+                    <ChevronDown size={16} className={`shrink-0 text-muted-foreground transition-transform ${showMatches ? 'rotate-180' : ''}`} />
+                  </button>
+                  {showMatches && (
+                    <div className="max-h-48 overflow-y-auto">
+                      {matches.map(({ transaction, expense }, index) => {
+                        const bankTotal = expenseTotalAmount(transaction)
+                        return (
+                          <div
+                            key={`${transaction.date}-${transaction.description}-${transaction.amount}-${index}`}
+                            className="border-b border-border/50 px-4 py-2.5"
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <p className="truncate text-xs font-bold text-foreground">{transaction.description}</p>
+                                <p className="mt-0.5 text-[11px] text-muted-foreground">
+                                  Ekstre: {formatShortDate(transaction.date)} · {transaction.category}
+                                  {transaction.isInstallment ? ` · ${transaction.installmentNo}${transaction.installmentCount ? `/${transaction.installmentCount}` : ''}. taksit` : ''}
+                                </p>
+                                <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
+                                  App: {expense.description || 'Açıklama yok'} · {formatShortDate(expense.spent_at)} · {appExpenseStatusLabel(expense.status)}
+                                </p>
+                              </div>
+                              <div className="shrink-0 text-right">
+                                <p className="text-xs font-black text-foreground">{formatAmount(bankTotal)}</p>
+                                <p className="text-[10px] font-bold text-muted-foreground">App {formatAmount(expense.amount)}</p>
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* ── B2: Taksit kontrolü ── */}
+              {installmentCheck && (installmentCheck.matched.length > 0 || installmentCheck.amountMismatches.length > 0 || installmentCheck.appOnly.length > 0) && (
+                <div className="border-b border-border">
+                  <button
+                    type="button"
+                    onClick={() => setShowInstallmentCheck((v) => !v)}
+                    className="flex w-full items-center justify-between gap-3 px-4 py-2 text-left hover:bg-muted/30"
+                    aria-expanded={showInstallmentCheck}
+                  >
+                    <span className="text-xs font-bold text-muted-foreground">
+                      Taksit kontrolü ({installmentCheck.matched.length + installmentCheck.amountMismatches.length + installmentCheck.appOnly.length})
                     </span>
-                  </span>
-                  <div className="flex items-center gap-2">
-                    {installmentCheck.amountMismatches.length > 0 || installmentCheck.appOnly.length > 0 ? (
-                      <span className="flex items-center gap-1 rounded-md bg-warning/10 px-2 py-0.5 text-[10px] font-black text-warning">
-                        <AlertCircle size={10} />
-                        {installmentCheck.amountMismatches.length + installmentCheck.appOnly.length}
-                      </span>
-                    ) : (
-                      <span className="flex items-center gap-1 rounded-md bg-success/10 px-2 py-0.5 text-[10px] font-black text-success">
-                        <CheckCircle2 size={10} />
-                        OK
-                      </span>
-                    )}
-                    <ChevronDown size={16} className={`shrink-0 text-muted-foreground transition-transform ${showInstallmentCheck ? 'rotate-180' : ''}`} />
-                  </div>
-                </button>
-                {showInstallmentCheck && (
-                  <div className="max-h-56 overflow-y-auto">
-                    {installmentCheck.amountMismatches.map(({ transaction: tx, installment: inst, diffTL: diff }) => (
-                      <div
-                        key={inst.id}
-                        className="flex items-center gap-3 border-b border-border/50 px-4 py-2.5"
-                      >
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-xs font-bold text-foreground">{tx.description}</p>
-                          <p className="text-[11px] text-muted-foreground">
-                            {tx.installmentNo}/{tx.installmentCount}. taksit · Ekstre: {formatAmount(tx.amount)} · App: {formatAmount(inst.amount)}
-                          </p>
-                          <p className="text-[11px] font-bold text-warning">
-                            Fark: {diff > 0 ? '+' : ''}{formatAmount(diff)}
-                          </p>
-                        </div>
-                        <span className="shrink-0 text-right text-[11px] font-bold text-muted-foreground">
-                          {inst.statement_archive_id !== null || inst.status === 'paid'
-                            ? 'Arşiv kaydı değiştirilemez'
-                            : 'Manuel uzlaştırma gerekli'}
+                    <div className="flex items-center gap-2">
+                      {installmentCheck.amountMismatches.length > 0 || installmentCheck.appOnly.length > 0 ? (
+                        <span className="flex items-center gap-1 rounded-md bg-warning/10 px-2 py-0.5 text-[10px] font-black text-warning">
+                          <AlertCircle size={10} />
+                          {installmentCheck.amountMismatches.length + installmentCheck.appOnly.length}
                         </span>
-                      </div>
-                    ))}
-                    {installmentCheck.appOnly.map((inst) => (
-                      <div
-                        key={inst.id}
-                        className="flex items-center gap-3 border-b border-border/50 px-4 py-2.5"
-                      >
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-xs font-bold text-foreground">{inst.description}</p>
-                          <p className="text-[11px] text-muted-foreground">
-                            {inst.installment_no}/{inst.installment_count}. taksit · {formatAmount(inst.amount)}/ay
-                          </p>
-                          <p className="text-[11px] font-bold text-warning">
-                            Ekstrede yok — kontrol et
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                    {installmentCheck.matched.map(({ transaction: tx, installment: inst }) => (
-                      <div
-                        key={inst.id}
-                        className="flex items-center gap-3 border-b border-border/50 px-4 py-2.5"
-                      >
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-xs font-bold text-foreground">{tx.description}</p>
-                          <p className="text-[11px] text-muted-foreground">
-                            {tx.installmentNo}/{tx.installmentCount}. taksit · {formatAmount(tx.amount)}/ay
-                          </p>
-                        </div>
-                        <span className="shrink-0 text-[11px] font-bold text-success">
-                          <CheckCircle2 size={12} className="inline" /> OK
+                      ) : (
+                        <span className="flex items-center gap-1 rounded-md bg-success/10 px-2 py-0.5 text-[10px] font-black text-success">
+                          <CheckCircle2 size={10} />
+                          OK
                         </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Faz 2 — App'te fazla (ekstrede yok): iptal edilebilir */}
-            {appOnly.length > 0 && (
-              <div className="border-b border-border">
-                <div className="px-4 py-2">
-                  <span className="text-xs font-bold text-warning">App'te fazla (ekstrede yok)</span>
-                  <p className="mt-0.5 text-[11px] text-muted-foreground">
-                    Bu dönem app'te olup ekstrede olmayan harcamalar (mükerrer / iptal edilmemiş). İptal edersen app bakiyesi bankayla eşleşir.
-                  </p>
-                </div>
-                <div className="max-h-48 overflow-y-auto">
-                  {appOnly.map((expense) => {
-                    const isCancelled = cancelledIds.has(expense.id)
-                    const isSel = cancelSelected.has(expense.id)
-                    return (
-                      <button
-                        type="button"
-                        key={expense.id}
-                        data-testid="statement-import-apponly-row"
-                        disabled={isCancelled}
-                        onClick={() => toggleCancel(expense.id)}
-                        aria-pressed={isSel}
-                        className="flex w-full items-center gap-3 border-b border-border/50 px-4 py-2.5 text-left hover:bg-muted/30 disabled:opacity-55"
-                      >
-                        <span
-                          aria-hidden="true"
-                          className={`grid size-4 shrink-0 place-items-center rounded border ${
-                            isSel ? 'border-destructive bg-destructive text-white' : 'border-border bg-background'
-                          }`}
-                        >
-                          {isSel ? <Check size={12} strokeWidth={3} /> : null}
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-xs font-bold text-foreground">{expense.description || 'Açıklama yok'}</p>
-                          <p className="text-[11px] text-muted-foreground">
-                            {formatShortDate(expense.spent_at)} · {expense.category ?? 'Diğer'}
-                            {isCancelled ? ' · iptal edildi' : ''}
-                          </p>
-                        </div>
-                        <span className={`shrink-0 text-right text-xs font-black ${isCancelled ? 'text-muted-foreground line-through' : 'text-foreground'}`}>
-                          {formatAmount(expense.amount)}
-                        </span>
-                      </button>
-                    )
-                  })}
-                </div>
-                {cancelError && (
-                  <p className="mx-4 mt-2 flex items-center gap-2 rounded-lg bg-destructive/10 p-2.5 text-[11px] text-destructive">
-                    <AlertCircle size={13} className="shrink-0" />
-                    {cancelError}
-                  </p>
-                )}
-                <div className="p-4">
-                  <button
-                    type="button"
-                    disabled={cancelSelected.size === 0 || cancelling}
-                    onClick={() => void handleCancelAppOnly()}
-                    className="flex w-full items-center justify-center gap-2 rounded-xl border border-destructive/40 py-2.5 text-xs font-black text-destructive transition hover:bg-destructive/10 disabled:opacity-55"
-                  >
-                    {cancelling && <Loader2 size={13} className="animate-spin" />}
-                    {cancelling ? 'İptal ediliyor…' : `Seçili ${cancelSelected.size} kaydı iptal et`}
+                      )}
+                      <ChevronDown size={16} className={`shrink-0 text-muted-foreground transition-transform ${showInstallmentCheck ? 'rotate-180' : ''}`} />
+                    </div>
                   </button>
-                </div>
-              </div>
-            )}
-
-            {/* Importable (otomatik aktarılabilir) işlemler */}
-            {importableCount > 0 && (
-              <>
-                <div className="flex items-center justify-between border-b border-border px-4 py-2">
-                  <span className="text-xs font-bold text-muted-foreground">
-                    {cleanImport ? 'İçe aktarılacak ekstre satırları' : "App'te olmayan işlemler ve alacaklar"}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={toggleAll}
-                    className="text-xs font-bold text-primary"
-                  >
-                    {selected.size === importableCount ? 'Tümünü kaldır' : 'Tümünü seç'}
-                  </button>
-                </div>
-
-                <div className="max-h-64 overflow-y-auto">
-                  {unmatched.map((item) => {
-                    const { transaction: tx, plannedPayment } = item
-                    const knownPlan = tx.isInstallment && tx.installmentCount > 1
-                    const isMidPlan = knownPlan && tx.installmentNo > 1 && tx.installmentNo < tx.installmentCount
-                    const isLastInstallment = knownPlan && tx.installmentNo === tx.installmentCount
-                    // Plan-ortası devirde kalan adet hesaplanır.
-                    const remainingCount = Math.max(1, tx.installmentCount - tx.installmentNo)
-                    const planCount = cleanImport && knownPlan
-                      ? Math.max(1, tx.installmentCount - tx.installmentNo + 1)
-                      : isMidPlan && knownPlan
-                        ? remainingCount
-                        : tx.installmentCount
-                    const rowTotal = knownPlan && !isLastInstallment
-                      ? roundTL(tx.amount * planCount)
-                      : tx.amount
-                    const isSelected = selected.has(item.selectionKey)
-                    return (
-                      <button
-                        type="button"
-                        key={item.selectionKey}
-                        data-testid="statement-import-row"
-                        onClick={() => toggleRow(item.selectionKey)}
-                        aria-pressed={isSelected}
-                        className="flex w-full cursor-pointer items-center gap-3 border-b border-border/50 px-4 py-2.5 text-left hover:bg-muted/30"
-                      >
-                        <span
-                          aria-hidden="true"
-                          className={`grid size-4 shrink-0 place-items-center rounded border ${
-                            isSelected
-                              ? 'border-primary bg-primary text-primary-foreground'
-                              : 'border-border bg-background'
-                          }`}
+                  {showInstallmentCheck && (
+                    <div className="max-h-56 overflow-y-auto">
+                      {installmentCheck.amountMismatches.map(({ transaction: tx, installment: inst, diffTL: diff }) => (
+                        <div
+                          key={inst.id}
+                          className="flex items-center gap-3 border-b border-border/50 px-4 py-2.5"
                         >
-                          {isSelected ? <Check size={12} strokeWidth={3} /> : null}
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-xs font-bold text-foreground">{tx.description}</p>
-                          {plannedPayment ? (
-                            <span className="mt-1 inline-flex rounded-md bg-info/10 px-2 py-0.5 text-[10px] font-black text-info">
-                              Planlı ödeme
-                            </span>
-                          ) : null}
-                          {plannedPayment ? (
-                            <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
-                              {formatShortDate(tx.date)} · {tx.category} · Plan: {plannedPayment.title} · vade {formatShortDate(plannedPayment.due_date)}
-                            </p>
-                          ) : (
-                            <p className="text-[11px] text-muted-foreground">
-                              {formatShortDate(tx.date)} · {tx.category}
-                              {tx.isInstallment ? ` · ${
-                                isLastInstallment ? `${tx.installmentNo}/${tx.installmentCount} son taksit`
-                                : (cleanImport || isMidPlan) && knownPlan ? `${tx.installmentNo}/${tx.installmentCount}. taksit, ${planCount} kalan`
-                                : `${tx.installmentCount} taksit`
-                              }` : ''}
-                            </p>
-                          )}
-                        </div>
-                        <span className="shrink-0 text-right text-xs font-black text-foreground">
-                          {formatAmount(rowTotal)}
-                          {tx.isInstallment && (
-                            <span className="block text-[10px] font-bold text-muted-foreground">
-                              {formatAmount(tx.amount)}/ay
-                            </span>
-                          )}
-                        </span>
-                      </button>
-                    )
-                  })}
-                  {adjustments.map((item) => {
-                    const { adjustment } = item
-                    const isSelected = selected.has(item.selectionKey)
-                    return (
-                      <button
-                        type="button"
-                        key={item.selectionKey}
-                        data-testid="statement-import-adjustment-row"
-                        onClick={() => toggleRow(item.selectionKey)}
-                        aria-pressed={isSelected}
-                        className="flex w-full cursor-pointer items-center gap-3 border-b border-border/50 px-4 py-2.5 text-left hover:bg-muted/30"
-                      >
-                        <span
-                          aria-hidden="true"
-                          className={`grid size-4 shrink-0 place-items-center rounded border ${
-                            isSelected
-                              ? 'border-primary bg-primary text-primary-foreground'
-                              : 'border-border bg-background'
-                          }`}
-                        >
-                          {isSelected ? <Check size={12} strokeWidth={3} /> : null}
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-xs font-bold text-foreground">{adjustment.description}</p>
-                          <span className="mt-1 inline-flex rounded-md bg-info/10 px-2 py-0.5 text-[10px] font-black text-info">
-                            Ekstre alacağı/iade
-                          </span>
-                          <p className="mt-0.5 text-[11px] text-muted-foreground">
-                            {formatShortDate(adjustment.date)} · {adjustment.category}
-                          </p>
-                        </div>
-                        <span className="shrink-0 text-right text-xs font-black text-success">
-                          -{formatAmount(adjustment.amount)}
-                        </span>
-                      </button>
-                    )
-                  })}
-                </div>
-
-                {importError && (
-                  <p className="mx-4 mt-2 flex items-center gap-2 rounded-lg bg-destructive/10 p-3 text-xs text-destructive">
-                    <AlertCircle size={13} className="shrink-0" />
-                    {importError}
-                  </p>
-                )}
-
-                <div className="border-t border-border p-4">
-                  <button
-                    type="button"
-                    disabled={selected.size === 0 || importing}
-                    onClick={() => void handleImport()}
-                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3 text-sm font-black text-primary-foreground disabled:opacity-55"
-                  >
-                    {importing && <Loader2 size={15} className="animate-spin" />}
-                    {importing
-                      ? 'İçe aktarılıyor…'
-                      : `${selected.size} satırı içe aktar`}
-                  </button>
-                </div>
-              </>
-            )}
-
-            {/* Faz 3 — Manuel kontrol: toplam taksit girilince inline eklenir */}
-            {manualReview.length > 0 && (
-              <div className="border-t border-border">
-                <div className="px-4 py-2">
-                  <span className="text-xs font-bold text-muted-foreground">Manuel kontrol gerekli</span>
-                  <p className="mt-0.5 text-[11px] text-muted-foreground">
-                    Toplam taksiti belirsiz işlemler. Toplam taksit sayısını gir, buradan ekle (Kartlar'a gitmeye gerek yok).
-                  </p>
-                </div>
-                <div className="max-h-56 overflow-y-auto">
-                  {manualReview.map((row) => {
-                    const tx = row.transaction
-                    const added = manualAddedKeys.has(row.key)
-                    const busy = manualBusyKey === row.key
-                    return (
-                      <div key={row.key} className="border-b border-border/50 px-4 py-2.5">
-                        <div className="flex items-center gap-3">
                           <div className="min-w-0 flex-1">
                             <p className="truncate text-xs font-bold text-foreground">{tx.description}</p>
                             <p className="text-[11px] text-muted-foreground">
-                              {formatShortDate(tx.date)} · {tx.category}
-                              {tx.isInstallment
-                                ? ` · ${tx.installmentNo}${tx.installmentCount ? `/${tx.installmentCount}` : ''}. taksit`
-                                : ''}
+                              {tx.installmentNo}/{tx.installmentCount}. taksit · Ekstre: {formatAmount(tx.amount)} · App: {formatAmount(inst.amount)}
+                            </p>
+                            <p className="text-[11px] font-bold text-warning">
+                              Fark: {diff > 0 ? '+' : ''}{formatAmount(diff)}
                             </p>
                           </div>
-                          <span className="shrink-0 text-xs font-black text-foreground">
-                            {formatAmount(tx.amount)}
-                            <span className="block text-[10px] font-bold text-muted-foreground">/ay</span>
+                          <span className="shrink-0 text-right text-[11px] font-bold text-muted-foreground">
+                            {inst.statement_archive_id !== null || inst.status === 'paid'
+                              ? 'Arşiv kaydı değiştirilemez'
+                              : 'Manuel uzlaştırma gerekli'}
                           </span>
                         </div>
-                        {added ? (
-                          <p className="mt-2 flex items-center gap-1 text-[11px] font-bold text-success">
-                            <CheckCircle2 size={12} /> Eklendi
-                          </p>
-                        ) : (
-                          <div className="mt-2 flex items-center gap-2">
-                            <label className="text-[11px] text-muted-foreground">Toplam taksit</label>
-                            <input
-                              type="number"
-                              min={1}
-                              inputMode="numeric"
-                              value={manualDrafts[row.key] ?? ''}
-                              onChange={(e) => setManualDrafts((prev) => ({ ...prev, [row.key]: e.target.value }))}
-                              placeholder={tx.installmentNo ? `≥${tx.installmentNo}` : '1'}
-                              className="w-16 rounded-md border border-border bg-background px-2 py-1 text-xs font-bold text-foreground"
-                            />
-                            <button
-                              type="button"
-                              disabled={busy}
-                              onClick={() => void handleAddManual(row)}
-                              className="ml-auto flex items-center gap-1 rounded-lg bg-primary px-3 py-1.5 text-[11px] font-black text-primary-foreground disabled:opacity-55"
-                            >
-                              {busy && <Loader2 size={12} className="animate-spin" />}
-                              {busy ? 'Ekleniyor…' : 'Elle ekle'}
-                            </button>
+                      ))}
+                      {installmentCheck.appOnly.map((inst) => (
+                        <div
+                          key={inst.id}
+                          className="flex items-center gap-3 border-b border-border/50 px-4 py-2.5"
+                        >
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-xs font-bold text-foreground">{inst.description}</p>
+                            <p className="text-[11px] text-muted-foreground">
+                              {inst.installment_no}/{inst.installment_count}. taksit · {formatAmount(inst.amount)}/ay
+                            </p>
+                            <p className="text-[11px] font-bold text-warning">
+                              Ekstrede yok — kontrol et
+                            </p>
                           </div>
-                        )}
-                      </div>
-                    )
-                  })}
+                        </div>
+                      ))}
+                      {installmentCheck.matched.map(({ transaction: tx, installment: inst }) => (
+                        <div
+                          key={inst.id}
+                          className="flex items-center gap-3 border-b border-border/50 px-4 py-2.5"
+                        >
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-xs font-bold text-foreground">{tx.description}</p>
+                            <p className="text-[11px] text-muted-foreground">
+                              {tx.installmentNo}/{tx.installmentCount}. taksit · {formatAmount(tx.amount)}/ay
+                            </p>
+                          </div>
+                          <span className="shrink-0 text-[11px] font-bold text-success">
+                            <CheckCircle2 size={12} className="inline" /> OK
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
-                {manualError && (
-                  <p className="mx-4 my-2 flex items-center gap-2 rounded-lg bg-destructive/10 p-2.5 text-[11px] text-destructive">
-                    <AlertCircle size={13} className="shrink-0" />
-                    {manualError}
-                  </p>
-                )}
-              </div>
-            )}
+              )}
 
-            {/* Hiç eksik yok */}
-            {importableCount === 0 && manualReview.length === 0 && appOnly.length === 0 && (
-              <div className="p-6 text-center">
-                <CheckCircle2 size={32} className="mx-auto text-success" />
-                <p className="mt-2 text-sm font-bold text-foreground">Tüm işlemler app'te zaten kayıtlı</p>
-                <p className="mt-1 text-xs text-muted-foreground">Mutabakat tamam.</p>
+              {/* ── B3: App dönem harcamaları (katlanır) ── */}
+              {periodExpenses.length > 0 && (
+                <div className="border-b border-border">
+                  <button
+                    type="button"
+                    onClick={() => setShowAppExpenses((v) => !v)}
+                    className="flex w-full items-center justify-between gap-3 px-4 py-2 text-left hover:bg-muted/30"
+                    aria-expanded={showAppExpenses}
+                  >
+                    <span className="text-xs font-bold text-muted-foreground">
+                      App dönem harcamaları ({periodExpenses.length})
+                    </span>
+                    <ChevronDown size={16} className={`shrink-0 text-muted-foreground transition-transform ${showAppExpenses ? 'rotate-180' : ''}`} />
+                  </button>
+                  {showAppExpenses && <CardExpenseHistorySection expenses={periodExpenses} periodLabel={periodLabel} />}
+                </div>
+              )}
+
+              {/* Hiç eksik yok */}
+              {importableCount === 0 && manualReview.length === 0 && appOnly.length === 0 && (
+                <div className="p-6 text-center">
+                  <CheckCircle2 size={32} className="mx-auto text-success" />
+                  <p className="mt-2 text-sm font-bold text-foreground">Tüm işlemler app'te zaten kayıtlı</p>
+                  <p className="mt-1 text-xs text-muted-foreground">Mutabakat tamam.</p>
+                </div>
+              )}
+            </div>
+
+            {/* ── Sticky CTA bar ── */}
+            {importableCount > 0 && (
+              <div className="sticky bottom-0 z-10 border-t border-border bg-card p-4 shadow-[0_-2px_8px_rgba(0,0,0,0.06)]">
+                <button
+                  type="button"
+                  disabled={selected.size === 0 || importing}
+                  onClick={() => void handleImport()}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3 text-sm font-black text-primary-foreground disabled:opacity-55"
+                >
+                  {importing && <Loader2 size={15} className="animate-spin" />}
+                  {importing
+                    ? 'İçe aktarılıyor…'
+                    : `${selected.size} satırı içe aktar`}
+                </button>
               </div>
             )}
 
@@ -1400,6 +1361,32 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
                   </button>
                 </div>
               )
+            )}
+
+            {/* Mutabakat */}
+            {!cleanImport && !reconciled && (
+              <div className="mt-2 space-y-2">
+                <button
+                  type="button"
+                  disabled={reconciling || !statementTotal}
+                  onClick={() => void handleReconcile()}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-border py-2.5 text-xs font-black text-foreground transition hover:bg-muted/50 disabled:opacity-55"
+                >
+                  {reconciling && <Loader2 size={13} className="animate-spin" />}
+                  {reconciling ? 'Kaydediliyor…' : 'Bu ekstreyi mutabık olarak kaydet'}
+                </button>
+                {reconcileError && (
+                  <p className="flex items-center gap-2 rounded-lg bg-destructive/10 p-2.5 text-[11px] text-destructive">
+                    <AlertCircle size={13} className="shrink-0" />
+                    {reconcileError}
+                  </p>
+                )}
+              </div>
+            )}
+            {!cleanImport && reconciled && (
+              <p className="mt-2 flex items-center justify-center gap-2 text-xs font-bold text-success">
+                <CheckCircle2 size={13} /> Mutabık kaydedildi
+              </p>
             )}
 
             <button
