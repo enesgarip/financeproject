@@ -306,7 +306,7 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
   const categoryMemory = useCategoryMemory()
 
   const handleFile = useCallback(async (file: File) => {
-    if (!file.name.endsWith('.pdf')) {
+    if (!file.name.toLowerCase().endsWith('.pdf') && file.type !== 'application/pdf') {
       setParseError('Lütfen bir PDF dosyası seçin.')
       return
     }

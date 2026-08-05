@@ -494,12 +494,24 @@ export function checkStatementInstallments(
 
   for (const tx of installmentTxs) {
     const expectedDueMonth = statementInstallmentDueDate(tx)
+    const periodMonth = (statementDate || expectedDueMonth).slice(0, 7)
 
-    const candidates = active.filter((inst) => (
+    // Strict: taksit numarası + vade ayı
+    let candidates = active.filter((inst) => (
       !usedIds.has(inst.id) &&
       inst.installment_no === tx.installmentNo &&
       (inst.due_month === expectedDueMonth || inst.due_month.slice(0, 7) === expectedDueMonth.slice(0, 7))
     ))
+
+    // Relaxed: banka ile app'teki taksit numarası farklı olabilir (ör. banka 5/9,
+    // app 3/6). Aynı dönemde açıklama uyumlu + tutar yakın kayıt varsa eşleştir.
+    if (!candidates.length) {
+      candidates = active.filter((inst) => (
+        !usedIds.has(inst.id) &&
+        inst.due_month.slice(0, 7) === periodMonth &&
+        installmentDescriptionsCompatible(tx.description, inst.description)
+      ))
+    }
 
     const preferred = candidates.find((inst) => installmentDescriptionsCompatible(tx.description, inst.description))
     const found = preferred ?? (candidates.length === 1 ? candidates[0] : undefined)
