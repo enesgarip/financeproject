@@ -5,6 +5,7 @@ import { useBodyScrollLock } from '../ui/use-body-scroll-lock'
 import { useCategoryMemory } from '../../hooks/useCategoryMemory'
 import {
   addCardExpense,
+  applyCardProvision,
   cancelCardExpense,
   cutCardStatement,
   fetchCardById,
@@ -14,7 +15,6 @@ import {
   payPaymentFromCardImport,
   recordCardInstallmentCarryover,
   resetCardImportData,
-  setStatementReconciliation,
   type ExpenseMatchRow,
   type PaymentMatchRow,
 } from '../../data/repositories/cardsRepo'
@@ -247,7 +247,7 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
   useBodyScrollLock(true)
 
   const [step, setStep] = useState<Step>('upload')
-  const cleanImport = false
+  const cleanImport = true
   const [parsing, setParsing] = useState(false)
   const [parseError, setParseError] = useState('')
   const [importing, setImporting] = useState(false)
@@ -289,16 +289,11 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
   const [manualAddedKeys, setManualAddedKeys] = useState<Set<string>>(new Set())
   const [manualError, setManualError] = useState('')
 
-  // Faz 1 — banka toplamına kilit (import sonrası taze borç ile kalan fark).
-  const [appTotalAfter, setAppTotalAfter] = useState(0)
-  const [lockResidualTL, setLockResidualTL] = useState(0)
-  const [locking, setLocking] = useState(false)
-  const [locked, setLocked] = useState(false)
-  const [lockError, setLockError] = useState('')
+  // Auto-lock: import sonrası banka toplamına otomatik kilitler.
+  const [autoLockApplied, setAutoLockApplied] = useState(false)
+  // Eşleşen provizyonların otomatik kesinleşme sayısı.
+  const [provisionConfirmedCount, setProvisionConfirmedCount] = useState(0)
 
-  const [reconciling, setReconciling] = useState(false)
-  const [reconciled, setReconciled] = useState(false)
-  const [reconcileError, setReconcileError] = useState('')
   const [showAppExpenses, setShowAppExpenses] = useState(false)
 
   const fileRef = useRef<HTMLInputElement>(null)
@@ -445,11 +440,6 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
     }
   }, [card, cleanImport, categoryMemory])
 
-  function reconcilePeriodDate() {
-    if (cleanImport) return new Date()
-    return statementDate ? new Date(`${statementDate}T00:00:00`) : new Date()
-  }
-
   async function handleCleanImport() {
     const toImport = unmatched.filter((item) => selected.has(item.selectionKey))
     const toAdjust = adjustments.filter((item) => selected.has(item.selectionKey))
@@ -500,23 +490,32 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
       setImportError(`${errors.length} işlem aktarılamadı: ${errors[0]}`)
     }
 
+    // ── Faiz/ücret farkı düzeltmesi ──
+    // Bankanın Dönem Borcu = işlemler + faiz/ücret. İşlem satırları tek tek
+    // import edildi ama faiz/ücret ayrı satır olmadığı için current_period
+    // banka toplamından düşük kalır. Farkı burada kapatıyoruz ki cut sonrası
+    // statement_debt_amount = bankanın Dönem Borcu olsun.
+    if (statementTotal > 0) {
+      const fresh = await fetchCardById(card.id)
+      if (fresh.ok) {
+        const currentTotal = fresh.data.current_period_spending
+        if (!equalsTL(statementTotal, currentTotal)) {
+          const gap = diffTL(statementTotal, currentTotal)
+          const lockResult = await postCardDebtCorrection(
+            card.id,
+            gap,
+            lockCorrectionNote(gap, periodLabel),
+          )
+          if (!lockResult.error) setAutoLockApplied(true)
+        }
+      }
+    }
+
     const cutResult = await cutCardStatement(card.id)
     if (!cutResult.ok) {
       setImportError(`Ekstre kesilemedi: ${cutResult.error.message ?? 'Bilinmeyen hata.'}`)
       setImporting(false)
       return
-    }
-
-    if (statementTotal) {
-      const period = reconcilePeriodDate()
-      const reconcileResult = await setStatementReconciliation({
-        cardId: card.id,
-        periodYear: period.getFullYear(),
-        periodMonth: period.getMonth() + 1,
-        bankAmount: statementTotal,
-        note: null,
-      })
-      if (reconcileResult.ok) setReconciled(true)
     }
 
     setImporting(false)
@@ -536,6 +535,20 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
     setImporting(true)
     setImportError('')
 
+    // ── Adım 1: Eşleşen provizyonları kesinleştir ──
+    // Provizyon provision_amount'ta, posted current_period'a düşer →
+    // borç karşılaştırması doğrular, lock'ta gereksiz düzeltme azalır.
+    let provisionCount = 0
+    const matchedProvisions = matches.filter(
+      (m) => (m.expense as ExpenseMatchRow).status === 'provision',
+    )
+    for (const { expense } of matchedProvisions) {
+      const result = await applyCardProvision((expense as ExpenseMatchRow).id, 'post')
+      if (result.ok) provisionCount++
+    }
+    setProvisionConfirmedCount(provisionCount)
+
+    // ── Adım 2: Eksik satırları içe aktar ──
     let successCount = 0
     const errors: string[] = []
 
@@ -571,6 +584,7 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
       setImportError(`${errors.length} işlem aktarılamadı: ${errors[0]}`)
     }
 
+    // ── Adım 3: Drift düzeltmesi ──
     if (matchDriftTL !== 0) {
       const correction = await postCardDebtCorrection(
         card.id,
@@ -580,14 +594,21 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
       if (!correction.error) setDriftCorrected(true)
     }
 
-    // Import + tüm düzeltmeler sonrası TAZE borç kovalarını oku; banka toplamına
-    // kalan farkı hesapla. Kilit adımı success ekranında sunulur (son hamle).
+    // ── Adım 4: Banka toplamına otomatik kilit ──
+    // PDF = kaynak; app borcu bankaya eşitlenir. Manuel adıma gerek yok.
     if (statementTotal > 0) {
       const fresh = await fetchCardById(card.id)
       if (fresh.ok) {
         const total = sumTL([fresh.data.statement_debt_amount, fresh.data.current_period_spending])
-        setAppTotalAfter(total)
-        setLockResidualTL(reconcileResidualTL(statementTotal, total))
+        if (!isFullyReconciled(statementTotal, total)) {
+          const residual = reconcileResidualTL(statementTotal, total)
+          const lockResult = await postCardDebtCorrection(
+            card.id,
+            residual,
+            lockCorrectionNote(residual, periodLabel),
+          )
+          if (!lockResult.error) setAutoLockApplied(true)
+        }
       }
     }
 
@@ -635,42 +656,6 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
     }
     setManualAddedKeys((prev) => new Set(prev).add(row.key))
     setManualBusyKey(null)
-  }
-
-  async function handleLock() {
-    if (!statementTotal || isFullyReconciled(statementTotal, appTotalAfter)) return
-
-    setLocking(true)
-    setLockError('')
-    const residual = reconcileResidualTL(statementTotal, appTotalAfter)
-    const result = await postCardDebtCorrection(card.id, residual, lockCorrectionNote(residual, periodLabel))
-    if (result.error) {
-      setLockError(result.error.message ?? 'Kilit uygulanamadı.')
-      setLocking(false)
-      return
-    }
-    setAppTotalAfter(statementTotal)
-    setLockResidualTL(0)
-    setLocked(true)
-    setLocking(false)
-  }
-
-  async function handleReconcile() {
-    setReconciling(true)
-    setReconcileError('')
-
-    const period = reconcilePeriodDate()
-    const result = await setStatementReconciliation({
-      cardId: card.id,
-      periodYear: period.getFullYear(),
-      periodMonth: period.getMonth() + 1,
-      bankAmount: statementTotal,
-      note: null,
-    })
-
-    if (!result.ok) setReconcileError(result.error.message ?? 'Mutabakat kaydedilemedi.')
-    else setReconciled(true)
-    setReconciling(false)
   }
 
   function toggleAll() {
@@ -972,7 +957,7 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
                   <div className="px-4 py-2">
                     <span className="text-xs font-bold text-warning">App'te fazla ({appOnly.length})</span>
                     <p className="mt-0.5 text-[11px] text-muted-foreground">
-                      App'te olup ekstrede olmayan harcamalar. İptal edersen fark kapanır.
+                      App'te olup ekstrede olmayan harcama/provizyonlar. Bankada yoksa iptal et.
                     </p>
                   </div>
                   <div className="max-h-48 overflow-y-auto">
@@ -1000,7 +985,7 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
                           <div className="min-w-0 flex-1">
                             <p className="truncate text-xs font-bold text-foreground">{expense.description || 'Açıklama yok'}</p>
                             <p className="text-[11px] text-muted-foreground">
-                              {formatShortDate(expense.spent_at)} · {expense.category ?? 'Diğer'}
+                              {formatShortDate(expense.spent_at)} · {expense.category ?? 'Diğer'} · {appExpenseStatusLabel(expense.status)}
                               {isCancelled ? ' · iptal edildi' : ''}
                             </p>
                           </div>
@@ -1303,89 +1288,28 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
             <p className="text-base font-black text-foreground">
               {importedCount} işlem içe aktarıldı
             </p>
-            {failedCount > 0 ? (
+            {failedCount > 0 && (
               <p className="text-sm font-medium text-warning">
                 {failedCount} işlem aktarılamadı. Kartlar ekranından kontrol et.
               </p>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                Kart bakiyesi güncellendi.
+            )}
+            {provisionConfirmedCount > 0 && (
+              <p className="text-sm text-info">
+                {provisionConfirmedCount} provizyon otomatik kesinleştirildi.
               </p>
             )}
             {driftCorrected && (
-              <p className="text-sm text-info">
-                Eşleşen işlemlerdeki {formatAmount(Math.abs(matchDriftTL))} tutar farkı otomatik düzeltildi.
+              <p className="text-sm text-muted-foreground">
+                Eşleşen işlemlerdeki {formatAmount(Math.abs(matchDriftTL))} tutar farkı düzeltildi.
               </p>
             )}
 
-            {/* Faz 1 — Banka toplamına kilit (kalan farkı tek düzeltmeyle kapat) */}
             {statementTotal > 0 && (
-              isFullyReconciled(statementTotal, appTotalAfter) ? (
-                <p className="flex items-center justify-center gap-1.5 rounded-xl bg-success/10 p-3 text-sm font-bold text-success">
-                  <CheckCircle2 size={15} />
-                  {locked ? 'Banka toplamına kilitlendi (app = banka)' : 'Tam mutabık — app = banka'}
-                </p>
-              ) : (
-                <div className="space-y-2 rounded-xl border border-border p-3 text-left">
-                  <div className="flex justify-between text-xs">
-                    <span className="text-muted-foreground">App</span>
-                    <span className="font-black text-foreground">{formatAmount(appTotalAfter)}</span>
-                  </div>
-                  <div className="flex justify-between text-xs">
-                    <span className="text-muted-foreground">Banka</span>
-                    <span className="font-black text-foreground">{formatAmount(statementTotal)}</span>
-                  </div>
-                  <div className="flex justify-between text-xs">
-                    <span className="font-bold text-muted-foreground">Kalan fark</span>
-                    <span className="font-black text-destructive">
-                      {lockResidualTL >= 0 ? '+' : ''}{formatAmount(lockResidualTL)}
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-muted-foreground">
-                    Kilit, kalanı tek denetlenebilir düzeltmeyle banka toplamına çeker. Fark büyükse önce fazla/manuel kayıtları gözden geçir.
-                  </p>
-                  {lockError && (
-                    <p className="flex items-center gap-2 rounded-lg bg-destructive/10 p-2.5 text-[11px] text-destructive">
-                      <AlertCircle size={13} className="shrink-0" />
-                      {lockError}
-                    </p>
-                  )}
-                  <button
-                    type="button"
-                    disabled={locking}
-                    onClick={() => void handleLock()}
-                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-2.5 text-xs font-black text-primary-foreground disabled:opacity-55"
-                  >
-                    {locking && <Loader2 size={13} className="animate-spin" />}
-                    {locking ? 'Kilitleniyor…' : 'Banka toplamına kilitle'}
-                  </button>
-                </div>
-              )
-            )}
-
-            {/* Mutabakat */}
-            {!cleanImport && !reconciled && (
-              <div className="mt-2 space-y-2">
-                <button
-                  type="button"
-                  disabled={reconciling || !statementTotal}
-                  onClick={() => void handleReconcile()}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-border py-2.5 text-xs font-black text-foreground transition hover:bg-muted/50 disabled:opacity-55"
-                >
-                  {reconciling && <Loader2 size={13} className="animate-spin" />}
-                  {reconciling ? 'Kaydediliyor…' : 'Bu ekstreyi mutabık olarak kaydet'}
-                </button>
-                {reconcileError && (
-                  <p className="flex items-center gap-2 rounded-lg bg-destructive/10 p-2.5 text-[11px] text-destructive">
-                    <AlertCircle size={13} className="shrink-0" />
-                    {reconcileError}
-                  </p>
-                )}
-              </div>
-            )}
-            {!cleanImport && reconciled && (
-              <p className="mt-2 flex items-center justify-center gap-2 text-xs font-bold text-success">
-                <CheckCircle2 size={13} /> Mutabık kaydedildi
+              <p className="flex items-center justify-center gap-1.5 rounded-xl bg-success/10 p-3 text-sm font-bold text-success">
+                <CheckCircle2 size={15} />
+                {autoLockApplied
+                  ? `Kart borcu banka toplamına (${formatAmount(statementTotal)}) ayarlandı`
+                  : `Kart borcu banka ile eşit — ${formatAmount(statementTotal)}`}
               </p>
             )}
 

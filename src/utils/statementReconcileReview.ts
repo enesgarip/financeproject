@@ -27,7 +27,10 @@ export type ReconcileExpenseRow = {
  * Dönem içinde app'te olup ekstre satırlarıyla eşleşmeyen, güvenle iptal
  * edilebilir harcamalar.
  *
- * - Yalnız `posted` (dönem içi) tek-çekim kayıtlar; provizyon/iptal elenir.
+ * - `posted` ve `provision` tek-çekim kayıtlar; iptal elenir.
+ *   Provizyonlar da dahil: ekstre banka datası olduğu için, ekstrede olmayan
+ *   provizyon "gerçekleşmemiş / sonraki döneme ait" demektir. Kullanıcı
+ *   bunları görsün ve gerekirse iptal etsin.
  * - Taksitler (installment_count > 1) burada DEĞİL, ayrı taksit kontrolünde ele
  *   alınır (tarihsel taksit satırını iptal etmek arşivi bozabilir).
  * - Sonuç tarihe göre sıralı; UI aynı sırada gösterir.
@@ -40,7 +43,7 @@ export function findAppOnlyExpenses<T extends ReconcileExpenseRow>(
     .filter(
       (expense) =>
         !matchedExpenseIds.has(expense.id) &&
-        expense.status === 'posted' &&
+        (expense.status === 'posted' || expense.status === 'provision') &&
         expense.installment_count <= 1,
     )
     .slice()

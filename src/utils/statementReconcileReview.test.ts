@@ -40,13 +40,13 @@ describe('findAppOnlyExpenses', () => {
     expect(findAppOnlyExpenses(rows, new Set())).toEqual([])
   })
 
-  it('provizyon ve iptal statülerini eler', () => {
+  it('provizyonu dahil eder, iptal statüsünü eler', () => {
     const rows = [
       expense({ id: 'prov', status: 'provision' }),
       expense({ id: 'iptal', status: 'cancelled' }),
       expense({ id: 'ok', status: 'posted' }),
     ]
-    expect(findAppOnlyExpenses(rows, new Set()).map((r) => r.id)).toEqual(['ok'])
+    expect(findAppOnlyExpenses(rows, new Set()).map((r) => r.id)).toEqual(['prov', 'ok'])
   })
 
   it('girdi dizisini mutasyona uğratmaz', () => {
