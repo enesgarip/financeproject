@@ -1,3 +1,26 @@
+// pdfjs-dist v6 getTextContent() uses `for await...of ReadableStream` internally.
+// Safari < 17.5 doesn't support ReadableStream async iteration — polyfill it
+// using the universally-supported reader API so the library works on older iOS.
+if (
+  typeof ReadableStream !== 'undefined' &&
+  typeof Symbol.asyncIterator !== 'undefined' &&
+  !(Symbol.asyncIterator in ReadableStream.prototype)
+) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- polyfill must patch the prototype
+  (ReadableStream.prototype as any)[Symbol.asyncIterator] = async function* (this: ReadableStream) {
+    const reader = this.getReader()
+    try {
+      for (;;) {
+        const { done, value } = await reader.read()
+        if (done) return
+        yield value
+      }
+    } finally {
+      reader.releaseLock()
+    }
+  }
+}
+
 export async function extractPdfText(file: File): Promise<string> {
   const pdfjsLib = await import('pdfjs-dist')
   pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
