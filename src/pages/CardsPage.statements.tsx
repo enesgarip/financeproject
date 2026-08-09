@@ -189,7 +189,7 @@ export function StatementPanel({
               <ReceiptText size={17} />
               Acik ekstreler
             </CardTitle>
-            <p className="mt-1 text-xs text-muted-foreground">Ekstre odendiginde bu ekstreye bagli kart taksitleri otomatik kapanir.</p>
+            <p className="mt-1 text-xs text-muted-foreground">Ekstre ödemesi seçilen hesaptan düşülür ve yalnızca bu ekstreyi kapatır.</p>
           </div>
           <Badge variant="secondary">{formatAmount(totalOpenAmount)}</Badge>
         </div>
