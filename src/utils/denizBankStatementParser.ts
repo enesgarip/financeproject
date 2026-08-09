@@ -498,24 +498,40 @@ export function checkStatementInstallments(
     const periodMonth = (statementDate || expectedDueMonth).slice(0, 7)
 
     // Strict: taksit numarası + vade ayı
-    let candidates = active.filter((inst) => (
+    const strictCandidates = active.filter((inst) => (
       !usedIds.has(inst.id) &&
       inst.installment_no === tx.installmentNo &&
       (inst.due_month === expectedDueMonth || inst.due_month.slice(0, 7) === expectedDueMonth.slice(0, 7))
     ))
 
+    const strictDescriptionCandidates = strictCandidates.filter((inst) => (
+      installmentDescriptionsCompatible(tx.description, inst.description)
+    ))
+    const strictPreferred = strictDescriptionCandidates.find((inst) => (
+      amountsMatchForImport(inst.amount, tx.amount)
+    )) ?? (strictDescriptionCandidates.length === 1 ? strictDescriptionCandidates[0] : undefined)
+    // Aynı sıra/tarihte tek aday olması tek başına yeterli değil: farklı bir
+    // planın çocuğu yanlış parent'a bağlanabilir. Açıklama uyuşmuyorsa ancak
+    // tutar da yakınsa güvenli fallback kabul et; aksi halde relaxed aşama doğru
+    // merchant'ın aynı dönem ama farklı numaralı çocuğunu bulabilsin.
+    const strictAmountFallback = strictCandidates.length === 1
+      && amountsMatchForImport(strictCandidates[0].amount, tx.amount)
+      ? strictCandidates[0]
+      : undefined
+    let found = strictPreferred ?? strictAmountFallback
+
     // Relaxed: banka ile app'teki taksit numarası farklı olabilir (ör. banka 5/9,
-    // app 3/6). Aynı dönemde açıklama uyumlu + tutar yakın kayıt varsa eşleştir.
-    if (!candidates.length) {
-      candidates = active.filter((inst) => (
+    // app 3/6). Strict aday güvenilir değilse aynı dönemde açıklaması uyumlu olan
+    // gerçek planı ara.
+    if (!found) {
+      const relaxedCandidates = active.filter((inst) => (
         !usedIds.has(inst.id) &&
         inst.due_month.slice(0, 7) === periodMonth &&
         installmentDescriptionsCompatible(tx.description, inst.description)
       ))
+      found = relaxedCandidates.find((inst) => amountsMatchForImport(inst.amount, tx.amount))
+        ?? (relaxedCandidates.length === 1 ? relaxedCandidates[0] : undefined)
     }
-
-    const preferred = candidates.find((inst) => installmentDescriptionsCompatible(tx.description, inst.description))
-    const found = preferred ?? (candidates.length === 1 ? candidates[0] : undefined)
 
     if (!found) {
       pdfOnly.push(tx)
