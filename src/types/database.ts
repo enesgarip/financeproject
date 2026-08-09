@@ -183,10 +183,11 @@ export type CardInstallment = BaseRow & {
 
 export type CardCurrentSettlement = BaseRow & {
   card_id: string
-  source_card_id: string
+  source_card_id: string | null
   amount: number
   settled_at: string
   note: string | null
+  settlement_kind: 'payment' | 'historical_repair'
 }
 
 export type CardStatementArchive = BaseRow & {

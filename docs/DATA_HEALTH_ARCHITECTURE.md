@@ -119,6 +119,10 @@ Use existing source-of-truth helpers before adding new checks:
   `card_expenses.note` records how many installments were completed before the
   open plan, so Data Health expects only the current/future suffix rather than
   reporting intentional history as missing
+- a legacy aggregate card payment can leave exact pre-cycle posted excess; the
+  canonical full-current `pay_card_debt` action may attach it to a source-less
+  historical repair settlement only on exact total proof, without a second cash
+  movement. Data Health must not guess a subset when that proof fails
 - overdue open card statements:
   `card_statement_archives.status`, `due_date`, and the existing
   `pay_card_statement` shared payment path

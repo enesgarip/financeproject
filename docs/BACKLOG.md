@@ -8,6 +8,12 @@
   Ödenmiş bir ekstreye bağlanmamış eski hareketler ancak bağlı toplamla birlikte
   arşiv tutarına kuruşu kuruşuna eşleşirse arşive alınır. Böylece gerçek dönem
   ödemesi eski taksitleri yeniden saymadan çalışır; belirsiz eşleşme reddedilir.
+- ~~**Eski aggregate dönem ödemesinin eksik child allocation'ını onar.**~~ DONE.
+  Tam dönem ödemesinde allocation'sız posted toplamın fazlası, yalnız aktif hesap
+  kesim döneminden önceki hareketlerden oluşuyor ve tutar tam eşleşiyorsa eski
+  satırlar `historical_repair` settlement'ına bağlanır. Bu onarım yeniden banka
+  hesabı düşmez; güncel ödeme normal kaynaktan ayrı kaydedilir. Belirsiz farkın
+  tamamı transaction içinde rollback olur.
 
 ## 2026-08-09 — SMS faturası ve abonelik tekilleştirme
 

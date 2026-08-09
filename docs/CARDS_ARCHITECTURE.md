@@ -180,6 +180,12 @@ paid, future scheduled installments remain scheduled, and allocated movements
 are excluded from subsequent statement cuts. Settled historical rows are
 guarded against update/delete.
 
+For legacy aggregate payments that predate row allocation, a later full-current
+payment may first create a source-less `historical_repair` settlement. This is
+allowed only when the unallocated excess exactly equals all posted movements
+before the active statement-cycle start. The repair creates no second account
+debit or card-total change; an ambiguous set still blocks and rolls back payment.
+
 The shared payment modal may provide amount shortcuts, but the RPC remains the
 authority. For card debt payment the shortcuts are presentation-only
 ("estimated minimum" and "full amount") and still submit through the same

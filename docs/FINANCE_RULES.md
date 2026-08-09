@@ -87,6 +87,12 @@ future installments, changes only `debt_amount`, and leaves the statement,
 current-period, and provision buckets intact. Recording the actual payment is a
 separate action tied to the bank account that funded it.
 
+If an old aggregate card payment left posted rows without a settlement marker,
+a later full current-period payment may classify the historical excess without
+another cash movement. This is allowed only when the excess exactly equals all
+unallocated rows before the active statement-cycle start; otherwise payment is
+rejected and nothing changes.
+
 ## Shared Credit Limits
 
 - Cards may share a limit through `limit_group_name`.
