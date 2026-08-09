@@ -745,19 +745,6 @@ export type Database = {
         }
         Returns: CardStatementArchive
       }
-      pay_card_installment: {
-        Args: {
-          p_installment_id: string
-          p_source_card_id: string
-        }
-        Returns: CardInstallment
-      }
-      unpay_card_installment: {
-        Args: {
-          p_installment_id: string
-        }
-        Returns: CardInstallment
-      }
       transfer_between_accounts: {
         Args: {
           p_source_card_id: string
