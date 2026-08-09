@@ -652,4 +652,36 @@ describe('checkStatementInstallments', () => {
     expect(result.matched).toHaveLength(1)
     expect(result.matched[0].installment.id).toBe('right')
   })
+
+  it('rejects an unrelated strict candidate and finds the correct relaxed plan', () => {
+    const result = checkStatementInstallments(
+      [pdfTx('2026-07-21', 761.15, 1, 3, 'TRENDYOL.COM Peş. Taksit 1.Tk Anapara')],
+      [
+        appInst({
+          id: 'wrong-parent',
+          card_expense_id: 'expense-wrong',
+          due_month: '2026-07-21',
+          amount: 2566.65,
+          description: 'OLKA SPOR MALZEMEL',
+          installment_no: 1,
+          installment_count: 6,
+        }),
+        appInst({
+          id: 'right-parent',
+          card_expense_id: 'expense-trendyol',
+          due_month: '2026-08-21',
+          amount: 761.15,
+          description: 'TRENDYOL.COM',
+          installment_no: 2,
+          installment_count: 3,
+        }),
+      ],
+      '2026-08-04',
+    )
+
+    expect(result.matched).toHaveLength(1)
+    expect(result.matched[0].installment.id).toBe('right-parent')
+    expect(result.amountMismatches).toHaveLength(0)
+    expect(result.pdfOnly).toHaveLength(0)
+  })
 })

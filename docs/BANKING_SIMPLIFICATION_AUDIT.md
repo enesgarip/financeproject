@@ -9,6 +9,9 @@
     only open children from bank truth, and records the drift on those rows.
   - Installment-count drift remains blocking because it changes historical plan
     structure and cannot be inferred safely from a current statement line.
+  - A sole strict date/number candidate no longer wins when both merchant and
+    amount disagree; matching falls back to the description-compatible plan in
+    the statement period, preventing a foreign parent id from reaching the RPC.
 
 - **Prod consistency hardening (2026-08-02)**
   - Data Health and JSON backup now read 1000+ row tables with immutable-PK

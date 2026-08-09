@@ -74,6 +74,12 @@ banka giderleri (MTV, sigorta) de kapsanmalı.
 
 ## 2026-08-09 — Ekstre PDF kaynak-gerçek yeniden kurulum
 
+- ~~**SI-08 — Taksit satırını yanlış tarih/sıra parent'ına bağlama.**~~ DONE.
+  Strict sıra+tarih eşlemesindeki tek aday, açıklama uyuşmuyorsa artık yalnız
+  tutarı da yakınsa kabul edilir. Aksi halde aynı ekstre dönemindeki açıklama ve
+  tutar uyumlu plan aranır; böylece farklı merchant'ın parent id'si import
+  payload'ına taşınmaz.
+
 - ~~**SI-07 — Tarihsel taksit parent toplam farkını güvenle kabul et.**~~ DONE.
   Ödenmiş geçmişi bulunan planda parent toplam tutarı ile PDF'nin aylık-tutar ×
   adet projeksiyonu farklıysa parent ve paid child'lar değişmeden kalır; açık
