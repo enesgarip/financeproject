@@ -12,6 +12,9 @@
   - A sole strict date/number candidate no longer wins when both merchant and
     amount disagree; matching falls back to the description-compatible plan in
     the statement period, preventing a foreign parent id from reaching the RPC.
+  - Paid children are excluded from current-PDF matching. A matched open child
+    can reuse its parent only when installment number and count both equal the
+    PDF structure; renumbered bank plans are rebuilt under a new open parent.
 
 - **Prod consistency hardening (2026-08-02)**
   - Data Health and JSON backup now read 1000+ row tables with immutable-PK

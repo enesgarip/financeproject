@@ -457,6 +457,16 @@ export type StatementInstallmentCheckResult = {
   appOnly: StatementInstallmentMatchRow[]
 }
 
+export function reusableStatementInstallmentParentId(
+  transaction: ParsedTransaction,
+  installment: StatementInstallmentMatchRow,
+): string | null {
+  if (installment.status === 'paid') return null
+  if (installment.installment_no !== transaction.installmentNo) return null
+  if (installment.installment_count !== transaction.installmentCount) return null
+  return installment.card_expense_id
+}
+
 function installmentDescriptionKey(value: string): string {
   return normalizeSearchText(
     cleanDescription(value),
@@ -488,6 +498,10 @@ export function checkStatementInstallments(
 ): StatementInstallmentCheckResult {
   const installmentTxs = pdfTransactions.filter((tx) => tx.isInstallment)
   const active = appInstallments.filter((inst) => inst.status !== 'cancelled')
+  // Ödenmiş tarihsel çocuklar cari PDF satırının adayı değildir. Aksi halde
+  // banka numaralandırmayı yeniden başlattığında yeni 1/3 satırı eski paid 1/3
+  // ile eşleşip immutable parent'ın import payload'ına taşınmasına yol açar.
+  const matchable = active.filter((inst) => inst.status !== 'paid')
   const usedIds = new Set<string>()
   const matched: StatementInstallmentMatch[] = []
   const amountMismatches: StatementInstallmentMismatch[] = []
@@ -498,7 +512,7 @@ export function checkStatementInstallments(
     const periodMonth = (statementDate || expectedDueMonth).slice(0, 7)
 
     // Strict: taksit numarası + vade ayı
-    const strictCandidates = active.filter((inst) => (
+    const strictCandidates = matchable.filter((inst) => (
       !usedIds.has(inst.id) &&
       inst.installment_no === tx.installmentNo &&
       (inst.due_month === expectedDueMonth || inst.due_month.slice(0, 7) === expectedDueMonth.slice(0, 7))
@@ -524,7 +538,7 @@ export function checkStatementInstallments(
     // app 3/6). Strict aday güvenilir değilse aynı dönemde açıklaması uyumlu olan
     // gerçek planı ara.
     if (!found) {
-      const relaxedCandidates = active.filter((inst) => (
+      const relaxedCandidates = matchable.filter((inst) => (
         !usedIds.has(inst.id) &&
         inst.due_month.slice(0, 7) === periodMonth &&
         installmentDescriptionsCompatible(tx.description, inst.description)
