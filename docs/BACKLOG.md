@@ -1,5 +1,17 @@
 # Priority Backlog
 
+## 2026-08-09 — Ekstre ve taksiti banka modeline indir
+
+- ~~**Ekstre importunda tarihsel taksit eşleştirmesini kaldır.**~~ DONE. PDF açık
+  dönemin kaynak gerçeğidir; `StatementImportModal` eski taksit/parent satırı
+  sorgulamaz. Devreden `3/6` plan yalnız `3..6` açık satırlarını üretir; geçmiş
+  `1..2` sentetik `paid` kayıtlar olarak yeniden yaratılmaz.
+- ~~**Ekstre ödemesini taksit yaşam döngüsünden ayır.**~~ DONE.
+  `pay_card_statement` arşivdeki banka tutarını öder, kaynak hesabı borçlandırır,
+  arşivi kapatır ve kartın ekstre kovasını açık arşivlerden tekrar projekte eder.
+  Aggregate drift ödemeyi engellemez; bağlı taksitlerin `status/paid_at` alanları
+  değişmez. Gerçek Postgres regresyonları import ve ödeme davranışını doğrular.
+
 ## 2026-08-04 — Bağlam türleri + tür registry
 
 - ~~**Yeni bağlam türleri.**~~ DONE. `pet`/`project`'e ek: `health` (Sağlık),
@@ -180,10 +192,10 @@ kapanış" yapmak — import bitince app ekstre borcu = bankanın bildirdiği to
   payment/carryover/expense aksiyonuna çözer; modaldaki 3 inline tekrar tek
   `runStatementImportAction` executor'ında birleşti. 9 birim senaryosu + gerçek
   Postgres DB regresyonu (`supabase/tests/statement_import_installments.sql`,
-  CI+deploy DB gate'inde): 1. taksit 12×1000=12000; plan-ortası 4/12 → borç 9000 =
-  ödenmemiş toplam, ilk 3 `paid_at` işaretli; son taksit 12/12 → borç 250, ay-sonu
-  vade (2026-07-31) doğru. İnvariant: kart borcu = ödenmemiş (`paid_at IS NULL`)
-  taksit toplamı.
+  CI+deploy DB gate'inde): 1. taksit 12×1000=12000; plan-ortası 4/12 → yalnız
+  `4..12` açık satırları ve 9000 borç; son taksit 12/12 → yalnız tek açık satır,
+  250 borç ve ay-sonu vade (2026-07-31). İnvariant: devreden plan geçmişi yeniden
+  üretmez; kart borcu cari+gelecek açık taksit toplamıdır.
 - **SI-04 — Çok bankalı cihaz-içi parser.** YapıKredi DONE, diğerleri PENDING.
   `utils/yapiKrediStatementParser.ts` (+ test) YapıKredi/Worldcard ekstresini
   cihazda çözer: Türkçe ay-isimli tarih ("05 Mart 2026"), Türkçe sayı, taksit
@@ -299,8 +311,9 @@ hazırdır; **prod deployment/main push kullanıcı açıkça istemeden yapılma
   archive toplamına bağlı kalamaz. DB guard ayrıca arşivlenmiş expense/installment'ın
   tutar, tarih, kart ve plan alanlarını raw REST `UPDATE`'ine karşı korur. Tek child
   tutarını parent/card/ledger etkisi olmadan değiştiren statement-import otomatik fix'i
-  kaldırıldı; fark manuel uzlaştırma sinyali olarak kalır. Kanonik ekstre ödemesinin
-  `status/paid_at` geçişi korunur. Single + installment gerçek DB regresyonu vardır.
+  kaldırıldı; fark manuel uzlaştırma sinyali olarak kalır. Kanonik ekstre ödemesi
+  artık child `status/paid_at` alanlarına dokunmaz. Single + installment gerçek DB
+  regresyonu vardır.
 - ~~**SEC-02 — Ekstre lifecycle/DELETE yolları arşiv toplamını atlayabiliyordu.**~~
   IMPLEMENTED LOCALLY. `20260802190000`, arşivlenmiş expense/installment ve ekstre
   parent'ının ham DELETE, finans alanı ve lifecycle değişikliklerini reddeder; yalnız

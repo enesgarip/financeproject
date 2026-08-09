@@ -472,8 +472,8 @@ begin
       v_single_amount, v_parent_amount, v_link_count;
   end if;
 
-  -- Statement payment is the legitimate archived-installment status change;
-  -- the financial-field guard must not block it.
+  -- Statement payment closes only the archive; the linked installment remains
+  -- unchanged and the financial-field guard must keep protecting it.
   select id into v_cut_archive
   from public.card_statement_archives
   where card_id = v_cut_card;
@@ -492,7 +492,8 @@ begin
   select count(*) into v_paid_count
   from public.card_installments
   where id = v_archived_installment
-    and status = 'paid';
+    and status = 'posted'
+    and paid_at is null;
 
   select status, paid_at
   into v_archive_status, v_archive_paid_at
@@ -506,7 +507,7 @@ begin
      or v_archive_status <> 'paid'
      or v_archive_paid_at is null then
     raise exception
-      'CANONICAL STATEMENT PAY FAIL: debt/statement/source/paid/archive = %/%/%/%/%',
+      'CANONICAL STATEMENT PAY FAIL: debt/statement/source/unchanged/archive = %/%/%/%/%',
       v_debt, v_statement, v_balance, v_paid_count, v_archive_status;
   end if;
 

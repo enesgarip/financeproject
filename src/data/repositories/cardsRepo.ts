@@ -248,7 +248,6 @@ export type CardStatementReplaceAction =
       description: string
       category: string
       sourceEventId: string
-      existingExpenseId?: string | null
     }
   | {
       kind: 'payment'

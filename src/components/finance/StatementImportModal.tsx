@@ -9,7 +9,6 @@ import {
   cancelCardExpense,
   fetchCardById,
   fetchCardExpenseMatchRows,
-  fetchCardInstallmentMatchRows,
   fetchCardPaymentMatchRows,
   payPaymentFromCardImport,
   replaceCardStatementImport,
@@ -26,15 +25,12 @@ import { dateRangeFromIsoDates, rowsInReviewPeriod } from '../../utils/importRev
 import {
   parseDenizBankStatement,
   matchTransactions,
-  reusableStatementInstallmentParentId,
-  checkStatementInstallments,
   checkStatementParseTotals,
   expenseTotalAmount,
   type ParsedStatement,
   type ParsedTransaction,
   type ParsedStatementAdjustment,
   type StatementTransactionMatch,
-  type StatementInstallmentCheckResult,
 } from '../../utils/denizBankStatementParser'
 import { matchDenizBankMovementPayments, type ParsedDenizBankMovement } from '../../utils/denizBankMovementParser'
 import { parseYapiKrediStatement } from '../../utils/yapiKrediStatementParser'
@@ -112,7 +108,6 @@ type StatementImportRow = {
   sourceEventId: string
   transaction: ParsedTransaction
   plannedPayment: PaymentMatchRow | null
-  existingExpenseId: string | null
 }
 
 type StatementAdjustmentRow = {
@@ -127,7 +122,6 @@ type ManualReviewRow = {
   key: string
   transaction: ParsedTransaction
   sourceEventId: string
-  existingExpenseId: string | null
 }
 
 type Props = {
@@ -161,7 +155,6 @@ function attachPlannedPayments(
   plannedPayments: PaymentMatchRow[],
   cardId: string,
   sourceEventIds: ReadonlyMap<ParsedTransaction, string>,
-  existingExpenseIds: ReadonlyMap<ParsedTransaction, string | null> = new Map(),
 ): StatementImportRow[] {
   const movementRows = transactions
     .map((transaction, index) => ({ transaction, index }))
@@ -177,7 +170,6 @@ function attachPlannedPayments(
     sourceEventId: sourceEventIds.get(transaction)!,
     transaction,
     plannedPayment: paymentByIndex.get(index) ?? null,
-    existingExpenseId: existingExpenseIds.get(transaction) ?? null,
   }))
 }
 
@@ -248,7 +240,7 @@ function runStatementImportAction(
 
 function toReplaceAction(
   action: StatementImportAction,
-  row: Pick<StatementImportRow, 'transaction' | 'sourceEventId' | 'existingExpenseId'>,
+  row: Pick<StatementImportRow, 'transaction' | 'sourceEventId'>,
 ): CardStatementReplaceAction | null {
   const common = {
     description: row.transaction.description,
@@ -261,7 +253,7 @@ function toReplaceAction(
     case 'expense':
       return { ...action, ...common }
     case 'carryover':
-      return { ...action, ...common, existingExpenseId: row.existingExpenseId }
+      return { ...action, ...common }
     case 'needs-review':
       return null
   }
@@ -296,8 +288,6 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
   // Parse doğrulama uyarısı (PDF'in kendi özet toplamları okunan satırlarla
   // tutmuyorsa; engellemez, dikkat çeker). Bkz. checkStatementParseTotals.
   const [parseTotalsWarning, setParseTotalsWarning] = useState<string | null>(null)
-  const [installmentCheck, setInstallmentCheck] = useState<StatementInstallmentCheckResult | null>(null)
-  const [showInstallmentCheck, setShowInstallmentCheck] = useState(false)
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [importedCount, setImportedCount] = useState(0)
   const [failedCount, setFailedCount] = useState(0)
@@ -375,10 +365,9 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
 
       // Load existing app expenses once: matching and the period history panel
       // share the same snapshot.
-      const [expensesResult, paymentsResult, installmentsResult] = await Promise.all([
+      const [expensesResult, paymentsResult] = await Promise.all([
         fetchCardExpenseMatchRows(card.id),
         fetchCardPaymentMatchRows(card.id),
-        fetchCardInstallmentMatchRows(card.id),
       ])
       if (!expensesResult.ok) {
         setParseError(expensesResult.error.message ?? 'Kart harcamaları yüklenemedi.')
@@ -401,27 +390,7 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
       setPeriodLabel(reviewPeriod?.label ?? '')
       setPeriodExpenses(rowsInReviewPeriod(expenses, reviewPeriod))
 
-      if (!installmentsResult.ok) {
-        setParseError(installmentsResult.error.message ?? 'Kart taksitleri yüklenemedi.')
-        setParsing(false)
-        return
-      }
-      const instCheck = checkStatementInstallments(parsed.transactions, installmentsResult.data, parsed.statementDate)
-      const hasIssues = instCheck.amountMismatches.length > 0 || instCheck.appOnly.length > 0
-      setInstallmentCheck(instCheck)
-      setShowInstallmentCheck(hasIssues)
-
       if (cleanImport) {
-        const existingExpenseIds = new Map<ParsedTransaction, string | null>()
-        for (const match of [...instCheck.matched, ...instCheck.amountMismatches]) {
-          // Parent yalnız PDF ile aynı plan yapısındaki açık child üzerinden
-          // yeniden kullanılabilir. Numara/adet drift'inde eski paid geçmiş
-          // kendi parent'ında kalır; PDF yeni bir açık plan kurar.
-          existingExpenseIds.set(
-            match.transaction,
-            reusableStatementInstallmentParentId(match.transaction, match.installment),
-          )
-        }
         const importable = parsed.transactions.filter(isImportable)
         const manual: ManualReviewRow[] = parsed.transactions
           .filter((tx) => !isImportable(tx))
@@ -429,14 +398,12 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
             key: `manual:${index}:${transaction.date}:${transaction.amount}:${transaction.description}`,
             transaction,
             sourceEventId: sourceEventIds.get(transaction)!,
-            existingExpenseId: existingExpenseIds.get(transaction) ?? null,
           }))
         const importRows = attachPlannedPayments(
           importable,
           paymentsResult.data,
           card.id,
           sourceEventIds,
-          existingExpenseIds,
         )
         const adjustmentRows = attachStatementAdjustments(parsed.adjustments ?? [])
 
@@ -466,7 +433,6 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
           key: `manual:${index}:${transaction.date}:${transaction.amount}:${transaction.description}`,
           transaction,
           sourceEventId: sourceEventIds.get(transaction)!,
-          existingExpenseId: null,
         }))
       const importRows = attachPlannedPayments(importable, paymentsResult.data, card.id, sourceEventIds)
       const adjustmentRows = attachStatementAdjustments(parsed.adjustments ?? [])
@@ -536,7 +502,6 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
       const replacement = toReplaceAction(action, {
         transaction: row.transaction,
         sourceEventId: row.sourceEventId,
-        existingExpenseId: row.existingExpenseId,
       })
       if (!replacement) {
         setImportError(`${row.transaction.description}: manuel taksit doğrulaması geçersiz.`)
@@ -1178,94 +1143,7 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
                 </div>
               )}
 
-              {/* ── B2: Taksit kontrolü ── */}
-              {installmentCheck && (installmentCheck.matched.length > 0 || installmentCheck.amountMismatches.length > 0 || installmentCheck.appOnly.length > 0) && (
-                <div className="border-b border-border">
-                  <button
-                    type="button"
-                    onClick={() => setShowInstallmentCheck((v) => !v)}
-                    className="flex w-full items-center justify-between gap-3 px-4 py-2 text-left hover:bg-muted/30"
-                    aria-expanded={showInstallmentCheck}
-                  >
-                    <span className="text-xs font-bold text-muted-foreground">
-                      Taksit kontrolü ({installmentCheck.matched.length + installmentCheck.amountMismatches.length + installmentCheck.appOnly.length})
-                    </span>
-                    <div className="flex items-center gap-2">
-                      {installmentCheck.amountMismatches.length > 0 || installmentCheck.appOnly.length > 0 ? (
-                        <span className="flex items-center gap-1 rounded-md bg-warning/10 px-2 py-0.5 text-[10px] font-black text-warning">
-                          <AlertCircle size={10} />
-                          {installmentCheck.amountMismatches.length + installmentCheck.appOnly.length}
-                        </span>
-                      ) : (
-                        <span className="flex items-center gap-1 rounded-md bg-success/10 px-2 py-0.5 text-[10px] font-black text-success">
-                          <CheckCircle2 size={10} />
-                          OK
-                        </span>
-                      )}
-                      <ChevronDown size={16} className={`shrink-0 text-muted-foreground transition-transform ${showInstallmentCheck ? 'rotate-180' : ''}`} />
-                    </div>
-                  </button>
-                  {showInstallmentCheck && (
-                    <div className="max-h-56 overflow-y-auto">
-                      {installmentCheck.amountMismatches.map(({ transaction: tx, installment: inst, diffTL: diff }) => (
-                        <div
-                          key={inst.id}
-                          className="flex items-center gap-3 border-b border-border/50 px-4 py-2.5"
-                        >
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate text-xs font-bold text-foreground">{tx.description}</p>
-                            <p className="text-[11px] text-muted-foreground">
-                              {tx.installmentNo}/{tx.installmentCount}. taksit · Ekstre: {formatAmount(tx.amount)} · App: {formatAmount(inst.amount)}
-                            </p>
-                            <p className="text-[11px] font-bold text-warning">
-                              Fark: {diff > 0 ? '+' : ''}{formatAmount(diff)}
-                            </p>
-                          </div>
-                          <span className="shrink-0 text-right text-[11px] font-bold text-muted-foreground">
-                            {inst.statement_archive_id !== null || inst.status === 'paid'
-                              ? 'Arşiv kaydı değiştirilemez'
-                              : 'Manuel uzlaştırma gerekli'}
-                          </span>
-                        </div>
-                      ))}
-                      {installmentCheck.appOnly.map((inst) => (
-                        <div
-                          key={inst.id}
-                          className="flex items-center gap-3 border-b border-border/50 px-4 py-2.5"
-                        >
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate text-xs font-bold text-foreground">{inst.description}</p>
-                            <p className="text-[11px] text-muted-foreground">
-                              {inst.installment_no}/{inst.installment_count}. taksit · {formatAmount(inst.amount)}/ay
-                            </p>
-                            <p className="text-[11px] font-bold text-warning">
-                              Ekstrede yok — kontrol et
-                            </p>
-                          </div>
-                        </div>
-                      ))}
-                      {installmentCheck.matched.map(({ transaction: tx, installment: inst }) => (
-                        <div
-                          key={inst.id}
-                          className="flex items-center gap-3 border-b border-border/50 px-4 py-2.5"
-                        >
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate text-xs font-bold text-foreground">{tx.description}</p>
-                            <p className="text-[11px] text-muted-foreground">
-                              {tx.installmentNo}/{tx.installmentCount}. taksit · {formatAmount(tx.amount)}/ay
-                            </p>
-                          </div>
-                          <span className="shrink-0 text-[11px] font-bold text-success">
-                            <CheckCircle2 size={12} className="inline" /> OK
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* ── B3: App dönem harcamaları (katlanır) ── */}
+              {/* ── B2: App dönem harcamaları (katlanır) ── */}
               {periodExpenses.length > 0 && (
                 <div className="border-b border-border">
                   <button

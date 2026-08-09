@@ -139,7 +139,9 @@ On the cards page:
 - provision must post before it becomes payable debt
 - card debt payments must debit a `banka_karti` source account
 - the preferred credit-card payment flow is paying an open statement with `pay_card_statement`
-- statement payment debits a `banka_karti`, reduces card debt, marks the statement paid, and marks linked installments paid
+- statement payment debits a `banka_karti`, uses the archived statement amount,
+  reduces card debt, and marks only the statement paid; linked installment rows
+  remain a schedule and are not mutated by payment
 - direct card debt payment is legacy/manual behavior and should not be the primary installment flow
 
 ## Card Expense Rules

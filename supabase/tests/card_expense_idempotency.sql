@@ -63,7 +63,7 @@ begin
     raise exception 'FAIL taksit retry: installments=3/debt=300 bekleniyordu, %/%', v_count, v_debt;
   end if;
 
-  -- Plan ortası taksit devri wrapper'ı da tüm taksitleri tek kez kurar.
+  -- Plan ortası taksit devri wrapper'ı yalnız cari+gelecek açık taksitleri tek kez kurar.
   insert into public.cards (user_id, bank_name, card_name, card_type, credit_limit, statement_day, due_day)
   values (v_user, 'Test', 'Idempotency devir', 'kredi_karti', 50000, 25, 10)
   returning id into v_carryover_card;
@@ -71,8 +71,8 @@ begin
   perform public.record_card_installment_carryover(v_carryover_card, 'Devir', 100, 3, 1, current_date, 'Diğer', 'carryover-1');
   select count(*) into v_count from public.card_installments where card_id = v_carryover_card;
   select debt_amount into v_debt from public.cards where id = v_carryover_card;
-  if v_count <> 3 or v_debt <> 200 then
-    raise exception 'FAIL carryover retry: installments=3/debt=200 bekleniyordu, %/%', v_count, v_debt;
+  if v_count <> 2 or v_debt <> 200 then
+    raise exception 'FAIL carryover retry: installments=2/debt=200 bekleniyordu, %/%', v_count, v_debt;
   end if;
 
   -- Importta planlı ödemeye bağlanan kart harcaması ödeme durumunu ve borcu

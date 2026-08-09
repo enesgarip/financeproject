@@ -2,10 +2,9 @@
 -- RPC'ler üzerinden doğrular. Plancı (resolveStatementImportAction) bu üç aksiyona
 -- çözer; burada aksiyonların DB etkisi kontrol edilir.
 --
--- İnvariant (docs/CARD_DEBT_TRANSITIONS.md): kredi kartı borcu = ödenmemiş
--- (paid_at IS NULL) taksitlerin toplamı. Plan-ortası devirde geçmiş taksitler
--- paid_at ile işaretlenip borçtan hariç tutulur (status='paid' DEĞİL; 'posted'/
--- 'scheduled' + paid_at dolu). Beklentiler iş kuralından türetilir, util'den değil.
+-- İnvariant (docs/CARD_DEBT_TRANSITIONS.md): devreden/PDF kaynaklı bir plan yalnız
+-- cari ve gelecek açık taksitleri tutar. Geçmiş taksitler sentetik paid satırlar
+-- olarak yeniden yaratılmaz; ödenen şey taksit değil ekstre arşividir.
 begin;
 set local role authenticated;
 set local request.jwt.claims to '{"sub":"11111111-1111-1111-1111-111111111111","role":"authenticated"}';
@@ -26,6 +25,7 @@ declare
   v_statement_date date;
   v_open_archive_count integer;
   v_original_expense uuid;
+  v_new_parent uuid;
   v_failed boolean;
 begin
   -- ── Senaryo A — 1. taksit: plancı 'expense' (toplam tutar + adet, orijinal tarih)
@@ -51,8 +51,7 @@ begin
   select debt_amount into v_debt from public.cards where id = v_card;
   if v_debt <> 12000 then raise exception 'FAIL A borc: 12000 bekleniyordu, %', v_debt; end if;
 
-  -- ── Senaryo B — plan-ortası (4/12): plancı 'carryover' (paid=3, next=2026-08-19)
-  -- İlk 3 taksit ödenmiş sayılır; borç yalnız kalan 9 × 1000 = 9000.
+  -- ── Senaryo B — plan-ortası (4/12): yalnız 4..12 açık plan olarak tutulur.
   insert into public.cards (user_id, bank_name, card_name, card_type, credit_limit, statement_day, due_day)
   values (v_user, 'SI', 'SI plan-ortasi', 'kredi_karti', 50000, 25, 10) returning id into v_card;
   perform public.record_card_installment_carryover(v_card, 'SI TAKSIT B', 1000, 12, 3, '2026-08-19', 'Market', 'si-B');
@@ -62,18 +61,17 @@ begin
          count(*) filter (where paid_at is null)
     into v_count, v_paid, v_unpaid
     from public.card_installments where card_id = v_card;
-  if v_count <> 12 or v_paid <> 3 or v_unpaid <> 9 then
-    raise exception 'FAIL B ayrim: 12/3/9 bekleniyordu, %/%/%', v_count, v_paid, v_unpaid;
+  if v_count <> 9 or v_paid <> 0 or v_unpaid <> 9 then
+    raise exception 'FAIL B ayrim: 9/0/9 bekleniyordu, %/%/%', v_count, v_paid, v_unpaid;
   end if;
-  -- Ödenmiş olanlar EN ERKEN taksitler (no 1..3) olmalı.
-  if exists (select 1 from public.card_installments where card_id = v_card and paid_at is not null and installment_no > 3) then
-    raise exception 'FAIL B odenmis sira: yalnizca ilk 3 taksit odenmis olmali';
+  if exists (select 1 from public.card_installments where card_id = v_card and installment_no < 4) then
+    raise exception 'FAIL B gecmis taksitler sentetik olarak yeniden yaratildi';
   end if;
   -- Kalanların en erken vadesi devrin başlangıcı (2026-08-19).
   select min(due_month) into v_min from public.card_installments where card_id = v_card and paid_at is null;
   if v_min <> date '2026-08-19' then raise exception 'FAIL B kalan vade: 2026-08-19 bekleniyordu, %', v_min; end if;
 
-  -- İNVARIANT: borç = ödenmemiş taksit toplamı; ödenmiş 3000 hariç.
+  -- İNVARIANT: borç = açık taksit toplamı.
   select debt_amount into v_debt from public.cards where id = v_card;
   select coalesce(sum(amount), 0) into v_sum from public.card_installments where card_id = v_card and paid_at is null;
   if v_debt <> 9000 then raise exception 'FAIL B borc: 9000 bekleniyordu, %', v_debt; end if;
@@ -90,8 +88,8 @@ begin
          count(*) filter (where paid_at is null)
     into v_count, v_paid, v_unpaid
     from public.card_installments where card_id = v_card;
-  if v_count <> 12 or v_paid <> 11 or v_unpaid <> 1 then
-    raise exception 'FAIL C ayrim: 12/11/1 bekleniyordu, %/%/%', v_count, v_paid, v_unpaid;
+  if v_count <> 1 or v_paid <> 0 or v_unpaid <> 1 then
+    raise exception 'FAIL C ayrim: 1/0/1 bekleniyordu, %/%/%', v_count, v_paid, v_unpaid;
   end if;
   select min(due_month) into v_min from public.card_installments where card_id = v_card and paid_at is null;
   select debt_amount into v_debt from public.cards where id = v_card;
@@ -175,8 +173,7 @@ begin
         'nextDueDate', v_statement_date,
         'description', 'PDF TAKSIT',
         'category', 'Market',
-        'sourceEventId', 'pdf-replace:installment',
-        'existingExpenseId', v_parent
+        'sourceEventId', 'pdf-replace:installment'
       ),
       jsonb_build_object(
         'kind', 'expense',
@@ -221,16 +218,12 @@ begin
   if (select amount from public.card_expenses where id = v_parent) <> 450 then
     raise exception 'FAIL D tarihsel parent toplamı değiştirildi';
   end if;
-  if not exists (
-    select 1 from public.card_installments
-    where card_expense_id = v_parent
-      and paid_at is null
-      and note like '%Tarihsel parent toplamı 450%PDF taksit projeksiyonu 400%'
-  ) then
-    raise exception 'FAIL D parent/PDF toplam farkı denetim notuna yazılmadı';
-  end if;
+  select id into v_new_parent from public.card_expenses
+  where card_id = v_card and source_event_id = 'pdf-replace:installment';
   select count(*) into v_count from public.card_installments where card_expense_id = v_parent;
-  if v_count <> 4 then raise exception 'FAIL D parent child adedi: 4 bekleniyordu, %', v_count; end if;
+  if v_count <> 1 then raise exception 'FAIL D tarihsel parent child adedi: 1 bekleniyordu, %', v_count; end if;
+  select count(*) into v_count from public.card_installments where card_expense_id = v_new_parent;
+  if v_count <> 3 then raise exception 'FAIL D yeni acik plan child adedi: 3 bekleniyordu, %', v_count; end if;
 
   perform public.replace_card_statement_import(
     v_card,
@@ -242,8 +235,7 @@ begin
         'kind', 'carryover', 'installmentAmount', 100,
         'totalInstallments', 4, 'paidInstallments', 1,
         'nextDueDate', v_statement_date, 'description', 'PDF TAKSIT',
-        'category', 'Market', 'sourceEventId', 'pdf-replace:installment',
-        'existingExpenseId', v_parent
+        'category', 'Market', 'sourceEventId', 'pdf-replace:installment'
       ),
       jsonb_build_object(
         'kind', 'expense', 'amount', 70, 'spentAt', v_statement_date,
@@ -259,38 +251,14 @@ begin
   );
 
   select debt_amount into v_debt from public.cards where id = v_card;
-  select count(*) into v_count from public.card_installments where card_expense_id = v_parent;
+  select count(*) into v_count
+  from public.card_installments installment
+  join public.card_expenses expense on expense.id = installment.card_expense_id
+  where expense.card_id = v_card and expense.source_event_id = 'pdf-replace:installment';
   select count(*) into v_open_archive_count
   from public.card_statement_archives where card_id = v_card and status = 'open';
-  if v_debt <> 440 or v_count <> 4 or v_open_archive_count <> 1 then
+  if v_debt <> 440 or v_count <> 3 or v_open_archive_count <> 1 then
     raise exception 'FAIL D reimport idempotency: debt/child/open = %/%/%', v_debt, v_count, v_open_archive_count;
-  end if;
-
-  -- Tarihsel parent toplam tutarı farklı olabilir; fakat taksit adedi değişirse
-  -- paid geçmişin yapısı belirsizleşir ve tüm import geri alınmalıdır.
-  v_failed := false;
-  begin
-    perform public.replace_card_statement_import(
-      v_card,
-      v_statement_date,
-      null,
-      160,
-      jsonb_build_array(jsonb_build_object(
-        'kind', 'carryover', 'installmentAmount', 100,
-        'totalInstallments', 5, 'paidInstallments', 1,
-        'nextDueDate', v_statement_date, 'description', 'PDF TAKSIT',
-        'category', 'Market', 'sourceEventId', 'pdf-replace:count-conflict',
-        'existingExpenseId', v_parent
-      ))
-    );
-  exception when others then
-    v_failed := true;
-  end;
-  if not v_failed then raise exception 'FAIL D taksit adedi çakışması bloklanmadı'; end if;
-  select debt_amount into v_debt from public.cards where id = v_card;
-  select count(*) into v_count from public.card_installments where card_expense_id = v_parent;
-  if v_debt <> 440 or v_count <> 4 then
-    raise exception 'FAIL D adet çakışması rollback: debt/child = %/%', v_debt, v_count;
   end if;
 
   -- ── Senaryo E — kesim tarihi doğrulaması en sonda hata verse bile RPC'nin
@@ -331,7 +299,7 @@ begin
   select debt_amount into v_debt from public.cards where id = v_card;
   if v_debt <> 20 then raise exception 'FAIL E atomik rollback borcu: 20 bekleniyordu, %', v_debt; end if;
 
-  raise notice 'Ekstre taksit import regresyonu OK (1. / orta / son / parent toplam farkı / adet koruması / atomik rollback).';
+  raise notice 'Ekstre taksit import regresyonu OK (1. / orta / son / PDF açık plan yenileme / atomik rollback).';
 end $$;
 
 rollback;
