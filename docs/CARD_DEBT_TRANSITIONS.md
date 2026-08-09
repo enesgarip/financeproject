@@ -102,7 +102,7 @@ member `debt_amount` values.
 | Scheduled installment due date reached | `post_due_card_installments` / finance maintenance | `current_period_spending += due scheduled installment total`; `debt_amount` unchanged | Changes due `card_installments` from `scheduled` to `posted`; maintenance runs this before statement cutting, and statement cutting keeps posted installment rows after the statement boundary in the new period |
 | Statement cut | `cut_card_statement` / `cut_due_card_statements` | `statement_debt_amount += statement-period current spending`; `current_period_spending` keeps only already-posted rows after the statement boundary; `debt_amount` unchanged | Inserts or returns an open `card_statement_archives` row; links posted expenses/installments whose dates are on or before the statement boundary under the guarded allocation context. Direct child re-allocation is rejected. Automatic due maintenance skips cards whose current spending belongs entirely to the next statement instead of surfacing an error. |
 | Statement paid | `pay_card_statement` | Source bank account `current_balance -= archived statement amount`; card debt reduces by that amount and `statement_debt_amount` is reprojected from remaining open archives | Marks only the statement `paid`; installment rows remain unchanged. Temporary aggregate drift does not block payment. |
-| Manual card debt paid | `pay_card_debt` | Source bank account `current_balance -= amount`; card `debt_amount -= amount`; statement debt is reduced first, then current-period spending | A full current-period payment inserts a payment settlement and allocates current-cycle movements. Exact older excess left by a legacy aggregate payment first enters a source-less `historical_repair` settlement without another cash/card aggregate movement. Ambiguous sets reject and roll back the whole payment. Direct marker writes remain rejected. |
+| Manual card debt paid | `pay_card_debt` | Source bank account `current_balance -= amount` (skipped with `p_skip_source_debit`); card `debt_amount -= amount`; statement debt is reduced first, then current-period spending | A full current-period payment inserts a payment settlement and allocates every unallocated current movement. Exact older excess left by a legacy aggregate payment first enters a source-less `historical_repair` settlement without another cash/card aggregate movement. Any remaining bucket-vs-row difference no longer rejects the payment: it is closed as an auditable residual recorded on the settlement note plus a `correction` history row (bank model — payment reduces the aggregate; row allocation is best-effort evidence). Direct marker writes remain rejected. |
 | Planned payment paid from credit card | `pay_payment` with a credit-card source | Source credit card `debt_amount += paid amount`; `current_period_spending += paid amount` | Inserts a posted `card_expenses` row for the planned payment; advances or closes the payment row |
 | Planned payment reconciled from card import | `pay_payment_from_card_import` | Source credit card `debt_amount += paid amount`; `current_period_spending += paid amount` | Inserts a posted `card_expenses` row using the bank movement/statement date; advances or closes the matched payment row |
 | Statement import credit/refund row | `StatementImportModal` + `post_card_debt_correction` | Card `debt_amount -= amount`; negative correction reduces current-period spending first, then statement debt, then provision | DenizBank statement rows ending with `+ TL` are imported as auditable reverse entries instead of positive spending, so bank statement totals stay net of refunds/credits |
@@ -210,12 +210,24 @@ deleted. A partial current-period payment remains aggregate-only and therefore
 does not claim individual movement rows.
 
 Legacy versions allowed aggregate-only payments that could leave already-paid
-movements unallocated. On a later full current-period payment, the database may
-repair this history only when `all unallocated posted - current period` exactly
-equals all unallocated posted rows before the active statement-cycle start.
-Those rows receive a source-less `historical_repair` settlement and no new cash
-or card-total movement. A one-kuruş or membership mismatch keeps the original
-hard rejection and rolls back the payment.
+movements unallocated. On a later full current-period payment, the database
+first tries the high-provenance repair: when `all unallocated posted - current
+period` exactly equals all unallocated posted rows before the active
+statement-cycle start, those rows receive a source-less `historical_repair`
+settlement and no new cash or card-total movement. Any difference that remains
+after that (legitimate row-less bucket moves: statement-import bank-total lock,
+refund adjustments, auto-payment amount corrections, partial aggregate
+payments) no longer hard-rejects the payment. All unallocated rows are attached
+to the payment settlement and the bucket-vs-row difference is recorded as an
+auditable residual (settlement note + `correction` history row); the bucket
+reaches zero and consistency self-heals on every full payment.
+
+Both `pay_card_debt` and `pay_card_statement` accept `p_skip_source_debit`
+(default false): when the bank account balance was already reduced by the SMS
+automation for the same payment, the RPC validates the source account but does
+not debit it again; the history note records this. The payment drawer offers
+this only when it finds an SMS-sourced outgoing movement on the selected
+account with the same amount within the last 3 days.
 
 The allocation marker is not a client-editable shortcut. Trigger authorization
 requires the canonical RPC's transaction-local context plus matching user, card,

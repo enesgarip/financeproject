@@ -695,6 +695,8 @@ export type Database = {
           p_card_id: string
           p_source_card_id: string
           p_amount: number
+          // true → bakiye SMS/banka hareketiyle zaten düşülmüş; tekrar düşülmez.
+          p_skip_source_debit?: boolean
         }
         Returns: Card
       }
@@ -738,6 +740,8 @@ export type Database = {
         Args: {
           p_statement_id: string
           p_source_card_id: string
+          // true → bakiye SMS/banka hareketiyle zaten düşülmüş; tekrar düşülmez.
+          p_skip_source_debit?: boolean
         }
         Returns: CardStatementArchive
       }

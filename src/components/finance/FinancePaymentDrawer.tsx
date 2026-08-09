@@ -1,16 +1,19 @@
-import type { ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import {
   accountLabelForObligation,
   amountLabelForObligation,
   emptyAccountMessageForObligation,
   estimatedMinimumCardPayment,
+  findRecentSmsAccountDebit,
   modalTitleForObligation,
   obligationAmountEditable,
   submitLabelForObligation,
+  type RecentSmsAccountDebit,
 } from '../../services/financePaymentActions'
 import type { Card } from '../../types/database'
 import { formatDate } from '../../utils/date'
 import { useBalancePrivacy } from '../../hooks/useBalancePrivacy'
+import { parseNumber } from '../../utils/formatCurrency'
 import { exceedsTL } from '../../utils/money'
 import type { FinanceObligation } from '../../utils/obligations'
 import { AccountPaymentModal } from './AccountPaymentModal'
@@ -18,6 +21,7 @@ import { AccountPaymentModal } from './AccountPaymentModal'
 type AccountPaymentSubmit = {
   account: Card
   amount: number
+  skipSourceDebit?: boolean
 }
 
 type FinancePaymentDrawerProps = {
@@ -67,6 +71,35 @@ export function FinancePaymentDrawer({
 }: FinancePaymentDrawerProps) {
   const { formatAmount } = useBalancePrivacy()
   const minimumPayment = intent?.action === 'pay_card_debt' ? estimatedMinimumCardPayment(intent.amount) : 0
+  // B4: seçili hesapta son 3 günde aynı tutarlı SMS kaynaklı çıkış varsa bakiye
+  // muhtemelen zaten düşmüş demektir; kullanıcıya "tekrar düşme" seçeneği sunulur.
+  // Sonuç, sorgulandığı (hesap, tutar) anahtarıyla saklanır; anahtar değişince
+  // eski sonuç render'da geçersiz sayılır (effect'te senkron temizlik gerekmez).
+  const isCardPayment = intent?.action === 'pay_card_debt' || intent?.action === 'pay_card_statement'
+  const [smsDebit, setSmsDebit] = useState<{ key: string; match: RecentSmsAccountDebit | null }>({ key: '', match: null })
+  const [skipDebitChecked, setSkipDebitChecked] = useState(true)
+  const parsedAmount = parseNumber(amountValue)
+  const smsDebitKey = open && isCardPayment && selectedAccountId && parsedAmount > 0
+    ? `${selectedAccountId}:${parsedAmount}`
+    : ''
+
+  useEffect(() => {
+    if (!smsDebitKey) return
+
+    let cancelled = false
+    const [accountId, rawAmount] = smsDebitKey.split(':')
+    void findRecentSmsAccountDebit(accountId, Number(rawAmount)).then((match) => {
+      if (cancelled) return
+      setSmsDebit({ key: smsDebitKey, match })
+      if (match) setSkipDebitChecked(true)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [smsDebitKey])
+
+  const smsDebitMatch = smsDebitKey && smsDebit.key === smsDebitKey ? smsDebit.match : null
+  const skipSourceDebit = Boolean(smsDebitMatch && skipDebitChecked)
   // Tavan, nominal tutardan büyük olabilir: ekstre kalemi "planlanan" ekstre
   // borcunu gösterir ama pay_card_debt dönem içini de kapatabilir (B7).
   const payableCeiling = intent ? intent.maxPayableAmount ?? intent.amount : 0
@@ -116,7 +149,23 @@ export function FinancePaymentDrawer({
       saving={saving}
       externalError={externalError}
       amountEditable={obligationAmountEditable(intent)}
-      accountPreviewAmount={(amount) => intent?.action === 'collect_debt' ? -amount : amount}
+      accountPreviewAmount={(amount) =>
+        skipSourceDebit ? 0 : intent?.action === 'collect_debt' ? -amount : amount}
+      extraControls={isCardPayment && smsDebitMatch ? (
+        <label className="flex items-start gap-2.5 rounded-xl border border-warning/25 bg-warning/8 p-3 text-xs font-medium text-warning">
+          <input
+            type="checkbox"
+            checked={skipDebitChecked}
+            onChange={(event) => setSkipDebitChecked(event.target.checked)}
+            className="mt-0.5 size-4 shrink-0 accent-[var(--warning)]"
+          />
+          <span>
+            Bu hesapta {formatDate(smsDebitMatch.occurredAt.slice(0, 10))} tarihli aynı tutarlı SMS hareketi var
+            (&quot;{smsDebitMatch.title}&quot;) — bakiye muhtemelen zaten düştü. İşaretliyken hesap bakiyesi{' '}
+            <strong>tekrar düşülmez</strong>; yalnız borç/ekstre kaydı kapatılır.
+          </span>
+        </label>
+      ) : null}
       successAction={intent?.action === 'collect_debt' || intent?.action === 'pay_card_statement'}
       info={
         intent?.action === 'pay_card_statement'
@@ -131,7 +180,7 @@ export function FinancePaymentDrawer({
         }
         return null
       }}
-      onSubmit={onSubmit}
+      onSubmit={(payload) => onSubmit({ ...payload, skipSourceDebit })}
     >
       {detail ?? defaultPaymentDetail(intent, formatAmount)}
     </AccountPaymentModal>

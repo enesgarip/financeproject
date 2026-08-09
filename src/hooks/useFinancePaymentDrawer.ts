@@ -13,6 +13,8 @@ import type { SupabaseLikeError } from '../utils/supabaseErrors'
 type AccountPaymentSubmit = {
   account: Card
   amount: number
+  // B4: bakiye SMS/banka hareketiyle zaten düşülmüşse RPC tekrar düşmez.
+  skipSourceDebit?: boolean
 }
 
 type FinancePaymentSubmitContext = AccountPaymentSubmit & {
@@ -83,7 +85,7 @@ export function useFinancePaymentDrawer() {
     setState((current) => (current ? { ...current, amountValue: value, error: '' } : current))
   }, [])
 
-  const handleSubmit = useCallback(async ({ account, amount }: AccountPaymentSubmit) => {
+  const handleSubmit = useCallback(async ({ account, amount, skipSourceDebit }: AccountPaymentSubmit) => {
     if (!state?.intent.action) return
 
     const current = state
@@ -95,6 +97,7 @@ export function useFinancePaymentDrawer() {
       obligation: current.intent,
       account,
       amount,
+      skipSourceDebit,
     })
     current.onSubmitEnd?.({ ...submitContext, error })
 
