@@ -2,6 +2,14 @@
 
 ## Fixed In This Pass
 
+- **Statement installment parent drift (2026-08-09)**
+  - A historical installment parent can legitimately differ from the PDF's
+    current monthly amount projection because earlier installments may be uneven.
+    Statement replacement now preserves that parent and paid children, rebuilds
+    only open children from bank truth, and records the drift on those rows.
+  - Installment-count drift remains blocking because it changes historical plan
+    structure and cannot be inferred safely from a current statement line.
+
 - **Prod consistency hardening (2026-08-02)**
   - Data Health and JSON backup now read 1000+ row tables with immutable-PK
     keyset pagination instead of relying on PostgREST's implicit row cap.

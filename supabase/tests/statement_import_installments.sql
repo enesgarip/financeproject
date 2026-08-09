@@ -126,7 +126,7 @@ begin
     installment_count, status, posted_at, note
   ) values (
     v_user, v_card, (v_statement_date - interval '1 month')::date,
-    400, 'PDF TAKSIT', 'Market', 4, 'posted', now(), 'Tarihsel parent'
+    450, 'PDF TAKSIT', 'Market', 4, 'posted', now(), 'Tarihsel parent toplamı korunmalı'
   ) returning id into v_parent;
 
   insert into public.card_installments (
@@ -218,6 +218,17 @@ begin
   ) then
     raise exception 'FAIL D paid geçmiş taksit korunmadı';
   end if;
+  if (select amount from public.card_expenses where id = v_parent) <> 450 then
+    raise exception 'FAIL D tarihsel parent toplamı değiştirildi';
+  end if;
+  if not exists (
+    select 1 from public.card_installments
+    where card_expense_id = v_parent
+      and paid_at is null
+      and note like '%Tarihsel parent toplamı 450%PDF taksit projeksiyonu 400%'
+  ) then
+    raise exception 'FAIL D parent/PDF toplam farkı denetim notuna yazılmadı';
+  end if;
   select count(*) into v_count from public.card_installments where card_expense_id = v_parent;
   if v_count <> 4 then raise exception 'FAIL D parent child adedi: 4 bekleniyordu, %', v_count; end if;
 
@@ -253,6 +264,33 @@ begin
   from public.card_statement_archives where card_id = v_card and status = 'open';
   if v_debt <> 440 or v_count <> 4 or v_open_archive_count <> 1 then
     raise exception 'FAIL D reimport idempotency: debt/child/open = %/%/%', v_debt, v_count, v_open_archive_count;
+  end if;
+
+  -- Tarihsel parent toplam tutarı farklı olabilir; fakat taksit adedi değişirse
+  -- paid geçmişin yapısı belirsizleşir ve tüm import geri alınmalıdır.
+  v_failed := false;
+  begin
+    perform public.replace_card_statement_import(
+      v_card,
+      v_statement_date,
+      null,
+      160,
+      jsonb_build_array(jsonb_build_object(
+        'kind', 'carryover', 'installmentAmount', 100,
+        'totalInstallments', 5, 'paidInstallments', 1,
+        'nextDueDate', v_statement_date, 'description', 'PDF TAKSIT',
+        'category', 'Market', 'sourceEventId', 'pdf-replace:count-conflict',
+        'existingExpenseId', v_parent
+      ))
+    );
+  exception when others then
+    v_failed := true;
+  end;
+  if not v_failed then raise exception 'FAIL D taksit adedi çakışması bloklanmadı'; end if;
+  select debt_amount into v_debt from public.cards where id = v_card;
+  select count(*) into v_count from public.card_installments where card_expense_id = v_parent;
+  if v_debt <> 440 or v_count <> 4 then
+    raise exception 'FAIL D adet çakışması rollback: debt/child = %/%', v_debt, v_count;
   end if;
 
   -- ── Senaryo E — kesim tarihi doğrulaması en sonda hata verse bile RPC'nin
@@ -293,7 +331,7 @@ begin
   select debt_amount into v_debt from public.cards where id = v_card;
   if v_debt <> 20 then raise exception 'FAIL E atomik rollback borcu: 20 bekleniyordu, %', v_debt; end if;
 
-  raise notice 'Ekstre taksit import regresyonu OK (1. / orta / son / atomik PDF replace / rollback).';
+  raise notice 'Ekstre taksit import regresyonu OK (1. / orta / son / parent toplam farkı / adet koruması / atomik rollback).';
 end $$;
 
 rollback;

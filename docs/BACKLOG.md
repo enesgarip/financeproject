@@ -74,6 +74,12 @@ banka giderleri (MTV, sigorta) de kapsanmalı.
 
 ## 2026-08-09 — Ekstre PDF kaynak-gerçek yeniden kurulum
 
+- ~~**SI-07 — Tarihsel taksit parent toplam farkını güvenle kabul et.**~~ DONE.
+  Ödenmiş geçmişi bulunan planda parent toplam tutarı ile PDF'nin aylık-tutar ×
+  adet projeksiyonu farklıysa parent ve paid child'lar değişmeden kalır; açık
+  child'lar PDF'den yeniden kurulur ve fark yeni child notlarında izlenir. Yalnız
+  taksit adedi çakışması yapısal belirsizlik olarak atomik importu durdurur.
+
 - ~~**SI-06 — Açık ekstre kapsamını PDF'den atomik yeniden kur.**~~ DONE.
   `replace_card_statement_import` ekstre tarihine kadarki yeniden kurulabilir
   harcama/açık taksit/arşiv kapsamını tek transaction'da temizleyip parser'ın
