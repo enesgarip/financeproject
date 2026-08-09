@@ -218,12 +218,18 @@ begin
   if (select amount from public.card_expenses where id = v_parent) <> 450 then
     raise exception 'FAIL D tarihsel parent toplamı değiştirildi';
   end if;
-  select id into v_new_parent from public.card_expenses
-  where card_id = v_card and source_event_id = 'pdf-replace:installment';
+  -- K1: ödenmiş geçmişi korunan plan, aynı adet + aynı açıklama ile tek adaysa
+  -- yeniden kullanılır — yeni parent açılmaz, açık child'lar mevcut parent'a kurulur.
+  if exists (
+    select 1 from public.card_expenses
+    where card_id = v_card and source_event_id = 'pdf-replace:installment'
+  ) then
+    raise exception 'FAIL D K1: plan yeniden kullanılmalıydı, yeni parent açıldı';
+  end if;
   select count(*) into v_count from public.card_installments where card_expense_id = v_parent;
-  if v_count <> 1 then raise exception 'FAIL D tarihsel parent child adedi: 1 bekleniyordu, %', v_count; end if;
-  select count(*) into v_count from public.card_installments where card_expense_id = v_new_parent;
-  if v_count <> 3 then raise exception 'FAIL D yeni acik plan child adedi: 3 bekleniyordu, %', v_count; end if;
+  if v_count <> 4 then raise exception 'FAIL D korunan parent toplam child: 4 bekleniyordu (1 paid + 3 açık), %', v_count; end if;
+  select count(*) into v_count from public.card_installments where card_expense_id = v_parent and paid_at is null;
+  if v_count <> 3 then raise exception 'FAIL D korunan parent açık child: 3 bekleniyordu, %', v_count; end if;
 
   perform public.replace_card_statement_import(
     v_card,
@@ -252,13 +258,17 @@ begin
 
   select debt_amount into v_debt from public.cards where id = v_card;
   select count(*) into v_count
-  from public.card_installments installment
-  join public.card_expenses expense on expense.id = installment.card_expense_id
-  where expense.card_id = v_card and expense.source_event_id = 'pdf-replace:installment';
+  from public.card_installments where card_expense_id = v_parent;
   select count(*) into v_open_archive_count
   from public.card_statement_archives where card_id = v_card and status = 'open';
-  if v_debt <> 440 or v_count <> 3 or v_open_archive_count <> 1 then
+  if v_debt <> 440 or v_count <> 4 or v_open_archive_count <> 1 then
     raise exception 'FAIL D reimport idempotency: debt/child/open = %/%/%', v_debt, v_count, v_open_archive_count;
+  end if;
+  if exists (
+    select 1 from public.card_expenses
+    where card_id = v_card and source_event_id = 'pdf-replace:installment'
+  ) then
+    raise exception 'FAIL D reimport K1: ikinci import da yeni parent açmamalı';
   end if;
 
   -- ── Senaryo E — kesim tarihi doğrulaması en sonda hata verse bile RPC'nin

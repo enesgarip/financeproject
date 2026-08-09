@@ -10,9 +10,11 @@ import {
   fetchCardInstallmentsByExpenseIds,
   fetchPostedInstallmentExpenses,
   updateCardExpense,
+  type CardInstallmentWithArchive,
 } from '../../data/repositories/cardsRepo'
 import { useBalancePrivacy } from '../../hooks/useBalancePrivacy'
-import type { Card, CardExpense, CardInstallment } from '../../types/database'
+import type { Card, CardExpense } from '../../types/database'
+import { isInstallmentSettled } from '../../utils/cardInstallmentCalendar'
 import { expenseCategoryOptions } from '../../utils/categories'
 import { formatDate } from '../../utils/date'
 import { parseNumber } from '../../utils/formatCurrency'
@@ -33,8 +35,10 @@ function historicalPaidInstallmentCount(expense: CardExpense) {
   return Math.max(0, Math.min(expense.installment_count - 1, paid))
 }
 
-function installmentStatusLabel(item: CardInstallment) {
-  if (item.status === 'paid') return 'Ödendi'
+// Ödenmişlik kanıttan türetilir (isInstallmentSettled): ekstre ödemesi taksit
+// satırını değiştirmez ama arşivi 'paid' olan taksit fiilen ödenmiştir.
+function installmentStatusLabel(item: CardInstallmentWithArchive) {
+  if (isInstallmentSettled(item)) return item.status === 'paid' ? 'Ödendi' : 'Ödendi (ekstre)'
   if (item.status === 'posted') return item.statement_archive_id ? 'Açık ekstrede' : 'Bu dönem'
   return 'Planlı'
 }
@@ -47,14 +51,14 @@ type CardInstallmentExpensesPanelProps = {
 
 const installmentExpensesHelp = {
   calculation: 'Taksit sayısı 1\'den büyük olan kesinleşmiş kart harcamaları ve bağlı taksit satırları gösterilir.',
-  importance: 'Kredi kartı taksitleri ayrı borç değildir; ekstre ödemesi arşiv kaydını kapatır, taksit takvimi bilgi amaçlı devam eder.',
-  source: 'Kart harcamaları, kart taksit kayıtları ve ekstre arşivi.',
+  importance: 'Kredi kartı taksitleri ayrı borç değildir. Bankadaki gibi: bağlı olduğu ekstre ödendiğinde taksit ödendi sayılır ve sayaç ilerler.',
+  source: 'Kart harcamaları, kart taksit kayıtları ve ekstre arşivi (ödenmişlik arşiv durumundan türetilir).',
 } satisfies HelpTooltipContent
 
 export function CardInstallmentExpensesPanel({ cards, reload, setError }: CardInstallmentExpensesPanelProps) {
   const { formatAmount } = useBalancePrivacy()
   const [expenses, setExpenses] = useState<CardExpense[]>([])
-  const [installments, setInstallments] = useState<CardInstallment[]>([])
+  const [installments, setInstallments] = useState<CardInstallmentWithArchive[]>([])
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState<CardExpense | null>(null)
   const [amount, setAmount] = useState('')
@@ -69,7 +73,7 @@ export function CardInstallmentExpensesPanel({ cards, reload, setError }: CardIn
 
   const cardsById = useMemo(() => new Map(cards.map((card) => [card.id, card])), [cards])
   const installmentsByExpense = useMemo(() => {
-    const next = new Map<string, CardInstallment[]>()
+    const next = new Map<string, CardInstallmentWithArchive[]>()
 
     for (const item of installments) {
       if (!item.card_expense_id) continue
@@ -79,13 +83,14 @@ export function CardInstallmentExpensesPanel({ cards, reload, setError }: CardIn
     return next
   }, [installments])
 
-  // Taksitleri biten plan: taksit satırları var ve hepsi ödenmiş.
+  // Taksitleri biten plan: taksit satırları var ve hepsi fiilen ödenmiş
+  // (satır paid, erken-ödeme settlement'ı veya ödenmiş ekstre arşivi).
   const { activeExpenses, completedExpenses } = useMemo(() => {
     const active: CardExpense[] = []
     const completed: CardExpense[] = []
     for (const expense of expenses) {
       const items = installmentsByExpense.get(expense.id) ?? []
-      if (items.length > 0 && items.every((item) => item.status === 'paid')) completed.push(expense)
+      if (items.length > 0 && items.every(isInstallmentSettled)) completed.push(expense)
       else active.push(expense)
     }
     return { activeExpenses: active, completedExpenses: completed }
@@ -216,9 +221,9 @@ export function CardInstallmentExpensesPanel({ cards, reload, setError }: CardIn
     const expenseInstallments = installmentsByExpense.get(expense.id) ?? []
     const paidCount = Math.min(
       expense.installment_count,
-      historicalPaidInstallmentCount(expense) + expenseInstallments.filter((item) => item.status === 'paid').length,
+      historicalPaidInstallmentCount(expense) + expenseInstallments.filter(isInstallmentSettled).length,
     )
-    const remainingInstallments = expenseInstallments.filter((item) => item.status !== 'paid')
+    const remainingInstallments = expenseInstallments.filter((item) => !isInstallmentSettled(item))
     const remainingAmount = sumTL(remainingInstallments.map((item) => item.amount))
     const isLocked = expenseInstallments.some((item) => item.status === 'paid' || item.statement_archive_id)
 
@@ -261,7 +266,7 @@ export function CardInstallmentExpensesPanel({ cards, reload, setError }: CardIn
             <p className="rounded-lg border border-border/50 bg-muted/30 px-3 py-2 text-xs text-muted-foreground">Taksit satırı bulunamadı.</p>
           ) : (
             expenseInstallments.map((item) => {
-              const isPaid = item.status === 'paid'
+              const isPaid = isInstallmentSettled(item)
               const isStatementLinked = Boolean(item.statement_archive_id)
 
               return (
@@ -296,7 +301,7 @@ export function CardInstallmentExpensesPanel({ cards, reload, setError }: CardIn
                     </p>
                     {!isPaid ? (
                       <p className="mt-1 text-[11px] leading-4 text-muted-foreground">
-                        Bu satır taksit takvimidir; ekstre ödemesi taksit planını değiştirmez.
+                        Bağlı olduğu ekstre ödendiğinde bu taksit ödendi sayılır.
                       </p>
                     ) : null}
                   </div>
@@ -319,7 +324,7 @@ export function CardInstallmentExpensesPanel({ cards, reload, setError }: CardIn
                 Taksitli harcamalar
                 <HelpTooltip title="Taksitli harcamalar" content={installmentExpensesHelp} />
               </CardTitle>
-              <p className="mt-1 text-xs text-muted-foreground">Kart taksitleri ayrı borç değildir; ekstre ödemesi taksit takvimini değiştirmez.</p>
+              <p className="mt-1 text-xs text-muted-foreground">Kart taksitleri ayrı borç değildir; ekstresi ödenen taksit ödendi sayılır.</p>
             </div>
             <Badge variant="secondary">{activeExpenses.length}</Badge>
           </div>

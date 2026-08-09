@@ -109,3 +109,20 @@ export function buildCardInstallmentTotalsByCard(
 export function totalScheduledInstallments(installments: CardInstallment[]) {
   return sumTL(installments.filter((item) => item.status === 'scheduled').map((item) => item.amount))
 }
+
+// ── Taksit ödenmişliği (banka modeli) ───────────────────────────────────────
+// pay_card_statement taksit satırına bilerek dokunmaz (SI-10: ödenen şey taksit
+// değil ekstre arşividir). "Bu taksit ödendi mi?" bu yüzden satır durumundan
+// değil kanıttan türetilir: satır paid'e çekildiyse (pay_card_debt tam kapanış),
+// erken-ödeme settlement'ına bağlandıysa veya bağlı olduğu ekstre arşivi
+// ödendiyse taksit fiilen ödenmiştir.
+export type InstallmentSettlementSource = Pick<CardInstallment, 'status'> & {
+  current_settlement_id?: string | null
+  statement_archive?: { status: string | null } | null
+}
+
+export function isInstallmentSettled(item: InstallmentSettlementSource) {
+  if (item.status === 'paid') return true
+  if (item.current_settlement_id) return true
+  return item.statement_archive?.status === 'paid'
+}

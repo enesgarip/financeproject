@@ -132,6 +132,14 @@ statement date): the rebuild scope only recognizes open archives, so replaying
 a paid period would add the debt a second time and silently delete preserved
 plans' open installments.
 
+A carryover action without an explicit `existingExpenseId` reuses the ongoing
+plan server-side: if exactly one preserved parent on the same card matches the
+PDF's installment count and (normalized) description and carries paid/settled
+history, its open children are rebuilt under that parent instead of creating a
+new parent expense each month. Amount drift is deliberately not a matching
+criterion (SI-07 accepts parent-total drift with a note); any ambiguity falls
+back to a fresh parent.
+
 The server-side daily maintenance job calls the same audited RPCs used by the
 client:
 
@@ -161,6 +169,13 @@ Payable debt excludes provisions and future scheduled installment debt. A
 provision must be posted before it becomes payable. Future installments first
 become current-period debt when their own due date passes, then become payable
 through the normal statement cut; they are not added again to dashboard debt.
+
+Installment "paidness" in the UI is derived, not stored: statement payment
+intentionally never touches installment rows, so `isInstallmentSettled`
+(`src/utils/cardInstallmentCalendar.ts`) treats a row as paid when its status is
+`paid`, it is linked to a current settlement, or its statement archive is
+`paid`. `fetchCardInstallmentsByExpenseIds` embeds the archive status for this;
+progress counters ("X/9 ödendi") must use this helper instead of raw status.
 
 The canonical user flow is paying an open statement with `pay_card_statement`.
 The archive's amount is bank truth; payment does not infer or mutate individual
