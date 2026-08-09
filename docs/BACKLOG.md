@@ -1,9 +1,34 @@
 # Priority Backlog
 
+## 2026-08-10 — Banka modeli Faz 4: sertleştirme
+
+Üç-akış denetiminin son planlı fazı.
+
+- ~~**T9 — Ölü taksit ödeme RPC'leri drop edildi.**~~ DONE.
+  `pay_card_installment(uuid,uuid)` + `unpay_card_installment(uuid)` eski
+  modelin (taksit başına borç düşme) kalıntısıydı; UI çağırmıyor ama grant'leri
+  açıktı ve çağrılsalar borcu ikinci kez düşürürlerdi. Migration
+  `20260810150000` + types temizliği.
+- ~~**O2 — YapıKredi plan toplamı tutarlılık kontrolüne bağlandı.**~~ DONE.
+  Alt satırdaki gerçek toplam ("146.999,00 TL'lik işlemin 4/9 taksidi") artık
+  çöpe atılmıyor: `kalan = toplam − aylık × sıra` çevirisiyle DenizBank'ın
+  `checkInstallmentNotation` kontrolünden geçer; eşit bölünmeyen plan veya
+  yanlış okunan adet needs-review'a düşer.
+- **T1 — `card_installments` yazımını RPC-only yapmak: ERTELENDİ.** Sebep:
+  `update_card_expense` ve `cut_card_statement` invoker-rights çalışır ve
+  taksit satırlarına authenticated tablo grant'leriyle yazar; grant'i kaldırmak
+  önce bu RPC'lerin security definer'a taşınmasını gerektirir (ayrı, dikkatli
+  bir güvenlik geçişi). Bugünkü koruma: arşivli/settled satırlar trigger
+  guard'lı; açık satır drift'ini Data Health non-fixable olarak raporlar.
+- **D2 — İstemcideki ölü ekstre eşleştirme kodu (matchTransactions,
+  checkStatementInstallments, reusableStatementInstallmentParentId ve
+  StatementImportModal'ın cleanImport=true ile erişilmez kalan yolları):
+  AÇIK.** K1 sunucu tarafı yeniden kullanım gelince kalıcı olarak gereksizleşti;
+  ayrı bir temizlik dilimi olarak silinebilir (davranış değişikliği yok).
+
 ## 2026-08-10 — Banka modeli Faz 3: ödeme banka modeline indi
 
-Üç-akış denetiminin üçüncü fazı. Faz 4 (card_installments RPC-only, ölü
-pay_card_installment RPC drop, YapıKredi gerçek toplam) AÇIK.
+Üç-akış denetiminin üçüncü fazı.
 
 - ~~**B1 — Tam güncel ödemenin kuruş-eşitlik kilidi kalktı.**~~ DONE.
   `pay_card_debt` tam güncel ödemede tüm allocation'sız satırları ödemenin
