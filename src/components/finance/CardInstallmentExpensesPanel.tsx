@@ -44,7 +44,7 @@ type CardInstallmentExpensesPanelProps = {
 
 const installmentExpensesHelp = {
   calculation: 'Taksit sayısı 1\'den büyük olan kesinleşmiş kart harcamaları ve bağlı taksit satırları gösterilir.',
-  importance: 'Kredi kartı taksitleri ayrı borç değildir; kart ekstresi ödendiğinde ilgili taksitler otomatik kapanır.',
+  importance: 'Kredi kartı taksitleri ayrı borç değildir; ekstre ödemesi arşiv kaydını kapatır, taksit takvimi bilgi amaçlı devam eder.',
   source: 'Kart harcamaları, kart taksit kayıtları ve ekstre arşivi.',
 } satisfies HelpTooltipContent
 
@@ -293,7 +293,7 @@ export function CardInstallmentExpensesPanel({ cards, reload, setError }: CardIn
                     </p>
                     {!isPaid ? (
                       <p className="mt-1 text-[11px] leading-4 text-muted-foreground">
-                        Bu taksit, bagli oldugu kredi karti ekstresi odendiginde otomatik kapanir.
+                        Bu satır taksit takvimidir; ekstre ödemesi taksit planını değiştirmez.
                       </p>
                     ) : null}
                   </div>
@@ -316,7 +316,7 @@ export function CardInstallmentExpensesPanel({ cards, reload, setError }: CardIn
                 Taksitli harcamalar
                 <HelpTooltip title="Taksitli harcamalar" content={installmentExpensesHelp} />
               </CardTitle>
-              <p className="mt-1 text-xs text-muted-foreground">Kart taksitleri ayrı borç değildir; bağlı ekstre ödendiğinde otomatik kapanır.</p>
+              <p className="mt-1 text-xs text-muted-foreground">Kart taksitleri ayrı borç değildir; ekstre ödemesi taksit takvimini değiştirmez.</p>
             </div>
             <Badge variant="secondary">{activeExpenses.length}</Badge>
           </div>
