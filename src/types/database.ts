@@ -875,6 +875,16 @@ export type Database = {
         }
         Returns: void
       }
+      replace_card_statement_import: {
+        Args: {
+          p_card_id: string
+          p_statement_date: string
+          p_due_date: string | null
+          p_bank_amount: number
+          p_actions: Json
+        }
+        Returns: Json
+      }
       post_due_card_auto_payments: {
         Args: Record<string, never>
         Returns: number

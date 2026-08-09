@@ -83,6 +83,7 @@ because the current undo flows explicitly do not refund cash automatically.
 | `transfer_between_accounts` | `transfer` | Source `cards.id` | Transfer amount | One feed row represents both debit and credit sides. |
 | `trade_asset_with_account` | `asset` | `assets.id` | Trade amount | Buy debits the selected bank account; sell credits it. Asset value/quantity updates and account balance movement commit together. |
 | `reset_card_import_data` | deletes scoped history | Non-paid/open import rows | n/a | Removes history tied only to a safely rebuildable working scope. It rejects cards whose current-settlement or paid-installment evidence would make historical replay unsafe. |
+| `replace_card_statement_import` | rebuilds scoped history | PDF-covered open rows | PDF row amounts | Deletes only history belonging to replaced open rows, reuses canonical expense/payment/carryover writers, and records the aggregate reset/bank lock in append-only card ledger adjustments. Paid and later history is retained. |
 | `reset_user_finance_data` | deletes all user history | User data reset | n/a | Full reset removes the feed with the rest of the user's finance data. |
 | Ledger recompute/correction RPCs | none | Ledger tables | none | Card/account ledgers are the audit trail; dashboard history is not duplicated. |
 | Data Health direct fixes | none | Direct table updates/deletes | none | Safe-fix preview/undo is Data Health state, not activity feed history. |

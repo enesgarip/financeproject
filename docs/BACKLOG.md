@@ -72,6 +72,19 @@ banka giderleri (MTV, sigorta) de kapsanmalı.
   Yerel Postgres'te RLS/grant/lint + uçtan uca UI (borç 800 tek sayıldı, araç
   toplamı 2300) doğrulandı.
 
+## 2026-08-09 — Ekstre PDF kaynak-gerçek yeniden kurulum
+
+- ~~**SI-06 — Açık ekstre kapsamını PDF'den atomik yeniden kur.**~~ DONE.
+  `replace_card_statement_import` ekstre tarihine kadarki yeniden kurulabilir
+  harcama/açık taksit/arşiv kapsamını tek transaction'da temizleyip parser'ın
+  doğrulanmış aksiyonlarını yeniden oynatır. Ödenmiş ekstre ve current-settlement
+  kanıtları ile PDF tarihinden sonraki hareket/provizyonlar korunur. Taksit
+  parent'ında paid arşiv çocuğu varsa parent + tarihsel child kalır, yalnız açık
+  child planı PDF'den yeniden oluşur. Kesim/son ödeme tarihi kart döngüsüyle
+  uyuşmazsa tüm işlem rollback olur; aynı PDF'nin yeniden importu borç/child/arşiv
+  sayısını değiştirmez. Modal tüm PDF satırlarını varsayılan/zorunlu kapsam yapar;
+  belirsiz taksit adedi doğrulanmadan RPC çağrılmaz.
+
 ## 2026-08-04 — Taksit import doğruluğu: kalan-borç cross-check + belirsiz taksit koruması
 
 Amaç: Ekstreden taksit kurulumunda en büyük sessiz hata sınıfını kapatmak —

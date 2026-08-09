@@ -7,14 +7,14 @@ import {
   addCardExpense,
   applyCardProvision,
   cancelCardExpense,
-  cutCardStatement,
   fetchCardById,
   fetchCardExpenseMatchRows,
   fetchCardInstallmentMatchRows,
   fetchCardPaymentMatchRows,
   payPaymentFromCardImport,
+  replaceCardStatementImport,
   recordCardInstallmentCarryover,
-  resetCardImportData,
+  type CardStatementReplaceAction,
   type ExpenseMatchRow,
   type PaymentMatchRow,
 } from '../../data/repositories/cardsRepo'
@@ -111,6 +111,7 @@ type StatementImportRow = {
   sourceEventId: string
   transaction: ParsedTransaction
   plannedPayment: PaymentMatchRow | null
+  existingExpenseId: string | null
 }
 
 type StatementAdjustmentRow = {
@@ -125,6 +126,7 @@ type ManualReviewRow = {
   key: string
   transaction: ParsedTransaction
   sourceEventId: string
+  existingExpenseId: string | null
 }
 
 type Props = {
@@ -158,6 +160,7 @@ function attachPlannedPayments(
   plannedPayments: PaymentMatchRow[],
   cardId: string,
   sourceEventIds: ReadonlyMap<ParsedTransaction, string>,
+  existingExpenseIds: ReadonlyMap<ParsedTransaction, string | null> = new Map(),
 ): StatementImportRow[] {
   const movementRows = transactions
     .map((transaction, index) => ({ transaction, index }))
@@ -173,6 +176,7 @@ function attachPlannedPayments(
     sourceEventId: sourceEventIds.get(transaction)!,
     transaction,
     plannedPayment: paymentByIndex.get(index) ?? null,
+    existingExpenseId: existingExpenseIds.get(transaction) ?? null,
   }))
 }
 
@@ -241,6 +245,27 @@ function runStatementImportAction(
   }
 }
 
+function toReplaceAction(
+  action: StatementImportAction,
+  row: Pick<StatementImportRow, 'transaction' | 'sourceEventId' | 'existingExpenseId'>,
+): CardStatementReplaceAction | null {
+  const common = {
+    description: row.transaction.description,
+    category: row.transaction.category,
+    sourceEventId: row.sourceEventId,
+  }
+  switch (action.kind) {
+    case 'payment':
+      return { ...action, sourceEventId: row.sourceEventId }
+    case 'expense':
+      return { ...action, ...common }
+    case 'carryover':
+      return { ...action, ...common, existingExpenseId: row.existingExpenseId }
+    case 'needs-review':
+      return null
+  }
+}
+
 export function StatementImportModal({ card, onClose, onSuccess }: Props) {
   const { formatAmount } = useBalancePrivacy()
   // Modal açıkken arka plan sayfasının kaymasını engelle (ortak kilit kalıbı).
@@ -285,7 +310,6 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
 
   // Faz 3 — manuel taksitlere inline "elle ekle" (toplam adet girilince importable).
   const [manualDrafts, setManualDrafts] = useState<Record<string, string>>({})
-  const [manualBusyKey, setManualBusyKey] = useState<string | null>(null)
   const [manualAddedKeys, setManualAddedKeys] = useState<Set<string>>(new Set())
   const [manualError, setManualError] = useState('')
 
@@ -376,15 +400,37 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
       setPeriodLabel(reviewPeriod?.label ?? '')
       setPeriodExpenses(rowsInReviewPeriod(expenses, reviewPeriod))
 
-      if (installmentsResult.ok) {
-        const instCheck = checkStatementInstallments(parsed.transactions, installmentsResult.data, parsed.statementDate)
-        const hasIssues = instCheck.amountMismatches.length > 0 || instCheck.appOnly.length > 0
-        setInstallmentCheck(instCheck)
-        setShowInstallmentCheck(hasIssues)
+      if (!installmentsResult.ok) {
+        setParseError(installmentsResult.error.message ?? 'Kart taksitleri yüklenemedi.')
+        setParsing(false)
+        return
       }
+      const instCheck = checkStatementInstallments(parsed.transactions, installmentsResult.data, parsed.statementDate)
+      const hasIssues = instCheck.amountMismatches.length > 0 || instCheck.appOnly.length > 0
+      setInstallmentCheck(instCheck)
+      setShowInstallmentCheck(hasIssues)
 
       if (cleanImport) {
-        const importRows = attachPlannedPayments(parsed.transactions, paymentsResult.data, card.id, sourceEventIds)
+        const existingExpenseIds = new Map<ParsedTransaction, string | null>()
+        for (const match of [...instCheck.matched, ...instCheck.amountMismatches]) {
+          existingExpenseIds.set(match.transaction, match.installment.card_expense_id)
+        }
+        const importable = parsed.transactions.filter(isImportable)
+        const manual: ManualReviewRow[] = parsed.transactions
+          .filter((tx) => !isImportable(tx))
+          .map((transaction, index) => ({
+            key: `manual:${index}:${transaction.date}:${transaction.amount}:${transaction.description}`,
+            transaction,
+            sourceEventId: sourceEventIds.get(transaction)!,
+            existingExpenseId: existingExpenseIds.get(transaction) ?? null,
+          }))
+        const importRows = attachPlannedPayments(
+          importable,
+          paymentsResult.data,
+          card.id,
+          sourceEventIds,
+          existingExpenseIds,
+        )
         const adjustmentRows = attachStatementAdjustments(parsed.adjustments ?? [])
 
         setMatched([])
@@ -392,9 +438,12 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
         setShowMatches(false)
         setUnmatched(importRows)
         setAdjustments(adjustmentRows)
-        setManualReview([])
+        setManualReview(manual)
 
-        setSelected(new Set())
+        setSelected(new Set([
+          ...importRows.map((row) => row.selectionKey),
+          ...adjustmentRows.map((row) => row.selectionKey),
+        ]))
         setStep('review')
         return
       }
@@ -410,6 +459,7 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
           key: `manual:${index}:${transaction.date}:${transaction.amount}:${transaction.description}`,
           transaction,
           sourceEventId: sourceEventIds.get(transaction)!,
+          existingExpenseId: null,
         }))
       const importRows = attachPlannedPayments(importable, paymentsResult.data, card.id, sourceEventIds)
       const adjustmentRows = attachStatementAdjustments(parsed.adjustments ?? [])
@@ -441,83 +491,80 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
   }, [card, cleanImport, categoryMemory])
 
   async function handleCleanImport() {
-    const toImport = unmatched.filter((item) => selected.has(item.selectionKey))
-    const toAdjust = adjustments.filter((item) => selected.has(item.selectionKey))
-    if (!toImport.length && !toAdjust.length) return
+    const toImport = unmatched
+    if (!toImport.length && manualAddedKeys.size === 0 && adjustments.length === 0) return
+
+    if (!statementDate) {
+      setImportError('Ekstre kesim tarihi okunamadı; yeniden kurulum başlatılmadı.')
+      return
+    }
+
+    if (manualAddedKeys.size !== manualReview.length) {
+      setImportError('PDF kaynak gerçek olarak uygulanmadan önce tüm manuel taksitleri doğrula.')
+      return
+    }
 
     setImporting(true)
     setImportError('')
 
-    const resetResult = await resetCardImportData(card.id)
-    if (!resetResult.ok) {
-      setImportError(`Sıfırlama başarısız: ${resetResult.error.message ?? 'Bilinmeyen hata.'}`)
-      setImporting(false)
-      return
-    }
-
-    let successCount = 0
-    const errors: string[] = []
-
+    const actions: CardStatementReplaceAction[] = []
     for (const item of toImport) {
-      const { transaction: tx, plannedPayment, sourceEventId } = item
+      const { transaction: tx, plannedPayment } = item
       const action = resolveStatementImportAction({ transaction: tx, plannedPaymentId: plannedPayment?.id })
-      const result = await runStatementImportAction(action, { cardId: card.id, tx, sourceEventId })
-      if (!result.ok) errors.push(`${tx.description}: ${result.error.message ?? 'Bilinmeyen hata.'}`)
-      else successCount++
-    }
-
-    for (const item of toAdjust) {
-      const { adjustment } = item
-      const result = await postCardDebtCorrection(
-        card.id,
-        -adjustment.amount,
-        `Ekstre import alacak/iade: ${adjustment.description} (${adjustment.date})`,
-      )
-      if (result.error) errors.push(`${adjustment.description}: ${result.error.message ?? 'Bilinmeyen hata.'}`)
-      else successCount++
-    }
-
-    setImportedCount(successCount)
-    setFailedCount(errors.length)
-
-    if (!successCount) {
-      setImportError(`İçe aktarma başarısız: ${errors[0] ?? 'Bilinmeyen hata.'}`)
-      setImporting(false)
-      return
-    }
-
-    if (errors.length) {
-      setImportError(`${errors.length} işlem aktarılamadı: ${errors[0]}`)
-    }
-
-    // ── Faiz/ücret farkı düzeltmesi ──
-    // Bankanın Dönem Borcu = işlemler + faiz/ücret. İşlem satırları tek tek
-    // import edildi ama faiz/ücret ayrı satır olmadığı için current_period
-    // banka toplamından düşük kalır. Farkı burada kapatıyoruz ki cut sonrası
-    // statement_debt_amount = bankanın Dönem Borcu olsun.
-    if (statementTotal > 0) {
-      const fresh = await fetchCardById(card.id)
-      if (fresh.ok) {
-        const currentTotal = fresh.data.current_period_spending
-        if (!equalsTL(statementTotal, currentTotal)) {
-          const gap = diffTL(statementTotal, currentTotal)
-          const lockResult = await postCardDebtCorrection(
-            card.id,
-            gap,
-            lockCorrectionNote(gap, periodLabel),
-          )
-          if (!lockResult.error) setAutoLockApplied(true)
-        }
+      const replacement = toReplaceAction(action, item)
+      if (!replacement) {
+        setImportError(`${tx.description}: taksit bilgisi doğrulanmadan yeniden kurulum yapılamaz.`)
+        setImporting(false)
+        return
       }
+      actions.push(replacement)
     }
 
-    const cutResult = await cutCardStatement(card.id)
-    if (!cutResult.ok) {
-      setImportError(`Ekstre kesilemedi: ${cutResult.error.message ?? 'Bilinmeyen hata.'}`)
+    for (const row of manualReview) {
+      const totalInstallments = Number(manualDrafts[row.key] ?? '')
+      const action = resolveStatementImportAction({
+        transaction: row.transaction,
+        totalInstallmentsOverride: totalInstallments,
+      })
+      const replacement = toReplaceAction(action, {
+        transaction: row.transaction,
+        sourceEventId: row.sourceEventId,
+        existingExpenseId: row.existingExpenseId,
+      })
+      if (!replacement) {
+        setImportError(`${row.transaction.description}: manuel taksit doğrulaması geçersiz.`)
+        setImporting(false)
+        return
+      }
+      actions.push(replacement)
+    }
+
+    for (const item of adjustments) {
+      actions.push({
+        kind: 'adjustment',
+        amount: item.adjustment.amount,
+        description: item.adjustment.description,
+        spentAt: item.adjustment.date,
+        sourceEventId: item.selectionKey,
+      })
+    }
+
+    const result = await replaceCardStatementImport({
+      cardId: card.id,
+      statementDate,
+      dueDate: dueDate || null,
+      bankAmount: statementTotal,
+      actions,
+    })
+    if (!result.ok) {
+      setImportError(result.error.message ?? 'Ekstre yeniden kurulamadı.')
       setImporting(false)
       return
     }
 
+    setImportedCount(actions.length)
+    setFailedCount(0)
+    setAutoLockApplied(true)
     setImporting(false)
     setStep('success')
   }
@@ -637,34 +684,26 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
     setCancelling(false)
   }
 
-  async function handleAddManual(row: ManualReviewRow) {
+  function handleAddManual(row: ManualReviewRow) {
     const totalInstallments = Number(manualDrafts[row.key] ?? '')
-    if (!Number.isInteger(totalInstallments) || totalInstallments < 1) {
-      setManualError('Geçerli bir toplam taksit sayısı gir (1 veya üzeri).')
+    if (!Number.isInteger(totalInstallments) || totalInstallments < Math.max(1, row.transaction.installmentNo)) {
+      setManualError(`Toplam taksit sayısı en az ${Math.max(1, row.transaction.installmentNo)} olmalı.`)
       return
     }
 
-    setManualBusyKey(row.key)
     setManualError('')
-    const tx = row.transaction
-    const action = resolveStatementImportAction({ transaction: tx, totalInstallmentsOverride: totalInstallments })
-    const result = await runStatementImportAction(action, { cardId: card.id, tx, sourceEventId: row.sourceEventId })
-    if (!result.ok) {
-      setManualError(`${tx.description}: ${result.error.message ?? 'Eklenemedi.'}`)
-      setManualBusyKey(null)
-      return
-    }
     setManualAddedKeys((prev) => new Set(prev).add(row.key))
-    setManualBusyKey(null)
   }
 
   function toggleAll() {
+    if (cleanImport) return
     const keys = [...unmatched.map((item) => item.selectionKey), ...adjustments.map((item) => item.selectionKey)]
     if (selected.size === keys.length) setSelected(new Set())
     else setSelected(new Set(keys))
   }
 
   function toggleRow(selectionKey: string) {
+    if (cleanImport) return
     setSelected((prev) => {
       const next = new Set(prev)
       if (next.has(selectionKey)) next.delete(selectionKey)
@@ -690,6 +729,7 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
   const appCardDebt = sumTL([card.statement_debt_amount, card.current_period_spending])
   const diff = diffTL(statementTotal, appCardDebt)
   const importableCount = unmatched.length + adjustments.length
+  const unresolvedManualCount = manualReview.length - manualAddedKeys.size
 
   return createPortal(
     <div className="fixed inset-0 z-[80] flex items-start justify-center overflow-y-auto bg-black/50 px-3 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-[calc(env(safe-area-inset-top)+1rem)] backdrop-blur-sm sm:items-center sm:p-6">
@@ -738,7 +778,7 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
             </button>
 
             <p className="rounded-xl border border-success/20 bg-success/8 p-3 text-xs text-success">
-              Güvenli eşleştirme kullanılır; geçmiş kayıtlar silinmez, yalnız eksik seçili ekstre satırları eklenir.
+              PDF açık ekstre döneminin kaynak gerçeğidir. Ödenmiş geçmiş ve ekstre tarihinden sonraki hareketler korunarak dönem atomik biçimde yeniden kurulur.
             </p>
 
             <input
@@ -767,7 +807,7 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
             {cleanImport && (
               <p className="flex items-start gap-2 border-b border-border bg-warning/10 px-4 py-3 text-xs font-bold text-warning">
                 <AlertCircle size={15} className="mt-0.5 shrink-0" />
-                Açık/güncel kart harcama ve taksitleri seçili PDF satırlarıyla yeniden kurulacak. Tüm ödenmiş ekstre arşivleri ve bağlı geçmiş kayıtlar korunur.
+                Ekstre tarihine kadarki açık harcama ve taksitler PDF satırlarıyla yeniden kurulacak. Ödenmiş geçmiş ve daha sonraki hareketler korunur; işlem yarıda kalırsa hiçbir değişiklik uygulanmaz.
               </p>
             )}
             {parseTotalsWarning && (
@@ -830,7 +870,7 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
                         onClick={toggleAll}
                         className="font-bold text-primary"
                       >
-                        {selected.size === importableCount ? 'Kaldır' : 'Tümünü seç'}
+                        {cleanImport ? 'PDF kapsamı' : selected.size === importableCount ? 'Kaldır' : 'Tümünü seç'}
                       </button>
                     </div>
                   </div>
@@ -1029,7 +1069,6 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
                     {manualReview.map((row) => {
                       const tx = row.transaction
                       const added = manualAddedKeys.has(row.key)
-                      const busy = manualBusyKey === row.key
                       return (
                         <div key={row.key} className="border-b border-border/50 px-4 py-2.5">
                           <div className="flex items-center gap-3">
@@ -1049,7 +1088,7 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
                           </div>
                           {added ? (
                             <p className="mt-2 flex items-center gap-1 text-[11px] font-bold text-success">
-                              <CheckCircle2 size={12} /> Eklendi
+                              <CheckCircle2 size={12} /> Doğrulandı
                             </p>
                           ) : (
                             <div className="mt-2 flex items-center gap-2">
@@ -1065,12 +1104,10 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
                               />
                               <button
                                 type="button"
-                                disabled={busy}
-                                onClick={() => void handleAddManual(row)}
+                                onClick={() => handleAddManual(row)}
                                 className="ml-auto flex items-center gap-1 rounded-lg bg-primary px-3 py-1.5 text-[11px] font-black text-primary-foreground disabled:opacity-55"
                               >
-                                {busy && <Loader2 size={12} className="animate-spin" />}
-                                {busy ? 'Ekleniyor…' : 'Elle ekle'}
+                                Doğrula
                               </button>
                             </div>
                           )}
@@ -1250,24 +1287,26 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
             </div>
 
             {/* ── Sticky CTA bar ── */}
-            {importableCount > 0 && (
+            {(importableCount > 0 || manualReview.length > 0) && (
               <div className="sticky bottom-0 z-10 border-t border-border bg-card p-4 shadow-[0_-2px_8px_rgba(0,0,0,0.06)]">
                 <button
                   type="button"
-                  disabled={selected.size === 0 || importing}
+                  disabled={(selected.size === 0 && manualAddedKeys.size === 0) || unresolvedManualCount > 0 || importing}
                   onClick={() => void handleImport()}
                   className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3 text-sm font-black text-primary-foreground disabled:opacity-55"
                 >
                   {importing && <Loader2 size={15} className="animate-spin" />}
                   {importing
                     ? 'İçe aktarılıyor…'
-                    : `${selected.size} satırı içe aktar`}
+                    : unresolvedManualCount > 0
+                      ? `Önce ${unresolvedManualCount} taksiti doğrula`
+                      : `${selected.size + manualAddedKeys.size} satırla yeniden kur`}
                 </button>
               </div>
             )}
 
             {/* İçe aktarılacak bir şey yokken kapat butonu */}
-            {importableCount === 0 && (
+            {importableCount === 0 && manualReview.length === 0 && (
               <div className="border-t border-border p-4">
                 <button
                   type="button"

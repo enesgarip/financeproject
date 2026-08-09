@@ -429,6 +429,7 @@ export function matchTransactions(
 
 export type StatementInstallmentMatchRow = {
   id: string
+  card_expense_id: string | null
   due_month: string
   amount: number
   status: string

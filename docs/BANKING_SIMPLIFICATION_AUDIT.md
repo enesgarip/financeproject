@@ -44,10 +44,10 @@
     for bank reconciliation.
   - Clean import always preserves paid archives and their linked history; a
     current-movement PDF no longer creates a synthetic "mutabık" snapshot.
-  - The destructive clean-import switch is no longer exposed. Statement and
-    current-movement imports reconcile safely, preserve the bank's installment
-    number/date, and let unmatched installment rows create the correct remaining
-    plan after the total count is supplied.
+  - Statement PDF import now rebuilds its covered open scope atomically from all
+    validated bank rows while preserving paid history and later movements.
+    Current-movement import remains non-destructive; both paths preserve the
+    bank's installment number/date and require missing total counts to be supplied.
   - Full pre-statement current-balance payments (the Yapı Kredi pattern) are
     allocated to posted movements through `card_current_settlements`; due
     installments become paid and settled rows cannot be billed again. Statement

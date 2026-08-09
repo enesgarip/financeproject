@@ -1,10 +1,10 @@
 import { supabase } from '../../lib/supabase'
-import type { Card, CardExpense, CardExpenseSource, CardInstallment, CardStatementArchive, Payment } from '../../types/database'
+import type { Card, CardExpense, CardExpenseSource, CardInstallment, CardStatementArchive, Json, Payment } from '../../types/database'
 import { ok, resultFromSupabase, voidResultFromSupabase, type Result } from '../result'
 import { roundTL } from '../../utils/money'
 
 export type ExpenseMatchRow = Pick<CardExpense, 'id' | 'spent_at' | 'amount' | 'status' | 'description' | 'category' | 'installment_count' | 'note'>
-export type InstallmentMatchRow = Pick<CardInstallment, 'id' | 'due_month' | 'amount' | 'status' | 'description' | 'installment_no' | 'installment_count' | 'statement_archive_id'>
+export type InstallmentMatchRow = Pick<CardInstallment, 'id' | 'card_expense_id' | 'due_month' | 'amount' | 'status' | 'description' | 'installment_no' | 'installment_count' | 'statement_archive_id'>
 export type PaymentMatchRow = Pick<
   Payment,
   'id' | 'title' | 'amount' | 'amount_status' | 'due_date' | 'status' | 'payment_method' | 'auto_source_card_id' | 'category' | 'recurrence' | 'recurrence_day' | 'recurrence_end_date'
@@ -197,7 +197,7 @@ export type CardInstallmentCarryoverInput = {
 export async function fetchCardInstallmentMatchRows(cardId: string): Promise<Result<InstallmentMatchRow[]>> {
   const { data, error } = await supabase
     .from('card_installments')
-    .select('id, due_month, amount, status, description, installment_no, installment_count, statement_archive_id')
+    .select('id, card_expense_id, due_month, amount, status, description, installment_no, installment_count, statement_archive_id')
     .eq('card_id', cardId)
 
   return resultFromSupabase((data ?? []) as InstallmentMatchRow[], error, 'Kart taksitleri yüklenemedi.')
@@ -227,6 +227,61 @@ export async function cutDueCardStatements(): Promise<Result<number>> {
 export async function resetCardImportData(cardId: string): Promise<Result<void>> {
   const { error } = await supabase.rpc('reset_card_import_data', { p_card_id: cardId })
   return voidResultFromSupabase(error, 'Kart import verisi sifirlanamadi.')
+}
+
+export type CardStatementReplaceAction =
+  | {
+      kind: 'expense'
+      amount: number
+      spentAt: string
+      installmentCount: number
+      description: string
+      category: string
+      sourceEventId: string
+    }
+  | {
+      kind: 'carryover'
+      installmentAmount: number
+      totalInstallments: number
+      paidInstallments: number
+      nextDueDate: string
+      description: string
+      category: string
+      sourceEventId: string
+      existingExpenseId?: string | null
+    }
+  | {
+      kind: 'payment'
+      paymentId: string
+      amount: number
+      spentAt: string
+      sourceEventId: string
+    }
+  | {
+      kind: 'adjustment'
+      amount: number
+      description: string
+      spentAt: string
+      sourceEventId: string
+    }
+
+export type ReplaceCardStatementImportInput = {
+  cardId: string
+  statementDate: string
+  dueDate: string | null
+  bankAmount: number
+  actions: CardStatementReplaceAction[]
+}
+
+export async function replaceCardStatementImport(input: ReplaceCardStatementImportInput): Promise<Result<void>> {
+  const { error } = await supabase.rpc('replace_card_statement_import', {
+    p_card_id: input.cardId,
+    p_statement_date: input.statementDate,
+    p_due_date: input.dueDate,
+    p_bank_amount: input.bankAmount,
+    p_actions: input.actions as Json,
+  })
+  return voidResultFromSupabase(error, 'Ekstre PDF kaynak gerçeğinden yeniden kurulamadı.')
 }
 
 export async function cutCardStatement(cardId: string): Promise<Result<void>> {
