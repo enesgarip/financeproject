@@ -540,6 +540,7 @@ describe('checkStatementInstallments', () => {
 
   const appInst = (overrides: Partial<StatementInstallmentMatchRow> = {}): StatementInstallmentMatchRow => ({
     id: 'inst-1',
+    card_expense_id: 'expense-1',
     due_month: '2026-06-19',
     amount: 21666.67,
     status: 'scheduled',

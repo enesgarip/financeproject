@@ -182,10 +182,11 @@ Current movement reconciliation:
 - A current-movement PDF is transaction evidence, not an independent total-debt
   snapshot. Rebuilding the open period from it must not record a synthetic
   zero-drift debt reconciliation; "bankayla mutabık" requires a real bank amount.
-- The import UI uses non-destructive matching and does not expose the old clean
-  import switch. The lower-level reset RPC remains archive-safe: if used by a
-  maintenance flow, it never deletes a paid statement archive or rows linked to
-  one, even when that paid archive is in the active statement period.
+- Statement PDF import is an authoritative, atomic replacement through the PDF's
+  statement date. All validated rows are included; unknown installment counts
+  must be confirmed first. Paid/current-settled evidence and movements after the
+  statement date are preserved. Current-movement import remains non-destructive
+  matching because it does not contain an independent total-debt snapshot.
 - Imports use `add_card_expense` for ordinary card spending so card debt, provision/current-period fields, ledger events, and transaction history stay under the audited mutation path.
 - If a missing bank row matches a still-open planned payment by amount and due/movement date, the import uses `pay_payment_from_card_import` instead. This creates the card expense on the bank row date and advances/closes the planned payment, preventing the same bill from remaining as a separate pending obligation.
 - DenizBank statement installment rows show the original purchase date even for

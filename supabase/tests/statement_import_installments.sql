@@ -21,6 +21,12 @@ declare
   v_sum numeric;
   v_min date;
   v_max date;
+  v_parent uuid;
+  v_paid_archive uuid;
+  v_statement_date date;
+  v_open_archive_count integer;
+  v_original_expense uuid;
+  v_failed boolean;
 begin
   -- ── Senaryo A — 1. taksit: plancı 'expense' (toplam tutar + adet, orijinal tarih)
   -- 12 × 1000 = 12000, 2026-05-19 başlangıç. Yeni plan → hiçbir taksit ödenmemiş.
@@ -92,7 +98,202 @@ begin
   if v_min <> date '2026-07-31' then raise exception 'FAIL C kalan vade: 2026-07-31 bekleniyordu, %', v_min; end if;
   if v_debt <> 250 then raise exception 'FAIL C borc: 250 bekleniyordu, %', v_debt; end if;
 
-  raise notice 'Ekstre taksit import regresyonu OK (1. taksit / plan-ortasi / son taksit).';
+  -- ── Senaryo D — PDF açık dönemi atomik yeniden kurar; paid geçmiş ve PDF
+  -- sonrası hareket kalır. Aynı payload ikinci kez çalışınca sonuç değişmez.
+  v_statement_date := current_date - 1;
+  insert into public.cards (
+    user_id, bank_name, card_name, card_type, credit_limit, statement_day,
+    debt_amount, statement_debt_amount, current_period_spending, provision_amount
+  ) values (
+    v_user, 'SI', 'SI PDF replace', 'kredi_karti', 50000,
+    extract(day from v_statement_date)::integer, 0, 0, 0, 0
+  ) returning id into v_card;
+
+  insert into public.card_statement_archives (
+    user_id, card_id, period_year, period_month, statement_date,
+    statement_debt_amount, current_period_spending, total_debt_amount,
+    status, paid_at, note
+  ) values (
+    v_user, v_card,
+    extract(year from (v_statement_date - interval '1 month'))::integer,
+    extract(month from (v_statement_date - interval '1 month'))::integer,
+    (v_statement_date - interval '1 month')::date,
+    100, 100, 100, 'paid', now(), 'Korunacak geçmiş ekstre'
+  ) returning id into v_paid_archive;
+
+  insert into public.card_expenses (
+    user_id, card_id, spent_at, amount, description, category,
+    installment_count, status, posted_at, note
+  ) values (
+    v_user, v_card, (v_statement_date - interval '1 month')::date,
+    400, 'PDF TAKSIT', 'Market', 4, 'posted', now(), 'Tarihsel parent'
+  ) returning id into v_parent;
+
+  insert into public.card_installments (
+    user_id, card_id, card_expense_id, statement_archive_id,
+    installment_no, installment_count, due_month, amount, description,
+    category, status, posted_at, paid_at, note
+  ) values (
+    v_user, v_card, v_parent, v_paid_archive,
+    1, 4, (v_statement_date - interval '1 month')::date, 100, 'PDF TAKSIT',
+    'Market', 'paid', now(), now(), 'Korunacak paid child'
+  );
+
+  insert into public.card_installments (
+    user_id, card_id, card_expense_id, installment_no, installment_count,
+    due_month, amount, description, category, status, posted_at
+  ) values
+    (v_user, v_card, v_parent, 2, 4, v_statement_date, 90, 'PDF TAKSIT', 'Market', 'posted', now()),
+    (v_user, v_card, v_parent, 3, 4, (v_statement_date + interval '1 month')::date, 90, 'PDF TAKSIT', 'Market', 'scheduled', null),
+    (v_user, v_card, v_parent, 4, 4, (v_statement_date + interval '2 month')::date, 90, 'PDF TAKSIT', 'Market', 'scheduled', null);
+
+  perform public.add_card_expense(
+    v_card, 50, 'PDF SONRASI', (v_statement_date + 1), 1, 'Diğer',
+    'posted', null, 'sms', 'after-pdf'
+  );
+  perform public.add_card_expense(
+    v_card, 30, 'PDF SONRASI PROVIZYON', (v_statement_date + 1), 1, 'Diğer',
+    'provision', null, 'sms', 'after-pdf-provision'
+  );
+  update public.cards
+  set debt_amount = 350,
+      current_period_spending = 140,
+      provision_amount = 30
+  where id = v_card;
+
+  perform public.replace_card_statement_import(
+    v_card,
+    v_statement_date,
+    null,
+    160,
+    jsonb_build_array(
+      jsonb_build_object(
+        'kind', 'carryover',
+        'installmentAmount', 100,
+        'totalInstallments', 4,
+        'paidInstallments', 1,
+        'nextDueDate', v_statement_date,
+        'description', 'PDF TAKSIT',
+        'category', 'Market',
+        'sourceEventId', 'pdf-replace:installment',
+        'existingExpenseId', v_parent
+      ),
+      jsonb_build_object(
+        'kind', 'expense',
+        'amount', 70,
+        'spentAt', v_statement_date,
+        'installmentCount', 1,
+        'description', 'PDF MARKET',
+        'category', 'Market',
+        'sourceEventId', 'pdf-replace:expense'
+      ),
+      jsonb_build_object(
+        'kind', 'adjustment', 'amount', 10,
+        'spentAt', v_statement_date, 'description', 'PDF IADE',
+        'sourceEventId', 'pdf-replace:refund'
+      )
+    )
+  );
+
+  select debt_amount into v_debt from public.cards where id = v_card;
+  if v_debt <> 440 then raise exception 'FAIL D borc: 440 bekleniyordu, %', v_debt; end if;
+  if (select statement_debt_amount from public.cards where id = v_card) <> 160 then
+    raise exception 'FAIL D ekstre: 160 bekleniyordu';
+  end if;
+  if (select current_period_spending from public.cards where id = v_card) <> 50 then
+    raise exception 'FAIL D PDF sonrasi current: 50 bekleniyordu';
+  end if;
+  if (select provision_amount from public.cards where id = v_card) <> 30 then
+    raise exception 'FAIL D PDF sonrasi provizyon: 30 bekleniyordu';
+  end if;
+  if not exists (
+    select 1 from public.card_expenses
+    where card_id = v_card and source_event_id = 'after-pdf' and spent_at > v_statement_date
+  ) then
+    raise exception 'FAIL D PDF sonrasi hareket silindi';
+  end if;
+  if not exists (
+    select 1 from public.card_installments
+    where card_expense_id = v_parent and statement_archive_id = v_paid_archive and status = 'paid'
+  ) then
+    raise exception 'FAIL D paid geçmiş taksit korunmadı';
+  end if;
+  select count(*) into v_count from public.card_installments where card_expense_id = v_parent;
+  if v_count <> 4 then raise exception 'FAIL D parent child adedi: 4 bekleniyordu, %', v_count; end if;
+
+  perform public.replace_card_statement_import(
+    v_card,
+    v_statement_date,
+    null,
+    160,
+    jsonb_build_array(
+      jsonb_build_object(
+        'kind', 'carryover', 'installmentAmount', 100,
+        'totalInstallments', 4, 'paidInstallments', 1,
+        'nextDueDate', v_statement_date, 'description', 'PDF TAKSIT',
+        'category', 'Market', 'sourceEventId', 'pdf-replace:installment',
+        'existingExpenseId', v_parent
+      ),
+      jsonb_build_object(
+        'kind', 'expense', 'amount', 70, 'spentAt', v_statement_date,
+        'installmentCount', 1, 'description', 'PDF MARKET',
+        'category', 'Market', 'sourceEventId', 'pdf-replace:expense'
+      ),
+      jsonb_build_object(
+        'kind', 'adjustment', 'amount', 10,
+        'spentAt', v_statement_date, 'description', 'PDF IADE',
+        'sourceEventId', 'pdf-replace:refund'
+      )
+    )
+  );
+
+  select debt_amount into v_debt from public.cards where id = v_card;
+  select count(*) into v_count from public.card_installments where card_expense_id = v_parent;
+  select count(*) into v_open_archive_count
+  from public.card_statement_archives where card_id = v_card and status = 'open';
+  if v_debt <> 440 or v_count <> 4 or v_open_archive_count <> 1 then
+    raise exception 'FAIL D reimport idempotency: debt/child/open = %/%/%', v_debt, v_count, v_open_archive_count;
+  end if;
+
+  -- ── Senaryo E — kesim tarihi doğrulaması en sonda hata verse bile RPC'nin
+  -- tüm temizleme/import adımları subtransaction ile geri alınır.
+  insert into public.cards (
+    user_id, bank_name, card_name, card_type, credit_limit, statement_day
+  ) values (
+    v_user, 'SI', 'SI rollback', 'kredi_karti', 50000,
+    extract(day from (current_date - 1))::integer
+  ) returning id into v_card;
+  select id into v_original_expense
+  from public.add_card_expense(
+    v_card, 20, 'ROLLBACK ORIGINAL', (current_date - 2), 1, 'Diğer',
+    'posted', null, 'manual', 'rollback-original'
+  );
+
+  v_failed := false;
+  begin
+    perform public.replace_card_statement_import(
+      v_card,
+      current_date - 2,
+      null,
+      30,
+      jsonb_build_array(jsonb_build_object(
+        'kind', 'expense', 'amount', 30, 'spentAt', current_date - 2,
+        'installmentCount', 1, 'description', 'ROLLBACK NEW',
+        'category', 'Diğer', 'sourceEventId', 'rollback-new'
+      ))
+    );
+  exception when others then
+    v_failed := true;
+  end;
+
+  if not v_failed then raise exception 'FAIL E tarih uyumsuzluğu hata vermedi'; end if;
+  if not exists (select 1 from public.card_expenses where id = v_original_expense) then
+    raise exception 'FAIL E atomik rollback orijinal harcamayı geri getirmedi';
+  end if;
+  select debt_amount into v_debt from public.cards where id = v_card;
+  if v_debt <> 20 then raise exception 'FAIL E atomik rollback borcu: 20 bekleniyordu, %', v_debt; end if;
+
+  raise notice 'Ekstre taksit import regresyonu OK (1. / orta / son / atomik PDF replace / rollback).';
 end $$;
 
 rollback;

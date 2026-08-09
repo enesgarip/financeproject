@@ -3,6 +3,7 @@ import {
   addCardExpense,
   fetchCardInstallmentMatchRows,
   payPaymentFromCardImport,
+  replaceCardStatementImport,
   recordCardInstallmentCarryover,
   setProvisionInstallments,
   updateCardExpenseHealthMetadata,
@@ -158,11 +159,43 @@ describe('cardsRepo statement installment read safety', () => {
     expect(result.ok).toBe(true)
     expect(supabaseMocks.from).toHaveBeenCalledWith('card_installments')
     expect(select).toHaveBeenCalledWith(
-      'id, due_month, amount, status, description, installment_no, installment_count, statement_archive_id',
+      'id, card_expense_id, due_month, amount, status, description, installment_no, installment_count, statement_archive_id',
     )
     expect(eq).toHaveBeenCalledWith('card_id', 'card-1')
   })
 
+})
+
+describe('cardsRepo statement replacement contract', () => {
+  it('PDF snapshotını tek atomik RPC çağrısına taşır', async () => {
+    supabaseMocks.rpc.mockReset()
+    supabaseMocks.rpc.mockResolvedValue({ data: { importedCount: 1 }, error: null })
+
+    const result = await replaceCardStatementImport({
+      cardId: 'card-1',
+      statementDate: '2026-08-05',
+      dueDate: '2026-08-15',
+      bankAmount: 100,
+      actions: [{
+        kind: 'expense',
+        amount: 100,
+        spentAt: '2026-08-01',
+        installmentCount: 1,
+        description: 'Market',
+        category: 'Market',
+        sourceEventId: 'pdf:1',
+      }],
+    })
+
+    expect(result.ok).toBe(true)
+    expect(supabaseMocks.rpc).toHaveBeenCalledWith('replace_card_statement_import', {
+      p_card_id: 'card-1',
+      p_statement_date: '2026-08-05',
+      p_due_date: '2026-08-15',
+      p_bank_amount: 100,
+      p_actions: [expect.objectContaining({ kind: 'expense', sourceEventId: 'pdf:1' })],
+    })
+  })
 })
 
 describe('cardsRepo.setProvisionInstallments', () => {
