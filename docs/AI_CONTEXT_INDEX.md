@@ -37,7 +37,7 @@ frontend -> RPC, or RPC -> migration.
 
 | Domain | First Doc | Then Read | Notes |
 | --- | --- | --- | --- |
-| Card debt fields and transitions | `docs/CARD_DEBT_TRANSITIONS.md` | `src/utils/financeSummary.ts`, `src/pages/CardsPage*.tsx`, `src/components/finance/LiveReconciliationPanel.tsx`, `src/services/cardLedgerActions.ts`, latest card migrations | Use this before touching `debt_amount`, `statement_debt_amount`, `current_period_spending`, `provision_amount`, card installments, or bank-snapshot reconciliation |
+| Card debt fields and transitions | `docs/CARD_DEBT_TRANSITIONS.md` | `src/utils/financeSummary.ts`, `src/pages/CardsPage*.tsx`, `src/components/finance/LiveReconciliationPanel.tsx`, `src/services/cardLedgerActions.ts`, latest card migrations, `supabase/tests/legacy_current_payment_allocation.sql` | Use this before touching `debt_amount`, `statement_debt_amount`, `current_period_spending`, `provision_amount`, card installments, bank-snapshot reconciliation, or historical payment allocation |
 | General finance rules | `docs/FINANCE_RULES.md` | Matching utility under `src/utils/*` | Broad business semantics: assets, cards, payments, loans, debts, goals, dashboard |
 | Expense contexts and car operations | `docs/EXPENSE_CONTEXTS_AND_CARS.md` | `src/utils/expenseContexts.ts`, `src/utils/carExpenses.ts`, matching repositories/pages, latest context/car migration | Saf reporting annotations, source separation, fuel measurement, reminders and TCO |
 | RPC-backed actions | `docs/RPC_ACTION_REFERENCE.md` | `src/data/repositories/*`, `src/services/*`, `src/types/database.ts`, migrations | Maps Supabase RPCs to user-visible actions and side effects |

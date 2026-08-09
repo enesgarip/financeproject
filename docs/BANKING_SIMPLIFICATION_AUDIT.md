@@ -11,6 +11,10 @@
   - Historical rows left unallocated by a legacy paid statement are repaired
     only on an exact archive-total proof, removing the false Data Health blocker
     without guessing which movements were paid.
+  - A legacy aggregate payment can also leave old posted rows outside any
+    settlement. Full current-period payment now repairs that history only when
+    the exact excess equals every pre-cycle row; the repair has no bank-account
+    debit and ambiguous sets remain blocked.
 
 - **Automatic bill/SMS single-event model (2026-08-09)**
   - A credit-card-funded recurring bill and the bank SMS for that charge are one

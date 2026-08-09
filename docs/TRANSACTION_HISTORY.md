@@ -1,6 +1,6 @@
 # Transaction History Side Effects
 
-Last reviewed: 2026-08-02
+Last reviewed: 2026-08-09
 
 This document is the source of truth for `transaction_history` side effects. Read
 it before changing a finance mutation, RPC wrapper, payment drawer action, or
@@ -75,7 +75,7 @@ because the current undo flows explicitly do not refund cash automatically.
 | `pay_payment_from_card_import` | `payment` | `payments.id` | Paid amount | Statement/current movement import path for a matched planned payment; credit-card source creates posted card spending on the bank row date. |
 | `post_due_card_auto_payments` | `payment` | `payments.id` | Paid amount | Maintenance wrapper reuses `pay_payment`, so the same feed row contract applies. |
 | `pay_card_statement` | `payment` | `card_statement_archives.id` | Paid statement amount | Linked installments are marked paid but do not get separate history rows. |
-| `pay_card_debt` | `payment` | `cards.id` or `card_current_settlements.id` | Paid amount | Manual card debt payment. Full pre-statement current-balance payments use the settlement row as source; future scheduled installments are not closed. |
+| `pay_card_debt` | `payment`; optional preceding `correction` | `cards.id` or `card_current_settlements.id` | Paid amount; exact historical excess for repair audit | Full current-balance payments use the payment settlement row. Exact legacy pre-cycle excess creates a source-less `historical_repair` settlement and correction audit without a second cash/card aggregate movement. Future scheduled installments are not closed. |
 | `pay_loan_installment` | `loan` | `loan_installments.id` | Installment amount | Bank source is recorded in `note`; loan summary sync is DB-owned. |
 | `settle_personal_debt` | `debt` | `debts.id` | `estimated_value_try` | Covers both paying debt and collecting receivable; direction is in `note`. |
 | `record_manual_account_movement` | `transfer` | `cards.id` | Movement amount | Manual bank-account in/out uses the affected account as source. |

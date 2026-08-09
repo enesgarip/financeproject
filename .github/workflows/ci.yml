@@ -283,6 +283,9 @@ jobs:
       - name: Card bank snapshot reconciliation
         run: docker exec -i supabase_db_financeproject psql -U postgres -d postgres -v ON_ERROR_STOP=1 -f - < supabase/tests/card_bank_snapshot_reconciliation.sql
 
+      - name: Legacy current-payment allocation repair
+        run: docker exec -i supabase_db_financeproject psql -U postgres -d postgres -v ON_ERROR_STOP=1 -f - < supabase/tests/legacy_current_payment_allocation.sql
+
       - name: Data Health safe-repair security
         run: docker exec -i supabase_db_financeproject psql -U postgres -d postgres -v ON_ERROR_STOP=1 -f - < supabase/tests/data_health_safe_repairs.sql
 

@@ -31,6 +31,8 @@ oluşmaması için branch push tetikleyicisi yoktur.
 - `npm run db:test:card-bank-snapshot` (bank total-only reconciliation, exact
   paid-statement child allocation, ledger bucket preservation, and subsequent
   full current-period payment)
+- `npm run db:test:legacy-current-payment` (exact pre-cycle historical allocation,
+  no duplicate cash movement, full current-period payment, and ambiguous rollback)
 - `npm run db:test:expense-contexts-cars` (gider bağlamı/araç own-row RLS,
   kart annotation ownership ve manuel raporlama satırları)
 
