@@ -634,6 +634,18 @@ export type Database = {
         }
         Returns: CardExpense
       }
+      record_sms_card_expense: {
+        Args: {
+          p_card_id: string
+          p_amount: number
+          p_description: string
+          p_spent_at: string
+          p_category: string
+          p_user_id: string
+          p_source_event_id: string
+        }
+        Returns: CardExpense
+      }
       cancel_card_expense: {
         Args: {
           p_expense_id: string

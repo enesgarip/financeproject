@@ -2,6 +2,15 @@
 
 ## Fixed In This Pass
 
+- **Automatic bill/SMS single-event model (2026-08-09)**
+  - A credit-card-funded recurring bill and the bank SMS for that charge are one
+    event. The SMS path now reconciles a unique payment candidate and advances
+    the plan instead of writing a second debt movement.
+  - The scheduled poster gives the SMS the due date, then remains a next-day
+    fallback. A delayed SMS binds to that fallback expense without adding debt.
+  - Subscription analysis excludes payment-linked SMS expenses, so the plan and
+    its card transaction do not appear as two monthly subscriptions.
+
 - **Statement/installment banking model (2026-08-09)**
   - A statement PDF no longer tries to match current rows to historical
     installment parents. It replaces the open scope and creates only the PDF's

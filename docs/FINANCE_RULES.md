@@ -158,6 +158,12 @@ On the cards page:
   idempotency key. Reusing it returns the existing expense without repeating card,
   installment, ledger, payment, or transaction-history effects. Different event IDs
   remain separate even when every fingerprint field is identical.
+- Credit-card-funded `bank_auto` payments and their bank SMS are one financial
+  event. A unique same-card/near-date/tolerant-amount plan match advances the
+  payment and creates only the SMS expense. The automatic poster waits through
+  the due date and is a next-day fallback; a late SMS attaches to that fallback
+  expense without increasing card debt again. Ambiguous candidates stay separate
+  for review instead of being guessed.
 - Data Health reports same-fingerprint card expenses and possible
   duplicates by same card/date/status/amount plus similar or blank descriptions.
   These are review signals, never automatic deletes. The user compares the exact
@@ -214,17 +220,18 @@ From `src/utils/cardInstallmentCalendar.ts` and page logic:
 - credit-card installments are not separate debt
 - the unpaid installment total is informational/planning data and must not be added on top of card debt
 - posted installments become payable as part of the card statement
-- paying the linked statement marks included installments `paid`
+- paying the linked statement closes only the statement archive; installment
+  rows remain an informational schedule and are not mutated by payment
 - paying the full current-period balance before statement cut records a
   `card_current_settlements` allocation, marks due posted installments `paid`,
   and prevents the allocated movements from entering a later statement;
   future scheduled installments remain scheduled
 - credit-card installments are not manually paid; manual payment is limited to the card's statement/current-period debt
 - locked installments, meaning paid or linked to a statement, should not be edited from the UI
-- during authoritative statement replacement, a historical installment parent's
-  stored total can differ from the PDF's current monthly-amount projection;
-  preserve the parent/paid children, rebuild only open children from the PDF,
-  and record the drift. A total-installment-count conflict remains blocking.
+- during authoritative statement replacement, historical installment parents
+  are not reused. The PDF creates only the current/future open-plan suffix and
+  records the completed prefix in the parent note; synthetic paid history is not
+  recreated.
 - Data Health checks that each linked installment date equals the original
   transaction date plus `(installment_no - 1)` months; legacy first-of-month
   dates and other structural plan drift navigate to the canonical parent-plan

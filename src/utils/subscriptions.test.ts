@@ -41,4 +41,16 @@ describe('buildSubscriptionSummary', () => {
     expect(result.items[0]!.source).toBe('recurring_payment')
     expect(result.monthlyTotal).toBe(200)
   })
+
+  it('does not double count an SMS expense reconciled with a differently named recurring payment', () => {
+    const result = buildSubscriptionSummary([
+      { ...expense('e1', '2026-05-08', 385, 'BUSKİ'), note: 'Ödeme kaydıyla SMS üzerinden eşleştirildi. Vade: 2026-05-08' },
+      { ...expense('e2', '2026-06-08', 385, 'BUSKİ'), note: 'Ödeme kaydıyla SMS üzerinden eşleştirildi. Vade: 2026-06-08' },
+      { ...expense('e3', '2026-07-08', 385, 'BUSKİ'), note: 'Ödeme kaydıyla SMS üzerinden eşleştirildi. Vade: 2026-07-08' },
+    ], [payment({ title: 'Su', amount: 385, recurrence_day: 8, due_date: '2026-08-08' })], 10000, new Date(2026, 6, 15))
+
+    expect(result.items).toHaveLength(1)
+    expect(result.items[0]).toMatchObject({ source: 'recurring_payment', title: 'Su', amount: 385 })
+    expect(result.monthlyTotal).toBe(385)
+  })
 })

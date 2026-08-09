@@ -61,16 +61,12 @@ export function buildSubscriptionSummary(
   // Credit-card funded recurring payments create a matching card_expenses row
   // when posted. The payment itself is already listed below, so exclude that
   // generated expense from automatic subscription discovery.
-  const cardFundedPaymentKeys = new Set(
-    payments
-      .filter((payment) => payment.recurrence === 'monthly' && Boolean(payment.auto_source_card_id))
-      .map((payment) => normalizeSearchText(payment.title)),
-  )
-
   for (const expense of posted) {
     const key = normalizeSearchText(expense.description)
-    const generatedFromPayment = normalizeSearchText(expense.note).includes('odeme kaydindan olusturuldu')
-    if (!key || (generatedFromPayment && cardFundedPaymentKeys.has(key))) continue
+    const normalizedNote = normalizeSearchText(expense.note)
+    const generatedFromPayment = /[oö]deme kayd[ıi]ndan olu[şs]turuldu/.test(normalizedNote)
+      || /[oö]deme kayd[ıi]yla sms [uü]zerinden e[şs]le[şs]tirildi/.test(normalizedNote)
+    if (!key || generatedFromPayment) continue
     if (!byDesc.has(key)) byDesc.set(key, { observations: [] })
     const bucket = byDesc.get(key)!
     const m = monthPrefix(expense.spent_at)

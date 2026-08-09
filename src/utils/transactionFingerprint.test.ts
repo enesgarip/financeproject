@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildTransactionFingerprint, descriptionSimilarity, normalizedTransactionDescription } from './transactionFingerprint'
+import { buildTransactionFingerprint, descriptionSimilarity, descriptionsProveDistinct, normalizedTransactionDescription } from './transactionFingerprint'
 
 describe('transaction fingerprint', () => {
   it('normalizes description text deterministically', () => {
@@ -18,5 +18,17 @@ describe('transaction fingerprint', () => {
 
   it('scores similar merchant descriptions above unrelated text', () => {
     expect(descriptionSimilarity('Migros Sanal POS', 'Migros')).toBeGreaterThan(descriptionSimilarity('Migros', 'Turk Telekom'))
+  })
+
+  it('recognizes different installment and charge components as distinct rows', () => {
+    expect(descriptionsProveDistinct(
+      'MEDIA MARKT Peş. Taksit 1.Tk Anapara',
+      'MEDIA MARKT Peş. Taksit 2.Tk Anapara',
+    )).toBe(true)
+    expect(descriptionsProveDistinct(
+      'Taksit. Nakit İSTANBUL 1.Tk BSMV',
+      'Taksit. Nakit İSTANBUL 1.Tk KKDF',
+    )).toBe(true)
+    expect(descriptionsProveDistinct('Migros Sanal POS', 'Migros')).toBe(false)
   })
 })
