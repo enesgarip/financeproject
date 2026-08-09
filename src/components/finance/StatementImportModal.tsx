@@ -26,6 +26,7 @@ import { dateRangeFromIsoDates, rowsInReviewPeriod } from '../../utils/importRev
 import {
   parseDenizBankStatement,
   matchTransactions,
+  reusableStatementInstallmentParentId,
   checkStatementInstallments,
   checkStatementParseTotals,
   expenseTotalAmount,
@@ -413,7 +414,13 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
       if (cleanImport) {
         const existingExpenseIds = new Map<ParsedTransaction, string | null>()
         for (const match of [...instCheck.matched, ...instCheck.amountMismatches]) {
-          existingExpenseIds.set(match.transaction, match.installment.card_expense_id)
+          // Parent yalnız PDF ile aynı plan yapısındaki açık child üzerinden
+          // yeniden kullanılabilir. Numara/adet drift'inde eski paid geçmiş
+          // kendi parent'ında kalır; PDF yeni bir açık plan kurar.
+          existingExpenseIds.set(
+            match.transaction,
+            reusableStatementInstallmentParentId(match.transaction, match.installment),
+          )
         }
         const importable = parsed.transactions.filter(isImportable)
         const manual: ManualReviewRow[] = parsed.transactions

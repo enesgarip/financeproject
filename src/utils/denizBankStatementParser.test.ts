@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { checkStatementInstallments, checkStatementParseTotals, expenseTotalAmount, matchTransactions, parseAmount, parseDenizBankStatement, statementInstallmentDueDate, type StatementInstallmentMatchRow } from './denizBankStatementParser'
+import { checkStatementInstallments, checkStatementParseTotals, expenseTotalAmount, matchTransactions, parseAmount, parseDenizBankStatement, reusableStatementInstallmentParentId, statementInstallmentDueDate, type StatementInstallmentMatchRow } from './denizBankStatementParser'
 import { checkInstallmentNotation } from './importedInstallmentPlan'
 
 describe('parseAmount (locale-robust)', () => {
@@ -617,6 +617,31 @@ describe('checkStatementInstallments', () => {
       '2026-06-04',
     )
     expect(result.appOnly).toHaveLength(0)
+  })
+
+  it('does not match a current PDF row to an immutable paid installment', () => {
+    const result = checkStatementInstallments(
+      [pdfTx('2026-05-19', 21666.67, 2, 3)],
+      [appInst({ status: 'paid' })],
+      '2026-06-04',
+    )
+    expect(result.matched).toHaveLength(0)
+    expect(result.amountMismatches).toHaveLength(0)
+    expect(result.pdfOnly).toHaveLength(1)
+    expect(result.appOnly).toHaveLength(0)
+  })
+
+  it('reuses a parent only when the open child has the same PDF plan structure', () => {
+    const tx = pdfTx('2026-07-21', 761.15, 1, 3, 'TRENDYOL.COM')
+    expect(reusableStatementInstallmentParentId(tx, appInst({
+      card_expense_id: 'same-plan', installment_no: 1, installment_count: 3,
+    }))).toBe('same-plan')
+    expect(reusableStatementInstallmentParentId(tx, appInst({
+      card_expense_id: 'renumbered-plan', installment_no: 2, installment_count: 3,
+    }))).toBeNull()
+    expect(reusableStatementInstallmentParentId(tx, appInst({
+      card_expense_id: 'paid-plan', installment_no: 1, installment_count: 3, status: 'paid',
+    }))).toBeNull()
   })
 
   it('ignores non-installment transactions', () => {

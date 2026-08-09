@@ -74,6 +74,12 @@ banka giderleri (MTV, sigorta) de kapsanmalı.
 
 ## 2026-08-09 — Ekstre PDF kaynak-gerçek yeniden kurulum
 
+- ~~**SI-09 — Cari PDF satırını paid child/yeniden numaralanmış parent ile karıştırma.**~~ DONE.
+  Paid taksitler cari eşleştirme adayından çıkarıldı. Açık child ile PDF'nin
+  taksit no/adedi birebir değilse tarihsel parent import payload'ında yeniden
+  kullanılmaz; eski paid geçmiş kendi parent'ında kalırken PDF yeni açık plan
+  kurar.
+
 - ~~**SI-08 — Taksit satırını yanlış tarih/sıra parent'ına bağlama.**~~ DONE.
   Strict sıra+tarih eşlemesindeki tek aday, açıklama uyuşmuyorsa artık yalnız
   tutarı da yakınsa kabul edilir. Aksi halde aynı ekstre dönemindeki açıklama ve
