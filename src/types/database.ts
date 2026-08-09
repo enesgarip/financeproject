@@ -662,6 +662,10 @@ export type Database = {
       cut_card_statement: {
         Args: {
           p_card_id: string
+          // PDF importunda banka belgesi tarih otoritesidir (±7 gün pencere);
+          // verilmezse kartın kesim/vade takviminden türetilir.
+          p_statement_date?: string | null
+          p_due_date?: string | null
         }
         Returns: CardStatementArchive
       }

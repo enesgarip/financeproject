@@ -67,6 +67,9 @@ export function FinancePaymentDrawer({
 }: FinancePaymentDrawerProps) {
   const { formatAmount } = useBalancePrivacy()
   const minimumPayment = intent?.action === 'pay_card_debt' ? estimatedMinimumCardPayment(intent.amount) : 0
+  // Tavan, nominal tutardan büyük olabilir: ekstre kalemi "planlanan" ekstre
+  // borcunu gösterir ama pay_card_debt dönem içini de kapatabilir (B7).
+  const payableCeiling = intent ? intent.maxPayableAmount ?? intent.amount : 0
   const quickAmounts = intent?.action === 'pay_card_debt' ? (
     <div className="flex flex-wrap gap-2">
       <button
@@ -76,12 +79,21 @@ export function FinancePaymentDrawer({
       >
         Asgari tahmini ({formatAmount(minimumPayment)})
       </button>
+      {exceedsTL(payableCeiling, intent.amount) && exceedsTL(intent.amount, 0) ? (
+        <button
+          type="button"
+          onClick={() => onAmountValueChange(String(intent.amount))}
+          className="rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-bold text-foreground transition hover:bg-muted"
+        >
+          Ekstre ({formatAmount(intent.amount)})
+        </button>
+      ) : null}
       <button
         type="button"
-        onClick={() => onAmountValueChange(String(intent.amount))}
+        onClick={() => onAmountValueChange(String(payableCeiling))}
         className="rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-bold text-foreground transition hover:bg-muted"
       >
-        Tamamı ({formatAmount(intent.amount)})
+        Tamamı ({formatAmount(payableCeiling)})
       </button>
     </div>
   ) : null
@@ -114,7 +126,7 @@ export function FinancePaymentDrawer({
             : null
       }
       validate={({ amount }) => {
-        if (intent?.action === 'pay_card_debt' && exceedsTL(amount, intent.amount)) {
+        if (intent?.action === 'pay_card_debt' && exceedsTL(amount, intent.maxPayableAmount ?? intent.amount)) {
           return 'Ödeme tutarı ödenebilir kart borcundan büyük olamaz.'
         }
         return null

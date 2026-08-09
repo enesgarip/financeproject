@@ -13,12 +13,21 @@
  */
 import type { Card, Payment } from '../types/database'
 import { isDateInMonth, monthlyOccurrenceDate } from './date'
+import { sumTL } from './money'
 
 // Kartın bu ay ödenecek tutarı = yalnızca kesilmiş ekstre borcu.
 // Dönem içi harcama (current_period_spending) henüz ekstreye girmediği için
 // bu ay vadesi gelmez; o kalem obligations.ts'te ayrı projekte edilir.
 export function cardMonthlyPaymentAmount(card: Pick<Card, 'statement_debt_amount'>) {
   return card.statement_debt_amount
+}
+
+// Şu an fiilen ödenebilir kart borcu = ekstre + dönem içi (banka "güncel borç"
+// ekranıyla aynı). Provizyon ve gelecek taksitler dahil değildir; `pay_card_debt`
+// RPC'sinin sunucu tarafı üst sınırı da budur. Ödeme çekmecesinin tutar tavanı
+// bu değeri kullanır — ekstre tutarı yalnız "planlanan" satırıdır, tavan değildir.
+export function cardPayableDebt(card: Pick<Card, 'statement_debt_amount' | 'current_period_spending'>) {
+  return Math.max(0, sumTL([card.statement_debt_amount, card.current_period_spending]))
 }
 
 export function paymentOccurrenceInMonth(payment: Payment, month = new Date()) {

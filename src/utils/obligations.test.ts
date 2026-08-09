@@ -333,6 +333,19 @@ describe('cash-impacting obligation date placement (billing-cycle correctness)',
       .toEqual([['2026-07-25', 1000, null]])
   })
 
+  it('carries the full payable ceiling on the pay_card_debt item while amount stays the billed statement (B7)', () => {
+    const data = input({
+      cards: [creditCard({ id: 'c', statement_day: 15, due_day: 25, statement_debt_amount: 3000, current_period_spending: 1000 })],
+    })
+
+    // Çekmece tavanı = ekstre + dönem içi (pay_card_debt sunucu üst sınırı);
+    // nominal tutar ekstre borcu kalır ki nakit projeksiyonu değişmesin.
+    const [item] = cardDebtItems(data, new Date(2026, 5, 1))
+    expect(item.amount).toBe(3000)
+    expect(item.maxPayableAmount).toBe(4000)
+    expect(item.cashImpactAmount).toBe(3000)
+  })
+
   it('keeps the same one-cycle separation when the due day precedes the statement day (typical TR card)', () => {
     const data = input({
       cards: [creditCard({ id: 'c', statement_day: 26, due_day: 6, statement_debt_amount: 3000, current_period_spending: 1000 })],

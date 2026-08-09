@@ -50,6 +50,19 @@ export async function fetchStatementArchives(limit: number): Promise<Result<Card
   return resultFromSupabase((data ?? []) as CardStatementArchive[], error, 'Ekstreler yüklenemedi.')
 }
 
+// Yalnız açık (ödenmemiş) ekstre arşivleri. Borçlar sayfası pay_card_debt
+// butonunu açık ekstre varken kapatmak için kullanır: pay_card_debt arşivi
+// kapatmadan statement kovasını düşürür ve ekstre ikinci kez ödenebilir kalırdı.
+export async function fetchOpenStatementArchives(): Promise<Result<CardStatementArchive[]>> {
+  const { data, error } = await supabase
+    .from('card_statement_archives')
+    .select('*')
+    .eq('status', 'open')
+    .order('due_date', { ascending: true })
+
+  return resultFromSupabase((data ?? []) as CardStatementArchive[], error, 'Açık ekstreler yüklenemedi.')
+}
+
 export async function fetchCardInstallments(): Promise<Result<CardInstallment[]>> {
   const { data, error } = await supabase
     .from('card_installments')
