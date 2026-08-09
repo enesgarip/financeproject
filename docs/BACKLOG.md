@@ -1,11 +1,29 @@
 # Priority Backlog
 
+## 2026-08-10 — Banka modeli Faz 3: ödeme banka modeline indi
+
+Üç-akış denetiminin üçüncü fazı. Faz 4 (card_installments RPC-only, ölü
+pay_card_installment RPC drop, YapıKredi gerçek toplam) AÇIK.
+
+- ~~**B1 — Tam güncel ödemenin kuruş-eşitlik kilidi kalktı.**~~ DONE.
+  `pay_card_debt` tam güncel ödemede tüm allocation'sız satırları ödemenin
+  settlement'ına bağlar; kova-satır farkı (satırsız kova oynatan meşru yollar:
+  import kilidi, iade düzeltmesi, otomatik ödeme tutar düzeltmesi, kısmi
+  aggregate ödeme) auditable residual olarak settlement notu + correction
+  history kaydına yazılır. "Güncel borcun hareket dağılımı uyuşmuyor" hatası
+  bitti; tutarlılık her tam ödemede kendini onarır. historical_repair yolu
+  (daha iyi provenance) önce denenmeye devam eder. Regresyon:
+  `legacy_current_payment_allocation.sql` residual senaryosunu assert eder.
+- ~~**B4 — SMS ile düşen bakiye ödemede ikinci kez düşmez.**~~ DONE.
+  `pay_card_debt`/`pay_card_statement` `p_skip_source_debit` alır; ödeme
+  çekmecesi seçili hesapta son 3 günde aynı tutarlı SMS kaynaklı çıkış bulursa
+  varsayılan işaretli "tekrar düşme" kutusu gösterir. RPC kaynak hesabı
+  doğrular ama borçlandırmaz; ödeme kaydı/settlement/arşiv kapanışı aynen
+  işler, history notu durumu söyler.
+
 ## 2026-08-10 — Banka modeli Faz 2: taksit kimliği ve ödenmişlik
 
-Üç-akış denetiminin ikinci fazı. Faz 3 (tam-güncel-ödeme eşitlik kilidini
-residual settlement kuralına indirme + SMS hesap hareketi ↔ kart ödemesi
-eşleşmesi) ve Faz 4 (card_installments RPC-only, ölü pay_card_installment RPC
-drop, YapıKredi gerçek toplam) AÇIK.
+Üç-akış denetiminin ikinci fazı.
 
 - ~~**K1 — Süregiden taksit planı importta yeniden kullanılır.**~~ DONE.
   `replace_card_statement_import` carryover'da parent id gelmezse aynı kart +

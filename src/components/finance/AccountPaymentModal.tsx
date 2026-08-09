@@ -34,6 +34,7 @@ type AccountPaymentModalProps = {
   accountPreviewAmount?: (amount: number) => number
   emptyMessage?: string
   info?: ReactNode
+  extraControls?: ReactNode
   children?: ReactNode
   validate?: (payload: AccountPaymentSubmit) => string | null
   successAction?: boolean
@@ -71,6 +72,7 @@ export function AccountPaymentModal({
   accountPreviewAmount,
   emptyMessage = 'Kullanılabilir banka hesabı yok.',
   info,
+  extraControls,
   children,
   validate,
   successAction = false,
@@ -148,6 +150,8 @@ export function AccountPaymentModal({
           label={accountLabel}
           emptyMessage={emptyMessage}
         />
+
+        {extraControls}
 
         {info ? <Alert variant="success">{info}</Alert> : null}
         {displayedError ? <Alert variant="destructive">{displayedError}</Alert> : null}

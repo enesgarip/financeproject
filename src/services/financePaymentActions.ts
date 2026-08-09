@@ -83,6 +83,40 @@ export function estimatedMinimumCardPayment(amount: number, rate = 0.2) {
   return roundTL(Math.max(0, amount) * rate)
 }
 
+export type RecentSmsAccountDebit = {
+  occurredAt: string
+  title: string
+}
+
+// B4: Kullanıcı kart borcunu bankada ödediğinde hesap SMS'i bakiyeyi ZATEN
+// düşürmüş olabilir (record_sms_account_movement). Aynı hesapta son 3 günde
+// aynı tutarlı SMS kaynaklı çıkış varsa ödeme çekmecesi "tekrar düşme"
+// seçeneği sunar; RPC'ler p_skip_source_debit ile bakiyeye dokunmaz.
+export async function findRecentSmsAccountDebit(
+  accountId: string,
+  amount: number,
+): Promise<RecentSmsAccountDebit | null> {
+  const rounded = roundTL(amount)
+  if (rounded <= 0) return null
+
+  const since = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString()
+  const { data, error } = await supabase
+    .from('transaction_history')
+    .select('occurred_at, title')
+    .eq('source_table', 'cards')
+    .eq('source_id', accountId)
+    .eq('type', 'transfer')
+    .eq('amount', rounded)
+    .eq('note', 'SMS otomasyonu ile kaydedildi.')
+    .gte('occurred_at', since)
+    .order('occurred_at', { ascending: false })
+    .limit(1)
+
+  if (error || !data || data.length === 0) return null
+  const row = data[0] as { occurred_at: string; title: string }
+  return { occurredAt: row.occurred_at, title: row.title }
+}
+
 export async function payPaymentFromCard(
   paymentId: string,
   cardId: string,
@@ -100,10 +134,12 @@ export async function submitFinanceObligationPayment({
   obligation,
   account,
   amount,
+  skipSourceDebit = false,
 }: {
   obligation: FinanceObligation
   account: Card
   amount: number
+  skipSourceDebit?: boolean
 }): Promise<FinancePaymentResult> {
   if (!obligation.action) return { error: { message: 'Bu kayıt doğrudan ödenebilir bir aksiyon taşımıyor.' } }
 
@@ -122,6 +158,7 @@ export async function submitFinanceObligationPayment({
     const { error } = await supabase.rpc('pay_card_statement', {
       p_statement_id: obligation.sourceId,
       p_source_card_id: account.id,
+      p_skip_source_debit: skipSourceDebit,
     })
     submitError = error
   } else if (obligation.action === 'pay_card_debt') {
@@ -129,6 +166,7 @@ export async function submitFinanceObligationPayment({
       p_card_id: obligation.sourceId,
       p_source_card_id: account.id,
       p_amount: amount,
+      p_skip_source_debit: skipSourceDebit,
     })
     submitError = error
   } else if (obligation.action === 'pay_loan_installment') {
