@@ -219,6 +219,10 @@ From `src/utils/cardInstallmentCalendar.ts` and page logic:
   future scheduled installments remain scheduled
 - credit-card installments are not manually paid; manual payment is limited to the card's statement/current-period debt
 - locked installments, meaning paid or linked to a statement, should not be edited from the UI
+- during authoritative statement replacement, a historical installment parent's
+  stored total can differ from the PDF's current monthly-amount projection;
+  preserve the parent/paid children, rebuild only open children from the PDF,
+  and record the drift. A total-installment-count conflict remains blocking.
 - Data Health checks that each linked installment date equals the original
   transaction date plus `(installment_no - 1)` months; legacy first-of-month
   dates and other structural plan drift navigate to the canonical parent-plan
