@@ -120,6 +120,18 @@ member `debt_amount` values.
 Statements are cut the day after the statement day, not on the statement day.
 This lets spending made on the statement day itself belong to that statement.
 
+`cut_card_statement(p_card_id, p_statement_date default null, p_due_date
+default null)`: when the optional dates are provided (only the statement PDF
+import passes them), the bank document is the date authority — the PDF
+statement date becomes the cut boundary and the archive's dates, provided it is
+within ±7 days of the card-calendar boundary (bank weekend/holiday shifts fit
+easily; a wrong-month PDF does not). Date-less calls (daily maintenance, client
+cut) behave exactly as before. `replace_card_statement_import` also rejects a
+PDF whose period already has a paid archive (or any paid archive with a newer
+statement date): the rebuild scope only recognizes open archives, so replaying
+a paid period would add the debt a second time and silently delete preserved
+plans' open installments.
+
 The server-side daily maintenance job calls the same audited RPCs used by the
 client:
 
@@ -162,6 +174,15 @@ has an open statement archive, because `pay_card_debt` lowers
 `statement_debt_amount` without closing the archive row (data health would flag
 the mismatch) — the same reason the obligations calendar only emits its
 `pay_card_debt` item for cards without an open statement.
+`LiabilitiesCardsPage` (`/borclar/kartlar`) applies the same guard by switching
+its button to the `pay_card_statement` flow whenever the card has an open
+archive; `pay_card_debt` is offered only for archive-less cards.
+
+The calendar's `pay_card_debt` item carries `maxPayableAmount`
+(= `cardPayableDebt`) alongside its nominal `amount`
+(= `statement_debt_amount`): the payment drawer validates and quick-fills
+against the ceiling, while cash-flow projections keep using the nominal amount
+so statement and current-period loads are not double-counted across months.
 
 When `pay_card_debt` closes the full current-period balance, the database must
 be able to allocate that amount exactly to posted, unstatemented single expenses
@@ -264,8 +285,10 @@ fields — no RPC changes needed.
 - Pre-migration events have null deltas and cannot be backfilled.
 
 The `LiveReconciliationPanel` on `/veri-sagligi` now offers a "Farkı düzelt"
-button for credit cards: user enters the bank's real debt, and the difference
-is applied as an auditable `post_card_debt_correction` — no PDF import needed.
+button for credit cards: user enters the bank's real debt (total remaining
+burden including future installments) and the panel applies it through
+`reconcile_card_bank_snapshot` — no PDF import needed. (`post_card_debt_correction`
+remains the generic signed-correction RPC used by the statement-import lock.)
 
 ## Data-Health Expectations
 

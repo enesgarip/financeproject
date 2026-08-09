@@ -37,6 +37,7 @@ import { savingsGoalProgressRate } from './savingsGoal'
 
 export {
   cardMonthlyPaymentAmount,
+  cardPayableDebt,
   paymentCashOutflowAmount,
   paymentOccurrenceInMonth,
   paymentUsesCreditCard,
@@ -203,10 +204,6 @@ export function cardDebtBreakdown(
     hasPartialScheduledDebtOverlap,
     hasUnexplainedDebt: hasDebtBeyondSplit && exceedsTL(unexplainedAmount, 0),
   }
-}
-
-export function cardPayableDebt(card: Pick<Card, 'statement_debt_amount' | 'current_period_spending'>) {
-  return Math.max(0, sumTL([card.statement_debt_amount, card.current_period_spending]))
 }
 
 /**

@@ -19,8 +19,11 @@ import { parseNumber } from '../../utils/formatCurrency'
 import { sumTL } from '../../utils/money'
 import { isMissingSupabaseCapabilityError, missingSupabaseCapabilityMessage } from '../../utils/supabaseErrors'
 
+// İki carryover not formatı da geçmiş taksit sayısını taşır: eski RPC "N/M taksiti
+// uygulama öncesinde ödendi.", yeni RPC (20260809190000) "N/M taksit ekstre
+// öncesinde tamamlandı; ...". Ödenmişlik satır durumundan değil bu nottan okunur.
 function historicalPaidInstallmentCount(expense: CardExpense) {
-  const match = expense.note?.match(/^([0-9]+)\/([0-9]+) taksiti uygulama/i)
+  const match = expense.note?.match(/^([0-9]+)\/([0-9]+) taksit(?:i uygulama| ekstre) [öo]ncesinde/i)
   if (!match) return 0
 
   const paid = Number(match[1] ?? 0)

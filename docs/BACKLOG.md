@@ -1,5 +1,36 @@
 # Priority Backlog
 
+## 2026-08-10 — Banka modeli Faz 1: kanama durdurucular
+
+2026-08-10 üç-akış denetiminin (ekstre import / taksit modeli / borç ödeme; 3
+yapısal kök neden) ilk fazı. Faz 2 (taksit planına kalıcı kimlik + ödenmişliği
+arşiv bağından türetme), Faz 3 (tam-güncel-ödeme eşitlik kilidini residual
+settlement kuralına indirme + SMS hesap hareketi ↔ kart ödemesi eşleşmesi) ve
+Faz 4 (card_installments RPC-only, ölü pay_card_installment RPC drop) AÇIK.
+
+- ~~**B3 — Borçlar sayfası açık-ekstre koruması.**~~ DONE. `LiabilitiesCardsPage`
+  açık arşivleri yükler; açık ekstresi olan kartta buton `pay_card_statement`
+  akışına döner (Hesaplar'daki desenle aynı drawer), `pay_card_debt` yalnız
+  arşivsiz kartta kalır. Çift düşme yolu kapandı.
+- ~~**K2 — Ödenmiş dönem PDF'inin yeniden importu reddedilir.**~~ DONE.
+  `replace_card_statement_import` başında ödenmiş (veya PDF tarihinden yeni)
+  arşiv varsa açık hata verir; re-import borcu ikiye katlayıp korunan planların
+  açık taksitlerini silemez. Regresyon: Senaryo F.
+- ~~**K3 — Banka belgesi tarih otoritesi.**~~ DONE. `cut_card_statement`
+  opsiyonel `p_statement_date`/`p_due_date` alır: kart takviminden ±7 gün içinde
+  PDF tarihi kesim sınırı ve arşiv tarihleri olur (hafta sonu/tatil kaydırması
+  importu kilitlemez); dönem üyeliği import kapsamıyla birebir hizalanır.
+  Tarihsiz çağrılar (bakım/client) aynen davranır. Regresyon: Senaryo G; E ise
+  toleransın dışına (9 gün) taşınarak atomik rollback amacını korur.
+- ~~**T2 — Taksit sayacı yeni carryover notunu tanır.**~~ DONE.
+  `CardInstallmentExpensesPanel` regex'i iki formatı da okur; `update_card_expense`
+  da (T2b) yeni notu tanır — tanımasa düzenleme geçmiş taksitleri sıfır sayıp
+  planı 1..M yeniden kurar ve borcu şişirirdi.
+- ~~**B7 — Takvim kart borcu kaleminde ödenebilir tavan.**~~ DONE.
+  `FinanceObligation.maxPayableAmount` (= `cardPayableDebt`) çekmece üst sınırı
+  oldu; nominal tutar ekstre borcu kalır (nakit projeksiyonu değişmez). Drawer'da
+  "Ekstre (X)" + "Tamamı (Y)" hızlı butonları tavanla uyumlu.
+
 ## 2026-08-09 — Banka kart yükü mutabakatı
 
 - ~~**Veri Sağlığı kilidinin ödenmiş ekstre artıklarını güvenle onarması.**~~ DONE.

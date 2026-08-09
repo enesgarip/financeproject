@@ -35,7 +35,7 @@ import type {
 } from '../types/database'
 import { getCardStatementPeriod, getNextCardPaymentDueDate } from './cardStatement'
 import { addDays, addMonths, dateInputValue, endOfMonth, isDateInMonth, monthlyOccurrenceDate, startOfDay, startOfMonth } from './date'
-import { cardMonthlyPaymentAmount, paymentCashOutflowAmount, paymentOccurrenceInMonth, paymentUsesCreditCard } from './financeObligationRules'
+import { cardMonthlyPaymentAmount, cardPayableDebt, paymentCashOutflowAmount, paymentOccurrenceInMonth, paymentUsesCreditCard } from './financeObligationRules'
 import { roundTL, sumTL } from './money'
 
 export type FinanceObligationKind =
@@ -71,6 +71,7 @@ export type FinanceObligation = {
   date: string
   amount: number // nominal tutar (ekranda gösterilen borç/tahsilat)
   cashImpactAmount?: number // bu ay bankadan çıkacak gerçek nakit (karta yazılırsa 0); yoksa amount kabul edilir
+  maxPayableAmount?: number // ödeme çekmecesinin tutar tavanı; amount'tan büyük olabilir (ör. ekstre + dönem içi). Yoksa amount tavandır.
   direction: FinanceObligationDirection
   settlement?: FinanceObligationSettlement
   isEstimate?: boolean // tutar tahmini/otomatik değerlenmiş mi (kesin değil)
@@ -231,6 +232,9 @@ export function buildFinanceObligationsForMonth(
         subtitle: card.bank_name,
         date: nextDue,
         amount: cardMonthlyPaymentAmount(card),
+        // pay_card_debt sunucuda ekstre + dönem içi toplamına kadar kabul eder;
+        // çekmece tavanı ekstre tutarına kilitlenirse tam kapama reddedilir (B7).
+        maxPayableAmount: cardPayableDebt(card),
         direction: 'outflow',
       })
     }

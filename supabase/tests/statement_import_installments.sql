@@ -262,7 +262,9 @@ begin
   end if;
 
   -- ── Senaryo E — kesim tarihi doğrulaması en sonda hata verse bile RPC'nin
-  -- tüm temizleme/import adımları subtransaction ile geri alınır.
+  -- tüm temizleme/import adımları subtransaction ile geri alınır. K3 sonrası
+  -- ±7 gün tolere edildiği için hatayı 9 günlük sapma tetikler; orijinal
+  -- harcama silme kapsamına girsin diye PDF tarihinden önceye konur.
   insert into public.cards (
     user_id, bank_name, card_name, card_type, credit_limit, statement_day
   ) values (
@@ -271,7 +273,7 @@ begin
   ) returning id into v_card;
   select id into v_original_expense
   from public.add_card_expense(
-    v_card, 20, 'ROLLBACK ORIGINAL', (current_date - 2), 1, 'Diğer',
+    v_card, 20, 'ROLLBACK ORIGINAL', (current_date - 12), 1, 'Diğer',
     'posted', null, 'manual', 'rollback-original'
   );
 
@@ -279,11 +281,11 @@ begin
   begin
     perform public.replace_card_statement_import(
       v_card,
-      current_date - 2,
+      current_date - 10,
       null,
       30,
       jsonb_build_array(jsonb_build_object(
-        'kind', 'expense', 'amount', 30, 'spentAt', current_date - 2,
+        'kind', 'expense', 'amount', 30, 'spentAt', current_date - 10,
         'installmentCount', 1, 'description', 'ROLLBACK NEW',
         'category', 'Diğer', 'sourceEventId', 'rollback-new'
       ))
@@ -299,7 +301,96 @@ begin
   select debt_amount into v_debt from public.cards where id = v_card;
   if v_debt <> 20 then raise exception 'FAIL E atomik rollback borcu: 20 bekleniyordu, %', v_debt; end if;
 
-  raise notice 'Ekstre taksit import regresyonu OK (1. / orta / son / PDF açık plan yenileme / atomik rollback).';
+  -- ── Senaryo F — K2: ödenmiş dönemin (veya daha eskisinin) PDF'i yeniden
+  -- import edilemez. Re-import borcu ikiye katlar ve açık taksitleri silerdi.
+  insert into public.cards (
+    user_id, bank_name, card_name, card_type, credit_limit, statement_day
+  ) values (
+    v_user, 'SI', 'SI paid reimport', 'kredi_karti', 50000,
+    extract(day from v_statement_date)::integer
+  ) returning id into v_card;
+
+  insert into public.card_statement_archives (
+    user_id, card_id, period_year, period_month, statement_date,
+    statement_debt_amount, current_period_spending, total_debt_amount,
+    status, paid_at, note
+  ) values (
+    v_user, v_card,
+    extract(year from v_statement_date)::integer,
+    extract(month from v_statement_date)::integer,
+    v_statement_date, 200, 200, 200, 'paid', now(), 'Ödenmiş dönem'
+  );
+
+  -- Aynı dönemin PDF'i reddedilir.
+  v_failed := false;
+  begin
+    perform public.replace_card_statement_import(
+      v_card, v_statement_date, null, 200,
+      jsonb_build_array(jsonb_build_object(
+        'kind', 'expense', 'amount', 200, 'spentAt', v_statement_date,
+        'installmentCount', 1, 'description', 'PAID REIMPORT',
+        'category', 'Diğer', 'sourceEventId', 'paid-reimport'
+      ))
+    );
+  exception when others then
+    v_failed := true;
+  end;
+  if not v_failed then raise exception 'FAIL F ödenmiş dönem re-importu reddedilmedi'; end if;
+
+  -- Ödenmişten daha eski bir dönemin PDF'i de reddedilir (geriye dönük import).
+  v_failed := false;
+  begin
+    perform public.replace_card_statement_import(
+      v_card, (v_statement_date - interval '1 month')::date, null, 150,
+      jsonb_build_array(jsonb_build_object(
+        'kind', 'expense', 'amount', 150, 'spentAt', (v_statement_date - interval '1 month')::date,
+        'installmentCount', 1, 'description', 'OLDER REIMPORT',
+        'category', 'Diğer', 'sourceEventId', 'older-reimport'
+      ))
+    );
+  exception when others then
+    v_failed := true;
+  end;
+  if not v_failed then raise exception 'FAIL F ödenmişten eski dönem importu reddedilmedi'; end if;
+
+  if (select debt_amount from public.cards where id = v_card) <> 0 then
+    raise exception 'FAIL F reddedilen import borç bıraktı';
+  end if;
+
+  -- ── Senaryo G — K3: PDF kesim/son ödeme tarihi ±7 gün içinde otoritedir.
+  -- Kart takvimi kesimi current_date-3 hesaplar; PDF current_date-1 der (banka
+  -- kaydırması). Import başarılı olmalı ve arşiv PDF tarihlerini taşımalı.
+  insert into public.cards (
+    user_id, bank_name, card_name, card_type, credit_limit, statement_day
+  ) values (
+    v_user, 'SI', 'SI banka tarihi', 'kredi_karti', 50000,
+    extract(day from (current_date - 3))::integer
+  ) returning id into v_card;
+
+  perform public.replace_card_statement_import(
+    v_card,
+    current_date - 1,
+    current_date + 9,
+    100,
+    jsonb_build_array(jsonb_build_object(
+      'kind', 'expense', 'amount', 100, 'spentAt', current_date - 2,
+      'installmentCount', 1, 'description', 'BANKA TARIHI',
+      'category', 'Diğer', 'sourceEventId', 'bank-dates'
+    ))
+  );
+
+  select statement_date, due_date into v_min, v_max
+  from public.card_statement_archives
+  where card_id = v_card and status = 'open';
+  if v_min <> (current_date - 1) or v_max <> (current_date + 9) then
+    raise exception 'FAIL G arşiv PDF tarihlerini taşımalı: %/% bekleniyordu, %/%',
+      current_date - 1, current_date + 9, v_min, v_max;
+  end if;
+  if (select statement_debt_amount from public.cards where id = v_card) <> 100 then
+    raise exception 'FAIL G ekstre kovası 100 olmalı';
+  end if;
+
+  raise notice 'Ekstre taksit import regresyonu OK (1. / orta / son / PDF açık plan yenileme / atomik rollback / paid re-import reddi / PDF tarih otoritesi).';
 end $$;
 
 rollback;

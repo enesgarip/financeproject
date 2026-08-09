@@ -8,9 +8,9 @@ import { Badge } from '../components/ui/badge'
 import { Button } from '../components/ui/button'
 import { Card as SurfaceCard, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Skeleton } from '../components/ui/skeleton'
-import { fetchCards } from '../data/repositories/cardsRepo'
+import { fetchCards, fetchOpenStatementArchives } from '../data/repositories/cardsRepo'
 import { useFinancePaymentDrawer } from '../hooks/useFinancePaymentDrawer'
-import type { Card as CardRow } from '../types/database'
+import type { Card as CardRow, CardStatementArchive } from '../types/database'
 import { getCardStatementPeriod } from '../utils/cardStatement'
 import { dateInputValue, formatDate } from '../utils/date'
 import { cardPayableDebt } from '../utils/financeSummary'
@@ -22,23 +22,32 @@ import { isMissingSupabaseCapabilityError, missingSupabaseCapabilityMessage } fr
  * Borçlar → Kart Borcu. Kredi kartı borcunu krediler/kişiler ile aynı "ne
  * borçluyum" bağlamında gösterir ve buradan ödetir. Kart ledger'ı/ekstre döngüsü
  * Hesaplar'da kalır — bu sayfa aynı veriyi OKUR (mükerrer yazma yok) ve ödemeyi
- * Hesaplar'daki ile birebir aynı paylaşılan drawer + pay_card_debt RPC'siyle yapar.
+ * Hesaplar'daki ile birebir aynı paylaşılan drawer + RPC'lerle yapar: açık
+ * ekstresi olan kartta pay_card_statement (kanonik yol; pay_card_debt arşivi
+ * kapatmadan kovayı düşürürdü), diğerlerinde pay_card_debt.
  */
 export function LiabilitiesCardsPage() {
   const [cards, setCards] = useState<CardRow[]>([])
+  const [openStatements, setOpenStatements] = useState<CardStatementArchive[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const { drawerProps, openPaymentDrawer } = useFinancePaymentDrawer()
   const invalidateSnapshot = useInvalidateFinanceSnapshot()
 
   const load = useCallback(async () => {
-    const result = await fetchCards()
-    if (!result.ok) {
-      setError(result.error.message ?? 'Kartlar yüklenemedi.')
+    const [cardsResult, statementsResult] = await Promise.all([fetchCards(), fetchOpenStatementArchives()])
+    if (!cardsResult.ok) {
+      setError(cardsResult.error.message ?? 'Kartlar yüklenemedi.')
       setLoading(false)
       return
     }
-    setCards(result.data)
+    if (!statementsResult.ok) {
+      setError(statementsResult.error.message ?? 'Açık ekstreler yüklenemedi.')
+      setLoading(false)
+      return
+    }
+    setCards(cardsResult.data)
+    setOpenStatements(statementsResult.data)
     setLoading(false)
   }, [])
 
@@ -56,6 +65,47 @@ export function LiabilitiesCardsPage() {
     [creditCards],
   )
   const totalDebt = useMemo(() => sumTL(creditCards.map((card) => card.debt_amount)), [creditCards])
+
+  // Açık ekstresi olan kartta kanonik yol pay_card_statement'tır: pay_card_debt
+  // arşivi kapatmadan statement kovasını düşürür (Veri Sağlığı mismatch + ekstre
+  // ikinci kez ödenebilir kalır). Hesaplar'daki openStatementPayment ile aynı desen.
+  async function openStatementPayment(statement: CardStatementArchive, card: CardRow) {
+    await openPaymentDrawer(
+      {
+        id: `card-statement-${statement.id}`,
+        kind: 'card_statement',
+        action: 'pay_card_statement',
+        sourceId: statement.id,
+        relatedCardId: card.id,
+        title: `${card.card_name} ekstresi`,
+        subtitle: card.bank_name,
+        date: statement.due_date ?? statement.statement_date,
+        amount: statement.statement_debt_amount,
+        direction: 'outflow',
+      },
+      {
+        cards,
+        reload: load,
+        afterSuccess: async () => {
+          await invalidateSnapshot()
+        },
+        detail: (
+          <>
+            <p className="font-semibold text-foreground">{card.card_name}</p>
+            <p>Son ödeme: {formatDate(statement.due_date)}</p>
+            <p>
+              Ekstre tutarı:{' '}
+              <span className="font-mono font-semibold text-foreground">{formatCurrency(statement.statement_debt_amount)}</span>
+            </p>
+          </>
+        ),
+        formatSubmitError: (submitError) =>
+          isMissingSupabaseCapabilityError(submitError)
+            ? missingSupabaseCapabilityMessage('Ekstre ödeme altyapısı', submitError)
+            : submitError.message ?? 'Ekstre ödenemedi.',
+      },
+    )
+  }
 
   async function openDebtPayment(card: CardRow) {
     await openPaymentDrawer(
@@ -141,6 +191,8 @@ export function LiabilitiesCardsPage() {
         cardsWithDebt.map((card) => {
           const period = getCardStatementPeriod(card, new Date())
           const payable = cardPayableDebt(card)
+          // En erken vadeli açık ekstre (fetch zaten due_date artan sıralı).
+          const openStatement = openStatements.find((statement) => statement.card_id === card.id)
           return (
             <SurfaceCard key={card.id}>
               <CardHeader className="pb-3">
@@ -164,17 +216,35 @@ export function LiabilitiesCardsPage() {
                   <DebtStat label="Ödenebilir" value={formatCurrency(payable)} />
                   <DebtStat
                     label="Son ödeme"
-                    value={period ? formatDate(period.dueDate) : 'Gün eksik'}
+                    value={openStatement?.due_date
+                      ? formatDate(openStatement.due_date)
+                      : period ? formatDate(period.dueDate) : 'Gün eksik'}
                   />
                 </div>
-                <Button
-                  variant="default"
-                  className="w-full sm:w-auto sm:self-end"
-                  disabled={payable <= 0}
-                  onClick={() => void openDebtPayment(card)}
-                >
-                  <Wallet /> Kart borcunu öde
-                </Button>
+                {openStatement ? (
+                  <>
+                    <p className="text-xs text-muted-foreground">
+                      Açık ekstre var — ödeme ekstre üzerinden yapılır; kalan dönem içi harcama sonraki ekstrede ödenir.
+                    </p>
+                    <Button
+                      variant="default"
+                      className="w-full sm:w-auto sm:self-end"
+                      disabled={openStatement.statement_debt_amount <= 0}
+                      onClick={() => void openStatementPayment(openStatement, card)}
+                    >
+                      <Wallet /> Ekstreyi öde ({formatCurrency(openStatement.statement_debt_amount)})
+                    </Button>
+                  </>
+                ) : (
+                  <Button
+                    variant="default"
+                    className="w-full sm:w-auto sm:self-end"
+                    disabled={payable <= 0}
+                    onClick={() => void openDebtPayment(card)}
+                  >
+                    <Wallet /> Kart borcunu öde
+                  </Button>
+                )}
               </CardContent>
             </SurfaceCard>
           )
