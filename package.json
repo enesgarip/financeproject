@@ -29,6 +29,7 @@
     "db:test:sms-card-reconciliation": "docker exec -i supabase_db_financeproject psql -U postgres -d postgres -v ON_ERROR_STOP=1 -f - < supabase/tests/sms_card_payment_reconciliation.sql",
     "db:test:statement-import": "docker exec -i supabase_db_financeproject psql -U postgres -d postgres -v ON_ERROR_STOP=1 -f - < supabase/tests/statement_import_installments.sql",
     "db:test:card-allocation": "docker exec -i supabase_db_financeproject psql -U postgres -d postgres -v ON_ERROR_STOP=1 -f - < supabase/tests/card_allocation_security.sql",
+    "db:test:card-bank-snapshot": "docker exec -i supabase_db_financeproject psql -U postgres -d postgres -v ON_ERROR_STOP=1 -f - < supabase/tests/card_bank_snapshot_reconciliation.sql",
     "db:test:data-health-safe-repairs": "docker exec -i supabase_db_financeproject psql -U postgres -d postgres -v ON_ERROR_STOP=1 -f - < supabase/tests/data_health_safe_repairs.sql",
     "db:test:data-health-acknowledgements": "docker exec -i supabase_db_financeproject psql -U postgres -d postgres -v ON_ERROR_STOP=1 -f - < supabase/tests/data_health_issue_acknowledgements.sql",
     "db:test:reset": "docker exec -i supabase_db_financeproject psql -U postgres -d postgres -v ON_ERROR_STOP=1 -f - < supabase/tests/reset_user_finance_data.sql",

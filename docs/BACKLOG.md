@@ -1,5 +1,14 @@
 # Priority Backlog
 
+## 2026-08-09 — Banka kart yükü mutabakatı
+
+- ~~**Veri Sağlığı kilidinin ödenmiş ekstre artıklarını güvenle onarması.**~~ DONE.
+  Bankadaki gelecek taksitler dahil toplam kalan yük kaynak gerçek olarak alınır;
+  dönem/ekstre/provizyon kovaları değiştirilmeden yalnız toplam borç düzeltilir.
+  Ödenmiş bir ekstreye bağlanmamış eski hareketler ancak bağlı toplamla birlikte
+  arşiv tutarına kuruşu kuruşuna eşleşirse arşive alınır. Böylece gerçek dönem
+  ödemesi eski taksitleri yeniden saymadan çalışır; belirsiz eşleşme reddedilir.
+
 ## 2026-08-09 — SMS faturası ve abonelik tekilleştirme
 
 - ~~**Kredi kartı otomatik ödemesi ile banka SMS'ini tek harekette birleştir.**~~

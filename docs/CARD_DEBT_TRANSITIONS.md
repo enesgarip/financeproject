@@ -1,6 +1,6 @@
 # Card Debt Transitions
 
-Last reviewed: 2026-08-03
+Last reviewed: 2026-08-09
 
 This file is the working source of truth for how credit-card debt moves through
 the app. If an RPC, page action, or data-health fix changes one of these rules,
@@ -110,6 +110,7 @@ member `debt_amount` values.
 | Old installment plan carried over | `record_card_installment_carryover` | `debt_amount += remaining installment total`; `current_period_spending += remaining installments whose exact due date has passed` | Called when the current installment number is greater than one; inserts one parent and only the current/future open rows. Earlier installments are not recreated as synthetic paid history. |
 | Card debt recomputed from ledger | `recompute_card_debt_from_ledger` | `debt_amount = sum(card_ledger.amount_kurus) / 100`; if the projection lowers total debt, visible split is reduced from current period first, then statement, then provision | Suppresses the ledger trigger for this repair write so no duplicate event is emitted |
 | Card debt manual correction | `post_card_debt_correction` | `debt_amount += signed correction`; positive corrections add to current-period spending, negative reverse entries reduce current period first, then statement, then provision | Writes an auditable `card_ledger.kind='adjustment'` event with the required reason note |
+| Bank total snapshot reconciled | `reconcile_card_bank_snapshot` | `debt_amount = bank total remaining card burden`; statement/current/provision buckets stay unchanged | Bank total must include future installments and cannot be below the visible split. A paid archive's unallocated historical children are attached only when every eligible child plus the linked total exactly equals that archive amount; ambiguous matches are untouched. The total-only change is an auditable ledger adjustment. |
 | Card import reset | `reset_card_import_data` | Sets visible card debt fields to `0` before a clean import rebuilds the non-paid/open scope | Deletes unarchived/non-paid-open expenses, installments, statement archives, and their history under a user/card-bound guard. It fails before mutation if current-settlement or paid-archive installment history makes a clean historical rebuild unsafe. The product import UI remains non-destructive. |
 | Statement PDF authoritative rebuild | `replace_card_statement_import` | Reprojects the rebuildable open scope, replays every validated PDF row, locks the cut amount to the bank total, then cuts/reconciles the statement in one transaction | Preserves paid archives/current-settlement evidence and movements after the PDF statement date. It never matches/reuses a historical installment parent: each PDF installment line creates a fresh current/future open plan, while old paid archives remain untouched. |
 | Legacy whole-card reset | removed (`reset_card_data`) | n/a | Removed because it predated immutable statement/current-settlement evidence and had no safe append-only reversal model. Full user reset remains the supported destructive reset. |
@@ -129,6 +130,14 @@ client:
 Do not duplicate their money-moving logic in a scheduler or page component.
 
 ## Payment Semantics
+
+Bank screens may label only the immediately payable amount as current debt and
+show future installments separately. Live reconciliation therefore asks for the
+bank's total remaining card burden including all future installments. The
+`reconcile_card_bank_snapshot` action changes only total debt and may repair an
+exactly proven historical archive allocation before a full current-period
+payment. It never debits a bank account; recording the payment remains a
+separate action with an explicit source account.
 
 `cardPayableDebt(card)` is:
 
@@ -208,6 +217,9 @@ integer kuruş. Repair flows follow the same append-only rule:
 - `post_card_debt_correction` is the preferred manual fix. It changes
   `debt_amount` through a signed adjustment and records the reason in
   `card_ledger`.
+- `reconcile_card_bank_snapshot` is the bank-truth total-only fix. It preserves
+  visible buckets, records the total delta as an adjustment, and repairs only
+  exact paid-archive allocation gaps.
 - Data Health's `apply_data_health_safe_repairs` may invoke the recompute or
   clamp invariant only after locking every submitted card and validating the
   exact scan-time `updated_at`; the whole card/account plan rolls back on one

@@ -8,7 +8,7 @@ import {
   insertAccountReconciliation,
 } from '../../data/repositories/financePanelsRepo'
 import { useBalancePrivacy } from '../../hooks/useBalancePrivacy'
-import { postCardDebtCorrection } from '../../services/cardLedgerActions'
+import { reconcileCardBankSnapshot } from '../../services/cardLedgerActions'
 import type { AccountReconciliation, Card, InsertFor, ReconciliationTarget } from '../../types/database'
 import { formatDate } from '../../utils/date'
 import { parseNumber } from '../../utils/formatCurrency'
@@ -146,10 +146,9 @@ export function LiveReconciliationPanel({ cards, onChanged }: LiveReconciliation
     setCorrectingId(cardId)
     setError('')
 
-    const correctionTL = -drift
-    const note = `Mutabakat düzeltmesi: banka farkı ${drift >= 0 ? '+' : ''}${drift.toFixed(2)} TL`
+    const note = `Banka toplam kart yükü mutabakatı: ${real.toFixed(2)} TL`
 
-    const { error: rpcError } = await postCardDebtCorrection(cardId, correctionTL, note)
+    const { error: rpcError } = await reconcileCardBankSnapshot(cardId, real, note)
     if (rpcError) {
       setError(rpcError.message ?? 'Fark düzeltilemedi.')
       setCorrectingId(null)
@@ -293,7 +292,9 @@ export function LiveReconciliationPanel({ cards, onChanged }: LiveReconciliation
 
               <div className="mt-2 flex flex-wrap items-end gap-2">
                 <label className="flex-1 min-w-[140px] text-xs font-semibold text-muted-foreground">
-                  Bankadaki gerçek {item.target === 'debt' ? 'borç' : 'bakiye'}
+                  {item.target === 'debt'
+                    ? 'Bankadaki toplam kalan kart yükü (gelecek taksitler dahil)'
+                    : 'Bankadaki gerçek bakiye'}
                   <Input
                     value={raw}
                     onChange={(event) => setInputs((prev) => ({ ...prev, [item.card.id]: event.target.value }))}
@@ -301,7 +302,7 @@ export function LiveReconciliationPanel({ cards, onChanged }: LiveReconciliation
                     inputMode="decimal"
                     placeholder="0,00"
                     className="mt-1 tabular-nums"
-                    aria-label={`${item.card.bank_name} ${item.card.card_name} bankadaki gerçek ${item.target === 'debt' ? 'borç' : 'bakiye'}`}
+                    aria-label={`${item.card.bank_name} ${item.card.card_name} ${item.target === 'debt' ? 'bankadaki toplam kalan kart yükü' : 'bankadaki gerçek bakiye'}`}
                   />
                 </label>
                 {liveDrift != null ? (

@@ -1,6 +1,6 @@
 # Supabase RPC Action Reference
 
-Last reviewed: 2026-08-03
+Last reviewed: 2026-08-09
 
 This file maps Supabase RPCs to the user-visible actions that call them. Keep it
 updated whenever a page action, repository wrapper, or migration changes an RPC
@@ -80,6 +80,7 @@ installment payment outside the statement flow.
 | --- | --- | --- | --- |
 | `recompute_card_debt_from_ledger` | `recomputeCardDebt` | Card ledger panel repair | Resets `cards.debt_amount` to the exact card-ledger projection while suppressing a duplicate ledger event |
 | `post_card_debt_correction` | `postCardDebtCorrection` | Card ledger panel correction | Applies a signed card debt adjustment; the card-ledger trigger records it as an auditable `adjustment` note |
+| `reconcile_card_bank_snapshot` | `reconcileCardBankSnapshot` | Cards summary / live reconciliation | Sets total debt to the bank's total remaining card burden without changing visible buckets; repairs only exact historical paid-statement allocation gaps and records an auditable ledger adjustment |
 | `recompute_account_balance_from_ledger` | `recomputeAccountBalance` | Account ledger panel repair | Resets bank-account balance to the exact account-ledger projection |
 | `post_account_balance_correction` | `postAccountBalanceCorrection` | Account ledger panel correction | Applies a signed bank-account balance adjustment with an auditable note |
 

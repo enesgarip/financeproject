@@ -51,3 +51,30 @@ export async function postCardDebtCorrection(
   if (error) return { debt: null, error }
   return { debt: typeof data === 'number' ? data : null, error: null }
 }
+
+/**
+ * Bankadaki toplam kalan kart yükünü (gelecek dönem taksitleri dahil) kaynak
+ * gerçek olarak kaydeder. Dönem/ekstre/provizyon kovaları değişmez; tutarı tam
+ * kanıtlanan eski ödenmiş-ekstre bağlantıları aynı transaction'da onarılır.
+ */
+export async function reconcileCardBankSnapshot(
+  cardId: string,
+  bankTotalTL: number,
+  note: string,
+): Promise<CardLedgerActionResult> {
+  const bankTotalKurus = toKurus(bankTotalTL)
+  if (bankTotalKurus < 0) {
+    return { debt: null, error: { message: 'Bankadaki toplam kart yükü negatif olamaz.' } }
+  }
+  if (!note.trim()) {
+    return { debt: null, error: { message: 'Mutabakat için açıklama zorunlu.' } }
+  }
+
+  const { data, error } = await supabase.rpc('reconcile_card_bank_snapshot', {
+    p_card_id: cardId,
+    p_bank_total_kurus: bankTotalKurus,
+    p_note: note.trim(),
+  })
+  if (error) return { debt: null, error }
+  return { debt: typeof data === 'number' ? data : null, error: null }
+}

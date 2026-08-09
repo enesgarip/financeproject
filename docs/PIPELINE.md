@@ -28,6 +28,9 @@ oluşmaması için branch push tetikleyicisi yoktur.
   and ledger-write boundary regression)
 - `npm run db:test:data-health-acknowledgements` (auth-bound write RPCs, own-row
   visibility, direct-write denial, and cross-user clear isolation)
+- `npm run db:test:card-bank-snapshot` (bank total-only reconciliation, exact
+  paid-statement child allocation, ledger bucket preservation, and subsequent
+  full current-period payment)
 - `npm run db:test:expense-contexts-cars` (gider bağlamı/araç own-row RLS,
   kart annotation ownership ve manuel raporlama satırları)
 

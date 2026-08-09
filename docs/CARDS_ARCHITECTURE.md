@@ -1,6 +1,6 @@
 # Cards Architecture Note
 
-Last reviewed: 2026-07-28
+Last reviewed: 2026-08-09
 
 This note maps `/kartlar` (`CardsPage`) after the page split. Start with
 `CLAUDE.md`, `docs/AI_CONTEXT_INDEX.md`, and `docs/CARD_DEBT_TRANSITIONS.md`
@@ -27,8 +27,9 @@ repositories, services, or focused `CardsPage.*` modules.
   provision/scheduled-installment buckets with the latest real-bank debt
   reconciliation and exposes import/reconciliation actions
 - `components/finance/LiveReconciliationPanel.tsx`: reused on the cards summary
-  with credit-card rows only, so the real bank debt can be entered and corrected
-  without leaving the card-first flow
+  with credit-card rows only. It accepts the bank's total remaining card burden
+  including future installments and uses the total-only bank snapshot RPC;
+  payment/account debit remains a separate explicit action
 - `CardsPage.expense.tsx`: quick expense and installment expense entry
   surface; loads editable repeat suggestions for recent cash expenses and
   routes paid-count installment imports to `record_card_installment_carryover`
@@ -73,6 +74,9 @@ lazy boundary.
 - The credit-card signature surface must leave overflow visible because the row
   action menu is anchored inside it. Keep decorative clipping on the dedicated
   absolute decoration layer so mobile menus can extend beyond the blue surface.
+- Credit-card list rows label `debt_amount` as “Toplam kart yükü”; current-period,
+  open-statement, and future-installment amounts remain separate supporting
+  values so a bank's zero current debt is not mistaken for zero total burden.
 - Do not render `CreditCardOverview` when there is no credit-card limit group;
   the account hub already owns cash-only summary.
 
