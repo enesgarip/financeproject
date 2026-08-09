@@ -66,6 +66,7 @@ installment payment outside the statement flow.
 | `transfer_between_accounts` | `submitAccountMovement` | Cards page/account center: bank-to-bank transfer | Moves money between two `banka_karti` accounts and writes history |
 | `record_manual_account_movement` | `submitAccountMovement` | Cards page/account center: manual deposit/withdrawal | Applies one account balance delta and writes history in one transaction |
 | `record_sms_account_movement` | `parse-sms` edge function (service role only) | SMS automation: bank account in/out movement | Matches `cards.account_number` against the SMS account number (digits-only exact match, then tolerant mutual-containment with a 6-digit minimum; ambiguous/cross-user global matches are rejected), applies the balance delta, and writes history at the explicit Turkey-offset SMS time. Optional `p_source_event_id` makes retries no-ops under the card lock + unique index. Minute-only SMS requires an external stable event ID. |
+| `record_sms_card_expense` | `parse-sms` edge function (service role only) | SMS automation: credit-card expense | Makes the SMS event idempotent, reconciles one unambiguous same-card/near-date/tolerant-amount `bank_auto` payment and advances its recurrence, or attaches a late SMS to the already-posted automatic fallback. Ambiguous candidates are not guessed. |
 
 ## Assets
 

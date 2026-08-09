@@ -53,7 +53,7 @@ import { importedRowEventIds, sha256Hex } from '../../utils/sourceEventId'
  * App'e güvenle otomatik aktarılabilen işlem mi?
  * - Peşin/tek çekim → her zaman aktarılabilir.
  * - Taksitli (toplam sayı biliniyor) → aktarılabilir. 1. taksit tam plan kurar;
- *   plan-ortası (no>1) carryover RPC ile geçmiş taksitleri ödendi olarak ekler;
+ *   plan-ortası (no>1) carryover RPC ile yalnız cari ve gelecek açık planı kurar;
  *   son taksit (no=count) tek ödeme olarak eklenir.
  * - Toplam sayısı bilinmeyen → manuel kontrol.
  */

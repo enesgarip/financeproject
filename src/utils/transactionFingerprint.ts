@@ -45,3 +45,29 @@ export function descriptionSimilarity(left: string | null | undefined, right: st
   const union = new Set([...leftTokens, ...rightTokens]).size
   return union === 0 ? 0 : intersection / union
 }
+
+function installmentSequenceMarker(value: string | null | undefined) {
+  return normalizedTransactionDescription(value).match(/\b(\d+)\s+tk\b/)?.[1] ?? null
+}
+
+function chargeComponentMarker(value: string | null | undefined) {
+  return normalizedTransactionDescription(value).match(/\b(anapara|faiz|bsmv|kkdf)\b/)?.[1] ?? null
+}
+
+/**
+ * Banka açıklaması iki satırın aynı ana işleme ait ama farklı finansal parçalar
+ * olduğunu açıkça kanıtlıyor mu? Farklı taksit numarası veya farklı
+ * anapara/faiz/vergi bileşeni, aynı gün+tutar olsa bile duplicate değildir.
+ */
+export function descriptionsProveDistinct(
+  left: string | null | undefined,
+  right: string | null | undefined,
+): boolean {
+  const leftInstallment = installmentSequenceMarker(left)
+  const rightInstallment = installmentSequenceMarker(right)
+  if (leftInstallment && rightInstallment && leftInstallment !== rightInstallment) return true
+
+  const leftComponent = chargeComponentMarker(left)
+  const rightComponent = chargeComponentMarker(right)
+  return Boolean(leftComponent && rightComponent && leftComponent !== rightComponent)
+}

@@ -788,6 +788,29 @@ describe('buildIssues carryover installment history (DH-01)', () => {
 
     expect(issues.some((issue) => issue.id === 'card-expense-extra-expense-1')).toBe(true)
   })
+
+  it('accepts the PDF-authoritative open plan without synthetic historical rows', () => {
+    const issues = buildIssues({
+      ...emptyData,
+      cards: [creditCard({ debt_amount: 300 })],
+      cardExpenses: [
+        cardExpense({
+          amount: 600,
+          installment_count: 6,
+          installment_amount: 100,
+          spent_at: '2026-05-19',
+          note: '3/6 taksit ekstre öncesinde tamamlandı; yalnız açık plan tutulur.',
+        }),
+      ],
+      cardInstallments: [
+        cardInstallment({ id: 'i4', card_expense_id: 'expense-1', installment_no: 4, installment_count: 6, amount: 100, due_month: '2026-08-19', status: 'scheduled' }),
+        cardInstallment({ id: 'i5', card_expense_id: 'expense-1', installment_no: 5, installment_count: 6, amount: 100, due_month: '2026-09-19', status: 'scheduled' }),
+        cardInstallment({ id: 'i6', card_expense_id: 'expense-1', installment_no: 6, installment_count: 6, amount: 100, due_month: '2026-10-19', status: 'scheduled' }),
+      ],
+    })
+
+    expect(issues.some((issue) => issue.id === 'card-expense-missing-expense-1')).toBe(false)
+  })
 })
 
 describe('buildIssues overdue card statements', () => {
@@ -913,6 +936,21 @@ describe('buildIssues card expense duplicate analysis', () => {
     const duplicate = issues.find((issue) => issue.kind === 'duplicateTransactionCandidate')
     expect(duplicate?.payload?.duplicateLevel).toBe('possible')
     expect(duplicate?.severity).toBe('info')
+  })
+
+  it('does not flag explicit installment numbers or fee components as duplicates', () => {
+    const issues = buildIssues({
+      ...emptyData,
+      cards: [creditCard()],
+      cardExpenses: [
+        cardExpense({ id: 'expense-1', amount: 5499, description: 'MEDIA MARKT Peş. Taksit 1.Tk Anapara' }),
+        cardExpense({ id: 'expense-2', amount: 5499, description: 'MEDIA MARKT Peş. Taksit 2.Tk Anapara' }),
+        cardExpense({ id: 'expense-3', amount: 497.25, description: 'Taksit. Nakit İSTANBUL 1.Tk BSMV', spent_at: '2026-07-06' }),
+        cardExpense({ id: 'expense-4', amount: 497.25, description: 'Taksit. Nakit İSTANBUL 1.Tk KKDF', spent_at: '2026-07-06' }),
+      ],
+    })
+
+    expect(issues.some((issue) => issue.kind === 'duplicateTransactionCandidate')).toBe(false)
   })
 
   it('reports card expenses without description or category', () => {

@@ -106,7 +106,13 @@ Use existing source-of-truth helpers before adding new checks:
   `projectLoanSummary` in `src/utils/financeSummary.ts`
 - card-expense duplicate signals:
   `src/utils/transactionFingerprint.ts` and the database-generated
-  `card_expenses.transaction_fingerprint`
+  `card_expenses.transaction_fingerprint`; explicit different installment
+  numbers (`1.Tk`/`2.Tk`) and charge components (`anapara`/`faiz`/`BSMV`/`KKDF`)
+  prove distinct bank rows and are excluded from loose duplicate candidates
+- authoritative PDF carryover plans may omit every historical installment row;
+  `card_expenses.note` records how many installments were completed before the
+  open plan, so Data Health expects only the current/future suffix rather than
+  reporting intentional history as missing
 - overdue open card statements:
   `card_statement_archives.status`, `due_date`, and the existing
   `pay_card_statement` shared payment path

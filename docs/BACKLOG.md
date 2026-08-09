@@ -1,5 +1,21 @@
 # Priority Backlog
 
+## 2026-08-09 — SMS faturası ve abonelik tekilleştirme
+
+- ~~**Kredi kartı otomatik ödemesi ile banka SMS'ini tek harekette birleştir.**~~
+  DONE. `record_sms_card_expense` tek kart/yakın tarih/toleranslı tutarda yalnız
+  bir plan adayı varsa SMS harcamasını o ödeme ile atomik eşler ve aylık planı
+  ilerletir. Otomatik görev vade gününde bekler, SMS gelmezse ertesi gün fallback
+  olarak postalar; geç gelen SMS mevcut otomatik harcamaya bağlanıp borcu ikinci
+  kez artırmaz. Belirsiz birden fazla aday otomatik birleştirilmez.
+- ~~**PDF açık-plan kayıtlarını Veri Sağlığı'nda eksik geçmiş taksit sayma.**~~
+  DONE. Yeni `N/M taksit ekstre öncesinde tamamlandı` notu geçmiş sentetik
+  satırların bilerek bulunmadığını anlatır; Data Health yalnız açık `N+1..M`
+  planını bekler. Eski carryover notu da geriye uyumlu kalır.
+- ~~**Banka taksit/masraf bileşenlerini mükerrer sayma.**~~ DONE. Açıklamadaki
+  farklı `1.Tk`/`2.Tk` numaraları ile `anapara`/`faiz`/`BSMV`/`KKDF` bileşenleri
+  aynı gün ve tutarda olsalar da yapısal olarak ayrı satır kabul edilir.
+
 ## 2026-08-09 — Ekstre ve taksiti banka modeline indir
 
 - ~~**Ekstre importunda tarihsel taksit eşleştirmesini kaldır.**~~ DONE. PDF açık

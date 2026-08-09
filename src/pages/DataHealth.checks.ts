@@ -29,7 +29,7 @@ import {
 import { formatCurrency } from '../utils/formatCurrency'
 import { diffTL, exceedsTL, moneyDiffers, roundTL, sumTL, toKurus } from '../utils/money'
 import { formatComponentAmount, formatSavingsGoalAmount, savingsGoalBelowTarget, savingsGoalTargetReached, savingsGoalValueTypeLabel } from '../utils/savingsGoal'
-import { buildTransactionFingerprint, descriptionSimilarity, normalizedTransactionDescription } from '../utils/transactionFingerprint'
+import { buildTransactionFingerprint, descriptionSimilarity, descriptionsProveDistinct, normalizedTransactionDescription } from '../utils/transactionFingerprint'
 import type { HealthIssue } from './DataHealth.logic'
 import { addMonthsToDate, currentMonthStart } from './DataHealth.logic'
 
@@ -66,8 +66,8 @@ function activeCardExpense(expense: CardExpense) {
   return expense.status !== 'cancelled'
 }
 
-function parseLegacyPaidCount(expense: CardExpense) {
-  const match = expense.note?.match(/(\d+)\/(\d+)\s+taksiti uygulama [öo]ncesinde/)
+function parseHistoricalPaidCount(expense: CardExpense) {
+  const match = expense.note?.match(/(\d+)\/(\d+)\s+taksit(?:i uygulama| ekstre) [öo]ncesinde/i)
   if (!match) return 0
   const paid = Number(match[1])
   const total = Number(match[2])
@@ -624,12 +624,16 @@ export function checkCardExpenseDuplicates(cards: Card[], cardExpenses: CardExpe
     if (exactDuplicateIdSets.has(ids.join('|'))) continue
 
     let maxSimilarity = 0
+    let hasComparablePair = false
     for (let left = 0; left < rows.length; left++) {
       for (let right = left + 1; right < rows.length; right++) {
+        if (descriptionsProveDistinct(rows[left].description, rows[right].description)) continue
+        hasComparablePair = true
         maxSimilarity = Math.max(maxSimilarity, descriptionSimilarity(rows[left].description, rows[right].description))
       }
     }
 
+    if (!hasComparablePair) continue
     const hasBlankDescription = rows.some((row) => !normalizedTransactionDescription(row.description))
     if (maxSimilarity < 0.3 && !hasBlankDescription) continue
 
@@ -1057,13 +1061,12 @@ export function checkCardInstallments(
   for (const expense of cardExpenses.filter((item) => item.status === 'posted' && item.installment_count > 1)) {
     const rows = installmentsByExpense.get(expense.id) ?? []
     const existingNos = new Set(rows.map((row) => row.installment_no))
-    const paidBefore = parseLegacyPaidCount(expense)
+    const paidBefore = parseHistoricalPaidCount(expense)
     const expectedNos = range(paidBefore + 1, expense.installment_count)
     const missingNos = expectedNos.filter((installmentNo) => !existingNos.has(installmentNo))
-    // DH-01: Carryover geçmiş taksit satırları (installment_no <= paidBefore, `posted`)
-    // MEŞRUDUR — `record_card_installment_carryover` onları bilerek yaratır (plan zaman
-    // çizelgesi). Eski `installment_no <= paidBefore` kuralı bunları "fazla" diye yanlış
-    // pozitif işaretliyordu. Yalnız gerçekten geçersiz (plan üstü / 1'den küçük) numaraları say.
+    // Eski carryover kayıtlarında geçmiş satırlar bulunabilir; yeni PDF modelinde ise
+    // note içindeki paidBefore kadar geçmiş taksit hiç yaratılmaz. İki model de meşrudur.
+    // Yalnız gerçekten geçersiz (plan üstü / 1'den küçük) numaraları fazla say.
     const extraRows = rows.filter((row) => row.installment_no > expense.installment_count || row.installment_no < 1)
     const baseDate = inferInstallmentBaseDate(expense, rows)
     const futureMissingNos = missingNos.filter((installmentNo) => addMonthsToDate(baseDate, installmentNo - 1) > today)

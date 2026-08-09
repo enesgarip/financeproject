@@ -444,7 +444,7 @@ async function handleCardSms(
   const card = aliases[0]!.cards
   const category = inferCategory(parsed.merchant)
 
-  const rpcUrl = `${supabaseUrl}/rest/v1/rpc/add_card_expense`
+  const rpcUrl = `${supabaseUrl}/rest/v1/rpc/record_sms_card_expense`
   const rpcRes = await fetch(rpcUrl, {
     method: 'POST',
     headers,
@@ -454,10 +454,7 @@ async function handleCardSms(
       p_description: parsed.merchant,
       p_spent_at: parsed.spentAt,
       p_category: category,
-      p_installment_count: 1,
-      p_status: 'provision',
       p_user_id: card.user_id,
-      p_source: 'sms',
       p_source_event_id: sourceEventId,
     }),
   })
