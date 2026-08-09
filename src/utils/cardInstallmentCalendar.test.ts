@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Card, CardInstallment } from '../types/database'
-import { buildCardInstallmentCalendar, buildCardInstallmentTotalsByCard, totalScheduledInstallments } from './cardInstallmentCalendar'
+import { buildCardInstallmentCalendar, buildCardInstallmentTotalsByCard, isInstallmentSettled, totalScheduledInstallments } from './cardInstallmentCalendar'
 
 const base = { id: 'id', user_id: 'u', created_at: '2026-01-01T00:00:00Z', updated_at: '2026-01-01T00:00:00Z' }
 
@@ -160,5 +160,29 @@ describe('totalScheduledInstallments', () => {
 
   it('returns 0 for empty array', () => {
     expect(totalScheduledInstallments([])).toBe(0)
+  })
+})
+
+// F1/T3: ekstre ödemesi taksit satırına dokunmaz; ödenmişlik kanıttan türetilir.
+describe('isInstallmentSettled', () => {
+  it('treats an explicit paid row as settled', () => {
+    expect(isInstallmentSettled({ status: 'paid' })).toBe(true)
+  })
+
+  it('treats a current-settlement-linked row as settled (erken tam ödeme)', () => {
+    expect(isInstallmentSettled({ status: 'posted', current_settlement_id: 'cs-1' })).toBe(true)
+  })
+
+  it('treats a row linked to a PAID statement archive as settled (banka modeli)', () => {
+    expect(isInstallmentSettled({ status: 'posted', statement_archive: { status: 'paid' } })).toBe(true)
+  })
+
+  it('keeps a row on an OPEN statement archive unsettled', () => {
+    expect(isInstallmentSettled({ status: 'posted', statement_archive: { status: 'open' } })).toBe(false)
+  })
+
+  it('keeps scheduled and unarchived posted rows unsettled', () => {
+    expect(isInstallmentSettled({ status: 'scheduled' })).toBe(false)
+    expect(isInstallmentSettled({ status: 'posted', statement_archive: null })).toBe(false)
   })
 })

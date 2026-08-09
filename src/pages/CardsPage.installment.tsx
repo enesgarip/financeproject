@@ -168,7 +168,7 @@ export function LegacyInstallmentPanel({
           </label>
           <div className="grid grid-cols-[minmax(0,0.74fr)_minmax(0,1.26fr)] gap-2.5">
             <MoneyInput
-              label="Taksit tutarı"
+              label="Aylık taksit tutarı"
               value={installmentAmount}
               onValueChange={(nextAmount) => {
                 setInstallmentAmount(nextAmount)
@@ -242,8 +242,15 @@ export function LegacyInstallmentPanel({
             <CategoryPicker description={description} value={category} onChange={setCategory} memory={categoryMemory} autoApply />
           </div>
           <p className="rounded-xl border border-warning/20 bg-warning/8 px-3 py-2.5 text-xs font-medium text-warning">
-            Kalan {formatAmount(remainingAmount)} tutarı otomatik olarak kart borcuna eklenir; böylece gelecek taksitler limit hesabına yansır.
+            Tutar TEK taksitin aylık tutarıdır (toplam değil). Kalan {formatAmount(remainingAmount)} otomatik
+            olarak kart borcuna eklenir; böylece gelecek taksitler limit hesabına yansır.
           </p>
+          {nextDueDate && nextDueDate <= dateInputValue(new Date()) ? (
+            <p className="rounded-xl border border-warning/20 bg-warning/8 px-3 py-2.5 text-xs font-medium text-warning">
+              Bu tarihle sıradaki taksit bugün dönem içi borca işlenir. Taksit bir sonraki ekstrede
+              görünecekse gelecek ayın tarihini seç; yoksa dönem borcu bir ay erken şişer.
+            </p>
+          ) : null}
           <InstallmentPlanner
             compact
             remainingCount={remainingCount}

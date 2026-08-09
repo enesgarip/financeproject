@@ -1,12 +1,36 @@
 # Priority Backlog
 
+## 2026-08-10 — Banka modeli Faz 2: taksit kimliği ve ödenmişlik
+
+Üç-akış denetiminin ikinci fazı. Faz 3 (tam-güncel-ödeme eşitlik kilidini
+residual settlement kuralına indirme + SMS hesap hareketi ↔ kart ödemesi
+eşleşmesi) ve Faz 4 (card_installments RPC-only, ölü pay_card_installment RPC
+drop, YapıKredi gerçek toplam) AÇIK.
+
+- ~~**K1 — Süregiden taksit planı importta yeniden kullanılır.**~~ DONE.
+  `replace_card_statement_import` carryover'da parent id gelmezse aynı kart +
+  aynı taksit adedi + birebir açıklama + ödenmiş/settled geçmişli TEK korunan
+  parent'ı sunucuda bulur ve açık planı ona kurar; her aylık importta yeni
+  parent açılması (harcama/kategori/geçmiş mükerrerliği) bitti. Belirsizlik
+  yeni parent'a düşer; tutar drift'i bilinçli olarak eşleşme kriteri değildir
+  (SI-07 notu ile korunur). Regresyon: Senaryo D artık yeniden kullanımı assert eder.
+- ~~**F1/T3 — Taksit ödenmişliği kanıttan türetilir.**~~ DONE. `isInstallmentSettled`
+  (utils/cardInstallmentCalendar.ts): satır `paid` VEYA current-settlement bağlı
+  VEYA arşivi `paid`. Repo taksitle birlikte arşiv durumunu embed eder;
+  taksit paneli sayaç/tamamlananlar/etiketleri bununla türetir — "X/9 ödendi"
+  bankadaki gibi ekstre ödemesiyle ilerler. SI-10 kararı korunur (ekstre
+  ödemesi satıra yazmaz).
+- ~~**T4/T5 — Taksit giriş formu sözleşmesi netleşti.**~~ DONE. Devir formu
+  etiketi "Aylık taksit tutarı" + "toplam değil" uyarısı; hızlı harcama
+  taksit modunda etiket "Toplam tutar". İki formda da sıradaki vade bugünden
+  ileri değilse "bugün dönem borcuna işlenir" uyarısı çıkar (erken posting
+  sürprizi bitti). Sözleşmeler bilinçli farklı kaldı: devir formu banka
+  ekstresindeki aylık tutarla, yeni harcama formu fişteki toplamla düşünülür.
+
 ## 2026-08-10 — Banka modeli Faz 1: kanama durdurucular
 
 2026-08-10 üç-akış denetiminin (ekstre import / taksit modeli / borç ödeme; 3
-yapısal kök neden) ilk fazı. Faz 2 (taksit planına kalıcı kimlik + ödenmişliği
-arşiv bağından türetme), Faz 3 (tam-güncel-ödeme eşitlik kilidini residual
-settlement kuralına indirme + SMS hesap hareketi ↔ kart ödemesi eşleşmesi) ve
-Faz 4 (card_installments RPC-only, ölü pay_card_installment RPC drop) AÇIK.
+yapısal kök neden) ilk fazı.
 
 - ~~**B3 — Borçlar sayfası açık-ekstre koruması.**~~ DONE. `LiabilitiesCardsPage`
   açık arşivleri yükler; açık ekstresi olan kartta buton `pay_card_statement`

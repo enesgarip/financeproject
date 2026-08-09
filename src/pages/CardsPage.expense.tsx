@@ -372,7 +372,7 @@ export function QuickExpensePanel({
           </label>
           <div className="grid grid-cols-[minmax(0,0.72fr)_minmax(0,1.28fr)] gap-2.5">
             <MoneyInput
-              label="TL"
+              label={canUseInstallments && paymentMode === 'installment' ? 'Toplam tutar' : 'TL'}
               value={amount}
               onValueChange={(nextAmount) => {
                 setAmount(nextAmount)
@@ -518,6 +518,12 @@ export function QuickExpensePanel({
                 </label>
               ) : null}
             </div>
+          ) : null}
+          {isCarryover && nextDueDate && nextDueDate <= dateInputValue(new Date()) ? (
+            <p className="rounded-xl border border-warning/20 bg-warning/8 px-3 py-2.5 text-xs font-medium text-warning">
+              Bu tarihle sıradaki taksit bugün dönem içi borca işlenir. Taksit bir sonraki ekstrede
+              görünecekse gelecek ayın tarihini seç; yoksa dönem borcu bir ay erken şişer.
+            </p>
           ) : null}
           {selectedCard?.card_type === 'kredi_karti' ? (
             <div className="rounded-xl border border-success/20 bg-success/8 p-3">

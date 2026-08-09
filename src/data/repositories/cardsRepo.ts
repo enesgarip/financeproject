@@ -72,17 +72,26 @@ export async function fetchCardInstallments(): Promise<Result<CardInstallment[]>
   return resultFromSupabase((data ?? []) as CardInstallment[], error, 'Kart taksitleri yüklenemedi.')
 }
 
-export async function fetchCardInstallmentsByExpenseIds(expenseIds: string[]): Promise<Result<CardInstallment[]>> {
+// Taksit + bağlı arşivin durumu. Ödenmişlik satırdan değil kanıttan türetilir
+// (bkz. utils/cardInstallmentCalendar.ts isInstallmentSettled): ekstre ödemesi
+// taksit satırına dokunmaz, bu yüzden arşiv statüsü satırla birlikte gelmeli.
+export type CardInstallmentWithArchive = CardInstallment & {
+  statement_archive: { status: string | null } | null
+}
+
+export async function fetchCardInstallmentsByExpenseIds(expenseIds: string[]): Promise<Result<CardInstallmentWithArchive[]>> {
   if (expenseIds.length === 0) return ok([])
 
   const { data, error } = await supabase
     .from('card_installments')
-    .select('*')
+    .select('*, statement_archive:card_statement_archives(status)')
     .in('card_expense_id', expenseIds)
     .order('due_month', { ascending: true })
     .order('installment_no', { ascending: true })
 
-  return resultFromSupabase((data ?? []) as CardInstallment[], error, 'Kart taksitleri yüklenemedi.')
+  // El yazımı Database tipi ilişki metadata'sı taşımadığı için embed dönüşü
+  // burada tek noktadan çevrilir; FK (20260602131850) DB'de mevcut.
+  return resultFromSupabase((data ?? []) as unknown as CardInstallmentWithArchive[], error, 'Kart taksitleri yüklenemedi.')
 }
 
 export async function fetchPostedInstallmentExpenses(limit: number): Promise<Result<CardExpense[]>> {
