@@ -16,7 +16,7 @@ import { cardPayableDebt } from '../utils/financeSummary'
 import { quickCardConsistencyScore } from '../utils/cardConsistency'
 import { bankBrandGradient, getBankBrand } from '../utils/bankBranding'
 import { buildAccountLedgerBalanceRows } from '../utils/accountLedger'
-import { toTL } from '../utils/money'
+import { sumTL, toTL } from '../utils/money'
 import {
   activeInstallmentCount,
   bankHueStyle,
@@ -222,6 +222,9 @@ export function CreditAccountListCard({
   const status = getCreditCardStatus(row, stats.usageRate, statements)
   const displayedOpenStatementAmount = visibleOpenStatementAmount(row, statements)
   const installmentCount = activeInstallmentCount(row, installments)
+  const scheduledInstallmentTotal = sumTL(installments
+    .filter((installment) => installment.card_id === row.id && installment.status === 'scheduled')
+    .map((installment) => installment.amount))
   const payableDebt = cardPayableDebt(row)
   const openStatements = statements.filter((statement) => statement.card_id === row.id && statement.status === 'open')
   const cardInstallments = installments
@@ -262,7 +265,7 @@ export function CreditAccountListCard({
         <div className="mt-6 grid grid-cols-[minmax(0,1fr)_auto] items-end gap-3">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-1.5">
-              <p className="text-[11px] font-bold uppercase text-white/65">Güncel borç</p>
+              <p className="text-[11px] font-bold uppercase text-white/65">Toplam kart yükü</p>
               {/* Rakam kesin görünür ama uzun süre doğrulanmadıysa güveni düşer. */}
               {debtConfidence.level !== 'exact' ? (
                 <span
@@ -298,9 +301,10 @@ export function CreditAccountListCard({
 
       <div className="mt-3 grid grid-cols-2 gap-2">
         <CardDatum label="Kullanılabilir" value={formatAmount(stats.availableLimit)} tone="good" />
-        <CardDatum label="Dönem borcu" value={formatAmount(row.current_period_spending)} />
+        <CardDatum label="Dönem içi" value={formatAmount(row.current_period_spending)} />
         <CardDatum label="Açık ekstre" value={formatAmount(displayedOpenStatementAmount)} tone={displayedOpenStatementAmount > 0 ? 'danger' : 'neutral'} />
-        <CardDatum label="Son ödeme" value={formatShortDate(dueDate)} tone={payableDebt > 0 ? 'warning' : 'neutral'} />
+        <CardDatum label="Gelecek taksit" value={formatAmount(scheduledInstallmentTotal)} />
+        <CardDatum label="Son ödeme" value={formatShortDate(dueDate)} tone={displayedOpenStatementAmount > 0 ? 'warning' : 'neutral'} />
       </div>
 
       <div className="mt-3 grid grid-cols-2 gap-2">

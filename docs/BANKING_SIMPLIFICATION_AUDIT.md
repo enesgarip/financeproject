@@ -2,6 +2,16 @@
 
 ## Fixed In This Pass
 
+- **Bank total and payable amount separation (2026-08-09)**
+  - Credit-card rows now call `debt_amount` “Toplam kart yükü” and show current
+    period, open statement, and future installments separately.
+  - Live reconciliation asks for the bank's total remaining burden including
+    future installments. It no longer feeds a bank's zero current-debt label
+    into the total-debt correction path.
+  - Historical rows left unallocated by a legacy paid statement are repaired
+    only on an exact archive-total proof, removing the false Data Health blocker
+    without guessing which movements were paid.
+
 - **Automatic bill/SMS single-event model (2026-08-09)**
   - A credit-card-funded recurring bill and the bank SMS for that charge are one
     event. The SMS path now reconciles a unique payment candidate and advances

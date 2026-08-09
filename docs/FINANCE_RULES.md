@@ -80,6 +80,13 @@ When there are scheduled future card installments, the expected difference is th
 
 This relationship appears in both card page logic and dashboard/data-health checks.
 
+Bank “current debt” and app total card debt are not interchangeable. A bank may
+show current debt as zero after payment while future installments remain. Bank
+snapshot reconciliation therefore uses the total remaining card burden including
+future installments, changes only `debt_amount`, and leaves the statement,
+current-period, and provision buckets intact. Recording the actual payment is a
+separate action tied to the bank account that funded it.
+
 ## Shared Credit Limits
 
 - Cards may share a limit through `limit_group_name`.

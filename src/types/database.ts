@@ -707,6 +707,14 @@ export type Database = {
         }
         Returns: number
       }
+      reconcile_card_bank_snapshot: {
+        Args: {
+          p_bank_total_kurus: number
+          p_card_id: string
+          p_note: string
+        }
+        Returns: number
+      }
       recompute_account_balance_from_ledger: {
         Args: {
           p_card_id: string

@@ -1,6 +1,6 @@
 # Data Health Architecture Note
 
-Last reviewed: 2026-08-03
+Last reviewed: 2026-08-09
 
 This note maps `/veri-sagligi` (`DataHealthPage`). Treat this route as an
 operational repair surface, not a debug page: fixes can modify real finance
@@ -89,6 +89,12 @@ Do not add a write action without a source of truth, stale-data guard, and an
 explicit resolution policy. If a finding can only be resolved with bank/user
 truth, keep it guided/manual and provide the exact next action instead of
 inventing a value.
+
+For credit-card scheduled-debt overlap, the guided bank-truth action uses the
+total remaining card burden including future installments. The reconciliation
+RPC preserves visible buckets and repairs legacy paid-statement allocation only
+when all eligible historical children exactly close one archive gap; otherwise
+the finding stays manual and no movement is guessed.
 
 ## Invariant Ownership
 
