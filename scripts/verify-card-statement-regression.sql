@@ -73,7 +73,7 @@ values
     0,
     0,
     0,
-    1,
+    extract(day from (current_date - interval '1 day'))::integer,
     10
   ),
   (
@@ -88,7 +88,7 @@ values
     0,
     250,
     0,
-    1,
+    extract(day from (current_date - interval '1 day'))::integer,
     10
   );
 
@@ -96,7 +96,7 @@ select public.add_card_expense(
   '00000000-0000-4000-8000-000000000202',
   1000,
   'Normal card spending',
-  current_date,
+  current_date - 1,
   1,
   'Diğer',
   'posted'
@@ -106,7 +106,7 @@ select public.add_card_expense(
   '00000000-0000-4000-8000-000000000202',
   6000,
   'Installment spending',
-  current_date,
+  current_date - 1,
   3,
   'Alışveriş',
   'posted'
@@ -180,7 +180,7 @@ begin
 
   select * into v_card from public.cards where id = '00000000-0000-4000-8000-000000000202';
 
-  if v_card.statement_debt_amount <> 3000 or v_card.current_period_spending <> 2000 or v_card.debt_amount <> 7000 then
+  if v_card.statement_debt_amount <> 3000 or v_card.current_period_spending <> 0 or v_card.debt_amount <> 7000 then
     raise exception 'Unexpected card split after statement: statement %, current %, debt %',
       v_card.statement_debt_amount,
       v_card.current_period_spending,
@@ -210,7 +210,7 @@ declare
   v_card public.cards%rowtype;
   v_account public.cards%rowtype;
   v_statement public.card_statement_archives%rowtype;
-  v_paid_linked_installments integer;
+  v_unchanged_linked_installments integer;
   v_auto_statement_count integer;
 begin
   select * into v_card from public.cards where id = '00000000-0000-4000-8000-000000000202';
@@ -221,7 +221,7 @@ begin
     raise exception 'Expected statement paid, got %', v_statement.status;
   end if;
 
-  if v_card.debt_amount <> 4000 or v_card.statement_debt_amount <> 0 or v_card.current_period_spending <> 2000 then
+  if v_card.debt_amount <> 4000 or v_card.statement_debt_amount <> 0 or v_card.current_period_spending <> 0 then
     raise exception 'Unexpected card split after statement payment: statement %, current %, debt %',
       v_card.statement_debt_amount,
       v_card.current_period_spending,
@@ -233,14 +233,14 @@ begin
   end if;
 
   select count(*)
-  into v_paid_linked_installments
+  into v_unchanged_linked_installments
   from public.card_installments
   where card_id = '00000000-0000-4000-8000-000000000202'
     and statement_archive_id = v_statement.id
-    and status = 'paid';
+    and status = 'posted';
 
-  if v_paid_linked_installments <> 1 then
-    raise exception 'Expected linked installment to become paid, got %', v_paid_linked_installments;
+  if v_unchanged_linked_installments <> 1 then
+    raise exception 'Expected statement payment to leave linked installment posted, got %', v_unchanged_linked_installments;
   end if;
 
   select count(*)

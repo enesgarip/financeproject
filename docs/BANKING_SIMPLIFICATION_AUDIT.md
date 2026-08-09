@@ -2,19 +2,28 @@
 
 ## Fixed In This Pass
 
+- **Statement/installment banking model (2026-08-09)**
+  - A statement PDF no longer tries to match current rows to historical
+    installment parents. It replaces the open scope and creates only the PDF's
+    current installment plus future installments; earlier numbers are not
+    synthesized as paid rows.
+  - Statement payment uses the archived bank amount, closes the archive, and
+    leaves every installment row unchanged. Card aggregate drift is repaired by
+    projection instead of blocking a real payment.
+  - The product rule is now explicit: installments are a future schedule;
+    statements are immutable billed snapshots; users pay statements, not
+    individual credit-card installments.
+
 - **Statement installment parent drift (2026-08-09)**
   - A historical installment parent can legitimately differ from the PDF's
     current monthly amount projection because earlier installments may be uneven.
-    Statement replacement now preserves that parent and paid children, rebuilds
-    only open children from bank truth, and records the drift on those rows.
-  - Installment-count drift remains blocking because it changes historical plan
-    structure and cannot be inferred safely from a current statement line.
+    The former matcher preserved/reused that parent. The simplified flow now
+    leaves it entirely historical and creates a new open projection from PDF truth.
   - A sole strict date/number candidate no longer wins when both merchant and
     amount disagree; matching falls back to the description-compatible plan in
     the statement period, preventing a foreign parent id from reaching the RPC.
-  - Paid children are excluded from current-PDF matching. A matched open child
-    can reuse its parent only when installment number and count both equal the
-    PDF structure; renumbered bank plans are rebuilt under a new open parent.
+  - These matcher rules remain only for non-authoritative current-movement review;
+    statement PDF import no longer depends on them.
 
 - **Prod consistency hardening (2026-08-02)**
   - Data Health and JSON backup now read 1000+ row tables with immutable-PK

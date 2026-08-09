@@ -105,7 +105,9 @@ actions should use the repository/service layer:
 - Statement import treats the validated PDF as the authoritative snapshot through
   its statement date. `replace_card_statement_import` rebuilds that open scope,
   cuts/reconciles it, and rolls back as one transaction on any row/date failure;
-  paid/current-settled history and later movements remain untouched. Current-
+  paid/current-settled history and later movements remain untouched. It does not
+  query or reuse an old installment parent: a PDF `3/6` row creates only the
+  current `3/6` plus future `4/6..6/6` open plan. Current-
   movement import stays non-destructive because that PDF has no independent debt
   total. The lower-level `reset_card_import_data` remains a guarded maintenance RPC.
 - Both importers use `src/utils/importedInstallmentPlan.ts` to preserve the
@@ -132,8 +134,8 @@ If a new query is needed, add it to the repository or service layer.
 For old installment plans that started before the app, do not expose a second
 top-level migration panel by default. The quick installment form has a
 "paid installments so far" field: zero uses `add_card_expense`; a positive
-value uses `record_card_installment_carryover`, writes the already-paid rows as
-paid history, and adds only the remaining debt.
+value uses `record_card_installment_carryover`, records the number on the parent
+note, creates only current/future open rows, and adds only the remaining debt.
 
 ## Card Debt Boundaries
 
