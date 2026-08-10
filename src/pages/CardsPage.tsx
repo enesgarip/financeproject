@@ -24,6 +24,7 @@ import { FinancePaymentDrawer } from '../components/finance/FinancePaymentDrawer
 import { LiveReconciliationPanel } from '../components/finance/LiveReconciliationPanel'
 import { CardInstallmentCalendarPanel } from '../components/finance/CardInstallmentCalendarPanel'
 import { CardInstallmentExpensesPanel } from '../components/finance/CardInstallmentExpensesPanel'
+import { RecentCardExpensesPanel } from '../components/finance/RecentCardExpensesPanel'
 import type { Card, CardStatementArchive } from '../types/database'
 import { dateInputValue, formatDate } from '../utils/date'
 import { cardPayableDebt } from '../utils/financeSummary'
@@ -318,6 +319,11 @@ export function CardsPage() {
                 <>
                   <QuickExpensePanel rows={cardRows} reload={() => refreshCardsAndProvisions(reload)} setError={setError} focus={quickExpenseFocus} formatAmount={formatAmount} />
                   <CategoryCleanupPanel />
+                  <RecentCardExpensesPanel
+                    cards={cardRows}
+                    reload={() => refreshCardsAndProvisions(reload)}
+                    setError={setError}
+                  />
                   <CardInstallmentExpensesPanel
                     cards={cardRows}
                     reload={() => refreshCardsAndProvisions(reload)}
