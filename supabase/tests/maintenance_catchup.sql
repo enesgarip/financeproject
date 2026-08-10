@@ -1,7 +1,8 @@
 -- Otomatik bakım (catch-up) invariant'ı.
 --
--- Uygulama açılışında sırayla `post_due_card_auto_payments`,
--- `post_due_card_installments`, `cut_due_card_statements` koşar. Kullanıcı
+-- Uygulama açılışında sırayla `post_due_card_installments`,
+-- `cut_due_card_statements` koşar (BM-5: talimatlı ödemenin proaktif
+-- kart yazımı kaldırıldı — kayıt SMS/ekstre importundan gelir). Kullanıcı
 -- uygulamayı birkaç gün açmadıysa bu çağrılar birikmiş işi yakalar — en yüksek
 -- hasarlı hata sınıfı budur: aynı işin İKİ KEZ yapılması (çift ekstre, çift
 -- ödeme) sessizce parayı bozar.
@@ -77,7 +78,6 @@ begin
   );
 
   -- ── 1. koşu ───────────────────────────────────────────────────────────────
-  perform public.post_due_card_auto_payments();
   perform public.post_due_card_installments();
   perform public.cut_due_card_statements();
 
@@ -114,7 +114,6 @@ begin
   end if;
 
   -- ── 2. koşu (catch-up tekrarı) ────────────────────────────────────────────
-  perform public.post_due_card_auto_payments();
   perform public.post_due_card_installments();
   perform public.cut_due_card_statements();
 

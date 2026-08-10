@@ -135,12 +135,6 @@ export async function fetchFinanceSnapshot(): Promise<FinanceSnapshot> {
   }
 }
 
-/** Vadesi gelen banka talimatlarını karta borç olarak işler; işlenen kayıt sayısını döndürür. */
-export async function postDueCardAutoPayments(): Promise<Result<number>> {
-  const { data, error } = await supabase.rpc('post_due_card_auto_payments')
-  return resultFromSupabase(data ?? 0, error, 'Otomatik ödemeler işlenemedi.')
-}
-
 /** Vadesi gelen kart taksitlerini dönem içi borca alır; işlenen satır sayısını döndürür. */
 export async function postDueCardInstallments(): Promise<Result<number>> {
   const { data, error } = await supabase.rpc('post_due_card_installments')
@@ -148,8 +142,9 @@ export async function postDueCardInstallments(): Promise<Result<number>> {
 }
 
 /**
- * Günlük bakım: vadesi gelen kart otomatik ödemelerini, kart taksitlerini ve ekstre kesimlerini
- * DB tarafında işler, ardından canlı kurla otomatik değerlenen satırları tazeler.
+ * Günlük bakım: vadesi gelen kart taksitlerini ve ekstre kesimlerini DB tarafında
+ * işler, ardından canlı kurla otomatik değerlenen satırları tazeler. Kart talimatlı
+ * ödemeler BM-5'ten beri proaktif yazılmaz — kayıt SMS/ekstre importundan gelir.
  * Kur senkronu best-effort'tur; bakım RPC hataları migration/RPC drift'i dahil görünür kalır.
  */
 export async function runFinanceMaintenance(): Promise<void> {
@@ -162,10 +157,9 @@ export async function runFinanceMaintenance(): Promise<void> {
     }
   })()
 
-  const autoPayments = await supabase.rpc('post_due_card_auto_payments')
   const cardInstallments = await supabase.rpc('post_due_card_installments')
   const statementCut = await supabase.rpc('cut_due_card_statements')
-  const maintenanceError = [autoPayments.error, cardInstallments.error, statementCut.error].find(Boolean)
+  const maintenanceError = [cardInstallments.error, statementCut.error].find(Boolean)
   if (maintenanceError) {
     await valuationSync
     throw new Error(financeMaintenanceErrorMessage(maintenanceError))

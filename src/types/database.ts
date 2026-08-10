@@ -901,10 +901,6 @@ export type Database = {
         }
         Returns: Json
       }
-      post_due_card_auto_payments: {
-        Args: Record<string, never>
-        Returns: number
-      }
       post_due_card_installments: {
         Args: Record<string, never>
         Returns: number
