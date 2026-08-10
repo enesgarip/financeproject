@@ -10,21 +10,9 @@ import { parseNumber } from '../utils/formatCurrency'
 import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
 import { formatMonth } from '../utils/analysisView'
 import { buildFinancialPosition, buildMonthlyCashFlow } from '../utils/financeSummary'
-import { buildSafeToSpend, DEFAULT_BUFFER } from '../utils/safeToSpend'
+import { buildSafeToSpend } from '../utils/safeToSpend'
+import { readSafeToSpendBuffer } from '../hooks/useSafeToSpend'
 import { BudgetProgress } from './AnalysisPage.panels'
-
-// SafeToSpendCard ile aynı localStorage anahtarı (tampon kullanıcı tercihi, cihaza özel).
-const BUFFER_KEY = 'denge:safe-to-spend-buffer'
-
-function readSafeToSpendBuffer() {
-  try {
-    const raw = localStorage.getItem(BUFFER_KEY)
-    const parsed = raw != null ? Number(raw) : Number.NaN
-    return Number.isFinite(parsed) && parsed >= 0 ? parsed : DEFAULT_BUFFER
-  } catch {
-    return DEFAULT_BUFFER
-  }
-}
 
 const budgetFields: FormField[] = [
   { name: 'month', label: 'Ay', type: 'date', required: true },
@@ -55,7 +43,7 @@ export function PlanningPage() {
 
   // Likit nakit (banka + nakit varlık) ve bu ayki harcanabilir (safeToSpend).
   // Likit → kasa modu kova hesabı; surplus → birikim önerisi "ayır / ara ver" bağlamı.
-  // Dashboard SafeToSpendCard ile aynı hesap.
+  // Dashboard kahraman rakamıyla aynı hesap (useSafeToSpend).
   const { liquidCash, monthlySurplus } = useMemo(() => {
     const data = snapshotQuery.data
     if (!data) return { liquidCash: 0, monthlySurplus: undefined as number | undefined }

@@ -1,5 +1,45 @@
 # Priority Backlog
 
+## 2026-08-10 — Şerit görsel dili: temel + Özet pilotu
+
+Masaüstündeki `design_handoff_denge_redesign/` handoff'unun uygulanması.
+Tasarımın fikri: **kart yığılmasını bitir**, sayıyı ekranın birincil nesnesi yap,
+rengi yalnız sinyal olarak kullan. Bilgi mimarisi ve iş kuralları değişmiyor.
+Handoff'un iki varsayımı eskiydi ve düzeltildi: repo React 19 + Tailwind v4
+(config dosyası yok, tokenlar `index.css`) ve koyu tema burada birinci sınıf.
+
+- ~~**Ş0 — Token katmanı, iki tema.**~~ DONE. `--page`/`--raised`/`--ink*`/
+  `--line*`/`--track`/`--chart-idle`/`--accent-soft`/`--neutral-bar` ve
+  `--signal-*` hem `:root` hem `:root.dark` için tanımlandı; koyu karşılıklar
+  prototipin `1c` seçeneğinden okundu. Sinyal renkleri mevcut
+  `--destructive/--warning/--info`'dan KASITLI olarak ayrı tutuldu ki
+  dönüştürülmemiş ekranlar bu commit'te kaymasın. `.serit-num` (mono +
+  tabular) ve `.serit-eyebrow` (Türkçe Ş/Ç/Ğ için sabit line-height) eklendi.
+- ~~**Ş1 — Ortak parçalar.**~~ DONE. `src/components/serit/*`: `ScreenHeader`,
+  `SectionEyebrow`, `HeroNumber`, `LineGroup`/`LineRow`/`DayBadge`,
+  `BreakdownBar`. Kart bileşeni bilinçli olarak YOK. Para biçimi
+  `formatSeritParts` (sembol sonda, ondalıksız, negatifte U+2212).
+- ~~**Ş2 — Özet ekranı pilotu (`2a` mobil + `4e` masaüstü).**~~ DONE.
+  Kahraman rakam = "ay sonuna kalan"; tek yeni türev ay şeridi
+  (`utils/dashboardMonthStrip.ts`, +test). `SafeToSpendCard` kaldırıldı, hesabı
+  `hooks/useSafeToSpend.ts`'e taşındı (PlanningPage de artık oradan okuyor);
+  tampon düzenleme `SeritBufferRow` olarak çizgi biçiminde geri geldi.
+
+**AÇIK — sıradaki ekranlar** (her biri ayrı faz): Hesaplar `4a`, Kart Borcu `3a`,
+Ödeme Takvimi `3b`, Krediler `4b`, Varlıklar `4c`, Hedefler `4d`, Analiz `3c`,
+Veri Kontrolü `3d`, ardından kabuk `4e` (Layout rail + BottomNav + FAB 76px bant).
+
+**AÇIK — pilotun bıraktığı borç:**
+- Özet'in "Tüm detayları göster" katmanı hâlâ eski dilde (odak aksiyonları,
+  ekstre hatırlatıcısı, mutabakat, metrik kutuları, geçmiş). İlgili ekranlar
+  dönüştükçe eriyecek.
+- `--background` (#f1f5f3) ile Şerit `--page` (#f6f7f3) hâlâ ayrı; kabuk fazında
+  birleşecek. Şu an fark gözle seçilmiyor.
+- `DataHealthBadge` (DashboardPanels.tsx) artık kullanılmıyor — `3d` fazında ya
+  yeniden bağlanmalı ya silinmeli.
+- Tasarımın `3d` ekranındaki "34 kontrol temiz" cümlesi için "yapılan kontrol
+  sayısı" üretilmiyor (`buildHealthCounts.total` = bulgu toplamı).
+
 ## 2026-08-10 — Banka modeli Faz 3: ödeme banka modeline indi
 
 Üç-akış denetiminin üçüncü fazı. Faz 4 (card_installments RPC-only, ölü

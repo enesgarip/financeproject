@@ -111,6 +111,24 @@
   --font-display: var(--font-family-display);
   --font-body: var(--font-family-body);
   --font-mono: var(--font-family-mono);
+
+  /* Şerit katmanı — kartsız görsel dil (bkz. :root'taki token bloğu). */
+  --color-page: var(--page);
+  --color-raised: var(--raised);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-ink-faint: var(--ink-faint);
+  --color-ink-ghost: var(--ink-ghost);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-track: var(--track);
+  --color-chart-idle: var(--chart-idle);
+  --color-accent-soft: var(--accent-soft);
+  --color-neutral-bar: var(--neutral-bar);
+  --color-signal-danger: var(--signal-danger);
+  --color-signal-warning: var(--signal-warning);
+  --color-signal-warning-ink: var(--signal-warning-ink);
+  --color-signal-info: var(--signal-info);
 }
 
 /* ─── LIGHT MODE ─── */
@@ -193,6 +211,32 @@
   --viz-13: #86a812;
   /* "Diğer" artık kategori değil, artık kova — kasıtlı olarak nötr ve geri planda. */
   --viz-other: var(--muted-foreground);
+
+  /* ── Şerit katmanı ──────────────────────────────────────────────────────
+     Kartsız görsel dil: ayrım gölgeyle değil, çizgi ve zemin tonuyla yapılır.
+     Bu tokenlar mevcut semantiklerin YERİNE değil YANINA yaşar; Şerit'e
+     dönüştürülmüş ekranlar bunları kullanır, kalanlar eski tokenlarda kalır.
+     Kaynak: design_handoff_denge_redesign/README.md (token tablosu). */
+  --page:        #f6f7f3;  /* sayfa zemini — sıcak porselen, beyaz değil */
+  --raised:      #ffffff;  /* ekran başına en fazla 1-2 blok */
+  --ink:         #111a15;
+  --ink-muted:   #5d6b63;
+  --ink-faint:   #7c8880;
+  --ink-ghost:   #8b968e;
+  --line:        #e6eae2;  /* liste içi satır ayıracı */
+  --line-strong: #e2e7dd;  /* blok/bölüm ayıracı, kenarlık */
+  --track:       #e2e6dd;  /* ilerleme çubuğu boş kısmı */
+  --chart-idle:  #dbe1d9;  /* trend grafiğinde geçmiş çubuklar */
+  --accent-soft: #d98466;  /* grafikte ikincil gider */
+  --neutral-bar: #c9cfc7;  /* grafikte sınıflandırılmamış */
+  /* Sinyal renkleri kasıtlı olarak `--destructive`/`--warning`/`--info`'dan AYRI:
+     Şerit tonları daha toprak/mat. Ayrı tutmak, henüz dönüştürülmemiş ekranların
+     bu commit'te görsel olarak kaymamasını sağlıyor — Ş-son'da birleştirilecek.
+     Uyarı iki değerli: dolgu daha parlak, metin AA için daha koyu. */
+  --signal-danger:       #b4433d;
+  --signal-warning:      #c68a1f;
+  --signal-warning-ink:  #9a6a12;
+  --signal-info:         #2b6bb8;
 
   /* Shadows */
   --shadow-subtle:  0 1px 2px rgba(21, 24, 36, 0.035);
@@ -281,6 +325,26 @@
   --viz-11: #c08a54;
   --viz-12: #d85ca0;
   --viz-13: #a0c22e;
+
+  /* ── Şerit katmanı (koyu) ──
+     Handoff koyu temaya tek cümle ayırmıştı; değerler prototipin `1c` seçeneğinden
+     okundu ve Nocturne obsidyeniyle hizalandı. Sinyal renkleri zaten eşleşiyordu. */
+  --page:        #0d120f;
+  --raised:      #141c18;
+  --ink:         #eef3f0;
+  --ink-muted:   #9daba3;
+  --ink-faint:   #8b978f;
+  --ink-ghost:   #7f8b83;
+  --line:        #212a25;
+  --line-strong: #26302b;
+  --track:       #212a25;
+  --chart-idle:  #2b352f;
+  --accent-soft: #ff8b6f;
+  --neutral-bar: #3a453f;
+  --signal-danger:       #ff6f6f;
+  --signal-warning:      #f2b64a;
+  --signal-warning-ink:  #f2b64a;
+  --signal-info:         #58a9ff;
 
   /* Dark shadows */
   --shadow-subtle:   0 1px 3px rgba(0, 0, 0, 0.25);
@@ -540,6 +604,26 @@ button:disabled {
     background-clip: text;
     -webkit-text-fill-color: transparent;
     filter: drop-shadow(0 0 22px color-mix(in srgb, var(--primary) 26%, transparent));
+  }
+
+  /* ── Şerit yardımcıları ──
+     Rakam sınıfı pazarlık konusu değil: hizalı rakamlar bu dilin belkemiği,
+     "tutarları gizle" açıkken `••••` de aynı genişlikte kalsın diye tabular. */
+  .serit-num {
+    font-family: var(--font-family-mono);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+  }
+
+  /* Uppercase eyebrow'da Ş/Ç/Ğ alt çıkıntıları satır yüksekliğini oynatır;
+     sabit line-height olmadan bölüm başlıkları ekrandan ekrana kayar. */
+  .serit-eyebrow {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    line-height: 16px;
+    text-transform: uppercase;
+    color: var(--ink-faint);
   }
 
   /* Progress bar states */

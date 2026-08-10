@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatCompactCurrency, formatPercent, parseNumber } from './formatCurrency'
+import { formatCompactCurrency, formatPercent, formatSeritAmount, formatSeritParts, parseNumber } from './formatCurrency'
 
 describe('parseNumber', () => {
   it('"k" kısaltmasını 1000 ile çarpar (eskiden çarpan uygulanmıyordu → "5k" 5 veriyordu)', () => {
@@ -78,5 +78,34 @@ describe('formatCompactCurrency', () => {
   it('null/undefined güvenli', () => {
     expect(formatCompactCurrency(null)).toBe('₺0')
     expect(formatCompactCurrency(undefined)).toBe('₺0')
+  })
+})
+
+describe('formatSeritParts / formatSeritAmount', () => {
+  it('sembolü sona alır ve varsayılan olarak ondalık göstermez', () => {
+    expect(formatSeritAmount(12480)).toBe('12.480 ₺')
+    expect(formatSeritAmount(1787291)).toBe('1.787.291 ₺')
+    expect(formatSeritParts(12480)).toEqual({ amount: '12.480', unit: '₺' })
+  })
+
+  it('yuvarlar; kuruş isteniyorsa tr-TR virgülüyle verir', () => {
+    expect(formatSeritAmount(12480.62)).toBe('12.481 ₺')
+    expect(formatSeritAmount(12480.62, { decimals: 2 })).toBe('12.480,62 ₺')
+  })
+
+  it('negatifte ASCII tire değil U+2212 kullanır (monospace hizası)', () => {
+    expect(formatSeritParts(-8940).amount).toBe('−8.940')
+    expect(formatSeritParts(-8940).amount.startsWith('-')).toBe(false)
+  })
+
+  it('signed yalnız pozitife + koyar, sıfıra koymaz', () => {
+    expect(formatSeritParts(62000, { signed: true }).amount).toBe('+62.000')
+    expect(formatSeritParts(0, { signed: true }).amount).toBe('0')
+    expect(formatSeritParts(-100, { signed: true }).amount).toBe('−100')
+  })
+
+  it('null/undefined güvenli', () => {
+    expect(formatSeritAmount(null)).toBe('0 ₺')
+    expect(formatSeritAmount(undefined)).toBe('0 ₺')
   })
 })

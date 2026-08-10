@@ -34,11 +34,9 @@ import type {
 } from '../types/database'
 import {
   DashboardHero,
-  DataHealthBadge,
   MetricTile,
   PulseCard,
 } from '../components/dashboard/DashboardPanels'
-import { SafeToSpendCard } from '../components/dashboard/SafeToSpendCard'
 import { HistorySection } from '../components/dashboard/DashboardCards'
 import { FocusActionPanel, UpcomingAlertPanel } from '../components/dashboard/DashboardInsights'
 import { FinancePaymentDrawer } from '../components/finance/FinancePaymentDrawer'
@@ -47,7 +45,10 @@ import type { FinanceObligation } from '../utils/obligations'
 import { dashboardHelp, getUserDisplayName } from '../components/dashboard/dashboardPanelUtils'
 import { StatementReminderPanel } from '../components/dashboard/StatementReminderPanel'
 import { ReconciliationPanel } from '../components/dashboard/ReconciliationPanel'
-import { addMonths, dateInputValue, daysUntil, startOfMonth } from '../utils/date'
+import { SeritOverview, type SeritLiquidAccount } from '../components/dashboard/SeritOverview'
+import { buildMonthStrip, monthStripTone } from '../utils/dashboardMonthStrip'
+import { useSafeToSpend } from '../hooks/useSafeToSpend'
+import { addMonths, dateInputValue, daysUntil, endOfMonth, startOfMonth } from '../utils/date'
 import {
 
   buildFinancialHealth,
@@ -224,6 +225,49 @@ export function DashboardPage() {
     [openPaymentDrawer, data.cards, invalidateSnapshot],
   )
   const healthCounts = useMemo(() => buildHealthCounts(data), [data])
+
+  // ── Şerit katmanı (yeni görsel dil, `2a`/`4e`) ──
+  // Kahraman rakam SafeToSpendCard'ın hesabıdır; kart kaldırıldığı için hesap
+  // ortak hook'a taşındı. Buradaki tek yeni türev ay şeridi.
+  const safeToSpend = useSafeToSpend(summary.cashFlow, summary.totalCashAssets)
+  const monthStrip = useMemo(
+    () =>
+      buildMonthStrip(
+        upcomingItems.map((item) => ({
+          id: item.id,
+          title: item.title,
+          amount: item.amount,
+          sortTime: item.sortTime,
+          tone: monthStripTone(item.obligation.kind),
+        })),
+      ),
+    [upcomingItems],
+  )
+  const sortedUpcoming = useMemo(
+    () => [...upcomingItems].sort((a, b) => a.sortTime - b.sortTime),
+    [upcomingItems],
+  )
+  const liquidAccounts = useMemo<SeritLiquidAccount[]>(
+    () => [
+      ...data.cards
+        .filter((card) => card.card_type === 'banka_karti')
+        .map((card) => ({
+          id: card.id,
+          name: `${card.bank_name} · ${card.card_name}`,
+          amount: card.current_balance,
+        })),
+      ...data.assets
+        .filter((asset) => asset.category === 'Nakit')
+        .map((asset) => ({ id: asset.id, name: asset.name, subtitle: 'Nakit', amount: asset.estimated_value_try })),
+    ],
+    [data.cards, data.assets],
+  )
+  const monthMeta = useMemo(() => {
+    const today = new Date()
+    const daysInMonth = endOfMonth(today).getDate()
+    const daysLeft = Math.max(1, daysInMonth - today.getDate())
+    return { today, daysInMonth, daysLeft }
+  }, [])
   const hasStatementReminders = useMemo(
     () => buildStatementReminders(data.cards, data.cardStatements).length > 0,
     [data.cards, data.cardStatements],
@@ -275,62 +319,65 @@ export function DashboardPage() {
   }
 
   const detailsPanelId = 'dashboard-details-panel'
-  let itemIndex = 0
 
   return (
-    <section className="grid gap-5 lg:grid-cols-12 lg:items-start">
-      {/* ── Günlük katman (her zaman görünür) ── */}
+    <section className="grid gap-6 lg:grid-cols-12 lg:items-start">
+      {/* ── Şerit katmanı: ekranın cevapladığı tek soru ve onu açan çizgiler ── */}
 
       {attentionLine ? (
-        <div className="dashboard-item min-w-0 lg:col-span-8" style={{ '--di': itemIndex++ } as React.CSSProperties}>
+        <div className="dashboard-item min-w-0 lg:col-span-12" style={{ '--di': 0 } as React.CSSProperties}>
           <p
             role="status"
-            className={`flex items-start gap-2.5 rounded-xl px-4 py-3 text-sm font-semibold ring-1 ${
-              attentionLine.tone === 'danger'
-                ? 'bg-destructive/8 text-destructive ring-destructive/25'
-                : 'bg-warning/8 text-warning ring-warning/25'
-            }`}
+            className="flex items-start gap-2.5 rounded-xl px-3.5 py-3 text-[13px] font-semibold"
+            style={{
+              color: attentionLine.tone === 'danger' ? 'var(--signal-danger)' : 'var(--signal-warning-ink)',
+              background:
+                attentionLine.tone === 'danger'
+                  ? 'color-mix(in srgb, var(--signal-danger) 9%, transparent)'
+                  : 'color-mix(in srgb, var(--signal-warning-ink) 9%, transparent)',
+            }}
           >
-            <AlertTriangle size={17} className="mt-0.5 shrink-0" aria-hidden="true" />
+            <AlertTriangle size={16} className="mt-0.5 shrink-0" aria-hidden="true" />
             <span className="min-w-0">{attentionLine.text}</span>
           </p>
         </div>
       ) : null}
 
-      <div className={`dashboard-item min-w-0 ${attentionLine ? 'lg:col-span-4' : 'lg:col-span-12'}`} style={{ '--di': itemIndex++ } as React.CSSProperties}>
-        <DataHealthBadge errors={healthCounts.errors} warnings={healthCounts.warnings} total={healthCounts.total} />
-      </div>
-
-      {/* Tek sayı: durumu anlatan panellerden önce "ne kadar harcayabilirim". */}
-      <div className="dashboard-item min-w-0 lg:col-span-5" style={{ '--di': itemIndex++ } as React.CSSProperties}>
-        <SafeToSpendCard cashFlow={summary.cashFlow} liquidCash={summary.totalCashAssets} />
-      </div>
-
-      <div className="dashboard-item min-w-0 lg:col-span-7" style={{ '--di': itemIndex++ } as React.CSSProperties}>
-        <DashboardHero
-          displayName={displayName}
+      <div className="dashboard-item min-w-0 lg:col-span-12" style={{ '--di': 1 } as React.CSSProperties}>
+        <SeritOverview
+          monthLabel={summary.cashFlow.monthLabel}
+          today={monthMeta.today}
+          daysInMonth={monthMeta.daysInMonth}
+          safeToSpend={safeToSpend}
+          buffer={safeToSpend.buffer}
+          onBufferChange={safeToSpend.setBuffer}
+          perDayAllowance={Math.max(0, safeToSpend.amount) / monthMeta.daysLeft}
+          strip={monthStrip}
+          upcoming={sortedUpcoming}
+          cardBuckets={{
+            statement: summary.totalCardStatementDebt,
+            current: summary.totalCardCurrentPeriod,
+            provision: summary.totalCardProvision,
+            total: summary.totalCreditCardDebt,
+          }}
+          creditUsageRate={summary.creditUsageRate}
+          totalCreditLimit={summary.totalCreditLimit}
           netWorth={summary.netWorth}
           totalAssets={summary.totalAssets}
           totalDebts={summary.totalDebts}
-          totalReceivables={summary.totalReceivables}
-          cashFlow={summary.cashFlow}
-          health={financialHealth}
+          liquidAccounts={liquidAccounts}
+          totalCashAssets={summary.totalCashAssets}
+          health={healthCounts}
+          onPay={(item) => handleUpcomingPay(item.obligation)}
         />
       </div>
 
-      <div className="dashboard-item min-w-0 lg:col-span-12" style={{ '--di': itemIndex++ } as React.CSSProperties}>
-        <FocusActionPanel actions={focusActions} cashFlow={summary.cashFlow} />
-      </div>
+      {/* ── Detay toggle ──
+          Aşağısı henüz eski dilde. Şerit'e çevrilmemiş paneller (odak aksiyonları,
+          ekstre hatırlatıcısı, mutabakat, geçmiş) buraya indirildi; ilgili ekranlar
+          dönüştükçe bu katman eriyecek. */}
 
-      {hasStatementReminders ? (
-        <div className="dashboard-item min-w-0 lg:col-span-12" style={{ '--di': itemIndex++ } as React.CSSProperties}>
-          <StatementReminderPanel cards={data.cards} statements={data.cardStatements} />
-        </div>
-      ) : null}
-
-      {/* ── Detay toggle ── */}
-
-      <div className="dashboard-item min-w-0 lg:col-span-12" style={{ '--di': itemIndex } as React.CSSProperties}>
+      <div className="dashboard-item min-w-0 lg:col-span-12" style={{ '--di': 2 } as React.CSSProperties}>
         <button
           type="button"
           onClick={toggleDetails}
@@ -354,6 +401,31 @@ export function DashboardPage() {
         className={`dashboard-details-wrapper lg:col-span-12 ${showDetails ? 'dashboard-details-open' : ''}`}
       >
         <div className="grid min-w-0 gap-5 lg:grid-cols-12 lg:items-start">
+          {/* ─ Durum ve odak ─ */}
+          <DetailSectionDivider label="Durum ve odak" />
+
+          <div className="min-w-0 lg:col-span-12">
+            <DashboardHero
+              displayName={displayName}
+              netWorth={summary.netWorth}
+              totalAssets={summary.totalAssets}
+              totalDebts={summary.totalDebts}
+              totalReceivables={summary.totalReceivables}
+              cashFlow={summary.cashFlow}
+              health={financialHealth}
+            />
+          </div>
+
+          <div className="min-w-0 lg:col-span-12">
+            <FocusActionPanel actions={focusActions} cashFlow={summary.cashFlow} />
+          </div>
+
+          {hasStatementReminders ? (
+            <div className="min-w-0 lg:col-span-12">
+              <StatementReminderPanel cards={data.cards} statements={data.cardStatements} />
+            </div>
+          ) : null}
+
           {/* ─ Vadeler ve mutabakat ─ */}
           <DetailSectionDivider label="Vadeler ve mutabakat" />
 
