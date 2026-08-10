@@ -1,12 +1,33 @@
 # Priority Backlog
 
+## 2026-08-10 — Banka modeli Faz 7: kenar bulguları (correctness dilimi)
+
+Uyuyan-akış denetiminin net correctness kalemleri. AÇIK kalan (tasarım/altyapı
+gerektiren, ayrı dilim): kısmi kişisel borç ödemesi (settle_personal_debt tutar
+parametresi — feature); ay-sonu carryover anchor gün kaybı (2b — çevrim başına
+kendini düzeltiyor, düşük); DB/TS vade tarihi çakışma ıraksaması (2d — düşük);
+gece penceresi (UTC/TR) ve Şubat+statement_day=31 için pgTAP kenar testleri
+(clock injection altyapısı gerekir); K3 ay-atlama dönem anahtarı kenarı (1f).
+
+- ~~**BM7 C-1/C-2 — Varlık satışı oransal değer.**~~ DONE. Miktar taşıyan
+  satışta değer satılan miktarla oransal düşer (tam satış sıfırlar → hayalet
+  değer yok); nakit bedel oransal değeri aşabilir (gerçekleşen kâr artık
+  engellenmiyor). Miktarsız TRY-nakit satışta kayıtlı değer üst sınırı korunur.
+  Migration `20260810180000` + UI kilidi miktarsıza daraltıldı + gerçek Postgres
+  regresyonu (`asset_trade_proportional_value.sql`).
+- ~~**BM7 A-2 — Kredi plan düzenlemeleri kayıtta hortlamıyor.**~~ DONE. `afterSave`
+  planı yalnız HİÇ yoksa jenerik şablondan kurar; plan bir kez oluştuktan sonra
+  kullanıcıya aittir (satır düzenleme/silme + "Ödendi say" korunur). Toplu
+  yenileme boş plandaki "Plan oluştur" ile yapılır.
+- ~~**BM7 A-3 — Ölü unpay_loan_installment drop edildi.**~~ DONE. UI çağırmıyor,
+  iade yapmadığı için elle çağrılsa banka bakiyesi ile kredi özetini ayrıştırırdı
+  (BM-4'teki kart muadili deseninin kredi karşılığı). Migration `20260810180000`
+  + types temizliği.
+
 ## 2026-08-10 — Banka modeli Faz 6: iptal yaşam döngüsü
 
 Uyuyan-akış denetiminin iptal (İptal-B2/B4/B6) bulgularının UX + canlandırma
-dilimi. Kalan BM-7 (ay-sonu carryover anchor'ı, K3 ay-atlama dönem anahtarı,
-kârda varlık satışı + tam satışta hayalet değer, kredi plan düzenlemelerinin
-kayıtta hortlaması, kısmi kişisel borç ödemesi, DB/TS vade ıraksaması, gece
-penceresi/Şubat-31 pgTAP kenar testleri, unpay_loan drop) AÇIK.
+dilimi.
 
 - ~~**BM6 — İptal keşfedilebilir + geri alınabilir.**~~ DONE. (İptal-B6) Yeni
   `RecentCardExpensesPanel` (`/kartlar?section=islemler`) son 20 kesinleşmiş

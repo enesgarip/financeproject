@@ -349,7 +349,16 @@ export function LoansPage() {
         collapsibleGroups={COMPLETED_LOAN_GROUPS}
         renderBeforeList={({ loading, rows }) => (!loading ? <LoanOverview loans={rows as Loan[]} installments={installments} /> : null)}
         afterSave={async (row) => {
-          await syncLoanInstallmentPlan(row as Loan)
+          // BM-7 A-2: Plan bir kez oluştuktan sonra kullanıcıya aittir (satır
+          // düzenleme/silme + "Ödendi say"). Her kredi kaydında jenerik şablondan
+          // yeniden kurmak bu düzenlemeleri eziyordu; artık plan yalnız HİÇ yoksa
+          // kurulur. Mevcut planı toplu yenilemek gerekirse "Plan oluştur" (boş
+          // planda görünür) veya satır bazlı düzenleme kullanılır.
+          const loan = row as Loan
+          const hasPlan = installments.some((item) => item.loan_id === loan.id)
+          if (!hasPlan) {
+            await syncLoanInstallmentPlan(loan)
+          }
           await Promise.all([loadInstallments(), invalidateSnapshot()])
         }}
         afterDelete={async () => {
