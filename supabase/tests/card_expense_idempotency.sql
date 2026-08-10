@@ -91,6 +91,25 @@ begin
     raise exception 'FAIL payment import retry: expenses=1/debt=250 bekleniyordu, %/%', v_count, v_debt;
   end if;
 
+
+  -- BM-6: iptal edilen kayit kimligi rezerve ETMEZ. Ayni kimlikle yeniden
+  -- import taze kayit olusturur (iptali geri almanin kanonik yolu); borc geri gelir.
+  -- Bu noktada kartta: manual request-1/2/3 (3x203) + sms provizyon 50 = 659.
+  perform public.cancel_card_expense((
+    select id from public.card_expenses
+    where card_id = v_card and source = 'manual' and source_event_id = 'request-1'
+  ));
+  select debt_amount into v_debt from public.cards where id = v_card;
+  if v_debt <> 456 then raise exception 'FAIL revival oncesi iptal: borc 456 bekleniyordu, %', v_debt; end if;
+
+  perform public.add_card_expense(v_card, 203, 'BURULAS', '2026-07-01', 1, 'Ulasim', 'posted', null, 'manual', 'request-1');
+  select count(*) into v_count from public.card_expenses
+  where card_id = v_card and source = 'manual' and source_event_id = 'request-1' and status <> 'cancelled';
+  select debt_amount into v_debt from public.cards where id = v_card;
+  if v_count <> 1 or v_debt <> 659 then
+    raise exception 'FAIL revival: aktif=1/borc=659 bekleniyordu, %/%', v_count, v_debt;
+  end if;
+
   raise notice 'Kart harcama idempotency regresyonu OK.';
 end $$;
 

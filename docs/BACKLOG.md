@@ -1,16 +1,25 @@
 # Priority Backlog
 
-## 2026-08-10 — Banka modeli Faz 5: uyuyan-akış denetimi düzeltmeleri
+## 2026-08-10 — Banka modeli Faz 6: iptal yaşam döngüsü
 
-2026-08-10 ikinci denetim turu (uyuyan modüller + iptal/iade + zaman sınırları;
-3 paralel ajan raporu) sonrası ilk düzeltme dilimi. Kalan bulgular BM-6 (iptal
-yaşam döngüsü UX: harcama listesinde iptal aksiyonu, iptali geri alma /
-cancelled kimliğin re-import'u sessiz yutması, fatura bağlantılı iptalde
-ödemeyi yeniden açma) ve BM-7 (ay-sonu carryover anchor'ı, K3 ay-atlama dönem
-anahtarı, kârda varlık satışı + tam satışta hayalet değer, kredi plan
-düzenlemelerinin kayıtta hortlaması, kısmi kişisel borç ödemesi, DB/TS vade
-ıraksaması, gece penceresi/Şubat-31 pgTAP kenar testleri, unpay_loan drop)
-olarak AÇIK.
+Uyuyan-akış denetiminin iptal (İptal-B2/B4/B6) bulgularının UX + canlandırma
+dilimi. Kalan BM-7 (ay-sonu carryover anchor'ı, K3 ay-atlama dönem anahtarı,
+kârda varlık satışı + tam satışta hayalet değer, kredi plan düzenlemelerinin
+kayıtta hortlaması, kısmi kişisel borç ödemesi, DB/TS vade ıraksaması, gece
+penceresi/Şubat-31 pgTAP kenar testleri, unpay_loan drop) AÇIK.
+
+- ~~**BM6 — İptal keşfedilebilir + geri alınabilir.**~~ DONE. (İptal-B6) Yeni
+  `RecentCardExpensesPanel` (`/kartlar?section=islemler`) son 20 kesinleşmiş
+  hareketi listeler ve tek yerden append-only iptal sunar; ekstreye kesilmiş /
+  erken-ödemeyle kapatılmış satırlar kilitli (RPC de reddeder). (İptal-B2)
+  Migration `20260810170000`: iptal edilen kayıt `source_event_id`'yi rezerve
+  etmez — unique index + `add_card_expense`/`record_card_installment_carryover`/
+  `pay_payment_from_card_import` lookup'ları `status <> 'cancelled'` süzer; aynı
+  satırı yeniden import taze kayıt = iptali geri almanın kanonik yolu. Retry
+  güvenliği (advisory lock + aktif satır index'i) korunur; `record_sms_card_expense`
+  bilerek dışarıda. (İptal-B4) Planlı ödemeden doğan kaydın iptalinde çekmece,
+  planın "ödendi" kalacağını açıkça uyarır. Regresyon: `card_expense_idempotency`
+  canlandırma senaryosu.
 
 - ~~**BM5-a — Kart talimatlı ödeme bilgilendirme moduna indi (kullanıcı
   kararı).**~~ DONE. Denetim B-1: tahmini tutarı proaktif karta yazan iki

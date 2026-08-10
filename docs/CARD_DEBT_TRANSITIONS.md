@@ -270,6 +270,16 @@ content hash and that content's occurrence ordinal. The occurrence is intentiona
 part of the identity: two identical rows in one document are two events, but
 retrying/reimporting either row is a no-op; reordering different rows does not change IDs.
 
+A cancelled row no longer reserves its source-event identity (BM-6): the unique
+index and the `add_card_expense` / `record_card_installment_carryover` /
+`pay_payment_from_card_import` idempotency lookups all exclude `status =
+'cancelled'`. So re-importing (or re-entering) the same row after an accidental
+cancel creates a fresh active row — this is the canonical way to undo a cancel.
+Genuine retries still collapse because they arrive within the same transaction
+window (advisory lock) before any human cancel can intervene. `record_sms_card_expense`
+is intentionally excluded: a webhook retry carries no human intent, so a cancelled
+SMS row is not revived by the same text (it returns via statement import if real).
+
 ## Ledger Authority
 
 `card_ledger` is the append-only audit trail for `cards.debt_amount`. Ordinary
