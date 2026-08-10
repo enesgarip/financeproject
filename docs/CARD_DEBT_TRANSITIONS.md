@@ -98,7 +98,7 @@ member `debt_amount` values.
 | Provision installment count marked (pre-post) | `setProvisionInstallments` (repo direct update, no RPC) | none | Bank SMS carries only the total, so SMS provisions open with `installment_count=1`. Before posting, the provisions panel lets the user set the real count; this updates only `installment_count`/`installment_amount` on the `status='provision'` row. No debt/bucket/ledger change — it is a label the later `post_card_provision` reads to split the plan. The `status='provision'` filter forbids touching posted/archived rows (that path is `update_card_expense`). |
 | Provision posted | `post_card_provision` | `provision_amount -= posted amount`; `current_period_spending += installments whose due date has passed` | Full post updates the same expense; partial post leaves the original provision with the remaining amount and inserts a posted expense; multi-installment posted provisions create exact-date installment rows |
 | Provision cancelled | `cancel_card_provision` | `debt_amount -= amount`; `provision_amount -= amount` | Marks the expense `cancelled`; removes related installment rows if any |
-| Unstatemented expense cancelled | `cancel_card_expense` | `debt_amount -= amount`; provision rows also reduce `provision_amount`; posted rows reduce current-period spending. Future scheduled installment debt is removed without double-reducing current period. | Marks the expense `cancelled`, removes related installment rows, and logs a correction. Directly/child statement-archived expenses are rejected; historical corrections require append-only reconciliation. |
+| Unstatemented expense cancelled | `cancel_card_expense` | Single/provision rows: `debt_amount -= amount` (provision also reduces `provision_amount`). Posted multi-installment plans: `debt_amount -=` the plan's child-row total — the plan's actual debt contribution — so cancelling a carried-over plan (parent amount = full plan, debt contribution = remaining only) never over-reverses. Posted rows reduce current-period spending; future scheduled installment debt is removed without double-reducing current period. | Marks the expense `cancelled`, removes related installment rows, and logs a correction with the real reversal amount. Directly/child statement-archived expenses are rejected; historical corrections require append-only reconciliation. |
 | Scheduled installment due date reached | `post_due_card_installments` / finance maintenance | `current_period_spending += due scheduled installment total`; `debt_amount` unchanged | Changes due `card_installments` from `scheduled` to `posted`; maintenance runs this before statement cutting, and statement cutting keeps posted installment rows after the statement boundary in the new period |
 | Statement cut | `cut_card_statement` / `cut_due_card_statements` | `statement_debt_amount += statement-period current spending`; `current_period_spending` keeps only already-posted rows after the statement boundary; `debt_amount` unchanged | Inserts or returns an open `card_statement_archives` row; links posted expenses/installments whose dates are on or before the statement boundary under the guarded allocation context. Direct child re-allocation is rejected. Automatic due maintenance skips cards whose current spending belongs entirely to the next statement instead of surfacing an error. |
 | Statement paid | `pay_card_statement` | Source bank account `current_balance -= archived statement amount`; card debt reduces by that amount and `statement_debt_amount` is reprojected from remaining open archives | Marks only the statement `paid`; installment rows remain unchanged. Temporary aggregate drift does not block payment. |
@@ -249,6 +249,14 @@ When `pay_payment` is funded by a credit card instead of a bank account, it is
 card spending, not cash outflow: the selected credit card receives a posted
 expense and its `debt_amount` / `current_period_spending` increase by the paid
 amount.
+
+Card-instructed (`bank_auto` + card source) planned payments are informational
+since BM-5: nothing posts them to the card proactively (the client hook and the
+`post_due_card_auto_payments` maintenance RPC were removed). The real record
+arrives from the SMS automation — which also advances the plan via the
+`record_sms_card_expense` match — or from the monthly statement import
+(`pay_payment_from_card_import`); manual "Öde" stays available. Estimated
+amounts are therefore never written to a card.
 
 DenizBank statement/current movement imports use `pay_payment_from_card_import`
 for rows that match a still-open planned payment. It is the same credit-card

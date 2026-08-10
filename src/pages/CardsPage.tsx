@@ -18,15 +18,12 @@
 import { Suspense, useState, useCallback } from 'react'
 import { Link } from 'react-router'
 import { CalendarClock, FileText, History, Info, ScanSearch, ShieldCheck } from 'lucide-react'
-import { useFinanceSnapshot } from '../app/useFinanceSnapshot'
 import { CrudPage } from '../components/CrudPage'
-import { AutoPaymentConfirmation } from '../components/finance/AutoPaymentConfirmation'
 import { CategoryCleanupPanel } from '../components/finance/CategoryCleanupPanel'
 import { FinancePaymentDrawer } from '../components/finance/FinancePaymentDrawer'
 import { LiveReconciliationPanel } from '../components/finance/LiveReconciliationPanel'
 import { CardInstallmentCalendarPanel } from '../components/finance/CardInstallmentCalendarPanel'
 import { CardInstallmentExpensesPanel } from '../components/finance/CardInstallmentExpensesPanel'
-import { useAutoPayments } from '../hooks/useAutoPayments'
 import type { Card, CardStatementArchive } from '../types/database'
 import { dateInputValue, formatDate } from '../utils/date'
 import { cardPayableDebt } from '../utils/financeSummary'
@@ -101,10 +98,6 @@ export function CardsPage() {
     handleSetProvisionInstallments,
     setStatementActionId,
   } = useCardsPageData()
-  const snapshotQuery = useFinanceSnapshot()
-  const snapshotPayments = snapshotQuery.data?.payments ?? []
-  const snapshotCards = snapshotQuery.data?.cards ?? []
-  const { autoPayResults, dismiss, dismissAll, adjustAmount } = useAutoPayments(snapshotPayments, snapshotCards, invalidateSnapshot)
   const [reloadCards, setReloadCards] = useState<(() => Promise<void>) | null>(null)
   const {
     transactionAmount,
@@ -295,15 +288,6 @@ export function CardsPage() {
 
               {!loading && section === 'ozet' ? (
                 <>
-                  <AutoPaymentConfirmation
-                    results={autoPayResults}
-                    onDismiss={dismiss}
-                    onDismissAll={dismissAll}
-                    onAdjust={async (paymentId, cardId, oldAmount, newAmount) => {
-                      await adjustAmount(paymentId, cardId, oldAmount, newAmount)
-                      await reload()
-                    }}
-                  />
                   <AccountHubPanel rows={cardRows} onOpenTransfer={(source) => openTransaction(source, reload, cardRows, 'transfer')} formatAmount={formatAmount} />
                   <div className="hidden md:block">
                     <CardControlCenter

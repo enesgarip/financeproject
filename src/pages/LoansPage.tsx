@@ -9,6 +9,7 @@ import {
   deleteLoanInstallment,
   fetchLoanInstallments,
   updateLoanInstallment,
+  upsertLoanInstallments,
 } from '../data/repositories/loansRepo'
 import type { Loan, LoanInstallment } from '../types/database'
 import { formatDate } from '../utils/date'
@@ -24,9 +25,11 @@ import {
   getNextPaymentDate,
   loanFields,
   loanProgress,
+  markPaidWithoutCashPayload,
   nextPendingInstallment,
   optionalDate,
   optionalDay,
+  pastDuePendingInstallments,
   syncLoanInstallmentPlan,
   validateLoanForm,
 } from './LoansPage.helpers'
@@ -150,6 +153,30 @@ export function LoansPage() {
     setEditingPlanItem(null)
   }
 
+  // BM-5c: Uygulama öncesi bankada zaten ödenmiş taksitleri nakit hareketi
+  // olmadan "ödendi" işaretler; sync_loan_summary özeti otomatik yeniden kurar.
+  async function markInstallmentsPaidWithoutCash(
+    rows: LoanInstallment[],
+    reload: () => Promise<void>,
+    setError: (message: string) => void,
+  ) {
+    const confirmed = await confirm({
+      title: rows.length === 1 ? 'Taksiti ödendi say' : `${rows.length} taksiti ödendi say`,
+      description:
+        'Banka bakiyesinden para DÜŞÜLMEZ; taksit(ler) uygulama öncesinde bankada ödenmiş kabul edilir ve kredi özeti yeniden hesaplanır.',
+      confirmLabel: 'Ödendi say',
+    })
+    if (!confirmed) return
+
+    const result = await upsertLoanInstallments(markPaidWithoutCashPayload(rows))
+    if (!result.ok) {
+      setError(result.error.message ?? 'Taksitler ödendi sayılamadı.')
+      return
+    }
+
+    await Promise.all([loadInstallments(), reload(), invalidateSnapshot()])
+  }
+
   async function deletePlanItem(item: LoanInstallment, reload: () => Promise<void>, setError: (message: string) => void) {
     const confirmed = await confirm({
       title: 'Taksiti sil',
@@ -197,13 +224,27 @@ export function LoansPage() {
       )
     }
 
+    const pastDuePending = pastDuePendingInstallments(loanInstallments)
+
     return (
       <section className="mt-4 rounded-2xl border border-border/70 bg-muted/20 p-3">
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
           <h3 className="finance-label">Ödeme Planı</h3>
-          <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-semibold tabular-nums text-muted-foreground">
-            {loanInstallments.filter((item) => item.status === 'ödendi').length}/{loanInstallments.length}
-          </span>
+          <div className="flex items-center gap-2">
+            {pastDuePending.length > 0 ? (
+              <button
+                type="button"
+                onClick={() => void markInstallmentsPaidWithoutCash(pastDuePending, reload, setError)}
+                className="rounded-lg border border-border bg-card px-2.5 py-1.5 text-xs font-semibold text-foreground transition hover:bg-muted active:scale-[0.97]"
+                title="Uygulama öncesi bankada ödenmiş geçmiş taksitleri nakit hareketi olmadan işaretler"
+              >
+                Geçmişi ödendi say ({pastDuePending.length})
+              </button>
+            ) : null}
+            <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-semibold tabular-nums text-muted-foreground">
+              {loanInstallments.filter((item) => item.status === 'ödendi').length}/{loanInstallments.length}
+            </span>
+          </div>
         </div>
         <div className="space-y-2">
           {loanInstallments.map((item) => (
@@ -249,7 +290,20 @@ export function LoansPage() {
                   <MoreVertical size={16} />
                 </button>
                 {planMenuOpenId === item.id ? (
-                  <div className="absolute right-0 top-full z-20 mt-1 w-36 rounded-lg border border-border bg-popover py-1 shadow-[var(--shadow-elevated)]">
+                  <div className="absolute right-0 top-full z-20 mt-1 w-40 rounded-lg border border-border bg-popover py-1 shadow-[var(--shadow-elevated)]">
+                    {item.status !== 'ödendi' ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPlanMenuOpenId(null)
+                          void markInstallmentsPaidWithoutCash([item], reload, setError)
+                        }}
+                        className="flex w-full items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted"
+                      >
+                        <Check size={14} />
+                        Ödendi say
+                      </button>
+                    ) : null}
                     <button
                       type="button"
                       onClick={() => openPlanEdit(item)}

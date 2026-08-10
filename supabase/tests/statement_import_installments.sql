@@ -400,7 +400,34 @@ begin
     raise exception 'FAIL G ekstre kovası 100 olmalı';
   end if;
 
-  raise notice 'Ekstre taksit import regresyonu OK (1. / orta / son / PDF açık plan yenileme / atomik rollback / paid re-import reddi / PDF tarih otoritesi).';
+  -- ── Senaryo H — BM-5b: devreden planın iptali borcu FAZLA düşürmez.
+  -- Parent tam plan tutarını (9×100) taşır ama borca yalnız kalan 6 taksit
+  -- eklenmiştir; iptal, child toplamı (600) kadar terslemeli — 900 değil.
+  insert into public.cards (user_id, bank_name, card_name, card_type, credit_limit, statement_day, due_day)
+  values (v_user, 'SI', 'SI iptal devir', 'kredi_karti', 50000, 25, 10) returning id into v_card;
+
+  perform public.add_card_expense(v_card, 200, 'H TABAN', current_date, 1, 'Diğer', 'posted', null, 'manual', 'h-base');
+  perform public.record_card_installment_carryover(v_card, 'H DEVIR', 100, 9, 3, (current_date + 10), 'Market', 'h-carry');
+
+  select debt_amount into v_debt from public.cards where id = v_card;
+  if v_debt <> 800 then raise exception 'FAIL H kurulum borcu: 800 bekleniyordu (200 taban + 6x100), %', v_debt; end if;
+
+  select id into v_parent from public.card_expenses where card_id = v_card and source_event_id = 'h-carry';
+  perform public.cancel_card_expense(v_parent);
+
+  select debt_amount into v_debt from public.cards where id = v_card;
+  if v_debt <> 200 then
+    raise exception 'FAIL H iptal terslemesi: 200 kalmalıydı (yalnız child toplamı 600 düşer), %', v_debt;
+  end if;
+  if not exists (
+    select 1 from public.transaction_history
+    where source_table = 'card_expenses' and source_id = v_parent
+      and type = 'correction' and amount = 600
+  ) then
+    raise exception 'FAIL H history gerçek tersleme tutarını (600) yazmalı';
+  end if;
+
+  raise notice 'Ekstre taksit import regresyonu OK (1. / orta / son / PDF açık plan yenileme / atomik rollback / paid re-import reddi / PDF tarih otoritesi / devir iptali terslemesi).';
 end $$;
 
 rollback;

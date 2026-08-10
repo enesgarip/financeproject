@@ -7,7 +7,6 @@ import { Badge } from '../components/ui/badge'
 import { Card, CardContent } from '../components/ui/card'
 import { Progress } from '../components/ui/progress'
 import { useFinanceSnapshot, useInvalidateFinanceSnapshot } from '../app/useFinanceSnapshot'
-import { postDueCardAutoPayments } from '../data/repositories/financeSnapshotRepo'
 import { fetchCards } from '../data/repositories/cardsRepo'
 import { sortPaymentAccounts } from '../services/financePaymentActions'
 import type {
@@ -26,7 +25,7 @@ import { sumTL } from '../utils/money'
 import { paidPaymentIdsInMonth } from '../utils/paymentHistory'
 import type { FinanceObligation, FinanceObligationsInput } from '../utils/obligations'
 import { useFinancePaymentDrawer } from '../hooks/useFinancePaymentDrawer'
-import { useCallback, useEffect, useMemo, useRef } from 'react'
+import { useCallback, useMemo } from 'react'
 
 const paymentCategoryOptions: { label: PaymentCategory; value: PaymentCategory }[] = [
   { label: 'Fatura', value: 'Fatura' },
@@ -154,32 +153,11 @@ function getPaymentScheduleLabel(payment: Payment) {
   return `Aylık · Her ayın ${payment.recurrence_day ?? '-'}. günü${endDate}`
 }
 
-// Banka talimatı + kredi kartı + bilinen tutar → vade gelince otomatik postalanır;
-// bu kayıtlarda manuel "Öde" butonu gösterilmez.
-function isAutoPostedPayment(payment: Payment) {
-  return paymentUsesCreditCard(payment) && payment.amount > 0
-}
-
-/** Vadesi gelmiş banka talimatlarını açılışta otomatik karta borç olarak işler. */
-function DueAutoPaymentsAutomation({ reload }: { reload: () => Promise<void> }) {
-  const ranRef = useRef(false)
-
-  useEffect(() => {
-    if (ranRef.current) return
-    ranRef.current = true
-
-    let cancelled = false
-    void (async () => {
-      const result = await postDueCardAutoPayments()
-      if (!cancelled && result.ok && result.data > 0) await reload()
-    })()
-
-    return () => {
-      cancelled = true
-    }
-  }, [reload])
-
-  return null
+// BM-5: Kart talimatlı ödeme BİLGİLENDİRME kaydıdır; tahmini tutar proaktif
+// karta yazılmaz. Gerçek kayıt SMS'ten (anlık) veya ekstre importundan (aylık
+// kesin kapanış) gelir ve planı otomatik ilerletir; manuel "Öde" açık kalır.
+function isCardInstructedPayment(payment: Payment) {
+  return paymentUsesCreditCard(payment)
 }
 
 function getPaymentAmountLabel(payment: Payment) {
@@ -368,7 +346,6 @@ export function PaymentsPage() {
           const payments = rows as Payment[]
           return (
             <div className="flex flex-col gap-3">
-              <DueAutoPaymentsAutomation reload={async () => { await Promise.all([reload(), loadPlanningData()]) }} />
               {planningError ? <Alert variant="warning">{planningError}</Alert> : null}
               <ObligationsCalendar
                 loading={loading || planningLoading}
@@ -468,7 +445,13 @@ export function PaymentsPage() {
                 </p>
               ) : null}
 
-              {!isPaid && !isAutoPostedPayment(payment) ? (
+              {!isPaid && isCardInstructedPayment(payment) ? (
+                <p className="mt-2.5 text-[11px] font-medium text-muted-foreground">
+                  Talimat bilgilendirmedir; harcama SMS geldiğinde veya ekstre importunda otomatik işlenir ve plan ilerler.
+                </p>
+              ) : null}
+
+              {!isPaid ? (
                 <div className="mt-3">
                   <button
                     type="button"

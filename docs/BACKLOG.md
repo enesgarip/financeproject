@@ -1,5 +1,43 @@
 # Priority Backlog
 
+## 2026-08-10 — Banka modeli Faz 5: uyuyan-akış denetimi düzeltmeleri
+
+2026-08-10 ikinci denetim turu (uyuyan modüller + iptal/iade + zaman sınırları;
+3 paralel ajan raporu) sonrası ilk düzeltme dilimi. Kalan bulgular BM-6 (iptal
+yaşam döngüsü UX: harcama listesinde iptal aksiyonu, iptali geri alma /
+cancelled kimliğin re-import'u sessiz yutması, fatura bağlantılı iptalde
+ödemeyi yeniden açma) ve BM-7 (ay-sonu carryover anchor'ı, K3 ay-atlama dönem
+anahtarı, kârda varlık satışı + tam satışta hayalet değer, kredi plan
+düzenlemelerinin kayıtta hortlaması, kısmi kişisel borç ödemesi, DB/TS vade
+ıraksaması, gece penceresi/Şubat-31 pgTAP kenar testleri, unpay_loan drop)
+olarak AÇIK.
+
+- ~~**BM5-a — Kart talimatlı ödeme bilgilendirme moduna indi (kullanıcı
+  kararı).**~~ DONE. Denetim B-1: tahmini tutarı proaktif karta yazan iki
+  kaynak (istemci hook'u vade günü + `post_due_card_auto_payments` ertesi gün)
+  SMS ile tutar sapmasında çift harcama üretebiliyordu. Artık talimat yalnız
+  bilgidir: `useAutoPayments`/`AutoPaymentConfirmation`/`utils/autoPayment`
+  kaldırıldı, RPC drop edildi (migration `20260810160000`), bakım zinciri iki
+  RPC'ye indi. Gerçek kayıt SMS'ten (plan ilerletme eşleşmesi KORUNDU) veya
+  ekstre importundan gelir; PaymentsPage kart talimatlı satırda bunu söyler ve
+  manuel "Öde" artık talimatlılarda da açıktır. Regresyonlar yeni modele
+  güncellendi (`maintenance_catchup.sql`, `sms_card_payment_reconciliation.sql`).
+- ~~**BM5-b — Devreden plan iptali borcu fazla düşürmüyor.**~~ DONE. Denetim
+  İptal-B1: carryover parent'ı tam plan tutarını taşır ama borca yalnız kalan
+  eklenir; `cancel_card_expense` amount kadar düşünce fark kayboluyordu. Yeni
+  kural (aynı migration): posted çok taksitli planda borç terslemesi = child
+  satır toplamı (planın gerçek katkısı); `add_card_expense` planlarında çocuk
+  toplamı = amount olduğundan davranış değişmez, çocuksuz legacy fallback
+  amount kalır. History kaydı da gerçek tersleme tutarını yazar.
+- ~~**BM5-c — Devam eden kredi girilebilir: "Ödendi say" (nakit hareketsiz).**~~
+  DONE. Denetim A-1: geçmiş taksitleri kapatmanın tek yolu bugünkü banka
+  bakiyesinden gerçek para düşürmekti. Plan panelinde artık geçmiş vadeli
+  bekleyenler için toplu "Geçmişi ödendi say (N)" + satır menüsünde "Ödendi
+  say" var: banka bakiyesine dokunmadan durum işaretlenir (paid_at = vade,
+  not: "Uygulama öncesi ödendi"), `sync_loan_summary` özeti otomatik kurar,
+  merge ödendi satırları zaten korur. Saf yardımcılar
+  (`pastDuePendingInstallments`, `markPaidWithoutCashPayload`) test edildi.
+
 ## 2026-08-10 — Banka modeli Faz 4: sertleştirme
 
 Üç-akış denetiminin son planlı fazı.

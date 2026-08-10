@@ -117,19 +117,6 @@ export async function findRecentSmsAccountDebit(
   return { occurredAt: row.occurred_at, title: row.title }
 }
 
-export async function payPaymentFromCard(
-  paymentId: string,
-  cardId: string,
-  amount: number,
-): Promise<FinancePaymentResult> {
-  const { error } = await supabase.rpc('pay_payment', {
-    p_payment_id: paymentId,
-    p_source_card_id: cardId,
-    p_paid_amount: amount,
-  })
-  return { error }
-}
-
 export async function submitFinanceObligationPayment({
   obligation,
   account,
