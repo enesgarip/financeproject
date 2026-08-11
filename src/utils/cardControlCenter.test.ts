@@ -91,6 +91,7 @@ function reconciliation(overrides: Partial<AccountReconciliation> = {}): Account
     app_amount: 10_000,
     real_amount: 10_000,
     drift: 0,
+    resolution: null,
     note: null,
     ...overrides,
   }
@@ -134,6 +135,21 @@ describe('buildCardControlItems', () => {
 
     expect(result[0].card.id).toBe('card-2')
     expect(result[0].reconciliationStatus).toBe('drift')
+  })
+
+  // Faz D1: ölçüm düzeltmeden sonra da kayıtta durduğu için app ≠ gerçek olmak
+  // artık tek başına "fark var" demek değil — aksi halde düzeltilen her kart
+  // sonsuza dek kırmızı kalırdı.
+  it('does not keep a corrected reconciliation flagged as drift', () => {
+    const result = buildCardControlItems(
+      [card()],
+      [],
+      [],
+      [reconciliation({ app_amount: 10_500, real_amount: 10_000, drift: 500, resolution: 'corrected' })],
+      now,
+    )
+
+    expect(result[0].reconciliationStatus).toBe('matched')
   })
 
   it('distinguishes stale and never-reconciled cards', () => {

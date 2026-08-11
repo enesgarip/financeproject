@@ -15,6 +15,7 @@ import { parseNumber } from '../../utils/formatCurrency'
 import { toKurus } from '../../utils/money'
 import {
   buildDriftCauseSummary,
+  buildDriftHistory,
   buildReconciliationItems,
   computeDrift,
   isReconciled,
@@ -116,13 +117,16 @@ export function LiveReconciliationPanel({ cards, onChanged }: LiveReconciliation
     setSavingId(cardId)
     setError('')
 
+    const drift = computeDrift(app, real)
     const payload: InsertFor<'account_reconciliations'> = {
       user_id: user.id,
       card_id: cardId,
       target,
       app_amount: app,
       real_amount: real,
-      drift: computeDrift(app, real),
+      drift,
+      // Düzeltme yapılmadı: fark varsa açık kalır, yoksa mutabık.
+      resolution: toKurus(drift) === 0 ? 'matched' : 'open',
       reconciled_at: new Date().toISOString(),
     }
     const saveResult = await insertAccountReconciliation(payload)
@@ -155,13 +159,17 @@ export function LiveReconciliationPanel({ cards, onChanged }: LiveReconciliation
       return
     }
 
+    // Ölçüm düzeltmeden ÖNCEKİ haliyle yazılır: app_amount düzeltilmiş değere
+    // çekilirse "fark vardı" gerçeği kaydın kendisinden silinir ve sapma trendi
+    // hiç oluşamaz (Faz D1). Düzeltildiği bilgisi resolution'da durur.
     const payload: InsertFor<'account_reconciliations'> = {
       user_id: user.id,
       card_id: cardId,
       target,
-      app_amount: real,
+      app_amount: app,
       real_amount: real,
-      drift: 0,
+      drift,
+      resolution: 'corrected',
       reconciled_at: new Date().toISOString(),
     }
     await insertAccountReconciliation(payload)
@@ -213,6 +221,9 @@ export function LiveReconciliationPanel({ cards, onChanged }: LiveReconciliation
           const reconciledNow = hasInput && isReconciled(item.app, parseNumber(raw))
           const isBusy = savingId === item.card.id || correctingId === item.card.id
           const canQuickReconcile = liveDrift != null && !reconciledNow && item.target === 'debt' && item.card.card_type === 'kredi_karti'
+          // Tek bir "Fark var" rozeti "bu kartta sürekli mi oluyor?" sorusuna
+          // cevap veremez; iki ve üzeri sapma artık bir desendir.
+          const history = buildDriftHistory(rows, item.card.id)
 
           return (
             <div key={item.card.id} className="rounded-lg bg-muted/40 px-3 py-2.5">
@@ -236,6 +247,13 @@ export function LiveReconciliationPanel({ cards, onChanged }: LiveReconciliation
                       ? ` · Kayıtlı fark ${item.last.drift >= 0 ? '+' : ''}${formatAmount(item.last.drift)}`
                       : ''}
                   </p>
+                  {history.driftCount >= 2 ? (
+                    <p className="mt-1 text-xs font-semibold text-warning">
+                      Son {history.sampleCount} mutabakatın {history.driftCount} tanesinde fark çıktı · en büyüğü{' '}
+                      {formatAmount(history.largestDriftTL)}
+                      {history.hasLegacyRows ? ' · eski kayıtların akıbeti bilinmiyor, sayım eksik olabilir' : ''}
+                    </p>
+                  ) : null}
                 </div>
               </div>
 

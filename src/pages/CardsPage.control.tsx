@@ -142,6 +142,11 @@ export function CardControlCenter({
                         {drift !== null && reconciliationStatus === 'drift'
                           ? ` · App − banka farkı ${drift > 0 ? '+' : ''}${formatAmount(drift)}`
                           : ''}
+                        {/* Faz D1'den beri düzeltilen fark kayıtta duruyor; "sorunsuz geçti"
+                            ile "fark çıktı ama kapatıldı" artık ayırt edilebilir. */}
+                        {latestReconciliation.resolution === 'corrected' && drift !== null
+                          ? ` · ${formatAmount(Math.abs(drift))} fark düzeltildi`
+                          : ''}
                       </>
                     ) : (
                       'Bankadaki gerçek borç henüz kaydedilmedi.'
