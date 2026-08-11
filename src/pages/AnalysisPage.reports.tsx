@@ -304,12 +304,19 @@ export function SearchExport({ items }: { items: SearchItem[] }) {
   const { formatAmount } = useBalancePrivacy()
   const [query, setQuery] = useState('')
   const normalizedQuery = normalizeSearchText(query)
-  const filteredItems = useMemo(
+  // Export ile liste AYRIŞIR: CSV her zaman aramanın tam sonucunu (arama boşsa
+  // TÜM kayıtları) indirir; ekrandaki liste kısaltılmış önizlemedir. Eski hali
+  // arama boşken yalnız 12 kaydı dışa aktarıyordu (denetim 2026-08-12 K9).
+  const matchedItems = useMemo(
     () =>
       normalizedQuery
         ? items.filter((item) => normalizeSearchText(`${item.type} ${item.title} ${item.subtitle}`).includes(normalizedQuery))
-        : items.slice(0, 12),
+        : items,
     [items, normalizedQuery],
+  )
+  const filteredItems = useMemo(
+    () => (normalizedQuery ? matchedItems : matchedItems.slice(0, 12)),
+    [matchedItems, normalizedQuery],
   )
 
   return (
@@ -320,9 +327,9 @@ export function SearchExport({ items }: { items: SearchItem[] }) {
             <CardTitle>Genel arama ve dışa aktarım</CardTitle>
             <p className="mt-1 text-sm text-muted-foreground">Varlık, kart, borç, ödeme, bütçe ve geçmiş kayıtları.</p>
           </div>
-          <Button type="button" variant="outline" onClick={() => downloadCsv(filteredItems)}>
+          <Button type="button" variant="outline" onClick={() => downloadCsv(matchedItems)}>
             <Download />
-            CSV
+            CSV{normalizedQuery ? '' : ` (${matchedItems.length})`}
           </Button>
         </div>
       </CardHeader>

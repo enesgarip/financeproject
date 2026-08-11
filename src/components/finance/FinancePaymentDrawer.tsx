@@ -70,7 +70,10 @@ export function FinancePaymentDrawer({
   detail,
 }: FinancePaymentDrawerProps) {
   const { formatAmount } = useBalancePrivacy()
-  const minimumPayment = intent?.action === 'pay_card_debt' ? estimatedMinimumCardPayment(intent.amount) : 0
+  // Asgari yalnız EKSTRE kovası üzerinden (K7): bankada dönem içi harcamanın
+  // asgarisi olmaz. Taban 0 ise (salt dönem içi borç) ipucu hiç gösterilmez.
+  const minimumPayment =
+    intent?.action === 'pay_card_debt' ? estimatedMinimumCardPayment(intent.minimumPaymentBase ?? 0) : 0
   // B4: seçili hesapta son 3 günde aynı tutarlı SMS kaynaklı çıkış varsa bakiye
   // muhtemelen zaten düşmüş demektir; kullanıcıya "tekrar düşme" seçeneği sunulur.
   // Sonuç, sorgulandığı (hesap, tutar) anahtarıyla saklanır; anahtar değişince
@@ -105,13 +108,15 @@ export function FinancePaymentDrawer({
   const payableCeiling = intent ? intent.maxPayableAmount ?? intent.amount : 0
   const quickAmounts = intent?.action === 'pay_card_debt' ? (
     <div className="flex flex-wrap gap-2">
-      <button
-        type="button"
-        onClick={() => onAmountValueChange(String(minimumPayment))}
-        className="rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-bold text-foreground transition hover:bg-muted"
-      >
-        Asgari tahmini ({formatAmount(minimumPayment)})
-      </button>
+      {minimumPayment > 0 ? (
+        <button
+          type="button"
+          onClick={() => onAmountValueChange(String(minimumPayment))}
+          className="rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-bold text-foreground transition hover:bg-muted"
+        >
+          Asgari tahmini ({formatAmount(minimumPayment)})
+        </button>
+      ) : null}
       {exceedsTL(payableCeiling, intent.amount) && exceedsTL(intent.amount, 0) ? (
         <button
           type="button"

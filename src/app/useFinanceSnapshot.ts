@@ -41,6 +41,12 @@ export function useFinanceSnapshot() {
   return useQuery({
     queryKey: financeSnapshotKey(userId),
     enabled: Boolean(user),
+    // K2 (denetim 2026-08-12): girişten hemen sonra token henüz her istekte
+    // geçerli olmayabiliyor (saat kayması/iat) ve ilk snapshot 401'lerle
+    // düşüyordu; global retry:1 yetmeyip kullanıcıyı elle yenilemeye
+    // zorluyordu. 3 deneme + üstel bekleme geçici auth hatasını kendi kendine
+    // iyileştirir; kalıcı hata yine error state'e düşer.
+    retry: 3,
     queryFn: async () => {
       const snapshotPromise = fetchFinanceSnapshot()
       runFinanceMaintenanceInBackground().then((didRun) => {

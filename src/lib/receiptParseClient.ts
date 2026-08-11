@@ -1,4 +1,5 @@
 import { supabase } from './supabase'
+import { edgeErrorMessage } from './statementParseClient'
 
 /**
  * Parse a receipt / bill / bank-notification image into a single card expense,
@@ -40,9 +41,8 @@ export async function parseReceiptImage(file: File): Promise<ReceiptParseResult>
   })
 
   if (error) {
-    // Edge function returns a JSON { error } body on non-2xx; surface it if present.
-    const context = (error as { context?: { error?: string } })?.context
-    throw new Error(context?.error ?? 'Fiş okunamadı, tekrar dene.')
+    // Edge function returns a JSON { error } body on non-2xx; surface it (O3).
+    throw new Error(await edgeErrorMessage(error, 'Fiş okunamadı, tekrar dene.'))
   }
   const result = (data as { result?: ReceiptParseResult } | null)?.result
   if (!result || typeof result.amount !== 'number' || result.amount <= 0) {
