@@ -1,5 +1,35 @@
 # Priority Backlog
 
+## 2026-08-11 — Ödeme alarmı sadeleştirmesi + bağlam etiketleme kapsamı
+
+- ~~**S1 — Dashboard "Ödeme alarmı" paneli kaldırıldı.**~~ DONE. Detay
+  katmanındaki `UpcomingAlertPanel` şerit dilindeki `SeritOverview` yaklaşan
+  vade listesinin dublikatıydı; abonelik/faturalar SMS otomasyonuyla ödendiği
+  için ikinci bir uyarı yüzeyi gereksizdi. Ayıraç "Vadeler ve mutabakat" →
+  "Mutabakat". Yerinde ödeme çekmecesi KALDI (şerit listesi kullanıyor);
+  `buildFocusActions`'taki "N vade 3 gün içinde" aksiyonu da kaldı, yalnız
+  metnindeki kaldırılmış panele atıf takvime çevrildi. `/odemeler`, takvim ve
+  nakit akışı projeksiyonu dokunulmadan duruyor.
+- ~~**S2 — Bağlam etiketleme listesi provizyonları kapsıyor.**~~ DONE. Liste
+  `fetchRecentCardExpenses(40)` (yalnız `posted`, `created_at` sırası) yerine
+  yeni `fetchTaggableCardExpenses(100)` (`posted` + `provision`, `spent_at`
+  sırası) kullanıyor; provizyonlar rozetle işaretli. SMS'ten yeni düşen
+  harcamalar kesinleşene kadar listede olmadığı için bağlam atanamıyordu.
+  `fetchRecentCardExpenses`'in "yalnız kesinleşmiş" anlamı değişmedi (tekrarla
+  çipleri, araç giderleri ve son hareketler paneli ona bağlı).
+- ~~**S3 — Kısmi provizyon kesinleşmesi bağlamı kaybediyordu.**~~ DONE.
+  `post_card_provision` kısmi yolda kesinleşen tutar için YENİ satır açıyor ve
+  `context_id`'yi kopyalamıyordu → etiketlenmiş provizyonun kesinleşen kısmı
+  bağlam özetlerinde hiç görünmüyordu (tam kesinleşme yolunda aynı satır
+  güncellendiği için sorun yoktu). `20260811100000_partial_provision_keeps_context.sql`
+  + regresyon: `supabase/tests/partial_provision_context.sql`
+  (`npm run db:test:provision-context`). Eski fonksiyonla negatif kontrol
+  yapıldı: test kırmızı, yeni fonksiyonla yeşil.
+- **S4 — Açık: son üç DB regresyon testi CI'da koşmuyor.** `db:test:asset-trade`,
+  `db:test:partial-debt` ve `db:test:provision-context` package.json'da var ama
+  `ci.yml`/`deploy.yml`'deki Supabase adım listesine eklenmemiş; yalnız elle
+  koşuyorlar.
+
 ## 2026-08-10 — Şerit görsel dili: temel + Özet pilotu
 
 Masaüstündeki `design_handoff_denge_redesign/` handoff'unun uygulanması.

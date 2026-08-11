@@ -140,7 +140,7 @@ export function buildFocusActions(
     actions.push({
       id: 'urgent-upcoming',
       title: `${urgentCount} vade 3 gün içinde`,
-      description: 'Yakın vadeleri kaçırmamak için ödeme alarmındaki ilk kalemlerden başlamak en güvenlisi.',
+      description: 'Yakın vadeleri kaçırmamak için takvimdeki ilk kalemlerden başlamak en güvenlisi.',
       to: '/odemeler',
       cta: 'Vadeleri gör',
       tone: urgentCount >= 3 ? 'rose' : 'amber',

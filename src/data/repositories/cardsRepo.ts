@@ -117,6 +117,24 @@ export async function fetchRecentCardExpenses(limit: number): Promise<Result<Car
   return resultFromSupabase((data ?? []) as CardExpense[], error, 'Son harcamalar yüklenemedi.')
 }
 
+/**
+ * Bağlam etiketlemesi için harcama listesi. `fetchRecentCardExpenses`'ten farkı:
+ * provizyonları da kapsar (SMS'ten yeni düşen harcamalar önce `provision` gelir,
+ * kesinleşene kadar listede olmazsa bağlam atanamıyordu) ve harcama tarihine göre
+ * sıralar. Etiketleme kart borcunu değiştirmediği için provizyonu dahil etmek güvenli.
+ */
+export async function fetchTaggableCardExpenses(limit: number): Promise<Result<CardExpense[]>> {
+  const { data, error } = await supabase
+    .from('card_expenses')
+    .select('*')
+    .in('status', ['posted', 'provision'])
+    .order('spent_at', { ascending: false })
+    .order('created_at', { ascending: false })
+    .limit(limit)
+
+  return resultFromSupabase((data ?? []) as CardExpense[], error, 'Son harcamalar yüklenemedi.')
+}
+
 export async function fetchCardExpenseMatchRows(cardId: string): Promise<Result<ExpenseMatchRow[]>> {
   const { data, error } = await supabase
     .from('card_expenses')
