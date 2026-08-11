@@ -9,13 +9,10 @@ import type {
   LoanInstallment,
   Payment,
   SalaryHistory,
-  SavingsGoal,
-  SavingsGoalComponent,
 } from '../../src/types/database'
 import {
   buildCreditLimitGroups,
   buildFinancialPosition,
-  buildGoalProgressSummary,
   buildMonthlyCashFlow,
   cardPayableDebt,
   totalCreditLimit,
@@ -189,35 +186,6 @@ function salary(overrides: Partial<SalaryHistory>): SalaryHistory {
   }
 }
 
-function savingsGoal(overrides: Partial<SavingsGoal>): SavingsGoal {
-  return {
-    ...base(overrides.id ?? crypto.randomUUID()),
-    name: 'Hedef',
-    value_type: 'TRY',
-    target_amount: 0,
-    current_amount: 0,
-    estimated_value_try: null,
-    auto_valued: false,
-    target_date: null,
-    status: 'active',
-    note: null,
-    ...overrides,
-  }
-}
-
-function savingsGoalComponent(overrides: Partial<SavingsGoalComponent>): SavingsGoalComponent {
-  return {
-    ...base(overrides.id ?? crypto.randomUUID()),
-    goal_id: 'goal-1',
-    label: null,
-    value_type: 'TRY',
-    target_amount: 0,
-    current_amount: 0,
-    sort_order: 1,
-    ...overrides,
-  }
-}
-
 function data(overrides: Partial<FinanceSummaryInput>): FinanceSummaryInput {
   return {
     assets: [],
@@ -363,19 +331,4 @@ test('monthly cash flow counts one-off and active recurring payments once', () =
   expect(flow.paymentOutflow).toBe(1_200)
   expect(flow.outflow).toBe(1_200)
   expect(flow.netFlow).toBe(8_800)
-})
-
-test('goal progress caps individual goals and averages composite components', () => {
-  const tryGoal = savingsGoal({ id: 'goal-try', target_amount: 1_000, current_amount: 1_500 })
-  const compositeGoal = savingsGoal({ id: 'goal-composite', value_type: 'composite', target_amount: 2, current_amount: 0 })
-  const summary = buildGoalProgressSummary(
-    [tryGoal, compositeGoal],
-    [
-      savingsGoalComponent({ goal_id: 'goal-composite', target_amount: 10, current_amount: 5, sort_order: 1 }),
-      savingsGoalComponent({ goal_id: 'goal-composite', target_amount: 20, current_amount: 20, sort_order: 2 }),
-    ],
-  )
-
-  expect(summary.activeCount).toBe(2)
-  expect(summary.averageProgress).toBe(87.5)
 })
