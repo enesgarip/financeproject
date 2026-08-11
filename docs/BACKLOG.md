@@ -27,13 +27,29 @@ ikizi ile zaten temiz çıktı; açıklar sonradan eklenen alanlardaydı.
   Bilerek EKLENMEYEN kolon: uygulanan düzeltme tutarı — her iki akışta da tam
   `-drift`'e eşit, yani bu maddenin düzelttiği hatanın (türetilebilir değeri
   korumasız saklamak) aynısı olurdu.
-- **D2 — Açık: karma birikim hedefinde ana satır türetilmiş ama korumasız.**
+- ~~**D2 — Karma birikim hedefinde ana satır türetilmiş ama korumasızdı.**~~ DONE.
   `savings_goals.target_amount` = bileşen sayısı, `current_amount` = hedefine
   ulaşan bileşen sayısı; `upsert_savings_goal` client'ın gönderdiğini sorgusuz
-  yazıyor. Ayrıca bu sayaç iki yerde TL sanılıyor: `analysisView.ts` → arama/CSV
-  listesinde `formatAmount()` ile "₺2,00" basılıyor, ve
+  yazıyordu. Artık composite'te `p_target_amount`/`p_current_amount` YOK SAYILIR
+  ve sayaçlar `p_components`'tan hesaplanır ("ulaştı" tanımı TS ikizi
+  `savingsGoalTargetReached` ile aynı: hedef > 0 ve eksik ≤ 1 kuruş). Client'taki
+  ikinci hesap `SavingsGoalsPanel`'den kaldırıldı — ayrışmanın yolu oydu.
+  Migration halihazırda ayrışmış hedefleri bileşenlerinden onarır (mutabakat
+  farkının aksine bu veri kayıp değil, türetilebilir olduğu için onarım tam).
+  Bileşeni kalmamış karma hedefin sayacı da sıfırlanır.
+  Ayrıca bu sayaç iki yerde TL sanılıyordu ve ikisi de düzeltildi:
+  `analysisView.ts` arama/CSV listesinde `formatAmount()` ile "₺2,00" basıyordu →
+  artık `amount: null`, sayaç alt satırda ("Aktif · 2/3 bileşen"); ve
   `financeSummary.buildGoalProgressSummary` bileşen sayısından TL "aylık gerekli"
-  üretiyor (`savingsSuggestion.ts` aynı tuzağa karşı guard'lı, bu değil).
+  üretiyordu → `savingsSuggestion.ts`'teki guard'ın aynısı eklendi.
+  Migration: `20260811150000_composite_goal_totals_from_components.sql`,
+  regresyon: `supabase/tests/composite_goal_totals.sql`
+  (`npm run db:test:composite-goal`; eski fonksiyonla negatif kontrol yapıldı —
+  client değeri 99 sızıyor, test kırmızı).
+  Not: `buildGoalProgressSummary`'nin tek çağıranı DashboardPage'de hesaplanıp
+  hiç render edilmiyordu; ölü bağlantı kaldırıldı. Fonksiyon (guard'ı düzeltilmiş
+  hâlde) duruyor — bir panele bağlanacaksa doğru çalışsın diye; bağlanmayacaksa
+  testleriyle birlikte silinebilir.
 - **D3 — Açık: otomatik değerlemede tazelik bilgisi saklanmıyor.**
   `assets`/`debts`/`savings_goals` üzerinde `estimated_value_try` + `auto_valued`
   var ama `valued_at` ve kullanılan kur yok; `effectiveAssetValue` canlı kur

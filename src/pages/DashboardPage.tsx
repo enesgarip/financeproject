@@ -45,7 +45,6 @@ import { addMonths, dateInputValue, endOfMonth, startOfMonth } from '../utils/da
 import {
 
   buildFinancialPosition,
-  buildGoalProgressSummary,
   buildMonthlyCashFlow,
 
   sum,
@@ -156,7 +155,6 @@ export function DashboardPage() {
     const creditUsageRate = totalSharedCreditLimit > 0 ? Math.min(100, (position.totalCreditCardDebt / totalSharedCreditLimit) * 100) : 0
     const cashFlow = buildMonthlyCashFlow(data)
     const nextMonthCashFlow = buildMonthlyCashFlow(data, addMonths(startOfMonth(), 1))
-    const goalProgress = buildGoalProgressSummary(data.savingsGoals, data.savingsGoalComponents)
 
     return {
       ...position,
@@ -165,7 +163,6 @@ export function DashboardPage() {
       totalLoanMonthlyPayment,
       cashFlow,
       nextMonthCashFlow,
-      goalProgress,
     }
   }, [data])
 
