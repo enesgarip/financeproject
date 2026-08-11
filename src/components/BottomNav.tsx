@@ -5,26 +5,30 @@ import { QuickActionsFab } from './QuickActions'
 
 /**
  * Mobil alt bar — Şerit (`2a`). Yüzen hap değil, sayfanın dibine oturan düz bant:
- * ayrım 1px çizgiyle yapılır, gölge yok.
+ * ayrım 1px çizgiyle yapılır, gölge yok (tek istisna FAB).
  *
- * Sarmalayıcı FAB için **76px'lik ayrılmış bant** taşır ve bandın zemini sayfa
- * rengiyle doludur — FAB hiçbir kaydırma konumunda içeriğin üstüne binmez.
- * (Eski yüzen FAB sayfa sonunda satırları örtüyordu.) Bandın yüksekliği
- * `main`'in alt padding'iyle eşleşmeli; ikisi de Layout'ta.
+ * FAB için 76px'lik bir alan ayrılır ama bu alanın zemini **şeffaftır**; opak
+ * olduğunda içeriği görünmez bir çizgide düz kesiyordu — kartların altı yuvarlak
+ * köşesi olmadan kırpılıp FAB bölgeyi "yemiş" gibi duruyordu. Şeffaf bantta
+ * kart bütün görünür, FAB kaydırma sırasında üstünden geçer.
+ *
+ * FAB'ın sayfa SONUNDA içeriği örtmemesi ayrılan alandan değil, `main`'in
+ * bandın tamamı kadar (152px) alt padding'inden gelir — ikisi Layout'ta eşleşir.
+ * Yalnız nav satırı opaktır; onun altından içerik geçmemeli.
  */
 export function BottomNav() {
   const { pathname } = useLocation()
 
+  // pt = 62px: ayıraç çizgisi (nav'ın üst kenarlığı) FAB'ın 10px altından geçsin
+  // diye — prototipteki ölçü. Sarmalayıcı tıklamayı yutmaz; şeffaf bandın
+  // altındaki içerik tıklanabilir kalsın diye yalnız FAB ve nav `pointer-events-auto`.
   return (
-    <div className="fixed inset-x-0 bottom-0 z-30 bg-page pt-[76px] md:hidden">
-      {/* Ayıraç FAB'ın 10px altından geçer; FAB çizginin üstünde durur. */}
-      <div className="pointer-events-none absolute inset-x-0 top-[62px] border-t border-line-strong" aria-hidden="true" />
-
-      <div className="absolute right-4 top-0">
+    <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 pt-[62px] md:hidden">
+      <div className="pointer-events-auto absolute right-4 top-0">
         <QuickActionsFab />
       </div>
 
-      <nav className="grid grid-cols-5 gap-0.5 px-3.5 pb-[calc(env(safe-area-inset-bottom)+18px)] pt-3.5">
+      <nav className="pointer-events-auto grid grid-cols-5 gap-0.5 border-t border-line-strong bg-page px-3.5 pb-[calc(env(safe-area-inset-bottom)+18px)] pt-3.5">
         {bottomNavItems.map((item) => (
           <NavLink
             key={item.to}
