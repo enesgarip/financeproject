@@ -2,13 +2,14 @@ import { CheckCircle2, Repeat, TrendingUp, Users, WalletCards } from 'lucide-rea
 import { useMemo } from 'react'
 import { Badge } from '../components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
-import { Progress } from '../components/ui/progress'
+import { SERIT_FILL, SERIT_TEXT, useSeritAmount } from '../components/serit'
 import type { Budget, CardExpense, Debt } from '../types/database'
 import { dateInputValue, daysUntil, formatDate, isDateInMonth, startOfMonth } from '../utils/date'
 import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
 import { getCurrentSalary, sum } from '../utils/financeSummary'
 import { analysisObligationsInput, formatMonth, type AnalysisData } from '../utils/analysisView'
 import { activeExpense as activeCardExpense, buildBudgetUsage } from '../utils/budgetAlerts'
+import { formatPercent } from '../utils/formatCurrency'
 import { PRICE_RADAR_MONTHS } from '../data/repositories/analysisRepo'
 import { type PriceTrend } from '../utils/priceIncreaseRadar'
 import { canCutCurrentStatement } from '../utils/statementCycle'
@@ -102,41 +103,46 @@ export function UpcomingInstallments({ data }: { data: AnalysisData }) {
 }
 
 export function BudgetProgress({ budgets, expenses }: { budgets: Budget[]; expenses: CardExpense[] }) {
-  const { formatAmount } = useBalancePrivacy()
+  const seritAmount = useSeritAmount()
   const usage = useMemo(() => buildBudgetUsage(budgets, expenses), [budgets, expenses])
 
   if (usage.length === 0) {
-    return <p className="rounded-xl bg-muted/45 p-3 text-sm text-muted-foreground">Bu ay için bütçe eklediğinde kategori kullanımı burada görünecek.</p>
+    return <p className="text-[13px] text-ink-muted">Bu ay için bütçe eklediğinde kategori kullanımı burada görünecek.</p>
   }
 
+  // Şerit (`4d`): kategori limitleri kutu değil satır. Ad + "harcanan / limit"
+  // mono, altında 3px çubuk — aşımda danger, %80+ warning, altı brand.
   return (
-    <div className="space-y-2">
+    <div className="[&>*+*]:border-t [&>*+*]:border-line">
       {usage.map((budget) => {
-        const isOver = budget.status === 'over'
-        const isWarning = budget.status === 'warning'
+        const tone = budget.status === 'over' ? 'danger' : budget.status === 'warning' ? 'warning' : 'brand'
 
         return (
-          <div
-            key={budget.budgetId}
-            className={`rounded-xl border p-3 ${isOver ? 'border-destructive/20 bg-destructive/8' : isWarning ? 'border-warning/20 bg-warning/8' : 'border-border/50 bg-muted/30'}`}
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className="truncate text-sm font-bold text-foreground">{budget.category}</p>
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  {formatAmount(budget.spent)} / {formatAmount(budget.limit)}
-                </p>
-                {isOver ? (
-                  <p className="mt-0.5 text-xs font-medium text-destructive">
-                    Limit {formatAmount(diffTL(budget.spent, budget.limit))} aşıldı
-                  </p>
-                ) : isWarning ? (
-                  <p className="mt-0.5 text-xs font-medium text-warning">Limite yaklaşıyor</p>
-                ) : null}
-              </div>
-              <Badge variant={isOver ? 'destructive' : isWarning ? 'secondary' : 'outline'}>%{Math.round(budget.usageRate)}</Badge>
+          <div key={budget.budgetId} className="py-3">
+            <div className="flex items-baseline justify-between gap-3">
+              <p className="truncate text-[14.5px] font-semibold text-ink">{budget.category}</p>
+              <p className="serit-num shrink-0 text-[13px] text-ink">
+                {seritAmount(budget.spent).amount}
+                <span className="text-ink-faint"> / {seritAmount(budget.limit).amount} ₺</span>
+              </p>
             </div>
-            <Progress value={Math.min(100, budget.usageRate)} className="mt-3 h-1.5" />
+
+            <div className="mt-2 h-[3px] overflow-hidden rounded-full bg-track">
+              <div
+                className="h-full rounded-full transition-[width] duration-200 ease-out"
+                style={{ width: `${Math.min(100, budget.usageRate)}%`, background: SERIT_FILL[tone] }}
+              />
+            </div>
+
+            {budget.status === 'over' ? (
+              <p className="mt-1.5 text-xs" style={{ color: SERIT_TEXT.danger }}>
+                Limit {seritAmount(diffTL(budget.spent, budget.limit)).amount} ₺ aşıldı
+              </p>
+            ) : budget.status === 'warning' ? (
+              <p className="mt-1.5 text-xs" style={{ color: SERIT_TEXT.warning }}>
+                Limite yaklaşıyor · {formatPercent(budget.usageRate)}
+              </p>
+            ) : null}
           </div>
         )
       })}

@@ -14,10 +14,9 @@ import type { Loan, LoanInstallment } from '../types/database'
 import { formatDate } from '../utils/date'
 import { parseNumber } from '../utils/formatCurrency'
 import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
+import { useSeritAmount } from '../components/serit'
 import { useFinancePaymentDrawer } from '../hooks/useFinancePaymentDrawer'
 import { BankLogo } from '../components/finance/BankLogo'
-import { Badge } from '../components/ui/badge'
-import { Progress } from '../components/ui/progress'
 import { LoanOverview } from './LoansPage.components'
 import {
   getBankaKartlari,
@@ -41,6 +40,9 @@ const COMPLETED_LOAN_GROUPS = ['Tamamlananlar']
 
 export function LoansPage() {
   const { formatAmount } = useBalancePrivacy()
+  // Şerit blokları ondalıksız rakam ister; formatAmount kuruşu koruyor ve
+  // renderDetails/çekmece gibi metin yollarında kullanılmaya devam ediyor.
+  const seritAmount = useSeritAmount()
   const { confirm, confirmDialog } = useConfirmDialog()
   const { drawerProps, openPaymentDrawer } = useFinancePaymentDrawer()
   const [reloadLoans, setReloadLoans] = useState<(() => Promise<void>) | null>(null)
@@ -345,43 +347,58 @@ export function LoansPage() {
               ? getNextPaymentDate(loan.installment_day, loan.remaining_installments)
               : null
 
+          // Şerit (`4b`): kart değil blok. Ad+banka eyebrow olur, taksit sayacı ve
+          // aylık tutar tek satırda, altında 4px ilerleme, altında kalan/bitiş ikilisi.
           return (
-            <article className="rounded-2xl border border-border/75 bg-card p-4 shadow-[var(--shadow-card)] transition-all duration-250 hover:-translate-y-0.5 hover:shadow-[var(--shadow-lifted)] dark:ring-1 dark:ring-white/[0.04] min-[390px]:p-5">
+            <article className="border-t border-line-strong py-4 first:border-t-0">
               <div className="flex items-start justify-between gap-3">
-                <div className="flex min-w-0 items-center gap-3">
+                <div className="flex min-w-0 items-center gap-2.5">
                   <BankLogo bankName={loan.bank_name} size="sm" />
                   <div className="min-w-0">
-                    <h2 className="truncate text-base font-black text-foreground">{loan.loan_name}</h2>
-                    <p className="mt-0.5 text-xs text-muted-foreground">{loan.bank_name} · {loan.status === 'active' ? 'Aktif kredi' : 'Kapalı kredi'}</p>
+                    <p className="serit-eyebrow truncate">
+                      {loan.loan_name} · {loan.bank_name}
+                    </p>
+                    <p className="mt-1 flex flex-wrap items-baseline gap-x-2.5 text-[14.5px] font-semibold text-ink">
+                      <span className="serit-num">
+                        {progress.totalCount
+                          ? `${progress.paidCount} / ${progress.totalCount} taksit`
+                          : `${loan.remaining_installments} taksit kaldı`}
+                      </span>
+                      <span className="serit-num text-[13px] font-normal text-ink-muted">
+                        {seritAmount(loan.monthly_payment).amount} ₺/ay
+                      </span>
+                    </p>
                   </div>
                 </div>
-                <div className="flex shrink-0 items-center gap-2">
-                  <Badge variant={progress.next ? 'warning' : 'success'}>
-                    {progress.totalCount ? `${progress.paidCount}/${progress.totalCount}` : `${loan.remaining_installments} kaldı`}
-                  </Badge>
-                  {menu}
-                </div>
+                <div className="shrink-0">{menu}</div>
               </div>
 
-              <div className="mt-3">
-                <Progress value={progress.progressRate} color="primary" size="default" />
+              <div className="mt-3 h-1 overflow-hidden rounded-full bg-track">
+                <div
+                  className="h-full rounded-full transition-[width] duration-200 ease-out"
+                  style={{
+                    width: `${Math.min(100, Math.max(0, progress.progressRate))}%`,
+                    background: 'var(--primary)',
+                  }}
+                />
               </div>
 
-              <div className="mt-4 flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
-                <div className="min-w-0">
-                  <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Kalan borç</p>
-                  {/* Kapanmış kredide kalan borç 0 → olumlu durum; kırmızı yerine yeşil. */}
-                  <p className={`mt-0.5 font-mono text-lg font-black tabular-nums ${loan.remaining_amount > 0 ? 'text-destructive' : 'text-success'}`}>{formatAmount(loan.remaining_amount)}</p>
-                </div>
-                <div className="min-w-0">
-                  <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Aylık taksit</p>
-                  <p className="mt-0.5 font-mono text-lg font-black tabular-nums text-foreground">{formatAmount(loan.monthly_payment)}</p>
-                </div>
+              <div className="mt-2.5 flex flex-wrap gap-x-6 gap-y-1 text-[12.5px] text-ink-muted">
+                <span>
+                  Kalan{' '}
+                  {/* Kapanmış kredide kalan 0 → olumlu; kırmızı yerine jade. */}
+                  <span
+                    className="serit-num font-semibold"
+                    style={{ color: loan.remaining_amount > 0 ? 'var(--ink)' : 'var(--primary)' }}
+                  >
+                    {seritAmount(loan.remaining_amount).amount} ₺
+                  </span>
+                </span>
                 {nextPaymentDate ? (
-                  <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
-                    <CalendarDays size={14} />
-                    <span>{nextPaymentDate}</span>
-                  </div>
+                  <span className="inline-flex items-center gap-1.5">
+                    <CalendarDays size={13} aria-hidden="true" />
+                    Sıradaki <span className="serit-num font-semibold text-ink">{nextPaymentDate}</span>
+                  </span>
                 ) : null}
               </div>
 

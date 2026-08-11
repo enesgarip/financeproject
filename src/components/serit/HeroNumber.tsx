@@ -17,6 +17,7 @@ export function HeroNumber({
   description,
   progress,
   progressTone = 'brand',
+  unitOverride,
 }: {
   label: string
   value: number | null | undefined
@@ -25,9 +26,17 @@ export function HeroNumber({
   /** 0–100. Verilirse rakamın altına 4px'lik ilerleme çubuğu çizilir. */
   progress?: number
   progressTone?: SeritTone
+  /**
+   * Para olmayan kahraman rakamlar için birim ("bulgu", "gün"). Verildiğinde
+   * tutar biçimlendirmesi ve gizlilik maskesi UYGULANMAZ — bir sayaç gizlenecek
+   * bakiye değildir ve `••••` orada bilgi kaybı olur.
+   */
+  unitOverride?: string
 }) {
   const amount = useSeritAmount()
-  const { amount: text, unit } = amount(value)
+  const money = amount(value)
+  const text = unitOverride ? String(value ?? 0) : money.amount
+  const unit = unitOverride ?? money.unit
 
   return (
     <div>

@@ -304,7 +304,7 @@ export function CardsPage() {
                       await reload()
                     }}
                   />
-                  <AccountHubPanel rows={cardRows} onOpenTransfer={(source) => openTransaction(source, reload, cardRows, 'transfer')} formatAmount={formatAmount} />
+                  <AccountHubPanel rows={cardRows} onOpenTransfer={(source) => openTransaction(source, reload, cardRows, 'transfer')} />
                   <div className="hidden md:block">
                     <CardControlCenter
                       rows={cardRows}

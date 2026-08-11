@@ -25,20 +25,49 @@ Handoff'un iki varsayımı eskiydi ve düzeltildi: repo React 19 + Tailwind v4
   `hooks/useSafeToSpend.ts`'e taşındı (PlanningPage de artık oradan okuyor);
   tampon düzenleme `SeritBufferRow` olarak çizgi biçiminde geri geldi.
 
-**AÇIK — sıradaki ekranlar** (her biri ayrı faz): Hesaplar `4a`, Kart Borcu `3a`,
-Ödeme Takvimi `3b`, Krediler `4b`, Varlıklar `4c`, Hedefler `4d`, Analiz `3c`,
-Veri Kontrolü `3d`, ardından kabuk `4e` (Layout rail + BottomNav + FAB 76px bant).
+- ~~**Ş3 — Uygulama kabuğu (`4e`).**~~ DONE. 216px rail (raised zemin, 1px
+  ayıraç, gölge yok); kırılımlar <768 alt bar · 768-1024 ikon-only rail ·
+  ≥1024 tam rail. Alt bar yüzen hap olmaktan çıkıp dibe oturdu ve FAB için
+  **76px'lik opak ayrılmış bant** taşıyor — FAB artık hiçbir kaydırma
+  konumunda içeriğin üstüne binmiyor (ölçüldü: bandın en üstteki elemanı barın
+  kendisi). `QuickActions` panel/tetikleyici olarak ayrıldı.
+- ~~**Ş4 — Kalan sekiz ekran.**~~ DONE. Hesaplar `4a` (CardsPage.overview),
+  Kart Borcu `3a` (LiabilitiesCardsPage), Ödeme Takvimi `3b` (PaymentsPage),
+  Krediler `4b` (LoansPage + .components), Varlıklar `4c` (AssetsPage),
+  Hedefler `4d` (PlanningPage + BudgetProgress), Analiz `3c`
+  (AnalysisPage.hero), Veri Kontrolü `3d` (DataHealthPage). `HubNav` hap
+  yerine 2px jade alt çizgili sekme şeridi oldu (5 hub'ı birden etkiler).
+  `CrudPage`'in kendi sayfa başlığı kaldırıldı — başlık artık yalnız kabukta;
+  kahraman rakam en üstte, arama+ekle çubuğu onun altında.
+- ~~**Ş5 — Para biçimi tekilleştirildi.**~~ DONE. `formatPrivateCurrency`
+  (yani `useBalancePrivacy().formatAmount`) `formatSeritAmount`'a geçti:
+  sembol sonda, kuruş korunuyor. Aynı blokta "196.680 ₺" ile "₺196.680,00"
+  yan yana düşmesi bitti. `formatCurrency` dışa aktarım/PDF/rapor yollarında
+  duruyor (orada sembolün önde olması beklenen çıktı).
 
-**AÇIK — pilotun bıraktığı borç:**
+**Renk kuralı sapması (bilinçli):** Şerit "renk yalnızca sinyal" der; bu kural
+DURUM için uygulandı. Kompozisyon dilimleri (varlık sınıfı, gider kategorisi)
+repo'nun CVD-doğrulanmış `vizPalette` kimlik renklerini kullanmaya devam ediyor —
+`BreakdownSegment.color` bunun için var. Dört sinyal rengiyle sekiz varlık
+sınıfını ayırt etmek mümkün değildi.
+
+**AÇIK — kalan borç:**
 - Özet'in "Tüm detayları göster" katmanı hâlâ eski dilde (odak aksiyonları,
-  ekstre hatırlatıcısı, mutabakat, metrik kutuları, geçmiş). İlgili ekranlar
-  dönüştükçe eriyecek.
-- `--background` (#f1f5f3) ile Şerit `--page` (#f6f7f3) hâlâ ayrı; kabuk fazında
-  birleşecek. Şu an fark gözle seçilmiyor.
-- `DataHealthBadge` (DashboardPanels.tsx) artık kullanılmıyor — `3d` fazında ya
-  yeniden bağlanmalı ya silinmeli.
+  ekstre hatırlatıcısı, mutabakat, metrik kutuları, geçmiş) ve ekrandaki tek
+  eski-biçim para bu katmanda kaldı (4 tutar, `formatCurrency` doğrudan).
+  İlgili ekranlar dönüştükçe eriyecek.
+- `--background` (#f1f5f3) ile Şerit `--page` (#f6f7f3) hâlâ ayrı; `bg-page`
+  kabukta kullanıldığı için ekranda Şerit değeri geçerli, `body` gradyanı eski
+  değerde. Tek satırlık birleştirme bekliyor.
+- `--signal-*` ile `--destructive/--warning/--info` hâlâ ayrı token setleri.
+  Geçiş bittiğine göre birleştirilebilir; ayrı tutulma gerekçesi (dönüştürülmemiş
+  ekranlar kaymasın) artık geçerli değil.
+- `DataHealthBadge` (DashboardPanels.tsx) ve `PageCommandHeader`
+  (finance/FinanceUI.tsx) kullanılmıyor — silinebilir.
 - Tasarımın `3d` ekranındaki "34 kontrol temiz" cümlesi için "yapılan kontrol
   sayısı" üretilmiyor (`buildHealthCounts.total` = bulgu toplamı).
+- Modal/çekmece/form yüzeyleri (SimpleModal, FinancePaymentDrawer, CrudPage
+  formu) hâlâ kart dilinde — ekranlar bitti, kabuk içi yüzeyler sırada.
 
 ## 2026-08-10 — Banka modeli Faz 3: ödeme banka modeline indi
 

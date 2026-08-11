@@ -5,6 +5,13 @@ export type BreakdownSegment = {
   label: string
   value: number
   tone: SeritTone
+  /**
+   * Sinyal paletini aşan kimlik rengi (varlık sınıfı, gider kategorisi).
+   * Şerit "renk yalnızca sinyal" der ama bu kural DURUM için geçerli; bir
+   * kompozisyon diliminin rengi kimliktir ve repo'nun CVD-doğrulanmış viz
+   * paleti (`components/charts/vizPalette.ts`) orada daha doğru sonuç verir.
+   */
+  color?: string
 }
 
 /**
@@ -40,7 +47,7 @@ export function BreakdownBar({
                 className="transition-[width] duration-200 ease-out"
                 style={{
                   width: `${(Math.max(0, segment.value) / total) * 100}%`,
-                  background: SERIT_FILL[segment.tone],
+                  background: segment.color ?? SERIT_FILL[segment.tone],
                 }}
               />
             ))

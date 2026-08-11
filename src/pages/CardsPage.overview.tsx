@@ -1,4 +1,5 @@
-import { ArrowRightLeft, Landmark } from 'lucide-react'
+import { ArrowRightLeft } from 'lucide-react'
+import { HeroNumber, LineGroup, SectionEyebrow, SERIT_TEXT, useSeritAmount } from '../components/serit'
 import { BankLogo } from '../components/finance/BankLogo'
 import { AmountDisplay, FinancePanel, MiniStat, ProgressStrip, SectionHeader, StatusBadge } from '../components/finance/FinanceUI'
 import { Badge } from '../components/ui/badge'
@@ -144,12 +145,13 @@ export function CreditCardOverview({
 export function AccountHubPanel({
   rows,
   onOpenTransfer,
-  formatAmount = formatCurrency,
 }: {
   rows: Card[]
   onOpenTransfer: (source: Card) => void
-  formatAmount?: (value: number | null | undefined) => string
 }) {
+  // Tutarlar gizlilik maskesine saygılı Şerit biçimlendiricisinden geçer;
+  // panel artık dışarıdan formatAmount almıyor (iki biçim yan yana düşüyordu).
+  const seritAmount = useSeritAmount()
   const accounts = rows.filter((row) => row.card_type === 'banka_karti')
   const creditCards = rows.filter((row) => row.card_type === 'kredi_karti')
   if (accounts.length === 0 && creditCards.length === 0) return null
@@ -170,81 +172,70 @@ export function AccountHubPanel({
   ).sort((left, right) => right[1].balance - left[1].balance)
   const canTransfer = accounts.length > 1
 
+  // Şerit (`4a`): kahraman = borç sonrası likit; altında banka hesapları çizgi
+  // listesi. Kart yok — "accounts-signature-hub" gradyanlı bloğu kaldırıldı.
   return (
-    <SurfaceCard id="hesap-merkezi" className="accounts-signature-hub overflow-hidden border-0">
-      <CardHeader className="relative z-[1] pb-0">
-        <div className="flex min-w-0 items-start justify-between gap-4">
-          <div className="min-w-0">
-            <p className="finance-label">Nakit ve borç merkezi</p>
-            <CardTitle className="font-display mt-2 text-xl font-semibold sm:text-2xl">Paranın bugünkü konumu</CardTitle>
-            <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted-foreground">
-              Banka hesapları, ödenebilir kart borcu ve transfer aksiyonları tek yerde.
-            </p>
-          </div>
-          <div className="grid size-11 shrink-0 place-items-center rounded-xl bg-white/10 text-primary ring-1 ring-white/15">
-            <Landmark size={20} />
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent className="relative z-[1] flex flex-col gap-5 pt-4">
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.35fr)] lg:items-end">
-          <div className="min-w-0 rounded-xl bg-white/[0.065] p-4 ring-1 ring-white/10">
-            <p className="finance-label">Borç sonrası nakit</p>
-            <p className={`finance-value mt-3 truncate text-3xl font-bold leading-none sm:text-4xl ${balanceAfterPayableDebt >= 0 ? 'text-success' : 'text-destructive'}`}>
-              {formatAmount(balanceAfterPayableDebt)}
-            </p>
-            <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
-              Hesap bakiyesi eksi bugün ödenebilir kredi kartı borcu.
-            </p>
-          </div>
-          <div className="grid grid-cols-2 gap-2 min-[620px]:grid-cols-4">
-            <OverviewStat label="Hesap bakiyesi" value={formatAmount(accountBalance)} help={cardHelp.cashBalance} />
-            <OverviewStat label="Kart borcu" value={formatAmount(cardDebt)} help={cardHelp.totalDebt} />
-            <OverviewStat label="Ödenebilir" value={formatAmount(payableCardDebt)} help={cardHelp.statementDebt} />
-            <OverviewStat label="Banka" value={String(banks.length)} />
-          </div>
-        </div>
+    <section id="hesap-merkezi">
+      <HeroNumber
+        label="Likit toplam"
+        value={balanceAfterPayableDebt}
+        tone={balanceAfterPayableDebt >= 0 ? 'ink' : 'danger'}
+        description={
+          <>
+            Kart borcu düşülmüş net ·{' '}
+            <span className="serit-num text-ink">{seritAmount(accountBalance).amount} ₺</span> hesap bakiyesi,{' '}
+            <span className="serit-num" style={{ color: SERIT_TEXT.danger }}>
+              {seritAmount(payableCardDebt).amount} ₺
+            </span>{' '}
+            ödenebilir borç
+          </>
+        }
+      />
 
-        {accounts.length > 0 ? (
-          <div className="grid gap-2 min-[760px]:grid-cols-2">
+      <div className="mt-6">
+        <SectionEyebrow className="mb-1">
+          Banka hesapları · {banks.length} banka
+        </SectionEyebrow>
+
+        {accounts.length === 0 ? (
+          <p className="mt-2 text-[13px] text-ink-muted">Transfer için önce banka kartı türünde en az iki hesap ekle.</p>
+        ) : (
+          <LineGroup>
             {accounts.map((account) => (
-              <div key={account.id} className="accounts-bank-tile flex items-center justify-between gap-3 rounded-xl px-3 py-3">
+              <div key={account.id} className="flex items-center justify-between gap-3 py-[13px]">
                 <div className="flex min-w-0 items-center gap-3">
                   <BankLogo bankName={account.bank_name} size="sm" />
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-bold text-foreground">{account.card_name}</p>
-                    <p className="truncate text-xs text-muted-foreground">{account.bank_name}</p>
+                    <p className="truncate text-[14.5px] font-semibold text-ink">{account.card_name}</p>
+                    <p className="mt-0.5 truncate text-xs text-ink-muted">{account.bank_name}</p>
                   </div>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
-                  <span className="text-sm font-extrabold tabular-nums text-foreground">{formatAmount(account.current_balance)}</span>
+                  <span className="serit-num text-[17px] font-semibold text-ink">
+                    {seritAmount(account.current_balance).amount} ₺
+                  </span>
                   <button
                     type="button"
                     onClick={() => onOpenTransfer(account)}
                     disabled={!canTransfer}
-                    className="tap-target grid size-9 place-items-center rounded-lg border border-white/12 bg-white/8 text-muted-foreground transition hover:bg-white/14 hover:text-foreground disabled:opacity-45"
+                    className="grid size-9 place-items-center rounded-lg border border-line-strong text-ink-faint transition-colors duration-[120ms] hover:bg-black/[.02] hover:text-ink disabled:opacity-45 dark:hover:bg-white/[.03]"
                     aria-label={`${account.card_name} hesabından transfer yap`}
                   >
-                    <ArrowRightLeft size={15} />
+                    <ArrowRightLeft size={15} aria-hidden="true" />
                   </button>
                 </div>
               </div>
             ))}
-          </div>
-        ) : (
-          <p className="rounded-lg bg-muted/45 p-3 text-sm text-muted-foreground">Transfer için önce banka kartı türünde en az iki hesap ekle.</p>
+          </LineGroup>
         )}
+      </div>
 
-        {banks.length > 1 ? (
-          <div className="flex flex-wrap gap-2">
-            {banks.map(([bankName, bank]) => (
-              <Badge key={bankName} variant="outline">
-                {bankName} · {formatAmount(bank.balance)}
-              </Badge>
-            ))}
-          </div>
-        ) : null}
-      </CardContent>
-    </SurfaceCard>
+      {cardDebt > 0 ? (
+        <p className="mt-4 border-t border-line pt-3 text-[12.5px] text-ink-muted">
+          Kredi kartlarında toplam <span className="serit-num font-semibold text-ink">{seritAmount(cardDebt).amount} ₺</span> borç,
+          bugün ödenebilir kısmı <span className="serit-num font-semibold text-ink">{seritAmount(payableCardDebt).amount} ₺</span>.
+        </p>
+      ) : null}
+    </section>
   )
 }

@@ -1,12 +1,9 @@
-import { CreditCard, Wallet } from 'lucide-react'
 import { Link } from 'react-router'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useInvalidateFinanceSnapshot } from '../app/useFinanceSnapshot'
 import { FinancePaymentDrawer } from '../components/finance/FinancePaymentDrawer'
 import { Alert } from '../components/ui/alert'
-import { Badge } from '../components/ui/badge'
-import { Button } from '../components/ui/button'
-import { Card as SurfaceCard, CardContent, CardHeader, CardTitle } from '../components/ui/card'
+import { BreakdownBar, HeroNumber, LineGroup, SectionEyebrow, SERIT_TEXT, useSeritAmount } from '../components/serit'
 import { Skeleton } from '../components/ui/skeleton'
 import { fetchCards, fetchOpenStatementArchives } from '../data/repositories/cardsRepo'
 import { useFinancePaymentDrawer } from '../hooks/useFinancePaymentDrawer'
@@ -14,7 +11,7 @@ import type { Card as CardRow, CardStatementArchive } from '../types/database'
 import { getCardStatementPeriod } from '../utils/cardStatement'
 import { dateInputValue, formatDate } from '../utils/date'
 import { cardPayableDebt } from '../utils/financeSummary'
-import { formatCurrency } from '../utils/formatCurrency'
+import { formatPercent } from '../utils/formatCurrency'
 import { sumTL } from '../utils/money'
 import { isMissingSupabaseCapabilityError, missingSupabaseCapabilityMessage } from '../utils/supabaseErrors'
 
@@ -33,6 +30,7 @@ export function LiabilitiesCardsPage() {
   const [error, setError] = useState('')
   const { drawerProps, openPaymentDrawer } = useFinancePaymentDrawer()
   const invalidateSnapshot = useInvalidateFinanceSnapshot()
+  const seritAmount = useSeritAmount()
 
   const load = useCallback(async () => {
     const [cardsResult, statementsResult] = await Promise.all([fetchCards(), fetchOpenStatementArchives()])
@@ -95,7 +93,7 @@ export function LiabilitiesCardsPage() {
             <p>Son ödeme: {formatDate(statement.due_date)}</p>
             <p>
               Ekstre tutarı:{' '}
-              <span className="font-mono font-semibold text-foreground">{formatCurrency(statement.statement_debt_amount)}</span>
+              <span className="font-mono font-semibold text-foreground">{seritAmount(statement.statement_debt_amount).amount} ₺</span>
             </p>
           </>
         ),
@@ -130,11 +128,11 @@ export function LiabilitiesCardsPage() {
         detail: (
           <>
             <p className="font-semibold text-foreground">{card.card_name}</p>
-            <p>Ekstre borcu: {formatCurrency(card.statement_debt_amount)}</p>
-            <p>Dönem içi harcama: {formatCurrency(card.current_period_spending)}</p>
+            <p>Ekstre borcu: {seritAmount(card.statement_debt_amount).amount} ₺</p>
+            <p>Dönem içi harcama: {seritAmount(card.current_period_spending).amount} ₺</p>
             <p>
               Ödenebilir toplam:{' '}
-              <span className="font-mono font-semibold text-foreground">{formatCurrency(cardPayableDebt(card))}</span>
+              <span className="font-mono font-semibold text-foreground">{seritAmount(cardPayableDebt(card)).amount} ₺</span>
             </p>
           </>
         ),
@@ -155,112 +153,152 @@ export function LiabilitiesCardsPage() {
     )
   }
 
+  // Şerit (`3a`): kahraman = toplam kart borcu + kova çubuğu + limit kullanımı.
+  const buckets = {
+    statement: sumTL(creditCards.map((card) => card.statement_debt_amount)),
+    current: sumTL(creditCards.map((card) => card.current_period_spending)),
+    provision: sumTL(creditCards.map((card) => card.provision_amount ?? 0)),
+  }
+  const totalLimit = sumTL(creditCards.map((card) => card.credit_limit))
+  const usageRate = totalLimit > 0 ? Math.min(100, (totalDebt / totalLimit) * 100) : 0
+  // Ödenecek ekstre: en erken vadeli açık ekstre (fetch zaten due_date artan sıralı).
+  const dueStatement = openStatements.find((statement) => statement.statement_debt_amount > 0)
+  const dueStatementCard = dueStatement ? creditCards.find((card) => card.id === dueStatement.card_id) : undefined
+
   return (
-    <div className="flex flex-col gap-5">
+    <div>
       {error ? <Alert variant="warning">{error}</Alert> : null}
 
-      <SurfaceCard>
-        <CardContent className="flex items-center justify-between gap-3 p-4">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Toplam kart borcu</p>
-            <p className="text-2xl font-bold tabular-nums text-foreground">{formatCurrency(totalDebt)}</p>
-          </div>
-          <Badge variant="secondary">
-            {cardsWithDebt.length} kart · {creditCards.length} kredi kartı
-          </Badge>
-        </CardContent>
-      </SurfaceCard>
+      <HeroNumber
+        label="Toplam kart borcu"
+        value={totalDebt}
+        description={
+          totalLimit > 0 ? (
+            <>
+              {cardsWithDebt.length} kartta borç · limit kullanımı{' '}
+              <span className="serit-num font-semibold text-ink">{formatPercent(usageRate)}</span>
+            </>
+          ) : (
+            `${cardsWithDebt.length} kartta borç`
+          )
+        }
+      />
 
-      {creditCards.length === 0 ? (
-        <SurfaceCard>
-          <CardContent className="p-6 text-center text-sm text-muted-foreground">
+      {totalDebt > 0 ? (
+        <div className="mt-[18px]">
+          <BreakdownBar
+            height={8}
+            segments={[
+              { label: 'Ekstre', value: buckets.statement, tone: 'danger' },
+              { label: 'Dönem içi', value: buckets.current, tone: 'warning' },
+              { label: 'Provizyon', value: buckets.provision, tone: 'info' },
+            ]}
+          />
+        </div>
+      ) : null}
+
+      {/* Ekranın TEK yükseltilmiş bloğu: ödenmesi gereken ekstre. */}
+      {dueStatement && dueStatementCard ? (
+        <section className="mt-6 rounded-[14px] border border-line-strong bg-raised p-4">
+          <p className="serit-eyebrow" style={{ color: SERIT_TEXT.danger }}>
+            Ödenecek ekstre
+          </p>
+          <p className="mt-1.5 text-[14.5px] font-semibold text-ink">
+            {dueStatementCard.card_name} · {dueStatementCard.bank_name}
+          </p>
+          <p className="serit-num mt-2 text-[26px] font-semibold text-ink" style={{ letterSpacing: '-0.03em' }}>
+            {seritAmount(dueStatement.statement_debt_amount).amount} ₺
+          </p>
+          <p className="mt-1 text-[12.5px] text-ink-muted">
+            Son ödeme {formatDate(dueStatement.due_date)} · kalan dönem içi harcama sonraki ekstrede ödenir.
+          </p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => void openStatementPayment(dueStatement, dueStatementCard)}
+              className="rounded-[9px] bg-primary px-4 py-2 text-[13px] font-semibold text-primary-foreground transition-colors duration-[120ms] hover:brightness-95"
+            >
+              Öde
+            </button>
+            <Link
+              to="/kartlar?section=ekstre"
+              className="rounded-[9px] border border-line-strong px-4 py-2 text-[13px] font-semibold text-ink-muted transition-colors duration-[120ms] hover:bg-black/[.02] dark:hover:bg-white/[.03]"
+            >
+              Ekstreyi gör
+            </Link>
+          </div>
+        </section>
+      ) : null}
+
+      <section className="mt-7">
+        <SectionEyebrow className="mb-1">Kartlar</SectionEyebrow>
+
+        {creditCards.length === 0 ? (
+          <p className="mt-2 text-[13px] text-ink-muted">
             Kredi kartın yok. Kart eklemek ve yönetmek için{' '}
             <Link to="/kartlar" className="font-semibold text-primary hover:underline">
               Hesaplar
             </Link>{' '}
             sayfasına git.
-          </CardContent>
-        </SurfaceCard>
-      ) : cardsWithDebt.length === 0 ? (
-        <SurfaceCard>
-          <CardContent className="p-6 text-center text-sm text-muted-foreground">
-            Kredi kartlarında borç yok. 🎉
-          </CardContent>
-        </SurfaceCard>
-      ) : (
-        cardsWithDebt.map((card) => {
-          const period = getCardStatementPeriod(card, new Date())
-          const payable = cardPayableDebt(card)
-          // En erken vadeli açık ekstre (fetch zaten due_date artan sıralı).
-          const openStatement = openStatements.find((statement) => statement.card_id === card.id)
-          return (
-            <SurfaceCard key={card.id}>
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <CardTitle className="flex items-center gap-2 text-base">
-                      <CreditCard className="size-4 text-primary" /> {card.card_name}
-                    </CardTitle>
-                    <p className="text-xs text-muted-foreground">{card.bank_name}</p>
+          </p>
+        ) : cardsWithDebt.length === 0 ? (
+          <p className="mt-2 text-[13px] text-ink-muted">Kredi kartlarında borç yok.</p>
+        ) : (
+          <LineGroup>
+            {cardsWithDebt.map((card) => {
+              const period = getCardStatementPeriod(card, new Date())
+              const payable = cardPayableDebt(card)
+              const openStatement = openStatements.find((statement) => statement.card_id === card.id)
+              const cardUsage = card.credit_limit > 0 ? (card.debt_amount / card.credit_limit) * 100 : null
+              const dueLabel = openStatement?.due_date
+                ? formatDate(openStatement.due_date)
+                : period
+                  ? formatDate(period.dueDate)
+                  : 'Gün eksik'
+
+              return (
+                <div key={card.id} className="py-[13px]">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex min-w-0 items-center gap-3">
+                      {/* 3px renkli sol çubuk: kartı listede kimliklendirir. */}
+                      <span
+                        aria-hidden="true"
+                        className="h-8 w-[3px] shrink-0 rounded-full"
+                        style={{ background: card.debt_amount > 0 ? SERIT_TEXT.danger : SERIT_TEXT.neutral }}
+                      />
+                      <div className="min-w-0">
+                        <p className="truncate text-[14.5px] font-semibold text-ink">{card.card_name}</p>
+                        <p className="mt-0.5 truncate text-xs text-ink-muted">
+                          {card.bank_name} · son ödeme {dueLabel}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <p className="serit-num text-[17px] font-semibold text-ink">{seritAmount(card.debt_amount).amount} ₺</p>
+                      {cardUsage === null ? null : (
+                        <p className="serit-num mt-0.5 text-[11px] text-ink-muted">{formatPercent(cardUsage)} limit</p>
+                      )}
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-lg font-bold tabular-nums text-foreground">{formatCurrency(card.debt_amount)}</p>
-                    <p className="text-xs text-muted-foreground">Toplam borç</p>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="flex flex-col gap-3">
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                  <DebtStat label="Ekstre borcu" value={formatCurrency(card.statement_debt_amount)} />
-                  <DebtStat label="Dönem içi" value={formatCurrency(card.current_period_spending)} />
-                  <DebtStat label="Ödenebilir" value={formatCurrency(payable)} />
-                  <DebtStat
-                    label="Son ödeme"
-                    value={openStatement?.due_date
-                      ? formatDate(openStatement.due_date)
-                      : period ? formatDate(period.dueDate) : 'Gün eksik'}
-                  />
-                </div>
-                {openStatement ? (
-                  <>
-                    <p className="text-xs text-muted-foreground">
-                      Açık ekstre var — ödeme ekstre üzerinden yapılır; kalan dönem içi harcama sonraki ekstrede ödenir.
-                    </p>
-                    <Button
-                      variant="default"
-                      className="w-full sm:w-auto sm:self-end"
-                      disabled={openStatement.statement_debt_amount <= 0}
-                      onClick={() => void openStatementPayment(openStatement, card)}
+
+                  {!openStatement && payable > 0 ? (
+                    <button
+                      type="button"
+                      onClick={() => void openDebtPayment(card)}
+                      className="mt-2 text-[13px] font-semibold transition-opacity duration-[120ms] hover:opacity-80"
+                      style={{ color: SERIT_TEXT.brand }}
                     >
-                      <Wallet /> Ekstreyi öde ({formatCurrency(openStatement.statement_debt_amount)})
-                    </Button>
-                  </>
-                ) : (
-                  <Button
-                    variant="default"
-                    className="w-full sm:w-auto sm:self-end"
-                    disabled={payable <= 0}
-                    onClick={() => void openDebtPayment(card)}
-                  >
-                    <Wallet /> Kart borcunu öde
-                  </Button>
-                )}
-              </CardContent>
-            </SurfaceCard>
-          )
-        })
-      )}
+                      Kart borcunu öde →
+                    </button>
+                  ) : null}
+                </div>
+              )
+            })}
+          </LineGroup>
+        )}
+      </section>
 
       <FinancePaymentDrawer {...drawerProps} />
-    </div>
-  )
-}
-
-function DebtStat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-xl border border-border/60 bg-muted/30 p-2.5">
-      <p className="text-[0.7rem] font-semibold uppercase tracking-wide text-muted-foreground">{label}</p>
-      <p className="mt-0.5 text-sm font-bold tabular-nums text-foreground">{value}</p>
     </div>
   )
 }

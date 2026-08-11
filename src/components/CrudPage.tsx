@@ -8,7 +8,7 @@ import { cn, openNativePicker } from '../lib/utils'
 import type { CrudTableName, InsertFor, RowFor, UpdateFor } from '../types/database'
 import { normalizeSearchText } from '../utils/searchText'
 import { EmptyState } from './EmptyState'
-import { FormSection, PageCommandHeader } from './finance/FinanceUI'
+import { FormSection } from './finance/FinanceUI'
 import { SimpleModal } from './SimpleModal'
 import { Alert } from './ui/alert'
 import { Button } from './ui/button'
@@ -117,8 +117,8 @@ export function CrudPage<T extends CrudTableName>({
   table,
   addLabel,
   pageTitle,
-  pageLabel,
-  pageDescription,
+  // pageLabel/pageDescription artık çizilmiyor: sayfa başlığı kabukta (Layout).
+  // Prop olarak duruyorlar ki 10+ çağıran sayfa tek tek düzenlenmesin.
   fields,
   emptyTitle,
   emptyDescription,
@@ -363,33 +363,36 @@ export function CrudPage<T extends CrudTableName>({
   }
 
   return (
-    <section className="flex flex-col gap-5">
-      <PageCommandHeader
-        label={pageLabel}
-        title={pageTitle ?? addLabel}
-        description={pageDescription}
-        meta={normalizedQuery ? `${visibleRows.length} / ${rows.length} kayıt gösteriliyor` : `${rows.length} kayıt bulundu`}
-        tools={
-          <div className="grid gap-2 sm:grid-cols-[minmax(14rem,18rem)_auto] sm:items-center">
-            <label className="relative block">
-              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="Kayıtlarda ara"
-                className="pl-9 text-sm"
-              />
-            </label>
-            <Button type="button" onClick={openCreate} className="h-11 gap-2 px-4">
-              <Plus data-icon="inline-start" />
-              {addLabel}
-            </Button>
-          </div>
-        }
-      />
-
+    <section className="flex flex-col gap-6">
       {error ? <Alert variant="destructive">{error}</Alert> : null}
+
+      {/* Şerit: kahraman rakam ekranın EN ÜSTÜNDE durur, araç çubuğu onun altında.
+          Sayfa başlığı/açıklaması artık kabukta (Layout) — burada tekrarlanmıyor,
+          `pageTitle`/`pageLabel`/`pageDescription` yalnız erişilebilirlik başlığı
+          ve arama etiketi için taşınıyor. */}
       {renderBeforeList ? renderBeforeList({ loading, rows, reload: loadRows, setError }) : null}
+
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line-strong pt-4">
+        <p className="serit-eyebrow">
+          {normalizedQuery ? `${visibleRows.length} / ${rows.length} kayıt` : `${rows.length} kayıt`}
+        </p>
+        <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-2">
+          <label className="relative block min-w-0 flex-1 sm:max-w-64">
+            <span className="sr-only">{pageTitle ?? addLabel} içinde ara</span>
+            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-ink-faint" />
+            <Input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Kayıtlarda ara"
+              className="pl-9 text-sm"
+            />
+          </label>
+          <Button type="button" onClick={openCreate} className="h-11 gap-2 px-4">
+            <Plus data-icon="inline-start" />
+            {addLabel}
+          </Button>
+        </div>
+      </div>
 
       {!showList ? null : loading ? (
         <div className="grid gap-3 min-[760px]:grid-cols-2 xl:grid-cols-3">

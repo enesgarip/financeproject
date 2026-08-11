@@ -1,84 +1,62 @@
-import { CheckCircle2, Landmark } from 'lucide-react'
-import { Badge } from '../components/ui/badge'
-import { Card as SurfaceCard, CardContent } from '../components/ui/card'
 import type { Loan, LoanInstallment } from '../types/database'
 import { formatDate } from '../utils/date'
-import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
 import { sumTL } from '../utils/money'
+import { HeroNumber, SERIT_TEXT, useSeritAmount } from '../components/serit'
 import { nextPendingInstallment } from './LoansPage.helpers'
 
+/**
+ * Krediler ekranının kahraman rakamı — Şerit (`4b`): **kalan anapara**, altında
+ * aylık toplam taksit ve sıradaki vade. Kart yok; blok sayfa zemininde durur.
+ */
 export function LoanOverview({ loans, installments }: { loans: Loan[]; installments: LoanInstallment[] }) {
-  const { formatAmount } = useBalancePrivacy()
+  const format = useSeritAmount()
   const activeLoans = loans.filter((loan) => loan.status === 'active')
+
   if (activeLoans.length === 0) {
     // Hiç kredi yoksa CrudPage'in kendi boş durumu devreye girer. Burada yalnızca
-    // "kredileri olan ama hepsi kapanmış" için büyük boşluk yerine olumlu bir kart.
+    // "kredileri olan ama hepsi kapanmış" durumu için olumlu tek satır.
     if (loans.length === 0) return null
     return (
-      <SurfaceCard variant="elevated" className="overflow-hidden">
-        <CardContent className="flex items-center gap-4 p-4 sm:p-5">
-          <div className="grid size-12 shrink-0 place-items-center rounded-2xl bg-success/12 text-success">
-            <CheckCircle2 className="size-6" />
-          </div>
-          <div className="min-w-0">
-            <p className="font-display text-base font-bold text-foreground sm:text-lg">Aktif kredin yok</p>
-            <p className="mt-0.5 text-sm text-muted-foreground">
-              Tüm kredilerin kapandı — aylık taksit yükün ₺0. Geçmiş planlar aşağıda.
-            </p>
-          </div>
-        </CardContent>
-      </SurfaceCard>
+      <p className="text-[13px] text-ink-muted">
+        Tüm kredilerin kapandı — aylık taksit yükün{' '}
+        <span className="serit-num font-semibold" style={{ color: SERIT_TEXT.brand }}>
+          0 ₺
+        </span>
+        . Geçmiş planlar aşağıda.
+      </p>
     )
   }
 
   const totalRemaining = sumTL(activeLoans.map((loan) => loan.remaining_amount))
   const totalMonthly = sumTL(activeLoans.map((loan) => loan.monthly_payment))
-  const nextItems = activeLoans
+  const monthly = format(totalMonthly)
+  const nextPayment = activeLoans
     .map((loan) => ({ loan, item: nextPendingInstallment(loan, installments) }))
     .filter((entry): entry is { loan: Loan; item: LoanInstallment } => Boolean(entry.item))
-    .sort((a, b) => a.item.due_date.localeCompare(b.item.due_date))
-  const nextPayment = nextItems[0]
+    .sort((a, b) => a.item.due_date.localeCompare(b.item.due_date))[0]
 
   return (
-    <div className="flex flex-col gap-3">
-      <SurfaceCard variant="elevated" className="overflow-hidden">
-        <div className="pointer-events-none -mt-4 mb-1 h-[2px] bg-gradient-to-r from-destructive via-primary to-info opacity-80" />
-        <CardContent className="p-4 sm:p-5">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <p className="finance-label">Aylık Ödeme Yükü</p>
-              <p className="finance-value mt-1.5 text-[clamp(1.5rem,6vw,2.1rem)] font-bold leading-none text-foreground">{formatAmount(totalMonthly)}</p>
-              <p className="mt-1.5 text-xs text-muted-foreground">Aktif kredilerin toplam taksiti</p>
-            </div>
-            <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-destructive/12 text-destructive">
-              <Landmark className="size-5" />
-            </div>
-          </div>
-          <div className="mt-4 grid grid-cols-2 gap-2">
-            <OverviewStat label="Kalan Borç" value={formatAmount(totalRemaining)} tone="danger" />
-            <OverviewStat label="Aktif Kredi" value={`${activeLoans.length} kayıt`} />
-          </div>
-          {nextPayment ? (
-            <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-border/60 bg-muted/30 px-3 py-2.5 text-sm">
-              <div className="min-w-0">
-                <p className="truncate font-semibold text-foreground">{nextPayment.loan.loan_name}</p>
-                <p className="text-xs text-muted-foreground">Sıradaki taksit · {formatDate(nextPayment.item.due_date)}</p>
-              </div>
-              <Badge variant="warning">{formatAmount(nextPayment.item.amount)}</Badge>
-            </div>
-          ) : null}
-        </CardContent>
-      </SurfaceCard>
-    </div>
-  )
-}
+    <section>
+      <HeroNumber
+        label="Kalan kredi anaparası"
+        value={totalRemaining}
+        description={
+          <>
+            {activeLoans.length} aktif kredi · aylık{' '}
+            <span className="serit-num font-semibold" style={{ color: SERIT_TEXT.brand }}>
+              {monthly.amount} {monthly.unit}
+            </span>
+          </>
+        }
+      />
 
-export function OverviewStat({ label, value, tone = 'neutral' }: { label: string; value: string; tone?: 'neutral' | 'danger' | 'success' }) {
-  const toneClass = tone === 'danger' ? 'text-destructive' : tone === 'success' ? 'text-success' : 'text-foreground'
-  return (
-    <div className="min-w-0 rounded-xl border border-border/60 bg-muted/30 px-3 py-2.5">
-      <p className="finance-label truncate">{label}</p>
-      <p className={`finance-value mt-1 truncate text-sm font-bold tabular-nums ${toneClass}`}>{value}</p>
-    </div>
+      {nextPayment ? (
+        <p className="mt-4 border-t border-line pt-3 text-[12.5px] text-ink-muted">
+          Sıradaki taksit <span className="font-semibold text-ink">{nextPayment.loan.loan_name}</span> ·{' '}
+          {formatDate(nextPayment.item.due_date)} ·{' '}
+          <span className="serit-num font-semibold text-ink">{format(nextPayment.item.amount).amount} ₺</span>
+        </p>
+      ) : null}
+    </section>
   )
 }

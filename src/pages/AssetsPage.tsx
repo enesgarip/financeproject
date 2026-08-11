@@ -1,12 +1,11 @@
 import { ArrowDownRight, ArrowUpRight, Banknote, ChevronDown, ChevronUp, Coins, Landmark, LineChart, Minus, Plus, ShieldCheck, TrendingUp, Wallet } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState, type ComponentType, type FormEvent } from 'react'
 import { CrudPage, type FormField } from '../components/CrudPage'
-import { CompositionBar, type CompositionSlice } from '../components/charts/CompositionBar'
+import { type CompositionSlice } from '../components/charts/CompositionBar'
+import { BreakdownBar, HeroNumber, LineGroup, LineRow, SERIT_TEXT, useSeritAmount } from '../components/serit'
 import { buildVizColorMap, orderSlicesCanonically } from '../components/charts/vizPalette'
 import { RatesBanner } from '../components/finance/RatesBanner'
-import { Badge } from '../components/ui/badge'
 import { Button } from '../components/ui/button'
-import { Card, CardContent } from '../components/ui/card'
 import { fetchCrudRows } from '../data/repositories/crudRepo'
 import { useMarketRates } from '../hooks/useMarketRates'
 import { useStockPrices } from '../hooks/useStockPrices'
@@ -255,7 +254,9 @@ function validateAssetForm(formData: FormData): Record<string, string> {
 }
 
 function AssetsOverview({ rows, snapshot, stockPrices, bankCash }: { rows: Asset[]; snapshot: MarketRatesSnapshot | null; stockPrices: StockPrices; bankCash: number }) {
-  const { formatAmount } = useBalancePrivacy()
+  // Gizlilik maskesi (tutarları gizle) bu hook üzerinden geliyor; ham
+  // formatSeritAmount kullanılırsa maske atlanır ve tutar sızar.
+  const seritAmount = useSeritAmount()
   if (rows.length === 0) return null
 
   const valueOf = (row: Asset) => effectiveAssetValue(row, snapshot, stockPrices)
@@ -303,61 +304,85 @@ function AssetsOverview({ rows, snapshot, stockPrices, bankCash }: { rows: Asset
     ASSET_ORDER,
   )
 
+  // Sınıf satırları: kırılım çubuğuyla AYNI sırayı ve rengi kullanır, yoksa
+  // çubuktaki dilimi altındaki satırla eşlemek gözle yapılamaz.
+  const classRows = donutData.map((slice) => {
+    const isBank = slice.name === 'Banka'
+    const categoryRows = isBank ? [] : rows.filter((row) => row.category === slice.name)
+    return {
+      name: slice.name,
+      color: slice.color,
+      value: slice.value,
+      sharePct: total > 0 ? (slice.value / total) * 100 : 0,
+      subtitle: isBank ? 'Banka hesapları' : `${categoryRows.length} kayıt`,
+      profitPct: slice.name === 'Hisse' && hasStockCost ? stockProfitPct : null,
+    }
+  })
+
   return (
-    <Card variant="elevated" className="overflow-hidden border-primary/15">
-      {/* Top accent line */}
-      <div className="pointer-events-none -mt-4 mb-1 h-[2px] bg-gradient-to-r from-success via-primary to-warning opacity-80" />
-      <CardContent className="p-4 sm:p-5">
-        <div className="grid gap-5 sm:grid-cols-[1.1fr_1fr] sm:items-center">
-          {/* Left: total + highlights */}
-          <div className="min-w-0">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className="finance-label">Toplam Varlık</p>
-                <p className="finance-value mt-1.5 text-[clamp(1.75rem,7vw,2.5rem)] font-bold leading-none text-foreground">
-                  {formatAmount(total)}
+    <section>
+      <HeroNumber
+        label="Toplam varlık"
+        value={total}
+        description={
+          topCategory ? (
+            <>
+              En büyük kalem <span className="font-semibold text-ink">{topCategory.category}</span> · nakit ve banka{' '}
+              <span className="serit-num font-semibold text-ink">{seritAmount(cashTotal).amount} ₺</span>
+            </>
+          ) : undefined
+        }
+      />
+
+      <div className="mt-[18px]">
+        <BreakdownBar
+          segments={donutData.map((slice) => ({
+            label: slice.name,
+            value: slice.value,
+            tone: 'neutral' as const,
+            color: slice.color,
+          }))}
+          showValues={false}
+        />
+      </div>
+
+      <div className="mt-5">
+        <LineGroup>
+          {classRows.map((item) => (
+            <LineRow
+              key={item.name}
+              lead={
+                <span
+                  aria-hidden="true"
+                  className="size-2 shrink-0 rounded-[2px]"
+                  style={{ background: item.color }}
+                />
+              }
+              title={item.name}
+              subtitle={item.subtitle}
+              amount={item.value}
+              trailing={
+                <p
+                  className="serit-num mt-0.5 text-[11px]"
+                  style={{
+                    color:
+                      item.profitPct === null
+                        ? SERIT_TEXT.neutral
+                        : item.profitPct >= 0
+                          ? SERIT_TEXT.brand
+                          : SERIT_TEXT.danger,
+                  }}
+                >
+                  {item.profitPct === null
+                    ? formatPercent(item.sharePct)
+                    : formatPercent(item.profitPct, { signed: true })}
                 </p>
-              </div>
-              <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/12 text-primary">
-                <Wallet className="size-5" />
-              </div>
-            </div>
-
-            <div className="mt-4 grid grid-cols-2 gap-2">
-              <div className="min-w-0 rounded-xl border border-border/60 bg-muted/30 px-3 py-2.5">
-                <p className="finance-label truncate">Nakit (banka dahil)</p>
-                <p className="finance-value mt-1 truncate text-sm font-bold text-success">{formatAmount(cashTotal)}</p>
-              </div>
-              <div className="min-w-0 rounded-xl border border-border/60 bg-muted/30 px-3 py-2.5">
-                <p className="finance-label truncate">En Büyük Kalem</p>
-                <p className="finance-value mt-1 truncate text-sm font-bold text-foreground">
-                  {topCategory ? topCategory.category : '—'}
-                </p>
-              </div>
-            </div>
-
-            {hasStockCost ? (
-              <div className="mt-2 min-w-0 rounded-xl border border-border/60 bg-muted/30 px-3 py-2.5">
-                <p className="finance-label truncate">Hisse Kâr / Zarar</p>
-                <p className={`finance-value mt-1 truncate text-sm font-bold tabular-nums ${stockProfitTotal >= 0 ? 'text-success' : 'text-destructive'}`}>
-                  {stockProfitTotal >= 0 ? '+' : ''}{formatAmount(stockProfitTotal)} ({formatPercent(stockProfitPct, { signed: true })})
-                </p>
-              </div>
-            ) : null}
-
-            <div className="mt-3 flex items-center gap-2">
-              <Badge variant="secondary">{rows.length} kayıt</Badge>
-              <Badge variant="outline">{categoryTotals.length} kategori</Badge>
-            </div>
-          </div>
-
-          {/* Right: composition — yatay yığın, büyüklük karşılaştırması için */}
-          <div className="min-w-0">
-            <CompositionBar data={donutData} totalLabel="Varlık" />
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+              }
+            />
+          ))}
+        </LineGroup>
+      </div>
+    </section>
   )
 }
 
