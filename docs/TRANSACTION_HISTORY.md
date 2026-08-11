@@ -73,11 +73,10 @@ because the current undo flows explicitly do not refund cash automatically.
 | `record_card_installment_carryover` | `card` | Imported `card_expenses.id` | Remaining imported amount | Captures pre-app paid/remaining installment context in `note`. |
 | `pay_payment` | `payment` | `payments.id` | Paid amount | Bank source debits cash; credit-card source creates posted card spending. |
 | `pay_payment_from_card_import` | `payment` | `payments.id` | Paid amount | Statement/current movement import path for a matched planned payment; credit-card source creates posted card spending on the bank row date. |
-| `post_due_card_auto_payments` | `payment` | `payments.id` | Paid amount | Maintenance wrapper reuses `pay_payment`, so the same feed row contract applies. |
-| `pay_card_statement` | `payment` | `card_statement_archives.id` | Paid statement amount | Linked installments are marked paid but do not get separate history rows. |
+| `pay_card_statement` | `payment` | `card_statement_archives.id` | Paid statement amount | Installment rows are not mutated; UI derives paidness from the paid archive link (`isInstallmentSettled`). |
 | `pay_card_debt` | `payment`; optional preceding `correction` | `cards.id` or `card_current_settlements.id` | Paid amount; exact historical excess for repair audit | Full current-balance payments use the payment settlement row. Exact legacy pre-cycle excess creates a source-less `historical_repair` settlement and correction audit without a second cash/card aggregate movement. Future scheduled installments are not closed. |
 | `pay_loan_installment` | `loan` | `loan_installments.id` | Installment amount | Bank source is recorded in `note`; loan summary sync is DB-owned. |
-| `settle_personal_debt` | `debt` | `debts.id` | `estimated_value_try` | Covers both paying debt and collecting receivable; direction is in `note`. |
+| `settle_personal_debt` | `debt` | `debts.id` | Paid amount (full value or partial `p_amount`) | Covers both paying debt and collecting receivable; direction is in `note`. Partial payments keep the row `açık` with proportionally reduced `estimated_value_try`/`amount` and note the remaining value. |
 | `record_manual_account_movement` | `transfer` | `cards.id` | Movement amount | Manual bank-account in/out uses the affected account as source. |
 | `record_sms_account_movement` | `transfer` | `cards.id` | Movement amount | Service-role SMS path stores the bank-local timestamp with explicit offset. Non-null `source_event_id` makes retries return without repeating balance, ledger, or history effects. |
 | `transfer_between_accounts` | `transfer` | Source `cards.id` | Transfer amount | One feed row represents both debit and credit sides. |

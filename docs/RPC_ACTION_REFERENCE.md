@@ -13,7 +13,6 @@ repair rules, keep `docs/TRANSACTION_HISTORY.md` aligned with this file.
 
 | RPC | Called From | User-Visible Action | Main Effect |
 | --- | --- | --- | --- |
-| `post_due_card_auto_payments` | `runFinanceMaintenance` in `financeSnapshotRepo` | App open/dashboard snapshot maintenance | Posts due `bank_auto` payments to their selected credit cards by reusing `pay_payment`; returns processed count |
 | `post_due_card_installments` | `runFinanceMaintenance`, `run_scheduled_card_maintenance` | App open/server daily maintenance | Moves scheduled card installments whose exact due date has passed into `current_period_spending`; returns processed row count |
 | `cut_due_card_statements` | `runFinanceMaintenance`, `cutDueCardStatements` | App open/cards page maintenance | Cuts any due credit-card statements for the signed-in user after due installments have been posted; cards whose spending belongs entirely to the next statement are skipped without error; returns cut count |
 

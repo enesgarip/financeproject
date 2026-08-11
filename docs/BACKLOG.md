@@ -122,11 +122,118 @@ sınıfını ayırt etmek mümkün değildi.
   parçaları silinebilir (ölü ama zararsız).
 - `--surface-elevated`, `--shadow-*` tokenları artık kullanılmıyor; token
   bloğu sadeleştirilebilir.
+## 2026-08-10 — Banka modeli Faz 8: kısmi borç + vade çakışması
+
+Faz 7'de ertelenen kalemlerin devamı. Hâlâ AÇIK (bilinçli, düşük değer/yüksek
+altyapı): (2b) ay-sonu carryover anchor gün kaybı — çevrim başına kendini
+düzeltiyor, düzeltmesi ağır overload zincirine (7/8-arg carryover +
+replace_card_statement_import preserved-parent) dokunuyor, risk/değer düşük;
+gece penceresi (UTC/TR) ve Şubat+statement_day=31 için pgTAP kenar testleri
+(saat enjeksiyonu altyapısı gerekir — mevcut testler current_date bazlı);
+(1f) K3 ay-atlama dönem anahtarı kenarı — düşük frekans.
+
+- ~~**BM8 D-1 — Kısmi kişisel borç/alacak ödemesi.**~~ DONE.
+  `settle_personal_debt` opsiyonel `p_amount` aldı (migration `20260810190000`):
+  null/tam değer → kapatır (eski davranış); daha azı → estimated_value_try ve
+  amount'u oransal düşürür, kaydı açık bırakır, nakiti yalnız ödenen kadar
+  oynatır (auto_valued kayıtta miktar da oransal → sonraki değerleme senkronu
+  tutarlı). Çekmece tutarı settle/collect'te düzenlenebilir + borç değeri tavan
+  validasyonu; DebtsPage detayı toplam değer + kısmi açıklaması. Regresyon:
+  `partial_debt_and_due_collision.sql`.
+- ~~**BM8 2d — cut_card_statement due_date çakışma ötelemesi.**~~ DONE. Aynı
+  migration: `due_day <= statement_day` iken arşiv vadesi bir sonraki aya taşınır
+  (TS ikizi `getCardStatementPeriod` ile hizalı; eskiden DB'de arşiv
+  `due_date = statement_date` çakışıp UI projeksiyonundan ıraksıyordu). PDF
+  importu `p_due_date` verdiğinde o yine otoritedir. Regresyon aynı dosyada.
+
+- ~~**BM7 C-1/C-2 — Varlık satışı oransal değer.**~~ DONE. Miktar taşıyan
+  satışta değer satılan miktarla oransal düşer (tam satış sıfırlar → hayalet
+  değer yok); nakit bedel oransal değeri aşabilir (gerçekleşen kâr artık
+  engellenmiyor). Miktarsız TRY-nakit satışta kayıtlı değer üst sınırı korunur.
+  Migration `20260810180000` + UI kilidi miktarsıza daraltıldı + gerçek Postgres
+  regresyonu (`asset_trade_proportional_value.sql`).
+- ~~**BM7 A-2 — Kredi plan düzenlemeleri kayıtta hortlamıyor.**~~ DONE. `afterSave`
+  planı yalnız HİÇ yoksa jenerik şablondan kurar; plan bir kez oluştuktan sonra
+  kullanıcıya aittir (satır düzenleme/silme + "Ödendi say" korunur). Toplu
+  yenileme boş plandaki "Plan oluştur" ile yapılır.
+- ~~**BM7 A-3 — Ölü unpay_loan_installment drop edildi.**~~ DONE. UI çağırmıyor,
+  iade yapmadığı için elle çağrılsa banka bakiyesi ile kredi özetini ayrıştırırdı
+  (BM-4'teki kart muadili deseninin kredi karşılığı). Migration `20260810180000`
+  + types temizliği.
+
+## 2026-08-10 — Banka modeli Faz 6: iptal yaşam döngüsü
+
+Uyuyan-akış denetiminin iptal (İptal-B2/B4/B6) bulgularının UX + canlandırma
+dilimi.
+
+- ~~**BM6 — İptal keşfedilebilir + geri alınabilir.**~~ DONE. (İptal-B6) Yeni
+  `RecentCardExpensesPanel` (`/kartlar?section=islemler`) son 20 kesinleşmiş
+  hareketi listeler ve tek yerden append-only iptal sunar; ekstreye kesilmiş /
+  erken-ödemeyle kapatılmış satırlar kilitli (RPC de reddeder). (İptal-B2)
+  Migration `20260810170000`: iptal edilen kayıt `source_event_id`'yi rezerve
+  etmez — unique index + `add_card_expense`/`record_card_installment_carryover`/
+  `pay_payment_from_card_import` lookup'ları `status <> 'cancelled'` süzer; aynı
+  satırı yeniden import taze kayıt = iptali geri almanın kanonik yolu. Retry
+  güvenliği (advisory lock + aktif satır index'i) korunur; `record_sms_card_expense`
+  bilerek dışarıda. (İptal-B4) Planlı ödemeden doğan kaydın iptalinde çekmece,
+  planın "ödendi" kalacağını açıkça uyarır. Regresyon: `card_expense_idempotency`
+  canlandırma senaryosu.
+
+- ~~**BM5-a — Kart talimatlı ödeme bilgilendirme moduna indi (kullanıcı
+  kararı).**~~ DONE. Denetim B-1: tahmini tutarı proaktif karta yazan iki
+  kaynak (istemci hook'u vade günü + `post_due_card_auto_payments` ertesi gün)
+  SMS ile tutar sapmasında çift harcama üretebiliyordu. Artık talimat yalnız
+  bilgidir: `useAutoPayments`/`AutoPaymentConfirmation`/`utils/autoPayment`
+  kaldırıldı, RPC drop edildi (migration `20260810160000`), bakım zinciri iki
+  RPC'ye indi. Gerçek kayıt SMS'ten (plan ilerletme eşleşmesi KORUNDU) veya
+  ekstre importundan gelir; PaymentsPage kart talimatlı satırda bunu söyler ve
+  manuel "Öde" artık talimatlılarda da açıktır. Regresyonlar yeni modele
+  güncellendi (`maintenance_catchup.sql`, `sms_card_payment_reconciliation.sql`).
+- ~~**BM5-b — Devreden plan iptali borcu fazla düşürmüyor.**~~ DONE. Denetim
+  İptal-B1: carryover parent'ı tam plan tutarını taşır ama borca yalnız kalan
+  eklenir; `cancel_card_expense` amount kadar düşünce fark kayboluyordu. Yeni
+  kural (aynı migration): posted çok taksitli planda borç terslemesi = child
+  satır toplamı (planın gerçek katkısı); `add_card_expense` planlarında çocuk
+  toplamı = amount olduğundan davranış değişmez, çocuksuz legacy fallback
+  amount kalır. History kaydı da gerçek tersleme tutarını yazar.
+- ~~**BM5-c — Devam eden kredi girilebilir: "Ödendi say" (nakit hareketsiz).**~~
+  DONE. Denetim A-1: geçmiş taksitleri kapatmanın tek yolu bugünkü banka
+  bakiyesinden gerçek para düşürmekti. Plan panelinde artık geçmiş vadeli
+  bekleyenler için toplu "Geçmişi ödendi say (N)" + satır menüsünde "Ödendi
+  say" var: banka bakiyesine dokunmadan durum işaretlenir (paid_at = vade,
+  not: "Uygulama öncesi ödendi"), `sync_loan_summary` özeti otomatik kurar,
+  merge ödendi satırları zaten korur. Saf yardımcılar
+  (`pastDuePendingInstallments`, `markPaidWithoutCashPayload`) test edildi.
+
+## 2026-08-10 — Banka modeli Faz 4: sertleştirme
+
+Üç-akış denetiminin son planlı fazı.
+
+- ~~**T9 — Ölü taksit ödeme RPC'leri drop edildi.**~~ DONE.
+  `pay_card_installment(uuid,uuid)` + `unpay_card_installment(uuid)` eski
+  modelin (taksit başına borç düşme) kalıntısıydı; UI çağırmıyor ama grant'leri
+  açıktı ve çağrılsalar borcu ikinci kez düşürürlerdi. Migration
+  `20260810150000` + types temizliği.
+- ~~**O2 — YapıKredi plan toplamı tutarlılık kontrolüne bağlandı.**~~ DONE.
+  Alt satırdaki gerçek toplam ("146.999,00 TL'lik işlemin 4/9 taksidi") artık
+  çöpe atılmıyor: `kalan = toplam − aylık × sıra` çevirisiyle DenizBank'ın
+  `checkInstallmentNotation` kontrolünden geçer; eşit bölünmeyen plan veya
+  yanlış okunan adet needs-review'a düşer.
+- **T1 — `card_installments` yazımını RPC-only yapmak: ERTELENDİ.** Sebep:
+  `update_card_expense` ve `cut_card_statement` invoker-rights çalışır ve
+  taksit satırlarına authenticated tablo grant'leriyle yazar; grant'i kaldırmak
+  önce bu RPC'lerin security definer'a taşınmasını gerektirir (ayrı, dikkatli
+  bir güvenlik geçişi). Bugünkü koruma: arşivli/settled satırlar trigger
+  guard'lı; açık satır drift'ini Data Health non-fixable olarak raporlar.
+- **D2 — İstemcideki ölü ekstre eşleştirme kodu (matchTransactions,
+  checkStatementInstallments, reusableStatementInstallmentParentId ve
+  StatementImportModal'ın cleanImport=true ile erişilmez kalan yolları):
+  AÇIK.** K1 sunucu tarafı yeniden kullanım gelince kalıcı olarak gereksizleşti;
+  ayrı bir temizlik dilimi olarak silinebilir (davranış değişikliği yok).
 
 ## 2026-08-10 — Banka modeli Faz 3: ödeme banka modeline indi
 
-Üç-akış denetiminin üçüncü fazı. Faz 4 (card_installments RPC-only, ölü
-pay_card_installment RPC drop, YapıKredi gerçek toplam) AÇIK.
+Üç-akış denetiminin üçüncü fazı.
 
 - ~~**B1 — Tam güncel ödemenin kuruş-eşitlik kilidi kalktı.**~~ DONE.
   `pay_card_debt` tam güncel ödemede tüm allocation'sız satırları ödemenin

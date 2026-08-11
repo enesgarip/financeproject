@@ -745,19 +745,6 @@ export type Database = {
         }
         Returns: CardStatementArchive
       }
-      pay_card_installment: {
-        Args: {
-          p_installment_id: string
-          p_source_card_id: string
-        }
-        Returns: CardInstallment
-      }
-      unpay_card_installment: {
-        Args: {
-          p_installment_id: string
-        }
-        Returns: CardInstallment
-      }
       transfer_between_accounts: {
         Args: {
           p_source_card_id: string
@@ -836,12 +823,6 @@ export type Database = {
         }
         Returns: LoanInstallment
       }
-      unpay_loan_installment: {
-        Args: {
-          p_installment_id: string
-        }
-        Returns: LoanInstallment
-      }
       pay_payment: {
         Args: {
           p_payment_id: string
@@ -865,6 +846,8 @@ export type Database = {
         Args: {
           p_debt_id: string
           p_account_card_id: string
+          // null/tam değer → kapatır; daha az → kısmi ödeme (kayıt açık kalır).
+          p_amount?: number | null
         }
         Returns: Debt
       }
@@ -913,10 +896,6 @@ export type Database = {
           p_actions: Json
         }
         Returns: Json
-      }
-      post_due_card_auto_payments: {
-        Args: Record<string, never>
-        Returns: number
       }
       post_due_card_installments: {
         Args: Record<string, never>

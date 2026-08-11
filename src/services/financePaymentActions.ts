@@ -64,6 +64,7 @@ export function accountLabelForObligation(obligation: FinanceObligation | null) 
 
 export function amountLabelForObligation(obligation: FinanceObligation | null) {
   if (obligation?.action === 'collect_debt') return 'Tahsilat tutarı'
+  if (obligation?.action === 'settle_debt') return 'Ödeme tutarı'
   if (obligation?.action === 'pay_payment') return 'Ödenen gerçek tutar'
   if (obligation?.action === 'pay_card_debt') return 'Ödeme tutarı'
   return 'Tutar'
@@ -76,7 +77,10 @@ export function emptyAccountMessageForObligation(obligation: FinanceObligation |
 }
 
 export function obligationAmountEditable(obligation: FinanceObligation | null) {
-  return obligation?.action === 'pay_payment' || obligation?.action === 'pay_card_debt'
+  return obligation?.action === 'pay_payment'
+    || obligation?.action === 'pay_card_debt'
+    || obligation?.action === 'settle_debt'
+    || obligation?.action === 'collect_debt'
 }
 
 export function estimatedMinimumCardPayment(amount: number, rate = 0.2) {
@@ -115,19 +119,6 @@ export async function findRecentSmsAccountDebit(
   if (error || !data || data.length === 0) return null
   const row = data[0] as { occurred_at: string; title: string }
   return { occurredAt: row.occurred_at, title: row.title }
-}
-
-export async function payPaymentFromCard(
-  paymentId: string,
-  cardId: string,
-  amount: number,
-): Promise<FinancePaymentResult> {
-  const { error } = await supabase.rpc('pay_payment', {
-    p_payment_id: paymentId,
-    p_source_card_id: cardId,
-    p_paid_amount: amount,
-  })
-  return { error }
 }
 
 export async function submitFinanceObligationPayment({
@@ -176,9 +167,13 @@ export async function submitFinanceObligationPayment({
     })
     submitError = error
   } else if (obligation.action === 'settle_debt' || obligation.action === 'collect_debt') {
+    // BM-8 D-1: girilen tutar toplam değerin altındaysa kısmi ödeme; toplam
+    // değere eşitse (varsayılan) tam kapama. RPC tavanı borç değeridir.
+    const isPartial = amount > 0 && amount < obligation.amount
     const { error } = await supabase.rpc('settle_personal_debt', {
       p_debt_id: obligation.sourceId,
       p_account_card_id: account.id,
+      p_amount: isPartial ? amount : null,
     })
     submitError = error
   }

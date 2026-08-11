@@ -107,6 +107,34 @@ function buildLoanSchedule(loan: Loan): InsertFor<'loan_installments'>[] {
   return schedule
 }
 
+// BM-5c: Devam eden (bankada yarısı ödenmiş) kredi uygulamaya girildiğinde
+// geçmiş taksitleri "ödendi" saymanın nakit-hareketsiz yolu. pay_loan_installment
+// bugünkü banka bakiyesinden gerçek para düşürür; uygulama ÖNCESİ ödenmiş
+// taksitlerde yalnız plan durumu işaretlenir (paid_at = vade günü) ve
+// sync_loan_summary trigger'ı kredi özetini otomatik yeniden kurar.
+export const PAID_BEFORE_APP_NOTE = 'Uygulama öncesi ödendi (nakit hareketi yok).'
+
+export function pastDuePendingInstallments(
+  rows: LoanInstallment[],
+  today = dateInputValue(startOfToday()),
+) {
+  return rows.filter((item) => item.status !== 'ödendi' && item.due_date < today)
+}
+
+export function markPaidWithoutCashPayload(rows: LoanInstallment[]): InsertFor<'loan_installments'>[] {
+  return rows.map((item) => ({
+    id: item.id,
+    user_id: item.user_id,
+    loan_id: item.loan_id,
+    installment_no: item.installment_no,
+    due_date: item.due_date,
+    amount: item.amount,
+    status: 'ödendi',
+    paid_at: `${item.due_date}T00:00:00+03:00`,
+    note: item.note ?? PAID_BEFORE_APP_NOTE,
+  }))
+}
+
 export function nextPendingInstallment(loan: Loan, installments: LoanInstallment[]) {
   return installments
     .filter((item) => item.loan_id === loan.id && item.status !== 'ödendi')

@@ -32,15 +32,15 @@ describe('financeSnapshotRepo.runFinanceMaintenance', () => {
 
   it('runs maintenance RPCs and best-effort valuation sync', async () => {
     mocks.rpc
-      .mockResolvedValueOnce({ data: 1, error: null })
       .mockResolvedValueOnce({ data: 2, error: null })
       .mockResolvedValueOnce({ data: 3, error: null })
 
     await expect(runFinanceMaintenance()).resolves.toBeUndefined()
 
-    expect(mocks.rpc).toHaveBeenNthCalledWith(1, 'post_due_card_auto_payments')
-    expect(mocks.rpc).toHaveBeenNthCalledWith(2, 'post_due_card_installments')
-    expect(mocks.rpc).toHaveBeenNthCalledWith(3, 'cut_due_card_statements')
+    // BM-5: kart talimatlı ödemeler proaktif yazılmaz (post_due_card_auto_payments kaldırıldı).
+    expect(mocks.rpc).toHaveBeenNthCalledWith(1, 'post_due_card_installments')
+    expect(mocks.rpc).toHaveBeenNthCalledWith(2, 'cut_due_card_statements')
+    expect(mocks.rpc).toHaveBeenCalledTimes(2)
     expect(mocks.ensureRatesLoaded).toHaveBeenCalledTimes(1)
     expect(mocks.syncAutoValuedRows).toHaveBeenCalledWith({ rates: 'snapshot' })
   })
@@ -49,9 +49,8 @@ describe('financeSnapshotRepo.runFinanceMaintenance', () => {
     mocks.rpc
       .mockResolvedValueOnce({
         data: null,
-        error: { code: 'PGRST202', message: 'Could not find the function public.post_due_card_auto_payments in the schema cache' },
+        error: { code: 'PGRST202', message: 'Could not find the function public.post_due_card_installments in the schema cache' },
       })
-      .mockResolvedValueOnce({ data: 0, error: null })
       .mockResolvedValueOnce({ data: 0, error: null })
 
     await expect(runFinanceMaintenance()).rejects.toThrow(

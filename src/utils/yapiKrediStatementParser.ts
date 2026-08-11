@@ -9,6 +9,8 @@
  *  - Taksit bilgisi işlem satırının ALTINDAKİ satırda:
  *    "146.999,00 TL'lik işlemin 4 / 9 taksidi" → toplam / (kaçıncı / toplam adet).
  *    İşlem satırındaki tutar AYLIK taksit tutarıdır (DenizBank ile aynı semantik).
+ *    Plan toplamı "kalan borç"a çevrilir (kalan = toplam − aylık × sıra) →
+ *    DenizBank ile aynı checkInstallmentNotation tutarlılık kontrolü çalışır.
  *  - İşlemler yalnız "İşlem Tarihi İşlemler Tutar(TL)…" başlığı ile "TOPLAM" arasında;
  *    WORLDPUAN DETAYI bölümünde de tarih+tutar satırları var → bölge sınırı ŞART.
  *
@@ -16,6 +18,7 @@
  */
 import { suggestExpenseCategory, type CategoryMemory } from './categories'
 import { parseAmount, type ParsedStatement, type ParsedStatementAdjustment, type ParsedTransaction } from './denizBankStatementParser'
+import { roundTL } from './money'
 
 const MONTHS: Record<string, number> = {
   Ocak: 1, Şubat: 2, Mart: 3, Nisan: 4, Mayıs: 5, Haziran: 6,
@@ -112,11 +115,19 @@ export function parseYapiKrediStatement(text: string, memory?: CategoryMemory): 
     let isInstallment = false
     let installmentNo = 1
     let installmentCount = 1
+    let remainingDebt: number | null = null
     const instMatch = lines[i + 1]?.match(INSTALLMENT_RE)
     if (instMatch) {
       isInstallment = true
       installmentNo = Number(instMatch[2])
       installmentCount = Number(instMatch[3])
+      // Alt satır gerçek PLAN TOPLAMINI basar ("146.999,00 TL'lik işlemin
+      // 4/9 taksidi"). DenizBank'ın "kalan borç" semantiğine çevrilir
+      // (kalan = toplam − aylık × sıra) ki aynı tutarlılık kontrolünden
+      // (checkInstallmentNotation) geçsin: eşit bölünmeyen plan veya yanlış
+      // okunan adet needs-review'a düşer, körlemesine aylık × adet kurulmaz.
+      const planTotal = parseAmount(instMatch[1])
+      if (planTotal > 0) remainingDebt = roundTL(planTotal - amount * installmentNo)
       i++ // taksit satırını tükettik
     }
 
@@ -125,9 +136,7 @@ export function parseYapiKrediStatement(text: string, memory?: CategoryMemory): 
       continue
     }
 
-    // YapıKredi taksit notasyonunda kalan borç yer almaz → null (tutarlılık
-    // kontrolü bu banka için çalışmaz, adede eskisi gibi güvenilir).
-    transactions.push({ date, description, amount, category, isInstallment, installmentNo, installmentCount, remainingDebt: null })
+    transactions.push({ date, description, amount, category, isInstallment, installmentNo, installmentCount, remainingDebt })
   }
 
   return { cardLastFour, statementDate, dueDate, totalDebt, transactions, adjustments }

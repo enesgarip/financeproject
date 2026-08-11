@@ -72,23 +72,9 @@ begin
   end if;
 end $$;
 
--- Otomatik görev vade gününde bekler; SMS'e aynı gün öncelik verir.
-set local role authenticated;
-set local request.jwt.claims to '{"sub":"11111111-1111-1111-1111-111111111111","role":"authenticated"}';
-
-do $$
-declare
-  v_count integer;
-begin
-  select public.post_due_card_auto_payments() into v_count;
-  if v_count <> 1 then
-    raise exception 'FAIL auto fallback: yalnız dünkü ödeme işlenmeliydi, %', v_count;
-  end if;
-end $$;
-
-reset role;
-
--- Otomatik fallback önce: geciken SMS mevcut harcamaya bağlanır, borcu artırmaz.
+-- BM-5: proaktif fallback yok (post_due_card_auto_payments drop edildi).
+-- Geciken talimat da SMS geldiğinde kapanır: dünkü vadeli plan SMS'le eşleşir,
+-- tek harcama yazılır ve plan ilerler.
 set local role service_role;
 set local request.jwt.claims to '{"role":"service_role"}';
 
@@ -110,6 +96,7 @@ declare
   v_debt numeric;
   v_source text;
   v_event_id text;
+  v_due_date date;
 begin
   select count(*), max(source), max(source_event_id)
   into v_count, v_source, v_event_id
@@ -117,13 +104,28 @@ begin
   where card_id = 'c1000000-0000-4000-8000-000000000002';
 
   if v_count <> 1 or v_source <> 'sms' or v_event_id <> 'sms-card-event-2' then
-    raise exception 'FAIL auto-first eşleme: count/source/event 1/sms/event bekleniyordu, %/%/%', v_count, v_source, v_event_id;
+    raise exception 'FAIL geciken talimat eşleme: count/source/event 1/sms/event bekleniyordu, %/%/%', v_count, v_source, v_event_id;
   end if;
 
   select debt_amount into v_debt
   from public.cards where id = 'c1000000-0000-4000-8000-000000000002';
   if v_debt <> 685 then
-    raise exception 'FAIL auto-first borç iki kez yazıldı: 685 bekleniyordu, %', v_debt;
+    raise exception 'FAIL geciken talimat borcu tek yazılmalıydı: 685 bekleniyordu, %', v_debt;
+  end if;
+
+  select due_date into v_due_date
+  from public.payments where id = 'a1000000-0000-4000-8000-000000000002';
+  if v_due_date <= current_date then
+    raise exception 'FAIL geciken talimat planı ilerlemedi: %', v_due_date;
+  end if;
+
+  -- BM-5: proaktif yazan RPC tamamen kaldırıldı.
+  if exists (
+    select 1 from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public' and p.proname = 'post_due_card_auto_payments'
+  ) then
+    raise exception 'FAIL BM-5: post_due_card_auto_payments hâlâ mevcut.';
   end if;
 
   if has_function_privilege(
@@ -134,7 +136,7 @@ begin
     raise exception 'FAIL grant: authenticated SMS kart RPC çalıştıramamalı.';
   end if;
 
-  raise notice 'SMS kart/planlı ödeme eşleme regresyonu OK.';
+  raise notice 'SMS kart/planlı ödeme eşleme regresyonu OK (BM-5: SMS tek yazar).';
 end $$;
 
 rollback;

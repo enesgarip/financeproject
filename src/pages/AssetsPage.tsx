@@ -514,12 +514,15 @@ export function AssetsPage() {
       setTradeError('Kaynak hesap bakiyesi yetersiz.')
       return
     }
-    if (trade.direction === 'sell' && greaterThanTL(amount, trade.asset.estimated_value_try)) {
-      setTradeError('Satış tutarı varlığın kayıtlı değerinden büyük olamaz.')
-      return
-    }
     if (assetTradeRequiresQuantity(trade.asset) && (!quantity || quantity <= 0)) {
       setTradeError('Hisse, fon ve döviz işlemlerinde miktar girilmeli.')
+      return
+    }
+    // Miktarsız (TRY nakit / yalnız-değerleme) satışta tutar = değerdir, üst
+    // sınır kayıtlı değer. Miktar taşıyan satışta sınır MİKTARDIR (aşağıda);
+    // nakit bedel kayıtlı değeri aşabilir (gerçekleşen kâr — BM-7 C-1).
+    if (trade.direction === 'sell' && quantity === null && greaterThanTL(amount, trade.asset.estimated_value_try)) {
+      setTradeError('Satış tutarı varlığın kayıtlı değerinden büyük olamaz.')
       return
     }
     if (trade.direction === 'sell' && quantity !== null && quantity > trade.asset.amount) {

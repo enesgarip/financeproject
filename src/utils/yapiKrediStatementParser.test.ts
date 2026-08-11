@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { parseYapiKrediStatement } from './yapiKrediStatementParser'
 import { expenseTotalAmount } from './denizBankStatementParser'
+import { checkInstallmentNotation } from './importedInstallmentPlan'
 
 // Gerçek YapıKredi ekstresinden türetilmiş, kişisel alanları (isim/adres)
 // çıkarılmış temsili metin. Kart numarası zaten maskeli. WORLDPUAN DETAYI bölümü
@@ -70,6 +71,35 @@ describe('parseYapiKrediStatement', () => {
 
   it('açıklamadan şehir+ülke kodunu temizler', () => {
     expect(parsed.transactions.every((t) => !/ISTANBUL TR$/.test(t.description))).toBe(true)
+  })
+
+  // O2: alt satırdaki gerçek plan toplamı "kalan borç"a çevrilir
+  // (kalan = toplam − aylık × sıra) → DenizBank'la aynı tutarlılık kontrolü.
+  it('plan toplamını kalan borca çevirir ve gerçek ekstrede tutarlılık kontrolü geçer', () => {
+    const first = parsed.transactions[0]
+    // 146.999,00 − 16.333,22 × 5 = 65.332,90 (banka satırı 65.332,88 basar;
+    // 2 kuruş yuvarlama farkı toleransın çok içindedir).
+    expect(first.remainingDebt).toBe(65332.9)
+
+    const check = checkInstallmentNotation({
+      installmentAmount: first.amount,
+      installmentNo: first.installmentNo,
+      totalInstallments: first.installmentCount,
+      remainingDebt: first.remainingDebt ?? 0,
+    })
+    expect(check.consistent).toBe(true)
+  })
+
+  it('yanlış okunan taksit adedi tutarlılık kontrolünde yakalanır', () => {
+    const first = parsed.transactions[0]
+    // Adet 9 yerine 12 okunsaydı fark bir aylık tutarın katları olurdu → tutarsız.
+    const check = checkInstallmentNotation({
+      installmentAmount: first.amount,
+      installmentNo: first.installmentNo,
+      totalInstallments: 12,
+      remainingDebt: first.remainingDebt ?? 0,
+    })
+    expect(check.consistent).toBe(false)
   })
 })
 
