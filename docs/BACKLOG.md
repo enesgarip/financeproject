@@ -80,10 +80,14 @@ sınıfını ayırt etmek mümkün değildi.
   geçmişi kaldı — bunların tasarımda karşılığı yok ve silmek işlev kaybı olurdu.
   `DataHealthBadge` ve `buildFinancialHealth` kullanımı ölü kaldığı için düştü.
 
+- ~~**Ş11 — Para biçimi cümle üreten util'lere kadar indi.**~~ DONE.
+  `dashboardInsights`, `attention`, `statementReminder`, `dashboardUpcoming`,
+  `savingsGoal`, `analysisView` artık `formatSeritAmount(x, { decimals: 2 })`
+  kullanıyor — sembol sonda, kuruş korunuyor. 10 rota tarandı: uygulamada
+  eski biçim (₺ önde) SIFIR. `formatCurrency` yalnız `financialReport` (PDF/
+  dışa aktarım) ve `marketRates` (kur etiketi) yollarında kaldı.
+
 **AÇIK:**
-- Özet'in detay katmanındaki 4 tutar hâlâ eski para biçiminde
-  (`formatCurrency` doğrudan çağrılıyor, `FocusActionPanel` /
-  `StatementReminderPanel`). Uygulamadaki tek kalan biçim tutarsızlığı.
 - Tasarımın `3d` ekranındaki "34 kontrol temiz" cümlesi için "yapılan kontrol
   sayısı" üretilmiyor (`buildHealthCounts.total` = bulgu toplamı).
 - `/kartlar`'ın alt bölümleri (`CardsPage.list/.statements/.installment/

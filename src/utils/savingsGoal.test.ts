@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { SavingsGoal, SavingsGoalComponent } from '../types/database'
-import { formatCurrency } from './formatCurrency'
+import { formatSeritAmount } from './formatCurrency'
 import {
   formatComponentAmount,
   formatSavingsGoalAmount,
@@ -113,12 +113,12 @@ describe('amount formatting', () => {
     expect(formatSavingsGoalAmount(goal({ value_type: 'gram_altin' }), 50)).toBe('50 gram')
     expect(formatSavingsGoalAmount(goal({ value_type: 'ceyrek_altin' }), 3)).toBe('3 çeyrek')
     expect(formatSavingsGoalAmount(goal({ value_type: 'composite' }), 2)).toBe('2 bileşen')
-    expect(formatSavingsGoalAmount(goal({ value_type: 'TRY' }), 1000)).toBe(formatCurrency(1000))
+    expect(formatSavingsGoalAmount(goal({ value_type: 'TRY' }), 1000)).toBe(formatSeritAmount(1000, { decimals: 2 }))
   })
 
   it('labels component amounts by value type', () => {
     expect(formatComponentAmount({ value_type: 'gram_altin' }, 5)).toBe('5 gram')
     expect(formatComponentAmount({ value_type: 'ceyrek_altin' }, 2)).toBe('2 çeyrek')
-    expect(formatComponentAmount({ value_type: 'TRY' }, 1000)).toBe(formatCurrency(1000))
+    expect(formatComponentAmount({ value_type: 'TRY' }, 1000)).toBe(formatSeritAmount(1000, { decimals: 2 }))
   })
 })

@@ -8,7 +8,7 @@
  * float kalıntısı "hedefe ulaşıldı mı?" kararını bozmasın.
  */
 import type { SavingsGoal, SavingsGoalComponent, SavingsGoalValueType } from '../types/database'
-import { formatCurrency, formatNumber } from './formatCurrency'
+import { formatNumber, formatSeritAmount } from './formatCurrency'
 import { exceedsTL } from './money'
 
 export function savingsGoalValueTypeLabel(valueType: SavingsGoalValueType) {
@@ -22,14 +22,14 @@ export function formatSavingsGoalAmount(
   goal: Pick<SavingsGoal, 'value_type' | 'target_amount' | 'current_amount'>,
   amount: number,
 ) {
-  if (goal.value_type === 'TRY') return formatCurrency(amount)
+  if (goal.value_type === 'TRY') return formatSeritAmount(amount, { decimals: 2 })
   if (goal.value_type === 'composite') return `${formatNumber(amount)} bileşen`
   const unit = goal.value_type === 'gram_altin' ? 'gram' : 'çeyrek'
   return `${formatNumber(amount)} ${unit}`
 }
 
 export function formatComponentAmount(component: Pick<SavingsGoalComponent, 'value_type'>, amount: number) {
-  if (component.value_type === 'TRY') return formatCurrency(amount)
+  if (component.value_type === 'TRY') return formatSeritAmount(amount, { decimals: 2 })
   const unit = component.value_type === 'gram_altin' ? 'gram' : 'çeyrek'
   return `${formatNumber(amount)} ${unit}`
 }

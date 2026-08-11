@@ -8,7 +8,7 @@
  */
 import type { Card, CardStatementArchive } from '../types/database'
 import { dateInputValue, formatDate, nextMonthlyDate } from './date'
-import { formatCurrency } from './formatCurrency'
+import { formatSeritAmount } from './formatCurrency'
 import { daysUntilFrom, nextUncutStatementDate } from './statementCycle'
 
 export type StatementReminder = {
@@ -85,7 +85,7 @@ export function statementReminderTitle(reminder: StatementReminder) {
 }
 
 export function statementReminderDescription(reminder: StatementReminder) {
-  const period = `Dönem içi: ${formatCurrency(reminder.currentPeriodSpending)}`
+  const period = `Dönem içi: ${formatSeritAmount(reminder.currentPeriodSpending, { decimals: 2 })}`
   if (reminder.kind === 'ready') {
     return `${period}. Otomatik olarak ekstre borcuna aktarılıyor.`
   }
