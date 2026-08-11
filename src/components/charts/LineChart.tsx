@@ -184,7 +184,7 @@ export function LineChart({ data, series, height = 260 }: LineChartProps) {
               height={24 + series.length * 20}
               style={{ pointerEvents: 'none' }}
             >
-              <div className="rounded-xl border border-border/70 bg-card p-2.5 shadow-[var(--shadow-floating)]">
+              <div className="rounded-xl border border-border/70 bg-card p-2.5">
                 <p className="mb-1.5 text-[10px] font-semibold uppercase text-muted-foreground">{hovered.label}</p>
                 {series.map((s) => {
                   const v = hovered[s.key]

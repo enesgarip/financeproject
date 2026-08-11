@@ -64,7 +64,7 @@ export function ActivityFeedPanel({ data }: { data: AnalysisData }) {
   const grouped = useMemo(() => groupByDate(visibleItems), [visibleItems])
 
   return (
-    <div className="col-span-full rounded-2xl border border-border/60 bg-card p-4 shadow-sm">
+    <div className="col-span-full rounded-2xl border border-border/60 bg-card p-4 ">
       <div className="mb-3 flex items-center justify-between gap-2">
         <h3 className="text-sm font-bold text-foreground">Aktivite Akışı</h3>
         <button

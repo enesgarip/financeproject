@@ -51,37 +51,44 @@ repo'nun CVD-doğrulanmış `vizPalette` kimlik renklerini kullanmaya devam ediy
 `BreakdownSegment.color` bunun için var. Dört sinyal rengiyle sekiz varlık
 sınıfını ayırt etmek mümkün değildi.
 
-**AÇIK — handoff'un tarif etmediği 9 alt rota.** Handoff yalnız 9 ana ekranı
-belgeliyor ("Kişiler ve Kart Borcu sekmeleri aynı iskeleti kullanır" deyip
-geçiyor). Şu rotalar kabuğu ve hub sekmesini aldı ama içerikleri hâlâ eski
-dilde — kahraman rakam yok, kart ve gölge duruyor:
-`/varliklar/maas` · `/varliklar/altin` · `/varliklar/araclar` ·
-`/borclar/kisiler` · `/odemeler/alsam-mi` · `/odemeler/liste` ·
-`/odemeler/baglamlar` · `/analiz/detay` · `/veri-sagligi/islemler`.
-Ayrıca `/kartlar`'ın "İşlemler" sekmesi ve alt bölümleri (`CardsPage.list`,
-`.statements`, `.installment`, `.expense`) dönüşmedi; o sayfada yalnız
-`AccountHubPanel` Şerit'e geçti.
-Bunlardan dördünde **başlık tekrarı** var: `PageCommandHeader` hâlâ sayfanın
-içinde ve kabuk zaten aynı başlığı gösteriyor →
-`/odemeler/alsam-mi`, `/odemeler/liste`, `/analiz/detay`, `/veri-sagligi/islemler`.
-(Bu yüzden `PageCommandHeader` "ölü kod" değil; önce bu dört sayfa dönüşmeli.)
+- ~~**Ş6 — Handoff'un tarif etmediği 9 alt rota + uzun kuyruk.**~~ DONE.
+  `/varliklar/maas` (kahraman + 6 kayıtlık trend), `/varliklar/altin` (güncel
+  değer + kâr/zarar Delta), `/varliklar/araclar`, `/borclar/kisiler` (net
+  denge + borç/alacak kırılımı), `/odemeler/alsam-mi`, `/odemeler/liste`
+  (bekleyen istek toplamı), `/odemeler/baglamlar`, `/analiz/detay`,
+  `/veri-sagligi/islemler`. Dört sayfadaki **başlık tekrarı** giderildi:
+  `PageCommandHeader` bu sayfalardan kaldırıldı (kabuk zaten başlığı taşıyor).
+- ~~**Ş7 — Kart bileşeni Şerit'e indirildi.**~~ DONE. `components/ui/card.tsx`
+  gölge/parlaklık yerine 1px `line-strong` + `raised` zemine geçti; 40+
+  çağıranı olan `variant` API'si korundu. Bu, dosya dosya dolaşmadan kalan
+  tüm yüzeyleri (araçlar, bağlamlar, modal/çekmece içleri, detay panelleri)
+  aynı dile getirdi.
+- ~~**Ş8 — Gölge süpürmesi.**~~ DONE. 41 dosyadan 87, ikinci turda 13 dosyadan
+  18 gölge yardımcısı ve `index.css`'ten 9 `box-shadow` kaldırıldı. Kalan
+  tek gölge FAB'ın (tasarımın açık istisnası) ve login ekranının (Şerit kapsamı
+  dışında). Ekrandaki `ring-1` kullanımları teknik olarak box-shadow üretiyor
+  ama 1px çizgi anlamına geliyor — kasıtlı bırakıldı, layout'u da bozmuyorlar.
+- ~~**Ş9 — Token setleri birleştirildi.**~~ DONE. `--destructive/--warning/
+  --info/--primary` Şerit değerlerine çekildi (hepsi eskisinden daha koyu →
+  kontrast arttı), `--signal-*` artık onlara alias. `--page`/`--raised`
+  `--background`/`--card`'a bağlandı: tek kaynak. Tek ayrık değer
+  `--signal-warning` (açık temada çubuk dolgusu #c68a1f, metin AA için
+  `--warning`).
+- ~~**Ş10 — Özet detay katmanı budandı.**~~ DONE. Net değer (artık Analiz'in
+  kahraman rakamı) ve borç/limit metrik kutuları (kendi ekranlarında)
+  kaldırıldı. Odak aksiyonları, ekstre hatırlatıcısı, mutabakat ve işlem
+  geçmişi kaldı — bunların tasarımda karşılığı yok ve silmek işlev kaybı olurdu.
+  `DataHealthBadge` ve `buildFinancialHealth` kullanımı ölü kaldığı için düştü.
 
-**AÇIK — kalan borç:**
-- Özet'in "Tüm detayları göster" katmanı hâlâ eski dilde (odak aksiyonları,
-  ekstre hatırlatıcısı, mutabakat, metrik kutuları, geçmiş) ve ekrandaki tek
-  eski-biçim para bu katmanda kaldı (4 tutar, `formatCurrency` doğrudan).
-  İlgili ekranlar dönüştükçe eriyecek.
-- `--background` (#f1f5f3) ile Şerit `--page` (#f6f7f3) hâlâ ayrı; `bg-page`
-  kabukta kullanıldığı için ekranda Şerit değeri geçerli, `body` gradyanı eski
-  değerde. Tek satırlık birleştirme bekliyor.
-- `--signal-*` ile `--destructive/--warning/--info` hâlâ ayrı token setleri.
-  Geçiş bittiğine göre birleştirilebilir; ayrı tutulma gerekçesi (dönüştürülmemiş
-  ekranlar kaymasın) artık geçerli değil.
-- `DataHealthBadge` (DashboardPanels.tsx) hiçbir yerde kullanılmıyor — silinebilir.
+**AÇIK:**
+- Özet'in detay katmanındaki 4 tutar hâlâ eski para biçiminde
+  (`formatCurrency` doğrudan çağrılıyor, `FocusActionPanel` /
+  `StatementReminderPanel`). Uygulamadaki tek kalan biçim tutarsızlığı.
 - Tasarımın `3d` ekranındaki "34 kontrol temiz" cümlesi için "yapılan kontrol
   sayısı" üretilmiyor (`buildHealthCounts.total` = bulgu toplamı).
-- Modal/çekmece/form yüzeyleri (SimpleModal, FinancePaymentDrawer, CrudPage
-  formu) hâlâ kart dilinde — ekranlar bitti, kabuk içi yüzeyler sırada.
+- `/kartlar`'ın alt bölümleri (`CardsPage.list/.statements/.installment/
+  .expense`) kart bileşeni üzerinden Şerit'e geldi ama kendi kahraman
+  rakamları/çizgi listeleri yok — yapısal dönüşüm değil, yüzey dönüşümü.
 
 ## 2026-08-10 — Banka modeli Faz 3: ödeme banka modeline indi
 

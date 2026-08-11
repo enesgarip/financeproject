@@ -1,10 +1,10 @@
-import { ArrowDownRight, ArrowUpRight, Minus, TrendingUp } from 'lucide-react'
+import { ArrowDownRight, ArrowUpRight } from 'lucide-react'
 import { CrudPage, type FormField } from '../components/CrudPage'
-import { Card, CardContent } from '../components/ui/card'
+import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
+import { Delta, HeroNumber, SectionEyebrow, TrendBars } from '../components/serit'
 import type { SalaryHistory } from '../types/database'
 import { formatDate } from '../utils/date'
 import { parseNumber } from '../utils/formatCurrency'
-import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
 import { getSalaryTrend } from '../utils/financeSummary'
 import { diffTL } from '../utils/money'
 
@@ -16,48 +16,36 @@ const salaryFields: FormField[] = [
 ]
 
 function SalaryOverview({ rows }: { rows: SalaryHistory[] }) {
-  const { formatAmount } = useBalancePrivacy()
   if (rows.length === 0) return null
 
   const { current, previous, difference, percentage } = getSalaryTrend(rows)
   if (!current) return null
-  const isUp = difference > 0
-  const isDown = difference < 0
-  const DeltaIcon = isUp ? ArrowUpRight : isDown ? ArrowDownRight : Minus
-  const deltaColor = isUp ? 'text-success' : isDown ? 'text-destructive' : 'text-muted-foreground'
+  // Trend serisi: en eski → en yeni, son çubuk jade olsun diye kronolojik.
+  const trend = [...rows]
+    .sort((a, b) => a.effective_date.localeCompare(b.effective_date))
+    .slice(-6)
+    .map((row) => row.amount)
 
+  // Şerit: kahraman = güncel maaş, altında son değişim (Delta) ve 6 aylık trend.
   return (
-    <Card variant="default" className="overflow-hidden border-success/20">
-      <CardContent className="p-4 sm:p-5">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <p className="finance-label">Güncel Maaş</p>
-            <p className="finance-value mt-1.5 text-[clamp(1.5rem,6vw,2.1rem)] font-bold leading-none text-foreground">
-              {formatAmount(current.amount)}
-            </p>
-            <p className="mt-1.5 text-xs text-muted-foreground">{formatDate(current.effective_date)}</p>
-          </div>
-          <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-success/12 text-success">
-            <TrendingUp className="size-5" />
-          </div>
-        </div>
+    <section>
+      <HeroNumber label="Güncel maaş" value={current.amount} description={formatDate(current.effective_date)} />
 
-        {previous ? (
-          <div className="mt-4 flex items-center justify-between gap-3 rounded-xl border border-border/60 bg-muted/30 px-3 py-2.5">
-            <span className="text-xs text-muted-foreground">Önceki kayda göre</span>
-            <span className={`flex items-center gap-1 font-mono text-sm font-semibold tabular-nums ${deltaColor}`}>
-              <DeltaIcon size={14} />
-              {difference >= 0 ? '+' : ''}{formatAmount(difference)}
-              <span className="ml-1 text-xs">({percentage >= 0 ? '+' : ''}{percentage.toFixed(1)}%)</span>
-            </span>
-          </div>
-        ) : (
-          <div className="mt-4 rounded-xl border border-border/60 bg-muted/30 px-3 py-2.5 text-xs text-muted-foreground">
-            İlk maaş kaydı — sonraki kayıtlarda artış trendi burada görünecek.
-          </div>
-        )}
-      </CardContent>
-    </Card>
+      {previous ? (
+        <Delta value={difference} percent={percentage} suffix="önceki kayda göre" />
+      ) : (
+        <p className="mt-2.5 text-[13px] text-ink-muted">
+          İlk maaş kaydı — sonraki kayıtlarda artış trendi burada görünecek.
+        </p>
+      )}
+
+      {trend.length >= 2 ? (
+        <div className="mt-5">
+          <SectionEyebrow className="mb-2">Maaş trendi · son {trend.length} kayıt</SectionEyebrow>
+          <TrendBars values={trend} label={`Son ${trend.length} maaş kaydının trendi`} />
+        </div>
+      ) : null}
+    </section>
   )
 }
 

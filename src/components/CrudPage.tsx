@@ -397,7 +397,7 @@ export function CrudPage<T extends CrudTableName>({
       {!showList ? null : loading ? (
         <div className="grid gap-3 min-[760px]:grid-cols-2 xl:grid-cols-3">
           {Array.from({ length: 6 }, (_, index) => (
-            <div key={index} className="rounded-2xl border border-border/50 bg-card p-4 shadow-[var(--shadow-card)] min-[390px]:p-5">
+            <div key={index} className="rounded-2xl border border-border/50 bg-card p-4 min-[390px]:p-5">
               <Skeleton className="h-5 w-2/3" />
               <Skeleton className="mt-3 h-3.5 w-1/2" />
               <div className="mt-5 grid grid-cols-2 gap-2">
@@ -457,7 +457,7 @@ export function CrudPage<T extends CrudTableName>({
                         <MoreVertical size={18} />
                       </button>
                       {menuOpenId === row.id && (
-                        <div className="absolute right-0 top-full z-10 mt-1 w-44 rounded-lg border border-border bg-popover py-1 shadow-[var(--shadow-elevated)]">
+                        <div className="absolute right-0 top-full z-10 mt-1 w-44 rounded-lg border border-border bg-popover py-1">
                           {renderMenuActions ? renderMenuActions(row, { reload: loadRows, setError, rows, closeMenu: () => setMenuOpenId(null) }) : null}
                           {editAllowed ? (
                             <button
@@ -510,7 +510,7 @@ export function CrudPage<T extends CrudTableName>({
                       data-card-id={row.id}
                       style={getCardStyle?.(row, rows)}
                       className={cn(
-                        'min-w-0 rounded-2xl border bg-card p-4 shadow-[var(--shadow-card)] transition-all duration-250 hover:-translate-y-0.5 hover:shadow-[var(--shadow-lifted)] dark:ring-1 dark:ring-white/[0.04] min-[390px]:p-5',
+                        'min-w-0 rounded-2xl border bg-card p-4 transition-all duration-250 hover:-translate-y-0.5 min-[390px]:p-5',
                         getCardClassName?.(row, rows) ?? 'border-border/75',
                       )}
                     >
@@ -535,7 +535,7 @@ export function CrudPage<T extends CrudTableName>({
                           <MoreVertical size={18} />
                         </button>
                         {menuOpenId === row.id && (
-                          <div className="absolute right-0 top-full z-10 mt-1 w-40 rounded-lg border border-border bg-popover py-1 shadow-[var(--shadow-elevated)]">
+                          <div className="absolute right-0 top-full z-10 mt-1 w-40 rounded-lg border border-border bg-popover py-1">
                             {renderMenuActions ? renderMenuActions(row, { reload: loadRows, setError, rows, closeMenu: () => setMenuOpenId(null) }) : null}
                             {editAllowed ? (
                               <button
@@ -763,7 +763,7 @@ export function CrudPage<T extends CrudTableName>({
           <Button
             type="submit"
             disabled={saving}
-            className="sticky bottom-0 z-10 h-12 w-full shadow-[0_-10px_24px_rgba(255,255,255,0.9)] dark:shadow-[0_-10px_24px_rgba(12,10,9,0.9)] sm:static sm:shadow-none"
+            className="sticky bottom-0 z-10 h-12 w-full sm:static sm:shadow-none"
           >
             {saving ? 'Kaydediliyor...' : 'Kaydet'}
           </Button>

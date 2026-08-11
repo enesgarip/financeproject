@@ -5,7 +5,6 @@ import { NotificationSettings } from '../components/finance/NotificationSettings
 import { AutomationCoveragePanel } from '../components/finance/AutomationCoveragePanel'
 import { SmsLogPanel } from '../components/finance/SmsLogPanel'
 import { Alert } from '../components/ui/alert'
-import { PageCommandHeader } from '../components/finance/FinanceUI'
 import { Card as SurfaceCard, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import {
   buildBackupPayload,
@@ -168,11 +167,9 @@ export function DataHealthOperationsPage() {
   return (
     <>
       <section className="space-y-4">
-        <PageCommandHeader
-          label="Operasyon merkezi"
-          title="Yedek, otomasyon ve cihaz ayarları"
-          description="Finans verisinin taşınabilirliğini, bildirimleri ve otomatik veri giriş kapsamını tek yerde yönet."
-        />
+        <p className="text-[13px] text-ink-muted">
+          Finans verisinin taşınabilirliğini, bildirimleri ve otomatik veri giriş kapsamını tek yerde yönet.
+        </p>
         <SurfaceCard variant="elevated" className="overflow-hidden">
           <div className="pointer-events-none -mt-4 mb-1 h-[2px] bg-gradient-to-r from-success via-info to-destructive opacity-80" />
           <CardHeader className="pb-2">

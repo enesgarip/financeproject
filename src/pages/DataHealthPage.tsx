@@ -461,7 +461,7 @@ export function DataHealthPage() {
                 type="button"
                 onClick={() => void openFixAllPreview()}
                 disabled={loading || Boolean(fixingId) || undoing || acknowledgementBusy || safeRepairPlan.length === 0}
-                className="inline-flex items-center gap-2 rounded-xl bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground shadow-[0_2px_8px_color-mix(in_srgb,var(--primary)_30%,transparent)] transition hover:bg-primary/90 active:scale-[0.97] disabled:opacity-50"
+                className="inline-flex items-center gap-2 rounded-xl bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 active:scale-[0.97] disabled:opacity-50"
               >
                 <Wrench size={15} />
                 Önizle ve güvenli çözümleri uygula

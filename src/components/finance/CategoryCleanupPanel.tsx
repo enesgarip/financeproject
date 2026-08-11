@@ -107,7 +107,7 @@ export function CategoryCleanupPanel({ onChanged }: { onChanged?: () => void }) 
   if (!loading && groups.length === 0 && savedCount === 0 && !error) return null
 
   return (
-    <SurfaceCard className="border-info/20 shadow-[var(--shadow-card)]">
+    <SurfaceCard className="border-info/20">
       <CardHeader className="pb-0">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
@@ -160,7 +160,7 @@ export function CategoryCleanupPanel({ onChanged }: { onChanged?: () => void }) 
                 type="button"
                 onClick={() => void handleSave(group)}
                 disabled={!selections[group.key] || savingKey !== null}
-                className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground shadow-sm disabled:opacity-50 hover:bg-primary/90"
+                className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground  disabled:opacity-50 hover:bg-primary/90"
               >
                 {savingKey === group.key ? <Loader2 size={13} className="animate-spin" /> : null}
                 Kaydet

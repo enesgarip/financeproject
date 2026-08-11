@@ -36,7 +36,7 @@ export function BankLogo({
       title={title ?? brand.name}
       style={{ backgroundImage: bankBrandGradient(bankName), ...style }}
       className={cn(
-        'grid shrink-0 place-items-center font-black uppercase leading-none tracking-tight text-white shadow-sm ring-1 ring-black/15',
+        'grid shrink-0 place-items-center font-black uppercase leading-none tracking-tight text-white  ring-1 ring-black/15',
         sizeClass[size],
         className,
       )}

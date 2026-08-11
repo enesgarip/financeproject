@@ -1,6 +1,4 @@
-import { ShieldAlert, ShieldCheck } from 'lucide-react'
 import { type ReactNode } from 'react'
-import { Link } from 'react-router'
 import { MiniStat, PageHero, ProgressStrip, StatusBadge } from '../finance/FinanceUI'
 import { Card, CardContent } from '../ui/card'
 import { HelpTooltip, type HelpTooltipContent } from '../ui/help-tooltip'
@@ -22,40 +20,6 @@ export type FocusAction = {
   tone: 'emerald' | 'amber' | 'rose' | 'indigo' | 'stone'
   icon: 'alert' | 'calendar' | 'card' | 'check' | 'health' | 'loan'
   priority: number
-}
-
-export function DataHealthBadge({ errors, warnings, total }: { errors: number; warnings: number; total: number }) {
-  if (total === 0) {
-    return (
-      <Link
-        to="/veri-sagligi"
-        className="flex min-h-11 items-center gap-2 rounded-xl bg-emerald-500/15 px-4 py-2.5 text-sm font-semibold text-emerald-700 ring-1 ring-emerald-500/30 transition hover:bg-emerald-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background dark:text-emerald-400 dark:ring-emerald-500/25"
-      >
-        <ShieldCheck size={16} className="shrink-0" aria-hidden="true" />
-        <span>Veri sağlığı temiz</span>
-      </Link>
-    )
-  }
-
-  const tone = errors > 0 ? 'destructive' : 'warning'
-  const parts: string[] = []
-  if (errors > 0) parts.push(`${errors} hata`)
-  if (warnings > 0) parts.push(`${warnings} uyarı`)
-
-  return (
-    <Link
-      to="/veri-sagligi"
-      className={`flex min-h-11 items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold ring-1 transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background ${
-        tone === 'destructive'
-          ? 'bg-destructive/12 text-destructive ring-destructive/25'
-          : 'bg-warning/12 text-warning ring-warning/25'
-      }`}
-    >
-      <ShieldAlert size={16} className="shrink-0" aria-hidden="true" />
-      <span>Veri sağlığı: {parts.join(' · ')}</span>
-      <span className="ml-auto text-xs opacity-70">Kontrol et →</span>
-    </Link>
-  )
 }
 
 export function DashboardHero({
@@ -129,7 +93,7 @@ export function MetricTile({
   }[tone]
 
   return (
-    <Card size="sm" className="border-0 shadow-[var(--shadow-card)] ring-1 ring-border/80">
+    <Card size="sm" className="border-0 ring-1 ring-border/80">
       <CardContent className="flex items-start justify-between gap-3 p-3">
         <div className="min-w-0">
           <div className="flex min-w-0 items-center gap-1">
@@ -153,7 +117,7 @@ export function PulseCard({ title, label, value, description, icon, tone }: { ti
   const toneClass = tone === 'emerald' ? 'text-emerald-700 bg-emerald-50 dark:text-emerald-300 dark:bg-emerald-950/30' : 'text-rose-700 bg-rose-50 dark:text-rose-300 dark:bg-rose-950/30'
 
   return (
-    <Card className="border-0 shadow-[var(--shadow-card)] ring-1 ring-border/80">
+    <Card className="border-0 ring-1 ring-border/80">
       <CardContent className="flex items-center gap-3 p-4">
         <div className={`grid size-10 shrink-0 place-items-center rounded-lg ${toneClass}`} aria-hidden="true">{icon}</div>
         <div className="min-w-0">

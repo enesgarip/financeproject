@@ -163,7 +163,7 @@ export function CreditAccountListCard({
       >
         <div className="relative flex items-start justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3.5">
-            <BankLogo bankName={row.bank_name} size="lg" className="size-14 rounded-2xl text-sm shadow-md" />
+            <BankLogo bankName={row.bank_name} size="lg" className="size-14 rounded-2xl text-sm " />
             <div className="min-w-0">
               <h2 className="truncate font-display text-lg font-bold tracking-tight text-foreground">{row.card_name}</h2>
               <p className="mt-1 truncate text-sm font-medium text-muted-foreground">{row.bank_name} · banka hesabı</p>
@@ -239,7 +239,7 @@ export function CreditAccountListCard({
     >
       <div
         style={{ backgroundImage: bankBrandGradient(row.bank_name) }}
-        className="relative overflow-visible rounded-2xl p-4 text-white shadow-sm"
+        className="relative overflow-visible rounded-2xl p-4 text-white "
       >
         <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-2xl">
           <div className="absolute inset-x-0 top-0 h-px bg-white/35" />

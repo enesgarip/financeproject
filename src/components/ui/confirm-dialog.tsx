@@ -86,7 +86,7 @@ function ConfirmDialog({
         aria-modal="true"
         aria-labelledby="confirm-dialog-title"
         aria-describedby="confirm-dialog-description"
-        className="w-full max-w-md overflow-hidden rounded-lg border border-border/85 bg-card text-card-foreground shadow-[var(--shadow-elevated)]"
+        className="w-full max-w-md overflow-hidden rounded-lg border border-border/85 bg-card text-card-foreground"
       >
         <div className="flex items-start gap-3 p-4">
           <div

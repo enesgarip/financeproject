@@ -20,8 +20,8 @@ const buttonVariants = cva(
       variant: {
         default: [
           "bg-primary text-primary-foreground",
-          "shadow-[0_1px_2px_color-mix(in_srgb,var(--primary)_28%,transparent)]",
-          "hover:bg-primary/90 hover:shadow-[0_5px_14px_color-mix(in_srgb,var(--primary)_22%,transparent)]",
+          "",
+          "hover:bg-primary/90",
         ].join(" "),
         outline: [
           "border-border bg-card/80 text-foreground",
@@ -44,7 +44,7 @@ const buttonVariants = cva(
         ].join(" "),
         success: [
           "bg-success text-success-foreground",
-          "shadow-[0_2px_8px_color-mix(in_srgb,var(--success)_28%,transparent)]",
+          "",
           "hover:bg-success/90",
         ].join(" "),
         link: "text-primary underline-offset-4 hover:underline p-0 h-auto!",

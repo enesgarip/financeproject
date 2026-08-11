@@ -95,7 +95,7 @@ export function CreditCardOverview({
       {groups.length > 0 ? (
         <div className="flex snap-x gap-3 overflow-x-auto pb-1">
           {groups.map((group) => (
-            <SurfaceCard key={group.key} className="min-w-[86%] snap-start border-border/70 shadow-[var(--shadow-card)] min-[520px]:min-w-[48%]">
+            <SurfaceCard key={group.key} className="min-w-[86%] snap-start border-border/70 min-[520px]:min-w-[48%]">
               <CardHeader className="pb-0">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex min-w-0 items-start gap-3">

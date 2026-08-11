@@ -64,7 +64,7 @@ export function UpcomingInstallments({ data }: { data: AnalysisData }) {
   }, [data.cards, data.loans, data.cardInstallments, data.loanInstallments])
 
   return (
-    <Card className="border-border/70 shadow-[var(--shadow-card)] lg:col-span-5">
+    <Card className="border-border/70 lg:col-span-5">
       <CardHeader className="pb-0">
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -211,7 +211,7 @@ export function PeopleLedger({ debts }: { debts: Debt[] }) {
   ).sort((a, b) => Math.abs(b.receivable - b.borrowed) - Math.abs(a.receivable - a.borrowed))
 
   return (
-    <Card className="border-border/70 shadow-[var(--shadow-card)] lg:col-span-5">
+    <Card className="border-border/70 lg:col-span-5">
       <CardHeader className="pb-0">
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -282,7 +282,7 @@ export function MonthCloseAssistant({ data, missingTables }: { data: AnalysisDat
   const completed = checks.filter((check) => check.done).length
 
   return (
-    <Card className="border-0 bg-card/95 text-foreground shadow-[var(--shadow-card)] ring-1 ring-border/80 lg:col-span-12">
+    <Card className="border-0 bg-card/95 text-foreground ring-1 ring-border/80 lg:col-span-12">
       <CardContent className="grid gap-4 p-4 min-[760px]:grid-cols-[0.72fr_1.28fr] min-[760px]:items-center">
         <div>
           <div className="flex items-center gap-2">
@@ -315,7 +315,7 @@ export function SubscriptionsPanel({ data }: { data: AnalysisData }) {
   )
 
   return (
-    <Card className="border-border/70 shadow-[var(--shadow-card)] lg:col-span-5">
+    <Card className="border-border/70 lg:col-span-5">
       <CardHeader className="pb-0">
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -366,7 +366,7 @@ export function SchemaMigrationNotice({ missingTables }: { missingTables: string
   const labels = missingTables.map((table) => optionalTableLabels[table] ?? table).join(', ')
 
   return (
-    <Card className="border-warning/25 bg-warning/8 shadow-[var(--shadow-card)] lg:col-span-12">
+    <Card className="border-warning/25 bg-warning/8 lg:col-span-12">
       <CardContent className="p-4">
         <p className="text-sm font-bold text-warning">Canlı veritabanı migration bekliyor</p>
         <p className="mt-1 text-sm text-warning/80">

@@ -61,7 +61,7 @@ export function ReconciliationPanel({ cards, statements }: ReconciliationPanelPr
   if (items.length === 0) return null
 
   return (
-    <Card className="border-0 shadow-[var(--shadow-card)] ring-1 ring-warning/20">
+    <Card className="border-0 ring-1 ring-warning/20">
       <CardHeader className="pb-0">
         <div className="flex items-start justify-between gap-3">
           <div>

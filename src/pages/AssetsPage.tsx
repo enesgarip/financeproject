@@ -698,7 +698,7 @@ export function AssetsPage() {
           const pl = asset.category === 'Hisse' ? stockProfit(value, asset) : null
 
           return (
-            <article className={`rounded-2xl border p-4 shadow-[var(--shadow-card)] transition-all duration-250 hover:-translate-y-0.5 hover:shadow-[var(--shadow-lifted)] dark:ring-1 dark:ring-white/[0.04] min-[390px]:p-5 ${categoryCardTint[asset.category]}`}>
+            <article className={`rounded-2xl border p-4 transition-all duration-250 hover:-translate-y-0.5 min-[390px]:p-5 ${categoryCardTint[asset.category]}`}>
               <div className="flex items-start justify-between gap-3">
                 <div className="flex min-w-0 items-center gap-3">
                   <div className="grid size-10 shrink-0 place-items-center rounded-xl" style={{ backgroundColor: `color-mix(in srgb, ${meta.color} 15%, transparent)`, color: meta.color }}>

@@ -11,9 +11,8 @@
  * Hesap ownership tablosu ve UX/a11y sözleşmesi: docs/DASHBOARD_ARCHITECTURE.md
  * (yeni panel/hesap eklemeden önce oraya bak).
  */
-import { AlertTriangle, ArrowUpRight, CalendarDays, ChevronDown, CreditCard, Landmark, RefreshCw } from 'lucide-react'
+import { AlertTriangle, ChevronDown, RefreshCw } from 'lucide-react'
 import { useCallback, useMemo, useState } from 'react'
-import { useAuth } from '../auth/useAuth'
 import { useFinanceSnapshot, useInvalidateFinanceSnapshot } from '../app/useFinanceSnapshot'
 import type {
   AccountReconciliation,
@@ -32,26 +31,19 @@ import type {
   SavingsGoalComponent,
   TransactionHistory,
 } from '../types/database'
-import {
-  DashboardHero,
-  MetricTile,
-  PulseCard,
-} from '../components/dashboard/DashboardPanels'
 import { HistorySection } from '../components/dashboard/DashboardCards'
 import { FocusActionPanel, UpcomingAlertPanel } from '../components/dashboard/DashboardInsights'
 import { FinancePaymentDrawer } from '../components/finance/FinancePaymentDrawer'
 import { useFinancePaymentDrawer } from '../hooks/useFinancePaymentDrawer'
 import type { FinanceObligation } from '../utils/obligations'
-import { dashboardHelp, getUserDisplayName } from '../components/dashboard/dashboardPanelUtils'
 import { StatementReminderPanel } from '../components/dashboard/StatementReminderPanel'
 import { ReconciliationPanel } from '../components/dashboard/ReconciliationPanel'
 import { SeritOverview, type SeritLiquidAccount } from '../components/dashboard/SeritOverview'
 import { buildMonthStrip, monthStripTone } from '../utils/dashboardMonthStrip'
 import { useSafeToSpend } from '../hooks/useSafeToSpend'
-import { addMonths, dateInputValue, daysUntil, endOfMonth, startOfMonth } from '../utils/date'
+import { addMonths, dateInputValue, endOfMonth, startOfMonth } from '../utils/date'
 import {
 
-  buildFinancialHealth,
   buildFinancialPosition,
   buildGoalProgressSummary,
   buildMonthlyCashFlow,
@@ -63,7 +55,6 @@ import { buildAttentionLine } from '../utils/attention'
 import { buildHealthCounts } from '../utils/dataHealthSummary'
 import { buildFocusActions } from '../utils/dashboardInsights'
 import { buildDashboardUpcomingItems } from '../utils/dashboardUpcoming'
-import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
 import { buildStatementReminders } from '../utils/statementReminder'
 import { SkeletonDashboard } from '../components/ui/skeleton'
 
@@ -108,10 +99,7 @@ const DASHBOARD_HISTORY_MONTHS = 3
 const DASHBOARD_SPENDING_MONTHS = 4
 
 export function DashboardPage() {
-  const { user } = useAuth()
-  const { formatAmount } = useBalancePrivacy()
   const snapshotQuery = useFinanceSnapshot()
-  const displayName = useMemo(() => getUserDisplayName(user), [user])
 
   // Snapshot yıllık raporlar için geniş bir süperset taşır; dashboard daraltır.
   // (geçmiş 3 ay, harcamalar 4 ay, bütçe yalnızca içinde bulunulan ay).
@@ -185,22 +173,6 @@ export function DashboardPage() {
     return buildDashboardUpcomingItems(obligationInput, UPCOMING_DAYS)
   }, [obligationInput])
   const outflowUpcoming = useMemo(() => upcomingItems.filter((item) => item.direction === 'outflow'), [upcomingItems])
-
-  const financialHealth = useMemo(() => {
-    const urgentUpcomingCount = outflowUpcoming.filter((item) => {
-      const remaining = daysUntil(new Date(item.sortTime))
-      return remaining !== null && remaining >= 0 && remaining <= 7
-    }).length
-
-    return buildFinancialHealth({
-      position: summary,
-      cashFlow: summary.cashFlow,
-      creditUsageRate: summary.creditUsageRate,
-      urgentUpcomingCount,
-      averageGoalProgress: summary.goalProgress.averageProgress,
-      typicalMonthlyOutflow: summary.nextMonthCashFlow.outflow,
-    })
-  }, [summary, outflowUpcoming])
 
   const focusActions = useMemo(
     () => buildFocusActions(data, summary.cashFlow, summary.creditUsageRate, outflowUpcoming),
@@ -294,7 +266,7 @@ export function DashboardPage() {
       <section
         role="alert"
         aria-live="assertive"
-        className="rounded-2xl border border-destructive/20 bg-destructive/8 p-4 text-sm text-destructive shadow-[var(--shadow-card)]"
+        className="rounded-2xl border border-destructive/20 bg-destructive/8 p-4 text-sm text-destructive"
       >
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex min-w-0 gap-3">
@@ -401,21 +373,7 @@ export function DashboardPage() {
         className={`dashboard-details-wrapper lg:col-span-12 ${showDetails ? 'dashboard-details-open' : ''}`}
       >
         <div className="grid min-w-0 gap-5 lg:grid-cols-12 lg:items-start">
-          {/* ─ Durum ve odak ─ */}
-          <DetailSectionDivider label="Durum ve odak" />
-
-          <div className="min-w-0 lg:col-span-12">
-            <DashboardHero
-              displayName={displayName}
-              netWorth={summary.netWorth}
-              totalAssets={summary.totalAssets}
-              totalDebts={summary.totalDebts}
-              totalReceivables={summary.totalReceivables}
-              cashFlow={summary.cashFlow}
-              health={financialHealth}
-            />
-          </div>
-
+          {/* ─ Odak ve hatırlatıcılar ─ */}
           <div className="min-w-0 lg:col-span-12">
             <FocusActionPanel actions={focusActions} cashFlow={summary.cashFlow} />
           </div>
@@ -433,23 +391,6 @@ export function DashboardPage() {
 
           <div className="min-w-0 lg:col-span-12">
             <ReconciliationPanel cards={data.cards} statements={data.cardStatements.filter((statement) => statement.status === 'open')} />
-          </div>
-
-          {/* ─ Borç ve limit özeti ─ */}
-          <DetailSectionDivider label="Borç ve limit" />
-
-          <div className="grid min-w-0 gap-3 min-[520px]:grid-cols-2 lg:col-span-12 lg:grid-cols-4">
-            <MetricTile label="Tahsilat" value={formatAmount(summary.totalReceivables)} icon={<ArrowUpRight />} tone="emerald" help={dashboardHelp.receivable} />
-            <MetricTile label="Toplam limit" value={formatAmount(summary.totalCreditLimit)} icon={<CreditCard />} tone="indigo" help={dashboardHelp.totalLimit} />
-            <MetricTile label="Kredi ödemesi" value={formatAmount(summary.totalLoanMonthlyPayment)} icon={<CalendarDays />} tone="stone" help={dashboardHelp.loanPayment} />
-            <PulseCard
-              title="Kredi ritmi"
-              label="Aylık ödeme"
-              value={formatAmount(summary.totalLoanMonthlyPayment)}
-              description={`${formatAmount(summary.totalLoanDebt)} aktif kredi borcu`}
-              icon={<Landmark />}
-              tone="rose"
-            />
           </div>
 
           {/* ─ Geçmiş ─ */}

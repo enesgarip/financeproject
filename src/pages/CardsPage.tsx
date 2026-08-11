@@ -521,7 +521,7 @@ export function CardsPage() {
 function ImportModalFallback() {
   return (
     <div className="fixed inset-0 z-[80] grid place-items-center bg-black/45 p-4 backdrop-blur-sm">
-      <div role="status" aria-live="polite" className="rounded-2xl border border-border bg-card px-5 py-4 text-sm font-semibold text-foreground shadow-[var(--shadow-floating)]">
+      <div role="status" aria-live="polite" className="rounded-2xl border border-border bg-card px-5 py-4 text-sm font-semibold text-foreground">
         İçe aktarma aracı hazırlanıyor...
       </div>
     </div>

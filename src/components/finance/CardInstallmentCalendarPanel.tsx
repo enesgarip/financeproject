@@ -57,7 +57,7 @@ export function CardInstallmentCalendarPanel({ cards }: CardInstallmentCalendarP
   if (creditCards.length === 0) return null
 
   return (
-    <SurfaceCard id="taksit-takvimi" className="border-primary/20 shadow-[var(--shadow-card)]">
+    <SurfaceCard id="taksit-takvimi" className="border-primary/20">
       <CardHeader className="pb-0">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">

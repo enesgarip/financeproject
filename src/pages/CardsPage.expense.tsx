@@ -260,7 +260,7 @@ export function QuickExpensePanel({
   if (cards.length === 0) return null
 
   return (
-    <SurfaceCard id="hizli-harcama" className="border-success/20 shadow-[var(--shadow-card)]">
+    <SurfaceCard id="hizli-harcama" className="border-success/20">
       <CardHeader className="pb-0">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
@@ -560,7 +560,7 @@ export function QuickExpensePanel({
           <button
             type="submit"
             disabled={!canSubmitQuickExpense}
-            className="rounded-xl bg-success px-4 py-3 text-sm font-semibold text-white shadow-sm disabled:opacity-60 hover:bg-success/90"
+            className="rounded-xl bg-success px-4 py-3 text-sm font-semibold text-white  disabled:opacity-60 hover:bg-success/90"
           >
             {saving ? 'Ekleniyor...' : 'Harcamayı kaydet'}
           </button>

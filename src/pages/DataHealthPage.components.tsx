@@ -121,7 +121,7 @@ export function HealthIssueCard({
                     type="button"
                     onClick={() => onFix(issue)}
                     disabled={Boolean(fixingId) || undoing}
-                    className="rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground shadow-[0_2px_8px_color-mix(in_srgb,var(--primary)_30%,transparent)] transition hover:bg-primary/90 active:scale-[0.97] disabled:opacity-50"
+                    className="rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground transition hover:bg-primary/90 active:scale-[0.97] disabled:opacity-50"
                   >
                     {fixingId === issue.id ? 'Düzeltiliyor...' : resolution.label}
                   </button>
@@ -252,7 +252,7 @@ export function FixAllModal({
           type="button"
           onClick={onConfirm}
           disabled={Boolean(fixingId) || undoing || repairCount === 0}
-          className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-[0_2px_8px_color-mix(in_srgb,var(--primary)_30%,transparent)] transition hover:bg-primary/90 active:scale-[0.99] disabled:opacity-50"
+          className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 active:scale-[0.99] disabled:opacity-50"
         >
           <Wrench size={16} />
           {fixingId === 'all' ? 'Düzeltiliyor...' : 'Güvenli çözümleri uygula'}
@@ -306,7 +306,7 @@ export function ResetDataModal({
         <button
           type="submit"
           disabled={resetting}
-          className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-destructive px-4 text-sm font-semibold text-destructive-foreground shadow-[0_2px_8px_color-mix(in_srgb,var(--destructive)_30%,transparent)] transition hover:bg-destructive/90 active:scale-[0.99] disabled:opacity-50"
+          className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-destructive px-4 text-sm font-semibold text-destructive-foreground transition hover:bg-destructive/90 active:scale-[0.99] disabled:opacity-50"
         >
           <DatabaseZap size={16} />
           {resetting ? 'Siliniyor...' : 'Tüm veriyi kalıcı olarak sil'}
@@ -370,7 +370,7 @@ export function RestoreBackupModal({
           <button
             type="submit"
             disabled={restoring}
-            className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-[0_2px_8px_color-mix(in_srgb,var(--primary)_30%,transparent)] transition hover:bg-primary/90 active:scale-[0.99] disabled:opacity-50"
+            className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 active:scale-[0.99] disabled:opacity-50"
           >
             <Upload size={16} />
             {restoring ? `${restoreStep || 'Geri yükleniyor'}...` : 'Yedeği geri yükle'}

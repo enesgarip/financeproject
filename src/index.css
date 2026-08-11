@@ -156,13 +156,13 @@
   /* Semantic tokens — daylight jade (açık tema birinci sınıf).
      Sıcak porselen zemin (hafif yeşil eğilimli), imza jade, anlam renkleri
      yalnız paraya. */
-  --background:           #f1f5f3;
+  --background:           #f6f7f3;
   --foreground:           #101a16;
   --card:                 #ffffff;
   --card-foreground:      #101a16;
   --popover:              #ffffff;
   --popover-foreground:   #101a16;
-  --primary:              #097352;
+  --primary:              #0a6b4f;
   --primary-foreground:   #ffffff;
   --secondary:            #e7efea;
   --secondary-foreground: #26332d;
@@ -171,13 +171,13 @@
   --muted-foreground:     #536860;
   --accent:               #d7f2e6;
   --accent-foreground:    #0a6b4f;
-  --destructive:          #d64545;
+  --destructive:          #b4433d;
   --destructive-foreground: #ffffff;
   --success:              #097352;
   --success-foreground:   #ffffff;
-  --warning:              #a86a0f;
+  --warning:              #9a6a12;
   --warning-foreground:   #fffbeb;
-  --info:                 #2b74d8;
+  --info:                 #2b6bb8;
   --info-foreground:      #eff6ff;
   --surface:              #ffffff;
   --surface-muted:        #f5faf7;
@@ -217,8 +217,8 @@
      Bu tokenlar mevcut semantiklerin YERİNE değil YANINA yaşar; Şerit'e
      dönüştürülmüş ekranlar bunları kullanır, kalanlar eski tokenlarda kalır.
      Kaynak: design_handoff_denge_redesign/README.md (token tablosu). */
-  --page:        #f6f7f3;  /* sayfa zemini — sıcak porselen, beyaz değil */
-  --raised:      #ffffff;  /* ekran başına en fazla 1-2 blok */
+  --page:        var(--background);  /* sayfa zemini — sıcak porselen, beyaz değil */
+  --raised:      var(--card);        /* ekran başına en fazla 1-2 blok */
   --ink:         #111a15;
   --ink-muted:   #5d6b63;
   --ink-faint:   #7c8880;
@@ -233,10 +233,10 @@
      Şerit tonları daha toprak/mat. Ayrı tutmak, henüz dönüştürülmemiş ekranların
      bu commit'te görsel olarak kaymamasını sağlıyor — Ş-son'da birleştirilecek.
      Uyarı iki değerli: dolgu daha parlak, metin AA için daha koyu. */
-  --signal-danger:       #b4433d;
+  --signal-danger:       var(--destructive);
   --signal-warning:      #c68a1f;
-  --signal-warning-ink:  #9a6a12;
-  --signal-info:         #2b6bb8;
+  --signal-warning-ink:  var(--warning);
+  --signal-info:         var(--info);
 
   /* Shadows */
   --shadow-subtle:  0 1px 2px rgba(21, 24, 36, 0.035);
@@ -270,7 +270,7 @@
 :root.dark {
   /* Background stack — warm obsidian (hafif yeşil-arduvaz eğilimli).
      Katmanlar parlaklıkla yükselir; imza tema budur. */
-  --background:           #0a0d0c;
+  --background:           #0d120f;
   --card:                 #131a17;
   --card-foreground:      #e9efec;
   --popover:              #141c19;
@@ -329,8 +329,8 @@
   /* ── Şerit katmanı (koyu) ──
      Handoff koyu temaya tek cümle ayırmıştı; değerler prototipin `1c` seçeneğinden
      okundu ve Nocturne obsidyeniyle hizalandı. Sinyal renkleri zaten eşleşiyordu. */
-  --page:        #0d120f;
-  --raised:      #141c18;
+  --page:        var(--background);
+  --raised:      var(--card);
   --ink:         #eef3f0;
   --ink-muted:   #9daba3;
   --ink-faint:   #8b978f;
@@ -341,10 +341,10 @@
   --chart-idle:  #2b352f;
   --accent-soft: #ff8b6f;
   --neutral-bar: #3a453f;
-  --signal-danger:       #ff6f6f;
-  --signal-warning:      #f2b64a;
-  --signal-warning-ink:  #f2b64a;
-  --signal-info:         #58a9ff;
+  --signal-danger:       var(--destructive);
+  --signal-warning:      var(--warning);
+  --signal-warning-ink:  var(--warning);
+  --signal-info:         var(--info);
 
   /* Dark shadows */
   --shadow-subtle:   0 1px 3px rgba(0, 0, 0, 0.25);
@@ -434,8 +434,7 @@ button:disabled {
   .finance-surface {
     border: 1px solid var(--border);
     background: var(--card);
-    box-shadow: var(--shadow-card);
-    transition: box-shadow var(--motion-normal), transform var(--motion-normal);
+    transition: transform var(--motion-normal);
   }
 
   .finance-surface:hover {
@@ -450,9 +449,8 @@ button:disabled {
   .finance-panel {
     border: 1px solid var(--border);
     background: var(--card);
-    box-shadow: var(--shadow-card);
     border-radius: calc(var(--radius) + 4px);
-    transition: box-shadow var(--motion-normal);
+    transition: none;
   }
 
   .finance-panel:hover {
@@ -466,7 +464,6 @@ button:disabled {
       color-mix(in srgb, var(--card) 94%, var(--primary) 6%),
       color-mix(in srgb, var(--accent) 70%, var(--card) 30%)
     );
-    box-shadow: var(--shadow-lifted);
   }
 
   .finance-glass {
@@ -474,13 +471,11 @@ button:disabled {
     background: color-mix(in srgb, var(--card) 70%, transparent);
     backdrop-filter: blur(20px) saturate(1.4);
     -webkit-backdrop-filter: blur(20px) saturate(1.4);
-    box-shadow: var(--shadow-card);
   }
 
   .finance-command-surface {
     border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
     background: color-mix(in srgb, var(--card) 88%, transparent);
-    box-shadow: var(--shadow-floating);
     backdrop-filter: blur(24px);
     -webkit-backdrop-filter: blur(24px);
   }
@@ -488,7 +483,7 @@ button:disabled {
   .finance-field {
     border: 1px solid var(--border);
     background: color-mix(in srgb, var(--muted) 45%, transparent);
-    transition: border-color var(--motion-fast), box-shadow var(--motion-fast);
+    transition: border-color var(--motion-fast);
   }
 
   .finance-field:focus-within {
@@ -499,17 +494,15 @@ button:disabled {
   /* Card variants */
   .card-interactive {
     cursor: pointer;
-    transition: transform var(--motion-normal), box-shadow var(--motion-normal);
+    transition: transform var(--motion-normal);
   }
 
   .card-interactive:hover {
     transform: translateY(-2px);
-    box-shadow: var(--shadow-floating);
   }
 
   .card-interactive:active {
     transform: translateY(0);
-    box-shadow: var(--shadow-card);
   }
 
   /* Typography helpers */
@@ -732,7 +725,6 @@ button:disabled {
     border: 1px solid color-mix(in srgb, var(--border) 88%, transparent);
     background: color-mix(in srgb, var(--card) 82%, transparent);
     color: var(--muted-foreground);
-    box-shadow: var(--shadow-subtle);
     transition: color var(--motion-fast), border-color var(--motion-fast), background var(--motion-fast);
   }
 
@@ -895,14 +887,10 @@ button:disabled {
   display: none;
 }
 
-.finance-list-row {
-  box-shadow: var(--shadow-subtle);
-}
-
 .finance-list-row:hover,
 .finance-list-row:focus-within {
-  border-color: color-mix(in srgb, var(--primary) 22%, var(--border));
-  box-shadow: var(--shadow-card);
+  /* Şerit: vurgu gölgeyle değil zemin tonuyla yapılır. */
+  background: color-mix(in srgb, var(--ink) 2%, transparent);
 }
 
 .premium-entity-card::before {

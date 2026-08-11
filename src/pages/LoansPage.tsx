@@ -190,7 +190,7 @@ export function LoansPage() {
                   setError(syncError instanceof Error ? syncError.message : 'Ödeme planı oluşturulamadı.')
                 }
               }}
-              className="shrink-0 rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground shadow-[0_2px_8px_color-mix(in_srgb,var(--primary)_30%,transparent)] transition hover:bg-primary/90 active:scale-[0.97]"
+              className="shrink-0 rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground transition hover:bg-primary/90 active:scale-[0.97]"
             >
               Plan oluştur
             </button>
@@ -251,7 +251,7 @@ export function LoansPage() {
                   <MoreVertical size={16} />
                 </button>
                 {planMenuOpenId === item.id ? (
-                  <div className="absolute right-0 top-full z-20 mt-1 w-36 rounded-lg border border-border bg-popover py-1 shadow-[var(--shadow-elevated)]">
+                  <div className="absolute right-0 top-full z-20 mt-1 w-36 rounded-lg border border-border bg-popover py-1">
                     <button
                       type="button"
                       onClick={() => openPlanEdit(item)}
@@ -449,7 +449,7 @@ export function LoansPage() {
           <button
             type="submit"
             disabled={planSaving}
-            className="h-12 w-full rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-[0_2px_8px_color-mix(in_srgb,var(--primary)_30%,transparent)] transition hover:bg-primary/90 active:scale-[0.99] disabled:opacity-50"
+            className="h-12 w-full rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 active:scale-[0.99] disabled:opacity-50"
           >
             {planSaving ? 'Kaydediliyor...' : 'Kaydet'}
           </button>
