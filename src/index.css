@@ -375,17 +375,13 @@ body {
   min-width: 320px;
   min-height: 100dvh;
   margin: 0;
-  background:
-    radial-gradient(ellipse 70% 42% at 72% -12%, color-mix(in srgb, var(--primary) 7%, transparent), transparent 72%),
-    var(--background);
+  /* DÜZ zemin, gradyan yok. Nocturne'den kalan jade radyal gradyan alt barın
+     ayrılmış bandını ele veriyordu: bar `bg-page` ile düz boyanıyor, gövde
+     gradyanlı kalınca FAB'ın arkasında yama gibi bir dikdörtgen görünüyordu.
+     Şerit zaten düz zemin ister — ayrım çizgi ve ton farkıyla yapılır. */
+  background: var(--background);
   overscroll-behavior-y: none;
   -webkit-tap-highlight-color: transparent;
-}
-
-.dark body {
-  background:
-    radial-gradient(ellipse 70% 38% at 72% -8%, color-mix(in srgb, var(--primary) 10%, transparent), transparent 72%),
-    var(--background);
 }
 
 ::selection {
