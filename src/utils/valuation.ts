@@ -1,5 +1,5 @@
 import type { Asset, Debt, SavingsGoal } from '../types/database'
-import { convertToTry, type MarketRatesSnapshot, type RateSide, type RateSymbol } from './marketRates'
+import { convertToTry, unitRate, type MarketRatesSnapshot, type RateSide, type RateSymbol } from './marketRates'
 import { roundTL as round2 } from './money'
 
 /**
@@ -125,32 +125,99 @@ export function valueGoal(
   return convertToTry(goal.current_amount, symbol, snapshot, 'buying')
 }
 
+// --- Birim kur (değerlemeyle birlikte saklanır — Faz D3) --------------------
+
+export function assetUnitRate(
+  asset: Pick<Asset, 'category' | 'unit' | 'currency' | 'symbol' | 'amount'>,
+  snapshot: MarketRatesSnapshot | null | undefined,
+  stockPrices?: StockPrices | null,
+): number | null {
+  if (assetIsStock(asset)) {
+    const price = stockPrices?.[asset.symbol!.toUpperCase()]
+    return typeof price === 'number' && Number.isFinite(price) && price > 0 ? price : null
+  }
+  const symbol = assetRateSymbol(asset)
+  return symbol ? unitRate(symbol, snapshot, 'buying') : null
+}
+
+export function debtUnitRate(
+  debt: Pick<Debt, 'value_type' | 'currency' | 'direction'>,
+  snapshot: MarketRatesSnapshot | null | undefined,
+): number | null {
+  const symbol = debtRateSymbol(debt)
+  return symbol ? unitRate(symbol, snapshot, debtRateSide(debt)) : null
+}
+
+export function goalUnitRate(
+  goal: Pick<SavingsGoal, 'value_type'>,
+  snapshot: MarketRatesSnapshot | null | undefined,
+): number | null {
+  const symbol = goalRateSymbol(goal)
+  return symbol ? unitRate(symbol, snapshot, 'buying') : null
+}
+
 // --- Effective value (auto when opted-in & priced, else the stored value) --
+
+/**
+ * Gösterilen rakamın NEREDEN geldiği (Faz D3):
+ *  - live   : canlı kurla şimdi hesaplandı
+ *  - stored : otomatik değerleme açık ama kur alınamadı → en son saklanan değer
+ *  - manual : kullanıcının elle girdiği değer
+ *
+ * `stored` sessiz kaldığı sürece kullanıcı bayat bir rakamı canlı sanıyordu;
+ * ayrım rozetle görünür kılınabilsin diye dışarı veriliyor.
+ */
+export type ValueSource = 'live' | 'stored' | 'manual'
+
+export function effectiveAssetValueWithSource(
+  asset: Asset,
+  snapshot: MarketRatesSnapshot | null | undefined,
+  stockPrices?: StockPrices | null,
+): { value: number; source: ValueSource } {
+  if (asset.auto_valued) {
+    const auto = assetIsStock(asset) ? valueStock(asset, stockPrices) : valueAsset(asset, snapshot)
+    if (auto !== null) return { value: auto, source: 'live' }
+    return { value: asset.estimated_value_try, source: 'stored' }
+  }
+  return { value: asset.estimated_value_try, source: 'manual' }
+}
 
 export function effectiveAssetValue(
   asset: Asset,
   snapshot: MarketRatesSnapshot | null | undefined,
   stockPrices?: StockPrices | null,
 ): number {
-  if (asset.auto_valued) {
-    const auto = assetIsStock(asset) ? valueStock(asset, stockPrices) : valueAsset(asset, snapshot)
-    if (auto !== null) return auto
+  return effectiveAssetValueWithSource(asset, snapshot, stockPrices).value
+}
+
+export function effectiveDebtValueWithSource(
+  debt: Debt,
+  snapshot: MarketRatesSnapshot | null | undefined,
+): { value: number; source: ValueSource } {
+  if (debt.auto_valued) {
+    const auto = valueDebt(debt, snapshot)
+    if (auto !== null) return { value: auto, source: 'live' }
+    return { value: debt.estimated_value_try, source: 'stored' }
   }
-  return asset.estimated_value_try
+  return { value: debt.estimated_value_try, source: 'manual' }
 }
 
 export function effectiveDebtValue(debt: Debt, snapshot: MarketRatesSnapshot | null | undefined): number {
-  if (debt.auto_valued) {
-    const auto = valueDebt(debt, snapshot)
-    if (auto !== null) return auto
+  return effectiveDebtValueWithSource(debt, snapshot).value
+}
+
+export function effectiveGoalValueWithSource(
+  goal: SavingsGoal,
+  snapshot: MarketRatesSnapshot | null | undefined,
+): { value: number; source: ValueSource } {
+  if (goal.auto_valued) {
+    const auto = valueGoal(goal, snapshot)
+    if (auto !== null) return { value: auto, source: 'live' }
+    return { value: goal.estimated_value_try ?? 0, source: 'stored' }
   }
-  return debt.estimated_value_try
+  return { value: goal.estimated_value_try ?? 0, source: 'manual' }
 }
 
 export function effectiveGoalValue(goal: SavingsGoal, snapshot: MarketRatesSnapshot | null | undefined): number {
-  if (goal.auto_valued) {
-    const auto = valueGoal(goal, snapshot)
-    if (auto !== null) return auto
-  }
-  return goal.estimated_value_try ?? 0
+  return effectiveGoalValueWithSource(goal, snapshot).value
 }

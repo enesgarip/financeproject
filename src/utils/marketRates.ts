@@ -189,11 +189,26 @@ export function convertToTry(
 ): number | null {
   if (!Number.isFinite(amount)) return null
   if (symbol === 'TRY') return round2(amount)
+  const price = unitRate(symbol, snapshot, side)
+  if (price === null) return null
+  return round2(amount * price)
+}
+
+/**
+ * Bir sembolün birim TL fiyatı (miktardan bağımsız). `convertToTry`'ın kullandığı
+ * oranın kendisi — değerlemeyle birlikte saklanabilsin diye ayrı açıldı: değer
+ * kaydedildikten sonra `amount` değişirse oran geri hesaplanamaz (Faz D3).
+ */
+export function unitRate(
+  symbol: RateSymbol,
+  snapshot: MarketRatesSnapshot | null | undefined,
+  side: RateSide,
+): number | null {
   const rate = snapshot?.rates?.[symbol]
   if (!rate) return null
   const price = side === 'buying' ? rate.buying : rate.selling
   if (!Number.isFinite(price) || price <= 0) return null
-  return round2(amount * price)
+  return price
 }
 
 export function hasRate(snapshot: MarketRatesSnapshot | null | undefined, symbol: RateSymbol): boolean {

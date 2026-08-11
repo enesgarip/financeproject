@@ -41,6 +41,8 @@ import { ReconciliationPanel } from '../components/dashboard/ReconciliationPanel
 import { SeritOverview, type SeritLiquidAccount } from '../components/dashboard/SeritOverview'
 import { buildMonthStrip, monthStripTone } from '../utils/dashboardMonthStrip'
 import { useSafeToSpend } from '../hooks/useSafeToSpend'
+import { useMarketRates } from '../hooks/useMarketRates'
+import { formatSnapshotAge } from '../utils/marketRates'
 import { addMonths, dateInputValue, endOfMonth, startOfMonth } from '../utils/date'
 import {
 
@@ -199,6 +201,11 @@ export function DashboardPage() {
   // Kahraman rakam SafeToSpendCard'ın hesabıdır; kart kaldırıldığı için hesap
   // ortak hook'a taşındı. Buradaki tek yeni türev ay şeridi.
   const safeToSpend = useSafeToSpend(summary.cashFlow, summary.totalCashAssets)
+  // Net değerin içinde altın/döviz var; kur bayatsa rakam da bayattır. Uyarı
+  // Varlıklar/Borçlar/Altın'daki RatesBanner'da vardı ama kahraman rakamın
+  // olduğu ekranda hiç yoktu (Faz D3).
+  const { snapshot: ratesSnapshot, isStale: ratesStale } = useMarketRates()
+  const staleRatesLabel = ratesStale ? formatSnapshotAge(ratesSnapshot) : null
   const monthStrip = useMemo(
     () =>
       buildMonthStrip(
@@ -334,6 +341,7 @@ export function DashboardPage() {
           netWorth={summary.netWorth}
           totalAssets={summary.totalAssets}
           totalDebts={summary.totalDebts}
+          staleRatesLabel={staleRatesLabel}
           liquidAccounts={liquidAccounts}
           totalCashAssets={summary.totalCashAssets}
           health={healthCounts}

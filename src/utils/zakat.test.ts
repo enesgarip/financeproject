@@ -11,7 +11,7 @@ function snap(gramBuying: number): MarketRatesSnapshot {
 const base = { id: 'id', user_id: 'u', created_at: '2026-01-01T00:00:00Z', updated_at: '2026-01-01T00:00:00Z' }
 
 function asset(overrides: Partial<Asset>): Asset {
-  return { ...base, name: 'V', category: 'Nakit', amount: 0, unit: 'TRY', currency: null, symbol: null, unit_cost: null, estimated_value_try: 0, auto_valued: false, source: null, note: null, ...overrides }
+  return { ...base, name: 'V', category: 'Nakit', amount: 0, unit: 'TRY', currency: null, symbol: null, unit_cost: null, estimated_value_try: 0, auto_valued: false, valued_at: null, valuation_rate: null, source: null, note: null, ...overrides }
 }
 
 function creditCard(overrides: Partial<Card>): Card {
@@ -25,7 +25,7 @@ function creditCard(overrides: Partial<Card>): Card {
 function debt(overrides: Partial<Debt>): Debt {
   return {
     ...base, person_name: 'K', direction: 'borç_aldım', value_type: 'TRY', currency: null, amount: 0,
-    estimated_value_try: 0, auto_valued: false, due_date: null, status: 'açık', note: null, ...overrides,
+    estimated_value_try: 0, auto_valued: false, valued_at: null, valuation_rate: null, due_date: null, status: 'açık', note: null, ...overrides,
   }
 }
 
