@@ -164,7 +164,9 @@ function LayoutInner() {
         <main
           className={cn(
             'mx-auto w-full flex-1 px-5 pt-5 md:px-6 lg:px-[34px] lg:pt-6',
-            // Alt bar 76px ayrılmış bant + nav satırı taşıyor; içerik onun altına girmez.
+            // Alt bar 138px (62px FAB alanı + nav satırı). Buradaki 152px onu
+            // aşar: FAB'ın altında sayfa sonunda içerik kalmamasını sağlayan şey
+            // bandın opaklığı değil, BU boşluk. Bant şeffaf (bkz. BottomNav).
             'pb-[calc(env(safe-area-inset-bottom)+9.5rem)] md:pb-14',
             contentWidth,
           )}
