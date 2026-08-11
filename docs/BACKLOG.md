@@ -102,12 +102,26 @@ sınıfını ayırt etmek mümkün değildi.
   (`main`'de de yok — yani Şerit'ten önce de kırıktı), "Detay"ı doğrudan buton
   sanıyordu (kartın taşma menüsünde) ve tutar beklentisi eski para
   biçimindeydi. Üçü düzeltildi; yerel Supabase'e karşı canlı koşuldu, geçiyor.
-**AÇIK:**
-- Tasarımın `3d` ekranındaki "34 kontrol temiz" cümlesi için "yapılan kontrol
-  sayısı" üretilmiyor (`buildHealthCounts.total` = bulgu toplamı).
-- `/kartlar`'ın alt bölümleri (`CardsPage.list/.statements/.installment/
-  .expense`) kart bileşeni üzerinden Şerit'e geldi ama kendi kahraman
-  rakamları/çizgi listeleri yok — yapısal dönüşüm değil, yüzey dönüşümü.
+- ~~**Ş14 — Kontrol sayısı üretiliyor.**~~ DONE. `buildHealthCounts` artık
+  `checksRun` ve `cleanChecks` döndürüyor (kart 3, planlı kredi 2, taksitli
+  harcama 1, limit grubu 1 kontrol; koşmayan kontrol sayaca girmez).
+  Veri Kontrolü ekranı için `buildAreaCoverage` eklendi: bulguları alan
+  düzeyinde sayar ("6/8 alan temiz"). Granülerlik ALAN düzeyinde kaldı —
+  check aileleri içindeki koşulları tek tek saymak veri bütünlüğü katmanının
+  tamamını elden geçirmeyi gerektirirdi, regresyon riski kazanca değmez.
+  Özet'in satırı kasıtlı olarak daha çekingen ("hızlı kontrollerde sapma yok"):
+  o satır hafif ikizi okur, kesin cevabı Veri Kontrolü ekranı verir.
+- ~~**Ş15 — `/kartlar` alt sekmelerine kahraman rakam.**~~ DONE.
+  `CardsPage.hero.tsx`: Kartlar → toplam borç + limit kullanımı çubuğu,
+  İşlemler → dönem içi harcama (+ provizyon notu), Ekstreler → ödenecek
+  ekstre + en yakın son ödeme. Özet sekmesinde rakam zaten `AccountHubPanel`
+  içinde olduğu için orada çizilmiyor.
+
+**AÇIK:** Şerit tarafında kalan yapısal iş yok. Sonraki turda bakılabilecekler:
+- `finance-page-command` / `PageHero` gibi artık kullanılmayan FinanceUI
+  parçaları silinebilir (ölü ama zararsız).
+- `--surface-elevated`, `--shadow-*` tokenları artık kullanılmıyor; token
+  bloğu sadeleştirilebilir.
 
 ## 2026-08-10 — Banka modeli Faz 3: ödeme banka modeline indi
 

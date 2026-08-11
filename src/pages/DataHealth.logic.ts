@@ -190,3 +190,33 @@ export function buildIssues(data: HealthData): HealthIssue[] {
     return severityOrder[a.severity] - severityOrder[b.severity] || a.area.localeCompare(b.area, 'tr-TR')
   })
 }
+
+/**
+ * Kontrolün kapsadığı alanlar. `buildIssues`'ın çağırdığı check ailelerinin
+ * ürettiği `area` değerlerinin tamamı — yeni bir alan eklenirse buraya da girer.
+ */
+export const HEALTH_AREAS = [
+  'Varlıklar',
+  'Bütçeler',
+  'Kartlar',
+  'Krediler',
+  'Kişiler',
+  'Maaş',
+  'Hedefler',
+  'Planlı',
+] as const
+
+/**
+ * "N alan temiz" cümlesinin paydası. Bulguya tek başına bakmak yanıltıcı:
+ * "2 bulgu" ifadesi 2/2 ile 2/8 arasında çok farklı şeyler demek.
+ *
+ * Granülerlik kasıtlı olarak ALAN düzeyinde, tek tek kontrol düzeyinde değil:
+ * check aileleri içindeki koşul sayısını saymak veri bütünlüğü katmanının
+ * tamamını elden geçirmeyi gerektirirdi ve oradaki regresyon riski, kazanılan
+ * hassasiyete değmez.
+ */
+export function buildAreaCoverage(issues: HealthIssue[]) {
+  const dirty = new Set(issues.map((issue) => issue.area))
+  const cleanAreas = HEALTH_AREAS.filter((area) => !dirty.has(area))
+  return { areasChecked: HEALTH_AREAS.length, cleanAreas: cleanAreas.length, cleanAreaNames: cleanAreas }
+}

@@ -42,6 +42,7 @@ import {
   DueStatementAutomation,
   type CardSection,
 } from './CardsPage.sections'
+import { CardsSectionHero } from './CardsPage.hero'
 
 import { QuickExpensePanel } from './CardsPage.expense'
 import { CreditAccountListCard } from './CardsPage.list'
@@ -280,6 +281,8 @@ export function CardsPage() {
                 </div>
               ) : null}
               <CardSectionNav section={section} onSelect={handleSectionChange} counts={counts} />
+              {/* Şerit: sekmenin cevapladığı tek soru, sekme şeridinin hemen altında. */}
+              {!loading ? <CardsSectionHero section={section} rows={cardRows} statements={statements} /> : null}
               {!loading ? (
                 <DueStatementAutomation
                   rows={cardRows}

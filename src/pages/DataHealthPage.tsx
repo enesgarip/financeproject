@@ -27,6 +27,7 @@ import { formatDate } from '../utils/date'
 import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
 import { isMissingSupabaseCapabilityError, missingSupabaseCapabilityMessage } from '../utils/supabaseErrors'
 import {
+  buildAreaCoverage,
   buildIssues,
   type HealthData,
   type HealthIssue,
@@ -169,6 +170,7 @@ export function DataHealthPage() {
   const visibleIssues = useMemo(() => issues.filter((issue) => !snoozedIssueIds.includes(issue.id) && !dismissedIssueIds.includes(issue.id)), [issues, snoozedIssueIds, dismissedIssueIds])
   const bulkIssues = visibleIssues.filter((issue) => resolveHealthIssue(issue).bulkEligible)
   const safeRepairPlan = useMemo(() => safeRepairPlanForIssues(visibleIssues), [visibleIssues])
+  const coverage = useMemo(() => buildAreaCoverage(visibleIssues), [visibleIssues])
   const stats = {
     errors: visibleIssues.filter((issue) => issue.severity === 'error').length,
     warnings: visibleIssues.filter((issue) => issue.severity === 'warning').length,
@@ -425,8 +427,8 @@ export function DataHealthPage() {
               loading
                 ? 'Kontroller çalışıyor…'
                 : visibleIssues.length === 0
-                  ? 'Ledger, bakiye, borç kırılımı ve sınıflandırmalarda sapma yok.'
-                  : `${stats.errors} hata · ${stats.warnings} uyarı · ${stats.info} bilgi`
+                  ? `${coverage.areasChecked} alanın hepsi temiz — ledger, bakiye, borç kırılımı ve sınıflandırmalarda sapma yok.`
+                  : `${stats.errors} hata · ${stats.warnings} uyarı · ${stats.info} bilgi · ${coverage.cleanAreas}/${coverage.areasChecked} alan temiz`
             }
           />
 

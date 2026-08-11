@@ -99,8 +99,8 @@ export function SeritOverview({
   totalDebts: number
   liquidAccounts: SeritLiquidAccount[]
   totalCashAssets: number
-  /** `total` = errors + warnings (bulgu toplamı), yapılan kontrol sayısı DEĞİL. */
-  health: { errors: number; warnings: number; total: number }
+  /** `total` = bulgu toplamı; `cleanChecks` = sorunsuz geçen kontrol sayısı. */
+  health: { errors: number; warnings: number; total: number; checksRun: number; cleanChecks: number }
   onPay: (item: DashboardUpcomingItem) => void
 }) {
   const format = useSeritAmount()
@@ -266,13 +266,18 @@ export function SeritOverview({
               const Icon = tone === 'brand' ? ShieldCheck : ShieldAlert
               return <Icon size={16} className="shrink-0" style={{ color: SERIT_TEXT[tone] }} aria-hidden="true" />
             })()}
+            {/* Bu satır `buildHealthCounts`'a bakar — tam denetimin (buildIssues)
+                hafif ikizi ve daha az kontrol koşturur. O yüzden "her şey temiz"
+                iddiasında bulunmuyor: sıfır bulguda bile sözü "hızlı kontrol"le
+                sınırlıyor, kesin cevabı Veri Kontrolü ekranı veriyor. */}
             <p className="flex-1 text-[13px] text-ink-muted">
               Veri kontrolü —{' '}
               <span className="font-semibold text-ink">
-                {/* `total` yapılan kontrol sayısı değil bulgu toplamı; tasarımdaki
-                    "34 kontrol temiz" cümlesi için o sayı henüz üretilmiyor. */}
-                {health.total === 0 ? 'tutarsızlık yok' : `${health.warnings} uyarı, ${health.errors} hata`}
+                {health.total === 0
+                  ? `hızlı kontrollerde sapma yok`
+                  : `${health.warnings} uyarı, ${health.errors} hata`}
               </span>
+              {health.checksRun > 0 ? ` · ${health.cleanChecks}/${health.checksRun} temiz` : null}
             </p>
             <span className="shrink-0 text-[13px] font-semibold" style={{ color: SERIT_TEXT.brand }}>
               Aç →
