@@ -145,13 +145,22 @@ export function buildSearchItems(data: AnalysisData): SearchItem[] {
       amount: budget.limit_amount,
       date: budget.month,
     })),
-    ...data.savingsGoals.map((goal) => ({
-      type: 'Birikim hedefi',
-      title: goal.name,
-      subtitle: goal.status === 'active' ? 'Aktif' : 'Tamamlandı',
-      amount: goal.current_amount,
-      date: goal.target_date,
-    })),
+    ...data.savingsGoals.map((goal) => {
+      // Karma hedefte current/target TL DEĞİL, bileşen sayısıdır (bkz.
+      // savingsGoal.ts). Tutar kolonuna konursa "2 bileşen tamamlandı" ekranda
+      // ve CSV'de "₺2,00" diye okunur; sayaç bu yüzden alt satıra taşınır.
+      const isComposite = goal.value_type === 'composite'
+      const status = goal.status === 'active' ? 'Aktif' : 'Tamamlandı'
+      return {
+        type: 'Birikim hedefi',
+        title: goal.name,
+        subtitle: isComposite
+          ? `${status} · ${goal.current_amount}/${goal.target_amount} bileşen`
+          : status,
+        amount: isComposite ? null : goal.current_amount,
+        date: goal.target_date,
+      }
+    }),
     ...data.transactionHistory.map((row) => ({
       type: 'Geçmiş',
       title: row.title,

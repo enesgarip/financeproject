@@ -937,6 +937,34 @@ describe('buildGoalProgressSummary', () => {
     ])
     expect(result.nextGoalName).toBe('Tatil')
   })
+
+  // Faz D2: karma hedefte target/current bileşen SAYISIDIR. Guard olmadan
+  // 3 bileşenlik bir hedef "3 TL kaldı, ayda 1 TL biriktir" üretiyordu.
+  it('never derives a TL monthly need from a composite goal (counts are not money)', () => {
+    const result = buildGoalProgressSummary([
+      goal({
+        id: 'karma',
+        name: 'Karma',
+        value_type: 'composite',
+        target_date: '2026-09-01',
+        target_amount: 3,
+        current_amount: 1,
+        status: 'active',
+      }),
+    ])
+    expect(result.nextGoalName).toBeNull()
+    expect(result.nextGoalRemaining).toBe(0)
+    expect(result.nextGoalMonthlyNeed).toBe(0)
+  })
+
+  it('still picks a non-composite goal when a composite one is also present', () => {
+    const result = buildGoalProgressSummary([
+      goal({ id: 'karma', name: 'Karma', value_type: 'composite', target_date: '2026-08-01', target_amount: 3, current_amount: 1, status: 'active' }),
+      goal({ id: 'tl', name: 'Tatil', target_date: '2026-09-01', target_amount: 50, current_amount: 10, status: 'active' }),
+    ])
+    expect(result.nextGoalName).toBe('Tatil')
+    expect(result.nextGoalRemaining).toBe(40)
+  })
 })
 
 // ── buildFinancialHealth ───────────────────────────────────────────────────
