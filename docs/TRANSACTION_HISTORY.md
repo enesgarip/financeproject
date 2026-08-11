@@ -1,6 +1,6 @@
 # Transaction History Side Effects
 
-Last reviewed: 2026-08-09
+Last reviewed: 2026-08-12
 
 This document is the source of truth for `transaction_history` side effects. Read
 it before changing a finance mutation, RPC wrapper, payment drawer action, or
@@ -69,6 +69,7 @@ because the current undo flows explicitly do not refund cash automatically.
 | `update_card_expense` | none | none | none | Rewrites a posted expense impact and installment rows; no new feed row today. |
 | `post_card_provision` | `card` | Posted `card_expenses.id` | Posted amount | Partial posting writes the posted amount, not the original provision total. |
 | `cancel_card_provision` | `card` | `card_expenses.id` | Provision amount | Cancellation remains visible because it reverses limit/balance impact. |
+| `cancel_card_expense` | `correction` | `card_expenses.id` | Actual debt reversal | Since BM5-b the amount is the expense's real debt contribution, not `amount`: for a posted multi-installment plan it is the sum of the remaining child rows (a carryover parent's `amount` carries the full plan total, but only remaining installments were added to debt). Childless legacy plans fall back to `amount`. |
 | `cut_card_statement` / `cut_due_card_statements` | `card` | `card_statement_archives.id` | Statement amount | Statement cutting logs the movement into billed debt; installments are not logged separately. |
 | `record_card_installment_carryover` | `card` | Imported `card_expenses.id` | Remaining imported amount | Captures pre-app paid/remaining installment context in `note`. |
 | `pay_payment` | `payment` | `payments.id` | Paid amount | Bank source debits cash; credit-card source creates posted card spending. |

@@ -1,6 +1,9 @@
 # Shared Payment Drawer Plan
 
-Last reviewed: 2026-06-14
+Last reviewed: 2026-08-12
+
+> **Note:** This plan was implemented on 2026-06-14; except for the Guardrails
+> section, this document is archival.
 
 ## Goal
 
@@ -19,7 +22,8 @@ right data after success.
 | Planned payment | `PaymentsPage.openObligationPayment` | `submitFinanceObligationPayment` -> `pay_payment` | Bank account or credit card | Amount is editable because estimates can be paid with the real amount. |
 | Credit-card statement | `CardsPage.hooks.useStatementPaymentModal` | `submitFinanceObligationPayment` -> `pay_card_statement` | Bank account only, not the target credit card | Archived statement amount is paid; linked installment schedule remains unchanged. |
 | Manual card debt | `CardsPage.openDebtPayment` ("Borç öde" on the credit-card row) and `ObligationsCalendar` -> `PaymentsPage.openObligationPayment` | `submitFinanceObligationPayment` -> `pay_card_debt` | Bank account only, not the target card | Amount is editable but cannot exceed payable card debt (statement + current period). Works before a statement is cut; the card-row button is disabled while an open statement archive exists (statement flow owns that case). |
-| Card installment | `ObligationsCalendar` | No direct action | N/A | Scheduled installments are paid by statement flow; manual `pay_card_installment` remains intentionally disabled. |
+| Card installment | `ObligationsCalendar` | No direct action | N/A | Scheduled installments are paid by statement flow; the manual `pay_card_installment`/`unpay_card_installment` RPCs were dropped entirely (migration `20260810150000_drop_dead_installment_rpcs.sql`). |
+| Card debt hub (`/borclar/kartlar`) | `LiabilitiesCardsPage.openPaymentDrawer` | `submitFinanceObligationPayment` -> `pay_card_statement` (card with an open statement archive) or `pay_card_debt` | Bank account only, not the target card | Uses the shared drawer; the canonical path for a card with an open archive is statement payment. |
 | Loan installment | `LoansPage.openInstallmentPayment` | `payLoanInstallment` repo wrapper | Bank account only | Uses a page-local modal state and `loanAccount` preference. |
 | Personal debt/receivable | `DebtsPage.openDebtSettlement` | `settlePersonalDebt` repo wrapper | Bank account only | Receivable collection is an inflow, so account preview must add funds instead of checking coverage. |
 

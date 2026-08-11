@@ -1,6 +1,6 @@
 # AI Context Index
 
-Last reviewed: 2026-08-10
+Last reviewed: 2026-08-12
 
 This file is the cheapest starting point for future AI/Codex sessions. Its job
 is to reduce repeated repo discovery: read this first, choose the smallest
@@ -25,7 +25,7 @@ frontend -> RPC, or RPC -> migration.
 | `CLAUDE.md` | A new AI agent needs persistent repo rules before acting | Stack summary, layer boundaries, money-model warnings, deployment gotchas |
 | `docs/CODEX_GUIDE.md` | A Codex session needs working rules and finish checklist | How to work in this repo with low regression risk |
 | `docs/PROJECT_CONTEXT.md` | You need the product map or route/table overview | Product purpose, app structure, important domains, route model |
-| `docs/UI_ARCHITECTURE.md` | You are changing shared visual language, route shells, navigation, page hierarchy, or UI primitives | Premium-fintech principles, shared templates, route patterns, responsive/a11y contract |
+| `docs/UI_ARCHITECTURE.md` | You are changing shared visual language, route shells, navigation, page hierarchy, or UI primitives | Şerit görsel sözleşmesi (kartsız dil, kabuk, token'lar), shared templates, route patterns, responsive/a11y contract |
 | `docs/DASHBOARD_ARCHITECTURE.md` | You are changing `/` dashboard orchestration, dashboard-specific derived math, or dashboard UX/a11y behavior | Dashboard data flow, utility ownership, obligation input, panel boundaries, UX/a11y contract |
 | `docs/CARDS_ARCHITECTURE.md` | You are changing `/kartlar` orchestration, card/account panels, or card page module boundaries | Cards page data flow, module map, side-effect boundaries, payment flow |
 | `docs/DATA_HEALTH_ARCHITECTURE.md` | You are changing `/veri-sagligi`, data-health checks, safe fixes, undo, backup, or reset flows | Data-health lifecycle, issue/fix ownership, write safety, invariant sources |
@@ -45,6 +45,7 @@ frontend -> RPC, or RPC -> migration.
 | Shared payment drawer | `docs/SHARED_PAYMENT_DRAWER_PLAN.md` | `src/hooks/useFinancePaymentDrawer.ts`, `src/components/finance/FinancePaymentDrawer.tsx`, `src/components/finance/AccountPaymentModal.tsx`, `src/services/financePaymentActions.ts`, payment-owning pages | Plan and shared implementation for account-backed payment modals without changing RPC behavior |
 | Release/migration compatibility | `docs/MIGRATION_COMPATIBILITY_CHECKLIST.md` | `.github/workflows/ci.yml`, `.github/workflows/deploy.yml`, `supabase/migrations/*` | Use for schema, RLS, RPC, edge function, or generated type changes |
 | Banking simplification | `docs/BANKING_SIMPLIFICATION_AUDIT.md` | `src/pages/CardsPage*.tsx`, `src/components/finance/*`, `docs/CARDS_ARCHITECTURE.md` | Tracks completed banking simplifications and future maintenance notes |
+| Uygulama geneli denetim (2026-08-12) | `docs/APPLICATION_AUDIT_2026-08-12.md` | `docs/BACKLOG.md` | Tüm katmanların dosya dosya denetimi: kritik bulgular, ölü kod envanteri, tekrar eden yüzey haritası, faz planı |
 | Pipeline/deploy | `docs/PIPELINE.md` | GitHub workflow files, `.lighthouserc.cjs`, and package scripts | CI, deploy, secrets, branch flow |
 
 ## Architecture Map
@@ -284,6 +285,10 @@ paylaşır; her sayfa süpersetini client-side daraltır). Query client: `src/ap
 | **Karar anı ("alsam mı")** | `utils/purchaseImpact.ts` (+ test; kartta ilk taksit sonraki ekstrede), `utils/cashFlowForecast.ts` | `financeSnapshotRepo.ts` | `pages/PurchaseDecisionPage.tsx` (`/alsam-mi`, QuickActions ilk sırada) |
 | **Rakam güven dili (kesin/tahmini/bayat)** | `utils/dataConfidence.ts` (+ test) | — | `components/ui/confidence-badge.tsx`, `pages/CardsPage.control.tsx`, `pages/CardsPage.list.tsx`, `components/finance/RatesBanner.tsx` |
 | **Piyasa kuru / BIST** | `utils/marketRates.ts` | — | `supabase/functions/bist-quote` |
+| **Hisse fiyatları (canlı)** | `hooks/useStockPrices.ts` | — | `pages/AssetsPage.tsx` (Hisse satırları), `supabase/functions/bist-quote` |
+| **Fiş tarama (foto → kart harcaması)** | — | `lib/receiptParseClient.ts` | `supabase/functions/parse-receipt`, `pages/CardsPage.expense.tsx` (Hızlı harcama fiş yükleme) |
+| **Genel ekstre parse fallback (bilinmeyen banka PDF'i)** | `utils/denizBankStatementParser.ts`, `utils/yapiKrediStatementParser.ts` (önce yerel parser'lar) | `lib/statementParseClient.ts` | `supabase/functions/parse-statement`, `components/finance/StatementImportModal.tsx` |
+| **Pull-to-refresh** | `hooks/usePullToRefresh.ts` | — | `components/PullToRefresh.tsx` (Layout `main` sarmalayıcısı) |
 | **Şema / tip / RPC kontratı** | — | `src/types/database.ts` | — |
 | **Migration / trigger** | `utils/financeSummary.ts` (saf TS ikizleri) | `supabase/migrations/*` | — |
 

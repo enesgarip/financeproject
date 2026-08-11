@@ -5,7 +5,7 @@ bağlamdır. Amaç: temiz bir oturumun projenin kurallarını ve tuzaklarını s
 keşfetmek zorunda kalmaması.
 
 **Bu dosya kanonik kural setidir.** Eşlik eden dosyalar:
-`AGENTS.md` (Codex giriş noktası — bu dosyaya yönlendirir + 5 kritik kuralı yineler),
+`AGENTS.md` (Codex giriş noktası — bu dosyaya yönlendirir + 6 kritik kuralı yineler),
 `docs/AI_CONTEXT_INDEX.md` (görev bazlı en ucuz okuma rotası + konu→dosya tablosu;
 keşif turu atmamak için **önce buna bak**),
 `docs/PROJECT_CONTEXT.md` (domain + tablo + route haritası).

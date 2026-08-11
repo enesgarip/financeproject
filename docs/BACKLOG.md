@@ -1,5 +1,17 @@
 # Priority Backlog
 
+## 2026-08-12 — Uygulama geneli denetim (kod + UI + docs)
+
+Tüm `src/`, `supabase/` ve `docs/` dosya dosya tarandı; canlı UI turu yapıldı.
+Bulguların tamamı ve önerilen faz planı: `docs/APPLICATION_AUDIT_2026-08-12.md`.
+Özet: 18 kritik/yüksek bulgu (gizlilik maskesi sızıntısı, ilk girişte 401 yarışı,
+`post_card_provision` migration regresyonu, çift ekstre ödemesi riski, altın grafiği
+maliyet hatası, mutabakat parse hatası, agregat gelecek-taksit netlemesi vb.),
+geniş ölü kod envanteri (~500 satır bayraklı ölü dal + 7 ölü dosya + ölü CSS),
+tekrar eden yüzey haritası (kart kırılımı 11 yüzey, "Harcanabilir" 2 formül) ve
+pgTAP kapsam boşlukları. Docs senkronu aynı gün yapıldı (bkz. rapor §11).
+Düzeltme fazları (A–E) rapor §12'de; henüz uygulanmadı.
+
 ## 2026-08-11 — Veri doğruluğu denetimi (Faz D1–D4)
 
 Denetimin sorusu: türetilebilir bilgi DB'de gereksiz/korumasız saklanıyor mu, ve
@@ -1405,10 +1417,8 @@ pattern'ler ve açık düzeltme planı yer alıyor.
 
 ## P3 - Nice to Have
 
-- Add goal-based automatic saving suggestions.
-  - For each active savings goal, show the monthly amount needed to hit the target date.
-  - Adjust suggestions against upcoming obligations so the app can say "bu ay hedefe ara ver" or "bu ay fazladan X ₺ ayırabilirsin."
-  - Reuse existing savings goals and cash-flow/obligation projections before adding any new write model.
+- ~~Add goal-based automatic saving suggestions.~~ DONE (G3a, `src/utils/savingsSuggestion.ts`,
+  tüketici `SavingsGoalsPanel` — hedef başına aylık gereken tutar + yükümlülük-farkındalıklı öneri).
 - Add guided import/restore flow for personal finance data.
   - JSON export/restore exists in Data Health, including a pre-restore safety backup.
   - CSV export exists; remaining import work is a guided CSV/manual mapping flow if that becomes useful.

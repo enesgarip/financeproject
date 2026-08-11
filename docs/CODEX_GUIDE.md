@@ -9,7 +9,7 @@
 
 ## Bir task'a başlarken
 
-1. `AGENTS.md`'deki 5 kritik kuralı içselleştir.
+1. `AGENTS.md`'deki 6 kritik kuralı içselleştir.
 2. `docs/AI_CONTEXT_INDEX.md`'den konunun dosyalarını bul — grep ile keşif turu atma.
 3. Az oku, mevcut deseni kopyala, edit'i dar tut.
 

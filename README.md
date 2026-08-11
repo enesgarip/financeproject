@@ -53,8 +53,8 @@ kullanımı hedefler (TL, Türkçe arayüz).
   krediler, kişisel borç-alacak, ödeme takvimi, analiz & net değer, veri sağlığı.
 - **Gelişmekte (cihaz-içi otomasyon):** SMS'ten provizyon/hareket okuma ve banka
   ekstresi import'u (DenizBank, YapıKredi) tarayıcıda çalışır; tüm-ekstre
-  satır-toplamı doğrulaması henüz kalibre edilmemiştir (bkz. `docs/BACKLOG.md`).
-  Web Push bildirim tercihleri.
+  satır-toplamı doğrulaması gerçek ekstrelerde kalibre edilmiş iki bağımsız
+  checksum ile yapılır (bkz. `docs/BACKLOG.md`). Web Push bildirim tercihleri.
 
 ## Ekran görüntüleri
 

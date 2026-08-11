@@ -1,6 +1,6 @@
 # Supabase RPC Action Reference
 
-Last reviewed: 2026-08-09
+Last reviewed: 2026-08-12
 
 This file maps Supabase RPCs to the user-visible actions that call them. Keep it
 updated whenever a page action, repository wrapper, or migration changes an RPC
@@ -31,7 +31,7 @@ repair rules, keep `docs/TRANSACTION_HISTORY.md` aligned with this file.
 | `pay_payment_from_card_import` | `payPaymentFromCardImport` in `cardsRepo` | Statement/current movement import: matched planned payment row | Adds the matched bill as posted credit-card spending on the bank row date and advances/closes the planned payment; source event retries are no-ops. |
 | `record_card_installment_carryover` | `recordCardInstallmentCarryover` in `cardsRepo` | Cards page/import: current installment number is greater than one | Adds only current/future open installment rows and remaining card debt; earlier installments are represented by the parent note, not recreated as synthetic paid rows. Source event retries do not recreate the plan. |
 | `reset_card_import_data` | `resetCardImportData` in `cardsRepo` | Guarded maintenance helper (the import UI no longer exposes destructive clean import) | Clears only the non-paid/open working scope under a user/card-bound DB context. It fails before mutation when current-settlement or paid-statement installment history would require reconstructing immutable evidence. |
-| `replace_card_statement_import` | `replaceCardStatementImport` in `cardsRepo` | Statement PDF import | In one transaction preserves immutable history/later movements, replaces the PDF-covered open scope, applies refunds, locks the cut amount to the bank total, cuts the statement, and records reconciliation. Historical installment parents are never matched/reused; the PDF creates a fresh current/future open plan. |
+| `replace_card_statement_import` | `replaceCardStatementImport` in `cardsRepo` | Statement PDF import | In one transaction preserves immutable history/later movements, replaces the PDF-covered open scope, applies refunds, locks the cut amount to the bank total, cuts the statement, and records reconciliation. Since K1 (2026-08-10, migration `20260810130000_statement_import_reuse_plan.sql`) a carryover action without a parent id looks up the preserved installment parent on the server (same card, same installment count, exact description, paid/settled history); exactly one candidate is reused so the open plan attaches to the existing parent instead of duplicating it. Ambiguity falls back to a fresh current/future open plan. |
 
 `reset_card_data` and its repository helper were removed in the 2026-08-02
 hardening pass because that legacy RPC could not safely erase immutable statement/
@@ -49,14 +49,15 @@ rewriting historical expenses.
 | RPC | Called From | User-Visible Action | Main Effect |
 | --- | --- | --- | --- |
 | `pay_payment` | `submitFinanceObligationPayment` | Planned payments page/dashboard obligation modal | Marks one payment paid or advances monthly recurrence; bank source debits `current_balance`, credit-card source increases `debt_amount` / `current_period_spending` and creates posted card spending |
-| `pay_card_statement` | `submitFinanceObligationPayment` | Pay open credit-card statement | Uses the archived bank amount, debits the source account, marks the statement paid, reduces card debt, and reprojects statement debt from remaining open archives. It does not mutate linked installments and aggregate drift does not block payment. |
-| `pay_card_debt` | `submitFinanceObligationPayment` | Manual credit-card debt payment ("Borç öde" on the cards page card row, plus the obligations calendar item) | Debits a bank account and reduces card debt. A full current-period payment uses a payment settlement. Exact pre-cycle excess left by a legacy aggregate payment first enters a source-less `historical_repair` settlement without a second debit; ambiguous movement sets reject and roll back the whole payment. Direct child marker writes remain rejected. |
+| `pay_card_statement` | `submitFinanceObligationPayment` | Pay open credit-card statement | Uses the archived bank amount, debits the source account, marks the statement paid, reduces card debt, and reprojects statement debt from remaining open archives. It does not mutate linked installments and aggregate drift does not block payment. Optional `p_skip_source_debit` (BM-3/B4): when a bank SMS already debited the source account, the statement is settled without a second debit. |
+| `pay_card_debt` | `submitFinanceObligationPayment` | Manual credit-card debt payment ("Borç öde" on the cards page card row, plus the obligations calendar item) | Debits a bank account and reduces card debt. A full current-period payment uses a payment settlement. Exact pre-cycle excess left by a legacy aggregate payment first enters a source-less `historical_repair` settlement without a second debit; ambiguous movement sets reject and roll back the whole payment. Direct child marker writes remain rejected. Optional `p_skip_source_debit` (BM-3/B4): when a bank SMS already debited the source account, the payment is recorded without a second debit. |
 | `pay_loan_installment` | `submitFinanceObligationPayment` | Pay loan installment | Debits a bank account, marks installment paid, syncs loan summary through DB invariants |
-| `settle_personal_debt` | `submitFinanceObligationPayment` | Settle personal debt or collect receivable | Updates bank-account balance and closes the debt row |
+| `settle_personal_debt` | `submitFinanceObligationPayment` | Settle personal debt or collect receivable | Updates bank-account balance. Since BM-8 an optional `p_amount` allows a partial payment: null/full amount closes the debt row, a smaller amount reduces it and leaves the row open |
 
-`pay_card_installment` and `unpay_card_installment` are still typed RPCs, but
-the current database definitions intentionally reject manual credit-card
-installment payment outside the statement flow.
+`pay_card_installment` and `unpay_card_installment` were dropped from the
+database and from `src/types/database.ts` (migration
+`20260810150000_drop_dead_installment_rpcs.sql`): installments are not paid
+individually — payment flows through the statement/settlement model.
 
 ## Bank Accounts
 
@@ -72,6 +73,12 @@ installment payment outside the statement flow.
 | RPC | Called From | User-Visible Action | Main Effect |
 | --- | --- | --- | --- |
 | `trade_asset_with_account` | `submitAssetTrade` | Assets page: buy/sell an existing asset with a selected bank account | Buy debits a `banka_karti` and increases asset value/quantity; sell credits a `banka_karti` and decreases asset value/quantity; writes one asset history row |
+
+## Savings Goals
+
+| RPC | Called From | User-Visible Action | Main Effect |
+| --- | --- | --- | --- |
+| `upsert_savings_goal` | `upsertSavingsGoalWithComponents` in `savingsGoalsRepo` | Savings goals panel: create/edit a goal (simple or composite) | Upserts one `savings_goals` row plus its `savings_goal_components` in a single transaction; for composite goals the goal's target/current totals are derived from the components on the server (D2). Returns the goal id |
 
 ## Ledger Repair
 
@@ -90,6 +97,8 @@ installment payment outside the statement flow.
 | `apply_data_health_safe_repairs` | `dataHealthRepairs` / `DataHealthPage.actions` | Individual source recompute / previewed card-account bulk repair | Applies one 1..100-entry, duplicate-free card/account or loan domain plan after owner/type locks and exact `updated_at` validation; stale input rolls back the domain plan, while canonical request-bound idempotency returns the original receipt on replay |
 | `update_card_expense_health_metadata` | `cardsRepo` / `DataHealthCardExpenseReview` | Complete flagged description/category | Locks card → expense, rejects stale/cancelled rows, and updates only non-financial metadata without changing archive totals |
 | `reset_user_finance_data` | `dataHealthRepo`, `backupRepo` | Data health reset / restore pre-wipe | In one auth.uid-bound transaction deletes the signed-in user's finance/support rows child-first, safely breaks settlement RESTRICT links, and clears repair receipts plus owner SMS/notification logs while preserving ownerless diagnostics |
+| `acknowledge_data_health_issues` | `acknowledgeDataHealthIssues` in `dataHealthRepo` (batched by 500), `backupRepo` restore | Data health: dismiss/acknowledge findings; restore replays saved acknowledgements | Upserts own-row `data_health_issue_acknowledgements` entries for the given issue ids so acknowledged findings stay hidden |
+| `clear_data_health_issue_acknowledgements` | `clearDataHealthIssueAcknowledgements` in `dataHealthRepo` | Data health: bring back all dismissed findings | Deletes all of the signed-in user's issue acknowledgements |
 
 The bulk planner excludes `loanTotals`; an individual loan finding submits a
 loan-only plan so card and loan lock domains are never mixed. Each accepted new

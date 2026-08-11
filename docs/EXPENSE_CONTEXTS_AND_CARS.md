@@ -17,6 +17,19 @@ Bu doküman `/odemeler/baglamlar` ve `/varliklar/araclar` için davranış kayna
 
 **Süre / süresizlik.** `starts_on` ve `ends_on` nullable; DB ve form tarihi zorunlu tutmaz. Evcil hayvan doğası gereği süresizdir — formu tarih alanı göstermez (`kind==='pet'`). Proje türünde tarihler opsiyoneldir; **bitiş boş bırakılırsa bağlam süresiz** sürer. `ends_on` null olan her bağlam özet kartında "Süresiz" rozetiyle işaretlenir.
 
+## Kart harcaması etiketleme (S2/S3, 2026-08-11)
+
+- **Etiketlenebilir liste provizyonları da kapsar.** `fetchTaggableCardExpenses`
+  (`cardsRepo.ts`) `posted` + `provision` durumlarını harcama tarihine göre listeler:
+  SMS'ten yeni düşen harcamalar önce `provision` gelir; kesinleşene kadar listede
+  olmazsa bağlam atanamıyordu. Etiketleme kart borcunu değiştirmediği için
+  provizyonu dahil etmek güvenli (S2).
+- **Kısmi provizyon kesinleşmesi `context_id`'yi korur.** `post_card_provision`
+  kısmi kesinleşmede kalan provizyonu orijinal satırda bırakıp kesinleşen kısım
+  için yeni `card_expenses` satırı açar; `context_id` artık yeni satıra kopyalanır
+  (migration `20260811100000_partial_provision_keeps_context.sql`), yoksa etiketli
+  provizyonun kesinleşen kısmı bağlam özetlerinde görünmüyordu (S3).
+
 ## Yakıt ölçümü
 
 Litre ve odometre, hem manuel araç giderinde hem etiketli kart giderinde nullable annotation'dır. Tüketim ardışık ve artan odometreli dolumlar arasında hesaplanır:

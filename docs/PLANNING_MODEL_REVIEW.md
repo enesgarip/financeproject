@@ -47,6 +47,9 @@ Every planning surface should preserve these meanings:
 - `cashImpactAmount`: the cash movement for that date. Credit-card-settled
   obligations and scheduled card installments can be `0` even when `amount` is
   positive.
+- `maxPayableAmount`: the payment drawer's amount ceiling; may exceed `amount`
+  (for example statement debt plus current-period spending on a manual card
+  debt payment). When absent, `amount` is the ceiling.
 - `settlement`: `cash` for bank-account cash movement, `credit_card` for
   obligations that first land on a card.
 - `action`: non-null only when the item can be paid/settled from the shared

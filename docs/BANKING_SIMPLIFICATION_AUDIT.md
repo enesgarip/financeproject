@@ -40,8 +40,13 @@
 - **Statement installment parent drift (2026-08-09)**
   - A historical installment parent can legitimately differ from the PDF's
     current monthly amount projection because earlier installments may be uneven.
-    The former matcher preserved/reused that parent. The simplified flow now
-    leaves it entirely historical and creates a new open projection from PDF truth.
+    The former matcher preserved/reused that parent. The simplified flow first
+    left it entirely historical and created a new open projection from PDF truth;
+    since 2026-08-10 (K1, migration `20260810130000_statement_import_reuse_plan.sql`)
+    the server finds the single preserved carryover parent (same card, same
+    installment count, exact description, paid/settled history) and reuses it,
+    so monthly imports no longer duplicate the plan. Ambiguity still falls back
+    to a fresh parent.
   - A sole strict date/number candidate no longer wins when both merchant and
     amount disagree; matching falls back to the description-compatible plan in
     the statement period, preventing a foreign parent id from reaching the RPC.
@@ -137,7 +142,7 @@
 
 - **Primary app structure**
   - Before: daily banking screens, reporting, loans, assets, and data-health maintenance all competed in the main navigation.
-  - Now: the primary navigation is reduced to "Özet", "Hesaplar", "Planlı", "Kişiler", "Raporlar", and "Diğer"; less frequent records and maintenance live under "Diğer".
+  - Now: the primary navigation is context-based — "Özet", "Hesaplar", "Varlıklar", "Borçlar", "Plan", and "Analiz" (see `src/components/navigation.ts`); maintenance lives under the secondary "Kontrol" (`/veri-sagligi`) item.
 
 - **Quick actions**
   - Before: the floating quick-action menu mixed daily money actions with data-health maintenance.

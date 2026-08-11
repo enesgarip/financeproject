@@ -1,6 +1,6 @@
 # Cards Architecture Note
 
-Last reviewed: 2026-08-09
+Last reviewed: 2026-08-12
 
 This note maps `/kartlar` (`CardsPage`) after the page split. Start with
 `CLAUDE.md`, `docs/AI_CONTEXT_INDEX.md`, and `docs/CARD_DEBT_TRANSITIONS.md`
@@ -57,23 +57,26 @@ lazy boundary.
 
 ## Visual Hierarchy
 
-- `CrudPage` supplies the shared `PageCommandHeader`; `/kartlar` labels this
-  surface "Finans merkezi" and keeps search/create tools in the same command
-  layer.
-- On the summary section, `AccountHubPanel` is the first persistent decision
-  surface. It shows account balance, payable card debt, and "borç sonrası
-  nakit" (`diffTL(accountBalance, payableCardDebt)`) before reconciliation and
-  detailed card panels.
-- `accounts-signature-hub` is a scoped dark signature surface in both app
-  themes. Keep its foreground/card contrast tokens local.
-- Account and credit-card list surfaces use the shared `premium-entity-card`
-  anatomy: identity, one primary value, supporting metrics/activity, then the
-  primary action. Their list is capped at two desktop columns so balance,
-  movement, statement, and limit information never collapses into a narrow
-  tile.
-- The credit-card signature surface must leave overflow visible because the row
-  action menu is anchored inside it. Keep decorative clipping on the dedicated
-  absolute decoration layer so mobile menus can extend beyond the blue surface.
+- The page title lives in the app shell (`Layout` + `navigation.ts` routeMeta);
+  `CrudPage` no longer renders its own page header (removed in Ş4). It only
+  renders the toolbar layer (record count, search, add action); its
+  `pageTitle` prop is carried for accessibility/search labels only.
+- Each `/kartlar` sub-section answers one question with a Şerit `HeroNumber`
+  (`CardsPage.hero.tsx`); on the summary section the hero is "borç sonrası
+  likit" (`diffTL(accountBalance, payableCardDebt)`) inside `AccountHubPanel`
+  (`CardsPage.overview.tsx`), followed by the bank-account line list.
+- There is no dark signature surface anymore: the old `accounts-signature-hub`
+  gradient block was removed with the Şerit redesign (see the comment in
+  `CardsPage.overview.tsx`). Separation is done with 1px lines and background
+  tone, not scoped dark tokens.
+- Account and credit-card list surfaces still use the shared
+  `premium-entity-card` anatomy: identity, one primary value, supporting
+  metrics/activity, then the primary action. Their list is capped at two
+  desktop columns so balance, movement, statement, and limit information never
+  collapses into a narrow tile.
+- Credit-card list rows must leave overflow visible because the row action
+  menu is anchored inside them; keep any decorative clipping on a dedicated
+  layer so mobile menus can extend beyond the row surface.
 - Credit-card list rows label `debt_amount` as “Toplam kart yükü”; current-period,
   open-statement, and future-installment amounts remain separate supporting
   values so a bank's zero current debt is not mistaken for zero total burden.
@@ -109,11 +112,18 @@ actions should use the repository/service layer:
 - Statement import treats the validated PDF as the authoritative snapshot through
   its statement date. `replace_card_statement_import` rebuilds that open scope,
   cuts/reconciles it, and rolls back as one transaction on any row/date failure;
-  paid/current-settled history and later movements remain untouched. It does not
-  query or reuse an old installment parent: a PDF `3/6` row creates only the
-  current `3/6` plus future `4/6..6/6` open plan. Current-
-  movement import stays non-destructive because that PDF has no independent debt
-  total. The lower-level `reset_card_import_data` remains a guarded maintenance RPC.
+  paid/current-settled history and later movements remain untouched. A PDF `3/6`
+  row creates only the current `3/6` plus future `4/6..6/6` open plan — synthetic
+  paid history is never recreated. Since K1
+  (`supabase/migrations/20260810130000_statement_import_reuse_plan.sql`) the
+  carryover path **does reuse a preserved installment parent on the server**:
+  when the action carries no parent id, the RPC looks for exactly one same-card
+  parent with the same installment count, identical description, and paid/settled
+  history, and rebuilds the open plan under it instead of opening a new parent
+  every month; any ambiguity falls back to creating a new parent. Amount
+  tolerance is intentionally not a match criterion. Current-movement import
+  stays non-destructive because that PDF has no independent debt total. The
+  lower-level `reset_card_import_data` remains a guarded maintenance RPC.
 - Both importers use `src/utils/importedInstallmentPlan.ts` to preserve the
   original bank transaction date, derive the exact current installment date,
   and retain numbering such as 5/12 instead of rebuilding it as 1/8.
@@ -129,7 +139,7 @@ actions should use the repository/service layer:
   `src/hooks/useFinancePaymentDrawer.ts` and
   `src/components/finance/FinancePaymentDrawer.tsx`
 - balance privacy:
-  `src/hooks/useBalancePrivacy.ts`; pass its formatter down instead of adding
+  `src/hooks/useBalancePrivacy.tsx`; pass its formatter down instead of adding
   page-local masking logic
 
 Do not import `src/lib/supabase` from page, component, hook, or utility code.
