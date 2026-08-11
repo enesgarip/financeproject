@@ -6,6 +6,7 @@ import { BreakdownBar, HeroNumber, LineGroup, LineRow, SERIT_TEXT, useSeritAmoun
 import { buildVizColorMap, orderSlicesCanonically } from '../components/charts/vizPalette'
 import { RatesBanner } from '../components/finance/RatesBanner'
 import { Button } from '../components/ui/button'
+import { ConfidenceBadge } from '../components/ui/confidence-badge'
 import { fetchCrudRows } from '../data/repositories/crudRepo'
 import { useMarketRates } from '../hooks/useMarketRates'
 import { useStockPrices } from '../hooks/useStockPrices'
@@ -18,7 +19,8 @@ import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
 import { GOLD_LEDGER_SOURCE } from '../utils/goldLedger'
 import type { MarketRatesSnapshot } from '../utils/marketRates'
 import { diffTL, greaterThanTL, sumTL, roundTL } from '../utils/money'
-import { assetRateSymbol, effectiveAssetValue, stockCostBasis, stockProfit, valueAsset, valueStock } from '../utils/valuation'
+import { valuationConfidence } from '../utils/dataConfidence'
+import { assetRateSymbol, effectiveAssetValue, effectiveAssetValueWithSource, stockCostBasis, stockProfit, valueAsset, valueStock } from '../utils/valuation'
 import { AssetTradeModal, type AssetTradeDraft } from './AssetsPage.tradeModal'
 
 const categoryOptions: Asset['category'][] = ['Nakit', 'Altın', 'Fon', 'Hisse', 'Araç', 'BES', 'Diğer']
@@ -695,7 +697,10 @@ export function AssetsPage() {
         canDeleteRow={(row) => !isGoldLedgerAsset(row)}
         renderCard={(row, { menu, rowActions }) => {
           const asset = row as Asset
-          const value = effectiveAssetValue(asset, snapshot, stockPrices)
+          // Canlı kur gelmediğinde sessizce saklı değere düşülüyordu; kaynak
+          // artık rozetle görünür (Faz D3).
+          const { value, source } = effectiveAssetValueWithSource(asset, snapshot, stockPrices)
+          const valueConfidence = valuationConfidence(source, asset.valued_at)
           const meta = categoryMeta[asset.category]
           const Icon = meta.icon
           const pl = asset.category === 'Hisse' ? stockProfit(value, asset) : null
@@ -722,7 +727,10 @@ export function AssetsPage() {
               <div className="mt-4 flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
                 <div className="min-w-0">
                   <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Değer</p>
-                  <p className="mt-0.5 font-mono text-lg font-black tabular-nums text-foreground">{formatAmount(value)}</p>
+                  <div className="mt-0.5 flex flex-wrap items-center gap-2">
+                    <p className="font-mono text-lg font-black tabular-nums text-foreground">{formatAmount(value)}</p>
+                    <ConfidenceBadge confidence={valueConfidence} />
+                  </div>
                 </div>
                 {(asset.category === 'Altın' || asset.category === 'Hisse') && asset.amount > 0 ? (
                   <div className="min-w-0">

@@ -50,13 +50,24 @@ ikizi ile zaten temiz çıktı; açıklar sonradan eklenen alanlardaydı.
   hiç render edilmiyordu; ölü bağlantı kaldırıldı. Fonksiyon (guard'ı düzeltilmiş
   hâlde) duruyor — bir panele bağlanacaksa doğru çalışsın diye; bağlanmayacaksa
   testleriyle birlikte silinebilir.
-- **D3 — Açık: otomatik değerlemede tazelik bilgisi saklanmıyor.**
+- ~~**D3 — Otomatik değerlemede tazelik bilgisi saklanmıyordu.**~~ DONE.
   `assets`/`debts`/`savings_goals` üzerinde `estimated_value_try` + `auto_valued`
-  var ama `valued_at` ve kullanılan kur yok; `effectiveAssetValue` canlı kur
-  gelmezse sessizce saklı değere düşüyor. `net_worth_snapshots` bunu doğru
-  yapıyor (`gold_try` + `usd_try` satırda) — aynı desen varlık satırına taşınacak.
-  Ayrıca `RatesBanner` yalnız Varlıklar/Borçlar/Altın'da; net değer kahraman
-  rakamının olduğu Dashboard'da kur yaşı hiç görünmüyor.
+  vardı ama `valued_at` ve kullanılan kur yoktu (`updated_at` bu işi göremez —
+  not değişince de ilerler). `effectiveAssetValue` canlı kur gelmediğinde
+  sessizce saklı değere düşüyordu; kullanıcı bayat rakamı canlı sanıyordu.
+  Artık üç tabloda `valued_at` + `valuation_rate` var ve `persistEstimatedValues`
+  ikisini de yazıyor. `valuation_rate` NEDEN türetilebilir sayılmadı:
+  kabaca `estimated_value_try / amount`'a eşit ama `amount` sonradan
+  değiştirilebiliyor ve miktarın geçmişi tutulmuyor — miktar değişir değişmez
+  oran geri hesaplanamaz. `net_worth_snapshots`'ın `gold_try`/`usd_try`'yi
+  saklamasıyla aynı gerekçe.
+  Görünür taraf: yeni `ValueSource` (`live`/`stored`/`manual`) ve
+  `valuationConfidence` ile Varlıklar sayfasında rozet, Borçlar'da
+  "Canlı kurla otomatik" yerine "Kur alınamadı · N gün önceki kur", birikim
+  hedefinde "Güncel" etiketi yalnız gerçekten canlıyken. Bulgu 6: `RatesBanner`
+  yalnız Varlıklar/Borçlar/Altın'daydı; Dashboard'daki "Net değer" paneline kur
+  yaşı uyarısı eklendi (net değerin içinde altın/döviz var, kur bayatsa rakam da
+  bayat). Migration: `20260811160000_valuation_freshness.sql`.
 - **D4 — Açık: "harcanabilir" sayısı ekrandan ekrana farklı.** Dashboard
   (`useSafeToSpend`) kasa kovalarındaki rezervi düşüyor; `PurchaseDecisionPage`
   ve `PlanningPage` `buildSafeToSpend`'i `reserved` olmadan çağırıyor. Yani

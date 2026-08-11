@@ -33,7 +33,7 @@ const AUGUST = new Date(2026, 7, 15)
 // ── Factories ──────────────────────────────────────────────────────────────
 
 function asset(overrides: Partial<Asset>): Asset {
-  return { ...base, name: 'Varlık', category: 'Nakit', amount: 0, unit: 'TRY', currency: null, symbol: null, unit_cost: null, estimated_value_try: 0, auto_valued: false, source: null, note: null, ...overrides }
+  return { ...base, name: 'Varlık', category: 'Nakit', amount: 0, unit: 'TRY', currency: null, symbol: null, unit_cost: null, estimated_value_try: 0, auto_valued: false, valued_at: null, valuation_rate: null, source: null, note: null, ...overrides }
 }
 
 function bankCard(overrides: Partial<Card>): Card {
@@ -115,7 +115,7 @@ function statement(overrides: Partial<CardStatementArchive>): CardStatementArchi
 function debt(overrides: Partial<Debt>): Debt {
   return {
     ...base, person_name: 'Kişi', direction: 'borç_aldım', value_type: 'TRY',
-    currency: null, amount: 0, estimated_value_try: 0, auto_valued: false,
+    currency: null, amount: 0, estimated_value_try: 0, auto_valued: false, valued_at: null, valuation_rate: null,
     due_date: null, status: 'açık', note: null, ...overrides,
   }
 }
@@ -136,7 +136,7 @@ function salary(overrides: Partial<SalaryHistory>): SalaryHistory {
 function goal(overrides: Partial<SavingsGoal>): SavingsGoal {
   return {
     ...base, name: 'Hedef', value_type: 'TRY', target_amount: 0, current_amount: 0,
-    estimated_value_try: null, auto_valued: false, target_date: null, status: 'active', note: null, ...overrides,
+    estimated_value_try: null, auto_valued: false, valued_at: null, valuation_rate: null, target_date: null, status: 'active', note: null, ...overrides,
   }
 }
 

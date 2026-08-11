@@ -22,6 +22,8 @@ function goal(overrides: Partial<SavingsGoal>): SavingsGoal {
     current_amount: 0,
     estimated_value_try: 0,
     auto_valued: false,
+    valued_at: null,
+    valuation_rate: null,
     target_date: null,
     status: 'active',
     note: null,

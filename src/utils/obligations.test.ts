@@ -92,6 +92,8 @@ function debt(overrides: Partial<Debt>): Debt {
     amount: 1,
     estimated_value_try: 0,
     auto_valued: false,
+    valued_at: null,
+    valuation_rate: null,
     due_date: null,
     status: 'açık',
     note: null,

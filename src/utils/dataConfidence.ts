@@ -55,6 +55,41 @@ export function freshnessConfidence(
   return EXACT
 }
 
+/**
+ * Otomatik değerlenen bir satırın güveni (Faz D3).
+ *
+ * `source='stored'` = otomatik değerleme açık ama canlı kur alınamadı, ekranda
+ * en son saklanan tutar duruyor. Bu sessiz kaldığı sürece kullanıcı bayat bir
+ * rakamı canlı sanıyordu; rozet "ne kadar bayat" sorusunu da cevaplar.
+ * `valuedAt` bilinmiyorsa (kolondan önceki kayıt) yaş yerine bunu söyler.
+ */
+export function valuationConfidence(
+  source: 'live' | 'stored' | 'manual',
+  valuedAt: string | null,
+  now: Date = new Date(),
+): Confidence {
+  if (source !== 'stored') return EXACT
+  if (!valuedAt) {
+    return {
+      level: 'stale',
+      label: 'Kur yok',
+      reason: 'Canlı kur alınamadı; saklanan tutar gösteriliyor ve ne zaman hesaplandığı bilinmiyor.',
+    }
+  }
+  const days = Math.floor((now.getTime() - new Date(valuedAt).getTime()) / 86_400_000)
+  if (!Number.isFinite(days)) {
+    return { level: 'stale', label: 'Kur yok', reason: 'Canlı kur alınamadı; saklanan tutar gösteriliyor.' }
+  }
+  return {
+    level: 'stale',
+    label: days <= 0 ? 'Kur yok' : `${days} gün önceki kur`,
+    reason:
+      days <= 0
+        ? 'Canlı kur alınamadı; bugün hesaplanan son tutar gösteriliyor.'
+        : `Canlı kur alınamadı; ${days} gün önceki kurla hesaplanmış tutar gösteriliyor.`,
+  }
+}
+
 /** Birden çok sinyal varsa en kötüsü kazanır (stale > estimate > exact). */
 export function worstConfidence(...values: Confidence[]): Confidence {
   const rank: Record<ConfidenceLevel, number> = { exact: 0, estimate: 1, stale: 2 }

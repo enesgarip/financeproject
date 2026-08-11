@@ -23,7 +23,9 @@ import {
   savingsGoalValueTypeLabel,
 } from '../../utils/savingsGoal'
 import { buildSavingsCashflowAdvice, buildSavingsSuggestion } from '../../utils/savingsSuggestion'
-import { effectiveGoalValue, valueGoal } from '../../utils/valuation'
+import { valuationConfidence } from '../../utils/dataConfidence'
+import { effectiveGoalValueWithSource, valueGoal } from '../../utils/valuation'
+import { ConfidenceBadge } from '../ui/confidence-badge'
 
 type ComponentDraft = {
   key: string
@@ -410,11 +412,21 @@ export function SavingsGoalsPanel({ monthlySurplus }: { monthlySurplus?: number 
                         </div>
                       </div>
                       <p className="mt-1.5 text-xs font-semibold tabular-nums text-muted-foreground">{formatSavingsGoalProgress(goal, goalComponents)}</p>
-                      {goal.value_type !== 'TRY' && goal.value_type !== 'composite' && (goal.auto_valued || goal.estimated_value_try) ? (
-                        <p className="mt-0.5 text-xs text-muted-foreground">
-                          {goal.auto_valued ? 'Güncel' : 'Tahmini'}: <span className="font-semibold tabular-nums text-foreground">{formatAmount(effectiveGoalValue(goal, snapshot))}</span>
-                        </p>
-                      ) : null}
+                      {goal.value_type !== 'TRY' && goal.value_type !== 'composite' && (goal.auto_valued || goal.estimated_value_try) ? (() => {
+                        // "Güncel" etiketi kur alınamadığında da yazıyordu; artık
+                        // saklı değere düşüldüğünde bunu söylüyor (Faz D3).
+                        const { value, source } = effectiveGoalValueWithSource(goal, snapshot)
+                        const confidence = valuationConfidence(source, goal.valued_at)
+                        return (
+                          <p className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+                            <span>
+                              {goal.auto_valued && source === 'live' ? 'Güncel' : 'Tahmini'}:{' '}
+                              <span className="font-semibold tabular-nums text-foreground">{formatAmount(value)}</span>
+                            </span>
+                            <ConfidenceBadge confidence={confidence} />
+                          </p>
+                        )
+                      })() : null}
                       {goal.target_date ? <p className="mt-0.5 text-[11px] text-muted-foreground">Hedef: {formatDate(goal.target_date)}</p> : null}
                       {!isCompleted ? (() => {
                         const suggestion = buildSavingsSuggestion(goal)
