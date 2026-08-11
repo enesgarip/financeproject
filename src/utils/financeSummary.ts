@@ -208,10 +208,13 @@ export function cardDebtBreakdown(
 
 /**
  * Clamps a credit card's debt breakdown so `statement + provision + current`
- * never exceeds `debt` (roadmap "güven" Faz 1). Priority: statement is the most
- * protected, then provision, then current absorbs the remainder. This is the
- * TS twin of the DB BEFORE trigger `clamp_card_breakdown()` — the single source
- * of truth for the invariant, shared with the DataHealth split check.
+ * never exceeds `debt` (roadmap "güven" Faz 1). Öncelik sırası: önce statement
+ * korunur, sonra provision, en son current — yani kalan pay bittiğinde AŞAĞI
+ * kırpılan da current olur. (Eski yorum "current absorbs the remainder" diyordu;
+ * hiçbir kova şişirilmez, üçü de yalnız kırpılır. Toplam `debt`'ten KÜÇÜK
+ * kalabilir; bu artık `cardDebtBreakdown.unexplainedAmount` ile raporlanır.)
+ * This is the TS twin of the DB BEFORE trigger `clamp_card_breakdown()` — the
+ * single source of truth for the invariant, shared with the DataHealth split check.
  */
 export function clampCardBreakdown(debt: number, statement: number, current: number, provision: number) {
   const totalK = Math.max(0, toKurus(debt))

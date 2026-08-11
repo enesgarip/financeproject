@@ -11,7 +11,7 @@ import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
 import { formatMonth } from '../utils/analysisView'
 import { buildFinancialPosition, buildMonthlyCashFlow } from '../utils/financeSummary'
 import { buildSafeToSpend } from '../utils/safeToSpend'
-import { readSafeToSpendBuffer } from '../hooks/useSafeToSpend'
+import { readSafeToSpendBuffer, useKasaReserved } from '../hooks/useSafeToSpend'
 import { SERIT_FILL, useSeritAmount, type SeritTone } from '../components/serit'
 import { buildBudgetUsage } from '../utils/budgetAlerts'
 import { sumTL } from '../utils/money'
@@ -47,7 +47,10 @@ export function PlanningPage() {
 
   // Likit nakit (banka + nakit varlık) ve bu ayki harcanabilir (safeToSpend).
   // Likit → kasa modu kova hesabı; surplus → birikim önerisi "ayır / ara ver" bağlamı.
-  // Dashboard kahraman rakamıyla aynı hesap (useSafeToSpend).
+  // Dashboard kahraman rakamıyla aynı hesap: tampon VE kasa rezervi birlikte
+  // düşülür. Rezerv burada eksikti, yani aynı isimli sayı Dashboard'dakinden
+  // ayrılmış rezerv kadar fazla çıkıyordu (Faz D4).
+  const reserved = useKasaReserved()
   const { liquidCash, monthlySurplus } = useMemo(() => {
     const data = snapshotQuery.data
     if (!data) return { liquidCash: 0, monthlySurplus: undefined as number | undefined }
@@ -58,9 +61,10 @@ export function PlanningPage() {
       expectedIncome: cashFlow.expectedIncome,
       remainingOutflow: cashFlow.remainingOutflow,
       buffer: readSafeToSpendBuffer(),
+      reserved,
     }).amount
     return { liquidCash: position.totalCashAssets, monthlySurplus: surplus }
-  }, [snapshotQuery.data])
+  }, [snapshotQuery.data, reserved])
 
   // Ay bütçesi toplamı: kategori limitlerinin ve harcamalarının toplamı.
   // "Hız" cümlesi ayın kaçıncı gününde olduğumuzla harcama oranını karşılaştırır —

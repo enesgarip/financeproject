@@ -68,11 +68,23 @@ ikizi ile zaten temiz çıktı; açıklar sonradan eklenen alanlardaydı.
   yalnız Varlıklar/Borçlar/Altın'daydı; Dashboard'daki "Net değer" paneline kur
   yaşı uyarısı eklendi (net değerin içinde altın/döviz var, kur bayatsa rakam da
   bayat). Migration: `20260811160000_valuation_freshness.sql`.
-- **D4 — Açık: "harcanabilir" sayısı ekrandan ekrana farklı.** Dashboard
-  (`useSafeToSpend`) kasa kovalarındaki rezervi düşüyor; `PurchaseDecisionPage`
-  ve `PlanningPage` `buildSafeToSpend`'i `reserved` olmadan çağırıyor. Yani
-  "bunu alsam ne olur?" ekranı — kararın verildiği yer — harcanabilir tutarı
-  ayrılmış rezerv kadar FAZLA gösteriyor.
+- ~~**D4 — "Harcanabilir" sayısı ekrandan ekrana farklıydı.**~~ DONE. Dashboard
+  (`useSafeToSpend`) kasa kovalarındaki rezervi düşüyordu; `PurchaseDecisionPage`
+  ve `PlanningPage` `buildSafeToSpend`'i `reserved` olmadan çağırıyordu. Yani
+  "bunu alsam ne olur?" ekranı — kararın fiilen verildiği yer — harcanabilir
+  tutarı ayrılmış rezerv kadar FAZLA gösteriyordu (PlanningPage'in yorumu
+  "Dashboard kahraman rakamıyla aynı hesap" diyordu ama değildi). Rezerv
+  `useSafeToSpend`'in içinden `useKasaReserved` hook'una çıkarıldı ve üç ekran
+  da onu kullanıyor.
+  Bu sınıf hata (saf fonksiyon doğru, çağrı yeri eksik girdiyle çağırıyor)
+  birim testiyle yakalanamaz — fonksiyon her iki çağrıda da "doğru" çalışır.
+  `src/utils/safeToSpend.guard.test.ts` kaynak metnini tarayıp her
+  `buildSafeToSpend` çağrısının `reserved` geçtiğini zorluyor
+  (`docs.guard`/`encoding.guard` ile aynı desen; negatif kontrol yapıldı —
+  `reserved` kaldırılınca guard kırmızıya dönüyor). Guard ayrıca glob'un
+  gerçekten çağrı bulduğunu doğruluyor ki yalancı yeşil olmasın.
+  Ayrıca `clampCardBreakdown`'ın yanıltıcı yorumu düzeltildi: "current absorbs
+  the remainder" diyordu ama hiçbir kova şişirilmiyor, üçü de yalnız kırpılıyor.
 
 ## 2026-08-11 — Ödeme alarmı sadeleştirmesi + bağlam etiketleme kapsamı
 
