@@ -846,6 +846,8 @@ export type Database = {
         Args: {
           p_debt_id: string
           p_account_card_id: string
+          // null/tam değer → kapatır; daha az → kısmi ödeme (kayıt açık kalır).
+          p_amount?: number | null
         }
         Returns: Debt
       }

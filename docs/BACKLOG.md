@@ -1,13 +1,28 @@
 # Priority Backlog
 
-## 2026-08-10 — Banka modeli Faz 7: kenar bulguları (correctness dilimi)
+## 2026-08-10 — Banka modeli Faz 8: kısmi borç + vade çakışması
 
-Uyuyan-akış denetiminin net correctness kalemleri. AÇIK kalan (tasarım/altyapı
-gerektiren, ayrı dilim): kısmi kişisel borç ödemesi (settle_personal_debt tutar
-parametresi — feature); ay-sonu carryover anchor gün kaybı (2b — çevrim başına
-kendini düzeltiyor, düşük); DB/TS vade tarihi çakışma ıraksaması (2d — düşük);
+Faz 7'de ertelenen kalemlerin devamı. Hâlâ AÇIK (bilinçli, düşük değer/yüksek
+altyapı): (2b) ay-sonu carryover anchor gün kaybı — çevrim başına kendini
+düzeltiyor, düzeltmesi ağır overload zincirine (7/8-arg carryover +
+replace_card_statement_import preserved-parent) dokunuyor, risk/değer düşük;
 gece penceresi (UTC/TR) ve Şubat+statement_day=31 için pgTAP kenar testleri
-(clock injection altyapısı gerekir); K3 ay-atlama dönem anahtarı kenarı (1f).
+(saat enjeksiyonu altyapısı gerekir — mevcut testler current_date bazlı);
+(1f) K3 ay-atlama dönem anahtarı kenarı — düşük frekans.
+
+- ~~**BM8 D-1 — Kısmi kişisel borç/alacak ödemesi.**~~ DONE.
+  `settle_personal_debt` opsiyonel `p_amount` aldı (migration `20260810190000`):
+  null/tam değer → kapatır (eski davranış); daha azı → estimated_value_try ve
+  amount'u oransal düşürür, kaydı açık bırakır, nakiti yalnız ödenen kadar
+  oynatır (auto_valued kayıtta miktar da oransal → sonraki değerleme senkronu
+  tutarlı). Çekmece tutarı settle/collect'te düzenlenebilir + borç değeri tavan
+  validasyonu; DebtsPage detayı toplam değer + kısmi açıklaması. Regresyon:
+  `partial_debt_and_due_collision.sql`.
+- ~~**BM8 2d — cut_card_statement due_date çakışma ötelemesi.**~~ DONE. Aynı
+  migration: `due_day <= statement_day` iken arşiv vadesi bir sonraki aya taşınır
+  (TS ikizi `getCardStatementPeriod` ile hizalı; eskiden DB'de arşiv
+  `due_date = statement_date` çakışıp UI projeksiyonundan ıraksıyordu). PDF
+  importu `p_due_date` verdiğinde o yine otoritedir. Regresyon aynı dosyada.
 
 - ~~**BM7 C-1/C-2 — Varlık satışı oransal değer.**~~ DONE. Miktar taşıyan
   satışta değer satılan miktarla oransal düşer (tam satış sıfırlar → hayalet
