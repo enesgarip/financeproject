@@ -1,4 +1,6 @@
-const CACHE_NAME = 'denge-v2'
+// Sürüm yükseltmek eski önbelleği düşürür (activate eşleşmeyen key'leri siler).
+// Şerit görsel dili + FAB bandı düzeltmesi için bump edildi.
+const CACHE_NAME = 'denge-v3'
 const APP_SHELL = ['/', '/manifest.webmanifest', '/icon.svg']
 
 // --- Web Push (roadmap Y1) ---------------------------------------------------
