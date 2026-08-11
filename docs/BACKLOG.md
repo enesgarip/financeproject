@@ -51,6 +51,21 @@ repo'nun CVD-doğrulanmış `vizPalette` kimlik renklerini kullanmaya devam ediy
 `BreakdownSegment.color` bunun için var. Dört sinyal rengiyle sekiz varlık
 sınıfını ayırt etmek mümkün değildi.
 
+**AÇIK — handoff'un tarif etmediği 9 alt rota.** Handoff yalnız 9 ana ekranı
+belgeliyor ("Kişiler ve Kart Borcu sekmeleri aynı iskeleti kullanır" deyip
+geçiyor). Şu rotalar kabuğu ve hub sekmesini aldı ama içerikleri hâlâ eski
+dilde — kahraman rakam yok, kart ve gölge duruyor:
+`/varliklar/maas` · `/varliklar/altin` · `/varliklar/araclar` ·
+`/borclar/kisiler` · `/odemeler/alsam-mi` · `/odemeler/liste` ·
+`/odemeler/baglamlar` · `/analiz/detay` · `/veri-sagligi/islemler`.
+Ayrıca `/kartlar`'ın "İşlemler" sekmesi ve alt bölümleri (`CardsPage.list`,
+`.statements`, `.installment`, `.expense`) dönüşmedi; o sayfada yalnız
+`AccountHubPanel` Şerit'e geçti.
+Bunlardan dördünde **başlık tekrarı** var: `PageCommandHeader` hâlâ sayfanın
+içinde ve kabuk zaten aynı başlığı gösteriyor →
+`/odemeler/alsam-mi`, `/odemeler/liste`, `/analiz/detay`, `/veri-sagligi/islemler`.
+(Bu yüzden `PageCommandHeader` "ölü kod" değil; önce bu dört sayfa dönüşmeli.)
+
 **AÇIK — kalan borç:**
 - Özet'in "Tüm detayları göster" katmanı hâlâ eski dilde (odak aksiyonları,
   ekstre hatırlatıcısı, mutabakat, metrik kutuları, geçmiş) ve ekrandaki tek
@@ -62,8 +77,7 @@ sınıfını ayırt etmek mümkün değildi.
 - `--signal-*` ile `--destructive/--warning/--info` hâlâ ayrı token setleri.
   Geçiş bittiğine göre birleştirilebilir; ayrı tutulma gerekçesi (dönüştürülmemiş
   ekranlar kaymasın) artık geçerli değil.
-- `DataHealthBadge` (DashboardPanels.tsx) ve `PageCommandHeader`
-  (finance/FinanceUI.tsx) kullanılmıyor — silinebilir.
+- `DataHealthBadge` (DashboardPanels.tsx) hiçbir yerde kullanılmıyor — silinebilir.
 - Tasarımın `3d` ekranındaki "34 kontrol temiz" cümlesi için "yapılan kontrol
   sayısı" üretilmiyor (`buildHealthCounts.total` = bulgu toplamı).
 - Modal/çekmece/form yüzeyleri (SimpleModal, FinancePaymentDrawer, CrudPage
