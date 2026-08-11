@@ -19,7 +19,6 @@ import {
   formatComponentAmount,
   formatSavingsGoalAmount,
   formatSavingsGoalProgress,
-  savingsGoalTargetReached,
   savingsGoalProgressRate,
   savingsGoalValueTypeLabel,
 } from '../../utils/savingsGoal'
@@ -226,8 +225,6 @@ export function SavingsGoalsPanel({ monthlySurplus }: { monthlySurplus?: number 
     setFormError('')
 
     try {
-      const compositeTargetAmount = parsedComponents.length
-      const compositeCurrentAmount = parsedComponents.filter(savingsGoalTargetReached).length
       const goalAutoValued = isGold && autoValued
       const liveGoalValue = goalAutoValued
         ? valueGoal({ value_type: valueType, current_amount: parseNumber(currentAmount) }, snapshot)
@@ -235,8 +232,13 @@ export function SavingsGoalsPanel({ monthlySurplus }: { monthlySurplus?: number 
       const goalFields = {
         name: trimmedName,
         value_type: valueType,
-        target_amount: isComposite ? compositeTargetAmount : parseNumber(targetAmount),
-        current_amount: isComposite ? compositeCurrentAmount : parseNumber(currentAmount),
+        // Karma hedefte sayaçları (bileşen sayısı / hedefine ulaşan bileşen
+        // sayısı) upsert_savings_goal bileşenlerin kendisinden türetir; buradan
+        // gönderilen değer yok sayılır. Aynı hesabı ikinci kez burada tutmak
+        // ana satırın bileşenlerden ayrışmasının yoluydu (Faz D2). Kayıt sonrası
+        // loadData() zaten sunucudaki doğru sayacı geri getiriyor.
+        target_amount: isComposite ? 0 : parseNumber(targetAmount),
+        current_amount: isComposite ? 0 : parseNumber(currentAmount),
         estimated_value_try: goalAutoValued
           ? liveGoalValue ?? (estimatedValueTry.trim() ? parseNumber(estimatedValueTry) : null)
           : isGold && estimatedValueTry.trim()

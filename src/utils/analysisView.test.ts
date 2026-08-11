@@ -206,6 +206,52 @@ describe('buildSearchItems', () => {
     const [item] = buildSearchItems(data({ debts: [debt({ direction: 'borç_aldım' })] }))
     expect(item.type).toBe('Borç')
   })
+
+  // Faz D2: karma hedefte current_amount TL değil, hedefine ulaşan bileşen
+  // sayısıdır. Tutar kolonuna konunca ekranda ve CSV'de "₺2,00" diye okunuyordu.
+  it('keeps a composite goal out of the money column and shows the count instead', () => {
+    const [item] = buildSearchItems(
+      data({
+        savingsGoals: [{
+          ...base,
+          name: 'Karma hedef',
+          value_type: 'composite',
+          target_amount: 3,
+          current_amount: 2,
+          target_date: '2026-06-09',
+          status: 'active',
+          estimated_value_try: null,
+          auto_valued: false,
+          note: null,
+        }],
+      }),
+    )
+
+    expect(item.amount).toBeNull()
+    expect(item.subtitle).toBe('Aktif · 2/3 bileşen')
+  })
+
+  it('still reports a TL goal amount as money', () => {
+    const [item] = buildSearchItems(
+      data({
+        savingsGoals: [{
+          ...base,
+          name: 'Tatil',
+          value_type: 'TRY',
+          target_amount: 50000,
+          current_amount: 12000,
+          target_date: '2026-06-09',
+          status: 'active',
+          estimated_value_try: null,
+          auto_valued: false,
+          note: null,
+        }],
+      }),
+    )
+
+    expect(item.amount).toBe(12000)
+    expect(item.subtitle).toBe('Aktif')
+  })
 })
 
 describe('buildSearchCsv', () => {

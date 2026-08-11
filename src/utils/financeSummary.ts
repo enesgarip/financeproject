@@ -499,6 +499,11 @@ export function buildGoalProgressSummary(goals: SavingsGoal[] = [], components: 
   const averageProgress = rates.length > 0 ? rates.reduce((total, rate) => total + rate, 0) / rates.length : 0
   const today = startOfMonth()
   const goalsWithNeed = activeGoals
+    // Karma hedefte target/current bileşen SAYISIDIR; aradaki fark TL değildir,
+    // dolayısıyla "aylık şu kadar biriktir" üretilemez (savingsSuggestion.ts
+    // aynı guard'ı taşır — burada eksikti ve 3 bileşenlik bir hedef "3 TL"
+    // sanılıyordu).
+    .filter((goal) => goal.value_type !== 'composite')
     .filter((goal) => goal.target_date && goal.target_amount > goal.current_amount)
     .map((goal) => {
       const targetDate = new Date(`${goal.target_date}T00:00:00`)
