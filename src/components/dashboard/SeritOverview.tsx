@@ -112,9 +112,12 @@ export function SeritOverview({
     <div className="lg:grid lg:grid-cols-[1.4fr_1fr] lg:items-start lg:gap-9">
       {/* ── Sol kolon: kahraman rakam, şerit, vadeler ── */}
       <div className="min-w-0">
-        <ScreenHeader eyebrow={monthLabel} context={`${today.getDate()} / ${daysInMonth} gün`} />
+        {/* Masaüstünde kabuk zaten sayfa başlığını taşıyor; ekran eyebrow'u yalnız mobilde. */}
+        <div className="lg:hidden">
+          <ScreenHeader eyebrow={monthLabel} context={`${today.getDate()} / ${daysInMonth} gün`} />
+        </div>
 
-        <div className="mt-4">
+        <div className="mt-4 lg:mt-0">
           <HeroNumber
             label="Ay sonuna kalan"
             value={safeToSpend.amount}
