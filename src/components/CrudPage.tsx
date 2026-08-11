@@ -8,7 +8,7 @@ import { cn, openNativePicker } from '../lib/utils'
 import type { CrudTableName, InsertFor, RowFor, UpdateFor } from '../types/database'
 import { normalizeSearchText } from '../utils/searchText'
 import { EmptyState } from './EmptyState'
-import { FormSection, PageCommandHeader } from './finance/FinanceUI'
+import { FormSection } from './finance/FinanceUI'
 import { SimpleModal } from './SimpleModal'
 import { Alert } from './ui/alert'
 import { Button } from './ui/button'
@@ -117,8 +117,8 @@ export function CrudPage<T extends CrudTableName>({
   table,
   addLabel,
   pageTitle,
-  pageLabel,
-  pageDescription,
+  // pageLabel/pageDescription artık çizilmiyor: sayfa başlığı kabukta (Layout).
+  // Prop olarak duruyorlar ki 10+ çağıran sayfa tek tek düzenlenmesin.
   fields,
   emptyTitle,
   emptyDescription,
@@ -363,38 +363,41 @@ export function CrudPage<T extends CrudTableName>({
   }
 
   return (
-    <section className="flex flex-col gap-5">
-      <PageCommandHeader
-        label={pageLabel}
-        title={pageTitle ?? addLabel}
-        description={pageDescription}
-        meta={normalizedQuery ? `${visibleRows.length} / ${rows.length} kayıt gösteriliyor` : `${rows.length} kayıt bulundu`}
-        tools={
-          <div className="grid gap-2 sm:grid-cols-[minmax(14rem,18rem)_auto] sm:items-center">
-            <label className="relative block">
-              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="Kayıtlarda ara"
-                className="pl-9 text-sm"
-              />
-            </label>
-            <Button type="button" onClick={openCreate} className="h-11 gap-2 px-4">
-              <Plus data-icon="inline-start" />
-              {addLabel}
-            </Button>
-          </div>
-        }
-      />
-
+    <section className="flex flex-col gap-6">
       {error ? <Alert variant="destructive">{error}</Alert> : null}
+
+      {/* Şerit: kahraman rakam ekranın EN ÜSTÜNDE durur, araç çubuğu onun altında.
+          Sayfa başlığı/açıklaması artık kabukta (Layout) — burada tekrarlanmıyor,
+          `pageTitle`/`pageLabel`/`pageDescription` yalnız erişilebilirlik başlığı
+          ve arama etiketi için taşınıyor. */}
       {renderBeforeList ? renderBeforeList({ loading, rows, reload: loadRows, setError }) : null}
+
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line-strong pt-4">
+        <p className="serit-eyebrow">
+          {normalizedQuery ? `${visibleRows.length} / ${rows.length} kayıt` : `${rows.length} kayıt`}
+        </p>
+        <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-2">
+          <label className="relative block min-w-0 flex-1 sm:max-w-64">
+            <span className="sr-only">{pageTitle ?? addLabel} içinde ara</span>
+            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-ink-faint" />
+            <Input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Kayıtlarda ara"
+              className="pl-9 text-sm"
+            />
+          </label>
+          <Button type="button" onClick={openCreate} className="h-11 gap-2 px-4">
+            <Plus data-icon="inline-start" />
+            {addLabel}
+          </Button>
+        </div>
+      </div>
 
       {!showList ? null : loading ? (
         <div className="grid gap-3 min-[760px]:grid-cols-2 xl:grid-cols-3">
           {Array.from({ length: 6 }, (_, index) => (
-            <div key={index} className="rounded-2xl border border-border/50 bg-card p-4 shadow-[var(--shadow-card)] min-[390px]:p-5">
+            <div key={index} className="rounded-2xl border border-border/50 bg-card p-4 min-[390px]:p-5">
               <Skeleton className="h-5 w-2/3" />
               <Skeleton className="mt-3 h-3.5 w-1/2" />
               <div className="mt-5 grid grid-cols-2 gap-2">
@@ -454,7 +457,7 @@ export function CrudPage<T extends CrudTableName>({
                         <MoreVertical size={18} />
                       </button>
                       {menuOpenId === row.id && (
-                        <div className="absolute right-0 top-full z-10 mt-1 w-44 rounded-lg border border-border bg-popover py-1 shadow-[var(--shadow-elevated)]">
+                        <div className="absolute right-0 top-full z-10 mt-1 w-44 rounded-lg border border-border bg-popover py-1">
                           {renderMenuActions ? renderMenuActions(row, { reload: loadRows, setError, rows, closeMenu: () => setMenuOpenId(null) }) : null}
                           {editAllowed ? (
                             <button
@@ -507,7 +510,7 @@ export function CrudPage<T extends CrudTableName>({
                       data-card-id={row.id}
                       style={getCardStyle?.(row, rows)}
                       className={cn(
-                        'min-w-0 rounded-2xl border bg-card p-4 shadow-[var(--shadow-card)] transition-all duration-250 hover:-translate-y-0.5 hover:shadow-[var(--shadow-lifted)] dark:ring-1 dark:ring-white/[0.04] min-[390px]:p-5',
+                        'min-w-0 rounded-2xl border bg-card p-4 transition-all duration-250 hover:-translate-y-0.5 min-[390px]:p-5',
                         getCardClassName?.(row, rows) ?? 'border-border/75',
                       )}
                     >
@@ -532,7 +535,7 @@ export function CrudPage<T extends CrudTableName>({
                           <MoreVertical size={18} />
                         </button>
                         {menuOpenId === row.id && (
-                          <div className="absolute right-0 top-full z-10 mt-1 w-40 rounded-lg border border-border bg-popover py-1 shadow-[var(--shadow-elevated)]">
+                          <div className="absolute right-0 top-full z-10 mt-1 w-40 rounded-lg border border-border bg-popover py-1">
                             {renderMenuActions ? renderMenuActions(row, { reload: loadRows, setError, rows, closeMenu: () => setMenuOpenId(null) }) : null}
                             {editAllowed ? (
                               <button
@@ -760,7 +763,7 @@ export function CrudPage<T extends CrudTableName>({
           <Button
             type="submit"
             disabled={saving}
-            className="sticky bottom-0 z-10 h-12 w-full shadow-[0_-10px_24px_rgba(255,255,255,0.9)] dark:shadow-[0_-10px_24px_rgba(12,10,9,0.9)] sm:static sm:shadow-none"
+            className="sticky bottom-0 z-10 h-12 w-full sm:static sm:shadow-none"
           >
             {saving ? 'Kaydediliyor...' : 'Kaydet'}
           </Button>

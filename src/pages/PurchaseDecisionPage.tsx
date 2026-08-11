@@ -3,7 +3,6 @@ import { useMemo, useState } from 'react'
 import { useFinanceSnapshot } from '../app/useFinanceSnapshot'
 import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
 import { Card, CardContent } from '../components/ui/card'
-import { PageCommandHeader } from '../components/finance/FinanceUI'
 import { Input } from '../components/ui/input'
 import { buildCashFlowForecast } from '../utils/cashFlowForecast'
 import { buildMonthlyCashFlow, buildFinancialPosition } from '../utils/financeSummary'
@@ -83,11 +82,9 @@ export function PurchaseDecisionPage() {
 
   return (
     <section className="mx-auto min-w-0 max-w-xl space-y-4">
-      <PageCommandHeader
-        label="Anlık karar"
-        title="Bu alışveriş bütçene uyuyor mu?"
-        description="Tutarı ve ödeme şeklini seç; önümüzdeki altı aya etkisini birkaç saniyede gör."
-      />
+      <p className="text-[13px] text-ink-muted">
+        Tutarı ve ödeme şeklini seç; önümüzdeki altı aya etkisini birkaç saniyede gör.
+      </p>
       <Card variant="elevated" className="border-primary/20">
         <CardContent className="p-4 sm:p-5">
           <div className="flex items-center gap-2.5">

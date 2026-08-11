@@ -15,6 +15,40 @@ export function formatCurrency(value: number | null | undefined) {
   }).format(value ?? 0)
 }
 
+const SERIT_PLAIN = new Intl.NumberFormat('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })
+const SERIT_DECIMAL = new Intl.NumberFormat('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+
+export type SeritAmountOptions = {
+  /** Kahraman ve liste rakamları ondalıksız; yalnız mutabakat gibi yerlerde 2. */
+  decimals?: 0 | 2
+  /** Gelir satırlarında artı işareti gösterilir (`+62.000`). */
+  signed?: boolean
+}
+
+/**
+ * Şerit dilinin para biçimi: **sembol sonda**, ondalık varsayılan olarak yok
+ * (`12.480 ₺`). `formatCurrency`'den kasıtlı olarak ayrı — o, sembolü öne alan
+ * `Intl` `style:'currency'` çıktısını verir ve dönüştürülmemiş ekranlar onu
+ * kullanmaya devam eder.
+ *
+ * Rakam ve birim ayrı döner çünkü kahraman rakamında birim ayrı punto/renkte
+ * dizilir; tek string isteyen çağıran `formatSeritAmount` kullanır.
+ *
+ * Negatifte U+2212 (−) kullanılır, ASCII tire değil: monospace'te tam genişlikte
+ * durur ve tabular hizayı bozmaz.
+ */
+export function formatSeritParts(value: number | null | undefined, options?: SeritAmountOptions) {
+  const v = value ?? 0
+  const format = options?.decimals === 2 ? SERIT_DECIMAL : SERIT_PLAIN
+  const sign = v < 0 ? '−' : options?.signed && v > 0 ? '+' : ''
+  return { amount: `${sign}${format.format(Math.abs(v))}`, unit: '₺' }
+}
+
+export function formatSeritAmount(value: number | null | undefined, options?: SeritAmountOptions) {
+  const { amount, unit } = formatSeritParts(value, options)
+  return `${amount} ${unit}`
+}
+
 const COMPACT_FORMAT = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 1 })
 
 /**

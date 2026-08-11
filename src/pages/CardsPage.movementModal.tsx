@@ -101,7 +101,7 @@ export function MovementModal({
         <button
           type="submit"
           disabled={saving}
-          className="h-12 w-full rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-[0_2px_8px_color-mix(in_srgb,var(--primary)_30%,transparent)] transition hover:bg-primary/90 active:scale-[0.99] disabled:opacity-50"
+          className="h-12 w-full rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 active:scale-[0.99] disabled:opacity-50"
         >
           {saving ? 'İşleniyor...' : isTransfer ? 'Transferi tamamla' : 'Bakiyeyi güncelle'}
         </button>

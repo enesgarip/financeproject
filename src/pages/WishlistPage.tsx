@@ -4,7 +4,7 @@ import { Check, ChevronDown, ChevronUp, Plus, Trash2, Undo2 } from 'lucide-react
 import { useAuth } from '../auth/useAuth'
 import { useConfirmDialog } from '../components/ui/use-confirm-dialog'
 import { useToast } from '../components/ui/toast'
-import { PageCommandHeader } from '../components/finance/FinanceUI'
+import { HeroNumber } from '../components/serit'
 import { Button } from '../components/ui/button'
 import { Card, CardContent } from '../components/ui/card'
 import { Input } from '../components/ui/input'
@@ -15,6 +15,7 @@ import {
   updateWishlistItem,
 } from '../data/repositories/wishlistRepo'
 import { formatCurrency } from '../utils/formatCurrency'
+import { sumTL } from '../utils/money'
 import type { WishlistItem } from '../types/database'
 
 const QUERY_KEY = ['wishlist-items'] as const
@@ -36,6 +37,8 @@ export function WishlistPage() {
 
   const pending = useMemo(() => items.filter((i) => !i.is_purchased), [items])
   const purchased = useMemo(() => items.filter((i) => i.is_purchased), [items])
+  // Tahmini fiyatı girilmemiş madde 0 sayılır; toplam "en az bu kadar" okunur.
+  const pendingTotal = useMemo(() => sumTL(pending.map((i) => i.estimated_price ?? 0)), [pending])
 
   const [showPurchased, setShowPurchased] = useState(true)
   const [newName, setNewName] = useState('')
@@ -118,11 +121,11 @@ export function WishlistPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <PageCommandHeader
-        label="İstek planı"
-        title="Alışveriş listesi"
-        description="İsteklerini tahmini fiyatıyla kaydet; satın alma kararını bütçeden ayrı ama görünür tut."
-        meta={`${pending.length} bekleyen · ${purchased.length} tamamlanan`}
+      {/* Şerit: kahraman = bekleyen isteklerin tahmini toplamı. */}
+      <HeroNumber
+        label="Bekleyen istekler"
+        value={pendingTotal}
+        description={`${pending.length} bekleyen · ${purchased.length} tamamlanan · tahmini fiyatlarla`}
       />
 
       {/* Yeni madde ekleme */}

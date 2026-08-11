@@ -14,7 +14,7 @@ import type {
   Payment,
 } from '../types/database'
 import { dateInputValue } from '../utils/date'
-import { buildIssues } from './DataHealth.logic'
+import { buildAreaCoverage, buildIssues, HEALTH_AREAS } from './DataHealth.logic'
 import { emptyData } from './DataHealth.actions'
 
 const base = {
@@ -1232,5 +1232,29 @@ describe('buildIssues account ledger drift (Faz 3.1)', () => {
     })
 
     expect(issues.find((issue) => issue.id === 'account-ledger-drift-bank-1')).toBeUndefined()
+  })
+})
+
+describe('buildAreaCoverage', () => {
+  it('bulgu yokken tüm alanlar temiz', () => {
+    const coverage = buildAreaCoverage([])
+    expect(coverage.areasChecked).toBe(HEALTH_AREAS.length)
+    expect(coverage.cleanAreas).toBe(HEALTH_AREAS.length)
+  })
+
+  it('bulgulu alan temiz sayılmaz', () => {
+    const coverage = buildAreaCoverage([
+      { id: 'x', area: 'Kartlar', severity: 'error', title: 't', detail: 'd' } as never,
+    ])
+    expect(coverage.cleanAreas).toBe(HEALTH_AREAS.length - 1)
+    expect(coverage.cleanAreaNames).not.toContain('Kartlar')
+  })
+
+  it('aynı alandaki birden çok bulgu alanı bir kez düşürür', () => {
+    const coverage = buildAreaCoverage([
+      { id: 'a', area: 'Krediler', severity: 'error', title: 't', detail: 'd' } as never,
+      { id: 'b', area: 'Krediler', severity: 'warning', title: 't', detail: 'd' } as never,
+    ])
+    expect(coverage.cleanAreas).toBe(HEALTH_AREAS.length - 1)
   })
 })

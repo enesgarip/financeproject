@@ -168,7 +168,7 @@ export function BarChart({
               height={grouped ? 72 : 52}
               style={{ pointerEvents: 'none' }}
             >
-              <div className="rounded-xl border border-border/70 bg-card p-2 shadow-[var(--shadow-floating)]">
+              <div className="rounded-xl border border-border/70 bg-card p-2">
                 <p className="mb-1 text-[10px] font-semibold uppercase text-muted-foreground">{hovered.label}</p>
                 <div className="flex items-center justify-between gap-3">
                   <span className="text-[10px] text-muted-foreground">Tutar</span>

@@ -281,7 +281,7 @@ export function SavingsGoalsPanel({ monthlySurplus }: { monthlySurplus?: number 
 
   return (
     <section className="space-y-4">
-      <Card className="border-border/70 shadow-[var(--shadow-card)]">
+      <Card className="border-border/70">
         <CardContent className="p-5">
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-3">
@@ -349,7 +349,7 @@ export function SavingsGoalsPanel({ monthlySurplus }: { monthlySurplus?: number 
             const strokeOffset = circumference - (circumference * Math.min(rate, 100)) / 100
 
             return (
-              <Card key={goal.id} className={`border-border/70 shadow-[var(--shadow-card)] transition-shadow hover:shadow-md ${isCompleted ? 'bg-success/4 ring-1 ring-success/20' : ''}`}>
+              <Card key={goal.id} className={`border-border/70 transition-shadow  ${isCompleted ? 'bg-success/4 ring-1 ring-success/20' : ''}`}>
                 <CardContent className="p-4">
                   <div className="flex gap-3">
                     <div className="relative flex size-20 shrink-0 items-center justify-center">

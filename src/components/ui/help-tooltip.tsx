@@ -98,7 +98,7 @@ export function HelpTooltip({ title, content, className }: HelpTooltipProps) {
             role="tooltip"
             style={{ top: position.top, left: position.left, width: position.width }}
             className={cn(
-              "fixed z-[60] rounded-lg border border-border bg-popover p-3 text-left text-xs text-popover-foreground shadow-[var(--shadow-elevated)] ring-1 ring-black/[0.025] dark:ring-white/[0.06]",
+              "fixed z-[60] rounded-lg border border-border bg-popover p-3 text-left text-xs text-popover-foreground ring-1 ring-black/[0.025] dark:ring-white/[0.06]",
               position.placement === "top" && "-translate-y-full",
             )}
           >

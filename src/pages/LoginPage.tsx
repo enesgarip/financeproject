@@ -71,7 +71,7 @@ export function LoginPage() {
               <div className="relative flex items-start justify-between gap-4">
                 <div>
                   <p className="text-[11px] font-bold uppercase tracking-wide text-white/65">Nakit akışı</p>
-                  <p className="mt-2 font-mono text-3xl font-bold tabular-nums">₺10.860,00</p>
+                  <p className="mt-2 font-mono text-3xl font-bold tabular-nums">10.860,00 ₺</p>
                   <p className="mt-1 text-sm text-white/65">Ay sonu projeksiyonu artıda.</p>
                 </div>
                 <div className="grid size-9 place-items-center rounded-xl bg-white/15">
@@ -83,7 +83,7 @@ export function LoginPage() {
                   <div key={label} className="rounded-xl bg-white/10 px-3 py-2 ring-1 ring-white/10">
                     <p className="text-[10px] font-bold uppercase tracking-wide text-white/55">{label}</p>
                     <p className={`mt-1 font-mono text-sm font-bold tabular-nums ${index === 1 ? 'text-rose-200' : 'text-emerald-200'}`}>
-                      {index === 0 ? '₺28.750' : index === 1 ? '₺17.890' : '₺10.860'}
+                      {index === 0 ? '28.750 ₺' : index === 1 ? '17.890 ₺' : '10.860 ₺'}
                     </p>
                   </div>
                 ))}

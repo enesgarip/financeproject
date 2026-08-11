@@ -35,7 +35,7 @@ export function HistorySection({ rows }: { rows: TransactionHistory[] }) {
   const groupedRows = useMemo(() => groupHistoryRows(filteredRows.slice(0, 40)), [filteredRows])
 
   return (
-    <Card className="border-0 shadow-[var(--shadow-card)] ring-1 ring-border/80">
+    <Card className="border-0 ring-1 ring-border/80">
       <CardHeader className="pb-0">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div>
@@ -68,7 +68,7 @@ export function HistorySection({ rows }: { rows: TransactionHistory[] }) {
                 onClick={() => setActiveType(filter.value)}
                 className={`min-h-11 shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background ${
                   isActive
-                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    ? 'bg-primary text-primary-foreground '
                     : 'bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground'
                 }`}
               >
@@ -93,7 +93,7 @@ export function HistorySection({ rows }: { rows: TransactionHistory[] }) {
                 {group.rows.map((row) => {
                   const meta = historyTypeMeta[row.type]
                   return (
-                  <article key={row.id} className="flex gap-3 rounded-lg border border-border/75 bg-card/80 p-3 shadow-sm">
+                  <article key={row.id} className="flex gap-3 rounded-lg border border-border/75 bg-card/80 p-3 ">
                     <div className={cn('mt-0.5 grid size-7 shrink-0 place-items-center rounded-lg', meta.chip)} aria-label={meta.label}>
                       <meta.icon size={15} strokeWidth={2.25} />
                     </div>

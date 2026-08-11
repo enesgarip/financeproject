@@ -73,7 +73,7 @@ function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: (id: string)
       aria-atomic="true"
       className={cn(
         'pointer-events-auto flex w-full max-w-sm items-start gap-3 rounded-2xl border px-4 py-3.5',
-        'shadow-[var(--shadow-floating)] backdrop-blur-xl',
+        ' backdrop-blur-xl',
         'transition-all duration-300',
         wrapper,
         visible && !leaving

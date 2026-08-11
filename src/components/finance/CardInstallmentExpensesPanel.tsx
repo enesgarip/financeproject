@@ -208,7 +208,7 @@ export function CardInstallmentExpensesPanel({ cards, reload, setError }: CardIn
 
   if (loading) {
     return (
-      <SurfaceCard className="border-border/70 shadow-[var(--shadow-card)]">
+      <SurfaceCard className="border-border/70">
         <CardContent className="p-4 text-sm text-muted-foreground">Taksitli harcamalar yükleniyor...</CardContent>
       </SurfaceCard>
     )
@@ -316,7 +316,7 @@ export function CardInstallmentExpensesPanel({ cards, reload, setError }: CardIn
 
   return (
     <>
-      <SurfaceCard className="border-border/70 shadow-[var(--shadow-card)]">
+      <SurfaceCard className="border-border/70">
         <CardHeader className="pb-0">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
@@ -415,7 +415,7 @@ export function CardInstallmentExpensesPanel({ cards, reload, setError }: CardIn
           <button
             type="submit"
             disabled={saving}
-            className="h-12 w-full rounded-xl bg-success px-4 text-sm font-semibold text-success-foreground shadow-[0_2px_8px_color-mix(in_srgb,var(--success)_28%,transparent)] transition hover:bg-success/90 active:scale-[0.99] disabled:opacity-50"
+            className="h-12 w-full rounded-xl bg-success px-4 text-sm font-semibold text-success-foreground transition hover:bg-success/90 active:scale-[0.99] disabled:opacity-50"
           >
             {saving ? 'Kaydediliyor...' : 'Değişiklikleri kaydet'}
           </button>

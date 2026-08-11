@@ -1,9 +1,7 @@
 import { CrudPage, type FormField } from '../components/CrudPage'
 import { FinancePaymentDrawer } from '../components/finance/FinancePaymentDrawer'
 import { RatesBanner } from '../components/finance/RatesBanner'
-import { Badge } from '../components/ui/badge'
-import { Card, CardContent } from '../components/ui/card'
-import { Progress } from '../components/ui/progress'
+import { BreakdownBar, HeroNumber } from '../components/serit'
 import { useMarketRates } from '../hooks/useMarketRates'
 import { useInvalidateFinanceSnapshot } from '../app/useFinanceSnapshot'
 import { fetchCardsByType } from '../data/repositories/cardsRepo'
@@ -163,7 +161,6 @@ const debtTone: Record<Debt['direction'], { card: string; detail: string }> = {
 }
 
 function DebtsOverview({ rows, snapshot }: { rows: Debt[]; snapshot: MarketRatesSnapshot | null }) {
-  const { formatAmount } = useBalancePrivacy()
   const openRows = rows.filter((row) => row.status === 'açık')
   if (openRows.length === 0) return null
 
@@ -172,55 +169,42 @@ function DebtsOverview({ rows, snapshot }: { rows: Debt[]; snapshot: MarketRates
   const receivable = sumTL(openRows.filter((row) => row.direction === 'borç_verdim').map(valueOf))
   const total = sumTL([borrowed, receivable])
   const net = diffTL(receivable, borrowed)
-  const borrowedRate = total > 0 ? Math.min(100, (borrowed / total) * 100) : 0
   const upcoming = openRows
     .filter((row) => row.due_date)
     .sort((a, b) => String(a.due_date).localeCompare(String(b.due_date)))[0]
 
+  // Şerit: kahraman = net borç/alacak dengesi, altında borç-alacak kırılımı.
   return (
-    <Card variant="elevated" className="overflow-hidden">
-      <div className="pointer-events-none -mt-4 mb-1 h-[2px] bg-gradient-to-r from-destructive via-primary to-success opacity-80" />
-      <CardContent className="p-4 sm:p-5">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <p className="finance-label">Borç Dengesi</p>
-            <p className={`finance-value mt-1.5 text-[clamp(1.5rem,6vw,2.1rem)] font-bold leading-none ${net >= 0 ? 'text-success' : 'text-destructive'}`}>
-              {formatAmount(Math.abs(net))}
-            </p>
-            <p className="mt-1.5 text-xs text-muted-foreground">{net >= 0 ? 'Net alacak' : 'Net borç'}</p>
-          </div>
-          <Badge variant={net >= 0 ? 'success' : 'destructive'}>{openRows.length} açık kayıt</Badge>
-        </div>
-        <div className="mt-4 grid grid-cols-2 gap-2">
-          <OverviewStat label="Borç" value={formatAmount(borrowed)} tone="danger" />
-          <OverviewStat label="Alacak" value={formatAmount(receivable)} tone="success" />
-        </div>
-        <div className="mt-4">
-          <div className="mb-1.5 flex justify-between text-xs">
-            <span className="text-muted-foreground">Borç ağırlığı</span>
-            <span className="font-mono font-semibold tabular-nums text-foreground">%{Math.round(borrowedRate)}</span>
-          </div>
-          <Progress value={borrowedRate} color="danger" size="default" />
-        </div>
-        {upcoming?.due_date ? (
-          <div className="mt-3 rounded-xl border border-border/60 bg-muted/30 px-3 py-2.5 text-sm">
-            <span className="font-semibold text-foreground">{upcoming.person_name}</span>
-            <span className="text-muted-foreground"> · en yakın vade {formatDate(upcoming.due_date)}</span>
-          </div>
-        ) : null}
-      </CardContent>
-    </Card>
-  )
-}
+    <section>
+      <HeroNumber
+        label={net >= 0 ? 'Net alacak' : 'Net borç'}
+        value={Math.abs(net)}
+        tone={net >= 0 ? 'brand' : 'danger'}
+        description={
+          <>
+            {openRows.length} açık kayıt
+            {upcoming?.due_date ? (
+              <>
+                {' '}· en yakın vade <span className="font-semibold text-ink">{upcoming.person_name}</span>,{' '}
+                {formatDate(upcoming.due_date)}
+              </>
+            ) : null}
+          </>
+        }
+      />
 
-function OverviewStat({ label, value, tone }: { label: string; value: string; tone: 'success' | 'danger' }) {
-  const toneClass = tone === 'success' ? 'text-success' : 'text-destructive'
-
-  return (
-    <div className="min-w-0 rounded-xl border border-border/60 bg-muted/30 px-3 py-2.5">
-      <p className="finance-label truncate">{label}</p>
-      <p className={`finance-value mt-1 truncate text-sm font-bold tabular-nums ${toneClass}`}>{value}</p>
-    </div>
+      {total > 0 ? (
+        <div className="mt-[18px]">
+          <BreakdownBar
+            height={8}
+            segments={[
+              { label: 'Borç', value: borrowed, tone: 'danger' },
+              { label: 'Alacak', value: receivable, tone: 'brand' },
+            ]}
+          />
+        </div>
+      ) : null}
+    </section>
   )
 }
 
@@ -355,7 +339,7 @@ export function DebtsPage() {
             <button
               type="button"
               onClick={() => void openDebtSettlement(row, helpers.reload)}
-              className="max-w-full rounded-lg bg-success px-3 py-2 text-xs font-semibold text-success-foreground shadow-[0_2px_8px_color-mix(in_srgb,var(--success)_28%,transparent)] transition hover:bg-success/90 active:scale-[0.97]"
+              className="max-w-full rounded-lg bg-success px-3 py-2 text-xs font-semibold text-success-foreground transition hover:bg-success/90 active:scale-[0.97]"
             >
               {row.direction === 'borç_aldım' ? 'Borcu öde' : 'Tahsil et'}
             </button>

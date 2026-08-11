@@ -4,8 +4,7 @@ import { FinancePaymentDrawer } from '../components/finance/FinancePaymentDrawer
 import { ObligationsCalendar } from '../components/finance/ObligationsCalendar'
 import { Alert } from '../components/ui/alert'
 import { Badge } from '../components/ui/badge'
-import { Card, CardContent } from '../components/ui/card'
-import { Progress } from '../components/ui/progress'
+import { HeroNumber, SERIT_TEXT } from '../components/serit'
 import { useFinanceSnapshot, useInvalidateFinanceSnapshot } from '../app/useFinanceSnapshot'
 import { fetchCards } from '../data/repositories/cardsRepo'
 import { sortPaymentAccounts } from '../services/financePaymentActions'
@@ -18,8 +17,7 @@ import type {
   TransactionHistory,
 } from '../types/database'
 import { addMonths, dateInputValue, daysUntil, formatDate, startOfMonth } from '../utils/date'
-import { formatCurrency, parseNumber } from '../utils/formatCurrency'
-import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
+import { formatSeritAmount, parseNumber } from '../utils/formatCurrency'
 import { paymentCashOutflowAmount, paymentOccurrenceInMonth, paymentUsesCreditCard } from '../utils/financeSummary'
 import { sumTL } from '../utils/money'
 import { paidPaymentIdsInMonth } from '../utils/paymentHistory'
@@ -163,11 +161,11 @@ function isCardInstructedPayment(payment: Payment) {
 function getPaymentAmountLabel(payment: Payment) {
   if (payment.amount <= 0 && payment.amount_status === 'estimated') return 'Tutar bekleniyor'
   const prefix = payment.amount_status === 'estimated' ? 'Yaklaşık ' : ''
-  return `${prefix}${formatCurrency(payment.amount)}`
+  return `${prefix}${formatSeritAmount(payment.amount, { decimals: 2 })}`
 }
 
 function PaymentsOverview({ rows, transactionHistory }: { rows: Payment[]; transactionHistory: TransactionHistory[] }) {
-  const { formatAmount } = useBalancePrivacy()
+  // Tutarlar Şerit bileşenleri üzerinden biçimleniyor; gizlilik onların içinde.
   const summary = useMemo(() => {
     if (rows.length === 0) return null
 
@@ -213,38 +211,47 @@ function PaymentsOverview({ rows, transactionHistory }: { rows: Payment[]; trans
 
   const { pendingThisMonth, paidThisMonthCount, pendingTotal, recurringCount, paidRate, overdueCount, nextPayment, statusLabel } = summary
 
+  // Şerit (`3b`): kahraman = kalan yükümlülük, altında vade sayısı ve en yakını.
+  const nextDays = nextPayment ? daysUntil(nextPayment.due_date) : null
+
   return (
-    <Card variant="elevated" className="overflow-hidden">
-      <div className="pointer-events-none -mt-4 mb-1 h-[2px] bg-gradient-to-r from-warning via-primary to-success opacity-80" />
-      <CardContent className="p-4 sm:p-5">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <p className="finance-label">Bekleyen Ödemeler</p>
-            <p className="finance-value mt-1.5 text-[clamp(1.5rem,6vw,2.1rem)] font-bold leading-none text-foreground">{formatAmount(pendingTotal)}</p>
-            <p className="mt-1.5 text-xs text-muted-foreground">
-              {pendingThisMonth.length} bekleyen · {recurringCount} aylık tekrar
-            </p>
-          </div>
-          <Badge variant={overdueCount > 0 ? 'destructive' : pendingThisMonth.length > 0 ? 'warning' : 'success'}>{statusLabel}</Badge>
-        </div>
-        {paidThisMonthCount > 0 ? <div className="mt-4">
-          <div className="mb-1.5 flex justify-between text-xs">
-            <span className="text-muted-foreground">Ödenen kayıtlar</span>
-            <span className="font-mono font-semibold tabular-nums text-foreground">%{Math.round(paidRate)}</span>
-          </div>
-          <Progress value={paidRate} color="success" size="default" />
-        </div> : null}
+    <section>
+      <HeroNumber
+        label="Kalan yükümlülük"
+        value={pendingTotal}
+        tone={overdueCount > 0 ? 'danger' : 'ink'}
+        // İlerleme yalnız gerçekten ödenen varsa çizilir; boş çubuk "hiç
+        // ilerlemedin" gibi okunuyordu.
+        progress={paidThisMonthCount > 0 ? paidRate : undefined}
+        description={
+          <>
+            {pendingThisMonth.length} vade
+            {nextDays !== null ? (
+              <>
+                {' '}
+                · en yakını{' '}
+                <span className="font-semibold" style={{ color: nextDays < 0 ? SERIT_TEXT.danger : SERIT_TEXT.ink }}>
+                  {nextDays < 0 ? 'gecikti' : nextDays === 0 ? 'bugün' : `${nextDays} gün sonra`}
+                </span>
+              </>
+            ) : null}
+            {recurringCount > 0 ? ` · ${recurringCount} aylık tekrar` : null}
+          </>
+        }
+      />
+
+      <p className="mt-3.5 border-t border-line pt-3 text-[12.5px] text-ink-muted">
+        <span className="font-semibold text-ink">{statusLabel}</span>
+        {paidThisMonthCount > 0 ? ` · bu ay ${paidThisMonthCount} kayıt ödendi` : null}
         {nextPayment ? (
-          <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-border/60 bg-muted/30 px-3 py-2.5 text-sm">
-            <div className="min-w-0">
-              <p className="truncate font-semibold text-foreground">{nextPayment.title}</p>
-              <p className="text-xs text-muted-foreground">Sıradaki tarih {formatDate(nextPayment.due_date)}</p>
-            </div>
-            <span className="finance-value shrink-0 text-sm font-bold text-foreground">{getPaymentAmountLabel(nextPayment)}</span>
-          </div>
+          <>
+            {' '}
+            · sıradaki <span className="text-ink">{nextPayment.title}</span> {formatDate(nextPayment.due_date)}{' '}
+            <span className="serit-num font-semibold text-ink">{getPaymentAmountLabel(nextPayment)}</span>
+          </>
         ) : null}
-      </CardContent>
-    </Card>
+      </p>
+    </section>
   )
 }
 
@@ -407,7 +414,7 @@ export function PaymentsPage() {
           const isUrgent = remaining !== null && remaining >= 0 && remaining <= 3
 
           return (
-            <article className={`rounded-2xl border bg-card p-4 shadow-[var(--shadow-card)] transition-all duration-250 hover:-translate-y-0.5 hover:shadow-[var(--shadow-lifted)] dark:ring-1 dark:ring-white/[0.04] min-[390px]:p-5 ${isPaid ? 'border-success/20 opacity-70' : isUrgent ? 'border-warning/40' : 'border-border/75'}`}>
+            <article className={`rounded-2xl border bg-card p-4 transition-all duration-250 hover:-translate-y-0.5 min-[390px]:p-5 ${isPaid ? 'border-success/20 opacity-70' : isUrgent ? 'border-warning/40' : 'border-border/75'}`}>
               <div className="flex items-start justify-between gap-3">
                 <div className="flex min-w-0 items-center gap-3">
                   <div className={`grid size-10 shrink-0 place-items-center rounded-xl ${isPaid ? 'bg-success/12 text-success' : isAuto ? 'bg-info/12 text-info' : 'bg-muted text-muted-foreground'}`}>
@@ -456,7 +463,7 @@ export function PaymentsPage() {
                   <button
                     type="button"
                     onClick={() => void openObligationPayment(paymentToObligation(payment), reload)}
-                    className="rounded-lg bg-success px-3 py-2 text-xs font-semibold text-success-foreground shadow-[0_2px_8px_color-mix(in_srgb,var(--success)_28%,transparent)] transition hover:bg-success/90 active:scale-[0.97]"
+                    className="rounded-lg bg-success px-3 py-2 text-xs font-semibold text-success-foreground transition hover:bg-success/90 active:scale-[0.97]"
                   >
                     Öde
                   </button>

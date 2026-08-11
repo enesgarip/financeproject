@@ -40,6 +40,7 @@ import {
   DueStatementAutomation,
   type CardSection,
 } from './CardsPage.sections'
+import { CardsSectionHero } from './CardsPage.hero'
 
 import { QuickExpensePanel } from './CardsPage.expense'
 import { CreditAccountListCard } from './CardsPage.list'
@@ -274,6 +275,8 @@ export function CardsPage() {
                 </div>
               ) : null}
               <CardSectionNav section={section} onSelect={handleSectionChange} counts={counts} />
+              {/* Şerit: sekmenin cevapladığı tek soru, sekme şeridinin hemen altında. */}
+              {!loading ? <CardsSectionHero section={section} rows={cardRows} statements={statements} /> : null}
               {!loading ? (
                 <DueStatementAutomation
                   rows={cardRows}
@@ -289,7 +292,7 @@ export function CardsPage() {
 
               {!loading && section === 'ozet' ? (
                 <>
-                  <AccountHubPanel rows={cardRows} onOpenTransfer={(source) => openTransaction(source, reload, cardRows, 'transfer')} formatAmount={formatAmount} />
+                  <AccountHubPanel rows={cardRows} onOpenTransfer={(source) => openTransaction(source, reload, cardRows, 'transfer')} />
                   <div className="hidden md:block">
                     <CardControlCenter
                       rows={cardRows}
@@ -511,7 +514,7 @@ export function CardsPage() {
 function ImportModalFallback() {
   return (
     <div className="fixed inset-0 z-[80] grid place-items-center bg-black/45 p-4 backdrop-blur-sm">
-      <div role="status" aria-live="polite" className="rounded-2xl border border-border bg-card px-5 py-4 text-sm font-semibold text-foreground shadow-[var(--shadow-floating)]">
+      <div role="status" aria-live="polite" className="rounded-2xl border border-border bg-card px-5 py-4 text-sm font-semibold text-foreground">
         İçe aktarma aracı hazırlanıyor...
       </div>
     </div>

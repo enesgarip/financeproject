@@ -94,7 +94,7 @@ const emptyInput = {
 describe('buildHealthCounts', () => {
   it('returns zero counts for empty data', () => {
     const result = buildHealthCounts(emptyInput)
-    expect(result).toEqual({ errors: 0, warnings: 0, total: 0 })
+    expect(result).toEqual({ errors: 0, warnings: 0, total: 0, checksRun: 0, cleanChecks: 0 })
   })
 
   it('returns zero when card debt split is consistent', () => {
@@ -152,5 +152,58 @@ describe('buildHealthCounts', () => {
     const second = makeCard({ id: 'c2', limit_group_name: 'Ortak', debt_amount: 12000, statement_debt_amount: 12000, credit_limit: 20000 })
     const result = buildHealthCounts({ ...emptyInput, cards: [first, second] })
     expect(result.warnings).toBeGreaterThanOrEqual(1)
+  })
+})
+
+describe('checksRun / cleanChecks', () => {
+  it('boş veride hiç kontrol koşmaz', () => {
+    const result = buildHealthCounts(emptyInput)
+    expect(result.checksRun).toBe(0)
+    expect(result.cleanChecks).toBe(0)
+    expect(result.total).toBe(0)
+  })
+
+  it('her kredi kartı üç kontrol koşturur', () => {
+    const result = buildHealthCounts({ ...emptyInput, cards: [makeCard({ id: 'c1' }), makeCard({ id: 'c2' })] })
+    // 2 kart x 3 kontrol + 2 tekil limit grubu
+    expect(result.checksRun).toBe(8)
+  })
+
+  it('banka kartı kontrol sayacına girmez', () => {
+    const bank = makeCard({ id: 'b1', card_type: 'banka_karti', credit_limit: 0, debt_amount: 0, statement_debt_amount: 0 })
+    const result = buildHealthCounts({ ...emptyInput, cards: [bank] })
+    expect(result.checksRun).toBe(0)
+  })
+
+  it('ödeme planı olmayan kredi "temiz geçti" diye sayılmaz', () => {
+    const result = buildHealthCounts({ ...emptyInput, loans: [makeLoan()] })
+    expect(result.checksRun).toBe(0)
+    expect(result.cleanChecks).toBe(0)
+  })
+
+  it('planı olan kredi iki kontrol koşturur', () => {
+    const loan = makeLoan({ remaining_amount: 3000, remaining_installments: 3 })
+    const installments = [
+      makeLoanInstallment({ id: 'li1', amount: 1000, status: 'bekliyor' }),
+      makeLoanInstallment({ id: 'li2', amount: 1000, status: 'bekliyor', installment_no: 2 }),
+      makeLoanInstallment({ id: 'li3', amount: 1000, status: 'bekliyor', installment_no: 3 }),
+    ]
+    const result = buildHealthCounts({ ...emptyInput, loans: [loan], loanInstallments: installments })
+    expect(result.checksRun).toBe(2)
+    expect(result.cleanChecks).toBe(2)
+  })
+
+  it('cleanChecks = checksRun − bulgu; bulgulu kartta düşer', () => {
+    const bad = makeCard({ debt_amount: 100, statement_debt_amount: 900, current_period_spending: 900, credit_limit: 10000 })
+    const result = buildHealthCounts({ ...emptyInput, cards: [bad] })
+    expect(result.checksRun).toBe(4) // 3 kart kontrolü + 1 limit grubu
+    expect(result.cleanChecks).toBe(result.checksRun - result.total)
+    expect(result.cleanChecks).toBeGreaterThanOrEqual(0)
+  })
+
+  it('limitsiz grup aşım kontrolüne girmez', () => {
+    const noLimit = makeCard({ credit_limit: 0, debt_amount: 0, statement_debt_amount: 0, current_period_spending: 0 })
+    const result = buildHealthCounts({ ...emptyInput, cards: [noLimit] })
+    expect(result.checksRun).toBe(3)
   })
 })

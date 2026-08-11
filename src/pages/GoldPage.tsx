@@ -1,11 +1,11 @@
-import { Coins, LineChart as LineChartIcon, Scale, TrendingUp } from 'lucide-react'
+import { Coins } from 'lucide-react'
 import { useMemo, useEffect, useRef } from 'react'
 import { useAuth } from '../auth/useAuth'
 import { CrudPage, type FormField } from '../components/CrudPage'
 import { LineChart } from '../components/charts/LineChart'
 import { RatesBanner } from '../components/finance/RatesBanner'
-import { MetricCard, SectionHeader } from '../components/finance/FinanceUI'
-import { Alert } from '../components/ui/alert'
+import { SectionHeader } from '../components/finance/FinanceUI'
+import { Delta, HeroNumber, LineGroup, LineRow, SERIT_TEXT } from '../components/serit'
 import { Badge } from '../components/ui/badge'
 import { Card, CardContent } from '../components/ui/card'
 import { useMarketRates } from '../hooks/useMarketRates'
@@ -199,7 +199,6 @@ function GoldLedgerAssetSync({
 }
 
 function GoldOverview({ rows, snapshot }: { rows: GoldLot[]; snapshot: MarketRatesSnapshot | null }) {
-  const { formatAmount } = useBalancePrivacy()
   const summaries = useMemo(() => summarizeGold(rows), [rows])
   if (summaries.length === 0) return null
 
@@ -208,58 +207,48 @@ function GoldOverview({ rows, snapshot }: { rows: GoldLot[]; snapshot: MarketRat
   const knownLiveValue = sumGoldValues(summaries, snapshot, 'knownQuantity')
   const profit = knownLiveValue === null || totalKnownCost <= 0 ? null : diffTL(knownLiveValue, totalKnownCost)
   const profitPct = profit === null || totalKnownCost <= 0 ? null : round2((profit / totalKnownCost) * 100)
-  const totalValueLabel = totalLiveValue === null ? 'Kur bekleniyor' : formatAmount(totalLiveValue)
   const gramSummary = summaries.find((summary) => summary.goldType === 'gram')
   const ceyrekSummary = summaries.find((summary) => summary.goldType === 'ceyrek')
   const unknownSummaries = summaries.filter((summary) => summary.unknownQuantity > 0)
 
+  // Şerit: kahraman = güncel piyasa değeri; kâr/zarar Delta satırı, birikim
+  // ve maliyet çizgi listesi. MetricCard ızgarası (4 kutu) kaldırıldı.
   return (
-    <div className="space-y-3">
-      <div className="grid gap-3 min-[680px]:grid-cols-2 xl:grid-cols-4">
-        <MetricCard
-          label="Güncel değer"
-          value={totalValueLabel}
-          description="canlı alış kuruyla"
-          tone="premium"
-          icon={TrendingUp}
-        />
-        <MetricCard
-          label="Toplam maliyet"
-          value={formatAmount(totalKnownCost)}
-          description="maliyeti kayıtlı alımlar"
-          tone="neutral"
-          icon={Coins}
-        />
-        <MetricCard
-          label="Kâr / zarar"
-          value={profit === null ? 'Kur bekleniyor' : `${profit >= 0 ? '+' : ''}${formatAmount(profit)}`}
-          delta={profitPct === null ? undefined : `${profitPct >= 0 ? '+' : ''}%${profitPct.toFixed(1)}`}
-          deltaLabel={profit === null ? 'flat' : profit > 0 ? 'up' : profit < 0 ? 'down' : 'flat'}
-          description="kayıtlı maliyet üzerinden"
-          tone={profit === null ? 'neutral' : profit >= 0 ? 'good' : 'danger'}
-          icon={LineChartIcon}
-        />
-        <MetricCard
-          label="Birikim"
-          value={[
-            gramSummary ? formatQuantity(gramSummary.totalQuantity, 'gram') : null,
-            ceyrekSummary ? formatQuantity(ceyrekSummary.totalQuantity, 'ceyrek') : null,
-          ].filter(Boolean).join(' · ')}
-          description={`${rows.length} işlem`}
-          tone="info"
-          icon={Scale}
-        />
+    <section>
+      <HeroNumber
+        label="Altın güncel değer"
+        value={totalLiveValue ?? 0}
+        description={
+          totalLiveValue === null
+            ? 'Canlı kur bekleniyor — değer kur gelince hesaplanacak.'
+            : `${rows.length} işlem · canlı alış kuruyla`
+        }
+      />
+
+      {profit === null ? null : <Delta value={profit} percent={profitPct ?? undefined} suffix="kayıtlı maliyet üzerinden" />}
+
+      <div className="mt-5">
+        <LineGroup>
+          <LineRow
+            title="Birikim"
+            subtitle={[
+              gramSummary ? formatQuantity(gramSummary.totalQuantity, 'gram') : null,
+              ceyrekSummary ? formatQuantity(ceyrekSummary.totalQuantity, 'ceyrek') : null,
+            ].filter(Boolean).join(' · ') || 'Kayıt yok'}
+          />
+          <LineRow title="Toplam maliyet" subtitle="maliyeti kayıtlı alımlar" amount={totalKnownCost} />
+        </LineGroup>
       </div>
 
       {unknownSummaries.length > 0 ? (
-        <Alert variant="warning">
+        <p className="mt-4 border-t border-line pt-3 text-[12.5px]" style={{ color: SERIT_TEXT.warning }}>
           {unknownSummaries
             .map((summary) => `${formatQuantity(summary.unknownQuantity, summary.goldType)} maliyeti kayıtsız`)
             .join(' · ')}
           . Adet toplamda sayılıyor; ortalama maliyet ve kâr/zarar sadece maliyeti kayıtlı işlemlerden hesaplanıyor.
-        </Alert>
+        </p>
       ) : null}
-    </div>
+    </section>
   )
 }
 
@@ -360,7 +349,7 @@ export function GoldPage() {
         const noCost = lot.unit_price == null
 
         return (
-          <article className={`premium-entity-card gold-entity-card relative overflow-hidden rounded-2xl border p-4 shadow-[var(--shadow-card)] transition-[border-color,box-shadow,transform] duration-250 hover:-translate-y-0.5 hover:shadow-[var(--shadow-lifted)] min-[390px]:p-5 ${noCost ? 'border-warning/35' : 'border-warning/22'}`}>
+          <article className={`premium-entity-card gold-entity-card relative overflow-hidden rounded-2xl border p-4 transition-[border-color,box-shadow,transform] duration-250 hover:-translate-y-0.5 min-[390px]:p-5 ${noCost ? 'border-warning/35' : 'border-warning/22'}`}>
             <div className="relative flex items-start justify-between gap-3">
               <div className="flex min-w-0 items-center gap-3.5">
                 <div className="grid size-12 shrink-0 place-items-center rounded-2xl bg-warning/14 text-warning ring-1 ring-warning/16">

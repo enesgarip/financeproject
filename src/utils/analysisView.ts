@@ -14,7 +14,7 @@ import type {
   TransactionHistory,
 } from '../types/database'
 import { dateInputValue, startOfMonth } from './date'
-import { formatCurrency } from './formatCurrency'
+import { formatSeritAmount } from './formatCurrency'
 import { dayOfMonthCutoff, isWithinDayOfMonth } from './monthToDate'
 import { averageOverActiveMonths } from './spendingStats'
 import { activeExpense as activeCardExpense } from './budgetAlerts'
@@ -273,7 +273,7 @@ export function buildCategoryInsights(data: AnalysisData): CategoryInsight[] {
       return {
         category,
         title: 'Bütçe aşıldı',
-        description: `${formatCurrency(amount)} harcandı; limit ${formatCurrency(budget.limit_amount)}.`,
+        description: `${formatSeritAmount(amount, { decimals: 2 })} harcandı; limit ${formatSeritAmount(budget.limit_amount, { decimals: 2 })}.`,
         tone: 'rose' as const,
         priority: 1,
         amount,
@@ -284,7 +284,7 @@ export function buildCategoryInsights(data: AnalysisData): CategoryInsight[] {
       return {
         category,
         title: `Limitin %${Math.round(limitRate * 100)} doldu`,
-        description: `${formatCurrency(Math.max(0, diffTL(budget.limit_amount, amount)))} alan kaldı.`,
+        description: `${formatSeritAmount(Math.max(0, diffTL(budget.limit_amount, amount)))} alan kaldı.`,
         tone: 'amber' as const,
         priority: 2,
         amount,
@@ -295,7 +295,7 @@ export function buildCategoryInsights(data: AnalysisData): CategoryInsight[] {
       return {
         category,
         title: 'Son 3 ay ortalamasının üstünde',
-        description: `Bu ay ${formatCurrency(amount)}, üç aylık ortalama ${formatCurrency(average)}.`,
+        description: `Bu ay ${formatSeritAmount(amount, { decimals: 2 })}, üç aylık ortalama ${formatSeritAmount(average, { decimals: 2 })}.`,
         tone: 'amber' as const,
         priority: 3,
         amount,
@@ -306,7 +306,7 @@ export function buildCategoryInsights(data: AnalysisData): CategoryInsight[] {
       return {
         category,
         title: 'Ortalamanın altında',
-        description: `Bu ay tempo ${formatCurrency(diffTL(average, amount))} daha düşük görünüyor.`,
+        description: `Bu ay tempo ${formatSeritAmount(diffTL(average, amount), { decimals: 2 })} daha düşük görünüyor.`,
         tone: 'emerald' as const,
         priority: 6,
         amount,

@@ -8,7 +8,7 @@
  * Burada iş kuralı YOK; sadece obligations çıktısının sunum dönüşümü.
  */
 import { formatDate, startOfMonth } from './date'
-import { formatCurrency } from './formatCurrency'
+import { formatSeritAmount } from './formatCurrency'
 import { sumTL } from './money'
 import {
   buildFinanceObligationsForMonth,
@@ -59,7 +59,7 @@ function obligationToDashboardUpcomingItem(item: FinanceObligation): DashboardUp
     id: item.id,
     title: item.title,
     subtitle: item.subtitle,
-    value: formatCurrency(item.amount),
+    value: formatSeritAmount(item.amount, { decimals: 2 }),
     amount: item.amount,
     cashImpactAmount: item.cashImpactAmount ?? item.amount,
     settlement: item.settlement ?? 'cash',

@@ -1,7 +1,7 @@
 import { buildCashFlowForecast } from './cashFlowForecast'
 import { dateInputValue } from './date'
 import { buildFinancialPosition, type FinanceSummaryInput } from './financeSummary'
-import { formatCurrency } from './formatCurrency'
+import { formatSeritAmount } from './formatCurrency'
 import { diffTL, greaterThanTL, sumTL } from './money'
 
 /**
@@ -50,7 +50,7 @@ export function buildAttentionLine(
     const gap = diffTL(dueSoonTotal, cash)
     return {
       tone: 'danger',
-      text: `Önümüzdeki ${SHORTFALL_WINDOW_DAYS} günde ${formatCurrency(dueSoonTotal)} ödeme var ama nakit ${formatCurrency(cash)} — ${formatCurrency(gap)} açık.`,
+      text: `Önümüzdeki ${SHORTFALL_WINDOW_DAYS} günde ${formatSeritAmount(dueSoonTotal, { decimals: 2 })} ödeme var ama nakit ${formatSeritAmount(cash, { decimals: 2 })} — ${formatSeritAmount(gap, { decimals: 2 })} açık.`,
     }
   }
 
@@ -60,7 +60,7 @@ export function buildAttentionLine(
   if (forecast.firstNegative) {
     return {
       tone: 'danger',
-      text: `Nakit ${forecast.firstNegative.monthLabel} sonunda eksiye düşüyor (${formatCurrency(forecast.firstNegative.balance)}) — büyük ödemeleri öne/arkaya almayı düşün.`,
+      text: `Nakit ${forecast.firstNegative.monthLabel} sonunda eksiye düşüyor (${formatSeritAmount(forecast.firstNegative.balance, { decimals: 2 })}) — büyük ödemeleri öne/arkaya almayı düşün.`,
     }
   }
 
@@ -72,7 +72,7 @@ export function buildAttentionLine(
   ) {
     return {
       tone: 'warning',
-      text: `Önümüzdeki ${FORECAST_HORIZON_MONTHS} ayın en düşük noktası ${forecast.lowest.monthLabel}: ${formatCurrency(forecast.lowest.balance)}.`,
+      text: `Önümüzdeki ${FORECAST_HORIZON_MONTHS} ayın en düşük noktası ${forecast.lowest.monthLabel}: ${formatSeritAmount(forecast.lowest.balance, { decimals: 2 })}.`,
     }
   }
 

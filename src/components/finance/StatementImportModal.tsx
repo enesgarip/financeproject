@@ -705,7 +705,7 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
 
   return createPortal(
     <div className="fixed inset-0 z-[80] flex items-start justify-center overflow-y-auto bg-black/50 px-3 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-[calc(env(safe-area-inset-top)+1rem)] backdrop-blur-sm sm:items-center sm:p-6">
-      <div className="max-h-[88svh] w-full max-w-lg overflow-x-hidden overflow-y-auto rounded-2xl bg-card shadow-xl sm:max-h-[92svh]">
+      <div className="max-h-[88svh] w-full max-w-lg overflow-x-hidden overflow-y-auto rounded-2xl bg-card  sm:max-h-[92svh]">
         {/* Header */}
         <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-card/95 px-4 py-3 backdrop-blur">
           <div className="flex items-center gap-2">
@@ -1173,7 +1173,7 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
 
             {/* ── Sticky CTA bar ── */}
             {(importableCount > 0 || manualReview.length > 0) && (
-              <div className="sticky bottom-0 z-10 border-t border-border bg-card p-4 shadow-[0_-2px_8px_rgba(0,0,0,0.06)]">
+              <div className="sticky bottom-0 z-10 border-t border-border bg-card p-4">
                 <button
                   type="button"
                   disabled={(selected.size === 0 && manualAddedKeys.size === 0) || unresolvedManualCount > 0 || importing}

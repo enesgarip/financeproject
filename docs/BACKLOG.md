@@ -1,5 +1,127 @@
 # Priority Backlog
 
+## 2026-08-10 — Şerit görsel dili: temel + Özet pilotu
+
+Masaüstündeki `design_handoff_denge_redesign/` handoff'unun uygulanması.
+Tasarımın fikri: **kart yığılmasını bitir**, sayıyı ekranın birincil nesnesi yap,
+rengi yalnız sinyal olarak kullan. Bilgi mimarisi ve iş kuralları değişmiyor.
+Handoff'un iki varsayımı eskiydi ve düzeltildi: repo React 19 + Tailwind v4
+(config dosyası yok, tokenlar `index.css`) ve koyu tema burada birinci sınıf.
+
+- ~~**Ş0 — Token katmanı, iki tema.**~~ DONE. `--page`/`--raised`/`--ink*`/
+  `--line*`/`--track`/`--chart-idle`/`--accent-soft`/`--neutral-bar` ve
+  `--signal-*` hem `:root` hem `:root.dark` için tanımlandı; koyu karşılıklar
+  prototipin `1c` seçeneğinden okundu. Sinyal renkleri mevcut
+  `--destructive/--warning/--info`'dan KASITLI olarak ayrı tutuldu ki
+  dönüştürülmemiş ekranlar bu commit'te kaymasın. `.serit-num` (mono +
+  tabular) ve `.serit-eyebrow` (Türkçe Ş/Ç/Ğ için sabit line-height) eklendi.
+- ~~**Ş1 — Ortak parçalar.**~~ DONE. `src/components/serit/*`: `ScreenHeader`,
+  `SectionEyebrow`, `HeroNumber`, `LineGroup`/`LineRow`/`DayBadge`,
+  `BreakdownBar`. Kart bileşeni bilinçli olarak YOK. Para biçimi
+  `formatSeritParts` (sembol sonda, ondalıksız, negatifte U+2212).
+- ~~**Ş2 — Özet ekranı pilotu (`2a` mobil + `4e` masaüstü).**~~ DONE.
+  Kahraman rakam = "ay sonuna kalan"; tek yeni türev ay şeridi
+  (`utils/dashboardMonthStrip.ts`, +test). `SafeToSpendCard` kaldırıldı, hesabı
+  `hooks/useSafeToSpend.ts`'e taşındı (PlanningPage de artık oradan okuyor);
+  tampon düzenleme `SeritBufferRow` olarak çizgi biçiminde geri geldi.
+
+- ~~**Ş3 — Uygulama kabuğu (`4e`).**~~ DONE. 216px rail (raised zemin, 1px
+  ayıraç, gölge yok); kırılımlar <768 alt bar · 768-1024 ikon-only rail ·
+  ≥1024 tam rail. Alt bar yüzen hap olmaktan çıkıp dibe oturdu ve FAB için
+  **76px'lik opak ayrılmış bant** taşıyor — FAB artık hiçbir kaydırma
+  konumunda içeriğin üstüne binmiyor (ölçüldü: bandın en üstteki elemanı barın
+  kendisi). `QuickActions` panel/tetikleyici olarak ayrıldı.
+- ~~**Ş4 — Kalan sekiz ekran.**~~ DONE. Hesaplar `4a` (CardsPage.overview),
+  Kart Borcu `3a` (LiabilitiesCardsPage), Ödeme Takvimi `3b` (PaymentsPage),
+  Krediler `4b` (LoansPage + .components), Varlıklar `4c` (AssetsPage),
+  Hedefler `4d` (PlanningPage + BudgetProgress), Analiz `3c`
+  (AnalysisPage.hero), Veri Kontrolü `3d` (DataHealthPage). `HubNav` hap
+  yerine 2px jade alt çizgili sekme şeridi oldu (5 hub'ı birden etkiler).
+  `CrudPage`'in kendi sayfa başlığı kaldırıldı — başlık artık yalnız kabukta;
+  kahraman rakam en üstte, arama+ekle çubuğu onun altında.
+- ~~**Ş5 — Para biçimi tekilleştirildi.**~~ DONE. `formatPrivateCurrency`
+  (yani `useBalancePrivacy().formatAmount`) `formatSeritAmount`'a geçti:
+  sembol sonda, kuruş korunuyor. Aynı blokta "196.680 ₺" ile "₺196.680,00"
+  yan yana düşmesi bitti. `formatCurrency` dışa aktarım/PDF/rapor yollarında
+  duruyor (orada sembolün önde olması beklenen çıktı).
+
+**Renk kuralı sapması (bilinçli):** Şerit "renk yalnızca sinyal" der; bu kural
+DURUM için uygulandı. Kompozisyon dilimleri (varlık sınıfı, gider kategorisi)
+repo'nun CVD-doğrulanmış `vizPalette` kimlik renklerini kullanmaya devam ediyor —
+`BreakdownSegment.color` bunun için var. Dört sinyal rengiyle sekiz varlık
+sınıfını ayırt etmek mümkün değildi.
+
+- ~~**Ş6 — Handoff'un tarif etmediği 9 alt rota + uzun kuyruk.**~~ DONE.
+  `/varliklar/maas` (kahraman + 6 kayıtlık trend), `/varliklar/altin` (güncel
+  değer + kâr/zarar Delta), `/varliklar/araclar`, `/borclar/kisiler` (net
+  denge + borç/alacak kırılımı), `/odemeler/alsam-mi`, `/odemeler/liste`
+  (bekleyen istek toplamı), `/odemeler/baglamlar`, `/analiz/detay`,
+  `/veri-sagligi/islemler`. Dört sayfadaki **başlık tekrarı** giderildi:
+  `PageCommandHeader` bu sayfalardan kaldırıldı (kabuk zaten başlığı taşıyor).
+- ~~**Ş7 — Kart bileşeni Şerit'e indirildi.**~~ DONE. `components/ui/card.tsx`
+  gölge/parlaklık yerine 1px `line-strong` + `raised` zemine geçti; 40+
+  çağıranı olan `variant` API'si korundu. Bu, dosya dosya dolaşmadan kalan
+  tüm yüzeyleri (araçlar, bağlamlar, modal/çekmece içleri, detay panelleri)
+  aynı dile getirdi.
+- ~~**Ş8 — Gölge süpürmesi.**~~ DONE. 41 dosyadan 87, ikinci turda 13 dosyadan
+  18 gölge yardımcısı ve `index.css`'ten 9 `box-shadow` kaldırıldı. Kalan
+  tek gölge FAB'ın (tasarımın açık istisnası) ve login ekranının (Şerit kapsamı
+  dışında). Ekrandaki `ring-1` kullanımları teknik olarak box-shadow üretiyor
+  ama 1px çizgi anlamına geliyor — kasıtlı bırakıldı, layout'u da bozmuyorlar.
+- ~~**Ş9 — Token setleri birleştirildi.**~~ DONE. `--destructive/--warning/
+  --info/--primary` Şerit değerlerine çekildi (hepsi eskisinden daha koyu →
+  kontrast arttı), `--signal-*` artık onlara alias. `--page`/`--raised`
+  `--background`/`--card`'a bağlandı: tek kaynak. Tek ayrık değer
+  `--signal-warning` (açık temada çubuk dolgusu #c68a1f, metin AA için
+  `--warning`).
+- ~~**Ş10 — Özet detay katmanı budandı.**~~ DONE. Net değer (artık Analiz'in
+  kahraman rakamı) ve borç/limit metrik kutuları (kendi ekranlarında)
+  kaldırıldı. Odak aksiyonları, ekstre hatırlatıcısı, mutabakat ve işlem
+  geçmişi kaldı — bunların tasarımda karşılığı yok ve silmek işlev kaybı olurdu.
+  `DataHealthBadge` ve `buildFinancialHealth` kullanımı ölü kaldığı için düştü.
+
+- ~~**Ş11 — Para biçimi cümle üreten util'lere kadar indi.**~~ DONE.
+  `dashboardInsights`, `attention`, `statementReminder`, `dashboardUpcoming`,
+  `savingsGoal`, `analysisView` artık `formatSeritAmount(x, { decimals: 2 })`
+  kullanıyor — sembol sonda, kuruş korunuyor. 10 rota tarandı: uygulamada
+  eski biçim (₺ önde) SIFIR. `formatCurrency` yalnız `financialReport` (PDF/
+  dışa aktarım) ve `marketRates` (kur etiketi) yollarında kaldı.
+
+- ~~**Ş12 — Kapanış denetimi.**~~ DONE. Kontrast iki temada ölçüldü; açık
+  temada `--ink-faint` #7c8880 → 3.43:1 çıktı (11px uppercase eyebrow için AA
+  altı) ve `--ink-ghost` 3.07:1 idi. Hue korunarak koyulaştırıldı (#667069 /
+  #6b756e): hepsi artık ≥4.5. **Tasarımdan bilinçli sapma** — handoff bu iki
+  değeri veriyordu, gerekçe `index.css`'te yazılı.
+  768–1024 kırılımı doğrulandı (rail 56px ikon-only, etiketler gizli, alt bar
+  yok). Odak halkası global `:focus-visible` ile 2px jade + 2px offset; `--ring`
+  iki temada da jade. `PageCommandHeader` kullanımı sıfır. Login ekranındaki
+  demo tutarları da sembol-sonda biçime alındı.
+- ~~**Ş13 — Bayat e2e testi onarıldı.**~~ DONE. `money-mutation.spec.ts`
+  varsayılan atlandığı için (`E2E_LIVE_SUPABASE=1` kapısı) sessizce çürümüştü
+  ve üç ayrı yerde bozuktu: aradığı "Güncel borç" etiketi arayüzde yok
+  (`main`'de de yok — yani Şerit'ten önce de kırıktı), "Detay"ı doğrudan buton
+  sanıyordu (kartın taşma menüsünde) ve tutar beklentisi eski para
+  biçimindeydi. Üçü düzeltildi; yerel Supabase'e karşı canlı koşuldu, geçiyor.
+- ~~**Ş14 — Kontrol sayısı üretiliyor.**~~ DONE. `buildHealthCounts` artık
+  `checksRun` ve `cleanChecks` döndürüyor (kart 3, planlı kredi 2, taksitli
+  harcama 1, limit grubu 1 kontrol; koşmayan kontrol sayaca girmez).
+  Veri Kontrolü ekranı için `buildAreaCoverage` eklendi: bulguları alan
+  düzeyinde sayar ("6/8 alan temiz"). Granülerlik ALAN düzeyinde kaldı —
+  check aileleri içindeki koşulları tek tek saymak veri bütünlüğü katmanının
+  tamamını elden geçirmeyi gerektirirdi, regresyon riski kazanca değmez.
+  Özet'in satırı kasıtlı olarak daha çekingen ("hızlı kontrollerde sapma yok"):
+  o satır hafif ikizi okur, kesin cevabı Veri Kontrolü ekranı verir.
+- ~~**Ş15 — `/kartlar` alt sekmelerine kahraman rakam.**~~ DONE.
+  `CardsPage.hero.tsx`: Kartlar → toplam borç + limit kullanımı çubuğu,
+  İşlemler → dönem içi harcama (+ provizyon notu), Ekstreler → ödenecek
+  ekstre + en yakın son ödeme. Özet sekmesinde rakam zaten `AccountHubPanel`
+  içinde olduğu için orada çizilmiyor.
+
+**AÇIK:** Şerit tarafında kalan yapısal iş yok. Sonraki turda bakılabilecekler:
+- `finance-page-command` / `PageHero` gibi artık kullanılmayan FinanceUI
+  parçaları silinebilir (ölü ama zararsız).
+- `--surface-elevated`, `--shadow-*` tokenları artık kullanılmıyor; token
+  bloğu sadeleştirilebilir.
 ## 2026-08-10 — Banka modeli Faz 8: kısmi borç + vade çakışması
 
 Faz 7'de ertelenen kalemlerin devamı. Hâlâ AÇIK (bilinçli, düşük değer/yüksek

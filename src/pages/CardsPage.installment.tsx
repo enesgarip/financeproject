@@ -134,7 +134,7 @@ export function LegacyInstallmentPanel({
   if (creditCards.length === 0) return null
 
   return (
-    <SurfaceCard className="border-warning/20 shadow-[var(--shadow-card)]">
+    <SurfaceCard className="border-warning/20">
       <CardHeader className="pb-0">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
@@ -263,7 +263,7 @@ export function LegacyInstallmentPanel({
           <button
             type="submit"
             disabled={saving || !canSubmitLegacyInstallment}
-            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-[0_2px_8px_color-mix(in_srgb,var(--primary)_30%,transparent)] transition hover:bg-primary/90 active:scale-[0.98] disabled:opacity-50"
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 active:scale-[0.98] disabled:opacity-50"
           >
             <CalendarClock size={16} />
             {saving ? 'Ekleniyor...' : 'Devir taksitlerini ekle'}

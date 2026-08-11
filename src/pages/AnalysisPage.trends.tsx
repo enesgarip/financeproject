@@ -32,7 +32,7 @@ export function NetWorthTrend({
 
   if (snapshots.length < 2) {
     return (
-      <Card className="border-border/70 shadow-[var(--shadow-card)] lg:col-span-12">
+      <Card className="border-border/70 lg:col-span-12">
         <CardHeader className="pb-0">
           <CardTitle>Net değer trendi</CardTitle>
           <p className="mt-1 text-sm text-muted-foreground">Geçmişe dönük net değer değişimi.</p>
@@ -103,7 +103,7 @@ export function NetWorthTrend({
   const hasRates = currentRates.goldTry !== null && currentRates.usdTry !== null
 
   return (
-    <Card className="border-border/70 shadow-[var(--shadow-card)] lg:col-span-12">
+    <Card className="border-border/70 lg:col-span-12">
       <CardHeader className="pb-0">
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -238,7 +238,7 @@ export function ForwardForecast({ data }: { data: AnalysisData }) {
   const endingDelta = scenarioForecast ? diffTL(scenarioForecast.endingBalance, forecast.endingBalance) : null
 
   return (
-    <Card className="border-border/70 shadow-[var(--shadow-card)] lg:col-span-12">
+    <Card className="border-border/70 lg:col-span-12">
       <CardHeader className="pb-0">
         <div className="flex items-start justify-between gap-3">
           <div>

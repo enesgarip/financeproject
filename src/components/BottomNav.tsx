@@ -1,54 +1,53 @@
 import { NavLink, useLocation } from 'react-router'
 import { cn } from '../lib/utils'
 import { bottomNavItems } from './navigation'
+import { QuickActionsFab } from './QuickActions'
 
+/**
+ * Mobil alt bar — Şerit (`2a`). Yüzen hap değil, sayfanın dibine oturan düz bant:
+ * ayrım 1px çizgiyle yapılır, gölge yok.
+ *
+ * Sarmalayıcı FAB için **76px'lik ayrılmış bant** taşır ve bandın zemini sayfa
+ * rengiyle doludur — FAB hiçbir kaydırma konumunda içeriğin üstüne binmez.
+ * (Eski yüzen FAB sayfa sonunda satırları örtüyordu.) Bandın yüksekliği
+ * `main`'in alt padding'iyle eşleşmeli; ikisi de Layout'ta.
+ */
 export function BottomNav() {
   const { pathname } = useLocation()
 
   return (
-    <nav
-      className="fixed inset-x-3 bottom-[max(env(safe-area-inset-bottom),0.75rem)] z-30 rounded-2xl border border-border/75 p-1.5 lg:hidden"
-      style={{
-        background: 'color-mix(in srgb, var(--card) 90%, transparent)',
-        backdropFilter: 'blur(24px)',
-        boxShadow: 'var(--shadow-floating)',
-      }}
-    >
-      <div className="mx-auto grid max-w-md grid-cols-5 gap-1">
+    <div className="fixed inset-x-0 bottom-0 z-30 bg-page pt-[76px] md:hidden">
+      {/* Ayıraç FAB'ın 10px altından geçer; FAB çizginin üstünde durur. */}
+      <div className="pointer-events-none absolute inset-x-0 top-[62px] border-t border-line-strong" aria-hidden="true" />
+
+      <div className="absolute right-4 top-0">
+        <QuickActionsFab />
+      </div>
+
+      <nav className="grid grid-cols-5 gap-0.5 px-3.5 pb-[calc(env(safe-area-inset-bottom)+18px)] pt-3.5">
         {bottomNavItems.map((item) => (
           <NavLink
             key={item.to}
             to={item.to}
             end={item.to === '/'}
-            className={({ isActive }) => {
-              const itemIsActive =
-                isActive ||
-                ('activePaths' in item &&
-                  (item.activePaths as readonly string[]).includes(pathname))
-              return cn(
-                'relative flex min-h-[3.35rem] min-w-0 flex-col items-center justify-center gap-1 rounded-xl px-1',
-                'text-[10px] font-semibold leading-none transition-all',
-                itemIsActive
-                  ? [
-                      'bg-primary text-primary-foreground shadow-[0_4px_12px_color-mix(in_srgb,var(--primary)_24%,transparent)]',
-                    ].join(' ')
-                  : 'text-muted-foreground hover:bg-muted/70 active:bg-muted',
-              )
-            }}
+            className="flex min-w-0 flex-col items-center gap-[5px] rounded-lg py-1"
           >
             {({ isActive }) => {
               const itemIsActive =
                 isActive ||
-                ('activePaths' in item &&
-                  (item.activePaths as readonly string[]).includes(pathname))
+                ('activePaths' in item && (item.activePaths as readonly string[]).includes(pathname))
               return (
                 <>
                   <item.icon
-                    size={19}
-                    strokeWidth={itemIsActive ? 2.5 : 1.8}
-                    className={itemIsActive ? 'text-primary-foreground' : 'text-muted-foreground'}
+                    size={20}
+                    strokeWidth={itemIsActive ? 2.2 : 1.8}
+                    style={{ color: itemIsActive ? 'var(--primary)' : 'var(--ink-faint)' }}
+                    aria-hidden="true"
                   />
-                  <span className={cn('truncate', itemIsActive ? 'text-primary-foreground' : '')}>
+                  <span
+                    className={cn('truncate text-[10.5px] leading-none', itemIsActive ? 'font-semibold' : 'font-normal')}
+                    style={{ color: itemIsActive ? 'var(--primary)' : 'var(--ink-faint)' }}
+                  >
                     {item.label}
                   </span>
                 </>
@@ -56,7 +55,7 @@ export function BottomNav() {
             }}
           </NavLink>
         ))}
-      </div>
-    </nav>
+      </nav>
+    </div>
   )
 }

@@ -95,7 +95,7 @@ export function RecentCardExpensesPanel({ cards, reload, setError }: RecentCardE
   if (loading || expenses.length === 0) return null
 
   return (
-    <SurfaceCard className="border-border/70 shadow-[var(--shadow-card)]">
+    <SurfaceCard className="border-border/70">
       <CardHeader className="pb-0">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">

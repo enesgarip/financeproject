@@ -37,7 +37,7 @@ export function ProvisionPanel({
   const totalProvision = sumTL(pending.map((expense) => expense.amount))
   if (loading && pending.length === 0) {
     return (
-      <SurfaceCard className="border-warning/20 shadow-[var(--shadow-card)]">
+      <SurfaceCard className="border-warning/20">
         <CardContent className="p-4 text-sm text-muted-foreground">Provizyonlar yükleniyor...</CardContent>
       </SurfaceCard>
     )
@@ -46,7 +46,7 @@ export function ProvisionPanel({
   if (pending.length === 0) return null
 
   return (
-    <SurfaceCard className="border-warning/20 shadow-[var(--shadow-card)]">
+    <SurfaceCard className="border-warning/20">
       <CardHeader className="pb-0">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
@@ -172,7 +172,7 @@ export function StatementPanel({
 
   if (loading && openStatements.length === 0) {
     return (
-      <SurfaceCard className="border-success/20 shadow-[var(--shadow-card)]">
+      <SurfaceCard className="border-success/20">
         <CardContent className="p-4 text-sm text-muted-foreground">Ekstreler yukleniyor...</CardContent>
       </SurfaceCard>
     )
@@ -181,7 +181,7 @@ export function StatementPanel({
   if (openStatements.length === 0) return null
 
   return (
-    <SurfaceCard className="border-success/20 shadow-[var(--shadow-card)]">
+    <SurfaceCard className="border-success/20">
       <CardHeader className="pb-0">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
@@ -220,7 +220,7 @@ export function StatementPanel({
                   type="button"
                   onClick={() => onPay(statement, card)}
                   disabled={Boolean(actionId)}
-                  className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-success px-3 py-2 text-xs font-semibold text-white shadow-sm disabled:opacity-60 hover:bg-success/90"
+                  className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-success px-3 py-2 text-xs font-semibold text-white  disabled:opacity-60 hover:bg-success/90"
                 >
                   <CheckCircle2 size={14} />
                   {actionId === statement.id ? 'Isleniyor...' : 'Ekstreyi odendi isaretle'}
@@ -244,7 +244,7 @@ export function StatementArchivePanel({ rows, statements }: { rows: Card[]; stat
     .slice(0, 8)
 
   return (
-    <SurfaceCard className="border-border/70 shadow-[var(--shadow-card)]">
+    <SurfaceCard className="border-border/70">
       <CardHeader className="pb-0">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">

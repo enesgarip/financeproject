@@ -64,7 +64,7 @@ export function PageCommandHeader({
     <header
       className={cn(
         'finance-page-command relative overflow-hidden rounded-2xl border border-border/70 bg-card p-4',
-        'shadow-[var(--shadow-card)] sm:p-5',
+        ' sm:p-5',
         className,
       )}
     >
@@ -97,8 +97,8 @@ export function FinancePanel({
   return (
     <div
       className={cn(
-        'min-w-0 rounded-2xl border shadow-[var(--shadow-card)] transition-[border-color,box-shadow]',
-        'hover:border-primary/15 hover:shadow-[var(--shadow-card-hover)]',
+        'min-w-0 rounded-2xl border transition-[border-color,box-shadow]',
+        'hover:border-primary/15',
         toneSurfaceClass[tone],
         className,
       )}
@@ -135,7 +135,7 @@ export function PageHero({
     <div
       className={cn(
         'finance-hero-card relative min-w-0 overflow-hidden rounded-2xl border p-5 sm:p-7',
-        'shadow-[var(--shadow-card)]',
+        '',
         toneSurfaceClass[tone],
         className,
       )}
@@ -260,9 +260,9 @@ export function MetricCard({
     <div
       className={cn(
         '@container/metric group/metric relative min-w-0 overflow-hidden rounded-2xl border border-border/70 bg-card p-4 sm:p-5',
-        'shadow-[var(--shadow-card)] transition-[border-color,box-shadow] duration-250',
-        'hover:shadow-[var(--shadow-card-hover)] hover:border-primary/20',
-        'dark:ring-1 dark:ring-white/[0.04]',
+        ' transition-[border-color,box-shadow] duration-250',
+        ' hover:border-primary/20',
+        '',
         className,
       )}
     >

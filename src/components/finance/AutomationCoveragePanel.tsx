@@ -47,7 +47,7 @@ export function AutomationCoveragePanel() {
   const coverage = rows ? buildAutomationCoverage(rows) : null
 
   return (
-    <SurfaceCard className="border-info/20 shadow-[var(--shadow-card)]">
+    <SurfaceCard className="border-info/20">
       <CardHeader className="pb-0">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">

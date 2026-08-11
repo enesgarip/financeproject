@@ -1,11 +1,11 @@
-import { Activity, CheckCircle2, RefreshCw, Settings, ShieldCheck, Undo2, Wrench } from 'lucide-react'
+import { Activity, CheckCircle2, RefreshCw, Settings, Undo2, Wrench } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router'
 import { FinancePaymentDrawer } from '../components/finance/FinancePaymentDrawer'
-import { PageCommandHeader } from '../components/finance/FinanceUI'
+import { BreakdownBar, HeroNumber } from '../components/serit'
 import { LiveReconciliationPanel } from '../components/finance/LiveReconciliationPanel'
 import { Badge } from '../components/ui/badge'
-import { Card as SurfaceCard, CardContent, CardHeader, CardTitle } from '../components/ui/card'
+import { Card as SurfaceCard, CardContent } from '../components/ui/card'
 import {
   acknowledgeDataHealthIssues,
   clearDataHealthIssueAcknowledgements,
@@ -27,6 +27,7 @@ import { formatDate } from '../utils/date'
 import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
 import { isMissingSupabaseCapabilityError, missingSupabaseCapabilityMessage } from '../utils/supabaseErrors'
 import {
+  buildAreaCoverage,
   buildIssues,
   type HealthData,
   type HealthIssue,
@@ -169,6 +170,7 @@ export function DataHealthPage() {
   const visibleIssues = useMemo(() => issues.filter((issue) => !snoozedIssueIds.includes(issue.id) && !dismissedIssueIds.includes(issue.id)), [issues, snoozedIssueIds, dismissedIssueIds])
   const bulkIssues = visibleIssues.filter((issue) => resolveHealthIssue(issue).bulkEligible)
   const safeRepairPlan = useMemo(() => safeRepairPlanForIssues(visibleIssues), [visibleIssues])
+  const coverage = useMemo(() => buildAreaCoverage(visibleIssues), [visibleIssues])
   const stats = {
     errors: visibleIssues.filter((issue) => issue.severity === 'error').length,
     warnings: visibleIssues.filter((issue) => issue.severity === 'warning').length,
@@ -414,32 +416,39 @@ export function DataHealthPage() {
   return (
     <>
       <section className="space-y-4">
-        <PageCommandHeader
-          label="Güven ve bütünlük"
-          title="Finans verin kontrol altında"
-          description="Ledger, bakiye, borç kırılımı ve işlem sınıflandırmalarındaki sapmaları güvenli biçimde izle."
-          meta={loading ? 'Kontroller çalışıyor' : `${visibleIssues.length} aktif bulgu`}
-        />
-        <SurfaceCard variant="elevated" className="overflow-hidden">
-          <div className="pointer-events-none -mt-4 mb-1 h-[2px] bg-gradient-to-r from-info via-primary to-success opacity-80" />
-          <CardHeader className="pb-2">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <ShieldCheck size={20} className="text-primary" />
-                  Veri kontrolü
-                </CardTitle>
-                <p className="mt-1 text-sm text-muted-foreground">Varlık, kart, kredi, kişi ve planlı ödeme kayıtları.</p>
-              </div>
-              <Badge variant={visibleIssues.length > 0 ? 'warning' : 'success'}>{loading ? 'Kontrol' : `${visibleIssues.length} bulgu`}</Badge>
+        {/* Şerit (`3d`): kahraman = bulgu sayısı, altında tür kırılımı ve 6px oran çubuğu. */}
+        <div>
+          <HeroNumber
+            label="Veri kontrolü"
+            value={visibleIssues.length}
+            tone={stats.errors > 0 ? 'danger' : visibleIssues.length > 0 ? 'warning' : 'brand'}
+            unitOverride="bulgu"
+            description={
+              loading
+                ? 'Kontroller çalışıyor…'
+                : visibleIssues.length === 0
+                  ? `${coverage.areasChecked} alanın hepsi temiz — ledger, bakiye, borç kırılımı ve sınıflandırmalarda sapma yok.`
+                  : `${stats.errors} hata · ${stats.warnings} uyarı · ${stats.info} bilgi · ${coverage.cleanAreas}/${coverage.areasChecked} alan temiz`
+            }
+          />
+
+          {visibleIssues.length > 0 ? (
+            <div className="mt-4">
+              <BreakdownBar
+                height={6}
+                showValues={false}
+                segments={[
+                  { label: 'Kritik', value: stats.errors, tone: 'danger' },
+                  { label: 'Uyarı', value: stats.warnings, tone: 'warning' },
+                  { label: 'Bilgi', value: stats.info, tone: 'info' },
+                ]}
+              />
             </div>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="grid grid-cols-3 gap-2">
-              <HealthStat label="Kritik" value={stats.errors} tone="danger" />
-              <HealthStat label="Uyarı" value={stats.warnings} tone="warning" />
-              <HealthStat label="Bilgi" value={stats.info} tone="info" />
-            </div>
+          ) : null}
+        </div>
+
+        <div className="border-t border-line pt-4">
+          <div className="space-y-3">
             <div className="flex flex-wrap gap-2">
               <button
                 type="button"
@@ -454,7 +463,7 @@ export function DataHealthPage() {
                 type="button"
                 onClick={() => void openFixAllPreview()}
                 disabled={loading || Boolean(fixingId) || undoing || acknowledgementBusy || safeRepairPlan.length === 0}
-                className="inline-flex items-center gap-2 rounded-xl bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground shadow-[0_2px_8px_color-mix(in_srgb,var(--primary)_30%,transparent)] transition hover:bg-primary/90 active:scale-[0.97] disabled:opacity-50"
+                className="inline-flex items-center gap-2 rounded-xl bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 active:scale-[0.97] disabled:opacity-50"
               >
                 <Wrench size={15} />
                 Önizle ve güvenli çözümleri uygula
@@ -502,8 +511,8 @@ export function DataHealthPage() {
             </div>
             {message ? <p className="rounded-xl border border-success/20 bg-success/8 p-3 text-sm font-medium text-success">{message}</p> : null}
             {error ? <p className="rounded-xl border border-destructive/20 bg-destructive/8 p-3 text-sm font-medium text-destructive">{error}</p> : null}
-          </CardContent>
-        </SurfaceCard>
+          </div>
+        </div>
 
         {!loading && data.cards.length > 0 ? (
           <LiveReconciliationPanel

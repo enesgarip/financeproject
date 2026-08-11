@@ -14,42 +14,33 @@ function Card({
   size?: CardSize
   variant?: CardVariant
 }) {
+  /**
+   * Şerit'e geçişte kartın kendisi sadeleşti: **gölge yok**, ayrım 1px
+   * `line-strong` ve `raised` zeminle yapılıyor. Bu, tek tek dönüştürülmemiş
+   * yüzeyleri (araçlar, gider bağlamları, modal/form içleri, detay panelleri)
+   * dosya dosya dolaşmadan aynı dile getirir.
+   *
+   * `variant` API'si korunuyor — 40+ çağıran var — ama görsel fark artık
+   * gölge/parlaklık değil, zemin ve kenarlık tonu. `elevated` "yükseltilmiş
+   * blok"tur (Şerit'in ekran başına 1-2 taneyle sınırladığı yüzey), `outline`
+   * zeminsizdir, `interactive` yalnız hover zemini alır.
+   */
   const variantClass: Record<CardVariant, string> = {
-    default: [
-      "border border-border/85 bg-card text-card-foreground",
-      "shadow-[var(--shadow-card)]",
-      // Koyu temada üstten ince aydınlatma: obsidyen yüzeye işlenmiş-metal his.
-      "dark:shadow-[var(--shadow-card),inset_0_1px_0_rgba(255,255,255,0.045)] dark:ring-1 dark:ring-white/[0.04]",
-    ].join(" "),
-    elevated: [
-      "border border-border/60 bg-card text-card-foreground",
-      "shadow-[var(--shadow-lifted)]",
-      // Obsidyen yükseltilmiş yüzey (eski soğuk-gri #1a1d26 kalıntısı kaldırıldı).
-      "dark:bg-surface-elevated dark:shadow-[var(--shadow-lifted),inset_0_1px_0_rgba(255,255,255,0.06)] dark:ring-1 dark:ring-white/[0.06]",
-    ].join(" "),
-    glass: [
-      "border border-border/60 text-card-foreground",
-      "bg-card/70 backdrop-blur-xl",
-      "shadow-[var(--shadow-card)]",
-      "dark:bg-card/40",
-    ].join(" "),
+    default: "border border-line-strong bg-raised text-ink",
+    elevated: "border border-line-strong bg-raised text-ink",
+    glass: "border border-line-strong bg-raised/85 text-ink backdrop-blur-xl",
     interactive: [
-      "border border-border/80 bg-card text-card-foreground cursor-pointer",
-      "shadow-[var(--shadow-card)]",
-      "transition-all duration-250",
-      "hover:border-primary/25 hover:shadow-[var(--shadow-card-hover)]",
-      "active:translate-y-0 active:shadow-[var(--shadow-card)]",
-      "dark:ring-1 dark:ring-white/[0.04]",
+      "border border-line-strong bg-raised text-ink cursor-pointer",
+      "transition-colors duration-[120ms]",
+      "hover:bg-black/[.02] dark:hover:bg-white/[.03]",
     ].join(" "),
-    outline: [
-      "border border-border bg-transparent text-card-foreground",
-    ].join(" "),
+    outline: "border border-line-strong bg-transparent text-ink",
   }
 
   const sizeClass: Record<CardSize, string> = {
-    sm:      "gap-3 py-3 rounded-xl",
-    default: "gap-4 py-4 rounded-2xl",
-    lg:      "gap-5 py-5 rounded-2xl",
+    sm:      "gap-3 py-3 rounded-[12px]",
+    default: "gap-4 py-4 rounded-[14px]",
+    lg:      "gap-5 py-5 rounded-[14px]",
   }
 
   return (
@@ -58,7 +49,7 @@ function Card({
       data-size={size}
       data-variant={variant}
       className={cn(
-        "group/card flex flex-col overflow-hidden text-sm transition-[border-color,box-shadow]",
+        "group/card flex flex-col overflow-hidden text-sm",
         sizeClass[size],
         variantClass[variant],
         className,
@@ -91,7 +82,7 @@ function CardTitle({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="card-title"
       className={cn(
-        "text-base font-bold leading-snug tracking-tight text-card-foreground",
+        "text-base font-semibold leading-snug tracking-tight text-ink",
         "group-data-[size=sm]/card:text-sm",
         className,
       )}
@@ -104,7 +95,7 @@ function CardDescription({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="card-description"
-      className={cn("text-sm text-muted-foreground leading-relaxed", className)}
+      className={cn("text-sm text-ink-muted leading-relaxed", className)}
       {...props}
     />
   )
@@ -138,7 +129,7 @@ function CardFooter({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="card-footer"
       className={cn(
-        "flex items-center border-t border-border/60 bg-muted/30 px-5 py-3",
+        "flex items-center border-t border-line px-5 py-3",
         "group-data-[size=sm]/card:px-4 group-data-[size=lg]/card:px-6",
         className,
       )}

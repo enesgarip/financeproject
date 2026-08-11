@@ -176,7 +176,7 @@ export function LiveReconciliationPanel({ cards, onChanged }: LiveReconciliation
 
   if (loadError) {
     return (
-      <SurfaceCard className="border-0 shadow-[var(--shadow-card)] ring-1 ring-border/40">
+      <SurfaceCard className="border-0 ring-1 ring-border/40">
         <CardContent className="p-4">
           <Alert variant="warning">{loadError}</Alert>
         </CardContent>
@@ -187,7 +187,7 @@ export function LiveReconciliationPanel({ cards, onChanged }: LiveReconciliation
   const actionableCount = items.filter((item) => item.status === 'drift' || item.status === 'never').length
 
   return (
-    <SurfaceCard className="border-0 shadow-[var(--shadow-card)] ring-1 ring-border/40">
+    <SurfaceCard className="border-0 ring-1 ring-border/40">
       <CardHeader className="pb-0">
         <div className="flex items-start justify-between gap-3">
           <div>

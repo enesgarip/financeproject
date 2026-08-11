@@ -48,15 +48,21 @@ test.describe('money mutation (live backend)', () => {
     // Submit clears the description field on success.
     await expect(form.getByPlaceholder('Migros, benzin, yemek...')).toHaveValue('', { timeout: 10_000 })
 
-    // The card's "Güncel borç" (on the Kartlar tab) should reflect the new debt.
+    // Kartlar sekmesindeki "Toplam kart yükü" yeni borcu göstermeli.
+    // NOT: bu assertion eskiden "Güncel borç" arıyordu ve o etiket uzun süredir
+    // arayüzde yok — test varsayılan olarak atlandığı için (E2E_LIVE_SUPABASE)
+    // sessizce bayatlamıştı. Tutar biçimi de Şerit'e geçti: sembol sonda.
     await page.getByRole('button', { name: /Kartlar/ }).click()
     const card = page.locator('article').filter({ hasText: CARD_NAME })
-    await expect(card.getByText('Güncel borç')).toBeVisible({ timeout: 10_000 })
-    await expect(card).toContainText('₺500,00')
+    await expect(card.getByText('Toplam kart yükü')).toBeVisible({ timeout: 10_000 })
+    await expect(card).toContainText('500,00 ₺')
 
     // Drill-down: the ledger records the increase.
-    await card.getByRole('button', { name: 'Detay' }).click()
-    await expect(card.getByText('Borç hareketleri')).toBeVisible()
-    await expect(card.getByText('Borç arttı')).toBeVisible()
+    // "Detay" doğrudan bir buton değil, kartın taşma menüsünde — bu adım da
+    // testin bayat kalan kısmıydı.
+    await card.getByRole('button', { name: `${CARD_NAME} işlemleri` }).click()
+    await page.getByRole('button', { name: 'Detay', exact: true }).click()
+    await expect(card.getByText('Borç hareketleri')).toBeVisible({ timeout: 10_000 })
+    await expect(card.getByText('Borç arttı').first()).toBeVisible({ timeout: 10_000 })
   })
 })

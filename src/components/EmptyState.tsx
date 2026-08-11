@@ -67,7 +67,7 @@ export function EmptyState({
     <div
       className={cn(
         'mx-auto w-full max-w-xl rounded-2xl border border-dashed border-border/70 bg-card/80 text-center',
-        'shadow-[var(--shadow-card)]',
+        '',
         paddingClass,
         className,
       )}

@@ -19,7 +19,7 @@ import {
   sum,
   type CashFlowSummary,
 } from './financeSummary'
-import { formatCurrency } from './formatCurrency'
+import { formatSeritAmount } from './formatCurrency'
 import { buildReconciliationItems, latestReconciliationByCard, STALE_AFTER_DAYS } from './reconciliation'
 import { canCutCurrentStatement } from './statementCycle'
 
@@ -127,7 +127,7 @@ export function buildFocusActions(
     actions.push({
       id: 'cash-gap',
       title: 'Ay sonu nakit açığı görünüyor',
-      description: `${cashFlow.monthLabel} projeksiyonu ${formatCurrency(cashFlow.projectedCash)}. Ödeme tarihlerini ve tahsilatları birlikte kontrol et.`,
+      description: `${cashFlow.monthLabel} projeksiyonu ${formatSeritAmount(cashFlow.projectedCash, { decimals: 2 })}. Ödeme tarihlerini ve tahsilatları birlikte kontrol et.`,
       to: '/analiz',
       cta: 'Raporlara git',
       tone: 'rose',
@@ -152,7 +152,7 @@ export function buildFocusActions(
   if (totalProvision > 0) {
     actions.push({
       id: 'card-provisions',
-      title: `${formatCurrency(totalProvision)} provizyon bekliyor`,
+      title: `${formatSeritAmount(totalProvision, { decimals: 2 })} provizyon bekliyor`,
       description: 'Kesinleşenleri güncel borca aktar, iptal olanları limitten çıkar.',
       to: '/kartlar?section=ekstreler',
       cta: 'Provizyonları aç',

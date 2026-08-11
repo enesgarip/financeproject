@@ -33,7 +33,7 @@ export function FocusActionPanel({ actions, cashFlow }: { actions: FocusAction[]
   const hiddenCount = Math.max(0, actions.length - 4)
 
   return (
-    <Card className="border-0 bg-card/95 py-0 shadow-[var(--shadow-card)] ring-1 ring-border/80">
+    <Card className="border-0 bg-card/95 py-0 ring-1 ring-border/80">
       <CardContent className="p-4">
         <div className="grid gap-4 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.4fr)] lg:items-stretch">
           <div className="flex min-w-0 flex-col justify-between rounded-lg border border-border/75 bg-surface-muted p-4">
@@ -74,7 +74,7 @@ export function FocusActionPanel({ actions, cashFlow }: { actions: FocusAction[]
                 type="button"
                 onClick={() => setShowAll((current) => !current)}
                 aria-expanded={showAll}
-                className="mt-2 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-border bg-muted/55 px-3 py-2 text-xs font-black text-muted-foreground shadow-sm transition hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background"
+                className="mt-2 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-border bg-muted/55 px-3 py-2 text-xs font-black text-muted-foreground  transition hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background"
               >
                 {showAll ? <ChevronUp size={15} aria-hidden="true" /> : <ChevronDown size={15} aria-hidden="true" />}
                 {showAll ? 'Aksiyonları daralt' : `Tüm aksiyonları göster (${actions.length})`}
@@ -121,7 +121,7 @@ function FocusActionCard({ action }: { action: FocusAction }) {
   return (
     <Link
       to={action.to}
-      className={`group relative flex min-w-0 flex-col justify-between overflow-hidden rounded-lg border p-3 pl-4 shadow-sm ring-1 transition hover:-translate-y-0.5 hover:shadow-[var(--shadow-card)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background ${toneClass}`}
+      className={`group relative flex min-w-0 flex-col justify-between overflow-hidden rounded-lg border p-3 pl-4  ring-1 transition hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background ${toneClass}`}
     >
       <span className={`accent-stripe ${stripeClass}`} aria-hidden="true" />
       <div className="flex items-start gap-3">
@@ -154,7 +154,7 @@ export function UpcomingAlertPanel({ items, onPay }: { items: UpcomingItem[]; on
   const hiddenCount = Math.max(0, items.length - 3)
 
   return (
-    <Card className="min-w-0 border-amber-200 bg-amber-50/70 py-0 shadow-sm ring-1 ring-amber-200/80 dark:border-amber-900 dark:bg-amber-950/20 dark:ring-amber-900/70 lg:col-span-12">
+    <Card className="min-w-0 border-amber-200 bg-amber-50/70 py-0  ring-1 ring-amber-200/80 dark:border-amber-900 dark:bg-amber-950/20 dark:ring-amber-900/70 lg:col-span-12">
       <CardContent className="p-4">
         {/* Sol sütun kısa bir başlık bloğu, sağ sütun uzun bir liste; items-start
             sol tarafı tepeye çivileyip altında ~180px boşluk bırakıyordu. */}
@@ -204,7 +204,7 @@ export function UpcomingAlertPanel({ items, onPay }: { items: UpcomingItem[]; on
                 type="button"
                 onClick={() => setShowAll((current) => !current)}
                 aria-expanded={showAll}
-                className="mt-2 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-amber-200 bg-card/70 px-3 py-2 text-xs font-bold text-amber-900 shadow-sm transition hover:bg-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background dark:border-amber-900/70 dark:text-amber-100"
+                className="mt-2 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-amber-200 bg-card/70 px-3 py-2 text-xs font-bold text-amber-900  transition hover:bg-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background dark:border-amber-900/70 dark:text-amber-100"
               >
                 {showAll ? <ChevronUp size={15} aria-hidden="true" /> : <ChevronDown size={15} aria-hidden="true" />}
                 {showAll ? 'Daralt' : `Tümünü göster (${items.length})`}

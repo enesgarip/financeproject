@@ -45,7 +45,7 @@ export function CardSectionNav({
               'flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-md px-1.5 py-2 text-[11px] font-black leading-tight transition',
               'min-[560px]:flex-row min-[560px]:gap-1.5 min-[560px]:px-3 min-[560px]:text-xs',
               isActive
-                ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/20'
+                ? 'bg-primary text-primary-foreground '
                 : 'text-muted-foreground hover:bg-muted/70 hover:text-foreground',
             )}
           >

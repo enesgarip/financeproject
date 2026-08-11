@@ -196,7 +196,7 @@ export function CashFlowChart({ data, height = 220 }: CashFlowChartProps) {
               height={86}
               style={{ pointerEvents: 'none' }}
             >
-              <div className="rounded-xl border border-border/70 bg-card p-2.5 shadow-[var(--shadow-floating)] backdrop-blur-xl">
+              <div className="rounded-xl border border-border/70 bg-card p-2.5 backdrop-blur-xl">
                 <p className="mb-1.5 text-[10px] font-semibold uppercase text-muted-foreground">{hovered.label}</p>
                 {SERIES.map((s) => (
                   <div key={s.key} className="flex items-center justify-between gap-3">
