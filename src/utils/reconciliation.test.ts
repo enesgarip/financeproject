@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { AccountReconciliation, Card } from '../types/database'
 import {
   appAmount,
+  buildDriftHistory,
   buildReconciliationItems,
   computeDrift,
   isReconciled,
@@ -41,6 +42,7 @@ function recon(over: Partial<AccountReconciliation> & Pick<AccountReconciliation
     app_amount: 0,
     real_amount: 0,
     drift: 0,
+    resolution: null,
     note: null,
     ...over,
   }
@@ -117,5 +119,117 @@ describe('buildReconciliationItems', () => {
     const items = buildReconciliationItems(cards, new Map(), today)
     expect(items[0].app).toBe(3333)
     expect(items[0].target).toBe('debt')
+  })
+
+  // Faz D1: düzeltilen fark artık kayıtta duruyor. Eskiden drift 0'a çekildiği
+  // için bu satır 'ok' görünüyordu; şimdi drift ≠ 0 ama akıbeti kapalı.
+  it('treats a corrected drift as resolved, not as an open drift', () => {
+    const cards = [card({ id: 'c', card_type: 'kredi_karti', debt_amount: 2000 })]
+    const latest = new Map<string, AccountReconciliation>([
+      ['c', recon({
+        card_id: 'c',
+        reconciled_at: '2026-06-09T00:00:00Z',
+        target: 'debt',
+        app_amount: 2150,
+        real_amount: 2000,
+        drift: 150,
+        resolution: 'corrected',
+      })],
+    ])
+    expect(buildReconciliationItems(cards, latest, today)[0].status).toBe('ok')
+  })
+
+  it('keeps an uncorrected drift actionable', () => {
+    const cards = [card({ id: 'c', card_type: 'kredi_karti', debt_amount: 2000 })]
+    const latest = new Map<string, AccountReconciliation>([
+      ['c', recon({
+        card_id: 'c',
+        reconciled_at: '2026-06-09T00:00:00Z',
+        target: 'debt',
+        app_amount: 2150,
+        real_amount: 2000,
+        drift: 150,
+        resolution: 'open',
+      })],
+    ])
+    expect(buildReconciliationItems(cards, latest, today)[0].status).toBe('drift')
+  })
+
+  it('a corrected row still goes stale with age', () => {
+    const cards = [card({ id: 'c', card_type: 'kredi_karti', debt_amount: 2000 })]
+    const latest = new Map<string, AccountReconciliation>([
+      ['c', recon({
+        card_id: 'c',
+        reconciled_at: '2026-04-01T00:00:00Z',
+        target: 'debt',
+        app_amount: 2150,
+        real_amount: 2000,
+        drift: 150,
+        resolution: 'corrected',
+      })],
+    ])
+    expect(buildReconciliationItems(cards, latest, today)[0].status).toBe('stale')
+  })
+
+  // resolution = null olan eski kayıtlar: tek sinyal drift'in kendisi.
+  it('falls back to drift for legacy rows without a resolution', () => {
+    const cards = [
+      card({ id: 'legacy-drift', card_type: 'banka_karti', current_balance: 100 }),
+      card({ id: 'legacy-clean', card_type: 'banka_karti', current_balance: 100 }),
+    ]
+    const latest = new Map<string, AccountReconciliation>([
+      ['legacy-drift', recon({ card_id: 'legacy-drift', reconciled_at: '2026-06-09T00:00:00Z', app_amount: 250, real_amount: 100, drift: 150 })],
+      ['legacy-clean', recon({ card_id: 'legacy-clean', reconciled_at: '2026-06-09T00:00:00Z', drift: 0 })],
+    ])
+    const byId = new Map(buildReconciliationItems(cards, latest, today).map((i) => [i.card.id, i]))
+    expect(byId.get('legacy-drift')?.status).toBe('drift')
+    expect(byId.get('legacy-clean')?.status).toBe('ok')
+  })
+})
+
+describe('buildDriftHistory', () => {
+  it('counts measured drifts across the recent window', () => {
+    const rows = [
+      recon({ card_id: 'c', reconciled_at: '2026-06-01T00:00:00Z', app_amount: 110, real_amount: 100, drift: 10, resolution: 'corrected' }),
+      recon({ card_id: 'c', reconciled_at: '2026-06-05T00:00:00Z', drift: 0, resolution: 'matched' }),
+      recon({ card_id: 'c', reconciled_at: '2026-06-09T00:00:00Z', app_amount: 60, real_amount: 100, drift: -40, resolution: 'open' }),
+      recon({ card_id: 'other', reconciled_at: '2026-06-09T00:00:00Z', app_amount: 500, real_amount: 100, drift: 400, resolution: 'open' }),
+    ]
+    const history = buildDriftHistory(rows, 'c')
+    expect(history.sampleCount).toBe(3)
+    expect(history.driftCount).toBe(2)
+    expect(history.netDriftTL).toBe(-30)
+    expect(history.largestDriftTL).toBe(40)
+    expect(history.hasLegacyRows).toBe(false)
+  })
+
+  it('only looks at the newest `limit` reconciliations', () => {
+    const rows = [
+      recon({ card_id: 'c', reconciled_at: '2026-06-01T00:00:00Z', app_amount: 110, real_amount: 100, drift: 10, resolution: 'open' }),
+      recon({ card_id: 'c', reconciled_at: '2026-06-02T00:00:00Z', drift: 0, resolution: 'matched' }),
+      recon({ card_id: 'c', reconciled_at: '2026-06-03T00:00:00Z', drift: 0, resolution: 'matched' }),
+    ]
+    const history = buildDriftHistory(rows, 'c', 2)
+    expect(history.sampleCount).toBe(2)
+    expect(history.driftCount).toBe(0)
+  })
+
+  // Eski kayıtlarda düzeltilen fark 0 yazıldığı için sayım eksik kalabilir;
+  // bayrak bunu açıkça bildirir ki eksik sayım kesin gerçek gibi okunmasın.
+  it('flags legacy rows so the count is not read as complete', () => {
+    const rows = [
+      recon({ card_id: 'c', reconciled_at: '2026-06-09T00:00:00Z', drift: 0 }),
+    ]
+    expect(buildDriftHistory(rows, 'c').hasLegacyRows).toBe(true)
+  })
+
+  it('returns an empty summary for a card with no reconciliations', () => {
+    expect(buildDriftHistory([], 'c')).toEqual({
+      sampleCount: 0,
+      driftCount: 0,
+      netDriftTL: 0,
+      largestDriftTL: 0,
+      hasLegacyRows: false,
+    })
   })
 })

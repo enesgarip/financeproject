@@ -378,10 +378,18 @@ export type NotificationLog = {
 export type ReconciliationTarget = 'balance' | 'debt'
 
 /**
+ * Ölçümden sonra ne olduğu (Faz D1). `drift` ham gözlemi tutar, bu kolon
+ * gözlemin akıbetini: fark yoktu / duruyor / ledger düzeltmesiyle kapatıldı.
+ * NULL = kolon eklenmeden önce yazılmış kayıt, akıbeti bilinmiyor.
+ */
+export type ReconciliationResolution = 'matched' | 'open' | 'corrected'
+
+/**
  * One live-balance reconciliation event (roadmap A3): a snapshot comparing the
  * app's current figure (bank account current_balance or credit-card
  * debt_amount) against the real figure the user read in their banking app.
- * `drift` = app_amount - real_amount, stored as a point-in-time fact.
+ * `drift` = app_amount - real_amount, stored as a point-in-time fact — düzeltme
+ * uygulansa bile DEĞİŞMEZ (DB'de check kısıtıyla zorlanır).
  */
 export type AccountReconciliation = BaseRow & {
   card_id: string
@@ -390,6 +398,7 @@ export type AccountReconciliation = BaseRow & {
   app_amount: number
   real_amount: number
   drift: number
+  resolution: ReconciliationResolution | null
   note: string | null
 }
 

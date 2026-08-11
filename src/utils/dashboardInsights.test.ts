@@ -70,7 +70,7 @@ describe('buildFocusActions', () => {
       ...emptyInput,
       cards: [card({ card_type: 'banka_karti' })],
       salaryHistory: [{ ...base, title: 'Maaş', amount: 1, effective_date: '2026-01-01', note: null }],
-      accountReconciliations: [{ ...base, card_id: 'id', reconciled_at: new Date().toISOString(), target: 'balance' as const, app_amount: 0, real_amount: 0, drift: 0, note: null }],
+      accountReconciliations: [{ ...base, card_id: 'id', reconciled_at: new Date().toISOString(), target: 'balance' as const, app_amount: 0, real_amount: 0, drift: 0, resolution: 'matched' as const, note: null }],
     }
     const actions = buildFocusActions(input, cashFlow(), 0, [])
     expect(actions).toHaveLength(1)
