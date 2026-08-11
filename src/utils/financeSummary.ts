@@ -347,9 +347,19 @@ export function buildFinancialPosition(data: FinanceSummaryInput): FinancialPosi
   const totalCardStatementDebt = sum(creditCards, (card) => card.statement_debt_amount)
   const totalCardCurrentPeriod = sum(creditCards, (card) => card.current_period_spending)
   const totalCardProvision = sum(creditCards, cardProvisionAmount)
-  const totalCardSplitDebt = cardSplitTotal(totalCardStatementDebt, totalCardCurrentPeriod, totalCardProvision)
-  // Toplam borcun ekstre+dönem+provizyon ile açıklanmayan kısmı = ileri tarihli taksitler.
-  const totalCardFutureInstallmentDebt = Math.max(0, diffTL(totalCreditCardDebt, totalCardSplitDebt))
+  // Borcun ekstre+dönem+provizyon ile açıklanmayan kısmı = ileri tarihli taksitler.
+  // KART BAŞINA hesaplanır: agregat fark, bir karttaki split taşmasının (negatif
+  // kalan) başka kartın gerçek gelecek-taksit borcunu sessizce netlemesine izin
+  // verirdi (denetim 2026-08-12 K13).
+  const totalCardFutureInstallmentDebt = sum(creditCards, (card) =>
+    Math.max(
+      0,
+      diffTL(
+        card.debt_amount,
+        cardSplitTotal(card.statement_debt_amount, card.current_period_spending, cardProvisionAmount(card)),
+      ),
+    ),
+  )
   const totalLoanDebt = sum(
     data.loans.filter((loan) => loan.status === 'active'),
     (loan) => loan.remaining_amount,

@@ -198,6 +198,14 @@ the mismatch) — the same reason the obligations calendar only emits its
 its button to the `pay_card_statement` flow whenever the card has an open
 archive; `pay_card_debt` is offered only for archive-less cards.
 
+The UI guard is now backed by a database guard as well (audit 2026-08-12 K4,
+migration `20260812091000`): `pay_card_statement` refuses to pay an open archive
+when the card's statement bucket is already zero, because that means the debt
+was settled through another flow (`pay_card_debt`, import reconciliation) and a
+second payment would debit the bank twice. Partial bucket drift (bucket > 0 but
+below the archive amount) still does NOT block payment — only the
+full-double-payment case is stopped. pgTAP: `statement_double_payment_guard.sql`.
+
 The calendar's `pay_card_debt` item carries `maxPayableAmount`
 (= `cardPayableDebt`) alongside its nominal `amount`
 (= `statement_debt_amount`): the payment drawer validates and quick-fills

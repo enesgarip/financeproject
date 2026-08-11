@@ -32,6 +32,7 @@ import {
 } from '../../utils/denizBankMovementParser'
 import { dateRangeFromIsoDates, rowsInReviewPeriod } from '../../utils/importReviewPeriod'
 import { dateInputValue } from '../../utils/date'
+import { parseNumber } from '../../utils/formatCurrency'
 import { insertAccountReconciliation } from '../../data/repositories/financePanelsRepo'
 import { computeDrift } from '../../utils/reconciliation'
 import { roundTL, sumTL, toKurus } from '../../utils/money'
@@ -376,6 +377,10 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
       return
     }
 
+    // Guard arşivi, bir sonraki günlük bakımın (`cut_due_card_statements`) taze
+    // import edilmiş dönemin üstüne ekstre kesmesini engeller. Yazılamazsa bu
+    // sessizce yutulamaz — kullanıcı çift işleme riskini bilmeli (K14).
+    let guardWarning = ''
     if (user) {
       if (card.card_type === 'kredi_karti' && card.statement_day) {
         const now = new Date()
@@ -384,22 +389,28 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
         const lastDay = new Date(y, m + 1, 0).getDate()
         const sd = Math.min(card.statement_day, lastDay)
         const boundary = new Date(y, m, sd)
-        if (now > boundary) {
-          const dateStr = dateInputValue(boundary)
-          await insertGuardStatementArchive(user.id, card.id, y, m + 1, dateStr)
-        } else {
-          const prev = new Date(y, m - 1, 1)
-          const prevLastDay = new Date(prev.getFullYear(), prev.getMonth() + 1, 0).getDate()
-          const prevSd = Math.min(card.statement_day, prevLastDay)
-          const prevBoundary = new Date(prev.getFullYear(), prev.getMonth(), prevSd)
-          const dateStr = dateInputValue(prevBoundary)
-          await insertGuardStatementArchive(user.id, card.id, prev.getFullYear(), prev.getMonth() + 1, dateStr)
+        const guardResult = now > boundary
+          ? await insertGuardStatementArchive(user.id, card.id, y, m + 1, dateInputValue(boundary))
+          : await (() => {
+              const prev = new Date(y, m - 1, 1)
+              const prevLastDay = new Date(prev.getFullYear(), prev.getMonth() + 1, 0).getDate()
+              const prevSd = Math.min(card.statement_day, prevLastDay)
+              const prevBoundary = new Date(prev.getFullYear(), prev.getMonth(), prevSd)
+              return insertGuardStatementArchive(
+                user.id,
+                card.id,
+                prev.getFullYear(),
+                prev.getMonth() + 1,
+                dateInputValue(prevBoundary),
+              )
+            })()
+        if (!guardResult.ok) {
+          guardWarning = ` Uyarı: dönem koruma kaydı yazılamadı (${guardResult.error.message ?? 'bilinmeyen hata'}) — ekstre kesimi bu dönemi yeniden işleyebilir.`
         }
       }
-
     }
 
-    setResultMessage(`Kart import kapsamında sıfırlandı, ${successCount} hareket içe aktarıldı`)
+    setResultMessage(`Kart import kapsamında sıfırlandı, ${successCount} hareket içe aktarıldı${guardWarning}`)
     setApplying(false)
     await loadAppDebtAfterImport()
     setStep('done')
@@ -542,8 +553,11 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
     const raw = realDebtInput.trim()
     if (!raw) return
 
-    const real = Number(raw.replace(/\./g, '').replace(',', '.'))
-    if (!Number.isFinite(real)) {
+    // parseNumber çift-locale çözer ("1.234,56" ve "1234.56" ikisi de doğru).
+    // Eski elle parse noktayı binlik sanıp "1234.56"yı 123456 TL okuyor ve
+    // fark ledger'a düzeltme olarak yazılıyordu (denetim 2026-08-12 K6).
+    const real = parseNumber(raw)
+    if (!/\d/.test(raw) || !Number.isFinite(real) || real < 0) {
       setReconcileError('Geçerli bir tutar gir.')
       return
     }

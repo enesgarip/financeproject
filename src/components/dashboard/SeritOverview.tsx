@@ -66,6 +66,7 @@ export function SeritOverview({
   today,
   daysInMonth,
   safeToSpend,
+  reservedKnown = true,
   buffer,
   onBufferChange,
   perDayAllowance,
@@ -87,6 +88,8 @@ export function SeritOverview({
   today: Date
   daysInMonth: number
   safeToSpend: SafeToSpendResult
+  /** false = kasa rezervi doğrulanamadı; kahraman rakam rezervsiz (şişkin) olabilir (K16). */
+  reservedKnown?: boolean
   buffer: number
   onBufferChange: (value: number) => void
   perDayAllowance: number
@@ -143,6 +146,11 @@ export function SeritOverview({
 
         <div className="mt-4">
           <SeritBufferRow buffer={buffer} onChange={onBufferChange} />
+          {!reservedKnown ? (
+            <p className="mt-1.5 text-xs font-semibold" style={{ color: SERIT_TEXT.warning }}>
+              Kasa rezervi doğrulanamadı — bu rakam rezerv düşülmeden hesaplandı.
+            </p>
+          ) : null}
         </div>
 
         <div className="mt-5">

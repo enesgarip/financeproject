@@ -54,11 +54,19 @@ export function summarizeGoldType(lots: GoldLot[], goldType: GoldType): GoldType
 
   for (const lot of rows) {
     const qty = Number(lot.quantity) || 0
-    const sign = lot.direction === 'sell' ? -1 : 1
-    totalQuantity += qty * sign
-    if (lot.unit_price != null && Number.isFinite(lot.unit_price)) {
-      knownQuantity += qty * sign
-      if (lot.direction !== 'sell') {
+    if (lot.direction === 'sell') {
+      // Satış fiyatının bilinip bilinmemesi maliyet tabanını İLGİLENDİRMEZ:
+      // satılan altın elden çıkar ve bilinen-maliyetli havuzdan düşer. Eski
+      // sürüm fiyatsız satışı atlıyordu → knownCost elde kalandan fazla
+      // miktar üzerinden hesaplanıp şişiyordu (denetim 2026-08-12 O1).
+      // Clamp DÖNGÜ SONUNDA (heldKnownQuantity): satırlar tarih sırasında
+      // gelmeyebilir, ara clamp satışı yutar.
+      totalQuantity -= qty
+      knownQuantity -= qty
+    } else {
+      totalQuantity += qty
+      if (lot.unit_price != null && Number.isFinite(lot.unit_price)) {
+        knownQuantity += qty
         buyQuantity += qty
         buyCost += qty * lot.unit_price
       }
@@ -115,16 +123,16 @@ export function buildGoldAccumulation(lots: GoldLot[], goldType?: GoldType): Gol
     const qty = Number(lot.quantity) || 0
     const isSell = lot.direction === 'sell'
     cumulativeQuantity += qty * (isSell ? -1 : 1)
-    if (lot.unit_price != null && Number.isFinite(lot.unit_price)) {
-      if (isSell) {
-        const avg = costPoolQuantity > 0 ? costPool / costPoolQuantity : 0
-        const removed = Math.min(qty, costPoolQuantity)
-        costPool -= avg * removed
-        costPoolQuantity -= removed
-      } else {
-        costPool += qty * lot.unit_price
-        costPoolQuantity += qty
-      }
+    if (isSell) {
+      // Satışta fiyat bilgisi gereksiz: maliyet havuzundan her zaman o anki
+      // ortalama maliyet düşer (fiyatsız satış da havuzu küçültür — O1).
+      const avg = costPoolQuantity > 0 ? costPool / costPoolQuantity : 0
+      const removed = Math.min(qty, costPoolQuantity)
+      costPool -= avg * removed
+      costPoolQuantity -= removed
+    } else if (lot.unit_price != null && Number.isFinite(lot.unit_price)) {
+      costPool += qty * lot.unit_price
+      costPoolQuantity += qty
     }
     points.push({
       date: String(lot.purchase_date),
