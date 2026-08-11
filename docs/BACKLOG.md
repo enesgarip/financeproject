@@ -87,6 +87,21 @@ sınıfını ayırt etmek mümkün değildi.
   eski biçim (₺ önde) SIFIR. `formatCurrency` yalnız `financialReport` (PDF/
   dışa aktarım) ve `marketRates` (kur etiketi) yollarında kaldı.
 
+- ~~**Ş12 — Kapanış denetimi.**~~ DONE. Kontrast iki temada ölçüldü; açık
+  temada `--ink-faint` #7c8880 → 3.43:1 çıktı (11px uppercase eyebrow için AA
+  altı) ve `--ink-ghost` 3.07:1 idi. Hue korunarak koyulaştırıldı (#667069 /
+  #6b756e): hepsi artık ≥4.5. **Tasarımdan bilinçli sapma** — handoff bu iki
+  değeri veriyordu, gerekçe `index.css`'te yazılı.
+  768–1024 kırılımı doğrulandı (rail 56px ikon-only, etiketler gizli, alt bar
+  yok). Odak halkası global `:focus-visible` ile 2px jade + 2px offset; `--ring`
+  iki temada da jade. `PageCommandHeader` kullanımı sıfır. Login ekranındaki
+  demo tutarları da sembol-sonda biçime alındı.
+- ~~**Ş13 — Bayat e2e testi onarıldı.**~~ DONE. `money-mutation.spec.ts`
+  varsayılan atlandığı için (`E2E_LIVE_SUPABASE=1` kapısı) sessizce çürümüştü
+  ve üç ayrı yerde bozuktu: aradığı "Güncel borç" etiketi arayüzde yok
+  (`main`'de de yok — yani Şerit'ten önce de kırıktı), "Detay"ı doğrudan buton
+  sanıyordu (kartın taşma menüsünde) ve tutar beklentisi eski para
+  biçimindeydi. Üçü düzeltildi; yerel Supabase'e karşı canlı koşuldu, geçiyor.
 **AÇIK:**
 - Tasarımın `3d` ekranındaki "34 kontrol temiz" cümlesi için "yapılan kontrol
   sayısı" üretilmiyor (`buildHealthCounts.total` = bulgu toplamı).

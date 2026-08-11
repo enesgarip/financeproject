@@ -221,8 +221,12 @@
   --raised:      var(--card);        /* ekran başına en fazla 1-2 blok */
   --ink:         #111a15;
   --ink-muted:   #5d6b63;
-  --ink-faint:   #7c8880;
-  --ink-ghost:   #8b968e;
+  /* Handoff #7c8880 veriyordu ama porselen zeminde 3.43:1 — 11px uppercase
+     eyebrow için AA altı. Hue korunarak koyulaştırıldı: 4.78:1 (zemin) / 5.14:1
+     (yükseltilmiş blok). Tasarımdan bilinçli sapma. */
+  --ink-faint:   #667069;
+  /* Eksen etiketi 10px; #8b968e beyazda 3.07:1 idi → 4.78:1. */
+  --ink-ghost:   #6b756e;
   --line:        #e6eae2;  /* liste içi satır ayıracı */
   --line-strong: #e2e7dd;  /* blok/bölüm ayıracı, kenarlık */
   --track:       #e2e6dd;  /* ilerleme çubuğu boş kısmı */
