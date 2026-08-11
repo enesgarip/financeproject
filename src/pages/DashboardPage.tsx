@@ -32,7 +32,7 @@ import type {
   TransactionHistory,
 } from '../types/database'
 import { HistorySection } from '../components/dashboard/DashboardCards'
-import { FocusActionPanel, UpcomingAlertPanel } from '../components/dashboard/DashboardInsights'
+import { FocusActionPanel } from '../components/dashboard/DashboardInsights'
 import { FinancePaymentDrawer } from '../components/finance/FinancePaymentDrawer'
 import { useFinancePaymentDrawer } from '../hooks/useFinancePaymentDrawer'
 import type { FinanceObligation } from '../utils/obligations'
@@ -180,7 +180,7 @@ export function DashboardPage() {
   )
   const attentionLine = useMemo(() => buildAttentionLine(data, outflowUpcoming), [data, outflowUpcoming])
 
-  // Ödeme Alarmı'ndaki tekil vadeler yerinde ödensin: paylaşılan çekmece
+  // Şerit'teki yaklaşan vadeler yerinde ödensin: paylaşılan çekmece
   // (PaymentsPage/LoansPage ile aynı) sayfa değiştirmeden açılır, ödeme sonrası
   // snapshot cache'i tazelenir.
   const invalidateSnapshot = useInvalidateFinanceSnapshot()
@@ -384,10 +384,8 @@ export function DashboardPage() {
             </div>
           ) : null}
 
-          {/* ─ Vadeler ve mutabakat ─ */}
-          <DetailSectionDivider label="Vadeler ve mutabakat" />
-
-          <UpcomingAlertPanel items={outflowUpcoming} onPay={handleUpcomingPay} />
+          {/* ─ Mutabakat ─ */}
+          <DetailSectionDivider label="Mutabakat" />
 
           <div className="min-w-0 lg:col-span-12">
             <ReconciliationPanel cards={data.cards} statements={data.cardStatements.filter((statement) => statement.status === 'open')} />

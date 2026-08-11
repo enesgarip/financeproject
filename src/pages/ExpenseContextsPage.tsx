@@ -10,7 +10,7 @@ import { Input, Select } from '../components/ui/input'
 import { Skeleton } from '../components/ui/skeleton'
 import { useConfirmDialog } from '../components/ui/use-confirm-dialog'
 import { useToast } from '../components/ui/toast'
-import { fetchRecentCardExpenses } from '../data/repositories/cardsRepo'
+import { fetchTaggableCardExpenses } from '../data/repositories/cardsRepo'
 import {
   deleteContextExpense,
   deleteExpenseContext,
@@ -250,7 +250,7 @@ function ContextCardTagging({ contexts, onChanged, onError }: { contexts: Expens
   const [expenses, setExpenses] = useState<CardExpense[]>([])
   const [loading, setLoading] = useState(true)
   const [busyId, setBusyId] = useState<string | null>(null)
-  const load = useCallback(async () => { const result = await fetchRecentCardExpenses(40); if (result.ok) setExpenses(result.data); setLoading(false) }, [])
+  const load = useCallback(async () => { const result = await fetchTaggableCardExpenses(100); if (result.ok) setExpenses(result.data); setLoading(false) }, [])
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void load()
@@ -267,8 +267,8 @@ function ContextCardTagging({ contexts, onChanged, onError }: { contexts: Expens
   }
 
   return (
-    <Card><CardHeader className="pb-2"><CardTitle className="flex items-center gap-2 text-base"><CreditCard className="size-4 text-primary" /> Kart harcamasını bağlama ata</CardTitle><p className="text-xs text-muted-foreground">Etiketleme kart borcunu değiştirmez.</p></CardHeader><CardContent>
-      {loading ? <Skeleton className="h-24 rounded-xl" /> : <ul className="flex flex-col divide-y divide-border/60">{expenses.map((expense) => <li key={expense.id} className="flex items-center justify-between gap-3 py-2"><div className="min-w-0"><p className="truncate text-sm font-semibold">{expense.description}</p><p className="truncate text-xs text-muted-foreground">{formatDate(expense.spent_at)} · {formatCurrency(expense.amount)}{expense.context_id ? ` · ${names.get(expense.context_id) ?? 'Bağlam'}` : ''}</p></div><Select className="w-40 shrink-0" value={expense.context_id ?? ''} disabled={busyId === expense.id} onChange={(event) => void assign(expense, event.target.value)} aria-label={`${expense.description} için bağlam`}><option value="">Bağlam yok</option>{contexts.map((context) => <option key={context.id} value={context.id}>{context.name}</option>)}</Select></li>)}</ul>}
+    <Card><CardHeader className="pb-2"><CardTitle className="flex items-center gap-2 text-base"><CreditCard className="size-4 text-primary" /> Kart harcamasını bağlama ata</CardTitle><p className="text-xs text-muted-foreground">Etiketleme kart borcunu değiştirmez. Henüz kesinleşmemiş provizyonlar da listelenir.</p></CardHeader><CardContent>
+      {loading ? <Skeleton className="h-24 rounded-xl" /> : <ul className="flex flex-col divide-y divide-border/60">{expenses.map((expense) => <li key={expense.id} className="flex items-center justify-between gap-3 py-2"><div className="min-w-0"><p className="flex items-center gap-2 text-sm font-semibold"><span className="truncate">{expense.description}</span>{expense.status === 'provision' ? <Badge variant="outline" className="shrink-0">Provizyon</Badge> : null}</p><p className="truncate text-xs text-muted-foreground">{formatDate(expense.spent_at)} · {formatCurrency(expense.amount)}{expense.context_id ? ` · ${names.get(expense.context_id) ?? 'Bağlam'}` : ''}</p></div><Select className="w-40 shrink-0" value={expense.context_id ?? ''} disabled={busyId === expense.id} onChange={(event) => void assign(expense, event.target.value)} aria-label={`${expense.description} için bağlam`}><option value="">Bağlam yok</option>{contexts.map((context) => <option key={context.id} value={context.id}>{context.name}</option>)}</Select></li>)}</ul>}
     </CardContent></Card>
   )
 }
