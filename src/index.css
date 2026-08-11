@@ -673,10 +673,10 @@ button:disabled {
     border-radius: 3px;
     pointer-events: none;
   }
-  .accent-stripe-emerald { background: var(--success); box-shadow: 0 0 12px 0 color-mix(in srgb, var(--success) 55%, transparent); }
-  .accent-stripe-amber   { background: var(--warning); box-shadow: 0 0 12px 0 color-mix(in srgb, var(--warning) 55%, transparent); }
-  .accent-stripe-rose    { background: var(--destructive); box-shadow: 0 0 12px 0 color-mix(in srgb, var(--destructive) 55%, transparent); }
-  .accent-stripe-indigo  { background: var(--info); box-shadow: 0 0 12px 0 color-mix(in srgb, var(--info) 55%, transparent); }
+  .accent-stripe-emerald  { background: var(--success); }
+  .accent-stripe-amber  { background: var(--warning); }
+  .accent-stripe-rose  { background: var(--destructive); }
+  .accent-stripe-indigo  { background: var(--info); }
   .accent-stripe-stone   { background: var(--muted-foreground); }
 }
 
