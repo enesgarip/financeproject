@@ -1,5 +1,52 @@
 # Priority Backlog
 
+## 2026-08-11 — Veri doğruluğu denetimi (Faz D1–D4)
+
+Denetimin sorusu: türetilebilir bilgi DB'de gereksiz/korumasız saklanıyor mu, ve
+kararı değiştirecek bir bilgi kullanıcıdan gizleniyor mu? Çekirdek para modeli
+(kart borcu, banka bakiyesi, kredi özeti, taksit tutarı) ledger + trigger + TS
+ikizi ile zaten temiz çıktı; açıklar sonradan eklenen alanlardaydı.
+
+- ~~**D1 — Mutabakat kaydı düzeltilen farkı siliyordu.**~~ DONE. "Farkı düzelt"
+  akışı (`LiveReconciliationPanel`, `CurrentMovementImportModal`) ledger
+  düzeltmesini uyguladıktan sonra mutabakat satırına `app_amount = gerçek`,
+  `drift = 0` yazıyordu; yani "bankayla arasında X TL fark vardı" gözlemi tam da
+  onu tutması gereken tablodan siliniyordu. Sonucu somut: `buildReconciliationItems`
+  drift=0 gördüğü için kartı `ok` sayıyor, modülün başlığında hedeflenen sapma
+  trendi hiç oluşamıyordu. Artık `drift` DAİMA ham ölçüm (DB'de
+  `check (drift = app_amount - real_amount)` ile zorlanır — eski hatalı desen
+  veritabanı seviyesinde reddediliyor) ve akıbet ayrı `resolution` kolonunda
+  (`matched` | `open` | `corrected`). `cardControlCenter` de aynı mantığa geçti,
+  aksi halde düzeltilen kart sonsuza dek "fark var" kalırdı. Yeni
+  `buildDriftHistory` "son N mutabakatın M tanesinde fark çıktı" desenini
+  panelde gösteriyor. Migration: `20260811140000_reconciliation_preserves_drift.sql`.
+  Eski satırlarda düzeltme öncesi `app_amount` hiç yazılmamış olduğu için gerçek
+  fark geri getirilemez; `resolution` NULL = "bilinmiyor" kalır ve okuma tarafı
+  o satırlarda eski davranışa düşer (uydurma veri üretilmedi). `hasLegacyRows`
+  bayrağı bu körlüğü kullanıcıya da bildirir.
+  Bilerek EKLENMEYEN kolon: uygulanan düzeltme tutarı — her iki akışta da tam
+  `-drift`'e eşit, yani bu maddenin düzelttiği hatanın (türetilebilir değeri
+  korumasız saklamak) aynısı olurdu.
+- **D2 — Açık: karma birikim hedefinde ana satır türetilmiş ama korumasız.**
+  `savings_goals.target_amount` = bileşen sayısı, `current_amount` = hedefine
+  ulaşan bileşen sayısı; `upsert_savings_goal` client'ın gönderdiğini sorgusuz
+  yazıyor. Ayrıca bu sayaç iki yerde TL sanılıyor: `analysisView.ts` → arama/CSV
+  listesinde `formatAmount()` ile "₺2,00" basılıyor, ve
+  `financeSummary.buildGoalProgressSummary` bileşen sayısından TL "aylık gerekli"
+  üretiyor (`savingsSuggestion.ts` aynı tuzağa karşı guard'lı, bu değil).
+- **D3 — Açık: otomatik değerlemede tazelik bilgisi saklanmıyor.**
+  `assets`/`debts`/`savings_goals` üzerinde `estimated_value_try` + `auto_valued`
+  var ama `valued_at` ve kullanılan kur yok; `effectiveAssetValue` canlı kur
+  gelmezse sessizce saklı değere düşüyor. `net_worth_snapshots` bunu doğru
+  yapıyor (`gold_try` + `usd_try` satırda) — aynı desen varlık satırına taşınacak.
+  Ayrıca `RatesBanner` yalnız Varlıklar/Borçlar/Altın'da; net değer kahraman
+  rakamının olduğu Dashboard'da kur yaşı hiç görünmüyor.
+- **D4 — Açık: "harcanabilir" sayısı ekrandan ekrana farklı.** Dashboard
+  (`useSafeToSpend`) kasa kovalarındaki rezervi düşüyor; `PurchaseDecisionPage`
+  ve `PlanningPage` `buildSafeToSpend`'i `reserved` olmadan çağırıyor. Yani
+  "bunu alsam ne olur?" ekranı — kararın verildiği yer — harcanabilir tutarı
+  ayrılmış rezerv kadar FAZLA gösteriyor.
+
 ## 2026-08-11 — Ödeme alarmı sadeleştirmesi + bağlam etiketleme kapsamı
 
 - ~~**S1 — Dashboard "Ödeme alarmı" paneli kaldırıldı.**~~ DONE. Detay

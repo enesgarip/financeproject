@@ -564,13 +564,17 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
     }
 
     const corrected = mode === 'correct' && toKurus(drift) !== 0
+    // Ölçüm daima düzeltme ÖNCESİ haliyle yazılır (Faz D1); düzeltildiği bilgisi
+    // resolution'da durur. Aksi halde "import sonrası fark çıktı" gözlemi kaydın
+    // kendisinden silinip mutabakat geçmişi olayı hiç yaşanmamış gösteriyordu.
     const saveResult = await insertAccountReconciliation({
       user_id: user.id,
       card_id: card.id,
       target: 'debt',
-      app_amount: corrected ? real : appDebtAfterImport,
+      app_amount: appDebtAfterImport,
       real_amount: real,
-      drift: corrected ? 0 : drift,
+      drift,
+      resolution: corrected ? 'corrected' : toKurus(drift) === 0 ? 'matched' : 'open',
       reconciled_at: new Date().toISOString(),
     })
 

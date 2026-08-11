@@ -1,10 +1,16 @@
 import type { AccountReconciliation, Card, ReconciliationTarget } from '../types/database'
-import { diffTL, equalsTL, sumKurus, toTL } from './money'
+import { diffTL, equalsTL, sumKurus, toKurus, toTL } from './money'
 
 /**
  * Live-balance reconciliation (roadmap A3): compare the app's current figure for
  * each account/card against the real figure from the user's bank, and track the
  * ritual ("last reconciled N days ago", drift trend). Pure and money.ts-backed.
+ *
+ * Faz D1: `drift` ham gözlemdir ve düzeltme uygulansa bile değişmez; "kapandı mı"
+ * sorusunun cevabı `resolution` kolonundadır. Önceden düzeltme anında drift 0'a
+ * çekildiği için her kart 'ok' görünüyor ve sapma trendi hiç oluşamıyordu.
+ * `resolution = null` olan eski kayıtlarda akıbet bilinmediği için eski davranışa
+ * (drift ≠ 0 → çözülmemiş) düşülür.
  */
 
 /**
@@ -56,12 +62,23 @@ export type ReconciliationItem = {
 }
 
 /**
+ * Bir mutabakat kaydının farkı hâlâ açık mı? `resolution` varsa ona bakılır;
+ * yoksa (eski kayıt) tek elimizdeki sinyal drift'in kendisidir.
+ */
+export function isUnresolvedDrift(row: AccountReconciliation): boolean {
+  if (row.resolution === 'open') return true
+  if (row.resolution === 'matched' || row.resolution === 'corrected') return false
+  return !equalsTL(row.drift, 0)
+}
+
+/**
  * Build per-card reconciliation rows from the cards and their latest
  * reconciliation. Status:
  *  - never: no reconciliation on record
- *  - drift: last reconciliation showed app ≠ real (still unresolved)
+ *  - drift: son mutabakatta fark çıktı ve kapatılmadı (resolution='open', ya da
+ *           eski kayıtta drift ≠ 0)
  *  - stale: reconciled but longer ago than STALE_AFTER_DAYS
- *  - ok:    reconciled recently with no drift
+ *  - ok:    yakın zamanda mutabık olundu (fark yoktu ya da düzeltildi)
  * Sorted most-actionable first (drift → never → stale → ok).
  */
 export function buildReconciliationItems(
@@ -78,7 +95,7 @@ export function buildReconciliationItems(
 
     let status: ReconcileStatus
     if (!last) status = 'never'
-    else if (!equalsTL(last.drift, 0)) status = 'drift'
+    else if (isUnresolvedDrift(last)) status = 'drift'
     else if (daysSince != null && daysSince > staleAfterDays) status = 'stale'
     else status = 'ok'
 
@@ -86,6 +103,49 @@ export function buildReconciliationItems(
   })
 
   return items.sort((a, b) => rank[a.status] - rank[b.status])
+}
+
+export type DriftHistorySummary = {
+  /** Bakılan mutabakat sayısı (en yeniden geriye, `limit` kadar). */
+  sampleCount: number
+  /** İçlerinde sıfırdan farklı sapma ölçülenlerin sayısı. */
+  driftCount: number
+  /** Ölçülen sapmaların işaretli toplamı (TL) — yön eğilimi. */
+  netDriftTL: number
+  /** En büyük mutlak sapma (TL). */
+  largestDriftTL: number
+  /** Örneklemde akıbeti bilinmeyen (resolution = null) eski kayıt var mı? */
+  hasLegacyRows: boolean
+}
+
+/**
+ * Bir kartın son `limit` mutabakatından sapma eğilimi. "Bu kartta sürekli fark
+ * çıkıyor mu, yoksa tek seferlik miydi?" sorusunun cevabı — tek bir 'Fark var'
+ * rozetinin söyleyemediği şey.
+ *
+ * Eski kayıtlarda düzeltilen fark 0 olarak yazıldığı için sayım onları sapma
+ * saymaz; `hasLegacyRows` bu körlüğü açıkça bildirir ki eksik sayım kesin
+ * gerçek gibi okunmasın.
+ */
+export function buildDriftHistory(
+  rows: AccountReconciliation[],
+  cardId: string,
+  limit = 5,
+): DriftHistorySummary {
+  const recent = rows
+    .filter((row) => row.card_id === cardId)
+    .sort((a, b) => b.reconciled_at.localeCompare(a.reconciled_at))
+    .slice(0, limit)
+
+  const drifted = recent.filter((row) => !equalsTL(row.drift, 0))
+
+  return {
+    sampleCount: recent.length,
+    driftCount: drifted.length,
+    netDriftTL: toTL(sumKurus(drifted.map((row) => toKurus(row.drift)))),
+    largestDriftTL: drifted.reduce((max, row) => Math.max(max, Math.abs(row.drift)), 0),
+    hasLegacyRows: recent.some((row) => row.resolution === null),
+  }
 }
 
 export type DriftCauseEvent = {

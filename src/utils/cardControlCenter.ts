@@ -5,7 +5,7 @@ import type {
   CardStatementArchive,
 } from '../types/database'
 import { scheduledCardInstallmentTotalsByCard } from './financeSummary'
-import { moneyDiffers } from './money'
+import { isUnresolvedDrift } from './reconciliation'
 
 const RECONCILIATION_STALE_DAYS = 7
 
@@ -59,7 +59,10 @@ export function buildCardControlItems(
       let reconciliationStatus: CardBankReconciliationStatus = 'never'
 
       if (latestReconciliation) {
-        if (moneyDiffers(latestReconciliation.app_amount, latestReconciliation.real_amount)) {
+        // Faz D1: ölçümdeki fark artık düzeltmeden sonra da kayıtta durur, bu
+        // yüzden "app ≠ gerçek mi" sorusu tek başına yetmez — kapatılıp
+        // kapatılmadığına bakılır (eski kayıtlarda drift'e düşer).
+        if (isUnresolvedDrift(latestReconciliation)) {
           reconciliationStatus = 'drift'
         } else if (reconciliationAgeDays(latestReconciliation.reconciled_at, now) > RECONCILIATION_STALE_DAYS) {
           reconciliationStatus = 'stale'
