@@ -1,6 +1,6 @@
 # Card Debt Transitions
 
-Last reviewed: 2026-08-09
+Last reviewed: 2026-08-12
 
 This file is the working source of truth for how credit-card debt moves through
 the app. If an RPC, page action, or data-health fix changes one of these rules,
@@ -126,7 +126,12 @@ import passes them), the bank document is the date authority — the PDF
 statement date becomes the cut boundary and the archive's dates, provided it is
 within ±7 days of the card-calendar boundary (bank weekend/holiday shifts fit
 easily; a wrong-month PDF does not). Date-less calls (daily maintenance, client
-cut) behave exactly as before. `replace_card_statement_import` also rejects a
+cut) behave exactly as before. Due-day collision (BM-8 2d, migration
+`20260810190000_partial_personal_debt_and_due_collision.sql`): when
+`due_day <= statement_day`, `cut_card_statement` moves the archive's due date
+to the next month, matching the TS twin `getCardStatementPeriod` — otherwise a
+card like statement_day=30 / due_day=31 could produce
+`due_date = statement_date`. `replace_card_statement_import` also rejects a
 PDF whose period already has a paid archive (or any paid archive with a newer
 statement date): the rebuild scope only recognizes open archives, so replaying
 a paid period would add the debt a second time and silently delete preserved
@@ -329,7 +334,8 @@ fields — no RPC changes needed.
   deltas, falling back to the current → statement → provision heuristic otherwise.
 - Pre-migration events have null deltas and cannot be backfilled.
 
-The `LiveReconciliationPanel` on `/veri-sagligi` now offers a "Farkı düzelt"
+The `LiveReconciliationPanel` (rendered both on `/kartlar` via `CardsPage.tsx`
+and on `/veri-sagligi` via `DataHealthPage.tsx`) now offers a "Farkı düzelt"
 button for credit cards: user enters the bank's real debt (total remaining
 burden including future installments) and the panel applies it through
 `reconcile_card_bank_snapshot` — no PDF import needed. (`post_card_debt_correction`

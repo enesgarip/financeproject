@@ -46,11 +46,11 @@ The main product goal is to make monthly financial load visible before due dates
 - Layout/navigation: `src/components/Layout.tsx`, `src/components/BottomNav.tsx`, `src/components/navigation.ts`
 - Pages:
   - `DashboardPage.tsx`
-  - `AssetsPage.tsx` (Varlıklar hub: `AssetsHub.tsx` → varlıklar + `SalaryPage.tsx` + `GoldPage.tsx`)
+  - `AssetsPage.tsx` (Varlıklar hub: `AssetsHub.tsx` → varlıklar + `SalaryPage.tsx` + `GoldPage.tsx` + `CarsPage.tsx`)
   - `CardsPage.tsx`
-  - `LoansPage.tsx` / `DebtsPage.tsx` (Borçlar hub: `LiabilitiesHub.tsx`)
-  - `PaymentsPage.tsx` / `PlanningPage.tsx` (Planlama hub: `PlanningHub.tsx`)
-  - `AnalysisPage.tsx` / `AnalysisTrendsPage.tsx` / `AnalysisWealthPage.tsx` / `AnalysisRecordsPage.tsx` (Analiz hub: `AnalysisHub.tsx`)
+  - `LoansPage.tsx` / `DebtsPage.tsx` / `LiabilitiesCardsPage.tsx` (Borçlar hub: `LiabilitiesHub.tsx`)
+  - `PaymentsPage.tsx` / `PlanningPage.tsx` / `PurchaseDecisionPage.tsx` / `WishlistPage.tsx` / `ExpenseContextsPage.tsx` (Planlama hub: `PlanningHub.tsx`)
+  - `AnalysisPage.tsx` / `AnalysisDetailPage.tsx` (+ `AnalysisPage.*` parçaları; Analiz hub: `AnalysisHub.tsx`)
   - `DataHealthPage.tsx` / `DataHealthOperationsPage.tsx` (Veri Kontrolü hub: `DataHealthHub.tsx`)
   - `LoginPage.tsx`
 
@@ -136,20 +136,29 @@ tablosundadır; burada tekrarlamak drift yaratır.
 
 ## Route Model
 
+Live routes (source of truth: `src/App.tsx`):
+
 - `/` dashboard
 - `/kartlar` (Hesaplar)
-- `/varliklar` hub → index (Varlıklar) + `/varliklar/maas` (Maaş)
-- `/borclar` hub → `/borclar/krediler` (Krediler) + `/borclar/kisiler` (Kişiler); bare `/borclar` redirects to krediler
-- `/odemeler` hub -> index (Ödeme Takvimi) + `/odemeler/hedefler` (Bütçe & Hedefler)
-- `/odemeler/baglamlar` (evcil hayvan ve etkinlik/proje gider bağlamları)
-- `/analiz` hub -> index (Genel) + `/analiz/trendler` + `/analiz/servet` + `/analiz/kayitlar`
-- `/veri-sagligi` hub -> index (Bulgular) + `/veri-sagligi/islemler` (Yedek ve Ayarlar)
+- `/varliklar` hub → index (Varlıklar) + `/varliklar/maas` (Maaş) + `/varliklar/altin` (Altın) + `/varliklar/araclar` (Arabalarım)
+- `/borclar` hub → `/borclar/krediler` (Krediler) + `/borclar/kisiler` (Kişiler) + `/borclar/kartlar` (Kart Borcu)
+- `/odemeler` hub → index (Ödeme Takvimi) + `/odemeler/hedefler` (Bütçe & Hedefler) + `/odemeler/alsam-mi` (Alsam mı?) + `/odemeler/liste` (Alışveriş Listesi) + `/odemeler/baglamlar` (gider bağlamları)
+- `/analiz` hub → index (Analiz) + `/analiz/detay` (Detay)
+- `/veri-sagligi` hub → index (Bulgular) + `/veri-sagligi/islemler` (Yedek ve Ayarlar)
 - `/login`
-- Legacy redirects: `/krediler` → `/borclar/krediler`, `/daha` → `/`
+
+Redirects (not live pages):
+
+- `/borclar` → `/borclar/krediler`
+- `/alsam-mi` → `/odemeler/alsam-mi`
+- `/analiz/araclar` → `/varliklar/araclar`
+- `/analiz/trendler` → `/analiz`; `/analiz/servet`, `/analiz/kayitlar` → `/analiz/detay`
+- `/krediler` → `/borclar/krediler`
+- unknown paths (`*`) → `/`
 
 All app routes except `/login` are protected by `ProtectedRoute`.
 
-Navigation (`src/components/navigation.ts`): bottom bar (mobile, 5) = Özet · Hesaplar · Birikim · Borçlar · Takvim; desktop sidebar adds Analiz; Analiz + Kontrol + Çıkış live in the mobile header menu.
+Navigation (`src/components/navigation.ts`): bottom bar (mobile, 5) = Özet · Hesaplar · Varlıklar · Borçlar · Plan; desktop rail adds Analiz and Kontrol; Analiz + Kontrol live in the mobile header overflow menu, Çıkış in the desktop rail footer.
 
 ## Database Notes
 
@@ -171,6 +180,14 @@ From the current typed schema, main tables are:
 - `transaction_history`
 - `salary_history`
 - `dismissed_upcoming_items`
+- `card_ledger` / `account_ledger` (append-only signed-kuruş event ledgers; trigger/correction-RPC owned)
+- `account_reconciliations` (bank-vs-app drift snapshots; `drift` immutable, resolution ayrı kolonda)
+- `card_aliases` (SMS/import kart eşleme takma adları)
+- `sms_log` (tanınmayan/işlenen SMS kayıtları)
+- `push_subscriptions`, `notification_log` (Web Push abonelik + gönderim günlüğü)
+- `net_worth_snapshots` (günlük net değer fotoğrafı)
+- `gold_lots` (altın lot/ledger)
+- `wishlist_items` (alışveriş listesi)
 - `data_health_repair_runs` (canonical request, idempotency, batch status/counts)
 - `data_health_repair_steps` (per-target before/after repair receipts)
 - `data_health_issue_acknowledgements` (reversible per-user accepted issue IDs)
@@ -192,7 +209,7 @@ This is not just a simple CRUD app anymore. It has evolved into:
 - a personal ledger
 - a monthly planning tool
 - a credit card statement/installment tracker
-- a loan-affordability decision support surface
+- a purchase-decision ("alsam mı") support surface
 - a data quality repair surface
 
 Any new work should preserve that direction instead of reducing the app back to plain list management.

@@ -1,13 +1,17 @@
 # Finance Rules
 
+Last reviewed: 2026-08-12
+
 ## Scope
 
-This file records the current business rules inferred from the codebase as of 2026-07-07. If code and this file diverge, update both intentionally.
+This file records the current business rules inferred from the codebase. If code and this file diverge, update both intentionally.
 
 ## Money and Formatting
 
-- Most monetary values are handled as decimal numbers and displayed in Turkish locale.
-- Comparisons often use 2-digit rounding tolerance; values within roughly `0.01` may be treated as equal.
+- Monetary values are stored as exact `numeric` in the database; float issues exist only in JS. Ledger tables store signed integer kuruş (`amount_kurus bigint`).
+- All money rounding/comparison goes through `src/utils/money.ts`: `roundTL`, `equalsTL`, `moneyDiffers`, `greaterThanTL`, `diffTL`, `toKurus`/`toTL`, `sumTL`. These compare at kuruş precision after rounding.
+- Ad hoc tolerances are FORBIDDEN: do not write bare `Math.round(x*100)/100` or a `±0.01` comparison tolerance. If two amounts should be "equal", use `equalsTL`/`moneyDiffers`; import-matching tolerances have their own dedicated owner (`src/utils/importMatch.ts`).
+- Amounts are displayed in Turkish locale.
 
 ## Assets
 
@@ -119,7 +123,7 @@ Statement archive behavior:
 - statement amount is the posted current-period spending at cut time
 - cutting a statement links posted card expenses and posted card installments through `statement_archive_id`
 - statements are cut automatically the day **after** the statement day (like banks), so the statement day's own spending is included; the dashboard/cards page calls `cut_due_card_statements` on load and the daily `pg_cron` job runs it server-side. There is no manual "cut statement" action.
-- statement/current movement imports match existing app expenses primarily by amount and same-or-near date, not by identical merchant text. The amount tolerance is 1 TL and the loose date window is 3 days. This lets the user keep personal descriptions while avoiding duplicate imports when bank posting dates drift by a few days.
+- statement/current movement imports match existing app expenses primarily by amount and same-or-near date, not by identical merchant text. Matching tuning lives in one shared owner, `src/utils/importMatch.ts`: the amount tolerance is `max(5 TL, 1%)` of the larger amount, the near date window is 3 days, and the loose window extends to 7 days where a match additionally REQUIRES compatible descriptions (blind amount-only matching is allowed only in the near window with a single candidate). This lets the user keep personal descriptions while avoiding duplicate imports when bank posting dates drift by a few days.
 
 ## Scheduled Card Maintenance (server-side)
 
@@ -241,10 +245,13 @@ From `src/utils/cardInstallmentCalendar.ts` and page logic:
   future scheduled installments remain scheduled
 - credit-card installments are not manually paid; manual payment is limited to the card's statement/current-period debt
 - locked installments, meaning paid or linked to a statement, should not be edited from the UI
-- during authoritative statement replacement, historical installment parents
-  are not reused. The PDF creates only the current/future open-plan suffix and
-  records the completed prefix in the parent note; synthetic paid history is not
-  recreated.
+- during authoritative statement replacement, the PDF creates only the
+  current/future open-plan suffix and records the completed prefix in the
+  parent note; synthetic paid history is not recreated. Since K1
+  (`20260810130000_statement_import_reuse_plan.sql`), the server-side carryover
+  path reuses an existing preserved parent when exactly one same-card parent
+  matches by installment count, identical description, and paid/settled
+  history; otherwise a new parent is created.
 - Data Health checks that each linked installment date equals the original
   transaction date plus `(installment_no - 1)` months; legacy first-of-month
   dates and other structural plan drift navigate to the canonical parent-plan
@@ -297,6 +304,12 @@ From `src/utils/budgetAlerts.ts`:
 - `src/utils/financeObligationRules.ts` owns the small shared helpers for payment
   occurrence and cash impact; both monthly cash-flow and dated obligation
   projections use those helpers.
+- A payment instructed to a credit card (BM-5 "bilgilendirme modu":
+  `payment_method = 'bank_auto'` with a selected `auto_source_card_id`,
+  `paymentUsesCreditCard`) is informational for cash flow: its cash impact for
+  the month is 0 (`paymentCashOutflowAmount`), because the money leaves as card
+  debt, and the real bank outflow happens when that card's statement is paid.
+  Its nominal amount still exists as a liability (see below).
 - dashboard monthly load includes:
   - one-off payments due in the month
   - recurring monthly payments whose occurrence lands in the month
@@ -333,8 +346,10 @@ From `src/utils/budgetAlerts.ts`:
   the salary record effective by that month's end.
 - Forward cash projections repeat the salary each month until a newer effective
   salary record applies. A future salary record does not affect earlier months.
-- "Current salary" UI and affordability/FIRE consumers also require
+- "Current salary" consumers (`getCurrentSalary`) also require
   `effective_date <= today`; an all-future salary history has no current salary.
+- Salary trend comparison (`getSalaryTrend`) is consumed only by the Salary
+  page (`/varliklar/maas`); the dashboard no longer shows it.
 - The daily cash calendar shows upcoming obligations and cash impact; it does
   not create a daily salary deposit event from `salary_history`.
 
@@ -352,27 +367,10 @@ From `src/utils/budgetAlerts.ts`:
   Already-paid installment due dates, amounts, payment metadata, and extra rows
   are historical facts and must be preserved.
 
-## Loan Affordability
+## Loan Affordability (removed)
 
-`src/utils/loanAffordability.ts` is a decision-support calculator, not a bank
-approval engine. It answers: "With the current app data, would a new consumer
-loan installment strain monthly cash flow?"
-
-- Stable income is the current effective salary from `salary_history`; one-off
-  receivables are not treated as stable credit capacity.
-- Existing load is conservative: the higher of near-term peak outflow and the
-  forward forecast's average monthly outflow is used.
-- Safe installment capacity is capped by a target income/load ratio and by
-  available monthly surplus; weak cash buffers reduce the safe installment.
-- Maximum principal is derived from the safe installment, user-entered monthly
-  interest rate, and term using the standard amortized-loan formula.
-- The balanced recommendation scans standard terms at the current monthly
-  interest rate and uses roughly 85% of the safe installment capacity, so it is
-  a comfort scenario rather than the absolute maximum the calculator can derive.
-- The selected loan scenario is stressed against the forward cash projection;
-  if the projection can go negative, the recommendation becomes "zorlayıcı."
-- The first installment is assumed to start next month. Fees, insurance, bank
-  campaign terms, and credit-score approval are outside the app model.
+The loan-affordability calculator (`loanAffordability.ts`) was removed from the
+app; there is no affordability decision surface anymore.
 
 ## Debts / Receivables
 
@@ -402,16 +400,21 @@ Non-composite goal progress rule:
 
 ## Dashboard Planning Rules
 
-Current dashboard behavior includes:
+Current dashboard (Şerit) behavior includes:
 
+- the hero number is the "harcanabilir" figure (`buildSafeToSpend`: liquid cash
+  + remaining income − remaining obligations − buffer − kasa reserve; the
+  `reserved` input is mandatory, see `docs/DASHBOARD_ARCHITECTURE.md`)
 - net worth equals assets minus card, loan, personal debt, and pending payment liabilities
 - open receivables are shown separately as expected collection
-- monthly cash projection
+- monthly cash projection and the month strip
 - upcoming obligations within a lookahead window
 - credit usage monitoring
-- next-month load breakdown
-- salary trend comparison
 - history grouping and filtering
+
+The old dashboard panels for next-month load breakdown and salary trend
+comparison were removed with the Şerit redesign; salary trend
+(`getSalaryTrend`) now lives only on the Salary page.
 
 This means any change in card, loan, debt, or payment semantics likely affects dashboard math.
 
@@ -419,12 +422,6 @@ This means any change in card, loan, debt, or payment semantics likely affects d
 
 - The shared finance snapshot loads 24 completed months plus the current month,
   so current-year and previous-year reports have a complete source window.
-- The full-month calendar starts from today's current cash balance. Past events
-  remain visible but are not applied again; otherwise received salary and paid
-  obligations would be double-counted in projected month-end cash.
-- FIRE's card-spending default averages the last five completed calendar months,
-  includes zero-spend months in the denominator, and excludes the partial current
-  month and cancelled expenses.
-- Quiet-day spending counts card purchases on their purchase date. Card statement
-  payments and the matching history row for a card-funded planned payment are not
-  new spending and must not be counted again.
+- Removed features (their utilities no longer exist; do not resurrect their
+  rules): full-month cash calendar (`fullMonthCalendar.ts`), FIRE projection
+  (`fire.ts`), quiet-day spending (`quietDays.ts`).

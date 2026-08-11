@@ -24,17 +24,31 @@ oluşmaması için branch push tetikleyicisi yoktur.
 - `npm run test:e2e`
 - `npm run ci:local`
 - `npm run db:seed:local` (reapply migrations + seed in local Supabase)
-- `npm run db:test:data-health-safe-repairs` (transaction, idempotency, audit RLS,
-  and ledger-write boundary regression)
-- `npm run db:test:data-health-acknowledgements` (auth-bound write RPCs, own-row
-  visibility, direct-write denial, and cross-user clear isolation)
+- `npm run db:test:catchup` (maintenance catch-up regression)
+- `npm run db:test:provision` (provision/debt separation transitions)
+- `npm run db:test:card-expense-idempotency` (source-event retry no-ops for card expenses)
+- `npm run db:test:sms-account-idempotency` (SMS account movement retry no-ops)
+- `npm run db:test:sms-card-reconciliation` (SMS card payment reconciliation matching)
+- `npm run db:test:statement-import` (statement import installment scope/rebuild)
+- `npm run db:test:card-allocation` (guarded child allocation security)
 - `npm run db:test:card-bank-snapshot` (bank total-only reconciliation, exact
   paid-statement child allocation, ledger bucket preservation, and subsequent
   full current-period payment)
 - `npm run db:test:legacy-current-payment` (exact pre-cycle historical allocation,
   no duplicate cash movement, full current-period payment, and ambiguous rollback)
+- `npm run db:test:data-health-safe-repairs` (transaction, idempotency, audit RLS,
+  and ledger-write boundary regression)
+- `npm run db:test:data-health-acknowledgements` (auth-bound write RPCs, own-row
+  visibility, direct-write denial, and cross-user clear isolation)
+- `npm run db:test:reset` (full user finance data reset)
 - `npm run db:test:expense-contexts-cars` (gider bağlamı/araç own-row RLS,
   kart annotation ownership ve manuel raporlama satırları)
+- `npm run db:test:asset-trade` (proportional asset value on buy/sell)
+- `npm run db:test:partial-debt` (partial personal debt payment and statement
+  due-day collision)
+- `npm run db:test:provision-context` (partial provision posting keeps `context_id`)
+- `npm run db:test:composite-goal` (composite savings-goal totals derived from
+  components)
 
 ## Optional Docker Parity
 

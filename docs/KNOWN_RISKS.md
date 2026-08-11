@@ -12,8 +12,11 @@ Residual risk is low: keep editors and tooling on UTF-8.
 
 All four original large page files have been split into focused modules. The last
 remaining monolith (`DataHealth.logic.ts`, 1413 lines) was split into a thin
-orchestrator (~160 lines) and `DataHealth.checks.ts` (~900 lines of domain check
-functions). No page file now exceeds ~460 lines.
+orchestrator (~160 lines) and `DataHealth.checks.ts` (domain check functions,
+since grown to ~1730 lines as new checks were added). The largest page files as
+of 2026-08-12 are `CarsPage.tsx` (~780 lines), `AssetsPage.tsx` (~770 lines),
+`DataHealthPage.tsx` (~650 lines), `CardsPage.expense.tsx` (~570 lines), and
+`LoansPage.tsx` (~520 lines).
 
 Residual risk: `DataHealth.checks.ts` is still the largest single logic file, but
 each check function is self-contained and independently testable.

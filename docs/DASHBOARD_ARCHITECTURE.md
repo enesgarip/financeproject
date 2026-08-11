@@ -1,6 +1,6 @@
 # Dashboard Architecture Note
 
-Last reviewed: 2026-07-27
+Last reviewed: 2026-08-12
 
 This note is a quick map for changes touching `/` (`DashboardPage`). Start with
 `CLAUDE.md` and `docs/AI_CONTEXT_INDEX.md`; use this file after you know the
@@ -41,10 +41,14 @@ Use these owners before adding dashboard math:
   `src/utils/obligations.ts` through `src/utils/dashboardUpcoming.ts`
 - attention line:
   `src/utils/attention.ts`
-- insight and focus cards:
+- focus actions (`buildFocusActions`) and reconciliation drift count:
   `src/utils/dashboardInsights.ts`
-- forward cash projection:
-  `src/utils/cashFlowForecast.ts`
+- hero number ("harcanabilir"): `src/utils/safeToSpend.ts` through
+  `src/hooks/useSafeToSpend.ts` (see UX contract below)
+- month strip derivation: `src/utils/dashboardMonthStrip.ts`
+- forward cash projection: `src/utils/cashFlowForecast.ts` (shared owner; its
+  current consumers are the purchase-decision and analysis screens, not a
+  dashboard panel)
 
 Money aggregation must use `src/utils/money.ts` helpers, or existing
 `financeSummary.sum()` where the local pattern already uses it.
@@ -99,16 +103,24 @@ personal debt date filtering inside `DashboardPage`. Add behavior to
 modules may format values and choose badges/tone, but new business rules belong
 in `src/utils/*`.
 
-Current module split:
+Current module split (post-Şerit):
 
-- `DashboardPanels.tsx`: hero, goal progress, metric tiles, pulses, shared
-  dashboard-only panel types.
-- `DashboardCards.tsx`: card/debt/limit/history presentation.
-- `DashboardCashFlow.tsx`: monthly payment load, cash-flow chart, cash calendar.
-- `DashboardInsights.tsx`: focus actions, spending radar, smart insights,
-  upcoming alert.
-- `BudgetAlertPanel.tsx`, `StatementReminderPanel.tsx`, and
-  `ReconciliationPanel.tsx`: focused companion panels.
+- `SeritOverview.tsx`: the Şerit body of the dashboard — hero number, liquid
+  account rows, upcoming dues, buffer row wiring. Pure presentation; every
+  number arrives precomputed from `DashboardPage`.
+- `SeritMonthStrip.tsx`: the month strip chart (one of the few allowed raised
+  blocks).
+- `SeritBufferRow.tsx`: safety-buffer editing row (formerly the bottom of the
+  removed `SafeToSpendCard`).
+- `DashboardCards.tsx`: `HistorySection` (transaction history presentation).
+- `DashboardInsights.tsx`: `FocusActionPanel` (focus actions list).
+- `DashboardPanels.tsx`: mostly legacy — only the `FocusAction` type is still
+  imported; the `DashboardHero`/`MetricTile`/`PulseCard` components have no
+  live consumers.
+- `dashboardPanelUtils.ts`: dead module (no imports anywhere); candidate for
+  deletion.
+- `StatementReminderPanel.tsx` and `ReconciliationPanel.tsx`: focused
+  companion panels.
 
 If a panel grows a complex local calculation, extract it to a utility and cover
 it with focused Vitest tests.
@@ -118,17 +130,17 @@ it with focused Vitest tests.
 Dashboard panels are dense operational UI, so keep the interaction contract
 predictable:
 
-- The modernized first decision layer places `SafeToSpendCard` beside
-  `DashboardHero` on desktop and stacks them in that order on mobile. Keep the
-  focus-action panel in the next layer; do not add duplicate summary panels
-  between these decision surfaces.
-- `safe-spend-card` and `dashboard-signature-hero` are the dashboard's two
-  signature dark surfaces. Their scoped contrast tokens must work in both app
-  themes, while the rest of the page stays neutral. Keep these styles outside
-  `prefers-reduced-motion`; that query only disables animation.
-- Negative monetary values in the primary decision card must stay on one line
-  at narrow widths. Hero mini-stats use two mobile columns and four columns from
-  520px upward.
+- The hero number is the Şerit "harcanabilir" figure rendered by
+  `SeritOverview`; there is no signature card anymore (the old
+  `SafeToSpendCard`/`DashboardHero` dark surfaces were removed with the Şerit
+  redesign). Do not add duplicate summary panels above or beside it.
+- The hero calculation lives in `src/utils/safeToSpend.ts` and is wired
+  through `src/hooks/useSafeToSpend.ts`. Callers of `buildSafeToSpend` MUST
+  pass the `reserved` (kasa reserve) input — Faz D4 guard: without it the
+  same-named number differs between screens. `useKasaReserved` in the hook
+  supplies it, and `src/utils/safeToSpend.guard.test.ts` enforces this in CI.
+- Negative monetary values in the hero/decision rows must stay on one line at
+  narrow widths (`.serit-num` tabular figures help; do not wrap the amount).
 - The loading dashboard skeleton must expose a polite loading state
   (`role="status"` / `aria-busy`) while individual skeleton blocks stay
   decorative.
