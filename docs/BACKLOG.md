@@ -46,10 +46,16 @@ ikizi ile zaten temiz çıktı; açıklar sonradan eklenen alanlardaydı.
   regresyon: `supabase/tests/composite_goal_totals.sql`
   (`npm run db:test:composite-goal`; eski fonksiyonla negatif kontrol yapıldı —
   client değeri 99 sızıyor, test kırmızı).
-  Not: `buildGoalProgressSummary`'nin tek çağıranı DashboardPage'de hesaplanıp
-  hiç render edilmiyordu; ölü bağlantı kaldırıldı. Fonksiyon (guard'ı düzeltilmiş
-  hâlde) duruyor — bir panele bağlanacaksa doğru çalışsın diye; bağlanmayacaksa
-  testleriyle birlikte silinebilir.
+  ~~Not: `buildGoalProgressSummary` tüketicisiz kalmıştı.~~ DONE (D5) —
+  fonksiyon, `GoalProgressSummary` tipi ve testleri silindi. Ürettiği her alanın
+  canlı bir karşılığı zaten vardı (`savingsGoalProgressRate`,
+  `buildSavingsSuggestion`) ve asıl gerekçe ölü kod değil: aynı hesabın iki
+  implementasyonu olması D2'deki hatanın SEBEBİYDİ — biri karma hedef guard'ını
+  taşıyordu, diğeri taşımıyordu. Düzeltilmiş kopyayı tüketicisiz tutmak aynı
+  tuzağı canlı bırakırdı. `financeSummary.ts`'te yerinde bir açıklama notu var.
+  `FinanceSummaryInput.savingsGoals*` alanları duruyor ama artık bu modülde
+  okunmuyor — çağıranlar aynı nesneyi başka util'lere geçirdiği için opsiyonel
+  kaldı, tipte bu da belgelendi.
 - ~~**D3 — Otomatik değerlemede tazelik bilgisi saklanmıyordu.**~~ DONE.
   `assets`/`debts`/`savings_goals` üzerinde `estimated_value_try` + `auto_valued`
   vardı ama `valued_at` ve kullanılan kur yoktu (`updated_at` bu işi göremez —
