@@ -12,6 +12,36 @@ tekrar eden yüzey haritası (kart kırılımı 11 yüzey, "Harcanabilir" 2 form
 pgTAP kapsam boşlukları. Docs senkronu aynı gün yapıldı (bkz. rapor §11).
 Düzeltme fazları (A–E) rapor §12'de.
 
+- ~~**Faz B — güven/UX kritikleri.**~~ DONE (2026-08-12). K1: gizlilik maskesi
+  artık metne gömülü tutarları da kapatıyor (`maskAmountsInText` +
+  dikkat bandı/odak kartları/ekstre hatırlatıcısı/kategori içgörüleri).
+  K2: snapshot sorgusu `retry: 3` — giriş sonrası geçici 401 kendi kendine
+  iyileşiyor. K7 (kapsam daraltıldı, ↓ aşağıya bak): asgari ipucu yalnız EKSTRE
+  kovası üzerinden ve taban 0 iken gizli (`minimumPaymentBase`). K8: `?section=
+  ekstre` kırık linki düzeldi. K9: CSV her zaman tam eşleşme kümesini indiriyor.
+  K10: odak paneli "Ay sonuna kalan" kahraman rakamla aynı kaynaktan
+  (safeToSpend). K11: Kasa paneli etiketi "Rezerv sonrası" (iki farklı formüle
+  aynı "Harcanabilir" adı verilmiyor). K12: hero + Borçlar→Kart Borcu limitte
+  `totalCreditLimit` (ortak grup çift sayımı bitti). K17: LineChart null
+  noktalarda çizgiyi bölüyor (+tüm-null girdide boş-veri kutusu, G2; BarChart
+  tooltip sol kırpma, G3). K18: parse-sms `SMS_OWNER_USER_ID` env'i ile tenant
+  daraltması; çok-kullanıcılı son-4 çakışması artık keyfî seçim yerine 409.
+  O3: edge hata gövdesi `context.json()` ile gerçekten okunuyor
+  (`edgeErrorMessage`). Ayrıca yerel gotcha: `config.toml [auth.email]
+  enable_signup=false` güncel GoTrue'da girişleri de kapatıyor → true yapıldı.
+
+- **K7 kalan kapsam — kısmi/asgari EKSTRE ödemesi (tasarım notu).** Arşiv
+  tutarı `guard_card_statement_archive_mutation` ile bilinçli olarak değişmez
+  ve DataHealth "kova = açık arşivler toplamı" varsayar; bu yüzden kısmi ekstre
+  ödemesi mevcut şemada temiz ifade edilemiyor (banka-model denetiminde de
+  bilinçli açık bırakılmıştı). Doğru tasarım: append-only
+  `card_statement_payments` çocuk tablosu (arşiv başına ödemeler; kalan =
+  arşiv − ödemeler), `pay_card_statement(p_amount)` kısmi yolu bu tabloya
+  yazar, DataHealth/ekran "kalan" türetimini bu tablodan okur; backup/reset
+  kapsamına eklenir; pgTAP: kısmi + kalan + çift-ödeme etkileşimi. Ayrı PR
+  olarak ele alınmalı — dokunduğu yüzey: guard trigger, RPC, checks TS+SQL
+  ikizi, drawer, obligations, backup.
+
 - ~~**Faz A — para doğruluğu.**~~ DONE (2026-08-12). K3: `post_card_provision`
   regresyonu geri alındı (`20260812090000` — tarih=işlem günü, vadesi geçmiş
   taksitler posted, current=geçmiş taksitler toplamı; context_id korunuyor;

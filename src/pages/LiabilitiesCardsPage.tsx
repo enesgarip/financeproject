@@ -10,7 +10,7 @@ import { useFinancePaymentDrawer } from '../hooks/useFinancePaymentDrawer'
 import type { Card as CardRow, CardStatementArchive } from '../types/database'
 import { getCardStatementPeriod } from '../utils/cardStatement'
 import { dateInputValue, formatDate } from '../utils/date'
-import { cardPayableDebt } from '../utils/financeSummary'
+import { cardPayableDebt, totalCreditLimit } from '../utils/financeSummary'
 import { formatPercent } from '../utils/formatCurrency'
 import { sumTL } from '../utils/money'
 import { isMissingSupabaseCapabilityError, missingSupabaseCapabilityMessage } from '../utils/supabaseErrors'
@@ -117,6 +117,7 @@ export function LiabilitiesCardsPage() {
         subtitle: card.bank_name,
         date: dateInputValue(new Date()),
         amount: cardPayableDebt(card),
+        minimumPaymentBase: card.statement_debt_amount,
         direction: 'outflow',
       },
       {
@@ -159,7 +160,8 @@ export function LiabilitiesCardsPage() {
     current: sumTL(creditCards.map((card) => card.current_period_spending)),
     provision: sumTL(creditCards.map((card) => card.provision_amount ?? 0)),
   }
-  const totalLimit = sumTL(creditCards.map((card) => card.credit_limit))
+  // Ortak limit grubunda kart başına toplama çift sayar; grup başına max (K12).
+  const totalLimit = totalCreditLimit(creditCards)
   const usageRate = totalLimit > 0 ? Math.min(100, (totalDebt / totalLimit) * 100) : 0
   // Ödenecek ekstre: en erken vadeli açık ekstre (fetch zaten due_date artan sıralı).
   const dueStatement = openStatements.find((statement) => statement.statement_debt_amount > 0)
@@ -221,7 +223,7 @@ export function LiabilitiesCardsPage() {
               Öde
             </button>
             <Link
-              to="/kartlar?section=ekstre"
+              to="/kartlar?section=ekstreler"
               className="rounded-[9px] border border-line-strong px-4 py-2 text-[13px] font-semibold text-ink-muted transition-colors duration-[120ms] hover:bg-black/[.02] dark:hover:bg-white/[.03]"
             >
               Ekstreyi gör

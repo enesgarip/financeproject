@@ -426,7 +426,16 @@ async function handleCardSms(
     label: string | null
     cards: { id: string; card_name: string; bank_name: string; user_id: string }
   }>
-  if (aliases.length === 0) {
+  // K18 (denetim 2026-08-12): tenant sınırı. Webhook'un kullanıcı bağlamı yok;
+  // SMS_OWNER_USER_ID tanımlıysa eşleşmeler o kullanıcıya daraltılır. Tanımlı
+  // değilse bile aynı son-4 hane BİRDEN ÇOK kullanıcıda eşleşiyorsa keyfî ilk
+  // kaydı seçmek yerine açıkça reddedilir (yanlış kullanıcının kartına yazma).
+  const ownerUserId = env('SMS_OWNER_USER_ID')?.trim() || null
+  const scopedAliases = ownerUserId
+    ? aliases.filter((alias) => alias.cards.user_id === ownerUserId)
+    : aliases
+
+  if (scopedAliases.length === 0) {
     await logSms(supabaseUrl, headers, {
       smsType: 'card_expense',
       status: 'error',
@@ -441,7 +450,21 @@ async function handleCardSms(
     }, 404)
   }
 
-  const card = aliases[0]!.cards
+  const distinctUserIds = new Set(scopedAliases.map((alias) => alias.cards.user_id))
+  if (distinctUserIds.size > 1) {
+    const errorMessage = `Son 4 hanesi "${parsed.lastFour}" birden çok kullanıcının kartıyla eşleşiyor; SMS_OWNER_USER_ID tanımlayın.`
+    await logSms(supabaseUrl, headers, {
+      smsType: 'card_expense',
+      status: 'error',
+      errorMessage,
+      amount: parsed.amount,
+      summary: parsed.merchant,
+      rawSms,
+    })
+    return jsonResponse({ error: errorMessage }, 409)
+  }
+
+  const card = scopedAliases[0]!.cards
   const category = inferCategory(parsed.merchant)
 
   const rpcUrl = `${supabaseUrl}/rest/v1/rpc/record_sms_card_expense`
@@ -502,6 +525,10 @@ async function handleAccountSms(
   supabaseUrl: string,
   headers: Record<string, string>,
 ): Promise<Response> {
+  // K18: SMS_OWNER_USER_ID tanımlıysa RPC'ye geçilir — RPC service_role
+  // çağrısında p_user_id'yi tenant filtresi olarak kullanır; tanımsızken tüm
+  // kullanıcılarda hesap arıyordu (tekil eşleşme başka kullanıcıya yazabilirdi).
+  const ownerUserId = env('SMS_OWNER_USER_ID')?.trim() || null
   const rpcUrl = `${supabaseUrl}/rest/v1/rpc/record_sms_account_movement`
   const rpcRes = await fetch(rpcUrl, {
     method: 'POST',
@@ -514,6 +541,7 @@ async function handleAccountSms(
       p_occurred_at: parsed.occurredAt,
       p_transaction_type: parsed.transactionType,
       p_source_event_id: sourceEventId,
+      ...(ownerUserId ? { p_user_id: ownerUserId } : {}),
     }),
   })
 

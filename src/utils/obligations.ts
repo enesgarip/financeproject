@@ -72,6 +72,12 @@ export type FinanceObligation = {
   amount: number // nominal tutar (ekranda gösterilen borç/tahsilat)
   cashImpactAmount?: number // bu ay bankadan çıkacak gerçek nakit (karta yazılırsa 0); yoksa amount kabul edilir
   maxPayableAmount?: number // ödeme çekmecesinin tutar tavanı; amount'tan büyük olabilir (ör. ekstre + dönem içi). Yoksa amount tavandır.
+  /**
+   * Asgari ödeme ipucunun TABANI: yalnız ekstre kovası. Bankada asgari ekstre
+   * borcu üzerinden hesaplanır; dönem içi harcamanın asgarisi olmaz. Yoksa/0
+   * ise çekmece asgari ipucu göstermez (denetim 2026-08-12 K7).
+   */
+  minimumPaymentBase?: number
   direction: FinanceObligationDirection
   settlement?: FinanceObligationSettlement
   isEstimate?: boolean // tutar tahmini/otomatik değerlenmiş mi (kesin değil)
@@ -235,6 +241,7 @@ export function buildFinanceObligationsForMonth(
         // pay_card_debt sunucuda ekstre + dönem içi toplamına kadar kabul eder;
         // çekmece tavanı ekstre tutarına kilitlenirse tam kapama reddedilir (B7).
         maxPayableAmount: cardPayableDebt(card),
+        minimumPaymentBase: card.statement_debt_amount,
         direction: 'outflow',
       })
     }

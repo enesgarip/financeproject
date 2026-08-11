@@ -14,14 +14,25 @@ import { useState } from 'react'
 import { Link } from 'react-router'
 import { Card, CardContent } from '../ui/card'
 import { useBalancePrivacy } from '../../hooks/useBalancePrivacy'
-import type { CashFlowSummary } from '../../utils/financeSummary'
 import type { FocusAction } from './DashboardPanels'
 
-export function FocusActionPanel({ actions, cashFlow }: { actions: FocusAction[]; cashFlow: CashFlowSummary }) {
+export function FocusActionPanel({
+  actions,
+  safeToSpendAmount,
+}: {
+  actions: FocusAction[]
+  /**
+   * Kahraman rakamla AYNI sayı (buildSafeToSpend çıktısı). Eskiden burada
+   * tampon/rezerv düşülmemiş `cashFlow.projectedCash` gösteriliyordu; aynı
+   * ekranda iki farklı "ay sonu" rakamı vardı (denetim 2026-08-12 K10).
+   */
+  safeToSpendAmount: number
+}) {
   const { formatAmount } = useBalancePrivacy()
   const [showAll, setShowAll] = useState(false)
   const primaryAction = actions[0]
-  const cashIsPositive = cashFlow.projectedCash >= 0
+  if (!primaryAction) return null
+  const cashIsPositive = safeToSpendAmount >= 0
   const statusLabel = primaryAction.priority <= 20 ? 'Aksiyon gerekli' : 'Takip temiz'
   const visibleActions = showAll ? actions : actions.slice(0, 4)
   const hiddenCount = Math.max(0, actions.length - 4)
@@ -45,9 +56,9 @@ export function FocusActionPanel({ actions, cashFlow }: { actions: FocusAction[]
             </div>
             <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
               <div className="rounded-lg bg-card/80 px-3 py-2 ring-1 ring-border/70">
-                <p className="font-bold uppercase text-muted-foreground">Ay sonu</p>
+                <p className="font-bold uppercase text-muted-foreground">Ay sonuna kalan</p>
                 <p className={`finance-value mt-1 truncate text-sm font-extrabold ${cashIsPositive ? 'text-success' : 'text-destructive'}`}>
-                  {formatAmount(cashFlow.projectedCash)}
+                  {formatAmount(safeToSpendAmount)}
                 </p>
               </div>
               <div className="rounded-lg bg-card/80 px-3 py-2 ring-1 ring-border/70">
@@ -82,6 +93,9 @@ export function FocusActionPanel({ actions, cashFlow }: { actions: FocusAction[]
 }
 
 function FocusActionCard({ action }: { action: FocusAction }) {
+  // Başlık/açıklama util katmanında üretilen serbest metin ve tutar içerebilir
+  // ("1.000,00 ₺ provizyon bekliyor") — gizlilik modunda maskelenmeli (K1).
+  const { maskText } = useBalancePrivacy()
   const Icon = {
     alert: AlertTriangle,
     calendar: CalendarDays,
@@ -123,8 +137,8 @@ function FocusActionCard({ action }: { action: FocusAction }) {
           <Icon size={18} />
         </div>
         <div className="min-w-0">
-          <h3 className="text-sm font-extrabold leading-snug">{action.title}</h3>
-          <p className="mt-1 line-clamp-2 text-xs leading-5 text-muted-foreground">{action.description}</p>
+          <h3 className="text-sm font-extrabold leading-snug">{maskText(action.title)}</h3>
+          <p className="mt-1 line-clamp-2 text-xs leading-5 text-muted-foreground">{maskText(action.description)}</p>
         </div>
       </div>
       <span className="mt-3 inline-flex items-center text-xs font-black uppercase tracking-normal text-muted-foreground group-hover:text-foreground">

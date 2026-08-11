@@ -145,7 +145,7 @@ export function KasaModuPanel({ liquidCash }: { liquidCash: number }) {
               <div>
                 <h2 className="text-lg font-bold text-foreground">Kasa modu</h2>
                 <p className="text-sm text-muted-foreground">
-                  Bakiyeni kovalara ayır; gerçek harcanabiliri gör. Bakiye değişmez.
+                  Bakiyeni kovalara ayır; rezerv sonrası kalan likidi gör. Bakiye değişmez.
                 </p>
               </div>
             </div>
@@ -158,8 +158,12 @@ export function KasaModuPanel({ liquidCash }: { liquidCash: number }) {
           <div className="mt-4 grid grid-cols-3 gap-2">
             <MiniStat label="Likit" value={formatAmount(liquidCash)} tone="neutral" />
             <MiniStat label="Rezerve" value={formatAmount(reservedTotal)} tone={reservedTotal > 0 ? 'warning' : 'neutral'} />
+            {/* "Harcanabilir" DEĞİL: o etiket kanonik buildSafeToSpend sayısına
+                ait (yükümlülük+tampon da düşer). Buradaki sayı yalnız
+                likit − rezerv'dir; aynı adı taşıması iki farklı rakamı aynı
+                kavram gibi gösteriyordu (denetim 2026-08-12 K11). */}
             <MiniStat
-              label="Harcanabilir"
+              label="Rezerv sonrası"
               value={formatAmount(spendable)}
               tone={spendable < 0 ? 'danger' : 'good'}
             />

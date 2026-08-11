@@ -217,7 +217,10 @@ web3 = 30
 
 [auth.email]
 # Allow/disallow new user signups via email to your project.
-enable_signup = false
+# GOTCHA: guncel GoTrue imaji false'u "email provider kapali" olarak yorumlayip
+# MEVCUT kullanicinin girisini de "Email logins are disabled" ile reddediyor.
+# Yerel gelistirmede true kalmali; uretim ayari dashboard'dan yonetiliyor.
+enable_signup = true
 # If enabled, a user will be required to confirm any email change on both the old, and new email
 # addresses. If disabled, only the new email is required to confirm.
 double_confirm_changes = true

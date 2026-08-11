@@ -162,7 +162,7 @@ export function BarChart({
           {/* Tooltip */}
           {hovered !== null && hoverIndex !== null ? (
             <foreignObject
-              x={Math.min(hoverX - 70, chartWidth - 148)}
+              x={Math.max(pad.left, Math.min(hoverX - 70, chartWidth - 148))}
               y={Math.max(pad.top, toY(Math.max(hovered.value, hovered.prevValue ?? 0)) - 60)}
               width={140}
               height={grouped ? 72 : 52}

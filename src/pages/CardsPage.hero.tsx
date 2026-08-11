@@ -12,6 +12,7 @@ import { formatDate } from '../utils/date'
 import { formatPercent } from '../utils/formatCurrency'
 import { daysUntil } from '../utils/date'
 import { sumTL } from '../utils/money'
+import { totalCreditLimit } from '../utils/financeSummary'
 import { HeroNumber, SERIT_TEXT } from '../components/serit'
 
 export function CardsSectionHero({
@@ -28,7 +29,9 @@ export function CardsSectionHero({
 
   if (section === 'kartlar') {
     const debt = sumTL(creditCards.map((card) => card.debt_amount))
-    const limit = sumTL(creditCards.map((card) => card.credit_limit))
+    // Ortak limit grubu kart başına TOPLANMAZ (çift sayım); grup başına max —
+    // kontrol merkeziyle aynı kaynak (denetim 2026-08-12 K12).
+    const limit = totalCreditLimit(creditCards)
     const usage = limit > 0 ? Math.min(100, (debt / limit) * 100) : 0
     return (
       <HeroNumber

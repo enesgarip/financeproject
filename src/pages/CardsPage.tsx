@@ -201,6 +201,7 @@ export function CardsPage() {
         subtitle: card.bank_name,
         date: dateInputValue(new Date()),
         amount: cardPayableDebt(card),
+        minimumPaymentBase: card.statement_debt_amount,
         direction: 'outflow',
       },
       {

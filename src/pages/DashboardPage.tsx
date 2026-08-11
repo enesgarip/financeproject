@@ -33,6 +33,7 @@ import type {
 } from '../types/database'
 import { HistorySection } from '../components/dashboard/DashboardCards'
 import { FocusActionPanel } from '../components/dashboard/DashboardInsights'
+import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
 import { FinancePaymentDrawer } from '../components/finance/FinancePaymentDrawer'
 import { useFinancePaymentDrawer } from '../hooks/useFinancePaymentDrawer'
 import type { FinanceObligation } from '../utils/obligations'
@@ -101,6 +102,8 @@ const DASHBOARD_SPENDING_MONTHS = 4
 
 export function DashboardPage() {
   const snapshotQuery = useFinanceSnapshot()
+  // Dikkat bandı tutarı metin içinde taşır; gizlilik modunda maskelenmeli (K1).
+  const { maskText } = useBalancePrivacy()
 
   // Snapshot yıllık raporlar için geniş bir süperset taşır; dashboard daraltır.
   // (geçmiş 3 ay, harcamalar 4 ay, bütçe yalnızca içinde bulunulan ay).
@@ -314,7 +317,7 @@ export function DashboardPage() {
             }}
           >
             <AlertTriangle size={16} className="mt-0.5 shrink-0" aria-hidden="true" />
-            <span className="min-w-0">{attentionLine.text}</span>
+            <span className="min-w-0">{maskText(attentionLine.text)}</span>
           </p>
         </div>
       ) : null}
@@ -381,7 +384,7 @@ export function DashboardPage() {
         <div className="grid min-w-0 gap-5 lg:grid-cols-12 lg:items-start">
           {/* ─ Odak ve hatırlatıcılar ─ */}
           <div className="min-w-0 lg:col-span-12">
-            <FocusActionPanel actions={focusActions} cashFlow={summary.cashFlow} />
+            <FocusActionPanel actions={focusActions} safeToSpendAmount={safeToSpend.amount} />
           </div>
 
           {hasStatementReminders ? (

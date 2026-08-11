@@ -39,6 +39,20 @@ export function LineChart({ data, series, height = 260 }: LineChartProps) {
   const plotH = height - pad.top - pad.bottom
 
   const allValues = data.flatMap((d) => series.map((s) => d[s.key]).filter((v): v is number => typeof v === 'number'))
+
+  // Tüm değerler null ise Math.max(...[]) = -Infinity → NaN koordinatlı bozuk
+  // SVG üretilirdi; boş-veri kutusuna düş (denetim 2026-08-12 G2).
+  if (allValues.length === 0) {
+    return (
+      <div
+        className="flex items-center justify-center rounded-xl bg-muted/30 text-sm text-muted-foreground"
+        style={{ height }}
+      >
+        Veri yok
+      </div>
+    )
+  }
+
   const ticks = niceScale(Math.min(0, ...allValues), Math.max(...allValues))
   const yMin = ticks[0]
   const yMax = ticks[ticks.length - 1]
@@ -52,8 +66,26 @@ export function LineChart({ data, series, height = 260 }: LineChartProps) {
       const v = d[s.key]
       return typeof v === 'number' ? { x: toX(i), y: toY(v), value: v } : null
     })
-    const points = s.connectNulls ? raw.filter((p): p is NonNullable<typeof p> => p !== null) : raw
-    return { ...s, raw, points }
+    const validPoints = raw.filter((p): p is NonNullable<typeof p> => p !== null)
+    // connectNulls=false: null noktalar çizgiyi BÖLER — veri boşluğu gerçek
+    // boşluk olarak görünür. Eski hali null'ları filtreleyip tek kesintisiz
+    // path çiziyordu; eksik ay gerçek trend gibi okunuyordu (K17).
+    const segments: (typeof validPoints)[] = []
+    if (s.connectNulls) {
+      segments.push(validPoints)
+    } else {
+      let run: typeof validPoints = []
+      for (const point of raw) {
+        if (point === null) {
+          if (run.length > 0) segments.push(run)
+          run = []
+        } else {
+          run.push(point)
+        }
+      }
+      if (run.length > 0) segments.push(run)
+    }
+    return { ...s, raw, validPoints, segments }
   })
 
   const hovered = hoverIndex !== null ? data[hoverIndex] : null
@@ -122,15 +154,20 @@ export function LineChart({ data, series, height = 260 }: LineChartProps) {
 
           {/* Lines + dots */}
           {seriesData.map((s) => {
-            const validPoints = s.points.filter((p): p is NonNullable<typeof p> => p !== null)
+            const validPoints = s.validPoints
             return (
               <g key={s.key}>
-                <path
-                  d={buildPathD(validPoints)}
-                  fill="none"
-                  stroke={s.stroke}
-                  strokeWidth={2.5}
-                />
+                {s.segments
+                  .filter((segment) => segment.length >= 2)
+                  .map((segment, si) => (
+                    <path
+                      key={si}
+                      d={buildPathD(segment)}
+                      fill="none"
+                      stroke={s.stroke}
+                      strokeWidth={2.5}
+                    />
+                  ))}
                 {validPoints.map((p, pi) => (
                   <circle
                     key={pi}

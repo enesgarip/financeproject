@@ -23,8 +23,23 @@ export function formatPrivateCurrency(value: number | null | undefined, hidden: 
   return hidden ? MASKED_AMOUNT : formatSeritAmount(value, { decimals: 2 })
 }
 
+// "12.480 ₺", "1.234,56 ₺", "5.000₺", "1666.67 TL" gibi metin içine gömülü
+// tutarları yakalar. Cümle üreten util'ler (attention, dashboardInsights,
+// statementReminder, analysisView) tutarı string'e gömer; maske yalnız
+// formatAmount'tan geçen değerleri kapatınca bu cümleler gizlilik modunu
+// deliyordu (denetim 2026-08-12 K1).
+const EMBEDDED_AMOUNT_PATTERN = /\d[\d.,]*\s*(?:₺|TL\b)/g
+
+// eslint-disable-next-line react-refresh/only-export-components
+export function maskAmountsInText(text: string, hidden: boolean) {
+  if (!hidden) return text
+  return text.replace(EMBEDDED_AMOUNT_PATTERN, `${MASKED_AMOUNT} ₺`)
+}
+
 type BalancePrivacyContextValue = {
   formatAmount: (value: number | null | undefined) => string
+  /** Metin içine gömülü "12.480 ₺" kalıplarını gizlilik modunda maskeler. */
+  maskText: (text: string) => string
   hidden: boolean
   toggleHidden: () => void
 }
@@ -47,8 +62,10 @@ export function BalancePrivacyProvider({ children }: { children: ReactNode }) {
     [hidden],
   )
 
+  const maskText = useCallback((text: string) => maskAmountsInText(text, hidden), [hidden])
+
   return (
-    <BalancePrivacyContext.Provider value={{ formatAmount, hidden, toggleHidden }}>
+    <BalancePrivacyContext.Provider value={{ formatAmount, maskText, hidden, toggleHidden }}>
       {children}
     </BalancePrivacyContext.Provider>
   )

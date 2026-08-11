@@ -173,7 +173,8 @@ export function ZakatPanel({ data, ratesSnapshot }: { data: AnalysisData; ratesS
 }
 
 export function CategorySpendingChart({ data }: { data: AnalysisData }) {
-  const { formatAmount } = useBalancePrivacy()
+  // İçgörü açıklamaları tutarı metin içinde taşır — gizlilik modunda maskele (K1).
+  const { formatAmount, maskText } = useBalancePrivacy()
   const monthlyExpenses = useMemo(
     () => data.cardExpenses.filter((expense) => activeCardExpense(expense) && isDateInMonth(expense.spent_at)),
     [data.cardExpenses],
@@ -223,7 +224,7 @@ export function CategorySpendingChart({ data }: { data: AnalysisData }) {
                 <div key={`${insight.category}-${insight.title}`} className="flex min-w-0 items-start justify-between gap-3 rounded-lg bg-card px-3 py-2 text-sm ring-1 ring-border/60">
                   <div className="min-w-0">
                     <p className="truncate font-semibold text-foreground">{insight.category}</p>
-                    <p className="mt-0.5 text-xs text-muted-foreground">{insight.title} · {insight.description}</p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">{insight.title} · {maskText(insight.description)}</p>
                   </div>
                   <Badge variant={insight.tone === 'rose' ? 'destructive' : insight.tone === 'amber' ? 'warning' : 'success'}>
                     {formatAmount(insight.amount)}

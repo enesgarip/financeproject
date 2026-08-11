@@ -61,6 +61,25 @@ export function mapStatementResult(raw: RawStatement, memory?: CategoryMemory): 
   }
 }
 
+/**
+ * FunctionsHttpError.context ham `Response` nesnesidir; edge'in JSON hata
+ * gövdesine (`{ error: "..." }`) ancak `await context.json()` ile ulaşılır.
+ * Eski `context?.error` deseni her zaman undefined kalıp spesifik Türkçe
+ * hatayı (örn. Gemini kota mesajı) yutuyordu (denetim 2026-08-12 O3).
+ */
+export async function edgeErrorMessage(error: unknown, fallback: string): Promise<string> {
+  const context = (error as { context?: unknown })?.context
+  if (context instanceof Response) {
+    try {
+      const body = (await context.clone().json()) as { error?: unknown }
+      if (typeof body?.error === 'string' && body.error.trim()) return body.error
+    } catch {
+      /* gövde JSON değilse fallback'e düş */
+    }
+  }
+  return fallback
+}
+
 /** Ekstre metnini edge fonksiyonuna gönderir ve ParsedStatement döndürür. */
 export async function parseStatementText(text: string, memory?: CategoryMemory): Promise<ParsedStatement> {
   const { data, error } = await supabase.functions.invoke('parse-statement', {
@@ -68,8 +87,7 @@ export async function parseStatementText(text: string, memory?: CategoryMemory):
   })
 
   if (error) {
-    const context = (error as { context?: { error?: string } })?.context
-    throw new Error(context?.error ?? 'Ekstre okunamadı, tekrar dene.')
+    throw new Error(await edgeErrorMessage(error, 'Ekstre okunamadı, tekrar dene.'))
   }
   const result = (data as { result?: RawStatement } | null)?.result
   if (!result) throw new Error('Ekstre çözümlenemedi.')

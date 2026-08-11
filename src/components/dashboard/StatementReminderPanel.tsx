@@ -10,6 +10,7 @@ import {
   statementReminderTitle,
 } from '../../utils/statementReminder'
 import { dateInputValue, formatDate } from '../../utils/date'
+import { useBalancePrivacy } from '../../hooks/useBalancePrivacy'
 
 type StatementReminderPanelProps = {
   cards: FinanceCard[]
@@ -23,6 +24,8 @@ const statementReminderHelp = {
 } satisfies HelpTooltipContent
 
 export function StatementReminderPanel({ cards, statements }: StatementReminderPanelProps) {
+  // Açıklama "Dönem içi: X ₺" gibi tutar gömer — gizlilik modunda maskele (K1).
+  const { maskText } = useBalancePrivacy()
   const reminders = buildStatementReminders(cards, statements)
 
   if (reminders.length === 0) return null
@@ -58,7 +61,7 @@ export function StatementReminderPanel({ cards, statements }: StatementReminderP
                     {reminder.kind === 'ready' ? 'Otomatik kesiliyor' : `${reminder.daysUntilStatement} gün`}
                   </Badge>
                 </div>
-                <p className="mt-0.5 text-xs text-muted-foreground">{statementReminderDescription(reminder)}</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">{maskText(statementReminderDescription(reminder))}</p>
                 <p className="mt-0.5 text-xs text-muted-foreground">
                   Ekstre: {formatDate(dateInputValue(reminder.statementDate))}
                   {reminder.dueDay ? ` · Son ödeme: ${reminder.dueDateLabel}` : ''}
