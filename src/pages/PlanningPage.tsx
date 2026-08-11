@@ -50,7 +50,7 @@ export function PlanningPage() {
   // Dashboard kahraman rakamıyla aynı hesap: tampon VE kasa rezervi birlikte
   // düşülür. Rezerv burada eksikti, yani aynı isimli sayı Dashboard'dakinden
   // ayrılmış rezerv kadar fazla çıkıyordu (Faz D4).
-  const reserved = useKasaReserved()
+  const { reserved } = useKasaReserved()
   const { liquidCash, monthlySurplus } = useMemo(() => {
     const data = snapshotQuery.data
     if (!data) return { liquidCash: 0, monthlySurplus: undefined as number | undefined }

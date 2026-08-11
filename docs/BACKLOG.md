@@ -10,7 +10,22 @@ maliyet hatası, mutabakat parse hatası, agregat gelecek-taksit netlemesi vb.),
 geniş ölü kod envanteri (~500 satır bayraklı ölü dal + 7 ölü dosya + ölü CSS),
 tekrar eden yüzey haritası (kart kırılımı 11 yüzey, "Harcanabilir" 2 formül) ve
 pgTAP kapsam boşlukları. Docs senkronu aynı gün yapıldı (bkz. rapor §11).
-Düzeltme fazları (A–E) rapor §12'de; henüz uygulanmadı.
+Düzeltme fazları (A–E) rapor §12'de.
+
+- ~~**Faz A — para doğruluğu.**~~ DONE (2026-08-12). K3: `post_card_provision`
+  regresyonu geri alındı (`20260812090000` — tarih=işlem günü, vadesi geçmiş
+  taksitler posted, current=geçmiş taksitler toplamı; context_id korunuyor;
+  idempotent onarım bloğu dahil; pgTAP `provision_post_semantics.sql`).
+  K4: `pay_card_statement`'a çift-ödeme guard'ı (`20260812091000`; pgTAP
+  `statement_double_payment_guard.sql`). K5+O1: GoldPage grafiği
+  `buildGoldAccumulation`'a bağlandı, fiyatsız satış artık iki fonksiyonda da
+  maliyet havuzunu düşürüyor. K6: mutabakat girişi `parseNumber`'a geçti.
+  K13: gelecek-taksit borcu kart başına. K14: guard arşiv Result'ı artık
+  uyarı üretiyor. K15: kısmi borç kararı `greaterThanTL`. K16+O3: kasa rezervi
+  TanStack Query'de (`KASA_BUCKETS_QUERY_KEY`), hata halinde Dashboard/Alsam-mı
+  "rezerv doğrulanamadı" uyarısı gösteriyor, KasaModuPanel mutasyonları
+  invalidate ediyor. Ayrıca `supabase/.temp` ESLint ignore'una alındı (yeni CLI
+  start-secrets artefaktı lint'i kırıyordu).
 
 ## 2026-08-11 — Veri doğruluğu denetimi (Faz D1–D4)
 

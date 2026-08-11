@@ -60,6 +60,33 @@ describe('gold ledger summaries', () => {
     expect(summary.avgUnitCost).toBe(3000)
   })
 
+  it('fiyatsız satış da maliyet tabanını düşürür (denetim 2026-08-12 O1)', () => {
+    const summary = summarizeGoldType(
+      [
+        lot({ quantity: 10, unit_price: 1000 }),
+        lot({ id: 'sell-no-price', quantity: 5, unit_price: null, direction: 'sell' }),
+      ],
+      'gram',
+    )
+
+    expect(summary.totalQuantity).toBe(5)
+    expect(summary.knownQuantity).toBe(5)
+    // Elde 5 gr kaldı; maliyet tabanı 5 × 1000 = 5000 (10.000 DEĞİL).
+    expect(summary.knownCost).toBe(5000)
+  })
+
+  it('satır sırası sonucu değiştirmez (UI yeniden-eskiye sıralı verir)', () => {
+    const rows = [
+      lot({ id: 'sell', purchase_date: '2026-07-20', quantity: 5, unit_price: 4000, direction: 'sell' }),
+      lot({ id: 'buy', purchase_date: '2026-05-10', quantity: 10, unit_price: 2000 }),
+    ]
+
+    const summary = summarizeGoldType(rows, 'gram')
+    expect(summary.totalQuantity).toBe(5)
+    expect(summary.knownQuantity).toBe(5)
+    expect(summary.knownCost).toBe(10000)
+  })
+
   it('returns one summary per used type in stable gram/ceyrek order', () => {
     const summaries = summarizeGold([
       lot({ id: 'q1', gold_type: 'ceyrek', quantity: 1, unit_price: 11000 }),
@@ -102,6 +129,21 @@ describe('gold accumulation chart data', () => {
     expect(points).toEqual([
       { date: '2026-06-01', cumulativeQuantity: 4, cumulativeCost: 8000 },
       // 1 gram satıldı → maliyet 8000/4 = 2000 düşer → 6000 (satış fiyatı 5000 değil).
+      { date: '2026-06-10', cumulativeQuantity: 3, cumulativeCost: 6000 },
+    ])
+  })
+
+  it('fiyatsız satış da maliyet havuzunu ortalamadan düşürür (O1)', () => {
+    const points = buildGoldAccumulation(
+      [
+        lot({ id: 'buy', purchase_date: '2026-06-01', quantity: 4, unit_price: 2000 }),
+        lot({ id: 'sell', purchase_date: '2026-06-10', quantity: 1, unit_price: null, direction: 'sell' }),
+      ],
+      'gram',
+    )
+
+    expect(points).toEqual([
+      { date: '2026-06-01', cumulativeQuantity: 4, cumulativeCost: 8000 },
       { date: '2026-06-10', cumulativeQuantity: 3, cumulativeCost: 6000 },
     ])
   })

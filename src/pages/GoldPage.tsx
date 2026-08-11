@@ -15,6 +15,7 @@ import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
 import {
   GOLD_TYPE_LABELS,
   GOLD_TYPE_UNIT,
+  buildGoldAccumulation,
   summarizeGold,
   type GoldTypeSummary,
 } from '../utils/goldLedger'
@@ -127,15 +128,20 @@ function buildChartData(lots: GoldLot[], snapshot: MarketRatesSnapshot | null): 
     .filter((lot) => lot.purchase_date)
     .sort((a, b) => String(a.purchase_date).localeCompare(String(b.purchase_date)))
 
+  // Maliyet çizgisi ağırlıklı-ortalama havuzdan gelir (buildGoldAccumulation —
+  // özet kartıyla AYNI yöntem). Eski yerel kopya satışta maliyetten satış
+  // fiyatını düşüyordu; kârlı satış maliyet çizgisini 0'ın altına bile
+  // itebiliyordu (denetim 2026-08-12 K5). Accumulation aynı filtre + aynı
+  // sıralamayla üretildiği için indeksler `dated` ile birebir hizalı.
+  const accumulation = buildGoldAccumulation(lots)
+
   let gram = 0
   let ceyrek = 0
-  let cost = 0
 
-  return dated.map((lot) => {
+  return dated.map((lot, index) => {
     const sign = lot.direction === 'sell' ? -1 : 1
     if (lot.gold_type === 'gram') gram += lot.quantity * sign
     if (lot.gold_type === 'ceyrek') ceyrek += lot.quantity * sign
-    if (lot.unit_price != null) cost = sumTL([cost, round2(lot.quantity * lot.unit_price * sign)])
 
     const gramValue = goldValue('gram', gram, snapshot)
     const ceyrekValue = goldValue('ceyrek', ceyrek, snapshot)
@@ -145,7 +151,7 @@ function buildChartData(lots: GoldLot[], snapshot: MarketRatesSnapshot | null): 
       label: formatDate(lot.purchase_date),
       gram: round2(gram),
       ceyrek: round2(ceyrek),
-      cost: round2(cost),
+      cost: accumulation[index]?.cumulativeCost ?? 0,
       market: gramValue === null || ceyrekValue === null ? null : sumTL([gramValue, ceyrekValue]),
     }
   })

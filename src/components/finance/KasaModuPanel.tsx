@@ -1,3 +1,4 @@
+import { useQueryClient } from '@tanstack/react-query'
 import { Boxes, Plus, Pencil, Trash2, Wallet } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { useAuth } from '../../auth/useAuth'
@@ -8,6 +9,7 @@ import {
   updateKasaBucket,
 } from '../../data/repositories/kasaBucketsRepo'
 import { useBalancePrivacy } from '../../hooks/useBalancePrivacy'
+import { KASA_BUCKETS_QUERY_KEY } from '../../hooks/useSafeToSpend'
 import type { KasaBucket } from '../../types/database'
 import { parseNumber } from '../../utils/formatCurrency'
 import { spendableAfterReserves, totalReservedTL } from '../../utils/kasaMode'
@@ -26,6 +28,7 @@ import { useConfirmDialog } from '../ui/use-confirm-dialog'
 export function KasaModuPanel({ liquidCash }: { liquidCash: number }) {
   const { formatAmount } = useBalancePrivacy()
   const { user } = useAuth()
+  const queryClient = useQueryClient()
   const { confirm, confirmDialog } = useConfirmDialog()
   const [buckets, setBuckets] = useState<KasaBucket[]>([])
   const [loading, setLoading] = useState(true)
@@ -88,6 +91,8 @@ export function KasaModuPanel({ liquidCash }: { liquidCash: number }) {
       return
     }
     await load()
+    // Aynı sayfadaki "harcanabilir" hesabı (useKasaReserved) bayat kalmasın (O3).
+    void queryClient.invalidateQueries({ queryKey: KASA_BUCKETS_QUERY_KEY })
   }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -122,6 +127,7 @@ export function KasaModuPanel({ liquidCash }: { liquidCash: number }) {
     }
     setModalOpen(false)
     await load()
+    void queryClient.invalidateQueries({ queryKey: KASA_BUCKETS_QUERY_KEY })
   }
 
   const reservedTotal = totalReservedTL(buckets)

@@ -39,6 +39,8 @@
     "db:test:partial-debt": "docker exec -i supabase_db_financeproject psql -U postgres -d postgres -v ON_ERROR_STOP=1 -f - < supabase/tests/partial_debt_and_due_collision.sql",
     "db:test:provision-context": "docker exec -i supabase_db_financeproject psql -U postgres -d postgres -v ON_ERROR_STOP=1 -f - < supabase/tests/partial_provision_context.sql",
     "db:test:composite-goal": "docker exec -i supabase_db_financeproject psql -U postgres -d postgres -v ON_ERROR_STOP=1 -f - < supabase/tests/composite_goal_totals.sql",
+    "db:test:provision-post-semantics": "docker exec -i supabase_db_financeproject psql -U postgres -d postgres -v ON_ERROR_STOP=1 -f - < supabase/tests/provision_post_semantics.sql",
+    "db:test:statement-double-payment": "docker exec -i supabase_db_financeproject psql -U postgres -d postgres -v ON_ERROR_STOP=1 -f - < supabase/tests/statement_double_payment_guard.sql",
     "db:reset:local": "supabase db reset --local --no-seed",
     "db:seed:local": "supabase db reset --local",
     "ci:local": "npm exec -- eslint . && npm exec -- tsc -b && npm exec -- vitest run && npm exec -- vite build && npm exec -- playwright test"

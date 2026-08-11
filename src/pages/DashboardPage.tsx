@@ -325,6 +325,7 @@ export function DashboardPage() {
           today={monthMeta.today}
           daysInMonth={monthMeta.daysInMonth}
           safeToSpend={safeToSpend}
+          reservedKnown={safeToSpend.reservedKnown}
           buffer={safeToSpend.buffer}
           onBufferChange={safeToSpend.setBuffer}
           perDayAllowance={Math.max(0, safeToSpend.amount) / monthMeta.daysLeft}

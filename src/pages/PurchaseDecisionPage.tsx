@@ -42,7 +42,7 @@ export function PurchaseDecisionPage() {
 
   const amount = Number(amountInput.replace(/\./g, '').replace(',', '.'))
   const hasAmount = Number.isFinite(amount) && amount > 0
-  const reserved = useKasaReserved()
+  const { reserved, reservedKnown } = useKasaReserved()
 
   const impact = useMemo(() => {
     const snapshot = snapshotQuery.data
@@ -218,6 +218,11 @@ export function PurchaseDecisionPage() {
               <p className="mt-3 text-[11px] text-muted-foreground">
                 Kartla alımda ilk taksit bir sonraki ekstrede nakit çıkışına dönüşür; bu yüzden bu ayın bakiyesi değişmez.
               </p>
+              {!reservedKnown ? (
+                <p className="mt-2 text-[11px] font-semibold text-warning">
+                  Kasa rezervi doğrulanamadı — harcanabilir tutar rezerv düşülmeden hesaplandı, gerçekte daha düşük olabilir.
+                </p>
+              ) : null}
             </CardContent>
           </Card>
         </>

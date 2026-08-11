@@ -1,6 +1,6 @@
 import { supabase } from '../lib/supabase'
 import type { Card } from '../types/database'
-import { roundTL } from '../utils/money'
+import { greaterThanTL, roundTL } from '../utils/money'
 import type { FinanceObligation } from '../utils/obligations'
 import { isMissingSupabaseCapabilityError, missingSupabaseCapabilityMessage, type SupabaseLikeError } from '../utils/supabaseErrors'
 
@@ -169,7 +169,10 @@ export async function submitFinanceObligationPayment({
   } else if (obligation.action === 'settle_debt' || obligation.action === 'collect_debt') {
     // BM-8 D-1: girilen tutar toplam değerin altındaysa kısmi ödeme; toplam
     // değere eşitse (varsayılan) tam kapama. RPC tavanı borç değeridir.
-    const isPartial = amount > 0 && amount < obligation.amount
+    // Kuruş hassasiyeti şart: obligation.amount döviz/altın borcunda çarpımdan
+    // gelir ve float tozu taşıyabilir; çıplak `<` kullanıcının "tam" ödemesini
+    // kısmi işleyip borcu kuruş altı açık bırakırdı.
+    const isPartial = amount > 0 && greaterThanTL(obligation.amount, amount)
     const { error } = await supabase.rpc('settle_personal_debt', {
       p_debt_id: obligation.sourceId,
       p_account_card_id: account.id,
