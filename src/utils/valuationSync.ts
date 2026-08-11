@@ -8,7 +8,16 @@ import {
 } from '../data/repositories/valuationRepo'
 import type { MarketRatesSnapshot } from './marketRates'
 import { moneyDiffers } from './money'
-import { assetIsStock, valueAsset, valueStock, valueDebt, valueGoal } from './valuation'
+import {
+  assetIsStock,
+  assetUnitRate,
+  debtUnitRate,
+  goalUnitRate,
+  valueAsset,
+  valueStock,
+  valueDebt,
+  valueGoal,
+} from './valuation'
 
 /**
  * Write-back: when rates refresh, recompute `estimated_value_try` for the rows
@@ -50,10 +59,11 @@ async function syncAssets(snapshot: MarketRatesSnapshot): Promise<number> {
     .map((asset) => ({
       id: asset.id,
       value: assetIsStock(asset) ? valueStock(asset, stockPrices) : valueAsset(asset, snapshot),
+      rate: assetUnitRate(asset, snapshot, stockPrices),
       current: asset.estimated_value_try,
     }))
     .filter((entry) => entry.value !== null && changed(entry.value, entry.current))
-    .map(({ id, value }) => ({ id, value: value as number }))
+    .map(({ id, value, rate }) => ({ id, value: value as number, rate }))
 
   const persistResult = await persistEstimatedValues('assets', updates)
   if (!persistResult.ok) console.warn('[valuationSync] persist assets:', persistResult.error.message)
@@ -70,9 +80,14 @@ async function syncDebts(snapshot: MarketRatesSnapshot): Promise<number> {
   if (rows.length === 0) return 0
 
   const updates: EstimatedValueUpdate[] = rows
-    .map((debt) => ({ id: debt.id, value: valueDebt(debt, snapshot), current: debt.estimated_value_try }))
+    .map((debt) => ({
+      id: debt.id,
+      value: valueDebt(debt, snapshot),
+      rate: debtUnitRate(debt, snapshot),
+      current: debt.estimated_value_try,
+    }))
     .filter((entry) => entry.value !== null && changed(entry.value, entry.current))
-    .map(({ id, value }) => ({ id, value: value as number }))
+    .map(({ id, value, rate }) => ({ id, value: value as number, rate }))
 
   const persistResult = await persistEstimatedValues('debts', updates)
   if (!persistResult.ok) console.warn('[valuationSync] persist debts:', persistResult.error.message)
@@ -89,9 +104,14 @@ async function syncGoals(snapshot: MarketRatesSnapshot): Promise<number> {
   if (rows.length === 0) return 0
 
   const updates: EstimatedValueUpdate[] = rows
-    .map((goal) => ({ id: goal.id, value: valueGoal(goal, snapshot), current: goal.estimated_value_try }))
+    .map((goal) => ({
+      id: goal.id,
+      value: valueGoal(goal, snapshot),
+      rate: goalUnitRate(goal, snapshot),
+      current: goal.estimated_value_try,
+    }))
     .filter((entry) => entry.value !== null && changed(entry.value, entry.current))
-    .map(({ id, value }) => ({ id, value: value as number }))
+    .map(({ id, value, rate }) => ({ id, value: value as number, rate }))
 
   const persistResult = await persistEstimatedValues('savings_goals', updates)
   if (!persistResult.ok) console.warn('[valuationSync] persist goals:', persistResult.error.message)

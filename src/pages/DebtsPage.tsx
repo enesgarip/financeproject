@@ -12,7 +12,8 @@ import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
 import { useFinancePaymentDrawer } from '../hooks/useFinancePaymentDrawer'
 import type { MarketRatesSnapshot } from '../utils/marketRates'
 import { diffTL, sumTL } from '../utils/money'
-import { debtRateSymbol, effectiveDebtValue, valueDebt } from '../utils/valuation'
+import { valuationConfidence } from '../utils/dataConfidence'
+import { debtRateSymbol, effectiveDebtValue, effectiveDebtValueWithSource, valueDebt } from '../utils/valuation'
 
 /** Gold or non-TRY foreign-currency debts can be auto-valued from live rates. */
 function debtSupportsAuto(values: Record<string, string>): boolean {
@@ -323,12 +324,21 @@ export function DebtsPage() {
         renderTitle={(row) => row.person_name}
         renderSubtitle={(row) => `${directionLabel(row.direction)} · ${valueTypeLabel(row)} · ${row.status}`}
         renderDetails={(row) => {
-          const details = [`Değer: ${formatAmount(effectiveDebtValue(row, snapshot))}`, `Vade: ${formatDate(row.due_date)}`]
+          const { value, source } = effectiveDebtValueWithSource(row, snapshot)
+          const details = [`Değer: ${formatAmount(value)}`, `Vade: ${formatDate(row.due_date)}`]
           if (isGoldDebt(row)) details.unshift(`Miktar: ${formatNumber(row.amount)} ${valueTypeLabel(row)}`)
           if (row.value_type === 'doviz') {
             details.unshift(row.auto_valued ? `Tutar: ${formatNumber(row.amount)} ${row.currency ?? '-'}` : `Para birimi: ${row.currency ?? '-'}`)
           }
-          if (row.auto_valued) details.push('Canlı kurla otomatik')
+          // "Canlı kurla otomatik" kur alınamadığında da yazıyordu — ekrandaki
+          // rakam aslında saklı ve bayat olduğu halde canlı görünüyordu (Faz D3).
+          if (row.auto_valued) {
+            details.push(
+              source === 'live'
+                ? 'Canlı kurla otomatik'
+                : `Kur alınamadı · ${valuationConfidence(source, row.valued_at).label}`,
+            )
+          }
           return details
         }}
         groupBy={(row) => directionLabel(row.direction)}

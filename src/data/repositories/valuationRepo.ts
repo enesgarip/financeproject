@@ -11,7 +11,12 @@ import { resultFromSupabase, voidResultFromSupabase, type Result } from '../resu
 
 export type ValuationTable = 'assets' | 'debts' | 'savings_goals'
 
-export type EstimatedValueUpdate = { id: string; value: number }
+/**
+ * `rate` = hesapta kullanılan birim TL fiyatı (gram altın / döviz / hisse).
+ * Değerle birlikte yazılır ki satır "ne zaman, hangi kurla" sorusunu kendi
+ * başına cevaplayabilsin (Faz D3).
+ */
+export type EstimatedValueUpdate = { id: string; value: number; rate: number | null }
 
 export async function fetchAutoValuedAssets(): Promise<Result<Asset[]>> {
   const { data, error } = await supabase.from('assets').select('*').eq('auto_valued', true)
@@ -30,11 +35,17 @@ export async function fetchAutoValuedGoals(): Promise<Result<SavingsGoal[]>> {
 
 export async function persistEstimatedValues(table: ValuationTable, updates: EstimatedValueUpdate[]): Promise<Result<void>> {
   if (updates.length === 0) return { ok: true, data: undefined }
+  const now = new Date().toISOString()
   const results = await Promise.all(
-    updates.map(({ id, value }) =>
+    updates.map(({ id, value, rate }) =>
       supabase
         .from(table)
-        .update({ estimated_value_try: value, updated_at: new Date().toISOString() })
+        .update({
+          estimated_value_try: value,
+          valued_at: now,
+          valuation_rate: rate,
+          updated_at: now,
+        })
         .eq('id', id),
     ),
   )

@@ -77,6 +77,7 @@ export function SeritOverview({
   netWorth,
   totalAssets,
   totalDebts,
+  staleRatesLabel,
   liquidAccounts,
   totalCashAssets,
   health,
@@ -97,6 +98,8 @@ export function SeritOverview({
   netWorth: number
   totalAssets: number
   totalDebts: number
+  /** Kur bayatsa yaş etiketi ("2 gün önce"); taze/bilinmiyorsa null. */
+  staleRatesLabel: string | null
   liquidAccounts: SeritLiquidAccount[]
   totalCashAssets: number
   /** `total` = bulgu toplamı; `cleanChecks` = sorunsuz geçen kontrol sayısı. */
@@ -222,6 +225,14 @@ export function SeritOverview({
             </span>{' '}
             borç
           </p>
+          {/* Altın/döviz varlıkları bu rakamın içinde; kur bayatsa net değer de
+              bayattır. Uyarı Varlıklar/Borçlar/Altın'daki RatesBanner'da vardı
+              ama kahraman rakamın olduğu yerde yoktu (Faz D3). */}
+          {staleRatesLabel ? (
+            <p className="mt-1.5 text-[12.5px]" style={{ color: SERIT_TEXT.warning }}>
+              Kur {staleRatesLabel} güncellendi — altın/döviz değerleri bayat olabilir.
+            </p>
+          ) : null}
         </SidePanel>
 
         <SidePanel title={`Kart borcu · ${format(cardBuckets.total).amount} ${format(cardBuckets.total).unit}`}>

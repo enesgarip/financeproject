@@ -50,6 +50,10 @@ export type Asset = BaseRow & {
   unit_cost: number | null
   estimated_value_try: number
   auto_valued: boolean
+  /** Otomatik değerlemenin yaşı (Faz D3). NULL = elle girilmiş ya da eski kayıt. */
+  valued_at: string | null
+  /** Hesapta kullanılan birim TL fiyatı; `amount` sonradan değişince geri hesaplanamaz. */
+  valuation_rate: number | null
   /** When 'gold_ledger', this row is an aggregate maintained from gold_lots (do not hand-edit). */
   source: string | null
   note: string | null
@@ -150,6 +154,10 @@ export type SavingsGoal = BaseRow & {
   current_amount: number
   estimated_value_try: number | null
   auto_valued: boolean
+  /** Otomatik değerlemenin yaşı (Faz D3). NULL = elle girilmiş ya da eski kayıt. */
+  valued_at: string | null
+  /** Hesapta kullanılan birim TL fiyatı. */
+  valuation_rate: number | null
   target_date: string | null
   status: SavingsGoalStatus
   note: string | null
@@ -240,6 +248,10 @@ export type Debt = BaseRow & {
   amount: number
   estimated_value_try: number
   auto_valued: boolean
+  /** Otomatik değerlemenin yaşı (Faz D3). NULL = elle girilmiş ya da eski kayıt. */
+  valued_at: string | null
+  /** Hesapta kullanılan birim TL fiyatı (borçta Satış tarafı). */
+  valuation_rate: number | null
   due_date: string | null
   status: DebtStatus
   note: string | null

@@ -17,7 +17,7 @@ const base = { id: 'id', user_id: 'u', created_at: '2026-06-01T00:00:00.000Z', u
 const FROM = new Date(2026, 5, 1) // 1 June 2026
 
 function asset(overrides: Partial<Asset>): Asset {
-  return { ...base, name: 'Varlık', category: 'Nakit', amount: 0, unit: 'TRY', currency: 'TRY', symbol: null, unit_cost: null, estimated_value_try: 0, auto_valued: false, source: null, note: null, ...overrides }
+  return { ...base, name: 'Varlık', category: 'Nakit', amount: 0, unit: 'TRY', currency: 'TRY', symbol: null, unit_cost: null, estimated_value_try: 0, auto_valued: false, valued_at: null, valuation_rate: null, source: null, note: null, ...overrides }
 }
 
 function card(overrides: Partial<Card>): Card {
@@ -50,7 +50,7 @@ function loanInstallment(overrides: Partial<LoanInstallment>): LoanInstallment {
 }
 
 function debt(overrides: Partial<Debt>): Debt {
-  return { ...base, person_name: 'Kişi', direction: 'borç_aldım', value_type: 'TRY', currency: null, amount: 0, estimated_value_try: 0, auto_valued: false, due_date: null, status: 'açık', note: null, ...overrides }
+  return { ...base, person_name: 'Kişi', direction: 'borç_aldım', value_type: 'TRY', currency: null, amount: 0, estimated_value_try: 0, auto_valued: false, valued_at: null, valuation_rate: null, due_date: null, status: 'açık', note: null, ...overrides }
 }
 
 function payment(overrides: Partial<Payment>): Payment {

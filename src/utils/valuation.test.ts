@@ -4,12 +4,18 @@ import type { MarketRatesSnapshot } from './marketRates'
 import {
   assetIsStock,
   assetRateSymbol,
+  assetUnitRate,
   debtRateSide,
   debtRateSymbol,
+  debtUnitRate,
   effectiveAssetValue,
+  effectiveAssetValueWithSource,
   effectiveDebtValue,
+  effectiveDebtValueWithSource,
   effectiveGoalValue,
+  effectiveGoalValueWithSource,
   goalRateSymbol,
+  goalUnitRate,
   stockCostBasis,
   stockProfit,
   valueAsset,
@@ -47,6 +53,8 @@ function asset(overrides: Partial<Asset>): Asset {
     unit_cost: null,
     estimated_value_try: 0,
     auto_valued: false,
+    valued_at: null,
+    valuation_rate: null,
     source: null,
     note: null,
     ...overrides,
@@ -63,6 +71,8 @@ function debt(overrides: Partial<Debt>): Debt {
     amount: 0,
     estimated_value_try: 0,
     auto_valued: false,
+    valued_at: null,
+    valuation_rate: null,
     due_date: null,
     status: 'açık',
     note: null,
@@ -79,6 +89,8 @@ function goal(overrides: Partial<SavingsGoal>): SavingsGoal {
     current_amount: 0,
     estimated_value_try: 0,
     auto_valued: false,
+    valued_at: null,
+    valuation_rate: null,
     target_date: null,
     status: 'active',
     note: null,
@@ -193,5 +205,70 @@ describe('stocks (BIST)', () => {
     expect(effectiveAssetValue(row, SNAPSHOT, PRICES)).toBe(29700)
     // falls back to stored value when the price is unavailable
     expect(effectiveAssetValue(asset({ category: 'Hisse', symbol: 'X', amount: 100, auto_valued: true, estimated_value_try: 5000 }), SNAPSHOT, PRICES)).toBe(5000)
+  })
+})
+
+// ── Faz D3: değerin kaynağı ve kullanılan birim kur ────────────────────────
+//
+// Eskiden canlı kur gelmediğinde sessizce saklı değere düşülüyordu; ekrandaki
+// rakam bayat olduğu halde canlı görünüyordu. Kaynak artık ayırt edilebilir.
+
+const SOURCE_PRICES = { THYAO: 297, GARAN: 130.5 }
+
+describe('value source (live / stored / manual)', () => {
+  it('reports live when the rate is available', () => {
+    const row = asset({ category: 'Altın', unit: 'gram', amount: 2, auto_valued: true, estimated_value_try: 1 })
+    expect(effectiveAssetValueWithSource(row, SNAPSHOT)).toEqual({ value: 13107.16, source: 'live' })
+  })
+
+  it('falls back to the stored value and says so when the rate is missing', () => {
+    const row = asset({ category: 'Altın', unit: 'gram', amount: 2, auto_valued: true, estimated_value_try: 9000 })
+    expect(effectiveAssetValueWithSource(row, null)).toEqual({ value: 9000, source: 'stored' })
+  })
+
+  it('marks a hand-entered value as manual, never stale', () => {
+    const row = asset({ category: 'Altın', unit: 'gram', amount: 2, auto_valued: false, estimated_value_try: 9000 })
+    expect(effectiveAssetValueWithSource(row, null)).toEqual({ value: 9000, source: 'manual' })
+  })
+
+  it('marks an unpriced stock as stored, not live', () => {
+    const row = asset({ category: 'Hisse', symbol: 'YOK', amount: 100, auto_valued: true, estimated_value_try: 5000 })
+    expect(effectiveAssetValueWithSource(row, SNAPSHOT, SOURCE_PRICES)).toEqual({ value: 5000, source: 'stored' })
+  })
+
+  it('applies the same rule to debts and goals', () => {
+    const goldDebt = debt({ value_type: 'gram_altin', amount: 1, direction: 'borç_aldım', auto_valued: true, estimated_value_try: 6000 })
+    expect(effectiveDebtValueWithSource(goldDebt, SNAPSHOT).source).toBe('live')
+    expect(effectiveDebtValueWithSource(goldDebt, null)).toEqual({ value: 6000, source: 'stored' })
+
+    const goldGoal = goal({ value_type: 'gram_altin', current_amount: 1, auto_valued: true, estimated_value_try: 6000 })
+    expect(effectiveGoalValueWithSource(goldGoal, SNAPSHOT).source).toBe('live')
+    expect(effectiveGoalValueWithSource(goldGoal, null)).toEqual({ value: 6000, source: 'stored' })
+  })
+
+  it('keeps effectiveAssetValue backwards compatible', () => {
+    const row = asset({ category: 'Altın', unit: 'gram', amount: 2, auto_valued: true, estimated_value_try: 1 })
+    expect(effectiveAssetValue(row, SNAPSHOT)).toBe(effectiveAssetValueWithSource(row, SNAPSHOT).value)
+    expect(effectiveDebtValue(debt({ value_type: 'TRY', amount: 5, estimated_value_try: 5 }), SNAPSHOT)).toBe(5)
+    expect(effectiveGoalValue(goal({ value_type: 'TRY', estimated_value_try: 7 }), SNAPSHOT)).toBe(7)
+  })
+})
+
+describe('unit rate (miktardan bağımsız, değerle birlikte saklanır)', () => {
+  it('uses the buying side for holdings and the selling side for what you owe', () => {
+    expect(assetUnitRate(asset({ category: 'Altın', unit: 'gram', amount: 3 }), SNAPSHOT)).toBe(6553.58)
+    expect(debtUnitRate(debt({ value_type: 'gram_altin', direction: 'borç_aldım' }), SNAPSHOT)).toBe(6554.44)
+    expect(debtUnitRate(debt({ value_type: 'gram_altin', direction: 'borç_verdim' }), SNAPSHOT)).toBe(6553.58)
+    expect(goalUnitRate(goal({ value_type: 'gram_altin' }), SNAPSHOT)).toBe(6553.58)
+  })
+
+  it('is the share price for a stock holding', () => {
+    expect(assetUnitRate(asset({ category: 'Hisse', symbol: 'THYAO', amount: 100 }), SNAPSHOT, SOURCE_PRICES)).toBe(297)
+  })
+
+  it('is null when the row has no market symbol or the rate is missing', () => {
+    expect(assetUnitRate(asset({ category: 'Nakit', currency: 'TRY', amount: 10 }), SNAPSHOT)).toBeNull()
+    expect(assetUnitRate(asset({ category: 'Altın', unit: 'gram', amount: 3 }), null)).toBeNull()
+    expect(assetUnitRate(asset({ category: 'Hisse', symbol: 'YOK', amount: 1 }), SNAPSHOT, SOURCE_PRICES)).toBeNull()
   })
 })
