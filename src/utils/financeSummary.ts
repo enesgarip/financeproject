@@ -33,7 +33,6 @@ import type {
 import { endOfMonth, startOfMonth } from './date'
 import { diffTL, exceedsTL, roundTL, sumTL, toKurus, toTL } from './money'
 import { buildFinanceObligationsForMonth, getFirstBusinessDay, type FinanceObligation, type FinanceObligationsInput } from './obligations'
-import { savingsGoalProgressRate } from './savingsGoal'
 
 export {
   cardMonthlyPaymentAmount,
@@ -53,6 +52,12 @@ export type FinanceSummaryInput = {
   salaryHistory: SalaryHistory[]
   cardInstallments: CardInstallment[]
   cardStatements?: CardStatementArchive[]
+  /**
+   * Bu modüldeki hiçbir hesap birikim hedeflerini OKUMAZ; alanlar yalnız
+   * çağıranların aynı nesneyi başka util'lere de geçirebilmesi için opsiyonel
+   * duruyor (bkz. analysisFinanceSummaryInput). Hedef matematiği
+   * `savingsGoal.ts` + `savingsSuggestion.ts`'te.
+   */
   savingsGoals?: SavingsGoal[]
   savingsGoalComponents?: SavingsGoalComponent[]
 }
@@ -107,14 +112,6 @@ export type CashFlowSummary = {
   loanOutflow: number
   paymentOutflow: number
   debtOutflow: number
-}
-
-export type GoalProgressSummary = {
-  activeCount: number
-  averageProgress: number
-  nextGoalName: string | null
-  nextGoalRemaining: number
-  nextGoalMonthlyNeed: number
 }
 
 export type FinancialHealthSummary = {
@@ -496,41 +493,18 @@ export function buildMonthlyCashFlow(
   }
 }
 
-export function buildGoalProgressSummary(goals: SavingsGoal[] = [], components: SavingsGoalComponent[] = []): GoalProgressSummary {
-  const activeGoals = goals.filter((goal) => goal.status === 'active')
-  const rates = activeGoals.map((goal) => savingsGoalProgressRate(goal, components))
-  const averageProgress = rates.length > 0 ? rates.reduce((total, rate) => total + rate, 0) / rates.length : 0
-  const today = startOfMonth()
-  const goalsWithNeed = activeGoals
-    // Karma hedefte target/current bileşen SAYISIDIR; aradaki fark TL değildir,
-    // dolayısıyla "aylık şu kadar biriktir" üretilemez (savingsSuggestion.ts
-    // aynı guard'ı taşır — burada eksikti ve 3 bileşenlik bir hedef "3 TL"
-    // sanılıyordu).
-    .filter((goal) => goal.value_type !== 'composite')
-    .filter((goal) => goal.target_date && goal.target_amount > goal.current_amount)
-    .map((goal) => {
-      const targetDate = new Date(`${goal.target_date}T00:00:00`)
-      const monthDelta = (targetDate.getFullYear() - today.getFullYear()) * 12 + targetDate.getMonth() - today.getMonth()
-      const remainingMonths = Math.max(1, monthDelta + 1)
-      const remaining = Math.max(0, diffTL(goal.target_amount, goal.current_amount))
-      return {
-        goal,
-        remaining,
-        monthlyNeed: roundTL(remaining / remainingMonths),
-        targetTime: targetDate.getTime(),
-      }
-    })
-    .sort((a, b) => a.targetTime - b.targetTime)
-  const nextGoal = goalsWithNeed[0]
-
-  return {
-    activeCount: activeGoals.length,
-    averageProgress,
-    nextGoalName: nextGoal?.goal.name ?? null,
-    nextGoalRemaining: nextGoal?.remaining ?? 0,
-    nextGoalMonthlyNeed: nextGoal?.monthlyNeed ?? 0,
-  }
-}
+/*
+ * `buildGoalProgressSummary` burada durup hiçbir yerden çağrılmıyordu (tek
+ * çağıranı DashboardPage'de hesaplanıp render edilmeden atılıyordu) ve
+ * ürettiği her alanın canlı bir karşılığı zaten vardı: ilerleme oranı
+ * `savingsGoalProgressRate`, "aylık gerekli" ise `savingsSuggestion.ts`.
+ *
+ * Silinme gerekçesi yalnız ölü kod değil: aynı hesabın iki ayrı
+ * implementasyonu olması Faz D2'deki hatanın SEBEBİYDİ — biri karma hedef
+ * guard'ını taşıyordu, diğeri taşımıyordu ve bileşen sayısını TL sanıyordu.
+ * Düzeltilmiş kopyayı tüketicisiz tutmak aynı tuzağı canlı bırakırdı.
+ * Hedef özeti bir panele gerekirse `buildSavingsSuggestion` üzerine kurulmalı.
+ */
 
 export function buildFinancialHealth({
   position,

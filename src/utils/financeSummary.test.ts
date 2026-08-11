@@ -1,10 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import type { Asset, Card, CardInstallment, CardStatementArchive, Debt, Loan, LoanInstallment, Payment, SalaryHistory, SavingsGoal } from '../types/database'
+import type { Asset, Card, CardInstallment, CardStatementArchive, Debt, Loan, LoanInstallment, Payment, SalaryHistory } from '../types/database'
 import {
   buildCreditLimitGroups,
   buildFinancialHealth,
   buildFinancialPosition,
-  buildGoalProgressSummary,
   buildMonthlyCashFlow,
   cardDebtBreakdown,
   cardPayableDebt,
@@ -131,13 +130,6 @@ function payment(overrides: Partial<Payment>): Payment {
 
 function salary(overrides: Partial<SalaryHistory>): SalaryHistory {
   return { ...base, title: 'Maaş', amount: 0, effective_date: '2026-01-01', note: null, ...overrides }
-}
-
-function goal(overrides: Partial<SavingsGoal>): SavingsGoal {
-  return {
-    ...base, name: 'Hedef', value_type: 'TRY', target_amount: 0, current_amount: 0,
-    estimated_value_try: null, auto_valued: false, valued_at: null, valuation_rate: null, target_date: null, status: 'active', note: null, ...overrides,
-  }
 }
 
 const emptyInput = {
@@ -909,61 +901,6 @@ describe('buildMonthlyCashFlow', () => {
     expect(flow.outflow).toBe(0.1)
     expect(flow.netFlow).toBe(0.1)
     expect(flow.projectedCash).toBe(0.2)
-  })
-})
-
-// ── buildGoalProgressSummary ───────────────────────────────────────────────
-
-describe('buildGoalProgressSummary', () => {
-  it('returns zero counts for no active goals', () => {
-    const result = buildGoalProgressSummary([], [])
-    expect(result.activeCount).toBe(0)
-    expect(result.averageProgress).toBe(0)
-    expect(result.nextGoalName).toBeNull()
-  })
-
-  it('counts only active goals', () => {
-    const result = buildGoalProgressSummary([
-      goal({ id: 'g1', status: 'active', target_amount: 100, current_amount: 50 }),
-      goal({ id: 'g2', status: 'completed', target_amount: 100, current_amount: 100 }),
-    ])
-    expect(result.activeCount).toBe(1)
-  })
-
-  it('picks the soonest upcoming goal as next', () => {
-    const result = buildGoalProgressSummary([
-      goal({ id: 'g1', name: 'Araba', target_date: '2027-01-01', target_amount: 100, current_amount: 10, status: 'active' }),
-      goal({ id: 'g2', name: 'Tatil', target_date: '2026-09-01', target_amount: 50, current_amount: 10, status: 'active' }),
-    ])
-    expect(result.nextGoalName).toBe('Tatil')
-  })
-
-  // Faz D2: karma hedefte target/current bileşen SAYISIDIR. Guard olmadan
-  // 3 bileşenlik bir hedef "3 TL kaldı, ayda 1 TL biriktir" üretiyordu.
-  it('never derives a TL monthly need from a composite goal (counts are not money)', () => {
-    const result = buildGoalProgressSummary([
-      goal({
-        id: 'karma',
-        name: 'Karma',
-        value_type: 'composite',
-        target_date: '2026-09-01',
-        target_amount: 3,
-        current_amount: 1,
-        status: 'active',
-      }),
-    ])
-    expect(result.nextGoalName).toBeNull()
-    expect(result.nextGoalRemaining).toBe(0)
-    expect(result.nextGoalMonthlyNeed).toBe(0)
-  })
-
-  it('still picks a non-composite goal when a composite one is also present', () => {
-    const result = buildGoalProgressSummary([
-      goal({ id: 'karma', name: 'Karma', value_type: 'composite', target_date: '2026-08-01', target_amount: 3, current_amount: 1, status: 'active' }),
-      goal({ id: 'tl', name: 'Tatil', target_date: '2026-09-01', target_amount: 50, current_amount: 10, status: 'active' }),
-    ])
-    expect(result.nextGoalName).toBe('Tatil')
-    expect(result.nextGoalRemaining).toBe(40)
   })
 })
 
