@@ -172,11 +172,18 @@ export function FinancePaymentDrawer({
           ? 'Bu ekstre kapandığında ekstreye bağlı kredi kartı taksitleri otomatik ödenmiş olur.'
           : intent?.action === 'pay_card_debt'
             ? 'Ödeme önce ekstre borcundan, kalanı dönem içi harcamadan düşülür. Provizyon ve gelecek taksitler bu tutara dahil değildir.'
-            : null
+            : intent?.action === 'settle_debt' || intent?.action === 'collect_debt'
+              ? 'Tam tutar girilirse kayıt kapanır; daha az girersen kısmi ödenir ve kalan değer açık kalır.'
+              : null
       }
       validate={({ amount }) => {
         if (intent?.action === 'pay_card_debt' && exceedsTL(amount, intent.maxPayableAmount ?? intent.amount)) {
           return 'Ödeme tutarı ödenebilir kart borcundan büyük olamaz.'
+        }
+        if ((intent?.action === 'settle_debt' || intent?.action === 'collect_debt') && exceedsTL(amount, intent.amount)) {
+          return intent.action === 'collect_debt'
+            ? 'Tahsilat tutarı alacak değerinden büyük olamaz.'
+            : 'Ödeme tutarı borç değerinden büyük olamaz.'
         }
         return null
       }}

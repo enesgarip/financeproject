@@ -36,6 +36,7 @@
     "db:test:reset": "docker exec -i supabase_db_financeproject psql -U postgres -d postgres -v ON_ERROR_STOP=1 -f - < supabase/tests/reset_user_finance_data.sql",
     "db:test:expense-contexts-cars": "docker exec -i supabase_db_financeproject psql -U postgres -d postgres -v ON_ERROR_STOP=1 -f - < supabase/tests/expense_contexts_and_cars.sql",
     "db:test:asset-trade": "docker exec -i supabase_db_financeproject psql -U postgres -d postgres -v ON_ERROR_STOP=1 -f - < supabase/tests/asset_trade_proportional_value.sql",
+    "db:test:partial-debt": "docker exec -i supabase_db_financeproject psql -U postgres -d postgres -v ON_ERROR_STOP=1 -f - < supabase/tests/partial_debt_and_due_collision.sql",
     "db:reset:local": "supabase db reset --local --no-seed",
     "db:seed:local": "supabase db reset --local",
     "ci:local": "npm exec -- eslint . && npm exec -- tsc -b && npm exec -- vitest run && npm exec -- vite build && npm exec -- playwright test"
