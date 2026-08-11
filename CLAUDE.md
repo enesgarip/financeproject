@@ -168,5 +168,12 @@ Günlük şifreli DB yedeği cron'u var (`db-backup.yml`).
 - **`@sentry/deno` edge'e KONMADI** (bundle'ı 3kB→1MB şişiriyor); edge için Supabase
   fonksiyon logları yeterli. Sentry yalnız frontend.
 - **timestamptz'i `formatDate`'e verme** (date-only bekler) → `.slice(0,10)`.
+- **Export silerken `src/` taraması YETMEZ.** `tests/e2e/*.spec.ts` doğrudan
+  `../../src/utils/*`'tan import eder ama `tsc -b`'nin tsconfig'ine dahil değildir:
+  bir export/tip silindiğinde `lint + test:unit + build` üçü de yeşil kalır, hatayı
+  yalnız Playwright Smoke yakalar (`SyntaxError: does not provide an export named …`)
+  — yani CI'da, PR açıldıktan sonra. Silmeden önce `git grep` ile `tests/` dahil tüm
+  depoyu tara ve ilgili spec'i yerelde koştur:
+  `npx playwright test tests/e2e/<spec> --reporter=line`.
 - Edge fonksiyonları `supabase/functions/_shared/edge.ts` ortak modülünü kullanır
   (CORS, timeout'lu fetch).
