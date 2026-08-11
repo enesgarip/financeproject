@@ -32,12 +32,16 @@ export function writeSafeToSpendBuffer(value: number) {
   }
 }
 
-export function useSafeToSpend(
-  cashFlow: CashFlowSummary,
-  liquidCash: number,
-): SafeToSpendResult & { buffer: number; setBuffer: (value: number) => void } {
-  const [buffer, setBuffer] = useState(readSafeToSpendBuffer)
-  // Kasa tablosu yoksa/boşsa 0 kalır ve hesap yine çalışır.
+/**
+ * Kasa kovalarında ayrılmış toplam (TL). Kasa tablosu yoksa/boşsa 0 kalır ve
+ * çağıran hesap yine çalışır.
+ *
+ * `useSafeToSpend`'in içinden çıkarıldı (Faz D4): rezervi yalnız Dashboard
+ * düşüyordu, `PurchaseDecisionPage` ve `PlanningPage` `buildSafeToSpend`'i
+ * `reserved` olmadan çağırdığı için aynı isimli sayı orada ayrılmış rezerv
+ * kadar FAZLA çıkıyordu — hem de kararın verildiği ekranda.
+ */
+export function useKasaReserved(): number {
   const [reserved, setReserved] = useState(0)
 
   useEffect(() => {
@@ -49,6 +53,16 @@ export function useSafeToSpend(
       active = false
     }
   }, [])
+
+  return reserved
+}
+
+export function useSafeToSpend(
+  cashFlow: CashFlowSummary,
+  liquidCash: number,
+): SafeToSpendResult & { buffer: number; setBuffer: (value: number) => void } {
+  const [buffer, setBuffer] = useState(readSafeToSpendBuffer)
+  const reserved = useKasaReserved()
 
   // Tampon başka bir sekmede/ekranda değişebilir; pencereye dönüşte tazele.
   useEffect(() => {

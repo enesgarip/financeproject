@@ -2,6 +2,7 @@ import { CircleAlert, CircleCheck, CircleX, ShoppingCart } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useFinanceSnapshot } from '../app/useFinanceSnapshot'
 import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
+import { useKasaReserved } from '../hooks/useSafeToSpend'
 import { Card, CardContent } from '../components/ui/card'
 import { Input } from '../components/ui/input'
 import { buildCashFlowForecast } from '../utils/cashFlowForecast'
@@ -41,6 +42,7 @@ export function PurchaseDecisionPage() {
 
   const amount = Number(amountInput.replace(/\./g, '').replace(',', '.'))
   const hasAmount = Number.isFinite(amount) && amount > 0
+  const reserved = useKasaReserved()
 
   const impact = useMemo(() => {
     const snapshot = snapshotQuery.data
@@ -66,6 +68,10 @@ export function PurchaseDecisionPage() {
       expectedIncome: cashFlow.expectedIncome,
       remainingOutflow: cashFlow.remainingOutflow,
       buffer,
+      // Kasa rezervi burada düşülmüyordu: kararın verildiği ekran harcanabilir
+      // tutarı ayrılmış rezerv kadar FAZLA gösteriyor, üstelik Dashboard'daki
+      // aynı isimli sayıdan farklı çıkıyordu (Faz D4).
+      reserved,
     })
 
     return buildPurchaseImpact({
@@ -76,7 +82,7 @@ export function PurchaseDecisionPage() {
       safeToSpend: safe.amount,
       buffer,
     })
-  }, [snapshotQuery.data, hasAmount, amount, installments, method])
+  }, [snapshotQuery.data, hasAmount, amount, installments, method, reserved])
 
   const verdict = impact ? VERDICT_PRESENTATION[impact.verdict] : null
 
