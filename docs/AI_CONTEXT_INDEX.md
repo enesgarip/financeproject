@@ -208,7 +208,7 @@ Choose the smallest ladder that matches the risk:
 | Pure utility change | Targeted Vitest file, then `npm run test:unit` |
 | TypeScript/UI change | `npm run lint`, `npm run test:unit`, `npm run build` |
 | Route/user-flow change | Previous row plus `npm run test:e2e` when feasible |
-| Migration/RPC/RLS change | Previous row plus `npm run db:reset:local`, `npm run db:lint:local`, `npm run db:audit:rls:local`, `npm run db:audit:grants:local` when local Supabase is available |
+| Migration/RPC/RLS change | Previous row plus `npm run db:reset:local`, `npm run db:lint:local`, `npm run db:audit:rls:local`, `npm run db:audit:grants:local` when local Supabase is available; `npm run db:test:all` runs every `supabase/tests/*.sql` (new files are auto-covered in CI too — no per-file wiring, S4) |
 | Yeni tablo | Üsttekilere ek: migration'da **explicit `grant`** olmalı (`db:audit:grants:local` zorlar — policy'si olup grant'i olmayan tablo ölü koddur) |
 | Bakım/otomatik iş RPC'si | Üsttekilere ek: `npm run db:test:catchup` (idempotency) |
 | Release-critical change | `npm run ci:local` and CI green |

@@ -12,6 +12,25 @@ tekrar eden yüzey haritası (kart kırılımı 11 yüzey, "Harcanabilir" 2 form
 pgTAP kapsam boşlukları. Docs senkronu aynı gün yapıldı (bkz. rapor §11).
 Düzeltme fazları (A–E) rapor §12'de.
 
+- ~~**Faz E — test borcu.**~~ DONE (2026-08-12). Denetim raporu §8 pgTAP
+  boşlukları kapatıldı — 5 yeni SQL testi (hepsi yerelde yeşil):
+  `pay_card_statement_flow.sql` (mutlu yol + B4 `p_skip_source_debit` dalı),
+  `pay_card_debt_residual.sql` (B1 residual: allocation'sız satırlar
+  settlement'a bağlanır, kova-satır farkı settlement notu + correction history
+  kaydıyla denetlenebilir), `payment_flows.sql` (`pay_payment`,
+  `pay_loan_installment`+`sync_loan_summary`, `transfer_between_accounts`,
+  `record_manual_account_movement`+account_ledger), `ledger_projection_integrity.sql`
+  (card_ledger borç+kova delta projeksiyonu = kart değerleri; account_ledger =
+  bakiye; `app.ledger_suppress` event üretmez ve geri açılır),
+  `cancel_card_expense_reversal.sql` (5b: tersleme = çocuk taksit toplamı;
+  devreden planda diğer borç korunur). UNIT: `LineChart.test.tsx` (K17
+  null-segment bölünmesi, connectNulls tek path, G2 tüm-null "Veri yok";
+  vitest config'e `@` alias'ı eklendi). S4 sistemik düzeltme: ci.yml +
+  deploy.yml `supabase/tests/*.sql`'in TAMAMINI döngüyle koşuyor (tek tek adım
+  bağlama kuralı kalktı); yerel eşdeğer `npm run db:test:all`
+  (`scripts/run-db-tests.mjs`, Windows uyumlu). e2e-only tüketici
+  (`buildDashboardMonthlyLoad`) kararı Faz C'de silinerek kapanmıştı.
+
 - ~~**Faz D — tutarlılık ve dil.**~~ DONE (2026-08-12). Denetim raporu §5–§7'nin
   25 maddesi: 17 dil/metin düzeltmesi (ASCII'ye düşmüş Türkçe, kesme işareti,
   ek uyumu kalıplarının yeniden kurulması, "app"→"uygulama", terminoloji
@@ -215,10 +234,10 @@ ikizi ile zaten temiz çıktı; açıklar sonradan eklenen alanlardaydı.
   + regresyon: `supabase/tests/partial_provision_context.sql`
   (`npm run db:test:provision-context`). Eski fonksiyonla negatif kontrol
   yapıldı: test kırmızı, yeni fonksiyonla yeşil.
-- **S4 — Açık: son üç DB regresyon testi CI'da koşmuyor.** `db:test:asset-trade`,
-  `db:test:partial-debt` ve `db:test:provision-context` package.json'da var ama
-  `ci.yml`/`deploy.yml`'deki Supabase adım listesine eklenmemiş; yalnız elle
-  koşuyorlar.
+- ~~**S4 — Son DB regresyon testleri CI'da koşmuyor.**~~ DONE (2026-08-12,
+  Faz E kapsamında sistemik çözüm): `ci.yml` ve `deploy.yml` artık tek tek adım
+  yerine `supabase/tests/*.sql`'in tamamını döngüyle koşuyor; yeni test dosyası
+  otomatik kapsanır. Yerel eşdeğer: `npm run db:test:all`.
 
 ## 2026-08-10 — Şerit görsel dili: temel + Özet pilotu
 

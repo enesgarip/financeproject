@@ -1,3 +1,4 @@
+import path from 'node:path'
 import { defineConfig } from 'vitest/config'
 
 // Unit tests (pure finance/util logic) live next to their source as
@@ -7,6 +8,13 @@ import { defineConfig } from 'vitest/config'
 // Playwright e2e specs under `tests/e2e/*.spec.ts` are intentionally excluded
 // so the two runners never pick up each other's files.
 export default defineConfig({
+  resolve: {
+    // vite.config.ts ile aynı `@` alias'ı: bileşen testleri (`.test.tsx`)
+    // `@/utils/...` importlu kaynakları çekebilsin diye burada da tanımlı.
+    alias: {
+      '@': path.resolve(import.meta.dirname, './src'),
+    },
+  },
   test: {
     include: ['src/**/*.test.{ts,tsx}'],
     environment: 'node',
