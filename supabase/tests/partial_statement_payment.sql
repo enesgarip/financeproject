@@ -117,18 +117,75 @@ begin
     raise exception 'BASARISIZ: kapali arsive odeme kabul edildi.';
   end if;
 
-  -- 6) Append-only: odeme kaydi guncellenemez/silinemez.
-  v_guard_fired := false;
+  -- 6) Append-only, kullanici rolu: UPDATE denemesi satiri DEGISTIRMEMELI.
+  -- Iki mesru yol da kabul: yetki/policy reddi (exception) ya da RLS'in satiri
+  -- hic gormemesi (0 satir). Invariant "satir degismez" oldugu icin testin
+  -- assertion'i da bu — ortama gore degisen hata metnine bagli degil.
   begin
     update public.card_statement_payments set amount = 1 where statement_archive_id = v_archive;
+  exception
+    when others then null;
+  end;
+
+  if exists (select 1 from public.card_statement_payments where statement_archive_id = v_archive and amount = 1) then
+    raise exception 'BASARISIZ: odeme kaydi authenticated rolunde guncellenebildi.';
+  end if;
+
+  raise notice 'GECTI: kismi ekstre odemesi — kalan/kova/kapanis dogru.';
+end;
+$$;
+
+-- 7) Guard trigger'in KENDISI: RLS'i bypass eden rolde (auth.uid() null, reset
+-- GUC'u yok) update/delete mutlaka exception atmali. Yukaridaki authenticated
+-- denemesi RLS'e takilip trigger'a hic ulasmayabilir; guard bu blokla sinanir.
+reset role;
+
+do $$
+declare
+  v_user uuid := '11111111-1111-1111-1111-111111111111';
+  v_bank uuid := 'a0000000-0000-4000-8000-0000000000b9';
+  v_card uuid := 'a0000000-0000-4000-8000-0000000000c9';
+  v_archive uuid := 'a0000000-0000-4000-8000-0000000000d9';
+  v_payment uuid := 'a0000000-0000-4000-8000-0000000000e9';
+  v_guard_fired boolean;
+begin
+  insert into public.cards (id, user_id, bank_name, card_name, card_type, current_balance)
+  values (v_bank, v_user, 'Test Bank', 'Vadesiz9', 'banka_karti', 1000);
+  insert into public.cards (id, user_id, bank_name, card_name, card_type, credit_limit, debt_amount, statement_debt_amount)
+  values (v_card, v_user, 'Test Bank', 'Guard Kart', 'kredi_karti', 50000, 500, 500);
+  insert into public.card_statement_archives (
+    id, user_id, card_id, period_year, period_month, statement_date,
+    statement_debt_amount, current_period_spending, total_debt_amount, status
+  )
+  values (v_archive, v_user, v_card, 2026, 6, '2026-06-25', 500, 500, 500, 'open');
+  insert into public.card_statement_payments (id, user_id, card_id, statement_archive_id, amount)
+  values (v_payment, v_user, v_card, v_archive, 100);
+
+  v_guard_fired := false;
+  begin
+    update public.card_statement_payments set amount = 999 where id = v_payment;
+  exception
+    when others then
+      v_guard_fired := true;
+      if position('append-only' in sqlerrm) = 0 then
+        raise exception 'BASARISIZ: guard beklenen mesajla durdurmadi (%).', sqlerrm;
+      end if;
+  end;
+  if not v_guard_fired then
+    raise exception 'BASARISIZ: guard trigger UPDATE''i engellemedi.';
+  end if;
+
+  v_guard_fired := false;
+  begin
+    delete from public.card_statement_payments where id = v_payment;
   exception
     when others then v_guard_fired := true;
   end;
   if not v_guard_fired then
-    raise exception 'BASARISIZ: odeme kaydi guncellenebildi.';
+    raise exception 'BASARISIZ: guard trigger DELETE''i engellemedi.';
   end if;
 
-  raise notice 'GECTI: kismi ekstre odemesi — kalan/kova/kapanis/append-only dogru.';
+  raise notice 'GECTI: card_statement_payments append-only guard trigger''i calisiyor.';
 end;
 $$;
 
