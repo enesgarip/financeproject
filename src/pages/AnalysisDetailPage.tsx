@@ -1,5 +1,8 @@
 import { ChevronDown } from 'lucide-react'
 import { useState } from 'react'
+import { useFinanceSnapshot } from '../app/useFinanceSnapshot'
+import { QueryError } from '../components/ui/query-error'
+import { SkeletonCard } from '../components/ui/skeleton'
 import { InflationShieldPanel, ZakatPanel } from './AnalysisPage.wealth'
 import { SearchExport, YearEndReport } from './AnalysisPage.reports'
 import { PeopleLedger } from './AnalysisPage.panels'
@@ -31,9 +34,35 @@ function CollapsibleSection({ label, children }: { label: string; children: Reac
 
 export function AnalysisDetailPage() {
   const { data, error, loading, ratesSnapshot, searchItems, snapshots } = useAnalysisPageData()
+  const snapshotQuery = useFinanceSnapshot()
+
+  // Boş veriyle çizmek yerine skeleton (bkz. AnalysisPage'deki aynı gerekçe).
+  if (loading) {
+    return (
+      <div
+        role="status"
+        aria-live="polite"
+        aria-busy="true"
+        aria-label="Detay verileri yükleniyor"
+        className="grid min-w-0 gap-5 lg:grid-cols-12"
+      >
+        <span className="sr-only">Detay verileri yükleniyor</span>
+        <div className="lg:col-span-6"><SkeletonCard lines={4} /></div>
+        <div className="lg:col-span-6"><SkeletonCard lines={4} /></div>
+        <div className="lg:col-span-12"><SkeletonCard lines={6} /></div>
+      </div>
+    )
+  }
 
   if (error) {
-    return <p className="rounded-xl border border-destructive/20 bg-destructive/8 p-3 text-sm font-medium text-destructive">{error}</p>
+    return (
+      <QueryError
+        title="Detay verileri yüklenemedi"
+        message={error}
+        onRetry={() => void snapshotQuery.refetch()}
+        retrying={snapshotQuery.isFetching}
+      />
+    )
   }
 
   return (
@@ -55,8 +84,6 @@ export function AnalysisDetailPage() {
           <ZakatPanel data={data} ratesSnapshot={ratesSnapshot} />
         </CollapsibleSection>
       </div>
-
-      {loading ? <p className="rounded-xl border border-border/60 bg-card p-4 text-sm text-muted-foreground">Detay verileri yükleniyor...</p> : null}
     </section>
   )
 }

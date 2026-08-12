@@ -31,10 +31,15 @@ import { SeritMonthStrip } from './SeritMonthStrip'
 
 export type SeritLiquidAccount = { id: string; name: string; subtitle?: string; amount: number }
 
+/**
+ * Vade tipi → ton. `SeritMonthStrip`'in `TONE_MAP`'iyle AYNI olmak zorunda:
+ * "Planlı" burada `neutral`, şeritte `info` idi — aynı kalem şeritte mavi
+ * çubuk, tablonun yanında gri rozet oluyordu (denetim 2026-08-12 §6).
+ */
 const BADGE_TONE: Record<ReturnType<typeof monthStripTone>, SeritTone> = {
   statement: 'danger',
   installment: 'warning',
-  planned: 'neutral',
+  planned: 'info',
   income: 'brand',
 }
 
@@ -113,6 +118,12 @@ export function SeritOverview({
   const daysLeft = daysInMonth - today.getDate()
   const perDay = format(perDayAllowance)
   const nextThree = upcoming.slice(0, 3)
+  // Hiç veri yokken "ay sonuna kalan" tamponun eksisi kadar NEGATİF çıkıyordu
+  // ("−5.000 ₺ · günde 0 ₺"): ilk açılışta kullanıcıya var olmayan bir borç
+  // gösteriyordu (denetim 2026-08-12 §10). Bu durumda rakam yerine ne yapması
+  // gerektiğini söyleyen bir satır gösterilir; tampon satırı da saklanır.
+  const isOnboarding =
+    totalAssets <= 0 && totalDebts <= 0 && cardBuckets.total <= 0 && liquidAccounts.length === 0 && upcoming.length === 0
 
   return (
     <div className="lg:grid lg:grid-cols-[1.4fr_1fr] lg:items-start lg:gap-9">
@@ -124,34 +135,48 @@ export function SeritOverview({
         </div>
 
         <div className="mt-4 lg:mt-0">
-          <HeroNumber
-            label="Ay sonuna kalan"
-            value={safeToSpend.amount}
-            tone={safeToSpend.negativeCause === 'obligations' ? 'danger' : 'ink'}
-            description={
-              safeToSpend.negativeCause === 'obligations' ? (
-                'Bu ayın kalan yükümlülükleri eldeki parayı aşıyor.'
-              ) : (
-                <>
-                  {daysLeft} gün kaldı · günde{' '}
-                  <span className="serit-num font-semibold" style={{ color: SERIT_TEXT.brand }}>
-                    {perDay.amount} {perDay.unit}
-                  </span>{' '}
-                  harcayabilirsin.
-                </>
-              )
-            }
-          />
+          {isOnboarding ? (
+            <div>
+              <p className="uppercase text-ink-faint" style={{ fontSize: 12, letterSpacing: '0.1em', lineHeight: '16px' }}>
+                Ay sonuna kalan
+              </p>
+              <p className="mt-2 text-[22px] font-semibold leading-tight text-ink lg:text-[26px]">Hesaplamak için veri yok</p>
+              <p className="mt-1.5 max-w-[320px] text-[13px] leading-[1.5] text-ink-muted">
+                Bir banka hesabı, maaş ya da kart ekle; ay sonuna kalan tutar ilk kayıttan sonra hesaplanır.
+              </p>
+            </div>
+          ) : (
+            <HeroNumber
+              label="Ay sonuna kalan"
+              value={safeToSpend.amount}
+              tone={safeToSpend.negativeCause === 'obligations' ? 'danger' : 'ink'}
+              description={
+                safeToSpend.negativeCause === 'obligations' ? (
+                  'Bu ayın kalan yükümlülükleri eldeki parayı aşıyor.'
+                ) : (
+                  <>
+                    {daysLeft} gün kaldı · günde{' '}
+                    <span className="serit-num font-semibold" style={{ color: SERIT_TEXT.brand }}>
+                      {perDay.amount} {perDay.unit}
+                    </span>{' '}
+                    harcayabilirsin.
+                  </>
+                )
+              }
+            />
+          )}
         </div>
 
-        <div className="mt-4">
-          <SeritBufferRow buffer={buffer} onChange={onBufferChange} />
-          {!reservedKnown ? (
-            <p className="mt-1.5 text-xs font-semibold" style={{ color: SERIT_TEXT.warning }}>
-              Kasa rezervi doğrulanamadı — bu rakam rezerv düşülmeden hesaplandı.
-            </p>
-          ) : null}
-        </div>
+        {isOnboarding ? null : (
+          <div className="mt-4">
+            <SeritBufferRow buffer={buffer} onChange={onBufferChange} />
+            {!reservedKnown ? (
+              <p className="mt-1.5 text-xs font-semibold" style={{ color: SERIT_TEXT.warning }}>
+                Kasa rezervi doğrulanamadı — bu rakam rezerv düşülmeden hesaplandı.
+              </p>
+            ) : null}
+          </div>
+        )}
 
         <div className="mt-5">
           <SeritMonthStrip strip={strip} monthLabel={monthLabel} />
@@ -212,6 +237,21 @@ export function SeritOverview({
                         style={{ color: inflow ? SERIT_TEXT.brand : SERIT_TEXT.ink }}
                       >
                         {money.amount} {money.unit}
+                      </td>
+                      {/* Ödeme aksiyonu yalnız mobilde vardı (LineRow onClick): masaüstünde
+                          aynı vadeye tıklamak hiçbir şey yapmıyordu, kullanıcı ödemek için
+                          ilgili sekmeye gitmek zorunda kalıyordu (denetim §6). */}
+                      <td className="w-20 py-[13px] pl-3 text-right">
+                        {item.obligation.action ? (
+                          <button
+                            type="button"
+                            onClick={() => onPay(item)}
+                            className="rounded-[8px] border border-line-strong px-2.5 py-1.5 text-[12px] font-semibold text-ink-muted transition-colors duration-[120ms] hover:bg-black/[.02] hover:text-ink dark:hover:bg-white/[.03]"
+                          >
+                            {inflow ? 'Tahsil et' : 'Öde'}
+                            <span className="sr-only"> — {item.title}</span>
+                          </button>
+                        ) : null}
                       </td>
                     </tr>
                   )

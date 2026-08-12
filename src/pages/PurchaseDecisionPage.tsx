@@ -2,13 +2,15 @@ import { CircleAlert, CircleCheck, CircleX, ShoppingCart } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useFinanceSnapshot } from '../app/useFinanceSnapshot'
 import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
-import { useKasaReserved } from '../hooks/useSafeToSpend'
+import { readSafeToSpendBuffer, useKasaReserved } from '../hooks/useSafeToSpend'
 import { Card, CardContent } from '../components/ui/card'
 import { Input } from '../components/ui/input'
+import { QueryError } from '../components/ui/query-error'
 import { buildCashFlowForecast } from '../utils/cashFlowForecast'
 import { buildMonthlyCashFlow, buildFinancialPosition } from '../utils/financeSummary'
 import { buildPurchaseImpact, type PurchasePaymentMethod, type PurchaseVerdict } from '../utils/purchaseImpact'
-import { buildSafeToSpend, DEFAULT_BUFFER } from '../utils/safeToSpend'
+import { buildSafeToSpend } from '../utils/safeToSpend'
+import { parseNumber } from '../utils/formatCurrency'
 
 /**
  * Karar anı ekranı: "bunu alsam ne olur?" Mağazada telefonda 10 saniyede
@@ -17,15 +19,8 @@ import { buildSafeToSpend, DEFAULT_BUFFER } from '../utils/safeToSpend'
  * tutar (safeToSpend) üzerine kurulu.
  */
 
-const BUFFER_KEY = 'denge:safe-to-spend-buffer'
 const INSTALLMENT_PRESETS = [1, 3, 6, 9, 12]
 const HORIZON_MONTHS = 6
-
-function readBuffer(): number {
-  const raw = localStorage.getItem(BUFFER_KEY)
-  const parsed = raw === null ? NaN : Number(raw)
-  return Number.isFinite(parsed) && parsed >= 0 ? parsed : DEFAULT_BUFFER
-}
 
 const VERDICT_PRESENTATION: Record<PurchaseVerdict, { label: string; className: string; Icon: typeof CircleCheck }> = {
   rahat: { label: 'Rahatlıkla alabilirsin', className: 'border-success/30 bg-success/8 text-success', Icon: CircleCheck },
@@ -40,8 +35,11 @@ export function PurchaseDecisionPage() {
   const [installments, setInstallments] = useState(1)
   const [method, setMethod] = useState<PurchasePaymentMethod>('card')
 
-  const amount = Number(amountInput.replace(/\./g, '').replace(',', '.'))
-  const hasAmount = Number.isFinite(amount) && amount > 0
+  // Elle parse yerine kanonik `parseNumber`: "1234.56" gibi girdiyi binlik ayraç
+  // sanıp 123.456 TL okuyan yerel kopya kalkmadı diye K6 burada yaşamaya devam
+  // ediyordu (denetim 2026-08-12 §6).
+  const amount = parseNumber(amountInput)
+  const hasAmount = amount > 0
   const { reserved, reservedKnown } = useKasaReserved()
 
   const impact = useMemo(() => {
@@ -63,7 +61,10 @@ export function PurchaseDecisionPage() {
 
     const forecast = buildCashFlowForecast(summaryInput, { horizonMonths: HORIZON_MONTHS })
     const cashFlow = buildMonthlyCashFlow(summaryInput)
-    const buffer = readBuffer()
+    // Tampon okuması kanonik sürümden (`hooks/useSafeToSpend`): yerel kopya
+    // try/catch'siz localStorage okuyordu — gizli modda/depolama kapalıyken
+    // sayfa çöküyordu.
+    const buffer = readSafeToSpendBuffer()
     const safe = buildSafeToSpend({
       liquidCash: buildFinancialPosition(summaryInput).totalCashAssets,
       expectedIncome: cashFlow.expectedIncome,
@@ -115,24 +116,32 @@ export function PurchaseDecisionPage() {
             className="finance-value mt-4 h-14 w-full bg-background px-4 text-center text-2xl font-bold tabular-nums"
           />
 
+          {/* Nakit/banka seçiliyken taksit yoktur: butonlar tıklanabilir kalıyordu ve
+              "nakit + 6 taksit" gibi gerçekte olmayan bir kombinasyon seçilebiliyordu
+              (seçim zaten 1'e zorlanıyordu ama arayüz aksini söylüyordu). */}
           <div className="mt-3">
-            <p className="finance-label">Taksit</p>
-            <div className="mt-1.5 grid grid-cols-5 gap-1.5">
+            <p className="finance-label" id="installment-group-label">Taksit</p>
+            <div className="mt-1.5 grid grid-cols-5 gap-1.5" role="group" aria-labelledby="installment-group-label">
               {INSTALLMENT_PRESETS.map((count) => (
                 <button
                   key={count}
                   type="button"
                   onClick={() => setInstallments(count)}
-                  className={`min-h-11 rounded-lg text-sm font-bold ring-1 transition ${
+                  disabled={method === 'cash' && count !== 1}
+                  aria-pressed={installments === count}
+                  className={`min-h-11 rounded-lg text-sm font-bold ring-1 transition disabled:cursor-not-allowed disabled:opacity-45 ${
                     installments === count
                       ? 'bg-primary text-primary-foreground ring-primary'
-                      : 'bg-card text-foreground ring-border hover:bg-muted'
+                      : 'bg-card text-foreground ring-border enabled:hover:bg-muted'
                   }`}
                 >
                   {count === 1 ? 'Peşin' : count}
                 </button>
               ))}
             </div>
+            {method === 'cash' ? (
+              <p className="mt-1.5 text-[11px] text-muted-foreground">Nakit ve banka ödemesi peşindir; taksit yalnız kredi kartında seçilebilir.</p>
+            ) : null}
           </div>
 
           <div className="mt-3">
@@ -146,6 +155,7 @@ export function PurchaseDecisionPage() {
                     setMethod(value)
                     if (value === 'cash') setInstallments(1)
                   }}
+                  aria-pressed={method === value}
                   className={`min-h-11 rounded-lg text-sm font-bold ring-1 transition ${
                     method === value
                       ? 'bg-primary text-primary-foreground ring-primary'
@@ -161,7 +171,18 @@ export function PurchaseDecisionPage() {
       </Card>
 
       {snapshotQuery.isPending ? (
-        <p className="rounded-xl border border-border/60 bg-card p-4 text-sm text-muted-foreground">Veriler yükleniyor...</p>
+        <p role="status" className="rounded-xl border border-border/60 bg-card p-4 text-sm text-muted-foreground">Veriler yükleniyor…</p>
+      ) : null}
+
+      {/* Snapshot düşerse karar ekranı sıfırlarla "rahatlıkla alabilirsin" diyebilir;
+          hata artık görünür ve tekrar denenebilir (denetim §6). */}
+      {snapshotQuery.isError ? (
+        <QueryError
+          title="Karar verileri yüklenemedi"
+          message={snapshotQuery.error instanceof Error ? snapshotQuery.error.message : undefined}
+          onRetry={() => void snapshotQuery.refetch()}
+          retrying={snapshotQuery.isFetching}
+        />
       ) : null}
 
       {impact && verdict ? (

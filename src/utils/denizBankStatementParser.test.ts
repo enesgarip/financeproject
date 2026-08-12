@@ -343,3 +343,54 @@ describe('parseDenizBankStatement — additional card', () => {
     expect(hepsi).toBeUndefined()
   })
 })
+
+describe('parseDenizBankStatement — bonus temizliği ve bölüm başlığı', () => {
+  // Faz F: bonus kolonu binlik ayraçlı olabilir ("1,996.00"); eski regex
+  // (`\d+[.,]\d{2}$`) yalnız ayraçsızını yakalıyordu → satıcı adı kirleniyordu.
+  const BONUS_TEXT = `
+Hesap Kesim Tarihi 04/06/2026
+Son Ödeme Tarihi 15/06/2026
+Dönem Borcu 201,596.00 TL
+01/06/2026 BALAT GUSTO PLUS MARKET BURSA TR 1,996.00 199,600.00 TL
+02/06/2026 FILE MARKET BURSA TR 19.96 1,996.00 TL
+`
+
+  it('binlik ayraçlı bonusu açıklamada bırakmaz', () => {
+    const result = parseDenizBankStatement(BONUS_TEXT)
+    const balat = result.transactions.find((t) => t.amount === 199600)
+    expect(balat?.description).toBe('BALAT GUSTO PLUS MARKET')
+  })
+
+  it('ayraçsız bonusu da (eski davranış) temizlemeye devam eder', () => {
+    const result = parseDenizBankStatement(BONUS_TEXT)
+    const file = result.transactions.find((t) => t.amount === 1996)
+    expect(file?.description).toBe('FILE MARKET')
+  })
+
+  // Faz F: `line.toUpperCase()` tr-TR'de "Sigorta" → "SIGORTA" üretiyor ve
+  // "SİGORTA" anahtarını kaçırıyordu (CLAUDE.md I/İ tuzağı). Gözlemlenebilir
+  // etki: tanınmayan başlık ÖNCEKİ bölümün kategorisini sıfırlamaz, bu yüzden
+  // sigorta satırı "Sağlık" olarak damgalanır.
+  const SECTION_TEXT = `
+Hesap Kesim Tarihi 04/06/2026
+Son Ödeme Tarihi 15/06/2026
+Dönem Borcu 620.00 TL
+Eczane
+01/06/2026 XYZ ANONIM SATIS BURSA TR 120.00 TL
+Sigorta
+02/06/2026 QWE ANONIM POLICE BURSA TR 500.00 TL
+`
+
+  it('BÜYÜK harf olmayan bölüm başlığını da tanır (I/İ katlaması)', () => {
+    const result = parseDenizBankStatement(SECTION_TEXT)
+    expect(result.transactions.find((t) => t.amount === 120)?.category).toBe('Sağlık')
+    // "Sigorta" tanınmazsa bu satır önceki bölümden 'Sağlık' devralırdı.
+    expect(result.transactions.find((t) => t.amount === 500)?.category).toBe('Diğer')
+  })
+
+  it('BÜYÜK harfli başlıkta eski davranışı korur', () => {
+    const result = parseDenizBankStatement(SECTION_TEXT.replace('Eczane', 'ECZANE').replace('Sigorta', 'SİGORTA'))
+    expect(result.transactions.find((t) => t.amount === 120)?.category).toBe('Sağlık')
+    expect(result.transactions.find((t) => t.amount === 500)?.category).toBe('Diğer')
+  })
+})

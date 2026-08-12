@@ -228,9 +228,11 @@ export function navigationAction(issue: HealthIssue): NavigationAction {
   if (id.startsWith('card-expense-duplicate-') || kind === 'duplicateTransactionCandidate') {
     return { to: '/kartlar?section=islemler', label: 'Kayıtları karşılaştır' }
   }
+  // Bu ID'ler artık etkilenen kayıt kümesinin imzasıyla biter
+  // (`card-expense-missing-category-3-1a2b`), bu yüzden eşleşme ÖNEK ile yapılır.
   if (
-    id === 'card-expense-missing-description'
-    || id === 'card-expense-missing-category'
+    id.startsWith('card-expense-missing-description')
+    || id.startsWith('card-expense-missing-category')
     || kind === 'cardExpenseDataQuality'
   ) {
     return { to: '/kartlar?section=islemler', label: 'Harcamaları düzenle' }

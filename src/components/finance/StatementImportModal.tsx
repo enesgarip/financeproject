@@ -2,6 +2,7 @@ import { FileUp, X, CheckCircle2, AlertCircle, Loader2, FileText, ChevronDown } 
 import { useCallback, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useBodyScrollLock } from '../ui/use-body-scroll-lock'
+import { useDialogA11y } from '../ui/use-dialog-a11y'
 import { useCategoryMemory } from '../../hooks/useCategoryMemory'
 import {
   fetchCardExpenseMatchRows,
@@ -407,14 +408,31 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
   const importableCount = importRows.length + adjustments.length
   const unresolvedManualCount = manualReview.length - manualAddedKeys.size
 
+  // Escape yalnız işlem sürmüyorken kapatır: içe aktarma yarısında kaçmak
+  // kısmi kayıt bırakabilir.
+  const dialogRef = useDialogA11y<HTMLDivElement>(true, () => {
+    if (!importing && !parsing) onClose()
+  })
+
   return createPortal(
-    <div className="fixed inset-0 z-[80] flex items-start justify-center overflow-y-auto bg-black/50 px-3 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-[calc(env(safe-area-inset-top)+1rem)] backdrop-blur-sm sm:items-center sm:p-6">
-      <div className="max-h-[88svh] w-full max-w-lg overflow-x-hidden overflow-y-auto rounded-2xl bg-card  sm:max-h-[92svh]">
+    <div className="fixed inset-0 z-[80] flex items-start justify-center overflow-y-auto bg-[var(--overlay)] px-3 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-[calc(env(safe-area-inset-top)+1rem)] backdrop-blur-sm sm:items-center sm:p-6">
+      {/* Bu modal SimpleModal'a sarılamıyor (kendi sticky başlığı + tam genişlik
+          adım gövdeleri var), o yüzden diyalog sözleşmesi elle kuruluyor: aynı
+          `useDialogA11y` hook'u, `role="dialog"` + `aria-modal` + `aria-labelledby`.
+          Eskiden ham div'di — trap/Escape/rol yoktu (denetim 2026-08-12 §6). */}
+      <div
+        ref={dialogRef}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="statement-import-title"
+        className="max-h-[88svh] w-full max-w-lg overflow-x-hidden overflow-y-auto rounded-2xl bg-card focus:outline-none sm:max-h-[92svh]"
+      >
         {/* Header */}
         <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-card/95 px-4 py-3 backdrop-blur">
           <div className="flex items-center gap-2">
-            <FileText size={16} className="text-primary" />
-            <span className="text-sm font-black text-foreground">Ekstre İçe Aktar</span>
+            <FileText size={16} className="text-primary" aria-hidden="true" />
+            <span id="statement-import-title" className="text-sm font-black text-foreground">Ekstre İçe Aktar</span>
             <span className="rounded-md bg-muted px-2 py-0.5 text-xs font-bold text-muted-foreground">
               **** {card.card_name}
             </span>
@@ -422,9 +440,10 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
           <button
             type="button"
             onClick={onClose}
-            className="grid size-7 place-items-center rounded-lg hover:bg-muted"
+            aria-label="Kapat"
+            className="tap-target grid size-7 place-items-center rounded-lg hover:bg-muted"
           >
-            <X size={15} />
+            <X size={15} aria-hidden="true" />
           </button>
         </div>
 

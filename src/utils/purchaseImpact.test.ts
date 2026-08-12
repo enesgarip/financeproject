@@ -128,7 +128,21 @@ describe('buildPurchaseImpact', () => {
     expect(result.reasons).toContain('3 ay boyunca aylık 1.666,67 ₺ yük ekler.')
   })
 
-  it('harcanabilir tutarı aşan alım en az dikkat verir', () => {
+  it('harcanabilir tutarı aşan nakit alım en az dikkat verir', () => {
+    const result = buildPurchaseImpact({
+      amount: 6000,
+      installments: 1,
+      method: 'cash',
+      forecast,
+      safeToSpend: 3000,
+      buffer: 0,
+    })
+    expect(result.verdict).toBe('dikkat')
+    expect(result.safeToSpendAfter).toBe(-3000)
+    expect(result.reasons).toContain('Bu ayın harcanabilir tutarını aşıyor.')
+  })
+
+  it('kartla alım bu ayın harcanabilirini düşürmez ama taksit büyükse uyarır', () => {
     const result = buildPurchaseImpact({
       amount: 6000,
       installments: 1,
@@ -137,7 +151,58 @@ describe('buildPurchaseImpact', () => {
       safeToSpend: 3000,
       buffer: 0,
     })
+
+    // Tablo "Temmuz'a yük binmez" diyor; harcanabilir de aynı ayı anlatır.
+    expect(result.months[0]!.charge).toBe(0)
+    expect(result.safeToSpendAfter).toBe(3000)
     expect(result.verdict).toBe('dikkat')
-    expect(result.safeToSpendAfter).toBe(-3000)
+    expect(result.reasons.some((reason) => reason.includes('bu ayın harcanabilir tutarından yüksek'))).toBe(true)
+  })
+
+  it('yuvarlama artığını son taksit emer (n × taksit = tutar)', () => {
+    const result = buildPurchaseImpact({
+      amount: 100,
+      installments: 3,
+      method: 'card',
+      forecast,
+      safeToSpend: 20000,
+      buffer: 0,
+    })
+
+    expect(result.monthlyInstallment).toBe(33.33)
+    expect(result.lastInstallment).toBe(33.34)
+    const charged = result.months.reduce((total, month) => total + month.charge, 0)
+    expect(Math.round(charged * 100) / 100).toBe(100)
+  })
+
+  it('projeksiyon penceresini aşan taksitleri gerekçede sayar', () => {
+    const result = buildPurchaseImpact({
+      amount: 12000,
+      installments: 12,
+      method: 'card',
+      forecast,
+      safeToSpend: 20000,
+      buffer: 0,
+    })
+
+    // 6 aylık pencerede yalnız 5 taksit görünür (ilk ay yük almaz).
+    expect(result.installmentsBeyondForecast).toBe(7)
+    expect(result.reasons.some((reason) => reason.includes('projeksiyonu penceresinin dışında'))).toBe(true)
+  })
+
+  it('boş projeksiyonda gerekçe null ay basmaz', () => {
+    const result = buildPurchaseImpact({
+      amount: 5000,
+      installments: 1,
+      method: 'cash',
+      forecast: { ...forecast, months: [] },
+      safeToSpend: 20000,
+      buffer: 5000,
+    })
+
+    expect(result.lowestAfter).toBe(0)
+    expect(result.lowestLabel).toBeNull()
+    expect(result.reasons.some((reason) => reason.includes('null'))).toBe(false)
+    expect(result.reasons).toContain('Nakit projeksiyonu oluşturulamadı; karar yalnız bu ayın harcanabilir tutarına dayanıyor.')
   })
 })

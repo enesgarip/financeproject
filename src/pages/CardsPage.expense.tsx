@@ -47,6 +47,9 @@ export function QuickExpensePanel({
   const [nextDueDate, setNextDueDate] = useState(dateInputValue(new Date()))
   const [expenseStatus, setExpenseStatus] = useState<CardExpenseStatus>('posted')
   const [localError, setLocalError] = useState('')
+  // Harcama yazıldı ama araç etiketi uygulanamadı: hata DEĞİL, uyarı. Kullanıcı
+  // "hiç kaydolmadı" sanıp tekrar göndermesin (manuel kayıtta dedupe yok).
+  const [localWarning, setLocalWarning] = useState('')
   const [saving, setSaving] = useState(false)
   const [scanning, setScanning] = useState(false)
   const [prefilledByScan, setPrefilledByScan] = useState(false)
@@ -76,13 +79,24 @@ export function QuickExpensePanel({
   const isCarryover = parsedInstallmentCount > 1 && parsedPaidInstallments > 0
   const previewDate = isCarryover ? nextDueDate : spentAt
   const statementPreview = useMemo(() => getCardStatementPeriod(selectedCard, previewDate), [selectedCard, previewDate])
-  const debitPreview = Math.max(0, diffTL(selectedCard?.current_balance, parsedAmount))
-  const isProvision = expenseStatus === 'provision'
+  // Banka hesabında bakiye aşımı: MovementModal aynı hesap için gönderimi
+  // engelliyordu, burada 0'a kırpılıp sessizce geçiyordu → aynı hesap iki kural.
+  // Artık tek kural: sunucu reddetmeden önce kullanıcı görür ve gönderemez.
+  const isBankAccount = selectedCard?.card_type === 'banka_karti'
+  const rawDebitPreview = diffTL(selectedCard?.current_balance, parsedAmount)
+  const debitPreview = Math.max(0, rawDebitPreview)
+  const exceedsAccountBalance = Boolean(isBankAccount) && parsedAmount > 0 && rawDebitPreview < 0
+  // Provizyon yalnız KREDİ KARTI kavramıdır (limitten düşer, ekstreye sonra
+  // girer). Banka hesabında para anında çıkar → durum her zaman kesinleşmiş.
+  const canUseProvision = selectedCard?.card_type === 'kredi_karti'
+  const effectiveStatus: CardExpenseStatus = isCarryover || !canUseProvision ? 'posted' : expenseStatus
+  const isProvision = effectiveStatus === 'provision'
   const displayAmount = formatAmount ?? formatCurrency
   const canSubmitQuickExpense = Boolean(selectedCard) &&
     parsedAmount > 0 &&
     trimmedDescription.length > 0 &&
     !saving &&
+    !exceedsAccountBalance &&
     (!isCarryover || Boolean(nextDueDate))
 
   // "Harcama ekle / Taksit ekle" kısayolundan gelen kartı ve modu önceden seç.
@@ -179,6 +193,10 @@ export function QuickExpensePanel({
       setLocalError('Sıradaki taksit tarihini seçmelisin.')
       return
     }
+    if (exceedsAccountBalance) {
+      setLocalError('Bu tutar hesap bakiyesini aşıyor. Sunucu da reddeder; tutarı düşür ya da başka hesap seç.')
+      return
+    }
     const source = prefilledByScan ? 'receipt_scan' : 'manual'
     const signature = JSON.stringify({
       cardId: selectedCard.id,
@@ -190,7 +208,7 @@ export function QuickExpensePanel({
       installmentCount: parsedInstallmentCount,
       paidInstallments: parsedPaidInstallments,
       nextDueDate,
-      status: expenseStatus,
+      status: effectiveStatus,
       source,
     })
     if (!submissionIdentityRef.current || submissionIdentityRef.current.signature !== signature) {
@@ -201,6 +219,7 @@ export function QuickExpensePanel({
     submittingRef.current = true
     setSaving(true)
     setLocalError('')
+    setLocalWarning('')
     setError('')
     const submitResult = isCarryover
       ? await recordCardInstallmentCarryover({
@@ -221,7 +240,7 @@ export function QuickExpensePanel({
         spentAt,
         category,
         installmentCount: parsedInstallmentCount,
-        status: expenseStatus,
+        status: effectiveStatus,
         source,
         sourceEventId,
         carId: carId || null,
@@ -238,6 +257,9 @@ export function QuickExpensePanel({
       return
     }
 
+    // Harcama yazıldı; araç etiketi düştüyse formu SIFIRLAMAYA devam ederiz —
+    // tekrar gönderim çift harcama üretirdi.
+    setLocalWarning(submitResult.data.carTagWarning ?? '')
     invalidateCategoryMemory()
     setLastUsed('expenseCard', selectedCard.id)
     setCardId(selectedCard.id)
@@ -359,6 +381,7 @@ export function QuickExpensePanel({
                 setPaymentMode('cash')
                 setPaidInstallments('0')
                 setLocalError('')
+                setLocalWarning('')
               }}
               className="mt-1 w-full rounded-lg border border-input bg-white px-3 py-2.5 outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 dark:bg-card/50 dark:text-foreground"
               required
@@ -432,16 +455,16 @@ export function QuickExpensePanel({
             <label className="block min-w-0 text-sm font-semibold text-foreground">
               Durum
               <select
-                value={isCarryover ? 'posted' : expenseStatus}
+                value={effectiveStatus}
                 onChange={(event) => {
                   setExpenseStatus(event.target.value as CardExpenseStatus)
                   setLocalError('')
                 }}
-                disabled={isCarryover}
+                disabled={isCarryover || !canUseProvision}
                 className="mt-1 w-full min-w-0 rounded-lg border border-input bg-white px-3 py-2.5 outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 dark:bg-card/50 dark:text-foreground"
               >
                 <option value="posted">Kesinleşmiş</option>
-                <option value="provision">Provizyonda</option>
+                {canUseProvision ? <option value="provision">Provizyonda</option> : null}
               </select>
             </label>
           </div>
@@ -551,12 +574,20 @@ export function QuickExpensePanel({
               )}
             </div>
           ) : selectedCard ? (
-            <div className="grid grid-cols-2 gap-2 rounded-xl border border-border/60 bg-muted/30 p-3">
-              <OverviewStat label="Mevcut bakiye" value={displayAmount(selectedCard.current_balance)} />
-              <OverviewStat label="İşlem sonrası" value={displayAmount(debitPreview)} />
+            <div className="space-y-2">
+              <div className="grid grid-cols-2 gap-2 rounded-xl border border-border/60 bg-muted/30 p-3">
+                <OverviewStat label="Mevcut bakiye" value={displayAmount(selectedCard.current_balance)} />
+                <OverviewStat label="İşlem sonrası" value={displayAmount(debitPreview)} />
+              </div>
+              {exceedsAccountBalance ? (
+                <p className="rounded-xl border border-destructive/20 bg-destructive/8 px-3 py-2.5 text-xs font-medium text-destructive">
+                  Bu tutar hesap bakiyesini aşıyor; kayıt yapılamaz. Tutarı düşür ya da başka bir hesap seç.
+                </p>
+              ) : null}
             </div>
           ) : null}
           {localError ? <p className="rounded-xl border border-destructive/20 bg-destructive/8 p-3 text-sm font-medium text-destructive">{localError}</p> : null}
+          {localWarning ? <p className="rounded-xl border border-warning/20 bg-warning/8 p-3 text-sm font-medium text-warning">{localWarning}</p> : null}
           <button
             type="submit"
             disabled={!canSubmitQuickExpense}

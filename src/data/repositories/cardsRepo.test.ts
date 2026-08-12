@@ -78,6 +78,43 @@ describe('cardsRepo.addCardExpense', () => {
     )
   })
 
+  it('araç etiketi düşse bile harcamayı ok döndürür ve hatayı uyarı olarak taşır', async () => {
+    // Aksi halde kullanıcı "hiç kaydolmadı" sanıp tekrar gönderiyor ve manuel
+    // kayıtta dedupe olmadığı için çift harcama oluşuyordu.
+    supabaseMocks.rpc.mockResolvedValue({ data: { id: 'expense-1' }, error: null })
+    const eq = vi.fn().mockResolvedValue({ error: { message: 'car_id yazılamadı' } })
+    const update = vi.fn(() => ({ eq }))
+    supabaseMocks.from.mockReset()
+    supabaseMocks.from.mockReturnValue({ update })
+
+    const result = await addCardExpense({ ...input, carId: 'car-1' })
+
+    expect(result.ok).toBe(true)
+    if (!result.ok) throw new Error('Harcama ok dönmeliydi')
+    expect(result.data.carTagWarning).toContain('araca atanamadı')
+    expect(eq).toHaveBeenCalledWith('id', 'expense-1')
+  })
+
+  it('RPC kayıt kimliği döndürmezse araç etiketi sessizce başarılı sayılmaz', async () => {
+    supabaseMocks.rpc.mockResolvedValue({ data: null, error: null })
+
+    const result = await addCardExpense({ ...input, carId: 'car-1' })
+
+    expect(result.ok).toBe(true)
+    if (!result.ok) throw new Error('Harcama ok dönmeliydi')
+    expect(result.data.carTagWarning).toContain('kayıt kimliği dönmedi')
+  })
+
+  it('araç seçilmediyse uyarı üretmez', async () => {
+    supabaseMocks.rpc.mockResolvedValue({ data: { id: 'expense-1' }, error: null })
+
+    const result = await addCardExpense(input)
+
+    expect(result.ok).toBe(true)
+    if (!result.ok) throw new Error('Harcama ok dönmeliydi')
+    expect(result.data.carTagWarning).toBeNull()
+  })
+
   it('does not retry the retired legacy RPC signature on missing capability', async () => {
     supabaseMocks.rpc.mockResolvedValue({
       error: { code: 'PGRST202', message: 'Could not find the function public.add_card_expense in the schema cache' },

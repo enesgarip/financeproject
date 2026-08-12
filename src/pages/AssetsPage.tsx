@@ -7,6 +7,7 @@ import { buildVizColorMap, orderSlicesCanonically } from '../components/charts/v
 import { RatesBanner } from '../components/finance/RatesBanner'
 import { Button } from '../components/ui/button'
 import { ConfidenceBadge } from '../components/ui/confidence-badge'
+import { QueryError } from '../components/ui/query-error'
 import { fetchCrudRows } from '../data/repositories/crudRepo'
 import { useMarketRates } from '../hooks/useMarketRates'
 import { useStockPrices } from '../hooks/useStockPrices'
@@ -363,22 +364,24 @@ function AssetsOverview({ rows, snapshot, stockPrices, bankCash }: { rows: Asset
               title={item.name}
               subtitle={item.subtitle}
               amount={item.value}
+              /* Sağ sütun HER satırda portföy payıdır. Eskiden yalnız "Hisse"
+                 satırında sessizce K/Z yüzdesine dönüşüyordu: aynı görsel slot iki
+                 anlam taşıyordu ve %8 payı %8 kâr sanmak mümkündü (denetim §5).
+                 K/Z ayrı bir satır olarak, etiketiyle birlikte altına yazılır. */
               trailing={
-                <p
-                  className="serit-num mt-0.5 text-[11px]"
-                  style={{
-                    color:
-                      item.profitPct === null
-                        ? SERIT_TEXT.neutral
-                        : item.profitPct >= 0
-                          ? SERIT_TEXT.brand
-                          : SERIT_TEXT.danger,
-                  }}
-                >
-                  {item.profitPct === null
-                    ? formatPercent(item.sharePct)
-                    : formatPercent(item.profitPct, { signed: true })}
-                </p>
+                <div className="mt-0.5 text-right">
+                  <p className="serit-num text-[11px]" style={{ color: SERIT_TEXT.neutral }}>
+                    {formatPercent(item.sharePct)} pay
+                  </p>
+                  {item.profitPct === null ? null : (
+                    <p
+                      className="serit-num text-[11px]"
+                      style={{ color: item.profitPct >= 0 ? SERIT_TEXT.brand : SERIT_TEXT.danger }}
+                    >
+                      {formatPercent(item.profitPct, { signed: true })} K/Z
+                    </p>
+                  )}
+                </div>
               }
             />
           ))}
@@ -461,13 +464,21 @@ export function AssetsPage() {
     [accounts],
   )
 
+  // Hesap yükleme hatası SAYFA seviyesinde tutulur: eskiden yalnız `tradeError`'a
+  // yazılıyordu, o da sadece işlem modalında görünüyordu — hero "Toplam varlık"
+  // banka bakiyeleri eksik hâlde sessizce küçük çıkıyordu (denetim 2026-08-12 §5).
+  const [accountsError, setAccountsError] = useState('')
+
   const loadAccounts = useCallback(async () => {
     const result = await fetchCrudRows('cards', 'created_at', false)
     if (!result.ok) {
-      setTradeError(result.error.message ?? 'Banka hesapları yüklenemedi.')
+      const message = result.error.message ?? 'Banka hesapları yüklenemedi.'
+      setAccountsError(message)
+      setTradeError(message)
       setAccounts([])
       return
     }
+    setAccountsError('')
     setAccounts(result.data)
   }, [])
 
@@ -598,6 +609,13 @@ export function AssetsPage() {
               onSubmit={(event) => void handleTradeSubmit(event, reload, setError)}
             />
             <StockPriceSync rows={rows as Asset[]} onPrices={setStockPrices} />
+            {accountsError ? (
+              <QueryError
+                title="Banka hesapları yüklenemedi"
+                message={`${accountsError} Aşağıdaki "Toplam varlık" banka bakiyeleri olmadan hesaplandı.`}
+                onRetry={() => void loadAccounts()}
+              />
+            ) : null}
             <RatesBanner
               onSynced={reload}
               note={

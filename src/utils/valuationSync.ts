@@ -31,26 +31,65 @@ import {
  */
 
 export type ValuationSyncResult = {
+  /** GERÇEKTEN yazılan satır sayısı (denenen değil). */
   updated: number
   assets: number
   debts: number
   goals: number
+  /** Yazılamayan satır sayısı; > 0 ise gösterilen değer bayat kalmış olabilir. */
+  failed: number
 }
+
+/** Tek tablonun yazma sonucu: denenen değil, yazılan sayılır. */
+type TableSyncOutcome = { updated: number; failed: number }
+
+const NO_CHANGES: TableSyncOutcome = { updated: 0, failed: 0 }
 
 function changed(next: number, current: number | null | undefined): boolean {
   return moneyDiffers(next, current ?? 0)
 }
 
-async function syncAssets(snapshot: MarketRatesSnapshot): Promise<number> {
+/**
+ * `persistEstimatedValues` sonucunu sayıya indirger.
+ *
+ * Bulgu (Faz F): eskiden `updates.length` dönülüyordu, yani hata hâlinde bile
+ * "N güncellendi" deniyordu — RatesBanner buna bakıp cache'i tazeliyor,
+ * kullanıcı ise yazılmamış değeri güncel sanıyordu. Repo artık
+ * `{requested, updated, failed}` döndürüyor; gerçek sayı ondan okunur.
+ */
+function outcomeOf(
+  label: string,
+  requested: number,
+  result: Awaited<ReturnType<typeof persistEstimatedValues>>,
+): TableSyncOutcome {
+  if (!result.ok) {
+    console.warn(`[valuationSync] persist ${label}:`, result.error.message)
+    return { updated: 0, failed: requested }
+  }
+  const { updated, failed } = result.data
+  if (failed.length > 0) {
+    console.warn(
+      `[valuationSync] persist ${label}: ${failed.length}/${requested} satır yazılamadı —`,
+      failed.map((row) => `${row.id}: ${row.message}`).join(' | '),
+    )
+  }
+  return { updated, failed: failed.length }
+}
+
+async function syncAssets(snapshot: MarketRatesSnapshot): Promise<TableSyncOutcome> {
   const result = await fetchAutoValuedAssets()
   if (!result.ok) {
     console.warn('[valuationSync] assets:', result.error.message)
-    return 0
+    return NO_CHANGES
   }
   const rows = result.data
-  if (rows.length === 0) return 0
+  if (rows.length === 0) return NO_CHANGES
 
   const stockRows = rows.filter(assetIsStock)
+  // `fetchStockPrices` çok bayat cache'i (bkz. STOCK_PRICES_MAX_AGE_HOURS)
+  // döndürmez: fiyatı olmayan hisse `valueStock` içinde null olur, satır
+  // filtrelenir ve saklanan değer korunur. Böylece bayat fiyat SESSİZCE
+  // `estimated_value_try`'a yazılıp taze görünmez.
   const stockPrices = stockRows.length
     ? await fetchStockPrices(stockRows.map((asset) => asset.symbol!))
     : {}
@@ -65,19 +104,17 @@ async function syncAssets(snapshot: MarketRatesSnapshot): Promise<number> {
     .filter((entry) => entry.value !== null && changed(entry.value, entry.current))
     .map(({ id, value, rate }) => ({ id, value: value as number, rate }))
 
-  const persistResult = await persistEstimatedValues('assets', updates)
-  if (!persistResult.ok) console.warn('[valuationSync] persist assets:', persistResult.error.message)
-  return updates.length
+  return outcomeOf('assets', updates.length, await persistEstimatedValues('assets', updates))
 }
 
-async function syncDebts(snapshot: MarketRatesSnapshot): Promise<number> {
+async function syncDebts(snapshot: MarketRatesSnapshot): Promise<TableSyncOutcome> {
   const result = await fetchAutoValuedDebts()
   if (!result.ok) {
     console.warn('[valuationSync] debts:', result.error.message)
-    return 0
+    return NO_CHANGES
   }
   const rows = result.data
-  if (rows.length === 0) return 0
+  if (rows.length === 0) return NO_CHANGES
 
   const updates: EstimatedValueUpdate[] = rows
     .map((debt) => ({
@@ -89,19 +126,17 @@ async function syncDebts(snapshot: MarketRatesSnapshot): Promise<number> {
     .filter((entry) => entry.value !== null && changed(entry.value, entry.current))
     .map(({ id, value, rate }) => ({ id, value: value as number, rate }))
 
-  const persistResult = await persistEstimatedValues('debts', updates)
-  if (!persistResult.ok) console.warn('[valuationSync] persist debts:', persistResult.error.message)
-  return updates.length
+  return outcomeOf('debts', updates.length, await persistEstimatedValues('debts', updates))
 }
 
-async function syncGoals(snapshot: MarketRatesSnapshot): Promise<number> {
+async function syncGoals(snapshot: MarketRatesSnapshot): Promise<TableSyncOutcome> {
   const result = await fetchAutoValuedGoals()
   if (!result.ok) {
     console.warn('[valuationSync] goals:', result.error.message)
-    return 0
+    return NO_CHANGES
   }
   const rows = result.data
-  if (rows.length === 0) return 0
+  if (rows.length === 0) return NO_CHANGES
 
   const updates: EstimatedValueUpdate[] = rows
     .map((goal) => ({
@@ -113,13 +148,11 @@ async function syncGoals(snapshot: MarketRatesSnapshot): Promise<number> {
     .filter((entry) => entry.value !== null && changed(entry.value, entry.current))
     .map(({ id, value, rate }) => ({ id, value: value as number, rate }))
 
-  const persistResult = await persistEstimatedValues('savings_goals', updates)
-  if (!persistResult.ok) console.warn('[valuationSync] persist goals:', persistResult.error.message)
-  return updates.length
+  return outcomeOf('goals', updates.length, await persistEstimatedValues('savings_goals', updates))
 }
 
 export async function syncAutoValuedRows(snapshot: MarketRatesSnapshot | null): Promise<ValuationSyncResult> {
-  if (!snapshot) return { updated: 0, assets: 0, debts: 0, goals: 0 }
+  if (!snapshot) return { updated: 0, assets: 0, debts: 0, goals: 0, failed: 0 }
 
   const [assets, debts, goals] = await Promise.all([
     syncAssets(snapshot),
@@ -127,5 +160,11 @@ export async function syncAutoValuedRows(snapshot: MarketRatesSnapshot | null): 
     syncGoals(snapshot),
   ])
 
-  return { updated: assets + debts + goals, assets, debts, goals }
+  return {
+    updated: assets.updated + debts.updated + goals.updated,
+    assets: assets.updated,
+    debts: debts.updated,
+    goals: goals.updated,
+    failed: assets.failed + debts.failed + goals.failed,
+  }
 }

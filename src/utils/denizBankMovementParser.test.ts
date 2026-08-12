@@ -367,3 +367,45 @@ describe('DenizBank movement planned payment reconciliation', () => {
     expect(result.unmatched).toEqual([invoice])
   })
 })
+
+describe('parseDenizBankMovementPdf — iade/ters kayıt satırı (Faz F)', () => {
+  // Banka iadeyi EKSİ tutarla basar. Eski desen işareti tanımıyordu: satır
+  // ROW_PATTERN'e uymayıp ignoredRows'a düşüyordu (ya da işaretsiz basılırsa
+  // harcama sayılıyordu). Artık ayrı `refunds` listesine düşer.
+  const REFUND_TEXT = `
+İşlem Türü İşlem Tarihi İşlem İşlem Detayı Kart No Kart Tipi İşlem Tutarı Bonus
+Dönem İçi 18.06.2026 FLEX STORE BURSA TR Peşin Satış 5555 74** **** 0189 Asıl Kart 460,00 TL 0,00 TL
+Dönem İçi 19.06.2026 FLEX STORE IADE BURSA TR Peşin Satış 5555 74** **** 0189 Asıl Kart -460,00 TL -4,60 TL
+Dönem İçi 20.06.2026 SONDA ISARET IADE BURSA TR Peşin Satış 5555 74** **** 0189 Asıl Kart 120,50- TL 0,00 TL
+`
+
+  it('eksi tutarlı satırı harcama olarak İÇERİ ALMAZ', () => {
+    const result = parseDenizBankMovementPdf(REFUND_TEXT)
+    expect(result.movements).toHaveLength(1)
+    expect(result.movements[0].amount).toBe(460)
+    expect(result.movements.some((m) => m.description.includes('IADE'))).toBe(false)
+  })
+
+  it('iadeyi ayrı `refunds` listesinde mutlak tutarla döndürür', () => {
+    const result = parseDenizBankMovementPdf(REFUND_TEXT)
+    expect(result.refunds).toHaveLength(2)
+    expect(result.refunds[0].amount).toBe(460)
+    expect(result.refunds[0].bonus).toBe(-4.6)
+    // Sonda işaret taşıyan format da yakalanır.
+    expect(result.refunds[1].amount).toBe(120.5)
+  })
+
+  it('iade satırını kullanıcıya görünür kılar (ignoredRows uyarı yolu)', () => {
+    const result = parseDenizBankMovementPdf(REFUND_TEXT)
+    expect(result.ignoredRows).toHaveLength(2)
+  })
+
+  it('eksi tutarlı ödeme satırını da tahsilat saymaz', () => {
+    const result = parseDenizBankMovementPdf(`
+Dönem İçi 09.06.2026 Hesaptan Ödeme Hesaptan Ödeme 5555 74** **** 0189 Asıl Kart -1.000,00 TL 0,00 TL
+`)
+    expect(result.payments).toHaveLength(0)
+    expect(result.movements).toHaveLength(0)
+    expect(result.refunds).toHaveLength(1)
+  })
+})

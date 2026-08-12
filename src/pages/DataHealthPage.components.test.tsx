@@ -28,6 +28,7 @@ vi.mock('../components/ui/card', () => ({
 }))
 
 import { FixAllModal, HealthIssueCard } from './DataHealthPage.components'
+import { MAX_SAFE_REPAIR_BATCH_SIZE } from './DataHealthPage.actions'
 
 afterEach(cleanup)
 
@@ -240,5 +241,70 @@ describe('FixAllModal safe repair preview', () => {
     expect(screen.getByText(/Kalan 7 çözüm/).textContent).toContain(
       'güncel veriden yeniden önizlenir',
     )
+  })
+
+  it('tur başına üst sınırı sabitten yazar (metin sabitle ayrışmasın)', () => {
+    render(
+      <FixAllModal
+        open
+        onClose={vi.fn()}
+        safeIssues={[]}
+        repairCount={MAX_SAFE_REPAIR_BATCH_SIZE}
+        remainingRepairCount={3}
+        fixingId={null}
+        undoing={false}
+        onConfirm={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByText(/Kalan 3 çözüm/).textContent).toContain(
+      `en fazla ${MAX_SAFE_REPAIR_BATCH_SIZE} çözüm`,
+    )
+  })
+})
+
+describe('HealthIssueCard kalıcılık ve detay listesi', () => {
+  it('geçici gizlemeyi kalıcı kapatmadan ayırt edilir biçimde etiketler', () => {
+    const onDismiss = vi.fn()
+    const onSnooze = vi.fn()
+    render(
+      <MemoryRouter>
+        <HealthIssueCard
+          issue={issue({ id: 'card-missing-days-card-1', area: 'Kartlar', kind: 'manual' })}
+          fixingId={null}
+          undoing={false}
+          onFix={vi.fn()}
+          onSnooze={onSnooze}
+          onDismiss={onDismiss}
+        />
+      </MemoryRouter>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Bu görünümde gizle' }))
+    expect(onSnooze).toHaveBeenCalledWith('card-missing-days-card-1')
+    fireEvent.click(screen.getByRole('button', { name: 'Bu doğru, kalıcı kapat' }))
+    expect(onDismiss).toHaveBeenCalledWith('card-missing-days-card-1')
+    expect(screen.getByText(/geçicidir/).textContent).toContain('tüm cihazlarda kalıcıdır')
+  })
+
+  it('birebir aynı iki detay satırını da basar (key çakışması yok)', () => {
+    render(
+      <MemoryRouter>
+        <HealthIssueCard
+          issue={issue({
+            id: 'card-expense-duplicate-exact-a-b',
+            area: 'Kartlar',
+            kind: 'duplicateTransactionCandidate',
+            details: ['Aynı satır', 'Aynı satır'],
+          })}
+          fixingId={null}
+          undoing={false}
+          onFix={vi.fn()}
+          onSnooze={vi.fn()}
+        />
+      </MemoryRouter>,
+    )
+
+    expect(screen.getAllByText('Aynı satır')).toHaveLength(2)
   })
 })

@@ -15,13 +15,26 @@ import { financeSnapshotKey } from './financeSnapshotKey'
  *  - Ağır modüller (repo katmanı, financeSummary, kur istemcisi) DİNAMİK import
  *    edilir. Layout her sayfada yüklendiği için statik import bunları giriş
  *    paketine sokuyor ve ilk açılışı yavaşlatıyordu (index chunk +16 kB gzip).
+ *
+ * İki kenar durum (denetim 2026-08-12):
+ *  - Cache'teki snapshot ne kadar eski olursa olsun kullanılıyordu; PWA sekmesi
+ *    gece açık kaldığında DÜNKÜ pozisyon bugünün noktası olarak yazılabiliyordu.
+ *    Artık cache yalnız AYNI YEREL GÜNDE alındıysa kabul edilir.
+ *  - Cache boşken sonuç `setQueryData` ile yazılıyordu; bu `dataUpdatedAt`'ı
+ *    tazelediği için `useFinanceSnapshot`'ın queryFn'i (ve ona bağlı finans
+ *    bakımı) o açılışta atlanabiliyordu. Yan etki kaldırıldı: fotoğraf kendi
+ *    verisini okur, paylaşılan cache'e YAZMAZ.
  */
 
 const STORAGE_KEY = 'denge:net-worth-snapshot-day'
 const RECORD_DELAY_MS = 4000
 
+function localDay(value: Date | number): string {
+  return new Date(value).toLocaleDateString('sv-SE')
+}
+
 function todayKey(userId: string): string {
-  return `${userId}:${new Date().toLocaleDateString('sv-SE')}`
+  return `${userId}:${localDay(new Date())}`
 }
 
 export function useDailyNetWorthSnapshot() {
@@ -47,11 +60,14 @@ export function useDailyNetWorthSnapshot() {
           ])
           if (cancelled) return
 
-          let snapshot = queryClient.getQueryData<FinanceSnapshot>(financeSnapshotKey(userId))
+          const cached = queryClient.getQueryState<FinanceSnapshot>(financeSnapshotKey(userId))
+          const cachedIsFromToday = Boolean(cached?.data)
+            && cached!.dataUpdatedAt > 0
+            && localDay(cached!.dataUpdatedAt) === localDay(new Date())
+          let snapshot = cachedIsFromToday ? cached!.data : undefined
           if (!snapshot) {
             snapshot = await snapshotRepo.fetchFinanceSnapshot()
             if (cancelled) return
-            queryClient.setQueryData(financeSnapshotKey(userId), snapshot)
           }
 
           const position = financeSummary.buildFinancialPosition({
@@ -77,7 +93,9 @@ export function useDailyNetWorthSnapshot() {
           })
           if (cancelled || !result.ok) return
 
-          localStorage.setItem(STORAGE_KEY, marker)
+          // Damga kayıt ANINDAKİ günden türetilir: gece yarısını geçen bir koşu
+          // dünün anahtarını yazmasın (yoksa bugün ikinci kez tetiklenir).
+          localStorage.setItem(STORAGE_KEY, todayKey(userId))
           // Analiz sayfası açıksa bugünün noktasını hemen görsün.
           void queryClient.invalidateQueries({ queryKey: ['net-worth-snapshots'] })
         } catch {

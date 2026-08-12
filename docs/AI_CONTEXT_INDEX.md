@@ -289,6 +289,9 @@ paylaşır; her sayfa süpersetini client-side daraltır). Query client: `src/ap
 | **Fiş tarama (foto → kart harcaması)** | — | `lib/receiptParseClient.ts` | `supabase/functions/parse-receipt`, `pages/CardsPage.expense.tsx` (Hızlı harcama fiş yükleme) |
 | **Genel ekstre parse fallback (bilinmeyen banka PDF'i)** | `utils/denizBankStatementParser.ts`, `utils/yapiKrediStatementParser.ts` (önce yerel parser'lar) | `lib/statementParseClient.ts` | `supabase/functions/parse-statement`, `components/finance/StatementImportModal.tsx` |
 | **Pull-to-refresh** | `hooks/usePullToRefresh.ts` | — | `components/PullToRefresh.tsx` (Layout `main` sarmalayıcısı) |
+| **Kısmi ekstre ödemesi (kalan türetimi)** | `utils/cardStatementPayments.ts` (kalan = arşiv − ödemeler; SQL ikizi `private.statement_remaining_amount`) | `data/repositories/cardsRepo.ts` (`fetchStatementPayments`), `supabase/migrations/20260812110000_partial_statement_payments.sql`, `supabase/tests/partial_statement_payment.sql` | `pages/CardsPage.statements.tsx`, `pages/CardsPage.hero.tsx`, `utils/cardControlCenter.ts`, `pages/LiabilitiesCardsPage.tsx`, `utils/obligations.ts` |
+| **Modal/popover erişilebilirlik sözleşmesi** | `components/ui/use-dialog-a11y.ts` (odak içeri → Tab hapsi → Escape → odağı tetikleyiciye geri ver) | — | `components/SimpleModal.tsx`, `components/ui/confirm-dialog.tsx`, `components/QuickActions.tsx`, `components/Layout.tsx`, iki import modalı |
+| **Sorgu hatası yüzeyi** | `components/ui/query-error.tsx` (`role="alert"` + "Tekrar dene") | — | `pages/AnalysisPage.tsx`, `pages/AnalysisDetailPage.tsx`, `pages/PlanningPage.tsx`, `pages/PurchaseDecisionPage.tsx`, `pages/AssetsPage.tsx` |
 | **Şema / tip / RPC kontratı** | — | `src/types/database.ts` | — |
 | **Migration / trigger** | `utils/financeSummary.ts` (saf TS ikizleri) | `supabase/migrations/*` | — |
 

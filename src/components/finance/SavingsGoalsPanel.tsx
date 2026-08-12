@@ -26,6 +26,7 @@ import { buildSavingsCashflowAdvice, buildSavingsSuggestion } from '../../utils/
 import { valuationConfidence } from '../../utils/dataConfidence'
 import { effectiveGoalValueWithSource, valueGoal } from '../../utils/valuation'
 import { ConfidenceBadge } from '../ui/confidence-badge'
+import { MoneyInput } from './MoneyInput'
 
 type ComponentDraft = {
   key: string
@@ -538,27 +539,29 @@ export function SavingsGoalsPanel({ monthlySurplus }: { monthlySurplus?: number 
                     <option value="ceyrek_altin">Çeyrek altın</option>
                   </Select>
                   <div className="grid grid-cols-2 gap-2">
+                    {/* Bileşen değerleri TL ya da gram olabilir (`draft.value_type`),
+                        o yüzden MoneyInput değil; virgül kabul eden ondalık metin. */}
                     <Input
                       value={draft.current_amount}
                       onChange={(e) =>
                         setComponentDrafts((rows) => rows.map((row) => (row.key === draft.key ? { ...row, current_amount: e.target.value } : row)))
                       }
-                      type="number"
-                      min="0"
-                      step="0.01"
+                      type="text"
+                      inputMode="decimal"
+                      aria-label={`Bileşen ${index + 1} biriken`}
                       placeholder="Biriken"
-                      className="h-10 text-sm"
+                      className="h-10 text-sm tabular-nums"
                     />
                     <Input
                       value={draft.target_amount}
                       onChange={(e) =>
                         setComponentDrafts((rows) => rows.map((row) => (row.key === draft.key ? { ...row, target_amount: e.target.value } : row)))
                       }
-                      type="number"
-                      min="0"
-                      step="0.01"
+                      type="text"
+                      inputMode="decimal"
+                      aria-label={`Bileşen ${index + 1} hedef`}
                       placeholder="Hedef"
-                      className="h-10 text-sm"
+                      className="h-10 text-sm tabular-nums"
                       required
                     />
                   </div>
@@ -574,15 +577,29 @@ export function SavingsGoalsPanel({ monthlySurplus }: { monthlySurplus?: number 
             </div>
           ) : (
             <>
+              {/* `valueType === 'TRY'` ise bu iki alan PARADIR → MoneyInput (TR virgülü
+                  kabul eder, tutarı biçimlenmiş gösterir). Altın hedeflerinde aynı
+                  alanlar gram/adet MİKTARIDIR; oraya TL önizlemesi basmak yanlış
+                  olurdu, o yüzden yalnız `type="number"` yerine ondalık metin girişine
+                  çevrildi — virgül sorunu orada da çözülür (denetim §6). */}
               <div className="grid grid-cols-2 gap-3">
-                <label className="block text-sm font-medium">
-                  Hedef miktar
-                  <Input value={targetAmount} onChange={(e) => setTargetAmount(e.target.value)} type="number" min="0" step="0.01" className="mt-1" required />
-                </label>
-                <label className="block text-sm font-medium">
-                  Biriken miktar
-                  <Input value={currentAmount} onChange={(e) => setCurrentAmount(e.target.value)} type="number" min="0" step="0.01" className="mt-1" required />
-                </label>
+                {valueType === 'TRY' ? (
+                  <>
+                    <MoneyInput label="Hedef miktar" value={targetAmount} onValueChange={setTargetAmount} required />
+                    <MoneyInput label="Biriken miktar" value={currentAmount} onValueChange={setCurrentAmount} required />
+                  </>
+                ) : (
+                  <>
+                    <label className="block text-sm font-medium">
+                      Hedef miktar
+                      <Input value={targetAmount} onChange={(e) => setTargetAmount(e.target.value)} type="text" inputMode="decimal" className="mt-1 tabular-nums" required />
+                    </label>
+                    <label className="block text-sm font-medium">
+                      Biriken miktar
+                      <Input value={currentAmount} onChange={(e) => setCurrentAmount(e.target.value)} type="text" inputMode="decimal" className="mt-1 tabular-nums" required />
+                    </label>
+                  </>
+                )}
               </div>
               {valueType === 'gram_altin' || valueType === 'ceyrek_altin' ? (
                 <div className="space-y-3">
@@ -604,10 +621,7 @@ export function SavingsGoalsPanel({ monthlySurplus }: { monthlySurplus?: number 
                       </span>
                     </div>
                   ) : (
-                    <label className="block text-sm font-medium">
-                      Tahmini değer (TRY)
-                      <Input value={estimatedValueTry} onChange={(e) => setEstimatedValueTry(e.target.value)} type="number" min="0" step="0.01" className="mt-1" />
-                    </label>
+                    <MoneyInput label="Tahmini değer (TRY)" value={estimatedValueTry} onValueChange={setEstimatedValueTry} />
                   )}
                 </div>
               ) : null}

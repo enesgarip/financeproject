@@ -5,6 +5,18 @@ function formatTL(value: number): string {
   return `${new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 0 }).format(roundTL(value))} ₺`
 }
 
+/**
+ * Kilometre başına maliyet için 2 ondalık. ₺/km tek haneli bir sayıdır (ör.
+ * 2,45); tam sayıya yuvarlanınca "2 ₺/km" oluyordu ve %20'ye varan fark
+ * görünmez kalıyordu — yıllık toplamla aynı biçimi paylaşamaz.
+ */
+function formatRateTL(value: number): string {
+  return `${new Intl.NumberFormat('tr-TR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(roundTL(value))} ₺`
+}
+
 export function renderCarTcoCard(summary: CarSummary, year: number = new Date().getFullYear()): HTMLCanvasElement {
   const canvas = document.createElement('canvas')
   canvas.width = 1440
@@ -21,7 +33,7 @@ export function renderCarTcoCard(summary: CarSummary, year: number = new Date().
   const stats = [
     ['YILLIK TOPLAM', formatTL(summary.yearTotal)],
     ['GÜNLÜK MALİYET', `${formatTL(summary.costPerDay)} / gün`],
-    ['YAKIT MALİYETİ', summary.fuel.costPerKm == null ? 'Ölçüm bekliyor' : `${formatTL(summary.fuel.costPerKm)} / km`],
+    ['YAKIT MALİYETİ', summary.fuel.costPerKm == null ? 'Ölçüm bekliyor' : `${formatRateTL(summary.fuel.costPerKm)} / km`],
   ]
   stats.forEach(([label, value], index) => {
     const x = 48 + index * 210

@@ -22,8 +22,12 @@ export type BudgetUsage = {
   remaining: number
 }
 
-/** Uncategorised expenses fall into the 'Diğer' bucket so every consumer of
- *  buildBudgetUsage agrees on where they land. */
+/**
+ * Kategorisiz harcamaların düştüğü kova. `category` kolonu NOT NULL olduğu için
+ * `??` hiçbir zaman tetiklenmiyordu; gerçek boşluk BOŞ STRING olarak geliyor.
+ * Bu yüzden `||` kullanılır — monthlySummary / analysisView / expenseRepeat da
+ * aynı deseni kullanır, böylece ekranlar aynı kovadan konuşur.
+ */
 const UNCATEGORISED = 'Diğer'
 
 export function activeExpense(expense: CardExpense) {
@@ -43,7 +47,7 @@ export function buildBudgetUsage(budgets: Budget[], expenses: CardExpense[], mon
 
   return monthlyBudgets.map((budget) => {
     const spent = monthlyExpenses
-      .filter((expense) => (expense.category ?? UNCATEGORISED) === budget.category)
+      .filter((expense) => (expense.category || UNCATEGORISED) === budget.category)
       .reduce((total, expense) => sumTL([total, expense.amount]), 0)
     const usageRate = budget.limit_amount > 0 ? (spent / budget.limit_amount) * 100 : spent > 0 ? 100 : 0
     let status: BudgetAlertStatus = 'ok'

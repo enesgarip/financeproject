@@ -3,6 +3,8 @@ import { useFinanceSnapshot } from '../app/useFinanceSnapshot'
 import { CrudPage, type FormField } from '../components/CrudPage'
 import { KasaModuPanel } from '../components/finance/KasaModuPanel'
 import { SavingsGoalsPanel } from '../components/finance/SavingsGoalsPanel'
+import { QueryError } from '../components/ui/query-error'
+import { SkeletonCard, SkeletonHero } from '../components/ui/skeleton'
 import type { Budget } from '../types/database'
 import { expenseCategoryOptions } from '../utils/categories'
 import { dateInputValue, endOfMonth, startOfMonth } from '../utils/date'
@@ -101,8 +103,34 @@ export function PlanningPage() {
   const canManageBudgets = !missingTables.includes('budgets')
   const canManageGoals = !missingTables.includes('savings_goals')
 
+  // Yükleniyorken paneller boş veriyle çizilmez; hata durumunda sıfırlarla
+  // "normal" görünmek yerine `role="alert"` + "Tekrar dene" (denetim §6).
   if (loading) {
-    return <p className="rounded-xl border border-border/60 bg-card p-4 text-sm text-muted-foreground">Veriler yükleniyor...</p>
+    return (
+      <div
+        role="status"
+        aria-live="polite"
+        aria-busy="true"
+        aria-label="Plan verileri yükleniyor"
+        className="space-y-6"
+      >
+        <span className="sr-only">Plan verileri yükleniyor</span>
+        <SkeletonHero />
+        <SkeletonCard lines={4} />
+        <SkeletonCard lines={3} />
+      </div>
+    )
+  }
+
+  if (snapshotQuery.isError) {
+    return (
+      <QueryError
+        title="Plan verileri yüklenemedi"
+        message={snapshotQuery.error instanceof Error ? snapshotQuery.error.message : undefined}
+        onRetry={() => void snapshotQuery.refetch()}
+        retrying={snapshotQuery.isFetching}
+      />
+    )
   }
 
   return (

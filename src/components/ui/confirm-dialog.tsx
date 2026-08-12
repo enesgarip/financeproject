@@ -1,10 +1,10 @@
-import { useEffect, useRef } from "react"
 import { createPortal } from "react-dom"
 import { AlertTriangle, X } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { useBodyScrollLock } from "./use-body-scroll-lock"
+import { useDialogA11y } from "./use-dialog-a11y"
 
 type ConfirmDialogProps = {
   open: boolean
@@ -29,64 +29,28 @@ function ConfirmDialog({
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
-  const sectionRef = useRef<HTMLElement>(null)
   useBodyScrollLock(open)
-
-  // onCancel'ı ref'te tut: effect yalnız `open` değişince kurulsun. Çağıran inline
-  // callback verdiğinde her render'da yeniden kurulup odağı çalıp klavyeyi kapatmasın
-  // (bkz. SimpleModal'daki aynı düzeltme).
-  const onCancelRef = useRef(onCancel)
-  useEffect(() => {
-    onCancelRef.current = onCancel
-  })
-
-  useEffect(() => {
-    if (!open) return
-    const section = sectionRef.current
-    if (!section) return
-
-    const focusable = section.querySelectorAll<HTMLElement>(
-      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
-    )
-    const first = focusable[0]
-    const last = focusable[focusable.length - 1]
-
-    first?.focus()
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') {
-        event.stopPropagation()
-        onCancelRef.current()
-        return
-      }
-      if (event.key === 'Tab' && focusable.length > 0) {
-        if (event.shiftKey && document.activeElement === first) {
-          event.preventDefault()
-          last?.focus()
-        } else if (!event.shiftKey && document.activeElement === last) {
-          event.preventDefault()
-          first?.focus()
-        }
-      }
-    }
-
-    document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [open])
+  // Ortak focus sözleşmesi (SimpleModal ile aynı hook): odak diyaloğa taşınır,
+  // Tab içeride hapsedilir, Escape kapatır ve kapanınca odak TETİKLEYİCİYE döner.
+  // Eskiden geri verme yoktu (odak <body>'ye düşüyordu) ve focusable listesi
+  // açılışta bir kez alınıyordu — `loading` butonları disabled edince Tab döngüsü
+  // ölü referanslara kuruluyordu (denetim 2026-08-12 §6).
+  const sectionRef = useDialogA11y<HTMLElement>(open, onCancel)
 
   if (!open) return null
 
   const isDestructive = variant === "destructive"
 
   return createPortal(
-    <div className="fixed inset-0 z-[90] flex items-end bg-slate-950/45 px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] backdrop-blur-sm sm:items-center sm:justify-center sm:p-6">
+    <div className="fixed inset-0 z-[90] flex items-end bg-[var(--overlay)] px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] backdrop-blur-sm sm:items-center sm:justify-center sm:p-6">
       <section
         ref={sectionRef}
+        tabIndex={-1}
         role="alertdialog"
         aria-modal="true"
         aria-labelledby="confirm-dialog-title"
         aria-describedby="confirm-dialog-description"
-        className="w-full max-w-md overflow-hidden rounded-lg border border-border/85 bg-card text-card-foreground"
+        className="w-full max-w-md overflow-hidden rounded-lg border border-border/85 bg-card text-card-foreground focus:outline-none"
       >
         <div className="flex items-start gap-3 p-4">
           <div

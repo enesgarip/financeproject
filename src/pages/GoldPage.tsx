@@ -17,6 +17,7 @@ import {
   GOLD_TYPE_UNIT,
   buildGoldAccumulation,
   summarizeGold,
+  summarizeGoldType,
   type GoldTypeSummary,
 } from '../utils/goldLedger'
 import { syncGoldLedgerAssets } from '../utils/goldLedgerSync'
@@ -221,15 +222,28 @@ function GoldOverview({ rows, snapshot }: { rows: GoldLot[]; snapshot: MarketRat
   // ve maliyet çizgi listesi. MetricCard ızgarası (4 kutu) kaldırıldı.
   return (
     <section>
-      <HeroNumber
-        label="Altın güncel değer"
-        value={totalLiveValue ?? 0}
-        description={
-          totalLiveValue === null
-            ? 'Canlı kur bekleniyor — değer kur gelince hesaplanacak.'
-            : `${rows.length} işlem · canlı alış kuruyla`
-        }
-      />
+      {/* Kur yokken kahraman rakam "0 ₺" gösteriyordu: eldeki altın duruyorken
+          ekran "hiç değeri yok" diyor, hemen altındaki açıklama ise "kur
+          bekleniyor" diyordu — rakam ile cümle çelişiyordu (denetim 2026-08-12 §5).
+          Kur gelene kadar sayı yerine BEKLEME durumu gösterilir; birikim ve maliyet
+          satırları aşağıda zaten görünür. */}
+      {totalLiveValue === null ? (
+        <div>
+          <p className="uppercase text-ink-faint" style={{ fontSize: 12, letterSpacing: '0.1em', lineHeight: '16px' }}>
+            Altın güncel değer
+          </p>
+          <p className="mt-2 text-[22px] font-semibold leading-tight text-ink lg:text-[26px]">Kur bekleniyor</p>
+          <p className="mt-1.5 text-[13px] text-ink-muted">
+            {rows.length} işlem kayıtlı · canlı alış kuru gelince güncel değer hesaplanacak.
+          </p>
+        </div>
+      ) : (
+        <HeroNumber
+          label="Altın güncel değer"
+          value={totalLiveValue}
+          description={`${rows.length} işlem · canlı alış kuruyla`}
+        />
+      )}
 
       {profit === null ? null : <Delta value={profit} percent={profitPct ?? undefined} suffix="kayıtlı maliyet üzerinden" />}
 
@@ -292,10 +306,33 @@ function GoldAccumulationChart({ rows, snapshot }: { rows: GoldLot[]; snapshot: 
   )
 }
 
-function validateGoldLot(formData: FormData): Record<string, string> {
+/**
+ * Satışta eldekinden fazla miktar girilebiliyordu: `summarizeGoldType` negatif
+ * birikimi sessizce 0'a kırpıyor, yani 5 gram varken 50 gram satışı kabul edilip
+ * defter "0 gram" gösteriyordu (denetim 2026-08-12 §5).
+ *
+ * Kural elde kalan miktar üzerinden kurulur ve DÜZENLEMEDE düzenlenen satırın
+ * kendi etkisi geri alınır (aksi halde mevcut bir satış kaydını kaydetmek
+ * kendi kendini reddederdi).
+ */
+function validateGoldLot(formData: FormData, rows: GoldLot[], editing: GoldLot | null): Record<string, string> {
   const errors: Record<string, string> = {}
   const quantity = parseNumber(formData.get('quantity'))
-  if (quantity <= 0) errors.quantity = 'Miktar 0’dan büyük olmalı.'
+  if (quantity <= 0) {
+    errors.quantity = 'Miktar 0’dan büyük olmalı.'
+    return errors
+  }
+
+  if (formData.get('direction') !== 'sell') return errors
+
+  const goldType = formData.get('gold_type') as GoldType
+  const others = editing ? rows.filter((row) => row.id !== editing.id) : rows
+  const held = summarizeGoldType(others, goldType).totalQuantity
+
+  if (quantity > held) {
+    errors.quantity = `${GOLD_TYPE_LABELS[goldType]} olarak elinde ${formatQuantity(held, goldType)} var; bundan fazlasını satamazsın.`
+  }
+
   return errors
 }
 
@@ -315,7 +352,7 @@ export function GoldPage() {
       orderAscending={false}
       emptyTitle="Henüz altın işlemi yok"
       emptyDescription="Gram veya çeyrek alımlarını işlem olarak ekleyince toplam adet, ortalama maliyet ve net değer otomatik güncellenir."
-      validateForm={validateGoldLot}
+      validateForm={(formData, _values, editing, rows) => validateGoldLot(formData, rows as GoldLot[], editing as GoldLot | null)}
       getInitialValues={(row?: GoldLot) => ({
         direction: row?.direction ?? 'buy',
         purchase_date: row?.purchase_date ?? '',

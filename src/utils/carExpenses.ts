@@ -129,24 +129,51 @@ export function buildCarLedgerEntries(
   return entries
 }
 
+/**
+ * Yakıt özeti: L/100km ve ₺/km yalnız ÖLÇÜLEBİLEN aralıklardan hesaplanır
+ * (iki artan odometre okuması arası). Tank-to-tank yöntem: A→B mesafesi,
+ * B'de alınan yakıtla kat edilmiş sayılır — bu yüzden ilk (temel) dolumun
+ * litresi hiçbir aralığa girmez, doğrusu bu.
+ *
+ * Bulgu (Faz F): odometresiz ARA dolumun litresi hiçbir yere yazılmıyordu ama
+ * bir sonraki ölçümde mesafe TAMAMI alınıyordu → aralığa giren yakıt eksik,
+ * L/100km sistematik olarak DÜŞÜK çıkıyordu (5 L'lik ara dolum tüketimi %20
+ * yanlış gösterebilir). Artık bekleyen litre/masraf, aralığı kapatan ölçüme
+ * taşınır; hem litre hem mesafe aynı aralığa ait olur. Aynı düzeltme
+ * odometresi GERİLEMİŞ (hatalı okunmuş) satır için de geçerlidir.
+ */
 function buildFuelSummary(entries: CarLedgerEntry[]): CarFuelSummary {
   const fillups = entries
     .filter((entry) => entry.fuelLiters != null && entry.fuelLiters > 0)
     .sort((a, b) => a.spentAt.localeCompare(b.spentAt))
   const measured = new Map<string, { costs: number[]; measuredCosts: number[]; liters: number; distanceKm: number }>()
   let previousOdometer: number | null = null
+  // Aralığı kapatan ölçümü bekleyen ara dolumlar.
+  let pendingLiters = 0
+  let pendingCosts: number[] = []
 
   for (const fillup of fillups) {
     const month = monthKey(fillup.spentAt)
     const row = measured.get(month) ?? { costs: [], measuredCosts: [], liters: 0, distanceKm: 0 }
     row.costs.push(fillup.amount)
-    if (fillup.odometerKm != null && previousOdometer != null && fillup.odometerKm > previousOdometer) {
-      row.liters += fillup.fuelLiters ?? 0
-      row.distanceKm += fillup.odometerKm - previousOdometer
-      row.measuredCosts.push(fillup.amount)
+    const odometer = fillup.odometerKm
+    // Koşul YERİNDE yazılır (ara değişkene alınmaz) ki TS `previousOdometer`ı
+    // bloğun içinde non-null daraltabilsin.
+    if (odometer != null && previousOdometer != null && odometer > previousOdometer) {
+      row.liters += (fillup.fuelLiters ?? 0) + pendingLiters
+      row.distanceKm += odometer - previousOdometer
+      row.measuredCosts.push(fillup.amount, ...pendingCosts)
+      pendingLiters = 0
+      pendingCosts = []
+    } else if (previousOdometer != null) {
+      // Ölçüm zinciri kurulu ama bu satır aralığı kapatmıyor: yakıtı bir SONRAKİ
+      // ölçülen aralıkta yakıldı. (previousOdometer == null = temel dolum;
+      // onun litresi bilinçli olarak hiçbir aralığa yazılmaz.)
+      pendingLiters += fillup.fuelLiters ?? 0
+      pendingCosts.push(fillup.amount)
     }
-    if (fillup.odometerKm != null && (previousOdometer == null || fillup.odometerKm > previousOdometer)) {
-      previousOdometer = fillup.odometerKm
+    if (odometer != null && (previousOdometer == null || odometer > previousOdometer)) {
+      previousOdometer = odometer
     }
     measured.set(month, row)
   }

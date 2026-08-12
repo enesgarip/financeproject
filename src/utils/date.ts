@@ -31,10 +31,21 @@ export function nextMonthlyDateFrom(day: number | null | undefined, from: Date) 
   return target
 }
 
+/**
+ * Bugünden `value` tarihine kalan tam gün sayısı (geçmişte negatif).
+ *
+ * String girdide yalnız GÜN kısmı alınır: gelen değer `timestamptz` ise
+ * (`2026-08-12T13:00:00+03:00`) düz birleştirme `…T13:00:00+03:00T00:00:00`
+ * üretiyordu → Invalid Date → NaN gün. Bu, `formatDate`'in date-only tuzağının
+ * (CLAUDE.md) kardeşi. Geçersiz tarih artık NaN yerine null döner ki
+ * `isUpcomingDate` gibi tüketiciler sessizce false/true'ya kaymasın.
+ */
 export function daysUntil(value: Date | string | null | undefined) {
   if (!value) return null
-  const date = typeof value === 'string' ? new Date(`${value}T00:00:00`) : value
-  const ms = date.getTime() - startOfToday().getTime()
+  const date = typeof value === 'string' ? new Date(`${value.slice(0, 10)}T00:00:00`) : value
+  const time = date.getTime()
+  if (Number.isNaN(time)) return null
+  const ms = time - startOfToday().getTime()
   return Math.ceil(ms / 86_400_000)
 }
 

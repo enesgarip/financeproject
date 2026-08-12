@@ -15,7 +15,10 @@ import { fetchWithTimeout, handlePreflight, jsonResponse, rateLimit } from '../_
 // Must mirror src/utils/categories.ts expenseCategories.
 const CATEGORIES = ['Market', 'Yemek', 'Ulaşım', 'Alışveriş', 'Fatura', 'Sağlık', 'Eğlence', 'Eğitim', 'Konut', 'Abonelik', 'İş', 'Kişisel Bakım', 'Hediye', 'Diğer']
 const MODEL = 'gemini-2.5-flash'
-const MAX_IMAGE_BYTES = 8 * 1024 * 1024 // ~8 MB of base64
+// Sınır base64 KARAKTER uzunluğuna uygulanır; base64 ~%33 şişirdiği için 8 MB
+// base64 ≈ 6 MB gerçek görsel. Kullanıcıya gösterilen sınır da bu yüzden ~6 MB.
+const MAX_IMAGE_BASE64_CHARS = 8 * 1024 * 1024
+const MAX_IMAGE_MB_LABEL = 6
 const GEMINI_TIMEOUT_MS = 25_000
 
 const PROMPT = `Sen bir Türkçe fiş/fatura okuyucususun. Verilen görsel bir alışveriş fişi, fatura veya banka harcama bildirimidir.
@@ -66,11 +69,13 @@ Deno.serve(async (req: Request) => {
   if (!imageBase64 || !mimeType.startsWith('image/')) {
     return jsonResponse({ error: 'Geçerli bir görsel gönderilmedi.' }, 400)
   }
-  if (imageBase64.length > MAX_IMAGE_BYTES) {
-    return jsonResponse({ error: 'Görsel çok büyük (en fazla ~6 MB).' }, 413)
+  if (imageBase64.length > MAX_IMAGE_BASE64_CHARS) {
+    return jsonResponse({ error: `Görsel çok büyük (en fazla ~${MAX_IMAGE_MB_LABEL} MB).` }, 413)
   }
 
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${apiKey}`
+  // API anahtarı query-string'de DEĞİL header'da: URL'ler proxy/erişim
+  // loglarında görünür, anahtar oraya sızmasın (denetim 2026-08-12 §8).
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`
   const payload = {
     contents: [
       {
@@ -89,7 +94,7 @@ Deno.serve(async (req: Request) => {
       endpoint,
       {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
         body: JSON.stringify(payload),
       },
       GEMINI_TIMEOUT_MS,

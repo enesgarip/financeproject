@@ -29,9 +29,21 @@ export function BarChart({
   const [chartRef, chartWidth] = useChartWidth()
   const [hoverIndex, setHoverIndex] = useState<number | null>(null)
 
+  // Erişilebilir ad + cümle özeti: SVG'nin kendisi ekran okuyucuya hiçbir şey
+  // söylemiyordu. CashFlowChart'ın deseniyle aynı (denetim 2026-08-12 §6).
+  // Tutarlar `formatAmount`'tan geçer — gizlilik maskesi burada da geçerli.
+  const chartSummary = data
+    .map((point) =>
+      grouped && point.prevValue != null
+        ? `${point.label}: ${formatAmount(point.value)} (önceki ay ${formatAmount(point.prevValue)})`
+        : `${point.label}: ${formatAmount(point.value)}`,
+    )
+    .join('; ')
+
   if (data.length === 0) {
     return (
       <div
+        role="status"
         className="flex items-center justify-center rounded-xl bg-muted/30 text-sm text-muted-foreground"
         style={{ height }}
       >
@@ -66,7 +78,13 @@ export function BarChart({
   const hoverX = hoverIndex !== null ? pad.left + hoverIndex * barGroupWidth + barGroupWidth / 2 : 0
 
   return (
-    <div ref={chartRef} className="min-w-0" style={{ height, minHeight: height }}>
+    <div
+      ref={chartRef}
+      role="img"
+      aria-label={`Sütun grafiği. ${chartSummary}`}
+      className="min-w-0"
+      style={{ height, minHeight: height }}
+    >
       {chartWidth > 0 ? (
         <svg
           width={chartWidth}

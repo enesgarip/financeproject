@@ -54,6 +54,13 @@ export type ParsedDenizBankPayment = {
 export type ParsedDenizBankMovementFile = {
   movements: ParsedDenizBankMovement[]
   payments: ParsedDenizBankPayment[]
+  /**
+   * İade / ters kayıt satırları (banka EKSİ tutar basar). Harcama DEĞİLDİR:
+   * `movements` içine girerse borcu artıran bir gider olarak içe aktarılır.
+   * Ekstre parser'ındaki `adjustments` (credit) yaklaşımının hareket karşılığı.
+   * `amount` mutlak değerdir; işareti bu listede olmak taşır.
+   */
+  refunds: ParsedDenizBankMovement[]
   ignoredRows: string[]
 }
 
@@ -128,8 +135,13 @@ const KNOWN_DETAILS = [
 ]
 
 const CARD_NO_PATTERN = String.raw`\d{4}\s+(?:\d{2}\*\*|\d{4})\s+(?:\*{4}|\d{4})\s+\d{4}`
+// Tutar/bonus kolonları İŞARETLİ olabilir: iade/ters kayıtta banka "-1.234,56"
+// (ya da sonda işaretle "1.234,56-") basar. İşaret deseni desteklenmezse satır
+// ROW_PATTERN'e uymaz → ignoredRows'a düşer; banka iadeyi pozitif basarsa daha
+// kötüsü olur ve harcama sayılır. Bu yüzden işaret AÇIKÇA yakalanır.
+const SIGNED_AMOUNT_PATTERN = String.raw`[-+]?[\d.]+,\d{2}[-+]?`
 const ROW_PATTERN = new RegExp(
-  String.raw`^(Bekleyen İşlem|Dönem İçi)\s+(\d{2}\.\d{2}\.\d{4})\s+(.+?)\s+(${CARD_NO_PATTERN})\s+(Asıl Kart|Sanal|Sanal Kart|Ek Kart)\s+([\d.]+,\d{2})\s+TL\s+([\d.]+,\d{2})\s+TL\s*$`,
+  String.raw`^(Bekleyen İşlem|Dönem İçi)\s+(\d{2}\.\d{2}\.\d{4})\s+(.+?)\s+(${CARD_NO_PATTERN})\s+(Asıl Kart|Sanal|Sanal Kart|Ek Kart)\s+(${SIGNED_AMOUNT_PATTERN})\s+TL\s+(${SIGNED_AMOUNT_PATTERN})\s+TL\s*$`,
   'u',
 )
 
@@ -137,6 +149,13 @@ function parseAmountTL(value: string): number {
   const normalized = value.replace(/\./g, '').replace(',', '.')
   const parsed = Number(normalized)
   return Number.isFinite(parsed) ? roundTL(parsed) : 0
+}
+
+/** Önde ya da sonda işaret taşıyan tutarı işaretli sayıya çevirir. */
+function parseSignedAmountTL(value: string): number {
+  const negative = value.startsWith('-') || value.endsWith('-')
+  const magnitude = parseAmountTL(value.replace(/^[-+]/, '').replace(/[-+]$/, ''))
+  return negative ? -magnitude : magnitude
 }
 
 function parseDate(value: string): string {
@@ -251,6 +270,7 @@ export function parseDenizBankMovementPdf(text: string, memory?: CategoryMemory)
   const lines = text.split('\n').map((line) => line.trim()).filter(Boolean)
   const movements: ParsedDenizBankMovement[] = []
   const payments: ParsedDenizBankPayment[] = []
+  const refunds: ParsedDenizBankMovement[] = []
   const ignoredRows: string[] = []
 
   for (const line of lines) {
@@ -265,8 +285,11 @@ export function parseDenizBankMovementPdf(text: string, memory?: CategoryMemory)
     const [, rawType, rawDate, descriptionAndDetail, cardNo, cardType, rawAmount, rawBonus] = match
     const { bankStatus, appStatus } = movementStatus(rawType)
     const { description, detail } = splitDescriptionAndDetail(descriptionAndDetail)
-    const amount = parseAmountTL(rawAmount)
-    const bonus = parseAmountTL(rawBonus)
+    const signedAmount = parseSignedAmountTL(rawAmount)
+    const isRefund = signedAmount < 0
+    const amount = Math.abs(signedAmount)
+    // Bonus işaretli kalır: iadede bonus da geri alınır (eksi bonus gerçektir).
+    const bonus = parseSignedAmountTL(rawBonus)
     const base = {
       bankStatus,
       date: parseDate(rawDate),
@@ -280,25 +303,37 @@ export function parseDenizBankMovementPdf(text: string, memory?: CategoryMemory)
       rawLine: line,
     }
 
-    if (isPaymentRow(description, detail)) {
-      payments.push(base)
-      continue
-    }
-
     const isInstallment = isInstallmentRow(description, detail)
     const installmentInfo = isInstallment ? parseInstallmentInfo(description, detail) : { no: 1, count: 1 }
-
-    movements.push({
+    const movement: ParsedDenizBankMovement = {
       ...base,
       appStatus,
       category: suggestExpenseCategory(description, memory) ?? 'Diğer',
       isInstallment,
       installmentNo: installmentInfo.no,
       installmentCount: installmentInfo.count,
-    })
+    }
+
+    // İade önce elenir: eksi tutarlı satır ne harcama ne de ödeme tahsilatıdır
+    // (eksi "Hesaptan Ödeme" = ödemenin ters kaydı, o da içe aktarılmamalı).
+    if (isRefund) {
+      refunds.push(movement)
+      // İçe aktarma ekranı bugün yalnız `ignoredRows`'u gösteriyor; iade satırı
+      // sessizce kaybolmasın diye oraya da yazılır ("içe aktarılmadı" uyarısı
+      // kullanıcıyı tutar farkına hazırlar). Ayrı liste UI bağlanınca kullanılır.
+      ignoredRows.push(line)
+      continue
+    }
+
+    if (isPaymentRow(description, detail)) {
+      payments.push(base)
+      continue
+    }
+
+    movements.push(movement)
   }
 
-  return { movements, payments, ignoredRows }
+  return { movements, payments, refunds, ignoredRows }
 }
 
 export function matchDenizBankMovements(

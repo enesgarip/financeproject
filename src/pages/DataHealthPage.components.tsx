@@ -12,6 +12,7 @@ import {
   severityClass,
 } from './DataHealth.guide'
 import { resolveHealthIssue, type HealthResolutionMode } from './DataHealth.resolution'
+import { MAX_SAFE_REPAIR_BATCH_SIZE } from './DataHealthPage.actions'
 
 const resolutionBadge: Record<HealthResolutionMode, { label: string; variant: 'success' | 'info' | 'warning' | 'outline' }> = {
   auto_recompute: { label: 'Otomatik güvenli', variant: 'success' },
@@ -95,8 +96,10 @@ export function HealthIssueCard({
               </div>
             </div>
             <div className="mt-3 grid gap-1 text-xs text-muted-foreground">
-              {issue.details.map((detail) => (
-                <span key={detail}>{detail}</span>
+              {/* Detay METNİ key olamaz: iki özdeş satır (aynı tutarlı iki kayıt)
+                  çakışır ve biri kaybolur → index'li kararlı key. */}
+              {issue.details.map((detail, index) => (
+                <span key={`${issue.id}-detail-${index}`}>{detail}</span>
               ))}
             </div>
             <div className="mt-3 rounded-xl border border-primary/15 bg-primary/5 p-3 text-xs text-muted-foreground">
@@ -162,25 +165,34 @@ export function HealthIssueCard({
                     ? resolution.label
                     : quickLink.label}
                 </Link>
+                {/* İki aksiyonun KALICILIĞI farklı: gizleme yalnız bu görünüm
+                    boyunca (sayfadan çıkınca geri gelir), kapatma ise hesap
+                    genelinde kalıcı. Eski "Daha sonra hatırlat" etiketi kalıcılık
+                    ima ediyordu; artık ikisi de ne olduğunu söylüyor. */}
                 <button
                   type="button"
                   onClick={() => onSnooze(issue.id)}
                   disabled={Boolean(fixingId) || undoing}
+                  title="Yalnız bu görünümde gizlenir; sayfayı yeniden açtığında geri gelir."
                   className="rounded-lg border border-info/25 bg-info/8 px-3 py-2 text-xs font-semibold text-info transition hover:bg-info/12 disabled:opacity-50"
                 >
-                  Daha sonra hatırlat
+                  Bu görünümde gizle
                 </button>
                 {onDismiss ? (
                   <button
                     type="button"
                     onClick={() => onDismiss(issue.id)}
                     disabled={Boolean(fixingId) || undoing}
+                    title="Kalıcı: bu bulgu hesabındaki tüm cihazlarda kapalı kalır."
                     className="rounded-lg border border-border/60 bg-muted/30 px-3 py-2 text-xs font-semibold text-muted-foreground transition hover:bg-muted disabled:opacity-50"
                   >
-                    Bu doğru, kapat
+                    Bu doğru, kalıcı kapat
                   </button>
                 ) : null}
               </div>
+              <p className="mt-2 text-[11px] text-muted-foreground">
+                “Bu görünümde gizle” geçicidir (sayfayı yeniden açınca geri gelir); “Bu doğru, kalıcı kapat” hesabındaki tüm cihazlarda kalıcıdır.
+              </p>
             </div>
           </div>
         </div>
@@ -221,7 +233,7 @@ export function FixAllModal({
               </p>
               {remainingRepairCount > 0 ? (
                 <p className="mt-2 font-semibold">
-                  Bu tur en fazla 100 çözüm tek bir atomik veritabanı işlemi içinde uygulanır. Kalan {remainingRepairCount} çözüm, bu tur tamamlandıktan sonra güncel veriden yeniden önizlenir.
+                  Bu tur en fazla {MAX_SAFE_REPAIR_BATCH_SIZE} çözüm tek bir atomik veritabanı işlemi içinde uygulanır. Kalan {remainingRepairCount} çözüm, bu tur tamamlandıktan sonra güncel veriden yeniden önizlenir.
                 </p>
               ) : null}
             </div>

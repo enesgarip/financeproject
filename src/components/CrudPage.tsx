@@ -1,6 +1,6 @@
 import { CalendarDays, Check, ChevronDown, MoreVertical, Pencil, Plus, Search, Trash2 } from 'lucide-react'
 import type { CSSProperties, ReactNode } from 'react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router'
 import { useAuth } from '../auth/useAuth'
 import { deleteCrudRow, fetchCrudRows, saveCrudRow } from '../data/repositories/crudRepo'
@@ -71,7 +71,9 @@ type CrudPageProps<T extends CrudTableName> = {
   mapForm: (formData: FormData, userId: string, editing: RowFor<T> | null, context: FieldContext) => InsertFor<T> | UpdateFor<T>
   /** Arbitrary context (e.g. live market rates) forwarded to computed fields and mapForm. */
   fieldContext?: FieldContext
-  validateForm?: (formData: FormData, values: Record<string, string>, editing: RowFor<T> | null) => FormErrors
+  /** `rows` = yüklü kayıtların tamamı; stok/bakiye gibi kayıtlar-arası kuralları
+   *  doğrulamak için gerekir (ör. eldekinden fazla altın satılamaz). */
+  validateForm?: (formData: FormData, values: Record<string, string>, editing: RowFor<T> | null, rows: RowFor<T>[]) => FormErrors
   afterSave?: (row: RowFor<T>, action: SaveAction, helpers: { reload: () => Promise<void>; setError: (message: string) => void; previousRow: RowFor<T> | null }) => Promise<void> | void
   afterDelete?: (row: RowFor<T> | null, helpers: { reload: () => Promise<void>; setError: (message: string) => void }) => Promise<void> | void
   renderTitle: (row: RowFor<T>) => string
@@ -322,7 +324,7 @@ export function CrudPage<T extends CrudTableName>({
     const formData = new FormData(event.currentTarget)
     const validationErrors = {
       ...validateFields(visibleFields, formData),
-      ...(validateForm?.(formData, formValues, editing) ?? {}),
+      ...(validateForm?.(formData, formValues, editing, rows) ?? {}),
     }
     if (Object.keys(validationErrors).length > 0) {
       setFormErrors(validationErrors)
@@ -444,52 +446,44 @@ export function CrudPage<T extends CrudTableName>({
                     searchText: meta?.searchText ?? normalizeSearchText([title, subtitle, ...details, note].join(' ')),
                   }
                   const rowMenu = hasMenu ? (
-                    <div className="relative shrink-0">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setMenuOpenId(menuOpenId === row.id ? null : row.id)
-                        }}
-                        className="tap-target grid size-10 place-items-center rounded-lg border border-border/70 bg-background/55 text-muted-foreground transition hover:bg-muted hover:text-foreground"
-                        aria-label={`${title} işlemleri`}
-                      >
-                        <MoreVertical size={18} />
-                      </button>
-                      {menuOpenId === row.id && (
-                        <div className="absolute right-0 top-full z-10 mt-1 w-44 rounded-lg border border-border bg-popover py-1">
-                          {renderMenuActions ? renderMenuActions(row, { reload: loadRows, setError, rows, closeMenu: () => setMenuOpenId(null) }) : null}
-                          {editAllowed ? (
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                setMenuOpenId(null)
-                                openEdit(row)
-                              }}
-                              className="flex w-full items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted"
-                            >
-                              <Pencil size={14} />
-                              Düzenle
-                            </button>
-                          ) : null}
-                          {deleteAllowed ? (
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                setMenuOpenId(null)
-                                setDeleteId(row.id)
-                              }}
-                              className="flex w-full items-center gap-2 px-3 py-2 text-sm text-destructive hover:bg-destructive/10"
-                            >
-                              <Trash2 size={14} />
-                              Sil
-                            </button>
-                          ) : null}
-                        </div>
-                      )}
-                    </div>
+                    <RowMenu
+                      label={`${title} işlemleri`}
+                      open={menuOpenId === row.id}
+                      onToggle={() => setMenuOpenId(menuOpenId === row.id ? null : row.id)}
+                      onClose={() => setMenuOpenId(null)}
+                    >
+                      {renderMenuActions ? renderMenuActions(row, { reload: loadRows, setError, rows, closeMenu: () => setMenuOpenId(null) }) : null}
+                      {editAllowed ? (
+                        <button
+                          type="button"
+                          role="menuitem"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setMenuOpenId(null)
+                            openEdit(row)
+                          }}
+                          className="flex w-full items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted"
+                        >
+                          <Pencil size={14} />
+                          Düzenle
+                        </button>
+                      ) : null}
+                      {deleteAllowed ? (
+                        <button
+                          type="button"
+                          role="menuitem"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setMenuOpenId(null)
+                            setDeleteId(row.id)
+                          }}
+                          className="flex w-full items-center gap-2 px-3 py-2 text-sm text-destructive hover:bg-destructive/10"
+                        >
+                          <Trash2 size={14} />
+                          Sil
+                        </button>
+                      ) : null}
+                    </RowMenu>
                   ) : null
                   const rowActions = renderRowActions ? (
                     <div className="mt-3 flex flex-wrap gap-2">{renderRowActions(row, { reload: loadRows, setError, rows })}</div>
@@ -521,58 +515,12 @@ export function CrudPage<T extends CrudTableName>({
                         <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>
                       ) : null}
                     </div>
-                    {hasMenu ? (
-                      <div className="relative shrink-0">
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            setMenuOpenId(menuOpenId === row.id ? null : row.id)
-                          }}
-                          className="tap-target grid size-10 place-items-center rounded-lg border border-border/70 bg-background/55 text-muted-foreground transition hover:bg-muted hover:text-foreground"
-                          aria-label={`${title} işlemleri`}
-                        >
-                          <MoreVertical size={18} />
-                        </button>
-                        {menuOpenId === row.id && (
-                          <div className="absolute right-0 top-full z-10 mt-1 w-40 rounded-lg border border-border bg-popover py-1">
-                            {renderMenuActions ? renderMenuActions(row, { reload: loadRows, setError, rows, closeMenu: () => setMenuOpenId(null) }) : null}
-                            {editAllowed ? (
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  setMenuOpenId(null)
-                                  openEdit(row)
-                                }}
-                                className="flex w-full items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted"
-                              >
-                                <Pencil size={14} />
-                                Düzenle
-                              </button>
-                            ) : null}
-                            {deleteAllowed ? (
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  setMenuOpenId(null)
-                                  setDeleteId(row.id)
-                                }}
-                                className="flex w-full items-center gap-2 px-3 py-2 text-sm text-destructive hover:bg-destructive/10"
-                              >
-                                <Trash2 size={14} />
-                                Sil
-                              </button>
-                            ) : null}
-                          </div>
-                        )}
-                      </div>
-                    ) : null}
+                    {/* Menü JSX'i TEK yerde (`rowMenu`): burada bir kopyası daha
+                        vardı ve iki kopya birbirinden ayrışmıştı (44px vs 40px
+                        genişlik) — denetim 2026-08-12 §3. */}
+                    {rowMenu}
                   </div>
-                  {renderRowActions ? (
-                    <div className="mt-3 flex flex-wrap gap-2">{renderRowActions(row, { reload: loadRows, setError, rows })}</div>
-                  ) : null}
+                  {rowActions}
                   <dl className="mt-4 grid grid-cols-1 gap-2 text-sm min-[390px]:grid-cols-2">
                     {details.map((detail) => {
                       const parsedDetail = splitDetail(detail)
@@ -782,6 +730,92 @@ export function CrudPage<T extends CrudTableName>({
       />
 
     </section>
+  )
+}
+
+/**
+ * Kart satırının "…" menüsü. Tek kaynak: hem `renderCard` yolu hem varsayılan kart
+ * aynı bileşeni kullanır.
+ *
+ * A11y: `aria-haspopup="menu"` + `role="menu"`/`menuitem`, Escape ile kapanma ve
+ * ok tuşlarıyla gezinme. Eskiden menü yalnız dışa tıklanınca kapanıyordu ve
+ * klavyeyle öğeler arasında dolaşmak mümkün değildi (denetim 2026-08-12 §6).
+ */
+function RowMenu({
+  label,
+  open,
+  onToggle,
+  onClose,
+  children,
+}: {
+  label: string
+  open: boolean
+  onToggle: () => void
+  onClose: () => void
+  children: ReactNode
+}) {
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    const menu = menuRef.current
+    if (!menu) return
+
+    // Çağıranın `renderMenuActions` ile eklediği öğeler `role="menuitem"` taşımayabilir;
+    // gezinme yine de onları kapsasın diye seçici etkileşimli öğelere bakar.
+    const items = () => Array.from(menu.querySelectorAll<HTMLElement>('button:not([disabled]), a[href]'))
+    items()[0]?.focus()
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        event.stopPropagation()
+        onClose()
+        return
+      }
+      if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp' && event.key !== 'Home' && event.key !== 'End') return
+
+      const list = items()
+      if (list.length === 0) return
+      event.preventDefault()
+      const index = list.indexOf(document.activeElement as HTMLElement)
+      const next =
+        event.key === 'Home' ? 0
+        : event.key === 'End' ? list.length - 1
+        : event.key === 'ArrowDown' ? (index + 1) % list.length
+        : (index - 1 + list.length) % list.length
+      list[next]?.focus()
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [open, onClose])
+
+  return (
+    <div className="relative shrink-0">
+      <button
+        type="button"
+        onClick={(event) => {
+          event.stopPropagation()
+          onToggle()
+        }}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label={label}
+        className="tap-target grid size-10 place-items-center rounded-lg border border-border/70 bg-background/55 text-muted-foreground transition hover:bg-muted hover:text-foreground"
+      >
+        <MoreVertical size={18} />
+      </button>
+      {open ? (
+        <div
+          ref={menuRef}
+          role="menu"
+          aria-label={label}
+          className="absolute right-0 top-full z-10 mt-1 w-44 rounded-lg border border-border bg-popover py-1"
+        >
+          {children}
+        </div>
+      ) : null}
+    </div>
   )
 }
 

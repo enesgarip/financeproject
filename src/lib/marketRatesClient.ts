@@ -79,30 +79,60 @@ function writeCachedSnapshot(snapshot: MarketRatesSnapshot) {
   }
 }
 
+/**
+ * Besleme yanıt vermezse istek süresiz askıda kalır: `loading` sonsuz kalır ve
+ * `inflight` dolu olduğu için sonraki her çağrı da o ölü promise'e bağlanır.
+ * Edge fonksiyonlarındaki timeout'lu fetch (`_shared/edge.ts`) deseninin istemci
+ * karşılığı: AbortController + süre sınırı.
+ */
+const FEED_TIMEOUT_MS = 10_000
+
 async function fetchLiveSnapshot(): Promise<MarketRatesSnapshot | null> {
   // The feed sends an aggressive long-lived Cache-Control header, so bust it
   // with a timestamp query and an explicit no-store request.
   const url = `${FEED_URL}?t=${Date.now()}`
-  const response = await fetch(url, { cache: 'no-store', headers: { Accept: 'application/json' } })
-  if (!response.ok) {
-    throw new Error(`Kur servisi ${response.status} döndü.`)
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), FEED_TIMEOUT_MS)
+  try {
+    const response = await fetch(url, {
+      cache: 'no-store',
+      headers: { Accept: 'application/json' },
+      signal: controller.signal,
+    })
+    if (!response.ok) {
+      throw new Error(`Kur servisi ${response.status} döndü.`)
+    }
+    // Read as text and parse tolerantly: the feed occasionally truncates its long
+    // JSON tail, which would break a strict response.json(). Gövde okuması da
+    // timeout kapsamındadır (besleme bağlantıyı açık tutup yavaş akıtabilir).
+    const text = await response.text()
+    return parseTruncgilFeed(text)
+  } catch (error) {
+    // Abort'u ağ hatasından ayır: kullanıcı "zaman aşımı" gördüğünde cache'e
+    // düşüldüğünü anlar, "bilinmeyen hata" sanmaz.
+    if (controller.signal.aborted) throw new Error('Kur servisi zaman aşımına uğradı.', { cause: error })
+    throw error
+  } finally {
+    clearTimeout(timer)
   }
-  // Read as text and parse tolerantly: the feed occasionally truncates its long
-  // JSON tail, which would break a strict response.json().
-  const text = await response.text()
-  return parseTruncgilFeed(text)
 }
 
 /**
  * Refresh rates from the live feed. Falls back to the last cached snapshot on
  * failure. Concurrent calls share a single in-flight request unless `force`.
+ *
+ * `force` yarışı: eskiden her koşu `finally`'de `inflight = null` yapıyordu.
+ * `force` ile ikinci bir istek başlatıldığında ÖNCEKİ koşu (hâlâ uçuşta) bitince
+ * yeni isteğin referansını siliyordu → sonraki `refreshRates()` çağrıları
+ * paylaşım yerine ÜÇÜNCÜ bir istek açıyordu. Artık her koşu yalnız KENDİ
+ * promise'i hâlâ kayıtlıysa temizler.
  */
 export async function refreshRates(force = false): Promise<MarketRatesSnapshot | null> {
   if (inflight && !force) return inflight
 
   setState({ loading: true, error: null })
 
-  inflight = (async () => {
+  const run = (async () => {
     try {
       const snapshot = await fetchLiveSnapshot()
       if (snapshot) {
@@ -120,12 +150,18 @@ export async function refreshRates(force = false): Promise<MarketRatesSnapshot |
         error: error instanceof Error ? error.message : 'Kurlar alınamadı.',
       })
       return cached
-    } finally {
-      inflight = null
     }
   })()
+  inflight = run
+  // Temizlik promise ZİNCİRİNDE yapılır, gövdenin `finally`'sinde değil: gövde
+  // `run`'a kendi başlatıcısı içinden bakamaz (TDZ) ve bu haliyle "yalnız kendi
+  // referansını sil" kuralı okunur kalır. `run` asla reject etmez (iç catch her
+  // hatayı cache'e çevirir), o yüzden zincir güvenli.
+  void run.finally(() => {
+    if (inflight === run) inflight = null
+  })
 
-  return inflight
+  return run
 }
 
 /**
