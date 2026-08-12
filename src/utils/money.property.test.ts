@@ -1,7 +1,6 @@
 import fc from 'fast-check'
 import { describe, expect, it } from 'vitest'
 import {
-  addKurus,
   diffTL,
   equalsTL,
   exceedsTL,
@@ -74,10 +73,9 @@ describe('money — sumTL / sumKurus (kuruş modelinin asıl vaadi)', () => {
     )
   })
 
-  it('addKurus/subKurus tam sayı kuruşta kesindir', () => {
+  it('subKurus tam sayı kuruşta kesindir', () => {
     fc.assert(
       fc.property(kurusArb, kurusArb, (a, b) => {
-        expect(addKurus(a, b)).toBe(a + b)
         expect(subKurus(a, b)).toBe(a - b)
       }),
     )

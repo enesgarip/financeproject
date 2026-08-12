@@ -25,10 +25,6 @@ export type Confidence = {
 
 export const EXACT: Confidence = { level: 'exact', label: '', reason: 'Doğrulanmış tutar.' }
 
-export function estimateConfidence(reason = 'Bu tutar tahmindir; kesinleşince güncellenir.'): Confidence {
-  return { level: 'estimate', label: 'Tahmini', reason }
-}
-
 /**
  * Gün cinsinden yaşa göre bayatlık. `staleAfterDays` eşiğini geçmediyse exact.
  * Hiç doğrulanmamışsa (null) doğrudan bayat sayılır — "bilmiyoruz" da bir risktir.
@@ -88,10 +84,4 @@ export function valuationConfidence(
         ? 'Canlı kur alınamadı; bugün hesaplanan son tutar gösteriliyor.'
         : `Canlı kur alınamadı; ${days} gün önceki kurla hesaplanmış tutar gösteriliyor.`,
   }
-}
-
-/** Birden çok sinyal varsa en kötüsü kazanır (stale > estimate > exact). */
-export function worstConfidence(...values: Confidence[]): Confidence {
-  const rank: Record<ConfidenceLevel, number> = { exact: 0, estimate: 1, stale: 2 }
-  return values.reduce((worst, current) => (rank[current.level] > rank[worst.level] ? current : worst), EXACT)
 }

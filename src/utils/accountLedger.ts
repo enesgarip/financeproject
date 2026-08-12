@@ -23,26 +23,6 @@ export function projectAccountBalance(events: AccountLedgerEvent[]): number {
   return toTL(projectAccountBalanceKurus(events))
 }
 
-/** Group events by card id, preserving input order within each card. */
-export function groupEventsByAccount(events: AccountLedgerEvent[]): Map<string, AccountLedgerEvent[]> {
-  const byCard = new Map<string, AccountLedgerEvent[]>()
-  for (const event of events) {
-    const list = byCard.get(event.card_id)
-    if (list) list.push(event)
-    else byCard.set(event.card_id, [event])
-  }
-  return byCard
-}
-
-/** Projected balance per card id, in TL. */
-export function projectBalanceByAccount(events: AccountLedgerEvent[]): Map<string, number> {
-  const result = new Map<string, number>()
-  for (const [cardId, cardEvents] of groupEventsByAccount(events)) {
-    result.set(cardId, projectAccountBalance(cardEvents))
-  }
-  return result
-}
-
 /**
  * Signed drift (TL) between the stored balance and the ledger projection.
  * 0 means the ledger fully explains the stored balance. Positive = stored is

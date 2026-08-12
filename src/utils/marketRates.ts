@@ -34,15 +34,6 @@ export type MarketRatesSnapshot = {
 
 export const RATE_SYMBOLS: readonly RateSymbol[] = ['USD', 'EUR', 'GBP', 'GRA', 'CEYREKALTIN']
 
-/** Human labels for the symbols, used in tooltips/banners. */
-export const RATE_SYMBOL_LABELS: Record<RateSymbol, string> = {
-  USD: 'Dolar',
-  EUR: 'Euro',
-  GBP: 'Sterlin',
-  GRA: 'Gram altın',
-  CEYREKALTIN: 'Çeyrek altın',
-}
-
 function isRateSymbol(value: string): value is RateSymbol {
   return (RATE_SYMBOLS as readonly string[]).includes(value)
 }
@@ -211,10 +202,6 @@ export function unitRate(
   return price
 }
 
-export function hasRate(snapshot: MarketRatesSnapshot | null | undefined, symbol: RateSymbol): boolean {
-  return Boolean(snapshot?.rates?.[symbol])
-}
-
 /** Age of the snapshot in hours, based on its source time (falls back to fetch time). */
 export function snapshotAgeHours(
   snapshot: MarketRatesSnapshot | null | undefined,
@@ -259,7 +246,10 @@ function round2(value: number) {
   return Math.round((value + Number.EPSILON) * 100) / 100
 }
 
-/** Symbols serialized for the (Phase 2) server cache upsert payload. */
+/**
+ * Symbols serialized for the server cache upsert payload.
+ * Şu an tüketicisi yok; Faz 2 server cache için bekletiliyor (BACKLOG).
+ */
 export function snapshotToUpsertPayload(snapshot: MarketRatesSnapshot) {
   return (Object.entries(snapshot.rates) as [RateSymbol, Rate][])
     .filter((entry): entry is [RateSymbol, Rate] => isRateSymbol(entry[0]) && Boolean(entry[1]))

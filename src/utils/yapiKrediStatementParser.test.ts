@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { parseYapiKrediStatement } from './yapiKrediStatementParser'
-import { expenseTotalAmount } from './denizBankStatementParser'
 import { checkInstallmentNotation } from './importedInstallmentPlan'
+import { roundTL } from './money'
 
 // Gerçek YapıKredi ekstresinden türetilmiş, kişisel alanları (isim/adres)
 // çıkarılmış temsili metin. Kart numarası zaten maskeli. WORLDPUAN DETAYI bölümü
@@ -60,7 +60,7 @@ describe('parseYapiKrediStatement', () => {
     // amount AYLIK taksit tutarıdır (DenizBank ile aynı semantik). Aylık × adet
     // ekstredeki toplama (146.999,00) ~0,02 kuruş yuvarlamayla yaklaşır
     // (16333,22 × 9 = 146998,98); bu fark mutabakat kilidinde kapanır.
-    expect(expenseTotalAmount(first)).toBe(146998.98)
+    expect(roundTL(first.amount * first.installmentCount)).toBe(146998.98)
   })
 
   it('son taksit satırını (3/3) doğru işaretler', () => {

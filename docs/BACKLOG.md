@@ -12,6 +12,33 @@ tekrar eden yüzey haritası (kart kırılımı 11 yüzey, "Harcanabilir" 2 form
 pgTAP kapsam boşlukları. Docs senkronu aynı gün yapıldı (bkz. rapor §11).
 Düzeltme fazları (A–E) rapor §12'de.
 
+- ~~**Faz C — ölü kod temizliği.**~~ DONE (2026-08-12). 11 dosya silindi
+  (8 ölü dosya: `CardsPage.installment.tsx`, `InstallmentPlanner.tsx`,
+  `debtsRepo.ts`, `paymentsRepo.ts`, `spendingAnomalies.ts`+test,
+  `animated-number.tsx`, `separator.tsx`, `dashboardPanelUtils.ts`; +
+  `DashboardPanels.tsx` (FocusAction tipi DashboardInsights'a taşındı) ve
+  zincirleme tüketicisiz kalan `statementReconcileReview.ts`+test). Sabit
+  bayrak ölü dalları kaldırıldı: `StatementImportModal` yalnız clean-import
+  (non-clean gövde, A2/B1 blokları, işlevsiz "PDF kapsamı"/satır seçimi UI'ı
+  gitti), `CurrentMovementImportModal` yalnız eşleştirme akışı
+  (`handleCleanImport` + guard-arşiv bloğu gitti). Zincirleme repo/util
+  temizliği: `resetCardImportData`, `insertGuardStatementArchive`,
+  `cutCardStatement`, `setStatementReconciliation`, `payLoanInstallment`,
+  `matchTransactions`/`checkStatementInstallments`/
+  `reusableStatementInstallmentParentId` (+parser eşleştirme türleri/yardımcıları),
+  `buildFinancialHealth`, `buildBudgetAlerts`, `buildCalendarEvents` ailesi,
+  `buildDashboardMonthlyLoad`, ledger `groupEventsBy*`/`project*By*`,
+  `totalScheduledInstallments`, `addKurus`, `estimateConfidence`/
+  `worstConfidence`, `reconciliationDriftCount`, `attentionDayKey`,
+  `renderCardExtra`, `AppPage`/`PageCommandHeader`, `InputWithIcon`,
+  `SkeletonMetricGrid`/`SkeletonTable`, `Sparkline`, `hasRate`/
+  `RATE_SYMBOL_LABELS` (+ilgili test bölümleri). `index.css`'ten kullanılmayan
+  sınıf/token blokları (~300 satır: finance-surface/glass/hero-panel,
+  app-sidebar/header, safe-spend-card, accounts-signature-hub, animate-*/delay-*,
+  brand-* paleti, kullanılmayan gölgeler vb.) silindi. Toplam 53 dosyada
+  −3.890 / +147 satır (taşıma/yorum/docs dahil). `snapshotToUpsertPayload`
+  bilinçli bekletiliyor (Faz 2 server cache).
+
 - ~~**Faz B — güven/UX kritikleri.**~~ DONE (2026-08-12). K1: gizlilik maskesi
   artık metne gömülü tutarları da kapatıyor (`maskAmountsInText` +
   dikkat bandı/odak kartları/ekstre hatırlatıcısı/kategori içgörüleri).

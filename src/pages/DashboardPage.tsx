@@ -46,11 +46,8 @@ import { useMarketRates } from '../hooks/useMarketRates'
 import { formatSnapshotAge } from '../utils/marketRates'
 import { addMonths, dateInputValue, endOfMonth, startOfMonth } from '../utils/date'
 import {
-
   buildFinancialPosition,
   buildMonthlyCashFlow,
-
-  sum,
   totalCreditLimit,
 } from '../utils/financeSummary'
 import { buildAttentionLine } from '../utils/attention'
@@ -153,21 +150,14 @@ export function DashboardPage() {
   const summary = useMemo(() => {
     const position = buildFinancialPosition(data)
     const totalSharedCreditLimit = totalCreditLimit(data.cards)
-    const totalLoanMonthlyPayment = sum(
-      data.loans.filter((loan) => loan.status === 'active'),
-      (loan) => loan.monthly_payment,
-    )
     const creditUsageRate = totalSharedCreditLimit > 0 ? Math.min(100, (position.totalCreditCardDebt / totalSharedCreditLimit) * 100) : 0
     const cashFlow = buildMonthlyCashFlow(data)
-    const nextMonthCashFlow = buildMonthlyCashFlow(data, addMonths(startOfMonth(), 1))
 
     return {
       ...position,
       totalCreditLimit: totalSharedCreditLimit,
       creditUsageRate,
-      totalLoanMonthlyPayment,
       cashFlow,
-      nextMonthCashFlow,
     }
   }, [data])
 

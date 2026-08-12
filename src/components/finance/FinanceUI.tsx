@@ -39,51 +39,6 @@ const statusIcon: Record<Exclude<Tone, 'neutral' | 'premium'>, ComponentType<{ c
   info:    Info,
 }
 
-/* ─── Page wrapper ─── */
-export function AppPage({ className, children }: { className?: string; children: ReactNode }) {
-  return <section className={cn('flex min-w-0 flex-col gap-4 sm:gap-6', className)}>{children}</section>
-}
-
-/* ─── Shared page command header ─── */
-export function PageCommandHeader({
-  label,
-  title,
-  description,
-  meta,
-  tools,
-  className,
-}: {
-  label?: string
-  title: string
-  description?: string
-  meta?: string
-  tools?: ReactNode
-  className?: string
-}) {
-  return (
-    <header
-      className={cn(
-        'finance-page-command relative overflow-hidden rounded-2xl border border-border/70 bg-card p-4',
-        ' sm:p-5',
-        className,
-      )}
-    >
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-primary/80 via-info/55 to-transparent" />
-      <div className="flex min-w-0 flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div className="min-w-0">
-          {label ? <p className="finance-label text-primary">{label}</p> : null}
-          <h2 className={cn('font-display text-xl font-semibold leading-tight tracking-tight text-foreground sm:text-2xl', label && 'mt-2')}>
-            {title}
-          </h2>
-          {description ? <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">{description}</p> : null}
-          {meta ? <p className="mt-2 text-xs font-semibold text-muted-foreground">{meta}</p> : null}
-        </div>
-        {tools ? <div className="min-w-0 shrink-0">{tools}</div> : null}
-      </div>
-    </header>
-  )
-}
-
 /* ─── Finance Panel ─── */
 export function FinancePanel({
   className,

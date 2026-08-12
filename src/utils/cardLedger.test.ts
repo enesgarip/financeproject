@@ -1,11 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
-  groupEventsByCard,
   ledgerDrift,
   projectCardDebt,
   projectCardDebtKurus,
   projectCardSplit,
-  projectDebtByCard,
   summarizeCardLedger,
   type CardLedgerEvent,
 } from './cardLedger'
@@ -42,19 +40,6 @@ describe('projectCardDebtKurus / projectCardDebt', () => {
   it('handles a fully paid-off card (nets to zero)', () => {
     const events = [ev('a', 100000, 'opening'), ev('a', -100000, 'credit')]
     expect(projectCardDebt(events)).toBe(0)
-  })
-})
-
-describe('groupEventsByCard / projectDebtByCard', () => {
-  it('splits events per card and projects each', () => {
-    const events = [ev('a', 100000, 'opening'), ev('b', 50000, 'opening'), ev('a', -30000, 'credit')]
-    const grouped = groupEventsByCard(events)
-    expect(grouped.get('a')).toHaveLength(2)
-    expect(grouped.get('b')).toHaveLength(1)
-
-    const byCard = projectDebtByCard(events)
-    expect(byCard.get('a')).toBe(700)
-    expect(byCard.get('b')).toBe(500)
   })
 })
 

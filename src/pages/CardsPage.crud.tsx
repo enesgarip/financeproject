@@ -8,7 +8,6 @@ import {
   bankHueStyle,
   cardGroupLabel,
   cardTypeLabel,
-  limitGroupStats,
   optionalDay,
 } from './CardsPage.helpers'
 
@@ -131,33 +130,6 @@ export function renderCardDetails(row: Card) {
     `Ekstre: ${row.statement_day ? `Her ayın ${row.statement_day}. günü` : '-'}`,
     `Son ödeme: ${row.due_day ? `Her ayın ${row.due_day}. günü` : '-'}`,
   ]
-}
-
-export function renderCardExtra(row: Card, helpers: { rows: Card[] }) {
-  if (row.card_type !== 'kredi_karti' || row.credit_limit <= 0) return null
-
-  const stats = limitGroupStats(row, helpers.rows)
-  return (
-    <div className="mt-3 rounded-xl border border-border/50 bg-muted/30 p-3">
-      <div className="mb-1.5 flex items-center justify-between gap-3 text-xs text-muted-foreground">
-        <span>{stats.isShared ? 'Ortak limit kullanımı' : 'Limit kullanımı'}</span>
-        <span className="font-mono font-semibold tabular-nums text-foreground">{Math.round(stats.usageRate)}%</span>
-      </div>
-      <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-        <div
-          className="h-full rounded-full bg-gradient-to-r from-primary to-info transition-all duration-500"
-          style={{ width: `${stats.usageRate}%` }}
-        />
-      </div>
-      {stats.isShared ? (
-        <div className="mt-2 grid grid-cols-1 gap-2 text-xs text-muted-foreground min-[430px]:grid-cols-3">
-          <span>Grup borcu: {formatCurrency(stats.totalDebt)}</span>
-          <span>Provizyon: {formatCurrency(stats.provisionAmount)}</span>
-          <span>Kalan limit: {formatCurrency(stats.availableLimit)}</span>
-        </div>
-      ) : null}
-    </div>
-  )
 }
 
 export function getCardClassName() {

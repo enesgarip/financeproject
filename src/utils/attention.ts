@@ -1,5 +1,4 @@
 import { buildCashFlowForecast } from './cashFlowForecast'
-import { dateInputValue } from './date'
 import { buildFinancialPosition, type FinanceSummaryInput } from './financeSummary'
 import { formatSeritAmount } from './formatCurrency'
 import { diffTL, greaterThanTL, sumTL } from './money'
@@ -77,9 +76,4 @@ export function buildAttentionLine(
   }
 
   return null
-}
-
-/** Today's date key — exported so the dashboard can memo by day. */
-export function attentionDayKey(from: Date = new Date()) {
-  return dateInputValue(from)
 }

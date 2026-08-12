@@ -1,13 +1,12 @@
 /**
  * Finansal özetin matematik çekirdeği. Saf hesap (Supabase görmez), yoğun test
- * edilir. Üç ana çıktı üretir, hepsi tek `FinanceSummaryInput`'tan:
+ * edilir. İki ana çıktı üretir, hepsi tek `FinanceSummaryInput`'tan:
  *
  *  1. buildFinancialPosition  → BİLANÇO anlık görüntüsü (varlık, borç, net değer).
  *     "Şu an ne kadar zenginim?" — stok büyüklükleri.
  *  2. buildMonthlyCashFlow    → bir ayın NAKİT AKIŞI (gelir, çıkış, net, projeksiyon).
  *     "Bu ay para nasıl akıyor?" — akış büyüklükleri. Yükümlülükleri
  *     `obligations.ts`'ten alır, nakit etkisini (cashImpact) toplar.
- *  3. buildFinancialHealth    → 0-100 sağlık skoru + açıklayıcı faktörler.
  *
  * Ayrıca DB trigger'larının SAF TS İKİZLERİ burada yaşar: `clampCardBreakdown`,
  * `projectLoanSummary`, `expectedInstallmentAmount`. Bunlar invariant'ın tek
@@ -112,14 +111,6 @@ export type CashFlowSummary = {
   loanOutflow: number
   paymentOutflow: number
   debtOutflow: number
-}
-
-export type FinancialHealthSummary = {
-  score: number
-  label: string
-  description: string
-  tone: 'emerald' | 'amber' | 'rose'
-  factors: string[]
 }
 
 export function sum<T>(rows: T[], selector: (row: T) => number) {
@@ -516,109 +507,3 @@ export function buildMonthlyCashFlow(
  * Hedef özeti bir panele gerekirse `buildSavingsSuggestion` üzerine kurulmalı.
  */
 
-export function buildFinancialHealth({
-  position,
-  cashFlow,
-  creditUsageRate,
-  urgentUpcomingCount,
-  averageGoalProgress,
-  typicalMonthlyOutflow,
-}: {
-  position: FinancialPositionSummary
-  cashFlow: CashFlowSummary
-  creditUsageRate: number
-  urgentUpcomingCount: number
-  averageGoalProgress: number
-  typicalMonthlyOutflow?: number
-}): FinancialHealthSummary {
-  // 100'den başlar, risk faktörlerine göre puan düşürülür (birkaçı ekleyebilir).
-  // Her dal hem skoru ayarlar hem kullanıcıya gösterilecek bir açıklama (factor) ekler.
-  // Eşikler ürün kararı; banka onay kriteri değil, kullanıcıya yön gösterir.
-  let score = 100
-  const factors: string[] = []
-  const stableOutflow = typicalMonthlyOutflow ?? cashFlow.outflow
-  // Varlık yokken borç varsa oranı yapay olarak yükseğe (1.5) çekeriz ki skor cezalansın;
-  // bölme-sıfır yerine en kötü senaryoyu varsayar.
-  const debtToAssetRatio = position.totalAssets > 0 ? position.totalDebts / position.totalAssets : position.totalDebts > 0 ? 1.5 : 0
-  const outflowRatio = cashFlow.income > 0 ? stableOutflow / cashFlow.income : stableOutflow > 0 ? 1.2 : 0
-  const cashBufferMonths = stableOutflow > 0 ? position.totalCashAssets / stableOutflow : position.totalCashAssets > 0 ? 6 : 0
-
-  if (debtToAssetRatio >= 1) {
-    score -= 30
-    factors.push('Borçların varlıkları aşıyor; net değer baskı altında.')
-  } else if (debtToAssetRatio >= 0.6) {
-    score -= 20
-    factors.push('Borç / varlık oranı yüksek; yeni yük almadan önce kapatma planı iyi olur.')
-  } else if (debtToAssetRatio >= 0.3) {
-    score -= 10
-    factors.push('Borç seviyesi yönetilebilir ama düzenli izleme gerektiriyor.')
-  } else {
-    factors.push('Borç / varlık oranı dengeli görünüyor.')
-  }
-
-  if (outflowRatio >= 1) {
-    score -= 25
-    factors.push('Bu ayki ödeme yükü geliri aşıyor.')
-  } else if (outflowRatio >= 0.75) {
-    score -= 15
-    factors.push('Aylık ödeme yükü gelire göre yüksek.')
-  } else if (outflowRatio >= 0.5) {
-    score -= 8
-    factors.push('Aylık çıkışlar izlenebilir seviyede.')
-  } else {
-    factors.push('Aylık nakit çıkışı gelire göre rahat.')
-  }
-
-  if (creditUsageRate >= 80) {
-    score -= 20
-    factors.push('Kart limit kullanımı riskli bölgede.')
-  } else if (creditUsageRate >= 55) {
-    score -= 10
-    factors.push('Kart limit kullanımı orta-yüksek seviyede.')
-  }
-
-  if (cashBufferMonths < 1 && cashFlow.outflow > 0) {
-    score -= 15
-    factors.push('Nakit tamponu bir aylık ödeme yükünün altında.')
-  } else if (cashBufferMonths < 3 && cashFlow.outflow > 0) {
-    score -= 8
-    factors.push('Nakit tamponu var ama acil durum fonu güçlendirilebilir.')
-  } else if (cashBufferMonths >= 3) {
-    score += 5
-    factors.push('Nakit tamponu birkaç aylık yükü karşılayabiliyor.')
-  }
-
-  if (urgentUpcomingCount >= 3) {
-    score -= 8
-    factors.push('Yakın vadeli ödeme yoğunluğu yüksek.')
-  } else if (urgentUpcomingCount > 0) {
-    score -= 3
-    factors.push('Yakın vadeli ödeme var; takvim kontrolü yeterli.')
-  }
-
-  if (averageGoalProgress >= 60) {
-    score += 5
-    factors.push('Aktif hedeflerde ilerleme güçlü.')
-  } else if (averageGoalProgress > 0 && averageGoalProgress < 25) {
-    score -= 5
-    factors.push('Hedef ilerlemesi düşük; aylık birikim planı gerekebilir.')
-  }
-
-  const normalizedScore = Math.max(0, Math.min(100, Math.round(score)))
-  const tone = normalizedScore >= 80 ? 'emerald' : normalizedScore >= 60 ? 'amber' : 'rose'
-  const label = normalizedScore >= 80 ? 'Dengeli' : normalizedScore >= 60 ? 'İzlenmeli' : 'Riskli'
-  const description =
-    tone === 'emerald'
-      ? 'Genel tablo dengeli; odağı hedef ve erken borç kapatmaya ayırabilirsin.'
-      : tone === 'amber'
-        ? 'Genel tablo yönetilebilir, fakat bu ay birkaç kalem yakından izlenmeli.'
-        : 'Borç, nakit akışı veya limit kullanımı hızlı aksiyon gerektiriyor.'
-
-  return {
-    score: normalizedScore,
-    label,
-    description,
-    tone,
-    factors: factors.slice(0, 5),
-  }
-}

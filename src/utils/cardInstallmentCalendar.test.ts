@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Card, CardInstallment } from '../types/database'
-import { buildCardInstallmentCalendar, buildCardInstallmentTotalsByCard, isInstallmentSettled, totalScheduledInstallments } from './cardInstallmentCalendar'
+import { buildCardInstallmentCalendar, buildCardInstallmentTotalsByCard, isInstallmentSettled } from './cardInstallmentCalendar'
 
 const base = { id: 'id', user_id: 'u', created_at: '2026-01-01T00:00:00Z', updated_at: '2026-01-01T00:00:00Z' }
 
@@ -143,23 +143,6 @@ describe('buildCardInstallmentTotalsByCard', () => {
 
     expect(result.total).toBe(0)
     expect(result.rows).toEqual([])
-  })
-})
-
-describe('totalScheduledInstallments', () => {
-  it('sums only scheduled installments', () => {
-    const installments = [
-      makeInstallment({ id: 'i1', amount: 100, status: 'scheduled' }),
-      makeInstallment({ id: 'i2', amount: 200, status: 'paid' }),
-      makeInstallment({ id: 'i3', amount: 300, status: 'scheduled' }),
-      makeInstallment({ id: 'i4', amount: 150, status: 'posted' }),
-    ]
-
-    expect(totalScheduledInstallments(installments)).toBe(400)
-  })
-
-  it('returns 0 for empty array', () => {
-    expect(totalScheduledInstallments([])).toBe(0)
   })
 })
 

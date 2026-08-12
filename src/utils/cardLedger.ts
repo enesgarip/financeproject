@@ -36,26 +36,6 @@ export function projectCardDebt(events: CardLedgerEvent[]): number {
   return toTL(projectCardDebtKurus(events))
 }
 
-/** Group events by card id, preserving input order within each card. */
-export function groupEventsByCard(events: CardLedgerEvent[]): Map<string, CardLedgerEvent[]> {
-  const byCard = new Map<string, CardLedgerEvent[]>()
-  for (const event of events) {
-    const list = byCard.get(event.card_id)
-    if (list) list.push(event)
-    else byCard.set(event.card_id, [event])
-  }
-  return byCard
-}
-
-/** Projected debt per card id, in TL. */
-export function projectDebtByCard(events: CardLedgerEvent[]): Map<string, number> {
-  const result = new Map<string, number>()
-  for (const [cardId, cardEvents] of groupEventsByCard(events)) {
-    result.set(cardId, projectCardDebt(cardEvents))
-  }
-  return result
-}
-
 /**
  * Signed drift (TL) between the stored debt and the ledger projection.
  * 0 means the ledger fully explains the stored balance. Positive = stored is

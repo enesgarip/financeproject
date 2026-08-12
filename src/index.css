@@ -104,7 +104,6 @@
   --color-info-foreground: var(--info-foreground);
   --color-surface: var(--surface);
   --color-surface-muted: var(--surface-muted);
-  --color-surface-elevated: var(--surface-elevated);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
@@ -139,19 +138,6 @@
   --font-family-display: 'Denge Display', 'Denge Sans', ui-sans-serif, sans-serif;
   --font-family-body: 'Denge Sans', ui-sans-serif, -apple-system, sans-serif;
   --font-family-mono: 'Denge Mono', ui-monospace, monospace;
-
-  /* Brand palette — Jade (Nocturne). Yeşim: para = büyüme = denge. */
-  --brand-50:  #e9faf3;
-  --brand-100: #cbf4e1;
-  --brand-200: #9de8c8;
-  --brand-300: #62d7ab;
-  --brand-400: #2fbf8d;
-  --brand-500: #12a37a;
-  --brand-600: #0a8562;
-  --brand-700: #0a6b4f;
-  --brand-800: #0b5642;
-  --brand-900: #0c4737;
-  --brand-950: #052a20;
 
   /* Semantic tokens — daylight jade (açık tema birinci sınıf).
      Sıcak porselen zemin (hafif yeşil eğilimli), imza jade, anlam renkleri
@@ -243,19 +229,13 @@
   --signal-info:         var(--info);
 
   /* Shadows */
-  --shadow-subtle:  0 1px 2px rgba(21, 24, 36, 0.035);
-  --shadow-card:    0 1px 2px rgba(21, 24, 36, 0.035), 0 8px 24px rgba(21, 24, 36, 0.035);
   --shadow-lifted:  0 2px 4px rgba(21, 24, 36, 0.04), 0 14px 36px rgba(21, 24, 36, 0.07);
   --shadow-floating:0 20px 56px rgba(21, 24, 36, 0.14), 0 4px 14px rgba(21, 24, 36, 0.06);
-  --shadow-modal:   0 24px 72px rgba(15, 22, 35, 0.20), 0 8px 24px rgba(15, 22, 35, 0.10);
-  --shadow-card-hover: 0 2px 5px rgba(21, 24, 36, 0.045), 0 16px 38px rgba(21, 24, 36, 0.075);
-  --shadow-elevated: 0 20px 60px rgba(15, 22, 35, 0.16);
 
   /* Motion */
   --motion-fast:   150ms cubic-bezier(0.16, 1, 0.3, 1);
   --motion-normal: 250ms cubic-bezier(0.16, 1, 0.3, 1);
   --motion-slow:   400ms cubic-bezier(0.16, 1, 0.3, 1);
-  --motion-spring: 500ms cubic-bezier(0.34, 1.56, 0.64, 1);
 
   color-scheme: light;
   color: var(--foreground);
@@ -281,7 +261,6 @@
   --popover-foreground:   #e9efec;
   --surface:              #131a17;
   --surface-muted:        #0e1412;
-  --surface-elevated:     #1b231f;
 
   /* Foreground */
   --foreground:           #e9efec;
@@ -307,7 +286,6 @@
   --info:                 #58a9ff;
   --info-foreground:      #06111f;
   --border:               #242c29;
-  --border-strong:        #38423d;
   --input:                #2a332f;
   --ring:                 #46e0aa;
 
@@ -351,13 +329,8 @@
   --signal-info:         var(--info);
 
   /* Dark shadows */
-  --shadow-subtle:   0 1px 3px rgba(0, 0, 0, 0.25);
-  --shadow-card:     0 4px 20px rgba(0, 0, 0, 0.35), 0 1px 6px rgba(0, 0, 0, 0.20);
   --shadow-lifted:   0 8px 32px rgba(0, 0, 0, 0.45), 0 2px 10px rgba(0, 0, 0, 0.25);
   --shadow-floating: 0 16px 56px rgba(0, 0, 0, 0.55), 0 4px 20px rgba(0, 0, 0, 0.30);
-  --shadow-modal:    0 24px 80px rgba(0, 0, 0, 0.70), 0 8px 32px rgba(0, 0, 0, 0.40);
-  --shadow-card-hover: 0 8px 36px rgba(0, 0, 0, 0.50), 0 2px 12px rgba(0, 0, 0, 0.28);
-  --shadow-elevated:   0 20px 64px rgba(0, 0, 0, 0.60);
 
   color-scheme: dark;
   color: var(--foreground);
@@ -431,21 +404,6 @@ button:disabled {
 @layer components {
 
   /* Surfaces */
-  .finance-surface {
-    border: 1px solid var(--border);
-    background: var(--card);
-    transition: transform var(--motion-normal);
-  }
-
-  .finance-surface:hover {
-    border-color: color-mix(in srgb, var(--primary) 18%, var(--border));
-  }
-
-  .finance-surface-muted {
-    background: color-mix(in srgb, var(--muted) 50%, transparent);
-    border: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
-  }
-
   .finance-panel {
     border: 1px solid var(--border);
     background: var(--card);
@@ -455,22 +413,6 @@ button:disabled {
 
   .finance-panel:hover {
     border-color: color-mix(in srgb, var(--primary) 14%, var(--border));
-  }
-
-  .finance-hero-panel {
-    border: 1px solid color-mix(in srgb, var(--primary) 22%, var(--border));
-    background: linear-gradient(
-      135deg,
-      color-mix(in srgb, var(--card) 94%, var(--primary) 6%),
-      color-mix(in srgb, var(--accent) 70%, var(--card) 30%)
-    );
-  }
-
-  .finance-glass {
-    border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
-    background: color-mix(in srgb, var(--card) 70%, transparent);
-    backdrop-filter: blur(20px) saturate(1.4);
-    -webkit-backdrop-filter: blur(20px) saturate(1.4);
   }
 
   .finance-command-surface {
@@ -489,20 +431,6 @@ button:disabled {
   .finance-field:focus-within {
     border-color: var(--primary);
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 16%, transparent);
-  }
-
-  /* Card variants */
-  .card-interactive {
-    cursor: pointer;
-    transition: transform var(--motion-normal);
-  }
-
-  .card-interactive:hover {
-    transform: translateY(-2px);
-  }
-
-  .card-interactive:active {
-    transform: translateY(0);
   }
 
   /* Typography helpers */
@@ -540,23 +468,12 @@ button:disabled {
     letter-spacing: -0.01em;
   }
 
-  .finance-display {
-    font-family: var(--font-family-display);
-    font-weight: 700;
-    letter-spacing: -0.02em;
-  }
-
   .finance-label {
     font-size: 0.6875rem;
     font-weight: 700;
     letter-spacing: 0.085em;
     text-transform: uppercase;
     color: var(--muted-foreground);
-  }
-
-  .finance-section-grid {
-    display: grid;
-    gap: 1rem;
   }
 
   .finance-scrollbar {
@@ -573,14 +490,6 @@ button:disabled {
     );
     background-size: 200% 100%;
     animation: shimmer 1.8s ease-in-out infinite;
-  }
-
-  /* Gradient text */
-  .gradient-text {
-    background: linear-gradient(135deg, var(--primary), var(--info));
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
   }
 
   /* İmza aurora sayısı — uygulamanın TEK gradyan anı. Jade→safir, yumuşak ışıma.
@@ -619,46 +528,6 @@ button:disabled {
     color: var(--ink-faint);
   }
 
-  /* Progress bar states */
-  .progress-safe     { --progress-color: var(--success); }
-  .progress-warn     { --progress-color: var(--warning); }
-  .progress-danger   { --progress-color: var(--destructive); }
-  .progress-info     { --progress-color: var(--info); }
-  .progress-primary  { --progress-color: var(--primary); }
-
-  /* Pulse border for budget overage */
-  .pulse-border {
-    animation: pulse-border 2s ease-in-out infinite;
-  }
-
-  /* Number reveal */
-  .count-up {
-    font-variant-numeric: tabular-nums;
-    transition: all var(--motion-slow);
-  }
-
-  /* Sidebar active indicator */
-  .nav-pill {
-    position: relative;
-    z-index: 1;
-  }
-
-  .nav-pill::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    background: var(--primary);
-    opacity: 0;
-    transition: opacity var(--motion-fast);
-    z-index: -1;
-  }
-
-  /* Stat card trend indicators */
-  .trend-up   { color: var(--success); }
-  .trend-down { color: var(--destructive); }
-  .trend-flat { color: var(--muted-foreground); }
-
   /* Aksiyon kartı anlam-şeridi: sol kenarda parlayan ince çubuk. Renk durumu
      (risk/uyarı/bilgi/iyi) tek bakışta okutur — bilgi tasarımı, dekorasyon değil.
      Işıma koyu temada belirgin, açık temada nazik kalır. */
@@ -682,101 +551,16 @@ button:disabled {
   100% { background-position: -200% 0; }
 }
 
-@keyframes pulse-border {
-  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--destructive) 35%, transparent); }
-  50%       { box-shadow: 0 0 0 4px color-mix(in srgb, var(--destructive) 10%, transparent); }
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .skeleton-shimmer,
-  .pulse-border {
+  .skeleton-shimmer {
     animation: none;
   }
 }
-
-.app-sidebar {
-    --background: #090c0b;
-    --foreground: #eef3f0;
-    --card: #121815;
-    --muted: #1a221e;
-    --muted-foreground: #8f9a92;
-    --border: #232b27;
-    --primary: #46e0aa;
-    --primary-foreground: #04140e;
-    border-right: 1px solid #1f2723;
-    background:
-      radial-gradient(circle at 15% 4%, rgba(63, 220, 160, 0.11), transparent 27%),
-      #090c0b;
-    box-shadow: inset -1px 0 rgba(255, 255, 255, 0.025);
-  }
-
-  .app-header {
-    border-bottom: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
-    /* Zemin TAMAMEN opak: prod build'inde öneksiz `backdrop-filter` lightningcss
-       tarafından düşürülüyor (yalnız -webkit- kalıyor) ve blur etkisiz kalınca
-       %90 saydam başlığın altından kaydırılan içerik sızıyordu. Okunurluğu cam
-       efektine bağlamıyoruz — sabit sticky başlık her zaman opak. */
-    background: var(--background);
-  }
-
-  .app-icon-button {
-    display: grid;
-    place-items: center;
-    border: 1px solid color-mix(in srgb, var(--border) 88%, transparent);
-    background: color-mix(in srgb, var(--card) 82%, transparent);
-    color: var(--muted-foreground);
-    transition: color var(--motion-fast), border-color var(--motion-fast), background var(--motion-fast);
-  }
-
-  .app-icon-button:hover {
-    border-color: color-mix(in srgb, var(--primary) 20%, var(--border));
-    background: var(--card);
-    color: var(--foreground);
-  }
 
   .finance-hero-card {
     background:
       radial-gradient(circle at 92% 4%, color-mix(in srgb, var(--primary) 13%, transparent), transparent 34%),
       linear-gradient(145deg, var(--card), color-mix(in srgb, var(--card) 88%, var(--accent)));
-  }
-
-  .safe-spend-card {
-    --background: #0c2c21;
-    --foreground: #ffffff;
-    --card: #103b2c;
-    --muted: #ffffff;
-    --muted-foreground: #bfe9d7;
-    --border: rgba(255, 255, 255, 0.18);
-    --input: rgba(255, 255, 255, 0.2);
-    --primary: #7ff0c6;
-    --primary-foreground: #04241a;
-    --destructive: #ff9b9b;
-    --warning: #ffd477;
-    position: relative;
-    background:
-      radial-gradient(circle at 95% 2%, rgba(90, 230, 180, 0.34), transparent 36%),
-      radial-gradient(circle at 4% 100%, rgba(88, 169, 255, 0.12), transparent 40%),
-      linear-gradient(150deg, #0a2a1f, #12503a) !important;
-    border-color: rgba(255, 255, 255, 0.2) !important;
-    color: var(--foreground);
-    box-shadow: 0 22px 54px rgba(10, 60, 44, 0.34), inset 0 1px rgba(255, 255, 255, 0.08);
-  }
-
-  .safe-spend-card::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    border-radius: inherit;
-    background:
-      linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
-    background-size: 28px 28px;
-    mask-image: linear-gradient(to bottom right, black, transparent 68%);
-  }
-
-  .safe-spend-card .finance-label {
-    color: #c7ecdb;
   }
 
   .dashboard-signature-hero {
@@ -827,64 +611,6 @@ button:disabled {
   background:
     radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--primary) 9%, transparent), transparent 34%),
     var(--card);
-}
-
-.accounts-signature-hub {
-  --foreground: #ffffff;
-  --card: #121815;
-  --card-foreground: #ffffff;
-  --muted: rgba(255, 255, 255, 0.09);
-  --muted-foreground: #bcc7bf;
-  --border: rgba(255, 255, 255, 0.12);
-  --primary: #6ff0c0;
-  --primary-foreground: #04241a;
-  --success: #6ff0c0;
-  --destructive: #ffa4a4;
-  --info: #8ac2ff;
-  position: relative;
-  /* Dekoratif halka içeriğin üstüne binmesin (bkz. dashboard-signature-hero). */
-  isolation: isolate;
-  color: var(--foreground);
-  background:
-    radial-gradient(circle at 92% 5%, rgba(63, 220, 160, 0.26), transparent 33%),
-    radial-gradient(circle at 0% 100%, rgba(88, 169, 255, 0.09), transparent 34%),
-    linear-gradient(145deg, #0e1512, #16221c) !important;
-  box-shadow: 0 22px 54px rgba(6, 14, 10, 0.36), inset 0 1px rgba(255, 255, 255, 0.06);
-}
-
-.accounts-signature-hub::after {
-  content: '';
-  position: absolute;
-  z-index: -1;
-  right: -5rem;
-  bottom: -8rem;
-  width: 19rem;
-  height: 19rem;
-  border: 1px solid rgba(79, 227, 173, 0.14);
-  border-radius: 999px;
-  box-shadow:
-    0 0 0 3rem rgba(79, 227, 173, 0.024),
-    0 0 0 6rem rgba(79, 227, 173, 0.016);
-  pointer-events: none;
-}
-
-.accounts-signature-hub .finance-label {
-  color: #c2cec6;
-}
-
-.accounts-bank-tile {
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.06);
-}
-
-.hub-command-nav {
-  scrollbar-width: none;
-  backdrop-filter: blur(18px) saturate(1.2);
-  -webkit-backdrop-filter: blur(18px) saturate(1.2);
-}
-
-.hub-command-nav::-webkit-scrollbar {
-  display: none;
 }
 
 .finance-list-row:hover,
@@ -989,36 +715,8 @@ button:disabled {
   to   { transform: translateY(0); }
 }
 
-@keyframes fade-in {
-  from { opacity: 0; }
-  to   { opacity: 1; }
-}
-
-@keyframes scale-in {
-  from { opacity: 0; transform: scale(0.96); }
-  to   { opacity: 1; transform: scale(1); }
-}
-
-@keyframes slide-in-right {
-  from { opacity: 0; transform: translateX(24px); }
-  to   { opacity: 1; transform: translateX(0); }
-}
-
 /* ─── ANIMATION UTILITIES ─── */
-.animate-fade-in-up   { animation: fade-in-up   var(--motion-normal) both; }
-.animate-fade-in      { animation: fade-in       var(--motion-fast)   both; }
-.animate-scale-in     { animation: scale-in      var(--motion-normal) both; }
-.animate-slide-in-right { animation: slide-in-right var(--motion-normal) both; }
 .page-route-transition { animation: route-slide-in 220ms cubic-bezier(0.16, 1, 0.3, 1) both; }
-
-/* Stagger delays */
-.delay-50  { animation-delay:  50ms; }
-.delay-100 { animation-delay: 100ms; }
-.delay-150 { animation-delay: 150ms; }
-.delay-200 { animation-delay: 200ms; }
-.delay-300 { animation-delay: 300ms; }
-.delay-400 { animation-delay: 400ms; }
-.delay-500 { animation-delay: 500ms; }
 
 /* ─── REDUCED MOTION ─── */
 @media (prefers-reduced-motion: reduce) {

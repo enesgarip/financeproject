@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
 import {
-  addKurus,
   diffTL,
   equalsTL,
   exceedsTL,
@@ -75,15 +74,14 @@ describe('roundTL', () => {
 })
 
 describe('integer kuruş ops', () => {
-  it('addKurus / subKurus / sumKurus are exact', () => {
-    expect(addKurus(10, 20)).toBe(30)
+  it('subKurus / sumKurus are exact', () => {
     expect(subKurus(100, 30)).toBe(70)
     expect(sumKurus([10, 20, 30])).toBe(60)
     expect(sumKurus([])).toBe(0)
   })
 
   it('truncates non-integer kuruş inputs defensively', () => {
-    expect(addKurus(10.9, 20.9)).toBe(30)
+    expect(subKurus(30.9, 10.9)).toBe(20)
   })
 })
 
