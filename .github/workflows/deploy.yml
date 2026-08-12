@@ -188,50 +188,23 @@ jobs:
       - name: Lint local database
         run: supabase db lint --local --fail-on error
 
-      - name: RLS policy audit
-        run: docker exec -i supabase_db_financeproject psql -U postgres -d postgres -v ON_ERROR_STOP=1 -f - < supabase/tests/rls_audit.sql
-
-      - name: Table grant audit
-        run: docker exec -i supabase_db_financeproject psql -U postgres -d postgres -v ON_ERROR_STOP=1 -f - < supabase/tests/grants_audit.sql
-
-      - name: Maintenance catch-up idempotency
-        run: docker exec -i supabase_db_financeproject psql -U postgres -d postgres -v ON_ERROR_STOP=1 -f - < supabase/tests/maintenance_catchup.sql
-
-      - name: Card expense source-event idempotency
-        run: docker exec -i supabase_db_financeproject psql -U postgres -d postgres -v ON_ERROR_STOP=1 -f - < supabase/tests/card_expense_idempotency.sql
-
-      - name: Provision debt transitions
-        run: docker exec -i supabase_db_financeproject psql -U postgres -d postgres -v ON_ERROR_STOP=1 -f - < supabase/tests/provision_debt.sql
-
-      - name: Complete finance-data reset
-        run: docker exec -i supabase_db_financeproject psql -U postgres -d postgres -v ON_ERROR_STOP=1 -f - < supabase/tests/reset_user_finance_data.sql
-
-      - name: Expense contexts and car operations security
-        run: docker exec -i supabase_db_financeproject psql -U postgres -d postgres -v ON_ERROR_STOP=1 -f - < supabase/tests/expense_contexts_and_cars.sql
-
-      - name: Canonical card allocation security
-        run: docker exec -i supabase_db_financeproject psql -U postgres -d postgres -v ON_ERROR_STOP=1 -f - < supabase/tests/card_allocation_security.sql
-
-      - name: Card bank snapshot reconciliation
-        run: docker exec -i supabase_db_financeproject psql -U postgres -d postgres -v ON_ERROR_STOP=1 -f - < supabase/tests/card_bank_snapshot_reconciliation.sql
-
-      - name: Legacy current-payment allocation repair
-        run: docker exec -i supabase_db_financeproject psql -U postgres -d postgres -v ON_ERROR_STOP=1 -f - < supabase/tests/legacy_current_payment_allocation.sql
-
-      - name: Data Health safe-repair security
-        run: docker exec -i supabase_db_financeproject psql -U postgres -d postgres -v ON_ERROR_STOP=1 -f - < supabase/tests/data_health_safe_repairs.sql
-
-      - name: Data Health acknowledgement persistence
-        run: docker exec -i supabase_db_financeproject psql -U postgres -d postgres -v ON_ERROR_STOP=1 -f - < supabase/tests/data_health_issue_acknowledgements.sql
-
-      - name: SMS account source-event idempotency
-        run: docker exec -i supabase_db_financeproject psql -U postgres -d postgres -v ON_ERROR_STOP=1 -f - < supabase/tests/sms_account_idempotency.sql
-
-      - name: SMS card payment reconciliation
-        run: docker exec -i supabase_db_financeproject psql -U postgres -d postgres -v ON_ERROR_STOP=1 -f - < supabase/tests/sms_card_payment_reconciliation.sql
-
-      - name: Statement import installment correctness
-        run: docker exec -i supabase_db_financeproject psql -U postgres -d postgres -v ON_ERROR_STOP=1 -f - < supabase/tests/statement_import_installments.sql
+      # S4 sistemik düzeltme (denetim 2026-08-12): supabase/tests/*.sql'in TAMAMI
+      # döngüyle koşar — ci.yml'deki döngünün deploy hattındaki eşi. Yeni test
+      # dosyası buraya da otomatik dahil olur.
+      - name: SQL test suite (supabase/tests/*.sql — hepsi otomatik)
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          files=(supabase/tests/*.sql)
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "::error::supabase/tests altında .sql testi bulunamadı"
+            exit 1
+          fi
+          for f in "${files[@]}"; do
+            echo "::group::${f}"
+            docker exec -i supabase_db_financeproject psql -U postgres -d postgres -v ON_ERROR_STOP=1 -f - < "$f"
+            echo "::endgroup::"
+          done
 
   backup:
     name: Pre-migration backup

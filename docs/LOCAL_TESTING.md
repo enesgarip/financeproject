@@ -60,8 +60,11 @@ impersonation yöntemi yeterlidir.
 docker exec -i supabase_db_financeproject psql -U postgres -d postgres -v ON_ERROR_STOP=1 -f - < supabase/migrations/<yeni>.sql  # idempotent apply
 npm run db:reset:local        # temiz sıralı uygulama
 npm run db:lint:local ; npm run db:audit:rls:local ; npm run db:audit:grants:local
-npm run db:test:catchup ; npm run db:test:provision   # invariant regresyonları
+npm run db:test:all           # supabase/tests/*.sql tamamı (invariant regresyonları)
 ```
 
-Regresyon testleri `supabase/tests/*.sql` (raise-on-failure); yenisini eklerken
-`package.json`'a `db:test:*` script'i + CI'ya bağla.
+Regresyon testleri `supabase/tests/*.sql` (raise-on-failure). **`supabase/tests/`
+altına eklenen her `.sql` CI'da otomatik koşar** (ci.yml + deploy.yml döngü adımı,
+S4 düzeltmesi) — tek tek CI adımı/script bağlama kuralı kalktı. Yerelde tamamını
+koşmak için: `npm run db:test:all` (`scripts/run-db-tests.mjs`, Windows uyumlu).
+İstersen tek dosya için `db:test:*` script'i eklemek serbest ama zorunlu değil.

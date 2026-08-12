@@ -24,6 +24,11 @@ oluşmaması için branch push tetikleyicisi yoktur.
 - `npm run test:e2e`
 - `npm run ci:local`
 - `npm run db:seed:local` (reapply migrations + seed in local Supabase)
+- `npm run db:test:all` — **kanonik SQL test komutu:** `supabase/tests/*.sql`'in
+  tamamını sırayla koşar (`scripts/run-db-tests.mjs`, Windows uyumlu). CI de aynı
+  kümeyi döngüyle koşar; `supabase/tests/` altına eklenen her `.sql` otomatik
+  kapsanır — tek tek script/CI adımı bağlama kuralı kalktı (S4). Aşağıdaki
+  `db:test:*` script'leri tek dosyayı izole koşmak için duruyor.
 - `npm run db:test:catchup` (maintenance catch-up regression)
 - `npm run db:test:provision` (provision/debt separation transitions)
 - `npm run db:test:card-expense-idempotency` (source-event retry no-ops for card expenses)
@@ -75,10 +80,9 @@ Checks:
 - bundle size budget
 - Lighthouse performance/accessibility/best-practices budget (frontend paths)
 - Playwright smoke test (frontend paths)
-- Supabase local migration reset + lint/RLS/grant and financial SQL regressions
-  (database paths), including `supabase/tests/data_health_safe_repairs.sql` and
-  `supabase/tests/data_health_issue_acknowledgements.sql`, plus
-  `supabase/tests/expense_contexts_and_cars.sql`
+- Supabase local migration reset + lint, ardından **`supabase/tests/*.sql`'in
+  tamamı tek döngüyle** (database paths) — RLS/grant denetimleri ve tüm finansal
+  SQL regresyonları dahil. Yeni eklenen her test dosyası CI'da otomatik koşar.
 
 Lighthouse CI, GitHub status sonucunu yazabilsin diye job-scoped GitHub Actions
 token'ını `LHCI_GITHUB_TOKEN` olarak alır. Bu, "GitHub token not set" uyarısını
@@ -132,15 +136,11 @@ Order/parallel graph:
    promotion API, smoke-test the canonical production `/login` route, and roll
    back to the previous deployment automatically when smoke fails
 
-The path-aware database check in both `ci.yml` and `deploy.yml` explicitly runs
-`supabase/tests/data_health_safe_repairs.sql` after a clean migration reset. It
-guards plan prevalidation, all-or-none stale handling, domain separation,
-request-bound idempotency, receipt RLS, and revoked direct ledger INSERT access.
-The same gate runs `supabase/tests/data_health_issue_acknowledgements.sql` to
-protect account-wide acceptance persistence, RPC grants, own-row RLS, and
-cross-user cleanup isolation.
-`supabase/tests/expense_contexts_and_cars.sql` additionally protects reporting
-tag ownership and rejects forged cross-user car/context annotations.
+The path-aware database check in both `ci.yml` and `deploy.yml` runs the ENTIRE
+`supabase/tests/*.sql` suite in a single loop step after a clean migration
+reset (S4 fix, denetim 2026-08-12). Adding a new `.sql` file under
+`supabase/tests/` is sufficient — it is picked up automatically by CI, the
+deploy DB check, and `npm run db:test:all`; no per-file wiring is needed.
 
 `vercel.json` disables Vercel Git auto-deploy for `main`. The deploy hook is no
 longer used. The workflow uses one verified prebuilt artifact and does not
