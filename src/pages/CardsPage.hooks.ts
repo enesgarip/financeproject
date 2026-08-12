@@ -6,11 +6,12 @@ import {
   fetchCardInstallments,
   fetchProvisionExpenses,
   fetchStatementArchives,
+  fetchStatementPayments,
   setProvisionInstallments,
 } from '../data/repositories/cardsRepo'
 import { fetchAccountReconciliations } from '../data/repositories/financePanelsRepo'
 import { submitAccountMovement } from '../services/accountMovements'
-import type { AccountReconciliation, Card, CardExpense, CardInstallment, CardStatementArchive } from '../types/database'
+import type { AccountReconciliation, Card, CardExpense, CardInstallment, CardStatementArchive, CardStatementPayment } from '../types/database'
 import { parseNumber } from '../utils/formatCurrency'
 import { isMissingSupabaseCapabilityError, missingSupabaseCapabilityMessage } from '../utils/supabaseErrors'
 import type { CardSection } from './CardsPage.sections'
@@ -62,6 +63,7 @@ export function useCardsPageData() {
   const [provisionError, setProvisionError] = useState('')
   const [provisionActionId, setProvisionActionId] = useState<string | null>(null)
   const [statements, setStatements] = useState<CardStatementArchive[]>([])
+  const [statementPayments, setStatementPayments] = useState<CardStatementPayment[]>([])
   const [statementsLoading, setStatementsLoading] = useState(true)
   const [statementError, setStatementError] = useState('')
   const [statementActionId, setStatementActionId] = useState<string | null>(null)
@@ -86,10 +88,12 @@ export function useCardsPageData() {
     setProvisionsLoading(false)
   }, [])
 
+  // Arşiv ve kısmi ödemeler birlikte yüklenir: arşivin KALAN borcu ödemelerden
+  // türer (K7), ayrı yüklenirse ekran bir kare boyunca tam tutarı gösterir.
   const loadStatements = useCallback(async () => {
     setStatementsLoading(true)
     setStatementError('')
-    const result = await fetchStatementArchives(24)
+    const [result, paymentsResult] = await Promise.all([fetchStatementArchives(24), fetchStatementPayments()])
 
     if (!result.ok) {
       setStatements([])
@@ -101,6 +105,8 @@ export function useCardsPageData() {
     } else {
       setStatements(result.data)
     }
+    // Ödeme tablosu migration bekleyen ortamda yoksa kalan = arşiv tutarı.
+    setStatementPayments(paymentsResult.ok ? paymentsResult.data : [])
     setStatementsLoading(false)
   }, [])
 
@@ -236,6 +242,7 @@ export function useCardsPageData() {
     statementActionId,
     statementError,
     statements,
+    statementPayments,
     statementsLoading,
     handlePostAllProvisions,
     handleProvisionAction,

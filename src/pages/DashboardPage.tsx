@@ -22,6 +22,7 @@ import type {
   CardExpense,
   CardInstallment,
   CardStatementArchive,
+  CardStatementPayment,
   Debt,
   Loan,
   LoanInstallment,
@@ -70,6 +71,7 @@ type DashboardData = {
   cardExpenses: CardExpense[]
   cardInstallments: CardInstallment[]
   cardStatements: CardStatementArchive[]
+  cardStatementPayments: CardStatementPayment[]
   savingsGoals: SavingsGoal[]
   savingsGoalComponents: SavingsGoalComponent[]
   accountReconciliations: AccountReconciliation[]
@@ -88,6 +90,7 @@ const emptyData: DashboardData = {
   cardExpenses: [],
   cardInstallments: [],
   cardStatements: [],
+  cardStatementPayments: [],
   savingsGoals: [],
   savingsGoalComponents: [],
   accountReconciliations: [],
@@ -126,6 +129,7 @@ export function DashboardPage() {
       cardExpenses: snapshot.cardExpenses.filter((expense) => expense.spent_at >= spendingStart),
       cardInstallments: snapshot.cardInstallments,
       cardStatements: snapshot.cardStatements,
+      cardStatementPayments: snapshot.cardStatementPayments,
       savingsGoals: snapshot.savingsGoals,
       savingsGoalComponents: snapshot.savingsGoalComponents,
       accountReconciliations: snapshot.accountReconciliations,
@@ -143,9 +147,10 @@ export function DashboardPage() {
     debts: data.debts,
     cardInstallments: data.cardInstallments,
     cardStatements: data.cardStatements,
+    cardStatementPayments: data.cardStatementPayments,
     salaryHistory: data.salaryHistory,
     accountReconciliations: data.accountReconciliations,
-  }), [data.accountReconciliations, data.cardInstallments, data.cardStatements, data.cards, data.debts, data.loanInstallments, data.loans, data.payments, data.salaryHistory])
+  }), [data.accountReconciliations, data.cardInstallments, data.cardStatementPayments, data.cardStatements, data.cards, data.debts, data.loanInstallments, data.loans, data.payments, data.salaryHistory])
 
   const summary = useMemo(() => {
     const position = buildFinancialPosition(data)

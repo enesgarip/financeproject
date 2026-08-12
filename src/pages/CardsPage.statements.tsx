@@ -4,7 +4,13 @@ import { Badge } from '../components/ui/badge'
 import { Card as SurfaceCard, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { HelpTooltip } from '../components/ui/help-tooltip'
 import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
-import type { Card, CardExpense, CardStatementArchive } from '../types/database'
+import type { Card, CardExpense, CardStatementArchive, CardStatementPayment } from '../types/database'
+import {
+  buildStatementPaidMap,
+  openStatementsWithRemaining,
+  statementPaidAmount,
+  statementRemainingAmount,
+} from '../utils/cardStatementPayments'
 import { formatDate } from '../utils/date'
 import { sumTL } from '../utils/money'
 import { cardHelp } from './CardsPage.help'
@@ -153,22 +159,25 @@ export function ProvisionPanel({
 export function StatementPanel({
   rows,
   statements,
+  statementPayments = [],
   loading,
   actionId,
   onPay,
 }: {
   rows: Card[]
   statements: CardStatementArchive[]
+  /** Kısmi ekstre ödemeleri (K7): satırlar kalan borcu gösterir. */
+  statementPayments?: CardStatementPayment[]
   loading: boolean
   actionId: string | null
   onPay: (statement: CardStatementArchive, card: Card) => void
 }) {
   const { formatAmount } = useBalancePrivacy()
   const cardsById = useMemo(() => new Map(rows.map((card) => [card.id, card])), [rows])
-  const openStatements = statements
-    .filter((statement) => statement.status === 'open')
+  const paidByArchive = useMemo(() => buildStatementPaidMap(statementPayments), [statementPayments])
+  const openStatements = openStatementsWithRemaining(statements, paidByArchive)
     .sort((a, b) => (a.due_date ?? a.statement_date).localeCompare(b.due_date ?? b.statement_date))
-  const totalOpenAmount = sumTL(openStatements.map((statement) => statement.statement_debt_amount))
+  const totalOpenAmount = sumTL(openStatements.map((statement) => statementRemainingAmount(statement, paidByArchive)))
 
   if (loading && openStatements.length === 0) {
     return (
@@ -209,9 +218,15 @@ export function StatementPanel({
                   </p>
                 </div>
                 <span className="shrink-0 rounded-lg bg-card px-2 py-1 text-xs font-bold tabular-nums text-foreground ring-1 ring-border/60">
-                  {formatAmount(statement.statement_debt_amount)}
+                  {formatAmount(statementRemainingAmount(statement, paidByArchive))}
                 </span>
               </div>
+              {statementPaidAmount(statement, paidByArchive) > 0 ? (
+                <p className="mt-1 text-[11px] text-muted-foreground">
+                  {formatAmount(statementPaidAmount(statement, paidByArchive))} ödendi ·{' '}
+                  {formatAmount(statement.statement_debt_amount)} ekstre tutarı
+                </p>
+              ) : null}
               <div className="mt-3 grid gap-2 min-[520px]:grid-cols-[minmax(0,1fr)_auto] min-[520px]:items-center">
                 <p className="text-xs leading-5 text-success/80">
                   Bu tutar kart borcunun içindedir. Kredi kartı taksitleri ayrıca borç olarak ikinci kez eklenmez.

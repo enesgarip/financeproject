@@ -106,6 +106,7 @@ Supporting tables/features:
 - `card_expenses`
 - `card_installments`
 - `card_statement_archives`
+- `card_statement_payments` (append-only partial/minimum statement payments; remaining balance is derived — K7)
 - `card_current_settlements` (full current-period payments made before statement cut)
 - card-related RPCs such as `add_card_expense`, `post_card_provision`, `cut_card_statement`, `cut_due_card_statements`, `pay_card_statement`, `pay_card_debt`
 
@@ -172,6 +173,7 @@ From the current typed schema, main tables are:
 - `savings_goal_components`
 - `card_installments`
 - `card_statement_archives`
+- `card_statement_payments`
 - `card_current_settlements`
 - `loans`
 - `loan_installments`

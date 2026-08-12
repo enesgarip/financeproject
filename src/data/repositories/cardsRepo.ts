@@ -1,5 +1,5 @@
 import { supabase } from '../../lib/supabase'
-import type { Card, CardExpense, CardExpenseSource, CardInstallment, CardStatementArchive, Json, Payment } from '../../types/database'
+import type { Card, CardExpense, CardExpenseSource, CardInstallment, CardStatementArchive, CardStatementPayment, Json, Payment } from '../../types/database'
 import { ok, resultFromSupabase, voidResultFromSupabase, type Result } from '../result'
 import { roundTL } from '../../utils/money'
 
@@ -48,6 +48,19 @@ export async function fetchStatementArchives(limit: number): Promise<Result<Card
     .limit(limit)
 
   return resultFromSupabase((data ?? []) as CardStatementArchive[], error, 'Ekstreler yüklenemedi.')
+}
+
+/**
+ * Kısmi ekstre ödemeleri (K7). Arşivin kalan borcu bu satırlardan türer, o
+ * yüzden ekstre gösteren her ekran arşivlerle BİRLİKTE bunu da yükler.
+ */
+export async function fetchStatementPayments(): Promise<Result<CardStatementPayment[]>> {
+  const { data, error } = await supabase
+    .from('card_statement_payments')
+    .select('*')
+    .order('paid_at', { ascending: false })
+
+  return resultFromSupabase((data ?? []) as CardStatementPayment[], error, 'Ekstre ödemeleri yüklenemedi.')
 }
 
 // Yalnız açık (ödenmemiş) ekstre arşivleri. Borçlar sayfası pay_card_debt

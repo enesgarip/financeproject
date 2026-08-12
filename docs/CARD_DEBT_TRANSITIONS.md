@@ -189,6 +189,30 @@ intentionally never touches installment rows, so `isInstallmentSettled`
 `paid`. `fetchCardInstallmentsByExpenseIds` embeds the archive status for this;
 progress counters ("X/9 ödendi") must use this helper instead of raw status.
 
+### Partial / minimum statement payments (K7, `20260812110000`)
+
+A statement can be paid in parts. The archive row stays immutable (its guard
+trigger forbids amount edits); each payment is appended to
+`card_statement_payments` (append-only: update/delete raise, insert is
+RPC/restore only). The remaining balance is therefore DERIVED:
+
+```text
+remaining(archive) = archive.statement_debt_amount − Σ card_statement_payments.amount
+cards.statement_debt_amount = Σ remaining(open archives)
+```
+
+`pay_card_statement(p_amount)` appends the payment, debits the source account
+(unless `p_skip_source_debit`), and closes the archive only when the payment
+equals the remaining balance. `private.statement_remaining_amount` is the SQL
+side of this projection; `src/utils/cardStatementPayments.ts` is its TS twin and
+every "açık ekstre" surface (cards list, control center, statements panel,
+liabilities page, obligations projection) reads remaining through it — an archive
+whose remainder hit zero shows up nowhere and imposes no due date. The K4
+double-payment guard still applies: a zero statement bucket refuses payment.
+The payment drawer's amount is editable for statements too, and the minimum-payment
+hint uses the remaining statement balance as its base (never the current-period
+bucket). pgTAP: `partial_statement_payment.sql`.
+
 The canonical user flow is paying an open statement with `pay_card_statement`.
 The archive's amount is bank truth; payment does not infer or mutate individual
 installment lifecycle state. `pay_card_debt` is the optional manual/early payment path for posted

@@ -8,6 +8,7 @@ import type {
   CardExpense,
   CardInstallment,
   CardStatementArchive,
+  CardStatementPayment,
   Debt,
   Loan,
   LoanInstallment,
@@ -40,6 +41,8 @@ export type FinanceSnapshot = {
   cardExpenses: CardExpense[]
   cardInstallments: CardInstallment[]
   cardStatements: CardStatementArchive[]
+  /** Kısmi ekstre ödemeleri (K7): kalan = arşiv tutarı − bu satırların toplamı. */
+  cardStatementPayments: CardStatementPayment[]
   savingsGoals: SavingsGoal[]
   savingsGoalComponents: SavingsGoalComponent[]
   accountReconciliations: AccountReconciliation[]
@@ -92,6 +95,7 @@ export async function fetchFinanceSnapshot(): Promise<FinanceSnapshot> {
     cardExpenses,
     cardInstallments,
     cardStatements,
+    cardStatementPayments,
     savingsGoals,
     savingsGoalComponents,
     accountReconciliations,
@@ -108,6 +112,7 @@ export async function fetchFinanceSnapshot(): Promise<FinanceSnapshot> {
     supabase.from('card_expenses').select('*').gte('spent_at', windowStartValue).order('spent_at', { ascending: false }),
     supabase.from('card_installments').select('*').order('due_month', { ascending: true }),
     supabase.from('card_statement_archives').select('*').order('statement_date', { ascending: false }).limit(STATEMENT_ARCHIVE_LIMIT),
+    supabase.from('card_statement_payments').select('*').order('paid_at', { ascending: false }),
     supabase.from('savings_goals').select('*').order('created_at', { ascending: false }),
     supabase.from('savings_goal_components').select('*'),
     supabase.from('account_reconciliations').select('*').order('reconciled_at', { ascending: false }),
@@ -128,6 +133,7 @@ export async function fetchFinanceSnapshot(): Promise<FinanceSnapshot> {
     cardExpenses: requiredRows(cardExpenses),
     cardInstallments: optionalRows(cardInstallments, 'card_installments', missingTables),
     cardStatements: optionalRows(cardStatements, 'card_statement_archives', missingTables),
+    cardStatementPayments: optionalRows(cardStatementPayments, 'card_statement_payments', missingTables),
     savingsGoals: optionalRows(savingsGoals, 'savings_goals', missingTables),
     savingsGoalComponents: optionalRows(savingsGoalComponents, 'savings_goal_components', missingTables),
     accountReconciliations: optionalRows(accountReconciliations, 'account_reconciliations', missingTables),

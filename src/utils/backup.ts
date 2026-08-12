@@ -35,6 +35,8 @@ export const RESTORE_TABLE_ORDER = [
   'gold_lots',
   'net_worth_snapshots',
   'card_statement_archives',
+  // Kısmi ekstre ödemeleri (K7): arşivden SONRA (FK: cards + archives).
+  'card_statement_payments',
   'car_reminders',
   'car_expenses',
   'context_expenses',
@@ -303,6 +305,7 @@ export const BACKUP_TABLE_LABELS: Record<RestoreTable, string> = {
   gold_lots: 'Altın alımı',
   net_worth_snapshots: 'Net değer fotoğrafı',
   card_statement_archives: 'Ekstre arşivi',
+  card_statement_payments: 'Ekstre ödemesi',
   card_expenses: 'Kart harcaması',
   card_installments: 'Kart taksidi',
   loan_installments: 'Kredi taksidi',

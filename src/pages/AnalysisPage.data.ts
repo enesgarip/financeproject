@@ -61,6 +61,7 @@ export function useAnalysisPageData() {
       cardExpenses: snapshot.cardExpenses,
       cardInstallments: snapshot.cardInstallments.filter((installment) => installment.status !== 'paid'),
       cardStatementArchives: snapshot.cardStatements.slice(0, STATEMENT_ARCHIVE_LIMIT),
+      cardStatementPayments: snapshot.cardStatementPayments,
       budgets: snapshot.budgets,
       savingsGoals: snapshot.savingsGoals,
     }

@@ -21,6 +21,7 @@ import type {
   Card,
   CardInstallment,
   CardStatementArchive,
+  CardStatementPayment,
   Debt,
   Loan,
   LoanInstallment,
@@ -53,6 +54,8 @@ export type FinanceSummaryInput = {
   salaryHistory: SalaryHistory[]
   cardInstallments: CardInstallment[]
   cardStatements?: CardStatementArchive[]
+  /** Kısmi ekstre ödemeleri (K7); verilmezse kalan = arşiv tutarı. */
+  cardStatementPayments?: Pick<CardStatementPayment, 'statement_archive_id' | 'amount'>[]
   /**
    * Bu modüldeki hiçbir hesap birikim hedeflerini OKUMAZ; alanlar yalnız
    * çağıranların aynı nesneyi başka util'lere de geçirebilmesi için opsiyonel
@@ -403,6 +406,7 @@ function obligationsInput(data: FinanceSummaryInput): FinanceObligationsInput {
     debts: data.debts,
     cardInstallments: data.cardInstallments,
     cardStatements: data.cardStatements ?? [],
+    cardStatementPayments: data.cardStatementPayments ?? [],
     salaryHistory: data.salaryHistory,
   }
 }
