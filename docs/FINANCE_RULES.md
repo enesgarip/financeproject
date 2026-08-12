@@ -310,6 +310,11 @@ From `src/utils/budgetAlerts.ts`:
   the month is 0 (`paymentCashOutflowAmount`), because the money leaves as card
   debt, and the real bank outflow happens when that card's statement is paid.
   Its nominal amount still exists as a liability (see below).
+  This informational treatment applies only when the source card is a CREDIT
+  card: when the caller supplies the card list (`buildCreditCardIdCheck`) and
+  the `auto_source_card_id` points to a bank account, the payment counts as a
+  normal cash outflow (Faz D, 2026-08-12). Without a card list the old
+  assumption (source = credit card) is kept.
 - dashboard monthly load includes:
   - one-off payments due in the month
   - recurring monthly payments whose occurrence lands in the month

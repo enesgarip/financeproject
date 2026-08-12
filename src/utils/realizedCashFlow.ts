@@ -9,9 +9,9 @@
  * Aylık rapor "Nakit çıkışı"nı bu modülden besler; dashboard'ın kalan-yük
  * projeksiyonu (financeSummary.remainingOutflow) ile bilinçli olarak ayrıdır.
  */
-import type { Payment, TransactionHistory } from '../types/database'
+import type { Card, Payment, TransactionHistory } from '../types/database'
 import { addMonths, dateInputValue, startOfMonth } from './date'
-import { paymentUsesCreditCard } from './financeObligationRules'
+import { buildCreditCardIdCheck, paymentUsesCreditCard } from './financeObligationRules'
 import { normalizeSearchText } from './searchText'
 import { roundTL, sumTL } from './money'
 
@@ -40,10 +40,14 @@ export function buildRealizedMonthlyOutflow(
   history: TransactionHistory[],
   payments: Payment[],
   month: Date = new Date(),
+  cards: Array<Pick<Card, 'id' | 'card_type'>> = [],
 ): RealizedMonthlyOutflow {
   const monthStart = dateInputValue(startOfMonth(month))
   const monthEnd = dateInputValue(startOfMonth(addMonths(month, 1)))
   const paymentsById = new Map(payments.map((payment) => [payment.id, payment]))
+  // Kart listesi verilirse yalnız KREDİ kartına talimatlı ödemeler "nakit değil"
+  // kovasına gider; banka hesabına talimatlı ödeme normal nakit çıkışıdır.
+  const isCreditCardId = buildCreditCardIdCheck(cards)
 
   const cardPayments: number[] = []
   const billPayments: number[] = []
@@ -101,7 +105,7 @@ export function buildRealizedMonthlyOutflow(
       } else if (row.source_table === 'payments') {
         const payment = row.source_id ? paymentsById.get(row.source_id) : undefined
         // Ödeme kaydı silinmişse temkinli davranıp nakit sayarız.
-        if (payment && paymentUsesCreditCard(payment)) push(cardFundedBills, row)
+        if (payment && paymentUsesCreditCard(payment, isCreditCardId)) push(cardFundedBills, row)
         else push(billPayments, row)
       } else {
         push(billPayments, row)

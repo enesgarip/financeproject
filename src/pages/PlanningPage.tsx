@@ -91,10 +91,10 @@ export function PlanningPage() {
       tone: (usageRate > 100 ? 'danger' : usageRate >= 80 ? 'warning' : 'brand') as SeritTone,
       pace:
         ahead > 10
-          ? `Ayın %${Math.round(monthProgress)}'indesin ama bütçenin %${Math.round(usageRate)}'ini harcadın — hız yüksek.`
+          ? `Ay ilerlemesi %${Math.round(monthProgress)}, bütçe kullanımı %${Math.round(usageRate)} — hız yüksek.`
           : ahead < -10
-            ? `Ayın %${Math.round(monthProgress)}'indesin, bütçenin %${Math.round(usageRate)}'ini harcadın — planın önündesin.`
-            : `Ayın %${Math.round(monthProgress)}'indesin, harcama %${Math.round(usageRate)} — plana uygun gidiyorsun.`,
+            ? `Ay ilerlemesi %${Math.round(monthProgress)}, bütçe kullanımı %${Math.round(usageRate)} — planın önündesin.`
+            : `Ay ilerlemesi %${Math.round(monthProgress)}, bütçe kullanımı %${Math.round(usageRate)} — plana uygun gidiyorsun.`,
     }
   }, [snapshotQuery.data, cardExpenses])
 

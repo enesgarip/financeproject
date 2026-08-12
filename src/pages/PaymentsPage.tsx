@@ -18,7 +18,7 @@ import type {
 } from '../types/database'
 import { addMonths, dateInputValue, daysUntil, formatDate, startOfMonth } from '../utils/date'
 import { formatSeritAmount, parseNumber } from '../utils/formatCurrency'
-import { paymentCashOutflowAmount, paymentOccurrenceInMonth, paymentUsesCreditCard } from '../utils/financeSummary'
+import { buildCreditCardIdCheck, paymentCashOutflowAmount, paymentOccurrenceInMonth, paymentUsesCreditCard, type CreditCardIdCheck } from '../utils/financeSummary'
 import { sumTL } from '../utils/money'
 import { paidPaymentIdsInMonth } from '../utils/paymentHistory'
 import type { FinanceObligation, FinanceObligationsInput } from '../utils/obligations'
@@ -125,8 +125,8 @@ async function getPaymentCards(): Promise<FinanceCard[]> {
   return sortPaymentAccounts(result.ok ? result.data : [])
 }
 
-function paymentToObligation(payment: Payment): FinanceObligation {
-  const usesCreditCard = paymentUsesCreditCard(payment)
+function paymentToObligation(payment: Payment, isCreditCardId?: CreditCardIdCheck): FinanceObligation {
+  const usesCreditCard = paymentUsesCreditCard(payment, isCreditCardId)
   return {
     id: `payment-${payment.id}`,
     kind: 'payment',
@@ -137,7 +137,7 @@ function paymentToObligation(payment: Payment): FinanceObligation {
     subtitle: payment.category,
     date: payment.due_date,
     amount: payment.amount,
-    cashImpactAmount: paymentCashOutflowAmount(payment),
+    cashImpactAmount: paymentCashOutflowAmount(payment, isCreditCardId),
     direction: 'outflow',
     settlement: usesCreditCard ? 'credit_card' : 'cash',
     isEstimate: payment.amount_status === 'estimated',
@@ -154,8 +154,8 @@ function getPaymentScheduleLabel(payment: Payment) {
 // BM-5: Kart talimatlı ödeme BİLGİLENDİRME kaydıdır; tahmini tutar proaktif
 // karta yazılmaz. Gerçek kayıt SMS'ten (anlık) veya ekstre importundan (aylık
 // kesin kapanış) gelir ve planı otomatik ilerletir; manuel "Öde" açık kalır.
-function isCardInstructedPayment(payment: Payment) {
-  return paymentUsesCreditCard(payment)
+function isCardInstructedPayment(payment: Payment, isCreditCardId?: CreditCardIdCheck) {
+  return paymentUsesCreditCard(payment, isCreditCardId)
 }
 
 function getPaymentAmountLabel(payment: Payment) {
@@ -310,6 +310,10 @@ export function PaymentsPage() {
     return result
   }, [planningData.cards])
 
+  // Talimatın "karta biner / nakit çıkar" ayrımı kaynak kartın türüne bakar;
+  // kartlar yüklenmediyse undefined kalır ve eski varsayım (kredi kartı) geçerlidir.
+  const isCreditCardId = useMemo(() => buildCreditCardIdCheck(planningData.cards), [planningData.cards])
+
   const cardLabelById = useCallback(
     (cardId: string | null) => {
       if (!cardId) return null
@@ -452,7 +456,7 @@ export function PaymentsPage() {
                 </p>
               ) : null}
 
-              {!isPaid && isCardInstructedPayment(payment) ? (
+              {!isPaid && isCardInstructedPayment(payment, isCreditCardId) ? (
                 <p className="mt-2.5 text-[11px] font-medium text-muted-foreground">
                   Talimat bilgilendirmedir; harcama SMS geldiğinde veya ekstre importunda otomatik işlenir ve plan ilerler.
                 </p>
@@ -462,7 +466,7 @@ export function PaymentsPage() {
                 <div className="mt-3">
                   <button
                     type="button"
-                    onClick={() => void openObligationPayment(paymentToObligation(payment), reload)}
+                    onClick={() => void openObligationPayment(paymentToObligation(payment, isCreditCardId), reload)}
                     className="rounded-lg bg-success px-3 py-2 text-xs font-semibold text-success-foreground transition hover:bg-success/90 active:scale-[0.97]"
                   >
                     Öde

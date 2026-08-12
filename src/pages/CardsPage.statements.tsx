@@ -173,7 +173,7 @@ export function StatementPanel({
   if (loading && openStatements.length === 0) {
     return (
       <SurfaceCard className="border-success/20">
-        <CardContent className="p-4 text-sm text-muted-foreground">Ekstreler yukleniyor...</CardContent>
+        <CardContent className="p-4 text-sm text-muted-foreground">Ekstreler yükleniyor...</CardContent>
       </SurfaceCard>
     )
   }
@@ -187,7 +187,7 @@ export function StatementPanel({
           <div className="min-w-0">
             <CardTitle className="flex items-center gap-2 text-base">
               <ReceiptText size={17} />
-              Acik ekstreler
+              Açık ekstreler
             </CardTitle>
             <p className="mt-1 text-xs text-muted-foreground">Ekstre ödemesi seçilen hesaptan düşülür ve yalnızca bu ekstreyi kapatır.</p>
           </div>
@@ -205,7 +205,7 @@ export function StatementPanel({
                 <div className="min-w-0">
                   <p className="truncate text-sm font-bold text-foreground">{card.card_name}</p>
                   <p className="mt-0.5 text-xs text-muted-foreground">
-                    {card.bank_name} - {statementPeriodLabel(statement)} - son odeme {formatDate(statement.due_date)}
+                    {card.bank_name} - {statementPeriodLabel(statement)} - son ödeme {formatDate(statement.due_date)}
                   </p>
                 </div>
                 <span className="shrink-0 rounded-lg bg-card px-2 py-1 text-xs font-bold tabular-nums text-foreground ring-1 ring-border/60">
@@ -214,7 +214,7 @@ export function StatementPanel({
               </div>
               <div className="mt-3 grid gap-2 min-[520px]:grid-cols-[minmax(0,1fr)_auto] min-[520px]:items-center">
                 <p className="text-xs leading-5 text-success/80">
-                  Bu tutar kart borcunun icindedir. Kredi karti taksitleri ayrica borc olarak ikinci kez eklenmez.
+                  Bu tutar kart borcunun içindedir. Kredi kartı taksitleri ayrıca borç olarak ikinci kez eklenmez.
                 </p>
                 <button
                   type="button"
@@ -223,7 +223,7 @@ export function StatementPanel({
                   className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-success px-3 py-2 text-xs font-semibold text-white  disabled:opacity-60 hover:bg-success/90"
                 >
                   <CheckCircle2 size={14} />
-                  {actionId === statement.id ? 'Isleniyor...' : 'Ekstreyi odendi isaretle'}
+                  {actionId === statement.id ? 'İşleniyor...' : 'Ekstreyi öde'}
                 </button>
               </div>
             </div>

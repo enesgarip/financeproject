@@ -185,7 +185,7 @@ function CarManager({
     <Card>
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-2 text-base">
-          <CarIcon className="size-4 text-primary" /> Araçlarım
+          <CarIcon className="size-4 text-primary" /> Araçlar
         </CardTitle>
         <p className="text-xs text-muted-foreground">
           Her araç için giderleri ayrı takip et. Kart harcamaları borca aynen işler; buradaki takip

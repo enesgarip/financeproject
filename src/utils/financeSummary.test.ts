@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Asset, Card, CardInstallment, CardStatementArchive, Debt, Loan, LoanInstallment, Payment, SalaryHistory } from '../types/database'
 import {
+  buildCreditCardIdCheck,
   buildCreditLimitGroups,
   buildFinancialPosition,
   buildMonthlyCashFlow,
@@ -527,6 +528,25 @@ describe('paymentCashOutflowAmount', () => {
 
   it('removes credit-card automatic payments from immediate cash outflow', () => {
     expect(paymentCashOutflowAmount(payment({ amount: 1200, payment_method: 'bank_auto', auto_source_card_id: 'credit-card' }))).toBe(0)
+  })
+
+  // Faz D: kaynak kartın türü biliniyorsa yalnız KREDİ kartı talimatı "nakit
+  // değil" sayılır; banka hesabına talimatlı ödeme normal nakit çıkışıdır.
+  it('keeps bank-account instructed payments as cash when the source card type is known', () => {
+    const cards = [bankCard({ id: 'bank-1' }), creditCard({ id: 'credit-1' })]
+    const isCreditCardId = buildCreditCardIdCheck(cards)
+
+    const bankInstructed = payment({ amount: 1200, payment_method: 'bank_auto', auto_source_card_id: 'bank-1' })
+    const cardInstructed = payment({ amount: 1200, payment_method: 'bank_auto', auto_source_card_id: 'credit-1' })
+
+    expect(paymentCashOutflowAmount(bankInstructed, isCreditCardId)).toBe(1200)
+    expect(paymentCashOutflowAmount(cardInstructed, isCreditCardId)).toBe(0)
+  })
+
+  it('falls back to the old assumption when the card list is empty', () => {
+    expect(buildCreditCardIdCheck([])).toBeUndefined()
+    const instructed = payment({ amount: 1200, payment_method: 'bank_auto', auto_source_card_id: 'unknown' })
+    expect(paymentCashOutflowAmount(instructed, undefined)).toBe(0)
   })
 })
 

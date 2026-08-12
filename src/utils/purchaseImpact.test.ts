@@ -116,6 +116,18 @@ describe('buildPurchaseImpact', () => {
     expect(result.reasons.length).toBeGreaterThan(0)
   })
 
+  it('taksit gerekçesi tutarı tr-TR biçiminde yazar (1.666,67 ₺)', () => {
+    const result = buildPurchaseImpact({
+      amount: 5000,
+      installments: 3,
+      method: 'card',
+      forecast,
+      safeToSpend: 20000,
+      buffer: 5000,
+    })
+    expect(result.reasons).toContain('3 ay boyunca aylık 1.666,67 ₺ yük ekler.')
+  })
+
   it('harcanabilir tutarı aşan alım en az dikkat verir', () => {
     const result = buildPurchaseImpact({
       amount: 6000,

@@ -147,8 +147,8 @@ export function MonthlyReport({ data }: { data: AnalysisData }) {
   // "Nakit çıkışı" projeksiyon değil GERÇEKLEŞEN ödemelerdir (işlem geçmişi).
   // Projeksiyon dashboard'ın işi (kalan yük); rapor ayın fiilen olan bitenini anlatır.
   const realized = useMemo(
-    () => buildRealizedMonthlyOutflow(data.transactionHistory, data.payments),
-    [data.transactionHistory, data.payments],
+    () => buildRealizedMonthlyOutflow(data.transactionHistory, data.payments, new Date(), data.cards),
+    [data.transactionHistory, data.payments, data.cards],
   )
   const income = cashFlow.income
   const outflow = realized.totalCash
@@ -187,7 +187,7 @@ export function MonthlyReport({ data }: { data: AnalysisData }) {
           </Button>
           <Button type="button" variant="outline" size="sm" onClick={() => window.print()}>
             <Download />
-            PDF
+            Sayfayı yazdır
           </Button>
         </div>
         <div className="grid grid-cols-2 gap-2 min-[520px]:grid-cols-4">
@@ -217,7 +217,9 @@ export function MonthlyReport({ data }: { data: AnalysisData }) {
         ) : null}
 
         <p className="text-xs text-muted-foreground">
-          Kart harcamaları alışveriş tarihinde izlenir; nakit çıkışı bu ay fiilen yapılmış ödemelerden (işlem geçmişi) gelir.
+          Kart harcamaları alışveriş tarihinde izlenir ve bekleyen provizyonlar dahildir; nakit çıkışı bu ay fiilen yapılmış
+          ödemelerden (işlem geçmişi) gelir. Net nakit bu ikisinin farkıdır: gelir maaş varsayımına dayalı bir projeksiyon,
+          çıkış ise gerçekleşen ödemelerdir.
         </p>
       </CardContent>
     </Card>

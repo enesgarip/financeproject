@@ -47,15 +47,41 @@ export function paymentOccurrenceInMonth(payment: Payment, month = new Date()) {
   return isDateInMonth(payment.due_date, month) ? new Date(`${payment.due_date}T00:00:00`) : null
 }
 
-// Ödeme bir karta talimatlı mı? (otomatik ödeme + kaynak kart seçili).
-// Böyleyse para bankadan değil karttan çıkar → bu ayın nakit çıkışı değil.
-export function paymentUsesCreditCard(payment: Pick<Payment, 'payment_method' | 'auto_source_card_id'>) {
-  return payment.payment_method === 'bank_auto' && Boolean(payment.auto_source_card_id)
+/** "Bu kart id'si bilinen bir kredi kartı mı?" sorusuna cevap veren predicate. */
+export type CreditCardIdCheck = (cardId: string) => boolean
+
+/**
+ * Kart listesinden `CreditCardIdCheck` üretir. Liste boşsa `undefined` döner:
+ * kartlar henüz yüklenmemiş/bilinmiyor demektir ve çağıran eski varsayıma
+ * (talimat kartı = kredi kartı) düşer; boş listeyle her ödemeyi nakit saymak
+ * yükleme anında rakamları zıplatırdı.
+ */
+export function buildCreditCardIdCheck(cards: Array<Pick<Card, 'id' | 'card_type'>>): CreditCardIdCheck | undefined {
+  if (cards.length === 0) return undefined
+  const creditCardIds = new Set(cards.filter((card) => card.card_type === 'kredi_karti').map((card) => card.id))
+  return (cardId) => creditCardIds.has(cardId)
 }
 
-// Bu ay gerçekten bankadan çıkacak nakit. Karta talimatlıysa 0 (çıkış değil,
-// kart borcuna dönüşür; gerçek çıkış o kartın ekstresi ödenince gerçekleşir).
-// Nakit akışı/net değer hesapları bunu kullanır; nominal `amount`'u değil.
-export function paymentCashOutflowAmount(payment: Pick<Payment, 'amount' | 'payment_method' | 'auto_source_card_id'>) {
-  return paymentUsesCreditCard(payment) ? 0 : payment.amount
+// Ödeme bir KREDİ KARTINA talimatlı mı? Böyleyse para bankadan değil karttan
+// çıkar → bu ayın nakit çıkışı değil. `isCreditCardId` verilmezse eski varsayım
+// korunur: bank_auto + kaynak kart seçili = kredi kartı (form da yalnız kredi
+// kartı seçtirir). Verilirse BANKA hesabına talimatlı ödeme normal nakit çıkışı
+// sayılır — kart borcuna binmez.
+export function paymentUsesCreditCard(
+  payment: Pick<Payment, 'payment_method' | 'auto_source_card_id'>,
+  isCreditCardId?: CreditCardIdCheck,
+) {
+  if (payment.payment_method !== 'bank_auto' || !payment.auto_source_card_id) return false
+  return isCreditCardId ? isCreditCardId(payment.auto_source_card_id) : true
+}
+
+// Bu ay gerçekten bankadan çıkacak nakit. Kredi kartına talimatlıysa 0 (çıkış
+// değil, kart borcuna dönüşür; gerçek çıkış o kartın ekstresi ödenince
+// gerçekleşir). Nakit akışı/net değer hesapları bunu kullanır; nominal
+// `amount`'u değil.
+export function paymentCashOutflowAmount(
+  payment: Pick<Payment, 'amount' | 'payment_method' | 'auto_source_card_id'>,
+  isCreditCardId?: CreditCardIdCheck,
+) {
+  return paymentUsesCreditCard(payment, isCreditCardId) ? 0 : payment.amount
 }

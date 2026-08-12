@@ -34,11 +34,13 @@ import { diffTL, exceedsTL, roundTL, sumTL, toKurus, toTL } from './money'
 import { buildFinanceObligationsForMonth, getFirstBusinessDay, type FinanceObligation, type FinanceObligationsInput } from './obligations'
 
 export {
+  buildCreditCardIdCheck,
   cardMonthlyPaymentAmount,
   cardPayableDebt,
   paymentCashOutflowAmount,
   paymentOccurrenceInMonth,
   paymentUsesCreditCard,
+  type CreditCardIdCheck,
 } from './financeObligationRules'
 
 export type FinanceSummaryInput = {

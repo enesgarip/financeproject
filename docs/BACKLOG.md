@@ -12,6 +12,20 @@ tekrar eden yüzey haritası (kart kırılımı 11 yüzey, "Harcanabilir" 2 form
 pgTAP kapsam boşlukları. Docs senkronu aynı gün yapıldı (bkz. rapor §11).
 Düzeltme fazları (A–E) rapor §12'de.
 
+- ~~**Faz D — tutarlılık ve dil.**~~ DONE (2026-08-12). Denetim raporu §5–§7'nin
+  25 maddesi: 17 dil/metin düzeltmesi (ASCII'ye düşmüş Türkçe, kesme işareti,
+  ek uyumu kalıplarının yeniden kurulması, "app"→"uygulama", terminoloji
+  tekleştirme: "Araçlar", "Banka hesabı", "Geçmiş işlemler", "Ekstreyi öde",
+  "Mutabakat", "Alım sonrası kalan"; yüzde/para biçimi `formatPercent`/
+  `formatSeritAmount`'a bağlandı) + 8 tutarlılık düzeltmesi: kontrol merkezi
+  "açık ekstre" artık kart listesiyle aynı formül (tüm açık arşivlerin toplamı,
+  ton da ondan türer), mutabakat eşiği/yaş yardımcısı `reconciliation.ts`'te
+  tekleşti, `statementReminder` dueDate sabit `from`a göre hesaplanıyor,
+  `paymentUsesCreditCard` kaynak kartın türüne bakıyor (banka hesabına
+  talimat = nakit çıkışı), rozet/sayaç kesme uyarıları ("İlk 40 kayıt",
+  "ilk 8 gösteriliyor"), aylık rapor dipnotları (projeksiyon-gelir vs
+  gerçekleşen-çıkış, provizyon dahil) şeffaflaştı.
+
 - ~~**Faz C — ölü kod temizliği.**~~ DONE (2026-08-12). 11 dosya silindi
   (8 ölü dosya: `CardsPage.installment.tsx`, `InstallmentPlanner.tsx`,
   `debtsRepo.ts`, `paymentsRepo.ts`, `spendingAnomalies.ts`+test,

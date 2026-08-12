@@ -35,7 +35,7 @@ import type {
 } from '../types/database'
 import { getCardStatementPeriod, getNextCardPaymentDueDate } from './cardStatement'
 import { addDays, addMonths, dateInputValue, endOfMonth, isDateInMonth, monthlyOccurrenceDate, startOfDay, startOfMonth } from './date'
-import { cardMonthlyPaymentAmount, cardPayableDebt, paymentCashOutflowAmount, paymentOccurrenceInMonth, paymentUsesCreditCard } from './financeObligationRules'
+import { buildCreditCardIdCheck, cardMonthlyPaymentAmount, cardPayableDebt, paymentCashOutflowAmount, paymentOccurrenceInMonth, paymentUsesCreditCard } from './financeObligationRules'
 import { roundTL, sumTL } from './money'
 
 export type FinanceObligationKind =
@@ -171,13 +171,16 @@ export function buildFinanceObligationsForMonth(
   const fromMonth = startOfMonth(options.from ?? new Date())
   const items: FinanceObligation[] = []
   const cardsById = new Map(data.cards.map((card) => [card.id, card]))
+  // Kaynak kart BANKA hesabıysa talimat nakit çıkışıdır; yalnız kredi kartı
+  // kaynağı "karta biner, bu ay nakit değil" muamelesi görür.
+  const isCreditCardId = buildCreditCardIdCheck(data.cards)
   const openStatements = data.cardStatements.filter((statement) => statement.status === 'open')
   const cardsWithOpenStatements = new Set(openStatements.map((statement) => statement.card_id))
 
   for (const payment of data.payments) {
     const occurrence = paymentOccurrenceInMonth(payment, monthStart)
     if (!occurrence) continue
-    const usesCreditCard = paymentUsesCreditCard(payment)
+    const usesCreditCard = paymentUsesCreditCard(payment, isCreditCardId)
     const autoSourceCard = payment.auto_source_card_id ? cardsById.get(payment.auto_source_card_id) : undefined
 
     addObligation(
@@ -190,13 +193,13 @@ export function buildFinanceObligationsForMonth(
         relatedCardId: payment.auto_source_card_id ?? undefined,
         title: payment.title,
         subtitle: usesCreditCard
-          ? `${payment.category} - ${cardLabel(autoSourceCard)} kart talimati`
+          ? `${payment.category} - ${cardLabel(autoSourceCard)} kart talimatı`
           : payment.recurrence === 'monthly'
-            ? `${payment.category} - aylik`
+            ? `${payment.category} - aylık`
             : payment.category,
         date: dateInputValue(occurrence),
         amount: payment.amount,
-        cashImpactAmount: paymentCashOutflowAmount(payment),
+        cashImpactAmount: paymentCashOutflowAmount(payment, isCreditCardId),
         direction: 'outflow',
         settlement: usesCreditCard ? 'credit_card' : 'cash',
         isEstimate: payment.amount_status === 'estimated',

@@ -58,9 +58,9 @@ export function UpcomingInstallments({ data }: { data: AnalysisData }) {
           tone: remaining !== null && remaining < 0 ? 'destructive' : 'outline',
         }
       })
-    return [...cardItems, ...loanItems]
-      .sort((a, b) => a.sortDate.localeCompare(b.sortDate) || b.amount - a.amount)
-      .slice(0, 8)
+    // Sayaç kesmeden ÖNCEKİ gerçek toplamı söyler; liste ilk 8'i gösterir.
+    const all = [...cardItems, ...loanItems].sort((a, b) => a.sortDate.localeCompare(b.sortDate) || b.amount - a.amount)
+    return { items: all.slice(0, 8), totalCount: all.length }
   }, [data.cards, data.loans, data.cardInstallments, data.loanInstallments])
 
   return (
@@ -69,16 +69,18 @@ export function UpcomingInstallments({ data }: { data: AnalysisData }) {
         <div className="flex items-start justify-between gap-3">
           <div>
             <CardTitle>Yaklaşan taksitler</CardTitle>
-            <p className="mt-1 text-sm text-muted-foreground">{upcoming.length} kart / kredi taksiti</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {upcoming.totalCount} kart / kredi taksiti{upcoming.totalCount > 8 ? ' · ilk 8 gösteriliyor' : ''}
+            </p>
           </div>
           <WalletCards className="text-success" />
         </div>
       </CardHeader>
       <CardContent className="space-y-2 pt-2">
-        {upcoming.length === 0 ? (
+        {upcoming.items.length === 0 ? (
           <p className="rounded-xl bg-muted/45 p-3 text-sm text-muted-foreground">Bekleyen kart veya kredi taksiti yok.</p>
         ) : (
-          upcoming.map((item) => (
+          upcoming.items.map((item) => (
             <div key={item.id} className="rounded-xl bg-muted/45 px-3 py-2 text-sm">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
@@ -290,7 +292,7 @@ export function MonthCloseAssistant({ data, missingTables }: { data: AnalysisDat
             <h2 className="text-base font-extrabold">Ay kapanış asistanı</h2>
           </div>
           <p className="mt-1 text-sm text-muted-foreground">
-            {formatMonth(monthKey)} için {completed}/{checks.length} kontrol tamam. Raporu PDF olarak yazdırıp arşivleyebilirsin.
+            {formatMonth(monthKey)} için {completed}/{checks.length} kontrol tamam. Aylık rapor kartından PDF alabilirsin.
           </p>
         </div>
         <div className="grid gap-2 min-[560px]:grid-cols-2 min-[980px]:grid-cols-3">
@@ -322,7 +324,7 @@ export function SubscriptionsPanel({ data }: { data: AnalysisData }) {
             <CardTitle>Abonelik & sabit giderler</CardTitle>
             <p className="mt-1 text-sm text-muted-foreground">
               {result.items.filter((i) => i.isActive).length} aktif · toplam {formatAmount(result.monthlyTotal)}/ay
-              {result.incomeRatio !== null ? ` · gelirin %${result.incomeRatio}'i` : ''}
+              {result.incomeRatio !== null ? ` · gelire oranı %${result.incomeRatio}` : ''}
             </p>
           </div>
           <Repeat className="text-success" />

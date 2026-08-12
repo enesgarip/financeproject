@@ -46,7 +46,11 @@ export function CardControlCenter({
   const items = buildCardControlItems(rows, statements, installments, reconciliations)
   if (items.length === 0) return null
 
-  const totalStatement = sumTL(items.map(({ card }) => card.statement_debt_amount))
+  // Kart listesindeki visibleOpenStatementAmount ile aynı kural: açık arşiv
+  // toplamı; hiç açık arşiv yoksa karttaki ekstre borcuna düşülür.
+  const visibleStatementAmount = ({ card, openStatementAmount }: (typeof items)[number]) =>
+    openStatementAmount > 0 ? openStatementAmount : card.statement_debt_amount
+  const totalStatement = sumTL(items.map(visibleStatementAmount))
   const totalCurrent = sumTL(items.map(({ card }) => card.current_period_spending))
   const totalProvision = sumTL(items.map(({ card }) => cardProvisionAmount(card)))
   const totalScheduled = sumTL(items.map(({ scheduledInstallmentTotal }) => scheduledInstallmentTotal))
@@ -93,7 +97,9 @@ export function CardControlCenter({
       ) : null}
 
       <div className="mt-4 grid gap-3 xl:grid-cols-2">
-        {items.map(({ card, latestReconciliation, openStatement, reconciliationStatus, scheduledInstallmentTotal }) => {
+        {items.map((item) => {
+          const { card, latestReconciliation, openStatementDueDate, reconciliationStatus, scheduledInstallmentTotal } = item
+          const statementAmount = visibleStatementAmount(item)
           const status = statusPresentation[reconciliationStatus]
           const drift = latestReconciliation
             ? diffTL(latestReconciliation.app_amount, latestReconciliation.real_amount)
@@ -124,8 +130,8 @@ export function CardControlCenter({
               <div className="mt-3 grid grid-cols-2 gap-2 min-[620px]:grid-cols-4 xl:grid-cols-2 2xl:grid-cols-4">
                 <MiniStat
                   label="Ekstre"
-                  value={formatAmount(openStatement?.statement_debt_amount ?? card.statement_debt_amount)}
-                  tone={card.statement_debt_amount > 0 ? 'warning' : 'good'}
+                  value={formatAmount(statementAmount)}
+                  tone={statementAmount > 0 ? 'warning' : 'good'}
                 />
                 <MiniStat label="Dönem içi" value={formatAmount(card.current_period_spending)} tone="info" />
                 <MiniStat label="Provizyon" value={formatAmount(cardProvisionAmount(card))} />
@@ -140,7 +146,7 @@ export function CardControlCenter({
                       <>
                         Son banka kontrolü {formatDate(latestReconciliation.reconciled_at.slice(0, 10))}
                         {drift !== null && reconciliationStatus === 'drift'
-                          ? ` · App − banka farkı ${drift > 0 ? '+' : ''}${formatAmount(drift)}`
+                          ? ` · Uygulama − banka farkı ${drift > 0 ? '+' : ''}${formatAmount(drift)}`
                           : ''}
                         {/* Faz D1'den beri düzeltilen fark kayıtta duruyor; "sorunsuz geçti"
                             ile "fark çıktı ama kapatıldı" artık ayırt edilebilir. */}
@@ -153,8 +159,8 @@ export function CardControlCenter({
                     )}
                   </p>
                 </div>
-                {openStatement?.due_date ? (
-                  <span className="shrink-0 font-bold text-foreground">Son ödeme {formatDate(openStatement.due_date)}</span>
+                {openStatementDueDate ? (
+                  <span className="shrink-0 font-bold text-foreground">Son ödeme {formatDate(openStatementDueDate)}</span>
                 ) : null}
               </div>
 
@@ -173,7 +179,7 @@ export function CardControlCenter({
                   className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-primary px-3 text-xs font-bold text-primary-foreground transition hover:bg-primary/90"
                 >
                   <ScanSearch size={14} />
-                  Hareket PDF&apos;i
+                  Mutabakat
                 </button>
               </div>
             </article>

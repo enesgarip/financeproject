@@ -1177,7 +1177,7 @@ export function checkLoans(loans: Loan[], loanInstallments: LoanInstallment[]): 
         area: 'Krediler',
         severity: 'error',
         title: `${loan.loan_name} kalan bilgisi tutarsız`,
-        description: 'Kredi kartındaki ödeme planı ile kredi özetindeki kalan tutar/taksit aynı değil.',
+        description: 'Kredi kaydındaki ödeme planı ile kredi özetindeki kalan tutar/taksit aynı değil.',
         details: [
           `Kalan borç: ${formatCurrency(loan.remaining_amount)} → ${formatCurrency(remainingAmount)}`,
           `Kalan taksit: ${loan.remaining_installments} → ${remainingInstallments}`,
@@ -1508,7 +1508,7 @@ export function checkGoals(savingsGoals: SavingsGoal[], savingsGoalComponents: S
           area: 'Hedefler',
           severity: 'warning',
           title: `${goal.name} bileşen hedefi eksik`,
-          description: 'Karma hedefte her bileşenin hedef miktarı 0 dan büyük olmalı.',
+          description: 'Karma hedefte her bileşenin hedef miktarı 0’dan büyük olmalı.',
           details: componentsWithMissingTarget.map(formatGoalComponentProgress),
           fixable: false,
           kind: 'manual',
