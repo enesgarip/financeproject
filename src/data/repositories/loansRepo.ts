@@ -40,12 +40,3 @@ export async function deleteLoanInstallment(id: string): Promise<Result<void>> {
   const { error } = await supabase.from('loan_installments').delete().eq('id', id)
   return voidResultFromSupabase(error, 'Taksit silinemedi.')
 }
-
-export async function payLoanInstallment(installmentId: string, sourceCardId: string): Promise<Result<void>> {
-  const { error } = await supabase.rpc('pay_loan_installment', {
-    p_installment_id: installmentId,
-    p_source_card_id: sourceCardId,
-  })
-
-  return voidResultFromSupabase(error, 'Odeme islemi tamamlanamadi.')
-}

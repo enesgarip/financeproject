@@ -85,20 +85,4 @@ function CurrencyInput({
   )
 }
 
-/** Input with leading icon */
-function InputWithIcon({
-  icon,
-  className,
-  ...props
-}: React.ComponentProps<"input"> & { icon: React.ReactNode }) {
-  return (
-    <div className="relative">
-      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-        {icon}
-      </span>
-      <Input className={cn("pl-9", className)} {...props} />
-    </div>
-  )
-}
-
-export { Input, Select, Textarea, CurrencyInput, InputWithIcon }
+export { Input, Select, Textarea, CurrencyInput }

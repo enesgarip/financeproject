@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { EXACT, estimateConfidence, freshnessConfidence, valuationConfidence, worstConfidence } from './dataConfidence'
+import { EXACT, freshnessConfidence, valuationConfidence } from './dataConfidence'
 
 describe('freshnessConfidence', () => {
   it('eşiğin altındaki yaş kesin sayılır', () => {
@@ -16,18 +16,6 @@ describe('freshnessConfidence', () => {
   it('hiç doğrulanmamış rakam bayat sayılır', () => {
     expect(freshnessConfidence(null, 7).level).toBe('stale')
     expect(freshnessConfidence(null, 7).label).toBe('Doğrulanmadı')
-  })
-})
-
-describe('worstConfidence', () => {
-  it('en kötü sinyali seçer', () => {
-    expect(worstConfidence(EXACT, estimateConfidence()).level).toBe('estimate')
-    expect(worstConfidence(estimateConfidence(), freshnessConfidence(44, 7)).level).toBe('stale')
-    expect(worstConfidence(EXACT, EXACT).level).toBe('exact')
-  })
-
-  it('argümansız çağrıda kesin döner', () => {
-    expect(worstConfidence().level).toBe('exact')
   })
 })
 
@@ -59,10 +47,5 @@ describe('valuationConfidence', () => {
     expect(confidence.level).toBe('stale')
     expect(confidence.label).toBe('Kur yok')
     expect(confidence.reason).toContain('bilinmiyor')
-  })
-
-  it('en kötü sinyal kazanma kuralına katılır', () => {
-    const stale = valuationConfidence('stored', null, NOW)
-    expect(worstConfidence(EXACT, estimateConfidence(), stale).level).toBe('stale')
   })
 })

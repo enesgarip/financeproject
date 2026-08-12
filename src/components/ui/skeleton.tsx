@@ -37,23 +37,6 @@ function SkeletonHero() {
   )
 }
 
-function SkeletonMetricGrid({ count = 4 }: { count?: number }) {
-  return (
-    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-      {Array.from({ length: count }, (_, i) => (
-        <div key={i} className="flex flex-col gap-3 rounded-2xl border border-border/40 bg-card p-4">
-          <div className="flex items-start justify-between">
-            <Skeleton className="h-3 w-20" />
-            <Skeleton className="size-8 rounded-xl" />
-          </div>
-          <Skeleton className="h-7 w-32" />
-          <Skeleton className="h-3 w-24" />
-        </div>
-      ))}
-    </div>
-  )
-}
-
 function SkeletonCard({ lines = 3 }: { lines?: number }) {
   return (
     <div className="flex flex-col gap-3 rounded-2xl border border-border/40 bg-card p-5">
@@ -63,27 +46,6 @@ function SkeletonCard({ lines = 3 }: { lines?: number }) {
       </div>
       {Array.from({ length: lines }, (_, i) => (
         <Skeleton key={i} className="h-3" style={{ width: `${70 + (i % 3) * 10}%` }} />
-      ))}
-    </div>
-  )
-}
-
-function SkeletonTable({ rows = 5 }: { rows?: number }) {
-  return (
-    <div className="flex flex-col gap-2 rounded-2xl border border-border/40 bg-card p-4">
-      <div className="flex items-center justify-between pb-2">
-        <Skeleton className="h-4 w-32" />
-        <Skeleton className="h-8 w-20 rounded-lg" />
-      </div>
-      {Array.from({ length: rows }, (_, i) => (
-        <div key={i} className="flex items-center gap-3 rounded-xl border border-border/20 bg-muted/20 p-3">
-          <Skeleton className="size-8 shrink-0 rounded-lg" />
-          <div className="flex flex-1 flex-col gap-1.5">
-            <Skeleton className="h-3" style={{ width: `${40 + (i % 4) * 12}%` }} />
-            <Skeleton className="h-2.5 w-24" />
-          </div>
-          <Skeleton className="h-4 w-20 shrink-0" />
-        </div>
       ))}
     </div>
   )
@@ -178,4 +140,4 @@ function SkeletonDashboard() {
   )
 }
 
-export { Skeleton, SkeletonHero, SkeletonMetricGrid, SkeletonCard, SkeletonTable, SkeletonDashboard }
+export { Skeleton, SkeletonHero, SkeletonCard, SkeletonDashboard }

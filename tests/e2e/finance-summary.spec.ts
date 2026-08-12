@@ -3,10 +3,7 @@ import type {
   Asset,
   Card,
   CardInstallment,
-  CardStatementArchive,
   Debt,
-  Loan,
-  LoanInstallment,
   Payment,
   SalaryHistory,
 } from '../../src/types/database'
@@ -18,7 +15,6 @@ import {
   totalCreditLimit,
   type FinanceSummaryInput,
 } from '../../src/utils/financeSummary'
-import { buildDashboardMonthlyLoad } from '../../src/utils/dashboardUpcoming'
 
 const user_id = 'user-1'
 const now = '2026-06-02T12:00:00.000Z'
@@ -80,60 +76,6 @@ function cardInstallment(overrides: Partial<CardInstallment>): CardInstallment {
     category: 'Elektronik',
     status: 'scheduled',
     posted_at: null,
-    paid_at: null,
-    note: null,
-    ...overrides,
-  }
-}
-
-function cardStatement(overrides: Partial<CardStatementArchive>): CardStatementArchive {
-  return {
-    ...base(overrides.id ?? crypto.randomUUID()),
-    card_id: 'card-1',
-    period_year: 2026,
-    period_month: 7,
-    statement_date: '2026-07-01',
-    due_date: '2026-07-20',
-    statement_debt_amount: 0,
-    current_period_spending: 0,
-    total_debt_amount: 0,
-    status: 'open',
-    paid_at: null,
-    payment_source_card_id: null,
-    reconciled_bank_amount: null,
-    reconciled_at: null,
-    reconciliation_note: null,
-    note: null,
-    ...overrides,
-  }
-}
-
-function loan(overrides: Partial<Loan>): Loan {
-  return {
-    ...base(overrides.id ?? crypto.randomUUID()),
-    bank_name: 'Banka',
-    loan_name: 'Kredi',
-    total_amount: 0,
-    remaining_amount: 0,
-    monthly_payment: 0,
-    installment_day: 15,
-    start_date: null,
-    end_date: null,
-    remaining_installments: 0,
-    status: 'active',
-    note: null,
-    ...overrides,
-  }
-}
-
-function loanInstallment(overrides: Partial<LoanInstallment>): LoanInstallment {
-  return {
-    ...base(overrides.id ?? crypto.randomUUID()),
-    loan_id: 'loan-1',
-    installment_no: 1,
-    due_date: '2026-06-15',
-    amount: 0,
-    status: 'bekliyor',
     paid_at: null,
     note: null,
     ...overrides,
@@ -254,48 +196,6 @@ test('card payable debt excludes future installments and provisions', () => {
   })
 
   expect(cardPayableDebt(bonus)).toBe(6_000)
-})
-
-test('next month cash load does not count card installments before statement payment', () => {
-  const loanId = 'loan-1'
-  const input = data({
-    cards: [card({ id: 'card-1', statement_debt_amount: 9_999, debt_amount: 30_000, due_day: 20 })],
-    cardStatements: [cardStatement({ card_id: 'card-1', statement_debt_amount: 5_000, due_date: '2026-07-20' })],
-    cardInstallments: [cardInstallment({ card_id: 'card-1', due_month: '2026-07-01', amount: 5_000 })],
-    loanInstallments: [loanInstallment({ loan_id: loanId, due_date: '2026-07-15', amount: 2_500 })],
-    loans: [loan({ id: loanId, remaining_amount: 10_000, monthly_payment: 2_500, remaining_installments: 4 })],
-    payments: [payment({ due_date: '2026-07-05', amount: 750 })],
-    debts: [debt({ due_date: '2026-07-12', estimated_value_try: 1_250 })],
-  })
-  const load = buildDashboardMonthlyLoad(
-    {
-      cards: input.cards,
-      payments: input.payments,
-      loans: input.loans,
-      loanInstallments: input.loanInstallments,
-      debts: input.debts,
-      cardInstallments: input.cardInstallments,
-      cardStatements: input.cardStatements ?? [],
-    },
-    new Date('2026-07-01T00:00:00'),
-    new Date('2026-06-01T00:00:00'),
-  )
-
-  expect(load.cardStatements).toBe(5_000)
-  expect(load.cardInstallments).toBe(0)
-  expect(load.loanInstallments).toBe(2_500)
-  expect(load.legacyLoanInstallments).toBe(0)
-  expect(load.payments).toBe(750)
-  expect(load.personalDebts).toBe(1_250)
-  expect(load.total).toBe(
-    load.cardStatements +
-      load.cardInstallments +
-      load.loanInstallments +
-      load.legacyLoanInstallments +
-      load.payments +
-      load.personalDebts,
-  )
-  expect(load.total).toBe(9_500)
 })
 
 test('shared credit limits are counted once per group', () => {

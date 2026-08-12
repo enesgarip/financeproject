@@ -39,11 +39,6 @@ export function roundTL(tl: number | null | undefined): number {
   return toTL(toKurus(tl))
 }
 
-/** İki kuruş değerini toplar (kesin). */
-export function addKurus(a: number, b: number): number {
-  return Math.trunc(a) + Math.trunc(b)
-}
-
 /** İki kuruş değerini çıkarır (kesin). */
 export function subKurus(a: number, b: number): number {
   return Math.trunc(a) - Math.trunc(b)

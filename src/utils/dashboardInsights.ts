@@ -1,4 +1,4 @@
-import type { FocusAction } from '../components/dashboard/DashboardPanels'
+import type { FocusAction } from '../components/dashboard/DashboardInsights'
 import type {
   AccountReconciliation,
   Card as FinanceCard,
@@ -41,12 +41,6 @@ export type FocusActionsInput = {
   cardStatements: CardStatementArchive[]
   salaryHistory: SalaryHistory[]
   accountReconciliations: AccountReconciliation[]
-}
-
-export function reconciliationDriftCount(cards: FinanceCard[], reconciliations: AccountReconciliation[]): number {
-  const reconcilable = cards.filter((c) => c.card_type === 'banka_karti' || c.card_type === 'kredi_karti')
-  const items = buildReconciliationItems(reconcilable, latestReconciliationByCard(reconciliations))
-  return items.filter((i) => i.status === 'drift').length
 }
 
 export function buildFocusActions(

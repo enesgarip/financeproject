@@ -14,7 +14,17 @@ import { useState } from 'react'
 import { Link } from 'react-router'
 import { Card, CardContent } from '../ui/card'
 import { useBalancePrivacy } from '../../hooks/useBalancePrivacy'
-import type { FocusAction } from './DashboardPanels'
+
+export type FocusAction = {
+  id: string
+  title: string
+  description: string
+  to: string
+  cta: string
+  tone: 'emerald' | 'amber' | 'rose' | 'indigo' | 'stone'
+  icon: 'alert' | 'calendar' | 'card' | 'check' | 'health' | 'loan'
+  priority: number
+}
 
 export function FocusActionPanel({
   actions,

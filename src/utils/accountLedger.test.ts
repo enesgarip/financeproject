@@ -2,10 +2,8 @@ import { describe, expect, it } from 'vitest'
 import {
   balanceDrift,
   buildAccountLedgerBalanceRows,
-  groupEventsByAccount,
   projectAccountBalance,
   projectAccountBalanceKurus,
-  projectBalanceByAccount,
   summarizeAccountLedger,
   type AccountLedgerEvent,
 } from './accountLedger'
@@ -29,19 +27,6 @@ describe('projectAccountBalanceKurus / projectAccountBalance', () => {
   it('handles an emptied account (nets to zero)', () => {
     const events = [ev('a', 100000, 'opening'), ev('a', -100000, 'withdrawal')]
     expect(projectAccountBalance(events)).toBe(0)
-  })
-})
-
-describe('groupEventsByAccount / projectBalanceByAccount', () => {
-  it('splits events per account and projects each', () => {
-    const events = [ev('a', 100000, 'opening'), ev('b', 50000, 'opening'), ev('a', -30000, 'withdrawal')]
-    const grouped = groupEventsByAccount(events)
-    expect(grouped.get('a')).toHaveLength(2)
-    expect(grouped.get('b')).toHaveLength(1)
-
-    const byAccount = projectBalanceByAccount(events)
-    expect(byAccount.get('a')).toBe(700)
-    expect(byAccount.get('b')).toBe(500)
   })
 })
 

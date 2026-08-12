@@ -1,7 +1,7 @@
 /**
- * YapıKredi (Worldcard) EKSTRE metnini ParsedStatement'a ayrıştırır. Aynı
- * pipeline'ı (matchTransactions, checkStatementInstallments, expenseTotalAmount,
- * resolveStatementImportAction) DenizBank ile paylaşır; yalnız METİN düzeni farklı.
+ * YapıKredi (Worldcard) EKSTRE metnini ParsedStatement'a ayrıştırır. Aynı import
+ * pipeline'ını (resolveStatementImportAction) DenizBank ile paylaşır; yalnız
+ * METİN düzeni farklı.
  *
  * YapıKredi'nin DenizBank'tan farkları:
  *  - Tarih Türkçe ay-isimli: "05 Mart 2026" (DenizBank: 05/03/2026).

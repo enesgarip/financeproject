@@ -1,22 +1,13 @@
 /**
  * DenizBank EKSTRE metnini yapısal işlemlere ayrıştırır (kopyala-yapıştır PDF/
- * metin → ParsedTransaction[]). Taksit notasyonunu (X/Y) yakalar, kategoriyi
- * categories.ts ile tahmin eder ve mevcut kayıtlarla eşleştirir (MatchResult).
+ * metin → ParsedTransaction[]). Taksit notasyonunu (X/Y) yakalar ve kategoriyi
+ * categories.ts ile tahmin eder.
  *
  * Bu yalnız metin AYRIŞTIRMA; ledger'a yazma cardsRepo/StatementImportModal işi.
  * Karşılaştırma money.ts ile (tutar eşleşmesinde float toleransı yaratma).
  */
 import { suggestExpenseCategory, type CategoryMemory } from './categories'
-import { addMonths, dateInputValue } from './date'
-import {
-  amountsMatchForImport,
-  descriptionsCompatibleForImport,
-  LOOSE_DATE_MATCH_WINDOW_DAYS,
-  selectImportMatchIndex,
-  type ImportMatchCandidate,
-} from './importMatch'
 import { diffTL, roundTL, sumTL } from './money'
-import { normalizeSearchText } from './searchText'
 
 export type ParsedTransaction = {
   date: string
@@ -63,27 +54,6 @@ export type ParsedStatement = {
   feesAndInterest?: number | null
 }
 
-export type MatchResult = {
-  matched: ParsedTransaction[]
-  unmatched: ParsedTransaction[]
-  matches: StatementTransactionMatch[]
-  /** App'teki tutar ile PDF'teki tutar arasındaki toplam fark (app − PDF). */
-  matchDriftTL: number
-}
-
-export type StatementTransactionMatch = {
-  transaction: ParsedTransaction
-  expense: StatementExpenseMatchRow
-}
-
-export type StatementExpenseMatchRow = {
-  spent_at: string
-  amount: number
-  status: string
-  description?: string | null
-  note?: string | null
-}
-
 // ── PDF section headers → app categories ──────────────────────────────────
 
 const SECTION_CATEGORY: Record<string, string> = {
@@ -103,7 +73,6 @@ const SECTION_CATEGORY: Record<string, string> = {
 }
 
 const SECTION_KEYS = Object.keys(SECTION_CATEGORY)
-const AMOUNT_MATCH_TOLERANCE_TL = 5
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -144,35 +113,6 @@ function sectionCategoryFor(line: string): string | null {
   const upper = line.toUpperCase()
   const key = SECTION_KEYS.find((k) => upper.includes(k))
   return key ? (SECTION_CATEGORY[key] ?? null) : null
-}
-
-function isoDayNumber(value: string): number | null {
-  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/)
-  if (!match) return null
-  const [, year, month, day] = match
-  return Date.UTC(Number(year), Number(month) - 1, Number(day)) / 86_400_000
-}
-
-function dateDistanceDays(left: string, right: string): number | null {
-  const leftDay = isoDayNumber(left)
-  const rightDay = isoDayNumber(right)
-  if (leftDay == null || rightDay == null) return null
-  return Math.abs(leftDay - rightDay)
-}
-
-function paymentDueDateFromExpenseNote(note: string | null | undefined): string | null {
-  const match = note?.match(/Vade:\s*(\d{4}-\d{2}-\d{2})/i)
-  return match?.[1] ?? null
-}
-
-function expenseDateDistance(expense: StatementExpenseMatchRow, transactionDate: string): number | null {
-  const spentDistance = dateDistanceDays(expense.spent_at, transactionDate)
-  const paymentDueDate = paymentDueDateFromExpenseNote(expense.note)
-  const dueDistance = paymentDueDate ? dateDistanceDays(paymentDueDate, transactionDate) : null
-
-  if (spentDistance == null) return dueDistance
-  if (dueDistance == null) return spentDistance
-  return Math.min(spentDistance, dueDistance)
 }
 
 // ── Main parser ────────────────────────────────────────────────────────────
@@ -326,9 +266,9 @@ export const STATEMENT_TOTAL_TOLERANCE_TL = 1
 /**
  * Ekstre parse'ının kendi içinde tutarlı olup olmadığını iki bağımsız kimlikle
  * doğrular (8 gerçek DenizBank ekstresinde kalibre edildi — her ikisi de residual 0).
- * app-vs-banka mutabakat kilidinden (statementReconcileReview) FARKLIDIR: o app
- * kaydını bankaya çeker; bu, PDF'ten OKUNAN verinin PDF'in kendi özetiyle tutup
- * tutmadığını sorar. Gerekli alan yoksa `checked=false` (körlemesine geçme).
+ * app-vs-banka mutabakatından FARKLIDIR: o app kaydını bankaya çeker; bu, PDF'ten
+ * OKUNAN verinin PDF'in kendi özetiyle tutup tutmadığını sorar. Gerekli alan
+ * yoksa `checked=false` (körlemesine geçme).
  */
 export function checkStatementParseTotals(statement: ParsedStatement): StatementParseTotals {
   const { totalDebt, previousBalance, payments, periodSpending, feesAndInterest } = statement
@@ -358,216 +298,4 @@ export function checkStatementParseTotals(statement: ParsedStatement): Statement
       consistent: Math.abs(linesResidual) <= STATEMENT_TOTAL_TOLERANCE_TL,
     },
   }
-}
-
-// ── Matching ───────────────────────────────────────────────────────────────
-
-/**
- * Bir kart harcamasının app'te saklanan toplam tutarını döndürür.
- * Ekstrede taksit satırı AYLIK tutarı taşır; app ise harcamayı TOPLAM tutarla
- * saklar. Toplam taksit sayısı biliniyorsa aylık × sayı ile yeniden kurulur.
- */
-export function expenseTotalAmount(tx: ParsedTransaction): number {
-  if (tx.isInstallment && tx.installmentCount > 1) {
-    return roundTL(tx.amount * tx.installmentCount)
-  }
-  return tx.amount
-}
-
-export function statementInstallmentDueDate(tx: ParsedTransaction): string {
-  if (!tx.isInstallment || tx.installmentCount <= 1) return tx.date
-  return dateInputValue(addMonths(new Date(`${tx.date}T00:00:00`), Math.max(0, tx.installmentNo - 1)))
-}
-
-export function matchTransactions(
-  pdfTransactions: ParsedTransaction[],
-  existingExpenses: StatementExpenseMatchRow[],
-): MatchResult {
-  const active = existingExpenses.filter((e) => e.status !== 'cancelled')
-  const usedIndices = new Set<number>()
-  const matched: ParsedTransaction[] = []
-  const unmatched: ParsedTransaction[] = []
-  const matches: StatementTransactionMatch[] = []
-
-  for (const tx of pdfTransactions) {
-    // Taksitli işlem app'te orijinal tarih + TOPLAM tutarla bir harcama olarak
-    // durur; bu yüzden eşleştirmede toplam tutarı kullanırız.
-    const compareAmount = expenseTotalAmount(tx)
-    const candidates: ImportMatchCandidate[] = []
-    for (let i = 0; i < active.length; i++) {
-      if (usedIndices.has(i)) continue
-      const exp = active[i]
-      if (!amountsMatchForImport(exp.amount, compareAmount)) continue
-
-      const distance = expenseDateDistance(exp, tx.date)
-      if (distance == null || distance > LOOSE_DATE_MATCH_WINDOW_DAYS) continue
-      candidates.push({
-        index: i,
-        distance,
-        descriptionCompatible: descriptionsCompatibleForImport(tx.description, exp.description),
-      })
-    }
-    const foundIndex = selectImportMatchIndex(candidates)
-    if (foundIndex == null) {
-      unmatched.push(tx)
-    } else {
-      usedIndices.add(foundIndex)
-      matched.push(tx)
-      matches.push({ transaction: tx, expense: active[foundIndex] })
-    }
-  }
-
-  let matchDriftTL = 0
-  for (const m of matches) {
-    matchDriftTL += diffTL(m.expense.amount, expenseTotalAmount(m.transaction))
-  }
-
-  return { matched, unmatched, matches, matchDriftTL }
-}
-
-// ── Installment verification ──────────────────────────────────────────────
-
-export type StatementInstallmentMatchRow = {
-  id: string
-  card_expense_id: string | null
-  due_month: string
-  amount: number
-  status: string
-  description: string
-  installment_no: number
-  installment_count: number
-  statement_archive_id: string | null
-}
-
-export type StatementInstallmentMatch = {
-  transaction: ParsedTransaction
-  installment: StatementInstallmentMatchRow
-}
-
-export type StatementInstallmentMismatch = {
-  transaction: ParsedTransaction
-  installment: StatementInstallmentMatchRow
-  diffTL: number
-}
-
-export type StatementInstallmentCheckResult = {
-  matched: StatementInstallmentMatch[]
-  amountMismatches: StatementInstallmentMismatch[]
-  pdfOnly: ParsedTransaction[]
-  appOnly: StatementInstallmentMatchRow[]
-}
-
-export function reusableStatementInstallmentParentId(
-  transaction: ParsedTransaction,
-  installment: StatementInstallmentMatchRow,
-): string | null {
-  if (installment.status === 'paid') return null
-  if (installment.installment_no !== transaction.installmentNo) return null
-  if (installment.installment_count !== transaction.installmentCount) return null
-  return installment.card_expense_id
-}
-
-function installmentDescriptionKey(value: string): string {
-  return normalizeSearchText(
-    cleanDescription(value),
-  )
-    .replace(/[^\p{L}\p{N}]+/gu, ' ')
-    .trim()
-}
-
-function installmentDescriptionsCompatible(left: string, right: string | null | undefined): boolean {
-  const leftKey = installmentDescriptionKey(left)
-  const rightKey = installmentDescriptionKey(right ?? '')
-  if (!leftKey || !rightKey) return true
-  if (leftKey.includes(rightKey) || rightKey.includes(leftKey)) return true
-
-  const leftTokens = new Set(leftKey.split(' ').filter((t) => t.length >= 3))
-  const rightTokens = rightKey.split(' ').filter((t) => t.length >= 3)
-  const common = rightTokens.filter((t) => leftTokens.has(t)).length
-  return common >= Math.min(2, rightTokens.length)
-}
-
-/**
- * PDF'deki taksit satırlarını app'teki card_installments ile karşılaştırır.
- * Tutar farkları, eksik/fazla taksitler tespit edilir.
- */
-export function checkStatementInstallments(
-  pdfTransactions: ParsedTransaction[],
-  appInstallments: StatementInstallmentMatchRow[],
-  statementDate: string,
-): StatementInstallmentCheckResult {
-  const installmentTxs = pdfTransactions.filter((tx) => tx.isInstallment)
-  const active = appInstallments.filter((inst) => inst.status !== 'cancelled')
-  // Ödenmiş tarihsel çocuklar cari PDF satırının adayı değildir. Aksi halde
-  // banka numaralandırmayı yeniden başlattığında yeni 1/3 satırı eski paid 1/3
-  // ile eşleşip immutable parent'ın import payload'ına taşınmasına yol açar.
-  const matchable = active.filter((inst) => inst.status !== 'paid')
-  const usedIds = new Set<string>()
-  const matched: StatementInstallmentMatch[] = []
-  const amountMismatches: StatementInstallmentMismatch[] = []
-  const pdfOnly: ParsedTransaction[] = []
-
-  for (const tx of installmentTxs) {
-    const expectedDueMonth = statementInstallmentDueDate(tx)
-    const periodMonth = (statementDate || expectedDueMonth).slice(0, 7)
-
-    // Strict: taksit numarası + vade ayı
-    const strictCandidates = matchable.filter((inst) => (
-      !usedIds.has(inst.id) &&
-      inst.installment_no === tx.installmentNo &&
-      (inst.due_month === expectedDueMonth || inst.due_month.slice(0, 7) === expectedDueMonth.slice(0, 7))
-    ))
-
-    const strictDescriptionCandidates = strictCandidates.filter((inst) => (
-      installmentDescriptionsCompatible(tx.description, inst.description)
-    ))
-    const strictPreferred = strictDescriptionCandidates.find((inst) => (
-      amountsMatchForImport(inst.amount, tx.amount)
-    )) ?? (strictDescriptionCandidates.length === 1 ? strictDescriptionCandidates[0] : undefined)
-    // Aynı sıra/tarihte tek aday olması tek başına yeterli değil: farklı bir
-    // planın çocuğu yanlış parent'a bağlanabilir. Açıklama uyuşmuyorsa ancak
-    // tutar da yakınsa güvenli fallback kabul et; aksi halde relaxed aşama doğru
-    // merchant'ın aynı dönem ama farklı numaralı çocuğunu bulabilsin.
-    const strictAmountFallback = strictCandidates.length === 1
-      && amountsMatchForImport(strictCandidates[0].amount, tx.amount)
-      ? strictCandidates[0]
-      : undefined
-    let found = strictPreferred ?? strictAmountFallback
-
-    // Relaxed: banka ile app'teki taksit numarası farklı olabilir (ör. banka 5/9,
-    // app 3/6). Strict aday güvenilir değilse aynı dönemde açıklaması uyumlu olan
-    // gerçek planı ara.
-    if (!found) {
-      const relaxedCandidates = matchable.filter((inst) => (
-        !usedIds.has(inst.id) &&
-        inst.due_month.slice(0, 7) === periodMonth &&
-        installmentDescriptionsCompatible(tx.description, inst.description)
-      ))
-      found = relaxedCandidates.find((inst) => amountsMatchForImport(inst.amount, tx.amount))
-        ?? (relaxedCandidates.length === 1 ? relaxedCandidates[0] : undefined)
-    }
-
-    if (!found) {
-      pdfOnly.push(tx)
-      continue
-    }
-
-    usedIds.add(found.id)
-    const diff = diffTL(found.amount, tx.amount)
-
-    if (Math.abs(diff) > AMOUNT_MATCH_TOLERANCE_TL) {
-      amountMismatches.push({ transaction: tx, installment: found, diffTL: diff })
-    } else {
-      matched.push({ transaction: tx, installment: found })
-    }
-  }
-
-  const periodMonth = statementDate.slice(0, 7)
-  const appOnly = active.filter((inst) => (
-    !usedIds.has(inst.id) &&
-    inst.due_month.slice(0, 7) === periodMonth &&
-    inst.status !== 'paid'
-  ))
-
-  return { matched, amountMismatches, pdfOnly, appOnly }
 }

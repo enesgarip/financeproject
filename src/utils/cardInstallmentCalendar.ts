@@ -106,10 +106,6 @@ export function buildCardInstallmentTotalsByCard(
   }
 }
 
-export function totalScheduledInstallments(installments: CardInstallment[]) {
-  return sumTL(installments.filter((item) => item.status === 'scheduled').map((item) => item.amount))
-}
-
 // ── Taksit ödenmişliği (banka modeli) ───────────────────────────────────────
 // pay_card_statement taksit satırına bilerek dokunmaz (SI-10: ödenen şey taksit
 // değil ekstre arşividir). "Bu taksit ödendi mi?" bu yüzden satır durumundan

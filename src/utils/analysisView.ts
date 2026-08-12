@@ -18,18 +18,14 @@ import { formatSeritAmount } from './formatCurrency'
 import { dayOfMonthCutoff, isWithinDayOfMonth } from './monthToDate'
 import { averageOverActiveMonths } from './spendingStats'
 import { activeExpense as activeCardExpense } from './budgetAlerts'
-import {
-  buildFinanceObligationsForMonth,
-  type FinanceObligation,
-  type FinanceObligationsInput,
-} from './obligations'
+import type { FinanceObligationsInput } from './obligations'
 import type { FinanceSummaryInput } from './financeSummary'
 import { diffTL, sumTL } from './money'
 
 /**
  * Analiz sayfasının saf türetme çekirdeği (view-model'ler): arama/CSV listesi,
- * takvim olayları, kategori içgörüleri. JSX panelleri `pages/AnalysisPage.tsx`'te
- * kalır; buradaki her şey test edilebilir saf fonksiyondur.
+ * kategori içgörüleri. JSX panelleri `pages/AnalysisPage.tsx`'te kalır;
+ * buradaki her şey test edilebilir saf fonksiyondur.
  */
 
 export type AnalysisData = {
@@ -54,17 +50,6 @@ export type SearchItem = {
   subtitle: string
   amount: number | null
   date: string | null
-}
-
-export type CalendarEvent = {
-  id: string
-  date: string
-  title: string
-  amount: number
-  cashImpactAmount: number
-  direction: FinanceObligation['direction']
-  settlement: NonNullable<FinanceObligation['settlement']>
-  tone: 'emerald' | 'rose' | 'amber' | 'stone'
 }
 
 export type CategoryInsight = {
@@ -212,37 +197,6 @@ export function analysisFinanceSummaryInput(data: AnalysisData): FinanceSummaryI
   }
 }
 
-export function obligationCalendarTone(item: FinanceObligation): CalendarEvent['tone'] {
-  if (item.direction === 'inflow') return 'emerald'
-  if (item.settlement === 'credit_card') return 'stone'
-  if (item.isEstimate) return 'amber'
-  return 'rose'
-}
-
-export function calendarEventCashDelta(event: Pick<CalendarEvent, 'cashImpactAmount' | 'direction'>): number {
-  if (event.cashImpactAmount === 0) return 0
-  return event.direction === 'inflow' ? event.cashImpactAmount : -event.cashImpactAmount
-}
-
-export function calendarEventsCashDelta(events: Pick<CalendarEvent, 'cashImpactAmount' | 'direction'>[]): number {
-  return sumTL(events.map(calendarEventCashDelta))
-}
-
-// Reads the same obligation engine as the dashboard cash calendar, so both
-// screens list the identical items, dates, amounts and cash impact for the month.
-export function buildCalendarEvents(data: AnalysisData): CalendarEvent[] {
-  return buildFinanceObligationsForMonth(analysisObligationsInput(data), startOfMonth()).map((item) => ({
-    id: item.id,
-    date: item.date,
-    title: item.title,
-    amount: item.amount,
-    cashImpactAmount: item.cashImpactAmount ?? item.amount,
-    direction: item.direction,
-    settlement: item.settlement ?? 'cash',
-    tone: obligationCalendarTone(item),
-  }))
-}
-
 export function buildCategoryInsights(data: AnalysisData): CategoryInsight[] {
   const currentMonth = dateInputValue(startOfMonth())
   const previousMonths = previousMonthKeys(3)
@@ -253,7 +207,7 @@ export function buildCategoryInsights(data: AnalysisData): CategoryInsight[] {
   const currentTotals = new Map<string, number>()
   // category → (prior month → total): kept per-month so the baseline averages
   // over the months that actually had spending (not a fixed ÷3 that understates
-  // categories appearing in only some months). Shared with spendingAnomalies.
+  // categories appearing in only some months).
   const previousByMonth = new Map<string, Map<string, number>>()
   const budgetsByCategory = new Map(
     data.budgets.filter((budget) => budget.month === currentMonth).map((budget) => [budget.category, budget]),

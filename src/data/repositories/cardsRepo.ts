@@ -264,11 +264,6 @@ export async function cutDueCardStatements(): Promise<Result<number>> {
   return resultFromSupabase(data ?? 0, error, 'Ekstre kesimi başarısız.')
 }
 
-export async function resetCardImportData(cardId: string): Promise<Result<void>> {
-  const { error } = await supabase.rpc('reset_card_import_data', { p_card_id: cardId })
-  return voidResultFromSupabase(error, 'Kart import verisi sifirlanamadi.')
-}
-
 export type CardStatementReplaceAction =
   | {
       kind: 'expense'
@@ -321,53 +316,6 @@ export async function replaceCardStatementImport(input: ReplaceCardStatementImpo
     p_actions: input.actions as Json,
   })
   return voidResultFromSupabase(error, 'Ekstre PDF kaynak gerçeğinden yeniden kurulamadı.')
-}
-
-export async function cutCardStatement(cardId: string): Promise<Result<void>> {
-  const { error } = await supabase.rpc('cut_card_statement', { p_card_id: cardId })
-  return voidResultFromSupabase(error, 'Ekstre kesilemedi.')
-}
-
-export async function insertGuardStatementArchive(
-  userId: string,
-  cardId: string,
-  periodYear: number,
-  periodMonth: number,
-  statementDate: string,
-): Promise<Result<void>> {
-  const { error } = await supabase.from('card_statement_archives').insert({
-    user_id: userId,
-    card_id: cardId,
-    period_year: periodYear,
-    period_month: periodMonth,
-    statement_date: statementDate,
-    statement_debt_amount: 0,
-    current_period_spending: 0,
-    total_debt_amount: 0,
-    status: 'paid',
-    note: 'Clean import guard — ekstre kesimi engellendi.',
-  })
-  return voidResultFromSupabase(error, 'Guard arşiv kaydedilemedi.')
-}
-
-export type StatementReconciliationInput = {
-  cardId: string
-  periodYear: number
-  periodMonth: number
-  bankAmount: number
-  note: string | null
-}
-
-export async function setStatementReconciliation(input: StatementReconciliationInput): Promise<Result<void>> {
-  const { error } = await supabase.rpc('set_statement_reconciliation', {
-    p_card_id: input.cardId,
-    p_period_year: input.periodYear,
-    p_period_month: input.periodMonth,
-    p_bank_amount: input.bankAmount,
-    p_note: input.note,
-  })
-
-  return voidResultFromSupabase(error, 'Mutabakat kaydedilemedi.')
 }
 
 export async function applyCardProvision(expenseId: string, action: 'post' | 'cancel'): Promise<Result<void>> {

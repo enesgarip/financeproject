@@ -1,7 +1,7 @@
 /**
- * Kategori bütçesi kullanımı ve uyarıları. "Bu ay X kategorisinde bütçenin ne
- * kadarı harcandı?" sorusunun tek kaynağı: hem dashboard uyarı paneli hem analiz
- * sayfasının bütçe listesi buradan okur, böylece iki ekran asla ayrışmaz.
+ * Kategori bütçesi kullanımı. "Bu ay X kategorisinde bütçenin ne kadarı
+ * harcandı?" sorusunun tek kaynağı: analiz sayfasının bütçe listesi ve planlama
+ * sayfası buradan okur, böylece ekranlar asla ayrışmaz.
  *
  * Status eşikleri: harcama limiti aştıysa 'over', %80+ ise 'warning', yoksa 'ok'.
  * Kategorisiz harcamalar 'Diğer' kovasına düşer. Karşılaştırmalar money.ts ile.
@@ -22,10 +22,8 @@ export type BudgetUsage = {
   remaining: number
 }
 
-export type BudgetAlert = BudgetUsage
-
-/** Uncategorised expenses fall into the last bucket so both the dashboard alert
- *  panel and the analysis progress list agree on where they land. */
+/** Uncategorised expenses fall into the 'Diğer' bucket so every consumer of
+ *  buildBudgetUsage agrees on where they land. */
 const UNCATEGORISED = 'Diğer'
 
 export function activeExpense(expense: CardExpense) {
@@ -34,9 +32,9 @@ export function activeExpense(expense: CardExpense) {
 
 /**
  * Single source of truth for "kategori bütçesi ne kadar kullanıldı". Returns every
- * budget for the month with its spent amount, usage rate and status. Both
- * {@link buildBudgetAlerts} (dashboard) and the analysis page's budget list read
- * from this so the two screens can never drift apart.
+ * budget for the month with its spent amount, usage rate and status. The analysis
+ * page's budget list and the planning page both read from this so the screens
+ * can never drift apart.
  */
 export function buildBudgetUsage(budgets: Budget[], expenses: CardExpense[], month = new Date()): BudgetUsage[] {
   const monthKey = dateInputValue(startOfMonth(month))
@@ -63,10 +61,4 @@ export function buildBudgetUsage(budgets: Budget[], expenses: CardExpense[], mon
       remaining: Math.max(0, diffTL(budget.limit_amount, spent)),
     }
   })
-}
-
-export function buildBudgetAlerts(budgets: Budget[], expenses: CardExpense[], month = new Date()): BudgetAlert[] {
-  return buildBudgetUsage(budgets, expenses, month)
-    .filter((alert) => alert.status !== 'ok')
-    .sort((a, b) => b.usageRate - a.usageRate)
 }

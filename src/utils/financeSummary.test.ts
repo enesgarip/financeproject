@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest'
 import type { Asset, Card, CardInstallment, CardStatementArchive, Debt, Loan, LoanInstallment, Payment, SalaryHistory } from '../types/database'
 import {
   buildCreditLimitGroups,
-  buildFinancialHealth,
   buildFinancialPosition,
   buildMonthlyCashFlow,
   cardDebtBreakdown,
@@ -901,106 +900,5 @@ describe('buildMonthlyCashFlow', () => {
     expect(flow.outflow).toBe(0.1)
     expect(flow.netFlow).toBe(0.1)
     expect(flow.projectedCash).toBe(0.2)
-  })
-})
-
-// ── buildFinancialHealth ───────────────────────────────────────────────────
-
-describe('buildFinancialHealth', () => {
-  function healthInput(overrides: Partial<Parameters<typeof buildFinancialHealth>[0]> = {}) {
-    const defaults = {
-      position: buildFinancialPosition(emptyInput),
-      cashFlow: buildMonthlyCashFlow(emptyInput, JUNE),
-      creditUsageRate: 0,
-      urgentUpcomingCount: 0,
-      averageGoalProgress: 0,
-    }
-    return { ...defaults, ...overrides }
-  }
-
-  it('returns emerald / Dengeli for healthy financials', () => {
-    const position = buildFinancialPosition({
-      ...emptyInput,
-      assets: [asset({ category: 'Nakit', estimated_value_try: 200000 })],
-    })
-    const cashFlow = buildMonthlyCashFlow({
-      ...emptyInput,
-      assets: [asset({ category: 'Nakit', estimated_value_try: 200000 })],
-      salaryHistory: [salary({ amount: 50000, effective_date: '2026-01-01' })],
-      payments: [payment({ amount: 5000, due_date: '2026-06-15', status: 'bekliyor' })],
-    }, JUNE)
-    const result = buildFinancialHealth({ position, cashFlow, creditUsageRate: 10, urgentUpcomingCount: 0, averageGoalProgress: 70 })
-    expect(result.tone).toBe('emerald')
-    expect(result.label).toBe('Dengeli')
-    expect(result.score).toBeGreaterThanOrEqual(80)
-  })
-
-  it('returns rose / Riskli when debts exceed assets', () => {
-    const position = buildFinancialPosition({
-      ...emptyInput,
-      assets: [asset({ category: 'Nakit', estimated_value_try: 1000 })],
-      cards: [creditCard({ debt_amount: 50000, statement_debt_amount: 50000 })],
-    })
-    const result = buildFinancialHealth(healthInput({ position, creditUsageRate: 90, urgentUpcomingCount: 5 }))
-    expect(result.tone).toBe('rose')
-    expect(result.label).toBe('Riskli')
-    expect(result.score).toBeLessThan(60)
-  })
-
-  it('returns amber for moderate risk', () => {
-    // Create moderate conditions: manageable debt, ok credit usage
-    const position = buildFinancialPosition({
-      ...emptyInput,
-      assets: [asset({ category: 'Nakit', estimated_value_try: 100000 })],
-      cards: [creditCard({ debt_amount: 40000, statement_debt_amount: 40000 })],
-    })
-    const cashFlow = buildMonthlyCashFlow({
-      ...emptyInput,
-      assets: [asset({ category: 'Nakit', estimated_value_try: 100000 })],
-      salaryHistory: [salary({ amount: 20000, effective_date: '2026-01-01' })],
-      payments: [payment({ amount: 16000, due_date: '2026-06-15', status: 'bekliyor' })],
-    }, JUNE)
-    const result = buildFinancialHealth({ position, cashFlow, creditUsageRate: 60, urgentUpcomingCount: 1, averageGoalProgress: 0 })
-    expect(result.score).toBeGreaterThanOrEqual(60)
-    expect(result.score).toBeLessThan(80)
-    expect(result.tone).toBe('amber')
-  })
-
-  it('clamps score to [0, 100]', () => {
-    const result = buildFinancialHealth(healthInput({
-      position: buildFinancialPosition({
-        ...emptyInput,
-        assets: [asset({ category: 'Nakit', estimated_value_try: 5 })],
-        cards: [creditCard({ debt_amount: 9999999, statement_debt_amount: 9999999 })],
-      }),
-      creditUsageRate: 100,
-      urgentUpcomingCount: 10,
-    }))
-    expect(result.score).toBeGreaterThanOrEqual(0)
-    expect(result.score).toBeLessThanOrEqual(100)
-  })
-
-  it('includes up to 5 factors', () => {
-    const result = buildFinancialHealth(healthInput())
-    expect(result.factors.length).toBeLessThanOrEqual(5)
-    expect(result.factors.length).toBeGreaterThan(0)
-  })
-
-  it('uses typicalMonthlyOutflow for cashBufferMonths when provided', () => {
-    const position = buildFinancialPosition({
-      ...emptyInput,
-      assets: [asset({ category: 'Nakit', estimated_value_try: 60000 })],
-    })
-    const cashFlow = buildMonthlyCashFlow({
-      ...emptyInput,
-      assets: [asset({ category: 'Nakit', estimated_value_try: 60000 })],
-      salaryHistory: [salary({ amount: 50000, effective_date: '2026-01-01' })],
-      payments: [payment({ amount: 3000, due_date: '2026-06-25', status: 'bekliyor' })],
-    }, JUNE)
-
-    const withoutTypical = buildFinancialHealth({ position, cashFlow, creditUsageRate: 0, urgentUpcomingCount: 0, averageGoalProgress: 0 })
-    const withTypical = buildFinancialHealth({ position, cashFlow, creditUsageRate: 0, urgentUpcomingCount: 0, averageGoalProgress: 0, typicalMonthlyOutflow: 50000 })
-
-    expect(withoutTypical.score).toBeGreaterThan(withTypical.score)
   })
 })
