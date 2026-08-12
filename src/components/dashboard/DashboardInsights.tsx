@@ -29,6 +29,7 @@ export type FocusAction = {
 export function FocusActionPanel({
   actions,
   safeToSpendAmount,
+  onboarding = false,
 }: {
   actions: FocusAction[]
   /**
@@ -37,6 +38,12 @@ export function FocusActionPanel({
    * ekranda iki farklı "ay sonu" rakamı vardı (denetim 2026-08-12 K10).
    */
   safeToSpendAmount: number
+  /**
+   * Hiç veri yokken kahraman rakam yerini yönlendirmeye bırakıyor; bu kutu da
+   * aynı kararı izlemeli. Aksi halde hero "veri yok" derken hemen altında
+   * tamponun eksisi (−5.000 ₺) duruyor ve düzeltme boşa çıkıyordu.
+   */
+  onboarding?: boolean
 }) {
   const { formatAmount } = useBalancePrivacy()
   const [showAll, setShowAll] = useState(false)
@@ -67,9 +74,13 @@ export function FocusActionPanel({
             <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
               <div className="rounded-lg bg-card/80 px-3 py-2 ring-1 ring-border/70">
                 <p className="font-bold uppercase text-muted-foreground">Ay sonuna kalan</p>
-                <p className={`finance-value mt-1 truncate text-sm font-extrabold ${cashIsPositive ? 'text-success' : 'text-destructive'}`}>
-                  {formatAmount(safeToSpendAmount)}
-                </p>
+                {onboarding ? (
+                  <p className="mt-1 truncate text-sm font-extrabold text-muted-foreground">Veri bekliyor</p>
+                ) : (
+                  <p className={`finance-value mt-1 truncate text-sm font-extrabold ${cashIsPositive ? 'text-success' : 'text-destructive'}`}>
+                    {formatAmount(safeToSpendAmount)}
+                  </p>
+                )}
               </div>
               <div className="rounded-lg bg-card/80 px-3 py-2 ring-1 ring-border/70">
                 <p className="font-bold uppercase text-muted-foreground">Sıradaki</p>

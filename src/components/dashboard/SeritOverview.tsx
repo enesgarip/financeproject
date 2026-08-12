@@ -72,6 +72,7 @@ export function SeritOverview({
   daysInMonth,
   safeToSpend,
   reservedKnown = true,
+  isOnboarding = false,
   buffer,
   onBufferChange,
   perDayAllowance,
@@ -95,6 +96,14 @@ export function SeritOverview({
   safeToSpend: SafeToSpendResult
   /** false = kasa rezervi doğrulanamadı; kahraman rakam rezervsiz (şişkin) olabilir (K16). */
   reservedKnown?: boolean
+  /**
+   * Hiç finansal kayıt yok. Kahraman rakam bu durumda tamponun eksisi kadar
+   * NEGATİF çıkıyordu ("−5.000 ₺ · günde 0 ₺") ve ilk açılışta var olmayan bir
+   * borç gösteriyordu (denetim §10). Karar DashboardPage'de verilir; odak
+   * paneli de AYNI bayrağı kullanır, yoksa hero "veri yok" derken alttaki kutu
+   * eksi rakamı göstermeye devam ediyordu.
+   */
+  isOnboarding?: boolean
   buffer: number
   onBufferChange: (value: number) => void
   perDayAllowance: number
@@ -118,13 +127,6 @@ export function SeritOverview({
   const daysLeft = daysInMonth - today.getDate()
   const perDay = format(perDayAllowance)
   const nextThree = upcoming.slice(0, 3)
-  // Hiç veri yokken "ay sonuna kalan" tamponun eksisi kadar NEGATİF çıkıyordu
-  // ("−5.000 ₺ · günde 0 ₺"): ilk açılışta kullanıcıya var olmayan bir borç
-  // gösteriyordu (denetim 2026-08-12 §10). Bu durumda rakam yerine ne yapması
-  // gerektiğini söyleyen bir satır gösterilir; tampon satırı da saklanır.
-  const isOnboarding =
-    totalAssets <= 0 && totalDebts <= 0 && cardBuckets.total <= 0 && liquidAccounts.length === 0 && upcoming.length === 0
-
   return (
     <div className="lg:grid lg:grid-cols-[1.4fr_1fr] lg:items-start lg:gap-9">
       {/* ── Sol kolon: kahraman rakam, şerit, vadeler ── */}
