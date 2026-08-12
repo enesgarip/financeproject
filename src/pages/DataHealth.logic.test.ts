@@ -356,6 +356,11 @@ describe('buildIssues card debt breakdown', () => {
       payload: { cardId: 'card-1', scheduledTotal: 120, amount: 20 },
     })
     expect(issue?.payload?.nextDebtAmount).toBeUndefined()
+    // Aynı kök neden ikinci bir kart olarak tekrarlanmaz; örtüşme bilgisi
+    // taşma bulgusunun detay satırına döner.
+    expect(issues.find((item) => item.id === 'card-scheduled-debt-overlap-card-1')).toBeUndefined()
+    expect(issues.find((item) => item.id === 'card-scheduled-debt-card-1')).toBeUndefined()
+    expect(issue?.details.some((detail) => detail.includes('örtüşüyor'))).toBe(true)
   })
 
   it('does not flag planned installment debt as unclassified', () => {
@@ -972,8 +977,38 @@ describe('buildIssues card expense duplicate analysis', () => {
       ],
     })
 
-    expect(issues.find((issue) => issue.id === 'card-expense-missing-description')?.payload?.ids).toEqual(['expense-1'])
-    expect(issues.find((issue) => issue.id === 'card-expense-missing-category')?.payload?.ids).toEqual(['expense-1'])
+    expect(issues.find((issue) => issue.id.startsWith('card-expense-missing-description'))?.payload?.ids).toEqual(['expense-1'])
+    expect(issues.find((issue) => issue.id.startsWith('card-expense-missing-category'))?.payload?.ids).toEqual(['expense-1'])
+  })
+
+  it('etkilenen kayıt kümesi değişince bulgu kimliği de değişir (kalıcı kapatma yeni kayıtları gizlemesin)', () => {
+    const single = buildIssues({
+      ...emptyData,
+      cards: [creditCard()],
+      cardExpenses: [cardExpense({ id: 'expense-1', description: '', category: 'Market' })],
+    }).find((issue) => issue.id.startsWith('card-expense-missing-description'))
+    const withNewRow = buildIssues({
+      ...emptyData,
+      cards: [creditCard()],
+      cardExpenses: [
+        cardExpense({ id: 'expense-1', description: '', category: 'Market' }),
+        cardExpense({ id: 'expense-2', description: '', category: 'Market' }),
+      ],
+    }).find((issue) => issue.id.startsWith('card-expense-missing-description'))
+
+    expect(single?.id).toBeDefined()
+    expect(withNewRow?.id).toBeDefined()
+    expect(withNewRow?.id).not.toBe(single?.id)
+  })
+
+  it('aynı kayıt kümesi için kimlik kararlıdır (sıra bağımsız)', () => {
+    const build = (ids: string[]) => buildIssues({
+      ...emptyData,
+      cards: [creditCard()],
+      cardExpenses: ids.map((id) => cardExpense({ id, description: '', category: 'Market' })),
+    }).find((issue) => issue.id.startsWith('card-expense-missing-description'))?.id
+
+    expect(build(['expense-1', 'expense-2'])).toBe(build(['expense-2', 'expense-1']))
   })
 })
 
@@ -1053,7 +1088,7 @@ describe('buildIssues loan historical-date repair safety', () => {
       loanInstallments: [loanInstallment({ status: 'ödendi', paid_at: null })],
     })
 
-    expect(issues.find((item) => item.id === 'loan-paid-at-missing')).toMatchObject({
+    expect(issues.find((item) => item.id.startsWith('loan-paid-at-missing'))).toMatchObject({
       kind: 'loanPaidAtMissing',
       fixable: false,
       payload: { ids: ['loan-installment-1'] },

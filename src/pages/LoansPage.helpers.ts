@@ -121,6 +121,24 @@ export function pastDuePendingInstallments(
   return rows.filter((item) => item.status !== 'ödendi' && item.due_date < today)
 }
 
+/**
+ * `paid_at` timestamptz'dir, taksit vadesi ise date-only. Sabit `+03:00` yazmak
+ * cihazın saat dilimini yok sayıyordu (yurt dışından girişte gün kayabilirdi).
+ * Artık ofset o TARİHTEKİ cihaz ofsetinden türetilir; Türkiye'de sonuç birebir
+ * aynı kalır (+03:00), DST'li bölgelerde de doğru anı gösterir.
+ */
+export function localMidnightTimestamp(dateOnly: string): string {
+  const [year, month, day] = dateOnly.split('-').map(Number)
+  if (!year || !month || !day) return `${dateOnly}T00:00:00`
+  const localMidnight = new Date(year, month - 1, day)
+  const offsetMinutes = -localMidnight.getTimezoneOffset()
+  const sign = offsetMinutes < 0 ? '-' : '+'
+  const absolute = Math.abs(offsetMinutes)
+  const hours = String(Math.floor(absolute / 60)).padStart(2, '0')
+  const minutes = String(absolute % 60).padStart(2, '0')
+  return `${dateOnly}T00:00:00${sign}${hours}:${minutes}`
+}
+
 export function markPaidWithoutCashPayload(rows: LoanInstallment[]): InsertFor<'loan_installments'>[] {
   return rows.map((item) => ({
     id: item.id,
@@ -130,7 +148,7 @@ export function markPaidWithoutCashPayload(rows: LoanInstallment[]): InsertFor<'
     due_date: item.due_date,
     amount: item.amount,
     status: 'ödendi',
-    paid_at: `${item.due_date}T00:00:00+03:00`,
+    paid_at: localMidnightTimestamp(item.due_date),
     note: item.note ?? PAID_BEFORE_APP_NOTE,
   }))
 }

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { parseYapiKrediStatement } from './yapiKrediStatementParser'
+import { checkStatementParseTotals } from './denizBankStatementParser'
 import { checkInstallmentNotation } from './importedInstallmentPlan'
 import { roundTL } from './money'
 
@@ -131,5 +132,102 @@ TOPLAM 1.234,56 0`
     expect(parsed.transactions.some((t) => t.description === 'IADE MAGAZASI')).toBe(false)
     expect(parsed.adjustments).toHaveLength(1)
     expect(parsed.adjustments?.[0]).toMatchObject({ description: 'IADE MAGAZASI', amount: 50 })
+  })
+})
+
+describe('parseYapiKrediStatement — ödeme filtresi (Faz F)', () => {
+  // Eski filtre satırın HERHANGİ bir yerinde "ÖDEME" arıyordu: "PARAM ÖDEME
+  // KURULUŞU" gibi gerçek satıcılar sessizce düşüyordu. Yeni kural: açıklama
+  // "ÖDEME" ile BAŞLAYACAK ve satır ALACAK (+) olacak.
+  const text = `Hesap Kesim Tarihi : 13 Temmuz 2026
+Son Ödeme Tarihi : 23 Temmuz 2026
+Dönem Borcu : 1.500,00 TL
+Kart Numarası : 4506 34** **** 7735
+İşlem Tarihi İşlemler Tutar(TL) Kalan Tutar/Taksit Puan
+ÖNCEKİ DÖNEM HESAP ÖZETİ BORCU 0,00
+01 Temmuz 2026 ÖDEME-İNTERNET BANKACILIĞI +2.000,00
+02 Temmuz 2026 PARAM ÖDEME KURULUŞU ISTANBUL TR 900,00
+03 Temmuz 2026 FATURA ÖDEME MERKEZİ ISTANBUL TR 600,00
+04 Temmuz 2026 TURKCELL 5437616572 ödeme ISTANBUL TR 2.000,00
+TOPLAM 1.500,00 0`
+
+  const parsed = parseYapiKrediStatement(text)
+
+  it('içinde "ÖDEME" geçen gerçek satıcı harcamalarını İÇERİDE tutar', () => {
+    const descriptions = parsed.transactions.map((t) => t.description)
+    expect(descriptions).toContain('PARAM ÖDEME KURULUŞU')
+    expect(descriptions).toContain('FATURA ÖDEME MERKEZİ')
+    expect(descriptions.some((d) => d.startsWith('TURKCELL'))).toBe(true)
+    expect(parsed.transactions).toHaveLength(3)
+  })
+
+  it('gerçek ödeme satırını DIŞARIDA bırakır ve ödemeler toplamına yazar', () => {
+    expect(parsed.transactions.some((t) => t.description.startsWith('ÖDEME'))).toBe(false)
+    expect(parsed.adjustments ?? []).toHaveLength(0)
+    expect(parsed.payments).toBe(2000)
+    expect(parsed.previousBalance).toBe(0)
+  })
+})
+
+describe('parseYapiKrediStatement — satır toplamı checksum kimliği (Faz F)', () => {
+  // Kimlik: Dönem Borcu = Önceki − Ödemeler + (Σ harcama − Σ iade).
+  // YK "Dönem İçi Harcamanız" basmadığı için BAŞLIK kimliği çalışmaz; satır
+  // kimliği devir + ödeme satırları + TOPLAM footer'ından türetilir.
+  const header = `Hesap Kesim Tarihi : 13 Temmuz 2026
+Son Ödeme Tarihi : 23 Temmuz 2026
+Dönem Borcu : 1.000,00 TL
+Kart Numarası : 4506 34** **** 7735
+İşlem Tarihi İşlemler Tutar(TL) Kalan Tutar/Taksit Puan
+ÖNCEKİ DÖNEM HESAP ÖZETİ BORCU 500,00`
+
+  const consistent = `${header}
+01 Temmuz 2026 ÖDEME-İNTERNET BANKACILIĞI +500,00
+02 Temmuz 2026 MIGROS BURSA TR 1.100,00
+03 Temmuz 2026 IADE MAGAZASI BURSA TR +100,00
+TOPLAM 1.000,00 0`
+
+  it('tutarlı ekstrede satır kimliği çalışır ve residual 0 olur', () => {
+    const totals = checkStatementParseTotals(parseYapiKrediStatement(consistent))
+    expect(totals.lines.checked).toBe(true)
+    expect(totals.lines.consistent).toBe(true)
+    expect(totals.lines.residualTL).toBeCloseTo(0)
+  })
+
+  it('YK ekstresinde başlık kimliği körlemesine "tutarlı" demez', () => {
+    // periodSpending/feesAndInterest YK'da YOK → checked=false (uydurma yeşil yok).
+    const totals = checkStatementParseTotals(parseYapiKrediStatement(consistent))
+    expect(totals.header.checked).toBe(false)
+  })
+
+  it('düşen bir işlem satırı ≫1 TL residual üretir', () => {
+    // MIGROS satırı hiç okunmamış gibi: TOPLAM footer'ı hâlâ 1.000,00 basıyor.
+    const dropped = `${header}
+01 Temmuz 2026 ÖDEME-İNTERNET BANKACILIĞI +500,00
+03 Temmuz 2026 IADE MAGAZASI BURSA TR +100,00
+TOPLAM 1.000,00 0`
+    const totals = checkStatementParseTotals(parseYapiKrediStatement(dropped))
+    expect(totals.lines.checked).toBe(true)
+    expect(totals.lines.consistent).toBe(false)
+    expect(Math.abs(totals.lines.residualTL)).toBeGreaterThan(1)
+  })
+
+  it('gerçek ekstreden türetilmiş örnekte de kimlik tutar', () => {
+    // YK_STATEMENT: devir 0, ödeme 20.413,19, 4 taksit satırı toplamı 20.413,19,
+    // dönem borcu 0 → residual 0. Satırlardan biri düşse residual patlar.
+    const totals = checkStatementParseTotals(parseYapiKrediStatement(YK_STATEMENT))
+    expect(totals.lines.checked).toBe(true)
+    expect(totals.lines.consistent).toBe(true)
+  })
+
+  it('devir satırı okunamazsa checksum körlemesine geçmez', () => {
+    const noOpening = `Hesap Kesim Tarihi : 13 Temmuz 2026
+Son Ödeme Tarihi : 23 Temmuz 2026
+Dönem Borcu : 150,00 TL
+İşlem Tarihi İşlemler Tutar(TL) Kalan Tutar/Taksit Puan
+10 Nisan 2026 MIGROS BURSA TR 150,00
+TOPLAM 150,00 0`
+    const totals = checkStatementParseTotals(parseYapiKrediStatement(noOpening))
+    expect(totals.lines.checked).toBe(false)
+    expect(totals.header.checked).toBe(false)
   })
 })

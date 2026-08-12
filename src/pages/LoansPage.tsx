@@ -254,24 +254,11 @@ export function LoansPage() {
               key={item.id}
               className="flex items-center gap-2 rounded-xl border border-border/50 bg-card px-2 py-2 text-sm"
             >
-              {item.status === 'ödendi' ? (
-                <div
-                  className="grid size-8 shrink-0 place-items-center rounded-full bg-success text-success-foreground"
-                  aria-label="Taksit ödendi"
-                >
-                  <Check size={16} strokeWidth={3} />
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => void openInstallmentPayment(loan, item, reload)}
-                  className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg border border-border bg-card px-2.5 py-1.5 text-xs font-semibold text-foreground transition hover:bg-muted active:scale-[0.97]"
-                >
-                  <ReceiptText size={13} />
-                  Öde
-                </button>
-              )}
-              <div className="min-w-0 flex-1">
+              {/* DOM sırası: METİN ÖNCE, aksiyon sonra. Görsel sıra `order-*` ile
+                  korunuyor (durum/ödeme solda kalır). Eskiden "Öde" butonu a11y
+                  ağacında taksit metninden önce geliyordu; ekran okuyucu neyi
+                  ödediğini söylemeden "Öde" diyordu (denetim 2026-08-12 §10). */}
+              <div className="order-2 min-w-0 flex-1">
                 <p className="truncate font-semibold text-foreground">
                   {item.installment_no}. taksit · <span className="font-mono">{formatAmount(item.amount)}</span>
                 </p>
@@ -279,7 +266,26 @@ export function LoansPage() {
                   {formatDate(item.due_date)} · {item.status === 'ödendi' ? 'Ödendi' : 'Bekliyor'}
                 </p>
               </div>
-              <div className="relative shrink-0">
+              {item.status === 'ödendi' ? (
+                <div
+                  className="order-1 grid size-8 shrink-0 place-items-center rounded-full bg-success text-success-foreground"
+                  role="img"
+                  aria-label="Taksit ödendi"
+                >
+                  <Check size={16} strokeWidth={3} aria-hidden="true" />
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => void openInstallmentPayment(loan, item, reload)}
+                  aria-label={`${item.installment_no}. taksiti öde`}
+                  className="order-1 inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg border border-border bg-card px-2.5 py-1.5 text-xs font-semibold text-foreground transition hover:bg-muted active:scale-[0.97]"
+                >
+                  <ReceiptText size={13} aria-hidden="true" />
+                  Öde
+                </button>
+              )}
+              <div className="relative order-3 shrink-0">
                 <button
                   type="button"
                   onClick={(event) => {
@@ -287,7 +293,7 @@ export function LoansPage() {
                     setPlanMenuOpenId(planMenuOpenId === item.id ? null : item.id)
                   }}
                   className="tap-target grid size-8 place-items-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground"
-                  aria-label="Taksit menüsü"
+                  aria-label={`${item.installment_no}. taksit menüsü`}
                 >
                   <MoreVertical size={16} />
                 </button>

@@ -3,7 +3,8 @@ import { ArrowDownRight, ArrowUpRight } from 'lucide-react'
 import { SimpleModal } from '../components/SimpleModal'
 import { Alert } from '../components/ui/alert'
 import { Button } from '../components/ui/button'
-import { CurrencyInput, Input, Select, Textarea } from '../components/ui/input'
+import { Input, Select, Textarea } from '../components/ui/input'
+import { MoneyInput } from '../components/finance/MoneyInput'
 import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
 import type { Asset, Card } from '../types/database'
 import { formatNumber, parseNumber } from '../utils/formatCurrency'
@@ -123,16 +124,9 @@ export function AssetTradeModal({
           </Select>
         </label>
 
-        <label className="block text-sm font-semibold text-foreground">
-          İşlem tutarı
-          <CurrencyInput
-            required
-            min="0"
-            value={amount}
-            onChange={(event) => onAmountChange(event.target.value)}
-            className="mt-1"
-          />
-        </label>
+        {/* Tek para girişi bileşeni MoneyInput; `CurrencyInput` bunun ikinci
+            (ve virgülü kabul etmeyen) kopyasıydı — silindi (denetim §3). */}
+        <MoneyInput label="İşlem tutarı" value={amount} onValueChange={onAmountChange} required />
 
         {asset && assetTradeShowsQuantity(asset) ? (
           <label className="block text-sm font-semibold text-foreground">

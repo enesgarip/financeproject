@@ -83,4 +83,13 @@ describe('buildBudgetUsage', () => {
     )
     expect(usage[0]).toMatchObject({ category: 'Diğer', spent: 150, status: 'over' })
   })
+
+  it('boş string kategoriyi de Diğer kovasına düşürür (kolon NOT NULL, ?? tetiklenmiyordu)', () => {
+    const usage = buildBudgetUsage(
+      [budget({ id: 'd', category: 'Diğer', limit_amount: 100 })],
+      [expense({ category: '', amount: 150 })],
+      JUNE,
+    )
+    expect(usage[0]).toMatchObject({ category: 'Diğer', spent: 150, status: 'over' })
+  })
 })

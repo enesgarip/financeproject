@@ -80,9 +80,12 @@ describe('markPaidWithoutCashPayload / pastDuePendingInstallments (BM-5c)', () =
       due_date: '2026-02-10',
       amount: 1_000,
       status: 'ödendi',
-      paid_at: '2026-02-10T00:00:00+03:00',
       note: PAID_BEFORE_APP_NOTE,
     })
+    // Sabit +03:00 yerine cihaz ofseti: değer HER ZAMAN vade gününün yerel
+    // gece yarısını gösterir (Türkiye'de eski çıktıyla birebir aynı).
+    expect(payload.paid_at).toMatch(/^2026-02-10T00:00:00[+-]\d{2}:\d{2}$/)
+    expect(new Date(payload.paid_at!).getTime()).toBe(new Date(2026, 1, 10).getTime())
   })
 
   it('keeps an existing user note instead of overwriting it', () => {

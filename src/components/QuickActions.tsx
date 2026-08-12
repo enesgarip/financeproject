@@ -4,6 +4,7 @@ import { Link, useLocation } from 'react-router'
 import { cn } from '../lib/utils'
 import { normalizeSearchText } from '../utils/searchText'
 import { Input } from './ui/input'
+import { useDialogA11y } from './ui/use-dialog-a11y'
 
 /**
  * Hızlı işlem akışı. Panel ile TETİKLEYİCİ kasıtlı olarak ayrı bileşenler:
@@ -89,25 +90,41 @@ export function QuickActionsProvider({ children }: { children: ReactNode }) {
     [open, toggle, close, formFocused],
   )
 
+  // Modal değil ama klavyeyle kullanılabilir olması şart: açılınca odak arama
+  // alanına gider, Tab panelin içinde döner, Escape kapatır ve kapanınca odak
+  // FAB'a/"İşlem" butonuna geri döner (denetim 2026-08-12 §6). Modallarla aynı
+  // hook — tek focus sözleşmesi.
+  const panelRef = useDialogA11y<HTMLDivElement>(open, close)
+
   return (
     <QuickActionsContext.Provider value={value}>
       {children}
 
       {/* Menü açıkken hafif karartma + dışa tıklayınca kapat: odağı menüye topla
-          ve tek çıkış yolu (X) olmasın. */}
+          ve tek çıkış yolu (X) olmasın.
+          Karartma tek `--overlay` token'ından türetilir ama %60'ı kadar: bu bir
+          popover, modal değil — sayfayı modal kadar karartmak "bir görevin
+          ortasındasın" yanlış mesajını verirdi. Sabit ikinci bir renk yazmak yerine
+          token'dan türetmek üçünün birlikte değişmesini sağlıyor (denetim §6). */}
       {open ? (
         <button
           type="button"
           aria-hidden
           tabIndex={-1}
           onClick={close}
-          className="fixed inset-0 z-40 cursor-default bg-black/30 backdrop-blur-[1px]"
+          className="fixed inset-0 z-40 cursor-default bg-[color-mix(in_srgb,var(--overlay)_60%,transparent)] backdrop-blur-[1px]"
         />
       ) : null}
 
       {open ? (
-        <div className="fixed bottom-[calc(env(safe-area-inset-bottom)+9rem)] right-4 z-50 w-[min(calc(100vw-2rem),24rem)] rounded-[14px] border border-line-strong bg-raised p-2 lg:bottom-6 lg:right-6">
+        <div
+          ref={panelRef}
+          role="dialog"
+          aria-label="Hızlı işlem menüsü"
+          className="fixed bottom-[calc(env(safe-area-inset-bottom)+9rem)] right-4 z-50 w-[min(calc(100vw-2rem),24rem)] rounded-[14px] border border-line-strong bg-raised p-2 lg:bottom-6 lg:right-6"
+        >
           <label className="relative mb-2 block">
+            <span className="sr-only">Hızlı işlem ara</span>
             <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-ink-faint" />
             <Input
               value={query}
@@ -150,6 +167,7 @@ export function QuickActionsFab() {
       type="button"
       onClick={toggle}
       aria-expanded={open}
+      aria-haspopup="dialog"
       aria-label={open ? 'Hızlı işlem menüsünü kapat' : 'Hızlı işlem menüsünü aç'}
       className={cn(
         'grid size-[52px] place-items-center rounded-[16px] bg-primary text-primary-foreground transition-all duration-200',
@@ -171,6 +189,7 @@ export function QuickActionsButton() {
       type="button"
       onClick={toggle}
       aria-expanded={open}
+      aria-haspopup="dialog"
       className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3.5 py-2 text-[12.5px] font-semibold text-primary-foreground transition-colors duration-[120ms] hover:brightness-95"
     >
       {open ? <X size={15} aria-hidden="true" /> : <Plus size={15} strokeWidth={2.5} aria-hidden="true" />}

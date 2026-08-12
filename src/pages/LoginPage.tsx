@@ -4,7 +4,6 @@ import { Navigate, useLocation } from 'react-router'
 import { useAuth } from '../auth/useAuth'
 import { Button } from '../components/ui/button'
 import { Card, CardContent } from '../components/ui/card'
-import { Tabs, TabsList, TabsTrigger } from '../components/ui/tabs'
 import { Input } from '../components/ui/input'
 import { AppMark } from '../components/AppMark'
 
@@ -15,7 +14,9 @@ export function LoginPage() {
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [message, setMessage] = useState('')
+  // `tone` mesajın stilini belirler: kayıt başarısı hata/uyarı kutusuyla
+  // basılıyordu, yani iyi haber kötü haber gibi görünüyordu (denetim §10).
+  const [message, setMessage] = useState<{ text: string; tone: 'error' | 'success' } | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
   if (user) {
@@ -29,21 +30,21 @@ export function LoginPage() {
     const trimmedFullName = fullName.trim()
 
     if (mode === 'register' && !trimmedFullName) {
-      setMessage('Ad soyad alanı zorunlu.')
+      setMessage({ text: 'Ad soyad alanı zorunlu.', tone: 'error' })
       return
     }
 
     setSubmitting(true)
-    setMessage('')
+    setMessage(null)
     try {
       if (mode === 'login') {
         await signIn(trimmedEmail, password)
       } else {
         await signUp(trimmedEmail, password, trimmedFullName)
-        setMessage('Kayıt başarılı. E-posta onayı açıksa gelen kutunu kontrol et.')
+        setMessage({ text: 'Kayıt başarılı. E-posta onayı açıksa gelen kutunu kontrol et.', tone: 'success' })
       }
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'İşlem tamamlanamadı.')
+      setMessage({ text: error instanceof Error ? error.message : 'İşlem tamamlanamadı.', tone: 'error' })
     } finally {
       setSubmitting(false)
     }
@@ -123,31 +124,13 @@ export function LoginPage() {
             </p>
           </div>
 
-          <Tabs
-            value={mode}
-            onValueChange={(value) => {
-              setMode(value as 'login' | 'register')
-              setMessage('')
-            }}
-            className="mt-5"
-          >
-            <TabsList className="grid h-12 w-full grid-cols-2 rounded-lg bg-muted p-1">
-              <TabsTrigger
-                value="login"
-                className="h-full rounded-lg text-base font-bold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm"
-              >
-                Giriş Yap
-              </TabsTrigger>
-              <TabsTrigger
-                value="register"
-                className="h-full rounded-lg text-base font-bold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm"
-              >
-                Kayıt Ol
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
-
-          <form onSubmit={handleSubmit} className="mt-5 flex flex-col gap-4">
+          {/* Tek kullanıcılı bir ürün: "Kayıt Ol" birinci sınıf sekme olarak durunca
+              ekranın yarısını hiç kullanılmayacak bir yola ayırıyordu (denetim §10).
+              Artık varsayılan Giriş; kayıt formun altında ikincil bir bağlantı. */}
+          <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4">
+            <h2 className="text-sm font-black uppercase tracking-wider text-muted-foreground">
+              {mode === 'login' ? 'Giriş yap' : 'Yeni hesap'}
+            </h2>
             {mode === 'register' ? (
               <label className="block text-sm font-semibold text-foreground">
               Ad soyad
@@ -184,11 +167,33 @@ export function LoginPage() {
                 className="mt-1 h-11"
               />
             </label>
-            {message ? <p className="rounded-xl border border-warning/25 bg-warning/8 p-3 text-sm font-medium text-warning">{message}</p> : null}
+            {message ? (
+              <p
+                role={message.tone === 'error' ? 'alert' : 'status'}
+                className={
+                  message.tone === 'error'
+                    ? 'rounded-xl border border-destructive/25 bg-destructive/8 p-3 text-sm font-medium text-destructive'
+                    : 'rounded-xl border border-success/25 bg-success/8 p-3 text-sm font-medium text-success'
+                }
+              >
+                {message.text}
+              </p>
+            ) : null}
             <Button type="submit" disabled={submitting} className="h-11 w-full gap-2">
-              {submitting ? 'Bekle...' : mode === 'login' ? 'Giriş yap' : 'Kayıt ol'}
+              {submitting ? 'Bekle…' : mode === 'login' ? 'Giriş yap' : 'Kayıt ol'}
               {!submitting ? <ArrowRight data-icon="inline-end" /> : null}
             </Button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setMode((current) => (current === 'login' ? 'register' : 'login'))
+                setMessage(null)
+              }}
+              className="mx-auto text-xs font-semibold text-muted-foreground underline decoration-dotted underline-offset-4 transition hover:text-foreground"
+            >
+              {mode === 'login' ? 'Yeni hesap oluştur' : 'Zaten hesabım var, giriş yap'}
+            </button>
           </form>
         </CardContent>
       </Card>

@@ -1,6 +1,6 @@
 import { supabase } from '../../lib/supabase'
 import type { Card, CardExpense, CardExpenseSource, CardInstallment, CardStatementArchive, CardStatementPayment, Json, Payment } from '../../types/database'
-import { ok, resultFromSupabase, voidResultFromSupabase, type Result } from '../result'
+import { appErrorFromSupabase, fail, ok, resultFromSupabase, voidResultFromSupabase, type Result } from '../result'
 import { roundTL } from '../../utils/money'
 
 export type ExpenseMatchRow = Pick<CardExpense, 'id' | 'spent_at' | 'amount' | 'status' | 'description' | 'category' | 'installment_count' | 'note'>
@@ -184,7 +184,21 @@ export type AddCardExpenseInput = {
   carId?: string | null
 }
 
-export async function addCardExpense(input: AddCardExpenseInput): Promise<Result<void>> {
+/**
+ * Harcama yazma sonucu.
+ *
+ * NEDEN ayrı bir uyarı alanı: harcamanın kendisi RPC ile ATOMİK yazılır, araç
+ * etiketi ise ayrı bir UPDATE'tir. Eskiden etiket UPDATE'i düşünce tüm sonuç
+ * `fail` dönüyordu; kullanıcı "hiç kaydolmadı" sanıp tekrar gönderiyordu ve
+ * manuel kayıtta dedupe olmadığı için ÇİFT harcama oluşuyordu. Artık harcama
+ * yazıldıysa sonuç `ok`, etiket sorunu bu alanda taşınır.
+ */
+export type CardExpenseWriteResult = {
+  /** Harcama kaydedildi ama araç etiketi uygulanamadıysa kullanıcıya gösterilecek uyarı. */
+  carTagWarning: string | null
+}
+
+export async function addCardExpense(input: AddCardExpenseInput): Promise<Result<CardExpenseWriteResult>> {
   const { data, error } = await supabase.rpc('add_card_expense', {
     p_card_id: input.cardId,
     p_amount: input.amount,
@@ -197,19 +211,32 @@ export async function addCardExpense(input: AddCardExpenseInput): Promise<Result
     p_source_event_id: input.sourceEventId ?? null,
   })
 
-  if (error) return voidResultFromSupabase(error, 'Harcama kaydedilemedi.')
-  return tagExpenseCar((data as CardExpense | null)?.id, input.carId)
+  if (error) return fail(appErrorFromSupabase(error, 'Harcama kaydedilemedi.'))
+  return ok(await tagExpenseCar((data as CardExpense | null)?.id, input.carId))
 }
 
 /**
  * add_card_expense / carryover RPC'leri oluşturdukları card_expenses satırını
  * döndürür. Araç seçildiyse o satıra car_id etiketini ayrı UPDATE ile atarız
  * (saf annotation, borca dokunmaz — updateCardExpenseCategory ile aynı desen).
+ * Harcama zaten yazılmış olduğu için hata BURADA fail'e dönüşmez; uyarı olarak
+ * yukarı taşınır.
  */
-async function tagExpenseCar(expenseId: string | undefined, carId: string | null | undefined): Promise<Result<void>> {
-  if (!carId || !expenseId) return ok(undefined)
+async function tagExpenseCar(
+  expenseId: string | undefined,
+  carId: string | null | undefined,
+): Promise<CardExpenseWriteResult> {
+  if (!carId) return { carTagWarning: null }
+  if (!expenseId) {
+    // Araç seçilmişti ama RPC kayıt kimliğini döndürmedi (eski imza / boş yanıt).
+    // Eskiden sessizce ok dönüyordu: kullanıcı etiketin uygulandığını sanıyordu.
+    return { carTagWarning: 'Harcama kaydedildi ama araca atanamadı: kayıt kimliği dönmedi. Aracı harcama listesinden atayabilirsin.' }
+  }
   const { error } = await supabase.from('card_expenses').update({ car_id: carId }).eq('id', expenseId)
-  return voidResultFromSupabase(error, 'Harcama kaydedildi ama araca atanamadı.')
+  if (!error) return { carTagWarning: null }
+  return {
+    carTagWarning: `Harcama kaydedildi ama araca atanamadı: ${error.message ?? 'bilinmeyen hata'}. Tekrar göndermene gerek yok; aracı harcama listesinden atayabilirsin.`,
+  }
 }
 
 export type PayPaymentFromCardImportInput = {
@@ -256,7 +283,9 @@ export async function fetchCardInstallmentMatchRows(cardId: string): Promise<Res
   return resultFromSupabase((data ?? []) as InstallmentMatchRow[], error, 'Kart taksitleri yüklenemedi.')
 }
 
-export async function recordCardInstallmentCarryover(input: CardInstallmentCarryoverInput): Promise<Result<void>> {
+export async function recordCardInstallmentCarryover(
+  input: CardInstallmentCarryoverInput,
+): Promise<Result<CardExpenseWriteResult>> {
   const { data, error } = await supabase.rpc('record_card_installment_carryover', {
     p_card_id: input.cardId,
     p_description: input.description,
@@ -268,8 +297,8 @@ export async function recordCardInstallmentCarryover(input: CardInstallmentCarry
     p_source_event_id: input.sourceEventId ?? null,
   })
 
-  if (error) return voidResultFromSupabase(error, 'Taksit devri kaydedilemedi.')
-  return tagExpenseCar((data as CardExpense | null)?.id, input.carId)
+  if (error) return fail(appErrorFromSupabase(error, 'Taksit devri kaydedilemedi.'))
+  return ok(await tagExpenseCar((data as CardExpense | null)?.id, input.carId))
 }
 
 export async function cutDueCardStatements(): Promise<Result<number>> {

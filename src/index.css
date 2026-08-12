@@ -170,6 +170,11 @@
   --border:               #dfe8e3;
   --input:                #d3ddd7;
   --ring:                 #0fae7e;
+  /* Diyalog/popover karartması TEK token: üç ayrı yerde üç farklı değer vardı
+     (`bg-slate-950/45`, `/56`, `bg-black/30`) ve aynı katman her açılışta farklı
+     koyulukta görünüyordu (denetim 2026-08-12 §6). Tüketiciler: confirm-dialog,
+     SimpleModal, QuickActions, iki import modalı. */
+  --overlay:              rgb(2 6 23 / 0.5);
 
   /* Grafik kategori renkleri (kimlik) — sıra CVD güvenliğinin mekanizması,
      kozmetik değil; slot sırasını değiştirme, döngüye sokma.
@@ -232,10 +237,14 @@
   --shadow-lifted:  0 2px 4px rgba(21, 24, 36, 0.04), 0 14px 36px rgba(21, 24, 36, 0.07);
   --shadow-floating:0 20px 56px rgba(21, 24, 36, 0.14), 0 4px 14px rgba(21, 24, 36, 0.06);
 
-  /* Motion */
+  /* Motion — yalnız CSS'ten tüketilenler kalır (`--motion-slow` hiç kullanılmıyordu,
+     silindi). Şerit'in `duration-[120ms]` geçişleri KASITLI olarak token'a
+     bağlanmadı: Tailwind sınıfı bir CSS değişkeninden süre okuyamıyor ve o değer
+     bu ajanın dokunma izni olmayan sekiz dosyaya yayılmış — yarısını çevirmek
+     tutarsızlığı artırırdı. Tek yere toplama işi ayrı bir madde olarak duruyor
+     (denetim 2026-08-12 §6). */
   --motion-fast:   150ms cubic-bezier(0.16, 1, 0.3, 1);
   --motion-normal: 250ms cubic-bezier(0.16, 1, 0.3, 1);
-  --motion-slow:   400ms cubic-bezier(0.16, 1, 0.3, 1);
 
   color-scheme: light;
   color: var(--foreground);
@@ -279,7 +288,12 @@
   --accent-foreground:    #7ff0c6;
   --destructive:          #ff6f6f;
   --destructive-foreground: #2a0808;
-  --success:              #3ddca0;
+  /* Koyu temada `--success` marka jade'iyle BİREBİR aynıydı (#3ddca0): "Kaydet"
+     (default) ve "Onayla" (success) butonları yan yana ayırt edilemiyordu, artı
+     bakiye de marka rengiyle karışıyordu (denetim 2026-08-12 §6). Aynı hue
+     ailesinde kalıp bir basamak koyulaştırıldı — obsidyen kart (#131a17) üzerinde
+     6.9:1, üstündeki `--success-foreground` ile 7.5:1 (AA). */
+  --success:              #22b981;
   --success-foreground:   #04140e;
   --warning:              #f2b64a;
   --warning-foreground:   #241a05;
@@ -288,6 +302,7 @@
   --border:               #242c29;
   --input:                #2a332f;
   --ring:                 #46e0aa;
+  --overlay:              rgb(0 0 0 / 0.62);
 
   /* Aynı sekiz renk, koyu zemin için yeniden basamaklandı — otomatik çevirme değil.
      Grafik paleti kasıtlı olarak markadan (jade) bağımsız kategorik kimliktir.
@@ -684,7 +699,8 @@ button:disabled {
   --muted-foreground: #aeb9b1;
   --border: rgba(255, 255, 255, 0.12);
   --primary: #6ff0c0;
-  --success: #6ff0c0;
+  /* Marka ile birebir aynı değil (bkz. koyu tema `--success` notu). */
+  --success: #43d69a;
   color: var(--foreground);
   background:
     radial-gradient(circle at 8% 0%, rgba(63, 220, 160, 0.22), transparent 30%),

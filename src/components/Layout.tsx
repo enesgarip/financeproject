@@ -1,5 +1,5 @@
 import { Eye, EyeOff, LogOut, Moon, MoreHorizontal, Sun } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router'
 import { useDailyNetWorthSnapshot } from '../app/useDailyNetWorthSnapshot'
 import { useAuth } from '../auth/useAuth'
@@ -9,6 +9,7 @@ import { BottomNav } from './BottomNav'
 import { contentWidthClass, overflowNavItems, primaryNavItems, routeSubtitle, routeTitle, secondaryNavItems } from './navigation'
 import { PullToRefresh } from './PullToRefresh'
 import { QuickActionsButton, QuickActionsProvider } from './QuickActions'
+import { useDialogA11y } from './ui/use-dialog-a11y'
 
 /**
  * Uygulama kabuğu — Şerit (`4e`). Kart yok, gölge yok: rail sayfadan 1px
@@ -40,6 +41,10 @@ function LayoutInner() {
   })
   const [menuOpen, setMenuOpen] = useState(false)
   const { hidden: balancesHidden, toggleHidden: toggleBalancesHidden } = useBalancePrivacy()
+  const closeMenu = useCallback(() => setMenuOpen(false), [])
+  // Taşma menüsü de klavyeyle kapatılabilir olmalı: Escape kapatır, Tab menünün
+  // içinde döner, kapanınca odak "Menü" butonuna geri döner (denetim §6).
+  const menuRef = useDialogA11y<HTMLDivElement>(menuOpen, closeMenu)
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', isDark)
@@ -126,6 +131,7 @@ function LayoutInner() {
                   type="button"
                   onClick={() => setMenuOpen((c) => !c)}
                   aria-expanded={menuOpen}
+                  aria-haspopup="menu"
                   aria-label="Menü"
                   className="inline-flex items-center rounded-lg border border-line-strong p-[7px] text-ink-muted transition-colors duration-[120ms] hover:bg-black/[.02] dark:hover:bg-white/[.03]"
                 >
@@ -138,15 +144,21 @@ function LayoutInner() {
                       type="button"
                       aria-hidden
                       tabIndex={-1}
-                      onClick={() => setMenuOpen(false)}
+                      onClick={closeMenu}
                       className="fixed inset-0 z-40 cursor-default"
                     />
-                    <div className="absolute right-0 top-full z-50 mt-2 w-56 rounded-[14px] border border-line-strong bg-raised p-1.5">
+                    <div
+                      ref={menuRef}
+                      role="menu"
+                      aria-label="Ek sayfalar"
+                      className="absolute right-0 top-full z-50 mt-2 w-56 rounded-[14px] border border-line-strong bg-raised p-1.5"
+                    >
                       {overflowNavItems.map((item) => (
                         <Link
                           key={item.to}
                           to={item.to}
-                          onClick={() => setMenuOpen(false)}
+                          role="menuitem"
+                          onClick={closeMenu}
                           className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-ink transition-colors duration-[120ms] hover:bg-black/[.03] dark:hover:bg-white/[.04]"
                         >
                           <item.icon size={16} className="shrink-0 text-ink-faint" aria-hidden="true" />
@@ -183,9 +195,11 @@ function LayoutInner() {
 }
 
 /**
- * Rail satırı. `md`–`lg` arasında yalnız ikon görünür (56px rail); etiket
- * `sr-only` değil `hidden`, çünkü ikon zaten `aria-label` taşıyan bağlantının
- * içinde ve çift okuma istemiyoruz.
+ * Rail satırı. `md`–`lg` arasında yalnız ikon görünür (56px rail); etiket metni
+ * `display:none` olduğu için erişilebilirlik ağacından da düşer — bu yüzden
+ * bağlantının kendisi `aria-label` taşır (yorum bunu iddia ediyordu ama attribute
+ * yoktu: yalnız `title` vardı, o da klavye/ekran okuyucu için ad üretmez).
+ * `aria-label` içeriği ezdiği için ≥1024px'te görünen etiket iki kez okunmaz.
  */
 function RailLink({
   item,
@@ -199,6 +213,7 @@ function RailLink({
       to={item.to}
       end={item.to === '/'}
       title={item.label}
+      aria-label={item.label}
       className={({ isActive }) => {
         const itemIsActive =
           isActive || ('activePaths' in item && (item.activePaths as readonly string[]).includes(pathname))

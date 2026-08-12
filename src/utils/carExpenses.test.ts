@@ -141,6 +141,49 @@ describe('buildCarSummaries', () => {
     expect(fuel.litersPer100Km).toBe(7.5)
     expect(fuel.costPerKm).toBe(2)
   })
+
+  it('odometresiz ARA dolumun litresini aralığa katar (Faz F)', () => {
+    // Bulgu: ara dolumun litresi hiçbir aralığa yazılmıyordu ama mesafenin
+    // TAMAMI ölçülüyordu → L/100km sistematik olarak düşük çıkıyordu.
+    // 10.000 → 10.600 km arası 45 + 15 = 60 L ile kat edildi → 10 L/100km.
+    const manual = [
+      makeManual({ id: 'm1', car_id: 'car1', amount: 1000, spent_at: '2026-08-01', fuel_liters: 40, odometer_km: 10_000 }),
+      makeManual({ id: 'm2', car_id: 'car1', amount: 400, spent_at: '2026-08-08', fuel_liters: 15, odometer_km: null }),
+      makeManual({ id: 'm3', car_id: 'car1', amount: 1200, spent_at: '2026-08-15', fuel_liters: 45, odometer_km: 10_600 }),
+    ]
+    const fuel = buildCarSummaries(cars, manual, [], new Date('2026-08-20')).find((s) => s.car.id === 'car1')!.fuel
+    expect(fuel.fillupCount).toBe(3)
+    expect(fuel.measuredDistanceKm).toBe(600)
+    expect(fuel.litersPer100Km).toBe(10)
+    // ₺/km de ara dolumun masrafını içerir: (1200 + 400) / 600.
+    expect(fuel.costPerKm).toBeCloseTo(2.67, 2)
+  })
+
+  it('odometresi GERİLEMİŞ (hatalı) satırı da bekleyen dolum sayar', () => {
+    const manual = [
+      makeManual({ id: 'm1', car_id: 'car1', amount: 1000, spent_at: '2026-08-01', fuel_liters: 40, odometer_km: 10_000 }),
+      makeManual({ id: 'm2', car_id: 'car1', amount: 400, spent_at: '2026-08-08', fuel_liters: 15, odometer_km: 9_000 }),
+      makeManual({ id: 'm3', car_id: 'car1', amount: 1200, spent_at: '2026-08-15', fuel_liters: 45, odometer_km: 10_600 }),
+    ]
+    const fuel = buildCarSummaries(cars, manual, [], new Date('2026-08-20')).find((s) => s.car.id === 'car1')!.fuel
+    // Gerileyen okuma zinciri bozmaz: temel 10.000 kalır, mesafe 600.
+    expect(fuel.measuredDistanceKm).toBe(600)
+    expect(fuel.litersPer100Km).toBe(10)
+  })
+
+  it('temel (ilk) dolumun litresi hiçbir aralığa yazılmaz', () => {
+    // Tank-to-tank: A→B mesafesi B'de alınan yakıtla kat edilir. Tek dolumla
+    // ölçülebilir aralık yoktur → metrik null.
+    const manual = [
+      makeManual({ id: 'm1', car_id: 'car1', amount: 1000, spent_at: '2026-08-01', fuel_liters: 40, odometer_km: 10_000 }),
+    ]
+    const fuel = buildCarSummaries(cars, manual, [], new Date('2026-08-20')).find((s) => s.car.id === 'car1')!.fuel
+    expect(fuel.fillupCount).toBe(1)
+    expect(fuel.totalLiters).toBe(40)
+    expect(fuel.measuredDistanceKm).toBe(0)
+    expect(fuel.litersPer100Km).toBeNull()
+    expect(fuel.costPerKm).toBeNull()
+  })
 })
 
 describe('carReminderState', () => {

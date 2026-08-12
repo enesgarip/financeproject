@@ -1,7 +1,7 @@
-import { useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
 import { useBodyScrollLock } from './ui/use-body-scroll-lock'
+import { useDialogA11y } from './ui/use-dialog-a11y'
 
 type SimpleModalProps = {
   title: string
@@ -10,73 +10,16 @@ type SimpleModalProps = {
   onClose: () => void
 }
 
-const FOCUSABLE_SELECTOR =
-  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
-
 export function SimpleModal({ title, open, children, onClose }: SimpleModalProps) {
-  const sectionRef = useRef<HTMLElement>(null)
   useBodyScrollLock(open)
-
-  // onClose'u ref'te tut: effect yalnız `open` değişince kurulmalı. Aksi halde
-  // çağıran inline `onClose={() => ...}` verdiğinde (her render'da yeni referans)
-  // effect her tuş vuruşunda yeniden kurulur, `section.focus()` odağı input'tan
-  // alır ve MOBİLDE KLAVYE KAPANIR (yazarken en sinir bozucu bug).
-  const onCloseRef = useRef(onClose)
-  useEffect(() => {
-    onCloseRef.current = onClose
-  })
-
-  // A11y: focus'u modala taşı, arka plana kaçmayı engelle (Tab döngüsü), Escape ile
-  // kapat ve kapanınca focus'u tetikleyen öğeye geri ver. Aynı desen confirm-dialog'da
-  // da var; burada içerik form olduğu için focusable listesi HER Tab'da yeniden
-  // sorgulanır (hata mesajı/alan görünüp kaybolabilir).
-  useEffect(() => {
-    if (!open) return
-    const section = sectionRef.current
-    if (!section) return
-
-    const previouslyFocused = document.activeElement as HTMLElement | null
-    section.focus()
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') {
-        event.stopPropagation()
-        onCloseRef.current()
-        return
-      }
-      if (event.key !== 'Tab') return
-
-      const focusable = Array.from(section!.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR))
-      if (focusable.length === 0) {
-        event.preventDefault()
-        section!.focus()
-        return
-      }
-
-      const first = focusable[0]!
-      const last = focusable[focusable.length - 1]!
-      const active = document.activeElement
-
-      if (event.shiftKey && (active === first || active === section)) {
-        event.preventDefault()
-        last.focus()
-      } else if (!event.shiftKey && active === last) {
-        event.preventDefault()
-        first.focus()
-      }
-    }
-
-    document.addEventListener('keydown', handleKeyDown)
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown)
-      previouslyFocused?.focus?.()
-    }
-  }, [open])
+  // Focus sözleşmesi (odak içeri, Tab hapsi, Escape, kapanışta geri verme) ortak
+  // hook'ta — aynı davranış ConfirmDialog ve import modallarında da kullanılıyor.
+  const sectionRef = useDialogA11y<HTMLElement>(open, onClose)
 
   if (!open) return null
 
   return createPortal(
-    <div className="fixed inset-0 z-[80] flex items-start justify-center overflow-y-auto bg-slate-950/56 px-3 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-[calc(env(safe-area-inset-top)+1rem)] backdrop-blur-md sm:items-center sm:p-6">
+    <div className="fixed inset-0 z-[80] flex items-start justify-center overflow-y-auto bg-[var(--overlay)] px-3 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-[calc(env(safe-area-inset-top)+1rem)] backdrop-blur-md sm:items-center sm:p-6">
       <section
         ref={sectionRef}
         tabIndex={-1}

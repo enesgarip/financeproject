@@ -107,6 +107,10 @@ export function DueStatementAutomation({
     let cancelled = false
 
     async function runDueStatementCut() {
+      // BAŞARIDA damgala, hatada damgalama: `finally` içinde damgalanınca geçici
+      // bir ağ/RPC hatası dönemi "tamamlandı" sayıyor ve ekstre kesimi o oturum
+      // boyunca bir daha denenmiyordu. Kullanıcıya görünen hata korunur.
+      let succeeded = false
       try {
         const cutResult = await cutDueCardStatements()
 
@@ -119,13 +123,14 @@ export function DueStatementAutomation({
           return
         }
 
+        succeeded = true
         if (!cancelled && cutResult.data > 0) {
           await Promise.all([reload(), loadStatements()])
         }
       } finally {
         if (activeRunKeyRef.current === runKey) {
           activeRunKeyRef.current = null
-          completedRunKeyRef.current = runKey
+          if (succeeded) completedRunKeyRef.current = runKey
         }
       }
     }

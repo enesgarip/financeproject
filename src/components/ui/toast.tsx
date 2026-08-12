@@ -66,10 +66,15 @@ function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: (id: string)
     }
   }, [dismiss, toast.duration])
 
+  // Aciliyet tipe göre: yalnız error/warning ekran okuyucunun okuduğu cümleyi
+  // KESER (`assertive`). "Kaydedildi" gibi bilgiler sırasını bekler — hepsi
+  // assertive olduğunda her başarı bildirimi kullanıcının okuduğunu kesiyordu.
+  const urgent = toast.type === 'error' || toast.type === 'warning'
+
   return (
     <div
-      role="alert"
-      aria-live="assertive"
+      role={urgent ? 'alert' : 'status'}
+      aria-live={urgent ? 'assertive' : 'polite'}
       aria-atomic="true"
       className={cn(
         'pointer-events-auto flex w-full max-w-sm items-start gap-3 rounded-2xl border px-4 py-3.5',
@@ -91,7 +96,7 @@ function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: (id: string)
       <button
         type="button"
         onClick={dismiss}
-        className="mt-0.5 shrink-0 rounded-lg p-0.5 text-muted-foreground transition hover:bg-muted hover:text-foreground"
+        className="tap-target mt-0.5 grid size-6 shrink-0 place-items-center rounded-lg text-muted-foreground transition hover:bg-muted hover:text-foreground"
         aria-label="Bildirimi kapat"
       >
         <X size={14} />

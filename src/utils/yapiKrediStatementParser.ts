@@ -13,12 +13,16 @@
  *    DenizBank ile aynı checkInstallmentNotation tutarlılık kontrolü çalışır.
  *  - İşlemler yalnız "İşlem Tarihi İşlemler Tutar(TL)…" başlığı ile "TOPLAM" arasında;
  *    WORLDPUAN DETAYI bölümünde de tarih+tutar satırları var → bölge sınırı ŞART.
+ *  - Özet alanları YOK: YK "Dönem İçi Harcamanız"/"Toplam Faiz ve Ücretler"
+ *    basmaz, bu yüzden DenizBank'ın BAŞLIK kimliği burada çalıştırılamaz. Ama
+ *    devir satırı (ÖNCEKİ DÖNEM … BORCU), ödeme satırları ve TOPLAM footer'ı
+ *    okunabilir → SATIR kimliği türetilebilir (bkz. checkStatementParseTotals).
  *
  * Saf metin ayrıştırma; ledger'a yazma cardsRepo/StatementImportModal işi.
  */
 import { suggestExpenseCategory, type CategoryMemory } from './categories'
 import { parseAmount, type ParsedStatement, type ParsedStatementAdjustment, type ParsedTransaction } from './denizBankStatementParser'
-import { roundTL } from './money'
+import { roundTL, sumTL } from './money'
 
 const MONTHS: Record<string, number> = {
   Ocak: 1, Şubat: 2, Mart: 3, Nisan: 4, Mayıs: 5, Haziran: 6,
@@ -35,6 +39,14 @@ const ANY_DATE_RE = new RegExp(`(\\d{1,2})\\s+(${MONTH_ALTERNATION})\\s+(\\d{4})
 const MONEY_RE = /\d{1,3}(?:\.\d{3})*,\d{2}/
 // Alt satırdaki taksit notasyonu; apostrof düz/typografik olabilir.
 const INSTALLMENT_RE = /([\d.,]+)\s*TL['’ʼ]?lik\s+işlemin\s+(\d+)\s*\/\s*(\d+)\s*taksidi/i
+/**
+ * GERÇEK ödeme satırı: açıklaması "ÖDEME" ile BAŞLAR ("ÖDEME-İNTERNET
+ * BANKACILIĞI", "ÖDEME ŞUBE"). Eskiden satırın herhangi bir yerinde "ÖDEME"
+ * aranıyordu; bu "PARAM ÖDEME KURULUŞU", "FATURA ÖDEME MERKEZİ", "… ödeme"
+ * gibi GERÇEK satıcı harcamalarını da sessizce düşürüyordu. Ek güvence:
+ * yalnız ALACAK (+) satırları ödeme sayılır — ödeme borcu azaltır.
+ */
+const PAYMENT_DESC_RE = /^ÖDEME(?:[-\s]|$)/i
 
 function parseTurkishDate(day: string, monthName: string, year: string): string {
   const month = MONTHS[monthName]
@@ -74,26 +86,41 @@ export function parseYapiKrediStatement(text: string, memory?: CategoryMemory): 
   // ── İşlemler (yalnız tablo bölgesinde) ─────────────────────────────────
   const transactions: ParsedTransaction[] = []
   const adjustments: ParsedStatementAdjustment[] = []
+  // Checksum girdileri: devir borcu, ödeme satırları toplamı, TOPLAM footer'ı.
+  let previousBalance: number | null = null
+  let footerTotal: number | null = null
+  const paymentAmounts: number[] = []
   let inTable = false
+  let sawTable = false
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i]
 
     if (/İşlem Tarihi\s+İşlemler\s+Tutar/i.test(line)) {
       inTable = true
+      sawTable = true
       continue
     }
     if (!inTable) continue
     if (/^TOPLAM\b/i.test(line)) {
+      // Footer dönem borcunu işlem satırlarından BAĞIMSIZ basar → checksum
+      // girdisi (ve "Dönem Borcu" başlığı okunamadıysa yedek kaynak).
+      const footerMoney = line.match(MONEY_RE)
+      if (footerMoney) footerTotal = parseAmount(footerMoney[0])
       inTable = false
+      continue
+    }
+
+    // Devir satırı TARİH TAŞIMAZ ("ÖNCEKİ DÖNEM HESAP ÖZETİ BORCU 0,00"), o
+    // yüzden tarih kontrolünden önce ele alınır; harcama değil, checksum girdisi.
+    if (/ÖNCEKİ DÖNEM/i.test(line)) {
+      const prevMoney = line.match(MONEY_RE)
+      if (prevMoney) previousBalance = parseAmount(prevMoney[0])
       continue
     }
 
     const dateMatch = line.match(TX_DATE_RE)
     if (!dateMatch) continue
-
-    // Ödemeler (ÖDEME-…) ve önceki dönem devri harcama değildir.
-    if (/ÖDEME/i.test(line) || /ÖNCEKİ DÖNEM/i.test(line)) continue
 
     const rest = line.slice(dateMatch[0].length).trim()
     const moneyMatch = rest.match(MONEY_RE)
@@ -107,6 +134,12 @@ export function parseYapiKrediStatement(text: string, memory?: CategoryMemory): 
     const isCredit = descRaw.endsWith('+')
     const description = cleanDescription(descRaw.replace(/\+\s*$/, ''))
     if (!description) continue
+
+    // Ödeme satırı harcama DEĞİL; borcu azalttığı için checksum'da ayrı durur.
+    if (isCredit && PAYMENT_DESC_RE.test(description)) {
+      paymentAmounts.push(amount)
+      continue
+    }
 
     const date = parseTurkishDate(dateMatch[1], dateMatch[2], dateMatch[3])
     const category = suggestExpenseCategory(description, memory) ?? 'Diğer'
@@ -139,5 +172,22 @@ export function parseYapiKrediStatement(text: string, memory?: CategoryMemory): 
     transactions.push({ date, description, amount, category, isInstallment, installmentNo, installmentCount, remainingDebt })
   }
 
-  return { cardLastFour, statementDate, dueDate, totalDebt, transactions, adjustments }
+  return {
+    cardLastFour,
+    statementDate,
+    dueDate,
+    // "Dönem Borcu" başlığı okunamadıysa TOPLAM footer'ı yedek kaynaktır.
+    totalDebt: totalMatch ? totalDebt : (footerTotal ?? 0),
+    transactions,
+    adjustments,
+    // Devir okunabildiyse SATIR kimliği çalışır:
+    //   Dönem Borcu = Önceki − Ödemeler + (Σ harcama − Σ iade)
+    // periodSpending/feesAndInterest YK ekstresinde YOK → null bırakılır
+    // (başlık kimliği körlemesine "tutarlı" görünmesin).
+    previousBalance,
+    // Tablo bölgesi hiç bulunamadıysa "ödeme yok" DEMEK DEĞİL → null.
+    payments: sawTable ? sumTL(paymentAmounts) : null,
+    periodSpending: null,
+    feesAndInterest: null,
+  }
 }

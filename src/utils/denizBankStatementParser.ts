@@ -8,6 +8,7 @@
  */
 import { suggestExpenseCategory, type CategoryMemory } from './categories'
 import { diffTL, roundTL, sumTL } from './money'
+import { normalizeSearchText } from './searchText'
 
 export type ParsedTransaction = {
   date: string
@@ -72,7 +73,23 @@ const SECTION_CATEGORY: Record<string, string> = {
   'BONUS PROGRAM ORTAKLARI DIŞINDA YAPTIĞINIZ HARCAMALAR': 'Diğer',
 }
 
-const SECTION_KEYS = Object.keys(SECTION_CATEGORY)
+/**
+ * Bölüm başlığı eşleştirmesi için metni I-duyarsız hale getirir.
+ *
+ * Neden: eski kod çıplak `toUpperCase()` kullanıyordu; "Sigorta" → "SIGORTA"
+ * olup "SİGORTA" anahtarını tutmuyordu (CLAUDE.md tr-TR I/İ tuzağı). Projenin
+ * `normalizeSearchText` deseni büyük I/İ'yi 'i'ye katlar; başlık eşleşmesinde
+ * yönü tamamlamak için noktasız 'ı' da 'i'ye katlanır — böylece PDF başlığı
+ * BÜYÜK, Başlık ya da küçük harfle gelse de aynı anahtara düşer.
+ */
+function normalizeSection(value: string): string {
+  return normalizeSearchText(value).replace(/ı/g, 'i')
+}
+
+const SECTION_KEYS = Object.keys(SECTION_CATEGORY).map((key) => ({
+  key,
+  normalized: normalizeSection(key),
+}))
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -110,9 +127,9 @@ function cleanDescription(s: string): string {
 }
 
 function sectionCategoryFor(line: string): string | null {
-  const upper = line.toUpperCase()
-  const key = SECTION_KEYS.find((k) => upper.includes(k))
-  return key ? (SECTION_CATEGORY[key] ?? null) : null
+  const normalized = normalizeSection(line)
+  const found = SECTION_KEYS.find((entry) => normalized.includes(entry.normalized))
+  return found ? (SECTION_CATEGORY[found.key] ?? null) : null
 }
 
 // ── Main parser ────────────────────────────────────────────────────────────
@@ -214,8 +231,10 @@ export function parseDenizBankStatement(text: string, memory?: CategoryMemory): 
     // Strip "Kalan Borç/Taksit" notation e.g. "43,333.33/3-1"
     descRegion = descRegion.replace(/\s+[\d.,]+\/\d+-\d+\s*/g, ' ')
 
-    // Strip trailing standalone bonus number e.g. "195.00" or "19.96"
-    descRegion = descRegion.replace(/\s+\d+[.,]\d{2}\s*$/, '')
+    // Sondaki tek başına duran bonus tutarını at: "195.00", "19.96" ve binlik
+    // ayraçlı "1,996.00" / "1.996,00". Ayraç grubu olmadan (`\d+[.,]\d{2}`)
+    // binlik ayraçlı bonus açıklamada kalıp satıcı adını kirletiyordu.
+    descRegion = descRegion.replace(/\s+\d+(?:[.,]\d{3})*[.,]\d{2}\s*$/, '')
 
     const description = cleanDescription(descRegion)
     if (!description) continue
@@ -264,6 +283,27 @@ export type StatementParseTotals = {
 export const STATEMENT_TOTAL_TOLERANCE_TL = 1
 
 /**
+ * Satır kimliğinin sağ tarafı: dönem içi NET hareket beklentisi.
+ *
+ * İki kaynak, öncelik sırasıyla:
+ *  1. DenizBank ekstresi "Dönem İçi Harcamanız" + "Toplam Faiz ve Ücretler"i
+ *     doğrudan basar → doğrudan onu kullan.
+ *  2. YapıKredi bu iki alanı basmaz; devir satırı (ÖNCEKİ DÖNEM … BORCU),
+ *     ödeme satırları ve dönem borcu (TOPLAM footer'ı) vardır → kimlik
+ *     `Dönem Borcu = Önceki − Ödemeler + net hareket` üzerinden TÜRETİLİR.
+ *
+ * Türetme dairesel DEĞİL: dönem borcu ve devir, işlem satırlarından bağımsız
+ * basılır. Bu yüzden düşen bir satır residual üretir (kimliğin varlık sebebi).
+ * Alanlar yoksa null → `checked=false` (körlemesine geçme).
+ */
+function expectedPeriodMovement(statement: ParsedStatement): number | null {
+  const { totalDebt, previousBalance, payments, periodSpending, feesAndInterest } = statement
+  if (periodSpending != null && feesAndInterest != null) return roundTL(periodSpending + feesAndInterest)
+  if (previousBalance != null && payments != null) return roundTL(totalDebt - previousBalance + payments)
+  return null
+}
+
+/**
  * Ekstre parse'ının kendi içinde tutarlı olup olmadığını iki bağımsız kimlikle
  * doğrular (8 gerçek DenizBank ekstresinde kalibre edildi — her ikisi de residual 0).
  * app-vs-banka mutabakatından FARKLIDIR: o app kaydını bankaya çeker; bu, PDF'ten
@@ -282,9 +322,9 @@ export function checkStatementParseTotals(statement: ParsedStatement): Statement
 
   const txSum = sumTL(statement.transactions.map((t) => t.amount))
   const adjSum = sumTL((statement.adjustments ?? []).map((a) => a.amount))
-  const linesChecked = periodSpending != null && feesAndInterest != null
-  const linesExpected = linesChecked ? roundTL(periodSpending + feesAndInterest) : 0
-  const linesResidual = linesChecked ? diffTL(linesExpected, roundTL(txSum - adjSum)) : 0
+  const periodMovement = expectedPeriodMovement(statement)
+  const linesChecked = periodMovement != null
+  const linesResidual = periodMovement != null ? diffTL(periodMovement, roundTL(txSum - adjSum)) : 0
 
   return {
     header: {

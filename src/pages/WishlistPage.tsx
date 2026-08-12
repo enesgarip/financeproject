@@ -14,7 +14,7 @@ import {
   insertWishlistItem,
   updateWishlistItem,
 } from '../data/repositories/wishlistRepo'
-import { formatCurrency } from '../utils/formatCurrency'
+import { formatCurrency, parseNumber } from '../utils/formatCurrency'
 import { sumTL } from '../utils/money'
 import type { WishlistItem } from '../types/database'
 
@@ -49,8 +49,11 @@ export function WishlistPage() {
 
   const addMutation = useMutation({
     mutationFn: async ({ name, price }: { name: string; price: string }) => {
-      const parsed = price ? Number(price.replace(',', '.')) : null
-      const estimatedPrice = parsed && Number.isFinite(parsed) ? parsed : null
+      // `parseNumber` çift-locale çözer: "12.500" (binlik nokta) ve "12,5" (ondalık
+      // virgül) ikisi de doğru okunur. Elle `replace(',', '.')` "12.500"ü NaN
+      // yapıyordu → madde fiyatsız kaydediliyordu (denetim 2026-08-12 §6).
+      const parsed = price.trim() ? parseNumber(price) : 0
+      const estimatedPrice = parsed > 0 ? parsed : null
       const result = await insertWishlistItem({
         user_id: user!.id,
         name,

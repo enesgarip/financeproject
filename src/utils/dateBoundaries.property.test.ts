@@ -2,7 +2,7 @@ import fc from 'fast-check'
 import { describe, expect, it } from 'vitest'
 import type { Card } from '../types/database'
 import { getCardStatementPeriod, getNextCardPaymentDueDate } from './cardStatement'
-import { addMonths, dateInMonth, dateInputValue, isDateInMonth, monthlyOccurrenceDate } from './date'
+import { addMonths, dateInMonth, dateInputValue, daysUntil, isDateInMonth, isUpcomingDate, monthlyOccurrenceDate } from './date'
 
 /**
  * Tarih sınırı invariantları (ayın 29/30/31'i, Şubat, yıl geçişi).
@@ -123,5 +123,38 @@ describe('getNextCardPaymentDueDate', () => {
       }),
       { numRuns: 3000 },
     )
+  })
+})
+
+describe('daysUntil — ISO saatli/timestamptz girdi (Faz F)', () => {
+  // Bulgu: string girdiye körlemesine `T00:00:00` ekleniyordu; değer zaten saat
+  // taşıyorsa ("…T13:00:00+03:00") sonuç Invalid Date → NaN gün oluyordu.
+  // NaN her karşılaştırmada false verir, yani "yaklaşan" uyarıları SESSİZCE
+  // kaybolur. Artık gün kısmı alınır (CLAUDE.md formatDate tuzağının kardeşi).
+  const iso = (date: Date) => dateInputValue(date)
+
+  it('date-only ve aynı günün timestamptz hâli aynı sonucu verir', () => {
+    fc.assert(
+      fc.property(dateArb, fc.integer({ min: 0, max: 23 }), (date, hour) => {
+        const dayOnly = iso(date)
+        const withTime = `${dayOnly}T${String(hour).padStart(2, '0')}:00:00+03:00`
+        const expected = daysUntil(dayOnly)
+        expect(expected).not.toBeNull()
+        expect(Number.isNaN(expected!)).toBe(false)
+        expect(daysUntil(withTime)).toBe(expected)
+      }),
+      { numRuns: 1000 },
+    )
+  })
+
+  it('bugünün timestamptz hâli için 0 döner ve isUpcomingDate true kalır', () => {
+    const today = iso(new Date())
+    expect(daysUntil(`${today}T13:00:00+03:00`)).toBe(0)
+    expect(isUpcomingDate(`${today}T13:00:00+03:00`)).toBe(true)
+  })
+
+  it('okunamayan tarihte NaN yerine null döner', () => {
+    expect(daysUntil('bugün')).toBeNull()
+    expect(isUpcomingDate('bugün')).toBe(false)
   })
 })

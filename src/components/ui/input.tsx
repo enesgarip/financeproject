@@ -58,31 +58,8 @@ function Textarea({ className, ...props }: React.ComponentProps<"textarea">) {
   )
 }
 
-/** Currency-aware input with ₺ prefix and monospace font */
-function CurrencyInput({
-  className,
-  ...props
-}: React.ComponentProps<"input">) {
-  return (
-    <div className="relative">
-      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-muted-foreground">
-        ₺
-      </span>
-      <input
-        data-slot="input"
-        type="number"
-        inputMode="decimal"
-        step="0.01"
-        className={cn(
-          "h-10 min-w-0 pl-7",
-          "font-mono text-right tracking-tight tabular-nums",
-          baseInputClass,
-          className,
-        )}
-        {...props}
-      />
-    </div>
-  )
-}
-
-export { Input, Select, Textarea, CurrencyInput }
+// `CurrencyInput` SİLİNDİ (denetim 2026-08-12 §3): para girişinin iki ayrı
+// bileşeni vardı ve virgül/negatif davranışları farklıydı. Tek para girişi
+// `components/finance/MoneyInput.tsx` — `parseNumber` ile TR virgülünü de kabul
+// eder ve girilen tutarı biçimlenmiş olarak altında gösterir.
+export { Input, Select, Textarea }

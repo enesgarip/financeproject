@@ -1,5 +1,6 @@
 import { supabase } from './supabase'
 import { edgeErrorMessage } from './statementParseClient'
+import { expenseCategories } from '../utils/categories'
 
 /**
  * Parse a receipt / bill / bank-notification image into a single card expense,
@@ -14,8 +15,12 @@ export type ReceiptParseResult = {
   merchant: string
   /** Total amount in TRY (> 0). */
   amount: number
-  /** YYYY-MM-DD, or '' when the date could not be read. */
+  /** YYYY-MM-DD, or '' when the date could not be read OR failed validation. */
   date: string
+  /**
+   * `expenseCategories` içindeki bir değer, ya da '' — model listede olmayan bir
+   * kategori uydurduysa alan DÜŞÜRÜLÜR (bkz. sanitizeReceiptResult).
+   */
   category: string
 }
 
@@ -33,6 +38,33 @@ export function fileToBase64(file: File): Promise<{ base64: string; mimeType: st
   })
 }
 
+const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/
+
+/**
+ * LLM çıktısı SÖZLEŞMEYE göre değil, isteğe göre üretilir: model uydurma bir
+ * kategori ("Kırtasiye") ya da yerel biçimli bir tarih ("14.05.2026") dönebilir.
+ * Bunlar doğrulanmadan forma yazılınca kategori sessizce listede olmayan bir
+ * değere, tarih de geçersiz bir `date` input'una düşüyordu. Geçersiz alan
+ * DÜŞÜRÜLÜR (boş bırakılır) — kullanıcı elle seçer, uydurma değer kaydedilmez.
+ */
+function sanitizeReceiptResult(raw: {
+  merchant?: unknown
+  amount: number
+  date?: unknown
+  category?: unknown
+}): ReceiptParseResult {
+  const category = typeof raw.category === 'string' ? raw.category.trim() : ''
+  const date = typeof raw.date === 'string' ? raw.date.trim() : ''
+  // Takvim geçerliliği de kontrol edilir: "2026-02-31" biçime uyar ama tarih değil.
+  const dateValid = ISO_DATE_RE.test(date) && new Date(`${date}T00:00:00Z`).toISOString().startsWith(date)
+  return {
+    merchant: typeof raw.merchant === 'string' ? raw.merchant.trim() : '',
+    amount: raw.amount,
+    date: dateValid ? date : '',
+    category: (expenseCategories as readonly string[]).includes(category) ? category : '',
+  }
+}
+
 export async function parseReceiptImage(file: File): Promise<ReceiptParseResult> {
   const { base64, mimeType } = await fileToBase64(file)
 
@@ -48,5 +80,5 @@ export async function parseReceiptImage(file: File): Promise<ReceiptParseResult>
   if (!result || typeof result.amount !== 'number' || result.amount <= 0) {
     throw new Error('Görselden bir tutar okunamadı.')
   }
-  return result
+  return sanitizeReceiptResult(result)
 }

@@ -30,4 +30,32 @@ describe('paidPaymentIdsInMonth', () => {
 
     expect([...result]).toEqual(['payment-1'])
   })
+
+  it('ay sınırını aşan geri almayı görür (31 Temmuz ödendi → 1 Ağustos geri alındı)', () => {
+    const result = paidPaymentIdsInMonth([
+      history({ occurred_at: '2026-07-31T09:00:00Z' }),
+      history({ id: 'undo', occurred_at: '2026-08-01T09:00:00Z', title: 'Fatura ödemesi geri alındı' }),
+    ], new Date(2026, 6, 18))
+
+    expect([...result]).toEqual([])
+  })
+
+  it('geri alma penceresi kapandıktan sonra ayın sonucunu değiştirmez', () => {
+    const result = paidPaymentIdsInMonth([
+      history({ occurred_at: '2026-07-31T09:00:00Z' }),
+      history({ id: 'undo', occurred_at: '2026-08-25T09:00:00Z', title: 'Fatura ödemesi geri alındı' }),
+    ], new Date(2026, 6, 18))
+
+    expect([...result]).toEqual(['payment-1'])
+  })
+
+  it('sonraki ayda yeniden ödenip geri alınan tekrarlı ödeme bu ayı etkilemez', () => {
+    const result = paidPaymentIdsInMonth([
+      history({ occurred_at: '2026-07-05T09:00:00Z' }),
+      history({ id: 'august', occurred_at: '2026-08-05T09:00:00Z' }),
+      history({ id: 'undo', occurred_at: '2026-08-06T09:00:00Z', title: 'Fatura ödemesi geri alındı' }),
+    ], new Date(2026, 6, 18))
+
+    expect([...result]).toEqual(['payment-1'])
+  })
 })

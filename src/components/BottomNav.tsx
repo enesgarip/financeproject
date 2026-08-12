@@ -28,7 +28,10 @@ export function BottomNav() {
         <QuickActionsFab />
       </div>
 
-      <nav className="pointer-events-auto grid grid-cols-5 gap-0.5 border-t border-line-strong bg-page px-3.5 pb-[calc(env(safe-area-inset-bottom)+18px)] pt-3.5">
+      <nav
+        aria-label="Ana gezinme"
+        className="pointer-events-auto grid grid-cols-5 gap-0.5 border-t border-line-strong bg-page px-3.5 pb-[calc(env(safe-area-inset-bottom)+18px)] pt-3.5"
+      >
         {bottomNavItems.map((item) => (
           <NavLink
             key={item.to}

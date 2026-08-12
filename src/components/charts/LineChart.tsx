@@ -23,9 +23,22 @@ export function LineChart({ data, series, height = 260 }: LineChartProps) {
   const [chartRef, chartWidth] = useChartWidth()
   const [hoverIndex, setHoverIndex] = useState<number | null>(null)
 
+  // Erişilebilir ad + cümle özeti (CashFlowChart deseni, denetim §6). Boş nokta
+  // "veri yok" olarak okunur — düz çizgi izlenimi görselde de yok (K17).
+  const chartSummary = data
+    .map((point) => {
+      const parts = series.map((s) => {
+        const value = point[s.key]
+        return `${s.name} ${typeof value === 'number' ? formatAmount(value) : 'veri yok'}`
+      })
+      return `${point.label}: ${parts.join(', ')}`
+    })
+    .join('; ')
+
   if (data.length === 0) {
     return (
       <div
+        role="status"
         className="flex items-center justify-center rounded-xl bg-muted/30 text-sm text-muted-foreground"
         style={{ height }}
       >
@@ -45,6 +58,7 @@ export function LineChart({ data, series, height = 260 }: LineChartProps) {
   if (allValues.length === 0) {
     return (
       <div
+        role="status"
         className="flex items-center justify-center rounded-xl bg-muted/30 text-sm text-muted-foreground"
         style={{ height }}
       >
@@ -92,7 +106,13 @@ export function LineChart({ data, series, height = 260 }: LineChartProps) {
   const hoverX = hoverIndex !== null ? toX(hoverIndex) : 0
 
   return (
-    <div ref={chartRef} className="min-w-0" style={{ height, minHeight: height }}>
+    <div
+      ref={chartRef}
+      role="img"
+      aria-label={`Çizgi grafiği. ${chartSummary}`}
+      className="min-w-0"
+      style={{ height, minHeight: height }}
+    >
       {chartWidth > 0 ? (
         <svg
           width={chartWidth}

@@ -10,7 +10,71 @@ maliyet hatası, mutabakat parse hatası, agregat gelecek-taksit netlemesi vb.),
 geniş ölü kod envanteri (~500 satır bayraklı ölü dal + 7 ölü dosya + ölü CSS),
 tekrar eden yüzey haritası (kart kırılımı 11 yüzey, "Harcanabilir" 2 formül) ve
 pgTAP kapsam boşlukları. Docs senkronu aynı gün yapıldı (bkz. rapor §11).
-Düzeltme fazları (A–E) rapor §12'de.
+Düzeltme fazları (A–E) rapor §12'de. Faz F rapor §5/§6/§9/§10'daki kalan
+ORTA/DÜŞÜK katmanı kapatır — denetimden açık bulgu kalmadı.
+
+- ~~**Faz F — kalan ORTA/DÜŞÜK bulgular.**~~ DONE (2026-08-12). Üç ayrık kümede
+  toplandı (+ DB tarafı ana oturumda):
+  **DataHealth:** `card-split-` sayacı artık etkilenen KART üzerinden tekilleşiyor
+  (tek kartta `splitOk = −1` bitti; tüm `*Ok` sayaçları `max(0, …)`); sabit ID'li
+  bulgulara (`card-expense-missing-*`, `loan-paid-at-*`) `affectedSetSignature()`
+  imzası eklendi — kalıcı "kapat" artık GELECEKTEKİ yeni kayıtları gizlemiyor;
+  örtüşen borç bulguları tek "taşma" bulgusuna indi (diğerleri detay satırı);
+  snooze "Bu görünümde gizle" / "Bu doğru, kalıcı kapat" olarak ayrıştı; detay
+  React key'leri stabil; "en fazla 100" metni `MAX_SAFE_REPAIR_BATCH_SIZE`'dan;
+  jargon (`posted_at`/`paid_at`/idempotent/immutable) Türkçeleşti; DataHealth
+  kategori düzeltmesi artık kategori hafızasını besliyor.
+  **Veri/servis:** `persistEstimatedValues` `{requested, updated, failed}`
+  döndürüyor (kısmi başarı sessiz değil); `addCardExpense` araç etiketi hatasında
+  `ok` + `carTagWarning` (tekrar gönderim kaynaklı çift harcama riski gitti);
+  `useDailyNetWorthSnapshot` yalnız AYNI günün cache'ini kabul ediyor ve
+  `setQueryData` yan etkisi kaldırıldı (finans bakımı atlanamaz);
+  `paymentHistory` undo penceresi ay dışına taşındı + metin sözleşmesi tek
+  sabitte; `purchaseImpact` modelle hizalandı (+ufuk aşan taksit uyarısı, son
+  taksit kalanı emer, boş forecast guard'ı); `budgetAlerts` boş kategoriyi
+  'Diğer'e katıyor; `CardsPage.expense` banka hesabında provizyonu ve bakiye
+  aşımını engelliyor; `DueStatementAutomation` yalnız başarıda damgalıyor;
+  `LoansPage` sabit `+03:00` yerine cihaz ofseti; Dashboard `monthMeta` gün
+  değişimini yakalıyor.
+  **UI/a11y:** ortak `use-dialog-a11y` (odak içeri → Tab hapsi → Escape → odağı
+  tetikleyiciye geri ver) confirm-dialog + QuickActions + Layout menüsü + iki
+  import modalında; ortak `QueryError` (`role="alert"` + "Tekrar dene")
+  Analysis/AnalysisDetail/Planning/PurchaseDecision/AssetsPage'de + skeleton'lı
+  erken dönüş (yanlış "Maaş eklenmedi" flash'ı bitti); toast success/info
+  `role="status"`+polite; CrudPage satır menüsü tek `RowMenu` + klavye gezinme;
+  BarChart/LineChart `role="img"`+özet; ObligationsCalendar gün `aria-label`ları
+  ve aynı günde giriş+çıkış birlikte; WishlistPage/PurchaseDecision `parseNumber`;
+  LoginPage kayıt ikincil + başarı stili; GoldPage elde olandan fazla satış
+  engeli; masaüstü vade tablosunda ödeme aksiyonu; "Planlı" tonu tekilleşti;
+  onboarding'de negatif kahraman rakam yerine yönlendirme; `CurrencyInput`
+  silinip `MoneyInput` tekil oldu; tek `--overlay` token'ı + dark `--success`
+  ayrıştırıldı.
+  **Parser/lib:** YapıKredi "ÖDEME" filtresi satır-başı kalıbına daraldı (gerçek
+  satıcılar artık düşmüyor) + YK checksum kimliği açıldı; parserFixtures banka
+  önekiyle YK fixture'ı kabul ediyor; DenizBank hareketlerinde iade satırı ayrı
+  toplanıyor; bonus regex'i binlik ayraçlı tutarı temizliyor; `sectionCategoryFor`
+  İ/ı normalizasyonuna bağlandı; `bankBranding` dört kusuru (maximiles, Enpara
+  sırası, tam-kelime ptt/ing/teb) testle kilitlendi; `date.daysUntil` ISO-saatli
+  girdide NaN üretmiyor; `valuationSync` gerçek `updated`/`failed` bildiriyor;
+  `marketRatesClient` timeout + inflight yarışı; `stockQuotesClient` 24 saat
+  bayatlık eşiği (bayat fiyat artık persist edilmiyor); `pdfText` destroy;
+  `receiptParseClient` LLM kategori/tarih doğrulaması; `supabase.ts` üretimde de
+  env hatasını bildiriyor; yakıt özeti odometresiz ara dolumu doğru dağıtıyor;
+  TCO ₺/km iki ondalık; zekât yorumları koda hizalandı (davranış aynı).
+  **DB (`20260812120000`):** `update_card_expense` banka yolunda bakiye kontrolü
+  IADE SONRASI değeri kullanıyor (yanlış red bitti); `reset_card_import_data`'nın
+  `20260805120000`'de düşen iki anlamlı ön-koşul mesajı geri geldi; edge
+  fonksiyonlarında Gemini anahtarı query-string'den `x-goog-api-key` header'ına
+  taşındı ve fiş boyut sınırı/mesajı tutarlı hale getirildi.
+  pgTAP: `faz_f_db_fixes.sql` (yanlış red yok + gerçek yetersizlik hâlâ red +
+  ön-koşul mesajı). Kapılar: lint + 1140 unit + build + 28/28 SQL.
+  **Bilinçli bırakılanlar:** varlık geçmişi N+1 (toplu çekim repo/service
+  imzası gerektiriyor), `useStockPrices` gösteriminde bayatlık rozeti yok
+  (persist yolu kapatıldı), Şerit `duration-[120ms]` değerleri `--motion-*`
+  token'ına bağlanmadı (Tailwind sınıfı CSS değişkeninden süre okuyamıyor),
+  `guard_current_settlement_allocation`'ın ölü dalı ve
+  `cut_due_card_statements`'ın hata-mesajı bağı (400+ satır fonksiyon
+  kopyalamanın davranış-kaybı riski kazançtan büyük).
 
 - ~~**Faz E — test borcu.**~~ DONE (2026-08-12). Denetim raporu §8 pgTAP
   boşlukları kapatıldı — 5 yeni SQL testi (hepsi yerelde yeşil):

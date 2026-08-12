@@ -8,22 +8,39 @@ import { effectiveAssetValue } from './valuation'
  * Zakat estimator aligned with the Diyanet (TR) ruling:
  * - Nisab = value of 80.18 g gold (priced live from the gram-gold rate).
  * - Rate  = 2.5% (1/40).
- * - Zakatable wealth = cash + gold + tradeable holdings (Hisse/Fon) + strong
- *   receivables, MINUS debts (credit card + loan + personal).
+ * - Zakatable wealth = cash + gold + tradeable holdings (Hisse/Fon) + receivables,
+ *   MINUS debts (credit card + loan + personal).
  * - Personal-use assets (Araç, Diğer) are excluded; BES is excluded by default
  *   (locked pension) but can be opted in.
  *
  * This is an ESTIMATE: it cannot verify the one-lunar-year (hawl) condition and
  * uses a simplified market-value treatment of stocks/funds. Pure & testable.
+ *
+ * İki basitleştirme AÇIKÇA belirtilir (fıkıhta ikisi de tartışmalı, uygulama
+ * bilinçli olarak tek bir yorumu seçer — bu yorum kodun GERÇEĞİNİ anlatır, hedefi
+ * değil):
+ *
+ *  1. ALACAKLAR: `includeReceivables` açıkken AÇIK olan TÜM alacaklar
+ *     (`direction='borç_verdim'`) katılır. Uygulamada "kuvvetli/tahsili şüpheli"
+ *     ayrımı için bir alan YOK, dolayısıyla tahsil edilebilirlik süzgeci de yok.
+ *     Tahsili şüpheli bir alacak nisabı gereksiz aştırabilir; o durumda seçeneği
+ *     kapat ya da alacağı kapat.
+ *  2. BORÇLAR: `deductDebts` açıkken kart + kredi + kişisel borcun TAMAMI
+ *     düşülür — yalnız bu yıl vadesi gelen kısmı değil. Yaygın görüş, uzun
+ *     vadeli kredinin yalnız cari yıl taksitlerinin düşülmesidir; tamamını
+ *     düşmek zekâtı OLDUĞUNDAN AZ gösterir. Krediyi yeni çekmiş bir kullanıcıda
+ *     fark büyüktür.
  */
 
 export const ZAKAT_NISAB_GOLD_GRAMS = 80.18
 export const ZAKAT_RATE = 0.025
 
 export type ZakatOptions = {
-  includeReceivables?: boolean // strong/collectible receivables (default true)
+  /** Açık olan TÜM alacaklar (tahsil edilebilirlik süzgeci yok; default true). */
+  includeReceivables?: boolean
   includeBes?: boolean // locked pension (default false)
-  deductDebts?: boolean // subtract debts before nisab check (default true)
+  /** Kart + kredi + kişisel borcun TAMAMINI düş (cari yıl taksiti değil; default true). */
+  deductDebts?: boolean
 }
 
 export type ZakatComponent = {
@@ -90,6 +107,8 @@ export function computeZakat(
     cash + gold + tradeable + (includeReceivables ? receivables : 0) + (includeBes ? bes : 0),
   )
 
+  // Borcun TAMAMI (kredinin kalan bakiyesi dahil) düşülür — bkz. modül başlığı,
+  // 2. basitleştirme. Kasıtlı; değiştirmek zekât tutarını yükseltir.
   const debts = position.totalCreditCardDebt + position.totalLoanDebt + position.totalPersonalDebts
   const deductibleDebts = deductDebts ? roundTL(debts) : 0
   if (deductDebts && deductibleDebts > 0) {

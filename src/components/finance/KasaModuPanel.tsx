@@ -18,6 +18,7 @@ import { Alert } from '../ui/alert'
 import { Button } from '../ui/button'
 import { Card, CardContent } from '../ui/card'
 import { MiniStat } from './FinanceUI'
+import { MoneyInput } from './MoneyInput'
 import { Input, Textarea } from '../ui/input'
 import { useConfirmDialog } from '../ui/use-confirm-dialog'
 
@@ -230,10 +231,10 @@ export function KasaModuPanel({ liquidCash }: { liquidCash: number }) {
             Kova adı
             <Input value={name} onChange={(e) => setName(e.target.value)} className="mt-1" placeholder="Örn. Acil fon" required />
           </label>
-          <label className="block text-sm font-medium">
-            Rezerve tutar (₺)
-            <Input value={reserved} onChange={(e) => setReserved(e.target.value)} type="number" min="0" step="0.01" className="mt-1" required />
-          </label>
+          {/* Ham `type="number"` TR klavyede virgülü reddediyordu ("1.250,50" ya da
+              "1250,5" girilemiyordu). MoneyInput `parseNumber` üzerinden iki
+              locale'i de kabul eder ve tutarı biçimlenmiş gösterir (denetim §6). */}
+          <MoneyInput label="Rezerve tutar (₺)" value={reserved} onValueChange={setReserved} required />
           <label className="block text-sm font-medium">
             Not
             <Textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} className="mt-1" />

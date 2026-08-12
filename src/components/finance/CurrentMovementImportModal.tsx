@@ -37,6 +37,7 @@ import { getCardStatementPeriod } from '../../utils/cardStatement'
 import { buildImportedInstallmentPlan } from '../../utils/importedInstallmentPlan'
 import { postCardDebtCorrection } from '../../services/cardLedgerActions'
 import { useBodyScrollLock } from '../ui/use-body-scroll-lock'
+import { useDialogA11y } from '../ui/use-dialog-a11y'
 import { useCategoryMemory } from '../../hooks/useCategoryMemory'
 import { importedRowEventIds, sha256Hex } from '../../utils/sourceEventId'
 
@@ -500,14 +501,28 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
   const bankOnlyTotal = sumTL(bankOnly.map(({ movement }) => movement.amount))
   const appOnlyTotal = sumTL(appOnly.map(({ expense }) => expense.amount))
 
+  // Escape yalnız işlem sürmüyorken kapatır (bkz. StatementImportModal).
+  const dialogRef = useDialogA11y<HTMLDivElement>(true, () => {
+    if (!applying && !parsing) onClose()
+  })
+
   return createPortal(
-    <div className="fixed inset-0 z-[80] flex items-start justify-center overflow-y-auto bg-black/50 px-3 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-[calc(env(safe-area-inset-top)+1rem)] backdrop-blur-sm sm:items-center sm:p-6">
-      <div className="max-h-[88svh] w-full max-w-2xl overflow-x-hidden overflow-y-auto rounded-2xl bg-card  sm:max-h-[92svh]">
+    <div className="fixed inset-0 z-[80] flex items-start justify-center overflow-y-auto bg-[var(--overlay)] px-3 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-[calc(env(safe-area-inset-top)+1rem)] backdrop-blur-sm sm:items-center sm:p-6">
+      {/* Diyalog sözleşmesi elle kuruluyor — kardeş StatementImportModal ile aynı
+          gerekçe ve aynı `useDialogA11y` hook'u (denetim 2026-08-12 §6). */}
+      <div
+        ref={dialogRef}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="movement-import-title"
+        className="max-h-[88svh] w-full max-w-2xl overflow-x-hidden overflow-y-auto rounded-2xl bg-card focus:outline-none sm:max-h-[92svh]"
+      >
         {/* Header */}
         <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-card/95 px-4 py-3 backdrop-blur">
           <div className="flex min-w-0 items-center gap-2">
-            <Scale size={16} className="shrink-0 text-primary" />
-            <span className="truncate text-sm font-black text-foreground">Hareket mutabakatı</span>
+            <Scale size={16} className="shrink-0 text-primary" aria-hidden="true" />
+            <span id="movement-import-title" className="truncate text-sm font-black text-foreground">Hareket mutabakatı</span>
             <span className="hidden rounded-md bg-muted px-2 py-0.5 text-xs font-bold text-muted-foreground sm:inline">
               {card.card_name}
             </span>
@@ -515,9 +530,10 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
           <button
             type="button"
             onClick={onClose}
-            className="grid size-7 place-items-center rounded-lg hover:bg-muted"
+            aria-label="Kapat"
+            className="tap-target grid size-7 place-items-center rounded-lg hover:bg-muted"
           >
-            <X size={15} />
+            <X size={15} aria-hidden="true" />
           </button>
         </div>
 

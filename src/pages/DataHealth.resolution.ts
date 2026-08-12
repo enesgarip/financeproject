@@ -270,7 +270,7 @@ function resolveManualIssue(issue: HealthIssue): HealthIssueResolution {
   if (issue.id.startsWith('card-scheduled-') && !issue.id.startsWith('card-scheduled-debt-')) {
     return guardedOneClick(
       'Kart bakımını çalıştır',
-      'Taksit vade tarihi ve idempotent post_due_card_installments geçişi.',
+      'Taksit vade tarihi ve kart bakımının dönem içine alma adımı; tekrar çalıştırılsa bile çift işlem üretmez.',
       { undoPolicy: 'domain_managed' },
     )
   }
@@ -297,7 +297,7 @@ export function resolveHealthIssue(issue: HealthIssue): HealthIssueResolution {
       return autoRecompute('Borcu hareketlerden hesapla', 'Değişmez kart borç hareketlerinin kuruş toplamı.')
     case 'cardSplitDrift':
       return autoRecompute(
-        'Borç kırılımını ledger’dan hesapla',
+        'Borç kırılımını hareket geçmişinden hesapla',
         'Eksiksiz kart hareketlerinin ekstre, dönem içi ve provizyon kırılımı.',
       )
     case 'accountLedgerDrift':
@@ -305,7 +305,7 @@ export function resolveHealthIssue(issue: HealthIssue): HealthIssueResolution {
     case 'loanTotals':
       return autoRecompute(
         'Kredi özetini plandan hesapla',
-        'Ödenmemiş loan_installments satırlarının transaction içindeki kilitli projeksiyonu.',
+        'Kredinin ödenmemiş taksit satırları; özet tek işlemde kilit altında bunlardan yeniden hesaplanır.',
         false,
       )
     case 'cardDebtSplit':
@@ -355,7 +355,7 @@ export function resolveHealthIssue(issue: HealthIssue): HealthIssueResolution {
       )
     case 'cardStatementTotals':
       return manualReconciliation(
-        'Immutable ekstre arşivi, bağlı hareketler ve banka ekstresi; arşiv toplamı doğrudan güncellenemez.',
+        'Değiştirilemeyen ekstre arşivi, ona bağlı hareketler ve bankanın ekstresi; arşiv toplamı doğrudan düzenlenemez.',
       )
     case 'cardStatementStatus':
       return manualReconciliation(
@@ -394,7 +394,7 @@ export function resolveHealthIssue(issue: HealthIssue): HealthIssueResolution {
     case 'paymentRecurrenceFields':
       return guardedOneClick(
         'Tekrar alanlarını temizle',
-        'Tek seferlik ödeme recurrence sözleşmesi.',
+        'Tek seferlik ödemede tekrar alanlarının boş olması kuralı.',
       )
     case 'paymentDueDay':
       return guardedOneClick(

@@ -104,20 +104,46 @@ function dayTotals(items: FinanceObligation[]) {
 /** Ortak kısa TL biçimi — eksen etiketiyle aynı eşikleri kullanır. */
 const formatCalendarCellAmount = formatCompactCurrency
 
-function calendarCellAmountLabel(totals: ReturnType<typeof dayTotals>, formatAmount: (value: number | null | undefined) => string) {
+type CalendarCellLine = { compact: string; full: string; tone: 'outflow' | 'inflow' | 'card' }
+
+/**
+ * Hücre satırları. Çıkış ve giriş AYNI GÜN birlikte gösterilir: eskiden `outflow > 0`
+ * ise giriş tamamen gizleniyordu, yani maaş ile kiranın aynı güne düştüğü hücrede
+ * yalnız kira görünüyordu (denetim 2026-08-12 §6).
+ */
+function calendarCellLines(
+  totals: ReturnType<typeof dayTotals>,
+  formatAmount: (value: number | null | undefined) => string,
+): CalendarCellLine[] {
+  const lines: CalendarCellLine[] = []
+
   if (totals.outflow > 0) {
-    return { compact: formatCalendarCellAmount(totals.outflow), full: formatAmount(totals.outflow) }
+    lines.push({ compact: `−${formatCalendarCellAmount(totals.outflow)}`, full: `−${formatAmount(totals.outflow)}`, tone: 'outflow' })
   }
-
   if (totals.inflow > 0) {
-    return { compact: formatCalendarCellAmount(totals.inflow), full: formatAmount(totals.inflow) }
+    lines.push({ compact: `+${formatCalendarCellAmount(totals.inflow)}`, full: `+${formatAmount(totals.inflow)}`, tone: 'inflow' })
+  }
+  // Kart ödemesi nakit çıkışı DEĞİL; yalnız başka satır yoksa gösterilir ki hücre
+  // boş görünmesin.
+  if (lines.length === 0 && totals.cardSettled > 0) {
+    lines.push({ compact: formatCalendarCellAmount(totals.cardSettled), full: `Kart ${formatAmount(totals.cardSettled)}`, tone: 'card' })
   }
 
-  if (totals.cardSettled > 0) {
-    return { compact: formatCalendarCellAmount(totals.cardSettled), full: `Kart ${formatAmount(totals.cardSettled)}` }
-  }
+  return lines
+}
 
-  return null
+// Sınıflar açık yazılır: `text-x`→`bg-x` dönüşümü Tailwind'in tarayıcısına
+// görünmez olduğu için üretimde renk kaybolur.
+const CELL_LINE_CLASS: Record<CalendarCellLine['tone'], string> = {
+  outflow: 'text-destructive',
+  inflow: 'text-success',
+  card: 'text-info',
+}
+
+const CELL_DOT_CLASS: Record<CalendarCellLine['tone'], string> = {
+  outflow: 'bg-destructive',
+  inflow: 'bg-success',
+  card: 'bg-info',
 }
 
 function SummaryStat({ label, value, tone = 'neutral' }: { label: string; value: string; tone?: 'neutral' | 'danger' | 'success' }) {
@@ -205,44 +231,52 @@ export function ObligationsCalendar({ data, loading = false, onPayObligation }: 
               {cells.map((cell) => {
                 const dayItems = groupedByDate.get(cell.key) ?? []
                 const totals = dayTotals(dayItems)
-                const amountLabel = calendarCellAmountLabel(totals, formatAmount)
+                const cellLines = calendarCellLines(totals, formatAmount)
                 const isSelected = cell.key === selectedDateInMonth
                 const isToday = cell.key === today
                 const hasItems = dayItems.length > 0
+                // Ekran okuyucu için hücrenin tam adı: tarih + kayıt sayısı + tutarlar.
+                // Eskiden buton yalnız gün numarasını okuyordu (denetim §6).
+                const cellLabel = [
+                  formatDate(cell.key),
+                  hasItems ? `${dayItems.length} kayıt` : 'kayıt yok',
+                  ...cellLines.map((line) => line.full),
+                ].join(', ')
 
                 return (
                   <button
                     key={cell.key}
                     type="button"
                     onClick={() => setSelectedDate(cell.key)}
+                    aria-label={cellLabel}
+                    aria-current={isToday ? 'date' : undefined}
+                    aria-pressed={isSelected}
                     className={cn(
-                      'flex h-[5.25rem] min-w-0 flex-col rounded-lg border p-1.5 text-left transition sm:h-28 sm:p-2',
+                      // Sabit yükseklik değil `min-h`: bir gün hem çıkış hem giriş
+                      // taşıdığında hücrede iki satır olur ve sabit 84px'e sığmaz.
+                      // Izgara satırı yine en uzun hücreye göre hizalanır.
+                      'flex min-h-[5.25rem] min-w-0 flex-col rounded-lg border p-1.5 text-left transition sm:min-h-28 sm:p-2',
                       cell.inCurrentMonth ? 'border-border/60 bg-card hover:border-primary/35 hover:bg-muted/35' : 'border-border/35 bg-muted/20 opacity-55',
                       isSelected && 'border-primary bg-primary/10 ring-2 ring-primary/15',
                       isToday && !isSelected && 'border-info/50',
                     )}
                   >
-                    <span className={cn('text-xs font-black tabular-nums', isToday ? 'text-info' : 'text-foreground')}>
+                    <span aria-hidden="true" className={cn('text-xs font-black tabular-nums', isToday ? 'text-info' : 'text-foreground')}>
                       {cell.date.getDate()}
                     </span>
                     {hasItems ? (
-                      <span className="mt-auto flex min-w-0 flex-col gap-1">
-                        <span className={cn(
-                          'truncate text-[10px] font-bold tabular-nums sm:text-xs',
-                          totals.outflow > 0 ? 'text-destructive' : totals.inflow > 0 ? 'text-success' : 'text-info',
-                        )}>
-                          {amountLabel ? (
-                            <>
-                              <span className="sm:hidden">{amountLabel.compact}</span>
-                              <span className="hidden sm:inline">{amountLabel.full}</span>
-                            </>
-                          ) : null}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <span className={cn(
-                            'size-1.5 rounded-full',
-                            totals.outflow > 0 ? 'bg-destructive' : totals.inflow > 0 ? 'bg-success' : 'bg-info',
-                          )} />
+                      <span aria-hidden="true" className="mt-auto flex min-w-0 flex-col gap-0.5">
+                        {cellLines.map((line) => (
+                          <span
+                            key={line.tone}
+                            className={cn('truncate text-[10px] font-bold tabular-nums sm:text-xs', CELL_LINE_CLASS[line.tone])}
+                          >
+                            <span className="sm:hidden">{line.compact}</span>
+                            <span className="hidden sm:inline">{line.full}</span>
+                          </span>
+                        ))}
+                        <span className="mt-0.5 flex items-center gap-1">
+                          <span className={cn('size-1.5 rounded-full', CELL_DOT_CLASS[cellLines[0]?.tone ?? 'card'])} />
                           <span className="truncate text-[10px] font-semibold text-muted-foreground">
                             <span className="sm:hidden">{dayItems.length}</span>
                             <span className="hidden sm:inline">{dayItems.length} kayıt</span>

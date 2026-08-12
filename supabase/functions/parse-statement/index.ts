@@ -101,7 +101,9 @@ Deno.serve(async (req: Request) => {
   if (!text.trim()) return jsonResponse({ error: 'Ekstre metni boş.' }, 400)
   if (text.length > MAX_TEXT_BYTES) return jsonResponse({ error: 'Ekstre metni çok büyük.' }, 413)
 
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${apiKey}`
+  // API anahtarı query-string'de DEĞİL header'da: URL'ler proxy/erişim
+  // loglarında görünür, anahtar oraya sızmasın (denetim 2026-08-12 §8).
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`
   const payload = {
     contents: [{ parts: [{ text: `${PROMPT}\n\n--- EKSTRE METNİ ---\n${text}` }] }],
     generationConfig: { responseMimeType: 'application/json', temperature: 0 },
@@ -111,7 +113,7 @@ Deno.serve(async (req: Request) => {
   try {
     const res = await fetchWithTimeout(
       endpoint,
-      { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) },
+      { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey }, body: JSON.stringify(payload) },
       GEMINI_TIMEOUT_MS,
     )
     if (!res.ok) return jsonResponse({ error: `Gemini hatası (${res.status}).` }, 502)

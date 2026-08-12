@@ -66,6 +66,28 @@ function activeCardExpense(expense: CardExpense) {
   return expense.status !== 'cancelled'
 }
 
+/**
+ * Toplu (kayıt kümesi) bulgularının kimliğine etkilenen kümenin imzasını ekler.
+ *
+ * NEDEN: bu bulgular tek bir kayda bağlı olmadığı için ID'leri sabitti
+ * (`card-expense-missing-category` gibi). "Bu doğru, kapat" KALICI yazıldığından
+ * kullanıcı bir kez kapattığında GELECEKTE eklenen yeni eksik kayıtlar da
+ * sonsuza dek gizleniyordu. İmza sayesinde küme değişince ID de değişir: bulgu
+ * yeniden görünür, ama kullanıcının onayladığı ESKİ küme kapalı kalır.
+ *
+ * Hash 32-bit FNV-1a; kriptografik değil, yalnız kısa ve kararlı bir ayırt edici.
+ */
+export function affectedSetSignature(ids: readonly string[]): string {
+  const sorted = [...ids].sort()
+  let hash = 2166136261
+  const joined = sorted.join('|')
+  for (let index = 0; index < joined.length; index++) {
+    hash ^= joined.charCodeAt(index)
+    hash = Math.imul(hash, 16777619)
+  }
+  return `${sorted.length}-${(hash >>> 0).toString(36)}`
+}
+
 function parseHistoricalPaidCount(expense: CardExpense) {
   const match = expense.note?.match(/(\d+)\/(\d+)\s+taksit(?:i uygulama| ekstre) [öo]ncesinde/i)
   if (!match) return 0
@@ -333,7 +355,40 @@ export function checkCards(
     const scheduledTotal = scheduledInstallmentsByCard.get(card.id) ?? 0
     const debtBreakdown = cardDebtBreakdown(card, scheduledTotal)
 
-    if (debtBreakdown.hasScheduledDebtGap) {
+    // Tek kök neden ("planlı taksitler ile toplam borç uyuşmuyor") üç koşulu
+    // birden tetikleyebiliyor ve kullanıcı aynı sorunu 3-4 ayrı kart olarak
+    // görüyordu. En AÇIKLAYICI bulgu, fazlayı kuruşuyla söyleyen "taksitler
+    // borçtan yüksek"tir; o ateşlendiğinde diğerlerinin bilgisi onun DETAY
+    // satırına döner ve ayrı bulgu üretilmez. (cardDebtBreakdown'ın üç bayrağı
+    // birbirini zaten matematiksel olarak dışlar.)
+    const hasInstallmentOverflow = exceedsTL(scheduledTotal, card.debt_amount) && card.debt_amount > 0
+
+    if (hasInstallmentOverflow) {
+      const overflow = roundTL(scheduledTotal - card.debt_amount)
+      issues.push({
+        id: `card-installment-overflow-${card.id}`,
+        area: 'Kartlar',
+        severity: 'warning',
+        title: `${cardLabel(card)} planlı taksitler borçtan yüksek`,
+        description: 'Planlı taksitlerin toplamı kartın güncel borcunu aşıyor. Ödenen/iptal edilmesi gereken taksitler olabilir.',
+        details: [
+          `Planlı taksit toplamı: ${formatCurrency(scheduledTotal)}`,
+          `Güncel borç: ${formatCurrency(card.debt_amount)}`,
+          `Fazla: ${formatCurrency(overflow)}`,
+          debtBreakdown.hasScheduledDebtGap
+            ? `Ekstre + dönem içi + provizyon toplamı borca eşit (${formatCurrency(debtBreakdown.splitTotal)}); taksitler borç bileşenlerinde hiç görünmüyor.`
+            : null,
+          debtBreakdown.hasPartialScheduledDebtOverlap
+            ? `Borç bileşenleri ve taksitler örtüşüyor; açıklanamayan tutar: ${formatCurrency(debtBreakdown.scheduledDebtOverlapAmount)}`
+            : null,
+        ].filter((item): item is string => Boolean(item)),
+        fixable: false,
+        kind: 'cardInstallmentOverflow',
+        payload: { cardId: card.id, scheduledTotal, amount: overflow },
+      })
+    }
+
+    if (debtBreakdown.hasScheduledDebtGap && !hasInstallmentOverflow) {
       issues.push({
         id: `card-scheduled-debt-${card.id}`,
         area: 'Kartlar',
@@ -350,7 +405,7 @@ export function checkCards(
       })
     }
 
-    if (debtBreakdown.hasPartialScheduledDebtOverlap) {
+    if (debtBreakdown.hasPartialScheduledDebtOverlap && !hasInstallmentOverflow) {
       issues.push({
         id: `card-scheduled-debt-overlap-${card.id}`,
         area: 'Kartlar',
@@ -370,25 +425,6 @@ export function checkCards(
           scheduledTotal: debtBreakdown.scheduledTotal,
           amount: debtBreakdown.scheduledDebtOverlapAmount,
         },
-      })
-    }
-
-    if (exceedsTL(scheduledTotal, card.debt_amount) && card.debt_amount > 0) {
-      const overflow = roundTL(scheduledTotal - card.debt_amount)
-      issues.push({
-        id: `card-installment-overflow-${card.id}`,
-        area: 'Kartlar',
-        severity: 'warning',
-        title: `${cardLabel(card)} planlı taksitler borçtan yüksek`,
-        description: 'Planlı taksitlerin toplamı kartın güncel borcunu aşıyor. Ödenen/iptal edilmesi gereken taksitler olabilir.',
-        details: [
-          `Planlı taksit toplamı: ${formatCurrency(scheduledTotal)}`,
-          `Güncel borç: ${formatCurrency(card.debt_amount)}`,
-          `Fazla: ${formatCurrency(overflow)}`,
-        ],
-        fixable: false,
-        kind: 'cardInstallmentOverflow',
-        payload: { cardId: card.id, scheduledTotal, amount: overflow },
       })
     }
 
@@ -662,8 +698,9 @@ export function checkCardExpenseDuplicates(cards: Card[], cardExpenses: CardExpe
 
   const missingDescriptions = activeExpenses.filter((expense) => !normalizedTransactionDescription(expense.description))
   if (missingDescriptions.length > 0) {
+    const missingDescriptionIds = missingDescriptions.map((expense) => expense.id)
     issues.push({
-      id: 'card-expense-missing-description',
+      id: `card-expense-missing-description-${affectedSetSignature(missingDescriptionIds)}`,
       area: 'Kartlar',
       severity: 'info',
       title: 'Açıklaması olmayan kart harcamaları var',
@@ -674,14 +711,15 @@ export function checkCardExpenseDuplicates(cards: Card[], cardExpenses: CardExpe
       ],
       fixable: false,
       kind: 'cardExpenseDataQuality',
-      payload: { ids: missingDescriptions.map((expense) => expense.id) },
+      payload: { ids: missingDescriptionIds },
     })
   }
 
   const missingCategories = activeExpenses.filter((expense) => !expense.category?.trim())
   if (missingCategories.length > 0) {
+    const missingCategoryIds = missingCategories.map((expense) => expense.id)
     issues.push({
-      id: 'card-expense-missing-category',
+      id: `card-expense-missing-category-${affectedSetSignature(missingCategoryIds)}`,
       area: 'Kartlar',
       severity: 'info',
       title: 'Kategorisi olmayan kart harcamaları var',
@@ -692,7 +730,7 @@ export function checkCardExpenseDuplicates(cards: Card[], cardExpenses: CardExpe
       ],
       fixable: false,
       kind: 'cardExpenseDataQuality',
-      payload: { ids: missingCategories.map((expense) => expense.id) },
+      payload: { ids: missingCategoryIds },
     })
   }
 
@@ -843,7 +881,7 @@ export function checkCardInstallments(
       area: 'Kartlar',
       severity: pastCount > 0 ? 'warning' : 'info',
       title: `${cardLabel(card)} dönem içine alınmamış taksit`,
-      description: 'Kart bakımı, tüm kartlardaki vadesi gelen plan satırlarını idempotent biçimde dönem içine alır ve ardından kontroller yeniden çalışır.',
+      description: 'Kart bakımı, tüm kartlardaki vadesi gelen plan satırlarını dönem içine alır; tekrar çalıştırılsa bile aynı taksiti iki kez işlemez. Ardından kontroller yeniden çalışır.',
       details: [`Taksit sayısı: ${rows.length}`, `Toplam: ${formatCurrency(total)}`, pastCount > 0 ? `${pastCount} tanesinin tarihi geçmiş.` : 'Bugün dönem içine alınmalı.'],
       fixable: false,
       kind: 'manual',
@@ -957,7 +995,7 @@ export function checkCardInstallments(
         area: 'Kartlar',
         severity: 'warning',
         title: `${installment.description} işlenme tarihi eksik`,
-        description: 'Döneme alınmış taksitlerde posted_at boş kalmış.',
+        description: 'Dönem içine alınmış taksitte işlenme tarihi (posted_at) boş kalmış; ne zaman işlendiği kayıtta yok.',
         details: [`Taksit: ${installment.installment_no}/${installment.installment_count}`],
         ...(archiveProtected
           ? { fixable: false as const, kind: 'manual' as const }
@@ -975,7 +1013,7 @@ export function checkCardInstallments(
         area: 'Kartlar',
         severity: 'warning',
         title: `${installment.description} planlı taksitte işlenme tarihi var`,
-        description: 'Planlı taksitlerde posted_at boş olmalı.',
+        description: 'Henüz dönem içine alınmamış taksitte işlenme tarihi (posted_at) dolu görünüyor.',
         details: [`Taksit: ${installment.installment_no}/${installment.installment_count}`],
         ...archiveAwareInstallmentIssue(
           archiveProtected || installment.due_month <= today || installment.paid_at != null,
@@ -1304,32 +1342,34 @@ export function checkLoans(loans: Loan[], loanInstallments: LoanInstallment[]): 
 
   const paidWithoutDate = loanInstallments.filter((item) => item.status === 'ödendi' && !item.paid_at)
   if (paidWithoutDate.length > 0) {
+    const paidWithoutDateIds = paidWithoutDate.map((item) => item.id)
     issues.push({
-      id: 'loan-paid-at-missing',
+      id: `loan-paid-at-missing-${affectedSetSignature(paidWithoutDateIds)}`,
       area: 'Krediler',
       severity: 'warning',
       title: 'Ödenmiş kredi taksitinde ödeme tarihi eksik',
-      description: 'Ödenmiş görünen taksitlerde paid_at alanı boş kalmış.',
+      description: 'Ödendi görünen taksitlerin ödeme tarihi boş; ne zaman ödendiği kayıtta yok.',
       details: [`Satır sayısı: ${paidWithoutDate.length}`],
       fixable: false,
       kind: 'loanPaidAtMissing',
-      payload: { ids: paidWithoutDate.map((item) => item.id) },
+      payload: { ids: paidWithoutDateIds },
     })
   }
 
   const pendingWithDate = loanInstallments.filter((item) => item.status !== 'ödendi' && item.paid_at)
   if (pendingWithDate.length > 0) {
+    const pendingWithDateIds = pendingWithDate.map((item) => item.id)
     issues.push({
-      id: 'loan-pending-paid-at',
+      id: `loan-pending-paid-at-${affectedSetSignature(pendingWithDateIds)}`,
       area: 'Krediler',
       severity: 'warning',
       title: 'Bekleyen kredi taksitinde ödeme tarihi var',
-      description: 'Bekleyen taksitlerde paid_at dolu kalmış.',
+      description: 'Henüz ödenmemiş görünen taksitlerde bir ödeme tarihi duruyor.',
       details: [`Satır sayısı: ${pendingWithDate.length}`],
       fixable: true,
       fixLabel: 'Bekleyenlerden ödeme tarihini kaldır',
       kind: 'loanPendingPaidAt',
-      payload: { ids: pendingWithDate.map((item) => item.id) },
+      payload: { ids: pendingWithDateIds },
     })
   }
 

@@ -16,27 +16,44 @@ export type BankBrand = {
 }
 
 type BankBrandSeed = {
-  /** Banka adında aranacak küçük harfli anahtar kelimeler. */
+  /**
+   * Banka adında aranacak küçük harfli anahtarlar (substring). NORMALIZE EDİLMİŞ
+   * metinle karşılaştırılır: büyük İ/I 'i'ye katlanır, bu yüzden anahtarlarda
+   * büyük harf/İ KULLANMA — 'maximİles' gibi bir anahtar asla eşleşmez.
+   */
   keywords: string[]
+  /**
+   * Yalnız TAM KELİME olarak eşleşen anahtarlar. Çıplak substring kısa kodlarda
+   * yanlış pozitif üretir ("sterling" → 'ing', "integral" → 'ing') ya da boşluk
+   * şartı yüzünden tek kelimelik adı kaçırır (eski ' ptt'/'ptt ' → "PTT" hiç
+   * eşleşmiyordu).
+   */
+  words?: string[]
   code: string
   color: string
   name: string
 }
 
-// Sıralama önemli: daha belirgin (uzun) eşleşmeler önce gelmeli.
+// Sıralama önemli: daha belirgin (uzun) eşleşmeler önce gelmeli. Sırayı
+// bozmadan anahtar ekleme; ilk eşleşen kazanır.
 const BANK_BRANDS: BankBrandSeed[] = [
+  // Enpara QNB'nin dijital markası; ADI GEÇİYORSA kendi kimliğini almalı, bu
+  // yüzden QNB'den ÖNCE gelir (QNB'nin 'enpara' anahtarı da kaldırıldı — o
+  // anahtar bu girdiyi tümden erişilemez kılıyordu).
+  { keywords: ['enpara'], code: 'EN', color: '#7A1FA2', name: 'Enpara' },
+  // DenizBank de "Bonus" lisanslıdır; Garanti'nin genel 'bonus' anahtarından
+  // ÖNCE gelmeli ki "Bonus Deniz" DenizBank'a düşsün.
+  { keywords: ['denizbank', 'deniz bank', 'bonus deniz'], code: 'DB', color: '#0072CE', name: 'DenizBank' },
   { keywords: ['garanti', 'bbva', 'bonus'], code: 'GA', color: '#0EA47A', name: 'Garanti BBVA' },
   { keywords: ['akbank', 'axess', 'wings'], code: 'AK', color: '#E2001A', name: 'Akbank' },
   { keywords: ['yapı kredi', 'yapi kredi', 'yapıkredi', 'yapikredi', 'world card', 'worldcard'], code: 'YK', color: '#003B6F', name: 'Yapı Kredi' },
-  { keywords: ['iş bankası', 'iş bankasi', 'is bankasi', 'işbank', 'isbank', 'maximum', 'maximİles'], code: 'İŞ', color: '#0033A0', name: 'İş Bankası' },
+  { keywords: ['iş bankası', 'iş bankasi', 'is bankasi', 'işbank', 'isbank', 'maximum', 'maximiles'], code: 'İŞ', color: '#0033A0', name: 'İş Bankası' },
   { keywords: ['ziraat', 'bankkart'], code: 'ZB', color: '#C8102E', name: 'Ziraat Bankası' },
   { keywords: ['halkbank', 'halk bankası', 'halk bankasi', 'paraf'], code: 'HB', color: '#00529B', name: 'Halkbank' },
   { keywords: ['vakıf', 'vakif', 'vakıfbank', 'vakifbank'], code: 'VB', color: '#1B3A6B', name: 'VakıfBank' },
-  { keywords: ['qnb', 'finansbank', 'cardfinans', 'enpara'], code: 'QNB', color: '#59328C', name: 'QNB' },
-  { keywords: ['enpara'], code: 'EN', color: '#7A1FA2', name: 'Enpara' },
-  { keywords: ['denizbank', 'deniz bank', 'bonus deniz'], code: 'DB', color: '#0072CE', name: 'DenizBank' },
-  { keywords: ['teb', 'türk ekonomi', 'turk ekonomi'], code: 'TEB', color: '#009639', name: 'TEB' },
-  { keywords: ['ing'], code: 'ING', color: '#FF6200', name: 'ING' },
+  { keywords: ['qnb', 'finansbank', 'cardfinans'], code: 'QNB', color: '#59328C', name: 'QNB' },
+  { keywords: ['türk ekonomi', 'turk ekonomi'], words: ['teb'], code: 'TEB', color: '#009639', name: 'TEB' },
+  { keywords: [], words: ['ing'], code: 'ING', color: '#FF6200', name: 'ING' },
   { keywords: ['hsbc', 'advantage'], code: 'HS', color: '#DB0011', name: 'HSBC' },
   { keywords: ['şekerbank', 'sekerbank'], code: 'ŞB', color: '#009A44', name: 'Şekerbank' },
   { keywords: ['fibabanka', 'fiba'], code: 'FB', color: '#E94E1B', name: 'Fibabanka' },
@@ -49,9 +66,25 @@ const BANK_BRANDS: BankBrandSeed[] = [
   { keywords: ['tosla'], code: 'TO', color: '#7C3AED', name: 'Tosla' },
   { keywords: ['n26'], code: 'N26', color: '#1A1A2E', name: 'N26' },
   { keywords: ['wise'], code: 'WI', color: '#163300', name: 'Wise' },
-  { keywords: [' ptt', 'ptt '], code: 'PT', color: '#FFC107', name: 'PTT' },
+  { keywords: ['pttbank'], words: ['ptt'], code: 'PT', color: '#FFC107', name: 'PTT' },
   { keywords: ['emlak katılım', 'emlak katilim', 'emlakbank', 'emlak bankası'], code: 'EK', color: '#0B5C3A', name: 'Emlak Katılım' },
 ]
+
+/**
+ * Tam kelime eşleşmesi. Lookbehind KULLANMAZ (eski Safari'de sözdizimi hatası
+ * tüm modülü düşürür); onun yerine kelime sınırını karakter sınıfıyla yakalar.
+ * `\b` yetmez: ASCII tabanlıdır, "tebşir" gibi Türkçe harfli komşuda sınır
+ * görüp yanlış pozitif üretir.
+ */
+function wordMatcher(word: string): RegExp {
+  const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  return new RegExp(`(^|[^\\p{L}\\p{N}])${escaped}([^\\p{L}\\p{N}]|$)`, 'u')
+}
+
+const BRAND_MATCHERS = BANK_BRANDS.map((seed) => ({
+  seed,
+  wordPatterns: (seed.words ?? []).map(wordMatcher),
+}))
 
 // Marka eşleşmesi yoksa banka adından üretilen tutarlı renk paleti.
 const FALLBACK_COLORS = ['#475569', '#0E7490', '#7C3AED', '#B45309', '#0F766E', '#9333EA', '#1D4ED8', '#BE185D']
@@ -85,7 +118,13 @@ export function getBankBrand(bankName: string | null | undefined): BankBrand {
   if (cached) return cached
 
   const normalized = normalize(raw)
-  const seed = BANK_BRANDS.find((brand) => brand.keywords.some((keyword) => normalized.includes(keyword.trim())))
+  // İki eşleşme yolu: serbest substring (uzun, ayırt edici adlar) ve TAM KELİME
+  // (kısa kodlar: ing/teb/ptt). Sıra BANK_BRANDS sırasıdır — ilk eşleşen kazanır.
+  const seed = BRAND_MATCHERS.find(
+    (matcher) =>
+      matcher.seed.keywords.some((keyword) => normalized.includes(keyword.trim()))
+      || matcher.wordPatterns.some((pattern) => pattern.test(normalized)),
+  )?.seed
 
   const brand: BankBrand = seed
     ? { code: seed.code, color: seed.color, name: seed.name, matched: true }

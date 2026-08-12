@@ -18,6 +18,7 @@ import {
   type UpdateCardExpenseHealthMetadataInput,
 } from '../data/repositories/cardsRepo'
 import { useFinancePaymentDrawer } from '../hooks/useFinancePaymentDrawer'
+import { invalidateCategoryMemory } from '../hooks/useCategoryMemory'
 import {
   applyDataHealthSafeRepairs,
   createDataHealthRepairIdempotencyKey,
@@ -179,24 +180,34 @@ export function DataHealthPage() {
   const integrityStats = {
     sameFingerprint: visibleIssues.filter((issue) => issue.kind === 'duplicateTransactionCandidate' && issue.payload?.duplicateLevel === 'same_fingerprint').length,
     possibleDuplicates: visibleIssues.filter((issue) => issue.kind === 'duplicateTransactionCandidate' && issue.payload?.duplicateLevel === 'possible').length,
-    missingDescriptions: visibleIssues.find((issue) => issue.id === 'card-expense-missing-description')?.payload?.ids?.length ?? 0,
-    missingCategories: visibleIssues.find((issue) => issue.id === 'card-expense-missing-category')?.payload?.ids?.length ?? 0,
+    // ID'ler etkilenen kayıt kümesinin imzasıyla bittiği için önekle aranır.
+    missingDescriptions: visibleIssues.find((issue) => issue.id.startsWith('card-expense-missing-description'))?.payload?.ids?.length ?? 0,
+    missingCategories: visibleIssues.find((issue) => issue.id.startsWith('card-expense-missing-category'))?.payload?.ids?.length ?? 0,
   }
   const derivedFieldStats = useMemo(() => {
     const creditCards = data.cards.filter((c) => c.card_type === 'kredi_karti')
     const bankCards = data.cards.filter((c) => c.card_type === 'banka_karti')
     const debtDriftCount = visibleIssues.filter((issue) => issue.id.startsWith('card-ledger-drift-')).length
     const balanceDriftCount = visibleIssues.filter((issue) => issue.id.startsWith('account-ledger-drift-')).length
-    const splitDriftCount = visibleIssues.filter((issue) => issue.id.startsWith('card-split-')).length
+    // `card-split-{cardId}` (kırılım sınırlandırma ihlali) ve
+    // `card-split-drift-{cardId}` (ledger projeksiyonuyla fark) İKİ AYRI
+    // bulgudur ama aynı kart için birlikte ateşlenebilir. Tek önekle sayıldığında
+    // tek kredi kartlı kullanıcıda splitOk = 1 − 2 = −1 görünüyordu; bu yüzden
+    // sayım bulgu değil ETKİLENEN KART üzerinden yapılır.
+    const splitDriftIssues = visibleIssues.filter((issue) => issue.id.startsWith('card-split-'))
+    const splitDriftCardIds = new Set(splitDriftIssues.map((issue) => issue.payload?.cardId ?? issue.id))
+    const splitDriftCount = splitDriftCardIds.size
     const loanDriftCount = visibleIssues.filter((issue) => issue.id.startsWith('loan-totals-')).length
     return {
-      debtOk: creditCards.length - debtDriftCount,
+      // "Ok" sayaçları hiçbir durumda negatife düşmez: bir kayıt için birden
+      // fazla bulgu üretilebildiği için çıkarma tek başına güvenli değil.
+      debtOk: Math.max(0, creditCards.length - debtDriftCount),
       debtDrift: debtDriftCount,
-      balanceOk: bankCards.length - balanceDriftCount,
+      balanceOk: Math.max(0, bankCards.length - balanceDriftCount),
       balanceDrift: balanceDriftCount,
-      splitOk: creditCards.length - splitDriftCount,
+      splitOk: Math.max(0, creditCards.length - splitDriftCount),
       splitDrift: splitDriftCount,
-      loanOk: data.loans.length - loanDriftCount,
+      loanOk: Math.max(0, data.loans.length - loanDriftCount),
       loanDrift: loanDriftCount,
       totalChecked: creditCards.length + bankCards.length + data.loans.length,
       totalDrift: debtDriftCount + balanceDriftCount + splitDriftCount + loanDriftCount,
@@ -397,6 +408,12 @@ export function DataHealthPage() {
         return
       }
 
+      // Kategori düzeltmesi öğrenilen (açıklama → kategori) hafızayı besler;
+      // CategoryCleanupPanel ve hızlı harcama formu aynı şeyi yapıyor. Bu akış
+      // beslemediği için aynı satıcı burada düzeltilse bile form eski tahmini
+      // öneriyordu.
+      invalidateCategoryMemory()
+
       const loaded = await loadData()
       if (!loaded) {
         setReviewError('Harcama güncellendi ancak güncel kontroller yüklenemedi. Sayfayı yenile.')
@@ -476,7 +493,7 @@ export function DataHealthPage() {
                   className="inline-flex items-center gap-2 rounded-xl border border-info/25 bg-info/8 px-3 py-2 text-sm font-semibold text-info transition hover:bg-info/12 disabled:opacity-50"
                 >
                   <Activity size={15} />
-                  {snoozedIssueIds.length} ertelenen uyarıyı geri getir
+                  {snoozedIssueIds.length} gizlenen uyarıyı geri getir
                 </button>
               ) : null}
               {dismissedIssueIds.length > 0 ? (
@@ -577,7 +594,7 @@ export function DataHealthPage() {
               </div>
               <div>
                 <h2 className="font-bold text-foreground">Aktif listede uyarı kalmadı</h2>
-                <p className="mt-1 text-sm text-muted-foreground">Bulunan kayıtları daha sonra hatırlat olarak erteledin. İstersen yukarıdan geri getirebilirsin.</p>
+                <p className="mt-1 text-sm text-muted-foreground">Bulunan kayıtları bu görünümde gizledin (geçici) veya kalıcı kapattın. İkisini de yukarıdaki düğmelerden geri getirebilirsin.</p>
               </div>
             </CardContent>
           </SurfaceCard>

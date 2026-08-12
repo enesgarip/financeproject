@@ -12,7 +12,7 @@
  * (yeni panel/hesap eklemeden önce oraya bak).
  */
 import { AlertTriangle, ChevronDown, RefreshCw } from 'lucide-react'
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useFinanceSnapshot, useInvalidateFinanceSnapshot } from '../app/useFinanceSnapshot'
 import type {
   AccountReconciliation,
@@ -236,12 +236,30 @@ export function DashboardPage() {
     ],
     [data.cards, data.assets],
   )
+  // "Bugün" donuk kalmasın: PWA sekmesi gece boyunca açık kaldığında
+  // `useMemo(..., [])` dünün tarihini gösteriyordu (gün sayacı, kalan gün,
+  // günlük harcanabilir hepsi bir gün geride kalıyordu). Sekme öne geldiğinde
+  // yerel gün değiştiyse yeniden hesaplanır.
+  const [todayStamp, setTodayStamp] = useState(() => dateInputValue(new Date()))
+  useEffect(() => {
+    const syncToday = () => {
+      if (document.visibilityState === 'hidden') return
+      const next = dateInputValue(new Date())
+      setTodayStamp((current) => (current === next ? current : next))
+    }
+    document.addEventListener('visibilitychange', syncToday)
+    window.addEventListener('focus', syncToday)
+    return () => {
+      document.removeEventListener('visibilitychange', syncToday)
+      window.removeEventListener('focus', syncToday)
+    }
+  }, [])
   const monthMeta = useMemo(() => {
-    const today = new Date()
+    const today = new Date(`${todayStamp}T00:00:00`)
     const daysInMonth = endOfMonth(today).getDate()
     const daysLeft = Math.max(1, daysInMonth - today.getDate())
     return { today, daysInMonth, daysLeft }
-  }, [])
+  }, [todayStamp])
   const hasStatementReminders = useMemo(
     () => buildStatementReminders(data.cards, data.cardStatements).length > 0,
     [data.cards, data.cardStatements],
