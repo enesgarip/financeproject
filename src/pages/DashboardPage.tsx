@@ -236,6 +236,18 @@ export function DashboardPage() {
     ],
     [data.cards, data.assets],
   )
+  // Hiç finansal kayıt yok mu? Kahraman rakam ve odak kutusu AYNI karara bakar;
+  // ayrı ayrı hesaplandığında hero "veri yok" derken kutu tamponun eksisini
+  // (−5.000 ₺) göstermeye devam ediyordu (canlı tur, denetim §10).
+  const isOnboarding = useMemo(
+    () =>
+      summary.totalAssets <= 0
+      && summary.totalDebts <= 0
+      && summary.totalCreditCardDebt <= 0
+      && liquidAccounts.length === 0
+      && sortedUpcoming.length === 0,
+    [liquidAccounts.length, sortedUpcoming.length, summary.totalAssets, summary.totalCreditCardDebt, summary.totalDebts],
+  )
   // "Bugün" donuk kalmasın: PWA sekmesi gece boyunca açık kaldığında
   // `useMemo(..., [])` dünün tarihini gösteriyordu (gün sayacı, kalan gün,
   // günlük harcanabilir hepsi bir gün geride kalıyordu). Sekme öne geldiğinde
@@ -342,6 +354,7 @@ export function DashboardPage() {
           daysInMonth={monthMeta.daysInMonth}
           safeToSpend={safeToSpend}
           reservedKnown={safeToSpend.reservedKnown}
+          isOnboarding={isOnboarding}
           buffer={safeToSpend.buffer}
           onBufferChange={safeToSpend.setBuffer}
           perDayAllowance={Math.max(0, safeToSpend.amount) / monthMeta.daysLeft}
@@ -397,7 +410,7 @@ export function DashboardPage() {
         <div className="grid min-w-0 gap-5 lg:grid-cols-12 lg:items-start">
           {/* ─ Odak ve hatırlatıcılar ─ */}
           <div className="min-w-0 lg:col-span-12">
-            <FocusActionPanel actions={focusActions} safeToSpendAmount={safeToSpend.amount} />
+            <FocusActionPanel actions={focusActions} safeToSpendAmount={safeToSpend.amount} onboarding={isOnboarding} />
           </div>
 
           {hasStatementReminders ? (
