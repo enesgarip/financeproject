@@ -90,17 +90,28 @@ Düzeltme fazları (A–E) rapor §12'de.
   (`edgeErrorMessage`). Ayrıca yerel gotcha: `config.toml [auth.email]
   enable_signup=false` güncel GoTrue'da girişleri de kapatıyor → true yapıldı.
 
-- **K7 kalan kapsam — kısmi/asgari EKSTRE ödemesi (tasarım notu).** Arşiv
-  tutarı `guard_card_statement_archive_mutation` ile bilinçli olarak değişmez
-  ve DataHealth "kova = açık arşivler toplamı" varsayar; bu yüzden kısmi ekstre
-  ödemesi mevcut şemada temiz ifade edilemiyor (banka-model denetiminde de
-  bilinçli açık bırakılmıştı). Doğru tasarım: append-only
-  `card_statement_payments` çocuk tablosu (arşiv başına ödemeler; kalan =
-  arşiv − ödemeler), `pay_card_statement(p_amount)` kısmi yolu bu tabloya
-  yazar, DataHealth/ekran "kalan" türetimini bu tablodan okur; backup/reset
-  kapsamına eklenir; pgTAP: kısmi + kalan + çift-ödeme etkileşimi. Ayrı PR
-  olarak ele alınmalı — dokunduğu yüzey: guard trigger, RPC, checks TS+SQL
-  ikizi, drawer, obligations, backup.
+- ~~**K7 kalan kapsam — kısmi/asgari EKSTRE ödemesi.**~~ DONE (2026-08-12,
+  migration `20260812110000_partial_statement_payments.sql`). Tasarım notta
+  önerildiği gibi uygulandı: append-only `card_statement_payments` çocuk tablosu
+  (insert yalnız RPC/restore, update/delete guard trigger'la reddedilir), arşiv
+  tutarı DEĞİŞMEZ kaldı ve kalan türetildi —
+  `kalan = arşiv.statement_debt_amount − Σ ödemeler`; kartın ekstre kovası açık
+  arşivlerin kalanları toplamına projekte ediliyor
+  (`private.statement_remaining_amount` + TS ikizi
+  `src/utils/cardStatementPayments.ts`). `pay_card_statement(p_amount)` kalanın
+  altındaki tutarı kısmi ödeme olarak yazıp arşivi açık bırakıyor, kalana eşit
+  tutar (ya da `p_amount` verilmemesi) arşivi kapatıyor; K4 çift-ödeme guard'ı
+  aynen duruyor. Kalan-bazlı okuyan yüzeyler: kart listesi/hero, kontrol merkezi,
+  ekstre paneli ("X ₺ ödendi" satırı), Borçlar→Kart Borcu, obligations
+  projeksiyonu (kalanı biten arşiv artık yükümlülük üretmiyor ve `pay_card_debt`
+  yolunu kapatmıyor). Çekmecede ekstre tutarı düzenlenebilir + asgari ipucu
+  kalan üzerinden. Backup `RESTORE_TABLE_ORDER`'a arşivden sonra eklendi; reset
+  kapsamı GUC'lu blokta. pgTAP `partial_statement_payment.sql` (kısmi → kalan
+  üstü red → ikinci kısmi → tam kapama → kapalıya red → append-only red).
+  **Bilinçli atlanan:** DataHealth'e ödeme tablosu eklenmedi; kovayı her ödemede
+  RPC'nin kendisi kalanlar toplamına eşitliyor (tek yazar), mevcut
+  `card-orphan-statement-debt` kontrolü de kova>0 ⟹ kalanı olan açık arşiv
+  ilişkisiyle geçerli kalıyor.
 
 - ~~**Faz A — para doğruluğu.**~~ DONE (2026-08-12). K3: `post_card_provision`
   regresyonu geri alındı (`20260812090000` — tarih=işlem günü, vadesi geçmiş

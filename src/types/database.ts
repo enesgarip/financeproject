@@ -216,6 +216,27 @@ export type CardStatementArchive = BaseRow & {
   note: string | null
 }
 
+/**
+ * Kısmi/asgari ekstre ödemesi (K7, migration 20260812110000). Append-only:
+ * arşiv tutarı hiç değişmez, ödemeler bu çocuk tabloya yazılır ve
+ * kalan(arşiv) = arşiv.statement_debt_amount − sum(ödemeler). Tam ödeme
+ * (p_amount null ya da kalana eşit) arşivi `paid` yapar; kısmi ödeme açık
+ * bırakır. `source_debited=false` = bakiye banka/SMS tarafından zaten
+ * düşülmüştü (B4 yolu). updated_at yok — satırlar değiştirilemez.
+ */
+export type CardStatementPayment = {
+  id: string
+  user_id: string
+  card_id: string
+  statement_archive_id: string
+  source_card_id: string | null
+  amount: number
+  paid_at: string
+  source_debited: boolean
+  note: string | null
+  created_at: string
+}
+
 export type Loan = BaseRow & {
   bank_name: string
   loan_name: string
@@ -566,6 +587,19 @@ export type Database = {
       savings_goal_components: Table<SavingsGoalComponent, WithBaseInsert<SavingsGoalComponent>, WithBaseUpdate<SavingsGoalComponent>>
       card_installments: Table<CardInstallment, WithBaseInsert<CardInstallment>, WithBaseUpdate<CardInstallment>>
       card_statement_archives: Table<CardStatementArchive, WithBaseInsert<CardStatementArchive>, WithBaseUpdate<CardStatementArchive>>
+      // Append-only: update/delete guard'lıdır; Insert yalnız backup restore için.
+      card_statement_payments: Table<
+        CardStatementPayment,
+        Omit<CardStatementPayment, 'id' | 'created_at' | 'paid_at' | 'source_card_id' | 'source_debited' | 'note'> & {
+          id?: string
+          created_at?: string
+          paid_at?: string
+          source_card_id?: string | null
+          source_debited?: boolean
+          note?: string | null
+        },
+        Partial<Omit<CardStatementPayment, 'id' | 'user_id' | 'created_at'>>
+      >
       loans: Table<Loan, WithBaseInsert<Loan>, WithBaseUpdate<Loan>>
       loan_installments: Table<LoanInstallment, WithBaseInsert<LoanInstallment>, WithBaseUpdate<LoanInstallment>>
       debts: Table<Debt, WithBaseInsert<Debt>, WithBaseUpdate<Debt>>
@@ -763,6 +797,8 @@ export type Database = {
           p_source_card_id: string
           // true → bakiye SMS/banka hareketiyle zaten düşülmüş; tekrar düşülmez.
           p_skip_source_debit?: boolean
+          // verilmezse/null → kalanın tamamı; kalandan az → kısmi ödeme (arşiv açık kalır).
+          p_amount?: number
         }
         Returns: CardStatementArchive
       }

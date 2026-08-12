@@ -7,6 +7,7 @@ import type {
   CardInstallment,
   CardStatementArchive,
 } from '../types/database'
+import type { CardStatementPayment } from '../types/database'
 import { buildCardControlItems, type CardBankReconciliationStatus } from '../utils/cardControlCenter'
 import { buildLimitGroupSummaries } from './CardsPage.helpers'
 import { ConfidenceBadge } from '../components/ui/confidence-badge'
@@ -27,6 +28,8 @@ const statusPresentation: Record<CardBankReconciliationStatus, { label: string; 
 type CardControlCenterProps = {
   rows: Card[]
   statements: CardStatementArchive[]
+  /** Kısmi ekstre ödemeleri (K7): açık ekstre rakamı kalanı gösterir. */
+  statementPayments?: CardStatementPayment[]
   installments: CardInstallment[]
   reconciliations: AccountReconciliation[]
   onReconcile: (card: Card) => void
@@ -37,13 +40,14 @@ type CardControlCenterProps = {
 export function CardControlCenter({
   rows,
   statements,
+  statementPayments = [],
   installments,
   reconciliations,
   onReconcile,
   onImportStatement,
   formatAmount = formatCurrency,
 }: CardControlCenterProps) {
-  const items = buildCardControlItems(rows, statements, installments, reconciliations)
+  const items = buildCardControlItems(rows, statements, installments, reconciliations, new Date(), statementPayments)
   if (items.length === 0) return null
 
   // Kart listesindeki visibleOpenStatementAmount ile aynı kural: açık arşiv

@@ -5,10 +5,11 @@ import { FinancePaymentDrawer } from '../components/finance/FinancePaymentDrawer
 import { Alert } from '../components/ui/alert'
 import { BreakdownBar, HeroNumber, LineGroup, SectionEyebrow, SERIT_TEXT, useSeritAmount } from '../components/serit'
 import { Skeleton } from '../components/ui/skeleton'
-import { fetchCards, fetchOpenStatementArchives } from '../data/repositories/cardsRepo'
+import { fetchCards, fetchOpenStatementArchives, fetchStatementPayments } from '../data/repositories/cardsRepo'
 import { useFinancePaymentDrawer } from '../hooks/useFinancePaymentDrawer'
-import type { Card as CardRow, CardStatementArchive } from '../types/database'
+import type { Card as CardRow, CardStatementArchive, CardStatementPayment } from '../types/database'
 import { getCardStatementPeriod } from '../utils/cardStatement'
+import { buildStatementPaidMap, statementPaidAmount, statementRemainingAmount } from '../utils/cardStatementPayments'
 import { dateInputValue, formatDate } from '../utils/date'
 import { cardPayableDebt, totalCreditLimit } from '../utils/financeSummary'
 import { formatPercent } from '../utils/formatCurrency'
@@ -26,6 +27,7 @@ import { isMissingSupabaseCapabilityError, missingSupabaseCapabilityMessage } fr
 export function LiabilitiesCardsPage() {
   const [cards, setCards] = useState<CardRow[]>([])
   const [openStatements, setOpenStatements] = useState<CardStatementArchive[]>([])
+  const [statementPayments, setStatementPayments] = useState<CardStatementPayment[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const { drawerProps, openPaymentDrawer } = useFinancePaymentDrawer()
@@ -33,7 +35,11 @@ export function LiabilitiesCardsPage() {
   const seritAmount = useSeritAmount()
 
   const load = useCallback(async () => {
-    const [cardsResult, statementsResult] = await Promise.all([fetchCards(), fetchOpenStatementArchives()])
+    const [cardsResult, statementsResult, paymentsResult] = await Promise.all([
+      fetchCards(),
+      fetchOpenStatementArchives(),
+      fetchStatementPayments(),
+    ])
     if (!cardsResult.ok) {
       setError(cardsResult.error.message ?? 'Kartlar yüklenemedi.')
       setLoading(false)
@@ -46,8 +52,12 @@ export function LiabilitiesCardsPage() {
     }
     setCards(cardsResult.data)
     setOpenStatements(statementsResult.data)
+    // Ödeme tablosu yoksa (migration bekleyen ortam) kalan = arşiv tutarı.
+    setStatementPayments(paymentsResult.ok ? paymentsResult.data : [])
     setLoading(false)
   }, [])
+
+  const paidByArchive = useMemo(() => buildStatementPaidMap(statementPayments), [statementPayments])
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -68,6 +78,8 @@ export function LiabilitiesCardsPage() {
   // arşivi kapatmadan statement kovasını düşürür (Veri Sağlığı mismatch + ekstre
   // ikinci kez ödenebilir kalır). Hesaplar'daki openStatementPayment ile aynı desen.
   async function openStatementPayment(statement: CardStatementArchive, card: CardRow) {
+    // Tutar/tavan/asgari tabanı = KALAN (kısmi ödemeler düşülmüş — K7).
+    const remaining = statementRemainingAmount(statement, paidByArchive)
     await openPaymentDrawer(
       {
         id: `card-statement-${statement.id}`,
@@ -78,7 +90,9 @@ export function LiabilitiesCardsPage() {
         title: `${card.card_name} ekstresi`,
         subtitle: card.bank_name,
         date: statement.due_date ?? statement.statement_date,
-        amount: statement.statement_debt_amount,
+        amount: remaining,
+        maxPayableAmount: remaining,
+        minimumPaymentBase: remaining,
         direction: 'outflow',
       },
       {
@@ -92,9 +106,15 @@ export function LiabilitiesCardsPage() {
             <p className="font-semibold text-foreground">{card.card_name}</p>
             <p>Son ödeme: {formatDate(statement.due_date)}</p>
             <p>
-              Ekstre tutarı:{' '}
-              <span className="font-mono font-semibold text-foreground">{seritAmount(statement.statement_debt_amount).amount} ₺</span>
+              Kalan ekstre borcu:{' '}
+              <span className="font-mono font-semibold text-foreground">{seritAmount(remaining).amount} ₺</span>
             </p>
+            {statementPaidAmount(statement, paidByArchive) > 0 ? (
+              <p>
+                Ekstre tutarı {seritAmount(statement.statement_debt_amount).amount} ₺ ·{' '}
+                {seritAmount(statementPaidAmount(statement, paidByArchive)).amount} ₺ ödendi
+              </p>
+            ) : null}
           </>
         ),
         formatSubmitError: (submitError) =>
@@ -163,8 +183,9 @@ export function LiabilitiesCardsPage() {
   // Ortak limit grubunda kart başına toplama çift sayar; grup başına max (K12).
   const totalLimit = totalCreditLimit(creditCards)
   const usageRate = totalLimit > 0 ? Math.min(100, (totalDebt / totalLimit) * 100) : 0
-  // Ödenecek ekstre: en erken vadeli açık ekstre (fetch zaten due_date artan sıralı).
-  const dueStatement = openStatements.find((statement) => statement.statement_debt_amount > 0)
+  // Ödenecek ekstre: en erken vadeli, KALANI olan açık ekstre (fetch zaten
+  // due_date artan sıralı; kısmen ödenip kalanı biten arşiv atlanır — K7).
+  const dueStatement = openStatements.find((statement) => statementRemainingAmount(statement, paidByArchive) > 0)
   const dueStatementCard = dueStatement ? creditCards.find((card) => card.id === dueStatement.card_id) : undefined
 
   return (
@@ -209,10 +230,13 @@ export function LiabilitiesCardsPage() {
             {dueStatementCard.card_name} · {dueStatementCard.bank_name}
           </p>
           <p className="serit-num mt-2 text-[26px] font-semibold text-ink" style={{ letterSpacing: '-0.03em' }}>
-            {seritAmount(dueStatement.statement_debt_amount).amount} ₺
+            {seritAmount(statementRemainingAmount(dueStatement, paidByArchive)).amount} ₺
           </p>
           <p className="mt-1 text-[12.5px] text-ink-muted">
             Son ödeme {formatDate(dueStatement.due_date)} · kalan dönem içi harcama sonraki ekstrede ödenir.
+            {statementPaidAmount(dueStatement, paidByArchive) > 0
+              ? ` Bu ekstreye ${seritAmount(statementPaidAmount(dueStatement, paidByArchive)).amount} ₺ ödendi.`
+              : ''}
           </p>
           <div className="mt-4 flex flex-wrap gap-2">
             <button

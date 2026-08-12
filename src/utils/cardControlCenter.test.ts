@@ -140,6 +140,39 @@ describe('buildCardControlItems', () => {
     expect(result[0].openStatementDueDate).toBe('2026-07-14')
   })
 
+  // K7: kısmi ödeme arşivi açık bırakır; kontrol merkezi KALANI göstermeli.
+  it('subtracts partial statement payments and skips archives whose remainder is gone', () => {
+    const result = buildCardControlItems(
+      [card()],
+      [
+        statement(), // 4.000, vade 2026-07-14
+        statement({
+          id: 'statement-2',
+          period_month: 8,
+          statement_date: '2026-08-04',
+          due_date: '2026-08-14',
+          statement_debt_amount: 2_500,
+        }),
+      ],
+      [],
+      [reconciliation()],
+      now,
+      [
+        { statement_archive_id: 'statement-1', amount: 1_500 }, // kalan 2.500
+        { statement_archive_id: 'statement-2', amount: 2_500 }, // kalan 0 → görünmez
+      ],
+    )
+
+    expect(result[0].openStatementAmount).toBe(2_500)
+    // Kalanı biten arşiv vade de dayatmaz.
+    expect(result[0].openStatementDueDate).toBe('2026-07-14')
+  })
+
+  it('keeps the full archive amount when no payment rows are supplied', () => {
+    const result = buildCardControlItems([card()], [statement()], [], [reconciliation()], now)
+    expect(result[0].openStatementAmount).toBe(4_000)
+  })
+
   it('marks a bank difference as drift and prioritizes it', () => {
     const drifted = card({ id: 'card-2', card_name: 'Black' })
     const result = buildCardControlItems(

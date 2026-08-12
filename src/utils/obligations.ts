@@ -27,6 +27,7 @@ import type {
   Card,
   CardInstallment,
   CardStatementArchive,
+  CardStatementPayment,
   Debt,
   Loan,
   LoanInstallment,
@@ -34,6 +35,7 @@ import type {
   SalaryHistory,
 } from '../types/database'
 import { getCardStatementPeriod, getNextCardPaymentDueDate } from './cardStatement'
+import { buildStatementPaidMap, statementRemainingAmount } from './cardStatementPayments'
 import { addDays, addMonths, dateInputValue, endOfMonth, isDateInMonth, monthlyOccurrenceDate, startOfDay, startOfMonth } from './date'
 import { buildCreditCardIdCheck, cardMonthlyPaymentAmount, cardPayableDebt, paymentCashOutflowAmount, paymentOccurrenceInMonth, paymentUsesCreditCard } from './financeObligationRules'
 import { roundTL, sumTL } from './money'
@@ -91,6 +93,11 @@ export type FinanceObligationsInput = {
   debts: Debt[]
   cardInstallments: CardInstallment[]
   cardStatements: CardStatementArchive[]
+  /**
+   * Kısmi ekstre ödemeleri (K7). Verilmezse kalan = arşiv tutarı kabul edilir
+   * (migration bekleyen ortamda eski davranış korunur).
+   */
+  cardStatementPayments?: Pick<CardStatementPayment, 'statement_archive_id' | 'amount'>[]
   salaryHistory?: SalaryHistory[]
 }
 
@@ -174,7 +181,12 @@ export function buildFinanceObligationsForMonth(
   // Kaynak kart BANKA hesabıysa talimat nakit çıkışıdır; yalnız kredi kartı
   // kaynağı "karta biner, bu ay nakit değil" muamelesi görür.
   const isCreditCardId = buildCreditCardIdCheck(data.cards)
-  const openStatements = data.cardStatements.filter((statement) => statement.status === 'open')
+  // Kalanı biten ekstre (kısmi ödemelerle kapanmış ama arşivi açık) ne yükümlülük
+  // üretir ne de kartın pay_card_debt yolunu kapatır (K7).
+  const paidByArchive = buildStatementPaidMap(data.cardStatementPayments ?? [])
+  const openStatements = data.cardStatements.filter(
+    (statement) => statement.status === 'open' && statementRemainingAmount(statement, paidByArchive) > 0,
+  )
   const cardsWithOpenStatements = new Set(openStatements.map((statement) => statement.card_id))
 
   for (const payment of data.payments) {
@@ -213,6 +225,9 @@ export function buildFinanceObligationsForMonth(
     if (!isDateInMonth(dueDate, monthStart)) continue
 
     const card = cardsById.get(statement.card_id)
+    // Tutar = KALAN: kısmi ödeme sonrası ekran ve çekmece tavanı kalanı gösterir;
+    // asgari ipucunun tabanı da aynı kalandır (bankada asgari ekstre üzerinden).
+    const remaining = statementRemainingAmount(statement, paidByArchive)
     addObligation(items, {
       id: `card-statement-${statement.id}`,
       kind: 'card_statement',
@@ -222,7 +237,8 @@ export function buildFinanceObligationsForMonth(
       title: `${card?.card_name ?? 'Kredi kartı'} ekstresi`,
       subtitle: cardLabel(card),
       date: dueDate,
-      amount: statement.statement_debt_amount,
+      amount: remaining,
+      minimumPaymentBase: remaining,
       direction: 'outflow',
     })
   }

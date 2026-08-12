@@ -88,7 +88,10 @@ describe('finance payment action helpers', () => {
   it('keeps amount editing limited to actions that support actual amount changes', () => {
     expect(obligationAmountEditable(obligation({ action: 'pay_payment' }))).toBe(true)
     expect(obligationAmountEditable(obligation({ kind: 'card_debt', action: 'pay_card_debt' }))).toBe(true)
-    expect(obligationAmountEditable(obligation({ kind: 'card_statement', action: 'pay_card_statement' }))).toBe(false)
+    // K7: ekstre de kısmi/asgari ödenebilir (append-only card_statement_payments).
+    expect(obligationAmountEditable(obligation({ kind: 'card_statement', action: 'pay_card_statement' }))).toBe(true)
+    // Kredi taksidi hâlâ tam tutar: taksit planı bölünmez.
+    expect(obligationAmountEditable(obligation({ kind: 'loan_installment', action: 'pay_loan_installment' }))).toBe(false)
   })
 
   it('keeps last-used account memory separated by obligation family', () => {
@@ -116,6 +119,41 @@ describe('finance payment action helpers', () => {
       p_paid_amount: 125,
     })
     expect(result.error?.message).toContain('PGRST202')
+  })
+
+  it('sends p_amount only when the statement payment is partial (K7)', async () => {
+    const statement = obligation({ kind: 'card_statement', action: 'pay_card_statement', amount: 1_000 })
+
+    rpcMock.mockResolvedValueOnce({ data: null, error: null } as never)
+    await submitFinanceObligationPayment({ obligation: statement, account: card({ id: 'bank' }), amount: 400 })
+    expect(rpcMock).toHaveBeenLastCalledWith('pay_card_statement', {
+      p_statement_id: 'source',
+      p_source_card_id: 'bank',
+      p_skip_source_debit: false,
+      p_amount: 400,
+    })
+
+    // Kalanın tamamı: p_amount GÖNDERİLMEZ → sunucu tam kapama yapar.
+    rpcMock.mockResolvedValueOnce({ data: null, error: null } as never)
+    await submitFinanceObligationPayment({ obligation: statement, account: card({ id: 'bank' }), amount: 1_000 })
+    expect(rpcMock).toHaveBeenLastCalledWith('pay_card_statement', {
+      p_statement_id: 'source',
+      p_source_card_id: 'bank',
+      p_skip_source_debit: false,
+    })
+
+    // Kuruş altı fark tam ödeme sayılır (float tozu kısmi ödemeye düşmez).
+    rpcMock.mockResolvedValueOnce({ data: null, error: null } as never)
+    await submitFinanceObligationPayment({
+      obligation: obligation({ kind: 'card_statement', action: 'pay_card_statement', amount: 1_000.0000001 }),
+      account: card({ id: 'bank' }),
+      amount: 1_000,
+    })
+    expect(rpcMock).toHaveBeenLastCalledWith('pay_card_statement', {
+      p_statement_id: 'source',
+      p_source_card_id: 'bank',
+      p_skip_source_debit: false,
+    })
   })
 
   it('computes the estimated minimum card payment with TL rounding', () => {

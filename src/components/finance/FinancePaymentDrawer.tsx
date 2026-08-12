@@ -72,8 +72,11 @@ export function FinancePaymentDrawer({
   const { formatAmount } = useBalancePrivacy()
   // Asgari yalnız EKSTRE kovası üzerinden (K7): bankada dönem içi harcamanın
   // asgarisi olmaz. Taban 0 ise (salt dönem içi borç) ipucu hiç gösterilmez.
+  // K7: ekstre de kısmi/asgari ödenebilir; iki kart akışında da taban ekstre kovası.
   const minimumPayment =
-    intent?.action === 'pay_card_debt' ? estimatedMinimumCardPayment(intent.minimumPaymentBase ?? 0) : 0
+    intent?.action === 'pay_card_debt' || intent?.action === 'pay_card_statement'
+      ? estimatedMinimumCardPayment(intent.minimumPaymentBase ?? 0)
+      : 0
   // B4: seçili hesapta son 3 günde aynı tutarlı SMS kaynaklı çıkış varsa bakiye
   // muhtemelen zaten düşmüş demektir; kullanıcıya "tekrar düşme" seçeneği sunulur.
   // Sonuç, sorgulandığı (hesap, tutar) anahtarıyla saklanır; anahtar değişince
@@ -106,7 +109,7 @@ export function FinancePaymentDrawer({
   // Tavan, nominal tutardan büyük olabilir: ekstre kalemi "planlanan" ekstre
   // borcunu gösterir ama pay_card_debt dönem içini de kapatabilir (B7).
   const payableCeiling = intent ? intent.maxPayableAmount ?? intent.amount : 0
-  const quickAmounts = intent?.action === 'pay_card_debt' ? (
+  const quickAmounts = isCardPayment && intent ? (
     <div className="flex flex-wrap gap-2">
       {minimumPayment > 0 ? (
         <button
@@ -174,7 +177,7 @@ export function FinancePaymentDrawer({
       successAction={intent?.action === 'collect_debt' || intent?.action === 'pay_card_statement'}
       info={
         intent?.action === 'pay_card_statement'
-          ? 'Bu ekstre kapandığında ekstreye bağlı kredi kartı taksitleri otomatik ödenmiş olur.'
+          ? 'Tam tutar girilirse ekstre kapanır ve bağlı kredi kartı taksitleri ödenmiş olur; daha az girersen kısmi ödenir, kalan ekstre borcu açık kalır.'
           : intent?.action === 'pay_card_debt'
             ? 'Ödeme önce ekstre borcundan, kalanı dönem içi harcamadan düşülür. Provizyon ve gelecek taksitler bu tutara dahil değildir.'
             : intent?.action === 'settle_debt' || intent?.action === 'collect_debt'
@@ -184,6 +187,9 @@ export function FinancePaymentDrawer({
       validate={({ amount }) => {
         if (intent?.action === 'pay_card_debt' && exceedsTL(amount, intent.maxPayableAmount ?? intent.amount)) {
           return 'Ödeme tutarı ödenebilir kart borcundan büyük olamaz.'
+        }
+        if (intent?.action === 'pay_card_statement' && exceedsTL(amount, intent.maxPayableAmount ?? intent.amount)) {
+          return 'Ödeme tutarı ekstrenin kalan borcundan büyük olamaz.'
         }
         if ((intent?.action === 'settle_debt' || intent?.action === 'collect_debt') && exceedsTL(amount, intent.amount)) {
           return intent.action === 'collect_debt'

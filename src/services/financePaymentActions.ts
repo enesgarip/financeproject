@@ -79,6 +79,8 @@ export function emptyAccountMessageForObligation(obligation: FinanceObligation |
 export function obligationAmountEditable(obligation: FinanceObligation | null) {
   return obligation?.action === 'pay_payment'
     || obligation?.action === 'pay_card_debt'
+    // K7: ekstre de kısmi/asgari ödenebilir (append-only card_statement_payments).
+    || obligation?.action === 'pay_card_statement'
     || obligation?.action === 'settle_debt'
     || obligation?.action === 'collect_debt'
 }
@@ -146,10 +148,16 @@ export async function submitFinanceObligationPayment({
     submitError = error
 
   } else if (obligation.action === 'pay_card_statement') {
+    // K7: girilen tutar kalanın ALTINDAysa kısmi ödeme (arşiv açık kalır, kalan
+    // çocuk tablodan türer); kalana eşitse p_amount gönderilmez = tam kapama.
+    // Kuruş hassasiyeti şart: obligation.amount kalan projeksiyonundan gelir ve
+    // çıplak `<` float tozunda "tam" ödemeyi kısmi işleyip arşivi açık bırakırdı.
+    const isPartial = amount > 0 && greaterThanTL(obligation.amount, amount)
     const { error } = await supabase.rpc('pay_card_statement', {
       p_statement_id: obligation.sourceId,
       p_source_card_id: account.id,
       p_skip_source_debit: skipSourceDebit,
+      ...(isPartial ? { p_amount: amount } : {}),
     })
     submitError = error
   } else if (obligation.action === 'pay_card_debt') {

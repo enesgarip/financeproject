@@ -71,6 +71,7 @@ function obligationsInput(data: FinanceSummaryInput): FinanceObligationsInput {
     debts: data.debts,
     cardInstallments: data.cardInstallments,
     cardStatements: data.cardStatements ?? [],
+    cardStatementPayments: data.cardStatementPayments ?? [],
     salaryHistory: data.salaryHistory,
   }
 }

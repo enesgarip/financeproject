@@ -1,9 +1,15 @@
 import type { CSSProperties } from 'react'
 import type { FormField } from '../components/CrudPage'
 import type { Card, CardInstallment, CardStatementArchive } from '../types/database'
+import {
+  EMPTY_STATEMENT_PAID_MAP,
+  openStatementsRemainingTotal,
+  statementRemainingAmount,
+  type StatementPaidMap,
+} from '../utils/cardStatementPayments'
 import { buildCreditLimitGroups, cardPayableDebt, creditLimitGroupKey } from '../utils/financeSummary'
 import { nextMonthlyDateFrom, startOfDay } from '../utils/date'
-import { roundTL, sumTL } from '../utils/money'
+import { roundTL } from '../utils/money'
 import { normalizeSearchText } from '../utils/searchText'
 import { canCutCurrentStatement } from '../utils/statementCycle'
 
@@ -185,9 +191,21 @@ export type CreditCardStatus = {
   className: string
 }
 
-export function getCreditCardDueDate(card: Card, statements: CardStatementArchive[], now: Date = new Date()): Date | null {
+export function getCreditCardDueDate(
+  card: Card,
+  statements: CardStatementArchive[],
+  now: Date = new Date(),
+  paid: StatementPaidMap = EMPTY_STATEMENT_PAID_MAP,
+): Date | null {
+  // Kısmen ödenmiş ama kalanı biten ekstre vade dayatmaz (K7).
   const openStatement = statements
-    .filter((statement) => statement.card_id === card.id && statement.status === 'open' && statement.statement_debt_amount > 0 && statement.due_date)
+    .filter(
+      (statement) =>
+        statement.card_id === card.id
+        && statement.status === 'open'
+        && statementRemainingAmount(statement, paid) > 0
+        && statement.due_date,
+    )
     .sort((a, b) => (a.due_date ?? '').localeCompare(b.due_date ?? ''))[0]
   return openStatement?.due_date ? new Date(`${openStatement.due_date}T00:00:00`) : nextMonthlyDateFrom(card.due_day, now)
 }
@@ -248,16 +266,21 @@ export function activeInstallmentCount(card: Card, installments: CardInstallment
   return installments.filter((installment) => installment.card_id === card.id && installment.status !== 'paid').length
 }
 
-export function openStatementAmount(card: Card, statements: CardStatementArchive[]) {
-  return sumTL(
-    statements
-      .filter((statement) => statement.card_id === card.id && statement.status === 'open')
-      .map((statement) => statement.statement_debt_amount),
-  )
+/** Kartın açık ekstrelerinin KALAN toplamı (kısmi ödemeler düşülmüş — K7). */
+export function openStatementAmount(
+  card: Card,
+  statements: CardStatementArchive[],
+  paid: StatementPaidMap = EMPTY_STATEMENT_PAID_MAP,
+) {
+  return openStatementsRemainingTotal(statements, paid, card.id)
 }
 
-export function visibleOpenStatementAmount(card: Card, statements: CardStatementArchive[]) {
-  const openAmount = openStatementAmount(card, statements)
+export function visibleOpenStatementAmount(
+  card: Card,
+  statements: CardStatementArchive[],
+  paid: StatementPaidMap = EMPTY_STATEMENT_PAID_MAP,
+) {
+  const openAmount = openStatementAmount(card, statements, paid)
   return openAmount > 0 ? openAmount : card.statement_debt_amount
 }
 

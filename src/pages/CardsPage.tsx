@@ -26,6 +26,7 @@ import { CardInstallmentCalendarPanel } from '../components/finance/CardInstallm
 import { CardInstallmentExpensesPanel } from '../components/finance/CardInstallmentExpensesPanel'
 import { RecentCardExpensesPanel } from '../components/finance/RecentCardExpensesPanel'
 import type { Card, CardStatementArchive } from '../types/database'
+import { buildStatementPaidMap, statementRemainingAmount } from '../utils/cardStatementPayments'
 import { dateInputValue, formatDate } from '../utils/date'
 import { cardPayableDebt } from '../utils/financeSummary'
 import { isMissingSupabaseCapabilityError, missingSupabaseCapabilityMessage } from '../utils/supabaseErrors'
@@ -94,6 +95,7 @@ export function CardsPage() {
     statementActionId,
     statementError,
     statements,
+    statementPayments,
     statementsLoading,
     handlePostAllProvisions,
     handleProvisionAction,
@@ -150,6 +152,9 @@ export function CardsPage() {
   }, [reloadCards, loadStatements, loadInstallments, loadReconciliations, invalidateSnapshot])
 
   async function openStatementPayment(statement: CardStatementArchive, card: Card, cards: Card[], reload: () => Promise<void>) {
+    // Tutar = KALAN (kısmi ödemeler düşülmüş); çekmecede düzenlenebilir, asgari
+    // ipucunun tabanı da aynı kalandır (K7).
+    const remaining = statementRemainingAmount(statement, buildStatementPaidMap(statementPayments))
     await openPaymentDrawer(
       {
         id: `card-statement-${statement.id}`,
@@ -160,7 +165,9 @@ export function CardsPage() {
         title: `${card.card_name} ekstresi`,
         subtitle: card.bank_name,
         date: statement.due_date ?? statement.statement_date,
-        amount: statement.statement_debt_amount,
+        amount: remaining,
+        maxPayableAmount: remaining,
+        minimumPaymentBase: remaining,
         direction: 'outflow',
       },
       {
@@ -277,7 +284,14 @@ export function CardsPage() {
               ) : null}
               <CardSectionNav section={section} onSelect={handleSectionChange} counts={counts} />
               {/* Şerit: sekmenin cevapladığı tek soru, sekme şeridinin hemen altında. */}
-              {!loading ? <CardsSectionHero section={section} rows={cardRows} statements={statements} /> : null}
+              {!loading ? (
+                <CardsSectionHero
+                  section={section}
+                  rows={cardRows}
+                  statements={statements}
+                  statementPayments={statementPayments}
+                />
+              ) : null}
               {!loading ? (
                 <DueStatementAutomation
                   rows={cardRows}
@@ -298,6 +312,7 @@ export function CardsPage() {
                     <CardControlCenter
                       rows={cardRows}
                       statements={statements}
+                      statementPayments={statementPayments}
                       installments={installments}
                       reconciliations={reconciliations}
                       onReconcile={setMovementImportCard}
@@ -344,6 +359,7 @@ export function CardsPage() {
                   <StatementPanel
                     rows={cardRows}
                     statements={statements}
+                    statementPayments={statementPayments}
                     loading={statementsLoading}
                     actionId={statementActionId}
                     onPay={(statement, card) => openStatementPayment(statement, card, cardRows, reload)}

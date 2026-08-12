@@ -55,6 +55,7 @@ const EMPTY_PLANNING_DATA: PlanningData = {
   debts: [],
   cardInstallments: [],
   cardStatements: [],
+  cardStatementPayments: [],
 }
 
 const baseFields: FormField[] = [
@@ -276,6 +277,7 @@ export function PaymentsPage() {
       debts: [...snapshot.debts].sort(byDueDate),
       cardInstallments: snapshot.cardInstallments,
       cardStatements: snapshot.cardStatements.filter((statement) => statement.status === 'open').sort(byDueDate),
+      cardStatementPayments: snapshot.cardStatementPayments,
       salaryHistory: snapshot.salaryHistory,
     }
   }, [snapshotQuery.data])

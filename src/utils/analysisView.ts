@@ -5,6 +5,7 @@ import type {
   CardExpense,
   CardInstallment,
   CardStatementArchive,
+  CardStatementPayment,
   Debt,
   Loan,
   LoanInstallment,
@@ -40,6 +41,8 @@ export type AnalysisData = {
   cardExpenses: CardExpense[]
   cardInstallments: CardInstallment[]
   cardStatementArchives: CardStatementArchive[]
+  /** Kısmi ekstre ödemeleri (K7); kalan borç bunlardan türer. */
+  cardStatementPayments?: Pick<CardStatementPayment, 'statement_archive_id' | 'amount'>[]
   budgets: Budget[]
   savingsGoals: SavingsGoal[]
 }
@@ -179,6 +182,7 @@ export function analysisObligationsInput(data: AnalysisData): FinanceObligations
     debts: data.debts,
     cardInstallments: data.cardInstallments,
     cardStatements: data.cardStatementArchives,
+    cardStatementPayments: data.cardStatementPayments ?? [],
   }
 }
 
@@ -193,6 +197,7 @@ export function analysisFinanceSummaryInput(data: AnalysisData): FinanceSummaryI
     salaryHistory: data.salaryHistory,
     cardInstallments: data.cardInstallments,
     cardStatements: data.cardStatementArchives,
+    cardStatementPayments: data.cardStatementPayments ?? [],
     savingsGoals: data.savingsGoals,
   }
 }

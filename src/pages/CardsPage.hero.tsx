@@ -6,8 +6,13 @@
  * zaten `AccountHubPanel`'de (likit toplam), o yüzden burada çizilmez.
  */
 import { Link } from 'react-router'
-import type { Card, CardStatementArchive } from '../types/database'
+import type { Card, CardStatementArchive, CardStatementPayment } from '../types/database'
 import type { CardSection } from './CardsPage.sections'
+import {
+  buildStatementPaidMap,
+  openStatementsWithRemaining,
+  statementRemainingAmount,
+} from '../utils/cardStatementPayments'
 import { formatDate } from '../utils/date'
 import { formatPercent } from '../utils/formatCurrency'
 import { daysUntil } from '../utils/date'
@@ -19,10 +24,13 @@ export function CardsSectionHero({
   section,
   rows,
   statements,
+  statementPayments = [],
 }: {
   section: CardSection
   rows: Card[]
   statements: CardStatementArchive[]
+  /** Kısmi ekstre ödemeleri (K7): kahraman rakam kalanı gösterir. */
+  statementPayments?: CardStatementPayment[]
 }) {
   const creditCards = rows.filter((row) => row.card_type === 'kredi_karti')
   if (section === 'ozet' || creditCards.length === 0) return null
@@ -80,8 +88,11 @@ export function CardsSectionHero({
   }
 
   // section === 'ekstreler'
-  const open = statements.filter((statement) => statement.status === 'open' && statement.statement_debt_amount > 0)
-  const due = sumTL(open.map((statement) => statement.statement_debt_amount))
+  // Kalan-bazlı (K7): kısmen ödenmiş ekstre kalanıyla, kalanı biten arşiv hiç
+  // görünmez — ekstre panelindeki toplamla aynı kaynak.
+  const paidByArchive = buildStatementPaidMap(statementPayments)
+  const open = openStatementsWithRemaining(statements, paidByArchive)
+  const due = sumTL(open.map((statement) => statementRemainingAmount(statement, paidByArchive)))
   const nearest = open
     .filter((statement) => statement.due_date)
     .sort((a, b) => String(a.due_date).localeCompare(String(b.due_date)))[0]

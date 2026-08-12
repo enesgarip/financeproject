@@ -58,6 +58,7 @@ export function PurchaseDecisionPage() {
       salaryHistory: snapshot.salaryHistory,
       cardInstallments: snapshot.cardInstallments,
       cardStatements: snapshot.cardStatements,
+      cardStatementPayments: snapshot.cardStatementPayments,
     }
 
     const forecast = buildCashFlowForecast(summaryInput, { horizonMonths: HORIZON_MONTHS })
