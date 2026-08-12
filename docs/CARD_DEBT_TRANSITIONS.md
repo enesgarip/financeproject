@@ -89,6 +89,13 @@ Use `src/utils/financeSummary.ts` instead of reimplementing card math in pages:
 limit is the max `credit_limit` in the group, while group debt is the sum of
 member `debt_amount` values.
 
+"Açık ekstre" has one formula everywhere (Faz D, 2026-08-12): the SUM of all of
+the card's open statement archives (falling back to `statement_debt_amount`
+when no open archive exists). The card control center
+(`buildCardControlItems.openStatementAmount`) and the card list
+(`visibleOpenStatementAmount`) both show this total — not just the newest open
+archive — and warning tones derive from the same total.
+
 ## Transition Matrix
 
 | Action | Owner | Card field changes | Related rows |

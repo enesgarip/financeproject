@@ -200,7 +200,7 @@ export function SavingsGoalsPanel({ monthlySurplus }: { monthlySurplus?: number 
         const target = parseNumber(draft.target_amount)
         const current = parseNumber(draft.current_amount)
         if (target <= 0) {
-          setFormError(`${draft.label || 'Bileşen'} hedef miktarı 0 dan büyük olmalı.`)
+          setFormError(`${draft.label || 'Bileşen'} hedef miktarı 0’dan büyük olmalı.`)
           return
         }
 
@@ -218,7 +218,7 @@ export function SavingsGoalsPanel({ monthlySurplus }: { monthlySurplus?: number 
       parsedComponents = nextComponents
     } else {
       if (parseNumber(targetAmount) <= 0) {
-        setFormError('Hedef miktar 0 dan büyük olmalı.')
+        setFormError('Hedef miktar 0’dan büyük olmalı.')
         return
       }
     }

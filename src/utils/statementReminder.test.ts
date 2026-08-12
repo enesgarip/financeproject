@@ -73,4 +73,14 @@ describe('buildStatementReminders', () => {
     expect(reminders[0]?.kind).toBe('upcoming')
     expect(reminders[0]?.daysUntilStatement).toBe(2)
   })
+
+  // dueDate önceden gerçek duvar saatinden (nextMonthlyDate) hesaplanıyordu;
+  // sabit `from` verildiğinde bile bugüne göre kayıyordu.
+  it('derives the due date label from the given `from`, not the wall clock', () => {
+    const reminders = buildStatementReminders([card({ statement_day: 9, due_day: 20 })], [archive()], new Date('2026-07-07T12:00:00'))
+
+    expect(reminders).toHaveLength(1)
+    // 7 Temmuz'dan bakınca gelecek ayın 20'si değil, bu ayın 20'si.
+    expect(reminders[0]?.dueDateLabel).toBe('20 Tem 2026')
+  })
 })

@@ -72,7 +72,7 @@ export const assetsHubTabs: HubTab[] = [
   { to: '/varliklar', label: 'Varlıklar', icon: Gem, end: true },
   { to: '/varliklar/maas', label: 'Maaş', icon: Banknote },
   { to: '/varliklar/altin', label: 'Altın', icon: Coins },
-  { to: '/varliklar/araclar', label: 'Arabalar', icon: Car },
+  { to: '/varliklar/araclar', label: 'Araçlar', icon: Car },
 ]
 
 export const liabilitiesHubTabs: HubTab[] = [
@@ -108,7 +108,7 @@ const routeMeta: Record<string, { title: string; subtitle?: string; width: Route
   '/varliklar': { title: 'Varlıklar', subtitle: 'Nakit, yatırım ve birikimler', width: 'medium' },
   '/varliklar/maas': { title: 'Maaş', subtitle: 'Maaş geçmişi ve trend', width: 'medium' },
   '/varliklar/altin': { title: 'Altın', subtitle: 'Altın varlıkları ve değerleme', width: 'narrow' },
-  '/varliklar/araclar': { title: 'Arabalarım', subtitle: 'Araç başına gider takibi ve dağılımı', width: 'wide' },
+  '/varliklar/araclar': { title: 'Araçlar', subtitle: 'Araç başına gider takibi ve dağılımı', width: 'wide' },
   '/borclar/krediler': { title: 'Krediler', subtitle: 'Aktif krediler ve taksit planları', width: 'wide' },
   '/borclar/kisiler': { title: 'Kişiler', subtitle: 'Kişisel borç ve alacaklar', width: 'medium' },
   '/borclar/kartlar': { title: 'Kart Borcu', subtitle: 'Kredi kartı borçların ve ödeme', width: 'medium' },

@@ -221,7 +221,7 @@ export function buildFocusActions(
       actions.push({
         id: 'reconciliation-drift',
         title: `${reconDrift} hesapta bakiye farkı var`,
-        description: 'Son mutabakatta app ile banka arasında fark tespit edildi. Farkın kaynağını incelemek iyi olur.',
+        description: 'Son mutabakatta uygulama ile banka arasında fark tespit edildi. Farkın kaynağını incelemek iyi olur.',
         to: '/veri-sagligi',
         cta: 'Mutabakata git',
         tone: 'rose',

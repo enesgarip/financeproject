@@ -15,6 +15,7 @@
  * Saf; Supabase görmez.
  */
 import type { CashFlowForecast } from './cashFlowForecast'
+import { formatSeritAmount } from './formatCurrency'
 import { diffTL, roundTL } from './money'
 
 export type PurchasePaymentMethod = 'card' | 'cash'
@@ -104,7 +105,7 @@ export function buildPurchaseImpact(input: PurchaseImpactInput): PurchaseImpactR
   }
 
   if (installments > 1) {
-    reasons.push(`${installments} ay boyunca aylık ${monthlyInstallment.toFixed(2)} TL yük ekler.`)
+    reasons.push(`${installments} ay boyunca aylık ${formatSeritAmount(monthlyInstallment, { decimals: 2 })} yük ekler.`)
   }
 
   if (verdict === 'rahat' && reasons.length === 0) {

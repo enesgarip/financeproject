@@ -7,7 +7,7 @@
  * (bkz. statementCycle.ts). Eşik: 3 gün kala uyarı başlar. Saf; sadece görüntü metni üretir.
  */
 import type { Card, CardStatementArchive } from '../types/database'
-import { dateInputValue, formatDate, nextMonthlyDate } from './date'
+import { dateInputValue, formatDate, nextMonthlyDateFrom } from './date'
 import { formatSeritAmount } from './formatCurrency'
 import { daysUntilFrom, nextUncutStatementDate } from './statementCycle'
 
@@ -32,7 +32,9 @@ export function buildStatementReminders(cards: Card[], statements: CardStatement
     const statementDate = nextUncutStatementDate(card, statements, from)
     if (!statementDate) continue
 
-    const dueDate = card.due_day ? nextMonthlyDate(card.due_day) : null
+    // `from`a göre hesaplanır — nextMonthlyDate gerçek duvar saatini okuyordu ve
+    // sabit `from` ile çağıran test/simülasyonlarda yanlış güne kayıyordu.
+    const dueDate = card.due_day ? nextMonthlyDateFrom(card.due_day, from) : null
     const remaining = daysUntilFrom(statementDate, from)
 
     // The cut runs the day AFTER the statement day, so "ready/otomatik kesiliyor"

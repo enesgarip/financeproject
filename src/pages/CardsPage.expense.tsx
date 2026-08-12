@@ -168,7 +168,7 @@ export function QuickExpensePanel({
       return
     }
     if (parsedAmount <= 0) {
-      setLocalError('Tutar 0 dan büyük olmalı.')
+      setLocalError('Tutar 0’dan büyük olmalı.')
       return
     }
     if (!trimmedDescription) {
@@ -447,7 +447,7 @@ export function QuickExpensePanel({
           </div>
           {vehicles.length > 0 ? (
             <label className="block text-sm font-semibold text-foreground">
-              Araç <span className="font-normal text-muted-foreground">(opsiyonel · Arabalarım)</span>
+              Araç <span className="font-normal text-muted-foreground">(opsiyonel · Araçlar)</span>
               <select
                 value={carId}
                 onChange={(event) => setCarId(event.target.value)}

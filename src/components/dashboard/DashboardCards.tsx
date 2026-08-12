@@ -39,7 +39,7 @@ export function HistorySection({ rows }: { rows: TransactionHistory[] }) {
       <CardHeader className="pb-0">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <CardTitle>Son güncellemeler</CardTitle>
+            <CardTitle>Geçmiş işlemler</CardTitle>
             <p className="mt-1 text-sm text-muted-foreground">Son 3 ay işlem geçmişi ve hesap hareketleri.</p>
           </div>
           <Badge variant="secondary">{filteredRows.length} kayıt</Badge>
@@ -80,7 +80,7 @@ export function HistorySection({ rows }: { rows: TransactionHistory[] }) {
       {rows.length === 0 ? (
         <EmptyState title="İşlem geçmişi yok" description="Planlı ödemeler, transferler ve borç kapatma işlemleri burada görünecek." />
       ) : filteredRows.length === 0 ? (
-        <EmptyState title="Bu filtrede işlem yok" description="Farklı bir işlem türü seçerek geçmiş kayıtları görebilirsiniz." />
+        <EmptyState title="Bu filtrede işlem yok" description="Farklı bir işlem türü seçerek geçmiş kayıtları görebilirsin." />
       ) : (
         <div className="space-y-5">
           {groupedRows.map((group) => (
@@ -117,6 +117,9 @@ export function HistorySection({ rows }: { rows: TransactionHistory[] }) {
               </div>
             </section>
           ))}
+          {filteredRows.length > 40 ? (
+            <p className="text-center text-xs text-muted-foreground">İlk 40 kayıt gösteriliyor.</p>
+          ) : null}
         </div>
       )}
       </CardContent>

@@ -38,10 +38,10 @@ type LiveReconciliationPanelProps = {
 
 const help = {
   calculation:
-    'Her banka hesabı / kredi kartı için app\'in güncel rakamı (bakiye veya borç) ile bankada gördüğün gerçek rakamı karşılaştırır. Fark = app − gerçek.',
+    'Her banka hesabı / kredi kartı için uygulamanın güncel rakamı (bakiye veya borç) ile bankada gördüğün gerçek rakamı karşılaştırır. Fark = uygulama − gerçek.',
   importance:
     'Rakamların sessizce kayması manuel finans takibini bırakmanın 1 numaralı sebebidir. Düzenli mutabakat, kaçak veya eksik girilmiş bir işlemi erken yakalar.',
-  source: 'Senin girdiğin gerçek bakiye + app\'in o anki rakamı; her mutabakat kaydedilir.',
+  source: 'Senin girdiğin gerçek bakiye + uygulamanın o anki rakamı; her mutabakat kaydedilir.',
 } satisfies HelpTooltipContent
 
 const STATUS_META: Record<ReconcileStatus, { variant: 'destructive' | 'secondary' | 'warning' | 'success'; label: string }> = {
@@ -205,7 +205,7 @@ export function LiveReconciliationPanel({ cards, onChanged }: LiveReconciliation
               <HelpTooltip title="Canlı bakiye mutabakatı" content={help} />
             </CardTitle>
             <p className="mt-1 text-sm text-muted-foreground">
-              Bankadaki gerçek rakamı gir; app ile farkı anında gör ve mutabık olarak kaydet.
+              Bankadaki gerçek rakamı gir; uygulama ile farkı anında gör ve mutabık olarak kaydet.
             </p>
           </div>
           {actionableCount > 0 ? <Badge variant="warning">{actionableCount}</Badge> : null}
@@ -237,7 +237,7 @@ export function LiveReconciliationPanel({ cards, onChanged }: LiveReconciliation
                     <Badge variant="outline">{item.target === 'debt' ? 'Borç' : 'Bakiye'}</Badge>
                   </div>
                   <p className="mt-0.5 text-xs text-muted-foreground">
-                    App: <span className="font-semibold text-foreground">{formatAmount(item.app)}</span>
+                    Uygulama: <span className="font-semibold text-foreground">{formatAmount(item.app)}</span>
                     {item.last
                       ? ` · Son mutabakat: ${formatDate(item.last.reconciled_at.slice(0, 10))}${
                           item.daysSince != null ? ` (${item.daysSince} gün önce)` : ''
@@ -265,7 +265,7 @@ export function LiveReconciliationPanel({ cards, onChanged }: LiveReconciliation
                     onClick={() => loadDriftCause(item.card.id, item.target, item.last!.reconciled_at)}
                   >
                     {expandedDrift[item.card.id] ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                    Son mutabakatten bu yana hareketler
+                    Son mutabakattan bu yana hareketler
                   </button>
                   {expandedDrift[item.card.id] ? (
                     <div className="mt-1.5 rounded-md bg-background/60 px-2.5 py-2 text-xs">

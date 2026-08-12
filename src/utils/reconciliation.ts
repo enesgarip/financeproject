@@ -49,6 +49,17 @@ function daysBetween(fromIso: string, today: Date): number {
   return Math.floor(ms / 86_400_000)
 }
 
+/**
+ * Bir mutabakat kaydının yaşı (tam gün). Geçersiz tarih sonsuz yaş sayılır ki
+ * çağıran onu "bayat" kabul etsin; negatif (gelecek tarihli) kayıt 0'a kırpılır.
+ * cardControlCenter bu yardımcıyı buradan kullanır — kopya tutulmaz.
+ */
+export function reconciliationAgeDays(reconciledAt: string, now: Date): number {
+  const reconciledTime = new Date(reconciledAt).getTime()
+  if (!Number.isFinite(reconciledTime)) return Number.POSITIVE_INFINITY
+  return Math.max(0, Math.floor((now.getTime() - reconciledTime) / 86_400_000))
+}
+
 export type ReconciliationItem = {
   card: Card
   target: ReconciliationTarget

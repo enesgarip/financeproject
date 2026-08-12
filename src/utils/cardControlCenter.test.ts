@@ -109,9 +109,35 @@ describe('buildCardControlItems', () => {
       now,
     )
 
-    expect(result[0].openStatement?.id).toBe('statement-1')
+    expect(result[0].openStatementAmount).toBe(4_000)
+    expect(result[0].openStatementDueDate).toBe('2026-07-14')
     expect(result[0].scheduledInstallmentTotal).toBe(1_000)
     expect(result[0].reconciliationStatus).toBe('matched')
+  })
+
+  // Kart listesi tüm açık arşivlerin toplamını gösterirken kontrol merkezi
+  // yalnız en yenisini gösteriyordu → iki panel farklı "açık ekstre" söylüyordu.
+  it('sums every open statement archive of the card and picks the nearest due date', () => {
+    const result = buildCardControlItems(
+      [card()],
+      [
+        statement(),
+        statement({
+          id: 'statement-2',
+          period_month: 8,
+          statement_date: '2026-08-04',
+          due_date: '2026-08-14',
+          statement_debt_amount: 2_500,
+        }),
+        statement({ id: 'paid', status: 'paid', statement_debt_amount: 9_999 }),
+      ],
+      [],
+      [reconciliation()],
+      now,
+    )
+
+    expect(result[0].openStatementAmount).toBe(6_500)
+    expect(result[0].openStatementDueDate).toBe('2026-07-14')
   })
 
   it('marks a bank difference as drift and prioritizes it', () => {

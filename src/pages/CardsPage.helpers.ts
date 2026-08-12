@@ -22,7 +22,7 @@ export const fields: FormField[] = [
     type: 'select',
     options: [
       { label: 'Kredi kartı', value: 'kredi_karti' },
-      { label: 'Banka kartı', value: 'banka_karti' },
+      { label: 'Banka hesabı', value: 'banka_karti' },
     ],
   },
   {
@@ -109,12 +109,12 @@ export function optionalDay(value: FormDataEntryValue | null) {
 
 export function cardTypeLabel(value: Card['card_type']) {
   if (value === 'kredi_karti') return 'Kredi kartı'
-  return 'Banka kartı'
+  return 'Banka hesabı'
 }
 
 export function cardGroupLabel(row: Card) {
   if (row.card_type === 'kredi_karti') return row.limit_group_name?.trim() ? `Ortak limit · ${row.limit_group_name.trim()}` : 'Tekil kredi kartları'
-  return 'Banka kartları'
+  return 'Banka hesapları'
 }
 
 function normalizeBankName(bankName: string) {

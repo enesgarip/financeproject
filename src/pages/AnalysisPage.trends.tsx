@@ -39,7 +39,7 @@ export function NetWorthTrend({
         </CardHeader>
         <CardContent className="pt-3">
           <p className="rounded-xl bg-muted/45 p-4 text-sm text-muted-foreground">
-            Trend grafiği her gün AnalysisPage açıldığında güncellenir; birkaç gün sonra burada görünür.
+            Net değer fotoğrafı her gün uygulama açıldığında alınır; birkaç günlük veri birikince grafik burada görünür.
           </p>
         </CardContent>
       </Card>
