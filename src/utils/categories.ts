@@ -14,7 +14,12 @@ import { normalizeSearchText } from './searchText'
 
 export const expenseCategories = [
   'Market',
-  'Yemek',
+  // 2026-08-16'da 'Yemek' → 'Yeme & İçme' yeniden adlandırıldı (kafe/kahve de
+  // buraya girer). SIRA KORUNDU: viz rengi kanonik indeksten geldiği için
+  // ikinci slotta kalınca grafik renkleri kaymaz. Kanonik DEĞER değişti, yani
+  // eski satırlar migration `20260816120000` ile güncellendi — kodda 'Yemek'
+  // dizesi kalmamalı (parse-sms/parse-receipt edge fonksiyonları dahil).
+  'Yeme & İçme',
   'Ulaşım',
   'Alışveriş',
   'Fatura',
@@ -43,8 +48,24 @@ export const categoryRules: Array<{ category: string; keywords: string[] }> = [
     keywords: ['market', 'migros', 'bim', 'a101', 'şok', 'sok', 'carrefour', 'carrefoursa', 'macrocenter', 'kasap', 'manav'],
   },
   {
-    category: 'Yemek',
-    keywords: ['yemek', 'restoran', 'restaurant', 'cafe', 'kahve', 'starbucks', 'yemeksepeti', 'getir yemek', 'burger', 'pizza', 'döner', 'doner', 'kebap'],
+    // Kafe/kahve bu kategoriye DAHİLDİR. Gerçek ekstre satırlarıyla ölçüldü
+    // (2026-08-16): 'cafe' varken Türkçe 'kafe' yoktu, 'starbucks' varken
+    // bankanın bastığı 'sbux'/'sbx' kısaltması yoktu → "PETROV KAFE",
+    // "COFFEE SINKY", "SBX İZM KORDON" gibi satırlar Diğer'e düşüyordu.
+    // Yeni satıcı eklerken bankanın BASTIĞI biçimi ekle, ticari adı değil.
+    category: 'Yeme & İçme',
+    keywords: [
+      'yemek', 'restoran', 'restaurant', 'lokanta', 'bistro', 'meyhane',
+      'cafe', 'kafe', 'coffee', 'kahve', 'kahvaltı', 'kahvalti', 'çay', 'cay',
+      'starbucks', 'sbux', 'sbx', 'gloria jeans', 'nero', 'caribou', 'espressolab',
+      // 'trendyol yemek' burada KAZANIR çünkü bu kural Alışveriş'ten (trendyol)
+      // önce gelir. 'migros yemek' eklenmedi: Market kuralı sırada daha önce
+      // olduğu için ölü anahtar olurdu.
+      'yemeksepeti', 'getir yemek', 'trendyol yemek',
+      'burger', 'pizza', 'döner', 'doner', 'kebap', 'kebab', 'köfte', 'kofte',
+      'köfteci', 'kofteci', 'pastane', 'fırın', 'firin', 'tatlı', 'tatli',
+      'dondurma', 'waffle', 'salata', 'pide', 'lahmacun', 'çiğköfte', 'cigkofte',
+    ],
   },
   {
     category: 'Ulaşım',

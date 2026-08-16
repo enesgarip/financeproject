@@ -22,12 +22,22 @@ const CATEGORY_CASES: Array<{ description: string; expected: string | null }> = 
   { description: 'CarrefourSA', expected: 'Market' },
   { description: 'Kasap Mehmet', expected: 'Market' },
 
-  // --- Yemek ---
-  { description: 'YEMEKSEPETI ISTANBUL', expected: 'Yemek' },
-  { description: 'Starbucks Coffee', expected: 'Yemek' },
-  { description: "Domino's Pizza", expected: 'Yemek' },
-  { description: 'CITY DONER KEBAP', expected: 'Yemek' },
-  { description: 'Cafe Nero', expected: 'Yemek' },
+  // --- Yeme & İçme ---
+  { description: 'YEMEKSEPETI ISTANBUL', expected: 'Yeme & İçme' },
+  { description: 'Starbucks Coffee', expected: 'Yeme & İçme' },
+  { description: "Domino's Pizza", expected: 'Yeme & İçme' },
+  { description: 'CITY DONER KEBAP', expected: 'Yeme & İçme' },
+  { description: 'Cafe Nero', expected: 'Yeme & İçme' },
+  // Gerçek DenizBank ekstre satırları (2026-08). Hepsi ESKİDEN Diğer'e
+  // düşüyordu: Türkçe 'kafe', çıplak 'coffee' ve bankanın Starbucks için
+  // bastığı 'SBUX'/'SBX' kısaltmaları sözlükte yoktu.
+  { description: 'PETROV KAFE BURSA TR', expected: 'Yeme & İçme' },
+  { description: 'COFFEE SINKY BURSA TR', expected: 'Yeme & İçme' },
+  { description: 'SBUX IST FIKIRTEPE YENITE', expected: 'Yeme & İçme' },
+  { description: 'SBX İZM KORDON İZMİR TR', expected: 'Yeme & İçme' },
+  { description: 'GLORIA JEANS MARKA AVM BURSA TR', expected: 'Yeme & İçme' },
+  { description: 'KOFTECI YUSUF AS BRS KARA BURSA TUR', expected: 'Yeme & İçme' },
+  { description: 'GREEN SALATA BURSA TR', expected: 'Yeme & İçme' },
 
   // --- Ulaşım ---
   { description: 'SHELL PETROL', expected: 'Ulaşım' },
@@ -103,7 +113,7 @@ describe('categorisation golden set', () => {
 
   it('covers every expense category at least once (except Diğer)', () => {
     const covered = new Set(CATEGORY_CASES.map((c) => c.expected).filter((c): c is string => c != null))
-    for (const category of ['Market', 'Yemek', 'Ulaşım', 'Fatura', 'Sağlık', 'Eğitim', 'Eğlence', 'Alışveriş', 'Konut', 'Abonelik', 'İş', 'Kişisel Bakım', 'Hediye']) {
+    for (const category of ['Market', 'Yeme & İçme', 'Ulaşım', 'Fatura', 'Sağlık', 'Eğitim', 'Eğlence', 'Alışveriş', 'Konut', 'Abonelik', 'İş', 'Kişisel Bakım', 'Hediye']) {
       expect(covered.has(category)).toBe(true)
     }
   })

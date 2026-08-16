@@ -20,6 +20,16 @@ Dönem İçi 09.06.2026 Hesaptan Ödeme Hesaptan Ödeme 5555 74** **** 0189 Ası
 Dönem İçi 19.05.2026 BEYLER OPTİK Peş. Taksit 2.Tk Anapara Taksitli Satış 5555 74** **** 0189 Asıl Kart 21.666,67 TL 0,00 TL
 `
 
+/** Tek kartlı ürün: DenizBank Kart No / Kart Tipi kolonlarını hiç basmaz. */
+const SINGLE_CARD_TEXT = `
+8/16/26, 5:39 PM DenizBank İnternet Bankacılığı
+İşlem Türü İşlem Tarihi İşlem İşlem Detayı İşlem Tutarı Bonus
+Bekleyen İşlem 15.08.2026 GEMLİK TERMAL BURSA TR 120,00 TL 0,00 TL
+Dönem İçi 14.08.2026 GREEN SALATA BURSA TR Peşin Satış 1.075,00 TL 0,00 TL
+Dönem İçi 09.08.2026 Hesaptan Ödeme Hesaptan Ödeme 22.759,20 TL 0,00 TL
+Dönem İçi 08.08.2026 SEYHAN MARKET BURSA TR Peşin Satış 208,40 TL 0,10 TL
+`
+
 describe('parseDenizBankMovementPdf', () => {
   it('parses current movement rows from DenizBank internet banking PDF text', () => {
     const result = parseDenizBankMovementPdf(SAMPLE_TEXT)
@@ -85,6 +95,60 @@ describe('parseDenizBankMovementPdf', () => {
     const flexStore = result.movements.find((m) => m.description.includes('FLEX STORE'))
 
     expect(flexStore).toMatchObject({ installmentNo: 1, installmentCount: 1, isInstallment: false })
+  })
+
+  it('reads rows from single-card exports that omit the Kart No / Kart Tipi columns', () => {
+    // Tek kartlı üründe DenizBank kart kolonlarını hiç basmaz. Kolon zorunlu
+    // tutulduğu sürece TÜM satırlar ignoredRows'a düşüyordu (ekran boş geliyordu).
+    const result = parseDenizBankMovementPdf(SINGLE_CARD_TEXT)
+
+    expect(result.ignoredRows).toHaveLength(0)
+    expect(result.movements).toHaveLength(3)
+    expect(result.payments).toHaveLength(1)
+    expect(result.movements[0]).toMatchObject({
+      bankStatus: 'pending',
+      appStatus: 'provision',
+      date: '2026-08-15',
+      description: 'GEMLİK TERMAL',
+      amount: 120,
+      cardNo: '',
+      cardType: '',
+      cardLastFour: '',
+    })
+    expect(result.movements[1]).toMatchObject({
+      date: '2026-08-14',
+      description: 'GREEN SALATA',
+      detail: 'Peşin Satış',
+      amount: 1075,
+    })
+    expect(result.payments[0]).toMatchObject({ date: '2026-08-09', amount: 22759.2, cardLastFour: '' })
+  })
+
+  it('keeps the card columns when the export does include them', () => {
+    // Kolon opsiyonel olduktan sonra da açıklama kart numarasını YUTMAMALI.
+    const result = parseDenizBankMovementPdf(SAMPLE_TEXT)
+    const petrol = result.movements.find((m) => m.description === 'UNDEM PETROL')
+
+    expect(petrol).toMatchObject({ cardNo: '5555 74** **** 0189', cardType: 'Asıl Kart', cardLastFour: '0189' })
+  })
+
+  it('splits OGS-HGS and Talimatlı Taksitli detail labels out of the description', () => {
+    const result = parseDenizBankMovementPdf(`
+İşlem Türü İşlem Tarihi İşlem İşlem Detayı Kart No Kart Tipi İşlem Tutarı Bonus
+Dönem İçi 12.08.2026 34ABC12 HGS yükl. bedeli İSTANBUL TR OGS-HGS Yükleme İşlemi 5555 74** **** 0189 Asıl Kart 250,00 TL 0,00 TL
+Dönem İçi 08.07.2026 BEYLER OPTİK Bursa Peş. Taksit 2.Tk Anapara Talimatlı Taksitli Satış 5555 74** **** 0189 Asıl Kart 1.750,00 TL 0,00 TL
+`)
+
+    expect(result.ignoredRows).toHaveLength(0)
+    expect(result.movements[0]).toMatchObject({
+      description: '34ABC12 HGS yükl. bedeli',
+      detail: 'OGS-HGS Yükleme İşlemi',
+    })
+    // "Talimatlı" kısa varyanta düşerse açıklamada sarkar; uzun etiket önce gelmeli.
+    expect(result.movements[1]).toMatchObject({
+      description: 'BEYLER OPTİK Bursa Peş. Taksit 2.Tk Anapara',
+      detail: 'Talimatlı Taksitli Satış',
+    })
   })
 })
 

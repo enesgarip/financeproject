@@ -127,21 +127,35 @@ export type DenizBankMovementPaymentMatch = {
 const PAYMENT_DATE_MATCH_WINDOW_DAYS = 7
 const AMOUNT_MATCH_TOLERANCE_TL = 5
 
+// SIRA ÖNEMLİ: `splitDescriptionAndDetail` ilk eşleşeni alır, bu yüzden uzun
+// varyant kısa olanından ÖNCE gelmeli ("Talimatlı Taksitli Satış" aksi halde
+// "Taksitli Satış"a düşer ve açıklamada sarkan "Talimatlı" kalır).
+// Listede olmayan detay açıklamaya sızar (satır yine içe aktarılır, sadece
+// açıklama kirlenir) — yeni bir detay etiketi görürsen buraya ekle.
 const KNOWN_DETAILS = [
   'Otomatik Kredi Kartı Fatura Ödemesi',
+  'OGS-HGS Yükleme İşlemi',
+  'Talimatlı Taksitli Satış',
   'Taksitli Satış',
   'Peşin Satış',
   'Hesaptan Ödeme',
 ]
 
 const CARD_NO_PATTERN = String.raw`\d{4}\s+(?:\d{2}\*\*|\d{4})\s+(?:\*{4}|\d{4})\s+\d{4}`
+// Kart No + Kart Tipi kolonları OPSİYONELDİR: DenizBank bu iki kolonu yalnız
+// karta bağlı ek/sanal kart varsa basar. Tek kartlı üründe (ör. Gold) başlık
+// "… İşlem Detayı İşlem Tutarı Bonus" olur ve satırda kart hiç geçmez — kolon
+// zorunlu tutulursa TÜM satırlar ignoredRows'a düşer, yani ekran boş gelir.
+// Lazy `(.+?)` kolon varken yine kart grubunu tercih eder (grup önce denenir),
+// bu yüzden çok kartlı PDF'lerde davranış değişmez.
+const CARD_COLUMNS_PATTERN = String.raw`(?:\s+(${CARD_NO_PATTERN})\s+(Asıl Kart|Sanal|Sanal Kart|Ek Kart))?`
 // Tutar/bonus kolonları İŞARETLİ olabilir: iade/ters kayıtta banka "-1.234,56"
 // (ya da sonda işaretle "1.234,56-") basar. İşaret deseni desteklenmezse satır
 // ROW_PATTERN'e uymaz → ignoredRows'a düşer; banka iadeyi pozitif basarsa daha
 // kötüsü olur ve harcama sayılır. Bu yüzden işaret AÇIKÇA yakalanır.
 const SIGNED_AMOUNT_PATTERN = String.raw`[-+]?[\d.]+,\d{2}[-+]?`
 const ROW_PATTERN = new RegExp(
-  String.raw`^(Bekleyen İşlem|Dönem İçi)\s+(\d{2}\.\d{2}\.\d{4})\s+(.+?)\s+(${CARD_NO_PATTERN})\s+(Asıl Kart|Sanal|Sanal Kart|Ek Kart)\s+(${SIGNED_AMOUNT_PATTERN})\s+TL\s+(${SIGNED_AMOUNT_PATTERN})\s+TL\s*$`,
+  String.raw`^(Bekleyen İşlem|Dönem İçi)\s+(\d{2}\.\d{2}\.\d{4})\s+(.+?)${CARD_COLUMNS_PATTERN}\s+(${SIGNED_AMOUNT_PATTERN})\s+TL\s+(${SIGNED_AMOUNT_PATTERN})\s+TL\s*$`,
   'u',
 )
 
@@ -282,7 +296,10 @@ export function parseDenizBankMovementPdf(text: string, memory?: CategoryMemory)
       continue
     }
 
-    const [, rawType, rawDate, descriptionAndDetail, cardNo, cardType, rawAmount, rawBonus] = match
+    // cardNo/cardType opsiyonel grup: tek kartlı PDF'te undefined gelir.
+    const [, rawType, rawDate, descriptionAndDetail, rawCardNo, rawCardType, rawAmount, rawBonus] = match
+    const cardNo = rawCardNo ?? ''
+    const cardType = rawCardType ?? ''
     const { bankStatus, appStatus } = movementStatus(rawType)
     const { description, detail } = splitDescriptionAndDetail(descriptionAndDetail)
     const signedAmount = parseSignedAmountTL(rawAmount)

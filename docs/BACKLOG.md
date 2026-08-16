@@ -1,5 +1,55 @@
 # Priority Backlog
 
+## 2026-08-16 — Mutabakat parser'ı tek kartlı PDF + planlı ödeme kartı sadeleşmesi
+
+- ~~**'Yemek' kategorisi 'Yeme & İçme' oldu + kafe sözlüğü genişledi.**~~ DONE
+  (2026-08-16). Kullanıcı kararı: kafe/kahve harcamaları da bu kategoriye girer.
+  Asıl bulgu ETİKET DEĞİL SÖZLÜKTÜ — gerçek ekstre satırlarıyla ölçüldü:
+  `cafe` varken Türkçe `kafe` yoktu, `starbucks` varken bankanın bastığı
+  `sbux`/`sbx` kısaltması yoktu → "PETROV KAFE", "COFFEE SINKY",
+  "SBX İZM KORDON", "GLORIA JEANS", "KOFTECI YUSUF", "GREEN SALATA" satırlarının
+  hepsi Diğer'e düşüyordu (tek ayda 8-9 satır). Bunlar `categoryCases.test.ts`'e
+  regresyon vakası olarak eklendi.
+  Kategori DB'de serbest metin olduğu için yeniden adlandırma migration ister:
+  `20260816120000` üç tabloyu (`card_expenses`, `card_installments`, `budgets` —
+  bütçe atlanırsa harcamalardan sessizce kopar) günceller ve safe-repair
+  RPC'sindeki beyaz listeyi tazeler. RPC gövdesi kaynağıyla diff'lendi: yalnız
+  beyaz liste satırı farklı. Yerel docker'da doğrulandı — 4 satır yeniden
+  adlandı, 0 kaldı; RPC eski adı reddediyor, yenisini kabul ediyor; `db lint`
+  temiz. Liste SIRASI korundu, yani viz rengi kaymadı.
+  Geçmişte Diğer'e düşmüş satırlar bilerek toplu güncellenmedi: kullanıcı
+  uygulamadaki Kategori Temizliği panelinden satıcı satıcı onaylayacak (hem
+  görünür hem kategori hafızasını besliyor). `scripts/recategorize-ulasim.sql`
+  arşiv olarak işaretlendi — eski sözlüğü taşıdığı için tekrar çalıştırılmamalı.
+
+- ~~**Tek kartlı DenizBank güncel hareket PDF'i hiç okunmuyordu.**~~ DONE
+  (2026-08-16). DenizBank `Kart No` + `Kart Tipi` kolonlarını yalnız karta bağlı
+  ek/sanal kart varsa basar; tek kartlı üründe (ör. Gold) başlık
+  `… İşlem Detayı İşlem Tutarı Bonus` olur. `ROW_PATTERN` bu iki kolonu zorunlu
+  tuttuğu için TÜM satırlar `ignoredRows`'a düşüyordu — mutabakat ekranı boş
+  geliyor, kullanıcı yalnız "N satır okunamadı" uyarısı görüyordu. Kolonlar
+  opsiyonel gruba alındı (`CARD_COLUMNS_PATTERN`); kolon varken lazy açıklama
+  yine kart grubunu tercih ettiği için çok kartlı PDF davranışı değişmedi
+  (gerçek iki PDF ile doğrulandı: 7/7 ve 64/64 satır). `cardNo`/`cardType`/
+  `cardLastFour` kolon yoksa boş string; taksit inceleme satırı sarkan `**** `
+  basmıyor. Golden fixture: `movement.denizbank-2026-08-tekkart.txt`.
+- ~~**Tanınmayan işlem detayı açıklamaya sızıyordu.**~~ DONE (2026-08-16).
+  `KNOWN_DETAILS`'e `OGS-HGS Yükleme İşlemi` ve `Talimatlı Taksitli Satış`
+  eklendi. Sıra kuralı yazıldı: uzun varyant kısa olandan önce gelmeli, aksi
+  halde "Talimatlı Taksitli Satış" kısa etikete düşüp açıklamada sarkan
+  "Talimatlı" bırakıyordu.
+- ~~**Planlı ödeme kartındaki "Öde" butonu kaldırıldı.**~~ DONE (2026-08-16).
+  Kart talimatlı satırda hemen üstteki "talimat bilgilendirmedir, SMS/ekstre ile
+  işlenir" notuyla çelişiyordu (yeşil buton "bunu sen ödemelisin" diye okunuyor).
+  Ödeme aksiyonu sayfa başındaki `ObligationsCalendar`'da ve panodaki şeritte
+  duruyor; `paymentToObligation` ölü kaldığı için silindi.
+- **Açık:** Veri Sağlığı'ndaki `payment-overdue-*` kontrolü BM-5'ten habersiz —
+  kart talimatlı ödeme SMS/ekstre eşleşene kadar `bekliyor` kalır ve vadeyi bir
+  gün geçince "vadesi geçmiş" uyarısı üretir. 2026-08-16'da gözlenen vaka gerçek
+  bir bekleyen ödemeydi, o yüzden aksiyon ALINMADI. Tekrarlarsa doğru çözüm:
+  talimatlılarda kısa tolerans penceresi + "SMS/ekstre eşleşmesi gelmedi" metni
+  (kontrolden büsbütün çıkarmak, SMS hiç gelmeyen planı görünmez yapar).
+
 ## 2026-08-12 — Uygulama geneli denetim (kod + UI + docs)
 
 Tüm `src/`, `supabase/` ve `docs/` dosya dosya tarandı; canlı UI turu yapıldı.
@@ -501,7 +551,9 @@ dilimi.
   kaldırıldı, RPC drop edildi (migration `20260810160000`), bakım zinciri iki
   RPC'ye indi. Gerçek kayıt SMS'ten (plan ilerletme eşleşmesi KORUNDU) veya
   ekstre importundan gelir; PaymentsPage kart talimatlı satırda bunu söyler ve
-  manuel "Öde" artık talimatlılarda da açıktır. Regresyonlar yeni modele
+  manuel "Öde" artık talimatlılarda da açıktır (kayıt kartındaki buton
+  2026-08-16'da kaldırıldı — bkz. üstteki bölüm; aksiyon takvimde durur).
+  Regresyonlar yeni modele
   güncellendi (`maintenance_catchup.sql`, `sms_card_payment_reconciliation.sql`).
 - ~~**BM5-b — Devreden plan iptali borcu fazla düşürmüyor.**~~ DONE. Denetim
   İptal-B1: carryover parent'ı tam plan tutarını taşır ama borca yalnız kalan

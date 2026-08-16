@@ -190,6 +190,11 @@ On the cards page:
 Current movement reconciliation:
 
 - DenizBank internet-banking movement PDFs are an intra-period reconciliation source, not a statement cut.
+- The movement export has two column layouts. `Kart No` / `Kart Tipi` appear only
+  when the card has linked supplementary or virtual cards; a single-card product
+  omits both columns entirely. Parsing treats them as optional, so `cardNo`,
+  `cardType`, and `cardLastFour` can be empty. They are display-only detail: the
+  target card comes from the import screen selection, never from the row.
 - `Bekleyen İşlem` rows import as `provision`; `Dönem İçi` spending rows import as `posted`.
 - `Hesaptan Ödeme` rows are not imported as card expenses.
 - `Taksitli Satış` rows are matched to existing installment rows by amount,

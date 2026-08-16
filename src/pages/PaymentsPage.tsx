@@ -18,7 +18,7 @@ import type {
 } from '../types/database'
 import { addMonths, dateInputValue, daysUntil, formatDate, startOfMonth } from '../utils/date'
 import { formatSeritAmount, parseNumber } from '../utils/formatCurrency'
-import { buildCreditCardIdCheck, paymentCashOutflowAmount, paymentOccurrenceInMonth, paymentUsesCreditCard, type CreditCardIdCheck } from '../utils/financeSummary'
+import { buildCreditCardIdCheck, paymentOccurrenceInMonth, paymentUsesCreditCard, type CreditCardIdCheck } from '../utils/financeSummary'
 import { sumTL } from '../utils/money'
 import { paidPaymentIdsInMonth } from '../utils/paymentHistory'
 import type { FinanceObligation, FinanceObligationsInput } from '../utils/obligations'
@@ -126,25 +126,6 @@ async function getPaymentCards(): Promise<FinanceCard[]> {
   return sortPaymentAccounts(result.ok ? result.data : [])
 }
 
-function paymentToObligation(payment: Payment, isCreditCardId?: CreditCardIdCheck): FinanceObligation {
-  const usesCreditCard = paymentUsesCreditCard(payment, isCreditCardId)
-  return {
-    id: `payment-${payment.id}`,
-    kind: 'payment',
-    action: 'pay_payment',
-    sourceId: payment.id,
-    relatedCardId: payment.auto_source_card_id ?? undefined,
-    title: payment.title,
-    subtitle: payment.category,
-    date: payment.due_date,
-    amount: payment.amount,
-    cashImpactAmount: paymentCashOutflowAmount(payment, isCreditCardId),
-    direction: 'outflow',
-    settlement: usesCreditCard ? 'credit_card' : 'cash',
-    isEstimate: payment.amount_status === 'estimated',
-  }
-}
-
 function getPaymentScheduleLabel(payment: Payment) {
   if (payment.recurrence !== 'monthly') return 'Tek seferlik'
 
@@ -154,7 +135,9 @@ function getPaymentScheduleLabel(payment: Payment) {
 
 // BM-5: Kart talimatlı ödeme BİLGİLENDİRME kaydıdır; tahmini tutar proaktif
 // karta yazılmaz. Gerçek kayıt SMS'ten (anlık) veya ekstre importundan (aylık
-// kesin kapanış) gelir ve planı otomatik ilerletir; manuel "Öde" açık kalır.
+// kesin kapanış) gelir ve planı otomatik ilerletir. Manuel ödeme yolu kayıt
+// kartında DEĞİL, sayfa başındaki ObligationsCalendar'da (ve panodaki şeritte)
+// durur — bilgilendirme notunun altındaki "Öde" butonu çelişki yaratıyordu.
 function isCardInstructedPayment(payment: Payment, isCreditCardId?: CreditCardIdCheck) {
   return paymentUsesCreditCard(payment, isCreditCardId)
 }
@@ -410,7 +393,7 @@ export function PaymentsPage() {
         renderSubtitle={(row) => `${row.category} · ${row.status}`}
         renderDetails={(row) => [`Tutar: ${getPaymentAmountLabel(row)}`]}
         groupBy={(row) => row.category}
-        renderCard={(row, { menu, reload }) => {
+        renderCard={(row, { menu }) => {
           const payment = row as Payment
           const autoCard = cardLabelById(payment.auto_source_card_id)
           const isAuto = payment.payment_method === 'bank_auto'
@@ -464,17 +447,11 @@ export function PaymentsPage() {
                 </p>
               ) : null}
 
-              {!isPaid ? (
-                <div className="mt-3">
-                  <button
-                    type="button"
-                    onClick={() => void openObligationPayment(paymentToObligation(payment, isCreditCardId), reload)}
-                    className="rounded-lg bg-success px-3 py-2 text-xs font-semibold text-success-foreground transition hover:bg-success/90 active:scale-[0.97]"
-                  >
-                    Öde
-                  </button>
-                </div>
-              ) : null}
+              {/* Kayıt kartında "Öde" butonu YOK: kart talimatlı ödemede hemen
+                  üstteki "talimat bilgilendirmedir" notuyla çelişiyordu (yeşil
+                  buton "bunu sen ödemelisin" diye okunuyor, oysa harcama SMS/
+                  ekstre ile kendiliğinden işleniyor). Ödeme aksiyonu sayfanın
+                  üstündeki ObligationsCalendar'da ve panodaki şeritte duruyor. */}
             </article>
           )
         }}

@@ -3,26 +3,26 @@ import { buildVizColorMap, orderSlicesCanonically, VIZ_NEUTRAL, VIZ_SERIES, vizC
 
 describe('buildVizColorMap', () => {
   it('slotları kanonik sırayla dağıtır', () => {
-    const map = buildVizColorMap(['Market', 'Yemek', 'Ulaşım'])
+    const map = buildVizColorMap(['Market', 'Yeme & İçme', 'Ulaşım'])
     expect(map.Market).toBe(VIZ_SERIES[0])
-    expect(map.Yemek).toBe(VIZ_SERIES[1])
+    expect(map['Yeme & İçme']).toBe(VIZ_SERIES[1])
     expect(map['Ulaşım']).toBe(VIZ_SERIES[2])
   })
 
   it('renk varlığa bağlıdır: veri sıralaması değişse de aynı kalır', () => {
-    const canonical = ['Market', 'Yemek', 'Ulaşım']
+    const canonical = ['Market', 'Yeme & İçme', 'Ulaşım']
     const map = buildVizColorMap(canonical)
     // Ay içinde harcama sıralaması tersine dönse bile kategori rengi sabit.
-    const reordered = ['Ulaşım', 'Market', 'Yemek']
+    const reordered = ['Ulaşım', 'Market', 'Yeme & İçme']
     for (const key of reordered) expect(vizColor(map, key)).toBe(map[key])
     expect(map['Ulaşım']).toBe(VIZ_SERIES[2])
   })
 
   it('nötr anahtarlar slot harcamaz', () => {
-    const map = buildVizColorMap(['Market', 'Diğer', 'Yemek'], ['Diğer'])
+    const map = buildVizColorMap(['Market', 'Diğer', 'Yeme & İçme'], ['Diğer'])
     expect(map['Diğer']).toBe(VIZ_NEUTRAL)
-    // "Diğer" araya girse de Yemek ikinci slotu alır.
-    expect(map.Yemek).toBe(VIZ_SERIES[1])
+    // "Diğer" araya girse de Yeme & İçme ikinci slotu alır.
+    expect(map['Yeme & İçme']).toBe(VIZ_SERIES[1])
   })
 
   it('slotlar bitince döngüye girmez, nötre düşer', () => {

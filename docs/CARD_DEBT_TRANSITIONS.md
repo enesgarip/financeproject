@@ -299,8 +299,9 @@ since BM-5: nothing posts them to the card proactively (the client hook and the
 `post_due_card_auto_payments` maintenance RPC were removed). The real record
 arrives from the SMS automation — which also advances the plan via the
 `record_sms_card_expense` match — or from the monthly statement import
-(`pay_payment_from_card_import`); manual "Öde" stays available. Estimated
-amounts are therefore never written to a card.
+(`pay_payment_from_card_import`); manual payment stays available from the
+obligations calendar and the dashboard Şerit row, though not from the payment
+record card itself. Estimated amounts are therefore never written to a card.
 
 DenizBank statement/current movement imports use `pay_payment_from_card_import`
 for rows that match a still-open planned payment. It is the same credit-card

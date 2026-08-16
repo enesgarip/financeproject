@@ -45,9 +45,9 @@ describe('buildMonthlySummary', () => {
   it('ignores prior-month spending after the cutoff entirely for the change', () => {
     const summary = buildMonthlySummary(
       [
-        expense({ id: 'c1', spent_at: '2026-06-08', amount: 500, category: 'Yemek', description: 'A' }),
+        expense({ id: 'c1', spent_at: '2026-06-08', amount: 500, category: 'Yeme & İçme', description: 'A' }),
         // all prior-month spend happened after the 15th → no comparable base
-        expense({ id: 'p1', spent_at: '2026-05-25', amount: 3000, category: 'Yemek', description: 'B' }),
+        expense({ id: 'p1', spent_at: '2026-05-25', amount: 3000, category: 'Yeme & İçme', description: 'B' }),
       ],
       NOW,
     )

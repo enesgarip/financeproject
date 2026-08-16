@@ -234,10 +234,10 @@ describe('parseDenizBankStatement — regular transactions', () => {
     expect(petrol?.category).toBe('Ulaşım')
   })
 
-  it('assigns Yemek category to cafe transactions', () => {
+  it('assigns Yeme & İçme category to cafe transactions', () => {
     const result = parseDenizBankStatement(SAMPLE_TEXT)
     const cafe = result.transactions.find((t) => t.description.includes('CAFE LİFE'))
-    expect(cafe?.category).toBe('Yemek')
+    expect(cafe?.category).toBe('Yeme & İçme')
   })
 
   it('assigns Sağlık category to eczane', () => {

@@ -13,7 +13,7 @@
 import { fetchWithTimeout, handlePreflight, jsonResponse, rateLimit } from '../_shared/edge.ts'
 
 // Must mirror src/utils/categories.ts expenseCategories.
-const CATEGORIES = ['Market', 'Yemek', 'Ulaşım', 'Alışveriş', 'Fatura', 'Sağlık', 'Eğlence', 'Eğitim', 'Konut', 'Abonelik', 'İş', 'Kişisel Bakım', 'Hediye', 'Diğer']
+const CATEGORIES = ['Market', 'Yeme & İçme', 'Ulaşım', 'Alışveriş', 'Fatura', 'Sağlık', 'Eğlence', 'Eğitim', 'Konut', 'Abonelik', 'İş', 'Kişisel Bakım', 'Hediye', 'Diğer']
 const MODEL = 'gemini-2.5-flash'
 // Sınır base64 KARAKTER uzunluğuna uygulanır; base64 ~%33 şişirdiği için 8 MB
 // base64 ≈ 6 MB gerçek görsel. Kullanıcıya gösterilen sınır da bu yüzden ~6 MB.

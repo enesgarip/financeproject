@@ -151,7 +151,9 @@ describe('parser golden fixtures', () => {
             expect(movement.description.trim().length).toBeGreaterThan(0)
             expect(movement.amount).toBeGreaterThan(0)
             expect(movement.date).toMatch(ISO_DATE)
-            expect(movement.cardLastFour).toMatch(/^\d{4}$/)
+            // Boş kabul edilir: tek kartlı DenizBank PDF'inde Kart No kolonu YOK
+            // (bkz. CARD_COLUMNS_PATTERN). Dolu ise 4 hane olmak zorunda.
+            expect(movement.cardLastFour).toMatch(/^(?:\d{4})?$/)
             expect(['pending', 'posted']).toContain(movement.bankStatus)
           }
         })

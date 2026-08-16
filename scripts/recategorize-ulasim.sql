@@ -1,4 +1,11 @@
 -- ---------------------------------------------------------------------------
+-- ARŞİV — BİR KEZ ÇALIŞTIRILDI, TEKRAR ÇALIŞTIRMA.
+-- Aşağıdaki sözlük bu script'in çalıştığı ANDAKİ kanonik listedir. 2026-08-16'da
+-- 'Yemek' kategorisi 'Yeme & İçme' olarak yeniden adlandırıldı (migration
+-- `20260816120000`) ve sözlük genişletildi; bu dosya o değişikliği YANSITMAZ.
+-- Bugün çalıştırılırsa kategorileri eski adlarına geri yazar. Benzer bir toplu
+-- düzeltme gerekirse uygulamadaki Kategori Temizliği panelini kullan.
+--
 -- Fix card_expenses wrongly labelled "Ulaşım" by the old substring matcher.
 --
 -- Root cause: the importer matched category keywords with a raw substring, so
