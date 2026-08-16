@@ -35,6 +35,11 @@ export const VIZ_SERIES = [
   'var(--viz-11)',
   'var(--viz-12)',
   'var(--viz-13)',
+  // 14: Finansman. Diğer 13'ün hepsi doygun renk; 14 ayrı TONU renk körlüğünde
+  // ayırt etmek mümkün olmadığı için bu slot kasıtlı olarak DÜŞÜK DOYGUNLUKTA
+  // (slate) seçildi — tondan değil doygunluk/parlaklıktan ayrışır. Anlamca da
+  // uygun: Finansman tüketim değil, paranın maliyeti.
+  'var(--viz-14)',
 ] as const
 
 /** Artık kova: kategori değil, o yüzden kasıtlı olarak nötr. */

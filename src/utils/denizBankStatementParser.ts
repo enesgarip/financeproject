@@ -68,7 +68,9 @@ const SECTION_CATEGORY: Record<string, string> = {
   'ECZANE': 'Sağlık',
   'OTOMOTİV': 'Diğer',
   'DİĞER İŞLEM VE HARCAMALARINIZ': 'Diğer',
-  'NAKİT AVANS BİLGİLERİ': 'Diğer',
+  // Bu bölüm yalnız anaparayı değil faiz/BSMV/KKDF satırlarını da taşır; hepsi
+  // Finansman'dır (eskiden Diğer'e düşüyordu).
+  'NAKİT AVANS BİLGİLERİ': 'Finansman',
   'BONUS PROGRAM ORTAKLARINDA YAPTIĞINIZ HARCAMALAR': 'Diğer',
   'BONUS PROGRAM ORTAKLARI DIŞINDA YAPTIĞINIZ HARCAMALAR': 'Diğer',
 }

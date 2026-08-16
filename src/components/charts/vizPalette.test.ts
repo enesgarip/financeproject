@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { expenseCategories } from '../../utils/categories'
 import { buildVizColorMap, orderSlicesCanonically, VIZ_NEUTRAL, VIZ_SERIES, vizColor } from './vizPalette'
 
 describe('buildVizColorMap', () => {
@@ -40,6 +41,21 @@ describe('buildVizColorMap', () => {
   it('hiçbir kimlik slotu durum rengi kullanmaz', () => {
     const statusTokens = ['var(--success)', 'var(--warning)', 'var(--destructive)', 'var(--info)']
     for (const slot of VIZ_SERIES) expect(statusTokens).not.toContain(slot)
+  })
+
+  it('palet TÜM harcama kategorilerine yetiyor (sessiz nötre düşme yok)', () => {
+    // 2026-08-16'da palet tam doluyken keşfedildi: 14. kategori eklemek onu
+    // sessizce VIZ_NEUTRAL'a düşürüyordu, yani grafikte "Diğer" ile AYNI renk.
+    // Kategori eklerken index.css'e yeni --viz-N token'ı eklemek unutulmasın.
+    const identityKeys = expenseCategories.filter((category) => category !== 'Diğer')
+    expect(
+      VIZ_SERIES.length,
+      `${identityKeys.length} kimlik kategorisi için ${VIZ_SERIES.length} slot var`,
+    ).toBeGreaterThanOrEqual(identityKeys.length)
+
+    const map = buildVizColorMap(expenseCategories, ['Diğer'])
+    const collapsed = identityKeys.filter((key) => map[key] === VIZ_NEUTRAL)
+    expect(collapsed, `nötre düşen kategoriler: ${collapsed.join(', ')}`).toEqual([])
   })
 
   it('bilinmeyen anahtar nötre düşer', () => {

@@ -206,6 +206,16 @@ describe('parseDenizBankStatement — transaction filtering', () => {
     expect(nakit).toBeDefined()
     expect(nakit?.amount).toBeCloseTo(8524.62)
   })
+
+  it('nakit avans bölümündeki satırları Finansman kategorisine yazar', () => {
+    // Anapara + faiz/BSMV/KKDF aynı bölümden gelir ve hepsi tüketim değil
+    // finansman maliyetidir; eskiden hepsi Diğer'e düşüyordu.
+    const result = parseDenizBankStatement(SAMPLE_TEXT)
+    const nakit = result.transactions.find((t) => t.description.toLowerCase().includes('nakit'))
+    const faiz = result.transactions.find((t) => /faiz/i.test(t.description))
+    expect(nakit?.category).toBe('Finansman')
+    expect(faiz?.category).toBe('Finansman')
+  })
 })
 
 describe('parseDenizBankStatement — regular transactions', () => {

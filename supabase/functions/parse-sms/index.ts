@@ -222,19 +222,29 @@ function accountSmsNeedsExternalEventId(parsed: ParsedSms): boolean {
 // --- Category inference (mirrors src/utils/categories.ts) ------------------
 
 const CATEGORY_RULES: Array<{ category: string; keywords: string[] }> = [
-  { category: 'Market', keywords: ['market', 'migros', 'bim', 'a101', 'şok', 'sok', 'carrefour', 'carrefoursa', 'macrocenter', 'kasap', 'manav'] },
+  // Finansman SIRADA ÖNCE: 'kart aidati' Konut'un 'aidat'ından önce yakalanmali.
+  { category: 'Finansman', keywords: ['nakit avans', 'avans', 'faiz', 'bsmv', 'kkdf', 'gecikme', 'kart aidat', 'kart ucret', 'kart ücret'] },
+  { category: 'Market', keywords: ['market', 'migros', 'bim', 'a101', 'şok', 'sok', 'carrefour', 'carrefoursa', 'macrocenter', 'kasap', 'manav', 'gıda', 'gida'] },
   { category: 'Yeme & İçme', keywords: ['yemek', 'restoran', 'restaurant', 'lokanta', 'bistro', 'cafe', 'kafe', 'coffee', 'kahve', 'kahvaltı', 'kahvalti', 'starbucks', 'sbux', 'sbx', 'gloria jeans', 'espressolab', 'yemeksepeti', 'getir yemek', 'trendyol yemek', 'burger', 'pizza', 'döner', 'doner', 'kebap', 'kebab', 'köfte', 'kofte', 'köfteci', 'kofteci', 'pastane', 'fırın', 'firin', 'tatlı', 'tatli', 'dondurma', 'waffle', 'salata', 'pide', 'lahmacun'] },
-  { category: 'Ulaşım', keywords: ['benzin', 'yakıt', 'yakit', 'petrol', 'shell', 'opet', 'bp', 'total', 'taksi', 'uber'] },
+  // Bu matcher SUBSTRING calisir (whole-word degil), o yuzden 'eczane' burada
+  // 'ECZANESI'yi zaten tutar; cekimli varyant eklemeye gerek yok.
+  // NOT: 'taksi' substring oldugu icin 'taksit'i de tutar. SMS'te satici adi
+  // geldigi ve "taksit" nadiren gectigi icin mevcut davranis KORUNDU; app
+  // tarafi (categories.ts) bunu tam-kelime esleme ile zaten cozuyor.
+  { category: 'Ulaşım', keywords: ['benzin', 'yakıt', 'yakit', 'petrol', 'shell', 'opet', 'bp', 'total', 'taksi', 'uber', 'hgs', 'ogs', 'otopark', 'otoyol', 'otel', 'turizm'] },
   // 'abonelik' Fatura'dan çıkarıldı → yeni Abonelik kuralına taşındı (kural sırası
   // önce geldiği için Fatura'da kalsaydı Abonelik hiç eşleşemezdi). Bu blok
   // src/utils/categories.ts categoryRules'un substring-güvenli aynasıdır.
   { category: 'Fatura', keywords: ['fatura', 'elektrik', 'dogalgaz', 'internet', 'turkcell', 'vodafone', 'superonline', 'findeks'] },
-  { category: 'Sağlık', keywords: ['eczane', 'hastane', 'doktor', 'medikal'] },
+  { category: 'Sağlık', keywords: ['eczane', 'hastane', 'doktor', 'medikal', 'veteriner', 'optik'] },
   { category: 'Eğitim', keywords: ['okul', 'kurs', 'kitap', 'udemy'] },
-  { category: 'Eğlence', keywords: ['sinema', 'konser', 'netflix', 'spotify', 'oyun'] },
+  { category: 'Eğlence', keywords: ['sinema', 'konser', 'netflix', 'spotify', 'oyun', 'supercell', 'steam', 'playstation'] },
+  // Abonelik SIRADA Alisveris'ten ONCE: substring matcher'da Alisveris'in
+  // 'amazon' anahtari "AMAZONPRIMET"i de tutar; abonelik once gelmezse Amazon
+  // Prime app tarafinda Abonelik, SMS tarafinda Alisveris olurdu (sessiz ayrisma).
+  { category: 'Abonelik', keywords: ['abonelik', 'icloud', 'blutv', 'exxen', 'apple.com', 'youtube', 'amazonprim', 'amazon prime'] },
   { category: 'Alışveriş', keywords: ['trendyol', 'hepsiburada', 'hepsipay', 'amazon', 'n11', 'zara', 'lcw', 'teknosa', 'media markt'] },
   { category: 'Konut', keywords: ['kira', 'aidat', 'emlak', 'ipotek'] },
-  { category: 'Abonelik', keywords: ['abonelik', 'icloud', 'blutv', 'exxen'] },
   { category: 'İş', keywords: ['reklam', 'google ads', 'meta ads', 'hosting', 'komisyon'] },
   { category: 'Kişisel Bakım', keywords: ['kuafor', 'berber', 'kozmetik', 'gratis', 'watsons', 'rossmann'] },
   { category: 'Hediye', keywords: ['hediye', 'bagis', 'kizilay'] },

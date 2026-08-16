@@ -39,6 +39,35 @@ const CATEGORY_CASES: Array<{ description: string; expected: string | null }> = 
   { description: 'KOFTECI YUSUF AS BRS KARA BURSA TUR', expected: 'Yeme & İçme' },
   { description: 'GREEN SALATA BURSA TR', expected: 'Yeme & İçme' },
 
+  // --- Finansman (paranın maliyeti; tüketim değil) ---
+  { description: 'NAKİT AVANS ANAPARA', expected: 'Finansman' },
+  { description: 'TAKSİTLİ NAKİT AVANS', expected: 'Finansman' },
+  { description: 'Nakit Avans Faizi', expected: 'Finansman' },
+  { description: 'BSMV', expected: 'Finansman' },
+  { description: 'KKDF', expected: 'Finansman' },
+  { description: 'GECİKME FAİZİ', expected: 'Finansman' },
+  // "kart aidatı" Finansman, "apartman aidatı" Konut — Finansman kuralı sırada
+  // önce ama yalnız "kart aidatı" ifadesiyle eşleşir.
+  { description: 'KART AİDATI', expected: 'Finansman' },
+  { description: 'APARTMAN AİDATI', expected: 'Konut' },
+
+  // --- Aksan katlama + çekimli biçim regresyonları (2026-08-16) ---
+  // Hepsi ESKİDEN Diğer'e düşüyordu; ölçüm 69 satırın 43'ünü Diğer'de buluyordu.
+  { description: 'İREM ECZANESİ ÇANAKKALE TR', expected: 'Sağlık' },       // 'eczane' çekimli biçimi tutmuyordu
+  { description: 'KARYA DOĞA VETERİNER BURSA TR', expected: 'Sağlık' },
+  { description: 'AKUĞUR ALIŞVERİŞ MERKEZİ BURSA TR', expected: 'Alışveriş' }, // ALL-CAPS hibrit normalizasyon
+  { description: 'ÖZTRAKYA AKARYAKIT İZMİR TR', expected: 'Ulaşım' },      // 'yakıt' AKARYAKIT'ı tutmuyordu
+  { description: '16NHY76 HGS yükl. bedeli İSTANBUL TR', expected: 'Ulaşım' },
+  { description: 'AÇIK ALAN OTOPARKLAR İZMİR TR', expected: 'Ulaşım' },    // 'otopark' çoğulu tutmuyordu
+  { description: 'DOUBLETREE BY HİLTON İZMİR TR', expected: 'Ulaşım' },    // ekstredeki "SEYAHAT & ULAŞIM" ile tutarlı
+  { description: 'BUSKİ - BURSA SU 498149 ö', expected: 'Fatura' },
+  { description: 'APPLE.COM/BILL CORK IRL', expected: 'Abonelik' },
+  { description: 'GOOGLE *YouTube', expected: 'Abonelik' },
+  { description: 'IYZICO /AMAZONPRİMET İSTANBUL TR', expected: 'Abonelik' },
+  { description: 'FS *SUPERCELLSTORE fsprg nl NLD', expected: 'Eğlence' },
+  // 'youtube' Abonelik'te ama 'google' EKLENMEDİ: reklam harcaması İş kalmalı.
+  { description: 'GOOGLE ADS', expected: 'İş' },
+
   // --- Ulaşım ---
   { description: 'SHELL PETROL', expected: 'Ulaşım' },
   { description: 'BP AKARYAKIT', expected: 'Ulaşım' },
@@ -95,7 +124,10 @@ const CATEGORY_CASES: Array<{ description: string; expected: string | null }> = 
 
   // --- Footguns: short keywords must NOT latch onto larger words ---
   // "taksi" inside "taksit" → instalment rows must NOT become Ulaşım (real bug).
-  { description: 'BEYLER OPTİK Peş. Taksit 1.Tk Anapara', expected: null },
+  // Bu satır 2026-08-16'da null → 'Sağlık' oldu ('optik' anahtarı eklendi,
+  // optisyen gerçekten Sağlık). Footgun iddiası KORUNUYOR ve hatta güçlendi:
+  // taksit metni satırı Ulaşım'a çekmiyor, gerçek anahtar kazanıyor.
+  { description: 'BEYLER OPTİK Peş. Taksit 1.Tk Anapara', expected: 'Sağlık' },
   { description: 'NEOVA SİGORTA Peş. Taksit 3.Tk Anapara', expected: null },
   { description: 'Taksitli İşlem', expected: null },
   // "bp" must not match inside another token.
@@ -113,7 +145,7 @@ describe('categorisation golden set', () => {
 
   it('covers every expense category at least once (except Diğer)', () => {
     const covered = new Set(CATEGORY_CASES.map((c) => c.expected).filter((c): c is string => c != null))
-    for (const category of ['Market', 'Yeme & İçme', 'Ulaşım', 'Fatura', 'Sağlık', 'Eğitim', 'Eğlence', 'Alışveriş', 'Konut', 'Abonelik', 'İş', 'Kişisel Bakım', 'Hediye']) {
+    for (const category of ['Market', 'Yeme & İçme', 'Ulaşım', 'Fatura', 'Sağlık', 'Eğitim', 'Eğlence', 'Alışveriş', 'Konut', 'Abonelik', 'İş', 'Kişisel Bakım', 'Hediye', 'Finansman']) {
       expect(covered.has(category)).toBe(true)
     }
   })
