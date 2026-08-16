@@ -200,6 +200,11 @@
   --viz-11: #9c6b3f;
   --viz-12: #c2367d;
   --viz-13: #86a812;
+  /* viz-14: Finansman. 14 ayrı TON renk körlüğünde ayrılamaz, bu yüzden bu slot
+     hue yerine DOYGUNLUK ekseninde ayrışır: koyu, mat slate. Nötr "Diğer"den
+     (muted-foreground) belirgin şekilde daha koyu olması şart — yoksa donut'ta
+     ikisi karışır. */
+  --viz-14: #46586b;
   /* "Diğer" artık kategori değil, artık kova — kasıtlı olarak nötr ve geri planda. */
   --viz-other: var(--muted-foreground);
 
@@ -322,6 +327,8 @@
   --viz-11: #c08a54;
   --viz-12: #d85ca0;
   --viz-13: #a0c22e;
+  /* Koyu temada slate AÇILIR: zeminden ayrışması için parlaklık ters yönde. */
+  --viz-14: #94a7bb;
 
   /* ── Şerit katmanı (koyu) ──
      Handoff koyu temaya tek cümle ayırmıştı; değerler prototipin `1c` seçeneğinden

@@ -1,5 +1,50 @@
 # Priority Backlog
 
+## 2026-08-16 (2) — Finansman kategorisi + kategori sözlüğü kök-sebep düzeltmesi
+
+- ~~**Yeni kategori: Finansman.**~~ DONE (2026-08-16). Nakit avans (peşin/taksitli),
+  faiz, BSMV/KKDF, gecikme, kart aidatı. Tüketim değil paranın maliyeti; eskiden
+  hepsi Diğer'deydi. `SECTION_CATEGORY`'de `NAKİT AVANS BİLGİLERİ` artık buraya
+  gidiyor (o bölüm anaparanın yanında faiz/BSMV/KKDF satırlarını da taşır).
+  Kural sırada ÖNCE: `kart aidatı` Konut'un `aidat`ından önce yakalanmalı; buna
+  karşılık çıplak `aidat*` Finansman'a KONMADI, yoksa apartman aidatı kayardı.
+  Migration `20260816150000` yalnız safe-repair RPC beyaz listesini genişletir
+  (veri migrasyonu yok — yeni değeri taşıyan satır yok). Yerelde doğrulandı.
+- ~~**Palet doluydu; 14. slot eklendi.**~~ DONE. `VIZ_SERIES` 13 slot ve 13 kimlik
+  kategorisi vardı — 14. kategori `buildVizColorMap` içinde SESSİZCE `VIZ_NEUTRAL`'a
+  düşüyordu, yani grafikte "Diğer" ile aynı renk. `--viz-14` açık+koyu eklendi;
+  14 ayrı TON renk körlüğünde ayrılamayacağı için bu slot kasıtlı olarak
+  DOYGUNLUK ekseninde ayrışan mat slate. `vizPalette.test.ts`'e koruma testi
+  eklendi: hiçbir kimlik kategorisi nötre düşmemeli.
+- ~~**Kök sebep: sözlük eşleşmesi aksan-duyarlıydı.**~~ DONE. Kullanıcı "bazı
+  kategorileri hiç kullanmıyorum" dedi; ölçüm bunu ÇÜRÜTTÜ. Gerçek ekstrede 69
+  satırın 43'ü Diğer'deydi ve sebep kategoriler değil sözlüktü:
+  - `normalizeSearchText` yalnız `I/İ→i` katlar; ALL-CAPS Türkçe satıcı adı
+    HİBRİT forma düşer (`"ALIŞVERİŞ"` → `"alişveriş"`) ve ne `alışveriş` (noktasız ı)
+    ne `alisveris` (aksansız) tutar. Eşleşme artık `foldForMatch` ile aksan-katlanmış
+    uzayda yapılıyor. **`normalizeDescription` DEĞİŞMEDİ** — o CategoryMemory'nin
+    anahtarıdır, değişse öğrenilmiş geçmiş eşleşmeler kaybolurdu.
+  - Tam-kelime eşleşme çekimli biçimi tutmuyordu: `eczane` ≠ `ECZANESİ`,
+    `otopark` ≠ `OTOPARKLAR`, `yakıt` ≠ `AKARYAKIT` → çekimli biçimler ayrı
+    anahtar olarak eklendi (kuralı gevşetmek `taksi`/`taksit` hatasını geri getirirdi).
+  - Eksik satıcılar eklendi: HGS/OGS/otopark/otel/turizm (ekstredeki
+    "SEYAHAT & ULAŞIM" bölümüyle tutarlı), APPLE.COM/YouTube/Amazon Prime,
+    Supercell, belediye su idareleri (BUSKİ/İSKİ/ASKİ…), veteriner, optik.
+    `google` bilerek EKLENMEDİ: Abonelik sırada İş'ten önce, "GOOGLE ADS" reklam
+    harcaması İş kalmalı.
+  - `parse-sms` aynasında Abonelik kuralı Alışveriş'in ÜSTÜNE alındı: substring
+    matcher'da `amazon`, "AMAZONPRIMET"i de tutuyordu → Amazon Prime app'te
+    Abonelik, SMS'te Alışveriş oluyordu (sessiz ayrışma).
+  - **Sonuç: Diğer 43 → 9 satır.** Kalan 9 gerçekten belirsiz satıcı adı
+    (BERGAMA ZEYTIN, ÖDEAL//NARGİO TOBACC…) — doğru araç Kategori Temizliği paneli.
+  - Ders: **kategori kullanım verisine bakıp kategori emekliye ayırma** —
+    "0 kayıt" çoğu zaman sözlüğün satırı tanımadığı anlamına gelir. Emeklilik
+    kararı, sözlük düzeldikten sonra birkaç ay gerçek veriyle verilmeli.
+- **Açık:** kategori emekliliği/birleştirme değerlendirmesi (kullanıcı bazı
+  kategorileri kullanmadığını düşünüyor). Sözlük düzeldiğine göre birkaç ay
+  sonra gerçek dağılıma bakılıp karar verilecek. Emekli edilen kategori
+  Finansman gibi AYNI indekse konursa palet hiç değişmez.
+
 ## 2026-08-16 — Mutabakat parser'ı tek kartlı PDF + planlı ödeme kartı sadeleşmesi
 
 - ~~**'Yemek' kategorisi 'Yeme & İçme' oldu + kafe sözlüğü genişledi.**~~ DONE
