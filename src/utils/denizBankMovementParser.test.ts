@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  findExistingInstallmentPlan,
   matchDenizBankInstallmentMovements,
   matchDenizBankMovementPayments,
   matchDenizBankMovements,
@@ -342,7 +343,84 @@ describe('matchDenizBankInstallmentMovements', () => {
     expect(result.matches).toHaveLength(0)
     expect(result.unmatched).toHaveLength(1)
   })
+
+  // KÖK SEBEP REGRESYONU (2026-08-16): `scheduled` satırlar aday listesinden
+  // eleniyordu. Bankanın bu ay bastığı taksit uygulamada tam olarak `scheduled`
+  // beklediği için eşleşme sistematik olarak kaçıyor, satır manuel incelemeye
+  // düşüyor ve kullanıcı aynı alışverişe İKİNCİ bir plan kuruyordu. Üretimde
+  // 4 çift kayıt bu yoldan doğdu.
+  it.each(['scheduled', 'posted', 'paid'])('matches an existing plan row with status "%s"', (status) => {
+    const movement = parseDenizBankMovementPdf(SAMPLE_TEXT).movements.find((item) => item.description.includes('BEYLER'))!
+    const result = matchDenizBankInstallmentMovements([movement], [{
+      id: 'i-2',
+      due_month: '2026-06-19',
+      amount: 21_666.67,
+      status,
+      description: 'Beyler Optik',
+      installment_no: 2,
+      installment_count: 3,
+    }])
+
+    expect(result.matches, `status=${status} eşleşmeliydi`).toHaveLength(1)
+    expect(result.unmatched).toHaveLength(0)
+  })
+
+  it('tolerates the month-end shift in the derived installment date', () => {
+    // 31 Oca + 1 ay = 28 Şub: türetilen vade ile plandaki vade birkaç gün kayar.
+    const [movement] = parseDenizBankMovementPdf(`
+İşlem Türü İşlem Tarihi İşlem İşlem Detayı Kart No Kart Tipi İşlem Tutarı Bonus
+Dönem İçi 31.01.2026 TEST MAĞAZA Peş. Taksit 2.Tk Anapara Taksitli Satış 5555 74** **** 0189 Asıl Kart 1.000,00 TL 0,00 TL
+`).movements
+
+    const result = matchDenizBankInstallmentMovements([movement], [{
+      id: 'i-2',
+      due_month: '2026-02-28',
+      amount: 1000,
+      status: 'scheduled',
+      description: 'TEST MAĞAZA',
+      installment_no: 2,
+      installment_count: 4,
+    }])
+
+    expect(result.matches).toHaveLength(1)
+  })
 })
+
+describe('findExistingInstallmentPlan', () => {
+  const movement = parseDenizBankMovementPdf(SAMPLE_TEXT).movements.find((item) => item.description.includes('BEYLER'))!
+
+  it('finds the existing plan by monthly amount and description', () => {
+    const hint = findExistingInstallmentPlan(movement, [
+      { id: 'i-3', due_month: '2026-07-19', amount: 21_666.67, status: 'scheduled', description: 'BEYLER OPTİK Peş. Taksit 3.Tk Anapara', installment_no: 3, installment_count: 3 },
+    ])
+
+    expect(hint).toMatchObject({ installmentCount: 3, knownInstallmentNo: 3 })
+  })
+
+  it('suggests the highest count when the same merchant already carries conflicting plans', () => {
+    // Bozuk veri hâli: aynı satıcı için 2 ve 3 taksitlik iki plan var. Eksik plan
+    // kurmak fazladan plan kurmaktan az zararlı olduğu için yüksek adet önerilir.
+    const hint = findExistingInstallmentPlan(movement, [
+      { id: 'a', due_month: '2026-06-19', amount: 21_666.67, status: 'paid', description: 'BEYLER OPTİK', installment_no: 1, installment_count: 2 },
+      { id: 'b', due_month: '2026-07-19', amount: 21_666.66, status: 'scheduled', description: 'BEYLER OPTİK', installment_no: 3, installment_count: 3 },
+    ])
+
+    expect(hint?.installmentCount).toBe(3)
+  })
+
+  it('does not suggest a plan from an unrelated merchant with a similar amount', () => {
+    const hint = findExistingInstallmentPlan(movement, [
+      { id: 'x', due_month: '2026-07-19', amount: 21_666.67, status: 'scheduled', description: 'BAŞKA MAĞAZA', installment_no: 2, installment_count: 6 },
+    ])
+
+    expect(hint).toBeNull()
+  })
+
+  it('returns null when no installment plan resembles the row', () => {
+    expect(findExistingInstallmentPlan(movement, [])).toBeNull()
+  })
+})
+
 describe('DenizBank movement planned payment reconciliation', () => {
   const invoice = parseDenizBankMovementPdf(SAMPLE_TEXT).movements.find((movement) => movement.amount === 685)!
 

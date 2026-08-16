@@ -315,6 +315,13 @@ content hash and that content's occurrence ordinal. The occurrence is intentiona
 part of the identity: two identical rows in one document are two events, but
 retrying/reimporting either row is a no-op; reordering different rows does not change IDs.
 
+`post_card_debt_correction` sets `app.ledger_kind` / `app.ledger_note` and, since
+migration `20260816170000`, clears them again before returning. Without that
+reset every later card write in the same transaction inherited the correction's
+label and note, so a following `cancel_card_expense` landed in the ledger as
+`adjustment` instead of `credit` — amounts stayed correct, the audit trail did
+not. Any RPC that sets these GUCs must clear them on the way out.
+
 A cancelled row no longer reserves its source-event identity (BM-6): the unique
 index and the `add_card_expense` / `record_card_installment_carryover` /
 `pay_payment_from_card_import` idempotency lookups all exclude `status =

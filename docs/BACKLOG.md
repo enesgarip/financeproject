@@ -1,5 +1,47 @@
 # Priority Backlog
 
+## 2026-08-16 (3) — Çift taksit planı kök sebebi + ledger GUC sızıntısı
+
+Canlı Veri Sağlığı'nda 6 bulgu incelendi. **Bulgular para hatası DEĞİLDİ**:
+üç kartın borcu da bankayla birebir doğrulandı (Gold'da 1 kuruş). Ayrıntı ve
+çıkarılan ders: `docs/BACKLOG.md` bu bölüm + hafıza notu.
+
+- ~~**Kök sebep: `scheduled` taksitler eşleştirmeden eleniyordu.**~~ DONE.
+  `matchDenizBankInstallmentMovements` aday listesini
+  `status !== 'scheduled'` ile süzüyordu. Oysa bankanın o ay bastığı taksit,
+  uygulamada tam olarak `scheduled` bekleyen satırdır → eşleşme sistematik
+  kaçıyor, satır manuel incelemeye düşüyor, kullanıcı aynı alışverişe İKİNCİ
+  bir plan kuruyordu. Üretimde 4 çift kayıt (BEYLER OPTİK, NEOVA SİGORTA,
+  MEDIA MARKT, OLKA SPOR) bu yoldan doğmuştu. Filtre kaldırıldı; üç durum da
+  (`scheduled`/`posted`/`paid`) `it.each` ile kilitlendi.
+- ~~**Vade eşleşmesine ay-sonu toleransı.**~~ DONE. Türetme
+  `orijinal + (sıra−1) ay` olduğu için 31 Oca + 1 ay = 28 Şub kayması tam
+  eşitliği bozuyordu. `INSTALLMENT_DATE_MATCH_WINDOW_DAYS = 5`; taksit numarası
+  ve tutar zaten tam eşleştiği için pencere yanlış planı içeri almaz.
+- ~~**İkinci savunma hattı: mevcut plan ipucu.**~~ DONE. Toplam taksit adedi
+  PDF'te YOK, kullanıcı elle giriyor; aynı alışverişe farklı aylarda farklı
+  adet girilince çift plan doğuyordu (BEYLER OPTİK'e bir ay 3, ertesi ay 2).
+  Yeni `findExistingInstallmentPlan` aynı kartta tutar+açıklama uyan planı
+  bulur; import ekranı adedi ÖN-DOLDURUR ve "bu satıcı için zaten N taksitlik
+  plan var" uyarısı basar. Eşleşme kuralından bilerek daha gevşektir (taksit
+  numarası/vade aranmaz) — karar kullanıcıda kalır.
+- ~~**`post_card_debt_correction` ledger GUC'unu sızdırıyordu.**~~ DONE
+  (migration `20260816170000`). `app.ledger_kind='adjustment'` ve
+  `app.ledger_note` transaction-local ayarlanıp GERİ ALINMIYORDU; aynı
+  transaction'da sonra çalışan `cancel_card_expense` bu etiketi ve yabancı notu
+  miras alıyor, ledger'a `credit` yerine `adjustment` düşüyordu. Tutarlar
+  doğru, DENETİM KAYDI yanlış. Diğer RPC'ler (`20260802160000`,
+  `20260806120000`) zaten kullandıktan sonra boşa çekiyor. Yerelde doğrulandı:
+  düzeltme sonrası iptal artık `credit` + kendi notu.
+
+- **Açık — çift kayıtlar duruyor (kasıtlı).** Dört kaydın tek taksit satırı
+  ödenmiş bir ekstreye bağlı; `cancel_card_expense` bunları haklı olarak
+  reddediyor (kesilmiş ekstre değiştirilemez). Borç zaten DOĞRU olduğu için
+  finansal müdahale veriyi bozar. Kalan tek etki: o dört alışveriş harcama
+  analizinde iki kez sayılıyor. Borç-nötr bir çözüm gerekirse
+  `update_card_expense_health_metadata` (yalnız açıklama/kategori yazar) ile
+  "[çift kayıt]" etiketlenebilir.
+
 ## 2026-08-16 (2) — Finansman kategorisi + kategori sözlüğü kök-sebep düzeltmesi
 
 - ~~**Yeni kategori: Finansman.**~~ DONE (2026-08-16). Nakit avans (peşin/taksitli),

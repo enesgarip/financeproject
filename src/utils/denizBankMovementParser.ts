@@ -126,6 +126,13 @@ export type DenizBankMovementPaymentMatch = {
 
 const PAYMENT_DATE_MATCH_WINDOW_DAYS = 7
 const AMOUNT_MATCH_TOLERANCE_TL = 5
+/**
+ * Taksit vadesi eşleşmesinde tolerans. Türetme `orijinal tarih + (sıra − 1) ay`
+ * olduğu için ay sonu kayması vadeyi birkaç gün oynatabilir (31 Oca + 1 ay =
+ * 28 Şub → 3 gün). Pencere dar tutulur: taksit numarası ve tutar zaten tam
+ * eşleştiğinden bu kadarı yanlış planı içeri almaz.
+ */
+const INSTALLMENT_DATE_MATCH_WINDOW_DAYS = 5
 
 // SIRA ÖNEMLİ: `splitDescriptionAndDetail` ilk eşleşeni alır, bu yüzden uzun
 // varyant kısa olanından ÖNCE gelmeli ("Talimatlı Taksitli Satış" aksi halde
@@ -407,7 +414,11 @@ export function matchDenizBankInstallmentMovements(
   bankMovements: ParsedDenizBankMovement[],
   installments: MovementInstallmentMatchRow[],
 ): { matches: DenizBankInstallmentMatch[]; unmatched: ParsedDenizBankMovement[] } {
-  const available = installments.filter((installment) => installment.status !== 'scheduled')
+  // `scheduled` satırlar BİLEREK dahildir. Eskiden eleniyorlardı ve bu, çift
+  // plan üretiminin kök sebebiydi: bankanın bu ay bastığı taksit, uygulamada
+  // tam olarak `scheduled` durumunda bekleyen satırdır. Elenince eşleşme
+  // kaçıyor, satır manuel incelemeye düşüyor ve kullanıcı aynı alışveriş için
+  // ikinci bir plan kuruyordu (ölçüldü 2026-08-16: 4 çift kayıt bu yoldan).
   const usedIds = new Set<string>()
   const matches: DenizBankInstallmentMatch[] = []
   const unmatched: ParsedDenizBankMovement[] = []
@@ -416,12 +427,16 @@ export function matchDenizBankInstallmentMovements(
     const currentInstallmentDate = dateInputValue(
       addMonths(new Date(`${movement.date}T00:00:00`), Math.max(0, movement.installmentNo - 1)),
     )
-    const candidates = available.filter((installment) => (
-      !usedIds.has(installment.id) &&
-      installment.installment_no === movement.installmentNo &&
-      installment.due_month === currentInstallmentDate &&
-      Math.abs(diffTL(installment.amount, movement.amount)) <= AMOUNT_MATCH_TOLERANCE_TL
-    ))
+    const candidates = installments.filter((installment) => {
+      if (usedIds.has(installment.id)) return false
+      if (installment.installment_no !== movement.installmentNo) return false
+      if (Math.abs(diffTL(installment.amount, movement.amount)) > AMOUNT_MATCH_TOLERANCE_TL) return false
+      // Tam eşitlik yerine dar pencere: ay sonu kayması türetilen vadeyi birkaç
+      // gün oynatır (31 Oca + 1 ay = 28 Şub). Taksit NUMARASI ve tutar zaten
+      // eşleştiği için pencere yanlış planı içeri almaz.
+      const distance = dateDistanceDays(installment.due_month, currentInstallmentDate)
+      return distance != null && distance <= INSTALLMENT_DATE_MATCH_WINDOW_DAYS
+    })
     const preferred = candidates.find((installment) => descriptionsCompatible(movement.description, installment.description))
     const found = preferred ?? (candidates.length === 1 ? candidates[0] : undefined)
 
@@ -435,6 +450,55 @@ export function matchDenizBankInstallmentMovements(
   }
 
   return { matches, unmatched }
+}
+
+/** Manuel incelemeye düşen satır için bulunan mevcut plan ipucu. */
+export type ExistingInstallmentPlanHint = {
+  /** Mevcut planın toplam taksit adedi — kullanıcıya önerilecek sayı. */
+  installmentCount: number
+  /** Plandaki örnek açıklama (kullanıcı hangi plan olduğunu tanısın). */
+  description: string
+  /** Plandaki en yüksek taksit numarası — "9 taksitlik plan, 6'ya kadar var". */
+  knownInstallmentNo: number
+}
+
+/**
+ * Manuel incelemeye düşen bir taksit satırı için, AYNI kartta zaten var olan
+ * planı arar.
+ *
+ * Neden: toplam taksit adedi PDF'te YOKTUR, kullanıcı elle girer. Aynı alışveriş
+ * farklı aylarda farklı adetle girilirse (bir ay 3, ertesi ay 2) aynı satın alma
+ * için iki ayrı plan doğar — 2026-08-16'da üretimde tam olarak bu oldu.
+ * Eşleşme kuralından FARKLIDIR: taksit numarası ya da vade tutmasa bile aylık
+ * tutar + açıklama uyuyorsa ipucu verir; karar kullanıcıya bırakılır.
+ */
+export function findExistingInstallmentPlan(
+  movement: ParsedDenizBankMovement,
+  installments: MovementInstallmentMatchRow[],
+): ExistingInstallmentPlanHint | null {
+  const related = installments.filter((installment) => (
+    installment.installment_count > 1 &&
+    Math.abs(diffTL(installment.amount, movement.amount)) <= AMOUNT_MATCH_TOLERANCE_TL &&
+    descriptionsCompatible(movement.description, installment.description)
+  ))
+  if (related.length === 0) return null
+
+  // Aynı satıcı için birden çok adet görünüyorsa (zaten bozuk veri) en YÜKSEK
+  // adedi öner: eksik plan kurmak, fazladan plan kurmaktan daha az zararlı.
+  let best = related[0]
+  for (const installment of related) {
+    if (installment.installment_count > best.installment_count) best = installment
+  }
+  const knownInstallmentNo = related.reduce(
+    (highest, installment) => Math.max(highest, installment.installment_no),
+    0,
+  )
+
+  return {
+    installmentCount: best.installment_count,
+    description: best.description,
+    knownInstallmentNo,
+  }
 }
 
 export function matchDenizBankMovementPayments(

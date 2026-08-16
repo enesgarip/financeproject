@@ -198,10 +198,21 @@ Current movement reconciliation:
 - `Bekleyen İşlem` rows import as `provision`; `Dönem İçi` spending rows import as `posted`.
 - `Hesaptan Ödeme` rows are not imported as card expenses.
 - `Taksitli Satış` rows are matched to existing installment rows by amount,
-  installment number, derived exact date, and description. Unmatched rows can
+  installment number, derived date, and description. **`scheduled` rows are
+  matchable**: the installment the bank is charging this period is exactly the
+  one sitting unposted in the plan, so excluding them made every follow-up month
+  miss its plan and create a duplicate. The derived date allows a few days of
+  slack for the month-end shift (Jan 31 + 1 month), which the exact installment
+  number and amount keep safe. Unmatched rows can
   be selected after the user enters the total installment count; the importer
   then creates a first-installment plan or a mid-plan carryover without
   renumbering the bank's installment sequence.
+- The total installment count is not in the PDF, so the user types it. When an
+  existing plan on the same card matches the row by monthly amount and
+  description, the import screen pre-fills that count and warns that a different
+  number opens a second plan for the same purchase. This hint is deliberately
+  looser than the match rule (it ignores installment number and due date) and is
+  advisory only — the user still decides.
 - Review screens show the app's spending history for the detected period, keep matched bank/app record pairs collapsed by default, and leave missing rows unselected until the user chooses which rows to import.
 - Importable rows are selected by a stable per-row key instead of array position,
   so identical-looking bank rows can be selected one by one.

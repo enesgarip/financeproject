@@ -19,10 +19,12 @@ import { useBalancePrivacy } from '../../hooks/useBalancePrivacy'
 import { extractPdfText } from '../../lib/pdfText'
 import type { Card } from '../../types/database'
 import {
+  findExistingInstallmentPlan,
   matchDenizBankMovements,
   matchDenizBankInstallmentMovements,
   matchDenizBankMovementPayments,
   parseDenizBankMovementPdf,
+  type ExistingInstallmentPlanHint,
   type DenizBankMovementMatch,
   type DenizBankMovementPaymentMatch,
   type ParsedDenizBankMovement,
@@ -117,6 +119,10 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
   const [ignoredOpen, setIgnoredOpen] = useState(false)
   const [periodLabel, setPeriodLabel] = useState('')
 
+  // Manuel incelemeye düşen satır için "bu satıcının zaten planı var" ipucu.
+  // Toplam taksit adedi PDF'te olmadığı için kullanıcı elle girer; aynı alışverişe
+  // farklı aylarda farklı adet girilince ÇİFT PLAN doğuyordu (2026-08-16 vakası).
+  const [planHints, setPlanHints] = useState<Map<number, ExistingInstallmentPlanHint>>(new Map())
   const [allMovements, setAllMovements] = useState<ParsedDenizBankMovement[]>([])
   const [sourceEventIds, setSourceEventIds] = useState<string[]>([])
   const [installmentCounts, setInstallmentCounts] = useState<Map<number, number>>(new Map())
@@ -252,6 +258,20 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
           description: expense.description ?? movement.description,
         }))
       const nextManual = installmentResult.unmatched
+      // İpucu + adet ön-doldurma: mevcut plan bulunursa kullanıcı sayıyı sıfırdan
+      // tahmin etmez. Eşleşme kuralından farklı ve daha gevşektir (tutar+açıklama),
+      // o yüzden karar yine kullanıcıda — sadece doğru varsayılanı öneriyoruz.
+      const nextHints = new Map<number, ExistingInstallmentPlanHint>()
+      const nextCounts = new Map<number, number>()
+      for (const movement of nextManual) {
+        const hint = findExistingInstallmentPlan(movement, installmentsResult.data)
+        if (!hint) continue
+        const movementIndex = parsed.movements.indexOf(movement)
+        nextHints.set(movementIndex, hint)
+        if (hint.installmentCount >= movement.installmentNo) {
+          nextCounts.set(movementIndex, hint.installmentCount)
+        }
+      }
       const nextAppOnly = result.appOnly
         .filter((expense): expense is ExpenseMatchRow => 'id' in expense && typeof expense.id === 'string')
         .map((expense, index) => ({
@@ -268,6 +288,8 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
       setAppOnly(nextAppOnly)
       setProvisionPromotions(nextPromotions)
       setManualReview(nextManual)
+      setPlanHints(nextHints)
+      setInstallmentCounts(nextCounts)
       setMatchDriftTL(result.matchDriftTL)
       setDriftCorrected(false)
       setSelectedImport(new Set())
@@ -863,6 +885,7 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
                       const totalCount = installmentCounts.get(movementIndex) ?? 0
                       const validCount = totalCount >= movement.installmentNo
                       const selected = selectedInstallments.has(movementIndex)
+                      const hint = planHints.get(movementIndex)
                       const plan = validCount
                         ? buildImportedInstallmentPlan({
                           originalDate: movement.date,
@@ -937,6 +960,18 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
                               <span className="text-warning">Aktarmak için toplam taksit sayısını gir.</span>
                             )}
                           </div>
+                          {/* Aynı satıcı için zaten plan varsa uyar: farklı adet girmek
+                              aynı alışverişe ikinci bir plan açar (2026-08-16 vakası). */}
+                          {hint ? (
+                            <p className="mt-1.5 flex items-start gap-1.5 pl-8 text-[11px] font-medium text-info">
+                              <AlertCircle size={12} className="mt-0.5 shrink-0" />
+                              <span>
+                                Bu satıcı için zaten <strong>{hint.installmentCount} taksitlik</strong> bir plan var
+                                {hint.knownInstallmentNo > 0 ? ` (${hint.knownInstallmentNo}. taksite kadar kayıtlı)` : ''}.
+                                Toplamı farklı girersen aynı alışveriş için ikinci bir plan açılır.
+                              </span>
+                            </p>
+                          ) : null}
                         </div>
                       )
                     })}
