@@ -893,7 +893,10 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
                             <div className="min-w-0 flex-1">
                               <p className="truncate text-xs font-bold text-foreground">{movement.description}</p>
                               <p className="text-[11px] text-muted-foreground">
-                                İşlem {formatShortDate(movement.date)} · {movement.installmentNo}. taksit · **** {movement.cardLastFour}
+                                {/* Kart no yalnız çok kartlı PDF'te gelir (bkz. CARD_COLUMNS_PATTERN);
+                                    yoksa sarkan "**** " basma. */}
+                                İşlem {formatShortDate(movement.date)} · {movement.installmentNo}. taksit
+                                {movement.cardLastFour ? ` · **** ${movement.cardLastFour}` : ''}
                               </p>
                             </div>
                             <span className="shrink-0 text-xs font-black text-foreground">{formatAmount(movement.amount)}</span>
