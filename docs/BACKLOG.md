@@ -2,6 +2,26 @@
 
 ## 2026-08-16 — Mutabakat parser'ı tek kartlı PDF + planlı ödeme kartı sadeleşmesi
 
+- ~~**'Yemek' kategorisi 'Yeme & İçme' oldu + kafe sözlüğü genişledi.**~~ DONE
+  (2026-08-16). Kullanıcı kararı: kafe/kahve harcamaları da bu kategoriye girer.
+  Asıl bulgu ETİKET DEĞİL SÖZLÜKTÜ — gerçek ekstre satırlarıyla ölçüldü:
+  `cafe` varken Türkçe `kafe` yoktu, `starbucks` varken bankanın bastığı
+  `sbux`/`sbx` kısaltması yoktu → "PETROV KAFE", "COFFEE SINKY",
+  "SBX İZM KORDON", "GLORIA JEANS", "KOFTECI YUSUF", "GREEN SALATA" satırlarının
+  hepsi Diğer'e düşüyordu (tek ayda 8-9 satır). Bunlar `categoryCases.test.ts`'e
+  regresyon vakası olarak eklendi.
+  Kategori DB'de serbest metin olduğu için yeniden adlandırma migration ister:
+  `20260816120000` üç tabloyu (`card_expenses`, `card_installments`, `budgets` —
+  bütçe atlanırsa harcamalardan sessizce kopar) günceller ve safe-repair
+  RPC'sindeki beyaz listeyi tazeler. RPC gövdesi kaynağıyla diff'lendi: yalnız
+  beyaz liste satırı farklı. Yerel docker'da doğrulandı — 4 satır yeniden
+  adlandı, 0 kaldı; RPC eski adı reddediyor, yenisini kabul ediyor; `db lint`
+  temiz. Liste SIRASI korundu, yani viz rengi kaymadı.
+  Geçmişte Diğer'e düşmüş satırlar bilerek toplu güncellenmedi: kullanıcı
+  uygulamadaki Kategori Temizliği panelinden satıcı satıcı onaylayacak (hem
+  görünür hem kategori hafızasını besliyor). `scripts/recategorize-ulasim.sql`
+  arşiv olarak işaretlendi — eski sözlüğü taşıdığı için tekrar çalıştırılmamalı.
+
 - ~~**Tek kartlı DenizBank güncel hareket PDF'i hiç okunmuyordu.**~~ DONE
   (2026-08-16). DenizBank `Kart No` + `Kart Tipi` kolonlarını yalnız karta bağlı
   ek/sanal kart varsa basar; tek kartlı üründe (ör. Gold) başlık

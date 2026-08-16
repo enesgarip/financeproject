@@ -223,7 +223,7 @@ function accountSmsNeedsExternalEventId(parsed: ParsedSms): boolean {
 
 const CATEGORY_RULES: Array<{ category: string; keywords: string[] }> = [
   { category: 'Market', keywords: ['market', 'migros', 'bim', 'a101', 'şok', 'sok', 'carrefour', 'carrefoursa', 'macrocenter', 'kasap', 'manav'] },
-  { category: 'Yemek', keywords: ['yemek', 'restoran', 'restaurant', 'cafe', 'kahve', 'starbucks', 'yemeksepeti', 'getir yemek', 'burger', 'pizza', 'döner', 'doner', 'kebap'] },
+  { category: 'Yeme & İçme', keywords: ['yemek', 'restoran', 'restaurant', 'lokanta', 'bistro', 'cafe', 'kafe', 'coffee', 'kahve', 'kahvaltı', 'kahvalti', 'starbucks', 'sbux', 'sbx', 'gloria jeans', 'espressolab', 'yemeksepeti', 'getir yemek', 'trendyol yemek', 'burger', 'pizza', 'döner', 'doner', 'kebap', 'kebab', 'köfte', 'kofte', 'köfteci', 'kofteci', 'pastane', 'fırın', 'firin', 'tatlı', 'tatli', 'dondurma', 'waffle', 'salata', 'pide', 'lahmacun'] },
   { category: 'Ulaşım', keywords: ['benzin', 'yakıt', 'yakit', 'petrol', 'shell', 'opet', 'bp', 'total', 'taksi', 'uber'] },
   // 'abonelik' Fatura'dan çıkarıldı → yeni Abonelik kuralına taşındı (kural sırası
   // önce geldiği için Fatura'da kalsaydı Abonelik hiç eşleşemezdi). Bu blok
