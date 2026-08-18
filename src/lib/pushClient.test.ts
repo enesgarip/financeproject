@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { applicationServerKeyMatches, shouldSyncPushSubscription, urlBase64ToUint8Array } from './pushClient'
+import {
+  applicationServerKeyMatches,
+  pushUnavailableReason,
+  shouldSyncPushSubscription,
+  urlBase64ToUint8Array,
+} from './pushClient'
 
 describe('urlBase64ToUint8Array', () => {
   it('decodes a url-safe base64 VAPID key to the correct bytes', () => {
@@ -52,5 +57,31 @@ describe('shouldSyncPushSubscription', () => {
   it('skips when push is unsupported or VAPID key is missing', () => {
     expect(shouldSyncPushSubscription({ ...base, supported: false })).toBe('unsupported')
     expect(shouldSyncPushSubscription({ ...base, configured: false })).toBe('unsupported')
+  })
+})
+
+describe('pushUnavailableReason', () => {
+  const ok = { supported: true, configured: true, iosLike: false, standalone: false }
+
+  it('kart kullanilabilirse sebep yok', () => {
+    expect(pushUnavailableReason(ok)).toBeNull()
+  })
+
+  it('Safari sekmesindeki iPhone icin "ana ekrana ekle" der', () => {
+    // iOS'ta PushManager yalnız yüklü PWA'da var; kart eskiden sessizce kayboluyordu.
+    expect(pushUnavailableReason({ ...ok, supported: false, iosLike: true })).toBe('ios-needs-install')
+  })
+
+  it('ana ekrana eklenmis iOS hala desteklemiyorsa tarayici sebebini verir', () => {
+    expect(pushUnavailableReason({ ...ok, supported: false, iosLike: true, standalone: true }))
+      .toBe('unsupported-browser')
+  })
+
+  it('iOS disi desteksiz tarayiciyi ayirt eder', () => {
+    expect(pushUnavailableReason({ ...ok, supported: false })).toBe('unsupported-browser')
+  })
+
+  it('destek varken eksik VAPID anahtarini bildirir', () => {
+    expect(pushUnavailableReason({ ...ok, configured: false })).toBe('not-configured')
   })
 })

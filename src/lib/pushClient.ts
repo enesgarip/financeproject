@@ -267,6 +267,51 @@ export async function syncPushSubscription(userId: string): Promise<PushSyncOutc
   }
 }
 
+// ── "Kart neden yok?" ──────────────────────────────────────────────────────
+// Bildirim kartı desteklenmeyen ortamda sessizce KAYBOLUYORDU. En sık vakası
+// iPhone: Safari sekmesinde `PushManager` yoktur, yalnız ana ekrana eklenmiş
+// PWA'da vardır — kullanıcı da kartı bulamadığı için özelliğin bozuk mu yoksa
+// yanlış yerde mi olduğunu anlayamıyordu. Artık sebep gösteriliyor.
+
+export type PushUnavailableReason = 'ios-needs-install' | 'unsupported-browser' | 'not-configured' | null
+
+/** Kartın neden kullanılamadığını söyler; null = kullanılabilir. Saf. */
+export function pushUnavailableReason(input: {
+  supported: boolean
+  configured: boolean
+  iosLike: boolean
+  standalone: boolean
+}): PushUnavailableReason {
+  if (!input.supported) {
+    return input.iosLike && !input.standalone ? 'ios-needs-install' : 'unsupported-browser'
+  }
+  if (!input.configured) return 'not-configured'
+  return null
+}
+
+/** iOS/iPadOS mu? (iPad'ler masaüstü user-agent bildirebiliyor.) */
+export function isIosLike(): boolean {
+  if (typeof navigator === 'undefined') return false
+  if (/iPad|iPhone|iPod/.test(navigator.userAgent)) return true
+  return navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1
+}
+
+/** Uygulama ana ekrandan (standalone PWA olarak) mı açıldı? */
+export function isStandaloneDisplay(): boolean {
+  if (typeof window === 'undefined') return false
+  if (window.matchMedia?.('(display-mode: standalone)').matches) return true
+  return (navigator as Navigator & { standalone?: boolean }).standalone === true
+}
+
+export function currentPushUnavailableReason(): PushUnavailableReason {
+  return pushUnavailableReason({
+    supported: isPushSupported(),
+    configured: isPushConfigured(),
+    iosLike: isIosLike(),
+    standalone: isStandaloneDisplay(),
+  })
+}
+
 export async function getCurrentPushEndpoint(): Promise<string | null> {
   if (!isPushSupported()) return null
   const registration = await navigator.serviceWorker.getRegistration()
