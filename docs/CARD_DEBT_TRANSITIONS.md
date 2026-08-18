@@ -123,6 +123,18 @@ archive — and warning tones derive from the same total.
 | Statement PDF authoritative rebuild | `replace_card_statement_import` | Reprojects the rebuildable open scope, replays every validated PDF row, locks the cut amount to the bank total, then cuts/reconciles the statement in one transaction | Preserves paid archives/current-settlement evidence and movements after the PDF statement date. It never matches/reuses a historical installment parent: each PDF installment line creates a fresh current/future open plan, while old paid archives remain untouched. |
 | Legacy whole-card reset | removed (`reset_card_data`) | n/a | Removed because it predated immutable statement/current-settlement evidence and had no safe append-only reversal model. Full user reset remains the supported destructive reset. |
 
+## Calendar
+
+The database default timezone is **Europe/Istanbul** (migration
+`20260819120000`), so `current_date` inside every money RPC means the
+Istanbul calendar day the user is living in. It used to be UTC, which shifted
+every "has this due date passed" decision for transactions made between 00:00
+and 03:00 Istanbul time — the first installment of such a purchase entered the
+current period a day late. `timestamptz` is absolute, so no stored value moved;
+only which calendar day counts as today. Use `private.today_ist()` in new code
+when the intent matters, and keep `supabase/tests/installment_intent_and_calendar.sql`
+green — it fails loudly if the setting is ever reverted.
+
 ## Statement Boundary
 
 Statements are cut the day after the statement day, not on the statement day.

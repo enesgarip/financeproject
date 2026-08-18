@@ -31,10 +31,20 @@ yanlış olan kova/zamanlama, ekstre kesildikten sonra da düzeltmesi pahalıdı
   bazlı opt-out bayrağı olmadan kullanıcı bildirimleri kapatamazdı).
   Ayrıca sessiz saat 22-08 varsayılanı 07:00'deki TEK gönderimi tamamen
   susturuyordu — UI artık bunu uyarıyor.
-- **Açık — Istanbul/UTC gün sınırı.** `post_card_provision` vadeyi
-  `current_date` (UTC) ile kıyaslar; işlem Istanbul saatiyle 00:00-03:00
-  arasında yapılırsa ilk taksit o gün dönem içine girmez, ertesi gün girer.
-  Tutarlar etkilenmez, yalnız bir günlük kova gecikmesi olur.
+- ~~**Istanbul/UTC gün sınırı.**~~ DONE (migration `20260819120000`).
+  Uygulamanın günü Istanbul, veritabanının `current_date`i UTC idi: Istanbul
+  saatiyle 00:00-03:00 arasında yapılan işlemde o gün vadesi gelen taksit dönem
+  içi borca girmiyor, ertesi gün giriyordu. Aynı kayma `current_date` kullanan
+  13 kart/ödeme fonksiyonunun HEPSİNDE vardı (ekstre kesimi, vadesi gelen taksit
+  işleme, bayat provizyon kesinleştirme, ödeme gecikmesi). Tek noktadan
+  çözüldü: veritabanının varsayılan saat dilimi `Europe/Istanbul`.
+  `timestamptz` mutlak olduğu için depolanmış veri değişmez; değişen yalnız
+  hangi takvim gününün "bugün" sayıldığıdır. pg_cron zamanlaması ayrı GUC
+  olduğu için etkilenmez (00:05 GMT = 03:05 Istanbul → iş artık doğru şekilde
+  yeni günün tarihini görür). `supabase/tests/installment_intent_and_calendar.sql`
+  hem takvimi hem niyet eşleşmesini kilitler; mutasyon testiyle doğrulandı
+  (oturum UTC'ye çekilince test kırmızıya dönüyor). 26 mevcut SQL regresyon
+  testinin tamamı yeni takvimde yeşil.
 
 ## 2026-08-16 (3) — Çift taksit planı kök sebebi + ledger GUC sızıntısı
 
