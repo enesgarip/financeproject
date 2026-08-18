@@ -135,7 +135,7 @@ After a schema/RPC release, check the affected flow in production:
 - Cards/account pages load if card tables or RPCs changed.
 - Data health does not show new false-positive finance issues.
 - Any changed RPC-backed action succeeds on a small safe record.
-- Sentry/logs do not show missing column/function errors.
+- Vercel/Supabase logs do not show missing column/function errors.
 
 ## 8. Rollback Notes
 
