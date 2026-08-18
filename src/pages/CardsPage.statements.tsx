@@ -5,6 +5,7 @@ import { Card as SurfaceCard, CardContent, CardHeader, CardTitle } from '../comp
 import { HelpTooltip } from '../components/ui/help-tooltip'
 import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
 import type { Card, CardExpense, CardStatementArchive, CardStatementPayment } from '../types/database'
+import { installmentChoicesWith } from '../utils/cardInstallmentCalendar'
 import {
   buildStatementPaidMap,
   openStatementsWithRemaining,
@@ -15,8 +16,6 @@ import { formatDate } from '../utils/date'
 import { sumTL } from '../utils/money'
 import { cardHelp } from './CardsPage.help'
 import { statementPeriodLabel } from './CardsPage.helpers'
-
-const INSTALLMENT_OPTIONS = [1, 2, 3, 4, 6, 9, 12]
 
 export function ProvisionPanel({
   rows,
@@ -85,9 +84,7 @@ export function ProvisionPanel({
           const installmentsActionId = `installments-${expense.id}`
           const canInstall = card?.card_type === 'kredi_karti'
           const installmentCount = Math.max(1, expense.installment_count)
-          const installmentChoices = INSTALLMENT_OPTIONS.includes(installmentCount)
-            ? INSTALLMENT_OPTIONS
-            : [...INSTALLMENT_OPTIONS, installmentCount].sort((a, b) => a - b)
+          const installmentChoices = installmentChoicesWith(installmentCount)
 
           return (
             <div key={expense.id} className="rounded-xl border border-warning/15 bg-warning/8 px-3 py-2.5">

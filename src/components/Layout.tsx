@@ -4,6 +4,7 @@ import { Link, NavLink, Outlet, useLocation } from 'react-router'
 import { useDailyNetWorthSnapshot } from '../app/useDailyNetWorthSnapshot'
 import { useAuth } from '../auth/useAuth'
 import { BalancePrivacyProvider, useBalancePrivacy } from '../hooks/useBalancePrivacy'
+import { usePushSubscriptionSync } from '../hooks/usePushSubscriptionSync'
 import { cn } from '../lib/utils'
 import { BottomNav } from './BottomNav'
 import { contentWidthClass, overflowNavItems, primaryNavItems, routeSubtitle, routeTitle, secondaryNavItems } from './navigation'
@@ -34,6 +35,8 @@ function LayoutInner() {
   const { signOut, user } = useAuth()
   // Günlük net değer fotoğrafı: hangi sayfayla açılırsa açılsın alınır.
   useDailyNetWorthSnapshot()
+  // Ölmüş/silinmiş push aboneliğini sessizce onarır (ayar panelini beklemeden).
+  usePushSubscriptionSync(user?.id)
   const contentWidth = contentWidthClass(pathname)
   const [isDark, setIsDark] = useState(() => {
     const storedTheme = localStorage.getItem('theme')

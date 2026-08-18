@@ -103,6 +103,7 @@ archive — and warning tones derive from the same total.
 | Posted expense added | `add_card_expense` | `debt_amount += amount`; `current_period_spending += installments whose due date has passed` | Inserts `card_expenses`; multi-installment expenses create exact-date installment rows, posting only rows due on/before today. A repeated non-null `(user, source, source_event_id)` returns the existing expense and repeats no effect. |
 | Provision expense added | `add_card_expense` with `status='provision'` | `debt_amount += amount`; `provision_amount += amount` | Inserts a provision `card_expenses` row; no installment rows are created until posting |
 | Provision installment count marked (pre-post) | `setProvisionInstallments` (repo direct update, no RPC) | none | Bank SMS carries only the total, so SMS provisions open with `installment_count=1`. Before posting, the provisions panel lets the user set the real count; this updates only `installment_count`/`installment_amount` on the `status='provision'` row. No debt/bucket/ledger change — it is a label the later `post_card_provision` reads to split the plan. The `status='provision'` filter forbids touching posted/archived rows (that path is `update_card_expense`). |
+| Installment intent applied to a provision | `private.apply_card_installment_intent` (called by `record_sms_card_expense`; manual wrapper `apply_card_installment_intent`) | none | The pre-shopping intent (`card_installment_intents`) writes the same `installment_count`/`installment_amount` label as the row above, then marks the intent `consumed`. Money model untouched: debt, buckets and ledger are identical whatever the count is. Matching is card + amount window + normalized merchant hint + `expires_at`, most specific first; SMS rows matched to a planned `bank_auto` payment are excluded. |
 | Provision posted | `post_card_provision` | `provision_amount -= posted amount`; `current_period_spending += installments whose due date has passed` | Full post updates the same expense; partial post leaves the original provision with the remaining amount and inserts a posted expense; multi-installment posted provisions create exact-date installment rows |
 | Provision cancelled | `cancel_card_provision` | `debt_amount -= amount`; `provision_amount -= amount` | Marks the expense `cancelled`; removes related installment rows if any |
 | Unstatemented expense cancelled | `cancel_card_expense` | Single/provision rows: `debt_amount -= amount` (provision also reduces `provision_amount`). Posted multi-installment plans: `debt_amount -=` the plan's child-row total — the plan's actual debt contribution — so cancelling a carried-over plan (parent amount = full plan, debt contribution = remaining only) never over-reverses. Posted rows reduce current-period spending; future scheduled installment debt is removed without double-reducing current period. | Marks the expense `cancelled`, removes related installment rows, and logs a correction with the real reversal amount. Directly/child statement-archived expenses are rejected; historical corrections require append-only reconciliation. |
@@ -113,7 +114,7 @@ archive — and warning tones derive from the same total.
 | Planned payment paid from credit card | `pay_payment` with a credit-card source | Source credit card `debt_amount += paid amount`; `current_period_spending += paid amount` | Inserts a posted `card_expenses` row for the planned payment; advances or closes the payment row |
 | Planned payment reconciled from card import | `pay_payment_from_card_import` | Source credit card `debt_amount += paid amount`; `current_period_spending += paid amount` | Inserts a posted `card_expenses` row using the bank movement/statement date; advances or closes the matched payment row |
 | Statement import credit/refund row | `StatementImportModal` + `post_card_debt_correction` | Card `debt_amount -= amount`; negative correction reduces current-period spending first, then statement debt, then provision | DenizBank statement rows ending with `+ TL` are imported as auditable reverse entries instead of positive spending, so bank statement totals stay net of refunds/credits |
-| Posted expense edited | `update_card_expense` | Reverses the previous unstatemented posted impact, then applies the new posted impact | Recreates installment rows for the edited expense. Rejects an expense already linked to a statement and an installment parent with any statement-linked child. |
+| Posted expense edited | `update_card_expense` | Reverses the previous unstatemented posted impact, then applies the new posted impact | Recreates installment rows for the edited expense. Rejects an expense already linked to a statement and an installment parent with any statement-linked child. The card-movements panel exposes this as "Taksitlendir" for a posted single-charge row (`installment_count = 1`), which is the repair path when a provision auto-posted before the installment count was marked — the installment-expense panel only lists `installment_count > 1`, so that row had no other way back. |
 | Old installment plan carried over | `record_card_installment_carryover` | `debt_amount += remaining installment total`; `current_period_spending += remaining installments whose exact due date has passed` | Called when the current installment number is greater than one; inserts one parent and only the current/future open rows. Earlier installments are not recreated as synthetic paid history. |
 | Card debt recomputed from ledger | `recompute_card_debt_from_ledger` | `debt_amount = sum(card_ledger.amount_kurus) / 100`; if the projection lowers total debt, visible split is reduced from current period first, then statement, then provision | Suppresses the ledger trigger for this repair write so no duplicate event is emitted |
 | Card debt manual correction | `post_card_debt_correction` | `debt_amount += signed correction`; positive corrections add to current-period spending, negative reverse entries reduce current period first, then statement, then provision | Writes an auditable `card_ledger.kind='adjustment'` event with the required reason note |
@@ -160,6 +161,29 @@ client:
 - `post_card_provision`
 
 Do not duplicate their money-moving logic in a scheduler or page component.
+
+### Installment capture around the 7-day auto-post
+
+`run_scheduled_card_maintenance(p_provision_stale_days default 7)` posts a
+provision **exactly as it stands**. Since a bank SMS never carries the
+installment count, an unmarked provision becomes a single-charge plan on day 7 —
+the total debt is right either way, only the bucket/timing is wrong, but after
+the statement cut the repair falls back to append-only corrections. Three
+layers close that gap, cheapest first:
+
+1. **Before the purchase** — `card_installment_intents` (Kartlar → Ekstreler →
+   "Bekleyen taksit niyeti"): the count is captured at decision time and applied
+   the moment the SMS provision lands.
+2. **Days 2–7** — push notification `provision_installment_pending` (preference
+   column `provisions_enabled`) nags for provisions ≥ 1000 TL still marked as a
+   single charge. Thresholds live next to `PROVISION_AUTO_POST_DAYS` in
+   `supabase/functions/push-notify/index.ts` and must track
+   `p_provision_stale_days`.
+3. **After posting** — "Taksitlendir" on the recent-card-movements panel
+   (`update_card_expense`), valid until the row is statement-linked.
+
+The statement PDF import remains the authority of last resort: its `1/9` lines
+rebuild the real plan. Principle: **SMS is a guess, the PDF is the truth.**
 
 ## Payment Semantics
 

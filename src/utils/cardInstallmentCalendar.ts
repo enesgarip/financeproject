@@ -9,6 +9,20 @@ import type { Card, CardInstallment } from '../types/database'
 import { addMonths, dateInputValue, startOfMonth } from './date'
 import { sumTL } from './money'
 
+/**
+ * Taksit sayısı seçeneklerinin tek kaynağı: provizyon panelinde de, kesinleşmiş
+ * hareketi sonradan taksitlendirirken de aynı liste kullanılır.
+ */
+export const INSTALLMENT_COUNT_OPTIONS = [1, 2, 3, 4, 6, 9, 12] as const
+
+/** Seçenek listesine kayıttaki mevcut (listede olmayan) sayıyı da katar. */
+export function installmentChoicesWith(current: number): number[] {
+  const options = [...INSTALLMENT_COUNT_OPTIONS]
+  return options.includes(current as (typeof INSTALLMENT_COUNT_OPTIONS)[number])
+    ? options
+    : [...options, current].sort((a, b) => a - b)
+}
+
 export type CardInstallmentMonthRow = {
   cardId: string
   cardLabel: string

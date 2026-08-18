@@ -1,5 +1,41 @@
 # Priority Backlog
 
+## 2026-08-19 — Taksit yakalama zinciri + mobil push onarımı
+
+Taksit bilgisi banka SMS'inde YOKTUR; provizyon her zaman tek çekim doğar ve
+işaretlenmezse 7. günde öyle kesinleşir. Toplam borç her iki halde de doğrudur —
+yanlış olan kova/zamanlama, ekstre kesildikten sonra da düzeltmesi pahalıdır.
+Üç katmanlı yakalama kuruldu (detay: `docs/CARD_DEBT_TRANSITIONS.md`).
+
+- ~~**Alışveriş öncesi taksit niyeti.**~~ DONE (migration `20260819110000`).
+  `card_installment_intents`: kart + tutar aralığı + satıcı ipucu + geçerlilik
+  penceresi. SMS provizyonu düştüğü an `record_sms_card_expense` içinden
+  uygulanır, niyet `consumed` olur. Eşleşme en özelden başlar; planlı
+  `bank_auto` ödemeyle eşleşen SMS'ler dışarıdadır. Yerelde doğrulandı: 6
+  taksit niyeti uygulandı, süresi dolmuş/tutar penceresi dışı niyetler
+  eşleşmedi, tr-TR büyük-I tuzağı ("migros" ↔ "MIGROS ATASEHIR") çalıştı ve
+  kart kovaları (borç 21.000 / provizyon 21.000) taksit sayısından bağımsız
+  aynı kaldı.
+- ~~**2-7. günde push hatırlatma.**~~ DONE (migration `20260819100000`).
+  `provision_installment_pending`: 1000 TL üstü, hâlâ tek çekim görünen
+  provizyon için tek sefer (kalıcı dedupe). Yeni tercih kolonu
+  `provisions_enabled`.
+- ~~**Kesinleşme sonrası onarım.**~~ DONE. Son kart hareketleri panelinde
+  "Taksitlendir": `update_card_expense` ile planı yeniden kurar. Taksitli
+  harcama paneli yalnız `installment_count > 1` çektiği için bu satırın başka
+  dönüş yolu yoktu.
+- ~~**Mobil bildirimler gelmiyordu.**~~ DONE. Kanıt: 08-07 koşusunda 2 cihaz
+  teslimi, 08-10'da `staleDeleted: 3`, sonrasında tek cihaz. Abonelik 410 Gone
+  ile silinince onarım yalnız Bildirim Ayarları paneli açılınca çalışıyordu.
+  `syncPushSubscription` artık her açılışta koşar (yeni izin İSTEMEZ; cihaz
+  bazlı opt-out bayrağı olmadan kullanıcı bildirimleri kapatamazdı).
+  Ayrıca sessiz saat 22-08 varsayılanı 07:00'deki TEK gönderimi tamamen
+  susturuyordu — UI artık bunu uyarıyor.
+- **Açık — Istanbul/UTC gün sınırı.** `post_card_provision` vadeyi
+  `current_date` (UTC) ile kıyaslar; işlem Istanbul saatiyle 00:00-03:00
+  arasında yapılırsa ilk taksit o gün dönem içine girmez, ertesi gün girer.
+  Tutarlar etkilenmez, yalnız bir günlük kova gecikmesi olur.
+
 ## 2026-08-16 (3) — Çift taksit planı kök sebebi + ledger GUC sızıntısı
 
 Canlı Veri Sağlığı'nda 6 bulgu incelendi. **Bulgular para hatası DEĞİLDİ**:

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { applicationServerKeyMatches, urlBase64ToUint8Array } from './pushClient'
+import { applicationServerKeyMatches, shouldSyncPushSubscription, urlBase64ToUint8Array } from './pushClient'
 
 describe('urlBase64ToUint8Array', () => {
   it('decodes a url-safe base64 VAPID key to the correct bytes', () => {
@@ -29,5 +29,28 @@ describe('urlBase64ToUint8Array', () => {
 
   it('treats missing browser key metadata as compatible', () => {
     expect(applicationServerKeyMatches(null, 'aGVsbG8')).toBe(true)
+  })
+})
+
+describe('shouldSyncPushSubscription', () => {
+  const base = { supported: true, configured: true, permission: 'granted' as const, optedOut: false }
+
+  it('runs the silent repair when permission is already granted', () => {
+    expect(shouldSyncPushSubscription(base)).toBe('proceed')
+  })
+
+  it('never subscribes silently without permission', () => {
+    expect(shouldSyncPushSubscription({ ...base, permission: 'default' })).toBe('not-permitted')
+    expect(shouldSyncPushSubscription({ ...base, permission: 'denied' })).toBe('not-permitted')
+  })
+
+  it('respects an explicit opt-out on this device', () => {
+    // Aksi halde kullanıcı bildirimleri kapattığı anda onarım geri açardı.
+    expect(shouldSyncPushSubscription({ ...base, optedOut: true })).toBe('opted-out')
+  })
+
+  it('skips when push is unsupported or VAPID key is missing', () => {
+    expect(shouldSyncPushSubscription({ ...base, supported: false })).toBe('unsupported')
+    expect(shouldSyncPushSubscription({ ...base, configured: false })).toBe('unsupported')
   })
 })

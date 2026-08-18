@@ -117,6 +117,8 @@ export async function subscribeToPush(userId: string): Promise<void> {
   const permission = await Notification.requestPermission()
   if (permission !== 'granted') throw new Error('Bildirim izni verilmedi.')
 
+  clearPushOptOut()
+
   const registration = await ensureRegistration()
   await navigator.serviceWorker.ready
 
@@ -135,6 +137,9 @@ export async function subscribeToPush(userId: string): Promise<void> {
 /** Aboneliği iptal eder ve DB'den siler. */
 export async function unsubscribeFromPush(userId: string): Promise<void> {
   if (!isPushSupported()) return
+  // Kapatma niyeti bu cihaza yazılır; yoksa aşağıdaki otomatik onarım
+  // aboneliği hemen geri açar ve kullanıcı bildirimleri hiç kapatamaz.
+  markPushOptOut()
   const registration = await navigator.serviceWorker.getRegistration()
   const subscription = await registration?.pushManager.getSubscription()
   if (!subscription) return
@@ -162,6 +167,104 @@ export async function isSubscribedOnThisDevice(userId?: string): Promise<boolean
   const registered = hasResult.ok && hasResult.data
   if (!registered) await savePushSubscription(userId, subscriptionToPayload(compatibleSubscription))
   return true
+}
+
+// ── Sessiz abonelik onarımı ────────────────────────────────────────────────
+// Push aboneliği kullanıcı hiçbir şey yapmadan ölebilir: tarayıcı endpoint'i
+// döndürür, iOS PWA aboneliği düşürür ya da gönderici 410 Gone alıp server
+// satırını siler. Bu durumda uygulama "bildirimler açık" görünür ama hiçbir
+// şey gelmez. Aşağıdaki senkron her açılışta sessizce durumu tazeler.
+
+const PUSH_OPT_OUT_KEY = 'push:optOut'
+
+function markPushOptOut(): void {
+  try {
+    localStorage.setItem(PUSH_OPT_OUT_KEY, '1')
+  } catch {
+    // Depolama yoksa (özel mod) opt-out hatırlanamaz; senkron yine de izne bakar.
+  }
+}
+
+function clearPushOptOut(): void {
+  try {
+    localStorage.removeItem(PUSH_OPT_OUT_KEY)
+  } catch {
+    // yok sayılır
+  }
+}
+
+/** Kullanıcı bu cihazda bildirimleri kendi kapattı mı? */
+export function isPushOptedOut(): boolean {
+  try {
+    return localStorage.getItem(PUSH_OPT_OUT_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+
+export type PushSyncOutcome =
+  | 'unsupported'
+  | 'not-permitted'
+  | 'opted-out'
+  | 'no-registration'
+  | 'already-registered'
+  | 'server-row-restored'
+  | 'resubscribed'
+  | 'failed'
+
+/**
+ * Otomatik onarımın koşabileceği durum mu? Saf karar (test edilebilir):
+ * izin verilmemişse asla sessizce abone olma, kullanıcı kapattıysa dokunma.
+ */
+export function shouldSyncPushSubscription(input: {
+  supported: boolean
+  configured: boolean
+  permission: NotificationPermission | 'unsupported'
+  optedOut: boolean
+}): Exclude<PushSyncOutcome, 'no-registration' | 'already-registered' | 'server-row-restored' | 'resubscribed' | 'failed'> | 'proceed' {
+  if (!input.supported || !input.configured) return 'unsupported'
+  if (input.optedOut) return 'opted-out'
+  if (input.permission !== 'granted') return 'not-permitted'
+  return 'proceed'
+}
+
+/**
+ * İzin zaten verilmişken tarayıcı aboneliğini ve server satırını tazeler.
+ * Yeni izin İSTEMEZ; kullanıcı kapattıysa hiç dokunmaz. Hata fırlatmaz —
+ * açılış yolunda sessizce çalışır.
+ */
+export async function syncPushSubscription(userId: string): Promise<PushSyncOutcome> {
+  const decision = shouldSyncPushSubscription({
+    supported: isPushSupported(),
+    configured: isPushConfigured(),
+    permission: getPushPermission(),
+    optedOut: isPushOptedOut(),
+  })
+  if (decision !== 'proceed') return decision
+
+  try {
+    const registration = await navigator.serviceWorker.getRegistration()
+    if (!registration) return 'no-registration'
+
+    const existing = await getCompatibleSubscription(registration, userId)
+    if (existing) {
+      const hasResult = await hasPushSubscription(userId, existing.endpoint)
+      if (hasResult.ok && hasResult.data) return 'already-registered'
+      const saved = await savePushSubscription(userId, subscriptionToPayload(existing))
+      return saved.ok ? 'server-row-restored' : 'failed'
+    }
+
+    // Tarayıcı aboneliği tamamen düşmüş: izin hâlâ verili olduğu için
+    // kullanıcı hareketi gerekmeden yeniden abone olunabilir.
+    const revived = await registration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY as string),
+    })
+    const saved = await savePushSubscription(userId, subscriptionToPayload(revived))
+    return saved.ok ? 'resubscribed' : 'failed'
+  } catch {
+    return 'failed'
+  }
 }
 
 export async function getCurrentPushEndpoint(): Promise<string | null> {

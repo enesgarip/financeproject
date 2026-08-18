@@ -3,6 +3,7 @@ import {
   isNotificationTypeEnabled,
   isWithinQuietHours,
   notificationTypeToPrefKey,
+  quietHoursMuteDailyPush,
 } from './notificationPreferences'
 
 const allOn = {
@@ -11,6 +12,7 @@ const allOn = {
   statements_enabled: true,
   weekly_enabled: true,
   cars_enabled: true,
+  provisions_enabled: true,
 }
 
 describe('notificationTypeToPrefKey', () => {
@@ -53,5 +55,19 @@ describe('isWithinQuietHours', () => {
     expect(isWithinQuietHours(3, 22, 7)).toBe(true)
     expect(isWithinQuietHours(7, 22, 7)).toBe(false)
     expect(isWithinQuietHours(12, 22, 7)).toBe(false)
+  })
+})
+
+describe('quietHoursMuteDailyPush', () => {
+  it('UI varsayilani 22-08 gunluk 07:00 gonderimini tamamen susturur', () => {
+    // Sessiz saat anahtarinin varsayilani 22-08; cron 07:00'de kostugu icin bu
+    // secim "sessiz" degil "kapali" demek olur, kullanici da bunu bilmez.
+    expect(quietHoursMuteDailyPush(22, 8)).toBe(true)
+  })
+
+  it('07:00 disinda kalan pencere gonderime dokunmaz', () => {
+    expect(quietHoursMuteDailyPush(22, 7)).toBe(false)
+    expect(quietHoursMuteDailyPush(23, 6)).toBe(false)
+    expect(quietHoursMuteDailyPush(null, null)).toBe(false)
   })
 })

@@ -189,6 +189,27 @@ export type CardInstallment = BaseRow & {
   note: string | null
 }
 
+export type CardInstallmentIntentStatus = 'active' | 'consumed' | 'cancelled'
+
+/**
+ * Alışverişten önce bırakılan "bu işlem N taksit olacak" notu. SMS provizyonu
+ * düştüğü anda `record_sms_card_expense` içinden uygulanır (yalnız etiket yazar;
+ * borç/kova/ledger'a dokunmaz). Bkz. docs/CARD_DEBT_TRANSITIONS.md.
+ */
+export type CardInstallmentIntent = BaseRow & {
+  /** NULL = kullanıcının herhangi bir kredi kartı. */
+  card_id: string | null
+  merchant_hint: string | null
+  min_amount: number | null
+  max_amount: number | null
+  installment_count: number
+  expires_at: string
+  status: CardInstallmentIntentStatus
+  consumed_expense_id: string | null
+  consumed_at: string | null
+  note: string | null
+}
+
 export type CardCurrentSettlement = BaseRow & {
   card_id: string
   source_card_id: string | null
@@ -537,6 +558,7 @@ export type NotificationPreferences = {
   statements_enabled: boolean
   weekly_enabled: boolean
   cars_enabled: boolean
+  provisions_enabled: boolean
   quiet_hours_start: number | null
   quiet_hours_end: number | null
 }
@@ -586,6 +608,11 @@ export type Database = {
       savings_goals: Table<SavingsGoal, WithBaseInsert<SavingsGoal>, WithBaseUpdate<SavingsGoal>>
       savings_goal_components: Table<SavingsGoalComponent, WithBaseInsert<SavingsGoalComponent>, WithBaseUpdate<SavingsGoalComponent>>
       card_installments: Table<CardInstallment, WithBaseInsert<CardInstallment>, WithBaseUpdate<CardInstallment>>
+      card_installment_intents: Table<
+        CardInstallmentIntent,
+        WithBaseInsert<CardInstallmentIntent>,
+        WithBaseUpdate<CardInstallmentIntent>
+      >
       card_statement_archives: Table<CardStatementArchive, WithBaseInsert<CardStatementArchive>, WithBaseUpdate<CardStatementArchive>>
       // Append-only: update/delete guard'lıdır; Insert yalnız backup restore için.
       card_statement_payments: Table<
@@ -688,6 +715,10 @@ export type Database = {
           p_source?: CardExpenseSource
           p_source_event_id?: string | null
         }
+        Returns: CardExpense
+      }
+      apply_card_installment_intent: {
+        Args: { p_expense_id: string }
         Returns: CardExpense
       }
       record_sms_card_expense: {
