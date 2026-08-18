@@ -5,10 +5,9 @@ import { Button } from '../ui/button'
 import { Card as SurfaceCard, CardContent, CardHeader, CardTitle } from '../ui/card'
 import { Select } from '../ui/input'
 import {
+  currentPushUnavailableReason,
   getCurrentPushEndpoint,
   getPushPermission,
-  isPushConfigured,
-  isPushSupported,
   isSubscribedOnThisDevice,
   subscribeToPush,
   unsubscribeFromPush,
@@ -122,8 +121,7 @@ export function NotificationSettings() {
     void loadPrefs()
   }, [refresh, loadPrefs])
 
-  const supported = isPushSupported()
-  const configured = isPushConfigured()
+  const unavailableReason = currentPushUnavailableReason()
   const permission = getPushPermission()
   const blocked = permission === 'denied'
 
@@ -186,8 +184,36 @@ export function NotificationSettings() {
     }
   }, [user])
 
-  // VAPID anahtarı kurulmadıysa veya tarayıcı desteklemiyorsa kartı gizle.
-  if (!supported || !configured) return null
+  // Desteklenmeyen ortamda kartı GİZLEME — sebebini söyle. En sık vaka iPhone:
+  // Safari sekmesinde Web Push yoktur, yalnız ana ekrana eklenmiş PWA'da vardır.
+  if (unavailableReason) {
+    return (
+      <SurfaceCard>
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <BellOff className="h-5 w-5" /> Bildirimler
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {unavailableReason === 'ios-needs-install' ? (
+            <p className="text-sm text-muted-foreground">
+              iPhone/iPad'de bildirimler yalnız <strong>ana ekrana eklenmiş</strong> uygulamada çalışır. Safari'de
+              paylaş düğmesi → <strong>Ana Ekrana Ekle</strong> de, sonra uygulamayı ana ekrandaki simgesinden aç —
+              bu kart burada açılabilir hâle gelir.
+            </p>
+          ) : unavailableReason === 'unsupported-browser' ? (
+            <p className="text-sm text-muted-foreground">
+              Bu tarayıcı Web Push'u desteklemiyor. Chrome, Edge veya ana ekrana eklenmiş uygulama üzerinden dene.
+            </p>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Bildirim anahtarı (VAPID) bu sürümde tanımlı değil, gönderim yapılamaz.
+            </p>
+          )}
+        </CardContent>
+      </SurfaceCard>
+    )
+  }
 
   const quietOn = prefs.quiet_hours_start != null && prefs.quiet_hours_end != null
 
