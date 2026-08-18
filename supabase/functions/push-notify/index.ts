@@ -90,6 +90,17 @@ type CardExpenseRow = {
   spent_at: string
 }
 
+// Taksit onayi bekleyen provizyon: SMS her zaman tek cekim dogurur, kullanici
+// panelden taksit sayisini isaretlemezse 7. gunde oldugu gibi kesinlesir.
+type PendingProvisionRow = {
+  id: string
+  user_id: string
+  card_id: string
+  description: string
+  amount: number | string
+  spent_at: string
+}
+
 type StatementArchiveRow = {
   card_id: string
   period_year: number
@@ -134,11 +145,18 @@ type NotificationPreferenceRow = {
   statements_enabled: boolean
   weekly_enabled: boolean
   cars_enabled: boolean
+  provisions_enabled: boolean
   quiet_hours_start: number | null
   quiet_hours_end: number | null
 }
 
-type PreferenceFlagKey = 'payments_enabled' | 'loans_enabled' | 'statements_enabled' | 'weekly_enabled' | 'cars_enabled'
+type PreferenceFlagKey =
+  | 'payments_enabled'
+  | 'loans_enabled'
+  | 'statements_enabled'
+  | 'weekly_enabled'
+  | 'cars_enabled'
+  | 'provisions_enabled'
 
 // src/utils/notificationPreferences.ts ikizleri (Deno import edemez; testli mantık orada).
 function notificationTypeToPrefKey(notificationType: string): PreferenceFlagKey | null {
@@ -154,6 +172,8 @@ function notificationTypeToPrefKey(notificationType: string): PreferenceFlagKey 
       return 'weekly_enabled'
     case 'car_reminder_due_7d':
       return 'cars_enabled'
+    case 'provision_installment_pending':
+      return 'provisions_enabled'
     default:
       return null
   }
@@ -164,6 +184,14 @@ function isWithinQuietHours(hour: number, start: number | null, end: number | nu
   if (start < end) return hour >= start && hour < end
   return hour >= start || hour < end
 }
+
+// Provizyon hatirlatma esikleri. Kucuk market harcamasi taksitli olmaz; asil
+// risk buyuk ve unutulmus provizyonda. PROVISION_AUTO_POST_DAYS,
+// run_scheduled_card_maintenance'in p_provision_stale_days varsayilanidir —
+// ikisi birlikte degismelidir.
+const PROVISION_REMINDER_MIN_AMOUNT = 1000
+const PROVISION_REMINDER_AFTER_DAYS = 2
+const PROVISION_AUTO_POST_DAYS = 7
 
 type PushPayload = {
   title: string
@@ -679,7 +707,7 @@ function applyPreferences(
 async function loadPreferences(db: RestClient, userIds: string[]): Promise<Map<string, NotificationPreferenceRow>> {
   if (userIds.length === 0) return new Map()
   const rows = await db.select<NotificationPreferenceRow>('notification_preferences', {
-    select: 'user_id,payments_enabled,loans_enabled,statements_enabled,weekly_enabled,cars_enabled,quiet_hours_start,quiet_hours_end',
+    select: 'user_id,payments_enabled,loans_enabled,statements_enabled,weekly_enabled,cars_enabled,provisions_enabled,quiet_hours_start,quiet_hours_end',
     user_id: inFilter(userIds),
   })
   return new Map(rows.map((row) => [row.user_id, row]))
@@ -770,6 +798,7 @@ async function loadCandidates(
     loanInstallmentsThisWeek,
     cards,
     carRemindersDue7d,
+    pendingProvisions,
   ] = await Promise.all([
     db.select<PaymentRow>('payments', {
       select: 'id,user_id,title,amount,due_date',
@@ -806,6 +835,14 @@ async function loadCandidates(
       select: 'id,user_id,car_id,title,due_date',
       user_id: userFilter,
       due_date: `eq.${addDaysIso(todayIso, 7)}`,
+    }),
+    db.select<PendingProvisionRow>('card_expenses', {
+      select: 'id,user_id,card_id,description,amount,spent_at',
+      user_id: userFilter,
+      status: 'eq.provision',
+      installment_count: 'eq.1',
+      amount: `gte.${PROVISION_REMINDER_MIN_AMOUNT}`,
+      spent_at: `lte.${addDaysIso(todayIso, -PROVISION_REMINDER_AFTER_DAYS)}`,
     }),
   ])
 
@@ -881,6 +918,39 @@ async function loadCandidates(
         tag: `car-reminder-${reminder.id}-${reminder.due_date}`,
       },
     })
+  }
+
+  // Taksit onayi bekleyen provizyonlar: otomatik kesinlesmeden once tek sefer
+  // hatirlat. Dedupe kalici oldugu icin ayni provizyon her gun tekrar durtmez.
+  if (pendingProvisions.length > 0) {
+    const provisionCardIds = Array.from(new Set(pendingProvisions.map((row) => row.card_id)))
+    const provisionCards = await db.select<CardRow>('cards', {
+      select: 'id,user_id,bank_name,card_name,statement_day,current_period_spending',
+      id: inFilter(provisionCardIds),
+      card_type: 'eq.kredi_karti',
+    })
+    const provisionCardsById = new Map(provisionCards.map((card) => [card.id, card]))
+
+    for (const provision of pendingProvisions) {
+      const card = provisionCardsById.get(provision.card_id)
+      if (!card) continue // kredi karti disi (banka karti) provizyonu taksitlenmez
+
+      const waitedDays = daysBetweenIso(provision.spent_at.slice(0, 10), todayIso)
+      const daysLeft = Math.max(0, PROVISION_AUTO_POST_DAYS - waitedDays)
+      candidates.push({
+        userId: provision.user_id,
+        notificationType: 'provision_installment_pending',
+        referenceId: provision.id,
+        payload: {
+          title: `${formatTL(provision.amount)} ₺ provizyon: taksitli miydi?`,
+          body: daysLeft > 0
+            ? `${provision.description} · ${`${card.bank_name} ${card.card_name}`.trim()} · ${daysLeft} gün sonra tek çekim olarak kesinleşir.`
+            : `${provision.description} · ${`${card.bank_name} ${card.card_name}`.trim()} · tek çekim olarak kesinleşmek üzere.`,
+          url: '/kartlar?section=ekstreler',
+          tag: `provision-installment-${provision.id}`,
+        },
+      })
+    }
   }
 
   for (const card of cards) {

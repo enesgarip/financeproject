@@ -20,7 +20,12 @@ import {
   upsertNotificationPreferences,
   type NotificationLogEntry,
 } from '../../data/repositories/notificationPreferencesRepo'
-import { DEFAULT_NOTIFICATION_PREFERENCES, type NotificationTypeKey } from '../../utils/notificationPreferences'
+import {
+  DAILY_PUSH_HOUR,
+  DEFAULT_NOTIFICATION_PREFERENCES,
+  quietHoursMuteDailyPush,
+  type NotificationTypeKey,
+} from '../../utils/notificationPreferences'
 import { formatDate } from '../../utils/date'
 
 type PrefFlags = {
@@ -29,6 +34,7 @@ type PrefFlags = {
   statements_enabled: boolean
   weekly_enabled: boolean
   cars_enabled: boolean
+  provisions_enabled: boolean
   quiet_hours_start: number | null
   quiet_hours_end: number | null
 }
@@ -39,6 +45,7 @@ const TYPE_TOGGLES: { key: NotificationTypeKey; label: string; hint: string }[] 
   { key: 'loans_enabled', label: 'Kredi taksitleri', hint: 'Yarın vadesi gelen kredi taksitleri' },
   { key: 'statements_enabled', label: 'Ekstre kesimi', hint: 'Kesime 3 gün kala hatırlatma' },
   { key: 'weekly_enabled', label: 'Haftalık özet & mutabakat', hint: 'Pazartesi özeti ve mutabakat hatırlatması' },
+  { key: 'provisions_enabled', label: 'Taksit onayı bekleyen provizyon', hint: 'Otomatik tek çekim kesinleşmeden önce hatırlat' },
 ]
 
 const NOTIFICATION_TYPE_LABELS: Record<string, string> = {
@@ -48,6 +55,7 @@ const NOTIFICATION_TYPE_LABELS: Record<string, string> = {
   card_statement_cut_3d: 'Ekstre kesimi',
   weekly_summary: 'Haftalık özet',
   reconciliation_stale_weekly: 'Mutabakat hatırlatması',
+  provision_installment_pending: 'Provizyon taksit onayı',
   test: 'Test bildirimi',
 }
 
@@ -99,6 +107,8 @@ export function NotificationSettings() {
         statements_enabled: row.statements_enabled,
         weekly_enabled: row.weekly_enabled,
         cars_enabled: row.cars_enabled,
+        // Kolon yeni: migration'dan önceki satırlarda undefined gelebilir.
+        provisions_enabled: row.provisions_enabled ?? true,
         quiet_hours_start: row.quiet_hours_start,
         quiet_hours_end: row.quiet_hours_end,
       })
@@ -291,6 +301,13 @@ export function NotificationSettings() {
                   </Select>
                   <span className="text-xs text-muted-foreground">arası bildirim gönderilmez.</span>
                 </div>
+              ) : null}
+              {quietOn && quietHoursMuteDailyPush(prefs.quiet_hours_start, prefs.quiet_hours_end) ? (
+                <p className="mt-2 text-xs font-medium text-warning">
+                  Bildirimler her gün {String(DAILY_PUSH_HOUR).padStart(2, '0')}:00'de gönderiliyor ve bu saat seçtiğin
+                  sessiz aralığın içinde — bu haliyle hiçbir bildirim ulaşmaz. Aralığı {String(DAILY_PUSH_HOUR).padStart(2, '0')}:00'i
+                  dışarıda bırakacak şekilde daralt.
+                </p>
               ) : null}
             </div>
 

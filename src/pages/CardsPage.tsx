@@ -23,6 +23,7 @@ import { CategoryCleanupPanel } from '../components/finance/CategoryCleanupPanel
 import { FinancePaymentDrawer } from '../components/finance/FinancePaymentDrawer'
 import { LiveReconciliationPanel } from '../components/finance/LiveReconciliationPanel'
 import { CardInstallmentCalendarPanel } from '../components/finance/CardInstallmentCalendarPanel'
+import { CardInstallmentIntentPanel } from '../components/finance/CardInstallmentIntentPanel'
 import { CardInstallmentExpensesPanel } from '../components/finance/CardInstallmentExpensesPanel'
 import { RecentCardExpensesPanel } from '../components/finance/RecentCardExpensesPanel'
 import type { Card, CardStatementArchive } from '../types/database'
@@ -367,6 +368,9 @@ export function CardsPage() {
                   {provisionError ? (
                     <p className="rounded-xl border border-warning/20 bg-warning/8 p-3 text-sm font-medium text-warning">{provisionError}</p>
                   ) : null}
+                  {/* Niyet paneli provizyonun ÜSTÜNDE: alışverişten önce doldurulur,
+                      provizyon düştüğünde taksit sayısı zaten işlenmiş olur. */}
+                  <CardInstallmentIntentPanel cards={cardRows} onChanged={() => refreshCardsAndProvisions(reload)} />
                   <ProvisionPanel
                     rows={cardRows}
                     provisions={provisions}

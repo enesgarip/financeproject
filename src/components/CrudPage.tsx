@@ -374,6 +374,10 @@ export function CrudPage<T extends CrudTableName>({
           ve arama etiketi için taşınıyor. */}
       {renderBeforeList ? renderBeforeList({ loading, rows, reload: loadRows, setError }) : null}
 
+      {/* Arama + ekleme çubuğu listeyle birlikte yaşar: liste gizliyken (Hesaplar
+          sayfasının özet/işlem/ekstre sekmeleri) bu çubuk da görünmez — yoksa her
+          sekmenin dibinde o sekmeyle ilgisiz bir "ekle" düğmesi duruyordu. */}
+      {showList ? (
       <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line-strong pt-4">
         <p className="serit-eyebrow">
           {normalizedQuery ? `${visibleRows.length} / ${rows.length} kayıt` : `${rows.length} kayıt`}
@@ -395,6 +399,7 @@ export function CrudPage<T extends CrudTableName>({
           </Button>
         </div>
       </div>
+      ) : null}
 
       {!showList ? null : loading ? (
         <div className="grid gap-3 min-[760px]:grid-cols-2 xl:grid-cols-3">
