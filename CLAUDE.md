@@ -25,7 +25,9 @@ taşıdıysan/sildiysen docs'taki referansını güncelle. Bunu CI'da
 Türkçe kişisel finans PWA'sı. Tek kullanıcı (sahibi = geliştirici). Stack:
 **React 19 + Vite 7 + TypeScript + TailwindCSS v4**, veri katmanı **Supabase**
 (Postgres + Auth + Edge Functions), **TanStack Query**, **Vercel** üzerinde
-yayında. Hata izleme **Sentry** (yalnız frontend). Para birimi TL, dil Türkçe;
+yayında. Uzak hata izleme YOK (Sentry 2026-08-19'da kaldırıldı: DSN üretimde hiç
+tanımlı değildi, yani rapor gitmiyordu — bkz. `src/components/AppErrorBoundary.tsx`).
+Para birimi TL, dil Türkçe;
 kullanıcıya yanıtlar Türkçe.
 
 ## Komutlar
@@ -55,7 +57,7 @@ data    →  src/data/repositories/*   TEK Supabase teması. Result<T> döndür�
 app     →  src/app/*          TanStack Query use-case hook'ları (useFinanceSnapshot vb.).
 ui      →  src/pages, src/components   "Aptal" sunum. Supabase görmez.
 services→  src/services/*      RPC sarmalayıcıları (kasıtlı; doğrudan supabase çağırır).
-lib     →  src/lib/*           supabase client, sentry, harici istemciler.
+lib     →  src/lib/*           supabase client, push client, harici istemciler.
 ```
 
 **KURAL (ESLint `no-restricted-imports`, `eslint.config.js`):** `src/{pages,components,utils,hooks}`
@@ -165,8 +167,10 @@ Günlük şifreli DB yedeği cron'u var (`db-backup.yml`).
 - **Yeni tablo migration'ı `grant` içermeli.** Üretimde arayüzden açılan tablolar
   yetkili gelir ama migration'lardan kurulan ortam (yerel docker, kurtarma)
   gelmez → `npm run db:audit:grants:local` CI'da bunu kırar.
-- **`@sentry/deno` edge'e KONMADI** (bundle'ı 3kB→1MB şişiriyor); edge için Supabase
-  fonksiyon logları yeterli. Sentry yalnız frontend.
+- **Uzak hata izleme yok.** Sentry 2026-08-19'da kaldırıldı; `VITE_SENTRY_DSN`
+  üretimde boştu, yani hiçbir zaman rapor göndermiyordu. Çökme yakalama
+  `AppErrorBoundary` ile yerelde sürüyor, teşhis için Supabase fonksiyon logları
+  ve Vercel logları kullanılır. Geri getirilecekse hem DSN hem CSP satırı gerekir.
 - **timestamptz'i `formatDate`'e verme** (date-only bekler) → `.slice(0,10)`.
 - **Export silerken `src/` taraması YETMEZ.** `tests/e2e/*.spec.ts` doğrudan
   `../../src/utils/*`'tan import eder ama `tsc -b`'nin tsconfig'ine dahil değildir:

@@ -32,7 +32,8 @@ The main product goal is to make monthly financial load visible before due dates
 - Backend/BaaS: Supabase (Postgres + Auth + Edge Functions)
 - Auth: Supabase Auth (email/password)
 - Database: Postgres via Supabase, with RLS (her public tablo RLS açık, CI denetler)
-- Error tracking: **Sentry** (yalnız frontend; edge'de yok)
+- Error tracking: uzak servis YOK (Sentry 2026-08-19'da kaldırıldı; DSN üretimde boştu).
+  Çökme yakalama `src/components/AppErrorBoundary.tsx`, teşhis Vercel + Supabase logları.
 - Deployment target: Vercel (protected `main` merge = production deploy)
 - PWA assets: `public/manifest.webmanifest`, `public/sw.js`
 
@@ -62,7 +63,7 @@ data     → src/data/repositories/*   TEK Supabase teması. Result<T> döndür�
 app      → src/app/*                 TanStack Query use-case hook'ları (useFinanceSnapshot).
 ui       → src/pages, src/components  "Aptal" sunum. Supabase görmez.
 services → src/services/*            RPC sarmalayıcıları (kasıtlı; doğrudan supabase).
-lib      → src/lib/*                 supabase client, sentry, harici istemciler.
+lib      → src/lib/*                 supabase client, push client, harici istemciler.
 ```
 
 - Supabase client: `src/lib/supabase.ts` (UI'dan import etmek ESLint HATA'sı)

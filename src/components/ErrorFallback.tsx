@@ -1,4 +1,4 @@
-/** Shown by the top-level Sentry ErrorBoundary when the app crashes. */
+/** Shown by the top-level AppErrorBoundary when the app crashes. */
 export function ErrorFallback() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-4 p-6 text-center">
