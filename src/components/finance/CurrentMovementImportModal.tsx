@@ -529,7 +529,7 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
   })
 
   return createPortal(
-    <div className="fixed inset-0 z-[80] flex items-start justify-center overflow-y-auto bg-[var(--overlay)] px-3 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-[calc(env(safe-area-inset-top)+1rem)] backdrop-blur-sm sm:items-center sm:p-6">
+    <div className="fixed inset-0 z-[80] flex items-end justify-center overflow-y-auto bg-[var(--overlay)] backdrop-blur-sm sm:items-center sm:p-6">
       {/* Diyalog sözleşmesi elle kuruluyor — kardeş StatementImportModal ile aynı
           gerekçe ve aynı `useDialogA11y` hook'u (denetim 2026-08-12 §6). */}
       <div
@@ -538,14 +538,16 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
         role="dialog"
         aria-modal="true"
         aria-labelledby="movement-import-title"
-        className="max-h-[88svh] w-full max-w-2xl overflow-x-hidden overflow-y-auto rounded-2xl bg-card focus:outline-none sm:max-h-[92svh]"
+        className="max-h-[88svh] w-full max-w-2xl overflow-x-hidden overflow-y-auto rounded-t-2xl bg-raised pb-[env(safe-area-inset-bottom)] focus:outline-none sm:max-h-[92svh] sm:rounded-2xl sm:pb-0"
       >
+        {/* Mobilde bottom-sheet: tutamak biçimin kendisini anlatır. */}
+        <span aria-hidden="true" className="mx-auto mt-3 block h-1 w-9 shrink-0 rounded-full bg-line-strong sm:hidden" />
         {/* Header */}
-        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-card/95 px-4 py-3 backdrop-blur">
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-line-strong bg-raised px-4 py-3 backdrop-blur">
           <div className="flex min-w-0 items-center gap-2">
             <Scale size={16} className="shrink-0 text-primary" aria-hidden="true" />
-            <span id="movement-import-title" className="truncate text-sm font-black text-foreground">Hareket mutabakatı</span>
-            <span className="hidden rounded-md bg-muted px-2 py-0.5 text-xs font-bold text-muted-foreground sm:inline">
+            <span id="movement-import-title" className="truncate text-sm font-black text-ink">Hareket mutabakatı</span>
+            <span className="hidden rounded-md bg-page px-2 py-0.5 text-xs font-bold text-ink-muted sm:inline">
               {card.card_name}
             </span>
           </div>
@@ -553,7 +555,7 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
             type="button"
             onClick={onClose}
             aria-label="Kapat"
-            className="tap-target grid size-7 place-items-center rounded-lg hover:bg-muted"
+            className="tap-target grid size-7 place-items-center rounded-lg hover:bg-black/[.03] dark:hover:bg-white/[.04]"
           >
             <X size={15} aria-hidden="true" />
           </button>
@@ -563,16 +565,16 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
         {step === 'upload' && (
           <div className="space-y-4 p-4">
             {isMobileDevice() ? (
-              <div className="flex flex-col items-center gap-3 rounded-xl border border-border bg-muted/30 p-6 text-center">
-                <Monitor size={32} className="text-muted-foreground" />
-                <p className="text-sm font-bold text-foreground">Bu özellik masaüstü tarayıcıda kullanılabilir</p>
-                <p className="text-xs text-muted-foreground">
+              <div className="flex flex-col items-center gap-3 rounded-xl border border-line-strong bg-page p-6 text-center">
+                <Monitor size={32} className="text-ink-muted" />
+                <p className="text-sm font-bold text-ink">Bu özellik masaüstü tarayıcıda kullanılabilir</p>
+                <p className="text-xs text-ink-muted">
                   PDF işleme altyapısı mobil tarayıcılarda desteklenmiyor. Lütfen bilgisayarından dene.
                 </p>
               </div>
             ) : (
               <>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-ink-muted">
                   DenizBank internet bankacılığından alınan kredi kartı hareket PDF&apos;ini seç.
                   {' '}Banka hareketleri ile app kayıtları karşılaştırılacak.
                 </p>
@@ -585,17 +587,17 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
                   type="button"
                   disabled={parsing}
                   onClick={() => fileRef.current?.click()}
-                  className="flex w-full flex-col items-center gap-3 rounded-xl border-2 border-dashed border-border bg-muted/30 p-6 transition hover:bg-muted/50 disabled:opacity-60"
+                  className="flex w-full flex-col items-center gap-3 rounded-xl border-2 border-dashed border-line-strong bg-page p-6 transition hover:bg-black/[.03] dark:hover:bg-white/[.04] disabled:opacity-60"
                 >
                   {parsing ? (
                     <Loader2 size={24} className="animate-spin text-primary" />
                   ) : (
-                    <FileUp size={24} className="text-muted-foreground" />
+                    <FileUp size={24} className="text-ink-muted" />
                   )}
-                  <span className="text-sm font-bold text-foreground">
+                  <span className="text-sm font-bold text-ink">
                     {parsing ? 'PDF okunuyor...' : 'PDF seç'}
                   </span>
-                  <span className="text-xs text-muted-foreground">DenizBank İnternet Bankacılığı.pdf</span>
+                  <span className="text-xs text-ink-muted">DenizBank İnternet Bankacılığı.pdf</span>
                 </button>
 
                 <input
@@ -623,28 +625,28 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
         {step === 'review' && (
           <div className="flex max-h-[76vh] flex-col">
             {/* Summary */}
-            <div className="space-y-3 border-b border-border p-4">
+            <div className="space-y-3 border-b border-line-strong p-4">
               <div className="grid grid-cols-2 gap-2 text-xs min-[560px]:grid-cols-4">
                 <div className="rounded-lg bg-success/10 p-2.5">
                   <p className="font-bold text-success">Eşleşen</p>
-                  <p className="mt-0.5 font-black text-foreground">{matched.length}</p>
+                  <p className="mt-0.5 font-black text-ink">{matched.length}</p>
                 </div>
                 <div className="rounded-lg bg-info/10 p-2.5">
                   <p className="font-bold text-info">Sadece bankada</p>
-                  <p className="mt-0.5 font-black text-foreground">{bankOnly.length}</p>
+                  <p className="mt-0.5 font-black text-ink">{bankOnly.length}</p>
                 </div>
                 <div className="rounded-lg bg-warning/10 p-2.5">
                   <p className="font-bold text-warning">Sadece app'te</p>
-                  <p className="mt-0.5 font-black text-foreground">{appOnly.length}</p>
+                  <p className="mt-0.5 font-black text-ink">{appOnly.length}</p>
                 </div>
-                <div className="rounded-lg bg-muted/40 p-2.5">
-                  <p className="font-bold text-muted-foreground">Manuel</p>
-                  <p className="mt-0.5 font-black text-foreground">{manualReview.length}</p>
+                <div className="rounded-lg bg-page p-2.5">
+                  <p className="font-bold text-ink-muted">Manuel</p>
+                  <p className="mt-0.5 font-black text-ink">{manualReview.length}</p>
                 </div>
               </div>
 
               {periodLabel && (
-                <p className="text-[11px] font-bold text-muted-foreground">Dönem: {periodLabel}</p>
+                <p className="text-[11px] font-bold text-ink-muted">Dönem: {periodLabel}</p>
               )}
 
               {payments.length > 0 && (
@@ -681,7 +683,7 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
                       {ignoredRows.map((line, index) => (
                         <li
                           key={`${index}-${line.slice(0, 24)}`}
-                          className="break-all rounded bg-background/70 px-2 py-1 font-mono text-[10px] text-muted-foreground"
+                          className="break-all rounded bg-page px-2 py-1 font-mono text-[10px] text-ink-muted"
                         >
                           {line}
                         </li>
@@ -696,29 +698,29 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
             <div className="flex-1 overflow-y-auto">
               {/* ── Matched section (collapsible) ── */}
               {matches.length > 0 && (
-                <div className="border-b border-border">
+                <div className="border-b border-line-strong">
                   <button
                     type="button"
                     onClick={() => setShowMatched((v) => !v)}
-                    className="flex w-full items-center justify-between gap-3 px-4 py-2 text-left hover:bg-muted/30"
+                    className="flex w-full items-center justify-between gap-3 px-4 py-2 text-left hover:bg-black/[.03] dark:hover:bg-white/[.04]"
                     aria-expanded={showMatched}
                   >
                     <span className="min-w-0">
                       <span className="block text-xs font-bold text-success">Eşleşen kayıtlar ({matches.length})</span>
-                      <span className="mt-0.5 block text-[11px] text-muted-foreground">
+                      <span className="mt-0.5 block text-[11px] text-ink-muted">
                         {provisionPromotions.length > 0
                           ? `Banka hareketi ile app kaydı uyuşuyor. ${provisionPromotions.length} provizyon kesinleşmiş olarak işaretlenecek.`
                           : 'Banka hareketi ile app kaydı uyuşuyor — aksiyon gerekmez.'}
                       </span>
                     </span>
-                    <ChevronDown size={16} className={`shrink-0 text-muted-foreground transition-transform ${showMatched ? 'rotate-180' : ''}`} />
+                    <ChevronDown size={16} className={`shrink-0 text-ink-muted transition-transform ${showMatched ? 'rotate-180' : ''}`} />
                   </button>
                   {showMatched && (
                     <div className="max-h-60 overflow-y-auto">
                       {matches.map(({ movement, expense }, index) => (
                         <div
                           key={`match-${movement.date}-${movement.amount}-${index}`}
-                          className="border-b border-border/50 px-4 py-2.5"
+                          className="border-b border-line-strong px-4 py-2.5"
                         >
                           <div className="flex items-start gap-3">
                             <CheckCircle2 size={14} className="mt-0.5 shrink-0 text-success" />
@@ -726,15 +728,15 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
                               <div className="grid gap-1 min-[500px]:grid-cols-2">
                                 <div className="min-w-0">
                                   <p className="text-[10px] font-bold uppercase text-info">Banka</p>
-                                  <p className="truncate text-xs font-bold text-foreground">{movement.description}</p>
-                                  <p className="text-[11px] text-muted-foreground">
+                                  <p className="truncate text-xs font-bold text-ink">{movement.description}</p>
+                                  <p className="text-[11px] text-ink-muted">
                                     {formatShortDate(movement.date)} · {formatAmount(movement.amount)}
                                   </p>
                                 </div>
                                 <div className="min-w-0">
                                   <p className="text-[10px] font-bold uppercase text-primary">App</p>
-                                  <p className="truncate text-xs font-bold text-foreground">{expense.description || 'Açıklama yok'}</p>
-                                  <p className="text-[11px] text-muted-foreground">
+                                  <p className="truncate text-xs font-bold text-ink">{expense.description || 'Açıklama yok'}</p>
+                                  <p className="text-[11px] text-ink-muted">
                                     {formatShortDate(expense.spent_at)} · {formatAmount(expense.amount)} · {appExpenseStatusLabel(expense.status)}
                                   </p>
                                 </div>
@@ -750,11 +752,11 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
 
               {/* ── Bank only section (importable) ── */}
               {bankOnly.length > 0 && (
-                <div className="border-b border-border">
+                <div className="border-b border-line-strong">
                   <div className="flex items-center justify-between px-4 py-2">
                     <div className="min-w-0">
                       <span className="block text-xs font-bold text-info">Sadece bankada ({bankOnly.length})</span>
-                      <span className="mt-0.5 block text-[11px] text-muted-foreground">
+                      <span className="mt-0.5 block text-[11px] text-ink-muted">
                         PDF'te var ama app'te yok — seçtiklerini içe aktar. Toplam {formatAmount(bankOnlyTotal)}
                       </span>
                     </div>
@@ -771,12 +773,12 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
                         key={item.selectionKey}
                         onClick={() => toggleImportRow(item.selectionKey)}
                         aria-pressed={isSelected}
-                        className="flex w-full cursor-pointer items-center gap-3 border-b border-border/50 px-4 py-2.5 text-left hover:bg-muted/30"
+                        className="flex w-full cursor-pointer items-center gap-3 border-b border-line-strong px-4 py-2.5 text-left hover:bg-black/[.03] dark:hover:bg-white/[.04]"
                       >
                         <span
                           aria-hidden="true"
                           className={`grid size-4 shrink-0 place-items-center rounded border ${
-                            isSelected ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-background'
+                            isSelected ? 'border-primary bg-primary text-primary-foreground' : 'border-line-strong bg-page'
                           }`}
                         >
                           {isSelected ? <Check size={12} strokeWidth={3} /> : null}
@@ -786,7 +788,7 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
                             <div className="min-w-0">
                               <p className="text-[10px] font-bold uppercase text-info">Banka</p>
                               <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-                                <p className="min-w-0 truncate text-xs font-bold text-foreground">{movement.description}</p>
+                                <p className="min-w-0 truncate text-xs font-bold text-ink">{movement.description}</p>
                                 <span className={`rounded-md px-1.5 py-0.5 text-[10px] font-black ${statusClassName(movement)}`}>
                                   {statusLabel(movement)}
                                 </span>
@@ -794,17 +796,17 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
                                   <span className="rounded-md bg-info/10 px-1.5 py-0.5 text-[10px] font-black text-info">Planlı</span>
                                 )}
                               </div>
-                              <p className="text-[11px] text-muted-foreground">
+                              <p className="text-[11px] text-ink-muted">
                                 {formatShortDate(movement.date)} · {movement.category}
                               </p>
                             </div>
                             <div className="min-w-0">
                               <p className="text-[10px] font-bold uppercase text-primary">App</p>
-                              <p className="text-xs italic text-muted-foreground">Kayıt yok</p>
+                              <p className="text-xs italic text-ink-muted">Kayıt yok</p>
                             </div>
                           </div>
                         </div>
-                        <span className="shrink-0 text-right text-xs font-black text-foreground">
+                        <span className="shrink-0 text-right text-xs font-black text-ink">
                           {formatAmount(movement.amount)}
                         </span>
                       </button>
@@ -815,11 +817,11 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
 
               {/* ── App only section (cancellable) ── */}
               {appOnly.length > 0 && (
-                <div className="border-b border-border">
+                <div className="border-b border-line-strong">
                   <div className="flex items-center justify-between px-4 py-2">
                     <div className="min-w-0">
                       <span className="block text-xs font-bold text-warning">Sadece app'te ({appOnly.length})</span>
-                      <span className="mt-0.5 block text-[11px] text-muted-foreground">
+                      <span className="mt-0.5 block text-[11px] text-ink-muted">
                         App'te var ama bankada yok — çift sayılmış olabilir. Toplam {formatAmount(appOnlyTotal)}
                       </span>
                     </div>
@@ -836,12 +838,12 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
                         key={item.selectionKey}
                         onClick={() => toggleCancelRow(item.selectionKey)}
                         aria-pressed={isSelected}
-                        className="flex w-full cursor-pointer items-center gap-3 border-b border-border/50 px-4 py-2.5 text-left hover:bg-muted/30"
+                        className="flex w-full cursor-pointer items-center gap-3 border-b border-line-strong px-4 py-2.5 text-left hover:bg-black/[.03] dark:hover:bg-white/[.04]"
                       >
                         <span
                           aria-hidden="true"
                           className={`grid size-4 shrink-0 place-items-center rounded border ${
-                            isSelected ? 'border-warning bg-warning text-white' : 'border-border bg-background'
+                            isSelected ? 'border-warning bg-warning text-white' : 'border-line-strong bg-page'
                           }`}
                         >
                           {isSelected ? <XCircle size={12} strokeWidth={3} /> : null}
@@ -850,18 +852,18 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
                           <div className="grid gap-1 min-[500px]:grid-cols-2">
                             <div className="min-w-0">
                               <p className="text-[10px] font-bold uppercase text-info">Banka</p>
-                              <p className="text-xs italic text-muted-foreground">Kayıt yok</p>
+                              <p className="text-xs italic text-ink-muted">Kayıt yok</p>
                             </div>
                             <div className="min-w-0">
                               <p className="text-[10px] font-bold uppercase text-primary">App</p>
-                              <p className="min-w-0 truncate text-xs font-bold text-foreground">{expense.description || 'Açıklama yok'}</p>
-                              <p className="text-[11px] text-muted-foreground">
+                              <p className="min-w-0 truncate text-xs font-bold text-ink">{expense.description || 'Açıklama yok'}</p>
+                              <p className="text-[11px] text-ink-muted">
                                 {formatShortDate(expense.spent_at)} · {expense.category || ''} · {appExpenseStatusLabel(expense.status)}
                               </p>
                             </div>
                           </div>
                         </div>
-                        <span className="shrink-0 text-right text-xs font-black text-foreground">
+                        <span className="shrink-0 text-right text-xs font-black text-ink">
                           {formatAmount(expense.amount)}
                         </span>
                       </button>
@@ -872,10 +874,10 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
 
               {/* ── Manual review (installments) ── */}
               {manualReview.length > 0 && (
-                <div className="border-b border-border">
+                <div className="border-b border-line-strong">
                   <div className="px-4 py-2">
-                    <span className="text-xs font-bold text-muted-foreground">Taksit planını doğrula ({manualReview.length})</span>
-                    <p className="mt-0.5 text-[11px] text-muted-foreground">
+                    <span className="text-xs font-bold text-ink-muted">Taksit planını doğrula ({manualReview.length})</span>
+                    <p className="mt-0.5 text-[11px] text-ink-muted">
                       Banka toplam taksit sayısını vermiyor. Toplamı gir; tarih ve önceki/gelecek durumları otomatik kurulacak.
                     </p>
                   </div>
@@ -898,7 +900,7 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
                       return (
                         <div
                           key={`manual-${movement.date}-${movement.description}-${manualIndex}`}
-                          className="border-b border-border/50 px-4 py-2.5"
+                          className="border-b border-line-strong px-4 py-2.5"
                         >
                           <div className="flex items-center gap-3">
                             <button
@@ -907,25 +909,25 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
                               onClick={() => toggleInstallmentRow(movementIndex)}
                               aria-pressed={selected}
                               className={`grid size-5 shrink-0 place-items-center rounded border ${
-                                selected ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-background'
+                                selected ? 'border-primary bg-primary text-primary-foreground' : 'border-line-strong bg-page'
                               } disabled:cursor-not-allowed disabled:opacity-40`}
                               aria-label={`${movement.description} taksit planını içe aktar`}
                             >
                               {selected ? <Check size={12} strokeWidth={3} /> : null}
                             </button>
                             <div className="min-w-0 flex-1">
-                              <p className="truncate text-xs font-bold text-foreground">{movement.description}</p>
-                              <p className="text-[11px] text-muted-foreground">
+                              <p className="truncate text-xs font-bold text-ink">{movement.description}</p>
+                              <p className="text-[11px] text-ink-muted">
                                 {/* Kart no yalnız çok kartlı PDF'te gelir (bkz. CARD_COLUMNS_PATTERN);
                                     yoksa sarkan "**** " basma. */}
                                 İşlem {formatShortDate(movement.date)} · {movement.installmentNo}. taksit
                                 {movement.cardLastFour ? ` · **** ${movement.cardLastFour}` : ''}
                               </p>
                             </div>
-                            <span className="shrink-0 text-xs font-black text-foreground">{formatAmount(movement.amount)}</span>
+                            <span className="shrink-0 text-xs font-black text-ink">{formatAmount(movement.amount)}</span>
                           </div>
                           <div className="mt-2 flex flex-wrap items-center gap-2 pl-8 text-[11px]">
-                            <label className="flex items-center gap-1 font-bold text-foreground">
+                            <label className="flex items-center gap-1 font-bold text-ink">
                               Toplam
                               <input
                                 type="number"
@@ -949,11 +951,11 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
                                     return next
                                   })
                                 }}
-                                className="w-14 rounded border border-border bg-background px-1.5 py-1 text-center font-bold text-foreground"
+                                className="w-14 rounded border border-line-strong bg-page px-1.5 py-1 text-center font-bold text-ink"
                               />
                             </label>
                             {plan ? (
-                              <span className="text-muted-foreground">
+                              <span className="text-ink-muted">
                                 Bu taksit {formatShortDate(plan.currentInstallmentDate)} · önceki {plan.paidInstallments} ödendi · kalan {plan.remainingInstallments}
                               </span>
                             ) : (
@@ -983,8 +985,8 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
               {bankOnly.length === 0 && appOnly.length === 0 && manualReview.length === 0 && (
                 <div className="p-6 text-center">
                   <CheckCircle2 size={32} className="mx-auto text-success" />
-                  <p className="mt-2 text-sm font-bold text-foreground">Tüm hareketler eşleşiyor</p>
-                  <p className="mt-1 text-xs text-muted-foreground">Mutabakat tamam.</p>
+                  <p className="mt-2 text-sm font-bold text-ink">Tüm hareketler eşleşiyor</p>
+                  <p className="mt-1 text-xs text-ink-muted">Mutabakat tamam.</p>
                 </div>
               )}
             </div>
@@ -997,7 +999,7 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
               </p>
             )}
 
-            <div className="border-t border-border p-4">
+            <div className="border-t border-line-strong p-4">
               {totalSelectedActions > 0 ? (
                 <button
                   type="button"
@@ -1031,8 +1033,8 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
         {step === 'done' && (
           <div className="space-y-3 p-6 text-center">
             <CheckCircle2 size={40} className="mx-auto text-success" />
-            <p className="text-base font-black text-foreground">{resultMessage}</p>
-            <p className="text-sm text-muted-foreground">Kart bakiyesi güncellendi.</p>
+            <p className="text-base font-black text-ink">{resultMessage}</p>
+            <p className="text-sm text-ink-muted">Kart bakiyesi güncellendi.</p>
             {driftCorrected && (
               <p className="text-sm text-info">
                 Eşleşen işlemlerdeki {formatAmount(Math.abs(matchDriftTL))} tutar farkı otomatik düzeltildi.
@@ -1041,7 +1043,7 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
 
             {/* Akış-içi mutabakat: doğrulama için ayrı ekrana gitmeye gerek yok. */}
             {appDebtAfterImport !== null && (
-              <div className="mt-1 rounded-xl border border-border bg-muted/40 p-3 text-left">
+              <div className="mt-1 rounded-xl border border-line-strong bg-page p-3 text-left">
                 {reconcileDone ? (
                   <p className="flex items-start gap-2 text-sm font-bold text-success">
                     <CheckCircle2 size={15} className="mt-0.5 shrink-0" />
@@ -1051,12 +1053,12 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
                   </p>
                 ) : (
                   <>
-                    <p className="text-xs font-bold uppercase text-muted-foreground">Son kontrol</p>
-                    <p className="mt-1 text-sm text-foreground">
+                    <p className="text-xs font-bold uppercase text-ink-muted">Son kontrol</p>
+                    <p className="mt-1 text-sm text-ink">
                       App'teki güncel borç:{' '}
                       <span className="font-black tabular-nums">{formatAmount(appDebtAfterImport)}</span>
                     </p>
-                    <p className="mt-0.5 text-xs text-muted-foreground">
+                    <p className="mt-0.5 text-xs text-ink-muted">
                       Bankadaki gerçek borcu yaz; import doğru okumuş mu şimdi anlaşılır.
                     </p>
                     <input
@@ -1066,7 +1068,7 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
                       onChange={(event) => setRealDebtInput(event.target.value)}
                       placeholder="Bankadaki gerçek borç"
                       aria-label="Bankadaki gerçek borç"
-                      className="mt-2 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm tabular-nums"
+                      className="mt-2 w-full rounded-lg border border-line-strong bg-page px-3 py-2 text-sm tabular-nums"
                     />
                     {reconcileError && <p className="mt-1.5 text-xs font-medium text-destructive">{reconcileError}</p>}
                     <div className="mt-2 grid grid-cols-2 gap-2">
@@ -1074,7 +1076,7 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
                         type="button"
                         onClick={() => void handleReconcile('save')}
                         disabled={reconcileSaving || !realDebtInput.trim()}
-                        className="min-h-10 rounded-lg border border-border bg-card px-3 py-2 text-xs font-bold text-foreground disabled:opacity-50"
+                        className="min-h-10 rounded-lg border border-line-strong bg-raised px-3 py-2 text-xs font-bold text-ink disabled:opacity-50"
                       >
                         {reconcileSaving ? 'Kaydediliyor...' : 'Farkı kaydet'}
                       </button>

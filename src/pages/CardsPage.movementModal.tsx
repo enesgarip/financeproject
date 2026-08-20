@@ -39,16 +39,16 @@ export function MovementModal({
   return (
     <SimpleModal title={isTransfer ? 'Hesaplar arası transfer' : 'Para hareketi'} open={Boolean(card)} onClose={onClose}>
       <form onSubmit={onSubmit} className="space-y-4">
-        <div className="rounded-xl border border-border/60 bg-muted/30 p-3 text-sm text-muted-foreground">
-          <p className="font-semibold text-foreground">{card?.card_name}</p>
+        <div className="rounded-xl border border-line-strong bg-page p-3 text-sm text-ink-muted">
+          <p className="font-semibold text-ink">{card?.card_name}</p>
           <p>Mevcut bakiye: {formatAmount(card?.current_balance ?? 0)}</p>
         </div>
-        <label className="block text-sm font-semibold text-foreground">
+        <label className="block text-sm font-semibold text-ink">
           İşlem tipi
           <select
             value={type}
             onChange={(event) => onTypeChange(event.target.value as 'in' | 'out' | 'transfer')}
-            className="mt-1 w-full rounded-lg border border-input bg-white px-3 py-3 outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 dark:bg-card/50 dark:text-foreground"
+            className="mt-1 w-full rounded-lg border border-line-strong bg-white px-3 py-3 outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 dark:bg-raised dark:text-ink"
           >
             <option value="in">Para geldi</option>
             <option value="out">Para gitti</option>
@@ -57,7 +57,7 @@ export function MovementModal({
             </option>
           </select>
         </label>
-        <label className="block text-sm font-semibold text-foreground">
+        <label className="block text-sm font-semibold text-ink">
           Tutar
           <input
             required
@@ -66,18 +66,18 @@ export function MovementModal({
             type="number"
             value={amount}
             onChange={(event) => onAmountChange(event.target.value)}
-            className="mt-1 w-full rounded-lg border border-input px-3 py-3 outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 dark:bg-card/50 dark:text-foreground"
+            className="mt-1 w-full rounded-lg border border-line-strong px-3 py-3 outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 dark:bg-raised dark:text-ink"
           />
         </label>
         {isTransfer ? (
           <>
-            <label className="block text-sm font-semibold text-foreground">
+            <label className="block text-sm font-semibold text-ink">
               Hedef hesap
               <select
                 required
                 value={targetCardId}
                 onChange={(event) => onTargetCardChange(event.target.value)}
-                className="mt-1 w-full rounded-lg border border-input bg-white px-3 py-3 outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 dark:bg-card/50 dark:text-foreground"
+                className="mt-1 w-full rounded-lg border border-line-strong bg-white px-3 py-3 outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 dark:bg-raised dark:text-ink"
               >
                 <option value="">{targetAccounts.length > 0 ? 'Hedef hesap seç' : 'Transfer için ikinci hesap gerekli'}</option>
                 {targetAccounts.map((account) => (
@@ -88,7 +88,7 @@ export function MovementModal({
               </select>
             </label>
             {target ? (
-              <div className="grid grid-cols-2 gap-2 rounded-xl bg-muted/45 px-3 py-2 text-xs text-muted-foreground">
+              <div className="grid grid-cols-2 gap-2 rounded-xl bg-page px-3 py-2 text-xs text-ink-muted">
                 <span>
                   Kaynak sonrası: {formatAmount(diffTL(card?.current_balance, amountValue))}
                 </span>

@@ -415,7 +415,7 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
   })
 
   return createPortal(
-    <div className="fixed inset-0 z-[80] flex items-start justify-center overflow-y-auto bg-[var(--overlay)] px-3 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-[calc(env(safe-area-inset-top)+1rem)] backdrop-blur-sm sm:items-center sm:p-6">
+    <div className="fixed inset-0 z-[80] flex items-end justify-center overflow-y-auto bg-[var(--overlay)] backdrop-blur-sm sm:items-center sm:p-6">
       {/* Bu modal SimpleModal'a sarılamıyor (kendi sticky başlığı + tam genişlik
           adım gövdeleri var), o yüzden diyalog sözleşmesi elle kuruluyor: aynı
           `useDialogA11y` hook'u, `role="dialog"` + `aria-modal` + `aria-labelledby`.
@@ -426,14 +426,16 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
         role="dialog"
         aria-modal="true"
         aria-labelledby="statement-import-title"
-        className="max-h-[88svh] w-full max-w-lg overflow-x-hidden overflow-y-auto rounded-2xl bg-card focus:outline-none sm:max-h-[92svh]"
+        className="max-h-[88svh] w-full max-w-lg overflow-x-hidden overflow-y-auto rounded-t-2xl bg-raised pb-[env(safe-area-inset-bottom)] focus:outline-none sm:max-h-[92svh] sm:rounded-2xl sm:pb-0"
       >
+        {/* Mobilde bottom-sheet: tutamak biçimin kendisini anlatır. */}
+        <span aria-hidden="true" className="mx-auto mt-3 block h-1 w-9 shrink-0 rounded-full bg-line-strong sm:hidden" />
         {/* Header */}
-        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-card/95 px-4 py-3 backdrop-blur">
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-line-strong bg-raised px-4 py-3 backdrop-blur">
           <div className="flex items-center gap-2">
             <FileText size={16} className="text-primary" aria-hidden="true" />
-            <span id="statement-import-title" className="text-sm font-black text-foreground">Ekstre İçe Aktar</span>
-            <span className="rounded-md bg-muted px-2 py-0.5 text-xs font-bold text-muted-foreground">
+            <span id="statement-import-title" className="text-sm font-black text-ink">Ekstre İçe Aktar</span>
+            <span className="rounded-md bg-page px-2 py-0.5 text-xs font-bold text-ink-muted">
               **** {card.card_name}
             </span>
           </div>
@@ -441,7 +443,7 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
             type="button"
             onClick={onClose}
             aria-label="Kapat"
-            className="tap-target grid size-7 place-items-center rounded-lg hover:bg-muted"
+            className="tap-target grid size-7 place-items-center rounded-lg hover:bg-black/[.03] dark:hover:bg-white/[.04]"
           >
             <X size={15} aria-hidden="true" />
           </button>
@@ -450,7 +452,7 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
         {/* Upload step */}
         {step === 'upload' && (
           <div className="p-4 space-y-4">
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-ink-muted">
               Kredi kartı ekstre PDF'ini yükle. DenizBank ve YapıKredi ekstreleri tamamen
               cihazında okunur; diğer bankalarda metin yalnız çözümleme için sunucuya gönderilir, saklanmaz.
             </p>
@@ -459,17 +461,17 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
               type="button"
               disabled={parsing}
               onClick={() => fileRef.current?.click()}
-              className="flex w-full flex-col items-center gap-3 rounded-xl border-2 border-dashed border-border bg-muted/30 p-6 transition hover:bg-muted/50 disabled:opacity-60"
+              className="flex w-full flex-col items-center gap-3 rounded-xl border-2 border-dashed border-line-strong bg-page p-6 transition hover:bg-black/[.03] dark:hover:bg-white/[.04] disabled:opacity-60"
             >
               {parsing ? (
                 <Loader2 size={24} className="animate-spin text-primary" />
               ) : (
-                <FileUp size={24} className="text-muted-foreground" />
+                <FileUp size={24} className="text-ink-muted" />
               )}
-              <span className="text-sm font-bold text-foreground">
+              <span className="text-sm font-bold text-ink">
                 {parsing ? 'PDF okunuyor…' : 'PDF seç'}
               </span>
-              <span className="text-xs text-muted-foreground">kk_hesap_ekstresi_*.pdf</span>
+              <span className="text-xs text-ink-muted">kk_hesap_ekstresi_*.pdf</span>
             </button>
 
             <p className="rounded-xl border border-success/20 bg-success/8 p-3 text-xs text-success">
@@ -499,33 +501,33 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
         {/* Review step */}
         {step === 'review' && (
           <div className="flex max-h-[75vh] flex-col">
-            <p className="flex items-start gap-2 border-b border-border bg-warning/10 px-4 py-3 text-xs font-bold text-warning">
+            <p className="flex items-start gap-2 border-b border-line-strong bg-warning/10 px-4 py-3 text-xs font-bold text-warning">
               <AlertCircle size={15} className="mt-0.5 shrink-0" />
               Ekstre tarihine kadarki açık harcama ve taksitler PDF satırlarıyla yeniden kurulacak. Ödenmiş geçmiş ve daha sonraki hareketler korunur; işlem yarıda kalırsa hiçbir değişiklik uygulanmaz.
             </p>
             {parseTotalsWarning && (
-              <p className="flex items-start gap-2 border-b border-border bg-destructive/10 px-4 py-3 text-xs font-bold text-destructive">
+              <p className="flex items-start gap-2 border-b border-line-strong bg-destructive/10 px-4 py-3 text-xs font-bold text-destructive">
                 <AlertCircle size={15} className="mt-0.5 shrink-0" />
                 {parseTotalsWarning}
               </p>
             )}
 
             {/* ── Kompakt özet ── */}
-            <div className="border-b border-border p-4 space-y-2">
+            <div className="border-b border-line-strong p-4 space-y-2">
               <div className="grid grid-cols-2 gap-2 text-xs">
-                <div className="rounded-lg bg-muted/40 p-2.5">
-                  <p className="font-bold text-muted-foreground">Ekstre kesim</p>
-                  <p className="mt-0.5 font-black text-foreground">{formatShortDate(statementDate)}</p>
+                <div className="rounded-lg bg-page p-2.5">
+                  <p className="font-bold text-ink-muted">Ekstre kesim</p>
+                  <p className="mt-0.5 font-black text-ink">{formatShortDate(statementDate)}</p>
                 </div>
-                <div className="rounded-lg bg-muted/40 p-2.5">
-                  <p className="font-bold text-muted-foreground">Son ödeme</p>
-                  <p className="mt-0.5 font-black text-foreground">{formatShortDate(dueDate)}</p>
+                <div className="rounded-lg bg-page p-2.5">
+                  <p className="font-bold text-ink-muted">Son ödeme</p>
+                  <p className="mt-0.5 font-black text-ink">{formatShortDate(dueDate)}</p>
                 </div>
               </div>
-              <div className="rounded-xl bg-muted/40 p-3 text-xs">
+              <div className="rounded-xl bg-page p-3 text-xs">
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Bankadan gelen</span>
-                  <span className="font-black text-foreground">{formatAmount(statementTotal)}</span>
+                  <span className="text-ink-muted">Bankadan gelen</span>
+                  <span className="font-black text-ink">{formatAmount(statementTotal)}</span>
                 </div>
               </div>
             </div>
@@ -536,9 +538,9 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
 
               {/* ── A1: İçe aktarılacak ekstre satırları (ANA AKSİYON) ── */}
               {importableCount > 0 && (
-                <div className="border-b border-border">
+                <div className="border-b border-line-strong">
                   <div className="px-4 py-2">
-                    <span className="text-xs font-bold text-foreground">
+                    <span className="text-xs font-bold text-ink">
                       İçe aktarılacak ekstre satırları ({importableCount})
                     </span>
                   </div>
@@ -558,21 +560,21 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
                         <div
                           key={item.selectionKey}
                           data-testid="statement-import-row"
-                          className="flex w-full items-center gap-3 border-b border-border/50 px-4 py-2.5 text-left"
+                          className="flex w-full items-center gap-3 border-b border-line-strong px-4 py-2.5 text-left"
                         >
                           <div className="min-w-0 flex-1">
-                            <p className="truncate text-xs font-bold text-foreground">{tx.description}</p>
+                            <p className="truncate text-xs font-bold text-ink">{tx.description}</p>
                             {plannedPayment ? (
                               <span className="mt-1 inline-flex rounded-md bg-info/10 px-2 py-0.5 text-[10px] font-black text-info">
                                 Planlı ödeme
                               </span>
                             ) : null}
                             {plannedPayment ? (
-                              <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
+                              <p className="mt-0.5 truncate text-[11px] text-ink-muted">
                                 {formatShortDate(tx.date)} · {tx.category} · Plan: {plannedPayment.title} · vade {formatShortDate(plannedPayment.due_date)}
                               </p>
                             ) : (
-                              <p className="text-[11px] text-muted-foreground">
+                              <p className="text-[11px] text-ink-muted">
                                 {formatShortDate(tx.date)} · {tx.category}
                                 {tx.isInstallment ? ` · ${
                                   isLastInstallment ? `${tx.installmentNo}/${tx.installmentCount} son taksit`
@@ -582,10 +584,10 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
                               </p>
                             )}
                           </div>
-                          <span className="shrink-0 text-right text-xs font-black text-foreground">
+                          <span className="shrink-0 text-right text-xs font-black text-ink">
                             {formatAmount(rowTotal)}
                             {tx.isInstallment && (
-                              <span className="block text-[10px] font-bold text-muted-foreground">
+                              <span className="block text-[10px] font-bold text-ink-muted">
                                 {formatAmount(tx.amount)}/ay
                               </span>
                             )}
@@ -599,14 +601,14 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
                         <div
                           key={item.selectionKey}
                           data-testid="statement-import-adjustment-row"
-                          className="flex w-full items-center gap-3 border-b border-border/50 px-4 py-2.5 text-left"
+                          className="flex w-full items-center gap-3 border-b border-line-strong px-4 py-2.5 text-left"
                         >
                           <div className="min-w-0 flex-1">
-                            <p className="truncate text-xs font-bold text-foreground">{adjustment.description}</p>
+                            <p className="truncate text-xs font-bold text-ink">{adjustment.description}</p>
                             <span className="mt-1 inline-flex rounded-md bg-info/10 px-2 py-0.5 text-[10px] font-black text-info">
                               Ekstre alacağı/iade
                             </span>
-                            <p className="mt-0.5 text-[11px] text-muted-foreground">
+                            <p className="mt-0.5 text-[11px] text-ink-muted">
                               {formatShortDate(adjustment.date)} · {adjustment.category}
                             </p>
                           </div>
@@ -629,10 +631,10 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
 
               {/* ── A3: Manuel kontrol ── */}
               {manualReview.length > 0 && (
-                <div className="border-b border-border">
+                <div className="border-b border-line-strong">
                   <div className="px-4 py-2">
-                    <span className="text-xs font-bold text-muted-foreground">Manuel kontrol ({manualReview.length})</span>
-                    <p className="mt-0.5 text-[11px] text-muted-foreground">
+                    <span className="text-xs font-bold text-ink-muted">Manuel kontrol ({manualReview.length})</span>
+                    <p className="mt-0.5 text-[11px] text-ink-muted">
                       Toplam taksiti belirsiz. Sayısını gir, buradan ekle.
                     </p>
                   </div>
@@ -641,20 +643,20 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
                       const tx = row.transaction
                       const added = manualAddedKeys.has(row.key)
                       return (
-                        <div key={row.key} className="border-b border-border/50 px-4 py-2.5">
+                        <div key={row.key} className="border-b border-line-strong px-4 py-2.5">
                           <div className="flex items-center gap-3">
                             <div className="min-w-0 flex-1">
-                              <p className="truncate text-xs font-bold text-foreground">{tx.description}</p>
-                              <p className="text-[11px] text-muted-foreground">
+                              <p className="truncate text-xs font-bold text-ink">{tx.description}</p>
+                              <p className="text-[11px] text-ink-muted">
                                 {formatShortDate(tx.date)} · {tx.category}
                                 {tx.isInstallment
                                   ? ` · ${tx.installmentNo}${tx.installmentCount ? `/${tx.installmentCount}` : ''}. taksit`
                                   : ''}
                               </p>
                             </div>
-                            <span className="shrink-0 text-xs font-black text-foreground">
+                            <span className="shrink-0 text-xs font-black text-ink">
                               {formatAmount(tx.amount)}
-                              <span className="block text-[10px] font-bold text-muted-foreground">/ay</span>
+                              <span className="block text-[10px] font-bold text-ink-muted">/ay</span>
                             </span>
                           </div>
                           {added ? (
@@ -663,7 +665,7 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
                             </p>
                           ) : (
                             <div className="mt-2 flex items-center gap-2">
-                              <label className="text-[11px] text-muted-foreground">Toplam taksit</label>
+                              <label className="text-[11px] text-ink-muted">Toplam taksit</label>
                               <input
                                 type="number"
                                 min={1}
@@ -671,7 +673,7 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
                                 value={manualDrafts[row.key] ?? ''}
                                 onChange={(e) => setManualDrafts((prev) => ({ ...prev, [row.key]: e.target.value }))}
                                 placeholder={tx.installmentNo ? `≥${tx.installmentNo}` : '1'}
-                                className="w-16 rounded-md border border-border bg-background px-2 py-1 text-xs font-bold text-foreground"
+                                className="w-16 rounded-md border border-line-strong bg-page px-2 py-1 text-xs font-bold text-ink"
                               />
                               <button
                                 type="button"
@@ -697,17 +699,17 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
 
               {/* ── B2: App dönem harcamaları (katlanır referans) ── */}
               {periodExpenses.length > 0 && (
-                <div className="border-b border-border">
+                <div className="border-b border-line-strong">
                   <button
                     type="button"
                     onClick={() => setShowAppExpenses((v) => !v)}
-                    className="flex w-full items-center justify-between gap-3 px-4 py-2 text-left hover:bg-muted/30"
+                    className="flex w-full items-center justify-between gap-3 px-4 py-2 text-left hover:bg-black/[.03] dark:hover:bg-white/[.04]"
                     aria-expanded={showAppExpenses}
                   >
-                    <span className="text-xs font-bold text-muted-foreground">
+                    <span className="text-xs font-bold text-ink-muted">
                       App dönem harcamaları ({periodExpenses.length})
                     </span>
-                    <ChevronDown size={16} className={`shrink-0 text-muted-foreground transition-transform ${showAppExpenses ? 'rotate-180' : ''}`} />
+                    <ChevronDown size={16} className={`shrink-0 text-ink-muted transition-transform ${showAppExpenses ? 'rotate-180' : ''}`} />
                   </button>
                   {showAppExpenses && <CardExpenseHistorySection expenses={periodExpenses} periodLabel={periodLabel} />}
                 </div>
@@ -717,15 +719,15 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
               {importableCount === 0 && manualReview.length === 0 && (
                 <div className="p-6 text-center">
                   <CheckCircle2 size={32} className="mx-auto text-success" />
-                  <p className="mt-2 text-sm font-bold text-foreground">Tüm işlemler app'te zaten kayıtlı</p>
-                  <p className="mt-1 text-xs text-muted-foreground">Mutabakat tamam.</p>
+                  <p className="mt-2 text-sm font-bold text-ink">Tüm işlemler app'te zaten kayıtlı</p>
+                  <p className="mt-1 text-xs text-ink-muted">Mutabakat tamam.</p>
                 </div>
               )}
             </div>
 
             {/* ── Sticky CTA bar ── */}
             {(importableCount > 0 || manualReview.length > 0) && (
-              <div className="sticky bottom-0 z-10 border-t border-border bg-card p-4">
+              <div className="sticky bottom-0 z-10 border-t border-line-strong bg-raised p-4">
                 <button
                   type="button"
                   disabled={(importableCount === 0 && manualAddedKeys.size === 0) || unresolvedManualCount > 0 || importing}
@@ -744,7 +746,7 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
 
             {/* İçe aktarılacak bir şey yokken kapat butonu */}
             {importableCount === 0 && manualReview.length === 0 && (
-              <div className="border-t border-border p-4">
+              <div className="border-t border-line-strong p-4">
                 <button
                   type="button"
                   onClick={onClose}
@@ -761,7 +763,7 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
         {step === 'success' && (
           <div className="p-6 text-center space-y-3">
             <CheckCircle2 size={40} className="mx-auto text-success" />
-            <p className="text-base font-black text-foreground">
+            <p className="text-base font-black text-ink">
               {importedCount} işlem içe aktarıldı
             </p>
 

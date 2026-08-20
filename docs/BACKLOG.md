@@ -72,9 +72,14 @@ edilen yerde** kullanılır ve hafif gölge alır. Kural tablosu
   Kredi kartı görselleri: **fiziksel kart metaforu KALIYOR**, palet dışı mavi
   gradient banka rengi olarak palete çekilecek (sahibin kararı 2026-08-20).
   Kartın altındaki 2×2 gri kutucuklar kart-içinde-kart; çizgi satırına döner.
-- **Faz 5 — Modal & sihirbaz.** CurrentMovementImportModal (1108 satır),
-  StatementImportModal (788), FinancePaymentDrawer, trade/movement modalları;
-  mobilde bottom-sheet.
+- ~~**Faz 5 — Modal & sihirbaz.**~~ DONE. 4 dosya, 173 token değişimi
+  (`CurrentMovementImportModal` 87, `StatementImportModal` 59,
+  `CardsPage.movementModal` 18, `AssetsPage.tradeModal` 9) + iki import modalı
+  mobilde bottom-sheet oldu. Bu ikisi `SimpleModal`a sarılamıyor (kendi sticky
+  başlıkları ve tam genişlik adım gövdeleri var), o yüzden aynı biçim elle
+  uygulandı. **Güvenli alan payı kabın dışından panelin dibine taşındı** —
+  bottom-sheet dibe yaslandığı için eski `pb-[safe-area]` sarmalayıcıda
+  kalsaydı içerik iOS'ta home çubuğunun altında kalırdı.
 - **Faz 6 — İkincil sayfalar.** Araçlar, Altın, İstek Listesi, Alsam mı?,
   Bağlamlar, DataHealth*, Login, Analysis parçaları.
 - **Faz 7 — Grafikler.** `charts/*` + `vizPalette` hizası (`--viz-*` slot

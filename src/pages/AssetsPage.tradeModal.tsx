@@ -89,10 +89,10 @@ export function AssetTradeModal({
     <SimpleModal title={asset ? `${asset.name} ${isBuy ? 'al' : 'sat'}` : 'Varlık işlemi'} open={Boolean(trade)} onClose={onClose}>
       <form onSubmit={onSubmit} className="space-y-4">
         {asset ? (
-          <div className="rounded-xl border border-border/60 bg-muted/30 p-3 text-sm text-muted-foreground">
+          <div className="rounded-xl border border-line-strong bg-page p-3 text-sm text-ink-muted">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <p className="truncate font-semibold text-foreground">{asset.name}</p>
+                <p className="truncate font-semibold text-ink">{asset.name}</p>
                 <p>{asset.category}</p>
               </div>
               <div className="grid size-9 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
@@ -106,7 +106,7 @@ export function AssetTradeModal({
           </div>
         ) : null}
 
-        <label className="block text-sm font-semibold text-foreground">
+        <label className="block text-sm font-semibold text-ink">
           {isBuy ? 'Kaynak hesap' : 'Tahsilat hesabı'}
           <Select
             required
@@ -129,7 +129,7 @@ export function AssetTradeModal({
         <MoneyInput label="İşlem tutarı" value={amount} onValueChange={onAmountChange} required />
 
         {asset && assetTradeShowsQuantity(asset) ? (
-          <label className="block text-sm font-semibold text-foreground">
+          <label className="block text-sm font-semibold text-ink">
             {quantityLabel(asset)}
             {assetTradeRequiresQuantity(asset) ? <span className="text-destructive"> *</span> : null}
             <Input
@@ -144,13 +144,13 @@ export function AssetTradeModal({
           </label>
         ) : null}
 
-        <label className="block text-sm font-semibold text-foreground">
+        <label className="block text-sm font-semibold text-ink">
           Not
           <Textarea rows={2} value={note} onChange={(event) => onNoteChange(event.target.value)} className="mt-1" />
         </label>
 
         {selectedAccount && asset ? (
-          <div className="grid gap-2 rounded-xl bg-muted/45 px-3 py-2 text-xs text-muted-foreground min-[420px]:grid-cols-2">
+          <div className="grid gap-2 rounded-xl bg-page px-3 py-2 text-xs text-ink-muted min-[420px]:grid-cols-2">
             <span>{isBuy ? 'Hesap sonrası' : 'Tahsilat sonrası'}: {formatAmount(nextAccountBalance)}</span>
             <span>Varlık sonrası: {formatAmount(nextAssetValue)}</span>
           </div>
