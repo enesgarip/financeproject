@@ -9,7 +9,7 @@ const buttonVariants = cva(
     "group/button inline-flex shrink-0 items-center justify-center gap-2 rounded-lg border border-transparent",
     "bg-clip-padding text-sm font-semibold whitespace-nowrap select-none",
     "transition-all outline-none",
-    "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background",
+    "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-page",
     "active:translate-y-px",
     "disabled:pointer-events-none disabled:opacity-40",
     "aria-invalid:border-destructive aria-invalid:ring-2 aria-invalid:ring-destructive/20",
@@ -24,18 +24,16 @@ const buttonVariants = cva(
           "hover:bg-primary/90",
         ].join(" "),
         outline: [
-          "border-border bg-card/80 text-foreground",
-          "hover:bg-muted hover:border-border/80",
-          "dark:bg-card/40 dark:hover:bg-muted/60",
+          "border-line-strong bg-raised text-ink",
+          "hover:bg-black/[.03] dark:hover:bg-white/[.04]",
         ].join(" "),
         secondary: [
-          "bg-secondary text-secondary-foreground border-border/40",
+          "bg-secondary text-secondary-foreground border-line-strong",
           "hover:bg-secondary/80",
         ].join(" "),
         ghost: [
-          "text-muted-foreground",
-          "hover:bg-muted hover:text-foreground",
-          "dark:hover:bg-muted/50",
+          "text-ink-muted",
+          "hover:bg-black/[.03] hover:text-ink dark:hover:bg-white/[.04]",
         ].join(" "),
         destructive: [
           "bg-destructive/10 text-destructive border-destructive/20",

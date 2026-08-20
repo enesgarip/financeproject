@@ -1,13 +1,18 @@
 import * as React from "react"
 import { cn } from "@/lib/utils"
 
+/**
+ * Şerit v2 Faz 2: form alanları da dilin token'larına bağlandı — kenarlık
+ * `line-strong`, zemin `raised`, metin `ink`, ipucu `ink-faint`. Sinyal
+ * renkleri (`destructive`) KASITLI olarak eski semantikte kaldı; `--signal-*`
+ * ile birleştirme ayrı bir madde (bkz. index.css Şerit token bloğu).
+ */
 const baseInputClass = [
-  "w-full rounded-xl border border-input bg-card/80 px-3 text-sm font-medium text-foreground",
-  "outline-none transition-all placeholder:text-muted-foreground/50",
-  "focus:border-ring focus:ring-2 focus:ring-ring/20 focus:bg-card",
-  "disabled:cursor-not-allowed disabled:bg-muted/40 disabled:text-muted-foreground disabled:opacity-60",
+  "w-full rounded-xl border border-line-strong bg-raised px-3 text-sm font-medium text-ink",
+  "outline-none transition-all placeholder:text-ink-faint",
+  "focus:border-ring focus:ring-2 focus:ring-ring/20",
+  "disabled:cursor-not-allowed disabled:bg-page disabled:text-ink-faint disabled:opacity-60",
   "aria-invalid:border-destructive aria-invalid:focus:ring-destructive/20",
-  "dark:bg-card/50 dark:focus:bg-card/70",
 ].join(" ")
 
 function Input({
@@ -35,7 +40,7 @@ function Select({ className, ...props }: React.ComponentProps<"select">) {
     <select
       data-slot="select"
       className={cn(
-        "h-10 min-w-0 cursor-pointer bg-card/80 dark:bg-card/50",
+        "h-10 min-w-0 cursor-pointer",
         baseInputClass,
         className,
       )}

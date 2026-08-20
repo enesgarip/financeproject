@@ -50,7 +50,7 @@ function ConfirmDialog({
         aria-modal="true"
         aria-labelledby="confirm-dialog-title"
         aria-describedby="confirm-dialog-description"
-        className="w-full max-w-md overflow-hidden rounded-lg border border-border/85 bg-card text-card-foreground focus:outline-none"
+        className="w-full max-w-md overflow-hidden rounded-lg border border-line-strong bg-raised text-ink focus:outline-none"
       >
         <div className="flex items-start gap-3 p-4">
           <div
@@ -64,10 +64,10 @@ function ConfirmDialog({
             <AlertTriangle size={19} />
           </div>
           <div className="min-w-0 flex-1">
-            <h2 id="confirm-dialog-title" className="text-base font-extrabold leading-snug text-foreground">
+            <h2 id="confirm-dialog-title" className="text-base font-extrabold leading-snug text-ink">
               {title}
             </h2>
-            <p id="confirm-dialog-description" className="mt-1 text-sm leading-6 text-muted-foreground">
+            <p id="confirm-dialog-description" className="mt-1 text-sm leading-6 text-ink-muted">
               {description}
             </p>
           </div>
@@ -75,13 +75,13 @@ function ConfirmDialog({
             type="button"
             onClick={onCancel}
             disabled={loading}
-            className="grid size-9 shrink-0 place-items-center rounded-lg text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:opacity-50"
+            className="grid size-9 shrink-0 place-items-center rounded-lg text-ink-muted transition hover:bg-black/[.03] dark:hover:bg-white/[.04] hover:text-ink disabled:opacity-50"
             aria-label="Kapat"
           >
             <X size={17} />
           </button>
         </div>
-        <div className="grid grid-cols-2 gap-2 border-t border-border/75 bg-muted/35 p-3">
+        <div className="grid grid-cols-2 gap-2 border-t border-line-strong bg-page p-3">
           <Button type="button" variant="outline" onClick={onCancel} disabled={loading}>
             {cancelLabel}
           </Button>

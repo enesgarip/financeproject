@@ -24,19 +24,19 @@ const ToastContext = createContext<ToastContextValue | null>(null)
 
 const toastStyles: Record<ToastType, { wrapper: string; icon: ReactNode }> = {
   success: {
-    wrapper: 'border-success/25 bg-card text-foreground dark:border-success/30',
+    wrapper: 'border-success/25 bg-raised text-ink dark:border-success/30',
     icon: <CheckCircle2 className="size-4 text-success" />,
   },
   error: {
-    wrapper: 'border-destructive/25 bg-card text-foreground dark:border-destructive/30',
+    wrapper: 'border-destructive/25 bg-raised text-ink dark:border-destructive/30',
     icon: <XCircle className="size-4 text-destructive" />,
   },
   warning: {
-    wrapper: 'border-warning/25 bg-card text-foreground dark:border-warning/30',
+    wrapper: 'border-warning/25 bg-raised text-ink dark:border-warning/30',
     icon: <AlertCircle className="size-4 text-warning" />,
   },
   info: {
-    wrapper: 'border-info/25 bg-card text-foreground dark:border-info/30',
+    wrapper: 'border-info/25 bg-raised text-ink dark:border-info/30',
     icon: <Info className="size-4 text-info" />,
   },
 }
@@ -88,15 +88,15 @@ function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: (id: string)
     >
       <span className="mt-0.5 shrink-0">{icon}</span>
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-semibold leading-snug text-foreground">{toast.title}</p>
+        <p className="text-sm font-semibold leading-snug text-ink">{toast.title}</p>
         {toast.description ? (
-          <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">{toast.description}</p>
+          <p className="mt-0.5 text-xs leading-relaxed text-ink-muted">{toast.description}</p>
         ) : null}
       </div>
       <button
         type="button"
         onClick={dismiss}
-        className="tap-target mt-0.5 grid size-6 shrink-0 place-items-center rounded-lg text-muted-foreground transition hover:bg-muted hover:text-foreground"
+        className="tap-target mt-0.5 grid size-6 shrink-0 place-items-center rounded-lg text-ink-muted transition hover:bg-black/[.03] dark:hover:bg-white/[.04] hover:text-ink"
         aria-label="Bildirimi kapat"
       >
         <X size={14} />

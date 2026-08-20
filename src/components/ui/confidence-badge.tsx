@@ -18,7 +18,7 @@ export function ConfidenceBadge({ confidence, className = '' }: { confidence: Co
       className={`inline-flex shrink-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-bold ring-1 ${
         isStale
           ? 'bg-warning/12 text-warning ring-warning/25'
-          : 'bg-muted text-muted-foreground ring-border/60'
+          : 'bg-page text-ink-muted ring-line-strong'
       } ${className}`}
     >
       <Icon size={10} aria-hidden="true" />

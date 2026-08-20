@@ -3,7 +3,7 @@ import type { ReactNode } from 'react'
 /**
  * Şerit'te ayrım gölgeyle değil çizgiyle yapılır — ama o çizgi bugüne kadar her
  * dosyada elle yazılıyordu (`border-t border-line`, `border-border/70`,
- * `bg-slate-200 h-px`…). Aynı işin üç farklı kalınlıkta üç ayrı yazımı vardı;
+ * ham renkli `h-px`…). Aynı işin üç farklı kalınlıkta üç ayrı yazımı vardı;
  * bu bileşen ayıracı tek yere topluyor.
  *
  * İki ton kasıtlı olarak ayrı:
