@@ -40,7 +40,7 @@ export function StatementReminderPanel({ cards, statements }: StatementReminderP
               Ekstre hatırlatıcısı
               <HelpTooltip title="Ekstre hatırlatıcısı" content={statementReminderHelp} />
             </CardTitle>
-            <p className="mt-1 text-sm text-muted-foreground">Kesilecek veya yaklaşan ekstreler.</p>
+            <p className="mt-1 text-sm text-ink-muted">Kesilecek veya yaklaşan ekstreler.</p>
           </div>
           <Badge variant="secondary">{reminders.length}</Badge>
         </div>
@@ -56,20 +56,20 @@ export function StatementReminderPanel({ cards, statements }: StatementReminderP
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
-                  <p className="font-semibold text-foreground">{statementReminderTitle(reminder)}</p>
+                  <p className="font-semibold text-ink">{statementReminderTitle(reminder)}</p>
                   <Badge variant={reminder.kind === 'ready' ? 'default' : 'secondary'}>
                     {reminder.kind === 'ready' ? 'Otomatik kesiliyor' : `${reminder.daysUntilStatement} gün`}
                   </Badge>
                 </div>
-                <p className="mt-0.5 text-xs text-muted-foreground">{maskText(statementReminderDescription(reminder))}</p>
-                <p className="mt-0.5 text-xs text-muted-foreground">
+                <p className="mt-0.5 text-xs text-ink-muted">{maskText(statementReminderDescription(reminder))}</p>
+                <p className="mt-0.5 text-xs text-ink-muted">
                   Ekstre: {formatDate(dateInputValue(reminder.statementDate))}
                   {reminder.dueDay ? ` · Son ödeme: ${reminder.dueDateLabel}` : ''}
                 </p>
               </div>
               <Link
                 to="/kartlar?section=ekstreler"
-                className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-lg bg-card px-3 py-1.5 text-xs font-semibold text-info ring-1 ring-info/20 transition hover:bg-info/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background"
+                className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-lg bg-raised px-3 py-1.5 text-xs font-semibold text-info ring-1 ring-info/20 transition hover:bg-info/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background"
               >
                 Kartlara git
               </Link>

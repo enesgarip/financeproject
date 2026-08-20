@@ -12,11 +12,11 @@ import { Button } from '../ui/button'
 import { Input } from '../ui/input'
 
 const KIND_LABELS: Record<CardLedger['kind'], { label: string; className: string }> = {
-  opening: { label: 'Başlangıç', className: 'text-muted-foreground' },
+  opening: { label: 'Başlangıç', className: 'text-ink-muted' },
   debit: { label: 'Borç arttı', className: 'text-destructive' },
   credit: { label: 'Ödeme/azalış', className: 'text-success' },
   adjustment: { label: 'Düzeltme', className: 'text-info' },
-  reclass: { label: 'Kırılım değişikliği', className: 'text-muted-foreground' },
+  reclass: { label: 'Kırılım değişikliği', className: 'text-ink-muted' },
 }
 
 const VISIBLE_EVENTS = 8
@@ -118,17 +118,17 @@ export function CardLedgerPanel({
   const splitProjection = projectCardSplit(events)
 
   return (
-    <div className="mt-3 rounded-lg bg-card/80 p-3 ring-1 ring-border/70">
+    <div className="mt-3 rounded-lg bg-raised p-3 ring-1 ring-line-strong">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-xs font-black uppercase text-muted-foreground">Borç hareketleri</p>
-        <p className="text-xs font-semibold text-muted-foreground">
+        <p className="text-xs font-black uppercase text-ink-muted">Borç hareketleri</p>
+        <p className="text-xs font-semibold text-ink-muted">
           {summary.count} hareket · Borçlanma {formatAmount(summary.totalDebit)} − Ödeme {formatAmount(summary.totalCredit)} ={' '}
-          <span className="font-black text-foreground">{formatAmount(summary.net)}</span>
+          <span className="font-black text-ink">{formatAmount(summary.net)}</span>
         </p>
       </div>
 
       {splitProjection.complete && summary.count > 0 ? (
-        <p className="mt-1 text-xs text-muted-foreground">
+        <p className="mt-1 text-xs text-ink-muted">
           Kova projeksiyonu: Ekstre {formatAmount(splitProjection.statement)} · Dönem {formatAmount(splitProjection.current)} · Provizyon {formatAmount(splitProjection.provision)}
         </p>
       ) : null}
@@ -158,13 +158,13 @@ export function CardLedgerPanel({
             const meta = KIND_LABELS[event.kind]
             const amountTL = toTL(event.amount_kurus)
             return (
-              <div key={event.id} className="rounded-lg bg-muted/55 px-3 py-2 text-xs">
+              <div key={event.id} className="rounded-lg bg-page px-3 py-2 text-xs">
                 <div className="flex min-w-0 items-center justify-between gap-3">
                   <span className="min-w-0 truncate">
                     <span className={`font-black ${meta.className}`}>{meta.label}</span>
-                    <span className="ml-2 text-muted-foreground">{formatDate(event.occurred_at.slice(0, 10))}</span>
+                    <span className="ml-2 text-ink-muted">{formatDate(event.occurred_at.slice(0, 10))}</span>
                     {(event.kind === 'adjustment' || event.kind === 'reclass') && event.note ? (
-                      <span className="ml-2 italic text-muted-foreground">· {event.note}</span>
+                      <span className="ml-2 italic text-ink-muted">· {event.note}</span>
                     ) : null}
                   </span>
                   <span className={`shrink-0 font-black tabular-nums ${meta.className}`}>
@@ -181,20 +181,20 @@ export function CardLedgerPanel({
                   if (c !== 0) parts.push(`dönem ${c > 0 ? '+' : ''}${formatAmount(c)}`)
                   if (p !== 0) parts.push(`provizyon ${p > 0 ? '+' : ''}${formatAmount(p)}`)
                   if (parts.length === 0) return null
-                  return <p className="mt-0.5 text-[10px] text-muted-foreground">{parts.join(' · ')}</p>
+                  return <p className="mt-0.5 text-[10px] text-ink-muted">{parts.join(' · ')}</p>
                 })() : null}
               </div>
             )
           })}
           {events.length > VISIBLE_EVENTS ? (
-            <p className="text-xs font-semibold text-muted-foreground">+{events.length - VISIBLE_EVENTS} hareket daha</p>
+            <p className="text-xs font-semibold text-ink-muted">+{events.length - VISIBLE_EVENTS} hareket daha</p>
           ) : null}
         </div>
       ) : (
-        <p className="mt-3 text-sm text-muted-foreground">Henüz hareket kaydı yok; borç değiştikçe burada listelenecek.</p>
+        <p className="mt-3 text-sm text-ink-muted">Henüz hareket kaydı yok; borç değiştikçe burada listelenecek.</p>
       )}
 
-      <div className="mt-3 border-t border-border/60 pt-3">
+      <div className="mt-3 border-t border-line-strong pt-3">
         <button
           type="button"
           onClick={() => {
@@ -229,7 +229,7 @@ export function CardLedgerPanel({
                 Borcu azalt (−)
               </Button>
             </div>
-            <label className="text-xs font-semibold text-muted-foreground">
+            <label className="text-xs font-semibold text-ink-muted">
               Tutar
               <Input
                 value={amount}
@@ -241,7 +241,7 @@ export function CardLedgerPanel({
                 aria-label={`${card.bank_name} ${card.card_name} düzeltme tutarı`}
               />
             </label>
-            <label className="text-xs font-semibold text-muted-foreground">
+            <label className="text-xs font-semibold text-ink-muted">
               Sebep
               <Input
                 value={note}

@@ -53,7 +53,20 @@ edilen yerde** kullanılır ve hafif gölge alır. Kural tablosu
   tutamak); `sm` ve üzeri eski ortalanmış kart.
   (3) `FormSection` zeminsizleşti — modal zaten bir yüzey, kutulu hali
   kart-içinde-kart yapıyordu (tek çağıranı `CrudPage` modal formu).
-- **Faz 4 — Panel ailesi.** `finance/*` (26) + `dashboard/*` (7), üç alt PR.
+- ~~**Faz 4a — Kart panelleri.**~~ DONE. 8 dosya, 161 token değişimi
+  (`CardLedgerPanel`, `CardInstallment{Calendar,Expenses,Intent}Panel`,
+  `RecentCardExpensesPanel`, `CardExpenseHistorySection`, `CardAliasPanel`,
+  `StatementReminderPanel`). Eşleme betikle yapıldı — 380 kullanımı elle
+  yazmak hata kaynağı olurdu; tablo commit mesajında. **Sinyal ve marka
+  tonlarına dokunulmadı.**
+- **Faz 4b — Hesap/ödeme panelleri.** `AccountLedgerPanel`,
+  `AccountPaymentModal`, `AccountSelector`, `FinancePaymentDrawer`,
+  `ObligationsCalendar`, `SavingsGoalsPanel`, `KasaModuPanel`, `RatesBanner`,
+  `MoneyInput`, `CategoryPicker`, `FinanceUI`.
+- **Faz 4c — Veri sağlığı + ayar + dashboard panelleri.**
+  `LiveReconciliationPanel`, `AutomationCoveragePanel`, `CategoryCleanupPanel`,
+  `SmsLogPanel`, `NotificationSettings`, `DashboardCards`,
+  `DashboardInsights`, `ReconciliationPanel`.
   Kredi kartı görselleri: **fiziksel kart metaforu KALIYOR**, palet dışı mavi
   gradient banka rengi olarak palete çekilecek (sahibin kararı 2026-08-20).
   Kartın altındaki 2×2 gri kutucuklar kart-içinde-kart; çizgi satırına döner.

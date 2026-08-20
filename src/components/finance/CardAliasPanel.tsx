@@ -77,13 +77,13 @@ export function CardAliasPanel({ card }: { card: Card }) {
   }
 
   if (aliases === null) {
-    return <p className="text-xs text-muted-foreground">Yükleniyor...</p>
+    return <p className="text-xs text-ink-muted">Yükleniyor...</p>
   }
 
   return (
-    <div className="mt-3 rounded-xl border border-border/50 bg-muted/30 p-3">
+    <div className="mt-3 rounded-xl border border-line-strong bg-page p-3">
       <div className="mb-2 flex items-center justify-between">
-        <span className="text-xs font-semibold text-muted-foreground">SMS kart numaraları</span>
+        <span className="text-xs font-semibold text-ink-muted">SMS kart numaraları</span>
         {!adding ? (
           <button
             type="button"
@@ -99,7 +99,7 @@ export function CardAliasPanel({ card }: { card: Card }) {
       {error ? <p className="mb-2 text-xs text-destructive">{error}</p> : null}
 
       {aliases.length === 0 && !adding ? (
-        <p className="text-xs text-muted-foreground">
+        <p className="text-xs text-ink-muted">
           Henüz kart numarası eklenmemiş. SMS otomasyonu için son 4 haneyi ekle.
         </p>
       ) : null}
@@ -108,15 +108,15 @@ export function CardAliasPanel({ card }: { card: Card }) {
         {aliases.map((alias) => (
           <span
             key={alias.id}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background px-2.5 py-1 text-xs font-mono font-semibold tabular-nums"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-line-strong bg-page px-2.5 py-1 text-xs font-mono font-semibold tabular-nums"
           >
             ****{alias.last_four_digits}
-            {alias.label ? <span className="font-sans font-normal text-muted-foreground">({alias.label})</span> : null}
+            {alias.label ? <span className="font-sans font-normal text-ink-muted">({alias.label})</span> : null}
             <button
               type="button"
               onClick={() => handleDelete(alias.id)}
               disabled={busy}
-              className="ml-0.5 rounded p-0.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition"
+              className="ml-0.5 rounded p-0.5 text-ink-muted hover:text-destructive hover:bg-destructive/10 transition"
               title="Sil"
             >
               <X size={12} />
@@ -128,7 +128,7 @@ export function CardAliasPanel({ card }: { card: Card }) {
       {adding ? (
         <div className="mt-2 flex items-end gap-2">
           <label className="flex-1">
-            <span className="text-xs text-muted-foreground">Son 4 hane</span>
+            <span className="text-xs text-ink-muted">Son 4 hane</span>
             <Input
               type="text"
               inputMode="numeric"
@@ -140,7 +140,7 @@ export function CardAliasPanel({ card }: { card: Card }) {
             />
           </label>
           <label className="flex-1">
-            <span className="text-xs text-muted-foreground">Etiket (opsiyonel)</span>
+            <span className="text-xs text-ink-muted">Etiket (opsiyonel)</span>
             <Input
               type="text"
               value={label}

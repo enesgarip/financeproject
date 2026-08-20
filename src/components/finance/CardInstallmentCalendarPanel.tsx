@@ -66,28 +66,28 @@ export function CardInstallmentCalendarPanel({ cards }: CardInstallmentCalendarP
               Taksit takvimi
               <HelpTooltip title="Taksit takvimi" content={installmentCalendarHelp} />
             </CardTitle>
-            <p className="mt-1 text-xs text-muted-foreground">Önümüzdeki 4 ayda kartlara yansıyacak taksit yükü.</p>
+            <p className="mt-1 text-xs text-ink-muted">Önümüzdeki 4 ayda kartlara yansıyacak taksit yükü.</p>
           </div>
           <Badge variant="secondary">{creditCards.length} kart</Badge>
         </div>
       </CardHeader>
       <CardContent className="space-y-3 pt-2">
         {!loading && hasOngoingInstallments ? (
-          <section className="rounded-xl border border-border/70 bg-card/80 p-3">
+          <section className="rounded-xl border border-line-strong bg-raised p-3">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="min-w-0">
-                <p className="text-xs font-black uppercase text-muted-foreground">Gelecek taksit toplamı</p>
-                <p className="finance-value mt-1 text-xl font-black leading-none text-foreground">{formatAmount(cardTotals.total)}</p>
+                <p className="text-xs font-black uppercase text-ink-muted">Gelecek taksit toplamı</p>
+                <p className="finance-value mt-1 text-xl font-black leading-none text-ink">{formatAmount(cardTotals.total)}</p>
               </div>
               <Badge variant="warning">{cardTotals.rows.length} kart</Badge>
             </div>
             <div className="mt-3 grid gap-2 min-[640px]:grid-cols-2">
               {cardTotals.rows.map((row) => (
-                <div key={row.cardId} className="flex min-w-0 items-center justify-between gap-3 rounded-lg bg-muted/45 px-3 py-2 text-xs">
-                  <span className="min-w-0 truncate font-semibold text-foreground">{row.cardLabel}</span>
-                  <span className="shrink-0 text-right font-black tabular-nums text-foreground">
+                <div key={row.cardId} className="flex min-w-0 items-center justify-between gap-3 rounded-lg bg-page px-3 py-2 text-xs">
+                  <span className="min-w-0 truncate font-semibold text-ink">{row.cardLabel}</span>
+                  <span className="shrink-0 text-right font-black tabular-nums text-ink">
                     {formatAmount(row.amount)}
-                    <span className="ml-1 font-semibold text-muted-foreground">
+                    <span className="ml-1 font-semibold text-ink-muted">
                       {row.count > 1 ? `· ${row.count} taksit` : '· 1 taksit'}
                     </span>
                   </span>
@@ -97,27 +97,27 @@ export function CardInstallmentCalendarPanel({ cards }: CardInstallmentCalendarP
           </section>
         ) : null}
         {loading ? (
-          <p className="text-sm text-muted-foreground">Taksitler yükleniyor...</p>
+          <p className="text-sm text-ink-muted">Taksitler yükleniyor...</p>
         ) : !hasAny ? (
-          <p className="rounded-xl bg-muted/45 p-3 text-sm text-muted-foreground">Bu dönem için planlı kart taksiti yok.</p>
+          <p className="rounded-xl bg-page p-3 text-sm text-ink-muted">Bu dönem için planlı kart taksiti yok.</p>
         ) : (
           <div className="grid gap-3 min-[640px]:grid-cols-2">
             {months.map((month) => (
-              <div key={month.monthKey} className="rounded-xl bg-muted/45 p-3">
+              <div key={month.monthKey} className="rounded-xl bg-page p-3">
                 <div className="mb-2 flex items-center justify-between gap-2">
-                  <p className="text-sm font-bold capitalize text-foreground">{month.monthLabel}</p>
-                  <span className="shrink-0 rounded-lg bg-card px-2 py-1 font-mono text-xs font-bold tabular-nums text-foreground ring-1 ring-border/60">
+                  <p className="text-sm font-bold capitalize text-ink">{month.monthLabel}</p>
+                  <span className="shrink-0 rounded-lg bg-raised px-2 py-1 font-mono text-xs font-bold tabular-nums text-ink ring-1 ring-line-strong">
                     {formatAmount(month.total)}
                   </span>
                 </div>
                 {month.rows.length === 0 ? (
-                  <p className="text-xs text-muted-foreground">Taksit yok</p>
+                  <p className="text-xs text-ink-muted">Taksit yok</p>
                 ) : (
                   <ul className="space-y-1.5">
                     {month.rows.map((row) => (
                       <li key={`${month.monthKey}-${row.cardId}`} className="flex items-center justify-between gap-2 text-xs">
-                        <span className="min-w-0 truncate text-muted-foreground">{row.cardLabel}</span>
-                        <span className="shrink-0 font-semibold tabular-nums text-foreground">
+                        <span className="min-w-0 truncate text-ink-muted">{row.cardLabel}</span>
+                        <span className="shrink-0 font-semibold tabular-nums text-ink">
                           {formatAmount(row.amount)}
                           {row.count > 1 ? ` · ${row.count} taksit` : ''}
                         </span>

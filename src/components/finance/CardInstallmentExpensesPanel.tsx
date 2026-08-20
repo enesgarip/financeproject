@@ -208,8 +208,8 @@ export function CardInstallmentExpensesPanel({ cards, reload, setError }: CardIn
 
   if (loading) {
     return (
-      <SurfaceCard className="border-border/70">
-        <CardContent className="p-4 text-sm text-muted-foreground">Taksitli harcamalar yükleniyor...</CardContent>
+      <SurfaceCard className="border-line-strong">
+        <CardContent className="p-4 text-sm text-ink-muted">Taksitli harcamalar yükleniyor...</CardContent>
       </SurfaceCard>
     )
   }
@@ -228,21 +228,21 @@ export function CardInstallmentExpensesPanel({ cards, reload, setError }: CardIn
     const isLocked = expenseInstallments.some((item) => item.status === 'paid' || item.statement_archive_id)
 
     return (
-      <section key={expense.id} className="rounded-xl bg-muted/45 px-3 py-3">
+      <section key={expense.id} className="rounded-xl bg-page px-3 py-3">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="truncate text-sm font-bold text-foreground">{expense.description}</p>
-            <p className="mt-0.5 truncate text-xs text-muted-foreground">
+            <p className="truncate text-sm font-bold text-ink">{expense.description}</p>
+            <p className="mt-0.5 truncate text-xs text-ink-muted">
               {card ? `${card.bank_name} - ${card.card_name}` : 'Kart'} - {formatDate(expense.spent_at)} - {expense.installment_count} taksit
             </p>
             <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] font-semibold">
-              <span className="rounded-full bg-muted px-2 py-1 text-muted-foreground">
+              <span className="rounded-full bg-page px-2 py-1 text-ink-muted">
                 {paidCount}/{expense.installment_count} ödendi
               </span>
-              <span className="rounded-full bg-muted px-2 py-1 text-muted-foreground">
+              <span className="rounded-full bg-page px-2 py-1 text-ink-muted">
                 {remainingInstallments.length} taksit izleniyor
               </span>
-              <span className="rounded-full bg-muted px-2 py-1 text-muted-foreground">
+              <span className="rounded-full bg-page px-2 py-1 text-ink-muted">
                 {formatAmount(remainingAmount)} bilgi amaçlı
               </span>
             </div>
@@ -254,7 +254,7 @@ export function CardInstallmentExpensesPanel({ cards, reload, setError }: CardIn
             type="button"
             onClick={() => openEdit(expense)}
             disabled={isLocked}
-            className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-border bg-card px-2.5 py-1.5 text-xs font-semibold text-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-line-strong bg-raised px-2.5 py-1.5 text-xs font-semibold text-ink transition hover:bg-black/[.03] dark:hover:bg-white/[.04] disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Pencil size={13} />
             Düzenle
@@ -263,7 +263,7 @@ export function CardInstallmentExpensesPanel({ cards, reload, setError }: CardIn
 
         <div className="mt-3 space-y-2">
           {expenseInstallments.length === 0 ? (
-            <p className="rounded-lg border border-border/50 bg-muted/30 px-3 py-2 text-xs text-muted-foreground">Taksit satırı bulunamadı.</p>
+            <p className="rounded-lg border border-line-strong bg-page px-3 py-2 text-xs text-ink-muted">Taksit satırı bulunamadı.</p>
           ) : (
             expenseInstallments.map((item) => {
               const isPaid = isInstallmentSettled(item)
@@ -277,7 +277,7 @@ export function CardInstallmentExpensesPanel({ cards, reload, setError }: CardIn
                       ? 'border-success/25 bg-success/8'
                       : isStatementLinked
                         ? 'border-warning/25 bg-warning/8'
-                        : 'border-border/60 bg-card'
+                        : 'border-line-strong bg-raised'
                   }`}
                 >
                   <div
@@ -286,21 +286,21 @@ export function CardInstallmentExpensesPanel({ cards, reload, setError }: CardIn
                         ? 'border-success bg-success text-success-foreground'
                         : isStatementLinked
                           ? 'border-warning/40 bg-warning/15 text-warning'
-                          : 'border-border bg-muted text-muted-foreground'
+                          : 'border-line-strong bg-page text-ink-muted'
                     }`}
                     aria-label={installmentStatusLabel(item)}
                   >
                     {isPaid ? <Check size={16} strokeWidth={3} /> : isStatementLinked ? <ReceiptText size={15} /> : <Clock3 size={15} />}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className={`truncate font-semibold ${isPaid ? 'text-success' : 'text-foreground'}`}>
+                    <p className={`truncate font-semibold ${isPaid ? 'text-success' : 'text-ink'}`}>
                       {item.installment_no}/{item.installment_count}. taksit - {formatAmount(item.amount)}
                     </p>
-                    <p className={`text-xs ${isPaid ? 'text-success/80' : 'text-muted-foreground'}`}>
+                    <p className={`text-xs ${isPaid ? 'text-success/80' : 'text-ink-muted'}`}>
                       {formatDate(item.due_month)} - {installmentStatusLabel(item)}
                     </p>
                     {!isPaid ? (
-                      <p className="mt-1 text-[11px] leading-4 text-muted-foreground">
+                      <p className="mt-1 text-[11px] leading-4 text-ink-muted">
                         Bağlı olduğu ekstre ödendiğinde bu taksit ödendi sayılır.
                       </p>
                     ) : null}
@@ -316,7 +316,7 @@ export function CardInstallmentExpensesPanel({ cards, reload, setError }: CardIn
 
   return (
     <>
-      <SurfaceCard className="border-border/70">
+      <SurfaceCard className="border-line-strong">
         <CardHeader className="pb-0">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
@@ -324,34 +324,34 @@ export function CardInstallmentExpensesPanel({ cards, reload, setError }: CardIn
                 Taksitli harcamalar
                 <HelpTooltip title="Taksitli harcamalar" content={installmentExpensesHelp} />
               </CardTitle>
-              <p className="mt-1 text-xs text-muted-foreground">Kart taksitleri ayrı borç değildir; ekstresi ödenen taksit ödendi sayılır.</p>
+              <p className="mt-1 text-xs text-ink-muted">Kart taksitleri ayrı borç değildir; ekstresi ödenen taksit ödendi sayılır.</p>
             </div>
             <Badge variant="secondary">{activeExpenses.length}</Badge>
           </div>
         </CardHeader>
         <CardContent className="space-y-3 pt-2">
           {activeExpenses.length === 0 ? (
-            <p className="rounded-lg border border-border/50 bg-muted/30 px-3 py-2 text-xs text-muted-foreground">Devam eden taksitli harcama yok.</p>
+            <p className="rounded-lg border border-line-strong bg-page px-3 py-2 text-xs text-ink-muted">Devam eden taksitli harcama yok.</p>
           ) : (
             activeExpenses.map(renderExpenseCard)
           )}
 
           {completedExpenses.length > 0 ? (
-            <div className="rounded-xl border border-border/60 bg-card/60">
+            <div className="rounded-xl border border-line-strong bg-raised">
               <button
                 type="button"
                 onClick={() => setCompletedOpen((open) => !open)}
                 aria-expanded={completedOpen}
-                className="flex w-full items-center justify-between gap-2 px-3 py-2.5 text-sm font-semibold text-foreground transition hover:bg-muted/50"
+                className="flex w-full items-center justify-between gap-2 px-3 py-2.5 text-sm font-semibold text-ink transition hover:bg-black/[.03] dark:hover:bg-white/[.04]"
               >
                 <span className="inline-flex items-center gap-2">
                   <Check size={15} className="text-success" />
                   Tamamlananlar ({completedExpenses.length})
                 </span>
-                <ChevronDown size={16} className={`shrink-0 text-muted-foreground transition-transform ${completedOpen ? 'rotate-180' : ''}`} />
+                <ChevronDown size={16} className={`shrink-0 text-ink-muted transition-transform ${completedOpen ? 'rotate-180' : ''}`} />
               </button>
               {completedOpen ? (
-                <div className="space-y-3 border-t border-border/60 p-3">
+                <div className="space-y-3 border-t border-line-strong p-3">
                   {completedExpenses.map(renderExpenseCard)}
                 </div>
               ) : null}
@@ -363,28 +363,28 @@ export function CardInstallmentExpensesPanel({ cards, reload, setError }: CardIn
       <SimpleModal title="Taksitli harcamayı düzenle" open={Boolean(editing)} onClose={closeEdit}>
         <form onSubmit={handleSave} className="space-y-4">
           <MoneyInput label="Toplam tutar" value={amount} onValueChange={setAmount} required />
-          <label className="block text-sm font-semibold text-foreground">
+          <label className="block text-sm font-semibold text-ink">
             Açıklama
             <input
               value={description}
               onChange={(event) => setDescription(event.target.value)}
               type="text"
-              className="mt-1 w-full rounded-lg border border-input bg-card/80 px-3 py-2.5 outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 dark:bg-card/50 dark:text-foreground"
+              className="mt-1 w-full rounded-lg border border-line-strong bg-raised px-3 py-2.5 outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 dark:bg-raised dark:text-ink"
               required
             />
           </label>
           <div className="grid grid-cols-2 gap-3">
-            <label className="block text-sm font-semibold text-foreground">
+            <label className="block text-sm font-semibold text-ink">
               Harcama Tarihi
               <input
                 value={spentAt}
                 onChange={(event) => setSpentAt(event.target.value)}
                 type="date"
-                className="mt-1 w-full rounded-lg border border-input bg-card/80 px-3 py-2.5 outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 dark:bg-card/50 dark:text-foreground"
+                className="mt-1 w-full rounded-lg border border-line-strong bg-raised px-3 py-2.5 outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 dark:bg-raised dark:text-ink"
                 required
               />
             </label>
-            <label className="block text-sm font-semibold text-foreground">
+            <label className="block text-sm font-semibold text-ink">
               Taksit sayısı
               <input
                 value={installmentCount}
@@ -393,19 +393,19 @@ export function CardInstallmentExpensesPanel({ cards, reload, setError }: CardIn
                 min="2"
                 max="36"
                 step="1"
-                className="mt-1 w-full rounded-lg border border-input bg-card/80 px-3 py-2.5 outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 dark:bg-card/50 dark:text-foreground"
+                className="mt-1 w-full rounded-lg border border-line-strong bg-raised px-3 py-2.5 outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 dark:bg-raised dark:text-ink"
                 required
               />
             </label>
           </div>
           <CategoryPicker description={description} value={category} onChange={setCategory} />
-          <label className="block text-sm font-semibold text-foreground">
+          <label className="block text-sm font-semibold text-ink">
             Not
             <textarea
               value={note}
               onChange={(event) => setNote(event.target.value)}
               rows={2}
-              className="mt-1 w-full rounded-lg border border-input bg-card/80 px-3 py-2.5 outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 dark:bg-card/50 dark:text-foreground"
+              className="mt-1 w-full rounded-lg border border-line-strong bg-raised px-3 py-2.5 outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 dark:bg-raised dark:text-ink"
             />
           </label>
           <p className="rounded-xl border border-warning/20 bg-warning/8 p-3 text-xs font-medium text-warning">

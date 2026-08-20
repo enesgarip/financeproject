@@ -132,7 +132,7 @@ export function RecentCardExpensesPanel({ cards, reload, setError }: RecentCardE
   if (loading || expenses.length === 0) return null
 
   return (
-    <SurfaceCard className="border-border/70">
+    <SurfaceCard className="border-line-strong">
       <CardHeader className="pb-0">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
@@ -140,7 +140,7 @@ export function RecentCardExpensesPanel({ cards, reload, setError }: RecentCardE
               Son kart hareketleri
               <HelpTooltip title="Son kart hareketleri" content={recentExpensesHelp} />
             </CardTitle>
-            <p className="mt-1 text-xs text-muted-foreground">Yanlış girilen hareketi buradan iptal edebilirsin; borç otomatik terslenir.</p>
+            <p className="mt-1 text-xs text-ink-muted">Yanlış girilen hareketi buradan iptal edebilirsin; borç otomatik terslenir.</p>
           </div>
           <Badge variant="secondary">{expenses.length}</Badge>
         </div>
@@ -152,16 +152,16 @@ export function RecentCardExpensesPanel({ cards, reload, setError }: RecentCardE
           const canSplit = card?.card_type === 'kredi_karti' && expense.installment_count === 1 && !locked
           const splitOpen = splittingId === expense.id
           return (
-            <div key={expense.id} className="rounded-xl border border-border/50 bg-card px-3 py-2 text-sm">
+            <div key={expense.id} className="rounded-xl border border-line-strong bg-raised px-3 py-2 text-sm">
               <div className="flex items-center gap-3">
                 <div className="min-w-0 flex-1">
-                  <p className="truncate font-semibold text-foreground">{expense.description}</p>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="truncate font-semibold text-ink">{expense.description}</p>
+                  <p className="text-xs text-ink-muted">
                     {card ? `${card.bank_name} · ${card.card_name}` : 'Kart'} · {formatDate(expense.spent_at)}
                     {expense.installment_count > 1 ? ` · ${expense.installment_count} taksit` : ''}
                   </p>
                 </div>
-                <span className="shrink-0 font-mono font-semibold tabular-nums text-foreground">{formatAmount(expense.amount)}</span>
+                <span className="shrink-0 font-mono font-semibold tabular-nums text-ink">{formatAmount(expense.amount)}</span>
                 {canSplit ? (
                   <button
                     type="button"
@@ -171,7 +171,7 @@ export function RecentCardExpensesPanel({ cards, reload, setError }: RecentCardE
                     }}
                     disabled={cancellingId === expense.id || savingSplitId === expense.id}
                     title="Tek çekim görünen hareketi taksitli plana çevir"
-                    className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-border bg-card px-2.5 py-1.5 text-xs font-semibold text-foreground transition hover:bg-muted/40 disabled:cursor-not-allowed disabled:opacity-40"
+                    className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-line-strong bg-raised px-2.5 py-1.5 text-xs font-semibold text-ink transition hover:bg-black/[.03] dark:hover:bg-white/[.04] disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     <Layers size={13} />
                     Taksitlendir
@@ -182,7 +182,7 @@ export function RecentCardExpensesPanel({ cards, reload, setError }: RecentCardE
                   onClick={() => void handleCancel(expense)}
                   disabled={Boolean(locked) || cancellingId === expense.id}
                   title={locked ?? 'Hareketi append-only iptal et'}
-                  className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-border bg-card px-2.5 py-1.5 text-xs font-semibold text-destructive transition hover:bg-destructive/10 disabled:cursor-not-allowed disabled:opacity-40"
+                  className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-line-strong bg-raised px-2.5 py-1.5 text-xs font-semibold text-destructive transition hover:bg-destructive/10 disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   <Ban size={13} />
                   İptal
@@ -190,14 +190,14 @@ export function RecentCardExpensesPanel({ cards, reload, setError }: RecentCardE
               </div>
 
               {splitOpen ? (
-                <div className="mt-2 flex flex-wrap items-center gap-2 border-t border-border/50 pt-2">
-                  <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                <div className="mt-2 flex flex-wrap items-center gap-2 border-t border-line-strong pt-2">
+                  <label className="flex items-center gap-1.5 text-xs font-medium text-ink-muted">
                     Taksit sayısı
                     <select
                       value={splitCount}
                       onChange={(event) => setSplitCount(Number(event.target.value))}
                       disabled={savingSplitId === expense.id}
-                      className="rounded-lg border border-border/60 bg-card px-2 py-1 text-xs font-semibold tabular-nums text-foreground disabled:opacity-60"
+                      className="rounded-lg border border-line-strong bg-raised px-2 py-1 text-xs font-semibold tabular-nums text-ink disabled:opacity-60"
                     >
                       {installmentChoicesWith(2)
                         .filter((count) => count > 1)
@@ -206,7 +206,7 @@ export function RecentCardExpensesPanel({ cards, reload, setError }: RecentCardE
                         ))}
                     </select>
                   </label>
-                  <span className="text-xs text-muted-foreground tabular-nums">
+                  <span className="text-xs text-ink-muted tabular-nums">
                     {splitCount} × {formatAmount(expense.amount / splitCount)}
                   </span>
                   <button
@@ -221,7 +221,7 @@ export function RecentCardExpensesPanel({ cards, reload, setError }: RecentCardE
                     type="button"
                     onClick={() => setSplittingId(null)}
                     disabled={savingSplitId === expense.id}
-                    className="inline-flex items-center rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground transition hover:bg-muted/40 disabled:opacity-60"
+                    className="inline-flex items-center rounded-lg border border-line-strong bg-raised px-3 py-1.5 text-xs font-semibold text-ink transition hover:bg-black/[.03] dark:hover:bg-white/[.04] disabled:opacity-60"
                   >
                     Vazgeç
                   </button>
