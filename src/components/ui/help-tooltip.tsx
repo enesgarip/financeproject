@@ -98,16 +98,16 @@ export function HelpTooltip({ title, content, className }: HelpTooltipProps) {
             role="tooltip"
             style={{ top: position.top, left: position.left, width: position.width }}
             className={cn(
-              "fixed z-[60] rounded-lg border border-border bg-popover p-3 text-left text-xs text-popover-foreground ring-1 ring-black/[0.025] dark:ring-white/[0.06]",
+              "fixed z-[60] rounded-lg border border-line-strong bg-raised p-3 text-left text-xs text-ink ring-1 ring-black/[0.025] dark:ring-white/[0.06]",
               position.placement === "top" && "-translate-y-full",
             )}
           >
-            <p className="mb-2 text-[11px] font-black uppercase tracking-normal text-foreground">{title}</p>
+            <p className="mb-2 text-[11px] font-black uppercase tracking-normal text-ink">{title}</p>
             <dl className="space-y-2">
               {helpRows.map((row) => (
                 <div key={row.key}>
-                  <dt className="font-bold text-muted-foreground">{row.label}</dt>
-                  <dd className="mt-0.5 leading-5 text-foreground/90">{content[row.key]}</dd>
+                  <dt className="font-bold text-ink-muted">{row.label}</dt>
+                  <dd className="mt-0.5 leading-5 text-ink">{content[row.key]}</dd>
                 </div>
               ))}
             </dl>
@@ -139,7 +139,7 @@ export function HelpTooltip({ title, content, className }: HelpTooltipProps) {
         onBlur={() => setHovered(false)}
         // Görsel daire 28px kalır; dokunma alanı before pseudo-element ile
         // 44px'e çıkar — düzen bozulmadan mobil hedef büyür.
-        className="relative inline-grid size-7 shrink-0 place-items-center rounded-full text-[15px] font-black leading-none text-muted-foreground transition before:absolute before:left-1/2 before:top-1/2 before:size-11 before:-translate-x-1/2 before:-translate-y-1/2 before:content-[''] hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/30"
+        className="relative inline-grid size-7 shrink-0 place-items-center rounded-full text-[15px] font-black leading-none text-ink-muted transition before:absolute before:left-1/2 before:top-1/2 before:size-11 before:-translate-x-1/2 before:-translate-y-1/2 before:content-[''] hover:bg-black/[.03] dark:hover:bg-white/[.04] hover:text-ink focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/30"
       >
         <span aria-hidden="true">ⓘ</span>
       </button>

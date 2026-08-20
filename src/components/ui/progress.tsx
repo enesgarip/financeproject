@@ -49,7 +49,7 @@ function Progress({
       data-slot="progress"
       className={cn(
         "relative flex w-full items-center overflow-hidden rounded-full",
-        "bg-muted/70 dark:bg-muted/40",
+        "bg-track",
         heightClass,
         className,
       )}

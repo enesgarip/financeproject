@@ -16,7 +16,7 @@ function Skeleton({ className, "aria-hidden": ariaHidden = true, ...props }: Rea
 
 function SkeletonHero() {
   return (
-    <div className="flex flex-col gap-4 rounded-2xl border border-border/40 bg-card p-6">
+    <div className="flex flex-col gap-4 rounded-2xl border border-line-strong bg-raised p-6">
       <div className="flex items-start justify-between">
         <div className="flex flex-col gap-2.5">
           <Skeleton className="h-3 w-28" />
@@ -27,7 +27,7 @@ function SkeletonHero() {
       </div>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         {Array.from({ length: 4 }, (_, i) => (
-          <div key={i} className="flex flex-col gap-1.5 rounded-xl border border-border/30 bg-muted/20 p-3">
+          <div key={i} className="flex flex-col gap-1.5 rounded-xl border border-line bg-page p-3">
             <Skeleton className="h-2.5 w-16" />
             <Skeleton className="h-5 w-24" />
           </div>
@@ -39,7 +39,7 @@ function SkeletonHero() {
 
 function SkeletonCard({ lines = 3 }: { lines?: number }) {
   return (
-    <div className="flex flex-col gap-3 rounded-2xl border border-border/40 bg-card p-5">
+    <div className="flex flex-col gap-3 rounded-2xl border border-line-strong bg-raised p-5">
       <div className="flex items-center justify-between gap-3">
         <Skeleton className="h-4 w-36" />
         <Skeleton className="h-5 w-16 rounded-full" />
@@ -73,7 +73,7 @@ function SkeletonDashboard() {
 
       {/* Ödeme yükü — lg:col-span-4 */}
       <div className="lg:col-span-4">
-        <div className="flex flex-col gap-4 rounded-2xl border border-border/40 bg-card p-5">
+        <div className="flex flex-col gap-4 rounded-2xl border border-line-strong bg-raised p-5">
           <div className="flex items-start justify-between">
             <div className="flex flex-col gap-2">
               <Skeleton className="h-4 w-32" />
@@ -85,7 +85,7 @@ function SkeletonDashboard() {
           <Skeleton className="h-9 w-36" />
           <div className="grid grid-cols-2 gap-2">
             {Array.from({ length: 2 }, (_, i) => (
-              <div key={i} className="flex flex-col gap-1.5 rounded-xl border border-border/30 bg-muted/20 p-3">
+              <div key={i} className="flex flex-col gap-1.5 rounded-xl border border-line bg-page p-3">
                 <Skeleton className="h-2.5 w-20" />
                 <Skeleton className="h-5 w-24" />
               </div>
@@ -98,7 +98,7 @@ function SkeletonDashboard() {
 
       {/* Kredi kartları — lg:col-span-5 */}
       <div className="lg:col-span-5">
-        <div className="flex flex-col gap-4 rounded-2xl border border-border/40 bg-card p-5">
+        <div className="flex flex-col gap-4 rounded-2xl border border-line-strong bg-raised p-5">
           <div className="flex items-start justify-between">
             <Skeleton className="h-5 w-28" />
             <Skeleton className="h-7 w-24 rounded-full" />
@@ -107,7 +107,7 @@ function SkeletonDashboard() {
           <Skeleton className="h-8 w-44" />
           <Skeleton className="h-2.5 w-full rounded-full" />
           {Array.from({ length: 3 }, (_, i) => (
-            <div key={i} className="flex items-center justify-between rounded-xl border border-border/30 bg-muted/20 px-4 py-3">
+            <div key={i} className="flex items-center justify-between rounded-xl border border-line bg-page px-4 py-3">
               <div className="flex items-center gap-3">
                 <Skeleton className="size-8 rounded-lg" />
                 <div className="flex flex-col gap-1">

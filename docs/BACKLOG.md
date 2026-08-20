@@ -18,12 +18,27 @@ edilen yerde** kullanılır ve hafif gölge alır. Kural tablosu
   `serit/Divider` (ayıraç tek yerde), `ui/card` tek kademe gölge +
   `variant="flat"` (kart içinde kart için), UI_ARCHITECTURE kart kuralı
   yeniden yazıldı.
-- **Faz 2 — UI primitive.** button/input/badge/tabs/alert/progress/skeleton/
-  toast/confirm-dialog/tooltip token uyumu + 8 dosyadaki ham Tailwind rengi.
+- ~~**Faz 2a — UI primitive token uyumu.**~~ DONE. button/input/badge/tabs/
+  skeleton/toast/confirm-dialog/help-tooltip/progress/query-error/
+  confidence-badge: nötrler Şerit token'larına geçti (`border-line-strong`,
+  `bg-raised`, `text-ink`/`ink-muted`/`ink-faint`, progress track `--track`,
+  odak halkası `ring-offset-page`). Nötr hover tek yazıma indi
+  (`hover:bg-black/[.03] dark:hover:bg-white/[.04]`). **Sinyal renkleri
+  (`destructive`/`success`/`warning`/`info`) KASITLI olarak eski semantikte
+  bırakıldı** — `--signal-*` ile birleştirme Faz 8'de, yoksa bu PR görsel
+  olarak da kayardı.
+- **Faz 2b — ham Tailwind rengi temizliği.** 8 dosya, ~37 kullanım. Dosya
+  başına karar gerekiyor: sinyal mi (`--signal-*`), kimlik mi (`--viz-*`),
+  dekorasyon mu (nötr `ink-faint`). En büyüğü `DashboardCards` işlem türü
+  chip'leri (7 tür × ham renk) — kimlik olduğu için viz paletine geçmeli, ama
+  viz'in Tailwind utility'si yok (`var(--viz-N)` inline style gerekiyor).
 - **Faz 3 — Kabuk.** Layout/BottomNav/HubNav/QuickActions/CrudPage/EmptyState/
   SimpleModal/PullToRefresh. **FAB sağ alttaki tutarı örtüyor** (mobil, Özet'te
   "427 ₺", Kartlar'da "%20" rozeti) — sağa yaslı rakamlı listede kalıcı sorun.
 - **Faz 4 — Panel ailesi.** `finance/*` (26) + `dashboard/*` (7), üç alt PR.
+  Kredi kartı görselleri: **fiziksel kart metaforu KALIYOR**, palet dışı mavi
+  gradient banka rengi olarak palete çekilecek (sahibin kararı 2026-08-20).
+  Kartın altındaki 2×2 gri kutucuklar kart-içinde-kart; çizgi satırına döner.
 - **Faz 5 — Modal & sihirbaz.** CurrentMovementImportModal (1108 satır),
   StatementImportModal (788), FinancePaymentDrawer, trade/movement modalları;
   mobilde bottom-sheet.
