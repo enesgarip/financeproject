@@ -128,6 +128,27 @@
   --color-signal-warning: var(--signal-warning);
   --color-signal-warning-ink: var(--signal-warning-ink);
   --color-signal-info: var(--signal-info);
+
+  /* Kimlik (grafik) paleti — Tailwind utility köprüsü. Renkler zaten :root'ta
+     vardı ama yalnız `var(--viz-N)` olarak, inline style ile tüketilebiliyordu:
+     className içinden kimlik rengi vermek isteyen ekranlar bu yüzden ham Tailwind
+     rengine (`text-sky-500`, `bg-violet-500/12`) kaçıyordu. Slot sırası CVD
+     güvenliğinin mekanizması — bkz. charts/vizPalette.ts. */
+  --color-viz-1: var(--viz-1);
+  --color-viz-2: var(--viz-2);
+  --color-viz-3: var(--viz-3);
+  --color-viz-4: var(--viz-4);
+  --color-viz-5: var(--viz-5);
+  --color-viz-6: var(--viz-6);
+  --color-viz-7: var(--viz-7);
+  --color-viz-8: var(--viz-8);
+  --color-viz-9: var(--viz-9);
+  --color-viz-10: var(--viz-10);
+  --color-viz-11: var(--viz-11);
+  --color-viz-12: var(--viz-12);
+  --color-viz-13: var(--viz-13);
+  --color-viz-14: var(--viz-14);
+  --color-viz-other: var(--viz-other);
 }
 
 /* ─── LIGHT MODE ─── */

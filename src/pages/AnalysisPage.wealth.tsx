@@ -62,7 +62,7 @@ export function InflationShieldPanel({ data }: { data: AnalysisData }) {
             <CardTitle>Enflasyon kalkanı</CardTitle>
             <p className="mt-1 text-xs text-muted-foreground">Servetinin ne kadarı reel varlıkta, ne kadarı eriyen TL nakitte.</p>
           </div>
-          <ShieldCheck size={18} className="text-emerald-500" />
+          <ShieldCheck size={18} className="text-ink-faint" />
         </div>
       </CardHeader>
       <CardContent className="space-y-3 pt-3">
@@ -121,7 +121,7 @@ export function ZakatPanel({ data, ratesSnapshot }: { data: AnalysisData; ratesS
             <CardTitle>Zekât hesaplayıcı</CardTitle>
             <p className="mt-1 text-xs text-muted-foreground">Diyanet ölçüsü: 80,18 gr altın nisabı, %2,5 oran, borçlar düşülür.</p>
           </div>
-          <HandCoins size={18} className="text-amber-500" />
+          <HandCoins size={18} className="text-ink-faint" />
         </div>
       </CardHeader>
       <CardContent className="space-y-4 pt-3">

@@ -56,8 +56,8 @@ const categoryCardTint: Record<Asset['category'], string> = {
   Altın: 'border-warning/20 bg-warning/5 dark:bg-warning/8',
   Fon:   'border-info/20 bg-info/5 dark:bg-info/8',
   Hisse: 'border-primary/20 bg-primary/5 dark:bg-primary/8',
-  Araç:  'border-orange-300/30 bg-orange-50/40 dark:border-orange-900/40 dark:bg-orange-950/15',
-  BES:   'border-teal-300/30 bg-teal-50/40 dark:border-teal-900/40 dark:bg-teal-950/15',
+  Araç:  'border-viz-11/25 bg-viz-11/6',
+  BES:   'border-viz-9/25 bg-viz-9/6',
   Diğer: 'border-border/70 bg-card',
 }
 

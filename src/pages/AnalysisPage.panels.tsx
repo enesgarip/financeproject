@@ -165,27 +165,27 @@ export function PriceIncreaseRadar({ trends }: { trends: PriceTrend[] }) {
             <CardTitle>Zam radarı</CardTitle>
             <p className="mt-1 text-xs text-muted-foreground">Düzenli gider ve aboneliklerinde zamanla artan kalemler (son {PRICE_RADAR_MONTHS - 1} ay).</p>
           </div>
-          <TrendingUp size={18} className="text-amber-500" />
+          <TrendingUp size={18} className="text-ink-faint" />
         </div>
       </CardHeader>
       <CardContent className="grid gap-2 pt-3 min-[640px]:grid-cols-2">
         {visible.map((trend) => (
           <div
             key={trend.key}
-            className="rounded-xl bg-amber-50/70 px-3 py-2.5 ring-1 ring-amber-200/60 dark:bg-amber-950/20 dark:ring-amber-900/40"
+            className="rounded-xl bg-warning/8 px-3 py-2.5 ring-1 ring-warning/25"
           >
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
-                <p className="truncate text-sm font-bold text-amber-900 dark:text-amber-100">{trend.label}</p>
+                <p className="truncate text-sm font-bold text-ink">{trend.label}</p>
                 {trend.category ? (
-                  <p className="truncate text-[11px] text-amber-700/80 dark:text-amber-300/70">{trend.category}</p>
+                  <p className="truncate text-[11px] text-ink-muted">{trend.category}</p>
                 ) : null}
               </div>
-              <span className="shrink-0 rounded-md bg-amber-200/70 px-1.5 py-0.5 text-xs font-bold text-amber-800 dark:bg-amber-900/50 dark:text-amber-200">
+              <span className="shrink-0 rounded-md bg-warning/18 px-1.5 py-0.5 text-xs font-bold text-warning">
                 +%{Math.round(trend.changePct)}
               </span>
             </div>
-            <p className="mt-1 text-[11px] text-amber-700/80 dark:text-amber-300/70">
+            <p className="mt-1 text-[11px] text-ink-muted">
               {formatAmount(trend.firstAmount)} → {formatAmount(trend.lastAmount)} · {trend.monthsSpan} ayda
               {trend.monthsSpan >= 3 ? ` · yıllık ~%${Math.round(trend.annualizedPct)}` : ''}
             </p>

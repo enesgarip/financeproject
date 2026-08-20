@@ -231,7 +231,7 @@ export function NotificationSettings() {
         </p>
 
         {blocked ? (
-          <p className="flex items-center gap-2 text-sm text-amber-600">
+          <p className="flex items-center gap-2 text-sm text-warning">
             <BellOff className="h-4 w-4" /> Bildirim izni tarayıcıda engellenmiş. Site
             ayarlarından izni açman gerekiyor.
           </p>
@@ -349,7 +349,7 @@ export function NotificationSettings() {
           <p className="text-xs text-muted-foreground">Bu cihaz bildirimlere abone.</p>
         ) : null}
         {info ? <p className="text-sm text-success">{info}</p> : null}
-        {error ? <p className="text-sm text-red-600">{error}</p> : null}
+        {error ? <p className="text-sm text-destructive">{error}</p> : null}
       </CardContent>
     </SurfaceCard>
   )
