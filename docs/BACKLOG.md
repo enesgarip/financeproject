@@ -36,11 +36,17 @@ edilen yerde** kullanılır ve hafif gölge alır. Kural tablosu
   (`@theme`e `--color-viz-1..14` köprüsü) — ekranlar kimlik rengi için ham
   Tailwind'e kaçmak zorunda değil. `LoginPage`in koyu imza panelindeki iki renk
   Faz 6'ya bırakıldı (panelin `index.css`'te kendi bloğu var).
-- **Faz 3 — Kabuk.** Layout/BottomNav/HubNav/QuickActions/CrudPage/EmptyState/
-  SimpleModal/PullToRefresh. **FAB sağ alttaki tutarı örtüyor** (mobil, Özet'te
-  "427 ₺", Kartlar'da "%20" rozeti) — sağa yaslı rakamlı listede kalıcı sorun.
-  `CrudPage` arama satırı 390px'te sıkışıyor: "Kayıtlarda ara" placeholder'ı
-  kırpılıyor (sayaç + arama + ekle butonu tek satırda).
+- ~~**Faz 3a — Kabuk token + mobil araç çubuğu.**~~ DONE. `EmptyState`,
+  `SimpleModal`, `PullToRefresh`, `CrudPage` Şerit token'larına geçti
+  (Layout/BottomNav/HubNav/QuickActions zaten temizdi). `CrudPage` araç çubuğu
+  390px'te sıkışıyordu — sayaç + arama + "Ekle" tek satırdaydı ve placeholder
+  kırpılıyordu; mobilde sayaç üst satıra, arama + buton alt satıra alındı
+  (masaüstü değişmedi). Kayıt menüsü popover'ı `--shadow-card` aldı.
+- **Faz 3b — mobil davranış (DAVRANIŞ DEĞİŞİKLİĞİ, ayrı PR).** İki madde:
+  (1) **FAB sağa yaslı tutarı örtüyor** (Özet'te "427 ₺", Kartlar'da "%20").
+  Bandı opak yapmak çözüm DEĞİL (bilinen kural). Öneri: kaydırma yönüne duyarlı
+  gizlenme — aşağı kaydırırken çekilir, yukarı kaydırınca/dururken döner.
+  (2) `SimpleModal` mobilde bottom-sheet olsun.
 - **Faz 4 — Panel ailesi.** `finance/*` (26) + `dashboard/*` (7), üç alt PR.
   Kredi kartı görselleri: **fiziksel kart metaforu KALIYOR**, palet dışı mavi
   gradient banka rengi olarak palete çekilecek (sahibin kararı 2026-08-20).

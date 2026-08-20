@@ -382,7 +382,7 @@ export function CrudPage<T extends CrudTableName>({
         <p className="serit-eyebrow">
           {normalizedQuery ? `${visibleRows.length} / ${rows.length} kayıt` : `${rows.length} kayıt`}
         </p>
-        <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-2">
+        <div className="flex w-full min-w-0 items-center gap-2 sm:w-auto sm:flex-1 sm:justify-end">
           <label className="relative block min-w-0 flex-1 sm:max-w-64">
             <span className="sr-only">{pageTitle ?? addLabel} içinde ara</span>
             <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-ink-faint" />
@@ -393,7 +393,7 @@ export function CrudPage<T extends CrudTableName>({
               className="pl-9 text-sm"
             />
           </label>
-          <Button type="button" onClick={openCreate} className="h-11 gap-2 px-4">
+          <Button type="button" onClick={openCreate} className="h-11 shrink-0 gap-2 px-4">
             <Plus data-icon="inline-start" />
             {addLabel}
           </Button>
@@ -404,7 +404,7 @@ export function CrudPage<T extends CrudTableName>({
       {!showList ? null : loading ? (
         <div className="grid gap-3 min-[760px]:grid-cols-2 xl:grid-cols-3">
           {Array.from({ length: 6 }, (_, index) => (
-            <div key={index} className="rounded-2xl border border-border/50 bg-card p-4 min-[390px]:p-5">
+            <div key={index} className="rounded-2xl border border-line-strong bg-raised p-4 min-[390px]:p-5">
               <Skeleton className="h-5 w-2/3" />
               <Skeleton className="mt-3 h-3.5 w-1/2" />
               <div className="mt-5 grid grid-cols-2 gap-2">
@@ -467,7 +467,7 @@ export function CrudPage<T extends CrudTableName>({
                             setMenuOpenId(null)
                             openEdit(row)
                           }}
-                          className="flex w-full items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted"
+                          className="flex w-full items-center gap-2 px-3 py-2 text-sm text-ink hover:bg-black/[.03] dark:hover:bg-white/[.04]"
                         >
                           <Pencil size={14} />
                           Düzenle
@@ -535,8 +535,8 @@ export function CrudPage<T extends CrudTableName>({
                           key={detail}
                           style={getDetailStyle?.(row, rows)}
                           className={cn(
-                            'min-w-0 rounded-xl border border-border/50 bg-muted/30 px-3 py-2.5',
-                            getDetailClassName?.(row, rows) ?? 'bg-muted/40',
+                            'min-w-0 rounded-xl border border-line bg-page px-3 py-2.5',
+                            getDetailClassName?.(row, rows) ?? '',
                           )}
                         >
                           {parsedDetail ? (
@@ -561,12 +561,12 @@ export function CrudPage<T extends CrudTableName>({
 
             if (isCollapsible) {
               return (
-                <section key={group} className="rounded-xl border border-border/60 bg-card/60">
+                <section key={group} className="rounded-xl border border-line-strong bg-raised">
                   <button
                     type="button"
                     onClick={() => toggleCollapsibleGroup(group)}
                     aria-expanded={isGroupOpen}
-                    className="flex w-full items-center justify-between gap-2 px-3 py-2.5 text-sm font-semibold text-foreground transition hover:bg-muted/50"
+                    className="flex w-full items-center justify-between gap-2 px-3 py-2.5 text-sm font-semibold text-ink transition hover:bg-black/[.03] dark:hover:bg-white/[.04]"
                   >
                     <span className="inline-flex items-center gap-2">
                       <Check size={15} className="text-success" />
@@ -806,7 +806,7 @@ function RowMenu({
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label={label}
-        className="tap-target grid size-10 place-items-center rounded-lg border border-border/70 bg-background/55 text-muted-foreground transition hover:bg-muted hover:text-foreground"
+        className="tap-target grid size-10 place-items-center rounded-lg border border-line-strong bg-page text-ink-muted transition hover:bg-black/[.03] dark:hover:bg-white/[.04] hover:text-ink"
       >
         <MoreVertical size={18} />
       </button>
@@ -815,7 +815,7 @@ function RowMenu({
           ref={menuRef}
           role="menu"
           aria-label={label}
-          className="absolute right-0 top-full z-10 mt-1 w-44 rounded-lg border border-border bg-popover py-1"
+          className="absolute right-0 top-full z-10 mt-1 w-44 rounded-lg border border-line-strong bg-raised py-1 shadow-[var(--shadow-card)]"
         >
           {children}
         </div>
