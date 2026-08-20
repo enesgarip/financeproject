@@ -153,7 +153,7 @@ function ContextManager({ contexts, userId, onChanged, onError, confirm }: {
     <Card>
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-2 text-base"><FolderKanban className="size-4 text-primary" /> Gider bağlamları</CardTitle>
-        <p className="text-xs text-muted-foreground">Evcil hayvan giderlerini veya düğün, taşınma gibi süreli projeleri tek mercekte izle.</p>
+        <p className="text-xs text-ink-muted">Evcil hayvan giderlerini veya düğün, taşınma gibi süreli projeleri tek mercekte izle.</p>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
         {contexts.length ? (
@@ -161,17 +161,17 @@ function ContextManager({ contexts, userId, onChanged, onError, confirm }: {
             {contexts.map((context) => {
               const KindIcon = KIND_ICONS[context.kind] ?? FolderKanban
               return (
-              <li key={context.id} className="flex items-center justify-between rounded-xl border border-border px-3 py-2">
+              <li key={context.id} className="flex items-center justify-between rounded-xl border border-line-strong px-3 py-2">
                 <div className="flex min-w-0 items-center gap-2">
                   <KindIcon className="size-4 text-primary" />
-                  <div className="min-w-0"><p className="truncate text-sm font-bold">{context.name}</p><p className="text-xs text-muted-foreground">{contextKindLabel(context.kind)}</p></div>
+                  <div className="min-w-0"><p className="truncate text-sm font-bold">{context.name}</p><p className="text-xs text-ink-muted">{contextKindLabel(context.kind)}</p></div>
                 </div>
                 <Button size="icon-sm" variant="ghost" aria-label={`${context.name} bağlamını sil`} onClick={() => void remove(context)}><Trash2 /></Button>
               </li>
               )
             })}
           </ul>
-        ) : <p className="rounded-xl border border-dashed border-border p-4 text-center text-sm text-muted-foreground">İlk evcil hayvanını veya projeni ekle.</p>}
+        ) : <p className="rounded-xl border border-dashed border-line-strong p-4 text-center text-sm text-ink-muted">İlk evcil hayvanını veya projeni ekle.</p>}
         <form onSubmit={add} className="grid gap-2 sm:grid-cols-2 lg:grid-cols-6">
           <Select
             value={kind}
@@ -197,8 +197,8 @@ function ContextManager({ contexts, userId, onChanged, onError, confirm }: {
           ) : null}
           <Button type="submit" disabled={!name.trim() || saving}><Plus /> {saving ? 'Ekleniyor...' : 'Ekle'}</Button>
         </form>
-        <p className="text-xs text-muted-foreground">
-          Bütçe ve tarihler opsiyonel. Bitişi boş bırakırsan bağlam <strong className="font-semibold text-foreground">süresiz</strong> sürer; evcil hayvan zaten süresizdir.
+        <p className="text-xs text-ink-muted">
+          Bütçe ve tarihler opsiyonel. Bitişi boş bırakırsan bağlam <strong className="font-semibold text-ink">süresiz</strong> sürer; evcil hayvan zaten süresizdir.
         </p>
       </CardContent>
     </Card>
@@ -267,8 +267,8 @@ function ContextCardTagging({ contexts, onChanged, onError }: { contexts: Expens
   }
 
   return (
-    <Card><CardHeader className="pb-2"><CardTitle className="flex items-center gap-2 text-base"><CreditCard className="size-4 text-primary" /> Kart harcamasını bağlama ata</CardTitle><p className="text-xs text-muted-foreground">Etiketleme kart borcunu değiştirmez. Henüz kesinleşmemiş provizyonlar da listelenir.</p></CardHeader><CardContent>
-      {loading ? <Skeleton className="h-24 rounded-xl" /> : <ul className="flex flex-col divide-y divide-border/60">{expenses.map((expense) => <li key={expense.id} className="flex items-center justify-between gap-3 py-2"><div className="min-w-0"><p className="flex items-center gap-2 text-sm font-semibold"><span className="truncate">{expense.description}</span>{expense.status === 'provision' ? <Badge variant="outline" className="shrink-0">Provizyon</Badge> : null}</p><p className="truncate text-xs text-muted-foreground">{formatDate(expense.spent_at)} · {formatCurrency(expense.amount)}{expense.context_id ? ` · ${names.get(expense.context_id) ?? 'Bağlam'}` : ''}</p></div><Select className="w-40 shrink-0" value={expense.context_id ?? ''} disabled={busyId === expense.id} onChange={(event) => void assign(expense, event.target.value)} aria-label={`${expense.description} için bağlam`}><option value="">Bağlam yok</option>{contexts.map((context) => <option key={context.id} value={context.id}>{context.name}</option>)}</Select></li>)}</ul>}
+    <Card><CardHeader className="pb-2"><CardTitle className="flex items-center gap-2 text-base"><CreditCard className="size-4 text-primary" /> Kart harcamasını bağlama ata</CardTitle><p className="text-xs text-ink-muted">Etiketleme kart borcunu değiştirmez. Henüz kesinleşmemiş provizyonlar da listelenir.</p></CardHeader><CardContent>
+      {loading ? <Skeleton className="h-24 rounded-xl" /> : <ul className="flex flex-col divide-y divide-line">{expenses.map((expense) => <li key={expense.id} className="flex items-center justify-between gap-3 py-2"><div className="min-w-0"><p className="flex items-center gap-2 text-sm font-semibold"><span className="truncate">{expense.description}</span>{expense.status === 'provision' ? <Badge variant="outline" className="shrink-0">Provizyon</Badge> : null}</p><p className="truncate text-xs text-ink-muted">{formatDate(expense.spent_at)} · {formatCurrency(expense.amount)}{expense.context_id ? ` · ${names.get(expense.context_id) ?? 'Bağlam'}` : ''}</p></div><Select className="w-40 shrink-0" value={expense.context_id ?? ''} disabled={busyId === expense.id} onChange={(event) => void assign(expense, event.target.value)} aria-label={`${expense.description} için bağlam`}><option value="">Bağlam yok</option>{contexts.map((context) => <option key={context.id} value={context.id}>{context.name}</option>)}</Select></li>)}</ul>}
     </CardContent></Card>
   )
 }
@@ -278,9 +278,9 @@ function ContextSummaryCard({ summary, onDelete }: { summary: ExpenseContextSumm
   const usedWidth = `${Math.min(100, Math.max(0, (budgetUsedRatio ?? 0) * 100))}%`
   const KindIcon = KIND_ICONS[context.kind] ?? FolderKanban
   return (
-    <Card><CardHeader className="pb-3"><div className="flex items-start justify-between gap-3"><div><CardTitle className="flex items-center gap-2 text-base"><KindIcon className="size-4 text-primary" />{context.name}</CardTitle>{context.ends_on ? <p className="text-xs text-muted-foreground">Bitiş {formatDate(context.ends_on)}</p> : <Badge variant="outline" className="mt-1">Süresiz</Badge>}</div><div className="text-right"><p className="font-bold tabular-nums">{formatCurrency(total)}</p><p className="text-xs text-muted-foreground">Bu ay {formatCurrency(thisMonthTotal)}</p></div></div></CardHeader><CardContent className="flex flex-col gap-4">
-      {remainingBudget != null ? <div><div className="mb-1 flex justify-between text-xs"><span className="font-semibold">Bütçe burn-down</span><span className={remainingBudget < 0 ? 'text-destructive' : 'text-muted-foreground'}>{remainingBudget < 0 ? `${formatCurrency(-remainingBudget)} aşıldı` : `${formatCurrency(remainingBudget)} kaldı`}</span></div><div className="h-2 overflow-hidden rounded-full bg-muted"><div className={`h-full rounded-full ${remainingBudget < 0 ? 'bg-destructive' : 'bg-primary'}`} style={{ width: usedWidth }} /></div></div> : null}
-      {entries.length ? <ul className="flex flex-col divide-y divide-border/50">{entries.slice(0, 10).map((entry) => <li key={entry.id} className="flex items-center justify-between gap-2 py-2"><div className="min-w-0"><p className="truncate text-sm font-medium">{entry.description}</p><p className="text-xs text-muted-foreground">{formatDate(entry.spentAt)} · {entry.category}</p></div><div className="flex items-center gap-2"><Badge variant={entry.source === 'card' ? 'secondary' : 'outline'}>{entry.paymentLabel}</Badge><span className="text-sm font-semibold tabular-nums">{formatCurrency(entry.amount)}</span>{entry.source === 'manual' ? <Button size="icon-xs" variant="ghost" aria-label="Gideri sil" onClick={() => void onDelete(entry.id.replace(/^manual:/, ''))}><Trash2 /></Button> : null}</div></li>)}</ul> : <p className="text-sm text-muted-foreground">Henüz gider yok.</p>}
+    <Card><CardHeader className="pb-3"><div className="flex items-start justify-between gap-3"><div><CardTitle className="flex items-center gap-2 text-base"><KindIcon className="size-4 text-primary" />{context.name}</CardTitle>{context.ends_on ? <p className="text-xs text-ink-muted">Bitiş {formatDate(context.ends_on)}</p> : <Badge variant="outline" className="mt-1">Süresiz</Badge>}</div><div className="text-right"><p className="font-bold tabular-nums">{formatCurrency(total)}</p><p className="text-xs text-ink-muted">Bu ay {formatCurrency(thisMonthTotal)}</p></div></div></CardHeader><CardContent className="flex flex-col gap-4">
+      {remainingBudget != null ? <div><div className="mb-1 flex justify-between text-xs"><span className="font-semibold">Bütçe burn-down</span><span className={remainingBudget < 0 ? 'text-destructive' : 'text-ink-muted'}>{remainingBudget < 0 ? `${formatCurrency(-remainingBudget)} aşıldı` : `${formatCurrency(remainingBudget)} kaldı`}</span></div><div className="h-2 overflow-hidden rounded-full bg-page"><div className={`h-full rounded-full ${remainingBudget < 0 ? 'bg-destructive' : 'bg-primary'}`} style={{ width: usedWidth }} /></div></div> : null}
+      {entries.length ? <ul className="flex flex-col divide-y divide-line">{entries.slice(0, 10).map((entry) => <li key={entry.id} className="flex items-center justify-between gap-2 py-2"><div className="min-w-0"><p className="truncate text-sm font-medium">{entry.description}</p><p className="text-xs text-ink-muted">{formatDate(entry.spentAt)} · {entry.category}</p></div><div className="flex items-center gap-2"><Badge variant={entry.source === 'card' ? 'secondary' : 'outline'}>{entry.paymentLabel}</Badge><span className="text-sm font-semibold tabular-nums">{formatCurrency(entry.amount)}</span>{entry.source === 'manual' ? <Button size="icon-xs" variant="ghost" aria-label="Gideri sil" onClick={() => void onDelete(entry.id.replace(/^manual:/, ''))}><Trash2 /></Button> : null}</div></li>)}</ul> : <p className="text-sm text-ink-muted">Henüz gider yok.</p>}
     </CardContent></Card>
   )
 }

@@ -509,15 +509,15 @@ export function CrudPage<T extends CrudTableName>({
                       data-card-id={row.id}
                       style={getCardStyle?.(row, rows)}
                       className={cn(
-                        'min-w-0 rounded-2xl border bg-card p-4 transition-all duration-250 hover:-translate-y-0.5 min-[390px]:p-5',
-                        getCardClassName?.(row, rows) ?? 'border-border/75',
+                        'min-w-0 rounded-2xl border bg-raised p-4 transition-all duration-250 hover:-translate-y-0.5 min-[390px]:p-5',
+                        getCardClassName?.(row, rows) ?? 'border-line-strong',
                       )}
                     >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
-                      <h2 className="truncate text-base font-black text-foreground">{title}</h2>
+                      <h2 className="truncate text-base font-black text-ink">{title}</h2>
                       {subtitle ? (
-                        <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>
+                        <p className="mt-1 text-sm text-ink-muted">{subtitle}</p>
                       ) : null}
                     </div>
                     {/* Menü JSX'i TEK yerde (`rowMenu`): burada bir kopyası daha
@@ -542,16 +542,16 @@ export function CrudPage<T extends CrudTableName>({
                           {parsedDetail ? (
                             <>
                               <dt className="finance-label break-words leading-tight">{parsedDetail.label}</dt>
-                              <dd className="mt-1 break-words font-mono text-sm font-bold leading-snug text-foreground">{parsedDetail.value}</dd>
+                              <dd className="mt-1 break-words font-mono text-sm font-bold leading-snug text-ink">{parsedDetail.value}</dd>
                             </>
                           ) : (
-                            <span className="break-words text-sm font-semibold text-foreground/85">{detail}</span>
+                            <span className="break-words text-sm font-semibold text-ink">{detail}</span>
                           )}
                         </div>
                       )
                     })}
                   </dl>
-                  {note ? <p className="mt-3 text-sm text-muted-foreground">{note}</p> : null}
+                  {note ? <p className="mt-3 text-sm text-ink-muted">{note}</p> : null}
                   {renderExtra ? renderExtra(row, { reload: loadRows, setError, rows }) : null}
                 </article>
                   )
@@ -572,9 +572,9 @@ export function CrudPage<T extends CrudTableName>({
                       <Check size={15} className="text-success" />
                       {group} ({items.length})
                     </span>
-                    <ChevronDown size={16} className={`shrink-0 text-muted-foreground transition-transform ${isGroupOpen ? 'rotate-180' : ''}`} />
+                    <ChevronDown size={16} className={`shrink-0 text-ink-muted transition-transform ${isGroupOpen ? 'rotate-180' : ''}`} />
                   </button>
-                  {isGroupOpen ? <div className="border-t border-border/60 p-3">{grid}</div> : null}
+                  {isGroupOpen ? <div className="border-t border-line-strong p-3">{grid}</div> : null}
                 </section>
               )
             }
@@ -584,7 +584,7 @@ export function CrudPage<T extends CrudTableName>({
                 {groupBy && group ? (
                   <div className="flex items-center gap-3 px-1 py-1">
                     <h2
-                      className={cn('shrink-0 text-xs font-black uppercase text-muted-foreground', getGroupClassName?.(group))}
+                      className={cn('shrink-0 text-xs font-black uppercase text-ink-muted', getGroupClassName?.(group))}
                     >
                       {group}
                     </h2>
@@ -616,7 +616,7 @@ export function CrudPage<T extends CrudTableName>({
             const hintText = field.hint?.(formValues, fieldContext) ?? null
 
             return (
-              <label key={field.name} className={cn('block text-sm font-semibold text-foreground', field.type === 'textarea' && 'sm:col-span-2')}>
+              <label key={field.name} className={cn('block text-sm font-semibold text-ink', field.type === 'textarea' && 'sm:col-span-2')}>
                 <span>
                   {field.label}
                   {field.required ? <span className="text-destructive"> *</span> : null}
@@ -661,7 +661,7 @@ export function CrudPage<T extends CrudTableName>({
                     <CalendarDays
                       aria-hidden="true"
                       size={18}
-                      className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                      className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-ink-muted"
                     />
                   </div>
                 ) : field.type === 'day' ? (
@@ -687,11 +687,11 @@ export function CrudPage<T extends CrudTableName>({
                     <CalendarDays
                       aria-hidden="true"
                       size={18}
-                      className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                      className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-ink-muted"
                     />
                   </div>
                 ) : field.type === 'computed' ? (
-                  <div className="mt-1 flex min-h-[2.5rem] items-center rounded-xl border border-dashed border-border bg-muted/40 px-3 text-sm font-mono font-semibold tabular-nums text-foreground">
+                  <div className="mt-1 flex min-h-[2.5rem] items-center rounded-xl border border-dashed border-line-strong bg-page px-3 text-sm font-mono font-semibold tabular-nums text-ink">
                     {(field.formatComputed ?? defaultFormatComputed)(field.compute?.(formValues, fieldContext) ?? null)}
                   </div>
                 ) : (
@@ -708,7 +708,7 @@ export function CrudPage<T extends CrudTableName>({
                   />
                 )}
                 {fieldError ? <span className="mt-1 block text-xs font-medium text-destructive">{fieldError}</span> : null}
-                {hintText ? <span className="mt-1 block text-xs text-muted-foreground">{hintText}</span> : null}
+                {hintText ? <span className="mt-1 block text-xs text-ink-muted">{hintText}</span> : null}
               </label>
             )
           })}

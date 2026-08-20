@@ -64,12 +64,12 @@ export function UpcomingInstallments({ data }: { data: AnalysisData }) {
   }, [data.cards, data.loans, data.cardInstallments, data.loanInstallments])
 
   return (
-    <Card className="border-border/70 lg:col-span-5">
+    <Card className="border-line-strong lg:col-span-5">
       <CardHeader className="pb-0">
         <div className="flex items-start justify-between gap-3">
           <div>
             <CardTitle>Yaklaşan taksitler</CardTitle>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <p className="mt-1 text-sm text-ink-muted">
               {upcoming.totalCount} kart / kredi taksiti{upcoming.totalCount > 8 ? ' · ilk 8 gösteriliyor' : ''}
             </p>
           </div>
@@ -78,21 +78,21 @@ export function UpcomingInstallments({ data }: { data: AnalysisData }) {
       </CardHeader>
       <CardContent className="space-y-2 pt-2">
         {upcoming.items.length === 0 ? (
-          <p className="rounded-xl bg-muted/45 p-3 text-sm text-muted-foreground">Bekleyen kart veya kredi taksiti yok.</p>
+          <p className="rounded-xl bg-page p-3 text-sm text-ink-muted">Bekleyen kart veya kredi taksiti yok.</p>
         ) : (
           upcoming.items.map((item) => (
-            <div key={item.id} className="rounded-xl bg-muted/45 px-3 py-2 text-sm">
+            <div key={item.id} className="rounded-xl bg-page px-3 py-2 text-sm">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <div className="flex min-w-0 items-center gap-2">
-                    <p className="truncate font-semibold text-foreground">{item.title}</p>
+                    <p className="truncate font-semibold text-ink">{item.title}</p>
                     <Badge variant={item.tone as 'default' | 'secondary' | 'destructive' | 'outline'}>{item.statusLabel}</Badge>
                   </div>
-                  <p className="mt-0.5 text-xs text-muted-foreground">
+                  <p className="mt-0.5 text-xs text-ink-muted">
                     {item.subtitle}
                   </p>
                 </div>
-                <span className="shrink-0 whitespace-nowrap rounded-lg bg-muted px-2 py-1 font-mono text-xs font-bold tabular-nums text-foreground ring-1 ring-border/60">
+                <span className="shrink-0 whitespace-nowrap rounded-lg bg-page px-2 py-1 font-mono text-xs font-bold tabular-nums text-ink ring-1 ring-line-strong">
                   {formatAmount(item.amount)}
                 </span>
               </div>
@@ -158,12 +158,12 @@ export function PriceIncreaseRadar({ trends }: { trends: PriceTrend[] }) {
   const visible = trends.slice(0, 6)
 
   return (
-    <Card className="border-border/70 lg:col-span-7">
+    <Card className="border-line-strong lg:col-span-7">
       <CardHeader className="pb-0">
         <div className="flex items-start justify-between gap-3">
           <div>
             <CardTitle>Zam radarı</CardTitle>
-            <p className="mt-1 text-xs text-muted-foreground">Düzenli gider ve aboneliklerinde zamanla artan kalemler (son {PRICE_RADAR_MONTHS - 1} ay).</p>
+            <p className="mt-1 text-xs text-ink-muted">Düzenli gider ve aboneliklerinde zamanla artan kalemler (son {PRICE_RADAR_MONTHS - 1} ay).</p>
           </div>
           <TrendingUp size={18} className="text-ink-faint" />
         </div>
@@ -213,28 +213,28 @@ export function PeopleLedger({ debts }: { debts: Debt[] }) {
   ).sort((a, b) => Math.abs(b.receivable - b.borrowed) - Math.abs(a.receivable - a.borrowed))
 
   return (
-    <Card className="border-border/70 lg:col-span-5">
+    <Card className="border-line-strong lg:col-span-5">
       <CardHeader className="pb-0">
         <div className="flex items-start justify-between gap-3">
           <div>
             <CardTitle>Kişi bazlı bakiye</CardTitle>
-            <p className="mt-1 text-sm text-muted-foreground">Açık borç ve alacakları kişi profili gibi oku.</p>
+            <p className="mt-1 text-sm text-ink-muted">Açık borç ve alacakları kişi profili gibi oku.</p>
           </div>
           <Users className="text-success" />
         </div>
       </CardHeader>
       <CardContent className="space-y-2 pt-2">
         {rows.length === 0 ? (
-          <p className="rounded-xl bg-muted/45 p-3 text-sm text-muted-foreground">Açık kişi borcu veya alacağı yok.</p>
+          <p className="rounded-xl bg-page p-3 text-sm text-ink-muted">Açık kişi borcu veya alacağı yok.</p>
         ) : (
           rows.slice(0, 6).map((row) => {
             const net = diffTL(row.receivable, row.borrowed)
             return (
-              <div key={row.person} className="rounded-xl bg-muted/45 p-3">
+              <div key={row.person} className="rounded-xl bg-page p-3">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-bold text-foreground">{row.person}</p>
-                    <p className="mt-0.5 text-xs text-muted-foreground">{row.count} açık kayıt</p>
+                    <p className="truncate text-sm font-bold text-ink">{row.person}</p>
+                    <p className="mt-0.5 text-xs text-ink-muted">{row.count} açık kayıt</p>
                   </div>
                   <Badge variant={net >= 0 ? 'default' : 'destructive'}>{net >= 0 ? 'Alacak' : 'Borç'}</Badge>
                 </div>
@@ -284,20 +284,20 @@ export function MonthCloseAssistant({ data, missingTables }: { data: AnalysisDat
   const completed = checks.filter((check) => check.done).length
 
   return (
-    <Card className="border-0 bg-card/95 text-foreground ring-1 ring-border/80 lg:col-span-12">
+    <Card className="border-0 bg-raised text-ink ring-1 ring-line-strong lg:col-span-12">
       <CardContent className="grid gap-4 p-4 min-[760px]:grid-cols-[0.72fr_1.28fr] min-[760px]:items-center">
         <div>
           <div className="flex items-center gap-2">
             <CheckCircle2 className="text-success" />
             <h2 className="text-base font-extrabold">Ay kapanış asistanı</h2>
           </div>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <p className="mt-1 text-sm text-ink-muted">
             {formatMonth(monthKey)} için {completed}/{checks.length} kontrol tamam. Aylık rapor kartından PDF alabilirsin.
           </p>
         </div>
         <div className="grid gap-2 min-[560px]:grid-cols-2 min-[980px]:grid-cols-3">
           {checks.map((check) => (
-            <div key={check.label} className={`rounded-lg px-3 py-2 ${check.done ? 'bg-success/10 text-success' : 'bg-muted/55 text-muted-foreground'}`}>
+            <div key={check.label} className={`rounded-lg px-3 py-2 ${check.done ? 'bg-success/10 text-success' : 'bg-page text-ink-muted'}`}>
               <p className="truncate text-xs font-bold">{check.label}</p>
               <p className="mt-0.5 truncate text-[11px] opacity-70">{check.detail}</p>
             </div>
@@ -317,12 +317,12 @@ export function SubscriptionsPanel({ data }: { data: AnalysisData }) {
   )
 
   return (
-    <Card className="border-border/70 lg:col-span-5">
+    <Card className="border-line-strong lg:col-span-5">
       <CardHeader className="pb-0">
         <div className="flex items-start justify-between gap-3">
           <div>
             <CardTitle>Abonelik & sabit giderler</CardTitle>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <p className="mt-1 text-sm text-ink-muted">
               {result.items.filter((i) => i.isActive).length} aktif · toplam {formatAmount(result.monthlyTotal)}/ay
               {result.incomeRatio !== null ? ` · gelire oranı %${result.incomeRatio}` : ''}
             </p>
@@ -332,20 +332,20 @@ export function SubscriptionsPanel({ data }: { data: AnalysisData }) {
       </CardHeader>
       <CardContent className="space-y-2 pt-2">
         {result.items.length === 0 ? (
-          <p className="rounded-xl bg-muted/45 p-3 text-sm text-muted-foreground">Tekrarlayan harcama veya ödeme tespit edilmedi.</p>
+          <p className="rounded-xl bg-page p-3 text-sm text-ink-muted">Tekrarlayan harcama veya ödeme tespit edilmedi.</p>
         ) : (
           result.items.slice(0, 8).map((item) => (
-            <div key={item.id} className={`rounded-xl px-3 py-2 text-sm ${item.isActive ? 'bg-muted/45' : 'bg-muted/25 opacity-60'}`}>
+            <div key={item.id} className={`rounded-xl px-3 py-2 text-sm ${item.isActive ? 'bg-page' : 'bg-page opacity-60'}`}>
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="truncate font-semibold text-foreground">{item.title}</p>
-                  <p className="mt-0.5 text-xs text-muted-foreground">
+                  <p className="truncate font-semibold text-ink">{item.title}</p>
+                  <p className="mt-0.5 text-xs text-ink-muted">
                     {item.category}
                     {item.source === 'recurring_expense' ? ` · ${item.monthCount} aydır tekrarlıyor` : ' · planlı ödeme'}
                     {!item.isActive ? ' · durdurulmuş olabilir' : ''}
                   </p>
                 </div>
-                <span className="shrink-0 whitespace-nowrap rounded-lg bg-muted px-2 py-1 font-mono text-xs font-bold tabular-nums text-foreground ring-1 ring-border/60">
+                <span className="shrink-0 whitespace-nowrap rounded-lg bg-page px-2 py-1 font-mono text-xs font-bold tabular-nums text-ink ring-1 ring-line-strong">
                   {formatAmount(item.amount)}
                 </span>
               </div>

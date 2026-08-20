@@ -64,13 +64,13 @@ export function ActivityFeedPanel({ data }: { data: AnalysisData }) {
   const grouped = useMemo(() => groupByDate(visibleItems), [visibleItems])
 
   return (
-    <div className="col-span-full rounded-2xl border border-border/60 bg-card p-4 ">
+    <div className="col-span-full rounded-2xl border border-line-strong bg-raised p-4 ">
       <div className="mb-3 flex items-center justify-between gap-2">
-        <h3 className="text-sm font-bold text-foreground">Aktivite akışı</h3>
+        <h3 className="text-sm font-bold text-ink">Aktivite akışı</h3>
         <button
           type="button"
           onClick={() => void loadLedgers()}
-          className="tap-target rounded-md p-1.5 text-muted-foreground hover:bg-muted/60 hover:text-foreground transition"
+          className="tap-target rounded-md p-1.5 text-ink-muted hover:bg-black/[.03] dark:hover:bg-white/[.04] hover:text-ink transition"
           aria-label="Aktivite akışını yenile"
           title="Yenile"
         >
@@ -88,7 +88,7 @@ export function ActivityFeedPanel({ data }: { data: AnalysisData }) {
               'whitespace-nowrap rounded-md px-2.5 py-1 text-[11px] font-bold transition',
               filter === opt.value
                 ? 'bg-primary text-primary-foreground'
-                : 'text-muted-foreground hover:bg-muted/70 hover:text-foreground',
+                : 'text-ink-muted hover:bg-black/[.03] dark:hover:bg-white/[.04] hover:text-ink',
             )}
           >
             {opt.label}
@@ -99,16 +99,16 @@ export function ActivityFeedPanel({ data }: { data: AnalysisData }) {
       {loading ? (
         <div className="space-y-2">
           {Array.from({ length: 5 }, (_, i) => (
-            <div key={i} className="h-10 animate-pulse rounded-lg bg-muted/40" />
+            <div key={i} className="h-10 animate-pulse rounded-lg bg-page" />
           ))}
         </div>
       ) : allItems.length === 0 ? (
-        <p className="py-6 text-center text-xs text-muted-foreground">Henüz kayıt yok.</p>
+        <p className="py-6 text-center text-xs text-ink-muted">Henüz kayıt yok.</p>
       ) : (
         <div className="space-y-4">
           {[...grouped.entries()].map(([date, items]) => (
             <div key={date}>
-              <p className="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+              <p className="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-ink-muted">
                 {formatDate(date)}
               </p>
               <div className="space-y-1">
@@ -123,7 +123,7 @@ export function ActivityFeedPanel({ data }: { data: AnalysisData }) {
             <button
               type="button"
               onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}
-              className="w-full rounded-lg border border-border/50 py-2 text-xs font-bold text-muted-foreground hover:bg-muted/40 transition"
+              className="w-full rounded-lg border border-line-strong py-2 text-xs font-bold text-ink-muted hover:bg-black/[.03] dark:hover:bg-white/[.04] transition"
             >
               Daha fazla göster ({allItems.length - visibleCount} kayıt)
             </button>
@@ -138,20 +138,20 @@ function ActivityRow({ item }: { item: ActivityItem }) {
   const { formatAmount } = useBalancePrivacy()
   const Icon = ICON_MAP[item.icon] ?? Minus
   return (
-    <div className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 hover:bg-muted/40 transition">
+    <div className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 hover:bg-black/[.03] dark:hover:bg-white/[.04] transition">
       <div className={cn(
         'grid h-7 w-7 shrink-0 place-items-center rounded-full',
         item.direction === 'inflow' ? 'bg-success/12 text-success' :
         item.direction === 'outflow' ? 'bg-destructive/12 text-destructive' :
-        'bg-muted text-muted-foreground',
+        'bg-page text-ink-muted',
       )}>
         <Icon size={14} strokeWidth={2.2} />
       </div>
 
       <div className="min-w-0 flex-1">
-        <p className="truncate text-xs font-semibold text-foreground">{item.title}</p>
+        <p className="truncate text-xs font-semibold text-ink">{item.title}</p>
         {item.detail ? (
-          <p className="truncate text-[10px] text-muted-foreground">{item.detail}</p>
+          <p className="truncate text-[10px] text-ink-muted">{item.detail}</p>
         ) : null}
       </div>
 
@@ -160,7 +160,7 @@ function ActivityRow({ item }: { item: ActivityItem }) {
           'shrink-0 text-xs font-bold tabular-nums',
           item.direction === 'inflow' ? 'text-success' :
           item.direction === 'outflow' ? 'text-destructive' :
-          'text-muted-foreground',
+          'text-ink-muted',
         )}>
           {item.direction === 'inflow' ? '+' : item.direction === 'outflow' ? '−' : ''}
           {formatAmount(Math.abs(item.amountTL))}

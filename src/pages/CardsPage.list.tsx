@@ -58,12 +58,12 @@ function AccountRecentTransactions({
   const rows = buildAccountLedgerBalanceRows(events, card.current_balance)
 
   return (
-    <section className="account-activity-panel mt-4 rounded-2xl border border-border/65 bg-card/70 p-3.5">
+    <section className="account-activity-panel mt-4 rounded-2xl border border-line-strong bg-raised p-3.5">
       <div className="flex items-center justify-between gap-3">
         <p className="finance-label">Son 3 hareket</p>
-        <span className="text-[11px] font-semibold text-muted-foreground">{rows.length} kayıt</span>
+        <span className="text-[11px] font-semibold text-ink-muted">{rows.length} kayıt</span>
       </div>
-      <div className="mt-2.5 divide-y divide-border/55">
+      <div className="mt-2.5 divide-y divide-line">
         {rows.map(({ event, balanceAfter }) => {
           const amount = toTL(event.amount_kurus)
           const isInflow = amount >= 0
@@ -74,13 +74,13 @@ function AccountRecentTransactions({
                 <span className={isInflow ? 'font-black text-success' : 'font-black text-destructive'}>
                   {isInflow ? 'Giriş' : 'Çıkış'}
                 </span>
-                <span className="ml-2 text-muted-foreground">{formatDate(event.occurred_at.slice(0, 10))}</span>
+                <span className="ml-2 text-ink-muted">{formatDate(event.occurred_at.slice(0, 10))}</span>
               </span>
               <span className="shrink-0 text-right tabular-nums">
                 <span className={isInflow ? 'font-black text-success' : 'font-black text-destructive'}>
                   {amount > 0 ? '+' : ''}{formatAmount(amount)}
                 </span>
-                <span className="ml-2 hidden text-muted-foreground min-[460px]:inline">Sonrası {formatAmount(balanceAfter)}</span>
+                <span className="ml-2 hidden text-ink-muted min-[460px]:inline">Sonrası {formatAmount(balanceAfter)}</span>
               </span>
             </div>
           )
@@ -165,8 +165,8 @@ export function CreditAccountListCard({
           <div className="flex min-w-0 items-center gap-3.5">
             <BankLogo bankName={row.bank_name} size="lg" className="size-14 rounded-2xl text-sm " />
             <div className="min-w-0">
-              <h2 className="truncate font-display text-lg font-bold tracking-tight text-foreground">{row.card_name}</h2>
-              <p className="mt-1 truncate text-sm font-medium text-muted-foreground">{row.bank_name} · banka hesabı</p>
+              <h2 className="truncate font-display text-lg font-bold tracking-tight text-ink">{row.card_name}</h2>
+              <p className="mt-1 truncate text-sm font-medium text-ink-muted">{row.bank_name} · banka hesabı</p>
             </div>
           </div>
           <div className="entity-card-menu">{menu}</div>
@@ -174,7 +174,7 @@ export function CreditAccountListCard({
 
         <div className="account-balance-well relative mt-5 overflow-hidden rounded-2xl border border-[hsl(var(--bank-hue)_45%_84%/0.76)] bg-[hsl(var(--bank-hue)_55%_97%)] p-4 dark:border-[hsl(var(--bank-hue)_34%_33%/0.64)] dark:bg-[hsl(var(--bank-hue)_35%_16%)]">
           <p className="finance-label">Kullanılabilir bakiye</p>
-          <p className="finance-value mt-2 truncate text-[clamp(1.8rem,7vw,2.75rem)] font-bold leading-none tracking-tight text-foreground">
+          <p className="finance-value mt-2 truncate text-[clamp(1.8rem,7vw,2.75rem)] font-bold leading-none tracking-tight text-ink">
             {formatAmount(row.current_balance)}
           </p>
         </div>
@@ -185,15 +185,15 @@ export function CreditAccountListCard({
         </div>
 
         {row.iban ? (
-          <div className="mt-3 rounded-xl border border-border/60 bg-muted/35 px-3 py-2.5">
+          <div className="mt-3 rounded-xl border border-line-strong bg-page px-3 py-2.5">
             <p className="finance-label">IBAN</p>
             <button
               type="button"
               onClick={handleCopyIban}
-              className="mt-1.5 flex min-h-7 w-full min-w-0 items-center justify-between gap-2 rounded-md text-left font-mono text-xs font-bold tabular-nums text-foreground transition hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="mt-1.5 flex min-h-7 w-full min-w-0 items-center justify-between gap-2 rounded-md text-left font-mono text-xs font-bold tabular-nums text-ink transition hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <span className="min-w-0 truncate">{balancesHidden ? '••••' : formatIban(row.iban)}</span>
-              {ibanCopied ? <Check size={14} className="shrink-0 text-success" /> : <Copy size={14} className="shrink-0 text-muted-foreground" />}
+              {ibanCopied ? <Check size={14} className="shrink-0 text-success" /> : <Copy size={14} className="shrink-0 text-ink-muted" />}
             </button>
           </div>
         ) : null}
@@ -235,7 +235,7 @@ export function CreditAccountListCard({
   return (
     <article
       style={bankHueStyle(row.bank_name, rows)}
-      className="premium-entity-card credit-entity-card finance-panel relative min-w-0 overflow-hidden rounded-2xl bg-card/96 p-4 ring-1 ring-[hsl(var(--bank-hue)_42%_82%/0.55)] dark:ring-[hsl(var(--bank-hue)_40%_42%/0.45)]"
+      className="premium-entity-card credit-entity-card finance-panel relative min-w-0 overflow-hidden rounded-2xl bg-raised p-4 ring-1 ring-[hsl(var(--bank-hue)_42%_82%/0.55)] dark:ring-[hsl(var(--bank-hue)_40%_42%/0.45)]"
     >
       <div
         style={{ backgroundImage: bankBrandGradient(row.bank_name) }}
@@ -336,7 +336,7 @@ export function CreditAccountListCard({
         </Button>
       </div>
       {detailsOpen ? (
-        <div className="mt-4 rounded-lg border border-border/80 bg-surface-muted/70 p-3 ring-1 ring-border/60">
+        <div className="mt-4 rounded-lg border border-line-strong bg-surface-muted/70 p-3 ring-1 ring-line-strong">
           <SectionHeader
             title="Kart detay özeti"
             description="Borç, ekstre, limit, vade ve devam eden taksitleri birlikte oku."
@@ -353,12 +353,12 @@ export function CreditAccountListCard({
             <MiniStat label="Limit tipi" value={stats.isShared ? 'Ortak limit' : 'Tekil limit'} tone={stats.isShared ? 'info' : 'neutral'} />
             <MiniStat label="İç veri sağlığı" value={`%${consistency.score}`} tone={consistency.score >= 100 ? 'good' : consistency.score >= 75 ? 'warning' : 'danger'} />
           </div>
-          <div className="mt-3 rounded-lg bg-card/80 p-3 ring-1 ring-border/70">
+          <div className="mt-3 rounded-lg bg-raised p-3 ring-1 ring-line-strong">
             <div className="flex items-start gap-2">
               <ShieldCheck size={15} className={consistency.score >= 100 ? 'mt-0.5 text-success' : consistency.score >= 75 ? 'mt-0.5 text-warning' : 'mt-0.5 text-destructive'} />
               <div className="min-w-0">
-                <p className="text-xs font-black uppercase text-muted-foreground">İç veri sağlığı kontrolleri</p>
-                <div className="mt-2 grid gap-1 text-xs text-muted-foreground">
+                <p className="text-xs font-black uppercase text-ink-muted">İç veri sağlığı kontrolleri</p>
+                <div className="mt-2 grid gap-1 text-xs text-ink-muted">
                   {consistency.checks.map((check) => (
                     <span key={check.label}>{check.ok ? '✓' : '✗'} {check.label}</span>
                   ))}
@@ -367,36 +367,36 @@ export function CreditAccountListCard({
             </div>
           </div>
           <div className="mt-4 grid gap-3 min-[760px]:grid-cols-2">
-            <div className="rounded-lg bg-card/80 p-3 ring-1 ring-border/70">
-              <p className="text-xs font-black uppercase text-muted-foreground">Devam eden taksitler</p>
+            <div className="rounded-lg bg-raised p-3 ring-1 ring-line-strong">
+              <p className="text-xs font-black uppercase text-ink-muted">Devam eden taksitler</p>
               {cardInstallments.length > 0 ? (
                 <div className="mt-3 flex flex-col gap-2">
                   {cardInstallments.slice(0, 3).map((installment) => (
-                    <div key={installment.id} className="flex min-w-0 items-center justify-between gap-3 rounded-lg bg-muted/55 px-3 py-2 text-xs">
-                      <span className="min-w-0 truncate font-bold text-foreground">{installment.description}</span>
-                      <span className="shrink-0 font-black tabular-nums text-foreground">
+                    <div key={installment.id} className="flex min-w-0 items-center justify-between gap-3 rounded-lg bg-page px-3 py-2 text-xs">
+                      <span className="min-w-0 truncate font-bold text-ink">{installment.description}</span>
+                      <span className="shrink-0 font-black tabular-nums text-ink">
                         {formatAmount(installment.amount)} · {formatDate(installment.due_month)}
                       </span>
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="mt-3 text-sm text-muted-foreground">Devam eden taksit yok.</p>
+                <p className="mt-3 text-sm text-ink-muted">Devam eden taksit yok.</p>
               )}
             </div>
-            <div className="rounded-lg bg-card/80 p-3 ring-1 ring-border/70">
-              <p className="text-xs font-black uppercase text-muted-foreground">Ekstre geçmişi</p>
+            <div className="rounded-lg bg-raised p-3 ring-1 ring-line-strong">
+              <p className="text-xs font-black uppercase text-ink-muted">Ekstre geçmişi</p>
               {openStatements.length > 0 ? (
                 <div className="mt-3 flex flex-col gap-2">
                   {openStatements.slice(0, 3).map((statement) => (
-                    <div key={statement.id} className="flex min-w-0 items-center justify-between gap-3 rounded-lg bg-muted/55 px-3 py-2 text-xs">
-                      <span className="min-w-0 truncate font-bold text-foreground">{statementPeriodLabel(statement)}</span>
-                      <span className="shrink-0 font-black tabular-nums text-foreground">{formatAmount(statement.statement_debt_amount)}</span>
+                    <div key={statement.id} className="flex min-w-0 items-center justify-between gap-3 rounded-lg bg-page px-3 py-2 text-xs">
+                      <span className="min-w-0 truncate font-bold text-ink">{statementPeriodLabel(statement)}</span>
+                      <span className="shrink-0 font-black tabular-nums text-ink">{formatAmount(statement.statement_debt_amount)}</span>
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="mt-3 text-sm text-muted-foreground">Açık ekstre kaydı yok.</p>
+                <p className="mt-3 text-sm text-ink-muted">Açık ekstre kaydı yok.</p>
               )}
             </div>
           </div>

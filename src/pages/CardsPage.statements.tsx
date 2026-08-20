@@ -43,7 +43,7 @@ export function ProvisionPanel({
   if (loading && pending.length === 0) {
     return (
       <SurfaceCard className="border-warning/20">
-        <CardContent className="p-4 text-sm text-muted-foreground">Provizyonlar yükleniyor...</CardContent>
+        <CardContent className="p-4 text-sm text-ink-muted">Provizyonlar yükleniyor...</CardContent>
       </SurfaceCard>
     )
   }
@@ -60,7 +60,7 @@ export function ProvisionPanel({
               Provizyondaki işlemler
               <HelpTooltip title="Provizyondaki işlemler" content={cardHelp.provisionsPanel} />
             </CardTitle>
-            <p className="mt-1 text-xs text-muted-foreground">Kesinleşince dönem içine alınır, iptal edilirse limitten çıkarılır.</p>
+            <p className="mt-1 text-xs text-ink-muted">Kesinleşince dönem içine alınır, iptal edilirse limitten çıkarılır.</p>
           </div>
           <div className="flex shrink-0 flex-col items-end gap-2">
             <Badge variant="secondary">{formatAmount(totalProvision)}</Badge>
@@ -90,24 +90,24 @@ export function ProvisionPanel({
             <div key={expense.id} className="rounded-xl border border-warning/15 bg-warning/8 px-3 py-2.5">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-bold text-foreground">{expense.description}</p>
-                  <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                  <p className="truncate text-sm font-bold text-ink">{expense.description}</p>
+                  <p className="mt-0.5 truncate text-xs text-ink-muted">
                     {card ? `${card.bank_name} · ${card.card_name}` : 'Kart'} · {formatDate(expense.spent_at)}
                   </p>
                 </div>
-                <span className="shrink-0 rounded-lg bg-card px-2 py-1 text-xs font-bold tabular-nums text-foreground ring-1 ring-border/60">
+                <span className="shrink-0 rounded-lg bg-raised px-2 py-1 text-xs font-bold tabular-nums text-ink ring-1 ring-line-strong">
                   {formatAmount(expense.amount)}
                 </span>
               </div>
               {canInstall ? (
                 <div className="mt-2 flex flex-wrap items-center gap-2">
-                  <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                  <label className="flex items-center gap-1.5 text-xs font-medium text-ink-muted">
                     Taksit
                     <select
                       value={installmentCount}
                       onChange={(event) => onSetInstallments(expense, Number(event.target.value))}
                       disabled={Boolean(actionId)}
-                      className="rounded-lg border border-border/60 bg-card px-2 py-1 text-xs font-semibold tabular-nums text-foreground disabled:opacity-60"
+                      className="rounded-lg border border-line-strong bg-raised px-2 py-1 text-xs font-semibold tabular-nums text-ink disabled:opacity-60"
                     >
                       {installmentChoices.map((count) => (
                         <option key={count} value={count}>
@@ -117,9 +117,9 @@ export function ProvisionPanel({
                     </select>
                   </label>
                   {actionId === installmentsActionId ? (
-                    <span className="text-xs text-muted-foreground">Kaydediliyor...</span>
+                    <span className="text-xs text-ink-muted">Kaydediliyor...</span>
                   ) : installmentCount > 1 ? (
-                    <span className="text-xs text-muted-foreground tabular-nums">
+                    <span className="text-xs text-ink-muted tabular-nums">
                       {installmentCount} × {formatAmount(expense.amount / installmentCount)}
                     </span>
                   ) : null}
@@ -179,7 +179,7 @@ export function StatementPanel({
   if (loading && openStatements.length === 0) {
     return (
       <SurfaceCard className="border-success/20">
-        <CardContent className="p-4 text-sm text-muted-foreground">Ekstreler yükleniyor...</CardContent>
+        <CardContent className="p-4 text-sm text-ink-muted">Ekstreler yükleniyor...</CardContent>
       </SurfaceCard>
     )
   }
@@ -195,7 +195,7 @@ export function StatementPanel({
               <ReceiptText size={17} />
               Açık ekstreler
             </CardTitle>
-            <p className="mt-1 text-xs text-muted-foreground">Ekstre ödemesi seçilen hesaptan düşülür ve yalnızca bu ekstreyi kapatır.</p>
+            <p className="mt-1 text-xs text-ink-muted">Ekstre ödemesi seçilen hesaptan düşülür ve yalnızca bu ekstreyi kapatır.</p>
           </div>
           <Badge variant="secondary">{formatAmount(totalOpenAmount)}</Badge>
         </div>
@@ -209,17 +209,17 @@ export function StatementPanel({
             <div key={statement.id} className="rounded-xl border border-success/15 bg-success/8 px-3 py-3">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-bold text-foreground">{card.card_name}</p>
-                  <p className="mt-0.5 text-xs text-muted-foreground">
+                  <p className="truncate text-sm font-bold text-ink">{card.card_name}</p>
+                  <p className="mt-0.5 text-xs text-ink-muted">
                     {card.bank_name} - {statementPeriodLabel(statement)} - son ödeme {formatDate(statement.due_date)}
                   </p>
                 </div>
-                <span className="shrink-0 rounded-lg bg-card px-2 py-1 text-xs font-bold tabular-nums text-foreground ring-1 ring-border/60">
+                <span className="shrink-0 rounded-lg bg-raised px-2 py-1 text-xs font-bold tabular-nums text-ink ring-1 ring-line-strong">
                   {formatAmount(statementRemainingAmount(statement, paidByArchive))}
                 </span>
               </div>
               {statementPaidAmount(statement, paidByArchive) > 0 ? (
-                <p className="mt-1 text-[11px] text-muted-foreground">
+                <p className="mt-1 text-[11px] text-ink-muted">
                   {formatAmount(statementPaidAmount(statement, paidByArchive))} ödendi ·{' '}
                   {formatAmount(statement.statement_debt_amount)} ekstre tutarı
                 </p>
@@ -232,7 +232,7 @@ export function StatementPanel({
                   type="button"
                   onClick={() => onPay(statement, card)}
                   disabled={Boolean(actionId)}
-                  className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-success px-3 py-2 text-xs font-semibold text-white  disabled:opacity-60 hover:bg-success/90"
+                  className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-success px-3 py-2 text-xs font-semibold text-white disabled:opacity-60 hover:bg-success/90"
                 >
                   <CheckCircle2 size={14} />
                   {actionId === statement.id ? 'İşleniyor...' : 'Ekstreyi öde'}
@@ -256,7 +256,7 @@ export function StatementArchivePanel({ rows, statements }: { rows: Card[]; stat
     .slice(0, 8)
 
   return (
-    <SurfaceCard className="border-border/70">
+    <SurfaceCard className="border-line-strong">
       <CardHeader className="pb-0">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
@@ -264,23 +264,23 @@ export function StatementArchivePanel({ rows, statements }: { rows: Card[]; stat
               <ReceiptText size={17} />
               Ekstre arşivi
             </CardTitle>
-            <p className="mt-1 text-xs text-muted-foreground">Kesilmiş son ekstreler; açık olanlar yukarıdaki panelden ödenir.</p>
+            <p className="mt-1 text-xs text-ink-muted">Kesilmiş son ekstreler; açık olanlar yukarıdaki panelden ödenir.</p>
           </div>
           <Badge variant="secondary">{archives.length} kayıt</Badge>
         </div>
       </CardHeader>
       <CardContent className="space-y-2 pt-2">
         {archives.length === 0 ? (
-          <p className="rounded-xl bg-muted/45 p-3 text-sm text-muted-foreground">Ekstre kesildiğinde arşiv burada tutulur.</p>
+          <p className="rounded-xl bg-page p-3 text-sm text-ink-muted">Ekstre kesildiğinde arşiv burada tutulur.</p>
         ) : (
           archives.map((archive) => {
             const card = cardsById.get(archive.card_id)
             return (
-              <div key={archive.id} className="rounded-xl bg-muted/45 px-3 py-2 text-sm">
+              <div key={archive.id} className="rounded-xl bg-page px-3 py-2 text-sm">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="truncate font-semibold text-foreground">{card?.card_name ?? 'Kart'}</p>
-                    <p className="mt-0.5 text-xs text-muted-foreground">
+                    <p className="truncate font-semibold text-ink">{card?.card_name ?? 'Kart'}</p>
+                    <p className="mt-0.5 text-xs text-ink-muted">
                       {formatDate(archive.statement_date)} · son ödeme {formatDate(archive.due_date)}
                     </p>
                   </div>
@@ -288,7 +288,7 @@ export function StatementArchivePanel({ rows, statements }: { rows: Card[]; stat
                     <Badge variant={archive.status === 'open' ? 'secondary' : 'outline'}>
                       {archive.status === 'open' ? 'Açık' : 'Ödendi'}
                     </Badge>
-                    <span className="whitespace-nowrap rounded-lg bg-muted px-2 py-1 font-mono text-xs font-bold tabular-nums text-foreground ring-1 ring-border/60">
+                    <span className="whitespace-nowrap rounded-lg bg-page px-2 py-1 font-mono text-xs font-bold tabular-nums text-ink ring-1 ring-line-strong">
                       {formatAmount(archive.statement_debt_amount)}
                     </span>
                   </div>

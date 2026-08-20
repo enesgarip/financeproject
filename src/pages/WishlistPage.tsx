@@ -116,7 +116,7 @@ export function WishlistPage() {
     return (
       <div className="flex flex-col gap-3 p-1">
         {Array.from({ length: 4 }, (_, i) => (
-          <div key={i} className="h-14 animate-pulse rounded-xl border border-border bg-muted/40" />
+          <div key={i} className="h-14 animate-pulse rounded-xl border border-line-strong bg-page" />
         ))}
       </div>
     )
@@ -169,7 +169,7 @@ export function WishlistPage() {
 
       {/* Alınacaklar */}
       {pending.length === 0 && purchased.length === 0 && (
-        <p className="py-8 text-center text-sm text-muted-foreground">
+        <p className="py-8 text-center text-sm text-ink-muted">
           Henüz bir madde eklenmedi.
         </p>
       )}
@@ -193,7 +193,7 @@ export function WishlistPage() {
           <button
             type="button"
             onClick={() => setShowPurchased((v) => !v)}
-            className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground transition hover:text-foreground"
+            className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-ink-muted transition hover:text-ink"
           >
             {showPurchased ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
             Alınanlar ({purchased.length})
@@ -233,14 +233,14 @@ function WishlistRow({
   const purchasedDate = item.purchased_at ? new Date(item.purchased_at).toLocaleDateString('tr-TR') : null
 
   return (
-    <li className="finance-list-row group flex items-center gap-3 rounded-xl border border-border/70 bg-card px-3 py-3 transition">
+    <li className="finance-list-row group flex items-center gap-3 rounded-xl border border-line-strong bg-raised px-3 py-3 transition">
       <button
         type="button"
         onClick={onToggle}
         className={`tap-target grid size-7 shrink-0 place-items-center rounded-lg border transition ${
           purchased
             ? 'border-primary/40 bg-primary/10 text-primary'
-            : 'border-border bg-background text-transparent hover:border-primary/60 hover:text-primary/40'
+            : 'border-line-strong bg-page text-transparent hover:border-primary/60 hover:text-primary/40'
         }`}
         aria-label={purchased ? 'Alınmadı olarak işaretle' : 'Alındı olarak işaretle'}
       >
@@ -248,11 +248,11 @@ function WishlistRow({
       </button>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <span className={`truncate text-sm font-medium ${purchased ? 'text-muted-foreground line-through' : 'text-foreground'}`}>
+        <span className={`truncate text-sm font-medium ${purchased ? 'text-ink-muted line-through' : 'text-ink'}`}>
           {item.name}
         </span>
         {(item.estimated_price || purchasedDate) && (
-          <span className="truncate text-xs text-muted-foreground">
+          <span className="truncate text-xs text-ink-muted">
             {item.estimated_price ? formatCurrency(item.estimated_price) : ''}
             {item.estimated_price && purchasedDate ? ' · ' : ''}
             {purchasedDate ? purchasedDate : ''}
@@ -265,7 +265,7 @@ function WishlistRow({
           <button
             type="button"
             onClick={onToggle}
-            className="tap-target grid size-8 place-items-center rounded-lg text-muted-foreground transition hover:bg-muted hover:text-foreground"
+            className="tap-target grid size-8 place-items-center rounded-lg text-ink-muted transition hover:bg-black/[.03] dark:hover:bg-white/[.04] hover:text-ink"
             aria-label="Geri al"
           >
             <Undo2 size={14} />
@@ -274,7 +274,7 @@ function WishlistRow({
         <button
           type="button"
           onClick={onDelete}
-          className="tap-target grid size-8 place-items-center rounded-lg text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive"
+          className="tap-target grid size-8 place-items-center rounded-lg text-ink-muted transition hover:bg-destructive/10 hover:text-destructive"
           aria-label="Sil"
         >
           <Trash2 size={14} />

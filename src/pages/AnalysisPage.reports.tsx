@@ -113,7 +113,7 @@ function AiSummaryButton({ data }: { data: AnalysisData }) {
       </Button>
       <SimpleModal title="Finansal özet — AI için" open={open} onClose={() => setOpen(false)}>
         <div className="space-y-3">
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-ink-muted">
             Aşağıdaki özet hesap/banka/kişi adı içermez — yalnız yapı ve rakam. ChatGPT gibi bir asistana yapıştırıp
             taktik alabilir veya PDF olarak indirebilirsin.
           </p>
@@ -127,7 +127,7 @@ function AiSummaryButton({ data }: { data: AnalysisData }) {
               Yazdır / PDF
             </Button>
           </div>
-          <pre className="max-h-[52svh] overflow-auto rounded-xl border border-border/70 bg-muted/40 p-3 text-xs leading-relaxed whitespace-pre-wrap break-words text-foreground">
+          <pre className="max-h-[52svh] overflow-auto rounded-xl border border-line-strong bg-page p-3 text-xs leading-relaxed whitespace-pre-wrap break-words text-ink">
             {markdown}
           </pre>
         </div>
@@ -163,12 +163,12 @@ export function MonthlyReport({ data }: { data: AnalysisData }) {
   const changeLabel = summary.changePercent === null ? '—' : `${summary.changePercent > 0 ? '+' : ''}%${summary.changePercent}`
 
   return (
-    <Card className="border-border/70 lg:col-span-7">
+    <Card className="border-line-strong lg:col-span-7">
       <CardHeader className="pb-0">
         <div className="flex items-start justify-between gap-3">
           <div>
             <CardTitle>Aylık rapor</CardTitle>
-            <p className="mt-1 text-sm text-muted-foreground">{cashFlow.monthLabel}</p>
+            <p className="mt-1 text-sm text-ink-muted">{cashFlow.monthLabel}</p>
           </div>
           <div className="grid size-11 shrink-0 place-items-center rounded-xl bg-success/12 text-success">
             <BarChart3 />
@@ -198,9 +198,9 @@ export function MonthlyReport({ data }: { data: AnalysisData }) {
         </div>
         <div className="grid gap-2 min-[520px]:grid-cols-2">
           {reportRows.map((row) => (
-            <div key={row.label} className="flex min-w-0 items-center justify-between gap-3 rounded-xl bg-muted/45 px-3 py-2 text-sm">
-              <span className="min-w-0 truncate text-muted-foreground">{row.label}</span>
-              <span className="shrink-0 whitespace-nowrap font-bold tabular-nums text-foreground">{formatAmount(row.value)}</span>
+            <div key={row.label} className="flex min-w-0 items-center justify-between gap-3 rounded-xl bg-page px-3 py-2 text-sm">
+              <span className="min-w-0 truncate text-ink-muted">{row.label}</span>
+              <span className="shrink-0 whitespace-nowrap font-bold tabular-nums text-ink">{formatAmount(row.value)}</span>
             </div>
           ))}
         </div>
@@ -208,15 +208,15 @@ export function MonthlyReport({ data }: { data: AnalysisData }) {
         {/* Kategori kırılımı yandaki "Kategori harcaması" panelinde (CompositionBar + içgörü)
             tek yerde; burada yalnız aya göre değişim özeti kalır, tekrar edilmez. */}
         {summary.changePercent !== null ? (
-          <div className="flex items-center justify-between gap-3 rounded-xl bg-muted/45 px-3 py-2 text-sm">
-            <span className="text-muted-foreground">Geçen aya göre harcama</span>
-            <span className={`font-bold tabular-nums ${changeTone === 'emerald' ? 'text-success' : changeTone === 'rose' ? 'text-destructive' : 'text-muted-foreground'}`}>
+          <div className="flex items-center justify-between gap-3 rounded-xl bg-page px-3 py-2 text-sm">
+            <span className="text-ink-muted">Geçen aya göre harcama</span>
+            <span className={`font-bold tabular-nums ${changeTone === 'emerald' ? 'text-success' : changeTone === 'rose' ? 'text-destructive' : 'text-ink-muted'}`}>
               {changeLabel}
             </span>
           </div>
         ) : null}
 
-        <p className="text-xs text-muted-foreground">
+        <p className="text-xs text-ink-muted">
           Kart harcamaları alışveriş tarihinde izlenir ve bekleyen provizyonlar dahildir; nakit çıkışı bu ay fiilen yapılmış
           ödemelerden (işlem geçmişi) gelir. Net nakit bu ikisinin farkıdır: gelir maaş varsayımına dayalı bir projeksiyon,
           çıkış ise gerçekleşen ödemelerdir.
@@ -236,12 +236,12 @@ export function YearEndReport({ data, snapshots }: { data: AnalysisData; snapsho
   if (report.totalSpending === 0) return null
 
   return (
-    <Card className="border-border/70 lg:col-span-12">
+    <Card className="border-line-strong lg:col-span-12">
       <CardHeader className="pb-0">
         <div className="flex items-start justify-between gap-3">
           <div>
             <CardTitle>{report.year} yılı finansal özet</CardTitle>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <p className="mt-1 text-sm text-ink-muted">
               Yıllık harcama: {formatAmount(report.totalSpending)} · Aylık ortalama: {formatAmount(report.avgMonthlySpending)}
             </p>
           </div>
@@ -261,7 +261,7 @@ export function YearEndReport({ data, snapshots }: { data: AnalysisData; snapsho
         </div>
 
         <div className="space-y-2">
-          <p className="text-xs font-bold uppercase text-muted-foreground">Aylık harcama trendi</p>
+          <p className="text-xs font-bold uppercase text-ink-muted">Aylık harcama trendi</p>
           <div className="grid grid-cols-6 gap-1.5 min-[760px]:grid-cols-12">
             {report.monthlyTotals.map((m) => {
               const maxAmount = report.mostExpensiveMonth?.amount ?? 1
@@ -270,12 +270,12 @@ export function YearEndReport({ data, snapshots }: { data: AnalysisData; snapsho
                 <div key={m.month} className="flex flex-col items-center gap-1">
                   <div className="flex h-16 w-full items-end justify-center">
                     <div
-                      className="w-full rounded-t-md bg-foreground/15"
+                      className="w-full rounded-t-md bg-ink/15"
                       style={{ height: `${heightPct}%` }}
                       title={`${m.label}: ${formatAmount(m.amount)}`}
                     />
                   </div>
-                  <span className="text-[10px] font-bold text-muted-foreground">{m.label.slice(0, 3)}</span>
+                  <span className="text-[10px] font-bold text-ink-muted">{m.label.slice(0, 3)}</span>
                 </div>
               )
             })}
@@ -284,13 +284,13 @@ export function YearEndReport({ data, snapshots }: { data: AnalysisData; snapsho
 
         {report.topCategories.length > 0 ? (
           <div className="space-y-2">
-            <p className="text-xs font-bold uppercase text-muted-foreground">En çok harcanan kategoriler</p>
+            <p className="text-xs font-bold uppercase text-ink-muted">En çok harcanan kategoriler</p>
             <div className="grid gap-2 min-[520px]:grid-cols-2 min-[900px]:grid-cols-3">
               {report.topCategories.slice(0, 6).map((cat) => (
-                <div key={cat.category} className="flex items-center justify-between gap-3 rounded-xl bg-muted/45 px-3 py-2 text-sm">
-                  <span className="min-w-0 truncate text-muted-foreground">{cat.category}</span>
-                  <span className="shrink-0 whitespace-nowrap font-bold tabular-nums text-foreground">
-                    {formatAmount(cat.amount)} <span className="text-xs font-normal text-muted-foreground">(%{cat.percentage})</span>
+                <div key={cat.category} className="flex items-center justify-between gap-3 rounded-xl bg-page px-3 py-2 text-sm">
+                  <span className="min-w-0 truncate text-ink-muted">{cat.category}</span>
+                  <span className="shrink-0 whitespace-nowrap font-bold tabular-nums text-ink">
+                    {formatAmount(cat.amount)} <span className="text-xs font-normal text-ink-muted">(%{cat.percentage})</span>
                   </span>
                 </div>
               ))}
@@ -322,12 +322,12 @@ export function SearchExport({ items }: { items: SearchItem[] }) {
   )
 
   return (
-    <Card className="border-border/70 lg:col-span-7">
+    <Card className="border-line-strong lg:col-span-7">
       <CardHeader className="pb-0">
         <div className="flex items-start justify-between gap-3">
           <div>
             <CardTitle>Genel arama ve dışa aktarım</CardTitle>
-            <p className="mt-1 text-sm text-muted-foreground">Varlık, kart, borç, ödeme, bütçe ve geçmiş kayıtları.</p>
+            <p className="mt-1 text-sm text-ink-muted">Varlık, kart, borç, ödeme, bütçe ve geçmiş kayıtları.</p>
           </div>
           <Button type="button" variant="outline" onClick={() => downloadCsv(matchedItems)}>
             <Download />
@@ -337,25 +337,25 @@ export function SearchExport({ items }: { items: SearchItem[] }) {
       </CardHeader>
       <CardContent className="space-y-3 pt-2">
         <label className="relative block">
-          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-ink-muted" />
           <input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Ara: market, kart, kredi, hedef..."
-            className="w-full rounded-xl border border-input bg-card/80 py-3 pl-10 pr-3 text-sm text-foreground outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 dark:bg-card/50"
+            className="w-full rounded-xl border border-line-strong bg-raised py-3 pl-10 pr-3 text-sm text-ink outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 dark:bg-raised"
           />
         </label>
         <div className="space-y-2">
           {filteredItems.slice(0, 20).map((item, index) => (
-            <div key={`${item.type}-${item.title}-${item.date}-${index}`} className="flex items-start justify-between gap-3 rounded-xl bg-muted/45 px-3 py-2 text-sm">
+            <div key={`${item.type}-${item.title}-${item.date}-${index}`} className="flex items-start justify-between gap-3 rounded-xl bg-page px-3 py-2 text-sm">
               <div className="min-w-0">
-                <p className="truncate font-semibold text-foreground">{item.title}</p>
-                <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                <p className="truncate font-semibold text-ink">{item.title}</p>
+                <p className="mt-0.5 truncate text-xs text-ink-muted">
                   {item.type} · {item.subtitle}
                 </p>
               </div>
               {item.amount !== null ? (
-                <span className="shrink-0 whitespace-nowrap rounded-lg bg-muted px-2 py-1 font-mono text-xs font-bold tabular-nums text-foreground ring-1 ring-border/60">
+                <span className="shrink-0 whitespace-nowrap rounded-lg bg-page px-2 py-1 font-mono text-xs font-bold tabular-nums text-ink ring-1 ring-line-strong">
                   {formatAmount(item.amount)}
                 </span>
               ) : null}

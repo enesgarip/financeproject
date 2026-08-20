@@ -22,7 +22,7 @@ function CollapsibleSection({ label, children }: { label: string; children: Reac
         type="button"
         onClick={() => setOpen((prev) => !prev)}
         aria-expanded={open}
-        className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-border/60 bg-card/80 px-4 py-3 text-sm font-bold text-muted-foreground transition hover:border-primary/30 hover:bg-primary/5 hover:text-foreground"
+        className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-line-strong bg-raised px-4 py-3 text-sm font-bold text-ink-muted transition hover:border-primary/30 hover:bg-primary/5 hover:text-ink"
       >
         <span>{open ? `${label} — gizle` : label}</span>
         <ChevronDown size={16} aria-hidden="true" className={`transition-transform ${open ? 'rotate-180' : ''}`} />

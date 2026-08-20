@@ -102,7 +102,7 @@ export function LoansPage() {
         },
         detail: (
           <>
-            <p className="font-semibold text-foreground">{loan.loan_name}</p>
+            <p className="font-semibold text-ink">{loan.loan_name}</p>
             <p className="mt-0.5">
               {item.installment_no}. taksit · {formatDate(item.due_date)}
             </p>
@@ -201,11 +201,11 @@ export function LoansPage() {
     const loanInstallments = installments.filter((item) => item.loan_id === loan.id)
     if (loanInstallments.length === 0) {
       return (
-        <section className="mt-4 rounded-2xl border border-dashed border-border/70 bg-muted/20 p-3">
+        <section className="mt-4 rounded-2xl border border-dashed border-line-strong bg-page p-3">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <h3 className="text-sm font-semibold text-foreground">Ödeme planı yok</h3>
-              <p className="mt-1 text-xs text-muted-foreground">Kredi bilgilerinden aylık taksit listesini oluşturabilirsin.</p>
+              <h3 className="text-sm font-semibold text-ink">Ödeme planı yok</h3>
+              <p className="mt-1 text-xs text-ink-muted">Kredi bilgilerinden aylık taksit listesini oluşturabilirsin.</p>
             </div>
             <button
               type="button"
@@ -229,7 +229,7 @@ export function LoansPage() {
     const pastDuePending = pastDuePendingInstallments(loanInstallments)
 
     return (
-      <section className="mt-4 rounded-2xl border border-border/70 bg-muted/20 p-3">
+      <section className="mt-4 rounded-2xl border border-line-strong bg-page p-3">
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
           <h3 className="finance-label">Ödeme Planı</h3>
           <div className="flex items-center gap-2">
@@ -237,13 +237,13 @@ export function LoansPage() {
               <button
                 type="button"
                 onClick={() => void markInstallmentsPaidWithoutCash(pastDuePending, reload, setError)}
-                className="rounded-lg border border-border bg-card px-2.5 py-1.5 text-xs font-semibold text-foreground transition hover:bg-muted active:scale-[0.97]"
+                className="rounded-lg border border-line-strong bg-raised px-2.5 py-1.5 text-xs font-semibold text-ink transition hover:bg-black/[.03] dark:hover:bg-white/[.04] active:scale-[0.97]"
                 title="Uygulama öncesi bankada ödenmiş geçmiş taksitleri nakit hareketi olmadan işaretler"
               >
                 Geçmişi ödendi say ({pastDuePending.length})
               </button>
             ) : null}
-            <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-semibold tabular-nums text-muted-foreground">
+            <span className="rounded-full bg-page px-2.5 py-1 text-xs font-semibold tabular-nums text-ink-muted">
               {loanInstallments.filter((item) => item.status === 'ödendi').length}/{loanInstallments.length}
             </span>
           </div>
@@ -252,17 +252,17 @@ export function LoansPage() {
           {loanInstallments.map((item) => (
             <div
               key={item.id}
-              className="flex items-center gap-2 rounded-xl border border-border/50 bg-card px-2 py-2 text-sm"
+              className="flex items-center gap-2 rounded-xl border border-line-strong bg-raised px-2 py-2 text-sm"
             >
               {/* DOM sırası: METİN ÖNCE, aksiyon sonra. Görsel sıra `order-*` ile
                   korunuyor (durum/ödeme solda kalır). Eskiden "Öde" butonu a11y
                   ağacında taksit metninden önce geliyordu; ekran okuyucu neyi
                   ödediğini söylemeden "Öde" diyordu (denetim 2026-08-12 §10). */}
               <div className="order-2 min-w-0 flex-1">
-                <p className="truncate font-semibold text-foreground">
+                <p className="truncate font-semibold text-ink">
                   {item.installment_no}. taksit · <span className="font-mono">{formatAmount(item.amount)}</span>
                 </p>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs text-ink-muted">
                   {formatDate(item.due_date)} · {item.status === 'ödendi' ? 'Ödendi' : 'Bekliyor'}
                 </p>
               </div>
@@ -279,7 +279,7 @@ export function LoansPage() {
                   type="button"
                   onClick={() => void openInstallmentPayment(loan, item, reload)}
                   aria-label={`${item.installment_no}. taksiti öde`}
-                  className="order-1 inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg border border-border bg-card px-2.5 py-1.5 text-xs font-semibold text-foreground transition hover:bg-muted active:scale-[0.97]"
+                  className="order-1 inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg border border-line-strong bg-raised px-2.5 py-1.5 text-xs font-semibold text-ink transition hover:bg-black/[.03] dark:hover:bg-white/[.04] active:scale-[0.97]"
                 >
                   <ReceiptText size={13} aria-hidden="true" />
                   Öde
@@ -292,13 +292,13 @@ export function LoansPage() {
                     event.stopPropagation()
                     setPlanMenuOpenId(planMenuOpenId === item.id ? null : item.id)
                   }}
-                  className="tap-target grid size-8 place-items-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground"
+                  className="tap-target grid size-8 place-items-center rounded-full text-ink-muted transition hover:bg-black/[.03] dark:hover:bg-white/[.04] hover:text-ink"
                   aria-label={`${item.installment_no}. taksit menüsü`}
                 >
                   <MoreVertical size={16} />
                 </button>
                 {planMenuOpenId === item.id ? (
-                  <div className="absolute right-0 top-full z-20 mt-1 w-40 rounded-lg border border-border bg-popover py-1">
+                  <div className="absolute right-0 top-full z-20 mt-1 w-40 rounded-lg border border-line-strong bg-raised py-1">
                     {item.status !== 'ödendi' ? (
                       <button
                         type="button"
@@ -306,7 +306,7 @@ export function LoansPage() {
                           setPlanMenuOpenId(null)
                           void markInstallmentsPaidWithoutCash([item], reload, setError)
                         }}
-                        className="flex w-full items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted"
+                        className="flex w-full items-center gap-2 px-3 py-2 text-sm text-ink hover:bg-black/[.03] dark:hover:bg-white/[.04]"
                       >
                         <Check size={14} />
                         Ödendi say
@@ -315,7 +315,7 @@ export function LoansPage() {
                     <button
                       type="button"
                       onClick={() => openPlanEdit(item)}
-                      className="flex w-full items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted"
+                      className="flex w-full items-center gap-2 px-3 py-2 text-sm text-ink hover:bg-black/[.03] dark:hover:bg-white/[.04]"
                     >
                       <Pencil size={14} />
                       Düzenle
@@ -481,17 +481,17 @@ export function LoansPage() {
 
       <SimpleModal title="Taksiti düzenle" open={Boolean(editingPlanItem)} onClose={() => setEditingPlanItem(null)}>
         <form onSubmit={handlePlanEditSubmit} className="space-y-4">
-          <label className="block text-sm font-semibold text-foreground">
+          <label className="block text-sm font-semibold text-ink">
             Vade tarihi
             <input
               required
               type="date"
               value={planDueDate}
               onChange={(event) => setPlanDueDate(event.target.value)}
-              className="mt-1 h-10 w-full rounded-xl border border-input bg-card/80 px-3 text-sm text-foreground outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 dark:bg-card/50 [color-scheme:light] dark:[color-scheme:dark]"
+              className="mt-1 h-10 w-full rounded-xl border border-line-strong bg-raised px-3 text-sm text-ink outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 dark:bg-raised [color-scheme:light] dark:[color-scheme:dark]"
             />
           </label>
-          <label className="block text-sm font-semibold text-foreground">
+          <label className="block text-sm font-semibold text-ink">
             Tutar
             <input
               required
@@ -500,16 +500,16 @@ export function LoansPage() {
               type="number"
               value={planAmount}
               onChange={(event) => setPlanAmount(event.target.value)}
-              className="mt-1 h-10 w-full rounded-xl border border-input bg-card/80 px-3 text-sm font-mono tabular-nums text-foreground outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 dark:bg-card/50"
+              className="mt-1 h-10 w-full rounded-xl border border-line-strong bg-raised px-3 text-sm font-mono tabular-nums text-ink outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 dark:bg-raised"
             />
           </label>
-          <label className="block text-sm font-semibold text-foreground">
+          <label className="block text-sm font-semibold text-ink">
             Not
             <textarea
               rows={3}
               value={planNote}
               onChange={(event) => setPlanNote(event.target.value)}
-              className="mt-1 w-full resize-y rounded-xl border border-input bg-card/80 px-3 py-2.5 text-sm text-foreground outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 dark:bg-card/50"
+              className="mt-1 w-full resize-y rounded-xl border border-line-strong bg-raised px-3 py-2.5 text-sm text-ink outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 dark:bg-raised"
             />
           </label>
           {planError ? (

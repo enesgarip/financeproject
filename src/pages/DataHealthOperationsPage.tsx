@@ -177,7 +177,7 @@ export function DataHealthOperationsPage() {
               <Settings size={20} className="text-primary" />
               Yedek ve ayarlar
             </CardTitle>
-            <p className="text-sm text-muted-foreground">Yedek, geri yükleme, bildirim ve sıfırlama işlemleri.</p>
+            <p className="text-sm text-ink-muted">Yedek, geri yükleme, bildirim ve sıfırlama işlemleri.</p>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="grid gap-2 min-[640px]:grid-cols-2">
@@ -204,7 +204,7 @@ export function DataHealthOperationsPage() {
                 type="button"
                 onClick={() => void handleCsvExport()}
                 disabled={csvExporting || resetting || restoring}
-                className="inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-card px-3 py-2.5 text-sm font-semibold text-foreground transition hover:bg-muted disabled:opacity-50"
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-line-strong bg-raised px-3 py-2.5 text-sm font-semibold text-ink transition hover:bg-black/[.03] dark:hover:bg-white/[.04] disabled:opacity-50"
               >
                 <Download size={15} />
                 {csvExporting ? 'CSV hazırlanıyor...' : 'CSV yedek'}

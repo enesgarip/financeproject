@@ -14,19 +14,19 @@ import { cardHelp } from './CardsPage.help'
 
 export function OverviewStat({ label, value, help }: { label: string; value: string; help?: HelpTooltipContent }) {
   return (
-    <div className="min-w-0 rounded-lg bg-muted/55 px-2.5 py-2">
+    <div className="min-w-0 rounded-lg bg-page px-2.5 py-2">
       <div className="flex min-w-0 items-center gap-1">
-        <p className="truncate text-[11px] font-medium text-muted-foreground">{label}</p>
+        <p className="truncate text-[11px] font-medium text-ink-muted">{label}</p>
         {help ? <HelpTooltip title={label} content={help} /> : null}
       </div>
-      <p className="mt-1 truncate text-sm font-bold tabular-nums text-foreground">{value}</p>
+      <p className="mt-1 truncate text-sm font-bold tabular-nums text-ink">{value}</p>
     </div>
   )
 }
 
 export function CardDatum({ label, value, tone = 'neutral' }: { label: string; value: string; tone?: 'neutral' | 'good' | 'warning' | 'danger' }) {
   const valueClass = {
-    neutral: 'text-foreground',
+    neutral: 'text-ink',
     good: 'text-success',
     warning: 'text-warning',
     danger: 'text-destructive',
@@ -34,7 +34,7 @@ export function CardDatum({ label, value, tone = 'neutral' }: { label: string; v
 
   return (
     <div className="finance-field min-w-0 rounded-lg px-3 py-2.5">
-      <p className="truncate text-[11px] font-bold uppercase text-muted-foreground">{label}</p>
+      <p className="truncate text-[11px] font-bold uppercase text-ink-muted">{label}</p>
       <p className={`finance-value mt-1 truncate text-sm font-black leading-tight ${valueClass}`}>{value}</p>
     </div>
   )
@@ -68,7 +68,7 @@ export function CreditCardOverview({
           title="Kart özeti"
           description="Toplam borç, açık ekstre, provizyon ve kullanılabilir limit."
           action={
-            <div className="inline-flex items-center gap-1 text-muted-foreground">
+            <div className="inline-flex items-center gap-1 text-ink-muted">
               <HelpTooltip title="Kart özeti" content={cardHelp.summary} />
               <StatusBadge tone={totalUsageRate >= 80 ? 'danger' : totalUsageRate >= 55 ? 'warning' : 'good'}>%{Math.round(totalUsageRate)}</StatusBadge>
             </div>
@@ -95,14 +95,14 @@ export function CreditCardOverview({
       {groups.length > 0 ? (
         <div className="flex snap-x gap-3 overflow-x-auto pb-1">
           {groups.map((group) => (
-            <SurfaceCard key={group.key} className="min-w-[86%] snap-start border-border/70 min-[520px]:min-w-[48%]">
+            <SurfaceCard key={group.key} className="min-w-[86%] snap-start border-line-strong min-[520px]:min-w-[48%]">
               <CardHeader className="pb-0">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex min-w-0 items-start gap-3">
                     <BankLogo bankName={group.bankName} size="sm" />
                     <div className="min-w-0">
                       <CardTitle className="truncate text-base">{group.label}</CardTitle>
-                      <p className="mt-1 truncate text-xs text-muted-foreground">{group.bankName}</p>
+                      <p className="mt-1 truncate text-xs text-ink-muted">{group.bankName}</p>
                     </div>
                   </div>
                   <Badge variant="secondary">{group.cards.length} kart</Badge>
@@ -116,17 +116,17 @@ export function CreditCardOverview({
                   <OverviewStat label="Provizyon" value={formatAmount(group.provision)} help={cardHelp.provision} />
                 </div>
                 <Progress value={group.usageRate} className="h-1.5" />
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <div className="flex items-center justify-between text-xs text-ink-muted">
                   <span>Limit {formatAmount(group.limit)}</span>
                   <span>Kalan {formatAmount(group.available)}</span>
                 </div>
                 <div className="flex flex-col gap-2">
                   {group.cards.map((card) => (
-                    <div key={card.id} className="flex items-center justify-between gap-2 rounded-lg bg-muted/55 px-2.5 py-2 text-xs">
-                      <span className="min-w-0 truncate font-semibold text-foreground">
+                    <div key={card.id} className="flex items-center justify-between gap-2 rounded-lg bg-page px-2.5 py-2 text-xs">
+                      <span className="min-w-0 truncate font-semibold text-ink">
                         {card.holder_name || card.card_name}
                       </span>
-                      <span className="shrink-0 tabular-nums text-muted-foreground">
+                      <span className="shrink-0 tabular-nums text-ink-muted">
                         {formatAmount(card.debt_amount)}
                         {cardProvisionAmount(card) > 0 ? ` · prov. ${formatAmount(cardProvisionAmount(card))}` : ''}
                       </span>

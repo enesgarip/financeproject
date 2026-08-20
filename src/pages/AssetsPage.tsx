@@ -58,7 +58,7 @@ const categoryCardTint: Record<Asset['category'], string> = {
   Hisse: 'border-primary/20 bg-primary/5 dark:bg-primary/8',
   Araç:  'border-viz-11/25 bg-viz-11/6',
   BES:   'border-viz-9/25 bg-viz-9/6',
-  Diğer: 'border-border/70 bg-card',
+  Diğer: 'border-line-strong bg-raised',
 }
 
 function isGoldLedgerAsset(row: Asset): boolean {
@@ -413,11 +413,11 @@ function AssetValueHistoryPanel({
   if (!entries || entries.length === 0) return null
 
   return (
-    <div className="mt-3 rounded-lg bg-card/70 p-3 ring-1 ring-border/60">
+    <div className="mt-3 rounded-lg bg-raised p-3 ring-1 ring-line-strong">
       <button
         type="button"
         onClick={() => setOpen((prev) => !prev)}
-        className="flex w-full items-center justify-between text-[11px] font-black uppercase text-muted-foreground"
+        className="flex w-full items-center justify-between text-[11px] font-black uppercase text-ink-muted"
       >
         <span>Güncelleme geçmişi ({entries.length})</span>
         {open ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
@@ -428,8 +428,8 @@ function AssetValueHistoryPanel({
             const delta = entry.amount ?? 0
             const isUp = delta >= 0
             return (
-              <div key={entry.id} className="flex min-w-0 items-center justify-between gap-3 rounded-lg bg-muted/45 px-2.5 py-2 text-xs">
-                <span className="min-w-0 truncate text-muted-foreground">
+              <div key={entry.id} className="flex min-w-0 items-center justify-between gap-3 rounded-lg bg-page px-2.5 py-2 text-xs">
+                <span className="min-w-0 truncate text-ink-muted">
                   {new Date(entry.occurred_at).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', year: 'numeric' })}
                 </span>
                 <span className="shrink-0 text-right tabular-nums">
@@ -731,8 +731,8 @@ export function AssetsPage() {
                     <Icon className="size-5" />
                   </div>
                   <div className="min-w-0">
-                    <h2 className="truncate text-base font-black text-foreground">{asset.name}</h2>
-                    <p className="mt-0.5 text-xs text-muted-foreground">
+                    <h2 className="truncate text-base font-black text-ink">{asset.name}</h2>
+                    <p className="mt-0.5 text-xs text-ink-muted">
                       {isGoldLedgerAsset(asset) ? `${asset.category} · defter` : asset.category === 'Hisse' && asset.symbol ? `${asset.category} · ${asset.symbol}` : asset.category}
                     </p>
                   </div>
@@ -744,32 +744,32 @@ export function AssetsPage() {
 
               <div className="mt-4 flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
                 <div className="min-w-0">
-                  <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Değer</p>
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-ink-muted">Değer</p>
                   <div className="mt-0.5 flex flex-wrap items-center gap-2">
-                    <p className="font-mono text-lg font-black tabular-nums text-foreground">{formatAmount(value)}</p>
+                    <p className="font-mono text-lg font-black tabular-nums text-ink">{formatAmount(value)}</p>
                     <ConfidenceBadge confidence={valueConfidence} />
                   </div>
                 </div>
                 {(asset.category === 'Altın' || asset.category === 'Hisse') && asset.amount > 0 ? (
                   <div className="min-w-0">
-                    <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-ink-muted">
                       {asset.category === 'Altın' ? 'Miktar' : 'Adet'}
                     </p>
-                    <p className="mt-0.5 font-mono text-sm font-bold tabular-nums text-foreground">
+                    <p className="mt-0.5 font-mono text-sm font-bold tabular-nums text-ink">
                       {formatNumber(asset.amount)} {asset.category === 'Altın' ? (asset.unit === 'adet' ? 'çeyrek' : asset.unit) : 'adet'}
                     </p>
                   </div>
                 ) : null}
                 {asset.category === 'Nakit' && asset.currency && asset.currency !== 'TRY' ? (
                   <div className="min-w-0">
-                    <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Tutar</p>
-                    <p className="mt-0.5 font-mono text-sm font-bold tabular-nums text-foreground">{formatNumber(asset.amount)} {asset.currency}</p>
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-ink-muted">Tutar</p>
+                    <p className="mt-0.5 font-mono text-sm font-bold tabular-nums text-ink">{formatNumber(asset.amount)} {asset.currency}</p>
                   </div>
                 ) : null}
               </div>
 
               {asset.auto_valued ? (
-                <p className="mt-2.5 text-[11px] font-semibold text-muted-foreground/70">Canlı fiyatla otomatik</p>
+                <p className="mt-2.5 text-[11px] font-semibold text-ink-muted">Canlı fiyatla otomatik</p>
               ) : null}
 
               {pl ? <ProfitBadge profit={pl.profit} profitPct={pl.profitPct} /> : null}
