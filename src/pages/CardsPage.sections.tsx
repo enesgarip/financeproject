@@ -31,7 +31,10 @@ export function CardSectionNav({
   counts: Partial<Record<CardSection, number>>
 }) {
   return (
-    <div className="finance-command-surface -mx-1 flex gap-1.5 overflow-x-auto rounded-lg p-1.5 finance-scrollbar">
+    <div
+      aria-label="Kart bölümleri"
+      className="mb-4 flex w-full snap-x items-center gap-[22px] overflow-x-auto border-b border-line-strong [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+    >
       {cardSections.map((item) => {
         const isActive = item.id === section
         const count = counts[item.id]
@@ -42,21 +45,19 @@ export function CardSectionNav({
             onClick={() => onSelect(item.id)}
             aria-pressed={isActive}
             className={cn(
-              'flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-md px-1.5 py-2 text-[11px] font-black leading-tight transition',
-              'min-[560px]:flex-row min-[560px]:gap-1.5 min-[560px]:px-3 min-[560px]:text-xs',
+              'flex-none snap-start whitespace-nowrap border-b-2 pb-2.5 text-[13.5px] transition-colors duration-[120ms]',
               isActive
-                ? 'bg-primary text-primary-foreground '
-                : 'text-ink-muted hover:bg-black/[.03] dark:hover:bg-white/[.04] hover:text-ink',
+                ? 'border-primary font-semibold text-ink'
+                : 'border-transparent text-ink-faint hover:text-ink-muted',
             )}
           >
-            <item.icon size={16} strokeWidth={2.3} className="shrink-0" />
             <span className="flex items-center gap-1 whitespace-nowrap">
               {item.label}
               {count ? (
                 <span
                   className={cn(
-                    'grid min-w-4 place-items-center rounded-full px-1 text-[9px] font-black tabular-nums min-[560px]:text-[10px]',
-                    isActive ? 'bg-primary-foreground/20 text-primary-foreground' : 'bg-primary/12 text-primary',
+                    'serit-num grid min-w-4 place-items-center rounded-full px-1 text-[10px]',
+                    isActive ? 'bg-primary/12 text-primary' : 'bg-page text-ink-faint',
                   )}
                 >
                   {count}

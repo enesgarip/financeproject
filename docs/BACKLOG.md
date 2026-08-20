@@ -103,9 +103,14 @@ edilen yerde** kullanılır ve hafif gölge alır. Kural tablosu
     eziliyordu; mobilde aksiyonlar alt satıra indi (`sm`'den itibaren eski
     tek satır). Araçlar'da aynı ekranda iki farklı liste biçimi vardı (üstte
     kutular, altta `divide-y`) — ikisi de çizgi oldu.
-  - **6b-4 `LoginPage`**: koyu imza paneli + kalan 16 token + 2 ham renk.
-  - **6b-5 hap sekme çubuğu**: kart içinde yüzen `Özet/Kartlar/İşlemler/Ekstreler`
-    şeridi.
+  - ~~**6b-4 `LoginPage` + 6b-5 sekme şeridi.**~~ DONE. `LoginPage`, `App.tsx`
+    ve `ProtectedRoute` token'a geçti (26 değişim); marka zemininde duran
+    rose/emerald demo rakamları beyaza indi — orada renk sinyal taşımıyor,
+    etiket zaten "Nakit çıkışı" diyor. Kart bölüm şeridi hap olmaktan çıkıp
+    **`HubNav`in dilinde alttan çizgili sekmeye** döndü: aynı işlevin iki farklı
+    dili vardı, biri de sayfa içinde yüzen bir yüzeydi.
+    **Bununla kodda eski shadcn semantik token'ı SIFIR** (kalan tek eşleşme
+    `serit/Divider`ın yorumundaki tarihsel örnek).
 - ~~**Faz 7 — Grafikler.**~~ DONE. 4 dosya, 33 token + 3 gölge. Grafiklerin
   kendi renkleri zaten doğru yerdeydi (`--viz-*`, `--chart-idle`, `SERIT_FILL`);
   eski token yalnız **çeperde** kalmıştı: tooltip kabı, boş durum kutusu,

@@ -7,7 +7,7 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
   if (loading) {
     return (
-      <main className="grid min-h-svh place-items-center bg-background px-5 text-sm text-muted-foreground">
+      <main className="grid min-h-svh place-items-center bg-page px-5 text-sm text-ink-muted">
         Yükleniyor...
       </main>
     )
