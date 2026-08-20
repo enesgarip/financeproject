@@ -194,7 +194,7 @@ function CarManager({
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
         {cars.length > 0 ? (
-          <ul className="flex flex-col gap-2">
+          <ul className="flex flex-col divide-y divide-line">
             {cars.map((car) =>
               editingId === car.id ? (
                 <li key={car.id}>
@@ -215,7 +215,7 @@ function CarManager({
               ) : (
                 <li
                   key={car.id}
-                  className="flex items-center justify-between gap-2 rounded-xl border border-line-strong bg-raised px-3 py-2"
+                  className="flex items-center justify-between gap-2 py-2.5"
                 >
                   <div className="min-w-0">
                     <p className="truncate text-sm font-bold text-ink">{car.name}</p>

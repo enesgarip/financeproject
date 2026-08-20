@@ -96,9 +96,13 @@ edilen yerde** kullanılır ve hafif gölge alır. Kural tablosu
     banka marka renklerini tutuyor, kimlik katmanı. Sorun renk değil yüzey
     sayısıydı. Ayrıca yerel seed'e 2 kart + 1 hesap eklendi, bu paneller artık
     yerelde doğrulanabiliyor.
-  - **6b-2 İşlemler listesi**: her satır ayrı kutu (→ `LineGroup`), "İptal"in
-    kırmızısı (rutin aksiyon, sinyal değil).
-  - **6b-3 Araçlar**: kart→kart→satır yığını.
+  - ~~**6b-2 İşlemler listesi + 6b-3 Araçlar.**~~ DONE. Her satırın ayrı kutu
+    olması bitti (ayıracı kap çiziyor). "İptal" nötrleşti: rutin aksiyon,
+    yıkıcı niyet zaten onay diyaloğunda. **390px'te gerçek kırılma bulundu:**
+    açıklama + tutar + iki buton tek satıra sığmıyordu, açıklama "A…"ya kadar
+    eziliyordu; mobilde aksiyonlar alt satıra indi (`sm`'den itibaren eski
+    tek satır). Araçlar'da aynı ekranda iki farklı liste biçimi vardı (üstte
+    kutular, altta `divide-y`) — ikisi de çizgi oldu.
   - **6b-4 `LoginPage`**: koyu imza paneli + kalan 16 token + 2 ham renk.
   - **6b-5 hap sekme çubuğu**: kart içinde yüzen `Özet/Kartlar/İşlemler/Ekstreler`
     şeridi.

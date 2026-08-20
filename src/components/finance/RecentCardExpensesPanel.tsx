@@ -145,23 +145,23 @@ export function RecentCardExpensesPanel({ cards, reload, setError }: RecentCardE
           <Badge variant="secondary">{expenses.length}</Badge>
         </div>
       </CardHeader>
-      <CardContent className="space-y-2 pt-2">
+      <CardContent className="pt-2 [&>*+*]:border-t [&>*+*]:border-line">
         {expenses.map((expense) => {
           const card = cardsById.get(expense.card_id)
           const locked = lockReason(expense)
           const canSplit = card?.card_type === 'kredi_karti' && expense.installment_count === 1 && !locked
           const splitOpen = splittingId === expense.id
           return (
-            <div key={expense.id} className="rounded-xl border border-line-strong bg-raised px-3 py-2 text-sm">
-              <div className="flex items-center gap-3">
-                <div className="min-w-0 flex-1">
+            <div key={expense.id} className="py-2.5 text-sm">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-2 sm:flex-nowrap">
+                <div className="min-w-0 flex-1 basis-full sm:basis-auto">
                   <p className="truncate font-semibold text-ink">{expense.description}</p>
                   <p className="text-xs text-ink-muted">
                     {card ? `${card.bank_name} · ${card.card_name}` : 'Kart'} · {formatDate(expense.spent_at)}
                     {expense.installment_count > 1 ? ` · ${expense.installment_count} taksit` : ''}
                   </p>
                 </div>
-                <span className="shrink-0 font-mono font-semibold tabular-nums text-ink">{formatAmount(expense.amount)}</span>
+                <span className="serit-num shrink-0 font-semibold text-ink">{formatAmount(expense.amount)}</span>
                 {canSplit ? (
                   <button
                     type="button"
@@ -182,7 +182,7 @@ export function RecentCardExpensesPanel({ cards, reload, setError }: RecentCardE
                   onClick={() => void handleCancel(expense)}
                   disabled={Boolean(locked) || cancellingId === expense.id}
                   title={locked ?? 'Hareketi append-only iptal et'}
-                  className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-line-strong bg-raised px-2.5 py-1.5 text-xs font-semibold text-destructive transition hover:bg-destructive/10 disabled:cursor-not-allowed disabled:opacity-40"
+                  className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-line-strong bg-raised px-2.5 py-1.5 text-xs font-semibold text-ink-muted transition hover:bg-black/[.03] dark:hover:bg-white/[.04] hover:text-ink disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   <Ban size={13} />
                   İptal
@@ -190,7 +190,7 @@ export function RecentCardExpensesPanel({ cards, reload, setError }: RecentCardE
               </div>
 
               {splitOpen ? (
-                <div className="mt-2 flex flex-wrap items-center gap-2 border-t border-line-strong pt-2">
+                <div className="mt-2 flex flex-wrap items-center gap-2 border-t border-line pt-2">
                   <label className="flex items-center gap-1.5 text-xs font-medium text-ink-muted">
                     Taksit sayısı
                     <select
