@@ -42,7 +42,7 @@ export function AccountSelector({
 
   return (
     <div className="flex flex-col gap-2">
-      <label className="block text-sm font-semibold text-foreground">
+      <label className="block text-sm font-semibold text-ink">
         {label}
         <Select
           required

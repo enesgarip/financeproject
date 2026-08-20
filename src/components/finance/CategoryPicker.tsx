@@ -40,7 +40,7 @@ export function CategoryPicker({ label = 'Kategori', value, description, onChang
 
   return (
     <div className="min-w-0">
-      <label className="block min-w-0 text-sm font-semibold text-foreground">
+      <label className="block min-w-0 text-sm font-semibold text-ink">
         {label}
         <select
           value={value}
@@ -48,7 +48,7 @@ export function CategoryPicker({ label = 'Kategori', value, description, onChang
             manuallyChosen.current = true
             onChange(event.target.value)
           }}
-          className="mt-1 w-full min-w-0 rounded-lg border border-input bg-card/80 px-3 py-2.5 outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 dark:bg-card/50 dark:text-foreground"
+          className="mt-1 w-full min-w-0 rounded-lg border border-line-strong bg-raised px-3 py-2.5 outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 dark:bg-raised dark:text-ink"
         >
           {expenseCategoryOptions.map((option) => (
             <option key={option.value} value={option.value}>
@@ -70,7 +70,7 @@ export function CategoryPicker({ label = 'Kategori', value, description, onChang
         </button>
       ) : null}
       {value && suggestion && suggestion.category === value ? (
-        <p className="mt-2 text-xs text-muted-foreground">
+        <p className="mt-2 text-xs text-ink-muted">
           Neden {value}? {suggestionReason(suggestion.source, suggestion.match)}. Değiştirirsen bundan sonra senin seçimin önerilir.
         </p>
       ) : null}

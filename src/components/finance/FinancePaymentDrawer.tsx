@@ -44,12 +44,12 @@ function defaultPaymentDetail(intent: FinanceObligation | null, formatAmount: (v
 
   return (
     <>
-      <p className="font-semibold text-foreground">{intent.title}</p>
+      <p className="font-semibold text-ink">{intent.title}</p>
       <p className="mt-0.5">{intent.subtitle}</p>
       <p className="mt-0.5">Tarih: {formatDate(intent.date)}</p>
       <p className="mt-0.5">
         Planlanan tutar:{' '}
-        <span className="font-mono font-semibold text-foreground">{formatAmount(intent.amount)}</span>
+        <span className="font-mono font-semibold text-ink">{formatAmount(intent.amount)}</span>
       </p>
     </>
   )
@@ -115,7 +115,7 @@ export function FinancePaymentDrawer({
         <button
           type="button"
           onClick={() => onAmountValueChange(String(minimumPayment))}
-          className="rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-bold text-foreground transition hover:bg-muted"
+          className="rounded-lg border border-line-strong bg-raised px-3 py-1.5 text-xs font-bold text-ink transition hover:bg-black/[.03] dark:hover:bg-white/[.04]"
         >
           Asgari tahmini ({formatAmount(minimumPayment)})
         </button>
@@ -124,7 +124,7 @@ export function FinancePaymentDrawer({
         <button
           type="button"
           onClick={() => onAmountValueChange(String(intent.amount))}
-          className="rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-bold text-foreground transition hover:bg-muted"
+          className="rounded-lg border border-line-strong bg-raised px-3 py-1.5 text-xs font-bold text-ink transition hover:bg-black/[.03] dark:hover:bg-white/[.04]"
         >
           Ekstre ({formatAmount(intent.amount)})
         </button>
@@ -132,7 +132,7 @@ export function FinancePaymentDrawer({
       <button
         type="button"
         onClick={() => onAmountValueChange(String(payableCeiling))}
-        className="rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-bold text-foreground transition hover:bg-muted"
+        className="rounded-lg border border-line-strong bg-raised px-3 py-1.5 text-xs font-bold text-ink transition hover:bg-black/[.03] dark:hover:bg-white/[.04]"
       >
         Tamamı ({formatAmount(payableCeiling)})
       </button>

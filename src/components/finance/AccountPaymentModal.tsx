@@ -122,7 +122,7 @@ export function AccountPaymentModal({
     <SimpleModal title={title} open={open} onClose={handleClose}>
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         {children ? (
-          <div className="rounded-lg border border-border/60 bg-muted/30 p-3 text-sm text-muted-foreground">
+          <div className="rounded-lg border border-line-strong bg-page p-3 text-sm text-ink-muted">
             {children}
           </div>
         ) : null}
@@ -133,9 +133,9 @@ export function AccountPaymentModal({
             {amountActions}
           </div>
         ) : (
-          <div className="rounded-lg border border-border/60 bg-card/80 px-3 py-2.5">
+          <div className="rounded-lg border border-line-strong bg-raised px-3 py-2.5">
             <p className="finance-label">{amountLabel}</p>
-            <p className="finance-value mt-1 text-base font-black tabular-nums text-foreground">{formatAmount(amount)}</p>
+            <p className="finance-value mt-1 text-base font-black tabular-nums text-ink">{formatAmount(amount)}</p>
           </div>
         )}
 

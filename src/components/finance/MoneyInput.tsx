@@ -36,7 +36,7 @@ export function MoneyInput({
   }
 
   return (
-    <label className={`block text-sm font-semibold text-foreground ${className}`}>
+    <label className={`block text-sm font-semibold text-ink ${className}`}>
       {label}
       <Input
         value={value}
@@ -48,7 +48,7 @@ export function MoneyInput({
         placeholder={placeholder}
         className="mt-1 tabular-nums"
       />
-      {parsedValue > 0 ? <span className="mt-1 block text-xs font-semibold text-muted-foreground">{formatAmount(parsedValue)}</span> : null}
+      {parsedValue > 0 ? <span className="mt-1 block text-xs font-semibold text-ink-muted">{formatAmount(parsedValue)}</span> : null}
     </label>
   )
 }

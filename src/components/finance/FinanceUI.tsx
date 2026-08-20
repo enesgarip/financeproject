@@ -6,7 +6,7 @@ import { Progress } from '@/components/ui/progress'
 type Tone = 'neutral' | 'good' | 'warning' | 'danger' | 'info' | 'premium'
 
 const toneSurfaceClass: Record<Tone, string> = {
-  neutral: 'border-border/70 bg-card text-foreground',
+  neutral: 'border-line-strong bg-raised text-ink',
   good:    'border-success/20 bg-success/8 text-success dark:bg-success/12',
   warning: 'border-warning/25 bg-warning/8 text-warning dark:bg-warning/12',
   danger:  'border-destructive/20 bg-destructive/8 text-destructive dark:bg-destructive/12',
@@ -15,7 +15,7 @@ const toneSurfaceClass: Record<Tone, string> = {
 }
 
 const toneTextClass: Record<Tone, string> = {
-  neutral: 'text-foreground',
+  neutral: 'text-ink',
   good:    'text-success',
   warning: 'text-warning',
   danger:  'text-destructive',
@@ -24,7 +24,7 @@ const toneTextClass: Record<Tone, string> = {
 }
 
 const toneBgClass: Record<Tone, string> = {
-  neutral: 'bg-muted/50',
+  neutral: 'bg-page',
   good:    'bg-success/12 dark:bg-success/18',
   warning: 'bg-warning/12 dark:bg-warning/18',
   danger:  'bg-destructive/12 dark:bg-destructive/18',
@@ -101,7 +101,7 @@ export function PageHero({
         <div className="flex min-w-0 items-start justify-between gap-4">
           <div className="min-w-0">
             <p className="finance-label">{label}</p>
-            <h2 className="font-display mt-2 text-[clamp(1.35rem,5vw,2.5rem)] font-semibold leading-none tracking-tight text-foreground">
+            <h2 className="font-display mt-2 text-[clamp(1.35rem,5vw,2.5rem)] font-semibold leading-none tracking-tight text-ink">
               {title}
             </h2>
             {amount ? (
@@ -114,7 +114,7 @@ export function PageHero({
               </p>
             ) : null}
             {description ? (
-              <p className="mt-3 max-w-xl text-sm leading-relaxed text-muted-foreground">{description}</p>
+              <p className="mt-3 max-w-xl text-sm leading-relaxed text-ink-muted">{description}</p>
             ) : null}
           </div>
           <div className="hidden shrink-0 sm:block">{action}</div>
@@ -141,9 +141,9 @@ export function SectionHeader({
   return (
     <div className={cn('flex min-w-0 items-start justify-between gap-3', className)}>
       <div className="min-w-0">
-        <h2 className="text-base font-bold leading-tight tracking-tight text-foreground sm:text-lg">{title}</h2>
+        <h2 className="text-base font-bold leading-tight tracking-tight text-ink sm:text-lg">{title}</h2>
         {description ? (
-          <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{description}</p>
+          <p className="mt-1 text-sm leading-relaxed text-ink-muted">{description}</p>
         ) : null}
       </div>
       {action ? <div className="shrink-0">{action}</div> : null}
@@ -209,12 +209,12 @@ export function MetricCard({
   const deltaColorClass =
     deltaLabel === 'up' ? 'text-success' :
     deltaLabel === 'down' ? 'text-destructive' :
-    'text-muted-foreground'
+    'text-ink-muted'
 
   return (
     <div
       className={cn(
-        '@container/metric group/metric relative min-w-0 overflow-hidden rounded-2xl border border-border/70 bg-card p-4 sm:p-5',
+        '@container/metric group/metric relative min-w-0 overflow-hidden rounded-2xl border border-line-strong bg-raised p-4 sm:p-5',
         ' transition-[border-color,box-shadow] duration-250',
         ' hover:border-primary/20',
         '',
@@ -257,7 +257,7 @@ export function MetricCard({
               </span>
             ) : null}
             {description ? (
-              <span className="truncate text-xs text-muted-foreground">{description}</span>
+              <span className="truncate text-xs text-ink-muted">{description}</span>
             ) : null}
           </div>
         ) : null}
@@ -309,7 +309,7 @@ export function MiniStat({
 }) {
   return (
     <div className={cn(
-      'min-w-0 rounded-xl border border-border/60 bg-muted/30 px-3 py-2.5',
+      'min-w-0 rounded-xl border border-line-strong bg-page px-3 py-2.5',
       className,
     )}>
       <p className="finance-label truncate">{label}</p>
@@ -358,7 +358,7 @@ export function ProgressStrip({
         size={size === 'lg' ? 'lg' : size === 'sm' ? 'sm' : 'default'}
       />
       {detail ? (
-        <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{detail}</p>
+        <p className="mt-2 text-xs leading-relaxed text-ink-muted">{detail}</p>
       ) : null}
     </div>
   )

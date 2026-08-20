@@ -59,10 +59,10 @@ edilen yerde** kullanılır ve hafif gölge alır. Kural tablosu
   `StatementReminderPanel`). Eşleme betikle yapıldı — 380 kullanımı elle
   yazmak hata kaynağı olurdu; tablo commit mesajında. **Sinyal ve marka
   tonlarına dokunulmadı.**
-- **Faz 4b — Hesap/ödeme panelleri.** `AccountLedgerPanel`,
-  `AccountPaymentModal`, `AccountSelector`, `FinancePaymentDrawer`,
-  `ObligationsCalendar`, `SavingsGoalsPanel`, `KasaModuPanel`, `RatesBanner`,
-  `MoneyInput`, `CategoryPicker`, `FinanceUI`.
+- ~~**Faz 4b — Hesap/ödeme panelleri.**~~ DONE. 11 dosya, 136 değişim. En
+  kritiği `FinanceUI`: `toneSurfaceClass`/`toneTextClass`/`toneBgClass`
+  tablolarının **yalnız `neutral` satırı** çevrildi — good/warning/danger/info
+  satırları sinyal, onlara dokunulmadı.
 - **Faz 4c — Veri sağlığı + ayar + dashboard panelleri.**
   `LiveReconciliationPanel`, `AutomationCoveragePanel`, `CategoryCleanupPanel`,
   `SmsLogPanel`, `NotificationSettings`, `DashboardCards`,
