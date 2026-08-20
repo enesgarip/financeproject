@@ -26,14 +26,14 @@ export function SimpleModal({ title, open, children, onClose }: SimpleModalProps
         role="dialog"
         aria-modal="true"
         aria-labelledby="simple-modal-title"
-        className="max-h-[88svh] w-full min-w-0 overflow-x-hidden overflow-y-auto rounded-lg border border-border/85 bg-card text-card-foreground focus:outline-none sm:max-h-[92svh] sm:max-w-2xl"
+        className="max-h-[88svh] w-full min-w-0 overflow-x-hidden overflow-y-auto rounded-lg border border-line-strong bg-raised text-ink focus:outline-none sm:max-h-[92svh] sm:max-w-2xl"
       >
-        <header className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-border/80 bg-card/94 px-4 py-3 backdrop-blur">
-          <h2 id="simple-modal-title" className="min-w-0 truncate text-base font-black text-foreground">{title}</h2>
+        <header className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-line-strong bg-raised/94 px-4 py-3 backdrop-blur">
+          <h2 id="simple-modal-title" className="min-w-0 truncate text-base font-black text-ink">{title}</h2>
           <button
             type="button"
             onClick={onClose}
-            className="grid size-10 place-items-center rounded-lg border border-border/75 bg-background/70 text-muted-foreground transition hover:bg-muted hover:text-foreground"
+            className="grid size-10 place-items-center rounded-lg border border-line-strong bg-page text-ink-muted transition hover:bg-black/[.03] dark:hover:bg-white/[.04] hover:text-ink"
             aria-label="Kapat"
           >
             <X size={18} />

@@ -21,7 +21,7 @@ export function PullToRefresh({ children }: { children: ReactNode }) {
       >
         <RefreshCw
           size={20}
-          className={refreshing ? 'animate-spin text-primary' : 'text-muted-foreground'}
+          className={refreshing ? 'animate-spin text-primary' : 'text-ink-muted'}
           style={refreshing ? undefined : { transform: `rotate(${progress * 360}deg)`, opacity: progress }}
         />
       </div>

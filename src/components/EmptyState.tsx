@@ -66,7 +66,7 @@ export function EmptyState({
   return (
     <div
       className={cn(
-        'mx-auto w-full max-w-xl rounded-2xl border border-dashed border-border/70 bg-card/80 text-center',
+        'mx-auto w-full max-w-xl rounded-2xl border border-dashed border-line-strong bg-raised text-center',
         '',
         paddingClass,
         className,
@@ -79,8 +79,8 @@ export function EmptyState({
       </div>
 
       {/* Text */}
-      <h3 className={cn('mt-4 leading-snug text-foreground', titleClass)}>{title}</h3>
-      <p className="mx-auto mt-2 max-w-xs text-sm leading-relaxed text-muted-foreground">
+      <h3 className={cn('mt-4 leading-snug text-ink', titleClass)}>{title}</h3>
+      <p className="mx-auto mt-2 max-w-xs text-sm leading-relaxed text-ink-muted">
         {description}
       </p>
 
@@ -88,7 +88,7 @@ export function EmptyState({
       {action ? (
         <div className="mt-5 flex justify-center">{action}</div>
       ) : (
-        <div className="mt-5 inline-flex items-center gap-2 rounded-lg bg-muted/60 px-3 py-1.5 text-xs font-medium text-muted-foreground ring-1 ring-border/60">
+        <div className="mt-5 inline-flex items-center gap-2 rounded-lg bg-page px-3 py-1.5 text-xs font-medium text-ink-muted ring-1 ring-line-strong">
           <Plus size={12} />
           İlk kayıtla ekran anlam kazanır
         </div>
