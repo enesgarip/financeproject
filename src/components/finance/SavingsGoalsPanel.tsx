@@ -359,7 +359,7 @@ export function SavingsGoalsPanel({ monthlySurplus }: { monthlySurplus?: number 
                   <div className="flex gap-3">
                     <div className="relative flex size-20 shrink-0 items-center justify-center">
                       <svg viewBox="0 0 80 80" className="size-20 -rotate-90">
-                        <circle cx="40" cy="40" r="36" fill="none" stroke="currentColor" strokeWidth="5" className="text-muted/40" />
+                        <circle cx="40" cy="40" r="36" fill="none" stroke="currentColor" strokeWidth="5" className="text-track" />
                         <circle
                           cx="40" cy="40" r="36" fill="none"
                           strokeWidth="5" strokeLinecap="round"

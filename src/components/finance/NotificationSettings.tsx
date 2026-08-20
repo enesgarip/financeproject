@@ -196,17 +196,17 @@ export function NotificationSettings() {
         </CardHeader>
         <CardContent>
           {unavailableReason === 'ios-needs-install' ? (
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-ink-muted">
               iPhone/iPad'de bildirimler yalnız <strong>ana ekrana eklenmiş</strong> uygulamada çalışır. Safari'de
               paylaş düğmesi → <strong>Ana Ekrana Ekle</strong> de, sonra uygulamayı ana ekrandaki simgesinden aç —
               bu kart burada açılabilir hâle gelir.
             </p>
           ) : unavailableReason === 'unsupported-browser' ? (
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-ink-muted">
               Bu tarayıcı Web Push'u desteklemiyor. Chrome, Edge veya ana ekrana eklenmiş uygulama üzerinden dene.
             </p>
           ) : (
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-ink-muted">
               Bildirim anahtarı (VAPID) bu sürümde tanımlı değil, gönderim yapılamaz.
             </p>
           )}
@@ -225,7 +225,7 @@ export function NotificationSettings() {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-ink-muted">
           Ekstre kesim tarihi, yaklaşan ödeme günleri ve haftalık özet için bu cihaza
           bildirim gönderilsin. İstediğin zaman kapatabilirsin.
         </p>
@@ -258,8 +258,8 @@ export function NotificationSettings() {
         )}
 
         {user ? (
-          <div className="space-y-3 border-t border-border/60 pt-3">
-            <p className="text-sm font-semibold text-foreground">Hangi bildirimler gelsin?</p>
+          <div className="space-y-3 border-t border-line-strong pt-3">
+            <p className="text-sm font-semibold text-ink">Hangi bildirimler gelsin?</p>
             <div className="grid gap-2">
               {TYPE_TOGGLES.map(({ key, label, hint }) => {
                 const on = prefs[key]
@@ -272,14 +272,14 @@ export function NotificationSettings() {
                     aria-label={label}
                     disabled={savingPref}
                     onClick={() => void savePrefs({ ...prefs, [key]: !on })}
-                    className="flex items-center justify-between gap-3 rounded-xl border border-border/60 bg-card px-3 py-2.5 text-left transition hover:bg-muted/40 disabled:opacity-60"
+                    className="flex items-center justify-between gap-3 rounded-xl border border-line-strong bg-raised px-3 py-2.5 text-left transition hover:bg-black/[.03] dark:hover:bg-white/[.04] disabled:opacity-60"
                   >
                     <span className="min-w-0">
-                      <span className="block text-sm font-semibold text-foreground">{label}</span>
-                      <span className="block text-xs text-muted-foreground">{hint}</span>
+                      <span className="block text-sm font-semibold text-ink">{label}</span>
+                      <span className="block text-xs text-ink-muted">{hint}</span>
                     </span>
                     <span
-                      className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition ${on ? 'bg-primary' : 'bg-muted-foreground/30'}`}
+                      className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition ${on ? 'bg-primary' : 'bg-page-foreground/30'}`}
                     >
                       <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition ${on ? 'translate-x-5' : 'translate-x-0.5'}`} />
                     </span>
@@ -288,9 +288,9 @@ export function NotificationSettings() {
               })}
             </div>
 
-            <div className="rounded-xl border border-border/60 bg-card px-3 py-2.5">
+            <div className="rounded-xl border border-line-strong bg-raised px-3 py-2.5">
               <label className="flex items-center justify-between gap-3">
-                <span className="text-sm font-semibold text-foreground">Sessiz saatler</span>
+                <span className="text-sm font-semibold text-ink">Sessiz saatler</span>
                 <input
                   type="checkbox"
                   checked={quietOn}
@@ -316,7 +316,7 @@ export function NotificationSettings() {
                   >
                     {HOURS.map((h) => <option key={h} value={h}>{String(h).padStart(2, '0')}:00</option>)}
                   </Select>
-                  <span className="text-muted-foreground">–</span>
+                  <span className="text-ink-muted">–</span>
                   <Select
                     value={String(prefs.quiet_hours_end ?? 8)}
                     onChange={(e) => void savePrefs({ ...prefs, quiet_hours_end: Number(e.target.value) })}
@@ -325,7 +325,7 @@ export function NotificationSettings() {
                   >
                     {HOURS.map((h) => <option key={h} value={h}>{String(h).padStart(2, '0')}:00</option>)}
                   </Select>
-                  <span className="text-xs text-muted-foreground">arası bildirim gönderilmez.</span>
+                  <span className="text-xs text-ink-muted">arası bildirim gönderilmez.</span>
                 </div>
               ) : null}
               {quietOn && quietHoursMuteDailyPush(prefs.quiet_hours_start, prefs.quiet_hours_end) ? (
@@ -337,7 +337,7 @@ export function NotificationSettings() {
               ) : null}
             </div>
 
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-ink-muted">
               {lastNotif
                 ? `Son gönderilen: ${NOTIFICATION_TYPE_LABELS[lastNotif.notification_type] ?? lastNotif.notification_type} · ${formatDate(lastNotif.sent_at.slice(0, 10))}`
                 : 'Henüz bildirim gönderilmedi.'}
@@ -346,7 +346,7 @@ export function NotificationSettings() {
         ) : null}
 
         {subscribed && !blocked ? (
-          <p className="text-xs text-muted-foreground">Bu cihaz bildirimlere abone.</p>
+          <p className="text-xs text-ink-muted">Bu cihaz bildirimlere abone.</p>
         ) : null}
         {info ? <p className="text-sm text-success">{info}</p> : null}
         {error ? <p className="text-sm text-destructive">{error}</p> : null}

@@ -63,10 +63,12 @@ edilen yerde** kullanılır ve hafif gölge alır. Kural tablosu
   kritiği `FinanceUI`: `toneSurfaceClass`/`toneTextClass`/`toneBgClass`
   tablolarının **yalnız `neutral` satırı** çevrildi — good/warning/danger/info
   satırları sinyal, onlara dokunulmadı.
-- **Faz 4c — Veri sağlığı + ayar + dashboard panelleri.**
-  `LiveReconciliationPanel`, `AutomationCoveragePanel`, `CategoryCleanupPanel`,
-  `SmsLogPanel`, `NotificationSettings`, `DashboardCards`,
-  `DashboardInsights`, `ReconciliationPanel`.
+- ~~**Faz 4c — Veri sağlığı + ayar + dashboard panelleri.**~~ DONE. 8 dosya,
+  119 + 2 değişim. Betiğin tablosuna girmeyen iki artık elle çevrildi:
+  `text-muted/40` (SVG halka stroke'u, `className` ile veriliyor) → `text-track`,
+  `hover:border-muted-foreground/35` → `hover:border-ink-faint`.
+  **Panel katmanı artık tamamen Şerit'te** — `finance/*` + `dashboard/*`
+  içinde kalan tek eski token kümesi Faz 5'in iki import modalında.
   Kredi kartı görselleri: **fiziksel kart metaforu KALIYOR**, palet dışı mavi
   gradient banka rengi olarak palete çekilecek (sahibin kararı 2026-08-20).
   Kartın altındaki 2×2 gri kutucuklar kart-içinde-kart; çizgi satırına döner.

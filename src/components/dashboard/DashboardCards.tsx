@@ -35,19 +35,19 @@ export function HistorySection({ rows }: { rows: TransactionHistory[] }) {
   const groupedRows = useMemo(() => groupHistoryRows(filteredRows.slice(0, 40)), [filteredRows])
 
   return (
-    <Card className="border-0 ring-1 ring-border/80">
+    <Card className="border-0 ring-1 ring-line-strong">
       <CardHeader className="pb-0">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <CardTitle>Geçmiş işlemler</CardTitle>
-            <p className="mt-1 text-sm text-muted-foreground">Son 3 ay işlem geçmişi ve hesap hareketleri.</p>
+            <p className="mt-1 text-sm text-ink-muted">Son 3 ay işlem geçmişi ve hesap hareketleri.</p>
           </div>
           <Badge variant="secondary">{filteredRows.length} kayıt</Badge>
         </div>
       </CardHeader>
       <CardContent className="space-y-4 pt-2">
         <label className="relative block">
-          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-ink-muted" />
           <Input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
@@ -69,7 +69,7 @@ export function HistorySection({ rows }: { rows: TransactionHistory[] }) {
                 className={`min-h-11 shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background ${
                   isActive
                     ? 'bg-primary text-primary-foreground '
-                    : 'bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground'
+                    : 'bg-page text-ink-muted hover:bg-black/[.03] dark:hover:bg-white/[.04] hover:text-ink'
                 }`}
               >
                 {filter.label}
@@ -86,30 +86,30 @@ export function HistorySection({ rows }: { rows: TransactionHistory[] }) {
           {groupedRows.map((group) => (
             <section key={group.label} className="space-y-2">
               <div className="flex items-center gap-3">
-                <h3 className="shrink-0 text-xs font-bold uppercase text-muted-foreground">{group.label}</h3>
+                <h3 className="shrink-0 text-xs font-bold uppercase text-ink-muted">{group.label}</h3>
                 <span className="h-px flex-1 bg-gradient-to-r from-border to-transparent" />
               </div>
               <div className="space-y-2">
                 {group.rows.map((row) => {
                   const meta = historyTypeMeta[row.type]
                   return (
-                  <article key={row.id} className="flex gap-3 rounded-lg border border-border/75 bg-card/80 p-3 ">
+                  <article key={row.id} className="flex gap-3 rounded-lg border border-line-strong bg-raised p-3 ">
                     <div className={cn('mt-0.5 grid size-7 shrink-0 place-items-center rounded-lg', meta.chip)} aria-label={meta.label}>
                       <meta.icon size={15} strokeWidth={2.25} />
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
-                          <p className="truncate text-sm font-bold text-foreground">{row.title}</p>
-                          <p className="mt-0.5 text-xs text-muted-foreground">{formatHistoryDate(row.occurred_at)}</p>
+                          <p className="truncate text-sm font-bold text-ink">{row.title}</p>
+                          <p className="mt-0.5 text-xs text-ink-muted">{formatHistoryDate(row.occurred_at)}</p>
                         </div>
                         {row.amount !== null ? (
-                          <span title={formatAmount(row.amount)} className="finance-value max-w-[45%] shrink-0 truncate rounded-lg bg-muted px-2.5 py-1 text-xs font-bold text-foreground">
+                          <span title={formatAmount(row.amount)} className="finance-value max-w-[45%] shrink-0 truncate rounded-lg bg-page px-2.5 py-1 text-xs font-bold text-ink">
                             {formatAmount(row.amount)}
                           </span>
                         ) : null}
                       </div>
-                      {row.note ? <p className="mt-2 text-xs leading-5 text-muted-foreground">{row.note}</p> : null}
+                      {row.note ? <p className="mt-2 text-xs leading-5 text-ink-muted">{row.note}</p> : null}
                     </div>
                   </article>
                   )
@@ -118,7 +118,7 @@ export function HistorySection({ rows }: { rows: TransactionHistory[] }) {
             </section>
           ))}
           {filteredRows.length > 40 ? (
-            <p className="text-center text-xs text-muted-foreground">İlk 40 kayıt gösteriliyor.</p>
+            <p className="text-center text-xs text-ink-muted">İlk 40 kayıt gösteriliyor.</p>
           ) : null}
         </div>
       )}
