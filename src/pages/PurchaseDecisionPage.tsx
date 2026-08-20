@@ -100,8 +100,8 @@ export function PurchaseDecisionPage() {
               <ShoppingCart className="size-5" />
             </span>
             <div className="min-w-0">
-              <p className="text-base font-black text-foreground">Bunu alsam ne olur?</p>
-              <p className="text-xs text-muted-foreground">Tutarı yaz, önümüzdeki {HORIZON_MONTHS} ayı gör.</p>
+              <p className="text-base font-black text-ink">Bunu alsam ne olur?</p>
+              <p className="text-xs text-ink-muted">Tutarı yaz, önümüzdeki {HORIZON_MONTHS} ayı gör.</p>
             </div>
           </div>
 
@@ -113,7 +113,7 @@ export function PurchaseDecisionPage() {
             placeholder="Tutar (TL)"
             aria-label="Alışveriş tutarı"
             autoFocus
-            className="finance-value mt-4 h-14 w-full bg-background px-4 text-center text-2xl font-bold tabular-nums"
+            className="finance-value mt-4 h-14 w-full bg-page px-4 text-center text-2xl font-bold tabular-nums"
           />
 
           {/* Nakit/banka seçiliyken taksit yoktur: butonlar tıklanabilir kalıyordu ve
@@ -132,7 +132,7 @@ export function PurchaseDecisionPage() {
                   className={`min-h-11 rounded-lg text-sm font-bold ring-1 transition disabled:cursor-not-allowed disabled:opacity-45 ${
                     installments === count
                       ? 'bg-primary text-primary-foreground ring-primary'
-                      : 'bg-card text-foreground ring-border enabled:hover:bg-muted'
+                      : 'bg-raised text-ink ring-line-strong enabled:hover:bg-black/[.03] dark:hover:bg-white/[.04]'
                   }`}
                 >
                   {count === 1 ? 'Peşin' : count}
@@ -140,7 +140,7 @@ export function PurchaseDecisionPage() {
               ))}
             </div>
             {method === 'cash' ? (
-              <p className="mt-1.5 text-[11px] text-muted-foreground">Nakit ve banka ödemesi peşindir; taksit yalnız kredi kartında seçilebilir.</p>
+              <p className="mt-1.5 text-[11px] text-ink-muted">Nakit ve banka ödemesi peşindir; taksit yalnız kredi kartında seçilebilir.</p>
             ) : null}
           </div>
 
@@ -159,7 +159,7 @@ export function PurchaseDecisionPage() {
                   className={`min-h-11 rounded-lg text-sm font-bold ring-1 transition ${
                     method === value
                       ? 'bg-primary text-primary-foreground ring-primary'
-                      : 'bg-card text-foreground ring-border hover:bg-muted'
+                      : 'bg-raised text-ink ring-line-strong hover:bg-black/[.03] dark:hover:bg-white/[.04]'
                   }`}
                 >
                   {value === 'card' ? 'Kredi kartı' : 'Nakit / banka'}
@@ -171,7 +171,7 @@ export function PurchaseDecisionPage() {
       </Card>
 
       {snapshotQuery.isPending ? (
-        <p role="status" className="rounded-xl border border-border/60 bg-card p-4 text-sm text-muted-foreground">Veriler yükleniyor…</p>
+        <p role="status" className="rounded-xl border border-line-strong bg-raised p-4 text-sm text-ink-muted">Veriler yükleniyor…</p>
       ) : null}
 
       {/* Snapshot düşerse karar ekranı sıfırlarla "rahatlıkla alabilirsin" diyebilir;
@@ -201,20 +201,20 @@ export function PurchaseDecisionPage() {
             </div>
           </div>
 
-          <Card className="border-border/70">
+          <Card className="border-line-strong">
             <CardContent className="p-4 sm:p-5">
               <div className="grid grid-cols-2 gap-2">
-                <div className="rounded-xl bg-muted/45 px-3 py-2.5">
+                <div className="rounded-xl bg-page px-3 py-2.5">
                   <p className="finance-label truncate">Aylık taksit</p>
-                  <p className="finance-value mt-1 truncate text-sm font-bold text-foreground">
+                  <p className="finance-value mt-1 truncate text-sm font-bold text-ink">
                     {formatAmount(impact.monthlyInstallment)}
                   </p>
                 </div>
-                <div className="rounded-xl bg-muted/45 px-3 py-2.5">
+                <div className="rounded-xl bg-page px-3 py-2.5">
                   <p className="finance-label truncate">Alım sonrası kalan</p>
                   <p
                     className={`finance-value mt-1 truncate text-sm font-bold ${
-                      impact.safeToSpendAfter < 0 ? 'text-destructive' : 'text-foreground'
+                      impact.safeToSpendAfter < 0 ? 'text-destructive' : 'text-ink'
                     }`}
                   >
                     {formatAmount(impact.safeToSpendAfter)}
@@ -225,11 +225,11 @@ export function PurchaseDecisionPage() {
               <p className="mt-4 finance-label">Aylık bakiye projeksiyonu</p>
               <div className="mt-1.5 space-y-1.5">
                 {impact.months.map((month) => (
-                  <div key={month.label} className="flex items-center justify-between gap-3 rounded-lg bg-muted/45 px-3 py-2 text-sm">
-                    <span className="min-w-0 truncate text-muted-foreground">{month.label}</span>
+                  <div key={month.label} className="flex items-center justify-between gap-3 rounded-lg bg-page px-3 py-2 text-sm">
+                    <span className="min-w-0 truncate text-ink-muted">{month.label}</span>
                     <span className="flex shrink-0 items-center gap-2 tabular-nums">
-                      <span className="text-xs text-muted-foreground line-through">{formatAmount(month.before)}</span>
-                      <span className={`font-bold ${month.after < 0 ? 'text-destructive' : 'text-foreground'}`}>
+                      <span className="text-xs text-ink-muted line-through">{formatAmount(month.before)}</span>
+                      <span className={`font-bold ${month.after < 0 ? 'text-destructive' : 'text-ink'}`}>
                         {formatAmount(month.after)}
                       </span>
                     </span>
@@ -237,7 +237,7 @@ export function PurchaseDecisionPage() {
                 ))}
               </div>
 
-              <p className="mt-3 text-[11px] text-muted-foreground">
+              <p className="mt-3 text-[11px] text-ink-muted">
                 Kartla alımda ilk taksit bir sonraki ekstrede nakit çıkışına dönüşür; bu yüzden bu ayın bakiyesi değişmez.
               </p>
               {!reservedKnown ? (
@@ -251,7 +251,7 @@ export function PurchaseDecisionPage() {
       ) : null}
 
       {!hasAmount && !snapshotQuery.isPending ? (
-        <p className="rounded-xl border border-border/60 bg-card p-4 text-sm text-muted-foreground">
+        <p className="rounded-xl border border-line-strong bg-raised p-4 text-sm text-ink-muted">
           Tutarı yazınca kararı hesaplarım.
         </p>
       ) : null}

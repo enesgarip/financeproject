@@ -40,6 +40,7 @@ import { useFinancePaymentDrawer } from '../hooks/useFinancePaymentDrawer'
 import type { FinanceObligation } from '../utils/obligations'
 import { StatementReminderPanel } from '../components/dashboard/StatementReminderPanel'
 import { ReconciliationPanel } from '../components/dashboard/ReconciliationPanel'
+import { Divider } from '../components/serit'
 import { SeritOverview, type SeritLiquidAccount } from '../components/dashboard/SeritOverview'
 import { buildMonthStrip, monthStripTone } from '../utils/dashboardMonthStrip'
 import { useSafeToSpend } from '../hooks/useSafeToSpend'
@@ -312,7 +313,7 @@ export function DashboardPage() {
             type="button"
             onClick={() => void snapshotQuery.refetch()}
             disabled={snapshotQuery.isFetching}
-            className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl border border-destructive/25 bg-card px-4 text-sm font-black text-destructive transition hover:bg-destructive/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl border border-destructive/25 bg-raised px-4 text-sm font-black text-destructive transition hover:bg-destructive/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-60"
           >
             <RefreshCw className={`size-4 ${snapshotQuery.isFetching ? 'animate-spin' : ''}`} aria-hidden="true" />
             {snapshotQuery.isFetching ? 'Yenileniyor' : 'Tekrar dene'}
@@ -390,7 +391,7 @@ export function DashboardPage() {
           onClick={toggleDetails}
           aria-expanded={showDetails}
           aria-controls={detailsPanelId}
-          className="group flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-border/60 bg-card/80 px-4 py-3 text-sm font-bold text-muted-foreground transition hover:border-primary/30 hover:bg-primary/5 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background"
+          className="group flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-line-strong bg-raised px-4 py-3 text-sm font-bold text-ink-muted transition hover:border-primary/30 hover:bg-primary/5 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background"
         >
           <span>{showDetails ? 'Detayları gizle' : 'Tüm detayları göster'}</span>
           <ChevronDown
@@ -440,11 +441,6 @@ export function DashboardPage() {
 }
 
 function DetailSectionDivider({ label }: { label: string }) {
-  return (
-    <div role="separator" aria-label={label} className="flex items-center gap-3 lg:col-span-12">
-      <div className="h-px flex-1 bg-border/50" aria-hidden="true" />
-      <span className="shrink-0 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/70">{label}</span>
-      <div className="h-px flex-1 bg-border/50" aria-hidden="true" />
-    </div>
-  )
+  // Elle yazılmış hâli serit/Divider ile birebir aynı işi yapıyordu.
+  return <Divider label={label} space="none" className="lg:col-span-12" />
 }

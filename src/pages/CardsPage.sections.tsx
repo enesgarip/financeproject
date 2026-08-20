@@ -46,7 +46,7 @@ export function CardSectionNav({
               'min-[560px]:flex-row min-[560px]:gap-1.5 min-[560px]:px-3 min-[560px]:text-xs',
               isActive
                 ? 'bg-primary text-primary-foreground '
-                : 'text-muted-foreground hover:bg-muted/70 hover:text-foreground',
+                : 'text-ink-muted hover:bg-black/[.03] dark:hover:bg-white/[.04] hover:text-ink',
             )}
           >
             <item.icon size={16} strokeWidth={2.3} className="shrink-0" />

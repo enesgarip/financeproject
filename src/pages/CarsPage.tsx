@@ -187,7 +187,7 @@ function CarManager({
         <CardTitle className="flex items-center gap-2 text-base">
           <CarIcon className="size-4 text-primary" /> Araçlar
         </CardTitle>
-        <p className="text-xs text-muted-foreground">
+        <p className="text-xs text-ink-muted">
           Her araç için giderleri ayrı takip et. Kart harcamaları borca aynen işler; buradaki takip
           yalnız araç başına dağılımı gösterir.
         </p>
@@ -215,17 +215,17 @@ function CarManager({
               ) : (
                 <li
                   key={car.id}
-                  className="flex items-center justify-between gap-2 rounded-xl border border-border bg-card/60 px-3 py-2"
+                  className="flex items-center justify-between gap-2 rounded-xl border border-line-strong bg-raised px-3 py-2"
                 >
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-bold text-foreground">{car.name}</p>
+                    <p className="truncate text-sm font-bold text-ink">{car.name}</p>
                     {car.plate ? (
-                      <p className="truncate text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      <p className="truncate text-xs font-medium uppercase tracking-wide text-ink-muted">
                         {car.plate}
                       </p>
                     ) : null}
                     {car.current_odometer_km != null ? (
-                      <p className="text-xs tabular-nums text-muted-foreground">{car.current_odometer_km.toLocaleString('tr-TR')} km</p>
+                      <p className="text-xs tabular-nums text-ink-muted">{car.current_odometer_km.toLocaleString('tr-TR')} km</p>
                     ) : null}
                   </div>
                   <div className="flex shrink-0 items-center gap-1">
@@ -246,7 +246,7 @@ function CarManager({
             )}
           </ul>
         ) : (
-          <p className="rounded-xl border border-dashed border-border p-4 text-center text-sm text-muted-foreground">
+          <p className="rounded-xl border border-dashed border-line-strong p-4 text-center text-sm text-ink-muted">
             Henüz araç yok. İlk aracını ekleyip giderlerini takip etmeye başla.
           </p>
         )}
@@ -375,7 +375,7 @@ function ManualExpenseForm({
         <CardTitle className="flex items-center gap-2 text-base">
           <Wallet className="size-4 text-primary" /> Kart-dışı gider ekle
         </CardTitle>
-        <p className="text-xs text-muted-foreground">
+        <p className="text-xs text-ink-muted">
           Nakit ya da bankadan ödediğin giderler (MTV, sigorta, nakit yakıt). Kartla ödediklerini
           aşağıdaki "Kart harcaması ata" bölümünden işaretle.
         </p>
@@ -383,7 +383,7 @@ function ManualExpenseForm({
       <CardContent>
         <form onSubmit={handleSubmit} className="flex flex-col gap-2.5">
           <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
-            <label className="block text-sm font-semibold text-foreground">
+            <label className="block text-sm font-semibold text-ink">
               Araç
               <Select value={activeCarId} onChange={(e) => setCarId(e.target.value)} className="mt-1">
                 {cars.map((car) => (
@@ -394,13 +394,13 @@ function ManualExpenseForm({
                 ))}
               </Select>
             </label>
-            <label className="block text-sm font-semibold text-foreground">
+            <label className="block text-sm font-semibold text-ink">
               Tarih
               <Input type="date" value={spentAt} onChange={(e) => setSpentAt(e.target.value)} className="mt-1" />
             </label>
           </div>
           <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
-            <label className="block text-sm font-semibold text-foreground">
+            <label className="block text-sm font-semibold text-ink">
               TL tutar
               <Input
                 value={amount}
@@ -411,7 +411,7 @@ function ManualExpenseForm({
                 required
               />
             </label>
-            <label className="block text-sm font-semibold text-foreground">
+            <label className="block text-sm font-semibold text-ink">
               Kategori
               <Select value={category} onChange={(e) => setCategory(e.target.value)} className="mt-1">
                 {CAR_EXPENSE_CATEGORIES.map((c) => (
@@ -421,7 +421,7 @@ function ManualExpenseForm({
                 ))}
               </Select>
             </label>
-            <label className="block text-sm font-semibold text-foreground">
+            <label className="block text-sm font-semibold text-ink">
               Ödeme
               <Select
                 value={paymentMethod}
@@ -438,17 +438,17 @@ function ManualExpenseForm({
           </div>
           {category === CAR_EXPENSE_CATEGORIES[0] ? (
             <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
-              <label className="block text-sm font-semibold text-foreground">
+              <label className="block text-sm font-semibold text-ink">
                 Alınan litre
                 <Input value={fuelLiters} onChange={(e) => setFuelLiters(e.target.value)} inputMode="decimal" placeholder="Ör. 42,5" className="mt-1" />
               </label>
-              <label className="block text-sm font-semibold text-foreground">
+              <label className="block text-sm font-semibold text-ink">
                 Dolumdaki kilometre
                 <Input value={odometerKm} onChange={(e) => setOdometerKm(e.target.value)} inputMode="numeric" placeholder="Ör. 82500" className="mt-1" />
               </label>
             </div>
           ) : null}
-          <label className="block text-sm font-semibold text-foreground">
+          <label className="block text-sm font-semibold text-ink">
             Açıklama (opsiyonel)
             <Input
               value={description}
@@ -526,14 +526,14 @@ function CarRemindersPanel({ cars, reminders, userId, onChanged, onError }: {
 
   return (
     <Card>
-      <CardHeader className="pb-2"><CardTitle className="flex items-center gap-2 text-base"><Bell className="size-4 text-primary" /> Bakım ve yenilemeler</CardTitle><p className="text-xs text-muted-foreground">Tarih, kilometre veya ikisi birden yaklaşınca görünür; açık Web Push varsa tarihli işler 7 gün önce bildirilir.</p></CardHeader>
+      <CardHeader className="pb-2"><CardTitle className="flex items-center gap-2 text-base"><Bell className="size-4 text-primary" /> Bakım ve yenilemeler</CardTitle><p className="text-xs text-ink-muted">Tarih, kilometre veya ikisi birden yaklaşınca görünür; açık Web Push varsa tarihli işler 7 gün önce bildirilir.</p></CardHeader>
       <CardContent className="flex flex-col gap-4">
         {reminders.length ? <ul className="grid gap-2 lg:grid-cols-2">{reminders.map((reminder) => {
           const car = carsById.get(reminder.car_id)
           if (!car) return null
           const state = carReminderState(reminder, car, todayIso)
-          return <li key={reminder.id} className={`flex items-center justify-between gap-3 rounded-xl border px-3 py-2 ${state === 'overdue' ? 'border-destructive/40 bg-destructive/5' : state === 'due-soon' ? 'border-warning/40 bg-warning/5' : 'border-border'}`}><div className="min-w-0"><div className="flex items-center gap-2"><p className="truncate text-sm font-bold">{reminder.title}</p><Badge variant={state === 'overdue' ? 'destructive' : state === 'due-soon' ? 'warning' : 'outline'}>{state === 'overdue' ? 'Gecikti' : state === 'due-soon' ? 'Yaklaşıyor' : 'Planlı'}</Badge></div><p className="truncate text-xs text-muted-foreground">{car.name}{reminder.due_date ? ` · ${formatDate(reminder.due_date)}` : ''}{reminder.due_odometer_km != null ? ` · ${reminder.due_odometer_km.toLocaleString('tr-TR')} km` : ''}</p></div><div className="flex shrink-0 gap-1"><Button size="icon-sm" variant="ghost" aria-label="Tamamlandı" onClick={() => void complete(reminder)}><Check /></Button><Button size="icon-sm" variant="ghost" aria-label="Hatırlatıcıyı sil" onClick={async () => { const result = await deleteCarReminder(reminder.id); if (!result.ok) return onError(result.error.message); await onChanged() }}><Trash2 /></Button></div></li>
-        })}</ul> : <p className="text-sm text-muted-foreground">Henüz bakım veya yenileme hatırlatıcısı yok.</p>}
+          return <li key={reminder.id} className={`flex items-center justify-between gap-3 rounded-xl border px-3 py-2 ${state === 'overdue' ? 'border-destructive/40 bg-destructive/5' : state === 'due-soon' ? 'border-warning/40 bg-warning/5' : 'border-line-strong'}`}><div className="min-w-0"><div className="flex items-center gap-2"><p className="truncate text-sm font-bold">{reminder.title}</p><Badge variant={state === 'overdue' ? 'destructive' : state === 'due-soon' ? 'warning' : 'outline'}>{state === 'overdue' ? 'Gecikti' : state === 'due-soon' ? 'Yaklaşıyor' : 'Planlı'}</Badge></div><p className="truncate text-xs text-ink-muted">{car.name}{reminder.due_date ? ` · ${formatDate(reminder.due_date)}` : ''}{reminder.due_odometer_km != null ? ` · ${reminder.due_odometer_km.toLocaleString('tr-TR')} km` : ''}</p></div><div className="flex shrink-0 gap-1"><Button size="icon-sm" variant="ghost" aria-label="Tamamlandı" onClick={() => void complete(reminder)}><Check /></Button><Button size="icon-sm" variant="ghost" aria-label="Hatırlatıcıyı sil" onClick={async () => { const result = await deleteCarReminder(reminder.id); if (!result.ok) return onError(result.error.message); await onChanged() }}><Trash2 /></Button></div></li>
+        })}</ul> : <p className="text-sm text-ink-muted">Henüz bakım veya yenileme hatırlatıcısı yok.</p>}
         <form onSubmit={add} className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
           <Select value={carId} onChange={(e) => setCarId(e.target.value)} aria-label="Hatırlatıcı aracı">{cars.map((car) => <option key={car.id} value={car.id}>{car.name}</option>)}</Select>
           <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Yağ değişimi, MTV..." required />
@@ -614,7 +614,7 @@ function CardTagging({
         <CardTitle className="flex items-center gap-2 text-base">
           <CreditCard className="size-4 text-primary" /> Kart harcamasını araca ata
         </CardTitle>
-        <p className="text-xs text-muted-foreground">
+        <p className="text-xs text-ink-muted">
           Son kart harcamaların. Araca ait olanı işaretle — borç değişmez, yalnız araç dağılımına eklenir.
         </p>
       </CardHeader>
@@ -622,15 +622,15 @@ function CardTagging({
         {loading ? (
           <Skeleton className="h-24 w-full rounded-xl" />
         ) : expenses.length === 0 ? (
-          <p className="py-2 text-center text-sm text-muted-foreground">Görüntülenecek kart harcaması yok.</p>
+          <p className="py-2 text-center text-sm text-ink-muted">Görüntülenecek kart harcaması yok.</p>
         ) : (
-          <ul className="flex flex-col divide-y divide-border/60">
+          <ul className="flex flex-col divide-y divide-line">
             {expenses.map((expense) => (
               <li key={expense.id} className="flex flex-col gap-2 py-2">
                 <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold text-foreground">{expense.description}</p>
-                  <p className="truncate text-xs text-muted-foreground">
+                  <p className="truncate text-sm font-semibold text-ink">{expense.description}</p>
+                  <p className="truncate text-xs text-ink-muted">
                     {formatDate(expense.spent_at)} · {formatCurrency(expense.amount)}
                     {expense.car_id ? (
                       <> · <span className="text-primary">{carName.get(expense.car_id) ?? 'Araç'}</span></>
@@ -688,40 +688,40 @@ function CarSummaryCard({
           <div className="min-w-0">
             <CardTitle className="truncate text-base">{car.name}</CardTitle>
             {car.plate ? (
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{car.plate}</p>
+              <p className="text-xs font-medium uppercase tracking-wide text-ink-muted">{car.plate}</p>
             ) : null}
           </div>
           <div className="text-right">
-            <p className="text-lg font-bold tabular-nums text-foreground">{formatCurrency(total)}</p>
-            <p className="text-xs text-muted-foreground">Bu ay {formatCurrency(thisMonthTotal)}</p>
+            <p className="text-lg font-bold tabular-nums text-ink">{formatCurrency(total)}</p>
+            <p className="text-xs text-ink-muted">Bu ay {formatCurrency(thisMonthTotal)}</p>
             <Button size="sm" variant="ghost" className="mt-1" onClick={() => downloadCarTcoCard(renderCarTcoCard(summary, currentYear), currentYear)}><Share2 /> Karneni indir</Button>
           </div>
         </div>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         {total === 0 ? (
-          <p className="rounded-xl border border-dashed border-border p-4 text-center text-sm text-muted-foreground">
+          <p className="rounded-xl border border-dashed border-line-strong p-4 text-center text-sm text-ink-muted">
             Bu araca ait gider yok. Yukarıdan kart-dışı gider ekle ya da bir kart harcamasını ata.
           </p>
         ) : (
           <>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-              <div className="rounded-xl bg-muted/50 p-3"><p className="text-xs text-muted-foreground">{currentYear} TCO</p><p className="font-bold tabular-nums">{formatCurrency(yearTotal)}</p></div>
-              <div className="rounded-xl bg-muted/50 p-3"><p className="text-xs text-muted-foreground">Günlük maliyet</p><p className="font-bold tabular-nums">{formatCurrency(costPerDay)}</p></div>
-              <div className="rounded-xl bg-muted/50 p-3"><p className="text-xs text-muted-foreground">Önceki yıl</p><p className="font-bold tabular-nums">{formatCurrency(previousYearTotal)}</p></div>
-              <div className="rounded-xl bg-muted/50 p-3"><p className="text-xs text-muted-foreground">Yakıt / km</p><p className="font-bold tabular-nums">{fuel.costPerKm == null ? '—' : formatCurrency(fuel.costPerKm)}</p></div>
+              <div className="rounded-xl bg-page p-3"><p className="text-xs text-ink-muted">{currentYear} TCO</p><p className="font-bold tabular-nums">{formatCurrency(yearTotal)}</p></div>
+              <div className="rounded-xl bg-page p-3"><p className="text-xs text-ink-muted">Günlük maliyet</p><p className="font-bold tabular-nums">{formatCurrency(costPerDay)}</p></div>
+              <div className="rounded-xl bg-page p-3"><p className="text-xs text-ink-muted">Önceki yıl</p><p className="font-bold tabular-nums">{formatCurrency(previousYearTotal)}</p></div>
+              <div className="rounded-xl bg-page p-3"><p className="text-xs text-ink-muted">Yakıt / km</p><p className="font-bold tabular-nums">{fuel.costPerKm == null ? '—' : formatCurrency(fuel.costPerKm)}</p></div>
             </div>
 
             {fuel.fillupCount > 0 ? (
-              <div className="rounded-xl border border-border/70 p-3">
+              <div className="rounded-xl border border-line-strong p-3">
                 <div className="mb-3 flex items-center gap-2"><Gauge className="size-4 text-primary" /><p className="text-sm font-bold">Yakıt karnesi</p></div>
                 <div className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
-                  <div><p className="text-xs text-muted-foreground">Dolum</p><p className="font-semibold">{fuel.fillupCount}</p></div>
-                  <div><p className="text-xs text-muted-foreground">Ölçülen km</p><p className="font-semibold tabular-nums">{fuel.measuredDistanceKm.toLocaleString('tr-TR')}</p></div>
-                  <div><p className="text-xs text-muted-foreground">L / 100 km</p><p className="font-semibold tabular-nums">{fuel.litersPer100Km ?? '—'}</p></div>
-                  <div><p className="text-xs text-muted-foreground">TL / km</p><p className="font-semibold tabular-nums">{fuel.costPerKm ?? '—'}</p></div>
+                  <div><p className="text-xs text-ink-muted">Dolum</p><p className="font-semibold">{fuel.fillupCount}</p></div>
+                  <div><p className="text-xs text-ink-muted">Ölçülen km</p><p className="font-semibold tabular-nums">{fuel.measuredDistanceKm.toLocaleString('tr-TR')}</p></div>
+                  <div><p className="text-xs text-ink-muted">L / 100 km</p><p className="font-semibold tabular-nums">{fuel.litersPer100Km ?? '—'}</p></div>
+                  <div><p className="text-xs text-ink-muted">TL / km</p><p className="font-semibold tabular-nums">{fuel.costPerKm ?? '—'}</p></div>
                 </div>
-                {fuel.months.length > 1 ? <div className="mt-3 flex items-end gap-2" aria-label="Aylık yakıt trendi">{fuel.months.slice(0, 6).reverse().map((month) => <div key={month.month} className="flex flex-1 flex-col items-center gap-1"><span className="text-[10px] tabular-nums text-muted-foreground">{formatCurrency(month.cost)}</span><div className="w-full rounded-t bg-primary/70" style={{ height: `${Math.max(8, (month.cost / fuelTrendMaxCost) * 64)}px` }} /><span className="text-[10px] text-muted-foreground">{month.month.slice(5)}</span></div>)}</div> : null}
+                {fuel.months.length > 1 ? <div className="mt-3 flex items-end gap-2" aria-label="Aylık yakıt trendi">{fuel.months.slice(0, 6).reverse().map((month) => <div key={month.month} className="flex flex-1 flex-col items-center gap-1"><span className="text-[10px] tabular-nums text-ink-muted">{formatCurrency(month.cost)}</span><div className="w-full rounded-t bg-primary/70" style={{ height: `${Math.max(8, (month.cost / fuelTrendMaxCost) * 64)}px` }} /><span className="text-[10px] text-ink-muted">{month.month.slice(5)}</span></div>)}</div> : null}
               </div>
             ) : null}
 
@@ -729,10 +729,10 @@ function CarSummaryCard({
               {categories.map((cat) => (
                 <div key={cat.category} className="flex flex-col gap-1">
                   <div className="flex items-center justify-between text-xs">
-                    <span className="font-semibold text-foreground">{cat.category}</span>
-                    <span className="tabular-nums text-muted-foreground">{formatCurrency(cat.total)}</span>
+                    <span className="font-semibold text-ink">{cat.category}</span>
+                    <span className="tabular-nums text-ink-muted">{formatCurrency(cat.total)}</span>
                   </div>
-                  <div className="h-1.5 overflow-hidden rounded-full bg-muted">
+                  <div className="h-1.5 overflow-hidden rounded-full bg-page">
                     <div
                       className="h-full rounded-full bg-primary/70"
                       style={{ width: `${Math.max(2, Math.round(cat.share * 100))}%` }}
@@ -743,19 +743,19 @@ function CarSummaryCard({
             </div>
 
             <div className="flex flex-col gap-1">
-              <p className="text-xs font-semibold text-muted-foreground">Son giderler</p>
-              <ul className="flex flex-col divide-y divide-border/50">
+              <p className="text-xs font-semibold text-ink-muted">Son giderler</p>
+              <ul className="flex flex-col divide-y divide-line">
                 {entries.slice(0, 12).map((entry) => (
                   <li key={entry.id} className="flex items-center justify-between gap-3 py-1.5">
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-medium text-foreground">{entry.description}</p>
-                      <p className="truncate text-xs text-muted-foreground">
+                      <p className="truncate text-sm font-medium text-ink">{entry.description}</p>
+                      <p className="truncate text-xs text-ink-muted">
                         {formatDate(entry.spentAt)} · {entry.category}
                       </p>
                     </div>
                     <div className="flex shrink-0 items-center gap-2">
                       <Badge variant={entry.source === 'card' ? 'secondary' : 'outline'}>{entry.paymentLabel}</Badge>
-                      <span className="w-24 text-right text-sm font-semibold tabular-nums text-foreground">
+                      <span className="w-24 text-right text-sm font-semibold tabular-nums text-ink">
                         {formatCurrency(entry.amount)}
                       </span>
                       {entry.source === 'manual' ? (

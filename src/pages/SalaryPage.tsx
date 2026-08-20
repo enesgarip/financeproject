@@ -99,7 +99,7 @@ export function SalaryPage() {
         )
       }}
       getCardClassName={() => 'border-success/20 bg-success/5 dark:bg-success/8'}
-      getDetailClassName={() => 'bg-muted/40'}
+      getDetailClassName={() => 'bg-page'}
     />
   )
 }

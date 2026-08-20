@@ -241,9 +241,9 @@ export function DebtsPage() {
         afterSuccess: invalidateSnapshot,
         detail: (
           <>
-            <p className="font-semibold text-foreground">{debt.person_name}</p>
+            <p className="font-semibold text-ink">{debt.person_name}</p>
             <p className="mt-0.5">
-              Toplam değer: <span className="font-mono font-semibold text-foreground">{formatAmount(effectiveDebtValue(debt, snapshot))}</span>
+              Toplam değer: <span className="font-mono font-semibold text-ink">{formatAmount(effectiveDebtValue(debt, snapshot))}</span>
             </p>
             <p className="mt-0.5">{isBorrowed ? 'Tam tutar hesaptan düşer; daha az girersen kısmi ödenir, kalan açık kalır.' : 'Tam tutar hesaba eklenir; daha az girersen kısmi tahsil edilir, kalan açık kalır.'}</p>
           </>

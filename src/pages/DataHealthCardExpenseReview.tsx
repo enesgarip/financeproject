@@ -72,56 +72,56 @@ function ExpenseDetails({
     <div className="min-w-0 flex-1">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="font-bold text-foreground">{expense.description.trim() || 'Açıklama eksik'}</p>
-          <p className="mt-0.5 text-xs text-muted-foreground">{cardLabel(expense, cardsById)}</p>
+          <p className="font-bold text-ink">{expense.description.trim() || 'Açıklama eksik'}</p>
+          <p className="mt-0.5 text-xs text-ink-muted">{cardLabel(expense, cardsById)}</p>
         </div>
-        <p className="shrink-0 font-mono text-sm font-black tabular-nums text-foreground">
+        <p className="shrink-0 font-mono text-sm font-black tabular-nums text-ink">
           {formatAmount(expense.amount)}
         </p>
       </div>
       <dl className="mt-3 grid gap-x-4 gap-y-2 text-xs sm:grid-cols-2">
         <div>
-          <dt className="font-semibold text-muted-foreground">İşlem tarihi</dt>
-          <dd className="mt-0.5 text-foreground">{formatDate(expense.spent_at)}</dd>
+          <dt className="font-semibold text-ink-muted">İşlem tarihi</dt>
+          <dd className="mt-0.5 text-ink">{formatDate(expense.spent_at)}</dd>
         </div>
         <div>
-          <dt className="font-semibold text-muted-foreground">Durum</dt>
-          <dd className="mt-0.5 text-foreground">{statusLabels[expense.status]}</dd>
+          <dt className="font-semibold text-ink-muted">Durum</dt>
+          <dd className="mt-0.5 text-ink">{statusLabels[expense.status]}</dd>
         </div>
         <div>
-          <dt className="font-semibold text-muted-foreground">Kategori</dt>
-          <dd className="mt-0.5 text-foreground">{expense.category.trim() || 'Kategori eksik'}</dd>
+          <dt className="font-semibold text-ink-muted">Kategori</dt>
+          <dd className="mt-0.5 text-ink">{expense.category.trim() || 'Kategori eksik'}</dd>
         </div>
         <div>
-          <dt className="font-semibold text-muted-foreground">Kaynak</dt>
-          <dd className="mt-0.5 text-foreground">
+          <dt className="font-semibold text-ink-muted">Kaynak</dt>
+          <dd className="mt-0.5 text-ink">
             {expense.source ? sourceLabels[expense.source] : 'Eski kayıt / bilinmiyor'}
           </dd>
         </div>
         <div>
-          <dt className="font-semibold text-muted-foreground">Taksit</dt>
-          <dd className="mt-0.5 text-foreground">{expense.installment_count} çekim</dd>
+          <dt className="font-semibold text-ink-muted">Taksit</dt>
+          <dd className="mt-0.5 text-ink">{expense.installment_count} çekim</dd>
         </div>
         <div>
-          <dt className="font-semibold text-muted-foreground">Oluşturulma</dt>
-          <dd className="mt-0.5 text-foreground">{shortRecordDate(expense.created_at)}</dd>
+          <dt className="font-semibold text-ink-muted">Oluşturulma</dt>
+          <dd className="mt-0.5 text-ink">{shortRecordDate(expense.created_at)}</dd>
         </div>
         <div>
-          <dt className="font-semibold text-muted-foreground">İşlenme tarihi</dt>
-          <dd className="mt-0.5 text-foreground">{shortRecordDate(expense.posted_at)}</dd>
+          <dt className="font-semibold text-ink-muted">İşlenme tarihi</dt>
+          <dd className="mt-0.5 text-ink">{shortRecordDate(expense.posted_at)}</dd>
         </div>
         <div>
-          <dt className="font-semibold text-muted-foreground">Kayıt kimliği</dt>
-          <dd className="mt-0.5 break-all font-mono text-foreground">{expense.id}</dd>
+          <dt className="font-semibold text-ink-muted">Kayıt kimliği</dt>
+          <dd className="mt-0.5 break-all font-mono text-ink">{expense.id}</dd>
         </div>
       </dl>
       {expense.note ? (
-        <p className="mt-3 rounded-lg bg-muted/50 px-2.5 py-2 text-xs text-muted-foreground">
-          <span className="font-semibold text-foreground">Not:</span> {expense.note}
+        <p className="mt-3 rounded-lg bg-page px-2.5 py-2 text-xs text-ink-muted">
+          <span className="font-semibold text-ink">Not:</span> {expense.note}
         </p>
       ) : null}
       {expense.transaction_fingerprint ? (
-        <p className="mt-2 break-all font-mono text-[11px] text-muted-foreground">
+        <p className="mt-2 break-all font-mono text-[11px] text-ink-muted">
           İşlem parmak izi: {expense.transaction_fingerprint}
         </p>
       ) : null}
@@ -180,8 +180,8 @@ function ReviewContent(props: DataHealthCardExpenseReviewProps) {
       onClose={onClose}
     >
       <div className="space-y-4" aria-busy={busy}>
-        <div className="rounded-xl border border-info/20 bg-info/8 p-3 text-sm text-muted-foreground">
-          <p className="font-bold text-foreground">{issue.title}</p>
+        <div className="rounded-xl border border-info/20 bg-info/8 p-3 text-sm text-ink-muted">
+          <p className="font-bold text-ink">{issue.title}</p>
           <p className="mt-1">{issue.description}</p>
           <Link
             to="/kartlar?section=islemler"
@@ -203,7 +203,7 @@ function ReviewContent(props: DataHealthCardExpenseReviewProps) {
           </p>
         ) : (
           <fieldset disabled={busy} className="space-y-2">
-            <legend className="mb-2 text-sm font-bold text-foreground">
+            <legend className="mb-2 text-sm font-bold text-ink">
               {isDuplicate ? 'Karşılaştırılacak adaylar' : 'Düzeltilecek harcamayı seç'}
             </legend>
             {candidates.map((expense, index) => (
@@ -212,7 +212,7 @@ function ReviewContent(props: DataHealthCardExpenseReviewProps) {
                 className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition ${
                   selectedExpenseId === expense.id
                     ? 'border-primary/45 bg-primary/8 ring-1 ring-primary/15'
-                    : 'border-border/70 bg-card/70 hover:bg-muted/40'
+                    : 'border-line-strong bg-raised hover:bg-black/[.03] dark:hover:bg-white/[.04]'
                 }`}
               >
                 <input
@@ -248,7 +248,7 @@ function ReviewContent(props: DataHealthCardExpenseReviewProps) {
             <p className="text-xs text-warning">
               Yalnız gerçekten tekrarlanan kaydı seç. İptal, geçmişi silmeden kart işlem akışında uygulanır.
             </p>
-            <label className="flex items-start gap-2 text-sm font-semibold text-foreground">
+            <label className="flex items-start gap-2 text-sm font-semibold text-ink">
               <input
                 type="checkbox"
                 checked={compared}
@@ -273,22 +273,22 @@ function ReviewContent(props: DataHealthCardExpenseReviewProps) {
 
         {isDataQuality && selectedExpense ? (
           <form onSubmit={submitMetadata} className="space-y-3 rounded-xl border border-primary/20 bg-primary/5 p-3">
-            <label className="block text-sm font-semibold text-foreground">
+            <label className="block text-sm font-semibold text-ink">
               Açıklama
               <input
                 value={description}
                 onChange={(event) => setDescription(event.target.value)}
                 disabled={busy}
-                className="mt-1 min-h-11 w-full rounded-xl border border-input bg-card px-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:opacity-60"
+                className="mt-1 min-h-11 w-full rounded-xl border border-line-strong bg-raised px-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:opacity-60"
               />
             </label>
-            <label className="block text-sm font-semibold text-foreground">
+            <label className="block text-sm font-semibold text-ink">
               Kategori
               <select
                 value={category}
                 onChange={(event) => setCategory(event.target.value)}
                 disabled={busy}
-                className="mt-1 min-h-11 w-full rounded-xl border border-input bg-card px-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:opacity-60"
+                className="mt-1 min-h-11 w-full rounded-xl border border-line-strong bg-raised px-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:opacity-60"
               >
                 <option value="">Kategori seçin</option>
                 {expenseCategoryOptions.map((option) => (

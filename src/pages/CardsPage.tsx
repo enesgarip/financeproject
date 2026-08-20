@@ -179,7 +179,7 @@ export function CardsPage() {
         },
         detail: (
           <>
-            <p className="font-semibold text-foreground">{card.card_name}</p>
+            <p className="font-semibold text-ink">{card.card_name}</p>
             <p>Ekstre: {statementPeriodLabel(statement)}</p>
             <p>Son ödeme: {formatDate(statement.due_date)}</p>
           </>
@@ -220,12 +220,12 @@ export function CardsPage() {
         },
         detail: (
           <>
-            <p className="font-semibold text-foreground">{card.card_name}</p>
+            <p className="font-semibold text-ink">{card.card_name}</p>
             <p>Ekstre borcu: {formatAmount(card.statement_debt_amount)}</p>
             <p>Dönem içi harcama: {formatAmount(card.current_period_spending)}</p>
             <p>
               Ödenebilir toplam:{' '}
-              <span className="font-mono font-semibold text-foreground">{formatAmount(cardPayableDebt(card))}</span>
+              <span className="font-mono font-semibold text-ink">{formatAmount(cardPayableDebt(card))}</span>
             </p>
           </>
         ),
@@ -430,7 +430,7 @@ export function CardsPage() {
                     menuHelpers.closeMenu()
                     toggleDetailPanel(card.id)
                   }}
-                  className="flex w-full items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted"
+                  className="flex w-full items-center gap-2 px-3 py-2 text-sm text-ink hover:bg-black/[.03] dark:hover:bg-white/[.04]"
                 >
                   <Info size={14} />
                   {detailOpenIds.has(card.id) ? 'Detayı gizle' : 'Detay'}
@@ -442,7 +442,7 @@ export function CardsPage() {
                     menuHelpers.closeMenu()
                     focusQuickExpense(card, 'installment')
                   }}
-                  className="flex w-full items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted"
+                  className="flex w-full items-center gap-2 px-3 py-2 text-sm text-ink hover:bg-black/[.03] dark:hover:bg-white/[.04]"
                 >
                   <CalendarClock size={14} />
                   Taksit ekle
@@ -454,7 +454,7 @@ export function CardsPage() {
                     menuHelpers.closeMenu()
                     setImportCard(card)
                   }}
-                  className="flex w-full items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted"
+                  className="flex w-full items-center gap-2 px-3 py-2 text-sm text-ink hover:bg-black/[.03] dark:hover:bg-white/[.04]"
                 >
                   <FileText size={14} />
                   Ekstre içe aktar
@@ -466,7 +466,7 @@ export function CardsPage() {
                     menuHelpers.closeMenu()
                     setMovementImportCard(card)
                   }}
-                  className="flex w-full items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted"
+                  className="flex w-full items-center gap-2 px-3 py-2 text-sm text-ink hover:bg-black/[.03] dark:hover:bg-white/[.04]"
                 >
                   <ScanSearch size={14} />
                   Mutabakat
@@ -483,7 +483,7 @@ export function CardsPage() {
                 menuHelpers.closeMenu()
                 toggleLedgerPanel(card.id)
               }}
-              className="flex w-full items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted"
+              className="flex w-full items-center gap-2 px-3 py-2 text-sm text-ink hover:bg-black/[.03] dark:hover:bg-white/[.04]"
             >
               <History size={14} />
               {ledgerOpenIds.has(card.id) ? 'Hareketleri gizle' : 'Hareketler'}
@@ -535,7 +535,7 @@ export function CardsPage() {
 function ImportModalFallback() {
   return (
     <div className="fixed inset-0 z-[80] grid place-items-center bg-black/45 p-4 backdrop-blur-sm">
-      <div role="status" aria-live="polite" className="rounded-2xl border border-border bg-card px-5 py-4 text-sm font-semibold text-foreground">
+      <div role="status" aria-live="polite" className="rounded-2xl border border-line-strong bg-raised px-5 py-4 text-sm font-semibold text-ink">
         İçe aktarma aracı hazırlanıyor...
       </div>
     </div>

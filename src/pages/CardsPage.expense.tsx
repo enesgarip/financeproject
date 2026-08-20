@@ -287,7 +287,7 @@ export function QuickExpensePanel({
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <CardTitle className="text-base">Hızlı harcama</CardTitle>
-            <p className="mt-1 text-xs text-muted-foreground">Kart, TL tutar ve açıklama yeterli.</p>
+            <p className="mt-1 text-xs text-ink-muted">Kart, TL tutar ve açıklama yeterli.</p>
           </div>
           {selectedCard ? (
             <Badge variant={selectedCard.card_type === 'kredi_karti' ? 'secondary' : 'outline'}>
@@ -352,25 +352,25 @@ export function QuickExpensePanel({
           )}
           {repeatSuggestions.length > 0 ? (
             <div className="flex flex-col gap-1.5">
-              <p className="text-xs font-semibold text-muted-foreground">Son harcamalar · tek dokunuşla tekrarla</p>
+              <p className="text-xs font-semibold text-ink-muted">Son harcamalar · tek dokunuşla tekrarla</p>
               <div className="flex flex-wrap gap-1.5">
                 {repeatSuggestions.map((suggestion) => (
                   <button
                     key={`${suggestion.description}-${suggestion.amount}`}
                     type="button"
                     onClick={() => applyRepeat(suggestion)}
-                    className="tap-target inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground transition hover:border-success/40 hover:bg-success/8"
+                    className="tap-target inline-flex items-center gap-1.5 rounded-full border border-line-strong bg-raised px-3 py-1.5 text-xs font-semibold text-ink transition hover:border-success/40 hover:bg-success/8"
                     aria-label={`${suggestion.description} harcamasını tekrarla`}
                   >
-                    <RotateCcw size={12} className="text-muted-foreground" />
+                    <RotateCcw size={12} className="text-ink-muted" />
                     <span className="max-w-[9rem] truncate">{suggestion.description}</span>
-                    <span className="tabular-nums text-muted-foreground">{displayAmount(suggestion.amount)}</span>
+                    <span className="tabular-nums text-ink-muted">{displayAmount(suggestion.amount)}</span>
                   </button>
                 ))}
               </div>
             </div>
           ) : null}
-          <label className="block text-sm font-semibold text-foreground">
+          <label className="block text-sm font-semibold text-ink">
             Kart
             <select
               value={activeCardId}
@@ -383,7 +383,7 @@ export function QuickExpensePanel({
                 setLocalError('')
                 setLocalWarning('')
               }}
-              className="mt-1 w-full rounded-lg border border-input bg-white px-3 py-2.5 outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 dark:bg-card/50 dark:text-foreground"
+              className="mt-1 w-full rounded-lg border border-line-strong bg-white px-3 py-2.5 outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 dark:bg-raised dark:text-ink"
               required
             >
               {cards.map((card) => (
@@ -403,7 +403,7 @@ export function QuickExpensePanel({
               }}
               required
             />
-            <label className="block text-sm font-semibold text-foreground">
+            <label className="block text-sm font-semibold text-ink">
               Açıklama
               <input
                 value={description}
@@ -413,13 +413,13 @@ export function QuickExpensePanel({
                 }}
                 type="text"
                 placeholder="Migros, benzin, yemek..."
-                className="mt-1 w-full rounded-lg border border-input px-3 py-2.5 outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 dark:bg-card/50 dark:text-foreground"
+                className="mt-1 w-full rounded-lg border border-line-strong px-3 py-2.5 outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 dark:bg-raised dark:text-ink"
                 required
               />
             </label>
           </div>
           <div className="grid grid-cols-2 gap-2.5 min-[760px]:grid-cols-4">
-            <label className="block min-w-0 text-sm font-semibold text-foreground">
+            <label className="block min-w-0 text-sm font-semibold text-ink">
               Tarih
               <input
                 value={spentAt}
@@ -430,11 +430,11 @@ export function QuickExpensePanel({
                 onClick={(event) => openNativePicker(event.currentTarget)}
                 onFocus={(event) => openNativePicker(event.currentTarget)}
                 type="date"
-                className="mt-1 block w-full min-w-0 max-w-[10.75rem] appearance-none rounded-lg border border-input px-3 py-2.5 outline-none [color-scheme:light] transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 min-[480px]:max-w-full dark:bg-card/50 dark:text-foreground dark:[color-scheme:dark]"
+                className="mt-1 block w-full min-w-0 max-w-[10.75rem] appearance-none rounded-lg border border-line-strong px-3 py-2.5 outline-none [color-scheme:light] transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 min-[480px]:max-w-full dark:bg-raised dark:text-ink dark:[color-scheme:dark]"
               />
             </label>
             <CategoryPicker description={description} value={category} onChange={setCategory} memory={categoryMemory} autoApply />
-            <label className="block min-w-0 text-sm font-semibold text-foreground">
+            <label className="block min-w-0 text-sm font-semibold text-ink">
               İşlem türü
               <select
                 value={canUseInstallments ? paymentMode : 'cash'}
@@ -446,13 +446,13 @@ export function QuickExpensePanel({
                   setLocalError('')
                 }}
                 disabled={!canUseInstallments}
-                className="mt-1 w-full min-w-0 rounded-lg border border-input bg-card/80 px-3 py-2.5 outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 disabled:bg-muted disabled:text-muted-foreground dark:bg-card/50 dark:text-foreground dark:disabled:bg-muted"
+                className="mt-1 w-full min-w-0 rounded-lg border border-line-strong bg-raised px-3 py-2.5 outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 disabled:bg-page disabled:text-ink-muted dark:bg-raised dark:text-ink dark:disabled:bg-page"
               >
                 <option value="cash">Peşin</option>
                 <option value="installment">Taksitli</option>
               </select>
             </label>
-            <label className="block min-w-0 text-sm font-semibold text-foreground">
+            <label className="block min-w-0 text-sm font-semibold text-ink">
               Durum
               <select
                 value={effectiveStatus}
@@ -461,7 +461,7 @@ export function QuickExpensePanel({
                   setLocalError('')
                 }}
                 disabled={isCarryover || !canUseProvision}
-                className="mt-1 w-full min-w-0 rounded-lg border border-input bg-white px-3 py-2.5 outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 dark:bg-card/50 dark:text-foreground"
+                className="mt-1 w-full min-w-0 rounded-lg border border-line-strong bg-white px-3 py-2.5 outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 dark:bg-raised dark:text-ink"
               >
                 <option value="posted">Kesinleşmiş</option>
                 {canUseProvision ? <option value="provision">Provizyonda</option> : null}
@@ -469,12 +469,12 @@ export function QuickExpensePanel({
             </label>
           </div>
           {vehicles.length > 0 ? (
-            <label className="block text-sm font-semibold text-foreground">
-              Araç <span className="font-normal text-muted-foreground">(opsiyonel · Araçlar)</span>
+            <label className="block text-sm font-semibold text-ink">
+              Araç <span className="font-normal text-ink-muted">(opsiyonel · Araçlar)</span>
               <select
                 value={carId}
                 onChange={(event) => setCarId(event.target.value)}
-                className="mt-1 w-full rounded-lg border border-input bg-white px-3 py-2.5 outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 dark:bg-card/50 dark:text-foreground"
+                className="mt-1 w-full rounded-lg border border-line-strong bg-white px-3 py-2.5 outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 dark:bg-raised dark:text-ink"
               >
                 <option value="">Araç yok</option>
                 {vehicles.map((vehicle) => (
@@ -487,7 +487,7 @@ export function QuickExpensePanel({
             </label>
           ) : null}
           {canUseInstallments && paymentMode === 'installment' ? (
-            <label className="block text-sm font-semibold text-foreground">
+            <label className="block text-sm font-semibold text-ink">
               Taksit sayısı
               <input
                 value={installmentCount}
@@ -501,13 +501,13 @@ export function QuickExpensePanel({
                 min="2"
                 max="36"
                 step="1"
-                className="mt-1 w-full rounded-lg border border-input px-3 py-2.5 outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 dark:bg-card/50 dark:text-foreground"
+                className="mt-1 w-full rounded-lg border border-line-strong px-3 py-2.5 outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 dark:bg-raised dark:text-ink"
               />
             </label>
           ) : null}
           {canUseInstallments && paymentMode === 'installment' ? (
             <div className="grid grid-cols-1 gap-2.5 min-[520px]:grid-cols-2">
-              <label className="block text-sm font-semibold text-foreground">
+              <label className="block text-sm font-semibold text-ink">
                 Şu ana kadar ödenen taksit
                 <input
                   value={paidInstallments}
@@ -520,11 +520,11 @@ export function QuickExpensePanel({
                   min="0"
                   max={Math.max(0, parsedInstallmentCount - 1)}
                   step="1"
-                  className="mt-1 w-full rounded-lg border border-input px-3 py-2.5 outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 dark:bg-card/50 dark:text-foreground"
+                  className="mt-1 w-full rounded-lg border border-line-strong px-3 py-2.5 outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 dark:bg-raised dark:text-ink"
                 />
               </label>
               {isCarryover ? (
-                <label className="block min-w-0 text-sm font-semibold text-foreground">
+                <label className="block min-w-0 text-sm font-semibold text-ink">
                   Sıradaki taksit tarihi
                   <input
                     value={nextDueDate}
@@ -535,7 +535,7 @@ export function QuickExpensePanel({
                     onClick={(event) => openNativePicker(event.currentTarget)}
                     onFocus={(event) => openNativePicker(event.currentTarget)}
                     type="date"
-                    className="mt-1 block w-full min-w-0 rounded-lg border border-input px-3 py-2.5 outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 dark:bg-card/50 dark:text-foreground"
+                    className="mt-1 block w-full min-w-0 rounded-lg border border-line-strong px-3 py-2.5 outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 dark:bg-raised dark:text-ink"
                     required
                   />
                 </label>
@@ -575,7 +575,7 @@ export function QuickExpensePanel({
             </div>
           ) : selectedCard ? (
             <div className="space-y-2">
-              <div className="grid grid-cols-2 gap-2 rounded-xl border border-border/60 bg-muted/30 p-3">
+              <div className="grid grid-cols-2 gap-2 rounded-xl border border-line-strong bg-page p-3">
                 <OverviewStat label="Mevcut bakiye" value={displayAmount(selectedCard.current_balance)} />
                 <OverviewStat label="İşlem sonrası" value={displayAmount(debitPreview)} />
               </div>
@@ -591,7 +591,7 @@ export function QuickExpensePanel({
           <button
             type="submit"
             disabled={!canSubmitQuickExpense}
-            className="rounded-xl bg-success px-4 py-3 text-sm font-semibold text-white  disabled:opacity-60 hover:bg-success/90"
+            className="rounded-xl bg-success px-4 py-3 text-sm font-semibold text-white disabled:opacity-60 hover:bg-success/90"
           >
             {saving ? 'Ekleniyor...' : 'Harcamayı kaydet'}
           </button>

@@ -103,11 +103,11 @@ export function LiabilitiesCardsPage() {
         },
         detail: (
           <>
-            <p className="font-semibold text-foreground">{card.card_name}</p>
+            <p className="font-semibold text-ink">{card.card_name}</p>
             <p>Son ödeme: {formatDate(statement.due_date)}</p>
             <p>
               Kalan ekstre borcu:{' '}
-              <span className="font-mono font-semibold text-foreground">{seritAmount(remaining).amount} ₺</span>
+              <span className="font-mono font-semibold text-ink">{seritAmount(remaining).amount} ₺</span>
             </p>
             {statementPaidAmount(statement, paidByArchive) > 0 ? (
               <p>
@@ -148,12 +148,12 @@ export function LiabilitiesCardsPage() {
         },
         detail: (
           <>
-            <p className="font-semibold text-foreground">{card.card_name}</p>
+            <p className="font-semibold text-ink">{card.card_name}</p>
             <p>Ekstre borcu: {seritAmount(card.statement_debt_amount).amount} ₺</p>
             <p>Dönem içi harcama: {seritAmount(card.current_period_spending).amount} ₺</p>
             <p>
               Ödenebilir toplam:{' '}
-              <span className="font-mono font-semibold text-foreground">{seritAmount(cardPayableDebt(card)).amount} ₺</span>
+              <span className="font-mono font-semibold text-ink">{seritAmount(cardPayableDebt(card)).amount} ₺</span>
             </p>
           </>
         ),

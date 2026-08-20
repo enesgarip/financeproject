@@ -80,8 +80,18 @@ edilen yerde** kullanılır ve hafif gölge alır. Kural tablosu
   uygulandı. **Güvenli alan payı kabın dışından panelin dibine taşındı** —
   bottom-sheet dibe yaslandığı için eski `pb-[safe-area]` sarmalayıcıda
   kalsaydı içerik iOS'ta home çubuğunun altında kalırdı.
-- **Faz 6 — İkincil sayfalar.** Araçlar, Altın, İstek Listesi, Alsam mı?,
-  Bağlamlar, DataHealth*, Login, Analysis parçaları.
+- ~~**Faz 6a — Sayfa katmanı token uyumu.**~~ DONE. 29 sayfa dosyası, 633 + 18
+  değişim (`CrudPage` ve `ErrorFallback`in kalanı dahil). İki elle düzeltme:
+  `AnalysisPage.reports`ta çubuk dolgusu `bg-foreground/15` → `bg-ink/15`;
+  `DashboardPage`in elle yazılmış `DetailSectionDivider`ı **Faz 1'de eklenen
+  `serit/Divider`e indirildi** (birebir aynı işi yapıyordu).
+  Kalan eski token: yalnız `charts/*` (Faz 7), `LoginPage` (Faz 6b),
+  `App.tsx`/`ProtectedRoute` (2+1, yükleme ekranı).
+- **Faz 6b — Yapısal geçiş (token değil DÜZEN).** Token turu rengi düzeltti ama
+  *biçimi* değil. Kalanlar: `LoginPage` (koyu imza paneli + 16 token),
+  Araçlar'da kart→kart→satır yığını, Kartlar/İşlemler listesinde her satırın
+  ayrı kutu olması (→ `LineGroup`), "İptal" butonunun kırmızısı (rutin aksiyon,
+  sinyal değil), `ui/tabs`in hap sekme çubuğu (kart içinde yüzüyor).
 - **Faz 7 — Grafikler.** `charts/*` + `vizPalette` hizası (`--viz-*` slot
   sırasına DOKUNULMAZ — CVD güvenliği).
 - **Faz 8 — Kapanış.** Ölü token/sınıf temizliği, 375/768/1440 gezinti,

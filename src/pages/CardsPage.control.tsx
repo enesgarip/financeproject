@@ -93,7 +93,7 @@ export function CardControlCenter({
             value={usageRate}
             tone={usageRate >= 80 ? 'danger' : usageRate >= 55 ? 'warning' : 'good'}
           />
-          <div className="mt-1.5 flex items-center justify-between text-xs tabular-nums text-muted-foreground">
+          <div className="mt-1.5 flex items-center justify-between text-xs tabular-nums text-ink-muted">
             <span>Kalan {formatAmount(totalAvailable)}</span>
             <span>Limit {formatAmount(totalLimit)}</span>
           </div>
@@ -116,13 +116,13 @@ export function CardControlCenter({
           const confidence = freshnessConfidence(daysSinceCheck, STALE_AFTER_DAYS, 'Bu kartın borcu')
 
           return (
-            <article key={card.id} className="rounded-xl bg-card/85 p-3 ring-1 ring-border/75">
+            <article key={card.id} className="rounded-xl bg-raised p-3 ring-1 ring-line-strong">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="flex min-w-0 items-center gap-3">
                   <BankLogo bankName={card.bank_name} size="sm" />
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-black text-foreground">{card.card_name}</p>
-                    <p className="truncate text-xs text-muted-foreground">{card.bank_name}</p>
+                    <p className="truncate text-sm font-black text-ink">{card.card_name}</p>
+                    <p className="truncate text-xs text-ink-muted">{card.bank_name}</p>
                   </div>
                 </div>
                 <div className="flex shrink-0 items-center gap-1.5">
@@ -142,10 +142,10 @@ export function CardControlCenter({
                 <MiniStat label="Gelecek taksit" value={formatAmount(scheduledInstallmentTotal)} />
               </div>
 
-              <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg bg-muted/50 px-3 py-2 text-xs">
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg bg-page px-3 py-2 text-xs">
                 <div className="flex min-w-0 items-start gap-2">
                   <ShieldCheck size={14} className={reconciliationStatus === 'matched' ? 'mt-0.5 shrink-0 text-success' : 'mt-0.5 shrink-0 text-warning'} />
-                  <p className="min-w-0 text-muted-foreground">
+                  <p className="min-w-0 text-ink-muted">
                     {latestReconciliation ? (
                       <>
                         Son banka kontrolü {formatDate(latestReconciliation.reconciled_at.slice(0, 10))}
@@ -164,7 +164,7 @@ export function CardControlCenter({
                   </p>
                 </div>
                 {openStatementDueDate ? (
-                  <span className="shrink-0 font-bold text-foreground">Son ödeme {formatDate(openStatementDueDate)}</span>
+                  <span className="shrink-0 font-bold text-ink">Son ödeme {formatDate(openStatementDueDate)}</span>
                 ) : null}
               </div>
 
@@ -172,7 +172,7 @@ export function CardControlCenter({
                 <button
                   type="button"
                   onClick={() => onImportStatement(card)}
-                  className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-border bg-card px-3 text-xs font-bold text-foreground transition hover:bg-muted"
+                  className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-line-strong bg-raised px-3 text-xs font-bold text-ink transition hover:bg-black/[.03] dark:hover:bg-white/[.04]"
                 >
                   <FileText size={14} />
                   Ekstre aktar

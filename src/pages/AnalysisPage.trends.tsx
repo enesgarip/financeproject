@@ -32,13 +32,13 @@ export function NetWorthTrend({
 
   if (snapshots.length < 2) {
     return (
-      <Card className="border-border/70 lg:col-span-12">
+      <Card className="border-line-strong lg:col-span-12">
         <CardHeader className="pb-0">
           <CardTitle>Net değer trendi</CardTitle>
-          <p className="mt-1 text-sm text-muted-foreground">Geçmişe dönük net değer değişimi.</p>
+          <p className="mt-1 text-sm text-ink-muted">Geçmişe dönük net değer değişimi.</p>
         </CardHeader>
         <CardContent className="pt-3">
-          <p className="rounded-xl bg-muted/45 p-4 text-sm text-muted-foreground">
+          <p className="rounded-xl bg-page p-4 text-sm text-ink-muted">
             Net değer fotoğrafı her gün uygulama açıldığında alınır; birkaç günlük veri birikince grafik burada görünür.
           </p>
         </CardContent>
@@ -103,12 +103,12 @@ export function NetWorthTrend({
   const hasRates = currentRates.goldTry !== null && currentRates.usdTry !== null
 
   return (
-    <Card className="border-border/70 lg:col-span-12">
+    <Card className="border-line-strong lg:col-span-12">
       <CardHeader className="pb-0">
         <div className="flex items-start justify-between gap-3">
           <div>
             <CardTitle>Net değer trendi</CardTitle>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <p className="mt-1 text-sm text-ink-muted">
               {aggregated
                 ? `${view.length} ay · aylık (ay sonu) görünüm.`
                 : `Son ${view.length} gün · günlük otomatik anlık görüntü.`}
@@ -130,7 +130,7 @@ export function NetWorthTrend({
               onClick={() => setRange(r)}
               className={[
                 'rounded-lg px-2.5 py-1 text-xs font-medium transition-colors',
-                range === r ? 'bg-primary text-primary-foreground' : 'bg-muted/60 text-muted-foreground hover:bg-muted',
+                range === r ? 'bg-primary text-primary-foreground' : 'bg-page text-ink-muted hover:bg-black/[.03] dark:hover:bg-white/[.04]',
               ].join(' ')}
               aria-label={`Net değer trendini ${label} aralığında göster`}
             >
@@ -149,7 +149,7 @@ export function NetWorthTrend({
                 'rounded-lg px-2.5 py-1 text-xs font-medium transition-colors',
                 unit === u
                   ? 'bg-primary text-primary-foreground'
-                  : 'bg-muted/60 text-muted-foreground hover:bg-muted',
+                  : 'bg-page text-ink-muted hover:bg-black/[.03] dark:hover:bg-white/[.04]',
                 u !== 'TRY' && !hasRates ? 'cursor-not-allowed opacity-40' : '',
               ]
                 .filter(Boolean)
@@ -180,7 +180,7 @@ export function NetWorthTrend({
             tone={minSnap.net_worth < 0 ? 'rose' : 'stone'}
           />
         </div>
-        <div className="rounded-xl bg-muted/20 p-2">
+        <div className="rounded-xl bg-page p-2">
           <BarChart data={barData} height={200} positiveColor="var(--success)" />
         </div>
       </CardContent>
@@ -238,12 +238,12 @@ export function ForwardForecast({ data }: { data: AnalysisData }) {
   const endingDelta = scenarioForecast ? diffTL(scenarioForecast.endingBalance, forecast.endingBalance) : null
 
   return (
-    <Card className="border-border/70 lg:col-span-12">
+    <Card className="border-line-strong lg:col-span-12">
       <CardHeader className="pb-0">
         <div className="flex items-start justify-between gap-3">
           <div>
             <CardTitle>İleriye dönük nakit</CardTitle>
-            <p className="mt-1 text-sm text-muted-foreground">Önümüzdeki 6 ay · bilinen gelir ve yükümlülüklere göre tahmini bakiye.</p>
+            <p className="mt-1 text-sm text-ink-muted">Önümüzdeki 6 ay · bilinen gelir ve yükümlülüklere göre tahmini bakiye.</p>
           </div>
           <Badge variant={hasDeficit ? 'destructive' : 'success'}>{hasDeficit ? 'Açık riski' : 'Pozitif'}</Badge>
         </div>
@@ -279,16 +279,16 @@ export function ForwardForecast({ data }: { data: AnalysisData }) {
           </div>
         ) : null}
 
-        <div className="rounded-xl bg-muted/20 p-2">
+        <div className="rounded-xl bg-page p-2">
           <BarChart data={barData} height={200} positiveColor="var(--success)" />
         </div>
 
         <div className="grid gap-2 min-[560px]:grid-cols-2">
           {activeForBarChart.months.map((month) => (
-            <div key={month.monthKey} className="flex items-center justify-between gap-3 rounded-xl bg-muted/45 px-3 py-2 text-sm">
+            <div key={month.monthKey} className="flex items-center justify-between gap-3 rounded-xl bg-page px-3 py-2 text-sm">
               <div className="min-w-0">
-                <p className="truncate font-semibold text-foreground">{month.monthLabel}</p>
-                <p className="mt-0.5 text-xs text-muted-foreground">
+                <p className="truncate font-semibold text-ink">{month.monthLabel}</p>
+                <p className="mt-0.5 text-xs text-ink-muted">
                   Net{' '}
                   <span className={month.net >= 0 ? 'text-success' : 'text-destructive'}>
                     {month.net >= 0 ? '+' : ''}
@@ -297,7 +297,7 @@ export function ForwardForecast({ data }: { data: AnalysisData }) {
                 </p>
               </div>
               <span
-                className={`shrink-0 whitespace-nowrap rounded-lg px-2 py-1 font-mono text-xs font-bold tabular-nums ring-1 ring-border/60 ${month.endingBalance < 0 ? 'bg-destructive/10 text-destructive' : 'bg-muted text-foreground'}`}
+                className={`shrink-0 whitespace-nowrap rounded-lg px-2 py-1 font-mono text-xs font-bold tabular-nums ring-1 ring-line-strong ${month.endingBalance < 0 ? 'bg-destructive/10 text-destructive' : 'bg-page text-ink'}`}
               >
                 {formatAmount(month.endingBalance)}
               </span>
@@ -307,11 +307,11 @@ export function ForwardForecast({ data }: { data: AnalysisData }) {
 
         {/* Scenario simulator */}
         {(candidateLoans.length > 0 || candidatePayments.length > 0) ? (
-          <div className="rounded-xl border border-border/50 bg-muted/20">
+          <div className="rounded-xl border border-line-strong bg-page">
             <button
               aria-expanded={scenarioOpen}
               onClick={() => setScenarioOpen((v) => !v)}
-              className="flex w-full items-center justify-between px-4 py-3 text-left text-sm font-semibold text-foreground"
+              className="flex w-full items-center justify-between px-4 py-3 text-left text-sm font-semibold text-ink"
             >
               <span>Ya şöyle olsaydı?</span>
               <span className="flex items-center gap-2">
@@ -320,18 +320,18 @@ export function ForwardForecast({ data }: { data: AnalysisData }) {
                     {endingDelta >= 0 ? '+' : ''}{formatAmount(endingDelta)}
                   </Badge>
                 ) : null}
-                <span className="text-xs text-muted-foreground">{scenarioOpen ? '▲' : '▼'}</span>
+                <span className="text-xs text-ink-muted">{scenarioOpen ? '▲' : '▼'}</span>
               </span>
             </button>
 
             {scenarioOpen ? (
-              <div className="space-y-3 border-t border-border/40 px-4 pb-4 pt-3">
+              <div className="space-y-3 border-t border-line-strong px-4 pb-4 pt-3">
                 {candidateLoans.length > 0 ? (
                   <div>
-                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Krediler</p>
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-muted">Krediler</p>
                     <div className="space-y-1.5">
                       {candidateLoans.map((loan) => (
-                        <label key={loan.id} className="flex cursor-pointer items-center gap-3 rounded-lg px-2 py-1.5 hover:bg-muted/40">
+                        <label key={loan.id} className="flex cursor-pointer items-center gap-3 rounded-lg px-2 py-1.5 hover:bg-black/[.03] dark:hover:bg-white/[.04]">
                           <input
                             type="checkbox"
                             checked={removedIds.has(loan.id)}
@@ -339,8 +339,8 @@ export function ForwardForecast({ data }: { data: AnalysisData }) {
                             className="h-4 w-4 accent-primary"
                             aria-label={`${loan.loan_name} kredisini kaldır`}
                           />
-                          <span className="min-w-0 flex-1 truncate text-sm text-foreground">{loan.loan_name}</span>
-                          <span className="shrink-0 text-xs text-muted-foreground">{formatAmount(loan.monthly_payment)}/ay</span>
+                          <span className="min-w-0 flex-1 truncate text-sm text-ink">{loan.loan_name}</span>
+                          <span className="shrink-0 text-xs text-ink-muted">{formatAmount(loan.monthly_payment)}/ay</span>
                         </label>
                       ))}
                     </div>
@@ -349,10 +349,10 @@ export function ForwardForecast({ data }: { data: AnalysisData }) {
 
                 {candidatePayments.length > 0 ? (
                   <div>
-                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Düzenli ödemeler</p>
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-muted">Düzenli ödemeler</p>
                     <div className="space-y-1.5">
                       {candidatePayments.map((payment) => (
-                        <label key={payment.id} className="flex cursor-pointer items-center gap-3 rounded-lg px-2 py-1.5 hover:bg-muted/40">
+                        <label key={payment.id} className="flex cursor-pointer items-center gap-3 rounded-lg px-2 py-1.5 hover:bg-black/[.03] dark:hover:bg-white/[.04]">
                           <input
                             type="checkbox"
                             checked={removedIds.has(payment.id)}
@@ -360,8 +360,8 @@ export function ForwardForecast({ data }: { data: AnalysisData }) {
                             className="h-4 w-4 accent-primary"
                             aria-label={`${payment.title} ödemesini kaldır`}
                           />
-                          <span className="min-w-0 flex-1 truncate text-sm text-foreground">{payment.title}</span>
-                          <span className="shrink-0 text-xs text-muted-foreground">{formatAmount(payment.amount)}/ay</span>
+                          <span className="min-w-0 flex-1 truncate text-sm text-ink">{payment.title}</span>
+                          <span className="shrink-0 text-xs text-ink-muted">{formatAmount(payment.amount)}/ay</span>
                         </label>
                       ))}
                     </div>
@@ -371,7 +371,7 @@ export function ForwardForecast({ data }: { data: AnalysisData }) {
                 {removedIds.size > 0 ? (
                   <button
                     onClick={() => setRemovedIds(new Set())}
-                    className="text-xs text-muted-foreground underline-offset-2 hover:underline"
+                    className="text-xs text-ink-muted underline-offset-2 hover:underline"
                   >
                     Sıfırla
                   </button>

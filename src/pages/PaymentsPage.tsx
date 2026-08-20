@@ -403,20 +403,20 @@ export function PaymentsPage() {
           const isUrgent = remaining !== null && remaining >= 0 && remaining <= 3
 
           return (
-            <article className={`rounded-2xl border bg-card p-4 transition-all duration-250 hover:-translate-y-0.5 min-[390px]:p-5 ${isPaid ? 'border-success/20 opacity-70' : isUrgent ? 'border-warning/40' : 'border-border/75'}`}>
+            <article className={`rounded-2xl border bg-raised p-4 transition-all duration-250 hover:-translate-y-0.5 min-[390px]:p-5 ${isPaid ? 'border-success/20 opacity-70' : isUrgent ? 'border-warning/40' : 'border-line-strong'}`}>
               <div className="flex items-start justify-between gap-3">
                 <div className="flex min-w-0 items-center gap-3">
-                  <div className={`grid size-10 shrink-0 place-items-center rounded-xl ${isPaid ? 'bg-success/12 text-success' : isAuto ? 'bg-info/12 text-info' : 'bg-muted text-muted-foreground'}`}>
+                  <div className={`grid size-10 shrink-0 place-items-center rounded-xl ${isPaid ? 'bg-success/12 text-success' : isAuto ? 'bg-info/12 text-info' : 'bg-page text-ink-muted'}`}>
                     {isAuto ? <CreditCard className="size-5" /> : <Receipt className="size-5" />}
                   </div>
                   <div className="min-w-0">
-                    <h2 className="truncate text-base font-black text-foreground">{payment.title}</h2>
-                    <p className="mt-0.5 text-xs text-muted-foreground">{payment.category} · {getPaymentScheduleLabel(payment)}</p>
+                    <h2 className="truncate text-base font-black text-ink">{payment.title}</h2>
+                    <p className="mt-0.5 text-xs text-ink-muted">{payment.category} · {getPaymentScheduleLabel(payment)}</p>
                   </div>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
                   {isPaid ? <Badge variant="success">Ödendi</Badge> : null}
-                  {isRecurring && !isPaid ? <RefreshCw size={13} className="text-muted-foreground" /> : null}
+                  {isRecurring && !isPaid ? <RefreshCw size={13} className="text-ink-muted" /> : null}
                   {payment.amount_status === 'estimated' && !isPaid ? <Badge variant="outline">Tahmini</Badge> : null}
                   {menu}
                 </div>
@@ -424,10 +424,10 @@ export function PaymentsPage() {
 
               <div className="mt-4 flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
                 <div className="min-w-0">
-                  <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Tutar</p>
-                  <p className="mt-0.5 font-mono text-lg font-black tabular-nums text-foreground">{getPaymentAmountLabel(payment)}</p>
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-ink-muted">Tutar</p>
+                  <p className="mt-0.5 font-mono text-lg font-black tabular-nums text-ink">{getPaymentAmountLabel(payment)}</p>
                 </div>
-                <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+                <div className="flex items-center gap-1.5 text-xs font-semibold text-ink-muted">
                   <CalendarDays size={14} />
                   <span>{formatDate(payment.due_date)}</span>
                   {isUrgent && !isPaid ? <Badge variant="warning" className="ml-1">{remaining} gün</Badge> : null}
@@ -442,7 +442,7 @@ export function PaymentsPage() {
               ) : null}
 
               {!isPaid && isCardInstructedPayment(payment, isCreditCardId) ? (
-                <p className="mt-2.5 text-[11px] font-medium text-muted-foreground">
+                <p className="mt-2.5 text-[11px] font-medium text-ink-muted">
                   Talimat bilgilendirmedir; harcama SMS geldiğinde veya ekstre importunda otomatik işlenir ve plan ilerler.
                 </p>
               ) : null}

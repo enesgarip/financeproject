@@ -55,12 +55,12 @@ export function InflationShieldPanel({ data }: { data: AnalysisData }) {
         : 'Servetinin çoğu eriyen TL nakitte — enflasyon riski yüksek.'
 
   return (
-    <Card className="border-border/70 lg:col-span-5">
+    <Card className="border-line-strong lg:col-span-5">
       <CardHeader className="pb-0">
         <div className="flex items-start justify-between gap-3">
           <div>
             <CardTitle>Enflasyon kalkanı</CardTitle>
-            <p className="mt-1 text-xs text-muted-foreground">Servetinin ne kadarı reel varlıkta, ne kadarı eriyen TL nakitte.</p>
+            <p className="mt-1 text-xs text-ink-muted">Servetinin ne kadarı reel varlıkta, ne kadarı eriyen TL nakitte.</p>
           </div>
           <ShieldCheck size={18} className="text-ink-faint" />
         </div>
@@ -70,7 +70,7 @@ export function InflationShieldPanel({ data }: { data: AnalysisData }) {
           <StatPill label="Reel / korumalı" value={`%${protectedPct}`} tone={protectedPct >= 60 ? 'emerald' : 'stone'} />
           <StatPill label="Eriyen TL nakit" value={`%${meltingPct}`} tone={meltingPct > 65 ? 'rose' : 'stone'} />
         </div>
-        <div className="rounded-xl bg-muted/40 p-3 text-xs text-muted-foreground">{headline}</div>
+        <div className="rounded-xl bg-page p-3 text-xs text-ink-muted">{headline}</div>
         <CompositionBar data={donutData} totalLabel="Varlık" />
       </CardContent>
     </Card>
@@ -79,9 +79,9 @@ export function InflationShieldPanel({ data }: { data: AnalysisData }) {
 
 function ZakatToggle({ checked, onChange, label }: { checked: boolean; onChange: (value: boolean) => void; label: string }) {
   return (
-    <label className="flex cursor-pointer items-center gap-2 rounded-lg bg-card px-2.5 py-1.5 text-xs ring-1 ring-border/60">
+    <label className="flex cursor-pointer items-center gap-2 rounded-lg bg-raised px-2.5 py-1.5 text-xs ring-1 ring-line-strong">
       <input type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} className="size-3.5 accent-primary" />
-      <span className="text-muted-foreground">{label}</span>
+      <span className="text-ink-muted">{label}</span>
     </label>
   )
 }
@@ -114,12 +114,12 @@ export function ZakatPanel({ data, ratesSnapshot }: { data: AnalysisData; ratesS
   if (zakat.zakatableAssets <= 0) return null
 
   return (
-    <Card className="border-border/70 lg:col-span-7">
+    <Card className="border-line-strong lg:col-span-7">
       <CardHeader className="pb-0">
         <div className="flex items-start justify-between gap-3">
           <div>
             <CardTitle>Zekât hesaplayıcı</CardTitle>
-            <p className="mt-1 text-xs text-muted-foreground">Diyanet ölçüsü: 80,18 gr altın nisabı, %2,5 oran, borçlar düşülür.</p>
+            <p className="mt-1 text-xs text-ink-muted">Diyanet ölçüsü: 80,18 gr altın nisabı, %2,5 oran, borçlar düşülür.</p>
           </div>
           <HandCoins size={18} className="text-ink-faint" />
         </div>
@@ -135,7 +135,7 @@ export function ZakatPanel({ data, ratesSnapshot }: { data: AnalysisData; ratesS
           />
         </div>
 
-        <div className="rounded-xl bg-muted/40 p-3 text-xs text-muted-foreground">
+        <div className="rounded-xl bg-page p-3 text-xs text-ink-muted">
           {zakat.nisabTry === null
             ? 'Gram altın fiyatı yüklenemediği için nisab hesaplanamadı.'
             : zakat.meetsNisab
@@ -143,13 +143,13 @@ export function ZakatPanel({ data, ratesSnapshot }: { data: AnalysisData; ratesS
               : 'Net servetin nisabın altında — zekât gerekmiyor.'}
         </div>
 
-        <div className="rounded-xl bg-muted/40 p-3">
+        <div className="rounded-xl bg-page p-3">
           <p className="finance-label mb-2">Hesap kalemleri</p>
           <div className="grid gap-1.5">
             {zakat.components.map((component) => (
               <div key={component.key} className="flex items-center justify-between gap-3 text-sm">
-                <span className="text-muted-foreground">{component.sign < 0 ? '− ' : '+ '}{component.label}</span>
-                <span className={`font-mono tabular-nums ${component.sign < 0 ? 'text-destructive' : 'text-foreground'}`}>
+                <span className="text-ink-muted">{component.sign < 0 ? '− ' : '+ '}{component.label}</span>
+                <span className={`font-mono tabular-nums ${component.sign < 0 ? 'text-destructive' : 'text-ink'}`}>
                   {component.sign < 0 ? '-' : ''}{formatAmount(component.amount)}
                 </span>
               </div>
@@ -163,7 +163,7 @@ export function ZakatPanel({ data, ratesSnapshot }: { data: AnalysisData; ratesS
           <ZakatToggle checked={includeBes} onChange={setIncludeBes} label="BES'i dahil et" />
         </div>
 
-        <p className="text-[11px] leading-relaxed text-muted-foreground">
+        <p className="text-[11px] leading-relaxed text-ink-muted">
           Bu bir tahmindir; uygulama bir mal üzerinden bir yıl (hawl) geçip geçmediğini takip edemez ve hisse/fon için
           basitleştirilmiş piyasa değeri kullanır. Kesin hüküm için bir yetkiliye danışın.
         </p>
@@ -200,31 +200,31 @@ export function CategorySpendingChart({ data }: { data: AnalysisData }) {
   )
 
   return (
-    <Card className="border-border/70 lg:col-span-5">
+    <Card className="border-line-strong lg:col-span-5">
       <CardHeader className="pb-0">
         <div className="flex items-start justify-between gap-3">
           <div>
             <CardTitle>Kategori harcaması</CardTitle>
-            <p className="mt-1 text-xs text-muted-foreground">Bu ay kart harcamalarının dağılımı.</p>
+            <p className="mt-1 text-xs text-ink-muted">Bu ay kart harcamalarının dağılımı.</p>
           </div>
           <PieChart size={18} className="text-primary" />
         </div>
       </CardHeader>
       <CardContent className="space-y-3 pt-3">
         {donutData.length === 0 ? (
-          <p className="rounded-xl bg-muted/45 p-3 text-sm text-muted-foreground">Bu ay kategorili kart harcaması yok.</p>
+          <p className="rounded-xl bg-page p-3 text-sm text-ink-muted">Bu ay kategorili kart harcaması yok.</p>
         ) : (
           <CompositionBar data={donutData} totalLabel="Bu ay" />
         )}
         {insights.length > 0 ? (
-          <div className="rounded-xl bg-muted/40 p-3">
+          <div className="rounded-xl bg-page p-3">
             <p className="finance-label mb-2">Kategori içgörüleri</p>
             <div className="grid gap-2">
               {insights.map((insight) => (
-                <div key={`${insight.category}-${insight.title}`} className="flex min-w-0 items-start justify-between gap-3 rounded-lg bg-card px-3 py-2 text-sm ring-1 ring-border/60">
+                <div key={`${insight.category}-${insight.title}`} className="flex min-w-0 items-start justify-between gap-3 rounded-lg bg-raised px-3 py-2 text-sm ring-1 ring-line-strong">
                   <div className="min-w-0">
-                    <p className="truncate font-semibold text-foreground">{insight.category}</p>
-                    <p className="mt-0.5 text-xs text-muted-foreground">{insight.title} · {maskText(insight.description)}</p>
+                    <p className="truncate font-semibold text-ink">{insight.category}</p>
+                    <p className="mt-0.5 text-xs text-ink-muted">{insight.title} · {maskText(insight.description)}</p>
                   </div>
                   <Badge variant={insight.tone === 'rose' ? 'destructive' : insight.tone === 'amber' ? 'warning' : 'success'}>
                     {formatAmount(insight.amount)}

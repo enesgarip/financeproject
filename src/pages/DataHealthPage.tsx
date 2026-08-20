@@ -359,9 +359,9 @@ export function DataHealthPage() {
         },
         detail: (
           <>
-            <p className="font-semibold text-foreground">{card.card_name}</p>
+            <p className="font-semibold text-ink">{card.card_name}</p>
             <p>Son ödeme: {formatDate(statement.due_date)}</p>
-            <p>Ekstre tutarı: <span className="font-mono font-semibold text-foreground">{formatAmount(statement.statement_debt_amount)}</span></p>
+            <p>Ekstre tutarı: <span className="font-mono font-semibold text-ink">{formatAmount(statement.statement_debt_amount)}</span></p>
           </>
         ),
         formatSubmitError: (error) =>
@@ -471,7 +471,7 @@ export function DataHealthPage() {
                 type="button"
                 onClick={() => void loadData()}
                 disabled={loading || Boolean(fixingId) || undoing || acknowledgementBusy}
-                className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-sm font-semibold text-foreground transition hover:bg-muted disabled:opacity-50"
+                className="inline-flex items-center gap-2 rounded-xl border border-line-strong bg-raised px-3 py-2 text-sm font-semibold text-ink transition hover:bg-black/[.03] dark:hover:bg-white/[.04] disabled:opacity-50"
               >
                 <RefreshCw size={15} />
                 Yenile
@@ -501,7 +501,7 @@ export function DataHealthPage() {
                   type="button"
                   onClick={() => void undismissAll()}
                   disabled={loading || Boolean(fixingId) || undoing || acknowledgementBusy}
-                  className="inline-flex items-center gap-2 rounded-xl border border-border/60 bg-muted/30 px-3 py-2 text-sm font-semibold text-muted-foreground transition hover:bg-muted disabled:opacity-50"
+                  className="inline-flex items-center gap-2 rounded-xl border border-line-strong bg-page px-3 py-2 text-sm font-semibold text-ink-muted transition hover:bg-black/[.03] dark:hover:bg-white/[.04] disabled:opacity-50"
                 >
                   <Activity size={15} />
                   {dismissedIssueIds.length} kapatılan uyarıyı geri getir
@@ -520,7 +520,7 @@ export function DataHealthPage() {
               ) : null}
               <Link
                 to="/veri-sagligi/islemler"
-                className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-sm font-semibold text-foreground transition hover:bg-muted"
+                className="inline-flex items-center gap-2 rounded-xl border border-line-strong bg-raised px-3 py-2 text-sm font-semibold text-ink transition hover:bg-black/[.03] dark:hover:bg-white/[.04]"
               >
                 <Settings size={15} />
                 Yedek & ayarlar
@@ -545,8 +545,8 @@ export function DataHealthPage() {
             <CardContent className="space-y-3 p-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <h2 className="font-bold text-foreground">Türetilmiş alan tutarlılığı</h2>
-                  <p className="mt-1 text-sm text-muted-foreground">Veritabanındaki özet alanları (borç, bakiye, kredi kalanı) kaynak verilerle eşleşiyor mu?</p>
+                  <h2 className="font-bold text-ink">Türetilmiş alan tutarlılığı</h2>
+                  <p className="mt-1 text-sm text-ink-muted">Veritabanındaki özet alanları (borç, bakiye, kredi kalanı) kaynak verilerle eşleşiyor mu?</p>
                 </div>
                 <Badge variant={derivedFieldStats.totalDrift > 0 ? 'warning' : 'success'}>
                   {derivedFieldStats.totalDrift === 0 ? 'Tutarlı' : `${derivedFieldStats.totalDrift} sapma`}
@@ -567,8 +567,8 @@ export function DataHealthPage() {
             <CardContent className="space-y-3 p-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <h2 className="font-bold text-foreground">İşlem güvenilirliği</h2>
-                  <p className="mt-1 text-sm text-muted-foreground">Kart harcamalarında tekrar olasılığı ve eksik sınıflandırma sinyalleri.</p>
+                  <h2 className="font-bold text-ink">İşlem güvenilirliği</h2>
+                  <p className="mt-1 text-sm text-ink-muted">Kart harcamalarında tekrar olasılığı ve eksik sınıflandırma sinyalleri.</p>
                 </div>
                 <Badge variant={integrityStats.sameFingerprint > 0 || integrityStats.possibleDuplicates > 0 ? 'warning' : 'success'}>
                   Mutabakat
@@ -593,8 +593,8 @@ export function DataHealthPage() {
                 <Activity size={22} />
               </div>
               <div>
-                <h2 className="font-bold text-foreground">Aktif listede uyarı kalmadı</h2>
-                <p className="mt-1 text-sm text-muted-foreground">Bulunan kayıtları bu görünümde gizledin (geçici) veya kalıcı kapattın. İkisini de yukarıdaki düğmelerden geri getirebilirsin.</p>
+                <h2 className="font-bold text-ink">Aktif listede uyarı kalmadı</h2>
+                <p className="mt-1 text-sm text-ink-muted">Bulunan kayıtları bu görünümde gizledin (geçici) veya kalıcı kapattın. İkisini de yukarıdaki düğmelerden geri getirebilirsin.</p>
               </div>
             </CardContent>
           </SurfaceCard>
@@ -605,8 +605,8 @@ export function DataHealthPage() {
                 <CheckCircle2 size={22} />
               </div>
               <div>
-                <h2 className="font-bold text-foreground">Kayıtlar temiz görünüyor</h2>
-                <p className="mt-1 text-sm text-muted-foreground">Otomatik kontrolün yakaladığı bir tutarsızlık yok.</p>
+                <h2 className="font-bold text-ink">Kayıtlar temiz görünüyor</h2>
+                <p className="mt-1 text-sm text-ink-muted">Otomatik kontrolün yakaladığı bir tutarsızlık yok.</p>
               </div>
             </CardContent>
           </SurfaceCard>

@@ -295,7 +295,7 @@ function GoldAccumulationChart({ rows, snapshot }: { rows: GoldLot[]; snapshot: 
         </div>
 
         {data.length === 0 ? (
-          <div className="flex h-52 items-center justify-center rounded-xl bg-muted/30 text-sm text-muted-foreground">
+          <div className="flex h-52 items-center justify-center rounded-xl bg-page text-sm text-ink-muted">
             Tarihli işlem yok
           </div>
         ) : (
@@ -399,11 +399,11 @@ export function GoldPage() {
                   <Coins className="size-5.5" />
                 </div>
                 <div className="min-w-0">
-                  <h2 className="truncate font-display text-lg font-bold tracking-tight text-foreground">
+                  <h2 className="truncate font-display text-lg font-bold tracking-tight text-ink">
                     {GOLD_TYPE_LABELS[lot.gold_type]}
                   </h2>
                   <div className="mt-1 flex flex-wrap items-center gap-2">
-                    <p className="text-xs font-medium text-muted-foreground">{formatDate(lot.purchase_date)}</p>
+                    <p className="text-xs font-medium text-ink-muted">{formatDate(lot.purchase_date)}</p>
                     <Badge variant={lot.direction === 'sell' ? 'destructive' : 'secondary'}>
                       {lot.direction === 'sell' ? 'Satış' : 'Alım'}
                     </Badge>
@@ -415,7 +415,7 @@ export function GoldPage() {
 
             <div className="gold-value-well relative mt-5 overflow-hidden rounded-2xl border border-warning/18 bg-warning/[0.055] p-4 dark:bg-warning/[0.075]">
               <p className="finance-label">{lot.direction === 'sell' ? 'Satış toplamı' : 'İşlem toplamı'}</p>
-              <p className={`finance-value mt-2 truncate text-[clamp(1.65rem,6vw,2.35rem)] font-bold leading-none tracking-tight ${noCost ? 'text-muted-foreground' : 'text-foreground'}`}>
+              <p className={`finance-value mt-2 truncate text-[clamp(1.65rem,6vw,2.35rem)] font-bold leading-none tracking-tight ${noCost ? 'text-ink-muted' : 'text-ink'}`}>
                 {totalCost == null ? 'Maliyet bilinmiyor' : formatAmount(totalCost)}
               </p>
             </div>
@@ -423,11 +423,11 @@ export function GoldPage() {
             <div className="mt-3 grid grid-cols-2 gap-2.5">
               <div className="finance-field min-w-0 rounded-xl px-3 py-2.5">
                 <p className="finance-label">Miktar</p>
-                <p className="finance-value mt-1.5 truncate text-base font-bold text-foreground">{formatQuantity(lot.quantity, lot.gold_type)}</p>
+                <p className="finance-value mt-1.5 truncate text-base font-bold text-ink">{formatQuantity(lot.quantity, lot.gold_type)}</p>
               </div>
               <div className="finance-field min-w-0 rounded-xl px-3 py-2.5">
                 <p className="finance-label">{lot.direction === 'sell' ? 'Birim fiyat' : 'Birim maliyet'}</p>
-                <p className={`finance-value mt-1.5 truncate text-base font-bold ${noCost ? 'text-muted-foreground' : 'text-foreground'}`}>
+                <p className={`finance-value mt-1.5 truncate text-base font-bold ${noCost ? 'text-ink-muted' : 'text-ink'}`}>
                   {noCost ? 'Bilinmiyor' : formatAmount(lot.unit_price!)}
                 </p>
               </div>
@@ -438,7 +438,7 @@ export function GoldPage() {
                 Maliyet bilinmiyor — adede dahil, kâr/zarar hesabına dahil değil.
               </p>
             ) : null}
-            {lot.note ? <p className="mt-3 line-clamp-2 text-xs leading-relaxed text-muted-foreground">{lot.note}</p> : null}
+            {lot.note ? <p className="mt-3 line-clamp-2 text-xs leading-relaxed text-ink-muted">{lot.note}</p> : null}
           </article>
         )
       }}
