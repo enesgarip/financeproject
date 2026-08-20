@@ -30,6 +30,7 @@ import {
   visibleOpenStatementAmount,
 } from './CardsPage.helpers'
 import { CardDatum } from './CardsPage.overview'
+import { LineGroup } from '../components/serit'
 import { formatCurrency } from '../utils/formatCurrency'
 import { Button } from '../components/ui/button'
 
@@ -172,17 +173,17 @@ export function CreditAccountListCard({
           <div className="entity-card-menu">{menu}</div>
         </div>
 
-        <div className="account-balance-well relative mt-5 overflow-hidden rounded-2xl border border-[hsl(var(--bank-hue)_45%_84%/0.76)] bg-[hsl(var(--bank-hue)_55%_97%)] p-4 dark:border-[hsl(var(--bank-hue)_34%_33%/0.64)] dark:bg-[hsl(var(--bank-hue)_35%_16%)]">
+        <div className="relative mt-5 border-t border-line pt-4">
           <p className="finance-label">Kullanılabilir bakiye</p>
           <p className="finance-value mt-2 truncate text-[clamp(1.8rem,7vw,2.75rem)] font-bold leading-none tracking-tight text-ink">
             {formatAmount(row.current_balance)}
           </p>
         </div>
 
-        <div className="mt-3 grid grid-cols-2 gap-2.5">
+        <LineGroup className="mt-3 border-t border-line pt-1">
           <CardDatum label="Tür" value="Banka hesabı" />
           <CardDatum label="Not" value={row.note || '-'} />
-        </div>
+        </LineGroup>
 
         {row.iban ? (
           <div className="mt-3 rounded-xl border border-line-strong bg-page px-3 py-2.5">
@@ -235,13 +236,13 @@ export function CreditAccountListCard({
   return (
     <article
       style={bankHueStyle(row.bank_name, rows)}
-      className="premium-entity-card credit-entity-card finance-panel relative min-w-0 overflow-hidden rounded-2xl bg-raised p-4 ring-1 ring-[hsl(var(--bank-hue)_42%_82%/0.55)] dark:ring-[hsl(var(--bank-hue)_40%_42%/0.45)]"
+      className="premium-entity-card credit-entity-card finance-panel relative min-w-0 overflow-hidden rounded-2xl bg-raised ring-1 ring-[hsl(var(--bank-hue)_42%_82%/0.55)] dark:ring-[hsl(var(--bank-hue)_40%_42%/0.45)]"
     >
       <div
         style={{ backgroundImage: bankBrandGradient(row.bank_name) }}
-        className="relative overflow-visible rounded-2xl p-4 text-white "
+        className="relative overflow-visible p-4 text-white"
       >
-        <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-2xl">
+        <div className="pointer-events-none absolute inset-0 overflow-hidden">
           <div className="absolute inset-x-0 top-0 h-px bg-white/35" />
           <div className="absolute -right-8 -top-10 size-32 rounded-full bg-white/10 blur-2xl" />
         </div>
@@ -292,20 +293,21 @@ export function CreditAccountListCard({
         </div>
       </div>
 
-      <div className="mt-3 flex flex-wrap items-center gap-2">
+      <div className="p-4 pt-3">
+      <div className="flex flex-wrap items-center gap-2">
         <span className={`inline-flex min-h-6 items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-black ring-1 ${status.className}`}>
           {status.label === 'Normal' ? <CheckCircle2 size={13} /> : <AlertTriangle size={13} />}
           {status.label}
         </span>
       </div>
 
-      <div className="mt-3 grid grid-cols-2 gap-2">
+      <LineGroup className="mt-2">
         <CardDatum label="Kullanılabilir" value={formatAmount(stats.availableLimit)} tone="good" />
         <CardDatum label="Dönem içi" value={formatAmount(row.current_period_spending)} />
         <CardDatum label="Açık ekstre" value={formatAmount(displayedOpenStatementAmount)} tone={displayedOpenStatementAmount > 0 ? 'danger' : 'neutral'} />
         <CardDatum label="Gelecek taksit" value={formatAmount(scheduledInstallmentTotal)} />
         <CardDatum label="Son ödeme" value={formatShortDate(dueDate)} tone={displayedOpenStatementAmount > 0 ? 'warning' : 'neutral'} />
-      </div>
+      </LineGroup>
 
       <div className="mt-3 grid grid-cols-2 gap-2">
         <Button
@@ -404,6 +406,7 @@ export function CreditAccountListCard({
           <CardLedgerPanel card={row} onChanged={onChanged} formatAmount={formatAmount} />
         </div>
       ) : null}
+      </div>
     </article>
   )
 }

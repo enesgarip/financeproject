@@ -32,10 +32,11 @@ export function CardDatum({ label, value, tone = 'neutral' }: { label: string; v
     danger: 'text-destructive',
   }[tone]
 
+  // `LineGroup` içinde yaşar: ayıracı kap çizer, satır kendi zeminini bilmez.
   return (
-    <div className="finance-field min-w-0 rounded-lg px-3 py-2.5">
-      <p className="truncate text-[11px] font-bold uppercase text-ink-muted">{label}</p>
-      <p className={`finance-value mt-1 truncate text-sm font-black leading-tight ${valueClass}`}>{value}</p>
+    <div className="flex min-w-0 items-center justify-between gap-3 py-[11px]">
+      <p className="min-w-0 truncate text-[13px] text-ink-muted">{label}</p>
+      <p className={`serit-num shrink-0 truncate text-[15px] font-semibold ${valueClass}`}>{value}</p>
     </div>
   )
 }
