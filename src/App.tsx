@@ -91,10 +91,10 @@ function PageFallback() {
       <div className="flex flex-col gap-4 w-full max-w-2xl">
         {/* Dolgu belirgin (muted/70): açık temada muted/40 neredeyse görünmez olup
             geçiş boş beyaz bir flash gibi okunuyordu — skeleton "yükleniyor" desin. */}
-        <div className="h-40 w-full animate-pulse rounded-2xl border border-border bg-muted/70" />
+        <div className="h-40 w-full animate-pulse rounded-2xl border border-line-strong bg-page" />
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {Array.from({ length: 4 }, (_, i) => (
-            <div key={i} className="h-24 animate-pulse rounded-2xl border border-border bg-muted/70" />
+            <div key={i} className="h-24 animate-pulse rounded-2xl border border-line-strong bg-page" />
           ))}
         </div>
       </div>
