@@ -43,7 +43,7 @@ export function CashFlowChart({ data, height = 220 }: CashFlowChartProps) {
     return (
       <div
         role="status"
-        className="flex items-center justify-center rounded-xl bg-muted/30 text-sm text-muted-foreground"
+        className="flex items-center justify-center rounded-xl bg-page text-sm text-ink-muted"
         style={{ height }}
       >
         Veri yok
@@ -196,15 +196,15 @@ export function CashFlowChart({ data, height = 220 }: CashFlowChartProps) {
               height={86}
               style={{ pointerEvents: 'none' }}
             >
-              <div className="rounded-xl border border-border/70 bg-card p-2.5 backdrop-blur-xl">
-                <p className="mb-1.5 text-[10px] font-semibold uppercase text-muted-foreground">{hovered.label}</p>
+              <div className="rounded-xl border border-line-strong bg-raised shadow-[var(--shadow-card)] p-2.5 backdrop-blur-xl">
+                <p className="mb-1.5 text-[10px] font-semibold uppercase text-ink-muted">{hovered.label}</p>
                 {SERIES.map((s) => (
                   <div key={s.key} className="flex items-center justify-between gap-3">
-                    <span className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                    <span className="flex items-center gap-1.5 text-[10px] text-ink-muted">
                       <span className="size-1.5 rounded-full" style={{ background: s.stroke }} />
                       {s.name}
                     </span>
-                    <span className="font-mono text-[10px] font-semibold tabular-nums text-foreground">
+                    <span className="font-mono text-[10px] font-semibold tabular-nums text-ink">
                       {formatAmount(hovered[s.key])}
                     </span>
                   </div>

@@ -39,7 +39,7 @@ export function LineChart({ data, series, height = 260 }: LineChartProps) {
     return (
       <div
         role="status"
-        className="flex items-center justify-center rounded-xl bg-muted/30 text-sm text-muted-foreground"
+        className="flex items-center justify-center rounded-xl bg-page text-sm text-ink-muted"
         style={{ height }}
       >
         Veri yok
@@ -59,7 +59,7 @@ export function LineChart({ data, series, height = 260 }: LineChartProps) {
     return (
       <div
         role="status"
-        className="flex items-center justify-center rounded-xl bg-muted/30 text-sm text-muted-foreground"
+        className="flex items-center justify-center rounded-xl bg-page text-sm text-ink-muted"
         style={{ height }}
       >
         Veri yok
@@ -241,18 +241,18 @@ export function LineChart({ data, series, height = 260 }: LineChartProps) {
               height={24 + series.length * 20}
               style={{ pointerEvents: 'none' }}
             >
-              <div className="rounded-xl border border-border/70 bg-card p-2.5">
-                <p className="mb-1.5 text-[10px] font-semibold uppercase text-muted-foreground">{hovered.label}</p>
+              <div className="rounded-xl border border-line-strong bg-raised shadow-[var(--shadow-card)] p-2.5">
+                <p className="mb-1.5 text-[10px] font-semibold uppercase text-ink-muted">{hovered.label}</p>
                 {series.map((s) => {
                   const v = hovered[s.key]
                   if (v == null) return null
                   return (
                     <div key={s.key} className="flex items-center justify-between gap-3 text-[10px]">
-                      <span className="flex min-w-0 items-center gap-1.5 text-muted-foreground">
+                      <span className="flex min-w-0 items-center gap-1.5 text-ink-muted">
                         <span className="size-1.5 shrink-0 rounded-full" style={{ background: s.stroke }} />
                         <span className="truncate">{s.name}</span>
                       </span>
-                      <span className="font-mono font-semibold tabular-nums text-foreground">
+                      <span className="font-mono font-semibold tabular-nums text-ink">
                         {formatAmount(v as number)}
                       </span>
                     </div>

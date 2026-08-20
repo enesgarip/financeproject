@@ -44,7 +44,7 @@ export function BarChart({
     return (
       <div
         role="status"
-        className="flex items-center justify-center rounded-xl bg-muted/30 text-sm text-muted-foreground"
+        className="flex items-center justify-center rounded-xl bg-page text-sm text-ink-muted"
         style={{ height }}
       >
         Veri yok
@@ -186,18 +186,18 @@ export function BarChart({
               height={grouped ? 72 : 52}
               style={{ pointerEvents: 'none' }}
             >
-              <div className="rounded-xl border border-border/70 bg-card p-2">
-                <p className="mb-1 text-[10px] font-semibold uppercase text-muted-foreground">{hovered.label}</p>
+              <div className="rounded-xl border border-line-strong bg-raised shadow-[var(--shadow-card)] p-2">
+                <p className="mb-1 text-[10px] font-semibold uppercase text-ink-muted">{hovered.label}</p>
                 <div className="flex items-center justify-between gap-3">
-                  <span className="text-[10px] text-muted-foreground">Tutar</span>
-                  <span className="font-mono text-[10px] font-semibold tabular-nums text-foreground">
+                  <span className="text-[10px] text-ink-muted">Tutar</span>
+                  <span className="font-mono text-[10px] font-semibold tabular-nums text-ink">
                     {formatAmount(hovered.value)}
                   </span>
                 </div>
                 {grouped && hovered.prevValue != null ? (
                   <div className="flex items-center justify-between gap-3">
-                    <span className="text-[10px] text-muted-foreground">Önceki Ay</span>
-                    <span className="font-mono text-[10px] font-semibold tabular-nums text-foreground">
+                    <span className="text-[10px] text-ink-muted">Önceki Ay</span>
+                    <span className="font-mono text-[10px] font-semibold tabular-nums text-ink">
                       {formatAmount(hovered.prevValue)}
                     </span>
                   </div>
