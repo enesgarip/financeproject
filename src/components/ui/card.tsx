@@ -2,7 +2,7 @@ import * as React from "react"
 
 import { cn } from "@/lib/utils"
 
-type CardVariant = "default" | "elevated" | "glass" | "interactive" | "outline"
+type CardVariant = "default" | "elevated" | "glass" | "interactive" | "outline" | "flat"
 type CardSize = "default" | "sm" | "lg"
 
 function Card({
@@ -15,26 +15,33 @@ function Card({
   variant?: CardVariant
 }) {
   /**
-   * Şerit'e geçişte kartın kendisi sadeleşti: **gölge yok**, ayrım 1px
-   * `line-strong` ve `raised` zeminle yapılıyor. Bu, tek tek dönüştürülmemiş
-   * yüzeyleri (araçlar, gider bağlamları, modal/form içleri, detay panelleri)
-   * dosya dosya dolaşmadan aynı dile getirir.
+   * Şerit v2: kart yasağı kalktı, yerine **üç meşru gerekçe** geldi — bağımsız
+   * nesne (araç, kredi, hedef, kart), aksiyon/araç bloğu (form, sihirbaz,
+   * hesaplayıcı) ve grafik bloğu. Homojen satır verisi hâlâ karta değil
+   * `LineGroup`a gider; kural `docs/UI_ARCHITECTURE.md`de.
    *
-   * `variant` API'si korunuyor — 40+ çağıran var — ama görsel fark artık
-   * gölge/parlaklık değil, zemin ve kenarlık tonu. `elevated` "yükseltilmiş
-   * blok"tur (Şerit'in ekran başına 1-2 taneyle sınırladığı yüzey), `outline`
-   * zeminsizdir, `interactive` yalnız hover zemini alır.
+   * Görsel: zemin (`raised`) + 1px `line-strong` + **tek kademe hafif gölge**
+   * (`--shadow-card`). Gölge ayrımı yapan şey değil, yalnız bloğu zeminden bir
+   * tık ayıran şey — bu yüzden iki kademe yok ve iç içe bloklarda kullanılmaz.
+   *
+   * `variant` API'si korunuyor — 40+ çağıran var:
+   *  - `default`/`elevated` → gölgeli blok (aynı görünür, ikisi de meşru kart),
+   *  - `flat`               → kart içinde kart olduğunda gölgesiz kalan blok,
+   *  - `outline`            → zeminsiz, yalnız kenarlık,
+   *  - `interactive`        → hover zemini alan tıklanabilir kart.
    */
   const variantClass: Record<CardVariant, string> = {
-    default: "border border-line-strong bg-raised text-ink",
-    elevated: "border border-line-strong bg-raised text-ink",
-    glass: "border border-line-strong bg-raised/85 text-ink backdrop-blur-xl",
+    default: "border border-line-strong bg-raised text-ink shadow-[var(--shadow-card)]",
+    elevated: "border border-line-strong bg-raised text-ink shadow-[var(--shadow-card)]",
+    glass:
+      "border border-line-strong bg-raised/85 text-ink shadow-[var(--shadow-card)] backdrop-blur-xl",
     interactive: [
       "border border-line-strong bg-raised text-ink cursor-pointer",
-      "transition-colors duration-[120ms]",
+      "shadow-[var(--shadow-card)] transition-colors duration-[120ms]",
       "hover:bg-black/[.02] dark:hover:bg-white/[.03]",
     ].join(" "),
     outline: "border border-line-strong bg-transparent text-ink",
+    flat: "border border-line-strong bg-raised text-ink",
   }
 
   const sizeClass: Record<CardSize, string> = {

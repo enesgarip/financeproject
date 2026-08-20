@@ -1,5 +1,39 @@
 # Priority Backlog
 
+## 2026-08-20 — Şerit v2: görsel dilin tüm uygulamaya yayılması
+
+Denetim (2026-08-20, prod + kod): uygulamada **üç görsel lehçe** bir arada
+yaşıyor. Özet saf Şerit; Kartlar/Veri Kontrolü melez; Araçlar, Alsam mı?,
+Altın, İstek Listesi, Bağlamlar tamamen eski shadcn dilinde. Ölçüm: 77
+sayfa/panel dosyasının **59'u** `components/serit/*`'ı hiç kullanmıyor;
+`bg-raised` 7, `border-line` 18, `serit-num` 17 dosyada. Ayrıca kredi kartı
+görselleri palet dışı **mavi gradient** kullanıyor (jade kimliği ve "renk
+yalnız sinyal" kuralı dışında).
+
+Kart yasağı bu turda kalkıyor (sahibin kararı): kart yasak değil, **hak
+edilen yerde** kullanılır ve hafif gölge alır. Kural tablosu
+`docs/UI_ARCHITECTURE.md` §Şerit İlkeleri 1'de.
+
+- ~~**Faz 1 — dil sözleşmesi.**~~ DONE. `--shadow-card` (açık+koyu tema),
+  `serit/Divider` (ayıraç tek yerde), `ui/card` tek kademe gölge +
+  `variant="flat"` (kart içinde kart için), UI_ARCHITECTURE kart kuralı
+  yeniden yazıldı.
+- **Faz 2 — UI primitive.** button/input/badge/tabs/alert/progress/skeleton/
+  toast/confirm-dialog/tooltip token uyumu + 8 dosyadaki ham Tailwind rengi.
+- **Faz 3 — Kabuk.** Layout/BottomNav/HubNav/QuickActions/CrudPage/EmptyState/
+  SimpleModal/PullToRefresh. **FAB sağ alttaki tutarı örtüyor** (mobil, Özet'te
+  "427 ₺", Kartlar'da "%20" rozeti) — sağa yaslı rakamlı listede kalıcı sorun.
+- **Faz 4 — Panel ailesi.** `finance/*` (26) + `dashboard/*` (7), üç alt PR.
+- **Faz 5 — Modal & sihirbaz.** CurrentMovementImportModal (1108 satır),
+  StatementImportModal (788), FinancePaymentDrawer, trade/movement modalları;
+  mobilde bottom-sheet.
+- **Faz 6 — İkincil sayfalar.** Araçlar, Altın, İstek Listesi, Alsam mı?,
+  Bağlamlar, DataHealth*, Login, Analysis parçaları.
+- **Faz 7 — Grafikler.** `charts/*` + `vizPalette` hizası (`--viz-*` slot
+  sırasına DOKUNULMAZ — CVD güvenliği).
+- **Faz 8 — Kapanış.** Ölü token/sınıf temizliği, 375/768/1440 gezinti,
+  klavye odak halkası, iki `<table>`'ın mobilde çizgi listesine dönmesi.
+
 ## 2026-08-19 — Taksit yakalama zinciri + mobil push onarımı
 
 Taksit bilgisi banka SMS'inde YOKTUR; provizyon her zaman tek çekim doğar ve

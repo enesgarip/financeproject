@@ -11,11 +11,31 @@ kalmasını sağlar. Şerit 2026-08-10/11'de tüm uygulamaya uygulandı (PR #108
 
 ## Şerit İlkeleri
 
-1. **Kart yok, gölge yok.** Ayrım gölgeyle değil 1px çizgi (`--line`,
-   `--line-strong`) ve zemin tonuyla (`--page` / `--raised`) yapılır.
-   Yükseltilmiş blok (`bg-raised`, `LineGroup variant="raised"`) ekran başına
-   en fazla 1-2 tane ve yalnız aksiyon/grafik için. `serit/` ailesine Card
-   bileşeni **eklenmez** — bu dilin ana fikri kartları bırakmaktır.
+1. **Ayrımı önce çizgi yapar, kart hak edilir.** Varsayılan ayrım 1px çizgi
+   (`--line`, `--line-strong`) ve zemin tonudur (`--page` / `--raised`);
+   tekil ayıraç için `serit/Divider`. Kart bir *biçim* değil bir *iddiadır*:
+   "bu blok kendi başına duran bir şey". Üç meşru gerekçesi vardır — başka
+   gerekçeyle kart açılmaz:
+
+   | Biçim | Ne zaman | Örnek |
+   | --- | --- | --- |
+   | Çizgi listesi (`LineGroup`) | Homojen, karşılaştırmalı satır verisi | Hesap listesi, taksit dökümü, ekstre satırları |
+   | Kart (`ui/card`) | **Bağımsız nesne** — kendi kimliği ve aksiyonu var | Araç, kredi, tasarruf hedefi, kredi kartı |
+   | Kart (`ui/card`) | **Aksiyon/araç bloğu** | Form, import sihirbazı, "Alsam mı?" hesaplayıcı, ayar paneli |
+   | Kart (`ui/card`) | **Grafik bloğu** | Chart + efsane |
+
+   Kartın görüntüsü: `bg-raised` + 1px `line-strong` + **tek kademe hafif
+   gölge** (`--shadow-card`). Gölge ayrımı yapan şey değil, bloğu zeminden bir
+   tık ayıran şeydir; ikinci kademe YOK. Kart içinde kart olmaz — iç blok
+   `variant="flat"` (gölgesiz) ya da çizgi listesi olur. Bir bölüm ya çizgi
+   listesidir ya kart ızgarası; ikisi aynı bölümde karışmaz.
+
+   (2026-08-20 revizyonu. Öncesinde kural mutlak "kart yok, gölge yok" idi;
+   kaynağı `design_handoff_denge_redesign/CLAUDE_CODE_KOMUTU.md` 3. aşama
+   komutuydu. Sonuç: dönüştürülmeyen 59 dosya eski shadcn dilinde kaldı ve
+   uygulamada üç lehçe bir arada yaşadı. Kart bileşeni tek yerde —
+   `components/ui/card.tsx` — `serit/` ailesinde kart YOKTUR.)
+
 2. **Renk yalnız sinyal.** Nötr satırlar `ink` rengindedir; bir satır
    kırmızıysa gerçekten acildir. İzin verilen sinyal kümesi
    `src/components/serit/tone.ts`'te kapalıdır (`SERIT_FILL`/`SERIT_TEXT`,
@@ -26,7 +46,9 @@ kalmasını sağlar. Şerit 2026-08-10/11'de tüm uygulamaya uygulandı (PR #108
    `HeroNumber` (dev mono rakam). Hub sekmeleri (`HubNav`) kahraman rakamın
    üstünde durur.
 4. **Liste = çizgi, kart değil.** Satırlar `LineGroup` içinde 1px ayıraçla
-   gruplanır; baskın biçim zeminsiz `plain`.
+   gruplanır; baskın biçim zeminsiz `plain`. Grup dışındaki tekil ayrım
+   (bölüm sonu, form grubu, modal altlığı) `serit/Divider` ile çizilir —
+   elle `border-t border-line` yazılmaz.
 5. Finansal rakamlar `.serit-num` ile mono + tabular görünür; başlıklar display
    ailede kalır.
 6. Hover dekorasyonu işlevin önüne geçmez; klavye odağı ve azaltılmış hareket
