@@ -54,6 +54,7 @@ export function QuickActionsProvider({ children }: { children: ReactNode }) {
   const [openPath, setOpenPath] = useState<string | null>(null)
   const [query, setQuery] = useState('')
   const [formFocused, setFormFocused] = useState(false)
+  const [scrollingDown, setScrollingDown] = useState(false)
   const location = useLocation()
   const open = openPath === location.pathname
 
@@ -79,6 +80,37 @@ export function QuickActionsProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
+  // FAB sabit bir katman; içerik altından kayıyor. Tutarlar sağa yaslı olduğu
+  // için sayfa boyunca sırayla her satırın tutarını — ve İşlemler listesinde
+  // "İptal" butonunu — örtüyordu. Bandı opak yapmak çözüm DEĞİL (bilinen kural:
+  // kartların altını görünmez bir çizgide kesiyor).
+  //
+  // Çözüm formFocused ile aynı mekanizma: aşağı kaydırırken FAB çekilir, yukarı
+  // kaydırınca ve kaydırma durunca döner. Durma zamanlayıcısı şart — yalnız
+  // "yukarı kaydırınca dön" deseydi, sayfanın dibinde duran kullanıcı FAB'ı geri
+  // getirmek için yukarı kaydırmak zorunda kalırdı.
+  useEffect(() => {
+    let lastY = window.scrollY
+    let idleTimer = 0
+
+    const onScroll = () => {
+      const y = window.scrollY
+      const delta = y - lastY
+      if (Math.abs(delta) > 4) {
+        setScrollingDown(delta > 0 && y > 64)
+        lastY = y
+      }
+      window.clearTimeout(idleTimer)
+      idleTimer = window.setTimeout(() => setScrollingDown(false), 700)
+    }
+
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => {
+      window.removeEventListener('scroll', onScroll)
+      window.clearTimeout(idleTimer)
+    }
+  }, [])
+
   const close = useCallback(() => setOpenPath(null), [])
   const toggle = useCallback(() => {
     setQuery('')
@@ -86,8 +118,8 @@ export function QuickActionsProvider({ children }: { children: ReactNode }) {
   }, [location.pathname])
 
   const value = useMemo(
-    () => ({ open, toggle, close, tucked: formFocused && !open }),
-    [open, toggle, close, formFocused],
+    () => ({ open, toggle, close, tucked: (formFocused || scrollingDown) && !open }),
+    [open, toggle, close, formFocused, scrollingDown],
   )
 
   // Modal değil ama klavyeyle kullanılabilir olması şart: açılınca odak arama

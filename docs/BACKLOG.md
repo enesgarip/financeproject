@@ -42,11 +42,17 @@ edilen yerde** kullanılır ve hafif gölge alır. Kural tablosu
   390px'te sıkışıyordu — sayaç + arama + "Ekle" tek satırdaydı ve placeholder
   kırpılıyordu; mobilde sayaç üst satıra, arama + buton alt satıra alındı
   (masaüstü değişmedi). Kayıt menüsü popover'ı `--shadow-card` aldı.
-- **Faz 3b — mobil davranış (DAVRANIŞ DEĞİŞİKLİĞİ, ayrı PR).** İki madde:
-  (1) **FAB sağa yaslı tutarı örtüyor** (Özet'te "427 ₺", Kartlar'da "%20").
-  Bandı opak yapmak çözüm DEĞİL (bilinen kural). Öneri: kaydırma yönüne duyarlı
-  gizlenme — aşağı kaydırırken çekilir, yukarı kaydırınca/dururken döner.
-  (2) `SimpleModal` mobilde bottom-sheet olsun.
+- ~~**Faz 3b — mobil davranış.**~~ DONE. (1) FAB kaydırma yönüne duyarlı:
+  `QuickActionsProvider` zaten `tucked` (form alanına odaklanınca çekilme)
+  mekanizmasına sahipti; koşula `scrollingDown` eklendi. Aşağı kaydırırken
+  çekilir; yukarı kaydırınca VEYA kaydırma 700ms durunca döner (yalnız "yukarı
+  kaydırınca" olsaydı sayfanın dibindeki kullanıcı FAB'ı geri getiremezdi).
+  Prod'da FAB yalnız tutarı değil İşlemler listesindeki "İptal" butonunu da
+  örtüyordu — okunabilirlik değil dokunulabilirlik sorunuydu.
+  (2) `SimpleModal` mobilde bottom-sheet (dibe yaslı, üst köşeler yuvarlak,
+  tutamak); `sm` ve üzeri eski ortalanmış kart.
+  (3) `FormSection` zeminsizleşti — modal zaten bir yüzey, kutulu hali
+  kart-içinde-kart yapıyordu (tek çağıranı `CrudPage` modal formu).
 - **Faz 4 — Panel ailesi.** `finance/*` (26) + `dashboard/*` (7), üç alt PR.
   Kredi kartı görselleri: **fiziksel kart metaforu KALIYOR**, palet dışı mavi
   gradient banka rengi olarak palete çekilecek (sahibin kararı 2026-08-20).
