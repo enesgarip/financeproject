@@ -92,8 +92,11 @@ edilen yerde** kullanılır ve hafif gölge alır. Kural tablosu
   Araçlar'da kart→kart→satır yığını, Kartlar/İşlemler listesinde her satırın
   ayrı kutu olması (→ `LineGroup`), "İptal" butonunun kırmızısı (rutin aksiyon,
   sinyal değil), `ui/tabs`in hap sekme çubuğu (kart içinde yüzüyor).
-- **Faz 7 — Grafikler.** `charts/*` + `vizPalette` hizası (`--viz-*` slot
-  sırasına DOKUNULMAZ — CVD güvenliği).
+- ~~**Faz 7 — Grafikler.**~~ DONE. 4 dosya, 33 token + 3 gölge. Grafiklerin
+  kendi renkleri zaten doğru yerdeydi (`--viz-*`, `--chart-idle`, `SERIT_FILL`);
+  eski token yalnız **çeperde** kalmıştı: tooltip kabı, boş durum kutusu,
+  efsane satırı, hover zemini. Tooltip'ler `--shadow-card` aldı — yüzen katman
+  için 1px çizgi yetmiyor. `--viz-*` slot sırasına dokunulmadı (CVD güvenliği).
 - **Faz 8 — Kapanış.** Ölü token/sınıf temizliği, 375/768/1440 gezinti,
   klavye odak halkası, iki `<table>`'ın mobilde çizgi listesine dönmesi.
 

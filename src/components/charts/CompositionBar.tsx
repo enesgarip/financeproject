@@ -55,7 +55,7 @@ export function CompositionBar({
 
   if (data.length === 0 || total <= 0) {
     return (
-      <div role="status" className="rounded-xl bg-muted/30 p-4 text-sm text-muted-foreground">
+      <div role="status" className="rounded-xl bg-page p-4 text-sm text-ink-muted">
         Veri yok
       </div>
     )
@@ -82,7 +82,7 @@ export function CompositionBar({
     <div className="flex flex-col gap-3">
       <div className="flex items-baseline justify-between gap-3">
         <span className="finance-label">{active ? active.name : totalLabel}</span>
-        <span className="finance-value text-lg font-bold text-foreground">
+        <span className="finance-value text-lg font-bold text-ink">
           {formatAmount(active ? active.value : total)}
         </span>
       </div>
@@ -113,7 +113,7 @@ export function CompositionBar({
                   aria-pressed={isSelected}
                   className={cn(
                     'finance-touch-target flex w-full items-center justify-between gap-3 rounded-lg px-2 text-left text-xs transition-colors',
-                    activeName === slice.name ? 'bg-muted/60' : 'hover:bg-muted/40',
+                    activeName === slice.name ? 'bg-page' : 'hover:bg-black/[.03] dark:hover:bg-white/[.04]',
                   )}
                   onClick={() => setSelectedName((current) => (current === slice.name ? null : slice.name))}
                   onMouseEnter={() => setPreviewName(slice.name)}
@@ -127,11 +127,11 @@ export function CompositionBar({
                       style={{ background: slice.color }}
                       aria-hidden="true"
                     />
-                    <span className="truncate text-muted-foreground">{slice.name}</span>
+                    <span className="truncate text-ink-muted">{slice.name}</span>
                   </span>
                   <span className="flex shrink-0 items-center gap-2.5">
-                    <span className="finance-value text-foreground">{formatAmount(slice.value)}</span>
-                    <span className="w-12 text-right font-semibold tabular-nums text-muted-foreground">
+                    <span className="finance-value text-ink">{formatAmount(slice.value)}</span>
+                    <span className="w-12 text-right font-semibold tabular-nums text-ink-muted">
                       {formatPercent(slice.pct)}
                     </span>
                   </span>
