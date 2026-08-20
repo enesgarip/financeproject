@@ -335,11 +335,11 @@ export function DashboardPage() {
             role="status"
             className="flex items-start gap-2.5 rounded-xl px-3.5 py-3 text-[13px] font-semibold"
             style={{
-              color: attentionLine.tone === 'danger' ? 'var(--signal-danger)' : 'var(--signal-warning-ink)',
+              color: attentionLine.tone === 'danger' ? 'var(--destructive)' : 'var(--warning)',
               background:
                 attentionLine.tone === 'danger'
-                  ? 'color-mix(in srgb, var(--signal-danger) 9%, transparent)'
-                  : 'color-mix(in srgb, var(--signal-warning-ink) 9%, transparent)',
+                  ? 'color-mix(in srgb, var(--destructive) 9%, transparent)'
+                  : 'color-mix(in srgb, var(--warning) 9%, transparent)',
             }}
           >
             <AlertTriangle size={16} className="mt-0.5 shrink-0" aria-hidden="true" />

@@ -116,8 +116,24 @@ edilen yerde** kullanılır ve hafif gölge alır. Kural tablosu
   eski token yalnız **çeperde** kalmıştı: tooltip kabı, boş durum kutusu,
   efsane satırı, hover zemini. Tooltip'ler `--shadow-card` aldı — yüzen katman
   için 1px çizgi yetmiyor. `--viz-*` slot sırasına dokunulmadı (CVD güvenliği).
-- **Faz 8 — Kapanış.** Ölü token/sınıf temizliği, 375/768/1440 gezinti,
-  klavye odak halkası, iki `<table>`'ın mobilde çizgi listesine dönmesi.
+- ~~**Faz 8 — Kapanış.**~~ DONE.
+  - **Ölü CSS silindi**: `.aurora-value`, `.dashboard-signature-hero` (+`::after`
+    ve `.finance-label` türevi), `.finance-page-command`,
+    `.finance-command-surface` (son kullanıcısı 6b-5'te kalktı). `index.css`
+    794 → 754 satır.
+  - **Bileşen katmanı Şerit'e geçti**: `.finance-panel` ve `.finance-field`
+    artık `--line-strong`/`--raised`/`--page` kullanıyor (eski `--border`/
+    `--card`/`--muted` değil).
+  - **`--signal-*` birleştirildi**: dördünden üçü zaten semantiklerin takma
+    adıydı; kaldırıldılar. Gerçek fark tek değer olduğu için o değer artık
+    adıyla duruyor: `--warning-fill` (dolgu) ≠ `--warning` (AA metin).
+    Tüketiciler: `serit/tone.ts`, `DashboardPage`.
+  - **375/768/1440 taraması**: 9 rota × 3 kırılım, **yatay taşma yok**
+    (ölçüm: `scrollWidth > innerWidth` + en taşkın elemanın raporlanması).
+    Klavye odak halkası görünür (2px solid outline). Koyu tema kontrol edildi.
+  - **İki `<table>` maddesi geri çekildi** (yanlış tespitti):
+    `AnalysisPage.reports`taki tablo **dışa aktarma HTML'i** (yazdırma çıktısı),
+    `SeritOverview`daki `hidden lg:block` — mobilde zaten `LineRow` ikizi var.
 
 ## 2026-08-19 — Taksit yakalama zinciri + mobil push onarımı
 
