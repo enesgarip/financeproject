@@ -184,7 +184,7 @@ export function LiveReconciliationPanel({ cards, onChanged }: LiveReconciliation
 
   if (loadError) {
     return (
-      <SurfaceCard className="border-0 ring-1 ring-border/40">
+      <SurfaceCard className="border-0 ring-1 ring-line-strong">
         <CardContent className="p-4">
           <Alert variant="warning">{loadError}</Alert>
         </CardContent>
@@ -195,7 +195,7 @@ export function LiveReconciliationPanel({ cards, onChanged }: LiveReconciliation
   const actionableCount = items.filter((item) => item.status === 'drift' || item.status === 'never').length
 
   return (
-    <SurfaceCard className="border-0 ring-1 ring-border/40">
+    <SurfaceCard className="border-0 ring-1 ring-line-strong">
       <CardHeader className="pb-0">
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -204,7 +204,7 @@ export function LiveReconciliationPanel({ cards, onChanged }: LiveReconciliation
               Canlı bakiye mutabakatı
               <HelpTooltip title="Canlı bakiye mutabakatı" content={help} />
             </CardTitle>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <p className="mt-1 text-sm text-ink-muted">
               Bankadaki gerçek rakamı gir; uygulama ile farkı anında gör ve mutabık olarak kaydet.
             </p>
           </div>
@@ -226,18 +226,18 @@ export function LiveReconciliationPanel({ cards, onChanged }: LiveReconciliation
           const history = buildDriftHistory(rows, item.card.id)
 
           return (
-            <div key={item.card.id} className="rounded-lg bg-muted/40 px-3 py-2.5">
+            <div key={item.card.id} className="rounded-lg bg-page px-3 py-2.5">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
-                    <p className="font-semibold text-foreground">
+                    <p className="font-semibold text-ink">
                       {item.card.bank_name} · {item.card.card_name}
                     </p>
                     <Badge variant={meta.variant}>{meta.label}</Badge>
                     <Badge variant="outline">{item.target === 'debt' ? 'Borç' : 'Bakiye'}</Badge>
                   </div>
-                  <p className="mt-0.5 text-xs text-muted-foreground">
-                    Uygulama: <span className="font-semibold text-foreground">{formatAmount(item.app)}</span>
+                  <p className="mt-0.5 text-xs text-ink-muted">
+                    Uygulama: <span className="font-semibold text-ink">{formatAmount(item.app)}</span>
                     {item.last
                       ? ` · Son mutabakat: ${formatDate(item.last.reconciled_at.slice(0, 10))}${
                           item.daysSince != null ? ` (${item.daysSince} gün önce)` : ''
@@ -261,21 +261,21 @@ export function LiveReconciliationPanel({ cards, onChanged }: LiveReconciliation
                 <div className="mt-2">
                   <button
                     type="button"
-                    className="flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
+                    className="flex items-center gap-1 text-xs font-semibold text-ink-muted hover:text-ink transition-colors"
                     onClick={() => loadDriftCause(item.card.id, item.target, item.last!.reconciled_at)}
                   >
                     {expandedDrift[item.card.id] ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                     Son mutabakattan bu yana hareketler
                   </button>
                   {expandedDrift[item.card.id] ? (
-                    <div className="mt-1.5 rounded-md bg-background/60 px-2.5 py-2 text-xs">
+                    <div className="mt-1.5 rounded-md bg-page px-2.5 py-2 text-xs">
                       {(() => {
-                        if (loadingDrift[item.card.id]) return <p className="text-muted-foreground">Yükleniyor…</p>
+                        if (loadingDrift[item.card.id]) return <p className="text-ink-muted">Yükleniyor…</p>
                         const summary = driftDetails[item.card.id]
                         if (!summary) return null
                         if (summary.eventCount === 0) {
                           return (
-                            <p className="text-muted-foreground">
+                            <p className="text-ink-muted">
                               Bu tarihten bu yana kayıtlı hareket bulunamadı — fark uygulama dışı bir işlemden kaynaklanıyor olabilir.
                             </p>
                           )
@@ -284,18 +284,18 @@ export function LiveReconciliationPanel({ cards, onChanged }: LiveReconciliation
                           <>
                             <div className="max-h-40 space-y-1 overflow-y-auto">
                               {summary.events.map((event, index) => (
-                                <div key={index} className="flex items-center justify-between gap-2 text-muted-foreground">
+                                <div key={index} className="flex items-center justify-between gap-2 text-ink-muted">
                                   <span className="truncate">
                                     {formatDate(event.occurred_at.slice(0, 10))} · {event.kind}
                                     {event.note ? ` · ${event.note}` : ''}
                                   </span>
-                                  <span className={`shrink-0 tabular-nums font-semibold ${event.amountTL >= 0 ? 'text-foreground' : 'text-success'}`}>
+                                  <span className={`shrink-0 tabular-nums font-semibold ${event.amountTL >= 0 ? 'text-ink' : 'text-success'}`}>
                                     {event.amountTL >= 0 ? '+' : ''}{formatAmount(event.amountTL)}
                                   </span>
                                 </div>
                               ))}
                             </div>
-                            <p className="mt-1.5 border-t pt-1.5 font-semibold text-foreground">
+                            <p className="mt-1.5 border-t pt-1.5 font-semibold text-ink">
                               {summary.eventCount} hareket, toplam{' '}
                               {summary.totalChangeTL >= 0 ? '+' : ''}
                               {formatAmount(summary.totalChangeTL)} değişim
@@ -309,7 +309,7 @@ export function LiveReconciliationPanel({ cards, onChanged }: LiveReconciliation
               ) : null}
 
               <div className="mt-2 flex flex-wrap items-end gap-2">
-                <label className="flex-1 min-w-[140px] text-xs font-semibold text-muted-foreground">
+                <label className="flex-1 min-w-[140px] text-xs font-semibold text-ink-muted">
                   {item.target === 'debt'
                     ? 'Bankadaki toplam kalan kart yükü (gelecek taksitler dahil)'
                     : 'Bankadaki gerçek bakiye'}

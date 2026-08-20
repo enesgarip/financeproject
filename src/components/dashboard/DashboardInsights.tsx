@@ -55,15 +55,15 @@ export function FocusActionPanel({
   const hiddenCount = Math.max(0, actions.length - 4)
 
   return (
-    <Card className="border-0 bg-card/95 py-0 ring-1 ring-border/80">
+    <Card className="border-0 bg-raised py-0 ring-1 ring-line-strong">
       <CardContent className="p-4">
         <div className="grid gap-4 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.4fr)] lg:items-stretch">
-          <div className="flex min-w-0 flex-col justify-between rounded-lg border border-border/75 bg-surface-muted p-4">
+          <div className="flex min-w-0 flex-col justify-between rounded-lg border border-line-strong bg-surface-muted p-4">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="text-xs font-bold uppercase text-primary">Bugünün odağı</p>
-                <h2 className="mt-2 text-2xl font-black leading-tight text-foreground">{statusLabel}</h2>
-                <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                <h2 className="mt-2 text-2xl font-black leading-tight text-ink">{statusLabel}</h2>
+                <p className="mt-2 text-sm leading-6 text-ink-muted">
                   En önemli finans aksiyonlarını vade, bakiye ve limit durumuna göre sıraladım.
                 </p>
               </div>
@@ -72,19 +72,19 @@ export function FocusActionPanel({
               </div>
             </div>
             <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
-              <div className="rounded-lg bg-card/80 px-3 py-2 ring-1 ring-border/70">
-                <p className="font-bold uppercase text-muted-foreground">Ay sonuna kalan</p>
+              <div className="rounded-lg bg-raised px-3 py-2 ring-1 ring-line-strong">
+                <p className="font-bold uppercase text-ink-muted">Ay sonuna kalan</p>
                 {onboarding ? (
-                  <p className="mt-1 truncate text-sm font-extrabold text-muted-foreground">Veri bekliyor</p>
+                  <p className="mt-1 truncate text-sm font-extrabold text-ink-muted">Veri bekliyor</p>
                 ) : (
                   <p className={`finance-value mt-1 truncate text-sm font-extrabold ${cashIsPositive ? 'text-success' : 'text-destructive'}`}>
                     {formatAmount(safeToSpendAmount)}
                   </p>
                 )}
               </div>
-              <div className="rounded-lg bg-card/80 px-3 py-2 ring-1 ring-border/70">
-                <p className="font-bold uppercase text-muted-foreground">Sıradaki</p>
-                <p className="mt-1 truncate text-sm font-extrabold text-foreground">{primaryAction.cta}</p>
+              <div className="rounded-lg bg-raised px-3 py-2 ring-1 ring-line-strong">
+                <p className="font-bold uppercase text-ink-muted">Sıradaki</p>
+                <p className="mt-1 truncate text-sm font-extrabold text-ink">{primaryAction.cta}</p>
               </div>
             </div>
           </div>
@@ -100,7 +100,7 @@ export function FocusActionPanel({
                 type="button"
                 onClick={() => setShowAll((current) => !current)}
                 aria-expanded={showAll}
-                className="mt-2 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-border bg-muted/55 px-3 py-2 text-xs font-black text-muted-foreground  transition hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background"
+                className="mt-2 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-line-strong bg-page px-3 py-2 text-xs font-black text-ink-muted transition hover:bg-black/[.03] dark:hover:bg-white/[.04] hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background"
               >
                 {showAll ? <ChevronUp size={15} aria-hidden="true" /> : <ChevronDown size={15} aria-hidden="true" />}
                 {showAll ? 'Aksiyonları daralt' : `Tüm aksiyonları göster (${actions.length})`}
@@ -126,18 +126,18 @@ function FocusActionCard({ action }: { action: FocusAction }) {
     loan: Landmark,
   }[action.icon]
   const toneClass = {
-    emerald: 'border-success/20 bg-card text-foreground ring-success/15 hover:border-success/35',
-    amber: 'border-warning/25 bg-card text-foreground ring-warning/15 hover:border-warning/40',
-    rose: 'border-destructive/20 bg-card text-foreground ring-destructive/15 hover:border-destructive/35',
-    indigo: 'border-info/20 bg-card text-foreground ring-info/15 hover:border-info/35',
-    stone: 'border-border bg-card text-foreground ring-border/70 hover:border-muted-foreground/35',
+    emerald: 'border-success/20 bg-raised text-ink ring-success/15 hover:border-success/35',
+    amber: 'border-warning/25 bg-raised text-ink ring-warning/15 hover:border-warning/40',
+    rose: 'border-destructive/20 bg-raised text-ink ring-destructive/15 hover:border-destructive/35',
+    indigo: 'border-info/20 bg-raised text-ink ring-info/15 hover:border-info/35',
+    stone: 'border-line-strong bg-raised text-ink ring-line-strong hover:border-ink-faint',
   }[action.tone]
   const iconClass = {
     emerald: 'bg-success/10 text-success',
     amber: 'bg-warning/12 text-warning',
     rose: 'bg-destructive/10 text-destructive',
     indigo: 'bg-info/10 text-info',
-    stone: 'bg-muted text-muted-foreground',
+    stone: 'bg-page text-ink-muted',
   }[action.tone]
   const stripeClass = {
     emerald: 'accent-stripe-emerald',
@@ -159,10 +159,10 @@ function FocusActionCard({ action }: { action: FocusAction }) {
         </div>
         <div className="min-w-0">
           <h3 className="text-sm font-extrabold leading-snug">{maskText(action.title)}</h3>
-          <p className="mt-1 line-clamp-2 text-xs leading-5 text-muted-foreground">{maskText(action.description)}</p>
+          <p className="mt-1 line-clamp-2 text-xs leading-5 text-ink-muted">{maskText(action.description)}</p>
         </div>
       </div>
-      <span className="mt-3 inline-flex items-center text-xs font-black uppercase tracking-normal text-muted-foreground group-hover:text-foreground">
+      <span className="mt-3 inline-flex items-center text-xs font-black uppercase tracking-normal text-ink-muted group-hover:text-ink">
         {action.cta}
         <ArrowUpRight className="ml-1 size-3.5" />
       </span>

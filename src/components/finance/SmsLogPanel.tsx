@@ -67,26 +67,26 @@ export function SmsLogPanel() {
           </CardTitle>
           <ChevronDown
             size={18}
-            className={`text-muted-foreground transition-transform ${open ? 'rotate-180' : ''}`}
+            className={`text-ink-muted transition-transform ${open ? 'rotate-180' : ''}`}
           />
         </button>
-        <p className="text-sm text-muted-foreground">Son işlenen banka SMS'lerinin başarı durumu.</p>
+        <p className="text-sm text-ink-muted">Son işlenen banka SMS'lerinin başarı durumu.</p>
       </CardHeader>
 
       {open ? (
         <CardContent className="space-y-2">
           {error ? <Alert variant="destructive">{error}</Alert> : null}
 
-          {!error && logs === null ? <p className="text-xs text-muted-foreground">Yükleniyor...</p> : null}
+          {!error && logs === null ? <p className="text-xs text-ink-muted">Yükleniyor...</p> : null}
 
           {!error && logs?.length === 0 ? (
-            <p className="text-xs text-muted-foreground">Henüz işlenmiş bir SMS yok.</p>
+            <p className="text-xs text-ink-muted">Henüz işlenmiş bir SMS yok.</p>
           ) : null}
 
           {logs?.map((log) => (
             <div
               key={log.id}
-              className="flex items-start gap-2.5 rounded-xl border border-border/50 bg-muted/30 p-2.5"
+              className="flex items-start gap-2.5 rounded-xl border border-line-strong bg-page p-2.5"
             >
               {log.status === 'success' ? (
                 <CheckCircle2 size={16} className="mt-0.5 shrink-0 text-success" />
@@ -95,12 +95,12 @@ export function SmsLogPanel() {
               )}
               <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs font-semibold text-foreground">{TYPE_LABEL[log.sms_type]}</span>
-                  <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
+                  <span className="text-xs font-semibold text-ink">{TYPE_LABEL[log.sms_type]}</span>
+                  <span className="shrink-0 text-xs text-ink-muted tabular-nums">
                     {formatLogDate(log.created_at)}
                   </span>
                 </div>
-                <p className="truncate text-xs text-muted-foreground">
+                <p className="truncate text-xs text-ink-muted">
                   {log.summary ?? (log.status === 'error' ? log.error_message : '—')}
                 </p>
                 {log.status === 'error' && log.summary && log.error_message ? (

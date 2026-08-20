@@ -55,7 +55,7 @@ export function AutomationCoveragePanel() {
               <Gauge size={17} />
               Otomasyon kapsamı
             </CardTitle>
-            <p className="mt-1 text-xs text-muted-foreground">
+            <p className="mt-1 text-xs text-ink-muted">
               Son {WINDOW_MONTHS} ayda harcamaların ne kadarı kendiliğinden kaydedildi.
             </p>
           </div>
@@ -70,13 +70,13 @@ export function AutomationCoveragePanel() {
         {error ? <Alert variant="warning">{error}</Alert> : null}
 
         {rows === null ? (
-          <p className="flex items-center gap-2 rounded-xl bg-muted/45 p-3 text-sm text-muted-foreground">
+          <p className="flex items-center gap-2 rounded-xl bg-page p-3 text-sm text-ink-muted">
             <Loader2 size={14} className="animate-spin" /> Kaynaklar okunuyor...
           </p>
         ) : null}
 
         {coverage && coverage.totalCount === 0 ? (
-          <p className="rounded-xl bg-muted/45 p-3 text-sm text-muted-foreground">
+          <p className="rounded-xl bg-page p-3 text-sm text-ink-muted">
             Bu pencerede harcama kaydı yok.
           </p>
         ) : null}
@@ -84,11 +84,11 @@ export function AutomationCoveragePanel() {
         {coverage && coverage.totalCount > 0 ? (
           <>
             {coverage.classifiedCount === 0 ? (
-              <p className="rounded-xl bg-muted/45 p-3 text-xs text-muted-foreground">
+              <p className="rounded-xl bg-page p-3 text-xs text-ink-muted">
                 Kaynak etiketi yeni eklendi; oran çıkması için birkaç yeni harcama gerekiyor.
               </p>
             ) : (
-              <p className="rounded-xl bg-muted/45 p-3 text-xs text-muted-foreground">
+              <p className="rounded-xl bg-page p-3 text-xs text-ink-muted">
                 {coverage.manualCount} kayıt elle girildi ({coverage.classifiedCount} etiketli kayıt üzerinden).
                 Elle giriş payı yüksekse otomasyonu oraya yatırmak en çok zamanı kazandırır.
               </p>
@@ -98,15 +98,15 @@ export function AutomationCoveragePanel() {
               {coverage.rows.map((row) => (
                 <div key={row.bucket} className="space-y-1">
                   <div className="flex items-center justify-between gap-3 text-sm">
-                    <span className="min-w-0 truncate text-muted-foreground">{row.label}</span>
-                    <span className="shrink-0 whitespace-nowrap font-bold tabular-nums text-foreground">
+                    <span className="min-w-0 truncate text-ink-muted">{row.label}</span>
+                    <span className="shrink-0 whitespace-nowrap font-bold tabular-nums text-ink">
                       {row.count} kayıt · {formatAmount(row.amount)}{' '}
-                      <span className="text-xs font-normal text-muted-foreground">(%{row.countShare})</span>
+                      <span className="text-xs font-normal text-ink-muted">(%{row.countShare})</span>
                     </span>
                   </div>
-                  <div className="h-1.5 overflow-hidden rounded-full bg-muted/60">
+                  <div className="h-1.5 overflow-hidden rounded-full bg-page">
                     <div
-                      className={`h-full rounded-full ${row.bucket === 'manual' ? 'bg-warning' : row.bucket === 'unknown' ? 'bg-muted-foreground/40' : 'bg-success'}`}
+                      className={`h-full rounded-full ${row.bucket === 'manual' ? 'bg-warning' : row.bucket === 'unknown' ? 'bg-page-foreground/40' : 'bg-success'}`}
                       style={{ width: `${Math.min(100, row.countShare)}%` }}
                     />
                   </div>
