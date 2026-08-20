@@ -27,14 +27,20 @@ edilen yerde** kullanılır ve hafif gölge alır. Kural tablosu
   (`destructive`/`success`/`warning`/`info`) KASITLI olarak eski semantikte
   bırakıldı** — `--signal-*` ile birleştirme Faz 8'de, yoksa bu PR görsel
   olarak da kayardı.
-- **Faz 2b — ham Tailwind rengi temizliği.** 8 dosya, ~37 kullanım. Dosya
-  başına karar gerekiyor: sinyal mi (`--signal-*`), kimlik mi (`--viz-*`),
-  dekorasyon mu (nötr `ink-faint`). En büyüğü `DashboardCards` işlem türü
-  chip'leri (7 tür × ham renk) — kimlik olduğu için viz paletine geçmeli, ama
-  viz'in Tailwind utility'si yok (`var(--viz-N)` inline style gerekiyor).
+- ~~**Faz 2b — ham Tailwind rengi temizliği.**~~ DONE. 7 dosya, 35 kullanım
+  üçe ayrıldı: **sinyal** (`NotificationSettings` izin/hata, `Analysis.activity`
+  giriş-çıkış, `Analysis.panels` yükselen trend, `SavingsGoals` ilerleme) →
+  `warning`/`destructive`/`success`; **kimlik** (`DashboardCards`ın 7 işlem türü,
+  `AssetsPage` Araç/BES) → `--viz-*`; **dekorasyon** (`Analysis.wealth` başlık
+  ikonları) → nötr `ink-faint`. Viz paleti artık Tailwind utility'si
+  (`@theme`e `--color-viz-1..14` köprüsü) — ekranlar kimlik rengi için ham
+  Tailwind'e kaçmak zorunda değil. `LoginPage`in koyu imza panelindeki iki renk
+  Faz 6'ya bırakıldı (panelin `index.css`'te kendi bloğu var).
 - **Faz 3 — Kabuk.** Layout/BottomNav/HubNav/QuickActions/CrudPage/EmptyState/
   SimpleModal/PullToRefresh. **FAB sağ alttaki tutarı örtüyor** (mobil, Özet'te
   "427 ₺", Kartlar'da "%20" rozeti) — sağa yaslı rakamlı listede kalıcı sorun.
+  `CrudPage` arama satırı 390px'te sıkışıyor: "Kayıtlarda ara" placeholder'ı
+  kırpılıyor (sayaç + arama + ekle butonu tek satırda).
 - **Faz 4 — Panel ailesi.** `finance/*` (26) + `dashboard/*` (7), üç alt PR.
   Kredi kartı görselleri: **fiziksel kart metaforu KALIYOR**, palet dışı mavi
   gradient banka rengi olarak palete çekilecek (sahibin kararı 2026-08-20).

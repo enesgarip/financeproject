@@ -157,14 +157,18 @@ function formatHistoryDay(value: string) {
 // İşlem türü → ikon + tonlu chip. Renk kimliği aynı kaldı (tür rengi), üstüne
 // tanınabilir bir ikon eklendi: uzun akışta tür tek bakışta ayrışsın (renk tek
 // başına taşımasın — renk körü-güvenli ikincil kanal).
+//
+// Renkler ham Tailwind'den (`text-sky-500`) CVD-doğrulanmış kimlik paletine
+// çekildi (Faz 2b): tür bir KİMLİKtir, sinyal değil — kırmızı "kredi" satırı
+// "kötü" demek değildir. Düzeltme kaydı bilinçli olarak nötr.
 const historyTypeMeta: Record<TransactionHistoryType, { icon: LucideIcon; chip: string; label: string }> = {
-  payment:    { icon: Receipt,        chip: 'bg-amber-500/12 text-amber-500',   label: 'Ödeme' },
-  transfer:   { icon: ArrowRightLeft, chip: 'bg-sky-500/12 text-sky-500',       label: 'Transfer' },
-  loan:       { icon: Landmark,       chip: 'bg-rose-500/12 text-rose-500',     label: 'Kredi' },
-  debt:       { icon: HandCoins,      chip: 'bg-violet-500/12 text-violet-500', label: 'Borç' },
-  card:       { icon: CreditCard,     chip: 'bg-emerald-500/12 text-emerald-500', label: 'Kart' },
-  correction: { icon: Wrench,         chip: 'bg-stone-500/12 text-stone-500',   label: 'Düzeltme' },
-  asset:      { icon: Wallet,         chip: 'bg-teal-500/12 text-teal-500',     label: 'Varlık' },
+  payment:    { icon: Receipt,        chip: 'bg-viz-4/12 text-viz-4',   label: 'Ödeme' },
+  transfer:   { icon: ArrowRightLeft, chip: 'bg-viz-1/12 text-viz-1',   label: 'Transfer' },
+  loan:       { icon: Landmark,       chip: 'bg-viz-8/12 text-viz-8',   label: 'Kredi' },
+  debt:       { icon: HandCoins,      chip: 'bg-viz-7/12 text-viz-7',   label: 'Borç' },
+  card:       { icon: CreditCard,     chip: 'bg-viz-3/12 text-viz-3',   label: 'Kart' },
+  correction: { icon: Wrench,         chip: 'bg-page text-ink-muted',   label: 'Düzeltme' },
+  asset:      { icon: Wallet,         chip: 'bg-viz-9/12 text-viz-9',   label: 'Varlık' },
 }
 
 function formatHistoryDate(value: string) {

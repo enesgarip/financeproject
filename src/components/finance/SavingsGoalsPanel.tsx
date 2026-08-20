@@ -364,7 +364,7 @@ export function SavingsGoalsPanel({ monthlySurplus }: { monthlySurplus?: number 
                           cx="40" cy="40" r="36" fill="none"
                           strokeWidth="5" strokeLinecap="round"
                           stroke="currentColor"
-                          className={isCompleted ? 'text-success' : rate >= 75 ? 'text-primary' : rate >= 40 ? 'text-amber-500' : 'text-primary/60'}
+                          className={isCompleted ? 'text-success' : rate >= 75 ? 'text-primary' : rate >= 40 ? 'text-warning' : 'text-primary/60'}
                           strokeDasharray={circumference}
                           strokeDashoffset={strokeOffset}
                           style={{ transition: 'stroke-dashoffset 0.8s ease-out' }}

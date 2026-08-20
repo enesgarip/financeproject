@@ -141,8 +141,8 @@ function ActivityRow({ item }: { item: ActivityItem }) {
     <div className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 hover:bg-muted/40 transition">
       <div className={cn(
         'grid h-7 w-7 shrink-0 place-items-center rounded-full',
-        item.direction === 'inflow' ? 'bg-emerald-500/12 text-emerald-600 dark:text-emerald-400' :
-        item.direction === 'outflow' ? 'bg-rose-500/12 text-rose-600 dark:text-rose-400' :
+        item.direction === 'inflow' ? 'bg-success/12 text-success' :
+        item.direction === 'outflow' ? 'bg-destructive/12 text-destructive' :
         'bg-muted text-muted-foreground',
       )}>
         <Icon size={14} strokeWidth={2.2} />
@@ -158,8 +158,8 @@ function ActivityRow({ item }: { item: ActivityItem }) {
       {item.amountTL != null ? (
         <span className={cn(
           'shrink-0 text-xs font-bold tabular-nums',
-          item.direction === 'inflow' ? 'text-emerald-600 dark:text-emerald-400' :
-          item.direction === 'outflow' ? 'text-rose-600 dark:text-rose-400' :
+          item.direction === 'inflow' ? 'text-success' :
+          item.direction === 'outflow' ? 'text-destructive' :
           'text-muted-foreground',
         )}>
           {item.direction === 'inflow' ? '+' : item.direction === 'outflow' ? '−' : ''}
