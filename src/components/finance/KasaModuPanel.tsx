@@ -136,7 +136,7 @@ export function KasaModuPanel({ liquidCash }: { liquidCash: number }) {
 
   return (
     <section className="space-y-4">
-      <Card className="border-border/70">
+      <Card className="border-line-strong">
         <CardContent className="p-5">
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-3">
@@ -144,8 +144,8 @@ export function KasaModuPanel({ liquidCash }: { liquidCash: number }) {
                 <Wallet size={22} />
               </div>
               <div>
-                <h2 className="text-lg font-bold text-foreground">Kasa modu</h2>
-                <p className="text-sm text-muted-foreground">
+                <h2 className="text-lg font-bold text-ink">Kasa modu</h2>
+                <p className="text-sm text-ink-muted">
                   Bakiyeni kovalara ayır; rezerv sonrası kalan likidi gör. Bakiye değişmez.
                 </p>
               </div>
@@ -180,33 +180,33 @@ export function KasaModuPanel({ liquidCash }: { liquidCash: number }) {
       {error ? <Alert variant="destructive">{error}</Alert> : null}
 
       {loading ? (
-        <p className="text-sm text-muted-foreground">Kovalar yükleniyor...</p>
+        <p className="text-sm text-ink-muted">Kovalar yükleniyor...</p>
       ) : buckets.length === 0 ? (
-        <Card className="border border-dashed border-border/70 bg-muted/20 shadow-none">
+        <Card className="border border-dashed border-line-strong bg-page shadow-none">
           <CardContent className="flex flex-col items-center gap-2 p-8 text-center">
             <div className="grid size-14 place-items-center rounded-2xl bg-primary/8 text-primary/60">
               <Boxes size={28} />
             </div>
-            <p className="text-sm font-semibold text-foreground">Henüz kova yok</p>
-            <p className="text-xs text-muted-foreground">Acil fon, vergi, tatil gibi kovalar ekleyerek başla.</p>
+            <p className="text-sm font-semibold text-ink">Henüz kova yok</p>
+            <p className="text-xs text-ink-muted">Acil fon, vergi, tatil gibi kovalar ekleyerek başla.</p>
           </CardContent>
         </Card>
       ) : (
         <div className="grid gap-2 min-[520px]:grid-cols-2">
           {buckets.map((bucket) => (
-            <Card key={bucket.id} className="border-border/70">
+            <Card key={bucket.id} className="border-line-strong">
               <CardContent className="flex items-center justify-between gap-3 p-4">
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-bold text-foreground">{bucket.name}</p>
-                  <p className="mt-0.5 text-sm font-black tabular-nums text-foreground">{formatAmount(bucket.reserved_amount)}</p>
-                  {bucket.note ? <p className="mt-0.5 truncate text-[11px] italic text-muted-foreground/70">{bucket.note}</p> : null}
+                  <p className="truncate text-sm font-bold text-ink">{bucket.name}</p>
+                  <p className="mt-0.5 text-sm font-black tabular-nums text-ink">{formatAmount(bucket.reserved_amount)}</p>
+                  {bucket.note ? <p className="mt-0.5 truncate text-[11px] italic text-ink-muted">{bucket.note}</p> : null}
                 </div>
                 <div className="flex shrink-0 gap-1.5">
                   <button
                     type="button"
                     onClick={() => openEdit(bucket)}
                     aria-label={`${bucket.name} kovasını düzenle`}
-                    className="tap-target grid size-9 place-items-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground"
+                    className="tap-target grid size-9 place-items-center rounded-lg text-ink-muted hover:bg-black/[.03] dark:hover:bg-white/[.04] hover:text-ink"
                   >
                     <Pencil size={14} />
                   </button>

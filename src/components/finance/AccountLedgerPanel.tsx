@@ -12,7 +12,7 @@ import { Button } from '../ui/button'
 import { Input } from '../ui/input'
 
 const KIND_LABELS: Record<AccountLedger['kind'], { label: string; className: string }> = {
-  opening: { label: 'Başlangıç', className: 'text-muted-foreground' },
+  opening: { label: 'Başlangıç', className: 'text-ink-muted' },
   deposit: { label: 'Para girişi', className: 'text-success' },
   withdrawal: { label: 'Para çıkışı', className: 'text-destructive' },
   adjustment: { label: 'Düzeltme', className: 'text-info' },
@@ -116,12 +116,12 @@ export function AccountLedgerPanel({
   const balanceRows = buildAccountLedgerBalanceRows(events, card.current_balance)
 
   return (
-    <div className="mt-3 rounded-lg bg-card/80 p-3 ring-1 ring-border/70">
+    <div className="mt-3 rounded-lg bg-raised p-3 ring-1 ring-line-strong">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-xs font-black uppercase text-muted-foreground">Hesap hareketleri</p>
-        <p className="text-xs font-semibold text-muted-foreground">
+        <p className="text-xs font-black uppercase text-ink-muted">Hesap hareketleri</p>
+        <p className="text-xs font-semibold text-ink-muted">
           {summary.count} hareket · Giriş {formatAmount(summary.totalIn)} − Çıkış {formatAmount(summary.totalOut)} ={' '}
-          <span className="font-black text-foreground">{formatAmount(summary.net)}</span>
+          <span className="font-black text-ink">{formatAmount(summary.net)}</span>
         </p>
       </div>
 
@@ -150,31 +150,31 @@ export function AccountLedgerPanel({
             const meta = KIND_LABELS[event.kind]
             const amountTL = toTL(event.amount_kurus)
             return (
-              <div key={event.id} className="flex min-w-0 items-center justify-between gap-3 rounded-lg bg-muted/55 px-3 py-2 text-xs">
+              <div key={event.id} className="flex min-w-0 items-center justify-between gap-3 rounded-lg bg-page px-3 py-2 text-xs">
                 <span className="min-w-0 truncate">
                   <span className={`font-black ${meta.className}`}>{meta.label}</span>
-                  <span className="ml-2 text-muted-foreground">{formatDate(event.occurred_at.slice(0, 10))}</span>
+                  <span className="ml-2 text-ink-muted">{formatDate(event.occurred_at.slice(0, 10))}</span>
                   {event.kind === 'adjustment' && event.note ? (
-                    <span className="ml-2 italic text-muted-foreground">· {event.note}</span>
+                    <span className="ml-2 italic text-ink-muted">· {event.note}</span>
                   ) : null}
                 </span>
                 <span className={`shrink-0 font-black tabular-nums ${meta.className}`}>
                   {amountTL > 0 ? '+' : ''}
                   {formatAmount(amountTL)}
-                  <span className="ml-2 font-semibold text-muted-foreground">Sonrası {formatAmount(balanceAfter)}</span>
+                  <span className="ml-2 font-semibold text-ink-muted">Sonrası {formatAmount(balanceAfter)}</span>
                 </span>
               </div>
             )
           })}
           {events.length > VISIBLE_EVENTS ? (
-            <p className="text-xs font-semibold text-muted-foreground">+{events.length - VISIBLE_EVENTS} hareket daha</p>
+            <p className="text-xs font-semibold text-ink-muted">+{events.length - VISIBLE_EVENTS} hareket daha</p>
           ) : null}
         </div>
       ) : (
-        <p className="mt-3 text-sm text-muted-foreground">Henüz hareket kaydı yok; bakiye değiştikçe burada listelenecek.</p>
+        <p className="mt-3 text-sm text-ink-muted">Henüz hareket kaydı yok; bakiye değiştikçe burada listelenecek.</p>
       )}
 
-      <div className="mt-3 border-t border-border/60 pt-3">
+      <div className="mt-3 border-t border-line-strong pt-3">
         <button
           type="button"
           onClick={() => {
@@ -209,7 +209,7 @@ export function AccountLedgerPanel({
                 Bakiye düş (−)
               </Button>
             </div>
-            <label className="text-xs font-semibold text-muted-foreground">
+            <label className="text-xs font-semibold text-ink-muted">
               Tutar
               <Input
                 value={amount}
@@ -221,7 +221,7 @@ export function AccountLedgerPanel({
                 aria-label={`${card.bank_name} ${card.card_name} düzeltme tutarı`}
               />
             </label>
-            <label className="text-xs font-semibold text-muted-foreground">
+            <label className="text-xs font-semibold text-ink-muted">
               Sebep
               <Input
                 value={note}

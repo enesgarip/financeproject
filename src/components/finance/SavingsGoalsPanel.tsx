@@ -286,7 +286,7 @@ export function SavingsGoalsPanel({ monthlySurplus }: { monthlySurplus?: number 
 
   return (
     <section className="space-y-4">
-      <Card className="border-border/70">
+      <Card className="border-line-strong">
         <CardContent className="p-5">
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-3">
@@ -294,8 +294,8 @@ export function SavingsGoalsPanel({ monthlySurplus }: { monthlySurplus?: number 
                 <Target size={22} />
               </div>
               <div>
-                <h2 className="text-lg font-bold text-foreground">Birikim hedefleri</h2>
-                <p className="text-sm text-muted-foreground">
+                <h2 className="text-lg font-bold text-ink">Birikim hedefleri</h2>
+                <p className="text-sm text-ink-muted">
                   {goals.length === 0
                     ? 'TL, altın veya karma hedef ekle.'
                     : `${activeGoals.length} aktif${completedGoals.length > 0 ? ` · ${completedGoals.length} tamamlandı` : ''}`}
@@ -333,15 +333,15 @@ export function SavingsGoalsPanel({ monthlySurplus }: { monthlySurplus?: number 
       ) : null}
 
       {loading ? (
-        <p className="text-sm text-muted-foreground">Hedefler yükleniyor...</p>
+        <p className="text-sm text-ink-muted">Hedefler yükleniyor...</p>
       ) : goals.length === 0 ? (
-        <Card className="border border-dashed border-border/70 bg-muted/20 shadow-none">
+        <Card className="border border-dashed border-line-strong bg-page shadow-none">
           <CardContent className="flex flex-col items-center gap-2 p-8 text-center">
             <div className="grid size-14 place-items-center rounded-2xl bg-primary/8 text-primary/60">
               <Target size={28} />
             </div>
-            <p className="text-sm font-semibold text-foreground">Henüz birikim hedefi yok</p>
-            <p className="text-xs text-muted-foreground">İlk hedefini ekleyerek birikimine yön ver.</p>
+            <p className="text-sm font-semibold text-ink">Henüz birikim hedefi yok</p>
+            <p className="text-xs text-ink-muted">İlk hedefini ekleyerek birikimine yön ver.</p>
           </CardContent>
         </Card>
       ) : (
@@ -354,7 +354,7 @@ export function SavingsGoalsPanel({ monthlySurplus }: { monthlySurplus?: number 
             const strokeOffset = circumference - (circumference * Math.min(rate, 100)) / 100
 
             return (
-              <Card key={goal.id} className={`border-border/70 transition-shadow  ${isCompleted ? 'bg-success/4 ring-1 ring-success/20' : ''}`}>
+              <Card key={goal.id} className={`border-line-strong transition-shadow  ${isCompleted ? 'bg-success/4 ring-1 ring-success/20' : ''}`}>
                 <CardContent className="p-4">
                   <div className="flex gap-3">
                     <div className="relative flex size-20 shrink-0 items-center justify-center">
@@ -374,14 +374,14 @@ export function SavingsGoalsPanel({ monthlySurplus }: { monthlySurplus?: number 
                         {isCompleted ? (
                           <Trophy size={18} className="text-success" />
                         ) : (
-                          <span className="text-sm font-extrabold tabular-nums text-foreground">%{Math.round(rate)}</span>
+                          <span className="text-sm font-extrabold tabular-nums text-ink">%{Math.round(rate)}</span>
                         )}
                       </div>
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-start justify-between gap-1">
                         <div className="min-w-0">
-                          <p className="truncate text-sm font-bold text-foreground">{goal.name}</p>
+                          <p className="truncate text-sm font-bold text-ink">{goal.name}</p>
                           <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
                             {isCompleted ? (
                               <Badge variant="default" className="bg-success/15 text-success text-[10px] px-1.5 py-0">Tamamlandı</Badge>
@@ -398,7 +398,7 @@ export function SavingsGoalsPanel({ monthlySurplus }: { monthlySurplus?: number 
                             type="button"
                             onClick={() => openEdit(goal)}
                             aria-label={`${goal.name} hedefini düzenle`}
-                            className="tap-target grid size-9 place-items-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground"
+                            className="tap-target grid size-9 place-items-center rounded-lg text-ink-muted hover:bg-black/[.03] dark:hover:bg-white/[.04] hover:text-ink"
                           >
                             <Pencil size={14} />
                           </button>
@@ -412,23 +412,23 @@ export function SavingsGoalsPanel({ monthlySurplus }: { monthlySurplus?: number 
                           </button>
                         </div>
                       </div>
-                      <p className="mt-1.5 text-xs font-semibold tabular-nums text-muted-foreground">{formatSavingsGoalProgress(goal, goalComponents)}</p>
+                      <p className="mt-1.5 text-xs font-semibold tabular-nums text-ink-muted">{formatSavingsGoalProgress(goal, goalComponents)}</p>
                       {goal.value_type !== 'TRY' && goal.value_type !== 'composite' && (goal.auto_valued || goal.estimated_value_try) ? (() => {
                         // "Güncel" etiketi kur alınamadığında da yazıyordu; artık
                         // saklı değere düşüldüğünde bunu söylüyor (Faz D3).
                         const { value, source } = effectiveGoalValueWithSource(goal, snapshot)
                         const confidence = valuationConfidence(source, goal.valued_at)
                         return (
-                          <p className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+                          <p className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-ink-muted">
                             <span>
                               {goal.auto_valued && source === 'live' ? 'Güncel' : 'Tahmini'}:{' '}
-                              <span className="font-semibold tabular-nums text-foreground">{formatAmount(value)}</span>
+                              <span className="font-semibold tabular-nums text-ink">{formatAmount(value)}</span>
                             </span>
                             <ConfidenceBadge confidence={confidence} />
                           </p>
                         )
                       })() : null}
-                      {goal.target_date ? <p className="mt-0.5 text-[11px] text-muted-foreground">Hedef: {formatDate(goal.target_date)}</p> : null}
+                      {goal.target_date ? <p className="mt-0.5 text-[11px] text-ink-muted">Hedef: {formatDate(goal.target_date)}</p> : null}
                       {!isCompleted ? (() => {
                         const suggestion = buildSavingsSuggestion(goal)
                         if (suggestion.pace === 'active' && suggestion.monthlyNeeded != null) {
@@ -446,21 +446,21 @@ export function SavingsGoalsPanel({ monthlySurplus }: { monthlySurplus?: number 
                           )
                         }
                         if (suggestion.pace === 'no-date' && suggestion.remaining > 0) {
-                          return <p className="mt-1 text-[11px] text-muted-foreground">Hedef tarih ekle → aylık plan çıkar</p>
+                          return <p className="mt-1 text-[11px] text-ink-muted">Hedef tarih ekle → aylık plan çıkar</p>
                         }
                         return null
                       })() : null}
                     </div>
                   </div>
                   {goal.value_type === 'composite' && goalComponents.length > 0 ? (
-                    <div className="mt-3 space-y-1.5 border-t border-border/50 pt-3">
+                    <div className="mt-3 space-y-1.5 border-t border-line-strong pt-3">
                       {goalComponents.map((row) => {
                         const compRate = row.target_amount > 0 ? Math.min((row.current_amount / row.target_amount) * 100, 100) : 0
                         return (
                           <div key={row.id} className="flex items-center gap-2">
-                            <span className="min-w-0 shrink truncate text-xs text-muted-foreground">{row.label?.trim() || savingsGoalValueTypeLabel(row.value_type)}</span>
+                            <span className="min-w-0 shrink truncate text-xs text-ink-muted">{row.label?.trim() || savingsGoalValueTypeLabel(row.value_type)}</span>
                             <Progress value={compRate} className="h-1 flex-1" color={compRate >= 100 ? 'success' : 'primary'} />
-                            <span className="shrink-0 text-[10px] font-bold tabular-nums text-muted-foreground">
+                            <span className="shrink-0 text-[10px] font-bold tabular-nums text-ink-muted">
                               {formatComponentAmount(row, row.current_amount)}/{formatComponentAmount(row, row.target_amount)}
                             </span>
                           </div>
@@ -469,7 +469,7 @@ export function SavingsGoalsPanel({ monthlySurplus }: { monthlySurplus?: number 
                     </div>
                   ) : null}
                   {goal.note ? (
-                    <p className="mt-2 truncate text-[11px] italic text-muted-foreground/70">{goal.note}</p>
+                    <p className="mt-2 truncate text-[11px] italic text-ink-muted">{goal.note}</p>
                   ) : null}
                 </CardContent>
               </Card>
@@ -502,9 +502,9 @@ export function SavingsGoalsPanel({ monthlySurplus }: { monthlySurplus?: number 
             <div className="space-y-3 rounded-lg bg-warning/10 p-3">
               <p className="text-xs font-medium text-warning">Örn. evlilik: 29 gram + 1 çeyrek ayrı satırlarda.</p>
               {componentDrafts.map((draft, index) => (
-                <div key={draft.key} className="space-y-2 rounded-lg bg-card/80 p-2.5 ring-1 ring-border/70">
+                <div key={draft.key} className="space-y-2 rounded-lg bg-raised p-2.5 ring-1 ring-line-strong">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-xs font-semibold text-muted-foreground">Bileşen {index + 1}</span>
+                    <span className="text-xs font-semibold text-ink-muted">Bileşen {index + 1}</span>
                     {componentDrafts.length > 1 ? (
                       <button
                         type="button"
@@ -611,9 +611,9 @@ export function SavingsGoalsPanel({ monthlySurplus }: { monthlySurplus?: number 
                     </Select>
                   </label>
                   {autoValued ? (
-                    <div className="rounded-lg border border-dashed border-border bg-muted/40 px-3 py-2.5 text-sm">
-                      <span className="text-muted-foreground">Güncel değer: </span>
-                      <span className="font-mono font-semibold tabular-nums text-foreground">
+                    <div className="rounded-lg border border-dashed border-line-strong bg-page px-3 py-2.5 text-sm">
+                      <span className="text-ink-muted">Güncel değer: </span>
+                      <span className="font-mono font-semibold tabular-nums text-ink">
                         {(() => {
                           const live = valueGoal({ value_type: valueType, current_amount: parseNumber(currentAmount) }, snapshot)
                           return live === null ? 'Kur bekleniyor…' : formatAmount(live)
