@@ -88,10 +88,20 @@ edilen yerde** kullanılır ve hafif gölge alır. Kural tablosu
   Kalan eski token: yalnız `charts/*` (Faz 7), `LoginPage` (Faz 6b),
   `App.tsx`/`ProtectedRoute` (2+1, yükleme ekranı).
 - **Faz 6b — Yapısal geçiş (token değil DÜZEN).** Token turu rengi düzeltti ama
-  *biçimi* değil. Kalanlar: `LoginPage` (koyu imza paneli + 16 token),
-  Araçlar'da kart→kart→satır yığını, Kartlar/İşlemler listesinde her satırın
-  ayrı kutu olması (→ `LineGroup`), "İptal" butonunun kırmızısı (rutin aksiyon,
-  sinyal değil), `ui/tabs`in hap sekme çubuğu (kart içinde yüzüyor).
+  *biçimi* değil.
+  - ~~**6b-1 kart görseli.**~~ DONE. Marka renkli yüzey kartın BAŞI oldu
+    (kenardan kenara, kendi yarıçapı yok); `CardDatum` kutudan satıra indi ve
+    `LineGroup`a sarıldı; banka hesabındaki "bakiye kuyusu" kutusu kalktı.
+    **Not:** mavi gradient palet dışı DEĞİLDİ — `utils/bankBranding.ts` gerçek
+    banka marka renklerini tutuyor, kimlik katmanı. Sorun renk değil yüzey
+    sayısıydı. Ayrıca yerel seed'e 2 kart + 1 hesap eklendi, bu paneller artık
+    yerelde doğrulanabiliyor.
+  - **6b-2 İşlemler listesi**: her satır ayrı kutu (→ `LineGroup`), "İptal"in
+    kırmızısı (rutin aksiyon, sinyal değil).
+  - **6b-3 Araçlar**: kart→kart→satır yığını.
+  - **6b-4 `LoginPage`**: koyu imza paneli + kalan 16 token + 2 ham renk.
+  - **6b-5 hap sekme çubuğu**: kart içinde yüzen `Özet/Kartlar/İşlemler/Ekstreler`
+    şeridi.
 - ~~**Faz 7 — Grafikler.**~~ DONE. 4 dosya, 33 token + 3 gölge. Grafiklerin
   kendi renkleri zaten doğru yerdeydi (`--viz-*`, `--chart-idle`, `SERIT_FILL`);
   eski token yalnız **çeperde** kalmıştı: tooltip kabı, boş durum kutusu,
