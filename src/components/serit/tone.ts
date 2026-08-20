@@ -9,9 +9,9 @@
 export type SeritTone = 'danger' | 'warning' | 'info' | 'brand' | 'accent' | 'neutral' | 'idle' | 'ink'
 
 export const SERIT_FILL: Record<SeritTone, string> = {
-  danger: 'var(--signal-danger)',
-  warning: 'var(--signal-warning)',
-  info: 'var(--signal-info)',
+  danger: 'var(--destructive)',
+  warning: 'var(--warning-fill)',
+  info: 'var(--info)',
   brand: 'var(--primary)',
   accent: 'var(--accent-soft)',
   neutral: 'var(--neutral-bar)',
@@ -21,5 +21,5 @@ export const SERIT_FILL: Record<SeritTone, string> = {
 
 export const SERIT_TEXT: Record<SeritTone, string> = {
   ...SERIT_FILL,
-  warning: 'var(--signal-warning-ink)',
+  warning: 'var(--warning)',
 }

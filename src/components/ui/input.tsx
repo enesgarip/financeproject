@@ -4,8 +4,8 @@ import { cn } from "@/lib/utils"
 /**
  * Şerit v2 Faz 2: form alanları da dilin token'larına bağlandı — kenarlık
  * `line-strong`, zemin `raised`, metin `ink`, ipucu `ink-faint`. Sinyal
- * renkleri (`destructive`) KASITLI olarak eski semantikte kaldı; `--signal-*`
- * ile birleştirme ayrı bir madde (bkz. index.css Şerit token bloğu).
+ * renkleri (`destructive`) semantik katmanda kalır — Faz 8'de `--signal-*`
+ * takma adları kaldırıldı, tek sinyal kümesi bu.
  */
 const baseInputClass = [
   "w-full rounded-xl border border-line-strong bg-raised px-3 text-sm font-medium text-ink",

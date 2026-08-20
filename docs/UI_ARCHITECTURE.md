@@ -134,8 +134,10 @@ bunları kullanır:
   index.css'te).
 - Çizgiler/zeminler: `--line`, `--line-strong`, `--track`, `--chart-idle`,
   `--accent-soft`, `--neutral-bar`.
-- Sinyaller: `--signal-danger`, `--signal-warning` (+ `--signal-warning-ink`
-  metin karşılığı), `--signal-info`.
+- Sinyaller: `--destructive`, `--warning` (+ `--warning-fill`: çubuk/rozet
+  zemini için daha parlak dolgu), `--info`, `--success`. Faz 8'de
+  `--signal-danger/-info/-warning-ink` takma adları kaldırıldı; üçü zaten
+  semantiklerin aynısıydı, gerçek fark tek değerdi (uyarı dolgusu ≠ uyarı metni).
 
 Yeni renk/radius'u component içinde çoğaltma; gerekiyorsa index.css token veya
 semantik sınıf ekle.
@@ -153,7 +155,7 @@ istisnadır.
 Grafik rengi dosya başına zevk meselesi değil, doğrulama kapısı olan bir token
 setidir. Kurallar (ihlal edilirse grafik yanlış bilgi verir):
 
-1. **Durum rengi kimlik taşımaz.** `--signal-*`/`--destructive` yalnız
+1. **Durum rengi kimlik taşımaz.** `--destructive`/`--warning`/`--info` yalnız
    başarı/uyarı/risk demektir. Kategori grafiğinde kırmızı bir dilim "kötü" diye
    okunur. Kimlik için `--viz-1..13` kullan (9..13, 13 kategorili taksonomi
    genişletmesidir; riskli komşu çiftler için index.css'teki nota bak).
