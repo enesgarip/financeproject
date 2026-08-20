@@ -377,10 +377,10 @@ export function FormSection({
   className?: string
 }) {
   return (
-    <section className={cn(
-      'rounded-xl border border-border/70 bg-muted/20 p-4 sm:p-5',
-      className,
-    )}>
+    // Zeminsiz: tek çağıranı CrudPage'in modal formu ve modal ZATEN bir yüzey.
+    // Kutulu haliyle sayfa-içinde-kart-içinde-kart oluyordu (Şerit v2 kuralı:
+    // kart içinde kart olmaz, iç blok düzleşir).
+    <section className={cn('min-w-0', className)}>
       <SectionHeader title={title} description={description} />
       <div className="mt-4 grid gap-3 sm:grid-cols-2">{children}</div>
     </section>
