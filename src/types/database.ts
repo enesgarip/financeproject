@@ -629,6 +629,33 @@ type WithBaseUpdate<T> = Partial<Omit<T, keyof BaseRow>> & {
   updated_at?: string
 }
 
+/**
+ * fetch_finance_snapshot RPC'sinin tek JSON yükü. Anahtarlar tablo adlarıdır;
+ * pencere/sıralama semantiği financeSnapshotRepo'daki legacy sorgularla birebir
+ * aynıdır. `missing_tables` = migration bekleyen ortamda eksik opsiyonel tablolar
+ * (optionalRows ikizi — RPC bunları hata değil boş liste + kayıt olarak döndürür).
+ */
+export type FinanceSnapshotRpcPayload = {
+  assets: Asset[]
+  cards: Card[]
+  loans: Loan[]
+  loan_installments: LoanInstallment[]
+  debts: Debt[]
+  payments: Payment[]
+  salary_history: SalaryHistory[]
+  transaction_history: TransactionHistory[]
+  budgets: Budget[]
+  card_expenses: CardExpense[]
+  card_installments: CardInstallment[]
+  card_statement_archives: CardStatementArchive[]
+  card_statement_payments: CardStatementPayment[]
+  savings_goals: SavingsGoal[]
+  savings_goal_components: SavingsGoalComponent[]
+  savings_goal_sources: SavingsGoalSource[]
+  account_reconciliations: AccountReconciliation[]
+  missing_tables: string[]
+}
+
 export type Database = {
   public: {
     Tables: {
@@ -741,6 +768,17 @@ export type Database = {
     }
     Views: Record<string, never>
     Functions: {
+      fetch_finance_snapshot: {
+        Args: {
+          /** snapshotWindowStart().toISOString() — transaction_history penceresi. */
+          p_window_start: string
+          /** dateInputValue(snapshotWindowStart()) — budgets/card_expenses penceresi. */
+          p_window_start_date: string
+          /** STATEMENT_ARCHIVE_LIMIT (card_statement_archives). */
+          p_statement_limit?: number
+        }
+        Returns: FinanceSnapshotRpcPayload
+      }
       add_card_expense: {
         Args: {
           p_card_id: string

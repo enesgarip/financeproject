@@ -10,6 +10,7 @@ import type {
   CardStatementArchive,
   CardStatementPayment,
   Debt,
+  FinanceSnapshotRpcPayload,
   Loan,
   LoanInstallment,
   Payment,
@@ -81,7 +82,62 @@ export function snapshotWindowStart(): Date {
   return addMonths(startOfMonth(), 1 - SNAPSHOT_HISTORY_MONTHS)
 }
 
+/**
+ * Açılış snapshot'ı tek istekte: fetch_finance_snapshot RPC'si (migration
+ * 20260824220000) 17 sorgunun tamamını tek JSON yükünde döndürür — mobilde
+ * 17 HTTP round-trip'i 1'e iner. Pencere/limit parametreleri buradan gider ki
+ * SNAPSHOT_HISTORY_MONTHS ve STATEMENT_ARCHIVE_LIMIT'in tek kaynağı client kalsın.
+ *
+ * RPC henüz deploy edilmemiş ortamda (frontend DB'den önce çıktıysa) eski
+ * tablo-tablo yola düşülür; eksik OPSİYONEL tabloları RPC'nin kendisi de
+ * missing_tables olarak bildirir (optionalRows ikizi, graceful degradation).
+ */
 export async function fetchFinanceSnapshot(): Promise<FinanceSnapshot> {
+  const windowStart = snapshotWindowStart()
+  const { data, error } = await supabase.rpc('fetch_finance_snapshot', {
+    p_window_start: windowStart.toISOString(),
+    p_window_start_date: dateInputValue(windowStart),
+    p_statement_limit: STATEMENT_ARCHIVE_LIMIT,
+  })
+
+  if (error) {
+    if (isMissingSupabaseCapabilityError(error)) return fetchFinanceSnapshotViaTableQueries()
+    throw new Error(error.message ?? 'Veri yüklenemedi.')
+  }
+
+  return snapshotFromRpcPayload(data)
+}
+
+function snapshotFromRpcPayload(payload: FinanceSnapshotRpcPayload): FinanceSnapshot {
+  return {
+    assets: payload.assets,
+    cards: payload.cards,
+    loans: payload.loans,
+    loanInstallments: payload.loan_installments,
+    debts: payload.debts,
+    payments: payload.payments,
+    salaryHistory: payload.salary_history,
+    transactionHistory: payload.transaction_history,
+    budgets: payload.budgets,
+    cardExpenses: payload.card_expenses,
+    cardInstallments: payload.card_installments,
+    cardStatements: payload.card_statement_archives,
+    cardStatementPayments: payload.card_statement_payments,
+    savingsGoals: payload.savings_goals,
+    savingsGoalComponents: payload.savings_goal_components,
+    savingsGoalSources: payload.savings_goal_sources,
+    accountReconciliations: payload.account_reconciliations,
+    missingTables: payload.missing_tables,
+  }
+}
+
+/**
+ * Eski yol: 17 ayrı PostgREST isteği. RPC'nin fallback'i olarak yaşar
+ * (migration bekleyen ortam) ve RPC ile alan alan aynı sonucu vermek
+ * zorundadır — filtre/sıralama değişecekse İKİ yerde birden değişir
+ * (RPC gövdesi + burası). Karşılaştırma testi: supabase/tests/finance_snapshot_rpc.sql.
+ */
+async function fetchFinanceSnapshotViaTableQueries(): Promise<FinanceSnapshot> {
   const windowStart = snapshotWindowStart()
   const windowStartValue = dateInputValue(windowStart)
 
