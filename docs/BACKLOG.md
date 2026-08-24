@@ -32,14 +32,28 @@ aşağıda; bilinçli yapılmayanlar listenin sonunda.
   - `kasa-buckets` / `wishlist-items` anahtarlarına `userId` + `enabled`
     eklendi (auth çözülmeden boş/401 atış + hesap değişiminde sızıntı);
     invalidation'lar prefix'le çalıştığı için çağıranlar değişmedi.
-- **Faz 2 — bundle & önbellek.** `manualChunks` fonksiyona (react-dom/client
-  entry'de kalıyordu, vendor'lar deploy'lar arası cache'lenemiyor), 51 mini
-  chunk birleştirme, bundle bütçesinde ölü kayıt + `.mjs` düzeltmesi, SW'de
-  `/assets/` cache-first, `vercel.json` immutable header (önce canlı doğrulama).
-- **Faz 3 — CardsPage render.** İki panelin mükerrer fetch'i prop'a,
-  `buildCardControlItems`/`buildLimitGroupSummaries`/AccountHub türetmeleri
-  memo'ya, `buildCreditLimitGroups`/bank-hue satır başına O(n²) → parent'ta bir
-  kez, backup export paralelleştirme (restore SERİ kalır).
+- ~~**Faz 2 — bundle & önbellek.**~~ DONE. `manualChunks` fonksiyon formuna:
+  obje formundaki `'react-dom'` kaydı `react-dom/client`'ı eşlemiyordu —
+  react-dom + supabase + tanstack 142 kB gzip'lik entry'de her deploy'da
+  yeniden iniyordu. Entry **142 → 15,8 kB gzip**; vendor-react/supabase/query/
+  ui/icons ayrı cache-stable chunk'lar; `pdfjs-dist`'e bilerek dokunulmadı
+  (dinamik import lazy kalır). `experimentalMinChunkSize` + vendor-icons ile
+  chunk sayısı **101 → 33** (51 adet <2 kB ikon chunk'ı tek dosyada). Bundle
+  bütçesi onarıldı: ölü vendor-recharts/vendor-motion kayıtları silindi, `.mjs`
+  dahil edildi (365 kB gzip pdf.worker toplama HİÇ girmiyordu — gerçek toplam
+  908 kB'tı, eski 660'lık bütçe görmüyordu). SW v4: `/assets/` cache-first
+  (içerik-adresli, bayatlayamaz; navigasyon network-first kaldı, asset'e
+  index.html fallback'i yine yok); `vercel.json`'a `/assets/` immutable +
+  `/sw.js` no-cache header'ları (deploy sonrası `curl -I` ile teyit edilecek).
+- ~~**Faz 3 — CardsPage render.**~~ DONE. `CardInstallmentCalendarPanel` +
+  `LiveReconciliationPanel` mükerrer fetch'leri kalktı (calendar düz prop;
+  reconciliation paneli opsiyonel managed mod — DataHealthPage prop'suz eski
+  davranışta). `buildCreditLimitGroups`'a WeakMap cache: `limitGroupStats` +
+  `quickCardConsistencyScore` satır başına, paneller ayrıca çağırıyordu —
+  maliyet kart sayısının karesiyle büyüyordu; aynı desen bank-hue sıralamasına.
+  `buildCardControlItems` useMemo'da (CrudPage her form tuşunda
+  `renderBeforeList`'i yeniden çizer). Backup export'u 6'lık gruplarla paralel;
+  **restore bilerek SERİ** (FK parent-first).
 - ~~**Faz 4a — DB.**~~ DONE (migration `20260824210000`). 5 policy çıplak
   `auth.uid()` → `(select auth.uid())` (wishlist_items, kasa_buckets,
   notification_preferences, cars, savings_goal_sources — hepsi 20260503'teki
@@ -50,8 +64,17 @@ aşağıda; bilinçli yapılmayanlar listenin sonunda.
   card/consumed_expense, card_statement_payments card/source_card — cascade
   silme seq-scan'i). Yerelde: reset + db lint + RLS audit + grants audit +
   32/32 SQL testi yeşil.
-- **Faz 4b — CI.** Lighthouse job'ı build'i artifact'tan alsın, Supabase CLI +
-  node_modules cache, vitest `pool: 'threads'`.
+- ~~**Faz 4b — CI.**~~ DONE. Lighthouse PR'da build'i quality job'ının
+  artifact'ından alıyor (gece koşusu kendi build'ini yapar — quality o saatte
+  hiç koşmaz, `!cancelled()` guard'ı şart). `supabase db start` + `db reset`
+  çifti teke indi: **CI logu kanıtı — iki adım da aynı 133 migration'ı
+  uyguluyordu**; reset'in kalan tek katkısı olan seed artık psql ile bir kez
+  uygulanıyor (seed.sql doğrulaması kaybolmadı). Supabase CLI üç kopyalanmış
+  curl bloğundan cache'e (sabit 2.101.0; retry döngüsünün varlığı flakiness
+  kanıtıydı). `node_modules` üç CI job'ında lock-hash anahtarlı cache. vitest
+  `pool: 'threads'` (fork spawn × 110 dosya → thread; yerelde 4,2 → 3,2 sn).
+  Bilinçli dokunulmayan: deploy `verify`↔`changes` bağımlılık ayrıştırması
+  (deploy hattı yapısal değişikliği ayrı, tek başına bir PR ister).
 - **Bilinçli yapılmayanlar:** 17 sorgu → tek RPC snapshot (graceful-degradation
   semantiği ayrı faz ister), CrudPage → TanStack (10+ sayfa), `sync_loan_summary`
   statement-level (önce invariant testi), ledger panellerine limit (projeksiyonu

@@ -161,7 +161,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - name: Install Supabase CLI (with retry)
+      # Binary sabit sürümlü ve değişmez — her koşuda GitHub release'ten indirmek
+      # hem yavaş hem flaky idi (retry döngüsünün varlığı kanıt).
+      - name: Cache Supabase CLI
+        id: sbcli-cache
+        uses: actions/cache@v4
+        with:
+          path: /tmp/sbcli
+          key: supabase-cli-linux-amd64-2.101.0
+
+      - name: Download Supabase CLI (with retry)
+        if: ${{ steps.sbcli-cache.outputs.cache-hit != 'true' }}
         run: |
           VERSION=2.101.0
           ok=0
@@ -175,15 +185,20 @@ jobs:
           [ "$ok" = 1 ] || { echo "::error::Supabase CLI download failed after 5 attempts"; exit 1; }
           rm -rf /tmp/sbcli && mkdir -p /tmp/sbcli
           tar -xzf supabase.tar.gz -C /tmp/sbcli
+
+      - name: Install Supabase CLI
+        run: |
           sudo cp /tmp/sbcli/supabase* /usr/local/bin/
           sudo chmod +x /usr/local/bin/supabase*
           supabase --version
 
-      - name: Start local Supabase
+      - name: Start local Supabase (migration'lar dahil)
         run: supabase db start
 
-      - name: Reapply migrations and seed
-        run: supabase db reset --local
+      # `db start` migration'ların tamamını ZATEN uyguluyor (ci.yml'deki notun
+      # eşi); reset'in kalan tek katkısı olan seed psql ile bir kez uygulanır.
+      - name: Apply seed
+        run: docker exec -i supabase_db_financeproject psql -U postgres -d postgres -v ON_ERROR_STOP=1 -f - < supabase/seed.sql
 
       - name: Lint local database
         run: supabase db lint --local --fail-on error
@@ -236,7 +251,15 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Install Supabase CLI (with retry)
+      - name: Cache Supabase CLI
+        id: sbcli-cache
+        uses: actions/cache@v4
+        with:
+          path: /tmp/sbcli
+          key: supabase-cli-linux-amd64-2.101.0
+
+      - name: Download Supabase CLI (with retry)
+        if: ${{ steps.sbcli-cache.outputs.cache-hit != 'true' }}
         run: |
           VERSION=2.101.0
           ok=0
@@ -250,6 +273,9 @@ jobs:
           [ "$ok" = 1 ] || { echo "::error::Supabase CLI download failed after 5 attempts"; exit 1; }
           rm -rf /tmp/sbcli && mkdir -p /tmp/sbcli
           tar -xzf supabase.tar.gz -C /tmp/sbcli
+
+      - name: Install Supabase CLI
+        run: |
           sudo cp /tmp/sbcli/supabase* /usr/local/bin/
           sudo chmod +x /usr/local/bin/supabase*
           supabase --version
