@@ -9,6 +9,17 @@ takılmadan** gerçek RPC'leri yerel Supabase'de test edebilmesi.
 - Başlat: `npm run dev:local` (Vite'ı yerel Supabase'e bağlar). Seed: `npm run db:seed:local`.
 - Test kullanıcısı: **t@t.com** (uid `11111111-1111-1111-1111-111111111111`).
   Şifre `CLAUDE.md`'de belgeli — ama aşağıdaki yöntem şifre GEREKTİRMEZ.
+- **Seed demo finans verisi içerir (2026-08-24'ten beri):** 2 banka hesabı +
+  3 kredi kartı (biri boş, 2'si "Aile" ortak limitli), alias'lar, ledger
+  hareketleri, açık/ödenmiş ekstre arşivi, 12 kart harcaması + 1 provizyon,
+  24 taksitli kredi, planlı ödemeler (talimatlı + "yaklaşık" örnekleriyle),
+  maaş zam geçmişi, canlı değerlenen varlıklar, hedef + kasa kovaları, bütçe,
+  istek listesi, mutabakat rozetlerinin üç durumu. Tarihler `current_date`
+  bazlı GÖRECELİ (kesim hep 9 gün önce, vadeler hep ileride) → seed
+  bayatlamaz, hangi gün reset atılırsa atılsın DataHealth 0 hata verir.
+  Ekstre kesimi/taksit planı gibi RPC-güdümlü akışlar UI'dan denenerek üretilir
+  (seed onları elle taklit etmez). Seed idempotenttir; sabit `de110000-…`
+  UUID önekiyle ayırt edilir.
 
 > **Güvenlik:** Testlerde yalnız `docker exec supabase_db_financeproject ...` (yerel
 > container) kullan. `.env.local` / `npm run dev` üretim Supabase'ine bağlanabilir —
