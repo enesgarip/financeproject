@@ -594,6 +594,8 @@ export type NotificationPreferences = {
   weekly_enabled: boolean
   cars_enabled: boolean
   provisions_enabled: boolean
+  /** Hedefe bağlı kovaya bu ay ayırma yapılmadıysa ay başında hatırlat. */
+  goals_enabled: boolean
   quiet_hours_start: number | null
   quiet_hours_end: number | null
 }

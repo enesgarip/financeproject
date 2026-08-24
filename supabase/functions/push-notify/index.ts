@@ -137,6 +137,27 @@ type CarReminderRow = {
 
 type CarProfileRow = { id: string; name: string }
 
+/** Hedefe bağlı kasa kovası; aylık ayırma yapılıp yapılmadığı buradan okunur. */
+type GoalBucketRow = {
+  id: string
+  user_id: string
+  name: string
+  goal_id: string
+  last_contribution_month: string | null
+}
+
+type GoalProfileRow = { id: string; name: string; status: string; value_type: string }
+
+/**
+ * Ayırma hatırlatmasının penceresi: ayın 2-5'i.
+ *
+ * 1'inde değil, çünkü maaş çoğu ay ilk iş gününde yatar ve para girmeden
+ * "ayır" demek erken. Tek gün de değil, çünkü o günün cron koşusu düşerse
+ * hatırlatma tamamen kaybolurdu; dedupe zaten aynı ay ikinci kez göndermez.
+ */
+const GOAL_REMINDER_DAY_FROM = 2
+const GOAL_REMINDER_DAY_TO = 5
+
 // Kullanıcı bazlı tür tercihleri + sessiz saatler.
 type NotificationPreferenceRow = {
   user_id: string
@@ -146,6 +167,7 @@ type NotificationPreferenceRow = {
   weekly_enabled: boolean
   cars_enabled: boolean
   provisions_enabled: boolean
+  goals_enabled: boolean
   quiet_hours_start: number | null
   quiet_hours_end: number | null
 }
@@ -157,6 +179,7 @@ type PreferenceFlagKey =
   | 'weekly_enabled'
   | 'cars_enabled'
   | 'provisions_enabled'
+  | 'goals_enabled'
 
 // src/utils/notificationPreferences.ts ikizleri (Deno import edemez; testli mantık orada).
 function notificationTypeToPrefKey(notificationType: string): PreferenceFlagKey | null {
@@ -174,6 +197,8 @@ function notificationTypeToPrefKey(notificationType: string): PreferenceFlagKey 
       return 'cars_enabled'
     case 'provision_installment_pending':
       return 'provisions_enabled'
+    case 'goal_contribution_due':
+      return 'goals_enabled'
     default:
       return null
   }
@@ -707,7 +732,7 @@ function applyPreferences(
 async function loadPreferences(db: RestClient, userIds: string[]): Promise<Map<string, NotificationPreferenceRow>> {
   if (userIds.length === 0) return new Map()
   const rows = await db.select<NotificationPreferenceRow>('notification_preferences', {
-    select: 'user_id,payments_enabled,loans_enabled,statements_enabled,weekly_enabled,cars_enabled,provisions_enabled,quiet_hours_start,quiet_hours_end',
+    select: 'user_id,payments_enabled,loans_enabled,statements_enabled,weekly_enabled,cars_enabled,provisions_enabled,goals_enabled,quiet_hours_start,quiet_hours_end',
     user_id: inFilter(userIds),
   })
   return new Map(rows.map((row) => [row.user_id, row]))
@@ -799,6 +824,7 @@ async function loadCandidates(
     cards,
     carRemindersDue7d,
     pendingProvisions,
+    goalBuckets,
   ] = await Promise.all([
     db.select<PaymentRow>('payments', {
       select: 'id,user_id,title,amount,due_date',
@@ -843,6 +869,13 @@ async function loadCandidates(
       installment_count: 'eq.1',
       amount: `gte.${PROVISION_REMINDER_MIN_AMOUNT}`,
       spent_at: `lte.${addDaysIso(todayIso, -PROVISION_REMINDER_AFTER_DAYS)}`,
+    }),
+    // Hedefe bağlı kovalar; "bu ay ayrıldı mı" filtresi kodda (satır sayısı
+    // kullanıcı başına birkaç tane, PostgREST or-filtresi kurmaya değmez).
+    db.select<GoalBucketRow>('kasa_buckets', {
+      select: 'id,user_id,name,goal_id,last_contribution_month',
+      user_id: userFilter,
+      goal_id: 'not.is.null',
     }),
   ])
 
@@ -903,6 +936,49 @@ async function loadCandidates(
         tag: `loan-installment-due-${installment.id}-${installment.due_date}`,
       },
     })
+  }
+
+  // Aylık ayırma hatırlatması: kovaya bu ay ayırma yapılmamış aktif hedefler.
+  //
+  // Bildirimde TUTAR YOK ve bu bilinçli: kaynağa bağlı hedefin `current_amount`
+  // kolonu DB'de 0'dır (biriken tutar client'ta canlı fiyat/kurla türetilir —
+  // bkz. utils/goalSources.ts), dolayısıyla sunucuda hesaplanacak "kalan" ya da
+  // "aylık gerekli" YANLIŞ olurdu. Doğru sayı ekranda; bildirim yalnız oraya
+  // çağırır.
+  const reminderDay = parseIsoDate(todayIso).day
+  if (reminderDay >= GOAL_REMINDER_DAY_FROM && reminderDay <= GOAL_REMINDER_DAY_TO) {
+    const monthKey = todayIso.slice(0, 7)
+    const pendingBuckets = goalBuckets.filter(
+      (bucket) => (bucket.last_contribution_month ?? '').slice(0, 7) !== monthKey,
+    )
+
+    if (pendingBuckets.length > 0) {
+      const goalIds = Array.from(new Set(pendingBuckets.map((bucket) => bucket.goal_id)))
+      const goals = await db.select<GoalProfileRow>('savings_goals', {
+        select: 'id,name,status,value_type',
+        id: inFilter(goalIds),
+        status: 'eq.active',
+      })
+      const goalsById = new Map(goals.map((goal) => [goal.id, goal]))
+
+      for (const bucket of pendingBuckets) {
+        const goal = goalsById.get(bucket.goal_id)
+        // Tamamlanmış/silinmiş hedefin kovası dürtmez.
+        if (!goal) continue
+
+        candidates.push({
+          userId: bucket.user_id,
+          notificationType: 'goal_contribution_due',
+          referenceId: `${goal.id}:${monthKey}`,
+          payload: {
+            title: `${goal.name}: bu ay ayırma yapmadın`,
+            body: `"${bucket.name}" kovasına bu ayın payını tek tıkla ayırabilirsin.`,
+            url: '/odemeler/hedefler',
+            tag: `goal-contribution-${goal.id}-${monthKey}`,
+          },
+        })
+      }
+    }
   }
 
   for (const reminder of carRemindersDue7d) {
