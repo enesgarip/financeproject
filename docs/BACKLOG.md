@@ -40,10 +40,16 @@ aşağıda; bilinçli yapılmayanlar listenin sonunda.
   `buildCardControlItems`/`buildLimitGroupSummaries`/AccountHub türetmeleri
   memo'ya, `buildCreditLimitGroups`/bank-hue satır başına O(n²) → parent'ta bir
   kez, backup export paralelleştirme (restore SERİ kalır).
-- **Faz 4a — DB.** 5 policy çıplak `auth.uid()` → `(select auth.uid())`
-  (wishlist_items, kasa_buckets, notification_preferences, cars,
-  savings_goal_sources — hepsi initPlan düzeltmesinden SONRA eklendiği için
-  deseni kaçırmış), `wishlist_items(user_id)` + eksik FK indeksleri.
+- ~~**Faz 4a — DB.**~~ DONE (migration `20260824210000`). 5 policy çıplak
+  `auth.uid()` → `(select auth.uid())` (wishlist_items, kasa_buckets,
+  notification_preferences, cars, savings_goal_sources — hepsi 20260503'teki
+  initPlan düzeltmesinden SONRA eklendiği için deseni kaçırmıştı; kanıt:
+  `car_expenses` aynı seride düzeltilmiş, `cars` atlanmış).
+  `wishlist_items(user_id)` (PK dışında indekssiz tek tabloydu) + 8 FK indeksi
+  (savings_goal_sources asset/card/bucket/component, card_installment_intents
+  card/consumed_expense, card_statement_payments card/source_card — cascade
+  silme seq-scan'i). Yerelde: reset + db lint + RLS audit + grants audit +
+  32/32 SQL testi yeşil.
 - **Faz 4b — CI.** Lighthouse job'ı build'i artifact'tan alsın, Supabase CLI +
   node_modules cache, vitest `pool: 'threads'`.
 - **Bilinçli yapılmayanlar:** 17 sorgu → tek RPC snapshot (graceful-degradation
