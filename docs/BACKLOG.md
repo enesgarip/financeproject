@@ -1,5 +1,21 @@
 # Priority Backlog
 
+## 2026-08-24 (4) — İstek listesi canlandı — DONE
+
+`WishlistPage` düz bir CRUD listesiydi; yanında `cashFlowForecast` ve hedef
+planı hazır dururken madde satırı bunlardan habersizdi.
+
+- ~~**Domain.**~~ DONE. `utils/wishlistPlan.ts` (+8 test): (1) **ne zaman** —
+  projeksiyondaki ilk ay ki o ayın sonunda güvenlik tamponunu ve kasa rezervini
+  BOZMADAN fiyatı karşılıyorsun (ufukta yoksa tarih UYDURULMAZ); (2) **neyin
+  payı** — tutar, asıl beslenen aktif hedefin kaç aylık payına denk.
+- **Kasıtlı dil:** "hedefini N ay geciktirir" DENMEZ. Parayı o hedeften
+  kısacağın bilinemez; yalnız büyüklük tanıdık bir birime çevrilir. Yarım aydan
+  küçük pay hiç yazılmaz (tabanı 1'e çekmek küçük tutarı şişirirdi).
+- ~~**Arayüz.**~~ DONE. Satır altında tek cümle: *"Şimdi alabilirsin · Kova E2E
+  hedefine ayıracağın ~1 aylık pay"*. Fiyatsız madde sessiz kalır. Sayfa hiçbir
+  finansal hesap tutmaz; snapshot + kasa rezervi + tamponu util'e verir.
+
 ## 2026-08-24 (3) — Hedef → kasa kovası: plan artık ısırıyor — DONE
 
 Sorun: hedef kartındaki "Aylık gerekli: ₺25.000" yalnız BİLGİYDİ; harcanabilir
