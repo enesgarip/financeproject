@@ -1,5 +1,31 @@
 # Priority Backlog
 
+## 2026-08-24 (10) — Seed demo veri seti + worktree lint onarımı — DONE
+
+Yerel doğrulama her seferinde boş ekranla ya da elle veri kurmakla
+başlıyordu; seed yalnız auth kullanıcısı içeriyordu.
+
+- ~~**Demo finans verisi `supabase/seed.sql`'de.**~~ DONE. Ana yüzeylerin
+  tamamını dolduran çekirdek set (kartlar/harcamalar/kredi/ödemeler/
+  varlıklar/hedef+kova/bütçe/istek listesi/mutabakat). Üç tasarım kuralı:
+  (1) **tarihler `current_date` bazlı göreceli** — kesim hep 9 gün önce,
+  vadeler hep ileride, kredinin bu ayki taksiti hep "ödendi"; seed hangi gün
+  koşarsa koşsun bayatlamaz ve sahte "gecikti" üretmez; (2) **kovalar kaynak
+  satırlarla birebir** — kart debt = statement+current+provision ve kovalar
+  harcama toplamlarına eşit; ledger olayları INSERT/UPDATE trigger'larından
+  doğal doğar; DataHealth: **0 hata**, türetilmiş alanların 4 kontrol ailesi
+  "Tutarlı", kalan 4 uyarı kasıtlı UI-durumu örnekleri (3 "hiç mutabık
+  olunmadı" + 1 "Tazele"); (3) **idempotent** — sabit `de110000-…` UUID +
+  on conflict; hareket update'leri yalnız ledger'da opening dışı olay yokken
+  koşar. Ekstre KESİMİ/taksit planı bilerek seed'lenmedi (kanonik RPC işi);
+  açık arşiv satırı ise ekstre kovasına eşit değerle eklendi. 32/32 SQL
+  testi seed verisiyle yeşil (testler kendi fixture'larını kurar, çakışmaz).
+- ~~**Worktree'ler kök lint'ini kırıyordu.**~~ DONE. Paralel oturumun
+  `.claude/worktrees/*` kopyası ikinci bir tsconfig kökü oluşturunca
+  typescript-eslint TÜM dosyalarda "multiple candidate TSConfigRootDirs"
+  parse hatası veriyordu (418 hata). Çift önlem: `globalIgnores`'a `.claude`
+  + `parserOptions.tsconfigRootDir = import.meta.dirname` (kök tahmini bitti).
+
 ## 2026-08-24 (9) — Performans/optimizasyon turu
 
 Üç paralel keşif (frontend/bundle, TanStack+veri katmanı, DB+CI) + dosya bazlı

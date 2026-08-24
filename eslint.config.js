@@ -8,7 +8,11 @@ import { defineConfig, globalIgnores } from 'eslint/config'
 export default defineConfig([
   // supabase/.temp: CLI'nin runtime artefaktları (start-secrets altında edge
   // runtime kopyası dahil) — proje kodu değil, lint'e girmemeli.
-  globalIgnores(['dist', 'test-results', 'playwright-report', 'coverage', '.lighthouseci', 'supabase/.temp']),
+  // .claude: paralel oturumların git worktree'leri (.claude/worktrees/*) repo
+  // kökünün altında yaşar; kök lint'i onları tarayınca her dosya
+  // "multiple candidate TSConfigRootDirs" ile patlıyordu. Her worktree kendi
+  // lint'ini kendi içinde koşar.
+  globalIgnores(['dist', 'test-results', 'playwright-report', 'coverage', '.lighthouseci', 'supabase/.temp', '.claude']),
   {
     files: ['**/*.{ts,tsx}'],
     extends: [
@@ -19,6 +23,12 @@ export default defineConfig([
     ],
     languageOptions: {
       globals: globals.browser,
+      parserOptions: {
+        // Kök AÇIKÇA sabit: paralel oturumların .claude/worktrees/* kopyaları
+        // repo altında ikinci bir tsconfig kökü oluşturur; typescript-eslint
+        // kökü tahmin etmeye kalkınca her dosya parse hatasıyla düşüyordu.
+        tsconfigRootDir: import.meta.dirname,
+      },
     },
   },
   {
