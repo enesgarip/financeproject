@@ -7,6 +7,7 @@ import { Badge } from '../components/ui/badge'
 import { HeroNumber, SERIT_TEXT } from '../components/serit'
 import { useFinanceSnapshot, useInvalidateFinanceSnapshot } from '../app/useFinanceSnapshot'
 import { fetchCards } from '../data/repositories/cardsRepo'
+import { saveCrudRow } from '../data/repositories/crudRepo'
 import { sortPaymentAccounts } from '../services/financePaymentActions'
 import type {
   Card as FinanceCard,
@@ -20,10 +21,11 @@ import { addMonths, dateInputValue, daysUntil, formatDate, startOfMonth } from '
 import { formatSeritAmount, parseNumber } from '../utils/formatCurrency'
 import { buildCreditCardIdCheck, paymentOccurrenceInMonth, paymentUsesCreditCard, type CreditCardIdCheck } from '../utils/financeSummary'
 import { sumTL } from '../utils/money'
+import { buildPaymentEstimateSuggestion } from '../utils/paymentEstimate'
 import { paidPaymentIdsInMonth } from '../utils/paymentHistory'
 import type { FinanceObligation, FinanceObligationsInput } from '../utils/obligations'
 import { useFinancePaymentDrawer } from '../hooks/useFinancePaymentDrawer'
-import { useCallback, useMemo } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 
 const paymentCategoryOptions: { label: PaymentCategory; value: PaymentCategory }[] = [
   { label: 'Fatura', value: 'Fatura' },
@@ -243,6 +245,33 @@ export function PaymentsPage() {
   const snapshotQuery = useFinanceSnapshot()
   const invalidateSnapshot = useInvalidateFinanceSnapshot()
   const { drawerProps, openPaymentDrawer } = useFinancePaymentDrawer()
+  /** Tahmini tutarı tazelenen ödeme (butonu kilitler). */
+  const [updatingPaymentId, setUpdatingPaymentId] = useState<string | null>(null)
+
+  const transactionHistory = snapshotQuery.data?.transactionHistory ?? []
+
+  /**
+   * Tahmini tutarı gerçekleşen ödemelerin ortasına çeker. Yalnız `amount`
+   * değişir: tutar durumu "tahmini" kalır, çünkü hâlâ tahmindir — sadece
+   * güncel bir tahmindir.
+   */
+  async function applyEstimate(
+    payment: Payment,
+    amount: number,
+    reload: () => Promise<void>,
+    setError: (message: string) => void,
+  ) {
+    setUpdatingPaymentId(payment.id)
+    const result = await saveCrudRow('payments', { amount }, payment.id)
+    setUpdatingPaymentId(null)
+
+    if (!result.ok) {
+      setError(result.error.message ?? 'Tahmini tutar güncellenemedi.')
+      return
+    }
+    await reload()
+    await invalidateSnapshot()
+  }
 
   // Ortak finans snapshot'ından takvim girdisini türet: taksit/borç vadeleri
   // artan sırada, ekstrelerden yalnızca açık olanlar (eski sorgu davranışıyla bire bir).
@@ -348,7 +377,7 @@ export function PaymentsPage() {
                 data={{ ...planningData, payments }}
                 onPayObligation={(obligation) => void openObligationPayment(obligation, reload)}
               />
-              {!loading ? <PaymentsOverview rows={payments} transactionHistory={snapshotQuery.data?.transactionHistory ?? []} /> : null}
+              {!loading ? <PaymentsOverview rows={payments} transactionHistory={transactionHistory} /> : null}
             </div>
           )
         }}
@@ -393,7 +422,7 @@ export function PaymentsPage() {
         renderSubtitle={(row) => `${row.category} · ${row.status}`}
         renderDetails={(row) => [`Tutar: ${getPaymentAmountLabel(row)}`]}
         groupBy={(row) => row.category}
-        renderCard={(row, { menu }) => {
+        renderCard={(row, { menu, reload, setError }) => {
           const payment = row as Payment
           const autoCard = cardLabelById(payment.auto_source_card_id)
           const isAuto = payment.payment_method === 'bank_auto'
@@ -433,6 +462,35 @@ export function PaymentsPage() {
                   {isUrgent && !isPaid ? <Badge variant="warning" className="ml-1">{remaining} gün</Badge> : null}
                 </div>
               </div>
+
+              {/* Bayat "yaklaşık" tutar: uygulama gerçekte ne ödendiğini biliyor.
+                  Kendiliğinden DEĞİŞTİRMEZ — planlı ödeme tutarı kullanıcının
+                  taahhüdü, sessizce oynatmak "benim yazdığım sayı nerede?"
+                  sorusunu doğururdu. */}
+              {!isPaid ? (() => {
+                const suggestion = buildPaymentEstimateSuggestion(payment, transactionHistory)
+                if (!suggestion) return null
+                const busy = updatingPaymentId === payment.id
+                return (
+                  <div className="mt-2.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 rounded-lg border border-dashed border-primary/30 bg-primary/5 px-2 py-1.5">
+                    <p className="w-full text-[11px] text-ink-muted">
+                      Son {suggestion.sampleCount} ödemenin ortası{' '}
+                      <span className="font-semibold tabular-nums text-ink">
+                        {formatSeritAmount(suggestion.suggested, { decimals: 2 })}
+                      </span>{' '}
+                      — tahmini güncelleyeyim mi?
+                    </p>
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => void applyEstimate(payment, suggestion.suggested, reload, setError)}
+                      className="tap-target ml-auto shrink-0 rounded-md px-2 py-1 text-[11px] font-bold text-primary hover:bg-primary/10 disabled:opacity-50"
+                    >
+                      {busy ? 'Güncelleniyor…' : 'Güncelle'}
+                    </button>
+                  </div>
+                )
+              })() : null}
 
               {isAuto && autoCard ? (
                 <p className="mt-2.5 text-[11px] font-semibold text-info/70">
