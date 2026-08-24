@@ -1,5 +1,6 @@
 import { Link2, Pencil, Plus, Target, Trash2, Trophy } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../../auth/useAuth'
 import { SimpleModal } from '../SimpleModal'
 import { Alert } from '../ui/alert'
@@ -25,7 +26,9 @@ import type {
   SavingsGoalValueType,
 } from '../../types/database'
 import { useBalancePrivacy } from '../../hooks/useBalancePrivacy'
-import { useKasaBuckets } from '../../hooks/useSafeToSpend'
+import { KASA_BUCKETS_QUERY_KEY, useKasaBuckets } from '../../hooks/useSafeToSpend'
+import { contributeToGoalBucket, insertKasaBucket, updateKasaBucket } from '../../data/repositories/kasaBucketsRepo'
+import { bucketForGoal, buildGoalBucketPlan } from '../../utils/goalBucket'
 import { useMarketRates } from '../../hooks/useMarketRates'
 import { useStockPrices } from '../../hooks/useStockPrices'
 import { formatDate } from '../../utils/date'
@@ -63,6 +66,9 @@ type ComponentDraft = {
   target_amount: string
   current_amount: string
 }
+
+/** Formdaki "yeni kova" seçeneği; gerçek bir kova id'siyle çakışmasın diye sabit. */
+const NEW_BUCKET = '__new__'
 
 /**
  * Formdaki tek takip kaynağı. `ownerKey` null ise hedefin kendisine, dolu ise o
@@ -216,7 +222,12 @@ export function SavingsGoalsPanel({
   const [note, setNote] = useState('')
   const [componentDrafts, setComponentDrafts] = useState<ComponentDraft[]>(defaultCompositeDrafts())
   const [formError, setFormError] = useState('')
+  /** Formdaki kasa kovası seçimi: '' = yok, NEW_BUCKET = hedef adıyla yeni kova, aksi hâlde kova id'si. */
+  const [bucketChoice, setBucketChoice] = useState('')
+  /** "Bu ay ayır" basılan hedef (butonu kilitler). */
+  const [contributingGoalId, setContributingGoalId] = useState<string | null>(null)
 
+  const queryClient = useQueryClient()
   const buckets = bucketsQuery.data
 
   const refs = useMemo<GoalSourceRefs>(
@@ -306,6 +317,7 @@ export function SavingsGoalsPanel({
     setNote('')
     setComponentDrafts(defaultCompositeDrafts())
     setSourceDrafts([])
+    setBucketChoice('')
     setFormError('')
     setModalOpen(true)
   }
@@ -343,8 +355,60 @@ export function SavingsGoalsPanel({
         .filter((source) => source.goal_id === goal.id)
         .map((source) => ({ key: source.id, ownerKey: source.component_id, token: goalSourceToken(source) })),
     )
+    setBucketChoice(buckets ? (bucketForGoal(goal.id, buckets)?.id ?? '') : '')
     setFormError('')
     setModalOpen(true)
+  }
+
+  /**
+   * Hedefin kova bağını forma göre kurar/koparır. Hedef RPC'siyle aynı
+   * transaction'da DEĞİL (ayrı tablo): hedef yazıldıktan sonra çalışır ve
+   * düşerse hedef kaydı korunur, kullanıcıya uyarı gider.
+   */
+  async function syncGoalBucket(goalId: string, goalName: string): Promise<string | null> {
+    const current = buckets ? bucketForGoal(goalId, buckets) : null
+
+    if (bucketChoice === '') {
+      if (!current) return null
+      const result = await updateKasaBucket(current.id, { goal_id: null })
+      return result.ok ? null : (result.error.message ?? 'Kova bağı kaldırılamadı.')
+    }
+
+    if (bucketChoice === NEW_BUCKET) {
+      if (!user) return null
+      const result = await insertKasaBucket({
+        user_id: user.id,
+        name: goalName,
+        reserved_amount: 0,
+        sort_order: (buckets?.length ?? 0) + 1,
+        note: null,
+        goal_id: goalId,
+      })
+      return result.ok ? null : (result.error.message ?? 'Kova oluşturulamadı.')
+    }
+
+    if (current?.id === bucketChoice) return null
+
+    // Önce eski bağı kopar: hedef başına tek kova (DB'de unique index).
+    if (current) {
+      const unlink = await updateKasaBucket(current.id, { goal_id: null })
+      if (!unlink.ok) return unlink.error.message ?? 'Eski kova bağı kaldırılamadı.'
+    }
+    const result = await updateKasaBucket(bucketChoice, { goal_id: goalId })
+    return result.ok ? null : (result.error.message ?? 'Kova bağlanamadı.')
+  }
+
+  /** Plan kadar kovaya ayırır; harcanabilir tutar bu andan sonra gerçekten azalır. */
+  async function contributeToGoal(goalId: string, bucketId: string, amount: number) {
+    setContributingGoalId(goalId)
+    const result = await contributeToGoalBucket(bucketId, amount)
+    setContributingGoalId(null)
+
+    if (!result.ok) {
+      setError(result.error.message ?? 'Kovaya ayrılamadı.')
+      return
+    }
+    await queryClient.invalidateQueries({ queryKey: KASA_BUCKETS_QUERY_KEY })
   }
 
   /** Öneriyi tek tıkla uygular: hedefin alanlarına dokunmadan kaynağı bağlar. */
@@ -533,6 +597,14 @@ export function SavingsGoalsPanel({
         isComposite,
       })
       if (!result.ok) throw new Error(result.error.message)
+
+      // Kova bağı ayrı tabloda; hedef yazıldıktan SONRA kurulur. Düşerse hedef
+      // kaydı korunur ve kullanıcı "hiç kaydolmadı" sanmasın diye uyarı görür.
+      const bucketError = valueType === 'TRY' ? await syncGoalBucket(result.data, trimmedName) : null
+      if (bucketError) {
+        setError(`Hedef kaydedildi ama kasa kovası bağlanamadı: ${bucketError}`)
+      }
+      await queryClient.invalidateQueries({ queryKey: KASA_BUCKETS_QUERY_KEY })
 
       setModalOpen(false)
       await loadData()
@@ -730,6 +802,58 @@ export function SavingsGoalsPanel({
                           {missingSourceCount} takip kaynağı bulunamadı; tutar eksik olabilir.
                         </p>
                       ) : null}
+                      {(() => {
+                        const plan = buildGoalBucketPlan(goal, buckets ? bucketForGoal(goal.id, buckets) : null, sources)
+                        if (!plan) return null
+                        const busy = contributingGoalId === goal.id
+                        return (
+                          <div className="mt-1.5 rounded-lg bg-raised px-2 py-1.5 ring-1 ring-line-strong">
+                            <p className="text-[11px] text-ink-muted">
+                              Kasada ayrılan:{' '}
+                              <span className="font-semibold tabular-nums text-ink">{formatAmount(plan.reserved)}</span>
+                              {plan.contributedThisMonth ? <span className="text-success"> · bu ay ayrıldı</span> : null}
+                            </p>
+                            {plan.monthlyNeeded > 0 ? (
+                              <div className="mt-1 flex items-center gap-2">
+                                <span className="min-w-0 flex-1 text-[11px] text-ink-muted">
+                                  {plan.contributedThisMonth ? 'Bu ayın planı' : 'Bu ay ayrılacak'}:{' '}
+                                  <span className="font-semibold tabular-nums text-ink">{formatAmount(plan.monthlyNeeded)}</span>
+                                </span>
+                                <button
+                                  type="button"
+                                  disabled={busy}
+                                  onClick={() => void contributeToGoal(goal.id, plan.bucket.id, plan.monthlyNeeded)}
+                                  className="tap-target shrink-0 rounded-md px-2 py-1 text-[11px] font-bold text-primary hover:bg-primary/10 disabled:opacity-50"
+                                >
+                                  {busy ? 'Ayrılıyor…' : plan.contributedThisMonth ? 'Tekrar ayır' : 'Ayır'}
+                                </button>
+                              </div>
+                            ) : null}
+                            {/* Kova hedefin KAYNAĞI değilse ayrılan nakit ilerlemeye
+                                yansımaz; "ayırdım ama yüzde artmadı" şaşkınlığını
+                                yaşatmadan önce söyle. */}
+                            {!plan.fundsProgress ? (
+                              <p className="mt-0.5 text-[11px] text-ink-faint">
+                                Bu para hedefe ayrılmış nakittir; ilerleme takip kaynağından hesaplanır.
+                                {/* Hedefin başka kaynağı yoksa ayırdığın para ilerlemeye
+                                    HİÇ yansımaz; kovayı kaynak yapmak tek tık uzakta
+                                    olsun. Başka kaynağı varsa (ör. hisse portföyü) bu
+                                    gerçekten ayrı bir kap — önerme. */}
+                                {!sources.some((source) => source.goal_id === goal.id) ? (
+                                  <button
+                                    type="button"
+                                    disabled={linkingGoalId === goal.id}
+                                    onClick={() => void applySuggestedSource(goal, `bucket:${plan.bucket.id}`)}
+                                    className="tap-target ml-1 font-bold text-primary hover:underline disabled:opacity-50"
+                                  >
+                                    Bu kovayı kaynak yap
+                                  </button>
+                                ) : null}
+                              </p>
+                            ) : null}
+                          </div>
+                        )
+                      })()}
                       {(() => {
                         const suggestion = suggestionByGoal.get(goal.id)
                         if (!suggestion) return null
@@ -951,8 +1075,11 @@ export function SavingsGoalsPanel({
                 {valueType === 'TRY' ? (
                   <>
                     <MoneyInput label="Hedef miktar" value={targetAmount} onValueChange={setTargetAmount} required />
+                    {/* Zorunlu DEĞİL: MoneyInput 0'ı boşa çeviriyor (blur), zorunlu
+                        alanla birleşince "henüz hiç birikmedim" diyen yeni hedef
+                        kaydedilemiyordu. Boş = 0. */}
                     {goalIsLinked ? null : (
-                      <MoneyInput label="Biriken miktar" value={currentAmount} onValueChange={setCurrentAmount} required />
+                      <MoneyInput label="Biriken miktar" value={currentAmount} onValueChange={setCurrentAmount} />
                     )}
                   </>
                 ) : (
@@ -964,7 +1091,8 @@ export function SavingsGoalsPanel({
                     {goalIsLinked ? null : (
                       <label className="block text-sm font-medium">
                         Biriken miktar
-                        <Input value={currentAmount} onChange={(e) => setCurrentAmount(e.target.value)} type="text" inputMode="decimal" className="mt-1 tabular-nums" required />
+                        {/* Zorunlu değil: boş = 0 ("henüz birikmedim"). */}
+                        <Input value={currentAmount} onChange={(e) => setCurrentAmount(e.target.value)} type="text" inputMode="decimal" className="mt-1 tabular-nums" />
                       </label>
                     )}
                   </>
@@ -1021,6 +1149,36 @@ export function SavingsGoalsPanel({
               ) : null}
             </>
           )}
+
+          {/* Kasa kovası yalnız TL hedefte anlamlı: kova TL rezerv tutar, gram
+              hedefinin "aylık gerekli"si gram cinsindendir. */}
+          {valueType === 'TRY' ? (
+            <label className="block text-sm font-medium">
+              Kasa kovası
+              {/* aria-label açık veriliyor: <label> içeriği seçeneklerle birleşince
+                  erişilebilir ad "Kasa kovasıYok — …" gibi çıkıyor ve başka
+                  alanların adıyla çakışıyordu. */}
+              <Select
+                value={bucketChoice}
+                aria-label="Kasa kovası"
+                onChange={(e) => setBucketChoice(e.target.value)}
+                className="mt-1"
+              >
+                <option value="">Yok — harcanabilirden düşme</option>
+                <option value={NEW_BUCKET}>Yeni kova oluştur</option>
+                {(buckets ?? [])
+                  .filter((bucket) => !bucket.goal_id || (editing && bucket.goal_id === editing.id))
+                  .map((bucket) => (
+                    <option key={bucket.id} value={bucket.id}>
+                      {bucket.name}
+                    </option>
+                  ))}
+              </Select>
+              <span className="mt-1 block text-xs font-normal text-ink-muted">
+                Yeni kova hedefin adıyla açılır. Kovaya ayırdığın para "bu ay harcayabilirim" tutarından düşer; ayırma her ay tek tıkla yapılır.
+              </span>
+            </label>
+          ) : null}
 
           <div className="grid grid-cols-2 gap-3">
             <label className="block text-sm font-medium">

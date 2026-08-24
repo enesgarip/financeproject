@@ -41,6 +41,22 @@ export async function updateKasaBucket(
   return ok(data as KasaBucket)
 }
 
+/**
+ * Hedef planı kadar kovaya ekler ve ayın damgasını basar.
+ *
+ * Artırım RPC'de: client'ta oku-değiştir-yaz yapılsaydı iki sekme aynı anda
+ * ayırdığında biri diğerini ezerdi. Dönen değer ayırma sonrası toplam rezerv.
+ */
+export async function contributeToGoalBucket(bucketId: string, amount: number): Promise<Result<number>> {
+  const { data, error } = await supabase.rpc('contribute_to_goal_bucket', {
+    p_bucket_id: bucketId,
+    p_amount: amount,
+  })
+
+  if (error) return fail(appErrorFromSupabase(error, 'Kovaya ayrılamadı.'))
+  return ok(Number(data ?? 0))
+}
+
 export async function deleteKasaBucket(id: string): Promise<Result<void>> {
   const { error } = await supabase.from('kasa_buckets').delete().eq('id', id)
   return voidResultFromSupabase(error, 'Kova silinemedi.')

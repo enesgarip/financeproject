@@ -4,7 +4,6 @@ import {
   appErrorFromSupabase,
   fail,
   ok,
-  resultFromSupabase,
   voidResultFromSupabase,
   type AppError,
   type Result,
@@ -79,7 +78,7 @@ export async function upsertSavingsGoalWithComponents(input: {
   components: SavingsGoalComponentInput[]
   sources: SavingsGoalSourceInput[]
   isComposite: boolean
-}): Promise<Result<void>> {
+}): Promise<Result<string>> {
   const { data, error } = await supabase.rpc('upsert_savings_goal', {
     p_goal_id: input.editingGoal?.id ?? null,
     p_name: input.goalFields.name,
@@ -113,8 +112,10 @@ export async function upsertSavingsGoalWithComponents(input: {
     })),
   })
 
-  if (error) return voidResultFromSupabase(error, 'Hedef kaydedilemedi.')
+  // Dönen kimlik yeni hedefte gerekiyor: kasa kovası bağı hedef yazıldıktan
+  // SONRA kurulur (ayrı tablo), bağlanacak satırın id'si buradan gelir.
+  if (error) return fail(appErrorFromSupabase(error, 'Hedef kaydedilemedi.'))
   if (!data) return fail({ type: 'unknown', message: 'Hedef kimliği oluşturulamadı.' })
 
-  return resultFromSupabase(undefined, null)
+  return ok(String(data))
 }
