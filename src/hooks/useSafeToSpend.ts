@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { useCallback, useEffect, useState } from 'react'
+import { useAuth } from '../auth/useAuth'
 import { fetchKasaBuckets } from '../data/repositories/kasaBucketsRepo'
 import type { CashFlowSummary } from '../utils/financeSummary'
 import { totalReservedTL } from '../utils/kasaMode'
@@ -67,8 +68,13 @@ export type KasaReservedState = {
  * hem seçim listesini hem de bağlı kovanın tutarını buradan okur.
  */
 export function useKasaBuckets() {
+  const { user } = useAuth()
+  // userId anahtarda (hesap değişiminde eski liste sızmasın), enabled auth'u
+  // bekler (401/boş ilk atış yok). Invalidation'lar KASA_BUCKETS_QUERY_KEY
+  // prefix'iyle çalıştığı için mevcut çağıranlar değişmedi.
   return useQuery({
-    queryKey: KASA_BUCKETS_QUERY_KEY,
+    queryKey: [...KASA_BUCKETS_QUERY_KEY, user?.id],
+    enabled: Boolean(user),
     queryFn: async () => {
       const result = await fetchKasaBuckets()
       if (!result.ok) {

@@ -79,21 +79,25 @@ function AiSummaryButton({ data }: { data: AnalysisData }) {
   const [open, setOpen] = useState(false)
   const [copied, setCopied] = useState(false)
 
+  // Rapor yalnız modal açıkken üretilir: butonun kendisi için tam finansal
+  // rapor + markdown serileştirmesi yapmak her data değişiminde boşa işti.
   const report = useMemo(
     () =>
-      buildFinancialReport({
-        assets: data.assets,
-        cards: data.cards,
-        loans: data.loans,
-        loanInstallments: data.loanInstallments,
-        debts: data.debts,
-        payments: data.payments,
-        salaryHistory: data.salaryHistory,
-        cardInstallments: data.cardInstallments,
-      }),
-    [data],
+      open
+        ? buildFinancialReport({
+            assets: data.assets,
+            cards: data.cards,
+            loans: data.loans,
+            loanInstallments: data.loanInstallments,
+            debts: data.debts,
+            payments: data.payments,
+            salaryHistory: data.salaryHistory,
+            cardInstallments: data.cardInstallments,
+          })
+        : null,
+    [open, data],
   )
-  const markdown = useMemo(() => reportToMarkdown(report), [report])
+  const markdown = useMemo(() => (report ? reportToMarkdown(report) : ''), [report])
 
   async function copyMarkdown() {
     try {
@@ -122,7 +126,7 @@ function AiSummaryButton({ data }: { data: AnalysisData }) {
               {copied ? <Check /> : <Copy />}
               {copied ? 'Kopyalandı' : 'AI için kopyala (Markdown)'}
             </Button>
-            <Button type="button" variant="outline" onClick={() => printFinancialReport(report)}>
+            <Button type="button" variant="outline" onClick={() => report && printFinancialReport(report)}>
               <Download />
               Yazdır / PDF
             </Button>

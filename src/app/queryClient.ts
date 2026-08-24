@@ -7,6 +7,10 @@ export const queryClient = new QueryClient({
     queries: {
       // Pencere odağı/route değişiminde 30 sn'den taze veriyi yeniden çekme.
       staleTime: 30_000,
+      // Snapshot'ı okumayan sayfalarda gezinirken observer kalmıyor; varsayılan
+      // 5 dk'lık gcTime cache'i siliyor ve Dashboard'a dönüş soğuk fetch +
+      // tam skeleton oluyordu. Satırlar küçük, 30 dk bellekte tutmak ucuz.
+      gcTime: 30 * 60_000,
       retry: 1,
       refetchOnWindowFocus: true,
     },

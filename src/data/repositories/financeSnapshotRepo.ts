@@ -158,14 +158,19 @@ export async function postDueCardInstallments(): Promise<Result<number>> {
  * işler, ardından canlı kurla otomatik değerlenen satırları tazeler. Kart talimatlı
  * ödemeler BM-5'ten beri proaktif yazılmaz — kayıt SMS/ekstre importundan gelir.
  * Kur senkronu best-effort'tur; bakım RPC hataları migration/RPC drift'i dahil görünür kalır.
+ *
+ * Dönüş: bakımın DEĞİŞTİRDİĞİ satır toplamı (taksit + kesim + değerleme). 0 ise
+ * çağıranın snapshot'ı yeniden çekmesi gerekmez — çoğu koşuda durum budur.
  */
-export async function runFinanceMaintenance(): Promise<void> {
+export async function runFinanceMaintenance(): Promise<number> {
   const valuationSync = (async () => {
     try {
       const snapshot = await ensureRatesLoaded()
-      await syncAutoValuedRows(snapshot)
+      const result = await syncAutoValuedRows(snapshot)
+      return result.updated
     } catch {
       // Kur kaynağı erişilemezse son kayıtlı değerlemeyle devam edilir.
+      return 0
     }
   })()
 
@@ -177,5 +182,5 @@ export async function runFinanceMaintenance(): Promise<void> {
     throw new Error(financeMaintenanceErrorMessage(maintenanceError))
   }
 
-  await valuationSync
+  return (cardInstallments.data ?? 0) + (statementCut.data ?? 0) + (await valuationSync)
 }

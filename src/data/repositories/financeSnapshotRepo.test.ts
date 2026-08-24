@@ -27,7 +27,7 @@ describe('financeSnapshotRepo.runFinanceMaintenance', () => {
     mocks.rpc.mockReset()
     mocks.syncAutoValuedRows.mockReset()
     mocks.ensureRatesLoaded.mockResolvedValue({ rates: 'snapshot' })
-    mocks.syncAutoValuedRows.mockResolvedValue(undefined)
+    mocks.syncAutoValuedRows.mockResolvedValue({ updated: 1, assets: 1, debts: 0, goals: 0, failed: 0 })
   })
 
   it('runs maintenance RPCs and best-effort valuation sync', async () => {
@@ -35,7 +35,9 @@ describe('financeSnapshotRepo.runFinanceMaintenance', () => {
       .mockResolvedValueOnce({ data: 2, error: null })
       .mockResolvedValueOnce({ data: 3, error: null })
 
-    await expect(runFinanceMaintenance()).resolves.toBeUndefined()
+    // Dönüş = değişen satır toplamı (2 taksit + 3 kesim + 1 değerleme);
+    // çağıran 0'da snapshot invalidation'ını atlar.
+    await expect(runFinanceMaintenance()).resolves.toBe(6)
 
     // BM-5: kart talimatlı ödemeler proaktif yazılmaz (post_due_card_auto_payments kaldırıldı).
     expect(mocks.rpc).toHaveBeenNthCalledWith(1, 'post_due_card_installments')
@@ -57,5 +59,14 @@ describe('financeSnapshotRepo.runFinanceMaintenance', () => {
       'Finans bakım altyapısı canlı veritabanında henüz görünmüyor. Beklenen migration/RPC deploy edilince bu işlem açılacak. Supabase kodu: PGRST202.',
     )
     expect(mocks.syncAutoValuedRows).toHaveBeenCalledWith({ rates: 'snapshot' })
+  })
+
+  it('returns 0 when maintenance touches nothing so callers can skip the snapshot refetch', async () => {
+    mocks.syncAutoValuedRows.mockResolvedValue({ updated: 0, assets: 0, debts: 0, goals: 0, failed: 0 })
+    mocks.rpc
+      .mockResolvedValueOnce({ data: 0, error: null })
+      .mockResolvedValueOnce({ data: 0, error: null })
+
+    await expect(runFinanceMaintenance()).resolves.toBe(0)
   })
 })
