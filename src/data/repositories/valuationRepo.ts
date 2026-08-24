@@ -28,9 +28,26 @@ export async function fetchAutoValuedDebts(): Promise<Result<Debt[]>> {
   return resultFromSupabase((data ?? []) as Debt[], error, 'Otomatik değerlenen borçlar yüklenemedi.')
 }
 
+/**
+ * Takip kaynağına bağlı hedefler DIŞARIDA bırakılır: onların `current_amount`'ı
+ * DB'de 0'dır (tutar okuma anında varlıklardan türetilir), dolayısıyla buradan
+ * hesaplanacak TL karşılığı da 0 olurdu ve saklanan değeri sıfırlardı.
+ */
 export async function fetchAutoValuedGoals(): Promise<Result<SavingsGoal[]>> {
-  const { data, error } = await supabase.from('savings_goals').select('*').eq('auto_valued', true).eq('status', 'active')
-  return resultFromSupabase((data ?? []) as SavingsGoal[], error, 'Otomatik değerlenen hedefler yüklenemedi.')
+  const [goalsResult, linkedResult] = await Promise.all([
+    supabase.from('savings_goals').select('*').eq('auto_valued', true).eq('status', 'active'),
+    supabase.from('savings_goal_sources').select('goal_id').is('component_id', null),
+  ])
+
+  if (goalsResult.error) {
+    return resultFromSupabase([] as SavingsGoal[], goalsResult.error, 'Otomatik değerlenen hedefler yüklenemedi.')
+  }
+
+  // Kaynak tablosu okunamadıysa (henüz kurulmamış ortam) eski davranış sürer.
+  const linkedGoalIds = new Set((linkedResult.data ?? []).map((row) => row.goal_id))
+  const rows = ((goalsResult.data ?? []) as SavingsGoal[]).filter((goal) => !linkedGoalIds.has(goal.id))
+
+  return resultFromSupabase(rows, null, 'Otomatik değerlenen hedefler yüklenemedi.')
 }
 
 /**

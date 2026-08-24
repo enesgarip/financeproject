@@ -172,6 +172,7 @@ From the current typed schema, main tables are:
 - `budgets`
 - `savings_goals`
 - `savings_goal_components`
+- `savings_goal_sources` (hedefin biriken tutarını türettiği kaynaklar: varlık / kategori / tüm varlıklar / banka hesabı / kasa kovası)
 - `card_installments`
 - `card_statement_archives`
 - `card_statement_payments`

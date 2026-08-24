@@ -1,4 +1,4 @@
-import { Pencil, Plus, Target, Trash2, Trophy } from 'lucide-react'
+import { Link2, Pencil, Plus, Target, Trash2, Trophy } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAuth } from '../../auth/useAuth'
 import { SimpleModal } from '../SimpleModal'
@@ -9,12 +9,36 @@ import { Card, CardContent } from '../ui/card'
 import { Input, Select, Textarea } from '../ui/input'
 import { Progress } from '../ui/progress'
 import { useConfirmDialog } from '../ui/use-confirm-dialog'
-import { deleteSavingsGoal, fetchSavingsGoalsRows, upsertSavingsGoalWithComponents } from '../../data/repositories/savingsGoalsRepo'
-import type { InsertFor, SavingsGoal, SavingsGoalComponent, SavingsGoalValueType } from '../../types/database'
+import {
+  deleteSavingsGoal,
+  fetchSavingsGoalsRows,
+  upsertSavingsGoalWithComponents,
+  type SavingsGoalComponentInput,
+  type SavingsGoalSourceInput,
+} from '../../data/repositories/savingsGoalsRepo'
+import type {
+  Asset,
+  Card as FinanceCard,
+  SavingsGoal,
+  SavingsGoalComponent,
+  SavingsGoalSource,
+  SavingsGoalValueType,
+} from '../../types/database'
 import { useBalancePrivacy } from '../../hooks/useBalancePrivacy'
+import { useKasaBuckets } from '../../hooks/useSafeToSpend'
 import { useMarketRates } from '../../hooks/useMarketRates'
+import { useStockPrices } from '../../hooks/useStockPrices'
 import { formatDate } from '../../utils/date'
 import { parseNumber } from '../../utils/formatCurrency'
+import {
+  goalSourceLabel,
+  goalSourceOptions,
+  goalSourceToken,
+  parseGoalSourceToken,
+  resolveGoalSources,
+  resolveSavingsGoalRows,
+  type GoalSourceRefs,
+} from '../../utils/goalSources'
 import {
   formatComponentAmount,
   formatSavingsGoalAmount,
@@ -30,15 +54,28 @@ import { MoneyInput } from './MoneyInput'
 
 type ComponentDraft = {
   key: string
+  /** Kayıtlı satırın kimliği; NULL = yeni bileşen. Bağlı kaynağın hayatta kalması buna bağlı. */
+  id: string | null
   label: string
   value_type: SavingsGoalComponent['value_type']
   target_amount: string
   current_amount: string
 }
 
+/**
+ * Formdaki tek takip kaynağı. `ownerKey` null ise hedefin kendisine, dolu ise o
+ * anahtara sahip bileşene bağlıdır (kaydetmede sıra numarasına çevrilir).
+ */
+type SourceDraft = {
+  key: string
+  ownerKey: string | null
+  token: string
+}
+
 function newComponentDraft(partial?: Partial<ComponentDraft>): ComponentDraft {
   return {
     key: partial?.key ?? crypto.randomUUID(),
+    id: partial?.id ?? null,
     label: partial?.label ?? '',
     value_type: partial?.value_type ?? 'gram_altin',
     target_amount: partial?.target_amount ?? '',
@@ -46,17 +83,119 @@ function newComponentDraft(partial?: Partial<ComponentDraft>): ComponentDraft {
   }
 }
 
+/**
+ * Bir satırın (hedef ya da bileşen) takip kaynaklarını düzenler.
+ *
+ * Kaynak seçiliyken "biriken" alanı gösterilmez: tutar kaynaktan türetilir,
+ * elle girilen ikinci bir sayı tutmak ekranda hangisinin doğru olduğunu
+ * belirsizleştirirdi.
+ */
+function GoalSourceEditor({
+  drafts,
+  valueType,
+  refs,
+  formatUnit,
+  onAdd,
+  onRemove,
+}: {
+  drafts: SourceDraft[]
+  valueType: Exclude<SavingsGoalValueType, 'composite'>
+  refs: GoalSourceRefs
+  formatUnit: (amount: number) => string
+  onAdd: (token: string) => void
+  onRemove: (key: string) => void
+}) {
+  const options = useMemo(() => goalSourceOptions(refs, valueType), [refs, valueType])
+  const groups = useMemo(() => [...new Set(options.map((option) => option.group))], [options])
+  const used = new Set(drafts.map((draft) => draft.token))
+
+  const parsed = drafts.map((draft) => parseGoalSourceToken(draft.token)).filter((row) => row !== null)
+  const preview = resolveGoalSources(parsed, valueType, refs)
+
+  return (
+    <div className="space-y-2">
+      {drafts.length > 0 ? (
+        <ul className="space-y-1.5">
+          {drafts.map((draft) => {
+            const source = parseGoalSourceToken(draft.token)
+            return (
+              <li key={draft.key} className="flex items-center gap-2 rounded-lg bg-raised px-2.5 py-2 ring-1 ring-line-strong">
+                <Link2 size={14} className="shrink-0 text-primary" />
+                <span className="min-w-0 flex-1 truncate text-xs font-medium text-ink">
+                  {source ? goalSourceLabel(source, refs) : 'Bilinmeyen kaynak'}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => onRemove(draft.key)}
+                  className="tap-target shrink-0 text-xs font-semibold text-destructive"
+                >
+                  Kaldır
+                </button>
+              </li>
+            )
+          })}
+        </ul>
+      ) : null}
+
+      <Select
+        value=""
+        aria-label="Takip kaynağı ekle"
+        onChange={(event) => {
+          if (event.target.value) onAdd(event.target.value)
+        }}
+        className="h-10 text-sm"
+      >
+        <option value="">+ Kaynak ekle…</option>
+        {groups.map((group) => (
+          <optgroup key={group} label={group}>
+            {options
+              .filter((option) => option.group === group && !used.has(option.token))
+              .map((option) => (
+                <option key={option.token} value={option.token}>
+                  {option.label}
+                </option>
+              ))}
+          </optgroup>
+        ))}
+      </Select>
+
+      {drafts.length > 0 ? (
+        <p className="text-xs text-ink-muted">
+          Şu anki değer: <span className="font-semibold tabular-nums text-ink">{formatUnit(preview.amount)}</span>
+        </p>
+      ) : null}
+
+      {preview.missing.length > 0 ? (
+        <p className="text-xs font-medium text-warning">{preview.missing.length} kaynak bulunamadı (silinmiş olabilir).</p>
+      ) : null}
+      {preview.unusable.length > 0 ? (
+        <p className="text-xs font-medium text-warning">
+          {preview.unusable.length} kaynak bu hedef biriminde kullanılamıyor ve toplama katılmıyor.
+        </p>
+      ) : null}
+    </div>
+  )
+}
+
 function defaultCompositeDrafts() {
   return [newComponentDraft({ label: 'Gram altın', value_type: 'gram_altin' }), newComponentDraft({ label: 'Çeyrek altın', value_type: 'ceyrek_altin' })]
 }
 
-export function SavingsGoalsPanel({ monthlySurplus }: { monthlySurplus?: number } = {}) {
+export function SavingsGoalsPanel({
+  monthlySurplus,
+  assets = [],
+  cards = [],
+}: { monthlySurplus?: number; assets?: Asset[]; cards?: FinanceCard[] } = {}) {
   const { formatAmount } = useBalancePrivacy()
   const { user } = useAuth()
   const { snapshot } = useMarketRates()
   const { confirm, confirmDialog } = useConfirmDialog()
+  const bucketsQuery = useKasaBuckets()
+  const stockPrices = useStockPrices(assets.map((asset) => asset.symbol))
   const [goals, setGoals] = useState<SavingsGoal[]>([])
   const [components, setComponents] = useState<SavingsGoalComponent[]>([])
+  const [sources, setSources] = useState<SavingsGoalSource[]>([])
+  const [sourceDrafts, setSourceDrafts] = useState<SourceDraft[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
@@ -74,16 +213,34 @@ export function SavingsGoalsPanel({ monthlySurplus }: { monthlySurplus?: number 
   const [componentDrafts, setComponentDrafts] = useState<ComponentDraft[]>(defaultCompositeDrafts())
   const [formError, setFormError] = useState('')
 
+  const buckets = bucketsQuery.data
+
+  const refs = useMemo<GoalSourceRefs>(
+    () => ({ assets, cards, buckets: buckets ?? [], snapshot, stockPrices }),
+    [assets, cards, buckets, snapshot, stockPrices],
+  )
+
+  /**
+   * Ekranda gösterilen satırlar TÜRETİLMİŞ olanlardır: kaynağa bağlı hedefin
+   * biriken tutarı DB'de değil burada hesaplanır (bkz. utils/goalSources.ts).
+   * Aşağıdaki tüm hesaplar (ilerleme, aylık gerekli, tamamlandı rozeti) bu
+   * satırları okur; ham `goals`/`components` yalnız düzenleme formunu doldurur.
+   */
+  const resolved = useMemo(
+    () => resolveSavingsGoalRows(goals, components, sources, refs),
+    [goals, components, sources, refs],
+  )
+
   const componentsByGoal = useMemo(() => {
     const map = new Map<string, SavingsGoalComponent[]>()
-    for (const row of components) {
+    for (const row of resolved.components) {
       map.set(row.goal_id, [...(map.get(row.goal_id) ?? []), row])
     }
     for (const rows of map.values()) {
       rows.sort((a, b) => a.sort_order - b.sort_order)
     }
     return map
-  }, [components])
+  }, [resolved.components])
 
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -95,12 +252,15 @@ export function SavingsGoalsPanel({ monthlySurplus }: { monthlySurplus?: number 
       setError(result.error.message ?? 'Birikim hedefleri yüklenemedi.')
       setGoals([])
       setComponents([])
+      setSources([])
     } else {
       setGoals(result.data.goals)
-      if (result.data.componentsError) {
-        setComponents([])
-      } else {
-        setComponents(result.data.components)
+      setComponents(result.data.componentsError ? [] : result.data.components)
+      // Kaynaklar okunamadıysa bağlı hedefin tutarı türetilemez; sessizce 0
+      // göstermek yerine kullanıcıya söyle (bağsız hedefler etkilenmez).
+      setSources(result.data.sourcesError ? [] : result.data.sources)
+      if (result.data.sourcesError) {
+        setError(result.data.sourcesError.message ?? 'Hedef takip kaynakları yüklenemedi.')
       }
     }
 
@@ -124,6 +284,7 @@ export function SavingsGoalsPanel({ monthlySurplus }: { monthlySurplus?: number 
     setStatus('active')
     setNote('')
     setComponentDrafts(defaultCompositeDrafts())
+    setSourceDrafts([])
     setFormError('')
     setModalOpen(true)
   }
@@ -145,6 +306,7 @@ export function SavingsGoalsPanel({ monthlySurplus }: { monthlySurplus?: number 
         ? rows.map((row) =>
             newComponentDraft({
               key: row.id,
+              id: row.id,
               label: row.label ?? '',
               value_type: row.value_type,
               target_amount: String(row.target_amount),
@@ -152,6 +314,13 @@ export function SavingsGoalsPanel({ monthlySurplus }: { monthlySurplus?: number 
             }),
           )
         : defaultCompositeDrafts(),
+    )
+    // Bileşen taslaklarının anahtarı kayıtlı satır id'sidir; kaynak da aynı
+    // id'yi taşıdığı için sahiplik eşleşmesi ek eşlemeye gerek kalmadan kurulur.
+    setSourceDrafts(
+      sources
+        .filter((source) => source.goal_id === goal.id)
+        .map((source) => ({ key: source.id, ownerKey: source.component_id, token: goalSourceToken(source) })),
     )
     setFormError('')
     setModalOpen(true)
@@ -187,7 +356,7 @@ export function SavingsGoalsPanel({ monthlySurplus }: { monthlySurplus?: number 
     const isComposite = valueType === 'composite'
     const isGold = valueType === 'gram_altin' || valueType === 'ceyrek_altin'
 
-    let parsedComponents: InsertFor<'savings_goal_components'>[] = []
+    let parsedComponents: SavingsGoalComponentInput[] = []
 
     if (isComposite) {
       if (componentDrafts.length === 0) {
@@ -195,19 +364,22 @@ export function SavingsGoalsPanel({ monthlySurplus }: { monthlySurplus?: number 
         return
       }
 
-      const nextComponents: InsertFor<'savings_goal_components'>[] = []
+      const nextComponents: SavingsGoalComponentInput[] = []
 
       for (const [index, draft] of componentDrafts.entries()) {
         const target = parseNumber(draft.target_amount)
-        const current = parseNumber(draft.current_amount)
+        // Kaynağa bağlı bileşende biriken tutar türetilir; elle gelen değer
+        // yazılmaz (0 gönderilir, RPC de aynısını zorlar).
+        const current = sourceDrafts.some((source) => source.ownerKey === draft.key)
+          ? 0
+          : parseNumber(draft.current_amount)
         if (target <= 0) {
           setFormError(`${draft.label || 'Bileşen'} hedef miktarı 0’dan büyük olmalı.`)
           return
         }
 
         nextComponents.push({
-          user_id: user.id,
-          goal_id: '',
+          id: draft.id,
           label: draft.label.trim() || null,
           value_type: draft.value_type,
           target_amount: target,
@@ -224,12 +396,43 @@ export function SavingsGoalsPanel({ monthlySurplus }: { monthlySurplus?: number 
       }
     }
 
+    const goalLinked = !isComposite && sourceDrafts.some((source) => source.ownerKey === null)
+
+    const sourcesPayload: SavingsGoalSourceInput[] = []
+    for (const [index, draft] of sourceDrafts.entries()) {
+      const parsed = parseGoalSourceToken(draft.token)
+      if (!parsed) continue
+
+      let componentIndex: number | null = null
+      if (isComposite) {
+        componentIndex = componentDrafts.findIndex((component) => component.key === draft.ownerKey)
+        // Sahibi kaldırılmış bileşen olan kaynak hedefe DÜŞMEZ, atılır.
+        if (componentIndex < 0) continue
+      } else if (draft.ownerKey !== null) {
+        continue
+      }
+
+      sourcesPayload.push({
+        component_index: componentIndex,
+        kind: parsed.kind,
+        asset_id: parsed.asset_id,
+        asset_category: parsed.asset_category,
+        card_id: parsed.card_id,
+        bucket_id: parsed.bucket_id,
+        sort_order: index,
+      })
+    }
+
     setSaving(true)
     setFormError('')
 
     try {
+      // Bağlı hedefte biriken tutar (ve dolayısıyla TL karşılığı) türetilir;
+      // saklanan tahmini değer bayat kalacağı için yazılmaz — ekran canlı
+      // hesabı gösterir (bkz. goalSources.ts + valuationRepo'nun bağlı hedefleri
+      // otomatik değerlemeden dışlaması).
       const goalAutoValued = isGold && autoValued
-      const liveGoalValue = goalAutoValued
+      const liveGoalValue = goalAutoValued && !goalLinked
         ? valueGoal({ value_type: valueType, current_amount: parseNumber(currentAmount) }, snapshot)
         : null
       const goalFields = {
@@ -241,12 +444,14 @@ export function SavingsGoalsPanel({ monthlySurplus }: { monthlySurplus?: number 
         // ana satırın bileşenlerden ayrışmasının yoluydu (Faz D2). Kayıt sonrası
         // loadData() zaten sunucudaki doğru sayacı geri getiriyor.
         target_amount: isComposite ? 0 : parseNumber(targetAmount),
-        current_amount: isComposite ? 0 : parseNumber(currentAmount),
-        estimated_value_try: goalAutoValued
-          ? liveGoalValue ?? (estimatedValueTry.trim() ? parseNumber(estimatedValueTry) : null)
-          : isGold && estimatedValueTry.trim()
-            ? parseNumber(estimatedValueTry)
-            : null,
+        current_amount: isComposite || goalLinked ? 0 : parseNumber(currentAmount),
+        estimated_value_try: goalLinked
+          ? null
+          : goalAutoValued
+            ? liveGoalValue ?? (estimatedValueTry.trim() ? parseNumber(estimatedValueTry) : null)
+            : isGold && estimatedValueTry.trim()
+              ? parseNumber(estimatedValueTry)
+              : null,
         auto_valued: goalAutoValued,
         target_date: targetDate || null,
         status,
@@ -258,6 +463,7 @@ export function SavingsGoalsPanel({ monthlySurplus }: { monthlySurplus?: number 
         editingGoal: editing,
         goalFields,
         components: parsedComponents,
+        sources: sourcesPayload,
         isComposite,
       })
       if (!result.ok) throw new Error(result.error.message)
@@ -271,18 +477,44 @@ export function SavingsGoalsPanel({ monthlySurplus }: { monthlySurplus?: number 
     }
   }
 
-  const activeGoals = goals.filter((g) => g.status === 'active')
-  const completedGoals = goals.filter((g) => g.status === 'completed')
+  const goalSourceDrafts = sourceDrafts.filter((draft) => draft.ownerKey === null)
+  const goalIsLinked = valueType !== 'composite' && goalSourceDrafts.length > 0
+
+  /**
+   * Formdaki hedefin kaynaklardan gelen miktarı. Altın hedefinde TL önizlemesi
+   * de buradan hesaplanır; elle girilen (ve bağlıyken boş kalan) alandan değil.
+   */
+  const goalSourceAmount = useMemo(() => {
+    if (valueType === 'composite') return 0
+    const parsed = goalSourceDrafts.map((draft) => parseGoalSourceToken(draft.token)).filter((row) => row !== null)
+    return resolveGoalSources(parsed, valueType, refs).amount
+    // goalSourceDrafts her render'da yeniden türetiliyor; kimliği değil içeriği önemli.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sourceDrafts, valueType, refs])
+
+  const formCurrentAmount = goalIsLinked ? goalSourceAmount : parseNumber(currentAmount)
+
+  function addSourceDraft(ownerKey: string | null, token: string) {
+    setSourceDrafts((rows) => [...rows, { key: crypto.randomUUID(), ownerKey, token }])
+  }
+
+  function removeSourceDraft(key: string) {
+    setSourceDrafts((rows) => rows.filter((row) => row.key !== key))
+  }
+
+  const visibleGoals = resolved.goals
+  const activeGoals = visibleGoals.filter((g) => g.status === 'active')
+  const completedGoals = visibleGoals.filter((g) => g.status === 'completed')
 
   // Aktif TRY hedeflerinin toplam aylık gerekliğini bu ayki harcanabilirle (surplus)
   // kıyaslayıp "ayır / kısıtlı ayır / ara ver" önerir. Surplus geçilmezse gösterilmez.
   const savingsAdvice = useMemo(() => {
     if (monthlySurplus === undefined) return null
-    const totalNeeded = goals
+    const totalNeeded = visibleGoals
       .filter((g) => g.status === 'active' && g.value_type === 'TRY')
       .reduce((total, g) => total + (buildSavingsSuggestion(g).monthlyNeeded ?? 0), 0)
     return buildSavingsCashflowAdvice(totalNeeded, monthlySurplus)
-  }, [goals, monthlySurplus])
+  }, [visibleGoals, monthlySurplus])
 
   return (
     <section className="space-y-4">
@@ -296,7 +528,7 @@ export function SavingsGoalsPanel({ monthlySurplus }: { monthlySurplus?: number 
               <div>
                 <h2 className="text-lg font-bold text-ink">Birikim hedefleri</h2>
                 <p className="text-sm text-ink-muted">
-                  {goals.length === 0
+                  {visibleGoals.length === 0
                     ? 'TL, altın veya karma hedef ekle.'
                     : `${activeGoals.length} aktif${completedGoals.length > 0 ? ` · ${completedGoals.length} tamamlandı` : ''}`}
                 </p>
@@ -334,7 +566,7 @@ export function SavingsGoalsPanel({ monthlySurplus }: { monthlySurplus?: number 
 
       {loading ? (
         <p className="text-sm text-ink-muted">Hedefler yükleniyor...</p>
-      ) : goals.length === 0 ? (
+      ) : visibleGoals.length === 0 ? (
         <Card className="border border-dashed border-line-strong bg-page shadow-none">
           <CardContent className="flex flex-col items-center gap-2 p-8 text-center">
             <div className="grid size-14 place-items-center rounded-2xl bg-primary/8 text-primary/60">
@@ -346,10 +578,18 @@ export function SavingsGoalsPanel({ monthlySurplus }: { monthlySurplus?: number 
         </Card>
       ) : (
         <div className="grid gap-3 min-[520px]:grid-cols-2">
-          {goals.map((goal) => {
-            const rate = savingsGoalProgressRate(goal, components)
+          {visibleGoals.map((goal) => {
+            const rate = savingsGoalProgressRate(goal, resolved.components)
             const goalComponents = componentsByGoal.get(goal.id) ?? []
             const isCompleted = goal.status === 'completed'
+            // Kaynak bağlı satırların türetme sonucu: rozet + "kaynak bulunamadı"
+            // uyarısı için. Karma hedefte bağ bileşenlerde olur.
+            const goalResolution = resolved.goalResolutions.get(goal.id)
+            const componentResolutions = goalComponents
+              .map((component) => resolved.componentResolutions.get(component.id))
+              .filter((resolution) => resolution !== undefined)
+            const linkedResolutions = goalResolution ? [goalResolution, ...componentResolutions] : componentResolutions
+            const missingSourceCount = linkedResolutions.reduce((total, resolution) => total + resolution.missing.length, 0)
             const circumference = 2 * Math.PI * 36
             const strokeOffset = circumference - (circumference * Math.min(rate, 100)) / 100
 
@@ -389,6 +629,12 @@ export function SavingsGoalsPanel({ monthlySurplus }: { monthlySurplus?: number 
                             {goal.value_type !== 'TRY' ? (
                               <Badge variant="outline" className="text-[10px] px-1.5 py-0">{savingsGoalValueTypeLabel(goal.value_type)}</Badge>
                             ) : null}
+                            {linkedResolutions.length > 0 ? (
+                              <Badge variant="outline" className="flex items-center gap-1 border-primary/30 text-primary text-[10px] px-1.5 py-0">
+                                <Link2 size={10} />
+                                Varlıklardan
+                              </Badge>
+                            ) : null}
                           </div>
                         </div>
                         {/* Sil düzenlemenin yanında; hedefler birbirinin görünür
@@ -413,6 +659,11 @@ export function SavingsGoalsPanel({ monthlySurplus }: { monthlySurplus?: number 
                         </div>
                       </div>
                       <p className="mt-1.5 text-xs font-semibold tabular-nums text-ink-muted">{formatSavingsGoalProgress(goal, goalComponents)}</p>
+                      {missingSourceCount > 0 ? (
+                        <p className="mt-0.5 text-[11px] font-medium text-warning">
+                          {missingSourceCount} takip kaynağı bulunamadı; tutar eksik olabilir.
+                        </p>
+                      ) : null}
                       {goal.value_type !== 'TRY' && goal.value_type !== 'composite' && (goal.auto_valued || goal.estimated_value_try) ? (() => {
                         // "Güncel" etiketi kur alınamadığında da yazıyordu; artık
                         // saklı değere düşüldüğünde bunu söylüyor (Faz D3).
@@ -508,7 +759,12 @@ export function SavingsGoalsPanel({ monthlySurplus }: { monthlySurplus?: number 
                     {componentDrafts.length > 1 ? (
                       <button
                         type="button"
-                        onClick={() => setComponentDrafts((rows) => rows.filter((row) => row.key !== draft.key))}
+                        onClick={() => {
+                          setComponentDrafts((rows) => rows.filter((row) => row.key !== draft.key))
+                          // Bileşen gidince bağı da gitmeli; yoksa kaydetmede
+                          // sahipsiz kalan kaynak sessizce düşerdi.
+                          setSourceDrafts((rows) => rows.filter((row) => row.ownerKey !== draft.key))
+                        }}
                         className="text-xs font-semibold text-destructive"
                       >
                         Kaldır
@@ -538,33 +794,53 @@ export function SavingsGoalsPanel({ monthlySurplus }: { monthlySurplus?: number 
                     <option value="gram_altin">Gram altın</option>
                     <option value="ceyrek_altin">Çeyrek altın</option>
                   </Select>
-                  <div className="grid grid-cols-2 gap-2">
-                    {/* Bileşen değerleri TL ya da gram olabilir (`draft.value_type`),
-                        o yüzden MoneyInput değil; virgül kabul eden ondalık metin. */}
-                    <Input
-                      value={draft.current_amount}
-                      onChange={(e) =>
-                        setComponentDrafts((rows) => rows.map((row) => (row.key === draft.key ? { ...row, current_amount: e.target.value } : row)))
-                      }
-                      type="text"
-                      inputMode="decimal"
-                      aria-label={`Bileşen ${index + 1} biriken`}
-                      placeholder="Biriken"
-                      className="h-10 text-sm tabular-nums"
-                    />
-                    <Input
-                      value={draft.target_amount}
-                      onChange={(e) =>
-                        setComponentDrafts((rows) => rows.map((row) => (row.key === draft.key ? { ...row, target_amount: e.target.value } : row)))
-                      }
-                      type="text"
-                      inputMode="decimal"
-                      aria-label={`Bileşen ${index + 1} hedef`}
-                      placeholder="Hedef"
-                      className="h-10 text-sm tabular-nums"
-                      required
-                    />
-                  </div>
+                  {(() => {
+                    const componentSources = sourceDrafts.filter((source) => source.ownerKey === draft.key)
+                    const linked = componentSources.length > 0
+                    return (
+                      <>
+                        <div className={linked ? 'grid grid-cols-1' : 'grid grid-cols-2 gap-2'}>
+                          {/* Bileşen değerleri TL ya da gram olabilir (`draft.value_type`),
+                              o yüzden MoneyInput değil; virgül kabul eden ondalık metin. */}
+                          {linked ? null : (
+                            <Input
+                              value={draft.current_amount}
+                              onChange={(e) =>
+                                setComponentDrafts((rows) => rows.map((row) => (row.key === draft.key ? { ...row, current_amount: e.target.value } : row)))
+                              }
+                              type="text"
+                              inputMode="decimal"
+                              aria-label={`Bileşen ${index + 1} biriken`}
+                              placeholder="Biriken"
+                              className="h-10 text-sm tabular-nums"
+                            />
+                          )}
+                          <Input
+                            value={draft.target_amount}
+                            onChange={(e) =>
+                              setComponentDrafts((rows) => rows.map((row) => (row.key === draft.key ? { ...row, target_amount: e.target.value } : row)))
+                            }
+                            type="text"
+                            inputMode="decimal"
+                            aria-label={`Bileşen ${index + 1} hedef`}
+                            placeholder="Hedef"
+                            className="h-10 text-sm tabular-nums"
+                            required
+                          />
+                        </div>
+                        <GoalSourceEditor
+                          drafts={componentSources}
+                          valueType={draft.value_type}
+                          refs={refs}
+                          formatUnit={(amount) =>
+                            formatComponentAmount({ value_type: draft.value_type }, amount)
+                          }
+                          onAdd={(token) => addSourceDraft(draft.key, token)}
+                          onRemove={removeSourceDraft}
+                        />
+                      </>
+                    )
+                  })()}
                 </div>
               ))}
               <button
@@ -582,11 +858,13 @@ export function SavingsGoalsPanel({ monthlySurplus }: { monthlySurplus?: number 
                   alanlar gram/adet MİKTARIDIR; oraya TL önizlemesi basmak yanlış
                   olurdu, o yüzden yalnız `type="number"` yerine ondalık metin girişine
                   çevrildi — virgül sorunu orada da çözülür (denetim §6). */}
-              <div className="grid grid-cols-2 gap-3">
+              <div className={goalIsLinked ? 'grid grid-cols-1' : 'grid grid-cols-2 gap-3'}>
                 {valueType === 'TRY' ? (
                   <>
                     <MoneyInput label="Hedef miktar" value={targetAmount} onValueChange={setTargetAmount} required />
-                    <MoneyInput label="Biriken miktar" value={currentAmount} onValueChange={setCurrentAmount} required />
+                    {goalIsLinked ? null : (
+                      <MoneyInput label="Biriken miktar" value={currentAmount} onValueChange={setCurrentAmount} required />
+                    )}
                   </>
                 ) : (
                   <>
@@ -594,12 +872,38 @@ export function SavingsGoalsPanel({ monthlySurplus }: { monthlySurplus?: number 
                       Hedef miktar
                       <Input value={targetAmount} onChange={(e) => setTargetAmount(e.target.value)} type="text" inputMode="decimal" className="mt-1 tabular-nums" required />
                     </label>
-                    <label className="block text-sm font-medium">
-                      Biriken miktar
-                      <Input value={currentAmount} onChange={(e) => setCurrentAmount(e.target.value)} type="text" inputMode="decimal" className="mt-1 tabular-nums" required />
-                    </label>
+                    {goalIsLinked ? null : (
+                      <label className="block text-sm font-medium">
+                        Biriken miktar
+                        <Input value={currentAmount} onChange={(e) => setCurrentAmount(e.target.value)} type="text" inputMode="decimal" className="mt-1 tabular-nums" required />
+                      </label>
+                    )}
                   </>
                 )}
+              </div>
+
+              {/* Takip kaynağı: seçilirse biriken tutar elle girilmez, varlıklardan
+                  türetilir — "borsa hedefimi her seferinde elle güncelliyorum"
+                  sorununun çözümü budur. */}
+              <div className="space-y-2 rounded-lg border border-dashed border-line-strong bg-page p-3">
+                <div>
+                  <p className="text-sm font-semibold text-ink">Biriken tutarı nereden takip edelim?</p>
+                  <p className="text-xs text-ink-muted">
+                    {goalIsLinked
+                      ? 'Tutar seçtiğin kaynaklardan otomatik hesaplanır; elle güncellemen gerekmez.'
+                      : 'Kaynak seçmezsen biriken tutarı elle girersin.'}
+                  </p>
+                </div>
+                <GoalSourceEditor
+                  drafts={goalSourceDrafts}
+                  valueType={valueType}
+                  refs={refs}
+                  formatUnit={(amount) =>
+                    formatSavingsGoalAmount({ value_type: valueType, target_amount: 0, current_amount: 0 }, amount)
+                  }
+                  onAdd={(token) => addSourceDraft(null, token)}
+                  onRemove={removeSourceDraft}
+                />
               </div>
               {valueType === 'gram_altin' || valueType === 'ceyrek_altin' ? (
                 <div className="space-y-3">
@@ -615,7 +919,8 @@ export function SavingsGoalsPanel({ monthlySurplus }: { monthlySurplus?: number 
                       <span className="text-ink-muted">Güncel değer: </span>
                       <span className="font-mono font-semibold tabular-nums text-ink">
                         {(() => {
-                          const live = valueGoal({ value_type: valueType, current_amount: parseNumber(currentAmount) }, snapshot)
+                          // Bağlı hedefte miktar kaynaklardan gelir; elle girilen alan boştur.
+                          const live = valueGoal({ value_type: valueType, current_amount: formCurrentAmount }, snapshot)
                           return live === null ? 'Kur bekleniyor…' : formatAmount(live)
                         })()}
                       </span>

@@ -9,6 +9,7 @@ import {
   buildSearchItems,
   type AnalysisData,
 } from '../utils/analysisView'
+import { resolveSavingsGoalRows } from '../utils/goalSources'
 import { type MarketRatesSnapshot } from '../utils/marketRates'
 import { buildPriceObservations, detectPriceIncreases, type PriceTrend } from '../utils/priceIncreaseRadar'
 
@@ -63,9 +64,16 @@ export function useAnalysisPageData() {
       cardStatementArchives: snapshot.cardStatements.slice(0, STATEMENT_ARCHIVE_LIMIT),
       cardStatementPayments: snapshot.cardStatementPayments,
       budgets: snapshot.budgets,
-      savingsGoals: snapshot.savingsGoals,
+      // Kaynağa bağlı hedefin biriken tutarı DB'de değil burada oluşur; döküm
+      // ve arama sonuçları ham 0'ı değil türetilmiş tutarı göstersin.
+      savingsGoals: resolveSavingsGoalRows(
+        snapshot.savingsGoals,
+        snapshot.savingsGoalComponents,
+        snapshot.savingsGoalSources,
+        { assets: snapshot.assets, cards: snapshot.cards, snapshot: ratesSnapshot },
+      ).goals,
     }
-  }, [snapshotQuery.data])
+  }, [snapshotQuery.data, ratesSnapshot])
   const dataRef = useRef<AnalysisData>(emptyAnalysisData)
   useEffect(() => {
     dataRef.current = data

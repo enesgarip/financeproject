@@ -8,14 +8,17 @@ import type {
   CardLedger,
   CardStatementArchive,
   Debt,
+  KasaBucket,
   Loan,
   LoanInstallment,
   Payment,
   SalaryHistory,
   SavingsGoal,
   SavingsGoalComponent,
+  SavingsGoalSource,
 } from '../types/database'
 import { dateInputValue } from '../utils/date'
+import { resolveSavingsGoalRows } from '../utils/goalSources'
 import {
   checkAssets,
   checkBudgets,
@@ -46,6 +49,9 @@ export type HealthData = {
   salaryHistory: SalaryHistory[]
   savingsGoals: SavingsGoal[]
   savingsGoalComponents: SavingsGoalComponent[]
+  /** Hedeflerin takip kaynakları; biriken tutar bunlardan türetilir. */
+  savingsGoalSources: SavingsGoalSource[]
+  kasaBuckets: KasaBucket[]
 }
 
 export type HealthIssue = {
@@ -181,7 +187,18 @@ export function buildIssues(data: HealthData): HealthIssue[] {
     ...checkLoans(data.loans, data.loanInstallments),
     ...checkDebts(data.debts),
     ...checkSalary(data.salaryHistory),
-    ...checkGoals(data.savingsGoals, data.savingsGoalComponents),
+    // Hedef kontrolleri TÜRETİLMİŞ satırları görmeli: kaynağa bağlı hedefin
+    // biriken tutarı DB'de 0'dır, ham satırla bakılsa her bağlı hedef "hedefin
+    // altında" diye yanlış bulgu üretirdi. Canlı kur/fiyat burada yok; varlığın
+    // saklı değerine düşülür (valuationSync onu taze tutar).
+    ...(() => {
+      const resolved = resolveSavingsGoalRows(data.savingsGoals, data.savingsGoalComponents, data.savingsGoalSources, {
+        assets: data.assets,
+        cards: data.cards,
+        buckets: data.kasaBuckets,
+      })
+      return checkGoals(resolved.goals, resolved.components)
+    })(),
     ...checkPayments(data.payments),
   ]
 

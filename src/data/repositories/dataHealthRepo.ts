@@ -10,12 +10,14 @@ import type {
   CardStatementArchive,
   DataHealthIssueAcknowledgement,
   Debt,
+  KasaBucket,
   Loan,
   LoanInstallment,
   Payment,
   SalaryHistory,
   SavingsGoal,
   SavingsGoalComponent,
+  SavingsGoalSource,
   TableName,
   UpdateFor,
 } from '../../types/database'
@@ -79,6 +81,9 @@ export type DataHealthRows = {
   salaryHistory: SalaryHistory[]
   savingsGoals: SavingsGoal[]
   savingsGoalComponents: SavingsGoalComponent[]
+  /** Hedef takip kaynakları + çözümlemek için gereken kova listesi (goalSources.ts). */
+  savingsGoalSources: SavingsGoalSource[]
+  kasaBuckets: KasaBucket[]
 }
 
 export type UndoTableName =
@@ -115,6 +120,8 @@ export async function fetchDataHealthRows(): Promise<Result<DataHealthRows>> {
     salaryHistory,
     savingsGoals,
     savingsGoalComponents,
+    savingsGoalSources,
+    kasaBuckets,
     cardLedger,
     accountLedger,
   ] = await Promise.all([
@@ -131,6 +138,8 @@ export async function fetchDataHealthRows(): Promise<Result<DataHealthRows>> {
     fetchAllRows<SalaryHistory>('salary_history'),
     fetchAllRows<SavingsGoal>('savings_goals'),
     fetchAllRows<SavingsGoalComponent>('savings_goal_components'),
+    fetchAllRows<SavingsGoalSource>('savings_goal_sources'),
+    fetchAllRows<KasaBucket>('kasa_buckets'),
     fetchAllRows<CardLedger>('card_ledger'),
     fetchAllRows<AccountLedger>('account_ledger'),
   ])
@@ -149,6 +158,8 @@ export async function fetchDataHealthRows(): Promise<Result<DataHealthRows>> {
     salaryHistory.error,
     savingsGoals.error,
     savingsGoalComponents.error,
+    savingsGoalSources.error,
+    kasaBuckets.error,
     cardLedger.error,
     accountLedger.error,
   ].filter(Boolean)
@@ -173,6 +184,8 @@ export async function fetchDataHealthRows(): Promise<Result<DataHealthRows>> {
       salaryHistory: (salaryHistory.data ?? []) as SalaryHistory[],
       savingsGoals: (savingsGoals.data ?? []) as SavingsGoal[],
       savingsGoalComponents: (savingsGoalComponents.data ?? []) as SavingsGoalComponent[],
+      savingsGoalSources: (savingsGoalSources.data ?? []) as SavingsGoalSource[],
+      kasaBuckets: (kasaBuckets.data ?? []) as KasaBucket[],
     },
     error,
     'Veri sağlığı kayıtları yüklenemedi.',
