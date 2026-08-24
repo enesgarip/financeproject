@@ -1,6 +1,6 @@
 # Supabase RPC Action Reference
 
-Last reviewed: 2026-08-12
+Last reviewed: 2026-08-24
 
 This file maps Supabase RPCs to the user-visible actions that call them. Keep it
 updated whenever a page action, repository wrapper, or migration changes an RPC
@@ -8,6 +8,12 @@ contract.
 
 For `transaction_history` side effects, type/source conventions, and no-history
 repair rules, keep `docs/TRANSACTION_HISTORY.md` aligned with this file.
+
+## Snapshot Read
+
+| RPC | Called From | User-Visible Action | Main Effect |
+| --- | --- | --- | --- |
+| `fetch_finance_snapshot` | `fetchFinanceSnapshot` in `financeSnapshotRepo` | App open / dashboard–analysis snapshot load | Read-only (`stable`, security invoker): returns all 17 snapshot tables in one JSON payload so mobile startup pays 1 HTTP round-trip instead of 17. Window (`p_window_start`/`p_window_start_date`) and `p_statement_limit` come from the client so `SNAPSHOT_HISTORY_MONTHS`/`STATEMENT_ARCHIVE_LIMIT` keep a single source; filters/ordering are the exact twin of the legacy per-table queries. Missing OPTIONAL tables are reported in `missing_tables` (the `optionalRows` twin — a migration-pending environment degrades gracefully instead of erroring), while a missing required table still errors. If the RPC itself is not deployed yet, the repo falls back to the legacy 17-query path. Contract test: `supabase/tests/finance_snapshot_rpc.sql`; migration `20260824220000_fetch_finance_snapshot_rpc.sql`. |
 
 ## Daily Maintenance
 

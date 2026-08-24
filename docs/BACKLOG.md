@@ -1,5 +1,30 @@
 # Priority Backlog
 
+## 2026-08-24 (11) — Açılış snapshot'ı tek RPC'de — DONE
+
+Performans turunun (9) bilinçli ertelenen en yüksek etkili işi:
+`fetchFinanceSnapshot`'ın 17 ayrı PostgREST isteği tek `fetch_finance_snapshot`
+RPC'sine indi (mobilde açılış 17 HTTP round-trip yerine 1 öder).
+
+- **Korunan semantikler:** `SNAPSHOT_HISTORY_MONTHS`/`STATEMENT_ARCHIVE_LIMIT`
+  client'ta kaldı (RPC'ye parametre gider — sabit değişimi migration istemez);
+  filtre/sıralama legacy sorgularla birebir; `security invoker` + RLS (sorguda
+  user_id filtresi yok, PostgREST yolundaki gibi policy süzer).
+- **Graceful degradation İKİ katman:** RPC içinde opsiyonel tablolar
+  `to_regclass` + dinamik SQL ile taranır — eksik tablo hata değil
+  `missing_tables` kaydı (optionalRows ikizi). RPC'nin KENDİSİ yoksa repo eski
+  17-sorgu yoluna düşer; legacy yol fallback olarak dosyada yaşıyor ve
+  filtre/sıralama değişecekse RPC gövdesiyle BİRLİKTE değişmeli.
+- **Doğrulama:** `supabase/tests/finance_snapshot_rpc.sql` (payload anahtarları,
+  satır sayıları, RLS iki yönlü, pencere `>=` sınırı, sıralamalar, limit, eksik
+  tablo dalı, oturumsuz çağrı reddi) + yerel docker'da çift-yol karşılaştırması:
+  17 tablonun tamamı alan alan birebir aynı çıktı (mikrosaniyeli timestamptz,
+  Türkçe metin, numeric serileştirme dahil; json vs jsonb farkı yok çünkü float
+  kolon yok, tüm para `numeric`).
+- Dosyalar: `supabase/migrations/20260824220000_fetch_finance_snapshot_rpc.sql`,
+  `src/data/repositories/financeSnapshotRepo.ts`, `src/types/database.ts`
+  (`FinanceSnapshotRpcPayload`), `docs/RPC_ACTION_REFERENCE.md` §Snapshot Read.
+
 ## 2026-08-24 (10) — Seed demo veri seti + worktree lint onarımı — DONE
 
 Yerel doğrulama her seferinde boş ekranla ya da elle veri kurmakla
@@ -101,8 +126,8 @@ aşağıda; bilinçli yapılmayanlar listenin sonunda.
   `pool: 'threads'` (fork spawn × 110 dosya → thread; yerelde 4,2 → 3,2 sn).
   Bilinçli dokunulmayan: deploy `verify`↔`changes` bağımlılık ayrıştırması
   (deploy hattı yapısal değişikliği ayrı, tek başına bir PR ister).
-- **Bilinçli yapılmayanlar:** 17 sorgu → tek RPC snapshot (graceful-degradation
-  semantiği ayrı faz ister), CrudPage → TanStack (10+ sayfa), `sync_loan_summary`
+- **Bilinçli yapılmayanlar:** ~~17 sorgu → tek RPC snapshot~~ (2026-08-24 (11)'de
+  YAPILDI), CrudPage → TanStack (10+ sayfa), `sync_loan_summary`
   statement-level (önce invariant testi), ledger panellerine limit (projeksiyonu
   BOZAR), `card_expenses` 12 indeks budaması (önce üretimde `pg_stat_user_indexes`
   ölçümü), Dashboard detay lazy-mount + PullToRefresh transform (görsel/a11y turu
