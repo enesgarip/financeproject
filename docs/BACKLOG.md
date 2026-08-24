@@ -1,5 +1,28 @@
 # Priority Backlog
 
+## 2026-08-24 (8) — Hedefe aylık ayırma hatırlatması (push) — DONE
+
+Kovaya ayırma tek tık ama kullanıcı Planlama sayfasına girmedikçe hiç
+görünmüyordu; ay geçtikçe plan sessizce kayıyordu.
+
+- ~~**Tercih kapısı.**~~ DONE. `notification_preferences.goals_enabled`
+  (varsayılan açık) + `NotificationSettings`'te anahtar.
+- ~~**Aday.**~~ DONE. `push-notify` içinde `goal_contribution_due`: hedefe bağlı
+  kovalardan bu ay ayırma yapılmamış olanlar, hedefi AKTİF olanlar. Pencere
+  ayın **2-5'i** (1'i değil — maaş çoğu ay ilk iş gününde yatar, para girmeden
+  "ayır" demek erken; tek gün de değil — o günün cron koşusu düşerse hatırlatma
+  tamamen kaybolurdu). Dedupe `goal:<id>:<YYYY-MM>` ile aynı ay tek gönderim.
+- **Bildirimde TUTAR YOK, bilinçli:** kaynağa bağlı hedefin `current_amount`
+  kolonu DB'de 0'dır (biriken client'ta canlı fiyat/kurla türetilir), dolayısıyla
+  sunucuda hesaplanacak "kalan"/"aylık gerekli" YANLIŞ olurdu. Doğru sayı
+  ekranda; bildirim yalnız oraya çağırır.
+
+Doğrulama: migration + kolon + RLS/grant/lint denetimleri ve tüm SQL suite
+yerel docker'da yeşil; aday seçiminin SQL karşılığı gerçek veriyle koşuldu
+(bu ay ayrılmış kova ve kapanmış hedef elendi, yalnız doğru aday kaldı);
+`deno check` temiz; ayar anahtarı 375px'te doğrulandı. Gerçek push GÖNDERİMİ
+üretimde ayın 2-5'inde ilk kez denenecek — cron o pencerede çalışıyor.
+
 ## 2026-08-24 (7) — "Yaklaşık" ödeme tutarları donuktu — DONE
 
 `payments.amount_status = 'estimated'` satırlar ekranda *"Yaklaşık ₺450"* diye

@@ -34,6 +34,7 @@ type PrefFlags = {
   weekly_enabled: boolean
   cars_enabled: boolean
   provisions_enabled: boolean
+  goals_enabled: boolean
   quiet_hours_start: number | null
   quiet_hours_end: number | null
 }
@@ -45,6 +46,7 @@ const TYPE_TOGGLES: { key: NotificationTypeKey; label: string; hint: string }[] 
   { key: 'statements_enabled', label: 'Ekstre kesimi', hint: 'Kesime 3 gün kala hatırlatma' },
   { key: 'weekly_enabled', label: 'Haftalık özet & mutabakat', hint: 'Pazartesi özeti ve mutabakat hatırlatması' },
   { key: 'provisions_enabled', label: 'Taksit onayı bekleyen provizyon', hint: 'Otomatik tek çekim kesinleşmeden önce hatırlat' },
+  { key: 'goals_enabled', label: 'Hedefe aylık ayırma', hint: 'Ay başında kovaya ayırma yapılmadıysa hatırlat' },
 ]
 
 const NOTIFICATION_TYPE_LABELS: Record<string, string> = {
@@ -55,6 +57,7 @@ const NOTIFICATION_TYPE_LABELS: Record<string, string> = {
   weekly_summary: 'Haftalık özet',
   reconciliation_stale_weekly: 'Mutabakat hatırlatması',
   provision_installment_pending: 'Provizyon taksit onayı',
+  goal_contribution_due: 'Hedefe aylık ayırma',
   test: 'Test bildirimi',
 }
 
@@ -106,6 +109,7 @@ export function NotificationSettings() {
         statements_enabled: row.statements_enabled,
         weekly_enabled: row.weekly_enabled,
         cars_enabled: row.cars_enabled,
+        goals_enabled: row.goals_enabled,
         // Kolon yeni: migration'dan önceki satırlarda undefined gelebilir.
         provisions_enabled: row.provisions_enabled ?? true,
         quiet_hours_start: row.quiet_hours_start,
