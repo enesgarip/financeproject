@@ -1,5 +1,26 @@
 # Priority Backlog
 
+## 2026-08-24 (2) — Kaynak önerisi + kesim günü etkisi — DONE
+
+Hedef takip kaynaklarının (aynı gün, bir önceki madde) devamı. İki küçük
+müdahale; ikisi de uygulamanın ZATEN bildiği ama karar anında söylemediği şeyi
+söylüyor.
+
+- ~~**Kaynak önerisi.**~~ DONE. `suggestGoalSource` (saf): kaynağı olmayan aktif
+  hedefin elle girdiği tutar bir kaynağın toplamına %2'den yakınsa hedef kartında
+  *"Hisse (tümü) toplamın ₺350.000 — bağlayıp otomatik güncelleyeyim mi?"* şeridi
+  + tek tık "Bağla". Eşitlikte tek varlık yerine KATEGORİ önerilir (sonraki alım
+  da kapsansın). Öneri; bağlama kullanıcının onayıyla.
+- ~~**Kesim günü etkisi.**~~ DONE. `utils/purchaseTiming.ts` (+7 test): hızlı
+  harcama formunda *"Kesime 3 gün kaldı: bugün alırsan 13 gün sonra, kesimden
+  sonraya bırakırsan 39 gün sonra ödersin."* Yalnız kesim ≤5 gün uzaktayken
+  gösterilir (3 hafta sonrası için "beklesen" demek gürültü). Dönem/vade
+  matematiği çoğaltılmadı — `getCardStatementPeriod`'a delege eder.
+
+**Sıradaki (kullanıcıyla kararlaştırıldı):** hedef → kasa kovası (tek tık ayır),
+istek listesinde "ne zaman alabilirim + hedef gecikmesi", hedef çıpası
+(altın/USD + gider katı).
+
 ## 2026-08-24 — Hedefleri varlıklara bağlama (takip kaynağı) — DONE
 
 Sorun: "Borsa: 1M TL" hedefinin biriken tutarı elle giriliyordu; portföy her gün

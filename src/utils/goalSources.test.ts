@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Asset, Card, KasaBucket, SavingsGoal, SavingsGoalComponent, SavingsGoalSource } from '../types/database'
-import { goalSourceLabel, resolveGoalSources, resolveSavingsGoalRows } from './goalSources'
+import { goalSourceLabel, resolveGoalSources, resolveSavingsGoalRows, suggestGoalSource } from './goalSources'
 import type { MarketRatesSnapshot } from './marketRates'
 
 const base = { id: 'id', user_id: 'u', created_at: '2026-08-01T00:00:00.000Z', updated_at: '2026-08-01T00:00:00.000Z' }
@@ -261,6 +261,51 @@ describe('resolveSavingsGoalRows', () => {
 
     expect(result.goals[0].current_amount).toBe(7_500)
     expect(result.goals[1].current_amount).toBe(5)
+  })
+})
+
+describe('suggestGoalSource', () => {
+  it('elle girilen tutar bir kaynağın toplamına yakınsa onu önerir', () => {
+    // Hisse toplamı 350.000; kullanıcı 348.000 yazmış (%0,57 sapma).
+    const suggestion = suggestGoalSource(goal({ id: 'g1', current_amount: 348_000 }), refs)
+
+    expect(suggestion?.token).toBe('cat:Hisse')
+    expect(suggestion?.amount).toBe(350_000)
+  })
+
+  it('eşik dışındaki sapmada öneri yapmaz', () => {
+    // 200.000 hiçbir kaynağın toplamına (25k, 28k, 50k, 120k, 148k, 300k, 350k, 523k) yakın değil.
+    expect(suggestGoalSource(goal({ id: 'g1', current_amount: 200_000 }), refs)).toBeNull()
+  })
+
+  it('eşitlikte tek varlık yerine kategoriyi önerir (yeni alım da kapsansın)', () => {
+    // Tek hisseli portföyde "THYAO" ile "Hisse (tümü)" aynı tutarı verir.
+    const single = {
+      ...refs,
+      assets: [portfolio[0]],
+    }
+    const suggestion = suggestGoalSource(goal({ id: 'g1', current_amount: 300_000 }), single)
+
+    expect(suggestion?.token).toBe('cat:Hisse')
+  })
+
+  it('karma hedefte ve biriken 0 iken öneri üretmez', () => {
+    expect(suggestGoalSource(goal({ id: 'g1', value_type: 'composite', current_amount: 350_000 }), refs)).toBeNull()
+    expect(suggestGoalSource(goal({ id: 'g1', current_amount: 0 }), refs)).toBeNull()
+  })
+
+  it('boş kaynağı (0 TL kategori) önermez', () => {
+    const empty = { ...refs, assets: [], cards: [], buckets: [] }
+    expect(suggestGoalSource(goal({ id: 'g1', current_amount: 0.001 }), empty)).toBeNull()
+  })
+
+  it('altın hedefinde miktar üzerinden eşleşir', () => {
+    const suggestion = suggestGoalSource(
+      goal({ id: 'g1', value_type: 'gram_altin', current_amount: 30 }),
+      refs,
+    )
+
+    expect(suggestion?.amount).toBe(30)
   })
 })
 

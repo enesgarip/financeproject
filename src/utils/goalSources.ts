@@ -311,6 +311,67 @@ export function goalSourceOptions(refs: GoalSourceRefs, valueType: ResolvableUni
   return options
 }
 
+/**
+ * "Bu hedefi bağlamak ister misin?" önerisi.
+ *
+ * Elle girilen biriken tutar bir kaynağın toplamına çok yakınsa, kullanıcı
+ * aslında o kaynağı elle kopyalıyordur — özelliğin varlığını keşfetmesi için
+ * beklemek yerine söylüyoruz. Yalnız ÖNERİ: bağlama tek tıkla ve kullanıcının
+ * onayıyla olur.
+ *
+ * Eşik oransal (varsayılan %2): 350.000 TL'lik portföyde 7.000 TL sapma hâlâ
+ * "aynı şeyi kastediyor" demek, 100 TL'lik kovada 2 TL sapma da öyle.
+ */
+export type GoalSourceSuggestion = {
+  token: string
+  label: string
+  /** Kaynağın şu anki tutarı (hedefin biriminde). */
+  amount: number
+  /** |elle girilen − kaynak| / kaynak. */
+  diffRatio: number
+}
+
+/** Eşitlikte hangi kaynak türü önerilsin: dar ama kalıcı olan önce. */
+const SUGGESTION_KIND_ORDER: SavingsGoalSource['kind'][] = [
+  'asset_category',
+  'asset',
+  'bank_account',
+  'kasa_bucket',
+  'all_assets',
+]
+
+export function suggestGoalSource(
+  goal: Pick<SavingsGoal, 'value_type' | 'current_amount'>,
+  refs: GoalSourceRefs,
+  tolerance = 0.02,
+): GoalSourceSuggestion | null {
+  if (goal.value_type === 'composite') return null
+  if (!(goal.current_amount > 0)) return null
+
+  let best: (GoalSourceSuggestion & { rank: number }) | null = null
+
+  for (const option of goalSourceOptions(refs, goal.value_type)) {
+    const parsed = parseGoalSourceToken(option.token)
+    if (!parsed) continue
+
+    const { amount, matched } = resolveGoalSources([parsed], goal.value_type, refs)
+    // Boş kaynak (henüz o kategoride varlık yok) 0 döner; 0'a "yakın" bir hedef
+    // önermek anlamsız olurdu.
+    if (matched === 0 || amount <= 0) continue
+
+    const diffRatio = Math.abs(amount - goal.current_amount) / amount
+    if (diffRatio > tolerance) continue
+
+    const rank = SUGGESTION_KIND_ORDER.indexOf(parsed.kind)
+    if (best === null || diffRatio < best.diffRatio - 1e-9 || (Math.abs(diffRatio - best.diffRatio) <= 1e-9 && rank < best.rank)) {
+      best = { token: option.token, label: option.label, amount, diffRatio, rank }
+    }
+  }
+
+  if (!best) return null
+  return { token: best.token, label: best.label, amount: best.amount, diffRatio: best.diffRatio }
+}
+
 /** Kaynağın kullanıcıya gösterilecek adı. */
 export function goalSourceLabel(source: GoalSourceLike, refs: GoalSourceRefs): string {
   switch (source.kind) {
