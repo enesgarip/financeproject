@@ -14,11 +14,20 @@ import {
   insertWishlistItem,
   updateWishlistItem,
 } from '../data/repositories/wishlistRepo'
+import { useFinanceSnapshot } from '../app/useFinanceSnapshot'
+import { readSafeToSpendBuffer, useKasaReserved } from '../hooks/useSafeToSpend'
+import { buildCashFlowForecast } from '../utils/cashFlowForecast'
+import { buildFinancialPosition, buildMonthlyCashFlow } from '../utils/financeSummary'
+import { resolveSavingsGoalRows } from '../utils/goalSources'
+import { buildSafeToSpend } from '../utils/safeToSpend'
+import { buildWishlistPlan, type WishlistPlan } from '../utils/wishlistPlan'
 import { formatCurrency, parseNumber } from '../utils/formatCurrency'
 import { sumTL } from '../utils/money'
 import type { WishlistItem } from '../types/database'
 
 const QUERY_KEY = ['wishlist-items'] as const
+/** "Ne zaman alabilirim" projeksiyon ufku; PurchaseDecisionPage ile aynı mantık. */
+const PLAN_HORIZON_MONTHS = 6
 
 export function WishlistPage() {
   const { user } = useAuth()
@@ -39,6 +48,58 @@ export function WishlistPage() {
   const purchased = useMemo(() => items.filter((i) => i.is_purchased), [items])
   // Tahmini fiyatı girilmemiş madde 0 sayılır; toplam "en az bu kadar" okunur.
   const pendingTotal = useMemo(() => sumTL(pending.map((i) => i.estimated_price ?? 0)), [pending])
+
+  /**
+   * "Ne zaman alabilirim" için gereken nakit projeksiyonu + hedef planı.
+   *
+   * Hepsi hazır cache'ten okunur: snapshot (TanStack, diğer sayfalarla ortak),
+   * kasa rezervi ve cihazdaki güvenlik tamponu. Liste kendi başına hiçbir
+   * finansal hesap TUTMAZ — cevap `utils/wishlistPlan.ts`'te üretilir.
+   */
+  const snapshotQuery = useFinanceSnapshot()
+  const { reserved } = useKasaReserved()
+
+  const planContext = useMemo(() => {
+    const snapshot = snapshotQuery.data
+    if (!snapshot) return null
+
+    const summaryInput = {
+      assets: snapshot.assets,
+      cards: snapshot.cards,
+      loans: snapshot.loans,
+      loanInstallments: snapshot.loanInstallments,
+      debts: snapshot.debts,
+      payments: snapshot.payments,
+      salaryHistory: snapshot.salaryHistory,
+      cardInstallments: snapshot.cardInstallments,
+      cardStatements: snapshot.cardStatements,
+      cardStatementPayments: snapshot.cardStatementPayments,
+    }
+
+    const buffer = readSafeToSpendBuffer()
+    const cashFlow = buildMonthlyCashFlow(summaryInput)
+    const safe = buildSafeToSpend({
+      liquidCash: buildFinancialPosition(summaryInput).totalCashAssets,
+      expectedIncome: cashFlow.expectedIncome,
+      remainingOutflow: cashFlow.remainingOutflow,
+      buffer,
+      reserved,
+    })
+
+    return {
+      forecast: buildCashFlowForecast(summaryInput, { horizonMonths: PLAN_HORIZON_MONTHS }),
+      safeToSpend: safe.amount,
+      // Ay sonunda dokunulmayacak taban; projeksiyon bakiyesi bunları içerir.
+      floor: buffer + reserved,
+      // Kaynağa bağlı hedefin birikeni DB'de değil burada oluşur (goalSources.ts).
+      goals: resolveSavingsGoalRows(
+        snapshot.savingsGoals,
+        snapshot.savingsGoalComponents,
+        snapshot.savingsGoalSources,
+        { assets: snapshot.assets, cards: snapshot.cards },
+      ).goals,
+    }
+  }, [snapshotQuery.data, reserved])
 
   const [showPurchased, setShowPurchased] = useState(true)
   const [newName, setNewName] = useState('')
@@ -180,6 +241,11 @@ export function WishlistPage() {
             <WishlistRow
               key={item.id}
               item={item}
+              plan={
+                planContext
+                  ? buildWishlistPlan({ price: item.estimated_price, ...planContext })
+                  : null
+              }
               onToggle={() => toggleMutation.mutate({ id: item.id, purchased: true })}
               onDelete={() => handleDelete(item)}
             />
@@ -221,11 +287,14 @@ export function WishlistPage() {
 
 function WishlistRow({
   item,
+  plan,
   onToggle,
   onDelete,
   purchased,
 }: {
   item: WishlistItem
+  /** Projeksiyondan türeyen "ne zaman + neyin payı"; veri hazır değilse null. */
+  plan?: WishlistPlan | null
   onToggle: () => void
   onDelete: () => void
   purchased?: boolean
@@ -258,6 +327,22 @@ function WishlistRow({
             {purchasedDate ? purchasedDate : ''}
           </span>
         )}
+        {/* Alınmamış maddede "ne zaman + neyin payı": ikisi de projeksiyondan
+            türer, listede saklanmaz. Ufukta karşılanmıyorsa tarih UYDURMAYIZ. */}
+        {/* truncate DEĞİL: dar ekranda "…" ile kesilince cümlenin asıl bilgisi
+            (hangi hedefin kaç aylık payı) kayboluyordu. */}
+        {!purchased && plan ? (
+          <span className="text-[11px] leading-tight text-ink-faint">
+            {plan.affordableNow
+              ? 'Şimdi alabilirsin'
+              : plan.month
+                ? `~${plan.month.label} içinde alabilirsin`
+                : 'Bu projeksiyonda karşılanmıyor'}
+            {plan.goalMonths > 0 && plan.goalName
+              ? ` · ${plan.goalName} hedefine ayıracağın ~${plan.goalMonths} aylık pay`
+              : ''}
+          </span>
+        ) : null}
       </div>
 
       <div className="hover-actions flex shrink-0 items-center gap-2 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100">
