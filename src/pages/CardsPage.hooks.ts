@@ -68,6 +68,9 @@ export function useCardsPageData() {
   const [statementError, setStatementError] = useState('')
   const [statementActionId, setStatementActionId] = useState<string | null>(null)
   const [installments, setInstallments] = useState<CardInstallment[]>([])
+  // Taksit takvimi paneli ilk yüklemede yanlış "taksit yok" göstermesin diye
+  // (boş liste ≠ henüz yüklenmedi) yükleme durumu ayrıca izlenir.
+  const [installmentsLoading, setInstallmentsLoading] = useState(true)
   const [reconciliations, setReconciliations] = useState<AccountReconciliation[]>([])
 
   const loadProvisions = useCallback(async () => {
@@ -115,10 +118,12 @@ export function useCardsPageData() {
 
     if (!result.ok) {
       setInstallments([])
+      setInstallmentsLoading(false)
       return
     }
 
     setInstallments(result.data)
+    setInstallmentsLoading(false)
   }, [])
 
   const loadReconciliations = useCallback(async () => {
@@ -229,6 +234,7 @@ export function useCardsPageData() {
 
   return {
     installments,
+    installmentsLoading,
     invalidateSnapshot,
     loadInstallments,
     loadReconciliations,

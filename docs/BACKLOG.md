@@ -1,5 +1,87 @@
 # Priority Backlog
 
+## 2026-08-24 (9) — Performans/optimizasyon turu
+
+Üç paralel keşif (frontend/bundle, TanStack+veri katmanı, DB+CI) + dosya bazlı
+doğrulama; plan 4 fazlı, hedef "davranışı bozmadan". Kritik bulgular faz faz
+aşağıda; bilinçli yapılmayanlar listenin sonunda.
+
+- ~~**Faz 1 — veri katmanı hızlı kazançlar.**~~ DONE.
+  - `AnalysisPage.data.ts`: iki query anahtarındaki `snapshotQuery.dataUpdatedAt`
+    kaldırıldı — her snapshot fetch'i yeni cache girdisi doğuruyor, `staleTime:
+    Infinity`'yi fiilen öldürüyor ve 1500 satıra kadar `net_worth_snapshots` +
+    13 aylık zam radarını her pencere odağında sıfırdan indiriyordu.
+    `staleTime` 10 dk; net-worth tazelemesi zaten `useDailyNetWorthSnapshot`'ın
+    prefix invalidation'ından geliyor.
+  - `runFinanceMaintenance` artık değiştirdiği satır TOPLAMINI döndürüyor
+    (taksit + kesim + değerleme); hook yalnız toplam > 0 iken snapshot'ı
+    invalidate ediyor. Eskiden her 5 dk'lık bakım koşusu — hiçbir şey
+    değişmese de — 17 sorguluk ikinci bir tur tetikliyordu.
+  - `queryClient`: `gcTime: 30 dk` — snapshot'ı okumayan sayfalarda gezinirken
+    cache 5 dk'lık varsayılanla siliniyor, Dashboard'a dönüş soğuk fetch +
+    tam skeleton oluyordu.
+  - Kartlar listesindeki iki N+1 kapandı: hesap başına limitsiz
+    `fetchAccountLedgerEvents` → `limit(3)` + TanStack cache; kart başına
+    `fetchCardAliases` → tek toplu `fetchAllCardAliases`, tüm satırlar aynı
+    query anahtarını paylaştığı için TanStack istekleri liste başına 1'e
+    tekilleştiriyor.
+  - `MonthCloseAssistant` memo'suzdu: her üst render'da yükümlülük inşası +
+    bütçe×harcama taraması + 3× sort'lu `getCurrentSalary` koşuyordu → tek
+    `useMemo` (gün dönüşü `todayKey` deps'iyle yakalanır). `AiSummaryButton`
+    raporu artık yalnız modal açıkken üretiyor.
+  - `kasa-buckets` / `wishlist-items` anahtarlarına `userId` + `enabled`
+    eklendi (auth çözülmeden boş/401 atış + hesap değişiminde sızıntı);
+    invalidation'lar prefix'le çalıştığı için çağıranlar değişmedi.
+- ~~**Faz 2 — bundle & önbellek.**~~ DONE. `manualChunks` fonksiyon formuna:
+  obje formundaki `'react-dom'` kaydı `react-dom/client`'ı eşlemiyordu —
+  react-dom + supabase + tanstack 142 kB gzip'lik entry'de her deploy'da
+  yeniden iniyordu. Entry **142 → 15,8 kB gzip**; vendor-react/supabase/query/
+  ui/icons ayrı cache-stable chunk'lar; `pdfjs-dist`'e bilerek dokunulmadı
+  (dinamik import lazy kalır). `experimentalMinChunkSize` + vendor-icons ile
+  chunk sayısı **101 → 33** (51 adet <2 kB ikon chunk'ı tek dosyada). Bundle
+  bütçesi onarıldı: ölü vendor-recharts/vendor-motion kayıtları silindi, `.mjs`
+  dahil edildi (365 kB gzip pdf.worker toplama HİÇ girmiyordu — gerçek toplam
+  908 kB'tı, eski 660'lık bütçe görmüyordu). SW v4: `/assets/` cache-first
+  (içerik-adresli, bayatlayamaz; navigasyon network-first kaldı, asset'e
+  index.html fallback'i yine yok); `vercel.json`'a `/assets/` immutable +
+  `/sw.js` no-cache header'ları (deploy sonrası `curl -I` ile teyit edilecek).
+- ~~**Faz 3 — CardsPage render.**~~ DONE. `CardInstallmentCalendarPanel` +
+  `LiveReconciliationPanel` mükerrer fetch'leri kalktı (calendar düz prop;
+  reconciliation paneli opsiyonel managed mod — DataHealthPage prop'suz eski
+  davranışta). `buildCreditLimitGroups`'a WeakMap cache: `limitGroupStats` +
+  `quickCardConsistencyScore` satır başına, paneller ayrıca çağırıyordu —
+  maliyet kart sayısının karesiyle büyüyordu; aynı desen bank-hue sıralamasına.
+  `buildCardControlItems` useMemo'da (CrudPage her form tuşunda
+  `renderBeforeList`'i yeniden çizer). Backup export'u 6'lık gruplarla paralel;
+  **restore bilerek SERİ** (FK parent-first).
+- ~~**Faz 4a — DB.**~~ DONE (migration `20260824210000`). 5 policy çıplak
+  `auth.uid()` → `(select auth.uid())` (wishlist_items, kasa_buckets,
+  notification_preferences, cars, savings_goal_sources — hepsi 20260503'teki
+  initPlan düzeltmesinden SONRA eklendiği için deseni kaçırmıştı; kanıt:
+  `car_expenses` aynı seride düzeltilmiş, `cars` atlanmış).
+  `wishlist_items(user_id)` (PK dışında indekssiz tek tabloydu) + 8 FK indeksi
+  (savings_goal_sources asset/card/bucket/component, card_installment_intents
+  card/consumed_expense, card_statement_payments card/source_card — cascade
+  silme seq-scan'i). Yerelde: reset + db lint + RLS audit + grants audit +
+  32/32 SQL testi yeşil.
+- ~~**Faz 4b — CI.**~~ DONE. Lighthouse PR'da build'i quality job'ının
+  artifact'ından alıyor (gece koşusu kendi build'ini yapar — quality o saatte
+  hiç koşmaz, `!cancelled()` guard'ı şart). `supabase db start` + `db reset`
+  çifti teke indi: **CI logu kanıtı — iki adım da aynı 133 migration'ı
+  uyguluyordu**; reset'in kalan tek katkısı olan seed artık psql ile bir kez
+  uygulanıyor (seed.sql doğrulaması kaybolmadı). Supabase CLI üç kopyalanmış
+  curl bloğundan cache'e (sabit 2.101.0; retry döngüsünün varlığı flakiness
+  kanıtıydı). `node_modules` üç CI job'ında lock-hash anahtarlı cache. vitest
+  `pool: 'threads'` (fork spawn × 110 dosya → thread; yerelde 4,2 → 3,2 sn).
+  Bilinçli dokunulmayan: deploy `verify`↔`changes` bağımlılık ayrıştırması
+  (deploy hattı yapısal değişikliği ayrı, tek başına bir PR ister).
+- **Bilinçli yapılmayanlar:** 17 sorgu → tek RPC snapshot (graceful-degradation
+  semantiği ayrı faz ister), CrudPage → TanStack (10+ sayfa), `sync_loan_summary`
+  statement-level (önce invariant testi), ledger panellerine limit (projeksiyonu
+  BOZAR), `card_expenses` 12 indeks budaması (önce üretimde `pg_stat_user_indexes`
+  ölçümü), Dashboard detay lazy-mount + PullToRefresh transform (görsel/a11y turu
+  ister), toptan `React.memo` (fayda/risk kötü).
+
 ## 2026-08-24 (8) — Hedefe aylık ayırma hatırlatması (push) — DONE
 
 Kovaya ayırma tek tık ama kullanıcı Planlama sayfasına girmedikçe hiç

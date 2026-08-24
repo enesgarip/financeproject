@@ -36,7 +36,10 @@ export function WishlistPage() {
   const { confirm, confirmDialog } = useConfirmDialog()
 
   const { data: items = [], isLoading } = useQuery({
-    queryKey: QUERY_KEY,
+    // userId anahtarda + enabled: auth çözülmeden ateşleyip boş/401 dönmesin;
+    // invalidate QUERY_KEY prefix'iyle yapıldığı için davranışı değişmez.
+    queryKey: [...QUERY_KEY, user?.id],
+    enabled: Boolean(user),
     queryFn: async () => {
       const result = await fetchWishlistItems()
       if (!result.ok) throw new Error(result.error.message)

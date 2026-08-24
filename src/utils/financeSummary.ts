@@ -264,7 +264,25 @@ export function totalCreditLimit(cards: Card[]) {
   return sumTL(limitsByGroup.values())
 }
 
+/**
+ * Aynı kart listesi referansı için grup inşası bir kez yapılır. Kart sayfası
+ * satır başına (limitGroupStats, quickCardConsistencyScore) ve panel başına
+ * (buildLimitGroupSummaries) bu fonksiyonu çağırıyor — cache olmadan render
+ * maliyeti kart sayısının karesiyle büyüyordu. React state'i immutable
+ * güncellendiği için (liste değişince referans da değişir) bayatlama olmaz;
+ * dönen diziyi ÇAĞIRAN MUTATE ETMEMELİ.
+ */
+const creditLimitGroupsCache = new WeakMap<Card[], CreditLimitGroup[]>()
+
 export function buildCreditLimitGroups(cards: Card[]): CreditLimitGroup[] {
+  const cached = creditLimitGroupsCache.get(cards)
+  if (cached) return cached
+  const result = computeCreditLimitGroups(cards)
+  creditLimitGroupsCache.set(cards, result)
+  return result
+}
+
+function computeCreditLimitGroups(cards: Card[]): CreditLimitGroup[] {
   const groups = new Map<string, Card[]>()
 
   for (const card of cards.filter((item) => item.card_type === 'kredi_karti')) {

@@ -34,6 +34,14 @@ import { Input } from '../ui/input'
 type LiveReconciliationPanelProps = {
   cards: Card[]
   onChanged?: () => void | Promise<void>
+  /**
+   * Üst sayfa mutabakat kayıtlarını zaten çekiyorsa ikisini birlikte verir;
+   * panel kendi fetch'ini atlar (CardsPage açılışta aynı tabloyu iki kez
+   * çekiyordu). Verilmezse panel eskisi gibi kendi yükünü kendisi yönetir
+   * (DataHealthPage bu moddadır).
+   */
+  reconciliations?: AccountReconciliation[]
+  onReloadReconciliations?: () => Promise<void>
 }
 
 const help = {
@@ -51,10 +59,17 @@ const STATUS_META: Record<ReconcileStatus, { variant: 'destructive' | 'secondary
   ok: { variant: 'success', label: 'Mutabık' },
 }
 
-export function LiveReconciliationPanel({ cards, onChanged }: LiveReconciliationPanelProps) {
+export function LiveReconciliationPanel({
+  cards,
+  onChanged,
+  reconciliations,
+  onReloadReconciliations,
+}: LiveReconciliationPanelProps) {
   const { formatAmount } = useBalancePrivacy()
   const { user } = useAuth()
-  const [rows, setRows] = useState<AccountReconciliation[]>([])
+  const managed = reconciliations !== undefined
+  const [ownRows, setOwnRows] = useState<AccountReconciliation[]>([])
+  const rows = reconciliations ?? ownRows
   const [loadError, setLoadError] = useState('')
   const [inputs, setInputs] = useState<Record<string, string>>({})
   const [savingId, setSavingId] = useState<string | null>(null)
@@ -70,6 +85,11 @@ export function LiveReconciliationPanel({ cards, onChanged }: LiveReconciliation
   )
 
   const load = useCallback(async () => {
+    // Managed modda kayıtların sahibi üst sayfa; tazelemeyi ona devret.
+    if (managed) {
+      await onReloadReconciliations?.()
+      return
+    }
     const loadResult = await fetchAccountReconciliations()
 
     if (!loadResult.ok) {
@@ -81,13 +101,14 @@ export function LiveReconciliationPanel({ cards, onChanged }: LiveReconciliation
       return
     }
     setLoadError('')
-    setRows(loadResult.data)
-  }, [])
+    setOwnRows(loadResult.data)
+  }, [managed, onReloadReconciliations])
 
   useEffect(() => {
+    if (managed) return
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void load()
-  }, [load])
+  }, [managed, load])
 
   const items = useMemo(
     () => buildReconciliationItems(reconcilable, latestReconciliationByCard(rows)),

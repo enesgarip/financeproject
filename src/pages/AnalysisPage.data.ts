@@ -84,10 +84,15 @@ export function useAnalysisPageData() {
     [snapshotQuery.data],
   )
 
+  // Anahtarda dataUpdatedAt TAŞIMA: her snapshot fetch'i (veri değişmese de)
+  // yeni bir cache girdisi doğurur, staleTime fiilen ölür ve 1500 satıra kadar
+  // geçmiş her pencere odağında sıfırdan iner. Günlük fotoğraf yazıcısı
+  // (useDailyNetWorthSnapshot) zaten ['net-worth-snapshots'] prefix'ini
+  // invalidate ediyor; gün içi tazelik için staleTime yeter.
   const netWorthQuery = useQuery({
-    queryKey: ['net-worth-snapshots', userId, snapshotQuery.dataUpdatedAt],
+    queryKey: ['net-worth-snapshots', userId],
     enabled: Boolean(userId && snapshotQuery.data),
-    staleTime: Infinity,
+    staleTime: 10 * 60_000,
     queryFn: async () => {
       try {
         const result = await fetchNetWorthSnapshots()
@@ -98,10 +103,12 @@ export function useAnalysisPageData() {
     },
   })
 
+  // 13 aylık zam radarı trend analizi — mutation'ı dakikası dakikasına izlemesi
+  // gerekmez; 10 dk'lık pencere yeterli tazelik verir (anahtar çöpü için üstteki not).
   const priceTrendsQuery = useQuery({
-    queryKey: ['price-trends', userId, snapshotQuery.dataUpdatedAt],
+    queryKey: ['price-trends', userId],
     enabled: Boolean(userId && snapshotQuery.data),
-    staleTime: Infinity,
+    staleTime: 10 * 60_000,
     queryFn: async () => {
       try {
         const radarResult = await fetchPriceRadarRows()

@@ -1,13 +1,15 @@
 import { AlertTriangle, Banknote, Check, CheckCircle2, Copy, ShieldCheck } from 'lucide-react'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { useAuth } from '../auth/useAuth'
 import { BankLogo } from '../components/finance/BankLogo'
 import { AccountLedgerPanel } from '../components/finance/AccountLedgerPanel'
 import { CardAliasPanel } from '../components/finance/CardAliasPanel'
 import { CardLedgerPanel } from '../components/finance/CardLedgerPanel'
 import { MiniStat, SectionHeader, StatusBadge } from '../components/finance/FinanceUI'
-import { fetchCardAliases } from '../data/repositories/cardAliasesRepo'
+import { fetchAllCardAliases } from '../data/repositories/cardAliasesRepo'
 import { fetchAccountLedgerEvents } from '../data/repositories/financePanelsRepo'
-import type { AccountLedger, AccountReconciliation, Card, CardInstallment, CardStatementArchive } from '../types/database'
+import type { AccountReconciliation, Card, CardInstallment, CardStatementArchive } from '../types/database'
 import { daysUntil } from '../utils/date'
 import { freshnessConfidence } from '../utils/dataConfidence'
 import { STALE_AFTER_DAYS } from '../utils/reconciliation'
@@ -41,18 +43,17 @@ function AccountRecentTransactions({
   card: Card
   formatAmount: (value: number | null | undefined) => string
 }) {
-  const [events, setEvents] = useState<AccountLedger[] | null>(null)
-
-  useEffect(() => {
-    let cancelled = false
-    void fetchAccountLedgerEvents(card.id).then((result) => {
-      if (cancelled) return
-      setEvents(result.ok ? result.data.slice(0, 3) : [])
-    })
-    return () => {
-      cancelled = true
-    }
-  }, [card.id])
+  const { user } = useAuth()
+  // Eski useEffect sürümü her mount'ta tüm hesap geçmişini çekip 3'e kesiyordu;
+  // limit DB'de, sonuç TanStack cache'inde (remount bedava).
+  const { data: events } = useQuery({
+    queryKey: ['account-ledger-recent', user?.id, card.id],
+    enabled: Boolean(user),
+    queryFn: async () => {
+      const result = await fetchAccountLedgerEvents(card.id, 3)
+      return result.ok ? result.data : []
+    },
+  })
 
   if (!events || events.length === 0) return null
 
@@ -92,18 +93,18 @@ function AccountRecentTransactions({
 }
 
 function CardMaskedNumber({ cardId, hidden }: { cardId: string; hidden: boolean }) {
-  const [digits, setDigits] = useState<string | null>(null)
-
-  useEffect(() => {
-    let cancelled = false
-    void fetchCardAliases(cardId).then((result) => {
-      if (cancelled) return
-      setDigits(result.ok ? (result.data[0]?.last_four_digits ?? null) : null)
-    })
-    return () => {
-      cancelled = true
-    }
-  }, [cardId])
+  const { user } = useAuth()
+  // Tüm satırlar aynı anahtarı paylaşır → TanStack istekleri tekilleştirir:
+  // kart başına bir sorgu yerine liste başına tek toplu sorgu.
+  const { data: aliases } = useQuery({
+    queryKey: ['card-aliases', user?.id],
+    enabled: Boolean(user),
+    queryFn: async () => {
+      const result = await fetchAllCardAliases()
+      return result.ok ? result.data : []
+    },
+  })
+  const digits = aliases?.find((alias) => alias.card_id === cardId)?.last_four_digits ?? null
 
   return (
     <p className="mt-3 font-mono text-sm font-black text-white/78">

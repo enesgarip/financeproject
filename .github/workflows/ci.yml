@@ -73,7 +73,17 @@ jobs:
           node-version: 24
           cache: npm
 
+      # setup-node'un npm cache'i yalnız indirme cache'i; npm ci yine tüm
+      # node_modules'ü kurar. Lock hash'i anahtar olduğu için bayatlama yok.
+      - name: Restore node_modules
+        id: node-modules-cache
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: node-modules-${{ runner.os }}-node24-${{ hashFiles('package-lock.json') }}
+
       - name: Install dependencies
+        if: ${{ steps.node-modules-cache.outputs.cache-hit != 'true' }}
         run: npm ci
 
       - name: Restore quality caches
@@ -104,10 +114,20 @@ jobs:
       - name: Bundle size budget
         run: npm run check:bundle
 
+      # Lighthouse aynı commit'in build'ini ölçer; ikinci bir tsc+vite koşusu
+      # yerine bu job'ın çıktısını artifact olarak devralır.
+      - name: Upload built app for Lighthouse
+        uses: actions/upload-artifact@v7
+        with:
+          name: dist
+          path: dist
+
   lighthouse:
     name: Lighthouse
-    needs: changes
-    if: ${{ github.event_name == 'schedule' || needs.changes.outputs.frontend == 'true' }}
+    needs: [changes, quality]
+    # Gece koşusunda quality hiç koşmaz (skipped) — !cancelled() olmadan needs
+    # zinciri bu job'ı da atlardı; PR'da ise quality başarısızsa ölçüm anlamsız.
+    if: ${{ !cancelled() && (github.event_name == 'schedule' || (needs.changes.outputs.frontend == 'true' && needs.quality.result == 'success')) }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     continue-on-error: true
@@ -126,7 +146,15 @@ jobs:
           node-version: 24
           cache: npm
 
+      - name: Restore node_modules
+        id: node-modules-cache
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: node-modules-${{ runner.os }}-node24-${{ hashFiles('package-lock.json') }}
+
       - name: Install dependencies
+        if: ${{ steps.node-modules-cache.outputs.cache-hit != 'true' }}
         run: npm ci
 
       - name: Use GitHub runner Chrome for Lighthouse
@@ -136,7 +164,15 @@ jobs:
           echo "CHROME_PATH=$CHROME_PATH" >> "$GITHUB_ENV"
           "$CHROME_PATH" --version
 
-      - name: Build
+      - name: Download built app (quality job artifact)
+        if: ${{ github.event_name != 'schedule' }}
+        uses: actions/download-artifact@v7
+        with:
+          name: dist
+          path: dist
+
+      - name: Build (gece koşusu — quality job'ı çalışmadı)
+        if: ${{ github.event_name == 'schedule' }}
         run: npm run build
         env:
           VITE_SUPABASE_URL: https://example.supabase.co
@@ -186,7 +222,15 @@ jobs:
           node-version: 24
           cache: npm
 
+      - name: Restore node_modules
+        id: node-modules-cache
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: node-modules-${{ runner.os }}-node24-${{ hashFiles('package-lock.json') }}
+
       - name: Install dependencies
+        if: ${{ steps.node-modules-cache.outputs.cache-hit != 'true' }}
         run: npm ci
 
       - name: Restore Playwright Chromium
@@ -229,7 +273,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - name: Install Supabase CLI (with retry)
+      # Binary sabit sürümlü ve değişmez — GitHub release'ten her koşuda indirmek
+      # hem yavaş hem flaky idi (retry döngüsünün varlığı kanıt).
+      - name: Cache Supabase CLI
+        id: sbcli-cache
+        uses: actions/cache@v4
+        with:
+          path: /tmp/sbcli
+          key: supabase-cli-linux-amd64-2.101.0
+
+      - name: Download Supabase CLI (with retry)
+        if: ${{ steps.sbcli-cache.outputs.cache-hit != 'true' }}
         run: |
           VERSION=2.101.0
           ok=0
@@ -243,15 +297,22 @@ jobs:
           [ "$ok" = 1 ] || { echo "::error::Supabase CLI download failed after 5 attempts"; exit 1; }
           rm -rf /tmp/sbcli && mkdir -p /tmp/sbcli
           tar -xzf supabase.tar.gz -C /tmp/sbcli
+
+      - name: Install Supabase CLI
+        run: |
           sudo cp /tmp/sbcli/supabase* /usr/local/bin/
           sudo chmod +x /usr/local/bin/supabase*
           supabase --version
 
-      - name: Start local Supabase
+      - name: Start local Supabase (migration'lar dahil)
         run: supabase db start
 
-      - name: Reapply migrations and seed
-        run: supabase db reset --local
+      # `db start` migration'ların tamamını ZATEN uyguluyor (CI logu kanıtı:
+      # iki adım da aynı 133 migration'ı koşuyordu — çift iş). Reset'in kalan
+      # tek katkısı seed'di; onu psql ile bir kez uyguluyoruz, seed.sql
+      # doğrulaması kaybolmuyor.
+      - name: Apply seed
+        run: docker exec -i supabase_db_financeproject psql -U postgres -d postgres -v ON_ERROR_STOP=1 -f - < supabase/seed.sql
 
       - name: Lint local database
         run: supabase db lint --local --fail-on error

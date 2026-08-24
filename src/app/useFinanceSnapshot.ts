@@ -14,18 +14,22 @@ export { financeSnapshotKey }
 
 const FINANCE_MAINTENANCE_THROTTLE_MS = 5 * 60 * 1000
 let lastFinanceMaintenanceAt = 0
-let financeMaintenancePromise: Promise<boolean> | null = null
+let financeMaintenancePromise: Promise<number> | null = null
 
-/** Returns true if maintenance actually ran, false if throttled/skipped. */
-async function runFinanceMaintenanceInBackground(): Promise<boolean> {
-  if (Date.now() - lastFinanceMaintenanceAt < FINANCE_MAINTENANCE_THROTTLE_MS) return false
+/**
+ * Bakımın değiştirdiği satır toplamını döndürür; throttle/hata = 0. Çoğu koşu
+ * hiçbir satıra dokunmaz — o durumda snapshot'ı ikinci kez çekmek boşa 17 sorgudur,
+ * invalidation yalnız gerçek değişiklikte yapılır.
+ */
+async function runFinanceMaintenanceInBackground(): Promise<number> {
+  if (Date.now() - lastFinanceMaintenanceAt < FINANCE_MAINTENANCE_THROTTLE_MS) return 0
 
   financeMaintenancePromise ??= runFinanceMaintenance()
-    .then(() => {
+    .then((changedRows) => {
       lastFinanceMaintenanceAt = Date.now()
-      return true
+      return changedRows
     })
-    .catch(() => false)
+    .catch(() => 0)
     .finally(() => {
       financeMaintenancePromise = null
     })
@@ -49,8 +53,8 @@ export function useFinanceSnapshot() {
     retry: 3,
     queryFn: async () => {
       const snapshotPromise = fetchFinanceSnapshot()
-      runFinanceMaintenanceInBackground().then((didRun) => {
-        if (didRun) queryClient.invalidateQueries({ queryKey: financeSnapshotKey(userId) })
+      runFinanceMaintenanceInBackground().then((changedRows) => {
+        if (changedRows > 0) queryClient.invalidateQueries({ queryKey: financeSnapshotKey(userId) })
       })
       return snapshotPromise
     },

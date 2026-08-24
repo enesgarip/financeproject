@@ -233,11 +233,18 @@ export async function buildBackupPayload(): Promise<{ payload: string; totalRows
   const tables: Record<string, BackupRow[]> = {}
   let totalRows = 0
 
-  for (const table of [...RESTORE_TABLE_ORDER, ...EXPORT_ONLY_TABLES]) {
-    const rows = await fetchTableRows(table)
-    if (rows === null) continue // table not deployed yet
-    tables[table] = rows
-    totalRows += rows.length
+  // Export salt okumadır, tablolar birbirinden bağımsız çekilebilir; tam seri
+  // döngü ~32 tabloda duvar saatini gereksiz uzatıyordu. 6'lık gruplar: tek
+  // Promise.all'un aynı anda 32 istekle tarayıcı bağlantı sırasını doldurmasını
+  // önler. restoreBackup SERİ KALIR — FK parent-first sırası anlamsaldır.
+  const order = [...RESTORE_TABLE_ORDER, ...EXPORT_ONLY_TABLES]
+  for (const part of chunk(order, 6)) {
+    const results = await Promise.all(part.map(async (table) => ({ table, rows: await fetchTableRows(table) })))
+    for (const { table, rows } of results) {
+      if (rows === null) continue // table not deployed yet
+      tables[table] = rows
+      totalRows += rows.length
+    }
   }
 
   const payload = JSON.stringify({ exportedAt: new Date().toISOString(), schema: BACKUP_SCHEMA_V2, tables }, null, 2)

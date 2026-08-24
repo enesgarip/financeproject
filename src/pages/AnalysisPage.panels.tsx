@@ -253,30 +253,39 @@ export function PeopleLedger({ debts }: { debts: Debt[] }) {
 
 export function MonthCloseAssistant({ data, missingTables }: { data: AnalysisData; missingTables: string[] }) {
   const { formatAmount } = useBalancePrivacy()
-  const monthKey = dateInputValue(startOfMonth())
-  const today = new Date()
-  const currentMonthExpenses = data.cardExpenses.filter((expense) => activeCardExpense(expense) && isDateInMonth(expense.spent_at))
-  const creditCards = data.cards.filter((card) => card.card_type === 'kredi_karti')
-  const statementDayPassedCards = creditCards.filter((card) => canCutCurrentStatement(card, data.cardStatementArchives, today))
-  const staleInstallments = data.cardInstallments.filter((item) => item.status === 'scheduled' && item.due_month <= monthKey).length
-  const currentMonthPaymentIds = new Set(
-    buildFinanceObligationsForMonth(analysisObligationsInput(data), startOfMonth())
-      .filter((item) => item.kind === 'payment')
-      .map((item) => item.sourceId),
-  )
-  const openPaymentCount = data.payments.filter((payment) => currentMonthPaymentIds.has(payment.id) || (payment.status === 'bekliyor' && (daysUntil(payment.due_date) ?? 0) < 0)).length
-  const budgetOverruns = data.budgets.filter((budget) => {
-    if (budget.month !== monthKey || budget.limit_amount <= 0) return false
-    const spent = sum(
-      currentMonthExpenses.filter((expense) => (expense.category || 'Diğer') === budget.category),
-      (expense) => expense.amount,
+  // Pahalı türetmeler (yükümlülük inşası + bütçe×harcama taraması) memo'da:
+  // eskiden her üst render'da baştan koşuyordu. Gün anahtarı deps'te — veri
+  // değişmese de gün dönünce kesim/vade durumu yeniden değerlendirilir.
+  const todayKey = dateInputValue(new Date())
+  const summary = useMemo(() => {
+    const monthKey = `${todayKey.slice(0, 7)}-01`
+    const today = new Date()
+    const currentMonthExpenses = data.cardExpenses.filter((expense) => activeCardExpense(expense) && isDateInMonth(expense.spent_at))
+    const creditCards = data.cards.filter((card) => card.card_type === 'kredi_karti')
+    const statementDayPassedCards = creditCards.filter((card) => canCutCurrentStatement(card, data.cardStatementArchives, today))
+    const staleInstallments = data.cardInstallments.filter((item) => item.status === 'scheduled' && item.due_month <= monthKey).length
+    const currentMonthPaymentIds = new Set(
+      buildFinanceObligationsForMonth(analysisObligationsInput(data), startOfMonth())
+        .filter((item) => item.kind === 'payment')
+        .map((item) => item.sourceId),
     )
-    return greaterThanTL(spent, budget.limit_amount)
-  }).length
+    const openPaymentCount = data.payments.filter((payment) => currentMonthPaymentIds.has(payment.id) || (payment.status === 'bekliyor' && (daysUntil(payment.due_date) ?? 0) < 0)).length
+    const budgetOverruns = data.budgets.filter((budget) => {
+      if (budget.month !== monthKey || budget.limit_amount <= 0) return false
+      const spent = sum(
+        currentMonthExpenses.filter((expense) => (expense.category || 'Diğer') === budget.category),
+        (expense) => expense.amount,
+      )
+      return greaterThanTL(spent, budget.limit_amount)
+    }).length
+    const currentSalary = getCurrentSalary(data.salaryHistory)
+    return { monthKey, statementDayPassedCards, staleInstallments, openPaymentCount, budgetOverruns, currentSalary }
+  }, [data, todayKey])
+  const { monthKey, statementDayPassedCards, staleInstallments, openPaymentCount, budgetOverruns, currentSalary } = summary
   const checks = [
     { label: 'Ekstreler kontrol edildi', done: statementDayPassedCards.length === 0, detail: statementDayPassedCards.length > 0 ? `${statementDayPassedCards.length} kart bekliyor` : 'Kesim günü geçmiş açık dönem yok' },
     { label: 'Taksitler işlendi', done: staleInstallments === 0, detail: staleInstallments > 0 ? `${staleInstallments} taksit planlı kaldı` : 'Bu aya kadar planlı taksit yok' },
-    { label: 'Maaş kaydı güncel', done: Boolean(getCurrentSalary(data.salaryHistory)), detail: getCurrentSalary(data.salaryHistory) ? formatAmount(getCurrentSalary(data.salaryHistory)?.amount ?? 0) : 'Maaş eklenmedi' },
+    { label: 'Maaş kaydı güncel', done: Boolean(currentSalary), detail: currentSalary ? formatAmount(currentSalary.amount ?? 0) : 'Maaş eklenmedi' },
     { label: 'Faturalar kapandı', done: openPaymentCount === 0, detail: openPaymentCount > 0 ? `${openPaymentCount} açık ödeme` : 'Açık vade görünmüyor' },
     { label: 'Bütçe aşımı yok', done: budgetOverruns === 0, detail: budgetOverruns > 0 ? `${budgetOverruns} kategori limit üstü` : 'Limitler sakin' },
     { label: 'Veri altyapısı hazır', done: missingTables.length === 0, detail: missingTables.length > 0 ? `${missingTables.length} migration bekliyor` : 'Tablolar erişilebilir' },

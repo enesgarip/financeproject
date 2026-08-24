@@ -2,12 +2,16 @@ import { supabase } from '../../lib/supabase'
 import type { AccountLedger, AccountReconciliation, CardLedger, InsertFor } from '../../types/database'
 import { resultFromSupabase, voidResultFromSupabase, type Result } from '../result'
 
-export async function fetchAccountLedgerEvents(cardId: string): Promise<Result<AccountLedger[]>> {
-  const { data, error } = await supabase
+export async function fetchAccountLedgerEvents(cardId: string, limit?: number): Promise<Result<AccountLedger[]>> {
+  // Limit yalnız "son N hareket" gibi özet yüzeyler için; ledger projeksiyonu
+  // (bakiye/sapma hesabı) tüm geçmişi ister, o çağrılar limitsiz kalmalı.
+  let query = supabase
     .from('account_ledger')
     .select('*')
     .eq('card_id', cardId)
     .order('occurred_at', { ascending: false })
+  if (limit !== undefined) query = query.limit(limit)
+  const { data, error } = await query
 
   return resultFromSupabase((data ?? []) as AccountLedger[], error, 'Hesap hareketleri yüklenemedi.')
 }

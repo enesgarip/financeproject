@@ -2,6 +2,20 @@ import { supabase } from '../../lib/supabase'
 import type { CardAlias } from '../../types/database'
 import { resultFromSupabase, voidResultFromSupabase, type Result } from '../result'
 
+/**
+ * Kullanıcının TÜM kart takma adları tek sorguda (RLS zaten kullanıcıya daraltır).
+ * Kart listesi her satır için ayrı istek atmasın diye toplu çekilir; satırlar
+ * kendi card_id'sini sonuçtan seçer.
+ */
+export async function fetchAllCardAliases(): Promise<Result<CardAlias[]>> {
+  const { data, error } = await supabase
+    .from('card_aliases')
+    .select('*')
+    .order('created_at', { ascending: true })
+
+  return resultFromSupabase((data ?? []) as CardAlias[], error, 'Kart takma adları yüklenemedi.')
+}
+
 export async function fetchCardAliases(cardId: string): Promise<Result<CardAlias[]>> {
   const { data, error } = await supabase
     .from('card_aliases')

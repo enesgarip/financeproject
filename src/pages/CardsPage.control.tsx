@@ -1,4 +1,5 @@
 import { FileText, ScanSearch, ShieldCheck } from 'lucide-react'
+import { useMemo } from 'react'
 import { BankLogo } from '../components/finance/BankLogo'
 import { FinancePanel, MiniStat, ProgressStrip, SectionHeader, StatusBadge } from '../components/finance/FinanceUI'
 import type {
@@ -47,7 +48,17 @@ export function CardControlCenter({
   onImportStatement,
   formatAmount = formatCurrency,
 }: CardControlCenterProps) {
-  const items = buildCardControlItems(rows, statements, installments, reconciliations, new Date(), statementPayments)
+  // CrudPage her form/arama tuşunda renderBeforeList'i yeniden çizer; kart ×
+  // ekstre × taksit taraması yalnız veri (ya da gün) değişince koşmalı.
+  const todayKey = new Date().toLocaleDateString('sv-SE')
+  // todayKey gövdede geçmez ama kasıtlı bağımlılıktır: gün dönünce mutabakat
+  // bayatlığı yeni "şimdi" ile yeniden değerlendirilir.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const now = useMemo(() => new Date(), [todayKey])
+  const items = useMemo(
+    () => buildCardControlItems(rows, statements, installments, reconciliations, now, statementPayments),
+    [rows, statements, installments, reconciliations, statementPayments, now],
+  )
   if (items.length === 0) return null
 
   // Kart listesindeki visibleOpenStatementAmount ile aynı kural: açık arşiv
