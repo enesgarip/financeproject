@@ -61,8 +61,13 @@ export type KasaReservedState = {
  * durumunda sessizce 0'a düşüyordu hem de kova düzenlenince (KasaModuPanel
  * invalidation'ı) aynı sayfadaki hesap bayat kalıyordu.
  */
-export function useKasaReserved(): KasaReservedState {
-  const query = useQuery({
+/**
+ * Kovaların kendisi. Rezerv toplamı dışında kova LİSTESİ de gerekiyor: birikim
+ * hedefi bir kovaya bağlanabildiği için (bkz. utils/goalSources.ts) hedef paneli
+ * hem seçim listesini hem de bağlı kovanın tutarını buradan okur.
+ */
+export function useKasaBuckets() {
+  return useQuery({
     queryKey: KASA_BUCKETS_QUERY_KEY,
     queryFn: async () => {
       const result = await fetchKasaBuckets()
@@ -74,6 +79,10 @@ export function useKasaReserved(): KasaReservedState {
       return result.data
     },
   })
+}
+
+export function useKasaReserved(): KasaReservedState {
+  const query = useKasaBuckets()
 
   return {
     reserved: query.data ? totalReservedTL(query.data) : 0,

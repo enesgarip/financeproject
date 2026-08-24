@@ -172,6 +172,26 @@ export type SavingsGoalComponent = BaseRow & {
   sort_order: number
 }
 
+export type SavingsGoalSourceKind = 'asset' | 'asset_category' | 'all_assets' | 'bank_account' | 'kasa_bucket'
+
+/**
+ * Hedefin (ya da karma hedefin bir bileşeninin) biriken tutarını nereden takip
+ * ettiği. Kaynak bağlıysa `current_amount` elle girilmez ve saklanmaz; okuma
+ * anında kaynaklardan türetilir (bkz. utils/goalSources.ts).
+ */
+export type SavingsGoalSource = BaseRow & {
+  goal_id: string
+  /** NULL = hedefin kendisi; dolu = karma hedefin tek bir bileşeni. */
+  component_id: string | null
+  kind: SavingsGoalSourceKind
+  asset_id: string | null
+  asset_category: AssetCategory | null
+  /** Banka hesabı (cards.card_type = 'banka_karti'). */
+  card_id: string | null
+  bucket_id: string | null
+  sort_order: number
+}
+
 export type CardInstallment = BaseRow & {
   card_id: string
   card_expense_id: string | null
@@ -607,6 +627,7 @@ export type Database = {
       budgets: Table<Budget, WithBaseInsert<Budget>, WithBaseUpdate<Budget>>
       savings_goals: Table<SavingsGoal, WithBaseInsert<SavingsGoal>, WithBaseUpdate<SavingsGoal>>
       savings_goal_components: Table<SavingsGoalComponent, WithBaseInsert<SavingsGoalComponent>, WithBaseUpdate<SavingsGoalComponent>>
+      savings_goal_sources: Table<SavingsGoalSource, WithBaseInsert<SavingsGoalSource>, WithBaseUpdate<SavingsGoalSource>>
       card_installments: Table<CardInstallment, WithBaseInsert<CardInstallment>, WithBaseUpdate<CardInstallment>>
       card_installment_intents: Table<
         CardInstallmentIntent,
@@ -876,6 +897,7 @@ export type Database = {
           p_note?: string | null
           p_is_composite?: boolean
           p_components?: Json
+          p_sources?: Json
         }
         Returns: string
       }

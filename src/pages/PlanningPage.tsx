@@ -166,7 +166,15 @@ export function PlanningPage() {
         </div>
       ) : null}
 
-      {canManageGoals ? <SavingsGoalsPanel monthlySurplus={monthlySurplus} /> : null}
+      {/* Varlık ve hesaplar hedefin "takip kaynağı" seçimi için gerekiyor;
+          panel Supabase görmez, veriyi hazır snapshot'tan alır. */}
+      {canManageGoals ? (
+        <SavingsGoalsPanel
+          monthlySurplus={monthlySurplus}
+          assets={snapshotQuery.data?.assets ?? []}
+          cards={snapshotQuery.data?.cards ?? []}
+        />
+      ) : null}
 
       <KasaModuPanel liquidCash={liquidCash} />
 

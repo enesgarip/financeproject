@@ -1,5 +1,38 @@
 # Priority Backlog
 
+## 2026-08-24 — Hedefleri varlıklara bağlama (takip kaynağı) — DONE
+
+Sorun: "Borsa: 1M TL" hedefinin biriken tutarı elle giriliyordu; portföy her gün
+değişse de hedef, kullanıcı yeniden yazana kadar aynı sayıda kalıyordu.
+
+Çözüm: hedef (ya da karma hedefin bir bileşeni) bir veya birden çok kaynağa
+bağlanır — **varlık satırı, varlık kategorisi, tüm varlıklar, banka hesabı,
+kasa kovası**. Biriken tutar OKUMA ANINDA türetilir, saklanmaz (canlı BIST
+fiyatı/kur yalnız client'ta; saklanan kopya bayat kalırdı). Birim duyarlı:
+TRY hedefte TL değeri, gram/çeyrek hedefte altın MİKTARI toplanır.
+
+- ~~**Faz 1 — veri modeli.**~~ DONE. `savings_goal_sources` (RLS own-row +
+  grant + kind↔referans check + bileşik FK `(component_id, goal_id)` + tekillik
+  indeksi). `upsert_savings_goal` bileşenleri artık **id ile upsert** ediyor —
+  eski sil-yaz akışı bileşene bağlı kaynağı her düzenlemede cascade ile
+  siliyordu. Bağlı satırın `current_amount`'ı 0'a çekilir.
+- ~~**Faz 2 — saf türetme.**~~ DONE. `utils/goalSources.ts` (+ 24 test):
+  `resolveGoalSources` (tek satır), `resolveSavingsGoalRows` (hedef/bileşen
+  satırlarının türetilmiş kopyası; karma hedefte sayaçlar da yeniden hesaplanır).
+  "Tüm varlıklar" seçiliyken diğer varlık bağları elenir (çift sayma).
+- ~~**Faz 3 — veri katmanı.**~~ DONE. Kaynaklar snapshot'a, DataHealth
+  payload'una (+ `kasa_buckets`) ve yedeğe (`RESTORE_TABLE_ORDER`) girdi.
+  `fetchAutoValuedGoals` bağlı hedefleri dışlar (yoksa değerleme 0 yazardı).
+- ~~**Faz 4 — arayüz.**~~ DONE. Hedef modalında "Biriken tutarı nereden takip
+  edelim?" bölümü (hedef + bileşen bazında), kaynak seçiliyken elle giriş alanı
+  kalkar, canlı önizleme ve "kullanılamaz/bulunamadı" uyarıları; kartta
+  "Varlıklardan" rozeti.
+- ~~**Faz 5 — tüketiciler.**~~ DONE. DataHealth kontrolleri, analiz dökümü ve
+  aylık-gerekli önerisi türetilmiş satırları okur.
+- ~~**Faz 6 — doğrulama.**~~ DONE. Yerel docker'da gerçek RPC senaryoları
+  (bağ koruma, bileşen silme, tekillik, check ihlali), `tests/e2e/goal-sources.spec.ts`
+  (canlı backend, 375px), lint + 1213 test + build.
+
 ## 2026-08-20 — Şerit v2: görsel dilin tüm uygulamaya yayılması
 
 Denetim (2026-08-20, prod + kod): uygulamada **üç görsel lehçe** bir arada

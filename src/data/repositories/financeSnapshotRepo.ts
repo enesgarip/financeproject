@@ -16,6 +16,7 @@ import type {
   SalaryHistory,
   SavingsGoal,
   SavingsGoalComponent,
+  SavingsGoalSource,
   TransactionHistory,
 } from '../../types/database'
 import { addMonths, dateInputValue, startOfMonth } from '../../utils/date'
@@ -45,6 +46,8 @@ export type FinanceSnapshot = {
   cardStatementPayments: CardStatementPayment[]
   savingsGoals: SavingsGoal[]
   savingsGoalComponents: SavingsGoalComponent[]
+  /** Hedeflerin takip kaynakları; biriken tutar bunlardan türetilir (goalSources.ts). */
+  savingsGoalSources: SavingsGoalSource[]
   accountReconciliations: AccountReconciliation[]
   /** Şemada henüz olmayan opsiyonel tablolar (migration bekleyen ortamlar). */
   missingTables: string[]
@@ -98,6 +101,7 @@ export async function fetchFinanceSnapshot(): Promise<FinanceSnapshot> {
     cardStatementPayments,
     savingsGoals,
     savingsGoalComponents,
+    savingsGoalSources,
     accountReconciliations,
   ] = await Promise.all([
     supabase.from('assets').select('*'),
@@ -115,6 +119,7 @@ export async function fetchFinanceSnapshot(): Promise<FinanceSnapshot> {
     supabase.from('card_statement_payments').select('*').order('paid_at', { ascending: false }),
     supabase.from('savings_goals').select('*').order('created_at', { ascending: false }),
     supabase.from('savings_goal_components').select('*'),
+    supabase.from('savings_goal_sources').select('*').order('sort_order', { ascending: true }),
     supabase.from('account_reconciliations').select('*').order('reconciled_at', { ascending: false }),
   ])
 
@@ -136,6 +141,7 @@ export async function fetchFinanceSnapshot(): Promise<FinanceSnapshot> {
     cardStatementPayments: optionalRows(cardStatementPayments, 'card_statement_payments', missingTables),
     savingsGoals: optionalRows(savingsGoals, 'savings_goals', missingTables),
     savingsGoalComponents: optionalRows(savingsGoalComponents, 'savings_goal_components', missingTables),
+    savingsGoalSources: optionalRows(savingsGoalSources, 'savings_goal_sources', missingTables),
     accountReconciliations: optionalRows(accountReconciliations, 'account_reconciliations', missingTables),
     missingTables,
   }

@@ -22,6 +22,8 @@ export const emptyData: HealthData = {
   salaryHistory: [],
   savingsGoals: [],
   savingsGoalComponents: [],
+  savingsGoalSources: [],
+  kasaBuckets: [],
 }
 
 const exportTables = [
