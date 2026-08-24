@@ -1,5 +1,26 @@
 # Priority Backlog
 
+## 2026-08-24 (7) — "Yaklaşık" ödeme tutarları donuktu — DONE
+
+`payments.amount_status = 'estimated'` satırlar ekranda *"Yaklaşık ₺450"* diye
+görünüyordu ama o sayı kullanıcının bir kez yazdığı sayıydı. Oysa
+`transaction_history` gerçekte ne ödendiğini biliyor. Tahmin bayatladıkça nakit
+projeksiyonu ve "bu ay harcayabilirim" **sistematik olarak iyimser** çıkıyordu —
+hata tek yönlü, çünkü faturalar zamanla artar.
+
+- ~~**Domain.**~~ DONE. `utils/paymentEstimate.ts` (+10 test):
+  `realizedPaymentAmounts` (geri alınan ödemeyi düşen geçmiş okuması) +
+  `buildPaymentEstimateSuggestion` — son 3 gerçek ödemenin **medyanı** (tek
+  aylık sıçrama ortalamayı uçurmasın), en az 2 örnek, sapma eşiği %10 **ve**
+  25 TL (her ay dırdır etmemek için). Tutarı hiç girilmemiş ("tutar bekleniyor")
+  satırda öneri her zaman verilir.
+- ~~**Arayüz.**~~ DONE. Ödeme kartında *"Son 3 ödemenin ortası ₺780 — tahmini
+  güncelleyeyim mi?"* + tek tık "Güncelle". Yalnız `amount` değişir; tutar
+  durumu "tahmini" kalır (hâlâ tahmin, sadece güncel bir tahmin).
+- **Kasıtlı dil:** uygulama tutarı kendiliğinden DEĞİŞTİRMEZ. Planlı ödeme
+  tutarı kullanıcının taahhüdü; sessizce oynatmak "benim yazdığım sayı nerede?"
+  sorusunu doğururdu (aynı çizgi: kasa kovasına ayırma da tek tık).
+
 ## 2026-08-24 (6) — Sıfır rezervli kova açılamıyordu — DONE
 
 `MoneyInput` blur'da 0'ı boşa çevirir; `KasaModuPanel`'de "Rezerve tutar"
