@@ -17,24 +17,28 @@ import path from 'node:path'
 const ASSETS_DIR = path.resolve('dist/assets')
 
 // gzip kB cinsinden bütçeler. Yeni bir vendor/entry chunk ağırlaşırsa buraya ekle.
+// Ölçüm 2026-08-24 (manualChunks fonksiyon formu sonrası); bütçe ≈ mevcut + %10.
 const BUDGETS = {
-  'index.js': 150,
-  'pdf.js': 138,
-  'vendor-recharts.js': 122,
-  'vendor-motion.js': 45,
+  'index.js': 20,
+  'vendor-react.js': 82,
+  'vendor-supabase.js': 63,
+  'pdf.js': 143,
+  'pdf.worker.min.mjs': 400,
 }
-const TOTAL_BUDGET_KB = 660
+// .mjs (pdf worker ~365 kB gzip) artık toplama DAHİL — eski 660'lık bütçe
+// worker'ı hiç saymıyordu, "TOPLAM" gerçekte 930 kB'tı ve regresyon görünmezdi.
+const TOTAL_BUDGET_KB = 1030
 
 const KB = 1024
 
 function stripHash(file) {
-  // vite çıktısı: `<ad>-<8karakterhash>.js` → `<ad>.js`
-  return file.replace(/-[A-Za-z0-9_-]{8}\.js$/, '.js')
+  // vite çıktısı: `<ad>-<8karakterhash>.js` → `<ad>.js` (worker `.mjs` dahil)
+  return file.replace(/-[A-Za-z0-9_-]{8}\.(js|mjs)$/, '.$1')
 }
 
 let files
 try {
-  files = readdirSync(ASSETS_DIR).filter((f) => f.endsWith('.js'))
+  files = readdirSync(ASSETS_DIR).filter((f) => f.endsWith('.js') || f.endsWith('.mjs'))
 } catch {
   console.error(`✗ ${ASSETS_DIR} bulunamadı — önce \`npm run build\` çalıştır.`)
   process.exit(1)

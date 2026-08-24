@@ -1,6 +1,6 @@
 // Sürüm yükseltmek eski önbelleği düşürür (activate eşleşmeyen key'leri siler).
-// Şerit görsel dili + FAB bandı düzeltmesi için bump edildi.
-const CACHE_NAME = 'denge-v3'
+// v4: /assets/ cache-first'e geçti — eski karışık (network-first) girdiler düşsün.
+const CACHE_NAME = 'denge-v4'
 const APP_SHELL = ['/', '/manifest.webmanifest', '/icon.svg']
 
 // --- Web Push (roadmap Y1) ---------------------------------------------------
@@ -61,6 +61,12 @@ function isNavigationOrStaticAsset(request, url) {
   return request.mode === 'navigate' || url.origin === self.location.origin
 }
 
+function isHashedAsset(url) {
+  // Vite çıktısı içerik-adresli: /assets/<ad>-<hash>.<uzantı>. İçerik değişince
+  // URL de değişir, bayatlaması imkânsız → cache-first hem güvenli hem en hızlısı.
+  return url.pathname.startsWith('/assets/')
+}
+
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return
 
@@ -70,6 +76,28 @@ self.addEventListener('fetch', (event) => {
   if (isApiRequest(url)) return
 
   if (!isNavigationOrStaticAsset(event.request, url)) return
+
+  // Hash'li asset'ler: cache-first. Eski network-first her açılışta değişmemiş
+  // chunk'lar için bile ağa çıkıyordu. Hash'li dosyaya index.html fallback'i
+  // yine YOK — stale deploy'da dinamik import hatası uygulamanın kendi reload
+  // kurtarmasına düşmeli (aşağıdaki network-first yorumuyla aynı kural).
+  if (url.origin === self.location.origin && isHashedAsset(url)) {
+    event.respondWith(
+      caches.match(event.request).then((cached) => {
+        if (cached) return cached
+        return fetch(event.request)
+          .then((response) => {
+            if (response.ok) {
+              const copy = response.clone()
+              caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy))
+            }
+            return response
+          })
+          .catch(() => Response.error())
+      }),
+    )
+    return
+  }
 
   const isNavigation = event.request.mode === 'navigate'
 
