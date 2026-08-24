@@ -1,5 +1,19 @@
 # Priority Backlog
 
+## 2026-08-24 (6) — Sıfır rezervli kova açılamıyordu — DONE
+
+`MoneyInput` blur'da 0'ı boşa çevirir; `KasaModuPanel`'de "Rezerve tutar"
+`required` olduğu için **"kovayı şimdi aç, parayı sonra ayır" akışı hiç
+kaydedilemiyordu** — üstelik hedefe bağlı kovanın doğal başlangıcı tam olarak 0.
+Alan zorunluluktan çıktı (boş = 0); gönderimdeki negatif kontrolü yerinde.
+
+Aynı kusur hedef formunda da vardı (bkz. 2026-08-24 (3)). Kalan üç `required`
+`MoneyInput` (ödeme tutarı, işlem tutarı, taksit toplamı) tarandı — orada 0
+zaten anlamsız, dokunulmadı.
+
+Doğrulama: yerel docker'da düzeltme ÖNCESİ kova oluşmuyordu (0 satır),
+sonrasında oluşuyor.
+
 ## 2026-08-24 (5) — Hedef TUTARININ çıpası — DONE
 
 Takip kaynaklarıyla hedefin biriken tarafı canlandı; hedef tarafı hâlâ donuk bir

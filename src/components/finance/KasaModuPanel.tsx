@@ -239,7 +239,11 @@ export function KasaModuPanel({ liquidCash }: { liquidCash: number }) {
           {/* Ham `type="number"` TR klavyede virgülü reddediyordu ("1.250,50" ya da
               "1250,5" girilemiyordu). MoneyInput `parseNumber` üzerinden iki
               locale'i de kabul eder ve tutarı biçimlenmiş gösterir (denetim §6). */}
-          <MoneyInput label="Rezerve tutar (₺)" value={reserved} onValueChange={setReserved} required />
+          {/* Zorunlu DEĞİL: `MoneyInput` blur'da 0'ı boşa çeviriyor, zorunlu alanla
+              birleşince "kovayı şimdi aç, parayı sonra ayır" akışı HİÇ
+              kaydedilemiyordu — üstelik hedefe bağlı kovanın doğal başlangıcı
+              tam olarak 0. Boş = 0; gönderimdeki negatif kontrolü yerinde duruyor. */}
+          <MoneyInput label="Rezerve tutar (₺)" value={reserved} onValueChange={setReserved} />
           <label className="block text-sm font-medium">
             Not
             <Textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} className="mt-1" />
