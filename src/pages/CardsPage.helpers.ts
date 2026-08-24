@@ -127,11 +127,23 @@ function normalizeBankName(bankName: string) {
   return normalizeSearchText(bankName)
 }
 
-function bankHue(bankName: string, rows: Card[]) {
+// Banka sırası aynı liste referansı için bir kez kurulur: bankHueStyle her kart
+// satırında (hem liste hem kart görseli) çağrılıyor, Set+sort'u satır başına
+// tekrarlamak gereksizdi. Liste değişince referans da değişir, cache tazelenir.
+const bankOrderCache = new WeakMap<Card[], string[]>()
+
+function sortedBankNames(rows: Card[]) {
+  const cached = bankOrderCache.get(rows)
+  if (cached) return cached
   const banks = Array.from(new Set(rows.map((row) => normalizeBankName(row.bank_name)).filter(Boolean))).sort((a, b) =>
     a.localeCompare(b, 'tr-TR'),
   )
-  const index = Math.max(0, banks.indexOf(normalizeBankName(bankName)))
+  bankOrderCache.set(rows, banks)
+  return banks
+}
+
+function bankHue(bankName: string, rows: Card[]) {
+  const index = Math.max(0, sortedBankNames(rows).indexOf(normalizeBankName(bankName)))
 
   return (index * 47 + 196) % 360
 }

@@ -1,15 +1,18 @@
 import { CalendarRange } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { Badge } from '../ui/badge'
 import { Card as SurfaceCard, CardContent, CardHeader, CardTitle } from '../ui/card'
 import { HelpTooltip, type HelpTooltipContent } from '../ui/help-tooltip'
-import { fetchCardInstallments } from '../../data/repositories/cardsRepo'
 import { useBalancePrivacy } from '../../hooks/useBalancePrivacy'
 import type { Card, CardInstallment } from '../../types/database'
 import { buildCardInstallmentCalendar, buildCardInstallmentTotalsByCard } from '../../utils/cardInstallmentCalendar'
 
 type CardInstallmentCalendarPanelProps = {
   cards: Card[]
+  // Taksitler sayfadan gelir: CardsPage aynı listeyi zaten çekiyor, panelin
+  // kendi fetch'i sayfa açılışında mükerrer istekti.
+  installments: CardInstallment[]
+  loading: boolean
 }
 
 const installmentCalendarHelp = {
@@ -18,39 +21,17 @@ const installmentCalendarHelp = {
   source: 'Kart taksit kayıtları ve bağlı kredi kartı bilgileri.',
 } satisfies HelpTooltipContent
 
-export function CardInstallmentCalendarPanel({ cards }: CardInstallmentCalendarPanelProps) {
+export function CardInstallmentCalendarPanel({ cards, installments, loading }: CardInstallmentCalendarPanelProps) {
   const { formatAmount } = useBalancePrivacy()
-  const [installments, setInstallments] = useState<CardInstallment[]>([])
-  const [loading, setLoading] = useState(true)
 
   const creditCards = useMemo(() => cards.filter((card) => card.card_type === 'kredi_karti'), [cards])
-
-  const loadInstallments = useCallback(async () => {
-    if (creditCards.length === 0) {
-      setInstallments([])
-      setLoading(false)
-      return
-    }
-
-    setLoading(true)
+  const creditInstallments = useMemo(() => {
     const creditCardIds = new Set(creditCards.map((card) => card.id))
-    const result = await fetchCardInstallments()
+    return installments.filter((item) => creditCardIds.has(item.card_id))
+  }, [creditCards, installments])
 
-    if (!result.ok) {
-      setInstallments([])
-    } else {
-      setInstallments(result.data.filter((item) => creditCardIds.has(item.card_id)))
-    }
-    setLoading(false)
-  }, [creditCards])
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    void loadInstallments()
-  }, [loadInstallments])
-
-  const months = useMemo(() => buildCardInstallmentCalendar(installments, creditCards, 4), [creditCards, installments])
-  const cardTotals = useMemo(() => buildCardInstallmentTotalsByCard(installments, creditCards), [creditCards, installments])
+  const months = useMemo(() => buildCardInstallmentCalendar(creditInstallments, creditCards, 4), [creditCards, creditInstallments])
+  const cardTotals = useMemo(() => buildCardInstallmentTotalsByCard(creditInstallments, creditCards), [creditCards, creditInstallments])
   const hasAny = months.some((month) => month.total > 0)
   const hasOngoingInstallments = cardTotals.total > 0
 

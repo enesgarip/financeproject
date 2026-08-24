@@ -83,6 +83,7 @@ export function CardsPage() {
   const { formatAmount, hidden: balancesHidden } = useBalancePrivacy()
   const {
     installments,
+    installmentsLoading,
     invalidateSnapshot,
     loadInstallments,
     loadReconciliations,
@@ -323,8 +324,12 @@ export function CardsPage() {
                   </div>
                   <LiveReconciliationPanel
                     cards={cardRows.filter((card) => card.card_type === 'kredi_karti')}
+                    reconciliations={reconciliations}
+                    onReloadReconciliations={loadReconciliations}
                     onChanged={async () => {
-                      await Promise.all([reload(), loadReconciliations(), invalidateSnapshot()])
+                      // loadReconciliations burada YOK: managed panel tazelemeyi
+                      // zaten onReloadReconciliations ile yapıyor.
+                      await Promise.all([reload(), invalidateSnapshot()])
                     }}
                   />
                   {/* Masaüstünde CardControlCenter asıl kart yüzeyi; CreditCardOverview yalnız
@@ -381,7 +386,7 @@ export function CardsPage() {
                     onCancel={(expense) => void handleProvisionAction(expense, 'cancel', reload, setError)}
                     onSetInstallments={(expense, count) => void handleSetProvisionInstallments(expense, count, reload, setError)}
                   />
-                  <CardInstallmentCalendarPanel cards={cardRows} />
+                  <CardInstallmentCalendarPanel cards={cardRows} installments={installments} loading={installmentsLoading} />
                   <StatementArchivePanel rows={cardRows} statements={statements} />
                 </>
               ) : null}
