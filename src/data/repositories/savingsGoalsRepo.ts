@@ -90,6 +90,9 @@ export async function upsertSavingsGoalWithComponents(input: {
     p_target_date: input.goalFields.target_date ?? null,
     p_status: input.goalFields.status,
     p_note: input.goalFields.note ?? null,
+    p_target_anchor: input.goalFields.target_anchor,
+    p_target_anchor_units: input.goalFields.target_anchor_units ?? null,
+    p_target_anchor_months: input.goalFields.target_anchor_months ?? null,
     p_is_composite: input.isComposite,
     p_components: input.isComposite
       ? input.components.map((c) => ({

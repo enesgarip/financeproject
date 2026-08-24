@@ -30,6 +30,7 @@ import type {
 } from '../types/database'
 import type { MarketRatesSnapshot } from './marketRates'
 import { roundTL, sumTL } from './money'
+import { goalTargetIsAnchored, resolveGoalTarget, type ResolvedGoalTarget } from './goalTargetAnchor'
 import { savingsGoalTargetReached } from './savingsGoal'
 import { effectiveAssetValue, type StockPrices } from './valuation'
 
@@ -41,6 +42,8 @@ export type GoalSourceRefs = {
   buckets?: KasaBucket[]
   snapshot?: MarketRatesSnapshot | null
   stockPrices?: StockPrices | null
+  /** Gerçekleşen aylık nakit çıkışı ortalaması; "N aylık gider" çıpası için. */
+  monthlyOutflow?: number | null
 }
 
 /**
@@ -177,6 +180,8 @@ export type ResolvedSavingsGoals = {
   goalResolutions: Map<string, GoalSourceResolution>
   /** component_id → türetme sonucu (yalnız kaynağa bağlı bileşenler). */
   componentResolutions: Map<string, GoalSourceResolution>
+  /** goal_id → çıpadan türeyen hedef tutarı (yalnız çıpalı hedefler). */
+  targetResolutions: Map<string, ResolvedGoalTarget>
 }
 
 function sourcesFor(sources: SavingsGoalSource[], goalId: string, componentId: string | null) {
@@ -202,9 +207,11 @@ export function resolveSavingsGoalRows(
 ): ResolvedSavingsGoals {
   const goalResolutions = new Map<string, GoalSourceResolution>()
   const componentResolutions = new Map<string, GoalSourceResolution>()
+  const targetResolutions = new Map<string, ResolvedGoalTarget>()
 
-  if (sources.length === 0) {
-    return { goals, components, goalResolutions, componentResolutions }
+  const anchoredGoals = goals.filter(goalTargetIsAnchored)
+  if (sources.length === 0 && anchoredGoals.length === 0) {
+    return { goals, components, goalResolutions, componentResolutions, targetResolutions }
   }
 
   const resolvedComponents = components.map((component) => {
@@ -227,14 +234,26 @@ export function resolveSavingsGoalRows(
       }
     }
 
+    // Hedefin İKİ tarafı da türetilebilir: biriken (kaynaklardan) ve tutar
+    // (çıpadan). İkisi de aynı yerden çıksın ki tüketiciler tek satıra baksın.
+    const target = resolveGoalTarget(goal, { snapshot: refs.snapshot, monthlyOutflow: refs.monthlyOutflow })
+    if (target) targetResolutions.set(goal.id, target)
+
     const rows = sourcesFor(sources, goal.id, null)
-    if (rows.length === 0) return goal
+    if (rows.length === 0) {
+      return target ? { ...goal, target_amount: target.amount } : goal
+    }
+
     const resolution = resolveGoalSources(rows, goal.value_type, refs)
     goalResolutions.set(goal.id, resolution)
-    return { ...goal, current_amount: resolution.amount }
+    return {
+      ...goal,
+      current_amount: resolution.amount,
+      ...(target ? { target_amount: target.amount } : {}),
+    }
   })
 
-  return { goals: resolvedGoals, components: resolvedComponents, goalResolutions, componentResolutions }
+  return { goals: resolvedGoals, components: resolvedComponents, goalResolutions, componentResolutions, targetResolutions }
 }
 
 // --- Form tarafı: kaynak = tek bir metin jetonu ----------------------------

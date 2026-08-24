@@ -27,6 +27,8 @@ export type CardExpenseSource =
 export type CardStatementStatus = 'open' | 'paid'
 export type SavingsGoalStatus = 'active' | 'completed'
 export type SavingsGoalValueType = 'TRY' | 'gram_altin' | 'ceyrek_altin' | 'composite'
+/** Hedef tutarının çıpası: sabit TL, altın/dolar endeksli ya da aylık gider katı. */
+export type SavingsGoalTargetAnchor = 'manual' | 'gold' | 'usd' | 'expense_months'
 export type TransactionHistoryType = 'payment' | 'transfer' | 'loan' | 'debt' | 'card' | 'correction' | 'asset'
 export type UpcomingDismissalSource = 'payment' | 'card' | 'loan_installment' | 'debt'
 export type ExpenseContextKind = 'pet' | 'project' | 'travel' | 'health' | 'hobby' | 'business'
@@ -161,6 +163,15 @@ export type SavingsGoal = BaseRow & {
   target_date: string | null
   status: SavingsGoalStatus
   note: string | null
+  /**
+   * Hedef TUTARININ neye bağlı olduğu. 'manual' dışında `target_amount` DB'de
+   * 0'dır ve tutar okuma anında türetilir (bkz. utils/goalTargetAnchor.ts).
+   */
+  target_anchor: SavingsGoalTargetAnchor
+  /** gold/usd çıpasında hedefin birim büyüklüğü (gram ya da USD). */
+  target_anchor_units: number | null
+  /** expense_months çıpasında kaç aylık gider. */
+  target_anchor_months: number | null
 }
 
 export type SavingsGoalComponent = BaseRow & {
@@ -910,6 +921,9 @@ export type Database = {
           p_is_composite?: boolean
           p_components?: Json
           p_sources?: Json
+          p_target_anchor?: string
+          p_target_anchor_units?: number | null
+          p_target_anchor_months?: number | null
         }
         Returns: string
       }

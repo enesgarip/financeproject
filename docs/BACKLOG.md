@@ -1,5 +1,30 @@
 # Priority Backlog
 
+## 2026-08-24 (5) — Hedef TUTARININ çıpası — DONE
+
+Takip kaynaklarıyla hedefin biriken tarafı canlandı; hedef tarafı hâlâ donuk bir
+sayıydı. "1M TL" üç yıl sonra bugünkü 1M değil.
+
+- ~~**Veri modeli.**~~ DONE. `savings_goals.target_anchor` (`manual` / `gold` /
+  `usd` / `expense_months`) + `target_anchor_units` + `target_anchor_months`,
+  alan kombinasyonu check kısıtıyla korunuyor. Çıpalı hedefte `target_amount`
+  0'a çekilir (türetilebilen değer saklanmaz). RPC yeni üç argümanı alır ve
+  çıpayı yalnız basit TL hedefte uygular — karma/altında sessizce değil AÇIKÇA
+  `manual`'e düşer. `supabase/tests/goal_target_anchor.sql`.
+- ~~**Domain.**~~ DONE. `utils/goalTargetAnchor.ts` (+9 test): çözme, bugünkü
+  TL'yi birime çevirme, rozet etiketi ve `averageMonthlyOutflow` (gerçekleşen
+  aylık nakit çıkışı ortalaması; cari ay hariç, boş aylar sayılmaz).
+  `resolveSavingsGoalRows` artık hedefin İKİ tarafını da türetiyor.
+- **TÜFE endeksi bilinçli olarak YOK:** elle girilen oran sayıya gömülmüş bir
+  tahmin, gerçek TÜFE ise yeni dış veri kaynağı + bakım olurdu. Altın/dolar
+  zaten canlı ve doğrulanabilir; "aylık gider katı" ise kullanıcının kendi
+  gerçek harcamasına dayanır.
+- ~~**Arayüz.**~~ DONE. Formda "Hedef tutarı" çıpa seçimi + bugünkü karşılığı
+  önizlemesi (*"139,45 gram altın"*), gider katında ay girişi ve
+  *"6 × ₺45.000 = ₺270.000"*; kartta çıpa rozeti. Kur/gider verisi yokken
+  kaydetme REDDEDİLİR (bayat çıpa yazmaktansa), var olan çıpalı hedefte ise
+  son bilinen tutar + "güncellenemedi" uyarısı gösterilir.
+
 ## 2026-08-24 (4) — İstek listesi canlandı — DONE
 
 `WishlistPage` düz bir CRUD listesiydi; yanında `cashFlowForecast` ve hedef
