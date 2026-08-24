@@ -37,7 +37,9 @@ import {
   parseGoalSourceToken,
   resolveGoalSources,
   resolveSavingsGoalRows,
+  suggestGoalSource,
   type GoalSourceRefs,
+  type GoalSourceSuggestion,
 } from '../../utils/goalSources'
 import {
   formatComponentAmount,
@@ -196,6 +198,8 @@ export function SavingsGoalsPanel({
   const [components, setComponents] = useState<SavingsGoalComponent[]>([])
   const [sources, setSources] = useState<SavingsGoalSource[]>([])
   const [sourceDrafts, setSourceDrafts] = useState<SourceDraft[]>([])
+  /** Öneriyi uygularken hangi hedefin beklediği (butonu kilitler). */
+  const [linkingGoalId, setLinkingGoalId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
@@ -230,6 +234,23 @@ export function SavingsGoalsPanel({
     () => resolveSavingsGoalRows(goals, components, sources, refs),
     [goals, components, sources, refs],
   )
+
+  /**
+   * "Bunu bağlayayım mı?" önerileri. Elle girilen tutar bir kaynağın toplamına
+   * çok yakınsa kullanıcı aslında o kaynağı elle kopyalıyordur; özelliği
+   * keşfetmesini beklemek yerine söylüyoruz. Yalnız kaynağı OLMAYAN aktif
+   * hedefler için — bağlı olan zaten güncel.
+   */
+  const suggestionByGoal = useMemo(() => {
+    const linkedGoalIds = new Set(sources.map((source) => source.goal_id))
+    const map = new Map<string, GoalSourceSuggestion>()
+    for (const goal of goals) {
+      if (goal.status !== 'active' || linkedGoalIds.has(goal.id)) continue
+      const suggestion = suggestGoalSource(goal, refs)
+      if (suggestion) map.set(goal.id, suggestion)
+    }
+    return map
+  }, [goals, sources, refs])
 
   const componentsByGoal = useMemo(() => {
     const map = new Map<string, SavingsGoalComponent[]>()
@@ -324,6 +345,51 @@ export function SavingsGoalsPanel({
     )
     setFormError('')
     setModalOpen(true)
+  }
+
+  /** Öneriyi tek tıkla uygular: hedefin alanlarına dokunmadan kaynağı bağlar. */
+  async function applySuggestedSource(goal: SavingsGoal, token: string) {
+    if (!user) return
+    const parsed = parseGoalSourceToken(token)
+    if (!parsed) return
+
+    setLinkingGoalId(goal.id)
+    const result = await upsertSavingsGoalWithComponents({
+      userId: user.id,
+      editingGoal: goal,
+      goalFields: {
+        name: goal.name,
+        value_type: goal.value_type,
+        target_amount: goal.target_amount,
+        current_amount: goal.current_amount,
+        // Bağlı hedefte saklanan tahmini değer bayat kalır; canlı hesaplanır.
+        estimated_value_try: null,
+        auto_valued: goal.auto_valued,
+        target_date: goal.target_date,
+        status: goal.status,
+        note: goal.note,
+      },
+      components: [],
+      sources: [
+        {
+          component_index: null,
+          kind: parsed.kind,
+          asset_id: parsed.asset_id,
+          asset_category: parsed.asset_category,
+          card_id: parsed.card_id,
+          bucket_id: parsed.bucket_id,
+          sort_order: 0,
+        },
+      ],
+      isComposite: false,
+    })
+    setLinkingGoalId(null)
+
+    if (!result.ok) {
+      setError(result.error.message ?? 'Hedef kaynağa bağlanamadı.')
+      return
+    }
+    await loadData()
   }
 
   async function handleDelete(goal: SavingsGoal) {
@@ -664,6 +730,29 @@ export function SavingsGoalsPanel({
                           {missingSourceCount} takip kaynağı bulunamadı; tutar eksik olabilir.
                         </p>
                       ) : null}
+                      {(() => {
+                        const suggestion = suggestionByGoal.get(goal.id)
+                        if (!suggestion) return null
+                        // Buton dar ekranda metnin YANINA sıkışmasın: metin tam
+                        // satır (w-full), buton alt satırda sağa yaslı (ml-auto).
+                        return (
+                          <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 rounded-lg border border-dashed border-primary/30 bg-primary/5 px-2 py-1.5">
+                            <p className="w-full text-[11px] text-ink-muted">
+                              <span className="font-semibold text-ink">{suggestion.label}</span> toplamın{' '}
+                              <span className="tabular-nums">{formatSavingsGoalAmount(goal, suggestion.amount)}</span> — bağlayıp
+                              otomatik güncelleyeyim mi?
+                            </p>
+                            <button
+                              type="button"
+                              disabled={linkingGoalId === goal.id}
+                              onClick={() => void applySuggestedSource(goal, suggestion.token)}
+                              className="tap-target ml-auto shrink-0 rounded-md px-2 py-1 text-[11px] font-bold text-primary hover:bg-primary/10 disabled:opacity-50"
+                            >
+                              {linkingGoalId === goal.id ? 'Bağlanıyor…' : 'Bağla'}
+                            </button>
+                          </div>
+                        )
+                      })()}
                       {goal.value_type !== 'TRY' && goal.value_type !== 'composite' && (goal.auto_valued || goal.estimated_value_try) ? (() => {
                         // "Güncel" etiketi kur alınamadığında da yazıyordu; artık
                         // saklı değere düşüldüğünde bunu söylüyor (Faz D3).

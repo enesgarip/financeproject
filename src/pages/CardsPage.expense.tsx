@@ -11,6 +11,7 @@ import type { Car, Card, CardExpense, CardExpenseStatus } from '../types/databas
 import { buildRepeatSuggestions, type RepeatSuggestion } from '../utils/expenseRepeat'
 import { expenseCategoryOptions } from '../utils/categories'
 import { getCardStatementPeriod } from '../utils/cardStatement'
+import { buildPurchaseTimingHint } from '../utils/purchaseTiming'
 import { dateInputValue, formatDate } from '../utils/date'
 import { cardProvisionAmount } from '../utils/financeSummary'
 import { getLastUsed, setLastUsed } from '../utils/lastUsed'
@@ -79,6 +80,15 @@ export function QuickExpensePanel({
   const isCarryover = parsedInstallmentCount > 1 && parsedPaidInstallments > 0
   const previewDate = isCarryover ? nextDueDate : spentAt
   const statementPreview = useMemo(() => getCardStatementPeriod(selectedCard, previewDate), [selectedCard, previewDate])
+  /**
+   * Kesim günü etkisi: kesime az kalmışken beklemek ödemeyi bir ay öteler.
+   * Yalnız normal (taksit devri olmayan) harcamada anlamlı — devirde tarih
+   * kullanıcının verdiği vade tarihidir, "beklemek" diye bir seçim yok.
+   */
+  const timingHint = useMemo(
+    () => (isCarryover ? null : buildPurchaseTimingHint(selectedCard, new Date(`${previewDate}T00:00:00`))),
+    [selectedCard, previewDate, isCarryover],
+  )
   // Banka hesabında bakiye aşımı: MovementModal aynı hesap için gönderimi
   // engelliyordu, burada 0'a kırpılıp sessizce geçiyordu → aynı hesap iki kural.
   // Artık tek kural: sunucu reddetmeden önce kullanıcı görür ve gönderemez.
@@ -572,6 +582,19 @@ export function QuickExpensePanel({
                   Kartta ekstre ve son ödeme günü eksik. Kartı güncellersen analizler daha net çalışır.
                 </p>
               )}
+              {/* Kesim günü etkisi: aynı harcama, bir gün farkla bir ay sonra
+                  ödenir. Bilgi zaten vardı ama karar anında görünmüyordu.
+                  Yalnız kesim yakınken gösterilir — 3 hafta sonrası için
+                  "beklesen" demek gerçekçi değil, gürültü olur. */}
+              {timingHint?.waitWorthIt ? (
+                <p className="mt-1 text-xs text-ink-muted">
+                  Kesime {timingHint.daysUntilStatement === 0 ? 'bugün' : `${timingHint.daysUntilStatement} gün`} kaldı:
+                  bugün alırsan <span className="font-semibold text-ink">{timingHint.daysUntilDue} gün</span> sonra
+                  ({formatDate(timingHint.dueDate)}), kesimden sonraya bırakırsan{' '}
+                  <span className="font-semibold text-ink">{timingHint.waitDaysUntilDue} gün</span> sonra
+                  ({formatDate(timingHint.waitDueDate)}) ödersin.
+                </p>
+              ) : null}
             </div>
           ) : selectedCard ? (
             <div className="space-y-2">
