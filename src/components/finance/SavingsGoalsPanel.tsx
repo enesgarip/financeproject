@@ -23,12 +23,14 @@ import type {
   SavingsGoal,
   SavingsGoalComponent,
   SavingsGoalSource,
+  SavingsGoalTargetAnchor,
   SavingsGoalValueType,
 } from '../../types/database'
 import { useBalancePrivacy } from '../../hooks/useBalancePrivacy'
 import { KASA_BUCKETS_QUERY_KEY, useKasaBuckets } from '../../hooks/useSafeToSpend'
 import { contributeToGoalBucket, insertKasaBucket, updateKasaBucket } from '../../data/repositories/kasaBucketsRepo'
 import { bucketForGoal, buildGoalBucketPlan } from '../../utils/goalBucket'
+import { goalTargetAnchorLabel, goalTargetUnitsFor } from '../../utils/goalTargetAnchor'
 import { useMarketRates } from '../../hooks/useMarketRates'
 import { useStockPrices } from '../../hooks/useStockPrices'
 import { formatDate } from '../../utils/date'
@@ -193,7 +195,14 @@ export function SavingsGoalsPanel({
   monthlySurplus,
   assets = [],
   cards = [],
-}: { monthlySurplus?: number; assets?: Asset[]; cards?: FinanceCard[] } = {}) {
+  monthlyOutflow = 0,
+}: {
+  monthlySurplus?: number
+  assets?: Asset[]
+  cards?: FinanceCard[]
+  /** Gerçekleşen aylık nakit çıkışı ortalaması; "N aylık gider" çıpası için. */
+  monthlyOutflow?: number
+} = {}) {
   const { formatAmount } = useBalancePrivacy()
   const { user } = useAuth()
   const { snapshot } = useMarketRates()
@@ -224,6 +233,9 @@ export function SavingsGoalsPanel({
   const [formError, setFormError] = useState('')
   /** Formdaki kasa kovası seçimi: '' = yok, NEW_BUCKET = hedef adıyla yeni kova, aksi hâlde kova id'si. */
   const [bucketChoice, setBucketChoice] = useState('')
+  /** Hedef TUTARININ çıpası (sabit TL / altın / dolar / aylık gider katı). */
+  const [targetAnchor, setTargetAnchor] = useState<SavingsGoalTargetAnchor>('manual')
+  const [anchorMonths, setAnchorMonths] = useState('6')
   /** "Bu ay ayır" basılan hedef (butonu kilitler). */
   const [contributingGoalId, setContributingGoalId] = useState<string | null>(null)
 
@@ -231,8 +243,8 @@ export function SavingsGoalsPanel({
   const buckets = bucketsQuery.data
 
   const refs = useMemo<GoalSourceRefs>(
-    () => ({ assets, cards, buckets: buckets ?? [], snapshot, stockPrices }),
-    [assets, cards, buckets, snapshot, stockPrices],
+    () => ({ assets, cards, buckets: buckets ?? [], snapshot, stockPrices, monthlyOutflow }),
+    [assets, cards, buckets, snapshot, stockPrices, monthlyOutflow],
   )
 
   /**
@@ -318,6 +330,8 @@ export function SavingsGoalsPanel({
     setComponentDrafts(defaultCompositeDrafts())
     setSourceDrafts([])
     setBucketChoice('')
+    setTargetAnchor('manual')
+    setAnchorMonths('6')
     setFormError('')
     setModalOpen(true)
   }
@@ -356,6 +370,8 @@ export function SavingsGoalsPanel({
         .map((source) => ({ key: source.id, ownerKey: source.component_id, token: goalSourceToken(source) })),
     )
     setBucketChoice(buckets ? (bucketForGoal(goal.id, buckets)?.id ?? '') : '')
+    setTargetAnchor(goal.target_anchor)
+    setAnchorMonths(String(goal.target_anchor_months ?? 6))
     setFormError('')
     setModalOpen(true)
   }
@@ -432,6 +448,10 @@ export function SavingsGoalsPanel({
         target_date: goal.target_date,
         status: goal.status,
         note: goal.note,
+        // Çıpa bu akışta değişmez; hedefin kendi ayarı korunur.
+        target_anchor: goal.target_anchor,
+        target_anchor_units: goal.target_anchor_units,
+        target_anchor_months: goal.target_anchor_months,
       },
       components: [],
       sources: [
@@ -485,6 +505,16 @@ export function SavingsGoalsPanel({
 
     const isComposite = valueType === 'composite'
     const isGold = valueType === 'gram_altin' || valueType === 'ceyrek_altin'
+    const effectiveAnchor: SavingsGoalTargetAnchor = valueType === 'TRY' ? targetAnchor : 'manual'
+
+    if (effectiveAnchor === 'expense_months' && Math.trunc(parseNumber(anchorMonths)) <= 0) {
+      setFormError('Kaç aylık gider hedeflediğini yaz (en az 1).')
+      return
+    }
+    if ((effectiveAnchor === 'gold' || effectiveAnchor === 'usd') && goalTargetUnitsFor(effectiveAnchor, parseNumber(targetAmount), snapshot) === null) {
+      setFormError('Kur alınamadığı için hedef çıpaya bağlanamadı; birazdan tekrar dene.')
+      return
+    }
 
     let parsedComponents: SavingsGoalComponentInput[] = []
 
@@ -520,7 +550,8 @@ export function SavingsGoalsPanel({
 
       parsedComponents = nextComponents
     } else {
-      if (parseNumber(targetAmount) <= 0) {
+      // Gider katı çıpasında hedef tutarı girilmez, aylık giderden türer.
+      if (effectiveAnchor !== 'expense_months' && parseNumber(targetAmount) <= 0) {
         setFormError('Hedef miktar 0’dan büyük olmalı.')
         return
       }
@@ -586,6 +617,16 @@ export function SavingsGoalsPanel({
         target_date: targetDate || null,
         status,
         note: note.trim() || null,
+        // Çıpa yalnız basit TL hedefte; RPC de aynı kuralı zorlar.
+        target_anchor: effectiveAnchor,
+        // Kaydederken bugünkü TL çıpa birimine çevrilir. Kur o günden beri
+        // oynadıysa yeniden kaydetmek hedefi GÜNCEL kurla yeniden çıpalar —
+        // ekranda gördüğü tutarı kastettiği için doğru davranış budur.
+        target_anchor_units:
+          effectiveAnchor === 'gold' || effectiveAnchor === 'usd'
+            ? goalTargetUnitsFor(effectiveAnchor, parseNumber(targetAmount), snapshot)
+            : null,
+        target_anchor_months: effectiveAnchor === 'expense_months' ? Math.trunc(parseNumber(anchorMonths)) : null,
       }
 
       const result = await upsertSavingsGoalWithComponents({
@@ -631,6 +672,30 @@ export function SavingsGoalsPanel({
   }, [sourceDrafts, valueType, refs])
 
   const formCurrentAmount = goalIsLinked ? goalSourceAmount : parseNumber(currentAmount)
+
+  /**
+   * Formdaki çıpanın bugünkü karşılığı. Kullanıcı "1M TL" yazdığında bunun kaç
+   * grama denk geldiğini KAYDETMEDEN önce görsün; sonradan hedefin neden
+   * oynadığını anlamak için de aynı cümle karta yazılır.
+   */
+  const anchorPreview = useMemo(() => {
+    if (valueType !== 'TRY') return null
+
+    if (targetAnchor === 'gold' || targetAnchor === 'usd') {
+      const units = goalTargetUnitsFor(targetAnchor, parseNumber(targetAmount), snapshot)
+      if (units === null) return 'Kur bekleniyor…'
+      return targetAnchor === 'gold' ? `${units} gram altın` : `${units} USD`
+    }
+
+    if (targetAnchor === 'expense_months') {
+      const months = Math.trunc(parseNumber(anchorMonths))
+      if (months <= 0) return null
+      if (!(monthlyOutflow > 0)) return 'Aylık gider verisi yok'
+      return `${months} × ${formatAmount(monthlyOutflow)} = ${formatAmount(months * monthlyOutflow)}`
+    }
+
+    return null
+  }, [valueType, targetAnchor, targetAmount, anchorMonths, snapshot, monthlyOutflow, formatAmount])
 
   function addSourceDraft(ownerKey: string | null, token: string) {
     setSourceDrafts((rows) => [...rows, { key: crypto.randomUUID(), ownerKey, token }])
@@ -727,6 +792,8 @@ export function SavingsGoalsPanel({
               .map((component) => resolved.componentResolutions.get(component.id))
               .filter((resolution) => resolution !== undefined)
             const linkedResolutions = goalResolution ? [goalResolution, ...componentResolutions] : componentResolutions
+            const anchorLabel = goalTargetAnchorLabel(goal)
+            const targetIsStale = resolved.targetResolutions.get(goal.id)?.stale ?? false
             const missingSourceCount = linkedResolutions.reduce((total, resolution) => total + resolution.missing.length, 0)
             const circumference = 2 * Math.PI * 36
             const strokeOffset = circumference - (circumference * Math.min(rate, 100)) / 100
@@ -773,6 +840,13 @@ export function SavingsGoalsPanel({
                                 Varlıklardan
                               </Badge>
                             ) : null}
+                            {/* Çıpa rozeti: hedef tutarı neden kendiliğinden
+                                oynuyor sorusunun cevabı kartın üstünde dursun. */}
+                            {anchorLabel ? (
+                              <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                                {anchorLabel}
+                              </Badge>
+                            ) : null}
                           </div>
                         </div>
                         {/* Sil düzenlemenin yanında; hedefler birbirinin görünür
@@ -800,6 +874,11 @@ export function SavingsGoalsPanel({
                       {missingSourceCount > 0 ? (
                         <p className="mt-0.5 text-[11px] font-medium text-warning">
                           {missingSourceCount} takip kaynağı bulunamadı; tutar eksik olabilir.
+                        </p>
+                      ) : null}
+                      {targetIsStale ? (
+                        <p className="mt-0.5 text-[11px] font-medium text-warning">
+                          Hedef tutarı güncellenemedi (kur/gider verisi yok); en son bilinen değer gösteriliyor.
                         </p>
                       ) : null}
                       {(() => {
@@ -1071,10 +1150,54 @@ export function SavingsGoalsPanel({
                   alanlar gram/adet MİKTARIDIR; oraya TL önizlemesi basmak yanlış
                   olurdu, o yüzden yalnız `type="number"` yerine ondalık metin girişine
                   çevrildi — virgül sorunu orada da çözülür (denetim §6). */}
+              {/* Hedef TUTARININ çıpası: "1M TL" üç yıl sonra bugünkü 1M değil.
+                  Yalnız TL hedefte anlamlı — altın hedefi zaten birim cinsinden. */}
+              {valueType === 'TRY' ? (
+                <label className="block text-sm font-medium">
+                  Hedef tutarı
+                  <Select
+                    value={targetAnchor}
+                    aria-label="Hedef tutarı çıpası"
+                    onChange={(e) => setTargetAnchor(e.target.value as SavingsGoalTargetAnchor)}
+                    className="mt-1"
+                  >
+                    <option value="manual">Sabit TL</option>
+                    <option value="gold">Altına endeksle (satın alma gücünü korur)</option>
+                    <option value="usd">Dolara endeksle</option>
+                    <option value="expense_months">Aylık giderimin katı (acil fon)</option>
+                  </Select>
+                </label>
+              ) : null}
+
+              {anchorPreview ? (
+                <div className="rounded-lg border border-dashed border-line-strong bg-page px-3 py-2.5 text-sm">
+                  <span className="text-ink-muted">Bugünkü karşılığı: </span>
+                  <span className="font-mono font-semibold tabular-nums text-ink">{anchorPreview}</span>
+                </div>
+              ) : null}
+
+              {targetAnchor === 'expense_months' && valueType === 'TRY' ? (
+                <label className="block text-sm font-medium">
+                  Kaç aylık gider
+                  <Input
+                    value={anchorMonths}
+                    onChange={(e) => setAnchorMonths(e.target.value)}
+                    type="text"
+                    inputMode="numeric"
+                    className="mt-1 tabular-nums"
+                  />
+                  <span className="mt-1 block text-xs font-normal text-ink-muted">
+                    Hedef, son 6 ayın gerçekleşen nakit çıkışı ortalamasından türer; harcaman değiştikçe hedef de değişir.
+                  </span>
+                </label>
+              ) : null}
+
               <div className={goalIsLinked ? 'grid grid-cols-1' : 'grid grid-cols-2 gap-3'}>
                 {valueType === 'TRY' ? (
                   <>
-                    <MoneyInput label="Hedef miktar" value={targetAmount} onValueChange={setTargetAmount} required />
+                    {targetAnchor === 'expense_months' ? null : (
+                      <MoneyInput label="Hedef miktar" value={targetAmount} onValueChange={setTargetAmount} required />
+                    )}
                     {/* Zorunlu DEĞİL: MoneyInput 0'ı boşa çeviriyor (blur), zorunlu
                         alanla birleşince "henüz hiç birikmedim" diyen yeni hedef
                         kaydedilemiyordu. Boş = 0. */}

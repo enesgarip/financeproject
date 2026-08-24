@@ -16,6 +16,7 @@ import { buildSafeToSpend } from '../utils/safeToSpend'
 import { readSafeToSpendBuffer, useKasaReserved } from '../hooks/useSafeToSpend'
 import { SERIT_FILL, useSeritAmount, type SeritTone } from '../components/serit'
 import { buildBudgetUsage } from '../utils/budgetAlerts'
+import { averageMonthlyOutflow } from '../utils/goalTargetAnchor'
 import { sumTL } from '../utils/money'
 import { BudgetProgress } from './AnalysisPage.panels'
 
@@ -67,6 +68,17 @@ export function PlanningPage() {
     }).amount
     return { liquidCash: position.totalCashAssets, monthlySurplus: surplus }
   }, [snapshotQuery.data, reserved])
+
+  /**
+   * "N aylık gider" çıpalı hedefin dayanağı: gerçekleşen aylık nakit çıkışının
+   * ortalaması (cari ay hariç). Projeksiyon değil, geçmiş — acil fon hedefi
+   * tahmine değil, gerçekten harcadığın paraya dayansın.
+   */
+  const monthlyOutflow = useMemo(() => {
+    const data = snapshotQuery.data
+    if (!data) return 0
+    return averageMonthlyOutflow(data.transactionHistory, data.payments, data.cards)
+  }, [snapshotQuery.data])
 
   // Ay bütçesi toplamı: kategori limitlerinin ve harcamalarının toplamı.
   // "Hız" cümlesi ayın kaçıncı gününde olduğumuzla harcama oranını karşılaştırır —
@@ -173,6 +185,7 @@ export function PlanningPage() {
           monthlySurplus={monthlySurplus}
           assets={snapshotQuery.data?.assets ?? []}
           cards={snapshotQuery.data?.cards ?? []}
+          monthlyOutflow={monthlyOutflow}
         />
       ) : null}
 

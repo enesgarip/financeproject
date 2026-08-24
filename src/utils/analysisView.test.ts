@@ -187,6 +187,9 @@ describe('buildSearchItems', () => {
           valued_at: null,
           valuation_rate: null,
           note: null,
+          target_anchor: 'manual',
+          target_anchor_units: null,
+          target_anchor_months: null,
         }],
       }),
     )
@@ -211,6 +214,9 @@ describe('buildSearchItems', () => {
           valued_at: null,
           valuation_rate: null,
           note: null,
+          target_anchor: 'manual',
+          target_anchor_units: null,
+          target_anchor_months: null,
         }],
       }),
     )

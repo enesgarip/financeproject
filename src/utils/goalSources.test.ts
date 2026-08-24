@@ -79,6 +79,9 @@ function goal(overrides: Partial<SavingsGoal> & { id: string }): SavingsGoal {
     target_date: null,
     status: 'active',
     note: null,
+    target_anchor: 'manual',
+    target_anchor_units: null,
+    target_anchor_months: null,
     ...overrides,
   }
 }
