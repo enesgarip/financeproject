@@ -1,5 +1,28 @@
 # Priority Backlog
 
+## 2026-08-24 (3) — Hedef → kasa kovası: plan artık ısırıyor — DONE
+
+Sorun: hedef kartındaki "Aylık gerekli: ₺25.000" yalnız BİLGİYDİ; harcanabilir
+tutarı (safeToSpend) hiç etkilemiyordu, yani plan harcama kararının önüne
+çıkmıyordu.
+
+- ~~**Veri modeli.**~~ DONE. `kasa_buckets.goal_id` (hedef silinince `set null` —
+  kovadaki para kaybolmaz, yalnız bağ kopar) + `last_contribution_month` +
+  hedef başına tek kova (partial unique index). `contribute_to_goal_bucket` RPC:
+  artırım tek ifadede sunucuda (client'ta oku-değiştir-yaz iki sekmede birbirini
+  ezerdi), ayın damgasını basar. `supabase/tests/goal_bucket_contribution.sql`.
+- ~~**Domain.**~~ DONE. `utils/goalBucket.ts` (+8 test): aylık plan, "bu ay
+  ayrıldı mı", ve kovanın hedefin takip KAYNAĞI olup olmadığı (`fundsProgress`).
+- ~~**Arayüz.**~~ DONE. Hedef formunda "Kasa kovası" seçimi (yok / yeni / mevcut),
+  kartta "Kasada ayrılan · Bu ay ayrılacak ₺X · [Ayır]" ve ayrıldıysa "bu ay
+  ayrıldı" + "Tekrar ayır". Kova hedefin kaynağı değilse ilerlemeye yansımadığı
+  SÖYLENİR ve "Bu kovayı kaynak yap" tek tıkla sunulur (halkayı kapatır:
+  ayır → harcanabilir düşer → ilerleme artar → aylık gerekli azalır).
+  KasaModuPanel'de bağlı kova işaretlenir.
+- ~~**Yan bulgu (düzeltildi).**~~ Hedef formunda "Biriken miktar" zorunluydu ama
+  `MoneyInput` blur'da 0'ı boşa çeviriyor → sıfırdan başlayan hedef HİÇ
+  kaydedilemiyordu. Alan zorunluluktan çıkarıldı (boş = 0).
+
 ## 2026-08-24 (2) — Kaynak önerisi + kesim günü etkisi — DONE
 
 Hedef takip kaynaklarının (aynı gün, bir önceki madde) devamı. İki küçük

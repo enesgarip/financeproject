@@ -48,7 +48,7 @@ function card(overrides: Partial<Card> & { id: string }): Card {
 }
 
 function bucket(overrides: Partial<KasaBucket> & { id: string }): KasaBucket {
-  return { ...base, name: 'Kova', reserved_amount: 0, sort_order: 0, note: null, ...overrides }
+  return { ...base, name: 'Kova', reserved_amount: 0, sort_order: 0, note: null, goal_id: null, last_contribution_month: null, ...overrides }
 }
 
 function source(overrides: Partial<SavingsGoalSource> & { id: string; kind: SavingsGoalSource['kind'] }): SavingsGoalSource {

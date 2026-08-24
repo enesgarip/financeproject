@@ -198,6 +198,11 @@ export function KasaModuPanel({ liquidCash }: { liquidCash: number }) {
               <CardContent className="flex items-center justify-between gap-3 p-4">
                 <div className="min-w-0">
                   <p className="truncate text-sm font-bold text-ink">{bucket.name}</p>
+                  {/* Bu kovayı bir hedef besliyor: tutarı elle değiştirmek
+                      hedefin planıyla çelişebilir, o yüzden görünür olsun. */}
+                  {bucket.goal_id ? (
+                    <p className="mt-0.5 text-[11px] font-semibold text-primary">Birikim hedefine bağlı</p>
+                  ) : null}
                   <p className="mt-0.5 text-sm font-black tabular-nums text-ink">{formatAmount(bucket.reserved_amount)}</p>
                   {bucket.note ? <p className="mt-0.5 truncate text-[11px] italic text-ink-muted">{bucket.note}</p> : null}
                 </div>

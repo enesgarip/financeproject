@@ -505,6 +505,10 @@ export type KasaBucket = BaseRow & {
   reserved_amount: number
   sort_order: number
   note: string | null
+  /** Bu kova bir birikim hedefine ayrılmışsa hedefin kimliği (en fazla bir kova). */
+  goal_id: string | null
+  /** Hedef planına göre en son ayırma yapılan ayın ilk günü; NULL = hiç ayrılmadı. */
+  last_contribution_month: string | null
 }
 
 export type Car = BaseRow & {
@@ -882,6 +886,14 @@ export type Database = {
           p_note?: string | null
         }
         Returns: Asset
+      }
+      contribute_to_goal_bucket: {
+        Args: {
+          p_bucket_id: string
+          p_amount: number
+        }
+        /** Ayırma sonrası kovadaki toplam rezerv. */
+        Returns: number
       }
       upsert_savings_goal: {
         Args: {
