@@ -3,6 +3,7 @@ import { useEffect } from 'react'
 import { useAuth } from '../auth/useAuth'
 import type { FinanceSnapshot } from '../data/repositories/financeSnapshotRepo'
 import { financeSnapshotKey } from './financeSnapshotKey'
+import { SAVINGS_GOAL_SNAPSHOTS_QUERY_KEY } from './savingsGoalSnapshotsKey'
 
 /**
  * Günlük net değer fotoğrafı. Eskiden yalnız Analiz sayfası açılınca alınıyordu;
@@ -112,7 +113,7 @@ export function useDailyNetWorthSnapshot() {
           if (cancelled) return
           await goalRunner.recordDailyGoalSnapshots(userId, snapshot, rates, () => cancelled)
           // Hedef kartındaki tempo/varış şeridi açıksa bugünün noktasını görsün.
-          void queryClient.invalidateQueries({ queryKey: ['savings-goal-snapshots'] })
+          void queryClient.invalidateQueries({ queryKey: SAVINGS_GOAL_SNAPSHOTS_QUERY_KEY })
         } catch {
           // Snapshot kaydı yardımcı bir iştir; hatası kullanıcı akışını bozmaz.
         }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { KasaBucket, SavingsGoal, SavingsGoalSource } from '../types/database'
-import { bucketForGoal, buildGoalBucketPlan, isSameMonth } from './goalBucket'
+import { bucketForGoal, buildGoalBucketPlan, dominantBucketGoal, isSameMonth } from './goalBucket'
 
 const base = { id: 'id', user_id: 'u', created_at: '2026-08-01T00:00:00.000Z', updated_at: '2026-08-01T00:00:00.000Z' }
 
@@ -113,5 +113,31 @@ describe('bucketForGoal', () => {
 
     expect(bucketForGoal('g1', rows)?.id).toBe('b1')
     expect(bucketForGoal('g2', rows)).toBeNull()
+  })
+})
+
+describe('dominantBucketGoal', () => {
+  it('kovası olan aktif hedeflerden aylık payı en çok isteyeni seçer', () => {
+    const goals = [
+      // 600k / 5 ay → aylık ~120k (baskın)
+      goal({ id: 'g1', name: 'Ev peşinatı' }),
+      // 60k / 5 ay → aylık ~12k
+      goal({ id: 'g2', name: 'Tatil', target_amount: 60_000 }),
+    ]
+    const buckets = [bucket({ id: 'b1', goal_id: 'g1' }), bucket({ id: 'b2', goal_id: 'g2' })]
+
+    const result = dominantBucketGoal(goals, buckets, today)
+    expect(result?.goal.id).toBe('g1')
+    expect(result?.bucket.id).toBe('b1')
+    expect(result?.monthlyNeeded).toBeGreaterThan(0)
+  })
+
+  it('kovasız ve pasif hedefleri eler; hiç aday yoksa null', () => {
+    const goals = [
+      goal({ id: 'g1' }), // kovası yok
+      goal({ id: 'g2', status: 'completed' }),
+    ]
+    expect(dominantBucketGoal(goals, [bucket({ id: 'b2', goal_id: 'g2' })], today)).toBeNull()
+    expect(dominantBucketGoal([], [], today)).toBeNull()
   })
 })

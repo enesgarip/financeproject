@@ -1,23 +1,30 @@
-import { useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { CircleAlert, CircleCheck, CircleX, ShoppingCart } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
+import { SAVINGS_GOAL_SNAPSHOTS_QUERY_KEY } from '../app/savingsGoalSnapshotsKey'
 import { useFinanceSnapshot } from '../app/useFinanceSnapshot'
 import { useAuth } from '../auth/useAuth'
 import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
-import { readSafeToSpendBuffer, useKasaReserved } from '../hooks/useSafeToSpend'
+import { KASA_BUCKETS_QUERY_KEY, readSafeToSpendBuffer, useKasaBuckets, useKasaReserved } from '../hooks/useSafeToSpend'
 import { WISHLIST_QUERY_KEY } from '../hooks/useWishlistItems'
 import { Card, CardContent } from '../components/ui/card'
 import { Input } from '../components/ui/input'
 import { QueryError } from '../components/ui/query-error'
+import { fetchSavingsGoalSnapshots } from '../data/repositories/analysisRepo'
+import { contributeToGoalBucket } from '../data/repositories/kasaBucketsRepo'
 import { insertWishlistItem } from '../data/repositories/wishlistRepo'
 import { buildCardTimingChoices } from '../utils/cardTimingChoice'
 import { buildCashFlowForecast } from '../utils/cashFlowForecast'
 import { dateInputValue } from '../utils/date'
 import { buildMonthlyCashFlow, buildFinancialPosition, getCurrentSalary } from '../utils/financeSummary'
+import { buildForegoneGainPreview } from '../utils/foregoneGain'
+import { dominantBucketGoal } from '../utils/goalBucket'
+import { buildGoalTempo } from '../utils/goalEta'
 import { resolveSavingsGoalRows } from '../utils/goalSources'
 import { averageMonthlyOutflow } from '../utils/goalTargetAnchor'
 import { buildPurchaseEffort } from '../utils/purchaseEffort'
+import { buildSavingsSuggestion } from '../utils/savingsSuggestion'
 import { buildPurchaseImpact, type PurchasePaymentMethod, type PurchaseVerdict } from '../utils/purchaseImpact'
 import { buildSafeToSpend } from '../utils/safeToSpend'
 import { dominantSavingsGoal } from '../utils/wishlistPlan'
@@ -56,6 +63,19 @@ export function PurchaseDecisionPage() {
   // "Şimdilik listeye at" köprüsünün durumu; tutar değişince buton geri gelir.
   const [listSave, setListSave] = useState<'idle' | 'saving' | 'done'>('idle')
   const [listError, setListError] = useState('')
+  // Vazgeçme Kazancı: aynı karar için ikinci ayırmayı state kilidi engeller.
+  const [foregoState, setForegoState] = useState<'idle' | 'saving' | 'done'>('idle')
+  const [foregoError, setForegoError] = useState('')
+  const bucketsQuery = useKasaBuckets()
+  // Günlük hedef fotoğrafları (yalnız okuma; yazan useDailyNetWorthSnapshot).
+  const goalSnapshotsQuery = useQuery({
+    queryKey: [...SAVINGS_GOAL_SNAPSHOTS_QUERY_KEY, user?.id],
+    enabled: Boolean(user),
+    queryFn: async () => {
+      const result = await fetchSavingsGoalSnapshots()
+      return result.ok ? (result.data ?? []) : []
+    },
+  })
 
   // Elle parse yerine kanonik `parseNumber`: "1234.56" gibi girdiyi binlik ayraç
   // sanıp 123.456 TL okuyan yerel kopya kalkmadı diye K6 burada yaşamaya devam
@@ -110,24 +130,65 @@ export function PurchaseDecisionPage() {
 
   const verdict = impact ? VERDICT_PRESENTATION[impact.verdict] : null
 
+  // Kaynağa bağlı hedefin birikeni DB'de değil burada oluşur (goalSources.ts) —
+  // ham snapshot.savingsGoals ile hesap remaining'i şişirirdi.
+  const resolvedGoals = useMemo(() => {
+    const snapshot = snapshotQuery.data
+    if (!snapshot) return null
+    return resolveSavingsGoalRows(snapshot.savingsGoals, snapshot.savingsGoalComponents, snapshot.savingsGoalSources, {
+      assets: snapshot.assets,
+      cards: snapshot.cards,
+    }).goals
+  }, [snapshotQuery.data])
+
   // "Bu tutar neye denk?" — emek çevirisi (utils/purchaseEffort). Girdisi eksik
   // satır susar; hedef kıyası wishlistPlan'ın baskın-hedef tanımını paylaşır.
   const effort = useMemo(() => {
     const snapshot = snapshotQuery.data
-    if (!snapshot || !hasAmount) return null
-    const { goals } = resolveSavingsGoalRows(
-      snapshot.savingsGoals,
-      snapshot.savingsGoalComponents,
-      snapshot.savingsGoalSources,
-      { assets: snapshot.assets, cards: snapshot.cards },
-    )
+    if (!snapshot || !resolvedGoals || !hasAmount) return null
     return buildPurchaseEffort({
       amount,
       salary: getCurrentSalary(snapshot.salaryHistory)?.amount ?? null,
       monthlyOutflow: averageMonthlyOutflow(snapshot.transactionHistory, snapshot.payments, snapshot.cards),
-      dominant: dominantSavingsGoal(goals, new Date()),
+      dominant: dominantSavingsGoal(resolvedGoals, new Date()),
     })
-  }, [snapshotQuery.data, hasAmount, amount])
+  }, [snapshotQuery.data, resolvedGoals, hasAmount, amount])
+
+  // Vazgeçme Kazancı: yalnız TL hedef + kova hedefin takip KAYNAĞI iken konuşur
+  // (fundsProgress değilse "varış öne gelir" önizlemesi YALAN olurdu —
+  // goalBucket.ts kuralı); kalan yoksa blok hiç görünmez.
+  const foregone = useMemo(() => {
+    const snapshot = snapshotQuery.data
+    const buckets = bucketsQuery.data
+    if (!snapshot || !buckets || !resolvedGoals || !hasAmount) return null
+    const dominant = dominantBucketGoal(resolvedGoals, buckets)
+    if (!dominant || dominant.goal.value_type !== 'TRY') return null
+    const fundsProgress = snapshot.savingsGoalSources.some(
+      (source) =>
+        source.goal_id === dominant.goal.id && source.kind === 'kasa_bucket' && source.bucket_id === dominant.bucket.id,
+    )
+    if (!fundsProgress) return null
+    const remaining = buildSavingsSuggestion(dominant.goal, new Date()).remaining
+    if (remaining <= 0) return null
+    const tempo = buildGoalTempo(goalSnapshotsQuery.data ?? [], dominant.goal.id)
+    return { dominant, preview: buildForegoneGainPreview({ goal: dominant.goal, remaining, amount, tempo }) }
+  }, [snapshotQuery.data, bucketsQuery.data, resolvedGoals, hasAmount, amount, goalSnapshotsQuery.data])
+
+  async function handleForego() {
+    if (!foregone || foregoState !== 'idle' || !hasAmount) return
+    setForegoState('saving')
+    setForegoError('')
+    // Tek yazma yolu MEVCUT RPC: çift muhasebe riski yok; kova ay damgasını
+    // basar (o ayın "hedefe ayır" dürtmeleri susar — bilinçli kabul).
+    const result = await contributeToGoalBucket(foregone.dominant.bucket.id, amount)
+    if (!result.ok) {
+      setForegoState('idle')
+      setForegoError(result.error.message)
+      return
+    }
+    setForegoState('done')
+    void qc.invalidateQueries({ queryKey: KASA_BUCKETS_QUERY_KEY })
+  }
 
   async function handleDeferToList() {
     if (!user || !hasAmount || listSave === 'saving') return
@@ -187,6 +248,8 @@ export function PurchaseDecisionPage() {
               setAmountInput(event.target.value)
               setListSave('idle')
               setListError('')
+              setForegoState('idle')
+              setForegoError('')
             }}
             placeholder="Tutar (TL)"
             aria-label="Alışveriş tutarı"
@@ -401,6 +464,40 @@ export function PurchaseDecisionPage() {
               ) : null}
             </CardContent>
           </Card>
+
+          {/* Vazgeçme Kazancı: üçüncü çıkış yolu — almamanın ödülü satın almanın
+              hazzıyla aynı ekranda yarışır. Yazma yolu mevcut RPC (tek yol). */}
+          {foregone ? (
+            <Card className="border-line-strong">
+              <CardContent className="p-4 sm:p-5">
+                <p className="text-sm font-bold text-ink">Vazgeçersen ne kazanırsın?</p>
+                <p className="mt-1 text-xs text-ink-muted">
+                  {foregone.preview.kind === 'dated'
+                    ? `Bu tutar ${foregone.dominant.goal.name} kovasına girerse varış ~${foregone.preview.beforeLabel} → ~${foregone.preview.afterLabel}${
+                        foregone.preview.monthsSaved > 0 ? ` (${foregone.preview.monthsSaved} ay önce)` : ''
+                      }.`
+                    : foregone.preview.kind === 'completes'
+                      ? `Bu tutar hedefin kalanını karşılıyor — ayırırsan ${foregone.dominant.goal.name} tamamlanır.`
+                      : `Ayırırsan ${foregone.dominant.goal.name} hedefine ${formatCurrency(amount)} eklenir. Varış tahmini için tempo verisi henüz yetersiz.`}
+                </p>
+                {foregoState === 'done' ? (
+                  <p className="mt-2 text-xs font-semibold text-success">
+                    {formatCurrency(amount)} {foregone.dominant.goal.name} kovasına ayrıldı.
+                  </p>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => void handleForego()}
+                    disabled={foregoState === 'saving'}
+                    className="mt-2 rounded-lg bg-primary/10 px-3 py-1.5 text-xs font-bold text-primary ring-1 ring-primary/30 transition hover:bg-primary/15 disabled:opacity-50"
+                  >
+                    Vazgeçtim — {foregone.dominant.goal.name} hedefine ayır
+                  </button>
+                )}
+                {foregoError ? <p className="mt-1 text-xs text-destructive">{foregoError}</p> : null}
+              </CardContent>
+            </Card>
+          ) : null}
         </>
       ) : null}
 

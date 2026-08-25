@@ -66,3 +66,33 @@ export function buildGoalBucketPlan(
 export function bucketForGoal(goalId: string, buckets: KasaBucket[]): KasaBucket | null {
   return buckets.find((bucket) => bucket.goal_id === goalId) ?? null
 }
+
+export type DominantBucketGoal = {
+  goal: SavingsGoal
+  bucket: KasaBucket
+  monthlyNeeded: number
+}
+
+/**
+ * Kovası olan aktif hedeflerden aylık payı en çok isteyeni seçer (wishlistPlan
+ * "asıl beslenen" mantığının kovalı sürümü). budgetBridge (bütçe→hedef köprüsü)
+ * ve karar ekranının Vazgeçme Kazancı aynı seçiciyi kullanır — iki yüzeyin
+ * hedef tanımı ayrışmasın.
+ */
+export function dominantBucketGoal(
+  goals: SavingsGoal[],
+  buckets: KasaBucket[],
+  today: Date = new Date(),
+): DominantBucketGoal | null {
+  return (
+    goals
+      .filter((goal) => goal.status === 'active')
+      .map((goal) => ({
+        goal,
+        bucket: bucketForGoal(goal.id, buckets),
+        monthlyNeeded: buildSavingsSuggestion(goal, today).monthlyNeeded ?? 0,
+      }))
+      .filter((row): row is DominantBucketGoal => row.bucket !== null)
+      .sort((a, b) => b.monthlyNeeded - a.monthlyNeeded)[0] ?? null
+  )
+}
