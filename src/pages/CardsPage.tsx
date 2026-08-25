@@ -30,6 +30,7 @@ import type { Card, CardStatementArchive } from '../types/database'
 import { buildStatementPaidMap, statementRemainingAmount } from '../utils/cardStatementPayments'
 import { dateInputValue, formatDate } from '../utils/date'
 import { cardPayableDebt } from '../utils/financeSummary'
+import { minimumCardPaymentRate } from '../utils/financeObligationRules'
 import { isMissingSupabaseCapabilityError, missingSupabaseCapabilityMessage } from '../utils/supabaseErrors'
 import { useFinancePaymentDrawer } from '../hooks/useFinancePaymentDrawer'
 import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
@@ -170,6 +171,7 @@ export function CardsPage() {
         amount: remaining,
         maxPayableAmount: remaining,
         minimumPaymentBase: remaining,
+        minimumPaymentRate: minimumCardPaymentRate(card.credit_limit),
         direction: 'outflow',
       },
       {
@@ -211,6 +213,7 @@ export function CardsPage() {
         date: dateInputValue(new Date()),
         amount: cardPayableDebt(card),
         minimumPaymentBase: card.statement_debt_amount,
+        minimumPaymentRate: minimumCardPaymentRate(card.credit_limit),
         direction: 'outflow',
       },
       {

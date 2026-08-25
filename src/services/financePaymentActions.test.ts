@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import {
   getAccountsForObligation,
   estimatedMinimumCardPayment,
+  minimumCardPaymentRate,
   lastUsedKeyForObligation,
   obligationAmountEditable,
   submitFinanceObligationPayment,
@@ -160,5 +161,13 @@ describe('finance payment action helpers', () => {
     expect(estimatedMinimumCardPayment(1000)).toBe(200)
     expect(estimatedMinimumCardPayment(333.33)).toBe(66.67)
     expect(estimatedMinimumCardPayment(-100)).toBe(0)
+  })
+
+  it('asgari oran BDDK kademesini izler: limit < 25.000 → %20, ≥ 25.000 → %40', () => {
+    expect(minimumCardPaymentRate(24999)).toBe(0.2)
+    expect(minimumCardPaymentRate(25000)).toBe(0.4)
+    expect(minimumCardPaymentRate(120000)).toBe(0.4)
+    expect(minimumCardPaymentRate(null)).toBe(0.2)
+    expect(estimatedMinimumCardPayment(10000, minimumCardPaymentRate(120000))).toBe(4000)
   })
 })

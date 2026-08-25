@@ -203,13 +203,14 @@ export type CreditCardStatus = {
   className: string
 }
 
-export function getCreditCardDueDate(
+/** Yalnız AÇIK ekstrenin vadesi (kalanı bitenler dayatmaz — K7); yoksa null.
+ *  Uyarı rozetleri buna bağlanır: bankada dönem içi harcamanın "son ödemesi"
+ *  olmaz, vade ancak kesilmiş ekstreyle doğar (denetim 2026-08-12 §2). */
+export function getOpenStatementDueDate(
   card: Card,
   statements: CardStatementArchive[],
-  now: Date = new Date(),
   paid: StatementPaidMap = EMPTY_STATEMENT_PAID_MAP,
 ): Date | null {
-  // Kısmen ödenmiş ama kalanı biten ekstre vade dayatmaz (K7).
   const openStatement = statements
     .filter(
       (statement) =>
@@ -219,7 +220,18 @@ export function getCreditCardDueDate(
         && statement.due_date,
     )
     .sort((a, b) => (a.due_date ?? '').localeCompare(b.due_date ?? ''))[0]
-  return openStatement?.due_date ? new Date(`${openStatement.due_date}T00:00:00`) : nextMonthlyDateFrom(card.due_day, now)
+  return openStatement?.due_date ? new Date(`${openStatement.due_date}T00:00:00`) : null
+}
+
+export function getCreditCardDueDate(
+  card: Card,
+  statements: CardStatementArchive[],
+  now: Date = new Date(),
+  paid: StatementPaidMap = EMPTY_STATEMENT_PAID_MAP,
+): Date | null {
+  // Açık ekstre yoksa due_day fallback'i yalnız BİLGİ amaçlıdır ("Son ödeme"
+  // satırı takvim günü gösterir); uyarı rozetleri bu fallback'e bakmaz.
+  return getOpenStatementDueDate(card, statements, paid) ?? nextMonthlyDateFrom(card.due_day, now)
 }
 
 export function getCreditCardStatus(
@@ -229,9 +241,12 @@ export function getCreditCardStatus(
   now: Date = new Date(),
 ): CreditCardStatus {
   const payableDebt = cardPayableDebt(card)
-  const dueDate = getCreditCardDueDate(card, statements, now)
-  const remainingDays = dueDate
-    ? Math.ceil((dueDate.getTime() - startOfDay(now).getTime()) / 86_400_000)
+  // Gecikme/yaklaşma yalnız AÇIK ekstre vadesinden doğar: açık ekstre yokken
+  // due_day fallback'i + dönem içi harcama sahte "Son ödeme yaklaşıyor"
+  // üretiyordu (denetim 2026-08-12 §2 — kesilmemiş borcun vadesi yoktur).
+  const openDueDate = getOpenStatementDueDate(card, statements)
+  const remainingDays = openDueDate
+    ? Math.ceil((openDueDate.getTime() - startOfDay(now).getTime()) / 86_400_000)
     : null
 
   if (payableDebt > 0 && remainingDays !== null && remainingDays < 0) {

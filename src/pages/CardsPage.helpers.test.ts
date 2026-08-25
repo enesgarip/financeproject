@@ -4,6 +4,7 @@ import {
   addMonthsToMonth,
   formatMonthLabel,
   getCreditCardStatus,
+  getOpenStatementDueDate,
   isMonthValue,
   monthDateValue,
   monthInputValue,
@@ -84,6 +85,27 @@ describe('getCreditCardStatus', () => {
 
     expect(status.label).toBe('Gecikmiş')
     expect(status.description).toBe('8 gün geçti')
+  })
+
+  // Denetim §2: vade rozetleri yalnız AÇIK ekstreden doğar — açık ekstre yokken
+  // due_day fallback'i + dönem içi harcama sahte "Son ödeme yaklaşıyor" üretiyordu.
+  it('açık ekstre yokken dönem içi harcama + due_day fallback sahte uyarı üretmez', () => {
+    const card = creditCard({ current_period_spending: 8_000, due_day: 26 })
+    const status = getCreditCardStatus(card, 10, [], new Date(2026, 6, 24))
+    expect(status.label).toBe('Normal')
+    expect(status.description).toBe('Takipte')
+  })
+
+  it('açık ekstre vadesi yaklaşınca uyarır', () => {
+    const card = creditCard({ statement_debt_amount: 5_000 })
+    const open = statement({ statement_debt_amount: 5_000, due_date: '2026-07-27' })
+    const status = getCreditCardStatus(card, 10, [open], new Date(2026, 6, 24))
+    expect(status.label).toBe('Son ödeme yaklaşıyor')
+  })
+
+  it('ödenmiş ya da başka karta ait ekstre vade dayatmaz', () => {
+    expect(getOpenStatementDueDate(creditCard(), [statement({ status: 'paid' })])).toBeNull()
+    expect(getOpenStatementDueDate(creditCard(), [statement({ card_id: 'other' })])).toBeNull()
   })
 })
 

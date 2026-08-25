@@ -26,9 +26,31 @@ iş / bilinçli-park. Dilim dilim kapanıyor:
     "belgelenmeli" maddesi kapandı).
   - Playwright-required önerisi gerekçeyle KAPATILDI (path-filtreli koşum
     required check'i kilitlerdi).
-- **K2 — denetim §2 kod işleri** (asgari ödeme %20/%40 kademesi, due_day
-  rozet fallback'i, taksit son-taksit yuvarlaması, kredi taksit sırası,
-  kesim client-side kararı) — sırada.
+- ~~**K2 — denetim §2 kod işleri.**~~ DONE (denetimin faz haritasına hiç
+  atanmamış §2 "klasik bankacılığa aykırılıklar" bölümünün kapanışı):
+  - **Asgari ödeme BDDK kademesi:** sabit %20 yerine limit < 25.000 → %20,
+    ≥ 25.000 → %40 (`minimumCardPaymentRate`, financeObligationRules — saf
+    katmanda; services yalnız re-export). Çekmece intent'in
+    `minimumPaymentRate`'ini uygular; 4 intent kurulum noktası + obligations
+    kartın `credit_limit`'ini geçirir.
+  - **Sahte "Son ödeme yaklaşıyor" bitti:** vade rozetleri yalnız AÇIK
+    ekstrenin vadesinden doğar (`getOpenStatementDueDate`); `due_day`
+    fallback'i yalnız bilgi satırında kalır — kesilmemiş dönem içi harcamanın
+    vadesi yoktur (+3 test; mevcut 14'lük helpers test dosyası korunarak).
+  - **Kredi taksit sırası:** `pay_loan_installment` daha küçük numaralı
+    bekleyen taksit varken ödemeyi reddeder (migration `20260825160000` —
+    gövde birebir + tek guard; `supabase/tests/loan_installment_order.sql`).
+    "Geçmişi ödendi say" akışı bu RPC'den geçmez, etkilenmez.
+  - **Kesim gözlemlenebilir sunucu kemeri:** pg_cron zamanlaması best-effort
+    kuruluydu ve üretim koşusu gözlemlenemiyordu; `push-notify` günlük cron'u
+    artık `run_scheduled_card_maintenance`'ı da çağırır (service_role grant'ı
+    aynı migration'da; RPC'ler idempotent, çifte koşu güvenli; sonuç yanıt
+    gövdesinde izlenir).
+  - **Taksit yuvarlaması:** ZATEN çözülmüştü — canlı `post_card_provision`
+    (20260812090000) son taksite kalanı emdiriyor; TS'teki `amount/count`
+    yalnız post-öncesi etiket önizlemesi (bankaların gösterimiyle aynı).
+    Kod değişikliği gerekmedi, burada kapanış kaydı.
+  - FINANCE_RULES §Card Payment Rules + §Scheduled Maintenance güncellendi.
 - **K3 — DataHealth talimatlı-ödeme tolerans penceresi** — sırada.
 - **K4 — `sync_loan_summary` invariant testi + statement-level** — sırada.
 - **K5 — pgTAP saat enjeksiyonu + gece/Şubat-31 kenar testleri** — sırada.

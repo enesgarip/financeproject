@@ -75,7 +75,7 @@ export function FinancePaymentDrawer({
   // K7: ekstre de kısmi/asgari ödenebilir; iki kart akışında da taban ekstre kovası.
   const minimumPayment =
     intent?.action === 'pay_card_debt' || intent?.action === 'pay_card_statement'
-      ? estimatedMinimumCardPayment(intent.minimumPaymentBase ?? 0)
+      ? estimatedMinimumCardPayment(intent.minimumPaymentBase ?? 0, intent.minimumPaymentRate)
       : 0
   // B4: seçili hesapta son 3 günde aynı tutarlı SMS kaynaklı çıkış varsa bakiye
   // muhtemelen zaten düşmüş demektir; kullanıcıya "tekrar düşme" seçeneği sunulur.

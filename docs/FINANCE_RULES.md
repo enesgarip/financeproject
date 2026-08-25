@@ -136,7 +136,12 @@ Statement archive behavior:
 ## Scheduled Card Maintenance (server-side)
 
 A daily `pg_cron` job runs `run_scheduled_card_maintenance()` so time-based card
-transitions happen on the correct day even if the app is never opened.
+transitions happen on the correct day even if the app is never opened. The
+scheduling was installed best-effort (skipped silently if the extension is
+unavailable) and its production runs were unobservable; since 2026-08-25 the
+daily `push-notify` GitHub cron (07:00 İstanbul) also calls the RPC as an
+observable second belt — its result lands in the workflow response body. The
+RPCs are idempotent, so a possible double run is safe.
 
 - It impersonates each credit-card user (sets the JWT `sub` claim) and calls the
   existing, audited RPCs — `post_due_card_installments`,
@@ -157,6 +162,20 @@ transitions happen on the correct day even if the app is never opened.
 ## Card Payment Rules
 
 On the cards page:
+
+- Minimum payment hint follows the BDDK tier (2023-08-25 kararı): credit limit
+  below 25.000 TL → 20%, at or above → 40%. Single source:
+  `minimumCardPaymentRate` in `src/utils/financeObligationRules.ts`; the drawer
+  applies it via the intent's `minimumPaymentRate`. The base is the statement
+  bucket only (K7 — dönem içi harcamanın asgarisi olmaz).
+- Due-date warning badges ("Son ödeme yaklaşıyor" / "Gecikmiş") arise ONLY from
+  an OPEN statement's due date (`getOpenStatementDueDate`); the `due_day`
+  calendar fallback is informational display only — uncut current-period
+  spending has no due date (denetim 2026-08-12 §2).
+- Loan installments are paid strictly in order: `pay_loan_installment` rejects
+  paying installment N while a lower-numbered installment is still `bekliyor`
+  (banks collect in sequence). The cash-free "Geçmişi ödendi say" flow does not
+  go through this RPC and is unaffected.
 
 - payable card debt excludes provision and future scheduled installments:
   - `payableDebt = max(0, statement_debt_amount + current_period_spending)`

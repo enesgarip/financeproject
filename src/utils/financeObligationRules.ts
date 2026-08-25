@@ -13,7 +13,7 @@
  */
 import type { Card, Payment } from '../types/database'
 import { isDateInMonth, monthlyOccurrenceDate } from './date'
-import { sumTL } from './money'
+import { roundTL, sumTL } from './money'
 
 // Kartın bu ay ödenecek tutarı = yalnızca kesilmiş ekstre borcu.
 // Dönem içi harcama (current_period_spending) henüz ekstreye girmediği için
@@ -84,4 +84,23 @@ export function paymentCashOutflowAmount(
   isCreditCardId?: CreditCardIdCheck,
 ) {
   return paymentUsesCreditCard(payment, isCreditCardId) ? 0 : payment.amount
+}
+
+/**
+ * BDDK asgari ödeme kademesi (25 Ağustos 2023 kararı): kart limiti
+ * 25.000 TL'nin ALTINDA %20, 25.000 TL ve ÜZERİNDE %40. Ortak aile limitinde
+ * kartın tahsis limiti ortak limitin kendisidir (credit_limit kolonu) — grup
+ * matematiğine girmeden kartın kendi kolonu doğru taban. Kural değişirse
+ * yalnız bu sabitler güncellenir.
+ */
+export const MINIMUM_PAYMENT_TIER_LIMIT = 25000
+const MINIMUM_PAYMENT_RATE_LOW = 0.2
+const MINIMUM_PAYMENT_RATE_HIGH = 0.4
+
+export function minimumCardPaymentRate(creditLimit: number | null | undefined): number {
+  return (creditLimit ?? 0) >= MINIMUM_PAYMENT_TIER_LIMIT ? MINIMUM_PAYMENT_RATE_HIGH : MINIMUM_PAYMENT_RATE_LOW
+}
+
+export function estimatedMinimumCardPayment(amount: number, rate = MINIMUM_PAYMENT_RATE_LOW) {
+  return roundTL(Math.max(0, amount) * rate)
 }

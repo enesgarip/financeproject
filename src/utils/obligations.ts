@@ -37,7 +37,7 @@ import type {
 import { getCardStatementPeriod, getNextCardPaymentDueDate } from './cardStatement'
 import { buildStatementPaidMap, statementRemainingAmount } from './cardStatementPayments'
 import { addDays, addMonths, dateInputValue, endOfMonth, isDateInMonth, monthlyOccurrenceDate, startOfDay, startOfMonth } from './date'
-import { buildCreditCardIdCheck, cardMonthlyPaymentAmount, cardPayableDebt, paymentCashOutflowAmount, paymentOccurrenceInMonth, paymentUsesCreditCard } from './financeObligationRules'
+import { buildCreditCardIdCheck, cardMonthlyPaymentAmount, cardPayableDebt, minimumCardPaymentRate, paymentCashOutflowAmount, paymentOccurrenceInMonth, paymentUsesCreditCard } from './financeObligationRules'
 import { roundTL, sumTL } from './money'
 
 export type FinanceObligationKind =
@@ -80,6 +80,8 @@ export type FinanceObligation = {
    * ise çekmece asgari ipucu göstermez (denetim 2026-08-12 K7).
    */
   minimumPaymentBase?: number
+  /** Asgari oran (BDDK kademesi, kart limitine göre %20/%40); yoksa çekmece %20 varsayar. */
+  minimumPaymentRate?: number
   direction: FinanceObligationDirection
   settlement?: FinanceObligationSettlement
   isEstimate?: boolean // tutar tahmini/otomatik değerlenmiş mi (kesin değil)
@@ -239,6 +241,7 @@ export function buildFinanceObligationsForMonth(
       date: dueDate,
       amount: remaining,
       minimumPaymentBase: remaining,
+      minimumPaymentRate: minimumCardPaymentRate(card?.credit_limit),
       direction: 'outflow',
     })
   }
