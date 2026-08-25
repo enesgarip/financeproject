@@ -1,10 +1,11 @@
 import { useMemo, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../auth/useAuth'
 import { useFinanceSnapshot } from '../app/useFinanceSnapshot'
 import { CrudPage, type FormField } from '../components/CrudPage'
 import { saveCrudRow } from '../data/repositories/crudRepo'
 import { fetchAccountEventsSince } from '../data/repositories/financePanelsRepo'
+import { contributeToGoalBucket } from '../data/repositories/kasaBucketsRepo'
 import { KasaModuPanel } from '../components/finance/KasaModuPanel'
 import { SavingsGoalsPanel } from '../components/finance/SavingsGoalsPanel'
 import { QueryError } from '../components/ui/query-error'
@@ -16,6 +17,7 @@ import { parseNumber } from '../utils/formatCurrency'
 import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
 import { formatMonth } from '../utils/analysisView'
 import { averageCategorySpend, budgetAnchorLabel, resolveBudgetRows } from '../utils/budgetAnchor'
+import { buildBudgetSurplusBridge } from '../utils/budgetBridge'
 import { buildFinancialPosition, buildMonthlyCashFlow, getCurrentSalary } from '../utils/financeSummary'
 import { buildSafeToSpend } from '../utils/safeToSpend'
 import { readSafeToSpendBuffer, useKasaBuckets, useKasaReserved } from '../hooks/useSafeToSpend'
@@ -142,6 +144,31 @@ export function PlanningPage() {
     if (!salaryWindowOpen) return null
     return findSalaryChangeCandidate(depositsQuery.data ?? [], salaryAmount)
   }, [salaryWindowOpen, depositsQuery.data, salaryAmount])
+
+  // Bütçe→hedef köprüsü: ayın son 3 gününde bütçe artığını tek tıkla kovaya.
+  // Ayırınca (kova ay damgası normal aylık ayırmayla çakıştığı için) ay
+  // işareti localStorage'a yazılır — aynı ay ikinci kez dürtmez.
+  const queryClient = useQueryClient()
+  const [bridgeBusy, setBridgeBusy] = useState(false)
+  const [bridgeError, setBridgeError] = useState('')
+  const [bridgeDoneMonth, setBridgeDoneMonth] = useState<string | null>(null)
+  const bridgeMarkerKey = userId ? `denge:budget-bridge:${userId}:${monthStartIso.slice(0, 7)}` : null
+  const bridgeDismissed =
+    !bridgeMarkerKey || bridgeDoneMonth === monthStartIso || localStorage.getItem(bridgeMarkerKey) === '1'
+
+  async function applyBudgetBridge(bucketId: string, amount: number) {
+    setBridgeBusy(true)
+    setBridgeError('')
+    const result = await contributeToGoalBucket(bucketId, amount)
+    setBridgeBusy(false)
+    if (!result.ok) {
+      setBridgeError(result.error.message ?? 'Kovaya ayırma tamamlanamadı.')
+      return
+    }
+    if (bridgeMarkerKey) localStorage.setItem(bridgeMarkerKey, '1')
+    setBridgeDoneMonth(monthStartIso)
+    void queryClient.invalidateQueries({ queryKey: ['kasa-buckets'] })
+  }
 
   async function applySalaryChange(amount: number) {
     if (!userId) return
@@ -371,8 +398,36 @@ export function PlanningPage() {
           emptyDescription="Kategori bazlı aylık limit ekleyerek harcama takibini başlatabilirsin."
           orderBy="month"
           orderAscending={false}
-          renderBeforeList={({ loading: crudLoading, rows, reload }) =>
-            !crudLoading ? (
+          renderBeforeList={({ loading: crudLoading, rows, reload }) => {
+            if (crudLoading) return null
+            const bridge = bridgeDismissed
+              ? null
+              : buildBudgetSurplusBridge(
+                  buildBudgetUsage(rows as Budget[], cardExpenses, new Date(), salaryAmount),
+                  snapshotQuery.data?.savingsGoals ?? [],
+                  bucketsQuery.data ?? [],
+                )
+            return (
+              <>
+                {bridge ? (
+                  <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-info/25 bg-info/8 px-3 py-2.5">
+                    <p className="text-sm font-medium text-info">
+                      Bu ay bütçelerden {formatAmount(bridge.surplus)} artmış görünüyor — {bridge.goalName} hedefine
+                      ayırmak ister misin?
+                    </p>
+                    <button
+                      type="button"
+                      disabled={bridgeBusy}
+                      onClick={() => void applyBudgetBridge(bridge.bucketId, bridge.surplus)}
+                      className="shrink-0 rounded-lg bg-info px-3 py-1.5 text-xs font-bold text-white transition hover:bg-info/90 disabled:opacity-60"
+                    >
+                      {bridgeBusy ? 'Ayırılıyor...' : `${formatAmount(bridge.surplus)} ayır`}
+                    </button>
+                    {bridgeError ? (
+                      <p role="alert" className="w-full text-xs font-medium text-warning">{bridgeError}</p>
+                    ) : null}
+                  </div>
+                ) : null}
               <BudgetProgress
                 budgets={rows as Budget[]}
                 expenses={cardExpenses}
@@ -407,8 +462,9 @@ export function PlanningPage() {
                   void snapshotQuery.refetch()
                 }}
               />
-            ) : null
-          }
+              </>
+            )
+          }}
           getInitialValues={(row?: Budget) => ({
             month: row?.month ?? dateInputValue(startOfMonth()),
             category: row?.category ?? expenseCategoryOptions[0]?.value ?? 'Diğer',

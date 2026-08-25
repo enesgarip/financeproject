@@ -30,8 +30,15 @@ Kullanıcıyla kararlaştırılan sıra:
   findSalaryDeposit kind filtresini içeride yapar). UI: Planlama'da öneri
   şeridi + tek tık "₺X olarak güncelle" → yeni `salary_history` satırı
   (effective_date = ay başı); uygulama sayıyı kendiliğinden DEĞİŞTİRMEZ.
-- **E2 — bütçe→hedef köprüsü** (ayın son günlerinde bütçe artığını tek tıkla
-  kovaya) — sırada.
+- ~~**E2 — bütçe→hedef köprüsü.**~~ DONE. `utils/budgetBridge.ts` (+3 test):
+  ayın SON 3 gününde (ortasında "kalan" artık değil plandır) limitli bütçe
+  satırlarının pozitif kalan toplamı ≥ 100 TL ise, kovası olan aktif
+  hedeflerden aylık payı en çok isteyene (wishlistPlan "asıl beslenen"
+  mantığı) tek tık ayırma önerir. Yazma MEVCUT `contribute_to_goal_bucket`
+  RPC'siyle; ayırınca localStorage ay damgası aynı ay ikinci dürtmeyi keser
+  (kova ay damgası kullanılamazdı — normal aylık ayırma da onu basar, köprünün
+  değeri PLAN ÜSTÜ artığı yakalamak). UI: Planlama'da BudgetProgress üstünde
+  şerit.
 - ~~**E3 — ekstre tahmini.**~~ DONE. `utils/statementEstimate.ts` (+3 test):
   kesime ≤5 gün kala (purchaseTiming pencere disiplini) tahmin = dönem içi
   kovası + o ekstre ayının planlı taksitleri; "~" dili bilinçli (bekleyen
