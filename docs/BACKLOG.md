@@ -15,14 +15,29 @@ Kullanıcıyla kararlaştırılan sıra:
    tek-tık ay devri şeridi, bayat bütçe önerisi, üç kopyanın DRY'ı
 5. ~~**Varış tahmini**~~ (DONE, aşağıda) — PR-0 serisinden gerçekleşen tempo
    (son 90 gün, min 45 gün + 2 ay örneği; tempo ≤ 0 ise tarih UYDURULMAZ)
-6. **Maaş günü akışı** — `salary_history` tutarı ± %10 deposit tespiti (saf
-   ikiz + edge), `goal_contribution_due` penceresi "gün 2-5 VEYA yatış görüldü"
-   + iki metin varyantı (tutar yine YOK), Planlama'da maaş şeridi; opsiyon:
-   maaş değişikliği algılama
+6. ~~**Maaş günü akışı**~~ (DONE, aşağıda) — deposit tespiti + push metni +
+   Planlama şeridi; opsiyonel "maaş değişikliği algılama" TURA ALINMADI
+   (ekstralarla birlikte not)
 
 Tura alınmayan, not edilen ekstralar: bütçe→hedef köprüsü (ay kapanışı artığını
 tek tıkla kovaya), abonelik radarı, ekstre tahmini ("kesilse ~₺X gelir").
 
+- ~~**PR-5 — maaş günü akışı.**~~ DONE (turun son maddesi — TUR TAMAM).
+  `utils/salaryDeposit.ts` (+test): `findSalaryDeposit` — ay içi 'deposit'
+  event'lerinde güncel maaşın ±%10 bandındaki ilk giriş (band bilinçli gevşek:
+  kesinti/prim oynatır; yanlış pozitifin bedeli küçük). Edge ikizi
+  `push-notify`'da: iki yeni sorgu (salary_history lte-bugün desc,
+  account_ledger bu ayın deposit'leri — maaş TUTARI saklı bilgi, "türetilmiş
+  tutar hesaplanmaz" kuralı bozulmaz); `goal_contribution_due` penceresi
+  "gün 2-5 VEYA (yatış tespit edildi VE gün ≤ 12)"; yatışta başlık/metin
+  "maaş yattı görünüyor" varyantına döner, dedupe (goal:ay) ve TUTARSIZ metin
+  kuralı aynen. UI: PlanningPage üstünde bilgi şeridi (ayın ilk 12 günü +
+  tespit + ayırılmamış kova varsa; sorgu yalnız pencere açıkken atılır) —
+  aksiyon hedef kartlarındaki MEVCUT tek-tık "Ayır", ikinci yazma yolu yok;
+  sessiz saat push'u sustursa da halka uygulama içinde kapanır. Doğrulama:
+  deno check + lint + 1298 test + build + bundle; sayfa smoke temiz (yereldeki
+  bist-quote 503'leri edge fn'lerin lokalde sunulmamasından, değişiklik dışı).
+  Gerçek push metni üretimde ilk yatış penceresinde görülecek (#160 kabulü).
 - ~~**PR-4 — varış tahmini.**~~ DONE. `utils/goalEta.ts` (+8 test):
   `buildGoalTempo` (son 90 günün UÇ noktalarından aylık delta — delikli seri
   sorun değil; min 45 gün süre + 2 farklı ay şartı, yoksa null) ve

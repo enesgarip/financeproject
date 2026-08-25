@@ -1,22 +1,26 @@
 import { useMemo } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '../auth/useAuth'
 import { useFinanceSnapshot } from '../app/useFinanceSnapshot'
 import { CrudPage, type FormField } from '../components/CrudPage'
 import { saveCrudRow } from '../data/repositories/crudRepo'
+import { fetchDepositsSince } from '../data/repositories/financePanelsRepo'
 import { KasaModuPanel } from '../components/finance/KasaModuPanel'
 import { SavingsGoalsPanel } from '../components/finance/SavingsGoalsPanel'
 import { QueryError } from '../components/ui/query-error'
 import { SkeletonCard, SkeletonHero } from '../components/ui/skeleton'
 import type { Budget } from '../types/database'
 import { expenseCategoryOptions } from '../utils/categories'
-import { dateInputValue, endOfMonth, startOfMonth } from '../utils/date'
+import { dateInputValue, endOfMonth, formatDate, startOfMonth } from '../utils/date'
 import { parseNumber } from '../utils/formatCurrency'
 import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
 import { formatMonth } from '../utils/analysisView'
 import { averageCategorySpend, budgetAnchorLabel, resolveBudgetRows } from '../utils/budgetAnchor'
 import { buildFinancialPosition, buildMonthlyCashFlow, getCurrentSalary } from '../utils/financeSummary'
 import { buildSafeToSpend } from '../utils/safeToSpend'
-import { readSafeToSpendBuffer, useKasaReserved } from '../hooks/useSafeToSpend'
+import { readSafeToSpendBuffer, useKasaBuckets, useKasaReserved } from '../hooks/useSafeToSpend'
+import { bucketForGoal, isSameMonth } from '../utils/goalBucket'
+import { findSalaryDeposit } from '../utils/salaryDeposit'
 import { SERIT_FILL, useSeritAmount, type SeritTone } from '../components/serit'
 import { buildBudgetUsage } from '../utils/budgetAlerts'
 import { averageMonthlyOutflow } from '../utils/goalTargetAnchor'
@@ -96,6 +100,38 @@ export function PlanningPage() {
     () => getCurrentSalary(snapshotQuery.data?.salaryHistory ?? [])?.amount ?? null,
     [snapshotQuery.data],
   )
+
+  // Maaş günü şeridi: ayın ilk ~12 gününde, hesaba maaşa benzeyen giriş
+  // düştüyse ve ayırması yapılmamış hedef kovası varsa tek satırlık dürtü.
+  // Push'un ikizi ama uygulama İÇİ halkası: sessiz saat push'u sustursa da
+  // kullanıcı sayfaya girince aynı sinyali görür. Tespit ±%10 bandıyla
+  // (utils/salaryDeposit); sorgu yalnız pencere açıkken atılır.
+  const todayDay = new Date().getDate()
+  const monthStartIso = dateInputValue(startOfMonth())
+  const salaryWindowOpen = todayDay <= 12 && Boolean(salaryAmount)
+  const depositsQuery = useQuery({
+    queryKey: ['salary-deposits', userId, monthStartIso],
+    enabled: Boolean(userId) && salaryWindowOpen,
+    queryFn: async () => {
+      const result = await fetchDepositsSince(monthStartIso)
+      return result.ok ? result.data : []
+    },
+  })
+  const bucketsQuery = useKasaBuckets()
+  const salaryStrip = useMemo(() => {
+    if (!salaryWindowOpen) return null
+    const match = findSalaryDeposit(depositsQuery.data ?? [], salaryAmount)
+    if (!match) return null
+    const goals = snapshotQuery.data?.savingsGoals ?? []
+    const buckets = bucketsQuery.data ?? []
+    const pending = goals.filter((goal) => {
+      if (goal.status !== 'active') return false
+      const bucket = bucketForGoal(goal.id, buckets)
+      return bucket ? !isSameMonth(bucket.last_contribution_month, new Date()) : false
+    })
+    if (pending.length === 0) return null
+    return { matchedAt: match.matchedAt, pendingCount: pending.length }
+  }, [salaryWindowOpen, depositsQuery.data, salaryAmount, snapshotQuery.data, bucketsQuery.data])
 
   // Bütçe formu: çıpa seçimi + koşullu alanlar + canlı "bugünkü karşılık"
   // önizlemesi (#157 desenindeki gibi — kural seçilirken sonucu görürsün).
@@ -247,6 +283,17 @@ export function PlanningPage() {
             />
           </div>
           <p className="mt-2.5 text-[13px] text-ink-muted">{budgetTotals.pace}</p>
+        </div>
+      ) : null}
+
+      {/* Maaş günü dürtüsü: bilgi şeridi; aksiyon hedef kartlarındaki mevcut
+          tek-tık "Ayır" akışıdır, burada ikinci bir yazma yolu açılmaz. */}
+      {salaryStrip ? (
+        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-info/25 bg-info/8 px-3 py-2.5">
+          <p className="text-sm font-medium text-info">
+            Maaş yattı görünüyor ({formatDate(salaryStrip.matchedAt)}) — {salaryStrip.pendingCount} hedefin bu ay
+            ayırması bekliyor; aşağıdan tek tıkla ayırabilirsin.
+          </p>
         </div>
       ) : null}
 
