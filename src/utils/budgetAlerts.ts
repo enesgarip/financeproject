@@ -7,6 +7,7 @@
  * Kategorisiz harcamalar 'Diğer' kovasına düşer. Karşılaştırmalar money.ts ile.
  */
 import type { Budget, CardExpense } from '../types/database'
+import { budgetAnchorLabel, resolveBudgetRows } from './budgetAnchor'
 import { dateInputValue, isDateInMonth, startOfMonth } from './date'
 import { diffTL, exceedsTL, sumTL } from './money'
 
@@ -20,6 +21,8 @@ export type BudgetUsage = {
   usageRate: number
   status: BudgetAlertStatus
   remaining: number
+  /** Çıpalı satırda kural etiketi ("Son 3 ay ort. × 1,5"); manual'de null. */
+  anchorLabel: string | null
 }
 
 /**
@@ -40,9 +43,19 @@ export function activeExpense(expense: CardExpense) {
  * page's budget list and the planning page both read from this so the screens
  * can never drift apart.
  */
-export function buildBudgetUsage(budgets: Budget[], expenses: CardExpense[], month = new Date()): BudgetUsage[] {
+export function buildBudgetUsage(
+  budgets: Budget[],
+  expenses: CardExpense[],
+  month = new Date(),
+  /** Çıpalı limitlerin çözümü için güncel maaş (salary_pct); yoksa null. */
+  salary: number | null = null,
+): BudgetUsage[] {
   const monthKey = dateInputValue(startOfMonth(month))
-  const monthlyBudgets = budgets.filter((budget) => budget.month === monthKey)
+  const monthlyBudgets = resolveBudgetRows(
+    budgets.filter((budget) => budget.month === monthKey),
+    expenses,
+    salary,
+  )
   const monthlyExpenses = expenses.filter((expense) => activeExpense(expense) && isDateInMonth(expense.spent_at, month))
 
   return monthlyBudgets.map((budget) => {
@@ -63,6 +76,7 @@ export function buildBudgetUsage(budgets: Budget[], expenses: CardExpense[], mon
       usageRate,
       status,
       remaining: Math.max(0, diffTL(budget.limit_amount, spent)),
+      anchorLabel: budgetAnchorLabel(budget),
     }
   })
 }

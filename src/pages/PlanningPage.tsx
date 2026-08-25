@@ -1,6 +1,8 @@
 import { useMemo } from 'react'
+import { useAuth } from '../auth/useAuth'
 import { useFinanceSnapshot } from '../app/useFinanceSnapshot'
 import { CrudPage, type FormField } from '../components/CrudPage'
+import { saveCrudRow } from '../data/repositories/crudRepo'
 import { KasaModuPanel } from '../components/finance/KasaModuPanel'
 import { SavingsGoalsPanel } from '../components/finance/SavingsGoalsPanel'
 import { QueryError } from '../components/ui/query-error'
@@ -11,21 +13,27 @@ import { dateInputValue, endOfMonth, startOfMonth } from '../utils/date'
 import { parseNumber } from '../utils/formatCurrency'
 import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
 import { formatMonth } from '../utils/analysisView'
-import { buildFinancialPosition, buildMonthlyCashFlow } from '../utils/financeSummary'
+import { averageCategorySpend, budgetAnchorLabel, resolveBudgetRows } from '../utils/budgetAnchor'
+import { buildFinancialPosition, buildMonthlyCashFlow, getCurrentSalary } from '../utils/financeSummary'
 import { buildSafeToSpend } from '../utils/safeToSpend'
 import { readSafeToSpendBuffer, useKasaReserved } from '../hooks/useSafeToSpend'
 import { SERIT_FILL, useSeritAmount, type SeritTone } from '../components/serit'
 import { buildBudgetUsage } from '../utils/budgetAlerts'
 import { averageMonthlyOutflow } from '../utils/goalTargetAnchor'
-import { sumTL } from '../utils/money'
+import { roundTL, sumTL } from '../utils/money'
 import { BudgetProgress } from './AnalysisPage.panels'
 
-const budgetFields: FormField[] = [
-  { name: 'month', label: 'Ay', type: 'date', required: true },
-  { name: 'category', label: 'Kategori', type: 'select', options: expenseCategoryOptions },
-  { name: 'limit_amount', label: 'Aylık limit', type: 'number', min: '0', step: '0.01', required: true },
-  { name: 'note', label: 'Not', type: 'textarea' },
+/** Limit kuralı seçenekleri; maaş yüzdesi yalnız maaş kaydı varken sunulur
+ *  (#157 çizgisi: veri yokken çıpa kaydetmek yerine seçenek hiç açılmaz). */
+const ANCHOR_BASE_OPTIONS = [
+  { value: 'manual', label: 'Sabit tutar' },
+  { value: 'avg_spend', label: 'Son 3 ay ortalaması × çarpan' },
 ]
+const SALARY_ANCHOR_OPTION = { value: 'salary_pct', label: 'Maaşın yüzdesi' }
+
+function isAnchored(values: Record<string, string>) {
+  return values.limit_anchor === 'avg_spend' || values.limit_anchor === 'salary_pct'
+}
 
 function monthStartValue(value: FormDataEntryValue | null) {
   const date = value ? new Date(`${String(value)}T00:00:00`) : new Date()
@@ -80,13 +88,77 @@ export function PlanningPage() {
     return averageMonthlyOutflow(data.transactionHistory, data.payments, data.cards)
   }, [snapshotQuery.data])
 
+  const { user } = useAuth()
+  const userId = user?.id
+
+  /** salary_pct çıpasının dayanağı: salary_history'nin bugünkü satırı. */
+  const salaryAmount = useMemo(
+    () => getCurrentSalary(snapshotQuery.data?.salaryHistory ?? [])?.amount ?? null,
+    [snapshotQuery.data],
+  )
+
+  // Bütçe formu: çıpa seçimi + koşullu alanlar + canlı "bugünkü karşılık"
+  // önizlemesi (#157 desenindeki gibi — kural seçilirken sonucu görürsün).
+  const budgetFields: FormField[] = useMemo(
+    () => [
+      { name: 'month', label: 'Ay', type: 'date', required: true },
+      { name: 'category', label: 'Kategori', type: 'select', options: expenseCategoryOptions },
+      {
+        name: 'limit_anchor',
+        label: 'Limit kaynağı',
+        type: 'select',
+        options: salaryAmount ? [...ANCHOR_BASE_OPTIONS, SALARY_ANCHOR_OPTION] : ANCHOR_BASE_OPTIONS,
+      },
+      {
+        name: 'limit_amount',
+        label: 'Aylık limit',
+        type: 'number',
+        min: '0',
+        step: '0.01',
+        required: true,
+        visibleWhen: (values) => !isAnchored(values),
+      },
+      {
+        name: 'limit_anchor_value',
+        label: 'Çarpan / yüzde',
+        type: 'number',
+        min: '0',
+        step: '0.01',
+        required: true,
+        visibleWhen: isAnchored,
+      },
+      {
+        name: 'limit_preview',
+        label: 'Bugünkü karşılık',
+        type: 'computed',
+        visibleWhen: isAnchored,
+        formatComputed: (value: number | null) => (value === null ? '—' : formatAmount(value)),
+        compute: (values) => {
+          const factor = parseNumber(values.limit_anchor_value)
+          if (!factor || factor <= 0) return null
+          if (values.limit_anchor === 'salary_pct') {
+            return salaryAmount ? roundTL((salaryAmount * factor) / 100) : null
+          }
+          const monthDate = values.month ? new Date(`${values.month}T00:00:00`) : new Date()
+          const base = averageCategorySpend(
+            cardExpenses,
+            values.category || expenseCategoryOptions[0]?.value || 'Diğer',
+            Number.isNaN(monthDate.getTime()) ? new Date() : monthDate,
+          )
+          return roundTL(base * factor)
+        },
+      },
+      { name: 'note', label: 'Not', type: 'textarea' },
+    ],
+    [salaryAmount, cardExpenses, formatAmount],
+  )
+
   // Ay bütçesi toplamı: kategori limitlerinin ve harcamalarının toplamı.
   // "Hız" cümlesi ayın kaçıncı gününde olduğumuzla harcama oranını karşılaştırır —
   // %60 harcama ayın %30'unda alarm, %90'ında normaldir.
   const budgetTotals = useMemo(() => {
     const budgets = snapshotQuery.data?.budgets ?? []
-    const currentMonth = dateInputValue(startOfMonth())
-    const usage = buildBudgetUsage(budgets.filter((budget) => budget.month === currentMonth), cardExpenses)
+    const usage = buildBudgetUsage(budgets, cardExpenses, new Date(), salaryAmount)
     if (usage.length === 0) return null
 
     const limit = sumTL(usage.map((item) => item.limit))
@@ -110,7 +182,7 @@ export function PlanningPage() {
             ? `Ay ilerlemesi %${Math.round(monthProgress)}, bütçe kullanımı %${Math.round(usageRate)} — planın önündesin.`
             : `Ay ilerlemesi %${Math.round(monthProgress)}, bütçe kullanımı %${Math.round(usageRate)} — plana uygun gidiyorsun.`,
     }
-  }, [snapshotQuery.data, cardExpenses])
+  }, [snapshotQuery.data, cardExpenses, salaryAmount])
 
   const canManageBudgets = !missingTables.includes('budgets')
   const canManageGoals = !missingTables.includes('savings_goals')
@@ -203,25 +275,73 @@ export function PlanningPage() {
           emptyDescription="Kategori bazlı aylık limit ekleyerek harcama takibini başlatabilirsin."
           orderBy="month"
           orderAscending={false}
-          renderBeforeList={({ loading: crudLoading, rows }) =>
-            !crudLoading ? <BudgetProgress budgets={rows as Budget[]} expenses={cardExpenses} /> : null
+          renderBeforeList={({ loading: crudLoading, rows, reload }) =>
+            !crudLoading ? (
+              <BudgetProgress
+                budgets={rows as Budget[]}
+                expenses={cardExpenses}
+                salary={salaryAmount}
+                onUpdateLimit={async (budgetId, amount) => {
+                  const result = await saveCrudRow('budgets', { limit_amount: amount }, budgetId)
+                  if (!result.ok) throw new Error(result.error.message ?? 'Bütçe güncellenemedi.')
+                  await reload()
+                  void snapshotQuery.refetch()
+                }}
+                onRollover={async (rowsToCopy) => {
+                  if (!userId) return
+                  // Sıralı insert: birkaç satır, yarıda kalırsa kalanlar şeritte
+                  // görünmeye devam eder (idempotent his; unique ay+kategori korur).
+                  for (const row of rowsToCopy) {
+                    const result = await saveCrudRow(
+                      'budgets',
+                      {
+                        user_id: userId,
+                        month: dateInputValue(startOfMonth()),
+                        category: row.category,
+                        limit_amount: row.limit_amount,
+                        note: row.note,
+                        limit_anchor: row.limit_anchor,
+                        limit_anchor_value: row.limit_anchor_value,
+                      },
+                      null,
+                    )
+                    if (!result.ok) throw new Error(result.error.message ?? `${row.category} bütçesi taşınamadı.`)
+                  }
+                  await reload()
+                  void snapshotQuery.refetch()
+                }}
+              />
+            ) : null
           }
           getInitialValues={(row?: Budget) => ({
             month: row?.month ?? dateInputValue(startOfMonth()),
             category: row?.category ?? expenseCategoryOptions[0]?.value ?? 'Diğer',
+            limit_anchor: row?.limit_anchor ?? 'manual',
             limit_amount: row?.limit_amount ?? 0,
+            limit_anchor_value: row?.limit_anchor_value ?? '',
             note: row?.note ?? '',
           })}
-          mapForm={(formData, userId) => ({
-            user_id: userId,
-            month: monthStartValue(formData.get('month')),
-            category: String(formData.get('category') ?? 'Diğer'),
-            limit_amount: parseNumber(formData.get('limit_amount')),
-            note: String(formData.get('note') ?? '') || null,
-          })}
+          mapForm={(formData, userId) => {
+            const anchor = String(formData.get('limit_anchor') ?? 'manual')
+            const anchored = anchor === 'avg_spend' || anchor === 'salary_pct'
+            return {
+              user_id: userId,
+              month: monthStartValue(formData.get('month')),
+              category: String(formData.get('category') ?? 'Diğer'),
+              limit_anchor: anchored ? anchor : 'manual',
+              // Çıpalı satırda türetilebilen saklanmaz: limit 0'a çekilir (#157 deseni).
+              limit_amount: anchored ? 0 : parseNumber(formData.get('limit_amount')),
+              limit_anchor_value: anchored ? parseNumber(formData.get('limit_anchor_value')) : null,
+              note: String(formData.get('note') ?? '') || null,
+            }
+          }}
           renderTitle={(row) => row.category}
           renderSubtitle={(row) => formatMonth(row.month)}
-          renderDetails={(row) => [`Limit: ${formatAmount(row.limit_amount)}`]}
+          renderDetails={(row) => {
+            const [resolved] = resolveBudgetRows([row], cardExpenses, salaryAmount)
+            const label = budgetAnchorLabel(row)
+            return [`Limit: ${formatAmount(resolved.limit_amount)}${label ? ` · ${label}` : ''}`]
+          }}
         />
       ) : null}
     </section>

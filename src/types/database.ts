@@ -147,6 +147,10 @@ export type Budget = BaseRow & {
   category: string
   limit_amount: number
   note: string | null
+  /** Limit kuralı: manual = sabit TL; kurallı satırda limit_amount 0 saklanır,
+   *  okuma anında türetilir (utils/budgetAnchor.ts). */
+  limit_anchor: 'manual' | 'avg_spend' | 'salary_pct'
+  limit_anchor_value: number | null
 }
 
 export type SavingsGoal = BaseRow & {

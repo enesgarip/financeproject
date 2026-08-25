@@ -19,8 +19,10 @@ import { formatSeritAmount } from './formatCurrency'
 import { dayOfMonthCutoff, isWithinDayOfMonth } from './monthToDate'
 import { averageOverActiveMonths } from './spendingStats'
 import { activeExpense as activeCardExpense } from './budgetAlerts'
+import { resolveBudgetRows } from './budgetAnchor'
 import type { FinanceObligationsInput } from './obligations'
 import type { FinanceSummaryInput } from './financeSummary'
+import { getCurrentSalary } from './financeSummary'
 import { diffTL, sumTL } from './money'
 
 /**
@@ -214,8 +216,13 @@ export function buildCategoryInsights(data: AnalysisData): CategoryInsight[] {
   // over the months that actually had spending (not a fixed ÷3 that understates
   // categories appearing in only some months).
   const previousByMonth = new Map<string, Map<string, number>>()
+  // Çıpalı limitler okuma anında türetilir; ham satır 0 taşır (budgetAnchor).
   const budgetsByCategory = new Map(
-    data.budgets.filter((budget) => budget.month === currentMonth).map((budget) => [budget.category, budget]),
+    resolveBudgetRows(
+      data.budgets.filter((budget) => budget.month === currentMonth),
+      data.cardExpenses,
+      getCurrentSalary(data.salaryHistory)?.amount ?? null,
+    ).map((budget) => [budget.category, budget]),
   )
 
   for (const expense of data.cardExpenses.filter(activeCardExpense)) {
