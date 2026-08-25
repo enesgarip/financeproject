@@ -1,5 +1,48 @@
 # Priority Backlog
 
+## 2026-08-25 — Docs kapanış turu (md'lerde kayıtlı ne kaldıysa)
+
+Kullanıcı "md dosyalarında kalan ne iş varsa bitirelim" dedi; tüm docs/*.md +
+CLAUDE.md tarandı (ajan raporu), açıklar üçe ayrıldı: bayat işaret / yapılacak
+iş / bilinçli-park. Dilim dilim kapanıyor:
+
+- ~~**K1 — docs hijyeni + anında yapılabilirler.**~~ DONE:
+  - **Faz C çelişkisi çözüldü:** CLAUDE.md "tek açık iş" diyordu; BACKLOG P0
+    kaydı DONE diyordu. Kod teyidi BACKLOG'u doğruladı (kalan çıplak round'lar
+    bilinçli para-dışı) → CLAUDE.md güncellendi. **Para modelinde açık iş yok.**
+  - `PageHero` + `finance-hero-card` CSS'i silindi (sıfır tüketici);
+    "--shadow-* kullanılmıyor" tespiti YANLIŞ çıktı (kullanılıyorlar, kaldı).
+  - Bayat işaretler düzeltildi: D2 (PR #123'te bitmişti), Şerit sonraki-tur
+    notu, AUDIT-02 F-04 satırı, SHARED_PLAN "next slice" satırı.
+  - SW/asset header'ları CANLIDA doğrulandı (`/sw.js` no-cache, `/assets/`
+    immutable) — Faz 2'deki bekleyen teyit kapandı.
+  - Arşivleme yapıldı: `SHARED_PAYMENT_DRAWER_PLAN`, `BANKING_SIMPLIFICATION_AUDIT`
+    (senkron dipnotuyla: K7 + BM5-a kapsam dışıydı), `APPLICATION_AUDIT_2026-08-02`
+    → `docs/archive/`; canlı referanslar güncellendi, yaşayan-doküman listesi
+    sadeleşti (CLAUDE.md + AGENTS.md).
+  - `PLANNING_MODEL_REVIEW` senkronlandı (K7 notu + tarih; legacy-loan geçiş
+    kriteri hâlâ sağlanmadı — madde AÇIK etiketiyle kaldı).
+  - Alacak/net değer asimetrisi FINANCE_RULES'a belgelendi (denetim §2'nin
+    "belgelenmeli" maddesi kapandı).
+  - Playwright-required önerisi gerekçeyle KAPATILDI (path-filtreli koşum
+    required check'i kilitlerdi).
+- **K2 — denetim §2 kod işleri** (asgari ödeme %20/%40 kademesi, due_day
+  rozet fallback'i, taksit son-taksit yuvarlaması, kredi taksit sırası,
+  kesim client-side kararı) — sırada.
+- **K3 — DataHealth talimatlı-ödeme tolerans penceresi** — sırada.
+- **K4 — `sync_loan_summary` invariant testi + statement-level** — sırada.
+- **K5 — pgTAP saat enjeksiyonu + gece/Şubat-31 kenar testleri** — sırada.
+- **K6 — deploy `verify`↔`changes` ayrıştırması** — sırada.
+- **K7t — restore tatbikatı** (RESTORE_DRILL gecikmiş; tetikleyici sağlandı) — sırada.
+- **Bilinçli PARK (bu turda yapılmayacak, gerekçesi yerinde):** CrudPage→TanStack
+  (10+ sayfa, ayrı tur), Dashboard lazy-mount+PullToRefresh (görsel/a11y turu),
+  transaksiyonel restore protokolü (KNOWN_RISKS #6 — ayrı büyük tasarım),
+  T1 RPC-only (önce security-definer geçişi, ayrı güvenlik dilimi), indeks
+  budaması (üretim `pg_stat_user_indexes` ölçümü ister), SI-04 yeni banka
+  (örnek ekstre gelmeden yazılmaz), DH-08 (banka gerçeği gerekli), prod çift
+  kayıt/₺298,20 (ekstre kanıtı gerekli), kategori emekliliği (birkaç ay veri),
+  mobil 5-slot (ürün kararı), R-1 canlı matris (ayrı QA dilimi).
+
 ## 2026-08-25 — "Canlı Sayılar" turu (kararlaştırıldı) — PR-0 DONE
 
 Hedef→kaynak zincirinin (#153-#160) devamı; ortak DNA: statik sayıyı canlı
@@ -239,7 +282,9 @@ aşağıda; bilinçli yapılmayanlar listenin sonunda.
   908 kB'tı, eski 660'lık bütçe görmüyordu). SW v4: `/assets/` cache-first
   (içerik-adresli, bayatlayamaz; navigasyon network-first kaldı, asset'e
   index.html fallback'i yine yok); `vercel.json`'a `/assets/` immutable +
-  `/sw.js` no-cache header'ları (deploy sonrası `curl -I` ile teyit edilecek).
+  `/sw.js` no-cache header'ları (~~deploy sonrası `curl -I` ile teyit
+  edilecek~~ → 2026-08-25 canlıda doğrulandı: `/sw.js` `no-cache`,
+  `/assets/index-*.js` `public, max-age=31536000, immutable`).
 - ~~**Faz 3 — CardsPage render.**~~ DONE. `CardInstallmentCalendarPanel` +
   `LiveReconciliationPanel` mükerrer fetch'leri kalktı (calendar düz prop;
   reconciliation paneli opsiyonel managed mod — DataHealthPage prop'suz eski
@@ -1202,11 +1247,13 @@ sınıfını ayırt etmek mümkün değildi.
   ekstre + en yakın son ödeme. Özet sekmesinde rakam zaten `AccountHubPanel`
   içinde olduğu için orada çizilmiyor.
 
-**AÇIK:** Şerit tarafında kalan yapısal iş yok. Sonraki turda bakılabilecekler:
-- `finance-page-command` / `PageHero` gibi artık kullanılmayan FinanceUI
-  parçaları silinebilir (ölü ama zararsız).
-- `--surface-elevated`, `--shadow-*` tokenları artık kullanılmıyor; token
-  bloğu sadeleştirilebilir.
+**KAPANDI (2026-08-25 kapanış turu):** Şerit tarafında kalan iş yok.
+- ~~`PageHero` silinebilir~~ → silindi (`finance-hero-card` CSS'i ile;
+  `finance-page-command` ve `--surface-elevated` zaten önceki temizliklerde
+  gitmişti).
+- ~~`--shadow-*` tokenları kullanılmıyor~~ → tespit YANLIŞTI: `--shadow-card`
+  popover/grafik tooltip'lerinde, `--shadow-lifted`/`--shadow-floating`
+  LoginPage imza panelinde kullanılıyor — kalıyorlar.
 ## 2026-08-10 — Banka modeli Faz 8: kısmi borç + vade çakışması
 
 Faz 7'de ertelenen kalemlerin devamı. Hâlâ AÇIK (bilinçli, düşük değer/yüksek
@@ -1312,11 +1359,10 @@ dilimi.
   önce bu RPC'lerin security definer'a taşınmasını gerektirir (ayrı, dikkatli
   bir güvenlik geçişi). Bugünkü koruma: arşivli/settled satırlar trigger
   guard'lı; açık satır drift'ini Data Health non-fixable olarak raporlar.
-- **D2 — İstemcideki ölü ekstre eşleştirme kodu (matchTransactions,
-  checkStatementInstallments, reusableStatementInstallmentParentId ve
-  StatementImportModal'ın cleanImport=true ile erişilmez kalan yolları):
-  AÇIK.** K1 sunucu tarafı yeniden kullanım gelince kalıcı olarak gereksizleşti;
-  ayrı bir temizlik dilimi olarak silinebilir (davranış değişikliği yok).
+- ~~**D2 — İstemcideki ölü ekstre eşleştirme kodu.**~~ DONE (denetim 2026-08-12
+  Faz C temizliğinde, PR #123: matchTransactions/checkStatementInstallments/
+  reusableStatementInstallmentParentId + cleanImport ölü dalları silindi).
+  Bu işaret 2026-08-25 kapanış turuna dek yanlışlıkla açık kalmıştı.
 
 ## 2026-08-10 — Banka modeli Faz 3: ödeme banka modeline indi
 
@@ -2211,7 +2257,7 @@ Canlı uygulama + kod incelemesinden çıkan bulgular tek pakette kapatıldı:
 ## P2 - UX / Maintainability
 
 - ~~Fix chronic CI failures and gate deploys.~~ DONE.
-  - 2026-07-02: Kök neden = Dependabot'un playwright'ı yükseltmesi ama ci.yml'deki sabit `mcr.microsoft.com/playwright:vX-noble` imajının geride kalması; 22 Haziran'dan beri her CI koşusu Playwright Smoke + Lighthouse'ta kırmızıydı ve deploy CI'a bağlı olmadığı için fark edilmiyordu. Düzeltme: (1) tarayıcı artık `npx playwright install --with-deps chromium` ile package-lock sürümünden kuruluyor (sabit imaj kaldırıldı); (2) deploy.yml'e `verify` kapısı (lint+test+build) eklendi — kırık push migration/Vercel'i tetiklemiyor. Öneri (elle yapılacak): "Playwright Smoke"u branch protection zorunlu kontrolüne ekle ki Dependabot auto-merge onu da beklesin.
+  - 2026-07-02: Kök neden = Dependabot'un playwright'ı yükseltmesi ama ci.yml'deki sabit `mcr.microsoft.com/playwright:vX-noble` imajının geride kalması; 22 Haziran'dan beri her CI koşusu Playwright Smoke + Lighthouse'ta kırmızıydı ve deploy CI'a bağlı olmadığı için fark edilmiyordu. Düzeltme: (1) tarayıcı artık `npx playwright install --with-deps chromium` ile package-lock sürümünden kuruluyor (sabit imaj kaldırıldı); (2) deploy.yml'e `verify` kapısı (lint+test+build) eklendi — kırık push migration/Vercel'i tetiklemiyor. Öneri (elle yapılacak): "Playwright Smoke"u branch protection zorunlu kontrolüne ekle ki Dependabot auto-merge onu da beklesin. **[2026-08-25 kapanışı: YAPILMAMALI — öneri eski durumla yazılmıştı; Playwright artık yalnız ilgili dosya alanı değişince koşuyor (path-filtreli). Required yapılırsa koşmadığı PR'larda check "Expected" olarak sonsuza dek bekler ve auto-merge dahil tüm merge'ler kilitlenir.]**
 - ~~Show completed loans in a collapsed "Tamamlananlar" section.~~ DONE.
   - 2026-07-02: `CrudPage` opsiyonel `collapsibleGroups` prop'u kazandı: bu gruplar listenin sonuna alınır ve taksitli harcamalardaki desenle aynı, varsayılan kapalı "Tamamlananlar (N)" bölümü olarak çizilir (boş grup adı = başlıksız normal liste). `LoansPage` bunu kullanır: aktif krediler başlıksız üstte, `status='closed'` krediler (sync_loan_summary trigger'ı kapatır) katlanır bölümde.
 - ~~Make SMS account movement matching tolerant.~~ DONE.

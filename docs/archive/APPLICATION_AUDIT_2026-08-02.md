@@ -302,7 +302,9 @@ bile). Kullanıcı yerel `t@t.com` ile giriş yaparsa bu kısım tamamlanabilir.
 766/766 · `npm run build` başarılı · RLS/grants/lint/catchup yerel docker'da yeşil.
 
 **Kalan / ertelenen:**
-- F-04: incelendi + kanıtlandı; düzeltme migration'ı ayrı onay bekliyor.
+- ~~F-04: incelendi + kanıtlandı; düzeltme migration'ı ayrı onay bekliyor.~~
+  DONE — migration `20260802120000` ile uygulandı (bu dosyanın kendi F-04
+  bölümü ve BACKLOG kaydı; bu satır bayat kalmıştı, 2026-08-25'te düzeltildi).
 - R-1 auth-arkası canlı matris + F-02'nin gerçek modalda canlı focus testi: ajanın
   şifre girme yasağı nedeniyle bloke; kullanıcı yerel `t@t.com` ile giriş yaparsa
   tamamlanır. (F-02 mantığı otomatik testle zaten doğrulandı.)

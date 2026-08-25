@@ -13,7 +13,7 @@ keşif turu atmamak için **önce buna bak**),
 **Doküman güncel tutma kuralı:** Yaşayan dokümanlar kodla aynı commit'te güncel
 kalır; "sonra bakarız" borcu açma. Özellikle `docs/BACKLOG.md`,
 `docs/AI_CONTEXT_INDEX.md`, `docs/CARD_DEBT_TRANSITIONS.md`,
-`docs/BANKING_SIMPLIFICATION_AUDIT.md` ve ilgili domain source-of-truth dokümanı,
+ve ilgili domain source-of-truth dokümanı,
 değişen davranışı/önceliği aynı PR/commit içinde yansıtmalı. Yeni
 `data/repositories/*` veya route sayfası (`*Page.tsx`/`*Hub.tsx`) eklediysen
 `docs/AI_CONTEXT_INDEX.md`'in konu→dosya tablosuna satır ekle. Dosya
@@ -74,8 +74,12 @@ her sayfa süperseti kendi penceresine client-side daraltır.
   `greaterThanTL`, `toKurus`/`toTL`, `sumTL`. Çıplak `Math.round(x*100)/100` veya
   `+0.01` toleransı YAZMA — money.ts'i kullan.
 - Ledger tabloları parayı **işaretli integer kuruş** (`amount_kurus bigint`) tutar.
-- **Faz C (tek açık iş):** kalan float TL aritmetik noktalarını integer kuruşa
-  çevirmek. Repo katmanı kurulu olduğu için dönüşüm tek katmanda yapılabilir.
+- **Faz C dönüşümü TAMAMLANDI** (BACKLOG P0 kaydı): `financeSummary` toplama
+  katmanı `sumTL`/`diffTL`'ye taşındı, `clampCardBreakdown` içerde kuruşla
+  çalışır; repo/servis katmanları zaten temizdi. Kalan çıplak
+  `Math.round(x*100)/100` noktaları (fire, realValue, marketRates, goldLedger,
+  goalTargetAnchor birim gösterimi) BİLİNÇLİ para-dışıdır (oran/miktar/görsel
+  hassasiyet) ve yerinde yorumludur — money.ts'e yönlendirme.
 
 ## Ledger & trigger invariant'ları (event-sourcing deseni)
 

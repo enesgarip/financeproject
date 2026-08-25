@@ -190,6 +190,13 @@
 
 ## Closeout Status
 
+> **Arşiv + senkron notu (2026-08-25):** Bu doküman `docs/archive/` altına
+> taşındı; yaşayan doküman değildir. Kapanıştan sonra ilgili alanda iki büyük
+> değişiklik daha oldu ve burada listelenmez: **K7 kısmi/asgari ekstre ödemesi**
+> (2026-08-12, `card_statement_payments`) ve **BM5-a kart talimatlı planlı
+> ödemenin bilgilendirme moduna inmesi** (2026-08-10). Güncel kart/ödeme
+> davranışının kaynağı `docs/CARD_DEBT_TRANSITIONS.md` + `docs/FINANCE_RULES.md`.
+
 No P0 banking-simplification candidate remains open as of 2026-06-15. The
 daily banking flows now share the account-backed payment drawer, bank-account
 movement helpers, normalized obligation read model, clearer account/card

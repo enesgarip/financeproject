@@ -155,7 +155,8 @@ RPC_ACTION_REFERENCE (drop edilen RPC'ler, K1 parent reuse, kısmi borç), FINAN
 sayıları, SHARED_PAYMENT_DRAWER_PLAN arşiv notu, PIPELINE db:test listesi,
 EXPENSE_CONTEXTS_AND_CARS S2/S3, CARD_DEBT_TRANSITIONS/TRANSACTION_HISTORY tarih+ekler,
 AI_CONTEXT_INDEX eksik satırlar. Arşiv adayları: SHARED_PAYMENT_DRAWER_PLAN,
-BANKING_SIMPLIFICATION_AUDIT (closeout sonrası), APPLICATION_AUDIT_2026-08-02.
+BANKING_SIMPLIFICATION_AUDIT (closeout sonrası), APPLICATION_AUDIT_2026-08-02
+— **üçü de 2026-08-25 kapanış turunda `docs/archive/` altına taşındı.**
 
 ## 12. Önerilen aksiyon planı
 

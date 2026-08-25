@@ -63,69 +63,6 @@ export function FinancePanel({
   )
 }
 
-/* ─── Page Hero ─── */
-export function PageHero({
-  label,
-  title,
-  amount,
-  description,
-  tone = 'premium',
-  children,
-  action,
-  className,
-  amountClassName,
-}: {
-  label: string
-  title: string
-  amount?: string
-  description?: string
-  tone?: Tone
-  children?: ReactNode
-  action?: ReactNode
-  className?: string
-  /** İmza aurora sayısı gibi hedefli süsleme için (ör. dashboard net değeri). */
-  amountClassName?: string
-}) {
-  return (
-    <div
-      className={cn(
-        'finance-hero-card relative min-w-0 overflow-hidden rounded-2xl border p-5 sm:p-7',
-        '',
-        toneSurfaceClass[tone],
-        className,
-      )}
-    >
-      <div className="pointer-events-none absolute inset-y-6 left-0 w-0.5 rounded-full bg-primary/70" />
-
-      <div className="relative flex min-w-0 flex-col gap-5">
-        <div className="flex min-w-0 items-start justify-between gap-4">
-          <div className="min-w-0">
-            <p className="finance-label">{label}</p>
-            <h2 className="font-display mt-2 text-[clamp(1.35rem,5vw,2.5rem)] font-semibold leading-none tracking-tight text-ink">
-              {title}
-            </h2>
-            {amount ? (
-              <p className={cn(
-                'finance-value mt-3 text-[clamp(1.75rem,9vw,3.5rem)] font-bold leading-none',
-                toneTextClass[tone],
-                amountClassName,
-              )}>
-                {amount}
-              </p>
-            ) : null}
-            {description ? (
-              <p className="mt-3 max-w-xl text-sm leading-relaxed text-ink-muted">{description}</p>
-            ) : null}
-          </div>
-          <div className="hidden shrink-0 sm:block">{action}</div>
-        </div>
-        {children}
-        {action ? <div className="sm:hidden">{action}</div> : null}
-      </div>
-    </div>
-  )
-}
-
 /* ─── Section Header ─── */
 export function SectionHeader({
   title,

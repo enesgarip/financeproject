@@ -12,6 +12,14 @@ This file records the current business rules inferred from the codebase. If code
 - All money rounding/comparison goes through `src/utils/money.ts`: `roundTL`, `equalsTL`, `moneyDiffers`, `greaterThanTL`, `diffTL`, `toKurus`/`toTL`, `sumTL`. These compare at kuruş precision after rounding.
 - Ad hoc tolerances are FORBIDDEN: do not write bare `Math.round(x*100)/100` or a `±0.01` comparison tolerance. If two amounts should be "equal", use `equalsTL`/`moneyDiffers`; import-matching tolerances have their own dedicated owner (`src/utils/importMatch.ts`).
 - Amounts are displayed in Turkish locale.
+- **Net değer ve kişisel alacaklar (bilinçli karar, 2026-08-25'te belgelendi):**
+  `buildFinancialPosition.netWorth` kişisel ALACAKLARI (`debts.direction =
+  'borç_verdim'`) varlık saymaz — tahsili belirsiz bir sözü servete yazmak
+  net değeri iyimser şişirirdi (ihtiyatlılık). Alacak iki yerde ayrı yaşar:
+  nakit AKIŞINDA beklenen gelir (`buildMonthlyCashFlow.receivableIncome`,
+  `personal_receivable` yükümlülük kalemi) ve borç panellerinde ayrı satır.
+  Borç tarafı (`borç_aldım`) ise net değerden DÜŞÜLÜR — asimetri bilinçlidir:
+  borcun ödeneceği kesin, alacağın tahsili değil.
 
 ## Assets
 
