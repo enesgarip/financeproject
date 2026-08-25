@@ -1282,6 +1282,39 @@ describe('buildIssues account ledger drift (Faz 3.1)', () => {
   })
 })
 
+describe('buildIssues talimatlı ödeme vade toleransı (BM-5)', () => {
+  const yesterday = dateInputValue(new Date(Date.now() - 86_400_000))
+  const lastWeek = dateInputValue(new Date(Date.now() - 7 * 86_400_000))
+
+  it('talimatlı ödeme vade+3 içinde "eşleşme bekleniyor" der, gecikmiş demez', () => {
+    const issues = buildIssues({
+      ...emptyData,
+      payments: [payment({ payment_method: 'bank_auto', due_date: yesterday })],
+    })
+    expect(issues.some((issue) => issue.id === 'payment-auto-pending-payment-1')).toBe(true)
+    expect(issues.some((issue) => issue.id === 'payment-overdue-payment-1')).toBe(false)
+  })
+
+  it('pencere aşılınca talimatlı da gecikmiş sayılır ama metin bankayı işaret eder', () => {
+    const issues = buildIssues({
+      ...emptyData,
+      payments: [payment({ payment_method: 'bank_auto', due_date: lastWeek })],
+    })
+    const overdue = issues.find((issue) => issue.id === 'payment-overdue-payment-1')
+    expect(overdue).toBeDefined()
+    expect(overdue!.description).toContain('banka tarafında')
+  })
+
+  it('manuel ödemede tolerans yok: vade+1 doğrudan gecikmiş', () => {
+    const issues = buildIssues({
+      ...emptyData,
+      payments: [payment({ payment_method: 'manual', due_date: yesterday })],
+    })
+    expect(issues.some((issue) => issue.id === 'payment-overdue-payment-1')).toBe(true)
+    expect(issues.some((issue) => issue.id === 'payment-auto-pending-payment-1')).toBe(false)
+  })
+})
+
 describe('buildAreaCoverage', () => {
   it('bulgu yokken tüm alanlar temiz', () => {
     const coverage = buildAreaCoverage([])

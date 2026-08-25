@@ -51,7 +51,12 @@ iş / bilinçli-park. Dilim dilim kapanıyor:
     yalnız post-öncesi etiket önizlemesi (bankaların gösterimiyle aynı).
     Kod değişikliği gerekmedi, burada kapanış kaydı.
   - FINANCE_RULES §Card Payment Rules + §Scheduled Maintenance güncellendi.
-- **K3 — DataHealth talimatlı-ödeme tolerans penceresi** — sırada.
+- ~~**K3 — DataHealth talimatlı-ödeme tolerans penceresi.**~~ DONE
+  (2026-08-16 notundaki belgeli çözüm): `bank_auto` ödemede vade+3 güne kadar
+  `payment-auto-pending-*` ("talimatı için eşleşme bekleniyor" — SMS/ekstre
+  genelde 1-2 günde düşer, BM-5), pencere aşılınca `payment-overdue-*` ama
+  metin bankayı işaret eder; manuel ödemede tolerans yok (+3 test). Guide
+  navigasyonu generic `payment-` dalından zaten kapsıyor.
 - **K4 — `sync_loan_summary` invariant testi + statement-level** — sırada.
 - **K5 — pgTAP saat enjeksiyonu + gece/Şubat-31 kenar testleri** — sırada.
 - **K6 — deploy `verify`↔`changes` ayrıştırması** — sırada.
