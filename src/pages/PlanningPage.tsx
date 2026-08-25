@@ -185,6 +185,8 @@ export function PlanningPage() {
       return
     }
     void snapshotQuery.refetch()
+    // SalaryPage'in cache'li listesi bu sayfadan yazılan kaydı da görsün.
+    void queryClient.invalidateQueries({ queryKey: ['crud-rows', 'salary_history'] })
   }
 
   // Bütçe formu: çıpa seçimi + koşullu alanlar + canlı "bugünkü karşılık"

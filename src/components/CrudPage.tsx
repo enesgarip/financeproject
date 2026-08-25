@@ -1,9 +1,11 @@
+import { useQueryClient } from '@tanstack/react-query'
 import { CalendarDays, Check, ChevronDown, MoreVertical, Pencil, Plus, Search, Trash2 } from 'lucide-react'
 import type { CSSProperties, ReactNode } from 'react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router'
+import { crudRowsKey, useCrudRows, useInvalidateCrudRows } from '../app/useCrudRows'
 import { useAuth } from '../auth/useAuth'
-import { deleteCrudRow, fetchCrudRows, saveCrudRow } from '../data/repositories/crudRepo'
+import { deleteCrudRow, saveCrudRow } from '../data/repositories/crudRepo'
 import { cn, openNativePicker } from '../lib/utils'
 import type { CrudTableName, InsertFor, RowFor, UpdateFor } from '../types/database'
 import { normalizeSearchText } from '../utils/searchText'
@@ -31,6 +33,10 @@ type RowMeta = {
   note: string
   searchText: string
 }
+
+// Sorgu veri getirmeden önceki kararlı boş referans: her render'da yeni []
+// üretmek rows'a bağlı useMemo'ları boşuna tazelerdi.
+const EMPTY_ROWS: never[] = []
 
 /** Extra data threaded into a form so computed fields can react to it (e.g. live market rates). */
 export type FieldContext = unknown
@@ -110,7 +116,6 @@ type CrudPageProps<T extends CrudTableName> = {
     },
   ) => ReactNode
   renderBeforeList?: (helpers: { loading: boolean; rows: RowFor<T>[]; reload: () => Promise<void>; setError: (message: string) => void }) => ReactNode
-  renderAfterList?: (helpers: { loading: boolean; rows: RowFor<T>[]; reload: () => Promise<void>; setError: (message: string) => void }) => ReactNode
   /** false ise dahili kayıt listesi (kart ızgarası) gizlenir; sayfa içi sekmeler için kullanılır. */
   showList?: boolean
 }
@@ -150,14 +155,17 @@ export function CrudPage<T extends CrudTableName>({
   renderExtra,
   renderCard,
   renderBeforeList,
-  renderAfterList,
   showList = true,
 }: CrudPageProps<T>) {
   const { user } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
-  const [rows, setRows] = useState<RowFor<T>[]>([])
-  const [loading, setLoading] = useState(true)
+  const queryClient = useQueryClient()
+  // Sıralama varsayılanı anahtara da girdiği için TEK yerde çözülür.
+  const ascending = orderAscending ?? (orderBy.includes('date') || orderBy.includes('day'))
+  const rowsQuery = useCrudRows(table, orderBy, ascending)
+  const rows = rowsQuery.data ?? EMPTY_ROWS
+  const loading = rowsQuery.isPending
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [editing, setEditing] = useState<RowFor<T> | null>(null)
@@ -225,28 +233,10 @@ export function CrudPage<T extends CrudTableName>({
     }
   }, [menuOpenId])
 
-  const loadRows = useCallback(async () => {
-    setLoading(true)
-    setError('')
-    const loadResult = await fetchCrudRows(
-      table,
-      orderBy,
-      orderAscending ?? (orderBy.includes('date') || orderBy.includes('day')),
-    )
-
-    if (!loadResult.ok) {
-      setError(loadResult.error.message ?? 'Kayıtlar yüklenemedi.')
-      setRows([])
-    } else {
-      setRows(loadResult.data)
-    }
-    setLoading(false)
-  }, [orderAscending, orderBy, table])
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    void loadRows()
-  }, [loadRows])
+  // `reload` sözleşmesi eskisiyle aynı: dönen promise liste tazelenince çözülür.
+  // Yükleme hatası artık sorgu state'inden okunur (yazma hataları `error`'da kalır).
+  const reload = useInvalidateCrudRows(table)
+  const loadError = rowsQuery.error ? (rowsQuery.error.message || 'Kayıtlar yüklenemedi.') : ''
 
   const openCreate = useCallback(() => {
     setEditing(null)
@@ -307,12 +297,17 @@ export function CrudPage<T extends CrudTableName>({
     }
 
     try {
-      await afterDelete?.(deletedRow, { reload: loadRows, setError })
+      await afterDelete?.(deletedRow, { reload, setError })
     } catch (deleteFollowUpError) {
       setError(deleteFollowUpError instanceof Error ? deleteFollowUpError.message : 'Silme sonrası işlem tamamlanamadı.')
     }
 
-    setRows((current) => current.filter((row) => row.id !== deleteId))
+    // Satır anında düşer (eski davranış); arka plan invalidation eski desenin
+    // "silme reload yapmaz, türetilmiş veri bayatlar" tuzağını da kapatır.
+    queryClient.setQueryData<RowFor<T>[]>(crudRowsKey(table, user?.id, orderBy, ascending), (current) =>
+      current?.filter((row) => row.id !== deleteId),
+    )
+    void reload()
     setDeleteId(null)
     setDeleting(false)
   }
@@ -349,7 +344,7 @@ export function CrudPage<T extends CrudTableName>({
     const savedRow = saveResult.data
     if (savedRow) {
       try {
-        await afterSave?.(savedRow, action, { reload: loadRows, setError, previousRow: editing })
+        await afterSave?.(savedRow, action, { reload, setError, previousRow: editing })
       } catch (saveError) {
         setError(saveError instanceof Error ? saveError.message : 'Kayıt sonrası işlem tamamlanamadı.')
         setSaving(false)
@@ -361,18 +356,18 @@ export function CrudPage<T extends CrudTableName>({
     setEditing(null)
     setFormErrors({})
     setSaving(false)
-    await loadRows()
+    await reload()
   }
 
   return (
     <section className="flex flex-col gap-6">
-      {error ? <Alert variant="destructive">{error}</Alert> : null}
+      {error || loadError ? <Alert variant="destructive">{error || loadError}</Alert> : null}
 
       {/* Şerit: kahraman rakam ekranın EN ÜSTÜNDE durur, araç çubuğu onun altında.
           Sayfa başlığı/açıklaması artık kabukta (Layout) — burada tekrarlanmıyor,
           `pageTitle`/`pageLabel`/`pageDescription` yalnız erişilebilirlik başlığı
           ve arama etiketi için taşınıyor. */}
-      {renderBeforeList ? renderBeforeList({ loading, rows, reload: loadRows, setError }) : null}
+      {renderBeforeList ? renderBeforeList({ loading, rows, reload, setError }) : null}
 
       {/* Arama + ekleme çubuğu listeyle birlikte yaşar: liste gizliyken (Hesaplar
           sayfasının özet/işlem/ekstre sekmeleri) bu çubuk da görünmez — yoksa her
@@ -457,7 +452,7 @@ export function CrudPage<T extends CrudTableName>({
                       onToggle={() => setMenuOpenId(menuOpenId === row.id ? null : row.id)}
                       onClose={() => setMenuOpenId(null)}
                     >
-                      {renderMenuActions ? renderMenuActions(row, { reload: loadRows, setError, rows, closeMenu: () => setMenuOpenId(null) }) : null}
+                      {renderMenuActions ? renderMenuActions(row, { reload, setError, rows, closeMenu: () => setMenuOpenId(null) }) : null}
                       {editAllowed ? (
                         <button
                           type="button"
@@ -491,14 +486,14 @@ export function CrudPage<T extends CrudTableName>({
                     </RowMenu>
                   ) : null
                   const rowActions = renderRowActions ? (
-                    <div className="mt-3 flex flex-wrap gap-2">{renderRowActions(row, { reload: loadRows, setError, rows })}</div>
+                    <div className="mt-3 flex flex-wrap gap-2">{renderRowActions(row, { reload, setError, rows })}</div>
                   ) : null
 
                   if (renderCard) {
                     return (
                       <div key={row.id} data-card-id={row.id} className="min-w-0">
-                        {renderCard(row, { meta: resolvedMeta, reload: loadRows, setError, rows, menu: rowMenu, rowActions })}
-                        {renderExtra ? renderExtra(row, { reload: loadRows, setError, rows }) : null}
+                        {renderCard(row, { meta: resolvedMeta, reload, setError, rows, menu: rowMenu, rowActions })}
+                        {renderExtra ? renderExtra(row, { reload, setError, rows }) : null}
                       </div>
                     )
                   }
@@ -552,7 +547,7 @@ export function CrudPage<T extends CrudTableName>({
                     })}
                   </dl>
                   {note ? <p className="mt-3 text-sm text-ink-muted">{note}</p> : null}
-                  {renderExtra ? renderExtra(row, { reload: loadRows, setError, rows }) : null}
+                  {renderExtra ? renderExtra(row, { reload, setError, rows }) : null}
                 </article>
                   )
                 })}
@@ -597,8 +592,6 @@ export function CrudPage<T extends CrudTableName>({
           })}
         </div>
       )}
-
-      {!loading && rows.length > 0 && renderAfterList ? renderAfterList({ loading, rows, reload: loadRows, setError }) : null}
 
       <SimpleModal
         title={editing ? 'Kaydı düzenle' : addLabel}

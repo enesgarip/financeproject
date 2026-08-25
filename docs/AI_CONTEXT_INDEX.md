@@ -235,6 +235,10 @@ her repository + route sayfasının bu tabloda adıyla geçmesini CI'da zorlar.)
 
 Paylaşılan veri: `src/app/useFinanceSnapshot.ts` (Dashboard + Analysis aynı cache'i
 paylaşır; her sayfa süpersetini client-side daraltır). Query client: `src/app/queryClient.ts`.
+CRUD listeleri: `src/app/useCrudRows.ts` — CrudPage'in 8 sayfası + AssetsPage hesap
+listesi TanStack cache'inden okur (`['crud-rows', tablo, userId, sıralama]`);
+tabloya CrudPage DIŞINDAN yazan bir akış eklersen `['crud-rows', tablo]` prefix'ini
+invalidate et (örnek: AnalysisPage abonelik→plan, PlanningPage maaş şeridi).
 
 | İş / konu | Önce bak (domain/util) | Veri katmanı | UI |
 |---|---|---|---|

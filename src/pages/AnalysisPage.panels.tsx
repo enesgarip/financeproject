@@ -439,8 +439,10 @@ export function SubscriptionsPanel({ data }: { data: AnalysisData }) {
       setPlanError(saveResult.error.message ?? 'Ödeme planı eklenemedi.')
       return
     }
-    // Analiz verisi snapshot'tan gelir; payments tazelensin.
+    // Analiz verisi snapshot'tan gelir; payments tazelensin. Plan sayfasının
+    // cache'li CrudPage listesi de aynı yazmayı görmeli (prefix eşleşir).
     void queryClient.invalidateQueries({ queryKey: ['finance-snapshot'] })
+    void queryClient.invalidateQueries({ queryKey: ['crud-rows', 'payments'] })
   }
 
   return (
