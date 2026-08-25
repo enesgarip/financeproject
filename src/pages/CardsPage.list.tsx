@@ -1,5 +1,5 @@
 import { AlertTriangle, Banknote, Check, CheckCircle2, Copy, ShieldCheck } from 'lucide-react'
-import { useCallback, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '../auth/useAuth'
 import { BankLogo } from '../components/finance/BankLogo'
@@ -8,13 +8,15 @@ import { CardAliasPanel } from '../components/finance/CardAliasPanel'
 import { CardLedgerPanel } from '../components/finance/CardLedgerPanel'
 import { MiniStat, SectionHeader, StatusBadge } from '../components/finance/FinanceUI'
 import { fetchAllCardAliases } from '../data/repositories/cardAliasesRepo'
+import { fetchExpensePaceRows } from '../data/repositories/cardsRepo'
 import { fetchAccountLedgerEvents } from '../data/repositories/financePanelsRepo'
 import type { AccountReconciliation, Card, CardInstallment, CardStatementArchive } from '../types/database'
-import { daysUntil } from '../utils/date'
+import { addDays, dateInputValue, daysUntil, startOfDay } from '../utils/date'
 import { freshnessConfidence } from '../utils/dataConfidence'
 import { STALE_AFTER_DAYS } from '../utils/reconciliation'
 import { formatDate } from '../utils/date'
 import { cardPayableDebt } from '../utils/financeSummary'
+import { buildStatementPace } from '../utils/statementPace'
 import { quickCardConsistencyScore } from '../utils/cardConsistency'
 import { bankBrandGradient, getBankBrand } from '../utils/bankBranding'
 import { buildAccountLedgerBalanceRows } from '../utils/accountLedger'
@@ -92,6 +94,24 @@ function AccountRecentTransactions({
   )
 }
 
+// Dönem temposu verisi: son 70 gün (iki tam dönemi fazlasıyla kapsar) tüm
+// kartların hafif harcama satırları TEK sorguda. Satırlar aynı anahtarı
+// paylaştığı için TanStack liste başına bir isteğe tekilleştirir
+// (card-aliases deseni); banka hesabı satırlarında sorgu hiç açılmaz.
+function useStatementPaceRows(enabled: boolean) {
+  const { user } = useAuth()
+  const sinceIso = dateInputValue(addDays(startOfDay(new Date()), -70))
+  const { data } = useQuery({
+    queryKey: ['card-expense-pace', user?.id, sinceIso],
+    enabled: Boolean(user) && enabled,
+    queryFn: async () => {
+      const result = await fetchExpensePaceRows(sinceIso)
+      return result.ok ? result.data : []
+    },
+  })
+  return data
+}
+
 function CardMaskedNumber({ cardId, hidden }: { cardId: string; hidden: boolean }) {
   const { user } = useAuth()
   // Tüm satırlar aynı anahtarı paylaşır → TanStack istekleri tekilleştirir:
@@ -145,6 +165,17 @@ export function CreditAccountListCard({
   onChanged?: () => void | Promise<void>
 }) {
   const [ibanCopied, setIbanCopied] = useState(false)
+
+  const paceRows = useStatementPaceRows(row.card_type === 'kredi_karti')
+  // Gün anahtarı memo'yu gün dönüşünde tazeler; tarih memo içinde o güne sabit.
+  const todayValue = dateInputValue(new Date())
+  const pace = useMemo(
+    () =>
+      row.card_type === 'kredi_karti'
+        ? buildStatementPace(row, paceRows ?? [], new Date(`${todayValue}T12:00:00`))
+        : null,
+    [row, paceRows, todayValue],
+  )
 
   const handleCopyIban = useCallback(async () => {
     if (!row.iban) return
@@ -309,6 +340,16 @@ export function CreditAccountListCard({
         <CardDatum label="Gelecek taksit" value={formatAmount(scheduledInstallmentTotal)} />
         <CardDatum label="Son ödeme" value={formatShortDate(dueDate)} tone={displayedOpenStatementAmount > 0 ? 'warning' : 'neutral'} />
       </LineGroup>
+
+      {/* Nötr bilgi, sinyal rengi yok: yüksek tempo her zaman kötü değildir. */}
+      {pace ? (
+        <p className="mt-2 text-[11px] font-semibold text-ink-muted">
+          Dönem temposu: {formatAmount(pace.current)} · geçen dönem aynı gün {formatAmount(pace.previous)}
+          {pace.deltaPct !== null && pace.deltaPct !== 0
+            ? ` (%${Math.abs(pace.deltaPct)} ${pace.deltaPct > 0 ? 'üzerinde' : 'altında'})`
+            : ''}
+        </p>
+      ) : null}
 
       <div className="mt-3 grid grid-cols-2 gap-2">
         <Button
