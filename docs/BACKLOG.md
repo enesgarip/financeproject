@@ -65,7 +65,18 @@ iş / bilinçli-park. Dilim dilim kapanıyor:
   ayrı ister; tek fonksiyon TG_OP'a göre transition tablosunu okur), dokunulan
   kredi başına TEK yeniden hesap — 36 taksitlik kurulumda O(n²) toplama bitti.
   Davranış birebir (0 taksit = closed; TS ikizi projectLoanSummary hizalı).
-- ~~**K5 — saat enjeksiyonlu kenar testleri.**~~ GEREKÇELİ PARK (kapanış
+- ~~**K5 — saat enjeksiyonlu kenar testleri.**~~ PARK AÇILDI ve TAMAMLANDI
+  (kullanıcı "kalanlardan devam" deyince): migration `20260825190000` —
+  `private.today_ist()` artık `app.today` GUC'unu tanır (üretimde GUC yok,
+  davranış aynı) ve **12 fonksiyonun canlı tanımı** (yerel DB'den
+  `pg_get_functiondef` ile dökülüp mekanik dönüşüm — el kopyası yok)
+  `current_date`'ten today_ist'e taşındı; "bugün" tek kaynak. İki tuzak
+  çözüldü: imza default'ları ÇAĞIRAN yetkisiyle değerlendiğinden `private`
+  şemasına USAGE + fonksiyona execute grant'ı şart (yalnız today_ist'e;
+  debit/credit yardımcıları kapalı kaldı). Kenar testi
+  `clock_injection_statement_cut.sql`: GUC yokken current_date özdeşliği +
+  Şubat'ta kesim=31'in ay sonuna kırpılması (2027-02-28) + sınır geçilmeden
+  kesim olmaması DB'de kanıtlı. Eski park notu tarihçe:
   incelemesi sonucu): kök gece (UTC/TR) riski Istanbul takvim migration'ıyla
   KALKTI; Şubat + kesim=31 kırpması TS ikizlerinde zaten testli
   (`getCardStatementPeriod` + statementPace Şubat senaryosu). Gerçek saat
