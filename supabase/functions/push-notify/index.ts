@@ -148,6 +148,10 @@ type GoalBucketRow = {
 
 type GoalProfileRow = { id: string; name: string; status: string; value_type: string }
 
+type SalaryRow = { user_id: string; amount: number; effective_date: string }
+
+type DepositRow = { user_id: string; amount_kurus: number; occurred_at: string }
+
 /**
  * Ayırma hatırlatmasının penceresi: ayın 2-5'i.
  *
@@ -157,6 +161,14 @@ type GoalProfileRow = { id: string; name: string; status: string; value_type: st
  */
 const GOAL_REMINDER_DAY_FROM = 2
 const GOAL_REMINDER_DAY_TO = 5
+/**
+ * Maaş yatışı TESPİT edildiyse pencere 12'ye uzar: maaş geç yatan ayda (6'sı
+ * ve sonrası) takvim penceresi kaçmış olsa da hatırlatma gerçek yatışa bağlanır.
+ * Dedupe (goal:ay) değişmez — ay başına yine tek gönderim.
+ */
+const GOAL_REMINDER_SALARY_DAY_TO = 12
+/** utils/salaryDeposit.ts ikizi (±%10 bandı; testli mantık orada). */
+const SALARY_MATCH_TOLERANCE = 0.1
 
 // Kullanıcı bazlı tür tercihleri + sessiz saatler.
 type NotificationPreferenceRow = {
@@ -825,6 +837,8 @@ async function loadCandidates(
     carRemindersDue7d,
     pendingProvisions,
     goalBuckets,
+    salaryRows,
+    monthDeposits,
   ] = await Promise.all([
     db.select<PaymentRow>('payments', {
       select: 'id,user_id,title,amount,due_date',
@@ -876,6 +890,20 @@ async function loadCandidates(
       select: 'id,user_id,name,goal_id,last_contribution_month',
       user_id: userFilter,
       goal_id: 'not.is.null',
+    }),
+    // Maaş tespiti için ham veri: maaş TUTARI türetilmiş değil, saklı bilgi —
+    // sunucunun okuması "push'ta türetilmiş tutar hesaplanmaz" kuralını bozmaz.
+    db.select<SalaryRow>('salary_history', {
+      select: 'user_id,amount,effective_date',
+      user_id: userFilter,
+      effective_date: `lte.${todayIso}`,
+      order: 'effective_date.desc',
+    }),
+    db.select<DepositRow>('account_ledger', {
+      select: 'user_id,amount_kurus,occurred_at',
+      user_id: userFilter,
+      kind: 'eq.deposit',
+      occurred_at: `gte.${todayIso.slice(0, 7)}-01`,
     }),
   ])
 
@@ -946,10 +974,30 @@ async function loadCandidates(
   // "aylık gerekli" YANLIŞ olurdu. Doğru sayı ekranda; bildirim yalnız oraya
   // çağırır.
   const reminderDay = parseIsoDate(todayIso).day
-  if (reminderDay >= GOAL_REMINDER_DAY_FROM && reminderDay <= GOAL_REMINDER_DAY_TO) {
+  // Maaş yatışı tespiti (utils/salaryDeposit.ts ikizi): kullanıcının güncel
+  // maaşına ±%10 bandında bu ay bir 'deposit' düştü mü? Sıralama
+  // effective_date.desc geldiği için kullanıcı başına İLK satır günceldir.
+  const salaryByUser = new Map<string, number>()
+  for (const row of salaryRows) {
+    if (!salaryByUser.has(row.user_id) && row.amount > 0) salaryByUser.set(row.user_id, row.amount)
+  }
+  const salaryLandedUsers = new Set<string>()
+  for (const deposit of monthDeposits) {
+    const salary = salaryByUser.get(deposit.user_id)
+    if (!salary) continue
+    if (Math.abs(deposit.amount_kurus / 100 - salary) <= salary * SALARY_MATCH_TOLERANCE) {
+      salaryLandedUsers.add(deposit.user_id)
+    }
+  }
+
+  const inBaseWindow = reminderDay >= GOAL_REMINDER_DAY_FROM && reminderDay <= GOAL_REMINDER_DAY_TO
+  const inSalaryWindow = reminderDay >= GOAL_REMINDER_DAY_FROM && reminderDay <= GOAL_REMINDER_SALARY_DAY_TO
+  if (inBaseWindow || (inSalaryWindow && salaryLandedUsers.size > 0)) {
     const monthKey = todayIso.slice(0, 7)
     const pendingBuckets = goalBuckets.filter(
-      (bucket) => (bucket.last_contribution_month ?? '').slice(0, 7) !== monthKey,
+      (bucket) =>
+        (bucket.last_contribution_month ?? '').slice(0, 7) !== monthKey &&
+        (inBaseWindow || salaryLandedUsers.has(bucket.user_id)),
     )
 
     if (pendingBuckets.length > 0) {
@@ -966,13 +1014,18 @@ async function loadCandidates(
         // Tamamlanmış/silinmiş hedefin kovası dürtmez.
         if (!goal) continue
 
+        // Yatış görüldüyse metin "doğru an"ı söyler; tutar yine YOK (üstteki
+        // gerekçe geçerli — plan/kalan client'ta türetilir).
+        const salaryLanded = salaryLandedUsers.has(bucket.user_id)
         candidates.push({
           userId: bucket.user_id,
           notificationType: 'goal_contribution_due',
           referenceId: `${goal.id}:${monthKey}`,
           payload: {
-            title: `${goal.name}: bu ay ayırma yapmadın`,
-            body: `"${bucket.name}" kovasına bu ayın payını tek tıkla ayırabilirsin.`,
+            title: salaryLanded ? `${goal.name}: maaş yattı görünüyor` : `${goal.name}: bu ay ayırma yapmadın`,
+            body: salaryLanded
+              ? `Maaş hesaba geçti; "${bucket.name}" kovasına bu ayın payını tek tıkla ayırabilirsin.`
+              : `"${bucket.name}" kovasına bu ayın payını tek tıkla ayırabilirsin.`,
             url: '/odemeler/hedefler',
             tag: `goal-contribution-${goal.id}-${monthKey}`,
           },
