@@ -462,6 +462,18 @@ export async function updateCardExpenseHealthMetadata(
   return voidResultFromSupabase(error, 'Harcama açıklaması/kategorisi güncellenemedi.')
 }
 
+/** Dönem temposu için hafif satırlar: kart + gün + tutar + durum yeter. */
+export type ExpensePaceRow = Pick<CardExpense, 'card_id' | 'amount' | 'status' | 'spent_at'>
+
+export async function fetchExpensePaceRows(sinceIso: string): Promise<Result<ExpensePaceRow[]>> {
+  const { data, error } = await supabase
+    .from('card_expenses')
+    .select('card_id, amount, status, spent_at')
+    .gte('spent_at', sinceIso)
+
+  return resultFromSupabase((data ?? []) as ExpensePaceRow[], error, 'Dönem temposu verisi yüklenemedi.')
+}
+
 /** Otomasyon kapsamı ölçümü için son harcamaların kaynak/nota bilgisi. */
 export type ExpenseSourceRow = Pick<CardExpense, 'source' | 'note' | 'amount' | 'status' | 'spent_at'>
 

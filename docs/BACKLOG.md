@@ -7,8 +7,8 @@ kaynağa bağla, uygulamanın bildiğini karar anında söyle, tek tıka indir.
 Kullanıcıyla kararlaştırılan sıra:
 
 1. ~~**PR-0 — hedef günlük fotoğrafı**~~ (DONE, aşağıda)
-2. **Dönem içi tempo** — kartta "bu dönem ₺X · geçen dönem aynı gün ₺Y" (saf
-   util + tek satır UI; nötr dil, sinyal rengi yok)
+2. ~~**Dönem içi tempo**~~ (DONE, aşağıda) — kartta "bu dönem ₺X · geçen dönem
+   aynı gün ₺Y" (saf util + tek satır UI; nötr dil, sinyal rengi yok)
 3. **Taksit ufku** — taksit formlarında "aylık yükün ₺X→₺Y olur" + takvimde
    "şu ay N taksit bitiyor, yük ₺Z azalır" (push MVP'de yok)
 4. **Bütçe turu** — `avg_spend` (son 3 tam ay ort. × çarpan) + `salary_pct`
@@ -25,6 +25,19 @@ Kullanıcıyla kararlaştırılan sıra:
 Tura alınmayan, not edilen ekstralar: bütçe→hedef köprüsü (ay kapanışı artığını
 tek tıkla kovaya), abonelik radarı, ekstre tahmini ("kesilse ~₺X gelir").
 
+- ~~**PR-1 — dönem içi tempo.**~~ DONE. `utils/statementPace.ts` (+7 test):
+  `buildStatementPace` — cari dönem gün-N toplamı vs önceki dönemin AYNI
+  gün-offset'i (offset kısa döneme kıstırılır — Şubat; iptal dışlanır;
+  timestamptz sızıntısına `slice(0,10)` toleransı). İki yaka da
+  `card_expenses`'ten: "Dönem içi" borç KOVASIYLA kaynak karıştırılmaz (kova
+  iade/düzeltme içerir, karışık kaynak sahte delta üretir). Önceki dönemde hiç
+  satır yoksa kıyas UYDURULMAZ (yeni kart → satır susar). Veri
+  `fetchExpensePaceRows` (son 70 gün, hafif seçim, tek toplu sorgu — satırlar
+  aynı TanStack anahtarını paylaşır, card-aliases deseni; banka satırında sorgu
+  açılmaz). UI: kredi kartı satırında LineGroup altında tek NÖTR satır
+  ("%29 üzerinde/altında" — sinyal rengi bilinçli yok, yüksek tempo her zaman
+  kötü değil), hesap `useMemo` + gün anahtarıyla (CrudPage tuş başına render
+  tuzağına karşı).
 - ~~**PR-0 — hedef günlük fotoğrafı.**~~ DONE. Sorun: hedefin GEÇMİŞ değeri
   hiçbir yerde yoktu (kova yalnız güncel rezerv + son ayırma ayı,
   net_worth_snapshots kırılımsız toplam); tempo/varış tahmini tarihçe ister.
