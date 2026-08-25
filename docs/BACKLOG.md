@@ -65,9 +65,24 @@ iş / bilinçli-park. Dilim dilim kapanıyor:
   ayrı ister; tek fonksiyon TG_OP'a göre transition tablosunu okur), dokunulan
   kredi başına TEK yeniden hesap — 36 taksitlik kurulumda O(n²) toplama bitti.
   Davranış birebir (0 taksit = closed; TS ikizi projectLoanSummary hizalı).
-- **K5 — pgTAP saat enjeksiyonu + gece/Şubat-31 kenar testleri** — sırada.
-- **K6 — deploy `verify`↔`changes` ayrıştırması** — sırada.
-- **K7t — restore tatbikatı** (RESTORE_DRILL gecikmiş; tetikleyici sağlandı) — sırada.
+- ~~**K5 — saat enjeksiyonlu kenar testleri.**~~ GEREKÇELİ PARK (kapanış
+  incelemesi sonucu): kök gece (UTC/TR) riski Istanbul takvim migration'ıyla
+  KALKTI; Şubat + kesim=31 kırpması TS ikizlerinde zaten testli
+  (`getCardStatementPeriod` + statementPace Şubat senaryosu). Gerçek saat
+  enjeksiyonu 13 para-kritik fonksiyonun `current_date`'ten
+  `private.today_ist()`e taşınmasını ister (helper hazır ama tüketicisi yok)
+  — mekanik ama geniş kapsamlı ayrı dilim; DB-kopyası testinin ek değeri
+  TS ağının yanında düşük. İstenirse "today_ist taşıma dilimi" diye açılır.
+- ~~**K6 — deploy `verify`↔`changes` ayrıştırması.**~~ GEREKÇELİ PARK:
+  kazanım yalnız classify job'ının süresi (~5-10 sn — verify'ın frontend
+  adımları zaten step-level gate'li); promote/rollback zincirini yeniden
+  kablolama riskine değmez. Deploy toplamı ~2 dk iken optimizasyon anlamsız.
+- ~~**K7t — restore tatbikatı.**~~ ÖN-KONTROL DONE + tam koşu KULLANICI-KAPILI:
+  ajan ön-kontrolü 2026-08-25'te geçti (aynı günün 2 şifreli yedeği mevcut,
+  ~285 KB — migration'lı deploy'lar yedeği tetiklemiş). Tam tatbikat iki
+  adımda kullanıcı ister: yedeği çözmek `BACKUP_PASSPHRASE`, adım 6 üretim
+  parolasıyla giriş — ikisi de ajanın giremeyeceği sırlar. Komutlar
+  `docs/RESTORE_DRILL.md`'de hazır; kullanıcı koşunca sonuç tablosuna satır.
 - **Bilinçli PARK (bu turda yapılmayacak, gerekçesi yerinde):** CrudPage→TanStack
   (10+ sayfa, ayrı tur), Dashboard lazy-mount+PullToRefresh (görsel/a11y turu),
   transaksiyonel restore protokolü (KNOWN_RISKS #6 — ayrı büyük tasarım),

@@ -132,3 +132,4 @@ Her tatbikattan sonra bir satır ekle:
 | Tarih | Yedek tarihi | Sonuç | Not |
 | --- | --- | --- | --- |
 | — | — | henüz koşulmadı | Runbook 2026-07-27'de yazıldı |
+| 2026-08-25 | 2026-08-25 | ön-kontrol geçti | Ajan ön-kontrolü: aynı günün 2 şifreli artifact'ı mevcut (~285 KB, boyut makul). Tam koşu passphrase + üretim girişi istediğinden kullanıcıda; `savings_goal_snapshots` + `budgets` çıpa kolonları eklendiğinden tetikleyici sağlandı, ilk fırsatta koşulmalı. |
