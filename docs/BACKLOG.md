@@ -77,7 +77,17 @@ iş / bilinçli-park. Dilim dilim kapanıyor:
   kazanım yalnız classify job'ının süresi (~5-10 sn — verify'ın frontend
   adımları zaten step-level gate'li); promote/rollback zincirini yeniden
   kablolama riskine değmez. Deploy toplamı ~2 dk iken optimizasyon anlamsız.
-- ~~**K7t — restore tatbikatı.**~~ ÖN-KONTROL DONE + tam koşu KULLANICI-KAPILI:
+- ~~**K7t — restore tatbikatı.**~~ **TAM KOŞU BAŞARILI** (2026-08-25, ilk
+  gerçek koşu — kullanıcı passphrase'i bulunca ajan koştu): çözme + yükleme +
+  denetimler + bütünlük (kredi kartlarında borç↔ledger drift 0,00; hesap
+  bakiyeleri birebir). Tatbikat ÜÇ runbook kusuru yakaladı ve düzeltildi:
+  `postgres` rolü auth şemasına yetmiyor (`supabase_admin`+`PGPASSWORD` şart),
+  FK-aktif migration şemasında `session_replication_role=replica` öneki şart
+  (yoksa alfabetik COPY sırası FK ihlaline düşer, yarım-restore olur), psql
+  bağlantı hataları küçük-harf "error:" bastığından sessiz çökme tuzağı.
+  Runbook güncellendi + UI'siz SQL kanıt adımı (5b) eklendi. Eski satır
+  (aşağıda) tarihçe:
+  ~~ÖN-KONTROL DONE + tam koşu KULLANICI-KAPILI:~~
   ajan ön-kontrolü 2026-08-25'te geçti (aynı günün 2 şifreli yedeği mevcut,
   ~285 KB — migration'lı deploy'lar yedeği tetiklemiş). Tam tatbikat iki
   adımda kullanıcı ister: yedeği çözmek `BACKUP_PASSPHRASE`, adım 6 üretim
