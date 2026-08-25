@@ -34,6 +34,8 @@ export const RESTORE_TABLE_ORDER = [
   'salary_history',
   'gold_lots',
   'net_worth_snapshots',
+  // Hedef fotoğrafları: savings_goals'tan SONRA (FK goal_id).
+  'savings_goal_snapshots',
   'card_statement_archives',
   // Kısmi ekstre ödemeleri (K7): arşivden SONRA (FK: cards + archives).
   'card_statement_payments',
@@ -313,6 +315,7 @@ export const BACKUP_TABLE_LABELS: Record<RestoreTable, string> = {
   salary_history: 'Maaş kaydı',
   gold_lots: 'Altın alımı',
   net_worth_snapshots: 'Net değer fotoğrafı',
+  savings_goal_snapshots: 'Hedef fotoğrafı',
   card_statement_archives: 'Ekstre arşivi',
   card_statement_payments: 'Ekstre ödemesi',
   card_expenses: 'Kart harcaması',

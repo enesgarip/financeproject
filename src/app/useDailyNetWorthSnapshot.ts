@@ -8,6 +8,8 @@ import { financeSnapshotKey } from './financeSnapshotKey'
  * Günlük net değer fotoğrafı. Eskiden yalnız Analiz sayfası açılınca alınıyordu;
  * seri delikli kalıyor, FIRE/trend kısa pencereden yanlış sonuç üretiyordu.
  * Artık Layout'a bağlı: uygulama hangi sayfayla açılırsa açılsın günde bir kez.
+ * Aynı koşu hedef bazlı fotoğrafları da yazar (savings_goal_snapshots) —
+ * "gerçekleşen tempo" ve varış tahmini tarihçesini bu seri besler.
  *
  * İki maliyet dengesi:
  *  - Kayıt gecikmeli tetiklenir ve önce TanStack cache'ine bakar; Dashboard/Analiz
@@ -98,6 +100,17 @@ export function useDailyNetWorthSnapshot() {
           localStorage.setItem(STORAGE_KEY, todayKey(userId))
           // Analiz sayfası açıksa bugünün noktasını hemen görsün.
           void queryClient.invalidateQueries({ queryKey: ['net-worth-snapshots'] })
+
+          // Hedef fotoğrafları: aynı günlük koşunun ikinci yarısı. Biriken
+          // tutar yalnız client'ta türetilebilir (canlı kur/BIST fiyatı) —
+          // sunucu bu seriyi üretemez. Akışın gövdesi lazy modülde
+          // (dailyGoalSnapshots): çözümleme zinciri entry bütçesine girmesin.
+          // Damgadan SONRA ve en-iyi-çaba: hatası net değer kaydını geri
+          // almaz, seri bir gün atlar ve ertesi koşuda devam eder.
+          if (!snapshot.savingsGoals.some((goal) => goal.status === 'active')) return
+          const goalRunner = await import('./dailyGoalSnapshots')
+          if (cancelled) return
+          await goalRunner.recordDailyGoalSnapshots(userId, snapshot, rates, () => cancelled)
         } catch {
           // Snapshot kaydı yardımcı bir iştir; hatası kullanıcı akışını bozmaz.
         }

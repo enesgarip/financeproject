@@ -494,6 +494,13 @@ export type NetWorthSnapshot = BaseRow & {
   usd_try: number | null
 }
 
+export type SavingsGoalSnapshot = BaseRow & {
+  goal_id: string
+  snapshot_date: string
+  /** Hedefin kendi biriminde: TRY→TL, gram/çeyrek→miktar, karma→ulaşan bileşen sayısı. */
+  amount: number
+}
+
 export type DismissedUpcomingItem = {
   id: string
   user_id: string
@@ -711,6 +718,7 @@ export type Database = {
       >
       salary_history: Table<SalaryHistory, WithBaseInsert<SalaryHistory>, WithBaseUpdate<SalaryHistory>>
       net_worth_snapshots: Table<NetWorthSnapshot, WithBaseInsert<NetWorthSnapshot>, WithBaseUpdate<NetWorthSnapshot>>
+      savings_goal_snapshots: Table<SavingsGoalSnapshot, WithBaseInsert<SavingsGoalSnapshot>, WithBaseUpdate<SavingsGoalSnapshot>>
       gold_lots: Table<GoldLot, WithBaseInsert<GoldLot>, WithBaseUpdate<GoldLot>>
       card_ledger: Table<CardLedger, WithBaseInsert<CardLedger>, WithBaseUpdate<CardLedger>>
       account_ledger: Table<AccountLedger, WithBaseInsert<AccountLedger>, WithBaseUpdate<AccountLedger>>
