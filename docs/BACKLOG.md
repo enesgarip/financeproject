@@ -152,12 +152,15 @@ iş / bilinçli-park. Dilim dilim kapanıyor:
   allocation-security testinin kabulü genişletildi (redd artık guard P0001'inden
   önce 42501'de) + fixture manipülasyonu yetkili role çerçevesine alındı.
   Cron impersonation yolu etkilenmedi (zaten DEFINER sarmalayıcıdan koşuyordu).
-  **indeks budaması** — üretim ölçümü KULLANICIDA: Supabase Studio SQL
-  editöründe şu sorgu, hangi `card_expenses` indekslerinin hiç
-  taranmadığını gösterir (idx_scan=0 + büyük boyut = budama adayı; sonucu
-  paylaşınca budama migration'ı yazılır):
-  `select indexrelname, idx_scan, pg_size_pretty(pg_relation_size(indexrelid))
-   from pg_stat_user_indexes where relname='card_expenses' order by idx_scan;` SI-04 yeni banka
+  ~~**indeks budaması**~~ → ÖLÇÜLDÜ ve YAPILDI (2026-08-25, kullanıcı üretim
+  `pg_stat_user_indexes` sonucunu paylaştı — 13 indeks): tek gerçek aday
+  `card_expenses_user_fingerprint_idx` düşürüldü (0 tarama, 96 kB — en büyük
+  indeksti; fingerprint yalnız trigger'la üretilir, hiçbir sorgu/fonksiyon
+  onunla aramaz; non-unique olduğundan davranış taşımıyordu — kolon + trigger
+  kaldı, migration `20260825230000`). İki 0/1-taramalı BİLİNÇLİ tutuldu:
+  `card_expenses_user_id_key` (ölçümden saatler önce T1 ile doğdu ve bileşik
+  FK'nın hedefi — 0 taraması yanılgı) ve `current_settlement_idx`
+  (FK/cascade yardımcısı). Kalan 10 indeks aktif (18-2139 tarama). SI-04 yeni banka
   (örnek ekstre gelmeden yazılmaz), DH-08 (banka gerçeği gerekli), prod çift
   kayıt/₺298,20 (ekstre kanıtı gerekli), kategori emekliliği (birkaç ay veri),
   mobil 5-slot (ürün kararı), R-1 canlı matris (ayrı QA dilimi).
