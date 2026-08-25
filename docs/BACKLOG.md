@@ -1,5 +1,48 @@
 # Priority Backlog
 
+## 2026-08-25 — "Canlı Sayılar" turu (kararlaştırıldı) — PR-0 DONE
+
+Hedef→kaynak zincirinin (#153-#160) devamı; ortak DNA: statik sayıyı canlı
+kaynağa bağla, uygulamanın bildiğini karar anında söyle, tek tıka indir.
+Kullanıcıyla kararlaştırılan sıra:
+
+1. ~~**PR-0 — hedef günlük fotoğrafı**~~ (DONE, aşağıda)
+2. **Dönem içi tempo** — kartta "bu dönem ₺X · geçen dönem aynı gün ₺Y" (saf
+   util + tek satır UI; nötr dil, sinyal rengi yok)
+3. **Taksit ufku** — taksit formlarında "aylık yükün ₺X→₺Y olur" + takvimde
+   "şu ay N taksit bitiyor, yük ₺Z azalır" (push MVP'de yok)
+4. **Bütçe turu** — `avg_spend` (son 3 tam ay ort. × çarpan) + `salary_pct`
+   çıpaları (çıpalı satırda `limit_amount` 0; #157 deseni), tek-tık ay devri
+   şeridi (otomatik taşıma YOK — #159 çizgisi), bayat bütçe önerisi (medyan +
+   %10 ve 25 TL eşiği), bütçe×harcama hesabının üç kopyasının DRY'ı
+5. **Varış tahmini** — PR-0 serisinden gerçekleşen tempo (son 90 gün, min 45
+   gün + 2 ay örneği; tempo ≤ 0 ise tarih UYDURULMAZ) + hedef kartında şerit
+6. **Maaş günü akışı** — `salary_history` tutarı ± %10 deposit tespiti (saf
+   ikiz + edge), `goal_contribution_due` penceresi "gün 2-5 VEYA yatış görüldü"
+   + iki metin varyantı (tutar yine YOK), Planlama'da maaş şeridi; opsiyon:
+   maaş değişikliği algılama
+
+Tura alınmayan, not edilen ekstralar: bütçe→hedef köprüsü (ay kapanışı artığını
+tek tıkla kovaya), abonelik radarı, ekstre tahmini ("kesilse ~₺X gelir").
+
+- ~~**PR-0 — hedef günlük fotoğrafı.**~~ DONE. Sorun: hedefin GEÇMİŞ değeri
+  hiçbir yerde yoktu (kova yalnız güncel rezerv + son ayırma ayı,
+  net_worth_snapshots kırılımsız toplam); tempo/varış tahmini tarihçe ister.
+  `savings_goal_snapshots` (unique goal+gün; `amount` hedefin KENDİ biriminde —
+  TRY→TL, gram/çeyrek→miktar, karma→ulaşan bileşen sayısı; RLS baştan
+  `(select auth.uid())` deseniyle + grant). `reset_user_finance_data`'ya
+  bilinçli eklenmedi: goal_id cascade yeterli, SQL testi bunu doğruluyor
+  (`supabase/tests/savings_goal_snapshots.sql`). Yazım
+  `useDailyNetWorthSnapshot`'ın aynı günlük koşusunun ikinci yarısı:
+  türetilmiş satırlar (`resolveSavingsGoalRows`; kova yalnız gerekliyse
+  fetch'lenir, BIST fiyatı `fetchStockPrices`) → `buildGoalSnapshotEntries`
+  (aktif hedefler; tamamlanmış fotoğraflanmaz — tempo bitmiş işi ölçmez) →
+  `recordSavingsGoalSnapshots` upsert. En-iyi-çaba: hatası net değer kaydını
+  ve gün damgasını geri almaz, seri ertesi koşuda devam eder. Yedek kapsamına
+  girdi (`RESTORE_TABLE_ORDER` savings_goals'tan sonra + FK sırası testte).
+  Okuma tarafı bilinçli YOK — PR-4 net worth deseniyle (kendi sorgusu) getirir,
+  finance snapshot şişirilmez.
+
 ## 2026-08-24 (11) — Açılış snapshot'ı tek RPC'de — DONE
 
 Performans turunun (9) bilinçli ertelenen en yüksek etkili işi:

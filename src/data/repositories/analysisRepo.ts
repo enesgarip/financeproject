@@ -1,6 +1,7 @@
 import { supabase } from '../../lib/supabase'
 import type { CardExpense, NetWorthSnapshot, TransactionHistory } from '../../types/database'
 import { addMonths, dateInputValue, startOfMonth } from '../../utils/date'
+import type { GoalSnapshotEntry } from '../../utils/goalSnapshots'
 import { isMissingSupabaseCapabilityError } from '../../utils/supabaseErrors'
 import { ok, resultFromSupabase, voidResultFromSupabase, type Result } from '../result'
 
@@ -33,6 +34,28 @@ export async function recordNetWorthSnapshot(
   // Tablo deploy edilmemişse sessizce geç (migration drift'i kullanıcıyı bloklamaz).
   if (isMissingSupabaseCapabilityError(error)) return ok(false)
   const result = voidResultFromSupabase(error, 'Net değer snapshot kaydedilemedi.')
+  return result.ok ? ok(true) : result
+}
+
+/** Bugünün hedef fotoğraflarını yazar (idempotent upsert). Net değer
+ *  fotoğrafıyla aynı günlük koşuda alınır (app/useDailyNetWorthSnapshot);
+ *  tutar TÜRETİLMİŞ biriken değerdir, okuma tarafı tempo/varış şeridiyle gelir. */
+export async function recordSavingsGoalSnapshots(
+  userId: string,
+  entries: GoalSnapshotEntry[],
+): Promise<Result<boolean>> {
+  if (entries.length === 0) return ok(false)
+  const today = new Date().toLocaleDateString('sv-SE')
+  const { error } = await supabase
+    .from('savings_goal_snapshots')
+    .upsert(
+      entries.map((entry) => ({ user_id: userId, goal_id: entry.goalId, snapshot_date: today, amount: entry.amount })),
+      { onConflict: 'goal_id,snapshot_date' },
+    )
+
+  // Tablo deploy edilmemişse sessizce geç (migration drift'i kullanıcıyı bloklamaz).
+  if (isMissingSupabaseCapabilityError(error)) return ok(false)
+  const result = voidResultFromSupabase(error, 'Hedef fotoğrafı kaydedilemedi.')
   return result.ok ? ok(true) : result
 }
 

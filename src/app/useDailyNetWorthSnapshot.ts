@@ -8,6 +8,8 @@ import { financeSnapshotKey } from './financeSnapshotKey'
  * Günlük net değer fotoğrafı. Eskiden yalnız Analiz sayfası açılınca alınıyordu;
  * seri delikli kalıyor, FIRE/trend kısa pencereden yanlış sonuç üretiyordu.
  * Artık Layout'a bağlı: uygulama hangi sayfayla açılırsa açılsın günde bir kez.
+ * Aynı koşu hedef bazlı fotoğrafları da yazar (savings_goal_snapshots) —
+ * "gerçekleşen tempo" ve varış tahmini tarihçesini bu seri besler.
  *
  * İki maliyet dengesi:
  *  - Kayıt gecikmeli tetiklenir ve önce TanStack cache'ine bakar; Dashboard/Analiz
@@ -98,6 +100,45 @@ export function useDailyNetWorthSnapshot() {
           localStorage.setItem(STORAGE_KEY, todayKey(userId))
           // Analiz sayfası açıksa bugünün noktasını hemen görsün.
           void queryClient.invalidateQueries({ queryKey: ['net-worth-snapshots'] })
+
+          // Hedef fotoğrafları: aynı günlük koşunun ikinci yarısı. Biriken
+          // tutar yalnız client'ta türetilebilir (canlı kur/BIST fiyatı) —
+          // sunucu bu seriyi üretemez, bkz. utils/goalSnapshots. Damgadan SONRA
+          // ve en-iyi-çaba: hatası net değer kaydını geri almaz, seri bir gün
+          // atlar ve ertesi koşuda devam eder.
+          if (!snapshot.savingsGoals.some((goal) => goal.status === 'active')) return
+
+          const [goalSources, goalSnapshots, kasaBucketsRepo, stockQuotes] = await Promise.all([
+            import('../utils/goalSources'),
+            import('../utils/goalSnapshots'),
+            import('../data/repositories/kasaBucketsRepo'),
+            import('../lib/stockQuotesClient'),
+          ])
+          if (cancelled) return
+
+          const needsBuckets = snapshot.savingsGoalSources.some((source) => source.kind === 'kasa_bucket')
+          const buckets = needsBuckets ? await kasaBucketsRepo.fetchKasaBuckets() : null
+          const tickers = Array.from(
+            new Set(snapshot.assets.map((asset) => stockQuotes.normalizeTicker(asset.symbol))),
+          ).filter((ticker): ticker is string => ticker !== null).sort()
+          const stockPrices = tickers.length > 0
+            ? await stockQuotes.fetchStockPrices(tickers).catch(() => null)
+            : null
+          if (cancelled) return
+
+          const resolved = goalSources.resolveSavingsGoalRows(
+            snapshot.savingsGoals,
+            snapshot.savingsGoalComponents,
+            snapshot.savingsGoalSources,
+            {
+              assets: snapshot.assets,
+              cards: snapshot.cards,
+              buckets: buckets?.ok ? buckets.data : [],
+              snapshot: rates,
+              stockPrices,
+            },
+          )
+          await analysisRepo.recordSavingsGoalSnapshots(userId, goalSnapshots.buildGoalSnapshotEntries(resolved.goals))
         } catch {
           // Snapshot kaydı yardımcı bir iştir; hatası kullanıcı akışını bozmaz.
         }
