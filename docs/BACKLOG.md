@@ -117,7 +117,29 @@ iş / bilinçli-park. Dilim dilim kapanıyor:
   içerikte PullToRefresh kaynaklı transform kalmadı.
 - **Bilinçli PARK (bu turda yapılmayacak, gerekçesi yerinde):** CrudPage→TanStack
   (10+ sayfa, ayrı tur),
-  transaksiyonel restore protokolü (KNOWN_RISKS #6 — ayrı büyük tasarım),
+  **transaksiyonel restore protokolü** (KNOWN_RISKS #6) — TASARIM HAZIR
+  (2026-08-25, tatbikat dersleri tazeyken yazıldı), uygulama ayrı oturum:
+  - Tek RPC: `restore_user_finance_data_tx(p_payload jsonb)` SECURITY DEFINER,
+    TEK transaction — başarısızlıkta hiçbir satır değişmez (bugünkü REST
+    replay'inin tam tersi).
+  - Gövde: (1) mevcut reset gövdesi (silme, child-first); (2) parent-first
+    replay — RESTORE_TABLE_ORDER'ın SQL ikizi + `jsonb_populate_record` ile
+    satır doğrulama (bilinmeyen kolon/tip hatası = tüm işlem geri); (3)
+    user_id rewrite SUNUCUDA (auth.uid()); (4) ledger tabloları VERİ olarak
+    replay edilirken türetme trigger'ları mevcut `app.ledger_suppress` GUC
+    deseniyle susturulur (tatbikat dersi olan session_replication_role'e
+    gerek kalmaz — RPC kendi guard'ını kurar); (5) arşiv/settlement bağları
+    yalnız payload-içi id eşleşmeleriyle korunur (K7/T1 allocation guard'ları
+    RPC'nin yetkili bağlamında geçerli kalır).
+  - Dikkat: PostgREST body limiti (payload ~1-2 MB; mevcut dump 1,5 MB — tek
+    kullanıcıda sorun değil, yine de sınır kontrolü + anlaşılır hata).
+  - Fazlar: R1 RPC + docker round-trip testi (JSON export → tx-restore →
+    DataHealth 0 kritik + ledger drift 0); R2 istemci geçişi (insertRows
+    döngüsü → tek çağrı; eski yol missing-capability fallback'i); R3
+    RESTORE_DRILL'e JSON-yolu bölümü. CARD_DEBT_TRANSITIONS:317 ve
+    DATA_HEALTH_ARCHITECTURE:199'daki tekrarlar kapanışta bu kayda işaret
+    edecek.
+  Ayrıca:
   ~~T1 RPC-only~~ → **AÇILDI ve TAMAMLANDI** (migration `20260825210000`):
   DEFINER geçiş denetimi (ajan raporu, onay kapısı) 5 INVOKER yazarın 4'ünü
   hazır buldu; `update_card_expense`'te ÜÇ user-filtresiz satır (arşiv guard
@@ -130,8 +152,12 @@ iş / bilinçli-park. Dilim dilim kapanıyor:
   allocation-security testinin kabulü genişletildi (redd artık guard P0001'inden
   önce 42501'de) + fixture manipülasyonu yetkili role çerçevesine alındı.
   Cron impersonation yolu etkilenmedi (zaten DEFINER sarmalayıcıdan koşuyordu).
-  İndeks
-  budaması (üretim `pg_stat_user_indexes` ölçümü ister), SI-04 yeni banka
+  **indeks budaması** — üretim ölçümü KULLANICIDA: Supabase Studio SQL
+  editöründe şu sorgu, hangi `card_expenses` indekslerinin hiç
+  taranmadığını gösterir (idx_scan=0 + büyük boyut = budama adayı; sonucu
+  paylaşınca budama migration'ı yazılır):
+  `select indexrelname, idx_scan, pg_size_pretty(pg_relation_size(indexrelid))
+   from pg_stat_user_indexes where relname='card_expenses' order by idx_scan;` SI-04 yeni banka
   (örnek ekstre gelmeden yazılmaz), DH-08 (banka gerçeği gerekli), prod çift
   kayıt/₺298,20 (ekstre kanıtı gerekli), kategori emekliliği (birkaç ay veri),
   mobil 5-slot (ürün kararı), R-1 canlı matris (ayrı QA dilimi).
