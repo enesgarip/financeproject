@@ -1,0 +1,22 @@
+-- card_expenses indeks budaması (perf turunun "önce üretimde ölç" şartıyla).
+--
+-- Kullanıcı 2026-08-25'te üretim pg_stat_user_indexes ölçümünü paylaştı
+-- (13 indeks). Kararlar:
+--
+--  DÜŞEN — card_expenses_user_fingerprint_idx (idx_scan=0, 96 kB; tablonun
+--  en büyük indeksi): transaction_fingerprint yalnız trigger'la ÜRETİLİYOR
+--  ve client tarafında kolon değeri OKUNUYOR (DataHealth çift-kayıt analizi
+--  hesabı TS'te yapar); ne PostgREST sorgusu ne canlı SQL fonksiyonu bu
+--  kolonla filtreliyor. Non-unique + partial olduğundan davranış taşımıyor —
+--  yalnız hiç kullanılmayan bir arama yolu. Kolon ve üretici trigger KALIYOR.
+--
+--  TUTULAN sıfır/az taramalılar (yanılgı uyarısı):
+--  - card_expenses_user_id_key (idx_scan=0): ölçüm anından SAATLER önce, aynı
+--    gün T1 migration'ıyla doğdu ve card_installments'ın bileşik parent-user
+--    FK'sının HEDEFİ — düşülemez ve düşülmemeli.
+--  - card_expenses_current_settlement_idx (idx_scan=1): FK/cascade yardımcı
+--    indeksi (erken-ödeme settlement bağları) — parent silme yollarını
+--    seq-scan'e düşürmemek için tutuldu (perf turu FK-indeks gerekçesi).
+--  Kalan 10 indeks aktif (18-2139 tarama).
+
+drop index if exists public.card_expenses_user_fingerprint_idx;
