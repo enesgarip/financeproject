@@ -1,16 +1,24 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type Dispatch, type SetStateAction } from 'react'
 import { BarChart, type BarDataPoint } from '../components/charts/BarChart'
 import { Badge } from '../components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import type { NetWorthSnapshot } from '../types/database'
 import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
-import { buildCashFlowForecast } from '../utils/cashFlowForecast'
+import { MoneyInput } from '../components/finance/MoneyInput'
+import { buildCashFlowForecast, salaryCutRunwayMonths } from '../utils/cashFlowForecast'
 import { analysisFinanceSummaryInput, type AnalysisData } from '../utils/analysisView'
+import { parseNumber } from '../utils/formatCurrency'
 import { type MarketRatesSnapshot } from '../utils/marketRates'
 import { diffTL } from '../utils/money'
 import { convertNetWorth, formatRealValue, realValueChangeBadge, type RealUnit, REAL_UNIT_LABELS } from '../utils/realValue'
 import { selectNetWorthSeries, type NetWorthRange } from '../utils/netWorthSeries'
-import { applyScenario, type ScenarioMutation } from '../utils/scenarioForecast'
+import {
+  applyScenario,
+  loanPayoffAmount,
+  payoffBreakEvenMonthKey,
+  scenarioStartingCashDelta,
+  type ScenarioMutation,
+} from '../utils/scenarioForecast'
 import { StatPill } from './AnalysisPage.atoms'
 
 export function NetWorthTrend({
@@ -188,29 +196,56 @@ export function NetWorthTrend({
   )
 }
 
+const SHOCK_PRESETS = [25_000, 50_000, 100_000] as const
+
 export function ForwardForecast({ data }: { data: AnalysisData }) {
   const { formatAmount } = useBalancePrivacy()
   const [scenarioOpen, setScenarioOpen] = useState(false)
+  // removedIds artık yalnız düzenli ödemeler için: kredilerde "bedavaya kaldır"
+  // bilinçli olarak kalktı (fazla iyimserdi) — kredinin tek modu "bugün kapat".
   const [removedIds, setRemovedIds] = useState<Set<string>>(new Set())
+  const [payoffIds, setPayoffIds] = useState<Set<string>>(new Set())
+  const [shockChoice, setShockChoice] = useState<number | 'custom' | null>(null)
+  const [customShockInput, setCustomShockInput] = useState('')
 
   const forecastInput = useMemo(() => analysisFinanceSummaryInput(data), [data])
 
   const forecast = useMemo(() => buildCashFlowForecast(forecastInput, { horizonMonths: 6 }), [forecastInput])
 
+  const shockAmount = useMemo(() => {
+    const raw = shockChoice === 'custom' ? parseNumber(customShockInput) : shockChoice ?? 0
+    return Number.isFinite(raw) && raw > 0 ? raw : 0
+  }, [shockChoice, customShockInput])
+
   const scenarioMutations = useMemo<ScenarioMutation[]>(() => {
-    if (removedIds.size === 0) return []
     const mutations: ScenarioMutation[] = []
-    for (const id of removedIds) {
-      if (data.loans.some((l) => l.id === id)) mutations.push({ type: 'remove_loan', loanId: id })
-      else mutations.push({ type: 'remove_payment', paymentId: id })
-    }
+    for (const id of payoffIds) mutations.push({ type: 'payoff_loan_today', loanId: id })
+    for (const id of removedIds) mutations.push({ type: 'remove_payment', paymentId: id })
+    if (shockAmount > 0) mutations.push({ type: 'cash_shock', amount: shockAmount })
     return mutations
-  }, [removedIds, data.loans])
+  }, [payoffIds, removedIds, shockAmount])
+
+  const startingCashDelta = useMemo(
+    () => scenarioStartingCashDelta(forecastInput, scenarioMutations),
+    [forecastInput, scenarioMutations],
+  )
 
   const scenarioForecast = useMemo(() => {
     if (scenarioMutations.length === 0) return null
-    return buildCashFlowForecast(applyScenario(forecastInput, scenarioMutations), { horizonMonths: 6 })
-  }, [forecastInput, scenarioMutations])
+    return buildCashFlowForecast(applyScenario(forecastInput, scenarioMutations), {
+      horizonMonths: 6,
+      startingBalanceDelta: startingCashDelta,
+    })
+  }, [forecastInput, scenarioMutations, startingCashDelta])
+
+  // Dayanıklılık: aktif senaryo girdisi üzerinden hesaplanır ki kredi kapatma /
+  // şok ile kompoze olsun; senaryo yokken baz veriyle koşar.
+  const runwayMonths = useMemo(() => {
+    const input = scenarioMutations.length > 0 ? applyScenario(forecastInput, scenarioMutations) : forecastInput
+    return salaryCutRunwayMonths(input, {
+      startingBalanceDelta: scenarioMutations.length > 0 ? startingCashDelta : 0,
+    })
+  }, [forecastInput, scenarioMutations, startingCashDelta])
 
   const activeForBarChart = scenarioForecast ?? forecast
   const barData: BarDataPoint[] = useMemo(
@@ -226,8 +261,8 @@ export function ForwardForecast({ data }: { data: AnalysisData }) {
   const candidateLoans = data.loans.filter((l) => l.status === 'active' && l.remaining_installments > 0)
   const candidatePayments = data.payments.filter((p) => p.recurrence !== 'none' && p.status !== 'ödendi')
 
-  function toggleId(id: string) {
-    setRemovedIds((prev) => {
+  function toggleIn(setter: Dispatch<SetStateAction<Set<string>>>, id: string) {
+    setter((prev) => {
       const next = new Set(prev)
       if (next.has(id)) next.delete(id)
       else next.add(id)
@@ -235,6 +270,14 @@ export function ForwardForecast({ data }: { data: AnalysisData }) {
     })
   }
 
+  function resetScenario() {
+    setRemovedIds(new Set())
+    setPayoffIds(new Set())
+    setShockChoice(null)
+    setCustomShockInput('')
+  }
+
+  const scenarioActive = scenarioMutations.length > 0
   const endingDelta = scenarioForecast ? diffTL(scenarioForecast.endingBalance, forecast.endingBalance) : null
 
   return (
@@ -263,6 +306,17 @@ export function ForwardForecast({ data }: { data: AnalysisData }) {
           />
         </div>
 
+        {/* Dayanıklılık satırı — nötr dil, sinyal rengi bilinçli yok (statementPace çizgisi) */}
+        <p className="text-xs text-ink-muted">
+          {scenarioActive ? 'Seçili senaryoyla gelir' : 'Gelir'} kesilse{' '}
+          {runwayMonths === null
+            ? 'bile 12+ ay dayanırsın'
+            : runwayMonths === 0
+              ? 'bu ay açığa düşersin'
+              : `~${runwayMonths} ay dayanırsın`}{' '}
+          (bilinen yükümlülüklere göre).
+        </p>
+
         {activeForBarChart.firstNegative ? (
           <div className="rounded-xl border border-destructive/20 bg-destructive/8 p-3">
             <p className="text-sm font-bold text-destructive">{activeForBarChart.firstNegative.monthLabel} içinde nakit açığa düşüyor</p>
@@ -275,7 +329,7 @@ export function ForwardForecast({ data }: { data: AnalysisData }) {
         {scenarioForecast && !scenarioForecast.firstNegative && forecast.firstNegative ? (
           <div className="rounded-xl border border-success/20 bg-success/8 p-3">
             <p className="text-sm font-bold text-success">Simülasyonda nakit açığı ortadan kalkıyor</p>
-            <p className="mt-0.5 text-xs text-success/80">Seçili yükümlülükleri kaldırmak 6 ay boyunca pozitif bakiyeyi koruyor.</p>
+            <p className="mt-0.5 text-xs text-success/80">Seçili senaryo 6 ay boyunca bakiyeyi pozitif tutuyor.</p>
           </div>
         ) : null}
 
@@ -305,81 +359,130 @@ export function ForwardForecast({ data }: { data: AnalysisData }) {
           ))}
         </div>
 
-        {/* Scenario simulator */}
-        {(candidateLoans.length > 0 || candidatePayments.length > 0) ? (
-          <div className="rounded-xl border border-line-strong bg-page">
-            <button
-              aria-expanded={scenarioOpen}
-              onClick={() => setScenarioOpen((v) => !v)}
-              className="flex w-full items-center justify-between px-4 py-3 text-left text-sm font-semibold text-ink"
-            >
-              <span>Ya şöyle olsaydı?</span>
-              <span className="flex items-center gap-2">
-                {removedIds.size > 0 && endingDelta !== null ? (
-                  <Badge variant={endingDelta >= 0 ? 'success' : 'destructive'}>
-                    {endingDelta >= 0 ? '+' : ''}{formatAmount(endingDelta)}
-                  </Badge>
-                ) : null}
-                <span className="text-xs text-ink-muted">{scenarioOpen ? '▲' : '▼'}</span>
-              </span>
-            </button>
+        {/* Scenario simulator — şok çipleri kredisiz/ödemesiz durumda da anlamlı, kutu hep görünür */}
+        <div className="rounded-xl border border-line-strong bg-page">
+          <button
+            aria-expanded={scenarioOpen}
+            onClick={() => setScenarioOpen((v) => !v)}
+            className="flex w-full items-center justify-between px-4 py-3 text-left text-sm font-semibold text-ink"
+          >
+            <span>Ya şöyle olsaydı?</span>
+            <span className="flex items-center gap-2">
+              {scenarioActive && endingDelta !== null ? (
+                <Badge variant={endingDelta >= 0 ? 'success' : 'destructive'}>
+                  {endingDelta >= 0 ? '+' : ''}{formatAmount(endingDelta)}
+                </Badge>
+              ) : null}
+              <span className="text-xs text-ink-muted">{scenarioOpen ? '▲' : '▼'}</span>
+            </span>
+          </button>
 
-            {scenarioOpen ? (
-              <div className="space-y-3 border-t border-line-strong px-4 pb-4 pt-3">
-                {candidateLoans.length > 0 ? (
-                  <div>
-                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-muted">Krediler</p>
-                    <div className="space-y-1.5">
-                      {candidateLoans.map((loan) => (
-                        <label key={loan.id} className="flex cursor-pointer items-center gap-3 rounded-lg px-2 py-1.5 hover:bg-black/[.03] dark:hover:bg-white/[.04]">
-                          <input
-                            type="checkbox"
-                            checked={removedIds.has(loan.id)}
-                            onChange={() => toggleId(loan.id)}
-                            className="h-4 w-4 accent-primary"
-                            aria-label={`${loan.loan_name} kredisini kaldır`}
-                          />
-                          <span className="min-w-0 flex-1 truncate text-sm text-ink">{loan.loan_name}</span>
-                          <span className="shrink-0 text-xs text-ink-muted">{formatAmount(loan.monthly_payment)}/ay</span>
-                        </label>
-                      ))}
-                    </div>
+          {scenarioOpen ? (
+            <div className="space-y-3 border-t border-line-strong px-4 pb-4 pt-3">
+              {candidateLoans.length > 0 ? (
+                <div>
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-muted">Krediler — bugün kapat</p>
+                  <div className="space-y-1.5">
+                    {candidateLoans.map((loan) => {
+                      const selected = payoffIds.has(loan.id)
+                      const payoff = loanPayoffAmount(forecastInput, loan.id)
+                      const breakEvenKey = selected ? payoffBreakEvenMonthKey(forecastInput, loan.id) : null
+                      return (
+                        <div key={loan.id}>
+                          <label className="flex cursor-pointer items-center gap-3 rounded-lg px-2 py-1.5 hover:bg-black/[.03] dark:hover:bg-white/[.04]">
+                            <input
+                              type="checkbox"
+                              checked={selected}
+                              onChange={() => toggleIn(setPayoffIds, loan.id)}
+                              className="h-4 w-4 accent-primary"
+                              aria-label={`${loan.loan_name} kredisini bugün kapat`}
+                            />
+                            <span className="min-w-0 flex-1 truncate text-sm text-ink">{loan.loan_name}</span>
+                            <span className="shrink-0 text-xs text-ink-muted">bugün kapat −{formatAmount(payoff)}</span>
+                          </label>
+                          {selected && breakEvenKey ? (
+                            <p className="pl-9 text-xs text-ink-muted">
+                              Aylık yük şimdi kalkar · bazla fark {monthYearLabel(breakEvenKey)} itibarıyla kapanır.
+                            </p>
+                          ) : null}
+                        </div>
+                      )
+                    })}
                   </div>
-                ) : null}
+                </div>
+              ) : null}
 
-                {candidatePayments.length > 0 ? (
-                  <div>
-                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-muted">Düzenli ödemeler</p>
-                    <div className="space-y-1.5">
-                      {candidatePayments.map((payment) => (
-                        <label key={payment.id} className="flex cursor-pointer items-center gap-3 rounded-lg px-2 py-1.5 hover:bg-black/[.03] dark:hover:bg-white/[.04]">
-                          <input
-                            type="checkbox"
-                            checked={removedIds.has(payment.id)}
-                            onChange={() => toggleId(payment.id)}
-                            className="h-4 w-4 accent-primary"
-                            aria-label={`${payment.title} ödemesini kaldır`}
-                          />
-                          <span className="min-w-0 flex-1 truncate text-sm text-ink">{payment.title}</span>
-                          <span className="shrink-0 text-xs text-ink-muted">{formatAmount(payment.amount)}/ay</span>
-                        </label>
-                      ))}
-                    </div>
+              {candidatePayments.length > 0 ? (
+                <div>
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-muted">Düzenli ödemeler</p>
+                  <div className="space-y-1.5">
+                    {candidatePayments.map((payment) => (
+                      <label key={payment.id} className="flex cursor-pointer items-center gap-3 rounded-lg px-2 py-1.5 hover:bg-black/[.03] dark:hover:bg-white/[.04]">
+                        <input
+                          type="checkbox"
+                          checked={removedIds.has(payment.id)}
+                          onChange={() => toggleIn(setRemovedIds, payment.id)}
+                          className="h-4 w-4 accent-primary"
+                          aria-label={`${payment.title} ödemesini kaldır`}
+                        />
+                        <span className="min-w-0 flex-1 truncate text-sm text-ink">{payment.title}</span>
+                        <span className="shrink-0 text-xs text-ink-muted">{formatAmount(payment.amount)}/ay</span>
+                      </label>
+                    ))}
                   </div>
-                ) : null}
+                </div>
+              ) : null}
 
-                {removedIds.size > 0 ? (
+              <div>
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-muted">Tek seferlik şok gideri</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {SHOCK_PRESETS.map((preset) => (
+                    <button
+                      key={preset}
+                      onClick={() => setShockChoice((prev) => (prev === preset ? null : preset))}
+                      className={[
+                        'rounded-lg px-2.5 py-1 text-xs font-medium transition-colors',
+                        shockChoice === preset
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-card text-ink-muted ring-1 ring-line-strong hover:bg-black/[.03] dark:hover:bg-white/[.04]',
+                      ].join(' ')}
+                      aria-pressed={shockChoice === preset}
+                      aria-label={`₺${preset.toLocaleString('tr-TR')} şok gideri uygula`}
+                    >
+                      ₺{preset.toLocaleString('tr-TR')}
+                    </button>
+                  ))}
                   <button
-                    onClick={() => setRemovedIds(new Set())}
-                    className="text-xs text-ink-muted underline-offset-2 hover:underline"
+                    onClick={() => setShockChoice((prev) => (prev === 'custom' ? null : 'custom'))}
+                    className={[
+                      'rounded-lg px-2.5 py-1 text-xs font-medium transition-colors',
+                      shockChoice === 'custom'
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-card text-ink-muted ring-1 ring-line-strong hover:bg-black/[.03] dark:hover:bg-white/[.04]',
+                    ].join(' ')}
+                    aria-pressed={shockChoice === 'custom'}
                   >
-                    Sıfırla
+                    Özel
                   </button>
+                </div>
+                {shockChoice === 'custom' ? (
+                  <MoneyInput
+                    label="Şok tutarı"
+                    value={customShockInput}
+                    onValueChange={setCustomShockInput}
+                    className="mt-2"
+                  />
                 ) : null}
               </div>
-            ) : null}
-          </div>
-        ) : null}
+
+              {scenarioActive ? (
+                <button onClick={resetScenario} className="text-xs text-ink-muted underline-offset-2 hover:underline">
+                  Sıfırla
+                </button>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
       </CardContent>
     </Card>
   )
@@ -387,4 +490,9 @@ export function ForwardForecast({ data }: { data: AnalysisData }) {
 
 function shortMonth(monthKey: string) {
   return new Intl.DateTimeFormat('tr-TR', { month: 'short' }).format(new Date(`${monthKey}T00:00:00`))
+}
+
+// Başabaş ayı 6 aylık ufkun çok ötesine düşebilir — yıl olmadan yanıltıcı olur.
+function monthYearLabel(monthKey: string) {
+  return new Intl.DateTimeFormat('tr-TR', { month: 'long', year: 'numeric' }).format(new Date(`${monthKey}T00:00:00`))
 }

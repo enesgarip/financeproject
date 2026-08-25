@@ -119,13 +119,17 @@ function forecastBuckets(items: FinanceObligation[]) {
 
 export function buildCashFlowForecast(
   data: FinanceSummaryInput,
-  options: { horizonMonths?: number; from?: Date } = {},
+  options: { horizonMonths?: number; from?: Date; startingBalanceDelta?: number } = {},
 ): CashFlowForecast {
   const horizonMonths = Math.max(0, options.horizonMonths ?? 6)
   const from = options.from ?? new Date()
   const firstMonth = startOfMonth(from)
 
-  const startingBalance = roundTL(buildFinancialPosition(data).totalCashAssets)
+  // startingBalanceDelta: senaryonun 0. gün nakit etkisi (örn. krediyi bugün
+  // kapat, tek seferlik şok gideri) — bkz. scenarioStartingCashDelta.
+  const startingBalance = roundTL(
+    sumTL([buildFinancialPosition(data).totalCashAssets, options.startingBalanceDelta ?? 0]),
+  )
   const obligationInput = obligationsInput(data)
 
   const months: CashFlowForecastMonth[] = []
@@ -175,4 +179,24 @@ export function buildCashFlowForecast(
   }
 
   return { startingBalance, endingBalance: runningBalance, months, lowest, firstNegative }
+}
+
+/**
+ * "Gelir kesilse kaç ay dayanırım?" — maaş tarihçesi soyulmuş forecast koşar,
+ * ilk negatif aya kadar TAMAMLANAN ay sayısını döner (ay-0 negatifse 0);
+ * ufukta hiç açığa düşmüyorsa null (UI "12+ ay" der). "Known data" modeli
+ * gereği girilmemiş gelecek kart harcaması sayılmaz — sonuç iyimser bir üst
+ * sınırdır; tahsilatlar gelir sayılmaya devam eder (bilinçli model kararı).
+ */
+export function salaryCutRunwayMonths(
+  data: FinanceSummaryInput,
+  options: { horizonMonths?: number; from?: Date; startingBalanceDelta?: number } = {},
+): number | null {
+  const forecast = buildCashFlowForecast(
+    { ...data, salaryHistory: [] },
+    { ...options, horizonMonths: options.horizonMonths ?? 12 },
+  )
+  if (!forecast.firstNegative) return null
+  const negativeKey = forecast.firstNegative.monthKey
+  return Math.max(0, forecast.months.findIndex((m) => m.monthKey === negativeKey))
 }

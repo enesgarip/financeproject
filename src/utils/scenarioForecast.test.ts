@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { applyScenario } from './scenarioForecast'
+import {
+  applyScenario,
+  loanPayoffAmount,
+  payoffBreakEvenMonthKey,
+  scenarioStartingCashDelta,
+} from './scenarioForecast'
 import type { FinanceSummaryInput } from './financeSummary'
 import type { Loan, LoanInstallment, Payment } from '../types/database'
 
@@ -140,5 +145,128 @@ describe('applyScenario', () => {
     const result = applyScenario(minimalData, [{ type: 'remove_loan', loanId: 'nonexistent' }])
     expect(result.loans).toHaveLength(2)
     expect(result.loanInstallments).toHaveLength(2)
+  })
+
+  it('payoff_loan_today strips the loan and its installments like remove_loan', () => {
+    const result = applyScenario(minimalData, [{ type: 'payoff_loan_today', loanId: 'loan-1' }])
+    expect(result.loans.map((l) => l.id)).toEqual(['loan-2'])
+    expect(result.loanInstallments.map((i) => i.loan_id)).toEqual(['loan-2'])
+  })
+
+  it('cash_shock leaves all rows untouched', () => {
+    const result = applyScenario(minimalData, [{ type: 'cash_shock', amount: 50_000 }])
+    expect(result.loans).toBe(minimalData.loans)
+    expect(result.loanInstallments).toBe(minimalData.loanInstallments)
+    expect(result.payments).toBe(minimalData.payments)
+  })
+})
+
+// Payoff/şok senaryolarının nakit tarafı: planlı kredi + legacy kredi + kapalı plan.
+const paidInstallment: LoanInstallment = {
+  ...baseRow,
+  id: 'inst-1-paid',
+  loan_id: 'loan-1',
+  installment_no: 2,
+  due_date: '2026-06-05',
+  amount: 2_000,
+  status: 'ödendi',
+  paid_at: '2026-06-05',
+  note: null,
+}
+
+const legacyLoan: Loan = {
+  ...baseRow,
+  id: 'loan-legacy',
+  bank_name: 'Banka C',
+  loan_name: 'İhtiyaç',
+  total_amount: 30_000,
+  remaining_amount: 15_000,
+  monthly_payment: 1_500,
+  installment_day: 7,
+  start_date: null,
+  end_date: null,
+  remaining_installments: 10,
+  status: 'active',
+  note: null,
+}
+
+const paidOffLoan: Loan = {
+  ...baseRow,
+  id: 'loan-paid',
+  bank_name: 'Banka D',
+  loan_name: 'Bitmiş',
+  total_amount: 10_000,
+  remaining_amount: 0,
+  monthly_payment: 1_000,
+  installment_day: 3,
+  start_date: null,
+  end_date: null,
+  remaining_installments: 0,
+  status: 'active',
+  note: null,
+}
+
+const paidOffInstallment: LoanInstallment = {
+  ...baseRow,
+  id: 'inst-paid-off',
+  loan_id: 'loan-paid',
+  installment_no: 1,
+  due_date: '2026-05-03',
+  amount: 1_000,
+  status: 'ödendi',
+  paid_at: '2026-05-03',
+  note: null,
+}
+
+const payoffData: FinanceSummaryInput = {
+  ...minimalData,
+  loans: [loan1, loan2, legacyLoan, paidOffLoan],
+  loanInstallments: [installment1, installment2, paidInstallment, paidOffInstallment],
+}
+
+describe('loanPayoffAmount', () => {
+  it('sums only pending installments for a planned loan', () => {
+    // loan-1'in ödenmiş 2. taksiti toplama girmez.
+    expect(loanPayoffAmount(payoffData, 'loan-1')).toBe(2_000)
+  })
+
+  it('falls back to monthly_payment × remaining_installments for a legacy loan', () => {
+    expect(loanPayoffAmount(payoffData, 'loan-legacy')).toBe(15_000)
+  })
+
+  it('returns 0 for a fully paid planned loan and for unknown ids', () => {
+    expect(loanPayoffAmount(payoffData, 'loan-paid')).toBe(0)
+    expect(loanPayoffAmount(payoffData, 'nonexistent')).toBe(0)
+  })
+})
+
+describe('scenarioStartingCashDelta', () => {
+  it('returns 0 (not -0) when nothing costs cash today', () => {
+    expect(scenarioStartingCashDelta(payoffData, [])).toBe(0)
+    expect(scenarioStartingCashDelta(payoffData, [{ type: 'remove_payment', paymentId: 'pay-1' }])).toBe(0)
+  })
+
+  it('accumulates payoff and shock as a negative delta', () => {
+    const delta = scenarioStartingCashDelta(payoffData, [
+      { type: 'payoff_loan_today', loanId: 'loan-1' },
+      { type: 'payoff_loan_today', loanId: 'loan-legacy' },
+      { type: 'cash_shock', amount: 5_000 },
+    ])
+    expect(delta).toBe(-22_000)
+  })
+})
+
+describe('payoffBreakEvenMonthKey', () => {
+  it('uses the month of the latest pending installment for a planned loan', () => {
+    expect(payoffBreakEvenMonthKey(payoffData, 'loan-1', new Date(2026, 5, 15))).toBe('2026-07-01')
+  })
+
+  it('projects from-month + remaining − 1 for a legacy loan', () => {
+    expect(payoffBreakEvenMonthKey(payoffData, 'loan-legacy', new Date(2026, 5, 15))).toBe('2027-03-01')
+  })
+
+  it('returns null for a fully paid plan and unknown ids', () => {
+    expect(payoffBreakEvenMonthKey(payoffData, 'loan-paid', new Date(2026, 5, 15))).toBeNull()
+    expect(payoffBreakEvenMonthKey(payoffData, 'nonexistent', new Date(2026, 5, 15))).toBeNull()
   })
 })
