@@ -103,42 +103,14 @@ export function useDailyNetWorthSnapshot() {
 
           // Hedef fotoğrafları: aynı günlük koşunun ikinci yarısı. Biriken
           // tutar yalnız client'ta türetilebilir (canlı kur/BIST fiyatı) —
-          // sunucu bu seriyi üretemez, bkz. utils/goalSnapshots. Damgadan SONRA
-          // ve en-iyi-çaba: hatası net değer kaydını geri almaz, seri bir gün
-          // atlar ve ertesi koşuda devam eder.
+          // sunucu bu seriyi üretemez. Akışın gövdesi lazy modülde
+          // (dailyGoalSnapshots): çözümleme zinciri entry bütçesine girmesin.
+          // Damgadan SONRA ve en-iyi-çaba: hatası net değer kaydını geri
+          // almaz, seri bir gün atlar ve ertesi koşuda devam eder.
           if (!snapshot.savingsGoals.some((goal) => goal.status === 'active')) return
-
-          const [goalSources, goalSnapshots, kasaBucketsRepo, stockQuotes] = await Promise.all([
-            import('../utils/goalSources'),
-            import('../utils/goalSnapshots'),
-            import('../data/repositories/kasaBucketsRepo'),
-            import('../lib/stockQuotesClient'),
-          ])
+          const goalRunner = await import('./dailyGoalSnapshots')
           if (cancelled) return
-
-          const needsBuckets = snapshot.savingsGoalSources.some((source) => source.kind === 'kasa_bucket')
-          const buckets = needsBuckets ? await kasaBucketsRepo.fetchKasaBuckets() : null
-          const tickers = Array.from(
-            new Set(snapshot.assets.map((asset) => stockQuotes.normalizeTicker(asset.symbol))),
-          ).filter((ticker): ticker is string => ticker !== null).sort()
-          const stockPrices = tickers.length > 0
-            ? await stockQuotes.fetchStockPrices(tickers).catch(() => null)
-            : null
-          if (cancelled) return
-
-          const resolved = goalSources.resolveSavingsGoalRows(
-            snapshot.savingsGoals,
-            snapshot.savingsGoalComponents,
-            snapshot.savingsGoalSources,
-            {
-              assets: snapshot.assets,
-              cards: snapshot.cards,
-              buckets: buckets?.ok ? buckets.data : [],
-              snapshot: rates,
-              stockPrices,
-            },
-          )
-          await analysisRepo.recordSavingsGoalSnapshots(userId, goalSnapshots.buildGoalSnapshotEntries(resolved.goals))
+          await goalRunner.recordDailyGoalSnapshots(userId, snapshot, rates, () => cancelled)
         } catch {
           // Snapshot kaydı yardımcı bir iştir; hatası kullanıcı akışını bozmaz.
         }
