@@ -1,6 +1,14 @@
 # Planning Model Review
 
-Last reviewed: 2026-06-15
+Last reviewed: 2026-08-25
+
+> **Senkron notu (2026-08-25):** 2026-06-15 sonrası projeksiyon sözleşmesini
+> etkileyen ana değişiklik **K7 kısmi/asgari ekstre ödemesi** (2026-08-12):
+> `maxPayableAmount` ve ekstre `settlement` akışı artık kısmi ödemeleri tanır
+> (`card_statement_payments`; satırlar kalan borcu gösterir). Aşağıdaki
+> Projection Contract bu değişiklikle çelişmez — yükümlülük üretimi yine
+> `utils/obligations.ts`'te; kısmi ödeme yalnız kart ekstresi kaleminin kalan
+> tutarını düşürür.
 
 ## Decision
 
@@ -95,6 +103,7 @@ maintenance polish:
   adapt page-specific presentation around it.
 - Keep legacy loan estimates (`legacy_loan_installment`) until every active loan
   reliably has `loan_installments`; do not mix legacy estimates with materialized
-  rows for the same loan.
-- Keep `docs/SHARED_PAYMENT_DRAWER_PLAN.md` aligned when new payable obligation
+  rows for the same loan. *(2026-08-25 durumu: geçiş kriteri hâlâ SAĞLANMADI —
+  `KNOWN_RISKS.md` #5 karma kredi modelini canlı sayar; bu madde AÇIK kalır.)*
+- Keep `docs/archive/SHARED_PAYMENT_DRAWER_PLAN.md` aligned when new payable obligation
   kinds are added.

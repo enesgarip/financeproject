@@ -576,15 +576,6 @@ button:disabled {
   }
 }
 
-  .finance-hero-card {
-    background:
-      radial-gradient(circle at 92% 4%, color-mix(in srgb, var(--primary) 13%, transparent), transparent 34%),
-      linear-gradient(145deg, var(--card), color-mix(in srgb, var(--card) 88%, var(--accent)));
-  }
-
-
-
-
 
 .finance-list-row:hover,
 .finance-list-row:focus-within {

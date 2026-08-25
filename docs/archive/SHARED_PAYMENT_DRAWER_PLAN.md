@@ -85,8 +85,9 @@ have card data in memory.
   and snapshot invalidation.
 - 2026-06-14: Phase 4 complete. Migrated `DebtsPage` personal debt settlement
   and receivable collection to the shared drawer.
-- Next slice: remove any now-unused legacy payment wrappers after a dedicated
-  dead-code pass.
+- ~~Next slice: remove any now-unused legacy payment wrappers after a dedicated
+  dead-code pass.~~ DONE — denetim 2026-08-12 Faz C temizliği (PR #123)
+  `debtsRepo.ts`, `paymentsRepo.ts` ve `loansRepo.payLoanInstallment`'ı sildi.
 
 ## Migration Order
 

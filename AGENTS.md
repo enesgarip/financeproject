@@ -11,8 +11,8 @@ ledger invariant'ları ve deploy hattı orada. Bir task'a başlamadan önce `CLA
 ve `docs/AI_CONTEXT_INDEX.md`'i oku — bu ikisi keşif turunu (grep fan-out) ortadan kaldırır.
 
 **Yaşayan doküman kuralı:** `docs/BACKLOG.md`, `docs/AI_CONTEXT_INDEX.md`,
-`docs/CARD_DEBT_TRANSITIONS.md`, `docs/BANKING_SIMPLIFICATION_AUDIT.md` ve ilgili
-domain source-of-truth dokümanı, davranış/öncelik değiştiği commit'te güncel kalmalı.
+`docs/CARD_DEBT_TRANSITIONS.md` ve ilgili domain source-of-truth dokümanı,
+davranış/öncelik değiştiği commit'te güncel kalmalı.
 
 İkincil bağlam (yalnız gerektiğinde aç, baştan okuma):
 - `docs/AI_CONTEXT_INDEX.md` — görev rotası + "şu işi yapacaksan şu dosyalara bak" tablosu
