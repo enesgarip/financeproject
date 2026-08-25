@@ -21,6 +21,10 @@ export type SubscriptionItem = {
   amount: number
   monthCount: number
   isActive: boolean
+  /** Tekrarın görüldüğü kart (son gözlem); yalnız recurring_expense'te dolu. */
+  sourceCardId: string | null
+  /** Son gözlemin ay günü — "Planla" dönüşümünde tekrar günü olur. */
+  recurrenceDay: number | null
 }
 
 export type SubscriptionSummaryResult = {
@@ -54,7 +58,7 @@ export function buildSubscriptionSummary(
     (e) => e.status === 'posted' && e.installment_count <= 1,
   )
 
-  type Observation = { month: string; amount: number; category: string; description: string }
+  type Observation = { month: string; day: number; cardId: string; amount: number; category: string; description: string }
   type Bucket = { observations: Observation[] }
   const byDesc = new Map<string, Bucket>()
 
@@ -70,7 +74,14 @@ export function buildSubscriptionSummary(
     if (!byDesc.has(key)) byDesc.set(key, { observations: [] })
     const bucket = byDesc.get(key)!
     const m = monthPrefix(expense.spent_at)
-    bucket.observations.push({ month: m, amount: expense.amount, category: expense.category, description: expense.description.trim() })
+    bucket.observations.push({
+      month: m,
+      day: Number(expense.spent_at.slice(8, 10)) || 1,
+      cardId: expense.card_id,
+      amount: expense.amount,
+      category: expense.category,
+      description: expense.description.trim(),
+    })
   }
 
   const TOLERANCE = 0.15
@@ -97,6 +108,8 @@ export function buildSubscriptionSummary(
       amount: med,
       monthCount: recentMonths.size,
       isActive,
+      sourceCardId: latest.cardId,
+      recurrenceDay: latest.day,
     })
   }
 
@@ -110,6 +123,8 @@ export function buildSubscriptionSummary(
       amount: payment.amount,
       monthCount: 0,
       isActive: true,
+      sourceCardId: null,
+      recurrenceDay: null,
     })
   }
 
@@ -119,4 +134,78 @@ export function buildSubscriptionSummary(
   const incomeRatio = monthlyIncome && monthlyIncome > 0 ? Math.round((monthlyTotal / monthlyIncome) * 100) : null
 
   return { items, monthlyTotal, incomeRatio }
+}
+
+// ── Radar → ödeme planı köprüsü (E4) ────────────────────────────────────────
+//
+// Tespit edilen abonelik yalnız BİLGİYDİ; ödeme planına çevrilince
+// obligations/cashFlowForecast görür. Kredi kartına talimatlı desen
+// (bank_auto + auto_source_card_id) çift saymayı zaten çözer: nakit çıkışı 0
+// sayılır, gerçek çıkış ekstre ödemesinde. Bu yüzden dönüşüm YALNIZ kredi
+// kartında sunulur — banka kartı aboneliğine payment eklemek çift sayardı.
+
+/** CardExpense kategorisi → PaymentCategory; birebir karşılığı olmayan 'Diğer'. */
+const EXPENSE_TO_PAYMENT_CATEGORY: Record<string, Payment['category']> = {
+  Abonelik: 'Dijital üyelik',
+  Fatura: 'Fatura',
+  Sigorta: 'Sigorta',
+  Eğitim: 'Eğitim',
+  Sağlık: 'Sağlık',
+}
+
+export type SubscriptionPaymentDraft = {
+  title: string
+  category: Payment['category']
+  amount: number
+  /** Tahmindir (medyan); paymentEstimate mekanizması sonra gerçekleşenden tazeler. */
+  amount_status: 'estimated'
+  due_date: string
+  status: 'bekliyor'
+  payment_method: 'bank_auto'
+  auto_source_card_id: string
+  recurrence: 'monthly'
+  recurrence_day: number
+  note: string
+}
+
+/**
+ * Radar satırından aylık ödeme taslağı. Vade: bu ayın tekrar günü geçtiyse
+ * gelecek ay (gün, kısa aya sığmazsa ay sonuna kırpılır).
+ */
+export function buildSubscriptionPaymentDraft(
+  item: SubscriptionItem,
+  isCreditCardId: (cardId: string) => boolean,
+  today: Date = new Date(),
+): SubscriptionPaymentDraft | null {
+  if (item.source !== 'recurring_expense') return null
+  if (!item.sourceCardId || !item.recurrenceDay) return null
+  if (!isCreditCardId(item.sourceCardId)) return null
+
+  const clampDay = (year: number, monthIndex: number, day: number) =>
+    new Date(year, monthIndex, Math.min(day, new Date(year, monthIndex + 1, 0).getDate()))
+  let due = clampDay(today.getFullYear(), today.getMonth(), item.recurrenceDay)
+  if (due < today) due = clampDay(today.getFullYear(), today.getMonth() + 1, item.recurrenceDay)
+
+  return {
+    title: item.title,
+    category: EXPENSE_TO_PAYMENT_CATEGORY[item.category] ?? 'Diğer',
+    amount: item.amount,
+    amount_status: 'estimated',
+    due_date: due.toLocaleDateString('sv-SE'),
+    status: 'bekliyor',
+    payment_method: 'bank_auto',
+    auto_source_card_id: item.sourceCardId,
+    recurrence: 'monthly',
+    recurrence_day: item.recurrenceDay,
+    note: 'Abonelik radarından eklendi.',
+  }
+}
+
+/** Aynı başlıklı aylık plan zaten varsa "Planla" yerine rozet gösterilir. */
+export function subscriptionAlreadyPlanned(item: SubscriptionItem, payments: Payment[]): boolean {
+  const key = normalizeSearchText(item.title)
+  if (!key) return false
+  return payments.some(
+    (payment) => payment.recurrence === 'monthly' && normalizeSearchText(payment.title) === key,
+  )
 }

@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import type { CardExpense, Payment } from '../types/database'
-import { buildSubscriptionSummary } from './subscriptions'
+import {
+  buildSubscriptionPaymentDraft,
+  buildSubscriptionSummary,
+  subscriptionAlreadyPlanned,
+  type SubscriptionItem,
+} from './subscriptions'
 
 const base = { user_id: 'u', created_at: '2026-01-01', updated_at: '2026-01-01' }
 
@@ -52,5 +57,68 @@ describe('buildSubscriptionSummary', () => {
     expect(result.items).toHaveLength(1)
     expect(result.items[0]).toMatchObject({ source: 'recurring_payment', title: 'Su', amount: 385 })
     expect(result.monthlyTotal).toBe(385)
+  })
+
+  it('tekrar satırı kartını ve ay gününü taşır (Planla dönüşümü için)', () => {
+    const result = buildSubscriptionSummary([
+      expense('s1', '2026-05-14', 200, 'SPOTIFY'),
+      expense('s2', '2026-06-14', 200, 'SPOTIFY'),
+      expense('s3', '2026-07-14', 200, 'SPOTIFY'),
+    ], [], null, new Date(2026, 6, 15))
+    expect(result.items[0]).toMatchObject({ sourceCardId: 'c', recurrenceDay: 14 })
+  })
+})
+
+function radarItem(overrides: Partial<SubscriptionItem> = {}): SubscriptionItem {
+  return {
+    id: 'expense:spotify',
+    source: 'recurring_expense',
+    title: 'SPOTIFY',
+    category: 'Abonelik',
+    amount: 200,
+    monthCount: 3,
+    isActive: true,
+    sourceCardId: 'kredi',
+    recurrenceDay: 14,
+    ...overrides,
+  }
+}
+
+describe('buildSubscriptionPaymentDraft', () => {
+  const isCredit = (cardId: string) => cardId === 'kredi'
+
+  it('kredi kartı kaynaklı satırdan bank_auto + kart bağlı aylık taslak üretir', () => {
+    const draft = buildSubscriptionPaymentDraft(radarItem(), isCredit, new Date('2026-08-25T12:00:00'))
+    expect(draft).toMatchObject({
+      title: 'SPOTIFY',
+      category: 'Dijital üyelik',
+      amount: 200,
+      amount_status: 'estimated',
+      due_date: '2026-09-14', // bu ayın 14'ü geçti → gelecek ay
+      payment_method: 'bank_auto',
+      auto_source_card_id: 'kredi',
+      recurrence: 'monthly',
+      recurrence_day: 14,
+    })
+  })
+
+  it('tekrar günü henüz gelmediyse vade bu ayda kalır; kısa aya kırpılır', () => {
+    expect(buildSubscriptionPaymentDraft(radarItem(), isCredit, new Date('2026-08-10T12:00:00'))!.due_date).toBe('2026-08-14')
+    expect(
+      buildSubscriptionPaymentDraft(radarItem({ recurrenceDay: 31 }), isCredit, new Date('2027-02-05T12:00:00'))!.due_date,
+    ).toBe('2027-02-28')
+  })
+
+  it('banka kartı kaynaklı ve planlı-ödeme satırlarında susar (çift sayma)', () => {
+    expect(buildSubscriptionPaymentDraft(radarItem({ sourceCardId: 'banka' }), isCredit)).toBeNull()
+    expect(buildSubscriptionPaymentDraft(radarItem({ source: 'recurring_payment' }), isCredit)).toBeNull()
+  })
+})
+
+describe('subscriptionAlreadyPlanned', () => {
+  it('aynı başlıklı aylık plan varsa true', () => {
+    expect(subscriptionAlreadyPlanned(radarItem(), [payment({ title: 'Spotify' })])).toBe(true)
+    expect(subscriptionAlreadyPlanned(radarItem(), [payment({ title: 'Netflix' })])).toBe(false)
+    expect(subscriptionAlreadyPlanned(radarItem(), [payment({ title: 'Spotify', recurrence: 'none' })])).toBe(false)
   })
 })

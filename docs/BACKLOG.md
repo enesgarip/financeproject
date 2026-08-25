@@ -45,7 +45,15 @@ Kullanıcıyla kararlaştırılan sıra:
   provizyon ve faiz bilinemez, satır kesinlik vaat etmez). UI: kredi kartı
   satırında "Dönem içi"nin altında `Kesim tahmini (N gün) ~₺X` CardDatum'u,
   pencere dışında hiç görünmez.
-- **E4 — abonelik radarı** (önce mevcut `utils/subscriptions.ts` keşfi) — sırada.
+- ~~**E4 — abonelik radarı → plan köprüsü.**~~ DONE. Keşif: radarın çekirdeği
+  ZATEN vardı (`buildSubscriptionSummary` ≥3 ay + ±%15 medyan tespiti); eksik
+  halka tespitin AKSİYONA dönmesiydi. `buildSubscriptionPaymentDraft` (+test):
+  tek tık "Planla" → aylık ödeme (medyan tutar `estimated` — paymentEstimate
+  sonra gerçekleşenden tazeler; vade son gözlem günü, geçtiyse gelecek ay;
+  `bank_auto` + kart bağı → nakit 0 sayılır, ÇİFT SAYMA yok). Dönüşüm yalnız
+  KREDİ kartı kaynaklı satırlarda (banka kartında payment eklemek çift
+  sayardı); `subscriptionAlreadyPlanned` aynı başlıklı aylık plan varsa buton
+  yerine "planda" rozeti. `SubscriptionItem` +sourceCardId/+recurrenceDay.
 
 - ~~**PR-5 — maaş günü akışı.**~~ DONE (turun son maddesi — TUR TAMAM).
   `utils/salaryDeposit.ts` (+test): `findSalaryDeposit` — ay içi 'deposit'
