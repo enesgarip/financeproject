@@ -118,7 +118,19 @@ iş / bilinçli-park. Dilim dilim kapanıyor:
 - **Bilinçli PARK (bu turda yapılmayacak, gerekçesi yerinde):** CrudPage→TanStack
   (10+ sayfa, ayrı tur),
   transaksiyonel restore protokolü (KNOWN_RISKS #6 — ayrı büyük tasarım),
-  T1 RPC-only (önce security-definer geçişi, ayrı güvenlik dilimi), indeks
+  ~~T1 RPC-only~~ → **AÇILDI ve TAMAMLANDI** (migration `20260825210000`):
+  DEFINER geçiş denetimi (ajan raporu, onay kapısı) 5 INVOKER yazarın 4'ünü
+  hazır buldu; `update_card_expense`'te ÜÇ user-filtresiz satır (arşiv guard
+  exists'i, posted toplamı — dönem içi kovaya giriyordu, taksit DELETE'i)
+  geçiş ÖNCESİ düzeltildi. 5 fonksiyon SECURITY DEFINER; authenticated'tan
+  UPDATE/DELETE çekildi + policy'leri kaldırıldı (ledger deseni — SELECT ve
+  JSON-restore'un INSERT'i kaldı); parent-user invariantı RLS WITH CHECK
+  yerine şemaya indi: `(user_id, card_expense_id) → card_expenses(user_id,
+  id)` bileşik FK. Yeni `card_installments_rpc_only.sql` + eski
+  allocation-security testinin kabulü genişletildi (redd artık guard P0001'inden
+  önce 42501'de) + fixture manipülasyonu yetkili role çerçevesine alındı.
+  Cron impersonation yolu etkilenmedi (zaten DEFINER sarmalayıcıdan koşuyordu).
+  İndeks
   budaması (üretim `pg_stat_user_indexes` ölçümü ister), SI-04 yeni banka
   (örnek ekstre gelmeden yazılmaz), DH-08 (banka gerçeği gerekli), prod çift
   kayıt/₺298,20 (ekstre kanıtı gerekli), kategori emekliliği (birkaç ay veri),

@@ -299,7 +299,9 @@ begin
     where id = v_archived_installment;
   exception when others then
     get stacked diagnostics v_error_state = returned_sqlstate;
-    v_denied := v_error_state = 'P0001';
+    -- T1 (RPC-only) sonrası doğrudan UPDATE daha guard'a varmadan tablo
+    -- yetkisinde reddedilir (42501); ikisi de geçerli "denied"dir.
+    v_denied := v_error_state in ('P0001', '42501');
   end;
   if not v_denied then
     raise exception 'INTEGRITY FAIL: raw archived installment amount update was not denied';
@@ -312,7 +314,7 @@ begin
     where id = v_archived_single;
   exception when others then
     get stacked diagnostics v_error_state = returned_sqlstate;
-    v_denied := v_error_state = 'P0001';
+    v_denied := v_error_state in ('P0001', '42501');
   end;
   if not v_denied then
     raise exception 'INTEGRITY FAIL: raw archived expense lifecycle update was not denied';
@@ -325,7 +327,7 @@ begin
     where id = v_archived_installment;
   exception when others then
     get stacked diagnostics v_error_state = returned_sqlstate;
-    v_denied := v_error_state = 'P0001';
+    v_denied := v_error_state in ('P0001', '42501');
   end;
   if not v_denied then
     raise exception 'INTEGRITY FAIL: raw archived installment lifecycle update was not denied';
@@ -384,7 +386,7 @@ begin
     delete from public.card_installments where id = v_archived_installment;
   exception when others then
     get stacked diagnostics v_error_state = returned_sqlstate;
-    v_denied := v_error_state = 'P0001';
+    v_denied := v_error_state in ('P0001', '42501');
   end;
   if not v_denied then
     raise exception 'INTEGRITY FAIL: raw archived installment delete was not denied';
@@ -395,7 +397,7 @@ begin
     delete from public.card_installments where id = v_future_installment;
   exception when others then
     get stacked diagnostics v_error_state = returned_sqlstate;
-    v_denied := v_error_state = 'P0001';
+    v_denied := v_error_state in ('P0001', '42501');
   end;
   if not v_denied then
     raise exception 'INTEGRITY FAIL: raw archive-sibling installment delete was not denied';
@@ -566,10 +568,14 @@ begin
   -- Settling this period's posted installment must not freeze the future
   -- sibling. Once due, normal maintenance posts it and the next statement cut
   -- may archive it under the canonical allocation context.
+  -- T1 (RPC-only) sonrası bu fixture manipülasyonu authenticated'a kapalı —
+  -- vadeyi geriye çekmek test-kurulum işidir, yetkili rolle yapılır.
+  execute 'reset role';
   update public.card_installments
   set due_month = (current_date - interval '40 days')::date
   where card_id = v_pay_card
     and status = 'scheduled';
+  execute 'set local role authenticated';
 
   perform public.post_due_card_installments();
 
@@ -708,7 +714,7 @@ begin
     where id = v_expense_current;
   exception when others then
     get stacked diagnostics v_error_state = returned_sqlstate;
-    v_denied := v_error_state = 'P0001';
+    v_denied := v_error_state in ('P0001', '42501');
   end;
   if not v_denied then
     raise exception 'SECURITY FAIL: forged expense settlement update was not denied';
@@ -721,7 +727,7 @@ begin
     where id = v_installment_current;
   exception when others then
     get stacked diagnostics v_error_state = returned_sqlstate;
-    v_denied := v_error_state = 'P0001';
+    v_denied := v_error_state in ('P0001', '42501');
   end;
   if not v_denied then
     raise exception 'SECURITY FAIL: forged installment settlement update was not denied';
@@ -747,7 +753,8 @@ begin
     where id = v_installment_archive;
   exception when others then
     get stacked diagnostics v_error_state = returned_sqlstate;
-    v_denied := v_error_state = 'P0001';
+    -- T1 (RPC-only) sonrası 42501 de geçerli "denied" (yetki katmanı önce).
+    v_denied := v_error_state in ('P0001', '42501');
   end;
   if not v_denied then
     raise exception 'SECURITY FAIL: forged installment archive update was not denied';
@@ -766,7 +773,7 @@ begin
     );
   exception when others then
     get stacked diagnostics v_error_state = returned_sqlstate;
-    v_denied := v_error_state = 'P0001';
+    v_denied := v_error_state in ('P0001', '42501');
   end;
   if not v_denied then
     raise exception 'SECURITY FAIL: forged expense settlement insert was not denied';
