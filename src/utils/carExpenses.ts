@@ -6,6 +6,7 @@
 
 import type { Car, CarExpense, CarPaymentMethod, CardExpense, CarReminder } from '../types/database'
 import { roundTL, sumTL } from './money'
+import { median } from './spendingStats'
 
 export type CarLedgerSource = 'card' | 'manual'
 
@@ -85,6 +86,13 @@ export type CarFuelSummary = {
   litersPer100Km: number | null
   costPerKm: number | null
   months: CarFuelMonth[]
+  /** Dolum bazlı ₺/lt serisi (eski→yeni). Fişte yakıt-dışı kalem varsa şişer — bilinçli kabul. */
+  unitPrices: Array<{ date: string; pricePerLiter: number }>
+  lastFillup: { date: string; pricePerLiter: number } | null
+  /** Son 90 günün ₺/lt medyanı; pencerede 2'den az fiyatlı dolum varsa null (kıyas uydurulmaz). */
+  medianPricePerLiter3m: number | null
+  /** Son dolumun medyana göre yüzde farkı (tam sayı; +üstünde/−altında); medyan yoksa null. */
+  lastVsMedianPct: number | null
 }
 
 /** İki kaynağı ortak girdi listesine indirger (tarihe göre yeni→eski sıralı). */
@@ -142,7 +150,7 @@ export function buildCarLedgerEntries(
  * taşınır; hem litre hem mesafe aynı aralığa ait olur. Aynı düzeltme
  * odometresi GERİLEMİŞ (hatalı okunmuş) satır için de geçerlidir.
  */
-function buildFuelSummary(entries: CarLedgerEntry[]): CarFuelSummary {
+function buildFuelSummary(entries: CarLedgerEntry[], today: Date = new Date()): CarFuelSummary {
   const fillups = entries
     .filter((entry) => entry.fuelLiters != null && entry.fuelLiters > 0)
     .sort((a, b) => a.spentAt.localeCompare(b.spentAt))
@@ -197,6 +205,22 @@ function buildFuelSummary(entries: CarLedgerEntry[]): CarFuelSummary {
   const measuredLiters = months.reduce((total, row) => total + row.liters, 0)
   const measuredCost = sumTL(months.map((row) => row.measuredCost))
 
+  // ₺/lt bir ORAN (para karşılaştırması değil) — roundTL yalnız 2 hane display
+  // precision için, L189-190'daki litersPer100Km/costPerKm konvansiyonuyla aynı;
+  // money.ts'in equalsTL/greaterThanTL'ine bağlanmaz.
+  const unitPrices = fillups
+    .filter((fillup) => fillup.amount > 0 && (fillup.fuelLiters ?? 0) > 0)
+    .map((fillup) => ({ date: fillup.spentAt, pricePerLiter: roundTL(fillup.amount / (fillup.fuelLiters ?? 1)) }))
+  const lastFillup = unitPrices.at(-1) ?? null
+  // 90 gün penceresi; tarih stringleri date-only dilimle lexicographic kıyaslanır.
+  const cutoffIso = new Date(today.getTime() - 90 * 86_400_000).toLocaleDateString('sv-SE')
+  const windowPrices = unitPrices.filter((row) => row.date.slice(0, 10) >= cutoffIso).map((row) => row.pricePerLiter)
+  const medianPricePerLiter3m = windowPrices.length >= 2 ? roundTL(median(windowPrices)) : null
+  const lastVsMedianPct =
+    lastFillup && medianPricePerLiter3m != null && medianPricePerLiter3m > 0
+      ? Math.round(((lastFillup.pricePerLiter - medianPricePerLiter3m) / medianPricePerLiter3m) * 100)
+      : null
+
   return {
     fillupCount: fillups.length,
     totalLiters,
@@ -204,6 +228,10 @@ function buildFuelSummary(entries: CarLedgerEntry[]): CarFuelSummary {
     litersPer100Km: measuredDistanceKm > 0 ? roundTL((measuredLiters * 100) / measuredDistanceKm) : null,
     costPerKm: measuredDistanceKm > 0 ? roundTL(measuredCost / measuredDistanceKm) : null,
     months,
+    unitPrices,
+    lastFillup,
+    medianPricePerLiter3m,
+    lastVsMedianPct,
   }
 }
 
@@ -266,7 +294,7 @@ export function buildCarSummaries(
       entryCount: entries.length,
       categories: categoryBreakdown(entries, total),
       entries,
-      fuel: buildFuelSummary(entries),
+      fuel: buildFuelSummary(entries, today),
     }
   })
 }
