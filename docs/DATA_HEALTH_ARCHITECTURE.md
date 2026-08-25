@@ -187,16 +187,19 @@ legacy Data Health v1 backup parsing. Unowned `sms_log`
 diagnostics remain service-role-only and never enter a user's backup.
 
 Restore parsing rejects non-array tables, non-object/keyless rows, and duplicate
-row keys before the transactional reset starts. Row-by-row replay over REST is
-still not one transaction; the UI safety-export remains the recovery path for a
-later schema/type/FK insert failure. `reset_user_finance_data()` itself is one
-auth.uid-bound transaction and clears repair receipts, newly added support rows,
-and owner operation logs so restored IDs cannot inherit stale repair keys or
+row keys before anything runs. Replay itself is now one server transaction:
+`restore_user_finance_data_tx` (migration `20260826090000`) performs reset +
+parent-first insert + cross-parent ownership assertion atomically, so a failed
+restore changes nothing. The client falls back to the legacy REST replay only
+when the RPC is not yet deployed; the UI safety-export remains the recovery path
+for that fallback. `reset_user_finance_data()` itself is one auth.uid-bound
+transaction and clears repair receipts, newly added support rows, and owner
+operation logs so restored IDs cannot inherit stale repair keys or
 notification-dedupe state.
 Current-settlement markers are normalized away because their immutable parent is
 export-only. Historical archive markers are retained and same-user/same-card RLS
-validated during replay; proving that such an INSERT came from restore rather than
-a direct client requires the future transactional restore protocol.
+validated during replay; the transactional RPC's final assertion additionally
+proves every restored child references the restoring user's own parent.
 The lower-level clean-import reset deletes only non-paid/open working scope and
 fails before mutation when immutable current-settlement or paid-statement
 installment history would require reconstructing a historical plan.

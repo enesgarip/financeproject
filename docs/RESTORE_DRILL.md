@@ -146,12 +146,34 @@ npm run db:seed:local
 
 > Yerel ortamı normal test tohumuna geri döndürür.
 
+## Uygulama içi JSON yolu (transactional RPC)
+
+SQL dump yolundan bağımsız ikinci kurtarma yolu: DataHealth'teki JSON yedeği,
+2026-08-26'dan beri **tek sunucu işleminde** geri yüklenir
+(`restore_user_finance_data_tx`, migration `20260826090000`). Sözleşme:
+
+- Reset + parent-first replay + doğrulama TEK transaction — herhangi bir adım
+  patlarsa hiçbir satır değişmez ("hiçbir veri değişmedi" mesajı buna güvenir).
+- Bilinmeyen tablo/kolon baştan reddedilir; payload 32 MB üstünde reddedilir.
+- Satırlar yalnız payload'da MEVCUT kolonlarla insert edilir → şema
+  değişikliğinden önce alınmış eski yedeklerde yeni kolonlar DEFAULT alır
+  (`jsonb_populate_recordset`'in NULL ezmesi bilinçli devre dışı).
+- `current_settlement_id` işaretleri sıyrılır (immutable parent export-only).
+- Kapanışta çapraz-parent sahiplik doğrulaması: başka kullanıcının satırına
+  işaret eden herhangi bir çocuk tüm restore'u geri aldırır.
+- İstemci (`restoreBackup`) önce RPC'yi dener; RPC henüz deploy edilmemişse
+  (migration drift) eski REST replay'ine düşer — güvenlik yedeği o yol için
+  duruyor.
+- Docker kanıtı: `supabase/tests/transactional_restore.sql` (round-trip sayım
+  eşitliği, rollback, sıyırma, eski-yedek DEFAULT'u, çapraz-parent reddi).
+
 ## Bilinen sınırlar
 
 - Ledger tabloları (`card_ledger`, `account_ledger`) yedekte **veri olarak**
   vardır; ancak uygulama içi JSON yedeğinden (DataHealth) geri yükleme yapılırsa
-  ledger'lar opening olayıyla yeniden başlar. Bu runbook SQL dump yolunu test
-  eder, JSON yolunu değil.
+  ledger'lar opening olayıyla yeniden başlar (borç/bakiye = projeksiyon değişmez).
+  Bu runbook'un adımları SQL dump yolunu test eder; JSON yolunun kanıtı yukarıdaki
+  docker testidir.
 - Edge fonksiyonları, secret'lar ve Vercel ortam değişkenleri dump'ta yoktur;
   gerçek felaket kurtarmada bunlar ayrıca kurulur.
 - Bu tatbikat **yerel** ortamda çalışır. Yeni bir Supabase projesine dönüş

@@ -1043,6 +1043,13 @@ export type Database = {
         Args: Record<string, never>
         Returns: void
       }
+      restore_user_finance_data_tx: {
+        Args: {
+          /** {schema:'financeproject-v2', tables:{tablo: satır[]}} — parseBackup çıktısı. */
+          p_payload: Record<string, unknown>
+        }
+        Returns: Record<string, unknown>
+      }
       acknowledge_data_health_issues: {
         Args: {
           p_issue_ids: string[]

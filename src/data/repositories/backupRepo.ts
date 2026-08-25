@@ -71,3 +71,24 @@ export async function resetOwnFinanceData(): Promise<void> {
   const { error } = await supabase.rpc('reset_user_finance_data', {})
   if (error) throw new Error(`Mevcut veriler temizlenemedi: ${error.message}`)
 }
+
+/**
+ * Tek transaction'lı sunucu geri yüklemesi (KNOWN_RISKS #6 kapanışı): silme +
+ * parent-first ekleme + doğrulama + user_id rewrite tamamı sunucuda, TEK
+ * işlemde — herhangi bir adım patlarsa HİÇBİR ŞEY değişmez. RPC henüz deploy
+ * edilmemişse null döner (çağıran eski REST yoluna düşer); diğer her hata
+ * fırlatılır ve mesaj "hiçbir veri değişmedi" garantisini söyler.
+ */
+export async function restoreViaTransactionalRpc(
+  tables: Record<string, BackupRow[]>,
+): Promise<Record<string, number> | null> {
+  const { data, error } = await supabase.rpc('restore_user_finance_data_tx', {
+    p_payload: { schema: 'financeproject-v2', tables },
+  })
+  if (error) {
+    if (isMissingSupabaseCapabilityError(error)) return null
+    throw new Error(`Geri yükleme başarısız — hiçbir veri değişmedi: ${error.message}`)
+  }
+  const report = data as { tables?: Record<string, number> } | null
+  return report?.tables ?? {}
+}

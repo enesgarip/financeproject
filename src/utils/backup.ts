@@ -2,6 +2,7 @@ import {
   fetchTableRows,
   insertRows,
   resetOwnFinanceData,
+  restoreViaTransactionalRpc,
   type BackupRow,
 } from '../data/repositories/backupRepo'
 
@@ -268,16 +269,27 @@ export function downloadBackupFile(payload: string, prefix = 'financeproject-bac
 export type RestoreProgress = { step: string; done: number; total: number }
 
 /**
- * Wipe own data transactionally through the reset RPC, then insert the backup
- * (FK order, chunked).
- * NOT transactional over REST — the caller must take a safety export first and
- * warn the user. RLS scopes every statement to the signed-in user.
+ * Birincil yol: tek transaction'lı sunucu RPC'si (restore_user_finance_data_tx)
+ * — silme + parent-first ekleme + doğrulama + user_id rewrite tamamı tek
+ * işlemde; patlarsa hiçbir şey değişmez (KNOWN_RISKS #6 kapandı). RPC deploy
+ * edilmemişse eski REST yoluna düşer: reset RPC + tablo tablo insert —
+ * o yol transactional DEĞİLDİR, çağıran güvenlik yedeği almış olmalı.
  */
 export async function restoreBackup(
   backup: ParsedBackup,
   userId: string,
   onProgress?: (progress: RestoreProgress) => void,
 ): Promise<void> {
+  onProgress?.({ step: 'Atomik geri yükleme (tek işlem)', done: 1, total: 2 })
+  const txReport = await restoreViaTransactionalRpc(backup.tables)
+  // Truthy kontrolü bilinçli: sözleşme obje-veya-null dese de beklenmedik bir
+  // undefined "başarı" sanılıp veriyi geri yüklemeden dönmemeli.
+  if (txReport) {
+    onProgress?.({ step: 'Tamamlandı', done: 2, total: 2 })
+    return
+  }
+
+  // Eski REST yolu — yalnız RPC henüz deploy değilken (migration drift).
   const steps = RESTORE_TABLE_ORDER.length + 1
   let done = 1
 
