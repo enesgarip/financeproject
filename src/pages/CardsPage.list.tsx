@@ -5,6 +5,7 @@ import { useAuth } from '../auth/useAuth'
 import { BankLogo } from '../components/finance/BankLogo'
 import { AccountLedgerPanel } from '../components/finance/AccountLedgerPanel'
 import { CardAliasPanel } from '../components/finance/CardAliasPanel'
+import { CardStatementProjectionPanel } from '../components/finance/CardStatementProjectionPanel'
 import { CardLedgerPanel } from '../components/finance/CardLedgerPanel'
 import { MiniStat, SectionHeader, StatusBadge } from '../components/finance/FinanceUI'
 import { fetchAllCardAliases } from '../data/repositories/cardAliasesRepo'
@@ -425,6 +426,7 @@ export function CreditAccountListCard({
               </div>
             </div>
           </div>
+          <CardStatementProjectionPanel card={row} installments={cardInstallments} formatAmount={formatAmount} />
           <div className="mt-4 grid gap-3 min-[760px]:grid-cols-2">
             <div className="rounded-lg bg-raised p-3 ring-1 ring-line-strong">
               <p className="text-xs font-black uppercase text-ink-muted">Devam eden taksitler</p>

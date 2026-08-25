@@ -124,8 +124,20 @@ liste köprüsü tek tık otomatik adla yazar.
   temiz; tercih zinciri 4 aynada güncel (edge tip+select, TS tipi, DEFAULT +
   eşleme + test, NotificationSettings toggle). Gerçek gönderim deploy sonrası
   workflow_dispatch ile gözlemlenecek.
-- **PR H — Gelecek 3 Ekstre** (sırada): statementProjection.ts; k=0'da abonelik
-  eklenmez (çift sayma), tempo toplam dışı ayrı satır.
+- ~~**PR H — Gelecek 3 Ekstre.**~~ DONE. Yeni `utils/statementProjection.ts`
+  (+4 test): `projectUpcomingStatements` — 3 kesim dönemi getCardStatementPeriod
+  zinciriyle (kesim ertesi günü referans, purchaseTiming deseni); k=0 E3
+  formülünün aynısı (kova + o ayın planlı taksidi, abonelik EKLENMEZ — bu
+  dönemki gerçekleşen abonelik zaten kovada, çift sayardı); k≥1 taksit + kartın
+  abonelik medyanları (buildSubscriptionSummary — genç abonelik eşiğe takılır,
+  projeksiyon sistematik DÜŞÜK kalabilir, dipnot söyler) + karta talimatlı aylık
+  ödemeler. `discretionaryMonthlyBase` (90 gün tek-çekim ortalaması − tekrarlar)
+  TOPLAM DIŞI bilgi satırı (kullanıcı kararı: toplam "bilinen yükler" olarak
+  savunulabilir kalır). UI yeni `CardStatementProjectionPanel`: kart detay
+  genişlemesinde (opt-in — E3'ün "≤5 gün, uzak tahmin gürültü" bilinçli
+  penceresiyle çelişmemek için satır rozeti DEĞİL), abonelik girdisi snapshot'tan
+  yalnız panel açıkken; kırılım satırı "dönem içi + taksit + abonelik/talimat" +
+  dürüstlük dipnotu.
 
 ## 2026-08-25 — CrudPage → TanStack göçü (son parklı büyük iş) — DONE
 
