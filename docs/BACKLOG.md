@@ -1,5 +1,49 @@
 # Priority Backlog
 
+## 2026-08-26 — Fikir turu (10 özellik, kullanıcıyla kararlaştırıldı)
+
+54 fikirlik çok-mercekli üretim + repo/backlog gerçeklik denetiminden kullanıcının
+seçtiği 10 iş; keşif ajanlarıyla dosya-satır düzeyinde planlandı, 8 PR'lık sıra
+kararlaştırıldı. Kararlar: kredilerde payoff-only (bedavaya "kaldır" kalktı),
+3-ekstre projeksiyonu Detay paneli içinde + tempo toplam DIŞI ayrı satır,
+vazgeçme ayırması kovanın ay damgasını basar (dürtme susması kabul), Alsam mı?
+liste köprüsü tek tık otomatik adla yazar.
+
+- ~~**PR A — Senaryo panelinin iki eksiği.**~~ DONE. `scenarioForecast.ts`:
+  `payoff_loan_today` (satır bazında remove_loan ile aynı; nakit bedeli yeni
+  `loanPayoffAmount` — planlı kredide projectLoanSummary, legacy'de
+  monthly_payment × remaining_installments, forecast'ın legacy türetimiyle AYNI
+  taban) + `cash_shock` + `scenarioStartingCashDelta` (−0 tuzağı korumalı) +
+  `payoffBreakEvenMonthKey` (analitik: son bekleyen taksitin ayı — iki forecast
+  kıyası gerekmez, 6 aylık ufuk çoğu kredide o ayı göremezdi).
+  `cashFlowForecast.ts`: `startingBalanceDelta` opsiyonu (4 mevcut çağıran
+  etkilenmez) + `salaryCutRunwayMonths` (maaş soyulmuş 12 ay koşu; ilk negatif
+  aya kadar TAMAMLANAN ay; hiç düşmüyorsa null → UI "12+ ay"). UI
+  (ForwardForecast): kredilerde tek mod "bugün kapat (−₺X)" + seçilince başabaş
+  satırı ("aylık yük şimdi kalkar · bazla fark <Ay Yıl> itibarıyla kapanır" —
+  kazanç dili bilinçli yok), ₺25k/50k/100k/Özel tek-seçimli şok çipleri
+  (kombinlenebilir), StatPill altında kalıcı nötr dayanıklılık satırı; senaryo
+  kutusu artık hep görünür (şok kredisiz de anlamlı). +12 test (payoff/legacy/
+  kapalı plan/delta/runway sınırları). Yerel docker + seed ile canlı doğrulama:
+  payoff 101.750 = 11 bekleyen taksit; rozet −55.500 = −101.750 + ufuktaki 5
+  kaçınılan taksit; şok kombinasyonu ve runway kayması birebir.
+- **PR B — Hangi Kartla? çipleri** (sırada): `cardTimingChoice.ts` + hızlı
+  harcama formu + Alsam mı? salt-bilgi çipleri; kullanılabilir limit ortak-limit
+  grubundan.
+- **PR C — Davranışsal temel** (sırada): paylaşılan query-key sabitleri +
+  Bekleme Kuralı + Karar–Liste köprüsü + Emek Çevirisi.
+- **PR D — Vazgeçme Kazancı** (sırada): contribute_to_goal_bucket + goalEta
+  önizleme; kova hedefin kaynağı değilse buton yok; tempo yoksa tarihsiz dil.
+- **PR E — Yakıt Fiyat Şeridi** (sırada): ₺/lt serisi (min-max normalize) +
+  3 ay medyan kıyası (±%2 "medyanla aynı"; <2 dolumda susar).
+- **PR F — Panodan doldur** (sırada): clipboardExpense.ts; kart SMS'i
+  source='sms' + aynı hash → webhook'la çift yönlü DB dedupe bedava.
+- **PR G — Push çifti** (sırada): kesim makbuzu (migrationsız,
+  statements_enabled, 48 saat pencere) + SMS bekçisi (sms_alerts_enabled kolonu
+  + parse-sms'e SMS_OWNER_USER_ID damgası).
+- **PR H — Gelecek 3 Ekstre** (sırada): statementProjection.ts; k=0'da abonelik
+  eklenmez (çift sayma), tempo toplam dışı ayrı satır.
+
 ## 2026-08-25 — CrudPage → TanStack göçü (son parklı büyük iş) — DONE
 
 Son bilinçli park açıldı: CrudPage'in elle fetch/state katmanı TanStack Query'ye

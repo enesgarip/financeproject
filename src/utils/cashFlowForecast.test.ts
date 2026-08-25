@@ -10,7 +10,7 @@ import type {
   Payment,
   SalaryHistory,
 } from '../types/database'
-import { buildCashFlowForecast } from './cashFlowForecast'
+import { buildCashFlowForecast, salaryCutRunwayMonths } from './cashFlowForecast'
 import type { FinanceSummaryInput } from './financeSummary'
 
 const base = { id: 'id', user_id: 'u', created_at: '2026-06-01T00:00:00.000Z', updated_at: '2026-06-01T00:00:00.000Z' }
@@ -259,5 +259,62 @@ describe('buildCashFlowForecast', () => {
     expect(forecast.months.map((m) => m.endingBalance)).toEqual([1000, -4000, -4000])
     expect(forecast.firstNegative).toMatchObject({ monthKey: '2026-07-01', balance: -4000 })
     expect(forecast.lowest).toMatchObject({ monthKey: '2026-07-01', balance: -4000 })
+  })
+
+  it('applies startingBalanceDelta to the opening balance and every ending balance', () => {
+    const input = buildInput({ assets: [asset({ category: 'Nakit', estimated_value_try: 10000 })] })
+    const forecast = buildCashFlowForecast(input, { from: FROM, horizonMonths: 2, startingBalanceDelta: -4000 })
+    expect(forecast.startingBalance).toBe(6000)
+    expect(forecast.months.map((m) => m.endingBalance)).toEqual([6000, 6000])
+  })
+
+  it('a negative startingBalanceDelta can introduce a deficit the base forecast lacks', () => {
+    const input = buildInput({ assets: [asset({ category: 'Nakit', estimated_value_try: 1000 })] })
+    expect(buildCashFlowForecast(input, { from: FROM, horizonMonths: 2 }).firstNegative).toBeNull()
+    const shocked = buildCashFlowForecast(input, { from: FROM, horizonMonths: 2, startingBalanceDelta: -3000 })
+    expect(shocked.firstNegative).toMatchObject({ monthKey: '2026-06-01', balance: -2000 })
+  })
+})
+
+describe('salaryCutRunwayMonths', () => {
+  it('counts completed months before the first deficit with salary stripped', () => {
+    const forecast = salaryCutRunwayMonths(
+      buildInput({
+        assets: [asset({ category: 'Nakit', estimated_value_try: 10000 })],
+        salaryHistory: [salary({ amount: 20000 })],
+        payments: [payment({ recurrence: 'monthly', recurrence_day: 15, due_date: '2026-06-01', amount: 6000 })],
+      }),
+      { from: FROM },
+    )
+    // Maaşsız: 10000 → 4000 (Haz) → -2000 (Tem): Haziran'ı tamamlar, 1 ay dayanır.
+    expect(forecast).toBe(1)
+  })
+
+  it('returns null when the horizon never goes negative', () => {
+    const result = salaryCutRunwayMonths(
+      buildInput({
+        assets: [asset({ category: 'Nakit', estimated_value_try: 100000 })],
+        payments: [payment({ recurrence: 'monthly', recurrence_day: 15, due_date: '2026-06-01', amount: 1000 })],
+      }),
+      { from: FROM },
+    )
+    expect(result).toBeNull()
+  })
+
+  it('returns 0 when the very first month is already negative', () => {
+    const result = salaryCutRunwayMonths(
+      buildInput({
+        assets: [asset({ category: 'Nakit', estimated_value_try: 1000 })],
+        payments: [payment({ recurrence: 'none', due_date: '2026-06-10', amount: 5000 })],
+      }),
+      { from: FROM },
+    )
+    expect(result).toBe(0)
+  })
+
+  it('composes with startingBalanceDelta so scenarios shift the runway', () => {
+    const input = buildInput({ assets: [asset({ category: 'Nakit', estimated_value_try: 10000 })] })
+    expect(salaryCutRunwayMonths(input, { from: FROM })).toBeNull()
+    expect(salaryCutRunwayMonths(input, { from: FROM, startingBalanceDelta: -10001 })).toBe(0)
   })
 })
