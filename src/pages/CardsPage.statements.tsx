@@ -4,8 +4,9 @@ import { Badge } from '../components/ui/badge'
 import { Card as SurfaceCard, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { HelpTooltip } from '../components/ui/help-tooltip'
 import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
-import type { Card, CardExpense, CardStatementArchive, CardStatementPayment } from '../types/database'
+import type { Card, CardExpense, CardInstallment, CardStatementArchive, CardStatementPayment } from '../types/database'
 import { installmentChoicesWith } from '../utils/cardInstallmentCalendar'
+import { buildPlannedInstallmentHint } from '../utils/installmentHorizon'
 import {
   buildStatementPaidMap,
   openStatementsWithRemaining,
@@ -20,6 +21,7 @@ import { statementPeriodLabel } from './CardsPage.helpers'
 export function ProvisionPanel({
   rows,
   provisions,
+  installments = [],
   loading,
   actionId,
   onPost,
@@ -29,6 +31,8 @@ export function ProvisionPanel({
 }: {
   rows: Card[]
   provisions: CardExpense[]
+  /** Planlı taksitler: taksit seçiminde "aylık yükün X → Y olur" bağlamı için. */
+  installments?: CardInstallment[]
   loading: boolean
   actionId: string | null
   onPost: (expense: CardExpense) => void
@@ -85,6 +89,9 @@ export function ProvisionPanel({
           const canInstall = card?.card_type === 'kredi_karti'
           const installmentCount = Math.max(1, expense.installment_count)
           const installmentChoices = installmentChoicesWith(installmentCount)
+          const horizonHint = canInstall
+            ? buildPlannedInstallmentHint(installments, { amount: expense.amount, count: installmentCount })
+            : null
 
           return (
             <div key={expense.id} className="rounded-xl border border-warning/15 bg-warning/8 px-3 py-2.5">
@@ -124,6 +131,11 @@ export function ProvisionPanel({
                     </span>
                   ) : null}
                 </div>
+              ) : null}
+              {horizonHint ? (
+                <p className="mt-1.5 text-[11px] font-semibold tabular-nums text-ink-muted">
+                  Aylık taksit yükün {formatAmount(horizonHint.baseMonthly)} → {formatAmount(horizonHint.newMonthly)} ({horizonHint.months} ay)
+                </p>
               ) : null}
               <div className="mt-2 grid grid-cols-2 gap-2">
                 <button
