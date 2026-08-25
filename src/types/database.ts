@@ -607,6 +607,8 @@ export type NotificationPreferences = {
   provisions_enabled: boolean
   /** Hedefe bağlı kovaya bu ay ayırma yapılmadıysa ay başında hatırlat. */
   goals_enabled: boolean
+  /** Son 24 saatte işlenemeyen banka SMS'i varsa günlük tek uyarı. */
+  sms_alerts_enabled: boolean
   quiet_hours_start: number | null
   quiet_hours_end: number | null
 }
