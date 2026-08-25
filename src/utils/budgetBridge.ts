@@ -18,9 +18,8 @@
 import type { KasaBucket, SavingsGoal } from '../types/database'
 import type { BudgetUsage } from './budgetAlerts'
 import { endOfMonth } from './date'
-import { bucketForGoal } from './goalBucket'
+import { dominantBucketGoal } from './goalBucket'
 import { roundTL, sumTL } from './money'
-import { buildSavingsSuggestion } from './savingsSuggestion'
 
 const BRIDGE_WINDOW_DAYS = 3
 const BRIDGE_MIN_SURPLUS = 100
@@ -46,16 +45,9 @@ export function buildBudgetSurplusBridge(
   const surplus = roundTL(sumTL(usage.filter((item) => item.limit > 0).map((item) => item.remaining)))
   if (surplus < BRIDGE_MIN_SURPLUS) return null
 
-  // Aylık payı en çok isteyen, kovası olan aktif hedef (wishlistPlan mantığı).
-  const target = goals
-    .filter((goal) => goal.status === 'active')
-    .map((goal) => ({
-      goal,
-      bucket: bucketForGoal(goal.id, buckets),
-      monthlyNeeded: buildSavingsSuggestion(goal).monthlyNeeded ?? 0,
-    }))
-    .filter((row): row is typeof row & { bucket: KasaBucket } => row.bucket !== null)
-    .sort((a, b) => b.monthlyNeeded - a.monthlyNeeded)[0]
+  // Aylık payı en çok isteyen, kovası olan aktif hedef — seçici goalBucket'ta
+  // paylaşılır (Vazgeçme Kazancı ile aynı "asıl beslenen" tanımı).
+  const target = dominantBucketGoal(goals, buckets, today)
   if (!target) return null
 
   return {

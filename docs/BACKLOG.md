@@ -65,8 +65,20 @@ liste köprüsü tek tık otomatik adla yazar.
   ≈ hedefin ~N aylık payı"; girdisi eksik satır 0 basmaz SUSAR; baskın hedef
   `wishlistPlan.dominantSavingsGoal` export'uyla paylaşıldı (iki yüzeyin tanımı
   ayrışmaz), "geciktirir" dili bilinçli yok.
-- **PR D — Vazgeçme Kazancı** (sırada): contribute_to_goal_bucket + goalEta
-  önizleme; kova hedefin kaynağı değilse buton yok; tempo yoksa tarihsiz dil.
+- ~~**PR D — Vazgeçme Kazancı.**~~ DONE. Alsam mı?'ya üçüncü çıkış yolu:
+  "Vazgeçtim — {hedef} hedefine ayır" → tutar MEVCUT `contribute_to_goal_bucket`
+  RPC'siyle baskın kovalı hedefe (yeni `goalBucket.dominantBucketGoal` —
+  budgetBridge'in seçim mantığı ortak yardımcıya çıktı, davranış birebir,
+  testleri yeşil). Önizleme yeni `utils/foregoneGain.ts` (+4 test): tempo
+  varsa "varış ~Şubat 2027 → ~Aralık 2026 (2 ay önce)", tutar kalanı
+  karşılıyorsa "hedef tamamlanır", tempo gate'i geçilmemişse TARİHSİZ dil
+  (üretimde ~Ekim'e dek beklenen hal — snapshot serisi taze). Kapılar: yalnız
+  TL hedef + kova hedefin takip KAYNAĞI (fundsProgress; değilse önizleme yalan
+  olurdu) + kalan > 0. Ayırma kovanın ay damgasını basar (o ayın dürtmeleri
+  susar — kullanıcı kararıyla kabul); state kilidi aynı kararda ikinci ayırmayı
+  önler, tutar değişince buton döner. Snapshot sorgu anahtarı paylaşılan sabite
+  çıktı (`app/savingsGoalSnapshotsKey.ts`; SavingsGoalsPanel +
+  useDailyNetWorthSnapshot aynı sabiti kullanır).
 - **PR E — Yakıt Fiyat Şeridi** (sırada): ₺/lt serisi (min-max normalize) +
   3 ay medyan kıyası (±%2 "medyanla aynı"; <2 dolumda susar).
 - **PR F — Panodan doldur** (sırada): clipboardExpense.ts; kart SMS'i

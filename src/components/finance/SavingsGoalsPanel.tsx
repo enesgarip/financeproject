@@ -2,6 +2,7 @@ import { Link2, Pencil, Plus, Target, Trash2, Trophy } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../../auth/useAuth'
+import { SAVINGS_GOAL_SNAPSHOTS_QUERY_KEY } from '../../app/savingsGoalSnapshotsKey'
 import { fetchSavingsGoalSnapshots } from '../../data/repositories/analysisRepo'
 import { SimpleModal } from '../SimpleModal'
 import { Alert } from '../ui/alert'
@@ -247,7 +248,7 @@ export function SavingsGoalsPanel({
   // Günlük hedef fotoğrafları (PR-0 serisi): gerçekleşen tempo + varış tahmini.
   // Yazan taraf useDailyNetWorthSnapshot; burada yalnız okunur.
   const goalSnapshotsQuery = useQuery({
-    queryKey: ['savings-goal-snapshots', user?.id],
+    queryKey: [...SAVINGS_GOAL_SNAPSHOTS_QUERY_KEY, user?.id],
     enabled: Boolean(user),
     queryFn: async () => {
       const result = await fetchSavingsGoalSnapshots()
