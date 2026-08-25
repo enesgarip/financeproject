@@ -60,7 +60,8 @@ scheduled installments). Three layers now prevent inconsistency:
    triggers prevent direct existing-row NULL→settlement/archive reassignment;
    only canonical payment/statement RPC contexts can attach existing rows.
    Historical archive-marker INSERT stays restore-compatible under same-user/
-   same-card RLS until restore becomes transactional. The expense edit RPC
+   same-card RLS; the transactional restore RPC additionally asserts parent
+   ownership across all restored tables (see risk 6). The expense edit RPC
    rejects both directly archived expenses and installment parents with any
    archived child, so current-period reversal logic cannot rewrite statement rows.
    Trigger-level field guards also reject raw REST amount/date/card/plan edits on
@@ -126,14 +127,17 @@ causes a visible conflict instead of a full-row overwrite. Bulk previews mirror
 the server's 100-repair cap and disclose repairs deferred to a fresh next turn.
 
 Restore validates table arrays, plain row objects, immutable keys, and duplicate
-keys before reset. It does not yet validate every column type/enum/FK against a
-runtime schema, and row replay over REST is non-transactional. The automatic
-safety export makes a later insert failure recoverable, but a future restore
-protocol should be a single transactional server operation for atomicity.
-Historical statement-linked children must currently retain their archive marker
-during direct REST replay. RLS verifies that marker's parent belongs to the same
-user and card, but direct same-card INSERT provenance cannot be distinguished from
-a genuine restore until replay moves into that transactional server operation.
+keys before reset. **Replay is now a single transactional server operation**
+(`restore_user_finance_data_tx`, migration `20260826090000`): reset + parent-first
+insert + validation run in one transaction, so any failure changes nothing.
+The RPC rejects unknown tables and unknown columns up front, strips
+current-settlement markers, inserts only the columns present in the payload (so
+pre-schema-change backups get column DEFAULTs instead of NULL overrides), and a
+final cross-parent ownership assertion rejects any payload row pointing at
+another user's parent — closing the same-card INSERT provenance gap. The client
+(`restoreBackup`) calls the RPC first and falls back to the legacy REST replay
+only when the RPC is not yet deployed (migration drift); the automatic safety
+export remains as defense-in-depth for that fallback path.
 
 ## 7. Limited Safety Net from Tests (mitigated)
 

@@ -116,29 +116,23 @@ iş / bilinçli-park. Dilim dilim kapanıyor:
   davranışı doğru; mobil touch simülasyonunda gösterge 105px yer açtı,
   içerikte PullToRefresh kaynaklı transform kalmadı.
 - **Bilinçli PARK (bu turda yapılmayacak, gerekçesi yerinde):** CrudPage→TanStack
-  (10+ sayfa, ayrı tur),
-  **transaksiyonel restore protokolü** (KNOWN_RISKS #6) — TASARIM HAZIR
-  (2026-08-25, tatbikat dersleri tazeyken yazıldı), uygulama ayrı oturum:
-  - Tek RPC: `restore_user_finance_data_tx(p_payload jsonb)` SECURITY DEFINER,
-    TEK transaction — başarısızlıkta hiçbir satır değişmez (bugünkü REST
-    replay'inin tam tersi).
-  - Gövde: (1) mevcut reset gövdesi (silme, child-first); (2) parent-first
-    replay — RESTORE_TABLE_ORDER'ın SQL ikizi + `jsonb_populate_record` ile
-    satır doğrulama (bilinmeyen kolon/tip hatası = tüm işlem geri); (3)
-    user_id rewrite SUNUCUDA (auth.uid()); (4) ledger tabloları VERİ olarak
-    replay edilirken türetme trigger'ları mevcut `app.ledger_suppress` GUC
-    deseniyle susturulur (tatbikat dersi olan session_replication_role'e
-    gerek kalmaz — RPC kendi guard'ını kurar); (5) arşiv/settlement bağları
-    yalnız payload-içi id eşleşmeleriyle korunur (K7/T1 allocation guard'ları
-    RPC'nin yetkili bağlamında geçerli kalır).
-  - Dikkat: PostgREST body limiti (payload ~1-2 MB; mevcut dump 1,5 MB — tek
-    kullanıcıda sorun değil, yine de sınır kontrolü + anlaşılır hata).
-  - Fazlar: R1 RPC + docker round-trip testi (JSON export → tx-restore →
-    DataHealth 0 kritik + ledger drift 0); R2 istemci geçişi (insertRows
-    döngüsü → tek çağrı; eski yol missing-capability fallback'i); R3
-    RESTORE_DRILL'e JSON-yolu bölümü. CARD_DEBT_TRANSITIONS:317 ve
-    DATA_HEALTH_ARCHITECTURE:199'daki tekrarlar kapanışta bu kayda işaret
-    edecek.
+  (10+ sayfa, ayrı tur).
+  ~~**transaksiyonel restore protokolü** (KNOWN_RISKS #6)~~ → **TAMAMLANDI**
+  (2026-08-26, migration `20260826090000`): `restore_user_finance_data_tx(p_payload
+  jsonb)` SECURITY DEFINER, TEK transaction — reset + parent-first replay
+  (RESTORE_TABLE_ORDER'ın SQL ikizi) + user_id rewrite sunucuda + kapanışta
+  çapraz-parent sahiplik doğrulaması; başarısızlıkta hiçbir satır değişmez.
+  Tasarımdan sapmalar (uygulamada öğrenilen): `jsonb_populate_record` doğrulaması
+  yerine information_schema kolon kontrolü (populate bilinmeyen anahtarı SESSİZCE
+  yutar) + yalnız-mevcut-kolon insert listesi (populate eksik kolonu NULL basıp
+  DEFAULT'u ezer — eski yedekler kırılırdı); ledger suppress'e gerek kalmadı
+  (ledger tabloları payload'da yok, opening'i cards insert trigger'ı üretir);
+  32 MB payload sınırı + anlaşılır hata. İstemci: `restoreBackup` RPC-öncelikli,
+  missing-capability'de eski REST fallback (`restoreViaTransactionalRpc`).
+  Kanıt: `supabase/tests/transactional_restore.sql` (rollback + round-trip +
+  sıyırma + eski-yedek DEFAULT + çapraz-parent reddi) + backup.restore.test.ts
+  iki-yol testleri. RESTORE_DRILL'e JSON-yolu bölümü eklendi;
+  CARD_DEBT_TRANSITIONS ve DATA_HEALTH_ARCHITECTURE tekrarları kapanışa çevrildi.
   Ayrıca:
   ~~T1 RPC-only~~ → **AÇILDI ve TAMAMLANDI** (migration `20260825210000`):
   DEFINER geçiş denetimi (ajan raporu, onay kapısı) 5 INVOKER yazarın 4'ünü
@@ -1890,8 +1884,9 @@ hazırdır; **prod deployment/main push kullanıcı açıkça istemeden yapılma
   taşıyan `pay_card_debt` / `cut_card_statement` açabilir; transaction-local bağlam
   kullanıcı, satır sahibi, kart ve parent ile doğrulanıp hemen temizlenir. Current
   settlement marker'lı doğrudan child `INSERT` de reddedilir. Tarihsel ekstre-marker'lı
-  `INSERT`, mevcut JSON restore doğrudan replay yaptığı için same-user/same-card RLS
-  kontrolünde kalır; tam provenance gelecekte transactional restore RPC gerektirir.
+  `INSERT` same-user/same-card RLS kontrolünde kalır; provenance açığı 2026-08-26'da
+  kapandı — `restore_user_finance_data_tx` tek transaction'dır ve kapanışta
+  çapraz-parent sahiplik doğrulaması yapar (bkz. yukarıda transaksiyonel restore).
 - ~~**INC-04 — Ekstreye kesilmiş harcama current-period edit algoritmasına
   girebiliyordu.**~~ IMPLEMENTED LOCALLY. `20260802200000`, doğrudan archive'a
   bağlı tek çekim harcamayı ve herhangi bir child taksiti archive'a bağlanmış

@@ -313,9 +313,11 @@ The allocation marker is not a client-editable shortcut. Trigger authorization
 requires the canonical RPC's transaction-local context plus matching user, card,
 and parent rows. Current-settlement markers are removed from backup children
 because their immutable parent is export-only. Historical statement markers are
-restored by direct row replay and remain constrained by same-user/same-card RLS;
-making that replay fully provenance-bound requires a future transactional restore
-RPC.
+restored constrained by same-user/same-card RLS; since `restore_user_finance_data_tx`
+(migration `20260826090000`) replay is one server transaction whose final
+cross-parent assertion re-verifies that every restored child points at the same
+user's parent, so a failed restore changes nothing and foreign-parent payloads
+are rejected outright.
 
 Cash-flow/obligation projections must not reuse a paid statement's old due date
 for new current-period spending. When no statement is pending, the current-period
