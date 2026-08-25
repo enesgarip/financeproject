@@ -96,7 +96,7 @@ function expense(overrides: Partial<CardExpense>): CardExpense {
 }
 
 function budget(overrides: Partial<Budget>): Budget {
-  return { ...base, month: '2026-06-01', category: 'Market', limit_amount: 1000, note: null, ...overrides }
+  return { ...base, month: '2026-06-01', category: 'Market', limit_amount: 1000, note: null, limit_anchor: 'manual' as const, limit_anchor_value: null, ...overrides }
 }
 
 function debt(overrides: Partial<Debt>): Debt {

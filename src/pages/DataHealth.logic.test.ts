@@ -172,6 +172,8 @@ function budget(overrides: Partial<Budget> = {}): Budget {
     category: 'Market',
     limit_amount: 1000,
     note: null,
+    limit_anchor: 'manual' as const,
+    limit_anchor_value: null,
     ...overrides,
   }
 }

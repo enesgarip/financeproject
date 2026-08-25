@@ -1,14 +1,15 @@
 import { CheckCircle2, Repeat, TrendingUp, Users, WalletCards } from 'lucide-react'
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { Badge } from '../components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { SERIT_FILL, SERIT_TEXT, useSeritAmount } from '../components/serit'
 import type { Budget, CardExpense, Debt } from '../types/database'
-import { dateInputValue, daysUntil, formatDate, isDateInMonth, startOfMonth } from '../utils/date'
+import { dateInputValue, daysUntil, formatDate, startOfMonth } from '../utils/date'
 import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
-import { getCurrentSalary, sum } from '../utils/financeSummary'
+import { getCurrentSalary } from '../utils/financeSummary'
 import { analysisObligationsInput, formatMonth, type AnalysisData } from '../utils/analysisView'
-import { activeExpense as activeCardExpense, buildBudgetUsage } from '../utils/budgetAlerts'
+import { buildBudgetUsage } from '../utils/budgetAlerts'
+import { buildBudgetRollover, buildBudgetSuggestions } from '../utils/budgetAnchor'
 import { formatPercent } from '../utils/formatCurrency'
 import { PRICE_RADAR_MONTHS } from '../data/repositories/analysisRepo'
 import { type PriceTrend } from '../utils/priceIncreaseRadar'
@@ -16,7 +17,7 @@ import { canCutCurrentStatement } from '../utils/statementCycle'
 import { buildFinanceObligationsForMonth } from '../utils/obligations'
 
 import { buildSubscriptionSummary } from '../utils/subscriptions'
-import { diffTL, greaterThanTL, sumTL } from '../utils/money'
+import { diffTL, sumTL } from '../utils/money'
 import { StatPill } from './AnalysisPage.atoms'
 
 export function UpcomingInstallments({ data }: { data: AnalysisData }) {
@@ -104,25 +105,93 @@ export function UpcomingInstallments({ data }: { data: AnalysisData }) {
   )
 }
 
-export function BudgetProgress({ budgets, expenses }: { budgets: Budget[]; expenses: CardExpense[] }) {
+export function BudgetProgress({
+  budgets,
+  expenses,
+  salary = null,
+  onUpdateLimit,
+  onRollover,
+}: {
+  budgets: Budget[]
+  expenses: CardExpense[]
+  /** Çıpalı limitlerin çözümü için güncel maaş (salary_pct). */
+  salary?: number | null
+  /** Verilirse bayat manual limitler için tek tık "Güncelle" önerisi görünür. */
+  onUpdateLimit?: (budgetId: string, amount: number) => Promise<void>
+  /** Verilirse "geçen ayın bütçelerini taşı" şeridi görünür (tek tık, toplu). */
+  onRollover?: (rows: Budget[]) => Promise<void>
+}) {
   const seritAmount = useSeritAmount()
-  const usage = useMemo(() => buildBudgetUsage(budgets, expenses), [budgets, expenses])
+  const [busyId, setBusyId] = useState<string | null>(null)
+  const usage = useMemo(() => buildBudgetUsage(budgets, expenses, new Date(), salary), [budgets, expenses, salary])
+  // Kimliği her render değişebilen callback yerine VARLIĞI deps'e girer;
+  // öneriler yalnız veriye bağlıdır.
+  const hasUpdateAction = Boolean(onUpdateLimit)
+  const suggestions = useMemo(
+    () => (hasUpdateAction ? buildBudgetSuggestions(budgets, expenses) : []),
+    [budgets, expenses, hasUpdateAction],
+  )
+  const suggestionById = useMemo(() => new Map(suggestions.map((item) => [item.budgetId, item])), [suggestions])
+  const rollover = useMemo(() => (onRollover ? buildBudgetRollover(budgets) : []), [budgets, onRollover])
 
-  if (usage.length === 0) {
+  const [actionError, setActionError] = useState('')
+
+  async function runAction(id: string, action: () => Promise<void>) {
+    setBusyId(id)
+    setActionError('')
+    try {
+      await action()
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : 'İşlem tamamlanamadı.')
+    } finally {
+      setBusyId(null)
+    }
+  }
+
+  if (usage.length === 0 && rollover.length === 0) {
     return <p className="text-[13px] text-ink-muted">Bu ay için bütçe eklediğinde kategori kullanımı burada görünecek.</p>
   }
 
   // Şerit (`4d`): kategori limitleri kutu değil satır. Ad + "harcanan / limit"
   // mono, altında 3px çubuk — aşımda danger, %80+ warning, altı brand.
   return (
-    <div className="[&>*+*]:border-t [&>*+*]:border-line">
+    <div>
+      {actionError ? (
+        <p role="alert" className="mb-3 rounded-xl border border-warning/20 bg-warning/8 p-3 text-sm font-medium text-warning">
+          {actionError}
+        </p>
+      ) : null}
+      {/* Ay devri: uygulama kendiliğinden satır YARATMAZ; tek tık kullanıcıda. */}
+      {rollover.length > 0 && onRollover ? (
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-info/25 bg-info/8 px-3 py-2.5">
+          <p className="text-xs font-semibold text-info">
+            Geçen ayın {rollover.length} bütçesi bu aya taşınmadı.
+          </p>
+          <button
+            type="button"
+            disabled={busyId !== null}
+            onClick={() => void runAction('rollover', () => onRollover(rollover))}
+            className="shrink-0 rounded-lg bg-info px-3 py-1.5 text-xs font-bold text-white transition hover:bg-info/90 disabled:opacity-60"
+          >
+            {busyId === 'rollover' ? 'Taşınıyor...' : 'Bu aya taşı'}
+          </button>
+        </div>
+      ) : null}
+
+      <div className="[&>*+*]:border-t [&>*+*]:border-line">
       {usage.map((budget) => {
         const tone = budget.status === 'over' ? 'danger' : budget.status === 'warning' ? 'warning' : 'brand'
+        const suggestion = suggestionById.get(budget.budgetId)
 
         return (
           <div key={budget.budgetId} className="py-3">
             <div className="flex items-baseline justify-between gap-3">
-              <p className="truncate text-[14.5px] font-semibold text-ink">{budget.category}</p>
+              <p className="min-w-0 truncate text-[14.5px] font-semibold text-ink">
+                {budget.category}
+                {budget.anchorLabel ? (
+                  <span className="ml-2 align-middle text-[11px] font-semibold text-ink-faint">{budget.anchorLabel}</span>
+                ) : null}
+              </p>
               <p className="serit-num shrink-0 text-[13px] text-ink">
                 {seritAmount(budget.spent).amount}
                 <span className="text-ink-faint"> / {seritAmount(budget.limit).amount} ₺</span>
@@ -145,9 +214,27 @@ export function BudgetProgress({ budgets, expenses }: { budgets: Budget[]; expen
                 Limite yaklaşıyor · {formatPercent(budget.usageRate)}
               </p>
             ) : null}
+
+            {/* Bayat limit önerisi (#159 çizgisi): sayı sessizce DEĞİŞMEZ. */}
+            {suggestion && onUpdateLimit ? (
+              <div className="mt-1.5 flex flex-wrap items-center justify-between gap-2">
+                <p className="text-xs text-ink-muted">
+                  Son 3 ayın ortası {seritAmount(suggestion.suggested).amount} ₺ — limiti güncelleyeyim mi?
+                </p>
+                <button
+                  type="button"
+                  disabled={busyId !== null}
+                  onClick={() => void runAction(budget.budgetId, () => onUpdateLimit(suggestion.budgetId, suggestion.suggested))}
+                  className="shrink-0 rounded-lg border border-line-strong bg-raised px-2.5 py-1 text-xs font-bold text-ink transition hover:bg-black/[.03] disabled:opacity-60 dark:hover:bg-white/[.04]"
+                >
+                  {busyId === budget.budgetId ? 'Güncelleniyor...' : 'Güncelle'}
+                </button>
+              </div>
+            ) : null}
           </div>
         )
       })}
+      </div>
     </div>
   )
 }
@@ -260,7 +347,6 @@ export function MonthCloseAssistant({ data, missingTables }: { data: AnalysisDat
   const summary = useMemo(() => {
     const monthKey = `${todayKey.slice(0, 7)}-01`
     const today = new Date()
-    const currentMonthExpenses = data.cardExpenses.filter((expense) => activeCardExpense(expense) && isDateInMonth(expense.spent_at))
     const creditCards = data.cards.filter((card) => card.card_type === 'kredi_karti')
     const statementDayPassedCards = creditCards.filter((card) => canCutCurrentStatement(card, data.cardStatementArchives, today))
     const staleInstallments = data.cardInstallments.filter((item) => item.status === 'scheduled' && item.due_month <= monthKey).length
@@ -270,15 +356,11 @@ export function MonthCloseAssistant({ data, missingTables }: { data: AnalysisDat
         .map((item) => item.sourceId),
     )
     const openPaymentCount = data.payments.filter((payment) => currentMonthPaymentIds.has(payment.id) || (payment.status === 'bekliyor' && (daysUntil(payment.due_date) ?? 0) < 0)).length
-    const budgetOverruns = data.budgets.filter((budget) => {
-      if (budget.month !== monthKey || budget.limit_amount <= 0) return false
-      const spent = sum(
-        currentMonthExpenses.filter((expense) => (expense.category || 'Diğer') === budget.category),
-        (expense) => expense.amount,
-      )
-      return greaterThanTL(spent, budget.limit_amount)
-    }).length
     const currentSalary = getCurrentSalary(data.salaryHistory)
+    // Bütçe aşımı buildBudgetUsage'tan okunur (tek kaynak): eskiden buradaki
+    // elle kopya %80 uyarı eşiğinden habersizdi ve çıpalı limiti çözemezdi.
+    const budgetOverruns = buildBudgetUsage(data.budgets, data.cardExpenses, today, currentSalary?.amount ?? null)
+      .filter((usage) => usage.status === 'over' && usage.limit > 0).length
     return { monthKey, statementDayPassedCards, staleInstallments, openPaymentCount, budgetOverruns, currentSalary }
   }, [data, todayKey])
   const { monthKey, statementDayPassedCards, staleInstallments, openPaymentCount, budgetOverruns, currentSalary } = summary

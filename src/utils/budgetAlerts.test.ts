@@ -6,7 +6,7 @@ const base = { id: 'id', user_id: 'u', created_at: '2026-06-01T00:00:00.000Z', u
 const JUNE = new Date(2026, 5, 15)
 
 function budget(overrides: Partial<Budget>): Budget {
-  return { ...base, month: '2026-06-01', category: 'Market', limit_amount: 1000, note: null, ...overrides }
+  return { ...base, month: '2026-06-01', category: 'Market', limit_amount: 1000, note: null, limit_anchor: 'manual' as const, limit_anchor_value: null, ...overrides }
 }
 
 function expense(overrides: Partial<CardExpense>): CardExpense {

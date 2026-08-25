@@ -11,10 +11,8 @@ Kullanıcıyla kararlaştırılan sıra:
    aynı gün ₺Y" (saf util + tek satır UI; nötr dil, sinyal rengi yok)
 3. ~~**Taksit ufku**~~ (DONE, aşağıda) — taksit formlarında "aylık yükün ₺X→₺Y
    olur" + takvimde "şu ay N taksit bitiyor, yük ₺Z azalır" (push MVP'de yok)
-4. **Bütçe turu** — `avg_spend` (son 3 tam ay ort. × çarpan) + `salary_pct`
-   çıpaları (çıpalı satırda `limit_amount` 0; #157 deseni), tek-tık ay devri
-   şeridi (otomatik taşıma YOK — #159 çizgisi), bayat bütçe önerisi (medyan +
-   %10 ve 25 TL eşiği), bütçe×harcama hesabının üç kopyasının DRY'ı
+4. ~~**Bütçe turu**~~ (DONE, aşağıda) — `avg_spend` + `salary_pct` çıpaları,
+   tek-tık ay devri şeridi, bayat bütçe önerisi, üç kopyanın DRY'ı
 5. **Varış tahmini** — PR-0 serisinden gerçekleşen tempo (son 90 gün, min 45
    gün + 2 ay örneği; tempo ≤ 0 ise tarih UYDURULMAZ) + hedef kartında şerit
 6. **Maaş günü akışı** — `salary_history` tutarı ± %10 deposit tespiti (saf
@@ -25,6 +23,24 @@ Kullanıcıyla kararlaştırılan sıra:
 Tura alınmayan, not edilen ekstralar: bütçe→hedef köprüsü (ay kapanışı artığını
 tek tıkla kovaya), abonelik radarı, ekstre tahmini ("kesilse ~₺X gelir").
 
+- ~~**PR-3 — bütçe turu.**~~ DONE. Migration `20260825120000`: `budgets` +
+  `limit_anchor` (`manual`/`avg_spend`/`salary_pct`) + `limit_anchor_value`,
+  kombinasyon check'i (`supabase/tests/budget_limit_anchor.sql`); çıpalı
+  satırda `limit_amount` 0 saklanır (#157 deseni). Snapshot RPC değişmedi —
+  `to_jsonb(t)` kolonları kendiliğinden taşır. `utils/budgetAnchor.ts`
+  (+10 test): `resolveBudgetRows` (avg_spend = satırın AYINDAN önceki 3 tam
+  ayın ortalaması — geçmiş aylar değişmediği için ay içinde stabil, geçmiş
+  satırlar tarihsel doğru; boş ay 0 sayılır; salary_pct maaşsız çözülmez, 0
+  kalır — uydurma yazılmaz), `buildBudgetSuggestions` (#159'un bire biri:
+  medyan, min 2 örnek, sapma %10 VE 25 TL; limit 0'da hep; çıpalı atlanır),
+  `buildBudgetRollover`, `budgetAnchorLabel`. DRY: `buildBudgetUsage` artık
+  maaş alıp çözümlemeyi kendisi yapıyor; `MonthCloseAssistant`ın elle kopyası
+  (eşik sapması riskli üçüncü kopya) ve `analysisView.buildCategoryInsights`
+  limitRate'i aynı kaynağa katlandı. UI: bütçe formunda "Limit kaynağı" +
+  koşullu alanlar (`visibleWhen`) + canlı "bugünkü karşılık" (`computed` alan;
+  maaş yüzdesi seçeneği maaş kaydı yokken hiç sunulmaz), BudgetProgress'te
+  çıpa rozeti + tek-tık devir şeridi + tek-tık limit güncelleme (yazma
+  PlanningPage'ten `saveCrudRow` ile — panel Supabase görmez).
 - ~~**PR-2 — taksit ufku.**~~ DONE. `utils/installmentHorizon.ts` (+6 test):
   `buildPlannedInstallmentHint` (taban bilinçli ÖNÜMÜZDEKİ ay — cari ayın
   taksitleri kısmen kesilmiş olabilir, yeni planın ilki de çoğunlukla sonraki
