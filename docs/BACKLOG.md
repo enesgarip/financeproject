@@ -1,5 +1,35 @@
 # Priority Backlog
 
+## 2026-08-25 — CrudPage → TanStack göçü (son parklı büyük iş) — DONE
+
+Son bilinçli park açıldı: CrudPage'in elle fetch/state katmanı TanStack Query'ye
+taşındı. 8 CRUD sayfası (assets, cards, debts, gold_lots, loans, payments,
+budgets, salary_history) props sözleşmesine DOKUNULMADAN navigasyonlar arası
+cache kazandı (geri dönüşte skeleton flaşı yok; 30 sn staleTime / 30 dk gcTime).
+
+- **`src/app/useCrudRows.ts`:** `['crud-rows', tablo, userId, orderBy, asc]`
+  anahtarı (sıralama SONDA — `['crud-rows', tablo]` prefix'i ile invalidate
+  edilir), `useCrudRows` + `useInvalidateCrudRows` (useCars deseni).
+- **CrudPage içi:** `rows/loading` → `useQuery`; `reload` helper'ı invalidate
+  (+aktif refetch bitince çözülür — LoansPage plan akışlarının `await reload()`
+  beklentisi korunur); kayıt sonrası invalidate; silmede satır ANINDA
+  `setQueryData` ile düşer + arka plan invalidate — eski desenin "silme reload
+  yapmaz, türetilmiş veri bayatlar" tuzağı kapandı. Yükleme hatası sorgu
+  state'inden Alert'e düşer. Ölü `renderAfterList` prop'u kaldırıldı (sıfır
+  kullanıcı).
+- **Cache tutarlılık kabloları (CrudPage dışından yazanlar):** AssetsPage'in
+  elle `fetchCrudRows('cards')` çekimi `useCrudRows`'a döndü — CardsPage
+  listesiyle AYNI anahtar (tablo+sıralama birebir), iki sayfa tek fetch; işlem
+  modalı açılışı `refetch()` ile bakiyeyi tazeler. AnalysisPage abonelik→plan
+  `['crud-rows','payments']`, PlanningPage maaş şeridi
+  `['crud-rows','salary_history']` prefix'ini invalidate eder.
+- **Doğrulama:** yeni `CrudPage.test.tsx` (6 test: cache'ten ikinci mount tek
+  fetch, reload sözleşmesi, kaydet→invalidate, afterSave hatası modalı açık
+  tutar, sil→anlık düşüş+refetch, yükleme hatası Alert) + canlı Playwright
+  `money-mutation` yerel docker'da geçti (gerçek login → harcama → borç+ledger);
+  suite 13 spec'te 10 pass / 3 skip (live-fixture gerektirenler). Entry bundle
+  19,08 kB gzip (< 20 kB).
+
 ## 2026-08-25 — Docs kapanış turu (md'lerde kayıtlı ne kaldıysa)
 
 Kullanıcı "md dosyalarında kalan ne iş varsa bitirelim" dedi; tüm docs/*.md +
@@ -115,8 +145,8 @@ iş / bilinçli-park. Dilim dilim kapanıyor:
   kapalıda panel children=0 / "Mutabakat" metni yok, aç-kapa aria+mount
   davranışı doğru; mobil touch simülasyonunda gösterge 105px yer açtı,
   içerikte PullToRefresh kaynaklı transform kalmadı.
-- **Bilinçli PARK (bu turda yapılmayacak, gerekçesi yerinde):** CrudPage→TanStack
-  (10+ sayfa, ayrı tur).
+- **Bilinçli PARK:** ~~CrudPage→TanStack (10+ sayfa, ayrı tur)~~ → AÇILDI ve
+  TAMAMLANDI (üstteki 2026-08-25 CrudPage→TanStack bölümü).
   ~~**transaksiyonel restore protokolü** (KNOWN_RISKS #6)~~ → **TAMAMLANDI**
   (2026-08-26, migration `20260826090000`): `restore_user_finance_data_tx(p_payload
   jsonb)` SECURITY DEFINER, TEK transaction — reset + parent-first replay
@@ -432,7 +462,7 @@ aşağıda; bilinçli yapılmayanlar listenin sonunda.
   Bilinçli dokunulmayan: deploy `verify`↔`changes` bağımlılık ayrıştırması
   (deploy hattı yapısal değişikliği ayrı, tek başına bir PR ister).
 - **Bilinçli yapılmayanlar:** ~~17 sorgu → tek RPC snapshot~~ (2026-08-24 (11)'de
-  YAPILDI), CrudPage → TanStack (10+ sayfa), `sync_loan_summary`
+  YAPILDI), ~~CrudPage → TanStack (10+ sayfa)~~ (2026-08-25'te YAPILDI), `sync_loan_summary`
   statement-level (önce invariant testi), ledger panellerine limit (projeksiyonu
   BOZAR), `card_expenses` 12 indeks budaması (önce üretimde `pg_stat_user_indexes`
   ölçümü), Dashboard detay lazy-mount + PullToRefresh transform (görsel/a11y turu

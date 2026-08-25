@@ -1,5 +1,5 @@
 import { ArrowDownRight, ArrowUpRight, Banknote, ChevronDown, ChevronUp, Coins, Landmark, LineChart, Minus, Plus, ShieldCheck, TrendingUp, Wallet } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useState, type ComponentType, type FormEvent } from 'react'
+import { useEffect, useMemo, useState, type ComponentType, type FormEvent } from 'react'
 import { CrudPage, type FormField } from '../components/CrudPage'
 import { type CompositionSlice } from '../components/charts/CompositionBar'
 import { BreakdownBar, HeroNumber, LineGroup, LineRow, SERIT_TEXT, useSeritAmount } from '../components/serit'
@@ -8,7 +8,7 @@ import { RatesBanner } from '../components/finance/RatesBanner'
 import { Button } from '../components/ui/button'
 import { ConfidenceBadge } from '../components/ui/confidence-badge'
 import { QueryError } from '../components/ui/query-error'
-import { fetchCrudRows } from '../data/repositories/crudRepo'
+import { useCrudRows, useInvalidateCrudRows } from '../app/useCrudRows'
 import { useMarketRates } from '../hooks/useMarketRates'
 import { useStockPrices } from '../hooks/useStockPrices'
 import { normalizeTicker, type StockPrices } from '../lib/stockQuotesClient'
@@ -29,6 +29,9 @@ const formCategoryOptions = categoryOptions.filter((category) => category !== 'A
 
 /** Context passed to form fields: live FX rates + live BIST prices. */
 type FieldCtx = { snapshot: MarketRatesSnapshot | null; stockPrices: StockPrices }
+
+// Sorgu veri getirmeden önceki kararlı boş referans (bkz. CrudPage.EMPTY_ROWS).
+const EMPTY_ACCOUNTS: never[] = []
 
 /* Varlık sınıfı → renk + ikon.
    Renk kimlik taşır, durum değil: eskiden Nakit yeşil (=başarı), Altın amber
@@ -450,7 +453,11 @@ export function AssetsPage() {
   const { formatAmount } = useBalancePrivacy()
   const { snapshot } = useMarketRates()
   const [stockPrices, setStockPrices] = useState<StockPrices>({})
-  const [accounts, setAccounts] = useState<FinanceCard[]>([])
+  // Hesap listesi CardsPage'in liste sorgusuyla AYNI anahtarı paylaşır (tablo +
+  // sıralama birebir): iki sayfa arası tek fetch, işlem sonrası tek invalidation.
+  const accountsQuery = useCrudRows('cards', 'created_at', false)
+  const accounts: FinanceCard[] = accountsQuery.data ?? EMPTY_ACCOUNTS
+  const invalidateAccounts = useInvalidateCrudRows('cards')
   const [trade, setTrade] = useState<AssetTradeDraft | null>(null)
   const [tradeAccountId, setTradeAccountId] = useState('')
   const [tradeAmount, setTradeAmount] = useState('')
@@ -464,28 +471,9 @@ export function AssetsPage() {
     [accounts],
   )
 
-  // Hesap yükleme hatası SAYFA seviyesinde tutulur: eskiden yalnız `tradeError`'a
-  // yazılıyordu, o da sadece işlem modalında görünüyordu — hero "Toplam varlık"
-  // banka bakiyeleri eksik hâlde sessizce küçük çıkıyordu (denetim 2026-08-12 §5).
-  const [accountsError, setAccountsError] = useState('')
-
-  const loadAccounts = useCallback(async () => {
-    const result = await fetchCrudRows('cards', 'created_at', false)
-    if (!result.ok) {
-      const message = result.error.message ?? 'Banka hesapları yüklenemedi.'
-      setAccountsError(message)
-      setTradeError(message)
-      setAccounts([])
-      return
-    }
-    setAccountsError('')
-    setAccounts(result.data)
-  }, [])
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    void loadAccounts()
-  }, [loadAccounts])
+  // Hesap yükleme hatası SAYFA seviyesinde görünür (denetim 2026-08-12 §5):
+  // hero "Toplam varlık" banka bakiyeleri olmadan sessizce küçük çıkmasın.
+  const accountsError = accountsQuery.error ? accountsQuery.error.message || 'Banka hesapları yüklenemedi.' : ''
 
   function openTrade(asset: Asset, direction: AssetTradeDirection) {
     setTrade({ asset, direction })
@@ -494,7 +482,8 @@ export function AssetsPage() {
     setTradeQuantity(direction === 'sell' && assetTradeRequiresQuantity(asset) && asset.amount > 0 ? String(asset.amount) : '')
     setTradeNote('')
     setTradeError('')
-    void loadAccounts()
+    // İşlem öncesi bakiyeler taze olsun: staleTime beklemeden yeniden çek.
+    void accountsQuery.refetch()
   }
 
   function closeTrade() {
@@ -563,7 +552,7 @@ export function AssetsPage() {
     setTrade(null)
     setTradeSaving(false)
     try {
-      await Promise.all([reloadAssets(), loadAccounts()])
+      await Promise.all([reloadAssets(), invalidateAccounts()])
     } catch (reloadError) {
       setPageError(reloadError instanceof Error ? reloadError.message : 'İşlem tamamlandı ama liste yenilenemedi.')
     }
@@ -599,7 +588,7 @@ export function AssetsPage() {
               amount={tradeAmount}
               quantity={tradeQuantity}
               note={tradeNote}
-              error={tradeError}
+              error={tradeError || accountsError}
               saving={tradeSaving}
               onClose={closeTrade}
               onAccountChange={setTradeAccountId}
@@ -613,7 +602,7 @@ export function AssetsPage() {
               <QueryError
                 title="Banka hesapları yüklenemedi"
                 message={`${accountsError} Aşağıdaki "Toplam varlık" banka bakiyeleri olmadan hesaplandı.`}
-                onRetry={() => void loadAccounts()}
+                onRetry={() => void accountsQuery.refetch()}
               />
             ) : null}
             <RatesBanner
