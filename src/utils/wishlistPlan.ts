@@ -46,8 +46,12 @@ export type WishlistPlan = {
   goalName: string | null
 }
 
-/** Kıyas için en çok aylık pay isteyen aktif hedef: "asıl beslediğin" hedef. */
-function dominantGoal(goals: SavingsGoal[], today: Date): { goal: SavingsGoal; monthlyNeeded: number } | null {
+/**
+ * Kıyas için en çok aylık pay isteyen aktif hedef: "asıl beslediğin" hedef.
+ * Export: PurchaseDecisionPage'in emek çevirisi bloğu aynı hedefi kullanır —
+ * iki yüzeyin "asıl beslenen" tanımı ayrışmasın.
+ */
+export function dominantSavingsGoal(goals: SavingsGoal[], today: Date): { goal: SavingsGoal; monthlyNeeded: number } | null {
   let best: { goal: SavingsGoal; monthlyNeeded: number } | null = null
 
   for (const goal of goals) {
@@ -80,7 +84,7 @@ export function buildWishlistPlan(input: WishlistPlanInput, today: Date = new Da
         return null
       })()
 
-  const dominant = dominantGoal(input.goals, today)
+  const dominant = dominantSavingsGoal(input.goals, today)
   // Yarım aydan küçük pay yuvarlanınca 0 olur ve cümle kurulmaz: "~1 aylık pay"
   // demek için tabanı 1'e çekmek küçük tutarları OLDUĞUNDAN BÜYÜK gösterirdi.
   const goalMonths = dominant ? Math.round(roundTL(price / dominant.monthlyNeeded)) : 0

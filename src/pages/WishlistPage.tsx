@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Check, ChevronDown, ChevronUp, Plus, Trash2, Undo2 } from 'lucide-react'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { Check, ChevronDown, ChevronUp, Plus, ShoppingCart, Trash2, Undo2 } from 'lucide-react'
+import { Link } from 'react-router'
 import { useAuth } from '../auth/useAuth'
 import { useConfirmDialog } from '../components/ui/use-confirm-dialog'
 import { useToast } from '../components/ui/toast'
@@ -10,22 +11,22 @@ import { Card, CardContent } from '../components/ui/card'
 import { Input } from '../components/ui/input'
 import {
   deleteWishlistItem,
-  fetchWishlistItems,
   insertWishlistItem,
   updateWishlistItem,
 } from '../data/repositories/wishlistRepo'
 import { useFinanceSnapshot } from '../app/useFinanceSnapshot'
 import { readSafeToSpendBuffer, useKasaReserved } from '../hooks/useSafeToSpend'
+import { useWishlistItems, WISHLIST_QUERY_KEY } from '../hooks/useWishlistItems'
 import { buildCashFlowForecast } from '../utils/cashFlowForecast'
 import { buildFinancialPosition, buildMonthlyCashFlow } from '../utils/financeSummary'
 import { resolveSavingsGoalRows } from '../utils/goalSources'
 import { buildSafeToSpend } from '../utils/safeToSpend'
+import { buildWishlistAge } from '../utils/wishlistAge'
 import { buildWishlistPlan, type WishlistPlan } from '../utils/wishlistPlan'
 import { formatCurrency, parseNumber } from '../utils/formatCurrency'
 import { sumTL } from '../utils/money'
 import type { WishlistItem } from '../types/database'
 
-const QUERY_KEY = ['wishlist-items'] as const
 /** "Ne zaman alabilirim" projeksiyon ufku; PurchaseDecisionPage ile aynı mantık. */
 const PLAN_HORIZON_MONTHS = 6
 
@@ -35,22 +36,16 @@ export function WishlistPage() {
   const { toast } = useToast()
   const { confirm, confirmDialog } = useConfirmDialog()
 
-  const { data: items = [], isLoading } = useQuery({
-    // userId anahtarda + enabled: auth çözülmeden ateşleyip boş/401 dönmesin;
-    // invalidate QUERY_KEY prefix'iyle yapıldığı için davranışı değişmez.
-    queryKey: [...QUERY_KEY, user?.id],
-    enabled: Boolean(user),
-    queryFn: async () => {
-      const result = await fetchWishlistItems()
-      if (!result.ok) throw new Error(result.error.message)
-      return result.data
-    },
-  })
+  // Sorgu + anahtar paylaşılan hook'ta (hooks/useWishlistItems): karar ekranının
+  // köprüsü aynı anahtarı invalidate eder, sayfa-lokal kopya bayatlamaz.
+  const { data: items = [], isLoading } = useWishlistItems()
 
   const pending = useMemo(() => items.filter((i) => !i.is_purchased), [items])
   const purchased = useMemo(() => items.filter((i) => i.is_purchased), [items])
   // Tahmini fiyatı girilmemiş madde 0 sayılır; toplam "en az bu kadar" okunur.
   const pendingTotal = useMemo(() => sumTL(pending.map((i) => i.estimated_price ?? 0)), [pending])
+  // Bekleme kuralı: 30 günü geçen bekleyenler hero özetinde görünür.
+  const staleCount = pending.filter((i) => buildWishlistAge(i).isStale).length
 
   /**
    * "Ne zaman alabilirim" için gereken nakit projeksiyonu + hedef planı.
@@ -109,7 +104,7 @@ export function WishlistPage() {
   const [newPrice, setNewPrice] = useState('')
   const nameInputRef = useRef<HTMLInputElement>(null)
 
-  const invalidate = useCallback(() => qc.invalidateQueries({ queryKey: QUERY_KEY }), [qc])
+  const invalidate = useCallback(() => qc.invalidateQueries({ queryKey: WISHLIST_QUERY_KEY }), [qc])
 
   const addMutation = useMutation({
     mutationFn: async ({ name, price }: { name: string; price: string }) => {
@@ -192,7 +187,9 @@ export function WishlistPage() {
       <HeroNumber
         label="Bekleyen istekler"
         value={pendingTotal}
-        description={`${pending.length} bekleyen · ${purchased.length} tamamlanan · tahmini fiyatlarla`}
+        description={`${pending.length} bekleyen · ${purchased.length} tamamlanan · tahmini fiyatlarla${
+          staleCount > 0 ? ` · ${staleCount} madde 30 günü geçti` : ''
+        }`}
       />
 
       {/* Yeni madde ekleme */}
@@ -303,6 +300,8 @@ function WishlistRow({
   purchased?: boolean
 }) {
   const purchasedDate = item.purchased_at ? new Date(item.purchased_at).toLocaleDateString('tr-TR') : null
+  // Bekleme kuralı rozetleri (utils/wishlistAge): tamamı mevcut kolonlardan.
+  const age = buildWishlistAge(item)
 
   return (
     <li className="finance-list-row group flex items-center gap-3 rounded-xl border border-line-strong bg-raised px-3 py-3 transition">
@@ -328,8 +327,18 @@ function WishlistRow({
             {item.estimated_price ? formatCurrency(item.estimated_price) : ''}
             {item.estimated_price && purchasedDate ? ' · ' : ''}
             {purchasedDate ? purchasedDate : ''}
+            {purchased && age.decisionDays !== null
+              ? ` · ${age.decisionDays === 0 ? 'aynı gün alındı' : `${age.decisionDays} gün düşündün`}`
+              : ''}
           </span>
         )}
+        {/* Bekleme kuralı: pasif rozet + nötr dil (aksiyon dürtmesi bilinçli yok). */}
+        {!purchased ? (
+          <span className={`text-[11px] leading-tight ${age.isStale ? 'text-warning' : 'text-ink-faint'}`}>
+            {age.ageDays === 0 ? 'Bugün eklendi' : `${age.ageDays} gündür listede`}
+            {age.isStale ? ' · 30 günü geçti — hâlâ istiyor musun?' : ''}
+          </span>
+        ) : null}
         {/* Alınmamış maddede "ne zaman + neyin payı": ikisi de projeksiyondan
             türer, listede saklanmaz. Ufukta karşılanmıyorsa tarih UYDURMAYIZ. */}
         {/* truncate DEĞİL: dar ekranda "…" ile kesilince cümlenin asıl bilgisi
@@ -349,6 +358,18 @@ function WishlistRow({
       </div>
 
       <div className="hover-actions flex shrink-0 items-center gap-2 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100">
+        {/* Karar–Liste köprüsünün ters yönü: fiyatlı bekleyen madde karar
+            ekranına tutarıyla taşınır (?tutar= tek seferlik form doldurur). */}
+        {!purchased && item.estimated_price ? (
+          <Link
+            to={`/odemeler/alsam-mi?tutar=${item.estimated_price}`}
+            className="tap-target grid size-8 place-items-center rounded-lg text-ink-muted transition hover:bg-black/[.03] dark:hover:bg-white/[.04] hover:text-ink"
+            aria-label={`"${item.name}" için Alsam mı ekranında değerlendir`}
+            title="Alsam mı?"
+          >
+            <ShoppingCart size={14} />
+          </Link>
+        ) : null}
         {purchased && (
           <button
             type="button"
