@@ -1656,22 +1656,50 @@ export function checkGoals(savingsGoals: SavingsGoal[], savingsGoalComponents: S
   return issues
 }
 
+/** Talimatlı ödemede SMS/ekstre eşleşmesine tanınan pencere (gün). */
+const AUTO_PAYMENT_MATCH_GRACE_DAYS = 3
+
 export function checkPayments(payments: Payment[]): HealthIssue[] {
   const issues: HealthIssue[] = []
   const today = todayValue()
 
   for (const payment of payments) {
     if (payment.status === 'bekliyor' && payment.due_date < today) {
-      issues.push({
-        id: `payment-overdue-${payment.id}`,
-        area: 'Planlı',
-        severity: 'info',
-        title: `${payment.title} vadesi geçmiş`,
-        description: 'Bekleyen ödeme tarihi geçmiş görünüyor.',
-        details: [`Vade: ${formatDate(payment.due_date)}`, `Tutar: ${formatCurrency(payment.amount)}`],
-        fixable: false,
-        kind: 'manual',
-      })
+      // BM-5: kart talimatlı ödeme BİLGİLENDİRMEDİR — kaydı SMS/ekstre
+      // eşleşmesi kapatır ve banka genelde vadeyi 1-2 gün gecikmeyle yansıtır.
+      // Vade+1'de "vadesi geçmiş" demek sahte alarmdı (BACKLOG 2026-08-16
+      // notu); talimatlıya kısa eşleşme penceresi tanınır, pencere aşılırsa
+      // metin banka tarafını işaret eder.
+      const overdueDays = Math.round(
+        (new Date(`${today}T00:00:00`).getTime() - new Date(`${payment.due_date}T00:00:00`).getTime()) / 86_400_000,
+      )
+      const isAutoPayment = payment.payment_method === 'bank_auto'
+      if (isAutoPayment && overdueDays <= AUTO_PAYMENT_MATCH_GRACE_DAYS) {
+        issues.push({
+          id: `payment-auto-pending-${payment.id}`,
+          area: 'Planlı',
+          severity: 'info',
+          title: `${payment.title} talimatı için eşleşme bekleniyor`,
+          description:
+            'Talimatlı ödemenin SMS/ekstre eşleşmesi henüz düşmedi; banka genelde vadeyi 1-2 gün içinde yansıtır.',
+          details: [`Vade: ${formatDate(payment.due_date)}`, `Tutar: ${formatCurrency(payment.amount)}`],
+          fixable: false,
+          kind: 'manual',
+        })
+      } else {
+        issues.push({
+          id: `payment-overdue-${payment.id}`,
+          area: 'Planlı',
+          severity: 'info',
+          title: `${payment.title} vadesi geçmiş`,
+          description: isAutoPayment
+            ? `Talimat eşleşmesi ${overdueDays} gündür gelmedi — banka tarafında talimatın çalıştığını kontrol et.`
+            : 'Bekleyen ödeme tarihi geçmiş görünüyor.',
+          details: [`Vade: ${formatDate(payment.due_date)}`, `Tutar: ${formatCurrency(payment.amount)}`],
+          fixable: false,
+          kind: 'manual',
+        })
+      }
     }
 
     if (payment.status === 'bekliyor' && payment.amount <= 0 && !(payment.payment_method === 'bank_auto' && payment.amount_status === 'estimated')) {
