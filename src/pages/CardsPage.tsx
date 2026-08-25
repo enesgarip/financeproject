@@ -375,10 +375,11 @@ export function CardsPage() {
                   ) : null}
                   {/* Niyet paneli provizyonun ÜSTÜNDE: alışverişten önce doldurulur,
                       provizyon düştüğünde taksit sayısı zaten işlenmiş olur. */}
-                  <CardInstallmentIntentPanel cards={cardRows} onChanged={() => refreshCardsAndProvisions(reload)} />
+                  <CardInstallmentIntentPanel cards={cardRows} installments={installments} onChanged={() => refreshCardsAndProvisions(reload)} />
                   <ProvisionPanel
                     rows={cardRows}
                     provisions={provisions}
+                    installments={installments}
                     loading={provisionsLoading}
                     actionId={provisionActionId}
                     onPost={(expense) => void handleProvisionAction(expense, 'post', reload, setError)}

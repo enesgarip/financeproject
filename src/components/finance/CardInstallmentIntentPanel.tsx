@@ -7,8 +7,9 @@ import {
   insertCardInstallmentIntent,
 } from '../../data/repositories/cardInstallmentIntentsRepo'
 import { useBalancePrivacy } from '../../hooks/useBalancePrivacy'
-import type { Card, CardInstallmentIntent } from '../../types/database'
+import type { Card, CardInstallment, CardInstallmentIntent } from '../../types/database'
 import { installmentChoicesWith } from '../../utils/cardInstallmentCalendar'
+import { buildPlannedInstallmentHint } from '../../utils/installmentHorizon'
 import { parseNumber } from '../../utils/formatCurrency'
 import { isMissingSupabaseCapabilityError, missingSupabaseCapabilityMessage } from '../../utils/supabaseErrors'
 import { Button } from '../ui/button'
@@ -50,11 +51,13 @@ function remainingLabel(expiresAt: string, nowMs: number): string {
 
 type CardInstallmentIntentPanelProps = {
   cards: Card[]
+  /** Planlı taksitler: niyet formunda "aylık yükün X → Y olur" bağlamı için. */
+  installments?: CardInstallment[]
   /** Niyet tüketilmiş olabilir; provizyon listesi tazelensin. */
   onChanged?: () => Promise<void> | void
 }
 
-export function CardInstallmentIntentPanel({ cards, onChanged }: CardInstallmentIntentPanelProps) {
+export function CardInstallmentIntentPanel({ cards, installments = [], onChanged }: CardInstallmentIntentPanelProps) {
   const { user } = useAuth()
   const { formatAmount } = useBalancePrivacy()
   const [intents, setIntents] = useState<CardInstallmentIntent[]>([])
@@ -249,6 +252,18 @@ export function CardInstallmentIntentPanel({ cards, onChanged }: CardInstallment
             </label>
 
             <div className="sm:col-span-2">
+              {(() => {
+                // Karar anı bağlamı: beklenen tutar (üst sınır; yoksa alt sınır)
+                // girildiyse yeni planın aylık yüke etkisi burada görünür.
+                const estimate = maxAmount.trim() ? parseNumber(maxAmount) : minAmount.trim() ? parseNumber(minAmount) : null
+                const horizonHint = buildPlannedInstallmentHint(installments, { amount: estimate, count: installmentCount })
+                return horizonHint ? (
+                  <p className="mb-2 text-xs font-semibold tabular-nums text-ink">
+                    Bu planla aylık taksit yükün {formatAmount(horizonHint.baseMonthly)} →{' '}
+                    {formatAmount(horizonHint.newMonthly)} olur (~{formatAmount(horizonHint.perMonth)}/ay, {horizonHint.months} ay).
+                  </p>
+                ) : null
+              })()}
               <p className="mb-2 text-xs text-ink-muted">
                 Tutar aralığı vermek, niyetin yanlış bir işleme yapışmasını engeller: aynı gün yaptığın başka bir
                 harcamaya değil, beklediğin tutardakine uygulanır.

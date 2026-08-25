@@ -9,8 +9,8 @@ Kullanıcıyla kararlaştırılan sıra:
 1. ~~**PR-0 — hedef günlük fotoğrafı**~~ (DONE, aşağıda)
 2. ~~**Dönem içi tempo**~~ (DONE, aşağıda) — kartta "bu dönem ₺X · geçen dönem
    aynı gün ₺Y" (saf util + tek satır UI; nötr dil, sinyal rengi yok)
-3. **Taksit ufku** — taksit formlarında "aylık yükün ₺X→₺Y olur" + takvimde
-   "şu ay N taksit bitiyor, yük ₺Z azalır" (push MVP'de yok)
+3. ~~**Taksit ufku**~~ (DONE, aşağıda) — taksit formlarında "aylık yükün ₺X→₺Y
+   olur" + takvimde "şu ay N taksit bitiyor, yük ₺Z azalır" (push MVP'de yok)
 4. **Bütçe turu** — `avg_spend` (son 3 tam ay ort. × çarpan) + `salary_pct`
    çıpaları (çıpalı satırda `limit_amount` 0; #157 deseni), tek-tık ay devri
    şeridi (otomatik taşıma YOK — #159 çizgisi), bayat bütçe önerisi (medyan +
@@ -25,6 +25,18 @@ Kullanıcıyla kararlaştırılan sıra:
 Tura alınmayan, not edilen ekstralar: bütçe→hedef köprüsü (ay kapanışı artığını
 tek tıkla kovaya), abonelik radarı, ekstre tahmini ("kesilse ~₺X gelir").
 
+- ~~**PR-2 — taksit ufku.**~~ DONE. `utils/installmentHorizon.ts` (+6 test):
+  `buildPlannedInstallmentHint` (taban bilinçli ÖNÜMÜZDEKİ ay — cari ayın
+  taksitleri kısmen kesilmiş olabilir, yeni planın ilki de çoğunlukla sonraki
+  ekstreye düşer; count ≤ 1 ya da tutarsızsa susar) ve `findInstallmentReliefs`
+  (plan = card_expense_id grubu, bağsız satır kendi başına plan; bitiş = son
+  'scheduled' ay, düşüş = son ayın satır toplamı; geçmiş + 12 ay ufku dışı
+  elenir). Yalnız 'scheduled' sayılır (cardInstallmentCalendar gerekçesi) ve
+  dil "taksit yükü" der, "nakit yükü" DEMEZ (obligations kart taksitini nakitte
+  bilinçli 0 sayar — o muhasebeye karışılmaz). UI üç yuva: niyet formunda
+  beklenen tutarla (üst yoksa alt sınır) canlı ipucu, provizyon satırında
+  taksit seçiminin altında "₺X → ₺Y (N ay)", taksit takviminde "Yaklaşan
+  bitişler" bölümü (ilk 3). Push bilinçli YOK (MVP).
 - ~~**PR-1 — dönem içi tempo.**~~ DONE. `utils/statementPace.ts` (+7 test):
   `buildStatementPace` — cari dönem gün-N toplamı vs önceki dönemin AYNI
   gün-offset'i (offset kısa döneme kıstırılır — Şubat; iptal dışlanır;

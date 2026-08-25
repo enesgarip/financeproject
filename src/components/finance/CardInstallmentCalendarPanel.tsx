@@ -6,6 +6,8 @@ import { HelpTooltip, type HelpTooltipContent } from '../ui/help-tooltip'
 import { useBalancePrivacy } from '../../hooks/useBalancePrivacy'
 import type { Card, CardInstallment } from '../../types/database'
 import { buildCardInstallmentCalendar, buildCardInstallmentTotalsByCard } from '../../utils/cardInstallmentCalendar'
+import { dateInputValue } from '../../utils/date'
+import { findInstallmentReliefs } from '../../utils/installmentHorizon'
 
 type CardInstallmentCalendarPanelProps = {
   cards: Card[]
@@ -32,6 +34,12 @@ export function CardInstallmentCalendarPanel({ cards, installments, loading }: C
 
   const months = useMemo(() => buildCardInstallmentCalendar(creditInstallments, creditCards, 4), [creditCards, creditInstallments])
   const cardTotals = useMemo(() => buildCardInstallmentTotalsByCard(creditInstallments, creditCards), [creditCards, creditInstallments])
+  // Gün anahtarı memo'yu gün dönüşünde tazeler; tarih memo içinde o güne sabit.
+  const todayValue = dateInputValue(new Date())
+  const reliefs = useMemo(
+    () => findInstallmentReliefs(creditInstallments, { today: new Date(`${todayValue}T12:00:00`) }),
+    [creditInstallments, todayValue],
+  )
   const hasAny = months.some((month) => month.total > 0)
   const hasOngoingInstallments = cardTotals.total > 0
 
@@ -75,6 +83,24 @@ export function CardInstallmentCalendarPanel({ cards, installments, loading }: C
                 </div>
               ))}
             </div>
+          </section>
+        ) : null}
+        {/* Rahatlama yönü: hangi ay hangi planların SON taksiti düşüyor. */}
+        {!loading && reliefs.length > 0 ? (
+          <section className="rounded-xl bg-page p-3">
+            <p className="text-xs font-black uppercase text-ink-muted">Yaklaşan bitişler</p>
+            <ul className="mt-2 space-y-1.5">
+              {reliefs.slice(0, 3).map((relief) => (
+                <li key={relief.monthKey} className="flex min-w-0 items-center justify-between gap-3 text-xs">
+                  <span className="min-w-0 truncate font-semibold text-ink">
+                    <span className="capitalize">{relief.monthLabel}</span> · son taksit × {relief.count}
+                  </span>
+                  <span className="shrink-0 font-semibold tabular-nums text-ink-muted">
+                    sonrasında aylık yük <span className="font-black text-ink">{formatAmount(relief.monthlyDrop)}</span> azalır
+                  </span>
+                </li>
+              ))}
+            </ul>
           </section>
         ) : null}
         {loading ? (
