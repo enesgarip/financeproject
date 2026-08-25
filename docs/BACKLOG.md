@@ -2383,7 +2383,8 @@ Canlı uygulama + kod incelemesinden çıkan bulgular tek pakette kapatıldı:
   - `push-notify` Supabase Edge Function sends VAPID-signed Web Push notifications for tomorrow's planned payments, tomorrow's loan installments, 3-day card statement cut reminders, and Monday weekly summaries.
   - `notification_log` prevents duplicate user/type/reference sends, and stale 404/410 endpoints are removed from `push_subscriptions`.
   - GitHub Actions invokes the sender daily at 04:00 UTC (07:00 Turkey time).
-- Add Web Push v1.1 controls and observability.
+- ~~Add Web Push v1.1 controls and observability.~~ DONE (tüm alt maddeler kapandı;
+  üst satır işaretlenmemiş kalmıştı — 2026-08-25 temizliği).
   - ~~Add a "test bildirimi gönder" action from the notification settings UI.~~ DONE.
     - 2026-06-21: Bildirim ayar kartı mevcut browser aboneliğini Supabase kaydıyla self-heal eder; VAPID public key değişmişse cihaz aboneliğini yeniler. `push-notify` authenticated test mode, kullanıcının kendi endpoint'ine gerçek Web Push payload'u gönderir.
   - ~~Let the user enable/disable payment, loan installment, statement cut, and weekly summary notifications separately.~~ DONE (2026-07-29, Faz G/Madde 5): 4 tür toggle `notification_preferences`'te; edge fonksiyonu kapalı türü eler.
@@ -2569,7 +2570,13 @@ pattern'ler ve açık düzeltme planı yer alıyor.
   - JSON export/restore exists in Data Health, including a pre-restore safety backup.
   - CSV export exists; remaining import work is a guided CSV/manual mapping flow if that becomes useful.
 - Add stronger historical analytics for cash flow and debt trend.
+  - [2026-08-25 durumu] Büyük ölçüde karşılandı: AnalysisPage trend/servet
+    sekmeleri + günlük net değer fotoğrafları (`net_worth_snapshots`) +
+    `cashFlowForecast`. Madde yalnız somut bir eksik çıkarsa açılır.
 - Add better scenario planning around next-month and multi-month obligations.
+  - [2026-08-25 durumu] Büyük ölçüde karşılandı: `scenarioForecast` +
+    yükümlülük projeksiyonu (obligations) + Alsam-mı-Olur-mu akışı. Madde
+    yalnız somut bir eksik çıkarsa açılır.
 
 ## Suggested Next Tasks for Codex
 
