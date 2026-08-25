@@ -32,7 +32,12 @@ Kullanıcıyla kararlaştırılan sıra:
   (effective_date = ay başı); uygulama sayıyı kendiliğinden DEĞİŞTİRMEZ.
 - **E2 — bütçe→hedef köprüsü** (ayın son günlerinde bütçe artığını tek tıkla
   kovaya) — sırada.
-- **E3 — ekstre tahmini** ("kesilse ~₺X gelir") — sırada.
+- ~~**E3 — ekstre tahmini.**~~ DONE. `utils/statementEstimate.ts` (+3 test):
+  kesime ≤5 gün kala (purchaseTiming pencere disiplini) tahmin = dönem içi
+  kovası + o ekstre ayının planlı taksitleri; "~" dili bilinçli (bekleyen
+  provizyon ve faiz bilinemez, satır kesinlik vaat etmez). UI: kredi kartı
+  satırında "Dönem içi"nin altında `Kesim tahmini (N gün) ~₺X` CardDatum'u,
+  pencere dışında hiç görünmez.
 - **E4 — abonelik radarı** (önce mevcut `utils/subscriptions.ts` keşfi) — sırada.
 
 - ~~**PR-5 — maaş günü akışı.**~~ DONE (turun son maddesi — TUR TAMAM).

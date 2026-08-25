@@ -16,6 +16,7 @@ import { freshnessConfidence } from '../utils/dataConfidence'
 import { STALE_AFTER_DAYS } from '../utils/reconciliation'
 import { formatDate } from '../utils/date'
 import { cardPayableDebt } from '../utils/financeSummary'
+import { estimateStatementTotal } from '../utils/statementEstimate'
 import { buildStatementPace } from '../utils/statementPace'
 import { quickCardConsistencyScore } from '../utils/cardConsistency'
 import { bankBrandGradient, getBankBrand } from '../utils/bankBranding'
@@ -175,6 +176,14 @@ export function CreditAccountListCard({
         ? buildStatementPace(row, paceRows ?? [], new Date(`${todayValue}T12:00:00`))
         : null,
     [row, paceRows, todayValue],
+  )
+  // Kesime ≤5 gün kala "kapanırsa ekstre ~₺X" — sürpriz ekstre kalmasın.
+  const statementEstimate = useMemo(
+    () =>
+      row.card_type === 'kredi_karti'
+        ? estimateStatementTotal(row, installments, new Date(`${todayValue}T12:00:00`))
+        : null,
+    [row, installments, todayValue],
   )
 
   const handleCopyIban = useCallback(async () => {
@@ -336,6 +345,12 @@ export function CreditAccountListCard({
       <LineGroup className="mt-2">
         <CardDatum label="Kullanılabilir" value={formatAmount(stats.availableLimit)} tone="good" />
         <CardDatum label="Dönem içi" value={formatAmount(row.current_period_spending)} />
+        {statementEstimate ? (
+          <CardDatum
+            label={statementEstimate.daysToCut === 0 ? 'Kesim tahmini (bugün)' : `Kesim tahmini (${statementEstimate.daysToCut} gün)`}
+            value={`~${formatAmount(statementEstimate.amount)}`}
+          />
+        ) : null}
         <CardDatum label="Açık ekstre" value={formatAmount(displayedOpenStatementAmount)} tone={displayedOpenStatementAmount > 0 ? 'danger' : 'neutral'} />
         <CardDatum label="Gelecek taksit" value={formatAmount(scheduledInstallmentTotal)} />
         <CardDatum label="Son ödeme" value={formatShortDate(dueDate)} tone={displayedOpenStatementAmount > 0 ? 'warning' : 'neutral'} />
