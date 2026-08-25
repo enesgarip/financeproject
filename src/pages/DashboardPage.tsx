@@ -281,6 +281,13 @@ export function DashboardPage() {
   const [showDetails, setShowDetails] = useState(() => {
     try { return localStorage.getItem('dashboard-details') === '1' } catch { return false }
   })
+  // Lazy-mount (perf turu ertelemesi): detay katmanı kapalıyken 4 ağır panel
+  // (odak/hatırlatıcı/mutabakat/geçmiş) boşuna render + hesap yapıyordu.
+  // İçerik ilk açılışa dek hiç mount edilmez; bir kez açıldıysa toggle'lar
+  // yalnız CSS ile gizler (animasyon + panel içi durum korunur). Not: ilk
+  // açılış animasyonsuz düşebilir (mount ve open aynı frame) — kabul edildi.
+  const [detailsEverOpened, setDetailsEverOpened] = useState(showDetails)
+  if (showDetails && !detailsEverOpened) setDetailsEverOpened(true)
 
   const toggleDetails = useCallback(() => {
     setShowDetails((prev) => {
@@ -408,6 +415,7 @@ export function DashboardPage() {
         id={detailsPanelId}
         className={`dashboard-details-wrapper lg:col-span-12 ${showDetails ? 'dashboard-details-open' : ''}`}
       >
+        {detailsEverOpened ? (
         <div className="grid min-w-0 gap-5 lg:grid-cols-12 lg:items-start">
           {/* ─ Odak ve hatırlatıcılar ─ */}
           <div className="min-w-0 lg:col-span-12">
@@ -434,6 +442,7 @@ export function DashboardPage() {
             <HistorySection rows={data.transactionHistory} />
           </div>
         </div>
+        ) : null}
       </div>
       <FinancePaymentDrawer {...drawerProps} />
     </section>

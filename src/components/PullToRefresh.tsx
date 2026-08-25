@@ -25,14 +25,12 @@ export function PullToRefresh({ children }: { children: ReactNode }) {
           style={refreshing ? undefined : { transform: `rotate(${progress * 360}deg)`, opacity: progress }}
         />
       </div>
-      <div
-        style={{
-          transform: pullDistance > 0 ? `translateY(${pullDistance * 0.4}px)` : undefined,
-          transition: refreshing || pullDistance === 0 ? 'transform 0.2s ease' : 'none',
-        }}
-      >
-        {children}
-      </div>
+      {/* İçerik sarmalayıcı transform'u kaldırıldı (perf turu ertelemesi):
+          gösterge zaten `height` ile akışta yer açıp içeriği doğal itiyor —
+          translateY EK bir itmeydi (çift kayma) ve transform'lu ata, içerideki
+          sticky/fixed elemanların referans çerçevesini bozuyordu. Artık çekme
+          sırasında kompozit katman da oluşmaz. */}
+      {children}
     </>
   )
 }
