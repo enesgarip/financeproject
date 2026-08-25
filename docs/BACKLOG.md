@@ -105,9 +105,25 @@ liste köprüsü tek tık otomatik adla yazar.
   `clearPrefillOrigins`'a toplandı — bayat event id elle girişe yapışsaydı
   idempotens kaydı sessizce yutardı. Ölü `smsParser` aynası İLK UI tüketicisine
   kavuştu (2026-08-02 denetim bulgusunun kapanışı).
-- **PR G — Push çifti** (sırada): kesim makbuzu (migrationsız,
-  statements_enabled, 48 saat pencere) + SMS bekçisi (sms_alerts_enabled kolonu
-  + parse-sms'e SMS_OWNER_USER_ID damgası).
+- ~~**PR G — Push çifti.**~~ DONE (migration `20260826150000`).
+  (1) **Ekstre kesim makbuzu** (`card_statement_cut_receipt`,
+  statements_enabled'a bağlı — weekly'nin iki-tür emsali): kesim sabahı
+  "X ekstresi kesildi: ₺Y — Son ödeme: Z" push'u; veri `card_statement_archives`
+  created_at penceresinden (RPC dönüşü yalnız sayaç). Pencere bilinçli 48 saat:
+  applyPreferences sessiz saatte adayı dedupe'tan ÖNCE eler ve log'a yazılmaz —
+  dar pencere sessiz sabahtaki makbuzu sonsuza dek kaybederdi; dedupe archive.id
+  (çift gönderim imkânsız; elle kesilen ekstre de bir kez makbuz alır — kabul).
+  (2) **Tanınmayan SMS bekçisi** (`sms_failure_daily`, yeni sms_alerts_enabled):
+  son 26 saatte (cron gecikme tamponu) status='error' sms_log satırı varsa
+  "N SMS işlenemedi" günde TEK toplu push → /veri-sagligi/islemler. NULL user
+  satırları SMS_OWNER_USER_ID'ye sayılır (K18 deseni). (3) **parse-sms damgası:**
+  hata satırları artık sahip user_id'siyle yazılır — RLS (20260718121000)
+  damgasızı gizliyordu, push'un açtığı panel boş kalırdı. (4) Bonus: parse-sms'te
+  ÖNCEDEN VAR OLAN deno-check tip hatası düzeltildi (`parsed.type === 'account'`
+  daraltma guard'ı — CI deno koşmadığı için sessizdi). İki edge fn deno check
+  temiz; tercih zinciri 4 aynada güncel (edge tip+select, TS tipi, DEFAULT +
+  eşleme + test, NotificationSettings toggle). Gerçek gönderim deploy sonrası
+  workflow_dispatch ile gözlemlenecek.
 - **PR H — Gelecek 3 Ekstre** (sırada): statementProjection.ts; k=0'da abonelik
   eklenmez (çift sayma), tempo toplam dışı ayrı satır.
 

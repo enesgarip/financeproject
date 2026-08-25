@@ -15,6 +15,7 @@ export type NotificationTypeKey =
   | 'cars_enabled'
   | 'provisions_enabled'
   | 'goals_enabled'
+  | 'sms_alerts_enabled'
 
 export const DEFAULT_NOTIFICATION_PREFERENCES = {
   payments_enabled: true,
@@ -24,6 +25,7 @@ export const DEFAULT_NOTIFICATION_PREFERENCES = {
   cars_enabled: true,
   provisions_enabled: true,
   goals_enabled: true,
+  sms_alerts_enabled: true,
   quiet_hours_start: null as number | null,
   quiet_hours_end: null as number | null,
 }
@@ -36,6 +38,7 @@ export function notificationTypeToPrefKey(notificationType: string): Notificatio
     case 'loan_installment_due_tomorrow':
       return 'loans_enabled'
     case 'card_statement_cut_3d':
+    case 'card_statement_cut_receipt':
       return 'statements_enabled'
     case 'weekly_summary':
     case 'reconciliation_stale_weekly':
@@ -46,6 +49,8 @@ export function notificationTypeToPrefKey(notificationType: string): Notificatio
       return 'provisions_enabled'
     case 'goal_contribution_due':
       return 'goals_enabled'
+    case 'sms_failure_daily':
+      return 'sms_alerts_enabled'
     default:
       return null // bilinmeyen/test türü kapıya takılmaz
   }

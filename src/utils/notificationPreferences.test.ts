@@ -14,6 +14,7 @@ const allOn = {
   cars_enabled: true,
   provisions_enabled: true,
   goals_enabled: true,
+  sms_alerts_enabled: true,
 }
 
 describe('notificationTypeToPrefKey', () => {
@@ -21,9 +22,12 @@ describe('notificationTypeToPrefKey', () => {
     expect(notificationTypeToPrefKey('payment_due_tomorrow')).toBe('payments_enabled')
     expect(notificationTypeToPrefKey('loan_installment_due_tomorrow')).toBe('loans_enabled')
     expect(notificationTypeToPrefKey('card_statement_cut_3d')).toBe('statements_enabled')
+    // Makbuz aynı anahtara bağlanır (weekly_enabled'ın iki türü kapsaması emsali).
+    expect(notificationTypeToPrefKey('card_statement_cut_receipt')).toBe('statements_enabled')
     expect(notificationTypeToPrefKey('goal_contribution_due')).toBe('goals_enabled')
     expect(notificationTypeToPrefKey('weekly_summary')).toBe('weekly_enabled')
     expect(notificationTypeToPrefKey('reconciliation_stale_weekly')).toBe('weekly_enabled')
+    expect(notificationTypeToPrefKey('sms_failure_daily')).toBe('sms_alerts_enabled')
     expect(notificationTypeToPrefKey('test')).toBeNull()
   })
 })

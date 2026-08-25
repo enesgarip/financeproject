@@ -107,6 +107,27 @@ type StatementArchiveRow = {
   period_month: number
 }
 
+// Kesim makbuzu: bugün/dün kesilen ekstrenin kesinleşen rakamı + vadesi.
+type CutReceiptRow = {
+  id: string
+  user_id: string
+  card_id: string
+  statement_date: string
+  due_date: string | null
+  statement_debt_amount: number | string
+}
+
+type CardLabelRow = {
+  id: string
+  bank_name: string
+  card_name: string
+}
+
+type SmsLogRow = {
+  id: string
+  user_id: string | null
+}
+
 type ReconcilableCardRow = {
   id: string
   user_id: string
@@ -180,6 +201,7 @@ type NotificationPreferenceRow = {
   cars_enabled: boolean
   provisions_enabled: boolean
   goals_enabled: boolean
+  sms_alerts_enabled: boolean
   quiet_hours_start: number | null
   quiet_hours_end: number | null
 }
@@ -192,6 +214,7 @@ type PreferenceFlagKey =
   | 'cars_enabled'
   | 'provisions_enabled'
   | 'goals_enabled'
+  | 'sms_alerts_enabled'
 
 // src/utils/notificationPreferences.ts ikizleri (Deno import edemez; testli mantık orada).
 function notificationTypeToPrefKey(notificationType: string): PreferenceFlagKey | null {
@@ -201,6 +224,7 @@ function notificationTypeToPrefKey(notificationType: string): PreferenceFlagKey 
     case 'loan_installment_due_tomorrow':
       return 'loans_enabled'
     case 'card_statement_cut_3d':
+    case 'card_statement_cut_receipt':
       return 'statements_enabled'
     case 'weekly_summary':
     case 'reconciliation_stale_weekly':
@@ -211,6 +235,8 @@ function notificationTypeToPrefKey(notificationType: string): PreferenceFlagKey 
       return 'provisions_enabled'
     case 'goal_contribution_due':
       return 'goals_enabled'
+    case 'sms_failure_daily':
+      return 'sms_alerts_enabled'
     default:
       return null
   }
@@ -744,7 +770,7 @@ function applyPreferences(
 async function loadPreferences(db: RestClient, userIds: string[]): Promise<Map<string, NotificationPreferenceRow>> {
   if (userIds.length === 0) return new Map()
   const rows = await db.select<NotificationPreferenceRow>('notification_preferences', {
-    select: 'user_id,payments_enabled,loans_enabled,statements_enabled,weekly_enabled,cars_enabled,provisions_enabled,goals_enabled,quiet_hours_start,quiet_hours_end',
+    select: 'user_id,payments_enabled,loans_enabled,statements_enabled,weekly_enabled,cars_enabled,provisions_enabled,goals_enabled,sms_alerts_enabled,quiet_hours_start,quiet_hours_end',
     user_id: inFilter(userIds),
   })
   return new Map(rows.map((row) => [row.user_id, row]))
@@ -1240,6 +1266,80 @@ async function loadCandidates(
           body: 'Bankadaki gerçek rakamla karşılaştır; fark varsa tek tıkla düzelt.',
           url: '/veri-sagligi',
           tag: `reconciliation-stale-${weekStartIso}`,
+        },
+      })
+    }
+  }
+
+  // Ekstre kesim makbuzu: aynı sabah (cron 07:00) ya da bir önceki gün kesilen
+  // ekstrenin KESİNLEŞEN tutarı + vadesi. Pencere bilinçli 48 saat:
+  // applyPreferences sessiz saatte adayı dedupe'tan ÖNCE eler ve elenen aday
+  // notification_log'a yazılmaz — dar "bugün" penceresi sessiz sabahtaki
+  // makbuzu sonsuza dek kaybederdi; dedupe archive.id olduğundan çift gönderim
+  // zaten imkânsız. (Elle kesilen ekstre de bir kez makbuz alır — kabul.)
+  const receiptWindowStart = `${addDaysIso(todayIso, -1)}T00:00:00+03:00`
+  const cutArchives = await db.select<CutReceiptRow>('card_statement_archives', {
+    select: 'id,user_id,card_id,statement_date,due_date,statement_debt_amount',
+    user_id: userFilter,
+    created_at: `gte.${receiptWindowStart}`,
+  })
+  if (cutArchives.length > 0) {
+    const receiptCardIds = Array.from(new Set(cutArchives.map((row) => row.card_id)))
+    const receiptCards = await db.select<CardLabelRow>('cards', {
+      select: 'id,bank_name,card_name',
+      id: inFilter(receiptCardIds),
+    })
+    const receiptCardsById = new Map(receiptCards.map((card) => [card.id, card]))
+
+    for (const archive of cutArchives) {
+      const card = receiptCardsById.get(archive.card_id)
+      const cardLabel = card ? `${card.bank_name} ${card.card_name}`.trim() : 'Kart'
+      candidates.push({
+        userId: archive.user_id,
+        notificationType: 'card_statement_cut_receipt',
+        referenceId: archive.id,
+        payload: {
+          title: `${cardLabel} ekstresi kesildi: ${formatTL(archive.statement_debt_amount)} ₺`,
+          body: archive.due_date
+            ? `Son ödeme: ${archive.due_date.split('-').reverse().join('.')}`
+            : 'Son ödeme tarihi kartta tanımlı değil.',
+          url: '/kartlar?section=ekstreler',
+          tag: `statement-cut-receipt-${archive.id}`,
+        },
+      })
+    }
+  }
+
+  // Tanınmayan SMS bekçisi: işlenemeyen SMS sessiz veri kaybıdır (harcama karta
+  // düşmez, dönem içi kova ve ekstre tahmini gerçeğin altında kalır). Günde en
+  // fazla TEK toplu bildirim (referenceId gün bazlı). user_id NULL satırlar
+  // (format tanınamadı / kart alias'ı yok) tek-kullanıcı sınırındaki
+  // SMS_OWNER_USER_ID'ye sayılır (parse-sms K18 deseni); env tanımsızsa o
+  // satırlar aday üretmez. 26 saat = 24 + cron gecikme tamponu.
+  const smsWindowStart = new Date(Date.now() - 26 * 3_600_000).toISOString()
+  const smsErrors = await db.select<SmsLogRow>('sms_log', {
+    select: 'id,user_id',
+    status: 'eq.error',
+    created_at: `gte.${smsWindowStart}`,
+  })
+  if (smsErrors.length > 0) {
+    const smsOwner = Deno.env.get('SMS_OWNER_USER_ID') ?? null
+    const countsByUser = new Map<string, number>()
+    for (const row of smsErrors) {
+      const target = row.user_id ?? smsOwner
+      if (!target || !userIds.includes(target)) continue
+      countsByUser.set(target, (countsByUser.get(target) ?? 0) + 1)
+    }
+    for (const [userId, count] of countsByUser) {
+      candidates.push({
+        userId,
+        notificationType: 'sms_failure_daily',
+        referenceId: `sms-errors:${todayIso}`,
+        payload: {
+          title: `${count} SMS işlenemedi`,
+          body: 'Son 24 saatte işlenemeyen banka SMS’i var; ayrıntılar işlem kayıtlarında.',
+          url: '/veri-sagligi/islemler',
+          tag: `sms-errors-${todayIso}`,
         },
       })
     }

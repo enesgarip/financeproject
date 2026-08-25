@@ -373,9 +373,16 @@ Deno.serve(async (req: Request) => {
     : req.headers.get('x-source-event-id')?.trim()
 
   // SMS'i parse et (DenizBank kart/hesap + Yapı Kredi kart)
+  // Hata satırlarına da sahip damgası: RLS yalnız kendi user_id'li satırları
+  // gösterir (20260718121000) — damgasız hata satırı SmsLogPanel'de GÖRÜNMEZ
+  // ve sms_failure_daily push'unun açtığı ekran boş kalırdı. Tek-kullanıcı
+  // sınırı zaten K18'in SMS_OWNER_USER_ID'si.
+  const logOwnerUserId = env('SMS_OWNER_USER_ID')?.trim() || null
+
   const parsed = parseSms(smsText)
   if (!parsed) {
     await logSms(supabaseUrl, headers, {
+      userId: logOwnerUserId,
       smsType: 'unrecognized',
       status: 'error',
       errorMessage: 'SMS formatı tanınamadı.',
@@ -384,9 +391,14 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({ error: 'SMS formatı tanınamadı.', sms: smsText.slice(0, 100) }, 422)
   }
 
-  if (accountSmsNeedsExternalEventId(parsed) && !callerEventId) {
+  // `parsed.type === 'account'` guard'ı TS daraltması için: fonksiyon içeride
+  // aynı kontrolü yapar ama tip sistemi bunu göremiyordu (deno check'te
+  // counterparty hatası — düzeltmeden önce de vardı, CI deno koşmadığı için
+  // sessiz kalmıştı). Davranış birebir.
+  if (parsed.type === 'account' && accountSmsNeedsExternalEventId(parsed) && !callerEventId) {
     const errorMessage = 'Saniyesiz hesap SMS’i için kararlı eventId zorunludur.'
     await logSms(supabaseUrl, headers, {
+      userId: logOwnerUserId,
       smsType: 'account_movement',
       status: 'error',
       errorMessage,
@@ -421,6 +433,7 @@ async function handleCardSms(
   const aliasRes = await fetch(aliasUrl, { headers })
   if (!aliasRes.ok) {
     await logSms(supabaseUrl, headers, {
+      userId: env('SMS_OWNER_USER_ID')?.trim() || null,
       smsType: 'card_expense',
       status: 'error',
       errorMessage: 'Kart sorgusu başarısız.',
@@ -447,6 +460,7 @@ async function handleCardSms(
 
   if (scopedAliases.length === 0) {
     await logSms(supabaseUrl, headers, {
+      userId: ownerUserId,
       smsType: 'card_expense',
       status: 'error',
       errorMessage: `Son 4 hanesi "${parsed.lastFour}" olan kart takma adı bulunamadı.`,
@@ -464,6 +478,7 @@ async function handleCardSms(
   if (distinctUserIds.size > 1) {
     const errorMessage = `Son 4 hanesi "${parsed.lastFour}" birden çok kullanıcının kartıyla eşleşiyor; SMS_OWNER_USER_ID tanımlayın.`
     await logSms(supabaseUrl, headers, {
+      userId: ownerUserId,
       smsType: 'card_expense',
       status: 'error',
       errorMessage,
@@ -558,6 +573,7 @@ async function handleAccountSms(
   if (!rpcRes.ok) {
     const errBody = await rpcRes.text()
     await logSms(supabaseUrl, headers, {
+      userId: ownerUserId,
       smsType: 'account_movement',
       status: 'error',
       errorMessage: `Hesap hareketi kaydedilemedi: ${errBody}`,
