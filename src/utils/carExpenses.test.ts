@@ -184,6 +184,46 @@ describe('buildCarSummaries', () => {
     expect(fuel.litersPer100Km).toBeNull()
     expect(fuel.costPerKm).toBeNull()
   })
+
+  it('dolum bazlı ₺/lt serisini eski→yeni üretir; litresiz satır seriye girmez', () => {
+    const manual = [
+      makeManual({ id: 'm1', car_id: 'car1', amount: 1000, spent_at: '2026-08-01', fuel_liters: 42.5 }),
+      makeManual({ id: 'm2', car_id: 'car1', amount: 900, spent_at: '2026-08-10' }), // litresiz — seri dışı
+      makeManual({ id: 'm3', car_id: 'car1', amount: 1200, spent_at: '2026-08-15', fuel_liters: 45 }),
+    ]
+    const fuel = buildCarSummaries(cars, manual, [], new Date('2026-08-20')).find((s) => s.car.id === 'car1')!.fuel
+    // 1000/42,5 = 23,53 (roundTL 2 hane), 1200/45 = 26,67.
+    expect(fuel.unitPrices).toEqual([
+      { date: '2026-08-01', pricePerLiter: 23.53 },
+      { date: '2026-08-15', pricePerLiter: 26.67 },
+    ])
+    expect(fuel.lastFillup).toEqual({ date: '2026-08-15', pricePerLiter: 26.67 })
+  })
+
+  it('3 ay medyan kıyası: pencere dışı dolum medyana girmez, seride kalır', () => {
+    const manual = [
+      // 90 gün penceresinin dışında (Nisan) — medyana girmez.
+      makeManual({ id: 'm0', car_id: 'car1', amount: 300, spent_at: '2026-04-01', fuel_liters: 10 }),
+      makeManual({ id: 'm1', car_id: 'car1', amount: 400, spent_at: '2026-07-01', fuel_liters: 10 }), // 40/lt
+      makeManual({ id: 'm2', car_id: 'car1', amount: 420, spent_at: '2026-08-01', fuel_liters: 10 }), // 42/lt
+      makeManual({ id: 'm3', car_id: 'car1', amount: 480, spent_at: '2026-08-15', fuel_liters: 10 }), // 48/lt
+    ]
+    const fuel = buildCarSummaries(cars, manual, [], new Date('2026-08-20')).find((s) => s.car.id === 'car1')!.fuel
+    expect(fuel.unitPrices).toHaveLength(4)
+    // Penceredeki medyan(40, 42, 48) = 42; son dolum 48 → %14 üstünde.
+    expect(fuel.medianPricePerLiter3m).toBe(42)
+    expect(fuel.lastVsMedianPct).toBe(14)
+  })
+
+  it('pencerede 2 fiyatlı dolum yoksa kıyas uydurmaz', () => {
+    const manual = [
+      makeManual({ id: 'm1', car_id: 'car1', amount: 400, spent_at: '2026-08-15', fuel_liters: 10 }),
+    ]
+    const fuel = buildCarSummaries(cars, manual, [], new Date('2026-08-20')).find((s) => s.car.id === 'car1')!.fuel
+    expect(fuel.lastFillup?.pricePerLiter).toBe(40)
+    expect(fuel.medianPricePerLiter3m).toBeNull()
+    expect(fuel.lastVsMedianPct).toBeNull()
+  })
 })
 
 describe('carReminderState', () => {

@@ -79,8 +79,17 @@ liste köprüsü tek tık otomatik adla yazar.
   önler, tutar değişince buton döner. Snapshot sorgu anahtarı paylaşılan sabite
   çıktı (`app/savingsGoalSnapshotsKey.ts`; SavingsGoalsPanel +
   useDailyNetWorthSnapshot aynı sabiti kullanır).
-- **PR E — Yakıt Fiyat Şeridi** (sırada): ₺/lt serisi (min-max normalize) +
-  3 ay medyan kıyası (±%2 "medyanla aynı"; <2 dolumda susar).
+- ~~**PR E — Yakıt Fiyat Şeridi.**~~ DONE. `carExpenses.ts` (+3 test):
+  `CarFuelSummary`'ye `unitPrices` (dolum bazlı ₺/lt, eski→yeni; litresiz/0
+  satır seri dışı), `lastFillup`, `medianPricePerLiter3m` (90 gün penceresi,
+  <2 fiyatlı dolumda null — kıyas uydurulmaz), `lastVsMedianPct`;
+  `buildFuelSummary` today enjeksiyonu aldı (test edilebilirlik). ₺/lt bilinçli
+  para-DIŞI oran (roundTL yalnız 2 hane display — L/100km konvansiyonu; yerinde
+  yorumlu). UI: Yakıt karnesi bloğunda "Son dolum ₺X/lt — 3 ay medyanının %Y
+  üstünde/altında" (±%2 "medyanla aynı") + min-max normalize mini bar serisi
+  (0-tabanlı ölçek 42→45 farkını gösteremezdi; kesin değer yandaki cümlede;
+  mevcut aylık maliyet barı da kaldı). Bilinçli kabul: fişte yakıt-dışı kalem
+  ₺/lt'yi şişirir — medyan seriyi korur, tek fiş yalnız manşeti oynatır.
 - **PR F — Panodan doldur** (sırada): clipboardExpense.ts; kart SMS'i
   source='sms' + aynı hash → webhook'la çift yönlü DB dedupe bedava.
 - **PR G — Push çifti** (sırada): kesim makbuzu (migrationsız,

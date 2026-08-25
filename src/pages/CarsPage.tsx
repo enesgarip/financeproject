@@ -680,6 +680,11 @@ function CarSummaryCard({
   const { car, total, thisMonthTotal, yearTotal, previousYearTotal, costPerDay, fuel, categories, entries } = summary
   const currentYear = new Date().getFullYear()
   const fuelTrendMaxCost = fuel.months.reduce((max, row) => Math.max(max, row.cost), 1)
+  // ₺/lt serisi min-max normalize edilir: pompa fiyatı dar bantta gezer
+  // (42→45), 0-tabanlı ölçek farkı görünmez yapardı. Kesin değer yandaki cümlede.
+  const unitPriceView = fuel.unitPrices.slice(-8)
+  const unitPriceMin = unitPriceView.reduce((min, row) => Math.min(min, row.pricePerLiter), Infinity)
+  const unitPriceMax = unitPriceView.reduce((max, row) => Math.max(max, row.pricePerLiter), 0)
 
   return (
     <Card>
@@ -721,6 +726,38 @@ function CarSummaryCard({
                   <div><p className="text-xs text-ink-muted">L / 100 km</p><p className="font-semibold tabular-nums">{fuel.litersPer100Km ?? '—'}</p></div>
                   <div><p className="text-xs text-ink-muted">TL / km</p><p className="font-semibold tabular-nums">{fuel.costPerKm ?? '—'}</p></div>
                 </div>
+                {fuel.lastFillup ? (
+                  <p className="mt-3 text-xs text-ink-muted">
+                    Son dolum {formatCurrency(fuel.lastFillup.pricePerLiter)}/lt
+                    {fuel.lastVsMedianPct != null
+                      ? Math.abs(fuel.lastVsMedianPct) <= 2
+                        ? ' — 3 ay medyanıyla aynı seviyede'
+                        : ` — 3 ay medyanının %${Math.abs(fuel.lastVsMedianPct)} ${fuel.lastVsMedianPct > 0 ? 'üstünde' : 'altında'}`
+                      : ''}
+                  </p>
+                ) : null}
+                {unitPriceView.length > 1 ? (
+                  <div className="mt-2 flex items-end gap-1" aria-label="₺/litre birim fiyat trendi">
+                    {unitPriceView.map((row, index) => (
+                      <div key={`${row.date}-${index}`} className="flex flex-1 flex-col items-center gap-1">
+                        {index === unitPriceView.length - 1 ? (
+                          <span className="text-[10px] tabular-nums text-ink-muted">{formatCurrency(row.pricePerLiter)}/lt</span>
+                        ) : null}
+                        <div
+                          className="w-full rounded-t bg-success/60"
+                          style={{
+                            height: `${Math.round(
+                              10 +
+                                (unitPriceMax > unitPriceMin
+                                  ? ((row.pricePerLiter - unitPriceMin) / (unitPriceMax - unitPriceMin)) * 38
+                                  : 19),
+                            )}px`,
+                          }}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
                 {fuel.months.length > 1 ? <div className="mt-3 flex items-end gap-2" aria-label="Aylık yakıt trendi">{fuel.months.slice(0, 6).reverse().map((month) => <div key={month.month} className="flex flex-1 flex-col items-center gap-1"><span className="text-[10px] tabular-nums text-ink-muted">{formatCurrency(month.cost)}</span><div className="w-full rounded-t bg-primary/70" style={{ height: `${Math.max(8, (month.cost / fuelTrendMaxCost) * 64)}px` }} /><span className="text-[10px] text-ink-muted">{month.month.slice(5)}</span></div>)}</div> : null}
               </div>
             ) : null}
