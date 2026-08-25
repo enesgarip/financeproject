@@ -104,8 +104,19 @@ iş / bilinçli-park. Dilim dilim kapanıyor:
   adımda kullanıcı ister: yedeği çözmek `BACKUP_PASSPHRASE`, adım 6 üretim
   parolasıyla giriş — ikisi de ajanın giremeyeceği sırlar. Komutlar
   `docs/RESTORE_DRILL.md`'de hazır; kullanıcı koşunca sonuç tablosuna satır.
+- ~~**Dashboard lazy-mount + PullToRefresh transform.**~~ PARK AÇILDI ve
+  TAMAMLANDI: (1) detay katmanı kapalıyken 4 ağır panel
+  (odak/hatırlatıcı/mutabakat/geçmiş) render + hesap yapıyordu — içerik ilk
+  açılışa dek mount edilmez, bir kez açıldıysa toggle CSS ile gizler (panel
+  durumu + animasyon korunur; aria-controls hedefi boş wrapper olarak hep
+  DOM'da). (2) PullToRefresh'in içerik translateY'si kaldırıldı: gösterge
+  `height`'ı zaten yer açıp içeriği doğal itiyordu (çift kayma) ve
+  transform'lu ata sticky/fixed referansını bozuyordu. Görsel doğrulama:
+  kapalıda panel children=0 / "Mutabakat" metni yok, aç-kapa aria+mount
+  davranışı doğru; mobil touch simülasyonunda gösterge 105px yer açtı,
+  içerikte PullToRefresh kaynaklı transform kalmadı.
 - **Bilinçli PARK (bu turda yapılmayacak, gerekçesi yerinde):** CrudPage→TanStack
-  (10+ sayfa, ayrı tur), Dashboard lazy-mount+PullToRefresh (görsel/a11y turu),
+  (10+ sayfa, ayrı tur),
   transaksiyonel restore protokolü (KNOWN_RISKS #6 — ayrı büyük tasarım),
   T1 RPC-only (önce security-definer geçişi, ayrı güvenlik dilimi), indeks
   budaması (üretim `pg_stat_user_indexes` ölçümü ister), SI-04 yeni banka
