@@ -9,6 +9,7 @@ import { addCardExpense, fetchRecentCardExpenses, recordCardInstallmentCarryover
 import { fetchCars } from '../data/repositories/carsRepo'
 import type { Car, Card, CardExpense, CardExpenseStatus } from '../types/database'
 import { buildRepeatSuggestions, type RepeatSuggestion } from '../utils/expenseRepeat'
+import { buildCardTimingChoices } from '../utils/cardTimingChoice'
 import { expenseCategoryOptions } from '../utils/categories'
 import { getCardStatementPeriod } from '../utils/cardStatement'
 import { buildPurchaseTimingHint } from '../utils/purchaseTiming'
@@ -89,6 +90,12 @@ export function QuickExpensePanel({
     () => (isCarryover ? null : buildPurchaseTimingHint(selectedCard, new Date(`${previewDate}T00:00:00`))),
     [selectedCard, previewDate, isCarryover],
   )
+  // Kartlar arası kıyas çipleri. Manuel useMemo YOK: React Compiler bu deseni
+  // kendisi memo'lar; gün anahtarlı elle memo burada compiler'ın
+  // preserve-manual-memoization kapısına takılıyor (list.tsx'teki emsalden
+  // farklı olarak araya türetilmiş state giriyor). Hesap kart sayısıyla
+  // doğrusal ve ucuz.
+  const timingChoices = buildCardTimingChoices(cards, parsedAmount, new Date(`${dateInputValue(new Date())}T00:00:00`))
   // Banka hesabında bakiye aşımı: MovementModal aynı hesap için gönderimi
   // engelliyordu, burada 0'a kırpılıp sessizce geçiyordu → aynı hesap iki kural.
   // Artık tek kural: sunucu reddetmeden önce kullanıcı görür ve gönderemez.
@@ -403,6 +410,42 @@ export function QuickExpensePanel({
               ))}
             </select>
           </label>
+          {timingChoices.length > 0 ? (
+            <div role="group" aria-label="Kartlar arası son ödeme kıyası" className="flex flex-wrap gap-1.5">
+              {timingChoices.map((choice) => (
+                <button
+                  key={choice.cardId}
+                  type="button"
+                  onClick={() => {
+                    setCardId(choice.cardId)
+                    setLastUsed('expenseCard', choice.cardId)
+                    setLocalError('')
+                  }}
+                  aria-pressed={activeCardId === choice.cardId}
+                  title={
+                    choice.hasSchedule
+                      ? `Bugün alırsan ilk ödeme ~${choice.daysUntilDue} gün sonra${choice.fitsLimit ? '' : ' · kullanılabilir limit bu tutara yetmiyor'}`
+                      : 'Kesim/son ödeme günü kartta tanımlı değil'
+                  }
+                  className={[
+                    'tap-target inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition',
+                    activeCardId === choice.cardId
+                      ? 'border-primary/50 bg-primary/10 text-ink'
+                      : 'border-line-strong bg-raised text-ink hover:border-success/40',
+                    choice.fitsLimit ? '' : 'opacity-45',
+                  ]
+                    .filter(Boolean)
+                    .join(' ')}
+                >
+                  <span className="max-w-[8rem] truncate">{choice.label}</span>
+                  <span className="tabular-nums text-ink-muted">
+                    {choice.hasSchedule ? `~${choice.daysUntilDue} gün` : 'gün eksik'}
+                  </span>
+                  {choice.isBest ? <span className="font-bold text-success">en geç</span> : null}
+                </button>
+              ))}
+            </div>
+          ) : null}
           <div className="grid grid-cols-[minmax(0,0.72fr)_minmax(0,1.28fr)] gap-2.5">
             <MoneyInput
               label={canUseInstallments && paymentMode === 'installment' ? 'Toplam tutar' : 'TL'}

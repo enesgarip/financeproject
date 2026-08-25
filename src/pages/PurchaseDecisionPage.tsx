@@ -6,7 +6,9 @@ import { readSafeToSpendBuffer, useKasaReserved } from '../hooks/useSafeToSpend'
 import { Card, CardContent } from '../components/ui/card'
 import { Input } from '../components/ui/input'
 import { QueryError } from '../components/ui/query-error'
+import { buildCardTimingChoices } from '../utils/cardTimingChoice'
 import { buildCashFlowForecast } from '../utils/cashFlowForecast'
+import { dateInputValue } from '../utils/date'
 import { buildMonthlyCashFlow, buildFinancialPosition } from '../utils/financeSummary'
 import { buildPurchaseImpact, type PurchasePaymentMethod, type PurchaseVerdict } from '../utils/purchaseImpact'
 import { buildSafeToSpend } from '../utils/safeToSpend'
@@ -88,6 +90,16 @@ export function PurchaseDecisionPage() {
 
   const verdict = impact ? VERDICT_PRESENTATION[impact.verdict] : null
 
+  // Kartlar arası kesim kıyası — SALT BİLGİ: purchaseImpact'in "ilk taksit bir
+  // sonraki ay" modeli değişmez, çipler yalnız hangi kartın ödemeyi en geç
+  // yaptıracağını gösterir. Gün anahtarıyla memo (tuş başına Date hesabı yok).
+  const todayKey = dateInputValue(new Date())
+  const timingChoices = useMemo(() => {
+    const cards = snapshotQuery.data?.cards
+    if (!cards || method !== 'card') return []
+    return buildCardTimingChoices(cards, amount, new Date(`${todayKey}T00:00:00`))
+  }, [snapshotQuery.data, method, amount, todayKey])
+
   return (
     <section className="mx-auto min-w-0 max-w-xl space-y-4">
       <p className="text-[13px] text-ink-muted">
@@ -166,6 +178,38 @@ export function PurchaseDecisionPage() {
                 </button>
               ))}
             </div>
+            {timingChoices.length > 0 ? (
+              <div className="mt-2">
+                <p className="text-[11px] text-ink-muted">Bugün alırsan ilk ödemeye kalan gün (kart bazında, sonucu değiştirmez):</p>
+                <div className="mt-1.5 flex flex-wrap gap-1.5">
+                  {timingChoices.map((choice) => (
+                    <span
+                      key={choice.cardId}
+                      title={
+                        choice.hasSchedule
+                          ? choice.fitsLimit
+                            ? undefined
+                            : 'Kullanılabilir limit bu tutara yetmiyor'
+                          : 'Kesim/son ödeme günü kartta tanımlı değil'
+                      }
+                      className={[
+                        'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold',
+                        choice.isBest ? 'border-success/40 bg-success/8 text-ink' : 'border-line-strong bg-raised text-ink',
+                        choice.fitsLimit ? '' : 'opacity-45',
+                      ]
+                        .filter(Boolean)
+                        .join(' ')}
+                    >
+                      <span className="max-w-[7rem] truncate">{choice.label}</span>
+                      <span className="tabular-nums text-ink-muted">
+                        {choice.hasSchedule ? `~${choice.daysUntilDue} gün` : 'gün eksik'}
+                      </span>
+                      {choice.isBest ? <span className="font-bold text-success">en geç</span> : null}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ) : null}
           </div>
         </CardContent>
       </Card>

@@ -27,9 +27,18 @@ liste köprüsü tek tık otomatik adla yazar.
   kapalı plan/delta/runway sınırları). Yerel docker + seed ile canlı doğrulama:
   payoff 101.750 = 11 bekleyen taksit; rozet −55.500 = −101.750 + ufuktaki 5
   kaçınılan taksit; şok kombinasyonu ve runway kayması birebir.
-- **PR B — Hangi Kartla? çipleri** (sırada): `cardTimingChoice.ts` + hızlı
-  harcama formu + Alsam mı? salt-bilgi çipleri; kullanılabilir limit ortak-limit
-  grubundan.
+- ~~**PR B — Hangi Kartla? çipleri.**~~ DONE. Yeni `utils/cardTimingChoice.ts`
+  (+6 test): `buildCardTimingChoices` — kredi kartlarını `buildPurchaseTimingHint`
+  ile kart başına "bugün alırsan ~N gün sonra ödersin"e çevirip kıyaslar; en geç
+  ödeten geçerli kart `isBest` (eşitlikte kullanılabilir limiti büyük olan),
+  kullanılabilir limit ortak-limit GRUBUNDAN (`buildCreditLimitGroups.available`
+  — kartın kendi limiti ortak grupta yanlış olurdu), tutarı karşılamayan soluk
+  (`fitsLimit=false`), günü eksik kart kıyas dışı ama listede (`hasSchedule`),
+  tek kredi kartında şerit susar. İki yüzey: hızlı harcama formunda kart
+  seçicisinin altında TIKLANabilir çipler (tık kartı seçer, lastUsed günceller);
+  Alsam mı?'da "Nasıl" bloğunun altında SALT BİLGİ çipleri (purchaseImpact'in
+  "ilk taksit bir sonraki ay" modeli bilinçli değişmedi). İki yüzeyde de gün
+  anahtarlı memo (tuş başına Date hesabı yok).
 - **PR C — Davranışsal temel** (sırada): paylaşılan query-key sabitleri +
   Bekleme Kuralı + Karar–Liste köprüsü + Emek Çevirisi.
 - **PR D — Vazgeçme Kazancı** (sırada): contribute_to_goal_bucket + goalEta
