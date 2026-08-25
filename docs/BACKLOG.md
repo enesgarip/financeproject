@@ -90,8 +90,21 @@ liste köprüsü tek tık otomatik adla yazar.
   (0-tabanlı ölçek 42→45 farkını gösteremezdi; kesin değer yandaki cümlede;
   mevcut aylık maliyet barı da kaldı). Bilinçli kabul: fişte yakıt-dışı kalem
   ₺/lt'yi şişirir — medyan seriyi korur, tek fiş yalnız manşeti oynatır.
-- **PR F — Panodan doldur** (sırada): clipboardExpense.ts; kart SMS'i
-  source='sms' + aynı hash → webhook'la çift yönlü DB dedupe bedava.
+- ~~**PR F — Panodan doldur.**~~ DONE. Yeni `utils/clipboardExpense.ts`
+  (+5 test; gerçek DenizBank format örnekleriyle): pano metni → SMS aynası
+  (`parseSms`) ya da TL-tutar fallback'ı (TR biçim çözümü) ile
+  `ClipboardPrefill` union'ı. Hızlı harcama formuna "Panodan doldur" butonu:
+  kart SMS'inde tutar+satıcı+tarih+alias'tan kart otomatik dolar,
+  `source='sms'` + webhook'la AYNI hash şeması (`sha256Hex(normalize(text))`)
+  → çift yönlü DB dedupe BEDAVA (idempotent RPC + unique index üretimdeydi);
+  durum ön-seçimi 'provision' (otomasyonla tutarlı, düzenlenebilir). Hesap-çıkış
+  SMS'i yalnız formu doldurur (hash'siz — saniyesiz format iki gerçek hareketi
+  ayıramaz), gelen para reddedilir (gider formu). iOS transient-activation
+  kuralı: `readText` handler'ın İLK await'i (alias'lar önceden useQuery'de).
+  Kritik regresyon önlemi: dağınık sms/scan sıfırlamaları tek
+  `clearPrefillOrigins`'a toplandı — bayat event id elle girişe yapışsaydı
+  idempotens kaydı sessizce yutardı. Ölü `smsParser` aynası İLK UI tüketicisine
+  kavuştu (2026-08-02 denetim bulgusunun kapanışı).
 - **PR G — Push çifti** (sırada): kesim makbuzu (migrationsız,
   statements_enabled, 48 saat pencere) + SMS bekçisi (sms_alerts_enabled kolonu
   + parse-sms'e SMS_OWNER_USER_ID damgası).

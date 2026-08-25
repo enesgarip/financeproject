@@ -1,14 +1,19 @@
-import { Camera, Image as ImageIcon, RotateCcw, ScanLine } from 'lucide-react'
+import { Camera, ClipboardPaste, Image as ImageIcon, RotateCcw, ScanLine } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { useAuth } from '../auth/useAuth'
 import { CategoryPicker } from '../components/finance/CategoryPicker'
 import { MoneyInput } from '../components/finance/MoneyInput'
 import { Badge } from '../components/ui/badge'
 import { Card as SurfaceCard, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { invalidateCategoryMemory, useCategoryMemory } from '../hooks/useCategoryMemory'
 import { addCardExpense, fetchRecentCardExpenses, recordCardInstallmentCarryover } from '../data/repositories/cardsRepo'
+import { fetchAllCardAliases } from '../data/repositories/cardAliasesRepo'
 import { fetchCars } from '../data/repositories/carsRepo'
 import type { Car, Card, CardExpense, CardExpenseStatus } from '../types/database'
 import { buildRepeatSuggestions, type RepeatSuggestion } from '../utils/expenseRepeat'
+import { buildClipboardPrefill } from '../utils/clipboardExpense'
+import { normalizeSmsWhitespace } from '../utils/smsParser'
 import { buildCardTimingChoices } from '../utils/cardTimingChoice'
 import { expenseCategoryOptions } from '../utils/categories'
 import { getCardStatementPeriod } from '../utils/cardStatement'
@@ -56,11 +61,26 @@ export function QuickExpensePanel({
   const [scanning, setScanning] = useState(false)
   const [prefilledByScan, setPrefilledByScan] = useState(false)
   const [scanEventId, setScanEventId] = useState<string | null>(null)
+  // Panodan doldurulan banka SMS'i: source='sms' + webhook'la AYNI hash şeması
+  // → çift yönlü DB dedupe bedava (unique index user+source+event).
+  const [prefilledBySms, setPrefilledBySms] = useState(false)
+  const [smsEventId, setSmsEventId] = useState<string | null>(null)
   const cameraInputRef = useRef<HTMLInputElement>(null)
   const galleryInputRef = useRef<HTMLInputElement>(null)
   const submittingRef = useRef(false)
   const submissionIdentityRef = useRef<{ signature: string; eventId: string } | null>(null)
   const categoryMemory = useCategoryMemory()
+  const { user } = useAuth()
+  // Alias listesi ÖNCEDEN elde tutulur: paste handler'ında readText'ten önce
+  // await olamaz (iOS transient activation). Anahtar CardsPage.list ile ortak.
+  const aliasesQuery = useQuery({
+    queryKey: ['card-aliases', user?.id],
+    enabled: Boolean(user),
+    queryFn: async () => {
+      const result = await fetchAllCardAliases()
+      return result.ok ? result.data : []
+    },
+  })
   const [recentExpenses, setRecentExpenses] = useState<CardExpense[]>([])
   const [vehicles, setVehicles] = useState<Car[]>([])
   const [carId, setCarId] = useState('')
@@ -162,9 +182,20 @@ export function QuickExpensePanel({
     setPaymentMode('cash')
     setPaidInstallments('0')
     setExpenseStatus('posted')
+    clearPrefillOrigins()
+    setLocalError('')
+  }
+
+  /**
+   * Ön-doldurma kökenlerini tek yerden sıfırla. Dağınık sıfırlama en kritik
+   * regresyon riskiydi: bayat sms/scan event id'si sonraki ELLE girişe yapışırsa
+   * idempotens yüzünden kayıt SESSİZCE yutulur (hiç oluşmaz).
+   */
+  function clearPrefillOrigins() {
     setPrefilledByScan(false)
     setScanEventId(null)
-    setLocalError('')
+    setPrefilledBySms(false)
+    setSmsEventId(null)
   }
 
   async function handleScanFile(file: File) {
@@ -181,6 +212,7 @@ export function QuickExpensePanel({
       if (result.date) setSpentAt(result.date)
       // Kaynak ölçümü: form fişten dolduruldu; kullanıcı düzeltse bile kaydın
       // kökeni taramadır (otomasyon kapsamı bunu elle giriş saymamalı).
+      clearPrefillOrigins()
       setPrefilledByScan(true)
       setScanEventId(artifactHash)
     } catch (scanError) {
@@ -188,6 +220,63 @@ export function QuickExpensePanel({
     } finally {
       setScanning(false)
     }
+  }
+
+  async function handlePasteFromClipboard() {
+    // iOS transient activation: readText bu handler'ın İLK await'i OLMALI —
+    // öncesine başka await girerse kullanıcı jesti düşer, NotAllowedError gelir.
+    let text: string
+    try {
+      text = await navigator.clipboard.readText()
+    } catch {
+      setLocalError(
+        'Panoya erişilemedi. Tarayıcı izin vermemiş olabilir — site ayarlarından pano iznini aç ya da alanları elle doldur.',
+      )
+      return
+    }
+    setLocalError('')
+    setLocalWarning('')
+    const prefill = buildClipboardPrefill(text, aliasesQuery.data ?? [])
+    if (prefill.kind === 'empty') {
+      setLocalError('Panoda kullanılabilir bir metin yok.')
+      return
+    }
+    if (prefill.kind === 'sms-account-in') {
+      setLocalError('Bu bir gelen para SMS’i — hızlı harcama formu gider içindir.')
+      return
+    }
+
+    clearPrefillOrigins()
+    setPaymentMode('cash')
+    setPaidInstallments('0')
+
+    if (prefill.kind === 'sms-card') {
+      if (prefill.cardId && cards.some((card) => card.id === prefill.cardId)) {
+        setCardId(prefill.cardId)
+        setLastUsed('expenseCard', prefill.cardId)
+      } else {
+        setLocalWarning(`${prefill.lastFour} ile biten kart tanınmadı — kart seçimini kontrol et.`)
+      }
+      setAmount(String(prefill.amount))
+      setDescription(prefill.description)
+      setSpentAt(prefill.spentAt)
+      // SMS otomasyonuyla tutarlı ön-seçim (webhook 'provision' yazar); alan
+      // düzenlenebilir, banka hesabında effectiveStatus zaten 'posted'a düşer.
+      setExpenseStatus('provision')
+      setPrefilledBySms(true)
+      setSmsEventId(await sha256Hex(normalizeSmsWhitespace(text)))
+      return
+    }
+    if (prefill.kind === 'sms-account-out') {
+      // Hesap SMS'ine hash verilmez (saniyesiz format iki gerçek hareketi
+      // ayıramaz — smsParser.accountSmsNeedsExternalEventId gerekçesi).
+      setAmount(String(prefill.amount))
+      setDescription(prefill.description)
+      setSpentAt(prefill.spentAt)
+      return
+    }
+    if (prefill.amount != null) setAmount(String(prefill.amount))
+    if (prefill.description) setDescription(prefill.description)
   }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -214,7 +303,7 @@ export function QuickExpensePanel({
       setLocalError('Bu tutar hesap bakiyesini aşıyor. Sunucu da reddeder; tutarı düşür ya da başka hesap seç.')
       return
     }
-    const source = prefilledByScan ? 'receipt_scan' : 'manual'
+    const source = prefilledBySms ? 'sms' : prefilledByScan ? 'receipt_scan' : 'manual'
     const signature = JSON.stringify({
       cardId: selectedCard.id,
       amount: parsedAmount,
@@ -231,7 +320,7 @@ export function QuickExpensePanel({
     if (!submissionIdentityRef.current || submissionIdentityRef.current.signature !== signature) {
       submissionIdentityRef.current = { signature, eventId: crypto.randomUUID() }
     }
-    const sourceEventId = scanEventId ?? submissionIdentityRef.current.eventId
+    const sourceEventId = smsEventId ?? scanEventId ?? submissionIdentityRef.current.eventId
 
     submittingRef.current = true
     setSaving(true)
@@ -289,8 +378,7 @@ export function QuickExpensePanel({
     setPaidInstallments('0')
     setNextDueDate(dateInputValue(new Date()))
     setExpenseStatus('posted')
-    setPrefilledByScan(false)
-    setScanEventId(null)
+    clearPrefillOrigins()
     setCarId('')
     submissionIdentityRef.current = null
     await Promise.all([reload(), loadRecent()])
@@ -364,6 +452,15 @@ export function QuickExpensePanel({
               >
                 <ImageIcon size={16} />
                 Galeriden seç
+              </button>
+              <button
+                type="button"
+                onClick={() => void handlePasteFromClipboard()}
+                className="col-span-2 inline-flex items-center justify-center gap-2 rounded-xl border border-dashed border-primary/40 bg-primary/5 px-4 py-2.5 text-sm font-semibold text-primary transition hover:bg-primary/10"
+                aria-label="Panodaki banka SMS'i ya da metinden formu doldur"
+              >
+                <ClipboardPaste size={16} />
+                Panodan doldur
               </button>
             </div>
           )}
