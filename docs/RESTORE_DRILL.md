@@ -1,6 +1,6 @@
 # Yedekten Dönüş Tatbikatı (Restore Drill)
 
-Last reviewed: 2026-07-27
+Last reviewed: 2026-08-25 (ilk gerçek koşu — üç runbook kusuru bulundu ve düzeltildi)
 
 Yedeğin **var olması** ile **çalıştığını bilmek** farklı şeylerdir. Bu runbook,
 şifreli yedeği yerel docker'a geri yükleyip uygulamanın onunla ayağa kalktığını
@@ -60,13 +60,34 @@ npm run db:reset:local
 ### 4. Yedeği yükle
 
 ```bash
-docker exec -i supabase_db_financeproject psql -U postgres -d postgres -v ON_ERROR_STOP=0 -f - < ./restore-drill/backup.sql
+(echo "set session_replication_role = replica;"; cat ./restore-drill/backup.sql) | docker exec -i -e PGPASSWORD=postgres supabase_db_financeproject psql -U supabase_admin -d postgres -v ON_ERROR_STOP=0
 ```
 
-`ON_ERROR_STOP=0` bilinçli: dump `auth`/`storage` şemalarındaki bazı Supabase
-nesnelerini yeniden oluşturmaya çalışırken "already exists" uyarıları verir,
-bunlar beklenen gürültüdür. **Beklenmeyen** hata sınıfı: `relation ... does not
-exist` veya `permission denied` — bunlar gerçek sorundur.
+Bu komutun üç parçası da 2026-08-25'teki ilk gerçek koşunun dersleridir —
+hiçbirini "sadeleştirme":
+
+- **`-U supabase_admin` + `-e PGPASSWORD=postgres`:** yerel stack'te `postgres`
+  rolü superuser DEĞİL ve `auth` şemasının sahibi değil — `-U postgres` ile
+  yükleme `permission denied for schema auth` yağdırır. `supabase_admin`
+  parola ister; `PGPASSWORD` verilmezse psql parolayı **stdin'den okur ve
+  dump'ın ilk satırını parola sanıp sessizce çöker** (aşağıdaki üçüncü derse
+  bak).
+- **`set session_replication_role = replica;` öneki:** adım 3'ün migration'lı
+  şemasında FK'lar baştan aktiftir; pg_dump ise FK'ları kendi akışında
+  post-data'da kurar ve COPY bloklarını buna güvenerek sıralar (`card_expenses`
+  dosyada `cards`'tan ÖNCE gelir). Önek olmadan çocuk tabloların COPY'leri FK
+  ihlaliyle reddedilir ve **kartlar dolu ama harcamalar boş** yarım-restore
+  oluşur. Replica modu FK + trigger'ları oturum boyunca kapatır — trigger'ların
+  kapalı olması da doğrudur: ledger olayları dump'ta VERİ olarak zaten var,
+  trigger'lar yeniden üretirse çift sayılırdı.
+- **Hata okuma tuzağı:** psql'in bağlantı hataları `psql: error:` (küçük harf)
+  basar; çıktıyı yalnız `ERROR` ile grep'lemek bağlantı çökmesini görmez.
+  Başarıyı hatasızlıktan değil, akan `COPY <n>` satırlarından ve adım 5-7'nin
+  sayımlarından doğrula.
+
+Beklenen gürültü: `already exists` (şema nesneleri migration'dan zaten var).
+**Beklenmeyen** sınıf: `relation ... does not exist`, `invalid input`, ya da
+hiç `COPY <n>` satırı akmaması.
 
 ### 5. Yetki ve politika denetimlerini koştur
 
@@ -80,6 +101,18 @@ npm run db:audit:grants:local
 
 İkisi de temiz olmalı. (Grant denetimi 2026-07-27'de eklendi: migration'lardan
 kurulan ortamın üretimden sapmaması için — bkz. `docs/BACKLOG.md`.)
+
+### 5b. UI'siz sağlık kanıtı (ajan koşusu / hızlı yol)
+
+Adım 6'daki UI girişi üretim parolası ister; parolasız da çekirdek kanıt
+SQL'le alınır — kart borcu ↔ ledger projeksiyonu ve hesap bakiyesi ↔
+account_ledger birebir olmalı (DataHealth'in ana invariant'ı):
+
+```bash
+docker exec -i supabase_db_financeproject psql -U postgres -d postgres -c "select c.card_name, c.debt_amount, round(coalesce(sum(l.amount_kurus),0)/100.0,2) proj, c.debt_amount - round(coalesce(sum(l.amount_kurus),0)/100.0,2) drift from public.cards c left join public.card_ledger l on l.card_id=c.id where c.card_type='kredi_karti' group by c.id order by 1;"
+```
+
+Tüm satırlarda `drift = 0.00` → yedek bütünlüğü kanıtlı.
 
 ### 6. Uygulamayı yedek verisiyle aç
 
@@ -133,3 +166,4 @@ Her tatbikattan sonra bir satır ekle:
 | --- | --- | --- | --- |
 | — | — | henüz koşulmadı | Runbook 2026-07-27'de yazıldı |
 | 2026-08-25 | 2026-08-25 | ön-kontrol geçti | Ajan ön-kontrolü: aynı günün 2 şifreli artifact'ı mevcut (~285 KB, boyut makul). Tam koşu passphrase + üretim girişi istediğinden kullanıcıda; `savings_goal_snapshots` + `budgets` çıpa kolonları eklendiğinden tetikleyici sağlandı, ilk fırsatta koşulmalı. |
+| 2026-08-25 | 2026-08-25 09:38 | **BAŞARILI** (ilk gerçek koşu) | Kullanıcı passphrase'i buldu, ajan koştu. Çözme ✓ (291 KB→1,5 MB), yükleme ✓ (66 COPY bloğu; 12 kart, 335 harcama, 1.492 card_ledger, 2 auth kullanıcısı), RLS+grant denetimleri ✓, bütünlük ✓ (4 kredi kartında borç↔ledger drift 0,00; 8 hesapta bakiye↔account_ledger birebir). UI girişi yerine 5b SQL kanıtı kullanıldı. ÜÇ runbook kusuru bulunup düzeltildi: postgres rolü auth'a yetmiyor (supabase_admin+PGPASSWORD), FK-aktif şemada replica-mode şart, psql küçük-harf "error:" sessiz çökme tuzağı. |
