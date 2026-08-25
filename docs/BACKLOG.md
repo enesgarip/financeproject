@@ -57,7 +57,14 @@ iş / bilinçli-park. Dilim dilim kapanıyor:
   genelde 1-2 günde düşer, BM-5), pencere aşılınca `payment-overdue-*` ama
   metin bankayı işaret eder; manuel ödemede tolerans yok (+3 test). Guide
   navigasyonu generic `payment-` dalından zaten kapsıyor.
-- **K4 — `sync_loan_summary` invariant testi + statement-level** — sırada.
+- ~~**K4 — `sync_loan_summary` statement-level.**~~ DONE (perf turunun şartı
+  sırasıyla: önce `supabase/tests/loan_summary_invariant.sql` — toplu
+  insert/update/delete + tek statement'ta çok-kredi senaryolarıyla "özet =
+  ödenmemiş taksit projeksiyonu" sabitlendi; sonra migration `20260825170000`:
+  FOR EACH ROW → üç FOR EACH STATEMENT trigger'ı (REFERENCING olay başına
+  ayrı ister; tek fonksiyon TG_OP'a göre transition tablosunu okur), dokunulan
+  kredi başına TEK yeniden hesap — 36 taksitlik kurulumda O(n²) toplama bitti.
+  Davranış birebir (0 taksit = closed; TS ikizi projectLoanSummary hizalı).
 - **K5 — pgTAP saat enjeksiyonu + gece/Şubat-31 kenar testleri** — sırada.
 - **K6 — deploy `verify`↔`changes` ayrıştırması** — sırada.
 - **K7t — restore tatbikatı** (RESTORE_DRILL gecikmiş; tetikleyici sağlandı) — sırada.
