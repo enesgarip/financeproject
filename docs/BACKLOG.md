@@ -48,8 +48,23 @@ liste köprüsü tek tık otomatik adla yazar.
   seviyesinde), toplam 932,6 kB ✓, chunk 54 / cüce 7 (eşiksiz 90/51 olurdu).
   Ders: yeni ortak util ekleyen her PR'da `npm run check:bundle` YEREL koşulmalı
   (`build` bütçeyi koşmuyor).
-- **PR C — Davranışsal temel** (sırada): paylaşılan query-key sabitleri +
-  Bekleme Kuralı + Karar–Liste köprüsü + Emek Çevirisi.
+- ~~**PR C — Davranışsal temel.**~~ DONE. (1) Paylaşılan anahtar: yeni
+  `hooks/useWishlistItems.ts` (`WISHLIST_QUERY_KEY` + sorgu; sayfa-lokal const
+  kalksaydı köprü string kopyalayacaktı — "dışarıdan yazan invalidate etmeli"
+  dersi). (2) **Bekleme Kuralı:** yeni `utils/wishlistAge.ts` (+4 test;
+  timestamptz→gün dilimi, 29/30 sınırı, negatif kaymada 0 kırpma) — bekleyen
+  satırda "N gündür listede", ≥30 günde nötr "hâlâ istiyor musun?" (pasif rozet,
+  aksiyon dürtmesi bilinçli yok — süs hassasiyeti), alınan satırda "N gün
+  düşündün", hero'da "N madde 30 günü geçti". (3) **Karar–Liste köprüsü:**
+  Alsam mı? dikkat/zorlayıcı sonucunda tek tık "Şimdilik listeye at" (otomatik
+  ad "İstek ₺X · 26 Ağu" — ad saklanan veri olduğundan privacy-maskesiz
+  formatCurrency; tutar değişince buton geri gelir) + Wishlist satırından
+  `?tutar=` ile karar ekranına dolu geçiş (TEK SEFERLİK lazy init — sürekli
+  senkron yazmayı bozardı). (4) **Emek Çevirisi:** yeni `utils/purchaseEffort.ts`
+  (+4 test) — "≈ N iş günü çalışma / ≈ N günlük ortalama nakit çıkışın /
+  ≈ hedefin ~N aylık payı"; girdisi eksik satır 0 basmaz SUSAR; baskın hedef
+  `wishlistPlan.dominantSavingsGoal` export'uyla paylaşıldı (iki yüzeyin tanımı
+  ayrışmaz), "geciktirir" dili bilinçli yok.
 - **PR D — Vazgeçme Kazancı** (sırada): contribute_to_goal_bucket + goalEta
   önizleme; kova hedefin kaynağı değilse buton yok; tempo yoksa tarihsiz dil.
 - **PR E — Yakıt Fiyat Şeridi** (sırada): ₺/lt serisi (min-max normalize) +

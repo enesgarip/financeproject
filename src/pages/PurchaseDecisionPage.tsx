@@ -1,18 +1,27 @@
+import { useQueryClient } from '@tanstack/react-query'
 import { CircleAlert, CircleCheck, CircleX, ShoppingCart } from 'lucide-react'
 import { useMemo, useState } from 'react'
+import { Link, useSearchParams } from 'react-router'
 import { useFinanceSnapshot } from '../app/useFinanceSnapshot'
+import { useAuth } from '../auth/useAuth'
 import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
 import { readSafeToSpendBuffer, useKasaReserved } from '../hooks/useSafeToSpend'
+import { WISHLIST_QUERY_KEY } from '../hooks/useWishlistItems'
 import { Card, CardContent } from '../components/ui/card'
 import { Input } from '../components/ui/input'
 import { QueryError } from '../components/ui/query-error'
+import { insertWishlistItem } from '../data/repositories/wishlistRepo'
 import { buildCardTimingChoices } from '../utils/cardTimingChoice'
 import { buildCashFlowForecast } from '../utils/cashFlowForecast'
 import { dateInputValue } from '../utils/date'
-import { buildMonthlyCashFlow, buildFinancialPosition } from '../utils/financeSummary'
+import { buildMonthlyCashFlow, buildFinancialPosition, getCurrentSalary } from '../utils/financeSummary'
+import { resolveSavingsGoalRows } from '../utils/goalSources'
+import { averageMonthlyOutflow } from '../utils/goalTargetAnchor'
+import { buildPurchaseEffort } from '../utils/purchaseEffort'
 import { buildPurchaseImpact, type PurchasePaymentMethod, type PurchaseVerdict } from '../utils/purchaseImpact'
 import { buildSafeToSpend } from '../utils/safeToSpend'
-import { parseNumber } from '../utils/formatCurrency'
+import { dominantSavingsGoal } from '../utils/wishlistPlan'
+import { formatCurrency, parseNumber } from '../utils/formatCurrency'
 
 /**
  * Karar anı ekranı: "bunu alsam ne olur?" Mağazada telefonda 10 saniyede
@@ -33,9 +42,20 @@ const VERDICT_PRESENTATION: Record<PurchaseVerdict, { label: string; className: 
 export function PurchaseDecisionPage() {
   const { formatAmount } = useBalancePrivacy()
   const snapshotQuery = useFinanceSnapshot()
-  const [amountInput, setAmountInput] = useState('')
+  const { user } = useAuth()
+  const qc = useQueryClient()
+  const [searchParams] = useSearchParams()
+  const [amountInput, setAmountInput] = useState(() => {
+    // Wishlist köprüsü: ?tutar=12500 ile gelince form dolu açılır. TEK SEFERLİK
+    // lazy init — sürekli senkron, autoFocus'lu serbest yazmayı bozardı.
+    const seed = searchParams.get('tutar')
+    return seed && parseNumber(seed) > 0 ? seed : ''
+  })
   const [installments, setInstallments] = useState(1)
   const [method, setMethod] = useState<PurchasePaymentMethod>('card')
+  // "Şimdilik listeye at" köprüsünün durumu; tutar değişince buton geri gelir.
+  const [listSave, setListSave] = useState<'idle' | 'saving' | 'done'>('idle')
+  const [listError, setListError] = useState('')
 
   // Elle parse yerine kanonik `parseNumber`: "1234.56" gibi girdiyi binlik ayraç
   // sanıp 123.456 TL okuyan yerel kopya kalkmadı diye K6 burada yaşamaya devam
@@ -90,6 +110,48 @@ export function PurchaseDecisionPage() {
 
   const verdict = impact ? VERDICT_PRESENTATION[impact.verdict] : null
 
+  // "Bu tutar neye denk?" — emek çevirisi (utils/purchaseEffort). Girdisi eksik
+  // satır susar; hedef kıyası wishlistPlan'ın baskın-hedef tanımını paylaşır.
+  const effort = useMemo(() => {
+    const snapshot = snapshotQuery.data
+    if (!snapshot || !hasAmount) return null
+    const { goals } = resolveSavingsGoalRows(
+      snapshot.savingsGoals,
+      snapshot.savingsGoalComponents,
+      snapshot.savingsGoalSources,
+      { assets: snapshot.assets, cards: snapshot.cards },
+    )
+    return buildPurchaseEffort({
+      amount,
+      salary: getCurrentSalary(snapshot.salaryHistory)?.amount ?? null,
+      monthlyOutflow: averageMonthlyOutflow(snapshot.transactionHistory, snapshot.payments, snapshot.cards),
+      dominant: dominantSavingsGoal(goals, new Date()),
+    })
+  }, [snapshotQuery.data, hasAmount, amount])
+
+  async function handleDeferToList() {
+    if (!user || !hasAmount || listSave === 'saving') return
+    setListSave('saving')
+    setListError('')
+    // Tek tık otomatik ad ("10 saniyede cevap" ilkesi) — listede düzenlenebilir.
+    // Ad saklanan VERİ olduğundan privacy-maskeli formatAmount değil formatCurrency.
+    const autoName = `İstek ${formatCurrency(amount)} · ${new Intl.DateTimeFormat('tr-TR', { day: 'numeric', month: 'short' }).format(new Date())}`
+    const result = await insertWishlistItem({
+      user_id: user.id,
+      name: autoName,
+      estimated_price: amount,
+      is_purchased: false,
+      sort_order: 0,
+    })
+    if (!result.ok) {
+      setListSave('idle')
+      setListError(result.error.message)
+      return
+    }
+    setListSave('done')
+    void qc.invalidateQueries({ queryKey: WISHLIST_QUERY_KEY })
+  }
+
   // Kartlar arası kesim kıyası — SALT BİLGİ: purchaseImpact'in "ilk taksit bir
   // sonraki ay" modeli değişmez, çipler yalnız hangi kartın ödemeyi en geç
   // yaptıracağını gösterir. Gün anahtarıyla memo (tuş başına Date hesabı yok).
@@ -121,7 +183,11 @@ export function PurchaseDecisionPage() {
             type="text"
             inputMode="decimal"
             value={amountInput}
-            onChange={(event) => setAmountInput(event.target.value)}
+            onChange={(event) => {
+              setAmountInput(event.target.value)
+              setListSave('idle')
+              setListError('')
+            }}
             placeholder="Tutar (TL)"
             aria-label="Alışveriş tutarı"
             autoFocus
@@ -241,6 +307,30 @@ export function PurchaseDecisionPage() {
                     <li key={reason}>· {reason}</li>
                   ))}
                 </ul>
+                {/* Karar–Liste köprüsü: "hayır" yerine tek tıkla "sonra" —
+                    dürtü anı satın almadan erteleme eylemine çevrilir. */}
+                {impact.verdict !== 'rahat' ? (
+                  <div className="mt-2.5">
+                    {listSave === 'done' ? (
+                      <p className="text-xs font-semibold">
+                        Listeye eklendi —{' '}
+                        <Link to="/odemeler/liste" className="underline underline-offset-2">
+                          Alışveriş Listesi
+                        </Link>
+                      </p>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => void handleDeferToList()}
+                        disabled={listSave === 'saving'}
+                        className="rounded-lg px-3 py-1.5 text-xs font-bold ring-1 ring-current/40 transition hover:bg-black/[.04] dark:hover:bg-white/[.06] disabled:opacity-50"
+                      >
+                        Şimdilik listeye at
+                      </button>
+                    )}
+                    {listError ? <p className="mt-1 text-xs">{listError}</p> : null}
+                  </div>
+                ) : null}
               </div>
             </div>
           </div>
@@ -265,6 +355,26 @@ export function PurchaseDecisionPage() {
                   </p>
                 </div>
               </div>
+
+              {/* Emek çevirisi: "değer mi?" kıyası — TL soyut, emek/hedef payı somut. */}
+              {effort && (effort.workDays !== null || effort.outflowDays !== null || effort.goalMonths > 0) ? (
+                <div className="mt-2 rounded-xl bg-page px-3 py-2.5">
+                  <p className="finance-label">Bu tutar neye denk?</p>
+                  <ul className="mt-1 space-y-0.5 text-xs text-ink-muted">
+                    {effort.workDays !== null ? (
+                      <li>≈ {effort.workDays.toLocaleString('tr-TR')} iş günü çalışma</li>
+                    ) : null}
+                    {effort.outflowDays !== null ? (
+                      <li>≈ {effort.outflowDays.toLocaleString('tr-TR')} günlük ortalama nakit çıkışın</li>
+                    ) : null}
+                    {effort.goalMonths > 0 && effort.goalName ? (
+                      <li>
+                        ≈ {effort.goalName} hedefine ayıracağın ~{effort.goalMonths} aylık pay
+                      </li>
+                    ) : null}
+                  </ul>
+                </div>
+              ) : null}
 
               <p className="mt-4 finance-label">Aylık bakiye projeksiyonu</p>
               <div className="mt-1.5 space-y-1.5">
