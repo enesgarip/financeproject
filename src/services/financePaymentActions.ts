@@ -85,9 +85,7 @@ export function obligationAmountEditable(obligation: FinanceObligation | null) {
     || obligation?.action === 'collect_debt'
 }
 
-export function estimatedMinimumCardPayment(amount: number, rate = 0.2) {
-  return roundTL(Math.max(0, amount) * rate)
-}
+export { estimatedMinimumCardPayment, minimumCardPaymentRate } from '../utils/financeObligationRules'
 
 export type RecentSmsAccountDebit = {
   occurredAt: string

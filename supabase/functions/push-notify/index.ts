@@ -1440,6 +1440,35 @@ Deno.serve(async (req: Request) => {
       })
     }
 
+    // Denetim §2 (K2-5): kesim/provizyon bakımı bu günlük cron'da da koşar.
+    // pg_cron zamanlaması migration'da best-effort kuruluydu (eklenti yoksa
+    // sessizce atlanır) ve üretimde koşup koşmadığı GÖZLEMLENEMİYORDU; burası
+    // gözlemlenebilir ikinci kemer — sonuç yanıt gövdesine düşer (gh run
+    // loglarında izlenebilir). RPC'ler idempotent, çifte koşu güvenli.
+    // En-iyi-çaba: bakım hatası bildirimleri BLOKLAMAZ; abonelik kontrolünden
+    // ÖNCE koşar — bakım aboneliğe bağlı bir iş değildir.
+    let maintenance: unknown = null
+    try {
+      const maintenanceResponse = await fetchWithTimeout(
+        `${supabaseUrl}/rest/v1/rpc/run_scheduled_card_maintenance`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            apikey: serviceRoleKey,
+            Authorization: `Bearer ${serviceRoleKey}`,
+          },
+          body: JSON.stringify({}),
+        },
+        20_000,
+      )
+      maintenance = maintenanceResponse.ok
+        ? await maintenanceResponse.json()
+        : { error: `HTTP ${maintenanceResponse.status}` }
+    } catch (error) {
+      maintenance = { error: error instanceof Error ? error.message : 'maintenance failed' }
+    }
+
     const subscriptions = await db.select<PushSubscriptionRow>('push_subscriptions', {
       select: 'id,user_id,endpoint,p256dh,auth',
     })
@@ -1448,6 +1477,7 @@ Deno.serve(async (req: Request) => {
       return jsonResponse({
         ok: true,
         today: todayIso,
+        maintenance,
         candidates: 0,
         sent: 0,
         staleDeleted: 0,
@@ -1479,6 +1509,7 @@ Deno.serve(async (req: Request) => {
       ok: !failedEveryDelivery,
       today: todayIso,
       weekday,
+      maintenance,
       candidates: candidates.length,
       ...result,
     }, failedEveryDelivery ? 502 : 200)

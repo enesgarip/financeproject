@@ -12,6 +12,7 @@ import { getCardStatementPeriod } from '../utils/cardStatement'
 import { buildStatementPaidMap, statementPaidAmount, statementRemainingAmount } from '../utils/cardStatementPayments'
 import { dateInputValue, formatDate } from '../utils/date'
 import { cardPayableDebt, totalCreditLimit } from '../utils/financeSummary'
+import { minimumCardPaymentRate } from '../utils/financeObligationRules'
 import { formatPercent } from '../utils/formatCurrency'
 import { sumTL } from '../utils/money'
 import { isMissingSupabaseCapabilityError, missingSupabaseCapabilityMessage } from '../utils/supabaseErrors'
@@ -93,6 +94,7 @@ export function LiabilitiesCardsPage() {
         amount: remaining,
         maxPayableAmount: remaining,
         minimumPaymentBase: remaining,
+        minimumPaymentRate: minimumCardPaymentRate(card.credit_limit),
         direction: 'outflow',
       },
       {
@@ -138,6 +140,7 @@ export function LiabilitiesCardsPage() {
         date: dateInputValue(new Date()),
         amount: cardPayableDebt(card),
         minimumPaymentBase: card.statement_debt_amount,
+        minimumPaymentRate: minimumCardPaymentRate(card.credit_limit),
         direction: 'outflow',
       },
       {
