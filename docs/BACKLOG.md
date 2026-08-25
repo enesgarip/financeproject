@@ -19,8 +19,21 @@ Kullanıcıyla kararlaştırılan sıra:
    Planlama şeridi; opsiyonel "maaş değişikliği algılama" TURA ALINMADI
    (ekstralarla birlikte not)
 
-Tura alınmayan, not edilen ekstralar: bütçe→hedef köprüsü (ay kapanışı artığını
-tek tıkla kovaya), abonelik radarı, ekstre tahmini ("kesilse ~₺X gelir").
+**Ekstralar (2026-08-25, kullanıcı "devam" dedi — sırayla):**
+
+- ~~**E1 — maaş değişikliği algılama.**~~ DONE. `findSalaryChangeCandidate`
+  (salaryDeposit.ts, +5 test): maaş ±%10 bandında yatış YOKKEN 0,5×-1,6×
+  bandındaki ilk girişi aday gösterir; hesaplar arası transferin iki bacağı
+  (aynı gün eşit tutarlı çıkış) elenir — yoksa birikim transferi "maaşın
+  118.000 mi oldu?" derdi. Veri `fetchAccountEventsSince` (deposit filtresi
+  kalktı; çıkışlar transfer eleme için gerekli — maaş şeridi davranışı aynı,
+  findSalaryDeposit kind filtresini içeride yapar). UI: Planlama'da öneri
+  şeridi + tek tık "₺X olarak güncelle" → yeni `salary_history` satırı
+  (effective_date = ay başı); uygulama sayıyı kendiliğinden DEĞİŞTİRMEZ.
+- **E2 — bütçe→hedef köprüsü** (ayın son günlerinde bütçe artığını tek tıkla
+  kovaya) — sırada.
+- **E3 — ekstre tahmini** ("kesilse ~₺X gelir") — sırada.
+- **E4 — abonelik radarı** (önce mevcut `utils/subscriptions.ts` keşfi) — sırada.
 
 - ~~**PR-5 — maaş günü akışı.**~~ DONE (turun son maddesi — TUR TAMAM).
   `utils/salaryDeposit.ts` (+test): `findSalaryDeposit` — ay içi 'deposit'
