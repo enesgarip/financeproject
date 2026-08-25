@@ -111,6 +111,8 @@ export function useDailyNetWorthSnapshot() {
           const goalRunner = await import('./dailyGoalSnapshots')
           if (cancelled) return
           await goalRunner.recordDailyGoalSnapshots(userId, snapshot, rates, () => cancelled)
+          // Hedef kartındaki tempo/varış şeridi açıksa bugünün noktasını görsün.
+          void queryClient.invalidateQueries({ queryKey: ['savings-goal-snapshots'] })
         } catch {
           // Snapshot kaydı yardımcı bir iştir; hatası kullanıcı akışını bozmaz.
         }
