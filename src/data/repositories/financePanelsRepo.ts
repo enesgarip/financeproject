@@ -16,17 +16,20 @@ export async function fetchAccountLedgerEvents(cardId: string, limit?: number): 
   return resultFromSupabase((data ?? []) as AccountLedger[], error, 'Hesap hareketleri yüklenemedi.')
 }
 
-/** Maaş yatışı tespiti için: verilen tarihten beri TÜM hesapların girişleri. */
-export async function fetchDepositsSince(since: string): Promise<Result<AccountLedger[]>> {
+/**
+ * Maaş yatışı/değişikliği tespiti için: verilen tarihten beri TÜM hesapların
+ * hareketleri. Çıkışlar da gelir — transfer bacağı eleme (utils/salaryDeposit
+ * `findSalaryChangeCandidate`) aynı gün eşit tutarlı çıkışı arar.
+ */
+export async function fetchAccountEventsSince(since: string): Promise<Result<AccountLedger[]>> {
   const { data, error } = await supabase
     .from('account_ledger')
     .select('*')
-    .eq('kind', 'deposit')
     .gte('occurred_at', since)
     .order('occurred_at', { ascending: true })
-    .limit(100)
+    .limit(200)
 
-  return resultFromSupabase((data ?? []) as AccountLedger[], error, 'Hesap girişleri yüklenemedi.')
+  return resultFromSupabase((data ?? []) as AccountLedger[], error, 'Hesap hareketleri yüklenemedi.')
 }
 
 export async function fetchCardLedgerEvents(cardId: string): Promise<Result<CardLedger[]>> {

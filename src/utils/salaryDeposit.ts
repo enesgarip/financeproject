@@ -41,3 +41,44 @@ export function findSalaryDeposit(
 
   return match ? { matchedAt: match.occurredAt.slice(0, 10), amount: match.amount } : null
 }
+
+/** Değişiklik adayının bandı: maaşın yarısından az giriş maaş değildir (prim
+ *  kesintisi bile maaşı yarıya indirmez), 1,6 katından fazlası da değildir
+ *  (zam sıçraması bunun altında kalır; üstü büyük ihtimalle başka bir giriş). */
+const SALARY_CHANGE_MIN_RATIO = 0.5
+const SALARY_CHANGE_MAX_RATIO = 1.6
+
+/**
+ * "Maaşın değişti mi?" adayı: ±%10 bandında eşleşme YOKKEN (maaş yerinde
+ * görünmüyorken) banda yakın büyüklükte bir giriş varsa onu önerir.
+ *
+ * Hesaplar arası transferin iki bacağı vardır (kaynağa çıkış + hedefe giriş);
+ * aynı gün eşit tutarlı bir ÇIKIŞI olan giriş transfer sayılır ve elenir —
+ * yoksa birikim hesabına atılan büyük transfer "maaşın 118.000 mi oldu?"
+ * diye sorardı. Girdi bu yüzden yalnız deposit değil TÜM event'lerdir.
+ */
+export function findSalaryChangeCandidate(
+  events: Array<Pick<AccountLedger, 'kind' | 'occurred_at' | 'amount_kurus'>>,
+  salaryAmount: number | null | undefined,
+): SalaryDepositMatch | null {
+  if (!salaryAmount || salaryAmount <= 0) return null
+  // Maaş ±%10 bandında yattıysa değişiklik yok; öneri gürültü olur.
+  if (findSalaryDeposit(events, salaryAmount)) return null
+
+  // Gün + mutlak kuruş anahtarıyla çıkışlar: transfer bacağı eşleme tablosu.
+  const outflowKeys = new Set(
+    events
+      .filter((event) => toTL(event.amount_kurus) < 0)
+      .map((event) => `${event.occurred_at.slice(0, 10)}:${Math.abs(event.amount_kurus)}`),
+  )
+
+  const candidate = events
+    .filter((event) => event.kind === 'deposit')
+    .map((event) => ({ occurredAt: event.occurred_at, amount: toTL(event.amount_kurus), kurus: event.amount_kurus }))
+    .filter((event) => event.amount >= salaryAmount * SALARY_CHANGE_MIN_RATIO)
+    .filter((event) => event.amount <= salaryAmount * SALARY_CHANGE_MAX_RATIO)
+    .filter((event) => !outflowKeys.has(`${event.occurredAt.slice(0, 10)}:${Math.abs(event.kurus)}`))
+    .sort((a, b) => a.occurredAt.localeCompare(b.occurredAt))[0]
+
+  return candidate ? { matchedAt: candidate.occurredAt.slice(0, 10), amount: candidate.amount } : null
+}

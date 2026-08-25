@@ -1,10 +1,10 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '../auth/useAuth'
 import { useFinanceSnapshot } from '../app/useFinanceSnapshot'
 import { CrudPage, type FormField } from '../components/CrudPage'
 import { saveCrudRow } from '../data/repositories/crudRepo'
-import { fetchDepositsSince } from '../data/repositories/financePanelsRepo'
+import { fetchAccountEventsSince } from '../data/repositories/financePanelsRepo'
 import { KasaModuPanel } from '../components/finance/KasaModuPanel'
 import { SavingsGoalsPanel } from '../components/finance/SavingsGoalsPanel'
 import { QueryError } from '../components/ui/query-error'
@@ -20,7 +20,7 @@ import { buildFinancialPosition, buildMonthlyCashFlow, getCurrentSalary } from '
 import { buildSafeToSpend } from '../utils/safeToSpend'
 import { readSafeToSpendBuffer, useKasaBuckets, useKasaReserved } from '../hooks/useSafeToSpend'
 import { bucketForGoal, isSameMonth } from '../utils/goalBucket'
-import { findSalaryDeposit } from '../utils/salaryDeposit'
+import { findSalaryChangeCandidate, findSalaryDeposit } from '../utils/salaryDeposit'
 import { SERIT_FILL, useSeritAmount, type SeritTone } from '../components/serit'
 import { buildBudgetUsage } from '../utils/budgetAlerts'
 import { averageMonthlyOutflow } from '../utils/goalTargetAnchor'
@@ -113,7 +113,7 @@ export function PlanningPage() {
     queryKey: ['salary-deposits', userId, monthStartIso],
     enabled: Boolean(userId) && salaryWindowOpen,
     queryFn: async () => {
-      const result = await fetchDepositsSince(monthStartIso)
+      const result = await fetchAccountEventsSince(monthStartIso)
       return result.ok ? result.data : []
     },
   })
@@ -132,6 +132,33 @@ export function PlanningPage() {
     if (pending.length === 0) return null
     return { matchedAt: match.matchedAt, pendingCount: pending.length }
   }, [salaryWindowOpen, depositsQuery.data, salaryAmount, snapshotQuery.data, bucketsQuery.data])
+
+  // Maaş değişikliği önerisi: ±%10 bandında yatış YOKKEN banda yakın bir giriş
+  // varsa "maaşını güncelle" tek tık'ı. Uygulama sayıyı kendiliğinden
+  // DEĞİŞTİRMEZ (#159 çizgisi); onay yeni salary_history satırı ekler.
+  const [salaryUpdateBusy, setSalaryUpdateBusy] = useState(false)
+  const [salaryUpdateError, setSalaryUpdateError] = useState('')
+  const salaryChange = useMemo(() => {
+    if (!salaryWindowOpen) return null
+    return findSalaryChangeCandidate(depositsQuery.data ?? [], salaryAmount)
+  }, [salaryWindowOpen, depositsQuery.data, salaryAmount])
+
+  async function applySalaryChange(amount: number) {
+    if (!userId) return
+    setSalaryUpdateBusy(true)
+    setSalaryUpdateError('')
+    const result = await saveCrudRow(
+      'salary_history',
+      { user_id: userId, title: 'Maaş', amount, effective_date: monthStartIso, note: null },
+      null,
+    )
+    setSalaryUpdateBusy(false)
+    if (!result.ok) {
+      setSalaryUpdateError(result.error.message ?? 'Maaş kaydı eklenemedi.')
+      return
+    }
+    void snapshotQuery.refetch()
+  }
 
   // Bütçe formu: çıpa seçimi + koşullu alanlar + canlı "bugünkü karşılık"
   // önizlemesi (#157 desenindeki gibi — kural seçilirken sonucu görürsün).
@@ -283,6 +310,28 @@ export function PlanningPage() {
             />
           </div>
           <p className="mt-2.5 text-[13px] text-ink-muted">{budgetTotals.pace}</p>
+        </div>
+      ) : null}
+
+      {/* Maaş değişikliği önerisi: yeni tutar tek tıkla salary_history'e girer;
+          maaş yüzdesi bütçe çıpaları ve nakit projeksiyonu da düzelir. */}
+      {salaryChange ? (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-info/25 bg-info/8 px-3 py-2.5">
+          <p className="text-sm font-medium text-info">
+            {formatDate(salaryChange.matchedAt)} tarihinde {formatAmount(salaryChange.amount)} yattı — kayıtlı maaşın{' '}
+            {formatAmount(salaryAmount ?? 0)}. Maaşın değişti mi?
+          </p>
+          <button
+            type="button"
+            disabled={salaryUpdateBusy}
+            onClick={() => void applySalaryChange(salaryChange.amount)}
+            className="shrink-0 rounded-lg bg-info px-3 py-1.5 text-xs font-bold text-white transition hover:bg-info/90 disabled:opacity-60"
+          >
+            {salaryUpdateBusy ? 'Güncelleniyor...' : `${formatAmount(salaryChange.amount)} olarak güncelle`}
+          </button>
+          {salaryUpdateError ? (
+            <p role="alert" className="w-full text-xs font-medium text-warning">{salaryUpdateError}</p>
+          ) : null}
         </div>
       ) : null}
 
