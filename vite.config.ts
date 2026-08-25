@@ -40,7 +40,7 @@ export default defineConfig({
           return undefined
         },
         // Kalan cüce chunk'ları (paylaşılan 1-2 kB'lık modüller) komşularına kat.
-        experimentalMinChunkSize: 20_000,
+        experimentalMinChunkSize: 5_000,
       },
     },
     chunkSizeWarningLimit: 700,
