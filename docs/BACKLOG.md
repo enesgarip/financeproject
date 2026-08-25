@@ -13,8 +13,8 @@ Kullanıcıyla kararlaştırılan sıra:
    olur" + takvimde "şu ay N taksit bitiyor, yük ₺Z azalır" (push MVP'de yok)
 4. ~~**Bütçe turu**~~ (DONE, aşağıda) — `avg_spend` + `salary_pct` çıpaları,
    tek-tık ay devri şeridi, bayat bütçe önerisi, üç kopyanın DRY'ı
-5. **Varış tahmini** — PR-0 serisinden gerçekleşen tempo (son 90 gün, min 45
-   gün + 2 ay örneği; tempo ≤ 0 ise tarih UYDURULMAZ) + hedef kartında şerit
+5. ~~**Varış tahmini**~~ (DONE, aşağıda) — PR-0 serisinden gerçekleşen tempo
+   (son 90 gün, min 45 gün + 2 ay örneği; tempo ≤ 0 ise tarih UYDURULMAZ)
 6. **Maaş günü akışı** — `salary_history` tutarı ± %10 deposit tespiti (saf
    ikiz + edge), `goal_contribution_due` penceresi "gün 2-5 VEYA yatış görüldü"
    + iki metin varyantı (tutar yine YOK), Planlama'da maaş şeridi; opsiyon:
@@ -23,6 +23,18 @@ Kullanıcıyla kararlaştırılan sıra:
 Tura alınmayan, not edilen ekstralar: bütçe→hedef köprüsü (ay kapanışı artığını
 tek tıkla kovaya), abonelik radarı, ekstre tahmini ("kesilse ~₺X gelir").
 
+- ~~**PR-4 — varış tahmini.**~~ DONE. `utils/goalEta.ts` (+8 test):
+  `buildGoalTempo` (son 90 günün UÇ noktalarından aylık delta — delikli seri
+  sorun değil; min 45 gün süre + 2 farklı ay şartı, yoksa null) ve
+  `buildGoalEta` (kalan/tempo → bitiş ayı; tempo ≤ 0 ya da 120 ay üstü ufukta
+  tarih UYDURULMAZ; `target_date` kıyası pozitif = önde). Okuma net worth
+  deseniyle: `fetchSavingsGoalSnapshots` (limit 2000, missing-table toleransı)
+  + panelde kendi TanStack anahtarı; günlük yazım sonrası hook invalidate eder.
+  UI: hedef kartında "Aylık gerekli"nin altında şerit — *"Son 70 günde ayda
+  +₺15.220 · bu gidişle ~Haziran 2027 · planın 3 ay önünde"*; tutar hedefin
+  KENDİ biriminde (gram hedefte gram), karma hedefte susar, negatif tempoda
+  tespit yazılır ama tarih verilmez. Şerit üretimde tarihçe birikene dek
+  (~Ekim başı) kendiliğinden sessiz — gate veriyle açılır.
 - ~~**PR-3 — bütçe turu.**~~ DONE. Migration `20260825120000`: `budgets` +
   `limit_anchor` (`manual`/`avg_spend`/`salary_pct`) + `limit_anchor_value`,
   kombinasyon check'i (`supabase/tests/budget_limit_anchor.sql`); çıpalı

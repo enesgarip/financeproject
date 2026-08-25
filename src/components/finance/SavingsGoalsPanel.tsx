@@ -1,7 +1,8 @@
 import { Link2, Pencil, Plus, Target, Trash2, Trophy } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../../auth/useAuth'
+import { fetchSavingsGoalSnapshots } from '../../data/repositories/analysisRepo'
 import { SimpleModal } from '../SimpleModal'
 import { Alert } from '../ui/alert'
 import { Badge } from '../ui/badge'
@@ -30,6 +31,7 @@ import { useBalancePrivacy } from '../../hooks/useBalancePrivacy'
 import { KASA_BUCKETS_QUERY_KEY, useKasaBuckets } from '../../hooks/useSafeToSpend'
 import { contributeToGoalBucket, insertKasaBucket, updateKasaBucket } from '../../data/repositories/kasaBucketsRepo'
 import { bucketForGoal, buildGoalBucketPlan } from '../../utils/goalBucket'
+import { buildGoalEta, buildGoalTempo } from '../../utils/goalEta'
 import { goalTargetAnchorLabel, goalTargetUnitsFor } from '../../utils/goalTargetAnchor'
 import { useMarketRates } from '../../hooks/useMarketRates'
 import { useStockPrices } from '../../hooks/useStockPrices'
@@ -241,6 +243,18 @@ export function SavingsGoalsPanel({
 
   const queryClient = useQueryClient()
   const buckets = bucketsQuery.data
+
+  // Günlük hedef fotoğrafları (PR-0 serisi): gerçekleşen tempo + varış tahmini.
+  // Yazan taraf useDailyNetWorthSnapshot; burada yalnız okunur.
+  const goalSnapshotsQuery = useQuery({
+    queryKey: ['savings-goal-snapshots', user?.id],
+    enabled: Boolean(user),
+    queryFn: async () => {
+      const result = await fetchSavingsGoalSnapshots()
+      return result.ok ? (result.data ?? []) : []
+    },
+  })
+  const goalSnapshots = goalSnapshotsQuery.data ?? []
 
   const refs = useMemo<GoalSourceRefs>(
     () => ({ assets, cards, buckets: buckets ?? [], snapshot, stockPrices, monthlyOutflow }),
@@ -992,6 +1006,34 @@ export function SavingsGoalsPanel({
                           return <p className="mt-1 text-[11px] text-ink-muted">Hedef tarih ekle → aylık plan çıkar</p>
                         }
                         return null
+                      })() : null}
+                      {/* Gerçekleşen tempo + varış tahmini (PR-0 serisinden).
+                          Yeterli tarihçe birikene dek (min 45 gün, 2 ay) susar;
+                          tempo ≤ 0 ise tarih UYDURULMAZ, tespit yine yazılır. */}
+                      {!isCompleted && goal.value_type !== 'composite' ? (() => {
+                        const tempo = buildGoalTempo(goalSnapshots, goal.id)
+                        if (!tempo) return null
+                        const suggestion = buildSavingsSuggestion(goal)
+                        const eta = buildGoalEta(goal, suggestion.remaining, tempo)
+                        const sign = tempo.monthlyDelta >= 0 ? '+' : '−'
+                        return (
+                          <p className="mt-1 text-[11px] text-ink-muted">
+                            Son {tempo.spanDays} günde ayda {sign}
+                            {formatSavingsGoalAmount(goal, Math.abs(tempo.monthlyDelta))}
+                            {eta ? (
+                              <>
+                                {' '}· bu gidişle ~{eta.etaLabel}
+                                {eta.deltaMonthsVsTarget === null
+                                  ? ''
+                                  : eta.deltaMonthsVsTarget > 0
+                                    ? ` · planın ${eta.deltaMonthsVsTarget} ay önünde`
+                                    : eta.deltaMonthsVsTarget < 0
+                                      ? ` · planın ${-eta.deltaMonthsVsTarget} ay gerisinde`
+                                      : ' · planla uyumlu'}
+                              </>
+                            ) : null}
+                          </p>
+                        )
                       })() : null}
                     </div>
                   </div>

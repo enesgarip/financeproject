@@ -1,5 +1,5 @@
 import { supabase } from '../../lib/supabase'
-import type { CardExpense, NetWorthSnapshot, TransactionHistory } from '../../types/database'
+import type { CardExpense, NetWorthSnapshot, SavingsGoalSnapshot, TransactionHistory } from '../../types/database'
 import { addMonths, dateInputValue, startOfMonth } from '../../utils/date'
 import type { GoalSnapshotEntry } from '../../utils/goalSnapshots'
 import { isMissingSupabaseCapabilityError } from '../../utils/supabaseErrors'
@@ -68,6 +68,24 @@ export async function fetchNetWorthSnapshots(): Promise<Result<NetWorthSnapshot[
 
   if (isMissingSupabaseCapabilityError(error)) return ok(null)
   return resultFromSupabase([...(data ?? [])].reverse() as NetWorthSnapshot[], error, 'Net değer serisi yüklenemedi.')
+}
+
+// Tempo penceresi 90 gün; birkaç hedef × günlük satırda 2000 bolca yeter.
+const SAVINGS_GOAL_SNAPSHOT_LIMIT = 2000
+
+export async function fetchSavingsGoalSnapshots(): Promise<Result<SavingsGoalSnapshot[] | null>> {
+  const { data, error } = await supabase
+    .from('savings_goal_snapshots')
+    .select('*')
+    .order('snapshot_date', { ascending: false })
+    .limit(SAVINGS_GOAL_SNAPSHOT_LIMIT)
+
+  if (isMissingSupabaseCapabilityError(error)) return ok(null)
+  return resultFromSupabase(
+    [...(data ?? [])].reverse() as SavingsGoalSnapshot[],
+    error,
+    'Hedef fotoğraf serisi yüklenemedi.',
+  )
 }
 
 export type PriceRadarRows = {
