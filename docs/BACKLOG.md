@@ -83,8 +83,37 @@ CodeQL, heartbeat, push_run_log, SECRETS.md, retention, Web Vitals RUM).
   `[functions.parse-sms]` + `[functions.push-notify]` `verify_jwt = false`
   (fiili durumun beyanı; her iki fonksiyon kendi sırrıyla korunur, test modu
   user-JWT'yi içeride doğrular) — dashboard'a gizli auth ayarı kalmadı.
-- **Sonra:** ④ SQL↔TS ikiz diferansiyel harness + fast-check ledger paketi →
-  ⑤ TS strict (ölçüldü: bugün 0 hata) + noUncheckedIndexedAccess fazlı.
+  **③ canlı kanıt + iki üretim tuzağı (2026-08-26):** yeni auth yolu
+  workflow_dispatch ile üretimde `ok:true` döndü; service-role artık cron
+  çağrısında YOK — kullanıcı `SUPABASE_SERVICE_ROLE_KEY`'i GH'dan silebilir.
+  Yol boyunca iki gerçek tuzak: (1) `sb_publishable` anahtar Authorization
+  Bearer olarak GÖNDERİLMEZ — gateway "Conflicting API keys" 401'i verir,
+  yalnız `apikey` başlığı (hotfix #202); (2) `... | gh secret set` pipe'ı sırra
+  satır-sonu ekliyor → header eşleşmez, fonksiyon 401 — sırlar `--body` ile
+  set edilmeli; edge tarafına da header trim sertleştirmesi eklendi.
+- ~~**④ — SQL↔TS ikiz güvencesi.**~~ DONE. (a) **Diferansiyel harness:**
+  `tests/twin/twinEquivalence.test.ts` + AYRI `vitest.twin.config.ts`
+  (`npm run db:test:twins` başlatıcısı .mjs — Windows'ta env öneki çalışmaz;
+  Node type-stripping uzantısız importları çözemediği için vitest koşucusu;
+  src altında yaşasaydı node tipleri app tsconfig'ine sızıyordu — denendi,
+  tests/twin'e taşındı, tipi tsconfig.e2e verir) — seed'li PRNG'yle 30
+  rastgele kart yazımı gerçek
+  trigger'lardan geçer (clamp BEFORE + record_card_debt_event AFTER), saklanan
+  kolonlar + card_ledger olayları TS ikizleriyle (clampCardBreakdown,
+  projectCardDebtKurus, projectCardSplit) KURUŞ-birebir kıyaslanır; kredi
+  senaryosu (6-17 taksit + rastgele ödenmiş önek) sync_loan_summary ↔
+  projectLoanSummary. Kapı Ş13 dersine karşı CI'a KABLOLU: ci.yml Supabase
+  job'ına Node+cache+`db:test:twins` adımı — skip'li test sessizce çürüyemez.
+  TWIN_SEED ile tekrar üretilebilir; DB'li testler 120 sn timeout (vitest 5 sn
+  varsayılanı ilk koşuda yanlış-kırmızı verdi). (b) **fast-check paketi:**
+  `cardLedger.property.test.ts` (+11 test) — "her olay dizisi için borç =
+  kuruş toplamı & sıra bağımsız", summarize debit−credit=net, tam-fidelity
+  dizide split toplamı = borç, tek null-delta complete'i düşürür; clamp
+  negatif-üretmez/aşmaz/idempotent/geçerliyi değiştirmez/statement önceliği;
+  projectLoanSummary cebirsel + "ödenmiş eklemek özeti değiştirmez";
+  expectedInstallmentAmount kuruş-kesin.
+- **Sonra:** ⑤ TS strict (ölçüldü: bugün 0 hata) + noUncheckedIndexedAccess
+  fazlı kapama (253 hata, yoğunluk parser katmanında).
 
 ## 2026-08-26 — Fikir turu (10 özellik, kullanıcıyla kararlaştırıldı)
 

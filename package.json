@@ -20,6 +20,7 @@
     "test:e2e:ui": "playwright test --ui",
     "docker:build": "docker build -t financeproject .",
     "docker:preview": "docker compose -f docker-compose.ci.yml up --build app",
+    "db:test:twins": "node scripts/verify-twin-equivalence.mjs",
     "db:lint:local": "supabase db lint --local --fail-on error",
     "db:audit:rls:local": "docker exec -i supabase_db_financeproject psql -U postgres -d postgres -v ON_ERROR_STOP=1 -f - < supabase/tests/rls_audit.sql",
     "db:audit:grants:local": "docker exec -i supabase_db_financeproject psql -U postgres -d postgres -v ON_ERROR_STOP=1 -f - < supabase/tests/grants_audit.sql",
