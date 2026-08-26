@@ -1,5 +1,33 @@
 # Priority Backlog
 
+## 2026-08-26 — Mühendislik turu (48 fikirlik denetimden, kullanıcının sırası)
+
+Fikir turunun mühendislik-gözü devamı: 6 mercek × 48 fikir + gerçeklik denetimi
+(teknik öncüller repo'dan doğrulandı). Kullanıcı benim sıralamamı onayladı:
+① kanıtlanmış delikler paketi → ② client_errors → ③ service-role emekliliği +
+CSP → ④ ikiz harness + property → ⑤ TS strict. Seçilmeyen ~30 fikir oturum
+kaydında (öne çıkanlar: knip, React Compiler, Stryker, auth drift bekçisi,
+CodeQL, heartbeat, push_run_log, SECRETS.md, retention, Web Vitals RUM).
+
+- ~~**M1 — CI kör noktaları: deno check + migration guard.**~~ DONE.
+  (1) ci.yml'e `edge` classify çıktısı + path-filtreli **Edge Deno Check** job'ı
+  (denoland/setup-deno v2.x, `~/.cache/deno` cache'li, `deno check
+  supabase/functions/*/index.ts`); deploy.yml'de edge deploy'dan HEMEN ÖNCE aynı
+  kapı — PR G'de parse-sms tip hatasının sessiz yaşamasının (CI deno koşmuyordu)
+  iki uçtan kapanışı. (2) Yeni `src/utils/migrations.guard.test.ts` (docs.guard
+  deseni, import.meta.glob): timestamp benzersizliği (23505 tuzağı), ad biçimi,
+  takvim geçerliliği — paralel-oturum çakışması artık her test:unit'te saniyelik
+  net mesajla, kriptik DB hatası ve 3-5 dk'lık DB job'ı beklemeden yakalanır.
+- **M2 — tsc kapsamı (e2e+scripts)** (sırada): tsconfig.e2e/tools — "export
+  silme yalnız CI'da patlar" gotcha'sının kökten kapanışı.
+- **M3 — npm run verify** (sırada): CI quality job'ının birebir yerel aynası
+  (coverage + bundle + audit + koşullu deno) + CLAUDE.md kapısı tek komut.
+- **M4 — .gitattributes** (sırada): satır sonu normalizasyonu (parser golden
+  fixture'ları bayt-sabit `-text`); renormalize diff'i bilinçli ayrı PR.
+- **Sonra:** ② client_errors tablosu → ③ service-role emekliliği + CSP
+  sabitleme → ④ SQL↔TS ikiz diferansiyel harness + fast-check ledger paketi →
+  ⑤ TS strict (ölçüldü: bugün 0 hata) + noUncheckedIndexedAccess fazlı.
+
 ## 2026-08-26 — Fikir turu (10 özellik, kullanıcıyla kararlaştırıldı)
 
 54 fikirlik çok-mercekli üretim + repo/backlog gerçeklik denetiminden kullanıcının
