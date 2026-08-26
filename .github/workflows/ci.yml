@@ -381,3 +381,26 @@ jobs:
             docker exec -i supabase_db_financeproject psql -U postgres -d postgres -v ON_ERROR_STOP=1 -f - < "$f"
             echo "::endgroup::"
           done
+
+      # SQL↔TS ikiz diferansiyel harness'i (muh. turu ④): rastgele yazma dizisi
+      # gerçek trigger'lardan geçer, çıktı TS ikizleriyle kuruş-birebir kıyaslanır.
+      # Trigger migration'ı ikizden saparsa (K4 tipi yeniden yazım) burada kırmızı.
+      - name: Setup Node (twin harness)
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Restore node_modules
+        id: node-modules-cache
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: node-modules-${{ runner.os }}-node24-${{ hashFiles('package-lock.json') }}
+
+      - name: Install dependencies
+        if: ${{ steps.node-modules-cache.outputs.cache-hit != 'true' }}
+        run: npm ci
+
+      - name: SQL↔TS twin equivalence harness
+        run: npm run db:test:twins

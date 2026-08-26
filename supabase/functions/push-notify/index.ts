@@ -332,8 +332,10 @@ function getServiceRoleKey(): string | null {
  * GitHub secrets'taki kopya emekliye ayrılır.
  */
 function isAuthorized(req: Request, serviceRoleKey: string): boolean {
+  // İki taraf da trim'lenir: sır bir kez pipe'tan satır-sonuyla set edilmişti
+  // ve fark 401 olarak döndü — görünmez whitespace sınıfı burada ölür.
   const cronSecret = Deno.env.get('PUSH_CRON_SECRET')?.trim() || null
-  const headerSecret = req.headers.get('x-cron-secret')
+  const headerSecret = req.headers.get('x-cron-secret')?.trim() || null
   if (cronSecret && headerSecret && timingSafeEqual(headerSecret, cronSecret)) return true
 
   const bearer = bearerToken(req)

@@ -31,5 +31,5 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["tests", "playwright.config.ts", "vitest.config.ts"]
+  "include": ["tests", "playwright.config.ts", "vitest.config.ts", "vitest.twin.config.ts"]
 }
