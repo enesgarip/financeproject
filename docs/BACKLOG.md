@@ -112,8 +112,14 @@ CodeQL, heartbeat, push_run_log, SECRETS.md, retention, Web Vitals RUM).
   negatif-üretmez/aşmaz/idempotent/geçerliyi değiştirmez/statement önceliği;
   projectLoanSummary cebirsel + "ödenmiş eklemek özeti değiştirmez";
   expectedInstallmentAmount kuruş-kesin.
-- **Sonra:** ⑤ TS strict (ölçüldü: bugün 0 hata) + noUncheckedIndexedAccess
-  fazlı kapama (253 hata, yoğunluk parser katmanında).
+- ~~**⑤ — TS strict.**~~ DONE. `"strict": true` ÜÇ projede de
+  (tsconfig.app/node/e2e) açıldı — ölçüm doğrulandı: temiz buildinfo'yla
+  `tsc -b` sıfır hata, yani tamamen bedava disiplin kilidi (strictNullChecks
+  vb. kapalıyken yeni kod sessizce gevşeyebilirdi; artık derleyici kilitli).
+  **Sıradaki doğal dilim (açık):** `noUncheckedIndexedAccess` — ölçüm 253 hata
+  ve yoğunluk tam olması gereken yerde (DenizBank/YKB ekstre-parser'larının
+  dizi indekslemeleri + chart'lar); "dizin taşması → NaN/undefined tutar" hata
+  sınıfını derleyiciye devreder. Mekanik ama geniş — ayrı tur dilimi.
 
 ## 2026-08-26 — Fikir turu (10 özellik, kullanıcıyla kararlaştırıldı)
 

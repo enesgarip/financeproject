@@ -7,6 +7,11 @@
     "types": ["vite/client"],
     "skipLibCheck": true,
     "ignoreDeprecations": "6.0",
+    // Ölçülüp açıldı (muh. turu ⑤, 2026-08-26): --strict bugün 0 hata veriyordu
+    // — bedava disiplin kilidi. strictNullChecks vb. kapalıyken yeni kod
+    // sessizce gevşeyebilirdi. Sıradaki faz: noUncheckedIndexedAccess (ölçüm:
+    // 253 hata, yoğunluk parser katmanında — ayrı dilim).
+    "strict": true,
 
     /* Bundler mode */
     "moduleResolution": "bundler",
