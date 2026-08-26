@@ -13,6 +13,11 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  define: {
+    // Hata kayıtlarını deploy'a eşleyen sürüm damgası (lib/errorReport):
+    // build GH Actions'ta koştuğu için GITHUB_SHA orada hep dolu.
+    __APP_COMMIT__: JSON.stringify(process.env.GITHUB_SHA?.slice(0, 12) ?? 'dev'),
+  },
   build: {
     // Sentry kaldirildiktan sonra source map'i tuketen kimse kalmadi; uretime
     // sunulmayan harita uretmek bosuna build maliyeti + sizinti yuzeyi.

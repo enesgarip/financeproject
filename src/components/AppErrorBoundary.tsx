@@ -19,8 +19,13 @@ export class AppErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: ErrorInfo): void {
-    // Uzak hata servisi yok; ayıklama için konsol kalır.
+    // Konsol ayıklama için kalır; kalıcı iz client_errors tablosuna düşer
+    // (lib/errorReport — kendi Supabase'imiz, Sentry'siz). Dinamik import:
+    // boundary entry'de yaşar, rapor zinciri giriş paketine binmesin.
     console.error('Uygulama hatası:', error, info.componentStack)
+    void import('../lib/errorReport')
+      .then((mod) => mod.reportBoundaryError(error, info.componentStack))
+      .catch(() => undefined)
   }
 
   render(): ReactNode {

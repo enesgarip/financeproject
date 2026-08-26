@@ -50,9 +50,25 @@ CodeQL, heartbeat, push_run_log, SECRETS.md, retention, Web Vitals RUM).
   DEĞİŞTİRİYORDU (denendi, geri alındı); parser'lar iki satır sonunu da tolere
   ettiğinden doğru bayt-sabitlik varsayılan normalize'ın kendisi
   (.gitattributes'ta gerekçeli yorum).
-- **Sonra:** ② client_errors tablosu → ③ service-role emekliliği + CSP
-  sabitleme → ④ SQL↔TS ikiz diferansiyel harness + fast-check ledger paketi →
-  ⑤ TS strict (ölçüldü: bugün 0 hata) + noUncheckedIndexedAccess fazlı.
+- ~~**② — client_errors: Sentry'siz istemci hata izleme.**~~ DONE (migration
+  `20260826180000`). Üretim telefon PWA'sında çökmeler tamamen görünmezdi
+  (Sentry 2026-08-19'da bilinçli kaldırılmıştı — DSN zaten boştu). Yeni
+  `lib/errorReport.ts`: AppErrorBoundary (dinamik import — entry şişmez) +
+  window error/unhandledrejection (PROD'da 3 sn gecikmeli kurulum,
+  dailyGoalSnapshots dersi) kendi `client_errors` tablosuna yazar — CSP
+  değişikliği gerekmedi (Supabase origin'i zaten izinli; Sentry'yi geri
+  getirmenin DSN+CSP maliyetinin aksine). Şişme korumaları: oturum başına ~5
+  kayıt + hash'le oturum-içi ve localStorage'la günlük dedupe + 90 gün
+  istemci-retention (oturumda bir delete). `__APP_COMMIT__` vite define'ı
+  (GITHUB_SHA) hatayı deploy'a eşler; vitest define ikizi eklendi. Tablo:
+  own-row RLS ((select auth.uid()) deseni), user_id DEFAULT auth.uid()
+  (istemci kolonu göndermez), UPDATE bilinçli yok, explicit grant. Yüzey:
+  `ClientErrorsPanel` (/veri-sagligi/islemler) — son 7 gün + commit kısaltması
+  + Temizle. Yedek/restore kapsamına BİLİNÇLİ girmedi (operasyonel log, finans
+  verisi değil; user FK cascade yeter).
+- **Sonra:** ③ service-role emekliliği + CSP sabitleme → ④ SQL↔TS ikiz
+  diferansiyel harness + fast-check ledger paketi → ⑤ TS strict (ölçüldü:
+  bugün 0 hata) + noUncheckedIndexedAccess fazlı.
 
 ## 2026-08-26 — Fikir turu (10 özellik, kullanıcıyla kararlaştırıldı)
 
