@@ -8,6 +8,10 @@ import { coverageConfigDefaults, defineConfig } from 'vitest/config'
 // Playwright e2e specs under `tests/e2e/*.spec.ts` are intentionally excluded
 // so the two runners never pick up each other's files.
 export default defineConfig({
+  define: {
+    // vite.config'teki build sabitinin test ikizi (lib/errorReport tüketir).
+    __APP_COMMIT__: JSON.stringify('test'),
+  },
   resolve: {
     // vite.config.ts ile aynı `@` alias'ı: bileşen testleri (`.test.tsx`)
     // `@/utils/...` importlu kaynakları çekebilsin diye burada da tanımlı.

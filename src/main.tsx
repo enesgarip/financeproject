@@ -20,6 +20,15 @@ createRoot(document.getElementById('root')!).render(
   </StrictMode>,
 )
 
+// Yakalanmamış hatalar client_errors'a (Sentry'siz izleme). PROD-only: yerelde
+// konsol var; kurulum gecikmeli + dinamik importla — entry bütçesine binmez
+// (dailyGoalSnapshots dersi). Boundary raporu bundan bağımsız her ortamda çalışır.
+if (import.meta.env.PROD) {
+  window.setTimeout(() => {
+    void import('./lib/errorReport').then((mod) => mod.installClientErrorReporting()).catch(() => undefined)
+  }, 3000)
+}
+
 if ('serviceWorker' in navigator && import.meta.env.PROD) {
   // `controllerchange` ilk kayıtta da tetiklenir; o an tazelemek yeni ziyaretçiyi
   // sebepsiz reload'a sokar. Kayıttan ÖNCE kontrolcü var mıydı, onu tutuyoruz.

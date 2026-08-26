@@ -3,6 +3,7 @@ import { useRef, useState, type ChangeEvent, type FormEvent } from 'react'
 import { useAuth } from '../auth/useAuth'
 import { NotificationSettings } from '../components/finance/NotificationSettings'
 import { AutomationCoveragePanel } from '../components/finance/AutomationCoveragePanel'
+import { ClientErrorsPanel } from '../components/finance/ClientErrorsPanel'
 import { SmsLogPanel } from '../components/finance/SmsLogPanel'
 import { Alert } from '../components/ui/alert'
 import { Card as SurfaceCard, CardContent, CardHeader, CardTitle } from '../components/ui/card'
@@ -230,6 +231,7 @@ export function DataHealthOperationsPage() {
         <NotificationSettings />
         <AutomationCoveragePanel />
         <SmsLogPanel />
+        <ClientErrorsPanel />
       </section>
 
       <ResetDataModal
