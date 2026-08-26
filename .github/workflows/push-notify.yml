@@ -33,9 +33,11 @@ jobs:
             exit 1
           fi
 
+          # sb_publishable anahtarı YALNIZ apikey başlığında gider: Authorization
+          # Bearer olarak da göndermek gateway'de "Conflicting API keys" 401'i
+          # üretiyor (ilk canlı koşuda öğrenildi). Fonksiyon kapısı x-cron-secret.
           curl --fail-with-body --show-error --silent \
             --request POST "https://${SUPABASE_PROJECT_REF}.functions.supabase.co/push-notify" \
-            --header "Authorization: Bearer ${SUPABASE_ANON_KEY}" \
             --header "apikey: ${SUPABASE_ANON_KEY}" \
             --header "x-cron-secret: ${PUSH_CRON_SECRET}" \
             --header "Content-Type: application/json" \
