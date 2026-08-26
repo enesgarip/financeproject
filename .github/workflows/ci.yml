@@ -20,6 +20,7 @@ jobs:
     outputs:
       frontend: ${{ steps.detect.outputs.frontend }}
       database: ${{ steps.detect.outputs.database }}
+      edge: ${{ steps.detect.outputs.edge }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -35,11 +36,13 @@ jobs:
         run: |
           frontend=false
           database=false
+          edge=false
 
           if [ "$EVENT_NAME" = "schedule" ] || [ "$EVENT_NAME" = "workflow_dispatch" ] \
             || [ -z "$BASE_SHA" ] || [ "$BASE_SHA" = "0000000000000000000000000000000000000000" ]; then
             frontend=true
             database=true
+            edge=true
           else
             changed=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA")
             while IFS= read -r file; do
@@ -53,11 +56,17 @@ jobs:
                   database=true
                   ;;
               esac
+              case "$file" in
+                supabase/functions/*)
+                  edge=true
+                  ;;
+              esac
             done <<< "$changed"
           fi
 
           echo "frontend=$frontend" >> "$GITHUB_OUTPUT"
           echo "database=$database" >> "$GITHUB_OUTPUT"
+          echo "edge=$edge" >> "$GITHUB_OUTPUT"
 
   quality:
     name: Lint and Build
@@ -263,6 +272,43 @@ jobs:
             playwright-report
             test-results
           if-no-files-found: ignore
+
+  # Edge fonksiyonları tsc'nin tamamen kör noktasıydı: PR G'de parse-sms'teki
+  # tip hatası sırf bu yüzden sessizce üretimde yaşadı. Path-filtreli tip kapısı;
+  # yerel eşdeğeri `deno check supabase/functions/*/index.ts`.
+  deno:
+    name: Edge Deno Check
+    needs: changes
+    if: ${{ github.event_name != 'schedule' && needs.changes.outputs.edge == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      # Remote import'lar (deno.land/jsr) ölçüm dışı bir kez inip cache'lenir.
+      - name: Cache Deno modules
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/deno
+          key: deno-${{ runner.os }}-${{ hashFiles('supabase/functions/**/*.ts') }}
+          restore-keys: |
+            deno-${{ runner.os }}-
+
+      - name: Type-check edge functions
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          files=(supabase/functions/*/index.ts)
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "::error::supabase/functions altında index.ts bulunamadı"
+            exit 1
+          fi
+          deno check "${files[@]}"
 
   supabase:
     name: Supabase Migration Check

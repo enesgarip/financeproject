@@ -292,6 +292,24 @@ jobs:
         if: ${{ needs.changes.outputs.migrations == 'true' }}
         run: supabase db push --linked --include-all
 
+      # Deploy'dan hemen önce tip kapısı: tip bozuk edge fonksiyonu üretime
+      # ÇIKAMAZ (PR G'de parse-sms tip hatası CI deno koşmadığı için sessizdi;
+      # PR yolundaki kapı ci.yml'de — bu, main'e doğrudan push'un emniyeti).
+      - name: Setup Deno (edge type-check)
+        if: ${{ needs.changes.outputs.edge == 'true' }}
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Type-check edge functions before deploy
+        if: ${{ needs.changes.outputs.edge == 'true' }}
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          files=(supabase/functions/*/index.ts)
+          [ "${#files[@]}" -gt 0 ] || { echo "::error::edge index.ts bulunamadı"; exit 1; }
+          deno check "${files[@]}"
+
       - name: Deploy changed edge functions
         if: ${{ needs.changes.outputs.edge == 'true' }}
         env:
