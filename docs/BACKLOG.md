@@ -41,8 +41,15 @@ CodeQL, heartbeat, push_run_log, SECRETS.md, retention, Web Vitals RUM).
   (coverageConfigDefaults spread'i; düz atama .test.ts'leri coverage'a katıp
   eşikleri anlamsızlaştırırdı). Coverage gerçek çekirdek yüzdesine oturdu:
   91,5/83,2/92,3/93,8 (eşikler 85/75/85/87 değişmedi).
-- **M4 — .gitattributes** (sırada): satır sonu normalizasyonu (parser golden
-  fixture'ları bayt-sabit `-text`); renormalize diff'i bilinçli ayrı PR.
+- ~~**M4 — .gitattributes.**~~ DONE. `* text=auto` + kaynak uzantılarına açık
+  `eol=lf`. `git add --renormalize .` SIFIR dosya değiştirdi — depo zaten
+  tamamen LF-normalize'mış; politika artık deklaratif, gelecekteki CRLF
+  sızıntısı (CRLF/perl tuzağı, worktree diff gürültüsü) yapısal olarak kapalı.
+  Önemli öğrenme: parser fixture'larına `-text` işaretlemek TERS TEPERDİ —
+  renormalize Windows working-tree'nin CRLF kopyasını stage'leyip LF blob'ları
+  DEĞİŞTİRİYORDU (denendi, geri alındı); parser'lar iki satır sonunu da tolere
+  ettiğinden doğru bayt-sabitlik varsayılan normalize'ın kendisi
+  (.gitattributes'ta gerekçeli yorum).
 - **Sonra:** ② client_errors tablosu → ③ service-role emekliliği + CSP
   sabitleme → ④ SQL↔TS ikiz diferansiyel harness + fast-check ledger paketi →
   ⑤ TS strict (ölçüldü: bugün 0 hata) + noUncheckedIndexedAccess fazlı.

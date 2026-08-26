@@ -1,0 +1,24 @@
+# Satır sonu politikası repo seviyesinde: CRLF/perl tuzağı (çok satırlı metin
+# değişikliği CRLF dosyada sessizce düşüyordu) ve worktree'ler arası satır-sonu
+# diff gürültüsü editör/araç ayarına bel bağlamadan kapanır.
+* text=auto
+
+# Kaynak dosyalar depoda HER ZAMAN LF (checkout'ta da LF — araçlar tutarlı görür).
+*.ts text eol=lf
+*.tsx text eol=lf
+*.mjs text eol=lf
+*.js text eol=lf
+*.css text eol=lf
+*.html text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.sql text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.toml text eol=lf
+
+# Parser golden fixture'larına (src/utils/__fixtures__/parsers) ÖZEL kural YOK,
+# bilinçli: depoda zaten LF saklılar ve parser'lar iki satır sonunu da tolere
+# ediyor (testler Windows'ta CRLF checkout'la, CI'da LF ile geçiyor). `-text`
+# işaretlemek renormalize'da Windows working-tree'nin CRLF kopyasını stage'leyip
+# blob'ları DEĞİŞTİRİRDİ — mevcut baytları korumanın yolu varsayılan normalize.
