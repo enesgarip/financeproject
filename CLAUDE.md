@@ -176,12 +176,10 @@ Günlük şifreli DB yedeği cron'u var (`db-backup.yml`).
   `AppErrorBoundary` ile yerelde sürüyor, teşhis için Supabase fonksiyon logları
   ve Vercel logları kullanılır. Geri getirilecekse hem DSN hem CSP satırı gerekir.
 - **timestamptz'i `formatDate`'e verme** (date-only bekler) → `.slice(0,10)`.
-- **Export silerken `src/` taraması YETMEZ.** `tests/e2e/*.spec.ts` doğrudan
-  `../../src/utils/*`'tan import eder ama `tsc -b`'nin tsconfig'ine dahil değildir:
-  bir export/tip silindiğinde `lint + test:unit + build` üçü de yeşil kalır, hatayı
-  yalnız Playwright Smoke yakalar (`SyntaxError: does not provide an export named …`)
-  — yani CI'da, PR açıldıktan sonra. Silmeden önce `git grep` ile `tests/` dahil tüm
-  depoyu tara ve ilgili spec'i yerelde koştur:
-  `npx playwright test tests/e2e/<spec> --reporter=line`.
+- ~~Export silme tests/e2e tuzağı~~ KAPANDI (M2, 2026-08-26): `tsconfig.e2e.json`
+  artık `tsc -b` referanslarında — `tests/e2e/*.spec.ts` + playwright/vitest
+  config'leri her `npm run build`'de tip-denetlenir; silinen export yerelde
+  saniyeler içinde patlar, PR-sonrası Playwright sürprizi kalmadı. (Kapı ilk
+  koşusunda üç spec fixture'ında gerçek şema drift'i yakaladı.)
 - Edge fonksiyonları `supabase/functions/_shared/edge.ts` ortak modülünü kullanır
   (CORS, timeout'lu fetch).
