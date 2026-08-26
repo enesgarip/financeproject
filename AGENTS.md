@@ -45,8 +45,11 @@ davranış/öncelik değiştiği commit'te güncel kalmalı.
 ## "Bitti" demeden önce
 
 ```bash
-npm run lint && npm run test:unit && npm run build
+npm run verify
 ```
+
+(CI quality kapısının birebir yerel aynası: lint + coverage'lı test + prod
+dependency audit + build + bundle bütçesi + deno kuruluysa edge tip kontrolü.)
 
 Migration/trigger değiştiyse ek olarak yerel gerçek Postgres'te doğrula
 (`npm run db:seed:local` + `docker exec ... psql`).

@@ -36,6 +36,7 @@ kullanıcıya yanıtlar Türkçe.
 npm run dev            # Vite (üretim Supabase'ine bağlanır — .env.local)
 npm run dev:local      # Yerel Supabase başlat + Vite'ı ona bağla (üretime dokunmaz)
 npm run dev:local:stop # Yerel Supabase docker'ı kapat
+npm run verify         # "BİTTİ" KAPISI — CI quality job'ının birebir yerel aynası
 npm run lint           # ESLint (tüm repo)
 npm run test:unit      # Vitest (saf util/servis testleri)
 npm run test:e2e       # Playwright smoke (CI'da çalışır)
@@ -47,7 +48,11 @@ npm run db:audit:rls:local # RLS denetimi (her public tablo RLS açık + own-row
 ```
 
 `dev:local` sonrası giriş: **t@t.com / password123** (önce `db:seed:local` çalıştır).
-Bir değişikliği "bitti" saymadan önce: `npm run lint && npm run test:unit && npm run build`.
+Bir değişikliği "bitti" saymadan önce: **`npm run verify`** — lint + coverage'lı
+test + prod dependency audit + build + bundle bütçesi + (deno kuruluysa) edge tip
+kontrolü. CI quality kapısının birebir aynası: eski üçlü (lint+test:unit+build)
+coverage eşiğini, bundle bütçesini ve audit'i KOŞMUYORDU — "yerelde yeşil, CI'da
+kırmızı" sürprizi iki kez yaşandı (PR-0 ve PR B bundle olayları).
 
 ## Mimari katmanlar (sınır ESLint ile zorlanır)
 

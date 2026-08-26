@@ -27,8 +27,20 @@ CodeQL, heartbeat, push_run_log, SECRETS.md, retention, Web Vitals RUM).
   eklenen kolonları (`valued_at`, `valuation_rate`, `auto_source_card_id`)
   hiç almamıştı — gerçek şema drift'i, düzeltildi. `scripts/*.mjs` checkJs'i
   bilinçli kapsam dışı (JSDoc tipleme ayrı iş; istenirse açılır).
-- **M3 — npm run verify** (sırada): CI quality job'ının birebir yerel aynası
-  (coverage + bundle + audit + koşullu deno) + CLAUDE.md kapısı tek komut.
+- ~~**M3 — npm run verify.**~~ DONE. `verify` script'i CI quality job'ının
+  BİREBİR yerel aynası (aynı sırayla: lint → test:coverage → npm audit
+  --omit=dev high → build → check:bundle) + kuyrukta `scripts/verify-edge.mjs`
+  (deno kuruluysa 5 fonksiyonu tip-denetler; değilse yüksek sesle uyarır ama
+  kilitlemez — zorlayıcı kapı CI'da). CLAUDE.md + AGENTS.md "bitti" kapısı tek
+  komuta indi; eski üçlünün koşmadığı coverage/bundle/audit farkı ("yerelde
+  yeşil, CI'da kırmızı" iki kez yaşanmıştı) kapandı. **Kapı ilk koşusunda
+  kendi sınıfından bir hata yakaladı:** coverage include'u `src/utils/**`
+  fixture README/.txt'lerini "uncovered file" diye parse etmeye çalışıp
+  WINDOWS'ta çöküyordu (CI Linux'ta sessiz) — include `**/*.ts`'e daraltıldı,
+  exclude varsayılanları koruyarak `__fixtures__` dışlandı
+  (coverageConfigDefaults spread'i; düz atama .test.ts'leri coverage'a katıp
+  eşikleri anlamsızlaştırırdı). Coverage gerçek çekirdek yüzdesine oturdu:
+  91,5/83,2/92,3/93,8 (eşikler 85/75/85/87 değişmedi).
 - **M4 — .gitattributes** (sırada): satır sonu normalizasyonu (parser golden
   fixture'ları bayt-sabit `-text`); renormalize diff'i bilinçli ayrı PR.
 - **Sonra:** ② client_errors tablosu → ③ service-role emekliliği + CSP
