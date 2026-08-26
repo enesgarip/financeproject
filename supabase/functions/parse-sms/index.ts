@@ -9,7 +9,7 @@
 //          Headers: x-webhook-secret: <secret>
 //          Body: { "sms": "Degerli Musterimiz, ..." }
 
-import { handlePreflight, jsonResponse, rateLimit } from '../_shared/edge.ts'
+import { handlePreflight, jsonResponse, rateLimit, timingSafeEqual } from '../_shared/edge.ts'
 
 // --- SMS parsing -----------------------------------------------------------
 // Parsing mantığı src/utils/smsParser.ts ile senkronize tutulmalı (testler orada).
@@ -339,8 +339,9 @@ Deno.serve(async (req: Request) => {
   const webhookSecret = env('SMS_WEBHOOK_SECRET')
   if (!webhookSecret) return jsonResponse({ error: 'SMS_WEBHOOK_SECRET tanımlı değil.' }, 500)
 
+  // Sabit-zamanlı kıyas: finansal yazma kapısında düz !== zamanlama sızıntısına açıktı.
   const reqSecret = req.headers.get('x-webhook-secret')
-  if (reqSecret !== webhookSecret) {
+  if (!reqSecret || !timingSafeEqual(reqSecret, webhookSecret)) {
     return jsonResponse({ error: 'Yetkisiz.' }, 401)
   }
 

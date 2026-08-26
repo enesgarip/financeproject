@@ -413,3 +413,14 @@ s3_secret_key = "env(S3_SECRET_KEY)"
 # declarative_schema_path = "./database"
 # JSON string passed through to pg-delta SQL formatting.
 # format_options = "{\"keywordCase\":\"upper\",\"indent\":2,\"maxWidth\":80,\"commaStyle\":\"trailing\"}"
+
+# Edge fonksiyon JWT durusu ARTIK git'te (muh. turu 3): iki fonksiyon kendi
+# sirriyla korunur, gateway JWT kapisi kapali - dashboard'a gizli ayar kalmadi.
+# parse-sms: iOS Shortcut x-webhook-secret ile cagirir (JWT'siz - mevcut fiili durum).
+# push-notify: cron x-cron-secret ile cagirir; user-JWT'li test modu fonksiyon
+# icinde ayrica dogrulanir (authenticatedUserId).
+[functions.parse-sms]
+verify_jwt = false
+
+[functions.push-notify]
+verify_jwt = false
