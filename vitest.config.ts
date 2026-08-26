@@ -1,5 +1,5 @@
 import path from 'node:path'
-import { defineConfig } from 'vitest/config'
+import { coverageConfigDefaults, defineConfig } from 'vitest/config'
 
 // Unit tests (pure finance/util logic) live next to their source as
 // `src/**/*.test.ts`. Component a11y tests use `.test.tsx` and opt into a DOM
@@ -28,7 +28,13 @@ export default defineConfig({
       // projection layer the whole trust journey is built on. UI (pages/
       // components) is exercised by Playwright, not unit-covered, so including
       // it here would only produce a misleading, unmovable percentage.
-      include: ['src/utils/**'],
+      // Yalnız .ts: fixture klasöründeki README.md/.txt "uncovered file" olarak
+      // parse edilmeye çalışılıp Windows'ta coverage koşusunu çökertiyordu
+      // (M3'te npm run verify'ın ilk yerel koşusu yakaladı; CI Linux'ta sessizdi).
+      include: ['src/utils/**/*.ts'],
+      // Varsayılan exclude'lar (test dosyaları vb.) KORUNUR — düz atama onları
+      // ezip .test.ts'leri coverage'a katar, eşikleri anlamsızlaştırırdı.
+      exclude: [...coverageConfigDefaults.exclude, '**/__fixtures__/**'],
       reporter: ['text-summary', 'html'],
       // Thresholds sit a small margin below current coverage: a genuine
       // regression (new untested branch/function in the core) fails CI, but
