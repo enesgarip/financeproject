@@ -18,8 +18,15 @@ CodeQL, heartbeat, push_run_log, SECRETS.md, retention, Web Vitals RUM).
   deseni, import.meta.glob): timestamp benzersizliği (23505 tuzağı), ad biçimi,
   takvim geçerliliği — paralel-oturum çakışması artık her test:unit'te saniyelik
   net mesajla, kriptik DB hatası ve 3-5 dk'lık DB job'ı beklemeden yakalanır.
-- **M2 — tsc kapsamı (e2e+scripts)** (sırada): tsconfig.e2e/tools — "export
-  silme yalnız CI'da patlar" gotcha'sının kökten kapanışı.
+- ~~**M2 — tsc kapsamı (tests/e2e + config'ler).**~~ DONE. Yeni
+  `tsconfig.e2e.json` (app/node ile aynı bundler-mode bayrakları; include:
+  tests + playwright.config.ts + vitest.config.ts) kök references'a bağlandı —
+  `npm run build` içindeki `tsc -b` artık spec'lerin import grafiğini de
+  denetler; CLAUDE.md gotcha'sı KAPANDI olarak güncellendi. Kapının değer
+  kanıtı ilk koşuda geldi: üç spec fixture'ı (asset/debt/payment) sonradan
+  eklenen kolonları (`valued_at`, `valuation_rate`, `auto_source_card_id`)
+  hiç almamıştı — gerçek şema drift'i, düzeltildi. `scripts/*.mjs` checkJs'i
+  bilinçli kapsam dışı (JSDoc tipleme ayrı iş; istenirse açılır).
 - **M3 — npm run verify** (sırada): CI quality job'ının birebir yerel aynası
   (coverage + bundle + audit + koşullu deno) + CLAUDE.md kapısı tek komut.
 - **M4 — .gitattributes** (sırada): satır sonu normalizasyonu (parser golden
