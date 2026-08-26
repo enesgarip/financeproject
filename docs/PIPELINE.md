@@ -156,7 +156,7 @@ Ek otomasyon:
   PR'ları üretilmez; security update'lar SemVer filtresinden muaftır ve major
   güvenlik yükseltmeleri manuel incelemeye kalır.
 - Günlük şifreli DB yedeği cron'u (`db-backup.yml`).
-- Günlük Web Push gönderici cron'u (`push-notify.yml`): 04:00 UTC / 07:00 TR, `push-notify` edge fonksiyonunu service-role ile invoke eder. Tarihli araç bakım/yenileme işleri için 7 gün kala aday üretir ve `cars_enabled` tercihini uygular.
+- Günlük Web Push gönderici cron'u (`push-notify.yml`): 04:00 UTC / 07:00 TR, `push-notify` edge fonksiyonunu `x-cron-secret` (PUSH_CRON_SECRET; fonksiyonda timing-safe kıyas) + publishable apikey ile invoke eder — service-role anahtarı bu workflow'dan emekli (muh. turu ③; sızıntı yüzeyi "tüm RLS'i aş"tan "cron'u tetikle"ye indi). Tarihli araç bakım/yenileme işleri için 7 gün kala aday üretir ve `cars_enabled` tercihini uygular.
   - Aynı edge function, ayar ekranındaki "test bildirimi gönder" için authenticated user JWT ile yalnızca o kullanıcının kendi endpoint'ine tek test payload'u yollar. Cron yolunda aday varsa ve tüm teslim denemeleri başarısız olursa workflow kırmızıya dönebilir.
 
 ## Required GitHub Secrets
@@ -196,7 +196,9 @@ and rollback APIs after the release gates pass.
 
 ## Push notification sender
 
-- `SUPABASE_SERVICE_ROLE_KEY` (GitHub Actions secret, only for `.github/workflows/push-notify.yml`)
+- `PUSH_CRON_SECRET` (GitHub Actions secret + Supabase edge secret — aynı değer; only for `.github/workflows/push-notify.yml`)
+- `SUPABASE_ANON_KEY` (GitHub Actions secret; publishable/public değer — cron çağrısının apikey/Authorization başlıkları)
+- ~~`SUPABASE_SERVICE_ROLE_KEY`~~ EMEKLİ (muh. turu ③): hiçbir workflow artık kullanmıyor; GitHub secrets'tan SİLİNEBİLİR (fonksiyonlar service-role'ü Supabase'in kendi enjekte ettiği env'den alır). Kod geriye uyumlu: service-role bearer'ı hâlâ kabul edilir, yalnız GitHub kopyası gereksizleşti.
 - `VAPID_PRIVATE_KEY` (Supabase Edge Function secret)
 - `VAPID_SUBJECT` (Supabase Edge Function secret, e.g. `mailto:you@example.com`)
 

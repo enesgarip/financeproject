@@ -19,18 +19,24 @@ jobs:
     runs-on: ubuntu-latest
     env:
       SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
-      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      # Service-role anahtarı bu workflow'dan EMEKLİ (muh. turu ③): sızarsa tüm
+      # RLS'i aşan anahtar yerine yalnız "cron'u tetikleme" yetkisi sızar.
+      # apikey publishable (zaten istemciyle dağıtılan public değer); asıl yetki
+      # x-cron-secret (fonksiyondaki timing-safe kıyasla doğrulanır).
+      PUSH_CRON_SECRET: ${{ secrets.PUSH_CRON_SECRET }}
+      SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
     steps:
       - name: Call edge function
         run: |
-          if [ -z "$SUPABASE_PROJECT_REF" ] || [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then
-            echo "::error::SUPABASE_PROJECT_REF and SUPABASE_SERVICE_ROLE_KEY secrets are required."
+          if [ -z "$SUPABASE_PROJECT_REF" ] || [ -z "$PUSH_CRON_SECRET" ] || [ -z "$SUPABASE_ANON_KEY" ]; then
+            echo "::error::SUPABASE_PROJECT_REF, PUSH_CRON_SECRET and SUPABASE_ANON_KEY secrets are required."
             exit 1
           fi
 
           curl --fail-with-body --show-error --silent \
             --request POST "https://${SUPABASE_PROJECT_REF}.functions.supabase.co/push-notify" \
-            --header "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
-            --header "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
+            --header "Authorization: Bearer ${SUPABASE_ANON_KEY}" \
+            --header "apikey: ${SUPABASE_ANON_KEY}" \
+            --header "x-cron-secret: ${PUSH_CRON_SECRET}" \
             --header "Content-Type: application/json" \
             --data '{}'

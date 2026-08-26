@@ -66,9 +66,25 @@ CodeQL, heartbeat, push_run_log, SECRETS.md, retention, Web Vitals RUM).
   `ClientErrorsPanel` (/veri-sagligi/islemler) — son 7 gün + commit kısaltması
   + Temizle. Yedek/restore kapsamına BİLİNÇLİ girmedi (operasyonel log, finans
   verisi değil; user FK cascade yeter).
-- **Sonra:** ③ service-role emekliliği + CSP sabitleme → ④ SQL↔TS ikiz
-  diferansiyel harness + fast-check ledger paketi → ⑤ TS strict (ölçüldü:
-  bugün 0 hata) + noUncheckedIndexedAccess fazlı.
+- ~~**③ — service-role emekliliği + CSP sabitleme.**~~ DONE.
+  (a) **CSP:** `connect-src` wildcard'ı (`https://*.supabase.co` — XSS'te hazır
+  exfiltration kanalıydı) kendi proje host'una sabitlendi (wss dahil);
+  `img-src`'den `https:` düştü (tek görsel yerel /icon.svg — grep kanıtı).
+  (b) **Service-role emekliliği:** push-notify.yml artık `x-cron-secret`
+  (yeni PUSH_CRON_SECRET — GH + Supabase edge secret olarak set edildi;
+  ÜRETİM TUZAĞI: PS 5.1'de RNG Fill yok, ilk deneme SIFIR baytlı öngörülebilir
+  sır üretti — RNGCryptoServiceProvider'la yeniden üretilip ÜZERİNE yazıldı) +
+  publishable apikey (yeni SUPABASE_ANON_KEY GH secret'ı) ile çağırıyor;
+  fonksiyonda timing-safe kıyas (`_shared/edge.ts timingSafeEqual`, parse-sms'in
+  düz `!==` kıyası da buna geçti). Kod geriye uyumlu (service-role bearer hâlâ
+  kabul — fonksiyon kendi env'inden alır); **kullanıcı aksiyonu:**
+  `SUPABASE_SERVICE_ROLE_KEY` GitHub secrets'tan silinebilir (PIPELINE
+  güncellendi). (c) **verify_jwt duruşu git'te:** config.toml'a
+  `[functions.parse-sms]` + `[functions.push-notify]` `verify_jwt = false`
+  (fiili durumun beyanı; her iki fonksiyon kendi sırrıyla korunur, test modu
+  user-JWT'yi içeride doğrular) — dashboard'a gizli auth ayarı kalmadı.
+- **Sonra:** ④ SQL↔TS ikiz diferansiyel harness + fast-check ledger paketi →
+  ⑤ TS strict (ölçüldü: bugün 0 hata) + noUncheckedIndexedAccess fazlı.
 
 ## 2026-08-26 — Fikir turu (10 özellik, kullanıcıyla kararlaştırıldı)
 

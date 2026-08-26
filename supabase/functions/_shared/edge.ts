@@ -14,6 +14,24 @@ export function handlePreflight(req: Request): Response | null {
   return null
 }
 
+/**
+ * Sabit-zamanlı sır kıyası: düz `!==` erken çıkar ve teoride zamanlama analizine
+ * açık kalır. Uzunluk farkı da erken sızdırmasın diye iki taraf aynı uzunluğa
+ * hash'lenmeden basitçe fold edilir; farklı uzunluk sonucu her zaman false yapar
+ * ama döngü her iki dizinin uzunluğu kadar koşar.
+ */
+export function timingSafeEqual(a: string, b: string): boolean {
+  const encoder = new TextEncoder()
+  const aBytes = encoder.encode(a)
+  const bBytes = encoder.encode(b)
+  let diff = aBytes.length ^ bBytes.length
+  const max = Math.max(aBytes.length, bBytes.length)
+  for (let i = 0; i < max; i += 1) {
+    diff |= (aBytes[i] ?? 0) ^ (bBytes[i] ?? 0)
+  }
+  return diff === 0
+}
+
 /** İsteğin istemci IP'sini x-forwarded-for / x-real-ip başlığından çıkarır. */
 function clientIp(req: Request): string {
   const xff = req.headers.get('x-forwarded-for')

@@ -9,7 +9,7 @@
 // Deliberately avoids npm modules: Web Push payload encryption and VAPID signing
 // use WebCrypto plus small local helpers for P-256 public-key derivation.
 
-import { fetchWithTimeout, handlePreflight, jsonResponse } from '../_shared/edge.ts'
+import { fetchWithTimeout, handlePreflight, jsonResponse, timingSafeEqual } from '../_shared/edge.ts'
 
 const TIME_ZONE = 'Europe/Istanbul'
 const PUSH_TTL_SECONDS = 60 * 60 * 24
@@ -323,7 +323,19 @@ function getServiceRoleKey(): string | null {
   return null
 }
 
+/**
+ * Cron yetkisi ayrı bir sırla gelir (x-cron-secret, parse-sms'in webhook-secret
+ * deseni): GitHub tarafında RLS'i tümüyle aşan service-role anahtarı tutmak
+ * gereksiz genişlikte yetkiydi — sızarsa saldırganın eline "push cron'u
+ * tetikleme" yerine tüm veri geçiyordu. Service-role bearer'ı geriye uyumluluk
+ * için kabul edilmeye devam eder (fonksiyon kendi env'inden zaten alıyor);
+ * GitHub secrets'taki kopya emekliye ayrılır.
+ */
 function isAuthorized(req: Request, serviceRoleKey: string): boolean {
+  const cronSecret = Deno.env.get('PUSH_CRON_SECRET')?.trim() || null
+  const headerSecret = req.headers.get('x-cron-secret')
+  if (cronSecret && headerSecret && timingSafeEqual(headerSecret, cronSecret)) return true
+
   const bearer = bearerToken(req)
   return bearer === serviceRoleKey || req.headers.get('apikey') === serviceRoleKey
 }
