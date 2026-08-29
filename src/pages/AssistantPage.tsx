@@ -1,9 +1,16 @@
+import { useQuery } from '@tanstack/react-query'
 import { Send, Trash2 } from 'lucide-react'
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import { useAiChatMessages, useClearAiChat, useSendAiChatMessage } from '../app/useAiChat'
+import { useCars } from '../app/useCars'
 import { useFinanceSnapshot } from '../app/useFinanceSnapshot'
+import { useAuth } from '../auth/useAuth'
+import { fetchNetWorthSnapshots, fetchSavingsGoalSnapshots } from '../data/repositories/analysisRepo'
+import { fetchContextExpenses, fetchExpenseContexts } from '../data/repositories/expenseContextsRepo'
+import { fetchWishlistItems } from '../data/repositories/wishlistRepo'
 import { useMarketRates } from '../hooks/useMarketRates'
-import { useKasaBuckets } from '../hooks/useSafeToSpend'
+import { readSafeToSpendBuffer, useKasaBuckets } from '../hooks/useSafeToSpend'
+import type { Result } from '../data/result'
 import { Button } from '../components/ui/button'
 import { ConfirmDialog } from '../components/ui/confirm-dialog'
 import { QueryError } from '../components/ui/query-error'
@@ -23,8 +30,46 @@ const SUGGESTIONS = [
   'Bu ayı değerlendir',
   'En çok nereye harcıyorum?',
   'Önümüzdeki ay beni ne bekliyor?',
+  'Taksitlerim ne zaman bitiyor?',
+  'Aboneliklerime ne kadar gidiyor?',
   'Borçlarımı kapatmak için nasıl bir sıra izlemeliyim?',
 ]
+
+/** Best-effort ek veri: düşen sorgu bölümünü düşürür, sohbeti asla kilitlemez. */
+function dataOrNull<T>(result: PromiseSettledResult<Result<T | null>>): T | null {
+  if (result.status !== 'fulfilled' || !result.value.ok) return null
+  return result.value.data
+}
+
+/**
+ * Bağlamın snapshot dışı kaynakları tek sorguda (5 paralel istek): gider
+ * bağlamları, alsam-mı listesi, net değer + hedef fotoğrafları. Kur ve kasa
+ * kovaları kendi hook'larından gelir (başka ekranlarla paylaşılan cache).
+ */
+function useAssistantExtras() {
+  const { user } = useAuth()
+  return useQuery({
+    queryKey: ['ai-assistant-extras', user?.id],
+    enabled: Boolean(user),
+    staleTime: 5 * 60 * 1000,
+    queryFn: async () => {
+      const [contexts, contextExpenses, wishlist, netWorth, goalSnapshots] = await Promise.allSettled([
+        fetchExpenseContexts(),
+        fetchContextExpenses(),
+        fetchWishlistItems(),
+        fetchNetWorthSnapshots(),
+        fetchSavingsGoalSnapshots(),
+      ])
+      return {
+        expenseContexts: dataOrNull(contexts),
+        contextExpenses: dataOrNull(contextExpenses),
+        wishlistItems: dataOrNull(wishlist),
+        netWorthSnapshots: dataOrNull(netWorth),
+        goalSnapshots: dataOrNull(goalSnapshots),
+      }
+    },
+  })
+}
 
 /** Bugünkü mesajda yalnız saat; eski mesajda gün + saat. */
 function chatStamp(createdAt: string, now = new Date()) {
@@ -49,10 +94,14 @@ function MessageBlock({ message }: { message: AiChatMessage }) {
 export function AssistantPage() {
   const snapshotQuery = useFinanceSnapshot()
   const messagesQuery = useAiChatMessages()
-  // Kur + kasa kovaları hedef türetimi için (aiContext): ikisi de opsiyoneldir,
-  // yüklenmemişse ilgili hedef satırı rakamsız etikete düşer — gönderim beklemez.
+  // Bağlam zenginleştiricileri (aiContext): hepsi opsiyoneldir, yüklenmemiş
+  // olan yalnız kendi bölümünü düşürür — gönderim hiçbirini beklemez.
   const { snapshot: ratesSnapshot } = useMarketRates()
   const bucketsQuery = useKasaBuckets()
+  const carsQuery = useCars()
+  const extrasQuery = useAssistantExtras()
+  // Güvenlik tamponu cihaz tercihidir (Dashboard'daki kahraman rakamla aynı kaynak).
+  const [safeToSpendBuffer] = useState(readSafeToSpendBuffer)
   const send = useSendAiChatMessage()
   const clear = useClearAiChat()
 
@@ -74,9 +123,19 @@ export function AssistantPage() {
   const context = useMemo(
     () =>
       snapshotQuery.data
-        ? buildAiFinanceContext(snapshotQuery.data, { ratesSnapshot, kasaBuckets: bucketsQuery.data ?? null })
+        ? buildAiFinanceContext(snapshotQuery.data, {
+            ratesSnapshot,
+            kasaBuckets: bucketsQuery.data ?? null,
+            safeToSpendBuffer,
+            carSummaries: carsQuery.data?.summaries ?? null,
+            expenseContexts: extrasQuery.data?.expenseContexts ?? null,
+            contextExpenses: extrasQuery.data?.contextExpenses ?? null,
+            wishlistItems: extrasQuery.data?.wishlistItems ?? null,
+            netWorthSnapshots: extrasQuery.data?.netWorthSnapshots ?? null,
+            goalSnapshots: extrasQuery.data?.goalSnapshots ?? null,
+          })
         : '',
-    [snapshotQuery.data, ratesSnapshot, bucketsQuery.data],
+    [snapshotQuery.data, ratesSnapshot, bucketsQuery.data, safeToSpendBuffer, carsQuery.data, extrasQuery.data],
   )
   const canSend = Boolean(snapshotQuery.data) && !send.isPending
 

@@ -1,20 +1,29 @@
 import { describe, expect, it } from 'vitest'
 import type {
+  AccountReconciliation,
   Asset,
   Budget,
+  Car,
   Card,
   CardExpense,
   CardInstallment,
+  CardStatementArchive,
   Debt,
+  ExpenseContext,
   KasaBucket,
   Loan,
+  LoanInstallment,
+  NetWorthSnapshot,
   Payment,
   SalaryHistory,
   SavingsGoal,
+  SavingsGoalSnapshot,
   SavingsGoalSource,
   TransactionHistory,
+  WishlistItem,
 } from '../types/database'
 import { buildAiFinanceContext, type AiContextInput } from './aiContext'
+import { buildCarSummaries } from './carExpenses'
 import type { MarketRatesSnapshot } from './marketRates'
 
 const base = { id: 'id', user_id: 'u', created_at: '2026-01-01T00:00:00Z', updated_at: '2026-01-01T00:00:00Z' }
@@ -125,6 +134,44 @@ function ratesSnapshot(): MarketRatesSnapshot {
     asOf: null,
     fetchedAt: '2026-08-29T00:00:00Z',
   }
+}
+
+function statementArchive(overrides: Partial<CardStatementArchive>): CardStatementArchive {
+  return {
+    ...base, card_id: 'c1', period_year: 2026, period_month: 7, statement_date: '2026-07-15',
+    due_date: '2026-07-25', statement_debt_amount: 9_000, current_period_spending: 0,
+    total_debt_amount: 9_000, status: 'paid', paid_at: '2026-07-20T00:00:00Z',
+    payment_source_card_id: null, reconciled_bank_amount: null, reconciled_at: null,
+    reconciliation_note: null, note: null, ...overrides,
+  }
+}
+
+function loanInstallment(overrides: Partial<LoanInstallment>): LoanInstallment {
+  return { ...base, loan_id: 'l1', installment_no: 1, due_date: '2026-09-05', amount: 3_750, status: 'bekliyor', paid_at: null, note: null, ...overrides }
+}
+
+function reconciliation(overrides: Partial<AccountReconciliation>): AccountReconciliation {
+  return { ...base, card_id: 'c2', reconciled_at: '2026-08-12T09:00:00Z', target: 'balance', app_amount: 5_000, real_amount: 5_000, drift: 0, resolution: 'matched', note: null, ...overrides }
+}
+
+function netWorthRow(overrides: Partial<NetWorthSnapshot>): NetWorthSnapshot {
+  return { ...base, snapshot_date: '2026-08-29', net_worth: 500_000, gold_try: null, usd_try: null, ...overrides }
+}
+
+function goalSnapshotRow(overrides: Partial<SavingsGoalSnapshot>): SavingsGoalSnapshot {
+  return { ...base, goal_id: 'g-plain', snapshot_date: '2026-08-25', amount: 40_000, ...overrides }
+}
+
+function wishlistItem(overrides: Partial<WishlistItem>): WishlistItem {
+  return { ...base, name: 'Kulaklık', estimated_price: 12_000, is_purchased: false, purchased_at: null, sort_order: 0, note: null, ...overrides }
+}
+
+function expenseContext(overrides: Partial<ExpenseContext>): ExpenseContext {
+  return { ...base, kind: 'travel', name: 'Tatil 2026', budget_amount: null, starts_on: null, ends_on: null, sort_order: 0, note: null, ...overrides }
+}
+
+function car(overrides: Partial<Car>): Car {
+  return { ...base, name: 'Egea', plate: null, current_odometer_km: null, sort_order: 0, note: null, ...overrides }
 }
 
 function richInput(): AiContextInput {
@@ -259,6 +306,140 @@ describe('buildAiFinanceContext', () => {
     expect(full).toContain('Altın Çıpalı: hedef 48.500 ₺ (çıpa: 10 gram altın karşılığı)')
   })
 
+  it('kredi limit gruplarını doluluk oranıyla basar', () => {
+    const out = buildAiFinanceContext(richInput(), { now: NOW })
+    const section = sectionOf(out, 'KREDİ LİMİTLERİ')
+
+    // 12.480 / 50.000 = %25; kullanılabilir = limit − borç.
+    expect(section).toContain('limit 50.000 ₺, kullanılan 12.480 ₺ (%25), kullanılabilir 37.520 ₺')
+    // Banka hesabı limit grubuna girmez.
+    expect(section).not.toContain('Vadesiz')
+  })
+
+  it('tampon + kova verilince güvenle harcanabilir satırını basar, verilmeyince basmaz', () => {
+    const withInputs = buildAiFinanceContext(richInput(), { now: NOW, safeToSpendBuffer: 5_000, kasaBuckets: [] })
+    expect(withInputs).toContain('Güvenle harcanabilir:')
+
+    const without = buildAiFinanceContext(richInput(), { now: NOW })
+    expect(without).not.toContain('Güvenle harcanabilir')
+  })
+
+  it('abonelik radarını basar (≥3 ay tutarlı kart tekrarı + planlı ödeme)', () => {
+    const input = richInput()
+    input.cardExpenses.push(
+      expense({ id: 'n1', description: 'Netflix', amount: 129.9, category: 'Abonelik', spent_at: '2026-06-05' }),
+      expense({ id: 'n2', description: 'Netflix', amount: 129.9, category: 'Abonelik', spent_at: '2026-07-05' }),
+      expense({ id: 'n3', description: 'Netflix', amount: 129.9, category: 'Abonelik', spent_at: '2026-08-05' }),
+    )
+
+    const section = sectionOf(buildAiFinanceContext(input, { now: NOW }), 'ABONELİKLER')
+    expect(section).toBeDefined()
+    expect(section).toContain('Netflix')
+    expect(section).toContain('(3 aydır)')
+    // Aylık tekrarlı bekleyen ödeme de düzenli gider sayılır, kaynağı işaretlenir.
+    expect(section).toContain('Kira: ~15.000 ₺/ay [planlı ödeme]')
+  })
+
+  it('ekstre geçmişini eski→yeni basar, açık ekstreyi işaretler', () => {
+    const input = richInput()
+    input.cardStatements = [
+      statementArchive({ id: 's1', statement_date: '2026-07-15', statement_debt_amount: 9_000, status: 'paid' }),
+      statementArchive({ id: 's2', statement_date: '2026-08-15', statement_debt_amount: 8_000, status: 'open', paid_at: null }),
+    ]
+
+    const section = sectionOf(buildAiFinanceContext(input, { now: NOW }), 'EKSTRE GEÇMİŞİ')
+    expect(section).toContain('Banka Bonus: Tem 2026 9.000 ₺ → Ağu 2026 8.000 ₺ (açık)')
+  })
+
+  it('kredinin bitiş ayını ödenmemiş son taksitten türetir', () => {
+    const input = richInput()
+    input.loans[0] = { ...input.loans[0], id: 'l1' }
+    input.loanInstallments = [
+      loanInstallment({ id: 'li1', due_date: '2026-09-05' }),
+      loanInstallment({ id: 'li2', installment_no: 18, due_date: '2027-02-05' }),
+      loanInstallment({ id: 'li3', installment_no: 19, due_date: '2027-03-05', status: 'ödendi' }),
+    ]
+
+    const out = buildAiFinanceContext(input, { now: NOW })
+    expect(out).toContain('bitiş Şubat 2027')
+  })
+
+  it('kart listesi öneme göre sıralı; taşan kısım "+N daha" ile söylenir', () => {
+    const input = richInput()
+    for (let i = 0; i < 10; i += 1) {
+      input.cards.push(card({ id: `extra${i}`, card_name: `Ek${i}`, debt_amount: 10 + i }))
+    }
+
+    const section = sectionOf(buildAiFinanceContext(input, { now: NOW }), 'KARTLAR VE HESAPLAR')
+    // 12.480 borçlu kart sıralamada üstte kalır, kesilmez.
+    expect(section).toContain('Bonus')
+    expect(section).toContain('… ve 2 hesap/kart daha')
+  })
+
+  it('banka hesabına son mutabakat tarihini iliştirir', () => {
+    const input = richInput()
+    input.accountReconciliations = [
+      reconciliation({ id: 'r-eski', reconciled_at: '2026-07-01T09:00:00Z' }),
+      reconciliation({ id: 'r-yeni', reconciled_at: '2026-08-12T09:00:00Z' }),
+    ]
+
+    const out = buildAiFinanceContext(input, { now: NOW })
+    expect(out).toContain('Vadesiz (banka hesabı): bakiye 5.000 ₺; son banka doğrulaması 12 Ağu 2026')
+  })
+
+  it('kasa kovalarını, araçları, bağlamları ve alsam-mı listesini basar', () => {
+    const cars = [car({ id: 'car1' })]
+    const tagged = [expense({ id: 'f1', description: 'Opet', category: 'Yakıt', amount: 2_000, spent_at: '2026-08-10', car_id: 'car1', fuel_liters: 40 })]
+    const input = richInput()
+    input.cardExpenses.push(tagged[0], expense({ id: 'ctx1e', description: 'Otel', amount: 4_000, spent_at: '2026-08-15', context_id: 'ctx1' }))
+
+    const out = buildAiFinanceContext(input, {
+      now: NOW,
+      kasaBuckets: [bucket({ id: 'b1', name: 'Acil fon' })],
+      carSummaries: buildCarSummaries(cars, [], tagged, NOW),
+      expenseContexts: [expenseContext({ id: 'ctx1' })],
+      contextExpenses: [],
+      wishlistItems: [wishlistItem({}), wishlistItem({ id: 'w2', name: 'Alınan', is_purchased: true })],
+    })
+
+    expect(sectionOf(out, 'KASA KOVALARI')).toContain('Acil fon: 7.500 ₺')
+    expect(sectionOf(out, 'ARAÇLAR')).toContain('Egea: bu ay 2.000 ₺')
+    expect(sectionOf(out, 'GİDER BAĞLAMLARI')).toContain('Tatil 2026 (Seyahat / Tatil): toplam 4.000 ₺')
+    const wishlist = sectionOf(out, 'ALSAM MI LİSTESİ')
+    expect(wishlist).toContain('Kulaklık: ~12.000 ₺')
+    // Satın alınmış madde listelenmez.
+    expect(wishlist).not.toContain('Alınan')
+  })
+
+  it('net değer trendini geçmiş fotoğraflardan basar', () => {
+    const out = buildAiFinanceContext(richInput(), {
+      now: NOW,
+      netWorthSnapshots: [
+        netWorthRow({ id: 'nw1', snapshot_date: '2026-08-29', net_worth: 500_000 }),
+        netWorthRow({ id: 'nw2', snapshot_date: '2026-07-28', net_worth: 480_000 }),
+        netWorthRow({ id: 'nw3', snapshot_date: '2026-05-30', net_worth: 450_000 }),
+      ],
+    })
+
+    const section = sectionOf(out, 'NET DEĞER TRENDİ')
+    expect(section).toContain('Bugün: 500.000 ₺')
+    expect(section).toContain('1 ay önce: 480.000 ₺')
+    expect(section).toContain('artış')
+  })
+
+  it('hedef fotoğrafları verilince rakamlı hedefe tahmini bitiş ekler', () => {
+    const out = buildAiFinanceContext(richInput(), {
+      now: NOW,
+      goalSnapshots: [
+        goalSnapshotRow({ id: 'gs1', snapshot_date: '2026-07-01', amount: 10_000 }),
+        goalSnapshotRow({ id: 'gs2', snapshot_date: '2026-08-25', amount: 40_000 }),
+      ],
+    })
+
+    const line = sectionOf(out, 'BİRİKİM HEDEFLERİ')!.split('\n').find((row) => row.includes('Tatil'))
+    expect(line).toContain('bu tempoyla tahmini bitiş')
+  })
+
   it('kur snapshot verilirse piyasa satırı basılır, verilmezse basılmaz', () => {
     const withRates = buildAiFinanceContext(richInput(), { now: NOW, ratesSnapshot: ratesSnapshot() })
     expect(withRates).toContain('Piyasa kurları (alış): USD 41,2 TL · gram altın 4.850 TL')
@@ -329,7 +510,8 @@ describe('buildAiFinanceContext', () => {
     const out = buildAiFinanceContext(input, { now: NOW })
     const section = sectionOf(out, 'SON KART HARCAMALARI')
     expect(section).toBeDefined()
-    // Başlık + en fazla 20 işlem satırı.
-    expect(section!.split('\n').length).toBe(21)
+    // Başlık + 20 işlem satırı + "+N daha" bildirimi (sessiz kırpma yok).
+    expect(section!.split('\n').length).toBe(22)
+    expect(section).toContain('… ve 180 harcama daha')
   })
 })

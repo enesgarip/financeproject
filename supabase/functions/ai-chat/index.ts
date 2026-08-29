@@ -112,7 +112,9 @@ Deno.serve(async (req: Request) => {
     })),
     // thinkingBudget 0: 2.5-flash'ın varsayılan "düşünme" adımı sohbette
     // gecikme + token yakar; kapatınca yanıt hızlanır (üretimde teyitli).
-    generationConfig: { temperature: 0.3, maxOutputTokens: 1024, thinkingConfig: { thinkingBudget: 0 } },
+    // 2048: 1024 uzun değerlendirme yanıtlarını cümle ortasında kesiyordu;
+    // yine kesilirse MAX_TOKENS işlenip kullanıcıya söylenir (aşağıda).
+    generationConfig: { temperature: 0.3, maxOutputTokens: 2048, thinkingConfig: { thinkingBudget: 0 } },
   }
 
   // fetchWithTimeout yalnız BAĞLANTI kurulumunu sınırlar (finally clearTimeout):
@@ -144,6 +146,7 @@ Deno.serve(async (req: Request) => {
       let buffer = ''
       let sentChars = 0
       let blocked = false
+      let truncated = false
 
       const handleLine = (line: string) => {
         if (!line.startsWith('data:')) return
@@ -164,6 +167,9 @@ Deno.serve(async (req: Request) => {
           blocked = true
           return
         }
+        // Token tavanına çarpan yanıt cümle ortasında biter; sessiz kalırsa
+        // kesik metin normal yanıt gibi kaydedilir — kullanıcıya söylenir.
+        if (candidate?.finishReason === 'MAX_TOKENS') truncated = true
         const parts = Array.isArray(candidate?.content?.parts) ? candidate.content.parts : []
         const text = parts
           .map((part) => {
@@ -195,8 +201,10 @@ Deno.serve(async (req: Request) => {
         if (!blocked) handleLine(buffer.trim())
 
         if (blocked) send({ error: 'Bu soruya yanıt üretilemedi, farklı biçimde sormayı dene.' })
-        else if (sentChars > 0) send({ done: true })
-        else send({ error: 'Yanıt çözümlenemedi, tekrar dene.' })
+        else if (sentChars > 0) {
+          if (truncated) send({ text: '\n\n(Yanıt uzunluk sınırına takıldı; devamını ayrıca sorabilirsin.)' })
+          send({ done: true })
+        } else send({ error: 'Yanıt çözümlenemedi, tekrar dene.' })
       } catch {
         // Kaynak koptu; done GİTMEZ — istemci bunu hata sayar. enqueue de
         // istemci kopmuşsa fırlatabilir, sessiz yutulur.
