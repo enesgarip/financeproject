@@ -14,6 +14,14 @@ export type ChatTurn = { role: 'user' | 'assistant'; content: string }
 
 const FALLBACK_ERROR = 'Yanıt alınamadı, tekrar dene.'
 
+/**
+ * Boşta-kalma sınırı: sunucunun 45 sn'lik zaman aşımı yalnız BAĞLANTI kurulumunu
+ * kapsar; akış ortasında ağ askıda kalırsa read() süresiz bekler ve arayüz
+ * "Asistan yazıyor…"da kilitlenirdi. Chunk'lar arası bu kadar sessizlik = iptal
+ * ("Tekrar dene" sözleşmesine düşer). Normal üretimde chunk aralığı ~saniyedir.
+ */
+const STREAM_IDLE_TIMEOUT_MS = 30_000
+
 export async function sendAiChat(
   messages: ChatTurn[],
   context: string,
@@ -24,15 +32,30 @@ export async function sendAiChat(
   const token = data.session?.access_token
   if (!token) throw new Error('Oturum bulunamadı, yeniden giriş yap.')
 
-  const res = await fetch(`${supabaseUrl}/functions/v1/ai-chat`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-      apikey: supabaseAnonKey,
-    },
-    body: JSON.stringify({ messages, context }),
-  })
+  const controller = new AbortController()
+  let idleTimer = 0
+  const resetIdleTimer = () => {
+    window.clearTimeout(idleTimer)
+    idleTimer = window.setTimeout(() => controller.abort(), STREAM_IDLE_TIMEOUT_MS)
+  }
+  resetIdleTimer()
+
+  let res: Response
+  try {
+    res = await fetch(`${supabaseUrl}/functions/v1/ai-chat`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+        apikey: supabaseAnonKey,
+      },
+      body: JSON.stringify({ messages, context }),
+      signal: controller.signal,
+    })
+  } catch (error) {
+    window.clearTimeout(idleTimer)
+    throw error instanceof DOMException && error.name === 'AbortError' ? new Error(FALLBACK_ERROR) : error
+  }
 
   if (!res.ok) {
     // Akış başlamadan düşen istek JSON hata gövdesi taşır (Türkçe sözlük).
@@ -42,12 +65,17 @@ export async function sendAiChat(
       if (typeof body?.error === 'string' && body.error.trim()) message = body.error
     } catch {
       /* gövde JSON değilse fallback */
+    } finally {
+      window.clearTimeout(idleTimer)
     }
     throw new Error(message)
   }
 
   const reader = res.body?.getReader()
-  if (!reader) throw new Error(FALLBACK_ERROR)
+  if (!reader) {
+    window.clearTimeout(idleTimer)
+    throw new Error(FALLBACK_ERROR)
+  }
 
   const decoder = new TextDecoder()
   let buffer = ''
@@ -80,6 +108,7 @@ export async function sendAiChat(
     while (!finished && !streamError) {
       const { value, done } = await reader.read()
       if (done) break
+      resetIdleTimer()
       buffer += decoder.decode(value, { stream: true })
       let newline = buffer.indexOf('\n')
       while (newline >= 0) {
@@ -91,6 +120,7 @@ export async function sendAiChat(
   } catch {
     throw new Error(FALLBACK_ERROR)
   } finally {
+    window.clearTimeout(idleTimer)
     reader.cancel().catch(() => {})
   }
 

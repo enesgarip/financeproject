@@ -40,8 +40,28 @@ etikete düşer — yanlış sayı basılmaz), **piyasa kuru satırı**, **6 ayl
 harcama trendi**, **son hareketler** (transaction_history). Edge `ai-chat`:
 sistem tarihi Europe/Istanbul'a çekildi (UTC gün kayması istemci özetiyle
 çelişiyordu) + prompta "özette olmayan ≠ kullanıcıda yok" kuralı eklendi.
-Bilinçli kapsam dışı: araç masrafları (ayrı veri kaynağı), ekstre arşivi
-geçmişi, mutabakat kayıtları.
+~~Bilinçli kapsam dışı: araç masrafları (ayrı veri kaynağı), ekstre arşivi
+geçmişi, mutabakat kayıtları.~~ → beşinci dilimde bunlar da girdi (aşağıda).
+
+Beşinci dilim — **ikinci (derin) tarama, tam paket**: 29 repository + snapshot'ın
+18 alanı + pipeline satır satır tarandı; kullanıcı A+C+D paketi ve B grubunun
+tamamını seçti. Bağlama eklenenler: **kredi limit grupları** (doluluk %,
+`buildCreditLimitGroups`), **güvenle harcanabilir** (kahraman rakam;
+tampon+kova verilmezse satır düşer — K16 şişkin-hesap dersi), **abonelik
+radarı** (`buildSubscriptionSummary`), **ekstre geçmişi** (kart başına son 3
+kesim), **kredi bitiş ayı** (ödenmemiş son taksitten), **kasa kovaları**,
+**araçlar** (`useCars.summaries`; kart tarafı zaten snapshot'taki `car_id`
+etiketi), **gider bağlamları** (`buildExpenseContextSummaries`), **alsam-mı
+listesi**, **net değer trendi** (günlük fotoğraflar; 1/3 ay kıyas), **hedef
+tempo/ETA** (`buildGoalEta`), **mutabakat tazeliği** (hesap satırına iliştirilir).
+Doğruluk: tüm liste kesitlerine "… ve N daha" satırı (sessiz kırpma asistanın
+yanlış genellemesine yol açıyordu); kartlar öneme göre sıralı. Pipeline:
+`maxOutputTokens` 1024→2048 + `MAX_TOKENS` finishReason'ı artık yutulmuyor
+(kesilen yanıta kullanıcıya görünür not eklenir); istemci akışına 30 sn
+boşta-kalma iptali (AbortController — askıda kalan ağda "yazıyor…" sonsuz
+dönüyordu). Sayfa: `useAssistantExtras` tek sorguda 5 best-effort fetch
+(bağlamlar, alsam-mı, net değer + hedef fotoğrafları); öneri çiplerine taksit
+ve abonelik soruları eklendi.
 
 ## 2026-08-26 — Mühendislik turu (48 fikirlik denetimden, kullanıcının sırası)
 
