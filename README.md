@@ -42,19 +42,38 @@ kullanımı hedefler (TL, Türkçe arayüz).
 - **Planlama & ödeme takvimi** — Yaklaşan ödemeler, aylık nakit akışı projeksiyonu,
   bütçe uyarıları, birikim hedefleri ve taksit takvimi özetleri.
 - **Analiz & net değer** — Net değer, servet ve nakit akışı trendleri; işlem geçmişi.
-- **Veri sağlığı** — Tutarsızlıkları tespit eden ve güvenli düzeltme akışları sunan
-  denetim yüzeyi (deterministik, sahiplik ve tür kontrollü onarımlar).
+- **AI Asistan** — Kendi finansal verilerinle Türkçe sohbet (`/analiz/asistan`).
+  Sorular, uygulamadaki güncel verilerden üretilen kompakt bir özetle birlikte
+  Google Gemini'ye gönderilir; geçmiş cihazlar arası kalıcıdır.
+- **Karar araçları** — "Alsam mı?" (alışverişin gelecek aylara etkisi), alışveriş
+  listesi (30 gün bekleme kuralı + "ne zaman alabilirim"), gider bağlamları
+  (evcil hayvan / etkinlik / proje bütçesi).
+- **Araçlar & TCO** — Araç başına gider, yakıt ölçümü, hatırlatıcılar ve toplam
+  sahip olma maliyeti karnesi.
+- **Veri sağlığı & yedek** — Tutarsızlıkları tespit eden ve güvenli düzeltme
+  akışları sunan denetim yüzeyi (deterministik, sahiplik ve tür kontrollü
+  onarımlar); tek dosya JSON yedek alma / geri yükleme, bildirim tercihleri.
 - **PWA** — Ana ekrana eklenebilir, çevrimdışı kabuk, ekle-git kısayolları
-  (harcama ekle, planlı ödemeler, analiz), açık/koyu tema.
+  (harcama ekle, planlı ödemeler, analiz), açık/koyu tema, Web Push bildirimleri.
 
 ## Durum
 
 - **Stabil (çekirdek):** hesaplar & varlıklar, kredi kartı borcu / ekstre / taksit,
-  krediler, kişisel borç-alacak, ödeme takvimi, analiz & net değer, veri sağlığı.
-- **Gelişmekte (cihaz-içi otomasyon):** SMS'ten provizyon/hareket okuma ve banka
-  ekstresi import'u (DenizBank, YapıKredi) tarayıcıda çalışır; tüm-ekstre
-  satır-toplamı doğrulaması gerçek ekstrelerde kalibre edilmiş iki bağımsız
-  checksum ile yapılır (bkz. `docs/BACKLOG.md`). Web Push bildirim tercihleri.
+  krediler, kişisel borç-alacak, ödeme takvimi, analiz & net değer, veri sağlığı,
+  Web Push bildirimleri (tercih + sessiz saat).
+- **Gelişmekte:** SMS'ten provizyon/hareket okuma ve banka ekstresi import'u
+  (DenizBank, YapıKredi) tarayıcıda çalışır; tüm-ekstre satır-toplamı doğrulaması
+  gerçek ekstrelerde kalibre edilmiş iki bağımsız checksum ile yapılır
+  (bkz. `docs/BACKLOG.md`). AI asistan yeni eklendi (Gemini ücretsiz katman).
+
+## Görsel dil: Şerit (Nocturne)
+
+Arayüz, 2026-08 yeniden tasarımıyla gelen **Şerit** görsel dilini kullanır:
+gölge ve kutu yığını yerine çizgiyle ayrılan satırlar, ekran başına tek
+kahraman rakam, mono + tabular finansal rakamlar; kart yalnız hak eden blokta.
+Renk kimliği **Nocturne**: sıcak porselen açık tema, koyu obsidyen koyu tema,
+jade vurgu — iki tema da birinci sınıftır. Kurallar:
+[`docs/UI_ARCHITECTURE.md`](docs/UI_ARCHITECTURE.md).
 
 ## Ekran görüntüleri
 
@@ -65,6 +84,8 @@ kullanımı hedefler (TL, Türkçe arayüz).
 | ![Hesaplar](docs/screenshots/accounts.png) | ![Krediler](docs/screenshots/loans.png) |
 | **Ödeme takvimi** | **Analiz & ay kapanışı** |
 | ![Ödeme takvimi](docs/screenshots/payments.png) | ![Analiz](docs/screenshots/analysis.png) |
+| **AI Asistan** | **Alsam mı?** |
+| ![AI Asistan](docs/screenshots/assistant.png) | ![Alsam mı](docs/screenshots/decision.png) |
 
 ## Gizlilik & güvenlik
 
@@ -96,19 +117,26 @@ data     → src/data/repositories/*  Tek Supabase teması. Result<T> döndürü
 app      → src/app/*                TanStack Query use-case hook'ları.
 ui       → src/pages, components    "Aptal" sunum katmanı.
 services → src/services/*           RPC sarmalayıcıları.
-lib      → src/lib/*                supabase client, sentry, harici istemciler.
+lib      → src/lib/*                supabase client, hata kaydı, harici istemciler.
 ```
 
 **Teknoloji:** React 19 · TypeScript · Vite 7 · Tailwind CSS v4 · TanStack Query ·
-Supabase (Postgres + Auth + Edge Functions) · Sentry (yalnız frontend) · Vercel · PWA.
+React Router v8 · Supabase (Postgres + Auth + Edge Functions) · Google Gemini
+(fiş/ekstre okuma + AI asistan, yalnız edge'de) · Vercel (+ Analytics) · PWA.
+
+Uzak hata izleme servisi yoktur (Sentry 2026-08-19'da kaldırıldı): çökme ve
+hatalar `AppErrorBoundary` + kendi `client_errors` tablosuyla, RLS altında
+uygulama içinde izlenir.
 
 ## Kurulum
 
 ```bash
 npm install
 
-npm run dev          # Üretim Supabase'ine bağlanır (.env.local gerekir)
-npm run dev:local    # Yerel Supabase (docker) + Vite — üretime dokunmaz
+npm run dev            # Üretim Supabase'ine bağlanır (.env.local gerekir)
+npm run dev:local      # Yerel Supabase (docker) + Vite — üretime dokunmaz
+npm run dev:local:stop # Yerel Supabase docker'ını kapatır
+npm run db:seed:local  # Yerel DB'yi sıfırlar + demo veri yükler
 ```
 
 1. Bir Supabase projesi oluştur (ya da yerel geliştirme için `npm run dev:local`).
@@ -117,11 +145,18 @@ npm run dev:local    # Yerel Supabase (docker) + Vite — üretime dokunmaz
    - `VITE_SUPABASE_URL`
    - `VITE_SUPABASE_ANON_KEY`
 
-Bir değişikliği "bitti" saymadan önce:
+Yerel girişte demo kullanıcı: `t@t.com / password123` (önce `npm run db:seed:local`;
+yalnız yerel docker'da geçerlidir).
+
+Bir değişikliği "bitti" saymadan önce (CI kalite kapısının birebir yerel aynası —
+lint + coverage'lı test + bağımlılık denetimi + build + bundle bütçesi + edge tip
+kontrolü):
 
 ```bash
-npm run lint && npm run test:unit && npm run build
+npm run verify
 ```
+
+Uçtan uca duman testi için `npm run test:e2e` (Playwright) ayrıca koşulabilir.
 
 ## Deploy
 
