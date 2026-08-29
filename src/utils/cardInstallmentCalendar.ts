@@ -61,9 +61,10 @@ export function buildCardInstallmentCalendar(
   installments: CardInstallment[],
   cards: Card[],
   monthCount = 4,
+  today: Date = new Date(),
 ): CardInstallmentMonthSummary[] {
   const cardsById = new Map(cards.map((card) => [card.id, card]))
-  const start = dateInputValue(startOfMonth())
+  const start = dateInputValue(startOfMonth(today))
   const monthKeys = Array.from({ length: monthCount }, (_, index) => dateInputValue(addMonths(new Date(`${start}T00:00:00`), index)))
 
   return monthKeys.map((monthKey) => {

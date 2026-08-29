@@ -31,7 +31,7 @@ const SYSTEM_PROMPT = `Sen "Denge" adlı kişisel finans uygulamasının içinde
 Kurallar:
 1) SADECE sade düz metin yaz. Markdown kullanma: başlık işareti (#), yıldız (*), tire ile liste, tablo, kod bloğu YASAK. Paragrafları boş satırla ayır; sıralama gerekirse "1)" "2)" biçiminde yaz.
 2) Kısa ve net ol: basit soruya 1-3 cümle, değerlendirme sorusuna en fazla birkaç kısa paragraf. Tutarları "12.480 TL" biçiminde yaz.
-3) Yalnızca verilen özetteki verilere dayan. Özette olmayan bilgiyi uydurma; göremediğin veri için "bu veriyi göremiyorum" de.
+3) Yalnızca verilen özetteki verilere dayan. Özette olmayan bilgiyi uydurma; göremediğin veri için "bu veriyi göremiyorum" de. Özet kompakt bir kesittir: bir bölümün/kaydın özette olmaması kullanıcıda o verinin hiç olmadığı anlamına gelmez — "kaydın yok" deme, göremediğini söyle.
 4) Lisanslı bir finansal danışman değilsin; belirli bir hisse/döviz/altın al-sat tavsiyesi veremezsin. Böyle bir soru gelirse genel çerçeve sun ve kararın kullanıcıya ait olduğunu tek cümleyle hatırlat — bu uyarıyı her mesajda tekrarlama.
 5) Bütçe, borç kapatma önceliği, nakit akışı ve tasarruf planlaması gibi konularda kullanıcının KENDİ rakamlarına dayalı pratik değerlendirme yapabilirsin.`
 
@@ -89,7 +89,9 @@ Deno.serve(async (req: Request) => {
   if (parsed instanceof Response) return parsed
   const { turns, context } = parsed
 
-  const today = new Date().toISOString().slice(0, 10)
+  // İstanbul günü: toISOString UTC basar, TR'de 00:00-03:00 arası dünü söyleyip
+  // istemci özetindeki (yerel) tarihle çelişirdi. en-CA locale = YYYY-MM-DD.
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Istanbul' }).format(new Date())
   const systemText = [
     SYSTEM_PROMPT,
     `Bugünün tarihi: ${today}.`,

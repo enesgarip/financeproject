@@ -14,7 +14,7 @@ edge `ai-chat` DB'ye dokunmaz, `verify_jwt` varsayılan true. ~~Streaming yok
 aynı origin'e ham fetch + SSE okuma kullanır (CSP değişikliği gerekmedi);
 kopan akışın kısmi metni KAYDEDİLMEZ — done sinyalsiz bitiş hata sayılır,
 "Tekrar dene" sözleşmesi aynen korunur. Bağlam CLIENT'ta üretilir: `utils/aiContext.ts` (öncelikli bölümler,
-≤12k karakter, composite/çıpalı hedefte TL basılmaz — yanlış rakam konuşmasın).
+~~≤12k karakter, composite/çıpalı hedefte TL basılmaz~~ → dördüncü dilimde genişledi, aşağıda).
 Hata sözleşmesi: invoke düşerse user mesajı DB'de kalır, "Tekrar dene" text'siz
 mutate (çift mesaj imkânsız); Gemini 429 kullanıcıya özel Türkçe mesajla iner.
 Dosyalar AI_CONTEXT_INDEX "AI finans asistanı" satırında.
@@ -26,6 +26,22 @@ eklendi; 7 görüntü `scripts/capture-screenshots.mjs` ile seed verisinden
 yeniden çekildi (1320×900@2x, ~%75 küçüldü); manifest + index.html tema
 renkleri Nocturne token'larına çekildi (eski indigo kalıntısıydı); seed'e
 asistan demo sohbeti eklendi (görüntü Gemini'siz deterministik çıkar).
+
+Dördüncü dilim — **bağlam kapsam taraması + genişletme**: kullanıcı asistanın
+taksit planlarını görmediğini fark etti; tam tarama yapılıp eksikler tek turda
+kapatıldı. `aiContext` artık ≤16k karakter (edge tavanı 24k) ve şunları da
+basar: **kart taksit takvimi** (aylık toplam + plan başına kalan/bitiş;
+`buildCardInstallmentCalendar` DRY, util'e test için opsiyonel `today` eklendi),
+**gelecek ayın bilinen kalemleri** (`buildMonthlyCashFlow` gelecek ay),
+**bütçe gerçekleşmesi + kurallı limit çözümü** (`buildBudgetUsage`),
+**hedeflerde ekranlarla aynı türetme** (`resolveSavingsGoalRows`; AssistantPage
+artık `useMarketRates` + `useKasaBuckets` geçirir, türetilemeyen hedef rakamsız
+etikete düşer — yanlış sayı basılmaz), **piyasa kuru satırı**, **6 aylık
+harcama trendi**, **son hareketler** (transaction_history). Edge `ai-chat`:
+sistem tarihi Europe/Istanbul'a çekildi (UTC gün kayması istemci özetiyle
+çelişiyordu) + prompta "özette olmayan ≠ kullanıcıda yok" kuralı eklendi.
+Bilinçli kapsam dışı: araç masrafları (ayrı veri kaynağı), ekstre arşivi
+geçmişi, mutabakat kayıtları.
 
 ## 2026-08-26 — Mühendislik turu (48 fikirlik denetimden, kullanıcının sırası)
 
