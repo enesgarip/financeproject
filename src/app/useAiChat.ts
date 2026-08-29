@@ -36,6 +36,8 @@ export type SendAiChatInput = {
   text?: string
   history: AiChatMessage[]
   context: string
+  /** Akış sırasında büyüyen TAM metinle çağrılır (canlı gösterim için). */
+  onChunk?: (partial: string) => void
 }
 
 export function useSendAiChatMessage() {
@@ -44,7 +46,7 @@ export function useSendAiChatMessage() {
   const userId = user?.id
 
   return useMutation({
-    mutationFn: async ({ text, history, context }: SendAiChatInput) => {
+    mutationFn: async ({ text, history, context, onChunk }: SendAiChatInput) => {
       let turns: ChatTurn[] = history.map((message) => ({ role: message.role, content: message.content }))
 
       const trimmed = text?.trim()
@@ -58,7 +60,7 @@ export function useSendAiChatMessage() {
 
       // Yanıt gelmeden düşersek kullanıcı mesajı DB'de KALIR (bilinçli sözleşme):
       // geçmiş kaybolmaz, UI "Tekrar dene" ile text'siz yeniden çağırır.
-      const reply = await sendAiChat(turns.slice(-CHAT_WINDOW), context)
+      const reply = await sendAiChat(turns.slice(-CHAT_WINDOW), context, onChunk)
 
       const saved = await insertAiChatMessage('assistant', reply)
       if (!saved.ok) throw new Error(saved.error.message)

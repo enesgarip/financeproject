@@ -1,15 +1,21 @@
 // Supabase Edge Function: ai-chat
 // AI finans asistanı (/analiz/asistan): istemci sohbet geçmişini (≤30 tur) ve
-// finansal özet metnini gönderir; bu fonksiyon Gemini Flash'ı server-side
-// çağırıp sade metin yanıtı döndürür. Anahtar istemciye ASLA inmez.
-// DB'ye DOKUNMAZ — kalıcılık istemcide (data/repositories/aiChatRepo.ts, RLS).
+// finansal özet metnini gönderir; bu fonksiyon Gemini Flash'ı STREAMING
+// (streamGenerateContent, SSE) çağırıp yanıtı chunk chunk iletir. Anahtar
+// istemciye ASLA inmez. DB'ye DOKUNMAZ — kalıcılık istemcide (aiChatRepo, RLS).
 // verify_jwt varsayılan true kalır (config.toml'a blok YOK): kullanıcı JWT'siz çağrılamaz.
+//
+// Yanıt sözleşmesi (istemci: lib/aiChatClient.ts):
+//   Akış başlamadan hata  -> mevcut JSON sözlüğü (400/413/422/429/500/502)
+//   Akış (200, text/event-stream):
+//     data: {"text":"..."}   0..n kez, sıralı parça
+//     data: {"done":true}    tam bitiş — bunsuz biten akış İSTEMCİDE hatadır
+//     data: {"error":"..."}  akış içi hata (SAFETY, kaynak kopması)
 //
 // Deploy:  supabase functions deploy ai-chat
 // Secret:  GEMINI_API_KEY (parse-receipt / parse-statement ile aynı anahtar)
-// Invoke:  supabase.functions.invoke('ai-chat', { body: { messages, context } })
 
-import { fetchWithTimeout, handlePreflight, jsonResponse, rateLimit } from '../_shared/edge.ts'
+import { CORS_HEADERS, fetchWithTimeout, handlePreflight, jsonResponse, rateLimit } from '../_shared/edge.ts'
 
 const MODEL = 'gemini-2.5-flash'
 // Sohbet yanıtı parse işlerinden (25/30 sn) uzun sürebilir; maxOutputTokens
@@ -93,7 +99,8 @@ Deno.serve(async (req: Request) => {
 
   // API anahtarı query-string'de DEĞİL header'da: URL'ler proxy/erişim
   // loglarında görünür, anahtar oraya sızmasın (denetim 2026-08-12 §8).
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`
+  // ?alt=sse anahtar değil format seçicidir, logda görünmesi zararsız.
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:streamGenerateContent?alt=sse`
   const payload = {
     systemInstruction: { parts: [{ text: systemText }] },
     // Gemini 'assistant' rolünü tanımaz: model/user ikilisine eşlenir.
@@ -102,42 +109,114 @@ Deno.serve(async (req: Request) => {
       parts: [{ text: turn.content }],
     })),
     // thinkingBudget 0: 2.5-flash'ın varsayılan "düşünme" adımı sohbette
-    // gecikme + token yakar; kapatınca yanıt hızlanır.
+    // gecikme + token yakar; kapatınca yanıt hızlanır (üretimde teyitli).
     generationConfig: { temperature: 0.3, maxOutputTokens: 1024, thinkingConfig: { thinkingBudget: 0 } },
   }
 
-  let reply: string
+  // fetchWithTimeout yalnız BAĞLANTI kurulumunu sınırlar (finally clearTimeout):
+  // gövde akışı serbest kalır, üst sınırı platformun function timeout'u koyar.
+  let res: Response
   try {
-    const res = await fetchWithTimeout(
+    res = await fetchWithTimeout(
       endpoint,
       { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey }, body: JSON.stringify(payload) },
       GEMINI_TIMEOUT_MS,
     )
-    if (res.status === 429) {
-      // Ücretsiz katman kotası — en olası üretim hatası; mesaj istemciye aynen ulaşır.
-      return jsonResponse({ error: 'Yapay zekâ kotası doldu. Bir dakika sonra ya da yarın tekrar dene.' }, 429)
-    }
-    if (!res.ok) return jsonResponse({ error: `Gemini hatası (${res.status}).` }, 502)
-
-    const json = await res.json()
-    const candidate = json?.candidates?.[0]
-    if (!candidate || candidate?.finishReason === 'SAFETY' || json?.promptFeedback?.blockReason) {
-      return jsonResponse({ error: 'Bu soruya yanıt üretilemedi, farklı biçimde sormayı dene.' }, 422)
-    }
-    // Çok parçalı yanıtta parts[0] kısayolu metni kırpar — hepsi birleştirilir.
-    const parts: unknown[] = Array.isArray(candidate?.content?.parts) ? candidate.content.parts : []
-    reply = parts
-      .map((part) => {
-        const text = (part as { text?: unknown })?.text
-        return typeof text === 'string' ? text : ''
-      })
-      .join('')
-      .trim()
   } catch {
     return jsonResponse({ error: 'Yanıt alınamadı, tekrar dene.' }, 502)
   }
+  if (res.status === 429) {
+    // Ücretsiz katman kotası — en olası üretim hatası; mesaj istemciye aynen ulaşır.
+    return jsonResponse({ error: 'Yapay zekâ kotası doldu. Bir dakika sonra ya da yarın tekrar dene.' }, 429)
+  }
+  if (!res.ok || !res.body) return jsonResponse({ error: `Gemini hatası (${res.status}).` }, 502)
+  const source = res.body
 
-  if (!reply) return jsonResponse({ error: 'Yanıt çözümlenemedi, tekrar dene.' }, 502)
+  // Gemini SSE'si satır satır ayrıştırılıp kendi küçük event sözleşmemize
+  // çevrilir; Gemini'nin ham şeması istemciye sızmaz.
+  const encoder = new TextEncoder()
+  const decoder = new TextDecoder()
+  const out = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      const send = (obj: unknown) => controller.enqueue(encoder.encode(`data: ${JSON.stringify(obj)}\n\n`))
+      let buffer = ''
+      let sentChars = 0
+      let blocked = false
 
-  return jsonResponse({ reply: reply.slice(0, MAX_REPLY_CHARS), asOf: new Date().toISOString() })
+      const handleLine = (line: string) => {
+        if (!line.startsWith('data:')) return
+        const raw = line.slice(5).trim()
+        if (!raw) return
+        let chunk: unknown
+        try {
+          chunk = JSON.parse(raw)
+        } catch {
+          return
+        }
+        const obj = (chunk && typeof chunk === 'object' ? chunk : {}) as {
+          promptFeedback?: { blockReason?: unknown }
+          candidates?: { finishReason?: unknown; content?: { parts?: unknown } }[]
+        }
+        const candidate = obj.candidates?.[0]
+        if (obj.promptFeedback?.blockReason || candidate?.finishReason === 'SAFETY') {
+          blocked = true
+          return
+        }
+        const parts = Array.isArray(candidate?.content?.parts) ? candidate.content.parts : []
+        const text = parts
+          .map((part) => {
+            const t = (part as { text?: unknown })?.text
+            return typeof t === 'string' ? t : ''
+          })
+          .join('')
+        if (!text || sentChars >= MAX_REPLY_CHARS) return
+        // DB check'i (16384) akışta da aşılmasın: tavana ulaşınca kalan kırpılır.
+        const clipped = text.slice(0, MAX_REPLY_CHARS - sentChars)
+        sentChars += clipped.length
+        send({ text: clipped })
+      }
+
+      try {
+        const reader = source.getReader()
+        while (true) {
+          const { value, done } = await reader.read()
+          if (done) break
+          buffer += decoder.decode(value, { stream: true })
+          let newline = buffer.indexOf('\n')
+          while (newline >= 0) {
+            handleLine(buffer.slice(0, newline).trim())
+            buffer = buffer.slice(newline + 1)
+            newline = buffer.indexOf('\n')
+          }
+          if (blocked) break
+        }
+        if (!blocked) handleLine(buffer.trim())
+
+        if (blocked) send({ error: 'Bu soruya yanıt üretilemedi, farklı biçimde sormayı dene.' })
+        else if (sentChars > 0) send({ done: true })
+        else send({ error: 'Yanıt çözümlenemedi, tekrar dene.' })
+      } catch {
+        // Kaynak koptu; done GİTMEZ — istemci bunu hata sayar. enqueue de
+        // istemci kopmuşsa fırlatabilir, sessiz yutulur.
+        try {
+          send({ error: 'Yanıt alınamadı, tekrar dene.' })
+        } catch {
+          /* istemci de koptu */
+        }
+      } finally {
+        try {
+          controller.close()
+        } catch {
+          /* zaten kapalı */
+        }
+      }
+    },
+    cancel() {
+      source.cancel().catch(() => {})
+    },
+  })
+
+  return new Response(out, {
+    headers: { ...CORS_HEADERS, 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache' },
+  })
 })
