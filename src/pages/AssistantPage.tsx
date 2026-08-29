@@ -51,6 +51,9 @@ export function AssistantPage() {
   const clear = useClearAiChat()
 
   const [input, setInput] = useState('')
+  // Akış sırasında büyüyen yanıt; tamamlanınca DB'ye yazılır ve sıfırlanır.
+  // Kopan akışın kısmi metni KAYDEDİLMEZ — "Tekrar dene" sözleşmesi bozulmaz.
+  const [streamingText, setStreamingText] = useState('')
   // Gönderim düşerse metin burada tutulur: insert bile başarısızsa retry aynı
   // metinle, insert olduysa metinsiz (çift mesaj olmasın) yeniden dener.
   const [failedText, setFailedText] = useState<string | null>(null)
@@ -71,15 +74,19 @@ export function AssistantPage() {
   useEffect(() => {
     const reduced = typeof window !== 'undefined' && Boolean(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches)
     endRef.current?.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'end' })
-  }, [messages.length, send.isPending])
+  }, [messages.length, send.isPending, streamingText])
 
   function handleSend(text: string) {
     const trimmed = text.trim()
     if (!trimmed || !canSend) return
     setInput('')
     send.mutate(
-      { text: trimmed, history: messages, context },
-      { onSuccess: () => setFailedText(null), onError: () => setFailedText(trimmed) },
+      { text: trimmed, history: messages, context, onChunk: setStreamingText },
+      {
+        onSuccess: () => setFailedText(null),
+        onError: () => setFailedText(trimmed),
+        onSettled: () => setStreamingText(''),
+      },
     )
   }
 
@@ -88,11 +95,14 @@ export function AssistantPage() {
     const lastRole = messages[messages.length - 1]?.role
     if (lastRole === 'user') {
       // Kullanıcı mesajı DB'ye yazılmış: insert atlanır, yalnız yanıt istenir.
-      send.mutate({ history: messages, context }, { onSuccess: () => setFailedText(null) })
+      send.mutate(
+        { history: messages, context, onChunk: setStreamingText },
+        { onSuccess: () => setFailedText(null), onSettled: () => setStreamingText('') },
+      )
     } else if (failedText) {
       send.mutate(
-        { text: failedText, history: messages, context },
-        { onSuccess: () => setFailedText(null) },
+        { text: failedText, history: messages, context, onChunk: setStreamingText },
+        { onSuccess: () => setFailedText(null), onSettled: () => setStreamingText('') },
       )
     }
   }
@@ -177,7 +187,20 @@ export function AssistantPage() {
         </div>
       ) : null}
 
-      {send.isPending ? <p className="animate-pulse text-sm text-ink-muted">Asistan yazıyor…</p> : null}
+      {send.isPending && streamingText ? (
+        <div className="space-y-1">
+          {messages.length > 0 ? <Divider space="sm" /> : null}
+          <span className="serit-eyebrow text-primary">Asistan</span>
+          <p className="whitespace-pre-wrap text-sm leading-6 text-ink">
+            {streamingText}
+            <span className="ml-0.5 inline-block w-2 animate-pulse text-primary" aria-hidden="true">▍</span>
+          </p>
+        </div>
+      ) : null}
+
+      {send.isPending && !streamingText ? (
+        <p className="animate-pulse text-sm text-ink-muted">Asistan yazıyor…</p>
+      ) : null}
 
       {send.isError && !send.isPending ? (
         <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-destructive/20 bg-destructive/8 px-3 py-2">

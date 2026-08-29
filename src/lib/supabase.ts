@@ -1,8 +1,10 @@
 import { createClient } from '@supabase/supabase-js'
 import type { Database } from '../types/database'
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
+// Streaming edge çağrıları (aiChatClient) invoke yerine ham fetch kullanır;
+// URL + anon key'i env'i ikinci kez okumadan buradan alsınlar diye export'lu.
+export const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined
+export const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
 
 /**
  * Env eksikse client bir PLACEHOLDER projeye bağlanır: uygulama açılır ama her

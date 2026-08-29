@@ -7,8 +7,13 @@ Kullanıcı finansal sohbetlerini ChatGPT'den uygulamaya taşıdı: güncel snap
 2.5 Flash ücretsiz katman** (anahtar `parse-receipt` ile paylaşık, zaten
 üretimde); **tek sürekli akış** (thread yok, "geçmişi temizle" var); geçmiş
 kalıcı (`ai_chat_messages`, own-row RLS, UPDATE yok, backup kapsamı DIŞI);
-**streaming yok** (MVP); edge `ai-chat` DB'ye dokunmaz, `verify_jwt` varsayılan
-true. Bağlam CLIENT'ta üretilir: `utils/aiContext.ts` (öncelikli bölümler,
+edge `ai-chat` DB'ye dokunmaz, `verify_jwt` varsayılan true. ~~Streaming yok
+(MVP)~~ → aynı gün üçüncü dilimde **streaming eklendi**: edge Gemini
+`streamGenerateContent` SSE'sini kendi küçük event sözleşmesine
+(`{text}/{done}/{error}`) çevirir; istemci `supabase.functions.invoke` yerine
+aynı origin'e ham fetch + SSE okuma kullanır (CSP değişikliği gerekmedi);
+kopan akışın kısmi metni KAYDEDİLMEZ — done sinyalsiz bitiş hata sayılır,
+"Tekrar dene" sözleşmesi aynen korunur. Bağlam CLIENT'ta üretilir: `utils/aiContext.ts` (öncelikli bölümler,
 ≤12k karakter, composite/çıpalı hedefte TL basılmaz — yanlış rakam konuşmasın).
 Hata sözleşmesi: invoke düşerse user mesajı DB'de kalır, "Tekrar dene" text'siz
 mutate (çift mesaj imkânsız); Gemini 429 kullanıcıya özel Türkçe mesajla iner.
