@@ -2,6 +2,8 @@ import { Send, Trash2 } from 'lucide-react'
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import { useAiChatMessages, useClearAiChat, useSendAiChatMessage } from '../app/useAiChat'
 import { useFinanceSnapshot } from '../app/useFinanceSnapshot'
+import { useMarketRates } from '../hooks/useMarketRates'
+import { useKasaBuckets } from '../hooks/useSafeToSpend'
 import { Button } from '../components/ui/button'
 import { ConfirmDialog } from '../components/ui/confirm-dialog'
 import { QueryError } from '../components/ui/query-error'
@@ -47,6 +49,10 @@ function MessageBlock({ message }: { message: AiChatMessage }) {
 export function AssistantPage() {
   const snapshotQuery = useFinanceSnapshot()
   const messagesQuery = useAiChatMessages()
+  // Kur + kasa kovaları hedef türetimi için (aiContext): ikisi de opsiyoneldir,
+  // yüklenmemişse ilgili hedef satırı rakamsız etikete düşer — gönderim beklemez.
+  const { snapshot: ratesSnapshot } = useMarketRates()
+  const bucketsQuery = useKasaBuckets()
   const send = useSendAiChatMessage()
   const clear = useClearAiChat()
 
@@ -66,8 +72,11 @@ export function AssistantPage() {
 
   const messages = messagesQuery.data ?? []
   const context = useMemo(
-    () => (snapshotQuery.data ? buildAiFinanceContext(snapshotQuery.data) : ''),
-    [snapshotQuery.data],
+    () =>
+      snapshotQuery.data
+        ? buildAiFinanceContext(snapshotQuery.data, { ratesSnapshot, kasaBuckets: bucketsQuery.data ?? null })
+        : '',
+    [snapshotQuery.data, ratesSnapshot, bucketsQuery.data],
   )
   const canSend = Boolean(snapshotQuery.data) && !send.isPending
 
