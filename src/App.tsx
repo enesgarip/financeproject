@@ -34,6 +34,9 @@ const AnalysisPage = lazyWithReload(() =>
 const AnalysisDetailPage = lazyWithReload(() =>
   import('./pages/AnalysisDetailPage').then((m) => ({ default: m.AnalysisDetailPage })),
 )
+const AssistantPage = lazyWithReload(() =>
+  import('./pages/AssistantPage').then((m) => ({ default: m.AssistantPage })),
+)
 const CarsPage = lazyWithReload(() =>
   import('./pages/CarsPage').then((m) => ({ default: m.CarsPage })),
 )
@@ -166,6 +169,7 @@ function AnimatedRoutes() {
         <Route path="analiz" element={<AnalysisHub />}>
           <Route index element={routeElement(<AnalysisPage />, 'analiz')} />
           <Route path="detay" element={routeElement(<AnalysisDetailPage />, 'analiz-detay')} />
+          <Route path="asistan" element={routeElement(<AssistantPage />, 'analiz-asistan')} />
           {/* Legacy redirect: cars moved from Analiz to the Varlıklar hub. */}
           <Route path="araclar" element={<Navigate to="/varliklar/araclar" replace />} />
           <Route path="trendler" element={<Navigate to="/analiz" replace />} />

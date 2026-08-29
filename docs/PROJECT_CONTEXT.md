@@ -145,7 +145,7 @@ Live routes (source of truth: `src/App.tsx`):
 - `/varliklar` hub → index (Varlıklar) + `/varliklar/maas` (Maaş) + `/varliklar/altin` (Altın) + `/varliklar/araclar` (Arabalarım)
 - `/borclar` hub → `/borclar/krediler` (Krediler) + `/borclar/kisiler` (Kişiler) + `/borclar/kartlar` (Kart Borcu)
 - `/odemeler` hub → index (Ödeme Takvimi) + `/odemeler/hedefler` (Bütçe & Hedefler) + `/odemeler/alsam-mi` (Alsam mı?) + `/odemeler/liste` (Alışveriş Listesi) + `/odemeler/baglamlar` (gider bağlamları)
-- `/analiz` hub → index (Analiz) + `/analiz/detay` (Detay)
+- `/analiz` hub → index (Analiz) + `/analiz/detay` (Detay) + `/analiz/asistan` (AI Asistan — Gemini sohbet)
 - `/veri-sagligi` hub → index (Bulgular) + `/veri-sagligi/islemler` (Yedek ve Ayarlar)
 - `/login`
 

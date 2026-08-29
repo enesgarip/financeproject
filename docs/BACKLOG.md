@@ -1,5 +1,19 @@
 # Priority Backlog
 
+## 2026-08-29 — AI Asistan (`/analiz/asistan`) TAMAMLANDI
+
+Kullanıcı finansal sohbetlerini ChatGPT'den uygulamaya taşıdı: güncel snapshot
+özetiyle konuşan Gemini tabanlı sohbet sayfası. Kararlar: sağlayıcı **Gemini
+2.5 Flash ücretsiz katman** (anahtar `parse-receipt` ile paylaşık, zaten
+üretimde); **tek sürekli akış** (thread yok, "geçmişi temizle" var); geçmiş
+kalıcı (`ai_chat_messages`, own-row RLS, UPDATE yok, backup kapsamı DIŞI);
+**streaming yok** (MVP); edge `ai-chat` DB'ye dokunmaz, `verify_jwt` varsayılan
+true. Bağlam CLIENT'ta üretilir: `utils/aiContext.ts` (öncelikli bölümler,
+≤12k karakter, composite/çıpalı hedefte TL basılmaz — yanlış rakam konuşmasın).
+Hata sözleşmesi: invoke düşerse user mesajı DB'de kalır, "Tekrar dene" text'siz
+mutate (çift mesaj imkânsız); Gemini 429 kullanıcıya özel Türkçe mesajla iner.
+Dosyalar AI_CONTEXT_INDEX "AI finans asistanı" satırında.
+
 ## 2026-08-26 — Mühendislik turu (48 fikirlik denetimden, kullanıcının sırası)
 
 Fikir turunun mühendislik-gözü devamı: 6 mercek × 48 fikir + gerçeklik denetimi
