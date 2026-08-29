@@ -16,6 +16,7 @@ import {
   ListChecks,
   ShieldCheck,
   ShoppingCart,
+  Sparkles,
   Target,
   UsersRound,
   WalletCards,
@@ -92,6 +93,7 @@ export const planningHubTabs: HubTab[] = [
 export const analysisHubTabs: HubTab[] = [
   { to: '/analiz', label: 'Analiz', icon: ChartNoAxesCombined, end: true },
   { to: '/analiz/detay', label: 'Detay', icon: CircleGauge },
+  { to: '/analiz/asistan', label: 'Asistan', icon: Sparkles },
 ]
 
 export const dataHealthHubTabs: HubTab[] = [
@@ -118,6 +120,7 @@ const routeMeta: Record<string, { title: string; subtitle?: string; width: Route
   '/odemeler/liste': { title: 'Alışveriş Listesi', subtitle: 'Almak istediğin şeyler', width: 'medium' },
   '/analiz': { title: 'Analiz', subtitle: 'Aylık rapor ve ay kapanış kontrolü', width: 'wide' },
   '/analiz/detay': { title: 'Detay', subtitle: 'Gelir/gider dağılımı ve trendler', width: 'wide' },
+  '/analiz/asistan': { title: 'Asistan', subtitle: 'Finansal verilerinle sohbet', width: 'narrow' },
   '/veri-sagligi': { title: 'Veri Kontrolü', subtitle: 'Tutarlılık denetimi ve bulgular', width: 'wide' },
   '/veri-sagligi/islemler': { title: 'Yedek ve Ayarlar', subtitle: 'Veri yedekleme ve bakım', width: 'medium' },
 }

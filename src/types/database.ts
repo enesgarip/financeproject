@@ -133,6 +133,17 @@ export type ClientError = {
   fingerprint: string
 }
 
+export type AiChatRole = 'user' | 'assistant'
+
+// AI asistan sohbet geçmişi (/analiz/asistan): tek sürekli akış, thread yok.
+export type AiChatMessage = {
+  id: string
+  user_id: string
+  created_at: string
+  role: AiChatRole
+  content: string
+}
+
 export type CardExpense = BaseRow & {
   card_id: string
   statement_archive_id: string | null
@@ -790,6 +801,12 @@ export type Database = {
         // id/created_at/user_id DB'de default'lu (user_id = auth.uid()).
         Omit<ClientError, 'id' | 'created_at' | 'user_id'> & { id?: string; created_at?: string; user_id?: string },
         Partial<Omit<ClientError, 'id'>>
+      >
+      ai_chat_messages: Table<
+        AiChatMessage,
+        // id/created_at/user_id DB'de default'lu (user_id = auth.uid()).
+        Omit<AiChatMessage, 'id' | 'created_at' | 'user_id'> & { id?: string; created_at?: string; user_id?: string },
+        Partial<Omit<AiChatMessage, 'id'>>
       >
       sms_log: Table<
         SmsLog,

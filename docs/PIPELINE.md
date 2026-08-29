@@ -202,6 +202,15 @@ and rollback APIs after the release gates pass.
 - `VAPID_PRIVATE_KEY` (Supabase Edge Function secret)
 - `VAPID_SUBJECT` (Supabase Edge Function secret, e.g. `mailto:you@example.com`)
 
+## AI / LLM edge functions
+
+- `GEMINI_API_KEY` (Supabase Edge Function secret; GitHub secret DEĞİL —
+  workflow'lar kullanmaz, yalnız edge runtime okur. `parse-receipt`,
+  `parse-statement` ve `ai-chat` aynı anahtarı paylaşır; üretimde tanımlı.
+  Elle yönetilir: `supabase secrets set GEMINI_API_KEY=...`)
+- `SMS_WEBHOOK_SECRET` + `SMS_OWNER_USER_ID` (Supabase Edge Function secret;
+  `parse-sms` webhook kapısı — bu liste dışında kalmasın diye burada anılır)
+
 ## Required Vercel / Supabase Setup Outside Git
 
 ## Supabase
