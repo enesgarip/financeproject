@@ -14,6 +14,14 @@ Hata sözleşmesi: invoke düşerse user mesajı DB'de kalır, "Tekrar dene" tex
 mutate (çift mesaj imkânsız); Gemini 429 kullanıcıya özel Türkçe mesajla iner.
 Dosyalar AI_CONTEXT_INDEX "AI finans asistanı" satırında.
 
+Aynı gün ikinci dilim — **README tazeleme + ekran görüntüsü turu**: Sentry
+kalıntıları silindi, Şerit/Nocturne bölümü + eksik özellikler (Araçlar/TCO,
+Alsam mı?, Liste, Bağlamlar, Yedek, AI Asistan) + `npm run verify` kapısı
+eklendi; 7 görüntü `scripts/capture-screenshots.mjs` ile seed verisinden
+yeniden çekildi (1320×900@2x, ~%75 küçüldü); manifest + index.html tema
+renkleri Nocturne token'larına çekildi (eski indigo kalıntısıydı); seed'e
+asistan demo sohbeti eklendi (görüntü Gemini'siz deterministik çıkar).
+
 ## 2026-08-26 — Mühendislik turu (48 fikirlik denetimden, kullanıcının sırası)
 
 Fikir turunun mühendislik-gözü devamı: 6 mercek × 48 fikir + gerçeklik denetimi

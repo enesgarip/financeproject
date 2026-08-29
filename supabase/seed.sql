@@ -227,3 +227,16 @@ insert into public.wishlist_items (id, user_id, name, estimated_price, sort_orde
   ('de110000-0000-4000-8000-000000000a01', '11111111-1111-1111-1111-111111111111', 'PlayStation 5', 28000.00, 0),
   ('de110000-0000-4000-8000-000000000a02', '11111111-1111-1111-1111-111111111111', 'Robot süpürge', 18000.00, 1)
 on conflict (id) do nothing;
+
+-- AI asistan demo sohbeti (/analiz/asistan): sayfa yerelde ve ekran
+-- görüntüsünde Gemini anahtarı olmadan da dolu/deterministik görünsün.
+insert into public.ai_chat_messages (id, user_id, created_at, role, content) values
+  ('de110000-0000-4000-8000-000000000d01', '11111111-1111-1111-1111-111111111111', now() - interval '2 hours', 'user',
+   'Bu ayı değerlendir'),
+  ('de110000-0000-4000-8000-000000000d02', '11111111-1111-1111-1111-111111111111', now() - interval '2 hours' + interval '12 seconds', 'assistant',
+   'Bu ay gelirin 105.000 TL ve toplam çıkışın yaklaşık 68.000 TL görünüyor; net akış artıda. Kart tarafında Bonus Gold ekstresi 21.500 TL ve ayın 25''inde ödenmesi gerekiyor, kredi taksitinle birlikte ay sonuna kadar en büyük iki kalemin bunlar.' || E'\n\n' || 'Market bütçen 6.000 TL''nin 4.050 TL''sini kullandın; bu tempoyla ay sonunu sınırda kapatırsın. Acil fon hedefine bu ay henüz ayırma yapılmamış, ekstre ödemesinden sonra 5.000 TL ayırman planına uygun olur.'),
+  ('de110000-0000-4000-8000-000000000d03', '11111111-1111-1111-1111-111111111111', now() - interval '1 hour', 'user',
+   'Borçlarımı kapatmak için nasıl bir sıra izlemeliyim?'),
+  ('de110000-0000-4000-8000-000000000d04', '11111111-1111-1111-1111-111111111111', now() - interval '1 hour' + interval '14 seconds', 'assistant',
+   'Önce kredi kartı ekstresini tam kapat: gecikme faizi en pahalı borç bu. Ardından takvimdeki sabit taksitler geliyor; kredin zaten otomatik planda, erken kapama cezası yoksa fazla nakdi buraya değil kart borcuna yönlendir.' || E'\n\n' || 'Ali''den alacağın 5.000 TL vadesinde gelirse onu doğrudan acil fon kasasına aktarabilirsin. Kararın sana ait; bu sıralama yalnızca maliyet mantığına göre.')
+on conflict (id) do nothing;
