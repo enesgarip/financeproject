@@ -1,12 +1,15 @@
 # Priority Backlog
 
-## 2026-08-30 — README İngilizce sürüm TAMAMLANDI
+## 2026-08-30 — README İngilizce sürüm + varsayılan takası TAMAMLANDI
 
-Kök dizine tam çeviri `README.en.md` eklendi; iki README'nin tepesine dil geçiş
-bağlantısı kondu (`**Türkçe** · [English]`). Bağlantı verilen dokümanlar Türkçe
-kaldığı için İngilizce sayfada "(Turkish)" notu düşülür. `encoding.guard.test.ts`
-kök taramasına `README.en.md` de girdi — İngilizce metin de Türkçe karakter
-taşıyor (Şerit, kuruş, YapıKredi), mojibake bekçisi onu da korur.
+İki dilim: önce kök dizine tam çeviri `README.en.md` eklendi (#210); aynı gün
+ikinci dilimde varsayılan İngilizce'ye çevrildi — İngilizce metin `README.md`
+oldu, Türkçe `README.tr.md`'ye taşındı (git mv, geçmiş rename olarak korunur).
+İki dosyanın tepesinde dil geçişi (`**English** · [Türkçe]` / tersi). Türkçe
+kalan doküman bağlantıları İngilizce sayfada "(Turkish)" notlu.
+`encoding.guard.test.ts` kök taraması `{README.md,README.tr.md}` — mojibake
+bekçisi iki dili de korur (İngilizce metin de Türkçe karakter taşıyor: Şerit,
+kuruş, YapıKredi).
 
 ## 2026-08-29 — AI Asistan (`/analiz/asistan`) TAMAMLANDI
 
