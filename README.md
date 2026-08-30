@@ -1,180 +1,201 @@
 # Denge
 
-**Türkçe** · [English](README.en.md)
+**English** · [Türkçe](README.tr.md)
 
-**Aylık finansal yükünü, vade kaçmadan görünür kılan kişisel finans uygulaması.**
+**A personal finance app that makes your monthly financial load visible before a due date slips past.**
 
-Denge; nakit, kart, kredi, borç ve planlı ödemeleri tek yerde toplayan Türkçe bir
-kişisel finans PWA'sıdır. Amaç basit bir "gelir–gider listesi" tutmak değil,
-**bu ay ve önümüzdeki aylarda cebinden ne çıkacağını önceden göstermek** —
-ekstre kesilmeden, taksit sırası gelmeden, ödeme günü geçmeden.
+Denge (Turkish for "balance") is a Turkish-language personal finance PWA that
+brings cash, credit cards, loans, personal debts and planned payments together
+in one place. The goal is not to keep a simple "income–expense list" but to
+**show in advance what will leave your pocket this month and in the months
+ahead** — before the statement closes, before the next installment, before the
+payment day passes.
 
-`React · TypeScript · Supabase · PWA` — tek kullanıcılık, TL, Türkçe.
+`React · TypeScript · Supabase · PWA` — single-user, Turkish lira, Turkish UI.
 
-![Denge — Finans Özeti](docs/screenshots/dashboard.png)
+![Denge — Finance Overview](docs/screenshots/dashboard.png)
 
-## Ne işe yarar?
+## What does it do?
 
-Kişisel finansta asıl zorluk tek tek harcamalar değil, **birbirine binen
-yükümlülükleri zamanında görebilmektir**: kredi kartı ekstresi, kart taksitleri,
-kredi taksitleri, kişilere olan borçlar ve tekrar eden ödemeler aynı ayda üst
-üste gelir. Denge bunların hepsini tek modelde toplar ve şu soruya cevap verir:
+The real challenge in personal finance is not individual purchases but
+**seeing overlapping obligations in time**: the credit-card statement, card
+installments, loan installments, debts to people and recurring payments all
+land in the same month. Denge folds all of them into a single model and
+answers one question:
 
-> _"Bu ay ve sonraki aylarda dengede miyim; nereye, ne zaman, ne kadar ödemem gerekiyor?"_
+> _"Am I balanced this month and the following ones — where, when and how much do I need to pay?"_
 
-## Kim için?
+## Who is it for?
 
-Denge; **birden fazla banka hesabı, kredi kartı ve taksit** yürüten, ay içinde
-ekstre kesimi, taksit sırası ve tekrar eden ödemeler üst üste bindiğinde nakit
-dengesini önceden görmek isteyen kişiler içindir. Kısacası _"bu ay ve sonraki
-aylarda cebimden ne çıkacak?"_ sorusuna net cevap arayan tek kişilik bir
-kullanımı hedefler (TL, Türkçe arayüz).
+Denge is for people juggling **multiple bank accounts, credit cards and
+installment plans** who want to see their cash balance ahead of time when
+statement cuts, installment schedules and recurring payments stack up within a
+month. In short, it targets single-person use looking for a clear answer to
+_"what will leave my pocket this month and in the months ahead?"_ (Turkish
+lira, Turkish UI).
 
-**Kim için değil:** çok kullanıcılı şirket muhasebesi, ekip/rol yönetimi ya da
-çok para birimli yatırım-portföy takibi için tasarlanmadı.
+**Who it is not for:** it is not designed for multi-user company bookkeeping,
+team/role management, or multi-currency investment portfolio tracking.
 
-## Özellikler
+## Features
 
-- **Hesaplar & varlıklar** — Banka kartları, nakit ve yatırım varlıkları, maaş
-  geçmişi ve altın takibi. Bakiyeler olay tabanlı (event-sourced) tutulur.
-- **Kredi kartı yönetimi** — Harcama, provizyon, ekstre kesimi, taksitli alışveriş
-  ve dönem içi ödemeler. Borç; güncel dönem / ekstre / provizyon kovalarına ayrılır.
-- **Krediler & kişisel borçlar** — Kredi taksit planları ve kişilere olan
-  borç/alacak takibi; taksit takvimiyle birlikte.
-- **Planlama & ödeme takvimi** — Yaklaşan ödemeler, aylık nakit akışı projeksiyonu,
-  bütçe uyarıları, birikim hedefleri ve taksit takvimi özetleri.
-- **Analiz & net değer** — Net değer, servet ve nakit akışı trendleri; işlem geçmişi.
-- **AI Asistan** — Kendi finansal verilerinle Türkçe sohbet (`/analiz/asistan`).
-  Sorular, uygulamadaki güncel verilerden üretilen kompakt bir özetle birlikte
-  Google Gemini'ye gönderilir; geçmiş cihazlar arası kalıcıdır.
-- **Karar araçları** — "Alsam mı?" (alışverişin gelecek aylara etkisi), alışveriş
-  listesi (30 gün bekleme kuralı + "ne zaman alabilirim"), gider bağlamları
-  (evcil hayvan / etkinlik / proje bütçesi).
-- **Araçlar & TCO** — Araç başına gider, yakıt ölçümü, hatırlatıcılar ve toplam
-  sahip olma maliyeti karnesi.
-- **Veri sağlığı & yedek** — Tutarsızlıkları tespit eden ve güvenli düzeltme
-  akışları sunan denetim yüzeyi (deterministik, sahiplik ve tür kontrollü
-  onarımlar); tek dosya JSON yedek alma / geri yükleme, bildirim tercihleri.
-- **PWA** — Ana ekrana eklenebilir, çevrimdışı kabuk, ekle-git kısayolları
-  (harcama ekle, planlı ödemeler, analiz), açık/koyu tema, Web Push bildirimleri.
+- **Accounts & assets** — Bank accounts, cash and investment assets, salary
+  history and gold tracking. Balances are event-sourced.
+- **Credit card management** — Purchases, provisions (pending authorizations),
+  statement cuts, installment purchases and mid-period payments. Debt is broken
+  down into current-period / statement / provision buckets.
+- **Loans & personal debts** — Loan installment plans plus debt/receivable
+  tracking with people, complete with an installment calendar.
+- **Planning & payment calendar** — Upcoming payments, monthly cash-flow
+  projection, budget alerts, savings goals and installment schedule summaries.
+- **Analysis & net worth** — Net worth, wealth and cash-flow trends;
+  transaction history.
+- **AI Assistant** — Chat about your own financial data in Turkish
+  (`/analiz/asistan`). Questions are sent to Google Gemini together with a
+  compact summary generated from your current in-app data; history persists
+  across devices.
+- **Decision tools** — "Should I buy it?" (a purchase's impact on future
+  months), shopping list (30-day cooling-off rule + "when can I buy it"),
+  spending contexts (pet / event / project budgets).
+- **Vehicles & TCO** — Per-vehicle expenses, fuel logging, reminders and a
+  total-cost-of-ownership report card.
+- **Data health & backup** — An audit surface that detects inconsistencies and
+  offers safe correction flows (deterministic, ownership- and type-checked
+  repairs); single-file JSON backup/restore, notification preferences.
+- **PWA** — Installable to the home screen, offline shell, quick shortcuts
+  (add expense, planned payments, analysis), light/dark themes, Web Push
+  notifications.
 
-## Durum
+## Status
 
-- **Stabil (çekirdek):** hesaplar & varlıklar, kredi kartı borcu / ekstre / taksit,
-  krediler, kişisel borç-alacak, ödeme takvimi, analiz & net değer, veri sağlığı,
-  Web Push bildirimleri (tercih + sessiz saat).
-- **Gelişmekte:** SMS'ten provizyon/hareket okuma ve banka ekstresi import'u
-  (DenizBank, YapıKredi) tarayıcıda çalışır; tüm-ekstre satır-toplamı doğrulaması
-  gerçek ekstrelerde kalibre edilmiş iki bağımsız checksum ile yapılır
-  (bkz. `docs/BACKLOG.md`). AI asistan yeni eklendi (Gemini ücretsiz katman).
+- **Stable (core):** accounts & assets, credit-card debt / statements /
+  installments, loans, personal debts & receivables, payment calendar,
+  analysis & net worth, data health, Web Push notifications (preferences +
+  quiet hours).
+- **In progress:** reading provisions/transactions from SMS and bank statement
+  import (DenizBank, YapıKredi) run in the browser; whole-statement line-total
+  validation uses two independent checksums calibrated on real statements
+  (see `docs/BACKLOG.md`). The AI assistant is a recent addition (Gemini free
+  tier).
 
-## Görsel dil: Şerit (Nocturne)
+## Visual language: Şerit (Nocturne)
 
-Arayüz, 2026-08 yeniden tasarımıyla gelen **Şerit** görsel dilini kullanır:
-gölge ve kutu yığını yerine çizgiyle ayrılan satırlar, ekran başına tek
-kahraman rakam, mono + tabular finansal rakamlar; kart yalnız hak eden blokta.
-Renk kimliği **Nocturne**: sıcak porselen açık tema, koyu obsidyen koyu tema,
-jade vurgu — iki tema da birinci sınıftır. Kurallar:
-[`docs/UI_ARCHITECTURE.md`](docs/UI_ARCHITECTURE.md).
+The UI uses the **Şerit** ("stripe") visual language introduced with the
+2026-08 redesign: rows separated by hairlines instead of stacked shadowed
+boxes, a single hero number per screen, mono + tabular numerals for financial
+figures; a card only where a block earns one. The color identity is
+**Nocturne**: a warm porcelain light theme, a dark obsidian dark theme and a
+jade accent — both themes are first-class. Rules:
+[`docs/UI_ARCHITECTURE.md`](docs/UI_ARCHITECTURE.md) (Turkish).
 
-## Ekran görüntüleri
+## Screenshots
 
-> Aşağıdaki görseller yerel geliştirme ortamında **temsili demo veriyle** alınmıştır.
+> The screenshots below were taken in a local development environment with
+> **representative demo data**.
 
-| Hesaplar & kartlar | Krediler & taksitler |
+| Accounts & cards | Loans & installments |
 | --- | --- |
-| ![Hesaplar](docs/screenshots/accounts.png) | ![Krediler](docs/screenshots/loans.png) |
-| **Ödeme takvimi** | **Analiz & ay kapanışı** |
-| ![Ödeme takvimi](docs/screenshots/payments.png) | ![Analiz](docs/screenshots/analysis.png) |
-| **AI Asistan** | **Alsam mı?** |
-| ![AI Asistan](docs/screenshots/assistant.png) | ![Alsam mı](docs/screenshots/decision.png) |
+| ![Accounts](docs/screenshots/accounts.png) | ![Loans](docs/screenshots/loans.png) |
+| **Payment calendar** | **Analysis & month close** |
+| ![Payment calendar](docs/screenshots/payments.png) | ![Analysis](docs/screenshots/analysis.png) |
+| **AI Assistant** | **Should I buy it?** |
+| ![AI Assistant](docs/screenshots/assistant.png) | ![Should I buy it](docs/screenshots/decision.png) |
 
-## Gizlilik & güvenlik
+## Privacy & security
 
-> - Veri **senin kendi Supabase projende** durur; üçüncü bir sunucuya gitmez.
-> - Her tabloda satır seviyesi güvenlik (RLS): her satır `user_id = auth.uid()`
->   koşuluyla sınırlıdır.
-> - İstemciye yalnızca **anon key** gider; **service role** anahtarı client'a
->   hiçbir zaman konmaz.
-> - Frontend filtrelemesine güvenilmez — yetki veritabanında zorlanır.
+> - Your data stays in **your own Supabase project**; it never goes to a
+>   third-party server.
+> - Row Level Security (RLS) on every table: every row is scoped by
+>   `user_id = auth.uid()`.
+> - Only the **anon key** ever reaches the client; the **service role** key is
+>   never shipped to it.
+> - Frontend filtering is never trusted — authorization is enforced in the
+>   database.
 
-## Para modeli (güven temeli)
+## Money model (the foundation of trust)
 
-Finans uygulamasında en kritik nokta paranın kesinliğidir. Denge parayı
-veritabanında `numeric`, ledger tablolarında ise **işaretli integer kuruş** olarak
-tutar; JS tarafındaki tüm yuvarlama/karşılaştırma tek bir çekirdekten
-(`src/utils/money.ts`) geçer. Kart borcu, banka bakiyesi, kredi özeti ve kart borç
-kırılımı gibi büyük para rakamları ya olaylardan türetilir ya da yazma anında
-veritabanı trigger'ıyla korunur — böylece tutarsızlık matematiksel olarak
-imkânsız hale gelir. Düzeltmeler geçmişi değiştirmez, **ters kayıt** olarak
-eklenir (append-only).
+The most critical thing in a finance app is monetary precision. Denge stores
+money as `numeric` in the database and as **signed integer kuruş** (the Turkish
+cent) in the ledger tables; every rounding/comparison on the JS side goes
+through a single core (`src/utils/money.ts`). The big monetary figures — card
+debt, bank balance, loan summary, card-debt breakdown — are either derived
+from events or protected by database triggers at write time, so inconsistency
+becomes mathematically impossible. Corrections never rewrite history; they are
+appended as **reversal entries** (append-only).
 
-## Mimari
+## Architecture
 
-Katmanlar arası sınırlar ESLint ile zorlanır; UI doğrudan Supabase'i göremez:
+Layer boundaries are enforced with ESLint; the UI can never see Supabase
+directly:
 
 ```
-domain   → src/utils/*              Saf hesap/iş kuralı. Yoğun test edilir.
-data     → src/data/repositories/*  Tek Supabase teması. Result<T> döndürür.
-app      → src/app/*                TanStack Query use-case hook'ları.
-ui       → src/pages, components    "Aptal" sunum katmanı.
-services → src/services/*           RPC sarmalayıcıları.
-lib      → src/lib/*                supabase client, hata kaydı, harici istemciler.
+domain   → src/utils/*              Pure calculation/business rules. Heavily tested.
+data     → src/data/repositories/*  The only Supabase contact. Returns Result<T>.
+app      → src/app/*                TanStack Query use-case hooks.
+ui       → src/pages, components    "Dumb" presentation layer.
+services → src/services/*           RPC wrappers.
+lib      → src/lib/*                supabase client, error logging, external clients.
 ```
 
-**Teknoloji:** React 19 · TypeScript · Vite 7 · Tailwind CSS v4 · TanStack Query ·
+**Tech:** React 19 · TypeScript · Vite 7 · Tailwind CSS v4 · TanStack Query ·
 React Router v8 · Supabase (Postgres + Auth + Edge Functions) · Google Gemini
-(fiş/ekstre okuma + AI asistan, yalnız edge'de) · Vercel (+ Analytics) · PWA.
+(receipt/statement parsing + AI assistant, edge-only) · Vercel (+ Analytics) ·
+PWA.
 
-Uzak hata izleme servisi yoktur (Sentry 2026-08-19'da kaldırıldı): çökme ve
-hatalar `AppErrorBoundary` + kendi `client_errors` tablosuyla, RLS altında
-uygulama içinde izlenir.
+There is no remote error-tracking service (Sentry was removed on 2026-08-19):
+crashes and errors are tracked in-app via `AppErrorBoundary` plus a dedicated
+`client_errors` table under RLS.
 
-## Kurulum
+## Getting started
 
 ```bash
 npm install
 
-npm run dev            # Üretim Supabase'ine bağlanır (.env.local gerekir)
-npm run dev:local      # Yerel Supabase (docker) + Vite — üretime dokunmaz
-npm run dev:local:stop # Yerel Supabase docker'ını kapatır
-npm run db:seed:local  # Yerel DB'yi sıfırlar + demo veri yükler
+npm run dev            # Connects to production Supabase (.env.local required)
+npm run dev:local      # Local Supabase (docker) + Vite — never touches production
+npm run dev:local:stop # Stops the local Supabase docker
+npm run db:seed:local  # Resets the local DB + loads demo data
 ```
 
-1. Bir Supabase projesi oluştur (ya da yerel geliştirme için `npm run dev:local`).
-2. `supabase/migrations/*` migration'larını CLI ile uygula.
-3. `.env.example` dosyasını `.env.local` olarak kopyalayıp değerleri doldur:
+1. Create a Supabase project (or use `npm run dev:local` for local
+   development).
+2. Apply the migrations under `supabase/migrations/*` with the CLI.
+3. Copy `.env.example` to `.env.local` and fill in the values:
    - `VITE_SUPABASE_URL`
    - `VITE_SUPABASE_ANON_KEY`
 
-Yerel girişte demo kullanıcı: `t@t.com / password123` (önce `npm run db:seed:local`;
-yalnız yerel docker'da geçerlidir).
+Local demo login: `t@t.com / password123` (run `npm run db:seed:local` first;
+valid only on the local docker).
 
-Bir değişikliği "bitti" saymadan önce (CI kalite kapısının birebir yerel aynası —
-lint + coverage'lı test + bağımlılık denetimi + build + bundle bütçesi + edge tip
-kontrolü):
+Before calling a change "done" (the exact local mirror of the CI quality gate —
+lint + tests with coverage + dependency audit + build + bundle budget + edge
+type check):
 
 ```bash
 npm run verify
 ```
 
-Uçtan uca duman testi için `npm run test:e2e` (Playwright) ayrıca koşulabilir.
+For an end-to-end smoke test, `npm run test:e2e` (Playwright) can be run
+separately.
 
 ## Deploy
 
-`main` dalına push = üretim deploy (GitHub Actions → Vercel). Frontend tek artifact
-olarak build edilip staged yüklenir, DB değiştiyse şifreli yedek alınıp migration
-uygulanır, canlıya alım sonrası `/login` smoke testi başarısız olursa otomatik
-rollback yapılır. Ayrıntı: [`docs/PIPELINE.md`](docs/PIPELINE.md).
+A push to `main` = production deploy (GitHub Actions → Vercel). The frontend is
+built as a single artifact and uploaded staged; if the DB changed, an encrypted
+backup is taken before migrations are applied; if the post-release `/login`
+smoke test fails, an automatic rollback kicks in. Details:
+[`docs/PIPELINE.md`](docs/PIPELINE.md) (Turkish).
 
-## Katkı & AI ajanları
+## Contributing & AI agents
 
-Bu depo AI ajanlarıyla (Claude Code, Codex) çalışacak şekilde belgelenmiştir. Bir
-oturuma başlarken önce [`docs/AI_CONTEXT_INDEX.md`](docs/AI_CONTEXT_INDEX.md) —
-görev bazlı en kısa okuma rotasını ve konu→dosya tablosunu verir. Kanonik kurallar
-[`CLAUDE.md`](CLAUDE.md)'de, domain + tablo + route haritası
-[`docs/PROJECT_CONTEXT.md`](docs/PROJECT_CONTEXT.md)'de tutulur.
+This repository is documented for working with AI agents (Claude Code, Codex).
+When starting a session, read
+[`docs/AI_CONTEXT_INDEX.md`](docs/AI_CONTEXT_INDEX.md) first — it gives the
+cheapest task-based reading route and the topic→file table. The canonical
+rules live in [`CLAUDE.md`](CLAUDE.md), and the domain + table + route map in
+[`docs/PROJECT_CONTEXT.md`](docs/PROJECT_CONTEXT.md). Project documentation is
+in Turkish.
 
-## Lisans
+## License
 
 [MIT](LICENSE) © Enes Garip

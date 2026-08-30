@@ -26,7 +26,7 @@ const sources: Record<string, string> = {
   ...import.meta.glob<string>('/src/**/*.{ts,tsx,js,jsx,css}', { query: '?raw', import: 'default', eager: true }),
   ...import.meta.glob<string>('/docs/**/*.md', { query: '?raw', import: 'default', eager: true }),
   ...import.meta.glob<string>('/supabase/migrations/**/*.sql', { query: '?raw', import: 'default', eager: true }),
-  ...import.meta.glob<string>('/{README.md,README.en.md,index.html}', { query: '?raw', import: 'default', eager: true }),
+  ...import.meta.glob<string>('/{README.md,README.tr.md,index.html}', { query: '?raw', import: 'default', eager: true }),
 }
 
 // This file necessarily contains the literal signatures above, so it excludes
