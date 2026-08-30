@@ -1,5 +1,7 @@
 # Denge
 
+**Türkçe** · [English](README.en.md)
+
 **Aylık finansal yükünü, vade kaçmadan görünür kılan kişisel finans uygulaması.**
 
 Denge; nakit, kart, kredi, borç ve planlı ödemeleri tek yerde toplayan Türkçe bir

@@ -1,5 +1,13 @@
 # Priority Backlog
 
+## 2026-08-30 — README İngilizce sürüm TAMAMLANDI
+
+Kök dizine tam çeviri `README.en.md` eklendi; iki README'nin tepesine dil geçiş
+bağlantısı kondu (`**Türkçe** · [English]`). Bağlantı verilen dokümanlar Türkçe
+kaldığı için İngilizce sayfada "(Turkish)" notu düşülür. `encoding.guard.test.ts`
+kök taramasına `README.en.md` de girdi — İngilizce metin de Türkçe karakter
+taşıyor (Şerit, kuruş, YapıKredi), mojibake bekçisi onu da korur.
+
 ## 2026-08-29 — AI Asistan (`/analiz/asistan`) TAMAMLANDI
 
 Kullanıcı finansal sohbetlerini ChatGPT'den uygulamaya taşıdı: güncel snapshot
