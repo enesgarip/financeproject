@@ -187,7 +187,7 @@ export function MonthlyReport({ data }: { data: AnalysisData }) {
             downloadShareableCard(canvas, cashFlow.monthLabel)
           }}>
             <ImageDown />
-            Kart
+            Görsel indir
           </Button>
           <Button type="button" variant="outline" size="sm" onClick={() => window.print()}>
             <Download />
@@ -195,11 +195,15 @@ export function MonthlyReport({ data }: { data: AnalysisData }) {
           </Button>
         </div>
         <div className="grid grid-cols-2 gap-2 min-[520px]:grid-cols-4">
-          <StatPill label="Gelir" value={formatAmount(income)} tone="emerald" />
+          <StatPill label="Beklenen gelir" value={formatAmount(income)} tone="emerald" />
           <StatPill label="Kart harcaması" value={formatAmount(cardSpending)} tone="rose" />
-          <StatPill label="Nakit çıkışı" value={formatAmount(outflow)} tone="rose" />
-          <StatPill label="Net nakit" value={formatAmount(net)} tone={net >= 0 ? 'emerald' : 'rose'} />
+          <StatPill label="Ödenen tutar" value={formatAmount(outflow)} tone="rose" />
+          <StatPill label="Gelirden kalan" value={formatAmount(net)} tone={net >= 0 ? 'emerald' : 'rose'} />
         </div>
+        <p className="text-xs text-ink-muted">
+          Gelirden kalan: beklenen aylık gelirden bugüne kadar kaydedilen ödemeler çıkarıldı.
+          Hesap bakiyesi veya ay sonu tahmini değildir.
+        </p>
         <div className="grid gap-2 min-[520px]:grid-cols-2">
           {reportRows.map((row) => (
             <div key={row.label} className="flex min-w-0 items-center justify-between gap-3 rounded-xl bg-page px-3 py-2 text-sm">
@@ -221,9 +225,8 @@ export function MonthlyReport({ data }: { data: AnalysisData }) {
         ) : null}
 
         <p className="text-xs text-ink-muted">
-          Kart harcamaları alışveriş tarihinde izlenir ve bekleyen provizyonlar dahildir; nakit çıkışı bu ay fiilen yapılmış
-          ödemelerden (işlem geçmişi) gelir. Net nakit bu ikisinin farkıdır: gelir maaş varsayımına dayalı bir projeksiyon,
-          çıkış ise gerçekleşen ödemelerdir.
+          Kart harcamaları alışveriş tarihinde gösterilir; bekleyen provizyonlar dahildir.
+          Ödenen tutar, bu ay işlem geçmişine kaydedilen nakit çıkışlarıdır. Beklenen gelir, maaş ve alacak planına dayanır.
         </p>
       </CardContent>
     </Card>

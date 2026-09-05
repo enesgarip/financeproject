@@ -164,7 +164,7 @@ export function NotificationSettings() {
       }
       await refresh()
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Bir hata oluştu.')
+      setError(e instanceof Error ? e.message : 'Bildirim ayarı değiştirilemedi. Bağlantını kontrol edip tekrar dene.')
     } finally {
       setBusy(false)
     }

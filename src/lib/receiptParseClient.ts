@@ -33,7 +33,7 @@ export function fileToBase64(file: File): Promise<{ base64: string; mimeType: st
       const comma = result.indexOf(',')
       resolve({ base64: comma >= 0 ? result.slice(comma + 1) : result, mimeType: file.type || 'image/jpeg' })
     }
-    reader.onerror = () => reject(new Error('Görsel okunamadı.'))
+    reader.onerror = () => reject(new Error('Görsel açılamadı. Başka bir fotoğraf seçip tekrar dene.'))
     reader.readAsDataURL(file)
   })
 }
@@ -78,7 +78,7 @@ export async function parseReceiptImage(file: File): Promise<ReceiptParseResult>
   }
   const result = (data as { result?: ReceiptParseResult } | null)?.result
   if (!result || typeof result.amount !== 'number' || result.amount <= 0) {
-    throw new Error('Görselden bir tutar okunamadı.')
+    throw new Error('Fişteki toplam tutar okunamadı. Daha net bir fotoğraf seç veya tutarı elle gir.')
   }
   return sanitizeReceiptResult(result)
 }

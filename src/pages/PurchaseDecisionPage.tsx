@@ -41,9 +41,9 @@ const INSTALLMENT_PRESETS = [1, 3, 6, 9, 12]
 const HORIZON_MONTHS = 6
 
 const VERDICT_PRESENTATION: Record<PurchaseVerdict, { label: string; className: string; Icon: typeof CircleCheck }> = {
-  rahat: { label: 'Rahatlıkla alabilirsin', className: 'border-success/30 bg-success/8 text-success', Icon: CircleCheck },
-  dikkat: { label: 'Alabilirsin ama dikkat', className: 'border-warning/30 bg-warning/8 text-warning', Icon: CircleAlert },
-  zorlayici: { label: 'Bu ay zorlar', className: 'border-destructive/30 bg-destructive/8 text-destructive', Icon: CircleX },
+  rahat: { label: 'Plana göre uygun', className: 'border-success/30 bg-success/8 text-success', Icon: CircleCheck },
+  dikkat: { label: 'Planını zorlayabilir', className: 'border-warning/30 bg-warning/8 text-warning', Icon: CircleAlert },
+  zorlayici: { label: 'Bakiye açığı oluşuyor', className: 'border-destructive/30 bg-destructive/8 text-destructive', Icon: CircleX },
 }
 
 export function PurchaseDecisionPage() {
@@ -286,7 +286,7 @@ export function PurchaseDecisionPage() {
           </div>
 
           <div className="mt-3">
-            <p className="finance-label">Nasıl</p>
+            <p className="finance-label">Ödeme şekli</p>
             <div className="mt-1.5 grid grid-cols-2 gap-1.5">
               {(['card', 'cash'] as const).map((value) => (
                 <button
@@ -309,7 +309,7 @@ export function PurchaseDecisionPage() {
             </div>
             {timingChoices.length > 0 ? (
               <div className="mt-2">
-                <p className="text-[11px] text-ink-muted">Bugün alırsan ilk ödemeye kalan gün (kart bazında, sonucu değiştirmez):</p>
+                <p className="text-[11px] text-ink-muted">Kartlara göre ilk ödemeye kalan tahmini süre. Bu tarihler aşağıdaki hesaplamayı değiştirmez.</p>
                 <div className="mt-1.5 flex flex-wrap gap-1.5">
                   {timingChoices.map((choice) => (
                     <span
@@ -388,7 +388,7 @@ export function PurchaseDecisionPage() {
                         disabled={listSave === 'saving'}
                         className="rounded-lg px-3 py-1.5 text-xs font-bold ring-1 ring-current/40 transition hover:bg-black/[.04] dark:hover:bg-white/[.06] disabled:opacity-50"
                       >
-                        Şimdilik listeye at
+                        Alışveriş listesine ekle
                       </button>
                     )}
                     {listError ? <p className="mt-1 text-xs">{listError}</p> : null}
@@ -402,13 +402,13 @@ export function PurchaseDecisionPage() {
             <CardContent className="p-4 sm:p-5">
               <div className="grid grid-cols-2 gap-2">
                 <div className="rounded-xl bg-page px-3 py-2.5">
-                  <p className="finance-label truncate">Aylık taksit</p>
+                  <p className="finance-label">{installments === 1 ? 'Ödeme tutarı' : 'Aylık taksit'}</p>
                   <p className="finance-value mt-1 truncate text-sm font-bold text-ink">
                     {formatAmount(impact.monthlyInstallment)}
                   </p>
                 </div>
                 <div className="rounded-xl bg-page px-3 py-2.5">
-                  <p className="finance-label truncate">Alım sonrası kalan</p>
+                  <p className="finance-label">Bu ay harcanabilir</p>
                   <p
                     className={`finance-value mt-1 truncate text-sm font-bold ${
                       impact.safeToSpendAfter < 0 ? 'text-destructive' : 'text-ink'
@@ -420,6 +420,12 @@ export function PurchaseDecisionPage() {
               </div>
 
               {/* Emek çevirisi: "değer mi?" kıyası — TL soyut, emek/hedef payı somut. */}
+              <p className="mt-3 text-xs text-ink-muted">
+                {method === 'card'
+                  ? 'Bu hesapta kart ödemesi gelecek ay başlar; bu ay harcanabilir tutar değişmez. Borç ise alışverişle artar.'
+                  : 'Nakit veya banka ödemesi bu ay harcanabilir tutardan hemen düşülür.'}
+                {' '}Tahmin yalnız kayıtlı planları ve bu alışverişi içerir; bundan sonra yapacağın diğer harcamalar dahil değildir.
+              </p>
               {effort && (effort.workDays !== null || effort.outflowDays !== null || effort.goalMonths > 0) ? (
                 <div className="mt-2 rounded-xl bg-page px-3 py-2.5">
                   <p className="finance-label">Bu tutar neye denk?</p>
@@ -439,7 +445,7 @@ export function PurchaseDecisionPage() {
                 </div>
               ) : null}
 
-              <p className="mt-4 finance-label">Aylık bakiye projeksiyonu</p>
+              <p className="mt-4 finance-label">Tahmini aylık bakiye</p>
               <div className="mt-1.5 space-y-1.5">
                 {impact.months.map((month) => (
                   <div key={month.label} className="flex items-center justify-between gap-3 rounded-lg bg-page px-3 py-2 text-sm">
@@ -454,9 +460,6 @@ export function PurchaseDecisionPage() {
                 ))}
               </div>
 
-              <p className="mt-3 text-[11px] text-ink-muted">
-                Kartla alımda ilk taksit bir sonraki ekstrede nakit çıkışına dönüşür; bu yüzden bu ayın bakiyesi değişmez.
-              </p>
               {!reservedKnown ? (
                 <p className="mt-2 text-[11px] font-semibold text-warning">
                   Kasa rezervi doğrulanamadı — harcanabilir tutar rezerv düşülmeden hesaplandı, gerçekte daha düşük olabilir.

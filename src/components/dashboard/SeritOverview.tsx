@@ -6,11 +6,12 @@
  *
  * Hesap yok — her sayı DashboardPage'den hazır gelir; burası yalnız sunum.
  */
+import { useState, type ReactNode } from 'react'
 import { ShieldAlert, ShieldCheck } from 'lucide-react'
 import { Link } from 'react-router'
 import type { MonthStrip } from '../../utils/dashboardMonthStrip'
 import { monthStripTone } from '../../utils/dashboardMonthStrip'
-import type { DashboardUpcomingItem } from '../../utils/dashboardUpcoming'
+import { groupDashboardInstallments, type DashboardUpcomingItem } from '../../utils/dashboardUpcoming'
 import type { SafeToSpendResult } from '../../utils/safeToSpend'
 import { daysUntil } from '../../utils/date'
 import { formatPercent } from '../../utils/formatCurrency'
@@ -89,6 +90,8 @@ export function SeritOverview({
   totalCashAssets,
   health,
   onPay,
+  priorityContent,
+  cycleContent,
 }: {
   monthLabel: string
   today: Date
@@ -109,7 +112,9 @@ export function SeritOverview({
   perDayAllowance: number
   strip: MonthStrip
   upcoming: DashboardUpcomingItem[]
-  cardBuckets: { statement: number; current: number; provision: number; total: number }
+  cardBuckets: { statement: number; current: number; provision: number; total: number; future: number }
+  priorityContent?: ReactNode
+  cycleContent?: ReactNode
   creditUsageRate: number
   totalCreditLimit: number
   netWorth: number
@@ -123,6 +128,9 @@ export function SeritOverview({
   health: { errors: number; warnings: number; total: number; checksRun: number; cleanChecks: number }
   onPay: (item: DashboardUpcomingItem) => void
 }) {
+  const [showAllUpcoming, setShowAllUpcoming] = useState(false)
+  const groupedUpcoming = groupDashboardInstallments(upcoming)
+  const visibleUpcoming = showAllUpcoming ? groupedUpcoming : groupedUpcoming.slice(0, 6)
   const format = useSeritAmount()
   const daysLeft = daysInMonth - today.getDate()
   const perDay = format(perDayAllowance)
@@ -161,7 +169,7 @@ export function SeritOverview({
                     <span className="serit-num font-semibold" style={{ color: SERIT_TEXT.brand }}>
                       {perDay.amount} {perDay.unit}
                     </span>{' '}
-                    harcayabilirsin.
+                    kayıtlı planlardan arta kalıyor.
                   </>
                 )
               }
@@ -180,6 +188,8 @@ export function SeritOverview({
           </div>
         )}
 
+        {priorityContent}
+        {cycleContent}
         <div className="mt-5">
           <SeritMonthStrip strip={strip} monthLabel={monthLabel} />
         </div>
@@ -215,17 +225,17 @@ export function SeritOverview({
           ) : (
             <table className="mt-1.5 w-full border-collapse">
               <tbody>
-                {upcoming.map((item, index) => {
+                {visibleUpcoming.map((item, index) => {
                   const money = format(item.amount, { signed: item.direction === 'inflow' })
                   const inflow = item.direction === 'inflow'
                   const overdue = (daysUntil(new Date(item.sortTime)) ?? 0) < 0
                   return (
-                    <tr key={item.id} className={index === upcoming.length - 1 ? undefined : 'border-b border-line'}>
+                    <tr key={item.id} className={index === visibleUpcoming.length - 1 ? undefined : 'border-b border-line'}>
                       <td className="serit-num w-14 py-[13px] text-[12.5px] text-ink-faint">
                         {shortDate(item.obligation.date)}
                       </td>
                       <td className="py-[13px] text-[14.5px] font-semibold text-ink">
-                        {item.title}
+                        {item.children ? <details><summary className="cursor-pointer">{item.title}</summary><ul className="mt-2 space-y-2 text-xs font-normal">{item.children.map((child) => <li key={child.id}>{child.title} · {child.subtitle} · {format(child.amount).amount} {format(child.amount).unit}</li>)}</ul></details> : item.title}
                         <span className="block text-xs font-normal text-ink-muted">{item.subtitle}</span>
                       </td>
                       <td
@@ -261,6 +271,7 @@ export function SeritOverview({
               </tbody>
             </table>
           )}
+          {groupedUpcoming.length > 6 && <button type="button" aria-expanded={showAllUpcoming} onClick={() => setShowAllUpcoming((value) => !value)} className="mt-2 min-h-11 text-sm font-semibold text-primary">{showAllUpcoming ? 'Vadeleri daralt' : 'Tüm vadeleri göster (' + groupedUpcoming.length + ')'}</button>}
         </section>
       </div>
 
@@ -293,6 +304,7 @@ export function SeritOverview({
                 { label: 'Ekstre', value: cardBuckets.statement, tone: 'danger' },
                 { label: 'Dönem içi', value: cardBuckets.current, tone: 'warning' },
                 { label: 'Provizyon', value: cardBuckets.provision, tone: 'info' },
+                { label: 'Gelecek taksitler', value: cardBuckets.future, tone: 'neutral' },
               ]}
             />
           </div>

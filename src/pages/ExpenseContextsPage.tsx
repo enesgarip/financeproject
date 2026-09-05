@@ -61,12 +61,12 @@ export function ExpenseContextsPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      {query.isError ? <Alert variant="warning">Bağlam verisi yüklenemedi. Sayfayı yenilemeyi dene.</Alert> : null}
+      {query.isError ? <Alert variant="warning">Gider grupları yüklenemedi. Sayfayı yenilemeyi dene.</Alert> : null}
       <ContextManager
         contexts={contexts}
         userId={user?.id}
         onChanged={refresh}
-        onError={(message) => toast.error('Olmadı', message)}
+        onError={(message) => toast.error('Kayıt değiştirilemedi', message)}
         confirm={confirm}
       />
       {contexts.length > 0 ? (
@@ -80,7 +80,7 @@ export function ExpenseContextsPage() {
           <ContextCardTagging
             contexts={contexts}
             onChanged={refresh}
-            onError={(message) => toast.error('Atanamadı', message)}
+            onError={(message) => toast.error('Harcama ilişkilendirilemedi', message)}
           />
           <section className="grid gap-4 lg:grid-cols-2">
             {(query.data?.summaries ?? []).map((summary) => (
@@ -140,7 +140,7 @@ function ContextManager({ contexts, userId, onChanged, onError, confirm }: {
   async function remove(context: ExpenseContext) {
     const ok = await confirm({
       title: `${context.name} silinsin mi?`,
-      description: 'Kart-dışı giderler silinir. Kart harcamaları kalır; yalnız bağlam etiketi düşer.',
+      description: 'Kart-dışı giderler silinir. Kart harcamaları kalır; yalnız gider grubu bağlantısı kaldırılır.',
       confirmLabel: 'Sil', variant: 'destructive',
     })
     if (!ok) return
@@ -152,8 +152,8 @@ function ContextManager({ contexts, userId, onChanged, onError, confirm }: {
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="flex items-center gap-2 text-base"><FolderKanban className="size-4 text-primary" /> Gider bağlamları</CardTitle>
-        <p className="text-xs text-ink-muted">Evcil hayvan giderlerini veya düğün, taşınma gibi süreli projeleri tek mercekte izle.</p>
+        <CardTitle className="flex items-center gap-2 text-base"><FolderKanban className="size-4 text-primary" /> Gider grupları</CardTitle>
+        <p className="text-xs text-ink-muted">Evcil hayvan, gezi veya taşınma gibi bir konuya ait giderleri birlikte izle. Her gider kendi kategorisini korur.</p>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
         {contexts.length ? (
@@ -166,7 +166,7 @@ function ContextManager({ contexts, userId, onChanged, onError, confirm }: {
                   <KindIcon className="size-4 text-primary" />
                   <div className="min-w-0"><p className="truncate text-sm font-bold">{context.name}</p><p className="text-xs text-ink-muted">{contextKindLabel(context.kind)}</p></div>
                 </div>
-                <Button size="icon-sm" variant="ghost" aria-label={`${context.name} bağlamını sil`} onClick={() => void remove(context)}><Trash2 /></Button>
+                <Button size="icon-sm" variant="ghost" aria-label={`${context.name} gider grubunu sil`} onClick={() => void remove(context)}><Trash2 /></Button>
               </li>
               )
             })}
@@ -181,14 +181,14 @@ function ContextManager({ contexts, userId, onChanged, onError, confirm }: {
               // Süresiz tür (pet/sağlık/hobi/yan iş) tarih taşımaz — temizle.
               if (!contextKindTimeboxed(next)) { setStartsOn(''); setEndsOn('') }
             }}
-            aria-label="Bağlam türü"
+            aria-label="Gider grubu türü"
           >
             {EXPENSE_CONTEXT_KINDS.map((entry) => (
               <option key={entry.kind} value={entry.kind}>{entry.label}</option>
             ))}
           </Select>
-          <Input value={name} onChange={(event) => setName(event.target.value)} placeholder={namePlaceholder(kind)} aria-label="Bağlam adı" required />
-          <Input value={budget} onChange={(event) => setBudget(event.target.value)} inputMode="decimal" placeholder="Bütçe (ops.)" aria-label="Bağlam bütçesi" />
+          <Input value={name} onChange={(event) => setName(event.target.value)} placeholder={namePlaceholder(kind)} aria-label="Gider grubu adı" required />
+          <Input value={budget} onChange={(event) => setBudget(event.target.value)} inputMode="decimal" placeholder="Bütçe (isteğe bağlı)" aria-label="Gider grubu bütçesi" />
           {contextKindTimeboxed(kind) ? (
             <>
               <Input type="date" value={startsOn} onChange={(event) => setStartsOn(event.target.value)} aria-label="Başlangıç (opsiyonel)" />
@@ -198,7 +198,7 @@ function ContextManager({ contexts, userId, onChanged, onError, confirm }: {
           <Button type="submit" disabled={!name.trim() || saving}><Plus /> {saving ? 'Ekleniyor...' : 'Ekle'}</Button>
         </form>
         <p className="text-xs text-ink-muted">
-          Bütçe ve tarihler opsiyonel. Bitişi boş bırakırsan bağlam <strong className="font-semibold text-ink">süresiz</strong> sürer; evcil hayvan zaten süresizdir.
+          Bütçe ve tarihler isteğe bağlı. Bitişi boş bırakırsan gider grubu <strong className="font-semibold text-ink">süresiz</strong> sürer; evcil hayvan zaten süresizdir.
         </p>
       </CardContent>
     </Card>
@@ -233,14 +233,14 @@ function ManualContextExpenseForm({ contexts, userId, onChanged, onError }: {
     <Card>
       <CardHeader className="pb-2"><CardTitle className="flex items-center gap-2 text-base"><Wallet className="size-4 text-primary" /> Kart-dışı gider ekle</CardTitle></CardHeader>
       <CardContent><form onSubmit={submit} className="grid gap-2 sm:grid-cols-2 lg:grid-cols-6">
-        <Select value={active?.id ?? ''} onChange={(event) => { setContextId(event.target.value); const next = contexts.find((c) => c.id === event.target.value); setCategory(contextCategories(next?.kind ?? 'pet')[0]) }} aria-label="Gider bağlamı">
+        <Select value={active?.id ?? ''} onChange={(event) => { setContextId(event.target.value); const next = contexts.find((c) => c.id === event.target.value); setCategory(contextCategories(next?.kind ?? 'pet')[0]) }} aria-label="Gider grubu">
           {contexts.map((context) => <option key={context.id} value={context.id}>{context.name}</option>)}
         </Select>
         <Input type="date" value={spentAt} onChange={(event) => setSpentAt(event.target.value)} aria-label="Gider tarihi" />
         <Input value={amount} onChange={(event) => setAmount(event.target.value)} inputMode="decimal" placeholder="TL tutar" aria-label="Gider tutarı" required />
         <Select value={category} onChange={(event) => setCategory(event.target.value)} aria-label="Gider kategorisi">{categories.map((item) => <option key={item}>{item}</option>)}</Select>
         <Input value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Açıklama" aria-label="Gider açıklaması" />
-        <div className="flex gap-2"><Select value={paymentMethod} onChange={(event) => setPaymentMethod(event.target.value as typeof paymentMethod)} aria-label="Ödeme yöntemi"><option value="nakit">Nakit</option><option value="banka">Banka</option><option value="diger">Diğer</option></Select><Button type="submit" aria-label="Bağlam giderini ekle" disabled={parseNumber(amount) <= 0 || saving}><Plus /></Button></div>
+        <div className="flex gap-2"><Select value={paymentMethod} onChange={(event) => setPaymentMethod(event.target.value as typeof paymentMethod)} aria-label="Ödeme yöntemi"><option value="nakit">Nakit</option><option value="banka">Banka</option><option value="diger">Diğer</option></Select><Button type="submit" aria-label="Gruba gider ekle" disabled={parseNumber(amount) <= 0 || saving}><Plus /></Button></div>
       </form></CardContent>
     </Card>
   )
@@ -267,8 +267,8 @@ function ContextCardTagging({ contexts, onChanged, onError }: { contexts: Expens
   }
 
   return (
-    <Card><CardHeader className="pb-2"><CardTitle className="flex items-center gap-2 text-base"><CreditCard className="size-4 text-primary" /> Kart harcamasını bağlama ata</CardTitle><p className="text-xs text-ink-muted">Etiketleme kart borcunu değiştirmez. Henüz kesinleşmemiş provizyonlar da listelenir.</p></CardHeader><CardContent>
-      {loading ? <Skeleton className="h-24 rounded-xl" /> : <ul className="flex flex-col divide-y divide-line">{expenses.map((expense) => <li key={expense.id} className="flex items-center justify-between gap-3 py-2"><div className="min-w-0"><p className="flex items-center gap-2 text-sm font-semibold"><span className="truncate">{expense.description}</span>{expense.status === 'provision' ? <Badge variant="outline" className="shrink-0">Provizyon</Badge> : null}</p><p className="truncate text-xs text-ink-muted">{formatDate(expense.spent_at)} · {formatCurrency(expense.amount)}{expense.context_id ? ` · ${names.get(expense.context_id) ?? 'Bağlam'}` : ''}</p></div><Select className="w-40 shrink-0" value={expense.context_id ?? ''} disabled={busyId === expense.id} onChange={(event) => void assign(expense, event.target.value)} aria-label={`${expense.description} için bağlam`}><option value="">Bağlam yok</option>{contexts.map((context) => <option key={context.id} value={context.id}>{context.name}</option>)}</Select></li>)}</ul>}
+    <Card><CardHeader className="pb-2"><CardTitle className="flex items-center gap-2 text-base"><CreditCard className="size-4 text-primary" /> Kart harcamasını gruba ekle</CardTitle><p className="text-xs text-ink-muted">Etiketleme kart borcunu değiştirmez. Henüz kesinleşmemiş provizyonlar da listelenir.</p></CardHeader><CardContent>
+      {loading ? <Skeleton className="h-24 rounded-xl" /> : <ul className="flex flex-col divide-y divide-line">{expenses.map((expense) => <li key={expense.id} className="flex items-center justify-between gap-3 py-2"><div className="min-w-0"><p className="flex items-center gap-2 text-sm font-semibold"><span className="truncate">{expense.description}</span>{expense.status === 'provision' ? <Badge variant="outline" className="shrink-0">Provizyon</Badge> : null}</p><p className="truncate text-xs text-ink-muted">{formatDate(expense.spent_at)} · {formatCurrency(expense.amount)}{expense.context_id ? ` · ${names.get(expense.context_id) ?? 'Gider grubu'}` : ''}</p></div><Select className="w-40 shrink-0" value={expense.context_id ?? ''} disabled={busyId === expense.id} onChange={(event) => void assign(expense, event.target.value)} aria-label={`${expense.description} için gider grubu`}><option value="">Grup seçilmedi</option>{contexts.map((context) => <option key={context.id} value={context.id}>{context.name}</option>)}</Select></li>)}</ul>}
     </CardContent></Card>
   )
 }

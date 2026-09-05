@@ -30,6 +30,7 @@ export function FocusActionPanel({
   actions,
   safeToSpendAmount,
   onboarding = false,
+  compact = false,
 }: {
   actions: FocusAction[]
   /**
@@ -44,16 +45,18 @@ export function FocusActionPanel({
    * tamponun eksisi (−5.000 ₺) duruyor ve düzeltme boşa çıkıyordu.
    */
   onboarding?: boolean
+  compact?: boolean
 }) {
-  const { formatAmount } = useBalancePrivacy()
+  const { formatAmount, maskText } = useBalancePrivacy()
   const [showAll, setShowAll] = useState(false)
   const primaryAction = actions[0]
   if (!primaryAction) return null
   const cashIsPositive = safeToSpendAmount >= 0
-  const statusLabel = primaryAction.priority <= 20 ? 'Aksiyon gerekli' : 'Takip temiz'
+  const statusLabel = primaryAction.priority <= 20 ? 'İlgilenmen gerekenler var' : 'Öncelikli hatırlatmalar'
   const visibleActions = showAll ? actions : actions.slice(0, 4)
   const hiddenCount = Math.max(0, actions.length - 4)
 
+  if (compact) return <section className="mt-5 border-t border-line pt-3" aria-label="Bugünün odağı"><h2 className="text-sm font-semibold">Bugünün odağı</h2><ul className="mt-1 divide-y divide-line">{actions.slice(0, 3).map((action) => <li key={action.id}><Link to={action.to} className="block min-h-11 py-2 text-sm"><span className="font-semibold">{maskText(action.title)}</span><span className="mt-1 block text-xs text-ink-muted">{maskText(action.description)} · {action.cta} →</span></Link></li>)}</ul></section>
   return (
     <Card className="border-0 bg-raised py-0 ring-1 ring-line-strong">
       <CardContent className="p-4">
@@ -64,7 +67,7 @@ export function FocusActionPanel({
                 <p className="text-xs font-bold uppercase text-primary">Bugünün odağı</p>
                 <h2 className="mt-2 text-2xl font-black leading-tight text-ink">{statusLabel}</h2>
                 <p className="mt-2 text-sm leading-6 text-ink-muted">
-                  En önemli finans aksiyonlarını vade, bakiye ve limit durumuna göre sıraladım.
+                  En önemli işlemleri vade, bakiye ve limit durumuna göre sıraladım.
                 </p>
               </div>
               <div className="grid size-11 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary ring-1 ring-primary/15" aria-hidden="true">
@@ -103,7 +106,7 @@ export function FocusActionPanel({
                 className="mt-2 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-line-strong bg-page px-3 py-2 text-xs font-black text-ink-muted transition hover:bg-black/[.03] dark:hover:bg-white/[.04] hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background"
               >
                 {showAll ? <ChevronUp size={15} aria-hidden="true" /> : <ChevronDown size={15} aria-hidden="true" />}
-                {showAll ? 'Aksiyonları daralt' : `Tüm aksiyonları göster (${actions.length})`}
+                {showAll ? 'Listeyi daralt' : `Tüm önerileri göster (${actions.length})`}
               </button>
             ) : null}
           </div>

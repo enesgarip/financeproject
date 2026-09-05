@@ -18,12 +18,12 @@ import { useDialogA11y } from './ui/use-dialog-a11y'
 
 const actions = [
   { to: '/odemeler/alsam-mi', label: 'Alsam mı?', description: 'Alışverişin aylara etkisini gör', icon: ShoppingCart, hiddenOnPaths: ['/odemeler'] },
-  { to: '/kartlar?section=islemler#hizli-harcama', label: 'Harcama', description: 'Hesaptan veya karttan harca', icon: WalletCards, hiddenOnPaths: ['/kartlar'] },
-  { to: '/kartlar#hesap-merkezi', label: 'Transfer', description: 'Hesaptan hesaba aktar', icon: ArrowRightLeft, hiddenOnPaths: ['/kartlar'] },
-  { to: '/odemeler?new=1', label: 'Planlı', description: 'Fatura, kira veya abonelik', icon: ReceiptText, hiddenOnPaths: ['/odemeler'] },
-  { to: '/borclar/kisiler?new=1', label: 'Kişi', description: 'Borç veya alacak kaydı', icon: HandCoins, hiddenOnPaths: ['/borclar'] },
-  { to: '/varliklar?new=1', label: 'Varlık', description: 'Nakit, yatırım veya maaş', icon: Banknote, hiddenOnPaths: ['/varliklar'] },
-  { to: '/borclar/krediler?new=1', label: 'Kredi', description: 'Kredi ve taksit planı', icon: Landmark, hiddenOnPaths: ['/borclar'] },
+  { to: '/kartlar?section=islemler#hizli-harcama', label: 'Harcama ekle', description: 'Hesap veya kart harcamasını kaydet', icon: WalletCards, hiddenOnPaths: ['/kartlar'] },
+  { to: '/kartlar#hesap-merkezi', label: 'Transfer kaydet', description: 'Hesaplar arası para aktarımını kaydet', icon: ArrowRightLeft, hiddenOnPaths: ['/kartlar'] },
+  { to: '/odemeler?new=1', label: 'Ödeme planla', description: 'Fatura, kira veya abonelik', icon: ReceiptText, hiddenOnPaths: ['/odemeler'] },
+  { to: '/borclar/kisiler?new=1', label: 'Borç / alacak ekle', description: 'Kişisel borç veya alacak kaydı', icon: HandCoins, hiddenOnPaths: ['/borclar'] },
+  { to: '/varliklar?new=1', label: 'Varlık ekle', description: 'Nakit veya yatırım kaydı', icon: Banknote, hiddenOnPaths: ['/varliklar'] },
+  { to: '/borclar/krediler?new=1', label: 'Kredi ekle', description: 'Kredi ve taksit planı', icon: Landmark, hiddenOnPaths: ['/borclar'] },
 ]
 
 type QuickActionsContextValue = {

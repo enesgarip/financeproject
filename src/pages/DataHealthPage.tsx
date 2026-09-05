@@ -523,7 +523,7 @@ export function DataHealthPage() {
                 className="inline-flex items-center gap-2 rounded-xl border border-line-strong bg-raised px-3 py-2 text-sm font-semibold text-ink transition hover:bg-black/[.03] dark:hover:bg-white/[.04]"
               >
                 <Settings size={15} />
-                Yedek & ayarlar
+                Yedek ve ayarlar
               </Link>
             </div>
             {message ? <p className="rounded-xl border border-success/20 bg-success/8 p-3 text-sm font-medium text-success">{message}</p> : null}

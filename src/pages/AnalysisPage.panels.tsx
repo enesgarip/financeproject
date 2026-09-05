@@ -367,18 +367,19 @@ export function MonthCloseAssistant({ data, missingTables }: { data: AnalysisDat
     const currentSalary = getCurrentSalary(data.salaryHistory)
     // Bütçe aşımı buildBudgetUsage'tan okunur (tek kaynak): eskiden buradaki
     // elle kopya %80 uyarı eşiğinden habersizdi ve çıpalı limiti çözemezdi.
-    const budgetOverruns = buildBudgetUsage(data.budgets, data.cardExpenses, today, currentSalary?.amount ?? null)
-      .filter((usage) => usage.status === 'over' && usage.limit > 0).length
-    return { monthKey, statementDayPassedCards, staleInstallments, openPaymentCount, budgetOverruns, currentSalary }
+    const budgetUsage = buildBudgetUsage(data.budgets, data.cardExpenses, today, currentSalary?.amount ?? null)
+    const budgetOverruns = budgetUsage.filter((usage) => usage.status === 'over' && usage.limit > 0).length
+    const hasBudgetLimit = budgetUsage.some((usage) => usage.limit > 0)
+    return { monthKey, statementDayPassedCards, staleInstallments, openPaymentCount, budgetOverruns, hasBudgetLimit, currentSalary }
   }, [data, todayKey])
-  const { monthKey, statementDayPassedCards, staleInstallments, openPaymentCount, budgetOverruns, currentSalary } = summary
+  const { monthKey, statementDayPassedCards, staleInstallments, openPaymentCount, budgetOverruns, hasBudgetLimit, currentSalary } = summary
   const checks = [
-    { label: 'Ekstreler kontrol edildi', done: statementDayPassedCards.length === 0, detail: statementDayPassedCards.length > 0 ? `${statementDayPassedCards.length} kart bekliyor` : 'Kesim günü geçmiş açık dönem yok' },
-    { label: 'Taksitler işlendi', done: staleInstallments === 0, detail: staleInstallments > 0 ? `${staleInstallments} taksit planlı kaldı` : 'Bu aya kadar planlı taksit yok' },
-    { label: 'Maaş kaydı güncel', done: Boolean(currentSalary), detail: currentSalary ? formatAmount(currentSalary.amount ?? 0) : 'Maaş eklenmedi' },
-    { label: 'Faturalar kapandı', done: openPaymentCount === 0, detail: openPaymentCount > 0 ? `${openPaymentCount} açık ödeme` : 'Açık vade görünmüyor' },
-    { label: 'Bütçe aşımı yok', done: budgetOverruns === 0, detail: budgetOverruns > 0 ? `${budgetOverruns} kategori limit üstü` : 'Limitler sakin' },
-    { label: 'Veri altyapısı hazır', done: missingTables.length === 0, detail: missingTables.length > 0 ? `${missingTables.length} migration bekliyor` : 'Tablolar erişilebilir' },
+    { label: 'Ekstre kesimi', done: statementDayPassedCards.length === 0, detail: statementDayPassedCards.length > 0 ? `${statementDayPassedCards.length} kart bekliyor` : 'Kesim günü geçmiş açık dönem yok' },
+    { label: 'Taksit kayıtları', done: staleInstallments === 0, detail: staleInstallments > 0 ? `${staleInstallments} taksit işlenmeyi bekliyor` : 'Bu aya kadar işlenmemiş taksit yok' },
+    { label: 'Maaş kaydı', done: Boolean(currentSalary), detail: currentSalary ? formatAmount(currentSalary.amount ?? 0) : 'Maaş eklenmedi' },
+    { label: 'Planlı ödemeler', done: openPaymentCount === 0, detail: openPaymentCount > 0 ? `${openPaymentCount} açık ödeme` : 'Açık ödeme yok' },
+    { label: 'Bütçe kontrolü', done: budgetOverruns === 0, detail: budgetOverruns > 0 ? `${budgetOverruns} kategori limit üstü` : hasBudgetLimit ? 'Tanımlı bütçelerde aşım yok' : 'Bu ay için bütçe limiti yok' },
+    { label: 'Veri erişimi', done: missingTables.length === 0, detail: missingTables.length > 0 ? `${missingTables.length} veri tablosuna erişilemiyor` : 'Veri tablolarına erişilebiliyor' },
   ]
   const completed = checks.filter((check) => check.done).length
 
@@ -391,14 +392,14 @@ export function MonthCloseAssistant({ data, missingTables }: { data: AnalysisDat
             <h2 className="text-base font-extrabold">Ay kapanış asistanı</h2>
           </div>
           <p className="mt-1 text-sm text-ink-muted">
-            {formatMonth(monthKey)} için {completed}/{checks.length} kontrol tamam. Aylık rapor kartından PDF alabilirsin.
+            {formatMonth(monthKey)} için {checks.length} kontrolün {completed} tanesinde uyarı yok. Aylık rapordaki “Sayfayı yazdır” ile PDF kaydedebilirsin.
           </p>
         </div>
         <div className="grid gap-2 min-[560px]:grid-cols-2 min-[980px]:grid-cols-3">
           {checks.map((check) => (
             <div key={check.label} className={`rounded-lg px-3 py-2 ${check.done ? 'bg-success/10 text-success' : 'bg-page text-ink-muted'}`}>
-              <p className="truncate text-xs font-bold">{check.label}</p>
-              <p className="mt-0.5 truncate text-[11px] opacity-70">{check.detail}</p>
+              <p className="text-xs font-bold">{check.label}</p>
+              <p className="mt-0.5 text-[11px] opacity-70">{check.detail}</p>
             </div>
           ))}
         </div>

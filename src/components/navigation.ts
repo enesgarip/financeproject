@@ -79,7 +79,7 @@ export const assetsHubTabs: HubTab[] = [
 export const liabilitiesHubTabs: HubTab[] = [
   { to: '/borclar/krediler', label: 'Krediler', icon: Landmark },
   { to: '/borclar/kisiler', label: 'Kişiler', icon: UsersRound },
-  { to: '/borclar/kartlar', label: 'Kart Borcu', icon: CreditCard },
+  { to: '/borclar/kartlar', label: 'Kart borcu', icon: CreditCard },
 ]
 
 export const planningHubTabs: HubTab[] = [
@@ -87,42 +87,42 @@ export const planningHubTabs: HubTab[] = [
   { to: '/odemeler/hedefler', label: 'Hedefler', icon: Target },
   { to: '/odemeler/alsam-mi', label: 'Alsam mı?', icon: ShoppingCart },
   { to: '/odemeler/liste', label: 'Liste', icon: ListChecks },
-  { to: '/odemeler/baglamlar', label: 'Bağlamlar', icon: FolderKanban },
+  { to: '/odemeler/baglamlar', label: 'Gider grupları', icon: FolderKanban },
 ]
 
 export const analysisHubTabs: HubTab[] = [
   { to: '/analiz', label: 'Analiz', icon: ChartNoAxesCombined, end: true },
-  { to: '/analiz/detay', label: 'Detay', icon: CircleGauge },
+  { to: '/analiz/detay', label: 'Ayrıntılar', icon: CircleGauge },
   { to: '/analiz/asistan', label: 'Asistan', icon: Sparkles },
 ]
 
 export const dataHealthHubTabs: HubTab[] = [
   { to: '/veri-sagligi', label: 'Bulgular', icon: ShieldCheck, end: true },
-  { to: '/veri-sagligi/islemler', label: 'Yedek & Ayarlar', icon: DatabaseBackup },
+  { to: '/veri-sagligi/islemler', label: 'Yedek ve ayarlar', icon: DatabaseBackup },
 ]
 
 type RouteWidth = 'wide' | 'medium' | 'narrow'
 
 const routeMeta: Record<string, { title: string; subtitle?: string; width: RouteWidth }> = {
-  '/odemeler/baglamlar': { title: 'Gider Bağlamları', subtitle: 'Evcil hayvan, etkinlik ve proje giderleri', width: 'wide' },
-  '/': { title: 'Finans Özeti', subtitle: 'Genel bakış ve günlük durum', width: 'wide' },
-  '/kartlar': { title: 'Hesaplar ve Kartlar', subtitle: 'Banka hesapları, kartlar ve işlemler', width: 'wide' },
+  '/odemeler/baglamlar': { title: 'Gider grupları', subtitle: 'Evcil hayvan, etkinlik ve proje giderleri', width: 'wide' },
+  '/': { title: 'Finans özeti', subtitle: 'Genel bakış ve günlük durum', width: 'wide' },
+  '/kartlar': { title: 'Hesaplar ve kartlar', subtitle: 'Banka hesapları, kartlar ve işlemler', width: 'wide' },
   '/varliklar': { title: 'Varlıklar', subtitle: 'Nakit, yatırım ve birikimler', width: 'medium' },
-  '/varliklar/maas': { title: 'Maaş', subtitle: 'Maaş geçmişi ve trend', width: 'medium' },
+  '/varliklar/maas': { title: 'Maaş', subtitle: 'Maaş geçmişi ve değişimi', width: 'medium' },
   '/varliklar/altin': { title: 'Altın', subtitle: 'Altın varlıkları ve değerleme', width: 'narrow' },
   '/varliklar/araclar': { title: 'Araçlar', subtitle: 'Araç başına gider takibi ve dağılımı', width: 'wide' },
   '/borclar/krediler': { title: 'Krediler', subtitle: 'Aktif krediler ve taksit planları', width: 'wide' },
-  '/borclar/kisiler': { title: 'Kişiler', subtitle: 'Kişisel borç ve alacaklar', width: 'medium' },
-  '/borclar/kartlar': { title: 'Kart Borcu', subtitle: 'Kredi kartı borçların ve ödeme', width: 'medium' },
-  '/odemeler': { title: 'Ödeme Takvimi', subtitle: 'Planlı ödemeler ve vadeler', width: 'medium' },
-  '/odemeler/hedefler': { title: 'Bütçe & Hedefler', subtitle: 'Birikim hedefleri ve bütçe takibi', width: 'medium' },
+  '/borclar/kisiler': { title: 'Borç ve alacaklar', subtitle: 'Kişisel borç ve alacaklar', width: 'medium' },
+  '/borclar/kartlar': { title: 'Kart borcu', subtitle: 'Kredi kartı borçları ve ödeme kayıtları', width: 'medium' },
+  '/odemeler': { title: 'Ödeme takvimi', subtitle: 'Planlı ödemeler ve vadeler', width: 'medium' },
+  '/odemeler/hedefler': { title: 'Bütçe ve hedefler', subtitle: 'Birikim hedefleri ve bütçe takibi', width: 'medium' },
   '/odemeler/alsam-mi': { title: 'Alsam mı?', subtitle: 'Alışverişin önümüzdeki aylara etkisi', width: 'narrow' },
-  '/odemeler/liste': { title: 'Alışveriş Listesi', subtitle: 'Almak istediğin şeyler', width: 'medium' },
+  '/odemeler/liste': { title: 'Alışveriş listesi', subtitle: 'Almak istediğin şeyler', width: 'medium' },
   '/analiz': { title: 'Analiz', subtitle: 'Aylık rapor ve ay kapanış kontrolü', width: 'wide' },
-  '/analiz/detay': { title: 'Detay', subtitle: 'Gelir/gider dağılımı ve trendler', width: 'wide' },
+  '/analiz/detay': { title: 'Ayrıntılı analiz', subtitle: 'Gelir, gider ve zaman içindeki değişim', width: 'wide' },
   '/analiz/asistan': { title: 'Asistan', subtitle: 'Finansal verilerinle sohbet', width: 'narrow' },
-  '/veri-sagligi': { title: 'Veri Kontrolü', subtitle: 'Tutarlılık denetimi ve bulgular', width: 'wide' },
-  '/veri-sagligi/islemler': { title: 'Yedek ve Ayarlar', subtitle: 'Veri yedekleme ve bakım', width: 'medium' },
+  '/veri-sagligi': { title: 'Veri kontrolü', subtitle: 'Tutarlılık denetimi ve bulgular', width: 'wide' },
+  '/veri-sagligi/islemler': { title: 'Yedek ve ayarlar', subtitle: 'Veri yedekleme ve bakım', width: 'medium' },
 }
 
 const WIDTH_CLASS: Record<RouteWidth, string> = {

@@ -90,6 +90,6 @@ export async function parseStatementText(text: string, memory?: CategoryMemory):
     throw new Error(await edgeErrorMessage(error, 'Ekstre okunamadı, tekrar dene.'))
   }
   const result = (data as { result?: RawStatement } | null)?.result
-  if (!result) throw new Error('Ekstre çözümlenemedi.')
+  if (!result) throw new Error('Ekstredeki hareketler okunamadı. Metin içeren başka bir PDF ile tekrar dene.')
   return mapStatementResult(result, memory)
 }

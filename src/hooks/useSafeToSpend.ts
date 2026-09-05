@@ -99,7 +99,7 @@ export function useKasaReserved(): KasaReservedState {
 export function useSafeToSpend(
   cashFlow: CashFlowSummary,
   liquidCash: number,
-): SafeToSpendResult & { buffer: number; setBuffer: (value: number) => void; reservedKnown: boolean } {
+): SafeToSpendResult & { buffer: number; setBuffer: (value: number) => void; reserved: number; reservedKnown: boolean } {
   const [buffer, setBuffer] = useState(readSafeToSpendBuffer)
   const { reserved, reservedKnown } = useKasaReserved()
 
@@ -126,6 +126,7 @@ export function useSafeToSpend(
     }),
     buffer,
     setBuffer: commitBuffer,
+    reserved,
     reservedKnown,
   }
 }
