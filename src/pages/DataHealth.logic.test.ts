@@ -1219,6 +1219,88 @@ describe('buildIssues card ledger drift (A2.1)', () => {
   })
 })
 
+describe('buildIssues statement-cut provision leftovers (2026-09-05 vakası)', () => {
+  const openArchive = () =>
+    cardStatementArchive({ status: 'open', statement_date: '2026-08-28', due_date: '2026-09-07' })
+  const findLeftover = (issues: ReturnType<typeof buildIssues>) =>
+    issues.find((issue) => issue.id.startsWith('card-statement-provision-leftover-card-1-'))
+
+  it('flags provisions older than the open statement cut date as review-only', () => {
+    const issues = buildIssues({
+      ...emptyData,
+      cards: [creditCard({ debt_amount: 900, provision_amount: 900 })],
+      cardStatementArchives: [openArchive()],
+      cardExpenses: [
+        cardExpense({ id: 'prov-1', status: 'provision', spent_at: '2026-08-25', amount: 900, posted_at: null }),
+      ],
+    })
+
+    const leftover = findLeftover(issues)
+    expect(leftover?.severity).toBe('warning')
+    expect(leftover?.fixable).toBe(false)
+    expect(leftover?.details.some((line) => line.includes('Migros'))).toBe(true)
+  })
+
+  it('does not flag provisions made after the cut date (they belong to the next statement)', () => {
+    const issues = buildIssues({
+      ...emptyData,
+      cards: [creditCard({ debt_amount: 900, provision_amount: 900 })],
+      cardStatementArchives: [openArchive()],
+      cardExpenses: [
+        cardExpense({ id: 'prov-1', status: 'provision', spent_at: '2026-08-30', amount: 900, posted_at: null }),
+      ],
+    })
+
+    expect(findLeftover(issues)).toBeUndefined()
+  })
+
+  it('does not flag when the only archive is already paid (PDF import can no longer repair it)', () => {
+    const issues = buildIssues({
+      ...emptyData,
+      cards: [creditCard({ debt_amount: 900, provision_amount: 900 })],
+      cardStatementArchives: [cardStatementArchive({ status: 'paid', statement_date: '2026-08-28', paid_at: '2026-09-01T00:00:00.000Z' })],
+      cardExpenses: [
+        cardExpense({ id: 'prov-1', status: 'provision', spent_at: '2026-08-25', amount: 900, posted_at: null }),
+      ],
+    })
+
+    expect(findLeftover(issues)).toBeUndefined()
+  })
+
+  it('compares against the newest open archive and re-keys the issue when the set changes', () => {
+    const twoOpenArchives = [
+      cardStatementArchive({ id: 'statement-1', status: 'open', statement_date: '2026-07-28' }),
+      cardStatementArchive({ id: 'statement-2', status: 'open', statement_date: '2026-08-28' }),
+    ]
+    const baseInput = {
+      ...emptyData,
+      cards: [creditCard({ debt_amount: 900, provision_amount: 900 })],
+      cardStatementArchives: twoOpenArchives,
+    }
+
+    // 2026-08-10 tarihi eski archive'ın (07-28) kesiminden yeni ama en yeni
+    // kesimden (08-28) eski → en yeni kesime göre yine bulgu üretmeli.
+    const single = buildIssues({
+      ...baseInput,
+      cardExpenses: [cardExpense({ id: 'prov-1', status: 'provision', spent_at: '2026-08-10', amount: 900, posted_at: null })],
+    })
+    const singleIssue = findLeftover(single)
+    expect(singleIssue).toBeDefined()
+
+    const grown = buildIssues({
+      ...baseInput,
+      cardExpenses: [
+        cardExpense({ id: 'prov-1', status: 'provision', spent_at: '2026-08-10', amount: 900, posted_at: null }),
+        cardExpense({ id: 'prov-2', status: 'provision', spent_at: '2026-08-11', amount: 100, posted_at: null }),
+      ],
+    })
+    const grownIssue = findLeftover(grown)
+    expect(grownIssue).toBeDefined()
+    // Küme büyüyünce ID değişmeli ki "doğru, kapat" onayı yeni kümeyi gizlemesin.
+    expect(grownIssue?.id).not.toBe(singleIssue?.id)
+  })
+})
+
 function bankCard(overrides: Partial<Card> = {}): Card {
   return creditCard({
     id: 'bank-1',

@@ -269,6 +269,7 @@ export function checkCards(
   cards: Card[],
   cardInstallments: CardInstallment[],
   cardStatementArchives: CardStatementArchive[],
+  cardExpenses: CardExpense[],
 ): HealthIssue[] {
   const issues: HealthIssue[] = []
   const today = todayValue()
@@ -589,6 +590,51 @@ export function checkCards(
         kind: 'manual',
       })
     }
+  }
+
+  // Ekstre kesiminde provizyonda kalan işlemler (2026-09-05 vakası): açık bir
+  // ekstre varken kesim tarihinden eski provizyon satırı, bankada onaylanıp
+  // gerçek ekstreye girmiş ama uygulamada unutulmuş harcama olabilir — uygulama
+  // ekstresi bankadan düşük kalır. Otomatik onarım YOK ve bilinçli: provizyonu
+  // şimdi aktarmak tutarı dönem içine (bir SONRAKİ ekstreye) yazar; kesilmiş
+  // açık ekstrenin tek onarım yolu ekstre PDF importudur (banka toplamına
+  // kilitler). Küme imzası: kullanıcı "doğru, kapat" derse yeni provizyon
+  // eklenene dek kapalı kalır.
+  const openArchiveLatestCutByCard = new Map<string, string>()
+  for (const archive of cardStatementArchives) {
+    if (archive.status !== 'open' || !archive.statement_date) continue
+    const knownCut = openArchiveLatestCutByCard.get(archive.card_id)
+    if (!knownCut || archive.statement_date > knownCut) {
+      openArchiveLatestCutByCard.set(archive.card_id, archive.statement_date)
+    }
+  }
+  const provisionExpensesByCard = groupBy(
+    cardExpenses.filter((expense) => expense.status === 'provision'),
+    (expense) => expense.card_id,
+  )
+  for (const [cardId, cutDate] of openArchiveLatestCutByCard) {
+    const leftovers = (provisionExpensesByCard.get(cardId) ?? []).filter(
+      (expense) => expense.spent_at.slice(0, 10) <= cutDate,
+    )
+    if (leftovers.length === 0) continue
+
+    const card = cardsById.get(cardId)
+    issues.push({
+      id: `card-statement-provision-leftover-${cardId}-${affectedSetSignature(leftovers.map((expense) => expense.id))}`,
+      area: 'Kartlar',
+      severity: 'warning',
+      title: `${cardLabel(card)} ekstre kesiminde provizyonda kalan işlem`,
+      description:
+        'Açık ekstre kesildiğinde bu işlemler hâlâ provizyondaydı. Bankada onaylandılarsa gerçek ekstrenin içindedirler ve uygulamadaki ekstre eksik demektir. Doğru onarım ekstre PDF\'ini içe aktarmaktır; provizyonu şimdi aktarmak tutarı bir sonraki ekstreye yazar.',
+      details: [
+        `Ekstre kesim tarihi: ${formatDate(cutDate)}`,
+        ...leftovers.map(
+          (expense) => `${formatDate(expense.spent_at)} · ${expense.description?.trim() || 'Açıklama yok'} · ${formatCurrency(expense.amount)}`,
+        ),
+      ],
+      fixable: false,
+      kind: 'manual',
+    })
   }
 
   return issues

@@ -46,6 +46,7 @@ export function notificationTypeToPrefKey(notificationType: string): Notificatio
     case 'car_reminder_due_7d':
       return 'cars_enabled'
     case 'provision_installment_pending':
+    case 'provision_statement_cut_risk':
       return 'provisions_enabled'
     case 'goal_contribution_due':
       return 'goals_enabled'
