@@ -256,7 +256,7 @@ export function navigationAction(issue: HealthIssue): NavigationAction {
     return { to: '/kartlar?section=islemler', label: 'Taksit planını incele' }
   }
   if (
-    startsWithAny(id, ['card-archive-', 'card-overdue-statement-', 'card-orphan-statement-debt-'])
+    startsWithAny(id, ['card-archive-', 'card-overdue-statement-', 'card-orphan-statement-debt-', 'card-statement-provision-leftover-'])
     || cardStatementKinds.has(kind)
   ) {
     return { to: '/kartlar?section=ekstreler', label: 'Ekstreleri aç' }

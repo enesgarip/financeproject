@@ -46,7 +46,7 @@ const TYPE_TOGGLES: { key: NotificationTypeKey; label: string; hint: string }[] 
   { key: 'loans_enabled', label: 'Kredi taksitleri', hint: 'Yarın vadesi gelen kredi taksitleri' },
   { key: 'statements_enabled', label: 'Ekstre kesimi', hint: 'Kesime 3 gün kala + kesim sabahı makbuz (tutar ve vade)' },
   { key: 'weekly_enabled', label: 'Haftalık özet & mutabakat', hint: 'Pazartesi özeti ve mutabakat hatırlatması' },
-  { key: 'provisions_enabled', label: 'Taksit onayı bekleyen provizyon', hint: 'Otomatik tek çekim kesinleşmeden önce hatırlat' },
+  { key: 'provisions_enabled', label: 'Bekleyen provizyonlar', hint: 'Taksit onayı hatırlatması + kesimde ekstre dışında kalacak provizyon uyarısı' },
   { key: 'goals_enabled', label: 'Hedefe aylık ayırma', hint: 'Ay başında kovaya ayırma yapılmadıysa hatırlat' },
   { key: 'sms_alerts_enabled', label: 'SMS otomasyonu uyarısı', hint: 'İşlenemeyen banka SMS’i olursa günlük tek uyarı' },
 ]
@@ -59,6 +59,7 @@ const NOTIFICATION_TYPE_LABELS: Record<string, string> = {
   weekly_summary: 'Haftalık özet',
   reconciliation_stale_weekly: 'Mutabakat hatırlatması',
   provision_installment_pending: 'Provizyon taksit onayı',
+  provision_statement_cut_risk: 'Provizyon ekstre riski',
   goal_contribution_due: 'Hedefe aylık ayırma',
   card_statement_cut_receipt: 'Ekstre kesim makbuzu',
   sms_failure_daily: 'SMS otomasyonu uyarısı',

@@ -180,7 +180,7 @@ export function buildIssues(data: HealthData): HealthIssue[] {
   const issues: HealthIssue[] = [
     ...checkAssets(data.assets),
     ...checkBudgets(data.budgets),
-    ...checkCards(data.cards, data.cardInstallments, data.cardStatementArchives),
+    ...checkCards(data.cards, data.cardInstallments, data.cardStatementArchives, data.cardExpenses),
     ...checkCardExpenseDuplicates(data.cards, data.cardExpenses),
     ...checkLedgerDrift(data.cards, data.cardLedger, data.accountLedger),
     ...checkCardInstallments(data.cards, data.cardExpenses, data.cardInstallments),

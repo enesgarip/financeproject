@@ -99,6 +99,7 @@ type PendingProvisionRow = {
   description: string
   amount: number | string
   spent_at: string
+  installment_count: number
 }
 
 type StatementArchiveRow = {
@@ -232,6 +233,7 @@ function notificationTypeToPrefKey(notificationType: string): PreferenceFlagKey 
     case 'car_reminder_due_7d':
       return 'cars_enabled'
     case 'provision_installment_pending':
+    case 'provision_statement_cut_risk':
       return 'provisions_enabled'
     case 'goal_contribution_due':
       return 'goals_enabled'
@@ -255,6 +257,14 @@ function isWithinQuietHours(hour: number, start: number | null, end: number | nu
 const PROVISION_REMINDER_MIN_AMOUNT = 1000
 const PROVISION_REMINDER_AFTER_DAYS = 2
 const PROVISION_AUTO_POST_DAYS = 7
+/**
+ * Kesime yetisemeyecek provizyon uyarisi penceresi: kesim gunune bu kadar gun
+ * kala (kesim gunu dahil) hala provizyonda bekleyen ve kesim kosusu sabahina
+ * dek stale esigini DOLDURMAYACAK islemler icin tek seferlik bildirim. Stale
+ * olacaklar bakim sirasi duzeltmesiyle (migration 20260905100000) kesime
+ * otomatik girer — onlara bildirim gurultu olur.
+ */
+const PROVISION_STATEMENT_CUT_WARN_DAYS = 2
 
 type PushPayload = {
   title: string
@@ -875,7 +885,7 @@ async function loadCandidates(
     loanInstallmentsThisWeek,
     cards,
     carRemindersDue7d,
-    pendingProvisions,
+    openProvisions,
     goalBuckets,
     salaryRows,
     monthDeposits,
@@ -916,13 +926,12 @@ async function loadCandidates(
       user_id: userFilter,
       due_date: `eq.${addDaysIso(todayIso, 7)}`,
     }),
+    // TÜM bekleyen provizyonlar: taksit hatırlatması VE kesim-riski uyarısı
+    // aynı kümeden türetilir (filtreler aşağıda, kodda — iki ayrı istek yerine).
     db.select<PendingProvisionRow>('card_expenses', {
-      select: 'id,user_id,card_id,description,amount,spent_at',
+      select: 'id,user_id,card_id,description,amount,spent_at,installment_count',
       user_id: userFilter,
       status: 'eq.provision',
-      installment_count: 'eq.1',
-      amount: `gte.${PROVISION_REMINDER_MIN_AMOUNT}`,
-      spent_at: `lte.${addDaysIso(todayIso, -PROVISION_REMINDER_AFTER_DAYS)}`,
     }),
     // Hedefe bağlı kovalar; "bu ay ayrıldı mı" filtresi kodda (satır sayısı
     // kullanıcı başına birkaç tane, PostgREST or-filtresi kurmaya değmez).
@@ -964,7 +973,7 @@ async function loadCandidates(
   }) : []
   const carsById = new Map(carProfiles.map((car) => [car.id, car]))
 
-  const statementArchives = cards.length
+  const statementArchives = (cards.length || openProvisions.length)
     ? await db.select<StatementArchiveRow>('card_statement_archives', {
       select: 'card_id,period_year,period_month',
       user_id: userFilter,
@@ -1089,34 +1098,90 @@ async function loadCandidates(
     })
   }
 
-  // Taksit onayi bekleyen provizyonlar: otomatik kesinlesmeden once tek sefer
-  // hatirlat. Dedupe kalici oldugu icin ayni provizyon her gun tekrar durtmez.
-  if (pendingProvisions.length > 0) {
-    const provisionCardIds = Array.from(new Set(pendingProvisions.map((row) => row.card_id)))
+  // Provizyon bildirimlerinin ortak kart haritası (yalnız kredi kartları;
+  // banka kartı provizyonu ne taksitlenir ne ekstreye girer).
+  const provisionCardsById = new Map<string, CardRow>()
+  if (openProvisions.length > 0) {
+    const provisionCardIds = Array.from(new Set(openProvisions.map((row) => row.card_id)))
     const provisionCards = await db.select<CardRow>('cards', {
       select: 'id,user_id,bank_name,card_name,statement_day,current_period_spending',
       id: inFilter(provisionCardIds),
       card_type: 'eq.kredi_karti',
     })
-    const provisionCardsById = new Map(provisionCards.map((card) => [card.id, card]))
+    for (const card of provisionCards) provisionCardsById.set(card.id, card)
+  }
 
-    for (const provision of pendingProvisions) {
-      const card = provisionCardsById.get(provision.card_id)
-      if (!card) continue // kredi karti disi (banka karti) provizyonu taksitlenmez
+  // Taksit onayi bekleyen provizyonlar: otomatik kesinlesmeden once tek sefer
+  // hatirlat. Dedupe kalici oldugu icin ayni provizyon her gun tekrar durtmez.
+  // Esikler eski sunucu filtresinin birebir kod ikizi (tek cekim isareti +
+  // buyuk tutar + en az 2 gun beklemis).
+  const installmentPendingProvisions = openProvisions.filter((row) =>
+    row.installment_count === 1 &&
+    numberValue(row.amount) >= PROVISION_REMINDER_MIN_AMOUNT &&
+    row.spent_at.slice(0, 10) <= addDaysIso(todayIso, -PROVISION_REMINDER_AFTER_DAYS)
+  )
+  for (const provision of installmentPendingProvisions) {
+    const card = provisionCardsById.get(provision.card_id)
+    if (!card) continue
 
-      const waitedDays = daysBetweenIso(provision.spent_at.slice(0, 10), todayIso)
-      const daysLeft = Math.max(0, PROVISION_AUTO_POST_DAYS - waitedDays)
+    const waitedDays = daysBetweenIso(provision.spent_at.slice(0, 10), todayIso)
+    const daysLeft = Math.max(0, PROVISION_AUTO_POST_DAYS - waitedDays)
+    candidates.push({
+      userId: provision.user_id,
+      notificationType: 'provision_installment_pending',
+      referenceId: provision.id,
+      payload: {
+        title: `${formatTL(provision.amount)} ₺ provizyon: taksitli miydi?`,
+        body: daysLeft > 0
+          ? `${provision.description} · ${`${card.bank_name} ${card.card_name}`.trim()} · ${daysLeft} gün sonra tek çekim olarak kesinleşir.`
+          : `${provision.description} · ${`${card.bank_name} ${card.card_name}`.trim()} · tek çekim olarak kesinleşmek üzere.`,
+        url: '/kartlar?section=ekstreler',
+        tag: `provision-installment-${provision.id}`,
+      },
+    })
+  }
+
+  // Kesime yetisemeyecek provizyonlar: ekstre kesimine <= 2 gun kala hala
+  // provizyonda bekleyen VE kesim kosusu sabahina dek stale esigini
+  // doldurmayacak islemler. Bunlar aktarilmazsa ekstre disinda kalir (bankada
+  // onaylanmis olsalar bile) — 2026-09-05 vakasi. Stale olacaklar bakim sirasi
+  // duzeltmesiyle kesime otomatik girer, onlara bildirim atilmaz. Dedupe
+  // kart+kesim tarihi: ekstre basina tek gonderim.
+  if (openProvisions.length > 0) {
+    const provisionsByCard = new Map<string, PendingProvisionRow[]>()
+    for (const provision of openProvisions) {
+      provisionsByCard.set(provision.card_id, [
+        ...(provisionsByCard.get(provision.card_id) ?? []),
+        provision,
+      ])
+    }
+
+    for (const [cardId, rows] of provisionsByCard) {
+      const card = provisionCardsById.get(cardId)
+      if (!card) continue
+
+      const statementDate = nextUncutStatementDate(card, todayIso, archivedPeriods)
+      if (!statementDate) continue
+      const daysToCut = daysBetweenIso(todayIso, statementDate)
+      if (daysToCut < 0 || daysToCut > PROVISION_STATEMENT_CUT_WARN_DAYS) continue
+
+      // Kesim kosusu kesim gununun ERTESI sabahi kosar; o sabah stale esigi
+      // dolmus provizyon otomatik post edilip kesime girer, riskte degildir.
+      const staleCoveredBoundary = addDaysIso(statementDate, 1 - PROVISION_AUTO_POST_DAYS)
+      const atRisk = rows.filter((row) => row.spent_at.slice(0, 10) > staleCoveredBoundary)
+      if (atRisk.length === 0) continue
+
+      const totalKurus = atRisk.reduce((sum, row) => sum + toKurus(row.amount), 0)
+      const cardLabel = `${card.bank_name} ${card.card_name}`.trim()
       candidates.push({
-        userId: provision.user_id,
-        notificationType: 'provision_installment_pending',
-        referenceId: provision.id,
+        userId: card.user_id,
+        notificationType: 'provision_statement_cut_risk',
+        referenceId: `${card.id}:${statementDate}`,
         payload: {
-          title: `${formatTL(provision.amount)} ₺ provizyon: taksitli miydi?`,
-          body: daysLeft > 0
-            ? `${provision.description} · ${`${card.bank_name} ${card.card_name}`.trim()} · ${daysLeft} gün sonra tek çekim olarak kesinleşir.`
-            : `${provision.description} · ${`${card.bank_name} ${card.card_name}`.trim()} · tek çekim olarak kesinleşmek üzere.`,
+          title: `${cardLabel}: ${atRisk.length} provizyon ekstre dışında kalabilir`,
+          body: `${daysToCut === 0 ? 'Ekstre bu gece kesilecek' : `Kesime ${daysToCut} gün var`} ve provizyonda ${formatTL(totalKurus / 100)} ₺ bekliyor. Bankada onaylandıysa dönem içine aktar; onaylanmadıysa dokunma.`,
           url: '/kartlar?section=ekstreler',
-          tag: `provision-installment-${provision.id}`,
+          tag: `provision-cut-risk-${card.id}-${statementDate}`,
         },
       })
     }
