@@ -165,12 +165,25 @@ new parent expense each month. Amount drift is deliberately not a matching
 criterion (SI-07 accepts parent-total drift with a note); any ambiguity falls
 back to a fresh parent.
 
-The server-side daily maintenance job calls the same audited RPCs used by the
-client:
+The server-side daily maintenance job (`run_scheduled_card_maintenance`) calls
+the same audited RPCs used by the client, **in this order** (migration
+`20260905100000`):
 
-- `cut_due_card_statements`
-- `post_due_card_installments`
-- `post_card_provision`
+1. `post_card_provision` for stale provisions (≥ `p_provision_stale_days`)
+2. `post_due_card_installments`
+3. `cut_due_card_statements`
+
+The order is load-bearing: stale provisions must post BEFORE the cut so they
+make it into the statement being cut. The old order (cut first, provisions
+last) leaked even a cut-day stale provision into the NEXT statement while the
+bank had already billed it (2026-09-05 case). `cut_due_card_statements` only
+looks at cards with `current_period_spending > 0`, so posting first also lets a
+card whose only movement is a provision cut correctly. No double count:
+`post_card_provision` creates past-due installment rows directly as `posted`
+and adds their total to the current bucket itself; `post_due_card_installments`
+only flips `scheduled` rows. Real-DB regression:
+`supabase/tests/provision_statement_cut_order.sql`
+(`npm run db:test:provision-cut-order`).
 
 Do not duplicate their money-moving logic in a scheduler or page component.
 
@@ -193,6 +206,22 @@ layers close that gap, cheapest first:
    `p_provision_stale_days`.
 3. **After posting** — "Taksitlendir" on the recent-card-movements panel
    (`update_card_expense`), valid until the row is statement-linked.
+
+A second provision gap is the STATEMENT CUT (2026-09-05 case): a provision the
+bank already approved but the user forgot to post stays in the provision bucket
+and misses the statement. Two layers close it:
+
+1. Stale provisions post before the cut (maintenance order above) — automatic.
+2. Push notification `provision_statement_cut_risk` (same `provisions_enabled`
+   preference): fires once per card+statement date when the cut is ≤
+   `PROVISION_STATEMENT_CUT_WARN_DAYS` (2) days away and provisions exist that
+   will NOT reach the stale threshold by the cut run — exactly the set layer 1
+   cannot save. Deliberately NOT auto-posted: a provision the bank still holds
+   must not enter the statement.
+
+After the cut has already happened the repair is the statement PDF import
+(posting now would write the amount into the NEXT statement); Data Health
+flags this state (see below).
 
 The statement PDF import remains the authority of last resort: its `1/9` lines
 rebuild the real plan. Principle: **SMS is a guess, the PDF is the truth.**
@@ -439,6 +468,10 @@ Data health may flag:
 - cards over shared/individual limit
 - statement/archive mismatches
 - overdue open statement archives that likely need a `pay_card_statement` flow
+- provisions older than an open archive's cut date (statement-cut leftovers,
+  `card-statement-provision-leftover-*`): review-only, points to the statement
+  PDF import — posting the provision now would land it in the NEXT statement,
+  so no automatic fix is offered
 - Card-list due-date and overdue badges use the earliest unpaid open archive's
   `due_date`. `nextMonthlyDate(due_day)` is only a fallback when no payable open
   archive exists; it cannot be used to detect an already overdue statement.

@@ -1,5 +1,29 @@
 # Priority Backlog
 
+## 2026-09-05 — Provizyon/ekstre kesimi kova kaçağı önlemleri TAMAMLANDI
+
+Vaka: bankada onaylanan işlemler uygulamada provizyonda unutuldu, ekstre
+kesilince dışarıda kaldılar (uygulama ekstresi bankadan düşük, provizyon şişkin;
+toplam borç doğru). Mevcut durumun onarımı ekstre PDF importu
+(`replace_card_statement_import`) — kod değişikliği gerektirmedi. Üç önlem:
+
+1. **Bakım sırası düzeltmesi** (migration `20260905100000`):
+   `run_scheduled_card_maintenance` stale provizyon post'unu ekstre kesiminin
+   ÖNÜNE aldı (eski sıra kesim günü post edilen provizyonu bile bir sonraki
+   ekstreye kaydırıyordu). `cut_due_card_statements` yalnız
+   `current_period_spending > 0` kartlara baktığından tek hareketi provizyon
+   olan kartın ekstresi de artık kesilir. Gerçek-DB regresyonu:
+   `supabase/tests/provision_statement_cut_order.sql`
+   (`npm run db:test:provision-cut-order`).
+2. **Kesim-riski push bildirimi** (`provision_statement_cut_risk`,
+   `provisions_enabled` tercihi): kesime ≤2 gün kala hâlâ provizyonda bekleyen
+   VE kesim koşusu sabahına dek stale eşiğini doldurmayacak işlemler için
+   ekstre başına tek bildirim. Stale olacaklar elenmiştir (1. madde onları
+   otomatik keser).
+3. **DataHealth review-only kontrolü** (`card-statement-provision-leftover-*`):
+   açık ekstre + kesim tarihinden eski provizyon → "PDF importu ile onar"
+   uyarısı; otomatik onarım bilinçli yok (aktarım bir sonraki ekstreye yazar).
+
 ## 2026-08-30 — README İngilizce sürüm + varsayılan takası TAMAMLANDI
 
 İki dilim: önce kök dizine tam çeviri `README.en.md` eklendi (#210); aynı gün
