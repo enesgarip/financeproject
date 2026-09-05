@@ -1,5 +1,19 @@
 # Priority Backlog
 
+## 2026-09-05 — Arayüz dili ilk paketi UYGULANDI
+
+`docs/UI_COPY_REVIEW.md`: GOV.UK ve NN/g rehberleriyle desteklenen Türkçe
+dil önerisi, kaynak kodla eşleştirilmiş mevcut → önerilen metinler ve uygulama
+sırası. Öncelik: finans rakamlarının kapsamı, gerçek durumu yansıtan başlıklar,
+simülasyon dilindeki kesinlik ve anlaşılır eylemler. Kullanıcı onayıyla
+ilk paket ve navigasyon adlandırmaları uygulandı; gider grubu terimi form ve
+erişilebilir adlara taşındı. Finans hesabı/RPC değişmedi. İkinci import/bildirim/hata taraması ve kart kırılımı, vade hiyerarşisi, mobil takvim düzeltmeleri 2026-09-06 takip paketinde tamamlandı.
+
+Kullanıcı kesilen ekstrenin tamamını ödüyor, günlük harcamalarını çoğunlukla
+kartla yapıyor. `docs/CARD_PAYMENT_CYCLE_PROPOSAL.md`: nakit akışını koruyarak
+ekstre karşılama + sonraki dönem harcaması + eldeki nakitle toplam borç
+karşılaştırması 2026-09-06 tarihinde uygulandı; sözleşme ve testler ilgili dokümanda.
+
 ## 2026-08-30 — README İngilizce sürüm + varsayılan takası TAMAMLANDI
 
 İki dilim: önce kök dizine tam çeviri `README.en.md` eklendi (#210); aynı gün
@@ -3088,3 +3102,11 @@ tam geçmiş ay/ortalama ile kıyaslanıyordu → metrik ay-içi yanıltıcı.
   (belirsiz same-day/same-amount keyfi eşleşme önlendi).
 - [x] Kart taksiti gösterim günü (`obligations.ts:232`): KASITLI ve doğru teyit edildi
   (due_month ay-başı, ödeme due_day'de, `cashImpactAmount:0`); kod değişikliği gerekmedi.
+
+## 2026-09-06 — Kart ödeme döngüsü ve arayüz takip paketi
+- [x] Kesilen ekstre kalanı için ortak nakit havuzu; kısmi ödemeler, tampon/rezerv, vade sırası, gelecekteki gelir ayrımı.
+- [x] Sonraki kesime biriken dönem içi + ilgili taksitler, provizyon ayrı; tüm kart borcu sonrası nakit farkı.
+- [x] Kullanıcı girişli aylık ek kart harcaması senaryosu; bilinen taksit/kart talimatları tahmini ekstre vadesinde, yeni harcama sonraki ayda.
+- [x] Dashboard gelecek taksit kırılımı, görünür odak, altı satırlık genişletilebilir masaüstü vadeler ve kart/tarih bazında taksit grupları.
+- [x] Mobil takvim kısa Türkçe birimler ve gizlilik maskesi; içe aktarma/bildirim hata metinleri ikinci tarama.
+- Model sınırı: banka kesim günü eksikse sonraki ekstre hesaplanmaz; gelirler tahmindir; faiz ve kayıtsız harcama uydurulmaz. Senaryo ay içi minimum değil ay sonu gösterir.

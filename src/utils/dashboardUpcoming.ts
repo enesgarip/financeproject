@@ -6,6 +6,7 @@
  * Burada iş kuralı YOK; sadece obligations çıktısının sunum dönüşümü.
  */
 import { formatDate } from './date'
+import { sumTL } from './money'
 import { formatSeritAmount } from './formatCurrency'
 import {
   buildFinanceObligationsForRange,
@@ -29,6 +30,23 @@ export type DashboardUpcomingItem = {
   // Kaynak yükümlülük: dashboard'dan yerinde ödeme çekmecesini açmak için taşınır
   // (yalnız `action` taşıyan kalemler ödenebilir). Sunum alanları yukarıda türetilir.
   obligation: FinanceObligation
+  children?: DashboardUpcomingItem[]
+}
+
+/** Only informational card installments are grouped; payment actions keep their own row. */
+export function groupDashboardInstallments(items: DashboardUpcomingItem[]): DashboardUpcomingItem[] {
+  const groups = new Map<string, DashboardUpcomingItem[]>()
+  for (const item of items) {
+    const key = item.obligation.kind === 'card_installment' && !item.obligation.action && item.obligation.relatedCardId
+      ? `${item.obligation.relatedCardId}:${item.obligation.date}` : item.id
+    const group = groups.get(key) ?? []
+    group.push(item)
+    groups.set(key, group)
+  }
+  return [...groups.values()].map((rows) => rows.length === 1 ? rows[0] : {
+    ...rows[0], title: `${rows.length} taksit kalemi`, subtitle: rows[0].subtitle.replace(/ - [^-]*$/, '') + ' · karta yazılacak',
+    amount: sumTL(rows.map((row) => row.amount)), cashImpactAmount: sumTL(rows.map((row) => row.cashImpactAmount)), children: rows,
+  })
 }
 
 function obligationKindToDashboardKind(kind: FinanceObligation['kind']): DashboardUpcomingItem['kind'] {

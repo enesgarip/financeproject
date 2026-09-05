@@ -75,6 +75,13 @@ twin is `clampCardBreakdown()` in `src/utils/financeSummary.ts`.
 
 ## Display Helpers
 
+2026-09-05 arayüz dili: hesap özetindeki “Kart borcu sonrası bakiye” yalnız
+banka bakiyelerinden `cardPayableDebt` (ekstre + dönem içi) düşülmüş tutardır.
+Provizyon ve gelecek taksitler düşülmez; toplam borç veya yalnız ekstre
+karşılama göstergesi değildir. Kullanıcının ekstresini tam ödeme döngüsüne
+yönelik ayrı ürün önerisi `docs/CARD_PAYMENT_CYCLE_PROPOSAL.md` içindedir;
+bu öneri mevcut borç geçişlerini veya hesaplamaları değiştirmemiştir.
+
 Use `src/utils/financeSummary.ts` instead of reimplementing card math in pages:
 
 - `cardProvisionAmount(card)`
@@ -446,3 +453,6 @@ Data health may flag:
 
 When fixing one of these, keep the field transition above intact and prefer a
 single RPC/helper change over page-local compensation.
+
+## Kart döngüsü sunumu (2026-09-06)
+Dashboard utils/cardPaymentCycle.ts ile kesilmiş ekstre kalanı için ortak nakit tahsisi gösterir. Arşiv ödemeleri düşülür; dönem içi ve gelecek taksitler bugünkü ekstreye katılmaz. Tüm kart borcu sonrası fark = nakit − debt_amount toplamı; ekstre ödemesi her iki tarafı eşit azaltır, yeni harcama farkı düşürür. Bu salt okuma, ledger/RPC veya borç kovalarını değiştirmez. Senaryo ileri taksit/kart talimatını tahmini ekstre vadesinde nakde taşır; temel cashFlowForecast korunur. Ayrıntı: docs/CARD_PAYMENT_CYCLE_PROPOSAL.md.

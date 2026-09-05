@@ -11,6 +11,22 @@ kalmasını sağlar. Şerit 2026-08-10/11'de tüm uygulamaya uygulandı (PR #108
 
 ## Şerit İlkeleri
 
+### Arayüz dili (2026-09-05)
+
+Kaynak ve uygulama listesi: `docs/UI_COPY_REVIEW.md`. Kısa/doğal Türkçe ve
+mevcut “sen” hitabı kullanılır. Başlıklar cümle düzeninde, düğmeler eylemle
+yazılır. Gider bağlamının kullanıcıya görünen adı “Gider grubu”; DB anahtarı
+ve rota değişmez. “Detay” sayfası “Ayrıntılı analiz”, sekmesi “Ayrıntılar”dır.
+
+Finans rakamlarında hesap bakiyesi, kart borcu sonrası bakiye, bu ay
+harcanabilir tutar ve net değer ayrı kavramlardır. Analizde “Gelirden kalan”,
+beklenen gelir eksi kaydedilen ödemedir; yakın açıklama zorunludur. Ay kapanış
+başlıkları başarı iddiası yerine kontrol konusunu söyler. Karar ekranı
+modelin sınırını açıklar; “Plana göre uygun” kesin alışveriş tavsiyesi değildir.
+Kart/nakit açıklaması seçime uyar. Kritik açıklama yalnız hover'a bırakılmaz;
+uzun etiket ve kontrol ayrıntısı satıra yayılır. Finans hesapları bu metin
+düzenlemesiyle değişmemiştir.
+
 1. **Ayrımı önce çizgi yapar, kart hak edilir.** Varsayılan ayrım 1px çizgi
    (`--line`, `--line-strong`) ve zemin tonudur (`--page` / `--raised`);
    tekil ayıraç için `serit/Divider`. Kart bir *biçim* değil bir *iddiadır*:
@@ -211,3 +227,6 @@ skill'inde (`validate_palette.js`), zemin olarak `--card` değerlerini ver.
 4. Masaüstü ve 390px mobilde taşma, odak, loading, empty ve hata durumunu kontrol
    et.
 5. `npm run lint && npm run test:unit && npm run build` kapılarını çalıştır.
+
+## 2026-09-06 takip paketi
+Özet odak önerileri ayrıntılar kapalıyken görünür. Masaüstü vade listesi altı grupla başlar, kullanıcı genişletir. Mobil takvimde b=bin, m=milyon açıklaması görünür; tam tutar seçilen gün detayındadır, kompakt tutarlar gizlilik moduna uyar. Kart döngüsü varsayımları aynı panelde, harcama senaryosu isteğe bağlı details içinde kalır.

@@ -169,3 +169,6 @@ npm run build
 
 Add browser or Playwright coverage when the change affects visible layout,
 navigation, or user flow.
+
+## 2026-09-06 — kart döngüsü
+CardPaymentCyclePanel, SeritOverview cycleContent yuvasında nakit akışının yanında yer alır. Hesap sahibi utils/cardPaymentCycle.ts; rezerv mevcut useSafeToSpend çıktısıdır. FocusActionPanel compact sürümü ilk üç öneriyi ayrıntı anahtarının dışında gösterir. Masaüstü vadeleri groupDashboardInstallments ile aynı kart/tarihin aksiyonsuz taksitlerini açılır gruplara toplar, ilk altı grubu gösterir. Ödeme aksiyonu taşıyan kayıt birleştirilmez. Borç çubuğu financeSummary.totalCardFutureInstallmentDebt ile dördüncü parçayı gösterir.

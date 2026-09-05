@@ -33,6 +33,7 @@ import type {
   TransactionHistory,
 } from '../types/database'
 import { HistorySection } from '../components/dashboard/DashboardCards'
+import { CardPaymentCyclePanel } from '../components/dashboard/CardPaymentCyclePanel'
 import { FocusActionPanel } from '../components/dashboard/DashboardInsights'
 import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
 import { FinancePaymentDrawer } from '../components/finance/FinancePaymentDrawer'
@@ -312,7 +313,7 @@ export function DashboardPage() {
           <div className="flex min-w-0 gap-3">
             <AlertTriangle className="mt-0.5 size-5 shrink-0" aria-hidden="true" />
             <div className="min-w-0">
-              <h2 className="font-black text-destructive">Dashboard verileri yüklenemedi</h2>
+              <h2 className="font-black text-destructive">Özet yüklenemedi</h2>
               <p className="mt-1 leading-6 text-destructive/85">{error}</p>
             </div>
           </div>
@@ -368,11 +369,14 @@ export function DashboardPage() {
           perDayAllowance={Math.max(0, safeToSpend.amount) / monthMeta.daysLeft}
           strip={monthStrip}
           upcoming={sortedUpcoming}
+          priorityContent={<FocusActionPanel compact actions={focusActions} safeToSpendAmount={safeToSpend.amount} onboarding={isOnboarding} />}
+          cycleContent={<CardPaymentCyclePanel data={data} from={monthMeta.today} buffer={safeToSpend.buffer} reserved={safeToSpend.reserved} reservedKnown={safeToSpend.reservedKnown} />}
           cardBuckets={{
             statement: summary.totalCardStatementDebt,
             current: summary.totalCardCurrentPeriod,
             provision: summary.totalCardProvision,
             total: summary.totalCreditCardDebt,
+            future: summary.totalCardFutureInstallmentDebt,
           }}
           creditUsageRate={summary.creditUsageRate}
           totalCreditLimit={summary.totalCreditLimit}
@@ -418,9 +422,6 @@ export function DashboardPage() {
         {detailsEverOpened ? (
         <div className="grid min-w-0 gap-5 lg:grid-cols-12 lg:items-start">
           {/* ─ Odak ve hatırlatıcılar ─ */}
-          <div className="min-w-0 lg:col-span-12">
-            <FocusActionPanel actions={focusActions} safeToSpendAmount={safeToSpend.amount} onboarding={isOnboarding} />
-          </div>
 
           {hasStatementReminders ? (
             <div className="min-w-0 lg:col-span-12">

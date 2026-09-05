@@ -20,6 +20,11 @@ frontend -> RPC, or RPC -> migration.
 
 ## Permanent Context
 
+Arayüz başlıkları, açıklamalar ve durum metinleri: `docs/UI_COPY_REVIEW.md`
+(2026-09-05; ilk paket uygulandı). Kalıcı dil sözleşmesi `docs/UI_ARCHITECTURE.md`.
+Ekstresini tam ödeyip günlük harcamalarını kartla yapan kullanıcı için öneri:
+`docs/CARD_PAYMENT_CYCLE_PROPOSAL.md` (uygulandı).
+
 | File | Read When | Owns |
 | --- | --- | --- |
 | `CLAUDE.md` | A new AI agent needs persistent repo rules before acting | Stack summary, layer boundaries, money-model warnings, deployment gotchas |
@@ -310,3 +315,8 @@ invalidate et (örnek: AnalysisPage abonelik→plan, PlanningPage maaş şeridi)
 Sık dokunulan, UI+iş kuralı karışık dosyalar: `DashboardPage.tsx`, `CardsPage.tsx`,
 `DataHealthPage.tsx`, `financeSummary.ts` — değişiklikte dashboard + veri sağlığı
 yan etkisini kontrol et.
+
+## Kart döngüsü (2026-09-06)
+- Saf hesap: src/utils/cardPaymentCycle.ts (+ test): ekstre için ortak nakit tahsisi, sonraki kesim ve ek harcama senaryosu. Panel: src/components/dashboard/CardPaymentCyclePanel.tsx, DashboardPage üzerinden.
+- Vade sunumu: src/utils/dashboardUpcoming.ts içindeki groupDashboardInstallments yalnız aksiyonsuz kart taksitlerini kart + tarih bazında gruplar.
+- Ürün/varsayım sözleşmesi: docs/CARD_PAYMENT_CYCLE_PROPOSAL.md (uygulandı).

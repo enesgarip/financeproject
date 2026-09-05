@@ -178,17 +178,16 @@ export function AccountHubPanel({
   return (
     <section id="hesap-merkezi">
       <HeroNumber
-        label="Likit toplam"
+        label="Kart borcu sonrası bakiye"
         value={balanceAfterPayableDebt}
         tone={balanceAfterPayableDebt >= 0 ? 'ink' : 'danger'}
         description={
           <>
-            Kart borcu düşülmüş net ·{' '}
-            <span className="serit-num text-ink">{seritAmount(accountBalance).amount} ₺</span> hesap bakiyesi,{' '}
+            <span className="serit-num text-ink">{seritAmount(accountBalance).amount} ₺</span> hesap bakiyesinden{' '}
             <span className="serit-num" style={{ color: SERIT_TEXT.danger }}>
               {seritAmount(payableCardDebt).amount} ₺
             </span>{' '}
-            ödenebilir borç
+            ekstre ve dönem içi borç düşüldü. Gelecek taksitler ve provizyon düşülmedi.
           </>
         }
       />

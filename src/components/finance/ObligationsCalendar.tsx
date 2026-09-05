@@ -102,7 +102,7 @@ function dayTotals(items: FinanceObligation[]) {
 }
 
 /** Ortak kısa TL biçimi — eksen etiketiyle aynı eşikleri kullanır. */
-const formatCalendarCellAmount = formatCompactCurrency
+const formatCalendarCellAmount = (amount: number) => formatCompactCurrency(amount).replace('₺', '').replace('K', 'b').replace('M', 'm')
 
 type CalendarCellLine = { compact: string; full: string; tone: 'outflow' | 'inflow' | 'card' }
 
@@ -151,14 +151,14 @@ function SummaryStat({ label, value, tone = 'neutral' }: { label: string; value:
 
   return (
     <div className="min-w-0 rounded-lg border border-line-strong bg-page px-3 py-2.5">
-      <p className="finance-label truncate">{label}</p>
+      <p className="finance-label">{label}</p>
       <p className={cn('finance-value mt-1 truncate text-sm font-black tabular-nums', toneClass)}>{value}</p>
     </div>
   )
 }
 
 export function ObligationsCalendar({ data, loading = false, onPayObligation }: ObligationsCalendarProps) {
-  const { formatAmount } = useBalancePrivacy()
+  const { formatAmount, hidden } = useBalancePrivacy()
   const today = dateInputValue(new Date())
   const [visibleMonth, setVisibleMonth] = useState(() => startOfMonth(new Date()))
   const [selectedDate, setSelectedDate] = useState(today)
@@ -187,7 +187,7 @@ export function ObligationsCalendar({ data, loading = false, onPayObligation }: 
       <CardHeader className="gap-3">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
-            <p className="finance-label">Planlı Yük Takvimi</p>
+            <p className="finance-label">Ödeme takvimi</p>
             <CardTitle className="mt-1 flex min-w-0 items-center gap-2 text-lg">
               <CalendarDays className="size-5 text-primary" />
               <span className="truncate capitalize">{MONTH_LABEL.format(visibleMonth)}</span>
@@ -207,6 +207,7 @@ export function ObligationsCalendar({ data, loading = false, onPayObligation }: 
         </div>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
+        <p className="text-xs text-ink-muted sm:hidden">Tutarlar TL · b: bin, m: milyon. Tam tutarı görmek için günü seç.</p>
         {loading ? (
           <div className="flex flex-col gap-3">
             <div className="grid grid-cols-2 gap-2 min-[720px]:grid-cols-4">
@@ -220,8 +221,9 @@ export function ObligationsCalendar({ data, loading = false, onPayObligation }: 
               <SummaryStat label="Ay yükü" value={formatAmount(summary.outflow)} tone="danger" />
               <SummaryStat label="Beklenen giriş" value={formatAmount(summary.inflow)} tone="success" />
               <SummaryStat label="Net etki" value={`${summary.net < 0 ? '−' : ''}${formatAmount(Math.abs(summary.net))}`} tone={summary.net >= 0 ? 'success' : 'danger'} />
-              <SummaryStat label="Aksiyon" value={`${summary.payableCount}/${summary.itemCount}`} />
+              <SummaryStat label="Ödeme / tahsilat" value={`${summary.payableCount}/${summary.itemCount}`} />
             </div>
+            <p className="text-xs text-ink-muted">Ödeme / tahsilat: işlem kaydedilebilen kalemlerin toplam kayıt sayısına oranı.</p>
 
             <div className="grid grid-cols-7 gap-1 text-center text-[11px] font-black uppercase text-ink-muted sm:gap-2">
               {WEEK_DAYS.map((day) => <span key={day}>{day}</span>)}
@@ -255,7 +257,7 @@ export function ObligationsCalendar({ data, loading = false, onPayObligation }: 
                       // Sabit yükseklik değil `min-h`: bir gün hem çıkış hem giriş
                       // taşıdığında hücrede iki satır olur ve sabit 84px'e sığmaz.
                       // Izgara satırı yine en uzun hücreye göre hizalanır.
-                      'flex min-h-[5.25rem] min-w-0 flex-col rounded-lg border p-1.5 text-left transition sm:min-h-28 sm:p-2',
+                      'flex min-h-[5.25rem] min-w-0 flex-col rounded-lg border p-0.5 text-left transition sm:min-h-28 sm:p-2',
                       cell.inCurrentMonth ? 'border-line-strong bg-raised hover:border-primary/35 hover:bg-black/[.03] dark:hover:bg-white/[.04]' : 'border-line-strong bg-page opacity-55',
                       isSelected && 'border-primary bg-primary/10 ring-2 ring-primary/15',
                       isToday && !isSelected && 'border-info/50',
@@ -269,9 +271,9 @@ export function ObligationsCalendar({ data, loading = false, onPayObligation }: 
                         {cellLines.map((line) => (
                           <span
                             key={line.tone}
-                            className={cn('truncate text-[10px] font-bold tabular-nums sm:text-xs', CELL_LINE_CLASS[line.tone])}
+                            className={cn('text-[9px] font-bold tabular-nums sm:text-xs', CELL_LINE_CLASS[line.tone])}
                           >
-                            <span className="sm:hidden">{line.compact}</span>
+                            <span className="sm:hidden">{hidden ? '••••' : line.compact}</span>
                             <span className="hidden sm:inline">{line.full}</span>
                           </span>
                         ))}
