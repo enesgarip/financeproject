@@ -135,6 +135,30 @@ function optionalDate(value: FormDataEntryValue | null) {
   return date || null
 }
 
+// Kapanan (ödenen / tahsil edilen) kayıtlar listenin altında, varsayılan
+// kapalı bir "Kapananlar" bölümünde toplanır; açıklar yöne göre gruplanır.
+const CLOSED_DEBT_GROUP = 'Kapananlar'
+const CLOSED_DEBT_GROUPS = [CLOSED_DEBT_GROUP]
+
+function statusLabel(value: Debt['status']) {
+  return value === 'kapandı' ? 'Kapandı' : 'Açık'
+}
+
+function compareDueDate(a: Debt, b: Debt) {
+  // Vadesi olmayanlar en sona.
+  if (a.due_date && b.due_date) return a.due_date.localeCompare(b.due_date)
+  if (a.due_date) return -1
+  if (b.due_date) return 1
+  return a.person_name.localeCompare(b.person_name, 'tr')
+}
+
+function sortDebts(rows: Debt[]): Debt[] {
+  const open = rows.filter((row) => row.status !== 'kapandı').sort(compareDueDate)
+  // Kapananlar: en son kapanan en üstte.
+  const closed = rows.filter((row) => row.status === 'kapandı').sort((a, b) => b.updated_at.localeCompare(a.updated_at))
+  return [...open, ...closed]
+}
+
 function directionLabel(value: Debt['direction']) {
   return value === 'borç_aldım' ? 'Ben borçluyum' : 'Bana borçlu'
 }
@@ -322,10 +346,11 @@ export function DebtsPage() {
           }
         }}
         renderTitle={(row) => row.person_name}
-        renderSubtitle={(row) => `${directionLabel(row.direction)} · ${valueTypeLabel(row)} · ${row.status}`}
+        renderSubtitle={(row) => `${directionLabel(row.direction)} · ${valueTypeLabel(row)} · ${statusLabel(row.status)}`}
         renderDetails={(row) => {
           const { value, source } = effectiveDebtValueWithSource(row, snapshot)
           const details = [`Değer: ${formatAmount(value)}`, `Vade: ${formatDate(row.due_date)}`]
+          if (row.status === 'kapandı') details.push(`Kapanış: ${formatDate(row.updated_at.slice(0, 10))}`)
           if (isGoldDebt(row)) details.unshift(`Miktar: ${formatNumber(row.amount)} ${valueTypeLabel(row)}`)
           if (row.value_type === 'doviz') {
             details.unshift(row.auto_valued ? `Tutar: ${formatNumber(row.amount)} ${row.currency ?? '-'}` : `Para birimi: ${row.currency ?? '-'}`)
@@ -341,8 +366,10 @@ export function DebtsPage() {
           }
           return details
         }}
-        groupBy={(row) => directionLabel(row.direction)}
-        getCardClassName={(row) => debtTone[row.direction].card}
+        groupBy={(row) => (row.status === 'kapandı' ? CLOSED_DEBT_GROUP : directionLabel(row.direction))}
+        collapsibleGroups={CLOSED_DEBT_GROUPS}
+        sortRows={(rows) => sortDebts(rows as Debt[]) as typeof rows}
+        getCardClassName={(row) => (row.status === 'kapandı' ? 'opacity-70' : debtTone[row.direction].card)}
         getDetailClassName={(row) => debtTone[row.direction].detail}
         renderRowActions={(row, helpers) =>
           row.status === 'açık' ? (
