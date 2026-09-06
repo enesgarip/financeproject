@@ -90,6 +90,8 @@ type CrudPageProps<T extends CrudTableName> = {
   getCardStyle?: (row: RowFor<T>, rows: RowFor<T>[]) => CSSProperties
   getDetailStyle?: (row: RowFor<T>, rows: RowFor<T>[]) => CSSProperties
   groupBy?: (row: RowFor<T>) => string
+  /** Sunucu sıralamasının üstüne istemci tarafı sıralama (örn. açıklar vadeye, kapananlar tarihe göre). */
+  sortRows?: (rows: RowFor<T>[]) => RowFor<T>[]
   getGroupClassName?: (group: string) => string
   /** Route-specific card density while preserving the shared list/group behavior. */
   listGridClassName?: string
@@ -145,6 +147,7 @@ export function CrudPage<T extends CrudTableName>({
   getCardStyle,
   getDetailStyle,
   groupBy,
+  sortRows,
   getGroupClassName,
   listGridClassName,
   collapsibleGroups,
@@ -198,10 +201,10 @@ export function CrudPage<T extends CrudTableName>({
 
     return map
   }, [renderDetails, renderSubtitle, renderTitle, rows])
-  const visibleRows = useMemo(
-    () => (normalizedQuery ? rows.filter((row) => rowMeta.get(row.id)?.searchText.includes(normalizedQuery)) : rows),
-    [normalizedQuery, rowMeta, rows],
-  )
+  const visibleRows = useMemo(() => {
+    const filtered = normalizedQuery ? rows.filter((row) => rowMeta.get(row.id)?.searchText.includes(normalizedQuery)) : rows
+    return sortRows ? sortRows(filtered) : filtered
+  }, [normalizedQuery, rowMeta, rows, sortRows])
   const groupedVisibleRows = useMemo(() => {
     const groups = groupRows(visibleRows, groupBy)
     if (!collapsibleGroups?.length) return groups
