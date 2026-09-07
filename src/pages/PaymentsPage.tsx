@@ -422,6 +422,7 @@ export function PaymentsPage() {
         renderSubtitle={(row) => `${row.category} · ${row.status}`}
         renderDetails={(row) => [`Tutar: ${getPaymentAmountLabel(row)}`]}
         groupBy={(row) => row.category}
+        flattenGroupsBelow={6}
         renderCard={(row, { menu, reload, setError }) => {
           const payment = row as Payment
           const autoCard = cardLabelById(payment.auto_source_card_id)
