@@ -85,7 +85,12 @@ export function QuickExpensePanel({
   const [vehicles, setVehicles] = useState<Car[]>([])
   const [carId, setCarId] = useState('')
   const cards = useMemo(() => rows.filter((row) => row.card_type === 'kredi_karti' || row.card_type === 'banka_karti'), [rows])
-  const repeatSuggestions = useMemo(() => buildRepeatSuggestions(recentExpenses), [recentExpenses])
+  // 3 çip yeter: 6 çip formun üstünü kalabalıklaştırıyordu (Faz UI-R4).
+  const repeatSuggestions = useMemo(() => buildRepeatSuggestions(recentExpenses, 3), [recentExpenses])
+  // Ayrıntılar katlaması: taksitli mod required alanlar içerdiğinden (sıradaki
+  // taksit tarihi) o moddayken zorla açık kalır — kapalı details içindeki
+  // required alan tarayıcı doğrulamasını sessizce kilitler.
+  const [advancedOpen, setAdvancedOpen] = useState(false)
   const activeCardId = cards.some((card) => card.id === cardId) ? cardId : (cards[0]?.id ?? '')
   const selectedCard = cards.find((card) => card.id === activeCardId)
   const canUseInstallments = selectedCard?.card_type === 'kredi_karti'
@@ -568,6 +573,29 @@ export function QuickExpensePanel({
               />
             </label>
           </div>
+          <details
+            open={advancedOpen || (canUseInstallments && paymentMode === 'installment')}
+            onToggle={(event) => {
+              const nextOpen = event.currentTarget.open
+              // Taksitli modda kapatma yok (required alanlar görünür kalmalı).
+              // React open prop'unu değişmemiş sayıp DOM'u geri yazmadığından
+              // tarayıcının kaldırdığı attribute'u burada elle geri koyarız.
+              if (!nextOpen && canUseInstallments && paymentMode === 'installment') {
+                event.currentTarget.open = true
+                return
+              }
+              setAdvancedOpen(nextOpen)
+            }}
+            className="rounded-xl border border-line-strong bg-page/60"
+          >
+            <summary className="flex min-h-11 cursor-pointer list-none flex-wrap items-center gap-x-2 px-3 py-2 text-sm font-semibold text-ink [&::-webkit-details-marker]:hidden">
+              Ayrıntılar
+              <span className="min-w-0 truncate text-xs font-medium text-ink-muted">
+                {spentAt === dateInputValue(new Date()) ? 'Bugün' : formatDate(spentAt)} · {category || 'kategori otomatik'} ·{' '}
+                {canUseInstallments && paymentMode === 'installment' ? 'Taksitli' : 'Peşin'}
+              </span>
+            </summary>
+            <div className="flex flex-col gap-2.5 px-3 pb-3">
           <div className="grid grid-cols-2 gap-2.5 min-[760px]:grid-cols-4">
             <label className="block min-w-0 text-sm font-semibold text-ink">
               Tarih
@@ -692,6 +720,8 @@ export function QuickExpensePanel({
               ) : null}
             </div>
           ) : null}
+            </div>
+          </details>
           {isCarryover && nextDueDate && nextDueDate <= dateInputValue(new Date()) ? (
             <p className="rounded-xl border border-warning/20 bg-warning/8 px-3 py-2.5 text-xs font-medium text-warning">
               Bu tarihle sıradaki taksit bugün dönem içi borca işlenir. Taksit bir sonraki ekstrede
