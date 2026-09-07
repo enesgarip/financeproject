@@ -17,7 +17,7 @@ import { isMissingSupabaseCapabilityError, missingSupabaseCapabilityMessage } fr
 import type { CardSection } from './CardsPage.sections'
 
 type ReloadCards = (() => Promise<void>) | null
-const cardSectionIds: CardSection[] = ['ozet', 'kartlar', 'islemler', 'ekstreler']
+const cardSectionIds: CardSection[] = ['ozet', 'kartlar', 'hesaplar', 'islemler', 'ekstreler']
 
 function parseCardSection(value: string | null): CardSection {
   return cardSectionIds.includes(value as CardSection) ? (value as CardSection) : 'ozet'

@@ -222,3 +222,8 @@ npm run build
 
 For RPC, RLS, or migration changes, also run the local Supabase checks from
 `docs/MIGRATION_COMPATIBILITY_CHECKLIST.md` when available.
+
+## 2026-09-07 — Hesap ve kart ayrımı
+İki büyük seçim alanı banka hesaplarını kredi kartlarından ayırır. `section=kartlar` yalnız kredi kartlarını, `section=hesaplar` yalnız banka hesaplarını listeler. Banka bölümü current_balance toplamını, kredi kartları debt_amount toplamını gösterir. Varsayılan Özet ve eski bağlantılar korunur. CrudPage listFilter yalnız sunumu filtreler; helpers.rows tam kaldığından ödeme hesapları, transfer hedefleri ve ortak limit hesabı daralmaz. Yeni banka hesabı formu banka türüyle başlar. Açık ekstrede kart satırı Ekstreler bölümüne görünür ödeme bağlantısı verir.
+
+2026-09-07 üretim öncesi takip: Hızlı menü Harcama ekle ile başlar; form kaynağı Hesap / kredi kartı olarak adlandırılır. Banka hesabı menüsü taşmaya açıktır; dekoratif üst çizgi köşelerin içine alınır.

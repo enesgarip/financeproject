@@ -120,6 +120,8 @@ type CrudPageProps<T extends CrudTableName> = {
   renderBeforeList?: (helpers: { loading: boolean; rows: RowFor<T>[]; reload: () => Promise<void>; setError: (message: string) => void }) => ReactNode
   /** false ise dahili kayıt listesi (kart ızgarası) gizlenir; sayfa içi sekmeler için kullanılır. */
   showList?: boolean
+  /** Yalnız sunumu filtreler; helpers.rows tam veri kümesini korur. */
+  listFilter?: (row: RowFor<T>) => boolean
 }
 
 export function CrudPage<T extends CrudTableName>({
@@ -159,6 +161,7 @@ export function CrudPage<T extends CrudTableName>({
   renderCard,
   renderBeforeList,
   showList = true,
+  listFilter,
 }: CrudPageProps<T>) {
   const { user } = useAuth()
   const location = useLocation()
@@ -201,10 +204,11 @@ export function CrudPage<T extends CrudTableName>({
 
     return map
   }, [renderDetails, renderSubtitle, renderTitle, rows])
+  const listRows = useMemo(() => listFilter ? rows.filter(listFilter) : rows, [listFilter, rows])
   const visibleRows = useMemo(() => {
-    const filtered = normalizedQuery ? rows.filter((row) => rowMeta.get(row.id)?.searchText.includes(normalizedQuery)) : rows
+    const filtered = normalizedQuery ? listRows.filter((row) => rowMeta.get(row.id)?.searchText.includes(normalizedQuery)) : listRows
     return sortRows ? sortRows(filtered) : filtered
-  }, [normalizedQuery, rowMeta, rows, sortRows])
+  }, [normalizedQuery, rowMeta, listRows, sortRows])
   const groupedVisibleRows = useMemo(() => {
     const groups = groupRows(visibleRows, groupBy)
     if (!collapsibleGroups?.length) return groups
@@ -378,7 +382,7 @@ export function CrudPage<T extends CrudTableName>({
       {showList ? (
       <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line-strong pt-4">
         <p className="serit-eyebrow">
-          {normalizedQuery ? `${visibleRows.length} / ${rows.length} kayıt` : `${rows.length} kayıt`}
+          {normalizedQuery ? `${visibleRows.length} / ${listRows.length} kayıt` : `${listRows.length} kayıt`}
         </p>
         <div className="flex w-full min-w-0 items-center gap-2 sm:w-auto sm:flex-1 sm:justify-end">
           <label className="relative block min-w-0 flex-1 sm:max-w-64">
@@ -412,7 +416,7 @@ export function CrudPage<T extends CrudTableName>({
             </div>
           ))}
         </div>
-      ) : rows.length === 0 ? (
+      ) : listRows.length === 0 ? (
         <EmptyState
           title={emptyTitle}
           description={emptyDescription}

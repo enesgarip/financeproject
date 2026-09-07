@@ -17,13 +17,13 @@ import { useDialogA11y } from './ui/use-dialog-a11y'
  */
 
 const actions = [
-  { to: '/odemeler/alsam-mi', label: 'Alsam mı?', description: 'Alışverişin aylara etkisini gör', icon: ShoppingCart, hiddenOnPaths: ['/odemeler'] },
-  { to: '/kartlar?section=islemler#hizli-harcama', label: 'Harcama ekle', description: 'Hesap veya kart harcamasını kaydet', icon: WalletCards, hiddenOnPaths: ['/kartlar'] },
-  { to: '/kartlar#hesap-merkezi', label: 'Transfer kaydet', description: 'Hesaplar arası para aktarımını kaydet', icon: ArrowRightLeft, hiddenOnPaths: ['/kartlar'] },
-  { to: '/odemeler?new=1', label: 'Ödeme planla', description: 'Fatura, kira veya abonelik', icon: ReceiptText, hiddenOnPaths: ['/odemeler'] },
-  { to: '/borclar/kisiler?new=1', label: 'Borç / alacak ekle', description: 'Kişisel borç veya alacak kaydı', icon: HandCoins, hiddenOnPaths: ['/borclar'] },
-  { to: '/varliklar?new=1', label: 'Varlık ekle', description: 'Nakit veya yatırım kaydı', icon: Banknote, hiddenOnPaths: ['/varliklar'] },
-  { to: '/borclar/krediler?new=1', label: 'Kredi ekle', description: 'Kredi ve taksit planı', icon: Landmark, hiddenOnPaths: ['/borclar'] },
+  { to: '/kartlar?section=islemler#hizli-harcama', label: 'Harcama ekle', description: 'Hesap veya kart harcamasını kaydet', icon: WalletCards },
+  { to: '/kartlar#hesap-merkezi', label: 'Transfer kaydet', description: 'Hesaplar arası para aktarımını kaydet', icon: ArrowRightLeft },
+  { to: '/odemeler?new=1', label: 'Ödeme planla', description: 'Fatura, kira veya abonelik', icon: ReceiptText },
+  { to: '/odemeler/alsam-mi', label: 'Alsam mı?', description: 'Alışverişin aylara etkisini gör', icon: ShoppingCart },
+  { to: '/borclar/kisiler?new=1', label: 'Borç / alacak ekle', description: 'Kişisel borç veya alacak kaydı', icon: HandCoins },
+  { to: '/varliklar?new=1', label: 'Varlık ekle', description: 'Nakit veya yatırım kaydı', icon: Banknote },
+  { to: '/borclar/krediler?new=1', label: 'Kredi ekle', description: 'Kredi ve taksit planı', icon: Landmark },
 ]
 
 type QuickActionsContextValue = {
@@ -58,14 +58,13 @@ export function QuickActionsProvider({ children }: { children: ReactNode }) {
   const location = useLocation()
   const open = openPath === location.pathname
 
-  const currentRootPath = location.pathname === '/' ? '/' : `/${location.pathname.split('/')[1]}`
   const orderedActions = useMemo(() => {
     const normalizedQuery = normalizeSearchText(query)
-    const availableActions = actions.filter((action) => !action.hiddenOnPaths.includes(currentRootPath))
+    const availableActions = actions
     return normalizedQuery
       ? availableActions.filter((action) => normalizeSearchText(`${action.label} ${action.description}`).includes(normalizedQuery))
       : availableActions
-  }, [currentRootPath, query])
+  }, [query])
 
   useEffect(() => {
     const syncFocus = () => setFormFocused(isFormElementActive())
