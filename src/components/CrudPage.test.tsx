@@ -151,4 +151,28 @@ describe('CrudPage — TanStack veri sözleşmesi', () => {
     renderCrud(makeClient())
     expect(await screen.findByText('Kayıtlar yüklenemedi: RLS')).toBeTruthy()
   })
+
+  it('sunum filtresi kayıt sayısını daraltır ama aksiyonların tam satır kümesini korur', async () => {
+    mocks.fetchCrudRows.mockResolvedValue({ ok: true, data: [salaryRow('r1', 'Görünen'), salaryRow('r2', 'Diğer')] })
+    let actionRows: SalaryHistory[] = []
+    renderCrud(makeClient(), {
+      listFilter: (row: SalaryHistory) => row.id === 'r1',
+      renderRowActions: (_row: SalaryHistory, helpers: { rows: SalaryHistory[] }) => {
+        actionRows = helpers.rows
+        return null
+      },
+    })
+    await screen.findByText('Görünen')
+    expect(screen.queryByText('Diğer')).toBeNull()
+    expect(screen.getByText('1 kayıt')).toBeTruthy()
+    expect(actionRows.map((row) => row.id)).toEqual(['r1', 'r2'])
+    fireEvent.change(screen.getByPlaceholderText('Kayıtlarda ara'), { target: { value: 'Diğer' } })
+    expect(screen.getByText('Eşleşen kayıt yok')).toBeTruthy()
+  })
+
+  it('diğer bölümde kayıt olsa da boş seçili bölüm ekleme durumunu gösterir', async () => {
+    renderCrud(makeClient(), { listFilter: () => false })
+    expect(await screen.findByText('Henüz kayıt yok')).toBeTruthy()
+    expect(screen.queryByText('Eşleşen kayıt yok')).toBeNull()
+  })
 })

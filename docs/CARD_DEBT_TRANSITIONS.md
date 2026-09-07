@@ -489,3 +489,6 @@ single RPC/helper change over page-local compensation.
 
 ## Kart döngüsü sunumu (2026-09-06)
 Dashboard utils/cardPaymentCycle.ts ile kesilmiş ekstre kalanı için ortak nakit tahsisi gösterir. Arşiv ödemeleri düşülür; dönem içi ve gelecek taksitler bugünkü ekstreye katılmaz. Tüm kart borcu sonrası fark = nakit − debt_amount toplamı; ekstre ödemesi her iki tarafı eşit azaltır, yeni harcama farkı düşürür. Bu salt okuma, ledger/RPC veya borç kovalarını değiştirmez. Senaryo ileri taksit/kart talimatını tahmini ekstre vadesinde nakde taşır; temel cashFlowForecast korunur. Ayrıntı: docs/CARD_PAYMENT_CYCLE_PROPOSAL.md.
+
+## 2026-09-07 sunum notu
+Kredi kartları ve banka hesapları ayrı listelerdedir. Toplam kart yükü debt_amount toplamıdır (provizyon ve gelecek taksitler dahil); banka hesaplarındaki para current_balance toplamıdır, kart borcu düşülmez. Açık ekstreli karttaki Ekstreyi öde bağlantısı mevcut Ekstreler akışına gider. Borç geçişleri ve RPC sözleşmesi değişmemiştir.

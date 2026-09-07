@@ -485,7 +485,7 @@ export function QuickExpensePanel({
             </div>
           ) : null}
           <label className="block text-sm font-semibold text-ink">
-            Kart
+            Hesap / kredi kartı
             <select
               value={activeCardId}
               onChange={(event) => {

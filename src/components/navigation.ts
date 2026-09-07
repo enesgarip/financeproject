@@ -79,7 +79,7 @@ export const assetsHubTabs: HubTab[] = [
 export const liabilitiesHubTabs: HubTab[] = [
   { to: '/borclar/krediler', label: 'Krediler', icon: Landmark },
   { to: '/borclar/kisiler', label: 'Kişiler', icon: UsersRound },
-  { to: '/borclar/kartlar', label: 'Kart borcu', icon: CreditCard },
+  { to: '/kartlar?section=kartlar', label: 'Kredi kartları', icon: CreditCard },
 ]
 
 export const planningHubTabs: HubTab[] = [

@@ -598,6 +598,8 @@ button:disabled {
 }
 
 .account-entity-card::before {
+  left: 16px;
+  right: 16px;
   background: linear-gradient(90deg, hsl(var(--bank-hue) 55% 48%), hsl(var(--bank-hue) 70% 68% / 0.32), transparent 78%);
 }
 

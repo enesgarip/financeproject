@@ -248,12 +248,13 @@ export function CardsPage() {
         pageTitle="Hesaplar ve kartlar"
         pageLabel="Finans merkezi"
         pageDescription="Nakit, kredi kartı yükü, transfer ve günlük işlemleri tek karar düzeninde yönet."
-        addLabel="Hesap / kart ekle"
+        addLabel={section === 'hesaplar' ? 'Hesap ekle' : section === 'kartlar' ? 'Kredi kartı ekle' : 'Hesap / kart ekle'}
         fields={fields}
-        emptyTitle="Henüz kart yok"
+        emptyTitle={section === 'hesaplar' ? 'Henüz banka hesabı yok' : 'Henüz kredi kartı yok'}
         emptyDescription="Banka hesaplarını ve kredi kartlarını buradan takip edebilirsin."
         orderBy="card_type"
-        showList={section === 'kartlar'}
+        showList={section === 'kartlar' || section === 'hesaplar'}
+        listFilter={(row) => row.card_type === (section === 'hesaplar' ? 'banka_karti' : 'kredi_karti')}
         afterSave={async () => {
           await invalidateSnapshot()
         }}
@@ -263,7 +264,8 @@ export function CardsPage() {
         renderBeforeList={({ loading, rows, reload, setError }) => {
           const cardRows = rows as Card[]
           const counts: Partial<Record<CardSection, number>> = {
-            kartlar: cardRows.length,
+            kartlar: cardRows.filter((row) => row.card_type === 'kredi_karti').length,
+            hesaplar: cardRows.filter((row) => row.card_type === 'banka_karti').length,
             ekstreler:
               statements.filter((statement) => statement.status === 'open').length +
               provisions.filter((expense) => expense.status === 'provision').length,
@@ -397,7 +399,7 @@ export function CardsPage() {
             </div>
           )
         }}
-        getInitialValues={getCardInitialValues}
+        getInitialValues={(row) => ({ ...getCardInitialValues(row), ...(!row && section === 'hesaplar' ? { card_type: 'banka_karti' } : {}) })}
         mapForm={mapCardForm}
         renderTitle={renderCardTitle}
         renderSubtitle={renderCardSubtitle}

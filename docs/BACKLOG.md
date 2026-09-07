@@ -3134,3 +3134,11 @@ tam geçmiş ay/ortalama ile kıyaslanıyordu → metrik ay-içi yanıltıcı.
 - [x] Dashboard gelecek taksit kırılımı, görünür odak, altı satırlık genişletilebilir masaüstü vadeler ve kart/tarih bazında taksit grupları.
 - [x] Mobil takvim kısa Türkçe birimler ve gizlilik maskesi; içe aktarma/bildirim hata metinleri ikinci tarama.
 - Model sınırı: banka kesim günü eksikse sonraki ekstre hesaplanmaz; gelirler tahmindir; faiz ve kayıtsız harcama uydurulmaz. Senaryo ay içi minimum değil ay sonu gösterir.
+
+## 2026-09-07 — Kullanım sadeleştirme / ilk paket
+- Hesaplar ekranında kredi kartları ve banka hesapları ayrı seçim alanları, listeler ve toplamlarla sunulur. Hesap ekleme varsayılanı seçili bölüme uyar.
+- Hızlı işlemler sayfaya göre kaybolmaz. Plan içinde Takvim/Hedefler önde, diğer araçlar açılır bölümde. Borçlar içindeki kredi kartı bağlantısı ana kart listesine gider; eski rota korunur.
+- Açık ekstresi olan kartta görünür “Ekstreyi öde” bağlantısı vardır. Finans hesapları ve yazma yolları değişmedi.
+- Doğrulama: npm run verify başarılı (1430 test); örnek API verileriyle masaüstü ve 390 px mobil tarayıcı kontrolü, açık/koyu tema, hesap türü varsayılanı ve hızlı harcama geçişi doğrulandı. Gerçek ödeme yazımı bu sunum paketinin tarayıcı kontrolünde çalıştırılmadı.
+
+2026-09-07 üretim öncesi takip: Hızlı menü Harcama ekle ile başlar; form kaynağı Hesap / kredi kartı olarak adlandırılır. Banka hesabı menüsü taşmaya açıktır; dekoratif üst çizgi köşelerin içine alınır.

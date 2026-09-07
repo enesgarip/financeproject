@@ -2,6 +2,7 @@ import {
   CalendarClock,
   CreditCard as CreditCardIcon,
   LayoutGrid,
+  Landmark,
   ReceiptText,
 } from 'lucide-react'
 import { useEffect, useRef } from 'react'
@@ -12,11 +13,12 @@ import { isMissingSupabaseCapabilityError, missingSupabaseCapabilityMessage } fr
 import { shouldRunStatementCut } from './CardsPage.helpers'
 
 
-export type CardSection = 'ozet' | 'kartlar' | 'islemler' | 'ekstreler'
+export type CardSection = 'ozet' | 'kartlar' | 'hesaplar' | 'islemler' | 'ekstreler'
 
 const cardSections = [
   { id: 'ozet', label: 'Özet', icon: LayoutGrid },
-  { id: 'kartlar', label: 'Kartlar', icon: CreditCardIcon },
+  { id: 'kartlar', label: 'Kredi kartları', icon: CreditCardIcon },
+  { id: 'hesaplar', label: 'Banka hesapları', icon: Landmark },
   { id: 'islemler', label: 'İşlemler', icon: ReceiptText },
   { id: 'ekstreler', label: 'Ekstreler', icon: CalendarClock },
 ] as const satisfies readonly { id: CardSection; label: string; icon: typeof LayoutGrid }[]
@@ -31,11 +33,22 @@ export function CardSectionNav({
   counts: Partial<Record<CardSection, number>>
 }) {
   return (
+    <div className="mb-4">
+      <div className="mb-4 grid grid-cols-2 gap-3" aria-label="Hesap veya kart seçimi">
+        {cardSections.filter((item) => item.id === 'kartlar' || item.id === 'hesaplar').map((item) => (
+          <button key={item.id} type="button" onClick={() => onSelect(item.id)} aria-pressed={section === item.id}
+            className={cn('min-h-24 rounded-xl border p-3 text-left transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary sm:p-4', section === item.id ? 'border-primary bg-primary/10' : 'border-line-strong bg-raised hover:border-primary/50')}>
+            <item.icon size={21} className="mb-2 text-primary" aria-hidden="true" />
+            <span className="block text-sm font-semibold text-ink">{item.label} <span className="text-ink-muted">{counts[item.id] ?? 0}</span></span>
+            <span className="mt-1 block text-xs text-ink-muted">{item.id === 'kartlar' ? 'Borç, ekstre ve limit' : 'Bakiye ve para hareketleri'}</span>
+          </button>
+        ))}
+      </div>
     <div
-      aria-label="Kart bölümleri"
+      aria-label="Hesap ve kart bölümleri"
       className="mb-4 flex w-full snap-x items-center gap-[22px] overflow-x-auto border-b border-line-strong [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
     >
-      {cardSections.map((item) => {
+      {cardSections.filter((item) => item.id !== 'kartlar' && item.id !== 'hesaplar').map((item) => {
         const isActive = item.id === section
         const count = counts[item.id]
         return (
@@ -45,7 +58,7 @@ export function CardSectionNav({
             onClick={() => onSelect(item.id)}
             aria-pressed={isActive}
             className={cn(
-              'flex-none snap-start whitespace-nowrap border-b-2 pb-2.5 text-[13.5px] transition-colors duration-[120ms]',
+              'min-h-11 flex-none snap-start whitespace-nowrap border-b-2 pb-2.5 text-[13.5px] transition-colors duration-[120ms]',
               isActive
                 ? 'border-primary font-semibold text-ink'
                 : 'border-transparent text-ink-faint hover:text-ink-muted',
@@ -67,6 +80,7 @@ export function CardSectionNav({
           </button>
         )
       })}
+    </div>
     </div>
   )
 }

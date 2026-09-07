@@ -1,5 +1,6 @@
 import { AlertTriangle, Banknote, Check, CheckCircle2, Copy, ShieldCheck } from 'lucide-react'
 import { useCallback, useMemo, useState } from 'react'
+import { Link } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '../auth/useAuth'
 import { BankLogo } from '../components/finance/BankLogo'
@@ -202,7 +203,7 @@ export function CreditAccountListCard({
     return (
       <article
         style={bankHueStyle(row.bank_name, rows)}
-        className="premium-entity-card account-entity-card finance-panel relative min-w-0 overflow-hidden rounded-2xl border-[hsl(var(--bank-hue)_45%_82%/0.72)] p-4 min-[390px]:p-5 dark:border-[hsl(var(--bank-hue)_35%_38%/0.55)]"
+        className="premium-entity-card account-entity-card finance-panel relative min-w-0 overflow-visible rounded-2xl border-[hsl(var(--bank-hue)_45%_82%/0.72)] p-4 min-[390px]:p-5 dark:border-[hsl(var(--bank-hue)_35%_38%/0.55)]"
       >
         <div className="relative flex items-start justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3.5">
@@ -223,8 +224,7 @@ export function CreditAccountListCard({
         </div>
 
         <LineGroup className="mt-3 border-t border-line pt-1">
-          <CardDatum label="Tür" value="Banka hesabı" />
-          <CardDatum label="Not" value={row.note || '-'} />
+          {row.note ? <CardDatum label="Not" value={row.note} /> : null}
         </LineGroup>
 
         {row.iban ? (
@@ -278,11 +278,11 @@ export function CreditAccountListCard({
   return (
     <article
       style={bankHueStyle(row.bank_name, rows)}
-      className="premium-entity-card credit-entity-card finance-panel relative min-w-0 overflow-hidden rounded-2xl bg-raised ring-1 ring-[hsl(var(--bank-hue)_42%_82%/0.55)] dark:ring-[hsl(var(--bank-hue)_40%_42%/0.45)]"
+      className="premium-entity-card credit-entity-card finance-panel relative min-w-0 overflow-visible rounded-2xl bg-raised ring-1 ring-[hsl(var(--bank-hue)_42%_82%/0.55)] dark:ring-[hsl(var(--bank-hue)_40%_42%/0.45)]"
     >
       <div
         style={{ backgroundImage: bankBrandGradient(row.bank_name) }}
-        className="relative overflow-visible p-4 text-white"
+        className="relative overflow-visible rounded-t-2xl p-4 text-white"
       >
         <div className="pointer-events-none absolute inset-0 overflow-hidden">
           <div className="absolute inset-x-0 top-0 h-px bg-white/35" />
@@ -344,7 +344,7 @@ export function CreditAccountListCard({
       </div>
 
       <LineGroup className="mt-2">
-        <CardDatum label="Kullanılabilir" value={formatAmount(stats.availableLimit)} tone="good" />
+        <CardDatum label="Kalan kart limiti" value={formatAmount(stats.availableLimit)} tone="good" />
         <CardDatum label="Dönem içi" value={formatAmount(row.current_period_spending)} />
         {statementEstimate ? (
           <CardDatum
@@ -368,6 +368,11 @@ export function CreditAccountListCard({
       ) : null}
 
       <div className="mt-3 grid grid-cols-2 gap-2">
+        {openStatements.length > 0 ? (
+          <Link to="/kartlar?section=ekstreler" className="flex min-h-11 items-center justify-center rounded-lg bg-primary px-3 text-xs font-semibold text-primary-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary">
+            Ekstreyi öde
+          </Link>
+        ) : (
         <Button
           type="button"
           size="lg"
@@ -385,6 +390,7 @@ export function CreditAccountListCard({
           <Banknote />
           Borç öde
         </Button>
+        )}
         <Button
           type="button"
           size="lg"

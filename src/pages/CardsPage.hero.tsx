@@ -33,7 +33,11 @@ export function CardsSectionHero({
   statementPayments?: CardStatementPayment[]
 }) {
   const creditCards = rows.filter((row) => row.card_type === 'kredi_karti')
-  if (section === 'ozet' || creditCards.length === 0) return null
+  if (section === 'hesaplar') {
+    const accounts = rows.filter((row) => row.card_type === 'banka_karti')
+    return <HeroNumber label="Banka hesaplarındaki para" value={sumTL(accounts.map((row) => row.current_balance))} description="Kart borçları bu bakiyeden düşülmemiştir." />
+  }
+  if (section === 'ozet') return null
 
   if (section === 'kartlar') {
     const debt = sumTL(creditCards.map((card) => card.debt_amount))
@@ -43,14 +47,14 @@ export function CardsSectionHero({
     const usage = limit > 0 ? Math.min(100, (debt / limit) * 100) : 0
     return (
       <HeroNumber
-        label="Toplam kart borcu"
+        label="Toplam kart yükü"
         value={debt}
         progress={limit > 0 ? usage : undefined}
         progressTone={usage >= 80 ? 'danger' : usage >= 55 ? 'warning' : 'brand'}
         description={
           limit > 0 ? (
             <>
-              {creditCards.length} kredi kartı · limit kullanımı{' '}
+              {creditCards.length} kredi kartı · gelecek taksitler ve provizyon dahil · limit kullanımı{' '}
               <span className="serit-num font-semibold text-ink">{formatPercent(usage)}</span>
             </>
           ) : (
@@ -107,7 +111,7 @@ export function CardsSectionHero({
         open.length === 0 ? (
           <>
             Açık ekstre yok — kesim geldiğinde burada görünür.{' '}
-            <Link to="/borclar/kartlar" className="font-semibold" style={{ color: SERIT_TEXT.brand }}>
+            <Link to="/kartlar?section=kartlar" className="font-semibold" style={{ color: SERIT_TEXT.brand }}>
               Kart borcu →
             </Link>
           </>
