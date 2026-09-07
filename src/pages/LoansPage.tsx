@@ -14,6 +14,7 @@ import {
 import type { Loan, LoanInstallment } from '../types/database'
 import { formatDate } from '../utils/date'
 import { parseNumber } from '../utils/formatCurrency'
+import { sumTL } from '../utils/money'
 import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
 import { useSeritAmount } from '../components/serit'
 import { useFinancePaymentDrawer } from '../hooks/useFinancePaymentDrawer'
@@ -227,29 +228,15 @@ export function LoansPage() {
     }
 
     const pastDuePending = pastDuePendingInstallments(loanInstallments)
+    // Katlama: ödenmiş taksitler tek özet satırına, uzak bekleyenler de ayrı bir
+    // katlamaya iner; varsayılan görünüm en yakın 3 taksittir. Satır menüleri
+    // (Düzenle/Sil/Ödendi say) katlanan satırlarda da aynen durur.
+    const paidItems = loanInstallments.filter((item) => item.status === 'ödendi')
+    const pendingItems = loanInstallments.filter((item) => item.status !== 'ödendi')
+    const visiblePending = pendingItems.slice(0, 3)
+    const foldedPending = pendingItems.slice(3)
 
-    return (
-      <section className="mt-4 rounded-2xl border border-line-strong bg-page p-3">
-        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-          <h3 className="finance-label">Ödeme Planı</h3>
-          <div className="flex items-center gap-2">
-            {pastDuePending.length > 0 ? (
-              <button
-                type="button"
-                onClick={() => void markInstallmentsPaidWithoutCash(pastDuePending, reload, setError)}
-                className="rounded-lg border border-line-strong bg-raised px-2.5 py-1.5 text-xs font-semibold text-ink transition hover:bg-black/[.03] dark:hover:bg-white/[.04] active:scale-[0.97]"
-                title="Uygulama öncesi bankada ödenmiş geçmiş taksitleri nakit hareketi olmadan işaretler"
-              >
-                Geçmişi ödendi say ({pastDuePending.length})
-              </button>
-            ) : null}
-            <span className="rounded-full bg-page px-2.5 py-1 text-xs font-semibold tabular-nums text-ink-muted">
-              {loanInstallments.filter((item) => item.status === 'ödendi').length}/{loanInstallments.length}
-            </span>
-          </div>
-        </div>
-        <div className="space-y-2">
-          {loanInstallments.map((item) => (
+    const renderInstallmentRow = (item: LoanInstallment) => (
             <div
               key={item.id}
               className="flex items-center gap-2 rounded-xl border border-line-strong bg-raised px-2 py-2 text-sm"
@@ -335,7 +322,53 @@ export function LoansPage() {
                 ) : null}
               </div>
             </div>
-          ))}
+    )
+
+    return (
+      <section className="mt-4 rounded-2xl border border-line-strong bg-page p-3">
+        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+          <h3 className="finance-label">Ödeme Planı</h3>
+          <div className="flex items-center gap-2">
+            {pastDuePending.length > 0 ? (
+              <button
+                type="button"
+                onClick={() => void markInstallmentsPaidWithoutCash(pastDuePending, reload, setError)}
+                className="rounded-lg border border-line-strong bg-raised px-2.5 py-1.5 text-xs font-semibold text-ink transition hover:bg-black/[.03] dark:hover:bg-white/[.04] active:scale-[0.97]"
+                title="Uygulama öncesi bankada ödenmiş geçmiş taksitleri nakit hareketi olmadan işaretler"
+              >
+                Geçmişi ödendi say ({pastDuePending.length})
+              </button>
+            ) : null}
+            <span className="rounded-full bg-page px-2.5 py-1 text-xs font-semibold tabular-nums text-ink-muted">
+              {loanInstallments.filter((item) => item.status === 'ödendi').length}/{loanInstallments.length}
+            </span>
+          </div>
+        </div>
+        <div className="space-y-2">
+          {paidItems.length > 0 ? (
+            <details className="rounded-xl border border-line-strong bg-raised">
+              <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-3 text-sm font-semibold text-ink-muted [&::-webkit-details-marker]:hidden">
+                <span className="inline-flex items-center gap-2">
+                  <span className="grid size-5 place-items-center rounded-full bg-success text-success-foreground">
+                    <Check size={12} strokeWidth={3} aria-hidden="true" />
+                  </span>
+                  {paidItems.length} taksit ödendi
+                </span>
+                <span className="font-mono text-xs tabular-nums">{formatAmount(sumTL(paidItems.map((item) => item.amount)))}</span>
+              </summary>
+              <div className="space-y-2 p-2 pt-0">{paidItems.map(renderInstallmentRow)}</div>
+            </details>
+          ) : null}
+          {visiblePending.map(renderInstallmentRow)}
+          {foldedPending.length > 0 ? (
+            <details className="rounded-xl border border-line-strong bg-raised">
+              <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-3 text-sm font-semibold text-ink-muted [&::-webkit-details-marker]:hidden">
+                <span>Sonraki {foldedPending.length} taksit</span>
+                <span className="font-mono text-xs tabular-nums">{formatAmount(sumTL(foldedPending.map((item) => item.amount)))}</span>
+              </summary>
+              <div className="space-y-2 p-2 pt-0">{foldedPending.map(renderInstallmentRow)}</div>
+            </details>
+          ) : null}
         </div>
       </section>
     )
