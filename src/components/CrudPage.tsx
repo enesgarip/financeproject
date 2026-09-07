@@ -90,6 +90,12 @@ type CrudPageProps<T extends CrudTableName> = {
   getCardStyle?: (row: RowFor<T>, rows: RowFor<T>[]) => CSSProperties
   getDetailStyle?: (row: RowFor<T>, rows: RowFor<T>[]) => CSSProperties
   groupBy?: (row: RowFor<T>) => string
+  /**
+   * Görünür kayıt sayısı bu eşiğin ALTINDAYSA grup başlıkları çizilmez (düz liste).
+   * Yalnız sınıflandırma amaçlı gruplarda kullan (kategori vb.); semantik bilgi
+   * taşıyan gruplar (ortak limit, kapalı kayıtlar) eşiksiz kalmalı.
+   */
+  flattenGroupsBelow?: number
   /** Sunucu sıralamasının üstüne istemci tarafı sıralama (örn. açıklar vadeye, kapananlar tarihe göre). */
   sortRows?: (rows: RowFor<T>[]) => RowFor<T>[]
   getGroupClassName?: (group: string) => string
@@ -149,6 +155,7 @@ export function CrudPage<T extends CrudTableName>({
   getCardStyle,
   getDetailStyle,
   groupBy,
+  flattenGroupsBelow,
   sortRows,
   getGroupClassName,
   listGridClassName,
@@ -210,14 +217,16 @@ export function CrudPage<T extends CrudTableName>({
     return sortRows ? sortRows(filtered) : filtered
   }, [normalizedQuery, rowMeta, listRows, sortRows])
   const groupedVisibleRows = useMemo(() => {
-    const groups = groupRows(visibleRows, groupBy)
+    // Az kayıtta grup başlıkları gürültü olur; eşik altında düz listeye in.
+    const flatten = flattenGroupsBelow !== undefined && visibleRows.length < flattenGroupsBelow
+    const groups = groupRows(visibleRows, flatten ? undefined : groupBy)
     if (!collapsibleGroups?.length) return groups
     // Katlanabilir gruplar (örn. tamamlananlar) her zaman listenin sonunda dursun.
     return [
       ...groups.filter(({ group }) => !collapsibleGroups.includes(group)),
       ...groups.filter(({ group }) => collapsibleGroups.includes(group)),
     ]
-  }, [collapsibleGroups, groupBy, visibleRows])
+  }, [collapsibleGroups, flattenGroupsBelow, groupBy, visibleRows])
   const [openCollapsibleGroups, setOpenCollapsibleGroups] = useState<Set<string>>(new Set())
 
   const toggleCollapsibleGroup = useCallback((group: string) => {
@@ -583,7 +592,8 @@ export function CrudPage<T extends CrudTableName>({
 
             return (
               <section key={group} className="flex flex-col gap-3">
-                {groupBy && group ? (
+                {/* 'all' = grupsuz sentinel (groupBy yok ya da flatten devrede); başlık çizilmez. */}
+                {groupBy && group && group !== 'all' ? (
                   <div className="flex items-center gap-3 px-1 py-1">
                     <h2
                       className={cn('shrink-0 text-xs font-black uppercase text-ink-muted', getGroupClassName?.(group))}
@@ -746,7 +756,9 @@ export function CrudPage<T extends CrudTableName>({
  * ok tuşlarıyla gezinme. Eskiden menü yalnız dışa tıklanınca kapanıyordu ve
  * klavyeyle öğeler arasında dolaşmak mümkün değildi (denetim 2026-08-12 §6).
  */
-function RowMenu({
+/** Satır taşma menüsü (⋮): klavye gezinme + Escape + dış tıklama kapatma.
+ *  CrudPage dışındaki liste panelleri de kullanır (örn. son kart hareketleri). */
+export function RowMenu({
   label,
   open,
   onToggle,

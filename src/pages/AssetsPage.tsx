@@ -770,6 +770,7 @@ export function AssetsPage() {
           )
         }}
         groupBy={(row) => row.category}
+        flattenGroupsBelow={6}
       />
   )
 }

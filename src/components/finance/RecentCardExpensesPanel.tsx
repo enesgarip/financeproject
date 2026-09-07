@@ -6,6 +6,7 @@ import type { Card, CardExpense } from '../../types/database'
 import { installmentChoicesWith } from '../../utils/cardInstallmentCalendar'
 import { formatDate } from '../../utils/date'
 import { Card as SurfaceCard, CardContent, CardHeader, CardTitle } from '../ui/card'
+import { RowMenu } from '../CrudPage'
 import { Badge } from '../ui/badge'
 import { HelpTooltip, type HelpTooltipContent } from '../ui/help-tooltip'
 import { useConfirmDialog } from '../ui/use-confirm-dialog'
@@ -45,6 +46,7 @@ export function RecentCardExpensesPanel({ cards, reload, setError }: RecentCardE
   const [loading, setLoading] = useState(true)
   const [cancellingId, setCancellingId] = useState<string | null>(null)
   const [splittingId, setSplittingId] = useState<string | null>(null)
+  const [menuOpenId, setMenuOpenId] = useState<string | null>(null)
   const [splitCount, setSplitCount] = useState(3)
   const [savingSplitId, setSavingSplitId] = useState<string | null>(null)
 
@@ -161,31 +163,44 @@ export function RecentCardExpensesPanel({ cards, reload, setError }: RecentCardE
                   </p>
                 </div>
                 <span className="serit-num shrink-0 font-semibold text-ink">{formatAmount(expense.amount)}</span>
-                {canSplit ? (
+                <RowMenu
+                  label={`${expense.description} işlemleri`}
+                  open={menuOpenId === expense.id}
+                  onToggle={() => setMenuOpenId(menuOpenId === expense.id ? null : expense.id)}
+                  onClose={() => setMenuOpenId(null)}
+                >
+                  {canSplit ? (
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        setMenuOpenId(null)
+                        setSplitCount(3)
+                        setSplittingId(splitOpen ? null : expense.id)
+                      }}
+                      disabled={cancellingId === expense.id || savingSplitId === expense.id}
+                      title="Tek çekim görünen hareketi taksitli plana çevir"
+                      className="flex w-full items-center gap-2 px-3 py-2 text-sm text-ink transition hover:bg-black/[.03] dark:hover:bg-white/[.04] disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      <Layers size={14} />
+                      Taksitlendir
+                    </button>
+                  ) : null}
                   <button
                     type="button"
+                    role="menuitem"
                     onClick={() => {
-                      setSplitCount(3)
-                      setSplittingId(splitOpen ? null : expense.id)
+                      setMenuOpenId(null)
+                      void handleCancel(expense)
                     }}
-                    disabled={cancellingId === expense.id || savingSplitId === expense.id}
-                    title="Tek çekim görünen hareketi taksitli plana çevir"
-                    className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-line-strong bg-raised px-2.5 py-1.5 text-xs font-semibold text-ink transition hover:bg-black/[.03] dark:hover:bg-white/[.04] disabled:cursor-not-allowed disabled:opacity-40"
+                    disabled={Boolean(locked) || cancellingId === expense.id}
+                    title={locked ?? 'Hareketi append-only iptal et'}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-sm text-destructive transition hover:bg-destructive/10 disabled:cursor-not-allowed disabled:opacity-40"
                   >
-                    <Layers size={13} />
-                    Taksitlendir
+                    <Ban size={14} />
+                    İptal et
                   </button>
-                ) : null}
-                <button
-                  type="button"
-                  onClick={() => void handleCancel(expense)}
-                  disabled={Boolean(locked) || cancellingId === expense.id}
-                  title={locked ?? 'Hareketi append-only iptal et'}
-                  className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-line-strong bg-raised px-2.5 py-1.5 text-xs font-semibold text-ink-muted transition hover:bg-black/[.03] dark:hover:bg-white/[.04] hover:text-ink disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  <Ban size={13} />
-                  İptal
-                </button>
+                </RowMenu>
               </div>
 
               {splitOpen ? (

@@ -3169,7 +3169,13 @@ buton çiftleri, hep-açık form). Dört küçük faz kararlaştırıldı.
   8→4 satır + "+N taksit daha · toplam" özet satırı. Aylık rapor'un iki dipnotu
   başlık tooltip'ine taşındı. Taksit takvimi paneli hiç içerik yokken (taksit +
   bitiş yok) artık hiç çizilmiyor (`taksit-takvimi` anchor'ına dış bağlantı yok).
-- **R3 — Grup + buton sadeleştirme:** Az kayıtta kategori grup başlıklarını düz
-  listeye indir; işlem satırlarındaki Taksitlendir/İptal çiftini satır menüsüne al.
+- **R3 — Grup + buton sadeleştirme (TAMAM):** `CrudPage`'e `flattenGroupsBelow`
+  prop'u: görünür kayıt eşiğin altındaysa grup başlıkları çizilmez ('all'
+  sentinel'i başlıksız). Yalnız sınıflandırma gruplarına verildi — Ödemeler +
+  Varlıklar `{6}`; Kartlar (ortak limit), Kişiler (kapalı), Krediler
+  (Tamamlananlar) semantik olduğundan bilinçli eşiksiz. `RowMenu` export edildi;
+  Son kart hareketleri'ndeki satır başına Taksitlendir/İptal buton çifti tek ⋮
+  menüsüne indi (disabled kilit nedenleri menü maddesinde). Playwright 4/4 PASS
+  (düz listeler + kart grubunun korunması + menü erişimi).
 - **R4 — Hızlı harcama katlama:** Varsayılanlı alanları (tarih/işlem türü/durum)
   "Gelişmiş" altına katla; son-harcama çiplerini kısalt.
