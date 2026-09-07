@@ -4,9 +4,11 @@ import { createPortal } from "react-dom"
 import { cn } from "@/lib/utils"
 
 export type HelpTooltipContent = {
-  calculation: string
-  importance: string
-  source: string
+  /** Yapılandırılmış satırlara oturmayan serbest açıklama; başlığın hemen altında düz paragraf olarak çıkar. */
+  note?: string
+  calculation?: string
+  importance?: string
+  source?: string
 }
 
 type HelpTooltipProps = {
@@ -103,13 +105,16 @@ export function HelpTooltip({ title, content, className }: HelpTooltipProps) {
             )}
           >
             <p className="mb-2 text-[11px] font-black uppercase tracking-normal text-ink">{title}</p>
+            {content.note ? <p className="mb-2 leading-5 text-ink">{content.note}</p> : null}
             <dl className="space-y-2">
-              {helpRows.map((row) => (
-                <div key={row.key}>
-                  <dt className="font-bold text-ink-muted">{row.label}</dt>
-                  <dd className="mt-0.5 leading-5 text-ink">{content[row.key]}</dd>
-                </div>
-              ))}
+              {helpRows
+                .filter((row) => content[row.key])
+                .map((row) => (
+                  <div key={row.key}>
+                    <dt className="font-bold text-ink-muted">{row.label}</dt>
+                    <dd className="mt-0.5 leading-5 text-ink">{content[row.key]}</dd>
+                  </div>
+                ))}
             </dl>
           </div>,
           document.body,

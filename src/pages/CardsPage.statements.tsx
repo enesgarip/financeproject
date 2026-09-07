@@ -64,7 +64,6 @@ export function ProvisionPanel({
               Provizyondaki işlemler
               <HelpTooltip title="Provizyondaki işlemler" content={cardHelp.provisionsPanel} />
             </CardTitle>
-            <p className="mt-1 text-xs text-ink-muted">Kesinleşince dönem içine alınır, iptal edilirse limitten çıkarılır.</p>
           </div>
           <div className="flex shrink-0 flex-col items-end gap-2">
             <Badge variant="secondary">{formatAmount(totalProvision)}</Badge>
@@ -206,8 +205,8 @@ export function StatementPanel({
             <CardTitle className="flex items-center gap-2 text-base">
               <ReceiptText size={17} />
               Açık ekstreler
+              <HelpTooltip title="Açık ekstreler" content={cardHelp.openStatements} />
             </CardTitle>
-            <p className="mt-1 text-xs text-ink-muted">Ekstre ödemesi seçilen hesaptan düşülür ve yalnızca bu ekstreyi kapatır.</p>
           </div>
           <Badge variant="secondary">{formatAmount(totalOpenAmount)}</Badge>
         </div>
@@ -236,10 +235,7 @@ export function StatementPanel({
                   {formatAmount(statement.statement_debt_amount)} ekstre tutarı
                 </p>
               ) : null}
-              <div className="mt-3 grid gap-2 min-[520px]:grid-cols-[minmax(0,1fr)_auto] min-[520px]:items-center">
-                <p className="text-xs leading-5 text-success/80">
-                  Bu tutar kart borcunun içindedir. Kredi kartı taksitleri ayrıca borç olarak ikinci kez eklenmez.
-                </p>
+              <div className="mt-3 flex justify-end">
                 <button
                   type="button"
                   onClick={() => onPay(statement, card)}
@@ -275,8 +271,8 @@ export function StatementArchivePanel({ rows, statements }: { rows: Card[]; stat
             <CardTitle className="flex items-center gap-2 text-base">
               <ReceiptText size={17} />
               Ekstre arşivi
+              <HelpTooltip title="Ekstre arşivi" content={cardHelp.statementArchive} />
             </CardTitle>
-            <p className="mt-1 text-xs text-ink-muted">Kesilmiş son ekstreler; açık olanlar yukarıdaki panelden ödenir.</p>
           </div>
           <Badge variant="secondary">{archives.length} kayıt</Badge>
         </div>
