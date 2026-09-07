@@ -3177,5 +3177,12 @@ buton çiftleri, hep-açık form). Dört küçük faz kararlaştırıldı.
   Son kart hareketleri'ndeki satır başına Taksitlendir/İptal buton çifti tek ⋮
   menüsüne indi (disabled kilit nedenleri menü maddesinde). Playwright 4/4 PASS
   (düz listeler + kart grubunun korunması + menü erişimi).
-- **R4 — Hızlı harcama katlama:** Varsayılanlı alanları (tarih/işlem türü/durum)
-  "Gelişmiş" altına katla; son-harcama çiplerini kısalt.
+- **R4 — Hızlı harcama katlama (TAMAM):** Tarih/kategori/işlem türü/durum grid'i,
+  araç seçimi ve taksit alanları "Ayrıntılar" details'ine katlandı; summary
+  dinamik özet taşır (tarih · kategori · Peşin/Taksitli). Taksitli modda katlama
+  ZORLA açık kalır — kapalı details içindeki `required` alan (sıradaki taksit
+  tarihi) tarayıcı doğrulamasını sessizce kilitler; React kontrollü `<details
+  open>` tarayıcının kaldırdığı attribute'u diff'te görmediği için onToggle
+  içinde DOM'a elle geri yazılır. Son-harcama çipleri 6→3. Ekstre önizleme
+  kutusu (dönem/kesim/yansıma + dinamik cümle) bilinçli olarak katlama DIŞINDA.
+  Playwright 5/5 PASS (kapalı katlamayla peşin kayıt dahil).
