@@ -2,6 +2,7 @@ import { BarChart3, CalendarRange, Check, Copy, Download, ImageDown, Search, Spa
 import { useMemo, useState } from 'react'
 import { Button } from '../components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
+import { HelpTooltip } from '../components/ui/help-tooltip'
 import { SimpleModal } from '../components/SimpleModal'
 import type { NetWorthSnapshot } from '../types/database'
 import { buildSearchCsv, type AnalysisData, type SearchItem } from '../utils/analysisView'
@@ -171,7 +172,16 @@ export function MonthlyReport({ data }: { data: AnalysisData }) {
       <CardHeader className="pb-0">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <CardTitle>Aylık rapor</CardTitle>
+            <CardTitle className="inline-flex items-center gap-1.5">
+              Aylık rapor
+              <HelpTooltip
+                title="Aylık rapor"
+                content={{
+                  calculation: 'Kart harcamaları alışveriş tarihinde gösterilir; bekleyen provizyonlar dahildir. Ödenen tutar, bu ay işlem geçmişine kaydedilen nakit çıkışlarıdır. Beklenen gelir, maaş ve alacak planına dayanır.',
+                  importance: 'Gelirden kalan: beklenen aylık gelirden bugüne kadar kaydedilen ödemeler çıkarıldı. Hesap bakiyesi veya ay sonu tahmini değildir.',
+                }}
+              />
+            </CardTitle>
             <p className="mt-1 text-sm text-ink-muted">{cashFlow.monthLabel}</p>
           </div>
           <div className="grid size-11 shrink-0 place-items-center rounded-xl bg-success/12 text-success">
@@ -200,10 +210,6 @@ export function MonthlyReport({ data }: { data: AnalysisData }) {
           <StatPill label="Ödenen tutar" value={formatAmount(outflow)} tone="rose" />
           <StatPill label="Gelirden kalan" value={formatAmount(net)} tone={net >= 0 ? 'emerald' : 'rose'} />
         </div>
-        <p className="text-xs text-ink-muted">
-          Gelirden kalan: beklenen aylık gelirden bugüne kadar kaydedilen ödemeler çıkarıldı.
-          Hesap bakiyesi veya ay sonu tahmini değildir.
-        </p>
         <div className="grid gap-2 min-[520px]:grid-cols-2">
           {reportRows.map((row) => (
             <div key={row.label} className="flex min-w-0 items-center justify-between gap-3 rounded-xl bg-page px-3 py-2 text-sm">
@@ -224,10 +230,6 @@ export function MonthlyReport({ data }: { data: AnalysisData }) {
           </div>
         ) : null}
 
-        <p className="text-xs text-ink-muted">
-          Kart harcamaları alışveriş tarihinde gösterilir; bekleyen provizyonlar dahildir.
-          Ödenen tutar, bu ay işlem geçmişine kaydedilen nakit çıkışlarıdır. Beklenen gelir, maaş ve alacak planına dayanır.
-        </p>
       </CardContent>
     </Card>
   )

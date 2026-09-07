@@ -3162,9 +3162,13 @@ buton çiftleri, hep-açık form). Dört küçük faz kararlaştırıldı.
   ödeme/tahsilat tanımı → stat tooltip'i), kart-talimat notu tek cümleye indi.
   Dinamik/bağlama özel satırlar (ör. "bu işlem şu ekstreye girer") bilinçli kaldı.
   Doğrulama: Playwright'ta 5 tooltip tıklama PASS; ekstreler sayfası ~%15 kısaldı.
-- **R2 — Liste katlama (SIRADA):** Kredi taksit planında ödenmişleri tek satıra
-  katla; Analiz "Yaklaşan taksitler"i ilk 3+toplam yap; boş durum panellerini
-  kompaktlaştır; Analiz aylık rapor dipnotlarını R1 desenine getir.
+- **R2 — Liste katlama (TAMAM):** Kredi ödeme planı: ödenmişler "✓ N taksit
+  ödendi · toplam" details'ine, bekleyenlerden en yakın 3 açık, kalanı "Sonraki N
+  taksit · toplam" details'ine katlandı (satır menüleri katlamada da çalışır,
+  Playwright PASS; krediler sayfası 2262px→1068px). Analiz "Yaklaşan taksitler"
+  8→4 satır + "+N taksit daha · toplam" özet satırı. Aylık rapor'un iki dipnotu
+  başlık tooltip'ine taşındı. Taksit takvimi paneli hiç içerik yokken (taksit +
+  bitiş yok) artık hiç çizilmiyor (`taksit-takvimi` anchor'ına dış bağlantı yok).
 - **R3 — Grup + buton sadeleştirme:** Az kayıtta kategori grup başlıklarını düz
   listeye indir; işlem satırlarındaki Taksitlendir/İptal çiftini satır menüsüne al.
 - **R4 — Hızlı harcama katlama:** Varsayılanlı alanları (tarih/işlem türü/durum)

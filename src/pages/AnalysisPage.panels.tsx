@@ -67,9 +67,11 @@ export function UpcomingInstallments({ data }: { data: AnalysisData }) {
           tone: remaining !== null && remaining < 0 ? 'destructive' : 'outline',
         }
       })
-    // Sayaç kesmeden ÖNCEKİ gerçek toplamı söyler; liste ilk 8'i gösterir.
+    // Sayaç kesmeden ÖNCEKİ gerçek toplamı söyler; liste ilk 4'ü gösterir,
+    // kalanlar tek toplam satırına katlanır (kalem dökümü Krediler/Kartlar'da).
     const all = [...cardItems, ...loanItems].sort((a, b) => a.sortDate.localeCompare(b.sortDate) || b.amount - a.amount)
-    return { items: all.slice(0, 8), totalCount: all.length }
+    const rest = all.slice(4)
+    return { items: all.slice(0, 4), totalCount: all.length, restCount: rest.length, restTotal: sumTL(rest.map((item) => item.amount)) }
   }, [data.cards, data.loans, data.cardInstallments, data.loanInstallments])
 
   return (
@@ -79,7 +81,7 @@ export function UpcomingInstallments({ data }: { data: AnalysisData }) {
           <div>
             <CardTitle>Yaklaşan taksitler</CardTitle>
             <p className="mt-1 text-sm text-ink-muted">
-              {upcoming.totalCount} kart / kredi taksiti{upcoming.totalCount > 8 ? ' · ilk 8 gösteriliyor' : ''}
+              {upcoming.totalCount} kart / kredi taksiti{upcoming.restCount > 0 ? ' · en yakın 4 gösteriliyor' : ''}
             </p>
           </div>
           <WalletCards className="text-success" />
@@ -108,6 +110,12 @@ export function UpcomingInstallments({ data }: { data: AnalysisData }) {
             </div>
           ))
         )}
+        {upcoming.restCount > 0 ? (
+          <p className="flex items-center justify-between gap-3 rounded-xl bg-page px-3 py-2 text-xs text-ink-muted">
+            <span>+{upcoming.restCount} taksit daha</span>
+            <span className="font-bold tabular-nums text-ink">{formatAmount(upcoming.restTotal)}</span>
+          </p>
+        ) : null}
       </CardContent>
     </Card>
   )

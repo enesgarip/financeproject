@@ -44,6 +44,8 @@ export function CardInstallmentCalendarPanel({ cards, installments, loading }: C
   const hasOngoingInstallments = cardTotals.total > 0
 
   if (creditCards.length === 0) return null
+  // Gösterecek hiçbir şey yokken panel kabuğunu da çizme; ilk taksitle geri gelir.
+  if (!loading && !hasAny && !hasOngoingInstallments && reliefs.length === 0) return null
 
   return (
     <SurfaceCard id="taksit-takvimi" className="border-primary/20">
