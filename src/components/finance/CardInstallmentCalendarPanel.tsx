@@ -55,7 +55,6 @@ export function CardInstallmentCalendarPanel({ cards, installments, loading }: C
               Taksit takvimi
               <HelpTooltip title="Taksit takvimi" content={installmentCalendarHelp} />
             </CardTitle>
-            <p className="mt-1 text-xs text-ink-muted">Önümüzdeki 4 ayda kartlara yansıyacak taksit yükü.</p>
           </div>
           <Badge variant="secondary">{creditCards.length} kart</Badge>
         </div>

@@ -51,4 +51,10 @@ export const cardHelp = {
     importance: 'Kesinleşince dönem içine geçecek, iptalde limitten çıkacak işlemleri kontrol eder.',
     source: 'Kart harcama kayıtlarının provizyon durumu.',
   },
+  openStatements: {
+    note: 'Ekstre ödemesi seçilen hesaptan düşülür ve yalnızca bu ekstreyi kapatır. Tutar kart borcunun içindedir; kredi kartı taksitleri ayrıca borç olarak ikinci kez eklenmez.',
+  },
+  statementArchive: {
+    note: 'Kesilmiş son ekstreler; açık olanlar yukarıdaki panelden ödenir.',
+  },
 } satisfies Record<string, HelpTooltipContent>

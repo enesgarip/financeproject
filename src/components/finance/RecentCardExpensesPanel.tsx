@@ -140,7 +140,6 @@ export function RecentCardExpensesPanel({ cards, reload, setError }: RecentCardE
               Son kart hareketleri
               <HelpTooltip title="Son kart hareketleri" content={recentExpensesHelp} />
             </CardTitle>
-            <p className="mt-1 text-xs text-ink-muted">Yanlış girilen hareketi buradan iptal edebilirsin; borç otomatik terslenir.</p>
           </div>
           <Badge variant="secondary">{expenses.length}</Badge>
         </div>

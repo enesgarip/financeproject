@@ -3144,3 +3144,28 @@ tam geçmiş ay/ortalama ile kıyaslanıyordu → metrik ay-içi yanıltıcı.
 2026-09-07 üretim öncesi takip: Hızlı menü Harcama ekle ile başlar; form kaynağı Hesap / kredi kartı olarak adlandırılır. Banka hesabı menüsü taşmaya açıktır; dekoratif üst çizgi köşelerin içine alınır.
 
 2026-09-07 görsel hotfix: Kredi kartı kartındaki dekoratif üst çizgi (`credit-entity-card::before`) `overflow-visible` geçişi sonrası yuvarlak sol üst köşeden taşıyordu (Yapı Kredi pembe hue'da bariz). Marka banner'ı çizgiyi zaten örttüğünden pseudo kredi görünümünde tamamen kapatıldı (`content: none`); banka hesabı çizgisi (16px içeri) olduğu gibi kaldı.
+
+## 2026-09-07 — Görsel rahatlatma turu (R1–R4)
+
+Ekran turu bulgusu: yorgunluğun kaynağı tema değil, tekrarlayan içerik desenleri
+(eğitici dipnotlar, tam liste tekrarları, az kayıtta grup başlıkları, satır başına
+buton çiftleri, hep-açık form). Dört küçük faz kararlaştırıldı.
+
+- **R1 — Dipnot diyeti (TAMAM):** Statik eğitici açıklamalar `HelpTooltip`'e taşındı
+  (content alanları opsiyonel + serbest `note` alanı eklendi). Kapsam: Özet "Kart
+  döngüsü" paneli (4 paragraf → 2 tooltip + kısa dinamik satırlar; "vade planında
+  açık yok" pozitif satırı artık yalnız eksik varsa çıkar), Ekstreler (açık ekstre
+  per-kart tekrar cümlesi dahil 5 panel açıklaması → başlık tooltip'leri,
+  `cardHelp.openStatements`/`statementArchive` girdileri), İşlemler panelleri
+  (taksit niyeti/takvimi + son hareketler — tooltip'ler zaten aynı bilgiyi
+  taşıyordu, dublike paragraflar silindi), Ödeme takvimi (b/bin kısaltma notu +
+  ödeme/tahsilat tanımı → stat tooltip'i), kart-talimat notu tek cümleye indi.
+  Dinamik/bağlama özel satırlar (ör. "bu işlem şu ekstreye girer") bilinçli kaldı.
+  Doğrulama: Playwright'ta 5 tooltip tıklama PASS; ekstreler sayfası ~%15 kısaldı.
+- **R2 — Liste katlama (SIRADA):** Kredi taksit planında ödenmişleri tek satıra
+  katla; Analiz "Yaklaşan taksitler"i ilk 3+toplam yap; boş durum panellerini
+  kompaktlaştır; Analiz aylık rapor dipnotlarını R1 desenine getir.
+- **R3 — Grup + buton sadeleştirme:** Az kayıtta kategori grup başlıklarını düz
+  listeye indir; işlem satırlarındaki Taksitlendir/İptal çiftini satır menüsüne al.
+- **R4 — Hızlı harcama katlama:** Varsayılanlı alanları (tarih/işlem türü/durum)
+  "Gelişmiş" altına katla; son-harcama çiplerini kısalt.

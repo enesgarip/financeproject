@@ -9,6 +9,7 @@ import {
   WalletCards,
 } from 'lucide-react'
 import { useMemo, useState } from 'react'
+import { HelpTooltip, type HelpTooltipContent } from '../ui/help-tooltip'
 import { useBalancePrivacy } from '../../hooks/useBalancePrivacy'
 import { cn } from '../../lib/utils'
 import { addDays, dateInputValue, formatDate, isDateInMonth, startOfMonth } from '../../utils/date'
@@ -146,12 +147,12 @@ const CELL_DOT_CLASS: Record<CalendarCellLine['tone'], string> = {
   card: 'bg-info',
 }
 
-function SummaryStat({ label, value, tone = 'neutral' }: { label: string; value: string; tone?: 'neutral' | 'danger' | 'success' }) {
+function SummaryStat({ label, value, tone = 'neutral', hint }: { label: string; value: string; tone?: 'neutral' | 'danger' | 'success'; hint?: HelpTooltipContent }) {
   const toneClass = tone === 'danger' ? 'text-destructive' : tone === 'success' ? 'text-success' : 'text-ink'
 
   return (
     <div className="min-w-0 rounded-lg border border-line-strong bg-page px-3 py-2.5">
-      <p className="finance-label">{label}</p>
+      <p className="finance-label">{label}{hint ? <HelpTooltip title={label} content={hint} className="-my-1.5" /> : null}</p>
       <p className={cn('finance-value mt-1 truncate text-sm font-black tabular-nums', toneClass)}>{value}</p>
     </div>
   )
@@ -207,7 +208,6 @@ export function ObligationsCalendar({ data, loading = false, onPayObligation }: 
         </div>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
-        <p className="text-xs text-ink-muted sm:hidden">Tutarlar TL · b: bin, m: milyon. Tam tutarı görmek için günü seç.</p>
         {loading ? (
           <div className="flex flex-col gap-3">
             <div className="grid grid-cols-2 gap-2 min-[720px]:grid-cols-4">
@@ -221,9 +221,12 @@ export function ObligationsCalendar({ data, loading = false, onPayObligation }: 
               <SummaryStat label="Ay yükü" value={formatAmount(summary.outflow)} tone="danger" />
               <SummaryStat label="Beklenen giriş" value={formatAmount(summary.inflow)} tone="success" />
               <SummaryStat label="Net etki" value={`${summary.net < 0 ? '−' : ''}${formatAmount(Math.abs(summary.net))}`} tone={summary.net >= 0 ? 'success' : 'danger'} />
-              <SummaryStat label="Ödeme / tahsilat" value={`${summary.payableCount}/${summary.itemCount}`} />
+              <SummaryStat
+                label="Ödeme / tahsilat"
+                value={`${summary.payableCount}/${summary.itemCount}`}
+                hint={{ note: 'İşlem kaydedilebilen kalemlerin toplam kayıt sayısına oranı. Takvim tutarları kısaltılır (b: bin, m: milyon); tam tutar için günü seç.' }}
+              />
             </div>
-            <p className="text-xs text-ink-muted">Ödeme / tahsilat: işlem kaydedilebilen kalemlerin toplam kayıt sayısına oranı.</p>
 
             <div className="grid grid-cols-7 gap-1 text-center text-[11px] font-black uppercase text-ink-muted sm:gap-2">
               {WEEK_DAYS.map((day) => <span key={day}>{day}</span>)}

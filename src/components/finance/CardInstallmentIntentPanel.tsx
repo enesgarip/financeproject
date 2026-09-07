@@ -168,9 +168,6 @@ export function CardInstallmentIntentPanel({ cards, installments = [], onChanged
               Bekleyen taksit niyeti
               <HelpTooltip title="Bekleyen taksit niyeti" content={intentHelp} />
             </CardTitle>
-            <p className="mt-1 text-xs text-ink-muted">
-              Taksitli alışverişe çıkmadan önce buraya not bırak; SMS provizyonu düştüğü an taksit sayısı otomatik işlenir.
-            </p>
           </div>
           <Button type="button" variant="secondary" onClick={() => setFormOpen((open) => !open)} disabled={busy}>
             <Plus data-icon="inline-start" />

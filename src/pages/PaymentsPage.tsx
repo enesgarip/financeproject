@@ -501,7 +501,7 @@ export function PaymentsPage() {
 
               {!isPaid && isCardInstructedPayment(payment, isCreditCardId) ? (
                 <p className="mt-2.5 text-[11px] font-medium text-ink-muted">
-                  Talimat bilgilendirmedir; harcama SMS geldiğinde veya ekstre importunda otomatik işlenir ve plan ilerler.
+                  Talimat — SMS/ekstreyle otomatik işlenir.
                 </p>
               ) : null}
 
