@@ -604,7 +604,9 @@ button:disabled {
 }
 
 .credit-entity-card::before {
-  background: linear-gradient(90deg, hsl(var(--bank-hue) 58% 52%), hsl(var(--bank-hue) 70% 68% / 0.28), transparent 78%);
+  /* Kredi görünümünde marka banner'ı bu çizgiyi zaten örter; kart
+     overflow-visible olunca yuvarlak köşeden taşan ucu görünür kalıyordu. */
+  content: none;
 }
 
 .account-balance-well::after,

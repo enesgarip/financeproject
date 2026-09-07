@@ -3142,3 +3142,5 @@ tam geçmiş ay/ortalama ile kıyaslanıyordu → metrik ay-içi yanıltıcı.
 - Doğrulama: npm run verify başarılı (1430 test); örnek API verileriyle masaüstü ve 390 px mobil tarayıcı kontrolü, açık/koyu tema, hesap türü varsayılanı ve hızlı harcama geçişi doğrulandı. Gerçek ödeme yazımı bu sunum paketinin tarayıcı kontrolünde çalıştırılmadı.
 
 2026-09-07 üretim öncesi takip: Hızlı menü Harcama ekle ile başlar; form kaynağı Hesap / kredi kartı olarak adlandırılır. Banka hesabı menüsü taşmaya açıktır; dekoratif üst çizgi köşelerin içine alınır.
+
+2026-09-07 görsel hotfix: Kredi kartı kartındaki dekoratif üst çizgi (`credit-entity-card::before`) `overflow-visible` geçişi sonrası yuvarlak sol üst köşeden taşıyordu (Yapı Kredi pembe hue'da bariz). Marka banner'ı çizgiyi zaten örttüğünden pseudo kredi görünümünde tamamen kapatıldı (`content: none`); banka hesabı çizgisi (16px içeri) olduğu gibi kaldı.
