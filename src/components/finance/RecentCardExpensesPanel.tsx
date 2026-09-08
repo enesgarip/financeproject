@@ -1,13 +1,20 @@
-import { Ban, Layers } from 'lucide-react'
+import { Ban, Layers, Pencil } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { cancelCardExpense, fetchRecentCardExpenses, updateCardExpense } from '../../data/repositories/cardsRepo'
 import { useBalancePrivacy } from '../../hooks/useBalancePrivacy'
 import type { Card, CardExpense } from '../../types/database'
 import { installmentChoicesWith } from '../../utils/cardInstallmentCalendar'
-import { formatDate } from '../../utils/date'
+import { expenseCategories } from '../../utils/categories'
+import { dateInputValue, formatDate } from '../../utils/date'
+import { parseNumber } from '../../utils/formatCurrency'
+import { SimpleModal } from '../SimpleModal'
+import { Alert } from '../ui/alert'
+import { Button } from '../ui/button'
 import { Card as SurfaceCard, CardContent, CardHeader, CardTitle } from '../ui/card'
+import { Input } from '../ui/input'
 import { RowMenu } from '../CrudPage'
 import { Badge } from '../ui/badge'
+import { MoneyInput } from './MoneyInput'
 import { HelpTooltip, type HelpTooltipContent } from '../ui/help-tooltip'
 import { useConfirmDialog } from '../ui/use-confirm-dialog'
 
@@ -31,6 +38,16 @@ type RecentCardExpensesPanelProps = {
   cards: Card[]
   reload: () => Promise<void>
   setError: (message: string) => void
+  /** Değişince liste yeniden çekilir; hızlı harcama formu kayıt sonrası artırır (UX turu B2). */
+  refreshKey?: number
+}
+
+type ExpenseDraft = {
+  expense: CardExpense
+  amount: string
+  description: string
+  spentAt: string
+  category: string
 }
 
 function lockReason(expense: CardExpense) {
@@ -39,12 +56,15 @@ function lockReason(expense: CardExpense) {
   return null
 }
 
-export function RecentCardExpensesPanel({ cards, reload, setError }: RecentCardExpensesPanelProps) {
+export function RecentCardExpensesPanel({ cards, reload, setError, refreshKey = 0 }: RecentCardExpensesPanelProps) {
   const { formatAmount } = useBalancePrivacy()
   const { confirm, confirmDialog } = useConfirmDialog()
   const [expenses, setExpenses] = useState<CardExpense[]>([])
   const [loading, setLoading] = useState(true)
   const [cancellingId, setCancellingId] = useState<string | null>(null)
+  const [draft, setDraft] = useState<ExpenseDraft | null>(null)
+  const [savingDraft, setSavingDraft] = useState(false)
+  const [draftError, setDraftError] = useState('')
   const [splittingId, setSplittingId] = useState<string | null>(null)
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null)
   const [splitCount, setSplitCount] = useState(3)
@@ -65,9 +85,67 @@ export function RecentCardExpensesPanel({ cards, reload, setError }: RecentCardE
   }, [setError])
 
   useEffect(() => {
+    // refreshKey bağımlılığı bilinçli: form kaydı sonrası yeniden çek.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void load()
-  }, [load])
+  }, [load, refreshKey])
+
+  function openEdit(expense: CardExpense) {
+    setDraftError('')
+    setDraft({
+      expense,
+      amount: String(expense.amount),
+      description: expense.description,
+      spentAt: expense.spent_at,
+      category: expense.category,
+    })
+  }
+
+  /**
+   * Düzenleme = update_card_expense RPC'si (borç/kova etkisini kendisi tersleyip
+   * yeniden uygular; ekstreye kesilmiş satırı reddeder). Eskiden menüde yalnız
+   * "Taksitlendir / İptal et" vardı; yanlış tutar için iptal + yeniden giriş
+   * gerekiyordu (UX turu B7).
+   */
+  async function handleSaveDraft(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!draft) return
+    const amount = parseNumber(draft.amount)
+    const description = draft.description.trim()
+    if (amount <= 0) {
+      setDraftError('Tutar 0’dan büyük olmalı.')
+      return
+    }
+    if (!description) {
+      setDraftError('Açıklama zorunlu.')
+      return
+    }
+    if (!draft.spentAt) {
+      setDraftError('Tarih seç.')
+      return
+    }
+
+    setSavingDraft(true)
+    setDraftError('')
+    const result = await updateCardExpense({
+      expenseId: draft.expense.id,
+      amount,
+      description,
+      spentAt: draft.spentAt,
+      installmentCount: draft.expense.installment_count,
+      category: draft.category,
+      note: draft.expense.note,
+    })
+    setSavingDraft(false)
+
+    if (!result.ok) {
+      setDraftError(result.error.message ?? 'Hareket güncellenemedi.')
+      return
+    }
+
+    setDraft(null)
+    await Promise.all([load(), reload()])
+  }
 
   async function handleCancel(expense: CardExpense) {
     // BM-6(d): planlı ödemeden doğan kayıtta iptal, ödemeyi geri AÇMAZ —
@@ -169,6 +247,20 @@ export function RecentCardExpensesPanel({ cards, reload, setError }: RecentCardE
                   onToggle={() => setMenuOpenId(menuOpenId === expense.id ? null : expense.id)}
                   onClose={() => setMenuOpenId(null)}
                 >
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setMenuOpenId(null)
+                      openEdit(expense)
+                    }}
+                    disabled={Boolean(locked) || expense.status !== 'posted' || cancellingId === expense.id}
+                    title={locked ?? 'Tutar, tarih, açıklama veya kategoriyi düzelt'}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-sm text-ink transition hover:bg-black/[.03] dark:hover:bg-white/[.04] disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    <Pencil size={14} />
+                    Düzenle
+                  </button>
                   {canSplit ? (
                     <button
                       type="button"
@@ -246,6 +338,48 @@ export function RecentCardExpensesPanel({ cards, reload, setError }: RecentCardE
         })}
       </CardContent>
       {confirmDialog}
+      <SimpleModal title="Hareketi düzenle" open={draft != null} onClose={() => (savingDraft ? null : setDraft(null))}>
+        {draft ? (
+          <form onSubmit={handleSaveDraft} className="flex flex-col gap-4">
+            <p className="text-xs text-ink-muted">
+              {cardsById.get(draft.expense.card_id)?.card_name ?? 'Kart'} · {formatDate(draft.expense.spent_at)} · {formatAmount(draft.expense.amount)}
+              {draft.expense.installment_count > 1 ? ` · ${draft.expense.installment_count} taksit (plan yeniden kurulur)` : ''}
+            </p>
+            <label className="block text-sm font-semibold text-ink">
+              Açıklama
+              <Input value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} className="mt-1" required />
+            </label>
+            <MoneyInput label={draft.expense.installment_count > 1 ? 'Toplam tutar' : 'Tutar'} value={draft.amount} onValueChange={(value) => setDraft({ ...draft, amount: value })} required />
+            <label className="block text-sm font-semibold text-ink">
+              Tarih
+              <input
+                type="date"
+                value={draft.spentAt}
+                max={dateInputValue(new Date())}
+                onChange={(event) => setDraft({ ...draft, spentAt: event.target.value })}
+                className="mt-1 min-h-11 w-full rounded-lg border border-line-strong bg-raised px-3 text-sm tabular-nums text-ink"
+              />
+            </label>
+            <label className="block text-sm font-semibold text-ink">
+              Kategori
+              <select
+                value={draft.category}
+                onChange={(event) => setDraft({ ...draft, category: event.target.value })}
+                className="mt-1 min-h-11 w-full rounded-lg border border-line-strong bg-raised px-3 text-sm text-ink"
+              >
+                {expenseCategories.map((category) => (
+                  <option key={category} value={category}>{category}</option>
+                ))}
+              </select>
+            </label>
+            {draftError ? <Alert variant="destructive">{draftError}</Alert> : null}
+            <div className="grid grid-cols-2 gap-2">
+              <Button type="button" variant="outline" onClick={() => setDraft(null)} disabled={savingDraft}>Vazgeç</Button>
+              <Button type="submit" disabled={savingDraft}>{savingDraft ? 'Kaydediliyor…' : 'Kaydet'}</Button>
+            </div>
+          </form>
+        ) : null}
+      </SimpleModal>
     </SurfaceCard>
   )
 }

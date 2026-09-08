@@ -23,7 +23,8 @@ import { buildCreditCardIdCheck, paymentOccurrenceInMonth, paymentUsesCreditCard
 import { sumTL } from '../utils/money'
 import { buildPaymentEstimateSuggestion } from '../utils/paymentEstimate'
 import { paidPaymentIdsInMonth } from '../utils/paymentHistory'
-import type { FinanceObligation, FinanceObligationsInput } from '../utils/obligations'
+import { buildPaymentObligation, type FinanceObligation, type FinanceObligationsInput } from '../utils/obligations'
+import { Button } from '../components/ui/button'
 import { useFinancePaymentDrawer } from '../hooks/useFinancePaymentDrawer'
 import { useCallback, useMemo, useState } from 'react'
 
@@ -448,6 +449,18 @@ export function PaymentsPage() {
                   {isPaid ? <Badge variant="success">Ödendi</Badge> : null}
                   {isRecurring && !isPaid ? <RefreshCw size={13} className="text-ink-muted" /> : null}
                   {payment.amount_status === 'estimated' && !isPaid ? <Badge variant="outline">Tahmini</Badge> : null}
+                  {/* Liste kartından doğrudan ödeme (UX turu B8): eskiden yalnız
+                      takvimde günü seçince ulaşılıyordu. */}
+                  {!isPaid ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={() => void openObligationPayment(buildPaymentObligation(payment, payment.due_date, planningData.cards), reload)}
+                      aria-label={`${payment.title} ödemesini yap`}
+                    >
+                      Öde
+                    </Button>
+                  ) : null}
                   {menu}
                 </div>
               </div>

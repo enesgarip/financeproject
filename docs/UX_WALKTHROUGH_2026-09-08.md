@@ -33,8 +33,9 @@ kesme arayüzü yok), push bildirimleri, "Ya şöyle olsaydı?" senaryoları.
 Etiketler: **M** mantık, **A** akış/etkileşim, **G** görsel, **Y** metin.
 
 **Durum (2026-09-08):** Kullanıcı hepsinin düzeltilmesine karar verdi. Paketler:
-UX-1 mantık (B1, B4, B5, B6, B11, B12, B15, B27) — ✅ uygulandı;
-UX-2 akış (B2, B3, B7, B8, B9, B10, B19, B20, B29); UX-3 görsel/metin (kalanlar).
+UX-1 mantık (B1, B4, B5, B6, B11, B12, B15, B27) — ✅ uygulandı (PR #223);
+UX-2 akış (B2, B3, B7, B8, B9, B10, B19, B20; B29 zaten vardı) — ✅ uygulandı;
+UX-3 görsel/metin (kalanlar).
 
 ### Yüksek
 

@@ -94,18 +94,21 @@ function obligationIcon(item: FinanceObligation) {
 
 function dayTotals(items: FinanceObligation[]) {
   const cashImpact = (item: FinanceObligation) => item.cashImpactAmount ?? item.amount
+  const live = items.filter((item) => !item.settled)
 
   return {
-    outflow: sumTL(items.filter((item) => item.direction === 'outflow').map(cashImpact)),
-    inflow: sumTL(items.filter((item) => item.direction === 'inflow').map(cashImpact)),
-    cardSettled: sumTL(items.filter((item) => item.settlement === 'credit_card').map((item) => item.amount)),
+    outflow: sumTL(live.filter((item) => item.direction === 'outflow').map(cashImpact)),
+    inflow: sumTL(live.filter((item) => item.direction === 'inflow').map(cashImpact)),
+    cardSettled: sumTL(live.filter((item) => item.settlement === 'credit_card').map((item) => item.amount)),
+    /** Bu gün ÖDENMİŞ kalemler (B10): hücrede soluk "✓" satırı. */
+    paid: sumTL(items.filter((item) => item.settled).map((item) => item.amount)),
   }
 }
 
 /** Ortak kısa TL biçimi — eksen etiketiyle aynı eşikleri kullanır. */
 const formatCalendarCellAmount = (amount: number) => formatCompactCurrency(amount).replace('₺', '').replace('K', 'b').replace('M', 'm')
 
-type CalendarCellLine = { compact: string; full: string; tone: 'outflow' | 'inflow' | 'card' }
+type CalendarCellLine = { compact: string; full: string; tone: 'outflow' | 'inflow' | 'card' | 'paid' }
 
 /**
  * Hücre satırları. Çıkış ve giriş AYNI GÜN birlikte gösterilir: eskiden `outflow > 0`
@@ -129,6 +132,11 @@ function calendarCellLines(
   if (lines.length === 0 && totals.cardSettled > 0) {
     lines.push({ compact: formatCalendarCellAmount(totals.cardSettled), full: `Kart ${formatAmount(totals.cardSettled)}`, tone: 'card' })
   }
+  // Ödenmiş kalemler soluk bir "✓" satırı olarak kalır; ay sonunda "ne ödedim"
+  // takvimden okunur (UX turu B10).
+  if (totals.paid > 0) {
+    lines.push({ compact: `✓${formatCalendarCellAmount(totals.paid)}`, full: `✓ ${formatAmount(totals.paid)} ödendi`, tone: 'paid' })
+  }
 
   return lines
 }
@@ -139,12 +147,14 @@ const CELL_LINE_CLASS: Record<CalendarCellLine['tone'], string> = {
   outflow: 'text-destructive',
   inflow: 'text-success',
   card: 'text-info',
+  paid: 'text-ink-muted line-through decoration-ink-muted/60',
 }
 
 const CELL_DOT_CLASS: Record<CalendarCellLine['tone'], string> = {
   outflow: 'bg-destructive',
   inflow: 'bg-success',
   card: 'bg-info',
+  paid: 'bg-ink-muted',
 }
 
 function SummaryStat({ label, value, tone = 'neutral', hint }: { label: string; value: string; tone?: 'neutral' | 'danger' | 'success'; hint?: HelpTooltipContent }) {
@@ -164,7 +174,8 @@ export function ObligationsCalendar({ data, loading = false, onPayObligation }: 
   const [visibleMonth, setVisibleMonth] = useState(() => startOfMonth(new Date()))
   const [selectedDate, setSelectedDate] = useState(today)
   const selectedDateInMonth = isDateInMonth(selectedDate, visibleMonth) ? selectedDate : dateInputValue(startOfMonth(visibleMonth))
-  const obligations = useMemo(() => buildFinanceObligationsForMonth(data, visibleMonth), [data, visibleMonth])
+  // includeSettled: ödenmiş kayıtlar hücrede iz bırakır (B10); özet onları saymaz.
+  const obligations = useMemo(() => buildFinanceObligationsForMonth(data, visibleMonth, { includeSettled: true }), [data, visibleMonth])
   const groupedByDate = useMemo(() => groupFinanceObligationsByDate(obligations), [obligations])
   // from: günü geçmiş maaş "yattı" sayılır, beklenen girişe tekrar girmez (B11).
   const summary = useMemo(() => summarizeFinanceObligations(obligations, { from: new Date() }), [obligations])
@@ -327,16 +338,17 @@ export function ObligationsCalendar({ data, loading = false, onPayObligation }: 
                             <div className="flex flex-wrap items-center gap-2">
                               <h4 className="min-w-0 truncate text-sm font-black text-ink">{item.title}</h4>
                               <Badge variant={obligationBadgeVariant(item)}>{obligationKindLabel(item)}</Badge>
+                              {item.settled ? <Badge variant="success">Ödendi</Badge> : null}
                               {item.isEstimate ? <Badge variant="outline">Tahmini</Badge> : null}
                             </div>
                             <p className="mt-1 text-xs font-medium text-ink-muted">{item.subtitle}</p>
                           </div>
                         </div>
                         <div className="flex shrink-0 items-center justify-between gap-3 sm:justify-end">
-                          <span className={cn('finance-value text-sm font-black tabular-nums', item.direction === 'inflow' ? 'text-success' : 'text-ink')}>
+                          <span className={cn('finance-value text-sm font-black tabular-nums', item.settled ? 'text-ink-muted line-through' : item.direction === 'inflow' ? 'text-success' : 'text-ink')}>
                             {item.direction === 'inflow' ? '+' : ''}{formatAmount(item.amount)}
                           </span>
-                          {item.action && onPayObligation ? (
+                          {item.settled ? null : item.action && onPayObligation ? (
                             <Button type="button" size="sm" variant={item.direction === 'inflow' ? 'success' : 'default'} onClick={() => onPayObligation(item)}>
                               {obligationActionLabel(item)}
                             </Button>

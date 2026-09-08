@@ -15,7 +15,6 @@ import { buildRepeatSuggestions, type RepeatSuggestion } from '../utils/expenseR
 import { buildClipboardPrefill } from '../utils/clipboardExpense'
 import { normalizeSmsWhitespace } from '../utils/smsParser'
 import { buildCardTimingChoices } from '../utils/cardTimingChoice'
-import { expenseCategoryOptions } from '../utils/categories'
 import { getCardStatementPeriod } from '../utils/cardStatement'
 import { buildPurchaseTimingHint } from '../utils/purchaseTiming'
 import { dateInputValue, formatDate } from '../utils/date'
@@ -36,18 +35,23 @@ export function QuickExpensePanel({
   setError,
   focus,
   formatAmount,
+  onSaved,
 }: {
   rows: Card[]
   reload: () => Promise<void>
   setError: (message: string) => void
   focus?: { cardId: string; mode: 'cash' | 'installment'; nonce: number } | null
   formatAmount?: (value: number | null | undefined) => string
+  /** Başarılı kayıttan sonra; aynı sayfadaki "Son kart hareketleri" listesi bununla tazelenir (UX turu B2). */
+  onSaved?: () => void
 }) {
   const [cardId, setCardId] = useState(() => getLastUsed('expenseCard'))
   const [amount, setAmount] = useState('')
   const [description, setDescription] = useState('')
   const [spentAt, setSpentAt] = useState(dateInputValue(new Date()))
-  const [category, setCategory] = useState(expenseCategoryOptions[0]?.value ?? 'Diğer')
+  // Varsayılan "Diğer": açıklama eşleşmeyince eskiden listenin ilki (Market)
+  // sessizce kalıyor ve analiz dağılımını kaydırıyordu (UX turu B19).
+  const [category, setCategory] = useState('Diğer')
   const [paymentMode, setPaymentMode] = useState<'cash' | 'installment'>('cash')
   const [installmentCount, setInstallmentCount] = useState('1')
   const [paidInstallments, setPaidInstallments] = useState('0')
@@ -377,7 +381,7 @@ export function QuickExpensePanel({
     setAmount('')
     setDescription('')
     setSpentAt(dateInputValue(new Date()))
-    setCategory(expenseCategoryOptions[0]?.value ?? 'Diğer')
+    setCategory('Diğer')
     setPaymentMode('cash')
     setInstallmentCount('1')
     setPaidInstallments('0')
@@ -386,6 +390,7 @@ export function QuickExpensePanel({
     clearPrefillOrigins()
     setCarId('')
     submissionIdentityRef.current = null
+    onSaved?.()
     await Promise.all([reload(), loadRecent()])
   }
 

@@ -430,7 +430,15 @@ export function SavingsGoalsPanel({
   }
 
   /** Plan kadar kovaya ayırır; harcanabilir tutar bu andan sonra gerçekten azalır. */
-  async function contributeToGoal(goalId: string, bucketId: string, amount: number) {
+  async function contributeToGoal(goalId: string, bucketId: string, amount: number, options: { again?: boolean; goalName?: string } = {}) {
+    // Tek tıkla onaysız ayırma ve yanındaki "Tekrar ayır" çift ayırmaya
+    // açıktı (UX turu B3): kova sanal ama "harcanabilir" bu andan sonra azalır.
+    const confirmed = await confirm({
+      title: options.again ? 'Tekrar ayır?' : 'Kovaya ayır?',
+      description: `${formatAmount(amount)} ${options.goalName ? `"${options.goalName}" ` : ''}kovasına ayrılacak; harcanabilir tutar bu kadar azalır. Bakiye değişmez.${options.again ? ' Bu ay zaten ayrılmıştı; ikinci kez ayırıyorsun.' : ''}`,
+      confirmLabel: options.again ? 'Tekrar ayır' : 'Ayır',
+    })
+    if (!confirmed) return
     setContributingGoalId(goalId)
     const result = await contributeToGoalBucket(bucketId, amount)
     setContributingGoalId(null)
@@ -916,7 +924,7 @@ export function SavingsGoalsPanel({
                                 <button
                                   type="button"
                                   disabled={busy}
-                                  onClick={() => void contributeToGoal(goal.id, plan.bucket.id, plan.monthlyNeeded)}
+                                  onClick={() => void contributeToGoal(goal.id, plan.bucket.id, plan.monthlyNeeded, { again: plan.contributedThisMonth, goalName: goal.name })}
                                   className="tap-target shrink-0 rounded-md px-2 py-1 text-[11px] font-bold text-primary hover:bg-primary/10 disabled:opacity-50"
                                 >
                                   {busy ? 'Ayrılıyor…' : plan.contributedThisMonth ? 'Tekrar ayır' : 'Ayır'}

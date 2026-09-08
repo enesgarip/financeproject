@@ -121,26 +121,36 @@ export async function findRecentSmsAccountDebit(
   return { occurredAt: row.occurred_at, title: row.title }
 }
 
+/** Gerçek ödeme günü desteklenen aksiyonlar (B9): planlı ödeme ve kredi taksiti. */
+export function obligationSupportsPaidAt(obligation: FinanceObligation | null | undefined): boolean {
+  return obligation?.action === 'pay_payment' || obligation?.action === 'pay_loan_installment'
+}
+
 export async function submitFinanceObligationPayment({
   obligation,
   account,
   amount,
   skipSourceDebit = false,
+  paidAt,
 }: {
   obligation: FinanceObligation
   account: Card
   amount: number
   skipSourceDebit?: boolean
+  /** Gerçek ödeme günü (YYYY-MM-DD). Boş/bugün ise RPC bugünü kullanır. */
+  paidAt?: string
 }): Promise<FinancePaymentResult> {
   if (!obligation.action) return { error: { message: 'Bu kayıt doğrudan ödenebilir bir aksiyon taşımıyor.' } }
 
   let submitError: SupabaseLikeError | null = null
+  const paidAtArg = paidAt ? { p_paid_at: paidAt } : {}
 
   if (obligation.action === 'pay_payment') {
     const { error } = await supabase.rpc('pay_payment', {
       p_payment_id: obligation.sourceId,
       p_source_card_id: account.id,
       p_paid_amount: amount,
+      ...paidAtArg,
     })
 
     submitError = error
@@ -170,6 +180,7 @@ export async function submitFinanceObligationPayment({
     const { error } = await supabase.rpc('pay_loan_installment', {
       p_installment_id: obligation.sourceId,
       p_source_card_id: account.id,
+      ...paidAtArg,
     })
     submitError = error
   } else if (obligation.action === 'settle_debt' || obligation.action === 'collect_debt') {

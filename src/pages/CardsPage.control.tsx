@@ -69,7 +69,13 @@ export function CardControlCenter({
   const totalCurrent = sumTL(items.map(({ card }) => card.current_period_spending))
   const totalProvision = sumTL(items.map(({ card }) => cardProvisionAmount(card)))
   const totalScheduled = sumTL(items.map(({ scheduledInstallmentTotal }) => scheduledInstallmentTotal))
-  const attentionCount = items.filter(({ reconciliationStatus }) => reconciliationStatus !== 'matched').length
+  // Borcu ve hareketi olmayan, hiç mutabakat görmemiş kart "kontrol bekliyor"
+  // sayılmaz: boş kartı bankayla karşılaştırmaya zorlamak gürültü (UX turu B20).
+  const attentionCount = items.filter(({ card, reconciliationStatus, openStatementAmount, scheduledInstallmentTotal }) => {
+    if (reconciliationStatus === 'matched') return false
+    const idle = card.debt_amount <= 0 && openStatementAmount <= 0 && scheduledInstallmentTotal <= 0
+    return !(idle && reconciliationStatus === 'never')
+  }).length
 
   // Limit kullanımı: paylaşımlı limit gruplarını doğru topla (kart başına toplama çift saymaz).
   const limitGroups = buildLimitGroupSummaries(rows)

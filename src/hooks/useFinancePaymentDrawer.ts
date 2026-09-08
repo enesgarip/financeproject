@@ -15,6 +15,8 @@ type AccountPaymentSubmit = {
   amount: number
   // B4: bakiye SMS/banka hareketiyle zaten düşülmüşse RPC tekrar düşmez.
   skipSourceDebit?: boolean
+  /** Gerçek ödeme günü (YYYY-MM-DD); yalnız planlı ödeme/kredi taksiti (UX turu B9). */
+  paidAt?: string
 }
 
 type FinancePaymentSubmitContext = AccountPaymentSubmit & {
@@ -85,7 +87,7 @@ export function useFinancePaymentDrawer() {
     setState((current) => (current ? { ...current, amountValue: value, error: '' } : current))
   }, [])
 
-  const handleSubmit = useCallback(async ({ account, amount, skipSourceDebit }: AccountPaymentSubmit) => {
+  const handleSubmit = useCallback(async ({ account, amount, skipSourceDebit, paidAt }: AccountPaymentSubmit) => {
     if (!state?.intent.action) return
 
     const current = state
@@ -98,6 +100,7 @@ export function useFinancePaymentDrawer() {
       account,
       amount,
       skipSourceDebit,
+      paidAt,
     })
     current.onSubmitEnd?.({ ...submitContext, error })
 

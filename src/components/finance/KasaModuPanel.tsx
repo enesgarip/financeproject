@@ -1,15 +1,14 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { Boxes, Plus, Pencil, Trash2, Wallet } from 'lucide-react'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useState } from 'react'
 import { useAuth } from '../../auth/useAuth'
 import {
   deleteKasaBucket,
-  fetchKasaBuckets,
   insertKasaBucket,
   updateKasaBucket,
 } from '../../data/repositories/kasaBucketsRepo'
 import { useBalancePrivacy } from '../../hooks/useBalancePrivacy'
-import { KASA_BUCKETS_QUERY_KEY } from '../../hooks/useSafeToSpend'
+import { KASA_BUCKETS_QUERY_KEY, useKasaBuckets } from '../../hooks/useSafeToSpend'
 import type { KasaBucket } from '../../types/database'
 import { parseNumber } from '../../utils/formatCurrency'
 import { spendableAfterReserves, totalReservedTL } from '../../utils/kasaMode'
@@ -31,9 +30,14 @@ export function KasaModuPanel({ liquidCash }: { liquidCash: number }) {
   const { user } = useAuth()
   const queryClient = useQueryClient()
   const { confirm, confirmDialog } = useConfirmDialog()
-  const [buckets, setBuckets] = useState<KasaBucket[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
+  // Kova listesi TanStack cache'inden gelir: hedef panelinin "Ayır"ı aynı
+  // anahtarı invalidate eder, bu liste de anında tazelenir (UX turu B3 —
+  // eskiden yerel state'ti ve sayfa yenilenene kadar eski rakam kalıyordu).
+  const bucketsQuery = useKasaBuckets()
+  const buckets: KasaBucket[] = bucketsQuery.data ?? []
+  const loading = bucketsQuery.isPending
+  const [mutationError, setError] = useState('')
+  const error = mutationError || (bucketsQuery.error ? bucketsQuery.error.message : '')
   const [modalOpen, setModalOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   const [editing, setEditing] = useState<KasaBucket | null>(null)
@@ -43,22 +47,9 @@ export function KasaModuPanel({ liquidCash }: { liquidCash: number }) {
   const [formError, setFormError] = useState('')
 
   const load = useCallback(async () => {
-    setLoading(true)
     setError('')
-    const result = await fetchKasaBuckets()
-    if (!result.ok) {
-      setError(result.error.message ?? 'Kasa kovaları yüklenemedi.')
-      setBuckets([])
-    } else {
-      setBuckets(result.data)
-    }
-    setLoading(false)
-  }, [])
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    void load()
-  }, [load])
+    await queryClient.invalidateQueries({ queryKey: KASA_BUCKETS_QUERY_KEY })
+  }, [queryClient])
 
   function openCreate() {
     setEditing(null)

@@ -1051,6 +1051,8 @@ export type Database = {
         Args: {
           p_installment_id: string
           p_source_card_id: string
+          /** Gerçek ödeme günü (YYYY-MM-DD); boşsa bugün. Migration 20260908140000 (B9). */
+          p_paid_at?: string
         }
         Returns: LoanInstallment
       }
@@ -1059,6 +1061,8 @@ export type Database = {
           p_payment_id: string
           p_source_card_id: string
           p_paid_amount?: number
+          /** Gerçek ödeme günü (YYYY-MM-DD); boşsa bugün. Migration 20260908140000 (B9). */
+          p_paid_at?: string
         }
         Returns: Payment
       }

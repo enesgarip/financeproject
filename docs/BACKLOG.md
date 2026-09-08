@@ -1,5 +1,29 @@
 # Priority Backlog
 
+## 2026-09-08 — Kullanıcı gözüyle tur: akış paketi (UX-2) UYGULANDI
+
+UX-2 kapsamı (bulgu numaraları `docs/UX_WALKTHROUGH_2026-09-08.md`):
+- **B2** Hızlı harcama kaydı `onSaved` → `RecentCardExpensesPanel` `refreshKey`
+  ile anında yenilenir.
+- **B3** Hedefe "Ayır / Tekrar ayır" onay diyaloğu; `KasaModuPanel` artık
+  `useKasaBuckets` cache'ini okur (Ayır sonrası kova listesi bayat kalmaz).
+- **B7** Kart harcaması menüsüne "Düzenle" (tutar/tarih/açıklama/kategori;
+  mevcut `update_card_expense` RPC'si).
+- **B8** Planlı ödeme kartında "Öde" düğmesi (`buildPaymentObligation` ortak
+  gövde; takvimle aynı kalem).
+- **B9** `pay_payment` / `pay_loan_installment` `p_paid_at` (migration
+  `20260908140000`): ödeme diyaloğunda "Ödeme günü" alanı (varsayılan bugün,
+  gelecek reddedilir); kart harcaması, taksit `paid_at` ve işlem geçmişi o güne
+  yazılır. Eski imzalar DROP edildi (default'lu yeni imza eski çağrıları karşılar).
+- **B10** Takvim `includeSettled`: ödenmiş planlı ödeme / kredi taksiti / ekstre
+  ödemesi hücrede soluk "✓ … ödendi" satırı ve seçili günde "Ödendi" rozeti;
+  özet/yük/sayımlara girmez.
+- **B19** Hızlı harcama varsayılan kategorisi "Diğer" (Market değil).
+- **B20** Borcu/hareketi olmayan, hiç mutabakat görmemiş kart "kontrol
+  bekliyor" sayılmaz.
+- **B29** Zaten vardı: kaynak hesap `lastUsed` ile hatırlanıyor (ilk kullanımdan
+  sonra ön-seçili); kod değişmedi.
+
 ## 2026-09-08 — Kullanıcı gözüyle tur: mantık paketi (UX-1) UYGULANDI
 
 `docs/UX_WALKTHROUGH_2026-09-08.md`: yerel seed üzerinde bir ay döngüsü gerçek
