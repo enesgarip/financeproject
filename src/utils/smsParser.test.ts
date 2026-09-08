@@ -211,6 +211,22 @@ describe('parseDenizbankIncomingAccountSms', () => {
     expect(parsed?.occurredAt).toBe('2026-07-31T09:13+03:00')
     expect(accountSmsNeedsExternalEventId(parsed!)).toBe(true)
   })
+
+  it('2026-09-08 vakası: gerçek FAST SMS\'inde gönderici adı olduğu gibi çıkar (kişisel alacak eşlemesinin girdisi)', () => {
+    const sms =
+      "Degerli Musterimiz, 08.09.2026 18:33:58'da FURKAN KURTULDU gondericisinden 4230-13300128-351 numarali hesabiniza FAST ile 8.000,00 TL tutarinda para girisi gerceklesmistir. Bilgi:08502220800 Mersis:0292008449600341 B002"
+    const parsed = parseDenizbankIncomingAccountSms(sms)
+    expect(parsed).toEqual({
+      type: 'account',
+      occurredAt: '2026-09-08T18:33:58+03:00',
+      accountNumber: '4230-13300128-351',
+      counterparty: 'FURKAN KURTULDU',
+      amount: 8000,
+      direction: 'in',
+      transactionType: 'FAST',
+    })
+    expect(accountSmsNeedsExternalEventId(parsed!)).toBe(false)
+  })
 })
 
 // -- parseSms (tüm bankalar) --------------------------------------------------

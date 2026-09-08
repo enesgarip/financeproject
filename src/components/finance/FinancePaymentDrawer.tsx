@@ -4,11 +4,11 @@ import {
   amountLabelForObligation,
   emptyAccountMessageForObligation,
   estimatedMinimumCardPayment,
-  findRecentSmsAccountDebit,
+  findRecentSmsAccountMovement,
   modalTitleForObligation,
   obligationAmountEditable,
   submitLabelForObligation,
-  type RecentSmsAccountDebit,
+  type RecentSmsAccountMovement,
 } from '../../services/financePaymentActions'
 import { obligationSupportsPaidAt } from '../../services/financePaymentActions'
 import type { Card } from '../../types/database'
@@ -84,19 +84,24 @@ export function FinancePaymentDrawer({
   // Sonuç, sorgulandığı (hesap, tutar) anahtarıyla saklanır; anahtar değişince
   // eski sonuç render'da geçersiz sayılır (effect'te senkron temizlik gerekmez).
   const isCardPayment = intent?.action === 'pay_card_debt' || intent?.action === 'pay_card_statement'
-  const [smsDebit, setSmsDebit] = useState<{ key: string; match: RecentSmsAccountDebit | null }>({ key: '', match: null })
+  // Kişisel alacak/borç da aynı tuzağa düşer: gelen FAST SMS'i bakiyeyi
+  // artırdıktan sonra "Tahsil et" ikinci kez ekliyordu. Yön alacakta giriş.
+  const isPersonalDebt = intent?.action === 'collect_debt' || intent?.action === 'settle_debt'
+  const smsDirection: 'in' | 'out' = intent?.action === 'collect_debt' ? 'in' : 'out'
+  const supportsSkip = isCardPayment || isPersonalDebt
+  const [smsDebit, setSmsDebit] = useState<{ key: string; match: RecentSmsAccountMovement | null }>({ key: '', match: null })
   const [skipDebitChecked, setSkipDebitChecked] = useState(true)
   const parsedAmount = parseNumber(amountValue)
-  const smsDebitKey = open && isCardPayment && selectedAccountId && parsedAmount > 0
-    ? `${selectedAccountId}:${parsedAmount}`
+  const smsDebitKey = open && supportsSkip && selectedAccountId && parsedAmount > 0
+    ? `${selectedAccountId}:${parsedAmount}:${smsDirection}`
     : ''
 
   useEffect(() => {
     if (!smsDebitKey) return
 
     let cancelled = false
-    const [accountId, rawAmount] = smsDebitKey.split(':')
-    void findRecentSmsAccountDebit(accountId, Number(rawAmount)).then((match) => {
+    const [accountId, rawAmount, direction] = smsDebitKey.split(':')
+    void findRecentSmsAccountMovement(accountId, Number(rawAmount), direction === 'in' ? 'in' : 'out').then((match) => {
       if (cancelled) return
       setSmsDebit({ key: smsDebitKey, match })
       if (match) setSkipDebitChecked(true)
@@ -161,7 +166,7 @@ export function FinancePaymentDrawer({
       amountEditable={obligationAmountEditable(intent)}
       accountPreviewAmount={(amount) =>
         skipSourceDebit ? 0 : intent?.action === 'collect_debt' ? -amount : amount}
-      extraControls={isCardPayment && smsDebitMatch ? (
+      extraControls={supportsSkip && smsDebitMatch ? (
         <label className="flex items-start gap-2.5 rounded-xl border border-warning/25 bg-warning/8 p-3 text-xs font-medium text-warning">
           <input
             type="checkbox"
@@ -171,8 +176,8 @@ export function FinancePaymentDrawer({
           />
           <span>
             Bu hesapta {formatDate(smsDebitMatch.occurredAt.slice(0, 10))} tarihli aynı tutarlı SMS hareketi var
-            (&quot;{smsDebitMatch.title}&quot;) — bakiye muhtemelen zaten düştü. İşaretliyken hesap bakiyesi{' '}
-            <strong>tekrar düşülmez</strong>; yalnız borç/ekstre kaydı kapatılır.
+            (&quot;{smsDebitMatch.title}&quot;) — bakiye muhtemelen zaten {smsDirection === 'in' ? 'arttı' : 'düştü'}. İşaretliyken hesap bakiyesi{' '}
+            <strong>{smsDirection === 'in' ? 'tekrar artırılmaz' : 'tekrar düşülmez'}</strong>; yalnız {isPersonalDebt ? 'kişisel kayıt' : 'borç/ekstre kaydı'} kapatılır.
           </span>
         </label>
       ) : null}
