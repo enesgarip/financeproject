@@ -1006,6 +1006,17 @@ export type Database = {
         }
         Returns: Asset
       }
+      update_asset_value: {
+        Args: {
+          p_asset_id: string
+          p_value: number
+          /** Dönemde yatırılan (katkı payı, devlet katkısı); eksi = çekim. */
+          p_contribution?: number | null
+          p_occurred_at?: string | null
+          p_note?: string | null
+        }
+        Returns: Asset
+      }
       contribute_to_goal_bucket: {
         Args: {
           p_bucket_id: string
