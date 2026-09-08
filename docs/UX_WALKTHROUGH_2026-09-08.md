@@ -34,8 +34,10 @@ Etiketler: **M** mantık, **A** akış/etkileşim, **G** görsel, **Y** metin.
 
 **Durum (2026-09-08):** Kullanıcı hepsinin düzeltilmesine karar verdi. Paketler:
 UX-1 mantık (B1, B4, B5, B6, B11, B12, B15, B27) — ✅ uygulandı (PR #223);
-UX-2 akış (B2, B3, B7, B8, B9, B10, B19, B20; B29 zaten vardı) — ✅ uygulandı;
-UX-3 görsel/metin (kalanlar).
+UX-2 akış (B2, B3, B7, B8, B9, B10, B19, B20; B29 zaten vardı) — ✅ uygulandı (PR #224);
+UX-3 görsel/metin (B13, B14, B16, B17, B18, B21, B22, B23, B24, B25, B26, B28) — ✅ uygulandı.
+Not: B10'da ödenmiş planlı ödeme, tekrarsız kayıtta vade gününde iz bırakır (ödeme
+günü işlem geçmişinde); kredi taksiti ve ekstre ödemesi gerçek ödeme gününde görünür.
 
 ### Yüksek
 

@@ -150,6 +150,9 @@ export function PlanningPage() {
   // işareti localStorage'a yazılır — aynı ay ikinci kez dürtmez.
   const queryClient = useQueryClient()
   const [bridgeBusy, setBridgeBusy] = useState(false)
+  // Bütçe kayıt kartları ilerleme çubuklarını tekrar ediyordu (UX turu B24):
+  // liste varsayılan gizli, "Kayıtları yönet" ile açılır (silme/düzenleme orada).
+  const [manageBudgets, setManageBudgets] = useState(false)
   const [bridgeError, setBridgeError] = useState('')
   const [bridgeDoneMonth, setBridgeDoneMonth] = useState<string | null>(null)
   const bridgeMarkerKey = userId ? `denge:budget-bridge:${userId}:${monthStartIso.slice(0, 7)}` : null
@@ -400,6 +403,7 @@ export function PlanningPage() {
           emptyDescription="Kategori bazlı aylık limit ekleyerek harcama takibini başlatabilirsin."
           orderBy="month"
           orderAscending={false}
+          showList={manageBudgets}
           renderBeforeList={({ loading: crudLoading, rows, reload }) => {
             if (crudLoading) return null
             const bridge = bridgeDismissed
@@ -430,6 +434,22 @@ export function PlanningPage() {
                     ) : null}
                   </div>
                 ) : null}
+              {/* Liste gizliyken CrudPage'in arama/ekle çubuğu da gizlenir; bu
+                  düğme hem ilk bütçeyi eklemenin hem düzenle/sil'in kapısı. */}
+              <div className="mb-2 flex justify-end">
+                <button
+                  type="button"
+                  aria-expanded={manageBudgets}
+                  onClick={() => setManageBudgets((value) => !value)}
+                  className="min-h-11 text-sm font-semibold text-primary"
+                >
+                  {manageBudgets
+                    ? 'Kayıt listesini gizle'
+                    : (rows as Budget[]).length > 0
+                      ? 'Kayıtları yönet (ekle / düzenle / sil)'
+                      : 'Bütçe ekle'}
+                </button>
+              </div>
               <BudgetProgress
                 budgets={rows as Budget[]}
                 expenses={cardExpenses}

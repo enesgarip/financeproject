@@ -441,7 +441,7 @@ export function PaymentsPage() {
                     {isAuto ? <CreditCard className="size-5" /> : <Receipt className="size-5" />}
                   </div>
                   <div className="min-w-0">
-                    <h2 className="truncate text-base font-black text-ink">{payment.title}</h2>
+                    <h2 className="line-clamp-2 text-base font-black leading-snug text-ink">{payment.title}</h2>
                     <p className="mt-0.5 text-xs text-ink-muted">{payment.category} · {getPaymentScheduleLabel(payment)}</p>
                   </div>
                 </div>

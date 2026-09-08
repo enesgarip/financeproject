@@ -60,6 +60,12 @@ describe('formatCompactCurrency', () => {
     expect(formatCompactCurrency(18_500)).toBe('₺19K')
   })
 
+  it('10 binin altında bir ondalık tutar (4.800 "5K" değil "4,8K" — UX turu B21)', () => {
+    expect(formatCompactCurrency(4_800)).toBe('₺4,8K')
+    expect(formatCompactCurrency(5_000)).toBe('₺5K')
+    expect(formatCompactCurrency(-3_400)).toBe('-₺3,4K')
+  })
+
   it('bin altını olduğu gibi yazar', () => {
     expect(formatCompactCurrency(940)).toBe('₺940')
     expect(formatCompactCurrency(0)).toBe('₺0')

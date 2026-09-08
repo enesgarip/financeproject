@@ -204,7 +204,7 @@ export function CategorySpendingChart({ data }: { data: AnalysisData }) {
   )
 
   return (
-    <Card className="border-line-strong lg:col-span-5">
+    <Card className="border-line-strong lg:col-span-7">
       <CardHeader className="pb-0">
         <div className="flex items-start justify-between gap-3">
           <div>

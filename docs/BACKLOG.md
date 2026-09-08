@@ -1,5 +1,26 @@
 # Priority Backlog
 
+## 2026-09-08 — Kullanıcı gözüyle tur: görsel/metin paketi (UX-3) UYGULANDI
+
+UX-3 kapsamı (bulgu numaraları `docs/UX_WALKTHROUGH_2026-09-08.md`):
+- **B13** Altın sayfası boş durumu Varlıklar'daki altın kaydını söyler (iki model köprüsü).
+- **B14** Analiz: kategori dağılımı 7/12 + abonelikler 5/12 yan yana, fiyat radarı
+  tam satır; Krediler listesi xl'de 2 sütun; Özet sağ sütunu yapışkan.
+- **B16** Aktivite akışı: "Tümü" görünümünde otomatik ledger yankısı (±2 dk aynı
+  tutarlı geçmiş kaydı varsa) gizlenir; geçmiş metinleri `turkishizeHistoryText`
+  ile Türkçe karaktere çevrilir (SQL ASCII yazmaya devam eder).
+- **B17** Taksit takvimi: bu ayın taksiti dönem içindeyse "Taksit yok" yerine
+  açıklama; "₺· N taksit" boşluğu.
+- **B18** Hızlı harcama çipi: "Kart borcu …" / "… provizyon bekliyor" / "Hesap bakiyesi …".
+- **B21** `formatCompactCurrency` 10 binin altında bir ondalık ("4,8K").
+- **B22** Arama yer tutucusu "Ara"; planlı ödeme başlığı 2 satır; kur kaynağı satırı sarar.
+- **B23** Hedef kartında cümle/düğme boşluğu.
+- **B24** Hedefler sayfasında bütçe kayıt listesi varsayılan gizli ("Kayıtları yönet").
+- **B25** Asistan yapılandırma hatası anlaşılır cümle.
+- **B26** Özet vadeleri: kişisel alacak listelenir; "N vade daha göster".
+- **B28** Seed: Ali (TRY, amount=1, currency) ve varlık teknik alanları
+  DataHealth sözleşmesine uygun → temiz seed 0 uyarı.
+
 ## 2026-09-08 — Kullanıcı gözüyle tur: akış paketi (UX-2) UYGULANDI
 
 UX-2 kapsamı (bulgu numaraları `docs/UX_WALKTHROUGH_2026-09-08.md`):

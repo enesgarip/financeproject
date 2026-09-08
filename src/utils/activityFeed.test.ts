@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { TransactionHistory, TransactionHistoryType } from '../types/database'
+import type { CardLedger, TransactionHistory, TransactionHistoryType } from '../types/database'
 import { buildActivityFeed } from './activityFeed'
 
 function tx(type: TransactionHistoryType, title: string, note: string | null = null, source_table: string | null = null): TransactionHistory {
@@ -61,5 +61,23 @@ describe('transaction history activity directions', () => {
     )
     expect(reclass!.direction).toBe('neutral')
     expect(reclass!.title).toBe('Borç kırılımı kayması')
+  })
+})
+
+describe('buildActivityFeed — otomatik ledger yankısı (UX turu B16)', () => {
+  const ledgerBase = { id: 'cl1', user_id: 'u', card_id: 'c1', kind: 'debit', amount_kurus: 85000, statement_delta_kurus: 0, current_delta_kurus: 85000, provision_delta_kurus: 0, note: 'Borç değişimi (otomatik kayıt)', occurred_at: '2026-09-08T13:00:30.000Z', created_at: '2026-09-08T13:00:30.000Z' } as unknown as CardLedger
+  const cards = [{ id: 'c1', card_name: 'Bonus Gold' }]
+
+  it('"Tümü" görünümünde aynı tutarlı geçmiş kaydı varsa otomatik satır gizlenir', () => {
+    const history = { ...tx('card', 'Migros', 'Pesin kart harcamasi.'), amount: 850, occurred_at: '2026-09-08T13:00:31.000Z' }
+    const all = buildActivityFeed([ledgerBase], [], [history], cards, 'all')
+    expect(all.map((item) => item.source)).toEqual(['transaction_history'])
+    expect(all[0].detail).toBe('Peşin kart harcaması.')
+  })
+
+  it('geçmiş kaydı yoksa ya da filtre ledger ise otomatik satır kalır', () => {
+    expect(buildActivityFeed([ledgerBase], [], [], cards, 'all')).toHaveLength(1)
+    const history = { ...tx('card', 'Migros', null), amount: 850, occurred_at: '2026-09-08T13:00:31.000Z' }
+    expect(buildActivityFeed([ledgerBase], [], [history], cards, 'card_ledger')).toHaveLength(1)
   })
 })

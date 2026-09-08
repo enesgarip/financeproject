@@ -86,7 +86,7 @@ function debt(overrides: Partial<Debt>): Debt {
 }
 
 describe('buildDashboardUpcomingItems', () => {
-  it('uses obligations for dashboard outflows and keeps receivables out of the load list', () => {
+  it('uses obligations for dashboard outflows and lists receivables as inflow rows (UX turu B26)', () => {
     const items = buildDashboardUpcomingItems(
       {
         cards: [card({ id: 'card', statement_debt_amount: 2000 })],
@@ -101,9 +101,12 @@ describe('buildDashboardUpcomingItems', () => {
       new Date(2026, 5, 1),
     )
 
-    expect(items.map((item) => [item.kind, item.amount])).toEqual([
-      ['payment', 5000],
-      ['card', 2000],
+    // Alacak "Ay sonuna kalan"da sayılıyordu ama listede yoktu; artık kendi
+    // yönüyle (inflow) listelenir — yük satırı değil.
+    expect(items.map((item) => [item.kind, item.amount, item.direction])).toEqual([
+      ['payment', 5000, 'outflow'],
+      ['debt', 1000, 'inflow'],
+      ['card', 2000, 'outflow'],
     ])
   })
 

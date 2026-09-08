@@ -72,6 +72,16 @@ function useAssistantExtras() {
 }
 
 /** Bugünkü mesajda yalnız saat; eski mesajda gün + saat. */
+/**
+ * Edge fonksiyonu yapılandırma hatasını ham env adıyla döner ("GEMINI_API_KEY
+ * tanımlı değil"); kullanıcıya anlaşılır cümle (UX turu B25).
+ */
+function friendlyAssistantError(message: string): string {
+  if (/GEMINI_API_KEY/i.test(message)) return 'Asistan bu ortamda yapılandırılmamış: yapay zekâ anahtarı tanımlı değil.'
+  if (/failed to fetch|networkerror|network error/i.test(message)) return 'Asistana ulaşılamadı; bağlantını kontrol edip tekrar dene.'
+  return message
+}
+
 function chatStamp(createdAt: string, now = new Date()) {
   const date = new Date(createdAt)
   const time = date.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })
@@ -272,7 +282,7 @@ export function AssistantPage() {
 
       {send.isError && !send.isPending ? (
         <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-destructive/20 bg-destructive/8 px-3 py-2">
-          <p className="text-sm text-destructive">{send.error.message}</p>
+          <p className="text-sm text-destructive">{friendlyAssistantError(send.error.message)}</p>
           <Button variant="outline" size="sm" onClick={handleRetry}>
             Tekrar dene
           </Button>

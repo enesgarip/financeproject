@@ -10,7 +10,8 @@
 import type { AccountLedger, CardLedger, TransactionHistory } from '../types/database'
 
 type CardLike = { id: string; card_name: string }
-import { toTL } from './money'
+import { turkishizeHistoryText } from './historyText'
+import { equalsTL, toTL } from './money'
 import { normalizeSearchText } from './searchText'
 
 export type ActivityItem = {
@@ -118,12 +119,35 @@ function transactionToActivity(tx: TransactionHistory): ActivityItem {
     id: `th-${tx.id}`,
     timestamp: tx.occurred_at,
     icon: TX_TYPE_ICON[tx.type] ?? 'payment',
-    title: tx.title,
-    detail: tx.note,
+    // SQL ASCII yazar; ekranda Türkçe (B16). Yön tespiti ham metinden yapılır.
+    title: turkishizeHistoryText(tx.title),
+    detail: tx.note ? turkishizeHistoryText(tx.note) : tx.note,
     amountTL: tx.amount,
     direction: transactionDirection(tx),
     source: 'transaction_history',
   }
+}
+
+const AUTO_LEDGER_NOTE = /\(otomatik kayıt\)/
+const AUTO_LEDGER_WINDOW_MS = 2 * 60 * 1000
+
+/**
+ * "Tümü" görünümünde trigger'ın otomatik ledger satırı, aynı anda aynı tutarla
+ * yazılmış geçmiş kaydının yanında ikinci bir satır olarak duruyordu (her işlem
+ * çift görünüyordu — UX turu B16). Otomatik satır, ±2 dk içinde aynı tutarlı bir
+ * geçmiş kaydı varsa gizlenir; "Kart borcu" / "Hesap" filtrelerinde tümü kalır.
+ */
+function dropAutoLedgerEchoes(items: ActivityItem[]): ActivityItem[] {
+  const history = items.filter((item) => item.source === 'transaction_history')
+  if (history.length === 0) return items
+  return items.filter((item) => {
+    if (item.source === 'transaction_history' || !item.detail || !AUTO_LEDGER_NOTE.test(item.detail)) return true
+    const at = new Date(item.timestamp).getTime()
+    return !history.some(
+      (tx) => tx.amountTL != null && item.amountTL != null && equalsTL(tx.amountTL, item.amountTL)
+        && Math.abs(new Date(tx.timestamp).getTime() - at) <= AUTO_LEDGER_WINDOW_MS,
+    )
+  })
 }
 
 export type ActivityFilter = 'all' | 'card_ledger' | 'account_ledger' | 'transaction_history'
@@ -147,8 +171,9 @@ export function buildActivityFeed(
     for (const tx of transactionHistory) items.push(transactionToActivity(tx))
   }
 
-  items.sort((a, b) => b.timestamp.localeCompare(a.timestamp))
-  return items
+  const visible = filter === 'all' ? dropAutoLedgerEchoes(items) : items
+  visible.sort((a, b) => b.timestamp.localeCompare(a.timestamp))
+  return visible
 }
 
 export function groupByDate(items: ActivityItem[]): Map<string, ActivityItem[]> {
