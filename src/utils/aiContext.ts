@@ -21,7 +21,7 @@
  * bölümler SONDAN atılır — bölüm ortasından kırpma yok (yarım cümle LLM'i
  * yanıltır, eksik bölüm yanıltmaz).
  *
- * Para gösterimi formatSeritAmount ("12.480 ₺"): hem uygulama diliyle tutarlı
+ * Para gösterimi formatSeritAmount ("12.480,00 ₺"): hem uygulama diliyle tutarlı
  * hem token açısından ucuz. Toplama sumTL ile (money.ts disiplini); kur,
  * lt/100km ve altın-birim gösterimleri bilinçli para-dışıdır (formatNumber).
  */

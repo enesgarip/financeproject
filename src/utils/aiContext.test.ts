@@ -219,15 +219,15 @@ describe('buildAiFinanceContext', () => {
     const out = buildAiFinanceContext(richInput(), { now: NOW })
 
     expect(out).toContain('FİNANSAL POZİSYON')
-    expect(out).toContain('12.480 ₺') // kart borcu
+    expect(out).toContain('12.480,00 ₺') // kart borcu
     expect(out).toContain("kesim ayın 15'i")
-    expect(out).toContain('Banka Vadesiz (banka hesabı): bakiye 5.000 ₺')
-    expect(out).toContain('İhtiyaç: kalan 45.000 ₺, 12 taksit, aylık 3.750 ₺')
-    expect(out).toContain('Ali: borcum 5.000 ₺')
-    expect(out).toContain('Kira 15.000 ₺, aylık tekrar')
-    expect(out).toContain('Tatil: hedef 100.000 ₺, biriken 40.000 ₺')
-    expect(out).toContain('Altın 120.000 ₺')
-    expect(out).toContain('Migros 450 ₺ [Market]')
+    expect(out).toContain('Banka Vadesiz (banka hesabı): bakiye 5.000,00 ₺')
+    expect(out).toContain('İhtiyaç: kalan 45.000,00 ₺, 12 taksit, aylık 3.750,00 ₺')
+    expect(out).toContain('Ali: borcum 5.000,00 ₺')
+    expect(out).toContain('Kira 15.000,00 ₺, aylık tekrar')
+    expect(out).toContain('Tatil: hedef 100.000,00 ₺, biriken 40.000,00 ₺')
+    expect(out).toContain('Altın 120.000,00 ₺')
+    expect(out).toContain('Migros 450,00 ₺ [Market]')
     // İptal edilen harcama hiçbir listede görünmez.
     expect(out).not.toContain('İptal')
   })
@@ -237,12 +237,12 @@ describe('buildAiFinanceContext', () => {
     const section = sectionOf(out, 'KART TAKSİT TAKVİMİ')
 
     expect(section).toBeDefined()
-    expect(section).toContain('Eylül 2026 1.400 ₺')
-    expect(section).toContain('Ekim 2026 1.400 ₺')
+    expect(section).toContain('Eylül 2026 1.400,00 ₺')
+    expect(section).toContain('Ekim 2026 1.400,00 ₺')
     // Ağustos'taki tek satır posted: aylık toplamda görünmez.
     expect(section).not.toContain('Ağustos 2026')
     // Plan satırı: kalan scheduled sayısı / toplam taksit + bitiş ayı.
-    expect(section).toContain('Telefon (Banka Bonus): aylık 1.400 ₺, kalan 2/6 taksit, bitiş Ekim 2026')
+    expect(section).toContain('Telefon (Banka Bonus): aylık 1.400,00 ₺, kalan 2/6 taksit, bitiş Ekim 2026')
   })
 
   it('gelecek ayın bilinen kalemlerini ayrı bölümde verir', () => {
@@ -250,8 +250,8 @@ describe('buildAiFinanceContext', () => {
     const section = sectionOf(out, 'GELECEK AY (Eylül 2026)')
 
     expect(section).toBeDefined()
-    expect(section).toContain('maaş 62.000 ₺')
-    expect(section).toContain('planlı ödeme 15.000 ₺')
+    expect(section).toContain('maaş 62.000,00 ₺')
+    expect(section).toContain('planlı ödeme 15.000,00 ₺')
   })
 
   it('bütçede limitle birlikte gerçekleşmeyi basar; kurallı limit türetilir', () => {
@@ -266,16 +266,16 @@ describe('buildAiFinanceContext', () => {
     const out = buildAiFinanceContext(input, { now: NOW })
     const section = sectionOf(out, 'BU AYIN BÜTÇELERİ')
 
-    expect(section).toContain('Market: limit 10.000 ₺, harcanan 450 ₺ (%5)')
+    expect(section).toContain('Market: limit 10.000,00 ₺, harcanan 450,00 ₺ (%5)')
     // Ort. (1000+2000+3000)/3 = 2000 × 1,5 = 3000; kural etiketi görünür.
-    expect(section).toContain('Ulaşım: limit 3.000 ₺ [kural: Son 3 ay ort.')
+    expect(section).toContain('Ulaşım: limit 3.000,00 ₺ [kural: Son 3 ay ort.')
   })
 
   it('kaynak-takipli hedefin birikenini ekranlarla aynı türetmeyle basar', () => {
     const out = buildAiFinanceContext(richInput(), { now: NOW })
     const section = sectionOf(out, 'BİRİKİM HEDEFLERİ')
 
-    expect(section).toContain('Takipli: hedef 200.000 ₺, biriken 120.000 ₺ — kaynaklardan türetildi')
+    expect(section).toContain('Takipli: hedef 200.000,00 ₺, biriken 120.000,00 ₺ — kaynaklardan türetildi')
     expect(section).toContain('Karma: karma hedef, 0/0 bileşen hedefinde')
   })
 
@@ -301,9 +301,9 @@ describe('buildAiFinanceContext', () => {
       buildAiFinanceContext(input, { now: NOW, kasaBuckets: [bucket({ id: 'b1' })], ratesSnapshot: ratesSnapshot() }),
       'BİRİKİM HEDEFLERİ',
     )
-    expect(full).toContain('Kovalı: hedef 50.000 ₺, biriken 7.500 ₺ — kaynaklardan türetildi')
-    // 10 gram × 4.850 TL alış = 48.500 ₺ türetilmiş hedef.
-    expect(full).toContain('Altın Çıpalı: hedef 48.500 ₺ (çıpa: 10 gram altın karşılığı)')
+    expect(full).toContain('Kovalı: hedef 50.000,00 ₺, biriken 7.500,00 ₺ — kaynaklardan türetildi')
+    // 10 gram × 4.850 TL alış = 48.500,00 ₺ türetilmiş hedef.
+    expect(full).toContain('Altın Çıpalı: hedef 48.500,00 ₺ (çıpa: 10 gram altın karşılığı)')
   })
 
   it('kredi limit gruplarını doluluk oranıyla basar', () => {
@@ -311,7 +311,7 @@ describe('buildAiFinanceContext', () => {
     const section = sectionOf(out, 'KREDİ LİMİTLERİ')
 
     // 12.480 / 50.000 = %25; kullanılabilir = limit − borç.
-    expect(section).toContain('limit 50.000 ₺, kullanılan 12.480 ₺ (%25), kullanılabilir 37.520 ₺')
+    expect(section).toContain('limit 50.000,00 ₺, kullanılan 12.480,00 ₺ (%25), kullanılabilir 37.520,00 ₺')
     // Banka hesabı limit grubuna girmez.
     expect(section).not.toContain('Vadesiz')
   })
@@ -337,7 +337,7 @@ describe('buildAiFinanceContext', () => {
     expect(section).toContain('Netflix')
     expect(section).toContain('(3 aydır)')
     // Aylık tekrarlı bekleyen ödeme de düzenli gider sayılır, kaynağı işaretlenir.
-    expect(section).toContain('Kira: ~15.000 ₺/ay [planlı ödeme]')
+    expect(section).toContain('Kira: ~15.000,00 ₺/ay [planlı ödeme]')
   })
 
   it('ekstre geçmişini eski→yeni basar, açık ekstreyi işaretler', () => {
@@ -348,7 +348,7 @@ describe('buildAiFinanceContext', () => {
     ]
 
     const section = sectionOf(buildAiFinanceContext(input, { now: NOW }), 'EKSTRE GEÇMİŞİ')
-    expect(section).toContain('Banka Bonus: Tem 2026 9.000 ₺ → Ağu 2026 8.000 ₺ (açık)')
+    expect(section).toContain('Banka Bonus: Tem 2026 9.000,00 ₺ → Ağu 2026 8.000,00 ₺ (açık)')
   })
 
   it('kredinin bitiş ayını ödenmemiş son taksitten türetir', () => {
@@ -384,7 +384,7 @@ describe('buildAiFinanceContext', () => {
     ]
 
     const out = buildAiFinanceContext(input, { now: NOW })
-    expect(out).toContain('Vadesiz (banka hesabı): bakiye 5.000 ₺; son banka doğrulaması 12 Ağu 2026')
+    expect(out).toContain('Vadesiz (banka hesabı): bakiye 5.000,00 ₺; son banka doğrulaması 12 Ağu 2026')
   })
 
   it('kasa kovalarını, araçları, bağlamları ve alsam-mı listesini basar', () => {
@@ -402,11 +402,11 @@ describe('buildAiFinanceContext', () => {
       wishlistItems: [wishlistItem({}), wishlistItem({ id: 'w2', name: 'Alınan', is_purchased: true })],
     })
 
-    expect(sectionOf(out, 'KASA KOVALARI')).toContain('Acil fon: 7.500 ₺')
-    expect(sectionOf(out, 'ARAÇLAR')).toContain('Egea: bu ay 2.000 ₺')
-    expect(sectionOf(out, 'GİDER BAĞLAMLARI')).toContain('Tatil 2026 (Seyahat / Tatil): toplam 4.000 ₺')
+    expect(sectionOf(out, 'KASA KOVALARI')).toContain('Acil fon: 7.500,00 ₺')
+    expect(sectionOf(out, 'ARAÇLAR')).toContain('Egea: bu ay 2.000,00 ₺')
+    expect(sectionOf(out, 'GİDER BAĞLAMLARI')).toContain('Tatil 2026 (Seyahat / Tatil): toplam 4.000,00 ₺')
     const wishlist = sectionOf(out, 'ALSAM MI LİSTESİ')
-    expect(wishlist).toContain('Kulaklık: ~12.000 ₺')
+    expect(wishlist).toContain('Kulaklık: ~12.000,00 ₺')
     // Satın alınmış madde listelenmez.
     expect(wishlist).not.toContain('Alınan')
   })
@@ -422,8 +422,8 @@ describe('buildAiFinanceContext', () => {
     })
 
     const section = sectionOf(out, 'NET DEĞER TRENDİ')
-    expect(section).toContain('Bugün: 500.000 ₺')
-    expect(section).toContain('1 ay önce: 480.000 ₺')
+    expect(section).toContain('Bugün: 500.000,00 ₺')
+    expect(section).toContain('1 ay önce: 480.000,00 ₺')
     expect(section).toContain('artış')
   })
 
@@ -452,10 +452,10 @@ describe('buildAiFinanceContext', () => {
     const out = buildAiFinanceContext(richInput(), { now: NOW })
 
     const trend = sectionOf(out, 'AYLIK KART HARCAMASI TRENDİ')
-    expect(trend).toContain('Ağu 2026 750 ₺')
+    expect(trend).toContain('Ağu 2026 750,00 ₺')
 
     const history = sectionOf(out, 'SON HAREKETLER')
-    expect(history).toContain('27 Ağu 2026: Kira ödemesi 15.000 ₺')
+    expect(history).toContain('27 Ağu 2026: Kira ödemesi 15.000,00 ₺')
   })
 
   it('maxChars sınırını bölüm bütünlüğünü koruyarak uygular', () => {
@@ -475,7 +475,7 @@ describe('buildAiFinanceContext', () => {
 
     expect(out).toContain('Tarih: 29 Ağu 2026')
     expect(out).toContain('FİNANSAL POZİSYON')
-    expect(out).toContain('Net değer: 0 ₺')
+    expect(out).toContain('Net değer: 0,00 ₺')
     expect(out).toContain('GELECEK AY')
     // Boş listelerin bölümleri hiç açılmaz.
     expect(out).not.toContain('KREDİLER')

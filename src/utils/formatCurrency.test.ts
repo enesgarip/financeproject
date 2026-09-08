@@ -88,30 +88,32 @@ describe('formatCompactCurrency', () => {
 })
 
 describe('formatSeritParts / formatSeritAmount', () => {
-  it('sembolü sona alır ve varsayılan olarak ondalık göstermez', () => {
-    expect(formatSeritAmount(12480)).toBe('12.480 ₺')
-    expect(formatSeritAmount(1787291)).toBe('1.787.291 ₺')
-    expect(formatSeritParts(12480)).toEqual({ amount: '12.480', unit: '₺' })
+  it('sembolü sona alır ve varsayılan olarak iki ondalık gösterir', () => {
+    expect(formatSeritAmount(12480)).toBe('12.480,00 ₺')
+    expect(formatSeritAmount(1787291)).toBe('1.787.291,00 ₺')
+    expect(formatSeritParts(12480)).toEqual({ amount: '12.480,00', unit: '₺' })
   })
 
-  it('yuvarlar; kuruş isteniyorsa tr-TR virgülüyle verir', () => {
-    expect(formatSeritAmount(12480.62)).toBe('12.481 ₺')
+  it('kuruşu varsayılan olarak tr-TR virgülüyle korur', () => {
+    expect(formatSeritAmount(12480.62)).toBe('12.480,62 ₺')
     expect(formatSeritAmount(12480.62, { decimals: 2 })).toBe('12.480,62 ₺')
+    expect(formatSeritAmount(12480.629)).toBe('12.480,63 ₺')
+    expect(formatSeritAmount(12480.62, { decimals: 0 })).toBe('12.481 ₺')
   })
 
   it('negatifte ASCII tire değil U+2212 kullanır (monospace hizası)', () => {
-    expect(formatSeritParts(-8940).amount).toBe('−8.940')
+    expect(formatSeritParts(-8940).amount).toBe('−8.940,00')
     expect(formatSeritParts(-8940).amount.startsWith('-')).toBe(false)
   })
 
   it('signed yalnız pozitife + koyar, sıfıra koymaz', () => {
-    expect(formatSeritParts(62000, { signed: true }).amount).toBe('+62.000')
-    expect(formatSeritParts(0, { signed: true }).amount).toBe('0')
-    expect(formatSeritParts(-100, { signed: true }).amount).toBe('−100')
+    expect(formatSeritParts(62000, { signed: true }).amount).toBe('+62.000,00')
+    expect(formatSeritParts(0, { signed: true }).amount).toBe('0,00')
+    expect(formatSeritParts(-100, { signed: true }).amount).toBe('−100,00')
   })
 
   it('null/undefined güvenli', () => {
-    expect(formatSeritAmount(null)).toBe('0 ₺')
-    expect(formatSeritAmount(undefined)).toBe('0 ₺')
+    expect(formatSeritAmount(null)).toBe('0,00 ₺')
+    expect(formatSeritAmount(undefined)).toBe('0,00 ₺')
   })
 })

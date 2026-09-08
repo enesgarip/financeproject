@@ -20,6 +20,10 @@ frontend -> RPC, or RPC -> migration.
 
 ## Permanent Context
 
+Para gösterimi (2026-09-09): `utils/formatCurrency.ts` içindeki
+`formatSeritParts` / `formatSeritAmount` varsayılan iki ondalık basamak kullanır
+(`12.480,62 ₺`). Görsel sözleşme: `docs/UI_ARCHITECTURE.md`.
+
 Arayüz başlıkları, açıklamalar ve durum metinleri: `docs/UI_COPY_REVIEW.md`
 (2026-09-05; ilk paket uygulandı). Kalıcı dil sözleşmesi `docs/UI_ARCHITECTURE.md`.
 Ekstresini tam ödeyip günlük harcamalarını kartla yapan kullanıcı için öneri:
