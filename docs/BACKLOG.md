@@ -1,5 +1,36 @@
 # Priority Backlog
 
+## 2026-09-08 — Borsa: hisse işlem defteri + portföy performansı — DONE
+
+Sorun: "portföyde şu tarihten bu yana ne kazandım" hesaplanamıyordu — işlem
+tarihçesi yoktu; `trade_asset_with_account` `assets` satırını yerinde
+değiştiriyor, `unit_cost` yürüyen ortalama, pozisyon sıfırlanınca siliniyor;
+tarihsel fiyat yok.
+
+- ~~**Defter.**~~ DONE. `stock_trades` (buy/sell/opening, tarih, adet, birim
+  fiyat nullable, komisyon, source manual/trade_rpc/opening). Mevcut Hisse
+  satırlarından `opening` backfill; trade RPC Hisse+miktarlı işlemde aynı
+  transaction'da satır yazar. `assets` Hisse satırı KANONİK pozisyon kalır
+  (altından farkı: defter varlığı yeniden yazmaz); uyuşmazlık sayfada uyarı.
+  Restore whitelist + reset kapsamı (FK set null → cascade yok; restore testi
+  yakaladı) + `RESTORE_TABLE_ORDER` + SQL testi.
+- ~~**Tarihsel fiyat.**~~ DONE. `bist-quote` `range` parametresi (1mo…max
+  beyaz liste) aynı Yahoo yanıtından günlük kapanış serisi döner;
+  `fetchStockHistory` sembol başına 24 saat cache.
+- ~~**Saf hesap.**~~ DONE. `utils/stockLedger.ts` (+15 test): ağırlıklı
+  ortalama maliyet, gerçekleşmiş/gerçekleşmemiş K/Z, nakit-akış düzeltilmiş
+  dönem getirisi (kazanç = V1 − V0 − alımlar + satışlar), eksik fiyat raporu.
+- ~~**Sayfa.**~~ DONE. `/varliklar/borsa` (Altın sekmesinin ikizi): hero
+  portföy değeri, baştan beri Delta, maliyet/gerçekleşmiş/gerçekleşmemiş, dönem
+  seçici (Baştan beri / 1A / 3A / Bu yıl / 1Y / Özel), sembol satırları, defter
+  listesi + "Geçmiş işlem ekle" (yalnız defter; nakit/varlık değişmez).
+- ~~**Yan düzeltme.**~~ DONE. Al/Sat modalının "varlık sonrası" önizlemesi
+  eski tutar-düşme modelindeydi; RPC'nin oransal modeline hizalandı.
+
+Bilinçli sınırlar: maliyet yöntemi ortalama (FIFO değil — mevcut `unit_cost`
+ile aynı aile); temettü yok; değer-zaman grafiği yok (tarihsel seri mevcut,
+sonraki adım olabilir).
+
 ## 2026-09-08 — Gelen/giden hesap SMS'i ↔ kişisel alacak/borç otomatik eşleme — DONE
 
 Vaka: arkadaş FAST ile 8.000 TL gönderdi; SMS otomasyonu hesaba ekledi,

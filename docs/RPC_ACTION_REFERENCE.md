@@ -79,7 +79,7 @@ individually — payment flows through the statement/settlement model.
 | RPC | Called From | User-Visible Action | Main Effect |
 | --- | --- | --- | --- |
 | `update_asset_value` | `updateAssetValue` (`services/assetValueHistory.ts`) | Assets page: "Değer güncelle" on a manual-valued asset card (value + period contribution + date + note) | Updates `assets.estimated_value_try`, appends an `asset_value_events` row and one `asset` history row in a single transaction; rejects auto-valued and gold-ledger rows |
-| `trade_asset_with_account` | `submitAssetTrade` | Assets page: buy/sell an existing asset with a selected bank account | Buy debits a `banka_karti` and increases asset value/quantity; sell credits a `banka_karti` and decreases asset value/quantity; writes one asset history row |
+| `trade_asset_with_account` | `submitAssetTrade` | Assets page: buy/sell an existing asset with a selected bank account | Buy debits a `banka_karti` and increases asset value/quantity; sell credits a `banka_karti` and decreases asset value/quantity (proportional to sold quantity); writes one asset history row and, for `Hisse` with quantity, one `stock_trades` ledger row |
 
 ## Savings Goals
 

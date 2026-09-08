@@ -37,6 +37,14 @@ This file records the current business rules inferred from the codebase. If code
     the source holding amount moves with the bank-account cash leg. This is
     mandatory for auto-valued FX because the next rate sync derives value from
     `amount`.
+  - Sell decreases the asset's TRY value **proportionally to the sold quantity**
+    (full sale → 0; cash proceeds may exceed the proportional value — that is
+    realized profit, not an error). Quantity-less sales still decrease by amount.
+  - Since `20260908180000` a `Hisse` trade with quantity also appends a
+    `stock_trades` row (kind buy/sell, unit price = cash / quantity, source
+    `trade_rpc`) in the same transaction. The `assets` row stays the canonical
+    position; `stock_trades` is history. Rows entered manually on the Borsa page
+    only feed the ledger — no cash or asset movement.
   - Ledger-managed gold asset rows stay outside this flow; gold is managed from
     the Gold page/ledger.
 
