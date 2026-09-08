@@ -166,7 +166,8 @@ export function ObligationsCalendar({ data, loading = false, onPayObligation }: 
   const selectedDateInMonth = isDateInMonth(selectedDate, visibleMonth) ? selectedDate : dateInputValue(startOfMonth(visibleMonth))
   const obligations = useMemo(() => buildFinanceObligationsForMonth(data, visibleMonth), [data, visibleMonth])
   const groupedByDate = useMemo(() => groupFinanceObligationsByDate(obligations), [obligations])
-  const summary = useMemo(() => summarizeFinanceObligations(obligations), [obligations])
+  // from: günü geçmiş maaş "yattı" sayılır, beklenen girişe tekrar girmez (B11).
+  const summary = useMemo(() => summarizeFinanceObligations(obligations, { from: new Date() }), [obligations])
   const cells = useMemo(() => buildCalendarCells(visibleMonth), [visibleMonth])
   const selectedItems = groupedByDate.get(selectedDateInMonth) ?? []
 
@@ -219,7 +220,12 @@ export function ObligationsCalendar({ data, loading = false, onPayObligation }: 
           <>
             <div className="grid grid-cols-2 gap-2 min-[720px]:grid-cols-4">
               <SummaryStat label="Ay yükü" value={formatAmount(summary.outflow)} tone="danger" />
-              <SummaryStat label="Beklenen giriş" value={formatAmount(summary.inflow)} tone="success" />
+              <SummaryStat
+                label="Beklenen giriş"
+                value={formatAmount(summary.inflow)}
+                tone="success"
+                hint={summary.receivedSalary > 0 ? { note: `Günü geçen ${formatAmount(summary.receivedSalary)} maaş yattı sayıldı; bu toplama girmez.` } : undefined}
+              />
               <SummaryStat label="Net etki" value={`${summary.net < 0 ? '−' : ''}${formatAmount(Math.abs(summary.net))}`} tone={summary.net >= 0 ? 'success' : 'danger'} />
               <SummaryStat
                 label="Ödeme / tahsilat"

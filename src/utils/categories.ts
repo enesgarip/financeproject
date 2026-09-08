@@ -315,3 +315,19 @@ export function explainExpenseCategory(description: string, memory?: CategoryMem
 export function suggestExpenseCategory(description: string, memory?: CategoryMemory): string | null {
   return explainExpenseCategory(description, memory)?.category ?? null
 }
+
+/**
+ * Planlı ödeme kategorisi → kart harcama kategorisi (UX turu B5).
+ * SQL ikizi: `private.card_category_from_payment` (migration 20260908120000).
+ * Kartla ödenen planlı ödeme karta harcama olarak yazılır; "Sigorta" gibi
+ * yalnız ödeme taksonomisinde olan etiketler kart paletinde renksiz/etiketsiz
+ * kalıyordu. Kart taksonomisindeki adlar aynen geçer, diğerleri eşlenir.
+ */
+export function cardCategoryFromPayment(paymentCategory: string | null | undefined): string {
+  const category = (paymentCategory ?? '').trim()
+  if (expenseCategories.includes(category) && category !== 'Diğer') return category
+  if (category === 'Sigorta' || category === 'Vergi / devlet') return 'Finansman'
+  if (category === 'Kira / aidat') return 'Konut'
+  if (category === 'Dijital üyelik') return 'Abonelik'
+  return 'Diğer'
+}

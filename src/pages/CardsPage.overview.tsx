@@ -160,7 +160,11 @@ export function AccountHubPanel({
   const accountBalance = sumTL(accounts.map((account) => account.current_balance))
   const cardDebt = sumTL(creditCards.map((card) => card.debt_amount))
   const payableCardDebt = sumTL(creditCards.map((card) => cardPayableDebt(card)))
-  const balanceAfterPayableDebt = diffTL(accountBalance, payableCardDebt)
+  // Özet'teki "Tüm kart borcu sonrası nakit farkı" ile aynı tanım: TOPLAM kart
+  // borcu (gelecek taksit + provizyon dahil) düşülür. Tek fark nakit tabanı:
+  // burada yalnız banka hesapları, Özet'te döviz nakit de var (UX turu B12 —
+  // aynı kavram için iki farklı rakam vardı).
+  const balanceAfterDebt = diffTL(accountBalance, cardDebt)
   const banks = Array.from(
     accounts.reduce((map, account) => {
       const current = map.get(account.bank_name) ?? { balance: 0, count: 0 }
@@ -179,15 +183,15 @@ export function AccountHubPanel({
     <section id="hesap-merkezi">
       <HeroNumber
         label="Kart borcu sonrası bakiye"
-        value={balanceAfterPayableDebt}
-        tone={balanceAfterPayableDebt >= 0 ? 'ink' : 'danger'}
+        value={balanceAfterDebt}
+        tone={balanceAfterDebt >= 0 ? 'ink' : 'danger'}
         description={
           <>
-            <span className="serit-num text-ink">{seritAmount(accountBalance).amount} ₺</span> hesap bakiyesinden{' '}
+            <span className="serit-num text-ink">{seritAmount(accountBalance).amount} ₺</span> banka bakiyesinden{' '}
             <span className="serit-num" style={{ color: SERIT_TEXT.danger }}>
-              {seritAmount(payableCardDebt).amount} ₺
+              {seritAmount(cardDebt).amount} ₺
             </span>{' '}
-            ekstre ve dönem içi borç düşüldü. Gelecek taksitler ve provizyon düşülmedi.
+            toplam kart borcu (gelecek taksit ve provizyon dahil) düşüldü. Özet'teki nakit farkı döviz nakdini de sayar.
           </>
         }
       />

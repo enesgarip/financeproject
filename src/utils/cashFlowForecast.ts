@@ -1,4 +1,4 @@
-import { addMonths, dateInputValue, endOfMonth, startOfMonth } from './date'
+import { addMonths, dateInputValue, endOfMonth, isDateInMonth, startOfMonth } from './date'
 import {
   buildFinancialPosition,
   getSalaryForDate,
@@ -76,6 +76,16 @@ function obligationsInput(data: FinanceSummaryInput): FinanceObligationsInput {
   }
 }
 
+/** Verilen ayda ekstreye girecek planlı (henüz işlenmemiş) kart taksitleri. */
+function scheduledInstallmentsInMonth(installments: FinanceSummaryInput['cardInstallments'], month: Date): number {
+  const monthStart = startOfMonth(month)
+  return sumTL(
+    installments
+      .filter((installment) => installment.status === 'scheduled' && isDateInMonth(installment.due_month, monthStart))
+      .map((installment) => installment.amount),
+  )
+}
+
 function forecastBuckets(items: FinanceObligation[]) {
   const receivables: number[] = []
   const paymentOutflow: number[] = []
@@ -145,9 +155,16 @@ export function buildCashFlowForecast(
     const salaryLikelyReceived = offset === 0 && from > getFirstBusinessDay(monthDate)
     const salary = salaryLikelyReceived ? 0 : salaryAmount
 
-    const { receivables, paymentOutflow, cardOutflow, loanOutflow, installmentOutflow, debtOutflow } = forecastBuckets(
+    const buckets = forecastBuckets(
       buildFinanceObligationsForMonth(obligationInput, monthDate, { from }),
     )
+    const { receivables, paymentOutflow, loanOutflow, installmentOutflow, debtOutflow } = buckets
+    // Planlı kart taksitleri BİLİNEN veridir: ay M'de ekstreye giren taksit, o
+    // ekstrenin vadesinde (ay M+1) nakitten çıkar. Ay 0'ın taksitleri zaten
+    // dönem içi harcamada (posted) olduğundan yalnız offset ≥ 1 taşınır
+    // (UX turu B27 — 6 aylık projeksiyon 4.000 ₺ gelecek taksiti görmüyordu).
+    const carriedInstallments = offset === 0 ? 0 : scheduledInstallmentsInMonth(data.cardInstallments, addMonths(monthDate, -1))
+    const cardOutflow = sumTL([buckets.cardOutflow, carriedInstallments])
 
     const income = sumTL([salary, receivables])
     const outflow = sumTL([paymentOutflow, cardOutflow, loanOutflow, installmentOutflow, debtOutflow])

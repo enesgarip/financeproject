@@ -452,3 +452,22 @@ describe('cash-impacting obligation date placement (billing-cycle correctness)',
     expect(summarizeFinanceObligations(items).outflow).toBe(0)
   })
 })
+
+describe('summarizeFinanceObligations — günü geçmiş maaş (UX turu B11)', () => {
+  it('from verilince ay başı maaşı beklenen girişe girmez, receivedSalary olarak ayrılır', () => {
+    const items = buildFinanceObligationsForMonth(
+      input({ salaryHistory: [{ ...base, id: 's1', title: 'Maaş', amount: 105000, effective_date: '2026-06-01', note: null }] }),
+      FROM,
+    )
+    const plain = summarizeFinanceObligations(items)
+    expect(plain.inflow).toBe(105000)
+    expect(plain.receivedSalary).toBe(0)
+
+    const later = summarizeFinanceObligations(items, { from: new Date(2026, 5, 8) })
+    expect(later.inflow).toBe(0)
+    expect(later.receivedSalary).toBe(105000)
+
+    const onPayday = summarizeFinanceObligations(items, { from: new Date(2026, 5, 1) })
+    expect(onPayday.inflow).toBe(105000)
+  })
+})

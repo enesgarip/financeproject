@@ -1,5 +1,30 @@
 # Priority Backlog
 
+## 2026-09-08 — Kullanıcı gözüyle tur: mantık paketi (UX-1) UYGULANDI
+
+`docs/UX_WALKTHROUGH_2026-09-08.md`: yerel seed üzerinde bir ay döngüsü gerçek
+kullanıcı gibi oynandı, 29 bulgu çıktı (para invariantları hiç bozulmadı).
+Üç paket: **UX-1 mantık** (bu kayıt), UX-2 akış/etkileşim, UX-3 görsel/metin.
+
+UX-1 kapsamı (bulgu numaraları dokümandaki):
+- **B1** `reconcile_card_bank_snapshot(p_bucket)` — "Farkı düzelt" artık onay
+  diyaloğu + kova seçimi (dönem içi varsayılan / ekstre / yalnız toplam);
+  pozitif fark kovaya yazılır, Veri Sağlığı "eksik pay" üretmez. Eski 3-arg
+  imza toplam-only kalır (import modalı). SQL regresyon genişletildi.
+- **B4** kartla ödenen manuel planlı ödeme aylık raporda nakit çıkışı
+  sayılmaz: `pay_payment` kart yolu `source='payment_auto'` +
+  `source_event_id='payment:<id>:<ts>'` damgalar, `realizedCashFlow` bunu
+  ay bazında tanır.
+- **B5** planlı ödeme kategorisi kart taksonomisine eşlenir
+  (`private.card_category_from_payment` ↔ `cardCategoryFromPayment` ikizi).
+- **B6** kategori dağılımı ilk 6 + "Diğer" birleşimi (`categoryComposition.ts`);
+  toplam artık "Kart harcaması" ile aynı.
+- **B11** takvim "Beklenen giriş" günü geçmiş maaşı saymaz (`summarizeFinanceObligations({ from })`).
+- **B12** Hesaplar kahraman rakamı Özet ile aynı tanım (toplam kart borcu).
+- **B15** Özet "Ay sonuna kalan" altında tahsil edilmemiş alacak ayrı cümlede.
+- **B27** 6 aylık nakit projeksiyonu planlı kart taksitlerini bir sonraki
+  ayın ekstre vadesinde düşer (`cashFlowForecast`).
+
 ## 2026-09-05 — Arayüz dili ilk paketi UYGULANDI
 
 `docs/UI_COPY_REVIEW.md`: GOV.UK ve NN/g rehberleriyle desteklenen Türkçe

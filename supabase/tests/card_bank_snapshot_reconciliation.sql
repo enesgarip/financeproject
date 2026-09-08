@@ -136,6 +136,85 @@ begin
   if v_debt <> 500 or v_current <> 0 or v_balance <> 950 then
     raise exception 'FAIL ödeme sonrası debt/current/balance 500/0/950 bekleniyordu, %/%/%', v_debt, v_current, v_balance;
   end if;
+end $$;
+
+-- UX turu B1: dört parametreli imza farkı seçilen kovaya da yazar.
+set local role authenticated;
+set local request.jwt.claims to '{"sub":"11111111-1111-1111-1111-111111111111","role":"authenticated"}';
+
+do $$
+declare
+  v_debt numeric;
+begin
+  -- Pozitif fark → dönem içi.
+  select public.reconcile_card_bank_snapshot(
+    'c2000000-0000-4000-8000-000000000001', 60000, 'Banka toplamı: dönem içi', 'current'
+  ) into v_debt;
+  if v_debt <> 600 then
+    raise exception 'FAIL kova=current banka toplamı 600 bekleniyordu, %', v_debt;
+  end if;
+
+  -- Pozitif fark → ekstre.
+  select public.reconcile_card_bank_snapshot(
+    'c2000000-0000-4000-8000-000000000001', 65000, 'Banka toplamı: ekstre', 'statement'
+  ) into v_debt;
+  if v_debt <> 650 then
+    raise exception 'FAIL kova=statement banka toplamı 650 bekleniyordu, %', v_debt;
+  end if;
+
+  -- Negatif fark: yalnız toplam düşer, kovalar clamp ile borca kırpılır.
+  select public.reconcile_card_bank_snapshot(
+    'c2000000-0000-4000-8000-000000000001', 62000, 'Banka toplamı: düşüş', 'current'
+  ) into v_debt;
+  if v_debt <> 620 then
+    raise exception 'FAIL negatif fark banka toplamı 620 bekleniyordu, %', v_debt;
+  end if;
+
+  begin
+    perform public.reconcile_card_bank_snapshot(
+      'c2000000-0000-4000-8000-000000000001', 62000, 'Geçersiz kova', 'provision'
+    );
+    raise exception 'FAIL geçersiz kova reddedilmeliydi.';
+  exception
+    when others then
+      if sqlerrm not like 'Geçersiz kova%' then
+        raise;
+      end if;
+  end;
+end $$;
+
+reset role;
+
+do $$
+declare
+  v_debt numeric;
+  v_statement numeric;
+  v_current numeric;
+  v_current_delta bigint;
+  v_statement_delta bigint;
+begin
+  select debt_amount, statement_debt_amount, current_period_spending
+  into v_debt, v_statement, v_current
+  from public.cards where id = 'c2000000-0000-4000-8000-000000000001';
+  if v_debt <> 620 or v_statement <> 50 or v_current <> 100 then
+    raise exception 'FAIL kova düzeltmesi sonrası debt/statement/current 620/50/100 bekleniyordu, %/%/%', v_debt, v_statement, v_current;
+  end if;
+
+  select current_delta_kurus into v_current_delta
+  from public.card_ledger
+  where card_id = 'c2000000-0000-4000-8000-000000000001'
+    and kind = 'adjustment' and note = 'Banka toplamı: dönem içi';
+  if v_current_delta <> 10000 then
+    raise exception 'FAIL kova=current ledger current deltası 10000 olmalı, %', v_current_delta;
+  end if;
+
+  select statement_delta_kurus into v_statement_delta
+  from public.card_ledger
+  where card_id = 'c2000000-0000-4000-8000-000000000001'
+    and kind = 'adjustment' and note = 'Banka toplamı: ekstre';
+  if v_statement_delta <> 5000 then
+    raise exception 'FAIL kova=statement ledger statement deltası 5000 olmalı, %', v_statement_delta;
+  end if;
 
   raise notice 'Kart banka snapshot mutabakat regresyonu OK.';
 end $$;

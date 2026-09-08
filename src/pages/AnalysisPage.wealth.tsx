@@ -9,6 +9,7 @@ import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
 
 import { buildCategoryInsights, type AnalysisData } from '../utils/analysisView'
 import { expenseCategories } from '../utils/categories'
+import { mergeCategoryTail } from '../utils/categoryComposition'
 import { activeExpense as activeCardExpense } from '../utils/budgetAlerts'
 import { type MarketRatesSnapshot } from '../utils/marketRates'
 import { buildInflationShield } from '../utils/inflationShield'
@@ -189,9 +190,12 @@ export function CategorySpendingChart({ data }: { data: AnalysisData }) {
     ([category, amount]) => ({ category, amount }),
   ).sort((a, b) => b.amount - a.amount)
 
-  // En büyük 7 kalem tutara göre seçilir, sonra halka kanonik sıraya dizilir.
+  // En büyük 6 kalem tutara göre seçilir; kalanı "Diğer" altında BİRLEŞİR ki
+  // çubuğun toplamı aylık raporun "Kart harcaması" rakamıyla aynı olsun (UX
+  // turu B6: eskiden 8+ kategoride toplam yalnız gösterilenleri sayıyordu).
+  // Sonra halka kanonik sıraya dizilir.
   const donutData: CompositionSlice[] = orderSlicesCanonically(
-    categoryTotals.slice(0, 7).map((item) => ({
+    mergeCategoryTail(categoryTotals, 6).map((item) => ({
       name:  item.category,
       value: item.amount,
       color: vizColor(CATEGORY_COLORS, item.category),

@@ -934,6 +934,8 @@ export type Database = {
           p_bank_total_kurus: number
           p_card_id: string
           p_note: string
+          /** 'none' | 'current' | 'statement' — migration 20260908120000 (B1). */
+          p_bucket?: string
         }
         Returns: number
       }
