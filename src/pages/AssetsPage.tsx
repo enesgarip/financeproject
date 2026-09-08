@@ -1,9 +1,10 @@
-import { ArrowDownRight, ArrowUpRight, Banknote, ChevronDown, ChevronUp, Coins, Landmark, LineChart, Minus, Plus, ShieldCheck, TrendingUp, Wallet } from 'lucide-react'
+import { ArrowDownRight, ArrowUpRight, Banknote, Coins, Landmark, LineChart, Minus, Plus, ShieldCheck, TrendingUp, Wallet } from 'lucide-react'
 import { useEffect, useMemo, useState, type ComponentType, type FormEvent } from 'react'
 import { CrudPage, type FormField } from '../components/CrudPage'
 import { type CompositionSlice } from '../components/charts/CompositionBar'
 import { BreakdownBar, HeroNumber, LineGroup, LineRow, SERIT_TEXT, useSeritAmount } from '../components/serit'
 import { buildVizColorMap, orderSlicesCanonically } from '../components/charts/vizPalette'
+import { AssetValueHistoryPanel } from '../components/finance/AssetValueHistoryPanel'
 import { RatesBanner } from '../components/finance/RatesBanner'
 import { Button } from '../components/ui/button'
 import { ConfidenceBadge } from '../components/ui/confidence-badge'
@@ -13,7 +14,6 @@ import { useMarketRates } from '../hooks/useMarketRates'
 import { useStockPrices } from '../hooks/useStockPrices'
 import { normalizeTicker, type StockPrices } from '../lib/stockQuotesClient'
 import { assetTradeRequiresQuantity, submitAssetTrade, type AssetTradeDirection } from '../services/assetTrades'
-import { fetchAssetValueHistory, recordAssetValueChange } from '../services/assetValueHistory'
 import type { Asset, Card as FinanceCard } from '../types/database'
 import { formatCurrency, formatNumber, formatPercent, parseNumber } from '../utils/formatCurrency'
 import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
@@ -394,61 +394,6 @@ function AssetsOverview({ rows, snapshot, stockPrices, bankCash }: { rows: Asset
   )
 }
 
-/** Shows recent value-update history for a manual asset (BES, Araç, Diğer, etc.). */
-function AssetValueHistoryPanel({
-  asset,
-  formatAmount: fmt,
-}: {
-  asset: Asset
-  formatAmount: (value: number | null | undefined) => string
-}) {
-  const [entries, setEntries] = useState<import('../types/database').TransactionHistory[] | null>(null)
-  const [open, setOpen] = useState(false)
-
-  useEffect(() => {
-    let cancelled = false
-    void fetchAssetValueHistory(asset.id, 5).then((data) => {
-      if (!cancelled) setEntries(data)
-    })
-    return () => { cancelled = true }
-  }, [asset.id, asset.updated_at])
-
-  if (!entries || entries.length === 0) return null
-
-  return (
-    <div className="mt-3 rounded-lg bg-raised p-3 ring-1 ring-line-strong">
-      <button
-        type="button"
-        onClick={() => setOpen((prev) => !prev)}
-        className="flex w-full items-center justify-between text-[11px] font-black uppercase text-ink-muted"
-      >
-        <span>Güncelleme geçmişi ({entries.length})</span>
-        {open ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-      </button>
-      {open ? (
-        <div className="mt-2 flex flex-col gap-1.5">
-          {entries.map((entry) => {
-            const delta = entry.amount ?? 0
-            const isUp = delta >= 0
-            return (
-              <div key={entry.id} className="flex min-w-0 items-center justify-between gap-3 rounded-lg bg-page px-2.5 py-2 text-xs">
-                <span className="min-w-0 truncate text-ink-muted">
-                  {new Date(entry.occurred_at).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', year: 'numeric' })}
-                </span>
-                <span className="shrink-0 text-right tabular-nums">
-                  <span className={isUp ? 'font-black text-success' : 'font-black text-destructive'}>
-                    {delta > 0 ? '+' : ''}{fmt(delta)}
-                  </span>
-                </span>
-              </div>
-            )
-          })}
-        </div>
-      ) : null}
-    </div>
-  )
-}
-
 export function AssetsPage() {
   const { formatAmount } = useBalancePrivacy()
   const { snapshot } = useMarketRates()
@@ -568,15 +513,6 @@ export function AssetsPage() {
         fields={fields}
         fieldContext={fieldContext}
         validateForm={validateAssetForm}
-        afterSave={async (savedRow, action, { previousRow }) => {
-          if (action !== 'update' || !previousRow) return
-          const prev = previousRow as Asset
-          const next = savedRow as Asset
-          // Only record history for manual-valued assets when value actually changed
-          if (!next.auto_valued && prev.estimated_value_try !== next.estimated_value_try) {
-            await recordAssetValueChange(next, prev.estimated_value_try, next.estimated_value_try)
-          }
-        }}
         emptyTitle="Henüz varlık yok"
         emptyDescription="Nakit, fon, hisse veya diğer varlıklarını buradan ekleyebilirsin. Altın işlemleri ayrı Altın sekmesinde tutulur."
         renderBeforeList={({ loading, rows, reload, setError }) => (
@@ -702,7 +638,7 @@ export function AssetsPage() {
         }}
         canEditRow={(row) => row.category !== 'Altın'}
         canDeleteRow={(row) => !isGoldLedgerAsset(row)}
-        renderCard={(row, { menu, rowActions }) => {
+        renderCard={(row, { menu, rowActions, reload }) => {
           const asset = row as Asset
           // Canlı kur gelmediğinde sessizce saklı değere düşülüyordu; kaynak
           // artık rozetle görünür (Faz D3).
@@ -764,7 +700,7 @@ export function AssetsPage() {
               {pl ? <ProfitBadge profit={pl.profit} profitPct={pl.profitPct} /> : null}
 
               {!asset.auto_valued && !isGoldLedgerAsset(asset) ? (
-                <AssetValueHistoryPanel asset={asset} formatAmount={formatAmount} />
+                <AssetValueHistoryPanel asset={asset} formatAmount={formatAmount} onChanged={reload} />
               ) : null}
             </article>
           )

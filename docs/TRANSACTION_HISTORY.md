@@ -58,7 +58,7 @@ because the current undo flows explicitly do not refund cash automatically.
 | `loan` | Loan installment payment |
 | `debt` | Personal debt settlement or receivable collection |
 | `card` | Card expense/provision/statement/carryover lifecycle events |
-| `asset` | Asset buy/sell actions backed by a selected bank account |
+| `asset` | Asset buy/sell actions backed by a selected bank account; manual value updates via `update_asset_value` (amount = absolute value change, direction in title, contribution/growth in note) |
 | `correction` | Auditable cancellation/reversal or one-time data repair; the corresponding append-only ledger remains the accounting source |
 
 ## Current RPC Side Effects
@@ -81,6 +81,7 @@ because the current undo flows explicitly do not refund cash automatically.
 | `record_manual_account_movement` | `transfer` | `cards.id` | Movement amount | Manual bank-account in/out uses the affected account as source. |
 | `record_sms_account_movement` | `transfer` | `cards.id` | Movement amount | Service-role SMS path stores the bank-local timestamp with explicit offset. Non-null `source_event_id` makes retries return without repeating balance, ledger, or history effects. |
 | `transfer_between_accounts` | `transfer` | Source `cards.id` | Transfer amount | One feed row represents both debit and credit sides. |
+| `update_asset_value` | `asset` | `assets.id` | Absolute value change (may be 0 when only a contribution is logged) | Manual-valued asset (BES/Araç/Fon/Diğer) value update. Writes the `asset_value_events` row (value before/after, period contribution, date, note) and this feed row in one transaction; the `assets` AFTER UPDATE trigger is suppressed via `app.asset_event_suppress`. Direct `assets` updates (generic edit form) still produce an `asset_value_events` row through the trigger but no feed row. Replaces the removed client-side `recordAssetValueChange`, whose signed delta was rejected by `amount >= 0` for every decrease. |
 | `trade_asset_with_account` | `asset` | `assets.id` | Trade amount | Buy debits the selected bank account; sell credits it. Asset value/quantity updates and account balance movement commit together. |
 | `reset_card_import_data` | deletes scoped history | Non-paid/open import rows | n/a | Removes history tied only to a safely rebuildable working scope. It rejects cards whose current-settlement or paid-installment evidence would make historical replay unsafe. |
 | `replace_card_statement_import` | rebuilds scoped history | PDF-covered open rows | PDF row amounts | Deletes only history belonging to replaced open rows, reuses canonical expense/payment/carryover writers, and records the aggregate reset/bank lock in append-only card ledger adjustments. Paid and later history is retained. |

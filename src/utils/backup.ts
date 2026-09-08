@@ -32,6 +32,8 @@ export const RESTORE_TABLE_ORDER = [
   'kasa_buckets',
   'wishlist_items',
   'debts',
+  // Manuel varlık değer olayları: assets'tan SONRA (FK asset_id).
+  'asset_value_events',
   'salary_history',
   'gold_lots',
   'net_worth_snapshots',
@@ -324,6 +326,7 @@ export const BACKUP_TABLE_LABELS: Record<RestoreTable, string> = {
   kasa_buckets: 'Kasa kovası',
   wishlist_items: 'İstek listesi kaydı',
   debts: 'Kişi borcu/alacağı',
+  asset_value_events: 'Varlık değer olayı',
   salary_history: 'Maaş kaydı',
   gold_lots: 'Altın alımı',
   net_worth_snapshots: 'Net değer fotoğrafı',

@@ -1,5 +1,30 @@
 # Priority Backlog
 
+## 2026-09-08 — BES/OTOBES değer geçmişi: katkı ve getiri ayrımı — DONE
+
+Sorun: manuel varlık (BES) güncellemesi geçmişe yalnız "+9.999 · tarih" olarak
+düşüyordu; ne zamandan ne zamana, katkı mı getiri mi belli değildi. Kök neden
+iki katlı: (1) client `transaction_history`'ye İŞARETLİ delta yazıyordu ve
+tablonun `amount >= 0` kısıtı düşüşleri sessizce reddediyordu (console.error) —
+listede yalnız artışlar kalıyordu; (2) katkı payı alanı yoktu.
+
+- ~~**Veri modeli.**~~ DONE. `asset_value_events` (önceki/yeni değer kuruş,
+  dönem katkısı, tarih, not, source manual/trigger/legacy). `assets` AFTER
+  UPDATE trigger'ı manuel satırın her değer değişimini olaya çevirir (auto-valued
+  senkron ve altın defteri hariç). `update_asset_value` RPC'si değer + katkı +
+  tarih + not'u tek transaction'da yazar, akış satırı pozitif tutarlı. Eski
+  `₺a → ₺b` başlıklı satırlar `legacy` olaya taşındı. Restore whitelist +
+  `RESTORE_TABLE_ORDER` + SQL testi.
+- ~~**Saf türetim.**~~ DONE. `utils/assetValueEvents.ts`: getiri = Δdeğer −
+  katkı; yüzde tabanı dönem başı + katkı; toplam getiri satır toplamı.
+- ~~**Panel.**~~ DONE. `AssetValueHistoryPanel`: başlıkta "İlk kayıt X ·
+  Katkı · Getiri (%)", satırda "dönem başı → dönem sonu, önceki → yeni,
+  katkı, getiri"; Tümü / Son 12 ay / Bu yıl; "Değer güncelle" formu.
+
+Kalan (bilinçli): OTOBES ayrı bir model değil, ikinci BES satırı olarak aynı
+paneli kullanır. Katkı her güncellemede elle girilir (OTOBES kesintisi maaşla
+değişir; otomatik aylık katkı türetimi istenmedi).
+
 ## 2026-09-08 — Kullanıcı gözüyle tur: görsel/metin paketi (UX-3) UYGULANDI
 
 UX-3 kapsamı (bulgu numaraları `docs/UX_WALKTHROUGH_2026-09-08.md`):
