@@ -44,8 +44,8 @@ const COMPLETED_LOAN_GROUPS = ['Tamamlananlar']
 
 export function LoansPage() {
   const { formatAmount } = useBalancePrivacy()
-  // Şerit blokları ondalıksız rakam ister; formatAmount kuruşu koruyor ve
-  // renderDetails/çekmece gibi metin yollarında kullanılmaya devam ediyor.
+  // Şerit blokları rakam/birim parçalarını, renderDetails/çekmece ise
+  // formatAmount metnini kullanır; ikisi de kuruşu korur.
   const seritAmount = useSeritAmount()
   const { confirm, confirmDialog } = useConfirmDialog()
   const { drawerProps, openPaymentDrawer } = useFinancePaymentDrawer()

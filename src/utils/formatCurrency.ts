@@ -19,15 +19,15 @@ const SERIT_PLAIN = new Intl.NumberFormat('tr-TR', { minimumFractionDigits: 0, m
 const SERIT_DECIMAL = new Intl.NumberFormat('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
 export type SeritAmountOptions = {
-  /** Kahraman ve liste rakamları ondalıksız; yalnız mutabakat gibi yerlerde 2. */
+  /** Varsayılan 2 ondalık; açıkça 0 verilirse tam sayı gösterilir. */
   decimals?: 0 | 2
-  /** Gelir satırlarında artı işareti gösterilir (`+62.000`). */
+  /** Gelir satırlarında artı işareti gösterilir (`+62.000,00`). */
   signed?: boolean
 }
 
 /**
- * Şerit dilinin para biçimi: **sembol sonda**, ondalık varsayılan olarak yok
- * (`12.480 ₺`). `formatCurrency`'den kasıtlı olarak ayrı — o, sembolü öne alan
+ * Şerit dilinin para biçimi: **sembol sonda**, varsayılan iki ondalık
+ * (`12.480,62 ₺`). `formatCurrency`'den kasıtlı olarak ayrı — o, sembolü öne alan
  * `Intl` `style:'currency'` çıktısını verir ve dönüştürülmemiş ekranlar onu
  * kullanmaya devam eder.
  *
@@ -39,7 +39,7 @@ export type SeritAmountOptions = {
  */
 export function formatSeritParts(value: number | null | undefined, options?: SeritAmountOptions) {
   const v = value ?? 0
-  const format = options?.decimals === 2 ? SERIT_DECIMAL : SERIT_PLAIN
+  const format = options?.decimals === 0 ? SERIT_PLAIN : SERIT_DECIMAL
   const sign = v < 0 ? '−' : options?.signed && v > 0 ? '+' : ''
   return { amount: `${sign}${format.format(Math.abs(v))}`, unit: '₺' }
 }

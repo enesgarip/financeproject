@@ -11,6 +11,14 @@ kalmasını sağlar. Şerit 2026-08-10/11'de tüm uygulamaya uygulandı (PR #108
 
 ## Şerit İlkeleri
 
+### Para gösterimi (2026-09-09)
+
+`formatSeritParts` / `formatSeritAmount` başlık ve liste tutarlarını varsayılan
+iki ondalık basamakla, Türkçe ayraçlarla ve sembol sonda gösterir:
+`12.480,62 ₺`, `500,00 ₺`. Kuruşlar tam TL'ye yuvarlanmaz. Açık `decimals: 0`
+seçeneği ve grafik/takvim için `formatCompactCurrency` kısa gösterimi korunur.
+Bu bir sunum kuralıdır; finans hesaplarını ve saklanan tutarları değiştirmez.
+
 ### Arayüz dili (2026-09-05)
 
 Kaynak ve uygulama listesi: `docs/UI_COPY_REVIEW.md`. Kısa/doğal Türkçe ve

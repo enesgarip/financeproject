@@ -1,5 +1,17 @@
 # Priority Backlog
 
+## 2026-09-09 — Para gösteriminde iki ondalık basamak — DONE
+
+`formatSeritParts` / `formatSeritAmount` varsayılan olarak kuruşu gösterir:
+`12.480,62 ₺`, tam tutarlarda `500,00 ₺`. Ortak gösterimi kullanan başlık,
+liste ve AI bağlamı aynı hassasiyettedir. Finans hesapları ve kayıtlar değişmez;
+grafik/takvim için kısa tutar biçimi korunur.
+
+Doğrulama: lint, 1463 test, prod dependency audit, build ve edge tip kontrolü
+geçti. `npm run verify` bundle kapısında durdu: `index.js` 20,1 kB / 20 kB.
+Eski formatter davranışıyla yeniden build de aynı sınırı aşıyor; mevcut
+bundle bütçesi sorunu bu gösterim değişikliğinden bağımsız.
+
 ## 2026-09-08 — Ölü kod temizliği (yetim tarama) — DONE
 
 Borçlar'daki yetim sayfa sonrası tüm repo tarandı (hiç import edilmeyen dosya,
