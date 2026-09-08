@@ -166,7 +166,7 @@ describe('CrudPage — TanStack veri sözleşmesi', () => {
     expect(screen.queryByText('Diğer')).toBeNull()
     expect(screen.getByText('1 kayıt')).toBeTruthy()
     expect(actionRows.map((row) => row.id)).toEqual(['r1', 'r2'])
-    fireEvent.change(screen.getByPlaceholderText('Kayıtlarda ara'), { target: { value: 'Diğer' } })
+    fireEvent.change(screen.getByPlaceholderText('Ara'), { target: { value: 'Diğer' } })
     expect(screen.getByText('Eşleşen kayıt yok')).toBeTruthy()
   })
 

@@ -72,8 +72,8 @@ export function RatesBanner({ onSynced, note }: { onSynced?: () => void | Promis
               </span>
             ) : null}
           </div>
-          <p className="truncate text-xs text-ink-muted">
-            {noData ? 'Kur verisi henüz yüklenmedi' : `truncgil.com · ${formatAsOf(asOf)} itibarıyla`}
+          <p className="text-xs text-ink-muted">
+            {noData ? 'Kur verisi henüz yüklenmedi' : `truncgil.com · ${formatAsOf(asOf)}`}
           </p>
           {note ? <p className="truncate text-xs text-ink-muted">{note}</p> : null}
         </div>

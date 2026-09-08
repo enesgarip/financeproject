@@ -75,7 +75,9 @@ function obligationToDashboardUpcomingItem(item: FinanceObligation): DashboardUp
 }
 
 export function buildDashboardUpcomingItems(data: FinanceObligationsInput, days = 30, from = new Date()): DashboardUpcomingItem[] {
+  // Kişisel alacak da listelenir (UX turu B26): "Ay sonuna kalan" onu sayıyor,
+  // vadeler listesi göstermiyordu; "Tahsil et" aksiyonu buradan da açılır.
   return buildFinanceObligationsForRange(data, { days, from })
-    .filter((item) => item.direction === 'outflow' || item.kind === 'salary')
+    .filter((item) => item.direction === 'outflow' || item.kind === 'salary' || item.kind === 'personal_receivable')
     .map(obligationToDashboardUpcomingItem)
 }

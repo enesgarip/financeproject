@@ -400,7 +400,7 @@ export function CrudPage<T extends CrudTableName>({
             <Input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Kayıtlarda ara"
+              placeholder="Ara"
               className="pl-9 text-sm"
             />
           </label>

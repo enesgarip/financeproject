@@ -936,7 +936,7 @@ export function SavingsGoalsPanel({
                                 yaşatmadan önce söyle. */}
                             {!plan.fundsProgress ? (
                               <p className="mt-0.5 text-[11px] text-ink-faint">
-                                Bu para hedefe ayrılmış nakittir; ilerleme takip kaynağından hesaplanır.
+                                Bu para hedefe ayrılmış nakittir; ilerleme takip kaynağından hesaplanır.{' '}
                                 {/* Hedefin başka kaynağı yoksa ayırdığın para ilerlemeye
                                     HİÇ yansımaz; kovayı kaynak yapmak tek tık uzakta
                                     olsun. Başka kaynağı varsa (ör. hisse portföyü) bu

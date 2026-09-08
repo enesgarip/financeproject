@@ -283,12 +283,14 @@ export function SeritOverview({
               </tbody>
             </table>
           )}
-          {groupedUpcoming.length > 6 && <button type="button" aria-expanded={showAllUpcoming} onClick={() => setShowAllUpcoming((value) => !value)} className="mt-2 min-h-11 text-sm font-semibold text-primary">{showAllUpcoming ? 'Vadeleri daralt' : 'Tüm vadeleri göster (' + groupedUpcoming.length + ')'}</button>}
+          {groupedUpcoming.length > 6 && <button type="button" aria-expanded={showAllUpcoming} onClick={() => setShowAllUpcoming((value) => !value)} className="mt-2 min-h-11 text-sm font-semibold text-primary">{showAllUpcoming ? 'Vadeleri daralt' : `${groupedUpcoming.length - 6} vade daha göster`}</button>}
         </section>
       </div>
 
       {/* ── Sağ kolon: ikincil paneller, her biri 1px üst çizgiyle ayrılır ── */}
-      <div className="mt-8 flex min-w-0 flex-col gap-6 lg:mt-0 lg:gap-7">
+      {/* Sağ sütun sol sütundan çok daha kısa; yapışkan kalınca kaydırırken
+          net değer / kart borcu görünür kalır ve alt boşluk hissi azalır (B14). */}
+      <div className="mt-8 flex min-w-0 flex-col gap-6 lg:sticky lg:top-6 lg:mt-0 lg:gap-7">
         <SidePanel title="Net değer" first>
           <SideNumber value={netWorth} />
           <p className="mt-1 text-[13px] text-ink-muted">

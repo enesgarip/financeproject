@@ -406,11 +406,12 @@ export function QuickExpensePanel({
           </div>
           {selectedCard ? (
             <Badge variant={selectedCard.card_type === 'kredi_karti' ? 'secondary' : 'outline'}>
+              {/* Seçili kartın durumu; "Toplam" formun toplamı sanılıyordu (UX turu B18). */}
               {selectedCard.card_type === 'kredi_karti'
                 ? cardProvisionAmount(selectedCard) > 0
-                  ? `Provizyon ${displayAmount(cardProvisionAmount(selectedCard))}`
-                  : `Toplam ${displayAmount(selectedCard.debt_amount)}`
-                : `Bakiye ${displayAmount(selectedCard.current_balance)}`}
+                  ? `${displayAmount(cardProvisionAmount(selectedCard))} provizyon bekliyor`
+                  : `Kart borcu ${displayAmount(selectedCard.debt_amount)}`
+                : `Hesap bakiyesi ${displayAmount(selectedCard.current_balance)}`}
             </Badge>
           ) : null}
         </div>

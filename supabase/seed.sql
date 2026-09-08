@@ -177,8 +177,9 @@ insert into public.payments (id, user_id, title, amount, due_date, status, categ
 on conflict (id) do nothing;
 
 -- Kişisel alacak (15 gün sonra vadeli).
-insert into public.debts (id, user_id, person_name, direction, value_type, amount, estimated_value_try, due_date, status) values
-  ('de110000-0000-4000-8000-000000000401', '11111111-1111-1111-1111-111111111111', 'Ali', 'borç_verdim', 'TRY', 5000.00, 5000.00, current_date + 15, 'açık')
+insert into public.debts (id, user_id, person_name, direction, value_type, currency, amount, estimated_value_try, due_date, status) values
+  -- TRY borç sözleşmesi (DataHealth): amount teknik alanı 1, değer estimated_value_try'de, para birimi TRY.
+  ('de110000-0000-4000-8000-000000000401', '11111111-1111-1111-1111-111111111111', 'Ali', 'borç_verdim', 'TRY', 'TRY', 1, 5000.00, current_date + 15, 'açık')
 on conflict (id) do nothing;
 
 -- Maaş: 6 ay önce 85k, bu ayın 1'i itibarıyla 105k → zam trendi görünür.
@@ -191,9 +192,12 @@ on conflict (id) do nothing;
 -- client'ta gelmezse valued_at'li saklı değere düşülür), BES elle.
 insert into public.assets (id, user_id, name, category, amount, unit, currency, estimated_value_try, auto_valued, symbol, valued_at, valuation_rate) values
   ('de110000-0000-4000-8000-000000000601', '11111111-1111-1111-1111-111111111111', 'Nakit dolar', 'Nakit', 1200, 'adet', 'USD', 49200.00, true, null, now(), 41.00),
-  ('de110000-0000-4000-8000-000000000602', '11111111-1111-1111-1111-111111111111', 'Gram altın', 'Altın', 60, 'gram', 'TRY', 302400.00, true, null, now(), 5040.00),
-  ('de110000-0000-4000-8000-000000000603', '11111111-1111-1111-1111-111111111111', 'THYAO', 'Hisse', 100, 'adet', 'TRY', 32500.00, true, 'THYAO', now(), 325.00),
-  ('de110000-0000-4000-8000-000000000604', '11111111-1111-1111-1111-111111111111', 'BES birikimi', 'BES', 1, 'adet', 'TRY', 150000.00, false, null, null, null)
+  -- Varlık teknik alan sözleşmesi (DataHealth.checks.ts): nakit dışı varlıkta
+  -- currency NULL; hisse unit='TRY' (adet amount'ta); altın dışı/hisse dışı
+  -- (BES) amount=1, unit='TRY'. Seed eskiden bu üçünde uyarı üretiyordu (UX turu B28).
+  ('de110000-0000-4000-8000-000000000602', '11111111-1111-1111-1111-111111111111', 'Gram altın', 'Altın', 60, 'gram', null, 302400.00, true, null, now(), 5040.00),
+  ('de110000-0000-4000-8000-000000000603', '11111111-1111-1111-1111-111111111111', 'THYAO', 'Hisse', 100, 'TRY', null, 32500.00, true, 'THYAO', now(), 325.00),
+  ('de110000-0000-4000-8000-000000000604', '11111111-1111-1111-1111-111111111111', 'BES birikimi', 'BES', 1, 'TRY', null, 150000.00, false, null, null, null)
 on conflict (id) do nothing;
 
 -- Birikim hedefi + kasa kovaları. Kova hedefe BAĞLI ama takip kaynağı değil —

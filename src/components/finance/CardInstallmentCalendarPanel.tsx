@@ -7,6 +7,7 @@ import { useBalancePrivacy } from '../../hooks/useBalancePrivacy'
 import type { Card, CardInstallment } from '../../types/database'
 import { buildCardInstallmentCalendar, buildCardInstallmentTotalsByCard } from '../../utils/cardInstallmentCalendar'
 import { dateInputValue } from '../../utils/date'
+import { sumTL } from '../../utils/money'
 import { findInstallmentReliefs } from '../../utils/installmentHorizon'
 
 type CardInstallmentCalendarPanelProps = {
@@ -41,6 +42,11 @@ export function CardInstallmentCalendarPanel({ cards, installments, loading }: C
     [creditInstallments, todayValue],
   )
   const hasAny = months.some((month) => month.total > 0)
+  const currentMonthKey = dateInputValue(new Date()).slice(0, 7)
+  const postedThisMonth = useMemo(
+    () => sumTL(creditInstallments.filter((item) => item.status === 'posted' && item.due_month.slice(0, 7) === currentMonthKey).map((item) => item.amount)),
+    [creditInstallments, currentMonthKey],
+  )
   const hasOngoingInstallments = cardTotals.total > 0
 
   if (creditCards.length === 0) return null
@@ -76,8 +82,8 @@ export function CardInstallmentCalendarPanel({ cards, installments, loading }: C
                 <div key={row.cardId} className="flex min-w-0 items-center justify-between gap-3 rounded-lg bg-page px-3 py-2 text-xs">
                   <span className="min-w-0 truncate font-semibold text-ink">{row.cardLabel}</span>
                   <span className="shrink-0 text-right font-black tabular-nums text-ink">
-                    {formatAmount(row.amount)}
-                    <span className="ml-1 font-semibold text-ink-muted">
+                    {formatAmount(row.amount)}{' '}
+                    <span className="font-semibold text-ink-muted">
                       {row.count > 1 ? `· ${row.count} taksit` : '· 1 taksit'}
                     </span>
                   </span>
@@ -119,7 +125,13 @@ export function CardInstallmentCalendarPanel({ cards, installments, loading }: C
                   </span>
                 </div>
                 {month.rows.length === 0 ? (
-                  <p className="text-xs text-ink-muted">Taksit yok</p>
+                  <p className="text-xs text-ink-muted">
+                    {/* Bu ayın taksiti zaten ekstreye/dönem içine yazıldıysa "Taksit yok"
+                        yanıltıcıydı: hemen üstte "1/3. taksit · Bu dönem" duruyordu (B17). */}
+                    {month.monthKey.slice(0, 7) === currentMonthKey && postedThisMonth > 0
+                      ? `Bu dönemin taksiti (${formatAmount(postedThisMonth)}) dönem içi harcamada`
+                      : 'Taksit yok'}
+                  </p>
                 ) : (
                   <ul className="space-y-1.5">
                     {month.rows.map((row) => (

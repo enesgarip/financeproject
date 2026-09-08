@@ -261,7 +261,7 @@ export function PriceIncreaseRadar({ trends }: { trends: PriceTrend[] }) {
   const visible = trends.slice(0, 6)
 
   return (
-    <Card className="border-line-strong lg:col-span-7">
+    <Card className="border-line-strong lg:col-span-12">
       <CardHeader className="pb-0">
         <div className="flex items-start justify-between gap-3">
           <div>

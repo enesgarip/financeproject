@@ -388,6 +388,9 @@ export function LoansPage() {
         validateForm={validateLoanForm}
         groupBy={(row) => (row.status === 'active' ? '' : 'Tamamlananlar')}
         collapsibleGroups={COMPLETED_LOAN_GROUPS}
+        // Kredi kartı içinde ödeme planı taşıyor; 1440'ta üç sütun tek krediyi
+        // sol üçte bire sıkıştırıp sağı boş bırakıyordu (UX turu B14).
+        listGridClassName="xl:grid-cols-2"
         renderBeforeList={({ loading, rows }) => (!loading ? <LoanOverview loans={rows as Loan[]} installments={installments} /> : null)}
         afterSave={async (row) => {
           // BM-7 A-2: Plan bir kez oluştuktan sonra kullanıcıya aittir (satır

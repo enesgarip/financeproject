@@ -66,6 +66,9 @@ export function formatCompactCurrency(value: number | null | undefined) {
     if (roundedThousands >= 1_000) {
       return `${sign}₺${COMPACT_FORMAT.format(abs / 1_000_000)}M`
     }
+    // 10 binin altında bir ondalık: 4.800 → "4,8K" (takvim hücresinde "5b" diye
+    // yuvarlanınca tutar tanınmıyordu — UX turu B21).
+    if (abs < 10_000) return `${sign}₺${COMPACT_FORMAT.format(abs / 1_000)}K`
     return `${sign}₺${COMPACT_FORMAT.format(roundedThousands)}K`
   }
   return `${sign}₺${COMPACT_FORMAT.format(abs)}`

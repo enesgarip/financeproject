@@ -72,11 +72,13 @@ export function AnalysisPage() {
         <MonthCloseAssistant data={data} missingTables={missingTables} />
         <MonthlyReport data={data} />
         <UpcomingInstallments data={data} />
+        {/* 7+5 çiftleri: kategori dağılımı ve abonelikler yan yana; fiyat radarı
+            (veri yoksa null döner) tam satır — sağ yarı boş kalmasın (UX turu B14). */}
         <CategorySpendingChart data={data} />
+        <SubscriptionsPanel data={data} />
         <PriceIncreaseRadar trends={priceTrends} />
         <NetWorthTrend snapshots={snapshots} ratesSnapshot={ratesSnapshot} />
         <ForwardForecast data={data} />
-        <SubscriptionsPanel data={data} />
       </div>
     </section>
   )

@@ -1,6 +1,7 @@
 import { Coins } from 'lucide-react'
 import { useMemo, useEffect, useRef } from 'react'
 import { useAuth } from '../auth/useAuth'
+import { useFinanceSnapshot } from '../app/useFinanceSnapshot'
 import { CrudPage, type FormField } from '../components/CrudPage'
 import { LineChart } from '../components/charts/LineChart'
 import { RatesBanner } from '../components/finance/RatesBanner'
@@ -339,6 +340,13 @@ function validateGoldLot(formData: FormData, rows: GoldLot[], editing: GoldLot |
 export function GoldPage() {
   const { formatAmount } = useBalancePrivacy()
   const { snapshot } = useMarketRates()
+  // Varlıklar sekmesinde "Gram altın" kaydı varken burada "Henüz altın işlemi yok"
+  // iki ayrı gerçek gibi okunuyordu (UX turu B13): boş durumda köprü kur.
+  const snapshotQuery = useFinanceSnapshot()
+  const goldAssets = (snapshotQuery.data?.assets ?? []).filter((asset) => asset.category === 'Altın')
+  const goldAssetNote = goldAssets.length > 0
+    ? ` Varlıklar sekmesinde ${goldAssets.map((asset) => `${formatNumber(asset.amount)} ${asset.unit} ${asset.name}`).join(', ')} kaydın zaten var; o kayıt toplam değeri taşır, buradaki işlem defteri alım maliyetini ve kâr/zararı izler. Alımı buraya da girersen iki kayıt eşitlenir.`
+    : ''
 
   return (
     <CrudPage
@@ -351,7 +359,7 @@ export function GoldPage() {
       orderBy="purchase_date"
       orderAscending={false}
       emptyTitle="Henüz altın işlemi yok"
-      emptyDescription="Gram veya çeyrek alımlarını işlem olarak ekleyince toplam adet, ortalama maliyet ve net değer otomatik güncellenir."
+      emptyDescription={`Gram veya çeyrek alımlarını işlem olarak ekleyince toplam adet, ortalama maliyet ve net değer otomatik güncellenir.${goldAssetNote}`}
       validateForm={(formData, _values, editing, rows) => validateGoldLot(formData, rows as GoldLot[], editing as GoldLot | null)}
       getInitialValues={(row?: GoldLot) => ({
         direction: row?.direction ?? 'buy',
