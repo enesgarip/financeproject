@@ -297,9 +297,9 @@ has an open statement archive, because `pay_card_debt` lowers
 `statement_debt_amount` without closing the archive row (data health would flag
 the mismatch) — the same reason the obligations calendar only emits its
 `pay_card_debt` item for cards without an open statement.
-`LiabilitiesCardsPage` (`/borclar/kartlar`) applies the same guard by switching
-its button to the `pay_card_statement` flow whenever the card has an open
-archive; `pay_card_debt` is offered only for archive-less cards.
+The former `/borclar/kartlar` page applied the same guard; it was removed on
+2026-09-08 (orphaned after UI-1 pointed the tab at the Accounts card section),
+so the Accounts page is now the only pay surface and carries this guard alone.
 
 The UI guard is now backed by a database guard as well (audit 2026-08-12 K4,
 migration `20260812091000`): `pay_card_statement` refuses to pay an open archive

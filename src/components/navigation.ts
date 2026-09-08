@@ -48,7 +48,7 @@ export const primaryNavItems: readonly NavItem[] = [
   { to: '/', label: 'Özet', icon: Home },
   { to: '/kartlar', label: 'Hesaplar', icon: CreditCard },
   { to: '/varliklar', label: 'Varlıklar', icon: Wallet, activePaths: ['/varliklar/maas', '/varliklar/altin', '/varliklar/araclar'] },
-  { to: '/borclar/krediler', label: 'Borçlar', icon: HandCoins, activePaths: ['/borclar/kisiler', '/borclar/kartlar'] },
+  { to: '/borclar/krediler', label: 'Borçlar', icon: HandCoins, activePaths: ['/borclar/kisiler'] },
   { to: '/odemeler', label: 'Plan', icon: WalletCards, activePaths: ['/odemeler/hedefler', '/odemeler/liste', '/odemeler/alsam-mi', '/odemeler/baglamlar'] },
   { to: '/analiz', label: 'Analiz', icon: BarChart3 },
 ]
@@ -81,7 +81,6 @@ export const assetsHubTabs: HubTab[] = [
 export const liabilitiesHubTabs: HubTab[] = [
   { to: '/borclar/krediler', label: 'Krediler', icon: Landmark },
   { to: '/borclar/kisiler', label: 'Kişiler', icon: UsersRound },
-  { to: '/kartlar?section=kartlar', label: 'Kredi kartları', icon: CreditCard },
 ]
 
 export const planningHubTabs: HubTab[] = [
@@ -116,7 +115,6 @@ const routeMeta: Record<string, { title: string; subtitle?: string; width: Route
   '/varliklar/araclar': { title: 'Araçlar', subtitle: 'Araç başına gider takibi ve dağılımı', width: 'wide' },
   '/borclar/krediler': { title: 'Krediler', subtitle: 'Aktif krediler ve taksit planları', width: 'wide' },
   '/borclar/kisiler': { title: 'Borç ve alacaklar', subtitle: 'Kişisel borç ve alacaklar', width: 'medium' },
-  '/borclar/kartlar': { title: 'Kart borcu', subtitle: 'Kredi kartı borçları ve ödeme kayıtları', width: 'medium' },
   '/odemeler': { title: 'Ödeme takvimi', subtitle: 'Planlı ödemeler ve vadeler', width: 'medium' },
   '/odemeler/hedefler': { title: 'Bütçe ve hedefler', subtitle: 'Birikim hedefleri ve bütçe takibi', width: 'medium' },
   '/odemeler/alsam-mi': { title: 'Alsam mı?', subtitle: 'Alışverişin önümüzdeki aylara etkisi', width: 'narrow' },
