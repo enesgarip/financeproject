@@ -122,6 +122,8 @@ export function CardsPage() {
     setTransactionAmount,
   } = useAccountMovementModal({ invalidateSnapshot, reloadCards, setReloadCards })
   const { drawerProps, openPaymentDrawer } = useFinancePaymentDrawer()
+  // Hızlı harcama kaydı → "Son kart hareketleri" listesi tazelenir (B2).
+  const [expensesVersion, setExpensesVersion] = useState(0)
   const [importCard, setImportCard] = useState<Card | null>(null)
   const [movementImportCard, setMovementImportCard] = useState<Card | null>(null)
   const [postImportBanner, setPostImportBanner] = useState(false)
@@ -347,12 +349,20 @@ export function CardsPage() {
 
               {!loading && section === 'islemler' ? (
                 <>
-                  <QuickExpensePanel rows={cardRows} reload={() => refreshCardsAndProvisions(reload)} setError={setError} focus={quickExpenseFocus} formatAmount={formatAmount} />
+                  <QuickExpensePanel
+                    rows={cardRows}
+                    reload={() => refreshCardsAndProvisions(reload)}
+                    setError={setError}
+                    focus={quickExpenseFocus}
+                    formatAmount={formatAmount}
+                    onSaved={() => setExpensesVersion((version) => version + 1)}
+                  />
                   <CategoryCleanupPanel />
                   <RecentCardExpensesPanel
                     cards={cardRows}
                     reload={() => refreshCardsAndProvisions(reload)}
                     setError={setError}
+                    refreshKey={expensesVersion}
                   />
                   <CardInstallmentExpensesPanel
                     cards={cardRows}

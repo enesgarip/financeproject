@@ -4,6 +4,7 @@ import {
   buildFinanceObligationsForMonth,
   buildFinanceObligationsForRange,
   summarizeFinanceObligations,
+  buildPaymentObligation,
   type FinanceObligationsInput,
 } from './obligations'
 
@@ -469,5 +470,43 @@ describe('summarizeFinanceObligations — günü geçmiş maaş (UX turu B11)', 
 
     const onPayday = summarizeFinanceObligations(items, { from: new Date(2026, 5, 1) })
     expect(onPayday.inflow).toBe(105000)
+  })
+})
+
+describe('includeSettled — ödenmiş kalemler takvim izi (UX turu B10)', () => {
+  it('ödenmiş planlı ödeme ve taksit settled olarak gelir; özet ve yük saymaz', () => {
+    const data = input({
+      payments: [
+        payment({ id: 'p-paid', title: 'Kasko', amount: 5100, due_date: '2026-06-28', status: 'ödendi', recurrence: 'none' }),
+        payment({ id: 'p-open', title: 'Kira', amount: 22000, due_date: '2026-06-01', recurrence: 'none' }),
+      ],
+      loans: [loan({ id: 'L', loan_name: 'Taşıt', status: 'active', remaining_installments: 1 })],
+      loanInstallments: [
+        loanInstallment({ id: 'i-paid', loan_id: 'L', installment_no: 1, amount: 9250, due_date: '2026-07-05', status: 'ödendi', paid_at: '2026-06-08T10:00:00Z' }),
+      ],
+    })
+    const plain = buildFinanceObligationsForMonth(data, FROM)
+    expect(plain.some((item) => item.settled)).toBe(false)
+
+    const withSettled = buildFinanceObligationsForMonth(data, FROM, { includeSettled: true })
+    const settled = withSettled.filter((item) => item.settled)
+    // Liste tarihe göre sıralı: taksit (8'i) kaskodan (28'i) önce.
+    expect(settled.map((item) => [item.title, item.date, item.cashImpactAmount, item.action])).toEqual([
+      ['Taşıt', '2026-06-08', 0, null],
+      ['Kasko', '2026-06-28', 0, null],
+    ])
+
+    const summary = summarizeFinanceObligations(withSettled)
+    expect(summary.outflow).toBe(22000)
+    expect(summary.itemCount).toBe(1)
+    expect(summary.payableCount).toBe(1)
+  })
+
+  it('buildPaymentObligation liste kartındaki Öde ile takvim kalemini aynı kurar (B8)', () => {
+    const row = payment({ id: 'p-open', title: 'Kira', amount: 22000, due_date: '2026-06-01', recurrence: 'monthly', recurrence_day: 1 })
+    const data = input({ payments: [row] })
+    const fromCalendar = buildFinanceObligationsForMonth(data, FROM).find((item) => item.sourceId === 'p-open')
+    const fromList = buildPaymentObligation(row, '2026-06-01', data.cards)
+    expect(fromList).toEqual(fromCalendar)
   })
 })

@@ -1,6 +1,7 @@
 import { useMemo, useState, type ReactNode } from 'react'
 import { useBalancePrivacy } from '../../hooks/useBalancePrivacy'
 import type { Card } from '../../types/database'
+import { dateInputValue } from '../../utils/date'
 import { parseNumber } from '../../utils/formatCurrency'
 import { diffTL, greaterThanTL } from '../../utils/money'
 import { SimpleModal } from '../SimpleModal'
@@ -12,9 +13,17 @@ import { MoneyInput } from './MoneyInput'
 type AccountPaymentSubmit = {
   account: Card
   amount: number
+  /** Gerçek ödeme günü (YYYY-MM-DD); `paidAtEditable` ise doldurulur (UX turu B9). */
+  paidAt?: string
 }
 
 type AccountPaymentModalProps = {
+  /**
+   * Ödeme günü alanı gösterilsin mi. Planlı ödeme ve kredi taksiti için evet:
+   * eskiden tarih "planlanan gün" olarak sabit gösteriliyor, erken/geç ödeme
+   * gerçek günüyle kaydedilemiyordu.
+   */
+  paidAtEditable?: boolean
   open: boolean
   title: string
   accounts: Card[]
@@ -76,9 +85,12 @@ export function AccountPaymentModal({
   children,
   validate,
   successAction = false,
+  paidAtEditable = false,
 }: AccountPaymentModalProps) {
   const { formatAmount } = useBalancePrivacy()
   const [validationError, setValidationError] = useState('')
+  const today = dateInputValue(new Date())
+  const [paidAt, setPaidAt] = useState(today)
   const amount = useMemo(() => parseNumber(amountValue), [amountValue])
   const previewAmount = accountPreviewAmount?.(amount) ?? amount
   const selectedAccount = accounts.find((account) => account.id === selectedAccountId)
@@ -115,7 +127,18 @@ export function AccountPaymentModal({
       return
     }
 
-    void onSubmit({ account: selectedAccount, amount })
+    if (paidAtEditable) {
+      if (!paidAt) {
+        setValidationError('Ödeme gününü seç.')
+        return
+      }
+      if (paidAt > today) {
+        setValidationError('Ödeme günü gelecekte olamaz.')
+        return
+      }
+    }
+
+    void onSubmit({ account: selectedAccount, amount, ...(paidAtEditable ? { paidAt } : {}) })
   }
 
   return (
@@ -125,6 +148,23 @@ export function AccountPaymentModal({
           <div className="rounded-lg border border-line-strong bg-page p-3 text-sm text-ink-muted">
             {children}
           </div>
+        ) : null}
+
+        {paidAtEditable ? (
+          <label className="block text-sm font-semibold text-ink">
+            Ödeme günü
+            <input
+              type="date"
+              value={paidAt}
+              max={today}
+              onChange={(event) => {
+                setValidationError('')
+                setPaidAt(event.target.value)
+              }}
+              className="mt-1 min-h-11 w-full rounded-lg border border-line-strong bg-raised px-3 text-sm tabular-nums text-ink"
+            />
+            <span className="mt-1 block text-xs font-normal text-ink-muted">Varsayılan bugün; erken/geç ödediysen gerçek günü yaz.</span>
+          </label>
         ) : null}
 
         {amountEditable ? (

@@ -85,6 +85,11 @@ export type FinanceObligation = {
   direction: FinanceObligationDirection
   settlement?: FinanceObligationSettlement
   isEstimate?: boolean // tutar tahmini/otomatik değerlenmiş mi (kesin değil)
+  /**
+   * Bu ay zaten ÖDENMİŞ kalem (yalnız `includeSettled` ile üretilir; takvim
+   * geçmişi için). cashImpactAmount 0, action null; özet ve projeksiyon saymaz.
+   */
+  settled?: boolean
 }
 
 export type FinanceObligationsInput = {
@@ -99,7 +104,10 @@ export type FinanceObligationsInput = {
    * Kısmi ekstre ödemeleri (K7). Verilmezse kalan = arşiv tutarı kabul edilir
    * (migration bekleyen ortamda eski davranış korunur).
    */
-  cardStatementPayments?: Pick<CardStatementPayment, 'statement_archive_id' | 'amount'>[]
+  cardStatementPayments?: Array<
+    Pick<CardStatementPayment, 'statement_archive_id' | 'amount'> &
+      Partial<Pick<CardStatementPayment, 'id' | 'card_id' | 'paid_at'>>
+  >
   salaryHistory?: SalaryHistory[]
 }
 
@@ -174,18 +182,48 @@ function addObligation(items: FinanceObligation[], item: FinanceObligation, opti
   })
 }
 
+/**
+ * Bekleyen planlı ödemeden ödeme kalemi üretir. Takvim döngüsü ve planlı ödeme
+ * listesindeki "Öde" düğmesi aynı gövdeyi kullanır (UX turu B8 — liste
+ * menüsünde ödeme yoktu, yalnız takvim gününden ulaşılıyordu).
+ */
+export function buildPaymentObligation(payment: Payment, occurrence: string, cards: Card[]): FinanceObligation {
+  const isCreditCardId = buildCreditCardIdCheck(cards)
+  const usesCreditCard = paymentUsesCreditCard(payment, isCreditCardId)
+  const autoSourceCard = payment.auto_source_card_id ? cards.find((card) => card.id === payment.auto_source_card_id) : undefined
+  const amount = roundTL(Math.max(0, payment.amount))
+  return {
+    id: `payment-${payment.id}-${occurrence}`,
+    kind: 'payment',
+    action: 'pay_payment',
+    sourceId: payment.id,
+    relatedCardId: payment.auto_source_card_id ?? undefined,
+    title: payment.title,
+    subtitle: usesCreditCard
+      ? `${payment.category} - ${cardLabel(autoSourceCard)} kart talimatı`
+      : payment.recurrence === 'monthly'
+        ? `${payment.category} - aylık`
+        : payment.category,
+    date: occurrence,
+    amount,
+    cashImpactAmount: roundTL(Math.max(0, paymentCashOutflowAmount(payment, isCreditCardId))),
+    direction: 'outflow',
+    settlement: usesCreditCard ? 'credit_card' : 'cash',
+    isEstimate: payment.amount_status === 'estimated',
+  }
+}
+
 export function buildFinanceObligationsForMonth(
   data: FinanceObligationsInput,
   month: Date,
-  options: { from?: Date } = {},
+  options: { from?: Date; includeSettled?: boolean } = {},
 ): FinanceObligation[] {
   const monthStart = startOfMonth(month)
   const fromMonth = startOfMonth(options.from ?? new Date())
   const items: FinanceObligation[] = []
   const cardsById = new Map(data.cards.map((card) => [card.id, card]))
   // Kaynak kart BANKA hesabıysa talimat nakit çıkışıdır; yalnız kredi kartı
-  // kaynağı "karta biner, bu ay nakit değil" muamelesi görür.
-  const isCreditCardId = buildCreditCardIdCheck(data.cards)
+  // kaynağı "karta biner, bu ay nakit değil" muamelesi görür — buildPaymentObligation içinde.
   // Kalanı biten ekstre (kısmi ödemelerle kapanmış ama arşivi açık) ne yükümlülük
   // üretir ne de kartın pay_card_debt yolunu kapatır (K7).
   const paidByArchive = buildStatementPaidMap(data.cardStatementPayments ?? [])
@@ -197,32 +235,76 @@ export function buildFinanceObligationsForMonth(
   for (const payment of data.payments) {
     const occurrence = paymentOccurrenceInMonth(payment, monthStart)
     if (!occurrence) continue
-    const usesCreditCard = paymentUsesCreditCard(payment, isCreditCardId)
-    const autoSourceCard = payment.auto_source_card_id ? cardsById.get(payment.auto_source_card_id) : undefined
 
     addObligation(
       items,
-      {
-        id: `payment-${payment.id}-${dateInputValue(occurrence)}`,
-        kind: 'payment',
-        action: 'pay_payment',
-        sourceId: payment.id,
-        relatedCardId: payment.auto_source_card_id ?? undefined,
-        title: payment.title,
-        subtitle: usesCreditCard
-          ? `${payment.category} - ${cardLabel(autoSourceCard)} kart talimatı`
-          : payment.recurrence === 'monthly'
-            ? `${payment.category} - aylık`
-            : payment.category,
-        date: dateInputValue(occurrence),
-        amount: payment.amount,
-        cashImpactAmount: paymentCashOutflowAmount(payment, isCreditCardId),
-        direction: 'outflow',
-        settlement: usesCreditCard ? 'credit_card' : 'cash',
-        isEstimate: payment.amount_status === 'estimated',
-      },
+      buildPaymentObligation(payment, dateInputValue(occurrence), data.cards),
       { allowZero: payment.amount_status === 'estimated' },
     )
+  }
+
+  if (options.includeSettled) {
+    // Ödenmiş kalemler takvimde iz bırakır (UX turu B10 — ödenen kayıt hücreden
+    // siliniyor, "bu ay ne ödedim" görülemiyordu). Nakit etkisi 0, aksiyon yok.
+    const settledPaymentIds = new Set<string>()
+    for (const payment of data.payments) {
+      if (payment.status !== 'ödendi' || !isDateInMonth(payment.due_date, monthStart)) continue
+      settledPaymentIds.add(payment.id)
+      addObligation(items, {
+        id: `settled-payment-${payment.id}-${payment.due_date}`,
+        kind: 'payment',
+        action: null,
+        sourceId: payment.id,
+        title: payment.title,
+        subtitle: `${payment.category} - ödendi`,
+        date: payment.due_date,
+        amount: payment.amount,
+        cashImpactAmount: 0,
+        direction: 'outflow',
+        settled: true,
+      })
+    }
+
+    for (const installment of data.loanInstallments) {
+      if (installment.status !== 'ödendi' || !installment.paid_at) continue
+      const paidOn = installment.paid_at.slice(0, 10)
+      if (!isDateInMonth(paidOn, monthStart)) continue
+      const loan = data.loans.find((row) => row.id === installment.loan_id)
+      addObligation(items, {
+        id: `settled-loan-installment-${installment.id}`,
+        kind: 'loan_installment',
+        action: null,
+        sourceId: installment.id,
+        title: loan?.loan_name ?? 'Kredi taksiti',
+        subtitle: `${loan?.bank_name ?? 'Kredi'} - ${installment.installment_no}. taksit ödendi`,
+        date: paidOn,
+        amount: installment.amount,
+        cashImpactAmount: 0,
+        direction: 'outflow',
+        settled: true,
+      })
+    }
+
+    for (const statementPayment of data.cardStatementPayments ?? []) {
+      if (!statementPayment.paid_at || !statementPayment.card_id) continue
+      const paidOn = statementPayment.paid_at.slice(0, 10)
+      if (!isDateInMonth(paidOn, monthStart)) continue
+      const card = cardsById.get(statementPayment.card_id)
+      addObligation(items, {
+        id: `settled-statement-payment-${statementPayment.id ?? `${statementPayment.statement_archive_id}-${paidOn}`}`,
+        kind: 'card_statement',
+        action: null,
+        sourceId: statementPayment.statement_archive_id,
+        relatedCardId: statementPayment.card_id,
+        title: `${card?.card_name ?? 'Kredi kartı'} ekstresi`,
+        subtitle: `${cardLabel(card)} - ödendi`,
+        date: paidOn,
+        amount: statementPayment.amount,
+        cashImpactAmount: 0,
+        direction: 'outflow',
+        settled: true,
+      })
+    }
   }
 
   for (const statement of openStatements) {
@@ -433,19 +515,21 @@ export function summarizeFinanceObligations(
   const fromKey = options.from ? dateInputValue(startOfDay(options.from)) : null
   const isReceivedSalary = (item: FinanceObligation) =>
     fromKey != null && item.kind === 'salary' && item.direction === 'inflow' && item.date < fromKey
-  const outflow = roundTL(sumTL(items.filter((item) => item.direction === 'outflow').map(obligationCashImpact)))
+  // Ödenmiş (settled) kalemler yalnız takvim izi; yük, giriş ve sayımlara girmez.
+  const live = items.filter((item) => !item.settled)
+  const outflow = roundTL(sumTL(live.filter((item) => item.direction === 'outflow').map(obligationCashImpact)))
   const inflow = roundTL(
-    sumTL(items.filter((item) => item.direction === 'inflow' && !isReceivedSalary(item)).map(obligationCashImpact)),
+    sumTL(live.filter((item) => item.direction === 'inflow' && !isReceivedSalary(item)).map(obligationCashImpact)),
   )
-  const receivedSalary = roundTL(sumTL(items.filter(isReceivedSalary).map(obligationCashImpact)))
+  const receivedSalary = roundTL(sumTL(live.filter(isReceivedSalary).map(obligationCashImpact)))
 
   return {
     outflow,
     inflow,
     receivedSalary,
     net: roundTL(inflow - outflow),
-    payableCount: items.filter((item) => item.action).length,
-    itemCount: items.length,
+    payableCount: live.filter((item) => item.action).length,
+    itemCount: live.length,
   }
 }
 

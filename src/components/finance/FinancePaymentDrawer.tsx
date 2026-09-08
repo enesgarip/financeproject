@@ -10,6 +10,7 @@ import {
   submitLabelForObligation,
   type RecentSmsAccountDebit,
 } from '../../services/financePaymentActions'
+import { obligationSupportsPaidAt } from '../../services/financePaymentActions'
 import type { Card } from '../../types/database'
 import { formatDate } from '../../utils/date'
 import { useBalancePrivacy } from '../../hooks/useBalancePrivacy'
@@ -22,6 +23,7 @@ type AccountPaymentSubmit = {
   account: Card
   amount: number
   skipSourceDebit?: boolean
+  paidAt?: string
 }
 
 type FinancePaymentDrawerProps = {
@@ -199,6 +201,7 @@ export function FinancePaymentDrawer({
         return null
       }}
       onSubmit={(payload) => onSubmit({ ...payload, skipSourceDebit })}
+      paidAtEditable={obligationSupportsPaidAt(intent)}
     >
       {detail ?? defaultPaymentDetail(intent, formatAmount)}
     </AccountPaymentModal>
