@@ -200,6 +200,15 @@ insert into public.assets (id, user_id, name, category, amount, unit, currency, 
   ('de110000-0000-4000-8000-000000000604', '11111111-1111-1111-1111-111111111111', 'BES birikimi', 'BES', 1, 'TRY', null, 150000.00, false, null, null, null)
 on conflict (id) do nothing;
 
+-- BES değer geçmişi: üç aylık dönem, her ay 5.000 katkı; ağustosta katkıya
+-- rağmen değer geriledi (düşüş satırı panelde görünsün). Zincir sürekli:
+-- 130.000 → 136.500 → 139.000 → 150.000 (varlık satırındaki güncel değer).
+insert into public.asset_value_events (id, user_id, asset_id, occurred_at, value_before_kurus, value_after_kurus, contribution_kurus, source, note) values
+  ('de110000-0000-4000-8000-000000000611', '11111111-1111-1111-1111-111111111111', 'de110000-0000-4000-8000-000000000604', date_trunc('month', current_date) - interval '2 months', 13000000, 13650000, 500000, 'manual', 'Fon getirisi'),
+  ('de110000-0000-4000-8000-000000000612', '11111111-1111-1111-1111-111111111111', 'de110000-0000-4000-8000-000000000604', date_trunc('month', current_date) - interval '1 month', 13650000, 13900000, 500000, 'manual', null),
+  ('de110000-0000-4000-8000-000000000613', '11111111-1111-1111-1111-111111111111', 'de110000-0000-4000-8000-000000000604', date_trunc('month', current_date), 13900000, 15000000, 500000, 'manual', 'Devlet katkısı dahil')
+on conflict (id) do nothing;
+
 -- Birikim hedefi + kasa kovaları. Kova hedefe BAĞLI ama takip kaynağı değil —
 -- UI'daki "bu kovayı kaynak yap" akışı elle denenebilir kalsın.
 insert into public.savings_goals (id, user_id, name, target_amount, current_amount, target_date, status) values

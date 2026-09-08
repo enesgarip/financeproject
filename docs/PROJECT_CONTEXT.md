@@ -191,6 +191,7 @@ From the current typed schema, main tables are:
 - `push_subscriptions`, `notification_log` (Web Push abonelik + gönderim günlüğü)
 - `net_worth_snapshots` (günlük net değer fotoğrafı)
 - `gold_lots` (altın lot/ledger)
+- `asset_value_events` (manuel varlık değer olayları: önceki→yeni değer kuruş + dönem katkısı; BES getirisi buradan türer)
 - `wishlist_items` (alışveriş listesi)
 - `data_health_repair_runs` (canonical request, idempotency, batch status/counts)
 - `data_health_repair_steps` (per-target before/after repair receipts)

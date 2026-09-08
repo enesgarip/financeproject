@@ -532,6 +532,18 @@ export type SavingsGoalSnapshot = BaseRow & {
   amount: number
 }
 
+/** Manuel varlık değer olayı (BES/Araç/Fon/Diğer): Δdeğer − katkı = getiri. */
+export type AssetValueEvent = BaseRow & {
+  asset_id: string
+  occurred_at: string
+  value_before_kurus: number
+  value_after_kurus: number
+  /** Dönemde yatırılan (katkı payı, devlet katkısı). Eksi = çekim. */
+  contribution_kurus: number
+  source: "manual" | "trigger" | "legacy"
+  note: string | null
+}
+
 export type DismissedUpcomingItem = {
   id: string
   user_id: string
@@ -753,6 +765,7 @@ export type Database = {
       net_worth_snapshots: Table<NetWorthSnapshot, WithBaseInsert<NetWorthSnapshot>, WithBaseUpdate<NetWorthSnapshot>>
       savings_goal_snapshots: Table<SavingsGoalSnapshot, WithBaseInsert<SavingsGoalSnapshot>, WithBaseUpdate<SavingsGoalSnapshot>>
       gold_lots: Table<GoldLot, WithBaseInsert<GoldLot>, WithBaseUpdate<GoldLot>>
+      asset_value_events: Table<AssetValueEvent, WithBaseInsert<AssetValueEvent>, WithBaseUpdate<AssetValueEvent>>
       card_ledger: Table<CardLedger, WithBaseInsert<CardLedger>, WithBaseUpdate<CardLedger>>
       account_ledger: Table<AccountLedger, WithBaseInsert<AccountLedger>, WithBaseUpdate<AccountLedger>>
       data_health_repair_runs: Table<

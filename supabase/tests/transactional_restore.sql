@@ -13,7 +13,7 @@ declare
   v_order text[] := array[
     'cards','cars','expense_contexts','card_aliases','assets','loans',
     'savings_goals','budgets','kasa_buckets','wishlist_items','debts',
-    'salary_history','gold_lots','net_worth_snapshots','savings_goal_snapshots',
+    'asset_value_events','salary_history','gold_lots','net_worth_snapshots','savings_goal_snapshots',
     'card_statement_archives','card_statement_payments','car_reminders',
     'car_expenses','context_expenses','card_expenses','card_installments',
     'loan_installments','savings_goal_components','savings_goal_sources',
