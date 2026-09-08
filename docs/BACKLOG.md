@@ -1,5 +1,14 @@
 # Priority Backlog
 
+## 2026-09-08 — Borçlar'daki "Kredi kartları" sekmesi + yetim sayfa kaldırıldı — DONE
+
+UI-1 (#216) sekmeyi `/kartlar?section=kartlar`'a yönlendirmişti; Borçlar
+hub'ında içeriksiz bir kısayol kalmış, `/borclar/kartlar`
+(`LiabilitiesCardsPage`) ise hiçbir bağlantısı olmayan yetim bir kopya yüzey
+olmuştu (aynı ödeme çekmecesini Hesaplar sunuyor). Sekme ve sayfa silindi;
+eski adres Hesaplar kart bölümüne yönlenir. Kart borcu tek yüzeyden gösterilir
+ve ödenir.
+
 ## 2026-09-08 — Borsa: hisse işlem defteri + portföy performansı — DONE
 
 Sorun: "portföyde şu tarihten bu yana ne kazandım" hesaplanamıyordu — işlem

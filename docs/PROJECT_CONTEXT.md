@@ -49,7 +49,7 @@ The main product goal is to make monthly financial load visible before due dates
   - `DashboardPage.tsx`
   - `AssetsPage.tsx` (Varlıklar hub: `AssetsHub.tsx` → varlıklar + `SalaryPage.tsx` + `GoldPage.tsx` + `CarsPage.tsx`)
   - `CardsPage.tsx`
-  - `LoansPage.tsx` / `DebtsPage.tsx` / `LiabilitiesCardsPage.tsx` (Borçlar hub: `LiabilitiesHub.tsx`)
+  - `LoansPage.tsx` / `DebtsPage.tsx` (Borçlar hub: `LiabilitiesHub.tsx`)
   - `PaymentsPage.tsx` / `PlanningPage.tsx` / `PurchaseDecisionPage.tsx` / `WishlistPage.tsx` / `ExpenseContextsPage.tsx` (Planlama hub: `PlanningHub.tsx`)
   - `AnalysisPage.tsx` / `AnalysisDetailPage.tsx` (+ `AnalysisPage.*` parçaları; Analiz hub: `AnalysisHub.tsx`)
   - `DataHealthPage.tsx` / `DataHealthOperationsPage.tsx` (Veri Kontrolü hub: `DataHealthHub.tsx`)
@@ -143,7 +143,7 @@ Live routes (source of truth: `src/App.tsx`):
 - `/` dashboard
 - `/kartlar` (Hesaplar)
 - `/varliklar` hub → index (Varlıklar) + `/varliklar/maas` (Maaş) + `/varliklar/altin` (Altın) + `/varliklar/araclar` (Arabalarım)
-- `/borclar` hub → `/borclar/krediler` (Krediler) + `/borclar/kisiler` (Kişiler) + `/borclar/kartlar` (Kart Borcu)
+- `/borclar` hub → `/borclar/krediler` (Krediler) + `/borclar/kisiler` (Kişiler); `/borclar/kartlar` eski adresi Hesaplar kart bölümüne yönlenir (sayfa 2026-09-08'de kaldırıldı)
 - `/odemeler` hub → index (Ödeme Takvimi) + `/odemeler/hedefler` (Bütçe & Hedefler) + `/odemeler/alsam-mi` (Alsam mı?) + `/odemeler/liste` (Alışveriş Listesi) + `/odemeler/baglamlar` (gider bağlamları)
 - `/analiz` hub → index (Analiz) + `/analiz/detay` (Detay) + `/analiz/asistan` (AI Asistan — Gemini sohbet)
 - `/veri-sagligi` hub → index (Bulgular) + `/veri-sagligi/islemler` (Yedek ve Ayarlar)

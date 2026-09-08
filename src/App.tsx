@@ -43,9 +43,6 @@ const AssistantPage = lazyWithReload(() =>
 const CarsPage = lazyWithReload(() =>
   import('./pages/CarsPage').then((m) => ({ default: m.CarsPage })),
 )
-const LiabilitiesCardsPage = lazyWithReload(() =>
-  import('./pages/LiabilitiesCardsPage').then((m) => ({ default: m.LiabilitiesCardsPage })),
-)
 const CardsPage = lazyWithReload(() =>
   import('./pages/CardsPage').then((m) => ({ default: m.CardsPage })),
 )
@@ -153,12 +150,14 @@ function AnimatedRoutes() {
           <Route path="araclar" element={routeElement(<CarsPage />, 'varliklar-araclar')} />
         </Route>
 
-        {/* Borçlar hub: loans + personal debts + credit-card debt */}
+        {/* Borçlar hub: loans + personal debts. Kredi kartı borcu Hesaplar'da
+            (UI-1 ile sekme oraya yönlenmişti; yetim /borclar/kartlar sayfası
+            2026-09-08'de kaldırıldı, eski adres yönlendirilir). */}
         <Route path="borclar" element={<LiabilitiesHub />}>
           <Route index element={<Navigate to="/borclar/krediler" replace />} />
           <Route path="krediler" element={routeElement(<LoansPage />, 'borclar-krediler')} />
           <Route path="kisiler" element={routeElement(<DebtsPage />, 'borclar-kisiler')} />
-          <Route path="kartlar" element={routeElement(<LiabilitiesCardsPage />, 'borclar-kartlar')} />
+          <Route path="kartlar" element={<Navigate to="/kartlar?section=kartlar" replace />} />
         </Route>
 
         <Route path="odemeler" element={<PlanningHub />}>
