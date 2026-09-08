@@ -585,13 +585,28 @@ async function handleAccountSms(
     return jsonResponse({ error: 'Hesap hareketi kaydedilemedi.', detail: errBody }, 502)
   }
 
-  const card = await rpcRes.json() as { user_id?: string; card_name?: string }
+  // RPC jsonb döner (20260908170000): kart alanları + kişisel alacak/borç
+  // eşlemesi. Eşleşen kayıt kapatıldıysa/kısmi düşüldüyse özet bunu söyler;
+  // eşleme yapılmadıysa sebebi (belirsiz aday, büyük tutar) yine özete girer ki
+  // kullanıcı "Tahsil et"e basmadan önce durumu görsün.
+  const result = await rpcRes.json() as {
+    user_id?: string
+    card_name?: string
+    matched_debt?: { id: string; person_name: string; direction: string; paid: number; closed: boolean; remaining: number } | null
+    debt_note?: string | null
+  }
+  const debt = result.matched_debt ?? null
+  const debtSummary = debt
+    ? ` · ${debt.direction === 'borç_verdim' ? 'alacak' : 'borç'} ${debt.closed ? 'kapandı' : `kısmen düşüldü (kalan ${debt.remaining} TL)`}: ${debt.person_name}`
+    : result.debt_note
+      ? ` · ${result.debt_note}`
+      : ''
   await logSms(supabaseUrl, headers, {
-    userId: card.user_id,
+    userId: result.user_id,
     smsType: 'account_movement',
     status: 'success',
     amount: parsed.amount,
-    summary: `${card.card_name ?? ''} · ${parsed.counterparty}`,
+    summary: `${result.card_name ?? ''} · ${parsed.counterparty}${debtSummary}`,
     rawSms,
   })
 
@@ -604,5 +619,7 @@ async function handleAccountSms(
     direction: parsed.direction,
     transactionType: parsed.transactionType,
     occurredAt: parsed.occurredAt,
+    matchedDebt: debt,
+    debtNote: result.debt_note ?? null,
   })
 }

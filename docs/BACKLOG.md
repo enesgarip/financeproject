@@ -1,5 +1,29 @@
 # Priority Backlog
 
+## 2026-09-08 — Gelen/giden hesap SMS'i ↔ kişisel alacak/borç otomatik eşleme — DONE
+
+Vaka: arkadaş FAST ile 8.000 TL gönderdi; SMS otomasyonu hesaba ekledi,
+kullanıcı borç kaydında "Tahsil et"e basınca `settle_personal_debt` hesabı
+İKİNCİ kez kredilendirdi. Parser gönderici adını zaten çıkarıyordu.
+
+- ~~**Otomatik eşleme (RPC).**~~ DONE. `record_sms_account_movement` bakiye +
+  geçmişten sonra açık kişisel kaydı arar: `private.fold_match_text` (Türkçe
+  aksan katlama) ile kayıttaki adın HER kelimesi gönderici adında tam kelime,
+  aynı yön (giriş→borç_verdim, çıkış→borç_aldım), TRY, tutar ≤ değer + max(5 TL,
+  %1). Tam olarak BİR aday → kapat/kısmi düş, hesaba dokunma. 0/>1 aday ya da
+  büyük tutar → hiçbir şey, sebep `debt_note` (sms_log özetine yazılır).
+  Dönüş jsonb; retry erken dönüşü eşlemeye girmez. Simetrik giden EFT de kapsandı.
+- ~~**Elle yol.**~~ DONE. `settle_personal_debt` `p_skip_account_move`;
+  çekmecede kart ödemesindeki "bakiye zaten düştü" kutusu alacak/borç için de
+  çıkar (`findRecentSmsAccountMovement` yönlü: "… geldi" / "… gonderimi").
+- ~~**Test.**~~ DONE. `supabase/tests/sms_personal_debt_match.sql` (tam, retry,
+  aksan+kısmi, belirsiz, büyük tutar, tolerans, tam kelime, giden, elle skip,
+  grant); parser testine gerçek SMS fikstürü.
+
+Bilinçli sınır: yalnız `value_type='TRY'` kayıtlar (döviz/altın kaydının TL
+değeri canlı kur tahmini). Gelen tutar kayıttan büyükse eşleme yapılmaz,
+yalnız not düşülür (kullanıcı kararı).
+
 ## 2026-09-08 — BES/OTOBES değer geçmişi: katkı ve getiri ayrımı — DONE
 
 Sorun: manuel varlık (BES) güncellemesi geçmişe yalnız "+9.999 · tarih" olarak

@@ -87,19 +87,22 @@ export function obligationAmountEditable(obligation: FinanceObligation | null) {
 
 export { estimatedMinimumCardPayment, minimumCardPaymentRate } from '../utils/financeObligationRules'
 
-export type RecentSmsAccountDebit = {
+export type RecentSmsAccountMovement = {
   occurredAt: string
   title: string
 }
 
 // B4: Kullanıcı kart borcunu bankada ödediğinde hesap SMS'i bakiyeyi ZATEN
 // düşürmüş olabilir (record_sms_account_movement). Aynı hesapta son 3 günde
-// aynı tutarlı SMS kaynaklı çıkış varsa ödeme çekmecesi "tekrar düşme"
-// seçeneği sunar; RPC'ler p_skip_source_debit ile bakiyeye dokunmaz.
-export async function findRecentSmsAccountDebit(
+// aynı tutarlı SMS kaynaklı hareket varsa ödeme çekmecesi "tekrar oynatma"
+// seçeneği sunar; RPC'ler p_skip_source_debit / p_skip_account_move ile
+// bakiyeye dokunmaz. Yön: kart/borç ödemesi çıkış ("… gonderimi"), alacak
+// tahsilatı giriş ("… geldi") — başlık SMS RPC'sinin sabit kalıbıdır.
+export async function findRecentSmsAccountMovement(
   accountId: string,
   amount: number,
-): Promise<RecentSmsAccountDebit | null> {
+  direction: 'in' | 'out' = 'out',
+): Promise<RecentSmsAccountMovement | null> {
   const rounded = roundTL(amount)
   if (rounded <= 0) return null
 
@@ -112,6 +115,7 @@ export async function findRecentSmsAccountDebit(
     .eq('type', 'transfer')
     .eq('amount', rounded)
     .eq('note', 'SMS otomasyonu ile kaydedildi.')
+    .like('title', direction === 'in' ? '% geldi' : '% gonderimi')
     .gte('occurred_at', since)
     .order('occurred_at', { ascending: false })
     .limit(1)
@@ -194,6 +198,8 @@ export async function submitFinanceObligationPayment({
       p_debt_id: obligation.sourceId,
       p_account_card_id: account.id,
       p_amount: isPartial ? amount : null,
+      // Para SMS ile zaten hesaba girdi/çıktı: yalnız kaydı kapat.
+      p_skip_account_move: skipSourceDebit,
     })
     submitError = error
   }

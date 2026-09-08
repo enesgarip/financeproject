@@ -1107,6 +1107,8 @@ export type Database = {
           p_account_card_id: string
           // null/tam değer → kapatır; daha az → kısmi ödeme (kayıt açık kalır).
           p_amount?: number | null
+          /** Para hesaba SMS/banka hareketiyle zaten girdi/çıktı; bakiyeye dokunma (kart ödemesindeki p_skip_source_debit ikizi). */
+          p_skip_account_move?: boolean
         }
         Returns: Debt
       }
