@@ -24,8 +24,17 @@ describe('card bank snapshot reconciliation', () => {
       p_card_id: 'card-id',
       p_bank_total_kurus: 8361483,
       p_note: 'YapıKredi ekranı',
+      p_bucket: 'none',
     })
     expect(result).toEqual({ debt: 83614.83, error: null })
+  })
+
+  it('passes the chosen bucket through (UX tour B1)', async () => {
+    rpcMock.mockResolvedValueOnce({ data: 100, error: null } as never)
+
+    await reconcileCardBankSnapshot('card-id', 100, 'not', 'current')
+
+    expect(rpcMock).toHaveBeenCalledWith('reconcile_card_bank_snapshot', expect.objectContaining({ p_bucket: 'current' }))
   })
 
   it('rejects a negative bank total without calling the database', async () => {

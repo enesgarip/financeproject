@@ -105,7 +105,10 @@ export type FinanceObligationsInput = {
 
 export type FinanceObligationMonthSummary = {
   outflow: number
+  /** Beklenen giriş; `from` verildiyse günü geçmiş maaş buna GİRMEZ (yattı sayılır). */
   inflow: number
+  /** `from` verildiyse bu ay günü geçmiş (yattı sayılan) maaş; aksi halde 0. */
+  receivedSalary: number
   net: number
   payableCount: number
   itemCount: number
@@ -420,13 +423,26 @@ export function buildFinanceObligationsForMonth(
   ))
 }
 
-export function summarizeFinanceObligations(items: FinanceObligation[]): FinanceObligationMonthSummary {
+export function summarizeFinanceObligations(
+  items: FinanceObligation[],
+  options: { from?: Date } = {},
+): FinanceObligationMonthSummary {
+  // Maaş günü geçmişse maaş "yattı" sayılır (financeSummary.salaryLikelyReceived
+  // ile aynı varsayım); "beklenen giriş" onu tekrar saymaz (UX turu B11 —
+  // takvim 8'inde hâlâ 1'inin maaşını bekliyor gösteriyordu).
+  const fromKey = options.from ? dateInputValue(startOfDay(options.from)) : null
+  const isReceivedSalary = (item: FinanceObligation) =>
+    fromKey != null && item.kind === 'salary' && item.direction === 'inflow' && item.date < fromKey
   const outflow = roundTL(sumTL(items.filter((item) => item.direction === 'outflow').map(obligationCashImpact)))
-  const inflow = roundTL(sumTL(items.filter((item) => item.direction === 'inflow').map(obligationCashImpact)))
+  const inflow = roundTL(
+    sumTL(items.filter((item) => item.direction === 'inflow' && !isReceivedSalary(item)).map(obligationCashImpact)),
+  )
+  const receivedSalary = roundTL(sumTL(items.filter(isReceivedSalary).map(obligationCashImpact)))
 
   return {
     outflow,
     inflow,
+    receivedSalary,
     net: roundTL(inflow - outflow),
     payableCount: items.filter((item) => item.action).length,
     itemCount: items.length,

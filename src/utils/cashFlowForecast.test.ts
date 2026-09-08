@@ -238,14 +238,17 @@ describe('buildCashFlowForecast', () => {
     )
 
     expect(forecast.startingBalance).toBe(15000)
-    expect(forecast.months.map((m) => m.endingBalance)).toEqual([26000, 47000, 60000, 72000, 90000, 108000])
-    expect(forecast.endingBalance).toBe(108000)
+    // Ağustos'ta ekstreye giren 1.500 ₺ planlı taksit Eylül vadesinde nakitten
+    // çıkar (B27); Eylül ve sonrası o kadar düşük.
+    expect(forecast.months.map((m) => m.endingBalance)).toEqual([26000, 47000, 60000, 70500, 88500, 106500])
+    expect(forecast.endingBalance).toBe(106500)
     expect(forecast.firstNegative).toBeNull()
     expect(forecast.lowest).toMatchObject({ monthKey: '2026-06-01', balance: 26000 })
 
     expect(forecast.months[1]).toMatchObject({ receivables: 8000, cardOutflow: 1000, income: 28000, outflow: 7000, net: 21000 })
     expect(forecast.months[2]).toMatchObject({ paymentOutflow: 7000, installmentOutflow: 0, outflow: 7000 })
-    expect(forecast.months[3]).toMatchObject({ debtOutflow: 6000, outflow: 8000 })
+    // Eylül: 2.000 planlı ödeme + 6.000 kişisel borç + Ağustos taksiti 1.500 (B27).
+    expect(forecast.months[3]).toMatchObject({ debtOutflow: 6000, cardOutflow: 1500, outflow: 9500 })
   })
 
   it('flags the first negative month and the lowest balance in a deficit', () => {
@@ -316,5 +319,26 @@ describe('salaryCutRunwayMonths', () => {
     const input = buildInput({ assets: [asset({ category: 'Nakit', estimated_value_try: 10000 })] })
     expect(salaryCutRunwayMonths(input, { from: FROM })).toBeNull()
     expect(salaryCutRunwayMonths(input, { from: FROM, startingBalanceDelta: -10001 })).toBe(0)
+  })
+})
+
+describe('buildCashFlowForecast — planlı kart taksitleri (UX turu B27)', () => {
+  it('ay M taksitini ay M+1 nakit çıkışına taşır; ay 0 taksiti dönem içinde sayılır, tekrar eklenmez', () => {
+    const forecast = buildCashFlowForecast(
+      buildInput({
+        assets: [asset({ category: 'Nakit', estimated_value_try: 10000 })],
+        cards: [card({ id: 'cc', card_type: 'kredi_karti', statement_day: 1, due_day: 10, current_period_spending: 2000 })],
+        cardInstallments: [
+          cardInstallment({ id: 'i1', card_id: 'cc', due_month: '2026-06-08', amount: 2000, status: 'posted' }),
+          cardInstallment({ id: 'i2', card_id: 'cc', due_month: '2026-07-08', amount: 2000 }),
+          cardInstallment({ id: 'i3', card_id: 'cc', due_month: '2026-08-08', amount: 2000 }),
+        ],
+      }),
+      { from: FROM, horizonMonths: 4 },
+    )
+    // Haz: açık dönem (2000, kesim 1 → vade 10 Haz) bu ay; Haz taksiti zaten
+    // posted (dönem içinde) → Tem'e taşınmaz; Tem taksiti Ağu'da; Ağu taksiti Eyl'de.
+    expect(forecast.months.map((m) => m.cardOutflow)).toEqual([2000, 0, 2000, 2000])
+    expect(forecast.endingBalance).toBe(4000)
   })
 })

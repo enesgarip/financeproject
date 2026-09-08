@@ -8,7 +8,7 @@ import {
   insertAccountReconciliation,
 } from '../../data/repositories/financePanelsRepo'
 import { useBalancePrivacy } from '../../hooks/useBalancePrivacy'
-import { reconcileCardBankSnapshot } from '../../services/cardLedgerActions'
+import { reconcileCardBankSnapshot, type ReconcileBucket } from '../../services/cardLedgerActions'
 import type { AccountReconciliation, Card, InsertFor, ReconciliationTarget } from '../../types/database'
 import { formatDate } from '../../utils/date'
 import { parseNumber } from '../../utils/formatCurrency'
@@ -28,6 +28,7 @@ import { Alert } from '../ui/alert'
 import { Badge } from '../ui/badge'
 import { Button } from '../ui/button'
 import { Card as SurfaceCard, CardContent, CardHeader, CardTitle } from '../ui/card'
+import { ConfirmDialog } from '../ui/confirm-dialog'
 import { HelpTooltip, type HelpTooltipContent } from '../ui/help-tooltip'
 import { Input } from '../ui/input'
 
@@ -74,10 +75,22 @@ export function LiveReconciliationPanel({
   const [inputs, setInputs] = useState<Record<string, string>>({})
   const [savingId, setSavingId] = useState<string | null>(null)
   const [correctingId, setCorrectingId] = useState<string | null>(null)
+  const [pendingCorrection, setPendingCorrection] = useState<{
+    cardId: string
+    app: number
+    real: number
+    target: 'balance' | 'debt'
+  } | null>(null)
+  const [bucket, setBucket] = useState<ReconcileBucket>('current')
   const [error, setError] = useState('')
   const [driftDetails, setDriftDetails] = useState<Record<string, DriftCauseSummary | null>>({})
   const [loadingDrift, setLoadingDrift] = useState<Record<string, boolean>>({})
   const [expandedDrift, setExpandedDrift] = useState<Record<string, boolean>>({})
+
+  const cardTitle = (cardId: string) => {
+    const card = cards.find((row) => row.id === cardId)
+    return card ? `${card.bank_name} · ${card.card_name}` : 'Kart'
+  }
 
   const reconcilable = useMemo(
     () => cards.filter((card) => card.card_type === 'banka_karti' || card.card_type === 'kredi_karti'),
@@ -161,22 +174,35 @@ export function LiveReconciliationPanel({
     await load()
   }
 
-  async function handleQuickReconcile(cardId: string, app: number, target: 'balance' | 'debt') {
+  // "Farkı düzelt" artık onaysız çalışmaz: fark ve kova seçimi diyalogda
+  // gösterilir (UX turu B1 — tek tıkla borç artıyor, fark hiçbir kovaya
+  // girmiyor ve Veri Sağlığı "eksik pay" bulgusu üretiyordu).
+  function handleQuickReconcile(cardId: string, app: number, target: 'balance' | 'debt') {
     const raw = inputs[cardId]
     if (!user || raw == null || raw.trim() === '' || target !== 'debt') return
     const real = parseNumber(raw)
     const drift = computeDrift(app, real)
     if (isReconciled(app, real) || toKurus(drift) === 0) return
+    setBucket('current')
+    setPendingCorrection({ cardId, app, real, target })
+  }
+
+  async function runCorrection() {
+    const pending = pendingCorrection
+    if (!pending || !user) return
+    const { cardId, app, real, target } = pending
+    const drift = computeDrift(app, real)
 
     setCorrectingId(cardId)
     setError('')
 
     const note = `Banka toplam kart yükü mutabakatı: ${real.toFixed(2)} TL`
 
-    const { error: rpcError } = await reconcileCardBankSnapshot(cardId, real, note)
+    const { error: rpcError } = await reconcileCardBankSnapshot(cardId, real, note, bucket)
     if (rpcError) {
       setError(rpcError.message ?? 'Fark düzeltilemedi.')
       setCorrectingId(null)
+      setPendingCorrection(null)
       return
     }
 
@@ -197,6 +223,7 @@ export function LiveReconciliationPanel({
 
     setInputs((prev) => ({ ...prev, [cardId]: '' }))
     setCorrectingId(null)
+    setPendingCorrection(null)
     await load()
     await onChanged?.()
   }
@@ -381,6 +408,49 @@ export function LiveReconciliationPanel({
           )
         })}
       </CardContent>
+      <ConfirmDialog
+        open={pendingCorrection != null}
+        title="Farkı düzelt"
+        description={
+          pendingCorrection
+            ? `${cardTitle(pendingCorrection.cardId)}: uygulama ${formatAmount(pendingCorrection.app)}, banka ${formatAmount(pendingCorrection.real)}. Toplam borç bankadaki rakama çekilir; fark ${formatAmount(Math.abs(computeDrift(pendingCorrection.app, pendingCorrection.real)))}.`
+            : ''
+        }
+        confirmLabel="Düzelt ve mutabık kaydet"
+        loading={correctingId != null}
+        onConfirm={() => void runCorrection()}
+        onCancel={() => setPendingCorrection(null)}
+      >
+        {pendingCorrection && computeDrift(pendingCorrection.app, pendingCorrection.real) < 0 ? (
+          <fieldset className="grid gap-2 text-sm">
+            <legend className="mb-1 text-xs font-semibold text-ink-muted">Eksik tutar hangi kovaya yazılsın?</legend>
+            {BUCKET_OPTIONS.map((option) => (
+              <label key={option.value} className="flex cursor-pointer items-start gap-2 rounded-lg border border-line-strong bg-page px-3 py-2">
+                <input
+                  type="radio"
+                  name="reconcile-bucket"
+                  value={option.value}
+                  checked={bucket === option.value}
+                  onChange={() => setBucket(option.value)}
+                  className="mt-1"
+                />
+                <span>
+                  <span className="font-semibold text-ink">{option.label}</span>
+                  <span className="block text-xs text-ink-muted">{option.hint}</span>
+                </span>
+              </label>
+            ))}
+          </fieldset>
+        ) : (
+          <p className="text-xs text-ink-muted">Bankadaki rakam uygulamadakinden düşük: yalnız toplam borç azaltılır, kovalar borca kırpılır.</p>
+        )}
+      </ConfirmDialog>
     </SurfaceCard>
   )
 }
+
+const BUCKET_OPTIONS: Array<{ value: ReconcileBucket; label: string; hint: string }> = [
+  { value: 'current', label: 'Dönem içi harcama (önerilen)', hint: 'Kaçırılmış bir harcama gibi bir sonraki ekstreye girer.' },
+  { value: 'statement', label: 'Açık ekstre borcu', hint: 'Kesilmiş ekstrede eksik kalan bir kalemse.' },
+  { value: 'none', label: 'Yalnız toplamı düzelt', hint: 'Kovalara dokunma; Veri Sağlığı farkı "eksik pay" olarak gösterir.' },
+]

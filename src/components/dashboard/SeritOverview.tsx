@@ -72,6 +72,7 @@ export function SeritOverview({
   today,
   daysInMonth,
   safeToSpend,
+  pendingReceivables = 0,
   reservedKnown = true,
   isOnboarding = false,
   buffer,
@@ -97,6 +98,11 @@ export function SeritOverview({
   today: Date
   daysInMonth: number
   safeToSpend: SafeToSpendResult
+  /**
+   * Kahraman rakamın içinde sayılan, henüz tahsil edilmemiş kişisel alacak.
+   * Ayrı satırda söylenir; alacak gelmezse rakam bu kadar iyimserdir (B15).
+   */
+  pendingReceivables?: number
   /** false = kasa rezervi doğrulanamadı; kahraman rakam rezervsiz (şişkin) olabilir (K16). */
   reservedKnown?: boolean
   /**
@@ -170,6 +176,12 @@ export function SeritOverview({
                       {perDay.amount} {perDay.unit}
                     </span>{' '}
                     kayıtlı planlardan arta kalıyor.
+                    {pendingReceivables > 0 ? (
+                      <>
+                        {' '}Bu tutar henüz tahsil edilmemiş{' '}
+                        <span className="serit-num font-semibold">{format(pendingReceivables).amount} {format(pendingReceivables).unit}</span> alacağı sayıyor.
+                      </>
+                    ) : null}
                   </>
                 )
               }

@@ -1,3 +1,4 @@
+import type { ReactNode } from "react"
 import { createPortal } from "react-dom"
 import { AlertTriangle, X } from "lucide-react"
 
@@ -14,6 +15,8 @@ type ConfirmDialogProps = {
   cancelLabel?: string
   variant?: "destructive" | "default"
   loading?: boolean
+  /** Açıklamanın altında ek içerik (ör. kova seçimi radyo grubu). */
+  children?: ReactNode
   onConfirm: () => void
   onCancel: () => void
 }
@@ -26,6 +29,7 @@ function ConfirmDialog({
   cancelLabel = "Vazgeç",
   variant = "default",
   loading = false,
+  children,
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
@@ -70,6 +74,7 @@ function ConfirmDialog({
             <p id="confirm-dialog-description" className="mt-1 text-sm leading-6 text-ink-muted">
               {description}
             </p>
+            {children ? <div className="mt-3">{children}</div> : null}
           </div>
           <button
             type="button"

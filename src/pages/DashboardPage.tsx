@@ -362,6 +362,7 @@ export function DashboardPage() {
           today={monthMeta.today}
           daysInMonth={monthMeta.daysInMonth}
           safeToSpend={safeToSpend}
+          pendingReceivables={summary.cashFlow.remainingReceivableIncome}
           reservedKnown={safeToSpend.reservedKnown}
           isOnboarding={isOnboarding}
           buffer={safeToSpend.buffer}

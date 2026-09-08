@@ -152,8 +152,10 @@ export function MonthlyReport({ data }: { data: AnalysisData }) {
   // "Nakit çıkışı" projeksiyon değil GERÇEKLEŞEN ödemelerdir (işlem geçmişi).
   // Projeksiyon dashboard'ın işi (kalan yük); rapor ayın fiilen olan bitenini anlatır.
   const realized = useMemo(
-    () => buildRealizedMonthlyOutflow(data.transactionHistory, data.payments, new Date(), data.cards),
-    [data.transactionHistory, data.payments, data.cards],
+    // cardExpenses: kartla ödenen manuel planlı ödeme (pay_payment kart yolu)
+    // nakit değildir; karta harcama olarak zaten "Kart harcaması"nda (B4).
+    () => buildRealizedMonthlyOutflow(data.transactionHistory, data.payments, new Date(), data.cards, data.cardExpenses),
+    [data.transactionHistory, data.payments, data.cards, data.cardExpenses],
   )
   const income = cashFlow.income
   const outflow = realized.totalCash
@@ -177,7 +179,7 @@ export function MonthlyReport({ data }: { data: AnalysisData }) {
               <HelpTooltip
                 title="Aylık rapor"
                 content={{
-                  calculation: 'Kart harcamaları alışveriş tarihinde gösterilir; bekleyen provizyonlar dahildir. Ödenen tutar, bu ay işlem geçmişine kaydedilen nakit çıkışlarıdır. Beklenen gelir, maaş ve alacak planına dayanır.',
+                  calculation: 'Kart harcamaları alışveriş tarihinde gösterilir; bekleyen provizyonlar dahildir. Ödenen tutar, bu ay işlem geçmişine kaydedilen nakit çıkışlarıdır; kredi kartıyla ödenen planlı ödemeler nakit değildir, yalnız kart harcamasında sayılır. Beklenen gelir, maaş ve alacak planına dayanır.',
                   importance: 'Gelirden kalan: beklenen aylık gelirden bugüne kadar kaydedilen ödemeler çıkarıldı. Hesap bakiyesi veya ay sonu tahmini değildir.',
                 }}
               />

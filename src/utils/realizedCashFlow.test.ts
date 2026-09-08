@@ -106,3 +106,41 @@ describe('buildRealizedMonthlyOutflow', () => {
     expect(result.billPayments).toBe(400)
   })
 })
+
+describe('buildRealizedMonthlyOutflow — kartla ödenen manuel planlı ödeme (UX turu B4)', () => {
+  it('pay_payment kart damgası taşıyan ödemeyi nakit değil kart-fonlu sayar', () => {
+    const result = buildRealizedMonthlyOutflow(
+      [row({ source_table: 'payments', source_id: 'p-kasko', amount: 5100, title: 'Araç kasko yenileme odendi', note: 'Bonus Gold kredi kartina harcama olarak islendi. Vade: 2026-07-28' })],
+      [payment({ id: 'p-kasko', payment_method: 'manual', auto_source_card_id: null })],
+      JULY,
+      [],
+      [{ source: 'payment_auto', source_event_id: 'payment:p-kasko:20260710100000000000', spent_at: '2026-07-10', status: 'posted' }],
+    )
+    expect(result.cardFundedBills).toBe(5100)
+    expect(result.billPayments).toBe(0)
+    expect(result.totalCash).toBe(0)
+  })
+
+  it('damga başka aya aitse (tekrarlı ödeme geçen ay kartla) bu ayki ödeme nakittir', () => {
+    const result = buildRealizedMonthlyOutflow(
+      [row({ source_table: 'payments', source_id: 'p-kira', amount: 22000 })],
+      [payment({ id: 'p-kira', payment_method: 'manual', auto_source_card_id: null })],
+      JULY,
+      [],
+      [{ source: 'payment_auto', source_event_id: 'payment:p-kira:20260610100000000000', spent_at: '2026-06-10', status: 'posted' }],
+    )
+    expect(result.billPayments).toBe(22000)
+    expect(result.cardFundedBills).toBe(0)
+  })
+
+  it('iptal edilmiş kart harcaması damga sayılmaz', () => {
+    const result = buildRealizedMonthlyOutflow(
+      [row({ source_table: 'payments', source_id: 'p-x', amount: 700 })],
+      [payment({ id: 'p-x', payment_method: 'manual', auto_source_card_id: null })],
+      JULY,
+      [],
+      [{ source: 'payment_auto', source_event_id: 'payment:p-x:20260710100000000000', spent_at: '2026-07-10', status: 'cancelled' }],
+    )
+    expect(result.billPayments).toBe(700)
+  })
+})

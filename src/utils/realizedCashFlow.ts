@@ -9,7 +9,7 @@
  * Aylık rapor "Nakit çıkışı"nı bu modülden besler; dashboard'ın kalan-yük
  * projeksiyonu (financeSummary.remainingOutflow) ile bilinçli olarak ayrıdır.
  */
-import type { Card, Payment, TransactionHistory } from '../types/database'
+import type { Card, CardExpense, Payment, TransactionHistory } from '../types/database'
 import { addMonths, dateInputValue, startOfMonth } from './date'
 import { buildCreditCardIdCheck, paymentUsesCreditCard } from './financeObligationRules'
 import { normalizeSearchText } from './searchText'
@@ -36,11 +36,37 @@ function isUndone(text: string): boolean {
   return text.includes('geri alındı') || text.includes('geri alindi')
 }
 
+/** `pay_payment` kart yolunun damgası: `source='payment_auto'`, `source_event_id='payment:<id>:<ts>'`. */
+const PAYMENT_EVENT_PREFIX = 'payment:'
+
+/**
+ * Kartla ödenen planlı ödemelerin (ödeme id + ay) anahtarları. Manuel "Öde"
+ * diyaloğunda kredi kartı seçilince ödeme karta harcama olarak yazılır; nakit
+ * çıkmaz. Talimatlı (bank_auto) olanlar payments satırından, manuel olanlar bu
+ * damgadan tanınır (UX turu B4). Aylık anahtar: aynı tekrarlı ödeme bir ay
+ * kartla, ertesi ay nakitle ödenebilir.
+ */
+function cardFundedPaymentKeys(expenses: RealizedCardExpense[]): Set<string> {
+  const keys = new Set<string>()
+  for (const expense of expenses) {
+    if (expense.status === 'cancelled' || expense.source !== 'payment_auto') continue
+    const eventId = expense.source_event_id ?? ''
+    if (!eventId.startsWith(PAYMENT_EVENT_PREFIX)) continue
+    const paymentId = eventId.slice(PAYMENT_EVENT_PREFIX.length).split(':')[0]
+    if (!paymentId) continue
+    keys.add(`${paymentId}|${expense.spent_at.slice(0, 7)}`)
+  }
+  return keys
+}
+
+export type RealizedCardExpense = Pick<CardExpense, 'source' | 'source_event_id' | 'spent_at' | 'status'>
+
 export function buildRealizedMonthlyOutflow(
   history: TransactionHistory[],
   payments: Payment[],
   month: Date = new Date(),
   cards: Array<Pick<Card, 'id' | 'card_type'>> = [],
+  cardExpenses: RealizedCardExpense[] = [],
 ): RealizedMonthlyOutflow {
   const monthStart = dateInputValue(startOfMonth(month))
   const monthEnd = dateInputValue(startOfMonth(addMonths(month, 1)))
@@ -48,6 +74,7 @@ export function buildRealizedMonthlyOutflow(
   // Kart listesi verilirse yalnız KREDİ kartına talimatlı ödemeler "nakit değil"
   // kovasına gider; banka hesabına talimatlı ödeme normal nakit çıkışıdır.
   const isCreditCardId = buildCreditCardIdCheck(cards)
+  const cardFundedKeys = cardFundedPaymentKeys(cardExpenses)
 
   const cardPayments: number[] = []
   const billPayments: number[] = []
@@ -104,8 +131,9 @@ export function buildRealizedMonthlyOutflow(
         push(cardPayments, row)
       } else if (row.source_table === 'payments') {
         const payment = row.source_id ? paymentsById.get(row.source_id) : undefined
+        const manualCardFunded = row.source_id ? cardFundedKeys.has(`${row.source_id}|${occurred.slice(0, 7)}`) : false
         // Ödeme kaydı silinmişse temkinli davranıp nakit sayarız.
-        if (payment && paymentUsesCreditCard(payment, isCreditCardId)) push(cardFundedBills, row)
+        if ((payment && paymentUsesCreditCard(payment, isCreditCardId)) || manualCardFunded) push(cardFundedBills, row)
         else push(billPayments, row)
       } else {
         push(billPayments, row)

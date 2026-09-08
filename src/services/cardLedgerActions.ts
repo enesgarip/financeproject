@@ -57,10 +57,17 @@ export async function postCardDebtCorrection(
  * gerçek olarak kaydeder. Dönem/ekstre/provizyon kovaları değişmez; tutarı tam
  * kanıtlanan eski ödenmiş-ekstre bağlantıları aynı transaction'da onarılır.
  */
+/**
+ * Farkın yazılacağı kova (UX turu B1). 'none' = yalnız toplam borç (eski
+ * davranış; import modalı bunu kullanır). UI varsayılanı 'current'.
+ */
+export type ReconcileBucket = 'none' | 'current' | 'statement'
+
 export async function reconcileCardBankSnapshot(
   cardId: string,
   bankTotalTL: number,
   note: string,
+  bucket: ReconcileBucket = 'none',
 ): Promise<CardLedgerActionResult> {
   const bankTotalKurus = toKurus(bankTotalTL)
   if (bankTotalKurus < 0) {
@@ -74,6 +81,7 @@ export async function reconcileCardBankSnapshot(
     p_card_id: cardId,
     p_bank_total_kurus: bankTotalKurus,
     p_note: note.trim(),
+    p_bucket: bucket,
   })
   if (error) return { debt: null, error }
   return { debt: typeof data === 'number' ? data : null, error: null }
