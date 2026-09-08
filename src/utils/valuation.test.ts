@@ -12,7 +12,6 @@ import {
   effectiveAssetValueWithSource,
   effectiveDebtValue,
   effectiveDebtValueWithSource,
-  effectiveGoalValue,
   effectiveGoalValueWithSource,
   goalRateSymbol,
   goalUnitRate,
@@ -160,8 +159,8 @@ describe('effective value (auto vs manual)', () => {
   it('applies the same rules to debts and goals', () => {
     expect(effectiveDebtValue(debt({ amount: 100, auto_valued: true, estimated_value_try: 1 }), SNAPSHOT)).toBe(4598.02)
     expect(effectiveDebtValue(debt({ amount: 100, auto_valued: false, estimated_value_try: 4000 }), SNAPSHOT)).toBe(4000)
-    expect(effectiveGoalValue(goal({ current_amount: 10, auto_valued: true, estimated_value_try: 1 }), SNAPSHOT)).toBe(65535.8)
-    expect(effectiveGoalValue(goal({ current_amount: 10, auto_valued: false, estimated_value_try: 60000 }), SNAPSHOT)).toBe(60000)
+    expect(effectiveGoalValueWithSource(goal({ current_amount: 10, auto_valued: true, estimated_value_try: 1 }), SNAPSHOT).value).toBe(65535.8)
+    expect(effectiveGoalValueWithSource(goal({ current_amount: 10, auto_valued: false, estimated_value_try: 60000 }), SNAPSHOT).value).toBe(60000)
   })
 })
 
@@ -253,7 +252,7 @@ describe('value source (live / stored / manual)', () => {
     const row = asset({ category: 'Altın', unit: 'gram', amount: 2, auto_valued: true, estimated_value_try: 1 })
     expect(effectiveAssetValue(row, SNAPSHOT)).toBe(effectiveAssetValueWithSource(row, SNAPSHOT).value)
     expect(effectiveDebtValue(debt({ value_type: 'TRY', amount: 5, estimated_value_try: 5 }), SNAPSHOT)).toBe(5)
-    expect(effectiveGoalValue(goal({ value_type: 'TRY', estimated_value_try: 7 }), SNAPSHOT)).toBe(7)
+    expect(effectiveGoalValueWithSource(goal({ value_type: 'TRY', estimated_value_try: 7 }), SNAPSHOT).value).toBe(7)
   })
 })
 

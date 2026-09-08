@@ -91,15 +91,6 @@ function exportRowDate(row: Record<string, unknown>) {
   return keys.map((key) => row[key]).find((value) => typeof value === 'string' && value) ?? ''
 }
 
-export function downloadDataJson(data: HealthData) {
-  const exportedAt = new Date().toISOString()
-  exportFile(
-    `financeproject-backup-${dateInputValue(new Date())}.json`,
-    JSON.stringify({ exportedAt, schema: 'financeproject-v1', data }, null, 2),
-    'application/json;charset=utf-8',
-  )
-}
-
 export function downloadDataCsv(data: HealthData) {
   const headers = ['table', 'id', 'label', 'amount', 'status', 'date', 'json']
   const rows = exportTables.flatMap(({ key, table }) =>

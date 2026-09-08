@@ -67,20 +67,6 @@ export async function insertCarExpense(
   return ok(data as CarExpense)
 }
 
-export async function updateCarExpense(
-  id: string,
-  fields: UpdateFor<'car_expenses'>,
-): Promise<Result<CarExpense>> {
-  const { data, error } = await supabase
-    .from('car_expenses')
-    .update(fields)
-    .eq('id', id)
-    .select()
-    .single()
-  if (error) return fail(appErrorFromSupabase(error, 'Araç gideri güncellenemedi.'))
-  return ok(data as CarExpense)
-}
-
 export async function deleteCarExpense(id: string): Promise<Result<void>> {
   const { error } = await supabase.from('car_expenses').delete().eq('id', id)
   return voidResultFromSupabase(error, 'Araç gideri silinemedi.')

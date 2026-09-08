@@ -1,8 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Card, CardStatementArchive } from '../types/database'
 import {
-  addMonthsToMonth,
-  formatMonthLabel,
   getCreditCardStatus,
   getOpenStatementDueDate,
   isMonthValue,
@@ -10,7 +8,6 @@ import {
   monthInputValue,
   moneyShare,
   openStatementAmount,
-  parseInstallmentNumber,
   visibleOpenStatementAmount,
 } from './CardsPage.helpers'
 
@@ -123,16 +120,6 @@ describe('month value helpers', () => {
   it('falls back to current month for malformed input', () => {
     expect(monthDateValue('bozuk')).toBe(`${monthInputValue()}-01`)
   })
-
-  it('adds months across a year boundary', () => {
-    expect(addMonthsToMonth('2026-11', 2)).toBe('2027-01-01')
-    expect(addMonthsToMonth('2026-03', -4)).toBe('2025-11-01')
-  })
-
-  it('labels a month in Turkish, dash for invalid', () => {
-    expect(formatMonthLabel('2026-06')).toBe('Haziran 2026')
-    expect(formatMonthLabel('bozuk')).toBe('-')
-  })
 })
 
 describe('moneyShare', () => {
@@ -172,12 +159,3 @@ describe('open statement amount helpers', () => {
   })
 })
 
-describe('parseInstallmentNumber', () => {
-  it('truncates numeric input', () => {
-    expect(parseInstallmentNumber('5.9', 1)).toBe(5)
-  })
-
-  it('falls back on non-numeric input', () => {
-    expect(parseInstallmentNumber('abc', 3)).toBe(3)
-  })
-})

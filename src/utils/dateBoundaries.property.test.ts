@@ -2,7 +2,7 @@ import fc from 'fast-check'
 import { describe, expect, it } from 'vitest'
 import type { Card } from '../types/database'
 import { getCardStatementPeriod, getNextCardPaymentDueDate } from './cardStatement'
-import { addMonths, dateInMonth, dateInputValue, daysUntil, isDateInMonth, isUpcomingDate, monthlyOccurrenceDate } from './date'
+import { addMonths, dateInMonth, dateInputValue, daysUntil, isDateInMonth, monthlyOccurrenceDate } from './date'
 
 /**
  * Tarih sınırı invariantları (ayın 29/30/31'i, Şubat, yıl geçişi).
@@ -147,14 +147,12 @@ describe('daysUntil — ISO saatli/timestamptz girdi (Faz F)', () => {
     )
   })
 
-  it('bugünün timestamptz hâli için 0 döner ve isUpcomingDate true kalır', () => {
+  it('bugünün timestamptz hâli için 0 döner', () => {
     const today = iso(new Date())
     expect(daysUntil(`${today}T13:00:00+03:00`)).toBe(0)
-    expect(isUpcomingDate(`${today}T13:00:00+03:00`)).toBe(true)
   })
 
   it('okunamayan tarihte NaN yerine null döner', () => {
     expect(daysUntil('bugün')).toBeNull()
-    expect(isUpcomingDate('bugün')).toBe(false)
   })
 })

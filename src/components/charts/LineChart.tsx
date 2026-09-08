@@ -23,7 +23,7 @@ export function LineChart({ data, series, height = 260 }: LineChartProps) {
   const [chartRef, chartWidth] = useChartWidth()
   const [hoverIndex, setHoverIndex] = useState<number | null>(null)
 
-  // Erişilebilir ad + cümle özeti (CashFlowChart deseni, denetim §6). Boş nokta
+  // Erişilebilir ad + cümle özeti (denetim §6; BarChart ile aynı desen). Boş nokta
   // "veri yok" olarak okunur — düz çizgi izlenimi görselde de yok (K17).
   const chartSummary = data
     .map((point) => {

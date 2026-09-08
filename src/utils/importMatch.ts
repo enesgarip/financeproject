@@ -10,7 +10,6 @@
  * yanlışlıkla birleştirir → uzak pencerede açıklama uyumu ZORUNLU tutulur.
  */
 import { diffTL, greaterThanTL, roundTL } from './money'
-import { normalizeSearchText } from './searchText'
 
 /** Aynı gün + birkaç gün içi: tek aday ise açıklama körüyle bile güvenli sayılır. */
 export const NEAR_DATE_MATCH_WINDOW_DAYS = 3
@@ -31,29 +30,6 @@ export function importAmountTolerance(a: number, b: number): number {
 /** a ve b eşleşme toleransı içinde mi (kuruş hassasiyetli, sınır dahil). */
 export function amountsMatchForImport(a: number, b: number): boolean {
   return !greaterThanTL(Math.abs(diffTL(a, b)), importAmountTolerance(a, b))
-}
-
-/** İki açıklamanın aynı işleme ait olacak kadar örtüşüp örtüşmediği. */
-export function descriptionsCompatibleForImport(
-  left: string | null | undefined,
-  right: string | null | undefined,
-): boolean {
-  const leftKey = descriptionKey(left)
-  const rightKey = descriptionKey(right)
-  // Taraflardan biri boşsa reddedecek bilgi yok → uyumlu say (eski davranış).
-  if (!leftKey || !rightKey) return true
-  if (leftKey.includes(rightKey) || rightKey.includes(leftKey)) return true
-
-  const leftTokens = new Set(leftKey.split(' ').filter((token) => token.length >= 3))
-  const rightTokens = rightKey.split(' ').filter((token) => token.length >= 3)
-  const common = rightTokens.filter((token) => leftTokens.has(token)).length
-  return common >= Math.min(2, rightTokens.length)
-}
-
-function descriptionKey(value: string | null | undefined): string {
-  return normalizeSearchText(value ?? '')
-    .replace(/[^\p{L}\p{N}]+/gu, ' ')
-    .trim()
 }
 
 export type ImportMatchCandidate = {

@@ -1,7 +1,6 @@
 import {
   type MarketRatesSnapshot,
   parseTruncgilFeed,
-  type RateSymbol,
 } from '../utils/marketRates'
 
 /**
@@ -177,11 +176,4 @@ export async function ensureRatesLoaded(maxAgeMinutes = 60): Promise<MarketRates
     }
   }
   return refreshRates()
-}
-
-/** Symbols currently priced — handy for diagnostics and tests. */
-export function pricedSymbols(): RateSymbol[] {
-  const snapshot = state.snapshot
-  if (!snapshot) return []
-  return (Object.keys(snapshot.rates) as RateSymbol[]).filter((symbol) => snapshot.rates[symbol])
 }

@@ -31,15 +31,6 @@ export function appErrorFromSupabase(error: SupabaseLikeError, fallbackMessage =
   }
 }
 
-export function appErrorFromUnknown(error: unknown, fallbackMessage = 'Islem tamamlanamadi.'): AppError {
-  if (isSupabaseLikeError(error)) return appErrorFromSupabase(error, fallbackMessage)
-  return {
-    type: 'unknown',
-    message: error instanceof Error ? error.message : fallbackMessage,
-    cause: error,
-  }
-}
-
 export function resultFromSupabase<T>(
   data: T,
   error: SupabaseLikeError | null | undefined,
@@ -55,16 +46,3 @@ export function voidResultFromSupabase(
   return resultFromSupabase(undefined, error, fallbackMessage)
 }
 
-export function throwResultError(result: Result<unknown>): never {
-  throw new Error(result.ok ? 'Islem tamamlanamadi.' : result.error.message)
-}
-
-function isSupabaseLikeError(error: unknown): error is SupabaseLikeError {
-  return Boolean(
-    error &&
-      typeof error === 'object' &&
-      ('message' in error || 'code' in error) &&
-      (typeof (error as SupabaseLikeError).message === 'string' ||
-        typeof (error as SupabaseLikeError).code === 'string'),
-  )
-}

@@ -46,20 +46,6 @@ export function debtRateSide(debt: Pick<Debt, 'direction'>): RateSide {
   return debt.direction === 'borç_aldım' ? 'selling' : 'buying'
 }
 
-// --- "Can this row be auto-valued at all?" (rate-independent) --------------
-
-export function assetSupportsAutoValuation(asset: Pick<Asset, 'category' | 'unit' | 'currency'>): boolean {
-  return assetRateSymbol(asset) !== null
-}
-
-export function debtSupportsAutoValuation(debt: Pick<Debt, 'value_type' | 'currency'>): boolean {
-  return debtRateSymbol(debt) !== null
-}
-
-export function goalSupportsAutoValuation(goal: Pick<SavingsGoal, 'value_type'>): boolean {
-  return goalRateSymbol(goal) !== null
-}
-
 // --- Compute the live TRY value (null when the rate is missing) ------------
 
 export function valueAsset(
@@ -216,8 +202,4 @@ export function effectiveGoalValueWithSource(
     return { value: goal.estimated_value_try ?? 0, source: 'stored' }
   }
   return { value: goal.estimated_value_try ?? 0, source: 'manual' }
-}
-
-export function effectiveGoalValue(goal: SavingsGoal, snapshot: MarketRatesSnapshot | null | undefined): number {
-  return effectiveGoalValueWithSource(goal, snapshot).value
 }

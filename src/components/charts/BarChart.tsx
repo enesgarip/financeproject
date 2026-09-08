@@ -30,7 +30,7 @@ export function BarChart({
   const [hoverIndex, setHoverIndex] = useState<number | null>(null)
 
   // Erişilebilir ad + cümle özeti: SVG'nin kendisi ekran okuyucuya hiçbir şey
-  // söylemiyordu. CashFlowChart'ın deseniyle aynı (denetim 2026-08-12 §6).
+  // söylemiyordu (denetim 2026-08-12 §6; desen LineChart ile ortak).
   // Tutarlar `formatAmount`'tan geçer — gizlilik maskesi burada da geçerli.
   const chartSummary = data
     .map((point) =>
