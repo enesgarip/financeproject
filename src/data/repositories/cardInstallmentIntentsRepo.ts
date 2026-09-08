@@ -1,5 +1,5 @@
 import { supabase } from '../../lib/supabase'
-import type { CardExpense, CardInstallmentIntent } from '../../types/database'
+import type { CardInstallmentIntent } from '../../types/database'
 import { appErrorFromSupabase, fail, ok, resultFromSupabase, voidResultFromSupabase, type Result } from '../result'
 
 /**
@@ -66,19 +66,4 @@ export async function cancelCardInstallmentIntent(id: string): Promise<Result<vo
     .eq('status', 'active')
 
   return voidResultFromSupabase(error, 'Taksit niyeti iptal edilemedi.')
-}
-
-export async function deleteCardInstallmentIntent(id: string): Promise<Result<void>> {
-  const { error } = await supabase.from('card_installment_intents').delete().eq('id', id)
-  return voidResultFromSupabase(error, 'Taksit niyeti silinemedi.')
-}
-
-/**
- * Bekleyen bir provizyona uyan niyeti elle uygular. SMS yolu bunu otomatik
- * yapar; bu çağrı niyet SMS'ten SONRA yazıldığında kullanılır.
- */
-export async function applyCardInstallmentIntent(expenseId: string): Promise<Result<CardExpense | null>> {
-  const { data, error } = await supabase.rpc('apply_card_installment_intent', { p_expense_id: expenseId })
-  if (error) return fail(appErrorFromSupabase(error, 'Taksit niyeti uygulanamadı.'))
-  return ok((data ?? null) as CardExpense | null)
 }

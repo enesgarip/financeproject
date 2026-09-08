@@ -1,5 +1,5 @@
 import { supabase } from '../../lib/supabase'
-import type { CardExpense, ContextExpense, ExpenseContext, InsertFor, UpdateFor } from '../../types/database'
+import type { CardExpense, ContextExpense, ExpenseContext, InsertFor } from '../../types/database'
 import { appErrorFromSupabase, fail, ok, resultFromSupabase, voidResultFromSupabase, type Result } from '../result'
 
 export async function fetchExpenseContexts(): Promise<Result<ExpenseContext[]>> {
@@ -12,12 +12,6 @@ export async function insertExpenseContext(
 ): Promise<Result<ExpenseContext>> {
   const { data, error } = await supabase.from('expense_contexts').insert(item).select().single()
   if (error) return fail(appErrorFromSupabase(error, 'Bağlam eklenemedi.'))
-  return ok(data as ExpenseContext)
-}
-
-export async function updateExpenseContext(id: string, fields: UpdateFor<'expense_contexts'>): Promise<Result<ExpenseContext>> {
-  const { data, error } = await supabase.from('expense_contexts').update(fields).eq('id', id).select().single()
-  if (error) return fail(appErrorFromSupabase(error, 'Bağlam güncellenemedi.'))
   return ok(data as ExpenseContext)
 }
 

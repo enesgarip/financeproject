@@ -1,5 +1,49 @@
 # Priority Backlog
 
+## 2026-09-08 — Ölü kod temizliği (yetim tarama) — DONE
+
+Borçlar'daki yetim sayfa sonrası tüm repo tarandı (hiç import edilmeyen dosya,
+test dışında hiç kullanılmayan export, sunucu tarafı RPC/edge/tablo/kolon).
+Silinenler: `components/ui/tabs.tsx` (HubNav sekme çizgisi yerini almıştı),
+`components/charts/CashFlowChart.tsx` (hiç render edilmiyordu; a11y deseni
+BarChart/LineChart'ta yaşıyor), repo katmanında 6 ince sarmalayıcı
+(`fetchCardById`, `fetchOpenStatementArchives`, `deleteCardInstallmentIntent`,
+`applyCardInstallmentIntent`, `updateCarExpense`, `updateExpenseContext`),
+`valuation.ts`'te 4 fonksiyon, `CardsPage.helpers`'ta 3 ay yardımcısı,
+`useInvalidateAiChat`, `pricedSymbols`, `downloadDataJson`, `isUpcomingDate`,
+`descriptionsCompatibleForImport` (+ `descriptionKey`), `result.ts`'te
+`appErrorFromUnknown`/`throwResultError`; ilgili test blokları.
+
+Bilinçli TUTULANLAR: SMS parser format export'ları ve bildirim tercih
+fonksiyonları (edge ikizi), `snapshotToUpsertPayload` (bekletiliyor),
+`categoryRules` (bakım script'i), `reset_card_import_data` RPC'si (elle bakım),
+yazılıp okunmayan adli kolonlar (`reconciliation_note`,
+`payment_source_card_id`, `settlement_kind`, `valuation_rate`) ve
+`data_health_repair_runs/steps` denetim tabloları. Sunucu tarafında başka
+yetim yok (edge, bildirim türleri, workflow/npm referansları temiz).
+
+## 2026-09-08 — Ölü kod temizliği (yetim tarama) — DONE
+
+Borçlar'daki yetim sayfa sonrası tüm repo tarandı (hiç import edilmeyen dosya,
+test dışında hiç kullanılmayan export, sunucu tarafı RPC/edge/tablo/kolon).
+Silinenler: `components/ui/tabs.tsx` (HubNav sekme çizgisi yerini almıştı),
+`components/charts/CashFlowChart.tsx` (hiç render edilmiyordu; a11y deseni
+BarChart/LineChart'ta yaşıyor), repo katmanında 6 ince sarmalayıcı
+(`fetchCardById`, `fetchOpenStatementArchives`, `deleteCardInstallmentIntent`,
+`applyCardInstallmentIntent`, `updateCarExpense`, `updateExpenseContext`),
+`valuation.ts`'te 4 fonksiyon, `CardsPage.helpers`'ta 3 ay yardımcısı,
+`useInvalidateAiChat`, `pricedSymbols`, `downloadDataJson`, `isUpcomingDate`,
+`descriptionsCompatibleForImport` (+ `descriptionKey`), `result.ts`'te
+`appErrorFromUnknown`/`throwResultError`; ilgili test blokları.
+
+Bilinçli TUTULANLAR: SMS parser format export'ları ve bildirim tercih
+fonksiyonları (edge ikizi), `snapshotToUpsertPayload` (bekletiliyor),
+`categoryRules` (bakım script'i), `reset_card_import_data` RPC'si (elle bakım),
+yazılıp okunmayan adli kolonlar (`reconciliation_note`,
+`payment_source_card_id`, `settlement_kind`, `valuation_rate`) ve
+`data_health_repair_runs/steps` denetim tabloları. Sunucu tarafında başka
+yetim yok (edge, bildirim türleri, workflow/npm referansları temiz).
+
 ## 2026-09-08 — Borçlar'daki "Kredi kartları" sekmesi + yetim sayfa kaldırıldı — DONE
 
 UI-1 (#216) sekmeyi `/kartlar?section=kartlar`'a yönlendirmişti; Borçlar

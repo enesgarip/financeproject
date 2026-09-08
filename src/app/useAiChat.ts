@@ -1,7 +1,6 @@
 // AI asistan sohbet akışı (/analiz/asistan): geçmiş sorgusu + gönderim
 // mutation'ı + temizleme. Kalıcılık aiChatRepo (RLS), yanıt aiChatClient (edge).
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useCallback } from 'react'
 import { useAuth } from '../auth/useAuth'
 import { clearAiChatMessages, fetchAiChatMessages, insertAiChatMessage } from '../data/repositories/aiChatRepo'
 import { sendAiChat, type ChatTurn } from '../lib/aiChatClient'
@@ -82,16 +81,4 @@ export function useClearAiChat() {
     },
     onSettled: () => queryClient.invalidateQueries({ queryKey: aiChatKey(userId) }),
   })
-}
-
-/** Sohbete dışarıdan yazan olursa cache'i tazelemek için (şimdilik sayfa içi kullanım). */
-export function useInvalidateAiChat() {
-  const queryClient = useQueryClient()
-  const { user } = useAuth()
-  const userId = user?.id
-
-  return useCallback(
-    () => queryClient.invalidateQueries({ queryKey: aiChatKey(userId) }),
-    [queryClient, userId],
-  )
 }

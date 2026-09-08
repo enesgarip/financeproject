@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
   amountsMatchForImport,
-  descriptionsCompatibleForImport,
   importAmountTolerance,
   selectImportMatchIndex,
   type ImportMatchCandidate,
@@ -31,22 +30,6 @@ describe('amountsMatchForImport', () => {
 
   it('treats the tolerance boundary as a match', () => {
     expect(amountsMatchForImport(10000, 10100)).toBe(true) // exactly 1%
-  })
-})
-
-describe('descriptionsCompatibleForImport', () => {
-  it('treats empty descriptions as compatible (no info to reject)', () => {
-    expect(descriptionsCompatibleForImport('', 'MIGROS')).toBe(true)
-    expect(descriptionsCompatibleForImport('MIGROS', null)).toBe(true)
-  })
-
-  it('matches on substring and shared tokens', () => {
-    expect(descriptionsCompatibleForImport('UNDEM PETROL', 'undem petrol bursa')).toBe(true)
-    expect(descriptionsCompatibleForImport('MEDIA MARKT MEDIA', 'Media Markt')).toBe(true)
-  })
-
-  it('rejects unrelated merchants', () => {
-    expect(descriptionsCompatibleForImport('Market alışverişi', 'Eczane')).toBe(false)
   })
 })
 

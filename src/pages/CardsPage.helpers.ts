@@ -334,26 +334,9 @@ export function monthDateValue(month: string) {
   return `${safeMonth}-01`
 }
 
-export function addMonthsToMonth(month: string, months: number) {
-  const [year, monthIndex] = monthDateValue(month).slice(0, 7).split('-').map(Number)
-  if (!year || !monthIndex) return monthDateValue(monthInputValue())
-
-  return new Date(year, monthIndex - 1 + months, 1).toLocaleDateString('sv-SE')
-}
-
 export function moneyShare(amount: number, pieces: number) {
   if (amount <= 0) return 0
   return roundTL(amount / Math.max(1, pieces))
-}
-
-export function formatMonthLabel(month: string) {
-  if (!isMonthValue(month)) return '-'
-  return new Intl.DateTimeFormat('tr-TR', { month: 'long', year: 'numeric' }).format(new Date(`${monthDateValue(month)}T00:00:00`))
-}
-
-export function parseInstallmentNumber(value: string, fallback: number) {
-  const parsed = Math.trunc(Number(value))
-  return Number.isFinite(parsed) ? parsed : fallback
 }
 
 export function shouldRunStatementCut(card: Card, statements: CardStatementArchive[]) {
