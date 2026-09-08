@@ -141,3 +141,81 @@ export async function fetchStockPrices(
     return cached
   }
 }
+
+// ── Tarihsel kapanış (portföy performansı) ───────────────────────────────────
+
+export type StockHistoryRange = '1mo' | '3mo' | '6mo' | '1y' | '2y' | '5y' | 'max'
+export type StockCloseSeries = { t: number[]; c: (number | null)[] }
+export type StockHistory = Record<string, StockCloseSeries>
+
+const HISTORY_STORAGE_KEY = 'fp.stockHistory.v1'
+const RANGE_ORDER: StockHistoryRange[] = ['1mo', '3mo', '6mo', '1y', '2y', '5y', 'max']
+
+type HistoryCacheEntry = { range: StockHistoryRange; series: StockCloseSeries; fetchedAt: string }
+type HistoryCache = Record<string, HistoryCacheEntry>
+
+function readHistoryCache(): HistoryCache {
+  if (!isStorageAvailable()) return {}
+  try {
+    const raw = window.localStorage.getItem(HISTORY_STORAGE_KEY)
+    const parsed = raw ? (JSON.parse(raw) as HistoryCache) : null
+    return parsed && typeof parsed === 'object' ? parsed : {}
+  } catch {
+    return {}
+  }
+}
+
+function writeHistoryCache(cache: HistoryCache) {
+  if (!isStorageAvailable()) return
+  try {
+    window.localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(cache))
+  } catch {
+    // Ignore quota / privacy-mode failures.
+  }
+}
+
+function coversRange(cached: StockHistoryRange, wanted: StockHistoryRange): boolean {
+  return RANGE_ORDER.indexOf(cached) >= RANGE_ORDER.indexOf(wanted)
+}
+
+/**
+ * Sembol başına günlük kapanış serisi (`bist-quote` + `range`). Cache: sembol
+ * başına en geniş pencere, `fetchedAt` ≤ 24 saat ise ve istenen pencereyi
+ * kapsıyorsa yeniden çekilmez. Eksik sembol = "bilinmiyor"; asla fırlatmaz.
+ */
+export async function fetchStockHistory(
+  symbols: string[],
+  range: StockHistoryRange,
+  options: { maxAgeHours?: number; now?: Date } = {},
+): Promise<StockHistory> {
+  const tickers = Array.from(new Set(symbols.map(normalizeTicker).filter((s): s is string => s !== null)))
+  const now = options.now ?? new Date()
+  const maxAge = options.maxAgeHours ?? STOCK_PRICES_MAX_AGE_HOURS
+  const cache = readHistoryCache()
+  const result: StockHistory = {}
+  const missing: string[] = []
+  for (const ticker of tickers) {
+    const entry = cache[ticker]
+    const ageHours = entry ? (now.getTime() - new Date(entry.fetchedAt).getTime()) / 3_600_000 : Number.POSITIVE_INFINITY
+    if (entry && ageHours <= maxAge && coversRange(entry.range, range)) result[ticker] = entry.series
+    else missing.push(ticker)
+  }
+  if (missing.length === 0) return result
+
+  try {
+    const { data, error } = await supabase.functions.invoke('bist-quote', { body: { symbols: missing, range } })
+    if (error || !data || typeof data !== 'object') return result
+    const history = (data as { history?: unknown }).history
+    if (!history || typeof history !== 'object') return result
+    for (const [symbol, series] of Object.entries(history as Record<string, unknown>)) {
+      const s = series as StockCloseSeries | null
+      if (!s || !Array.isArray(s.t) || !Array.isArray(s.c)) continue
+      result[symbol] = s
+      cache[symbol] = { range, series: s, fetchedAt: now.toISOString() }
+    }
+    writeHistoryCache(cache)
+    return result
+  } catch {
+    return result
+  }
+}

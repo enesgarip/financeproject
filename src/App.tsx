@@ -25,6 +25,9 @@ const AssetsPage = lazyWithReload(() =>
 const GoldPage = lazyWithReload(() =>
   import('./pages/GoldPage').then((m) => ({ default: m.GoldPage })),
 )
+const BorsaPage = lazyWithReload(() =>
+  import('./pages/BorsaPage').then((m) => ({ default: m.BorsaPage })),
+)
 const SalaryPage = lazyWithReload(() =>
   import('./pages/SalaryPage').then((m) => ({ default: m.SalaryPage })),
 )
@@ -146,6 +149,7 @@ function AnimatedRoutes() {
           <Route index element={routeElement(<AssetsPage />, 'varliklar')} />
           <Route path="maas" element={routeElement(<SalaryPage />, 'varliklar-maas')} />
           <Route path="altin" element={routeElement(<GoldPage />, 'varliklar-altin')} />
+          <Route path="borsa" element={routeElement(<BorsaPage />, 'varliklar-borsa')} />
           <Route path="araclar" element={routeElement(<CarsPage />, 'varliklar-araclar')} />
         </Route>
 

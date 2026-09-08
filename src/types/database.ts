@@ -544,6 +544,22 @@ export type AssetValueEvent = BaseRow & {
   note: string | null
 }
 
+export type StockTradeKind = 'buy' | 'sell' | 'opening'
+
+/** Hisse işlem defteri satırı; assets Hisse satırı kanonik pozisyon, bu tarihçe. */
+export type StockTrade = BaseRow & {
+  asset_id: string | null
+  symbol: string
+  kind: StockTradeKind
+  trade_date: string
+  quantity: number
+  /** Birim fiyat; null = maliyeti bilinmeyen açılış (maliyet tabanına girmez). */
+  unit_price: number | null
+  fee: number
+  source: 'manual' | 'trade_rpc' | 'opening'
+  note: string | null
+}
+
 export type DismissedUpcomingItem = {
   id: string
   user_id: string
@@ -766,6 +782,7 @@ export type Database = {
       savings_goal_snapshots: Table<SavingsGoalSnapshot, WithBaseInsert<SavingsGoalSnapshot>, WithBaseUpdate<SavingsGoalSnapshot>>
       gold_lots: Table<GoldLot, WithBaseInsert<GoldLot>, WithBaseUpdate<GoldLot>>
       asset_value_events: Table<AssetValueEvent, WithBaseInsert<AssetValueEvent>, WithBaseUpdate<AssetValueEvent>>
+      stock_trades: Table<StockTrade, WithBaseInsert<StockTrade>, WithBaseUpdate<StockTrade>>
       card_ledger: Table<CardLedger, WithBaseInsert<CardLedger>, WithBaseUpdate<CardLedger>>
       account_ledger: Table<AccountLedger, WithBaseInsert<AccountLedger>, WithBaseUpdate<AccountLedger>>
       data_health_repair_runs: Table<

@@ -8,7 +8,7 @@ import { MoneyInput } from '../components/finance/MoneyInput'
 import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
 import type { Asset, Card } from '../types/database'
 import { formatNumber, parseNumber } from '../utils/formatCurrency'
-import { diffTL, greaterThanTL, sumTL } from '../utils/money'
+import { diffTL, greaterThanTL, roundTL, sumTL } from '../utils/money'
 import { assetTradeRequiresQuantity, type AssetTradeDirection } from '../services/assetTrades'
 
 export type AssetTradeDraft = {
@@ -70,12 +70,19 @@ export function AssetTradeModal({
   const isBuy = direction === 'buy'
   const selectedAccount = accounts.find((account) => account.id === accountId) ?? null
   const amountValue = parseNumber(amount)
+  const quantityValue = parseNumber(quantity)
+  // Satış önizlemesi RPC ile aynı model (BM-7): miktarlı satışta değer
+  // SATILAN MİKTARLA oransal düşer (tam satış 0), miktarsızda tutar kadar.
   const nextAssetValue = asset
     ? isBuy
       ? sumTL([asset.estimated_value_try, amountValue])
-      : greaterThanTL(amountValue, asset.estimated_value_try)
-        ? 0
-        : diffTL(asset.estimated_value_try, amountValue)
+      : quantityValue > 0 && asset.amount > 0
+        ? greaterThanTL(quantityValue, asset.amount) || quantityValue === asset.amount
+          ? 0
+          : roundTL((asset.estimated_value_try * (asset.amount - quantityValue)) / asset.amount)
+        : greaterThanTL(amountValue, asset.estimated_value_try)
+          ? 0
+          : diffTL(asset.estimated_value_try, amountValue)
     : 0
   const nextAccountBalance = selectedAccount
     ? isBuy

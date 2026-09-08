@@ -18,6 +18,7 @@ import {
   ShoppingCart,
   Sparkles,
   Target,
+  TrendingUp,
   UsersRound,
   WalletCards,
   Wallet,
@@ -73,6 +74,7 @@ export const assetsHubTabs: HubTab[] = [
   { to: '/varliklar', label: 'Varlıklar', icon: Gem, end: true },
   { to: '/varliklar/maas', label: 'Maaş', icon: Banknote },
   { to: '/varliklar/altin', label: 'Altın', icon: Coins },
+  { to: '/varliklar/borsa', label: 'Borsa', icon: TrendingUp },
   { to: '/varliklar/araclar', label: 'Araçlar', icon: Car },
 ]
 
@@ -110,6 +112,7 @@ const routeMeta: Record<string, { title: string; subtitle?: string; width: Route
   '/varliklar': { title: 'Varlıklar', subtitle: 'Nakit, yatırım ve birikimler', width: 'medium' },
   '/varliklar/maas': { title: 'Maaş', subtitle: 'Maaş geçmişi ve değişimi', width: 'medium' },
   '/varliklar/altin': { title: 'Altın', subtitle: 'Altın varlıkları ve değerleme', width: 'narrow' },
+  '/varliklar/borsa': { title: 'Borsa', subtitle: 'Hisse işlem defteri ve portföy performansı', width: 'medium' },
   '/varliklar/araclar': { title: 'Araçlar', subtitle: 'Araç başına gider takibi ve dağılımı', width: 'wide' },
   '/borclar/krediler': { title: 'Krediler', subtitle: 'Aktif krediler ve taksit planları', width: 'wide' },
   '/borclar/kisiler': { title: 'Borç ve alacaklar', subtitle: 'Kişisel borç ve alacaklar', width: 'medium' },

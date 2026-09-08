@@ -168,11 +168,12 @@ describe('RESTORE_TABLE_ORDER FK safety', () => {
     expect(pos('loan_installments')).toBeGreaterThan(pos('loans'))
     expect(pos('savings_goal_snapshots')).toBeGreaterThan(pos('savings_goals')) // goal_id
     expect(pos('asset_value_events')).toBeGreaterThan(pos('assets')) // asset_id
+    expect(pos('stock_trades')).toBeGreaterThan(pos('assets')) // asset_id
     expect(pos('savings_goal_components')).toBeGreaterThan(pos('savings_goals'))
   })
 
   it('covers every user-owned table added after the original backup flow', () => {
-    for (const table of ['wishlist_items', 'kasa_buckets', 'notification_preferences', 'data_health_issue_acknowledgements', 'savings_goal_snapshots', 'asset_value_events'] as const) {
+    for (const table of ['wishlist_items', 'kasa_buckets', 'notification_preferences', 'data_health_issue_acknowledgements', 'savings_goal_snapshots', 'asset_value_events', 'stock_trades'] as const) {
       expect(RESTORE_TABLE_ORDER).toContain(table)
       expect(BACKUP_TABLE_LABELS[table]).toBeTruthy()
     }

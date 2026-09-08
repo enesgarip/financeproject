@@ -209,6 +209,16 @@ insert into public.asset_value_events (id, user_id, asset_id, occurred_at, value
   ('de110000-0000-4000-8000-000000000613', '11111111-1111-1111-1111-111111111111', 'de110000-0000-4000-8000-000000000604', date_trunc('month', current_date), 13900000, 15000000, 500000, 'manual', 'Devlet katkısı dahil')
 on conflict (id) do nothing;
 
+-- Hisse işlem defteri: migration mevcut THYAO satırından bir 'opening' satırı
+-- üretir; demo için onu silip 3 aylık gerçek işlemlerle değiştiriyoruz
+-- (70 + 50 alım, 20 satış = 100 adet, varlık satırıyla uyumlu).
+delete from public.stock_trades where user_id = '11111111-1111-1111-1111-111111111111' and source = 'opening';
+insert into public.stock_trades (id, user_id, asset_id, symbol, kind, trade_date, quantity, unit_price, fee, source, note) values
+  ('de110000-0000-4000-8000-000000000621', '11111111-1111-1111-1111-111111111111', 'de110000-0000-4000-8000-000000000603', 'THYAO', 'buy', (current_date - interval '3 months')::date, 70, 285.00, 15.00, 'manual', 'İlk alım'),
+  ('de110000-0000-4000-8000-000000000622', '11111111-1111-1111-1111-111111111111', 'de110000-0000-4000-8000-000000000603', 'THYAO', 'buy', (current_date - interval '2 months')::date, 50, 305.00, 12.00, 'manual', null),
+  ('de110000-0000-4000-8000-000000000623', '11111111-1111-1111-1111-111111111111', 'de110000-0000-4000-8000-000000000603', 'THYAO', 'sell', (current_date - interval '1 month')::date, 20, 340.00, 8.00, 'manual', 'Kısmi kâr realizasyonu')
+on conflict (id) do nothing;
+
 -- Birikim hedefi + kasa kovaları. Kova hedefe BAĞLI ama takip kaynağı değil —
 -- UI'daki "bu kovayı kaynak yap" akışı elle denenebilir kalsın.
 insert into public.savings_goals (id, user_id, name, target_amount, current_amount, target_date, status) values
