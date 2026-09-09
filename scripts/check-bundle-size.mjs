@@ -18,8 +18,20 @@ const ASSETS_DIR = path.resolve('dist/assets')
 
 // gzip kB cinsinden bütçeler. Yeni bir vendor/entry chunk ağırlaşırsa buraya ekle.
 // Ölçüm 2026-08-24 (manualChunks fonksiyon formu sonrası); bütçe ≈ mevcut + %10.
+//
+// index.js 2026-09-09: 20 → 22. CI ölçümü 20,1–20,2 kB (BORSA-1 #228 ile
+// 18,4'ten sıçradı). Sebep yeni entry kodu DEĞİL: BorsaPage'in importer kümesi
+// paylaşımlı chunk'ları böldü, Rollup `experimentalMinChunkSize` cüce parçaları
+// (money/marketRates/spendingStats/crudRepo, ~1,4 kB gzip) "zaten hep yüklü"
+// olan entry'ye katladı. Bu modülleri manualChunks ile pinlemek işe yaramaz:
+// bağımlılıkları (lib/supabase, formatCurrency, result) da o chunk'a taşınıp
+// entry onu modulepreload eder — kazanç sahte olur. Bütçe = CI ölçümü + %10.
+//
+// DİKKAT — yerel/CI farkı: CI `vercel build` GERÇEK Supabase URL + anon key
+// (JWT) ile derler; örnek env'li yerel build index.js'i ~0,3 kB gzip DÜŞÜK
+// ölçer. Yerelde bütçeye 0,5 kB'tan yakınsan CI'da kırmızı say.
 const BUDGETS = {
-  'index.js': 20,
+  'index.js': 22,
   'vendor-react.js': 82,
   'vendor-supabase.js': 63,
   'pdf.js': 143,

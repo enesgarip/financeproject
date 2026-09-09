@@ -180,6 +180,14 @@ Günlük şifreli DB yedeği cron'u var (`db-backup.yml`).
   üretimde boştu, yani hiçbir zaman rapor göndermiyordu. Çökme yakalama
   `AppErrorBoundary` ile yerelde sürüyor, teşhis için Supabase fonksiyon logları
   ve Vercel logları kullanılır. Geri getirilecekse hem DSN hem CSP satırı gerekir.
+- **Bundle bütçesi yerel/CI farkı:** CI `vercel build` GERÇEK Supabase URL +
+  anon key (JWT) ile derler; örnek env'li yerel build `index.js`'i ~0,3 kB gzip
+  düşük ölçer. Yerelde bütçeye 0,5 kB'tan yakınsan CI'da kırmızı say. Entry
+  ayrıca Rollup `experimentalMinChunkSize`'ın cüce paylaşımlı chunk'ları
+  katladığı yerdir — yeni sayfa importer kümesini değiştirince entry'ye statik
+  erişilmeyen util'ler girebilir (2026-09-09 olayı, `docs/BACKLOG.md`). Bunları
+  `manualChunks` ile pinlemek çözmez (bağımlılıklar da taşınır, entry chunk'ı
+  modulepreload eder); gerçek artışsa bütçeyi CI ölçümü + %10 yap.
 - **timestamptz'i `formatDate`'e verme** (date-only bekler) → `.slice(0,10)`.
 - ~~Export silme tests/e2e tuzağı~~ KAPANDI (M2, 2026-08-26): `tsconfig.e2e.json`
   artık `tsc -b` referanslarında — `tests/e2e/*.spec.ts` + playwright/vitest

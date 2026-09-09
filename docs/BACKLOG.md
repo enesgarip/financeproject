@@ -1,5 +1,28 @@
 # Priority Backlog
 
+## 2026-09-09 — Bundle bütçesi 4 deploy'u kırdı (index.js 20 kB) — DONE
+
+Dünkü #228 (BORSA-1), #229, #230 ve #231 main'e girdi ama `Deploy Production`
+"Bundle size budget" adımında düştü: `index.js` 20,1–20,2 kB / 20 kB. #227
+(SMS-1) son yeşil deploy; üretim hâlâ o commit'te.
+
+Teşhis (source map ile entry içeriği #227 ↔ HEAD karşılaştırıldı): entry'ye
+yeni uygulama kodu girmedi. `utils/money.ts`, `utils/marketRates.ts`,
+`utils/spendingStats.ts`, `data/repositories/crudRepo.ts` (toplam ~1,4 kB
+gzip) daha önce `TrendBars.js` / `financePanelsRepo.js` paylaşımlı
+chunk'larındaydı; BorsaPage'in importer kümesi bu chunk'ları bölünce Rollup
+`experimentalMinChunkSize` cüce parçaları "zaten her zaman yüklü" olan entry'ye
+katladı. Dört modül de entry'den statik erişilmiyor. Bu modülleri `manualChunks`
+ile ayrı chunk'a pinlemek denendi ve REDDEDİLDİ: bağımlılıkları (lib/supabase,
+formatCurrency, result) da o chunk'a taşınıp entry onu modulepreload ediyor —
+index.js küçülür ama ilk yük değişmez.
+
+Düzeltme: `scripts/check-bundle-size.mjs` index.js bütçesi 20 → 22 kB (script'in
+kendi kuralı: CI ölçümü + %10). Yerel/CI farkı belgelendi: `vercel build` gerçek
+Supabase URL + anon key ile derlediği için CI index.js'i örnek env'li yerel
+build'den ~0,3 kB gzip yüksek ölçer (#231 oturumu yerelde 20,1 gördü, CI'da da
+20,1; #228 yerelde 19,8 iken CI'da 20,2). CLAUDE.md gotcha'sına eklendi.
+
 ## 2026-09-09 — Para gösteriminde iki ondalık basamak — DONE
 
 `formatSeritParts` / `formatSeritAmount` varsayılan olarak kuruşu gösterir:
