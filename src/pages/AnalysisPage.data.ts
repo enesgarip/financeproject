@@ -4,14 +4,13 @@ import { useFinanceSnapshot } from '../app/useFinanceSnapshot'
 import { useAuth } from '../auth/useAuth'
 import { fetchNetWorthSnapshots, fetchPriceRadarRows } from '../data/repositories/analysisRepo'
 import { useMarketRates } from '../hooks/useMarketRates'
-import type { NetWorthSnapshot } from '../types/database'
 import {
   buildSearchItems,
   type AnalysisData,
 } from '../utils/analysisView'
 import { resolveSavingsGoalRows } from '../utils/goalSources'
 import { type MarketRatesSnapshot } from '../utils/marketRates'
-import { buildPriceObservations, detectPriceIncreases, type PriceTrend } from '../utils/priceIncreaseRadar'
+import { buildPriceObservations, detectPriceIncreases } from '../utils/priceIncreaseRadar'
 
 const emptyAnalysisData: AnalysisData = {
   assets: [],
@@ -94,12 +93,9 @@ export function useAnalysisPageData() {
     enabled: Boolean(userId && snapshotQuery.data),
     staleTime: 10 * 60_000,
     queryFn: async () => {
-      try {
-        const result = await fetchNetWorthSnapshots()
-        return (result.ok ? result.data : null) ?? []
-      } catch {
-        return [] as NetWorthSnapshot[]
-      }
+      const result = await fetchNetWorthSnapshots()
+      if (!result.ok) throw new Error(result.error.message)
+      return result.data
     },
   })
 
@@ -110,9 +106,8 @@ export function useAnalysisPageData() {
     enabled: Boolean(userId && snapshotQuery.data),
     staleTime: 10 * 60_000,
     queryFn: async () => {
-      try {
-        const radarResult = await fetchPriceRadarRows()
-        if (!radarResult.ok) return [] as PriceTrend[]
+      const radarResult = await fetchPriceRadarRows()
+        if (!radarResult.ok) throw new Error(radarResult.error.message)
 
         const radar = radarResult.data
         const latestData = dataRef.current
@@ -122,9 +117,6 @@ export function useAnalysisPageData() {
           cardExpenses: radar.cardExpenses,
         })
         return detectPriceIncreases(observations)
-      } catch {
-        return [] as PriceTrend[]
-      }
     },
   })
 
@@ -135,6 +127,9 @@ export function useAnalysisPageData() {
     error: snapshotQuery.error instanceof Error ? snapshotQuery.error.message : '',
     loading: snapshotQuery.isPending,
     missingTables,
+    auxiliaryLoading: netWorthQuery.isPending || priceTrendsQuery.isPending,
+    auxiliaryError: netWorthQuery.isError || priceTrendsQuery.isError,
+    retryAuxiliary: () => Promise.all([netWorthQuery.refetch(), priceTrendsQuery.refetch()]),
     priceTrends: priceTrendsQuery.data ?? [],
     ratesSnapshot,
     searchItems,

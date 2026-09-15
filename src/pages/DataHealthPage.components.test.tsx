@@ -4,6 +4,7 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { MemoryRouter } from 'react-router'
+import { BalancePrivacyProvider } from '../hooks/useBalancePrivacy'
 import type { HealthIssue } from './DataHealth.logic'
 
 vi.mock('../components/SimpleModal', () => ({
@@ -51,7 +52,7 @@ function renderIssueCard(target: HealthIssue) {
   const onReviewIssue = vi.fn()
 
   render(
-    <MemoryRouter>
+    <MemoryRouter><BalancePrivacyProvider>
       <HealthIssueCard
         issue={target}
         fixingId={null}
@@ -61,7 +62,7 @@ function renderIssueCard(target: HealthIssue) {
         onReviewIssue={onReviewIssue}
         onSnooze={vi.fn()}
       />
-    </MemoryRouter>,
+    </BalancePrivacyProvider></MemoryRouter>,
   )
 
   return { onFix, onPayIssue, onReviewIssue }
@@ -268,7 +269,7 @@ describe('HealthIssueCard kalıcılık ve detay listesi', () => {
     const onDismiss = vi.fn()
     const onSnooze = vi.fn()
     render(
-      <MemoryRouter>
+      <MemoryRouter><BalancePrivacyProvider>
         <HealthIssueCard
           issue={issue({ id: 'card-missing-days-card-1', area: 'Kartlar', kind: 'manual' })}
           fixingId={null}
@@ -277,7 +278,7 @@ describe('HealthIssueCard kalıcılık ve detay listesi', () => {
           onSnooze={onSnooze}
           onDismiss={onDismiss}
         />
-      </MemoryRouter>,
+      </BalancePrivacyProvider></MemoryRouter>,
     )
 
     fireEvent.click(screen.getByRole('button', { name: 'Bu görünümde gizle' }))
@@ -289,7 +290,7 @@ describe('HealthIssueCard kalıcılık ve detay listesi', () => {
 
   it('birebir aynı iki detay satırını da basar (key çakışması yok)', () => {
     render(
-      <MemoryRouter>
+      <MemoryRouter><BalancePrivacyProvider>
         <HealthIssueCard
           issue={issue({
             id: 'card-expense-duplicate-exact-a-b',
@@ -302,7 +303,7 @@ describe('HealthIssueCard kalıcılık ve detay listesi', () => {
           onFix={vi.fn()}
           onSnooze={vi.fn()}
         />
-      </MemoryRouter>,
+      </BalancePrivacyProvider></MemoryRouter>,
     )
 
     expect(screen.getAllByText('Aynı satır')).toHaveLength(2)

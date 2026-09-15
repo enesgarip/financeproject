@@ -15,7 +15,9 @@ if (
         if (done) return
         yield value
       }
-    } finally {
+    } catch {
+    throw new Error('PDF okunamadı. Dosyanın geçerli ve şifresiz olduğundan emin olup yeniden seç.')
+  } finally {
       reader.releaseLock()
     }
   }

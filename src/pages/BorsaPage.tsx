@@ -4,6 +4,7 @@ import { useCrudRows } from '../app/useCrudRows'
 import { CrudPage, type FormField } from '../components/CrudPage'
 import { RatesBanner } from '../components/finance/RatesBanner'
 import { Delta, HeroNumber, LineGroup, LineRow, SERIT_TEXT } from '../components/serit'
+import { QueryError } from '../components/ui/query-error'
 import { Badge } from '../components/ui/badge'
 import { Input } from '../components/ui/input'
 import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
@@ -90,6 +91,7 @@ function optionalNumber(formData: FormData, name: string): number | null {
 
 function validateTrade(formData: FormData, rows: StockTrade[], editing: StockTrade | null): Record<string, string> {
   const errors: Record<string, string> = {}
+  if (String(formData.get('trade_date')) > dateInputValue(new Date())) errors.trade_date = 'Geçmiş işlem tarihi gelecekte olamaz.'
   const symbol = normalizeTicker(String(formData.get('symbol') ?? ''))
   if (!symbol) errors.symbol = 'Sembol 1-10 harf/rakam olmalı (örn. THYAO).'
   const quantity = parseNumber(formData.get('quantity'))
@@ -117,7 +119,7 @@ function BorsaOverview({
   assets: Asset[]
   prices: StockPrices
 }) {
-  const { formatAmount } = useBalancePrivacy()
+  const { formatAmount, hidden } = useBalancePrivacy()
   const [period, setPeriod] = useState<PeriodKey>('all')
   const [customStart, setCustomStart] = useState(() => shiftMonths(new Date(), 6))
   const [history, setHistory] = useState<{ range: string; data: StockHistory }>({ range: '', data: {} })
@@ -142,7 +144,7 @@ function BorsaOverview({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [historyKey])
 
-  const positions = useMemo(() => projectStockPositions(trades), [trades])
+  const positions = useMemo(() => projectStockPositions(trades.filter(row => row.trade_date <= today)), [trades, today])
   const valuations = useMemo(
     () => symbols.map((symbol) => valueStockPosition(positions.get(symbol)!, prices[symbol])).filter((v) => v.position.quantity > 0 || v.position.realized !== 0),
     [positions, prices, symbols],
@@ -226,7 +228,7 @@ function BorsaOverview({
           {start ? (
             <div>
               <p className="text-ink-muted">Dönem başı ({formatDate(start)})</p>
-              <p className="font-black tabular-nums text-ink">{historyPending ? '…' : formatAmount(perf.startValue)}</p>
+              <p className="font-black tabular-nums text-ink">{historyPending ? '…' : perf.missingStartPrices.length ? 'Fiyat eksik' : formatAmount(perf.startValue)}</p>
             </div>
           ) : null}
           <div>
@@ -239,7 +241,7 @@ function BorsaOverview({
           </div>
           <div>
             <p className="text-ink-muted">Bugünkü değer</p>
-            <p className="font-black tabular-nums text-ink">{formatAmount(perf.endValue)}</p>
+            <p className="font-black tabular-nums text-ink">{perf.missingEndPrices.length ? 'Fiyat eksik' : formatAmount(perf.endValue)}</p>
           </div>
           <div>
             <p className="text-ink-muted">Gerçekleşmiş (dönemde)</p>
@@ -248,7 +250,7 @@ function BorsaOverview({
           <div>
             <p className="text-ink-muted">Kazanç</p>
             <p className={`font-black tabular-nums ${perf.gain > 0 ? 'text-success' : perf.gain < 0 ? 'text-destructive' : 'text-ink'}`}>
-              {historyPending ? '…' : (
+              {historyPending ? '…' : perf.missingStartPrices.length || perf.missingEndPrices.length ? 'Hesaplanamıyor' : (
                 <>
                   {perf.gain > 0 ? '+' : ''}
                   {formatAmount(perf.gain)}
@@ -274,8 +276,8 @@ function BorsaOverview({
             key={position.symbol}
             title={position.symbol}
             subtitle={[
-              `${formatNumber(position.quantity)} adet`,
-              position.avgCost === null ? 'maliyet kayıtsız' : `ort. ${formatCurrency(position.avgCost)}`,
+              `${hidden ? '••••' : formatNumber(position.quantity)} adet`,
+              position.avgCost === null ? 'maliyet kayıtsız' : `ort. ${formatAmount(position.avgCost)}`,
               price === null ? 'fiyat yok' : `güncel ${formatCurrency(price)}`,
               position.realized !== 0 ? `gerçekleşmiş ${position.realized > 0 ? '+' : ''}${formatAmount(position.realized)}` : null,
             ].filter(Boolean).join(' · ')}
@@ -295,7 +297,7 @@ function BorsaOverview({
 }
 
 function TradeCard({ trade, realized, menu }: { trade: StockTrade; realized: number | null; menu: ReactNode }) {
-  const { formatAmount } = useBalancePrivacy()
+  const { formatAmount, hidden } = useBalancePrivacy()
   const total = trade.unit_price == null ? null : trade.quantity * trade.unit_price + (trade.kind === 'sell' ? -trade.fee : trade.fee)
   return (
     <article className="rounded-2xl border border-line-strong p-4 transition-all duration-250 hover:-translate-y-0.5 min-[390px]:p-5">
@@ -319,8 +321,8 @@ function TradeCard({ trade, realized, menu }: { trade: StockTrade; realized: num
         <div>
           <p className="text-[11px] font-bold uppercase tracking-wider text-ink-muted">Adet × fiyat</p>
           <p className="mt-0.5 font-mono font-bold tabular-nums text-ink">
-            {formatNumber(trade.quantity)} × {trade.unit_price == null ? '—' : formatCurrency(trade.unit_price)}
-            {trade.fee > 0 ? <span className="text-ink-muted"> · komisyon {formatCurrency(trade.fee)}</span> : null}
+            {hidden ? '••••' : formatNumber(trade.quantity)} × {trade.unit_price == null ? '—' : formatAmount(trade.unit_price)}
+            {trade.fee > 0 ? <span className="text-ink-muted"> · komisyon {formatAmount(trade.fee)}</span> : null}
           </p>
         </div>
         <div className="text-right">
@@ -343,6 +345,8 @@ export function BorsaPage() {
   const assets: Asset[] = useMemo(() => (assetsQuery.data ?? []) as Asset[], [assetsQuery.data])
   const stockAssets = useMemo(() => assets.filter((asset) => asset.category === 'Hisse'), [assets])
 
+  if (assetsQuery.isError) return <QueryError title="Varlıklar yüklenemedi" message="Borsa karşılaştırması için varlık kayıtları gerekli." onRetry={() => void assetsQuery.refetch()} />
+  if (assetsQuery.isPending) return <p role="status">Varlıklar yükleniyor…</p>
   return (
     <CrudPage
       table="stock_trades"

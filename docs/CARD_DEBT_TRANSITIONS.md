@@ -492,3 +492,7 @@ Dashboard utils/cardPaymentCycle.ts ile kesilmiş ekstre kalanı için ortak nak
 
 ## 2026-09-07 sunum notu
 Kredi kartları ve banka hesapları ayrı listelerdedir. Toplam kart yükü debt_amount toplamıdır (provizyon ve gelecek taksitler dahil); banka hesaplarındaki para current_balance toplamıdır, kart borcu düşülmez. Açık ekstreli karttaki Ekstreyi öde bağlantısı mevcut Ekstreler akışına gider. Borç geçişleri ve RPC sözleşmesi değişmemiştir.
+
+## 2026-09-15 — Denetim düzeltmeleri
+
+Şerit özetinde toplam borçtan ekstre/dönem/provizyon çıkınca kalan artık “Taksit / sınıflanmamış borç” olarak gösterilir; yalnız gelecekteki taksitlerin kesin toplamı olduğu iddia edilmez. Ledger kovaları ve geçmiş olaylar değişmez. Asgari ipucu ekstre tabanında, limit ≤50.000 TL için %20, üstünde %40'tır (financeObligationRules.ts). Kart SMS alias lookup yalnız servis rolüne açık resolve_sms_card_alias RPC'sini kullanır; yazım/idempotency RPC'si korunur.

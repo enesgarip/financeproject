@@ -87,18 +87,18 @@ export function paymentCashOutflowAmount(
 }
 
 /**
- * BDDK asgari ödeme kademesi (25 Ağustos 2023 kararı): kart limiti
- * 25.000 TL'nin ALTINDA %20, 25.000 TL ve ÜZERİNDE %40. Ortak aile limitinde
+ * BDDK 26.09.2024 / 10970: kart limiti
+ * 50.000 TL ve ALTINDA %20, 50.000 TL'nin ÜZERİNDE %40. Ortak aile limitinde
  * kartın tahsis limiti ortak limitin kendisidir (credit_limit kolonu) — grup
  * matematiğine girmeden kartın kendi kolonu doğru taban. Kural değişirse
  * yalnız bu sabitler güncellenir.
  */
-export const MINIMUM_PAYMENT_TIER_LIMIT = 25000
+export const MINIMUM_PAYMENT_TIER_LIMIT = 50000
 const MINIMUM_PAYMENT_RATE_LOW = 0.2
 const MINIMUM_PAYMENT_RATE_HIGH = 0.4
 
 export function minimumCardPaymentRate(creditLimit: number | null | undefined): number {
-  return (creditLimit ?? 0) >= MINIMUM_PAYMENT_TIER_LIMIT ? MINIMUM_PAYMENT_RATE_HIGH : MINIMUM_PAYMENT_RATE_LOW
+  return (creditLimit ?? 0) > MINIMUM_PAYMENT_TIER_LIMIT ? MINIMUM_PAYMENT_RATE_HIGH : MINIMUM_PAYMENT_RATE_LOW
 }
 
 export function estimatedMinimumCardPayment(amount: number, rate = MINIMUM_PAYMENT_RATE_LOW) {

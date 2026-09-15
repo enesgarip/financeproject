@@ -1,3 +1,5 @@
+import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
+import { QueryError } from '../components/ui/query-error'
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Check, ChevronDown, ChevronUp, Plus, ShoppingCart, Trash2, Undo2 } from 'lucide-react'
@@ -23,7 +25,7 @@ import { resolveSavingsGoalRows } from '../utils/goalSources'
 import { buildSafeToSpend } from '../utils/safeToSpend'
 import { buildWishlistAge } from '../utils/wishlistAge'
 import { buildWishlistPlan, type WishlistPlan } from '../utils/wishlistPlan'
-import { formatCurrency, parseNumber } from '../utils/formatCurrency'
+import { parseNumber } from '../utils/formatCurrency'
 import { sumTL } from '../utils/money'
 import type { WishlistItem } from '../types/database'
 
@@ -38,7 +40,7 @@ export function WishlistPage() {
 
   // Sorgu + anahtar paylaşılan hook'ta (hooks/useWishlistItems): karar ekranının
   // köprüsü aynı anahtarı invalidate eder, sayfa-lokal kopya bayatlamaz.
-  const { data: items = [], isLoading } = useWishlistItems()
+  const { data: items = [], isLoading, isError, refetch } = useWishlistItems()
 
   const pending = useMemo(() => items.filter((i) => !i.is_purchased), [items])
   const purchased = useMemo(() => items.filter((i) => i.is_purchased), [items])
@@ -112,6 +114,7 @@ export function WishlistPage() {
       // virgül) ikisi de doğru okunur. Elle `replace(',', '.')` "12.500"ü NaN
       // yapıyordu → madde fiyatsız kaydediliyordu (denetim 2026-08-12 §6).
       const parsed = price.trim() ? parseNumber(price) : 0
+      if (parsed < 0) throw new Error('Fiyat negatif olamaz. Fiyat bilinmiyorsa alanı boş bırak.')
       const estimatedPrice = parsed > 0 ? parsed : null
       const result = await insertWishlistItem({
         user_id: user!.id,
@@ -171,6 +174,7 @@ export function WishlistPage() {
     addMutation.mutate({ name, price: newPrice })
   }
 
+  if (isError) return <QueryError title="Alışveriş listesi yüklenemedi" message="Kayıtlar alınamadı; toplam henüz bilinmiyor." onRetry={() => void refetch()} />
   if (isLoading) {
     return (
       <div className="flex flex-col gap-3 p-1">
@@ -299,6 +303,8 @@ function WishlistRow({
   onDelete: () => void
   purchased?: boolean
 }) {
+  const { formatAmount: formatCurrency } = useBalancePrivacy()
+
   const purchasedDate = item.purchased_at ? new Date(item.purchased_at).toLocaleDateString('tr-TR') : null
   // Bekleme kuralı rozetleri (utils/wishlistAge): tamamı mevcut kolonlardan.
   const age = buildWishlistAge(item)

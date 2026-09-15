@@ -152,7 +152,7 @@ export function buildCashFlowForecast(
     const monthKey = monthKeyOf(monthDate)
     const monthLabel = MONTH_LABEL.format(monthDate)
     const salaryAmount = roundTL(getSalaryForDate(data.salaryHistory, endOfMonth(monthDate))?.amount ?? 0)
-    const salaryLikelyReceived = offset === 0 && from > getFirstBusinessDay(monthDate)
+    const salaryLikelyReceived = offset === 0 && dateInputValue(from) > dateInputValue(getFirstBusinessDay(monthDate))
     const salary = salaryLikelyReceived ? 0 : salaryAmount
 
     const buckets = forecastBuckets(

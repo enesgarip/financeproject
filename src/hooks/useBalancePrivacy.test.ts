@@ -8,6 +8,7 @@ describe('maskAmountsInText', () => {
     expect(maskAmountsInText('1.000,00 ₺ provizyon bekliyor', true)).toBe('•••• ₺ provizyon bekliyor')
     expect(maskAmountsInText('Nakit 42.500 ₺ — 3.910 ₺ açık.', true)).toBe('Nakit •••• ₺ — •••• ₺ açık.')
     expect(maskAmountsInText('aylık 1666.67 TL yük', true)).toBe('aylık •••• ₺ yük')
+    expect(maskAmountsInText('Provizyon ₺1.500,00; bakiye -250,50 TL', true)).toBe('Provizyon •••• ₺; bakiye •••• ₺')
   })
 
   it('görünür modda metne dokunmaz', () => {

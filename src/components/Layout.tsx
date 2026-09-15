@@ -32,6 +32,7 @@ export function Layout() {
 
 function LayoutInner() {
   const { pathname } = useLocation()
+  useEffect(() => { document.title = `${routeTitle(pathname)} · Denge` }, [pathname])
   const { signOut, user } = useAuth()
   // Günlük net değer fotoğrafı: hangi sayfayla açılırsa açılsın alınır.
   useDailyNetWorthSnapshot()

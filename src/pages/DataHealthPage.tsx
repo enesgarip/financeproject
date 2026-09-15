@@ -1,3 +1,4 @@
+import { QueryError } from '../components/ui/query-error'
 import { Activity, CheckCircle2, RefreshCw, Settings, Undo2, Wrench } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router'
@@ -69,6 +70,7 @@ function readLegacyDismissedIssueIds(): string[] {
 export function DataHealthPage() {
   const { formatAmount } = useBalancePrivacy()
   const [data, setData] = useState<HealthData>(emptyData)
+  const [loadFailed, setLoadFailed] = useState(false)
   const [loading, setLoading] = useState(true)
   const [fixingId, setFixingId] = useState<string | null>(null)
   const [undoStack, setUndoStack] = useState<UndoBatch[]>([])
@@ -92,6 +94,7 @@ export function DataHealthPage() {
 
   const loadData = useCallback(async () => {
     setLoading(true)
+    setLoadFailed(false)
     setError('')
     setMessage('')
 
@@ -102,12 +105,14 @@ export function DataHealthPage() {
     if (!result.ok) {
       setError(result.error.message ?? 'Veri sağlığı kayıtları yüklenemedi.')
       setLoading(false)
+      setLoadFailed(true)
       return null
     }
 
     if (!acknowledgementResult.ok) {
       setError(acknowledgementResult.error.message ?? 'Kapatılan veri sağlığı bulguları yüklenemedi.')
       setLoading(false)
+      setLoadFailed(true)
       return null
     }
 
@@ -430,6 +435,7 @@ export function DataHealthPage() {
     }
   }
 
+  if (loadFailed) return <QueryError title="Veri kontrolü yapılamadı" message={error} onRetry={() => void loadData()} />
   return (
     <>
       <section className="space-y-4">

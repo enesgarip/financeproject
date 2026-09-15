@@ -665,11 +665,13 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
                             </p>
                           ) : (
                             <div className="mt-2 flex items-center gap-2">
-                              <label className="text-[11px] text-ink-muted">Toplam taksit</label>
+                              <label htmlFor={`installments-${row.key}`} className="text-[11px] text-ink-muted">Toplam taksit</label>
                               <input
                                 type="number"
                                 min={1}
                                 inputMode="numeric"
+                                id={`installments-${row.key}`}
+                                aria-label={`${tx.description} toplam taksit sayısı`}
                                 value={manualDrafts[row.key] ?? ''}
                                 onChange={(e) => setManualDrafts((prev) => ({ ...prev, [row.key]: e.target.value }))}
                                 placeholder={tx.installmentNo ? `≥${tx.installmentNo}` : '1'}

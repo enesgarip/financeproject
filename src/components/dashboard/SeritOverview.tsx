@@ -138,7 +138,7 @@ export function SeritOverview({
   const groupedUpcoming = groupDashboardInstallments(upcoming)
   const visibleUpcoming = showAllUpcoming ? groupedUpcoming : groupedUpcoming.slice(0, 6)
   const format = useSeritAmount()
-  const daysLeft = daysInMonth - today.getDate()
+  const daysLeft = Math.max(1, daysInMonth - today.getDate())
   const perDay = format(perDayAllowance)
   const nextThree = upcoming.slice(0, 3)
   return (
@@ -318,7 +318,7 @@ export function SeritOverview({
                 { label: 'Ekstre', value: cardBuckets.statement, tone: 'danger' },
                 { label: 'Dönem içi', value: cardBuckets.current, tone: 'warning' },
                 { label: 'Provizyon', value: cardBuckets.provision, tone: 'info' },
-                { label: 'Gelecek taksitler', value: cardBuckets.future, tone: 'neutral' },
+                { label: 'Taksit / sınıflanmamış borç', value: cardBuckets.future, tone: 'neutral' },
               ]}
             />
           </div>

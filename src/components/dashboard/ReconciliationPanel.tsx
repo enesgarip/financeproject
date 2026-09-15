@@ -6,7 +6,7 @@ import { HelpTooltip, type HelpTooltipContent } from '../ui/help-tooltip'
 import type { Card as FinanceCard, CardStatementArchive } from '../../types/database'
 import { useBalancePrivacy } from '../../hooks/useBalancePrivacy'
 import { formatDate } from '../../utils/date'
-import { diffTL } from '../../utils/money'
+import { diffTL, equalsTL } from '../../utils/money'
 
 type ReconciliationPanelProps = {
   cards: FinanceCard[]
@@ -21,7 +21,6 @@ const reconciliationHelp = {
   source: 'Ekstre arşivi (kesilmiş ekstreler) ve ekstre içe aktarırken kaydedilen mutabakat tutarı.',
 } satisfies HelpTooltipContent
 
-const DELTA_THRESHOLD = 1
 
 type ReconciliationItem = {
   statementId: string
@@ -41,7 +40,7 @@ function buildItems(cards: FinanceCard[], statements: CardStatementArchive[]): R
 
     if (statement.reconciled_at && statement.reconciled_bank_amount != null) {
       const delta = diffTL(statement.reconciled_bank_amount, statement.statement_debt_amount)
-      if (Math.abs(delta) > DELTA_THRESHOLD) {
+      if (!equalsTL(delta, 0)) {
         items.push({ statementId: statement.id, cardLabel, statementDate: statement.statement_date, kind: 'delta', delta })
       }
       // delta ~0 → mutabık, gösterme

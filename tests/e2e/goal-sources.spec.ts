@@ -20,6 +20,7 @@ test.describe('birikim hedefi takip kaynağı (live backend)', () => {
   test.skip(!LIVE, 'set E2E_LIVE_SUPABASE=1 with a local Supabase + seeded user')
 
   test('hedef varlık kategorisine bağlanınca tutar türetilir', async ({ page }) => {
+    const goalName = `Borsa E2E ${Date.now()}`
     await page.goto('/login')
     await page.locator('input[type="email"]').fill(EMAIL)
     await page.locator('input[type="password"]').fill(PASSWORD)
@@ -31,7 +32,7 @@ test.describe('birikim hedefi takip kaynağı (live backend)', () => {
     await page.getByRole('button', { name: 'Ekle', exact: true }).first().click()
 
     const modal = page.locator('form').filter({ hasText: 'Hedef adı' })
-    await modal.getByLabel('Hedef adı').fill('Borsa E2E')
+    await modal.getByLabel('Hedef adı').fill(goalName)
     await modal.getByLabel('Hedef miktar').fill('1000000')
 
     // Kaynak seçilmeden önce elle giriş alanı durur.
@@ -47,11 +48,12 @@ test.describe('birikim hedefi takip kaynağı (live backend)', () => {
 
     await modal.getByRole('button', { name: 'Kaydet' }).click()
 
-    const card = page.locator('article, div').filter({ hasText: 'Borsa E2E' }).last()
+    const card = page.locator('article, div').filter({ hasText: goalName }).last()
     await expect(card.getByText('Varlıklardan')).toBeVisible({ timeout: 10_000 })
   })
 
   test('kasa kovası bağlanan hedefte tek tıkla ayırma yapılır', async ({ page }) => {
+    const goalName = `Kova E2E ${Date.now()}`
     await page.goto('/login')
     await page.locator('input[type="email"]').fill(EMAIL)
     await page.locator('input[type="password"]').fill(PASSWORD)
@@ -62,18 +64,19 @@ test.describe('birikim hedefi takip kaynağı (live backend)', () => {
     await page.getByRole('button', { name: 'Ekle', exact: true }).first().click()
 
     const modal = page.locator('form').filter({ hasText: 'Hedef adı' })
-    await modal.getByLabel('Hedef adı').fill('Kova E2E')
+    await modal.getByLabel('Hedef adı').fill(goalName)
     await modal.getByLabel('Hedef miktar').fill('600000')
     // Biriken boş bırakılır (= 0): sıfırdan başlayan hedef normal durumdur.
-    await modal.getByLabel('Hedef tarih').fill('2026-12-31')
+    await modal.getByLabel('Hedef tarih').fill(`${new Date().getFullYear() + 1}-12-31`)
     // Hedef adıyla yeni kova aç: kova harcanabilirden düşen gerçek rezervdir.
     await modal.getByLabel('Kasa kovası').selectOption('__new__')
     await modal.getByRole('button', { name: 'Kaydet' }).click()
 
-    const card = page.locator('div').filter({ hasText: 'Kova E2E' }).filter({ hasText: 'Kasada ayrılan' }).last()
+    const card = page.locator('div').filter({ hasText: goalName }).filter({ hasText: 'Kasada ayrılan' }).last()
     await expect(card).toBeVisible({ timeout: 10_000 })
 
     await card.getByRole('button', { name: 'Ayır', exact: true }).click()
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Ayır', exact: true }).click()
     await expect(card.getByText('bu ay ayrıldı')).toBeVisible({ timeout: 10_000 })
     await expect(card.getByRole('button', { name: 'Tekrar ayır' })).toBeVisible()
   })

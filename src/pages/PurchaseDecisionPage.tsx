@@ -73,7 +73,8 @@ export function PurchaseDecisionPage() {
     enabled: Boolean(user),
     queryFn: async () => {
       const result = await fetchSavingsGoalSnapshots()
-      return result.ok ? (result.data ?? []) : []
+      if (!result.ok) throw new Error(result.error.message)
+      return result.data ?? []
     },
   })
 
@@ -170,9 +171,9 @@ export function PurchaseDecisionPage() {
     if (!fundsProgress) return null
     const remaining = buildSavingsSuggestion(dominant.goal, new Date()).remaining
     if (remaining <= 0) return null
-    const tempo = buildGoalTempo(goalSnapshotsQuery.data ?? [], dominant.goal.id)
+    const tempo = buildGoalTempo(goalSnapshotsQuery.isError ? [] : goalSnapshotsQuery.data ?? [], dominant.goal.id)
     return { dominant, preview: buildForegoneGainPreview({ goal: dominant.goal, remaining, amount, tempo }) }
-  }, [snapshotQuery.data, bucketsQuery.data, resolvedGoals, hasAmount, amount, goalSnapshotsQuery.data])
+  }, [snapshotQuery.data, bucketsQuery.data, resolvedGoals, hasAmount, amount, goalSnapshotsQuery.data, goalSnapshotsQuery.isError])
 
   async function handleForego() {
     if (!foregone || foregoState !== 'idle' || !hasAmount) return
@@ -225,6 +226,7 @@ export function PurchaseDecisionPage() {
 
   return (
     <section className="mx-auto min-w-0 max-w-xl space-y-4">
+      {goalSnapshotsQuery.isError ? <QueryError title="Hedef geçmişi yüklenemedi" onRetry={() => void goalSnapshotsQuery.refetch()} /> : null}
       <p className="text-[13px] text-ink-muted">
         Tutarı ve ödeme şeklini seç; önümüzdeki altı aya etkisini birkaç saniyede gör.
       </p>
