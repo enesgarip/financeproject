@@ -1,3 +1,4 @@
+import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
 import { CalendarDays, CreditCard, Receipt, RefreshCw } from 'lucide-react'
 import { CrudPage, type FormField } from '../components/CrudPage'
 import { FinancePaymentDrawer } from '../components/finance/FinancePaymentDrawer'
@@ -243,6 +244,7 @@ function PaymentsOverview({ rows, transactionHistory }: { rows: Payment[]; trans
 }
 
 export function PaymentsPage() {
+  const { maskText, formatAmount } = useBalancePrivacy()
   const snapshotQuery = useFinanceSnapshot()
   const invalidateSnapshot = useInvalidateFinanceSnapshot()
   const { drawerProps, openPaymentDrawer } = useFinancePaymentDrawer()
@@ -421,7 +423,7 @@ export function PaymentsPage() {
         }}
         renderTitle={(row) => row.title}
         renderSubtitle={(row) => `${row.category} · ${row.status}`}
-        renderDetails={(row) => [`Tutar: ${getPaymentAmountLabel(row)}`]}
+        renderDetails={(row) => [`Tutar: ${maskText(getPaymentAmountLabel(row))}`]}
         groupBy={(row) => row.category}
         flattenGroupsBelow={6}
         renderCard={(row, { menu, reload, setError }) => {
@@ -490,7 +492,7 @@ export function PaymentsPage() {
                     <p className="w-full text-[11px] text-ink-muted">
                       Son {suggestion.sampleCount} ödemenin ortası{' '}
                       <span className="font-semibold tabular-nums text-ink">
-                        {formatSeritAmount(suggestion.suggested, { decimals: 2 })}
+                        {formatAmount(suggestion.suggested)}
                       </span>{' '}
                       — tahmini güncelleyeyim mi?
                     </p>

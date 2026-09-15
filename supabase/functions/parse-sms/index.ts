@@ -147,7 +147,7 @@ function parseYapikrediCardSms(text: string): ParsedCardSms | null {
 // -- Hesap hareketi SMS'leri --
 
 const DENIZBANK_ACCOUNT_REGEX =
-  /(\d{2}\.\d{2}\.\d{4})\s+(\d{2}:\d{2}:\d{2})'da\s+(.+?)\s+(?:alicisina|gondericisinden)\s+([\d-]+)\s+numarali\s+hesabiniz(dan|a)\s+([\d.,]+)\s+TL\s+tutarinda\s+(\w+)\s+islemi/i
+  /(\d{2}\.\d{2}\.\d{4})\s+(\d{2}:\d{2}(?::\d{2})?)'da\s+(.+?)\s+(?:alicisina|gondericisinden)\s+([\d-]+)\s+numarali\s+hesabiniz(dan|a)\s+([\d.,]+)\s+TL\s+tutarinda\s+(\w+)\s+islemi/i
 
 const DENIZBANK_INCOMING_ACCOUNT_REGEX =
   /(\d{1,2}\.\d{1,2}\.\d{4})\s+(\d{2}:\d{2}(?::\d{2})?)'da\s+(.+?)\s+gondericisinden\s+([\d-]+)\s+numarali\s+hesabiniza\s+(FAST|HAVALE|EFT)\s+ile\s+([\d.,]+)\s+(?:TL|TRY)\s+tutarinda\s+para\s+girisi\s+gerceklesmistir/i
@@ -430,8 +430,11 @@ async function handleCardSms(
   supabaseUrl: string,
   headers: Record<string, string>,
 ): Promise<Response> {
-  const aliasUrl = `${supabaseUrl}/rest/v1/card_aliases?last_four_digits=eq.${parsed.lastFour}&select=card_id,label,cards(id,card_name,bank_name,user_id)`
-  const aliasRes = await fetch(aliasUrl, { headers })
+  const aliasUrl = `${supabaseUrl}/rest/v1/rpc/resolve_sms_card_alias`
+  const aliasRes = await fetch(aliasUrl, { method: 'POST', headers, body: JSON.stringify({
+    p_last_four: parsed.lastFour,
+    p_owner_id: env('SMS_OWNER_USER_ID')?.trim() || null,
+  }) })
   if (!aliasRes.ok) {
     await logSms(supabaseUrl, headers, {
       userId: env('SMS_OWNER_USER_ID')?.trim() || null,
@@ -490,6 +493,9 @@ async function handleCardSms(
     return jsonResponse({ error: errorMessage }, 409)
   }
 
+  if (new Set(scopedAliases.map(alias => alias.card_id)).size > 1) {
+    return jsonResponse({ error: 'Kart takma adı birden fazla kartla eşleşiyor. Takma adları düzeltin.' }, 409)
+  }
   const card = scopedAliases[0]!.cards
   const category = inferCategory(parsed.merchant)
 

@@ -6,8 +6,7 @@ import { expect, test } from '@playwright/test'
  * Skipped in the default CI smoke run (which points at a dummy Supabase URL).
  * To run locally:
  *   1. npx supabase start  (and db reset if needed)
- *   2. seed a confirmed user + a credit card named "Axess E2E", e.g. via psql
- *      (see tests/e2e/README or the session notes).
+ *   2. npm run db:seed:local (test kendi sıfır borçlu kartını oluşturur).
  *   3. E2E_LIVE_SUPABASE=1 VITE_SUPABASE_URL=http://127.0.0.1:55321 \
  *      VITE_SUPABASE_ANON_KEY=<publishable> \
  *      npx playwright test money-mutation
@@ -21,13 +20,13 @@ import { expect, test } from '@playwright/test'
 const LIVE = process.env.E2E_LIVE_SUPABASE === '1'
 const EMAIL = process.env.E2E_EMAIL ?? 't@t.com'
 const PASSWORD = process.env.E2E_PASSWORD ?? 'password123'
-const CARD_NAME = 'Axess E2E'
 const AMOUNT = 500
 
 test.describe('money mutation (live backend)', () => {
   test.skip(!LIVE, 'set E2E_LIVE_SUPABASE=1 with a local Supabase + seeded user/card')
 
   test('adding a card expense raises debt and lands in the ledger', async ({ page }) => {
+    const CARD_NAME = `Axess E2E ${Date.now()}`
     await page.goto('/login')
     await page.locator('input[type="email"]').fill(EMAIL)
     await page.locator('input[type="password"]').fill(PASSWORD)
@@ -35,6 +34,13 @@ test.describe('money mutation (live backend)', () => {
     await expect(page).toHaveURL(/\/$/)
 
     await page.goto('/kartlar')
+    await page.getByRole('button', { name: /Kredi kartları/ }).click()
+    await page.getByRole('button', { name: 'Kredi kartı ekle', exact: true }).click()
+    const create = page.getByRole('dialog')
+    await create.getByLabel(/^Banka/).fill('Akbank')
+    await create.getByLabel(/^Kart \/ hesap adı/).fill(CARD_NAME)
+    await create.getByRole('button', { name: 'Kaydet', exact: true }).click()
+    await expect(create).toHaveCount(0)
     await page.getByRole('button', { name: /İşlemler/ }).click()
 
     // Quick-expense form lives under the "Hızlı harcama" heading.
@@ -52,7 +58,7 @@ test.describe('money mutation (live backend)', () => {
     // NOT: bu assertion eskiden "Güncel borç" arıyordu ve o etiket uzun süredir
     // arayüzde yok — test varsayılan olarak atlandığı için (E2E_LIVE_SUPABASE)
     // sessizce bayatlamıştı. Tutar biçimi de Şerit'e geçti: sembol sonda.
-    await page.getByRole('button', { name: /Kartlar/ }).click()
+    await page.getByRole('button', { name: /Kredi kartları/ }).click()
     const card = page.locator('article').filter({ hasText: CARD_NAME })
     await expect(card.getByText('Toplam kart yükü')).toBeVisible({ timeout: 10_000 })
     await expect(card).toContainText('500,00 ₺')

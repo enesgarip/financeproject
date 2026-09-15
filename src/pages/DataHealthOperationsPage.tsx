@@ -1,6 +1,7 @@
 import { DatabaseZap, Download, Settings, Upload } from 'lucide-react'
 import { useRef, useState, type ChangeEvent, type FormEvent } from 'react'
 import { useAuth } from '../auth/useAuth'
+import { userMessage } from '../utils/userMessage'
 import { NotificationSettings } from '../components/finance/NotificationSettings'
 import { AutomationCoveragePanel } from '../components/finance/AutomationCoveragePanel'
 import { ClientErrorsPanel } from '../components/finance/ClientErrorsPanel'
@@ -60,13 +61,13 @@ export function DataHealthOperationsPage() {
     try {
       const result = await fetchDataHealthRows()
       if (!result.ok) {
-        setError(result.error.message ?? 'CSV yedek için kayıtlar yüklenemedi.')
+        setError(result.error.message ?? 'Kontrol verisi CSV için kayıtlar yüklenemedi.')
         return
       }
       downloadDataCsv(result.data)
-      setMessage('CSV yedek indirildi.')
+      setMessage('Kontrol verisi CSV indirildi.')
     } catch (csvError) {
-      setError(csvError instanceof Error ? csvError.message : 'CSV yedek alınamadı.')
+      setError(csvError instanceof Error ? csvError.message : 'Kontrol verisi CSV alınamadı.')
     } finally {
       setCsvExporting(false)
     }
@@ -120,7 +121,7 @@ export function DataHealthOperationsPage() {
     } catch (restoreError) {
       setError(
         restoreError instanceof Error
-          ? `${restoreError.message} - İşlem yarıda kaldıysa az önce inen "restore-oncesi" dosyasıyla tekrar geri yükleyebilirsin.`
+          ? `${userMessage(restoreError.message)} - İşlem öncesi yedeğin "restore-oncesi" dosyasında saklı.`
           : 'Geri yükleme başarısız.',
       )
     } finally {
@@ -208,7 +209,8 @@ export function DataHealthOperationsPage() {
                 className="inline-flex items-center justify-center gap-2 rounded-xl border border-line-strong bg-raised px-3 py-2.5 text-sm font-semibold text-ink transition hover:bg-black/[.03] dark:hover:bg-white/[.04] disabled:opacity-50"
               >
                 <Download size={15} />
-                {csvExporting ? 'CSV hazırlanıyor...' : 'CSV yedek'}
+                {csvExporting ? 'CSV hazırlanıyor...' : 'Kontrol verisi CSV'}
+                <span className="block text-xs">Kısmi dışa aktarım; tam yedek için JSON kullan.</span>
               </button>
               <button
                 type="button"

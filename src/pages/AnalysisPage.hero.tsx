@@ -16,9 +16,11 @@ const TREND_MONTHS = 12
 export function AnalysisHero({
   data,
   snapshots,
+  historyStatus = 'ready',
 }: {
   data: FinanceSummaryInput
   snapshots: NetWorthSnapshot[]
+  historyStatus?: 'ready' | 'loading' | 'error'
 }) {
   const position = buildFinancialPosition(data)
   const monthly = aggregateNetWorthByMonth(snapshots).slice(-TREND_MONTHS)
@@ -36,7 +38,7 @@ export function AnalysisHero({
         label="Net değer"
         value={position.netWorth}
         description={
-          monthly.length < 2 ? 'Trend için en az iki aylık fotoğraf gerekiyor; her açılışta bir tane alınıyor.' : undefined
+          historyStatus === 'error' ? 'Geçmiş yüklenemedi; trend karşılaştırması bilinmiyor.' : historyStatus === 'loading' ? 'Trend yükleniyor…' : monthly.length < 2 ? 'Trend için en az iki aylık fotoğraf gerekiyor; her gün bir fotoğraf alınıyor.' : undefined
         }
       />
 

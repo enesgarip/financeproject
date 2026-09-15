@@ -134,6 +134,12 @@ describe('buildCashFlowForecast', () => {
     expect(forecast.months.map((m) => m.endingBalance)).toEqual([1000, 21000, 41000])
   })
 
+  it.each([0, 12, 23])('maaş gününde saat %i aynı aylık geliri korur', (hour) => {
+    const forecast = buildCashFlowForecast(buildInput({ salaryHistory: [salary({ amount: 20000 })] }),
+      { from: new Date(2026, 5, 1, hour), horizonMonths: 1 })
+    expect(forecast.months[0].salary).toBe(20000)
+  })
+
   it('starts future salary records in their effective month', () => {
     const forecast = buildCashFlowForecast(
       buildInput({

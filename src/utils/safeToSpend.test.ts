@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest'
 import { buildSafeToSpend } from './safeToSpend'
 
 describe('buildSafeToSpend', () => {
+  it('eksi banka bakiyesini yok saymaz', () => {
+    expect(buildSafeToSpend({ liquidCash: -2000, expectedIncome: 0, remainingOutflow: 10000, buffer: 5000 }).amount).toBe(-17000)
+  })
   it('likit + kalan gelir − kalan yükümlülük − tampon', () => {
     const result = buildSafeToSpend({
       liquidCash: 46285.68,
@@ -74,14 +77,14 @@ describe('buildSafeToSpend', () => {
     expect(buildSafeToSpend({ liquidCash: 0, expectedIncome: 0, remainingOutflow: 0, buffer: 0 }).pressurePct).toBe(0)
   })
 
-  it('negatif girdileri sıfıra kırpar (bozuk veri hesabı patlatmasın)', () => {
+  it('negatif likidi korur; negatif plan ve tamponu sıfıra kırpar', () => {
     const result = buildSafeToSpend({
       liquidCash: -500,
       expectedIncome: -100,
       remainingOutflow: -50,
       buffer: -10,
     })
-    expect(result.amount).toBe(0)
+    expect(result.amount).toBe(-500)
   })
 
   it('kuruş hassasiyetini korur (float kırıntısı yok)', () => {

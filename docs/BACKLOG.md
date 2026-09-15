@@ -1,5 +1,17 @@
 # Priority Backlog
 
+## 2026-09-15 — Kullanıcı denetimi düzeltmeleri
+
+AUD-001–029 için ürün düzeltmeleri uygulandı. Son npm run verify geçti: 135 dosya / 1476 test, sıfır prod bağımlılık açığı, build, 17,8/20 kB giriş paketi, 969,8/1030 kB toplam paket ve altı Edge tip kontrolü. Temiz ve ek UI verisi bulunan DB: 45/45 SQL testi. Ayrıntılı değişiklik/kanıt tablosu: docs/USER_AUDIT_2026-09-09.md.
+
+- Kart asgari oranı, negatif likit, gün/maaş sınırı, vade sayımı, borç etiketi ve Türkçe tutar düzeltildi.
+- Gizlilik, hata/boş durumları, negatif giriş, form etiketleri, mobil tutar, rapor/CSV kapsamı ve rota başlıkları düzeltildi.
+- Kart SMS çözümleme dar servis RPC'sine taşındı; iki parser saniyesiz FAST/HAVALE/EFT destekliyor. Dakika hassasiyetinde kararlı eventId zorunluluğu korunur; gerçek yerel HTTP tekrar testi bakiye/borca tek etkiyi doğruladı.
+- Kirli form geri/kapat/Escape ve gerçek SW güncellemesi koruması tarayıcıda doğrulandı. Canlı hedef ve kart harcaması testleri çalışıyor.
+- Yerel temiz seed + 45/45 SQL testi geçti. Reset öncesi yedek: audit-20260909.local/before-fixes-0915.dump. Yerel PostgreSQL izinsiz çağrıyı EXCEPTION içinde yakalarken SIGSEGV verdi; ACL denetimi ve servis rolü gerçek çağrısı ayrı doğrulandı.
+
+Maliyet tercihi: hedefli okuma/test; uzun çıktılar yerel loglara. Gerçek banka dosyaları, fiziksel cihaz/ekran okuyucu ve dış sağlayıcı kapsam sınırları denetim raporunda korunur. Üretime gönderilmedi.
+
 ## 2026-09-09 — Para gösteriminde iki ondalık basamak — DONE
 
 `formatSeritParts` / `formatSeritAmount` varsayılan olarak kuruşu gösterir:

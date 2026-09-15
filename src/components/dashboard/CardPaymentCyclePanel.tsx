@@ -3,6 +3,7 @@ import { HelpTooltip } from '../ui/help-tooltip'
 import { useBalancePrivacy } from '../../hooks/useBalancePrivacy'
 import { buildCardPaymentCycle, buildCardCycleForecast, cardSpendingScenario } from '../../utils/cardPaymentCycle'
 import { formatDate } from '../../utils/date'
+import { parseNumber } from '../../utils/formatCurrency'
 import type { FinanceSummaryInput } from '../../utils/financeSummary'
 
 export function CardPaymentCyclePanel({ data, from, buffer, reserved, reservedKnown }: {
@@ -12,7 +13,8 @@ export function CardPaymentCyclePanel({ data, from, buffer, reserved, reservedKn
   const [extra, setExtra] = useState('')
   const cycle = useMemo(() => buildCardPaymentCycle(data, { from, buffer, reserved }), [data, from, buffer, reserved])
   const forecast = useMemo(() => buildCardCycleForecast(data, from), [data, from])
-  const scenario = useMemo(() => cardSpendingScenario(forecast, Number(extra), cycle.held), [forecast, extra, cycle.held])
+  const extraAmount = parseNumber(extra)
+  const scenario = useMemo(() => cardSpendingScenario(forecast, extraAmount, cycle.held), [forecast, extraAmount, cycle.held])
   if (!cycle.next.length) return null
   return <section className="mt-6 border-t border-line-strong pt-4" aria-labelledby="card-cycle-title">
     <h2 id="card-cycle-title" className="text-base font-semibold text-ink">
@@ -67,7 +69,7 @@ export function CardPaymentCyclePanel({ data, from, buffer, reserved, reservedKn
       <label className="mt-2 block text-sm" htmlFor="card-cycle-extra">Kayıtlı planların dışında aylık yeni kart harcaması (TL)</label>
       <input id="card-cycle-extra" type={hidden ? 'password' : 'number'} inputMode="decimal" min="0" step="0.01" value={extra} onChange={(event) => setExtra(event.target.value)} className="mt-2 min-h-11 w-full rounded-lg border border-line-strong bg-page px-3" placeholder="Aylık tahminini yaz" />
       <p className="mt-2 text-xs leading-5 text-ink-muted">Bu aydan başlayarak her ay aynı yeni harcama, ilk ödeme gelecek ay varsayılır. Kayıtlı borçları ve planları tekrar yazma. Son ayın yeni harcaması bu altı aylık ufkun sonrasına kalır. Ay sonu bakiyesidir; ay içindeki açığı göstermez. Bu karşılaştırmada kayıtlı gelecek taksitler ve kart talimatları tahmini ekstre vadelerinde nakitten düşülür. Kayıtlı olmayan abonelikleri yeni harcama tahminine dahil et. Kesim / ödeme günü eksik kartların gelecek ödemeleri hesaplanamaz.</p>
-      {extra !== '' && Number(extra) >= 0 && <div className="mt-3 overflow-x-auto"><table className="w-full text-left text-xs"><thead><tr><th className="py-2">Ay</th><th>Kayıtlı plan</th><th>Yeni harcamayla</th></tr></thead><tbody>{scenario.map((month) => <tr key={month.monthKey} className="border-t border-line"><th className="py-3 font-normal">{month.monthLabel}</th><td>{formatAmount(month.baseline)}</td><td>{formatAmount(month.scenario)}</td></tr>)}</tbody></table><p className="text-xs text-ink-muted">Her iki sütunda tampon, kasa rezervi ve vadesiz kişisel borç ayrıldı.</p></div>}
+      {extra !== '' && extraAmount >= 0 && <div className="mt-3 overflow-x-auto"><table className="w-full text-left text-xs"><thead><tr><th className="py-2">Ay</th><th>Kayıtlı plan</th><th>Yeni harcamayla</th></tr></thead><tbody>{scenario.map((month) => <tr key={month.monthKey} className="border-t border-line"><th className="py-3 font-normal">{month.monthLabel}</th><td>{formatAmount(month.baseline)}</td><td>{formatAmount(month.scenario)}</td></tr>)}</tbody></table><p className="text-xs text-ink-muted">Her iki sütunda tampon, kasa rezervi ve vadesiz kişisel borç ayrıldı.</p></div>}
     </details>
   </section>
 }

@@ -1,3 +1,4 @@
+import { QueryError } from '../ui/query-error'
 import { Link2, Pencil, Plus, Target, Trash2, Trophy } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -206,7 +207,7 @@ export function SavingsGoalsPanel({
   /** Gerçekleşen aylık nakit çıkışı ortalaması; "N aylık gider" çıpası için. */
   monthlyOutflow?: number
 } = {}) {
-  const { formatAmount } = useBalancePrivacy()
+  const { formatAmount, hidden } = useBalancePrivacy()
   const { user } = useAuth()
   const { snapshot } = useMarketRates()
   const { confirm, confirmDialog } = useConfirmDialog()
@@ -252,10 +253,11 @@ export function SavingsGoalsPanel({
     enabled: Boolean(user),
     queryFn: async () => {
       const result = await fetchSavingsGoalSnapshots()
-      return result.ok ? (result.data ?? []) : []
+      if (!result.ok) throw new Error(result.error.message)
+      return result.data ?? []
     },
   })
-  const goalSnapshots = goalSnapshotsQuery.data ?? []
+  const goalSnapshots = goalSnapshotsQuery.isError ? [] : goalSnapshotsQuery.data ?? []
 
   const refs = useMemo<GoalSourceRefs>(
     () => ({ assets, cards, buckets: buckets ?? [], snapshot, stockPrices, monthlyOutflow }),
@@ -744,6 +746,7 @@ export function SavingsGoalsPanel({
 
   return (
     <section className="space-y-4">
+      {goalSnapshotsQuery.isError ? <QueryError title="Hedef geçmişi yüklenemedi" message="Birikim hızı ve varış tarihi şu an doğrulanamıyor." onRetry={() => void goalSnapshotsQuery.refetch()} /> : null}
       <Card className="border-line-strong">
         <CardContent className="p-5">
           <div className="flex items-start justify-between gap-3">
@@ -893,7 +896,7 @@ export function SavingsGoalsPanel({
                           </button>
                         </div>
                       </div>
-                      <p className="mt-1.5 text-xs font-semibold tabular-nums text-ink-muted">{formatSavingsGoalProgress(goal, goalComponents)}</p>
+                      <p className="mt-1.5 text-xs font-semibold tabular-nums text-ink-muted">{hidden ? '••••' : formatSavingsGoalProgress(goal, goalComponents)}</p>
                       {missingSourceCount > 0 ? (
                         <p className="mt-0.5 text-[11px] font-medium text-warning">
                           {missingSourceCount} takip kaynağı bulunamadı; tutar eksik olabilir.
@@ -965,7 +968,7 @@ export function SavingsGoalsPanel({
                           <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 rounded-lg border border-dashed border-primary/30 bg-primary/5 px-2 py-1.5">
                             <p className="w-full text-[11px] text-ink-muted">
                               <span className="font-semibold text-ink">{suggestion.label}</span> toplamın{' '}
-                              <span className="tabular-nums">{formatSavingsGoalAmount(goal, suggestion.amount)}</span> — bağlayıp
+                              <span className="tabular-nums">{hidden ? '••••' : formatSavingsGoalAmount(goal, suggestion.amount)}</span> — bağlayıp
                               otomatik güncelleyeyim mi?
                             </p>
                             <button
@@ -1000,14 +1003,14 @@ export function SavingsGoalsPanel({
                         if (suggestion.pace === 'active' && suggestion.monthlyNeeded != null) {
                           return (
                             <p className="mt-1 text-[11px] font-bold text-primary">
-                              Aylık gerekli: {formatSavingsGoalAmount(goal, suggestion.monthlyNeeded)} · {suggestion.monthsRemaining} ay
+                              Aylık gerekli: {hidden ? '••••' : formatSavingsGoalAmount(goal, suggestion.monthlyNeeded)} · {suggestion.monthsRemaining} ay
                             </p>
                           )
                         }
                         if (suggestion.pace === 'overdue') {
                           return (
                             <p className="mt-1 text-[11px] font-bold text-warning">
-                              Hedef tarihi geçti · kalan {formatSavingsGoalAmount(goal, suggestion.remaining)}
+                              Hedef tarihi geçti · kalan {hidden ? '••••' : formatSavingsGoalAmount(goal, suggestion.remaining)}
                             </p>
                           )
                         }
@@ -1028,7 +1031,7 @@ export function SavingsGoalsPanel({
                         return (
                           <p className="mt-1 text-[11px] text-ink-muted">
                             Son {tempo.spanDays} günde ayda {sign}
-                            {formatSavingsGoalAmount(goal, Math.abs(tempo.monthlyDelta))}
+                            {hidden ? '••••' : formatSavingsGoalAmount(goal, Math.abs(tempo.monthlyDelta))}
                             {eta ? (
                               <>
                                 {' '}· bu gidişle ~{eta.etaLabel}
@@ -1119,7 +1122,7 @@ export function SavingsGoalsPanel({
                     onChange={(e) =>
                       setComponentDrafts((rows) => rows.map((row) => (row.key === draft.key ? { ...row, label: e.target.value } : row)))
                     }
-                    placeholder="Etiket (ör. Gram)"
+                    aria-label="Hedef bileşeni etiketi" placeholder="Etiket (ör. Gram)"
                     className="h-10 text-sm"
                   />
                   <Select

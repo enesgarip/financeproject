@@ -16,6 +16,7 @@
  * Para kuralı: tüm yuvarlama/karşılaştırma money.ts üzerinden (roundTL, diffTL,
  * sumTL, exceedsTL...). Çıplak Math.round veya +0.01 toleransı YAZMA.
  */
+import { dateInputValue } from './date'
 import type {
   Asset,
   Card,
@@ -497,7 +498,7 @@ export function buildMonthlyCashFlow(
   const remainingOutflow = obligationSum(remainingObligations, isOutflowKind)
   const remainingReceivableIncome = obligationSum(remainingObligations, (item) => item.kind === 'personal_receivable')
 
-  const salaryLikelyReceived = isCurrentMonth && today > getFirstBusinessDay(monthStart)
+  const salaryLikelyReceived = isCurrentMonth && dateInputValue(today) > dateInputValue(getFirstBusinessDay(monthStart))
   const projectedIncome = sumTL([salaryLikelyReceived ? 0 : salaryIncome, remainingReceivableIncome])
 
   return {

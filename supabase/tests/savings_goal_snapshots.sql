@@ -20,6 +20,7 @@ begin
   insert into public.savings_goals (user_id, name, target_amount, current_amount, status)
   values (v_user, 'Fotoğraf testi', 100000, 0, 'active')
   returning id into v_goal;
+  perform set_config('test.snapshot_goal', v_goal::text, true);
 
   -- 1) Aynı (hedef, gün) ikinci yazım güncelleme olur (client'ın upsert yolu).
   insert into public.savings_goal_snapshots (user_id, goal_id, snapshot_date, amount)
@@ -52,7 +53,7 @@ do $$
 declare
   v_count int;
 begin
-  select count(*) into v_count from public.savings_goal_snapshots;
+  select count(*) into v_count from public.savings_goal_snapshots where goal_id = current_setting('test.snapshot_goal')::uuid;
   if v_count <> 0 then
     raise exception 'BAŞARISIZ: RLS başka kullanıcının fotoğrafını gösterdi (% satır).', v_count;
   end if;
@@ -65,8 +66,8 @@ do $$
 declare
   v_count int;
 begin
-  delete from public.savings_goals where name = 'Fotoğraf testi';
-  select count(*) into v_count from public.savings_goal_snapshots;
+  delete from public.savings_goals where id = current_setting('test.snapshot_goal')::uuid;
+  select count(*) into v_count from public.savings_goal_snapshots where goal_id = current_setting('test.snapshot_goal')::uuid;
   if v_count <> 0 then
     raise exception 'BAŞARISIZ: cascade fotoğrafları silmedi (% satır).', v_count;
   end if;

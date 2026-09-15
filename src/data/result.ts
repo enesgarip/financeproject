@@ -1,3 +1,4 @@
+import { userMessage } from '../utils/userMessage'
 import { isMissingSupabaseCapabilityError, type SupabaseLikeError } from '../utils/supabaseErrors'
 
 export type AppErrorType = 'supabase' | 'missing-capability' | 'unknown'
@@ -21,11 +22,11 @@ export function fail<T = never>(error: AppError): Result<T> {
   return { ok: false, error }
 }
 
-export function appErrorFromSupabase(error: SupabaseLikeError, fallbackMessage = 'Islem tamamlanamadi.'): AppError {
+export function appErrorFromSupabase(error: SupabaseLikeError, fallbackMessage = 'İşlem tamamlanamadı.'): AppError {
   const missingCapability = isMissingSupabaseCapabilityError(error)
   return {
     type: missingCapability ? 'missing-capability' : 'supabase',
-    message: error.message ?? fallbackMessage,
+    message: userMessage(error.message, error.code, fallbackMessage),
     code: error.code,
     cause: error,
   }

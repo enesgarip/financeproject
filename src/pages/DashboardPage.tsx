@@ -103,6 +103,33 @@ const DASHBOARD_HISTORY_MONTHS = 3
 const DASHBOARD_SPENDING_MONTHS = 4
 
 export function DashboardPage() {
+  // "Bugün" donuk kalmasın: PWA sekmesi gece boyunca açık kaldığında
+  // `useMemo(..., [])` dünün tarihini gösteriyordu (gün sayacı, kalan gün,
+  // günlük harcanabilir hepsi bir gün geride kalıyordu). Sekme öne geldiğinde
+  // yerel gün değiştiyse yeniden hesaplanır.
+  const [todayStamp, setTodayStamp] = useState(() => dateInputValue(new Date()))
+  useEffect(() => {
+    const syncToday = () => {
+      if (document.visibilityState === 'hidden') return
+      const next = dateInputValue(new Date())
+      setTodayStamp((current) => (current === next ? current : next))
+    }
+    const timer = window.setInterval(syncToday, 60_000)
+    document.addEventListener('visibilitychange', syncToday)
+    window.addEventListener('focus', syncToday)
+    return () => {
+      window.clearInterval(timer)
+      document.removeEventListener('visibilitychange', syncToday)
+      window.removeEventListener('focus', syncToday)
+    }
+  }, [])
+  const monthMeta = useMemo(() => {
+    const today = new Date(`${todayStamp}T00:00:00`)
+    const daysInMonth = endOfMonth(today).getDate()
+    const daysLeft = Math.max(1, daysInMonth - today.getDate())
+    return { today, daysInMonth, daysLeft }
+  }, [todayStamp])
+
   const snapshotQuery = useFinanceSnapshot()
   // Dikkat bandı tutarı metin içinde taşır; gizlilik modunda maskelenmeli (K1).
   const { maskText } = useBalancePrivacy()
@@ -113,7 +140,7 @@ export function DashboardPage() {
     const snapshot = snapshotQuery.data
     if (!snapshot) return emptyData
 
-    const currentMonthStart = startOfMonth()
+    const currentMonthStart = startOfMonth(new Date(`${todayStamp}T00:00:00`))
     const historyStart = addMonths(currentMonthStart, -DASHBOARD_HISTORY_MONTHS).getTime()
     const spendingStart = dateInputValue(addMonths(currentMonthStart, -DASHBOARD_SPENDING_MONTHS))
     const currentMonth = dateInputValue(currentMonthStart)
@@ -136,7 +163,7 @@ export function DashboardPage() {
       savingsGoalComponents: snapshot.savingsGoalComponents,
       accountReconciliations: snapshot.accountReconciliations,
     }
-  }, [snapshotQuery.data])
+  }, [snapshotQuery.data, todayStamp])
 
   const loading = snapshotQuery.isPending
   const error = snapshotQuery.error instanceof Error ? snapshotQuery.error.message : ''
@@ -250,30 +277,6 @@ export function DashboardPage() {
       && sortedUpcoming.length === 0,
     [liquidAccounts.length, sortedUpcoming.length, summary.totalAssets, summary.totalCreditCardDebt, summary.totalDebts],
   )
-  // "Bugün" donuk kalmasın: PWA sekmesi gece boyunca açık kaldığında
-  // `useMemo(..., [])` dünün tarihini gösteriyordu (gün sayacı, kalan gün,
-  // günlük harcanabilir hepsi bir gün geride kalıyordu). Sekme öne geldiğinde
-  // yerel gün değiştiyse yeniden hesaplanır.
-  const [todayStamp, setTodayStamp] = useState(() => dateInputValue(new Date()))
-  useEffect(() => {
-    const syncToday = () => {
-      if (document.visibilityState === 'hidden') return
-      const next = dateInputValue(new Date())
-      setTodayStamp((current) => (current === next ? current : next))
-    }
-    document.addEventListener('visibilitychange', syncToday)
-    window.addEventListener('focus', syncToday)
-    return () => {
-      document.removeEventListener('visibilitychange', syncToday)
-      window.removeEventListener('focus', syncToday)
-    }
-  }, [])
-  const monthMeta = useMemo(() => {
-    const today = new Date(`${todayStamp}T00:00:00`)
-    const daysInMonth = endOfMonth(today).getDate()
-    const daysLeft = Math.max(1, daysInMonth - today.getDate())
-    return { today, daysInMonth, daysLeft }
-  }, [todayStamp])
   const hasStatementReminders = useMemo(
     () => buildStatementReminders(data.cards, data.cardStatements).length > 0,
     [data.cards, data.cardStatements],

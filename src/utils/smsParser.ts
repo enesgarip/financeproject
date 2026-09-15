@@ -60,7 +60,7 @@ const YAPIKREDI_CARD_REGEX =
   /(\d{4})\s+ile\s+biten\s+.+?\s+kartinizla\s+(\d{2}\.\d{2}\.\d{4})\s+saat\s+(\d{2}:\d{2})'de,\s*(.+?)\s+is\s+yerinden\s+([\d.,]+)\s+TL\s+islem/i
 
 const DENIZBANK_ACCOUNT_REGEX =
-  /(\d{2}\.\d{2}\.\d{4})\s+(\d{2}:\d{2}:\d{2})'da\s+(.+?)\s+(?:alicisina|gondericisinden)\s+([\d-]+)\s+numarali\s+hesabiniz(dan|a)\s+([\d.,]+)\s+TL\s+tutarinda\s+(\w+)\s+islemi/i
+  /(\d{2}\.\d{2}\.\d{4})\s+(\d{2}:\d{2}(?::\d{2})?)'da\s+(.+?)\s+(?:alicisina|gondericisinden)\s+([\d-]+)\s+numarali\s+hesabiniz(dan|a)\s+([\d.,]+)\s+TL\s+tutarinda\s+(\w+)\s+islemi/i
 
 const DENIZBANK_MASKED_CARD_REGEX =
   /\d{6}\*+(\d{4})\s+kartinizla\s+(\d{1,2}\.\d{1,2}\.\d{4})\s+(\d{2}:\d{2}:\d{2})\s+tarihinde\s+(.+?)\s+isyerinden\s+yapilan\s+([\d.,]+)\s+TRY\s+tutarindaki\s+islem/i

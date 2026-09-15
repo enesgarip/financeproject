@@ -147,7 +147,7 @@ export function KasaModuPanel({ liquidCash }: { liquidCash: number }) {
             </Button>
           </div>
 
-          <div className="mt-4 grid grid-cols-3 gap-2">
+          <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-2">
             <MiniStat label="Likit" value={formatAmount(liquidCash)} tone="neutral" />
             <MiniStat label="Rezerve" value={formatAmount(reservedTotal)} tone={reservedTotal > 0 ? 'warning' : 'neutral'} />
             {/* "Harcanabilir" DEĞİL: o etiket kanonik buildSafeToSpend sayısına

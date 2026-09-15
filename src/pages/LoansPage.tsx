@@ -264,6 +264,8 @@ export function LoansPage() {
               ) : (
                 <button
                   type="button"
+                  disabled={nextPendingInstallment(loan, installments)?.id !== item.id}
+                  title={nextPendingInstallment(loan, installments)?.id !== item.id ? "Önce sıradaki taksiti öde" : undefined}
                   onClick={() => void openInstallmentPayment(loan, item, reload)}
                   aria-label={`${item.installment_no}. taksiti öde`}
                   className="order-1 inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg border border-line-strong bg-raised px-2.5 py-1.5 text-xs font-semibold text-ink transition hover:bg-black/[.03] dark:hover:bg-white/[.04] active:scale-[0.97]"

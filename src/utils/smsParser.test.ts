@@ -13,6 +13,22 @@ import {
 
 // -- Whitespace normalization -------------------------------------------------
 
+describe('saniyesiz hesap transferleri', () => {
+  for (const kind of ['FAST', 'HAVALE', 'EFT']) {
+    for (const direction of ['gondericisinden 123-456 numarali hesabiniza', 'alicisina 123-456 numarali hesabinizdan']) {
+      it(`${kind} ${direction}: dakika hassasiyeti korunur`, () => {
+        const result = parseSms(`15.09.2026 12:10'da TEST ${direction} 123,45 TL tutarinda ${kind} islemi gerceklesmistir.`)
+        expect(result?.type).toBe('account')
+        expect(result && accountSmsNeedsExternalEventId(result)).toBe(true)
+        if (result?.type === 'account') {
+          expect(result.amount).toBe(123.45)
+          expect(result.occurredAt).toBe('2026-09-15T12:10+03:00')
+        }
+      })
+    }
+  }
+})
+
 describe('normalizeSmsWhitespace', () => {
   it('satır sonlarını tek boşluğa çevirir', () => {
     expect(normalizeSmsWhitespace('satir1\nsatir2\r\nsatir3')).toBe('satir1 satir2 satir3')

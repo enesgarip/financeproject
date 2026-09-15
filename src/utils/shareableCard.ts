@@ -16,8 +16,8 @@ type ShareableCardInput = {
 
 function formatTL(value: number): string {
   return new Intl.NumberFormat('tr-TR', {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   }).format(roundTL(value))
 }
 
@@ -76,7 +76,7 @@ export function renderShareableCard(input: ShareableCardInput): HTMLCanvasElemen
   const catY = 200
   ctx.fillStyle = '#94a3b8'
   ctx.font = 'bold 11px system-ui, -apple-system, sans-serif'
-  ctx.fillText('KATEGORİ DAĞILIMI', 40, catY)
+  ctx.fillText('EN BÜYÜK 5 KATEGORİ', 40, catY)
 
   if (summary.changePercent !== null) {
     const changeText = `Geçen aya göre: ${summary.changePercent > 0 ? '+' : ''}%${summary.changePercent}`

@@ -61,6 +61,7 @@ export function buildFocusActions(
     return installment.status === 'bekliyor' && remaining !== null && remaining < 0
   })
   const urgentCount = upcomingItems.filter((item) => {
+    if (item.direction !== 'outflow' || item.settlement !== 'cash' || !item.obligation.action) return false
     const remaining = daysUntil(new Date(item.sortTime))
     return remaining !== null && remaining >= 0 && remaining <= 3
   }).length

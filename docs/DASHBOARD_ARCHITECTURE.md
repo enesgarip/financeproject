@@ -172,3 +172,7 @@ navigation, or user flow.
 
 ## 2026-09-06 — kart döngüsü
 CardPaymentCyclePanel, SeritOverview cycleContent yuvasında nakit akışının yanında yer alır. Hesap sahibi utils/cardPaymentCycle.ts; rezerv mevcut useSafeToSpend çıktısıdır. FocusActionPanel compact sürümü ilk üç öneriyi ayrıntı anahtarının dışında gösterir. Masaüstü vadeleri groupDashboardInstallments ile aynı kart/tarihin aksiyonsuz taksitlerini açılır gruplara toplar, ilk altı grubu gösterir. Ödeme aksiyonu taşıyan kayıt birleştirilmez. Borç çubuğu financeSummary.totalCardFutureInstallmentDebt ile dördüncü parçayı gösterir.
+
+## 2026-09-15 — Gün ve vade sınırları
+
+Dashboard gün damgasını dakika aralığı, focus ve visibilitychange ile yeniler; türetilmiş veri gün damgasına bağlıdır. Ayın son gününde günlük bütçe paydası en az birdir. Acil vade sayısı yalnız action taşıyan nakit çıkışlarını sayar; maaş ve karta yansıyacak bilgi taksitleri sayılmaz. Mutabakat farkı kuruş hassasiyetindedir; 1 TL altı farklar gizlenmez.

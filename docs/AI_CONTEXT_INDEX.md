@@ -1,6 +1,6 @@
 # AI Context Index
 
-Last reviewed: 2026-08-24
+Last reviewed: 2026-09-15
 
 This file is the cheapest starting point for future AI/Codex sessions. Its job
 is to reduce repeated repo discovery: read this first, choose the smallest
@@ -19,6 +19,14 @@ Expand only when the change crosses a boundary such as page -> utility,
 frontend -> RPC, or RPC -> migration.
 
 ## Permanent Context
+
+Gerçek kullanıcı denetimi (9–11 Eylül 2026; 29 bulgu için düzeltme uygulandı; doğrulama tablosu raporda):
+`docs/USER_AUDIT_2026-09-09.md`. Doğrulanmış bulgular, Claude'dan devralınan
+adaylar, test kapsamı ve kanıt kaybı notları burada; 29 bulgunun kanıt düzeyi ve dış veri/cihaz kapsam sınırları ayrıdır. Tüm olası senaryoların test edildiği iddia edilmez.
+11 Eylül ekleri: saniyesiz hesap SMS reddi AUD-017, kısmi CSV yedek kapsamı AUD-018.
+Borsa assets sorgusu hatasında yanlış uyuşmazlık/düzeltme önerisi AUD-019 olarak tarayıcıda doğrulandı.
+Son ekler AUD-020–029: yardımcı sorgular, ay dönümü/maaş günü, negatif likit, vade/borç etiketleri, kirli form kaybı, başlık/mutabakat, Türkçe tutar ve rapor kapsamı.
+Maliyet tercihi: açık senaryoları hedefle; başarılı kapsamı gerekçesiz tekrarlama, kısa sonuç raporla.
 
 Para gösterimi (2026-09-09): `utils/formatCurrency.ts` içindeki
 `formatSeritParts` / `formatSeritAmount` varsayılan iki ondalık basamak kullanır
@@ -329,3 +337,9 @@ yan etkisini kontrol et.
 ## Hesap/kart ayrımı (2026-09-07)
 - `CardsPage.sections.tsx`: iki büyük seçim alanı; `section=kartlar` yalnız kredi kartları, `section=hesaplar` yalnız banka hesapları. `CardsPage.hero.tsx` bölüm toplamını gösterir.
 - `CrudPage.tsx` listFilter yalnız sunumu daraltır; transfer/ödeme helper verisi tam kalır. `PlanningHub.tsx` diğer araçları katlar; `QuickActions.tsx` sabit menüdür.
+
+## Denetim düzeltmesi girişleri (2026-09-15)
+
+- Kirli form/gezinme ve güncelleme: src/lib/navigationSafety.ts, src/lib/serviceWorkerRegistration.ts. Giriş paketi dinamik yükler.
+- Kullanıcıya teknik hata sızdırma: src/utils/userMessage.ts; src/data/result.ts ortak dönüşümü.
+- SMS kart sahibi çözümleme ve gelecek hisse tarihi: supabase/migrations/20260912090000_audit_sms_lookup_and_stock_date.sql; SQL regresyonu supabase/tests/audit_sms_and_stock.sql.

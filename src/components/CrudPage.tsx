@@ -1,3 +1,4 @@
+import { QueryError } from './ui/query-error'
 import { useQueryClient } from '@tanstack/react-query'
 import { CalendarDays, Check, ChevronDown, MoreVertical, Pencil, Plus, Search, Trash2 } from 'lucide-react'
 import type { CSSProperties, ReactNode } from 'react'
@@ -375,6 +376,7 @@ export function CrudPage<T extends CrudTableName>({
     await reload()
   }
 
+  if (loadError) return <QueryError title="Kayıtlar yüklenemedi" message={loadError} onRetry={() => void reload()} />
   return (
     <section className="flex flex-col gap-6">
       {error || loadError ? <Alert variant="destructive">{error || loadError}</Alert> : null}

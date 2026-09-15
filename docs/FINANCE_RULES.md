@@ -171,8 +171,8 @@ RPCs are idempotent, so a possible double run is safe.
 
 On the cards page:
 
-- Minimum payment hint follows the BDDK tier (2023-08-25 kararı): credit limit
-  below 25.000 TL → 20%, at or above → 40%. Single source:
+- Minimum payment hint follows the BDDK tier (2024-09-26, decision 10970): credit limit
+  at or below 50.000 TL → 20%, above → 40%. Single source:
   `minimumCardPaymentRate` in `src/utils/financeObligationRules.ts`; the drawer
   applies it via the intent's `minimumPaymentRate`. The base is the statement
   bucket only (K7 — dönem içi harcamanın asgarisi olmaz).
@@ -481,3 +481,10 @@ This means any change in card, loan, debt, or payment semantics likely affects d
 - Removed features (their utilities no longer exist; do not resurrect their
   rules): full-month cash calendar (`fullMonthCalendar.ts`), FIRE projection
   (`fire.ts`), quiet-day spending (`quietDays.ts`).
+
+## Denetim sınırları (2026-09-15)
+
+- Harcanabilir hesap negatif likit bakiyeyi korur; sıfıra kırpmak açığı gizler.
+- Maaşın alınmış sayılması özet ve projeksiyonda gün bazlıdır: ayın ilk iş günü boyunca beklenti korunur, sonraki gün düşer. Saat değişimi aynı gün farklı toplam üretmez.
+- Hisse geçmişi gelecek tarih kabul etmez (UI + İstanbul günü kullanan DB trigger); geçmiş kayıtlardaki gelecekteki işlemler bugünkü pozisyona katılmaz. Eksik dönem fiyatı sıfır kazanç değildir: hesaplanamıyor gösterilir.
+- Saniyesiz hesap SMS'leri iki parser tarafından tanınır. Aynı dakika içindeki ayrı transferleri birleştirmemek için kararlı kaynak eventId gerekir; yoksa 409. Tekrar gönderim ledger'a ikinci kez yazmaz. Kart takma adını yalnız service_role çağırabildiği, sahibi süzen RPC çözer.

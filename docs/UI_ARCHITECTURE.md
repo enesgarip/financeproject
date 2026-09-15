@@ -243,3 +243,7 @@ skill'inde (`validate_palette.js`), zemin olarak `--card` değerlerini ver.
 Hesap/kart sayfasında iki açıklamalı büyük seçim alanı kullanılır: Kredi kartları (borç, ekstre ve limit) ve Banka hesapları (bakiye ve hareketler). Alt şerit Özet/İşlemler/Ekstreler araçlarını taşır. Kalan kart limiti nakit bakiye gibi adlandırılmaz. Plan ana sekmeleri Takvim/Hedefler; diğer araçlar native details ile açılır, aktif araç üst sekmede görünür. Hızlı işlem seçenekleri tüm rotalarda sabittir.
 
 2026-09-07 üretim öncesi takip: Hızlı menü Harcama ekle ile başlar; form kaynağı Hesap / kredi kartı olarak adlandırılır. Banka hesabı menüsü taşmaya açıktır; dekoratif üst çizgi köşelerin içine alınır.
+
+## 2026-09-15 — Kullanıcı denetimi sözleşmesi
+
+Kişisel miktar/alış fiyatı/komisyon ve metne gömülü TL tutarları gizlilik modunda maskelenir; halka açık piyasa fiyatı ayrı kalır. Başarısız sorgu temiz/boş sonuç gibi sunulmaz; tekrar deneme görünür. Rota değişince belge başlığı güncellenir. Düzenlenen formdan geri/kapat/Escape ile ayrılmak kullanıcı onayı ister; SW güncellemesi kirli formu otomatik yenilemez. CSV “Kontrol verisi CSV” olarak kısmi kapsamını açıklar; tam yedek JSON'dur. Paylaşım PNG'si ilk beş kategoriyi adlandırır ve iki ondalık kullanır.

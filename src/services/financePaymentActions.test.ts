@@ -165,7 +165,10 @@ describe('finance payment action helpers', () => {
 
   it('asgari oran BDDK kademesini izler: limit < 25.000 → %20, ≥ 25.000 → %40', () => {
     expect(minimumCardPaymentRate(24999)).toBe(0.2)
-    expect(minimumCardPaymentRate(25000)).toBe(0.4)
+    expect(minimumCardPaymentRate(25000)).toBe(0.2)
+    expect(minimumCardPaymentRate(49999.99)).toBe(0.2)
+    expect(minimumCardPaymentRate(50000)).toBe(0.2)
+    expect(minimumCardPaymentRate(50000.01)).toBe(0.4)
     expect(minimumCardPaymentRate(120000)).toBe(0.4)
     expect(minimumCardPaymentRate(null)).toBe(0.2)
     expect(estimatedMinimumCardPayment(10000, minimumCardPaymentRate(120000))).toBe(4000)

@@ -28,7 +28,7 @@ export function formatPrivateCurrency(value: number | null | undefined, hidden: 
 // statementReminder, analysisView) tutarı string'e gömer; maske yalnız
 // formatAmount'tan geçen değerleri kapatınca bu cümleler gizlilik modunu
 // deliyordu (denetim 2026-08-12 K1).
-const EMBEDDED_AMOUNT_PATTERN = /\d[\d.,]*\s*(?:₺|TL\b)/g
+const EMBEDDED_AMOUNT_PATTERN = /(?:₺\s*-?\d[\d.,]*|-?\d[\d.,]*\s*(?:₺|TL\b))/g
 
 // eslint-disable-next-line react-refresh/only-export-components
 export function maskAmountsInText(text: string, hidden: boolean) {

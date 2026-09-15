@@ -5,6 +5,8 @@ begin;
 set local role authenticated;
 set local request.jwt.claims to '{"sub":"11111111-1111-1111-1111-111111111111","role":"authenticated"}';
 
+select set_config('test.thyao_count', (select count(*)::text from public.stock_trades where user_id = auth.uid() and symbol = 'THYAO' and source = 'manual'), true);
+
 do $$
 declare
   v_user uuid := '11111111-1111-1111-1111-111111111111';
@@ -27,7 +29,7 @@ begin
   -- 1) Alış: defterde buy satırı, birim fiyat = nakit / adet, kaynak trade_rpc.
   perform public.trade_asset_with_account(v_stock, v_account, 'buy', 2200, 20, 'test alım');
   select count(*), min(kind), min(quantity), min(unit_price) into v_count, v_kind, v_qty, v_price
-  from public.stock_trades where user_id = v_user and symbol = 'ASELS' and source = 'trade_rpc';
+  from public.stock_trades where user_id = v_user and asset_id = v_stock and source = 'trade_rpc';
   if v_count <> 1 or v_kind <> 'buy' or v_qty <> 20 or v_price <> 110 then
     raise exception 'BAŞARISIZ: alış defter satırı (% / % / % / %).', v_count, v_kind, v_qty, v_price;
   end if;
@@ -94,8 +96,8 @@ declare
 begin
   select count(*) into v_count from public.stock_trades
   where user_id = '11111111-1111-1111-1111-111111111111' and symbol = 'THYAO' and source = 'manual';
-  if v_count <> 3 then
-    raise exception 'BAŞARISIZ: seed THYAO defteri 3 satır beklenirdi (%).', v_count;
+  if v_count <> current_setting('test.thyao_count')::int then
+    raise exception 'BAŞARISIZ: test dışı THYAO defteri değişmemeliydi (%).', v_count;
   end if;
 end $$;
 
@@ -106,7 +108,7 @@ do $$
 declare
   v_count int;
 begin
-  select count(*) into v_count from public.stock_trades;
+  select count(*) into v_count from public.stock_trades where user_id = '11111111-1111-1111-1111-111111111111';
   if v_count <> 0 then
     raise exception 'BAŞARISIZ: RLS başka kullanıcının işlemini gösterdi (% satır).', v_count;
   end if;

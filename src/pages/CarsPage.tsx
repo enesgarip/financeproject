@@ -1,3 +1,4 @@
+import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
 import { Bell, Car as CarIcon, Check, CreditCard, Fuel, Gauge, Pencil, Plus, Share2, Trash2, Wallet } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useCars, useInvalidateCars } from '../app/useCars'
@@ -25,7 +26,7 @@ import { fetchRecentCardExpenses } from '../data/repositories/cardsRepo'
 import type { Car, CardExpense, CarPaymentMethod, CarReminder, CarReminderKind } from '../types/database'
 import { CAR_EXPENSE_CATEGORIES, carReminderState, type CarSummary } from '../utils/carExpenses'
 import { downloadCarTcoCard, renderCarTcoCard } from '../utils/carTcoCard'
-import { formatCurrency, parseNumber } from '../utils/formatCurrency'
+import { parseNumber } from '../utils/formatCurrency'
 import { dateInputValue, formatDate } from '../utils/date'
 
 const PAYMENT_OPTIONS: { value: CarPaymentMethod; label: string }[] = [
@@ -339,6 +340,8 @@ function ManualExpenseForm({
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault()
     if (!userId || !canSubmit) return
+    if (fuelLiters.trim() && parseNumber(fuelLiters) <= 0) return onError('Yakıt miktarı 0’dan büyük olmalı.')
+    if (odometerKm.trim() && parseNumber(odometerKm) < 0) return onError('Kilometre negatif olamaz.')
     setSaving(true)
     const result = await insertCarExpense({
       user_id: userId,
@@ -536,12 +539,12 @@ function CarRemindersPanel({ cars, reminders, userId, onChanged, onError }: {
         })}</ul> : <p className="text-sm text-ink-muted">Henüz bakım veya yenileme hatırlatıcısı yok.</p>}
         <form onSubmit={add} className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
           <Select value={carId} onChange={(e) => setCarId(e.target.value)} aria-label="Hatırlatıcı aracı">{cars.map((car) => <option key={car.id} value={car.id}>{car.name}</option>)}</Select>
-          <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Yağ değişimi, MTV..." required />
-          <Select value={kind} onChange={(e) => setKind(e.target.value as CarReminderKind)}>{REMINDER_KINDS.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</Select>
+          <Input value={title} onChange={(e) => setTitle(e.target.value)} aria-label="Hatırlatıcı başlığı" placeholder="Yağ değişimi, MTV..." required />
+          <Select aria-label="Hatırlatıcı türü" value={kind} onChange={(e) => setKind(e.target.value as CarReminderKind)}>{REMINDER_KINDS.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</Select>
           <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} aria-label="Hedef tarih" />
-          <Input value={dueKm} onChange={(e) => setDueKm(e.target.value)} inputMode="numeric" placeholder="Hedef km" />
-          <Input value={repeatMonths} onChange={(e) => setRepeatMonths(e.target.value)} inputMode="numeric" placeholder="Kaç ayda bir?" />
-          <Input value={repeatKm} onChange={(e) => setRepeatKm(e.target.value)} inputMode="numeric" placeholder="Kaç km'de bir?" />
+          <Input value={dueKm} onChange={(e) => setDueKm(e.target.value)} inputMode="numeric" aria-label="Hedef kilometre" placeholder="Hedef km" />
+          <Input value={repeatMonths} onChange={(e) => setRepeatMonths(e.target.value)} inputMode="numeric" aria-label="Tekrar aralığı (ay)" placeholder="Kaç ayda bir?" />
+          <Input value={repeatKm} onChange={(e) => setRepeatKm(e.target.value)} inputMode="numeric" aria-label="Tekrar aralığı (kilometre)" placeholder="Kaç km'de bir?" />
           <Button type="submit" disabled={!title.trim() || (!dueDate && !dueKm) || saving}><Plus /> {saving ? 'Ekleniyor...' : 'Hatırlat'}</Button>
         </form>
       </CardContent>
@@ -558,6 +561,8 @@ function CardTagging({
   onChanged: () => Promise<void>
   onError: (message: string) => void
 }) {
+  const { formatAmount: formatCurrency } = useBalancePrivacy()
+
   const [expenses, setExpenses] = useState<CardExpense[]>([])
   const [loading, setLoading] = useState(true)
   const [busyId, setBusyId] = useState<string | null>(null)
@@ -677,6 +682,8 @@ function CarSummaryCard({
   summary: CarSummary
   onDeleteEntry: (entryId: string) => Promise<void>
 }) {
+  const { formatAmount: formatCurrency } = useBalancePrivacy()
+
   const { car, total, thisMonthTotal, yearTotal, previousYearTotal, costPerDay, fuel, categories, entries } = summary
   const currentYear = new Date().getFullYear()
   const fuelTrendMaxCost = fuel.months.reduce((max, row) => Math.max(max, row.cost), 1)

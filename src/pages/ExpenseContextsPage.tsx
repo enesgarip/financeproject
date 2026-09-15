@@ -1,3 +1,4 @@
+import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
 import { Briefcase, CreditCard, FolderKanban, HeartPulse, Palette, PawPrint, Plane, Plus, Trash2, Wallet, type LucideIcon } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useExpenseContexts, useInvalidateExpenseContexts } from '../app/useExpenseContexts'
@@ -27,7 +28,7 @@ import {
   contextKindTimeboxed,
   type ExpenseContextSummary,
 } from '../utils/expenseContexts'
-import { formatCurrency, parseNumber } from '../utils/formatCurrency'
+import { parseNumber } from '../utils/formatCurrency'
 
 /** Tür → ikon (registry saf util olduğu için ikon eşlemesi UI katmanında). */
 const KIND_ICONS: Record<ExpenseContextKind, LucideIcon> = {
@@ -247,6 +248,8 @@ function ManualContextExpenseForm({ contexts, userId, onChanged, onError }: {
 }
 
 function ContextCardTagging({ contexts, onChanged, onError }: { contexts: ExpenseContext[]; onChanged: () => Promise<void>; onError: (message: string) => void }) {
+  const { formatAmount: formatCurrency } = useBalancePrivacy()
+
   const [expenses, setExpenses] = useState<CardExpense[]>([])
   const [loading, setLoading] = useState(true)
   const [busyId, setBusyId] = useState<string | null>(null)
@@ -274,6 +277,8 @@ function ContextCardTagging({ contexts, onChanged, onError }: { contexts: Expens
 }
 
 function ContextSummaryCard({ summary, onDelete }: { summary: ExpenseContextSummary; onDelete: (id: string) => Promise<void> }) {
+  const { formatAmount: formatCurrency } = useBalancePrivacy()
+
   const { context, total, thisMonthTotal, remainingBudget, budgetUsedRatio, entries } = summary
   const usedWidth = `${Math.min(100, Math.max(0, (budgetUsedRatio ?? 0) * 100))}%`
   const KindIcon = KIND_ICONS[context.kind] ?? FolderKanban

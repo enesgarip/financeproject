@@ -13,6 +13,7 @@ import {
 } from './DataHealth.guide'
 import { resolveHealthIssue, type HealthResolutionMode } from './DataHealth.resolution'
 import { MAX_SAFE_REPAIR_BATCH_SIZE } from './DataHealthPage.actions'
+import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
 
 const resolutionBadge: Record<HealthResolutionMode, { label: string; variant: 'success' | 'info' | 'warning' | 'outline' }> = {
   auto_recompute: { label: 'Otomatik güvenli', variant: 'success' },
@@ -59,6 +60,7 @@ export function HealthIssueCard({
   onDismiss?: (issueId: string) => void
 }) {
   const guide = buildIssueGuide(issue)
+  const { maskText } = useBalancePrivacy()
   const quickLink = navigationAction(issue)
   const resolution = resolveHealthIssue(issue)
   const badge = resolutionBadge[resolution.mode]
@@ -80,11 +82,11 @@ export function HealthIssueCard({
               <Badge variant={badge.variant}>{badge.label}</Badge>
             </div>
             <h2 className="mt-2 text-base font-bold text-ink">{issue.title}</h2>
-            <p className="mt-1 text-sm text-ink-muted">{issue.description}</p>
+            <p className="mt-1 text-sm text-ink-muted">{maskText(issue.description)}</p>
             <div className="mt-3 grid gap-2 rounded-xl border border-line-strong bg-page p-3 text-sm">
               <div>
                 <p className="font-semibold text-ink">Sorun nedir?</p>
-                <p className="mt-1 text-ink-muted">{guide.problem}</p>
+                <p className="mt-1 text-ink-muted">{maskText(guide.problem)}</p>
               </div>
               <div>
                 <p className="font-semibold text-ink">Neden önemli?</p>
@@ -99,7 +101,7 @@ export function HealthIssueCard({
               {/* Detay METNİ key olamaz: iki özdeş satır (aynı tutarlı iki kayıt)
                   çakışır ve biri kaybolur → index'li kararlı key. */}
               {issue.details.map((detail, index) => (
-                <span key={`${issue.id}-detail-${index}`}>{detail}</span>
+                <span key={`${issue.id}-detail-${index}`}>{maskText(detail)}</span>
               ))}
             </div>
             <div className="mt-3 rounded-xl border border-primary/15 bg-primary/5 p-3 text-xs text-ink-muted">
@@ -111,7 +113,7 @@ export function HealthIssueCard({
                 <p className="font-bold">Düzeltme önizlemesi</p>
                 <div className="mt-2 grid gap-1">
                   {previewRows.map((detail, index) => (
-                    <span key={`${issue.id}-preview-${index}`}>{detail}</span>
+                    <span key={`${issue.id}-preview-${index}`}>{maskText(detail)}</span>
                   ))}
                 </div>
               </div>

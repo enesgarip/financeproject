@@ -47,7 +47,7 @@ function AnalysisSkeleton() {
 }
 
 export function AnalysisPage() {
-  const { data, error, loading, missingTables, priceTrends, ratesSnapshot, snapshots } = useAnalysisPageData()
+  const { data, error, loading, missingTables, priceTrends, ratesSnapshot, snapshots, auxiliaryError, retryAuxiliary, auxiliaryLoading } = useAnalysisPageData()
   // Aynı TanStack sorgusu (paylaşılan cache) — yalnız "Tekrar dene" için gerekiyor.
   const snapshotQuery = useFinanceSnapshot()
 
@@ -66,8 +66,9 @@ export function AnalysisPage() {
 
   return (
     <section className="space-y-6">
+      {auxiliaryError ? <QueryError title="Geçmiş veriler yüklenemedi" message="Trend ve fiyat karşılaştırmaları şu an doğrulanamıyor." onRetry={() => void retryAuxiliary()} /> : null}
       <div className="grid gap-5 lg:grid-cols-12">
-        <AnalysisHero data={data} snapshots={snapshots} />
+        <AnalysisHero data={data} snapshots={snapshots} historyStatus={auxiliaryError ? "error" : auxiliaryLoading ? "loading" : "ready"} />
         <SchemaMigrationNotice missingTables={missingTables} />
         <MonthCloseAssistant data={data} missingTables={missingTables} />
         <MonthlyReport data={data} />
@@ -76,8 +77,8 @@ export function AnalysisPage() {
             (veri yoksa null döner) tam satır — sağ yarı boş kalmasın (UX turu B14). */}
         <CategorySpendingChart data={data} />
         <SubscriptionsPanel data={data} />
-        <PriceIncreaseRadar trends={priceTrends} />
-        <NetWorthTrend snapshots={snapshots} ratesSnapshot={ratesSnapshot} />
+        {!auxiliaryError && !auxiliaryLoading ? <PriceIncreaseRadar trends={priceTrends} /> : null}
+        {!auxiliaryError && !auxiliaryLoading ? <NetWorthTrend snapshots={snapshots} ratesSnapshot={ratesSnapshot} /> : null}
         <ForwardForecast data={data} />
       </div>
     </section>
