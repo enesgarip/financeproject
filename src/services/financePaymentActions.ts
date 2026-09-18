@@ -138,7 +138,7 @@ export async function submitFinanceObligationPayment({
   paidAt,
 }: {
   obligation: FinanceObligation
-  account: Card
+  account: Card | null
   amount: number
   skipSourceDebit?: boolean
   /** Gerçek ödeme günü (YYYY-MM-DD). Boş/bugün ise RPC bugünü kullanır. */
@@ -152,14 +152,16 @@ export async function submitFinanceObligationPayment({
   if (obligation.action === 'pay_payment') {
     const { error } = await supabase.rpc('pay_payment', {
       p_payment_id: obligation.sourceId,
-      p_source_card_id: account.id,
+      p_source_card_id: account?.id ?? null,
       p_paid_amount: amount,
+      p_outside_accounts: account === null,
       ...paidAtArg,
     })
 
     submitError = error
 
   } else if (obligation.action === 'pay_card_statement') {
+    if (!account) return { error: { message: 'Ekstre ödemesi için kaynak hesap seçmelisin.' } }
     // K7: girilen tutar kalanın ALTINDAysa kısmi ödeme (arşiv açık kalır, kalan
     // çocuk tablodan türer); kalana eşitse p_amount gönderilmez = tam kapama.
     // Kuruş hassasiyeti şart: obligation.amount kalan projeksiyonundan gelir ve
@@ -173,6 +175,7 @@ export async function submitFinanceObligationPayment({
     })
     submitError = error
   } else if (obligation.action === 'pay_card_debt') {
+    if (!account) return { error: { message: 'Kart borcu ödemesi için kaynak hesap seçmelisin.' } }
     const { error } = await supabase.rpc('pay_card_debt', {
       p_card_id: obligation.sourceId,
       p_source_card_id: account.id,
@@ -181,6 +184,7 @@ export async function submitFinanceObligationPayment({
     })
     submitError = error
   } else if (obligation.action === 'pay_loan_installment') {
+    if (!account) return { error: { message: 'Kredi taksiti için kaynak hesap seçmelisin.' } }
     const { error } = await supabase.rpc('pay_loan_installment', {
       p_installment_id: obligation.sourceId,
       p_source_card_id: account.id,
@@ -188,6 +192,7 @@ export async function submitFinanceObligationPayment({
     })
     submitError = error
   } else if (obligation.action === 'settle_debt' || obligation.action === 'collect_debt') {
+    if (!account) return { error: { message: 'Borç/alacak işlemi için kaynak hesap seçmelisin.' } }
     // BM-8 D-1: girilen tutar toplam değerin altındaysa kısmi ödeme; toplam
     // değere eşitse (varsayılan) tam kapama. RPC tavanı borç değeridir.
     // Kuruş hassasiyeti şart: obligation.amount döviz/altın borcunda çarpımdan

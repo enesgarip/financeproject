@@ -11,7 +11,7 @@ import type { FinanceObligation } from '../utils/obligations'
 import type { SupabaseLikeError } from '../utils/supabaseErrors'
 
 type AccountPaymentSubmit = {
-  account: Card
+  account: Card | null
   amount: number
   // B4: bakiye SMS/banka hareketiyle zaten düşülmüşse RPC tekrar düşmez.
   skipSourceDebit?: boolean
@@ -62,13 +62,16 @@ export function useFinancePaymentDrawer() {
     const sourceCards = options.cards ?? (options.loadCards ? await options.loadCards() : [])
     const accounts = getAccountsForObligation(intent, sourceCards)
     const lastUsedKey = lastUsedKeyForObligation(intent)
+    const selectableSourceIds = intent.action === 'pay_payment'
+      ? ['outside-accounts', ...accounts.map((account) => account.id)]
+      : accounts.map((account) => account.id)
 
     setState({
       intent,
       accounts,
-      selectedAccountId: resolvePreferred(getLastUsed(lastUsedKey), accounts.map((account) => account.id)),
+      selectedAccountId: resolvePreferred(getLastUsed(lastUsedKey), selectableSourceIds),
       amountValue: intent.amount > 0 ? String(intent.amount) : '',
-      error: accounts.length === 0 ? emptyAccountMessageForObligation(intent) : '',
+      error: accounts.length === 0 && intent.action !== 'pay_payment' ? emptyAccountMessageForObligation(intent) : '',
       saving: false,
       detail: options.detail,
       formatSubmitError: options.formatSubmitError,
@@ -113,7 +116,7 @@ export function useFinancePaymentDrawer() {
       return
     }
 
-    setLastUsed(lastUsedKeyForObligation(current.intent), account.id)
+    setLastUsed(lastUsedKeyForObligation(current.intent), account?.id ?? 'outside-accounts')
     closePaymentDrawer()
     await Promise.all([current.reload?.(), current.afterSuccess?.()])
   }, [closePaymentDrawer, state])

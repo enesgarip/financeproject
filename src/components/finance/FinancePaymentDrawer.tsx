@@ -20,7 +20,7 @@ import type { FinanceObligation } from '../../utils/obligations'
 import { AccountPaymentModal } from './AccountPaymentModal'
 
 type AccountPaymentSubmit = {
-  account: Card
+  account: Card | null
   amount: number
   skipSourceDebit?: boolean
   paidAt?: string
@@ -72,6 +72,7 @@ export function FinancePaymentDrawer({
   detail,
 }: FinancePaymentDrawerProps) {
   const { formatAmount } = useBalancePrivacy()
+  const outsideAccountsValue = intent?.action === 'pay_payment' ? 'outside-accounts' : undefined
   // Asgari yalnız EKSTRE kovası üzerinden (K7): bankada dönem içi harcamanın
   // asgarisi olmaz. Taban 0 ise (salt dönem içi borç) ipucu hiç gösterilmez.
   // K7: ekstre de kısmi/asgari ödenebilir; iki kart akışında da taban ekstre kovası.
@@ -160,6 +161,7 @@ export function FinancePaymentDrawer({
       amountActions={quickAmounts}
       accountLabel={accountLabelForObligation(intent)}
       emptyMessage={emptyAccountMessageForObligation(intent)}
+      outsideAccountsValue={outsideAccountsValue}
       submitLabel={submitLabelForObligation(intent)}
       saving={saving}
       externalError={externalError}
