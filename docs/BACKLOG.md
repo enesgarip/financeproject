@@ -1,5 +1,12 @@
 # Priority Backlog
 
+## 2026-09-18 — Provizyon kart filtresi — DONE
+
+Kartlar → Ekstreler bölümündeki “Provizyondaki işlemler” paneline, birden fazla
+kartta bekleyen işlem olduğunda görünen kart filtresi eklendi. Görünen toplam ve
+“Tümünü aktar” eylemi seçili kartın provizyonlarıyla sınırlı; “Tüm kartlar”
+seçeneği mevcut toplu davranışı koruyor.
+
 ## 2026-09-15 — Kullanıcı denetimi düzeltmeleri
 
 AUD-001–029 için ürün düzeltmeleri uygulandı. Son npm run verify geçti: 135 dosya / 1476 test, sıfır prod bağımlılık açığı, build, 17,8/20 kB giriş paketi, 969,8/1030 kB toplam paket ve altı Edge tip kontrolü. Temiz ve ek UI verisi bulunan DB: 45/45 SQL testi. Ayrıntılı değişiklik/kanıt tablosu: docs/USER_AUDIT_2026-09-09.md.
