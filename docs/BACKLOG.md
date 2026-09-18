@@ -1,5 +1,12 @@
 # Priority Backlog
 
+## 2026-09-18 — Ödeme kartı yerleşimi — DONE
+
+Ödeme listesinde başlıkların rozet, ödeme ve menü aksiyonları arasında daralıp
+harf harf kırıldığı kart başlığı düzeltildi. Kimlik ve aksiyon satırları
+ayrıldı; aylık tekrar durumu okunur metin kazandı. Finans ve ödeme akışları
+değişmedi.
+
 ## 2026-09-18 — Provizyon kart filtresi — DONE
 
 Kartlar → Ekstreler bölümündeki “Provizyondaki işlemler” paneline, birden fazla
