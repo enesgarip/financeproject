@@ -1,11 +1,12 @@
 import { ReceiptText } from 'lucide-react'
 import { Button } from '../components/ui/button'
-import type { Card, InsertFor, UpdateFor } from '../types/database'
+import type { AccountKind, Card, InsertFor, UpdateFor } from '../types/database'
 import { cardProvisionAmount, cardSplitTotal } from '../utils/financeSummary'
 import { formatCurrency, parseNumber } from '../utils/formatCurrency'
 import { equalsTL } from '../utils/money'
 import {
   bankHueStyle,
+  accountTypeLabel,
   cardGroupLabel,
   cardTypeLabel,
   optionalDay,
@@ -25,6 +26,7 @@ export function getCardInitialValues(row?: Card) {
     bank_name: row?.bank_name ?? '',
     card_name: row?.card_name ?? '',
     card_type: row?.card_type ?? 'kredi_karti',
+    account_kind: row?.account_kind ?? 'bank',
     holder_name: row?.holder_name ?? '',
     account_number: row?.account_number ?? '',
     iban: row?.iban ?? '',
@@ -43,6 +45,8 @@ export function getCardInitialValues(row?: Card) {
 export function mapCardForm(formData: FormData, userId: string, editing: Card | null = null): CardPayload {
   const cardType = formData.get('card_type') as Card['card_type']
   const isCreditCard = cardType === 'kredi_karti'
+  const accountKind: AccountKind = isCreditCard ? 'bank' : formData.get('account_kind') === 'cash' ? 'cash' : 'bank'
+  const isCash = !isCreditCard && accountKind === 'cash'
   const statementDebt = isCreditCard ? parseNumber(formData.get('statement_debt_amount')) : 0
   const currentPeriod = isCreditCard ? parseNumber(formData.get('current_period_spending')) : 0
   const provisionAmount = isCreditCard ? parseNumber(formData.get('provision_amount')) : 0
@@ -54,12 +58,13 @@ export function mapCardForm(formData: FormData, userId: string, editing: Card | 
     !equalsTL(provisionAmount, editing.provision_amount)
 
   const base = {
-    bank_name: String(formData.get('bank_name') ?? ''),
+    bank_name: isCash ? 'Nakit' : String(formData.get('bank_name') ?? '').trim(),
     card_name: String(formData.get('card_name') ?? ''),
     card_type: cardType,
+    account_kind: accountKind,
     holder_name: isCreditCard ? String(formData.get('holder_name') ?? '').trim() || null : null,
-    account_number: !isCreditCard ? String(formData.get('account_number') ?? '').trim() || null : null,
-    iban: !isCreditCard ? String(formData.get('iban') ?? '').replace(/\s+/g, '').toUpperCase() || null : null,
+    account_number: !isCreditCard && !isCash ? String(formData.get('account_number') ?? '').trim() || null : null,
+    iban: !isCreditCard && !isCash ? String(formData.get('iban') ?? '').replace(/\s+/g, '').toUpperCase() || null : null,
     limit_group_name: isCreditCard ? String(formData.get('limit_group_name') ?? '').trim() || null : null,
     credit_limit: isCreditCard ? parseNumber(formData.get('credit_limit')) : 0,
     statement_day: isCreditCard ? optionalDay(formData.get('statement_day')) : null,
@@ -107,11 +112,14 @@ export function renderCardTitle(row: Card) {
 }
 
 export function renderCardSubtitle(row: Card) {
-  return `${row.bank_name} · ${cardTypeLabel(row.card_type)}`
+  return row.card_type === 'banka_karti' && row.account_kind === 'cash'
+    ? accountTypeLabel(row)
+    : `${row.bank_name} · ${cardTypeLabel(row.card_type)}`
 }
 
 export function renderCardDetails(row: Card) {
   if (row.card_type !== 'kredi_karti') {
+    if (row.account_kind === 'cash') return [`Bakiye: ${formatCurrency(row.current_balance)}`]
     return [
       `Bakiye: ${formatCurrency(row.current_balance)}`,
       row.iban ? `IBAN: ${row.iban}` : 'IBAN: -',

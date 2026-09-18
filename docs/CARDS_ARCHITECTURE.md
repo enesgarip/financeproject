@@ -66,7 +66,7 @@ lazy boundary.
 - Each `/kartlar` sub-section answers one question with a Şerit `HeroNumber`
   (`CardsPage.hero.tsx`); on the summary section the hero is "borç sonrası
   likit" (`diffTL(accountBalance, payableCardDebt)`) inside `AccountHubPanel`
-  (`CardsPage.overview.tsx`), followed by the bank-account line list.
+  (`CardsPage.overview.tsx`), followed by the bank-account and cash-wallet line list.
 - There is no dark signature surface anymore: the old `accounts-signature-hub`
   gradient block was removed with the Şerit redesign (see the comment in
   `CardsPage.overview.tsx`). Separation is done with 1px lines and background
@@ -227,5 +227,15 @@ For RPC, RLS, or migration changes, also run the local Supabase checks from
 
 ## 2026-09-07 — Hesap ve kart ayrımı
 İki büyük seçim alanı banka hesaplarını kredi kartlarından ayırır. `section=kartlar` yalnız kredi kartlarını, `section=hesaplar` yalnız banka hesaplarını listeler. Banka bölümü current_balance toplamını, kredi kartları debt_amount toplamını gösterir. Varsayılan Özet ve eski bağlantılar korunur. CrudPage listFilter yalnız sunumu filtreler; helpers.rows tam kaldığından ödeme hesapları, transfer hedefleri ve ortak limit hesabı daralmaz. Yeni banka hesabı formu banka türüyle başlar. Açık ekstrede kart satırı Ekstreler bölümüne görünür ödeme bağlantısı verir.
+
+## 2026-09-18 — Nakit cüzdanı
+
+`section=hesaplar` artık banka hesaplarıyla birlikte fiziksel nakit cüzdanlarını
+gösterir. Şema ayrımı `cards.account_kind` (`bank | cash`) üzerindedir;
+`card_type='banka_karti'` kalır ki ödeme, transfer, `current_balance` ve
+`account_ledger` yolları çoğaltılmadan aynı invariant'ları kullansın. Nakit
+cüzdanında banka adı sunucuda `Nakit` olarak normalize edilir; IBAN ve hesap
+numarası tutulmaz. Ödeme seçicisindeki “Takip dışı (bakiye değişmez)” bundan
+farklıdır ve izlenen bakiyeye dokunmaz.
 
 2026-09-07 üretim öncesi takip: Hızlı menü Harcama ekle ile başlar; form kaynağı Hesap / kredi kartı olarak adlandırılır. Banka hesabı menüsü taşmaya açıktır; dekoratif üst çizgi köşelerin içine alınır.

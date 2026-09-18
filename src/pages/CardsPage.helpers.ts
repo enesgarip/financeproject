@@ -14,8 +14,14 @@ import { normalizeSearchText } from '../utils/searchText'
 import { canCutCurrentStatement } from '../utils/statementCycle'
 
 export const fields: FormField[] = [
-  { name: 'bank_name', label: 'Banka', type: 'text', required: true },
-  { name: 'card_name', label: 'Kart / hesap adı', type: 'text', required: true },
+  {
+    name: 'bank_name',
+    label: 'Banka',
+    type: 'text',
+    required: true,
+    visibleWhen: (values) => values.card_type === 'kredi_karti' || values.account_kind !== 'cash',
+  },
+  { name: 'card_name', label: 'Ad', type: 'text', required: true },
   {
     name: 'holder_name',
     label: 'Kart sahibi',
@@ -36,6 +42,16 @@ export const fields: FormField[] = [
     label: 'Ortak limit grubu',
     type: 'text',
     visibleWhen: { field: 'card_type', value: 'kredi_karti' },
+  },
+  {
+    name: 'account_kind',
+    label: 'Hesap türü',
+    type: 'select',
+    options: [
+      { label: 'Banka hesabı', value: 'bank' },
+      { label: 'Nakit cüzdanı', value: 'cash' },
+    ],
+    visibleWhen: { field: 'card_type', value: 'banka_karti' },
   },
   {
     name: 'credit_limit',
@@ -89,13 +105,13 @@ export const fields: FormField[] = [
     name: 'account_number',
     label: 'Hesap numarası',
     type: 'text',
-    visibleWhen: { field: 'card_type', value: 'banka_karti' },
+    visibleWhen: (values) => values.card_type === 'banka_karti' && values.account_kind !== 'cash',
   },
   {
     name: 'iban',
     label: 'IBAN',
     type: 'text',
-    visibleWhen: { field: 'card_type', value: 'banka_karti' },
+    visibleWhen: (values) => values.card_type === 'banka_karti' && values.account_kind !== 'cash',
   },
   {
     name: 'current_balance',
@@ -118,9 +134,18 @@ export function cardTypeLabel(value: Card['card_type']) {
   return 'Banka hesabı'
 }
 
+export function isCashAccount(card: Pick<Card, 'card_type' | 'account_kind'>) {
+  return card.card_type === 'banka_karti' && card.account_kind === 'cash'
+}
+
+export function accountTypeLabel(card: Pick<Card, 'card_type' | 'account_kind'>) {
+  if (card.card_type === 'kredi_karti') return 'Kredi kartı'
+  return isCashAccount(card) ? 'Nakit cüzdanı' : 'Banka hesabı'
+}
+
 export function cardGroupLabel(row: Card) {
   if (row.card_type === 'kredi_karti') return row.limit_group_name?.trim() ? `Ortak limit · ${row.limit_group_name.trim()}` : 'Tekil kredi kartları'
-  return 'Banka hesapları'
+  return isCashAccount(row) ? 'Nakit cüzdanları' : 'Banka hesapları'
 }
 
 function normalizeBankName(bankName: string) {
@@ -342,4 +367,3 @@ export function moneyShare(amount: number, pieces: number) {
 export function shouldRunStatementCut(card: Card, statements: CardStatementArchive[]) {
   return canCutCurrentStatement(card, statements)
 }
-

@@ -323,11 +323,17 @@ From `src/utils/cardInstallmentCalendar.ts` and page logic:
 
 ## Bank Account / Transfer Rules
 
-- `cards.card_type = 'banka_karti'` represents a bank account balance in the app.
+- `cards.card_type = 'banka_karti'` izlenen likit hesap bakiyesidir;
+  `account_kind = 'bank'` banka hesabını, `account_kind = 'cash'` fiziksel nakit
+  cüzdanını belirtir. Eski/default satırlar `bank` kabul edilir.
+- Nakit cüzdanı ayrı bir finans motoru değildir: ödeme, manuel hareket,
+  hesaplar arası aktarım ve `account_ledger` invariant'ları banka hesabıyla aynıdır.
+  UI'daki “Takip dışı (bakiye değişmez)” ise bilinçli olarak hiçbir izlenen
+  bakiyeyi değiştirmez (RPC notlarında eski “Nakit / hesap dışı” adı korunabilir).
 - Authenticated clients cannot insert directly into `card_ledger` or
   `account_ledger`; signed kuruş authority is trigger/correction-RPC owned.
 - Manual account inflow/outflow updates one account balance and writes `transaction_history`.
-- Bank-to-bank transfer uses `transfer_between_accounts`:
+- Banka↔banka, banka↔nakit ve nakit↔nakit aktarımı `transfer_between_accounts` kullanır:
   - source and target must both be `banka_karti`
   - source and target cannot be the same account
   - source balance must be enough for the transfer amount

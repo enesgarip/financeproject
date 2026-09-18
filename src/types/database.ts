@@ -4,6 +4,7 @@ export type AssetCategory = 'Nakit' | 'Altın' | 'Fon' | 'Hisse' | 'Araç' | 'BE
 export type AssetUnit = 'TRY' | 'gram' | 'adet'
 export type CashCurrency = 'TRY' | 'USD' | 'EUR' | 'GBP'
 export type CardType = 'banka_karti' | 'kredi_karti'
+export type AccountKind = 'bank' | 'cash'
 export type PaymentCategory = 'Fatura' | 'Dijital üyelik' | 'Kira / aidat' | 'Sigorta' | 'Vergi / devlet' | 'Eğitim' | 'Sağlık' | 'Diğer'
 export type LoanStatus = 'active' | 'closed'
 export type DebtDirection = 'borç_aldım' | 'borç_verdim'
@@ -81,6 +82,8 @@ export type Card = BaseRow & {
   bank_name: string
   card_name: string
   card_type: CardType
+  /** `banka_karti` satırının banka hesabı mı fiziksel nakit cüzdanı mı olduğu. Eski payload'larda yoksa banka hesabıdır. */
+  account_kind?: AccountKind
   holder_name: string | null
   account_number: string | null
   iban?: string | null

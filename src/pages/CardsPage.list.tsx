@@ -207,10 +207,16 @@ export function CreditAccountListCard({
       >
         <div className="relative flex items-start justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3.5">
-            <BankLogo bankName={row.bank_name} size="lg" className="size-14 rounded-2xl text-sm " />
+            {row.account_kind === 'cash' ? (
+              <span className="grid size-14 shrink-0 place-items-center rounded-2xl bg-success/10 text-success">
+                <Banknote size={24} aria-hidden="true" />
+              </span>
+            ) : (
+              <BankLogo bankName={row.bank_name} size="lg" className="size-14 rounded-2xl text-sm " />
+            )}
             <div className="min-w-0">
               <h2 className="truncate font-display text-lg font-bold tracking-tight text-ink">{row.card_name}</h2>
-              <p className="mt-1 truncate text-sm font-medium text-ink-muted">{row.bank_name} · banka hesabı</p>
+              <p className="mt-1 truncate text-sm font-medium text-ink-muted">{row.account_kind === 'cash' ? 'Fiziksel nakit cüzdanı' : `${row.bank_name} · banka hesabı`}</p>
             </div>
           </div>
           <div className="entity-card-menu">{menu}</div>
