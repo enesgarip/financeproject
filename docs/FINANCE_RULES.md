@@ -196,6 +196,18 @@ On the cards page:
   remain a schedule and are not mutated by payment
 - direct card debt payment is legacy/manual behavior and should not be the primary installment flow
 
+## Planned Payment Settlement
+
+- A planned payment can be settled from a bank account, a credit card, or
+  “Nakit / hesap dışı”.
+- Bank-account settlement debits the selected account; credit-card settlement
+  creates posted card spending and increases card debt/current-period spending.
+- “Nakit / hesap dışı” advances or closes the planned payment and writes an
+  auditable transaction-history row, but changes no tracked account balance or
+  credit-card debt. It is intentionally limited to `pay_payment`; card debt,
+  statements, loans, and personal debts still require their existing account
+  source.
+
 ## Card Expense Rules
 
 - card expenses can be `provision`, `posted`, or `cancelled`

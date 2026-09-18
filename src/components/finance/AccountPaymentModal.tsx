@@ -11,7 +11,7 @@ import { AccountSelector } from './AccountSelector'
 import { MoneyInput } from './MoneyInput'
 
 type AccountPaymentSubmit = {
-  account: Card
+  account: Card | null
   amount: number
   /** Gerçek ödeme günü (YYYY-MM-DD); `paidAtEditable` ise doldurulur (UX turu B9). */
   paidAt?: string
@@ -24,6 +24,7 @@ type AccountPaymentModalProps = {
    * gerçek günüyle kaydedilemiyordu.
    */
   paidAtEditable?: boolean
+  outsideAccountsValue?: string
   open: boolean
   title: string
   accounts: Card[]
@@ -86,6 +87,7 @@ export function AccountPaymentModal({
   validate,
   successAction = false,
   paidAtEditable = false,
+  outsideAccountsValue,
 }: AccountPaymentModalProps) {
   const { formatAmount } = useBalancePrivacy()
   const [validationError, setValidationError] = useState('')
@@ -94,6 +96,7 @@ export function AccountPaymentModal({
   const amount = useMemo(() => parseNumber(amountValue), [amountValue])
   const previewAmount = accountPreviewAmount?.(amount) ?? amount
   const selectedAccount = accounts.find((account) => account.id === selectedAccountId)
+  const outsideAccounts = Boolean(outsideAccountsValue && selectedAccountId === outsideAccountsValue)
   const displayedError = validationError || externalError
 
   function handleClose() {
@@ -110,18 +113,18 @@ export function AccountPaymentModal({
       return
     }
 
-    if (!selectedAccount) {
+    if (!selectedAccount && !outsideAccounts) {
       setValidationError('Hesap seçmelisin.')
       return
     }
 
-    const coverageError = accountCanCover(selectedAccount, previewAmount)
+    const coverageError = selectedAccount ? accountCanCover(selectedAccount, previewAmount) : null
     if (coverageError) {
       setValidationError(coverageError)
       return
     }
 
-    const customError = validate?.({ account: selectedAccount, amount })
+    const customError = validate?.({ account: selectedAccount ?? null, amount })
     if (customError) {
       setValidationError(customError)
       return
@@ -138,7 +141,7 @@ export function AccountPaymentModal({
       }
     }
 
-    void onSubmit({ account: selectedAccount, amount, ...(paidAtEditable ? { paidAt } : {}) })
+    void onSubmit({ account: selectedAccount ?? null, amount, ...(paidAtEditable ? { paidAt } : {}) })
   }
 
   return (
@@ -189,6 +192,7 @@ export function AccountPaymentModal({
           amount={previewAmount}
           label={accountLabel}
           emptyMessage={emptyMessage}
+          outsideAccountsValue={outsideAccountsValue}
         />
 
         {extraControls}

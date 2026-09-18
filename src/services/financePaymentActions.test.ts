@@ -118,8 +118,28 @@ describe('finance payment action helpers', () => {
       p_payment_id: 'source',
       p_source_card_id: 'bank',
       p_paid_amount: 125,
+      p_outside_accounts: false,
     })
     expect(result.error?.message).toContain('PGRST202')
+  })
+
+  it('marks a planned payment paid outside tracked accounts without a source card', async () => {
+    rpcMock.mockResolvedValueOnce({ data: null, error: null } as never)
+
+    await submitFinanceObligationPayment({
+      obligation: obligation({ action: 'pay_payment' }),
+      account: null,
+      amount: 300,
+      paidAt: '2026-09-18',
+    })
+
+    expect(rpcMock).toHaveBeenCalledWith('pay_payment', {
+      p_payment_id: 'source',
+      p_source_card_id: null,
+      p_paid_amount: 300,
+      p_paid_at: '2026-09-18',
+      p_outside_accounts: true,
+    })
   })
 
   it('sends p_amount only when the statement payment is partial (K7)', async () => {

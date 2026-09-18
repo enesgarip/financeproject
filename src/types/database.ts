@@ -1100,10 +1100,12 @@ export type Database = {
       pay_payment: {
         Args: {
           p_payment_id: string
-          p_source_card_id: string
+          p_source_card_id?: string | null
           p_paid_amount?: number
           /** Gerçek ödeme günü (YYYY-MM-DD); boşsa bugün. Migration 20260908140000 (B9). */
           p_paid_at?: string
+          /** Nakit veya uygulamada izlenmeyen başka bir kaynak; hesap/kart bakiyesi değişmez. */
+          p_outside_accounts?: boolean
         }
         Returns: Payment
       }

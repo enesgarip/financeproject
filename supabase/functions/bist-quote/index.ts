@@ -19,6 +19,10 @@ import { fetchWithTimeout, handlePreflight, jsonResponse, rateLimit } from '../_
 
 const MAX_SYMBOLS = 60
 const YAHOO_TIMEOUT_MS = 6_000
+// Tarihçe isteğinde her sembol ayrı Yahoo chart çağrısıdır. Büyük portföyleri
+// tek Promise.all dalgasıyla göndermek veri merkezi IP'sini anlık rate-limit'e
+// sokup canlı fiyat gelirken history'nin boş kalmasına yol açabiliyor.
+const YAHOO_CONCURRENCY = 4
 // query1 sometimes rate-limits datacenter IPs; query2 is a transparent mirror.
 const YAHOO_HOSTS = [
   'https://query1.finance.yahoo.com/v8/finance/chart',
@@ -28,6 +32,18 @@ const HISTORY_RANGES = new Set(['1mo', '3mo', '6mo', '1y', '2y', '5y', 'max'])
 
 type CloseSeries = { t: number[]; c: (number | null)[] }
 type Quote = { price: number | null; history: CloseSeries | null }
+
+async function forEachConcurrent<T>(items: T[], concurrency: number, fn: (item: T) => Promise<void>): Promise<void> {
+  let nextIndex = 0
+  const workers = Array.from({ length: Math.min(concurrency, items.length) }, async () => {
+    while (nextIndex < items.length) {
+      const index = nextIndex
+      nextIndex += 1
+      await fn(items[index])
+    }
+  })
+  await Promise.all(workers)
+}
 
 /** Keep only plausible BIST tickers: 1-10 chars of A-Z/0-9, uppercased, no suffix. */
 function normalizeSymbol(raw: unknown): string | null {
@@ -107,13 +123,13 @@ Deno.serve(async (req: Request) => {
 
   const prices: Record<string, number> = {}
   const history: Record<string, CloseSeries> = {}
-  await Promise.all(
-    symbols.map(async (symbol) => {
+  await forEachConcurrent(symbols, YAHOO_CONCURRENCY, async (symbol) => {
       const quote = await fetchQuote(symbol, range)
       if (quote.price !== null) prices[symbol] = quote.price
       if (quote.history !== null) history[symbol] = quote.history
-    }),
-  )
+  })
 
-  return jsonResponse(range ? { prices, history, range, asOf: new Date().toISOString() } : { prices, asOf: new Date().toISOString() })
+  return jsonResponse(range
+    ? { prices, history, range, historyVersion: 1, asOf: new Date().toISOString() }
+    : { prices, asOf: new Date().toISOString() })
 })

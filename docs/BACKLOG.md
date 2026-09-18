@@ -1,5 +1,20 @@
 # Priority Backlog
 
+## 2026-09-18 — Planlı ödemede nakit / hesap dışı kaynak — DONE
+
+Planlı ödeme çekmecesine “Nakit / hesap dışı” kaynağı eklendi. Bu seçim ödeme
+kaydını kapatır veya aylık vadeyi ilerletir ve işlem geçmişine kanıt yazar;
+banka bakiyesi ya da kredi kartı borcu değişmez. Ekstre, kart borcu, kredi
+taksiti ve kişisel borç akışlarının hesap zorunluluğu korunur.
+
+## 2026-09-18 — Borsa dönem performansı tarihsel fiyatları — DONE
+
+Üretimdeki `bist-quote` eski sözleşmede kaldığı için yalnız canlı fiyat dönüyor,
+`range/history` gelmiyor ve Borsa dönem performansı bütün sembollerde “Fiyat
+eksik” oluyordu. Edge fonksiyonu tarihçe sözleşmesini yeniden deploy ettirecek
+şekilde güncellendi; sembol başına Yahoo chart çağrıları dört işçiyle
+sınırlandırılarak büyük portföylerde anlık rate-limit riski azaltıldı.
+
 ## 2026-09-18 — Ödeme kartı yerleşimi — DONE
 
 Ödeme listesinde başlıkların rozet, ödeme ve menü aksiyonları arasında daralıp

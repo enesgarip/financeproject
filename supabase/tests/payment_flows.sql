@@ -51,6 +51,41 @@ begin
 end;
 $$;
 
+-- ── a2) pay_payment: nakit/hesap disi odeme bakiye degistirmez ─────────────
+do $$
+declare
+  v_user uuid := '11111111-1111-1111-1111-111111111111';
+  v_bank uuid := 'f2000000-0000-4000-8000-000000000001';
+  v_payment uuid := 'f2000000-0000-4000-8000-000000000011';
+  v_paid public.payments%rowtype;
+  v_balance numeric;
+  v_note text;
+begin
+  insert into public.payments (id, user_id, title, category, amount, due_date, status)
+  values (v_payment, v_user, 'Aidat nakit', 'Kira / aidat', 300, current_date, 'bekliyor');
+
+  v_paid := public.pay_payment(v_payment, null, 300, current_date, true);
+
+  if v_paid.status <> 'ödendi' then
+    raise exception 'BASARISIZ a2: hesap disi odeme kapanmadi (%).', v_paid.status;
+  end if;
+
+  select current_balance into v_balance from public.cards where id = v_bank;
+  if v_balance <> 7250 then
+    raise exception 'BASARISIZ a2: banka bakiyesi degismemeliydi (%).', v_balance;
+  end if;
+
+  select note into v_note
+  from public.transaction_history
+  where source_table = 'payments' and source_id = v_payment and type = 'payment';
+  if v_note not like 'Nakit / hesap disi odendi.%' then
+    raise exception 'BASARISIZ a2: hesap disi history notu yok (%).', v_note;
+  end if;
+
+  raise notice 'GECTI a2: hesap disi pay_payment (durum + bakiye sabit + history).';
+end;
+$$;
+
 -- ── b) pay_loan_installment: taksit odenir, sync_loan_summary ozeti dusurur ──
 do $$
 declare
