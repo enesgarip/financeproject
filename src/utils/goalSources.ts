@@ -320,7 +320,11 @@ export function goalSourceOptions(refs: GoalSourceRefs, valueType: ResolvableUni
   if (!isGold) {
     for (const card of refs.cards ?? []) {
       if (card.card_type !== 'banka_karti') continue
-      options.push({ token: `bank:${card.id}`, label: `${card.bank_name} · ${card.card_name}`, group: 'Banka hesabı' })
+      options.push({
+        token: `bank:${card.id}`,
+        label: card.account_kind === 'cash' ? card.card_name : `${card.bank_name} · ${card.card_name}`,
+        group: card.account_kind === 'cash' ? 'Nakit cüzdanı' : 'Banka hesabı',
+      })
     }
     for (const bucket of refs.buckets ?? []) {
       options.push({ token: `bucket:${bucket.id}`, label: bucket.name, group: 'Kasa kovası' })

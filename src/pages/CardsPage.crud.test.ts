@@ -11,6 +11,7 @@ function creditCard(overrides: Partial<Card> = {}): Card {
     holder_name: null, account_number: null,
     iban: null,
     card_type: 'kredi_karti',
+    account_kind: 'bank',
     limit_group_name: null,
     current_balance: 0,
     credit_limit: 10000,
@@ -55,6 +56,7 @@ function cardForm(card: Card, overrides: Record<string, string | number | null> 
     bank_name: card.bank_name,
     card_name: card.card_name,
     card_type: card.card_type,
+    account_kind: card.account_kind ?? 'bank',
     holder_name: card.holder_name,
     account_number: card.account_number,
     iban: card.iban ?? null,
@@ -102,5 +104,25 @@ describe('mapCardForm', () => {
 
     expect(payload.card_name).toBe('Yeni hesap adı')
     expect('current_balance' in payload).toBe(false)
+  })
+
+  it('maps a cash wallet without bank-only identity fields', () => {
+    const payload = mapCardForm(cardForm(bankCard(), {
+      account_kind: 'cash',
+      bank_name: '',
+      card_name: 'Cebimdeki nakit',
+      account_number: 'silinmeli',
+      iban: 'TR00123',
+      current_balance: 850,
+    }), 'user-1')
+
+    expect(payload).toMatchObject({
+      account_kind: 'cash',
+      bank_name: 'Nakit',
+      card_name: 'Cebimdeki nakit',
+      account_number: null,
+      iban: null,
+      current_balance: 850,
+    })
   })
 })

@@ -249,11 +249,11 @@ export function CardsPage() {
         table="cards"
         pageTitle="Hesaplar ve kartlar"
         pageLabel="Finans merkezi"
-        pageDescription="Nakit, kredi kartı yükü, transfer ve günlük işlemleri tek karar düzeninde yönet."
-        addLabel={section === 'hesaplar' ? 'Hesap ekle' : section === 'kartlar' ? 'Kredi kartı ekle' : 'Hesap / kart ekle'}
+        pageDescription="Banka, nakit, kredi kartı yükü, transfer ve günlük işlemleri tek karar düzeninde yönet."
+        addLabel={section === 'hesaplar' ? 'Hesap veya nakit ekle' : section === 'kartlar' ? 'Kredi kartı ekle' : 'Hesap / kart ekle'}
         fields={fields}
-        emptyTitle={section === 'hesaplar' ? 'Henüz banka hesabı yok' : 'Henüz kredi kartı yok'}
-        emptyDescription="Banka hesaplarını ve kredi kartlarını buradan takip edebilirsin."
+        emptyTitle={section === 'hesaplar' ? 'Henüz hesap veya nakit cüzdanı yok' : 'Henüz kredi kartı yok'}
+        emptyDescription="Banka hesaplarını, nakit cüzdanlarını ve kredi kartlarını buradan takip edebilirsin."
         orderBy="card_type"
         showList={section === 'kartlar' || section === 'hesaplar'}
         listFilter={(row) => row.card_type === (section === 'hesaplar' ? 'banka_karti' : 'kredi_karti')}

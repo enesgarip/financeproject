@@ -1,4 +1,4 @@
-import { ArrowRightLeft } from 'lucide-react'
+import { ArrowRightLeft, Banknote } from 'lucide-react'
 import { HeroNumber, LineGroup, SectionEyebrow, SERIT_TEXT, useSeritAmount } from '../components/serit'
 import { BankLogo } from '../components/finance/BankLogo'
 import { AmountDisplay, FinancePanel, MiniStat, ProgressStrip, SectionHeader, StatusBadge } from '../components/finance/FinanceUI'
@@ -88,7 +88,7 @@ export function CreditCardOverview({
             <MiniStat label="Provizyon" value={formatAmount(totalProvision)} tone={totalProvision > 0 ? 'warning' : 'neutral'} />
             <MiniStat label="Kalan limit" value={formatAmount(totalAvailable)} tone="good" />
             <MiniStat label="Limit" value={formatAmount(totalLimit)} tone="neutral" />
-            <MiniStat label="Hesap bakiyesi" value={formatAmount(cashBalance)} tone="premium" />
+            <MiniStat label="Likit bakiye" value={formatAmount(cashBalance)} tone="premium" />
           </div>
         </div>
       </FinancePanel>
@@ -154,6 +154,8 @@ export function AccountHubPanel({
   // panel artık dışarıdan formatAmount almıyor (iki biçim yan yana düşüyordu).
   const seritAmount = useSeritAmount()
   const accounts = rows.filter((row) => row.card_type === 'banka_karti')
+  const bankAccounts = accounts.filter((row) => row.account_kind !== 'cash')
+  const cashAccounts = accounts.filter((row) => row.account_kind === 'cash')
   const creditCards = rows.filter((row) => row.card_type === 'kredi_karti')
   if (accounts.length === 0 && creditCards.length === 0) return null
 
@@ -162,11 +164,11 @@ export function AccountHubPanel({
   const payableCardDebt = sumTL(creditCards.map((card) => cardPayableDebt(card)))
   // Özet'teki "Tüm kart borcu sonrası nakit farkı" ile aynı tanım: TOPLAM kart
   // borcu (gelecek taksit + provizyon dahil) düşülür. Tek fark nakit tabanı:
-  // burada yalnız banka hesapları, Özet'te döviz nakit de var (UX turu B12 —
+  // burada banka hesapları + nakit cüzdanları, Özet'te döviz nakit de var (UX turu B12 —
   // aynı kavram için iki farklı rakam vardı).
   const balanceAfterDebt = diffTL(accountBalance, cardDebt)
   const banks = Array.from(
-    accounts.reduce((map, account) => {
+    bankAccounts.reduce((map, account) => {
       const current = map.get(account.bank_name) ?? { balance: 0, count: 0 }
       map.set(account.bank_name, {
         balance: sumTL([current.balance, account.current_balance]),
@@ -187,7 +189,7 @@ export function AccountHubPanel({
         tone={balanceAfterDebt >= 0 ? 'ink' : 'danger'}
         description={
           <>
-            <span className="serit-num text-ink">{seritAmount(accountBalance).amount} ₺</span> banka bakiyesinden{' '}
+            <span className="serit-num text-ink">{seritAmount(accountBalance).amount} ₺</span> hesap ve nakit toplamından{' '}
             <span className="serit-num" style={{ color: SERIT_TEXT.danger }}>
               {seritAmount(cardDebt).amount} ₺
             </span>{' '}
@@ -198,20 +200,22 @@ export function AccountHubPanel({
 
       <div className="mt-6">
         <SectionEyebrow className="mb-1">
-          Banka hesapları · {banks.length} banka
+          Hesaplar ve nakit · {banks.length} banka · {cashAccounts.length} cüzdan
         </SectionEyebrow>
 
         {accounts.length === 0 ? (
-          <p className="mt-2 text-[13px] text-ink-muted">Transfer için önce banka kartı türünde en az iki hesap ekle.</p>
+          <p className="mt-2 text-[13px] text-ink-muted">Banka hesabını veya fiziksel nakdini ekleyerek bakiyeni takip et.</p>
         ) : (
           <LineGroup>
             {accounts.map((account) => (
               <div key={account.id} className="flex items-center justify-between gap-3 py-[13px]">
                 <div className="flex min-w-0 items-center gap-3">
-                  <BankLogo bankName={account.bank_name} size="sm" />
+                  {account.account_kind === 'cash' ? (
+                    <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-success/10 text-success"><Banknote size={17} aria-hidden="true" /></span>
+                  ) : <BankLogo bankName={account.bank_name} size="sm" />}
                   <div className="min-w-0">
                     <p className="truncate text-[14.5px] font-semibold text-ink">{account.card_name}</p>
-                    <p className="mt-0.5 truncate text-xs text-ink-muted">{account.bank_name}</p>
+                    <p className="mt-0.5 truncate text-xs text-ink-muted">{account.account_kind === 'cash' ? 'Nakit cüzdanı' : account.bank_name}</p>
                   </div>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
@@ -223,7 +227,7 @@ export function AccountHubPanel({
                     onClick={() => onOpenTransfer(account)}
                     disabled={!canTransfer}
                     className="grid size-9 place-items-center rounded-lg border border-line-strong text-ink-faint transition-colors duration-[120ms] hover:bg-black/[.02] hover:text-ink disabled:opacity-45 dark:hover:bg-white/[.03]"
-                    aria-label={`${account.card_name} hesabından transfer yap`}
+                    aria-label={`${account.card_name} kaynağından para aktar`}
                   >
                     <ArrowRightLeft size={15} aria-hidden="true" />
                   </button>

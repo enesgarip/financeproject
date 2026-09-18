@@ -1,4 +1,7 @@
 import { SimpleModal } from '../components/SimpleModal'
+import { MoneyInput } from '../components/finance/MoneyInput'
+import { Button } from '../components/ui/button'
+import { Select } from '../components/ui/input'
 import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
 import type { Card } from '../types/database'
 import { parseNumber } from '../utils/formatCurrency'
@@ -37,7 +40,7 @@ export function MovementModal({
   const target = targetAccounts.find((account) => account.id === targetCardId)
 
   return (
-    <SimpleModal title={isTransfer ? 'Hesaplar arası transfer' : 'Para hareketi'} open={Boolean(card)} onClose={onClose}>
+    <SimpleModal title={isTransfer ? 'Para aktar' : 'Para hareketi'} open={Boolean(card)} onClose={onClose}>
       <form onSubmit={onSubmit} className="space-y-4">
         <div className="rounded-xl border border-line-strong bg-page p-3 text-sm text-ink-muted">
           <p className="font-semibold text-ink">{card?.card_name}</p>
@@ -45,47 +48,36 @@ export function MovementModal({
         </div>
         <label className="block text-sm font-semibold text-ink">
           İşlem tipi
-          <select
+          <Select
             value={type}
             onChange={(event) => onTypeChange(event.target.value as 'in' | 'out' | 'transfer')}
-            className="mt-1 w-full rounded-lg border border-line-strong bg-white px-3 py-3 outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 dark:bg-raised dark:text-ink"
+            className="mt-1"
           >
             <option value="in">Para geldi</option>
             <option value="out">Para gitti</option>
             <option value="transfer" disabled={targetAccounts.length === 0}>
-              {targetAccounts.length === 0 ? 'Hesaplar arası transfer (ikinci hesap gerekli)' : 'Hesaplar arası transfer'}
+              {targetAccounts.length === 0 ? 'Para aktar (ikinci kaynak gerekli)' : 'Para aktar'}
             </option>
-          </select>
+          </Select>
         </label>
-        <label className="block text-sm font-semibold text-ink">
-          Tutar
-          <input
-            required
-            min="0"
-            step="0.01"
-            type="number"
-            value={amount}
-            onChange={(event) => onAmountChange(event.target.value)}
-            className="mt-1 w-full rounded-lg border border-line-strong px-3 py-3 outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 dark:bg-raised dark:text-ink"
-          />
-        </label>
+        <MoneyInput label="Tutar" value={amount} onValueChange={onAmountChange} required />
         {isTransfer ? (
           <>
             <label className="block text-sm font-semibold text-ink">
-              Hedef hesap
-              <select
+              Hedef
+              <Select
                 required
                 value={targetCardId}
                 onChange={(event) => onTargetCardChange(event.target.value)}
-                className="mt-1 w-full rounded-lg border border-line-strong bg-white px-3 py-3 outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 dark:bg-raised dark:text-ink"
+                className="mt-1"
               >
                 <option value="">{targetAccounts.length > 0 ? 'Hedef hesap seç' : 'Transfer için ikinci hesap gerekli'}</option>
                 {targetAccounts.map((account) => (
                   <option key={account.id} value={account.id}>
-                    {account.bank_name} · {account.card_name} ({formatAmount(account.current_balance)})
+                    {account.account_kind === 'cash' ? 'Nakit' : account.bank_name} · {account.card_name} ({formatAmount(account.current_balance)})
                   </option>
                 ))}
-              </select>
+              </Select>
             </label>
             {target ? (
               <div className="grid grid-cols-2 gap-2 rounded-xl bg-page px-3 py-2 text-xs text-ink-muted">
@@ -98,13 +90,13 @@ export function MovementModal({
           </>
         ) : null}
         {error ? <p className="rounded-xl border border-destructive/20 bg-destructive/8 p-3 text-sm font-medium text-destructive">{error}</p> : null}
-        <button
+        <Button
           type="submit"
           disabled={saving}
-          className="h-12 w-full rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 active:scale-[0.99] disabled:opacity-50"
+          className="h-12 w-full"
         >
           {saving ? 'İşleniyor...' : isTransfer ? 'Transferi tamamla' : 'Bakiyeyi güncelle'}
-        </button>
+        </Button>
       </form>
     </SimpleModal>
   )

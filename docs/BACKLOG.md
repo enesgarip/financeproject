@@ -1,5 +1,15 @@
 # Priority Backlog
 
+## 2026-09-18 — Nakit cüzdanı ve hesap UX'i — DONE
+
+Fiziksel nakit, mevcut hesap/ledger modelinde `account_kind = cash` ile birinci
+sınıf bakiye kaynağı oldu. Nakit cüzdanından ödeme bakiyeyi ve `account_ledger`ı
+azaltır; banka↔nakit aktarımı aynı güvenli transfer RPC'sini kullanır. Eski
+“Nakit / hesap dışı” seçeneği, nakitle karışmaması için “Takip dışı” olarak
+netleştirildi ve yalnız takip edilmeyen ödemeler için korunur. Hesap formu banka
+alanlarını nakitte gizler; ödeme seçici banka, nakit ve kredi kartlarını ayrı
+gruplar; hesap kartları ve hareket penceresi daha açık kaynak dili kullanır.
+
 ## 2026-09-18 — Planlı ödemede nakit / hesap dışı kaynak — DONE
 
 Planlı ödeme çekmecesine “Nakit / hesap dışı” kaynağı eklendi. Bu seçim ödeme

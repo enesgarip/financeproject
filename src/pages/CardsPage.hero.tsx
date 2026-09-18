@@ -35,7 +35,8 @@ export function CardsSectionHero({
   const creditCards = rows.filter((row) => row.card_type === 'kredi_karti')
   if (section === 'hesaplar') {
     const accounts = rows.filter((row) => row.card_type === 'banka_karti')
-    return <HeroNumber label="Banka hesaplarındaki para" value={sumTL(accounts.map((row) => row.current_balance))} description="Kart borçları bu bakiyeden düşülmemiştir." />
+    const cashWallets = accounts.filter((row) => row.account_kind === 'cash')
+    return <HeroNumber label="Hesaplar ve nakit" value={sumTL(accounts.map((row) => row.current_balance))} description={`${accounts.length - cashWallets.length} banka hesabı · ${cashWallets.length} nakit cüzdanı · kart borçları düşülmemiştir.`} />
   }
   if (section === 'ozet') return null
 

@@ -2,7 +2,7 @@ import {
   CalendarClock,
   CreditCard as CreditCardIcon,
   LayoutGrid,
-  Landmark,
+  WalletCards,
   ReceiptText,
 } from 'lucide-react'
 import { useEffect, useRef } from 'react'
@@ -18,7 +18,7 @@ export type CardSection = 'ozet' | 'kartlar' | 'hesaplar' | 'islemler' | 'ekstre
 const cardSections = [
   { id: 'ozet', label: 'Özet', icon: LayoutGrid },
   { id: 'kartlar', label: 'Kredi kartları', icon: CreditCardIcon },
-  { id: 'hesaplar', label: 'Banka hesapları', icon: Landmark },
+  { id: 'hesaplar', label: 'Hesaplar ve nakit', icon: WalletCards },
   { id: 'islemler', label: 'İşlemler', icon: ReceiptText },
   { id: 'ekstreler', label: 'Ekstreler', icon: CalendarClock },
 ] as const satisfies readonly { id: CardSection; label: string; icon: typeof LayoutGrid }[]
@@ -40,7 +40,7 @@ export function CardSectionNav({
             className={cn('min-h-24 rounded-xl border p-3 text-left transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary sm:p-4', section === item.id ? 'border-primary bg-primary/10' : 'border-line-strong bg-raised hover:border-primary/50')}>
             <item.icon size={21} className="mb-2 text-primary" aria-hidden="true" />
             <span className="block text-sm font-semibold text-ink">{item.label} <span className="text-ink-muted">{counts[item.id] ?? 0}</span></span>
-            <span className="mt-1 block text-xs text-ink-muted">{item.id === 'kartlar' ? 'Borç, ekstre ve limit' : 'Bakiye ve para hareketleri'}</span>
+            <span className="mt-1 block text-xs text-ink-muted">{item.id === 'kartlar' ? 'Borç, ekstre ve limit' : 'Banka, nakit ve hareketler'}</span>
           </button>
         ))}
       </div>

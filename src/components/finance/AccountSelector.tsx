@@ -39,8 +39,13 @@ export function AccountSelector({
       return `${account.card_name} (Kredi kartı · Borç ${formatAmount(account.debt_amount)}${limitLabel})`
     }
 
-    return `${account.card_name} (Banka hesabı · ${formatAmount(account.current_balance)})`
+    const typeLabel = account.account_kind === 'cash' ? 'Nakit cüzdanı' : 'Banka hesabı'
+    return `${account.card_name} (${typeLabel} · ${formatAmount(account.current_balance)})`
   }
+
+  const bankAccounts = accounts.filter((account) => account.card_type === 'banka_karti' && account.account_kind !== 'cash')
+  const cashAccounts = accounts.filter((account) => account.card_type === 'banka_karti' && account.account_kind === 'cash')
+  const creditCards = accounts.filter((account) => account.card_type === 'kredi_karti')
 
   return (
     <div className="flex flex-col gap-2">
@@ -53,17 +58,21 @@ export function AccountSelector({
           className="mt-1"
         >
           <option value="">{accounts.length > 0 ? 'Hesap seç' : emptyMessage}</option>
-          {outsideAccountsValue ? <option value={outsideAccountsValue}>Nakit / hesap dışı</option> : null}
-          {accounts.map((account) => (
-            <option key={account.id} value={account.id}>
-              {getAccountOptionLabel(account)}
-            </option>
-          ))}
+          {outsideAccountsValue ? <option value={outsideAccountsValue}>Takip dışı (bakiye değişmez)</option> : null}
+          {bankAccounts.length > 0 ? <optgroup label="Banka hesapları">
+            {bankAccounts.map((account) => <option key={account.id} value={account.id}>{getAccountOptionLabel(account)}</option>)}
+          </optgroup> : null}
+          {cashAccounts.length > 0 ? <optgroup label="Nakit">
+            {cashAccounts.map((account) => <option key={account.id} value={account.id}>{getAccountOptionLabel(account)}</option>)}
+          </optgroup> : null}
+          {creditCards.length > 0 ? <optgroup label="Kredi kartları">
+            {creditCards.map((account) => <option key={account.id} value={account.id}>{getAccountOptionLabel(account)}</option>)}
+          </optgroup> : null}
         </Select>
       </label>
       {outsideAccountsValue && value === outsideAccountsValue ? (
         <div className="rounded-xl bg-page px-3 py-2 text-xs font-medium text-ink-muted ring-1 ring-line">
-          Ödeme tamamlanır; banka hesabı bakiyesi ve kredi kartı borcu değişmez.
+          Ödeme tamamlanır; izlenen hesap, nakit cüzdanı ve kredi kartı bakiyesi değişmez.
         </div>
       ) : selectedAccount ? (
         <div
