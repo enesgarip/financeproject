@@ -247,3 +247,9 @@ Hesap/kart sayfasında iki açıklamalı büyük seçim alanı kullanılır: Kre
 ## 2026-09-15 — Kullanıcı denetimi sözleşmesi
 
 Kişisel miktar/alış fiyatı/komisyon ve metne gömülü TL tutarları gizlilik modunda maskelenir; halka açık piyasa fiyatı ayrı kalır. Başarısız sorgu temiz/boş sonuç gibi sunulmaz; tekrar deneme görünür. Rota değişince belge başlığı güncellenir. Düzenlenen formdan geri/kapat/Escape ile ayrılmak kullanıcı onayı ister; SW güncellemesi kirli formu otomatik yenilemez. CSV “Kontrol verisi CSV” olarak kısmi kapsamını açıklar; tam yedek JSON'dur. Paylaşım PNG'si ilk beş kategoriyi adlandırır ve iki ondalık kullanır.
+
+## 2026-09-18 — Ödeme kartı başlık ve aksiyon düzeni
+
+Ödeme kartlarında kimlik satırı başlık, kategori/takvim özeti ve taşma menüsüne
+ayrılır. Tekrar/tahmin durumları ile birincil “Öde” eylemi ayrı satırda durur;
+aksiyonlar uzun ödeme adlarını tek harflik kolonlara sıkıştıramaz.

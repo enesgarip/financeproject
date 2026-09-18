@@ -437,34 +437,40 @@ export function PaymentsPage() {
 
           return (
             <article className={`rounded-2xl border bg-raised p-4 transition-all duration-250 hover:-translate-y-0.5 min-[390px]:p-5 ${isPaid ? 'border-success/20 opacity-70' : isUrgent ? 'border-warning/40' : 'border-line-strong'}`}>
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex min-w-0 items-center gap-3">
-                  <div className={`grid size-10 shrink-0 place-items-center rounded-xl ${isPaid ? 'bg-success/12 text-success' : isAuto ? 'bg-info/12 text-info' : 'bg-page text-ink-muted'}`}>
-                    {isAuto ? <CreditCard className="size-5" /> : <Receipt className="size-5" />}
-                  </div>
-                  <div className="min-w-0">
-                    <h2 className="line-clamp-2 text-base font-black leading-snug text-ink">{payment.title}</h2>
-                    <p className="mt-0.5 text-xs text-ink-muted">{payment.category} · {getPaymentScheduleLabel(payment)}</p>
-                  </div>
+              <div className="flex items-start gap-3">
+                <div className={`grid size-10 shrink-0 place-items-center rounded-xl ${isPaid ? 'bg-success/12 text-success' : isAuto ? 'bg-info/12 text-info' : 'bg-page text-ink-muted'}`}>
+                  {isAuto ? <CreditCard className="size-5" /> : <Receipt className="size-5" />}
                 </div>
-                <div className="flex shrink-0 items-center gap-2">
+                <div className="min-w-0 flex-1">
+                  <h2 className="line-clamp-2 text-base font-black leading-snug text-ink">{payment.title}</h2>
+                  <p className="mt-0.5 text-xs leading-relaxed text-ink-muted">{payment.category} · {getPaymentScheduleLabel(payment)}</p>
+                </div>
+                <div className="shrink-0">{menu}</div>
+              </div>
+
+              <div className="mt-3 flex min-h-9 items-center justify-between gap-3">
+                <div className="flex min-w-0 flex-wrap items-center gap-2">
                   {isPaid ? <Badge variant="success">Ödendi</Badge> : null}
-                  {isRecurring && !isPaid ? <RefreshCw size={13} className="text-ink-muted" /> : null}
+                  {isRecurring && !isPaid ? (
+                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-ink-muted">
+                      <RefreshCw size={13} />
+                      Aylık
+                    </span>
+                  ) : null}
                   {payment.amount_status === 'estimated' && !isPaid ? <Badge variant="outline">Tahmini</Badge> : null}
                   {/* Liste kartından doğrudan ödeme (UX turu B8): eskiden yalnız
                       takvimde günü seçince ulaşılıyordu. */}
-                  {!isPaid ? (
-                    <Button
-                      type="button"
-                      size="sm"
-                      onClick={() => void openObligationPayment(buildPaymentObligation(payment, payment.due_date, planningData.cards), reload)}
-                      aria-label={`${payment.title} ödemesini yap`}
-                    >
-                      Öde
-                    </Button>
-                  ) : null}
-                  {menu}
                 </div>
+                {!isPaid ? (
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => void openObligationPayment(buildPaymentObligation(payment, payment.due_date, planningData.cards), reload)}
+                    aria-label={`${payment.title} ödemesini yap`}
+                  >
+                    Öde
+                  </Button>
+                ) : null}
               </div>
 
               <div className="mt-4 flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
@@ -521,11 +527,9 @@ export function PaymentsPage() {
                 </p>
               ) : null}
 
-              {/* Kayıt kartında "Öde" butonu YOK: kart talimatlı ödemede hemen
-                  üstteki "talimat bilgilendirmedir" notuyla çelişiyordu (yeşil
-                  buton "bunu sen ödemelisin" diye okunuyor, oysa harcama SMS/
-                  ekstre ile kendiliğinden işleniyor). Ödeme aksiyonu sayfanın
-                  üstündeki ObligationsCalendar'da ve panodaki şeritte duruyor. */}
+              {/* Öde aksiyonu kartta doğrudan erişilebilir. Kart talimatı notu,
+                  ödemenin banka hareketiyle otomatik işlenebileceğini ayrıca
+                  açıklar; RPC aynı idempotent ödeme akışını korur. */}
             </article>
           )
         }}
