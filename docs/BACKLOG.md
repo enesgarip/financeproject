@@ -9,6 +9,9 @@ azaltır; banka↔nakit aktarımı aynı güvenli transfer RPC'sini kullanır. E
 netleştirildi ve yalnız takip edilmeyen ödemeler için korunur. Hesap formu banka
 alanlarını nakitte gizler; ödeme seçici banka, nakit ve kredi kartlarını ayrı
 gruplar; hesap kartları ve hareket penceresi daha açık kaynak dili kullanır.
+Formdaki teknik “banka hesabı + hesap türü” ikilisi tek Tür seçimine indirildi;
+banka→nakit aktarımı “Nakit çek”, nakit→banka aktarımı “Bankaya yatır” olarak
+gösterilir ve iki yön de transfer olarak muhasebeleştirilir.
 
 ## 2026-09-18 — Planlı ödemede nakit / hesap dışı kaynak — DONE
 
@@ -3433,6 +3436,17 @@ tam geçmiş ay/ortalama ile kıyaslanıyordu → metrik ay-içi yanıltıcı.
 2026-09-07 üretim öncesi takip: Hızlı menü Harcama ekle ile başlar; form kaynağı Hesap / kredi kartı olarak adlandırılır. Banka hesabı menüsü taşmaya açıktır; dekoratif üst çizgi köşelerin içine alınır.
 
 2026-09-07 görsel hotfix: Kredi kartı kartındaki dekoratif üst çizgi (`credit-entity-card::before`) `overflow-visible` geçişi sonrası yuvarlak sol üst köşeden taşıyordu (Yapı Kredi pembe hue'da bariz). Marka banner'ı çizgiyi zaten örttüğünden pseudo kredi görünümünde tamamen kapatıldı (`content: none`); banka hesabı çizgisi (16px içeri) olduğu gibi kaldı.
+
+## 2026-09-18 — UI/UX bakım paketi
+
+- Orta ekran sol rail'i 56px ikon-only düzenden 144px etiketli düzene geçti.
+- Özet ilk görünümündeki odak listesi iki maddeye indi; kart ödeme döngüsü
+  isteğe bağlı ayrıntı katmanına taşındı.
+- Manuel banka rakamı girişi Veri Kontrolü'nde tekilleştirildi. Hesaplar ekranı
+  mutabakat durumunu gösterip kanonik akışa yönlendirir; PDF tabanlı işlem
+  karşılaştırması “Hareketleri karşılaştır” adıyla ayrıştırıldı.
+- Veri Kontrolü kahraman sayısı “veri hatası” olarak adlandırıldı; rutin banka
+  doğrulaması temiz veri bütünlüğü iddiasından ayrı bir bölüm oldu.
 
 ## 2026-09-07 — Görsel rahatlatma turu (R1–R4)
 

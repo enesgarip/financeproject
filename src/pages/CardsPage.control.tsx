@@ -1,5 +1,6 @@
 import { FileText, ScanSearch, ShieldCheck } from 'lucide-react'
 import { useMemo } from 'react'
+import { Link } from 'react-router'
 import { BankLogo } from '../components/finance/BankLogo'
 import { FinancePanel, MiniStat, ProgressStrip, SectionHeader, StatusBadge } from '../components/finance/FinanceUI'
 import type {
@@ -88,11 +89,16 @@ export function CardControlCenter({
     <FinancePanel tone={attentionCount > 0 ? 'warning' : 'premium'} className="p-4 sm:p-5">
       <SectionHeader
         title="Kart kontrol merkezi"
-        description="Kart harcaması, ekstre, gelecek taksit ve banka mutabakatı aynı yerde."
+        description="Kart harcaması, ekstre ve gelecek taksitleri izle; banka rakamını Veri Kontrolü'nde doğrula."
         action={
-          <StatusBadge tone={attentionCount > 0 ? 'warning' : 'good'}>
-            {attentionCount > 0 ? `${attentionCount} kart kontrol bekliyor` : 'Tümü güncel'}
-          </StatusBadge>
+          <div className="flex flex-col items-end gap-2">
+            <StatusBadge tone={attentionCount > 0 ? 'warning' : 'good'}>
+              {attentionCount > 0 ? `${attentionCount} kart kontrol bekliyor` : 'Tümü güncel'}
+            </StatusBadge>
+            <Link to="/veri-sagligi" className="text-xs font-bold text-primary hover:underline">
+              Banka rakamını doğrula →
+            </Link>
+          </div>
         }
       />
 
@@ -200,7 +206,7 @@ export function CardControlCenter({
                   className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-primary px-3 text-xs font-bold text-primary-foreground transition hover:bg-primary/90"
                 >
                   <ScanSearch size={14} />
-                  Mutabakat
+                  Hareketleri karşılaştır
                 </button>
               </div>
             </article>

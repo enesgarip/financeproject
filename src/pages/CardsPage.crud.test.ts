@@ -55,8 +55,7 @@ function cardForm(card: Card, overrides: Record<string, string | number | null> 
   return form({
     bank_name: card.bank_name,
     card_name: card.card_name,
-    card_type: card.card_type,
-    account_kind: card.account_kind ?? 'bank',
+    entry_type: card.card_type === 'banka_karti' && card.account_kind === 'cash' ? 'cash' : card.card_type,
     holder_name: card.holder_name,
     account_number: card.account_number,
     iban: card.iban ?? null,
@@ -108,7 +107,7 @@ describe('mapCardForm', () => {
 
   it('maps a cash wallet without bank-only identity fields', () => {
     const payload = mapCardForm(cardForm(bankCard(), {
-      account_kind: 'cash',
+      entry_type: 'cash',
       bank_name: '',
       card_name: 'Cebimdeki nakit',
       account_number: 'silinmeli',

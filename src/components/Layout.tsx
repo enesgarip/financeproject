@@ -16,8 +16,8 @@ import { useDialogA11y } from './ui/use-dialog-a11y'
  * Uygulama kabuğu — Şerit (`4e`). Kart yok, gölge yok: rail sayfadan 1px
  * `line-strong` ile ayrılır, başlık satırı yine 1px çizgiyle biter.
  *
- * Kırılımlar (README): <768px alt bar + tek kolon · 768–1024px ikon-only rail
- * (56px) · ≥1024px tam rail (216px). Tasarımın 1100px sınırı Tailwind'in `lg`
+ * Kırılımlar (README): <768px alt bar + tek kolon · 768–1024px etiketli kompakt
+ * rail (144px) · ≥1024px tam rail (216px). Tasarımın 1100px sınırı Tailwind'in `lg`
  * (1024) değerine yuvarlandı — özel bir kırılım açmaya değmiyor.
  */
 export function Layout() {
@@ -58,7 +58,7 @@ function LayoutInner() {
   return (
     <div className="min-h-dvh bg-page text-ink">
       {/* ── Sol rail ── */}
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-14 flex-col border-r border-line-strong bg-raised md:flex lg:w-[216px]">
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-36 flex-col border-r border-line-strong bg-raised md:flex lg:w-[216px]">
         <div className="flex h-full flex-col gap-6 px-2.5 py-5 lg:px-3.5">
           <div className="hidden px-2 lg:block">
             <p className="font-display text-[17px] font-bold tracking-[-0.01em] text-ink">Denge</p>
@@ -92,7 +92,7 @@ function LayoutInner() {
       </aside>
 
       {/* ── İçerik ── */}
-      <div className="flex min-h-dvh flex-col md:pl-14 lg:pl-[216px]">
+      <div className="flex min-h-dvh flex-col md:pl-36 lg:pl-[216px]">
         <header className="sticky top-0 z-20 bg-page px-5 pb-3 pt-[calc(env(safe-area-inset-top)+0.875rem)] md:px-6 lg:px-[34px] lg:pb-4 lg:pt-6">
           <div className={cn('mx-auto flex items-baseline justify-between gap-4 border-b border-line-strong pb-3 lg:pb-4', contentWidth)}>
             <div className="min-w-0">
@@ -199,11 +199,8 @@ function LayoutInner() {
 }
 
 /**
- * Rail satırı. `md`–`lg` arasında yalnız ikon görünür (56px rail); etiket metni
- * `display:none` olduğu için erişilebilirlik ağacından da düşer — bu yüzden
- * bağlantının kendisi `aria-label` taşır (yorum bunu iddia ediyordu ama attribute
- * yoktu: yalnız `title` vardı, o da klavye/ekran okuyucu için ad üretmez).
- * `aria-label` içeriği ezdiği için ≥1024px'te görünen etiket iki kez okunmaz.
+ * Rail satırı. Orta genişlikte de etiket görünür; kullanıcı ikonları ezberlemek
+ * zorunda kalmaz. `aria-label` bağlantıya her kırılımda kararlı bir ad verir.
  */
 function RailLink({
   item,
@@ -235,7 +232,7 @@ function RailLink({
         return (
           <>
             <item.icon size={17} strokeWidth={itemIsActive ? 2.2 : 1.8} className="shrink-0" aria-hidden="true" />
-            <span className="hidden truncate lg:inline">{item.label}</span>
+            <span className="truncate">{item.label}</span>
           </>
         )
       }}

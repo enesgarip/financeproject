@@ -106,7 +106,8 @@ in `src/utils/*`.
 Current module split (post-Şerit):
 
 - `SeritOverview.tsx`: the Şerit body of the dashboard — hero number, liquid
-  account rows, upcoming dues, buffer row wiring. Pure presentation; every
+  account rows, upcoming dues, buffer row wiring. İlk görünüm en fazla iki odak
+  maddesi gösterir; kart ödeme döngüsü ayrıntı katmanında başlar. Pure presentation; every
   number arrives precomputed from `DashboardPage`.
 - `SeritMonthStrip.tsx`: the month strip chart (one of the few allowed raised
   blocks).
@@ -171,7 +172,7 @@ Add browser or Playwright coverage when the change affects visible layout,
 navigation, or user flow.
 
 ## 2026-09-06 — kart döngüsü
-CardPaymentCyclePanel, SeritOverview cycleContent yuvasında nakit akışının yanında yer alır. Hesap sahibi utils/cardPaymentCycle.ts; rezerv mevcut useSafeToSpend çıktısıdır. FocusActionPanel compact sürümü ilk üç öneriyi ayrıntı anahtarının dışında gösterir. Masaüstü vadeleri groupDashboardInstallments ile aynı kart/tarihin aksiyonsuz taksitlerini açılır gruplara toplar, ilk altı grubu gösterir. Ödeme aksiyonu taşıyan kayıt birleştirilmez. Borç çubuğu financeSummary.totalCardFutureInstallmentDebt ile dördüncü parçayı gösterir.
+CardPaymentCyclePanel, ilk görünümü kalabalıklaştırmamak için DashboardPage ayrıntı katmanında yer alır. Hesap sahibi utils/cardPaymentCycle.ts; rezerv mevcut useSafeToSpend çıktısıdır. FocusActionPanel compact sürümü ilk iki öneriyi ayrıntı anahtarının dışında gösterir. Masaüstü vadeleri groupDashboardInstallments ile aynı kart/tarihin aksiyonsuz taksitlerini açılır gruplara toplar, ilk altı grubu gösterir. Ödeme aksiyonu taşıyan kayıt birleştirilmez. Borç çubuğu financeSummary.totalCardFutureInstallmentDebt ile dördüncü parçayı gösterir.
 
 ## 2026-09-15 — Gün ve vade sınırları
 

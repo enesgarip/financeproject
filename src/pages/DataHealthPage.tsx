@@ -439,18 +439,19 @@ export function DataHealthPage() {
   return (
     <>
       <section className="space-y-4">
-        {/* Şerit (`3d`): kahraman = bulgu sayısı, altında tür kırılımı ve 6px oran çubuğu. */}
+        {/* Kahraman yalnız veri bütünlüğü bulgularını sayar. Rutin banka
+            doğrulaması ayrı başlıkta gösterilir; "0" iki kavramı karıştırmaz. */}
         <div>
           <HeroNumber
             label="Veri kontrolü"
             value={visibleIssues.length}
             tone={stats.errors > 0 ? 'danger' : visibleIssues.length > 0 ? 'warning' : 'brand'}
-            unitOverride="bulgu"
+            unitOverride="veri hatası"
             description={
               loading
                 ? 'Kontroller çalışıyor…'
                 : visibleIssues.length === 0
-                  ? `${coverage.areasChecked} alanın hepsi temiz — ledger, bakiye, borç kırılımı ve sınıflandırmalarda sapma yok.`
+                  ? `${coverage.areasChecked} alanda veri tutarsızlığı bulunmadı. Rutin banka doğrulamalarını aşağıdan ayrıca yapabilirsin.`
                   : `${stats.errors} hata · ${stats.warnings} uyarı · ${stats.info} bilgi · ${coverage.cleanAreas}/${coverage.areasChecked} alan temiz`
             }
           />
@@ -538,12 +539,18 @@ export function DataHealthPage() {
         </div>
 
         {!loading && data.cards.length > 0 ? (
-          <LiveReconciliationPanel
-            cards={data.cards}
-            onChanged={async () => {
-              await loadData()
-            }}
-          />
+          <section aria-labelledby="bank-verification-heading" className="border-t border-line pt-4">
+            <div className="mb-3">
+              <h2 id="bank-verification-heading" className="font-bold text-ink">Rutin banka doğrulaması</h2>
+              <p className="mt-1 text-sm text-ink-muted">Veri hatasından bağımsızdır: uygulamadaki rakamı bankada gördüğün güncel bakiye veya borçla karşılaştır.</p>
+            </div>
+            <LiveReconciliationPanel
+              cards={data.cards}
+              onChanged={async () => {
+                await loadData()
+              }}
+            />
+          </section>
         ) : null}
 
         {!loading ? (

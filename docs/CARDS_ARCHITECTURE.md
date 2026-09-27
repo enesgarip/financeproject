@@ -25,11 +25,13 @@ repositories, services, or focused `CardsPage.*` modules.
 - `CardsPage.overview.tsx`: account hub and credit-card overview panels
 - `CardsPage.control.tsx`: card-first control center; combines statement/current/
   provision/scheduled-installment buckets with the latest real-bank debt
-  reconciliation and exposes import/reconciliation actions
-- `components/finance/LiveReconciliationPanel.tsx`: reused on the cards summary
-  with credit-card rows only. It accepts the bank's total remaining card burden
-  including future installments and uses the total-only bank snapshot RPC;
-  payment/account debit remains a separate explicit action
+  reconciliation and exposes import actions; its status links to the canonical
+  reconciliation form in Data Health
+- `components/finance/LiveReconciliationPanel.tsx`: rendered only in Data Health
+  so manual real-bank balance/debt entry has one canonical surface. It accepts
+  the bank's total remaining card burden including future installments and uses
+  the total-only bank snapshot RPC; payment/account debit remains a separate
+  explicit action
 - `CardsPage.expense.tsx`: quick expense and installment expense entry
   surface; loads editable repeat suggestions for recent cash expenses and
   routes paid-count installment imports to `record_card_installment_carryover`
@@ -237,5 +239,12 @@ gösterir. Şema ayrımı `cards.account_kind` (`bank | cash`) üzerindedir;
 cüzdanında banka adı sunucuda `Nakit` olarak normalize edilir; IBAN ve hesap
 numarası tutulmaz. Ödeme seçicisindeki “Takip dışı (bakiye değişmez)” bundan
 farklıdır ve izlenen bakiyeye dokunmaz.
+
+Ekleme/düzenleme formu bu iç şema ayrımını kullanıcıya iki seçim olarak
+göstermez. Tek “Tür” alanı Kredi kartı / Banka hesabı / Nakit seçeneklerini
+sunar; Nakit seçimi içeride `card_type='banka_karti'` + `account_kind='cash'`
+olarak eşlenir. Banka→nakit aktarımı “Nakit çek”, nakit→banka aktarımı
+“Bankaya yatır” diye adlandırılır; ikisi de gelir/gider değil, aynı atomik
+`transfer_between_accounts` işlemidir.
 
 2026-09-07 üretim öncesi takip: Hızlı menü Harcama ekle ile başlar; form kaynağı Hesap / kredi kartı olarak adlandırılır. Banka hesabı menüsü taşmaya açıktır; dekoratif üst çizgi köşelerin içine alınır.

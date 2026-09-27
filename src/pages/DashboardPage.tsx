@@ -374,7 +374,6 @@ export function DashboardPage() {
           strip={monthStrip}
           upcoming={sortedUpcoming}
           priorityContent={<FocusActionPanel compact actions={focusActions} safeToSpendAmount={safeToSpend.amount} onboarding={isOnboarding} />}
-          cycleContent={<CardPaymentCyclePanel data={data} from={monthMeta.today} buffer={safeToSpend.buffer} reserved={safeToSpend.reserved} reservedKnown={safeToSpend.reservedKnown} />}
           cardBuckets={{
             statement: summary.totalCardStatementDebt,
             current: summary.totalCardCurrentPeriod,
@@ -425,6 +424,12 @@ export function DashboardPage() {
       >
         {detailsEverOpened ? (
         <div className="grid min-w-0 gap-5 lg:grid-cols-12 lg:items-start">
+          <DetailSectionDivider label="Kart ödeme döngüsü" />
+
+          <div className="min-w-0 lg:col-span-12">
+            <CardPaymentCyclePanel data={data} from={monthMeta.today} buffer={safeToSpend.buffer} reserved={safeToSpend.reserved} reservedKnown={safeToSpend.reservedKnown} />
+          </div>
+
           {/* ─ Odak ve hatırlatıcılar ─ */}
 
           {hasStatementReminders ? (

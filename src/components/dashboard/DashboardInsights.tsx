@@ -56,7 +56,7 @@ export function FocusActionPanel({
   const visibleActions = showAll ? actions : actions.slice(0, 4)
   const hiddenCount = Math.max(0, actions.length - 4)
 
-  if (compact) return <section className="mt-5 border-t border-line pt-3" aria-label="Bugünün odağı"><h2 className="text-sm font-semibold">Bugünün odağı</h2><ul className="mt-1 divide-y divide-line">{actions.slice(0, 3).map((action) => <li key={action.id}><Link to={action.to} className="block min-h-11 py-2 text-sm"><span className="font-semibold">{maskText(action.title)}</span><span className="mt-1 block text-xs text-ink-muted">{maskText(action.description)} · {action.cta} →</span></Link></li>)}</ul></section>
+  if (compact) return <section className="mt-5 border-t border-line pt-3" aria-label="Bugünün odağı"><h2 className="text-sm font-semibold">Bugünün odağı</h2><ul className="mt-1 divide-y divide-line">{actions.slice(0, 2).map((action) => <li key={action.id}><Link to={action.to} className="block min-h-11 py-2 text-sm"><span className="font-semibold">{maskText(action.title)}</span><span className="mt-1 block text-xs text-ink-muted">{maskText(action.description)} · {action.cta} →</span></Link></li>)}</ul></section>
   return (
     <Card className="border-0 bg-raised py-0 ring-1 ring-line-strong">
       <CardContent className="p-4">
@@ -172,4 +172,3 @@ function FocusActionCard({ action }: { action: FocusAction }) {
     </Link>
   )
 }
-

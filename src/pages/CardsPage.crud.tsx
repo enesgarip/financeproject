@@ -22,11 +22,14 @@ type CardRowsHelper = {
 type OpenAccountTransaction = (card: Card, reload: () => Promise<void>, cards: Card[], type?: 'in' | 'out' | 'transfer') => void
 
 export function getCardInitialValues(row?: Card) {
+  const entryType = row?.card_type === 'banka_karti' && row.account_kind === 'cash'
+    ? 'cash'
+    : row?.card_type ?? 'kredi_karti'
+
   return {
     bank_name: row?.bank_name ?? '',
     card_name: row?.card_name ?? '',
-    card_type: row?.card_type ?? 'kredi_karti',
-    account_kind: row?.account_kind ?? 'bank',
+    entry_type: entryType,
     holder_name: row?.holder_name ?? '',
     account_number: row?.account_number ?? '',
     iban: row?.iban ?? '',
@@ -43,9 +46,10 @@ export function getCardInitialValues(row?: Card) {
 }
 
 export function mapCardForm(formData: FormData, userId: string, editing: Card | null = null): CardPayload {
-  const cardType = formData.get('card_type') as Card['card_type']
+  const entryType = String(formData.get('entry_type') ?? '')
+  const cardType: Card['card_type'] = entryType === 'kredi_karti' ? 'kredi_karti' : 'banka_karti'
   const isCreditCard = cardType === 'kredi_karti'
-  const accountKind: AccountKind = isCreditCard ? 'bank' : formData.get('account_kind') === 'cash' ? 'cash' : 'bank'
+  const accountKind: AccountKind = entryType === 'cash' ? 'cash' : 'bank'
   const isCash = !isCreditCard && accountKind === 'cash'
   const statementDebt = isCreditCard ? parseNumber(formData.get('statement_debt_amount')) : 0
   const currentPeriod = isCreditCard ? parseNumber(formData.get('current_period_spending')) : 0
