@@ -90,7 +90,8 @@ Kırılımlar:
 - **< 768px:** mobil alt bar (`BottomNav`) + tek kolon. Alt bar yüzen hap
   değil, sayfanın dibine oturan düz banttır: ayrım 1px `line-strong` çizgisi,
   gölge yok, 5 slot.
-- **768–1024px:** ikon-only sol rail (56px).
+- **768–1024px:** etiketli kompakt sol rail (144px). Orta genişlikte kullanıcı
+  ikonları ezberlemek zorunda bırakılmaz.
 - **≥ 1024px:** tam sol rail (216px), marka + etiketli navigasyon + kullanıcı/
   çıkış bloğu. Rail sayfadan 1px `line-strong` ile ayrılır.
 

@@ -92,7 +92,6 @@ export function SeritOverview({
   health,
   onPay,
   priorityContent,
-  cycleContent,
 }: {
   monthLabel: string
   today: Date
@@ -120,7 +119,6 @@ export function SeritOverview({
   upcoming: DashboardUpcomingItem[]
   cardBuckets: { statement: number; current: number; provision: number; total: number; future: number }
   priorityContent?: ReactNode
-  cycleContent?: ReactNode
   creditUsageRate: number
   totalCreditLimit: number
   netWorth: number
@@ -201,7 +199,6 @@ export function SeritOverview({
         )}
 
         {priorityContent}
-        {cycleContent}
         <div className="mt-5">
           <SeritMonthStrip strip={strip} monthLabel={monthLabel} />
         </div>

@@ -6,6 +6,7 @@ import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
 import type { Card } from '../types/database'
 import { parseNumber } from '../utils/formatCurrency'
 import { diffTL, sumTL } from '../utils/money'
+import { transferActionLabel } from './CardsPage.movementLabels'
 
 export function MovementModal({
   card,
@@ -38,9 +39,10 @@ export function MovementModal({
   const isTransfer = type === 'transfer'
   const amountValue = parseNumber(amount)
   const target = targetAccounts.find((account) => account.id === targetCardId)
+  const transferLabel = transferActionLabel(card, target)
 
   return (
-    <SimpleModal title={isTransfer ? 'Para aktar' : 'Para hareketi'} open={Boolean(card)} onClose={onClose}>
+    <SimpleModal title={isTransfer ? transferLabel : 'Para hareketi'} open={Boolean(card)} onClose={onClose}>
       <form onSubmit={onSubmit} className="space-y-4">
         <div className="rounded-xl border border-line-strong bg-page p-3 text-sm text-ink-muted">
           <p className="font-semibold text-ink">{card?.card_name}</p>
@@ -64,7 +66,7 @@ export function MovementModal({
         {isTransfer ? (
           <>
             <label className="block text-sm font-semibold text-ink">
-              Hedef
+              {transferLabel === 'Nakit çek' ? 'Nakit cüzdanı' : transferLabel === 'Bankaya yatır' ? 'Yatırılacak banka hesabı' : 'Hedef'}
               <Select
                 required
                 value={targetCardId}
@@ -95,7 +97,7 @@ export function MovementModal({
           disabled={saving}
           className="h-12 w-full"
         >
-          {saving ? 'İşleniyor...' : isTransfer ? 'Transferi tamamla' : 'Bakiyeyi güncelle'}
+          {saving ? 'İşleniyor...' : isTransfer ? transferLabel : 'Bakiyeyi güncelle'}
         </Button>
       </form>
     </SimpleModal>

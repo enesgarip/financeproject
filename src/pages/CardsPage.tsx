@@ -21,7 +21,6 @@ import { CalendarClock, FileText, History, Info, ScanSearch, ShieldCheck } from 
 import { CrudPage } from '../components/CrudPage'
 import { CategoryCleanupPanel } from '../components/finance/CategoryCleanupPanel'
 import { FinancePaymentDrawer } from '../components/finance/FinancePaymentDrawer'
-import { LiveReconciliationPanel } from '../components/finance/LiveReconciliationPanel'
 import { CardInstallmentCalendarPanel } from '../components/finance/CardInstallmentCalendarPanel'
 import { CardInstallmentIntentPanel } from '../components/finance/CardInstallmentIntentPanel'
 import { CardInstallmentExpensesPanel } from '../components/finance/CardInstallmentExpensesPanel'
@@ -329,16 +328,6 @@ export function CardsPage() {
                       formatAmount={formatAmount}
                     />
                   </div>
-                  <LiveReconciliationPanel
-                    cards={cardRows.filter((card) => card.card_type === 'kredi_karti')}
-                    reconciliations={reconciliations}
-                    onReloadReconciliations={loadReconciliations}
-                    onChanged={async () => {
-                      // loadReconciliations burada YOK: managed panel tazelemeyi
-                      // zaten onReloadReconciliations ile yapıyor.
-                      await Promise.all([reload(), invalidateSnapshot()])
-                    }}
-                  />
                   {/* Masaüstünde CardControlCenter asıl kart yüzeyi; CreditCardOverview yalnız
                       mobilde (CardControlCenter orada gizli) aynı kırılımı tekrar etmesin diye. */}
                   <div className="md:hidden">
@@ -409,7 +398,7 @@ export function CardsPage() {
             </div>
           )
         }}
-        getInitialValues={(row) => ({ ...getCardInitialValues(row), ...(!row && section === 'hesaplar' ? { card_type: 'banka_karti' } : {}) })}
+        getInitialValues={(row) => ({ ...getCardInitialValues(row), ...(!row && section === 'hesaplar' ? { entry_type: 'banka_karti' } : {}) })}
         mapForm={mapCardForm}
         renderTitle={renderCardTitle}
         renderSubtitle={renderCardSubtitle}
@@ -490,7 +479,7 @@ export function CardsPage() {
                   className="flex w-full items-center gap-2 px-3 py-2 text-sm text-ink hover:bg-black/[.03] dark:hover:bg-white/[.04]"
                 >
                   <ScanSearch size={14} />
-                  Mutabakat
+                  Hareketleri karşılaştır
                 </button>
               </>
             )

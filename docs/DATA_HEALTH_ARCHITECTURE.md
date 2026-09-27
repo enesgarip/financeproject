@@ -1,5 +1,12 @@
 # Data Health Architecture Note
 
+The hero count represents data-integrity findings only. Routine real-bank
+balance/debt verification is a separate section headed “Rutin banka
+doğrulaması”; a clean integrity result must not imply that every bank account
+was recently verified. `LiveReconciliationPanel` is canonical on this route;
+other screens may show status and deep-link here, but must not duplicate its
+manual amount-entry form.
+
 Last reviewed: 2026-08-09
 
 This note maps `/veri-sagligi` (`DataHealthPage`). Treat this route as an
