@@ -61,6 +61,19 @@ lazy boundary.
 
 ## Visual Hierarchy
 
+- Hesap ve kart başlığındaki kalp `cards.is_favorite` alanını değiştirir.
+  Favoriler kendi türleri içindeki mevcut sırayı koruyarak listenin ve işlem
+  seçicilerinin başına alınır; hızlı harcama formunda ayrıca tek dokunuşluk
+  kısayol olarak görünür. Bu tercih finansal alanlara veya ledger'a dokunmaz.
+- Uzun satır ayrıntıları varsayılan kapalıdır: banka/nakit kartında hesap
+  bilgileri ile son hareketler; kredi kartında dönem, limit ve taksit satırları
+  native `details` bölümlerinde açılır. Ana tutar ve birincil eylemler her zaman
+  görünür kalır.
+- Kredi Kartları bölümünün `HeroNumber` değeri tüm kredi kartlarının kesinleşmiş
+  `current_period_spending` toplamıdır (“Bu dönem kesilecek”). Henüz zamanı
+  gelmemiş taksitler ve provizyonlar bu toplamda yer almaz; toplam kart yükü
+  kart satırlarında ve hero açıklamasında ayrı kalır.
+
 - The page title lives in the app shell (`Layout` + `navigation.ts` routeMeta);
   `CrudPage` no longer renders its own page header (removed in Ş4). It only
   renders the toolbar layer (record count, search, add action); its

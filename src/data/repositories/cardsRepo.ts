@@ -20,6 +20,11 @@ export async function fetchCardsByType(cardType: Card['card_type']): Promise<Res
   return resultFromSupabase((data as Card[]) ?? [], error, 'Kartlar yüklenemedi.')
 }
 
+export async function updateCardFavorite(cardId: string, isFavorite: boolean): Promise<Result<void>> {
+  const { error } = await supabase.from('cards').update({ is_favorite: isFavorite }).eq('id', cardId)
+  return voidResultFromSupabase(error, 'Favori tercihi kaydedilemedi.')
+}
+
 export async function fetchProvisionExpenses(): Promise<Result<CardExpense[]>> {
   const { data, error } = await supabase
     .from('card_expenses')

@@ -4,6 +4,7 @@ import { Button } from '../components/ui/button'
 import { Select } from '../components/ui/input'
 import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
 import type { Card } from '../types/database'
+import { favoritesFirst } from '../utils/accountFavorites'
 import { parseNumber } from '../utils/formatCurrency'
 import { diffTL, sumTL } from '../utils/money'
 import { transferActionLabel } from './CardsPage.movementLabels'
@@ -74,9 +75,9 @@ export function MovementModal({
                 className="mt-1"
               >
                 <option value="">{targetAccounts.length > 0 ? 'Hedef hesap seç' : 'Transfer için ikinci hesap gerekli'}</option>
-                {targetAccounts.map((account) => (
+                {favoritesFirst(targetAccounts).map((account) => (
                   <option key={account.id} value={account.id}>
-                    {account.account_kind === 'cash' ? 'Nakit' : account.bank_name} · {account.card_name} ({formatAmount(account.current_balance)})
+                    {account.is_favorite ? '♥ ' : ''}{account.account_kind === 'cash' ? 'Nakit' : account.bank_name} · {account.card_name} ({formatAmount(account.current_balance)})
                   </option>
                 ))}
               </Select>

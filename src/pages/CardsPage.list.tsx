@@ -1,4 +1,4 @@
-import { AlertTriangle, Banknote, Check, CheckCircle2, Copy, ShieldCheck } from 'lucide-react'
+import { AlertTriangle, Banknote, Check, CheckCircle2, Copy, Heart, ShieldCheck } from 'lucide-react'
 import { useCallback, useMemo, useState } from 'react'
 import { Link } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
@@ -150,6 +150,7 @@ export function CreditAccountListCard({
   formatAmount = formatCurrency,
   onPayDebt,
   onAddExpense,
+  onToggleFavorite,
   onChanged,
 }: {
   row: Card
@@ -165,6 +166,7 @@ export function CreditAccountListCard({
   formatAmount?: (value: number | null | undefined) => string
   onPayDebt: (card: Card) => void
   onAddExpense: (card: Card, mode: 'cash' | 'installment') => void
+  onToggleFavorite: (card: Card) => void
   onChanged?: () => void | Promise<void>
 }) {
   const [ibanCopied, setIbanCopied] = useState(false)
@@ -219,7 +221,18 @@ export function CreditAccountListCard({
               <p className="mt-1 truncate text-sm font-medium text-ink-muted">{row.account_kind === 'cash' ? 'Fiziksel nakit cüzdanı' : `${row.bank_name} · banka hesabı`}</p>
             </div>
           </div>
-          <div className="entity-card-menu">{menu}</div>
+          <div className="flex shrink-0 items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => onToggleFavorite(row)}
+              aria-label={row.is_favorite ? `${row.card_name} favorilerden çıkar` : `${row.card_name} favorilere ekle`}
+              aria-pressed={row.is_favorite}
+              className="tap-target grid size-9 place-items-center rounded-lg text-ink-muted transition hover:bg-primary/8 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <Heart size={18} fill={row.is_favorite ? 'currentColor' : 'none'} className={row.is_favorite ? 'text-primary' : ''} />
+            </button>
+            <div className="entity-card-menu">{menu}</div>
+          </div>
         </div>
 
         <div className="relative mt-5 border-t border-line pt-4">
@@ -229,12 +242,17 @@ export function CreditAccountListCard({
           </p>
         </div>
 
-        <LineGroup className="mt-3 border-t border-line pt-1">
-          {row.note ? <CardDatum label="Not" value={row.note} /> : null}
-        </LineGroup>
+        <details open={ledgerOpen || undefined} className="group mt-3 border-t border-line pt-1">
+          <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between text-sm font-semibold text-ink-muted marker:hidden hover:text-ink [&::-webkit-details-marker]:hidden">
+            Hesap bilgileri ve son hareketler
+            <span aria-hidden="true" className="text-xs transition-transform group-open:rotate-180">⌄</span>
+          </summary>
+          <LineGroup>
+            {row.note ? <CardDatum label="Not" value={row.note} /> : null}
+          </LineGroup>
 
-        {row.iban ? (
-          <div className="mt-3 rounded-xl border border-line-strong bg-page px-3 py-2.5">
+          {row.iban ? (
+            <div className="mt-3 rounded-xl border border-line-strong bg-page px-3 py-2.5">
             <p className="finance-label">IBAN</p>
             <button
               type="button"
@@ -244,12 +262,12 @@ export function CreditAccountListCard({
               <span className="min-w-0 truncate">{balancesHidden ? '••••' : formatIban(row.iban)}</span>
               {ibanCopied ? <Check size={14} className="shrink-0 text-success" /> : <Copy size={14} className="shrink-0 text-ink-muted" />}
             </button>
-          </div>
-        ) : null}
+            </div>
+          ) : null}
 
-        <AccountRecentTransactions card={row} formatAmount={formatAmount} />
-
-        {ledgerOpen ? <AccountLedgerPanel card={row} onChanged={onChanged} formatAmount={formatAmount} /> : null}
+          <AccountRecentTransactions card={row} formatAmount={formatAmount} />
+          {ledgerOpen ? <AccountLedgerPanel card={row} onChanged={onChanged} formatAmount={formatAmount} /> : null}
+        </details>
         {rowActions}
       </article>
     )
@@ -305,6 +323,15 @@ export function CreditAccountListCard({
             <div className="grid size-10 place-items-center rounded-lg bg-white/15 text-xs font-black uppercase tracking-tight text-white ring-1 ring-white/25">
               {getBankBrand(row.bank_name).code}
             </div>
+            <button
+              type="button"
+              onClick={() => onToggleFavorite(row)}
+              aria-label={row.is_favorite ? `${row.card_name} favorilerden çıkar` : `${row.card_name} favorilere ekle`}
+              aria-pressed={row.is_favorite}
+              className="tap-target grid size-10 place-items-center rounded-lg bg-white/15 text-white ring-1 ring-white/25 transition hover:bg-white/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+            >
+              <Heart size={18} fill={row.is_favorite ? 'currentColor' : 'none'} />
+            </button>
             <div className="[&>div>button]:border-white/30 [&>div>button]:bg-white/15 [&>div>button]:text-white [&>div>button:hover]:bg-white/25 [&>div>button:hover]:text-white">
               {menu}
             </div>
@@ -349,7 +376,12 @@ export function CreditAccountListCard({
         </span>
       </div>
 
-      <LineGroup className="mt-2">
+      <details className="group mt-2 border-t border-line pt-1">
+        <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between text-sm font-semibold text-ink-muted marker:hidden hover:text-ink [&::-webkit-details-marker]:hidden">
+          Dönem, limit ve taksit ayrıntıları
+          <span aria-hidden="true" className="text-xs transition-transform group-open:rotate-180">⌄</span>
+        </summary>
+      <LineGroup>
         <CardDatum label="Kalan kart limiti" value={formatAmount(stats.availableLimit)} tone="good" />
         <CardDatum label="Dönem içi" value={formatAmount(row.current_period_spending)} />
         {statementEstimate ? (
@@ -372,6 +404,7 @@ export function CreditAccountListCard({
             : ''}
         </p>
       ) : null}
+      </details>
 
       <div className="mt-3 grid grid-cols-2 gap-2">
         {openStatements.length > 0 ? (

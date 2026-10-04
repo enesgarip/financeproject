@@ -82,6 +82,8 @@ export type Card = BaseRow & {
   bank_name: string
   card_name: string
   card_type: CardType
+  /** İşlem seçicilerinde ve hesap/kart listelerinde kullanıcı kontrollü öncelik. */
+  is_favorite?: boolean
   /** `banka_karti` satırının banka hesabı mı fiziksel nakit cüzdanı mı olduğu. Eski payload'larda yoksa banka hesabıdır. */
   account_kind?: AccountKind
   holder_name: string | null

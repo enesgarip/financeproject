@@ -10,6 +10,7 @@ import type { Asset, Card } from '../types/database'
 import { formatNumber, parseNumber } from '../utils/formatCurrency'
 import { diffTL, greaterThanTL, roundTL, sumTL } from '../utils/money'
 import { assetTradeRequiresQuantity, type AssetTradeDirection } from '../services/assetTrades'
+import { favoritesFirst } from '../utils/accountFavorites'
 
 export type AssetTradeDraft = {
   asset: Asset
@@ -123,9 +124,9 @@ export function AssetTradeModal({
             disabled={accounts.length === 0}
           >
             <option value="">{accounts.length > 0 ? 'Hesap seç' : 'Banka hesabı yok'}</option>
-            {accounts.map((account) => (
+            {favoritesFirst(accounts).map((account) => (
               <option key={account.id} value={account.id}>
-                {account.bank_name} · {account.card_name} ({formatAmount(account.current_balance)})
+                {account.is_favorite ? '♥ ' : ''}{account.bank_name} · {account.card_name} ({formatAmount(account.current_balance)})
               </option>
             ))}
           </Select>
