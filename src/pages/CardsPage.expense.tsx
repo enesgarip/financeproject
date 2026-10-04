@@ -22,6 +22,7 @@ import { cardProvisionAmount } from '../utils/financeSummary'
 import { getLastUsed, setLastUsed } from '../utils/lastUsed'
 import { diffTL, sumTL } from '../utils/money'
 import { isMissingSupabaseCapabilityError, missingSupabaseCapabilityMessage } from '../utils/supabaseErrors'
+import { favoriteAccounts, favoritesFirst } from '../utils/accountFavorites'
 import { openNativePicker } from '../lib/utils'
 import { cardOptionLabel, moneyShare } from './CardsPage.helpers'
 import { OverviewStat } from './CardsPage.overview'
@@ -88,7 +89,11 @@ export function QuickExpensePanel({
   const [recentExpenses, setRecentExpenses] = useState<CardExpense[]>([])
   const [vehicles, setVehicles] = useState<Car[]>([])
   const [carId, setCarId] = useState('')
-  const cards = useMemo(() => rows.filter((row) => row.card_type === 'kredi_karti' || row.card_type === 'banka_karti'), [rows])
+  const cards = useMemo(
+    () => favoritesFirst(rows.filter((row) => row.card_type === 'kredi_karti' || row.card_type === 'banka_karti')),
+    [rows],
+  )
+  const favoriteCards = useMemo(() => favoriteAccounts(cards), [cards])
   // 3 çip yeter: 6 çip formun üstünü kalabalıklaştırıyordu (Faz UI-R4).
   const repeatSuggestions = useMemo(() => buildRepeatSuggestions(recentExpenses, 3), [recentExpenses])
   // Ayrıntılar katlaması: taksitli mod required alanlar içerdiğinden (sıradaki
@@ -495,6 +500,30 @@ export function QuickExpensePanel({
               </div>
             </div>
           ) : null}
+          {favoriteCards.length > 0 ? (
+            <div role="group" aria-label="Favori hesap ve kartlar" className="flex flex-col gap-1.5">
+              <p className="text-xs font-semibold text-ink-muted">Favoriler</p>
+              <div className="flex flex-wrap gap-1.5">
+                {favoriteCards.map((card) => (
+                  <button
+                    key={card.id}
+                    type="button"
+                    aria-pressed={activeCardId === card.id}
+                    onClick={() => {
+                      setCardId(card.id)
+                      setLastUsed('expenseCard', card.id)
+                      setPaymentMode('cash')
+                      setPaidInstallments('0')
+                      setLocalError('')
+                    }}
+                    className={`tap-target rounded-full border px-3 py-1.5 text-xs font-semibold transition ${activeCardId === card.id ? 'border-primary/50 bg-primary/10 text-primary' : 'border-line-strong bg-raised text-ink hover:border-primary/40'}`}
+                  >
+                    ♥ {card.card_name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
           <label className="block text-sm font-semibold text-ink">
             Hesap / kredi kartı
             <select
@@ -513,7 +542,7 @@ export function QuickExpensePanel({
             >
               {cards.map((card) => (
                 <option key={card.id} value={card.id}>
-                  {cardOptionLabel(card)}
+                  {card.is_favorite ? '♥ ' : ''}{cardOptionLabel(card)}
                 </option>
               ))}
             </select>

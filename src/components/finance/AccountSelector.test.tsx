@@ -61,4 +61,21 @@ describe('AccountSelector hesap dışı kaynak', () => {
     expect(screen.getByRole('group', { name: 'Kredi kartları' })).toBeTruthy()
     expect(screen.getByRole('option', { name: /Cüzdan \(Nakit cüzdanı/i })).toBeTruthy()
   })
+
+  it('favorileri en üstte ayrı gösterir ve normal grupta tekrarlamaz', () => {
+    const base = {
+      id: 'normal', user_id: 'u', bank_name: 'Banka', card_name: 'Normal', card_type: 'banka_karti',
+      holder_name: null, account_number: null, limit_group_name: null, current_balance: 100,
+      credit_limit: 0, debt_amount: 0, statement_debt_amount: 0, current_period_spending: 0,
+      provision_amount: 0, statement_day: null, due_day: null, note: null,
+      created_at: '', updated_at: '',
+    } satisfies Card
+
+    render(<AccountSelector accounts={[base, { ...base, id: 'favorite', card_name: 'Favori', is_favorite: true }]} value="" onChange={vi.fn()} />)
+
+    const favorites = screen.getByRole('group', { name: 'Favoriler' })
+    expect(favorites.querySelectorAll('option')).toHaveLength(1)
+    expect(screen.getByRole('option', { name: /♥ Favori/ })).toBeTruthy()
+    expect(screen.getByRole('group', { name: 'Banka hesapları' }).querySelectorAll('option')).toHaveLength(1)
+  })
 })

@@ -30,10 +30,12 @@ import { buildStatementPaidMap, statementRemainingAmount } from '../utils/cardSt
 import { dateInputValue, formatDate } from '../utils/date'
 import { cardPayableDebt } from '../utils/financeSummary'
 import { minimumCardPaymentRate } from '../utils/financeObligationRules'
+import { favoritesFirst } from '../utils/accountFavorites'
 import { isMissingSupabaseCapabilityError, missingSupabaseCapabilityMessage } from '../utils/supabaseErrors'
 import { useFinancePaymentDrawer } from '../hooks/useFinancePaymentDrawer'
 import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
 import { lazyWithReload } from '../lib/lazyWithReload'
+import { updateCardFavorite } from '../data/repositories/cardsRepo'
 import { AccountHubPanel, CreditCardOverview } from './CardsPage.overview'
 import { CardControlCenter } from './CardsPage.control'
 import { ProvisionPanel, StatementArchivePanel, StatementPanel } from './CardsPage.statements'
@@ -242,6 +244,15 @@ export function CardsPage() {
     )
   }
 
+  async function toggleFavorite(card: Card, reload: () => Promise<void>, setError: (message: string) => void) {
+    const result = await updateCardFavorite(card.id, !card.is_favorite)
+    if (!result.ok) {
+      setError(result.error.message ?? 'Favori tercihi kaydedilemedi.')
+      return
+    }
+    await Promise.all([reload(), invalidateSnapshot()])
+  }
+
   return (
     <>
       <CrudPage
@@ -256,6 +267,7 @@ export function CardsPage() {
         orderBy="card_type"
         showList={section === 'kartlar' || section === 'hesaplar'}
         listFilter={(row) => row.card_type === (section === 'hesaplar' ? 'banka_karti' : 'kredi_karti')}
+        sortRows={favoritesFirst}
         afterSave={async () => {
           await invalidateSnapshot()
         }}
@@ -418,6 +430,7 @@ export function CardsPage() {
             formatAmount={formatAmount}
             onPayDebt={(card) => void openDebtPayment(card, helpers.rows as Card[], helpers.reload)}
             onAddExpense={focusQuickExpense}
+            onToggleFavorite={(card) => void toggleFavorite(card, helpers.reload, helpers.setError)}
             onChanged={() => refreshCardsAndProvisions(helpers.reload)}
           />
         )}

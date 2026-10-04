@@ -65,6 +65,7 @@ export function mapCardForm(formData: FormData, userId: string, editing: Card | 
     bank_name: isCash ? 'Nakit' : String(formData.get('bank_name') ?? '').trim(),
     card_name: String(formData.get('card_name') ?? ''),
     card_type: cardType,
+    is_favorite: editing?.is_favorite ?? false,
     account_kind: accountKind,
     holder_name: isCreditCard ? String(formData.get('holder_name') ?? '').trim() || null : null,
     account_number: !isCreditCard && !isCash ? String(formData.get('account_number') ?? '').trim() || null : null,

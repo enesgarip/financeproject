@@ -14,10 +14,8 @@ import {
   statementRemainingAmount,
 } from '../utils/cardStatementPayments'
 import { formatDate } from '../utils/date'
-import { formatPercent } from '../utils/formatCurrency'
 import { daysUntil } from '../utils/date'
 import { sumTL } from '../utils/money'
-import { totalCreditLimit } from '../utils/financeSummary'
 import { HeroNumber, SERIT_TEXT } from '../components/serit'
 
 export function CardsSectionHero({
@@ -41,25 +39,18 @@ export function CardsSectionHero({
   if (section === 'ozet') return null
 
   if (section === 'kartlar') {
-    const debt = sumTL(creditCards.map((card) => card.debt_amount))
-    // Ortak limit grubu kart başına TOPLANMAZ (çift sayım); grup başına max —
-    // kontrol merkeziyle aynı kaynak (denetim 2026-08-12 K12).
-    const limit = totalCreditLimit(creditCards)
-    const usage = limit > 0 ? Math.min(100, (debt / limit) * 100) : 0
+    const current = sumTL(creditCards.map((card) => card.current_period_spending))
     return (
       <HeroNumber
-        label="Toplam kart yükü"
-        value={debt}
-        progress={limit > 0 ? usage : undefined}
-        progressTone={usage >= 80 ? 'danger' : usage >= 55 ? 'warning' : 'brand'}
+        label="Bu dönem kesilecek"
+        value={current}
         description={
-          limit > 0 ? (
+          creditCards.length > 0 ? (
             <>
-              {creditCards.length} kredi kartı · gelecek taksitler ve provizyon dahil · limit kullanımı{' '}
-              <span className="serit-num font-semibold text-ink">{formatPercent(usage)}</span>
+              {creditCards.length} kredi kartının dönem içi toplamı · gelecek taksitler ve provizyon hariç · toplam kart yükü kartlarda ayrı gösterilir
             </>
           ) : (
-            `${creditCards.length} kredi kartı`
+            `${creditCards.length} kredi kartı · ekstreye dönüşecek dönem içi borç yok`
           )
         }
       />

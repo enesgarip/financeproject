@@ -11,6 +11,7 @@ import type { Card, CardInstallment, CardInstallmentIntent } from '../../types/d
 import { installmentChoicesWith } from '../../utils/cardInstallmentCalendar'
 import { buildPlannedInstallmentHint } from '../../utils/installmentHorizon'
 import { parseNumber } from '../../utils/formatCurrency'
+import { favoritesFirst } from '../../utils/accountFavorites'
 import { isMissingSupabaseCapabilityError, missingSupabaseCapabilityMessage } from '../../utils/supabaseErrors'
 import { Button } from '../ui/button'
 import { Card as SurfaceCard, CardContent, CardHeader, CardTitle } from '../ui/card'
@@ -75,7 +76,7 @@ export function CardInstallmentIntentPanel({ cards, installments = [], onChanged
   const [installmentCount, setInstallmentCount] = useState(3)
   const [validDays, setValidDays] = useState(2)
 
-  const creditCards = cards.filter((card) => card.card_type === 'kredi_karti')
+  const creditCards = favoritesFirst(cards.filter((card) => card.card_type === 'kredi_karti'))
 
   const load = useCallback(async () => {
     const result = await fetchCardInstallmentIntents()
@@ -187,7 +188,7 @@ export function CardInstallmentIntentPanel({ cards, installments = [], onChanged
               <Select value={cardId} onChange={(event) => setCardId(event.target.value)} className="mt-1">
                 <option value="">Fark etmez</option>
                 {creditCards.map((card) => (
-                  <option key={card.id} value={card.id}>{`${card.bank_name} · ${card.card_name}`}</option>
+                  <option key={card.id} value={card.id}>{`${card.is_favorite ? '♥ ' : ''}${card.bank_name} · ${card.card_name}`}</option>
                 ))}
               </Select>
             </label>

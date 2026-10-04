@@ -15,6 +15,7 @@ import {
 } from '../utils/cardStatementPayments'
 import { formatDate } from '../utils/date'
 import { sumTL } from '../utils/money'
+import { favoritesFirst } from '../utils/accountFavorites'
 import { cardHelp } from './CardsPage.help'
 import { statementPeriodLabel } from './CardsPage.helpers'
 
@@ -51,7 +52,7 @@ export function ProvisionPanel({
     return counts
   }, [pending])
   const filterCards = useMemo(
-    () => rows.filter((card) => pendingCardIds.has(card.id)),
+    () => favoritesFirst(rows.filter((card) => pendingCardIds.has(card.id))),
     [pendingCardIds, rows],
   )
   const activeCardId = selectedCardId === 'all' || pendingCardIds.has(selectedCardId) ? selectedCardId : 'all'
@@ -107,7 +108,7 @@ export function ProvisionPanel({
               <option value="all">Tüm kartlar ({pending.length})</option>
               {filterCards.map((card) => (
                 <option key={card.id} value={card.id}>
-                  {card.bank_name} · {card.card_name} ({pendingCountsByCard.get(card.id) ?? 0})
+                  {card.is_favorite ? '♥ ' : ''}{card.bank_name} · {card.card_name} ({pendingCountsByCard.get(card.id) ?? 0})
                 </option>
               ))}
             </select>

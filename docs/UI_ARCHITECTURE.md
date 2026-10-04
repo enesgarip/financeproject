@@ -254,3 +254,11 @@ Kişisel miktar/alış fiyatı/komisyon ve metne gömülü TL tutarları gizlili
 Ödeme kartlarında kimlik satırı başlık, kategori/takvim özeti ve taşma menüsüne
 ayrılır. Tekrar/tahmin durumları ile birincil “Öde” eylemi ayrı satırda durur;
 aksiyonlar uzun ödeme adlarını tek harflik kolonlara sıkıştıramaz.
+
+## 2026-10-04 — Hesap/kart hızlı erişimi
+
+Hesap ve kredi kartı kartlarında dolu/boş kalp kalıcı favoriyi gösterir; renk
+tek başına kullanılmaz (`aria-pressed` ve açık erişilebilir ad zorunlu).
+Favoriler seçim listelerinin başına alınır. Uzun hesap kimliği/hareket ve kart
+dönem-limit-taksit içerikleri varsayılan kapalı `details` bölümlerindedir;
+bakiye/borç ile ana eylemler katlanmaz.

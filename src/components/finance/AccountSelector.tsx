@@ -1,6 +1,7 @@
 import { useBalancePrivacy } from '../../hooks/useBalancePrivacy'
 import type { Card } from '../../types/database'
 import { diffTL, sumTL } from '../../utils/money'
+import { favoritesFirst } from '../../utils/accountFavorites'
 import { Select } from '../ui/input'
 
 type AccountSelectorProps = {
@@ -43,9 +44,12 @@ export function AccountSelector({
     return `${account.card_name} (${typeLabel} · ${formatAmount(account.current_balance)})`
   }
 
-  const bankAccounts = accounts.filter((account) => account.card_type === 'banka_karti' && account.account_kind !== 'cash')
-  const cashAccounts = accounts.filter((account) => account.card_type === 'banka_karti' && account.account_kind === 'cash')
-  const creditCards = accounts.filter((account) => account.card_type === 'kredi_karti')
+  const sortedAccounts = favoritesFirst(accounts)
+  const favoriteIds = new Set(sortedAccounts.filter((account) => account.is_favorite).map((account) => account.id))
+  const favorites = sortedAccounts.filter((account) => favoriteIds.has(account.id))
+  const bankAccounts = sortedAccounts.filter((account) => !favoriteIds.has(account.id) && account.card_type === 'banka_karti' && account.account_kind !== 'cash')
+  const cashAccounts = sortedAccounts.filter((account) => !favoriteIds.has(account.id) && account.card_type === 'banka_karti' && account.account_kind === 'cash')
+  const creditCards = sortedAccounts.filter((account) => !favoriteIds.has(account.id) && account.card_type === 'kredi_karti')
 
   return (
     <div className="flex flex-col gap-2">
@@ -59,6 +63,9 @@ export function AccountSelector({
         >
           <option value="">{accounts.length > 0 ? 'Hesap seç' : emptyMessage}</option>
           {outsideAccountsValue ? <option value={outsideAccountsValue}>Takip dışı (bakiye değişmez)</option> : null}
+          {favorites.length > 0 ? <optgroup label="Favoriler">
+            {favorites.map((account) => <option key={account.id} value={account.id}>♥ {getAccountOptionLabel(account)}</option>)}
+          </optgroup> : null}
           {bankAccounts.length > 0 ? <optgroup label="Banka hesapları">
             {bankAccounts.map((account) => <option key={account.id} value={account.id}>{getAccountOptionLabel(account)}</option>)}
           </optgroup> : null}

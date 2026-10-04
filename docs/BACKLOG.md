@@ -1,5 +1,18 @@
 # Priority Backlog
 
+## 2026-10-04 — Hesap/kart favorileri ve yoğunluk azaltma — DONE
+
+Hesap ve kredi kartlarına kalıcı `is_favorite` tercihi eklendi. Kullanıcı kart
+başlığındaki kalple favoriyi tek dokunuşla değiştirir; favoriler hesap/kart
+listelerinde, ortak ödeme seçicisinde, hızlı harcama, transfer, varlık işlemi,
+taksit niyeti ve provizyon filtresinde önce görünür. Hızlı harcama formu
+favorileri ayrıca doğrudan seçim düğmeleri olarak sunar. Hesap kimliği/son
+hareketler ile kredi kartı dönem-limit-taksit satırları varsayılan kapalı
+bölümlere alındı; ana bakiye/borç ve birincil eylemler görünür kalır.
+Kredi Kartları bölümünün ana rakamı, maaşla yaklaşan ödemeyi planlamak için tüm
+kartların `current_period_spending` toplamını “Bu dönem kesilecek” olarak
+gösterir; gelecek taksitler ve provizyonlar bu kesin toplama katılmaz.
+
 ## 2026-09-18 — Nakit cüzdanı ve hesap UX'i — DONE
 
 Fiziksel nakit, mevcut hesap/ledger modelinde `account_kind = cash` ile birinci
