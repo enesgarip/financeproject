@@ -122,6 +122,11 @@ export type FinanceObligationMonthSummary = {
   itemCount: number
 }
 
+/** Açık bir kişisel alacağın vadesini aynı gün korunarak bir takvim ayı öteler. */
+export function deferReceivableDueDate(dueDate: string): string {
+  return dateInputValue(addMonths(new Date(`${dueDate}T00:00:00`), 1))
+}
+
 function obligationCashImpact(item: FinanceObligation) {
   return item.cashImpactAmount ?? item.amount
 }

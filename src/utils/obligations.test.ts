@@ -5,8 +5,20 @@ import {
   buildFinanceObligationsForRange,
   summarizeFinanceObligations,
   buildPaymentObligation,
+  deferReceivableDueDate,
   type FinanceObligationsInput,
 } from './obligations'
+
+describe('deferReceivableDueDate', () => {
+  it('moves the due date by one calendar month', () => {
+    expect(deferReceivableDueDate('2026-10-15')).toBe('2026-11-15')
+  })
+
+  it('clamps month-end dates to the last valid day', () => {
+    expect(deferReceivableDueDate('2027-01-31')).toBe('2027-02-28')
+    expect(deferReceivableDueDate('2028-01-31')).toBe('2028-02-29')
+  })
+})
 
 const base = { id: 'id', user_id: 'u', created_at: '2026-06-01T00:00:00.000Z', updated_at: '2026-06-01T00:00:00.000Z' }
 const FROM = new Date(2026, 5, 1)

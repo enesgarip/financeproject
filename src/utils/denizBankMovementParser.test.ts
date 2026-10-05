@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   findExistingInstallmentPlan,
+  isDenizBankMovementPdf,
   matchDenizBankInstallmentMovements,
   matchDenizBankMovementPayments,
   matchDenizBankMovements,
@@ -30,6 +31,32 @@ Dönem İçi 14.08.2026 GREEN SALATA BURSA TR Peşin Satış 1.075,00 TL 0,00 TL
 Dönem İçi 09.08.2026 Hesaptan Ödeme Hesaptan Ödeme 22.759,20 TL 0,00 TL
 Dönem İçi 08.08.2026 SEYHAN MARKET BURSA TR Peşin Satış 208,40 TL 0,10 TL
 `
+
+describe('isDenizBankMovementPdf', () => {
+  it('recognizes a DenizBank movement table without statement summary fields', () => {
+    expect(isDenizBankMovementPdf(`
+DenizBank İnternet Bankacılığı
+İşlem Tarihi İşlem İşlem Detayı Kart No Kart Tipi İşlem Tutarı Bonus
+03.10.2026 KOZA OTOPARK 5555 74** **** 0189 Asıl Kart 200,00 TL 0,00 TL
+`)).toBe(true)
+  })
+
+  it('does not classify a real statement as a movement export', () => {
+    expect(isDenizBankMovementPdf(`
+DenizBank İnternet Bankacılığı
+Hesap Kesim Tarihi 03/10/2026
+Dönem Borcu 12.500,00 TL
+İşlem Tarihi Dönemiçi İşlemler Bonus(TL) İşlem Tutarı
+`)).toBe(false)
+  })
+
+  it('does not claim another bank movement table is a DenizBank export', () => {
+    expect(isDenizBankMovementPdf(`
+Başka Banka
+İşlem Tarihi İşlem İşlem Tutarı Bonus
+`)).toBe(false)
+  })
+})
 
 describe('parseDenizBankMovementPdf', () => {
   it('parses current movement rows from DenizBank internet banking PDF text', () => {
@@ -507,6 +534,73 @@ describe('DenizBank movement planned payment reconciliation', () => {
 
     expect(result.matched).toHaveLength(0)
     expect(result.unmatched).toEqual([invoice])
+  })
+
+  it('matches a uniquely identified estimated auto bill even when the actual amount differs', () => {
+    const result = matchDenizBankMovementPayments(
+      [{ ...invoice, description: 'BUSKİ - BURSA SU 498149', amount: 525 }],
+      [
+        {
+          id: 'water-bill',
+          title: 'Su',
+          amount: 385,
+          amount_status: 'estimated',
+          due_date: '2026-06-15',
+          status: 'bekliyor',
+          payment_method: 'bank_auto',
+          auto_source_card_id: 'card-1',
+        },
+      ],
+      'card-1',
+    )
+
+    expect(result.matches[0]?.payment.id).toBe('water-bill')
+    expect(result.unmatched).toHaveLength(0)
+  })
+
+  it('keeps amount matching strict for exact payments', () => {
+    const result = matchDenizBankMovementPayments(
+      [{ ...invoice, description: 'BUSKİ - BURSA SU 498149', amount: 525 }],
+      [
+        {
+          id: 'water-bill',
+          title: 'Su',
+          amount: 385,
+          amount_status: 'exact',
+          due_date: '2026-06-15',
+          status: 'bekliyor',
+          payment_method: 'bank_auto',
+          auto_source_card_id: 'card-1',
+        },
+      ],
+      'card-1',
+    )
+
+    expect(result.matched).toHaveLength(0)
+    expect(result.unmatched).toHaveLength(1)
+  })
+
+  it('does not guess between multiple relaxed estimated bill candidates', () => {
+    const estimatedBill = {
+      title: 'Su',
+      amount: 385,
+      amount_status: 'estimated' as const,
+      due_date: '2026-06-15',
+      status: 'bekliyor' as const,
+      payment_method: 'bank_auto' as const,
+      auto_source_card_id: 'card-1',
+    }
+    const result = matchDenizBankMovementPayments(
+      [{ ...invoice, description: 'BUSKİ - BURSA SU 498149', amount: 525 }],
+      [
+        { id: 'water-bill-1', ...estimatedBill },
+        { id: 'water-bill-2', ...estimatedBill },
+      ],
+      'card-1',
+    )
+
+    expect(result.matched).toHaveLength(0)
+    expect(result.unmatched).toHaveLength(1)
   })
 })
 

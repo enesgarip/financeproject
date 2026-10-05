@@ -126,6 +126,10 @@ Use existing source-of-truth helpers before adding new checks:
   `card_expenses.note` records how many installments were completed before the
   open plan, so Data Health expects only the current/future suffix rather than
   reporting intentional history as missing
+- a later `posted`/`paid` installment (or archive/current-settlement evidence)
+  proves the preceding sequential installments are historical; missing rows at
+  or before that proven prefix are not recreated or reported, while gaps after
+  the last proven installment remain findings
 - a legacy aggregate card payment can leave exact pre-cycle posted excess; the
   canonical full-current `pay_card_debt` action may attach it to a source-less
   historical repair settlement only on exact total proof, without a second cash

@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { CrudPage, type FormField } from '../components/CrudPage'
 import { FinancePaymentDrawer } from '../components/finance/FinancePaymentDrawer'
 import { RatesBanner } from '../components/finance/RatesBanner'
@@ -5,6 +6,7 @@ import { BreakdownBar, HeroNumber } from '../components/serit'
 import { useMarketRates } from '../hooks/useMarketRates'
 import { useInvalidateFinanceSnapshot } from '../app/useFinanceSnapshot'
 import { fetchCardsByType } from '../data/repositories/cardsRepo'
+import { saveCrudRow } from '../data/repositories/crudRepo'
 import type { Card as FinanceCard, Debt } from '../types/database'
 import { dateInputValue, formatDate } from '../utils/date'
 import { formatCurrency, formatNumber, parseNumber } from '../utils/formatCurrency'
@@ -13,6 +15,7 @@ import { useFinancePaymentDrawer } from '../hooks/useFinancePaymentDrawer'
 import type { MarketRatesSnapshot } from '../utils/marketRates'
 import { diffTL, sumTL } from '../utils/money'
 import { valuationConfidence } from '../utils/dataConfidence'
+import { deferReceivableDueDate } from '../utils/obligations'
 import { debtRateSymbol, effectiveDebtValue, effectiveDebtValueWithSource, valueDebt } from '../utils/valuation'
 
 /** Gold or non-TRY foreign-currency debts can be auto-valued from live rates. */
@@ -243,6 +246,25 @@ export function DebtsPage() {
   const { snapshot } = useMarketRates()
   const invalidateSnapshot = useInvalidateFinanceSnapshot()
   const { drawerProps, openPaymentDrawer } = useFinancePaymentDrawer()
+  const [deferringDebtId, setDeferringDebtId] = useState<string | null>(null)
+
+  async function deferReceivable(debt: Debt, reload: () => Promise<void>, setError: (message: string) => void) {
+    if (debt.direction !== 'borç_verdim' || debt.status !== 'açık' || !debt.due_date) return
+
+    setDeferringDebtId(debt.id)
+    const result = await saveCrudRow('debts', { due_date: deferReceivableDueDate(debt.due_date) }, debt.id)
+    if (!result.ok) {
+      setError(result.error.message ?? 'Alacak vadesi ertelenemedi.')
+      setDeferringDebtId(null)
+      return
+    }
+
+    try {
+      await Promise.all([reload(), invalidateSnapshot()])
+    } finally {
+      setDeferringDebtId(null)
+    }
+  }
 
   async function openDebtSettlement(debt: Debt, reload: () => Promise<void>) {
     const isBorrowed = debt.direction === 'borç_aldım'
@@ -371,17 +393,34 @@ export function DebtsPage() {
         sortRows={(rows) => sortDebts(rows as Debt[]) as typeof rows}
         getCardClassName={(row) => (row.status === 'kapandı' ? 'opacity-70' : debtTone[row.direction].card)}
         getDetailClassName={(row) => debtTone[row.direction].detail}
-        renderRowActions={(row, helpers) =>
-          row.status === 'açık' ? (
-            <button
-              type="button"
-              onClick={() => void openDebtSettlement(row, helpers.reload)}
-              className="max-w-full rounded-lg bg-success px-3 py-2 text-xs font-semibold text-success-foreground transition hover:bg-success/90 active:scale-[0.97]"
-            >
-              {row.direction === 'borç_aldım' ? 'Borcu öde' : 'Tahsil et'}
-            </button>
-          ) : null
-        }
+        renderRowActions={(row, helpers) => {
+          if (row.status !== 'açık') return null
+          const canDefer = row.direction === 'borç_verdim' && Boolean(row.due_date)
+          const isDeferring = deferringDebtId === row.id
+
+          return (
+            <>
+              <button
+                type="button"
+                onClick={() => void openDebtSettlement(row, helpers.reload)}
+                className="max-w-full rounded-lg bg-success px-3 py-2 text-xs font-semibold text-success-foreground transition hover:bg-success/90 active:scale-[0.97]"
+              >
+                {row.direction === 'borç_aldım' ? 'Borcu öde' : 'Tahsil et'}
+              </button>
+              {canDefer ? (
+                <button
+                  type="button"
+                  disabled={isDeferring}
+                  onClick={() => void deferReceivable(row, helpers.reload, helpers.setError)}
+                  aria-label={`${row.person_name} alacağının vadesini 1 ay ertele`}
+                  className="max-w-full rounded-lg border border-line-strong bg-raised px-3 py-2 text-xs font-semibold text-ink transition hover:bg-black/[.03] active:scale-[0.97] disabled:opacity-55 dark:hover:bg-white/[.04]"
+                >
+                  {isDeferring ? 'Erteleniyor…' : '1 ay ertele'}
+                </button>
+              ) : null}
+            </>
+          )
+        }}
       />
 
       <FinancePaymentDrawer {...drawerProps} />

@@ -166,6 +166,25 @@ const ROW_PATTERN = new RegExp(
   'u',
 )
 
+/**
+ * Ekstre modalına yanlışlıkla yüklenen DenizBank güncel-hareket çıktısını
+ * Gemini fallback'ine göndermeden tanır. Gerçek ekstrede aynı işlem kolonları
+ * bulunabilse de hesap kesim / dönem borcu alanları vardır; onları özellikle
+ * dışarıda bırakırız.
+ */
+export function isDenizBankMovementPdf(text: string): boolean {
+  const hasDenizBankSignature =
+    /DenizBank İnternet Bankacılığı/i.test(text) ||
+    /acikdeniz\.denizbank\.com\/creditcarddetails/i.test(text)
+  const hasMovementTable =
+    /İşlem Tarihi/i.test(text) &&
+    /İşlem Tutarı/i.test(text) &&
+    /Bonus/i.test(text)
+  const hasStatementSummary = /Hesap Kesim Tarihi|Dönem Borcu/i.test(text)
+
+  return hasDenizBankSignature && hasMovementTable && !hasStatementSummary
+}
+
 function parseAmountTL(value: string): number {
   const normalized = value.replace(/\./g, '').replace(',', '.')
   const parsed = Number(normalized)
@@ -517,24 +536,45 @@ export function matchDenizBankMovementPayments(
   const matches: DenizBankMovementPaymentMatch[] = []
 
   for (const movement of bankMovements) {
-    const candidates: Array<{ index: number; distance: number; titleCompatible: boolean; tiedToThisCard: boolean }> = []
+    const candidates: Array<{
+      index: number
+      distance: number
+      titleCompatible: boolean
+      tiedToThisCard: boolean
+      relaxedEstimatedAmount: boolean
+    }> = []
 
     for (let index = 0; index < active.length; index++) {
       if (usedIndices.has(index)) continue
       const payment = active[index]
       const sameAmount = Math.abs(diffTL(payment.amount, movement.amount)) <= AMOUNT_MATCH_TOLERANCE_TL
-      if (!sameAmount) continue
-
       const distance = dateDistanceDays(payment.due_date, movement.date)
       if (distance == null || distance > PAYMENT_DATE_MATCH_WINDOW_DAYS) continue
 
       const titleCompatible = descriptionsCompatible(movement.description, payment.title)
       const tiedToThisCard = payment.auto_source_card_id === cardId
+      // Su/elektrik gibi değişken faturalar tahmini tutarla planlanır; banka
+      // hareketindeki gerçek tutar doğal olarak farklıdır. Yalnız karta açıkça
+      // bağlı + açıklaması uyumlu tahmini talimatlarda tutar kapısını gevşet.
+      const relaxedEstimatedAmount = !sameAmount
+        && payment.payment_method === 'bank_auto'
+        && payment.amount_status === 'estimated'
+        && tiedToThisCard
+        && titleCompatible
+      if (!sameAmount && !relaxedEstimatedAmount) continue
 
-      candidates.push({ index, distance, titleCompatible, tiedToThisCard })
+      candidates.push({ index, distance, titleCompatible, tiedToThisCard, relaxedEstimatedAmount })
     }
 
-    const foundIndex = candidates
+    const exactAmountCandidates = candidates.filter((candidate) => !candidate.relaxedEstimatedAmount)
+    // Tutarı gevşetilmiş eşleşme yalnız TEK adayda güvenlidir. Aynı tarih/kartta
+    // iki benzer tahmini talimat varsa bankanın hangi planı kapattığını uydurma.
+    const eligibleCandidates = exactAmountCandidates.length > 0
+      ? exactAmountCandidates
+      : candidates.length === 1
+        ? candidates
+        : []
+    const foundIndex = eligibleCandidates
       .sort((left, right) => (
         Number(right.titleCompatible) - Number(left.titleCompatible) ||
         Number(right.tiedToThisCard) - Number(left.tiedToThisCard) ||

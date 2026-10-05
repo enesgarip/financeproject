@@ -453,6 +453,7 @@ app; there is no affordability decision surface anymore.
 - debts may be TRY, FX, gram gold, or quarter gold in type
 - summaries often use `estimated_value_try`
 - open receivables are shown as expected collection and are not added to net worth until collected
+- an open receivable with a due date can be deferred one calendar month; this changes only `due_date`, never its amount, status, balance, or ledger
 
 ## Savings Goals
 
