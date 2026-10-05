@@ -112,6 +112,7 @@ archive — and warning tones derive from the same total.
 | Provision installment count marked (pre-post) | `setProvisionInstallments` (repo direct update, no RPC) | none | Bank SMS carries only the total, so SMS provisions open with `installment_count=1`. Before posting, the provisions panel lets the user set the real count; this updates only `installment_count`/`installment_amount` on the `status='provision'` row. No debt/bucket/ledger change — it is a label the later `post_card_provision` reads to split the plan. The `status='provision'` filter forbids touching posted/archived rows (that path is `update_card_expense`). |
 | Installment intent applied to a provision | `private.apply_card_installment_intent` (called by `record_sms_card_expense`; manual wrapper `apply_card_installment_intent`) | none | The pre-shopping intent (`card_installment_intents`) writes the same `installment_count`/`installment_amount` label as the row above, then marks the intent `consumed`. Money model untouched: debt, buckets and ledger are identical whatever the count is. Matching is card + amount window + normalized merchant hint + `expires_at`, most specific first; SMS rows matched to a planned `bank_auto` payment are excluded. |
 | Provision posted | `post_card_provision` | `provision_amount -= posted amount`; `current_period_spending += installments whose due date has passed` | Full post updates the same expense; partial post leaves the original provision with the remaining amount and inserts a posted expense; multi-installment posted provisions create exact-date installment rows |
+| Post-cut provision blocked | `post_card_provision` + `ProvisionPanel` | none | An open statement whose cut date is on/after the provision's transaction date locks manual posting. The row says “Ekstre içe aktarma bekleniyor”; bulk posting skips it and the RPC rejects bypass attempts. Statement PDF import is the only safe repair because posting would move it into the next period. |
 | Provision cancelled | `cancel_card_provision` | `debt_amount -= amount`; `provision_amount -= amount` | Marks the expense `cancelled`; removes related installment rows if any |
 | Unstatemented expense cancelled | `cancel_card_expense` | Single/provision rows: `debt_amount -= amount` (provision also reduces `provision_amount`). Posted multi-installment plans: `debt_amount -=` the plan's child-row total — the plan's actual debt contribution — so cancelling a carried-over plan (parent amount = full plan, debt contribution = remaining only) never over-reverses. Posted rows reduce current-period spending; future scheduled installment debt is removed without double-reducing current period. | Marks the expense `cancelled`, removes related installment rows, and logs a correction with the real reversal amount. Directly/child statement-archived expenses are rejected; historical corrections require append-only reconciliation. |
 | Scheduled installment due date reached | `post_due_card_installments` / finance maintenance | `current_period_spending += due scheduled installment total`; `debt_amount` unchanged | Changes due `card_installments` from `scheduled` to `posted`; maintenance runs this before statement cutting, and statement cutting keeps posted installment rows after the statement boundary in the new period |
@@ -229,6 +230,12 @@ and misses the statement. Two layers close it:
 After the cut has already happened the repair is the statement PDF import
 (posting now would write the amount into the NEXT statement); Data Health
 flags this state (see below).
+
+The provisions panel enforces the same boundary: a provision dated on or before
+an open archive's statement date cannot be posted individually or through the
+bulk action. Its installment label and cancellation remain available, while a
+direct action opens statement import. `post_card_provision` repeats the guard
+server-side so stale clients cannot move the amount into the next period.
 
 The statement PDF import remains the authority of last resort: its `1/9` lines
 rebuild the real plan. Principle: **SMS is a guess, the PDF is the truth.**

@@ -342,6 +342,11 @@ toplam borç doğru). Mevcut durumun onarımı ekstre PDF importu
 3. **DataHealth review-only kontrolü** (`card-statement-provision-leftover-*`):
    açık ekstre + kesim tarihinden eski provizyon → "PDF importu ile onar"
    uyarısı; otomatik onarım bilinçli yok (aktarım bir sonraki ekstreye yazar).
+4. **Kesim sonrası kesinleştirme kilidi** (2026-10-05): provizyon tarihi açık
+   ekstre kesim tarihine eşit/eskiyse satır “Ekstre içe aktarma bekleniyor” olur,
+   tekil kesinleştirme kapanır ve toplu aktarım bu satırı atlar. Satır ekstre
+   importunu doğrudan açar; `post_card_provision` aynı sınırı sunucuda da
+   doğrular (`20261005120000`, `post_cut_provision_guard.sql`).
 
 ## 2026-08-30 — README İngilizce sürüm + varsayılan takası TAMAMLANDI
 

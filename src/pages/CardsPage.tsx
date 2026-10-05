@@ -396,12 +396,14 @@ export function CardsPage() {
                     rows={cardRows}
                     provisions={provisions}
                     installments={installments}
+                    statements={statements}
                     loading={provisionsLoading}
                     actionId={provisionActionId}
                     onPost={(expense) => void handleProvisionAction(expense, 'post', reload, setError)}
                     onPostAll={(expenses) => void handlePostAllProvisions(expenses, reload, setError)}
                     onCancel={(expense) => void handleProvisionAction(expense, 'cancel', reload, setError)}
                     onSetInstallments={(expense, count) => void handleSetProvisionInstallments(expense, count, reload, setError)}
+                    onImportStatement={setImportCard}
                   />
                   <CardInstallmentCalendarPanel cards={cardRows} installments={installments} loading={installmentsLoading} />
                   <StatementArchivePanel rows={cardRows} statements={statements} />

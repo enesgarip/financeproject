@@ -37,7 +37,9 @@ repositories, services, or focused `CardsPage.*` modules.
   routes paid-count installment imports to `record_card_installment_carryover`
 - `CardsPage.statements.tsx`: open statement and provision presentation panels;
   the provision panel can be filtered by card, and its visible total plus bulk
-  post action follow the selected card
+  post action follow the selected card. A provision on/before an open
+  statement's cut date is locked as “Ekstre içe aktarma bekleniyor”; bulk post
+  skips locked rows and the row links directly to statement import.
 - `CardsPage.list.tsx`: account/card list item presentation, row action menus,
   bank IBAN/copy affordance, masked card number, recent bank movements, and
   ledger/detail panels

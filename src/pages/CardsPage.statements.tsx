@@ -16,6 +16,7 @@ import {
 import { formatDate } from '../utils/date'
 import { sumTL } from '../utils/money'
 import { favoritesFirst } from '../utils/accountFavorites'
+import { statementAwaitingProvision } from '../utils/cardProvisionPosting'
 import { cardHelp } from './CardsPage.help'
 import { statementPeriodLabel } from './CardsPage.helpers'
 
@@ -23,23 +24,27 @@ export function ProvisionPanel({
   rows,
   provisions,
   installments = [],
+  statements = [],
   loading,
   actionId,
   onPost,
   onPostAll,
   onCancel,
   onSetInstallments,
+  onImportStatement,
 }: {
   rows: Card[]
   provisions: CardExpense[]
   /** Planlı taksitler: taksit seçiminde "aylık yükün X → Y olur" bağlamı için. */
   installments?: CardInstallment[]
+  statements?: CardStatementArchive[]
   loading: boolean
   actionId: string | null
   onPost: (expense: CardExpense) => void
   onPostAll: (expenses: CardExpense[]) => void
   onCancel: (expense: CardExpense) => void
   onSetInstallments: (expense: CardExpense, installmentCount: number) => void
+  onImportStatement: (card: Card) => void
 }) {
   const { formatAmount } = useBalancePrivacy()
   const [selectedCardId, setSelectedCardId] = useState('all')
@@ -59,6 +64,7 @@ export function ProvisionPanel({
   const visiblePending = activeCardId === 'all'
     ? pending
     : pending.filter((expense) => expense.card_id === activeCardId)
+  const postablePending = visiblePending.filter((expense) => !statementAwaitingProvision(expense, statements))
   const totalProvision = sumTL(visiblePending.map((expense) => expense.amount))
   if (loading && pending.length === 0) {
     return (
@@ -85,12 +91,16 @@ export function ProvisionPanel({
             <Badge variant="secondary">{formatAmount(totalProvision)}</Badge>
             <button
               type="button"
-              onClick={() => onPostAll(visiblePending)}
-              disabled={Boolean(actionId)}
+              onClick={() => onPostAll(postablePending)}
+              disabled={Boolean(actionId) || postablePending.length === 0}
               className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-success px-2.5 py-1.5 text-xs font-semibold text-white disabled:opacity-60 hover:bg-success/90"
             >
               <CheckCircle2 size={13} />
-              {actionId === 'post-all' ? 'Aktarılıyor...' : 'Tümünü aktar'}
+              {actionId === 'post-all'
+                ? 'Aktarılıyor...'
+                : postablePending.length < visiblePending.length
+                  ? `Uygunları aktar (${postablePending.length})`
+                  : 'Tümünü aktar'}
             </button>
           </div>
         </div>
@@ -125,6 +135,7 @@ export function ProvisionPanel({
           const horizonHint = canInstall
             ? buildPlannedInstallmentHint(installments, { amount: expense.amount, count: installmentCount })
             : null
+          const awaitingStatement = statementAwaitingProvision(expense, statements)
 
           return (
             <div key={expense.id} className="rounded-xl border border-warning/15 bg-warning/8 px-3 py-2.5">
@@ -170,15 +181,26 @@ export function ProvisionPanel({
                   Aylık taksit yükün {formatAmount(horizonHint.baseMonthly)} → {formatAmount(horizonHint.newMonthly)} ({horizonHint.months} ay)
                 </p>
               ) : null}
+              {awaitingStatement ? (
+                <div className="mt-2 rounded-lg border border-info/20 bg-info/8 px-2.5 py-2 text-xs text-info">
+                  <p className="font-semibold">Ekstre içe aktarma bekleniyor</p>
+                  <p className="mt-0.5">{formatDate(awaitingStatement.statement_date)} tarihli ekstreye ait olabilir; yeni döneme taşınmaması için kesinleştirme kapatıldı.</p>
+                  {card ? (
+                    <button type="button" onClick={() => onImportStatement(card)} className="mt-1.5 font-bold underline underline-offset-2">
+                      Ekstreyi içe aktar
+                    </button>
+                  ) : null}
+                </div>
+              ) : null}
               <div className="mt-2 grid grid-cols-2 gap-2">
                 <button
                   type="button"
                   onClick={() => onPost(expense)}
-                  disabled={Boolean(actionId)}
+                  disabled={Boolean(actionId) || Boolean(awaitingStatement)}
                   className="inline-flex items-center justify-center gap-2 rounded-lg bg-success px-3 py-2 text-xs font-semibold text-white disabled:opacity-60 hover:bg-success/90"
                 >
                   <CheckCircle2 size={14} />
-                  {actionId === postActionId ? 'İşleniyor...' : 'Kesinleştir'}
+                  {actionId === postActionId ? 'İşleniyor...' : awaitingStatement ? 'Kesinleştirme kapalı' : 'Kesinleştir'}
                 </button>
                 <button
                   type="button"
