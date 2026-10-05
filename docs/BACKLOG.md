@@ -1,5 +1,21 @@
 # Priority Backlog
 
+## 2026-10-05 — Tahmini fatura eşleşmesi ve tarihsel taksit gürültüsü — DONE
+
+Değişken tutarlı kart talimatları (`estimated`) banka hareketindeki gerçek tutar
+farklı olsa da aynı karta bağlı, tarih penceresinde, açıklaması uyumlu ve tek
+adaysa eşleşir; exact ödemelerde tutar kapısı korunur. Veri Sağlığı, daha yüksek
+numaralı işlenmiş/ödenmiş taksitin kanıtladığı geçmiş prefix içindeki eksik
+satırları artık raporlamaz veya yeniden yaratmaz; son kanıttan sonraki gerçek
+plan boşluklarını göstermeye devam eder.
+
+## 2026-10-05 — Kişisel alacak vadesini tek tıkla erteleme — DONE
+
+Açık ve vadeli kişisel alacak satırına “1 ay ertele” aksiyonu eklendi. Vade
+aynı gün korunarak bir takvim ayı ilerler, kısa ayda son güne kırpılır; tutar,
+durum, hesap bakiyesi ve ledger değişmez. Vadesiz, kapanmış veya kişisel borç
+kayıtlarında aksiyon gösterilmez.
+
 ## 2026-10-04 — Hesap/kart favorileri ve yoğunluk azaltma — DONE
 
 Hesap ve kredi kartlarına kalıcı `is_favorite` tercihi eklendi. Kullanıcı kart
@@ -1627,6 +1643,10 @@ Canlı Veri Sağlığı'nda 6 bulgu incelendi. **Bulgular para hatası DEĞİLD�
   (gerçek iki PDF ile doğrulandı: 7/7 ve 64/64 satır). `cardNo`/`cardType`/
   `cardLastFour` kolon yoksa boş string; taksit inceleme satırı sarkan `**** `
   basmıyor. Golden fixture: `movement.denizbank-2026-08-tekkart.txt`.
+- ~~**Hareket PDF'i ekstre ekranında Gemini'ye düşüyordu.**~~ DONE
+  (2026-10-05). Ekstre modalı, kesim/vade/dönem borcu taşımayan DenizBank
+  hareket tablosunu yerelde tanır; Gemini çağrısı yapmadan kullanıcıyı Kartlar
+  ekranındaki “Hareketleri karşılaştır” akışına yönlendirir.
 - ~~**Tanınmayan işlem detayı açıklamaya sızıyordu.**~~ DONE (2026-08-16).
   `KNOWN_DETAILS`'e `OGS-HGS Yükleme İşlemi` ve `Talimatlı Taksitli Satış`
   eklendi. Sıra kuralı yazıldı: uzun varyant kısa olandan önce gelmeli, aksi

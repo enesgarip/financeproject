@@ -828,6 +828,28 @@ describe('buildIssues carryover installment history (DH-01)', () => {
 
     expect(issues.some((issue) => issue.id === 'card-expense-missing-expense-1')).toBe(false)
   })
+
+  it('does not flag an earlier gap when a later installment is already paid', () => {
+    const issues = buildIssues({
+      ...emptyData,
+      cards: [creditCard({ debt_amount: 100 })],
+      cardExpenses: [
+        cardExpense({
+          amount: 400,
+          installment_count: 4,
+          installment_amount: 100,
+          spent_at: '2026-05-19',
+        }),
+      ],
+      cardInstallments: [
+        cardInstallment({ id: 'i1', card_expense_id: 'expense-1', installment_no: 1, installment_count: 4, amount: 100, due_month: '2026-05-19', status: 'posted' }),
+        cardInstallment({ id: 'i3', card_expense_id: 'expense-1', installment_no: 3, installment_count: 4, amount: 100, due_month: '2026-07-19', status: 'paid', paid_at: '2026-07-20' }),
+        cardInstallment({ id: 'i4', card_expense_id: 'expense-1', installment_no: 4, installment_count: 4, amount: 100, due_month: '2026-08-19', status: 'scheduled' }),
+      ],
+    })
+
+    expect(issues.some((issue) => issue.id === 'card-expense-missing-expense-1')).toBe(false)
+  })
 })
 
 describe('buildIssues overdue card statements', () => {

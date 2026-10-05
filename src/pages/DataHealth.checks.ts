@@ -1146,7 +1146,20 @@ export function checkCardInstallments(
     const rows = installmentsByExpense.get(expense.id) ?? []
     const existingNos = new Set(rows.map((row) => row.installment_no))
     const paidBefore = parseHistoricalPaidCount(expense)
-    const expectedNos = range(paidBefore + 1, expense.installment_count)
+    // Daha yüksek numaralı bir taksit işlenmiş/ödenmişse ondan önceki taksitler
+    // sıralı banka planında tarihsel olarak gerçekleşmiştir. Eksik geçmiş satırı
+    // uydurup yeniden yaratma; yalnız kanıtlanmış prefix'ten sonraki açık planı
+    // bekle. Carryover/PDF notundaki paidBefore aynı kanıtın açık biçimidir.
+    const evidencedHistoricalThrough = rows.reduce((highest, row) => (
+      row.status !== 'scheduled'
+      || row.posted_at != null
+      || row.paid_at != null
+      || row.statement_archive_id != null
+      || row.current_settlement_id != null
+        ? Math.max(highest, row.installment_no)
+        : highest
+    ), paidBefore)
+    const expectedNos = range(evidencedHistoricalThrough + 1, expense.installment_count)
     const missingNos = expectedNos.filter((installmentNo) => !existingNos.has(installmentNo))
     // Eski carryover kayıtlarında geçmiş satırlar bulunabilir; yeni PDF modelinde ise
     // note içindeki paidBefore kadar geçmiş taksit hiç yaratılmaz. İki model de meşrudur.

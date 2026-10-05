@@ -23,7 +23,11 @@ import {
   type ParsedTransaction,
   type ParsedStatementAdjustment,
 } from '../../utils/denizBankStatementParser'
-import { matchDenizBankMovementPayments, type ParsedDenizBankMovement } from '../../utils/denizBankMovementParser'
+import {
+  isDenizBankMovementPdf,
+  matchDenizBankMovementPayments,
+  type ParsedDenizBankMovement,
+} from '../../utils/denizBankMovementParser'
 import { parseYapiKrediStatement } from '../../utils/yapiKrediStatementParser'
 import { resolveStatementImportAction, type StatementImportAction } from '../../utils/statementImportPlan'
 import { roundTL } from '../../utils/money'
@@ -231,6 +235,15 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
 
     try {
       const text = await extractPdfText(file)
+
+      // İnternet bankacılığındaki hareket tablosu ekstre değildir: kesim/vade
+      // ve dönem borcu taşımadığı için atomik ekstre yeniden kurulumu yapılamaz.
+      // Gemini'ye göndermeden kullanıcıyı doğru, cihaz-içi akışa yönlendir.
+      if (isDenizBankMovementPdf(text)) {
+        setParseError('Bu dosya ekstre değil, kart hareketleri çıktısı. Kartlar ekranındaki “Hareketleri karşılaştır” seçeneğini kullan.')
+        return
+      }
+
       let parsed = parseDenizBankStatement(text, categoryMemory)
 
       // DenizBank tanınmadıysa YapıKredi'yi dene (cihaz-içi, metin sunucuya gitmez).
