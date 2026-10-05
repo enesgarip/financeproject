@@ -52,6 +52,7 @@ describe('ProvisionPanel kart filtresi', () => {
         onPostAll={onPostAll}
         onCancel={vi.fn()}
         onSetInstallments={vi.fn()}
+        onImportStatement={vi.fn()}
       />,
     )
 
@@ -64,5 +65,42 @@ describe('ProvisionPanel kart filtresi', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Tümünü aktar' }))
     expect(onPostAll).toHaveBeenCalledWith([secondProvision])
+  })
+
+  it('kesilmiş açık ekstre dönemindeki provizyonu kesinleştirmeye kapatır', () => {
+    const selectedCard = card('c1', 'Banka A', 'Kart A')
+    const oldProvision = provision('p1', selectedCard.id, 'Market', 100)
+    const newProvision = { ...provision('p2', selectedCard.id, 'Akaryakıt', 250), spent_at: '2026-09-20' }
+    const onPostAll = vi.fn()
+    const onImportStatement = vi.fn()
+
+    render(
+      <ProvisionPanel
+        rows={[selectedCard]}
+        provisions={[oldProvision, newProvision]}
+        statements={[{
+          id: 's1', user_id: 'u1', card_id: selectedCard.id,
+          statement_date: '2026-09-18', due_date: '2026-09-28', period_year: 2026, period_month: 9,
+          statement_debt_amount: 100, current_period_spending: 0, total_debt_amount: 100,
+          status: 'open', paid_at: null, payment_source_card_id: null,
+          reconciled_bank_amount: null, reconciled_at: null, reconciliation_note: null, note: null,
+          created_at: '2026-09-19', updated_at: '2026-09-19',
+        }]}
+        loading={false}
+        actionId={null}
+        onPost={vi.fn()}
+        onPostAll={onPostAll}
+        onCancel={vi.fn()}
+        onSetInstallments={vi.fn()}
+        onImportStatement={onImportStatement}
+      />,
+    )
+
+    expect(screen.getByText('Ekstre içe aktarma bekleniyor')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Kesinleştirme kapalı' })).toHaveProperty('disabled', true)
+    fireEvent.click(screen.getByRole('button', { name: 'Uygunları aktar (1)' }))
+    expect(onPostAll).toHaveBeenCalledWith([newProvision])
+    fireEvent.click(screen.getByRole('button', { name: 'Ekstreyi içe aktar' }))
+    expect(onImportStatement).toHaveBeenCalledWith(selectedCard)
   })
 })
