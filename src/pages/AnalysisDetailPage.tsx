@@ -8,6 +8,7 @@ import { SearchExport, YearEndReport } from './AnalysisPage.reports'
 import { PeopleLedger } from './AnalysisPage.panels'
 import { ActivityFeedPanel } from './AnalysisPage.activity'
 import { useAnalysisPageData } from './AnalysisPage.data'
+import { CreditScorePanel } from '../components/finance/CreditScorePanel'
 
 /**
  * Yılda bir bakılan paneller (zekât, yıl sonu özeti) katlanır durur: sayfayı
@@ -68,9 +69,10 @@ export function AnalysisDetailPage() {
   return (
     <section className="min-w-0 space-y-5">
       <p className="text-[13px] text-ink-muted">
-        Aktivite geçmişini, kişi bakiyelerini, enflasyon etkisini ve uzun dönem raporlarını incele.
+        Aktivite geçmişini, kredi notunu, kişi bakiyelerini, enflasyon etkisini ve uzun dönem raporlarını incele.
       </p>
       <div className="grid min-w-0 gap-5 lg:grid-cols-12 [&>*]:min-w-0">
+        <CreditScorePanel />
         <InflationShieldPanel data={data} />
         <PeopleLedger debts={data.debts} />
         <ActivityFeedPanel data={data} />

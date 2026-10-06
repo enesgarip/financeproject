@@ -7,13 +7,16 @@ set local request.jwt.claims to '{"sub":"11111111-1111-1111-1111-111111111111","
 
 create temp table _snapshot_counts (tbl text primary key, n bigint);
 
+insert into public.credit_score_history (user_id, score, checked_on, note)
+values ('11111111-1111-1111-1111-111111111111', 1450, date '2026-10-01', 'restore testi');
+
 do $$
 declare
   v_user uuid := '11111111-1111-1111-1111-111111111111';
   v_order text[] := array[
     'cards','cars','expense_contexts','card_aliases','assets','loans',
     'savings_goals','budgets','kasa_buckets','wishlist_items','debts',
-    'asset_value_events','stock_trades','salary_history','gold_lots','net_worth_snapshots','savings_goal_snapshots',
+    'asset_value_events','stock_trades','salary_history','credit_score_history','gold_lots','net_worth_snapshots','savings_goal_snapshots',
     'card_statement_archives','card_statement_payments','car_reminders',
     'car_expenses','context_expenses','card_expenses','card_installments',
     'loan_installments','savings_goal_components','savings_goal_sources',

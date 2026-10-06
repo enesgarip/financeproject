@@ -680,6 +680,12 @@ export type SalaryHistory = BaseRow & {
   note: string | null
 }
 
+export type CreditScoreHistory = BaseRow & {
+  score: number
+  checked_on: string
+  note: string | null
+}
+
 type Table<Row, Insert, Update> = {
   Row: Row
   Insert: Insert
@@ -783,6 +789,7 @@ export type Database = {
         WithBaseUpdate<NotificationPreferences>
       >
       salary_history: Table<SalaryHistory, WithBaseInsert<SalaryHistory>, WithBaseUpdate<SalaryHistory>>
+      credit_score_history: Table<CreditScoreHistory, WithBaseInsert<CreditScoreHistory>, WithBaseUpdate<CreditScoreHistory>>
       net_worth_snapshots: Table<NetWorthSnapshot, WithBaseInsert<NetWorthSnapshot>, WithBaseUpdate<NetWorthSnapshot>>
       savings_goal_snapshots: Table<SavingsGoalSnapshot, WithBaseInsert<SavingsGoalSnapshot>, WithBaseUpdate<SavingsGoalSnapshot>>
       gold_lots: Table<GoldLot, WithBaseInsert<GoldLot>, WithBaseUpdate<GoldLot>>

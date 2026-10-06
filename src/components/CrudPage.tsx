@@ -69,6 +69,7 @@ type CrudPageProps<T extends CrudTableName> = {
   pageTitle?: string
   pageLabel?: string
   pageDescription?: string
+  formDescription?: string
   fields: FormField[]
   emptyTitle: string
   emptyDescription: string
@@ -138,6 +139,7 @@ export function CrudPage<T extends CrudTableName>({
   // pageLabel/pageDescription artık çizilmiyor: sayfa başlığı kabukta (Layout).
   // Prop olarak duruyorlar ki 10+ çağıran sayfa tek tek düzenlenmesin.
   fields,
+  formDescription,
   emptyTitle,
   emptyDescription,
   orderBy = 'created_at' as keyof RowFor<T> & string,
@@ -621,7 +623,7 @@ export function CrudPage<T extends CrudTableName>({
           {formError ? <Alert variant="destructive">{formError}</Alert> : null}
           <FormSection
             title={editing ? 'Kayıt bilgileri' : 'Yeni kayıt bilgileri'}
-            description="Zorunlu alanları doldur; para ve tarih alanları finans hesaplamalarına doğrudan yansır."
+            description={formDescription ?? 'Zorunlu alanları doldur; para ve tarih alanları finans hesaplamalarına doğrudan yansır.'}
           >
           {visibleFields.map((field) => {
             const fieldError = formErrors[field.name]
