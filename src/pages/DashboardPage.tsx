@@ -59,6 +59,7 @@ import { buildFocusActions } from '../utils/dashboardInsights'
 import { buildDashboardUpcomingItems } from '../utils/dashboardUpcoming'
 import { buildStatementReminders } from '../utils/statementReminder'
 import { SkeletonDashboard } from '../components/ui/skeleton'
+import { CreditScoreReminder } from '../components/dashboard/CreditScoreReminder'
 
 type DashboardData = {
   assets: Asset[]
@@ -394,12 +395,16 @@ export function DashboardPage() {
         />
       </div>
 
+      <div className="dashboard-item min-w-0 lg:col-span-12" style={{ '--di': 2 } as React.CSSProperties}>
+        <CreditScoreReminder today={todayStamp} />
+      </div>
+
       {/* ── Detay toggle ──
           Aşağısı henüz eski dilde. Şerit'e çevrilmemiş paneller (odak aksiyonları,
           ekstre hatırlatıcısı, mutabakat, geçmiş) buraya indirildi; ilgili ekranlar
           dönüştükçe bu katman eriyecek. */}
 
-      <div className="dashboard-item min-w-0 lg:col-span-12" style={{ '--di': 2 } as React.CSSProperties}>
+      <div className="dashboard-item min-w-0 lg:col-span-12" style={{ '--di': 3 } as React.CSSProperties}>
         <button
           type="button"
           onClick={toggleDetails}

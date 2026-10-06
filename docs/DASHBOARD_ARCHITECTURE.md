@@ -115,6 +115,9 @@ Current module split (post-Şerit):
   removed `SafeToSpendCard`).
 - `DashboardCards.tsx`: `HistorySection` (transaction history presentation).
 - `DashboardInsights.tsx`: `FocusActionPanel` (focus actions list).
+- `CreditScoreReminder.tsx`: always-visible Findeks summary; current score and
+  last query date link to `/analiz/detay`, while a missing or 30-day-old record
+  opens the new-entry modal. Reminder timing belongs to `utils/creditScore.ts`.
 - `DashboardPanels.tsx`: mostly legacy — only the `FocusAction` type is still
   imported; the `DashboardHero`/`MetricTile`/`PulseCard` components have no
   live consumers.

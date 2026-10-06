@@ -183,6 +183,7 @@ From the current typed schema, main tables are:
 - `payments`
 - `transaction_history`
 - `salary_history`
+- `credit_score_history` (manuel Findeks sorgu geçmişi; finansal hesaplara katılmaz)
 - `dismissed_upcoming_items`
 - `card_ledger` / `account_ledger` (append-only signed-kuruş event ledgers; trigger/correction-RPC owned)
 - `account_reconciliations` (bank-vs-app drift snapshots; `drift` immutable, resolution ayrı kolonda)

@@ -1,5 +1,16 @@
 # Priority Backlog
 
+## 2026-10-06 — Findeks kredi notu geçmişi — DONE
+
+`Analiz > Detay` içine manuel Findeks kredi notu takibi eklendi. Kullanıcı
+1–1900 aralığında tam sayı notu, sorgulama tarihi ve isteğe bağlı notu
+kaydeder; güncel not, önceki sorguya göre puan farkı ve son 12 kayıt trendi
+görünür. Özet ekranındaki kalıcı satır güncel puanı ve son sorgu
+tarihini gösterir; kayıt yoksa veya 30 gün geçtiyse doğrudan yeni kayıt
+formunu açan “Güncelle” çağrısına dönüşür. Seri finansal bakiye, borç, kredi uygunluğu ve ledger hesaplarına
+katılmaz. `credit_score_history` own-row RLS ile korunur; JSON yedek/geri
+yükleme ve kullanıcı verisini sıfırlama kapsamındadır.
+
 ## 2026-10-05 — Tahmini fatura eşleşmesi ve tarihsel taksit gürültüsü — DONE
 
 Değişken tutarlı kart talimatları (`estimated`) banka hareketindeki gerçek tutar

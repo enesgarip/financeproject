@@ -173,7 +173,7 @@ describe('RESTORE_TABLE_ORDER FK safety', () => {
   })
 
   it('covers every user-owned table added after the original backup flow', () => {
-    for (const table of ['wishlist_items', 'kasa_buckets', 'notification_preferences', 'data_health_issue_acknowledgements', 'savings_goal_snapshots', 'asset_value_events', 'stock_trades'] as const) {
+    for (const table of ['wishlist_items', 'kasa_buckets', 'notification_preferences', 'data_health_issue_acknowledgements', 'savings_goal_snapshots', 'asset_value_events', 'stock_trades', 'credit_score_history'] as const) {
       expect(RESTORE_TABLE_ORDER).toContain(table)
       expect(BACKUP_TABLE_LABELS[table]).toBeTruthy()
     }

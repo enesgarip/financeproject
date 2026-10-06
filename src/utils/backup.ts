@@ -37,6 +37,7 @@ export const RESTORE_TABLE_ORDER = [
   // Hisse işlem defteri: assets'tan SONRA (FK asset_id, set null).
   'stock_trades',
   'salary_history',
+  'credit_score_history',
   'gold_lots',
   'net_worth_snapshots',
   // Hedef fotoğrafları: savings_goals'tan SONRA (FK goal_id).
@@ -331,6 +332,7 @@ export const BACKUP_TABLE_LABELS: Record<RestoreTable, string> = {
   asset_value_events: 'Varlık değer olayı',
   stock_trades: 'Hisse işlemi',
   salary_history: 'Maaş kaydı',
+  credit_score_history: 'Kredi notu kaydı',
   gold_lots: 'Altın alımı',
   net_worth_snapshots: 'Net değer fotoğrafı',
   savings_goal_snapshots: 'Hedef fotoğrafı',
