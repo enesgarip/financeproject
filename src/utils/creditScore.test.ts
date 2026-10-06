@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { CreditScoreHistory } from '../types/database'
-import { buildCreditScoreSummary } from './creditScore'
+import { buildCreditScoreSummary, creditScoreCheckStatus } from './creditScore'
 
 function score(id: string, value: number, checkedOn: string): CreditScoreHistory {
   return {
@@ -39,5 +39,26 @@ describe('buildCreditScoreSummary', () => {
       score('three', 1500, '2026-03-01'),
     ], 2)
     expect(limited.trend).toEqual([1400, 1500])
+  })
+})
+
+describe('creditScoreCheckStatus', () => {
+  it('kayıt yoksa ve son sorgudan 30 gün geçtiyse hatırlatır', () => {
+    expect(creditScoreCheckStatus(null, '2026-10-06')).toEqual({ daysSinceCheck: null, due: true })
+    expect(creditScoreCheckStatus(score('old', 1450, '2026-09-06'), '2026-10-06')).toEqual({
+      daysSinceCheck: 30,
+      due: true,
+    })
+  })
+
+  it('30 günden yeni sorguyu güncel sayar ve gelecek tarihi negatife indirmez', () => {
+    expect(creditScoreCheckStatus(score('recent', 1450, '2026-09-20'), '2026-10-06')).toEqual({
+      daysSinceCheck: 16,
+      due: false,
+    })
+    expect(creditScoreCheckStatus(score('future', 1450, '2026-10-07'), '2026-10-06')).toEqual({
+      daysSinceCheck: 0,
+      due: false,
+    })
   })
 })
