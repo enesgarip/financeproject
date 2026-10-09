@@ -20,6 +20,13 @@ export async function deleteExpenseContext(id: string): Promise<Result<void>> {
   return voidResultFromSupabase(error, 'Bağlam silinemedi.')
 }
 
+export async function setExpenseContextCompleted(id: string, completed: boolean): Promise<Result<ExpenseContext>> {
+  const { data, error } = await supabase.from('expense_contexts')
+    .update({ completed_at: completed ? new Date().toISOString() : null }).eq('id', id).select().single()
+  if (error) return fail(appErrorFromSupabase(error, 'Gider grubunun durumu değiştirilemedi.'))
+  return ok(data as ExpenseContext)
+}
+
 export async function fetchContextExpenses(): Promise<Result<ContextExpense[]>> {
   const { data, error } = await supabase.from('context_expenses').select('*').order('spent_at', { ascending: false })
   return resultFromSupabase((data ?? []) as ContextExpense[], error, 'Bağlam giderleri yüklenemedi.')

@@ -1,6 +1,6 @@
 # Cards Architecture Note
 
-Last reviewed: 2026-08-12
+Last reviewed: 2026-10-10
 
 This note maps `/kartlar` (`CardsPage`) after the page split. Start with
 `CLAUDE.md`, `docs/AI_CONTEXT_INDEX.md`, and `docs/CARD_DEBT_TRANSITIONS.md`
@@ -23,7 +23,8 @@ repositories, services, or focused `CardsPage.*` modules.
   statement action state, account movement modal state
 - `CardsPage.sections.tsx`: section navigation and due-statement automation
 - `CardsPage.overview.tsx`: account hub and credit-card overview panels
-- `CardsPage.control.tsx`: card-first control center; combines statement/current/
+- `CardsPage.summary.tsx`: two-section summary, simple record rows and complete scheduled-installment purchase breakdown
+- `CardsPage.control.tsx`: preserved legacy control center (not rendered by the main page); combines statement/current/
   provision/scheduled-installment buckets with the latest real-bank debt
   reconciliation and exposes import actions; its status links to the canonical
   reconciliation form in Data Health
@@ -43,6 +44,8 @@ repositories, services, or focused `CardsPage.*` modules.
 - `CardsPage.list.tsx`: account/card list item presentation, row action menus,
   bank IBAN/copy affordance, masked card number, recent bank movements, and
   ledger/detail panels
+- `components/finance/CardLedgerPanel.tsx`: refreshes ledger events when the card's
+  `updated_at` changes, including expenses entered while card details remain open.
 - `CardsPage.installment.tsx`: legacy installment migration fallback/reference;
   the primary user flow is now the unified installment form in
   `CardsPage.expense.tsx`
@@ -63,44 +66,36 @@ lazy boundary.
 
 ## Visual Hierarchy
 
-- Hesap ve kart başlığındaki kalp `cards.is_favorite` alanını değiştirir.
-  Favoriler kendi türleri içindeki mevcut sırayı koruyarak listenin ve işlem
-  seçicilerinin başına alınır; hızlı harcama formunda ayrıca tek dokunuşluk
-  kısayol olarak görünür. Bu tercih finansal alanlara veya ledger'a dokunmaz.
-- Uzun satır ayrıntıları varsayılan kapalıdır: banka/nakit kartında hesap
-  bilgileri ile son hareketler; kredi kartında dönem, limit ve taksit satırları
-  native `details` bölümlerinde açılır. Ana tutar ve birincil eylemler her zaman
-  görünür kalır.
-- Kredi Kartları bölümünün `HeroNumber` değeri tüm kredi kartlarının kesinleşmiş
-  `current_period_spending` toplamıdır (“Bu dönem kesilecek”). Henüz zamanı
-  gelmemiş taksitler ve provizyonlar bu toplamda yer almaz; toplam kart yükü
-  kart satırlarında ve hero açıklamasında ayrı kalır.
-
-- The page title lives in the app shell (`Layout` + `navigation.ts` routeMeta);
-  `CrudPage` no longer renders its own page header (removed in Ş4). It only
-  renders the toolbar layer (record count, search, add action); its
-  `pageTitle` prop is carried for accessibility/search labels only.
-- Each `/kartlar` sub-section answers one question with a Şerit `HeroNumber`
-  (`CardsPage.hero.tsx`); on the summary section the hero is "borç sonrası
-  likit" (`diffTL(accountBalance, payableCardDebt)`) inside `AccountHubPanel`
-  (`CardsPage.overview.tsx`), followed by the bank-account and cash-wallet line list.
-- There is no dark signature surface anymore: the old `accounts-signature-hub`
-  gradient block was removed with the Şerit redesign (see the comment in
-  `CardsPage.overview.tsx`). Separation is done with 1px lines and background
-  tone, not scoped dark tokens.
-- Account and credit-card list surfaces still use the shared
-  `premium-entity-card` anatomy: identity, one primary value, supporting
-  metrics/activity, then the primary action. Their list is capped at two
-  desktop columns so balance, movement, statement, and limit information never
-  collapses into a narrow tile.
-- Credit-card list rows must leave overflow visible because the row action
-  menu is anchored inside them; keep any decorative clipping on a dedicated
-  layer so mobile menus can extend beyond the row surface.
-- Credit-card list rows label `debt_amount` as “Toplam kart yükü”; current-period,
-  open-statement, and future-installment amounts remain separate supporting
-  values so a bank's zero current debt is not mistaken for zero total burden.
-- Do not render `CreditCardOverview` when there is no credit-card limit group;
-  the account hub already owns cash-only summary.
+- Ana sayfada yalnız **Kredi kartları** ve **Hesaplar ve nakit** seçimi bulunur.
+  Eski `section=ozet/islemler/ekstreler` bağlantıları çalışır; ayrı menü oluşturmaz.
+- Kart özetinde dönem içi kesinleşmiş toplam ve gelecek taksit toplamı öndedir.
+  Provizyon ayrı kovadır; ödenecek ekstre kısmi ödemeler düşülmüş kalandır.
+  İlgili toplama dokunmak aynı yüzeyde dökümü açar. Ana görünümde kategori
+  düzenleme kısa yolu ve kapalı manuel kayıt bölümü vardır.
+- Hesap özeti banka + nakit cüzdanı toplamını, ayrı banka/nakit tutarlarını ve
+  tüm kart yükü sonrası farkı gösterir. Döviz nakit varlıkları bu hesap listesine
+  dahil değildir; dashboard likit toplamı daha geniş kaynaktır.
+- Liste satırları hafiftir: kartta dönem içi tutar, hesapta bakiye. Favoriler
+  mevcut kararlı sırayla önce gelir. Kalp, düzenleme/silme, içe aktarma ve
+  finansal eylemler ilgili kaydın ayrıntısındadır.
+- `?section=kartlar&card=<id>` veya `?section=hesaplar&card=<id>` ayrı ayrıntı
+  görünümüdür. Yalnız seçilen kayıt çizilir; tarayıcı geri/Listeye dön önceki
+  bölümü, liste aramasını ve kaydırma konumunu korur. Doğrudan açılan ayrıntı
+  bağlantısı aynı bölümün listesine döner. Bilinmeyen id hata/geri yolu gösterir.
+- Kart ayrıntısında borç/limit ve dönem bilgisi açık, ek teknik bilgiler kapalıdır.
+  Dönem hareketleri, gelecek taksitler, ekstre ve provizyon dökümleri seçilen
+  kartla sınırlıdır. Hesap ayrıntısında kimlik, IBAN, hareketler, para giriş/çıkış
+  ve transfer mevcut hesap/ledger akışını kullanır.
+- Taksit dökümü tüm `scheduled` satırları alışveriş parent'ına göre gruplar;
+  `posted` veya `paid` satırlar gelecek toplamına katılmaz. Bağlantısız eski
+  satırlar yanlış alışveriş birleştirmemek için ayrı kalır. Son 50 parent'ın
+  düzenleme paneli ikincil, kapalı bir bölümdür; toplam bu limite bağlı değildir.
+- Taksitler immutable id ile 500'lük sayfalarda okunur, sonra vadeye göre sıralanır.
+  Ekstre okuması tüm açıkları + son 24 ödenmiş arşivi getirir; geçmiş sınırı açık
+  borcu gizlemez. Hatalı/yüklenmemiş toplam 0 gösterilmez; tekrar deneme yolu vardır.
+  Kısmi ödeme sorgusu hatasında ekstre tutarı doğrulanmış sayılmaz, ödeme açılmaz.
+- Gizlilik maskesi tüm tutarlara uygulanır. Sayfa başlığı kabuktadır; `CrudPage`
+  arama/ekleme araçları yalnız listede görünür. İki PDF modalı lazy yüklenir.
 
 ## Data And Side Effects
 

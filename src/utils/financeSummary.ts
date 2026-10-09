@@ -498,7 +498,7 @@ export function buildMonthlyCashFlow(
   const remainingOutflow = obligationSum(remainingObligations, isOutflowKind)
   const remainingReceivableIncome = obligationSum(remainingObligations, (item) => item.kind === 'personal_receivable')
 
-  const salaryLikelyReceived = isCurrentMonth && dateInputValue(today) > dateInputValue(getFirstBusinessDay(monthStart))
+  const salaryLikelyReceived = isCurrentMonth && dateInputValue(today) >= dateInputValue(getFirstBusinessDay(monthStart))
   const projectedIncome = sumTL([salaryLikelyReceived ? 0 : salaryIncome, remainingReceivableIncome])
 
   return {

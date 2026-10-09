@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState, type Dispatch, type FormEvent, type SetStateAction } from 'react'
-import { useSearchParams } from 'react-router'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type Dispatch, type FormEvent, type SetStateAction } from 'react'
+import { useLocation, useNavigate, useSearchParams } from 'react-router'
 import { useInvalidateFinanceSnapshot } from '../app/useFinanceSnapshot'
 import {
   applyCardProvision,
@@ -17,11 +17,7 @@ import { isMissingSupabaseCapabilityError, missingSupabaseCapabilityMessage } fr
 import type { CardSection } from './CardsPage.sections'
 
 type ReloadCards = (() => Promise<void>) | null
-const cardSectionIds: CardSection[] = ['ozet', 'kartlar', 'hesaplar', 'islemler', 'ekstreler']
-
-function parseCardSection(value: string | null): CardSection {
-  return cardSectionIds.includes(value as CardSection) ? (value as CardSection) : 'ozet'
-}
+export type CardPanel = 'donem' | 'taksitler' | 'ekstreler' | 'provizyon' | 'kategoriler' | 'manuel' | null
 
 function scrollToPageTop() {
   if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -29,30 +25,80 @@ function scrollToPageTop() {
 
 export function useCardSectionNavigation() {
   const [searchParams, setSearchParams] = useSearchParams()
-  const section = parseCardSection(searchParams.get('section'))
+  const navigate = useNavigate()
+  const location = useLocation()
+  const section: CardSection = searchParams.get('section') === 'hesaplar' ? 'hesaplar' : 'kartlar'
+  const selectedCardId = searchParams.get('card')
+  const rawPanel = searchParams.get('panel') ?? (searchParams.get('section') === 'ekstreler' ? 'ekstreler' : searchParams.get('section') === 'islemler' ? 'donem' : null)
+  const panel: CardPanel = ['donem', 'taksitler', 'ekstreler', 'provizyon', 'kategoriler', 'manuel'].includes(rawPanel ?? '') ? rawPanel as CardPanel : null
+  const listScroll = useRef(0)
+  const previousCard = useRef(selectedCardId)
   const [quickExpenseFocus, setQuickExpenseFocus] = useState<{ cardId: string; mode: 'cash' | 'installment'; nonce: number } | null>(null)
+
+  useLayoutEffect(() => {
+    if (previousCard.current && !selectedCardId) window.scrollTo({ top: listScroll.current, behavior: 'instant' })
+    previousCard.current = selectedCardId
+  }, [selectedCardId])
 
   const handleSectionChange = useCallback((next: CardSection) => {
     const nextParams = new URLSearchParams(searchParams)
-    if (next === 'ozet') nextParams.delete('section')
-    else nextParams.set('section', next)
+    nextParams.set('section', next === 'hesaplar' ? 'hesaplar' : 'kartlar')
+    nextParams.delete('card')
+    nextParams.delete('panel')
+    listScroll.current = 0
     setSearchParams(nextParams, { replace: true })
     scrollToPageTop()
   }, [searchParams, setSearchParams])
+
+  const openCardDetails = useCallback((card: Card) => {
+    if (!selectedCardId) listScroll.current = window.scrollY
+    const nextParams = new URLSearchParams(searchParams)
+    nextParams.set('section', card.card_type === 'banka_karti' ? 'hesaplar' : 'kartlar')
+    nextParams.set('card', card.id)
+    nextParams.delete('panel')
+    setSearchParams(nextParams, { state: { cardsList: location.pathname + location.search } })
+    scrollToPageTop()
+  }, [searchParams, setSearchParams, selectedCardId, location.pathname, location.search])
+
+  const backToList = useCallback(() => {
+    if (location.state?.cardsList) navigate(-1)
+    else {
+      const nextParams = new URLSearchParams(searchParams)
+      nextParams.delete('card')
+      nextParams.delete('panel')
+      nextParams.set('section', section)
+      setSearchParams(nextParams, { replace: true })
+    }
+  }, [location.state, navigate, searchParams, section, setSearchParams])
+
+  const openPanel = useCallback((next: CardPanel) => {
+    const nextParams = new URLSearchParams(searchParams)
+    nextParams.set('section', section)
+    if (next && next !== panel) nextParams.set('panel', next)
+    else nextParams.delete('panel')
+    setSearchParams(nextParams, { replace: true, state: location.state })
+  }, [searchParams, section, panel, setSearchParams, location.state])
 
   const focusQuickExpense = useCallback((card: Card, mode: 'cash' | 'installment') => {
     setQuickExpenseFocus({ cardId: card.id, mode, nonce: Date.now() })
     const nextParams = new URLSearchParams(searchParams)
-    nextParams.set('section', 'islemler')
-    setSearchParams(nextParams, { replace: true })
-    scrollToPageTop()
-  }, [searchParams, setSearchParams])
+    nextParams.set('section', 'kartlar')
+    nextParams.set('card', card.id)
+    nextParams.set('panel', 'manuel')
+    if (!selectedCardId) listScroll.current = window.scrollY
+    setSearchParams(nextParams, { replace: Boolean(selectedCardId), state: location.state ?? { cardsList: location.pathname + location.search } })
+  }, [searchParams, setSearchParams, selectedCardId, location.state, location.pathname, location.search])
 
   return {
     focusQuickExpense,
     handleSectionChange,
     quickExpenseFocus,
     section,
+    selectedCardId,
+    openCardDetails,
+    backToList,
+    panel,
+    openPanel,
   }
 }
 
@@ -71,6 +117,7 @@ export function useCardsPageData() {
   // Taksit takvimi paneli ilk yüklemede yanlış "taksit yok" göstermesin diye
   // (boş liste ≠ henüz yüklenmedi) yükleme durumu ayrıca izlenir.
   const [installmentsLoading, setInstallmentsLoading] = useState(true)
+  const [installmentsError, setInstallmentsError] = useState('')
   const [reconciliations, setReconciliations] = useState<AccountReconciliation[]>([])
 
   const loadProvisions = useCallback(async () => {
@@ -110,14 +157,20 @@ export function useCardsPageData() {
     }
     // Ödeme tablosu migration bekleyen ortamda yoksa kalan = arşiv tutarı.
     setStatementPayments(paymentsResult.ok ? paymentsResult.data : [])
+    if (!paymentsResult.ok && !isMissingSupabaseCapabilityError(paymentsResult.error)) {
+      setStatementError(paymentsResult.error.message ?? 'Kısmi ekstre ödemeleri yüklenemedi.')
+    }
     setStatementsLoading(false)
   }, [])
 
   const loadInstallments = useCallback(async () => {
+    setInstallmentsLoading(true)
+    setInstallmentsError('')
     const result = await fetchCardInstallments()
 
     if (!result.ok) {
       setInstallments([])
+      setInstallmentsError(result.error.message ?? 'Gelecek taksitler yüklenemedi.')
       setInstallmentsLoading(false)
       return
     }
@@ -235,6 +288,7 @@ export function useCardsPageData() {
   return {
     installments,
     installmentsLoading,
+    installmentsError,
     invalidateSnapshot,
     loadInstallments,
     loadReconciliations,

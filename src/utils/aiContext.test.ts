@@ -167,7 +167,7 @@ function wishlistItem(overrides: Partial<WishlistItem>): WishlistItem {
 }
 
 function expenseContext(overrides: Partial<ExpenseContext>): ExpenseContext {
-  return { ...base, kind: 'travel', name: 'Tatil 2026', budget_amount: null, starts_on: null, ends_on: null, sort_order: 0, note: null, ...overrides }
+  return { ...base, kind: 'travel', name: 'Tatil 2026', budget_amount: null, starts_on: null, ends_on: null, completed_at: null, sort_order: 0, note: null, ...overrides }
 }
 
 function car(overrides: Partial<Car>): Car {

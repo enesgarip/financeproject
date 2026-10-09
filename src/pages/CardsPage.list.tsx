@@ -1,6 +1,5 @@
 import { AlertTriangle, Banknote, Check, CheckCircle2, Copy, Heart, ShieldCheck } from 'lucide-react'
 import { useCallback, useMemo, useState } from 'react'
-import { Link } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '../auth/useAuth'
 import { BankLogo } from '../components/finance/BankLogo'
@@ -12,7 +11,9 @@ import { MiniStat, SectionHeader, StatusBadge } from '../components/finance/Fina
 import { fetchAllCardAliases } from '../data/repositories/cardAliasesRepo'
 import { fetchExpensePaceRows } from '../data/repositories/cardsRepo'
 import { fetchAccountLedgerEvents } from '../data/repositories/financePanelsRepo'
-import type { AccountReconciliation, Card, CardInstallment, CardStatementArchive } from '../types/database'
+import type { AccountReconciliation, Card, CardInstallment, CardStatementArchive, CardStatementPayment } from '../types/database'
+import { buildStatementPaidMap, statementRemainingAmount } from '../utils/cardStatementPayments'
+import type { CardPanel } from './CardsPage.hooks'
 import { addDays, dateInputValue, daysUntil, startOfDay } from '../utils/date'
 import { freshnessConfidence } from '../utils/dataConfidence'
 import { STALE_AFTER_DAYS } from '../utils/reconciliation'
@@ -140,6 +141,7 @@ export function CreditAccountListCard({
   row,
   rows,
   statements,
+  statementPayments = [],
   installments,
   reconciliations = [],
   menu,
@@ -152,10 +154,14 @@ export function CreditAccountListCard({
   onAddExpense,
   onToggleFavorite,
   onChanged,
+  onOpenPanel,
+  installmentsKnown = true,
+  statementsKnown = true,
 }: {
   row: Card
   rows: Card[]
   statements: CardStatementArchive[]
+  statementPayments?: CardStatementPayment[]
   installments: CardInstallment[]
   reconciliations?: AccountReconciliation[]
   menu: React.ReactNode
@@ -168,6 +174,9 @@ export function CreditAccountListCard({
   onAddExpense: (card: Card, mode: 'cash' | 'installment') => void
   onToggleFavorite: (card: Card) => void
   onChanged?: () => void | Promise<void>
+  onOpenPanel?: (panel: CardPanel) => void
+  installmentsKnown?: boolean
+  statementsKnown?: boolean
 }) {
   const [ibanCopied, setIbanCopied] = useState(false)
 
@@ -287,7 +296,8 @@ export function CreditAccountListCard({
   )
   const dueDate = getCreditCardDueDate(row, statements)
   const status = getCreditCardStatus(row, stats.usageRate, statements)
-  const displayedOpenStatementAmount = visibleOpenStatementAmount(row, statements)
+  const paidMap = buildStatementPaidMap(statementPayments)
+  const displayedOpenStatementAmount = visibleOpenStatementAmount(row, statements, paidMap)
   const installmentCount = activeInstallmentCount(row, installments)
   const scheduledInstallmentTotal = sumTL(installments
     .filter((installment) => installment.card_id === row.id && installment.status === 'scheduled')
@@ -376,7 +386,7 @@ export function CreditAccountListCard({
         </span>
       </div>
 
-      <details className="group mt-2 border-t border-line pt-1">
+      <details open={detailsOpen || undefined} className="group mt-2 border-t border-line pt-1">
         <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between text-sm font-semibold text-ink-muted marker:hidden hover:text-ink [&::-webkit-details-marker]:hidden">
           Dönem, limit ve taksit ayrıntıları
           <span aria-hidden="true" className="text-xs transition-transform group-open:rotate-180">⌄</span>
@@ -384,14 +394,15 @@ export function CreditAccountListCard({
       <LineGroup>
         <CardDatum label="Kalan kart limiti" value={formatAmount(stats.availableLimit)} tone="good" />
         <CardDatum label="Dönem içi" value={formatAmount(row.current_period_spending)} />
+        <CardDatum label="Bekleyen provizyon" value={formatAmount(row.provision_amount ?? 0)} />
         {statementEstimate ? (
           <CardDatum
             label={statementEstimate.daysToCut === 0 ? 'Kesim tahmini (bugün)' : `Kesim tahmini (${statementEstimate.daysToCut} gün)`}
             value={`~${formatAmount(statementEstimate.amount)}`}
           />
         ) : null}
-        <CardDatum label="Açık ekstre" value={formatAmount(displayedOpenStatementAmount)} tone={displayedOpenStatementAmount > 0 ? 'danger' : 'neutral'} />
-        <CardDatum label="Gelecek taksit" value={formatAmount(scheduledInstallmentTotal)} />
+        <CardDatum label="Açık ekstre" value={statementsKnown ? formatAmount(displayedOpenStatementAmount) : 'Doğrulanamadı'} tone={displayedOpenStatementAmount > 0 ? 'danger' : 'neutral'} />
+        <CardDatum label="Gelecek taksit" value={installmentsKnown ? formatAmount(scheduledInstallmentTotal) : 'Doğrulanamadı'} />
         <CardDatum label="Son ödeme" value={formatShortDate(dueDate)} tone={displayedOpenStatementAmount > 0 ? 'warning' : 'neutral'} />
       </LineGroup>
 
@@ -406,11 +417,11 @@ export function CreditAccountListCard({
       ) : null}
       </details>
 
-      <div className="mt-3 grid grid-cols-2 gap-2">
-        {openStatements.length > 0 ? (
-          <Link to="/kartlar?section=ekstreler" className="flex min-h-11 items-center justify-center rounded-lg bg-primary px-3 text-xs font-semibold text-primary-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary">
+      <div className="mt-3 grid gap-2">
+        {!statementsKnown ? <p className="text-xs text-warning">Ödeme için ekstre dökümünün yüklenmesi gerekiyor.</p> : openStatements.length > 0 ? (
+          <button type="button" onClick={() => onOpenPanel?.('ekstreler')} className="flex min-h-11 items-center justify-center rounded-lg bg-primary px-3 text-xs font-semibold text-primary-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary">
             Ekstreyi öde
-          </Link>
+          </button>
         ) : (
         <Button
           type="button"
@@ -419,7 +430,7 @@ export function CreditAccountListCard({
           disabled={payableDebt <= 0 || openStatements.length > 0}
           title={
             openStatements.length > 0
-              ? 'Açık ekstre var — Ekstreler sekmesinden "Ekstreyi öde" ile kapat'
+              ? 'Açık ekstre var — "Ekstreyi öde" ile kapat'
               : payableDebt <= 0
                 ? 'Ödenebilir kesinleşmiş borç yok'
                 : undefined
@@ -430,6 +441,9 @@ export function CreditAccountListCard({
           Borç öde
         </Button>
         )}
+      </div>
+      <details className="mt-3 border-t border-line">
+        <summary className="min-h-11 cursor-pointer py-3 text-xs font-semibold text-ink-muted">Manuel kayıt</summary>
         <Button
           type="button"
           size="lg"
@@ -437,11 +451,12 @@ export function CreditAccountListCard({
           onClick={() => onAddExpense(row, 'cash')}
           className="finance-touch-target px-3 text-xs"
         >
-          Harcama ekle
+          Manuel harcama ekle
         </Button>
-      </div>
+      </details>
       {detailsOpen ? (
-        <div className="mt-4 rounded-lg border border-line-strong bg-surface-muted/70 p-3 ring-1 ring-line-strong">
+        <details className="mt-4 rounded-lg border border-line-strong bg-surface-muted/70 p-3 ring-1 ring-line-strong">
+          <summary className="min-h-11 cursor-pointer py-3 text-sm font-semibold">Diğer kart bilgileri ve kayıt geçmişi</summary>
           <SectionHeader
             title="Kart detay özeti"
             description="Borç, ekstre, limit, vade ve devam eden taksitleri birlikte oku."
@@ -497,7 +512,7 @@ export function CreditAccountListCard({
                   {openStatements.slice(0, 3).map((statement) => (
                     <div key={statement.id} className="flex min-w-0 items-center justify-between gap-3 rounded-lg bg-page px-3 py-2 text-xs">
                       <span className="min-w-0 truncate font-bold text-ink">{statementPeriodLabel(statement)}</span>
-                      <span className="shrink-0 font-black tabular-nums text-ink">{formatAmount(statement.statement_debt_amount)}</span>
+                      <span className="shrink-0 font-black tabular-nums text-ink">{formatAmount(statementRemainingAmount(statement, paidMap))}</span>
                     </div>
                   ))}
                 </div>
@@ -508,7 +523,7 @@ export function CreditAccountListCard({
           </div>
           <CardAliasPanel card={row} />
           <CardLedgerPanel card={row} onChanged={onChanged} formatAmount={formatAmount} />
-        </div>
+        </details>
       ) : null}
       </div>
     </article>

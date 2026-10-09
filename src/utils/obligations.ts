@@ -514,12 +514,12 @@ export function summarizeFinanceObligations(
   items: FinanceObligation[],
   options: { from?: Date } = {},
 ): FinanceObligationMonthSummary {
-  // Maaş günü geçmişse maaş "yattı" sayılır (financeSummary.salaryLikelyReceived
+  // Maaş günü geldiyse maaş "yattı" sayılır (financeSummary.salaryLikelyReceived
   // ile aynı varsayım); "beklenen giriş" onu tekrar saymaz (UX turu B11 —
   // takvim 8'inde hâlâ 1'inin maaşını bekliyor gösteriyordu).
   const fromKey = options.from ? dateInputValue(startOfDay(options.from)) : null
   const isReceivedSalary = (item: FinanceObligation) =>
-    fromKey != null && item.kind === 'salary' && item.direction === 'inflow' && item.date < fromKey
+    fromKey != null && item.kind === 'salary' && item.direction === 'inflow' && item.date <= fromKey
   // Ödenmiş (settled) kalemler yalnız takvim izi; yük, giriş ve sayımlara girmez.
   const live = items.filter((item) => !item.settled)
   const outflow = roundTL(sumTL(live.filter((item) => item.direction === 'outflow').map(obligationCashImpact)))

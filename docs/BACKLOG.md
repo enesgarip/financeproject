@@ -1,5 +1,29 @@
 # Priority Backlog
 
+## 2026-10-10 — Hesap/kart odağı, gider grubu tamamlama ve maaş günü — UYGULANDI
+
+Hesaplar sayfası Kredi kartları / Hesaplar ve nakit olarak sadeleştirildi.
+Kartta dönem içi ve gelecek taksit toplamı önde, provizyon ve ekstre kalanı
+ayrı; toplamlar ilgili dökümü açar. Kart/hesap seçimi ayrı ayrıntı görünümüne
+geçer, geri dönüş bölüm/arama/kaydırmayı korur. Manuel kayıt kapalı bölümde,
+kategori düzenleme kısa yoldadır; eski ekstre/işlem bağlantıları çalışır.
+Gelecek taksit dökümü tüm planlı satırları alışveriş bazında gösterir.
+Gider grubu tamamlanınca geçmiş korunur, yeni gider seçiminden çıkar;
+Tamamlanan görünümünden yeniden açılır. İlk iş günü dahil bakiyedeki maaş
+beklenen gelire tekrar eklenmez; aynı sınır aylık özet ve projeksiyonda kullanılır.
+“Ay sonuna kalan” girdileri görünürdür. Kullanıcının bugün gördüğü farkın veri
+bazlı sebebi henüz kesinleşmedi; rakam dökümüyle takip edilecek.
+
+Doğrulama: `npm run verify` başarılı (1.522 test, coverage, lint, audit,
+build, bundle ve edge tipleri). Migration yerel reset/seed ile uygulandı;
+PostgreSQL'de tamamlama/yeniden açma, geçmiş koruma ve RLS regresyonu geçti.
+Tarayıcıda kart/hesap ayrıntısı, geri dönüş, kartla sınırlı taksit dökümü,
+390 px taşma kontrolü, grup kalıcılığı ve dashboard hesap dökümü denendi.
+Gerçek yerel backend E2E testi yeni kart ayrıntısı akışında 500 TL harcamanın
+borca ve ledger geçmişine yansımasını doğruladı. Açık ayrıntıdaki ledger,
+kart güncellendiğinde yeniden yüklenir.
+
+
 ## 2026-10-06 — Findeks kredi notu geçmişi — DONE
 
 `Analiz > Detay` içine manuel Findeks kredi notu takibi eklendi. Kullanıcı

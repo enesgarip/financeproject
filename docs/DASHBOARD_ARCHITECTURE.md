@@ -1,6 +1,6 @@
 # Dashboard Architecture Note
 
-Last reviewed: 2026-08-12
+Last reviewed: 2026-10-10
 
 This note is a quick map for changes touching `/` (`DashboardPage`). Start with
 `CLAUDE.md` and `docs/AI_CONTEXT_INDEX.md`; use this file after you know the
@@ -180,3 +180,14 @@ CardPaymentCyclePanel, ilk görünümü kalabalıklaştırmamak için DashboardP
 ## 2026-09-15 — Gün ve vade sınırları
 
 Dashboard gün damgasını dakika aralığı, focus ve visibilitychange ile yeniler; türetilmiş veri gün damgasına bağlıdır. Ayın son gününde günlük bütçe paydası en az birdir. Acil vade sayısı yalnız action taşıyan nakit çıkışlarını sayar; maaş ve karta yansıyacak bilgi taksitleri sayılmaz. Mutabakat farkı kuruş hassasiyetindedir; 1 TL altı farklar gizlenmez.
+
+## Ay sonuna kalan dökümü (2026-10-10)
+
+`SeritOverview` kahraman tutarının altındaki “Nasıl hesaplandı?” bölümü hazır
+likit bakiye + bu ay beklenen gelir − kalan çıkış − tampon − kasa rezervini
+aynı `useSafeToSpend` girdilerinden gösterir; yeni hesap formülü üretmez.
+Maaş ilk iş günü dahil bakiyede kabul edilir; ay sonu beklenen gelire tekrar
+katılmaz. Aynı gün 00/09/23 ve hafta sonu öncesi/sonrası regresyonları vardır.
+Aylık yükümlülük özeti ve `cashFlowForecast` aynı gün sınırını kullanır.
+Bu tarihten sonraki bir bakiye farkının gerçek veri sebebi ayrıca incelenmelidir;
+gelecek ayın maaşı bugünkü “Ay sonuna kalan” tutarına dahil değildir.

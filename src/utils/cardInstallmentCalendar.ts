@@ -49,6 +49,23 @@ export type CardInstallmentCardTotalsSummary = {
   rows: CardInstallmentCardTotal[]
 }
 
+/** Tüm planlı taksitlerden alışveriş dökümü; eski parent kaydı liste limitine takılmaz. */
+export function buildUpcomingInstallmentPlans(installments: CardInstallment[]) {
+  const plans = new Map<string, { id: string; cardId: string; description: string; items: CardInstallment[]; total: number }>()
+  for (const item of installments) {
+    if (item.status !== 'scheduled') continue
+    // Parent bağlantısı olmayan eski satırları yanlışlıkla aynı alışverişte birleştirme.
+    const id = `${item.card_id}:${item.card_expense_id ?? item.id}`
+    const existing = plans.get(id)
+    if (existing) {
+      existing.items.push(item)
+      existing.total = sumTL([existing.total, item.amount])
+    } else plans.set(id, { id, cardId: item.card_id, description: item.description, items: [item], total: item.amount })
+  }
+  return Array.from(plans.values()).map((plan) => ({ ...plan, items: plan.items.sort((a, b) => a.due_month.localeCompare(b.due_month)) }))
+    .sort((a, b) => b.total - a.total)
+}
+
 function monthLabel(monthKey: string) {
   return new Intl.DateTimeFormat('tr-TR', { month: 'long', year: 'numeric' }).format(new Date(`${monthKey}T00:00:00`))
 }

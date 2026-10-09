@@ -9,7 +9,7 @@ import {
 
 const context: ExpenseContext = {
   id: 'ctx1', user_id: 'u1', created_at: '', updated_at: '', kind: 'project', name: 'Taşınma',
-  budget_amount: 10_000, starts_on: '2026-08-01', ends_on: '2026-09-01', sort_order: 0, note: null,
+  budget_amount: 10_000, starts_on: '2026-08-01', ends_on: '2026-09-01', completed_at: null, sort_order: 0, note: null,
 }
 const manual: ContextExpense = {
   id: 'm1', user_id: 'u1', created_at: '', updated_at: '', context_id: 'ctx1', spent_at: '2026-08-02',
@@ -21,6 +21,13 @@ const card = {
 } as CardExpense
 
 describe('buildExpenseContextSummaries', () => {
+  it('tamamlamak ve yeniden açmak geçmişi ve toplamları korur', () => {
+    const before = buildExpenseContextSummaries([context], [manual], [card], new Date('2026-08-04'))[0]
+    const completed = buildExpenseContextSummaries([{ ...context, completed_at: '2026-08-04T12:00:00Z' }], [manual], [card], new Date('2026-08-04'))[0]
+    expect(completed.total).toBe(before.total)
+    expect(completed.entries).toEqual(before.entries)
+    expect(completed.remainingBudget).toBe(before.remainingBudget)
+  })
   it('kart ve manuel gideri çift saymadan toplar, bütçe burn-down üretir', () => {
     const result = buildExpenseContextSummaries([context], [manual], [card], new Date('2026-08-04'))[0]
     expect(result.total).toBe(4000)

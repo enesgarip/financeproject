@@ -18,6 +18,7 @@ import {
   insertContextExpense,
   insertExpenseContext,
   setCardExpenseContext,
+  setExpenseContextCompleted,
 } from '../data/repositories/expenseContextsRepo'
 import type { CardExpense, ExpenseContext, ExpenseContextKind } from '../types/database'
 import { dateInputValue, formatDate } from '../utils/date'
@@ -55,6 +56,8 @@ export function ExpenseContextsPage() {
   const toast = useToast()
   const { confirm, confirmDialog } = useConfirmDialog()
   const contexts = query.data?.contexts ?? []
+  const activeContexts = contexts.filter((context) => !context.completed_at)
+  const [showCompleted, setShowCompleted] = useState(false)
 
   const refresh = useCallback(async () => { await invalidate() }, [invalidate])
 
@@ -69,11 +72,14 @@ export function ExpenseContextsPage() {
         onChanged={refresh}
         onError={(message) => toast.error('Kayıt değiştirilemedi', message)}
         confirm={confirm}
+        showCompleted={showCompleted}
+        onShowCompleted={setShowCompleted}
       />
-      {contexts.length > 0 ? (
+      {activeContexts.length > 0 && !showCompleted ? (
         <>
           <ManualContextExpenseForm
-            contexts={contexts}
+            key={activeContexts.map((context) => context.id).join(':')}
+            contexts={activeContexts}
             userId={user?.id}
             onChanged={async () => { await refresh(); toast.success('Gider eklendi.') }}
             onError={(message) => toast.error('Gider eklenemedi', message)}
@@ -83,8 +89,10 @@ export function ExpenseContextsPage() {
             onChanged={refresh}
             onError={(message) => toast.error('Harcama ilişkilendirilemedi', message)}
           />
-          <section className="grid gap-4 lg:grid-cols-2">
-            {(query.data?.summaries ?? []).map((summary) => (
+        </>
+      ) : null}
+          <section className="grid gap-4 lg:grid-cols-2" aria-label={showCompleted ? 'Tamamlanan grupların geçmişi' : 'Aktif grupların özeti'}>
+            {(query.data?.summaries ?? []).filter((summary) => Boolean(summary.context.completed_at) === showCompleted).map((summary) => (
               <ContextSummaryCard
                 key={summary.context.id}
                 summary={summary}
@@ -96,19 +104,19 @@ export function ExpenseContextsPage() {
               />
             ))}
           </section>
-        </>
-      ) : null}
       {confirmDialog}
     </div>
   )
 }
 
-function ContextManager({ contexts, userId, onChanged, onError, confirm }: {
+function ContextManager({ contexts, userId, onChanged, onError, confirm, showCompleted, onShowCompleted }: {
   contexts: ExpenseContext[]
   userId?: string
   onChanged: () => Promise<void>
   onError: (message: string) => void
   confirm: ReturnType<typeof useConfirmDialog>['confirm']
+  showCompleted: boolean
+  onShowCompleted: (value: boolean) => void
 }) {
   const [kind, setKind] = useState<ExpenseContextKind>('pet')
   const [name, setName] = useState('')
@@ -116,6 +124,18 @@ function ContextManager({ contexts, userId, onChanged, onError, confirm }: {
   const [startsOn, setStartsOn] = useState('')
   const [endsOn, setEndsOn] = useState('')
   const [saving, setSaving] = useState(false)
+  const [busyId, setBusyId] = useState<string | null>(null)
+  const visibleContexts = contexts.filter((context) => Boolean(context.completed_at) === showCompleted)
+
+  async function changeCompletion(context: ExpenseContext) {
+    if (busyId) return
+    setBusyId(context.id)
+    try {
+      const result = await setExpenseContextCompleted(context.id, !context.completed_at)
+      if (!result.ok) return onError(result.error.message)
+      await onChanged()
+    } finally { setBusyId(null) }
+  }
 
   async function add(event: React.FormEvent) {
     event.preventDefault()
@@ -131,6 +151,7 @@ function ContextManager({ contexts, userId, onChanged, onError, confirm }: {
       ends_on: endsOn || null,
       sort_order: contexts.length,
       note: null,
+      completed_at: null,
     })
     setSaving(false)
     if (!result.ok) return onError(result.error.message)
@@ -157,9 +178,14 @@ function ContextManager({ contexts, userId, onChanged, onError, confirm }: {
         <p className="text-xs text-ink-muted">Evcil hayvan, gezi veya taşınma gibi bir konuya ait giderleri birlikte izle. Her gider kendi kategorisini korur.</p>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
-        {contexts.length ? (
+        <div className="flex gap-2" aria-label="Gider grubu durumu">
+          <Button variant={!showCompleted ? 'default' : 'outline'} onClick={() => onShowCompleted(false)} aria-pressed={!showCompleted}>Aktif ({contexts.filter((context) => !context.completed_at).length})</Button>
+          <Button variant={showCompleted ? 'default' : 'outline'} onClick={() => onShowCompleted(true)} aria-pressed={showCompleted}>Tamamlanan ({contexts.filter((context) => context.completed_at).length})</Button>
+        </div>
+        <p className="text-xs text-ink-muted">Tamamlanan grupların geçmişi korunur; yeni gider eklemek için grubu yeniden açabilirsin.</p>
+        {visibleContexts.length ? (
           <ul className="grid gap-2 sm:grid-cols-2">
-            {contexts.map((context) => {
+            {visibleContexts.map((context) => {
               const KindIcon = KIND_ICONS[context.kind] ?? FolderKanban
               return (
               <li key={context.id} className="flex items-center justify-between rounded-xl border border-line-strong px-3 py-2">
@@ -167,12 +193,15 @@ function ContextManager({ contexts, userId, onChanged, onError, confirm }: {
                   <KindIcon className="size-4 text-primary" />
                   <div className="min-w-0"><p className="truncate text-sm font-bold">{context.name}</p><p className="text-xs text-ink-muted">{contextKindLabel(context.kind)}</p></div>
                 </div>
-                <Button size="icon-sm" variant="ghost" aria-label={`${context.name} gider grubunu sil`} onClick={() => void remove(context)}><Trash2 /></Button>
+                <div className="flex shrink-0 items-center gap-1">
+                  <Button size="sm" variant="outline" disabled={busyId !== null} aria-label={`${context.name}: ${context.completed_at ? 'yeniden aç' : 'tamamla'}`} onClick={() => void changeCompletion(context)}>{context.completed_at ? 'Yeniden aç' : 'Tamamla'}</Button>
+                  <Button size="icon-sm" variant="ghost" aria-label={`${context.name} gider grubunu sil`} onClick={() => void remove(context)}><Trash2 /></Button>
+                </div>
               </li>
               )
             })}
           </ul>
-        ) : <p className="rounded-xl border border-dashed border-line-strong p-4 text-center text-sm text-ink-muted">İlk evcil hayvanını veya projeni ekle.</p>}
+        ) : <p className="rounded-xl border border-dashed border-line-strong p-4 text-center text-sm text-ink-muted">{showCompleted ? 'Tamamlanan gider grubu yok.' : 'Aktif gider grubu yok. Yeni bir grup ekleyebilir veya tamamlanan bir grubu yeniden açabilirsin.'}</p>}
         <form onSubmit={add} className="grid gap-2 sm:grid-cols-2 lg:grid-cols-6">
           <Select
             value={kind}
@@ -259,8 +288,10 @@ function ContextCardTagging({ contexts, onChanged, onError }: { contexts: Expens
     void load()
   }, [load])
   const names = useMemo(() => new Map(contexts.map((context) => [context.id, context.name])), [contexts])
+  const activeContexts = contexts.filter((context) => !context.completed_at)
 
   async function assign(expense: CardExpense, contextId: string) {
+    if (contextId && !activeContexts.some((context) => context.id === contextId)) return
     setBusyId(expense.id)
     const result = await setCardExpenseContext(expense.id, contextId || null)
     setBusyId(null)
@@ -271,7 +302,7 @@ function ContextCardTagging({ contexts, onChanged, onError }: { contexts: Expens
 
   return (
     <Card><CardHeader className="pb-2"><CardTitle className="flex items-center gap-2 text-base"><CreditCard className="size-4 text-primary" /> Kart harcamasını gruba ekle</CardTitle><p className="text-xs text-ink-muted">Etiketleme kart borcunu değiştirmez. Henüz kesinleşmemiş provizyonlar da listelenir.</p></CardHeader><CardContent>
-      {loading ? <Skeleton className="h-24 rounded-xl" /> : <ul className="flex flex-col divide-y divide-line">{expenses.map((expense) => <li key={expense.id} className="flex items-center justify-between gap-3 py-2"><div className="min-w-0"><p className="flex items-center gap-2 text-sm font-semibold"><span className="truncate">{expense.description}</span>{expense.status === 'provision' ? <Badge variant="outline" className="shrink-0">Provizyon</Badge> : null}</p><p className="truncate text-xs text-ink-muted">{formatDate(expense.spent_at)} · {formatCurrency(expense.amount)}{expense.context_id ? ` · ${names.get(expense.context_id) ?? 'Gider grubu'}` : ''}</p></div><Select className="w-40 shrink-0" value={expense.context_id ?? ''} disabled={busyId === expense.id} onChange={(event) => void assign(expense, event.target.value)} aria-label={`${expense.description} için gider grubu`}><option value="">Grup seçilmedi</option>{contexts.map((context) => <option key={context.id} value={context.id}>{context.name}</option>)}</Select></li>)}</ul>}
+      {loading ? <Skeleton className="h-24 rounded-xl" /> : <ul className="flex flex-col divide-y divide-line">{expenses.map((expense) => <li key={expense.id} className="flex items-center justify-between gap-3 py-2"><div className="min-w-0"><p className="flex items-center gap-2 text-sm font-semibold"><span className="truncate">{expense.description}</span>{expense.status === 'provision' ? <Badge variant="outline" className="shrink-0">Provizyon</Badge> : null}</p><p className="truncate text-xs text-ink-muted">{formatDate(expense.spent_at)} · {formatCurrency(expense.amount)}{expense.context_id ? ` · ${names.get(expense.context_id) ?? 'Gider grubu'}` : ''}</p></div><Select className="w-40 shrink-0" value={expense.context_id ?? ''} disabled={busyId === expense.id} onChange={(event) => void assign(expense, event.target.value)} aria-label={`${expense.description} için gider grubu`}><option value="">Grup seçilmedi</option>{expense.context_id && contexts.some((context) => context.id === expense.context_id && context.completed_at) ? <option value={expense.context_id} disabled>{names.get(expense.context_id)} (tamamlandı)</option> : null}{activeContexts.map((context) => <option key={context.id} value={context.id}>{context.name}</option>)}</Select></li>)}</ul>}
     </CardContent></Card>
   )
 }
@@ -283,7 +314,7 @@ function ContextSummaryCard({ summary, onDelete }: { summary: ExpenseContextSumm
   const usedWidth = `${Math.min(100, Math.max(0, (budgetUsedRatio ?? 0) * 100))}%`
   const KindIcon = KIND_ICONS[context.kind] ?? FolderKanban
   return (
-    <Card><CardHeader className="pb-3"><div className="flex items-start justify-between gap-3"><div><CardTitle className="flex items-center gap-2 text-base"><KindIcon className="size-4 text-primary" />{context.name}</CardTitle>{context.ends_on ? <p className="text-xs text-ink-muted">Bitiş {formatDate(context.ends_on)}</p> : <Badge variant="outline" className="mt-1">Süresiz</Badge>}</div><div className="text-right"><p className="font-bold tabular-nums">{formatCurrency(total)}</p><p className="text-xs text-ink-muted">Bu ay {formatCurrency(thisMonthTotal)}</p></div></div></CardHeader><CardContent className="flex flex-col gap-4">
+    <Card><CardHeader className="pb-3"><div className="flex items-start justify-between gap-3"><div><CardTitle className="flex items-center gap-2 text-base"><KindIcon className="size-4 text-primary" />{context.name}</CardTitle>{context.completed_at ? <Badge variant="outline" className="mt-1">Tamamlandı · {formatDate(context.completed_at.slice(0, 10))}</Badge> : context.ends_on ? <p className="text-xs text-ink-muted">Bitiş {formatDate(context.ends_on)}</p> : <Badge variant="outline" className="mt-1">Süresiz</Badge>}</div><div className="text-right"><p className="font-bold tabular-nums">{formatCurrency(total)}</p><p className="text-xs text-ink-muted">Bu ay {formatCurrency(thisMonthTotal)}</p></div></div></CardHeader><CardContent className="flex flex-col gap-4">
       {remainingBudget != null ? <div><div className="mb-1 flex justify-between text-xs"><span className="font-semibold">Bütçe burn-down</span><span className={remainingBudget < 0 ? 'text-destructive' : 'text-ink-muted'}>{remainingBudget < 0 ? `${formatCurrency(-remainingBudget)} aşıldı` : `${formatCurrency(remainingBudget)} kaldı`}</span></div><div className="h-2 overflow-hidden rounded-full bg-page"><div className={`h-full rounded-full ${remainingBudget < 0 ? 'bg-destructive' : 'bg-primary'}`} style={{ width: usedWidth }} /></div></div> : null}
       {entries.length ? <ul className="flex flex-col divide-y divide-line">{entries.slice(0, 10).map((entry) => <li key={entry.id} className="flex items-center justify-between gap-2 py-2"><div className="min-w-0"><p className="truncate text-sm font-medium">{entry.description}</p><p className="text-xs text-ink-muted">{formatDate(entry.spentAt)} · {entry.category}</p></div><div className="flex items-center gap-2"><Badge variant={entry.source === 'card' ? 'secondary' : 'outline'}>{entry.paymentLabel}</Badge><span className="text-sm font-semibold tabular-nums">{formatCurrency(entry.amount)}</span>{entry.source === 'manual' ? <Button size="icon-xs" variant="ghost" aria-label="Gideri sil" onClick={() => void onDelete(entry.id.replace(/^manual:/, ''))}><Trash2 /></Button> : null}</div></li>)}</ul> : <p className="text-sm text-ink-muted">Henüz gider yok.</p>}
     </CardContent></Card>

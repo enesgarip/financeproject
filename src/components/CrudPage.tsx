@@ -128,6 +128,8 @@ type CrudPageProps<T extends CrudTableName> = {
   renderBeforeList?: (helpers: { loading: boolean; rows: RowFor<T>[]; reload: () => Promise<void>; setError: (message: string) => void }) => ReactNode
   /** false ise dahili kayıt listesi (kart ızgarası) gizlenir; sayfa içi sekmeler için kullanılır. */
   showList?: boolean
+  /** Ayrıntı görünümü listenin arama/ekleme araçlarını göstermez. */
+  showToolbar?: boolean
   /** Yalnız sunumu filtreler; helpers.rows tam veri kümesini korur. */
   listFilter?: (row: RowFor<T>) => boolean
 }
@@ -171,6 +173,7 @@ export function CrudPage<T extends CrudTableName>({
   renderCard,
   renderBeforeList,
   showList = true,
+  showToolbar = true,
   listFilter,
 }: CrudPageProps<T>) {
   const { user } = useAuth()
@@ -216,9 +219,9 @@ export function CrudPage<T extends CrudTableName>({
   }, [renderDetails, renderSubtitle, renderTitle, rows])
   const listRows = useMemo(() => listFilter ? rows.filter(listFilter) : rows, [listFilter, rows])
   const visibleRows = useMemo(() => {
-    const filtered = normalizedQuery ? listRows.filter((row) => rowMeta.get(row.id)?.searchText.includes(normalizedQuery)) : listRows
+    const filtered = normalizedQuery && showToolbar ? listRows.filter((row) => rowMeta.get(row.id)?.searchText.includes(normalizedQuery)) : listRows
     return sortRows ? sortRows(filtered) : filtered
-  }, [normalizedQuery, rowMeta, listRows, sortRows])
+  }, [normalizedQuery, rowMeta, listRows, sortRows, showToolbar])
   const groupedVisibleRows = useMemo(() => {
     // Az kayıtta grup başlıkları gürültü olur; eşik altında düz listeye in.
     const flatten = flattenGroupsBelow !== undefined && visibleRows.length < flattenGroupsBelow
@@ -392,7 +395,7 @@ export function CrudPage<T extends CrudTableName>({
       {/* Arama + ekleme çubuğu listeyle birlikte yaşar: liste gizliyken (Hesaplar
           sayfasının özet/işlem/ekstre sekmeleri) bu çubuk da görünmez — yoksa her
           sekmenin dibinde o sekmeyle ilgisiz bir "ekle" düğmesi duruyordu. */}
-      {showList ? (
+      {showList && showToolbar ? (
       <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line-strong pt-4">
         <p className="serit-eyebrow">
           {normalizedQuery ? `${visibleRows.length} / ${listRows.length} kayıt` : `${listRows.length} kayıt`}

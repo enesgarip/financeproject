@@ -1,6 +1,6 @@
 # AI Context Index
 
-Last reviewed: 2026-09-15
+Last reviewed: 2026-10-10
 
 This file is the cheapest starting point for future AI/Codex sessions. Its job
 is to reduce repeated repo discovery: read this first, choose the smallest
@@ -50,6 +50,12 @@ Ekstresini tam ödeyip günlük harcamalarını kartla yapan kullanıcı için �
 | `docs/BACKLOG.md` | You need the next useful task | Priority backlog, 6-geçiş denetim sentezi (2026-06-23), suggested Codex tasks |
 | `docs/LOCAL_TESTING.md` | You need to functionally test real RPCs locally without hitting the UI login wall | Local docker env, user-impersonation method (no password), business-rule oracle, migration/regression verification, UI-layer credential constraint |
 
+10 Ekim 2026: `/kartlar` iki ana bölüm + URL ile seçilen kart/hesap ayrıntısı
+kullanır. Toplamdan döküm açılır, ekstre/taksit menüleri yoktur. Gider grupları
+`completed_at` ile geçmiş korunarak tamamlanır/yeniden açılır. Maaşın bakiyede
+varsayıldığı ortak gün sınırı ilk iş gününü de kapsar; dashboard hesap dökümü
+aynı nakit akışı/tampon/rezerv girdilerini gösterir.
+
 ## Domain Source Of Truth
 
 | Domain | First Doc | Then Read | Notes |
@@ -87,7 +93,7 @@ ESLint blocks `src/{pages,components,utils,hooks}` from importing
 | Route | Main Files | Data/Utility Neighbors |
 | --- | --- | --- |
 | `/` dashboard | `docs/DASHBOARD_ARCHITECTURE.md`, `src/pages/DashboardPage.tsx`, `src/components/dashboard/*` | `src/app/useFinanceSnapshot.ts`, `src/data/repositories/financeSnapshotRepo.ts`, `src/utils/dashboard*`, `src/utils/financeSummary.ts`, `src/utils/obligations.ts` |
-| `/kartlar` accounts/cards | `docs/CARDS_ARCHITECTURE.md`, `src/pages/CardsPage.tsx`, `src/pages/CardsPage.hooks.ts`, `src/pages/CardsPage.crud.tsx`, `src/pages/CardsPage.sections.tsx`, `src/pages/CardsPage.overview.tsx`, `src/pages/CardsPage.statements.tsx`, `src/pages/CardsPage.expense.tsx`, `src/pages/CardsPage.list.tsx`, `src/pages/CardsPage.helpers.ts`, `src/components/finance/RecentCardExpensesPanel.tsx` (son hareket iptali — BM-6), `src/hooks/useBalancePrivacy.tsx` | `src/data/repositories/cardsRepo.ts`, `src/data/repositories/cardAliasesRepo.ts`, `src/data/repositories/financePanelsRepo.ts`, `src/services/accountMovements.ts`, `src/utils/accountFavorites.ts` (kalıcı favorileri kararlı biçimde öne alır), `src/utils/accountLedger.ts`, `src/utils/cardStatement.ts`, `src/utils/financeSummary.ts` |
+| `/kartlar` accounts/cards | `docs/CARDS_ARCHITECTURE.md`, `src/pages/CardsPage.tsx`, `src/pages/CardsPage.hooks.ts`, `src/pages/CardsPage.crud.tsx`, `src/pages/CardsPage.sections.tsx`, `src/pages/CardsPage.summary.tsx`, `src/pages/CardsPage.overview.tsx`, `src/pages/CardsPage.statements.tsx`, `src/pages/CardsPage.expense.tsx`, `src/pages/CardsPage.list.tsx`, `src/pages/CardsPage.helpers.ts`, `src/components/finance/RecentCardExpensesPanel.tsx` (son hareket iptali — BM-6), `src/hooks/useBalancePrivacy.tsx` | `src/data/repositories/cardsRepo.ts`, `src/data/repositories/cardAliasesRepo.ts`, `src/data/repositories/financePanelsRepo.ts`, `src/services/accountMovements.ts`, `src/utils/accountFavorites.ts` (kalıcı favorileri kararlı biçimde öne alır), `src/utils/accountLedger.ts`, `src/utils/cardStatement.ts`, `src/utils/financeSummary.ts` |
 | `/odemeler` planned payments | `src/pages/PlanningHub.tsx`, `src/pages/PaymentsPage.tsx` | `src/services/financePaymentActions.ts`, `src/utils/obligations.ts`, `docs/PLANNING_MODEL_REVIEW.md`, `docs/archive/SHARED_PAYMENT_DRAWER_PLAN.md` |
 | `/borclar/krediler` loans | `src/pages/LoansPage.tsx`, `src/pages/LoansPage.helpers.ts`, `src/pages/LoansPage.components.tsx` | `src/data/repositories/loansRepo.ts`, `src/services/financePaymentActions.ts`, `src/utils/financeSummary.ts`, `docs/archive/SHARED_PAYMENT_DRAWER_PLAN.md` |
 | `/borclar/kisiler` personal debts | `src/pages/DebtsPage.tsx` | `src/services/financePaymentActions.ts`, `docs/archive/SHARED_PAYMENT_DRAWER_PLAN.md` |

@@ -390,6 +390,7 @@ export function DashboardPage() {
           staleRatesLabel={staleRatesLabel}
           liquidAccounts={liquidAccounts}
           totalCashAssets={summary.totalCashAssets}
+          cashFlowBreakdown={{ expectedIncome: summary.cashFlow.expectedIncome, remainingOutflow: summary.cashFlow.remainingOutflow, reserved: safeToSpend.reserved }}
           health={healthCounts}
           onPay={(item) => handleUpcomingPay(item.obligation)}
         />

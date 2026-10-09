@@ -17,7 +17,7 @@ import { useDialogA11y } from './ui/use-dialog-a11y'
  */
 
 const actions = [
-  { to: '/kartlar?section=islemler#hizli-harcama', label: 'Harcama ekle', description: 'Hesap veya kart harcamasını kaydet', icon: WalletCards },
+  { to: '/kartlar?section=kartlar&panel=manuel#hizli-harcama', label: 'Harcama ekle', description: 'Hesap veya kart harcamasını kaydet', icon: WalletCards },
   { to: '/kartlar#hesap-merkezi', label: 'Transfer kaydet', description: 'Hesaplar arası para aktarımını kaydet', icon: ArrowRightLeft },
   { to: '/odemeler?new=1', label: 'Ödeme planla', description: 'Fatura, kira veya abonelik', icon: ReceiptText },
   { to: '/odemeler/alsam-mi', label: 'Alsam mı?', description: 'Alışverişin aylara etkisini gör', icon: ShoppingCart },

@@ -67,7 +67,7 @@ export function CardLedgerPanel({
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void load()
-  }, [load])
+  }, [load, card.updated_at])
 
   async function afterMutation() {
     await load()
