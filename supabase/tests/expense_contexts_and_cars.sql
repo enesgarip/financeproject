@@ -94,10 +94,26 @@ begin
   end;
   if not v_denied then raise exception 'SECURITY FAIL: cross-user car tag accepted'; end if;
 
-  if (select count(*) from public.expense_contexts) <> 1 then
+  update public.expense_contexts set completed_at = now() where id = v_context;
+  if not exists (select 1 from public.expense_contexts where id = v_context and completed_at is not null) then
+    raise exception 'Completion did not persist';
+  end if;
+  if (select sum(amount) from public.context_expenses where context_id = v_context) <> 500
+    or (select context_id from public.card_expenses where id = v_expense) <> v_context then
+    raise exception 'Completion changed expense history';
+  end if;
+  update public.expense_contexts set completed_at = now()
+    where id = 'b0000000-0000-4000-8000-000000000001';
+  if found then raise exception 'SECURITY FAIL: cross-user completion accepted'; end if;
+  update public.expense_contexts set completed_at = null where id = v_context;
+  if not exists (select 1 from public.expense_contexts where id = v_context and completed_at is null) then
+    raise exception 'Reopening did not persist';
+  end if;
+
+  if exists (select 1 from public.expense_contexts where user_id <> v_user) then
     raise exception 'RLS FAIL: another user context is visible';
   end if;
-  if (select count(*) from public.cars) <> 1 then
+  if exists (select 1 from public.cars where user_id <> v_user) then
     raise exception 'RLS FAIL: another user car is visible';
   end if;
 

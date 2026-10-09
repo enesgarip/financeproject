@@ -38,10 +38,13 @@ test.describe('money mutation (live backend)', () => {
     await page.getByRole('button', { name: 'Kredi kartı ekle', exact: true }).click()
     const create = page.getByRole('dialog')
     await create.getByLabel(/^Banka/).fill('Akbank')
-    await create.getByLabel(/^Kart \/ hesap adı/).fill(CARD_NAME)
+    await create.getByLabel(/^Ad\s*\*?$/).fill(CARD_NAME)
     await create.getByRole('button', { name: 'Kaydet', exact: true }).click()
     await expect(create).toHaveCount(0)
-    await page.getByRole('button', { name: /İşlemler/ }).click()
+    await page.getByRole('button', { name: `${CARD_NAME} kart ayrıntıları`, exact: true }).click()
+    const card = page.locator('article').filter({ hasText: CARD_NAME })
+    await card.locator('summary').filter({ hasText: /^Manuel kayıt$/ }).click()
+    await card.getByRole('button', { name: 'Manuel harcama ekle', exact: true }).click()
 
     // Quick-expense form lives under the "Hızlı harcama" heading.
     const form = page.locator('form').filter({ has: page.getByPlaceholder('Migros, benzin, yemek...') })
@@ -54,20 +57,12 @@ test.describe('money mutation (live backend)', () => {
     // Submit clears the description field on success.
     await expect(form.getByPlaceholder('Migros, benzin, yemek...')).toHaveValue('', { timeout: 10_000 })
 
-    // Kartlar sekmesindeki "Toplam kart yükü" yeni borcu göstermeli.
-    // NOT: bu assertion eskiden "Güncel borç" arıyordu ve o etiket uzun süredir
-    // arayüzde yok — test varsayılan olarak atlandığı için (E2E_LIVE_SUPABASE)
-    // sessizce bayatlamıştı. Tutar biçimi de Şerit'e geçti: sembol sonda.
-    await page.getByRole('button', { name: /Kredi kartları/ }).click()
-    const card = page.locator('article').filter({ hasText: CARD_NAME })
+    // Kart ayrıntısı, kayıttan sonra yenilenen toplam borcu göstermeli.
     await expect(card.getByText('Toplam kart yükü')).toBeVisible({ timeout: 10_000 })
     await expect(card).toContainText('500,00 ₺')
 
-    // Drill-down: the ledger records the increase.
-    // "Detay" doğrudan bir buton değil, kartın taşma menüsünde — bu adım da
-    // testin bayat kalan kısmıydı.
-    await card.getByRole('button', { name: `${CARD_NAME} işlemleri` }).click()
-    await page.getByRole('button', { name: 'Detay', exact: true }).click()
+    // Kayıt geçmişinde aynı artışın ledger olayı da görünmeli.
+    await card.locator('summary').filter({ hasText: 'Diğer kart bilgileri ve kayıt geçmişi' }).click()
     await expect(card.getByText('Borç hareketleri')).toBeVisible({ timeout: 10_000 })
     await expect(card.getByText('Borç arttı').first()).toBeVisible({ timeout: 10_000 })
   })

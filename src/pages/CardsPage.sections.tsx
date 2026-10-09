@@ -1,9 +1,6 @@
 import {
-  CalendarClock,
   CreditCard as CreditCardIcon,
-  LayoutGrid,
   WalletCards,
-  ReceiptText,
 } from 'lucide-react'
 import { useEffect, useRef } from 'react'
 import { cutDueCardStatements } from '../data/repositories/cardsRepo'
@@ -16,72 +13,26 @@ import { shouldRunStatementCut } from './CardsPage.helpers'
 export type CardSection = 'ozet' | 'kartlar' | 'hesaplar' | 'islemler' | 'ekstreler'
 
 const cardSections = [
-  { id: 'ozet', label: 'Özet', icon: LayoutGrid },
   { id: 'kartlar', label: 'Kredi kartları', icon: CreditCardIcon },
   { id: 'hesaplar', label: 'Hesaplar ve nakit', icon: WalletCards },
-  { id: 'islemler', label: 'İşlemler', icon: ReceiptText },
-  { id: 'ekstreler', label: 'Ekstreler', icon: CalendarClock },
-] as const satisfies readonly { id: CardSection; label: string; icon: typeof LayoutGrid }[]
+] as const
 
-export function CardSectionNav({
-  section,
-  onSelect,
-  counts,
-}: {
+export function CardSectionNav({ section, onSelect, counts }: {
   section: CardSection
   onSelect: (next: CardSection) => void
   counts: Partial<Record<CardSection, number>>
 }) {
   return (
-    <div className="mb-4">
-      <div className="mb-4 grid grid-cols-2 gap-3" aria-label="Hesap veya kart seçimi">
-        {cardSections.filter((item) => item.id === 'kartlar' || item.id === 'hesaplar').map((item) => (
-          <button key={item.id} type="button" onClick={() => onSelect(item.id)} aria-pressed={section === item.id}
-            className={cn('min-h-24 rounded-xl border p-3 text-left transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary sm:p-4', section === item.id ? 'border-primary bg-primary/10' : 'border-line-strong bg-raised hover:border-primary/50')}>
-            <item.icon size={21} className="mb-2 text-primary" aria-hidden="true" />
-            <span className="block text-sm font-semibold text-ink">{item.label} <span className="text-ink-muted">{counts[item.id] ?? 0}</span></span>
-            <span className="mt-1 block text-xs text-ink-muted">{item.id === 'kartlar' ? 'Borç, ekstre ve limit' : 'Banka, nakit ve hareketler'}</span>
-          </button>
-        ))}
-      </div>
-    <div
-      aria-label="Hesap ve kart bölümleri"
-      className="mb-4 flex w-full snap-x items-center gap-[22px] overflow-x-auto border-b border-line-strong [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-    >
-      {cardSections.filter((item) => item.id !== 'kartlar' && item.id !== 'hesaplar').map((item) => {
-        const isActive = item.id === section
-        const count = counts[item.id]
-        return (
-          <button
-            key={item.id}
-            type="button"
-            onClick={() => onSelect(item.id)}
-            aria-pressed={isActive}
-            className={cn(
-              'min-h-11 flex-none snap-start whitespace-nowrap border-b-2 pb-2.5 text-[13.5px] transition-colors duration-[120ms]',
-              isActive
-                ? 'border-primary font-semibold text-ink'
-                : 'border-transparent text-ink-faint hover:text-ink-muted',
-            )}
-          >
-            <span className="flex items-center gap-1 whitespace-nowrap">
-              {item.label}
-              {count ? (
-                <span
-                  className={cn(
-                    'serit-num grid min-w-4 place-items-center rounded-full px-1 text-[10px]',
-                    isActive ? 'bg-primary/12 text-primary' : 'bg-page text-ink-faint',
-                  )}
-                >
-                  {count}
-                </span>
-              ) : null}
-            </span>
-          </button>
-        )
-      })}
-    </div>
-    </div>
+    <nav className="grid grid-cols-2 gap-3" aria-label="Hesap veya kart seçimi">
+      {cardSections.map((item) => (
+        <button key={item.id} type="button" onClick={() => onSelect(item.id)} aria-pressed={section === item.id}
+          className={cn('min-h-24 rounded-xl border p-3 text-left transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary sm:p-4', section === item.id ? 'border-primary bg-primary/10' : 'border-line-strong bg-raised hover:border-primary/50')}>
+          <item.icon size={21} className="mb-2 text-primary" aria-hidden="true" />
+          <span className="block text-sm font-semibold text-ink">{item.label} <span className="text-ink-muted">{counts[item.id] ?? 0}</span></span>
+          <span className="mt-1 block text-xs text-ink-muted">{item.id === 'kartlar' ? 'Dönem içi borç ve gelecek taksitler' : 'Bakiyeler ve hesap hareketleri'}</span>
+        </button>
+      ))}
+    </nav>
   )
 }
 

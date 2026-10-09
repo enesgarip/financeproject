@@ -89,6 +89,7 @@ export function SeritOverview({
   staleRatesLabel,
   liquidAccounts,
   totalCashAssets,
+  cashFlowBreakdown,
   health,
   onPay,
   priorityContent,
@@ -128,6 +129,7 @@ export function SeritOverview({
   staleRatesLabel: string | null
   liquidAccounts: SeritLiquidAccount[]
   totalCashAssets: number
+  cashFlowBreakdown?: { expectedIncome: number; remainingOutflow: number; reserved: number }
   /** `total` = bulgu toplamı; `cleanChecks` = sorunsuz geçen kontrol sayısı. */
   health: { errors: number; warnings: number; total: number; checksRun: number; cleanChecks: number }
   onPay: (item: DashboardUpcomingItem) => void
@@ -190,6 +192,19 @@ export function SeritOverview({
         {isOnboarding ? null : (
           <div className="mt-4">
             <SeritBufferRow buffer={buffer} onChange={onBufferChange} />
+            {cashFlowBreakdown ? (
+              <details className="mt-3 text-xs text-ink-muted">
+                <summary className="min-h-11 cursor-pointer py-3 font-semibold text-ink">Nasıl hesaplandı?</summary>
+                <dl className="grid grid-cols-[1fr_auto] gap-x-4 gap-y-2 border-t border-line py-3">
+                  <dt>Güncel hesap ve nakit bakiyesi</dt><dd>{`${format(totalCashAssets).amount} ${format(totalCashAssets).unit}`}</dd>
+                  <dt>Bu ay beklenen gelir</dt><dd>+ {`${format(cashFlowBreakdown.expectedIncome).amount} ${format(cashFlowBreakdown.expectedIncome).unit}`}</dd>
+                  <dt>Bu ay kalan ödemeler</dt><dd>− {`${format(cashFlowBreakdown.remainingOutflow).amount} ${format(cashFlowBreakdown.remainingOutflow).unit}`}</dd>
+                  <dt>Güvenlik tamponu</dt><dd>− {`${format(buffer).amount} ${format(buffer).unit}`}</dd>
+                  <dt>Kasa için ayrılan</dt><dd>{reservedKnown ? `− ${format(cashFlowBreakdown.reserved).amount} ${format(cashFlowBreakdown.reserved).unit}` : 'Doğrulanamadı'}</dd>
+                </dl>
+                <p className="max-w-md leading-relaxed">Maaş, ayın ilk iş gününden itibaren güncel bakiyenin içinde kabul edilir ve tekrar eklenmez. Bu tarihten önce bu ayın beklenen gelirine dahildir. Gelecek ayın maaşı bu tutara eklenmez.</p>
+              </details>
+            ) : null}
             {!reservedKnown ? (
               <p className="mt-1.5 text-xs font-semibold" style={{ color: SERIT_TEXT.warning }}>
                 Kasa rezervi doğrulanamadı — bu rakam rezerv düşülmeden hesaplandı.

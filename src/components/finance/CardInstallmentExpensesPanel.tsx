@@ -45,6 +45,7 @@ function installmentStatusLabel(item: CardInstallmentWithArchive) {
 
 type CardInstallmentExpensesPanelProps = {
   cards: Card[]
+  cardId?: string
   reload: () => Promise<void>
   setError: (message: string) => void
 }
@@ -55,7 +56,7 @@ const installmentExpensesHelp = {
   source: 'Kart harcamaları, kart taksit kayıtları ve ekstre arşivi (ödenmişlik arşiv durumundan türetilir).',
 } satisfies HelpTooltipContent
 
-export function CardInstallmentExpensesPanel({ cards, reload, setError }: CardInstallmentExpensesPanelProps) {
+export function CardInstallmentExpensesPanel({ cards, reload, setError, cardId }: CardInstallmentExpensesPanelProps) {
   const { formatAmount } = useBalancePrivacy()
   const [expenses, setExpenses] = useState<CardExpense[]>([])
   const [installments, setInstallments] = useState<CardInstallmentWithArchive[]>([])
@@ -118,7 +119,7 @@ export function CardInstallmentExpensesPanel({ cards, reload, setError }: CardIn
 
   const loadExpenses = useCallback(async () => {
     setLoading(true)
-    const result = await fetchPostedInstallmentExpenses(50)
+    const result = await fetchPostedInstallmentExpenses(50, cardId)
 
     if (!result.ok) {
       setExpenses([])
@@ -131,7 +132,7 @@ export function CardInstallmentExpensesPanel({ cards, reload, setError }: CardIn
     setExpenses(result.data)
     await loadInstallments(result.data.map((expense) => expense.id))
     setLoading(false)
-  }, [loadInstallments, setError])
+  }, [loadInstallments, setError, cardId])
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect

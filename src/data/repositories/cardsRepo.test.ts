@@ -2,6 +2,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   addCardExpense,
   fetchCardInstallmentMatchRows,
+  fetchCardInstallments,
+  fetchRecentCardExpenses,
+  fetchPostedInstallmentExpenses,
+  fetchUncategorizedExpenses,
+  fetchStatementArchives,
   payPaymentFromCardImport,
   replaceCardStatementImport,
   recordCardInstallmentCarryover,
@@ -20,6 +25,53 @@ vi.mock('../../lib/supabase', () => ({
     from: supabaseMocks.from,
   },
 }))
+
+function readQuery(response: { data: unknown[] | null; error: { message: string } | null }) {
+  return {
+    select: vi.fn().mockReturnThis(), eq: vi.fn().mockReturnThis(), gt: vi.fn().mockReturnThis(),
+    order: vi.fn().mockReturnThis(), limit: vi.fn().mockReturnThis(), lt: vi.fn().mockReturnThis(),
+    then: (resolve: (value: typeof response) => unknown) => Promise.resolve(response).then(resolve),
+  }
+}
+
+describe('kart ayrıntısı veri kapsamı', () => {
+  it.each([fetchRecentCardExpenses, fetchPostedInstallmentExpenses, fetchUncategorizedExpenses])('kart seçimi sorguya aktarılır', async (fetch) => {
+    const query = readQuery({ data: [], error: null })
+    supabaseMocks.from.mockReturnValue(query)
+    expect((await fetch(20, 'selected-card')).ok).toBe(true)
+    expect(query.eq).toHaveBeenCalledWith('card_id', 'selected-card')
+  })
+
+  it('500 eski taksit sonrasında gelecek taksitleri de yükler', async () => {
+    const first = readQuery({ data: Array.from({ length: 500 }, (_, i) => ({ id: `old-${i}`, due_month: '2026-01-01', status: 'posted' })), error: null })
+    const next = readQuery({ data: [{ id: 'future', due_month: '2027-01-01', status: 'scheduled' }], error: null })
+    supabaseMocks.from.mockReturnValueOnce(first).mockReturnValueOnce(next)
+    const result = await fetchCardInstallments()
+    expect(result.ok).toBe(true)
+    if (!result.ok) throw new Error('Taksitler yüklenemedi')
+    expect(result.data).toHaveLength(501)
+    expect(result.data.at(-1)?.id).toBe('future')
+    expect(next.lt).toHaveBeenCalledWith('id', 'old-499')
+  })
+
+  it('taksit sayfalarından biri hata verirse eksik toplamı başarı saymaz', async () => {
+    const first = readQuery({ data: Array.from({ length: 500 }, (_, i) => ({ id: `old-${i}`, due_month: '2026-01-01' })), error: null })
+    supabaseMocks.from.mockReturnValueOnce(first).mockReturnValueOnce(readQuery({ data: null, error: { message: 'Ağ hatası' } }))
+    expect((await fetchCardInstallments()).ok).toBe(false)
+  })
+
+  it('ödenmiş ekstre geçmişi sınırı eski açık borcu gizlemez', async () => {
+    const open = readQuery({ data: [{ id: 'old-open', statement_date: '2025-01-01' }], error: null })
+    const paid = readQuery({ data: [{ id: 'new-paid', statement_date: '2026-10-01' }], error: null })
+    supabaseMocks.from.mockReturnValueOnce(open).mockReturnValueOnce(paid)
+    const result = await fetchStatementArchives(24)
+    expect(result.ok).toBe(true)
+    if (!result.ok) throw new Error('Ekstreler yüklenemedi')
+    expect(result.data.map((row) => row.id)).toEqual(['new-paid', 'old-open'])
+    expect(open.limit).not.toHaveBeenCalled()
+    expect(paid.limit).toHaveBeenCalledWith(24)
+  })
+})
 
 describe('cardsRepo.addCardExpense', () => {
   beforeEach(() => {

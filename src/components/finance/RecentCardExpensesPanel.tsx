@@ -36,6 +36,7 @@ const recentExpensesHelp = {
 
 type RecentCardExpensesPanelProps = {
   cards: Card[]
+  cardId?: string
   reload: () => Promise<void>
   setError: (message: string) => void
   /** Değişince liste yeniden çekilir; hızlı harcama formu kayıt sonrası artırır (UX turu B2). */
@@ -56,7 +57,7 @@ function lockReason(expense: CardExpense) {
   return null
 }
 
-export function RecentCardExpensesPanel({ cards, reload, setError, refreshKey = 0 }: RecentCardExpensesPanelProps) {
+export function RecentCardExpensesPanel({ cards, reload, setError, refreshKey = 0, cardId }: RecentCardExpensesPanelProps) {
   const { formatAmount } = useBalancePrivacy()
   const { confirm, confirmDialog } = useConfirmDialog()
   const [expenses, setExpenses] = useState<CardExpense[]>([])
@@ -73,7 +74,7 @@ export function RecentCardExpensesPanel({ cards, reload, setError, refreshKey = 
   const cardsById = useMemo(() => new Map(cards.map((card) => [card.id, card])), [cards])
 
   const load = useCallback(async () => {
-    const result = await fetchRecentCardExpenses(20)
+    const result = await fetchRecentCardExpenses(20, cardId)
     if (!result.ok) {
       setExpenses([])
       setError(result.error.message ?? 'Son hareketler yüklenemedi.')
@@ -82,7 +83,7 @@ export function RecentCardExpensesPanel({ cards, reload, setError, refreshKey = 
     }
     setExpenses(result.data)
     setLoading(false)
-  }, [setError])
+  }, [setError, cardId])
 
   useEffect(() => {
     // refreshKey bağımlılığı bilinçli: form kaydı sonrası yeniden çek.

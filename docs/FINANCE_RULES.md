@@ -504,6 +504,6 @@ This means any change in card, loan, debt, or payment semantics likely affects d
 ## Denetim sınırları (2026-09-15)
 
 - Harcanabilir hesap negatif likit bakiyeyi korur; sıfıra kırpmak açığı gizler.
-- Maaşın alınmış sayılması özet ve projeksiyonda gün bazlıdır: ayın ilk iş günü boyunca beklenti korunur, sonraki gün düşer. Saat değişimi aynı gün farklı toplam üretmez.
+- Maaşın alınmış sayılması özet ve projeksiyonda gün bazlıdır: ayın ilk iş günü dahil maaş güncel bakiyenin içinde varsayılır ve beklenen gelire tekrar eklenmez. Bu tarihten önce bu ayın maaşı beklenir. Bu varsayım gerçek banka tahsilatını tespit etmez; maaş kaydı nakit hareketi değildir. Saat değişimi aynı gün farklı toplam üretmez.
 - Hisse geçmişi gelecek tarih kabul etmez (UI + İstanbul günü kullanan DB trigger); geçmiş kayıtlardaki gelecekteki işlemler bugünkü pozisyona katılmaz. Eksik dönem fiyatı sıfır kazanç değildir: hesaplanamıyor gösterilir.
 - Saniyesiz hesap SMS'leri iki parser tarafından tanınır. Aynı dakika içindeki ayrı transferleri birleştirmemek için kararlı kaynak eventId gerekir; yoksa 409. Tekrar gönderim ledger'a ikinci kez yazmaz. Kart takma adını yalnız service_role çağırabildiği, sahibi süzen RPC çözer.

@@ -481,7 +481,8 @@ describe('summarizeFinanceObligations — günü geçmiş maaş (UX turu B11)', 
     expect(later.receivedSalary).toBe(105000)
 
     const onPayday = summarizeFinanceObligations(items, { from: new Date(2026, 5, 1) })
-    expect(onPayday.inflow).toBe(105000)
+    expect(onPayday.inflow).toBe(0)
+    expect(onPayday.receivedSalary).toBe(105000)
   })
 })
 

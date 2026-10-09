@@ -17,6 +17,19 @@ Bu doküman `/odemeler/baglamlar` ve `/varliklar/araclar` için davranış kayna
 
 **Süre / süresizlik.** `starts_on` ve `ends_on` nullable; DB ve form tarihi zorunlu tutmaz. Evcil hayvan doğası gereği süresizdir — formu tarih alanı göstermez (`kind==='pet'`). Proje türünde tarihler opsiyoneldir; **bitiş boş bırakılırsa bağlam süresiz** sürer. `ends_on` null olan her bağlam özet kartında "Süresiz" rozetiyle işaretlenir.
 
+## Gider grubunu tamamlama (2026-10-10)
+
+`expense_contexts.completed_at` nullable zaman damgasıdır: NULL aktif, dolu
+ise tamamlanmıştır. Tamamlama giderleri, kart etiketlerini, bütçe ve toplamları
+korur; ledger/bakiye/borç yazmaz. Bitiş tarihi otomatik tamamlama değildir.
+Aktif ve Tamamlanan görünümleri ayrıdır; tamamlanan gruplar yeni manuel gider
+ve kart etiketi seçiminden çıkar. Önceden atanmış etiket adı korunur, seçicide
+“tamamlandı” olarak gösterilir. Yeniden açmak yalnız zaman damgasını temizler.
+Silme mevcut yıkıcı davranışını korur ve tamamlama için kullanılmaz.
+Durum güncellemesi mevcut own-row UPDATE RLS politikasından geçer.
+JSON yedek tablo satırlarını aynen taşır; eski yedekte eksik alan NULL varsayılır.
+Gerçek DB regresyonu: `supabase/tests/expense_contexts_and_cars.sql`.
+
 ## Kart harcaması etiketleme (S2/S3, 2026-08-11)
 
 - **Etiketlenebilir liste provizyonları da kapsar.** `fetchTaggableCardExpenses`

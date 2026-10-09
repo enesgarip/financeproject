@@ -36,13 +36,13 @@ export async function fetchProvisionExpenses(): Promise<Result<CardExpense[]>> {
 }
 
 export async function fetchStatementArchives(limit: number): Promise<Result<CardStatementArchive[]>> {
-  const { data, error } = await supabase
-    .from('card_statement_archives')
-    .select('*')
-    .order('statement_date', { ascending: false })
-    .limit(limit)
-
-  return resultFromSupabase((data ?? []) as CardStatementArchive[], error, 'Ekstreler yüklenemedi.')
+  // Geçmiş sınırı açık borcu gizlemesin: açıklar + son N ödenmiş ekstre.
+  const [open, paid] = await Promise.all([
+    supabase.from('card_statement_archives').select('*').eq('status', 'open').order('statement_date', { ascending: false }),
+    supabase.from('card_statement_archives').select('*').eq('status', 'paid').order('statement_date', { ascending: false }).limit(limit),
+  ])
+  const rows = [...(open.data ?? []), ...(paid.data ?? [])] as CardStatementArchive[]
+  return resultFromSupabase(rows.sort((a, b) => b.statement_date.localeCompare(a.statement_date)), open.error ?? paid.error, 'Ekstreler yüklenemedi.')
 }
 
 /**
@@ -59,12 +59,19 @@ export async function fetchStatementPayments(): Promise<Result<CardStatementPaym
 }
 
 export async function fetchCardInstallments(): Promise<Result<CardInstallment[]>> {
-  const { data, error } = await supabase
-    .from('card_installments')
-    .select('*')
-    .order('due_month', { ascending: true })
-
-  return resultFromSupabase((data ?? []) as CardInstallment[], error, 'Kart taksitleri yüklenemedi.')
+  const rows: CardInstallment[] = []
+  let beforeId: string | null = null
+  // Eski taksit geçmişi PostgREST satır sınırını doldursa da gelecek plan kaybolmaz.
+  for (;;) {
+    let query = supabase.from('card_installments').select('*').order('id', { ascending: false }).limit(500)
+    if (beforeId) query = query.lt('id', beforeId)
+    const { data, error } = await query
+    if (error) return fail(appErrorFromSupabase(error, 'Kart taksitleri yüklenemedi.'))
+    const page = (data ?? []) as CardInstallment[]
+    rows.push(...page)
+    if (page.length < 500) return ok(rows.sort((a, b) => a.due_month.localeCompare(b.due_month)))
+    beforeId = page[page.length - 1].id
+  }
 }
 
 // Taksit + bağlı arşivin durumu. Ödenmişlik satırdan değil kanıttan türetilir
@@ -89,25 +96,29 @@ export async function fetchCardInstallmentsByExpenseIds(expenseIds: string[]): P
   return resultFromSupabase((data ?? []) as unknown as CardInstallmentWithArchive[], error, 'Kart taksitleri yüklenemedi.')
 }
 
-export async function fetchPostedInstallmentExpenses(limit: number): Promise<Result<CardExpense[]>> {
-  const { data, error } = await supabase
+export async function fetchPostedInstallmentExpenses(limit: number, cardId?: string): Promise<Result<CardExpense[]>> {
+  let query = supabase
     .from('card_expenses')
     .select('*')
     .eq('status', 'posted')
     .gt('installment_count', 1)
     .order('spent_at', { ascending: false })
     .limit(limit)
+  if (cardId) query = query.eq('card_id', cardId)
+  const { data, error } = await query
 
   return resultFromSupabase((data ?? []) as CardExpense[], error, 'Taksitli harcamalar yüklenemedi.')
 }
 
-export async function fetchRecentCardExpenses(limit: number): Promise<Result<CardExpense[]>> {
-  const { data, error } = await supabase
+export async function fetchRecentCardExpenses(limit: number, cardId?: string): Promise<Result<CardExpense[]>> {
+  let query = supabase
     .from('card_expenses')
     .select('*')
     .eq('status', 'posted')
     .order('created_at', { ascending: false })
     .limit(limit)
+  if (cardId) query = query.eq('card_id', cardId)
+  const { data, error } = await query
 
   return resultFromSupabase((data ?? []) as CardExpense[], error, 'Son harcamalar yüklenemedi.')
 }
@@ -401,14 +412,16 @@ export async function updateCardExpense(input: UpdateCardExpenseInput): Promise<
 }
 
 /** "Diğer" kategorisinde kalmış son kesin harcamalar (hızlı kategorileme paneli için). */
-export async function fetchUncategorizedExpenses(limit: number): Promise<Result<CardExpense[]>> {
-  const { data, error } = await supabase
+export async function fetchUncategorizedExpenses(limit: number, cardId?: string): Promise<Result<CardExpense[]>> {
+  let query = supabase
     .from('card_expenses')
     .select('*')
     .eq('status', 'posted')
     .eq('category', 'Diğer')
     .order('spent_at', { ascending: false })
     .limit(limit)
+  if (cardId) query = query.eq('card_id', cardId)
+  const { data, error } = await query
 
   return resultFromSupabase((data ?? []) as CardExpense[], error, 'Kategorisiz harcamalar yüklenemedi.')
 }

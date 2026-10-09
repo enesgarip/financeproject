@@ -247,6 +247,13 @@ Yerel imaj notu: authenticated rolüne geçtikten sonra izinsiz RPC'yi PL/pgSQL 
 - Kaynak: `DashboardPage.tsx` günlük damgayı yalnız `monthMeta` için kullanıyor; aylık özet/veri memoları aynı gün anahtarına bağlı değil. `SeritOverview.tsx:141` ile günlük bölen farklı.
 - Ek saf hesap tekrarı: ilk iş günü 1 Ekim 12:00'de 10.000 TL maaş için aylık özet beklenen geliri 0; kart döngüsüne verilen aynı gün gece yarısı ile ileri projeksiyon maaşı 10.000 sayıyor. `domain-checks.json`. Kaydedilen maaşın nakit hareketi olmadığı sözleşmesi korunarak tüm hesaplara ortak kesme zamanı gerekli.
 
+- 10 Ekim 2026 takip düzeltmesi: gün bazlı ortak sınır ilk iş gününü de kapsar.
+  Manuel bakiyeye maaş ekleyen kullanıcı için aynı gün beklenen maaşı tekrar
+  saymamak üzere `financeSummary`, `obligations` ve `cashFlowForecast` birlikte
+  güncellendi. Önceki “ilk iş günü boyunca beklenir” kararı değiştirildi; saat
+  00/09/23, hafta sonu ve sonraki ay maaşı regresyonları eklendi. Bugünkü gerçek
+  kullanıcı farkının nedeninin bu olduğu henüz doğrulanmış değildir.
+
 ### AUD-022 — Negatif banka bakiyesi harcanabilir hesapta eksik sayılıyor
 
 - P1; saf gerçek fonksiyonlarla sınır verisi doğrulandı. Likit −2.000, gelir 0, çıkış 10.000, tampon 5.000 → `buildSafeToSpend` −15.000; cebirsel kalan −17.000.

@@ -849,6 +849,29 @@ describe('buildMonthlyCashFlow', () => {
     expect(flow.projectedCash).toBe(45000)
   })
 
+  it.each([0, 9, 23])('ilk iş gününde saat %s: güncellenen bakiyeye maaşı tekrar eklemez', (hour) => {
+    const today = new Date(2026, 9, 1, hour)
+    const flow = buildMonthlyCashFlow({ ...emptyInput,
+      cards: [bankCard({ current_balance: 60000 })],
+      salaryHistory: [salary({ amount: 50000, effective_date: '2026-01-01' })],
+    }, today, { today })
+    expect(flow.salaryIncome).toBe(50000)
+    expect(flow.expectedIncome).toBe(0)
+    expect(flow.projectedCash).toBe(60000)
+  })
+
+  it('ilk iş gününden önce maaşı bekler; gelecek ay maaşı bu aya eklenmez', () => {
+    const data = { ...emptyInput, cards: [bankCard({ current_balance: 10000 })],
+      salaryHistory: [salary({ amount: 50000, effective_date: '2026-01-01' }), salary({ amount: 80000, effective_date: '2026-12-01' })] }
+    const before = new Date(2026, 10, 1) // Pazar; ilk iş günü 2 Kasım.
+    const beforeFlow = buildMonthlyCashFlow(data, before, { today: before })
+    expect(beforeFlow.expectedIncome).toBe(50000)
+    const payday = new Date(2026, 10, 2)
+    const afterFlow = buildMonthlyCashFlow({ ...data, cards: [bankCard({ current_balance: 60000 })] }, payday, { today: payday })
+    expect(afterFlow.expectedIncome).toBe(0)
+    expect(afterFlow.projectedCash).toBe(60000)
+  })
+
   it('ödenmiş ekstre sonrası dönem içi harcamayı kalan yükte ve projectedCash içinde saymaz', () => {
     // Ekstre 4 Tem'de kesilip ödendi; dönem içi harcamanın gerçek vadesi 14 Ağustos.
     // Ay-başı görünümü (outflow) bunu 14 Tem'e yazmaya devam eder ama bugün

@@ -50,7 +50,7 @@ function groupByMerchant(rows: CardExpense[]): MerchantGroup[] {
     .slice(0, MAX_GROUPS)
 }
 
-export function CategoryCleanupPanel({ onChanged }: { onChanged?: () => void }) {
+export function CategoryCleanupPanel({ onChanged, cardId }: { onChanged?: () => void; cardId?: string }) {
   const { formatAmount } = useBalancePrivacy()
   const [rows, setRows] = useState<CardExpense[]>([])
   const [loading, setLoading] = useState(true)
@@ -61,7 +61,7 @@ export function CategoryCleanupPanel({ onChanged }: { onChanged?: () => void }) 
 
   const load = useCallback(async () => {
     setLoading(true)
-    const result = await fetchUncategorizedExpenses(FETCH_LIMIT)
+    const result = await fetchUncategorizedExpenses(FETCH_LIMIT, cardId)
     if (result.ok) {
       setRows(result.data)
       setError('')
@@ -70,7 +70,7 @@ export function CategoryCleanupPanel({ onChanged }: { onChanged?: () => void }) 
       setError(result.error.message ?? 'Kategorisiz harcamalar yüklenemedi.')
     }
     setLoading(false)
-  }, [])
+  }, [cardId])
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect

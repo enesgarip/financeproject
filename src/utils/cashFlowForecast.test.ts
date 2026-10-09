@@ -118,8 +118,8 @@ describe('buildCashFlowForecast', () => {
       }),
       { from: FROM, horizonMonths: 3 },
     )
-    expect(forecast.months.map((m) => m.salary)).toEqual([20000, 20000, 20000])
-    expect(forecast.months.map((m) => m.endingBalance)).toEqual([21000, 41000, 61000])
+    expect(forecast.months.map((m) => m.salary)).toEqual([0, 20000, 20000])
+    expect(forecast.months.map((m) => m.endingBalance)).toEqual([1000, 21000, 41000])
   })
 
   it('skips salary in month 0 when from is past the first business day', () => {
@@ -134,10 +134,10 @@ describe('buildCashFlowForecast', () => {
     expect(forecast.months.map((m) => m.endingBalance)).toEqual([1000, 21000, 41000])
   })
 
-  it.each([0, 12, 23])('maaş gününde saat %i aynı aylık geliri korur', (hour) => {
+  it.each([0, 12, 23])('maaş gününde saat %i bakiyedeki maaşı tekrar eklemez', (hour) => {
     const forecast = buildCashFlowForecast(buildInput({ salaryHistory: [salary({ amount: 20000 })] }),
       { from: new Date(2026, 5, 1, hour), horizonMonths: 1 })
-    expect(forecast.months[0].salary).toBe(20000)
+    expect(forecast.months[0].salary).toBe(0)
   })
 
   it('starts future salary records in their effective month', () => {
@@ -246,10 +246,10 @@ describe('buildCashFlowForecast', () => {
     expect(forecast.startingBalance).toBe(15000)
     // Ağustos'ta ekstreye giren 1.500 ₺ planlı taksit Eylül vadesinde nakitten
     // çıkar (B27); Eylül ve sonrası o kadar düşük.
-    expect(forecast.months.map((m) => m.endingBalance)).toEqual([26000, 47000, 60000, 70500, 88500, 106500])
-    expect(forecast.endingBalance).toBe(106500)
+    expect(forecast.months.map((m) => m.endingBalance)).toEqual([6000, 27000, 40000, 50500, 68500, 86500])
+    expect(forecast.endingBalance).toBe(86500)
     expect(forecast.firstNegative).toBeNull()
-    expect(forecast.lowest).toMatchObject({ monthKey: '2026-06-01', balance: 26000 })
+    expect(forecast.lowest).toMatchObject({ monthKey: '2026-06-01', balance: 6000 })
 
     expect(forecast.months[1]).toMatchObject({ receivables: 8000, cardOutflow: 1000, income: 28000, outflow: 7000, net: 21000 })
     expect(forecast.months[2]).toMatchObject({ paymentOutflow: 7000, installmentOutflow: 0, outflow: 7000 })

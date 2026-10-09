@@ -503,3 +503,12 @@ Kredi kartları ve banka hesapları ayrı listelerdedir. Toplam kart yükü debt
 ## 2026-09-15 — Denetim düzeltmeleri
 
 Şerit özetinde toplam borçtan ekstre/dönem/provizyon çıkınca kalan artık “Taksit / sınıflanmamış borç” olarak gösterilir; yalnız gelecekteki taksitlerin kesin toplamı olduğu iddia edilmez. Ledger kovaları ve geçmiş olaylar değişmez. Asgari ipucu ekstre tabanında, limit ≤50.000 TL için %20, üstünde %40'tır (financeObligationRules.ts). Kart SMS alias lookup yalnız servis rolüne açık resolve_sms_card_alias RPC'sini kullanır; yazım/idempotency RPC'si korunur.
+
+## Kart/hesap sunumu (2026-10-10)
+
+Ana kart görünümü kesinleşmiş dönem içi toplamı, `scheduled` gelecek taksitleri,
+kısmi ödemeler sonrası açık ekstre kalanını ve provizyonu ayrı gösterir.
+Toplam kart yükü bu kovaların yerine geçmez. `CardsPage.summary.tsx` salt sunumdur;
+kart/hesap ayrıntısına geçiş, kategori düzenleme ve gider grubu tamamlama borç
+geçişi oluşturmaz. Kart ayrıntısındaki ödeme/import/iptal mevcut kanonik
+RPC'lerden geçer; ekstre/taksit dökümleri seçilen kartla sınırlıdır.

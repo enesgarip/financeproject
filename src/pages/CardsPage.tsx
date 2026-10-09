@@ -17,7 +17,7 @@
  */
 import { Suspense, useState, useCallback } from 'react'
 import { Link } from 'react-router'
-import { CalendarClock, FileText, History, Info, ScanSearch, ShieldCheck } from 'lucide-react'
+import { ArrowLeft, CalendarClock, FileText, ScanSearch, ShieldCheck } from 'lucide-react'
 import { CrudPage } from '../components/CrudPage'
 import { CategoryCleanupPanel } from '../components/finance/CategoryCleanupPanel'
 import { FinancePaymentDrawer } from '../components/finance/FinancePaymentDrawer'
@@ -36,15 +36,13 @@ import { useFinancePaymentDrawer } from '../hooks/useFinancePaymentDrawer'
 import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
 import { lazyWithReload } from '../lib/lazyWithReload'
 import { updateCardFavorite } from '../data/repositories/cardsRepo'
-import { AccountHubPanel, CreditCardOverview } from './CardsPage.overview'
-import { CardControlCenter } from './CardsPage.control'
 import { ProvisionPanel, StatementArchivePanel, StatementPanel } from './CardsPage.statements'
 import {
   CardSectionNav,
   DueStatementAutomation,
   type CardSection,
 } from './CardsPage.sections'
-import { CardsSectionHero } from './CardsPage.hero'
+import { AccountListRow, CardsSummary, UpcomingInstallmentPlans, PeriodSpendingBreakdown } from './CardsPage.summary'
 
 import { QuickExpensePanel } from './CardsPage.expense'
 import { CreditAccountListCard } from './CardsPage.list'
@@ -56,7 +54,6 @@ import {
   getCardStyle,
   getDetailClassName,
   getDetailStyle,
-  groupCard,
   mapCardForm,
   renderCardDetails,
   renderCardRowActions,
@@ -81,14 +78,14 @@ const CurrentMovementImportModal = lazyWithReload(() =>
 )
 
 export function CardsPage() {
-  const { focusQuickExpense, handleSectionChange, quickExpenseFocus, section } = useCardSectionNavigation()
+  const { focusQuickExpense, handleSectionChange, quickExpenseFocus, section, selectedCardId, openCardDetails, backToList, panel, openPanel } = useCardSectionNavigation()
   const { formatAmount, hidden: balancesHidden } = useBalancePrivacy()
   const {
     installments,
     installmentsLoading,
+    installmentsError,
     invalidateSnapshot,
     loadInstallments,
-    loadReconciliations,
     loadStatements,
     provisionActionId,
     provisionError,
@@ -128,34 +125,11 @@ export function CardsPage() {
   const [importCard, setImportCard] = useState<Card | null>(null)
   const [movementImportCard, setMovementImportCard] = useState<Card | null>(null)
   const [postImportBanner, setPostImportBanner] = useState(false)
-  // Banka hesabı hareket paneli ⋮ menüden açılır; hangi hesapların paneli
-  // açık, satır bileşeni yerine burada tutulur (menü CrudPage'de render edilir).
-  const [ledgerOpenIds, setLedgerOpenIds] = useState<Set<string>>(new Set())
-  const [detailOpenIds, setDetailOpenIds] = useState<Set<string>>(new Set())
-
-  const toggleLedgerPanel = useCallback((cardId: string) => {
-    setLedgerOpenIds((current) => {
-      const next = new Set(current)
-      if (next.has(cardId)) next.delete(cardId)
-      else next.add(cardId)
-      return next
-    })
-  }, [])
-
-  const toggleDetailPanel = useCallback((cardId: string) => {
-    setDetailOpenIds((current) => {
-      const next = new Set(current)
-      if (next.has(cardId)) next.delete(cardId)
-      else next.add(cardId)
-      return next
-    })
-  }, [])
-
   const handleImportSuccess = useCallback(async (setter: (v: null) => void) => {
     setter(null)
-    await Promise.all([reloadCards?.(), loadStatements(), loadInstallments(), loadReconciliations(), invalidateSnapshot()])
+    await refreshCardsAndProvisions(reloadCards ?? (async () => {}))
     setPostImportBanner(true)
-  }, [reloadCards, loadStatements, loadInstallments, loadReconciliations, invalidateSnapshot])
+  }, [reloadCards, refreshCardsAndProvisions])
 
   async function openStatementPayment(statement: CardStatementArchive, card: Card, cards: Card[], reload: () => Promise<void>) {
     // Tutar = KALAN (kısmi ödemeler düşülmüş); çekmecede düzenlenebilir, asgari
@@ -253,6 +227,40 @@ export function CardsPage() {
     await Promise.all([reload(), invalidateSnapshot()])
   }
 
+  function renderPanels(cardRows: Card[], reload: () => Promise<void>, setError: (message: string) => void) {
+    if (!panel) return null
+    const scopedCards = selectedCardId ? cardRows.filter((row) => row.id === selectedCardId) : cardRows
+    const scopedStatements = selectedCardId ? statements.filter((item) => item.card_id === selectedCardId) : statements
+    const scopedInstallments = selectedCardId ? installments.filter((item) => item.card_id === selectedCardId) : installments
+    const scopedProvisions = selectedCardId ? provisions.filter((item) => item.card_id === selectedCardId) : provisions
+    const refresh = () => refreshCardsAndProvisions(reload)
+    return (
+      <section id="kart-bilgi-dokumu" className="flex flex-col gap-4 border-t border-line pt-4" aria-label="Seçilen bilgi dökümü">
+        <div className="flex justify-end"><button type="button" onClick={() => openPanel(null)} className="min-h-11 px-3 text-xs font-semibold text-ink-muted hover:text-primary">Dökümü kapat</button></div>
+        {panel === 'donem' ? <><PeriodSpendingBreakdown cards={scopedCards} /><RecentCardExpensesPanel key={selectedCardId ?? 'all'} cardId={selectedCardId ?? undefined} cards={cardRows} reload={refresh} setError={setError} refreshKey={expensesVersion} /></> : null}
+        {panel === 'kategoriler' ? <CategoryCleanupPanel key={selectedCardId ?? 'all'} cardId={selectedCardId ?? undefined} onChanged={() => { void invalidateSnapshot(); setExpensesVersion((version) => version + 1) }} /> : null}
+        {panel === 'manuel' ? <QuickExpensePanel rows={cardRows} reload={refresh} setError={setError} focus={quickExpenseFocus ?? (selectedCardId ? { cardId: selectedCardId, mode: 'cash', nonce: 0 } : null)} formatAmount={formatAmount} onSaved={() => setExpensesVersion((version) => version + 1)} /> : null}
+        {panel === 'taksitler' ? (
+          installmentsError ? <p role="alert" className="text-sm text-warning">{installmentsError} <button type="button" className="min-h-11 font-semibold underline" onClick={() => void loadInstallments()}>Tekrar dene</button></p> : <>
+            <CardInstallmentCalendarPanel cards={scopedCards} installments={scopedInstallments} loading={installmentsLoading} />
+            <UpcomingInstallmentPlans cards={scopedCards} installments={scopedInstallments} loading={installmentsLoading} />
+            <details className="border-t border-line pt-2"><summary className="min-h-11 cursor-pointer py-3 text-sm font-semibold">Taksitli alışveriş ayrıntılarını düzenle</summary><p className="mb-3 text-xs text-ink-muted">Son 50 taksitli alışveriş · tamamlananlar dahil. Gelecek taksitlerin tamamı yukarıdaki dökümde yer alır.</p><CardInstallmentExpensesPanel key={selectedCardId ?? 'all'} cardId={selectedCardId ?? undefined} cards={cardRows} reload={refresh} setError={setError} /></details>
+          </>
+        ) : null}
+        {panel === 'ekstreler' ? <>
+          {statementError ? <p role="alert" className="text-sm text-warning">{statementError} <button type="button" className="min-h-11 font-semibold underline" onClick={() => void loadStatements()}>Tekrar dene</button></p> : <StatementPanel rows={scopedCards} statements={scopedStatements} statementPayments={statementPayments} loading={statementsLoading} actionId={statementActionId} onPay={(statement, card) => openStatementPayment(statement, card, cardRows, reload)} />}
+          {!statementError ? <StatementArchivePanel rows={scopedCards} statements={scopedStatements} /> : null}
+        </> : null}
+        {panel === 'provizyon' ? <>
+          {provisionError ? <p role="alert" className="text-sm text-warning">{provisionError}</p> : null}
+          <ProvisionPanel rows={scopedCards} provisions={scopedProvisions} installments={scopedInstallments} statements={scopedStatements} loading={provisionsLoading} actionId={provisionActionId}
+            onPost={(expense) => void handleProvisionAction(expense, 'post', reload, setError)} onPostAll={(expenses) => void handlePostAllProvisions(expenses, reload, setError)} onCancel={(expense) => void handleProvisionAction(expense, 'cancel', reload, setError)} onSetInstallments={(expense, count) => void handleSetProvisionInstallments(expense, count, reload, setError)} onImportStatement={(card) => { setReloadCards(() => reload); setImportCard(card) }} />
+          <details className="border-t border-line pt-2"><summary className="min-h-11 cursor-pointer py-3 text-sm font-semibold">Yeni alışveriş için taksit bilgisi</summary><CardInstallmentIntentPanel cards={scopedCards} installments={scopedInstallments} onChanged={refresh} /></details>
+        </> : null}
+      </section>
+    )
+  }
+
   return (
     <>
       <CrudPage
@@ -265,150 +273,35 @@ export function CardsPage() {
         emptyTitle={section === 'hesaplar' ? 'Henüz hesap veya nakit cüzdanı yok' : 'Henüz kredi kartı yok'}
         emptyDescription="Banka hesaplarını, nakit cüzdanlarını ve kredi kartlarını buradan takip edebilirsin."
         orderBy="card_type"
-        showList={section === 'kartlar' || section === 'hesaplar'}
-        listFilter={(row) => row.card_type === (section === 'hesaplar' ? 'banka_karti' : 'kredi_karti')}
+        showToolbar={!selectedCardId}
+        listFilter={(row) => selectedCardId ? row.id === selectedCardId : row.card_type === (section === 'hesaplar' ? 'banka_karti' : 'kredi_karti')}
         sortRows={favoritesFirst}
         afterSave={async () => {
           await invalidateSnapshot()
         }}
         afterDelete={async () => {
           await invalidateSnapshot()
+          if (selectedCardId) backToList()
         }}
         renderBeforeList={({ loading, rows, reload, setError }) => {
           const cardRows = rows as Card[]
+          const selected = cardRows.find((row) => row.id === selectedCardId)
           const counts: Partial<Record<CardSection, number>> = {
             kartlar: cardRows.filter((row) => row.card_type === 'kredi_karti').length,
             hesaplar: cardRows.filter((row) => row.card_type === 'banka_karti').length,
-            ekstreler:
-              statements.filter((statement) => statement.status === 'open').length +
-              provisions.filter((expense) => expense.status === 'provision').length,
           }
-
           return (
             <div className="flex flex-col gap-3">
-              {postImportBanner ? (
-                <div className="flex items-center gap-3 rounded-xl border border-info/25 bg-info/8 p-3">
-                  <ShieldCheck size={18} className="shrink-0 text-info" />
-                  <p className="flex-1 text-sm font-medium text-info">İçe aktarma tamamlandı. Veri tutarlılığını kontrol etmeni öneriyoruz.</p>
-                  <Link
-                    to="/veri-sagligi"
-                    className="shrink-0 rounded-lg bg-info px-3 py-1.5 text-xs font-bold text-white transition hover:bg-info/90"
-                    onClick={() => setPostImportBanner(false)}
-                  >
-                    Kontrol et
-                  </Link>
-                  <button type="button" onClick={() => setPostImportBanner(false)} className="shrink-0 text-xs font-bold text-info hover:underline">
-                    Kapat
-                  </button>
-                </div>
-              ) : null}
-              <CardSectionNav section={section} onSelect={handleSectionChange} counts={counts} />
-              {/* Şerit: sekmenin cevapladığı tek soru, sekme şeridinin hemen altında. */}
-              {!loading ? (
-                <CardsSectionHero
-                  section={section}
-                  rows={cardRows}
-                  statements={statements}
-                  statementPayments={statementPayments}
-                />
-              ) : null}
-              {!loading ? (
-                <DueStatementAutomation
-                  rows={cardRows}
-                  statements={statements}
-                  statementsLoading={statementsLoading}
-                  reload={async () => {
-                    await Promise.all([reload(), invalidateSnapshot()])
-                  }}
-                  loadStatements={loadStatements}
-                  setError={setError}
-                />
-              ) : null}
-
-              {!loading && section === 'ozet' ? (
-                <>
-                  <AccountHubPanel rows={cardRows} onOpenTransfer={(source) => openTransaction(source, reload, cardRows, 'transfer')} />
-                  <div className="hidden md:block">
-                    <CardControlCenter
-                      rows={cardRows}
-                      statements={statements}
-                      statementPayments={statementPayments}
-                      installments={installments}
-                      reconciliations={reconciliations}
-                      onReconcile={setMovementImportCard}
-                      onImportStatement={setImportCard}
-                      formatAmount={formatAmount}
-                    />
-                  </div>
-                  {/* Masaüstünde CardControlCenter asıl kart yüzeyi; CreditCardOverview yalnız
-                      mobilde (CardControlCenter orada gizli) aynı kırılımı tekrar etmesin diye. */}
-                  <div className="md:hidden">
-                    <CreditCardOverview rows={cardRows} formatAmount={formatAmount} />
-                  </div>
-                </>
-              ) : null}
-
-              {!loading && section === 'islemler' ? (
-                <>
-                  <QuickExpensePanel
-                    rows={cardRows}
-                    reload={() => refreshCardsAndProvisions(reload)}
-                    setError={setError}
-                    focus={quickExpenseFocus}
-                    formatAmount={formatAmount}
-                    onSaved={() => setExpensesVersion((version) => version + 1)}
-                  />
-                  <CategoryCleanupPanel />
-                  <RecentCardExpensesPanel
-                    cards={cardRows}
-                    reload={() => refreshCardsAndProvisions(reload)}
-                    setError={setError}
-                    refreshKey={expensesVersion}
-                  />
-                  <CardInstallmentExpensesPanel
-                    cards={cardRows}
-                    reload={() => refreshCardsAndProvisions(reload)}
-                    setError={setError}
-                  />
-                </>
-              ) : null}
-
-              {!loading && section === 'ekstreler' ? (
-                <>
-                  {statementError ? (
-                    <p className="rounded-xl border border-warning/20 bg-warning/8 p-3 text-sm font-medium text-warning">{statementError}</p>
-                  ) : null}
-                  <StatementPanel
-                    rows={cardRows}
-                    statements={statements}
-                    statementPayments={statementPayments}
-                    loading={statementsLoading}
-                    actionId={statementActionId}
-                    onPay={(statement, card) => openStatementPayment(statement, card, cardRows, reload)}
-                  />
-                  {provisionError ? (
-                    <p className="rounded-xl border border-warning/20 bg-warning/8 p-3 text-sm font-medium text-warning">{provisionError}</p>
-                  ) : null}
-                  {/* Niyet paneli provizyonun ÜSTÜNDE: alışverişten önce doldurulur,
-                      provizyon düştüğünde taksit sayısı zaten işlenmiş olur. */}
-                  <CardInstallmentIntentPanel cards={cardRows} installments={installments} onChanged={() => refreshCardsAndProvisions(reload)} />
-                  <ProvisionPanel
-                    rows={cardRows}
-                    provisions={provisions}
-                    installments={installments}
-                    statements={statements}
-                    loading={provisionsLoading}
-                    actionId={provisionActionId}
-                    onPost={(expense) => void handleProvisionAction(expense, 'post', reload, setError)}
-                    onPostAll={(expenses) => void handlePostAllProvisions(expenses, reload, setError)}
-                    onCancel={(expense) => void handleProvisionAction(expense, 'cancel', reload, setError)}
-                    onSetInstallments={(expense, count) => void handleSetProvisionInstallments(expense, count, reload, setError)}
-                    onImportStatement={setImportCard}
-                  />
-                  <CardInstallmentCalendarPanel cards={cardRows} installments={installments} loading={installmentsLoading} />
-                  <StatementArchivePanel rows={cardRows} statements={statements} />
-                </>
-              ) : null}
+              {postImportBanner ? <div className="flex flex-wrap items-center gap-3 border-b border-line py-3 text-xs text-info"><ShieldCheck size={18} /><p className="flex-1">İçe aktarma tamamlandı.</p><Link to="/veri-sagligi" className="min-h-11 py-3 font-semibold" onClick={() => setPostImportBanner(false)}>Veri tutarlılığını kontrol et</Link><button type="button" className="min-h-11 px-2" onClick={() => setPostImportBanner(false)}>Kapat</button></div> : null}
+              {selectedCardId ? <div className="flex items-center gap-3 border-b border-line pb-3"><button type="button" onClick={backToList} className="flex min-h-11 items-center gap-1 text-sm font-semibold text-primary"><ArrowLeft size={17} /> Listeye dön</button><h2 className="ml-auto text-sm font-semibold text-ink">{selected?.card_type === 'banka_karti' ? 'Hesap ayrıntıları' : 'Kart ayrıntıları'}</h2></div> : <CardSectionNav section={section} onSelect={handleSectionChange} counts={counts} />}
+              {!loading && selectedCardId && !selected ? <p role="alert" className="py-5 text-sm text-ink-muted">Bu kayıt bulunamadı. Silinmiş olabilir; listeye dönerek başka bir kayıt seçebilirsin.</p> : null}
+              {!loading && !selectedCardId ? <>
+                <CardsSummary rows={cardRows} installments={installments} statements={statements} statementPayments={statementPayments} installmentsLoading={installmentsLoading} installmentsError={installmentsError} statementsLoading={statementsLoading} statementError={statementError} section={section === 'hesaplar' ? 'hesaplar' : 'kartlar'} panel={panel} onOpenPanel={openPanel} />
+                {section === 'kartlar' ? <div className="flex flex-wrap gap-x-5 gap-y-1"><button type="button" className="min-h-11 text-xs font-semibold text-primary" onClick={() => openPanel('kategoriler')} aria-expanded={panel === 'kategoriler'}>Kategorileri düzenle</button><details open={panel === 'manuel' || undefined}><summary className="min-h-11 cursor-pointer py-3 text-xs font-semibold text-ink-muted">Manuel kayıt</summary><button type="button" className="min-h-11 text-xs font-semibold text-primary" onClick={() => openPanel('manuel')}>Harcama veya taksit ekle</button></details></div> : null}
+                {section === 'kartlar' ? renderPanels(cardRows, reload, setError) : null}
+                <p className="mt-3 text-xs text-ink-muted">{section === 'hesaplar' ? 'Hareketler ve hesap işlemleri için bir hesap seç.' : 'Borç kırılımı ve kart işlemleri için bir kart seç.'}</p>
+              </> : null}
+              {!loading ? <DueStatementAutomation rows={cardRows} statements={statements} statementsLoading={statementsLoading} reload={async () => { await Promise.all([reload(), invalidateSnapshot()]) }} loadStatements={loadStatements} setError={setError} /> : null}
             </div>
           )
         }}
@@ -417,49 +310,29 @@ export function CardsPage() {
         renderTitle={renderCardTitle}
         renderSubtitle={renderCardSubtitle}
         renderDetails={renderCardDetails}
-        renderCard={(row, helpers) => (
-          <CreditAccountListCard
-            row={row as Card}
-            rows={helpers.rows as Card[]}
-            statements={statements}
-            installments={installments}
-            reconciliations={reconciliations}
-            menu={helpers.menu}
-            rowActions={helpers.rowActions}
-            ledgerOpen={ledgerOpenIds.has(row.id)}
-            detailsOpen={detailOpenIds.has(row.id)}
-            balancesHidden={balancesHidden}
-            formatAmount={formatAmount}
-            onPayDebt={(card) => void openDebtPayment(card, helpers.rows as Card[], helpers.reload)}
-            onAddExpense={focusQuickExpense}
-            onToggleFavorite={(card) => void toggleFavorite(card, helpers.reload, helpers.setError)}
-            onChanged={() => refreshCardsAndProvisions(helpers.reload)}
-          />
-        )}
+        renderCard={(row, helpers) => selectedCardId ? (
+          <div className="flex flex-col gap-5">
+            <CreditAccountListCard row={row as Card} rows={helpers.rows as Card[]} statements={statements} statementPayments={statementPayments} installments={installments} reconciliations={reconciliations} menu={helpers.menu} rowActions={helpers.rowActions} ledgerOpen detailsOpen installmentsKnown={!installmentsLoading && !installmentsError} statementsKnown={!statementsLoading && !statementError} balancesHidden={balancesHidden} formatAmount={formatAmount}
+              onPayDebt={(card) => void openDebtPayment(card, helpers.rows as Card[], helpers.reload)} onAddExpense={focusQuickExpense} onOpenPanel={openPanel} onToggleFavorite={(card) => void toggleFavorite(card, helpers.reload, helpers.setError)} onChanged={() => refreshCardsAndProvisions(helpers.reload)} />
+            {row.card_type === 'kredi_karti' ? <>
+              <div className="flex flex-wrap gap-2" aria-label="Kart bilgilerine ulaş">
+                {([['donem', 'Dönem hareketleri'], ['taksitler', 'Gelecek taksitler'], ['ekstreler', 'Ekstre dökümü'], ['provizyon', 'Provizyonlar'], ['kategoriler', 'Kategorileri düzenle']] as const).map(([id, label]) => <button key={id} type="button" onClick={() => openPanel(id)} aria-expanded={panel === id} aria-controls="kart-bilgi-dokumu" className="min-h-11 rounded-lg border border-line-strong px-3 text-xs font-semibold text-ink hover:border-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary">{label}</button>)}
+              </div>
+              {renderPanels(helpers.rows as Card[], helpers.reload, helpers.setError)}
+            </> : null}
+          </div>
+        ) : <AccountListRow card={row as Card} onOpen={openCardDetails} />}
         getCardClassName={getCardClassName}
         getDetailClassName={getDetailClassName}
         getCardStyle={getCardStyle}
         getDetailStyle={getDetailStyle}
-        groupBy={groupCard}
-        listGridClassName="grid gap-4 min-[900px]:grid-cols-2 xl:grid-cols-2"
+        listGridClassName="flex flex-col"
         renderRowActions={(row, helpers) => renderCardRowActions(row, helpers, openTransaction)}
         renderMenuActions={(row, menuHelpers) => {
           const card = row as Card
           if (card.card_type === 'kredi_karti') {
             return (
               <>
-                <button
-                  type="button"
-                  onClick={(event) => {
-                    event.stopPropagation()
-                    menuHelpers.closeMenu()
-                    toggleDetailPanel(card.id)
-                  }}
-                  className="flex w-full items-center gap-2 px-3 py-2 text-sm text-ink hover:bg-black/[.03] dark:hover:bg-white/[.04]"
-                >
-                  <Info size={14} />
-                  {detailOpenIds.has(card.id) ? 'Detayı gizle' : 'Detay'}
-                </button>
                 <button
                   type="button"
                   onClick={(event) => {
@@ -477,6 +350,7 @@ export function CardsPage() {
                   onClick={(event) => {
                     event.stopPropagation()
                     menuHelpers.closeMenu()
+                    setReloadCards(() => menuHelpers.reload)
                     setImportCard(card)
                   }}
                   className="flex w-full items-center gap-2 px-3 py-2 text-sm text-ink hover:bg-black/[.03] dark:hover:bg-white/[.04]"
@@ -489,6 +363,7 @@ export function CardsPage() {
                   onClick={(event) => {
                     event.stopPropagation()
                     menuHelpers.closeMenu()
+                    setReloadCards(() => menuHelpers.reload)
                     setMovementImportCard(card)
                   }}
                   className="flex w-full items-center gap-2 px-3 py-2 text-sm text-ink hover:bg-black/[.03] dark:hover:bg-white/[.04]"
@@ -499,21 +374,7 @@ export function CardsPage() {
               </>
             )
           }
-          if (card.card_type !== 'banka_karti') return null
-          return (
-            <button
-              type="button"
-              onClick={(event) => {
-                event.stopPropagation()
-                menuHelpers.closeMenu()
-                toggleLedgerPanel(card.id)
-              }}
-              className="flex w-full items-center gap-2 px-3 py-2 text-sm text-ink hover:bg-black/[.03] dark:hover:bg-white/[.04]"
-            >
-              <History size={14} />
-              {ledgerOpenIds.has(card.id) ? 'Hareketleri gizle' : 'Hareketler'}
-            </button>
-          )
+          return null
         }}
       />
 

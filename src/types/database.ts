@@ -640,6 +640,7 @@ export type ExpenseContext = BaseRow & {
   budget_amount: number | null
   starts_on: string | null
   ends_on: string | null
+  completed_at: string | null
   sort_order: number
   note: string | null
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Card, CardInstallment } from '../types/database'
-import { buildCardInstallmentCalendar, buildCardInstallmentTotalsByCard, isInstallmentSettled } from './cardInstallmentCalendar'
+import { buildCardInstallmentCalendar, buildCardInstallmentTotalsByCard, buildUpcomingInstallmentPlans, isInstallmentSettled } from './cardInstallmentCalendar'
 
 const base = { id: 'id', user_id: 'u', created_at: '2026-01-01T00:00:00Z', updated_at: '2026-01-01T00:00:00Z' }
 
@@ -42,6 +42,20 @@ function makeInstallment(overrides: Partial<CardInstallment> = {}): CardInstallm
 }
 
 describe('buildCardInstallmentCalendar', () => {
+  it('alışveriş dökümü yalnız gelecek satırları kuruş hassasiyetinde toplar, aynı açıklamalı alışverişleri ayırır', () => {
+    const plans = buildUpcomingInstallmentPlans([
+      makeInstallment({ id: 'i1', amount: 10.01, due_month: '2026-08-01' }),
+      makeInstallment({ id: 'i2', amount: 20.02, due_month: '2026-07-01' }),
+      makeInstallment({ id: 'old', amount: 500, status: 'posted' }),
+      makeInstallment({ id: 'paid', amount: 500, status: 'paid' }),
+      makeInstallment({ id: 'other', card_expense_id: 'expense-2', amount: 5 }),
+      makeInstallment({ id: 'legacy-1', card_expense_id: null, amount: 1 }),
+      makeInstallment({ id: 'legacy-2', card_expense_id: null, amount: 1 }),
+    ])
+    expect(plans).toHaveLength(4)
+    expect(plans[0].total).toBe(30.03)
+    expect(plans[0].items.map((item) => item.id)).toEqual(['i2', 'i1'])
+  })
   it('returns empty rows for months with no installments', () => {
     const result = buildCardInstallmentCalendar([], [], 3)
     expect(result).toHaveLength(3)
