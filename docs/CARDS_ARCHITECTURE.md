@@ -1,5 +1,10 @@
 # Cards Architecture Note
 
+
+Kart ayrıntısı düzeni: döküm seçenekleri ikonlu iki sütunlu menüdedir, manuel
+kayıt en alttadır. Kart ayarları ve kayıt geçmişi bölümünde yinelenen borç/limit
+özeti, taksit listesi ve ekstre listesi kaldırıldı; bunların tek ayrıntı kaynağı
+üst özet ve ilgili döküm menüsüdür. Borç/ledger kuralları değişmedi.
 Last reviewed: 2026-10-10
 
 This note maps `/kartlar` (`CardsPage`) after the page split. Start with
@@ -66,7 +71,10 @@ lazy boundary.
 
 ## Visual Hierarchy
 
-- Ana sayfada yalnız **Kredi kartları** ve **Hesaplar ve nakit** seçimi bulunur.
+- Ana sayfada **Hesaplar ve nakit** ilk sırada ve parametresiz girişte varsayılandır;
+  **Kredi kartları** ikinci seçimdir. Kredi kartları bölümündeki **Ortak limit grupları**
+  dökümü isimli grupların limit/borç/kalanını ve bağlı kart ayrıntısı bağlantılarını gösterir.
+  Grup ataması kart düzenleme formundaki `limit_group_name` alanından yapılır.
   Eski `section=ozet/islemler/ekstreler` bağlantıları çalışır; ayrı menü oluşturmaz.
 - Kart özetinde dönem içi kesinleşmiş toplam ve gelecek taksit toplamı öndedir.
   Provizyon ayrı kovadır; ödenecek ekstre kısmi ödemeler düşülmüş kalandır.

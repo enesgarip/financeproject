@@ -1,5 +1,19 @@
 # Priority Backlog
 
+
+Kart ayrıntısı düzeni: döküm seçenekleri ikonlu iki sütunlu menüdedir, manuel
+kayıt en alttadır. Kart ayarları ve kayıt geçmişi bölümünde yinelenen borç/limit
+özeti, taksit listesi ve ekstre listesi kaldırıldı; bunların tek ayrıntı kaynağı
+üst özet ve ilgili döküm menüsüdür. Borç/ledger kuralları değişmedi.
+## 2026-10-09 — Hesaplar varsayılanı ve ortak limit grupları — UYGULANDI
+
+Hesaplar ve nakit ilk seçim ve parametresiz girişin varsayılanıdır.
+Kredi kartları bölümünde Ortak limit grupları görünür; grup dökümü ortak
+limiti, toplam borcu, kalan limiti ve kart ayrıntısı bağlantılarını gösterir.
+Grup ataması kart düzenleme formundadır; isimli tek kartlı gruplar da görünür.
+Eski özet/işlem/ekstre bağlantıları kredi kartları bölümünü korur.
+
+
 ## 2026-10-10 — Hesap/kart odağı, gider grubu tamamlama ve maaş günü — UYGULANDI
 
 Hesaplar sayfası Kredi kartları / Hesaplar ve nakit olarak sadeleştirildi.

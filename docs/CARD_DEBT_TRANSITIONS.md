@@ -1,10 +1,19 @@
 # Card Debt Transitions
 
+
+Kart ayrıntısı düzeni: döküm seçenekleri ikonlu iki sütunlu menüdedir, manuel
+kayıt en alttadır. Kart ayarları ve kayıt geçmişi bölümünde yinelenen borç/limit
+özeti, taksit listesi ve ekstre listesi kaldırıldı; bunların tek ayrıntı kaynağı
+üst özet ve ilgili döküm menüsüdür. Borç/ledger kuralları değişmedi.
 Last reviewed: 2026-08-12
 
 This file is the working source of truth for how credit-card debt moves through
 the app. If an RPC, page action, or data-health fix changes one of these rules,
 update this file in the same change.
+
+Ortak limit grupları kredi kartları bölümünde görünür. Grup özeti mevcut
+`buildCreditLimitGroups` hesabını kullanır: limit en yüksek kart limiti, borç
+bağlı kartların toplamıdır. Bu görünüm borç geçişlerini veya ledger kayıtlarını değiştirmez.
 
 ## Canonical Fields
 

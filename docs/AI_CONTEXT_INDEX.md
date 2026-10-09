@@ -1,5 +1,10 @@
 # AI Context Index
 
+
+Kart ayrıntısı düzeni: döküm seçenekleri ikonlu iki sütunlu menüdedir, manuel
+kayıt en alttadır. Kart ayarları ve kayıt geçmişi bölümünde yinelenen borç/limit
+özeti, taksit listesi ve ekstre listesi kaldırıldı; bunların tek ayrıntı kaynağı
+üst özet ve ilgili döküm menüsüdür. Borç/ledger kuralları değişmedi.
 Last reviewed: 2026-10-10
 
 This file is the cheapest starting point for future AI/Codex sessions. Its job
@@ -55,6 +60,10 @@ kullanır. Toplamdan döküm açılır, ekstre/taksit menüleri yoktur. Gider gr
 `completed_at` ile geçmiş korunarak tamamlanır/yeniden açılır. Maaşın bakiyede
 varsayıldığı ortak gün sınırı ilk iş gününü de kapsar; dashboard hesap dökümü
 aynı nakit akışı/tampon/rezerv girdilerini gösterir.
+
+Hesaplar girişi: parametresiz `/kartlar` Hesaplar ve nakit ile açılır.
+Kredi kartları bölümündeki ortak limit dökümü `CardsPage.summary.tsx` içindeki
+`SharedLimitGroups` bileşenidir; mevcut `buildLimitGroupSummaries` hesabını kullanır.
 
 ## Domain Source Of Truth
 

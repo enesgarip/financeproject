@@ -13,8 +13,8 @@ import { shouldRunStatementCut } from './CardsPage.helpers'
 export type CardSection = 'ozet' | 'kartlar' | 'hesaplar' | 'islemler' | 'ekstreler'
 
 const cardSections = [
-  { id: 'kartlar', label: 'Kredi kartları', icon: CreditCardIcon },
   { id: 'hesaplar', label: 'Hesaplar ve nakit', icon: WalletCards },
+  { id: 'kartlar', label: 'Kredi kartları', icon: CreditCardIcon },
 ] as const
 
 export function CardSectionNav({ section, onSelect, counts }: {

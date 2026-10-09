@@ -17,7 +17,7 @@
  */
 import { Suspense, useState, useCallback } from 'react'
 import { Link } from 'react-router'
-import { ArrowLeft, CalendarClock, FileText, ScanSearch, ShieldCheck } from 'lucide-react'
+import { ArrowLeft, CalendarClock, FileText, ScanSearch, ShieldCheck, List, Clock, Tags, ChevronRight } from 'lucide-react'
 import { CrudPage } from '../components/CrudPage'
 import { CategoryCleanupPanel } from '../components/finance/CategoryCleanupPanel'
 import { FinancePaymentDrawer } from '../components/finance/FinancePaymentDrawer'
@@ -42,7 +42,7 @@ import {
   DueStatementAutomation,
   type CardSection,
 } from './CardsPage.sections'
-import { AccountListRow, CardsSummary, UpcomingInstallmentPlans, PeriodSpendingBreakdown } from './CardsPage.summary'
+import { AccountListRow, CardsSummary, SharedLimitGroups, UpcomingInstallmentPlans, PeriodSpendingBreakdown } from './CardsPage.summary'
 
 import { QuickExpensePanel } from './CardsPage.expense'
 import { CreditAccountListCard } from './CardsPage.list'
@@ -298,6 +298,7 @@ export function CardsPage() {
               {!loading && !selectedCardId ? <>
                 <CardsSummary rows={cardRows} installments={installments} statements={statements} statementPayments={statementPayments} installmentsLoading={installmentsLoading} installmentsError={installmentsError} statementsLoading={statementsLoading} statementError={statementError} section={section === 'hesaplar' ? 'hesaplar' : 'kartlar'} panel={panel} onOpenPanel={openPanel} />
                 {section === 'kartlar' ? <div className="flex flex-wrap gap-x-5 gap-y-1"><button type="button" className="min-h-11 text-xs font-semibold text-primary" onClick={() => openPanel('kategoriler')} aria-expanded={panel === 'kategoriler'}>Kategorileri düzenle</button><details open={panel === 'manuel' || undefined}><summary className="min-h-11 cursor-pointer py-3 text-xs font-semibold text-ink-muted">Manuel kayıt</summary><button type="button" className="min-h-11 text-xs font-semibold text-primary" onClick={() => openPanel('manuel')}>Harcama veya taksit ekle</button></details></div> : null}
+                {section === 'kartlar' ? <SharedLimitGroups rows={cardRows} onOpenCard={openCardDetails} /> : null}
                 {section === 'kartlar' ? renderPanels(cardRows, reload, setError) : null}
                 <p className="mt-3 text-xs text-ink-muted">{section === 'hesaplar' ? 'Hareketler ve hesap işlemleri için bir hesap seç.' : 'Borç kırılımı ve kart işlemleri için bir kart seç.'}</p>
               </> : null}
@@ -313,12 +314,27 @@ export function CardsPage() {
         renderCard={(row, helpers) => selectedCardId ? (
           <div className="flex flex-col gap-5">
             <CreditAccountListCard row={row as Card} rows={helpers.rows as Card[]} statements={statements} statementPayments={statementPayments} installments={installments} reconciliations={reconciliations} menu={helpers.menu} rowActions={helpers.rowActions} ledgerOpen detailsOpen installmentsKnown={!installmentsLoading && !installmentsError} statementsKnown={!statementsLoading && !statementError} balancesHidden={balancesHidden} formatAmount={formatAmount}
-              onPayDebt={(card) => void openDebtPayment(card, helpers.rows as Card[], helpers.reload)} onAddExpense={focusQuickExpense} onOpenPanel={openPanel} onToggleFavorite={(card) => void toggleFavorite(card, helpers.reload, helpers.setError)} onChanged={() => refreshCardsAndProvisions(helpers.reload)} />
+              onPayDebt={(card) => void openDebtPayment(card, helpers.rows as Card[], helpers.reload)} onOpenPanel={openPanel} onToggleFavorite={(card) => void toggleFavorite(card, helpers.reload, helpers.setError)} onChanged={() => refreshCardsAndProvisions(helpers.reload)} />
             {row.card_type === 'kredi_karti' ? <>
-              <div className="flex flex-wrap gap-2" aria-label="Kart bilgilerine ulaş">
-                {([['donem', 'Dönem hareketleri'], ['taksitler', 'Gelecek taksitler'], ['ekstreler', 'Ekstre dökümü'], ['provizyon', 'Provizyonlar'], ['kategoriler', 'Kategorileri düzenle']] as const).map(([id, label]) => <button key={id} type="button" onClick={() => openPanel(id)} aria-expanded={panel === id} aria-controls="kart-bilgi-dokumu" className="min-h-11 rounded-lg border border-line-strong px-3 text-xs font-semibold text-ink hover:border-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary">{label}</button>)}
-              </div>
-              {renderPanels(helpers.rows as Card[], helpers.reload, helpers.setError)}
+              <nav className="grid grid-cols-2 gap-2" aria-label="Kart dökümleri">
+                {([
+                  ['donem', 'Dönem hareketleri', List],
+                  ['taksitler', 'Gelecek taksitler', CalendarClock],
+                  ['ekstreler', 'Ekstre dökümü', FileText],
+                  ['provizyon', 'Provizyonlar', Clock],
+                  ['kategoriler', 'Kategorileri düzenle', Tags],
+                ] as const).map(([id, label, Icon]) => <button key={id} type="button" onClick={() => openPanel(id)} aria-expanded={panel === id} aria-controls="kart-bilgi-dokumu" className={`flex min-h-16 min-w-0 items-center gap-2 rounded-xl border p-3 text-left text-xs font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary ${id === 'kategoriler' ? 'col-span-2' : ''} ${panel === id ? 'border-primary bg-primary/10 text-primary' : 'border-line-strong bg-raised text-ink hover:border-primary/50'}`}><Icon size={18} className="shrink-0 text-primary" aria-hidden="true" /><span className="flex-1 break-words">{label}</span><ChevronRight size={14} className="shrink-0 text-ink-muted" aria-hidden="true" /></button>)}
+              </nav>
+              {panel !== 'manuel' ? renderPanels(helpers.rows as Card[], helpers.reload, helpers.setError) : null}
+              <details open={panel === 'manuel' || undefined} className="border-t border-line pt-2">
+                <summary className="min-h-11 cursor-pointer py-3 text-sm font-semibold text-ink-muted">Manuel kayıt</summary>
+                <p className="mb-3 text-xs text-ink-muted">Kart harcamasını veya taksitli alışverişini elle kaydet.</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <button type="button" onClick={() => focusQuickExpense(row as Card, 'cash')} className="min-h-11 rounded-lg border border-line-strong bg-raised px-3 py-3 text-sm font-semibold text-primary">Harcama ekle</button>
+                  <button type="button" onClick={() => focusQuickExpense(row as Card, 'installment')} className="min-h-11 rounded-lg border border-line-strong bg-raised px-3 py-3 text-sm font-semibold text-primary">Taksit ekle</button>
+                </div>
+                {panel === 'manuel' ? renderPanels(helpers.rows as Card[], helpers.reload, helpers.setError) : null}
+              </details>
             </> : null}
           </div>
         ) : <AccountListRow card={row as Card} onOpen={openCardDetails} />}

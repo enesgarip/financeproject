@@ -7,12 +7,12 @@ import { AccountLedgerPanel } from '../components/finance/AccountLedgerPanel'
 import { CardAliasPanel } from '../components/finance/CardAliasPanel'
 import { CardStatementProjectionPanel } from '../components/finance/CardStatementProjectionPanel'
 import { CardLedgerPanel } from '../components/finance/CardLedgerPanel'
-import { MiniStat, SectionHeader, StatusBadge } from '../components/finance/FinanceUI'
+import { MiniStat } from '../components/finance/FinanceUI'
 import { fetchAllCardAliases } from '../data/repositories/cardAliasesRepo'
 import { fetchExpensePaceRows } from '../data/repositories/cardsRepo'
 import { fetchAccountLedgerEvents } from '../data/repositories/financePanelsRepo'
 import type { AccountReconciliation, Card, CardInstallment, CardStatementArchive, CardStatementPayment } from '../types/database'
-import { buildStatementPaidMap, statementRemainingAmount } from '../utils/cardStatementPayments'
+import { buildStatementPaidMap } from '../utils/cardStatementPayments'
 import type { CardPanel } from './CardsPage.hooks'
 import { addDays, dateInputValue, daysUntil, startOfDay } from '../utils/date'
 import { freshnessConfidence } from '../utils/dataConfidence'
@@ -26,7 +26,6 @@ import { bankBrandGradient, getBankBrand } from '../utils/bankBranding'
 import { buildAccountLedgerBalanceRows } from '../utils/accountLedger'
 import { sumTL, toTL } from '../utils/money'
 import {
-  activeInstallmentCount,
   bankHueStyle,
   formatIban,
   formatMonthlyDay,
@@ -34,7 +33,6 @@ import {
   getCreditCardDueDate,
   getCreditCardStatus,
   limitGroupStats,
-  statementPeriodLabel,
   visibleOpenStatementAmount,
 } from './CardsPage.helpers'
 import { CardDatum } from './CardsPage.overview'
@@ -151,7 +149,6 @@ export function CreditAccountListCard({
   balancesHidden = false,
   formatAmount = formatCurrency,
   onPayDebt,
-  onAddExpense,
   onToggleFavorite,
   onChanged,
   onOpenPanel,
@@ -171,7 +168,6 @@ export function CreditAccountListCard({
   balancesHidden?: boolean
   formatAmount?: (value: number | null | undefined) => string
   onPayDebt: (card: Card) => void
-  onAddExpense: (card: Card, mode: 'cash' | 'installment') => void
   onToggleFavorite: (card: Card) => void
   onChanged?: () => void | Promise<void>
   onOpenPanel?: (panel: CardPanel) => void
@@ -298,7 +294,6 @@ export function CreditAccountListCard({
   const status = getCreditCardStatus(row, stats.usageRate, statements)
   const paidMap = buildStatementPaidMap(statementPayments)
   const displayedOpenStatementAmount = visibleOpenStatementAmount(row, statements, paidMap)
-  const installmentCount = activeInstallmentCount(row, installments)
   const scheduledInstallmentTotal = sumTL(installments
     .filter((installment) => installment.card_id === row.id && installment.status === 'scheduled')
     .map((installment) => installment.amount))
@@ -442,34 +437,11 @@ export function CreditAccountListCard({
         </Button>
         )}
       </div>
-      <details className="mt-3 border-t border-line">
-        <summary className="min-h-11 cursor-pointer py-3 text-xs font-semibold text-ink-muted">Manuel kayıt</summary>
-        <Button
-          type="button"
-          size="lg"
-          variant="outline"
-          onClick={() => onAddExpense(row, 'cash')}
-          className="finance-touch-target px-3 text-xs"
-        >
-          Manuel harcama ekle
-        </Button>
-      </details>
       {detailsOpen ? (
         <details className="mt-4 rounded-lg border border-line-strong bg-surface-muted/70 p-3 ring-1 ring-line-strong">
-          <summary className="min-h-11 cursor-pointer py-3 text-sm font-semibold">Diğer kart bilgileri ve kayıt geçmişi</summary>
-          <SectionHeader
-            title="Kart detay özeti"
-            description="Borç, ekstre, limit, vade ve devam eden taksitleri birlikte oku."
-            action={<StatusBadge tone={payableDebt > 0 ? 'warning' : 'good'}>{payableDebt > 0 ? 'Açık ekstre' : 'Temiz'}</StatusBadge>}
-          />
+          <summary className="min-h-11 cursor-pointer py-3 text-sm font-semibold">Kart ayarları ve kayıt geçmişi</summary>
           <div className="mt-4 grid grid-cols-2 gap-2 min-[620px]:grid-cols-3">
-            <MiniStat label="Ödenebilir" value={formatAmount(payableDebt)} tone={payableDebt > 0 ? 'warning' : 'good'} />
-            <MiniStat label="Açık ekstre" value={formatAmount(displayedOpenStatementAmount)} tone={displayedOpenStatementAmount > 0 ? 'danger' : 'neutral'} />
-            <MiniStat label="Kalan limit" value={formatAmount(stats.availableLimit)} tone="good" />
-            <MiniStat label="Son ödeme" value={formatShortDate(dueDate)} tone={payableDebt > 0 ? 'warning' : 'neutral'} />
             <MiniStat label="Ekstre günü" value={formatMonthlyDay(row.statement_day)} />
-            <MiniStat label="Limit kullanımı" value={`%${usageRate}`} tone={usageRate >= 80 ? 'danger' : usageRate >= 55 ? 'warning' : 'good'} />
-            <MiniStat label="Devam eden taksit" value={`${installmentCount} işlem`} tone={installmentCount > 0 ? 'warning' : 'neutral'} />
             <MiniStat label="Limit tipi" value={stats.isShared ? 'Ortak limit' : 'Tekil limit'} tone={stats.isShared ? 'info' : 'neutral'} />
             <MiniStat label="İç veri sağlığı" value={`%${consistency.score}`} tone={consistency.score >= 100 ? 'good' : consistency.score >= 75 ? 'warning' : 'danger'} />
           </div>
@@ -487,40 +459,6 @@ export function CreditAccountListCard({
             </div>
           </div>
           <CardStatementProjectionPanel card={row} installments={cardInstallments} formatAmount={formatAmount} />
-          <div className="mt-4 grid gap-3 min-[760px]:grid-cols-2">
-            <div className="rounded-lg bg-raised p-3 ring-1 ring-line-strong">
-              <p className="text-xs font-black uppercase text-ink-muted">Devam eden taksitler</p>
-              {cardInstallments.length > 0 ? (
-                <div className="mt-3 flex flex-col gap-2">
-                  {cardInstallments.slice(0, 3).map((installment) => (
-                    <div key={installment.id} className="flex min-w-0 items-center justify-between gap-3 rounded-lg bg-page px-3 py-2 text-xs">
-                      <span className="min-w-0 truncate font-bold text-ink">{installment.description}</span>
-                      <span className="shrink-0 font-black tabular-nums text-ink">
-                        {formatAmount(installment.amount)} · {formatDate(installment.due_month)}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="mt-3 text-sm text-ink-muted">Devam eden taksit yok.</p>
-              )}
-            </div>
-            <div className="rounded-lg bg-raised p-3 ring-1 ring-line-strong">
-              <p className="text-xs font-black uppercase text-ink-muted">Ekstre geçmişi</p>
-              {openStatements.length > 0 ? (
-                <div className="mt-3 flex flex-col gap-2">
-                  {openStatements.slice(0, 3).map((statement) => (
-                    <div key={statement.id} className="flex min-w-0 items-center justify-between gap-3 rounded-lg bg-page px-3 py-2 text-xs">
-                      <span className="min-w-0 truncate font-bold text-ink">{statementPeriodLabel(statement)}</span>
-                      <span className="shrink-0 font-black tabular-nums text-ink">{formatAmount(statementRemainingAmount(statement, paidMap))}</span>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="mt-3 text-sm text-ink-muted">Açık ekstre kaydı yok.</p>
-              )}
-            </div>
-          </div>
           <CardAliasPanel card={row} />
           <CardLedgerPanel card={row} onChanged={onChanged} formatAmount={formatAmount} />
         </details>
