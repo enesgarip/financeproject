@@ -7,7 +7,7 @@ import { buildStatementPaidMap } from '../utils/cardStatementPayments'
 import { buildUpcomingInstallmentPlans } from '../utils/cardInstallmentCalendar'
 import { formatDate } from '../utils/date'
 import { diffTL, sumTL } from '../utils/money'
-import { visibleOpenStatementAmount } from './CardsPage.helpers'
+import { buildLimitGroupSummaries, visibleOpenStatementAmount } from './CardsPage.helpers'
 import type { CardPanel } from './CardsPage.hooks'
 
 export function CardsSummary({ rows, installments, statements, statementPayments, installmentsLoading, installmentsError, statementsLoading, statementError, section, panel, onOpenPanel }: {
@@ -67,6 +67,28 @@ export function CardsSummary({ rows, installments, statements, statementPayments
         ))}
       </div>
       <p className="mt-3 text-xs text-ink-muted">Toplam kart yükü <strong className="font-semibold text-ink">{formatAmount(sumTL(creditCards.map((row) => row.debt_amount)))}</strong> · ekstre, dönem içi, provizyon ve gelecek taksitler dahil.</p>
+    </section>
+  )
+}
+
+export function SharedLimitGroups({ rows, onOpenCard }: { rows: Card[]; onOpenCard: (card: Card) => void }) {
+  const { formatAmount } = useBalancePrivacy()
+  const groups = buildLimitGroupSummaries(rows).filter((group) => group.cards.some((card) => card.limit_group_name?.trim()))
+  return (
+    <section aria-label="Ortak limit grupları" className="border-t border-line py-4">
+      <h3 className="text-sm font-semibold">Ortak limit grupları</h3>
+      <p className="mt-2 text-xs text-ink-muted">Aynı gruptaki kartların limiti bir kez sayılır. Grup oluşturmak veya değiştirmek için kartı düzenleyip “Ortak limit grubu” alanını doldur.</p>
+      {groups.length ? <div className="mt-3 divide-y divide-line">{groups.map((group) => (
+        <details key={group.key} className="py-3">
+          <summary className="min-h-11 cursor-pointer break-words py-2 text-sm font-semibold">{group.label} · {group.cards.length} kart</summary>
+          <dl className="grid gap-3 py-3 text-sm sm:grid-cols-3">
+            <div><dt className="text-xs text-ink-muted">Ortak limit</dt><dd className="mt-1 font-semibold">{formatAmount(group.limit)}</dd></div>
+            <div><dt className="text-xs text-ink-muted">Toplam kart borcu</dt><dd className="mt-1 font-semibold">{formatAmount(group.debt)}</dd></div>
+            <div><dt className="text-xs text-ink-muted">Kalan limit</dt><dd className="mt-1 font-semibold">{formatAmount(group.available)}</dd></div>
+          </dl>
+          <ul>{group.cards.map((card) => <li key={card.id}><button type="button" onClick={() => onOpenCard(card)} className="flex min-h-11 w-full items-center justify-between gap-3 border-t border-line py-3 text-left text-sm text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"><span className="min-w-0 break-words">{card.card_name}{card.holder_name ? ` · ${card.holder_name}` : ''}</span><ChevronRight size={16} className="shrink-0" aria-hidden="true" /></button></li>)}</ul>
+        </details>
+      ))}</div> : <p className="mt-3 text-sm text-ink-muted">Henüz ortak limit grubu yok.</p>}
     </section>
   )
 }

@@ -66,7 +66,10 @@ lazy boundary.
 
 ## Visual Hierarchy
 
-- Ana sayfada yalnız **Kredi kartları** ve **Hesaplar ve nakit** seçimi bulunur.
+- Ana sayfada **Hesaplar ve nakit** ilk sırada ve parametresiz girişte varsayılandır;
+  **Kredi kartları** ikinci seçimdir. Kredi kartları bölümündeki **Ortak limit grupları**
+  dökümü isimli grupların limit/borç/kalanını ve bağlı kart ayrıntısı bağlantılarını gösterir.
+  Grup ataması kart düzenleme formundaki `limit_group_name` alanından yapılır.
   Eski `section=ozet/islemler/ekstreler` bağlantıları çalışır; ayrı menü oluşturmaz.
 - Kart özetinde dönem içi kesinleşmiş toplam ve gelecek taksit toplamı öndedir.
   Provizyon ayrı kovadır; ödenecek ekstre kısmi ödemeler düşülmüş kalandır.

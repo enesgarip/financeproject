@@ -42,7 +42,7 @@ import {
   DueStatementAutomation,
   type CardSection,
 } from './CardsPage.sections'
-import { AccountListRow, CardsSummary, UpcomingInstallmentPlans, PeriodSpendingBreakdown } from './CardsPage.summary'
+import { AccountListRow, CardsSummary, SharedLimitGroups, UpcomingInstallmentPlans, PeriodSpendingBreakdown } from './CardsPage.summary'
 
 import { QuickExpensePanel } from './CardsPage.expense'
 import { CreditAccountListCard } from './CardsPage.list'
@@ -298,6 +298,7 @@ export function CardsPage() {
               {!loading && !selectedCardId ? <>
                 <CardsSummary rows={cardRows} installments={installments} statements={statements} statementPayments={statementPayments} installmentsLoading={installmentsLoading} installmentsError={installmentsError} statementsLoading={statementsLoading} statementError={statementError} section={section === 'hesaplar' ? 'hesaplar' : 'kartlar'} panel={panel} onOpenPanel={openPanel} />
                 {section === 'kartlar' ? <div className="flex flex-wrap gap-x-5 gap-y-1"><button type="button" className="min-h-11 text-xs font-semibold text-primary" onClick={() => openPanel('kategoriler')} aria-expanded={panel === 'kategoriler'}>Kategorileri düzenle</button><details open={panel === 'manuel' || undefined}><summary className="min-h-11 cursor-pointer py-3 text-xs font-semibold text-ink-muted">Manuel kayıt</summary><button type="button" className="min-h-11 text-xs font-semibold text-primary" onClick={() => openPanel('manuel')}>Harcama veya taksit ekle</button></details></div> : null}
+                {section === 'kartlar' ? <SharedLimitGroups rows={cardRows} onOpenCard={openCardDetails} /> : null}
                 {section === 'kartlar' ? renderPanels(cardRows, reload, setError) : null}
                 <p className="mt-3 text-xs text-ink-muted">{section === 'hesaplar' ? 'Hareketler ve hesap işlemleri için bir hesap seç.' : 'Borç kırılımı ve kart işlemleri için bir kart seç.'}</p>
               </> : null}

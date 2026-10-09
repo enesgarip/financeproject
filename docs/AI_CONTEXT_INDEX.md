@@ -56,6 +56,10 @@ kullanır. Toplamdan döküm açılır, ekstre/taksit menüleri yoktur. Gider gr
 varsayıldığı ortak gün sınırı ilk iş gününü de kapsar; dashboard hesap dökümü
 aynı nakit akışı/tampon/rezerv girdilerini gösterir.
 
+Hesaplar girişi: parametresiz `/kartlar` Hesaplar ve nakit ile açılır.
+Kredi kartları bölümündeki ortak limit dökümü `CardsPage.summary.tsx` içindeki
+`SharedLimitGroups` bileşenidir; mevcut `buildLimitGroupSummaries` hesabını kullanır.
+
 ## Domain Source Of Truth
 
 | Domain | First Doc | Then Read | Notes |

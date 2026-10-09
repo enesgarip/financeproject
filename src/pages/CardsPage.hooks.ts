@@ -27,7 +27,8 @@ export function useCardSectionNavigation() {
   const [searchParams, setSearchParams] = useSearchParams()
   const navigate = useNavigate()
   const location = useLocation()
-  const section: CardSection = searchParams.get('section') === 'hesaplar' ? 'hesaplar' : 'kartlar'
+  const rawSection = searchParams.get('section')
+  const section: CardSection = ['kartlar', 'ozet', 'islemler', 'ekstreler'].includes(rawSection ?? '') ? 'kartlar' : 'hesaplar'
   const selectedCardId = searchParams.get('card')
   const rawPanel = searchParams.get('panel') ?? (searchParams.get('section') === 'ekstreler' ? 'ekstreler' : searchParams.get('section') === 'islemler' ? 'donem' : null)
   const panel: CardPanel = ['donem', 'taksitler', 'ekstreler', 'provizyon', 'kategoriler', 'manuel'].includes(rawPanel ?? '') ? rawPanel as CardPanel : null
