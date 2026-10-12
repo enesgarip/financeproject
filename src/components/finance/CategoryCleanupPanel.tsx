@@ -50,7 +50,7 @@ function groupByMerchant(rows: CardExpense[]): MerchantGroup[] {
     .slice(0, MAX_GROUPS)
 }
 
-export function CategoryCleanupPanel({ onChanged, cardId }: { onChanged?: () => void; cardId?: string }) {
+export function CategoryCleanupPanel({ onChanged, cardId, collapsible = false, refreshKey = 0 }: { onChanged?: () => void; cardId?: string; collapsible?: boolean; refreshKey?: number }) {
   const { formatAmount } = useBalancePrivacy()
   const [rows, setRows] = useState<CardExpense[]>([])
   const [loading, setLoading] = useState(true)
@@ -58,6 +58,7 @@ export function CategoryCleanupPanel({ onChanged, cardId }: { onChanged?: () => 
   const [selections, setSelections] = useState<Record<string, string>>({})
   const [error, setError] = useState('')
   const [savedCount, setSavedCount] = useState(0)
+  const [open, setOpen] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -75,7 +76,7 @@ export function CategoryCleanupPanel({ onChanged, cardId }: { onChanged?: () => 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void load()
-  }, [load])
+  }, [load, refreshKey])
 
   const groups = useMemo(() => groupByMerchant(rows), [rows])
   const options = expenseCategories.filter((category) => category !== 'Diğer')
@@ -104,9 +105,8 @@ export function CategoryCleanupPanel({ onChanged, cardId }: { onChanged?: () => 
     [selections, onChanged],
   )
 
-  if (!loading && groups.length === 0 && savedCount === 0 && !error) return null
-
-  return (
+  const empty = !loading && groups.length === 0 && !error
+  const content = (
     <SurfaceCard className="border-info/20">
       <CardHeader className="pb-0">
         <div className="flex items-start justify-between gap-3">
@@ -123,7 +123,7 @@ export function CategoryCleanupPanel({ onChanged, cardId }: { onChanged?: () => 
         </div>
       </CardHeader>
       <CardContent className="space-y-2 pt-2">
-        {error ? <p className="rounded-xl border border-warning/20 bg-warning/8 p-3 text-sm font-medium text-warning">{error}</p> : null}
+        {error ? <p role="alert" className="rounded-xl border border-warning/20 bg-warning/8 p-3 text-sm font-medium text-warning">{error} <button type="button" disabled={loading || savingKey !== null} onClick={() => void load()} className="min-h-11 font-semibold underline disabled:opacity-50">Tekrar dene</button></p> : null}
         {loading ? (
           <p className="flex items-center gap-2 rounded-xl bg-page p-3 text-sm text-ink-muted">
             <Loader2 size={14} className="animate-spin" /> Harcamalar yükleniyor...
@@ -170,5 +170,27 @@ export function CategoryCleanupPanel({ onChanged, cardId }: { onChanged?: () => 
         ))}
       </CardContent>
     </SurfaceCard>
+  )
+
+  if (!collapsible) return content
+
+  const expanded = open && !empty
+  return (
+    <section aria-label="Harcama kategorilerini düzenle" className="border-t border-line pt-2">
+      <button
+        type="button"
+        disabled={loading || empty}
+        onClick={() => setOpen((current) => !current)}
+        aria-expanded={expanded}
+        className="flex min-h-11 items-center gap-2 text-xs font-semibold text-primary disabled:cursor-default disabled:text-ink-muted disabled:opacity-60"
+      >
+        <Tags size={15} aria-hidden="true" />
+        Kategorileri düzenle
+      </button>
+      {loading ? <p role="status" className="text-xs text-ink-muted">Kategorisiz harcamalar kontrol ediliyor…</p> : null}
+      {empty ? <p role="status" className="text-xs text-ink-muted">{savedCount > 0 ? `${savedCount} harcama kategorilendi. ` : ''}Kategorize edilecek harcama yok.</p> : null}
+      {error && !open ? <p role="alert" className="text-xs text-warning">Harcamalar kontrol edilemedi. Kategorileri düzenle bölümünü açıp tekrar dene.</p> : null}
+      {expanded ? content : null}
+    </section>
   )
 }

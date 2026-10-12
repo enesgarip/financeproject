@@ -49,8 +49,8 @@ export function HeroNumber({
 
       <div className="mt-2 flex flex-wrap items-end gap-x-5 gap-y-2 lg:mt-1.5">
         <p
-          className="serit-num text-[46px] font-semibold min-[400px]:text-[52px] lg:text-[62px]"
-          style={{ lineHeight: 0.95, letterSpacing: '-0.045em', color: SERIT_FILL[tone] }}
+          className="serit-num max-w-full break-words text-[46px] font-semibold min-[400px]:text-[52px] lg:text-[62px]"
+          style={{ lineHeight: 0.95, letterSpacing: '-0.045em', color: SERIT_FILL[tone], fontSize: text.length > 10 ? 'clamp(1.5rem, 7.5vw, 3.875rem)' : undefined }}
         >
           {text}
           <span className="text-[19px] text-ink-faint lg:text-[23px]"> {unit}</span>

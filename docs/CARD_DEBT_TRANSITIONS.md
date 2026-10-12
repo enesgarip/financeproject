@@ -1,11 +1,11 @@
 # Card Debt Transitions
 
 
-Kart ayrıntısı düzeni: döküm seçenekleri ikonlu iki sütunlu menüdedir, manuel
-kayıt en alttadır. Kart ayarları ve kayıt geçmişi bölümünde yinelenen borç/limit
+Kart ayrıntısı düzeni: döküm seçenekleri ikonlu iki sütunlu menüdedir.
+Manuel kayıt yalnız hızlı işlem menüsünden açılır. Kart ayarları ve kayıt geçmişi bölümünde yinelenen borç/limit
 özeti, taksit listesi ve ekstre listesi kaldırıldı; bunların tek ayrıntı kaynağı
 üst özet ve ilgili döküm menüsüdür. Borç/ledger kuralları değişmedi.
-Last reviewed: 2026-08-12
+Last reviewed: 2026-10-12
 
 This file is the working source of truth for how credit-card debt moves through
 the app. If an RPC, page action, or data-health fix changes one of these rules,
@@ -84,12 +84,21 @@ twin is `clampCardBreakdown()` in `src/utils/financeSummary.ts`.
 
 ## Display Helpers
 
-2026-09-05 arayüz dili: hesap özetindeki “Kart borcu sonrası bakiye” yalnız
-banka bakiyelerinden `cardPayableDebt` (ekstre + dönem içi) düşülmüş tutardır.
-Provizyon ve gelecek taksitler düşülmez; toplam borç veya yalnız ekstre
-karşılama göstergesi değildir. Kullanıcının ekstresini tam ödeme döngüsüne
+2026-10-12 belge eşitlemesi: hesap özetindeki “Tüm kart borcu sonrası” banka
+hesapları + nakit cüzdanları toplamından tüm kartların `debt_amount` toplamı
+düşülmüş farktır; provizyon ve gelecek taksitler de dahildir. Bu tanım mevcut
+hesap özetiyle aynıdır; bu değişiklik borç matematiğini değiştirmez. Dashboard
+likit toplamı nakit varlıklarını da kapsar ve daha geniş kaynaktır. Bu ay
+harcanabilir tutar ayrıca kalan gelir/yükümlülük, tampon ve kasa rezervini
+kullanır. Kullanıcının ekstresini tam ödeme döngüsüne
 yönelik ayrı ürün önerisi `docs/CARD_PAYMENT_CYCLE_PROPOSAL.md` içindedir;
 bu öneri mevcut borç geçişlerini veya hesaplamaları değiştirmemiştir.
+
+Manuel harcama/taksit kaydı yalnız hızlı işlem (+ / İşlem) menüsünden açılır.
+Tekrarlanan UI girişlerinin kaldırılması `add_card_expense` veya taksit devir
+RPC'sinin borç/ledger etkisini değiştirmez. AI paylaşım raporu da aynı snapshot,
+ekstre arşivi ve kısmi ödeme girdilerini kullanır; gelecekteki taksitleri
+toplam borca ikinci kez eklemez.
 
 Use `src/utils/financeSummary.ts` instead of reimplementing card math in pages:
 
@@ -521,3 +530,8 @@ Toplam kart yükü bu kovaların yerine geçmez. `CardsPage.summary.tsx` salt su
 kart/hesap ayrıntısına geçiş, kategori düzenleme ve gider grubu tamamlama borç
 geçişi oluşturmaz. Kart ayrıntısındaki ödeme/import/iptal mevcut kanonik
 RPC'lerden geçer; ekstre/taksit dökümleri seçilen kartla sınırlıdır.
+
+12 Ekim 2026: kategori düzenleme dönem hareketleri dökümüne taşındı; yalnız
+kesinleşmiş “Diğer” harcamaları kapsar ve düzenlenecek kayıt yoksa pasiftir.
+Kategori yazımı mevcut metadata yolunu kullanır; tutar, taksit, borç kovaları
+ve ledger geçişleri değişmez.

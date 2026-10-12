@@ -34,7 +34,6 @@ export function useCardSectionNavigation() {
   const panel: CardPanel = ['donem', 'taksitler', 'ekstreler', 'provizyon', 'kategoriler', 'manuel'].includes(rawPanel ?? '') ? rawPanel as CardPanel : null
   const listScroll = useRef(0)
   const previousCard = useRef(selectedCardId)
-  const [quickExpenseFocus, setQuickExpenseFocus] = useState<{ cardId: string; mode: 'cash' | 'installment'; nonce: number } | null>(null)
 
   useLayoutEffect(() => {
     if (previousCard.current && !selectedCardId) window.scrollTo({ top: listScroll.current, behavior: 'instant' })
@@ -80,20 +79,8 @@ export function useCardSectionNavigation() {
     setSearchParams(nextParams, { replace: true, state: location.state })
   }, [searchParams, section, panel, setSearchParams, location.state])
 
-  const focusQuickExpense = useCallback((card: Card, mode: 'cash' | 'installment') => {
-    setQuickExpenseFocus({ cardId: card.id, mode, nonce: Date.now() })
-    const nextParams = new URLSearchParams(searchParams)
-    nextParams.set('section', 'kartlar')
-    nextParams.set('card', card.id)
-    nextParams.set('panel', 'manuel')
-    if (!selectedCardId) listScroll.current = window.scrollY
-    setSearchParams(nextParams, { replace: Boolean(selectedCardId), state: location.state ?? { cardsList: location.pathname + location.search } })
-  }, [searchParams, setSearchParams, selectedCardId, location.state, location.pathname, location.search])
-
   return {
-    focusQuickExpense,
     handleSectionChange,
-    quickExpenseFocus,
     section,
     selectedCardId,
     openCardDetails,
