@@ -1,4 +1,4 @@
-import { ChevronRight, Heart } from 'lucide-react'
+import { Banknote, ChevronRight, Heart } from 'lucide-react'
 import { BankLogo } from '../components/finance/BankLogo'
 import { HeroNumber } from '../components/serit'
 import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
@@ -32,13 +32,14 @@ export function CardsSummary({ rows, installments, statements, statementPayments
     const total = sumTL([bankBalance, cashBalance])
     const debt = sumTL(creditCards.map((row) => row.debt_amount))
     return (
-      <section className="py-5" aria-label="Hesaplar ve nakit özeti">
+      <section className="pt-4" aria-label="Hesaplar ve nakit özeti">
         <HeroNumber label="Hesap ve nakit toplamı" value={total} description="Güncel bakiyeler · kart borçları düşülmemiştir." />
-        <dl className="mt-5 grid gap-3 border-y border-line py-4 text-sm sm:grid-cols-3">
-          <div><dt className="text-xs text-ink-muted">Banka hesapları</dt><dd className="mt-1 font-semibold">{formatAmount(bankBalance)}</dd></div>
-          <div><dt className="text-xs text-ink-muted">Nakit cüzdanları</dt><dd className="mt-1 font-semibold">{formatAmount(cashBalance)}</dd></div>
-          <div><dt className="text-xs text-ink-muted">Tüm kart borcu sonrası</dt><dd className="mt-1 font-semibold">{formatAmount(diffTL(total, debt))}</dd></div>
+        <dl className="mt-5 divide-y divide-line border-y border-line text-sm">
+          <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 py-3"><dt className="text-ink-muted">Banka hesapları <span className="text-xs">· {accounts.filter((row) => row.account_kind !== 'cash').length}</span></dt><dd className="serit-num font-semibold">{formatAmount(bankBalance)}</dd></div>
+          <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 py-3"><dt className="text-ink-muted">Nakit cüzdanları <span className="text-xs">· {accounts.filter((row) => row.account_kind === 'cash').length}</span></dt><dd className="serit-num font-semibold">{formatAmount(cashBalance)}</dd></div>
+          <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 py-3"><dt className="text-ink-muted">Tüm kart borcu sonrası</dt><dd className={`serit-num font-semibold ${diffTL(total, debt) < 0 ? 'text-destructive' : 'text-ink'}`}>{formatAmount(diffTL(total, debt))}</dd></div>
         </dl>
+        <p className="mt-2 text-xs leading-relaxed text-ink-muted">Kart borcu sonrası fark, gelecek taksit ve provizyonu da içerir. Bu ay harcanabilir tutar Özet ekranındadır.</p>
       </section>
     )
   }
@@ -77,9 +78,11 @@ export function AccountListRow({ card, onOpen }: { card: Card; onOpen: (card: Ca
   return (
     <button type="button" onClick={() => onOpen(card)} className="flex min-h-20 w-full min-w-0 items-center gap-3 border-b border-line py-4 text-left hover:bg-primary/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
       aria-label={`${card.card_name} ${credit ? 'kart' : 'hesap'} ayrıntıları`}>
-      <BankLogo bankName={card.bank_name} size="sm" />
-      <span className="min-w-0 flex-1"><span className="flex items-center gap-1 text-sm font-semibold"><span className="truncate">{card.card_name}</span>{card.is_favorite ? <Heart size={12} fill="currentColor" className="shrink-0 text-primary" aria-label="Favori" /> : null}</span><span className="mt-1 block truncate text-xs text-ink-muted">{card.account_kind === 'cash' ? 'Nakit cüzdanı' : card.bank_name}{card.holder_name ? ` · ${card.holder_name}` : ''}</span></span>
-      <span className="shrink-0 text-right"><span className="serit-num block text-sm font-semibold">{formatAmount(credit ? card.current_period_spending : card.current_balance)}</span><span className="mt-1 block text-[11px] text-ink-muted">{credit ? 'Dönem içi' : 'Güncel bakiye'}</span></span>
+      {card.account_kind === 'cash' ? <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary"><Banknote size={18} aria-hidden="true" /></span> : <BankLogo bankName={card.bank_name} size="sm" />}
+      <span className="grid min-w-0 flex-1 gap-x-3 gap-y-2 min-[460px]:grid-cols-[minmax(0,1fr)_auto] min-[460px]:items-center">
+        <span className="min-w-0"><span className="flex items-center gap-1 text-sm font-semibold"><span className="min-w-0 break-words">{card.card_name}</span>{card.is_favorite ? <Heart size={12} fill="currentColor" className="shrink-0 text-primary" aria-label="Favori" /> : null}</span><span className="mt-1 block truncate text-xs text-ink-muted">{card.account_kind === 'cash' ? 'Nakit cüzdanı' : card.bank_name}{card.holder_name ? ` · ${card.holder_name}` : ''}</span></span>
+        <span className="min-w-0 min-[460px]:text-right"><span className={`serit-num block break-words text-base font-semibold ${!credit && card.current_balance < 0 ? 'text-destructive' : 'text-ink'}`}>{formatAmount(credit ? card.current_period_spending : card.current_balance)}</span><span className="mt-0.5 block text-[11px] text-ink-muted">{credit ? 'Dönem içi' : 'Güncel bakiye'}</span></span>
+      </span>
       <ChevronRight size={16} aria-hidden="true" className="shrink-0 text-ink-muted" />
     </button>
   )

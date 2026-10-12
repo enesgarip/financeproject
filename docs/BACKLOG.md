@@ -1,5 +1,41 @@
 # Priority Backlog
 
+## 2026-10-12 — Kategori düzenleme konumu ve boş durum — UYGULANDI
+
+“Kategorileri düzenle” ana özetten ve kart ayrıntısı kısayollarından kaldırıldı;
+dönem hareketleri dökümünde kapalı yardımcı bölüme taşındı. Seçili kart/tüm
+kartlar kapsamındaki kesinleşmiş “Diğer” kayıtları kontrol edilir; yüklenirken
+ve düzenlenecek satıcı yoksa düğme pasiftir. Boş durumda açıklama, sorgu
+hatasında tekrar deneme yolu görünür; harcama düzenleme/iptali ve kategori
+kaydından sonra durum tazelenir. Eski kategori paneli bağlantıları korunur.
+Yerel demo tarayıcısında dolu ve seçili kartta boş durum doğrulandı; finansal
+kayıt gönderilmedi. Doğrulama sonucu mobil inceleme belgesindedir.
+
+## 2026-10-12 — Sistem teması, AI özeti ve mobil hesap düzeni — UYGULANDI
+
+Tema varsayılanı telefonun `prefers-color-scheme` tercihidir; açık uygulamada ve
+uygulamaya dönüşte izlenir. Sistem / Açık / Koyu seçimi ayrı cihaz anahtarında
+saklanır; eskiden otomatik yazılan `theme` sabit kullanıcı tercihi sayılmaz.
+AI paylaşım raporu hesap/nakit ayrımı, tampon + kasa rezervli harcanabilir tutar,
+anonim kart kırılımı, ortak limit, taksit takvimi, 30 günlük yükümlülükler,
+harcama eğilimi, kaydedilen ödemeler ve kaynaklardan türetilen hedeflerle genişledi.
+Ekstre arşivi ve kısmi ödemeler tam snapshot'tan gelir. Mobil kopyala/PDF
+düğmeleri alt alta; pano hatası ve kopyalama sonucu görünürdür.
+
+Manuel harcama/taksit ekleme yalnız hızlı işlem (+ / masaüstünde İşlem)
+menüsündedir; ana liste, kart ayrıntısı ve kayıt menüsündeki tekrarlar kaldırıldı.
+Hesap listesi ve ayrıntısı ortak Şerit diliyle sadeleşti; uzun isim, IBAN,
+büyük/negatif bakiye, hareket tutarı ve işlem sonrası bakiye mobilde okunur.
+Ayrıntıda aynı geçmişi iki kez gösteren son 3 hareket + ledger tekrarı kaldırıldı.
+Arama boş sonucuna “Aramayı temizle” eylemi eklendi. Finansal yazma/RPC ve
+ledger hesapları değişmedi.
+
+Görsel kontrol kapsamı ve bulgular: `docs/MOBILE_UI_REVIEW_2026-10-12.md`.
+Tema değişimi ve anonim rapor hesapları için hedefli regresyon testleri eklendi.
+`npm run verify` başarılı (1.532 test, lint, coverage, audit, build, bundle ve
+edge tip kontrolü); ayrıntılar denetim belgesindedir. 1280px masaüstü düzeni
+ve gerçek pano içeriğinin önizlemeyle eşleşmesi de kontrol edildi.
+
 ## 2026-10-10 — Hesap/kart odağı, gider grubu tamamlama ve maaş günü — UYGULANDI
 
 Hesaplar sayfası Kredi kartları / Hesaplar ve nakit olarak sadeleştirildi.

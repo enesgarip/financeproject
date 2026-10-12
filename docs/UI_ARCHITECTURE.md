@@ -1,6 +1,6 @@
 # UI Architecture
 
-Last reviewed: 2026-08-12
+Last reviewed: 2026-10-12
 
 Bu belge uygulamanın görsel kaynak gerçeğidir. Finans kurallarını veya veri
 erişimini tanımlamaz; route ve component'lerin aynı **Şerit** görsel dilinde
@@ -169,11 +169,12 @@ semantik sınıf ekle.
 
 ### Şerit'e taşınmamış yüzeyler
 
-`premium-entity-card` anatomisi hâlâ kullanılır: hesap/kart liste kartları
+`premium-entity-card` anatomisi hâlâ kullanılır: kredi kartı ayrıntısı
 (`src/pages/CardsPage.list.tsx`) ve altın lotları (`src/pages/GoldPage.tsx`).
 Kimlik başlığı, tek ana değer kuyusu, kısa metrikler, ana aksiyon sırası
 korunur. Bu yüzeylere dokunurken Şerit'e zorla çevirme; kart listesi bilinçli
-istisnadır.
+istisnadır. Banka/nakit ayrıntısı 12 Ekim 2026'da sade Şerit zeminine taşındı;
+liste ve hesap ayrıntısında gradyan, dekoratif üst çizgi ve renkli çerçeve yoktur.
 
 ## Grafik Rengi
 
@@ -262,3 +263,22 @@ tek başına kullanılmaz (`aria-pressed` ve açık erişilebilir ad zorunlu).
 Favoriler seçim listelerinin başına alınır. Uzun hesap kimliği/hareket ve kart
 dönem-limit-taksit içerikleri varsayılan kapalı `details` bölümlerindedir;
 bakiye/borç ile ana eylemler katlanmaz.
+
+## 2026-10-12 — Sistem teması ve mobil hesap tutarlılığı
+
+Tema `hooks/useTheme.ts` tarafından yönetilir. Varsayılan Sistem telefonun
+`prefers-color-scheme` değişimini dinler; uygulamaya dönüşte yeniden okunur.
+Elle Açık/Koyu seçimi `denge:theme-preference` anahtarındadır; eski `theme`
+otomatik yazıldığı için açık kullanıcı tercihi olarak taşınmaz. HTML renk
+şeması ve tarayıcı/PWA üst bandı aynı seçime uyar. Üst başlık dar ekranda
+kesilmek yerine satıra yayılır; üst kontrollerin gerçek hedefi en az 44px'tir.
+
+Hesap/kart seçimi mobilde kompakt iki açıklamalı alandır. Hesap listesinde
+uzun isim ve tutar ayrı satırlardadır (≥460px'te yan yana). Hesap ayrıntısında
+IBAN ve not kesilmez; hareketin tutarı, tarih ve işlem sonrası bakiye okunur.
+Uzun kahraman tutarları (>10 karakter) mobilde küçülerek iki ondalığı korur.
+Arama boş sonucunda ilk kayıt önerisi yerine aramayı temizleme eylemi vardır.
+
+AI özetinde kopyala/PDF mobilde tam genişlikte alt alta, masaüstünde yan yana
+durur. Panoya gerçekten kopyalanan içerik önizlemeyle aynıdır; hata/başarı
+ayrı durum metniyle bildirilir. Görsel denetim: `docs/MOBILE_UI_REVIEW_2026-10-12.md`.

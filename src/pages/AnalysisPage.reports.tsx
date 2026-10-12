@@ -18,6 +18,9 @@ import { downloadShareableCard, renderShareableCard } from '../utils/shareableCa
 import { normalizeSearchText } from '../utils/searchText'
 import { buildYearEndReport } from '../utils/yearEndReport'
 import { StatPill } from './AnalysisPage.atoms'
+import { useFinanceSnapshot } from '../app/useFinanceSnapshot'
+import { useMarketRates } from '../hooks/useMarketRates'
+import { readSafeToSpendBuffer, useKasaBuckets } from '../hooks/useSafeToSpend'
 
 function escapeHtml(value: string) {
   return value.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c] ?? c)
@@ -79,40 +82,41 @@ function downloadCsv(items: SearchItem[]) {
 function AiSummaryButton({ data }: { data: AnalysisData }) {
   const [open, setOpen] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [copyError, setCopyError] = useState('')
+  const snapshotQuery = useFinanceSnapshot()
+  const { snapshot: ratesSnapshot } = useMarketRates()
+  const bucketsQuery = useKasaBuckets()
 
   // Rapor yalnız modal açıkken üretilir: butonun kendisi için tam finansal
   // rapor + markdown serileştirmesi yapmak her data değişiminde boşa işti.
   const report = useMemo(
     () =>
       open
-        ? buildFinancialReport({
-            assets: data.assets,
-            cards: data.cards,
-            loans: data.loans,
-            loanInstallments: data.loanInstallments,
-            debts: data.debts,
-            payments: data.payments,
-            salaryHistory: data.salaryHistory,
-            cardInstallments: data.cardInstallments,
+        ? buildFinancialReport(snapshotQuery.data ?? { ...data, cardStatements: data.cardStatementArchives }, {
+            ratesSnapshot,
+            kasaBuckets: bucketsQuery.isSuccess ? bucketsQuery.data : null,
+            safeToSpendBuffer: readSafeToSpendBuffer(),
           })
         : null,
-    [open, data],
+    [open, data, snapshotQuery.data, ratesSnapshot, bucketsQuery.data, bucketsQuery.isSuccess],
   )
   const markdown = useMemo(() => (report ? reportToMarkdown(report) : ''), [report])
 
   async function copyMarkdown() {
+    setCopyError('')
     try {
       await navigator.clipboard.writeText(markdown)
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     } catch {
       setCopied(false)
+      setCopyError('Özet kopyalanamadı. Aşağıdaki metni seçip kopyalayabilirsin.')
     }
   }
 
   return (
     <>
-      <Button type="button" variant="outline" size="sm" onClick={() => setOpen(true)}>
+      <Button type="button" variant="outline" size="sm" onClick={() => { setCopied(false); setCopyError(''); setOpen(true) }}>
         <Sparkles />
         AI özeti
       </Button>
@@ -122,17 +126,19 @@ function AiSummaryButton({ data }: { data: AnalysisData }) {
             Aşağıdaki özet hesap/banka/kişi adı içermez — yalnız yapı ve rakam. ChatGPT gibi bir asistana yapıştırıp
             taktik alabilir veya PDF olarak indirebilirsin.
           </p>
-          <div className="flex flex-wrap gap-2">
-            <Button type="button" onClick={copyMarkdown}>
+          <div className="grid min-w-0 grid-cols-1 gap-2 sm:flex sm:flex-wrap" aria-label="Özet işlemleri">
+            <Button type="button" onClick={copyMarkdown} className="min-h-11 w-full min-w-0 sm:w-auto">
               {copied ? <Check /> : <Copy />}
-              {copied ? 'Kopyalandı' : 'AI için kopyala (Markdown)'}
+              {copied ? 'Kopyalandı' : 'Özeti kopyala'}
             </Button>
-            <Button type="button" variant="outline" onClick={() => report && printFinancialReport(report)}>
+            <Button type="button" variant="outline" className="min-h-11 w-full min-w-0 sm:w-auto" onClick={() => report && printFinancialReport(report)}>
               <Download />
               Yazdır / PDF
             </Button>
           </div>
-          <pre className="max-h-[52svh] overflow-auto rounded-xl border border-line-strong bg-page p-3 text-xs leading-relaxed whitespace-pre-wrap break-words text-ink">
+          {copyError ? <p role="alert" className="text-sm text-warning">{copyError}</p> : null}
+          {copied ? <p role="status" className="text-xs text-success">Özet Markdown biçiminde kopyalandı.</p> : null}
+          <pre className="max-h-[52svh] min-w-0 overflow-auto rounded-xl border border-line-strong bg-page p-3 text-xs leading-relaxed whitespace-pre-wrap [overflow-wrap:anywhere] text-ink">
             {markdown}
           </pre>
         </div>

@@ -17,7 +17,7 @@
  */
 import { Suspense, useState, useCallback } from 'react'
 import { Link } from 'react-router'
-import { ArrowLeft, CalendarClock, FileText, ScanSearch, ShieldCheck } from 'lucide-react'
+import { ArrowLeft, FileText, ScanSearch, ShieldCheck } from 'lucide-react'
 import { CrudPage } from '../components/CrudPage'
 import { CategoryCleanupPanel } from '../components/finance/CategoryCleanupPanel'
 import { FinancePaymentDrawer } from '../components/finance/FinancePaymentDrawer'
@@ -78,7 +78,7 @@ const CurrentMovementImportModal = lazyWithReload(() =>
 )
 
 export function CardsPage() {
-  const { focusQuickExpense, handleSectionChange, quickExpenseFocus, section, selectedCardId, openCardDetails, backToList, panel, openPanel } = useCardSectionNavigation()
+  const { handleSectionChange, section, selectedCardId, openCardDetails, backToList, panel, openPanel } = useCardSectionNavigation()
   const { formatAmount, hidden: balancesHidden } = useBalancePrivacy()
   const {
     installments,
@@ -233,13 +233,16 @@ export function CardsPage() {
     const scopedStatements = selectedCardId ? statements.filter((item) => item.card_id === selectedCardId) : statements
     const scopedInstallments = selectedCardId ? installments.filter((item) => item.card_id === selectedCardId) : installments
     const scopedProvisions = selectedCardId ? provisions.filter((item) => item.card_id === selectedCardId) : provisions
-    const refresh = () => refreshCardsAndProvisions(reload)
+    const refresh = async () => {
+      await refreshCardsAndProvisions(reload)
+      setExpensesVersion((version) => version + 1)
+    }
     return (
       <section id="kart-bilgi-dokumu" className="flex flex-col gap-4 border-t border-line pt-4" aria-label="Seçilen bilgi dökümü">
         <div className="flex justify-end"><button type="button" onClick={() => openPanel(null)} className="min-h-11 px-3 text-xs font-semibold text-ink-muted hover:text-primary">Dökümü kapat</button></div>
-        {panel === 'donem' ? <><PeriodSpendingBreakdown cards={scopedCards} /><RecentCardExpensesPanel key={selectedCardId ?? 'all'} cardId={selectedCardId ?? undefined} cards={cardRows} reload={refresh} setError={setError} refreshKey={expensesVersion} /></> : null}
+        {panel === 'donem' ? <><PeriodSpendingBreakdown cards={scopedCards} /><CategoryCleanupPanel key={selectedCardId ?? 'all'} collapsible cardId={selectedCardId ?? undefined} refreshKey={expensesVersion} onChanged={() => { void invalidateSnapshot(); setExpensesVersion((version) => version + 1) }} /><RecentCardExpensesPanel key={selectedCardId ?? 'all'} cardId={selectedCardId ?? undefined} cards={cardRows} reload={refresh} setError={setError} refreshKey={expensesVersion} /></> : null}
         {panel === 'kategoriler' ? <CategoryCleanupPanel key={selectedCardId ?? 'all'} cardId={selectedCardId ?? undefined} onChanged={() => { void invalidateSnapshot(); setExpensesVersion((version) => version + 1) }} /> : null}
-        {panel === 'manuel' ? <QuickExpensePanel rows={cardRows} reload={refresh} setError={setError} focus={quickExpenseFocus ?? (selectedCardId ? { cardId: selectedCardId, mode: 'cash', nonce: 0 } : null)} formatAmount={formatAmount} onSaved={() => setExpensesVersion((version) => version + 1)} /> : null}
+        {panel === 'manuel' ? <QuickExpensePanel rows={cardRows} reload={refresh} setError={setError} focus={selectedCardId ? { cardId: selectedCardId, mode: 'cash', nonce: 0 } : null} formatAmount={formatAmount} onSaved={() => setExpensesVersion((version) => version + 1)} /> : null}
         {panel === 'taksitler' ? (
           installmentsError ? <p role="alert" className="text-sm text-warning">{installmentsError} <button type="button" className="min-h-11 font-semibold underline" onClick={() => void loadInstallments()}>Tekrar dene</button></p> : <>
             <CardInstallmentCalendarPanel cards={scopedCards} installments={scopedInstallments} loading={installmentsLoading} />
@@ -268,7 +271,7 @@ export function CardsPage() {
         pageTitle="Hesaplar ve kartlar"
         pageLabel="Finans merkezi"
         pageDescription="Banka, nakit, kredi kartı yükü, transfer ve günlük işlemleri tek karar düzeninde yönet."
-        addLabel={section === 'hesaplar' ? 'Hesap veya nakit ekle' : section === 'kartlar' ? 'Kredi kartı ekle' : 'Hesap / kart ekle'}
+        addLabel={section === 'hesaplar' ? 'Hesap ekle' : section === 'kartlar' ? 'Kredi kartı ekle' : 'Hesap / kart ekle'}
         fields={fields}
         emptyTitle={section === 'hesaplar' ? 'Henüz hesap veya nakit cüzdanı yok' : 'Henüz kredi kartı yok'}
         emptyDescription="Banka hesaplarını, nakit cüzdanlarını ve kredi kartlarını buradan takip edebilirsin."
@@ -297,9 +300,8 @@ export function CardsPage() {
               {!loading && selectedCardId && !selected ? <p role="alert" className="py-5 text-sm text-ink-muted">Bu kayıt bulunamadı. Silinmiş olabilir; listeye dönerek başka bir kayıt seçebilirsin.</p> : null}
               {!loading && !selectedCardId ? <>
                 <CardsSummary rows={cardRows} installments={installments} statements={statements} statementPayments={statementPayments} installmentsLoading={installmentsLoading} installmentsError={installmentsError} statementsLoading={statementsLoading} statementError={statementError} section={section === 'hesaplar' ? 'hesaplar' : 'kartlar'} panel={panel} onOpenPanel={openPanel} />
-                {section === 'kartlar' ? <div className="flex flex-wrap gap-x-5 gap-y-1"><button type="button" className="min-h-11 text-xs font-semibold text-primary" onClick={() => openPanel('kategoriler')} aria-expanded={panel === 'kategoriler'}>Kategorileri düzenle</button><details open={panel === 'manuel' || undefined}><summary className="min-h-11 cursor-pointer py-3 text-xs font-semibold text-ink-muted">Manuel kayıt</summary><button type="button" className="min-h-11 text-xs font-semibold text-primary" onClick={() => openPanel('manuel')}>Harcama veya taksit ekle</button></details></div> : null}
                 {section === 'kartlar' ? renderPanels(cardRows, reload, setError) : null}
-                <p className="mt-3 text-xs text-ink-muted">{section === 'hesaplar' ? 'Hareketler ve hesap işlemleri için bir hesap seç.' : 'Borç kırılımı ve kart işlemleri için bir kart seç.'}</p>
+                {section === 'kartlar' ? <p className="mt-3 text-xs text-ink-muted">Borç kırılımı ve kart işlemleri için bir kart seç.</p> : null}
               </> : null}
               {!loading ? <DueStatementAutomation rows={cardRows} statements={statements} statementsLoading={statementsLoading} reload={async () => { await Promise.all([reload(), invalidateSnapshot()]) }} loadStatements={loadStatements} setError={setError} /> : null}
             </div>
@@ -313,10 +315,10 @@ export function CardsPage() {
         renderCard={(row, helpers) => selectedCardId ? (
           <div className="flex flex-col gap-5">
             <CreditAccountListCard row={row as Card} rows={helpers.rows as Card[]} statements={statements} statementPayments={statementPayments} installments={installments} reconciliations={reconciliations} menu={helpers.menu} rowActions={helpers.rowActions} ledgerOpen detailsOpen installmentsKnown={!installmentsLoading && !installmentsError} statementsKnown={!statementsLoading && !statementError} balancesHidden={balancesHidden} formatAmount={formatAmount}
-              onPayDebt={(card) => void openDebtPayment(card, helpers.rows as Card[], helpers.reload)} onAddExpense={focusQuickExpense} onOpenPanel={openPanel} onToggleFavorite={(card) => void toggleFavorite(card, helpers.reload, helpers.setError)} onChanged={() => refreshCardsAndProvisions(helpers.reload)} />
+              onPayDebt={(card) => void openDebtPayment(card, helpers.rows as Card[], helpers.reload)} onOpenPanel={openPanel} onToggleFavorite={(card) => void toggleFavorite(card, helpers.reload, helpers.setError)} onChanged={() => refreshCardsAndProvisions(helpers.reload)} />
             {row.card_type === 'kredi_karti' ? <>
               <div className="flex flex-wrap gap-2" aria-label="Kart bilgilerine ulaş">
-                {([['donem', 'Dönem hareketleri'], ['taksitler', 'Gelecek taksitler'], ['ekstreler', 'Ekstre dökümü'], ['provizyon', 'Provizyonlar'], ['kategoriler', 'Kategorileri düzenle']] as const).map(([id, label]) => <button key={id} type="button" onClick={() => openPanel(id)} aria-expanded={panel === id} aria-controls="kart-bilgi-dokumu" className="min-h-11 rounded-lg border border-line-strong px-3 text-xs font-semibold text-ink hover:border-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary">{label}</button>)}
+                {([['donem', 'Dönem hareketleri'], ['taksitler', 'Gelecek taksitler'], ['ekstreler', 'Ekstre dökümü'], ['provizyon', 'Provizyonlar']] as const).map(([id, label]) => <button key={id} type="button" onClick={() => openPanel(id)} aria-expanded={panel === id} aria-controls="kart-bilgi-dokumu" className="min-h-11 rounded-lg border border-line-strong px-3 text-xs font-semibold text-ink hover:border-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary">{label}</button>)}
               </div>
               {renderPanels(helpers.rows as Card[], helpers.reload, helpers.setError)}
             </> : null}
@@ -333,18 +335,6 @@ export function CardsPage() {
           if (card.card_type === 'kredi_karti') {
             return (
               <>
-                <button
-                  type="button"
-                  onClick={(event) => {
-                    event.stopPropagation()
-                    menuHelpers.closeMenu()
-                    focusQuickExpense(card, 'installment')
-                  }}
-                  className="flex w-full items-center gap-2 px-3 py-2 text-sm text-ink hover:bg-black/[.03] dark:hover:bg-white/[.04]"
-                >
-                  <CalendarClock size={14} />
-                  Taksit ekle
-                </button>
                 <button
                   type="button"
                   onClick={(event) => {

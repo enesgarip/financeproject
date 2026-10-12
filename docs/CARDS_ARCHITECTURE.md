@@ -1,6 +1,6 @@
 # Cards Architecture Note
 
-Last reviewed: 2026-10-10
+Last reviewed: 2026-10-12
 
 This note maps `/kartlar` (`CardsPage`) after the page split. Start with
 `CLAUDE.md`, `docs/AI_CONTEXT_INDEX.md`, and `docs/CARD_DEBT_TRANSITIONS.md`
@@ -70,8 +70,16 @@ lazy boundary.
   Eski `section=ozet/islemler/ekstreler` bağlantıları çalışır; ayrı menü oluşturmaz.
 - Kart özetinde dönem içi kesinleşmiş toplam ve gelecek taksit toplamı öndedir.
   Provizyon ayrı kovadır; ödenecek ekstre kısmi ödemeler düşülmüş kalandır.
-  İlgili toplama dokunmak aynı yüzeyde dökümü açar. Ana görünümde kategori
-  düzenleme kısa yolu ve kapalı manuel kayıt bölümü vardır.
+  İlgili toplama dokunmak aynı yüzeyde dökümü açar. Kategori düzenleme yalnız
+  dönem hareketleri dökümünde kapalı bir yardımcı bölümdür; ana özet ve kart
+  kısayollarında tekrarlanmaz. Seçili kart/tüm kartlar kapsamındaki kesinleşmiş
+  “Diğer” harcamaları yüklenirken veya düzenlenecek satıcı yokken düğme pasiftir;
+  boş durumda açıklama görünür. Sorgu hatası boş veri sayılmaz; bölüm açılıp
+  tekrar denenebilir. Harcama düzenleme/iptali ve kategori kaydından sonra
+  durum yenilenir. Eski `panel=kategoriler` bağlantısı çalışır.
+  Manuel harcama/taksit formu yalnız hızlı işlem
+  menüsündeki (+ / masaüstü İşlem) “Harcama ekle” ile açılır; liste/kart
+  ayrıntısında ek manuel kayıt tetikleyicisi veya menüde “Taksit ekle” yoktur.
 - Hesap özeti banka + nakit cüzdanı toplamını, ayrı banka/nakit tutarlarını ve
   tüm kart yükü sonrası farkı gösterir. Döviz nakit varlıkları bu hesap listesine
   dahil değildir; dashboard likit toplamı daha geniş kaynaktır.
@@ -86,6 +94,11 @@ lazy boundary.
   Dönem hareketleri, gelecek taksitler, ekstre ve provizyon dökümleri seçilen
   kartla sınırlıdır. Hesap ayrıntısında kimlik, IBAN, hareketler, para giriş/çıkış
   ve transfer mevcut hesap/ledger akışını kullanır.
+  Hesap ayrıntısı nötr Şerit zeminini, küçük banka kimliğini ve çizgi ayrımlarını
+  kullanır; dekoratif gradyan/renkli çerçeve çizilmez. Uzun ad/not/IBAN katlanır;
+  hareketin tutarı ve işlem sonrası bakiye ayrı satırlardadır. Tam ledger
+  gösterilirken ayrıca son 3 hareket tekrarlanmaz. Hesap/nakit listesindeki
+  tutar dar ekranda ismin altında, ≥460px'te sağında durur.
 - Taksit dökümü tüm `scheduled` satırları alışveriş parent'ına göre gruplar;
   `posted` veya `paid` satırlar gelecek toplamına katılmaz. Bağlantısız eski
   satırlar yanlış alışveriş birleştirmemek için ayrı kalır. Son 50 parent'ın

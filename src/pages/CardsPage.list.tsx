@@ -66,7 +66,7 @@ function AccountRecentTransactions({
   const rows = buildAccountLedgerBalanceRows(events, card.current_balance)
 
   return (
-    <section className="account-activity-panel mt-4 rounded-2xl border border-line-strong bg-raised p-3.5">
+    <section className="mt-4 border-t border-line pt-3">
       <div className="flex items-center justify-between gap-3">
         <p className="finance-label">Son 3 hareket</p>
         <span className="text-[11px] font-semibold text-ink-muted">{rows.length} kayıt</span>
@@ -76,20 +76,20 @@ function AccountRecentTransactions({
           const amount = toTL(event.amount_kurus)
           const isInflow = amount >= 0
           return (
-            <div key={event.id} className="flex min-w-0 items-center justify-between gap-3 py-2.5 text-xs first:pt-1">
-              <span className="flex min-w-0 items-center gap-2 truncate">
+            <div key={event.id} className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-1 py-3 text-xs first:pt-1">
+              <span className="flex min-w-0 flex-wrap items-center gap-2">
                 <span className={isInflow ? 'size-2 shrink-0 rounded-full bg-success' : 'size-2 shrink-0 rounded-full bg-destructive'} />
                 <span className={isInflow ? 'font-black text-success' : 'font-black text-destructive'}>
                   {isInflow ? 'Giriş' : 'Çıkış'}
                 </span>
-                <span className="ml-2 text-ink-muted">{formatDate(event.occurred_at.slice(0, 10))}</span>
+                <span className="text-ink-muted">{formatDate(event.occurred_at.slice(0, 10))}</span>
               </span>
-              <span className="shrink-0 text-right tabular-nums">
+              <span className="serit-num text-right">
                 <span className={isInflow ? 'font-black text-success' : 'font-black text-destructive'}>
                   {amount > 0 ? '+' : ''}{formatAmount(amount)}
                 </span>
-                <span className="ml-2 hidden text-ink-muted min-[460px]:inline">Sonrası {formatAmount(balanceAfter)}</span>
               </span>
+              <span className="col-span-2 text-ink-muted">Sonrası <span className="serit-num">{formatAmount(balanceAfter)}</span></span>
             </div>
           )
         })}
@@ -151,7 +151,6 @@ export function CreditAccountListCard({
   balancesHidden = false,
   formatAmount = formatCurrency,
   onPayDebt,
-  onAddExpense,
   onToggleFavorite,
   onChanged,
   onOpenPanel,
@@ -171,7 +170,6 @@ export function CreditAccountListCard({
   balancesHidden?: boolean
   formatAmount?: (value: number | null | undefined) => string
   onPayDebt: (card: Card) => void
-  onAddExpense: (card: Card, mode: 'cash' | 'installment') => void
   onToggleFavorite: (card: Card) => void
   onChanged?: () => void | Promise<void>
   onOpenPanel?: (panel: CardPanel) => void
@@ -213,21 +211,20 @@ export function CreditAccountListCard({
   if (row.card_type === 'banka_karti') {
     return (
       <article
-        style={bankHueStyle(row.bank_name, rows)}
-        className="premium-entity-card account-entity-card finance-panel relative min-w-0 overflow-visible rounded-2xl border-[hsl(var(--bank-hue)_45%_82%/0.72)] p-4 min-[390px]:p-5 dark:border-[hsl(var(--bank-hue)_35%_38%/0.55)]"
+        className="relative min-w-0 bg-page"
       >
-        <div className="relative flex items-start justify-between gap-3">
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 border-b border-line pb-4">
           <div className="flex min-w-0 items-center gap-3.5">
             {row.account_kind === 'cash' ? (
-              <span className="grid size-14 shrink-0 place-items-center rounded-2xl bg-success/10 text-success">
-                <Banknote size={24} aria-hidden="true" />
+              <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
+                <Banknote size={20} aria-hidden="true" />
               </span>
             ) : (
-              <BankLogo bankName={row.bank_name} size="lg" className="size-14 rounded-2xl text-sm " />
+              <BankLogo bankName={row.bank_name} size="sm" />
             )}
             <div className="min-w-0">
-              <h2 className="truncate font-display text-lg font-bold tracking-tight text-ink">{row.card_name}</h2>
-              <p className="mt-1 truncate text-sm font-medium text-ink-muted">{row.account_kind === 'cash' ? 'Fiziksel nakit cüzdanı' : `${row.bank_name} · banka hesabı`}</p>
+              <h2 className="break-words font-display text-base font-bold tracking-tight text-ink">{row.card_name}</h2>
+              <p className="mt-1 break-words text-xs text-ink-muted">{row.account_kind === 'cash' ? 'Fiziksel nakit cüzdanı' : `${row.bank_name} · banka hesabı`}</p>
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-1.5">
@@ -236,7 +233,7 @@ export function CreditAccountListCard({
               onClick={() => onToggleFavorite(row)}
               aria-label={row.is_favorite ? `${row.card_name} favorilerden çıkar` : `${row.card_name} favorilere ekle`}
               aria-pressed={row.is_favorite}
-              className="tap-target grid size-9 place-items-center rounded-lg text-ink-muted transition hover:bg-primary/8 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="grid size-11 place-items-center rounded-lg text-ink-muted transition hover:bg-primary/8 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <Heart size={18} fill={row.is_favorite ? 'currentColor' : 'none'} className={row.is_favorite ? 'text-primary' : ''} />
             </button>
@@ -244,40 +241,40 @@ export function CreditAccountListCard({
           </div>
         </div>
 
-        <div className="relative mt-5 border-t border-line pt-4">
-          <p className="finance-label">Kullanılabilir bakiye</p>
-          <p className="finance-value mt-2 truncate text-[clamp(1.8rem,7vw,2.75rem)] font-bold leading-none tracking-tight text-ink">
+        <div className="py-5">
+          <p className="serit-eyebrow">Güncel bakiye</p>
+          <p className={`serit-num mt-2 break-words text-[clamp(1.5rem,7vw,2.75rem)] font-semibold leading-tight ${row.current_balance < 0 ? 'text-destructive' : 'text-ink'}`}>
             {formatAmount(row.current_balance)}
           </p>
         </div>
 
-        <details open={ledgerOpen || undefined} className="group mt-3 border-t border-line pt-1">
+        <div className="mb-4">{rowActions}</div>
+        <details open={ledgerOpen || undefined} className="group border-t border-line pt-1">
           <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between text-sm font-semibold text-ink-muted marker:hidden hover:text-ink [&::-webkit-details-marker]:hidden">
             Hesap bilgileri ve son hareketler
             <span aria-hidden="true" className="text-xs transition-transform group-open:rotate-180">⌄</span>
           </summary>
           <LineGroup>
-            {row.note ? <CardDatum label="Not" value={row.note} /> : null}
+            {row.note ? <div className="py-3 text-sm"><p className="text-xs text-ink-muted">Not</p><p className="mt-1 whitespace-pre-wrap break-words text-ink">{row.note}</p></div> : null}
           </LineGroup>
 
           {row.iban ? (
-            <div className="mt-3 rounded-xl border border-line-strong bg-page px-3 py-2.5">
-            <p className="finance-label">IBAN</p>
+            <div className="border-b border-line py-3">
+            <p className="serit-eyebrow">IBAN</p>
             <button
               type="button"
               onClick={handleCopyIban}
-              className="mt-1.5 flex min-h-7 w-full min-w-0 items-center justify-between gap-2 rounded-md text-left font-mono text-xs font-bold tabular-nums text-ink transition hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              aria-label={ibanCopied ? 'IBAN kopyalandı' : 'IBAN kopyala'}
+              className="mt-1.5 flex min-h-11 w-full min-w-0 items-center justify-between gap-3 rounded-md text-left font-mono text-xs font-semibold tabular-nums text-ink transition hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              <span className="min-w-0 truncate">{balancesHidden ? '••••' : formatIban(row.iban)}</span>
+              <span className="min-w-0 break-words">{balancesHidden ? '••••' : formatIban(row.iban)}</span>
               {ibanCopied ? <Check size={14} className="shrink-0 text-success" /> : <Copy size={14} className="shrink-0 text-ink-muted" />}
             </button>
             </div>
           ) : null}
 
-          <AccountRecentTransactions card={row} formatAmount={formatAmount} />
-          {ledgerOpen ? <AccountLedgerPanel card={row} onChanged={onChanged} formatAmount={formatAmount} /> : null}
+          {ledgerOpen ? <AccountLedgerPanel card={row} onChanged={onChanged} formatAmount={formatAmount} /> : <AccountRecentTransactions card={row} formatAmount={formatAmount} />}
         </details>
-        {rowActions}
       </article>
     )
   }
@@ -442,18 +439,6 @@ export function CreditAccountListCard({
         </Button>
         )}
       </div>
-      <details className="mt-3 border-t border-line">
-        <summary className="min-h-11 cursor-pointer py-3 text-xs font-semibold text-ink-muted">Manuel kayıt</summary>
-        <Button
-          type="button"
-          size="lg"
-          variant="outline"
-          onClick={() => onAddExpense(row, 'cash')}
-          className="finance-touch-target px-3 text-xs"
-        >
-          Manuel harcama ekle
-        </Button>
-      </details>
       {detailsOpen ? (
         <details className="mt-4 rounded-lg border border-line-strong bg-surface-muted/70 p-3 ring-1 ring-line-strong">
           <summary className="min-h-11 cursor-pointer py-3 text-sm font-semibold">Diğer kart bilgileri ve kayıt geçmişi</summary>

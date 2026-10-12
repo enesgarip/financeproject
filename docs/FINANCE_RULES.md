@@ -495,6 +495,13 @@ This means any change in card, loan, debt, or payment semantics likely affects d
 
 ## Reporting and projection windows
 
+- AI paylaşım raporu (`src/utils/financialReport.ts`) tam snapshot'ı kullanır:
+  ekstre arşivi + kısmi ödemeler, taksitler, hedef kaynakları ve işlem geçmişi.
+  Hesap/kişi/banka/alışveriş/hedef isimleri yerine tür ve anonim sıra numarası
+  basılır. Planlanan nakit akışı ile kaydedilmiş nakit ödemeler ayrı bölümlerdir;
+  harcama eğilimi kart kayıtlarıdır, tüm nakit gider iddiası taşımaz. Kasa rezervi
+  veya tampon bilinmiyorsa harcanabilir rakam basılmaz. Eksik hedef kaynağı/çıpa
+  doğrulanmış değer sayılmaz. Gelecek taksit takvimi toplam borca yeniden eklenmez.
 - The shared finance snapshot loads 24 completed months plus the current month,
   so current-year and previous-year reports have a complete source window.
 - Removed features (their utilities no longer exist; do not resurrect their

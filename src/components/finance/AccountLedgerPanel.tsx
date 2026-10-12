@@ -116,13 +116,15 @@ export function AccountLedgerPanel({
   const balanceRows = buildAccountLedgerBalanceRows(events, card.current_balance)
 
   return (
-    <div className="mt-3 rounded-lg bg-raised p-3 ring-1 ring-line-strong">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-xs font-black uppercase text-ink-muted">Hesap hareketleri</p>
-        <p className="text-xs font-semibold text-ink-muted">
-          {summary.count} hareket · Giriş {formatAmount(summary.totalIn)} − Çıkış {formatAmount(summary.totalOut)} ={' '}
-          <span className="font-black text-ink">{formatAmount(summary.net)}</span>
-        </p>
+    <div className="mt-3 border-t border-line pt-4">
+      <div className="space-y-2">
+        <p className="serit-eyebrow">Hesap hareketleri</p>
+        <p className="text-xs text-ink-muted">{summary.count} kayıt</p>
+        <dl className="grid grid-cols-2 gap-x-4 gap-y-2 border-b border-line pb-3 text-xs">
+          <div className="min-w-0"><dt className="text-ink-muted">Toplam giriş</dt><dd className="serit-num mt-1 break-words font-semibold">{formatAmount(summary.totalIn)}</dd></div>
+          <div className="min-w-0"><dt className="text-ink-muted">Toplam çıkış</dt><dd className="serit-num mt-1 break-words font-semibold">{formatAmount(summary.totalOut)}</dd></div>
+          <div className="col-span-2 flex flex-wrap justify-between gap-x-3 gap-y-1 border-t border-line pt-2"><dt className="text-ink-muted">Hareketlerin neti</dt><dd className="serit-num font-semibold">{formatAmount(summary.net)}</dd></div>
+        </dl>
       </div>
 
       {drift !== 0 ? (
@@ -145,24 +147,24 @@ export function AccountLedgerPanel({
       ) : null}
 
       {events.length > 0 ? (
-        <div className="mt-3 flex flex-col gap-2">
+        <div className="mt-3 divide-y divide-line">
           {balanceRows.slice(0, VISIBLE_EVENTS).map(({ event, balanceAfter }) => {
             const meta = KIND_LABELS[event.kind]
             const amountTL = toTL(event.amount_kurus)
             return (
-              <div key={event.id} className="flex min-w-0 items-center justify-between gap-3 rounded-lg bg-page px-3 py-2 text-xs">
-                <span className="min-w-0 truncate">
-                  <span className={`font-black ${meta.className}`}>{meta.label}</span>
-                  <span className="ml-2 text-ink-muted">{formatDate(event.occurred_at.slice(0, 10))}</span>
+              <div key={event.id} className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-1 py-3 text-xs">
+                <span className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1">
+                  <span className={`font-semibold ${meta.className}`}>{meta.label}</span>
+                  <span className="text-ink-muted">{formatDate(event.occurred_at.slice(0, 10))}</span>
                   {event.kind === 'adjustment' && event.note ? (
-                    <span className="ml-2 italic text-ink-muted">· {event.note}</span>
+                    <span className="w-full break-words italic text-ink-muted">{event.note}</span>
                   ) : null}
                 </span>
-                <span className={`shrink-0 font-black tabular-nums ${meta.className}`}>
+                <span className={`serit-num text-right font-semibold ${meta.className}`}>
                   {amountTL > 0 ? '+' : ''}
                   {formatAmount(amountTL)}
-                  <span className="ml-2 font-semibold text-ink-muted">Sonrası {formatAmount(balanceAfter)}</span>
                 </span>
+                <span className="col-span-2 text-ink-muted">Sonrası <span className="serit-num">{formatAmount(balanceAfter)}</span></span>
               </div>
             )
           })}
@@ -182,7 +184,7 @@ export function AccountLedgerPanel({
             setError('')
           }}
           aria-expanded={formOpen}
-          className="text-xs font-black text-info underline-offset-2 hover:underline"
+          className="min-h-11 text-xs font-semibold text-primary underline-offset-2 hover:underline"
         >
           {formOpen ? 'Düzeltmeyi kapat' : 'Düzelt (ters kayıt)'}
         </button>

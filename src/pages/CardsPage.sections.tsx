@@ -23,13 +23,13 @@ export function CardSectionNav({ section, onSelect, counts }: {
   counts: Partial<Record<CardSection, number>>
 }) {
   return (
-    <nav className="grid grid-cols-2 gap-3" aria-label="Hesap veya kart seçimi">
+    <nav className="grid grid-cols-2 gap-2 sm:gap-3" aria-label="Hesap veya kart seçimi">
       {cardSections.map((item) => (
         <button key={item.id} type="button" onClick={() => onSelect(item.id)} aria-pressed={section === item.id}
-          className={cn('min-h-24 rounded-xl border p-3 text-left transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary sm:p-4', section === item.id ? 'border-primary bg-primary/10' : 'border-line-strong bg-raised hover:border-primary/50')}>
-          <item.icon size={21} className="mb-2 text-primary" aria-hidden="true" />
-          <span className="block text-sm font-semibold text-ink">{item.label} <span className="text-ink-muted">{counts[item.id] ?? 0}</span></span>
-          <span className="mt-1 block text-xs text-ink-muted">{item.id === 'kartlar' ? 'Dönem içi borç ve gelecek taksitler' : 'Bakiyeler ve hesap hareketleri'}</span>
+          className={cn('min-h-20 rounded-lg border p-3 text-left transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary sm:min-h-24 sm:rounded-xl sm:p-4', section === item.id ? 'border-primary bg-primary/10' : 'border-line-strong bg-raised hover:border-primary/50')}>
+          <item.icon size={21} className="mb-2 hidden text-primary sm:block" aria-hidden="true" />
+          <span className="flex items-start justify-between gap-1 text-[13px] font-semibold leading-snug text-ink sm:text-sm"><span className="min-w-0">{item.label}</span><span className="shrink-0 text-ink-muted">{counts[item.id] ?? 0}</span></span>
+          <span className="mt-1 block text-xs leading-relaxed text-ink-muted">{item.id === 'kartlar' ? 'Borç, ekstre ve taksitler' : 'Bakiye ve hareketler'}</span>
         </button>
       ))}
     </nav>

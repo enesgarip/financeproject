@@ -444,7 +444,7 @@ export function CrudPage<T extends CrudTableName>({
           }
         />
       ) : visibleRows.length === 0 ? (
-        <EmptyState title="Eşleşen kayıt yok" description="Arama metnini temizleyerek tüm kayıtları tekrar görebilirsin." />
+        <EmptyState title="Eşleşen kayıt yok" description="Arama metnini temizleyerek tüm kayıtları tekrar görebilirsin." action={<Button type="button" variant="outline" onClick={() => setQuery('')}>Aramayı temizle</Button>} />
       ) : (
         <div className="flex flex-col gap-5">
           {groupedVisibleRows.map(({ group, items }) => {

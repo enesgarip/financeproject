@@ -1,10 +1,11 @@
-import { Eye, EyeOff, LogOut, Moon, MoreHorizontal, Sun } from 'lucide-react'
+import { Eye, EyeOff, LogOut, MonitorSmartphone, Moon, MoreHorizontal, Sun } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router'
 import { useDailyNetWorthSnapshot } from '../app/useDailyNetWorthSnapshot'
 import { useAuth } from '../auth/useAuth'
 import { BalancePrivacyProvider, useBalancePrivacy } from '../hooks/useBalancePrivacy'
 import { usePushSubscriptionSync } from '../hooks/usePushSubscriptionSync'
+import { useTheme, type ThemePreference } from '../hooks/useTheme'
 import { cn } from '../lib/utils'
 import { BottomNav } from './BottomNav'
 import { contentWidthClass, overflowNavItems, primaryNavItems, routeSubtitle, routeTitle, secondaryNavItems } from './navigation'
@@ -39,21 +40,13 @@ function LayoutInner() {
   // Ölmüş/silinmiş push aboneliğini sessizce onarır (ayar panelini beklemeden).
   usePushSubscriptionSync(user?.id)
   const contentWidth = contentWidthClass(pathname)
-  const [isDark, setIsDark] = useState(() => {
-    const storedTheme = localStorage.getItem('theme')
-    return storedTheme ? storedTheme === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches
-  })
+  const { preference, chooseTheme } = useTheme()
   const [menuOpen, setMenuOpen] = useState(false)
   const { hidden: balancesHidden, toggleHidden: toggleBalancesHidden } = useBalancePrivacy()
   const closeMenu = useCallback(() => setMenuOpen(false), [])
   // Taşma menüsü de klavyeyle kapatılabilir olmalı: Escape kapatır, Tab menünün
   // içinde döner, kapanınca odak "Menü" butonuna geri döner (denetim §6).
   const menuRef = useDialogA11y<HTMLDivElement>(menuOpen, closeMenu)
-
-  useEffect(() => {
-    document.documentElement.classList.toggle('dark', isDark)
-    localStorage.setItem('theme', isDark ? 'dark' : 'light')
-  }, [isDark])
 
   return (
     <div className="min-h-dvh bg-page text-ink">
@@ -96,7 +89,7 @@ function LayoutInner() {
         <header className="sticky top-0 z-20 bg-page px-5 pb-3 pt-[calc(env(safe-area-inset-top)+0.875rem)] md:px-6 lg:px-[34px] lg:pb-4 lg:pt-6">
           <div className={cn('mx-auto flex items-baseline justify-between gap-4 border-b border-line-strong pb-3 lg:pb-4', contentWidth)}>
             <div className="min-w-0">
-              <h1 className="font-display truncate text-[17px] font-bold leading-tight tracking-[-0.02em] text-ink lg:text-[21px]">
+              <h1 className="break-words font-display text-[15px] font-bold leading-tight tracking-[-0.02em] text-ink sm:text-[17px] lg:text-[21px]">
                 {routeTitle(pathname)}
               </h1>
               {routeSubtitle(pathname) ? (
@@ -110,20 +103,20 @@ function LayoutInner() {
                 onClick={toggleBalancesHidden}
                 aria-pressed={balancesHidden}
                 aria-label={balancesHidden ? 'Tutarları göster' : 'Tutarları gizle'}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-line-strong px-2.5 py-[7px] text-[12.5px] text-ink-muted transition-colors duration-[120ms] hover:bg-black/[.02] dark:hover:bg-white/[.03] lg:px-3"
+                className="inline-flex min-h-11 min-w-11 items-center justify-center gap-1.5 rounded-lg border border-line-strong px-2.5 py-[7px] text-[12.5px] text-ink-muted transition-colors duration-[120ms] hover:bg-black/[.02] dark:hover:bg-white/[.03] lg:px-3"
               >
                 {balancesHidden ? <EyeOff size={15} aria-hidden="true" /> : <Eye size={15} aria-hidden="true" />}
                 <span className="hidden lg:inline">{balancesHidden ? 'Tutarları göster' : 'Tutarları gizle'}</span>
               </button>
 
-              <button
-                type="button"
-                onClick={() => setIsDark((c) => !c)}
-                aria-label={isDark ? 'Gündüz temasına geç' : 'Gece temasına geç'}
-                className="inline-flex items-center rounded-lg border border-line-strong p-[7px] text-ink-muted transition-colors duration-[120ms] hover:bg-black/[.02] dark:hover:bg-white/[.03]"
-              >
-                {isDark ? <Sun size={15} aria-hidden="true" /> : <Moon size={15} aria-hidden="true" />}
-              </button>
+              <label className="relative inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-line-strong px-2 text-xs text-ink-muted">
+                {preference === 'system' ? <MonitorSmartphone size={15} aria-hidden="true" /> : preference === 'light' ? <Sun size={15} aria-hidden="true" /> : <Moon size={15} aria-hidden="true" />}
+                <select aria-label="Tema tercihi" title="Sistem seçeneği telefonun açık/koyu temasını takip eder" value={preference} onChange={(event) => chooseTheme(event.target.value as ThemePreference)} className="min-h-11 max-w-20 cursor-pointer bg-transparent text-ink outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                  <option value="system">Sistem</option>
+                  <option value="light">Açık</option>
+                  <option value="dark">Koyu</option>
+                </select>
+              </label>
 
               <div className="hidden lg:block">
                 <QuickActionsButton />
@@ -137,7 +130,7 @@ function LayoutInner() {
                   aria-expanded={menuOpen}
                   aria-haspopup="menu"
                   aria-label="Menü"
-                  className="inline-flex items-center rounded-lg border border-line-strong p-[7px] text-ink-muted transition-colors duration-[120ms] hover:bg-black/[.02] dark:hover:bg-white/[.03]"
+                  className="inline-flex size-11 items-center justify-center rounded-lg border border-line-strong text-ink-muted transition-colors duration-[120ms] hover:bg-black/[.02] dark:hover:bg-white/[.03]"
                 >
                   <MoreHorizontal size={15} aria-hidden="true" />
                 </button>
