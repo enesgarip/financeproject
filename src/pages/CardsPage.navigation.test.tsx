@@ -4,6 +4,7 @@ import { MemoryRouter, useLocation, useNavigate } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Card } from '../types/database'
 import { useCardSectionNavigation } from './CardsPage.hooks'
+import { CardSectionNav } from './CardsPage.sections'
 
 vi.mock('../lib/supabase', () => ({ supabase: {} }))
 const account = { id: 'account-1', card_type: 'banka_karti' } as Card
@@ -28,6 +29,16 @@ afterEach(cleanup)
 beforeEach(() => { vi.spyOn(window, 'scrollTo').mockImplementation(() => {}) })
 
 describe('hesap ve kart ayrıntısı navigasyonu', () => {
+  it.each(['/kartlar', '/kartlar?section=bilinmeyen'])('varsayılan olarak hesapları açar: %s', (url) => {
+    render(<MemoryRouter initialEntries={[url]}><Harness /></MemoryRouter>)
+    expect(screen.getByLabelText('Seçim').textContent).toBe('hesaplar::')
+  })
+
+  it.each(['kartlar', 'ozet', 'islemler'])('açık ve eski kredi kartı bağlantısını korur: %s', (section) => {
+    render(<MemoryRouter initialEntries={[`/kartlar?section=${section}`]}><Harness /></MemoryRouter>)
+    expect(screen.getByLabelText('Seçim').textContent).toBe(`kartlar::${section === 'islemler' ? 'donem' : ''}`)
+  })
+
   it('hesap ayrıntısından döndüğünde bölüm, URL ve kaydırma konumunu korur', () => {
     Object.defineProperty(window, 'scrollY', { configurable: true, value: 420 })
     render(<MemoryRouter initialEntries={['/kartlar?section=hesaplar']}><Harness /></MemoryRouter>)
@@ -58,4 +69,16 @@ describe('hesap ve kart ayrıntısı navigasyonu', () => {
     render(<MemoryRouter initialEntries={['/kartlar?section=ekstreler']}><Harness /></MemoryRouter>)
     expect(screen.getByLabelText('Seçim').textContent).toBe('kartlar::ekstreler')
   })
+})
+
+
+it('hesaplar seçimini ilk sırada gösterir ve kredi kartlarına geçiş sağlar', () => {
+  const onSelect = vi.fn()
+  render(<CardSectionNav section="hesaplar" onSelect={onSelect} counts={{ hesaplar: 2, kartlar: 3 }} />)
+  const buttons = screen.getAllByRole('button')
+  expect(buttons[0].textContent).toContain('Hesaplar ve nakit')
+  expect(buttons[0].getAttribute('aria-pressed')).toBe('true')
+  expect(buttons[1].textContent).toContain('Kredi kartları')
+  fireEvent.click(buttons[1])
+  expect(onSelect).toHaveBeenCalledWith('kartlar')
 })

@@ -1,8 +1,8 @@
 // @vitest-environment happy-dom
-import { cleanup, render, screen, within } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { Card, CardInstallment, CardStatementArchive, CardStatementPayment } from '../types/database'
-import { CardsSummary } from './CardsPage.summary'
+import { CardsSummary, SharedLimitGroups } from './CardsPage.summary'
 
 vi.mock('../hooks/useBalancePrivacy', () => ({ useBalancePrivacy: () => ({ formatAmount: (value: number) => `${value.toFixed(2)} TL` }) }))
 afterEach(cleanup)
@@ -30,5 +30,35 @@ describe('kart özeti', () => {
     expect(within(total).getByText('—')).toBeTruthy()
     expect(within(total).getByText('Bağlantı kurulamadı')).toBeTruthy()
     expect(within(total).queryByText('0.00 TL')).toBeNull()
+  })
+})
+
+
+describe('ortak limit grupları', () => {
+  it('limiti bir kez sayar, tüm kart borçlarını toplar ve kart ayrıntısını açar', () => {
+    const first = { ...props.rows[0], bank_name: 'Banka', card_name: 'Birinci kart', limit_group_name: 'Aile', credit_limit: 1000 }
+    const second = { ...first, id: 'c2', card_name: 'İkinci kart', credit_limit: 900, debt_amount: 170 }
+    const standalone = { ...first, id: 'c3', card_name: 'Tekil kart', limit_group_name: null }
+    const onOpenCard = vi.fn()
+    render(<SharedLimitGroups rows={[first, second, standalone] as Card[]} onOpenCard={onOpenCard} />)
+    const region = screen.getByRole('region', { name: 'Ortak limit grupları' })
+    fireEvent.click(within(region).getByText('Aile · 2 kart'))
+    expect(within(region).getByText('1000.00 TL')).toBeTruthy()
+    expect(within(region).getByText('400.00 TL')).toBeTruthy()
+    expect(within(region).getByText('600.00 TL')).toBeTruthy()
+    expect(within(region).queryByText('Tekil kart')).toBeNull()
+    fireEvent.click(within(region).getByRole('button', { name: 'İkinci kart' }))
+    expect(onOpenCard).toHaveBeenCalledWith(second)
+  })
+
+  it('isimli tek kartlı grubu gösterir', () => {
+    render(<SharedLimitGroups rows={[{ ...props.rows[0], limit_group_name: 'Aile', credit_limit: 1000 } as Card]} onOpenCard={vi.fn()} />)
+    expect(screen.getByText('Aile · 1 kart')).toBeTruthy()
+  })
+
+  it('grup yoksa oluşturma yolunu açıklar', () => {
+    render(<SharedLimitGroups rows={[]} onOpenCard={vi.fn()} />)
+    expect(screen.getByText('Henüz ortak limit grubu yok.')).toBeTruthy()
+    expect(screen.getByText(/kartı düzenleyip/)).toBeTruthy()
   })
 })

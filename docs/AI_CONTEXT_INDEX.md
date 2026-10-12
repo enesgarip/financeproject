@@ -2,6 +2,11 @@
 
 Last reviewed: 2026-10-12
 
+Kart ayrıntısı düzeni: döküm seçenekleri ikonlu iki sütunlu menüdedir.
+Kart ayarları ve kayıt geçmişi bölümünde yinelenen borç/limit
+özeti, taksit listesi ve ekstre listesi kaldırıldı; bunların tek ayrıntı kaynağı
+üst özet ve ilgili döküm menüsüdür. Borç/ledger kuralları değişmedi.
+
 This file is the cheapest starting point for future AI/Codex sessions. Its job
 is to reduce repeated repo discovery: read this first, choose the smallest
 relevant route, then open only the linked source files and docs for the task.
@@ -61,6 +66,10 @@ tetikleyicisi hızlı işlem menüsüdür. Mobil hesap düzeni ve AI paylaşım 
 genişletildi. Kanıt/kapsam: `docs/MOBILE_UI_REVIEW_2026-10-12.md`.
 Kategori düzenleme, dönem hareketleri dökümünün içindedir; seçili kapsamda
 düzenlenecek “Diğer” harcaması yoksa eylem pasiftir (`CategoryCleanupPanel`).
+
+Hesaplar girişi: parametresiz `/kartlar` Hesaplar ve nakit ile açılır.
+Kredi kartları bölümündeki ortak limit dökümü `CardsPage.summary.tsx` içindeki
+`SharedLimitGroups` bileşenidir; mevcut `buildLimitGroupSummaries` hesabını kullanır.
 
 ## Domain Source Of Truth
 

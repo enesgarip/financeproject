@@ -68,3 +68,9 @@ lint, coverage, audit (0 açık), build, bundle bütçesi ve 6 edge tip kontrol�
 Toplam JS gzip 979,8 kB; giriş 19,8 kB. 390px ekranda belge genişliği ve
 içerik genişliği eşit (380px; kaydırma çubuğu hariç), kategori eylemi DOM'da
 `disabled=true` olarak doğrulandı.
+
+Yayın hazırlığında güncel main (#248) birleştirildi: Hesaplar ve nakit varsayılanı,
+ortak limit grupları ve ikonlu kart dökümü menüsü korundu; manuel/kategori
+girişleri bu incelemedeki sözleşmeye göre çözüldü. Birleşmiş kodda
+`npm run verify` başarılı: 144 dosya / 1.541 test, tüm kalite kapıları;
+toplam JS gzip 979,9 kB (bütçe 1.030 kB).
