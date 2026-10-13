@@ -246,8 +246,9 @@ export function LoansPage() {
                   ağacında taksit metninden önce geliyordu; ekran okuyucu neyi
                   ödediğini söylemeden "Öde" diyordu (denetim 2026-08-12 §10). */}
               <div className="order-2 min-w-0 flex-1">
-                <p className="truncate font-semibold text-ink">
-                  {item.installment_no}. taksit · <span className="font-mono">{formatAmount(item.amount)}</span>
+                <p className="flex flex-wrap items-baseline gap-x-1 font-semibold text-ink">
+                  <span>{item.installment_no}. taksit ·</span>
+                  <span className="serit-num max-w-full break-words">{formatAmount(item.amount)}</span>
                 </p>
                 <p className="text-xs text-ink-muted">
                   {formatDate(item.due_date)} · {item.status === 'ödendi' ? 'Ödendi' : 'Bekliyor'}

@@ -1,5 +1,27 @@
 # Priority Backlog
 
+## 2026-10-13 — Görsel taşma/kırpma taraması — UYGULANDI
+
+Kart köşesi düzeltmesine ek olarak dar ekranda kesilen taksit ve analiz
+tutarları, kur bandının gecikme açıklaması, borsa/ortak satır alt metni,
+gider grubu eylemleri ve harcama etiketleme düzeni düzeltildi. Değişiklikler
+sunum katmanındadır; para hesabı/RPC/şema değişmedi. 19 rota, mobil açık/koyu
+tema ve seçili masaüstü ekranlar incelendi. Kapsam, ölçümler ve sınırlar:
+`docs/VISUAL_REVIEW_2026-10-13.md`.
+Son kaynakla `npm run verify` başarılı: 145 dosya / 1.555 test, lint,
+coverage, audit, build, bundle ve edge tipleri.
+
+## 2026-10-13 — Kredi kartı ayrıntısında üst köşe taşması — DÜZELTİLDİ
+
+Kredi kartı marka başlığındaki dekorasyon katmanı yuvarlak köşeyi miras
+almadığı için üst parlak çizgi ve ışık köşelerin dışına taşıyordu.
+`CardsPage.list.tsx` içinde yalnız dekorasyon katmanı başlığın yarıçapını
+miras alır ve kırpılır; başlık/kart taşmaya açık kaldığından işlem menüsü
+kesilmez. Borç, limit ve ödeme davranışları değişmedi.
+Doğrulama: yerel demo tarayıcısında açık/koyu tema, köşe yarıçapı ve işlem
+menüsünün kesilmeden açılması kontrol edildi. `npm run verify` başarılı
+(1.555 test, lint, coverage, audit, build, bundle ve edge tipleri).
+
 ## 2026-10-13 — Altın toplamları ve ayar görünürlüğü — UYGULANDI
 
 İşlem adları form, liste, kayıt menüsü ve boş durumda Alım / Satım olarak

@@ -188,10 +188,10 @@ function ContextManager({ contexts, userId, onChanged, onError, confirm, showCom
             {visibleContexts.map((context) => {
               const KindIcon = KIND_ICONS[context.kind] ?? FolderKanban
               return (
-              <li key={context.id} className="flex items-center justify-between rounded-xl border border-line-strong px-3 py-2">
-                <div className="flex min-w-0 items-center gap-2">
-                  <KindIcon className="size-4 text-primary" />
-                  <div className="min-w-0"><p className="truncate text-sm font-bold">{context.name}</p><p className="text-xs text-ink-muted">{contextKindLabel(context.kind)}</p></div>
+              <li key={context.id} className="flex min-w-0 items-center justify-between gap-2 rounded-xl border border-line-strong px-3 py-2">
+                <div className="flex min-w-0 flex-1 items-center gap-2">
+                  <KindIcon className="size-4 shrink-0 text-primary" />
+                  <div className="min-w-0"><p className="break-words text-sm font-bold">{context.name}</p><p className="text-xs text-ink-muted">{contextKindLabel(context.kind)}</p></div>
                 </div>
                 <div className="flex shrink-0 items-center gap-1">
                   <Button size="sm" variant="outline" disabled={busyId !== null} aria-label={`${context.name}: ${context.completed_at ? 'yeniden aç' : 'tamamla'}`} onClick={() => void changeCompletion(context)}>{context.completed_at ? 'Yeniden aç' : 'Tamamla'}</Button>
@@ -302,7 +302,29 @@ function ContextCardTagging({ contexts, onChanged, onError }: { contexts: Expens
 
   return (
     <Card><CardHeader className="pb-2"><CardTitle className="flex items-center gap-2 text-base"><CreditCard className="size-4 text-primary" /> Kart harcamasını gruba ekle</CardTitle><p className="text-xs text-ink-muted">Etiketleme kart borcunu değiştirmez. Henüz kesinleşmemiş provizyonlar da listelenir.</p></CardHeader><CardContent>
-      {loading ? <Skeleton className="h-24 rounded-xl" /> : <ul className="flex flex-col divide-y divide-line">{expenses.map((expense) => <li key={expense.id} className="flex items-center justify-between gap-3 py-2"><div className="min-w-0"><p className="flex items-center gap-2 text-sm font-semibold"><span className="truncate">{expense.description}</span>{expense.status === 'provision' ? <Badge variant="outline" className="shrink-0">Provizyon</Badge> : null}</p><p className="truncate text-xs text-ink-muted">{formatDate(expense.spent_at)} · {formatCurrency(expense.amount)}{expense.context_id ? ` · ${names.get(expense.context_id) ?? 'Gider grubu'}` : ''}</p></div><Select className="w-40 shrink-0" value={expense.context_id ?? ''} disabled={busyId === expense.id} onChange={(event) => void assign(expense, event.target.value)} aria-label={`${expense.description} için gider grubu`}><option value="">Grup seçilmedi</option>{expense.context_id && contexts.some((context) => context.id === expense.context_id && context.completed_at) ? <option value={expense.context_id} disabled>{names.get(expense.context_id)} (tamamlandı)</option> : null}{activeContexts.map((context) => <option key={context.id} value={context.id}>{context.name}</option>)}</Select></li>)}</ul>}
+      {loading ? <Skeleton className="h-24 rounded-xl" /> : (
+        <ul className="flex flex-col divide-y divide-line">
+          {expenses.map((expense) => (
+            <li key={expense.id} className="flex min-w-0 flex-col gap-2 py-3 min-[560px]:flex-row min-[560px]:items-center min-[560px]:justify-between">
+              <div className="min-w-0 flex-1">
+                <p className="flex flex-wrap items-center gap-2 text-sm font-semibold">
+                  <span className="min-w-0 break-words">{expense.description}</span>
+                  {expense.status === 'provision' ? <Badge variant="outline" className="shrink-0">Provizyon</Badge> : null}
+                </p>
+                <p className="break-words text-xs leading-relaxed text-ink-muted">
+                  {formatDate(expense.spent_at)} · {formatCurrency(expense.amount)}
+                  {expense.context_id ? ` · ${names.get(expense.context_id) ?? 'Gider grubu'}` : ''}
+                </p>
+              </div>
+              <Select className="w-full shrink-0 min-[560px]:w-40" value={expense.context_id ?? ''} disabled={busyId === expense.id} onChange={(event) => void assign(expense, event.target.value)} aria-label={`${expense.description} için gider grubu`}>
+                <option value="">Grup seçilmedi</option>
+                {expense.context_id && contexts.some((context) => context.id === expense.context_id && context.completed_at) ? <option value={expense.context_id} disabled>{names.get(expense.context_id)} (tamamlandı)</option> : null}
+                {activeContexts.map((context) => <option key={context.id} value={context.id}>{context.name}</option>)}
+              </Select>
+            </li>
+          ))}
+        </ul>
+      )}
     </CardContent></Card>
   )
 }

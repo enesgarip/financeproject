@@ -287,6 +287,16 @@ ayrı durum metniyle bildirilir. Görsel denetim: `docs/MOBILE_UI_REVIEW_2026-10
 
 ## 2026-10-13 — Alınacaklar, tema ikonu ve altın geçmişi
 
+Görsel tarama: `docs/VISUAL_REVIEW_2026-10-13.md`. Taksit ve analiz tutarları
+üç noktayla kesilmez; dar ekranda metin/sütunlar sarılır. Kur bandının ek
+açıklaması tam satırı kullanır. `LineRow` alt metni sarılır. Gider grubunda
+uzun ad eylemleri dışarı itemez; harcama etiket seçicisi dar ekranda metnin
+altına geçer. Finansal hesap ve yazma davranışları bu düzenle değişmez.
+
+Kredi kartı ayrıntısında marka başlığının dekorasyon katmanı köşe yarıçapını
+başlıktan miras alarak kırpılır. Başlık/kart taşmaya açık kalır; böylece
+dekoratif çizgi ve ışık köşelerden taşmaz, işlem menüsü kesilmez.
+
 Altın işlemlerinin adı tutarlı olarak **Alım / Satım** çiftidir: form,
 ekleme düğmesi, liste satırı, kayıt menüsü ve boş durum aynı dili kullanır.
 Piyasa kurunun tarafını anlatan “alış kuru” ayrı bir kavram olarak korunur.
