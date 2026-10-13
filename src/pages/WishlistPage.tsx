@@ -25,12 +25,15 @@ import { resolveSavingsGoalRows } from '../utils/goalSources'
 import { buildSafeToSpend } from '../utils/safeToSpend'
 import { buildWishlistAge } from '../utils/wishlistAge'
 import { buildWishlistPlan, type WishlistPlan } from '../utils/wishlistPlan'
+import { assessWishlistIntent, type WishlistIntentAnswers } from '../utils/wishlistIntent'
+import { WishlistAssessment, WishlistIntentTest } from './WishlistPage.assessment'
 import { parseNumber } from '../utils/formatCurrency'
 import { sumTL } from '../utils/money'
 import type { WishlistItem } from '../types/database'
 
 /** "Ne zaman alabilirim" projeksiyon ufku; PurchaseDecisionPage ile aynı mantık. */
 const PLAN_HORIZON_MONTHS = 6
+const EMPTY_INTENT: WishlistIntentAnswers = { essential: null, alternative: null, delayCost: null }
 
 export function WishlistPage() {
   const { user } = useAuth()
@@ -57,11 +60,12 @@ export function WishlistPage() {
    * finansal hesap TUTMAZ — cevap `utils/wishlistPlan.ts`'te üretilir.
    */
   const snapshotQuery = useFinanceSnapshot()
-  const { reserved } = useKasaReserved()
+  const { reserved, reservedKnown } = useKasaReserved()
 
   const planContext = useMemo(() => {
     const snapshot = snapshotQuery.data
-    if (!snapshot) return null
+    if (!snapshot || snapshotQuery.isError || !reservedKnown) return null
+    if (snapshot.missingTables.some((table) => ['card_installments', 'card_statement_archives', 'card_statement_payments'].includes(table))) return null
 
     const summaryInput = {
       assets: snapshot.assets,
@@ -90,7 +94,7 @@ export function WishlistPage() {
       forecast: buildCashFlowForecast(summaryInput, { horizonMonths: PLAN_HORIZON_MONTHS }),
       safeToSpend: safe.amount,
       // Ay sonunda dokunulmayacak taban; projeksiyon bakiyesi bunları içerir.
-      floor: buffer + reserved,
+      floor: sumTL([buffer, reserved]),
       // Kaynağa bağlı hedefin birikeni DB'de değil burada oluşur (goalSources.ts).
       goals: resolveSavingsGoalRows(
         snapshot.savingsGoals,
@@ -99,12 +103,16 @@ export function WishlistPage() {
         { assets: snapshot.assets, cards: snapshot.cards },
       ).goals,
     }
-  }, [snapshotQuery.data, reserved])
+  }, [snapshotQuery.data, snapshotQuery.isError, reserved, reservedKnown])
 
   const [showPurchased, setShowPurchased] = useState(true)
   const [newName, setNewName] = useState('')
   const [newPrice, setNewPrice] = useState('')
+  const [intentAnswers, setIntentAnswers] = useState<WishlistIntentAnswers>(EMPTY_INTENT)
   const nameInputRef = useRef<HTMLInputElement>(null)
+  const draftPrice = newPrice.trim() ? parseNumber(newPrice) : null
+  const priceInvalid = draftPrice !== null && (!Number.isFinite(draftPrice) || draftPrice <= 0)
+  const draftPlan = planContext ? buildWishlistPlan({ price: draftPrice, ...planContext }) : null
 
   const invalidate = useCallback(() => qc.invalidateQueries({ queryKey: WISHLIST_QUERY_KEY }), [qc])
 
@@ -114,7 +122,7 @@ export function WishlistPage() {
       // virgül) ikisi de doğru okunur. Elle `replace(',', '.')` "12.500"ü NaN
       // yapıyordu → madde fiyatsız kaydediliyordu (denetim 2026-08-12 §6).
       const parsed = price.trim() ? parseNumber(price) : 0
-      if (parsed < 0) throw new Error('Fiyat negatif olamaz. Fiyat bilinmiyorsa alanı boş bırak.')
+      if (price.trim() && (!Number.isFinite(parsed) || parsed <= 0)) throw new Error('Pozitif bir fiyat gir. Fiyat bilinmiyorsa alanı boş bırak.')
       const estimatedPrice = parsed > 0 ? parsed : null
       const result = await insertWishlistItem({
         user_id: user!.id,
@@ -130,6 +138,7 @@ export function WishlistPage() {
       invalidate()
       setNewName('')
       setNewPrice('')
+      setIntentAnswers(EMPTY_INTENT)
       nameInputRef.current?.focus()
     },
     onError: (e: Error) => toast({ title: e.message, type: 'error' }),
@@ -170,7 +179,7 @@ export function WishlistPage() {
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     const name = newName.trim()
-    if (!name) return
+    if (!name || priceInvalid || !assessWishlistIntent(intentAnswers)) return
     addMutation.mutate({ name, price: newPrice })
   }
 
@@ -189,7 +198,7 @@ export function WishlistPage() {
     <div className="flex flex-col gap-5">
       {/* Şerit: kahraman = bekleyen isteklerin tahmini toplamı. */}
       <HeroNumber
-        label="Bekleyen istekler"
+        label="Alınacaklar"
         value={pendingTotal}
         description={`${pending.length} bekleyen · ${purchased.length} tamamlanan · tahmini fiyatlarla${
           staleCount > 0 ? ` · ${staleCount} madde 30 günü geçti` : ''
@@ -199,7 +208,8 @@ export function WishlistPage() {
       {/* Yeni madde ekleme */}
       <Card className="border-primary/15">
         <CardContent>
-          <form onSubmit={handleSubmit} className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_10rem_auto] sm:items-center">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_10rem]">
             <Input
               ref={nameInputRef}
               type="text"
@@ -208,29 +218,55 @@ export function WishlistPage() {
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               className="h-11"
+              disabled={addMutation.isPending}
             />
             <Input
               type="text"
               inputMode="decimal"
               placeholder="Tahmini fiyat"
               aria-label="Tahmini fiyat"
+              aria-invalid={priceInvalid}
+              aria-describedby={priceInvalid ? 'wishlist-price-error' : undefined}
               value={newPrice}
               onChange={(e) => setNewPrice(e.target.value)}
               className="h-11"
+              disabled={addMutation.isPending}
             />
+            </div>
+            {priceInvalid ? <p id="wishlist-price-error" className="text-xs text-destructive">Pozitif bir fiyat gir. Fiyat bilinmiyorsa alanı boş bırak.</p> : null}
+            {newName.trim() ? (
+              <fieldset disabled={addMutation.isPending} className="space-y-4">
+                <WishlistIntentTest answers={intentAnswers} onChange={setIntentAnswers} />
+                {draftPlan ? <div aria-live="polite"><WishlistAssessment plan={draftPlan} /></div> : null}
+                {!newPrice.trim() ? <p className="text-xs text-ink-muted">Fiyat ekleyince bütçene etkisini de görebilirsin.</p> : null}
+              </fieldset>
+            ) : null}
             <Button
               type="submit"
               size="lg"
-              disabled={!newName.trim() || addMutation.isPending}
+              disabled={!newName.trim() || priceInvalid || !assessWishlistIntent(intentAnswers) || addMutation.isPending}
               aria-label="Listeye ekle"
               className="w-full sm:w-auto"
             >
               <Plus />
-              <span className="sm:hidden">Listeye ekle</span>
+              <span>Listeye ekle</span>
             </Button>
           </form>
         </CardContent>
       </Card>
+
+      <div className="space-y-2 text-xs leading-relaxed text-ink-muted">
+        <p>Değerlendirmeler her ürün için ayrı, bugünkü tahmini fiyatla peşin alıma göre hesaplanır. Tampon, ayrılmış para, kayıtlı ödemeler ve beklenen gelir dikkate alınır; gelecekteki yeni harcamalar dahil değildir. Taksit veya kartla alım için Alsam mı? ekranını kullan.</p>
+        {!planContext ? (
+          <div role="status">
+            <p>Finansal veriler henüz doğrulanamadı. Bütçe değerlendirmesi hazır değil; listeye ekleyebilirsin.</p>
+            <button type="button" className="min-h-11 text-primary underline" onClick={() => {
+              void snapshotQuery.refetch()
+              void qc.invalidateQueries({ queryKey: ['kasa-buckets'] })
+            }}>Finansal verileri yeniden yükle</button>
+          </div>
+        ) : null}
+      </div>
 
       {/* Alınacaklar */}
       {pending.length === 0 && purchased.length === 0 && (
@@ -349,18 +385,7 @@ function WishlistRow({
             türer, listede saklanmaz. Ufukta karşılanmıyorsa tarih UYDURMAYIZ. */}
         {/* truncate DEĞİL: dar ekranda "…" ile kesilince cümlenin asıl bilgisi
             (hangi hedefin kaç aylık payı) kayboluyordu. */}
-        {!purchased && plan ? (
-          <span className="text-[11px] leading-tight text-ink-faint">
-            {plan.affordableNow
-              ? 'Şimdi alabilirsin'
-              : plan.month
-                ? `~${plan.month.label} içinde alabilirsin`
-                : 'Bu projeksiyonda karşılanmıyor'}
-            {plan.goalMonths > 0 && plan.goalName
-              ? ` · ${plan.goalName} hedefine ayıracağın ~${plan.goalMonths} aylık pay`
-              : ''}
-          </span>
-        ) : null}
+        {!purchased && plan ? <div className="mt-2"><WishlistAssessment plan={plan} /></div> : null}
       </div>
 
       <div className="hover-actions flex shrink-0 items-center gap-2 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100">

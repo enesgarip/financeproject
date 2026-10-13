@@ -19,12 +19,13 @@ import type { SavingsGoal } from '../types/database'
 import type { CashFlowForecast } from './cashFlowForecast'
 import { diffTL, greaterThanTL, roundTL } from './money'
 import { buildSavingsSuggestion } from './savingsSuggestion'
+import { buildPurchaseImpact, type PurchaseImpactResult } from './purchaseImpact'
 
 export type WishlistPlanInput = {
   /** Maddenin tahmini fiyatı; girilmemişse null. */
   price: number | null
   forecast: CashFlowForecast
-  /** Bugün harcanabilir (tampon + kasa rezervi düşülmüş). */
+  /** Bu ay harcanabilir; beklenen gelir dahil, tampon + kasa rezervi düşülmüş. */
   safeToSpend: number
   /**
    * Ayın sonunda dokunulmaması gereken taban: güvenlik tamponu + kasa rezervi.
@@ -36,7 +37,9 @@ export type WishlistPlanInput = {
 }
 
 export type WishlistPlan = {
-  /** Bugünün harcanabiliriyle alınabiliyor mu? */
+  /** Peşin alımın bu ay ve projeksiyon üzerindeki etkisi. */
+  impact: Pick<PurchaseImpactResult, 'verdict' | 'reasons' | 'safeToSpendAfter'>
+  /** Bu ayın planı ve bugünkü likit, tampon/rezervi koruyarak karşılıyor mu? */
   affordableNow: boolean
   /** Alınabilecek ilk ay; ufuk içinde yoksa null ("bu ufukta çıkmıyor"). */
   month: { key: string; label: string } | null
@@ -69,9 +72,31 @@ export function dominantSavingsGoal(goals: SavingsGoal[], today: Date): { goal: 
 export function buildWishlistPlan(input: WishlistPlanInput, today: Date = new Date()): WishlistPlan | null {
   const { price } = input
   // Fiyatsız maddeye tarih vermek uydurma olurdu; satır sessiz kalır.
-  if (price === null || !(price > 0)) return null
+  if (price === null || !Number.isFinite(price) || !(price > 0)) return null
 
-  const affordableNow = !greaterThanTL(price, input.safeToSpend)
+  const availableNow = diffTL(input.forecast.startingBalance, input.floor)
+  const affordableNow = !greaterThanTL(price, input.safeToSpend) && !greaterThanTL(price, availableNow)
+  const impact = buildPurchaseImpact({
+    amount: price,
+    installments: 1,
+    method: 'cash',
+    forecast: input.forecast,
+    safeToSpend: input.safeToSpend,
+    buffer: input.floor,
+  })
+  if (greaterThanTL(0, impact.safeToSpendAfter)) {
+    impact.verdict = 'zorlayici'
+    impact.reasons.unshift(greaterThanTL(0, input.safeToSpend)
+      ? 'Bu ayın harcanabilir tutarı zaten eksi; bu alım açığı artırıyor.'
+      : 'Bu alım, bu ayın harcanabilir tutarını aşıyor.')
+  }
+  if (greaterThanTL(price, input.forecast.startingBalance)) {
+    impact.verdict = 'zorlayici'
+    impact.reasons.unshift('Bugünkü nakit ve banka bakiyen peşin alım için yeterli değil; beklenen gelir henüz elinde değil.')
+  } else if (greaterThanTL(price, availableNow)) {
+    if (impact.verdict === 'rahat') impact.verdict = 'dikkat'
+    impact.reasons.unshift('Peşin alım bugün güvenlik tamponuna veya ayrılmış parana dokunuyor.')
+  }
 
   const month = affordableNow
     ? null
@@ -90,6 +115,7 @@ export function buildWishlistPlan(input: WishlistPlanInput, today: Date = new Da
   const goalMonths = dominant ? Math.round(roundTL(price / dominant.monthlyNeeded)) : 0
 
   return {
+    impact,
     affordableNow,
     month,
     goalMonths,

@@ -1,5 +1,47 @@
 # Priority Backlog
 
+## 2026-10-13 — Altın toplamları ve ayar görünürlüğü — UYGULANDI
+
+İşlem adları form, liste, kayıt menüsü ve boş durumda Alım / Satım olarak
+birleştirildi; karışık Alım / Satış kullanımı kaldırıldı.
+
+Altın alım/satımları kompakt liste olarak kalır; üst özet toplam miktar ve
+tahmini eder, tür bazında eldeki miktar, kayıtlı ayarlar, ortalama birim
+maliyet ve güncel ederi gösterir. İşlem defteri boşken bağımsız Varlıklar
+kayıtlarından özet gelir; defter varsa iki kaynak çift sayılmaz. Ayar ve
+maliyet bilinmiyorsa açıkça gösterilir; ayar mevcut kur hesabına çarpan
+olarak eklenmez. İşlem satırlarında ayar da görünür/aranabilir. Grafik
+varsayılan kapalı, işlem yoksa gizlidir. Yeni saf özet hesabının regresyon
+testleri defter/varlık kaynak seçimi, satış, maliyet, kur eksikliği ve ayar
+meta bilgisini kapsar.
+
+Doğrulama: `npm run verify` başarılı (1.555 test; lint, coverage, üretim
+dependency audit, build, bundle ve edge tipleri). Yerel demo tarayıcısında
+deftersiz 60 gram varlığın miktar/eder özeti, bilinmeyen ayar/maliyet ve
+tutarlarla birlikte miktarın gizlenmesi kontrol edildi. Yeni DB kaydı yazılmadı.
+
+## 2026-10-13 — Alınacaklar değerlendirmesi, tema ikonu ve altın listesi — UYGULANDI
+
+Alınacaklara eklerken üç soruluk istek/ihtiyaç testi sonucu gösterilir;
+kullanıcı tercihine göre cevaplar/sonuç kalıcı saklanmaz. Fiyat yazılırken ve
+bekleyen ürünlerde peşin alımın bütçe yorumu, gerekçesi ve kalan harcanabilir
+tutar görünür. Mevcut aylık/altı aylık hesaplar kullanılır; tampon ve kasa
+rezervi korunur. Beklenen gelir bugünkü nakit sayılmaz, gelecekteki eksi
+bakiye/taban ihlali uyarılır. Eksik snapshot/rezerv verisi olumlu yorum üretmez.
+
+Tema varsayılanı Sistem; üst barda tek ikon Sistem → Açık → Koyu → Sistem
+geçişi yapar. Altın geçmişi tür bazında tek sütunlu, çizgiyle ayrılan kompakt
+satırlardır; miktar/tarih/tutar/birim maliyet/not ve düzenle/sil menüsü korunur.
+DB şeması, para hareketleri ve ledger geçişleri değişmedi.
+
+Doğrulama: `npm run verify` başarılı (1.548 test; lint, coverage, üretim
+dependency audit, build, bundle ve edge tip kontrolü). Peşin likidite,
+rezerv/tampon, gelecek ay riski ve kuruş sınırı için regresyon testleri eklendi.
+Yerel demo tarayıcısında üç soru → sonuç → ekleme → form sıfırlama akışı,
+Türkçe fiyat, tema ikonunun üç modu ve altın alım/satış/maliyetsiz satırları
+kontrol edildi. 1280px'te tek sütun ve yatay taşma ölçüldü; mobilde satırlar
+ve düzenle/sil menüsü görüldü. Oluşturulan demo test kayıtları temizlendi.
+
 ## 2026-10-12 — Kategori düzenleme konumu ve boş durum — UYGULANDI
 
 “Kategorileri düzenle” ana özetten ve kart ayrıntısı kısayollarından kaldırıldı;

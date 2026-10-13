@@ -1,6 +1,6 @@
 # UI Architecture
 
-Last reviewed: 2026-10-12
+Last reviewed: 2026-10-13
 
 Bu belge uygulamanın görsel kaynak gerçeğidir. Finans kurallarını veya veri
 erişimini tanımlamaz; route ve component'lerin aynı **Şerit** görsel dilinde
@@ -170,7 +170,9 @@ semantik sınıf ekle.
 ### Şerit'e taşınmamış yüzeyler
 
 `premium-entity-card` anatomisi hâlâ kullanılır: kredi kartı ayrıntısı
-(`src/pages/CardsPage.list.tsx`) ve altın lotları (`src/pages/GoldPage.tsx`).
+(`src/pages/CardsPage.list.tsx`). Altın işlem geçmişi (`src/pages/GoldPage.tsx`)
+13 Ekim 2026'da tür bazında tek sütunlu, çizgiyle ayrılan kompakt satırlara taşındı;
+miktar, alım/satım, tarih, toplam, birim maliyet ve not satır içinde okunur.
 Kimlik başlığı, tek ana değer kuyusu, kısa metrikler, ana aksiyon sırası
 korunur. Bu yüzeylere dokunurken Şerit'e zorla çevirme; kart listesi bilinçli
 istisnadır. Banka/nakit ayrıntısı 12 Ekim 2026'da sade Şerit zeminine taşındı;
@@ -282,3 +284,32 @@ Arama boş sonucunda ilk kayıt önerisi yerine aramayı temizleme eylemi vardı
 AI özetinde kopyala/PDF mobilde tam genişlikte alt alta, masaüstünde yan yana
 durur. Panoya gerçekten kopyalanan içerik önizlemeyle aynıdır; hata/başarı
 ayrı durum metniyle bildirilir. Görsel denetim: `docs/MOBILE_UI_REVIEW_2026-10-12.md`.
+
+## 2026-10-13 — Alınacaklar, tema ikonu ve altın geçmişi
+
+Altın işlemlerinin adı tutarlı olarak **Alım / Satım** çiftidir: form,
+ekleme düğmesi, liste satırı, kayıt menüsü ve boş durum aynı dili kullanır.
+Piyasa kurunun tarafını anlatan “alış kuru” ayrı bir kavram olarak korunur.
+
+Altın ekranında üst özet toplam miktarı/ederi ve gram/çeyrek bazında eldeki
+miktar, kayıtlı ayarlar, ortalama birim maliyet ve güncel ederi gösterir.
+İşlem defteri boşsa bağımsız altın varlıkları özetlenir; iki kaynak toplanmaz.
+Maliyet veya ayar bilinmiyorsa açıkça belirtilir. Ayar meta bilgidir;
+mevcut gram/çeyrek kurundan değerlemeyi değiştirmez. Alım/satım satırlarında
+ayar görünür ve aranabilir. Birikim grafiği varsayılan kapalıdır; boş işlem
+defterinde çizilmez. Böylece özet ve listeye erişim grafik tarafından itilmez.
+Gizlilik modu özet ve işlem satırlarının kişisel miktarlarını da maskeler;
+notlara gömülü TL tutarları ortak `maskText` yolu üzerinden gizlenir.
+
+Tema kontrolü yalnız ikondur; menü ve görünür metin içermez. Tıklama sırası
+Sistem → Açık → Koyu → Sistem'dir. Varsayılan Sistem ve manuel seçimin cihazda
+kalıcılığı korunur. Erişilebilir ad ve tooltip mevcut modu ve sonraki eylemi söyler.
+
+Alınacaklara eklerken üç soruluk istek/ihtiyaç testi görünür. Üç cevap
+tamamlandığında sonucu gösterir; sonuç eklemeyi engellemez ve kaydedilmez.
+Fiyat girilirken ve fiyatlı bekleyen satırlarda peşin alımın finansal yorumu
+görünür. Renk yanında açık durum metni, gerekçe ve alım sonrası harcanabilir tutar
+vardır. Eksik finans/kasa verisinde olumlu değerlendirme gösterilmez; yeniden
+yükleme sunulur. Değerlendirme her ürünü ayrı ele alır; tüm listeyi aynı anda
+almayı varsaymaz. Tutarlar gizlilik tercihini izler. Hesap sözleşmesi:
+`docs/FINANCE_RULES.md`.
