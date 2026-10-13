@@ -490,6 +490,19 @@ app; there is no affordability decision surface anymore.
 - open receivables are shown as expected collection and are not added to net worth until collected
 - an open receivable with a due date can be deferred one calendar month; this changes only `due_date`, never its amount, status, balance, or ledger
 
+### Sadece takip (2026-10-13)
+
+`personal_tracking_entries` kişi, pozitif TL tutarı, işlem tarihi ve isteğe bağlı
+açıklama saklar. Geri beklenmeyen ödemeler Kişiler ekranının `Sadece takip`
+bölümünde eklenir/düzenlenir/silinir; kişi toplamları yalnız bilgi amaçlıdır.
+Bu tablo `debts` değildir ve finans snapshot'ına girmez: borç/alacak toplamı,
+beklenen gelir, net değer, nakit akışı, harcanabilir tutar ve bütçe hesapları
+etkilenmez. Ledger/hesap/kart hareketi, tahsilat, vade veya SMS eşleştirmesi
+oluşturmaz. Gerçek ödemenin zaten kayıtlı banka/kart hareketi kendi etkisini
+korur; takip kaydı ikinci bir harcama değildir. Own-row RLS uygulanır;
+JSON yedek, transaksiyonel/REST geri yükleme ve kullanıcı verisi sıfırlama
+kapsamındadır. Eski yedekte tablo yoksa geri yükleme sonrası boş kalır.
+
 ## Savings Goals
 
 Savings goals support:

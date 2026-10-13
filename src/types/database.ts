@@ -349,6 +349,14 @@ export type LoanInstallment = BaseRow & {
   note: string | null
 }
 
+/** Bilgi amaçlı kişi kayıtları; finans snapshot'ına ve para hareketlerine girmez. */
+export type PersonalTrackingEntry = BaseRow & {
+  person_name: string
+  amount: number
+  occurred_on: string
+  note: string | null
+}
+
 export type Debt = BaseRow & {
   person_name: string
   direction: DebtDirection
@@ -775,6 +783,7 @@ export type Database = {
       loans: Table<Loan, WithBaseInsert<Loan>, WithBaseUpdate<Loan>>
       loan_installments: Table<LoanInstallment, WithBaseInsert<LoanInstallment>, WithBaseUpdate<LoanInstallment>>
       debts: Table<Debt, WithBaseInsert<Debt>, WithBaseUpdate<Debt>>
+      personal_tracking_entries: Table<PersonalTrackingEntry, WithBaseInsert<PersonalTrackingEntry>, WithBaseUpdate<PersonalTrackingEntry>>
       payments: Table<Payment, WithBaseInsert<Payment>, WithBaseUpdate<Payment>>
       transaction_history: Table<TransactionHistory, WithBaseInsert<TransactionHistory>, WithBaseUpdate<TransactionHistory>>
       wishlist_items: Table<WishlistItem, WithBaseInsert<WishlistItem>, WithBaseUpdate<WishlistItem>>

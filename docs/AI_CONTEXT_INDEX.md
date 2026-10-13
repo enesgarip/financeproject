@@ -2,6 +2,16 @@
 
 Last reviewed: 2026-10-13
 
+13 Ekim 2026: Kişiler ekranında `section=takip` ile “Sadece takip” bölümü
+vardır. Geri beklenmeyen ödemeler `personal_tracking_entries` tablosunda,
+finans snapshot'ı ve SMS eşleştirmesinden ayrı saklanır. Kaynak sözleşme:
+`docs/FINANCE_RULES.md`; UI: `components/finance/PersonalTrackingPanel.tsx`,
+bilgi amaçlı kişi toplamları: `utils/personalTracking.ts` (+test), veri erişimi:
+`data/repositories/crudRepo.ts`. Migration:
+`supabase/migrations/20261013153000_personal_tracking_entries.sql`;
+CRUD/RLS/finansal etkisizlik/restore/reset kanıtı:
+`supabase/tests/personal_tracking_entries.sql`. JSON yedek kapsamına dahildir.
+
 Görsel taşma/kırpma taraması: `docs/VISUAL_REVIEW_2026-10-13.md` (19 rota;
 kart köşesi, taksit/analiz tutarı, kur açıklaması, ortak satır alt metni ve
 gider grubu eylem/etiketleme düzeni). Kaynak sözleşme `docs/UI_ARCHITECTURE.md`.

@@ -2,6 +2,13 @@ import { describe, expect, it } from 'vitest'
 import { BACKUP_TABLE_LABELS, chunk, parseBackup, RESTORE_TABLE_ORDER, rowForInsert } from './backup'
 
 describe('parseBackup', () => {
+  it('sadece takip kayıtlarını bilgi ve tarihleriyle geri yükleme kapsamına alır', () => {
+    const row = { id: 'track-1', person_name: 'Kardeşim', amount: 2500.25, occurred_on: '2026-10-13', note: 'Tamir' }
+    const parsed = parseBackup(JSON.stringify({ schema: 'financeproject-v2', tables: { personal_tracking_entries: [row] } }))
+    expect(parsed.tables.personal_tracking_entries).toEqual([row])
+    expect(parsed.totalRows).toBe(1)
+    expect(BACKUP_TABLE_LABELS.personal_tracking_entries).toBe('Sadece takip kaydı')
+  })
   it('parses a v2 backup and counts restorable rows', () => {
     const text = JSON.stringify({
       exportedAt: '2026-06-10T10:00:00Z',

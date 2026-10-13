@@ -32,6 +32,7 @@ export const RESTORE_TABLE_ORDER = [
   'kasa_buckets',
   'wishlist_items',
   'debts',
+  'personal_tracking_entries',
   // Manuel varlık değer olayları: assets'tan SONRA (FK asset_id).
   'asset_value_events',
   // Hisse işlem defteri: assets'tan SONRA (FK asset_id, set null).
@@ -329,6 +330,7 @@ export const BACKUP_TABLE_LABELS: Record<RestoreTable, string> = {
   kasa_buckets: 'Kasa kovası',
   wishlist_items: 'İstek listesi kaydı',
   debts: 'Kişi borcu/alacağı',
+  personal_tracking_entries: 'Sadece takip kaydı',
   asset_value_events: 'Varlık değer olayı',
   stock_trades: 'Hisse işlemi',
   salary_history: 'Maaş kaydı',

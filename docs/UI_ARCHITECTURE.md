@@ -21,6 +21,11 @@ Bu bir sunum kuralıdır; finans hesaplarını ve saklanan tutarları değiştir
 
 ### Arayüz dili (2026-09-05)
 
+Kişiler ekranı (2026-10-13) iki bölüm sunar: Borç / alacak ve Sadece takip.
+`section=takip` bilgi amaçlı kayıtlara doğrudan gider; kişi toplamları nötr
+çizgi listesinde, kayıtlar tarih sırasıyla gösterilir. Tutar gizleme hem
+kayıt hem toplamı kapsar. Finansal kapsam `docs/FINANCE_RULES.md` içindedir.
+
 Kaynak ve uygulama listesi: `docs/UI_COPY_REVIEW.md`. Kısa/doğal Türkçe ve
 mevcut “sen” hitabı kullanılır. Başlıklar cümle düzeninde, düğmeler eylemle
 yazılır. Gider bağlamının kullanıcıya görünen adı “Gider grubu”; DB anahtarı
