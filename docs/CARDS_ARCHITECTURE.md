@@ -1,6 +1,11 @@
 # Cards Architecture Note
 
-Last reviewed: 2026-10-12
+Last reviewed: 2026-10-13
+
+Kredi kartı marka başlığındaki dekorasyon katmanı köşe yarıçapını başlıktan
+miras alır (`rounded-[inherit]`) ve kendi içinde kırpılır. Başlığın/kartın
+taşması açık kalır; işlem menüsünü kırpmak için tüm karta `overflow-hidden`
+uygulanmaz. Bu, üst çizgi/ışığın yuvarlak köşeden taşmasını önler.
 
 Kart ayrıntısı düzeni: döküm seçenekleri ikonlu iki sütunlu menüdedir.
 Kart ayarları ve kayıt geçmişi bölümünde yinelenen borç/limit

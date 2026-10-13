@@ -68,7 +68,7 @@ export function LineRow({
         {lead}
         <div className="min-w-0">
           <p className="truncate text-[14.5px] font-semibold text-ink">{title}</p>
-          {subtitle ? <p className="mt-0.5 truncate text-xs text-ink-muted">{subtitle}</p> : null}
+          {subtitle ? <p className="mt-0.5 break-words text-xs leading-relaxed text-ink-muted">{subtitle}</p> : null}
         </div>
       </div>
 

@@ -312,7 +312,7 @@ export function CreditAccountListCard({
         style={{ backgroundImage: bankBrandGradient(row.bank_name) }}
         className="relative overflow-visible rounded-t-2xl p-4 text-white"
       >
-        <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-[inherit]">
           <div className="absolute inset-x-0 top-0 h-px bg-white/35" />
           <div className="absolute -right-8 -top-10 size-32 rounded-full bg-white/10 blur-2xl" />
         </div>

@@ -11,6 +11,11 @@ Bu doküman `/odemeler/baglamlar` ve `/varliklar/araclar` için davranış kayna
 
 ## Genel gider bağlamları
 
+13 Ekim 2026 görsel düzeni: grup satırı min-width:0 kullanır; uzun ad sarılır
+ve Tamamla/Sil düğmeleri küçülmeden görünür kalır. Kart harcaması etiketlemede
+560px altında açıklama/tarih/tutar ve grup seçicisi alt altadır. Tutar veya
+eylem kırpılmaz; etiketleme/tamamlama/silme iş kuralları değişmez.
+
 `expense_contexts.kind` şu türlerden biridir: `pet`, `health`, `hobby`, `business`, `travel`, `project` (DB `expense_contexts_kind_check` bunu zorlar). Türler tek kaynakta — `EXPENSE_CONTEXT_KINDS` registry (`utils/expenseContexts.ts`) — `{ label, categories, timeboxed }` olarak tanımlıdır; kod başka yerde tür ismini elle karşılaştırmaz (kategori/tarih/ikon hep registry'den türer). Yeni tür eklemek: registry'ye bir satır + CHECK'i genişleten migration + sayfada ikon eşlemesi.
 
 `timeboxed: false` türler (pet/health/hobby/business) süresizdir — tarih göstermez, "Süresiz" rozeti taşır. `timeboxed: true` türler (travel/project) opsiyonel bütçe + tarih aralığı taşır; burn-down tüm zamanlar birleşik giderinden hesaplanır. Kural: **düzenli/tekrar eden giderler (kira, fatura) abonelik/Ödeme Takvimi'ne aittir; bağlam bir "şey"in (özellikle düzensiz) toplam maliyeti içindir.**

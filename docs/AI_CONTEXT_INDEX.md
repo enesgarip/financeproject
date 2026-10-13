@@ -2,6 +2,14 @@
 
 Last reviewed: 2026-10-13
 
+Görsel taşma/kırpma taraması: `docs/VISUAL_REVIEW_2026-10-13.md` (19 rota;
+kart köşesi, taksit/analiz tutarı, kur açıklaması, ortak satır alt metni ve
+gider grubu eylem/etiketleme düzeni). Kaynak sözleşme `docs/UI_ARCHITECTURE.md`.
+
+Kredi kartı ayrıntısının üst köşe düzeltmesi: `pages/CardsPage.list.tsx`
+dekorasyon katmanı başlığın radius'unu miras alır; menü için başlık/kart
+overflow-visible kalır. Borç/limit/ödeme kuralları değişmedi.
+
 13 Ekim 2026: alınacaklara eklerken kalıcı kaydedilmeyen üç soruluk
 istek/ihtiyaç testi ve canlı peşin alım değerlendirmesi vardır. Finans/kasa
 verisi doğrulanmadan yorum verilmez. Tema menüsü yalnız ikonla üç mod arasında

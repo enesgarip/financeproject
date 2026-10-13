@@ -171,7 +171,7 @@ export function NetWorthTrend({
         </div>
       </CardHeader>
       <CardContent className="space-y-4 pt-3">
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 gap-2 min-[480px]:grid-cols-3">
           <StatPill
             label="Güncel"
             value={displayValue(latest.net_worth, currentRates)}
@@ -292,7 +292,7 @@ export function ForwardForecast({ data }: { data: AnalysisData }) {
         </div>
       </CardHeader>
       <CardContent className="space-y-4 pt-3">
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 gap-2 min-[480px]:grid-cols-3">
           <StatPill label="Başlangıç" value={formatAmount(activeForBarChart.startingBalance)} />
           <StatPill
             label={activeForBarChart.lowest ? `En düşük · ${shortMonth(activeForBarChart.lowest.monthKey)}` : 'En düşük'}
