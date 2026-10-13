@@ -1,5 +1,21 @@
 # Priority Backlog
 
+## 2026-10-13 — Kişilerde sadece takip kayıtları — UYGULANDI
+
+Kişiler ekranında Borç / alacak ve Sadece takip seçimi vardır. Geri beklenmeyen
+ödemeler kişi, TL tutarı, tarih ve açıklamayla ayrı tabloda saklanır;
+ekleme/düzenleme/silme ve kişi toplamı görünür. Finans snapshot'ı, borç/alacak,
+beklenen gelir, net değer, harcanabilir tutar, bütçe, ledger ve SMS eşleştirmesi
+bu veriyi kullanmaz. Own-row RLS, JSON yedek/geri yükleme ve reset kapsamı
+eklendi. Domain sözleşmesi: `docs/FINANCE_RULES.md`.
+Doğrulama: temiz `npm run db:seed:local` ve 48/48 SQL testi başarılı;
+CRUD, RLS, finansal etkisizlik, restore rollback/sahiplik ve eski yedek
+senaryoları kapsandı. Bileşen testinde ekle/düzenle/sil, toplam yenilenmesi,
+geçersiz giriş ve tutar gizleme doğrulandı. Tarayıcıdaki authenticated akış
+giriş ekranında kaldı; yerel test rehberinin şifre girişi kısıtı uygulandı.
+`npm run verify` başarılı (147 dosya / 1.563 test; lint, coverage, üretim
+dependency audit, build, bundle ve edge tipleri). DB lint temiz.
+
 ## 2026-10-13 — Görsel taşma/kırpma taraması — UYGULANDI
 
 Kart köşesi düzeltmesine ek olarak dar ekranda kesilen taksit ve analiz

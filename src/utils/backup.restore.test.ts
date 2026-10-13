@@ -77,4 +77,14 @@ describe('restoreBackup', () => {
     expect(mocks.resetOwnFinanceData).not.toHaveBeenCalled()
     expect(mocks.insertRows).not.toHaveBeenCalled()
   })
+
+  it('sadece takip kayıtlarını REST fallback yolunda yeni kullanıcıya taşır', async () => {
+    mocks.restoreViaTransactionalRpc.mockResolvedValue(null)
+    const backup = backupFixture()
+    backup.tables.personal_tracking_entries = [{ id: 'track-1', user_id: 'old-user', amount: 2500.25 }]
+    await restoreBackup(backup, 'new-user')
+    expect(mocks.insertRows).toHaveBeenCalledWith('personal_tracking_entries', [
+      { id: 'track-1', user_id: 'new-user', amount: 2500.25 },
+    ])
+  })
 })

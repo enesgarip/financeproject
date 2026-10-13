@@ -114,7 +114,7 @@ const routeMeta: Record<string, { title: string; subtitle?: string; width: Route
   '/varliklar/borsa': { title: 'Borsa', subtitle: 'Hisse işlem defteri ve portföy performansı', width: 'medium' },
   '/varliklar/araclar': { title: 'Araçlar', subtitle: 'Araç başına gider takibi ve dağılımı', width: 'wide' },
   '/borclar/krediler': { title: 'Krediler', subtitle: 'Aktif krediler ve taksit planları', width: 'wide' },
-  '/borclar/kisiler': { title: 'Borç ve alacaklar', subtitle: 'Kişisel borç ve alacaklar', width: 'medium' },
+  '/borclar/kisiler': { title: 'Kişiler', subtitle: 'Borç, alacak ve sadece takip kayıtları', width: 'medium' },
   '/odemeler': { title: 'Ödeme takvimi', subtitle: 'Planlı ödemeler ve vadeler', width: 'medium' },
   '/odemeler/hedefler': { title: 'Bütçe ve hedefler', subtitle: 'Birikim hedefleri ve bütçe takibi', width: 'medium' },
   '/odemeler/alsam-mi': { title: 'Alsam mı?', subtitle: 'Alışverişin önümüzdeki aylara etkisi', width: 'narrow' },

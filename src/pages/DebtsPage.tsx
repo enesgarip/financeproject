@@ -1,7 +1,9 @@
 import { useState } from 'react'
+import { useSearchParams } from 'react-router'
 import { CrudPage, type FormField } from '../components/CrudPage'
 import { FinancePaymentDrawer } from '../components/finance/FinancePaymentDrawer'
 import { RatesBanner } from '../components/finance/RatesBanner'
+import { PersonalTrackingPanel } from '../components/finance/PersonalTrackingPanel'
 import { BreakdownBar, HeroNumber } from '../components/serit'
 import { useMarketRates } from '../hooks/useMarketRates'
 import { useInvalidateFinanceSnapshot } from '../app/useFinanceSnapshot'
@@ -242,6 +244,8 @@ async function getBankaKartlari(): Promise<FinanceCard[]> {
 }
 
 export function DebtsPage() {
+  const [searchParams, setSearchParams] = useSearchParams()
+  const trackingSelected = searchParams.get('section') === 'takip'
   const { formatAmount } = useBalancePrivacy()
   const { snapshot } = useMarketRates()
   const invalidateSnapshot = useInvalidateFinanceSnapshot()
@@ -300,6 +304,25 @@ export function DebtsPage() {
 
   return (
     <>
+      <nav className="mb-5 flex gap-1 border-b border-line-strong" aria-label="Kişi kayıt türü">
+        {[
+          { id: 'borclar', label: 'Borç / alacak', selected: !trackingSelected },
+          { id: 'takip', label: 'Sadece takip', selected: trackingSelected },
+        ].map((section) => (
+          <button key={section.id} type="button" aria-pressed={section.selected}
+            className={`min-h-11 border-b-2 px-3 py-2 text-sm font-semibold ${section.selected ? 'border-primary text-primary' : 'border-transparent text-ink-muted hover:text-ink'}`}
+            onClick={() => setSearchParams((previous) => {
+              const next = new URLSearchParams(previous)
+              if (section.id === 'takip') next.set('section', 'takip')
+              else next.delete('section')
+              next.delete('new')
+              return next
+            })}>
+            {section.label}
+          </button>
+        ))}
+      </nav>
+      {trackingSelected ? <PersonalTrackingPanel /> : (
       <CrudPage
         table="debts"
         pageTitle="Kişiler"
@@ -422,6 +445,7 @@ export function DebtsPage() {
           )
         }}
       />
+      )}
 
       <FinancePaymentDrawer {...drawerProps} />
     </>
