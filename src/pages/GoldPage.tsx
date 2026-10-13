@@ -1,4 +1,3 @@
-import { Coins } from 'lucide-react'
 import { useMemo, useEffect, useRef } from 'react'
 import { useAuth } from '../auth/useAuth'
 import { useFinanceSnapshot } from '../app/useFinanceSnapshot'
@@ -9,21 +8,21 @@ import { SectionHeader } from '../components/finance/FinanceUI'
 import { Delta, HeroNumber, LineGroup, LineRow, SERIT_TEXT } from '../components/serit'
 import { Badge } from '../components/ui/badge'
 import { Card, CardContent } from '../components/ui/card'
+import { QueryError } from '../components/ui/query-error'
 import { useMarketRates } from '../hooks/useMarketRates'
-import type { GoldDirection, GoldLot, GoldType } from '../types/database'
+import type { Asset, GoldDirection, GoldLot, GoldType } from '../types/database'
 import { formatNumber, parseNumber } from '../utils/formatCurrency'
 import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
 import {
   GOLD_TYPE_LABELS,
   GOLD_TYPE_UNIT,
   buildGoldAccumulation,
-  summarizeGold,
   summarizeGoldType,
-  type GoldTypeSummary,
 } from '../utils/goldLedger'
 import { syncGoldLedgerAssets } from '../utils/goldLedgerSync'
+import { buildGoldHoldings } from '../utils/goldHoldings'
 import type { MarketRatesSnapshot } from '../utils/marketRates'
-import { diffTL, roundTL as round2, sumTL } from '../utils/money'
+import { roundTL as round2, sumTL } from '../utils/money'
 import { valueAsset } from '../utils/valuation'
 
 const goldFields: FormField[] = [
@@ -111,20 +110,6 @@ function goldValue(type: GoldType, quantity: number, snapshot: MarketRatesSnapsh
   )
 }
 
-function sumGoldValues(
-  summaries: GoldTypeSummary[],
-  snapshot: MarketRatesSnapshot | null,
-  quantity: 'totalQuantity' | 'knownQuantity',
-): number | null {
-  const values: number[] = []
-  for (const summary of summaries) {
-    const value = goldValue(summary.goldType, summary[quantity], snapshot)
-    if (value === null) return null
-    values.push(value)
-  }
-  return sumTL(values)
-}
-
 function buildChartData(lots: GoldLot[], snapshot: MarketRatesSnapshot | null): ChartPoint[] {
   const dated = lots
     .filter((lot) => lot.purchase_date)
@@ -206,23 +191,21 @@ function GoldLedgerAssetSync({
   return null
 }
 
-function GoldOverview({ rows, snapshot }: { rows: GoldLot[]; snapshot: MarketRatesSnapshot | null }) {
-  const summaries = useMemo(() => summarizeGold(rows), [rows])
-  if (summaries.length === 0) return null
+function GoldOverview({ rows, assets, snapshot }: { rows: GoldLot[]; assets: Asset[]; snapshot: MarketRatesSnapshot | null }) {
+  const { formatAmount, hidden } = useBalancePrivacy()
+  const overview = useMemo(() => buildGoldHoldings(rows, assets, snapshot), [rows, assets, snapshot])
+  if (overview.holdings.length === 0) return null
 
-  const totalKnownCost = sumTL(summaries.map((summary) => summary.knownCost))
-  const totalLiveValue = sumGoldValues(summaries, snapshot, 'totalQuantity')
-  const knownLiveValue = sumGoldValues(summaries, snapshot, 'knownQuantity')
-  const profit = knownLiveValue === null || totalKnownCost <= 0 ? null : diffTL(knownLiveValue, totalKnownCost)
+  const { totalKnownCost, totalValue: totalLiveValue, profit, holdings } = overview
   const profitPct = profit === null || totalKnownCost <= 0 ? null : round2((profit / totalKnownCost) * 100)
-  const gramSummary = summaries.find((summary) => summary.goldType === 'gram')
-  const ceyrekSummary = summaries.find((summary) => summary.goldType === 'ceyrek')
-  const unknownSummaries = summaries.filter((summary) => summary.unknownQuantity > 0)
+  const unknownSummaries = holdings.filter((summary) => summary.unknownQuantity > 0)
+  const valueSource = overview.usesStoredValue ? 'son kayıtlı değerle' : 'canlı alış kuruyla'
+  const displayQuantity = (quantity: number, type: GoldType) => hidden ? '••••' : formatQuantity(quantity, type)
 
   // Şerit: kahraman = güncel piyasa değeri; kâr/zarar Delta satırı, birikim
   // ve maliyet çizgi listesi. MetricCard ızgarası (4 kutu) kaldırıldı.
   return (
-    <section>
+    <section aria-label="Altın özeti">
       {/* Kur yokken kahraman rakam "0 ₺" gösteriyordu: eldeki altın duruyorken
           ekran "hiç değeri yok" diyor, hemen altındaki açıklama ise "kur
           bekleniyor" diyordu — rakam ile cümle çelişiyordu (denetim 2026-08-12 §5).
@@ -231,7 +214,7 @@ function GoldOverview({ rows, snapshot }: { rows: GoldLot[]; snapshot: MarketRat
       {totalLiveValue === null ? (
         <div>
           <p className="uppercase text-ink-faint" style={{ fontSize: 12, letterSpacing: '0.1em', lineHeight: '16px' }}>
-            Altın güncel değer
+            Toplam tahmini eder
           </p>
           <p className="mt-2 text-[22px] font-semibold leading-tight text-ink lg:text-[26px]">Kur bekleniyor</p>
           <p className="mt-1.5 text-[13px] text-ink-muted">
@@ -240,9 +223,9 @@ function GoldOverview({ rows, snapshot }: { rows: GoldLot[]; snapshot: MarketRat
         </div>
       ) : (
         <HeroNumber
-          label="Altın güncel değer"
+          label="Toplam tahmini eder"
           value={totalLiveValue}
-          description={`${rows.length} işlem · canlı alış kuruyla`}
+          description={`${overview.source === 'ledger' ? `${rows.length} işlem` : 'Varlık kayıtlarına göre'} · ${valueSource}`}
         />
       )}
 
@@ -251,22 +234,39 @@ function GoldOverview({ rows, snapshot }: { rows: GoldLot[]; snapshot: MarketRat
       <div className="mt-5">
         <LineGroup>
           <LineRow
-            title="Birikim"
-            subtitle={[
-              gramSummary ? formatQuantity(gramSummary.totalQuantity, 'gram') : null,
-              ceyrekSummary ? formatQuantity(ceyrekSummary.totalQuantity, 'ceyrek') : null,
-            ].filter(Boolean).join(' · ') || 'Kayıt yok'}
+            title="Toplam miktar"
+            subtitle={holdings.map((holding) => displayQuantity(holding.quantity, holding.goldType)).join(' · ')}
           />
-          <LineRow title="Toplam maliyet" subtitle="maliyeti kayıtlı alımlar" amount={totalKnownCost} />
+          <LineRow
+            title="Bilinen maliyet"
+            subtitle="elde kalan altının kayıtlı maliyeti"
+            amount={holdings.some((holding) => holding.knownQuantity > 0) ? totalKnownCost : undefined}
+            trailing={holdings.every((holding) => holding.knownQuantity === 0) ? <span className="text-sm text-ink-muted">Bilinmiyor</span> : undefined}
+          />
         </LineGroup>
       </div>
+
+      <LineGroup className="mt-3">
+        {holdings.map((holding) => (
+          <div key={holding.goldType} className="py-4">
+            <h2 className="text-sm font-semibold text-ink">{GOLD_TYPE_LABELS[holding.goldType]}</h2>
+            <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3">
+              <div className="min-w-0"><dt className="text-xs text-ink-muted">Eldeki miktar</dt><dd className="serit-num mt-1 break-words text-sm font-semibold text-ink">{displayQuantity(holding.quantity, holding.goldType)}</dd></div>
+              <div className="min-w-0"><dt className="text-xs text-ink-muted">Kayıtlı ayarlar</dt><dd className="mt-1 text-sm font-semibold text-ink">{holding.ayars.length === 0 ? 'Belirtilmedi' : [...holding.ayars.map((ayar) => `${ayar} ayar`), ...(holding.hasUnspecifiedAyar ? ['Bazıları belirtilmedi'] : [])].join(' · ')}</dd></div>
+              <div className="min-w-0"><dt className="text-xs text-ink-muted">Güncel eder</dt><dd className="serit-num mt-1 break-words text-sm font-semibold text-ink">{holding.value === null ? 'Kur bekleniyor' : formatAmount(holding.value)}</dd></div>
+              <div className="min-w-0"><dt className="text-xs text-ink-muted">Ortalama birim maliyet</dt><dd className="serit-num mt-1 break-words text-sm font-semibold text-ink">{holding.avgUnitCost === null ? 'Bilinmiyor' : formatAmount(holding.avgUnitCost)}</dd></div>
+            </dl>
+          </div>
+        ))}
+      </LineGroup>
+      <p className="text-xs leading-relaxed text-ink-muted">Kayıtlı ayarlar işlem bilgilerini gösterir. Tahmini eder gram/çeyrek alış kuruyla hesaplanır; ayar farkı değerlemeye dahil değildir.</p>
 
       {unknownSummaries.length > 0 ? (
         <p className="mt-4 border-t border-line pt-3 text-[12.5px]" style={{ color: SERIT_TEXT.warning }}>
           {unknownSummaries
-            .map((summary) => `${formatQuantity(summary.unknownQuantity, summary.goldType)} maliyeti kayıtsız`)
+            .map((summary) => `${displayQuantity(summary.unknownQuantity, summary.goldType)} maliyeti kayıtsız`)
             .join(' · ')}
-          . Adet toplamda sayılıyor; ortalama maliyet ve kâr/zarar sadece maliyeti kayıtlı işlemlerden hesaplanıyor.
+          . Ortalama maliyet ve kâr/zarar yalnız maliyeti bilinen miktarı kapsar.
         </p>
       ) : null}
     </section>
@@ -338,15 +338,13 @@ function validateGoldLot(formData: FormData, rows: GoldLot[], editing: GoldLot |
 }
 
 export function GoldPage() {
-  const { formatAmount } = useBalancePrivacy()
+  const { formatAmount, hidden, maskText } = useBalancePrivacy()
   const { snapshot } = useMarketRates()
   // Varlıklar sekmesinde "Gram altın" kaydı varken burada "Henüz altın işlemi yok"
   // iki ayrı gerçek gibi okunuyordu (UX turu B13): boş durumda köprü kur.
   const snapshotQuery = useFinanceSnapshot()
   const goldAssets = (snapshotQuery.data?.assets ?? []).filter((asset) => asset.category === 'Altın')
-  const goldAssetNote = goldAssets.length > 0
-    ? ` Varlıklar sekmesinde ${goldAssets.map((asset) => `${formatNumber(asset.amount)} ${asset.unit} ${asset.name}`).join(', ')} kaydın zaten var; o kayıt toplam değeri taşır, buradaki işlem defteri alım maliyetini ve kâr/zararı izler. Alımı buraya da girersen iki kayıt eşitlenir.`
-    : ''
+  const goldAssetNote = goldAssets.length > 0 ? ' Mevcut altınlarının miktarını ve ederini yukarıdaki özette görebilirsin.' : ''
 
   return (
     <CrudPage
@@ -359,7 +357,7 @@ export function GoldPage() {
       orderBy="purchase_date"
       orderAscending={false}
       emptyTitle="Henüz altın işlemi yok"
-      emptyDescription={`Gram veya çeyrek alımlarını işlem olarak ekleyince toplam adet, ortalama maliyet ve net değer otomatik güncellenir.${goldAssetNote}`}
+      emptyDescription={`Alım ve satım geçmişini ekleyince miktar ve maliyeti bu kayıtlardan takip edebilirsin.${goldAssetNote}`}
       validateForm={(formData, _values, editing, rows) => validateGoldLot(formData, rows as GoldLot[], editing as GoldLot | null)}
       getInitialValues={(row?: GoldLot) => ({
         direction: row?.direction ?? 'buy',
@@ -386,72 +384,51 @@ export function GoldPage() {
           <div className="space-y-3">
             <GoldLedgerAssetSync rows={goldRows} loading={loading} snapshot={snapshot} setError={setError} />
             <RatesBanner onSynced={reload} />
-            {!loading ? <GoldOverview rows={goldRows} snapshot={snapshot} /> : null}
-            {!loading ? <GoldAccumulationChart rows={goldRows} snapshot={snapshot} /> : null}
+            {!loading ? <GoldOverview rows={goldRows} assets={goldAssets} snapshot={snapshot} /> : null}
+            {!loading && goldRows.length === 0 && snapshotQuery.isError ? <QueryError title="Altın varlıkları yüklenemedi" message="Toplam miktar ve eder doğrulanamadı." onRetry={() => void snapshotQuery.refetch()} /> : null}
+            {!loading && goldRows.length > 0 ? (
+              <details className="border-y border-line py-3">
+                <summary className="min-h-11 cursor-pointer content-center text-sm font-semibold text-ink">Birikim grafiği</summary>
+                <GoldAccumulationChart rows={goldRows} snapshot={snapshot} />
+              </details>
+            ) : null}
           </div>
         )
       }}
-      renderTitle={(row) => `${GOLD_TYPE_LABELS[row.gold_type]}${row.direction === 'sell' ? ' (satış)' : ''}`}
+      renderTitle={(row) => `${GOLD_TYPE_LABELS[row.gold_type]}${row.direction === 'sell' ? ' (satım)' : ''}`}
       renderSubtitle={(row) => formatDate(row.purchase_date)}
-      renderDetails={(row) => [`Miktar: ${formatQuantity(row.quantity, row.gold_type)}`]}
+      renderDetails={(row) => [`Miktar: ${formatQuantity(row.quantity, row.gold_type)}`, row.ayar === null ? 'Ayar belirtilmedi' : `${row.ayar} ayar`]}
       renderCard={(row, { menu }) => {
         const lot = row as GoldLot
         const totalCost = lot.unit_price == null ? null : round2(lot.quantity * lot.unit_price)
         const noCost = lot.unit_price == null
 
         return (
-          <article className={`premium-entity-card gold-entity-card relative overflow-hidden rounded-2xl border p-4 transition-[border-color,box-shadow,transform] duration-250 hover:-translate-y-0.5 min-[390px]:p-5 ${noCost ? 'border-warning/35' : 'border-warning/22'}`}>
-            <div className="relative flex items-start justify-between gap-3">
-              <div className="flex min-w-0 items-center gap-3.5">
-                <div className="grid size-12 shrink-0 place-items-center rounded-2xl bg-warning/14 text-warning ring-1 ring-warning/16">
-                  <Coins className="size-5.5" />
-                </div>
-                <div className="min-w-0">
-                  <h2 className="truncate font-display text-lg font-bold tracking-tight text-ink">
-                    {GOLD_TYPE_LABELS[lot.gold_type]}
-                  </h2>
-                  <div className="mt-1 flex flex-wrap items-center gap-2">
-                    <p className="text-xs font-medium text-ink-muted">{formatDate(lot.purchase_date)}</p>
-                    <Badge variant={lot.direction === 'sell' ? 'destructive' : 'secondary'}>
-                      {lot.direction === 'sell' ? 'Satış' : 'Alım'}
-                    </Badge>
-                  </div>
-                </div>
+          <article className="flex items-start gap-2 border-b border-line py-3">
+            <div className="grid min-w-0 flex-1 gap-x-5 gap-y-1 sm:grid-cols-[minmax(0,1fr)_auto]">
+              <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                <h2 className="text-sm font-semibold text-ink">{lot.direction === 'sell' ? 'Satım' : 'Alım'}</h2>
+                <span className="serit-num text-sm text-ink">{hidden ? '••••' : formatQuantity(lot.quantity, lot.gold_type)}</span>
+                <span className="text-xs text-ink-muted">{lot.ayar === null ? 'Ayar belirtilmedi' : `${lot.ayar} ayar`}</span>
+                <span className="text-xs text-ink-muted">{formatDate(lot.purchase_date)}</span>
               </div>
-              <div className="entity-card-menu">{menu}</div>
-            </div>
-
-            <div className="gold-value-well relative mt-5 overflow-hidden rounded-2xl border border-warning/18 bg-warning/[0.055] p-4 dark:bg-warning/[0.075]">
-              <p className="finance-label">{lot.direction === 'sell' ? 'Satış toplamı' : 'İşlem toplamı'}</p>
-              <p className={`finance-value mt-2 truncate text-[clamp(1.65rem,6vw,2.35rem)] font-bold leading-none tracking-tight ${noCost ? 'text-ink-muted' : 'text-ink'}`}>
-                {totalCost == null ? 'Maliyet bilinmiyor' : formatAmount(totalCost)}
+              <p className="serit-num break-words text-sm font-semibold text-ink sm:text-right">
+                <span className="sr-only">İşlem toplamı: </span>
+                {totalCost == null ? 'Tutar bilinmiyor' : formatAmount(totalCost)}
               </p>
-            </div>
-
-            <div className="mt-3 grid grid-cols-2 gap-2.5">
-              <div className="finance-field min-w-0 rounded-xl px-3 py-2.5">
-                <p className="finance-label">Miktar</p>
-                <p className="finance-value mt-1.5 truncate text-base font-bold text-ink">{formatQuantity(lot.quantity, lot.gold_type)}</p>
-              </div>
-              <div className="finance-field min-w-0 rounded-xl px-3 py-2.5">
-                <p className="finance-label">{lot.direction === 'sell' ? 'Birim fiyat' : 'Birim maliyet'}</p>
-                <p className={`finance-value mt-1.5 truncate text-base font-bold ${noCost ? 'text-ink-muted' : 'text-ink'}`}>
-                  {noCost ? 'Bilinmiyor' : formatAmount(lot.unit_price!)}
-                </p>
-              </div>
-            </div>
-
-            {noCost ? (
-              <p className="mt-3 rounded-xl border border-warning/20 bg-warning/8 px-3 py-2.5 text-xs font-semibold text-warning">
-                Maliyet bilinmiyor — adede dahil, kâr/zarar hesabına dahil değil.
+              <p className="text-xs text-ink-muted sm:col-span-2">
+                {noCost
+                  ? 'Maliyet bilinmiyor · miktara dahil, kâr/zarara dahil değil.'
+                  : `Birim ${lot.direction === 'sell' ? 'fiyat' : 'maliyet'}: ${formatAmount(lot.unit_price!)}`}
               </p>
-            ) : null}
-            {lot.note ? <p className="mt-3 line-clamp-2 text-xs leading-relaxed text-ink-muted">{lot.note}</p> : null}
+              {lot.note ? <p className="break-words text-xs leading-relaxed text-ink-muted sm:col-span-2">{maskText(lot.note)}</p> : null}
+            </div>
+            <div className="shrink-0">{menu}</div>
           </article>
         )
       }}
       groupBy={(row) => GOLD_TYPE_LABELS[row.gold_type]}
-      listGridClassName="grid gap-4 min-[680px]:grid-cols-2 xl:grid-cols-2"
+      listGridClassName="grid-cols-1 gap-0 min-[760px]:grid-cols-1 xl:grid-cols-1"
     />
   )
 }

@@ -21,6 +21,30 @@ This file records the current business rules inferred from the codebase. If code
   Borç tarafı (`borç_aldım`) ise net değerden DÜŞÜLÜR — asimetri bilinçlidir:
   borcun ödeneceği kesin, alacağın tahsili değil.
 
+## Alınacaklar değerlendirmesi (2026-10-13)
+
+- Kaynak `src/utils/wishlistPlan.ts`; peşin senaryo hesabı mevcut
+  `buildPurchaseImpact` üzerinden yapılır. Tahmini fiyat alım anında nakitten
+  düşer ve etkisi sonraki aylara taşınır. Liste her ürünü ayrı değerlendirir.
+- Bu ay harcanabilir = likit + beklenen gelir − kalan yükümlülük − tampon −
+  kasa rezervi. Alım sonrası harcanabilir bu tutardan fiyatın çıkarılmasıdır.
+  Beklenen gelir bugün eldeki nakit sayılmaz: peşin fiyat mevcut likidi aşıyorsa
+  zorlayıcı, bugünkü tampon + rezerv tabanını bozuyorsa en az dikkat sonucu çıkar.
+- Altı aylık projeksiyonda negatif bakiye zorlayıcıdır; tampon + rezerv
+  tabanının altı dikkat sonucudur. İlk karşılanan ay bir tahmindir; daha sonraki
+  ayların sorunsuz olacağını veya gün içi likiditeyi garanti etmez. Model kayıtlı
+  yükümlülükleri bilir, gelecekteki yeni harcamaları tahmin etmez.
+- Alım sonrası bu ay harcanabilir eksiye düşüyorsa veya zaten eksideyse
+  zorlayıcı yorumu verilir. Bu listeye özgü yorum, Alsam mı? hesabının mevcut
+  kart/taksit sınıflandırmasını değiştirmez.
+- Fiyat yoksa değerlendirme yoktur. Snapshot/kasa rezervi doğrulanmamışsa veya
+  taksit/ekstre/ekstre ödemeleri şeması eksikse değerlendirme gösterilmez.
+- Eklemedeki üç soruluk test `src/utils/wishlistIntent.ts` içindedir: temel iş,
+  uygun alternatif ve ertelemenin somut etkisi. Sonuç düşünme desteğidir;
+  bütçe sonucunu değiştirmez, kayda yazılmaz ve alışverişi engellemez.
+- Alındı işareti ve bu değerlendirmeler para hareketi üretmez. Kart/taksit
+  senaryosunun ayrıntılı değerlendirme yeri mevcut Alsam mı? ekranıdır.
+
 ## Assets
 
 - Cash assets use category `Nakit`.
@@ -49,6 +73,17 @@ This file records the current business rules inferred from the codebase. If code
     the Gold page/ledger.
 
 ## Market Rates & Auto-Valuation
+
+Altın ekranı özeti `src/utils/goldHoldings.ts` tarafından üretilir. İşlem
+defteri varsa mevcut `summarizeGold` miktar/maliyet hesabı esas alınır; yoksa
+bağımsız (`source != gold_ledger`) altın varlıkları gram/çeyrek bazında
+birleştirilir. İki kaynak aynı özete toplanmaz. Varlık özetinde canlı alış
+kuru yoksa son kayıtlı TRY değeri kullanılır ve ekranda belirtilir; defterde
+kur yoksa eder bilinmiyor olarak kalır. Maliyeti kayıtsız miktar, miktar ve
+edere dahil; ortalama maliyet/kâr hesabının dışındadır. Kayıtlı ayarlar tüm
+işlemlerin meta bilgisidir; elde kalanın ayara göre dağılımı veya ayara göre
+fiyat düzeltmesi iddia edilmez. Ayarsız kayda varsayılan 22/24 ataması yapılmaz.
+Bu sunum hesap/banka/ledger yazma davranışını değiştirmez.
 
 Gold and foreign-currency holdings, debts, and savings goals can derive their
 TRY value from live market rates instead of a hand-typed `estimated_value_try`.

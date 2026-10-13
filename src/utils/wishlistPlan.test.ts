@@ -139,5 +139,53 @@ describe('buildWishlistPlan', () => {
   it('fiyatı olmayan maddede plan üretmez', () => {
     expect(buildWishlistPlan({ price: null, forecast, safeToSpend: 0, floor: 0, goals: [] }, today)).toBeNull()
     expect(buildWishlistPlan({ price: 0, forecast, safeToSpend: 0, floor: 0, goals: [] }, today)).toBeNull()
+    expect(buildWishlistPlan({ price: Infinity, forecast, safeToSpend: 0, floor: 0, goals: [] }, today)).toBeNull()
+  })
+
+  it('peşin alımın kalan harcanabilirini kuruşuyla gösterir', () => {
+    const plan = buildWishlistPlan({ price: 1234.56, forecast, safeToSpend: 8000, floor: 10000, goals: [] }, today)
+    expect(plan?.impact.safeToSpendAfter).toBe(6765.44)
+    expect(plan?.impact.verdict).toBe('rahat')
+  })
+
+  it('beklenen geliri bugünkü peşin alım bakiyesi saymaz', () => {
+    const plan = buildWishlistPlan({ price: 25000, forecast, safeToSpend: 40000, floor: 5000, goals: [] }, today)
+    expect(plan?.affordableNow).toBe(false)
+    expect(plan?.impact.verdict).toBe('zorlayici')
+    expect(plan?.impact.reasons[0]).toContain('beklenen gelir henüz elinde değil')
+  })
+
+  it('bugünkü alım tampon ve kasa tabanını bozuyorsa uyarır', () => {
+    const plan = buildWishlistPlan({ price: 12000, forecast, safeToSpend: 20000, floor: 10000, goals: [] }, today)
+    expect(plan?.affordableNow).toBe(false)
+    expect(plan?.impact.verdict).toBe('dikkat')
+    expect(plan?.impact.reasons[0]).toContain('ayrılmış parana')
+  })
+
+  it('bu aya sığsa bile gelecek ay bakiye eksiye düşüyorsa zorlayıcıdır', () => {
+    const futureRisk = { ...forecast, months: [month('2026-08', 'Ağustos', 20000), month('2026-09', 'Eylül', 3000)] }
+    const plan = buildWishlistPlan({ price: 5000, forecast: futureRisk, safeToSpend: 8000, floor: 1000, goals: [] }, today)
+    expect(plan?.impact.verdict).toBe('zorlayici')
+    expect(plan?.impact.reasons[0]).toContain('Eylül')
+  })
+
+  it('alım gelecekte ayrılmış para tabanını deliyorsa dikkat der', () => {
+    const futureRisk = { ...forecast, months: [month('2026-08', 'Ağustos', 20000), month('2026-09', 'Eylül', 12000)] }
+    const plan = buildWishlistPlan({ price: 5000, forecast: futureRisk, safeToSpend: 8000, floor: 10000, goals: [] }, today)
+    expect(plan?.impact.verdict).toBe('dikkat')
+  })
+
+  it('kuruş sınırında eşit fiyatı karşılar, bir kuruş fazlada uyarır', () => {
+    const input = { forecast, safeToSpend: 10000, floor: 10000, goals: [] }
+    expect(buildWishlistPlan({ ...input, price: 10000 }, today)?.affordableNow).toBe(true)
+    expect(buildWishlistPlan({ ...input, price: 10000.01 }, today)?.affordableNow).toBe(false)
+    expect(buildWishlistPlan({ ...input, price: 10000.01 }, today)?.impact.verdict).toBe('zorlayici')
+  })
+
+  it('bu ay zaten açık varken yeni alımı zorlayıcı gösterir', () => {
+    const plan = buildWishlistPlan({ price: 100, forecast, safeToSpend: -2000, floor: 1000, goals: [] }, today)
+    expect(plan?.impact.verdict).toBe('zorlayici')
+    expect(plan?.impact.safeToSpendAfter).toBe(-2100)
+    expect(plan?.impact.reasons[0]).toContain('zaten eksi')
   })
 })

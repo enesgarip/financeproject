@@ -5,7 +5,7 @@ import { useDailyNetWorthSnapshot } from '../app/useDailyNetWorthSnapshot'
 import { useAuth } from '../auth/useAuth'
 import { BalancePrivacyProvider, useBalancePrivacy } from '../hooks/useBalancePrivacy'
 import { usePushSubscriptionSync } from '../hooks/usePushSubscriptionSync'
-import { useTheme, type ThemePreference } from '../hooks/useTheme'
+import { useTheme } from '../hooks/useTheme'
 import { cn } from '../lib/utils'
 import { BottomNav } from './BottomNav'
 import { contentWidthClass, overflowNavItems, primaryNavItems, routeSubtitle, routeTitle, secondaryNavItems } from './navigation'
@@ -41,6 +41,8 @@ function LayoutInner() {
   usePushSubscriptionSync(user?.id)
   const contentWidth = contentWidthClass(pathname)
   const { preference, chooseTheme } = useTheme()
+  const nextTheme = preference === 'system' ? 'light' : preference === 'light' ? 'dark' : 'system'
+  const themeLabel = `Tema: ${preference === 'system' ? 'Sistem' : preference === 'light' ? 'Açık' : 'Koyu'}. ${nextTheme === 'system' ? 'Sistem temasına dön' : nextTheme === 'light' ? 'Açık temaya geç' : 'Koyu temaya geç'}`
   const [menuOpen, setMenuOpen] = useState(false)
   const { hidden: balancesHidden, toggleHidden: toggleBalancesHidden } = useBalancePrivacy()
   const closeMenu = useCallback(() => setMenuOpen(false), [])
@@ -109,14 +111,15 @@ function LayoutInner() {
                 <span className="hidden lg:inline">{balancesHidden ? 'Tutarları göster' : 'Tutarları gizle'}</span>
               </button>
 
-              <label className="relative inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-line-strong px-2 text-xs text-ink-muted">
+              <button
+                type="button"
+                onClick={() => chooseTheme(nextTheme)}
+                aria-label={themeLabel}
+                title={themeLabel}
+                className="inline-flex size-11 items-center justify-center rounded-lg border border-line-strong text-ink-muted transition-colors duration-[120ms] hover:bg-black/[.02] dark:hover:bg-white/[.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
                 {preference === 'system' ? <MonitorSmartphone size={15} aria-hidden="true" /> : preference === 'light' ? <Sun size={15} aria-hidden="true" /> : <Moon size={15} aria-hidden="true" />}
-                <select aria-label="Tema tercihi" title="Sistem seçeneği telefonun açık/koyu temasını takip eder" value={preference} onChange={(event) => chooseTheme(event.target.value as ThemePreference)} className="min-h-11 max-w-20 cursor-pointer bg-transparent text-ink outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                  <option value="system">Sistem</option>
-                  <option value="light">Açık</option>
-                  <option value="dark">Koyu</option>
-                </select>
-              </label>
+              </button>
 
               <div className="hidden lg:block">
                 <QuickActionsButton />
