@@ -1,5 +1,29 @@
 # Priority Backlog
 
+## 2026-10-15 — Değişken fatura ve Apple abonelik eşleştirmesi — UYGULANDI
+
+Kurum + kart + ±7 günlük dönem + tekillik kullanılır; aynı tutardaki ilgisiz
+Apple/otopark harcaması faturayı kapatamaz. Tahmini su/elektrik/doğalgaz/internet/
+mobil faturasında tutar değişebilir. Formdan kurum, abone no ve ayırt edici
+sabit tutar girilir; iCloud 169,99 / ChatGPT 499,99 mevcut plan ayarları kullanıcı
+onayına göre migration ile hazırlanır. İki plan/satır arasında tahmin yapılmaz.
+
+Mevcut SMS/PDF harcaması yeni borç yazmadan bağlanır; geçmişin gerçek banka günü
+ve tutarı append edilir, sonraki dönem tahmini kalır. Boş ay atlanmaz; bitiş
+tarihi korunur. Radarda planla çift sayım önlenir, değişken faturanın ±%15
+kısıtı kaldırılır; aynı ayda çoklu fatura ve ortak Apple açıklaması otomatik
+hizmet tespitine girmez. Bağlantı aktivitede nötrdür, nakit çıkışı sayılmaz.
+
+Gerçek geçmişin repo dışındaki yerel kopyasında 5 dönem (su 2, elektrik 2,
+iCloud 1) eşleşti; ikinci koşu 0 değişiklik yaptı. Tüm kart/hesap bakiyeleri,
+harcama satırları ve ledger aynı kaldı. ChatGPT zaten sonraki aya ilerlemişti.
+Özel finans verisi repo'ya eklenmedi. Kaynak: `docs/FINANCE_RULES.md`,
+`docs/CARD_DEBT_TRANSITIONS.md`, `docs/TRANSACTION_HISTORY.md`.
+Doğrulama: `supabase/tests/variable_bill_matching.sql`, saf matcher/abonelik/
+aktivite/nakit akışı regresyonları; `npm run verify` başarılı (148 dosya /
+1.628 test), temiz yerel migration/seed ve 49/49 SQL testi başarılı. DB lint
+hatasız; yeni alanların dolu/eski yedek restore uyumluluğu doğrulandı.
+
 ## 2026-10-15 — Son taksit, eski manuel plan ve PDF occurrence ayrımı — UYGULANDI
 
 Taksit devamının eşleştirmesi bankanın gerçek sırasına göre yapılır. Eski manuel

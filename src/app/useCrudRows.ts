@@ -15,7 +15,7 @@ export function crudRowsKey(table: CrudTableName, userId: string | undefined, or
   return ['crud-rows', table, userId ?? 'anon', orderBy, ascending] as const
 }
 
-function crudRowsInvalidationKey(table: CrudTableName, userId: string | undefined) {
+export function crudRowsInvalidationKey(table: CrudTableName, userId: string | undefined) {
   return ['crud-rows', table, userId ?? 'anon'] as const
 }
 

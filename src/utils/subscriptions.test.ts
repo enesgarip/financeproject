@@ -18,6 +18,35 @@ function payment(overrides: Partial<Payment> = {}): Payment {
 }
 
 describe('buildSubscriptionSummary', () => {
+  it('recognizes variable utility bills but keeps ordinary purchases consistent', () => {
+    const bills = [expense('a', '2026-05-08', 188, 'ULUDAĞ ELEKTRİK'),
+      expense('b', '2026-06-08', 299, 'ULUDAĞ ELEKTRİK'),
+      expense('c', '2026-07-08', 352, 'ULUDAĞ ELEKTRİK')]
+    expect(buildSubscriptionSummary(bills, [], null, new Date(2026, 6, 15)).items[0]?.amount).toBe(299)
+    expect(buildSubscriptionSummary(bills.map((e) => ({ ...e, description: 'MARKET' })), [], null, new Date(2026, 6, 15)).items).toHaveLength(0)
+  })
+
+  it('does not merge multiple contracts or separate cards into a utility subscription', () => {
+    const bills = [expense('a', '2026-05-08', 188), expense('b', '2026-06-08', 299), expense('c', '2026-07-08', 352)]
+    expect(buildSubscriptionSummary([...bills, expense('d', '2026-07-09', 440)], [], null, new Date(2026, 6, 15)).items).toHaveLength(0)
+    expect(buildSubscriptionSummary(bills.map((e, i) => ({ ...e, card_id: `c${i}` })), [], null, new Date(2026, 6, 15)).items).toHaveLength(0)
+  })
+
+  it('excludes already planned variable bills without modifying bank expense notes', () => {
+    const bills = [expense('a', '2026-05-08', 188, 'ULUDAĞ ELEKTRİK'),
+      expense('b', '2026-06-08', 299, 'ULUDAĞ ELEKTRİK'), expense('c', '2026-07-08', 352, 'ULUDAĞ ELEKTRİK')]
+    const result = buildSubscriptionSummary(bills, [payment({ title: 'Elektrik', amount_status: 'estimated' })], null, new Date(2026, 6, 15))
+    expect(result.items).toHaveLength(1)
+    expect(result.items[0]?.source).toBe('recurring_payment')
+    expect(bills.every((e) => e.note === null)).toBe(true)
+  })
+
+  it('does not invent a service from the shared Apple merchant', () => {
+    const bills = [expense('a', '2026-05-08', 499.99, 'APPLE.COM/BILL'),
+      expense('b', '2026-06-08', 499.99, 'APPLE.COM/BILL'), expense('c', '2026-07-08', 499.99, 'APPLE.COM/BILL')]
+    const result = buildSubscriptionSummary(bills, [payment({ title: 'ChatGPT', amount: 499.99, match_amount: 499.99 })], null, new Date(2026, 6, 15))
+    expect(result.items.map((e) => e.title)).toEqual(['ChatGPT'])
+  })
   it('uses only recent observations when calculating consistency and amount', () => {
     const result = buildSubscriptionSummary([
       expense('old', '2025-10-01', 100),

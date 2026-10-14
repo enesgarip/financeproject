@@ -2,6 +2,16 @@
 
 Last reviewed: 2026-10-15
 
+15 Ekim 2026: değişken fatura / abonelik eşleştirmesi kurum + kart + dönem +
+tekillik kullanır. Saf TS/SQL ikizi: `utils/paymentMatching.ts` (+test),
+`20261015010000_variable_bill_matching.sql`; banka kaydını yeniden borç yazmadan
+bağlayan authenticated RPC: `reconcile_card_payment_expenses`. Arayüzden kurum,
+abone no ve ayırt edici tutar düzenlenebilir (`pages/PaymentsPage.tsx`).
+Mevcut iCloud 169,99 / ChatGPT 499,99 ayarları kullanıcı onaylıdır. Radarda
+kanıtlı değişken faturanın ±%15 engeli ve planla çift sayımı kalkar; ortak Apple
+satırından hizmet adı uydurulmaz. Sözleşme `docs/FINANCE_RULES.md`,
+`docs/TRANSACTION_HISTORY.md`, SQL kanıtı `supabase/tests/variable_bill_matching.sql`.
+
 15 Ekim 2026: Veri sağlığı taksit devamını bankanın gerçek `N.Tk` sırasına
 çevirir; eski manuel kalan-adet planları, değişken nakit avans bileşenleri ve
 son taksidin 1 kuruş farkı desteklenir. Aynı PDF'deki ayrı occurrence satırları,
@@ -360,7 +370,7 @@ invalidate et (örnek: AnalysisPage abonelik→plan, PlanningPage maaş şeridi)
 | **Alışveriş listesi** | `utils/wishlistPlan.ts` (+test; mevcut nakit + aylık harcanabilir + altı aylık peşin etki; tampon/kasa tabanı ve hedef payı), `utils/wishlistIntent.ts` (üç soruluk, kalıcı kaydedilmeyen istek/ihtiyaç testi), `utils/wishlistAge.ts` (+test; 30 gün rozetleri), `utils/purchaseEffort.ts` (+test; iş günü / çıkış günü / hedef payı) | `data/repositories/wishlistRepo.ts`, `hooks/useWishlistItems.ts` (paylaşılan sorgu + `WISHLIST_QUERY_KEY`) | `pages/WishlistPage.tsx` (snapshot + rezerv doğrulanmadan finansal yorum yok), `pages/WishlistPage.assessment.tsx` (ekleme testi ve ortak yorum sunumu), `pages/PurchaseDecisionPage.tsx` (liste köprüsü; `?tutar=` ile ters yön) |
 | **Finansal rapor (PDF/AI paylaşım)** | `utils/financialReport.ts` (+test; anonim kart/hedef, hesap/nakit/harcanabilir, planlanan–kaydedilen ödeme ayrımı, taksit + 30 gün + harcama eğilimi; mevcut domain util'lerine delege) | `app/useFinanceSnapshot.ts` (tam ekstre + kısmi ödeme + hedef kaynakları), `hooks/useMarketRates.ts`, `hooks/useSafeToSpend.ts` (kasa + tampon) | `pages/AnalysisPage.reports.tsx` (mobil tam genişlik kopyala/PDF, pano hata/başarı durumu) |
 | **Aylık özet / kategori dağılımı** | `utils/monthlySummary.ts` | — | `pages/AnalysisPage.reports.tsx` (MonthlyReport) |
-| **Abonelik / sabit gider yönetimi** | `utils/subscriptions.ts` (+test; ≥3 ay + ±%15 medyan tespiti; `buildSubscriptionPaymentDraft` tek tık "Planla" → bank_auto+kart bağlı aylık ödeme, yalnız kredi kartı kaynaklı — çift sayma yok; `subscriptionAlreadyPlanned` rozeti) | — | `pages/AnalysisPage.panels.tsx` (SubscriptionsPanel; yazma `saveCrudRow('payments')`) |
+| **Abonelik / sabit gider yönetimi** | `utils/paymentMatching.ts` (+test; kurum/ref/tutar SQL ikizi), `utils/subscriptions.ts` (+test; aynı kart ≥3 ay, tanınan tekil faturada değişken tutar, diğerinde ±%15; `buildSubscriptionPaymentDraft` tek tık "Planla" → bank_auto+kart bağlı aylık ödeme, yalnız kredi kartı kaynaklı — çift sayma yok; `subscriptionAlreadyPlanned` rozeti) | `data/repositories/cardsRepo.ts` (`reconcileCardPaymentExpenses`), `financeSnapshotRepo.ts` (bakım), `supabase/tests/variable_bill_matching.sql` | `pages/PaymentsPage.tsx` (kurum/abone no/tutar), `pages/AnalysisPage.panels.tsx` (SubscriptionsPanel; yazma `saveCrudRow('payments')`) |
 | **Paylaşılabilir özet kartı** | `utils/shareableCard.ts` | — | `pages/AnalysisPage.reports.tsx` (MonthlyReport "Kart" butonu) |
 | **Yıl sonu finansal rapor** | `utils/yearEndReport.ts` | — | `pages/AnalysisPage.reports.tsx` (YearEndReport) |
 | **Forecast / senaryo / FIRE / enflasyon** | `utils/cashFlowForecast.ts`, `utils/scenarioForecast.ts`, `utils/financeObligationRules.ts`, `utils/inflationShield.ts` | `financeSnapshotRepo.ts` | `pages/DashboardPage.tsx`, `pages/AnalysisPage.tsx`, `pages/AnalysisDetailPage.tsx` |

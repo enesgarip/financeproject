@@ -32,6 +32,18 @@ declare
   v_expected bigint;
   v_drift numeric;
 begin
+  -- Yeni ödeme eşleştirme alanları da normal JSON round-trip kapsamındadır.
+  insert into public.payments(user_id,title,amount,amount_status,due_date,payment_method,
+    recurrence,recurrence_day,match_merchant,match_reference,match_amount)
+  values(v_user,'Restore Apple',169.99,'estimated','2026-11-11','manual','monthly',11,
+    'APPLE.COM/BILL','test-ref',169.99);
+  insert into public.transaction_history(user_id,type,title,amount,source_table,source_id,
+    matched_card_expense_id,payment_due_date)
+  select v_user,'payment','Restore eşleşme',169.99,'payments',p.id,e.id,'2026-10-11'
+  from public.payments p cross join lateral (
+    select id from public.card_expenses where user_id = v_user order by id limit 1
+  ) e where p.user_id = v_user and p.title = 'Restore Apple';
+
   -- Seed verisinden "export" derle (ledger + settlement tabloları bilinçli yok).
   foreach v_tbl in array v_order loop
     execute pg_catalog.format(
@@ -89,6 +101,12 @@ begin
     end if;
   end loop;
 
+  if not exists (select 1 from public.payments where user_id = v_user and title = 'Restore Apple'
+    and match_merchant = 'APPLE.COM/BILL' and match_reference = 'test-ref' and match_amount = 169.99)
+    or not exists (select 1 from public.transaction_history where user_id = v_user
+      and title = 'Restore eşleşme' and matched_card_expense_id is not null and payment_due_date = '2026-10-11')
+    then raise exception 'BAŞARISIZ: eşleştirme metadata round-trip kayboldu.'; end if;
+
   -- 4) Ledger'lar opening'le dürüstçe yeniden başladı: borç/bakiye = projeksiyon.
   select coalesce(sum(pg_catalog.abs(c.debt_amount - pg_catalog.round(coalesce(l.s, 0) / 100.0, 2))), 0)
   into v_drift
@@ -117,6 +135,15 @@ begin
       raise exception 'BAŞARISIZ: settlement işareti sıyrılmadı.';
     end if;
   end if;
+
+  v_report := public.restore_user_finance_data_tx(
+    jsonb_set(jsonb_set(v_payload, '{tables,payments}',
+      (select jsonb_agg(r - 'match_merchant' - 'match_reference' - 'match_amount') from jsonb_array_elements(v_payload->'tables'->'payments') r)),
+      '{tables,transaction_history}',
+      (select jsonb_agg(r - 'matched_card_expense_id' - 'payment_due_date') from jsonb_array_elements(v_payload->'tables'->'transaction_history') r)));
+  if exists (select 1 from public.payments where user_id = v_user and match_amount is not null)
+    or exists (select 1 from public.transaction_history where user_id = v_user and matched_card_expense_id is not null)
+    then raise exception 'BAŞARISIZ: eski yedek NULL varsayılanı korunmadı.'; end if;
 
   -- 5b) ESKİ-YEDEK uyumluluğu: şemadan önce alınmış yedekte yeni kolonlar
   --     yoktur (ör. bugünkü budgets.limit_anchor). Eksik kolon DEFAULT almalı

@@ -2,6 +2,8 @@
  * Abonelik / düzenli gider tespiti. İki kaynaktan:
  *  - Kart harcamaları: aynı açıklamayla son ~6 ayda ≥3 ay tekrar eden VE tutarı
  *    tutarlı (medyandan ±%15 sapma içinde) olanlar otomatik abonelik sayılır.
+ *    Tanınan fatura kurumlarında tutar değişebilir; aynı kart/açıklama ve
+ *    ayda tek hareket gerekir. Ortak Apple açıklamasından hizmet uydurulmaz.
  *    Medyan kullanılır ki tek seferlik sıçrama ortalamayı bozmasın. 2 ay eşiği
  *    benzin/market gibi tesadüfen tutarlı tekrarları abonelik sanıyordu (ör. OPET);
  *    o yüzden eşik 3 ay.
@@ -12,6 +14,7 @@ import type { CardExpense, Payment } from '../types/database'
 import { sumTL } from './money'
 import { median } from './spendingStats'
 import { normalizeSearchText } from './searchText'
+import { isVariableBill, paymentMatchKey, paymentMatchesExpense, paymentProvider } from './paymentMatching'
 
 export type SubscriptionItem = {
   id: string
@@ -66,11 +69,18 @@ export function buildSubscriptionSummary(
   // when posted. The payment itself is already listed below, so exclude that
   // generated expense from automatic subscription discovery.
   for (const expense of posted) {
-    const key = normalizeSearchText(expense.description)
+    // Shared Apple merchant does not identify a service; named plans own it.
+    if (paymentProvider(expense.description) === 'apple') continue
+    const variable = isVariableBill(expense.description)
+    const key = `${expense.card_id}|${variable ? paymentMatchKey(expense.description) : normalizeSearchText(expense.description)}`
     const normalizedNote = normalizeSearchText(expense.note)
     const generatedFromPayment = /[oö]deme kayd[ıi]ndan olu[şs]turuldu/.test(normalizedNote)
       || /[oö]deme kayd[ıi]yla sms [uü]zerinden e[şs]le[şs]tirildi/.test(normalizedNote)
-    if (!key || generatedFromPayment) continue
+    const alreadyPlanned = payments.some((payment) => payment.status === 'bekliyor'
+      && payment.recurrence === 'monthly' && payment.payment_method === 'bank_auto'
+      && payment.auto_source_card_id === expense.card_id
+      && paymentMatchesExpense(payment, expense.description, expense.amount))
+    if (!expense.description.trim() || generatedFromPayment || alreadyPlanned) continue
     if (!byDesc.has(key)) byDesc.set(key, { observations: [] })
     const bucket = byDesc.get(key)!
     const m = monthPrefix(expense.spent_at)
@@ -95,7 +105,10 @@ export function buildSubscriptionSummary(
     const med = median(amounts)
     if (med === 0) continue
     const consistent = amounts.every((a) => Math.abs(a - med) / med <= TOLERANCE)
-    if (!consistent) continue
+    const variableBill = isVariableBill(recent[0]!.description)
+    // Only verified utility providers may vary; ordinary shopping keeps ±15%.
+    // Multiple charges in a month are ambiguous (two contracts or duplicates).
+    if ((!consistent && !variableBill) || (variableBill && recentMonths.size !== recent.length)) continue
 
     const latest = [...recent].sort((a, b) => b.month.localeCompare(a.month))[0]!
     const isActive = latest.month >= offsetMonthPrefix(now, -1)
@@ -206,6 +219,7 @@ export function subscriptionAlreadyPlanned(item: SubscriptionItem, payments: Pay
   const key = normalizeSearchText(item.title)
   if (!key) return false
   return payments.some(
-    (payment) => payment.recurrence === 'monthly' && normalizeSearchText(payment.title) === key,
+    (payment) => payment.recurrence === 'monthly' && (normalizeSearchText(payment.title) === key
+      || (payment.auto_source_card_id === item.sourceCardId && paymentMatchesExpense(payment, item.title, item.amount))),
   )
 }

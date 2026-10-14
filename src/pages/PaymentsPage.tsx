@@ -7,7 +7,7 @@ import { Alert } from '../components/ui/alert'
 import { Badge } from '../components/ui/badge'
 import { HeroNumber, SERIT_TEXT } from '../components/serit'
 import { useFinanceSnapshot, useInvalidateFinanceSnapshot } from '../app/useFinanceSnapshot'
-import { fetchCards } from '../data/repositories/cardsRepo'
+import { fetchCards, reconcileCardPaymentExpenses } from '../data/repositories/cardsRepo'
 import { saveCrudRow } from '../data/repositories/crudRepo'
 import { sortPaymentAccounts } from '../services/financePaymentActions'
 import type {
@@ -105,6 +105,9 @@ const baseFields: FormField[] = [
     type: 'date',
     visibleWhen: { field: 'recurrence', value: 'monthly' },
   },
+  { name: 'match_merchant', label: 'Bankadaki kurum / işyeri adı (isteğe bağlı)', type: 'text', visibleWhen: { field: 'payment_method', value: 'bank_auto' } },
+  { name: 'match_reference', label: 'Abone / sözleşme numarası (isteğe bağlı)', type: 'text', visibleWhen: { field: 'payment_method', value: 'bank_auto' } },
+  { name: 'match_amount', label: 'Ayırt edici sabit tutar (Apple gibi ortak işyerleri için)', type: 'number', min: '0.01', step: '0.01', visibleWhen: { field: 'payment_method', value: 'bank_auto' } },
   { name: 'note', label: 'Not', type: 'textarea' },
 ]
 
@@ -121,6 +124,9 @@ function validatePaymentForm(formData: FormData) {
   }
   if (paymentMethod === 'bank_auto' && !String(formData.get('auto_source_card_id') ?? '').trim()) {
     errors.auto_source_card_id = 'Banka talimatı için bir kredi kartı seç.'
+  }
+  if (String(formData.get('match_amount') ?? '').trim() && parseNumber(formData.get('match_amount')) <= 0) {
+    errors.match_amount = 'Ayırt edici tutar 0’dan büyük olmalı.'
   }
   return errors
 }
@@ -364,7 +370,11 @@ export function PaymentsPage() {
         emptyDescription="Yaklaşan kira, fatura veya tek seferlik ödemelerini buradan ekleyebilirsin."
         orderBy="due_date"
         validateForm={validatePaymentForm}
-        afterSave={async () => {
+        afterSave={async (row, _action, helpers) => {
+          if (row.payment_method === 'bank_auto') {
+            const result = await reconcileCardPaymentExpenses()
+            if (!result.ok) helpers.setError(`Plan kaydedildi; ${result.error.message}`)
+          }
           await invalidateSnapshot()
         }}
         afterDelete={async () => {
@@ -395,6 +405,9 @@ export function PaymentsPage() {
           recurrence_day: row?.recurrence_day ?? (row?.due_date ? new Date(`${row.due_date}T00:00:00`).getDate() : new Date().getDate()),
           recurrence_end_date: row?.recurrence_end_date ?? '',
           auto_source_card_id: row?.auto_source_card_id ?? '',
+          match_merchant: row?.match_merchant ?? '',
+          match_reference: row?.match_reference ?? '',
+          match_amount: row?.match_amount ?? '',
           status: row?.status ?? 'bekliyor',
           note: row?.note ?? '',
         })}
@@ -418,6 +431,9 @@ export function PaymentsPage() {
             recurrence_day: recurrence === 'monthly' ? Number(formData.get('recurrence_day')) : null,
             recurrence_end_date: recurrence === 'monthly' ? String(formData.get('recurrence_end_date') ?? '') || null : null,
             auto_source_card_id: autoSourceCardId,
+            match_merchant: paymentMethod === 'bank_auto' ? String(formData.get('match_merchant') ?? '').trim() || null : null,
+            match_reference: paymentMethod === 'bank_auto' ? String(formData.get('match_reference') ?? '').trim() || null : null,
+            match_amount: paymentMethod === 'bank_auto' && String(formData.get('match_amount') ?? '').trim() ? parseNumber(formData.get('match_amount')) : null,
             note: String(formData.get('note') ?? '') || null,
           }
         }}

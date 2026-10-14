@@ -16,6 +16,7 @@ import {
 } from './importMatch'
 import { diffTL, roundTL } from './money'
 import { normalizeSearchText } from './searchText'
+import { paymentMatchesExpense, type PaymentMatchRule } from './paymentMatching'
 
 export type DenizBankMovementBankStatus = 'pending' | 'posted'
 export type DenizBankMovementAppStatus = 'provision' | 'posted'
@@ -102,7 +103,7 @@ export type DenizBankInstallmentMatch = {
   installment: MovementInstallmentMatchRow
 }
 
-export type MovementPaymentMatchRow = {
+export type MovementPaymentMatchRow = PaymentMatchRule & {
   id: string
   title: string
   amount: number
@@ -274,7 +275,7 @@ function descriptionsCompatible(left: string, right: string | null | undefined) 
   const leftTokens = new Set(leftKey.split(' ').filter((token) => token.length >= 3))
   const rightTokens = rightKey.split(' ').filter((token) => token.length >= 3)
   const common = rightTokens.filter((token) => leftTokens.has(token)).length
-  return common >= Math.min(2, rightTokens.length)
+  return rightTokens.length > 0 && common >= Math.min(2, rightTokens.length)
 }
 
 function isoDayNumber(value: string): number | null {
@@ -527,7 +528,7 @@ export function matchDenizBankMovementPayments(
 ): MovementPaymentMatchResult {
   const active = plannedPayments.filter((payment) => (
     payment.status === 'bekliyor' &&
-    payment.amount > 0 &&
+    (payment.amount > 0 || (payment.payment_method === 'bank_auto' && payment.amount_status === 'estimated')) &&
     (!payment.auto_source_card_id || payment.auto_source_card_id === cardId)
   ))
   const usedIndices = new Set<number>()
@@ -547,10 +548,18 @@ export function matchDenizBankMovementPayments(
     for (let index = 0; index < active.length; index++) {
       if (usedIndices.has(index)) continue
       const payment = active[index]
-      const sameAmount = Math.abs(diffTL(payment.amount, movement.amount)) <= AMOUNT_MATCH_TOLERANCE_TL
+      const sameAmount = payment.match_amount != null
+        ? paymentMatchesExpense(payment, movement.description, movement.amount)
+        : Math.abs(diffTL(payment.amount, movement.amount)) <= AMOUNT_MATCH_TOLERANCE_TL
       const distance = dateDistanceDays(payment.due_date, movement.date)
       if (distance == null || distance > PAYMENT_DATE_MATCH_WINDOW_DAYS) continue
 
+      const automatic = payment.payment_method === 'bank_auto'
+      if (automatic && payment.auto_source_card_id !== cardId) continue
+      if (automatic && (!paymentMatchesExpense(payment, movement.description, movement.amount)
+        || bankMovements.filter((row) => !row.isInstallment
+          && (dateDistanceDays(payment.due_date, row.date) ?? Infinity) <= PAYMENT_DATE_MATCH_WINDOW_DAYS
+          && paymentMatchesExpense(payment, row.description, row.amount)).length !== 1)) continue
       const titleCompatible = descriptionsCompatible(movement.description, payment.title)
       const tiedToThisCard = payment.auto_source_card_id === cardId
       // Su/elektrik gibi değişken faturalar tahmini tutarla planlanır; banka
@@ -560,7 +569,7 @@ export function matchDenizBankMovementPayments(
         && payment.payment_method === 'bank_auto'
         && payment.amount_status === 'estimated'
         && tiedToThisCard
-        && titleCompatible
+        && paymentMatchesExpense(payment, movement.description, movement.amount)
       if (!sameAmount && !relaxedEstimatedAmount) continue
 
       candidates.push({ index, distance, titleCompatible, tiedToThisCard, relaxedEstimatedAmount })
@@ -569,7 +578,8 @@ export function matchDenizBankMovementPayments(
     const exactAmountCandidates = candidates.filter((candidate) => !candidate.relaxedEstimatedAmount)
     // Tutarı gevşetilmiş eşleşme yalnız TEK adayda güvenlidir. Aynı tarih/kartta
     // iki benzer tahmini talimat varsa bankanın hangi planı kapattığını uydurma.
-    const eligibleCandidates = exactAmountCandidates.length > 0
+    const automaticAmbiguous = candidates.filter((candidate) => active[candidate.index].payment_method === 'bank_auto').length > 1
+    const eligibleCandidates = automaticAmbiguous ? [] : exactAmountCandidates.length > 0
       ? exactAmountCandidates
       : candidates.length === 1
         ? candidates

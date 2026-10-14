@@ -1,6 +1,6 @@
 # Transaction History Side Effects
 
-Last reviewed: 2026-08-12
+Last reviewed: 2026-10-15
 
 This document is the source of truth for `transaction_history` side effects. Read
 it before changing a finance mutation, RPC wrapper, payment drawer action, or
@@ -103,3 +103,17 @@ When changing a mutation side effect:
    `source_id`.
 5. Run at least `git diff --check`; for code changes also run targeted tests,
    `npm run test:unit`, `npm run lint`, and `npm run build`.
+
+## Existing card expense association (2026-10-15)
+
+`reconcile_card_payment_expenses` (also called privately by the SMS writer)
+appends a `payment` row with `source_table='payments'`, the payment id, actual
+bank amount/date, `matched_card_expense_id`, and the original `payment_due_date`.
+Both expense and payment-period identities are unique per user. No existing
+history, card expense, balance, or ledger row is rewritten. It proves the bill
+was charged to the card, not that cash paid the card statement. Activity feed
+shows this association as neutral; realized cash flow classifies it as a
+card-funded bill even after its payment plan is deleted or its funding changes.
+The real expense remains the sole card-spending record. Old history has NULL
+metadata; old backups remain compatible through column defaults. Metadata is
+included in normal JSON history export/restore/reset, without another table.

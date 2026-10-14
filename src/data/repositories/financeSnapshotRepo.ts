@@ -215,7 +215,7 @@ export async function postDueCardInstallments(): Promise<Result<number>> {
  * ödemeler BM-5'ten beri proaktif yazılmaz — kayıt SMS/ekstre importundan gelir.
  * Kur senkronu best-effort'tur; bakım RPC hataları migration/RPC drift'i dahil görünür kalır.
  *
- * Dönüş: bakımın DEĞİŞTİRDİĞİ satır toplamı (taksit + kesim + değerleme). 0 ise
+ * Dönüş: bakımın DEĞİŞTİRDİĞİ satır toplamı (taksit + kesim + ödeme eşleştirme + değerleme). 0 ise
  * çağıranın snapshot'ı yeniden çekmesi gerekmez — çoğu koşuda durum budur.
  */
 export async function runFinanceMaintenance(): Promise<number> {
@@ -232,11 +232,12 @@ export async function runFinanceMaintenance(): Promise<number> {
 
   const cardInstallments = await supabase.rpc('post_due_card_installments')
   const statementCut = await supabase.rpc('cut_due_card_statements')
-  const maintenanceError = [cardInstallments.error, statementCut.error].find(Boolean)
+  const paymentMatches = await supabase.rpc('reconcile_card_payment_expenses')
+  const maintenanceError = [cardInstallments.error, statementCut.error, paymentMatches.error].find(Boolean)
   if (maintenanceError) {
     await valuationSync
     throw new Error(financeMaintenanceErrorMessage(maintenanceError))
   }
 
-  return (cardInstallments.data ?? 0) + (statementCut.data ?? 0) + (await valuationSync)
+  return (cardInstallments.data ?? 0) + (statementCut.data ?? 0) + (paymentMatches.data ?? 0) + (await valuationSync)
 }

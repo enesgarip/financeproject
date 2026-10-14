@@ -8,6 +8,7 @@ import {
 } from '../data/repositories/financeSnapshotRepo'
 
 import { financeSnapshotKey } from './financeSnapshotKey'
+import { crudRowsInvalidationKey } from './useCrudRows'
 
 export type { FinanceSnapshot }
 export { financeSnapshotKey }
@@ -54,7 +55,10 @@ export function useFinanceSnapshot() {
     queryFn: async () => {
       const snapshotPromise = fetchFinanceSnapshot()
       runFinanceMaintenanceInBackground().then((changedRows) => {
-        if (changedRows > 0) queryClient.invalidateQueries({ queryKey: financeSnapshotKey(userId) })
+        if (changedRows > 0) {
+          queryClient.invalidateQueries({ queryKey: financeSnapshotKey(userId) })
+          queryClient.invalidateQueries({ queryKey: crudRowsInvalidationKey('payments', userId) })
+        }
       })
       return snapshotPromise
     },

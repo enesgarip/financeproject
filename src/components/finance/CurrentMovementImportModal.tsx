@@ -9,6 +9,7 @@ import {
   fetchCardExpenseMatchRows,
   fetchCardInstallmentMatchRows,
   fetchCardPaymentMatchRows,
+  reconcileCardPaymentExpenses,
   payPaymentFromCardImport,
   recordCardInstallmentCarryover,
   type ExpenseMatchRow,
@@ -236,7 +237,7 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
       }))
 
       const unmatchedNonInstallments = result.unmatched.filter((m) => !m.isInstallment)
-      const paymentMatchResult = matchDenizBankMovementPayments(unmatchedNonInstallments, paymentsResult.data, card.id)
+      const paymentMatchResult = matchDenizBankMovementPayments(parsed.movements.filter((m) => !m.isInstallment), paymentsResult.data, card.id)
       const plannedPaymentByMovement = new Map<string, PaymentMatchRow>(
         paymentMatchResult.matches.map(({ movement, payment }) => [movement.rawLine, payment as PaymentMatchRow]),
       )
@@ -360,7 +361,7 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
 
     for (const item of toImport) {
       const { movement, plannedPayment, sourceEventId } = item
-      const result = plannedPayment
+      const result = plannedPayment?.payment_method === 'manual'
         ? await payPaymentFromCardImport({
           paymentId: plannedPayment.id,
           sourceCardId: card.id,
@@ -449,11 +450,13 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
       if (!correction.error) setDriftCorrected(true)
     }
 
+    const reconciliation = await reconcileCardPaymentExpenses()
+    if (!reconciliation.ok) errors.push(reconciliation.error.message)
     const parts: string[] = []
     if (importedCount) parts.push(`${importedCount} hareket içe aktarıldı`)
     if (promotedCount) parts.push(`${promotedCount} provizyon kesinleşti`)
     if (cancelledCount) parts.push(`${cancelledCount} harcama iptal edildi`)
-    setResultMessage(parts.join(', '))
+    setResultMessage(parts.join(', ') + (errors.length ? ` · ${errors.join('; ')}` : ''))
     setApplying(false)
     await loadAppDebtAfterImport()
     setStep('done')

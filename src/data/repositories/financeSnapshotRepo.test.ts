@@ -25,6 +25,7 @@ describe('financeSnapshotRepo.runFinanceMaintenance', () => {
   beforeEach(() => {
     mocks.ensureRatesLoaded.mockReset()
     mocks.rpc.mockReset()
+    mocks.rpc.mockResolvedValue({ data: 0, error: null })
     mocks.syncAutoValuedRows.mockReset()
     mocks.ensureRatesLoaded.mockResolvedValue({ rates: 'snapshot' })
     mocks.syncAutoValuedRows.mockResolvedValue({ updated: 1, assets: 1, debts: 0, goals: 0, failed: 0 })
@@ -42,7 +43,8 @@ describe('financeSnapshotRepo.runFinanceMaintenance', () => {
     // BM-5: kart talimatlı ödemeler proaktif yazılmaz (post_due_card_auto_payments kaldırıldı).
     expect(mocks.rpc).toHaveBeenNthCalledWith(1, 'post_due_card_installments')
     expect(mocks.rpc).toHaveBeenNthCalledWith(2, 'cut_due_card_statements')
-    expect(mocks.rpc).toHaveBeenCalledTimes(2)
+    expect(mocks.rpc).toHaveBeenNthCalledWith(3, 'reconcile_card_payment_expenses')
+    expect(mocks.rpc).toHaveBeenCalledTimes(3)
     expect(mocks.ensureRatesLoaded).toHaveBeenCalledTimes(1)
     expect(mocks.syncAutoValuedRows).toHaveBeenCalledWith({ rates: 'snapshot' })
   })
