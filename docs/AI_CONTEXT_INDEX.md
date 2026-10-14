@@ -2,6 +2,11 @@
 
 Last reviewed: 2026-10-15
 
+15 Ekim 2026 canlı kontrol eki: `match_amount` ile kullanıcı tarafından
+doğrulanan sabit abonelik fiyatına, eski ayların medyanıyla daha düşük/yüksek
+tutar önerilmez (`utils/paymentEstimate.ts` ve regresyonu). Kart/ödeme/ledger
+yazması değişmez; değişken fatura önerileri korunur.
+
 15 Ekim 2026: değişken fatura / abonelik eşleştirmesi kurum + kart + dönem +
 tekillik kullanır. Saf TS/SQL ikizi: `utils/paymentMatching.ts` (+test),
 `20261015010000_variable_bill_matching.sql`; banka kaydını yeniden borç yazmadan

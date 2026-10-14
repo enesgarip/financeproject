@@ -73,10 +73,11 @@ export function realizedPaymentAmounts(paymentId: string, history: TransactionHi
  * rakamdır (kira gibi), oraya "şunu yaz" demek yanlış olur.
  */
 export function buildPaymentEstimateSuggestion(
-  payment: Pick<Payment, 'id' | 'amount' | 'amount_status'>,
+  payment: Pick<Payment, 'id' | 'amount' | 'amount_status' | 'match_amount'>,
   history: TransactionHistory[],
 ): PaymentEstimateSuggestion | null {
-  if (payment.amount_status !== 'estimated') return null
+  // Kullanıcının doğruladığı sabit fiyatı eski ayların medyanıyla geri alma.
+  if (payment.amount_status !== 'estimated' || payment.match_amount != null) return null
 
   const amounts = realizedPaymentAmounts(payment.id, history)
   if (amounts.length < MIN_SAMPLE) return null

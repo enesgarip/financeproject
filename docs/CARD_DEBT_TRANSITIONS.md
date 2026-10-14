@@ -573,3 +573,8 @@ sabit tutarla kontrol edilir. Abone no yokken iki sözleşme arasında tahmin
 edilmez. Plan ileri alınır ve gerçek tutarlı geçmiş append edilir; kanıtsız ay
 atlanmaz. Ayrıntılı kaynak sözleşme `docs/FINANCE_RULES.md`, SQL kanıtı
 `supabase/tests/variable_bill_matching.sql`, saf ikiz `utils/paymentMatching.ts`.
+
+15 Ekim 2026 canlı kontrol eki: `match_amount` ile kullanıcı tarafından
+doğrulanan sabit abonelik fiyatına, eski ayların medyanıyla daha düşük/yüksek
+tutar önerilmez (`utils/paymentEstimate.ts` ve regresyonu). Kart/ödeme/ledger
+yazması değişmez; değişken fatura önerileri korunur.
