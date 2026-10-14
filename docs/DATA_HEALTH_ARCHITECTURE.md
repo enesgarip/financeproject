@@ -7,7 +7,7 @@ was recently verified. `LiveReconciliationPanel` is canonical on this route;
 other screens may show status and deep-link here, but must not duplicate its
 manual amount-entry form.
 
-Last reviewed: 2026-08-09
+Last reviewed: 2026-10-14
 
 This note maps `/veri-sagligi` (`DataHealthPage`). Treat this route as an
 operational repair surface, not a debug page: fixes can modify real finance
@@ -130,6 +130,18 @@ Use existing source-of-truth helpers before adding new checks:
   proves the preceding sequential installments are historical; missing rows at
   or before that proven prefix are not recreated or reported, while gaps after
   the last proven installment remain findings
+- successive statement imports can retain historical parents while creating a
+  separate continuation parent. Data Health checks the open suffix only on the
+  latest unambiguous matching plan: same user/card, exact normalized description
+  excluding only the bank's `N.Tk` sequence marker (charge components retained),
+  installment count, monthly amount in kurus, and base date inferred from child
+  dates. Carryover notes must distinguish progress; duplicate progress levels
+  remain ambiguous. The successor's current installment must have posted/paid
+  or allocation evidence and the matching amount; the older parent must contain
+  only historical rows at or before the successor's prior-count boundary.
+  Current-plan gaps and other structural findings remain visible. This is a
+  read-only detection rule: billing progression never writes a payment status,
+  card balance, ledger event, or synthetic history
 - a legacy aggregate card payment can leave exact pre-cycle posted excess; the
   canonical full-current `pay_card_debt` action may attach it to a source-less
   historical repair settlement only on exact total proof, without a second cash
