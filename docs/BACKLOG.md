@@ -1,5 +1,12 @@
 # Priority Backlog
 
+## 2026-10-15 — Onaylı abonelik fiyatını eski medyana döndürme önerisi — UYGULANDI
+
+15 Ekim 2026 canlı kontrol eki: `match_amount` ile kullanıcı tarafından
+doğrulanan sabit abonelik fiyatına, eski ayların medyanıyla daha düşük/yüksek
+tutar önerilmez (`utils/paymentEstimate.ts` ve regresyonu). Kart/ödeme/ledger
+yazması değişmez; değişken fatura önerileri korunur.
+
 ## 2026-10-15 — Değişken fatura ve Apple abonelik eşleştirmesi — UYGULANDI
 
 Kurum + kart + ±7 günlük dönem + tekillik kullanılır; aynı tutardaki ilgisiz

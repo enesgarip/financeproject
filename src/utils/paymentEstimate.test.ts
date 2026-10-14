@@ -54,6 +54,13 @@ describe('realizedPaymentAmounts', () => {
 })
 
 describe('buildPaymentEstimateSuggestion', () => {
+  it('onaylı sabit abonelik fiyatını eski ayların tutarına döndürmeyi önermez', () => {
+    const rows = [paid('p1', 129.99, '2026-08-11T09:00:00.000Z'),
+      paid('p1', 129.99, '2026-09-11T09:00:00.000Z'),
+      paid('p1', 169.99, '2026-10-11T09:00:00.000Z')]
+    expect(buildPaymentEstimateSuggestion({ ...payment({ amount: 169.99 }), match_amount: 169.99 }, rows)).toBeNull()
+    expect(buildPaymentEstimateSuggestion(payment({ amount: 169.99 }), rows)?.suggested).toBe(129.99)
+  })
   it('bayat tahmini son ödemelerin medyanıyla tazelemeyi önerir', () => {
     const suggestion = buildPaymentEstimateSuggestion(payment(), history)
 
