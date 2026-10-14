@@ -375,6 +375,10 @@ export type Debt = BaseRow & {
 }
 
 export type Payment = BaseRow & {
+  /** Optional for old backups; DB defaults are NULL. */
+  match_merchant?: string | null
+  match_reference?: string | null
+  match_amount?: number | null
   title: string
   category: PaymentCategory
   amount: number
@@ -390,6 +394,8 @@ export type Payment = BaseRow & {
 }
 
 export type TransactionHistory = BaseRow & {
+  matched_card_expense_id?: string | null
+  payment_due_date?: string | null
   occurred_at: string
   type: TransactionHistoryType
   title: string
@@ -873,6 +879,10 @@ export type Database = {
     }
     Views: Record<string, never>
     Functions: {
+      reconcile_card_payment_expenses: {
+        Args: Record<string, never>
+        Returns: number
+      }
       fetch_finance_snapshot: {
         Args: {
           /** snapshotWindowStart().toISOString() — transaction_history penceresi. */

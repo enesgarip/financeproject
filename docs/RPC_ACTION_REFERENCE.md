@@ -1,6 +1,6 @@
 # Supabase RPC Action Reference
 
-Last reviewed: 2026-08-24
+Last reviewed: 2026-10-15
 
 This file maps Supabase RPCs to the user-visible actions that call them. Keep it
 updated whenever a page action, repository wrapper, or migration changes an RPC
@@ -21,6 +21,16 @@ repair rules, keep `docs/TRANSACTION_HISTORY.md` aligned with this file.
 | --- | --- | --- | --- |
 | `post_due_card_installments` | `runFinanceMaintenance`, `run_scheduled_card_maintenance` | App open/server daily maintenance | Moves scheduled card installments whose exact due date has passed into `current_period_spending`; returns processed row count |
 | `cut_due_card_statements` | `runFinanceMaintenance`, `cutDueCardStatements` | App open/cards page maintenance | Cuts any due credit-card statements for the signed-in user after due installments have been posted; cards whose spending belongs entirely to the next statement are skipped without error; returns cut count |
+
+`reconcile_card_payment_expenses()` is authenticated and has no user/card
+arguments. Called by `runFinanceMaintenance`, `reconcileCardPaymentExpenses`
+in `cardsRepo` after imports, and after saving a bank-auto plan. Returns linked
+period count, advances only uniquely proven pending periods and appends payment
+history; existing expenses/cards/ledgers are unchanged. The private user/card
+variant is not client-callable; `record_sms_card_expense` calls it for its
+service-validated owner/card. Contract: `docs/FINANCE_RULES.md`; migration
+`20261015010000_variable_bill_matching.sql`; regression
+`supabase/tests/variable_bill_matching.sql`.
 
 ## Cards And Statements
 

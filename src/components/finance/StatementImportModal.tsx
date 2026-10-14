@@ -7,6 +7,7 @@ import { useCategoryMemory } from '../../hooks/useCategoryMemory'
 import {
   fetchCardExpenseMatchRows,
   fetchCardPaymentMatchRows,
+  reconcileCardPaymentExpenses,
   replaceCardStatementImport,
   type CardStatementReplaceAction,
   type ExpenseMatchRow,
@@ -346,7 +347,7 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
     const actions: CardStatementReplaceAction[] = []
     for (const item of importRows) {
       const { transaction: tx, plannedPayment } = item
-      const action = resolveStatementImportAction({ transaction: tx, plannedPaymentId: plannedPayment?.id })
+      const action = resolveStatementImportAction({ transaction: tx, plannedPaymentId: plannedPayment?.payment_method === 'manual' ? plannedPayment.id : undefined })
       const replacement = toReplaceAction(action, item)
       if (!replacement) {
         setImportError(`${tx.description}: taksit bilgisi doğrulanmadan yeniden kurulum yapılamaz.`)
@@ -397,6 +398,12 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
       return
     }
 
+    const reconciliation = await reconcileCardPaymentExpenses()
+    if (!reconciliation.ok) {
+      setImportError(`Ekstre kaydedildi; ${reconciliation.error.message}`)
+      setImporting(false)
+      return
+    }
     setImportedCount(actions.length)
     setImporting(false)
     setStep('success')

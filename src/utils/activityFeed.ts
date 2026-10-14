@@ -86,6 +86,7 @@ const TX_TYPE_ICON: Record<string, ActivityItem['icon']> = {
 }
 
 function transactionDirection(tx: TransactionHistory): ActivityItem['direction'] {
+  if (tx.matched_card_expense_id) return 'neutral'
   const text = normalizeSearchText(`${tx.title} ${tx.note ?? ''}`)
   const has = (...values: string[]) => values.some((value) => text.includes(value))
   if (has('geri alındı', 'geri alindi')) return 'neutral'

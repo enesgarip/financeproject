@@ -1,6 +1,6 @@
 # Finance Rules
 
-Last reviewed: 2026-08-12
+Last reviewed: 2026-10-15
 
 ## Scope
 
@@ -257,12 +257,11 @@ On the cards page:
   idempotency key. Reusing it returns the existing expense without repeating card,
   installment, ledger, payment, or transaction-history effects. Different event IDs
   remain separate even when every fingerprint field is identical.
-- Credit-card-funded `bank_auto` payments and their bank SMS are one financial
-  event. A unique same-card/near-date/tolerant-amount plan match advances the
-  payment and creates only the SMS expense. The automatic poster waits through
-  the due date and is a next-day fallback; a late SMS attaches to that fallback
-  expense without increasing card debt again. Ambiguous candidates stay separate
-  for review instead of being guessed.
+- Credit-card-funded `bank_auto` payments are informational; BM-5 removed the
+  proactive automatic poster. SMS creates the real expense once, then the same
+  evidence matcher used by imports advances the plan. A late SMS may still bind
+  a legacy generated expense when merchant/date/amount identify a unique row.
+  Equal amounts without compatible merchants never identify an automatic bill.
 - Data Health reports same-fingerprint card expenses and possible
   duplicates by same card/date/status/amount plus similar or blank descriptions.
   These are review signals, never automatic deletes. The user compares the exact
@@ -404,7 +403,7 @@ From `src/utils/budgetAlerts.ts`:
 - marking a payment paid can use a bank card or credit card:
   - bank cards decrease `current_balance`
   - credit cards create a posted `card_expenses` row and increase `debt_amount` plus `current_period_spending`
-- DenizBank statement/current movement imports can reconcile a card-paid planned payment through `pay_payment_from_card_import`; this is credit-card-funded payment semantics with the bank import date preserved on the generated expense.
+- DenizBank imports use `pay_payment_from_card_import` for manual planned payments. Automatic card bills keep the real bank description in `card_expenses` and link that existing expense through `reconcile_card_payment_expenses`, without another charge.
 - `src/utils/financeObligationRules.ts` owns the small shared helpers for payment
   occurrence and cash impact; both monthly cash-flow and dated obligation
   projections use those helpers.
@@ -446,6 +445,50 @@ From `src/utils/budgetAlerts.ts`:
 - Payments-page monthly paid counts come from `transaction_history` rows whose
   source is `payments`; a recurring row merely having advanced into next month is
   not proof that it was paid in the current month.
+
+## Değişken fatura ve abonelik eşleştirmesi (2026-10-15)
+
+- Saf kural `src/utils/paymentMatching.ts`; SQL ikizleri
+  `private.payment_match_key`, `payment_provider`, `payment_description_matches`
+  ve `payment_matches_expense` içindedir. Türkçe harfler katlanır; kısa “Su”
+  başlığı her işyeriyle uyumlu kabul edilmez.
+- Otomatik eşleştirme yalnız kullanıcıya ait kredi kartına açıkça bağlı,
+  bekleyen `bank_auto` planlarda çalışır. Kart + kurum/açıklama + sıradaki
+  vadeye ±7 gün gerekir. Kaynak SMS/PDF/hareket importu veya kaynağı eski
+  sürümde boş kalmış gerçek kart harcamasıdır; iptal/taksit ve eski ödeme
+  tarafından üretilen satırlar dışarıdadır. Gelecek tarihli harcama kanıt olmaz.
+- Su, elektrik, doğalgaz, internet ve tanınan mobil telefon kurumlarının
+  `estimated` planlarında tutar değişebilir. Diğer planların eski 5 TL tutar
+  penceresi korunur. `match_amount` varsa kuruşu kuruşuna eşitlik gerekir.
+- Ödeme formunda isteğe bağlı `match_merchant` (bankadaki kurum),
+  `match_reference` (açıklamada ayrı parça olarak bulunması gereken abone no)
+  ve `match_amount` (ayırt edici sabit tutar) vardır. Aynı kurumda birden fazla
+  hesap/plan veya bir dönemde birden fazla banka satırı varsa tahmin yapılmaz;
+  abone numarasıyla tekilleştirilmelidir. Telefon başlığının kime ait olduğu
+  tutardan çıkarılmaz.
+- Ortak `APPLE.COM/BILL` açıklamasında hizmet adı tek başına yeterli değildir.
+  Kullanıcının onayladığı mevcut iCloud ve ChatGPT planlarına migration ile
+  sırasıyla 169,99 TL ve 499,99 TL `match_amount` ayarı eklenir. Eski fiyatlar
+  ve diğer Apple harcamaları bunlarla eşleştirilmez. Fiyatlar matcher'a sabit
+  gömülmez; formdan değiştirilebilir. Eski yedek geri yüklenirse bu isteğe bağlı
+  ayarlar NULL olabilir; eşleştirme mevcut plan tutarını kullanır.
+- `reconcile_card_payment_expenses()` uygulama bakımında, import sonrasında ve
+  otomatik plan kaydedildiğinde çalışır. Mevcut sıradaki dönemden başlayıp yalnız
+  kesintisiz kanıt bulunan ayları ilerletir; boş geçmiş ay atlanmaz. Başka ayın
+  ödemesi veya kullanıcının genel “ödedim” beyanı banka satırı yerine yazılmaz.
+- Her eşleşme tek transaction'da bir `payment` geçmişi ekler; gerçek tutar ve
+  banka günü korunur, sonraki aylık plan aynı gün (kısa ayda ay sonu) ve son
+  gerçekleşen tutarla `estimated` kalır. Bitişten sonraki dönem açılmaz.
+  `matched_card_expense_id` ve `payment_due_date` tekillikleri retry'ı korur.
+  Kart, harcama, hesap bakiyesi ve ledger değişmez. Bağlantı kart ekstresinin
+  nakitle ödendiğini göstermez; fatura/abonelik kart harcamasını tanımlar.
+- Abonelik radarı aynı kart ve açıklamada son altı ayın en az üç ayında tekrar
+  ister. Tanınan fatura kurumlarında ayda tek satır varsa ±%15 kısıtı kalkar;
+  normal alışverişte korunur. Mevcut aylık planıyla uyumlu gider ikinci kez
+  sayılmaz. Ortak Apple açıklamasından otomatik hizmet/abonelik uydurulmaz;
+  adı belli ödeme planları gösterilir.
+- Kanıt: `supabase/tests/variable_bill_matching.sql`,
+  `src/utils/paymentMatching.test.ts`, abonelik/aktivite/nakit akışı regresyonları.
 
 ## Salary
 

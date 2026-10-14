@@ -43,6 +43,11 @@ function payment(overrides: Partial<Payment>): Payment {
 const JULY = new Date(2026, 6, 15)
 
 describe('buildRealizedMonthlyOutflow', () => {
+  it('keeps an expense association out of cash totals even if its plan was deleted', () => {
+    const result = buildRealizedMonthlyOutflow([row({ amount: 525, matched_card_expense_id: 'e' })], [], JULY)
+    expect(result.totalCash).toBe(0)
+    expect(result.cardFundedBills).toBe(525)
+  })
   it('kaynak tablosuna göre kart/fatura/kredi/borç kovalarına ayırır', () => {
     const result = buildRealizedMonthlyOutflow(
       [

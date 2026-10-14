@@ -23,6 +23,10 @@ function direction(row: TransactionHistory) {
   return buildActivityFeed([], [], [row], [])[0]?.direction
 }
 
+it('shows linking an existing expense as neutral', () => {
+  expect(direction({ ...tx('payment', 'Su banka kaydıyla eşlendi'), matched_card_expense_id: 'e' })).toBe('neutral')
+})
+
 describe('transaction history activity directions', () => {
   it('treats positive payment and loan magnitudes as outflows', () => {
     expect(direction(tx('payment', 'Kira ödendi'))).toBe('outflow')

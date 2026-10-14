@@ -7,7 +7,7 @@ export type ExpenseMatchRow = Pick<CardExpense, 'id' | 'spent_at' | 'amount' | '
 export type InstallmentMatchRow = Pick<CardInstallment, 'id' | 'card_expense_id' | 'due_month' | 'amount' | 'status' | 'description' | 'installment_no' | 'installment_count' | 'statement_archive_id'>
 export type PaymentMatchRow = Pick<
   Payment,
-  'id' | 'title' | 'amount' | 'amount_status' | 'due_date' | 'status' | 'payment_method' | 'auto_source_card_id' | 'category' | 'recurrence' | 'recurrence_day' | 'recurrence_end_date'
+  'match_merchant' | 'match_reference' | 'match_amount' | 'id' | 'title' | 'amount' | 'amount_status' | 'due_date' | 'status' | 'payment_method' | 'auto_source_card_id' | 'category' | 'recurrence' | 'recurrence_day' | 'recurrence_end_date'
 >
 
 export async function fetchCards(): Promise<Result<Card[]>> {
@@ -153,9 +153,9 @@ export async function fetchCardExpenseMatchRows(cardId: string): Promise<Result<
 export async function fetchCardPaymentMatchRows(cardId: string): Promise<Result<PaymentMatchRow[]>> {
   const { data, error } = await supabase
     .from('payments')
-    .select('id, title, amount, amount_status, due_date, status, payment_method, auto_source_card_id, category, recurrence, recurrence_day, recurrence_end_date')
+    .select('id, title, amount, amount_status, due_date, status, payment_method, auto_source_card_id, category, recurrence, recurrence_day, recurrence_end_date, match_merchant, match_reference, match_amount')
     .eq('status', 'bekliyor')
-    .gt('amount', 0)
+    .gte('amount', 0)
     .or(`auto_source_card_id.is.null,auto_source_card_id.eq.${cardId}`)
 
   return resultFromSupabase((data ?? []) as PaymentMatchRow[], error, 'Planlı ödemeler yüklenemedi.')
@@ -480,4 +480,10 @@ export async function fetchExpenseSourceRows(sinceIso: string): Promise<Result<E
     .order('spent_at', { ascending: false })
 
   return resultFromSupabase((data ?? []) as ExpenseSourceRow[], error, 'Harcama kaynakları yüklenemedi.')
+}
+
+/** Mevcut banka harcamalarını bağlar; yeni harcama/borç oluşturmaz. */
+export async function reconcileCardPaymentExpenses(): Promise<Result<number>> {
+  const { data, error } = await supabase.rpc('reconcile_card_payment_expenses')
+  return resultFromSupabase(data ?? 0, error, 'Banka kayıtları ödeme planıyla eşleştirilemedi.')
 }

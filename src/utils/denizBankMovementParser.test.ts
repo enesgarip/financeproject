@@ -451,6 +451,20 @@ describe('findExistingInstallmentPlan', () => {
 describe('DenizBank movement planned payment reconciliation', () => {
   const invoice = parseDenizBankMovementPdf(SAMPLE_TEXT).movements.find((movement) => movement.amount === 685)!
 
+  it('uses the configured Apple price independently of the previous estimate', () => {
+    const plan = { id: 'cloud', title: 'icloud+', amount: 129.99, amount_status: 'exact',
+      match_amount: 169.99, due_date: invoice.date, status: 'bekliyor', payment_method: 'bank_auto', auto_source_card_id: 'card-1' }
+    const movement = { ...invoice, description: 'APPLE.COM/BILL', amount: 169.99 }
+    expect(matchDenizBankMovementPayments([movement], [plan], 'card-1').matches).toHaveLength(1)
+    expect(matchDenizBankMovementPayments([movement, { ...movement, rawLine: 'another' }], [plan], 'card-1').matches).toHaveLength(0)
+  })
+
+  it('does not infer a funding card for an automatic bill', () => {
+    const plan = { id: 'bill', title: invoice.description, amount: invoice.amount, amount_status: 'estimated',
+      due_date: invoice.date, status: 'bekliyor', payment_method: 'bank_auto', auto_source_card_id: null }
+    expect(matchDenizBankMovementPayments([invoice], [plan], 'card-1').matches).toHaveLength(0)
+  })
+
   it('matches payment-created card expenses by the due date stored in note', () => {
     const result = matchDenizBankMovements(
       [invoice],

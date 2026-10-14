@@ -5,7 +5,7 @@ Kart ayrıntısı düzeni: döküm seçenekleri ikonlu iki sütunlu menüdedir.
 Manuel kayıt yalnız hızlı işlem menüsünden açılır. Kart ayarları ve kayıt geçmişi bölümünde yinelenen borç/limit
 özeti, taksit listesi ve ekstre listesi kaldırıldı; bunların tek ayrıntı kaynağı
 üst özet ve ilgili döküm menüsüdür. Borç/ledger kuralları değişmedi.
-Last reviewed: 2026-10-12
+Last reviewed: 2026-10-15
 
 This file is the working source of truth for how credit-card debt moves through
 the app. If an RPC, page action, or data-health fix changes one of these rules,
@@ -138,7 +138,7 @@ archive — and warning tones derive from the same total.
 | Statement paid | `pay_card_statement` | Source bank account `current_balance -= archived statement amount`; card debt reduces by that amount and `statement_debt_amount` is reprojected from remaining open archives | Marks only the statement `paid`; installment rows remain unchanged. Temporary aggregate drift does not block payment. |
 | Manual card debt paid | `pay_card_debt` | Source bank account `current_balance -= amount` (skipped with `p_skip_source_debit`); card `debt_amount -= amount`; statement debt is reduced first, then current-period spending | A full current-period payment inserts a payment settlement and allocates every unallocated current movement. Exact older excess left by a legacy aggregate payment first enters a source-less `historical_repair` settlement without another cash/card aggregate movement. Any remaining bucket-vs-row difference no longer rejects the payment: it is closed as an auditable residual recorded on the settlement note plus a `correction` history row (bank model — payment reduces the aggregate; row allocation is best-effort evidence). Direct marker writes remain rejected. |
 | Planned payment paid from credit card | `pay_payment` with a credit-card source | Source credit card `debt_amount += paid amount`; `current_period_spending += paid amount` | Inserts a posted `card_expenses` row for the planned payment (category mapped to the card taxonomy via `private.card_category_from_payment`, `source='payment_auto'`, `source_event_id='payment:<id>:<ts>'` — UX tour B4/B5); `spent_at` and the history `occurred_at` honour the optional `p_paid_at` (B9, migration `20260908140000`); advances or closes the payment row |
-| Planned payment reconciled from card import | `pay_payment_from_card_import` | Source credit card `debt_amount += paid amount`; `current_period_spending += paid amount` | Inserts a posted `card_expenses` row using the bank movement/statement date; advances or closes the matched payment row |
+| Manual planned payment reconciled from card import | `pay_payment_from_card_import` | Source credit card `debt_amount += paid amount`; `current_period_spending += paid amount` | Inserts a posted `card_expenses` row using the bank movement/statement date; advances or closes the matched payment row |
 | Statement import credit/refund row | `StatementImportModal` + `post_card_debt_correction` | Card `debt_amount -= amount`; negative correction reduces current-period spending first, then statement debt, then provision | DenizBank statement rows ending with `+ TL` are imported as auditable reverse entries instead of positive spending, so bank statement totals stay net of refunds/credits |
 | Posted expense edited | `update_card_expense` | Reverses the previous unstatemented posted impact, then applies the new posted impact | Recreates installment rows for the edited expense. Rejects an expense already linked to a statement and an installment parent with any statement-linked child. The card-movements panel exposes this as "Taksitlendir" for a posted single-charge row (`installment_count = 1`), which is the repair path when a provision auto-posted before the installment count was marked — the installment-expense panel only lists `installment_count > 1`, so that row had no other way back. |
 | Old installment plan carried over | `record_card_installment_carryover` | `debt_amount += remaining installment total`; `current_period_spending += remaining installments whose exact due date has passed` | Called when the current installment number is greater than one; inserts one parent and only the current/future open rows. Earlier installments are not recreated as synthetic paid history. |
@@ -398,12 +398,12 @@ since BM-5: nothing posts them to the card proactively (the client hook and the
 `post_due_card_auto_payments` maintenance RPC were removed). The real record
 arrives from the SMS automation — which also advances the plan via the
 `record_sms_card_expense` match — or from the monthly statement import
-(`pay_payment_from_card_import`); manual payment stays available from the
+(`reconcile_card_payment_expenses` after recording the bank row); manual payment stays available from the
 obligations calendar and the dashboard Şerit row, though not from the payment
 record card itself. Estimated amounts are therefore never written to a card.
 
 DenizBank statement/current movement imports use `pay_payment_from_card_import`
-for rows that match a still-open planned payment. It is the same credit-card
+for rows that match a still-open manual planned payment. It is the same credit-card
 spending semantics as `pay_payment`, but the generated `card_expenses.spent_at`
 uses the bank row date and the note keeps the planned-payment due date. This
 prevents a bill from staying pending after its card movement is imported.
@@ -558,3 +558,18 @@ RPC'lerden geçer; ekstre/taksit dökümleri seçilen kartla sınırlıdır.
 kesinleşmiş “Diğer” harcamaları kapsar ve düzenlenecek kayıt yoksa pasiftir.
 Kategori yazımı mevcut metadata yolunu kullanır; tutar, taksit, borç kovaları
 ve ledger geçişleri değişmez.
+
+## Değişken banka faturası / abonelik kanıtı (2026-10-15)
+
+Otomatik `bank_auto` planlarında SMS veya import önce gerçek banka harcamasını
+oluşturur. `reconcile_card_payment_expenses()` mevcut harcamayı karta tekrar
+borç yazmadan ödeme planına bağlar; ödenmiş ekstreye bağlı eski satırlar da salt
+kanıt olarak okunabilir. Kart/harcama/ekstre/kova/ledger alanları bu bağlantıda
+aynen kalır. Kart ekstresinin nakit ödemesi ayrı olaydır.
+
+Kurum + kart + sıradaki vadeye ±7 gün + tekil banka satırı/plan şarttır.
+Tahmini tanınan faturada tutar değişebilir; ortak Apple açıklaması ayırt edici
+sabit tutarla kontrol edilir. Abone no yokken iki sözleşme arasında tahmin
+edilmez. Plan ileri alınır ve gerçek tutarlı geçmiş append edilir; kanıtsız ay
+atlanmaz. Ayrıntılı kaynak sözleşme `docs/FINANCE_RULES.md`, SQL kanıtı
+`supabase/tests/variable_bill_matching.sql`, saf ikiz `utils/paymentMatching.ts`.

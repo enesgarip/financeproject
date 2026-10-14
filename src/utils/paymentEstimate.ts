@@ -8,7 +8,9 @@
  * SİSTEMATİK olarak iyimser çıkar — hata tek yönlüdür, çünkü faturalar zamanla
  * artar.
  *
- * Karar dili kasıtlı: uygulama tutarı KENDİLİĞİNDEN değiştirmez, önerir. Planlı
+ * Medyanla tazeleme önerisi kullanıcının onayına bağlıdır. Banka kaydıyla
+ * kesin eşleştirmede ise gerçek ödeme tutarı planın sonraki tahmini olur.
+ * Karar dili kasıtlı: bu yardımcı tutarı KENDİLİĞİNDEN değiştirmez, önerir. Planlı
  * ödeme tutarı kullanıcının taahhüdüdür; sessizce oynatmak "benim yazdığım sayı
  * nerede?" sorusunu doğururdu (aynı çizgi: kasa kovasına otomatik ayırma da
  * tek tık bırakıldı).

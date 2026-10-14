@@ -133,7 +133,7 @@ export function buildRealizedMonthlyOutflow(
         const payment = row.source_id ? paymentsById.get(row.source_id) : undefined
         const manualCardFunded = row.source_id ? cardFundedKeys.has(`${row.source_id}|${occurred.slice(0, 7)}`) : false
         // Ödeme kaydı silinmişse temkinli davranıp nakit sayarız.
-        if ((payment && paymentUsesCreditCard(payment, isCreditCardId)) || manualCardFunded) push(cardFundedBills, row)
+        if (row.matched_card_expense_id || (payment && paymentUsesCreditCard(payment, isCreditCardId)) || manualCardFunded) push(cardFundedBills, row)
         else push(billPayments, row)
       } else {
         push(billPayments, row)
