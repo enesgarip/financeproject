@@ -116,22 +116,52 @@ function hasInstallmentHistory(row: CardInstallment) {
 function supersededInstallmentPlans(
   expenses: CardExpense[],
   installmentsByExpense: Map<string, CardInstallment[]>,
+  archivesById: Map<string, CardStatementArchive>,
 ) {
-  const groups = new Map<string, { expense: CardExpense; rows: CardInstallment[]; priorCount: number }[]>()
+  const groups = new Map<string, {
+    expense: CardExpense; rows: CardInstallment[]; current: CardInstallment;
+    bankNo: number; bankTotal: number; offset: number; historicalThrough: number;
+    variableCashAmount: boolean;
+  }[]>()
   for (const expense of expenses) {
     if (expense.status !== 'posted' || expense.installment_count <= 1 || expense.installment_amount <= 0) continue
     const rows = installmentsByExpense.get(expense.id) ?? []
     if (rows.length === 0 || rows.some((row) => row.user_id !== expense.user_id
       || row.card_id !== expense.card_id || row.installment_count !== expense.installment_count
       || row.installment_no < 1 || row.installment_no > expense.installment_count)) continue
-    // Yalnız banka açıklamasındaki sıra numarasını çıkar; satıcı, anapara/faiz/
-    // vergi bileşeni ve diğer bütün kelimeler birebir aynı kalmalı.
-    const description = normalizedTransactionDescription(expense.description).replace(/\b\d+\s+tk\b/g, '').replace(/\s+/g, ' ').trim()
+    const normalized = normalizedTransactionDescription(expense.description)
+    const marker = normalized.match(/\b(\d+)\s+tk\b/)
+    const localNo = parseHistoricalPaidCount(expense) + 1
+    const bankNo = marker ? Number(marker[1]) : localNo
+    const offset = bankNo - localNo
+    const bankTotal = expense.installment_count + offset
+    const current = rows.find((row) => row.installment_no === localNo)
+    // Eski manuel kayıtta kalan 6 taksit 1..6 sayılmış olabilir; bankanın
+    // 4.Tk belirteci bunları 4..9'a taşır. PDF devir notuyla çelişkiyi yorumlama.
+    if (!current || offset < 0 || bankTotal > 36 || (offset > 0
+      && (expense.note != null || (expense.source != null && expense.source !== 'manual')))) continue
+    // Satıcı ve anapara/faiz/vergi bileşeni birebir korunur.
+    const description = normalized.replace(/\b\d+\s+tk\b/g, '').replace(/\s+/g, ' ').trim()
     if (!description) continue
+    let originalDate = addMonthsToDate(inferInstallmentBaseDate(expense, rows), -offset)
+    const archive = archivesById.get(current.statement_archive_id ?? '')
+    if (offset > 0 && current.status === 'paid' && archive?.status === 'paid'
+      && archive.card_id === expense.card_id && archive.user_id === expense.user_id
+      && current.due_month > archive.statement_date
+      && addMonthsToDate(current.due_month, -1) <= archive.statement_date
+      && current.due_month <= addMonthsToDate(archive.statement_date, 1)) {
+      // Eski manuel satır kesimden sonraki ay/günle kaydedilmişse ödenmiş
+      // arşiv sınırı önceki dönemi kanıtlar. Yalnız eşleştirme tarihi değişir.
+      originalDate = addMonthsToDate(originalDate, -1)
+    }
     const key = JSON.stringify([expense.user_id, expense.card_id, description,
-      expense.installment_count, toKurus(expense.installment_amount), inferInstallmentBaseDate(expense, rows)])
+      bankTotal, originalDate])
     const group = groups.get(key) ?? []
-    group.push({ expense, rows, priorCount: parseHistoricalPaidCount(expense) })
+    group.push({ expense, rows, current, bankNo, bankTotal, offset,
+      historicalThrough: rows.reduce((highest, row) => hasInstallmentHistory(row)
+        ? Math.max(highest, row.installment_no + offset) : highest, 0),
+      variableCashAmount: marker != null && /^taksit nakit .+ (anapara|faiz|bsmv|kkdf)$/.test(description),
+    })
     groups.set(key, group)
   }
 
@@ -139,14 +169,18 @@ function supersededInstallmentPlans(
   for (const group of groups.values()) {
     // Aynı ilerleme seviyesinde iki parent varsa hangi alışverişin devamı
     // olduğu belirsizdir. Bu durumda hiçbir bulguyu örtme.
-    if (group.length < 2 || new Set(group.map((plan) => plan.priorCount)).size !== group.length) continue
-    const latest = group.reduce((left, right) => left.priorCount > right.priorCount ? left : right)
-    const current = latest.rows.find((row) => row.installment_no === latest.priorCount + 1)
-    if (!current || !hasInstallmentHistory(current) || !equalsTL(current.amount, latest.expense.installment_amount)) continue
+    if (group.length < 2 || new Set(group.map((plan) => plan.bankNo)).size !== group.length) continue
+    const latest = group.reduce((left, right) => left.bankNo > right.bankNo ? left : right)
+    if (!hasInstallmentHistory(latest.current) || !equalsTL(latest.current.amount, latest.expense.installment_amount)) continue
 
     for (const plan of group) {
       if (plan === latest || !plan.rows.every((row) => hasInstallmentHistory(row)
-        && row.installment_no <= latest.priorCount)) continue
+        && row.installment_no + plan.offset <= latest.historicalThrough)) continue
+      const amountMatches = equalsTL(plan.expense.installment_amount, latest.expense.installment_amount)
+        || (latest.historicalThrough === latest.bankTotal
+          && !moneyDiffers(plan.expense.installment_amount, latest.expense.installment_amount))
+        || (plan.variableCashAmount && latest.variableCashAmount)
+      if (!amountMatches) continue
       superseded.add(plan.expense.id)
     }
   }
@@ -718,8 +752,27 @@ function groupBy<T>(rows: T[], keyOf: (row: T) => string): Map<string, T[]> {
   return grouped
 }
 
-export function checkCardExpenseDuplicates(cards: Card[], cardExpenses: CardExpense[]): HealthIssue[] {
+function separatePdfOccurrences(left: CardExpense, right: CardExpense, archivesById: Map<string, CardStatementArchive>) {
+  if (left.source !== 'statement_import' || right.source !== 'statement_import'
+    || left.status !== 'posted' || right.status !== 'posted'
+    || left.user_id !== right.user_id || left.card_id !== right.card_id
+    || left.spent_at !== right.spent_at || !equalsTL(left.amount, right.amount)
+    || normalizedTransactionDescription(left.description) !== normalizedTransactionDescription(right.description)
+    || !left.statement_archive_id || left.statement_archive_id !== right.statement_archive_id) return false
+  const archive = archivesById.get(left.statement_archive_id)
+  if (!archive || archive.card_id !== left.card_id || archive.user_id !== left.user_id
+    || (archive.status !== 'open' && archive.status !== 'paid')) return false
+  // Aynı belgedeki eş satırların occurrence kimlikleri farklıdır. Başka belge,
+  // kaynak veya aynı occurrence'ın yeniden yazılması bu kanıtı sağlamaz.
+  const pattern = /^([a-f0-9]{64}):([a-f0-9]{64}):(0|[1-9]\d*)$/
+  const a = left.source_event_id?.match(pattern)
+  const b = right.source_event_id?.match(pattern)
+  return Boolean(a && b && a[1] === b[1] && a[2] === b[2] && a[3] !== b[3])
+}
+
+export function checkCardExpenseDuplicates(cards: Card[], cardExpenses: CardExpense[], cardStatementArchives: CardStatementArchive[] = []): HealthIssue[] {
   const issues: HealthIssue[] = []
+  const archivesById = new Map(cardStatementArchives.map((archive) => [archive.id, archive]))
   const cardsById = new Map(cards.map((card) => [card.id, card]))
   const activeExpenses = cardExpenses.filter(activeCardExpense)
   const exactDuplicateIdSets = new Set<string>()
@@ -728,6 +781,7 @@ export function checkCardExpenseDuplicates(cards: Card[], cardExpenses: CardExpe
     if (rows.length <= 1) continue
     const ids = rows.map((row) => row.id).sort()
     exactDuplicateIdSets.add(ids.join('|'))
+    if (rows.every((left, index) => rows.slice(index + 1).every((right) => separatePdfOccurrences(left, right, archivesById)))) continue
     const card = cardsById.get(rows[0]?.card_id ?? '')
 
     issues.push({
@@ -759,6 +813,7 @@ export function checkCardExpenseDuplicates(cards: Card[], cardExpenses: CardExpe
     let hasComparablePair = false
     for (let left = 0; left < rows.length; left++) {
       for (let right = left + 1; right < rows.length; right++) {
+        if (separatePdfOccurrences(rows[left], rows[right], archivesById)) continue
         if (descriptionsProveDistinct(rows[left].description, rows[right].description)) continue
         hasComparablePair = true
         maxSimilarity = Math.max(maxSimilarity, descriptionSimilarity(rows[left].description, rows[right].description))
@@ -950,6 +1005,7 @@ export function checkCardInstallments(
   cards: Card[],
   cardExpenses: CardExpense[],
   cardInstallments: CardInstallment[],
+  cardStatementArchives: CardStatementArchive[] = [],
 ): HealthIssue[] {
   const issues: HealthIssue[] = []
   const today = todayValue()
@@ -1192,7 +1248,8 @@ export function checkCardInstallments(
     }
   }
 
-  const supersededPlans = supersededInstallmentPlans(cardExpenses, installmentsByExpense)
+  const supersededPlans = supersededInstallmentPlans(cardExpenses, installmentsByExpense,
+    new Map(cardStatementArchives.map((archive) => [archive.id, archive])))
   for (const expense of cardExpenses.filter((item) => item.status === 'posted' && item.installment_count > 1)) {
     const rows = installmentsByExpense.get(expense.id) ?? []
     const existingNos = new Set(rows.map((row) => row.installment_no))

@@ -1,8 +1,18 @@
 # AI Context Index
 
-Last reviewed: 2026-10-14
+Last reviewed: 2026-10-15
 
-14 Ekim 2026: Veri sağlığında aynı taksit alışverişinin sonraki ekstrede ayrı
+15 Ekim 2026: Veri sağlığı taksit devamını bankanın gerçek `N.Tk` sırasına
+çevirir; eski manuel kalan-adet planları, değişken nakit avans bileşenleri ve
+son taksidin 1 kuruş farkı desteklenir. Aynı PDF'deki ayrı occurrence satırları,
+aynı doğrulanmış ekstreye bağlıysa mükerrer adayı olmaz; kaynağı belirsiz veya
+farklı belge/kaynak tekrarları korunur. Saf kurallar ve anonim regresyonlar:
+`pages/DataHealth.checks.ts`, `pages/DataHealth.logic.test.ts`;
+arşiv girdisi: `pages/DataHealth.logic.ts`. Sözleşme:
+`docs/DATA_HEALTH_ARCHITECTURE.md`, `docs/CARD_DEBT_TRANSITIONS.md`.
+Finans verisi, ödeme durumu ve ledger değişmez.
+
+14 Ekim 2026 ilk uygulama (15 Ekim'de genişletildi): aynı taksit alışverişinin sonraki ekstrede ayrı
 parent altında devam ettiği kesin eşleşirse tarihsel parent'ta açık devam
 satırları tekrar beklenmez. Eşleşme/tekillik ve güncel planın gerçek eksiklerini
 koruma: `pages/DataHealth.checks.ts`, `pages/DataHealth.logic.test.ts`.

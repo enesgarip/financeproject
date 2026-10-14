@@ -945,6 +945,74 @@ describe('buildIssues successive statement installment plans', () => {
 
     expect(buildIssues(data).some((issue) => issue.id === 'card-expense-missing-old-plan')).toBe(true)
   })
+
+  it('recognizes a cash-advance final installment with a changing principal amount', () => {
+    const data = {
+      ...emptyData,
+      cardExpenses: [
+        cardExpense({ id: 'first', description: 'Taksit. Nakit MOBİL 1.Tk Anapara', spent_at: '2026-07-06', amount: 18289.59, installment_count: 3, installment_amount: 6096.53 }),
+        cardExpense({ id: 'second', description: 'Taksit. Nakit MOBİL 2.Tk Anapara', spent_at: '2026-07-06', amount: 20294.55, installment_count: 3, installment_amount: 6764.85, note: '1/3 taksit ekstre öncesinde tamamlandı; yalnız açık plan tutulur.' }),
+        cardExpense({ id: 'final', description: 'Taksit. Nakit MOBİL 3.Tk Anapara', spent_at: '2026-07-06', amount: 21415.86, installment_count: 3, installment_amount: 7138.62, note: '2/3 taksit ekstre öncesinde tamamlandı; yalnız açık plan tutulur.' }),
+      ],
+      cardInstallments: [
+        cardInstallment({ id: 'first-1', card_expense_id: 'first', installment_no: 1, installment_count: 3, due_month: '2026-07-06', amount: 6096.53, status: 'posted' }),
+        cardInstallment({ id: 'second-2', card_expense_id: 'second', installment_no: 2, installment_count: 3, due_month: '2026-08-06', amount: 6764.85, status: 'posted' }),
+        cardInstallment({ id: 'final-3', card_expense_id: 'final', installment_no: 3, installment_count: 3, due_month: '2026-09-06', amount: 7138.62, status: 'posted' }),
+      ],
+    }
+    const before = structuredClone(data)
+
+    expect(buildIssues(data).filter((issue) => issue.id.startsWith('card-expense-missing-'))).toEqual([])
+    expect(data).toEqual(before)
+  })
+
+  it('accepts a one-kurus rounding difference only when the final installment is observed', () => {
+    const data = statementPlans()
+    Object.assign(data.cardExpenses[1], { description: 'NEOVA SİGORTA Peş. Taksit 9.Tk Anapara', amount: 18050.4, installment_amount: 2005.6, note: '8/9 taksit ekstre öncesinde tamamlandı; yalnız açık plan tutulur.' })
+    data.cardInstallments = [data.cardInstallments[0], cardInstallment({ ...data.cardInstallments[1], installment_no: 9, due_month: '2026-11-26', amount: 2005.6 })]
+
+    expect(buildIssues(data).filter((issue) => issue.id.startsWith('card-expense-missing-'))).toEqual([])
+    data.cardExpenses[1].installment_amount = 2005.59
+    data.cardInstallments[1].amount = 2005.59
+    expect(buildIssues(data).some((issue) => issue.id === 'card-expense-missing-old-plan')).toBe(true)
+  })
+
+  it('maps a legacy remaining-count plan back to the bank sequence and original date', () => {
+    const data = statementPlans()
+    Object.assign(data.cardExpenses[0], { description: 'NEOVA SİGORTA Peş. Taksit 4.Tk Anapara', spent_at: '2026-06-26', amount: 12033.66, installment_count: 6, note: null })
+    Object.assign(data.cardInstallments[0], { installment_no: 1, installment_count: 6, due_month: '2026-06-26' })
+
+    expect(buildIssues(data).filter((issue) => issue.id.startsWith('card-expense-missing-'))).toEqual([])
+  })
+
+  it('uses the paid archive boundary for a renumbered legacy row dated after its statement', () => {
+    const data = {
+      ...emptyData,
+      cardExpenses: [
+        cardExpense({ id: 'legacy', description: 'SPOR MAĞAZASI Peş. Taksit 2.Tk Anapara', spent_at: '2026-07-06', amount: 5133.3, installment_count: 2, installment_amount: 2566.65 }),
+        cardExpense({ id: 'final', description: 'SPOR MAĞAZASI Peş. Taksit 3.Tk Anapara', spent_at: '2026-05-06', amount: 7699.98, installment_count: 3, installment_amount: 2566.66, note: '2/3 taksit ekstre öncesinde tamamlandı; yalnız açık plan tutulur.' }),
+      ],
+      cardInstallments: [
+        cardInstallment({ id: 'legacy-1', card_expense_id: 'legacy', installment_no: 1, installment_count: 2, due_month: '2026-07-06', amount: 2566.65, status: 'paid', statement_archive_id: 'old-archive' }),
+        cardInstallment({ id: 'final-3', card_expense_id: 'final', installment_no: 3, installment_count: 3, due_month: '2026-07-06', amount: 2566.66, status: 'posted' }),
+      ],
+      cardStatementArchives: [cardStatementArchive({ id: 'old-archive', statement_date: '2026-07-04', status: 'paid' })],
+    }
+
+    expect(buildIssues(data).filter((issue) => issue.id.startsWith('card-expense-missing-'))).toEqual([])
+    data.cardStatementArchives = []
+    expect(buildIssues(data).some((issue) => issue.id === 'card-expense-missing-legacy')).toBe(true)
+  })
+
+  it('accepts later observed progress even when a preserved parent still names the previous installment', () => {
+    const data = statementPlans()
+    data.cardInstallments.push(cardInstallment({ ...data.cardInstallments[1], id: 'old-7', card_expense_id: 'old-plan' }))
+    Object.assign(data.cardInstallments[2], { status: 'posted' })
+    data.cardInstallments = data.cardInstallments.filter((row) => row.installment_no !== 9)
+
+    expect(buildIssues(data).some((issue) => issue.id === 'card-expense-missing-old-plan')).toBe(false)
+    expect(buildIssues(data).find((issue) => issue.id === 'card-expense-missing-current-plan')?.details).toContain('Eksik: 9/9')
+  })
 })
 
 describe('buildIssues overdue card statements', () => {
@@ -1039,6 +1107,47 @@ describe('buildIssues orphan statement debt', () => {
 })
 
 describe('buildIssues card expense duplicate analysis', () => {
+  function statementOccurrences() {
+    return [0, 1].map((occurrence) => cardExpense({
+      id: `pdf-${occurrence}`, description: 'ATÖLYE POS', source: 'statement_import',
+      statement_archive_id: 'statement-1', source_event_id: `${'a'.repeat(64)}:${'b'.repeat(64)}:${occurrence}`,
+    }))
+  }
+
+  it('accepts separate equal occurrences from one PDF in one validated statement', () => {
+    const data = { ...emptyData, cardExpenses: statementOccurrences(), cardStatementArchives: [cardStatementArchive()] }
+    const before = structuredClone(data)
+
+    expect(buildIssues(data).some((issue) => issue.kind === 'duplicateTransactionCandidate')).toBe(false)
+    expect(data).toEqual(before)
+  })
+
+  it.each([
+    ['same occurrence', { source_event_id: `${'a'.repeat(64)}:${'b'.repeat(64)}:0` }],
+    ['another PDF', { source_event_id: `${'c'.repeat(64)}:${'b'.repeat(64)}:1` }],
+    ['another row signature', { source_event_id: `${'a'.repeat(64)}:${'c'.repeat(64)}:1` }],
+    ['another statement', { statement_archive_id: 'other-statement' }],
+    ['unallocated expense', { statement_archive_id: null }],
+    ['unknown source', { source: null }],
+    ['malformed occurrence', { source_event_id: `${'a'.repeat(64)}:${'b'.repeat(64)}:invalid` }],
+  ] satisfies [string, Partial<CardExpense>][])('retains a duplicate candidate with %s', (_, overrides) => {
+    const expenses = statementOccurrences()
+    Object.assign(expenses[1], overrides)
+    expect(buildIssues({ ...emptyData, cardExpenses: expenses, cardStatementArchives: [cardStatementArchive()] }).some((issue) => issue.kind === 'duplicateTransactionCandidate')).toBe(true)
+  })
+
+  it('requires the statement to exist and belong to the same card and user', () => {
+    for (const archives of [[], [cardStatementArchive({ card_id: 'other-card' })], [cardStatementArchive({ user_id: 'other-user' })]]) {
+      expect(buildIssues({ ...emptyData, cardExpenses: statementOccurrences(), cardStatementArchives: archives }).some((issue) => issue.kind === 'duplicateTransactionCandidate')).toBe(true)
+    }
+  })
+
+  it('retains an external duplicate when two valid PDF occurrences share its fingerprint', () => {
+    const expenses = [...statementOccurrences(), cardExpense({ id: 'external', description: 'ATÖLYE POS', source: 'sms' })]
+    const issues = buildIssues({ ...emptyData, cardExpenses: expenses, cardStatementArchives: [cardStatementArchive()] })
+    expect(issues.find((issue) => issue.kind === 'duplicateTransactionCandidate')?.payload?.ids).toEqual(['external', 'pdf-0', 'pdf-1'])
+  })
+
   it('flags exact duplicate card expenses', () => {
     const issues = buildIssues({
       ...emptyData,
