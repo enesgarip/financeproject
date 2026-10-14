@@ -1,6 +1,13 @@
 # AI Context Index
 
-Last reviewed: 2026-10-13
+Last reviewed: 2026-10-14
+
+14 Ekim 2026: Veri sağlığında aynı taksit alışverişinin sonraki ekstrede ayrı
+parent altında devam ettiği kesin eşleşirse tarihsel parent'ta açık devam
+satırları tekrar beklenmez. Eşleşme/tekillik ve güncel planın gerçek eksiklerini
+koruma: `pages/DataHealth.checks.ts`, `pages/DataHealth.logic.test.ts`.
+Kaynak sözleşme: `docs/DATA_HEALTH_ARCHITECTURE.md`,
+`docs/CARD_DEBT_TRANSITIONS.md`. Ödeme durumu veya finans kayıtları değişmez.
 
 13 Ekim 2026: Kişiler ekranında `section=takip` ile “Sadece takip” bölümü
 vardır. Geri beklenmeyen ödemeler `personal_tracking_entries` tablosunda,

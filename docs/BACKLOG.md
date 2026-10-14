@@ -1,5 +1,23 @@
 # Priority Backlog
 
+## 2026-10-14 — Eski taksit planlarının yinelenen eksik satır uyarıları — UYGULANDI
+
+Sonraki ekstre ayrı parent altında aynı alışverişin devamını taşıdığında,
+tarihsel parent'ın 7/9, 8/9, 9/9 gibi açık devam satırları tekrar beklenmez.
+Kart/kullanıcı, sıra belirteci dışındaki tam açıklama (anapara/faiz/vergi korunur),
+adet, kuruş cinsinden aylık tutar ve child'lardan türetilen başlangıç tarihi
+eşleşir. İlerleme seviyesi tekil, yeni cari taksit işlenmiş/arşivli/settled,
+eski parent yalnız tarihsel satırlardan oluşmalıdır. Güncel planın gerçek
+eksikleri görünür; belirsiz adaylar ve hâlâ açık devamı olan eski planlar
+gizlenmez. Ödeme durumu, borç, ledger ve geçmiş satırlar değiştirilmez.
+Regresyonlar: Neova 6→7 ve 4→6→7, güncel planda eksik 8. taksit, farklı
+kart/kullanıcı/satıcı/bileşen/tutar/adet/tarih, iptal/provizyon, eksik kanıt,
+yalnız planlanmış devam, belirsiz parent ve eski açık devam.
+Kaynak: `docs/DATA_HEALTH_ARCHITECTURE.md`, `docs/CARD_DEBT_TRANSITIONS.md`.
+Doğrulama: `npm run verify` başarılı (147 dosya / 1.579 test; lint, coverage,
+üretim dependency audit, build, bundle ve edge tip kontrolü). 16 yeni regresyon
+testi eklendi; finans verisinin değişmediği de doğrulandı.
+
 ## 2026-10-13 — Kişilerde sadece takip kayıtları — UYGULANDI
 
 Kişiler ekranında Borç / alacak ve Sadece takip seçimi vardır. Geri beklenmeyen

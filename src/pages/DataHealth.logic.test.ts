@@ -852,6 +852,101 @@ describe('buildIssues carryover installment history (DH-01)', () => {
   })
 })
 
+describe('buildIssues successive statement installment plans', () => {
+  function statementPlans() {
+    return {
+      ...emptyData,
+      cards: [creditCard({ debt_amount: 6016.83 })],
+      cardExpenses: [
+        cardExpense({ id: 'old-plan', description: 'NEOVA SİGORTA Peş. Taksit 6.Tk Anapara', spent_at: '2026-03-26', amount: 18050.49, installment_count: 9, installment_amount: 2005.61, note: '5/9 taksiti uygulama öncesinde ödendi.' }),
+        cardExpense({ id: 'current-plan', description: 'NEOVA SİGORTA Peş. Taksit 7.Tk Anapara', spent_at: '2026-03-26', amount: 18050.49, installment_count: 9, installment_amount: 2005.61, note: '6/9 taksit ekstre öncesinde tamamlandı; yalnız açık plan tutulur.' }),
+      ],
+      cardInstallments: [
+        cardInstallment({ id: 'old-6', card_expense_id: 'old-plan', installment_no: 6, installment_count: 9, amount: 2005.61, due_month: '2026-08-26', status: 'posted', statement_archive_id: 'old-statement' }),
+        cardInstallment({ id: 'current-7', card_expense_id: 'current-plan', installment_no: 7, installment_count: 9, amount: 2005.61, due_month: '2026-09-26', status: 'posted', statement_archive_id: 'current-statement' }),
+        cardInstallment({ id: 'current-8', card_expense_id: 'current-plan', installment_no: 8, installment_count: 9, amount: 2005.61, due_month: '2026-10-26' }),
+        cardInstallment({ id: 'current-9', card_expense_id: 'current-plan', installment_no: 9, installment_count: 9, amount: 2005.61, due_month: '2026-11-26' }),
+      ],
+    }
+  }
+
+  it('does not require duplicate future rows on an older plan, without assuming payment', () => {
+    const data = statementPlans()
+    const before = structuredClone(data)
+    const issues = buildIssues(data)
+
+    expect(issues.filter((issue) => issue.id.startsWith('card-expense-missing-'))).toEqual([])
+    expect(issues.filter((issue) => issue.id.startsWith('card-expense-plan-total-'))).toEqual([])
+    expect(data).toEqual(before)
+    expect(data.cardInstallments.every((row) => row.paid_at === null)).toBe(true)
+  })
+
+  it('keeps a genuine gap on the current plan visible once', () => {
+    const data = statementPlans()
+    data.cardInstallments = data.cardInstallments.filter((row) => row.installment_no !== 8)
+    const missing = buildIssues(data).filter((issue) => issue.id.startsWith('card-expense-missing-'))
+
+    expect(missing).toHaveLength(1)
+    expect(missing[0]).toMatchObject({ id: 'card-expense-missing-current-plan', kind: 'manual' })
+    expect(missing[0].details).toContain('Eksik: 8/9')
+  })
+
+  it('recognizes several historical snapshots of the same plan', () => {
+    const data = statementPlans()
+    data.cardExpenses.push(cardExpense({ ...data.cardExpenses[0], id: 'older-plan', description: 'NEOVA SİGORTA Peş. Taksit 4.Tk Anapara', note: '3/9 taksiti uygulama öncesinde ödendi.' }))
+    data.cardInstallments.push(cardInstallment({ ...data.cardInstallments[0], id: 'older-4', card_expense_id: 'older-plan', installment_no: 4, due_month: '2026-06-26' }))
+
+    expect(buildIssues(data).filter((issue) => issue.id.startsWith('card-expense-missing-'))).toEqual([])
+  })
+
+  it.each([
+    ['another card', { card_id: 'card-2' }],
+    ['another user', { user_id: 'user-2' }],
+    ['another merchant', { description: 'BAŞKA SİGORTA Peş. Taksit 7.Tk Anapara' }],
+    ['another charge component', { description: 'NEOVA SİGORTA Peş. Taksit 7.Tk Faiz' }],
+    ['another installment amount', { installment_amount: 2005.62 }],
+    ['another installment count', { installment_count: 10 }],
+    ['a cancelled plan', { status: 'cancelled' }],
+    ['a provision', { status: 'provision' }],
+    ['missing carryover evidence', { note: null }],
+  ] satisfies [string, Partial<CardExpense>][])('does not hide the old finding for %s', (_, overrides) => {
+    const data = statementPlans()
+    Object.assign(data.cardExpenses[1], overrides)
+
+    expect(buildIssues(data).some((issue) => issue.id === 'card-expense-missing-old-plan')).toBe(true)
+  })
+
+  it('does not confuse another purchase date with the same merchant, amount and count', () => {
+    const data = statementPlans()
+    for (const row of data.cardInstallments.filter((item) => item.card_expense_id === 'current-plan')) row.due_month = row.due_month.replace('-26', '-27')
+    data.cardExpenses[1].spent_at = '2026-03-27'
+
+    expect(buildIssues(data).some((issue) => issue.id === 'card-expense-missing-old-plan')).toBe(true)
+  })
+
+  it('requires an observed installment rather than a scheduled-only successor', () => {
+    const data = statementPlans()
+    Object.assign(data.cardInstallments[1], { status: 'scheduled', statement_archive_id: null })
+
+    expect(buildIssues(data).some((issue) => issue.id === 'card-expense-missing-old-plan')).toBe(true)
+  })
+
+  it('does not hide findings when two successor plans are indistinguishable', () => {
+    const data = statementPlans()
+    data.cardExpenses.push(cardExpense({ ...data.cardExpenses[1], id: 'ambiguous-plan' }))
+    data.cardInstallments.push(cardInstallment({ ...data.cardInstallments[1], id: 'ambiguous-7', card_expense_id: 'ambiguous-plan' }))
+
+    expect(buildIssues(data).some((issue) => issue.id === 'card-expense-missing-old-plan')).toBe(true)
+  })
+
+  it('keeps the old finding if the old plan still has a scheduled continuation', () => {
+    const data = statementPlans()
+    data.cardInstallments.push(cardInstallment({ ...data.cardInstallments[2], id: 'old-8', card_expense_id: 'old-plan' }))
+
+    expect(buildIssues(data).some((issue) => issue.id === 'card-expense-missing-old-plan')).toBe(true)
+  })
+})
+
 describe('buildIssues overdue card statements', () => {
   it('flags an open statement whose due date has passed', () => {
     const issues = buildIssues({

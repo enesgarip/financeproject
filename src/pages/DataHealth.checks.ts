@@ -27,7 +27,7 @@ import {
   scheduledCardInstallmentTotalsByCard,
 } from '../utils/financeSummary'
 import { formatCurrency } from '../utils/formatCurrency'
-import { diffTL, exceedsTL, moneyDiffers, roundTL, sumTL, toKurus } from '../utils/money'
+import { diffTL, equalsTL, exceedsTL, moneyDiffers, roundTL, sumTL, toKurus } from '../utils/money'
 import { formatComponentAmount, formatSavingsGoalAmount, savingsGoalBelowTarget, savingsGoalTargetReached, savingsGoalValueTypeLabel } from '../utils/savingsGoal'
 import { buildTransactionFingerprint, descriptionSimilarity, descriptionsProveDistinct, normalizedTransactionDescription } from '../utils/transactionFingerprint'
 import type { HealthIssue } from './DataHealth.logic'
@@ -101,6 +101,56 @@ function inferInstallmentBaseDate(expense: CardExpense, rows: CardInstallment[])
   if (rows.length === 0) return expense.spent_at
   const earliest = [...rows].sort((a, b) => a.installment_no - b.installment_no)[0]
   return addMonthsToDate(earliest.due_month, 1 - earliest.installment_no)
+}
+
+function hasInstallmentHistory(row: CardInstallment) {
+  return row.status !== 'scheduled'
+    || row.posted_at != null
+    || row.paid_at != null
+    || row.statement_archive_id != null
+    || row.current_settlement_id != null
+}
+
+/** Açık devam planı başka parent'a taşınmışsa eski snapshot'ta tekrar aranmaz.
+ * Bu yalnız bulgu üretimini etkiler; ekstreye gelmek ödeme kanıtı sayılmaz. */
+function supersededInstallmentPlans(
+  expenses: CardExpense[],
+  installmentsByExpense: Map<string, CardInstallment[]>,
+) {
+  const groups = new Map<string, { expense: CardExpense; rows: CardInstallment[]; priorCount: number }[]>()
+  for (const expense of expenses) {
+    if (expense.status !== 'posted' || expense.installment_count <= 1 || expense.installment_amount <= 0) continue
+    const rows = installmentsByExpense.get(expense.id) ?? []
+    if (rows.length === 0 || rows.some((row) => row.user_id !== expense.user_id
+      || row.card_id !== expense.card_id || row.installment_count !== expense.installment_count
+      || row.installment_no < 1 || row.installment_no > expense.installment_count)) continue
+    // Yalnız banka açıklamasındaki sıra numarasını çıkar; satıcı, anapara/faiz/
+    // vergi bileşeni ve diğer bütün kelimeler birebir aynı kalmalı.
+    const description = normalizedTransactionDescription(expense.description).replace(/\b\d+\s+tk\b/g, '').replace(/\s+/g, ' ').trim()
+    if (!description) continue
+    const key = JSON.stringify([expense.user_id, expense.card_id, description,
+      expense.installment_count, toKurus(expense.installment_amount), inferInstallmentBaseDate(expense, rows)])
+    const group = groups.get(key) ?? []
+    group.push({ expense, rows, priorCount: parseHistoricalPaidCount(expense) })
+    groups.set(key, group)
+  }
+
+  const superseded = new Set<string>()
+  for (const group of groups.values()) {
+    // Aynı ilerleme seviyesinde iki parent varsa hangi alışverişin devamı
+    // olduğu belirsizdir. Bu durumda hiçbir bulguyu örtme.
+    if (group.length < 2 || new Set(group.map((plan) => plan.priorCount)).size !== group.length) continue
+    const latest = group.reduce((left, right) => left.priorCount > right.priorCount ? left : right)
+    const current = latest.rows.find((row) => row.installment_no === latest.priorCount + 1)
+    if (!current || !hasInstallmentHistory(current) || !equalsTL(current.amount, latest.expense.installment_amount)) continue
+
+    for (const plan of group) {
+      if (plan === latest || !plan.rows.every((row) => hasInstallmentHistory(row)
+        && row.installment_no <= latest.priorCount)) continue
+      superseded.add(plan.expense.id)
+    }
+  }
+  return superseded
 }
 
 function formatGoalComponentProgress(component: SavingsGoalComponent) {
@@ -1142,6 +1192,7 @@ export function checkCardInstallments(
     }
   }
 
+  const supersededPlans = supersededInstallmentPlans(cardExpenses, installmentsByExpense)
   for (const expense of cardExpenses.filter((item) => item.status === 'posted' && item.installment_count > 1)) {
     const rows = installmentsByExpense.get(expense.id) ?? []
     const existingNos = new Set(rows.map((row) => row.installment_no))
@@ -1151,15 +1202,13 @@ export function checkCardInstallments(
     // uydurup yeniden yaratma; yalnız kanıtlanmış prefix'ten sonraki açık planı
     // bekle. Carryover/PDF notundaki paidBefore aynı kanıtın açık biçimidir.
     const evidencedHistoricalThrough = rows.reduce((highest, row) => (
-      row.status !== 'scheduled'
-      || row.posted_at != null
-      || row.paid_at != null
-      || row.statement_archive_id != null
-      || row.current_settlement_id != null
+      hasInstallmentHistory(row)
         ? Math.max(highest, row.installment_no)
         : highest
     ), paidBefore)
-    const expectedNos = range(evidencedHistoricalThrough + 1, expense.installment_count)
+    // Eşleşen yeni snapshot açık devamın tek denetim sahibidir. Geçmiş
+    // parent'ın satırlarını/ödeme durumunu değiştirmeden yinelenen beklentiyi kaldır.
+    const expectedNos = supersededPlans.has(expense.id) ? [] : range(evidencedHistoricalThrough + 1, expense.installment_count)
     const missingNos = expectedNos.filter((installmentNo) => !existingNos.has(installmentNo))
     // Eski carryover kayıtlarında geçmiş satırlar bulunabilir; yeni PDF modelinde ise
     // note içindeki paidBefore kadar geçmiş taksit hiç yaratılmaz. İki model de meşrudur.

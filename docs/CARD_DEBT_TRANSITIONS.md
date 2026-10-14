@@ -489,6 +489,16 @@ remains the generic signed-correction RPC used by the statement-import lock.)
 
 ## Data-Health Expectations
 
+Successive statement snapshots may leave historical installment rows on an
+older parent and the open suffix on a newer parent. Data Health does not demand
+duplicate continuation rows on the older parent when user/card, description
+(only `N.Tk` removed; charge component preserved), count, monthly kurus amount,
+and inferred plan base date match unambiguously. A higher carryover prior-count
+plus an observed current installment proves plan progression; only historical
+rows may remain on the older parent. The latest plan retains missing-row checks,
+including genuine future gaps. Ambiguous matches retain the warning. This rule
+does not assert that prior statements were paid and performs no finance writes.
+
 Data health may flag:
 
 - split total greater than `debt_amount`
