@@ -7,7 +7,7 @@ was recently verified. `LiveReconciliationPanel` is canonical on this route;
 other screens may show status and deep-link here, but must not duplicate its
 manual amount-entry form.
 
-Last reviewed: 2026-10-14
+Last reviewed: 2026-10-15
 
 This note maps `/veri-sagligi` (`DataHealthPage`). Treat this route as an
 operational repair surface, not a debug page: fixes can modify real finance
@@ -122,6 +122,13 @@ Use existing source-of-truth helpers before adding new checks:
   `card_expenses.transaction_fingerprint`; explicit different installment
   numbers (`1.Tk`/`2.Tk`) and charge components (`anapara`/`faiz`/`BSMV`/`KKDF`)
   prove distinct bank rows and are excluded from loose duplicate candidates
+- equal PDF rows with distinct occurrence indices under the same artifact and
+  row-signature hashes are separate source rows, not an import retry. Suppress
+  their duplicate signal only for `statement_import`, the same card/user/date/
+  amount/normalized description, and one existing own-card/own-user open or paid
+  statement archive. Missing/invalid source IDs, repeated occurrence indices,
+  different artifacts/archives, unknown sources and external extra copies stay
+  candidates. Never deduplicate the rows or change their financial effect
 - authoritative PDF carryover plans may omit every historical installment row;
   `card_expenses.note` records how many installments were completed before the
   open plan, so Data Health expects only the current/future suffix rather than
@@ -133,12 +140,19 @@ Use existing source-of-truth helpers before adding new checks:
 - successive statement imports can retain historical parents while creating a
   separate continuation parent. Data Health checks the open suffix only on the
   latest unambiguous matching plan: same user/card, exact normalized description
-  excluding only the bank's `N.Tk` sequence marker (charge components retained),
-  installment count, monthly amount in kurus, and base date inferred from child
-  dates. Carryover notes must distinguish progress; duplicate progress levels
-  remain ambiguous. The successor's current installment must have posted/paid
-  or allocation evidence and the matching amount; the older parent must contain
-  only historical rows at or before the successor's prior-count boundary.
+  excluding only `N.Tk` (charge components retained), original bank installment
+  count and original base date. A legacy manual parent may number the remaining
+  suffix from one: the description's bank number minus the note's local current
+  number maps its local rows/count/date back to the bank plan. Non-manual source
+  or non-null note conflicts do not permit this legacy interpretation. For a
+  renumbered paid legacy row dated after its own paid archive's cut, the narrowly
+  bounded previous-month date is used only as matching evidence; stored dates
+  stay untouched. Duplicate bank progress levels remain ambiguous. The latest
+  current row needs posted/paid or allocation evidence and its own parent amount;
+  predecessors must contain only historical rows through the latest observed
+  bank sequence. Monthly amounts match exactly in kurus, except a one-kurus
+  difference when the final bank installment is observed, or explicitly marked
+  `Taksit. Nakit` principal/interest/tax components whose amounts vary by month.
   Current-plan gaps and other structural findings remain visible. This is a
   read-only detection rule: billing progression never writes a payment status,
   card balance, ledger event, or synthetic history

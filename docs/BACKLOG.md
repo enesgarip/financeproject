@@ -1,5 +1,29 @@
 # Priority Backlog
 
+## 2026-10-15 — Son taksit, eski manuel plan ve PDF occurrence ayrımı — UYGULANDI
+
+Taksit devamının eşleştirmesi bankanın gerçek sırasına göre yapılır. Eski manuel
+planın yerel 1..k satırları açıklamadaki `N.Tk` belirteciyle özgün adet/tarihe
+taşınır; devir notu/kaynak çelişkisi yorumlanmaz. Kendi ödenmiş arşivinden sonra
+tarihlenen, yeniden numaralanmış eski satır için yalnız dar önceki-ay eşleştirme
+kanıtı kullanılır; tarih düzeltilmez. Değişken nakit avans anapara/faiz/vergi
+bileşenleri ile gözlenen son taksidin 1 kuruş farkı desteklenir. Güncel gerçek
+eksik, belirsiz aday ve hâlâ açık eski devam bulguları korunur.
+
+Aynı PDF'nin aynı satır imzasındaki farklı occurrence kayıtları, eş işlem
+alanları ve aynı doğrulanmış kullanıcı/kart ekstresiyle birlikte ayrı banka
+satırları kabul edilir. Başka belge/kaynak/arşiv, aynı occurrence, eksik kaynak
+ve harici üçüncü kopya aday kalır. Finans verisi, ödeme durumu, ledger ve geçmiş
+satırlar değişmez. Anonim regresyonlar `DataHealth.logic.test.ts` içindedir;
+gerçek geçmişin yerel kopyasında gereksiz taksit bulgularının kalkması, kaynağı
+belirsiz tekrarın korunması ve finans verisinin değişmemesi ayrıca doğrulandı.
+Özel finans verisi repo'ya eklenmedi. Kaynak sözleşme:
+`docs/DATA_HEALTH_ARCHITECTURE.md`, `docs/CARD_DEBT_TRANSITIONS.md`.
+Doğrulama: `npm run verify` başarılı (147 dosya / 1.594 test; lint, coverage,
+üretim dependency audit, build, bundle ve edge tipleri). 15 yeni anonim regresyon
+ve repo dışında çalışan, finans verisinin değişmezliğini de doğrulayan yerel
+snapshot testi başarılı.
+
 ## 2026-10-14 — Eski taksit planlarının yinelenen eksik satır uyarıları — UYGULANDI
 
 Sonraki ekstre ayrı parent altında aynı alışverişin devamını taşıdığında,

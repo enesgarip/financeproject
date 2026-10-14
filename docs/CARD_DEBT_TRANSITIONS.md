@@ -492,12 +492,25 @@ remains the generic signed-correction RPC used by the statement-import lock.)
 Successive statement snapshots may leave historical installment rows on an
 older parent and the open suffix on a newer parent. Data Health does not demand
 duplicate continuation rows on the older parent when user/card, description
-(only `N.Tk` removed; charge component preserved), count, monthly kurus amount,
-and inferred plan base date match unambiguously. A higher carryover prior-count
-plus an observed current installment proves plan progression; only historical
-rows may remain on the older parent. The latest plan retains missing-row checks,
-including genuine future gaps. Ambiguous matches retain the warning. This rule
-does not assert that prior statements were paid and performs no finance writes.
+(only `N.Tk` removed; charge component preserved), original bank count and base
+date match unambiguously. Legacy manual remaining-count parents are mapped back
+to the bank's sequence using the description marker and local current number;
+conflicting devir notes/non-manual sources are not reinterpreted. A renumbered
+paid legacy child's date after its own paid archive cut permits only the bounded
+previous-month inference for matching, never a stored date change. The latest
+current row needs observed lifecycle/allocation evidence; older rows must all
+be historical through the latest observed sequence. Monthly kurus amounts match
+exactly except one kurus at the observed final installment, or explicitly named
+cash-advance principal/interest/tax components with varying monthly amounts.
+The latest plan retains real missing-row checks and ambiguous matches retain
+warnings. Billing progression does not assert payment and performs no writes.
+
+Equal rows from one statement PDF may be legitimate separate bank movements.
+Distinct occurrence indices under the same artifact/signature hashes, together
+with the same validated own-user/card statement archive and matching transaction
+fields, suppress only the duplicate candidate signal. Rows and totals remain
+unchanged. Different files/sources/archives, reused occurrence IDs and legacy
+unknown provenance retain review findings even if their statements are paid.
 
 Data health may flag:
 
