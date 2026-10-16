@@ -149,9 +149,9 @@ function ActivityRow({ item }: { item: ActivityItem }) {
       </div>
 
       <div className="min-w-0 flex-1">
-        <p className="truncate text-xs font-semibold text-ink">{item.title}</p>
+        <p className="break-words text-xs font-semibold text-ink">{item.title}</p>
         {item.detail ? (
-          <p className="truncate text-[10px] text-ink-muted">{item.detail}</p>
+          <p className="break-words text-xs leading-relaxed text-ink-muted">{item.detail}</p>
         ) : null}
       </div>
 

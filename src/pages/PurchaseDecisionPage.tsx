@@ -324,16 +324,16 @@ export function PurchaseDecisionPage() {
                           : 'Kesim/son ödeme günü kartta tanımlı değil'
                       }
                       className={[
-                        'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold',
+                        'inline-flex max-w-full flex-wrap items-center gap-x-1.5 gap-y-0.5 rounded-xl border px-2.5 py-1.5 text-xs font-semibold',
                         choice.isBest ? 'border-success/40 bg-success/8 text-ink' : 'border-line-strong bg-raised text-ink',
                         choice.fitsLimit ? '' : 'opacity-45',
                       ]
                         .filter(Boolean)
                         .join(' ')}
                     >
-                      <span className="max-w-[7rem] truncate">{choice.label}</span>
+                      <span className="min-w-0 break-words">{choice.label}</span>
                       <span className="tabular-nums text-ink-muted">
-                        {choice.hasSchedule ? `~${choice.daysUntilDue} gün` : 'gün eksik'}
+                        {choice.hasSchedule ? `yaklaşık ${choice.daysUntilDue} gün` : 'Vade günü tanımlı değil'}
                       </span>
                       {choice.isBest ? <span className="font-bold text-success">en geç</span> : null}
                     </span>
@@ -508,7 +508,7 @@ export function PurchaseDecisionPage() {
 
       {!hasAmount && !snapshotQuery.isPending ? (
         <p className="rounded-xl border border-line-strong bg-raised p-4 text-sm text-ink-muted">
-          Tutarı yazınca kararı hesaplarım.
+          Tutarı yazınca aylık etkisini hesaplarım.
         </p>
       ) : null}
     </section>

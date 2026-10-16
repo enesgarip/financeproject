@@ -103,12 +103,12 @@ export function LoginPage() {
               </div>
             </div>
             <div className="flex items-center gap-3 rounded-xl border border-line-strong bg-page p-3">
-              <div className="grid size-9 shrink-0 place-items-center rounded-lg bg-success/12 text-success">
+              <div className="grid size-9 shrink-0 place-items-center rounded-lg bg-primary/12 text-primary">
                 <ShieldCheck className="size-5" />
               </div>
               <div>
-                <p className="text-sm font-bold text-ink">Veri sağlığı</p>
-                <p className="text-xs text-ink-muted">Tutarsızlıkları büyümeden yakala.</p>
+                <p className="text-sm font-bold text-ink">Veri kontrolü</p>
+                <p className="text-xs text-ink-muted">Eksik ve uyuşmayan kayıtları gör.</p>
               </div>
             </div>
           </div>
@@ -128,7 +128,7 @@ export function LoginPage() {
               ekranın yarısını hiç kullanılmayacak bir yola ayırıyordu (denetim §10).
               Artık varsayılan Giriş; kayıt formun altında ikincil bir bağlantı. */}
           <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4">
-            <h2 className="text-sm font-black uppercase tracking-wider text-ink-muted">
+            <h2 className="text-sm font-semibold text-ink-muted">
               {mode === 'login' ? 'Giriş yap' : 'Yeni hesap'}
             </h2>
             {mode === 'register' ? (
@@ -180,7 +180,7 @@ export function LoginPage() {
               </p>
             ) : null}
             <Button type="submit" disabled={submitting} className="h-11 w-full gap-2">
-              {submitting ? 'Bekle…' : mode === 'login' ? 'Giriş yap' : 'Kayıt ol'}
+              {submitting ? (mode === 'login' ? 'Giriş yapılıyor…' : 'Hesap oluşturuluyor…') : mode === 'login' ? 'Giriş yap' : 'Hesap oluştur'}
               {!submitting ? <ArrowRight data-icon="inline-end" /> : null}
             </Button>
 

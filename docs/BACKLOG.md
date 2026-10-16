@@ -1,5 +1,18 @@
 # Priority Backlog
 
+## 2026-10-16 — Safir ikonlar ve okunur metinler — UYGULANDI
+
+Kullanıcının uygulama/yayın isteğiyle marka SVG'si, PWA/iOS PNG'leri,
+favicon ve push ikonu safire taşındı; sürümlü ikon adresleri ve tema bandı
+güncellendi. Nötr gezinme/yardım/boş durum ikonları safirdir; finansal
+durum renkleri korunur. PWA Harcama ekle kısayolu mevcut harcama görevine gider.
+Mobil ekstre/hesap adları, analiz raporu ve işlem açıklamaları, kart kıyasları
+sarılır. Mutabakat yerine anlaşılır karşılaştırma metinleri kullanılır;
+farkı kaydeden düğme artık “Karşılaştırmayı kaydet” der. Ödemeler sekmesi,
+ay özetleri, yedi günlük grup ve maaş türü doğru kapsamı adlandırır.
+Finans hesapları, ledger, şema ve ödeme/yazma davranışı değişmedi.
+Kapsam/kanıt: `docs/UI_ICON_COPY_2026-10-16.md`.
+
 ## 2026-10-16 — Mürekkep ve Safir / telefon öncelikli UI — UYGULANDI
 
 Kullanıcı onayıyla safir ana eylem, nötr lacivert yüzeyler, okunur metin

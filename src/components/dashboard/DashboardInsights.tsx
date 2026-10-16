@@ -162,7 +162,7 @@ function FocusActionCard({ action }: { action: FocusAction }) {
         </div>
         <div className="min-w-0">
           <h3 className="text-sm font-extrabold leading-snug">{maskText(action.title)}</h3>
-          <p className="mt-1 line-clamp-2 text-xs leading-5 text-ink-muted">{maskText(action.description)}</p>
+          <p className="mt-1 break-words text-xs leading-5 text-ink-muted">{maskText(action.description)}</p>
         </div>
       </div>
       <span className="mt-3 inline-flex items-center text-xs font-black uppercase tracking-normal text-ink-muted group-hover:text-ink">

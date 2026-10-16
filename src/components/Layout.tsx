@@ -98,7 +98,7 @@ function LayoutInner() {
                 {title}
               </h1>
               {subtitle ? (
-                <p className="mt-1 hidden truncate text-[13px] text-ink-muted lg:block">{subtitle}</p>
+                <p className="mt-1 hidden break-words text-[13px] text-ink-muted lg:block">{subtitle}</p>
               ) : null}
             </div>
 
@@ -110,7 +110,7 @@ function LayoutInner() {
                 aria-label={balancesHidden ? 'Tutarları göster' : 'Tutarları gizle'}
                 className="inline-flex min-h-11 min-w-11 items-center justify-center gap-1.5 rounded-lg border border-line-strong px-2.5 py-[7px] text-[12.5px] text-ink-muted transition-colors duration-[120ms] hover:bg-black/[.02] dark:hover:bg-white/[.03] lg:px-3"
               >
-                {balancesHidden ? <EyeOff size={15} aria-hidden="true" /> : <Eye size={15} aria-hidden="true" />}
+                {balancesHidden ? <EyeOff size={18} strokeWidth={1.8} className="text-primary" aria-hidden="true" /> : <Eye size={18} strokeWidth={1.8} className="text-primary" aria-hidden="true" />}
                 <span className="hidden lg:inline">{balancesHidden ? 'Tutarları göster' : 'Tutarları gizle'}</span>
               </button>
 
@@ -121,7 +121,7 @@ function LayoutInner() {
                 title={themeLabel}
                 className="inline-flex size-11 items-center justify-center rounded-lg border border-line-strong text-ink-muted transition-colors duration-[120ms] hover:bg-black/[.02] dark:hover:bg-white/[.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
-                {preference === 'system' ? <MonitorSmartphone size={15} aria-hidden="true" /> : preference === 'light' ? <Sun size={15} aria-hidden="true" /> : <Moon size={15} aria-hidden="true" />}
+                {preference === 'system' ? <MonitorSmartphone size={18} strokeWidth={1.8} className="text-primary" aria-hidden="true" /> : preference === 'light' ? <Sun size={18} strokeWidth={1.8} className="text-primary" aria-hidden="true" /> : <Moon size={18} strokeWidth={1.8} className="text-primary" aria-hidden="true" />}
               </button>
 
               <div className="hidden lg:block">
@@ -138,7 +138,7 @@ function LayoutInner() {
                   aria-label="Menü"
                   className="inline-flex size-11 items-center justify-center rounded-lg border border-line-strong text-ink-muted transition-colors duration-[120ms] hover:bg-black/[.02] dark:hover:bg-white/[.03]"
                 >
-                  <MoreHorizontal size={15} aria-hidden="true" />
+                  <MoreHorizontal size={18} strokeWidth={1.8} className="text-primary" aria-hidden="true" />
                 </button>
 
                 {menuOpen ? (
@@ -164,7 +164,7 @@ function LayoutInner() {
                           onClick={closeMenu}
                           className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-ink transition-colors duration-[120ms] hover:bg-black/[.03] dark:hover:bg-white/[.04]"
                         >
-                          <item.icon size={16} className="shrink-0 text-ink-faint" aria-hidden="true" />
+                          <item.icon size={18} strokeWidth={1.8} className="shrink-0 text-primary" aria-hidden="true" />
                           {item.label}
                         </Link>
                       ))}
@@ -228,7 +228,7 @@ function RailLink({
           isActive || ('activePaths' in item && (item.activePaths as readonly string[]).includes(pathname))
         return (
           <>
-            <item.icon size={17} strokeWidth={itemIsActive ? 2.2 : 1.8} className="shrink-0" aria-hidden="true" />
+            <item.icon size={19} strokeWidth={itemIsActive ? 2.1 : 1.8} className="shrink-0 text-primary" aria-hidden="true" />
             <span className="truncate">{item.label}</span>
           </>
         )

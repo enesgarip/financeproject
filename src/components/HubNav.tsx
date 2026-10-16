@@ -5,7 +5,7 @@ import type { HubTab } from './navigation'
 
 /**
  * Hub sekme şeridi — Şerit (`4c`). Hap değil, alttan çizgili sekme: aktif olan
- * 2px jade çizgi alır, şeridin kendisi 1px `line-strong` ile içerikten ayrılır.
+ * 2px safir çizgi alır, şeridin kendisi 1px `line-strong` ile içerikten ayrılır.
  * Kahraman rakamın ÜSTÜNDE durur (3. sistem kuralı).
  *
  * İkonlar bilerek çizilmiyor: tasarım sekmeyi metne indiriyor, ikon bu ölçekte

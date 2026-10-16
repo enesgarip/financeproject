@@ -222,9 +222,9 @@ export function buildFocusActions(
       actions.push({
         id: 'reconciliation-drift',
         title: `${reconDrift} hesapta bakiye farkı var`,
-        description: 'Son mutabakatta uygulama ile banka arasında fark tespit edildi. Farkın kaynağını incelemek iyi olur.',
+        description: 'Son karşılaştırmada uygulama ile banka arasında fark bulundu. Eksik veya hatalı kaydı kontrol et.',
         to: '/veri-sagligi',
-        cta: 'Mutabakata git',
+        cta: 'Bakiyeleri karşılaştır',
         tone: 'rose',
         icon: 'alert',
         priority: 8,
@@ -232,10 +232,10 @@ export function buildFocusActions(
     } else if (reconNever > 0) {
       actions.push({
         id: 'reconciliation-never',
-        title: `${reconNever} hesap hiç mutabık olmadı`,
-        description: 'Banka ile en az bir kez karşılaştır; sessiz kaymaları erken yakala.',
+        title: `${reconNever} hesap bankayla karşılaştırılmadı`,
+        description: 'Uygulamadaki bakiye veya borcu bankada gördüğün tutarla karşılaştır.',
         to: '/veri-sagligi',
-        cta: 'Mutabakata git',
+        cta: 'Bakiyeleri karşılaştır',
         tone: 'amber',
         icon: 'health',
         priority: 8.5,
@@ -243,10 +243,10 @@ export function buildFocusActions(
     } else if (reconStale > 0) {
       actions.push({
         id: 'reconciliation-stale',
-        title: `${reconStale} hesapta mutabakat ${STALE_AFTER_DAYS}+ gün önce`,
-        description: 'Düzenli mutabakat kaçak işlemleri erken yakalar. Bankadaki gerçek rakamla karşılaştır.',
+        title: `${reconStale} hesap ${STALE_AFTER_DAYS}+ gündür karşılaştırılmadı`,
+        description: 'Eksik işlemleri fark etmek için bankadaki güncel tutarla yeniden karşılaştır.',
         to: '/veri-sagligi',
-        cta: 'Mutabakata git',
+        cta: 'Bakiyeleri karşılaştır',
         tone: 'stone',
         icon: 'calendar',
         priority: 9,

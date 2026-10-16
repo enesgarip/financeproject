@@ -15,7 +15,7 @@ type ReconciliationPanelProps = {
 
 const reconciliationHelp = {
   calculation:
-    'Kesilmiş her kredi kartı ekstresi için "bankanın bildirdiği tutar" ile app\'in hesapladığı ekstre borcu karşılaştırılır.',
+    'Kesilmiş her kredi kartı ekstresinde bankanın bildirdiği tutar ile uygulamanın hesapladığı ekstre borcu karşılaştırılır.',
   importance:
     'Aradaki fark, eksik girilmiş bir taksit/harcamayı ay sonunu beklemeden gösterir; mutabık olmayan ekstreler hatırlatılır.',
   source: 'Ekstre arşivi (kesilmiş ekstreler) ve ekstre içe aktarırken kaydedilen mutabakat tutarı.',
@@ -66,8 +66,8 @@ export function ReconciliationPanel({ cards, statements }: ReconciliationPanelPr
           <div>
             <CardTitle className="flex items-center gap-2 text-base">
               <Scale size={17} />
-              Ekstre mutabakatı
-              <HelpTooltip title="Ekstre mutabakatı" content={reconciliationHelp} />
+              Ekstre karşılaştırması
+              <HelpTooltip title="Ekstre karşılaştırması" content={reconciliationHelp} />
             </CardTitle>
             <p className="mt-1 text-sm text-ink-muted">Banka ile uyuşmayan veya kontrol bekleyen ekstreler.</p>
           </div>
@@ -87,14 +87,14 @@ export function ReconciliationPanel({ cards, statements }: ReconciliationPanelPr
                   <Badge variant={item.kind === 'delta' ? 'destructive' : 'secondary'}>
                     {item.kind === 'delta'
                       ? `Fark ${item.delta >= 0 ? '+' : ''}${formatAmount(item.delta)}`
-                      : 'Mutabakat bekliyor'}
+                      : 'Karşılaştırma bekliyor'}
                   </Badge>
                 </div>
                 <p className="mt-0.5 text-xs text-ink-muted">
                   Ekstre: {formatDate(item.statementDate)}
                   {item.kind === 'delta'
                     ? ' · Bankayla uyuşmuyor, eksik bir taksit/harcama olabilir.'
-                    : ' · Ekstreyi içe aktarıp mutabık olarak kaydet.'}
+                    : ' · Ekstreyi içe aktar; bankadaki tutarla karşılaştırıp kaydet.'}
                 </p>
               </div>
               <Link

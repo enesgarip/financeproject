@@ -35,6 +35,12 @@ ve ödeme eylemini kullanır; kapalı ek bilgiler hesapları değiştirmez.
 İkonlar Lucide çizgi ailesindedir: gezinme 21px/1,8 (aktif 2,1), ana işlem ve
 bölüm ikonları 18–20px/1,8. Dekoratif ikon `aria-hidden`, ikon düğmesi açık
 erişilebilir ad taşır. Hesaplar WalletCards, Plan CalendarDays kullanır.
+Nötr gezinme, araç, yardım ve boş durum ikonları safirdir. Yardım işareti
+Unicode karakter yerine Lucide Info'dur. Durum ikonları başarı/uyarı/tehlike
+anlamını, banka logoları kurum kimliğini korur. Marka SVG'si `public/icon.svg`;
+iOS 180px ve PWA 192/512px PNG'leri aynı SVG'den üretilir. Favicon, uygulama
+markası, manifest ve push ikonu `?v=sapphire-20261016` kullanır. Tarayıcı/PWA
+bandı açık `#f5f7fb`, koyu `#101623` değerlerini tema tercihiyle izler.
 Mobil alt bar etiketli Harcama ekle ve diğer işlemler düğmesini içerir; form
 girişinde yinelenen ekle satırı gösterilmez. Yüzen FAB kaldırılmıştır.
 
@@ -45,6 +51,12 @@ menüsü aramaya odaklanıp klavye açmaz; odak içeride tutulur ve kapanınca g
 verilir. Kapalı details içindeki öğeler odak döngüsüne dahil edilmez.
 
 Uygulama/kanıt kaydı: `docs/UI_SAPPHIRE_2026-10-16.md`.
+İkon ve metin eki: `docs/UI_ICON_COPY_2026-10-16.md`. `LineRow` mobilde
+ad/açıklamayı tam genişlikte, tutar/eylemi altta gösterir; masaüstünde yan yana
+kalır. Kritik ad, tutar ve işlem açıklaması ellipsis/line-clamp ile gizlenmez.
+Plan sekmesi “Ödemeler”dir; Yaklaşanlar ve Takvim onun iki görünümüdür.
+Yedi günlük kayan pencere “Önümüzdeki 7 gün”, gelir satırında maaş “Maaş”
+diye adlandırılır. Karşılaştırma sonucu kaydı ile borç düzeltme ayrı eylemlerdir.
 
 ## Şerit İlkeleri
 
@@ -163,7 +175,7 @@ Kaynak: `src/components/serit/index.ts`. Roller:
 
 | Bileşen | Rol |
 | --- | --- |
-| `ScreenHeader` / `SectionEyebrow` | Ekranın ilk satırı: uppercase eyebrow + sağda bağlam ("4 hesap · 3 kart"). Bölüm başlıkları `SectionEyebrow`. |
+| `ScreenHeader` / `SectionEyebrow` | Ekranın ilk satırı: cümle düzeninde etiket + sağda bağlam ("4 hesap · 3 kart"). Bölüm başlıkları `SectionEyebrow`. |
 | `HeroNumber` | Ekranın tek sorusunun cevabı; dev mono rakam (36px mobil → 56px masaüstü). Rakam `ink`; `tone` yalnız gerçekten kritikse. Opsiyonel progress çubuğu. |
 | `LineGroup` / `LineRow` / `DayBadge` | Çizgi listesi. `plain` (zeminsiz, baskın) ve `raised` (14px yarıçap, ekran başına 1-2) kapları. |
 | `BreakdownBar` | Parça-bütün: pasta değil **yatay kırılım çubuğu** + etiket/değer satırları. Segment rengi sinyal (`tone`) ya da kimlik (`color` → viz paleti). Sıfır toplamda boş track kalır. |
@@ -283,7 +295,7 @@ skill'inde (`validate_palette.js`), zemin olarak `--card` değerlerini ver.
 Özet odak önerileri ayrıntılar kapalıyken görünür. Masaüstü vade listesi altı grupla başlar, kullanıcı genişletir. Mobil takvimde b=bin, m=milyon açıklaması görünür; tam tutar seçilen gün detayındadır, kompakt tutarlar gizlilik moduna uyar. Kart döngüsü varsayımları aynı panelde, harcama senaryosu isteğe bağlı details içinde kalır.
 
 ## 2026-09-07 — Günlük kullanım sadeleştirmesi
-Hesap/kart sayfasında iki açıklamalı büyük seçim alanı kullanılır: Kredi kartları (borç, ekstre ve limit) ve Banka hesapları (bakiye ve hareketler). Alt şerit Özet/İşlemler/Ekstreler araçlarını taşır. Kalan kart limiti nakit bakiye gibi adlandırılmaz. Plan ana sekmeleri Takvim/Hedefler; diğer araçlar native details ile açılır, aktif araç üst sekmede görünür. Hızlı işlem seçenekleri tüm rotalarda sabittir.
+Hesap/kart sayfasında iki açıklamalı büyük seçim alanı kullanılır: Kredi kartları (borç, ekstre ve limit) ve Banka hesapları (bakiye ve hareketler). Alt şerit Özet/İşlemler/Ekstreler araçlarını taşır. Kalan kart limiti nakit bakiye gibi adlandırılmaz. Plan ana sekmeleri Ödemeler/Hedefler; diğer araçlar native details ile açılır, aktif araç üst sekmede görünür. Hızlı işlem seçenekleri tüm rotalarda sabittir.
 
 2026-09-07 üretim öncesi takip: Hızlı menü Harcama ekle ile başlar; form kaynağı Hesap / kredi kartı olarak adlandırılır. Banka hesabı menüsü taşmaya açıktır; dekoratif üst çizgi köşelerin içine alınır.
 

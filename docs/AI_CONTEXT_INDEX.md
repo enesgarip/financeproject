@@ -2,6 +2,16 @@
 
 Last reviewed: 2026-10-16
 
+16 Ekim ikon/metin eki: safir marka kaynağı `public/icon.svg`; 180/192/512px
+PNG'ler bu SVG'den üretilir. `AppMark.tsx`, `index.html`, manifest ve push
+ikonu aynı sürümlü URL'yi kullanır. PWA bandı `hooks/useTheme.ts` ile tema
+zeminine uyar; Harcama ekle kısayolu doğrudan mevcut görev rotasını açar.
+`components/serit/LineRow.tsx` mobilde ad/açıklama ve tutarı ayrı satırlarda
+gösterir. Analiz işlem/raporları ve kart kıyasları kırpılmaz. Ödeme sekmesi
+“Ödemeler”, yedi günlük grup “Önümüzdeki 7 gün”; maaş türü “Maaş”tır.
+Karşılaştırma etiketleri sadeleştirildi; kayıt/düzeltme/hesap değişmedi.
+Kontrol kaydı: `docs/UI_ICON_COPY_2026-10-16.md`; dil: `docs/UI_COPY_REVIEW.md`.
+
 16 Ekim 2026: kullanıcı onaylı **Mürekkep ve Safir** görsel paketi. Tema/
 hareket kaynağı `src/index.css`, metin/dolgu ayrımı `components/serit/tone.ts`.
 Mobil işlem alanı `components/BottomNav.tsx` + `components/QuickActions.tsx`;

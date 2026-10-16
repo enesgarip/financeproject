@@ -1,26 +1,26 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Denge">
   <defs>
     <linearGradient id="bg" x1="72" y1="42" x2="434" y2="476" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#4fe3ad"/>
-      <stop offset=".46" stop-color="#12a37a"/>
-      <stop offset="1" stop-color="#08110d"/>
+      <stop stop-color="#8cb1ff"/>
+      <stop offset=".46" stop-color="#2458d3"/>
+      <stop offset="1" stop-color="#162d69"/>
     </linearGradient>
     <linearGradient id="flow" x1="150" y1="317" x2="366" y2="215" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#6ff0c0"/>
-      <stop offset=".5" stop-color="#35d99e"/>
-      <stop offset="1" stop-color="#58a9ff"/>
+      <stop stop-color="#b7d3ff"/>
+      <stop offset=".5" stop-color="#8cb1ff"/>
+      <stop offset="1" stop-color="#dbeafe"/>
     </linearGradient>
     <filter id="shadow" x="-20%" y="-20%" width="140%" height="145%">
       <feDropShadow dx="0" dy="18" stdDeviation="18" flood-color="#050816" flood-opacity=".34"/>
     </filter>
     <filter id="softGlow" x="-30%" y="-30%" width="160%" height="160%">
       <feGaussianBlur stdDeviation="12" result="blur"/>
-      <feColorMatrix in="blur" type="matrix" values="0 0 0 0 0.24 0 0 0 0 0.88 0 0 0 0 0.63 0 0 0 .32 0"/>
+      <feColorMatrix in="blur" type="matrix" values="0 0 0 0 0.55 0 0 0 0 0.69 0 0 0 0 1 0 0 0 .24 0"/>
       <feBlend in="SourceGraphic"/>
     </filter>
   </defs>
 
-  <rect width="512" height="512" fill="#0a0b0f"/>
+  <rect width="512" height="512" fill="#101623"/>
   <rect x="28" y="28" width="456" height="456" rx="96" fill="url(#bg)"/>
   <path d="M92 151h328M92 257h328M92 363h328M151 92v328M257 92v328M363 92v328" stroke="#ffffff" stroke-opacity=".07" stroke-width="3"/>
 
@@ -32,8 +32,8 @@
 
   <g filter="url(#softGlow)">
     <path d="M145 316c42-45 80-47 116-10 32 32 67 25 105-71" fill="none" stroke="url(#flow)" stroke-width="28" stroke-linecap="round" stroke-linejoin="round"/>
-    <circle cx="145" cy="316" r="19" fill="#6ff0c0"/>
-    <circle cx="366" cy="235" r="19" fill="#58a9ff"/>
+    <circle cx="145" cy="316" r="19" fill="#b7d3ff"/>
+    <circle cx="366" cy="235" r="19" fill="#dbeafe"/>
   </g>
 
   <path d="M159 389h196" stroke="#ffffff" stroke-opacity=".3" stroke-width="16" stroke-linecap="round"/>

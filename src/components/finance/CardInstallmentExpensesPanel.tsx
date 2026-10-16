@@ -294,7 +294,7 @@ export function CardInstallmentExpensesPanel({ cards, reload, setError, cardId }
                     {isPaid ? <Check size={16} strokeWidth={3} /> : isStatementLinked ? <ReceiptText size={15} /> : <Clock3 size={15} />}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className={`truncate font-semibold ${isPaid ? 'text-success' : 'text-ink'}`}>
+                    <p className={`break-words font-semibold ${isPaid ? 'text-success' : 'text-ink'}`}>
                       {item.installment_no}/{item.installment_count}. taksit - {formatAmount(item.amount)}
                     </p>
                     <p className={`text-xs ${isPaid ? 'text-success/80' : 'text-ink-muted'}`}>
