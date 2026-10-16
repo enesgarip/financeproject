@@ -4,6 +4,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../auth/useAuth'
 import { saveCrudRow } from '../data/repositories/crudRepo'
 import { Badge } from '../components/ui/badge'
+import { PaymentMatchStatus } from '../components/finance/PaymentMatchStatus'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { SERIT_FILL, SERIT_TEXT, useSeritAmount } from '../components/serit'
 import type { Budget, CardExpense, Debt } from '../types/database'
@@ -26,6 +27,7 @@ import {
   type SubscriptionItem,
 } from '../utils/subscriptions'
 import { diffTL, sumTL } from '../utils/money'
+import { matchedPaymentsInMonth } from '../utils/paymentHistory'
 import { StatPill } from './AnalysisPage.atoms'
 
 export function UpcomingInstallments({ data }: { data: AnalysisData }) {
@@ -421,6 +423,9 @@ export function SubscriptionsPanel({ data }: { data: AnalysisData }) {
   const { user } = useAuth()
   const queryClient = useQueryClient()
   const salary = getCurrentSalary(data.salaryHistory)
+  const monthKey = dateInputValue(startOfMonth(new Date()))
+  const matchMonth = useMemo(() => new Date(`${monthKey}T12:00:00`), [monthKey])
+  const monthMatches = useMemo(() => matchedPaymentsInMonth(data.transactionHistory, matchMonth, data.cardExpenses), [data.transactionHistory, data.cardExpenses, matchMonth])
   const result = useMemo(
     () => buildSubscriptionSummary(data.cardExpenses, data.payments, salary?.amount ?? null),
     [data.cardExpenses, data.payments, salary],
@@ -479,6 +484,7 @@ export function SubscriptionsPanel({ data }: { data: AnalysisData }) {
         ) : (
           result.items.slice(0, 8).map((item) => {
             const planned = item.source === 'recurring_expense' && subscriptionAlreadyPlanned(item, data.payments)
+            const automatic = item.paymentId && data.payments.some((payment) => payment.id === item.paymentId && payment.payment_method === 'bank_auto')
             const plannable =
               !planned &&
               item.isActive &&
@@ -499,6 +505,7 @@ export function SubscriptionsPanel({ data }: { data: AnalysisData }) {
                   {formatAmount(item.amount)}
                 </span>
               </div>
+              {automatic && item.paymentId ? <PaymentMatchStatus month={matchMonth} match={monthMatches.get(item.paymentId)} /> : null}
               {plannable ? (
                 <div className="mt-1.5 flex flex-wrap items-center justify-between gap-2">
                   <p className="text-xs text-ink-muted">Ödeme planına eklensin mi? Nakit takvimi ve hatırlatmalar görür.</p>

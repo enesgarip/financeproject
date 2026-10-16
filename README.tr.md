@@ -84,6 +84,8 @@ finans hareketi ve başarı içindir. Tema sistemi izler; elle açık/koyu seçi
 Telefonda yaklaşan vadeler ana tutarın ardından görünür; etiketli Harcama ekle
 eylemi alt gezinmeye bağlıdır. Harcama formunda hesap, tutar, açıklama ve Kaydet
 önce gelir. Ödemeler'deki Yaklaşanlar/Takvim aynı yükümlülükleri gösterir.
+Aboneliklerde eşleşen ay, banka işlem günü ve gerçek tutar görünür. Aylık kart
+talimatları otomatik takip edilir; elle ödenen planların ödeme düğmesi korunur.
 Erişilebilir ikon adları, sarılan metinler ve azaltılmış hareket desteği ortak
 görsel sözleşmenin parçasıdır. Kurallar:
 [`docs/UI_ARCHITECTURE.md`](docs/UI_ARCHITECTURE.md).

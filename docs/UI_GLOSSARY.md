@@ -1,5 +1,11 @@
 # Denge — Türkçe arayüz sözlüğü
 
+Abonelik aylık durumları: “Eşleşti” banka işleminin ilgili abonelik vadesine
+bağlandığını söyler; kart ekstresinin ödendiği anlamına gelmez. Ay, işlem günü
+ve gerçek tutar ayrıca gösterilir. Kanıt yoksa “Henüz eşleşme yok”, iptal/geri
+alma varsa “Eşleşme geri alınmış” denir. “Otomatik takip” aylık kart talimatında
+manuel ödeme düğmesinin yerini alır; diğer planlar “Ödeme kaydet” dilini korur.
+
 16 Ekim 2026. Kullanıcının dil/sözlük incelemesi isteğiyle oluşturuldu.
 Bu belge kullanıcıya görünen kelimelerin kaynağıdır. Finans tanımları için
 `FINANCE_RULES.md`, görsel sözleşme için `UI_ARCHITECTURE.md` geçerlidir.

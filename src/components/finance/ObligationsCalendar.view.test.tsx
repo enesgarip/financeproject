@@ -2,7 +2,7 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { BalancePrivacyProvider } from '../../hooks/useBalancePrivacy'
-import type { Payment } from '../../types/database'
+import type { Card, Payment } from '../../types/database'
 import type { FinanceObligationsInput } from '../../utils/obligations'
 import { ObligationsCalendar } from './ObligationsCalendar'
 
@@ -41,4 +41,20 @@ it('gizlilik tercihi yeni liste görünümünde de tutarları maskeler', () => {
   render(<BalancePrivacyProvider><ObligationsCalendar data={data} /></BalancePrivacyProvider>)
   expect(screen.queryByText(/700,00/)).toBeNull()
   expect(screen.getAllByText('••••').length).toBeGreaterThan(0)
+})
+
+it('aylık kart talimatını ödeme düğmesi yerine otomatik takip olarak gösterir', () => {
+  const automatic = { ...payment, recurrence: 'monthly', recurrence_day: 20, payment_method: 'bank_auto', auto_source_card_id: 'credit' } as Payment
+  render(<BalancePrivacyProvider><ObligationsCalendar data={{ ...data, payments: [automatic], cards: [{ id: 'credit', card_type: 'kredi_karti', debt_amount: 0, statement_debt_amount: 0, current_period_spending: 0, due_day: null } as Card] }} onPayObligation={vi.fn()} /></BalancePrivacyProvider>)
+  expect(screen.queryByRole('button', { name: 'Ödeme kaydet' })).toBeNull()
+  expect(screen.getByText('Otomatik takip')).toBeTruthy()
+})
+
+it('ay seçimini abonelik eşleşme göstergesine iletir', () => {
+  const onMonthChange = vi.fn()
+  render(<BalancePrivacyProvider><ObligationsCalendar data={data} onMonthChange={onMonthChange} /></BalancePrivacyProvider>)
+  fireEvent.click(screen.getByRole('button', { name: 'Sonraki ay' }))
+  expect(onMonthChange).toHaveBeenLastCalledWith(new Date(2026, 10, 1))
+  fireEvent.click(screen.getByRole('button', { name: 'Bugün' }))
+  expect(onMonthChange).toHaveBeenLastCalledWith(new Date(2026, 9, 1))
 })

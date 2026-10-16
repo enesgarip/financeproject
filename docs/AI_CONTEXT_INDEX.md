@@ -2,6 +2,14 @@
 
 Last reviewed: 2026-10-16
 
+Abonelik aylık eşleşmesi: `utils/paymentHistory.ts` / `matchedPaymentsInMonth`
+vade ayını, açık harcama bağlantısını veya eski SMS RPC sözleşmesini okur;
+manuel ödeme benzerliği kanıt değildir. `components/finance/PaymentMatchStatus.tsx`
+ay/tarih/gerçek tutar ve iptal/yükleme/hata durumunu gösterir. `pages/PaymentsPage.tsx`
+takvim ayını izler; `pages/AnalysisPage.panels.tsx` abonelikleri bu ay için gösterir.
+`utils/obligations.ts` aylık kredi kartı talimatında manuel eylem sunmaz;
+diğer ödemeler korunur. Sözleşme: `docs/FINANCE_RULES.md`, `docs/TRANSACTION_HISTORY.md`.
+
 Kalıcı kabukta günlük snapshot: `app/useDailyNetWorthSnapshot.ts` gezinmede
 damgayı kontrol eder; çalışan koşu kesilmez/çoğaltılmaz. Yeni gün ve başarısız
 kayıt sonraki gezinmede yeniden denenir; oturum değişimi/unmount iptal eder.

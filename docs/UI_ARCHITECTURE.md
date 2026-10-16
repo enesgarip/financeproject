@@ -2,6 +2,12 @@
 
 Last reviewed: 2026-10-16
 
+Abonelik satırında ay etiketli eşleşme durumu ve banka işlem tarihi/gerçek
+tutar görünür; Ödemeler'de takvim ayı, Analiz'de bu ay kullanılır. Aylık kart
+talimatında manuel ödeme düğmesi yerine otomatik takip vardır. Plan tutarı,
+eşleşme tutarı ve sıradaki ödeme metni gizlilik tercihine uyar. Kaynak:
+`components/finance/PaymentMatchStatus.tsx`, `docs/FINANCE_RULES.md`.
+
 Sayfa geçişlerinde Layout ve tema/gizlilik sağlayıcıları korunur; yalnız
 sayfa geçiş sınırı yenilenir. `components/ui/deferred-details.tsx` veri çeken
 ikincil panelleri ilk açılışa kadar kurmaz, sonra kapatıp açınca taslağı korur.

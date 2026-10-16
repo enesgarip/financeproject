@@ -28,6 +28,8 @@ export type SubscriptionItem = {
   sourceCardId: string | null
   /** Son gözlemin ay günü — "Planla" dönüşümünde tekrar günü olur. */
   recurrenceDay: number | null
+  /** Planlı abonelikte aylık banka eşleşmesini geçmişten okumak için. */
+  paymentId?: string
 }
 
 export type SubscriptionSummaryResult = {
@@ -131,6 +133,7 @@ export function buildSubscriptionSummary(
     items.push({
       id: `payment:${payment.id}`,
       source: 'recurring_payment',
+      paymentId: payment.id,
       title: payment.title,
       category: payment.category ?? 'Diğer',
       amount: payment.amount,

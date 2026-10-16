@@ -32,6 +32,7 @@ type ObligationsCalendarProps = {
   data: FinanceObligationsInput
   loading?: boolean
   onPayObligation?: (obligation: FinanceObligation) => void
+  onMonthChange?: (month: Date) => void
 }
 
 const WEEK_DAYS = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz']
@@ -69,6 +70,7 @@ function obligationKindLabel(item: FinanceObligation) {
 }
 
 function obligationActionLabel(item: FinanceObligation) {
+  if (item.kind === 'payment' && item.settlement === 'credit_card' && !item.action) return 'Otomatik takip'
   if (item.action === 'collect_debt') return 'Tahsilat kaydet'
   if (item.action) return 'Ödeme kaydet'
   return 'Bilgi'
@@ -204,7 +206,7 @@ function ObligationRow({ item, formatAmount, onPayObligation }: { item: FinanceO
   )
 }
 
-export function ObligationsCalendar({ data, loading = false, onPayObligation }: ObligationsCalendarProps) {
+export function ObligationsCalendar({ data, loading = false, onPayObligation, onMonthChange }: ObligationsCalendarProps) {
   const { formatAmount, hidden } = useBalancePrivacy()
   const today = dateInputValue(new Date())
   const [visibleMonth, setVisibleMonth] = useState(() => startOfMonth(new Date()))
@@ -233,12 +235,14 @@ export function ObligationsCalendar({ data, loading = false, onPayObligation }: 
   function moveMonth(offset: number) {
     const nextMonth = addCalendarMonths(visibleMonth, offset)
     setVisibleMonth(nextMonth)
+    onMonthChange?.(nextMonth)
     setSelectedDate(dateInputValue(startOfMonth(nextMonth)))
   }
 
   function jumpToToday() {
     const now = new Date()
     setVisibleMonth(startOfMonth(now))
+    onMonthChange?.(startOfMonth(now))
     setSelectedDate(dateInputValue(now))
   }
 
