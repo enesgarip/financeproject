@@ -1,5 +1,7 @@
 # Denge
 
+<img src="public/icon.svg" width="64" height="64" alt="Denge safir uygulama simgesi" />
+
 [English](README.md) · **Türkçe**
 
 **Aylık finansal yükünü, vade kaçmadan görünür kılan kişisel finans uygulaması.**
@@ -40,7 +42,8 @@ kullanımı hedefler (TL, Türkçe arayüz).
 - **Kredi kartı yönetimi** — Harcama, provizyon, ekstre kesimi, taksitli alışveriş
   ve dönem içi ödemeler. Borç; güncel dönem / ekstre / provizyon kovalarına ayrılır.
 - **Krediler & kişisel borçlar** — Kredi taksit planları ve kişilere olan
-  borç/alacak takibi; taksit takvimiyle birlikte.
+  borç/alacak takibi; taksit takvimiyle birlikte. Geri beklenmeyen ödemeler için
+  ayrı Sadece takip listesi vardır; bakiye, borç ve nakit akışını etkilemez.
 - **Planlama & ödeme takvimi** — Yaklaşan ödemeler, aylık nakit akışı projeksiyonu,
   bütçe uyarıları, birikim hedefleri ve taksit takvimi özetleri.
 - **Analiz & net değer** — Net değer, servet ve nakit akışı trendleri; işlem geçmişi.
@@ -63,23 +66,36 @@ kullanımı hedefler (TL, Türkçe arayüz).
 - **Stabil (çekirdek):** hesaplar & varlıklar, kredi kartı borcu / ekstre / taksit,
   krediler, kişisel borç-alacak, ödeme takvimi, analiz & net değer, veri sağlığı,
   Web Push bildirimleri (tercih + sessiz saat).
-- **Gelişmekte:** SMS'ten provizyon/hareket okuma ve banka ekstresi import'u
-  (DenizBank, YapıKredi) tarayıcıda çalışır; tüm-ekstre satır-toplamı doğrulaması
+- **İçe aktarma ve otomasyon:** SMS işleme Supabase Edge Function'da,
+  DenizBank/YapıKredi ekstre ayrıştırması tarayıcıda çalışır. Desteklenmeyen
+  ekstreler için isteğe bağlı AI yolu vardır. Tüm-ekstre satır-toplamı doğrulaması
   gerçek ekstrelerde kalibre edilmiş iki bağımsız checksum ile yapılır
   (bkz. `docs/BACKLOG.md`). AI asistan yeni eklendi (Gemini ücretsiz katman).
 
-## Görsel dil: Şerit (Nocturne)
+## Görsel dil: Şerit / Mürekkep ve Safir
 
 Arayüz, 2026-08 yeniden tasarımıyla gelen **Şerit** görsel dilini kullanır:
 gölge ve kutu yığını yerine çizgiyle ayrılan satırlar, ekran başına tek
 kahraman rakam, mono + tabular finansal rakamlar; kart yalnız hak eden blokta.
-Renk kimliği **Nocturne**: sıcak porselen açık tema, koyu obsidyen koyu tema,
-jade vurgu — iki tema da birinci sınıftır. Kurallar:
+16 Ekim 2026'dan itibaren renk kimliği **Mürekkep ve Safir**: serin açık
+yüzeyler, koyu mürekkep/lacivert yüzeyler ve safir ana eylemler. Yeşil, pozitif
+finans hareketi ve başarı içindir. Tema sistemi izler; elle açık/koyu seçilebilir.
+
+Telefonda yaklaşan vadeler ana tutarın ardından görünür; etiketli Harcama ekle
+eylemi alt gezinmeye bağlıdır. Harcama formunda hesap, tutar, açıklama ve Kaydet
+önce gelir. Ödemeler'deki Yaklaşanlar/Takvim aynı yükümlülükleri gösterir.
+Erişilebilir ikon adları, sarılan metinler ve azaltılmış hareket desteği ortak
+görsel sözleşmenin parçasıdır. Kurallar:
 [`docs/UI_ARCHITECTURE.md`](docs/UI_ARCHITECTURE.md).
 
 ## Ekran görüntüleri
 
-> Aşağıdaki görseller yerel geliştirme ortamında **temsili demo veriyle** alınmıştır.
+> Görseller 16 Ekim 2026'da yerel ortamda **temsili demo veriyle** yenilendi.
+> Üretim hesabı veya finans verisi kullanılmadı. [Çekim bilgileri](docs/screenshots/README.md).
+
+| Telefon özeti | Koyu tema |
+| --- | --- |
+| ![Mobil Özet](docs/screenshots/dashboard-mobile.png) | ![Koyu Özet](docs/screenshots/dashboard-dark.png) |
 
 | Hesaplar & kartlar | Krediler & taksitler |
 | --- | --- |
@@ -91,7 +107,9 @@ jade vurgu — iki tema da birinci sınıftır. Kurallar:
 
 ## Gizlilik & güvenlik
 
-> - Veri **senin kendi Supabase projende** durur; üçüncü bir sunucuya gitmez.
+> - Finans kayıtları **senin kendi Supabase projende** tutulur. AI asistan
+>   kullanıldığında soru ve finansal özet Google Gemini'ye gönderilir;
+>   AI fiş/ekstre okumasında seçilen içerik Edge Function üzerinden iletilir.
 > - Her tabloda satır seviyesi güvenlik (RLS): her satır `user_id = auth.uid()`
 >   koşuluyla sınırlıdır.
 > - İstemciye yalnızca **anon key** gider; **service role** anahtarı client'a
@@ -133,7 +151,7 @@ uygulama içinde izlenir.
 ## Kurulum
 
 ```bash
-npm install
+npm ci
 
 npm run dev            # Üretim Supabase'ine bağlanır (.env.local gerekir)
 npm run dev:local      # Yerel Supabase (docker) + Vite — üretime dokunmaz
@@ -162,10 +180,17 @@ Uçtan uca duman testi için `npm run test:e2e` (Playwright) ayrıca koşulabili
 
 ## Deploy
 
-`main` dalına push = üretim deploy (GitHub Actions → Vercel). Frontend tek artifact
-olarak build edilip staged yüklenir, DB değiştiyse şifreli yedek alınıp migration
-uygulanır, canlıya alım sonrası `/login` smoke testi başarısız olursa otomatik
-rollback yapılır. Ayrıntı: [`docs/PIPELINE.md`](docs/PIPELINE.md).
+Korumalı `main` dalına merge, üretim deploy'unu başlatır (GitHub Actions →
+Vercel). Lint, coverage ve bağımlılık denetimi; tek production build ve staged
+yüklemeyle paralel çalışır. Zorunlu **Lint and Build** kontrolü iki işin
+sonucunu toplar. CLI/lint/TypeScript önbellekleri tekrar işi azaltır;
+Lighthouse, PR build'i hazır olduğunda başlar.
+
+Gerekli DB ve edge kontrolleri başarılı olmadan yayın yapılamaz; migration'dan
+önce şifreli yedek alınır. Tüm gerekli kapılar geçince aynı staged artifact
+canlıya alınır. Üretim `/login` smoke testi başarısızsa frontend otomatik geri
+alınır. Her workflow süre raporu üretir. Ayrıntı:
+[`docs/PIPELINE.md`](docs/PIPELINE.md).
 
 ## Katkı & AI ajanları
 

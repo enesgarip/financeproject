@@ -3,6 +3,11 @@
 16 Ekim 2026. Kullanıcı ikonların safir temaya uymasını, anlaşılmayan veya
 kırpılan metinlerin düzeltilmesini ve paketin canlıya alınmasını istedi.
 
+Yayın tamamlandı: [PR #259](https://github.com/enesgarip/financeproject/pull/259),
+[başarılı production koşusu](https://github.com/enesgarip/financeproject/actions/runs/38886399991).
+Sonraki giriş/dil eki #260 ile yayınlandı. Güncel kamuya açık demo görselleri
+`docs/screenshots/README.md` kaynağındadır; aşağıdaki özgün audit kanıtları korunur.
+
 ## Uygulanan düzeltmeler
 
 - Yeşil marka SVG'si safire taşındı. Aynı SVG'den 180px iOS, 192px ve 512px
@@ -67,8 +72,8 @@ React incelemesinde yeni sorgu, effect, katman ihlali veya bağımlılık yok;
 mevcut erişilebilir ad, `aria-hidden` ve gizlilik akışı korunur.
 
 Yayın kullanıcının onayıyla korumalı PR → CI → Deploy Production hattından
-yapılır; üretim sonucu PR ve workflow kaydından izlenir. Migration/edge yayını
-gerekmiyor. DOM JSON'ları, ekran görüntüsü ve verify log'u repo dışındadır.
+yapıldı; sonuç yukarıdaki PR ve workflow kaydındadır. Migration/edge yayını
+gerekmedi. Özgün DOM JSON'ları, audit ekran görüntüsü ve verify log'u repo dışındadır.
 
 ## Canlı masaüstü giriş eki
 

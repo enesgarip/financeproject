@@ -178,7 +178,9 @@ SQL dump yolundan bağımsız ikinci kurtarma yolu: DataHealth'teki JSON yedeği
   gerçek felaket kurtarmada bunlar ayrıca kurulur.
 - Bu tatbikat **yerel** ortamda çalışır. Yeni bir Supabase projesine dönüş
   gerekirse ek olarak: proje oluştur → `supabase db push` (migration'lar) →
-  dump'tan yalnız veri yükle → secret'ları ve deploy hook'unu ayarla.
+  dump'tan yalnız veri yükle → Supabase/Vercel secret ve proje kimliklerini
+  güncelle → `docs/PIPELINE.md` staged build/promotion hattını doğrula.
+  Eski deploy hook'u kullanılmaz.
 
 ## Sonuç kaydı
 

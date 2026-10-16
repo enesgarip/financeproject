@@ -1,5 +1,32 @@
 # Priority Backlog
 
+## 2026-10-16 — CI/deploy süreleri ve güncel GitHub belgeleri — UYGULANDI
+
+Kullanıcı onaylı kapsam: lint/coverage/audit ve build paralel; branch
+protection/Dependabot için `Lint and Build` toplama kontrolünün adı korunur.
+Lighthouse PR build artifact'ı hazır olduğunda başlar. Lint içerik cache'i,
+ayrı TypeScript cache'i ve Vercel CLI 54.9.1 paket cache'i eklendi. Token
+yalnız ilgili adımlarda env'den geçer; `.vercel` env/artifact'ı cache'lenmez.
+Gerekli DB/yedek/edge/release işi failure/cancelled/beklenmedik skipped ise
+yayın engellenir. Edge tip kapısı üretim migration'larından önce çalışır.
+Regresyon: `src/utils/pipeline.guard.test.ts`; süre raporu:
+`scripts/report-workflow-timings.mjs`. Akış ve ölçüm: `docs/PIPELINE.md`.
+
+İki README'deki eski Nocturne/yeşil tema anlatımı Mürekkep ve Safir'e taşındı;
+mobil/koyu tema/giriş dahil demo PNG'leri yenilendi. Çekim aracı dış ağ
+isteklerini engeller. UI, proje, yerel test, migration/release, restore ve
+ajan giriş belgelerindeki güncel akış düzeltildi. Tarihsel audit kayıtları
+korundu; kaynak/çekim rehberi `docs/screenshots/README.md`.
+Finans mantığı, RPC/ledger/şema değişmez. Başlangıç production ortalaması
+125,7 sn (15 koşu); yaklaşık 90 sn hedefi gerçek yeni koşuda henüz ölçülmedi.
+Doğrulama: `npm run verify` başarılı (151 dosya / 1.644 test; coverage,
+production audit 0 açık, build, bundle ve altı edge tipi). `actionlint 1.7.12`
+iki workflow'u hatasız doğruladı. Playwright smoke 10 geçti / canlı backend
+gerektiren 3 test mevcut koşuluyla atlandı. Süre raporu API simülasyonunda
+sayfalama, geçmiş ortalaması, mevcut koşuyu dışlama ve API hata davranışı
+doğrulandı. 10 demo PNG görsel olarak incelendi. GitHub'da yeni workflow
+koşulmadı; push/deploy yapılmadı.
+
 ## 2026-10-16 — Türkçe dil sözlüğü ve giriş teması — UYGULANDI
 
 Kullanıcının sözlük incelemesi isteğiyle `docs/UI_GLOSSARY.md` oluşturuldu.

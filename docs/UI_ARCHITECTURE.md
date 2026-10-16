@@ -2,6 +2,10 @@
 
 Last reviewed: 2026-10-16
 
+GitHub README'leri güncel Mürekkep ve Safir tasarımını gösterir. Demo görselleri
+ve tekrar çekim kaynağı: `docs/screenshots/README.md`. Tarihsel audit ekranları
+mevcut uygulamanın görsel sözleşmesi yerine kullanılmaz.
+
 Bu belge uygulamanın görsel kaynak gerçeğidir. Finans kurallarını veya veri
 erişimini tanımlamaz; route ve component'lerin aynı **Şerit / Mürekkep ve Safir** görsel dilinde
 kalmasını sağlar. Şerit 2026-08-10/11'de tüm uygulamaya uygulandı (PR #108,
@@ -278,8 +282,8 @@ skill'inde (`validate_palette.js`), zemin olarak `--card` değerlerini ver.
   group-hover` kullanıyorsan `hover-actions` sınıfını da ekle; `@media
   (hover: none)` altında kalıcı görünür olur.
 - Hub navigation dar ekranda kırılmak yerine yatay taşar.
-- Mobil alt bar safe-area boşluğu kullanır; şeffaf FAB bandının altındaki
-  içerik tıklanabilir kalmalıdır (pointer-events ayrımını bozma).
+- Mobil alt bar safe-area boşluğu kullanır; etiketli işlem alanının üstünde
+  son içerik için yeterli padding bırakılır. Form odağında bar geri çekilir.
 - İkon-only aksiyonların erişilebilir adı olmalıdır. `TrendBars` gibi salt
   görsel grafikler ekran okuyucuya tek cümlelik `label` verir; `Delta`'nın ok
   karakteri `aria-hidden` değildir, yön kelimeyle desteklenir.
@@ -296,7 +300,8 @@ skill'inde (`validate_palette.js`), zemin olarak `--card` değerlerini ver.
    veya semantik sınıf ekle. Gölge ekleme — ayrım çizgiyle yapılır.
 4. Masaüstü ve 390px mobilde taşma, odak, loading, empty ve hata durumunu kontrol
    et.
-5. `npm run lint && npm run test:unit && npm run build` kapılarını çalıştır.
+5. `npm run verify` kalite kapısını çalıştır; kullanıcı akışı değiştiyse
+   Playwright smoke'u ayrıca doğrula.
 
 ## 2026-09-06 takip paketi
 Özet odak önerileri ayrıntılar kapalıyken görünür. Masaüstü vade listesi altı grupla başlar, kullanıcı genişletir. Mobil takvimde b=bin, m=milyon açıklaması görünür; tam tutar seçilen gün detayındadır, kompakt tutarlar gizlilik moduna uyar. Kart döngüsü varsayımları aynı panelde, harcama senaryosu isteğe bağlı details içinde kalır.

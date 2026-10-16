@@ -2,6 +2,17 @@
 
 Last reviewed: 2026-10-16
 
+16 Ekim CI/deploy hızlandırması: `.github/workflows/ci.yml` ve `deploy.yml`
+checks/build'i paralel koşar; zorunlu `Lint and Build` toplama kapısıdır.
+PR Lighthouse build artifact'ını erken devralır. Lint içerik cache'i,
+ayrı TypeScript cache'i ve sabit CLI paket cache'i vardır. Gerekli
+DB/yedek/edge/release işi başarısız, iptal veya beklenmedik skipped ise yayın
+durur; gerçek koşul regresyonları `utils/pipeline.guard.test.ts`.
+Ölçüm aracı `scripts/report-workflow-timings.mjs`; akış ve başlangıç ölçümü
+`docs/PIPELINE.md`. README'ler, Mürekkep ve Safir demo görselleri ve çekim
+rehberi `docs/screenshots/README.md` ile günceldir. Üretim süre kazancı,
+ilk gerçek yeni workflow koşusundan sonra doğrulanır; 90 sn yalnız hedeftir.
+
 Dil sözlüğü: `docs/UI_GLOSSARY.md` kullanıcı metinlerinin ortak kaynağıdır.
 Ödeme/tahsilat düğmeleri banka işlemi yerine kayıt işlemini adlandırır;
 ortak form etiketleri `services/financePaymentActions.ts`, açıklama

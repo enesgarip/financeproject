@@ -47,7 +47,7 @@ jobs:
             changed=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA")
             while IFS= read -r file; do
               case "$file" in
-                src/*|public/*|tests/e2e/*|index.html|package.json|package-lock.json|vite.config.*|vitest.config.*|playwright.config.*|tsconfig*.json|eslint.config.*|.lighthouserc.cjs|vercel.json)
+                src/*|public/*|tests/e2e/*|index.html|package.json|package-lock.json|vite.config.*|vitest.config.*|playwright.config.*|tsconfig*.json|eslint.config.*|.lighthouserc.cjs|vercel.json|.github/workflows/ci.yml|.github/workflows/deploy.yml|scripts/check-bundle-size.mjs|scripts/promote-vercel-deployment.mjs)
                   frontend=true
                   ;;
               esac
@@ -68,10 +68,11 @@ jobs:
           echo "database=$database" >> "$GITHUB_OUTPUT"
           echo "edge=$edge" >> "$GITHUB_OUTPUT"
 
-  quality:
-    name: Lint and Build
+  checks:
+    name: Lint, Coverage and Audit
     if: ${{ github.event_name != 'schedule' }}
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -100,10 +101,9 @@ jobs:
         with:
           path: |
             node_modules/.cache/eslint
-            node_modules/.tmp/*.tsbuildinfo
-          key: quality-${{ runner.os }}-node24-${{ hashFiles('package-lock.json') }}-${{ github.sha }}
+          key: lint-content-${{ runner.os }}-node24-${{ hashFiles('package-lock.json', 'eslint.config.js') }}-${{ github.sha }}
           restore-keys: |
-            quality-${{ runner.os }}-node24-${{ hashFiles('package-lock.json') }}-
+            lint-content-${{ runner.os }}-node24-${{ hashFiles('package-lock.json', 'eslint.config.js') }}-
 
       - name: Lint
         run: npm run lint
@@ -114,6 +114,40 @@ jobs:
       - name: Production dependency audit
         run: npm audit --omit=dev --audit-level=high
 
+  build:
+    name: Build and Bundle
+    if: ${{ github.event_name != 'schedule' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Restore node_modules
+        id: node-modules-cache
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: node-modules-${{ runner.os }}-node24-${{ hashFiles('package-lock.json') }}
+
+      - name: Install dependencies
+        if: ${{ steps.node-modules-cache.outputs.cache-hit != 'true' }}
+        run: npm ci
+
+      - name: Restore TypeScript cache
+        uses: actions/cache@v4
+        with:
+          path: node_modules/.tmp/*.tsbuildinfo
+          key: typescript-${{ runner.os }}-node24-${{ hashFiles('package-lock.json', 'tsconfig*.json') }}-${{ github.sha }}
+          restore-keys: |
+            typescript-${{ runner.os }}-node24-${{ hashFiles('package-lock.json', 'tsconfig*.json') }}-
+
       - name: Build
         run: npm run build
         env:
@@ -123,20 +157,33 @@ jobs:
       - name: Bundle size budget
         run: npm run check:bundle
 
-      # Lighthouse aynı commit'in build'ini ölçer; ikinci bir tsc+vite koşusu
-      # yerine bu job'ın çıktısını artifact olarak devralır.
+      # Lighthouse build bittiğinde başlar; lint/coverage'ı beklemez.
       - name: Upload built app for Lighthouse
         uses: actions/upload-artifact@v7
         with:
           name: dist
           path: dist
 
+  quality:
+    name: Lint and Build
+    needs: [checks, build]
+    # Branch protection ve Dependabot bu adı bekler; başarısız/skipped alt işi yutma.
+    if: ${{ always() && !cancelled() && github.event_name != 'schedule' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Require every quality gate
+        env:
+          CHECKS_RESULT: ${{ needs.checks.result }}
+          BUILD_RESULT: ${{ needs.build.result }}
+        run: test "$CHECKS_RESULT" = success && test "$BUILD_RESULT" = success
+
   lighthouse:
     name: Lighthouse
-    needs: [changes, quality]
-    # Gece koşusunda quality hiç koşmaz (skipped) — !cancelled() olmadan needs
-    # zinciri bu job'ı da atlardı; PR'da ise quality başarısızsa ölçüm anlamsız.
-    if: ${{ !cancelled() && (github.event_name == 'schedule' || (needs.changes.outputs.frontend == 'true' && needs.quality.result == 'success')) }}
+    needs: [changes, build]
+    # Gece koşusunda build hiç koşmaz (skipped) — !cancelled() olmadan needs
+    # zinciri bu job'ı da atlardı; PR'da build başarısızsa ölçüm yapılamaz.
+    if: ${{ !cancelled() && (github.event_name == 'schedule' || (needs.changes.outputs.frontend == 'true' && needs.build.result == 'success')) }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     continue-on-error: true
@@ -173,14 +220,14 @@ jobs:
           echo "CHROME_PATH=$CHROME_PATH" >> "$GITHUB_ENV"
           "$CHROME_PATH" --version
 
-      - name: Download built app (quality job artifact)
+      - name: Download built app (build job artifact)
         if: ${{ github.event_name != 'schedule' }}
         uses: actions/download-artifact@v7
         with:
           name: dist
           path: dist
 
-      - name: Build (gece koşusu — quality job'ı çalışmadı)
+      - name: Build (gece koşusu — build job'ı çalışmadı)
         if: ${{ github.event_name == 'schedule' }}
         run: npm run build
         env:
@@ -404,3 +451,23 @@ jobs:
 
       - name: SQL↔TS twin equivalence harness
         run: npm run db:test:twins
+
+  timings:
+    name: Workflow Timings
+    continue-on-error: true
+    needs: [changes, checks, build, quality, lighthouse, e2e, deno, supabase]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - name: Report durations and recent baseline
+        run: node scripts/report-workflow-timings.mjs
+        env:
+          GITHUB_TOKEN: ${{ github.token }}

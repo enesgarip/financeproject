@@ -37,6 +37,20 @@ The main product goal is to make monthly financial load visible before due dates
 - Deployment target: Vercel (protected `main` merge = production deploy)
 - PWA assets: `public/manifest.webmanifest`, `public/sw.js`
 
+## Güncel arayüz ve yayın
+
+16 Ekim 2026 görsel kimliği Şerit / Mürekkep ve Safir'dir: safir ana eylem ve
+ikonlar, serin açık zemin, mürekkep/lacivert koyu yüzeyler. Tema sistem/elle
+seçimlidir; mobilde etiketli Harcama ekle alanı, önde yaklaşan vadeler ve
+aynı yükümlülükleri kullanan Yaklaşanlar/Takvim vardır. UI metin kaynağı
+`docs/UI_GLOSSARY.md`, görsel sözleşme `docs/UI_ARCHITECTURE.md`.
+Güncel demo görselleri iki README ve `docs/screenshots/README.md`'dedir.
+
+CI ve production'da lint/coverage/audit ile build paraleldir; zorunlu
+`Lint and Build` iki sonucu toplar. Tek production artifact, gerekli
+DB/yedek/edge kapıları ve smoke/rollback sırası korunur. Süre raporu ve
+cache/release ayrıntıları `docs/PIPELINE.md`'dedir.
+
 ## App Structure
 
 ## Frontend
@@ -180,6 +194,7 @@ From the current typed schema, main tables are:
 - `loans`
 - `loan_installments`
 - `debts`
+- `personal_tracking_entries` (geri beklenmeyen kişi ödemeleri; finansal toplamlar dışında)
 - `payments`
 - `transaction_history`
 - `salary_history`
