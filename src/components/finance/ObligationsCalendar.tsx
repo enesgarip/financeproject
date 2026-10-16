@@ -6,13 +6,14 @@ import {
   CreditCard,
   HandCoins,
   Landmark,
+  ListChecks,
   WalletCards,
 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { HelpTooltip, type HelpTooltipContent } from '../ui/help-tooltip'
 import { useBalancePrivacy } from '../../hooks/useBalancePrivacy'
 import { cn } from '../../lib/utils'
-import { addDays, dateInputValue, formatDate, isDateInMonth, startOfMonth } from '../../utils/date'
+import { addDays, dateInputValue, daysUntil, formatDate, isDateInMonth, startOfMonth } from '../../utils/date'
 import { formatCompactCurrency } from '../../utils/formatCurrency'
 import { sumTL } from '../../utils/money'
 import {
@@ -78,19 +79,23 @@ function obligationActionLabel(item: FinanceObligation) {
 
 function obligationBadgeVariant(item: FinanceObligation): 'default' | 'destructive' | 'success' | 'warning' | 'info' | 'secondary' {
   if (item.direction === 'inflow') return 'success'
-  if (item.kind === 'card_statement' || item.kind === 'card_debt' || item.kind === 'personal_debt') return 'destructive'
-  if (item.kind === 'card_installment' || item.kind === 'legacy_loan_installment') return 'warning'
+  if (!item.settled && (daysUntil(item.date) ?? 0) < 0) return 'destructive'
+  if (item.kind === 'card_installment' || item.kind === 'legacy_loan_installment') return 'secondary'
   if (item.kind === 'loan_installment') return 'info'
   return 'default'
 }
 
-function obligationIcon(item: FinanceObligation) {
-  if (item.kind === 'payment') return WalletCards
-  if (item.kind === 'card_statement' || item.kind === 'card_debt' || item.kind === 'card_installment') return CreditCard
-  if (item.kind === 'loan_installment' || item.kind === 'legacy_loan_installment') return Landmark
-  if (item.kind === 'personal_debt' || item.kind === 'personal_receivable') return HandCoins
-  return Banknote
-}
+const OBLIGATION_ICONS = {
+  payment: WalletCards,
+  card_statement: CreditCard,
+  card_debt: CreditCard,
+  card_installment: CreditCard,
+  loan_installment: Landmark,
+  legacy_loan_installment: Landmark,
+  personal_debt: HandCoins,
+  personal_receivable: HandCoins,
+  salary: Banknote,
+} as const
 
 function dayTotals(items: FinanceObligation[]) {
   const cashImpact = (item: FinanceObligation) => item.cashImpactAmount ?? item.amount
@@ -144,14 +149,14 @@ function calendarCellLines(
 // Sınıflar açık yazılır: `text-x`→`bg-x` dönüşümü Tailwind'in tarayıcısına
 // görünmez olduğu için üretimde renk kaybolur.
 const CELL_LINE_CLASS: Record<CalendarCellLine['tone'], string> = {
-  outflow: 'text-destructive',
+  outflow: 'text-ink',
   inflow: 'text-success',
   card: 'text-info',
   paid: 'text-ink-muted line-through decoration-ink-muted/60',
 }
 
 const CELL_DOT_CLASS: Record<CalendarCellLine['tone'], string> = {
-  outflow: 'bg-destructive',
+  outflow: 'bg-primary',
   inflow: 'bg-success',
   card: 'bg-info',
   paid: 'bg-ink-muted',
@@ -163,8 +168,42 @@ function SummaryStat({ label, value, tone = 'neutral', hint }: { label: string; 
   return (
     <div className="min-w-0 rounded-lg border border-line-strong bg-page px-3 py-2.5">
       <p className="finance-label">{label}{hint ? <HelpTooltip title={label} content={hint} className="-my-1.5" /> : null}</p>
-      <p className={cn('finance-value mt-1 truncate text-sm font-black tabular-nums', toneClass)}>{value}</p>
+      <p className={cn('finance-value mt-1 break-words text-sm font-semibold tabular-nums', toneClass)}>{value}</p>
     </div>
+  )
+}
+
+function ObligationRow({ item, formatAmount, onPayObligation }: { item: FinanceObligation; formatAmount: (value: number | null | undefined) => string; onPayObligation?: (item: FinanceObligation) => void }) {
+  const Icon = OBLIGATION_ICONS[item.kind]
+  return (
+    <article className="flex min-w-0 flex-col gap-3 rounded-lg border border-line-strong bg-raised px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex min-w-0 items-start gap-3">
+        <div className="grid size-9 shrink-0 place-items-center rounded-lg bg-page text-ink-muted">
+          <Icon size={18} strokeWidth={1.8} aria-hidden="true" />
+        </div>
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <h4 className="min-w-0 break-words text-sm font-semibold text-ink">{item.title}</h4>
+            <Badge variant={obligationBadgeVariant(item)}>{obligationKindLabel(item)}</Badge>
+            {item.settled ? <Badge variant="success">Ödendi</Badge> : null}
+            {item.isEstimate ? <Badge variant="outline">Tahmini</Badge> : null}
+          </div>
+          <p className="mt-1 text-xs font-medium text-ink-muted">{item.subtitle}</p>
+        </div>
+      </div>
+      <div className="flex shrink-0 items-center justify-between gap-3 sm:justify-end">
+        <span className={cn('finance-value text-sm font-black tabular-nums', item.settled ? 'text-ink-muted line-through' : item.direction === 'inflow' ? 'text-success' : 'text-ink')}>
+          {item.direction === 'inflow' ? '+' : ''}{formatAmount(item.amount)}
+        </span>
+        {item.settled ? null : item.action && onPayObligation ? (
+          <Button type="button" size="sm" variant={item.direction === 'inflow' ? 'success' : 'default'} onClick={() => onPayObligation(item)}>
+            {obligationActionLabel(item)}
+          </Button>
+        ) : (
+          <Badge variant="secondary">{obligationActionLabel(item)}</Badge>
+        )}
+      </div>
+    </article>
   )
 }
 
@@ -173,6 +212,13 @@ export function ObligationsCalendar({ data, loading = false, onPayObligation }: 
   const today = dateInputValue(new Date())
   const [visibleMonth, setVisibleMonth] = useState(() => startOfMonth(new Date()))
   const [selectedDate, setSelectedDate] = useState(today)
+  const [view, setView] = useState<'agenda' | 'calendar'>(() => {
+    try { return localStorage.getItem('denge:payments-view') === 'calendar' ? 'calendar' : 'agenda' } catch { return 'agenda' }
+  })
+  function chooseView(next: 'agenda' | 'calendar') {
+    setView(next)
+    try { localStorage.setItem('denge:payments-view', next) } catch { /* Geçici tercih çalışmaya devam eder. */ }
+  }
   const selectedDateInMonth = isDateInMonth(selectedDate, visibleMonth) ? selectedDate : dateInputValue(startOfMonth(visibleMonth))
   // includeSettled: ödenmiş kayıtlar hücrede iz bırakır (B10); özet onları saymaz.
   const obligations = useMemo(() => buildFinanceObligationsForMonth(data, visibleMonth, { includeSettled: true }), [data, visibleMonth])
@@ -181,6 +227,11 @@ export function ObligationsCalendar({ data, loading = false, onPayObligation }: 
   const summary = useMemo(() => summarizeFinanceObligations(obligations, { from: new Date() }), [obligations])
   const cells = useMemo(() => buildCalendarCells(visibleMonth), [visibleMonth])
   const selectedItems = groupedByDate.get(selectedDateInMonth) ?? []
+  const agenda = obligations.filter(item => !item.settled && (item.kind !== 'salary' || item.date >= today)).sort((a, b) => a.date.localeCompare(b.date))
+  const agendaGroups = ['Geciken', 'Bugün', 'Bu hafta', 'Sonra'].map(label => ({ label, items: agenda.filter(item => {
+    const days = daysUntil(item.date) ?? 0
+    return (days < 0 ? 'Geciken' : days === 0 ? 'Bugün' : days <= 7 ? 'Bu hafta' : 'Sonra') === label
+  }) })).filter(group => group.items.length > 0)
 
   function moveMonth(offset: number) {
     const nextMonth = addCalendarMonths(visibleMonth, offset)
@@ -196,13 +247,12 @@ export function ObligationsCalendar({ data, loading = false, onPayObligation }: 
 
   return (
     <Card variant="elevated" className="overflow-hidden">
-      <div className="pointer-events-none -mt-4 mb-1 h-[2px] bg-gradient-to-r from-primary via-warning to-success opacity-80" />
       <CardHeader className="gap-3">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
             <p className="finance-label">Ödeme takvimi</p>
             <CardTitle className="mt-1 flex min-w-0 items-center gap-2 text-lg">
-              <CalendarDays className="size-5 text-primary" />
+              <CalendarDays size={20} strokeWidth={1.8} className="text-primary" aria-hidden="true" />
               <span className="truncate capitalize">{MONTH_LABEL.format(visibleMonth)}</span>
             </CardTitle>
           </div>
@@ -218,33 +268,36 @@ export function ObligationsCalendar({ data, loading = false, onPayObligation }: 
             </Button>
           </div>
         </div>
+        <div className="flex gap-2" role="group" aria-label="Ödeme görünümü">
+          <Button type="button" variant={view === 'agenda' ? 'default' : 'outline'} onClick={() => chooseView('agenda')} aria-pressed={view === 'agenda'}><ListChecks aria-hidden="true" />Yaklaşanlar</Button>
+          <Button type="button" variant={view === 'calendar' ? 'default' : 'outline'} onClick={() => chooseView('calendar')} aria-pressed={view === 'calendar'}><CalendarDays aria-hidden="true" />Takvim</Button>
+        </div>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         {loading ? (
           <div className="flex flex-col gap-3">
-            <div className="grid grid-cols-2 gap-2 min-[720px]:grid-cols-4">
+            <div className="grid grid-cols-2 gap-2">
               {Array.from({ length: 4 }, (_, index) => <Skeleton key={index} className="h-16 rounded-lg" />)}
             </div>
             <Skeleton className="h-[28rem] rounded-lg" />
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-2 gap-2 min-[720px]:grid-cols-4">
-              <SummaryStat label="Ay yükü" value={formatAmount(summary.outflow)} tone="danger" />
+            <div className="grid grid-cols-2 gap-2">
+              <SummaryStat label="Kalan ay yükü" value={formatAmount(summary.outflow)} />
               <SummaryStat
                 label="Beklenen giriş"
                 value={formatAmount(summary.inflow)}
                 tone="success"
                 hint={summary.receivedSalary > 0 ? { note: `Günü geçen ${formatAmount(summary.receivedSalary)} maaş yattı sayıldı; bu toplama girmez.` } : undefined}
               />
-              <SummaryStat label="Net etki" value={`${summary.net < 0 ? '−' : ''}${formatAmount(Math.abs(summary.net))}`} tone={summary.net >= 0 ? 'success' : 'danger'} />
-              <SummaryStat
-                label="Ödeme / tahsilat"
-                value={`${summary.payableCount}/${summary.itemCount}`}
-                hint={{ note: 'İşlem kaydedilebilen kalemlerin toplam kayıt sayısına oranı. Takvim tutarları kısaltılır (b: bin, m: milyon); tam tutar için günü seç.' }}
-              />
             </div>
 
+            {view === 'agenda' ? (
+              <section aria-label="Yaklaşan ödemeler">
+                {agendaGroups.length === 0 ? <p className="py-4 text-sm text-ink-muted">Bu ay bekleyen ödeme veya tahsilat yok.</p> : agendaGroups.map(group => <div key={group.label} className="mb-4 last:mb-0"><h3 className="mb-2 text-sm font-semibold">{group.label}</h3><div className="space-y-2">{group.items.map(item => <div key={item.id}><p className="mb-1 text-xs text-ink-muted">{formatDate(item.date)}</p><ObligationRow item={item} formatAmount={formatAmount} onPayObligation={onPayObligation} /></div>)}</div></div>)}
+              </section>
+            ) : <>
             <div className="grid grid-cols-7 gap-1 text-center text-[11px] font-black uppercase text-ink-muted sm:gap-2">
               {WEEK_DAYS.map((day) => <span key={day}>{day}</span>)}
             </div>
@@ -326,42 +379,19 @@ export function ObligationsCalendar({ data, loading = false, onPayObligation }: 
                 </p>
               ) : (
                 <div className="mt-3 flex flex-col gap-2">
-                  {selectedItems.map((item) => {
-                    const Icon = obligationIcon(item)
-                    return (
-                      <article key={item.id} className="flex min-w-0 flex-col gap-3 rounded-lg border border-line-strong bg-raised px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
-                        <div className="flex min-w-0 items-start gap-3">
-                          <div className="grid size-9 shrink-0 place-items-center rounded-lg bg-page text-ink-muted">
-                            <Icon className="size-4" />
-                          </div>
-                          <div className="min-w-0">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <h4 className="min-w-0 truncate text-sm font-black text-ink">{item.title}</h4>
-                              <Badge variant={obligationBadgeVariant(item)}>{obligationKindLabel(item)}</Badge>
-                              {item.settled ? <Badge variant="success">Ödendi</Badge> : null}
-                              {item.isEstimate ? <Badge variant="outline">Tahmini</Badge> : null}
-                            </div>
-                            <p className="mt-1 text-xs font-medium text-ink-muted">{item.subtitle}</p>
-                          </div>
-                        </div>
-                        <div className="flex shrink-0 items-center justify-between gap-3 sm:justify-end">
-                          <span className={cn('finance-value text-sm font-black tabular-nums', item.settled ? 'text-ink-muted line-through' : item.direction === 'inflow' ? 'text-success' : 'text-ink')}>
-                            {item.direction === 'inflow' ? '+' : ''}{formatAmount(item.amount)}
-                          </span>
-                          {item.settled ? null : item.action && onPayObligation ? (
-                            <Button type="button" size="sm" variant={item.direction === 'inflow' ? 'success' : 'default'} onClick={() => onPayObligation(item)}>
-                              {obligationActionLabel(item)}
-                            </Button>
-                          ) : (
-                            <Badge variant="secondary">{obligationActionLabel(item)}</Badge>
-                          )}
-                        </div>
-                      </article>
-                    )
-                  })}
+                  {selectedItems.map(item => <ObligationRow key={item.id} item={item} formatAmount={formatAmount} onPayObligation={onPayObligation} />)}
                 </div>
               )}
             </section>
+            </>}
+            <details className="border-t border-line pt-1"><summary className="min-h-11 cursor-pointer py-3 text-sm font-semibold text-ink-muted">Ayın diğer bilgileri</summary><div className="grid grid-cols-2 gap-2">
+              <SummaryStat label="Net etki" value={`${summary.net < 0 ? '−' : ''}${formatAmount(Math.abs(summary.net))}`} tone={summary.net >= 0 ? 'success' : 'danger'} />
+              <SummaryStat
+                label="Ödeme / tahsilat"
+                value={`${summary.payableCount}/${summary.itemCount}`}
+                hint={{ note: 'İşlem kaydedilebilen kalemlerin toplam kayıt sayısına oranı. Takvim tutarları kısaltılır (b: bin, m: milyon); tam tutar için günü seç.' }}
+              />
+            </div></details>
           </>
         )}
       </CardContent>

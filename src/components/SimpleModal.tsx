@@ -26,25 +26,25 @@ export function SimpleModal({ title, open, children, onClose }: SimpleModalProps
         role="dialog"
         aria-modal="true"
         aria-labelledby="simple-modal-title"
-        className="max-h-[88svh] w-full min-w-0 overflow-x-hidden overflow-y-auto rounded-t-2xl border border-line-strong bg-raised text-ink focus:outline-none sm:max-h-[92svh] sm:max-w-2xl sm:rounded-lg"
+        className="motion-panel max-h-[88dvh] w-full min-w-0 overflow-x-hidden overflow-y-auto rounded-t-2xl border border-line-strong bg-raised text-ink focus:outline-none sm:max-h-[92dvh] sm:max-w-2xl sm:rounded-2xl"
       >
         <header className="sticky top-0 z-10 border-b border-line-strong bg-raised/94 px-4 py-3 backdrop-blur">
           {/* Mobilde biçim bottom-sheet: tutamak biçimin kendisini anlatır,
               kapatma butonu tek çıkış yolu gibi durmasın. */}
           <span aria-hidden="true" className="mx-auto mb-2.5 block h-1 w-9 rounded-full bg-line-strong sm:hidden" />
           <div className="flex items-center justify-between gap-3">
-          <h2 id="simple-modal-title" className="min-w-0 truncate text-base font-black text-ink">{title}</h2>
+          <h2 id="simple-modal-title" className="min-w-0 break-words text-base font-semibold text-ink">{title}</h2>
           <button
             type="button"
             onClick={onClose}
-            className="grid size-10 place-items-center rounded-lg border border-line-strong bg-page text-ink-muted transition hover:bg-black/[.03] dark:hover:bg-white/[.04] hover:text-ink"
+            className="interaction-press grid size-11 place-items-center rounded-lg border border-line-strong bg-page text-ink-muted hover:bg-primary/8 hover:text-ink"
             aria-label="Kapat"
           >
-            <X size={18} />
+            <X size={20} strokeWidth={1.8} aria-hidden="true" />
           </button>
           </div>
         </header>
-        <div className="min-w-0 bg-[linear-gradient(180deg,var(--raised),color-mix(in_srgb,var(--page)_70%,var(--raised)_30%))] px-4 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] pt-4 sm:pb-5">
+        <div className="min-w-0 bg-raised px-4 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] pt-4 sm:pb-5">
           {children}
         </div>
       </section>

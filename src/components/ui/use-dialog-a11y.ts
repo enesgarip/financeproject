@@ -19,7 +19,7 @@ import { useEffect, useRef } from 'react'
  *    kurulur ve Tab kapsayıcının dışına kaçar.
  */
 const FOCUSABLE_SELECTOR =
-  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), summary, [tabindex]:not([tabindex="-1"])'
 
 export function useDialogA11y<T extends HTMLElement>(open: boolean, onClose: () => void) {
   const containerRef = useRef<T>(null)
@@ -35,7 +35,13 @@ export function useDialogA11y<T extends HTMLElement>(open: boolean, onClose: () 
     if (!container) return
 
     const previouslyFocused = document.activeElement as HTMLElement | null
-    const focusablesIn = () => Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR))
+    const focusablesIn = () => Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter(element => {
+      if (element.closest('[hidden], [inert]')) return false
+      for (let parent = element.parentElement; parent && parent !== container; parent = parent.parentElement) {
+        if (parent instanceof HTMLDetailsElement && !parent.open && parent.querySelector('summary') !== element) return false
+      }
+      return true
+    })
 
     // Kapsayıcı `tabindex="-1"` taşıyorsa odak ona gider (ekran okuyucu başlığı ve
     // açıklamayı baştan okur); taşımıyorsa ilk etkileşimli öğeye.

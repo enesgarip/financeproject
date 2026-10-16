@@ -1,13 +1,50 @@
 # UI Architecture
 
-Last reviewed: 2026-10-13
+Last reviewed: 2026-10-16
 
 Bu belge uygulamanın görsel kaynak gerçeğidir. Finans kurallarını veya veri
-erişimini tanımlamaz; route ve component'lerin aynı **Şerit** görsel dilinde
+erişimini tanımlamaz; route ve component'lerin aynı **Şerit / Mürekkep ve Safir** görsel dilinde
 kalmasını sağlar. Şerit 2026-08-10/11'de tüm uygulamaya uygulandı (PR #108,
 #112; tarihçe için `docs/BACKLOG.md` Ş0–Ş15 günlüğü). Kaynak gerçeği kod:
 `src/index.css` (token'lar), `src/components/Layout.tsx`, `BottomNav.tsx`,
 `HubNav.tsx`, `QuickActions.tsx`, `src/components/serit/*`.
+
+## Güncel görsel sözleşme — 16 Ekim 2026
+
+Kullanıcı onaylı yön Mürekkep ve Safir'dir. Şerit'in çizgi listesi, tek ana
+tutar, kuruş hassasiyeti ve gizlilik kuralları korunur. Ana eylem safir mavisi,
+başarı/pozitif finans hareketi yeşil; tehlike kırmızı, uyarı kehribardır.
+Dolgu için kullanılan nötr grafik rengi metinde kullanılamaz: `SERIT_TEXT`
+nötr/idle/accent tonlarını okunur `--ink-*` değerlerine bağlar.
+
+Özet'te mobil yaklaşan üç ödeme ana tutarın hemen ardından gelir; Öde/Tahsil et
+metni ve yön ikonu eylemi açıklar. Tahsil edilmemiş alacak ve doğrulanamayan
+kasa rezervi açıklamaları görünür kalır. Hesaplar listesi kompakt toplamdan
+sonra gelir; kırılımlar kapalı ayrıntılardadır. Kart satırında açık ekstre varsa
+kalan tutar ve vade, yoksa dönem içi tutar etiketlenir. Sorgu belirsizliği
+sıfır gibi gösterilmez. Kart ayrıntısında açık ekstre/vade/eylem, dönem-limit
+dökümünden önce gelir; banka kimliği küçük logo ile korunur.
+
+`/kartlar?section=kartlar&panel=manuel` doğrudan harcama görev ekranıdır.
+Hesap, tutar, açıklama ve Kaydet önce gelir. Fiş/pano/tekrar/favoriler ve kart
+kıyasları gerektiğinde açılır. Kayıt ve validasyon aynı repo/RPC'leri kullanır.
+Ödemeler'de Yaklaşanlar varsayılandır; Takvim seçimi `denge:payments-view`
+ile yerel tarayıcıda hatırlanır. Her iki görünüm aynı kanonik yükümlülükleri
+ve ödeme eylemini kullanır; kapalı ek bilgiler hesapları değiştirmez.
+
+İkonlar Lucide çizgi ailesindedir: gezinme 21px/1,8 (aktif 2,1), ana işlem ve
+bölüm ikonları 18–20px/1,8. Dekoratif ikon `aria-hidden`, ikon düğmesi açık
+erişilebilir ad taşır. Hesaplar WalletCards, Plan CalendarDays kullanır.
+Mobil alt bar etiketli Harcama ekle ve diğer işlemler düğmesini içerir; form
+girişinde yinelenen ekle satırı gösterilmez. Yüzen FAB kaldırılmıştır.
+
+Hareketler: basma 120ms, sayfa/ayrıntı 180ms, panel 240ms. Dashboard'da
+gecikmeli sıralı belirme yoktur. Tutar değişince gerçek değer hemen görünür;
+yalnız kısa zemin vurgusu yapılır. Azaltılmış hareket tercihi korunur. İşlem
+menüsü aramaya odaklanıp klavye açmaz; odak içeride tutulur ve kapanınca geri
+verilir. Kapalı details içindeki öğeler odak döngüsüne dahil edilmez.
+
+Uygulama/kanıt kaydı: `docs/UI_SAPPHIRE_2026-10-16.md`.
 
 ## Şerit İlkeleri
 
@@ -104,20 +141,18 @@ Header sticky'dir ve `--page` zemininde 1px çizgiyle biter; tutar gizleme,
 tema anahtarı, masaüstünde `QuickActionsButton`, mobilde taşma menüsü
 (Analiz + Kontrol) burada yaşar.
 
-### FAB bandı — ŞEFFAF (bilinen kural)
+### Mobil işlem alanı
 
-Mobil FAB (`QuickActionsFab`, 52×52) alt barın kendisine ayrılmış **76px'lik
-bandına** yerleşir; bu bandın zemini **şeffaftır ve opak yapılmamalıdır**.
-Opak yapıldığında içerik görünmez bir çizgide düz kesiliyordu. İçeriğin sayfa
-sonunda FAB altında kalmamasını bandın opaklığı değil, `main`'in banda eşlenen
-alt padding'i (152px, Layout'ta) sağlar. Yalnız nav satırı opaktır; şeffaf
-bandın altındaki içerik tıklanabilir kalır (`pointer-events` ayrımı
-`BottomNav`'da). Form alanına odaklanınca FAB geri çekilir.
+Mobilde işlem eylemi alt barın kendi opak yüzeyine bağlıdır. `QuickActionsFab`
+adı geriye dönük korunur ancak artık yalnız diğer işlemler düğmesidir; ayrı
+şeffaf 76px FAB bandı yoktur. `main` alt padding'i (152px + safe-area) son
+kaydın gezinmenin altında kalmasını önler. Form alanına odaklanınca mobil alt
+bar geri çekilir; harcama görev ekranında ekle satırı tekrarlanmaz.
 
 ### HubNav
 
 `src/components/HubNav.tsx`: hap değil, alttan çizgili sekme — aktif sekme
-**2px jade** (`--primary`) alt çizgi alır, şerit 1px `line-strong` ile
+**2px safir** (`--primary`) alt çizgi alır, şerit 1px `line-strong` ile
 içerikten ayrılır. İkon çizilmez (bu ölçekte gürültü; `HubTab.icon` tipte
 kalır çünkü alt bar/rail kullanır). Dar ekranda yatay kayar; aktif sekme rota
 değişince görüşe kaydırılır.
@@ -129,11 +164,11 @@ Kaynak: `src/components/serit/index.ts`. Roller:
 | Bileşen | Rol |
 | --- | --- |
 | `ScreenHeader` / `SectionEyebrow` | Ekranın ilk satırı: uppercase eyebrow + sağda bağlam ("4 hesap · 3 kart"). Bölüm başlıkları `SectionEyebrow`. |
-| `HeroNumber` | Ekranın tek sorusunun cevabı; dev mono rakam (46px mobil → 62px masaüstü). Rakam `ink`; `tone` yalnız gerçekten kritikse. Opsiyonel progress çubuğu. |
+| `HeroNumber` | Ekranın tek sorusunun cevabı; dev mono rakam (36px mobil → 56px masaüstü). Rakam `ink`; `tone` yalnız gerçekten kritikse. Opsiyonel progress çubuğu. |
 | `LineGroup` / `LineRow` / `DayBadge` | Çizgi listesi. `plain` (zeminsiz, baskın) ve `raised` (14px yarıçap, ekran başına 1-2) kapları. |
 | `BreakdownBar` | Parça-bütün: pasta değil **yatay kırılım çubuğu** + etiket/değer satırları. Segment rengi sinyal (`tone`) ya da kimlik (`color` → viz paleti). Sıfır toplamda boş track kalır. |
-| `TrendBars` | Yön okutan kısa trend: geçmiş çubuklar `--chart-idle`, sonuncusu jade. Eksen/tooltip yok; kesin değer yandaki cümlede. |
-| `Delta` | Kahraman rakamın altındaki değişim satırı ("▲ 18.900 ₺ bu ay (+%3,3)"). Artı jade, eksi `danger`. |
+| `TrendBars` | Yön okutan kısa trend: geçmiş çubuklar `--chart-idle`, sonuncusu safir. Eksen/tooltip yok; kesin değer yandaki cümlede. |
+| `Delta` | Kahraman rakamın altındaki değişim satırı ("▲ 18.900 ₺ bu ay (+%3,3)"). Artı yeşil, eksi `danger`. |
 | `tone.ts` | `SeritTone` sinyal kümesi + `SERIT_FILL`/`SERIT_TEXT` haritaları (uyarı sarısının metin karşılığı ayrı — AA). |
 | `useSeritAmount` | Rakamları "tutarları gizle" moduna bağlar; maske aynı genişlikte `••••` (tabular sayesinde satır kaymaz). |
 
@@ -145,20 +180,20 @@ Dashboard'un Şerit gövdesi `src/components/dashboard/Serit*.tsx`
 - `.serit-num` (index.css): mono aile + `tabular-nums` + `-0.02em`. Pazarlık
   konusu değil — hizalı rakamlar bu dilin belkemiği; gizleme maskesi de aynı
   genişlikte kalır.
-- `.serit-eyebrow`: 11px/600, `0.12em` tracking, sabit 16px line-height
+- `.serit-eyebrow`: 13px/600, `0.01em` tracking, 20px line-height
   (Ş/Ç/Ğ alt çıkıntıları satır yüksekliğini oynatmasın diye). Ekran eyebrow'u
   `0.14em` ile bölüm eyebrow'undan ayrılır.
 
 ## Token temelleri (`src/index.css`)
 
-İki tema birinci sınıftır (Nocturne: açık porselen + koyu obsidyen; jade vurgu).
+İki tema birinci sınıftır (Mürekkep ve Safir: açık serin zemin + koyu lacivert; safir vurgu).
 Şerit token'ları mevcut semantiklerin *yanında* yaşar; dönüştürülmüş ekranlar
 bunları kullanır:
 
-- `--background` ailesi: açık tema sıcak porselen `#f6f7f3`, koyu tema obsidyen
-  `#0d120f`; `--page` = `var(--background)`, `--raised` = `var(--card)`.
-- `--primary` jade: `#0a6b4f` (açık) / `#3ddca0` (koyu). Aktif nav, HubNav alt
-  çizgisi, trend vurgusu.
+- `--background` ailesi: açık tema `#f5f7fb`, koyu tema mürekkep
+  `#101623`; `--page` = `var(--background)`, `--raised` = `var(--card)`.
+- `--primary` safir: `#2458d3` (açık) / `#8cb1ff` (koyu). Aktif nav, HubNav alt
+  çizgisi, trend vurgusu. Pozitif finans hareketi `--success` ile yeşildir.
 - Mürekkep skalası: `--ink` / `--ink-muted` / `--ink-faint` / `--ink-ghost`
   (kontrast değerleri AA için handoff'tan bilinçli koyulaştırıldı — yorumlar
   index.css'te).
@@ -174,13 +209,12 @@ semantik sınıf ekle.
 
 ### Şerit'e taşınmamış yüzeyler
 
-`premium-entity-card` anatomisi hâlâ kullanılır: kredi kartı ayrıntısı
-(`src/pages/CardsPage.list.tsx`). Altın işlem geçmişi (`src/pages/GoldPage.tsx`)
+Kredi kartı ayrıntısı (`src/pages/CardsPage.list.tsx`) 16 Ekim 2026
+itibarıyla nötr safir yüzeye ve küçük banka logosuna taşındı. Altın işlem geçmişi (`src/pages/GoldPage.tsx`)
 13 Ekim 2026'da tür bazında tek sütunlu, çizgiyle ayrılan kompakt satırlara taşındı;
 miktar, alım/satım, tarih, toplam, birim maliyet ve not satır içinde okunur.
 Kimlik başlığı, tek ana değer kuyusu, kısa metrikler, ana aksiyon sırası
-korunur. Bu yüzeylere dokunurken Şerit'e zorla çevirme; kart listesi bilinçli
-istisnadır. Banka/nakit ayrıntısı 12 Ekim 2026'da sade Şerit zeminine taşındı;
+korunur. Bu yüzeylere dokunurken Şerit'e zorla çevirme; nesne kimliği kart biçimiyle korunur. Banka/nakit ayrıntısı 12 Ekim 2026'da sade Şerit zeminine taşındı;
 liste ve hesap ayrıntısında gradyan, dekoratif üst çizgi ve renkli çerçeve yoktur.
 
 ## Grafik Rengi

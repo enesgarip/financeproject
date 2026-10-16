@@ -6,7 +6,6 @@ import {
   ChartNoAxesCombined,
   CircleGauge,
   Coins,
-  CreditCard,
   DatabaseBackup,
   FolderKanban,
   Gem,
@@ -46,10 +45,10 @@ export type NavItem = {
  */
 export const primaryNavItems: readonly NavItem[] = [
   { to: '/', label: 'Özet', icon: Home },
-  { to: '/kartlar', label: 'Hesaplar', icon: CreditCard },
+  { to: '/kartlar', label: 'Hesaplar', icon: WalletCards },
   { to: '/varliklar', label: 'Varlıklar', icon: Wallet, activePaths: ['/varliklar/maas', '/varliklar/altin', '/varliklar/araclar'] },
   { to: '/borclar/krediler', label: 'Borçlar', icon: HandCoins, activePaths: ['/borclar/kisiler'] },
-  { to: '/odemeler', label: 'Plan', icon: WalletCards, activePaths: ['/odemeler/hedefler', '/odemeler/liste', '/odemeler/alsam-mi', '/odemeler/baglamlar'] },
+  { to: '/odemeler', label: 'Plan', icon: CalendarDays, activePaths: ['/odemeler/hedefler', '/odemeler/liste', '/odemeler/alsam-mi', '/odemeler/baglamlar'] },
   { to: '/analiz', label: 'Analiz', icon: BarChart3 },
 ]
 

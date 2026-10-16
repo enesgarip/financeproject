@@ -1,16 +1,15 @@
 # Cards Architecture Note
 
-Last reviewed: 2026-10-13
+Last reviewed: 2026-10-16
 
-Kredi kartı marka başlığındaki dekorasyon katmanı köşe yarıçapını başlıktan
-miras alır (`rounded-[inherit]`) ve kendi içinde kırpılır. Başlığın/kartın
-taşması açık kalır; işlem menüsünü kırpmak için tüm karta `overflow-hidden`
-uygulanmaz. Bu, üst çizgi/ışığın yuvarlak köşeden taşmasını önler.
-
-Kart ayrıntısı düzeni: döküm seçenekleri ikonlu iki sütunlu menüdedir.
-Kart ayarları ve kayıt geçmişi bölümünde yinelenen borç/limit
-özeti, taksit listesi ve ekstre listesi kaldırıldı; bunların tek ayrıntı kaynağı
-üst özet ve ilgili döküm menüsüdür. Borç/ledger kuralları değişmedi.
+16 Ekim 2026: kart ayrıntısı nötr safir yüzey + küçük banka logosuyla çizilir;
+menü taşmaya açık kalır. Açık ekstre, vade ve ödeme eylemi dönem-limit-taksit
+dökümünden önce; dönem dökümü varsayılan kapalıdır. Kart listesinde açık ekstre
+varsa kalan tutar/vade öne, yoksa etiketli dönem içi tutar gösterilir.
+Hesap/kart kırılımları kapalı ayrıntıda, ortak limit yönetimi liste sonundadır.
+`panel=manuel` toplam/listeleri göstermeyen doğrudan harcama görevidir;
+hesap/tutar/açıklama/Kaydet önde, fiş/pano/tekrar ve kart kıyası yardımcıdır.
+Ödeme, harcama ve ledger kuralları aynı kalır.
 
 This note maps `/kartlar` (`CardsPage`) after the page split. Start with
 `CLAUDE.md`, `docs/AI_CONTEXT_INDEX.md`, and `docs/CARD_DEBT_TRANSITIONS.md`
@@ -81,7 +80,7 @@ lazy boundary.
   dökümü isimli grupların limit/borç/kalanını ve bağlı kart ayrıntısı bağlantılarını gösterir.
   Grup ataması kart düzenleme formundaki `limit_group_name` alanından yapılır.
   Eski `section=ozet/islemler/ekstreler` bağlantıları çalışır; ayrı menü oluşturmaz.
-- Kart özetinde dönem içi kesinleşmiş toplam ve gelecek taksit toplamı öndedir.
+- Kart özetinde ödenecek ekstre öndedir; dönem içi ve gelecek taksit kırılımı açılır ayrıntıdadır.
   Provizyon ayrı kovadır; ödenecek ekstre kısmi ödemeler düşülmüş kalandır.
   İlgili toplama dokunmak aynı yüzeyde dökümü açar. Kategori düzenleme yalnız
   dönem hareketleri dökümünde kapalı bir yardımcı bölümdür; ana özet ve kart

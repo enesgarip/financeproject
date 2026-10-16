@@ -126,6 +126,7 @@ type CrudPageProps<T extends CrudTableName> = {
     },
   ) => ReactNode
   renderBeforeList?: (helpers: { loading: boolean; rows: RowFor<T>[]; reload: () => Promise<void>; setError: (message: string) => void }) => ReactNode
+  renderAfterList?: (helpers: { loading: boolean; rows: RowFor<T>[]; reload: () => Promise<void>; setError: (message: string) => void }) => ReactNode
   /** false ise dahili kayıt listesi (kart ızgarası) gizlenir; sayfa içi sekmeler için kullanılır. */
   showList?: boolean
   /** Ayrıntı görünümü listenin arama/ekleme araçlarını göstermez. */
@@ -172,6 +173,7 @@ export function CrudPage<T extends CrudTableName>({
   renderExtra,
   renderCard,
   renderBeforeList,
+  renderAfterList,
   showList = true,
   showToolbar = true,
   listFilter,
@@ -616,6 +618,8 @@ export function CrudPage<T extends CrudTableName>({
           })}
         </div>
       )}
+
+      {renderAfterList ? renderAfterList({ loading, rows, reload, setError }) : null}
 
       <SimpleModal
         title={editing ? 'Kaydı düzenle' : addLabel}

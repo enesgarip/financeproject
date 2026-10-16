@@ -8,7 +8,7 @@ import type { ReactNode } from 'react'
 export function ScreenHeader({ eyebrow, context }: { eyebrow: string; context?: ReactNode }) {
   return (
     <div className="flex items-center justify-between gap-3">
-      <p className="serit-eyebrow" style={{ letterSpacing: '0.14em' }}>
+      <p className="serit-eyebrow">
         {eyebrow}
       </p>
       {context ? <span className="shrink-0 text-xs text-ink-faint">{context}</span> : null}

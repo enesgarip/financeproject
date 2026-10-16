@@ -20,7 +20,7 @@ export function Delta({
 }) {
   const format = useSeritAmount()
   const money = format(Math.abs(value))
-  const tone = value > 0 ? 'brand' : value < 0 ? 'danger' : 'neutral'
+  const tone = value > 0 ? 'success' : value < 0 ? 'danger' : 'neutral'
 
   return (
     <p className="mt-2.5 text-[13px]" style={{ color: SERIT_TEXT[tone] }}>

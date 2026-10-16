@@ -1,5 +1,20 @@
 # Priority Backlog
 
+## 2026-10-16 — Mürekkep ve Safir / telefon öncelikli UI — UYGULANDI
+
+Kullanıcı onayıyla safir ana eylem, nötr lacivert yüzeyler, okunur metin
+tonları ve ortak kısa hareketler uygulandı. Lucide gezinme/bölüm/işlem
+ikonlarının boyut, çizgi ve erişilebilir adları düzenlendi. Yüzen FAB yerine
+etiketli alt işlem alanı var. Harcama girişinde hesap/tutar/açıklama/Kaydet
+önde; yardımcı girişler ve kart kıyasları katlanır. Mobil Özet vadeleri öne
+alır; hesap/kart listesi kırılımlardan önce gelir. Kart ayrıntısında ekstre/
+vade/ödeme eylemi dökümden önce ve nötr yüzeydedir. Yaklaşanlar/Takvim aynı
+yükümlülük kaynağını kullanır; görünüm yerel olarak hatırlanır. Fatura özeti
+kendi kapsamını adlandırır. Para hesabı, ledger/RPC/şema değişmedi.
+
+Yeni regresyonlar: ödeme görünümü/eylem/gizlilik ve kapalı details odak döngüsü.
+Doğrulama ve kapsam: `docs/UI_SAPPHIRE_2026-10-16.md`.
+
 ## 2026-10-15 — Onaylı abonelik fiyatını eski medyana döndürme önerisi — UYGULANDI
 
 15 Ekim 2026 canlı kontrol eki: `match_amount` ile kullanıcı tarafından

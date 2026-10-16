@@ -1,5 +1,5 @@
-import type { ReactNode } from 'react'
-import { SERIT_FILL, type SeritTone } from './tone'
+import { useEffect, useRef, type ReactNode } from 'react'
+import { SERIT_FILL, SERIT_TEXT, type SeritTone } from './tone'
 import { useSeritAmount } from './useSeritAmount'
 
 /**
@@ -18,6 +18,7 @@ export function HeroNumber({
   progress,
   progressTone = 'brand',
   unitOverride,
+  unavailable = false,
 }: {
   label: string
   value: number | null | undefined
@@ -32,32 +33,43 @@ export function HeroNumber({
    * bakiye değildir ve `••••` orada bilgi kaybı olur.
    */
   unitOverride?: string
+  /** Sorgu doğrulanamadığında sıfır toplam izlenimi vermeden göster. */
+  unavailable?: boolean
 }) {
   const amount = useSeritAmount()
   const money = amount(value)
-  const text = unitOverride ? String(value ?? 0) : money.amount
-  const unit = unitOverride ?? money.unit
+  const text = unavailable ? '—' : unitOverride ? String(value ?? 0) : money.amount
+  const unit = unavailable ? '' : unitOverride ?? money.unit
+  const numberRef = useRef<HTMLParagraphElement>(null)
+  const previousValue = useRef(value)
+  useEffect(() => {
+    const element = numberRef.current
+    if (previousValue.current != null && value != null && previousValue.current !== value && element?.animate && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      element.animate([{ backgroundColor: 'var(--accent)' }, { backgroundColor: 'transparent' }], { duration: 180, easing: 'ease-out' })
+    }
+    previousValue.current = value
+  }, [value])
 
   return (
     <div>
       <p
-        className="uppercase text-ink-faint"
-        style={{ fontSize: 12, letterSpacing: '0.1em', lineHeight: '16px' }}
+        className="text-[13px] font-medium leading-5 text-ink-muted"
       >
         {label}
       </p>
 
-      <div className="mt-2 flex flex-wrap items-end gap-x-5 gap-y-2 lg:mt-1.5">
+      <div className="mt-2 flex flex-col gap-2 lg:flex-row lg:flex-wrap lg:items-end lg:gap-x-5">
         <p
-          className="serit-num max-w-full break-words text-[46px] font-semibold min-[400px]:text-[52px] lg:text-[62px]"
-          style={{ lineHeight: 0.95, letterSpacing: '-0.045em', color: SERIT_FILL[tone], fontSize: text.length > 10 ? 'clamp(1.5rem, 7.5vw, 3.875rem)' : undefined }}
+          ref={numberRef}
+          className="serit-num max-w-full break-words text-[36px] font-semibold min-[400px]:text-[40px] lg:text-[56px]"
+          style={{ lineHeight: 1.1, letterSpacing: '-0.04em', color: SERIT_TEXT[tone], fontSize: text.length > 10 ? 'clamp(1.5rem, 7vw, 3.5rem)' : undefined }}
         >
           {text}
           <span className="text-[19px] text-ink-faint lg:text-[23px]"> {unit}</span>
         </p>
 
         {description ? (
-          <p className="mb-2 max-w-[240px] text-[13px] leading-[1.5] text-ink-muted lg:mb-3">{description}</p>
+          <p className="max-w-md text-[13px] leading-relaxed text-ink-muted lg:mb-1">{description}</p>
         ) : null}
       </div>
 

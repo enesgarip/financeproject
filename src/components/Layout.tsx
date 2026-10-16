@@ -32,8 +32,11 @@ export function Layout() {
 }
 
 function LayoutInner() {
-  const { pathname } = useLocation()
-  useEffect(() => { document.title = `${routeTitle(pathname)} · Denge` }, [pathname])
+  const { pathname, search } = useLocation()
+  const enteringExpense = pathname === '/kartlar' && new URLSearchParams(search).get('panel') === 'manuel'
+  const title = enteringExpense ? 'Harcama ekle' : routeTitle(pathname)
+  const subtitle = enteringExpense ? 'Hesap veya kart harcamasını kaydet' : routeSubtitle(pathname)
+  useEffect(() => { document.title = `${title} · Denge` }, [title])
   const { signOut, user } = useAuth()
   // Günlük net değer fotoğrafı: hangi sayfayla açılırsa açılsın alınır.
   useDailyNetWorthSnapshot()
@@ -92,10 +95,10 @@ function LayoutInner() {
           <div className={cn('mx-auto flex items-baseline justify-between gap-4 border-b border-line-strong pb-3 lg:pb-4', contentWidth)}>
             <div className="min-w-0">
               <h1 className="break-words font-display text-[15px] font-bold leading-tight tracking-[-0.02em] text-ink sm:text-[17px] lg:text-[21px]">
-                {routeTitle(pathname)}
+                {title}
               </h1>
-              {routeSubtitle(pathname) ? (
-                <p className="mt-1 hidden truncate text-[13px] text-ink-muted lg:block">{routeSubtitle(pathname)}</p>
+              {subtitle ? (
+                <p className="mt-1 hidden truncate text-[13px] text-ink-muted lg:block">{subtitle}</p>
               ) : null}
             </div>
 
@@ -176,9 +179,7 @@ function LayoutInner() {
         <main
           className={cn(
             'mx-auto w-full flex-1 px-5 pt-5 md:px-6 lg:px-[34px] lg:pt-6',
-            // Alt bar 138px (62px FAB alanı + nav satırı). Buradaki 152px onu
-            // aşar: FAB'ın altında sayfa sonunda içerik kalmamasını sağlayan şey
-            // bandın opaklığı değil, BU boşluk. Bant şeffaf (bkz. BottomNav).
+            // Etiketli işlem alanı + beşli alt gezinme için son içerik payı.
             'pb-[calc(env(safe-area-inset-bottom)+9.5rem)] md:pb-14',
             contentWidth,
           )}

@@ -2,16 +2,19 @@
 
 
 Kart ayrıntısı düzeni: döküm seçenekleri ikonlu iki sütunlu menüdedir.
-Manuel kayıt yalnız hızlı işlem menüsünden açılır. Kart ayarları ve kayıt geçmişi bölümünde yinelenen borç/limit
+Manuel kayıt etiketli Harcama ekle veya hızlı işlem menüsünden doğrudan görev ekranında açılır. Kart ayarları ve kayıt geçmişi bölümünde yinelenen borç/limit
 özeti, taksit listesi ve ekstre listesi kaldırıldı; bunların tek ayrıntı kaynağı
 üst özet ve ilgili döküm menüsüdür. Borç/ledger kuralları değişmedi.
-Last reviewed: 2026-10-15
+Last reviewed: 2026-10-16
 
 This file is the working source of truth for how credit-card debt moves through
 the app. If an RPC, page action, or data-health fix changes one of these rules,
 update this file in the same change.
 
-Ortak limit grupları kredi kartları bölümünde görünür. Grup özeti mevcut
+16 Ekim 2026 görsel düzeni borç geçişlerini değiştirmez: kart satırındaki açık
+ekstre aynı kısmi ödeme düşülmüş kaynaktan, dönem içi ayrı etiketten okunur;
+ödeme eylemleri aynı RPC üzerinden sürer. Ortak limit grupları kredi kartları
+listesinin altındaki yönetim ayrıntısında görünür. Grup özeti mevcut
 `buildCreditLimitGroups` hesabını kullanır: limit en yüksek kart limiti, borç
 bağlı kartların toplamıdır. Bu görünüm borç geçişlerini veya ledger kayıtlarını değiştirmez.
 

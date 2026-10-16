@@ -1,10 +1,9 @@
-import { Camera, ClipboardPaste, Image as ImageIcon, RotateCcw, ScanLine } from 'lucide-react'
+import { Camera, CheckCircle2, ClipboardPaste, Heart, Image as ImageIcon, LoaderCircle, RotateCcw, Save, ScanLine } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '../auth/useAuth'
 import { CategoryPicker } from '../components/finance/CategoryPicker'
 import { MoneyInput } from '../components/finance/MoneyInput'
-import { Badge } from '../components/ui/badge'
 import { Card as SurfaceCard, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { invalidateCategoryMemory, useCategoryMemory } from '../hooks/useCategoryMemory'
 import { addCardExpense, fetchRecentCardExpenses, recordCardInstallmentCarryover } from '../data/repositories/cardsRepo'
@@ -18,7 +17,6 @@ import { buildCardTimingChoices } from '../utils/cardTimingChoice'
 import { getCardStatementPeriod } from '../utils/cardStatement'
 import { buildPurchaseTimingHint } from '../utils/purchaseTiming'
 import { dateInputValue, formatDate } from '../utils/date'
-import { cardProvisionAmount } from '../utils/financeSummary'
 import { getLastUsed, setLastUsed } from '../utils/lastUsed'
 import { diffTL, sumTL } from '../utils/money'
 import { isMissingSupabaseCapabilityError, missingSupabaseCapabilityMessage } from '../utils/supabaseErrors'
@@ -63,6 +61,7 @@ export function QuickExpensePanel({
   // "hiç kaydolmadı" sanıp tekrar göndermesin (manuel kayıtta dedupe yok).
   const [localWarning, setLocalWarning] = useState('')
   const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
   const [scanning, setScanning] = useState(false)
   const [prefilledByScan, setPrefilledByScan] = useState(false)
   const [scanEventId, setScanEventId] = useState<string | null>(null)
@@ -338,6 +337,7 @@ export function QuickExpensePanel({
 
     submittingRef.current = true
     setSaving(true)
+    setSaved(false)
     setLocalError('')
     setLocalWarning('')
     setError('')
@@ -380,6 +380,7 @@ export function QuickExpensePanel({
     // Harcama yazıldı; araç etiketi düştüyse formu SIFIRLAMAYA devam ederiz —
     // tekrar gönderim çift harcama üretirdi.
     setLocalWarning(submitResult.data.carTagWarning ?? '')
+    setSaved(true)
     invalidateCategoryMemory()
     setLastUsed('expenseCard', selectedCard.id)
     setCardId(selectedCard.id)
@@ -402,23 +403,13 @@ export function QuickExpensePanel({
   if (cards.length === 0) return null
 
   return (
-    <SurfaceCard id="hizli-harcama" className="border-success/20">
+    <SurfaceCard id="hizli-harcama" className="border-line-strong">
       <CardHeader className="pb-0">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <CardTitle className="text-base">Hızlı harcama</CardTitle>
-            <p className="mt-1 text-xs text-ink-muted">Kart, TL tutar ve açıklama yeterli.</p>
+            <CardTitle className="text-base">Yeni harcama</CardTitle>
+            <p className="mt-1 text-[13px] text-ink-muted">Hesabı seç, tutarı ve açıklamayı yaz.</p>
           </div>
-          {selectedCard ? (
-            <Badge variant={selectedCard.card_type === 'kredi_karti' ? 'secondary' : 'outline'}>
-              {/* Seçili kartın durumu; "Toplam" formun toplamı sanılıyordu (UX turu B18). */}
-              {selectedCard.card_type === 'kredi_karti'
-                ? cardProvisionAmount(selectedCard) > 0
-                  ? `${displayAmount(cardProvisionAmount(selectedCard))} provizyon bekliyor`
-                  : `Kart borcu ${displayAmount(selectedCard.debt_amount)}`
-                : `Hesap bakiyesi ${displayAmount(selectedCard.current_balance)}`}
-            </Badge>
-          ) : null}
         </div>
       </CardHeader>
       <CardContent>
@@ -446,84 +437,6 @@ export function QuickExpensePanel({
               if (file) void handleScanFile(file)
             }}
           />
-          {scanning ? (
-            <div className="inline-flex items-center justify-center gap-2 rounded-xl border border-dashed border-primary/40 bg-primary/5 px-4 py-2.5 text-sm font-semibold text-primary">
-              <ScanLine size={16} />
-              Fiş okunuyor...
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 gap-2.5">
-              <button
-                type="button"
-                onClick={() => cameraInputRef.current?.click()}
-                className="inline-flex items-center justify-center gap-2 rounded-xl border border-dashed border-primary/40 bg-primary/5 px-4 py-2.5 text-sm font-semibold text-primary transition hover:bg-primary/10"
-              >
-                <Camera size={16} />
-                Kamerayla çek
-              </button>
-              <button
-                type="button"
-                onClick={() => galleryInputRef.current?.click()}
-                className="inline-flex items-center justify-center gap-2 rounded-xl border border-dashed border-primary/40 bg-primary/5 px-4 py-2.5 text-sm font-semibold text-primary transition hover:bg-primary/10"
-              >
-                <ImageIcon size={16} />
-                Galeriden seç
-              </button>
-              <button
-                type="button"
-                onClick={() => void handlePasteFromClipboard()}
-                className="col-span-2 inline-flex items-center justify-center gap-2 rounded-xl border border-dashed border-primary/40 bg-primary/5 px-4 py-2.5 text-sm font-semibold text-primary transition hover:bg-primary/10"
-                aria-label="Panodaki banka SMS'i ya da metinden formu doldur"
-              >
-                <ClipboardPaste size={16} />
-                Panodan doldur
-              </button>
-            </div>
-          )}
-          {repeatSuggestions.length > 0 ? (
-            <div className="flex flex-col gap-1.5">
-              <p className="text-xs font-semibold text-ink-muted">Son harcamalar · tek dokunuşla tekrarla</p>
-              <div className="flex flex-wrap gap-1.5">
-                {repeatSuggestions.map((suggestion) => (
-                  <button
-                    key={`${suggestion.description}-${suggestion.amount}`}
-                    type="button"
-                    onClick={() => applyRepeat(suggestion)}
-                    className="tap-target inline-flex items-center gap-1.5 rounded-full border border-line-strong bg-raised px-3 py-1.5 text-xs font-semibold text-ink transition hover:border-success/40 hover:bg-success/8"
-                    aria-label={`${suggestion.description} harcamasını tekrarla`}
-                  >
-                    <RotateCcw size={12} className="text-ink-muted" />
-                    <span className="max-w-[9rem] truncate">{suggestion.description}</span>
-                    <span className="tabular-nums text-ink-muted">{displayAmount(suggestion.amount)}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          ) : null}
-          {favoriteCards.length > 0 ? (
-            <div role="group" aria-label="Favori hesap ve kartlar" className="flex flex-col gap-1.5">
-              <p className="text-xs font-semibold text-ink-muted">Favoriler</p>
-              <div className="flex flex-wrap gap-1.5">
-                {favoriteCards.map((card) => (
-                  <button
-                    key={card.id}
-                    type="button"
-                    aria-pressed={activeCardId === card.id}
-                    onClick={() => {
-                      setCardId(card.id)
-                      setLastUsed('expenseCard', card.id)
-                      setPaymentMode('cash')
-                      setPaidInstallments('0')
-                      setLocalError('')
-                    }}
-                    className={`tap-target rounded-full border px-3 py-1.5 text-xs font-semibold transition ${activeCardId === card.id ? 'border-primary/50 bg-primary/10 text-primary' : 'border-line-strong bg-raised text-ink hover:border-primary/40'}`}
-                  >
-                    ♥ {card.card_name}
-                  </button>
-                ))}
-              </div>
-            </div>
-          ) : null}
           <label className="block text-sm font-semibold text-ink">
             Hesap / kredi kartı
             <select
@@ -547,6 +460,66 @@ export function QuickExpensePanel({
               ))}
             </select>
           </label>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <MoneyInput
+              label={canUseInstallments && paymentMode === 'installment' ? 'Toplam tutar' : 'Tutar (TL)'}
+              value={amount}
+              onValueChange={(nextAmount) => {
+                setAmount(nextAmount)
+                setLocalError('')
+              }}
+              required
+            />
+            <label className="block text-sm font-semibold text-ink">
+              Açıklama
+              <input
+                value={description}
+                onChange={(event) => {
+                  setDescription(event.target.value)
+                  setLocalError('')
+                }}
+                type="text"
+                placeholder="Migros, benzin, yemek..."
+                className="mt-1 w-full rounded-lg border border-line-strong px-3 py-2.5 outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 dark:bg-raised dark:text-ink"
+                required
+              />
+            </label>
+          </div>
+          {localError ? <p role="alert" className="rounded-xl border border-destructive/20 bg-destructive/8 p-3 text-sm font-medium text-destructive">{localError}</p> : null}
+          {localWarning ? <p role="alert" className="rounded-xl border border-warning/20 bg-warning/8 p-3 text-sm font-medium text-warning">{localWarning}</p> : null}
+
+          <button
+            type="submit"
+            disabled={!canSubmitQuickExpense}
+            className="interaction-press flex min-h-12 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground disabled:opacity-60 hover:bg-primary/90"
+          >
+            {saving ? <LoaderCircle size={18} strokeWidth={1.8} className="animate-spin" aria-hidden="true" /> : <Save size={18} strokeWidth={1.8} aria-hidden="true" />}
+            {saving ? 'Ekleniyor...' : 'Harcamayı kaydet'}
+          </button>
+          {saved && !amount && !description ? <p role="status" className="flex items-center gap-2 text-sm text-success"><CheckCircle2 size={18} strokeWidth={1.8} aria-hidden="true" />Harcama kaydedildi.</p> : null}
+          <details
+            open={advancedOpen || (canUseInstallments && paymentMode === 'installment')}
+            onToggle={(event) => {
+              const nextOpen = event.currentTarget.open
+              // Taksitli modda kapatma yok (required alanlar görünür kalmalı).
+              // React open prop'unu değişmemiş sayıp DOM'u geri yazmadığından
+              // tarayıcının kaldırdığı attribute'u burada elle geri koyarız.
+              if (!nextOpen && canUseInstallments && paymentMode === 'installment') {
+                event.currentTarget.open = true
+                return
+              }
+              setAdvancedOpen(nextOpen)
+            }}
+            className="rounded-xl border border-line-strong bg-page/60"
+          >
+            <summary className="flex min-h-11 cursor-pointer list-none flex-wrap items-center gap-x-2 px-3 py-2 text-sm font-semibold text-ink [&::-webkit-details-marker]:hidden">
+              Ayrıntılar
+              <span className="min-w-0 truncate text-xs font-medium text-ink-muted">
+                {spentAt === dateInputValue(new Date()) ? 'Bugün' : formatDate(spentAt)} · {category || 'kategori otomatik'} ·{' '}
+                {canUseInstallments && paymentMode === 'installment' ? 'Taksitli' : 'Peşin'}
+              </span>
+            </summary>
+            <div className="flex flex-col gap-2.5 px-3 pb-3">
           {timingChoices.length > 0 ? (
             <div role="group" aria-label="Kartlar arası son ödeme kıyası" className="flex flex-wrap gap-1.5">
               {timingChoices.map((choice) => (
@@ -583,54 +556,7 @@ export function QuickExpensePanel({
               ))}
             </div>
           ) : null}
-          <div className="grid grid-cols-[minmax(0,0.72fr)_minmax(0,1.28fr)] gap-2.5">
-            <MoneyInput
-              label={canUseInstallments && paymentMode === 'installment' ? 'Toplam tutar' : 'TL'}
-              value={amount}
-              onValueChange={(nextAmount) => {
-                setAmount(nextAmount)
-                setLocalError('')
-              }}
-              required
-            />
-            <label className="block text-sm font-semibold text-ink">
-              Açıklama
-              <input
-                value={description}
-                onChange={(event) => {
-                  setDescription(event.target.value)
-                  setLocalError('')
-                }}
-                type="text"
-                placeholder="Migros, benzin, yemek..."
-                className="mt-1 w-full rounded-lg border border-line-strong px-3 py-2.5 outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 dark:bg-raised dark:text-ink"
-                required
-              />
-            </label>
-          </div>
-          <details
-            open={advancedOpen || (canUseInstallments && paymentMode === 'installment')}
-            onToggle={(event) => {
-              const nextOpen = event.currentTarget.open
-              // Taksitli modda kapatma yok (required alanlar görünür kalmalı).
-              // React open prop'unu değişmemiş sayıp DOM'u geri yazmadığından
-              // tarayıcının kaldırdığı attribute'u burada elle geri koyarız.
-              if (!nextOpen && canUseInstallments && paymentMode === 'installment') {
-                event.currentTarget.open = true
-                return
-              }
-              setAdvancedOpen(nextOpen)
-            }}
-            className="rounded-xl border border-line-strong bg-page/60"
-          >
-            <summary className="flex min-h-11 cursor-pointer list-none flex-wrap items-center gap-x-2 px-3 py-2 text-sm font-semibold text-ink [&::-webkit-details-marker]:hidden">
-              Ayrıntılar
-              <span className="min-w-0 truncate text-xs font-medium text-ink-muted">
-                {spentAt === dateInputValue(new Date()) ? 'Bugün' : formatDate(spentAt)} · {category || 'kategori otomatik'} ·{' '}
-                {canUseInstallments && paymentMode === 'installment' ? 'Taksitli' : 'Peşin'}
-              </span>
-            </summary>
-            <div className="flex flex-col gap-2.5 px-3 pb-3">
+
           <div className="grid grid-cols-2 gap-2.5 min-[760px]:grid-cols-4">
             <label className="block min-w-0 text-sm font-semibold text-ink">
               Tarih
@@ -764,7 +690,7 @@ export function QuickExpensePanel({
             </p>
           ) : null}
           {selectedCard?.card_type === 'kredi_karti' ? (
-            <div className="rounded-xl border border-success/20 bg-success/8 p-3">
+            <div className="rounded-xl border border-line-strong bg-page p-3">
               <div className="grid grid-cols-2 gap-2 min-[430px]:grid-cols-4">
                 <OverviewStat label="Dönem" value={statementPreview?.periodLabel ?? 'Gün eksik'} />
                 <OverviewStat label="Ekstre" value={statementPreview ? formatDate(statementPreview.statementDate) : 'Gün eksik'} />
@@ -775,7 +701,7 @@ export function QuickExpensePanel({
                 />
               </div>
               {statementPreview ? (
-                <p className="mt-2 text-xs font-medium text-success">
+                <p className="mt-2 text-xs font-medium text-ink-muted">
                   {isCarryover
                     ? `${parsedPaidInstallments}/${parsedInstallmentCount} taksit ödenmiş kabul edilir; kart borcuna kalan ${remainingInstallmentCount} taksit eklenir.`
                     : isProvision
@@ -814,15 +740,89 @@ export function QuickExpensePanel({
               ) : null}
             </div>
           ) : null}
-          {localError ? <p className="rounded-xl border border-destructive/20 bg-destructive/8 p-3 text-sm font-medium text-destructive">{localError}</p> : null}
-          {localWarning ? <p className="rounded-xl border border-warning/20 bg-warning/8 p-3 text-sm font-medium text-warning">{localWarning}</p> : null}
-          <button
-            type="submit"
-            disabled={!canSubmitQuickExpense}
-            className="rounded-xl bg-success px-4 py-3 text-sm font-semibold text-white disabled:opacity-60 hover:bg-success/90"
-          >
-            {saving ? 'Ekleniyor...' : 'Harcamayı kaydet'}
-          </button>
+          <details className="border-t border-line pt-1">
+            <summary className="min-h-11 cursor-pointer py-3 text-sm font-semibold text-ink-muted">Fiş, pano ve son harcamalar</summary>
+            <div className="flex flex-col gap-3 pb-3">
+          {scanning ? (
+            <div className="inline-flex items-center justify-center gap-2 rounded-xl border border-dashed border-primary/40 bg-primary/5 px-4 py-2.5 text-sm font-semibold text-primary">
+              <ScanLine size={16} />
+              Fiş okunuyor...
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-2.5">
+              <button
+                type="button"
+                onClick={() => cameraInputRef.current?.click()}
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-dashed border-primary/40 bg-primary/5 px-4 py-2.5 text-sm font-semibold text-primary transition hover:bg-primary/10"
+              >
+                <Camera size={16} />
+                Kamerayla çek
+              </button>
+              <button
+                type="button"
+                onClick={() => galleryInputRef.current?.click()}
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-dashed border-primary/40 bg-primary/5 px-4 py-2.5 text-sm font-semibold text-primary transition hover:bg-primary/10"
+              >
+                <ImageIcon size={16} />
+                Galeriden seç
+              </button>
+              <button
+                type="button"
+                onClick={() => void handlePasteFromClipboard()}
+                className="col-span-2 inline-flex items-center justify-center gap-2 rounded-xl border border-dashed border-primary/40 bg-primary/5 px-4 py-2.5 text-sm font-semibold text-primary transition hover:bg-primary/10"
+                aria-label="Panodaki banka SMS'i ya da metinden formu doldur"
+              >
+                <ClipboardPaste size={16} />
+                Panodan doldur
+              </button>
+            </div>
+          )}
+          {repeatSuggestions.length > 0 ? (
+            <div className="flex flex-col gap-1.5">
+              <p className="text-xs font-semibold text-ink-muted">Son harcamalar · tek dokunuşla tekrarla</p>
+              <div className="flex flex-wrap gap-1.5">
+                {repeatSuggestions.map((suggestion) => (
+                  <button
+                    key={`${suggestion.description}-${suggestion.amount}`}
+                    type="button"
+                    onClick={() => applyRepeat(suggestion)}
+                    className="tap-target inline-flex items-center gap-1.5 rounded-full border border-line-strong bg-raised px-3 py-1.5 text-xs font-semibold text-ink transition hover:border-success/40 hover:bg-success/8"
+                    aria-label={`${suggestion.description} harcamasını tekrarla`}
+                  >
+                    <RotateCcw size={12} className="text-ink-muted" />
+                    <span className="max-w-[9rem] truncate">{suggestion.description}</span>
+                    <span className="tabular-nums text-ink-muted">{displayAmount(suggestion.amount)}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
+          {favoriteCards.length > 0 ? (
+            <div role="group" aria-label="Favori hesap ve kartlar" className="flex flex-col gap-1.5">
+              <p className="text-xs font-semibold text-ink-muted">Favoriler</p>
+              <div className="flex flex-wrap gap-1.5">
+                {favoriteCards.map((card) => (
+                  <button
+                    key={card.id}
+                    type="button"
+                    aria-pressed={activeCardId === card.id}
+                    onClick={() => {
+                      setCardId(card.id)
+                      setLastUsed('expenseCard', card.id)
+                      setPaymentMode('cash')
+                      setPaidInstallments('0')
+                      setLocalError('')
+                    }}
+                    className={`tap-target rounded-full border px-3 py-1.5 text-xs font-semibold transition ${activeCardId === card.id ? 'border-primary/50 bg-primary/10 text-primary' : 'border-line-strong bg-raised text-ink hover:border-primary/40'}`}
+                  >
+                    <Heart size={14} strokeWidth={1.8} className="mr-1 inline" aria-hidden="true" />{card.card_name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
+            </div>
+          </details>
         </form>
       </CardContent>
     </SurfaceCard>
