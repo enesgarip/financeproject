@@ -1,5 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query'
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
+import { useLocation } from 'react-router'
 import { useAuth } from '../auth/useAuth'
 import type { FinanceSnapshot } from '../data/repositories/financeSnapshotRepo'
 import { financeSnapshotKey } from './financeSnapshotKey'
@@ -44,14 +45,27 @@ export function useDailyNetWorthSnapshot() {
   const { user } = useAuth()
   const queryClient = useQueryClient()
   const userId = user?.id
+  const { key: locationKey } = useLocation()
+  const activeRun = useRef<(() => void) | null>(null)
+
+  // Kabuk kalıcıdır: gezinme bekleyen kaydı iptal etmez. Yalnız oturum
+  // değişimi/unmount iptal eder; eski koşu yeni kullanıcının işini temizleyemez.
+  useEffect(() => () => {
+    activeRun.current?.()
+    activeRun.current = null
+  }, [userId])
 
   useEffect(() => {
-    if (!userId) return
+    if (!userId || activeRun.current) return
 
     const marker = todayKey(userId)
     if (localStorage.getItem(STORAGE_KEY) === marker) return
 
     let cancelled = false
+    const cancelRun = () => {
+      cancelled = true
+      window.clearTimeout(timer)
+    }
     const timer = window.setTimeout(() => {
       void (async () => {
         try {
@@ -116,13 +130,14 @@ export function useDailyNetWorthSnapshot() {
           void queryClient.invalidateQueries({ queryKey: SAVINGS_GOAL_SNAPSHOTS_QUERY_KEY })
         } catch {
           // Snapshot kaydı yardımcı bir iştir; hatası kullanıcı akışını bozmaz.
+        } finally {
+          if (activeRun.current === cancelRun) activeRun.current = null
         }
       })()
     }, RECORD_DELAY_MS)
 
-    return () => {
-      cancelled = true
-      window.clearTimeout(timer)
-    }
-  }, [userId, queryClient])
+    activeRun.current = cancelRun
+    // Sonraki gezinme yeni günü veya başarısız koşuyu yeniden kontrol eder;
+    // çalışan koşu üstte tekilleştirildiği için 4 sn gecikme başa dönmez.
+  }, [userId, queryClient, locationKey])
 }

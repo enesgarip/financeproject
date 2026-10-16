@@ -7,6 +7,10 @@ Manuel kayıt etiketli Harcama ekle veya hızlı işlem menüsünden doğrudan g
 üst özet ve ilgili döküm menüsüdür. Borç/ledger kuralları değişmedi.
 Last reviewed: 2026-10-16
 
+Kalıcı kabuk eki: günlük net değer fotoğrafı yeni gün/başarısız kayıt sonrası
+gezinmede yeniden kontrol edilir; çalışan kayıt gezinmeyle iptal edilmez.
+Kart borcu/ledger geçişleri ve finans hesapları değişmez.
+
 16 Ekim çalışma zamanı eki: kart okuma cache'i kullanıcıya özeldir ve para
 hareketi/bakım sonrasında geçersiz kılınır. Arşiv + kısmi ödemeler birlikte
 yayımlanır; başarısız sorgu sıfır borç sayılmaz. Hesaplar ekranında kesim

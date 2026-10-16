@@ -8,6 +8,10 @@ Last reviewed: 2026-10-16
   tema/gizlilik sağlayıcıları ve günlük snapshot zamanlayıcısı sayfa geçişinde
   korunur. Sayfanın `PageTransition` anahtarı ve lazy/Suspense sınırı sürer;
   ayrılan sayfanın form durumu yeni açılışa taşınmaz.
+  `src/app/useDailyNetWorthSnapshot.ts` her gezinmede günlük damgayı kontrol
+  eder; çalışan koşuyu iptal etmez/çoğaltmaz. Ertesi yerel gün veya başarısız
+  kayıt sonraki gezinmede yeniden denenir. Oturum değişimi/unmount iptal eder;
+  dünkü cache'in bugünün kaydında kullanılmaması kuralı korunur.
 - `src/pages/CardsPage.hooks.ts` detay verilerini kullanıcıya özel
   `src/app/cardPageDataKey.ts` prefix'i altında TanStack Query ile tutar.
   Global tazelik 30 sn, bellekte tutma süresi 30 dk; süresi geçen veri sonraki
@@ -66,12 +70,13 @@ Finans formülleri, RPC/ledger/şema ve tarihsel veri kapsamı değiştirilmedi.
 ## Doğrulama ve geri dönüş
 
 Regresyonlar: `src/App.test.tsx`, `src/pages/CardsPage.data.test.tsx`,
-`src/components/ui/deferred-details.test.tsx`, `src/pages/DataHealthPage.cache.test.tsx`. Cache tazeliği/kullanıcı ayrımı,
+`src/components/ui/deferred-details.test.tsx`, `src/pages/DataHealthPage.cache.test.tsx`,
+`src/app/useDailyNetWorthSnapshot.test.tsx`. Cache tazeliği/kullanıcı ayrımı,
 aktif ve kapalı query invalidation'ı, kısmi ödeme hatası, eksik tablo uyumluluğu,
 doğrudan Hesaplar açılışında kesim adayı, kabuk sürekliliği ve form durumu kapsanır.
 Tam kapı `npm run verify`; tarayıcı smoke `npm run test:e2e`.
 
-Yerel doğrulama: verify başarılı (153 Vitest dosyası / 1.655 test + dört Node
+Yerel doğrulama: verify başarılı (154 Vitest dosyası / 1.659 test + dört Node
 guard; coverage %92,91 statement / %84,46 branch / %94,04 function / %95,04 line;
 production audit 0 açık; build, bundle ve altı edge tipi). Varsayılan Playwright
 10 geçti / canlı backend gerektiren üç test koşuluyla atlandı.
