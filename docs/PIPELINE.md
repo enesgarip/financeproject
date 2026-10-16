@@ -8,7 +8,7 @@ Gerçek akış: **`main` güncellemesi = üretim deploy.** `main` korumalıdır;
 PR üzerinden merge edilir ve production release bu merge push'uyla başlar.
 
 1. `codex/...` veya `feature/...` dalında çalış
-2. yerel kalite kontrolü: `npm run lint && npm run test:unit && npm run build`
+2. yerel kalite kontrolü: `npm run verify`
 3. migration/trigger değiştiyse yerel Postgres'te doğrula (`npm run db:seed:local`)
 4. commit (Türkçe + faz/madde etiketli)
 5. PR aç, CI yeşilken `main`'e merge et → `deploy.yml` otomatik çalışır
@@ -19,6 +19,10 @@ oluşmaması için branch push tetikleyicisi yoktur.
 
 ## Local Commands
 
+- `npm run verify` — lint + coverage + audit + build + bundle + varsa Deno
+- `npm run test:guards` — doğrudan Node ile encoding ve kaynak/doküman haritası
+- `npm run test:unit` — önce guard'lar, sonra tüm Vitest testleri
+- `npm run test:changed` — önce guard'lar, sonra `origin/main`'e göre etkilenen testler
 - `npm run lint`
 - `npm run build`
 - `npm run test:e2e`
@@ -62,6 +66,35 @@ oluşmaması için branch push tetikleyicisi yoktur.
 
 Docker is intentionally optional for day-to-day coding. It is included for clean local preview/build verification, while Playwright runs directly on the host locally and inside GitHub Actions in CI.
 
+## Test geri bildirimi ve tam kapı
+
+Kaynak encoding/pointer/repository-sayfa haritası guard'ları `tests/guards`
+altındadır. `scripts/run-guards.mjs` yeni `.test.mjs` dosyalarını otomatik
+kapsar; zorunlu docs/encoding dosyalarından biri eksikse hata verir. Node 24'ün
+yerleşik test runner'ı dosyaları doğrudan okur; yüzlerce
+dosya Vite `?raw` modülüne dönüştürülmez. Önceki dört guard testi ve tarama
+alanları korunur. `test:unit` ve `test:coverage` önce `test:guards` çalıştırır;
+`verify`, CI/deploy quality ve `ci:local` bu kapıyı devralır.
+
+Geliştirirken `npm run test:changed`, yereldeki `origin/main` ile farktan
+etkilenen Vitest testlerini çalıştırır; staged/unstaged değişiklikler de dahil
+edilir. İlgili test yoksa başarılı çıkar, fakat Node guard'ları her zaman
+koşar. `origin/main` ref'ini güncel tut. Alternatif taban için doğrudan
+`npx vitest run --changed=HEAD~1` kullanılabilir.
+
+Bu hızlı komut coverage, dinamik bağımlılıkların tamamı, E2E veya SQL kontrolü
+iddiası taşımaz; işi kapatırken `npm run verify` zorunludur. CI tam test
+kümesini koşmaya devam eder. Worker/izolasyon, property-test tekrar sayıları ve
+coverage eşikleri düşürülmedi. Saf veri sağlığı testi boş veri nesnesini
+`DataHealth.logic.ts` üzerinden aldığı için actions/repo/Supabase zincirini yüklemez.
+
+16 Ekim yerel ölçümü (4 worker, iki koşu): Vitest ortalaması 8,96 → 8,37 sn;
+doğrudan Node guard + Vitest toplamı 9,54 → 9,26 sn (npm/launcher ek yükü hariç).
+Bu küçük kazanç GitHub runner'ında henüz ölçülmedi. Etkilenen test komutu bu
+pakette 135 testi 0,72 sn'de koştu; her değişiklikte aynı süre/test sayısı
+beklenmez. Guard'lar ayrıca yaklaşık 0,3 sn sürer. Doğrulama/ölçüm kaydı:
+`docs/BACKLOG.md` 16 Ekim test hızlandırması maddesi.
+
 ## GitHub Actions
 
 ## CI workflow
@@ -83,6 +116,21 @@ Checks:
 - Supabase local migration reset + lint, ardından **`supabase/tests/*.sql`'in
   tamamı tek döngüyle** (database paths) — RLS/grant denetimleri ve tüm finansal
   SQL regresyonları dahil. Yeni eklenen her test dosyası CI'da otomatik koşar.
+
+16 Ekim 2026 itibarıyla `checks` (lint + coverage + audit) ve `build`
+(TypeScript + Vite + bundle bütçesi + `dist` artifact'ı) paralel çalışır.
+Branch protection ve Dependabot'un beklediği **Lint and Build** adı `quality`
+toplama işinde korunur; alt işlerden biri başarı dışında sonuç verirse kapı
+geçmez. Lighthouse yalnız `build` + değişiklik sınıflamasını bekler; quality
+sonucunu beklemeden aynı commit'in `dist` çıktısını ölçer. Lighthouse mevcut
+bilgilendirici (`continue-on-error`) konumunu korur. Gece koşusunda checks,
+build ve quality atlanır; Lighthouse kendi tek build'ini yapar.
+
+Lint `--cache-strategy content` kullanır: checkout dosya zamanını değiştirse
+de içerik aynıysa önbellek geçerlidir. Lint cache anahtarı lockfile + ESLint
+config'e; ayrı TypeScript cache'i lockfile + tsconfig'e bağlıdır. PR cache'leri
+GitHub'ın dal/ref sınırlarını korur; production için PR artifact'ı veya
+production env içeren `.vercel` dizini cache'lenmez.
 
 Lighthouse CI, GitHub status sonucunu yazabilsin diye job-scoped GitHub Actions
 token'ını `LHCI_GITHUB_TOKEN` olarak alır. Bu, "GitHub token not set" uyarısını
@@ -125,16 +173,48 @@ Runs on push to `main` or manual dispatch.
 Order/parallel graph:
 
 1. **Classify** — frontend, database/migration, and edge-function paths
-2. **Verify + artifact** — lint + coverage + production dependency audit; pull
-   production env, build once with `vercel build --prod`, verify the bundle, and
-   upload that exact output with `--prebuilt --skip-domain`
-3. **Database check + backup** — one seeded local reset and DB audits when
-   database paths changed; encrypted backup only for migration changes
-4. **Supabase release** — dry-run/push only when migrations changed; deploy only
-   changed edge functions (`_shared` means all)
+2. **Parallel checks + build** — lint + coverage + production dependency audit
+   run alongside the one production-env build and staged prebuilt upload.
+   `verify` retains the **Lint and Build** name and requires both jobs to succeed.
+   Production build/staging runs only on `main`, including manual dispatch.
+3. **Parallel database/edge checks + backup** — a fresh local database with
+   migrations, seed, lint and the full SQL suite when database paths changed;
+   encrypted backup only for migrations. Edge type-check completes before any
+   production migration or function deployment.
+4. **Supabase release** — after quality and all required DB/backup/edge gates,
+   dry-run/push only when migrations changed; deploy only changed edge
+   functions (`_shared` means all).
 5. **Promote + smoke** — after required Supabase work, use Vercel's team-scoped
    promotion API, smoke-test the canonical production `/login` route, and roll
    back to the previous deployment automatically when smoke fails
+
+Optional jobs may be skipped only when their corresponding change flag is
+false. A failed, cancelled or unexpectedly skipped required job blocks release
+and promotion. Promotion directly checks DB/backup/edge results too: a skipped
+Supabase release must never hide an upstream DB failure. Regression coverage:
+`src/utils/pipeline.guard.test.ts` evaluates the actual workflow expressions
+for frontend-only, DB-test-only, migration, edge, combined and docs-only releases.
+
+Vercel CLI `54.9.1` is cached under the runner temporary directory by OS,
+architecture, Node major and exact CLI version. Only its installed packages
+are cached; pulled env files and `.vercel/output` are excluded. The token is
+scoped to pull/build/upload steps and passed through `VERCEL_TOKEN`.
+
+### Süre ölçümü ve hedef
+
+Her iki workflow'un sonundaki **Workflow Timings**, GitHub Actions API'sini salt
+okunur çağırır ve job summary'ye iş/adım süreleri ile aynı dal/tetikleyicinin
+önceki en fazla 15 başarılı koşusunun ortalama/aralığını yazar. Raporlama
+hatası kalite veya release sonucunu değiştirmez. Toplam süre rapor anına kadar
+ölçülür; son raporlama işinin tamamlanmasını içermez.
+
+16 Ekim 2026 başlangıç ölçümü: son 15 production koşusu ortalama **125,7 sn**,
+aralık **94–153 sn**. [Örnek son koşu](https://github.com/enesgarip/financeproject/actions/runs/38912781873):
+lint 20 sn, coverage 24 sn, build 23 sn, CLI kurulumu 11 sn, staged upload 7 sn.
+İlk hedef sıcak cache ile frontend release'inde yaklaşık 90 sn'dir; doğrulanmış
+sonuç değildir. Önce/sonra aynı değişiklik türünü ve cache isabetini karşılaştır;
+migration'lı release'leri frontend-only koşularla aynı hedefe göre değerlendirme.
+Paralellik daha fazla runner başlangıcı gerektirir; kazancı gerçek koşularda ölç.
 
 The path-aware database check in both `ci.yml` and `deploy.yml` runs the ENTIRE
 `supabase/tests/*.sql` suite in a single loop step after a clean migration

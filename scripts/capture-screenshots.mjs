@@ -6,6 +6,11 @@ import { chromium } from 'playwright'
 import { statSync } from 'node:fs'
 
 const BASE_URL = process.env.BASE_URL ?? 'http://localhost:5173'
+const localHosts = new Set(['127.0.0.1', 'localhost', '[::1]'])
+const base = new URL(BASE_URL)
+if (base.protocol !== 'http:' || !localHosts.has(base.hostname)) {
+  throw new Error('README çekimi yalnız yerel demo sunucusunda yapılabilir.')
+}
 const SCALE = Number(process.env.SCALE ?? 2)
 const SHOTS = [
   { path: '/', file: 'docs/screenshots/dashboard.png' },
@@ -15,6 +20,9 @@ const SHOTS = [
   { path: '/analiz', file: 'docs/screenshots/analysis.png' },
   { path: '/analiz/asistan', file: 'docs/screenshots/assistant.png' },
   { path: '/odemeler/alsam-mi', file: 'docs/screenshots/decision.png' },
+  { path: '/login', file: 'docs/screenshots/login.png', public: true },
+  { path: '/', file: 'docs/screenshots/dashboard-mobile.png', mobile: true },
+  { path: '/', file: 'docs/screenshots/dashboard-dark.png', dark: true },
 ]
 
 const browser = await chromium.launch()
@@ -27,6 +35,16 @@ const context = await browser.newContext({
   timezoneId: 'Europe/Istanbul',
 })
 const page = await context.newPage()
+// Yerel Vite yanlışlıkla production env ile açılmışsa veri isteğini engelle.
+// Kur/AI/analytics gibi dış servisler de README çekiminin parçası değildir.
+await context.route('**/*', (route) => {
+  const url = new URL(route.request().url())
+  return localHosts.has(url.hostname) ? route.continue() : route.abort()
+})
+
+// Giriş ekranını authenticated yönlendirmeden önce çek.
+await page.goto(`${BASE_URL}/login`, { waitUntil: 'networkidle' })
+await page.screenshot({ path: SHOTS.find((shot) => shot.public).file, animations: 'disabled' })
 
 console.log(`Giriş: ${BASE_URL}/login (t@t.com)`)
 await page.goto(`${BASE_URL}/login`, { waitUntil: 'networkidle' })
@@ -36,7 +54,11 @@ await page.click('button[type="submit"]')
 await page.waitForURL((url) => !url.pathname.startsWith('/login'), { timeout: 15_000 })
 
 for (const shot of SHOTS) {
+  if (shot.public) continue
+  await page.setViewportSize(shot.mobile ? { width: 390, height: 844 } : { width: 1320, height: 900 })
+  await page.emulateMedia({ colorScheme: shot.dark ? 'dark' : 'light' })
   await page.goto(`${BASE_URL}${shot.path}`, { waitUntil: 'networkidle' })
+  if (new URL(page.url()).pathname.startsWith('/login')) throw new Error(`${shot.path}: demo oturumu yok`)
   // Snapshot sorguları + font yerleşimi için kısa oturma payı.
   await page.waitForTimeout(1200)
   await page.screenshot({ path: shot.file, animations: 'disabled' })

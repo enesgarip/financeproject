@@ -1,5 +1,7 @@
 # Denge
 
+<img src="public/icon.svg" width="64" height="64" alt="Denge sapphire app icon" />
+
 **English** · [Türkçe](README.tr.md)
 
 **A personal finance app that makes your monthly financial load visible before a due date slips past.**
@@ -45,7 +47,9 @@ team/role management, or multi-currency investment portfolio tracking.
   statement cuts, installment purchases and mid-period payments. Debt is broken
   down into current-period / statement / provision buckets.
 - **Loans & personal debts** — Loan installment plans plus debt/receivable
-  tracking with people, complete with an installment calendar.
+  tracking with people, complete with an installment calendar. A separate
+  tracking-only list records payments that are not expected back and does not
+  affect balances, debt or cash-flow projections.
 - **Planning & payment calendar** — Upcoming payments, monthly cash-flow
   projection, budget alerts, savings goals and installment schedule summaries.
 - **Analysis & net worth** — Net worth, wealth and cash-flow trends;
@@ -72,26 +76,40 @@ team/role management, or multi-currency investment portfolio tracking.
   installments, loans, personal debts & receivables, payment calendar,
   analysis & net worth, data health, Web Push notifications (preferences +
   quiet hours).
-- **In progress:** reading provisions/transactions from SMS and bank statement
-  import (DenizBank, YapıKredi) run in the browser; whole-statement line-total
+- **Import & automation:** SMS processing uses a Supabase Edge Function;
+  DenizBank and YapıKredi statement parsers run locally in the browser, with an
+  optional AI fallback for unsupported statements. Whole-statement line-total
   validation uses two independent checksums calibrated on real statements
   (see `docs/BACKLOG.md`). The AI assistant is a recent addition (Gemini free
   tier).
 
-## Visual language: Şerit (Nocturne)
+## Visual language: Şerit / Ink and Sapphire
 
 The UI uses the **Şerit** ("stripe") visual language introduced with the
 2026-08 redesign: rows separated by hairlines instead of stacked shadowed
 boxes, a single hero number per screen, mono + tabular numerals for financial
-figures; a card only where a block earns one. The color identity is
-**Nocturne**: a warm porcelain light theme, a dark obsidian dark theme and a
-jade accent — both themes are first-class. Rules:
+figures; a card only where a block earns one. Since 16 October 2026, the color
+identity is **Ink and Sapphire (Mürekkep ve Safir)**: cool light surfaces,
+ink/navy dark surfaces and sapphire primary actions. Green marks positive
+financial movement and success. The app follows the system theme and supports
+manual light/dark selection.
+
+On phones, upcoming due dates appear near the main balance, a labeled expense
+action sits above navigation, and the expense form puts account, amount,
+description and save first. Payments offers Upcoming/Calendar views of the
+same obligations. Accessible icon labels, wrapped text and reduced-motion
+support are part of the shared design. Rules:
 [`docs/UI_ARCHITECTURE.md`](docs/UI_ARCHITECTURE.md) (Turkish).
 
 ## Screenshots
 
 > The screenshots below were taken in a local development environment with
-> **representative demo data**.
+> **representative demo data**, refreshed on 16 October 2026. No production
+> account or financial data is used. [Capture details](docs/screenshots/README.md).
+
+| Phone overview | Dark theme |
+| --- | --- |
+| ![Mobile overview](docs/screenshots/dashboard-mobile.png) | ![Dark overview](docs/screenshots/dashboard-dark.png) |
 
 | Accounts & cards | Loans & installments |
 | --- | --- |
@@ -103,8 +121,9 @@ jade accent — both themes are first-class. Rules:
 
 ## Privacy & security
 
-> - Your data stays in **your own Supabase project**; it never goes to a
->   third-party server.
+> - Finance records are stored in **your own Supabase project**. Using the AI
+>   assistant sends your question and a financial summary to Google Gemini;
+>   AI receipt/statement parsing sends the selected content through an Edge Function.
 > - Row Level Security (RLS) on every table: every row is scoped by
 >   `user_id = auth.uid()`.
 > - Only the **anon key** ever reaches the client; the **service role** key is
@@ -149,7 +168,7 @@ crashes and errors are tracked in-app via `AppErrorBoundary` plus a dedicated
 ## Getting started
 
 ```bash
-npm install
+npm ci
 
 npm run dev            # Connects to production Supabase (.env.local required)
 npm run dev:local      # Local Supabase (docker) + Vite — never touches production
@@ -178,12 +197,23 @@ npm run verify
 For an end-to-end smoke test, `npm run test:e2e` (Playwright) can be run
 separately.
 
+For quicker local feedback, `npm run test:changed` runs repository guards plus
+tests affected by changes against the local `origin/main` ref. Keep that ref
+current. It does not replace `verify`: full unit/coverage commands and CI still
+require all tests and the Node-based file guards (`npm run test:guards`).
+
 ## Deploy
 
-A push to `main` = production deploy (GitHub Actions → Vercel). The frontend is
-built as a single artifact and uploaded staged; if the DB changed, an encrypted
-backup is taken before migrations are applied; if the post-release `/login`
-smoke test fails, an automatic rollback kicks in. Details:
+A merge into protected `main` starts production deployment (GitHub Actions →
+Vercel). Lint, coverage and dependency audit run in parallel with the single
+production build and staged upload. The required **Lint and Build** check
+aggregates both results. CLI/lint/TypeScript caches reduce repeated work;
+Lighthouse starts when the PR build is ready.
+
+Required database and edge checks must succeed before release; migrations
+require an encrypted backup. The staged artifact is promoted after all required
+gates pass, with automatic frontend rollback when the production `/login` smoke
+fails. Each workflow includes a duration report. Details:
 [`docs/PIPELINE.md`](docs/PIPELINE.md) (Turkish).
 
 ## Contributing & AI agents

@@ -6,25 +6,7 @@ import {
 import { dateInputValue } from '../utils/date'
 import type { HealthData, UndoBatch, UndoEntry, UndoRow, UndoTable } from './DataHealth.logic'
 
-export const emptyData: HealthData = {
-  assets: [],
-  budgets: [],
-  cards: [],
-  cardExpenses: [],
-  cardInstallments: [],
-  cardLedger: [],
-  accountLedger: [],
-  cardStatementArchives: [],
-  debts: [],
-  loans: [],
-  loanInstallments: [],
-  payments: [],
-  salaryHistory: [],
-  savingsGoals: [],
-  savingsGoalComponents: [],
-  savingsGoalSources: [],
-  kasaBuckets: [],
-}
+export { emptyData } from './DataHealth.logic'
 
 const exportTables = [
   { key: 'assets', table: 'assets' },

@@ -18,7 +18,7 @@ değişen davranışı/önceliği aynı PR/commit içinde yansıtmalı. Yeni
 `data/repositories/*` veya route sayfası (`*Page.tsx`/`*Hub.tsx`) eklediysen
 `docs/AI_CONTEXT_INDEX.md`'in konu→dosya tablosuna satır ekle. Dosya
 taşıdıysan/sildiysen docs'taki referansını güncelle. Bunu CI'da
-`docs.guard.test.ts` zorlar (kırık pointer + eksik harita = kırmızı).
+`tests/guards/docs.guard.test.mjs` zorlar (kırık pointer + eksik harita = kırmızı).
 
 ## Proje
 
@@ -36,9 +36,11 @@ kullanıcıya yanıtlar Türkçe.
 npm run dev            # Vite (üretim Supabase'ine bağlanır — .env.local)
 npm run dev:local      # Yerel Supabase başlat + Vite'ı ona bağla (üretime dokunmaz)
 npm run dev:local:stop # Yerel Supabase docker'ı kapat
-npm run verify         # "BİTTİ" KAPISI — CI quality job'ının birebir yerel aynası
+npm run verify         # "BİTTİ" KAPISI — CI kalite kontrollerinin yerel aynası
 npm run lint           # ESLint (tüm repo)
-npm run test:unit      # Vitest (saf util/servis testleri)
+npm run test:guards    # Node: encoding + kaynak pointer + repo/sayfa haritası
+npm run test:unit      # Node guard'ları + tüm Vitest testleri
+npm run test:changed   # Guard'lar + origin/main'e göre etkilenen Vitest testleri
 npm run test:e2e       # Playwright smoke (CI'da çalışır)
 npm run build          # tsc -b && vite build
 npm run db:seed:local  # Yerel DB'yi sıfırla + seed.sql yükle (test kullanıcısı)
@@ -53,6 +55,11 @@ test + prod dependency audit + build + bundle bütçesi + (deno kuruluysa) edge 
 kontrolü. CI quality kapısının birebir aynası: eski üçlü (lint+test:unit+build)
 coverage eşiğini, bundle bütçesini ve audit'i KOŞMUYORDU — "yerelde yeşil, CI'da
 kırmızı" sürprizi iki kez yaşandı (PR-0 ve PR B bundle olayları).
+
+`test:unit` ve `test:coverage` önce Node dosya guard'larını çalıştırır; CI ve
+`verify` bunları atlayamaz. `test:changed` yalnız yerel hızlı geri bildirimdir:
+coverage/toplu doğrulama yerine geçmez. `origin/main` ref'inin yerelde güncel
+olması gerekir. Test izolasyonu ve coverage eşikleri korunur.
 
 ## Mimari katmanlar (sınır ESLint ile zorlanır)
 
@@ -113,16 +120,24 @@ Düzeltme = **ters kayıt** (append-only history bozulmaz). GUC ile yönlendiril
 ## Deploy hattı (otomatik)
 
 `main`'e **push = üretim deploy** (`.github/workflows/deploy.yml`):
-1. **Classify + verify** — değişiklik alanlarını ayır; lint + coverage + production dependency audit kapısı
-2. **Tek artifact** — frontend değiştiyse production env'i çek, bir kez `vercel build --prod` ile build et, bundle bütçesini doğrula ve `--prebuilt --skip-domain` ile staged yükle
-3. **DB check + backup** — DB değiştiyse yerel gerçek Postgres kontrolü; migration varsa şifreli yedek
+1. **Classify + paralel kontrol/build** — lint + coverage + production dependency audit, tek production build ile paraleldir; `Lint and Build` iki sonucu zorunlu başarıyla toplar
+2. **Tek artifact** — frontend değiştiyse production env'i çek, bir kez `vercel build --prod` ile build et, bundle bütçesini doğrula ve `--prebuilt --skip-domain` ile staged yükle; production build yalnız `main`'de koşar
+3. **Paralel DB/edge check + backup** — DB değiştiyse yerel gerçek Postgres kontrolü; migration varsa şifreli yedek; edge tipi üretime herhangi bir yazmadan önce doğrulanır
 4. **Supabase release** — yalnız migration değiştiyse `db push`; yalnız değişen edge function'ları deploy et
 5. **Vercel promote + smoke** — resmi scoped API ile aynı staged build'i canlıya al; `/login` smoke başarısızsa önceki production deployment'a otomatik rollback yap
+
+Gerekli bir DB/yedek/edge/release işi `failure`, `cancelled` veya beklenmedik
+`skipped` ise yayın durur. Lint içerik tabanlı cache kullanır; TypeScript cache'i
+ayrı, Vercel CLI `54.9.1` paket cache'i ortam dosyalarından ayrıdır. `VERCEL_TOKEN`
+yalnız ilgili adımlarda env üzerinden verilir. Her workflow sonunda salt okunur
+`scripts/report-workflow-timings.mjs` iş/adım süreleri ve geçmiş ortalamayı raporlar.
 
 Vercel Git auto-deploy'u `vercel.json` ile `main` için kapalıdır; production'ı
 yalnız workflow'daki prebuilt staged deploy + scoped API promotion yönetir (çift deploy YAPMA).
 
-CI (`ci.yml`): PR ve `develop` push'larında Lint+Build (required); Playwright,
+CI (`ci.yml`): PR ve `develop` push'larında `Lint and Build` (required) paralel
+checks/build sonuçlarını toplar. Lighthouse build artifact'ını hazır olduğunda
+devralır; lint/coverage bitmesini beklemez. Playwright,
 Lighthouse ve Supabase kontrolleri yalnız ilgili dosya alanı değiştiyse çalışır.
 Gece Lighthouse denetimi 3 koşu, PR hızlı denetimi 1 koşudur. Lighthouse runner'da
 hazır Chrome'u headless kullanır. Route seviyesindeki giriş animasyonu ilk karede

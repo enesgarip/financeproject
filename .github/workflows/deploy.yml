@@ -14,6 +14,9 @@ permissions:
   contents: read
   actions: write
 
+env:
+  VERCEL_CLI_VERSION: 54.9.1
+
 jobs:
   changes:
     name: Classify release changes
@@ -75,17 +78,11 @@ jobs:
           echo "migrations=$migrations" >> "$GITHUB_OUTPUT"
           echo "edge=$edge" >> "$GITHUB_OUTPUT"
 
-  verify:
-    name: Lint and Build
+  checks:
+    name: Lint, Coverage and Audit
     needs: changes
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    outputs:
-      deployment_url: ${{ steps.stage.outputs.url }}
-    env:
-      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -104,10 +101,9 @@ jobs:
         with:
           path: |
             node_modules/.cache/eslint
-            node_modules/.tmp/*.tsbuildinfo
-          key: quality-${{ runner.os }}-node24-${{ hashFiles('package-lock.json') }}-${{ github.sha }}
+          key: lint-content-${{ runner.os }}-node24-${{ hashFiles('package-lock.json', 'eslint.config.js') }}-${{ github.sha }}
           restore-keys: |
-            quality-${{ runner.os }}-node24-${{ hashFiles('package-lock.json') }}-
+            lint-content-${{ runner.os }}-node24-${{ hashFiles('package-lock.json', 'eslint.config.js') }}-
 
       - name: Lint
         run: npm run lint
@@ -118,17 +114,66 @@ jobs:
       - name: Production dependency audit
         run: npm audit --omit=dev --audit-level=high
 
-      - name: Install pinned Vercel CLI
+  build:
+    name: Build and Stage Production
+    needs: changes
+    if: ${{ github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      deployment_url: ${{ steps.stage.outputs.url }}
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Restore TypeScript cache
+        uses: actions/cache@v4
+        with:
+          path: node_modules/.tmp/*.tsbuildinfo
+          key: typescript-${{ runner.os }}-node24-${{ hashFiles('package-lock.json', 'tsconfig*.json') }}-${{ github.sha }}
+          restore-keys: |
+            typescript-${{ runner.os }}-node24-${{ hashFiles('package-lock.json', 'tsconfig*.json') }}-
+
+      # Yalnız CLI paketleri cache'lenir; .vercel env/proje/artifact dosyaları değil.
+      - name: Restore pinned Vercel CLI
         if: ${{ needs.changes.outputs.frontend == 'true' }}
-        run: npm install --global vercel@54.9.1
+        id: vercel-cli-cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/vercel-cli
+          key: vercel-cli-${{ runner.os }}-${{ runner.arch }}-node24-${{ env.VERCEL_CLI_VERSION }}
+
+      - name: Install pinned Vercel CLI
+        if: ${{ needs.changes.outputs.frontend == 'true' && steps.vercel-cli-cache.outputs.cache-hit != 'true' }}
+        run: npm install --prefix "$RUNNER_TEMP/vercel-cli" --no-save --no-audit --no-fund "vercel@$VERCEL_CLI_VERSION"
+
+      - name: Add Vercel CLI to PATH
+        if: ${{ needs.changes.outputs.frontend == 'true' }}
+        run: echo "$RUNNER_TEMP/vercel-cli/node_modules/.bin" >> "$GITHUB_PATH"
 
       - name: Pull Vercel production environment
         if: ${{ needs.changes.outputs.frontend == 'true' }}
-        run: vercel pull --yes --environment=production --no-color --token "$VERCEL_TOKEN"
+        run: vercel pull --yes --environment=production --no-color
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
 
       - name: Build exact production artifact
         if: ${{ needs.changes.outputs.frontend == 'true' }}
-        run: vercel build --prod --yes --no-color --token "$VERCEL_TOKEN"
+        run: vercel build --prod --yes --no-color
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
 
       - name: Build non-frontend changes
         if: ${{ needs.changes.outputs.frontend != 'true' }}
@@ -143,8 +188,10 @@ jobs:
       - name: Upload staged prebuilt production
         if: ${{ needs.changes.outputs.frontend == 'true' }}
         id: stage
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
-          url=$(vercel deploy --prebuilt --prod --skip-domain --archive=tgz --yes --no-color --token "$VERCEL_TOKEN")
+          url=$(vercel deploy --prebuilt --prod --skip-domain --archive=tgz --yes --no-color)
           url=$(printf '%s\n' "$url" | tail -n 1)
           case "$url" in
             https://*) ;;
@@ -152,11 +199,25 @@ jobs:
           esac
           echo "url=$url" >> "$GITHUB_OUTPUT"
 
+  verify:
+    name: Lint and Build
+    needs: [checks, build]
+    if: ${{ always() && !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Require every quality gate
+        env:
+          CHECKS_RESULT: ${{ needs.checks.result }}
+          BUILD_RESULT: ${{ needs.build.result }}
+        run: test "$CHECKS_RESULT" = success && test "$BUILD_RESULT" = success
+
   database_check:
     name: Supabase Migration Check
     needs: changes
     if: ${{ needs.changes.outputs.database == 'true' }}
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -230,14 +291,16 @@ jobs:
 
   release_supabase:
     name: Release Supabase changes
-    needs: [changes, verify, database_check, backup]
+    needs: [changes, verify, database_check, backup, edge_check]
     if: >-
       ${{
         always() &&
         !cancelled() &&
+        needs.changes.result == 'success' &&
         needs.verify.result == 'success' &&
-        needs.database_check.result != 'failure' &&
-        needs.backup.result != 'failure' &&
+        (needs.database_check.result == 'success' || (needs.changes.outputs.database != 'true' && needs.database_check.result == 'skipped')) &&
+        (needs.backup.result == 'success' || (needs.changes.outputs.migrations != 'true' && needs.backup.result == 'skipped')) &&
+        (needs.edge_check.result == 'success' || (needs.changes.outputs.edge != 'true' && needs.edge_check.result == 'skipped')) &&
         (needs.changes.outputs.migrations == 'true' || needs.changes.outputs.edge == 'true')
       }}
     runs-on: ubuntu-latest
@@ -292,24 +355,6 @@ jobs:
         if: ${{ needs.changes.outputs.migrations == 'true' }}
         run: supabase db push --linked --include-all
 
-      # Deploy'dan hemen önce tip kapısı: tip bozuk edge fonksiyonu üretime
-      # ÇIKAMAZ (PR G'de parse-sms tip hatası CI deno koşmadığı için sessizdi;
-      # PR yolundaki kapı ci.yml'de — bu, main'e doğrudan push'un emniyeti).
-      - name: Setup Deno (edge type-check)
-        if: ${{ needs.changes.outputs.edge == 'true' }}
-        uses: denoland/setup-deno@v2
-        with:
-          deno-version: v2.x
-
-      - name: Type-check edge functions before deploy
-        if: ${{ needs.changes.outputs.edge == 'true' }}
-        run: |
-          set -euo pipefail
-          shopt -s nullglob
-          files=(supabase/functions/*/index.ts)
-          [ "${#files[@]}" -gt 0 ] || { echo "::error::edge index.ts bulunamadı"; exit 1; }
-          deno check "${files[@]}"
-
       - name: Deploy changed edge functions
         if: ${{ needs.changes.outputs.edge == 'true' }}
         env:
@@ -352,15 +397,20 @@ jobs:
 
   publish_frontend:
     name: Promote staged Vercel production
-    needs: [changes, verify, release_supabase]
+    needs: [changes, verify, build, database_check, backup, edge_check, release_supabase]
     if: >-
       ${{
         always() &&
         !cancelled() &&
+        needs.changes.result == 'success' &&
         needs.changes.outputs.frontend == 'true' &&
         needs.verify.result == 'success' &&
-        needs.verify.outputs.deployment_url != '' &&
-        needs.release_supabase.result != 'failure'
+        needs.build.result == 'success' &&
+        needs.build.outputs.deployment_url != '' &&
+        (needs.database_check.result == 'success' || (needs.changes.outputs.database != 'true' && needs.database_check.result == 'skipped')) &&
+        (needs.backup.result == 'success' || (needs.changes.outputs.migrations != 'true' && needs.backup.result == 'skipped')) &&
+        (needs.edge_check.result == 'success' || (needs.changes.outputs.edge != 'true' && needs.edge_check.result == 'skipped')) &&
+        (needs.release_supabase.result == 'success' || (needs.changes.outputs.migrations != 'true' && needs.changes.outputs.edge != 'true' && needs.release_supabase.result == 'skipped'))
       }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -368,7 +418,7 @@ jobs:
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
       VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
       VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-      DEPLOYMENT_URL: ${{ needs.verify.outputs.deployment_url }}
+      DEPLOYMENT_URL: ${{ needs.build.outputs.deployment_url }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -380,3 +430,48 @@ jobs:
 
       - name: Promote, smoke test, and rollback on failure
         run: node scripts/promote-vercel-deployment.mjs
+
+  edge_check:
+    name: Edge Deno Check
+    needs: changes
+    if: ${{ needs.changes.outputs.edge == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/deno
+          key: deno-${{ runner.os }}-${{ hashFiles('supabase/functions/**/*.ts') }}
+          restore-keys: |
+            deno-${{ runner.os }}-
+      - name: Type-check edge functions before any production writes
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          files=(supabase/functions/*/index.ts)
+          [ "${#files[@]}" -gt 0 ] || { echo "::error::edge index.ts bulunamadı"; exit 1; }
+          deno check "${files[@]}"
+
+  timings:
+    name: Workflow Timings
+    continue-on-error: true
+    needs: [changes, checks, build, verify, database_check, backup, edge_check, release_supabase, publish_frontend]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - name: Report durations and recent baseline
+        run: node scripts/report-workflow-timings.mjs
+        env:
+          GITHUB_TOKEN: ${{ github.token }}

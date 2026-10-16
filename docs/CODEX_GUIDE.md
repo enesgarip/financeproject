@@ -29,12 +29,13 @@ değiştirme. Migration yapma.`
 
 1. Route / util / `src/types/database.ts` / migration hâlâ hizalı mı? Yeni
    repository/sayfa eklediysen `docs/AI_CONTEXT_INDEX.md`'i güncelle, dosya
-   taşıdıysan docs referansını düzelt (`docs.guard.test.ts` CI'da zorlar).
+   taşıdıysan docs referansını düzelt (`tests/guards/docs.guard.test.mjs` CI'da zorlar).
 2. Finans değişikliğiyse dashboard yan etkisi?
 3. Türetilmiş toplam değiştiyse veri sağlığı (`DataHealthPage`) yan etkisi?
 4. RPC/şema/release dokunuşu varsa: `docs/MIGRATION_COMPATIBILITY_CHECKLIST.md` +
    `docs/RPC_ACTION_REFERENCE.md`'i güncel tut.
-5. `npm run lint && npm run test:unit && npm run build`. Migration/trigger
+5. `npm run verify` (lint + coverage + production audit + build + bundle +
+   Deno kuruluysa edge tipleri). Migration/trigger
    değiştiyse yerel Postgres'te de doğrula.
 6. Varsayımları net özetle.
 

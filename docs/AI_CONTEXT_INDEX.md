@@ -2,6 +2,26 @@
 
 Last reviewed: 2026-10-16
 
+16 Ekim test hızlandırması: kaynak/doküman guard'ları
+`tests/guards/docs.guard.test.mjs` ve `tests/guards/encoding.guard.test.mjs`
+altında `scripts/run-guards.mjs` ile doğrudan Node'da koşar; eksik/boş guard
+kümesi hata verir. `test:unit`/`test:coverage` bunları zorunlu
+çalıştırır; CI ve verify kapsamı korunur. Yerel `test:changed`, guard'lardan
+sonra `origin/main`'e göre etkilenen testleri seçer; tam kalite kapısı değildir.
+`pages/DataHealth.logic.ts` saf `emptyData` kaynağıdır; actions mevcut export'u
+yeniden sunar, saf test actions/repo/Supabase yüklemez. Akış: `docs/PIPELINE.md`.
+
+16 Ekim CI/deploy hızlandırması: `.github/workflows/ci.yml` ve `deploy.yml`
+checks/build'i paralel koşar; zorunlu `Lint and Build` toplama kapısıdır.
+PR Lighthouse build artifact'ını erken devralır. Lint içerik cache'i,
+ayrı TypeScript cache'i ve sabit CLI paket cache'i vardır. Gerekli
+DB/yedek/edge/release işi başarısız, iptal veya beklenmedik skipped ise yayın
+durur; gerçek koşul regresyonları `utils/pipeline.guard.test.ts`.
+Ölçüm aracı `scripts/report-workflow-timings.mjs`; akış ve başlangıç ölçümü
+`docs/PIPELINE.md`. README'ler, Mürekkep ve Safir demo görselleri ve çekim
+rehberi `docs/screenshots/README.md` ile günceldir. Üretim süre kazancı,
+ilk gerçek yeni workflow koşusundan sonra doğrulanır; 90 sn yalnız hedeftir.
+
 Dil sözlüğü: `docs/UI_GLOSSARY.md` kullanıcı metinlerinin ortak kaynağıdır.
 Ödeme/tahsilat düğmeleri banka işlemi yerine kayıt işlemini adlandırır;
 ortak form etiketleri `services/financePaymentActions.ts`, açıklama
@@ -354,7 +374,7 @@ more than no docs.
 ## Konu → Dosya (hızlı Türkçe tablo)
 
 Bir işe başlarken keşif turu (grep fan-out) atmamak için: "şu konuya dokunacaksan
-önce şu dosyalara bak." Bağlayıcı değil, başlangıç noktasıdır. (`docs.guard.test.ts`
+önce şu dosyalara bak." Bağlayıcı değil, başlangıç noktasıdır. (`tests/guards/docs.guard.test.mjs`
 her repository + route sayfasının bu tabloda adıyla geçmesini CI'da zorlar.)
 
 Paylaşılan veri: `src/app/useFinanceSnapshot.ts` (Dashboard + Analysis aynı cache'i

@@ -3,7 +3,10 @@
 16 Ekim 2026. Kullanıcı, telefon öncelikli UI/UX önerilerini ve Mürekkep ve
 Safir yönünü ikonlarla birlikte onayladı. Yerel doğrulama tamamlandı;
 kullanıcının canlıya alma onayıyla paket korumalı PR → CI → üretim yayın
-hattına hazırlanır. Yayın sonucu ilgili PR ve Deploy Production kaydından izlenir.
+hattından yayınlandı: [PR #258](https://github.com/enesgarip/financeproject/pull/258),
+[başarılı production koşusu](https://github.com/enesgarip/financeproject/actions/runs/38882330501).
+Sonraki ikon/dil ekleri #259/#260'tadır. Güncel README demo ekranları ve çekim
+kaynağı `docs/screenshots/README.md`'de tutulur; aşağıdaki ölçümler ilk paketindir.
 
 ## Uygulanan kapsam
 

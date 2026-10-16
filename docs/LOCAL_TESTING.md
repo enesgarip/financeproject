@@ -56,14 +56,19 @@ Kurallar:
 - Test kayıtlarına `LOCAL-E2E-<tarih>-<senaryo>` prefix'i ver; `rollback` ile izole tut.
 - RPC imzalarını varsayma; `select pg_get_function_arguments(...)` ile DB'den al.
 
-### UI katmanı kısıtı
+### Yerel UI ve README görselleri
 
-Bir AI ajanı **bir form alanına şifre giremez** (güvenlik kuralı) → yerel UI'a login
-olamaz; token enjeksiyonu da güvenlik sınıflandırıcısınca engellenir. Bu yüzden UI
-**yazma** akışları (form gönderimi, TanStack invalidation, render) ajan tarafından
-test edilemez. Gerekirse **kullanıcı bir kez giriş yapar**, ajan authenticated
-oturumu metin araçlarıyla (read_page/js) sürer. Veri-katmanı doğruluğu için yukarıdaki
-impersonation yöntemi yeterlidir.
+Yerel demo hesabının belgeli parolasıyla normal giriş yapılarak UI kontrolü
+yapılabilir; `scripts/capture-screenshots.mjs` bu yolu kullanır. Önce Vite'ın
+yerel Supabase'e bağlı olduğunu ve hesabın yalnız demo fixture'ları içerdiğini
+doğrula. Üretim hesabı/oturumu veya gerçek finans verisi README çekimine girmez.
+Token enjeksiyonu veya repo'ya browser storage state kaydı gerekmez.
+
+Çekim aracı yalnız loopback sunucusunu kabul eder, dış ağ isteklerini engeller
+ve mevcut rota ekranlarını kaydeder. Mobil/koyu tema dahil yeniden çekim ve
+görsel kontrol adımları: `docs/screenshots/README.md`. RPC doğruluğu için
+yukarıdaki gerçek Postgres impersonation testleri kullanılır; ekran görüntüsü
+yazma davranışının veya TanStack invalidation'ın test edildiği anlamına gelmez.
 
 ## Migration/RPC değişikliği doğrulama
 

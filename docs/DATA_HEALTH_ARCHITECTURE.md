@@ -9,6 +9,11 @@ manual amount-entry form.
 
 Last reviewed: 2026-10-16
 
+Test/import eki: boş `HealthData` nesnesi `DataHealth.logic.ts` içindedir.
+`DataHealth.actions.ts` mevcut `emptyData` export'unu yeniden sunar; UI aynı
+nesneyi kullanır. Saf logic testi doğrudan logic'ten alır ve yalnız fixture
+için repository/Supabase istemcisini yüklemez. Bulgu/onarım/RPC kuralları değişmez.
+
 Dil sözlüğü eki: kullanıcı metinlerinde işlem/karşılaştırma dili vardır;
 teknik aksiyon/çekmece/manuel uzlaştırma ifadeleri sadeleştirilmiştir.
 Ödeme kaydet düğmesi aynı kanonik formu açar. Resolution mode/primaryAction,
@@ -37,7 +42,7 @@ issue detection in `DataHealth.logic.ts` and writes in
 - `DataHealthPage.tsx`: orchestration, local UI state, loading, messages,
   modal wiring, and legacy browser-dismissal migration
 - `DataHealth.logic.ts`: thin pure issue orchestrator, issue/view-model and undo
-  types, and shared date helpers
+  types, empty data shape, and shared date helpers
 - `DataHealth.checks.ts`: domain-specific pure issue detection, including card
   scheduled-debt gap and partial-overlap checks
 - `DataHealthPage.actions.ts`: primary-action authorization, safe-repair RPC

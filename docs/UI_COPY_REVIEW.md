@@ -6,6 +6,11 @@ veri yazma davranışı korunuyor. Sonraki geniş kapsamlı mesaj taraması aç�
 
 ## 16 Ekim 2026 — ortak dil sözlüğü
 
+Paket yayınlandı: [PR #260](https://github.com/enesgarip/financeproject/pull/260),
+[başarılı production koşusu](https://github.com/enesgarip/financeproject/actions/runs/38912781873).
+README anlatımı/görselleri güncel dil ve safir tema ile eşitlendi;
+demo çekim kaynağı `docs/screenshots/README.md`.
+
 Kullanıcı kelime ve cümleleri ortak bir sözlükle düzenlemeyi istedi.
 Kanonik kelime/ton kaynağı `UI_GLOSSARY.md`'dir. Ödeme/tahsilat açma eylemi,
 form başlığı, hesap seçimi, bakiye/borç önizlemesi ve kaydet düğmesi birlikte
