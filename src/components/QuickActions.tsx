@@ -1,23 +1,12 @@
-import { ArrowRightLeft, Banknote, HandCoins, Landmark, Plus, ReceiptText, Search, ShoppingCart, WalletCards, X } from 'lucide-react'
+import { ArrowRightLeft, Banknote, HandCoins, Landmark, MoreHorizontal, Plus, ReceiptText, ShoppingCart, WalletCards, X } from 'lucide-react'
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Link, useLocation } from 'react-router'
-import { cn } from '../lib/utils'
-import { normalizeSearchText } from '../utils/searchText'
-import { Input } from './ui/input'
+import { useBodyScrollLock } from './ui/use-body-scroll-lock'
 import { useDialogA11y } from './ui/use-dialog-a11y'
 
-/**
- * Hızlı işlem akışı. Panel ile TETİKLEYİCİ kasıtlı olarak ayrı bileşenler:
- * Şerit'te FAB artık serbest yüzen bir öğe değil, alt barın kendi 76px'lik
- * ayrılmış bandında oturuyor (`QuickActionsFab`), masaüstünde ise başlık
- * satırındaki "İşlem" butonu (`QuickActionsButton`). İkisi de aynı paneli açar.
- *
- * Eski hâlinde FAB `fixed` olarak içeriğin üstünde yüzüyordu ve sayfa sonunda
- * satırları örtüyordu — tasarımın açıkça düzelttiği hata buydu.
- */
-
+export const quickExpensePath = '/kartlar?section=kartlar&panel=manuel'
 const actions = [
-  { to: '/kartlar?section=kartlar&panel=manuel#hizli-harcama', label: 'Harcama ekle', description: 'Hesap veya kart harcamasını kaydet', icon: WalletCards },
+  { to: quickExpensePath, label: 'Harcama ekle', description: 'Hesap veya kart harcamasını kaydet', icon: WalletCards },
   { to: '/kartlar#hesap-merkezi', label: 'Transfer kaydet', description: 'Hesaplar arası para aktarımını kaydet', icon: ArrowRightLeft },
   { to: '/odemeler?new=1', label: 'Ödeme planla', description: 'Fatura, kira veya abonelik', icon: ReceiptText },
   { to: '/odemeler/alsam-mi', label: 'Alsam mı?', description: 'Alışverişin aylara etkisini gör', icon: ShoppingCart },
@@ -26,205 +15,71 @@ const actions = [
   { to: '/borclar/krediler?new=1', label: 'Kredi ekle', description: 'Kredi ve taksit planı', icon: Landmark },
 ]
 
-type QuickActionsContextValue = {
-  open: boolean
-  toggle: () => void
-  close: () => void
-  /** Form alanına odaklanınca mobil FAB geri çekilir (klavye üstünde durmasın). */
-  tucked: boolean
-}
-
+type QuickActionsContextValue = { open: boolean; toggle: () => void; close: () => void; tucked: boolean }
 const QuickActionsContext = createContext<QuickActionsContextValue | null>(null)
 
-function useQuickActions() {
+// eslint-disable-next-line react-refresh/only-export-components -- Kabuk aynı sağlayıcı durumunu kullanır.
+export function useQuickActions() {
   const ctx = useContext(QuickActionsContext)
   if (!ctx) throw new Error('QuickActions trigger must be used inside QuickActionsProvider')
   return ctx
 }
 
-function isFormElementActive() {
-  if (typeof document === 'undefined') return false
-  const element = document.activeElement
-  if (!(element instanceof HTMLElement)) return false
-  return Boolean(element.closest('input, textarea, select, [contenteditable="true"]'))
+function ActionLink({ action, onSelect }: { action: typeof actions[number]; onSelect: () => void }) {
+  return (
+    <Link to={action.to} onClick={onSelect} className="interaction-press flex min-h-16 items-center gap-3 rounded-xl px-3 py-3 hover:bg-primary/8">
+      <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary"><action.icon size={20} strokeWidth={1.8} aria-hidden="true" /></span>
+      <span className="min-w-0"><span className="block text-sm font-semibold text-ink">{action.label}</span><span className="mt-0.5 block text-[13px] text-ink-muted">{action.description}</span></span>
+    </Link>
+  )
 }
 
 export function QuickActionsProvider({ children }: { children: ReactNode }) {
-  // Rota bazlı açıklık: sayfa değişince menü kendiliğinden kapanır.
   const [openPath, setOpenPath] = useState<string | null>(null)
-  const [query, setQuery] = useState('')
   const [formFocused, setFormFocused] = useState(false)
-  const [scrollingDown, setScrollingDown] = useState(false)
   const location = useLocation()
   const open = openPath === location.pathname
-
-  const orderedActions = useMemo(() => {
-    const normalizedQuery = normalizeSearchText(query)
-    const availableActions = actions
-    return normalizedQuery
-      ? availableActions.filter((action) => normalizeSearchText(`${action.label} ${action.description}`).includes(normalizedQuery))
-      : availableActions
-  }, [query])
-
   useEffect(() => {
-    const syncFocus = () => setFormFocused(isFormElementActive())
-    const syncFocusAfterBlur = () => window.setTimeout(syncFocus, 0)
-
+    const syncFocus = () => setFormFocused(Boolean(document.activeElement?.closest('input, textarea, select, [contenteditable="true"]')))
+    let blurTimer = 0
+    const syncBlur = () => { blurTimer = window.setTimeout(syncFocus, 0) }
     syncFocus()
     document.addEventListener('focusin', syncFocus)
-    document.addEventListener('focusout', syncFocusAfterBlur)
+    document.addEventListener('focusout', syncBlur)
     return () => {
+      window.clearTimeout(blurTimer)
       document.removeEventListener('focusin', syncFocus)
-      document.removeEventListener('focusout', syncFocusAfterBlur)
+      document.removeEventListener('focusout', syncBlur)
     }
-  }, [])
-
-  // FAB sabit bir katman; içerik altından kayıyor. Tutarlar sağa yaslı olduğu
-  // için sayfa boyunca sırayla her satırın tutarını — ve İşlemler listesinde
-  // "İptal" butonunu — örtüyordu. Bandı opak yapmak çözüm DEĞİL (bilinen kural:
-  // kartların altını görünmez bir çizgide kesiyor).
-  //
-  // Çözüm formFocused ile aynı mekanizma: aşağı kaydırırken FAB çekilir, yukarı
-  // kaydırınca ve kaydırma durunca döner. Durma zamanlayıcısı şart — yalnız
-  // "yukarı kaydırınca dön" deseydi, sayfanın dibinde duran kullanıcı FAB'ı geri
-  // getirmek için yukarı kaydırmak zorunda kalırdı.
-  useEffect(() => {
-    let lastY = window.scrollY
-    let idleTimer = 0
-
-    const onScroll = () => {
-      const y = window.scrollY
-      const delta = y - lastY
-      if (Math.abs(delta) > 4) {
-        setScrollingDown(delta > 0 && y > 64)
-        lastY = y
-      }
-      window.clearTimeout(idleTimer)
-      idleTimer = window.setTimeout(() => setScrollingDown(false), 700)
-    }
-
-    window.addEventListener('scroll', onScroll, { passive: true })
-    return () => {
-      window.removeEventListener('scroll', onScroll)
-      window.clearTimeout(idleTimer)
-    }
-  }, [])
-
+  }, [location.key])
   const close = useCallback(() => setOpenPath(null), [])
-  const toggle = useCallback(() => {
-    setQuery('')
-    setOpenPath((current) => (current === location.pathname ? null : location.pathname))
-  }, [location.pathname])
-
-  const value = useMemo(
-    () => ({ open, toggle, close, tucked: (formFocused || scrollingDown) && !open }),
-    [open, toggle, close, formFocused, scrollingDown],
-  )
-
-  // Modal değil ama klavyeyle kullanılabilir olması şart: açılınca odak arama
-  // alanına gider, Tab panelin içinde döner, Escape kapatır ve kapanınca odak
-  // FAB'a/"İşlem" butonuna geri döner (denetim 2026-08-12 §6). Modallarla aynı
-  // hook — tek focus sözleşmesi.
+  const toggle = useCallback(() => setOpenPath(current => current === location.pathname ? null : location.pathname), [location.pathname])
+  const value = useMemo(() => ({ open, toggle, close, tucked: formFocused && !open }), [open, toggle, close, formFocused])
   const panelRef = useDialogA11y<HTMLDivElement>(open, close)
-
+  useBodyScrollLock(open)
   return (
     <QuickActionsContext.Provider value={value}>
       {children}
-
-      {/* Menü açıkken hafif karartma + dışa tıklayınca kapat: odağı menüye topla
-          ve tek çıkış yolu (X) olmasın.
-          Karartma tek `--overlay` token'ından türetilir ama %60'ı kadar: bu bir
-          popover, modal değil — sayfayı modal kadar karartmak "bir görevin
-          ortasındasın" yanlış mesajını verirdi. Sabit ikinci bir renk yazmak yerine
-          token'dan türetmek üçünün birlikte değişmesini sağlıyor (denetim §6). */}
-      {open ? (
-        <button
-          type="button"
-          aria-hidden
-          tabIndex={-1}
-          onClick={close}
-          className="fixed inset-0 z-40 cursor-default bg-[color-mix(in_srgb,var(--overlay)_60%,transparent)] backdrop-blur-[1px]"
-        />
-      ) : null}
-
-      {open ? (
-        <div
-          ref={panelRef}
-          role="dialog"
-          aria-label="Hızlı işlem menüsü"
-          className="fixed bottom-[calc(env(safe-area-inset-bottom)+9rem)] right-4 z-50 w-[min(calc(100vw-2rem),24rem)] rounded-[14px] border border-line-strong bg-raised p-2 lg:bottom-6 lg:right-6"
-        >
-          <label className="relative mb-2 block">
-            <span className="sr-only">Hızlı işlem ara</span>
-            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-ink-faint" />
-            <Input
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Hızlı işlem ara"
-              className="pl-9 text-sm"
-            />
-          </label>
-          {orderedActions.map((action) => (
-            <Link
-              key={action.to + action.label}
-              to={action.to}
-              onClick={close}
-              className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors duration-[120ms] hover:bg-black/[.03] dark:hover:bg-white/[.04]"
-            >
-              <div className="grid size-9 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
-                <action.icon size={17} />
-              </div>
-              <div className="min-w-0">
-                <p className="font-semibold text-ink">{action.label}</p>
-                <p className="truncate text-xs text-ink-muted">{action.description}</p>
-              </div>
-            </Link>
-          ))}
-          {orderedActions.length === 0 ? (
-            <p className="px-3 py-4 text-center text-sm text-ink-muted">Eşleşen hızlı işlem yok.</p>
-          ) : null}
+      {open ? <>
+        <button type="button" aria-hidden tabIndex={-1} onClick={close} className="fixed inset-0 z-40 cursor-default bg-[var(--overlay)]" />
+        <div ref={panelRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label="Hızlı işlem menüsü" className="motion-panel fixed inset-x-0 bottom-0 z-50 max-h-[85dvh] overflow-y-auto rounded-t-2xl border border-line-strong bg-raised px-3 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-3 focus:outline-none md:inset-x-auto md:bottom-6 md:right-6 md:w-96 md:rounded-2xl">
+          <span aria-hidden className="mx-auto mb-2 block h-1 w-9 rounded-full bg-line-strong md:hidden" />
+          <div className="flex items-center justify-between gap-3 px-3"><h2 className="text-base font-semibold">İşlemler</h2><button type="button" onClick={close} aria-label="İşlem menüsünü kapat" className="interaction-press grid size-11 place-items-center rounded-xl text-ink-muted hover:bg-primary/8"><X size={20} strokeWidth={1.8} aria-hidden="true" /></button></div>
+          {actions.slice(0, 3).map(action => <ActionLink key={action.to} action={action} onSelect={close} />)}
+          <details className="mt-2 border-t border-line"><summary className="min-h-11 cursor-pointer px-3 py-3 text-sm font-semibold text-ink-muted">Diğer işlemler</summary>{actions.slice(3).map(action => <ActionLink key={action.to} action={action} onSelect={close} />)}</details>
         </div>
-      ) : null}
+      </> : null}
     </QuickActionsContext.Provider>
   )
 }
 
-/** Mobil FAB — 52×52, yarıçap 16. Alt barın ayrılmış bandına yerleşir. */
+/** Eski FAB'ın yerine alt gezinmenin içindeki taşma düğmesi. */
 export function QuickActionsFab() {
-  const { open, toggle, tucked } = useQuickActions()
-
-  return (
-    <button
-      type="button"
-      onClick={toggle}
-      aria-expanded={open}
-      aria-haspopup="dialog"
-      aria-label={open ? 'Hızlı işlem menüsünü kapat' : 'Hızlı işlem menüsünü aç'}
-      className={cn(
-        'grid size-[52px] place-items-center rounded-[16px] bg-primary text-primary-foreground transition-all duration-200',
-        'shadow-[0_12px_30px_color-mix(in_srgb,var(--primary)_28%,transparent)]',
-        tucked && 'pointer-events-none translate-y-3 scale-90 opacity-0',
-      )}
-    >
-      {open ? <X size={24} /> : <Plus size={24} strokeWidth={2.5} />}
-    </button>
-  )
+  const { open, toggle } = useQuickActions()
+  return <button type="button" onClick={toggle} aria-expanded={open} aria-haspopup="dialog" aria-label={open ? 'Hızlı işlem menüsünü kapat' : 'Hızlı işlem menüsünü aç'} className="interaction-press grid size-11 shrink-0 place-items-center rounded-xl border border-line-strong text-primary">{open ? <X size={22} strokeWidth={1.8} aria-hidden="true" /> : <MoreHorizontal size={22} strokeWidth={1.8} aria-hidden="true" />}</button>
 }
 
-/** Masaüstü başlık butonu — jade dolu "İşlem". */
 export function QuickActionsButton() {
   const { open, toggle } = useQuickActions()
-
-  return (
-    <button
-      type="button"
-      onClick={toggle}
-      aria-expanded={open}
-      aria-haspopup="dialog"
-      className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3.5 py-2 text-[12.5px] font-semibold text-primary-foreground transition-colors duration-[120ms] hover:brightness-95"
-    >
-      {open ? <X size={15} aria-hidden="true" /> : <Plus size={15} strokeWidth={2.5} aria-hidden="true" />}
-      İşlem
-    </button>
-  )
+  return <button type="button" onClick={toggle} aria-expanded={open} aria-haspopup="dialog" className="interaction-press inline-flex min-h-11 items-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground">{open ? <X size={18} strokeWidth={1.8} aria-hidden="true" /> : <Plus size={18} strokeWidth={1.8} aria-hidden="true" />}İşlem</button>
 }

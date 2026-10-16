@@ -196,7 +196,7 @@ function PaymentsOverview({ rows, transactionHistory }: { rows: Payment[]; trans
       ? `${overdueCount} geciken`
       : pendingThisMonth.length > 0
         ? `${pendingThisMonth.length} bekleyen`
-        : 'Takvim temiz'
+        : 'Bu ay kalan planlı ödeme yok'
 
     return { pendingThisMonth, paidThisMonthCount, pendingTotal, recurringCount, paidRate, overdueCount, nextPayment, statusLabel }
   }, [rows, transactionHistory])
@@ -211,7 +211,7 @@ function PaymentsOverview({ rows, transactionHistory }: { rows: Payment[]; trans
   return (
     <section>
       <HeroNumber
-        label="Kalan yükümlülük"
+        label="Kalan fatura ve planlı ödemeler"
         value={pendingTotal}
         tone={overdueCount > 0 ? 'danger' : 'ink'}
         // İlerleme yalnız gerçekten ödenen varsa çizilir; boş çubuk "hiç

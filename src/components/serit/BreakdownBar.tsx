@@ -55,13 +55,13 @@ export function BreakdownBar({
       </div>
 
       {showValues ? (
-        <div className="mt-3 flex justify-between gap-3">
-          {segments.map((segment, index) => {
+        <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3">
+          {segments.map((segment) => {
             const money = format(segment.value)
             return (
-              <div key={segment.label} className={index === segments.length - 1 ? 'text-right' : undefined}>
-                <p className="text-xs text-ink-muted">{segment.label}</p>
-                <p className="serit-num mt-0.5 text-sm font-semibold text-ink">{money.amount}</p>
+              <div key={segment.label} className="min-w-0">
+                <p className="break-words text-xs text-ink-muted">{segment.label}</p>
+                <p className="serit-num mt-0.5 break-words text-sm font-semibold text-ink">{money.amount}</p>
               </div>
             )
           })}

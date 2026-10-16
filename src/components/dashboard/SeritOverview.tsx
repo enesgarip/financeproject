@@ -7,7 +7,7 @@
  * Hesap yok — her sayı DashboardPage'den hazır gelir; burası yalnız sunum.
  */
 import { useState, type ReactNode } from 'react'
-import { ShieldAlert, ShieldCheck } from 'lucide-react'
+import { CalendarDays, ChevronRight, Landmark, ShieldAlert, ShieldCheck } from 'lucide-react'
 import { Link } from 'react-router'
 import type { MonthStrip } from '../../utils/dashboardMonthStrip'
 import { monthStripTone } from '../../utils/dashboardMonthStrip'
@@ -38,10 +38,10 @@ export type SeritLiquidAccount = { id: string; name: string; subtitle?: string; 
  * çubuk, tablonun yanında gri rozet oluyordu (denetim 2026-08-12 §6).
  */
 const BADGE_TONE: Record<ReturnType<typeof monthStripTone>, SeritTone> = {
-  statement: 'danger',
-  installment: 'warning',
-  planned: 'info',
-  income: 'brand',
+  statement: 'neutral',
+  installment: 'neutral',
+  planned: 'neutral',
+  income: 'success',
 }
 
 /** "3g" / "12g" — vadeye kalan gün. Bugün ve geçmiş için ayrı kısaltma. */
@@ -189,6 +189,36 @@ export function SeritOverview({
           )}
         </div>
 
+            {!reservedKnown ? (
+              <p className="mt-1.5 text-xs font-semibold" style={{ color: SERIT_TEXT.warning }}>
+                Kasa rezervi doğrulanamadı — bu rakam rezerv düşülmeden hesaplandı.
+              </p>
+            ) : null}
+
+        {/* Mobil: sıradaki üç vade, yükseltilmiş grup. */}
+        <section className="mt-6 lg:hidden">
+          <SectionEyebrow className="mb-2.5 flex items-center gap-2"><CalendarDays size={18} strokeWidth={1.8} aria-hidden="true" />Yaklaşan ödemeler</SectionEyebrow>
+          {nextThree.length === 0 ? (
+            <p className="text-[13px] text-ink-muted">Ayın kalanında planlı vade yok.</p>
+          ) : (
+            <LineGroup variant="raised">
+              {nextThree.map((item) => (
+                <LineRow
+                  key={item.id}
+                  lead={<DayBadge tone={(daysUntil(new Date(item.sortTime)) ?? 0) < 0 ? 'danger' : BADGE_TONE[monthStripTone(item.obligation.kind)]}>{remainingLabel(item)}</DayBadge>}
+                  title={item.title}
+                  subtitle={item.subtitle}
+                  amount={item.amount}
+                  amountOptions={{ signed: item.direction === 'inflow' }}
+                  amountTone={item.direction === 'inflow' ? 'success' : 'ink'}
+                  trailing={item.obligation.action ? <span className="mt-1 flex items-center justify-end gap-1 text-xs font-medium text-primary">{item.direction === 'inflow' ? 'Tahsil et' : 'Öde'}<ChevronRight size={14} aria-hidden="true" /></span> : undefined}
+                  onClick={item.obligation.action ? () => onPay(item) : undefined}
+                />
+              ))}
+            </LineGroup>
+          )}
+        </section>
+
         {isOnboarding ? null : (
           <div className="mt-4">
             <SeritBufferRow buffer={buffer} onChange={onBufferChange} />
@@ -205,11 +235,7 @@ export function SeritOverview({
                 <p className="max-w-md leading-relaxed">Maaş, ayın ilk iş gününden itibaren güncel bakiyenin içinde kabul edilir ve tekrar eklenmez. Bu tarihten önce bu ayın beklenen gelirine dahildir. Gelecek ayın maaşı bu tutara eklenmez.</p>
               </details>
             ) : null}
-            {!reservedKnown ? (
-              <p className="mt-1.5 text-xs font-semibold" style={{ color: SERIT_TEXT.warning }}>
-                Kasa rezervi doğrulanamadı — bu rakam rezerv düşülmeden hesaplandı.
-              </p>
-            ) : null}
+
           </div>
         )}
 
@@ -217,29 +243,6 @@ export function SeritOverview({
         <div className="mt-5">
           <SeritMonthStrip strip={strip} monthLabel={monthLabel} />
         </div>
-
-        {/* Mobil: sıradaki üç vade, yükseltilmiş grup. */}
-        <section className="mt-6 lg:hidden">
-          <SectionEyebrow className="mb-2.5">Sıradaki üç vade</SectionEyebrow>
-          {nextThree.length === 0 ? (
-            <p className="text-[13px] text-ink-muted">Ayın kalanında planlı vade yok.</p>
-          ) : (
-            <LineGroup variant="raised">
-              {nextThree.map((item) => (
-                <LineRow
-                  key={item.id}
-                  lead={<DayBadge tone={BADGE_TONE[monthStripTone(item.obligation.kind)]}>{remainingLabel(item)}</DayBadge>}
-                  title={item.title}
-                  subtitle={item.subtitle}
-                  amount={item.amount}
-                  amountOptions={{ signed: item.direction === 'inflow' }}
-                  amountTone={item.direction === 'inflow' ? 'brand' : 'ink'}
-                  onClick={item.obligation.action ? () => onPay(item) : undefined}
-                />
-              ))}
-            </LineGroup>
-          )}
-        </section>
 
         {/* Masaüstü: 30 günlük vade tablosu. */}
         <section className="mt-7 hidden lg:block">
@@ -270,7 +273,7 @@ export function SeritOverview({
                       </td>
                       <td
                         className="serit-num py-[13px] text-right text-[17px] font-semibold"
-                        style={{ color: inflow ? SERIT_TEXT.brand : SERIT_TEXT.ink }}
+                        style={{ color: inflow ? SERIT_TEXT.success : SERIT_TEXT.ink }}
                       >
                         {money.amount} {money.unit}
                       </td>
@@ -342,13 +345,14 @@ export function SeritOverview({
           ) : null}
         </SidePanel>
 
-        <SidePanel title={`Likit hesaplar · ${format(totalCashAssets).amount} ${format(totalCashAssets).unit}`}>
+        <SidePanel className="order-first lg:order-none" title="Hesapların">
+          <p className="mt-1 text-xs text-ink-muted">Toplam {format(totalCashAssets).amount} {format(totalCashAssets).unit}</p>
           {liquidAccounts.length === 0 ? (
             <p className="mt-2 text-[13px] text-ink-muted">Kayıtlı likit hesap yok.</p>
           ) : (
             <LineGroup className="mt-1">
               {liquidAccounts.map((account) => (
-                <LineRow key={account.id} title={account.name} subtitle={account.subtitle} amount={account.amount} />
+                <LineRow key={account.id} title={account.name} subtitle={account.subtitle} amount={account.amount} lead={<Landmark size={18} strokeWidth={1.8} className="shrink-0 text-primary" aria-hidden="true" />} />
               ))}
             </LineGroup>
           )}
@@ -388,9 +392,9 @@ export function SeritOverview({
   )
 }
 
-function SidePanel({ title, first, children }: { title: string; first?: boolean; children: React.ReactNode }) {
+function SidePanel({ title, first, children, className = '' }: { title: string; first?: boolean; children: React.ReactNode; className?: string }) {
   return (
-    <section className={first ? undefined : 'border-t border-line-strong pt-[18px]'}>
+    <section className={`${first ? '' : 'border-t border-line-strong pt-[18px]'} ${className}`}>
       <SectionEyebrow>{title}</SectionEyebrow>
       {children}
     </section>

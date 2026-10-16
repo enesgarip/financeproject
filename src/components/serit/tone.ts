@@ -6,13 +6,14 @@
  * Dolgu (`SERIT_FILL`) ve metin (`SERIT_TEXT`) ayrı: uyarı sarısı çubukta parlak
  * durur ama aynı sarı metinde AA'yı geçmez, o yüzden metin için koyu karşılığı var.
  */
-export type SeritTone = 'danger' | 'warning' | 'info' | 'brand' | 'accent' | 'neutral' | 'idle' | 'ink'
+export type SeritTone = 'danger' | 'warning' | 'info' | 'brand' | 'success' | 'accent' | 'neutral' | 'idle' | 'ink'
 
 export const SERIT_FILL: Record<SeritTone, string> = {
   danger: 'var(--destructive)',
   warning: 'var(--warning-fill)',
   info: 'var(--info)',
   brand: 'var(--primary)',
+  success: 'var(--success)',
   accent: 'var(--accent-soft)',
   neutral: 'var(--neutral-bar)',
   idle: 'var(--chart-idle)',
@@ -22,4 +23,7 @@ export const SERIT_FILL: Record<SeritTone, string> = {
 export const SERIT_TEXT: Record<SeritTone, string> = {
   ...SERIT_FILL,
   warning: 'var(--warning)',
+  neutral: 'var(--ink-muted)',
+  idle: 'var(--ink-faint)',
+  accent: 'var(--ink-muted)',
 }

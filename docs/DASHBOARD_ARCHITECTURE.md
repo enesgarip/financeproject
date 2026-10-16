@@ -1,10 +1,18 @@
 # Dashboard Architecture Note
 
-Last reviewed: 2026-10-10
+Last reviewed: 2026-10-16
 
 This note is a quick map for changes touching `/` (`DashboardPage`). Start with
 `CLAUDE.md` and `docs/AI_CONTEXT_INDEX.md`; use this file after you know the
 task is dashboard-specific.
+
+## 16 Ekim 2026 — mobil vade önceliği
+
+Ana tutarın ardından yaklaşan üç vade ve açık Öde/Tahsil et işareti gelir.
+Tampon/hesap açıklaması, odak önerileri ve grafik daha aşağıdadır. Alacak ve
+doğrulanamayan rezerv uyarıları korunur. Nötr vade tipleri alarm rengi taşımaz;
+grafik türü kimlik paleti, gecikme durum rengiyle anlatılır. Tutar/snapshot ve
+ödeme hesapları değişmedi. Gecikmeli sıralı belirme kaldırıldı.
 
 ## Responsibility
 

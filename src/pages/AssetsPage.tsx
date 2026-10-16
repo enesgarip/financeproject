@@ -334,7 +334,7 @@ function AssetsOverview({ rows, snapshot, stockPrices, bankCash }: { rows: Asset
           topCategory ? (
             <>
               En büyük kalem <span className="font-semibold text-ink">{topCategory.category}</span> · nakit ve banka{' '}
-              <span className="serit-num font-semibold text-ink">{seritAmount(cashTotal).amount} ₺</span>
+              <span className="serit-num whitespace-nowrap font-semibold text-ink">{seritAmount(cashTotal).amount} ₺</span>
             </>
           ) : undefined
         }

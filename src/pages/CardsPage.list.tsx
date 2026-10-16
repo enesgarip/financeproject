@@ -22,11 +22,9 @@ import { cardPayableDebt } from '../utils/financeSummary'
 import { estimateStatementTotal } from '../utils/statementEstimate'
 import { buildStatementPace } from '../utils/statementPace'
 import { quickCardConsistencyScore } from '../utils/cardConsistency'
-import { bankBrandGradient, getBankBrand } from '../utils/bankBranding'
 import { buildAccountLedgerBalanceRows } from '../utils/accountLedger'
 import { sumTL, toTL } from '../utils/money'
 import {
-  bankHueStyle,
   formatIban,
   formatMonthlyDay,
   formatShortDate,
@@ -129,7 +127,7 @@ function CardMaskedNumber({ cardId, hidden }: { cardId: string; hidden: boolean 
   const digits = aliases?.find((alias) => alias.card_id === cardId)?.last_four_digits ?? null
 
   return (
-    <p className="mt-3 font-mono text-sm font-black text-white/78">
+    <p className="mt-3 font-mono text-sm font-black text-ink-muted">
       {hidden ? '**** ****' : digits ? `**** ${digits}` : '**** ----'}
     </p>
   )
@@ -305,38 +303,28 @@ export function CreditAccountListCard({
 
   return (
     <article
-      style={bankHueStyle(row.bank_name, rows)}
-      className="premium-entity-card credit-entity-card finance-panel relative min-w-0 overflow-visible rounded-2xl bg-raised ring-1 ring-[hsl(var(--bank-hue)_42%_82%/0.55)] dark:ring-[hsl(var(--bank-hue)_40%_42%/0.45)]"
+      className="relative min-w-0 overflow-visible rounded-2xl border border-line-strong bg-raised shadow-[var(--shadow-card)]"
     >
-      <div
-        style={{ backgroundImage: bankBrandGradient(row.bank_name) }}
-        className="relative overflow-visible rounded-t-2xl p-4 text-white"
-      >
-        <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-[inherit]">
-          <div className="absolute inset-x-0 top-0 h-px bg-white/35" />
-          <div className="absolute -right-8 -top-10 size-32 rounded-full bg-white/10 blur-2xl" />
-        </div>
+      <div className="rounded-t-2xl border-b border-line bg-raised p-4 text-ink">
         <div className="relative flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="truncate text-xs font-bold uppercase text-white/70">{row.bank_name}</p>
+            <p className="truncate text-xs font-bold uppercase text-ink-muted">{row.bank_name}</p>
             <h2 className="mt-1 truncate text-lg font-black leading-tight">{row.card_name}</h2>
-            {row.holder_name ? <p className="mt-1 truncate text-xs font-semibold text-white/70">{row.holder_name}</p> : null}
+            {row.holder_name ? <p className="mt-1 truncate text-xs font-semibold text-ink-muted">{row.holder_name}</p> : null}
             <CardMaskedNumber cardId={row.id} hidden={balancesHidden} />
           </div>
           <div className="flex shrink-0 items-start gap-2">
-            <div className="grid size-10 place-items-center rounded-lg bg-white/15 text-xs font-black uppercase tracking-tight text-white ring-1 ring-white/25">
-              {getBankBrand(row.bank_name).code}
-            </div>
+            <BankLogo bankName={row.bank_name} size="sm" />
             <button
               type="button"
               onClick={() => onToggleFavorite(row)}
               aria-label={row.is_favorite ? `${row.card_name} favorilerden çıkar` : `${row.card_name} favorilere ekle`}
               aria-pressed={row.is_favorite}
-              className="tap-target grid size-10 place-items-center rounded-lg bg-white/15 text-white ring-1 ring-white/25 transition hover:bg-white/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+              className="interaction-press grid size-11 place-items-center rounded-xl border border-line-strong text-primary hover:bg-primary/8 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <Heart size={18} fill={row.is_favorite ? 'currentColor' : 'none'} />
             </button>
-            <div className="[&>div>button]:border-white/30 [&>div>button]:bg-white/15 [&>div>button]:text-white [&>div>button:hover]:bg-white/25 [&>div>button:hover]:text-white">
+            <div>
               {menu}
             </div>
           </div>
@@ -345,27 +333,27 @@ export function CreditAccountListCard({
         <div className="mt-6 grid grid-cols-[minmax(0,1fr)_auto] items-end gap-3">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-1.5">
-              <p className="text-[11px] font-bold uppercase text-white/65">Toplam kart yükü</p>
+              <p className="text-[11px] font-bold uppercase text-ink-muted">Toplam kart yükü</p>
               {/* Rakam kesin görünür ama uzun süre doğrulanmadıysa güveni düşer. */}
               {debtConfidence.level !== 'exact' ? (
                 <span
                   title={debtConfidence.reason}
-                  className="rounded-md bg-white/18 px-1.5 py-0.5 text-[10px] font-bold text-white ring-1 ring-white/25"
+                  className="rounded-md bg-secondary px-2 py-1 text-xs font-medium text-ink-muted"
                 >
                   {debtConfidence.label}
                 </span>
               ) : null}
             </div>
-            <p className="finance-value mt-1 truncate text-[clamp(1.45rem,6vw,2.15rem)] font-black leading-none">{formatAmount(row.debt_amount)}</p>
+            <p className="serit-num mt-1 break-words text-[clamp(1.45rem,6vw,2.15rem)] font-semibold leading-tight">{formatAmount(row.debt_amount)}</p>
           </div>
-          <span className="rounded-lg bg-white/14 px-2.5 py-1 text-xs font-black ring-1 ring-white/18">%{usageRate}</span>
+          <span className="rounded-lg bg-secondary px-2.5 py-1 text-xs font-semibold text-ink-muted">%{usageRate}</span>
         </div>
 
         <div className="mt-4">
-          <div className="h-2 overflow-hidden rounded-full bg-white/18">
-            <div className="h-full rounded-full bg-white transition-all" style={{ width: `${stats.usageRate}%` }} />
+          <div className="h-1.5 overflow-hidden rounded-full bg-track">
+            <div className="h-full rounded-full bg-primary transition-[width] duration-180" style={{ width: `${stats.usageRate}%` }} />
           </div>
-          <div className="mt-2 flex items-center justify-between gap-3 text-[11px] font-semibold text-white/72">
+          <div className="mt-2 flex items-center justify-between gap-3 text-[11px] font-semibold text-ink-muted">
             <span>Limit {formatAmount(stats.sharedLimit)}</span>
             <span>Kalan {formatAmount(stats.availableLimit)}</span>
           </div>
@@ -380,41 +368,15 @@ export function CreditAccountListCard({
         </span>
       </div>
 
-      <details open={detailsOpen || undefined} className="group mt-2 border-t border-line pt-1">
-        <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between text-sm font-semibold text-ink-muted marker:hidden hover:text-ink [&::-webkit-details-marker]:hidden">
-          Dönem, limit ve taksit ayrıntıları
-          <span aria-hidden="true" className="text-xs transition-transform group-open:rotate-180">⌄</span>
-        </summary>
-      <LineGroup>
-        <CardDatum label="Kalan kart limiti" value={formatAmount(stats.availableLimit)} tone="good" />
-        <CardDatum label="Dönem içi" value={formatAmount(row.current_period_spending)} />
-        <CardDatum label="Bekleyen provizyon" value={formatAmount(row.provision_amount ?? 0)} />
-        {statementEstimate ? (
-          <CardDatum
-            label={statementEstimate.daysToCut === 0 ? 'Kesim tahmini (bugün)' : `Kesim tahmini (${statementEstimate.daysToCut} gün)`}
-            value={`~${formatAmount(statementEstimate.amount)}`}
-          />
-        ) : null}
-        <CardDatum label="Açık ekstre" value={statementsKnown ? formatAmount(displayedOpenStatementAmount) : 'Doğrulanamadı'} tone={displayedOpenStatementAmount > 0 ? 'danger' : 'neutral'} />
-        <CardDatum label="Gelecek taksit" value={installmentsKnown ? formatAmount(scheduledInstallmentTotal) : 'Doğrulanamadı'} />
-        <CardDatum label="Son ödeme" value={formatShortDate(dueDate)} tone={displayedOpenStatementAmount > 0 ? 'warning' : 'neutral'} />
-      </LineGroup>
-
-      {/* Nötr bilgi, sinyal rengi yok: yüksek tempo her zaman kötü değildir. */}
-      {pace ? (
-        <p className="mt-2 text-[11px] font-semibold text-ink-muted">
-          Dönem temposu: {formatAmount(pace.current)} · geçen dönem aynı gün {formatAmount(pace.previous)}
-          {pace.deltaPct !== null && pace.deltaPct !== 0
-            ? ` (%${Math.abs(pace.deltaPct)} ${pace.deltaPct > 0 ? 'üzerinde' : 'altında'})`
-            : ''}
-        </p>
-      ) : null}
-      </details>
-
+      <div className="mt-3 flex flex-wrap items-baseline justify-between gap-2 text-sm">
+        <span className="text-ink-muted">Açık ekstre</span>
+        <strong className="serit-num font-semibold">{statementsKnown ? formatAmount(displayedOpenStatementAmount) : 'Doğrulanamadı'}</strong>
+        {displayedOpenStatementAmount > 0 ? <p className="w-full text-[13px] text-ink-muted">Son ödeme {formatShortDate(dueDate)}</p> : null}
+      </div>
       <div className="mt-3 grid gap-2">
         {!statementsKnown ? <p className="text-xs text-warning">Ödeme için ekstre dökümünün yüklenmesi gerekiyor.</p> : openStatements.length > 0 ? (
-          <button type="button" onClick={() => onOpenPanel?.('ekstreler')} className="flex min-h-11 items-center justify-center rounded-lg bg-primary px-3 text-xs font-semibold text-primary-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary">
-            Ekstreyi öde
+          <button type="button" onClick={() => onOpenPanel?.('ekstreler')} className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary px-3 text-xs font-semibold text-primary-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary">
+            <Banknote size={18} strokeWidth={1.8} aria-hidden="true" />Ekstreyi öde
           </button>
         ) : (
         <Button
@@ -436,6 +398,35 @@ export function CreditAccountListCard({
         </Button>
         )}
       </div>
+      <details className="group mt-3 border-t border-line pt-1">
+        <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between text-sm font-semibold text-ink-muted marker:hidden hover:text-ink [&::-webkit-details-marker]:hidden">
+          Dönem, limit ve taksit ayrıntıları
+          <span aria-hidden="true" className="text-xs transition-transform group-open:rotate-180">⌄</span>
+        </summary>
+      <LineGroup>
+        <CardDatum label="Kalan kart limiti" value={formatAmount(stats.availableLimit)} tone="good" />
+        <CardDatum label="Dönem içi" value={formatAmount(row.current_period_spending)} />
+        <CardDatum label="Bekleyen provizyon" value={formatAmount(row.provision_amount ?? 0)} />
+        {statementEstimate ? (
+          <CardDatum
+            label={statementEstimate.daysToCut === 0 ? 'Kesim tahmini (bugün)' : `Kesim tahmini (${statementEstimate.daysToCut} gün)`}
+            value={`~${formatAmount(statementEstimate.amount)}`}
+          />
+        ) : null}
+        <CardDatum label="Gelecek taksit" value={installmentsKnown ? formatAmount(scheduledInstallmentTotal) : 'Doğrulanamadı'} />
+      </LineGroup>
+
+      {/* Nötr bilgi, sinyal rengi yok: yüksek tempo her zaman kötü değildir. */}
+      {pace ? (
+        <p className="mt-2 text-[11px] font-semibold text-ink-muted">
+          Dönem temposu: {formatAmount(pace.current)} · geçen dönem aynı gün {formatAmount(pace.previous)}
+          {pace.deltaPct !== null && pace.deltaPct !== 0
+            ? ` (%${Math.abs(pace.deltaPct)} ${pace.deltaPct > 0 ? 'üzerinde' : 'altında'})`
+            : ''}
+        </p>
+      ) : null}
+      </details>
+
       {detailsOpen ? (
         <details className="mt-4 rounded-lg border border-line-strong bg-surface-muted/70 p-3 ring-1 ring-line-strong">
           <summary className="min-h-11 cursor-pointer py-3 text-sm font-semibold">Kart ayarları ve kayıt geçmişi</summary>

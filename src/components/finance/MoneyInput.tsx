@@ -46,7 +46,7 @@ export function MoneyInput({
         inputMode="decimal"
         required={required}
         placeholder={placeholder}
-        className="mt-1 tabular-nums"
+        className="mt-1 min-h-11 tabular-nums"
       />
       {parsedValue > 0 ? <span className="mt-1 block text-xs font-semibold text-ink-muted">{formatAmount(parsedValue)}</span> : null}
     </label>

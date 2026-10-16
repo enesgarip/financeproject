@@ -157,24 +157,23 @@
   --font-family-body: 'Denge Sans', ui-sans-serif, -apple-system, sans-serif;
   --font-family-mono: 'Denge Mono', ui-monospace, monospace;
 
-  /* Semantic tokens — daylight jade (açık tema birinci sınıf).
-     Sıcak porselen zemin (hafif yeşil eğilimli), imza jade, anlam renkleri
-     yalnız paraya. */
-  --background:           #f6f7f3;
-  --foreground:           #101a16;
+  /* Semantic tokens — Mürekkep ve Safir (iki tema birinci sınıf).
+     Ana eylem mavi; başarı/pozitif hareket yeşil; tehlike kırmızı. */
+  --background:           #f5f7fb;
+  --foreground:           #172239;
   --card:                 #ffffff;
-  --card-foreground:      #101a16;
+  --card-foreground:      #172239;
   --popover:              #ffffff;
-  --popover-foreground:   #101a16;
-  --primary:              #0a6b4f;
+  --popover-foreground:   #172239;
+  --primary:              #2458d3;
   --primary-foreground:   #ffffff;
-  --secondary:            #e7efea;
-  --secondary-foreground: #26332d;
-  --muted:                #e9f1ec;
+  --secondary:            #e9eef8;
+  --secondary-foreground: #283c62;
+  --muted:                #edf1f7;
   /* Jade eğilimli slate. Beyazda ~5.4:1, muted yüzeyde ~4.9:1 (AA ≥ 4.5). */
-  --muted-foreground:     #536860;
-  --accent:               #d7f2e6;
-  --accent-foreground:    #0a6b4f;
+  --muted-foreground:     #59667a;
+  --accent:               #e7edfc;
+  --accent-foreground:    #2458d3;
   --destructive:          #b4433d;
   --destructive-foreground: #ffffff;
   --success:              #097352;
@@ -184,10 +183,10 @@
   --info:                 #2b6bb8;
   --info-foreground:      #eff6ff;
   --surface:              #ffffff;
-  --surface-muted:        #f5faf7;
-  --border:               #dfe8e3;
-  --input:                #d3ddd7;
-  --ring:                 #0fae7e;
+  --surface-muted:        #f0f3f9;
+  --border:               #dbe1ec;
+  --input:                #cbd4e3;
+  --ring:                 #2458d3;
   /* Diyalog/popover karartması TEK token: üç ayrı yerde üç farklı değer vardı
      (`bg-slate-950/45`, `/56`, `bg-black/30`) ve aynı katman her açılışta farklı
      koyulukta görünüyordu (denetim 2026-08-12 §6). Tüketiciler: confirm-dialog,
@@ -233,20 +232,20 @@
      Kaynak: design_handoff_denge_redesign/README.md (token tablosu). */
   --page:        var(--background);  /* sayfa zemini — sıcak porselen, beyaz değil */
   --raised:      var(--card);        /* ekran başına en fazla 1-2 blok */
-  --ink:         #111a15;
-  --ink-muted:   #5d6b63;
+  --ink:         #172239;
+  --ink-muted:   #59667a;
   /* Handoff #7c8880 veriyordu ama porselen zeminde 3.43:1 — 11px uppercase
      eyebrow için AA altı. Hue korunarak koyulaştırıldı: 4.78:1 (zemin) / 5.14:1
      (yükseltilmiş blok). Tasarımdan bilinçli sapma. */
-  --ink-faint:   #667069;
+  --ink-faint:   #606d80;
   /* Eksen etiketi 10px; #8b968e beyazda 3.07:1 idi → 4.78:1. */
-  --ink-ghost:   #6b756e;
-  --line:        #e6eae2;  /* liste içi satır ayıracı */
-  --line-strong: #e2e7dd;  /* blok/bölüm ayıracı, kenarlık */
-  --track:       #e2e6dd;  /* ilerleme çubuğu boş kısmı */
-  --chart-idle:  #dbe1d9;  /* trend grafiğinde geçmiş çubuklar */
+  --ink-ghost:   #606d80;
+  --line:        #e1e6ef;  /* liste içi satır ayıracı */
+  --line-strong: #dbe1ec;  /* blok/bölüm ayıracı, kenarlık */
+  --track:       #e2e8f2;  /* ilerleme çubuğu boş kısmı */
+  --chart-idle:  #d4ddec;  /* trend grafiğinde geçmiş çubuklar */
   --accent-soft: #d98466;  /* grafikte ikincil gider */
-  --neutral-bar: #c9cfc7;  /* grafikte sınıflandırılmamış */
+  --neutral-bar: #b9c5d9;  /* grafikte sınıflandırılmamış */
   /* Uyarı TEK yerde iki değerlidir: dolgu (çubuk/rozet zemini) daha parlak,
      metin AA için daha koyu. Diğer sinyaller ayrı token istemiyor — Faz 8'de
      `--signal-danger/-info/-warning-ink` takma adları kaldırıldı, tüketiciler
@@ -262,14 +261,10 @@
      kullanılmaz (`Card variant="flat"`). */
   --shadow-card:    0 1px 2px rgba(21, 24, 36, 0.04), 0 2px 8px rgba(21, 24, 36, 0.05);
 
-  /* Motion — yalnız CSS'ten tüketilenler kalır (`--motion-slow` hiç kullanılmıyordu,
-     silindi). Şerit'in `duration-[120ms]` geçişleri KASITLI olarak token'a
-     bağlanmadı: Tailwind sınıfı bir CSS değişkeninden süre okuyamıyor ve o değer
-     bu ajanın dokunma izni olmayan sekiz dosyaya yayılmış — yarısını çevirmek
-     tutarsızlığı artırırdı. Tek yere toplama işi ayrı bir madde olarak duruyor
-     (denetim 2026-08-12 §6). */
-  --motion-fast:   150ms cubic-bezier(0.16, 1, 0.3, 1);
-  --motion-normal: 250ms cubic-bezier(0.16, 1, 0.3, 1);
+  /* Dokunma 120ms, ayrıntı/sayfa 180ms, açılan panel 240ms. */
+  --motion-fast:   120ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  --motion-normal: 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  --motion-panel:  240ms cubic-bezier(0.2, 0.8, 0.2, 1);
 
   color-scheme: light;
   color: var(--foreground);
@@ -286,31 +281,31 @@
 
 /* ─── DARK MODE ─── */
 :root.dark {
-  /* Background stack — warm obsidian (hafif yeşil-arduvaz eğilimli).
-     Katmanlar parlaklıkla yükselir; imza tema budur. */
-  --background:           #0d120f;
-  --card:                 #131a17;
-  --card-foreground:      #e9efec;
-  --popover:              #141c19;
-  --popover-foreground:   #e9efec;
-  --surface:              #131a17;
-  --surface-muted:        #0e1412;
+  /* Background stack — mürekkep sayfa, daha açık lacivert yüzey.
+     Katmanlar parlaklıkla yükselir. */
+  --background:           #101623;
+  --card:                 #1b2434;
+  --card-foreground:      #edf1f8;
+  --popover:              #202c40;
+  --popover-foreground:   #edf1f8;
+  --surface:              #1b2434;
+  --surface-muted:        #172031;
 
   /* Foreground */
-  --foreground:           #e9efec;
-  --muted-foreground:     #8b978f;
+  --foreground:           #edf1f8;
+  --muted-foreground:     #abb8cc;
 
-  /* Brand — Jade */
-  --primary:              #3ddca0;
-  --primary-foreground:   #04140e;
+  /* Brand — Safir */
+  --primary:              #8cb1ff;
+  --primary-foreground:   #0b1b3b;
 
   /* Semantic — anlam renkleri yalnız paraya. Artı = jade (marka ile bir),
      eksi = mercan, uyarı/altın = kehribar, bilgi = safir. */
-  --secondary:            #182019;
-  --secondary-foreground: #dfe8e2;
-  --muted:                #161d1a;
-  --accent:               #133026;
-  --accent-foreground:    #7ff0c6;
+  --secondary:            #253149;
+  --secondary-foreground: #e0e9fa;
+  --muted:                #202b3e;
+  --accent:               #263957;
+  --accent-foreground:    #b5cdff;
   --destructive:          #ff6f6f;
   --destructive-foreground: #2a0808;
   /* Koyu temada `--success` marka jade'iyle BİREBİR aynıydı (#3ddca0): "Kaydet"
@@ -324,9 +319,9 @@
   --warning-foreground:   #241a05;
   --info:                 #58a9ff;
   --info-foreground:      #06111f;
-  --border:               #242c29;
-  --input:                #2a332f;
-  --ring:                 #46e0aa;
+  --border:               #344155;
+  --input:                #40506a;
+  --ring:                 #8cb1ff;
   --overlay:              rgb(0 0 0 / 0.62);
 
   /* Aynı sekiz renk, koyu zemin için yeniden basamaklandı — otomatik çevirme değil.
@@ -355,16 +350,16 @@
      okundu ve Nocturne obsidyeniyle hizalandı. Sinyal renkleri zaten eşleşiyordu. */
   --page:        var(--background);
   --raised:      var(--card);
-  --ink:         #eef3f0;
-  --ink-muted:   #9daba3;
-  --ink-faint:   #8b978f;
-  --ink-ghost:   #7f8b83;
-  --line:        #212a25;
-  --line-strong: #26302b;
-  --track:       #212a25;
-  --chart-idle:  #2b352f;
+  --ink:         #edf1f8;
+  --ink-muted:   #abb8cc;
+  --ink-faint:   #a2b0c5;
+  --ink-ghost:   #a2b0c5;
+  --line:        #2c384c;
+  --line-strong: #344155;
+  --track:       #2c384c;
+  --chart-idle:  #3c4d67;
   --accent-soft: #ff8b6f;
-  --neutral-bar: #3a453f;
+  --neutral-bar: #657996;
   --warning-fill:        var(--warning);
 
   /* Dark shadows */
@@ -503,10 +498,10 @@ button:disabled {
   }
 
   .finance-label {
-    font-size: 0.6875rem;
-    font-weight: 700;
-    letter-spacing: 0.085em;
-    text-transform: uppercase;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    text-transform: none;
     color: var(--muted-foreground);
   }
 
@@ -539,11 +534,11 @@ button:disabled {
   /* Uppercase eyebrow'da Ş/Ç/Ğ alt çıkıntıları satır yüksekliğini oynatır;
      sabit line-height olmadan bölüm başlıkları ekrandan ekrana kayar. */
   .serit-eyebrow {
-    font-size: 11px;
+    font-size: 13px;
     font-weight: 600;
-    letter-spacing: 0.12em;
-    line-height: 16px;
-    text-transform: uppercase;
+    letter-spacing: 0.01em;
+    line-height: 20px;
+    text-transform: none;
     color: var(--ink-faint);
   }
 
@@ -680,12 +675,24 @@ button:disabled {
 /* Route content must paint on the first frame. A page-wide opacity:0 start can
    remain frozen in backgrounded audit tabs and makes a healthy route look blank. */
 @keyframes route-slide-in {
-  from { transform: translateY(12px); }
+  from { transform: translateY(6px); }
   to   { transform: translateY(0); }
 }
 
 /* ─── ANIMATION UTILITIES ─── */
-.page-route-transition { animation: route-slide-in 220ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+.page-route-transition { animation: route-slide-in var(--motion-normal) both; }
+
+.interaction-press {
+  transition: transform var(--motion-fast), background-color var(--motion-fast), color var(--motion-fast), border-color var(--motion-fast);
+}
+.interaction-press:active:not(:disabled) { transform: scale(0.985); }
+@keyframes panel-enter {
+  from { transform: translateY(24px); opacity: 0.8; }
+  to { transform: translateY(0); opacity: 1; }
+}
+.motion-panel { animation: panel-enter var(--motion-panel) both; }
+details > summary { transition: color var(--motion-fast); }
+details[open] > :not(summary) { animation: route-slide-in var(--motion-normal) both; }
 
 /* ─── REDUCED MOTION ─── */
 @media (prefers-reduced-motion: reduce) {
@@ -700,16 +707,14 @@ button:disabled {
 }
 
 /* ─── DASHBOARD ANIMATIONS ─── */
-.dashboard-item {
-  animation: fade-in-up var(--motion-normal) both;
-  animation-delay: calc(var(--di, 0) * 60ms);
-}
+/* Günlük kontrol ekranında kayıtlar gecikmeli belirmez. */
+.dashboard-item { min-width: 0; }
 
 .dashboard-details-wrapper {
   display: grid;
   grid-template-rows: 0fr;
   opacity: 0;
-  transition: grid-template-rows 300ms ease-in-out, opacity 300ms ease-in-out;
+  transition: grid-template-rows var(--motion-normal), opacity var(--motion-normal);
 }
 
 .dashboard-details-wrapper > div {

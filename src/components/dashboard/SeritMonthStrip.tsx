@@ -1,5 +1,5 @@
 import type { MonthStrip, MonthStripTone } from '../../utils/dashboardMonthStrip'
-import { SERIT_FILL, type SeritTone } from '../serit'
+
 
 /**
  * Ay şeridi (`2a`/`4e`): kalan ay bir zaman çizgisi, her vade bir çubuk.
@@ -8,11 +8,11 @@ import { SERIT_FILL, type SeritTone } from '../serit'
  *
  * Hesap `utils/dashboardMonthStrip.ts`'te; burada yalnız çizim ve token eşlemesi var.
  */
-const TONE_MAP: Record<MonthStripTone, SeritTone> = {
-  statement: 'danger',
-  installment: 'warning',
-  planned: 'info',
-  income: 'brand',
+const TYPE_COLOR: Record<MonthStripTone, string> = {
+  statement: 'var(--viz-1)',
+  installment: 'var(--viz-7)',
+  planned: 'var(--viz-14)',
+  income: 'var(--success)',
 }
 
 const LEGEND: { tone: MonthStripTone; label: string }[] = [
@@ -25,7 +25,7 @@ const LEGEND: { tone: MonthStripTone; label: string }[] = [
 export function SeritMonthStrip({ strip, monthLabel }: { strip: MonthStrip; monthLabel: string }) {
   return (
     <div className="rounded-[14px] border border-line-strong bg-raised px-3.5 pb-3.5 pt-4">
-      <div className="mb-2.5 flex justify-between text-[10px] text-ink-ghost">
+      <div className="mb-2.5 flex justify-between text-xs text-ink-ghost">
         {strip.axis.map((day) => (
           <span key={day} className="serit-num">
             {day}
@@ -52,19 +52,19 @@ export function SeritMonthStrip({ strip, monthLabel }: { strip: MonthStrip; mont
             style={{
               left: `${mark.positionPct}%`,
               height: `${mark.heightPct}%`,
-              background: SERIT_FILL[TONE_MAP[mark.tone]],
+              background: TYPE_COLOR[mark.tone],
             }}
           />
         ))}
       </div>
 
-      <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1.5 text-[11px] text-ink-muted">
+      <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1.5 text-xs text-ink-muted">
         {LEGEND.map((entry) => (
           <span key={entry.tone} className="inline-flex items-center gap-1.5">
             <span
               aria-hidden="true"
               className="inline-block size-[7px] rounded-[2px]"
-              style={{ background: SERIT_FILL[TONE_MAP[entry.tone]] }}
+              style={{ background: TYPE_COLOR[entry.tone] }}
             />
             {entry.label}
           </span>

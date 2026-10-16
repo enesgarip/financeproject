@@ -238,8 +238,8 @@ export function CardsPage() {
       setExpensesVersion((version) => version + 1)
     }
     return (
-      <section id="kart-bilgi-dokumu" className="flex flex-col gap-4 border-t border-line pt-4" aria-label="Seçilen bilgi dökümü">
-        <div className="flex justify-end"><button type="button" onClick={() => openPanel(null)} className="min-h-11 px-3 text-xs font-semibold text-ink-muted hover:text-primary">Dökümü kapat</button></div>
+      <section id="kart-bilgi-dokumu" className={`flex flex-col gap-3 ${panel === 'manuel' ? '' : 'border-t border-line pt-4'}`} aria-label={panel === 'manuel' ? 'Harcama girişi' : 'Seçilen bilgi dökümü'}>
+        <div className="flex"><button type="button" onClick={() => openPanel(null)} aria-label={panel === 'manuel' ? 'Kapat' : undefined} className="interaction-press flex min-h-11 items-center gap-2 text-sm font-semibold text-primary">{panel === 'manuel' ? <><ArrowLeft size={18} strokeWidth={1.8} aria-hidden="true" />Hesaplara dön</> : 'Dökümü kapat'}</button></div>
         {panel === 'donem' ? <><PeriodSpendingBreakdown cards={scopedCards} /><CategoryCleanupPanel key={selectedCardId ?? 'all'} collapsible cardId={selectedCardId ?? undefined} refreshKey={expensesVersion} onChanged={() => { void invalidateSnapshot(); setExpensesVersion((version) => version + 1) }} /><RecentCardExpensesPanel key={selectedCardId ?? 'all'} cardId={selectedCardId ?? undefined} cards={cardRows} reload={refresh} setError={setError} refreshKey={expensesVersion} /></> : null}
         {panel === 'kategoriler' ? <CategoryCleanupPanel key={selectedCardId ?? 'all'} cardId={selectedCardId ?? undefined} onChanged={() => { void invalidateSnapshot(); setExpensesVersion((version) => version + 1) }} /> : null}
         {panel === 'manuel' ? <QuickExpensePanel rows={cardRows} reload={refresh} setError={setError} focus={selectedCardId ? { cardId: selectedCardId, mode: 'cash', nonce: 0 } : null} formatAmount={formatAmount} onSaved={() => setExpensesVersion((version) => version + 1)} /> : null}
@@ -277,6 +277,7 @@ export function CardsPage() {
         emptyDescription="Banka hesaplarını, nakit cüzdanlarını ve kredi kartlarını buradan takip edebilirsin."
         orderBy="card_type"
         showToolbar={!selectedCardId}
+        showList={panel !== 'manuel' || Boolean(selectedCardId)}
         listFilter={(row) => selectedCardId ? row.id === selectedCardId : row.card_type === (section === 'hesaplar' ? 'banka_karti' : 'kredi_karti')}
         sortRows={favoritesFirst}
         afterSave={async () => {
@@ -288,6 +289,10 @@ export function CardsPage() {
         }}
         renderBeforeList={({ loading, rows, reload, setError }) => {
           const cardRows = rows as Card[]
+          if (!loading && panel === 'manuel' && !selectedCardId) return <>
+            {renderPanels(cardRows, reload, setError)}
+            <DueStatementAutomation rows={cardRows} statements={statements} statementsLoading={statementsLoading} reload={async () => { await Promise.all([reload(), invalidateSnapshot()]) }} loadStatements={loadStatements} setError={setError} />
+          </>
           const selected = cardRows.find((row) => row.id === selectedCardId)
           const counts: Partial<Record<CardSection, number>> = {
             kartlar: cardRows.filter((row) => row.card_type === 'kredi_karti').length,
@@ -300,14 +305,13 @@ export function CardsPage() {
               {!loading && selectedCardId && !selected ? <p role="alert" className="py-5 text-sm text-ink-muted">Bu kayıt bulunamadı. Silinmiş olabilir; listeye dönerek başka bir kayıt seçebilirsin.</p> : null}
               {!loading && !selectedCardId ? <>
                 <CardsSummary rows={cardRows} installments={installments} statements={statements} statementPayments={statementPayments} installmentsLoading={installmentsLoading} installmentsError={installmentsError} statementsLoading={statementsLoading} statementError={statementError} section={section === 'hesaplar' ? 'hesaplar' : 'kartlar'} panel={panel} onOpenPanel={openPanel} />
-                {section === 'kartlar' ? <SharedLimitGroups rows={cardRows} onOpenCard={openCardDetails} /> : null}
                 {section === 'kartlar' ? renderPanels(cardRows, reload, setError) : null}
-                {section === 'kartlar' ? <p className="mt-3 text-xs text-ink-muted">Borç kırılımı ve kart işlemleri için bir kart seç.</p> : null}
               </> : null}
               {!loading ? <DueStatementAutomation rows={cardRows} statements={statements} statementsLoading={statementsLoading} reload={async () => { await Promise.all([reload(), invalidateSnapshot()]) }} loadStatements={loadStatements} setError={setError} /> : null}
             </div>
           )
         }}
+        renderAfterList={({ loading, rows }) => !loading && !selectedCardId && section === 'kartlar' && panel !== 'manuel' ? <details className="border-t border-line pt-1"><summary className="min-h-11 cursor-pointer py-3 text-sm font-semibold text-ink-muted">Ortak limitleri yönet</summary><SharedLimitGroups rows={rows as Card[]} onOpenCard={openCardDetails} /></details> : null}
         getInitialValues={(row) => ({ ...getCardInitialValues(row), ...(!row && section === 'hesaplar' ? { entry_type: 'banka_karti' } : {}) })}
         mapForm={mapCardForm}
         renderTitle={renderCardTitle}
@@ -329,7 +333,7 @@ export function CardsPage() {
               {renderPanels(helpers.rows as Card[], helpers.reload, helpers.setError)}
             </> : null}
           </div>
-        ) : <AccountListRow card={row as Card} onOpen={openCardDetails} />}
+        ) : <AccountListRow card={row as Card} statements={statements} statementPayments={statementPayments} statementsKnown={!statementsLoading && !statementError} onOpen={openCardDetails} />}
         getCardClassName={getCardClassName}
         getDetailClassName={getDetailClassName}
         getCardStyle={getCardStyle}
