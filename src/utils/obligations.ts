@@ -200,7 +200,8 @@ export function buildPaymentObligation(payment: Payment, occurrence: string, car
   return {
     id: `payment-${payment.id}-${occurrence}`,
     kind: 'payment',
-    action: 'pay_payment',
+    // SMS/ekstreyle izlenen aylık kart talimatı için ikinci manuel ödeme sunma.
+    action: usesCreditCard && payment.recurrence === 'monthly' ? null : 'pay_payment',
     sourceId: payment.id,
     relatedCardId: payment.auto_source_card_id ?? undefined,
     title: payment.title,

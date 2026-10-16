@@ -1,6 +1,14 @@
 # Planning Model Review
 
-Last reviewed: 2026-08-25
+Last reviewed: 2026-10-16
+
+16 October: monthly credit-card `bank_auto` plans have `action=null` in
+`buildPaymentObligation`. Nominal amount/zero bank-cash impact remain unchanged;
+manual, one-off and bank-account plans keep their action. This removes the
+subscription payment button consistently from shared obligation surfaces.
+The payments list shows confirmed matches for the selected calendar month;
+analysis subscriptions show this month. Evidence: `docs/FINANCE_RULES.md`,
+`docs/TRANSACTION_HISTORY.md`. Payment RPCs and schema are unchanged.
 
 > **Senkron notu (2026-08-25):** 2026-06-15 sonrası projeksiyon sözleşmesini
 > etkileyen ana değişiklik **K7 kısmi/asgari ekstre ödemesi** (2026-08-12):

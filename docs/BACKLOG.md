@@ -1,5 +1,30 @@
 # Priority Backlog
 
+## 2026-10-16 — Abonelikte aylık eşleşme görünürlüğü — UYGULANDI
+
+Planlı ödemeler ve Analiz'de banka talimatlı aylık aboneliğin eşleşme ayı,
+gerçek işlem tarihi/tutarı görünür. Takvim ayı liste rozetine yansır; sonraki
+vadeye ilerleyen plan önceki ayın kanıtını kaybetmez. `matchedPaymentsInMonth`
+açık banka bağlantısını/vade ayını ve eski SMS RPC'sinin kesin tarihçesini
+okur. İptal/geri alma başarı sayılmaz; yükleme/hata eşleşme yok diye sunulmaz.
+Gizlilik tutarı maskeler. Aylık kredi kartı talimatında manuel ödeme eylemi
+sunulmaz; manuel kira, tek seferlik ve eski banka hesabı planları korunur.
+Nominal tutar/nakit etkisi, matcher, SMS/PDF RPC, ledger ve şema değişmez.
+Kaynak: `src/utils/paymentHistory.ts`, `src/utils/obligations.ts`,
+`src/components/finance/PaymentMatchStatus.tsx`; sözleşme: `docs/FINANCE_RULES.md`,
+`docs/TRANSACTION_HISTORY.md`, `docs/PLANNING_MODEL_REVIEW.md`.
+
+Tarihçe penceresi dışındaki/ilk sınır ayındaki eksik veri eşleşme yok sayılmaz;
+bulunan kesin kanıt korunur, aksi halde geçmişin tam yüklü olmadığı söylenir.
+Doğrulama: `npm run verify` başarılı (156 dosya / 1.681 Vitest + dört Node
+guard; coverage %92,92 statement / %84,65 branch / %94,06 function / %95,07 line;
+production audit 0 açık; build/bundle ve altı edge tipi). Playwright 10 geçti /
+canlı backend isteyen üç test koşuluyla atlandı. Demo API yanıtlarıyla gerçek
+tarayıcıda ay değiştirme, ilerleyen planın eski ay eşleşmesi, otomatik/manüel
+eylem ayrımı, Analiz aboneliği ve tüm satırın gizlilik maskesi doğrulandı;
+yakalanmamış JS hatası yok. Mevcut plan/sıradaki tutar metninin gizlilik
+sızıntısı da kapatıldı. Yeni sorgu veya backend/finans yazması eklenmedi.
+
 ## 2026-10-16 — Kalıcı kabukta günlük snapshot yaşam döngüsü — UYGULANDI
 
 Performans paketinin son kontrolü: kabuğun yeniden kurulmasına dayanan günlük

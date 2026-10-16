@@ -1,6 +1,6 @@
 # Transaction History Side Effects
 
-Last reviewed: 2026-10-15
+Last reviewed: 2026-10-16
 
 This document is the source of truth for `transaction_history` side effects. Read
 it before changing a finance mutation, RPC wrapper, payment drawer action, or
@@ -105,6 +105,14 @@ When changing a mutation side effect:
    `npm run test:unit`, `npm run lint`, and `npm run build`.
 
 ## Existing card expense association (2026-10-15)
+
+Read-side visibility (16 October): `utils/paymentHistory.ts` projects monthly
+subscription matches by `payment_due_date`, retaining the bank date/amount.
+An explicit expense id or the legacy SMS RPC's exact title + bank-SMS/Vade
+note contract is evidence. Similar amounts, arbitrary SMS words and advancing
+plans are insufficient. Expense cancellation/payment undo removes success;
+undoing a later period's payment does not undo an earlier match. The projection
+writes nothing and does not claim cash settled the card statement.
 
 `reconcile_card_payment_expenses` (also called privately by the SMS writer)
 appends a `payment` row with `source_table='payments'`, the payment id, actual

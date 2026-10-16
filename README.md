@@ -69,6 +69,9 @@ team/role management, or multi-currency investment portfolio tracking.
 - **PWA** — Installable to the home screen, offline shell, quick shortcuts
   (add expense, planned payments, analysis), light/dark themes, Web Push
   notifications.
+- **Subscription matching** — See the matched billing month, bank date and
+  actual amount. Monthly card instructions use automatic tracking; manually
+  paid plans retain their payment action.
 
 ## Status
 

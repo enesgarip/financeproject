@@ -2,12 +2,14 @@ import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
 import { CalendarDays, CreditCard, Receipt, RefreshCw } from 'lucide-react'
 import { CrudPage, type FormField } from '../components/CrudPage'
 import { FinancePaymentDrawer } from '../components/finance/FinancePaymentDrawer'
+import { PaymentMatchStatus } from '../components/finance/PaymentMatchStatus'
 import { ObligationsCalendar } from '../components/finance/ObligationsCalendar'
 import { Alert } from '../components/ui/alert'
 import { Badge } from '../components/ui/badge'
 import { HeroNumber, SERIT_TEXT } from '../components/serit'
 import { useFinanceSnapshot, useInvalidateFinanceSnapshot } from '../app/useFinanceSnapshot'
 import { fetchCards, reconcileCardPaymentExpenses } from '../data/repositories/cardsRepo'
+import { snapshotWindowStart } from '../data/repositories/financeSnapshotRepo'
 import { saveCrudRow } from '../data/repositories/crudRepo'
 import { sortPaymentAccounts } from '../services/financePaymentActions'
 import type {
@@ -23,7 +25,7 @@ import { formatSeritAmount, parseNumber } from '../utils/formatCurrency'
 import { buildCreditCardIdCheck, paymentOccurrenceInMonth, paymentUsesCreditCard, type CreditCardIdCheck } from '../utils/financeSummary'
 import { sumTL } from '../utils/money'
 import { buildPaymentEstimateSuggestion } from '../utils/paymentEstimate'
-import { paidPaymentIdsInMonth } from '../utils/paymentHistory'
+import { matchedPaymentsInMonth, paidPaymentIdsInMonth } from '../utils/paymentHistory'
 import { buildPaymentObligation, type FinanceObligation, type FinanceObligationsInput } from '../utils/obligations'
 import { Button } from '../components/ui/button'
 import { useFinancePaymentDrawer } from '../hooks/useFinancePaymentDrawer'
@@ -145,9 +147,8 @@ function getPaymentScheduleLabel(payment: Payment) {
 
 // BM-5: Kart talimatlı ödeme BİLGİLENDİRME kaydıdır; tahmini tutar proaktif
 // karta yazılmaz. Gerçek kayıt SMS'ten (anlık) veya ekstre importundan (aylık
-// kesin kapanış) gelir ve planı otomatik ilerletir. Manuel ödeme yolu kayıt
-// kartında DEĞİL, sayfa başındaki ObligationsCalendar'da (ve panodaki şeritte)
-// durur — bilgilendirme notunun altındaki "Öde" butonu çelişki yaratıyordu.
+// kesin kapanış) gelir ve planı otomatik ilerletir. Aylık kart talimatında
+// manuel ödeme düğmesi sunulmaz; eşleşme ayı geçmişin vade kanıtından okunur.
 function isCardInstructedPayment(payment: Payment, isCreditCardId?: CreditCardIdCheck) {
   return paymentUsesCreditCard(payment, isCreditCardId)
 }
@@ -159,6 +160,7 @@ function getPaymentAmountLabel(payment: Payment) {
 }
 
 function PaymentsOverview({ rows, transactionHistory }: { rows: Payment[]; transactionHistory: TransactionHistory[] }) {
+  const { maskText } = useBalancePrivacy()
   // Tutarlar Şerit bileşenleri üzerinden biçimleniyor; gizlilik onların içinde.
   const summary = useMemo(() => {
     if (rows.length === 0) return null
@@ -241,7 +243,7 @@ function PaymentsOverview({ rows, transactionHistory }: { rows: Payment[]; trans
           <>
             {' '}
             · sıradaki <span className="text-ink">{nextPayment.title}</span> {formatDate(nextPayment.due_date)}{' '}
-            <span className="serit-num font-semibold text-ink">{getPaymentAmountLabel(nextPayment)}</span>
+            <span className="serit-num font-semibold text-ink">{maskText(getPaymentAmountLabel(nextPayment))}</span>
           </>
         ) : null}
       </p>
@@ -256,8 +258,14 @@ export function PaymentsPage() {
   const { drawerProps, openPaymentDrawer } = useFinancePaymentDrawer()
   /** Tahmini tutarı tazelenen ödeme (butonu kilitler). */
   const [updatingPaymentId, setUpdatingPaymentId] = useState<string | null>(null)
+  const [matchMonth, setMatchMonth] = useState(() => startOfMonth(new Date()))
 
   const transactionHistory = snapshotQuery.data?.transactionHistory ?? []
+  const monthMatches = useMemo(() => matchedPaymentsInMonth(
+    snapshotQuery.data?.transactionHistory ?? [],
+    matchMonth,
+    snapshotQuery.data?.cardExpenses ?? [],
+  ), [snapshotQuery.data, matchMonth])
 
   /**
    * Tahmini tutarı gerçekleşen ödemelerin ortasına çeker. Yalnız `amount`
@@ -389,6 +397,7 @@ export function PaymentsPage() {
                 loading={loading || planningLoading}
                 data={{ ...planningData, payments }}
                 onPayObligation={(obligation) => void openObligationPayment(obligation, reload)}
+                onMonthChange={setMatchMonth}
               />
               {!loading ? <PaymentsOverview rows={payments} transactionHistory={transactionHistory} /> : null}
             </div>
@@ -448,6 +457,7 @@ export function PaymentsPage() {
           const isAuto = payment.payment_method === 'bank_auto'
           const isPaid = payment.status === 'ödendi'
           const isRecurring = payment.recurrence === 'monthly'
+          const obligation = buildPaymentObligation(payment, payment.due_date, planningData.cards)
           const remaining = daysUntil(new Date(`${payment.due_date}T00:00:00`))
           const isUrgent = remaining !== null && remaining >= 0 && remaining <= 3
 
@@ -474,14 +484,12 @@ export function PaymentsPage() {
                     </span>
                   ) : null}
                   {payment.amount_status === 'estimated' && !isPaid ? <Badge variant="outline">Tahmini</Badge> : null}
-                  {/* Liste kartından doğrudan ödeme (UX turu B8): eskiden yalnız
-                      takvimde günü seçince ulaşılıyordu. */}
                 </div>
-                {!isPaid ? (
+                {!isPaid && obligation.action ? (
                   <Button
                     type="button"
                     size="sm"
-                    onClick={() => void openObligationPayment(buildPaymentObligation(payment, payment.due_date, planningData.cards), reload)}
+                    onClick={() => void openObligationPayment(obligation, reload)}
                     aria-label={`${payment.title} için ödeme kaydet`}
                   >
                     Ödeme kaydet
@@ -489,14 +497,22 @@ export function PaymentsPage() {
                 ) : null}
               </div>
 
+              {isAuto && isRecurring ? <PaymentMatchStatus
+                month={matchMonth}
+                match={monthMatches.get(payment.id)}
+                loading={planningLoading}
+                error={Boolean(planningError)}
+                historyAvailable={matchMonth > snapshotWindowStart()}
+              /> : null}
+
               <div className="mt-4 flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
                 <div className="min-w-0">
                   <p className="text-[11px] font-bold uppercase tracking-wider text-ink-muted">Tutar</p>
-                  <p className="mt-0.5 font-mono text-lg font-black tabular-nums text-ink">{getPaymentAmountLabel(payment)}</p>
+                  <p className="mt-0.5 font-mono text-lg font-black tabular-nums text-ink">{maskText(getPaymentAmountLabel(payment))}</p>
                 </div>
                 <div className="flex items-center gap-1.5 text-xs font-semibold text-ink-muted">
                   <CalendarDays size={14} />
-                  <span>{formatDate(payment.due_date)}</span>
+                  <span>{isRecurring && !isPaid ? 'Sıradaki: ' : ''}{formatDate(payment.due_date)}</span>
                   {isUrgent && !isPaid ? <Badge variant="warning" className="ml-1">{remaining} gün</Badge> : null}
                 </div>
               </div>
@@ -543,9 +559,6 @@ export function PaymentsPage() {
                 </p>
               ) : null}
 
-              {/* Öde aksiyonu kartta doğrudan erişilebilir. Kart talimatı notu,
-                  ödemenin banka hareketiyle otomatik işlenebileceğini ayrıca
-                  açıklar; RPC aynı idempotent ödeme akışını korur. */}
             </article>
           )
         }}

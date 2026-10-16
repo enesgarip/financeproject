@@ -63,6 +63,15 @@ function payment(overrides: Partial<Payment>): Payment {
   }
 }
 
+it('aylık kredi kartı talimatında manuel ödeme yoktur; tutar ve nakit etkisi korunur', () => {
+  const credit = card({ id: 'credit', card_type: 'kredi_karti' })
+  const automatic = payment({ id: 'subscription', amount: 500, payment_method: 'bank_auto', auto_source_card_id: credit.id, recurrence: 'monthly' })
+  expect(buildPaymentObligation(automatic, '2026-06-01', [credit])).toMatchObject({ action: null, amount: 500, cashImpactAmount: 0, settlement: 'credit_card' })
+  expect(buildPaymentObligation({ ...automatic, recurrence: 'none' }, '2026-06-01', [credit]).action).toBe('pay_payment')
+  expect(buildPaymentObligation({ ...automatic, payment_method: 'manual' }, '2026-06-01', [credit]).action).toBe('pay_payment')
+  expect(buildPaymentObligation(automatic, '2026-06-01', [card({ id: 'credit', card_type: 'banka_karti' })]).action).toBe('pay_payment')
+})
+
 function loan(overrides: Partial<Loan>): Loan {
   return {
     ...base,
