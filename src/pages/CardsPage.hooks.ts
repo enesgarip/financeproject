@@ -1,5 +1,10 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type Dispatch, type FormEvent, type SetStateAction } from 'react'
+import { useCallback, useLayoutEffect, useRef, useState, type Dispatch, type FormEvent, type SetStateAction } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router'
+import { useQuery } from '@tanstack/react-query'
+import { useAuth } from '../auth/useAuth'
+import { cardPageDataKey } from '../app/cardPageDataKey'
+import { useCrudRows } from '../app/useCrudRows'
+import { canCutCurrentStatement } from '../utils/statementCycle'
 import { useInvalidateFinanceSnapshot } from '../app/useFinanceSnapshot'
 import {
   applyCardProvision,
@@ -90,110 +95,96 @@ export function useCardSectionNavigation() {
   }
 }
 
-export function useCardsPageData() {
+const EMPTY_PROVISIONS: CardExpense[] = []
+const EMPTY_INSTALLMENTS: CardInstallment[] = []
+const EMPTY_RECONCILIATIONS: AccountReconciliation[] = []
+const EMPTY_STATEMENTS: CardStatementArchive[] = []
+const EMPTY_STATEMENT_PAYMENTS: CardStatementPayment[] = []
+
+export function useCardsPageData({ section, panel, selectedCardId }: {
+  section: CardSection
+  panel: CardPanel
+  selectedCardId: string | null
+}) {
+  const { user } = useAuth()
   const invalidateSnapshot = useInvalidateFinanceSnapshot()
-  const [provisions, setProvisions] = useState<CardExpense[]>([])
-  const [provisionsLoading, setProvisionsLoading] = useState(false)
-  const [provisionError, setProvisionError] = useState('')
+  // CrudPage ile aynı anahtar/sıralama: ikinci HTTP isteği oluşturmaz.
+  const cardsQuery = useCrudRows('cards', 'card_type', false)
+  const creditVisible = section === 'kartlar'
+  // Doğrudan Hesaplar/harcama açılışında da zamanı gelen kesim atlanmaz.
+  // Önce ucuz kart alanlarıyla aday kontrolü; kesin karar arşivler geldikten sonra.
+  const cutMayBeDue = cardsQuery.data?.some((card) => canCutCurrentStatement(card)) ?? false
+  const enabled = Boolean(user)
+  const key = cardPageDataKey(user?.id)
   const [provisionActionId, setProvisionActionId] = useState<string | null>(null)
-  const [statements, setStatements] = useState<CardStatementArchive[]>([])
-  const [statementPayments, setStatementPayments] = useState<CardStatementPayment[]>([])
-  const [statementsLoading, setStatementsLoading] = useState(true)
-  const [statementError, setStatementError] = useState('')
   const [statementActionId, setStatementActionId] = useState<string | null>(null)
-  const [installments, setInstallments] = useState<CardInstallment[]>([])
-  // Taksit takvimi paneli ilk yüklemede yanlış "taksit yok" göstermesin diye
-  // (boş liste ≠ henüz yüklenmedi) yükleme durumu ayrıca izlenir.
-  const [installmentsLoading, setInstallmentsLoading] = useState(true)
-  const [installmentsError, setInstallmentsError] = useState('')
-  const [reconciliations, setReconciliations] = useState<AccountReconciliation[]>([])
 
-  const loadProvisions = useCallback(async () => {
-    setProvisionsLoading(true)
-    setProvisionError('')
-    const result = await fetchProvisionExpenses()
-
-    if (!result.ok) {
-      setProvisions([])
-      setProvisionError(
-        isMissingSupabaseCapabilityError(result.error)
-          ? missingSupabaseCapabilityMessage('Provizyon altyapısı', result.error)
-          : result.error.message ?? 'Provizyonlar yüklenemedi.',
-      )
-    } else {
-      setProvisions(result.data)
-    }
-    setProvisionsLoading(false)
-  }, [])
-
-  // Arşiv ve kısmi ödemeler birlikte yüklenir: arşivin KALAN borcu ödemelerden
-  // türer (K7), ayrı yüklenirse ekran bir kare boyunca tam tutarı gösterir.
-  const loadStatements = useCallback(async () => {
-    setStatementsLoading(true)
-    setStatementError('')
-    const [result, paymentsResult] = await Promise.all([fetchStatementArchives(24), fetchStatementPayments()])
-
-    if (!result.ok) {
-      setStatements([])
-      setStatementError(
-        isMissingSupabaseCapabilityError(result.error)
-          ? missingSupabaseCapabilityMessage('Ekstre arşivi altyapısı', result.error)
-          : result.error.message ?? 'Ekstreler yüklenemedi.',
-      )
-    } else {
-      setStatements(result.data)
-    }
-    // Ödeme tablosu migration bekleyen ortamda yoksa kalan = arşiv tutarı.
-    setStatementPayments(paymentsResult.ok ? paymentsResult.data : [])
-    if (!paymentsResult.ok && !isMissingSupabaseCapabilityError(paymentsResult.error)) {
-      setStatementError(paymentsResult.error.message ?? 'Kısmi ekstre ödemeleri yüklenemedi.')
-    }
-    setStatementsLoading(false)
-  }, [])
-
-  const loadInstallments = useCallback(async () => {
-    setInstallmentsLoading(true)
-    setInstallmentsError('')
-    const result = await fetchCardInstallments()
-
-    if (!result.ok) {
-      setInstallments([])
-      setInstallmentsError(result.error.message ?? 'Gelecek taksitler yüklenemedi.')
-      setInstallmentsLoading(false)
-      return
-    }
-
-    setInstallments(result.data)
-    setInstallmentsLoading(false)
-  }, [])
-
-  const loadReconciliations = useCallback(async () => {
-    const result = await fetchAccountReconciliations()
-    setReconciliations(result.ok ? result.data : [])
-  }, [])
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    void loadProvisions()
-  }, [loadProvisions])
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    void loadStatements()
-  }, [loadStatements])
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    void loadInstallments()
-  }, [loadInstallments])
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    void loadReconciliations()
-  }, [loadReconciliations])
+  const provisionsQuery = useQuery({
+    queryKey: [...key, 'provisions'],
+    enabled: enabled && creditVisible && panel === 'provizyon',
+    queryFn: async () => {
+      const result = await fetchProvisionExpenses()
+      if (!result.ok) throw new Error(isMissingSupabaseCapabilityError(result.error)
+        ? missingSupabaseCapabilityMessage('Provizyon altyapısı', result.error)
+        : result.error.message ?? 'Provizyonlar yüklenemedi.')
+      return result.data
+    },
+  })
+  // Arşiv ve kısmi ödemeler tek cache sonucudur: kalan borç eksik ödeme
+  // verisiyle bir kare dahi doğrulanmış sayılmaz (K7).
+  const statementsQuery = useQuery({
+    queryKey: [...key, 'statements'],
+    enabled: enabled && (creditVisible || cutMayBeDue),
+    queryFn: async () => {
+      const [result, paymentsResult] = await Promise.all([fetchStatementArchives(24), fetchStatementPayments()])
+      if (!result.ok) throw new Error(isMissingSupabaseCapabilityError(result.error)
+        ? missingSupabaseCapabilityMessage('Ekstre arşivi altyapısı', result.error)
+        : result.error.message ?? 'Ekstreler yüklenemedi.')
+      if (!paymentsResult.ok && !isMissingSupabaseCapabilityError(paymentsResult.error)) {
+        throw new Error(paymentsResult.error.message ?? 'Kısmi ekstre ödemeleri yüklenemedi.')
+      }
+      return { statements: result.data, payments: paymentsResult.ok ? paymentsResult.data : EMPTY_STATEMENT_PAYMENTS }
+    },
+  })
+  const installmentsQuery = useQuery({
+    queryKey: [...key, 'installments'],
+    enabled: enabled && creditVisible,
+    queryFn: async () => {
+      const result = await fetchCardInstallments()
+      if (!result.ok) throw new Error(result.error.message ?? 'Gelecek taksitler yüklenemedi.')
+      return result.data
+    },
+  })
+  const reconciliationsQuery = useQuery({
+    queryKey: [...key, 'reconciliations'],
+    enabled: enabled && creditVisible && Boolean(selectedCardId),
+    queryFn: async () => {
+      const result = await fetchAccountReconciliations()
+      if (!result.ok) throw new Error(result.error.message ?? 'Karşılaştırmalar yüklenemedi.')
+      return result.data
+    },
+  })
+  const provisions = provisionsQuery.data ?? EMPTY_PROVISIONS
+  const provisionsLoading = provisionsQuery.isPending
+  const provisionError = provisionsQuery.error?.message ?? ''
+  const statements = statementsQuery.data?.statements ?? EMPTY_STATEMENTS
+  const statementPayments = statementsQuery.data?.payments ?? EMPTY_STATEMENT_PAYMENTS
+  const statementsLoading = statementsQuery.isPending
+  const statementError = statementsQuery.error?.message ?? ''
+  const installments = installmentsQuery.data ?? EMPTY_INSTALLMENTS
+  const installmentsLoading = installmentsQuery.isPending
+  const installmentsError = installmentsQuery.error?.message ?? ''
+  const reconciliations = reconciliationsQuery.data ?? EMPTY_RECONCILIATIONS
+  const { refetch: refetchStatements } = statementsQuery
+  const { refetch: refetchInstallments } = installmentsQuery
+  const { refetch: refetchReconciliations } = reconciliationsQuery
+  const loadStatements = useCallback(async () => { await refetchStatements() }, [refetchStatements])
+  const loadInstallments = useCallback(async () => { await refetchInstallments() }, [refetchInstallments])
+  const loadReconciliations = useCallback(async () => { await refetchReconciliations() }, [refetchReconciliations])
 
   async function refreshCardsAndProvisions(reload: () => Promise<void>) {
-    await Promise.all([reload(), loadProvisions(), loadStatements(), loadInstallments(), loadReconciliations(), invalidateSnapshot()])
+    // Aktif sorgular bir kez tazelenir; kapalı sorgular sonraki açılışta yüklenir.
+    await Promise.all([reload(), invalidateSnapshot()])
   }
 
   async function handleProvisionAction(
@@ -204,7 +195,6 @@ export function useCardsPageData() {
   ) {
     setProvisionActionId(`${action}-${expense.id}`)
     setError('')
-    setProvisionError('')
 
     const result = await applyCardProvision(expense.id, action)
 
@@ -230,7 +220,6 @@ export function useCardsPageData() {
     if (installmentCount === expense.installment_count) return
     setProvisionActionId(`installments-${expense.id}`)
     setError('')
-    setProvisionError('')
 
     const result = await setProvisionInstallments(expense.id, expense.amount, installmentCount)
 
@@ -253,7 +242,6 @@ export function useCardsPageData() {
 
     setProvisionActionId('post-all')
     setError('')
-    setProvisionError('')
 
     for (const expense of pendingExpenses) {
       const result = await applyCardProvision(expense.id, 'post')

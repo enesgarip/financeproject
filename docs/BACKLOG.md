@@ -1,5 +1,33 @@
 # Priority Backlog
 
+## 2026-10-16 — Sayfa geçişi ve kart veri yüklemesi — UYGULANDI
+
+Kullanıcı onaylı üç performans düzeltmesi: Routes pathname anahtarı kaldırıldı;
+Layout/tema/gizlilik ve günlük snapshot zamanlayıcısı korunur, sayfa geçiş
+sınırı sürer. Kart detayları kullanıcı kapsamlı TanStack cache'e taşındı;
+görünmeyen provizyon/taksit/karşılaştırmalar gereksiz yüklenmez. Doğrudan
+Hesaplar açılışında zamanı gelen ekstre kesimi aday kontrolüyle korunur.
+Arşiv + kısmi ödemeler birlikte yayımlanır; hata doğrulanmış sıfır sayılmaz.
+Para hareketi/bakım cache'i geçersiz kılar. İkincil details çocukları ilk
+açılışta kurulur, kapanınca form taslağı korunur. Finans/ledger/RPC/şema aynı.
+
+Yerel demo üretim build ölçümü: Hesaplar ilk giriş 7 → 4 HTTP isteği
+(demo kartının gerekli ekstre kontrolü dahil), kısa dönüş 6 → 0; kabuk
+6/6 SPA geçişinde korundu. Giriş JS yaklaşık 192 KiB, PDF ilk akışta yüklenmez.
+Ölçüm koşulları, kapsam, regresyonlar ve geri dönüş: `docs/APP_PERFORMANCE.md`.
+Kaynak sözleşmesi: `docs/CARDS_ARCHITECTURE.md`, `docs/UI_ARCHITECTURE.md`.
+
+Veri sağlığı düzeltme/geri alma/ödeme/karşılaştırma ve restore/reset işlemleri
+ortak cache'i geçersiz kılar; salt okunur tarama yapmaz. Regresyonlar 14 yeni
+test içerir. Verify: 153 dosya / 1.655 Vitest test + dört Node guard, aynı
+coverage, production audit 0 açık, build/bundle/altı edge tipi başarılı.
+Playwright smoke 10 geçti / üç canlı backend testi koşuluyla atlandı; güncel
+para hareketi spec'i ayrıca gerçek yerel Supabase ile başarılı (500 TL harcama,
+SPA dönüşünde taze borç, korunan kabuk ve ledger artışı).
+
+Önceki CI/test paketi PR #261 ile canlıya alındı: production workflow
+38949699015 başarılı, 101 sn (önceki 15 koşu ortalaması 125,7 sn).
+
 ## 2026-10-16 — Test yükleme maliyeti ve hızlı yerel geri bildirim — UYGULANDI
 
 Kullanıcı onaylı üç madde uygulandı. Encoding ve doküman pointer/harita

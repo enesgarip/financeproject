@@ -2,6 +2,15 @@
 
 Last reviewed: 2026-10-16
 
+16 Ekim uygulama performansı: `App.tsx` kabuğu sayfa geçişinde korur;
+sayfa `PageTransition` anahtarı sürer. `pages/CardsPage.hooks.ts` kart
+detaylarını `app/cardPageDataKey.ts` kullanıcı prefix'inde TanStack cache'ler;
+`app/useFinanceSnapshot.ts` mutation/bakım sonrası invalidation'ı paylaşır.
+Hesaplarda kesim adayı varsa ekstre kontrolü korunur; normal durumda görünmeyen
+kart sorguları başlamaz. `components/ui/deferred-details.tsx` ikincil panelleri
+ilk açılışta kurar, sonra taslağı korur. Ölçüm/regresyon/geri dönüş:
+`docs/APP_PERFORMANCE.md`; sözleşme: `docs/CARDS_ARCHITECTURE.md`.
+
 16 Ekim test hızlandırması: kaynak/doküman guard'ları
 `tests/guards/docs.guard.test.mjs` ve `tests/guards/encoding.guard.test.mjs`
 altında `scripts/run-guards.mjs` ile doğrudan Node'da koşar; eksik/boş guard
@@ -19,8 +28,9 @@ DB/yedek/edge/release işi başarısız, iptal veya beklenmedik skipped ise yay�
 durur; gerçek koşul regresyonları `utils/pipeline.guard.test.ts`.
 Ölçüm aracı `scripts/report-workflow-timings.mjs`; akış ve başlangıç ölçümü
 `docs/PIPELINE.md`. README'ler, Mürekkep ve Safir demo görselleri ve çekim
-rehberi `docs/screenshots/README.md` ile günceldir. Üretim süre kazancı,
-ilk gerçek yeni workflow koşusundan sonra doğrulanır; 90 sn yalnız hedeftir.
+rehberi `docs/screenshots/README.md` ile günceldir. PR #261 sonrası production
+workflow 38949699015 101 sn sürdü; önceki 15 koşu ortalaması 125,7 sn idi.
+90 sn hedeftir; gerçekleşen ilk koşu kazancı yaklaşık %20'dir.
 
 Dil sözlüğü: `docs/UI_GLOSSARY.md` kullanıcı metinlerinin ortak kaynağıdır.
 Ödeme/tahsilat düğmeleri banka işlemi yerine kayıt işlemini adlandırır;

@@ -128,7 +128,7 @@ function AnimatedRoutes() {
   const location = useLocation()
 
   return (
-    <Routes location={location} key={location.pathname}>
+    <Routes location={location}>
       <Route path="/login" element={routeElement(<LoginPage />, 'login')} />
       <Route
         path="/"

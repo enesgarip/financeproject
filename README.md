@@ -216,6 +216,9 @@ gates pass, with automatic frontend rollback when the production `/login` smoke
 fails. Each workflow includes a duration report. Details:
 [`docs/PIPELINE.md`](docs/PIPELINE.md) (Turkish).
 
+Runtime loading, cache freshness and measured navigation improvements:
+[`docs/APP_PERFORMANCE.md`](docs/APP_PERFORMANCE.md) (Turkish).
+
 ## Contributing & AI agents
 
 This repository is documented for working with AI agents (Claude Code, Codex).

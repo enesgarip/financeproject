@@ -8,6 +8,7 @@ import {
 } from '../data/repositories/financeSnapshotRepo'
 
 import { financeSnapshotKey } from './financeSnapshotKey'
+import { cardPageDataKey } from './cardPageDataKey'
 import { crudRowsInvalidationKey } from './useCrudRows'
 
 export type { FinanceSnapshot }
@@ -58,6 +59,8 @@ export function useFinanceSnapshot() {
         if (changedRows > 0) {
           queryClient.invalidateQueries({ queryKey: financeSnapshotKey(userId) })
           queryClient.invalidateQueries({ queryKey: crudRowsInvalidationKey('payments', userId) })
+          queryClient.invalidateQueries({ queryKey: crudRowsInvalidationKey('cards', userId) })
+          queryClient.invalidateQueries({ queryKey: cardPageDataKey(userId) })
         }
       })
       return snapshotPromise
@@ -72,7 +75,12 @@ export function useInvalidateFinanceSnapshot() {
   const userId = user?.id
 
   return useCallback(
-    () => queryClient.invalidateQueries({ queryKey: financeSnapshotKey(userId) }),
+    async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: financeSnapshotKey(userId) }),
+        queryClient.invalidateQueries({ queryKey: cardPageDataKey(userId) }),
+      ])
+    },
     [queryClient, userId],
   )
 }

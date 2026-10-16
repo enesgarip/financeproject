@@ -2,6 +2,17 @@
 
 Last reviewed: 2026-10-16
 
+Çalışma zamanı performansı: `CardsPage.hooks.ts` detay sorgularını kullanıcıya
+özel TanStack cache'te tutar (30 sn tazelik / 30 dk bellekte tutma). Hesaplarda
+yalnız zamanı gelen ekstre kesim adayı varsa arşiv kontrolü açılır; kredi
+özetinde ekstre + kısmi ödeme/taksit, provizyon dökümünde provizyon ve seçili
+kart ayrıntısında karşılaştırma yüklenir. CrudPage kart listesi aynı query'yi
+paylaşır. Para hareketleri ve gerçek bakım değişikliği kart detay cache'ini
+geçersiz kılar; kapalı sorgu sonraki açılışta tazelenir. Ekstre/ödemeler tek
+query sonucudur; hata boş veri sayılmaz. İkincil düzenleme/niyet/ortak limit,
+kart kayıt geçmişi ve banka details çocukları ilk açılışta kurulur, sonra form taslağı korunur.
+Kaynak/ölçüm/regresyon: `docs/APP_PERFORMANCE.md`.
+
 Dil sözlüğü eki: ödeme eylemi ve ortak form gerçek bankacılık yerine kayıt
 işlemini adlandırır. “Ödemenin yapıldığı hesap” ve kayıt sonrası bakiye/borç/
 limit önizlemesi aynı veriyi kullanır; finansal kaynak ve RPC değişmedi.

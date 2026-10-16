@@ -26,6 +26,8 @@ test.describe('money mutation (live backend)', () => {
   test.skip(!LIVE, 'set E2E_LIVE_SUPABASE=1 with a local Supabase + seeded user/card')
 
   test('adding a card expense raises debt and lands in the ledger', async ({ page }) => {
+    // Hesap seçimi formda hatırlanır; gezinme korumasının yerel onayını kabul et.
+    page.on('dialog', dialog => dialog.accept())
     const CARD_NAME = `Axess E2E ${Date.now()}`
     await page.goto('/login')
     await page.locator('input[type="email"]').fill(EMAIL)
@@ -43,8 +45,8 @@ test.describe('money mutation (live backend)', () => {
     await expect(create).toHaveCount(0)
     await page.getByRole('button', { name: `${CARD_NAME} kart ayrıntıları`, exact: true }).click()
     const card = page.locator('article').filter({ hasText: CARD_NAME })
-    await card.locator('summary').filter({ hasText: /^Manuel kayıt$/ }).click()
-    await card.getByRole('button', { name: 'Manuel harcama ekle', exact: true }).click()
+    await page.getByRole('button', { name: 'İşlem', exact: true }).click()
+    await page.getByRole('link', { name: /Harcama ekle/ }).click()
 
     // Quick-expense form lives under the "Hızlı harcama" heading.
     const form = page.locator('form').filter({ has: page.getByPlaceholder('Migros, benzin, yemek...') })
@@ -52,17 +54,24 @@ test.describe('money mutation (live backend)', () => {
 
     await form.locator('select').first().selectOption({ label: `Akbank · ${CARD_NAME}` })
     await form.getByPlaceholder('Migros, benzin, yemek...').fill('E2E Market')
-    await form.getByLabel('TL', { exact: true }).fill(String(AMOUNT))
+    await form.getByLabel('Tutar (TL)', { exact: true }).fill(String(AMOUNT))
     await form.getByRole('button', { name: 'Harcamayı kaydet' }).click()
     // Submit clears the description field on success.
     await expect(form.getByPlaceholder('Migros, benzin, yemek...')).toHaveValue('', { timeout: 10_000 })
 
-    // Kart ayrıntısı, kayıttan sonra yenilenen toplam borcu göstermeli.
+    // SPA dönüşü aynı cache'i kullanır; yazma invalidation'ı güncel borcu getirmeli.
+    const shell = await page.locator('aside').elementHandle()
+    await page.getByRole('region', { name: 'Harcama girişi' }).getByRole('button', { name: 'Kapat', exact: true }).click()
+    await page.locator('aside').getByRole('link', { name: 'Plan', exact: true }).click()
+    await page.locator('aside').getByRole('link', { name: 'Hesaplar', exact: true }).click()
+    expect(await shell!.evaluate(element => element.isConnected)).toBe(true)
+    await page.getByRole('button', { name: /Kredi kartları/ }).click()
+    await page.getByRole('button', { name: `${CARD_NAME} kart ayrıntıları`, exact: true }).click()
     await expect(card.getByText('Toplam kart yükü')).toBeVisible({ timeout: 10_000 })
     await expect(card).toContainText('500,00 ₺')
 
     // Kayıt geçmişinde aynı artışın ledger olayı da görünmeli.
-    await card.locator('summary').filter({ hasText: 'Diğer kart bilgileri ve kayıt geçmişi' }).click()
+    await card.locator('summary').filter({ hasText: 'Kart ayarları ve kayıt geçmişi' }).click()
     await expect(card.getByText('Borç hareketleri')).toBeVisible({ timeout: 10_000 })
     await expect(card.getByText('Borç arttı').first()).toBeVisible({ timeout: 10_000 })
   })

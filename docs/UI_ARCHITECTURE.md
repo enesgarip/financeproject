@@ -2,6 +2,12 @@
 
 Last reviewed: 2026-10-16
 
+Sayfa geçişlerinde Layout ve tema/gizlilik sağlayıcıları korunur; yalnız
+sayfa geçiş sınırı yenilenir. `components/ui/deferred-details.tsx` veri çeken
+ikincil panelleri ilk açılışa kadar kurmaz, sonra kapatıp açınca taslağı korur.
+Native details/summary klavye davranışı ve başlangıçta açık ledger sürer.
+Çalışma zamanı ölçümü ve kaynaklar: `docs/APP_PERFORMANCE.md`.
+
 GitHub README'leri güncel Mürekkep ve Safir tasarımını gösterir. Demo görselleri
 ve tekrar çekim kaynağı: `docs/screenshots/README.md`. Tarihsel audit ekranları
 mevcut uygulamanın görsel sözleşmesi yerine kullanılmaz.
