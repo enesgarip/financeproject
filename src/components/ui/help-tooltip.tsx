@@ -1,5 +1,6 @@
 import * as React from "react"
 import { createPortal } from "react-dom"
+import { Info } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 
@@ -144,9 +145,9 @@ export function HelpTooltip({ title, content, className }: HelpTooltipProps) {
         onBlur={() => setHovered(false)}
         // Görsel daire 28px kalır; dokunma alanı before pseudo-element ile
         // 44px'e çıkar — düzen bozulmadan mobil hedef büyür.
-        className="relative inline-grid size-7 shrink-0 place-items-center rounded-full text-[15px] font-black leading-none text-ink-muted transition before:absolute before:left-1/2 before:top-1/2 before:size-11 before:-translate-x-1/2 before:-translate-y-1/2 before:content-[''] hover:bg-black/[.03] dark:hover:bg-white/[.04] hover:text-ink focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/30"
+        className="relative inline-grid size-7 shrink-0 place-items-center rounded-full text-primary transition before:absolute before:left-1/2 before:top-1/2 before:size-11 before:-translate-x-1/2 before:-translate-y-1/2 before:content-[''] hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/30"
       >
-        <span aria-hidden="true">ⓘ</span>
+        <Info size={17} strokeWidth={1.8} aria-hidden="true" />
       </button>
       {tooltip}
     </span>

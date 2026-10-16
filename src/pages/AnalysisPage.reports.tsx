@@ -364,10 +364,10 @@ export function SearchExport({ items }: { items: SearchItem[] }) {
         </label>
         <div className="space-y-2">
           {filteredItems.slice(0, 20).map((item, index) => (
-            <div key={`${item.type}-${item.title}-${item.date}-${index}`} className="flex items-start justify-between gap-3 rounded-xl bg-page px-3 py-2 text-sm">
+            <div key={`${item.type}-${item.title}-${item.date}-${index}`} className="flex flex-col items-start justify-between gap-2 rounded-xl bg-page px-3 py-2 text-sm sm:flex-row sm:gap-3">
               <div className="min-w-0">
-                <p className="truncate font-semibold text-ink">{item.title}</p>
-                <p className="mt-0.5 truncate text-xs text-ink-muted">
+                <p className="break-words font-semibold text-ink">{item.title}</p>
+                <p className="mt-0.5 break-words text-xs text-ink-muted">
                   {item.type} · {item.subtitle}
                 </p>
               </div>

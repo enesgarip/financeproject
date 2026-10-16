@@ -57,6 +57,7 @@ function buildCalendarCells(month: Date) {
 }
 
 function obligationKindLabel(item: FinanceObligation) {
+  if (item.kind === 'salary') return 'Maaş'
   if (item.kind === 'payment') return 'Planlı'
   if (item.kind === 'card_statement') return 'Ekstre'
   if (item.kind === 'card_debt') return 'Kart'
@@ -178,7 +179,7 @@ function ObligationRow({ item, formatAmount, onPayObligation }: { item: FinanceO
   return (
     <article className="flex min-w-0 flex-col gap-3 rounded-lg border border-line-strong bg-raised px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex min-w-0 items-start gap-3">
-        <div className="grid size-9 shrink-0 place-items-center rounded-lg bg-page text-ink-muted">
+        <div className="grid size-9 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
           <Icon size={18} strokeWidth={1.8} aria-hidden="true" />
         </div>
         <div className="min-w-0">
@@ -228,9 +229,9 @@ export function ObligationsCalendar({ data, loading = false, onPayObligation }: 
   const cells = useMemo(() => buildCalendarCells(visibleMonth), [visibleMonth])
   const selectedItems = groupedByDate.get(selectedDateInMonth) ?? []
   const agenda = obligations.filter(item => !item.settled && (item.kind !== 'salary' || item.date >= today)).sort((a, b) => a.date.localeCompare(b.date))
-  const agendaGroups = ['Geciken', 'Bugün', 'Bu hafta', 'Sonra'].map(label => ({ label, items: agenda.filter(item => {
+  const agendaGroups = ['Vadesi geçen', 'Bugün', 'Önümüzdeki 7 gün', 'Daha sonra'].map(label => ({ label, items: agenda.filter(item => {
     const days = daysUntil(item.date) ?? 0
-    return (days < 0 ? 'Geciken' : days === 0 ? 'Bugün' : days <= 7 ? 'Bu hafta' : 'Sonra') === label
+    return (days < 0 ? 'Vadesi geçen' : days === 0 ? 'Bugün' : days <= 7 ? 'Önümüzdeki 7 gün' : 'Daha sonra') === label
   }) })).filter(group => group.items.length > 0)
 
   function moveMonth(offset: number) {
@@ -250,7 +251,7 @@ export function ObligationsCalendar({ data, loading = false, onPayObligation }: 
       <CardHeader className="gap-3">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
-            <p className="finance-label">Ödeme takvimi</p>
+            <p className="finance-label">Ödemeler ve tahsilatlar</p>
             <CardTitle className="mt-1 flex min-w-0 items-center gap-2 text-lg">
               <CalendarDays size={20} strokeWidth={1.8} className="text-primary" aria-hidden="true" />
               <span className="truncate capitalize">{MONTH_LABEL.format(visibleMonth)}</span>
@@ -284,9 +285,9 @@ export function ObligationsCalendar({ data, loading = false, onPayObligation }: 
         ) : (
           <>
             <div className="grid grid-cols-2 gap-2">
-              <SummaryStat label="Kalan ay yükü" value={formatAmount(summary.outflow)} />
+              <SummaryStat label="Kalan ödemeler" value={formatAmount(summary.outflow)} />
               <SummaryStat
-                label="Beklenen giriş"
+                label="Beklenen gelir"
                 value={formatAmount(summary.inflow)}
                 tone="success"
                 hint={summary.receivedSalary > 0 ? { note: `Günü geçen ${formatAmount(summary.receivedSalary)} maaş yattı sayıldı; bu toplama girmez.` } : undefined}
@@ -375,7 +376,7 @@ export function ObligationsCalendar({ data, loading = false, onPayObligation }: 
 
               {selectedItems.length === 0 ? (
                 <p className="mt-3 rounded-lg border border-dashed border-line-strong bg-raised px-3 py-4 text-sm font-medium text-ink-muted">
-                  Bu güne bağlı planlı yük yok.
+                  Bu gün için kayıtlı ödeme veya tahsilat yok.
                 </p>
               ) : (
                 <div className="mt-3 flex flex-col gap-2">

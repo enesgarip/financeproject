@@ -1,7 +1,8 @@
 // Sürüm yükseltmek eski önbelleği düşürür (activate eşleşmeyen key'leri siler).
 // v4: /assets/ cache-first'e geçti — eski karışık (network-first) girdiler düşsün.
 const CACHE_NAME = 'denge-v4'
-const APP_SHELL = ['/', '/manifest.webmanifest', '/icon.svg']
+const APP_ICON = '/icon.svg?v=sapphire-20261016'
+const APP_SHELL = ['/', '/manifest.webmanifest', APP_ICON]
 
 // --- Web Push (roadmap Y1) ---------------------------------------------------
 // Gönderici edge fonksiyonu { title, body, url, tag } JSON payload yollar.
@@ -15,8 +16,8 @@ self.addEventListener('push', (event) => {
   const title = data.title || 'Denge'
   const options = {
     body: data.body || '',
-    icon: '/icon.svg',
-    badge: '/icon.svg',
+    icon: APP_ICON,
+    badge: APP_ICON,
     tag: data.tag,
     data: { url: data.url || '/' },
   }

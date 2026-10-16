@@ -129,7 +129,7 @@ export function CardLedgerPanel({
 
       {splitProjection.complete && summary.count > 0 ? (
         <p className="mt-1 text-xs text-ink-muted">
-          Kova projeksiyonu: Ekstre {formatAmount(splitProjection.statement)} · Dönem {formatAmount(splitProjection.current)} · Provizyon {formatAmount(splitProjection.provision)}
+          Hareketlerden hesaplanan borç dağılımı: Ekstre {formatAmount(splitProjection.statement)} · Dönem içi {formatAmount(splitProjection.current)} · Provizyon {formatAmount(splitProjection.provision)}
         </p>
       ) : null}
 

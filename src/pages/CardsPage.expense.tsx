@@ -514,7 +514,7 @@ export function QuickExpensePanel({
           >
             <summary className="flex min-h-11 cursor-pointer list-none flex-wrap items-center gap-x-2 px-3 py-2 text-sm font-semibold text-ink [&::-webkit-details-marker]:hidden">
               Ayrıntılar
-              <span className="min-w-0 truncate text-xs font-medium text-ink-muted">
+              <span className="min-w-0 break-words text-xs font-medium text-ink-muted">
                 {spentAt === dateInputValue(new Date()) ? 'Bugün' : formatDate(spentAt)} · {category || 'kategori otomatik'} ·{' '}
                 {canUseInstallments && paymentMode === 'installment' ? 'Taksitli' : 'Peşin'}
               </span>
@@ -538,7 +538,7 @@ export function QuickExpensePanel({
                       : 'Kesim/son ödeme günü kartta tanımlı değil'
                   }
                   className={[
-                    'tap-target inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition',
+                    'tap-target inline-flex max-w-full flex-wrap items-center gap-x-1.5 gap-y-0.5 rounded-xl border px-3 py-1.5 text-xs font-semibold transition',
                     activeCardId === choice.cardId
                       ? 'border-primary/50 bg-primary/10 text-ink'
                       : 'border-line-strong bg-raised text-ink hover:border-success/40',
@@ -547,9 +547,9 @@ export function QuickExpensePanel({
                     .filter(Boolean)
                     .join(' ')}
                 >
-                  <span className="max-w-[8rem] truncate">{choice.label}</span>
+                  <span className="min-w-0 break-words">{choice.label}</span>
                   <span className="tabular-nums text-ink-muted">
-                    {choice.hasSchedule ? `~${choice.daysUntilDue} gün` : 'gün eksik'}
+                    {choice.hasSchedule ? `yaklaşık ${choice.daysUntilDue} gün` : 'Vade günü tanımlı değil'}
                   </span>
                   {choice.isBest ? <span className="font-bold text-success">en geç</span> : null}
                 </button>

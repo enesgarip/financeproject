@@ -7,6 +7,13 @@ Manuel kayıt etiketli Harcama ekle veya hızlı işlem menüsünden doğrudan g
 üst özet ve ilgili döküm menüsüdür. Borç/ledger kuralları değişmedi.
 Last reviewed: 2026-10-16
 
+16 Ekim ikon/metin eki: “Mutabık kaydet” artık “Karşılaştırmayı kaydet”tir;
+farklı banka tutarı kaydedildiğinde durum yine `drift` kalır. “Düzelt ve
+kaydet” ayrı onaylı borç düzeltme eylemidir; delta, hedef borç bölümü ve
+append-only ledger işlemi değişmedi. “Kova projeksiyonu” yalnız arayüzde
+“Hareketlerden hesaplanan borç dağılımı” diye adlandırılır. Kart/taksit adı
+ve tutarı dar alanda sarılır. SQL/TS projeksiyon kaynakları aynı kalır.
+
 This file is the working source of truth for how credit-card debt moves through
 the app. If an RPC, page action, or data-health fix changes one of these rules,
 update this file in the same change.

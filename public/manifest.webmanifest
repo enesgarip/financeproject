@@ -2,8 +2,8 @@
   "name": "Denge",
   "short_name": "Denge",
   "description": "Nakit akışı, kart, borç ve planlı ödeme dengesi.",
-  "theme_color": "#f6f7f3",
-  "background_color": "#f6f7f3",
+  "theme_color": "#f5f7fb",
+  "background_color": "#f5f7fb",
   "display": "standalone",
   "orientation": "portrait",
   "start_url": "/",
@@ -12,39 +12,57 @@
     {
       "name": "Harcama ekle",
       "short_name": "Harcama",
-      "description": "Kart harcaması gir",
-      "url": "/kartlar?section=islemler",
-      "icons": [{ "src": "/pwa-192x192.png", "sizes": "192x192", "type": "image/png" }]
+      "description": "Hesap veya kart harcamasını kaydet",
+      "url": "/kartlar?section=kartlar&panel=manuel",
+      "icons": [
+        {
+          "src": "/pwa-192x192.png?v=sapphire-20261016",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
     },
     {
-      "name": "Planlı ödemeler",
+      "name": "Ödemeler",
       "short_name": "Ödemeler",
-      "description": "Yaklaşan ödeme ve yükümlülükler",
+      "description": "Yaklaşan ödemeleri ve tahsilatları gör",
       "url": "/odemeler",
-      "icons": [{ "src": "/pwa-192x192.png", "sizes": "192x192", "type": "image/png" }]
+      "icons": [
+        {
+          "src": "/pwa-192x192.png?v=sapphire-20261016",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
     },
     {
       "name": "Analiz",
       "short_name": "Analiz",
       "description": "Net değer ve nakit akışı analizi",
       "url": "/analiz",
-      "icons": [{ "src": "/pwa-192x192.png", "sizes": "192x192", "type": "image/png" }]
+      "icons": [
+        {
+          "src": "/pwa-192x192.png?v=sapphire-20261016",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
     }
   ],
   "icons": [
     {
-      "src": "/icon.svg",
+      "src": "/icon.svg?v=sapphire-20261016",
       "sizes": "512x512",
       "type": "image/svg+xml",
       "purpose": "any"
     },
     {
-      "src": "/pwa-192x192.png",
+      "src": "/pwa-192x192.png?v=sapphire-20261016",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "/pwa-512x512.png",
+      "src": "/pwa-512x512.png?v=sapphire-20261016",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"

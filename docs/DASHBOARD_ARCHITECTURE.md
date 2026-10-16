@@ -8,6 +8,12 @@ task is dashboard-specific.
 
 ## 16 Ekim 2026 — mobil vade önceliği
 
+İkon/metin eki: `LineRow` mobilde ekstre/hesap adlarını kesmez;
+ad/açıklamadan sonra tutar/eylem satırı gelir. Banka kontrol önerileri
+“karşılaştırma” diliyle yazılır; Ekstre karşılaştırması aynı arşiv/veri
+kaynağını kullanır. Öneri açıklaması iki satırla kırpılmaz. Nötr bölüm
+ikonları safirdir; finansal durum rengi ve gizlilik korunur.
+
 Ana tutarın ardından yaklaşan üç vade ve açık Öde/Tahsil et işareti gelir.
 Tampon/hesap açıklaması, odak önerileri ve grafik daha aşağıdadır. Alacak ve
 doğrulanamayan rezerv uyarıları korunur. Nötr vade tipleri alarm rengi taşımaz;

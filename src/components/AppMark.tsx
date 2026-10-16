@@ -7,7 +7,7 @@ type AppMarkProps = {
 export function AppMark({ className }: AppMarkProps) {
   return (
     <img
-      src="/icon.svg"
+      src="/icon.svg?v=sapphire-20261016"
       alt=""
       aria-hidden="true"
       className={cn('block shrink-0 overflow-hidden rounded-xl object-cover', className)}

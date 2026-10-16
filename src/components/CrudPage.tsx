@@ -831,7 +831,7 @@ export function RowMenu({
         aria-label={label}
         className="tap-target grid size-10 place-items-center rounded-lg border border-line-strong bg-page text-ink-muted transition hover:bg-black/[.03] dark:hover:bg-white/[.04] hover:text-ink"
       >
-        <MoreVertical size={18} />
+        <MoreVertical size={18} strokeWidth={1.8} className="text-primary" aria-hidden="true" />
       </button>
       {open ? (
         <div

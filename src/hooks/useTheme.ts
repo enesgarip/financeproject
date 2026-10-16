@@ -43,7 +43,7 @@ export function useTheme() {
     document.documentElement.style.colorScheme = isDark ? 'dark' : 'light'
     // Tarayıcı/PWA üst bandı da elle seçilmiş tema dahil aynı zemini izler.
     document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]').forEach((meta) => {
-      meta.content = isDark ? '#0d120f' : '#f6f7f3'
+      meta.content = isDark ? '#101623' : '#f5f7fb'
     })
   }, [isDark])
 

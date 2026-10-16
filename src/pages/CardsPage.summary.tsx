@@ -59,7 +59,7 @@ export function CardsSummary({ rows, installments, statements, statementPayments
   ] as const
   return (
     <section className="pt-3" aria-label="Kredi kartları özeti">
-      <HeroNumber label="Ödenecek ekstre" value={openStatement} unavailable={statementsLoading || Boolean(statementError)} description={statementsLoading ? 'Ekstreler yükleniyor…' : statementError || 'Kısmi ödemeler düşülmüş kalan · kart yükünden farklıdır.'} />
+      <HeroNumber label="Ödenecek ekstre" value={openStatement} unavailable={statementsLoading || Boolean(statementError)} description={statementsLoading ? 'Ekstreler yükleniyor…' : statementError || 'Kısmi ödemeler düşüldü. Dönem içi harcamalar ve gelecek taksitler bu toplamda yok.'} />
       <details className="mt-2"><summary className="min-h-11 cursor-pointer py-3 text-sm font-semibold text-ink-muted">Borç kırılımı ve dökümler</summary>
       <div className="grid grid-cols-2 gap-x-5 divide-y-0 border-b border-line">
         {metrics.map((metric) => (

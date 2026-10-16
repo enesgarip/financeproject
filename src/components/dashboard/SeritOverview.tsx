@@ -197,7 +197,7 @@ export function SeritOverview({
 
         {/* Mobil: sıradaki üç vade, yükseltilmiş grup. */}
         <section className="mt-6 lg:hidden">
-          <SectionEyebrow className="mb-2.5 flex items-center gap-2"><CalendarDays size={18} strokeWidth={1.8} aria-hidden="true" />Yaklaşan ödemeler</SectionEyebrow>
+          <SectionEyebrow className="mb-2.5 flex items-center gap-2"><CalendarDays size={18} strokeWidth={1.8} className="text-primary" aria-hidden="true" />Yaklaşan ödemeler</SectionEyebrow>
           {nextThree.length === 0 ? (
             <p className="text-[13px] text-ink-muted">Ayın kalanında planlı vade yok.</p>
           ) : (
@@ -348,7 +348,7 @@ export function SeritOverview({
         <SidePanel className="order-first lg:order-none" title="Hesapların">
           <p className="mt-1 text-xs text-ink-muted">Toplam {format(totalCashAssets).amount} {format(totalCashAssets).unit}</p>
           {liquidAccounts.length === 0 ? (
-            <p className="mt-2 text-[13px] text-ink-muted">Kayıtlı likit hesap yok.</p>
+            <p className="mt-2 text-[13px] text-ink-muted">Kayıtlı banka hesabı veya nakit cüzdanı yok.</p>
           ) : (
             <LineGroup className="mt-1">
               {liquidAccounts.map((account) => (

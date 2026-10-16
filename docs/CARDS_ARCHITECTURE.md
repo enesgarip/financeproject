@@ -2,6 +2,13 @@
 
 Last reviewed: 2026-10-16
 
+İkon/metin eki: banka karşılaştırmasında “Karşılaştırmayı kaydet” yalnız
+sonucu kaydeder; ayrı “Farkı düzelt” eylemi aynen korunur. Borç dağılımı
+teknik “kova” adıyla sunulmaz. Harcama kart kıyaslarında adlar sarılır;
+tanımsız vade günü açıkça söylenir. Ekstre özeti, dönem içi ve gelecek
+taksitleri içermediğini açıklar. PWA Harcama ekle kısayolu `panel=manuel`
+görev rotasını kullanır. Borç/ödeme hesapları ve kayıt kaynakları değişmedi.
+
 16 Ekim 2026: kart ayrıntısı nötr safir yüzey + küçük banka logosuyla çizilir;
 menü taşmaya açık kalır. Açık ekstre, vade ve ödeme eylemi dönem-limit-taksit
 dökümünden önce; dönem dökümü varsayılan kapalıdır. Kart listesinde açık ekstre

@@ -49,15 +49,15 @@ const help = {
   calculation:
     'Her banka hesabı / kredi kartı için uygulamanın güncel rakamı (bakiye veya borç) ile bankada gördüğün gerçek rakamı karşılaştırır. Fark = uygulama − gerçek.',
   importance:
-    'Rakamların sessizce kayması manuel finans takibini bırakmanın 1 numaralı sebebidir. Düzenli mutabakat, kaçak veya eksik girilmiş bir işlemi erken yakalar.',
-  source: 'Senin girdiğin gerçek bakiye + uygulamanın o anki rakamı; her mutabakat kaydedilir.',
+    'Bankadaki tutarla düzenli karşılaştırma, eksik veya hatalı girilmiş işlemleri fark etmeni sağlar.',
+  source: 'Senin girdiğin banka tutarı ve uygulamadaki güncel tutar; her karşılaştırma kaydedilir.',
 } satisfies HelpTooltipContent
 
 const STATUS_META: Record<ReconcileStatus, { variant: 'destructive' | 'secondary' | 'warning' | 'success'; label: string }> = {
   drift: { variant: 'destructive', label: 'Fark var' },
-  never: { variant: 'secondary', label: 'Hiç mutabık olunmadı' },
-  stale: { variant: 'warning', label: 'Tazele' },
-  ok: { variant: 'success', label: 'Mutabık' },
+  never: { variant: 'secondary', label: 'Karşılaştırılmadı' },
+  stale: { variant: 'warning', label: 'Yeniden karşılaştır' },
+  ok: { variant: 'success', label: 'Uyumlu' },
 }
 
 export function LiveReconciliationPanel({
@@ -249,11 +249,11 @@ export function LiveReconciliationPanel({
           <div>
             <CardTitle className="flex items-center gap-2 text-base">
               <Scale size={17} />
-              Canlı bakiye mutabakatı
-              <HelpTooltip title="Canlı bakiye mutabakatı" content={help} />
+              Bankayla bakiye karşılaştırması
+              <HelpTooltip title="Bankayla bakiye karşılaştırması" content={help} />
             </CardTitle>
             <p className="mt-1 text-sm text-ink-muted">
-              Bankadaki gerçek rakamı gir; uygulama ile farkı anında gör ve mutabık olarak kaydet.
+              Bankada gördüğün bakiye veya borcu gir; uygulamadaki tutarla karşılaştırıp sonucu kaydet.
             </p>
           </div>
           {actionableCount > 0 ? <Badge variant="warning">{actionableCount}</Badge> : null}
@@ -287,17 +287,17 @@ export function LiveReconciliationPanel({
                   <p className="mt-0.5 text-xs text-ink-muted">
                     Uygulama: <span className="font-semibold text-ink">{formatAmount(item.app)}</span>
                     {item.last
-                      ? ` · Son mutabakat: ${formatDate(item.last.reconciled_at.slice(0, 10))}${
+                      ? ` · Son karşılaştırma: ${formatDate(item.last.reconciled_at.slice(0, 10))}${
                           item.daysSince != null ? ` (${item.daysSince} gün önce)` : ''
                         }`
-                      : ' · Henüz mutabakat yok'}
+                          : ' · Henüz karşılaştırma yok'}
                     {item.status === 'drift' && item.last
                       ? ` · Kayıtlı fark ${item.last.drift >= 0 ? '+' : ''}${formatAmount(item.last.drift)}`
                       : ''}
                   </p>
                   {history.driftCount >= 2 ? (
                     <p className="mt-1 text-xs font-semibold text-warning">
-                      Son {history.sampleCount} mutabakatın {history.driftCount} tanesinde fark çıktı · en büyüğü{' '}
+                      Son {history.sampleCount} karşılaştırmanın {history.driftCount} tanesinde fark çıktı · en büyüğü{' '}
                       {formatAmount(history.largestDriftTL)}
                       {history.hasLegacyRows ? ' · eski kayıtların akıbeti bilinmiyor, sayım eksik olabilir' : ''}
                     </p>
@@ -313,7 +313,7 @@ export function LiveReconciliationPanel({
                     onClick={() => loadDriftCause(item.card.id, item.target, item.last!.reconciled_at)}
                   >
                     {expandedDrift[item.card.id] ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                    Son mutabakattan bu yana hareketler
+                    Son karşılaştırmadan bu yana hareketler
                   </button>
                   {expandedDrift[item.card.id] ? (
                     <div className="mt-1.5 rounded-md bg-page px-2.5 py-2 text-xs">
@@ -333,7 +333,7 @@ export function LiveReconciliationPanel({
                             <div className="max-h-40 space-y-1 overflow-y-auto">
                               {summary.events.map((event, index) => (
                                 <div key={index} className="flex items-center justify-between gap-2 text-ink-muted">
-                                  <span className="truncate">
+                                  <span className="min-w-0 break-words">
                                     {formatDate(event.occurred_at.slice(0, 10))} · {event.kind}
                                     {event.note ? ` · ${event.note}` : ''}
                                   </span>
@@ -378,7 +378,7 @@ export function LiveReconciliationPanel({
                       reconciledNow ? 'text-success' : 'text-destructive'
                     }`}
                   >
-                    {reconciledNow ? 'Mutabık ✓' : `Fark ${liveDrift >= 0 ? '+' : ''}${formatAmount(liveDrift)}`}
+                    {reconciledNow ? 'Tutarlar uyumlu ✓' : `Fark ${liveDrift >= 0 ? '+' : ''}${formatAmount(liveDrift)}`}
                   </span>
                 ) : null}
                 <Button
@@ -387,9 +387,9 @@ export function LiveReconciliationPanel({
                   size="sm"
                   disabled={!hasInput || isBusy}
                   onClick={() => handleSave(item.card.id, item.app, item.target)}
-                  aria-label={`${item.card.bank_name} ${item.card.card_name} mutabakatını kaydet`}
+                  aria-label={`${item.card.bank_name} ${item.card.card_name} karşılaştırmasını kaydet`}
                 >
-                  {savingId === item.card.id ? 'Kaydediliyor…' : 'Mutabık kaydet'}
+                  {savingId === item.card.id ? 'Kaydediliyor…' : 'Karşılaştırmayı kaydet'}
                 </Button>
                 {canQuickReconcile ? (
                   <Button
@@ -416,14 +416,14 @@ export function LiveReconciliationPanel({
             ? `${cardTitle(pendingCorrection.cardId)}: uygulama ${formatAmount(pendingCorrection.app)}, banka ${formatAmount(pendingCorrection.real)}. Toplam borç bankadaki rakama çekilir; fark ${formatAmount(Math.abs(computeDrift(pendingCorrection.app, pendingCorrection.real)))}.`
             : ''
         }
-        confirmLabel="Düzelt ve mutabık kaydet"
+        confirmLabel="Düzelt ve kaydet"
         loading={correctingId != null}
         onConfirm={() => void runCorrection()}
         onCancel={() => setPendingCorrection(null)}
       >
         {pendingCorrection && computeDrift(pendingCorrection.app, pendingCorrection.real) < 0 ? (
           <fieldset className="grid gap-2 text-sm">
-            <legend className="mb-1 text-xs font-semibold text-ink-muted">Eksik tutar hangi kovaya yazılsın?</legend>
+            <legend className="mb-1 text-xs font-semibold text-ink-muted">Eksik tutar hangi borç bölümüne eklensin?</legend>
             {BUCKET_OPTIONS.map((option) => (
               <label key={option.value} className="flex cursor-pointer items-start gap-2 rounded-lg border border-line-strong bg-page px-3 py-2">
                 <input
@@ -452,5 +452,5 @@ export function LiveReconciliationPanel({
 const BUCKET_OPTIONS: Array<{ value: ReconcileBucket; label: string; hint: string }> = [
   { value: 'current', label: 'Dönem içi harcama (önerilen)', hint: 'Kaçırılmış bir harcama gibi bir sonraki ekstreye girer.' },
   { value: 'statement', label: 'Açık ekstre borcu', hint: 'Kesilmiş ekstrede eksik kalan bir kalemse.' },
-  { value: 'none', label: 'Yalnız toplamı düzelt', hint: 'Kovalara dokunma; Veri Sağlığı farkı "eksik pay" olarak gösterir.' },
+  { value: 'none', label: 'Yalnız toplamı düzelt', hint: 'Borç dağılımı değişmez; Veri kontrolü farkı "eksik pay" olarak gösterir.' },
 ]

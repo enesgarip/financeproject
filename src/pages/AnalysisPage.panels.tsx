@@ -95,8 +95,8 @@ export function UpcomingInstallments({ data }: { data: AnalysisData }) {
             <div key={item.id} className="rounded-xl bg-page px-3 py-2 text-sm">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <div className="flex min-w-0 items-center gap-2">
-                    <p className="truncate font-semibold text-ink">{item.title}</p>
+                  <div className="flex min-w-0 flex-wrap items-center gap-2">
+                    <p className="break-words font-semibold text-ink">{item.title}</p>
                     <Badge variant={item.tone as 'default' | 'secondary' | 'destructive' | 'outline'}>{item.statusLabel}</Badge>
                   </div>
                   <p className="mt-0.5 text-xs text-ink-muted">
@@ -487,7 +487,7 @@ export function SubscriptionsPanel({ data }: { data: AnalysisData }) {
             <div key={item.id} className={`rounded-xl px-3 py-2 text-sm ${item.isActive ? 'bg-page' : 'bg-page opacity-60'}`}>
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="truncate font-semibold text-ink">{item.title}</p>
+                  <p className="break-words font-semibold text-ink">{item.title}</p>
                   <p className="mt-0.5 text-xs text-ink-muted">
                     {item.category}
                     {item.source === 'recurring_expense' ? ` · ${item.monthCount} aydır tekrarlıyor` : ' · planlı ödeme'}

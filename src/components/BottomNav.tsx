@@ -23,7 +23,7 @@ export function BottomNav() {
             {({ isActive }) => {
               const active = isActive || item.activePaths?.includes(pathname)
               return <>
-                <item.icon size={21} strokeWidth={active ? 2.1 : 1.8} className={active ? 'text-primary' : 'text-ink-muted'} aria-hidden="true" />
+                <item.icon size={21} strokeWidth={active ? 2.1 : 1.8} className="text-primary" aria-hidden="true" />
                 <span className={cn('text-xs leading-4', active ? 'font-semibold text-primary' : 'text-ink-muted')}>{item.label}</span>
               </>
             }}

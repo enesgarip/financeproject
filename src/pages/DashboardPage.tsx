@@ -413,7 +413,7 @@ export function DashboardPage() {
           aria-controls={detailsPanelId}
           className="group flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-line-strong bg-raised px-4 py-3 text-sm font-bold text-ink-muted transition hover:border-primary/30 hover:bg-primary/5 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background"
         >
-          <span>{showDetails ? 'Detayları gizle' : 'Tüm detayları göster'}</span>
+          <span>{showDetails ? 'Ayrıntıları gizle' : 'Tüm ayrıntıları göster'}</span>
           <ChevronDown
             size={16}
             aria-hidden="true"

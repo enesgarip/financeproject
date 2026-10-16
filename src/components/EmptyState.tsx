@@ -1,5 +1,5 @@
-import { BarChart3, Inbox, PiggyBank, Plus, Receipt, Target, Users, WalletCards } from 'lucide-react'
-import type { ComponentType, ReactNode } from 'react'
+import { BarChart3, Inbox, PiggyBank, Receipt, Target, Users, WalletCards, type LucideIcon } from 'lucide-react'
+import type { ReactNode } from 'react'
 import { cn } from '../lib/utils'
 
 type EmptyStateVariant =
@@ -12,18 +12,15 @@ type EmptyStateVariant =
   | 'reports'
   | 'payments'
 
-const variantConfig: Record<
-  EmptyStateVariant,
-  { icon: ComponentType<{ className?: string }>; color: string; bg: string }
-> = {
-  default:      { icon: Inbox,       color: 'text-primary',     bg: 'bg-primary/10' },
-  transactions: { icon: Receipt,     color: 'text-info',        bg: 'bg-info/10' },
-  budget:       { icon: WalletCards, color: 'text-warning',     bg: 'bg-warning/10' },
-  goals:        { icon: Target,      color: 'text-success',     bg: 'bg-success/10' },
-  accounts:     { icon: PiggyBank,   color: 'text-primary',     bg: 'bg-primary/10' },
-  debts:        { icon: Users,       color: 'text-destructive', bg: 'bg-destructive/10' },
-  reports:      { icon: BarChart3,   color: 'text-info',        bg: 'bg-info/10' },
-  payments:     { icon: WalletCards, color: 'text-warning',     bg: 'bg-warning/10' },
+const variantIcons: Record<EmptyStateVariant, LucideIcon> = {
+  default: Inbox,
+  transactions: Receipt,
+  budget: WalletCards,
+  goals: Target,
+  accounts: PiggyBank,
+  debts: Users,
+  reports: BarChart3,
+  payments: WalletCards,
 }
 
 type EmptyStateProps = {
@@ -43,7 +40,7 @@ export function EmptyState({
   size = 'default',
   className,
 }: EmptyStateProps) {
-  const { icon: Icon, color, bg } = variantConfig[variant]
+  const Icon = variantIcons[variant]
 
   const paddingClass = {
     sm:      'px-4 py-7',
@@ -73,9 +70,9 @@ export function EmptyState({
       )}
     >
       {/* Icon */}
-      <div className={cn('mx-auto grid place-items-center rounded-2xl ring-1', iconSizeClass, bg, color,
+      <div className={cn('mx-auto grid place-items-center rounded-2xl bg-primary/10 text-primary ring-1', iconSizeClass,
         'ring-current/20')}>
-        <Icon className="size-[40%]" />
+        <Icon className="size-[40%]" strokeWidth={1.8} aria-hidden="true" />
       </div>
 
       {/* Text */}
@@ -87,12 +84,7 @@ export function EmptyState({
       {/* CTA */}
       {action ? (
         <div className="mt-5 flex justify-center">{action}</div>
-      ) : (
-        <div className="mt-5 inline-flex items-center gap-2 rounded-lg bg-page px-3 py-1.5 text-xs font-medium text-ink-muted ring-1 ring-line-strong">
-          <Plus size={12} />
-          İlk kayıtla ekran anlam kazanır
-        </div>
-      )}
+      ) : null}
     </div>
   )
 }

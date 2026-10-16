@@ -64,17 +64,17 @@ export function LineRow({
 
   const body = (
     <>
-      <div className="flex min-w-0 items-center gap-3">
+      <div className="flex min-w-0 items-start gap-3 sm:items-center">
         {lead}
         <div className="min-w-0">
-          <p className="truncate text-[14.5px] font-semibold text-ink">{title}</p>
+          <p className="break-words text-[14.5px] font-semibold text-ink">{title}</p>
           {subtitle ? <p className="mt-0.5 break-words text-xs leading-relaxed text-ink-muted">{subtitle}</p> : null}
         </div>
       </div>
 
-      <div className="shrink-0 text-right">
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 sm:block sm:shrink-0 sm:text-right">
         {money ? (
-          <p className="serit-num text-[17px] font-semibold" style={{ color: SERIT_TEXT[amountTone] }}>
+          <p className="serit-num break-words text-[17px] font-semibold" style={{ color: SERIT_TEXT[amountTone] }}>
             {money.amount} {money.unit}
           </p>
         ) : null}
@@ -83,7 +83,7 @@ export function LineRow({
     </>
   )
 
-  const shell = 'flex w-full items-center justify-between gap-3 py-[13px] text-left'
+  const shell = 'flex w-full flex-col items-stretch justify-between gap-2 py-[13px] text-left sm:flex-row sm:items-center sm:gap-3'
 
   if (!onClick) return <div className={shell}>{body}</div>
 

@@ -4,6 +4,29 @@ Tarih: 2026-09-05. Durum: ilk düzenleme paketi ve aşağıdaki adlandırmalar u
 Kullanıcı kısa/doğal dil planını uygulamak üzere onayladı. Finans hesapları ve
 veri yazma davranışı korunuyor. Sonraki geniş kapsamlı mesaj taraması açık iştir.
 
+## 16 Ekim 2026 — safir metin ve kırpılma eki
+
+Kullanıcının yeni inceleme/yayın isteğiyle 19 rotanın mobil açık içerikleri
+ölçüldü. Özet'teki ekstre adları, analiz raporu kredi adları/işlem açıklamaları
+ve kart kıyasındaki adlar kesiliyordu; satıra yayılır. Ortak mobil `LineRow`
+ad/açıklamayı tutardan ayırır. Yardım ve boş durumlar aynı safir ikon dilindedir.
+
+| Önce | Şimdi | Anlam |
+| --- | --- | --- |
+| Takvim (Plan sekmesi/sayfa başlığı) | Ödemeler | Yaklaşanlar ve Takvim aynı alanın iki görünümü |
+| Kalan ay yükü / Beklenen giriş | Kalan ödemeler / Beklenen gelir | Rakamın yönü ve kapsamı anlaşılır |
+| Bu hafta (0–7 gün) | Önümüzdeki 7 gün | Takvim haftası değil kayan pencere |
+| Maaş için varsayılan Borç rozeti | Maaş | Gelir türü doğru gösterilir |
+| Hiç mutabık olunmadı / Mutabık | Karşılaştırılmadı / Uyumlu | Banka ile kontrolün durumu |
+| Mutabık kaydet | Karşılaştırmayı kaydet | Farklı tutar da kaydedilebilir; düzelmiş gibi sunulmaz |
+| Kova projeksiyonu | Hareketlerden hesaplanan borç dağılımı | Teknik türetim sade anlatılır |
+| gün eksik | Vade günü tanımlı değil | Kart bilgisinde neyin eksik olduğu belli |
+| Bu güne bağlı planlı yük yok | Bu gün için kayıtlı ödeme veya tahsilat yok | Boş günün kapsamı |
+
+Finansal tutar/ödeme/karşılaştırma hesapları ve kalıcı kayıt içerikleri
+değişmedi. Bu tur bütün hata, import ve silme durumlarının tam denetimi değildir.
+Kapsam, kanıt ve doğrulama: `docs/UI_ICON_COPY_2026-10-16.md`.
+
 Uygulama notları:
 - “Kişiler” dar sekmede korundu; sayfa başlığı “Borç ve alacaklar”.
 - Takvimde önerilen “Ödenebilir kayıt”, kaynak incelemesinde tahsilatları da
