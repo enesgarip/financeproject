@@ -2,6 +2,12 @@
 
 Last reviewed: 2026-10-16
 
+Kalıcı kabukta günlük snapshot: `app/useDailyNetWorthSnapshot.ts` gezinmede
+damgayı kontrol eder; çalışan koşu kesilmez/çoğaltılmaz. Yeni gün ve başarısız
+kayıt sonraki gezinmede yeniden denenir; oturum değişimi/unmount iptal eder.
+Regresyon: `app/useDailyNetWorthSnapshot.test.tsx`; eski günün cache'ini
+kullanmama kuralı korunur. Sözleşme: `docs/APP_PERFORMANCE.md`.
+
 16 Ekim uygulama performansı: `App.tsx` kabuğu sayfa geçişinde korur;
 sayfa `PageTransition` anahtarı sürer. `pages/CardsPage.hooks.ts` kart
 detaylarını `app/cardPageDataKey.ts` kullanıcı prefix'inde TanStack cache'ler;

@@ -2,6 +2,12 @@
 
 Last reviewed: 2026-10-16
 
+Kalıcı Layout günlük fotoğrafı `app/useDailyNetWorthSnapshot.ts` ile başlatır.
+Geçişler 4 sn beklemeyi başa döndürmez; yeni yerel gün/başarısız kayıt sonraki
+gezinmede yeniden kontrol edilir. Oturum değişimi/unmount koşuyu iptal eder.
+Yalnız aynı yerel günün finance cache'i kullanılır. Regresyon/ölçüm:
+`docs/APP_PERFORMANCE.md`.
+
 This note is a quick map for changes touching `/` (`DashboardPage`). Start with
 `CLAUDE.md` and `docs/AI_CONTEXT_INDEX.md`; use this file after you know the
 task is dashboard-specific.

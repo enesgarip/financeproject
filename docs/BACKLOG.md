@@ -1,5 +1,14 @@
 # Priority Backlog
 
+## 2026-10-16 — Kalıcı kabukta günlük snapshot yaşam döngüsü — UYGULANDI
+
+Performans paketinin son kontrolü: kabuğun yeniden kurulmasına dayanan günlük
+net değer/goal snapshot tetiklemesi kalıcı kabuğa uyarlandı. Gezinme çalışan
+4 sn gecikmeyi/koşuyu kesmez; aynı gün başarılı kayıt yinelenmez. Ertesi yerel
+gün veya başarısız kayıt sonraki gezinmede yeniden kontrol edilir. Oturum
+değişimi/unmount iptal eder; dünkü cache bugünkü kayda taşınmaz. Finans hesabı
+ve snapshot RPC'si aynı. Dört regresyon `src/app/useDailyNetWorthSnapshot.test.tsx`.
+
 ## 2026-10-16 — Sayfa geçişi ve kart veri yüklemesi — UYGULANDI
 
 Kullanıcı onaylı üç performans düzeltmesi: Routes pathname anahtarı kaldırıldı;
