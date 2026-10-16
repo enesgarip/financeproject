@@ -1,3 +1,5 @@
+import { useInvalidateFinanceSnapshot } from '../app/useFinanceSnapshot'
+import { useInvalidateCrudRows } from '../app/useCrudRows'
 import { QueryError } from '../components/ui/query-error'
 import { Activity, CheckCircle2, RefreshCw, Settings, Undo2, Wrench } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
@@ -68,6 +70,8 @@ function readLegacyDismissedIssueIds(): string[] {
 }
 
 export function DataHealthPage() {
+  const invalidateSnapshot = useInvalidateFinanceSnapshot()
+  const invalidateCards = useInvalidateCrudRows('cards')
   const { formatAmount } = useBalancePrivacy()
   const [data, setData] = useState<HealthData>(emptyData)
   const [loadFailed, setLoadFailed] = useState(false)
@@ -144,6 +148,13 @@ export function DataHealthPage() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadData()
   }, [loadData])
+
+  // Başka sayfalarda cache'lenen kart verisi düzeltme/ödeme/geri alma sonrası
+  // eski kalmasın. Salt okunur ilk tarama/yenileme bu invalidation'ı yapmaz.
+  async function refreshAfterChange() {
+    const [latest] = await Promise.all([loadData(), invalidateSnapshot(), invalidateCards()])
+    return latest
+  }
 
   const issues = useMemo(() => buildIssues(data), [data])
   const dismissIssue = useCallback(async (issueId: string) => {
@@ -229,7 +240,7 @@ export function DataHealthPage() {
       if (undoBatch) {
         setUndoStack((current) => [undoBatch, ...current].slice(0, 5))
       }
-      await loadData()
+      await refreshAfterChange()
       const resolution = resolveHealthIssue(issue)
       setMessage(
         undoBatch
@@ -263,7 +274,7 @@ export function DataHealthPage() {
       if (result.error) throw new Error(result.error.message ?? 'Güvenli düzeltmeler uygulanamadı.')
       if (!result.receipt) throw new Error('Güvenli düzeltme sonucu alınamadı.')
 
-      await loadData()
+      await refreshAfterChange()
       if (result.receipt.status === 'running') {
         setError('Aynı güvenli düzeltme hâlâ sunucuda çalışıyor. Bulguları yenileyerek sonucu kontrol et.')
       } else if (result.receipt.status === 'conflict') {
@@ -280,7 +291,7 @@ export function DataHealthPage() {
       }
       setFixAllRequest(null)
     } catch (fixError) {
-      await loadData()
+      await refreshAfterChange()
       setError(
         fixError instanceof Error
           ? fixError.message
@@ -324,10 +335,10 @@ export function DataHealthPage() {
         await applyUndoEntry(entry)
       }
       setUndoStack((current) => current.filter((item) => item.id !== batch.id))
-      await loadData()
+      await refreshAfterChange()
       setMessage('Son veri sağlığı düzeltmesi geri alındı.')
     } catch (undoError) {
-      await loadData()
+      await refreshAfterChange()
       setError(undoError instanceof Error ? undoError.message : 'Geri alma tamamlanamadı.')
     } finally {
       setUndoing(false)
@@ -360,7 +371,7 @@ export function DataHealthPage() {
       {
         cards: data.cards,
         reload: async () => {
-          await loadData()
+          await refreshAfterChange()
         },
         detail: (
           <>
@@ -387,7 +398,7 @@ export function DataHealthPage() {
         return
       }
 
-      const loaded = await loadData()
+      const loaded = await refreshAfterChange()
       if (!loaded) {
         setReviewError('Harcama iptal edildi ancak güncel kontroller yüklenemedi. Sayfayı yenile.')
         return
@@ -419,7 +430,7 @@ export function DataHealthPage() {
       // öneriyordu.
       invalidateCategoryMemory()
 
-      const loaded = await loadData()
+      const loaded = await refreshAfterChange()
       if (!loaded) {
         setReviewError('Harcama güncellendi ancak güncel kontroller yüklenemedi. Sayfayı yenile.')
         return
@@ -547,7 +558,7 @@ export function DataHealthPage() {
             <LiveReconciliationPanel
               cards={data.cards}
               onChanged={async () => {
-                await loadData()
+                await refreshAfterChange()
               }}
             />
           </section>

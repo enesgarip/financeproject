@@ -197,6 +197,9 @@ canlıya alınır. Üretim `/login` smoke testi başarısızsa frontend otomatik
 alınır. Her workflow süre raporu üretir. Ayrıntı:
 [`docs/PIPELINE.md`](docs/PIPELINE.md).
 
+Uygulama yüklemesi, cache tazeliği ve ölçülen gezinme iyileştirmeleri:
+[`docs/APP_PERFORMANCE.md`](docs/APP_PERFORMANCE.md).
+
 ## Katkı & AI ajanları
 
 Bu depo AI ajanlarıyla (Claude Code, Codex) çalışacak şekilde belgelenmiştir. Bir

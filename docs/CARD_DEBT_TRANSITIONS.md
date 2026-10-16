@@ -7,6 +7,13 @@ Manuel kayıt etiketli Harcama ekle veya hızlı işlem menüsünden doğrudan g
 üst özet ve ilgili döküm menüsüdür. Borç/ledger kuralları değişmedi.
 Last reviewed: 2026-10-16
 
+16 Ekim çalışma zamanı eki: kart okuma cache'i kullanıcıya özeldir ve para
+hareketi/bakım sonrasında geçersiz kılınır. Arşiv + kısmi ödemeler birlikte
+yayımlanır; başarısız sorgu sıfır borç sayılmaz. Hesaplar ekranında kesim
+adayı kontrolü korunur; kesin kesim kararı gerçek arşivlerle verilir.
+Kapalı yardımcı paneller ilk açılışta yüklenir. Borç geçişi, RPC, ledger,
+taksit sayfalaması ve açık ekstre kapsamı değişmez. `docs/APP_PERFORMANCE.md`.
+
 16 Ekim test hızlandırma eki: dosya guard'ları Node'a taşındı; saf veri
 sağlığı fixture'ının import'u repo'dan ayrıldı. Kart borcu/ledger hesapları,
 finans testlerinin kapsamı, SQL ikiz testleri ve coverage eşikleri değişmez.

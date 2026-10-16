@@ -37,6 +37,7 @@ import { CardDatum } from './CardsPage.overview'
 import { LineGroup } from '../components/serit'
 import { formatCurrency } from '../utils/formatCurrency'
 import { Button } from '../components/ui/button'
+import { DeferredDetails } from '../components/ui/deferred-details'
 
 function AccountRecentTransactions({
   card,
@@ -245,11 +246,10 @@ export function CreditAccountListCard({
         </div>
 
         <div className="mb-4">{rowActions}</div>
-        <details open={ledgerOpen || undefined} className="group border-t border-line pt-1">
-          <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between text-sm font-semibold text-ink-muted marker:hidden hover:text-ink [&::-webkit-details-marker]:hidden">
+        <DeferredDetails defaultOpen={ledgerOpen} className="group border-t border-line pt-1" summaryClassName="flex min-h-11 cursor-pointer list-none items-center justify-between text-sm font-semibold text-ink-muted marker:hidden hover:text-ink [&::-webkit-details-marker]:hidden" summary={<>
             Hesap bilgileri ve son hareketler
             <span aria-hidden="true" className="text-xs transition-transform group-open:rotate-180">⌄</span>
-          </summary>
+          </>}>
           <LineGroup>
             {row.note ? <div className="py-3 text-sm"><p className="text-xs text-ink-muted">Not</p><p className="mt-1 whitespace-pre-wrap break-words text-ink">{row.note}</p></div> : null}
           </LineGroup>
@@ -270,7 +270,7 @@ export function CreditAccountListCard({
           ) : null}
 
           {ledgerOpen ? <AccountLedgerPanel card={row} onChanged={onChanged} formatAmount={formatAmount} /> : <AccountRecentTransactions card={row} formatAmount={formatAmount} />}
-        </details>
+        </DeferredDetails>
       </article>
     )
   }
@@ -428,8 +428,7 @@ export function CreditAccountListCard({
       </details>
 
       {detailsOpen ? (
-        <details className="mt-4 rounded-lg border border-line-strong bg-surface-muted/70 p-3 ring-1 ring-line-strong">
-          <summary className="min-h-11 cursor-pointer py-3 text-sm font-semibold">Kart ayarları ve kayıt geçmişi</summary>
+        <DeferredDetails className="mt-4 rounded-lg border border-line-strong bg-surface-muted/70 p-3 ring-1 ring-line-strong" summaryClassName="min-h-11 cursor-pointer py-3 text-sm font-semibold" summary="Kart ayarları ve kayıt geçmişi">
           <div className="mt-4 grid grid-cols-2 gap-2 min-[620px]:grid-cols-3">
             <MiniStat label="Ekstre günü" value={formatMonthlyDay(row.statement_day)} />
             <MiniStat label="Limit tipi" value={stats.isShared ? 'Ortak limit' : 'Tekil limit'} tone={stats.isShared ? 'info' : 'neutral'} />
@@ -451,7 +450,7 @@ export function CreditAccountListCard({
           <CardStatementProjectionPanel card={row} installments={cardInstallments} formatAmount={formatAmount} />
           <CardAliasPanel card={row} />
           <CardLedgerPanel card={row} onChanged={onChanged} formatAmount={formatAmount} />
-        </details>
+        </DeferredDetails>
       ) : null}
       </div>
     </article>

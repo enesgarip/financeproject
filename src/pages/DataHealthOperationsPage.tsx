@@ -1,5 +1,6 @@
 import { DatabaseZap, Download, Settings, Upload } from 'lucide-react'
 import { useRef, useState, type ChangeEvent, type FormEvent } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../auth/useAuth'
 import { userMessage } from '../utils/userMessage'
 import { NotificationSettings } from '../components/finance/NotificationSettings'
@@ -27,6 +28,7 @@ import {
 } from './DataHealthPage.components'
 
 export function DataHealthOperationsPage() {
+  const queryClient = useQueryClient()
   const { user } = useAuth()
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
@@ -125,6 +127,8 @@ export function DataHealthOperationsPage() {
           : 'Geri yükleme başarısız.',
       )
     } finally {
+      // Geri yükleme kısmen tamamlanmış olabilir; eski kart detay cache'i kalmasın.
+      await queryClient.invalidateQueries()
       setRestoring(false)
       setRestoreStep('')
     }
@@ -157,6 +161,7 @@ export function DataHealthOperationsPage() {
       }
 
       setResetConfirm('')
+      await queryClient.invalidateQueries()
       setResetOpen(false)
       setMessage(`Tüm finans verisi silindi. Sıfırlama öncesi JSON yedek indirildi (${totalRows} kayıt).`)
     } catch (resetError) {

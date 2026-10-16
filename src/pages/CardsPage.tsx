@@ -19,6 +19,7 @@ import { Suspense, useState, useCallback } from 'react'
 import { Link } from 'react-router'
 import { ArrowLeft, CalendarClock, FileText, ScanSearch, ShieldCheck, List, Clock, ChevronRight } from 'lucide-react'
 import { CrudPage } from '../components/CrudPage'
+import { DeferredDetails } from '../components/ui/deferred-details'
 import { CategoryCleanupPanel } from '../components/finance/CategoryCleanupPanel'
 import { FinancePaymentDrawer } from '../components/finance/FinancePaymentDrawer'
 import { CardInstallmentCalendarPanel } from '../components/finance/CardInstallmentCalendarPanel'
@@ -102,7 +103,7 @@ export function CardsPage() {
     handleProvisionAction,
     handleSetProvisionInstallments,
     setStatementActionId,
-  } = useCardsPageData()
+  } = useCardsPageData({ section, panel, selectedCardId })
   const [reloadCards, setReloadCards] = useState<(() => Promise<void>) | null>(null)
   const {
     transactionAmount,
@@ -155,7 +156,7 @@ export function CardsPage() {
         cards,
         reload,
         afterSuccess: async () => {
-          await Promise.all([loadStatements(), loadInstallments(), invalidateSnapshot()])
+          await invalidateSnapshot()
         },
         detail: (
           <>
@@ -197,7 +198,7 @@ export function CardsPage() {
         cards,
         reload,
         afterSuccess: async () => {
-          await Promise.all([loadStatements(), loadInstallments(), invalidateSnapshot()])
+          await invalidateSnapshot()
         },
         detail: (
           <>
@@ -247,7 +248,7 @@ export function CardsPage() {
           installmentsError ? <p role="alert" className="text-sm text-warning">{installmentsError} <button type="button" className="min-h-11 font-semibold underline" onClick={() => void loadInstallments()}>Tekrar dene</button></p> : <>
             <CardInstallmentCalendarPanel cards={scopedCards} installments={scopedInstallments} loading={installmentsLoading} />
             <UpcomingInstallmentPlans cards={scopedCards} installments={scopedInstallments} loading={installmentsLoading} />
-            <details className="border-t border-line pt-2"><summary className="min-h-11 cursor-pointer py-3 text-sm font-semibold">Taksitli alışveriş ayrıntılarını düzenle</summary><p className="mb-3 text-xs text-ink-muted">Son 50 taksitli alışveriş · tamamlananlar dahil. Gelecek taksitlerin tamamı yukarıdaki dökümde yer alır.</p><CardInstallmentExpensesPanel key={selectedCardId ?? 'all'} cardId={selectedCardId ?? undefined} cards={cardRows} reload={refresh} setError={setError} /></details>
+            <DeferredDetails className="border-t border-line pt-2" summaryClassName="min-h-11 cursor-pointer py-3 text-sm font-semibold" summary="Taksitli alışveriş ayrıntılarını düzenle"><p className="mb-3 text-xs text-ink-muted">Son 50 taksitli alışveriş · tamamlananlar dahil. Gelecek taksitlerin tamamı yukarıdaki dökümde yer alır.</p><CardInstallmentExpensesPanel key={selectedCardId ?? 'all'} cardId={selectedCardId ?? undefined} cards={cardRows} reload={refresh} setError={setError} /></DeferredDetails>
           </>
         ) : null}
         {panel === 'ekstreler' ? <>
@@ -258,7 +259,7 @@ export function CardsPage() {
           {provisionError ? <p role="alert" className="text-sm text-warning">{provisionError}</p> : null}
           <ProvisionPanel rows={scopedCards} provisions={scopedProvisions} installments={scopedInstallments} statements={scopedStatements} loading={provisionsLoading} actionId={provisionActionId}
             onPost={(expense) => void handleProvisionAction(expense, 'post', reload, setError)} onPostAll={(expenses) => void handlePostAllProvisions(expenses, reload, setError)} onCancel={(expense) => void handleProvisionAction(expense, 'cancel', reload, setError)} onSetInstallments={(expense, count) => void handleSetProvisionInstallments(expense, count, reload, setError)} onImportStatement={(card) => { setReloadCards(() => reload); setImportCard(card) }} />
-          <details className="border-t border-line pt-2"><summary className="min-h-11 cursor-pointer py-3 text-sm font-semibold">Yeni alışveriş için taksit bilgisi</summary><CardInstallmentIntentPanel cards={scopedCards} installments={scopedInstallments} onChanged={refresh} /></details>
+          <DeferredDetails className="border-t border-line pt-2" summaryClassName="min-h-11 cursor-pointer py-3 text-sm font-semibold" summary="Yeni alışveriş için taksit bilgisi"><CardInstallmentIntentPanel cards={scopedCards} installments={scopedInstallments} onChanged={refresh} /></DeferredDetails>
         </> : null}
       </section>
     )
@@ -291,7 +292,7 @@ export function CardsPage() {
           const cardRows = rows as Card[]
           if (!loading && panel === 'manuel' && !selectedCardId) return <>
             {renderPanels(cardRows, reload, setError)}
-            <DueStatementAutomation rows={cardRows} statements={statements} statementsLoading={statementsLoading} reload={async () => { await Promise.all([reload(), invalidateSnapshot()]) }} loadStatements={loadStatements} setError={setError} />
+            <DueStatementAutomation rows={cardRows} statements={statements} statementsLoading={statementsLoading || Boolean(statementError)} reload={async () => { await Promise.all([reload(), invalidateSnapshot()]) }} loadStatements={loadStatements} setError={setError} />
           </>
           const selected = cardRows.find((row) => row.id === selectedCardId)
           const counts: Partial<Record<CardSection, number>> = {
@@ -307,11 +308,11 @@ export function CardsPage() {
                 <CardsSummary rows={cardRows} installments={installments} statements={statements} statementPayments={statementPayments} installmentsLoading={installmentsLoading} installmentsError={installmentsError} statementsLoading={statementsLoading} statementError={statementError} section={section === 'hesaplar' ? 'hesaplar' : 'kartlar'} panel={panel} onOpenPanel={openPanel} />
                 {section === 'kartlar' ? renderPanels(cardRows, reload, setError) : null}
               </> : null}
-              {!loading ? <DueStatementAutomation rows={cardRows} statements={statements} statementsLoading={statementsLoading} reload={async () => { await Promise.all([reload(), invalidateSnapshot()]) }} loadStatements={loadStatements} setError={setError} /> : null}
+              {!loading ? <DueStatementAutomation rows={cardRows} statements={statements} statementsLoading={statementsLoading || Boolean(statementError)} reload={async () => { await Promise.all([reload(), invalidateSnapshot()]) }} loadStatements={loadStatements} setError={setError} /> : null}
             </div>
           )
         }}
-        renderAfterList={({ loading, rows }) => !loading && !selectedCardId && section === 'kartlar' && panel !== 'manuel' ? <details className="border-t border-line pt-1"><summary className="min-h-11 cursor-pointer py-3 text-sm font-semibold text-ink-muted">Ortak limitleri yönet</summary><SharedLimitGroups rows={rows as Card[]} onOpenCard={openCardDetails} /></details> : null}
+        renderAfterList={({ loading, rows }) => !loading && !selectedCardId && section === 'kartlar' && panel !== 'manuel' ? <DeferredDetails className="border-t border-line pt-1" summaryClassName="min-h-11 cursor-pointer py-3 text-sm font-semibold text-ink-muted" summary="Ortak limitleri yönet"><SharedLimitGroups rows={rows as Card[]} onOpenCard={openCardDetails} /></DeferredDetails> : null}
         getInitialValues={(row) => ({ ...getCardInitialValues(row), ...(!row && section === 'hesaplar' ? { entry_type: 'banka_karti' } : {}) })}
         mapForm={mapCardForm}
         renderTitle={renderCardTitle}
