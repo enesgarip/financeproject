@@ -458,6 +458,9 @@ Bağlı harcama iptali ve ödeme geri alma başarı durumunu kaldırır; sonraki
 dönemin ödemesi geri alınınca önceki ay eşleşmesi bozulmaz. Yüklenmeyen/hatalı
 veri "eşleşme yok" diye sunulmaz. Takvim ayı liste rozetine yansır; Analiz bu
 ayı gösterir. Sıradaki vade ayrıca etiketlenir.
+Snapshot'ın 25 aylık tarihçe penceresi dışındaki ve ilk sınır ayındaki eksik
+kanıtta "geçmiş tam yüklü değil" denir (SMS önceki ayın son gününe düşebilir).
+O ay için bulunan kesin eşleşme kanıtı yine gösterilir.
 
 Aylık kredi kartı `bank_auto` planları otomatik takip edilir; listede ve ortak
 yükümlülük yüzeylerinde manuel ödeme eylemi sunulmaz (`action=null`). Manuel

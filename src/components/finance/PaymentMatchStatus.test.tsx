@@ -34,3 +34,11 @@ it('iptal veya geri alma başarı rozeti üretmez', () => {
   expect(screen.getByText(/Eşleşme geri alınmış/)).toBeTruthy()
   expect(screen.queryByText(/Banka işlemi/)).toBeNull()
 })
+
+it('tarihçe penceresi dışındaki ay için eşleşme yok demez; bulunan kanıtı yine gösterir', () => {
+  const view = render(<BalancePrivacyProvider><PaymentMatchStatus month={month} historyAvailable={false} /></BalancePrivacyProvider>)
+  expect(screen.getByText(/geçmişi tam yüklü değil/)).toBeTruthy()
+  expect(screen.queryByText(/Henüz eşleşme yok/)).toBeNull()
+  view.rerender(<BalancePrivacyProvider><PaymentMatchStatus month={month} historyAvailable={false} match={match} /></BalancePrivacyProvider>)
+  expect(screen.getByText(/· Eşleşti/)).toBeTruthy()
+})

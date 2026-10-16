@@ -9,6 +9,8 @@ ay/tarih/gerçek tutar ve iptal/yükleme/hata durumunu gösterir. `pages/Payment
 takvim ayını izler; `pages/AnalysisPage.panels.tsx` abonelikleri bu ay için gösterir.
 `utils/obligations.ts` aylık kredi kartı talimatında manuel eylem sunmaz;
 diğer ödemeler korunur. Sözleşme: `docs/FINANCE_RULES.md`, `docs/TRANSACTION_HISTORY.md`.
+Tarihçe penceresi dışındaki/ilk sınır ayındaki eksik veri eşleşme yok sayılmaz;
+kanıt bulunmadığında geçmişin tam yüklü olmadığı belirtilir.
 
 Kalıcı kabukta günlük snapshot: `app/useDailyNetWorthSnapshot.ts` gezinmede
 damgayı kontrol eder; çalışan koşu kesilmez/çoğaltılmaz. Yeni gün ve başarısız

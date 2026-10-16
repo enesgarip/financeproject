@@ -11,6 +11,7 @@ vi.mock('../app/useFinanceSnapshot', () => ({
   useInvalidateFinanceSnapshot: () => vi.fn(),
 }))
 vi.mock('../data/repositories/cardsRepo', () => ({ fetchCards: vi.fn(), reconcileCardPaymentExpenses: vi.fn() }))
+vi.mock('../data/repositories/financeSnapshotRepo', () => ({ snapshotWindowStart: () => new Date('2024-10-01T00:00:00') }))
 vi.mock('../data/repositories/crudRepo', () => ({ saveCrudRow: vi.fn() }))
 vi.mock('../hooks/useFinancePaymentDrawer', () => ({ useFinancePaymentDrawer: () => ({ drawerProps: {}, openPaymentDrawer: mocks.open }) }))
 vi.mock('../components/finance/FinancePaymentDrawer', () => ({ FinancePaymentDrawer: () => null }))

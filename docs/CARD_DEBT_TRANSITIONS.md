@@ -11,6 +11,8 @@ Abonelik görünürlüğü eki: aylık kredi kartı talimatında manuel ödeme d
 sunulmaz. Eşleşme rozeti vade ayı ve banka işlem tarihçesinden okunur; kart
 ekstresinin nakitle ödendiği anlamına gelmez. Yeni borç/ödeme/ledger kaydı
 oluşturulmaz; SMS/PDF eşleştirmesi ve aşağıdaki geçişler değişmez.
+Tarihçe kapsamı dışındaki eksik ayda eşleşme uydurulmaz veya yok sayılmaz;
+bulunan kanıt gösterilir, aksi halde geçmişin tam yüklü olmadığı belirtilir.
 
 Kalıcı kabuk eki: günlük net değer fotoğrafı yeni gün/başarısız kayıt sonrası
 gezinmede yeniden kontrol edilir; çalışan kayıt gezinmeyle iptal edilmez.

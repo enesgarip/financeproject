@@ -14,7 +14,9 @@ Kaynak: `src/utils/paymentHistory.ts`, `src/utils/obligations.ts`,
 `src/components/finance/PaymentMatchStatus.tsx`; sözleşme: `docs/FINANCE_RULES.md`,
 `docs/TRANSACTION_HISTORY.md`, `docs/PLANNING_MODEL_REVIEW.md`.
 
-Doğrulama: `npm run verify` başarılı (156 dosya / 1.680 Vitest + dört Node
+Tarihçe penceresi dışındaki/ilk sınır ayındaki eksik veri eşleşme yok sayılmaz;
+bulunan kesin kanıt korunur, aksi halde geçmişin tam yüklü olmadığı söylenir.
+Doğrulama: `npm run verify` başarılı (156 dosya / 1.681 Vitest + dört Node
 guard; coverage %92,92 statement / %84,65 branch / %94,06 function / %95,07 line;
 production audit 0 açık; build/bundle ve altı edge tipi). Playwright 10 geçti /
 canlı backend isteyen üç test koşuluyla atlandı. Demo API yanıtlarıyla gerçek

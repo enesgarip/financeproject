@@ -9,6 +9,7 @@ import { Badge } from '../components/ui/badge'
 import { HeroNumber, SERIT_TEXT } from '../components/serit'
 import { useFinanceSnapshot, useInvalidateFinanceSnapshot } from '../app/useFinanceSnapshot'
 import { fetchCards, reconcileCardPaymentExpenses } from '../data/repositories/cardsRepo'
+import { snapshotWindowStart } from '../data/repositories/financeSnapshotRepo'
 import { saveCrudRow } from '../data/repositories/crudRepo'
 import { sortPaymentAccounts } from '../services/financePaymentActions'
 import type {
@@ -501,6 +502,7 @@ export function PaymentsPage() {
                 match={monthMatches.get(payment.id)}
                 loading={planningLoading}
                 error={Boolean(planningError)}
+                historyAvailable={matchMonth > snapshotWindowStart()}
               /> : null}
 
               <div className="mt-4 flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
