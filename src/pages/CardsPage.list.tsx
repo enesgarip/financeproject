@@ -376,7 +376,7 @@ export function CreditAccountListCard({
       <div className="mt-3 grid gap-2">
         {!statementsKnown ? <p className="text-xs text-warning">Ödeme için ekstre dökümünün yüklenmesi gerekiyor.</p> : openStatements.length > 0 ? (
           <button type="button" onClick={() => onOpenPanel?.('ekstreler')} className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary px-3 text-xs font-semibold text-primary-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary">
-            <Banknote size={18} strokeWidth={1.8} aria-hidden="true" />Ekstreyi öde
+            <Banknote size={18} strokeWidth={1.8} aria-hidden="true" />Ekstre ödemesi kaydet
           </button>
         ) : (
         <Button
@@ -386,7 +386,7 @@ export function CreditAccountListCard({
           disabled={payableDebt <= 0 || openStatements.length > 0}
           title={
             openStatements.length > 0
-              ? 'Açık ekstre var — "Ekstreyi öde" ile kapat'
+              ? 'Açık ekstre için önce ekstre ödemesi kaydet.'
               : payableDebt <= 0
                 ? 'Ödenebilir kesinleşmiş borç yok'
                 : undefined
@@ -394,7 +394,7 @@ export function CreditAccountListCard({
           className="finance-touch-target px-3 text-xs"
         >
           <Banknote />
-          Borç öde
+          Borç ödemesi kaydet
         </Button>
         )}
       </div>

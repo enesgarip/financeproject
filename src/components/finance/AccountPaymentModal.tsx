@@ -153,6 +153,8 @@ export function AccountPaymentModal({
           </div>
         ) : null}
 
+        <p className="text-xs leading-relaxed text-ink-muted">Bankada yaptığın ödeme veya tahsilatı buraya kaydet. Bu ekran bankadan para göndermez.</p>
+
         {paidAtEditable ? (
           <label className="block text-sm font-semibold text-ink">
             Ödeme günü
@@ -201,7 +203,7 @@ export function AccountPaymentModal({
         {displayedError ? <Alert variant="destructive">{displayedError}</Alert> : null}
 
         <Button type="submit" disabled={saving} variant={successAction ? 'success' : 'default'} size="xl" className="w-full">
-          {saving ? 'İşleniyor...' : submitLabel}
+          {saving ? 'Kaydediliyor…' : submitLabel}
         </Button>
       </form>
     </SimpleModal>

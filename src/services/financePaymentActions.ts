@@ -39,27 +39,23 @@ export function lastUsedKeyForObligation(obligation: FinanceObligation) {
 }
 
 export function modalTitleForObligation(obligation: FinanceObligation | null) {
-  if (!obligation) return 'Ödeme yap'
-  if (obligation.action === 'collect_debt') return 'Alacağı tahsil et'
-  if (obligation.action === 'settle_debt') return 'Borcu öde'
+  if (!obligation) return 'Ödeme kaydı'
+  if (obligation.action === 'collect_debt') return 'Tahsilat kaydı'
+  if (obligation.action === 'settle_debt') return 'Borç ödeme kaydı'
   if (obligation.action === 'pay_card_statement') return 'Ekstre ödemesi'
-  if (obligation.action === 'pay_card_debt') return 'Kredi kartı borç ödeme'
+  if (obligation.action === 'pay_card_debt') return 'Kart borcu ödeme kaydı'
   if (obligation.action === 'pay_loan_installment') return 'Taksit ödemesi'
-  return 'Ödeme yap'
+  return 'Ödeme kaydı'
 }
 
 export function submitLabelForObligation(obligation: FinanceObligation | null) {
-  if (!obligation) return 'İşlemi tamamla'
-  if (obligation.action === 'collect_debt') return 'Tahsilatı tamamla'
-  if (obligation.action === 'settle_debt') return 'Borcu öde'
-  if (obligation.action === 'pay_card_statement') return 'Ekstreyi öde'
-  if (obligation.action === 'pay_card_debt') return 'Borç öde'
-  if (obligation.action === 'pay_loan_installment') return 'Taksiti öde'
-  return 'Ödemeyi tamamla'
+  if (!obligation) return 'Kaydet'
+  if (obligation.action === 'collect_debt') return 'Tahsilatı kaydet'
+  return 'Ödemeyi kaydet'
 }
 
 export function accountLabelForObligation(obligation: FinanceObligation | null) {
-  return obligation?.action === 'collect_debt' ? 'Tahsilat hesabı' : 'Kaynak hesap'
+  return obligation?.action === 'collect_debt' ? 'Paranın geldiği hesap' : 'Ödemenin yapıldığı hesap'
 }
 
 export function amountLabelForObligation(obligation: FinanceObligation | null) {

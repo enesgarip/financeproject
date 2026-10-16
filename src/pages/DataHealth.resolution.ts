@@ -94,7 +94,7 @@ function guidedReview(label: string, sourceOfTruth: string): HealthIssueResoluti
 function manualReconciliation(sourceOfTruth: string, label = 'Kayıtları karşılaştır'): HealthIssueResolution {
   return {
     mode: 'manual_reconciliation',
-    title: 'Manuel uzlaştırma gerekli',
+    title: 'Kayıtları karşılaştırmak gerekiyor',
     label,
     bulkEligible: false,
     undoPolicy: 'not_applicable',
@@ -363,7 +363,7 @@ export function resolveHealthIssue(issue: HealthIssue): HealthIssueResolution {
       )
     case 'cardOverduePayment':
       return guidedPayment(
-        'Ödeme çekmecesini aç',
+        'Ödeme kaydet',
         'Açık ekstre, gerçek kaynak banka hesabı ve pay_card_statement işlemi.',
       )
     case 'cardScheduledDebt':

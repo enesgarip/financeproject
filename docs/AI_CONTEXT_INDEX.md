@@ -2,6 +2,14 @@
 
 Last reviewed: 2026-10-16
 
+Dil sözlüğü: `docs/UI_GLOSSARY.md` kullanıcı metinlerinin ortak kaynağıdır.
+Ödeme/tahsilat düğmeleri banka işlemi yerine kayıt işlemini adlandırır;
+ortak form etiketleri `services/financePaymentActions.ts`, açıklama
+`components/finance/AccountPaymentModal.tsx`, önizleme `AccountSelector.tsx`.
+Enum/RPC/rota ve geçmiş kayıtlar dil değişikliğine dahil değildir. Giriş
+tanıtım paneli global tema token'larını miras alır; eski yeşil override yoktur.
+Tanıtım rakamları “Örnek” diye adlandırılır. Kayıt: `docs/UI_COPY_REVIEW.md`.
+
 16 Ekim ikon/metin eki: safir marka kaynağı `public/icon.svg`; 180/192/512px
 PNG'ler bu SVG'den üretilir. `AppMark.tsx`, `index.html`, manifest ve push
 ikonu aynı sürümlü URL'yi kullanır. PWA bandı `hooks/useTheme.ts` ile tema

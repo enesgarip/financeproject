@@ -41,6 +41,9 @@ anlamını, banka logoları kurum kimliğini korur. Marka SVG'si `public/icon.sv
 iOS 180px ve PWA 192/512px PNG'leri aynı SVG'den üretilir. Favicon, uygulama
 markası, manifest ve push ikonu `?v=sapphire-20261016` kullanır. Tarayıcı/PWA
 bandı açık `#f5f7fb`, koyu `#101623` değerlerini tema tercihiyle izler.
+Masaüstü giriş tanıtım paneli global tema token'larını miras alır; yerel
+`--primary` override'ı kullanamaz. Sabit tanıtım tutarları açıkça örnektir;
+safir zemin üzerindeki küçük beyaz etiketler okunur kalır.
 Mobil alt bar etiketli Harcama ekle ve diğer işlemler düğmesini içerir; form
 girişinde yinelenen ekle satırı gösterilmez. Yüzen FAB kaldırılmıştır.
 
@@ -79,6 +82,10 @@ Kaynak ve uygulama listesi: `docs/UI_COPY_REVIEW.md`. Kısa/doğal Türkçe ve
 mevcut “sen” hitabı kullanılır. Başlıklar cümle düzeninde, düğmeler eylemle
 yazılır. Gider bağlamının kullanıcıya görünen adı “Gider grubu”; DB anahtarı
 ve rota değişmez. “Detay” sayfası “Ayrıntılı analiz”, sekmesi “Ayrıntılar”dır.
+Kelime/işlem sözleşmesi `docs/UI_GLOSSARY.md`'dir. “Ödeme kaydet” ve
+“Tahsilat kaydet” kayıt formunu açar; son düğme “Ödemeyi/Tahsilatı kaydet”tir.
+Uygulamanın bankadan para göndermediği ortak formda açıkça söylenir. “Ödendi
+say” nakit hareketi oluşturmayan ayrı geçmiş işaretleme eylemi olarak korunur.
 
 Finans rakamlarında hesap bakiyesi, kart borcu sonrası bakiye, bu ay
 harcanabilir tutar ve net değer ayrı kavramlardır. Analizde “Gelirden kalan”,

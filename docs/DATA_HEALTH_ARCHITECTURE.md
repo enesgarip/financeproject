@@ -7,7 +7,12 @@ was recently verified. `LiveReconciliationPanel` is canonical on this route;
 other screens may show status and deep-link here, but must not duplicate its
 manual amount-entry form.
 
-Last reviewed: 2026-10-15
+Last reviewed: 2026-10-16
+
+Dil sözlüğü eki: kullanıcı metinlerinde işlem/karşılaştırma dili vardır;
+teknik aksiyon/çekmece/manuel uzlaştırma ifadeleri sadeleştirilmiştir.
+Ödeme kaydet düğmesi aynı kanonik formu açar. Resolution mode/primaryAction,
+toplu düzeltme uygunluğu, önizleme/guard ve geri alma kuralları değişmedi.
 
 This note maps `/veri-sagligi` (`DataHealthPage`). Treat this route as an
 operational repair surface, not a debug page: fixes can modify real finance

@@ -56,7 +56,7 @@ export function SalaryPage() {
       table="salary_history"
       pageTitle="Maaş geçmişi"
       pageLabel="Gelir merkezi"
-      pageDescription="Gelir değişimini tarihsel olarak izle ve nakit projeksiyonunun güncel maaşı kullanmasını sağla."
+      pageDescription="Maaş değişimlerini izle; nakit akışı tahminleri güncel maaşını kullansın."
       addLabel="Maaş ekle"
       fields={salaryFields}
       emptyTitle="Henüz maaş kaydı yok"

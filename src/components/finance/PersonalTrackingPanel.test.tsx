@@ -50,7 +50,7 @@ describe('Sadece takip formu ve listesi', () => {
     }, null))
     await screen.findByText('Kişi başına toplam · sadece takip')
     expect(screen.getByText('2.500,25 ₺', { selector: 'dd' })).toBeTruthy()
-    expect(screen.queryByRole('button', { name: /Tahsil et|Borcu öde|1 ay ertele/ })).toBeNull()
+    expect(screen.queryByRole('button', { name: /Tahsilat kaydet|Ödeme kaydet|1 ay ertele/ })).toBeNull()
 
     fireEvent.click(screen.getByRole('button', { name: 'Kardeşim işlemleri' }))
     fireEvent.click(screen.getByRole('menuitem', { name: 'Düzenle' }))

@@ -640,25 +640,15 @@ button:disabled {
 }
 
 .login-signature-panel {
-  --foreground: #f2f7f4;
-  --card: #121815;
-  --card-foreground: #f2f7f4;
-  --muted: #1b231e;
-  --muted-foreground: #aeb9b1;
-  --border: rgba(255, 255, 255, 0.12);
-  --primary: #6ff0c0;
-  /* Marka ile birebir aynı değil (bkz. koyu tema `--success` notu). */
-  --success: #43d69a;
-  color: var(--foreground);
+  /* Tema token'larını miras alır; yerel marka rengi ikonları ezmez. */
   background:
-    radial-gradient(circle at 8% 0%, rgba(63, 220, 160, 0.22), transparent 30%),
-    linear-gradient(145deg, #0b100d, #16201a);
+    radial-gradient(circle at 8% 0%, color-mix(in srgb, var(--primary) 12%, transparent), transparent 35%),
+    var(--card);
 }
 
 .login-cash-preview {
-  background:
-    radial-gradient(circle at 95% 0%, rgba(111, 240, 192, 0.28), transparent 36%),
-    linear-gradient(135deg, #0a2a1f, #10684c);
+  /* Marka SVG'sindeki sabit safir renkler; beyaz örnek rakam iki temada da okunur. */
+  background: linear-gradient(135deg, #162d69, #2458d3);
 }
 
 @keyframes fade-in-up {

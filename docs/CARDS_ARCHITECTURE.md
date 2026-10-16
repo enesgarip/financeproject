@@ -2,6 +2,10 @@
 
 Last reviewed: 2026-10-16
 
+Dil sözlüğü eki: ödeme eylemi ve ortak form gerçek bankacılık yerine kayıt
+işlemini adlandırır. “Ödemenin yapıldığı hesap” ve kayıt sonrası bakiye/borç/
+limit önizlemesi aynı veriyi kullanır; finansal kaynak ve RPC değişmedi.
+
 İkon/metin eki: banka karşılaştırmasında “Karşılaştırmayı kaydet” yalnız
 sonucu kaydeder; ayrı “Farkı düzelt” eylemi aynen korunur. Borç dağılımı
 teknik “kova” adıyla sunulmaz. Harcama kart kıyaslarında adlar sarılır;

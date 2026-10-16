@@ -69,12 +69,8 @@ function obligationKindLabel(item: FinanceObligation) {
 }
 
 function obligationActionLabel(item: FinanceObligation) {
-  if (item.action === 'collect_debt') return 'Tahsil et'
-  if (item.action === 'pay_card_statement') return 'Ekstre öde'
-  if (item.action === 'pay_card_debt') return 'Kart öde'
-  if (item.action === 'pay_loan_installment') return 'Taksit öde'
-  if (item.action === 'settle_debt') return 'Borcu öde'
-  if (item.action === 'pay_payment') return 'Öde'
+  if (item.action === 'collect_debt') return 'Tahsilat kaydet'
+  if (item.action) return 'Ödeme kaydet'
   return 'Bilgi'
 }
 
@@ -192,7 +188,7 @@ function ObligationRow({ item, formatAmount, onPayObligation }: { item: FinanceO
           <p className="mt-1 text-xs font-medium text-ink-muted">{item.subtitle}</p>
         </div>
       </div>
-      <div className="flex shrink-0 items-center justify-between gap-3 sm:justify-end">
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 sm:justify-end">
         <span className={cn('finance-value text-sm font-black tabular-nums', item.settled ? 'text-ink-muted line-through' : item.direction === 'inflow' ? 'text-success' : 'text-ink')}>
           {item.direction === 'inflow' ? '+' : ''}{formatAmount(item.amount)}
         </span>

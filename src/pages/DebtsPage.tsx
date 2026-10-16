@@ -428,7 +428,7 @@ export function DebtsPage() {
                 onClick={() => void openDebtSettlement(row, helpers.reload)}
                 className="max-w-full rounded-lg bg-success px-3 py-2 text-xs font-semibold text-success-foreground transition hover:bg-success/90 active:scale-[0.97]"
               >
-                {row.direction === 'borç_aldım' ? 'Borcu öde' : 'Tahsil et'}
+                {row.direction === 'borç_aldım' ? 'Ödeme kaydet' : 'Tahsilat kaydet'}
               </button>
               {canDefer ? (
                 <button

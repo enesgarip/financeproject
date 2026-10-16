@@ -106,7 +106,7 @@ describe('HealthIssueCard resolution actions', () => {
     })
     const { onPayIssue } = renderIssueCard(target)
 
-    fireEvent.click(screen.getByRole('button', { name: 'Ödeme çekmecesini aç' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Ödeme kaydet' }))
     expect(onPayIssue).toHaveBeenCalledWith(target)
     expect(screen.getByRole('link', { name: 'Ekstreleri aç' }).getAttribute('href')).toBe(
       '/kartlar?section=ekstreler',
