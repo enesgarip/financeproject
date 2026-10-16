@@ -211,7 +211,7 @@ export function SeritOverview({
                   amount={item.amount}
                   amountOptions={{ signed: item.direction === 'inflow' }}
                   amountTone={item.direction === 'inflow' ? 'success' : 'ink'}
-                  trailing={item.obligation.action ? <span className="mt-1 flex items-center justify-end gap-1 text-xs font-medium text-primary">{item.direction === 'inflow' ? 'Tahsil et' : 'Öde'}<ChevronRight size={14} aria-hidden="true" /></span> : undefined}
+                  trailing={item.obligation.action ? <span className="mt-1 flex items-center justify-end gap-1 text-xs font-medium text-primary">{item.direction === 'inflow' ? 'Tahsilat kaydet' : 'Ödeme kaydet'}<ChevronRight size={14} aria-hidden="true" /></span> : undefined}
                   onClick={item.obligation.action ? () => onPay(item) : undefined}
                 />
               ))}
@@ -287,7 +287,7 @@ export function SeritOverview({
                             onClick={() => onPay(item)}
                             className="rounded-[8px] border border-line-strong px-2.5 py-1.5 text-[12px] font-semibold text-ink-muted transition-colors duration-[120ms] hover:bg-black/[.02] hover:text-ink dark:hover:bg-white/[.03]"
                           >
-                            {inflow ? 'Tahsil et' : 'Öde'}
+                            {inflow ? 'Tahsilat kaydet' : 'Ödeme kaydet'}
                             <span className="sr-only"> — {item.title}</span>
                           </button>
                         ) : null}

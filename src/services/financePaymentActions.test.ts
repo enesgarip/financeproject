@@ -98,7 +98,7 @@ describe('finance payment action helpers', () => {
   it('keeps last-used account memory separated by obligation family', () => {
     expect(lastUsedKeyForObligation(obligation({ action: 'pay_loan_installment' }))).toBe('loanAccount')
     expect(lastUsedKeyForObligation(obligation({ action: 'settle_debt' }))).toBe('debtAccount')
-    expect(submitLabelForObligation(obligation({ action: 'pay_card_statement' }))).toBe('Ekstreyi öde')
+    expect(submitLabelForObligation(obligation({ action: 'pay_card_statement' }))).toBe('Ödemeyi kaydet')
   })
 
   it('does not retry pay_payment with a retired RPC signature when deployment is missing', async () => {

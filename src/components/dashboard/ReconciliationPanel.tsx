@@ -17,8 +17,8 @@ const reconciliationHelp = {
   calculation:
     'Kesilmiş her kredi kartı ekstresinde bankanın bildirdiği tutar ile uygulamanın hesapladığı ekstre borcu karşılaştırılır.',
   importance:
-    'Aradaki fark, eksik girilmiş bir taksit/harcamayı ay sonunu beklemeden gösterir; mutabık olmayan ekstreler hatırlatılır.',
-  source: 'Ekstre arşivi (kesilmiş ekstreler) ve ekstre içe aktarırken kaydedilen mutabakat tutarı.',
+    'Aradaki fark, eksik girilmiş bir taksit veya harcamayı gösterebilir. Bankayla uyuşmayan ekstreler burada görünür.',
+  source: 'Kesilmiş ekstreler ve içe aktarırken kaydettiğin banka tutarı.',
 } satisfies HelpTooltipContent
 
 

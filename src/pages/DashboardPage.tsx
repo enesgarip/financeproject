@@ -445,7 +445,7 @@ export function DashboardPage() {
           ) : null}
 
           {/* ─ Mutabakat ─ */}
-          <DetailSectionDivider label="Mutabakat" />
+          <DetailSectionDivider label="Banka karşılaştırması" />
 
           <div className="min-w-0 lg:col-span-12">
             <ReconciliationPanel cards={data.cards} statements={data.cardStatements.filter((statement) => statement.status === 'open')} />

@@ -69,3 +69,13 @@ mevcut erişilebilir ad, `aria-hidden` ve gizlilik akışı korunur.
 Yayın kullanıcının onayıyla korumalı PR → CI → Deploy Production hattından
 yapılır; üretim sonucu PR ve workflow kaydından izlenir. Migration/edge yayını
 gerekmiyor. DOM JSON'ları, ekran görüntüsü ve verify log'u repo dışındadır.
+
+## Canlı masaüstü giriş eki
+
+İlk paket yayınlandıktan sonraki giriş kontrolü, tanıtım panelinin global
+safiri eski yeşil yerel `--primary` değeriyle ezdiğini gösterdi. Yerel tema
+token'ları kaldırıldı; panel açık/koyu temayı miras alır. Örnek nakit akışı
+paneli marka SVG'siyle aynı safir renkleri kullanır; sabit tutarların örnek
+olduğu ve ay sonu değerinin tahmin olduğu açıklandı. Bu ek kullanıcının
+sonraki dil sözlüğü isteğiyle birlikte uygulanır; sözlük `UI_GLOSSARY.md`,
+doğrulama/yayın kaydı `UI_COPY_REVIEW.md`'dedir.

@@ -1,5 +1,18 @@
 # Priority Backlog
 
+## 2026-10-16 — Türkçe dil sözlüğü ve giriş teması — UYGULANDI
+
+Kullanıcının sözlük incelemesi isteğiyle `docs/UI_GLOSSARY.md` oluşturuldu.
+Özet/ödeme/kart/kredi/kişi/kontrol eylemleri ve ortak form, ödeme/tahsilat
+kaydettiğini açıkça söyler. Bankadan para gönderilmediği formda görünür.
+Bankayla karşılaştırma, tahmin, elle girilen kayıt ve işlem dili tutarlıdır;
+teknik “app/aksiyon/çekmece” ifadeleri ve belirsiz durumlar sadeleştirildi.
+Hesap önizlemesi kayıt sonrası bakiye/borç/limiti adlandırır. Geçmişi “Ödendi
+say” ile işaretleme ayrı kalır; enum/RPC/kayıt/finans hesabı değişmedi.
+Canlı kontrolde kalan masaüstü giriş yeşil override'ı kaldırıldı; panel
+global safiri miras alır, sabit rakamların örnek olduğu açıklandı.
+Kaynak/kanıt: `docs/UI_COPY_REVIEW.md`, `docs/UI_ICON_COPY_2026-10-16.md`.
+
 ## 2026-10-16 — Safir ikonlar ve okunur metinler — UYGULANDI
 
 Kullanıcının uygulama/yayın isteğiyle marka SVG'si, PWA/iOS PNG'leri,

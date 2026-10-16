@@ -16,11 +16,11 @@ import { MAX_SAFE_REPAIR_BATCH_SIZE } from './DataHealthPage.actions'
 import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
 
 const resolutionBadge: Record<HealthResolutionMode, { label: string; variant: 'success' | 'info' | 'warning' | 'outline' }> = {
-  auto_recompute: { label: 'Otomatik güvenli', variant: 'success' },
-  guarded_one_click: { label: 'Korumalı tek tık', variant: 'info' },
-  guided_domain_action: { label: 'Yönlendirmeli çözüm', variant: 'info' },
-  manual_reconciliation: { label: 'Mutabakat aksiyonu', variant: 'warning' },
-  informational: { label: 'İnceleme aksiyonu', variant: 'outline' },
+  auto_recompute: { label: 'Yeniden hesaplanabilir', variant: 'success' },
+  guarded_one_click: { label: 'Kontrollü düzeltme', variant: 'info' },
+  guided_domain_action: { label: 'İlgili ekranda düzelt', variant: 'info' },
+  manual_reconciliation: { label: 'Bankayla karşılaştır', variant: 'warning' },
+  informational: { label: 'İnceleme gerekiyor', variant: 'outline' },
 }
 
 export function HealthStat({ label, value, tone = 'neutral' }: { label: string; value: number; tone?: 'neutral' | 'danger' | 'warning' | 'info' }) {
@@ -119,7 +119,7 @@ export function HealthIssueCard({
               </div>
             ) : null}
             <div className="mt-3">
-              <p className="finance-label">Hızlı aksiyonlar</p>
+              <p className="finance-label">Yapılabilecek işlemler</p>
               <div className="mt-2 flex flex-wrap gap-2">
                 {canFix ? (
                   <button

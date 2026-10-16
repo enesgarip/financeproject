@@ -125,7 +125,7 @@ export function FinancePaymentDrawer({
           onClick={() => onAmountValueChange(String(minimumPayment))}
           className="rounded-lg border border-line-strong bg-raised px-3 py-1.5 text-xs font-bold text-ink transition hover:bg-black/[.03] dark:hover:bg-white/[.04]"
         >
-          Asgari tahmini ({formatAmount(minimumPayment)})
+          Tahmini asgari tutar ({formatAmount(minimumPayment)})
         </button>
       ) : null}
       {exceedsTL(payableCeiling, intent.amount) && exceedsTL(intent.amount, 0) ? (

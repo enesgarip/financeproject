@@ -584,7 +584,7 @@ export function DataHealthPage() {
                   <p className="mt-1 text-sm text-ink-muted">Kart harcamalarında tekrar olasılığı ve eksik sınıflandırma sinyalleri.</p>
                 </div>
                 <Badge variant={integrityStats.sameFingerprint > 0 || integrityStats.possibleDuplicates > 0 ? 'warning' : 'success'}>
-                  Mutabakat
+                  Kayıt kontrolü
                 </Badge>
               </div>
               <div className="grid grid-cols-2 gap-2 md:grid-cols-4">

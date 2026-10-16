@@ -7,6 +7,11 @@ Manuel kayıt etiketli Harcama ekle veya hızlı işlem menüsünden doğrudan g
 üst özet ve ilgili döküm menüsüdür. Borç/ledger kuralları değişmedi.
 Last reviewed: 2026-10-16
 
+Dil sözlüğü eki: kart ödeme eylemleri “Ekstre/Borç ödemesi kaydet” der;
+ortak form “Ödemeyi kaydet” ile aynı kanonik RPC'yi çağırır. Bankadan para
+gönderilmediği söylenir. Asgari/ekstre/tam tutar seçimi, SMS'te zaten oluşan
+hareketi tekrar saymama, kısmi ödeme ve borç bölümü geçişleri değişmedi.
+
 16 Ekim ikon/metin eki: “Mutabık kaydet” artık “Karşılaştırmayı kaydet”tir;
 farklı banka tutarı kaydedildiğinde durum yine `drift` kalır. “Düzelt ve
 kaydet” ayrı onaylı borç düzeltme eylemidir; delta, hedef borç bölümü ve

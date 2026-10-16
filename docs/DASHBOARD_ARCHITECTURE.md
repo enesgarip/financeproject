@@ -8,6 +8,10 @@ task is dashboard-specific.
 
 ## 16 Ekim 2026 — mobil vade önceliği
 
+Dil sözlüğü eki: vadelerde “Ödeme kaydet” / “Tahsilat kaydet” açma eylemi
+görünür. Aynı callback ve kanonik ödeme formu kullanılır. “Banka
+karşılaştırması” bölüm adı finansal kontrol hesabını değiştirmez.
+
 İkon/metin eki: `LineRow` mobilde ekstre/hesap adlarını kesmez;
 ad/açıklamadan sonra tutar/eylem satırı gelir. Banka kontrol önerileri
 “karşılaştırma” diliyle yazılır; Ekstre karşılaştırması aynı arşiv/veri

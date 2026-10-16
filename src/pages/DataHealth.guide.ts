@@ -294,7 +294,7 @@ export function navigationAction(issue: HealthIssue): NavigationAction {
     return { to: '/borclar/kisiler', label: 'Borç veya alacağı düzenle' }
   }
 
-  if (id.startsWith('payment-overdue-')) return { to: '/odemeler', label: 'Ödendi işaretle' }
+  if (id.startsWith('payment-overdue-')) return { to: '/odemeler', label: 'Ödeme kaydını kontrol et' }
   if (id.startsWith('payment-') || kind.startsWith('payment')) {
     return { to: '/odemeler', label: 'Ödemeyi düzenle' }
   }

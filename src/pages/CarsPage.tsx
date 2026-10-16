@@ -70,7 +70,7 @@ export function CarsPage() {
         userId={user?.id}
         onChanged={refresh}
         onAdded={() => toast.success('Araç eklendi.')}
-        onError={(m) => toast.error('Olmadı', m)}
+        onError={(m) => toast.error('Araç işlemi tamamlanamadı', m)}
         confirm={confirm}
       />
 
@@ -169,7 +169,7 @@ function CarManager({
     const ok = await confirm({
       title: `${car.name} silinsin mi?`,
       description:
-        'Aracın manuel giderleri de silinir. Kartla yapılan harcamalar kalır; yalnız araç etiketi düşer.',
+        'Elle eklediğin araç giderleri de silinir. Kartla yapılan harcamalar kalır; yalnız araçla bağlantısı kaldırılır.',
       confirmLabel: 'Sil',
       variant: 'destructive',
     })

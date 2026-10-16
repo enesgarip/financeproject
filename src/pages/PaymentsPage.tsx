@@ -41,7 +41,7 @@ const paymentCategoryOptions: { label: PaymentCategory; value: PaymentCategory }
 ]
 
 const paymentMethodOptions: { label: string; value: PaymentMethod }[] = [
-  { label: 'Manuel ödeme', value: 'manual' },
+  { label: 'Kendim ödüyorum', value: 'manual' },
   { label: 'Banka talimatı', value: 'bank_auto' },
 ]
 
@@ -482,9 +482,9 @@ export function PaymentsPage() {
                     type="button"
                     size="sm"
                     onClick={() => void openObligationPayment(buildPaymentObligation(payment, payment.due_date, planningData.cards), reload)}
-                    aria-label={`${payment.title} ödemesini yap`}
+                    aria-label={`${payment.title} için ödeme kaydet`}
                   >
-                    Öde
+                    Ödeme kaydet
                   </Button>
                 ) : null}
               </div>
@@ -512,7 +512,7 @@ export function PaymentsPage() {
                 return (
                   <div className="mt-2.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 rounded-lg border border-dashed border-primary/30 bg-primary/5 px-2 py-1.5">
                     <p className="w-full text-[11px] text-ink-muted">
-                      Son {suggestion.sampleCount} ödemenin ortası{' '}
+                      Son {suggestion.sampleCount} ödemeye göre önerilen tutar{' '}
                       <span className="font-semibold tabular-nums text-ink">
                         {formatAmount(suggestion.suggested)}
                       </span>{' '}

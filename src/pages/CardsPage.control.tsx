@@ -21,7 +21,7 @@ import { formatCurrency } from '../utils/formatCurrency'
 import { diffTL, sumTL } from '../utils/money'
 
 const statusPresentation: Record<CardBankReconciliationStatus, { label: string; tone: 'good' | 'warning' | 'danger' | 'neutral' }> = {
-  matched: { label: 'Bankayla mutabık', tone: 'good' },
+  matched: { label: 'Bankayla uyumlu', tone: 'good' },
   drift: { label: 'Fark var', tone: 'danger' },
   stale: { label: 'Kontrol zamanı', tone: 'warning' },
   never: { label: 'Henüz kontrol edilmedi', tone: 'neutral' },

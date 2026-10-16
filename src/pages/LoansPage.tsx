@@ -266,13 +266,13 @@ export function LoansPage() {
                 <button
                   type="button"
                   disabled={nextPendingInstallment(loan, installments)?.id !== item.id}
-                  title={nextPendingInstallment(loan, installments)?.id !== item.id ? "Önce sıradaki taksiti öde" : undefined}
+                  title={nextPendingInstallment(loan, installments)?.id !== item.id ? "Önce sıradaki taksitin ödemesini kaydet" : undefined}
                   onClick={() => void openInstallmentPayment(loan, item, reload)}
-                  aria-label={`${item.installment_no}. taksiti öde`}
+                  aria-label={`${item.installment_no}. taksit için ödeme kaydet`}
                   className="order-1 inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg border border-line-strong bg-raised px-2.5 py-1.5 text-xs font-semibold text-ink transition hover:bg-black/[.03] dark:hover:bg-white/[.04] active:scale-[0.97]"
                 >
                   <ReceiptText size={13} aria-hidden="true" />
-                  Öde
+                  Ödeme kaydet
                 </button>
               )}
               <div className="relative order-3 shrink-0">

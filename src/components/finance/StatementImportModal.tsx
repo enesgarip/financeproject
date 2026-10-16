@@ -337,7 +337,7 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
     }
 
     if (manualAddedKeys.size !== manualReview.length) {
-      setImportError('PDF kaynak gerçek olarak uygulanmadan önce tüm manuel taksitleri doğrula.')
+      setImportError('PDF banka kaydı olarak uygulanmadan önce elle girilen tüm taksitleri doğrula.')
       return
     }
 
@@ -368,7 +368,7 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
         sourceEventId: row.sourceEventId,
       })
       if (!replacement) {
-        setImportError(`${row.transaction.description}: manuel taksit doğrulaması geçersiz.`)
+        setImportError(`${row.transaction.description}: elle girilen taksit doğrulanamadı. Eşleştirmeyi kontrol et.`)
         setImporting(false)
         return
       }
@@ -742,7 +742,7 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
                 <div className="p-6 text-center">
                   <CheckCircle2 size={32} className="mx-auto text-success" />
                   <p className="mt-2 text-sm font-bold text-ink">Tüm işlemler app'te zaten kayıtlı</p>
-                  <p className="mt-1 text-xs text-ink-muted">Mutabakat tamam.</p>
+                  <p className="mt-1 text-xs text-ink-muted">Tutarlar uyuşuyor.</p>
                 </div>
               )}
             </div>

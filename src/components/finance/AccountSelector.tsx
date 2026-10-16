@@ -62,7 +62,7 @@ export function AccountSelector({
           className="mt-1"
         >
           <option value="">{accounts.length > 0 ? 'Hesap seç' : emptyMessage}</option>
-          {outsideAccountsValue ? <option value={outsideAccountsValue}>Takip dışı (bakiye değişmez)</option> : null}
+          {outsideAccountsValue ? <option value={outsideAccountsValue}>Başka bir yerden ödendi</option> : null}
           {favorites.length > 0 ? <optgroup label="Favoriler">
             {favorites.map((account) => <option key={account.id} value={account.id}>♥ {getAccountOptionLabel(account)}</option>)}
           </optgroup> : null}
@@ -79,7 +79,7 @@ export function AccountSelector({
       </label>
       {outsideAccountsValue && value === outsideAccountsValue ? (
         <div className="rounded-xl bg-page px-3 py-2 text-xs font-medium text-ink-muted ring-1 ring-line">
-          Ödeme tamamlanır; izlenen hesap, nakit cüzdanı ve kredi kartı bakiyesi değişmez.
+          Ödeme kaydı oluşturulur; kayıtlı hesaplarının, nakit cüzdanlarının ve kartlarının bakiyesi değişmez.
         </div>
       ) : selectedAccount ? (
         <div
@@ -94,18 +94,18 @@ export function AccountSelector({
           {selectedIsCreditCard ? (
             <>
               <span>Borç: {formatAmount(selectedAccount.debt_amount)}</span>
-              <span>Sonrası: {formatAmount(nextDebtAmount)}</span>
+              <span>Kayıt sonrası borç: {formatAmount(nextDebtAmount)}</span>
               {availableLimit !== null ? (
                 <>
-                  <span>Limit boşluğu: {formatAmount(availableLimit)}</span>
-                  <span>Sonrası: {formatAmount(nextAvailableLimit)}</span>
+                  <span>Kullanılabilir limit: {formatAmount(availableLimit)}</span>
+                  <span>Kayıt sonrası limit: {formatAmount(nextAvailableLimit)}</span>
                 </>
               ) : null}
             </>
           ) : (
             <>
               <span>Bakiye: {formatAmount(selectedAccount.current_balance)}</span>
-              <span>İşlem sonrası: {formatAmount(remainingBalance)}</span>
+              <span>Kayıt sonrası bakiye: {formatAmount(remainingBalance)}</span>
             </>
           )}
         </div>

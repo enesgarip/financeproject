@@ -108,7 +108,7 @@ describe('navigationAction', () => {
   })
 
   it('uses explicit overdue actions', () => {
-    expect(navigationAction(issue('payment-overdue-1', 'Planlı')).label).toBe('Ödendi işaretle')
+    expect(navigationAction(issue('payment-overdue-1', 'Planlı')).label).toBe('Ödeme kaydını kontrol et')
     expect(navigationAction(issue('debt-overdue-1', 'Kişiler')).label).toBe('Ödeme durumunu güncelle')
   })
 

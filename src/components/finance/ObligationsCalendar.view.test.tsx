@@ -21,7 +21,7 @@ it('yaklaşanlar varsayılandır; ödeme düğmesi aynı kanonik yükümlülüğ
   render(<BalancePrivacyProvider><ObligationsCalendar data={data} onPayObligation={onPay} /></BalancePrivacyProvider>)
   expect(screen.getByRole('button', { name: 'Yaklaşanlar' }).getAttribute('aria-pressed')).toBe('true')
   expect(screen.getByText('İnternet')).toBeTruthy()
-  fireEvent.click(screen.getByRole('button', { name: 'Öde' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Ödeme kaydet' }))
   expect(onPay).toHaveBeenCalledWith(expect.objectContaining({ sourceId: 'internet', action: 'pay_payment', amount: 700, date: '2026-10-20' }))
 })
 
@@ -33,7 +33,7 @@ it('takvim seçimini hatırlar; takvimden gün seçince aynı ödeme eylemi eri�
   render(<BalancePrivacyProvider><ObligationsCalendar data={data} onPayObligation={() => {}} /></BalancePrivacyProvider>)
   expect(screen.getByRole('button', { name: 'Takvim' }).getAttribute('aria-pressed')).toBe('true')
   fireEvent.click(screen.getByRole('button', { name: /20 Eki 2026, 1 kayıt/ }))
-  expect(screen.getByRole('button', { name: 'Öde' })).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Ödeme kaydet' })).toBeTruthy()
 })
 
 it('gizlilik tercihi yeni liste görünümünde de tutarları maskeler', () => {

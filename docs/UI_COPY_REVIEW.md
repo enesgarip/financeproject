@@ -4,6 +4,38 @@ Tarih: 2026-09-05. Durum: ilk düzenleme paketi ve aşağıdaki adlandırmalar u
 Kullanıcı kısa/doğal dil planını uygulamak üzere onayladı. Finans hesapları ve
 veri yazma davranışı korunuyor. Sonraki geniş kapsamlı mesaj taraması açık iştir.
 
+## 16 Ekim 2026 — ortak dil sözlüğü
+
+Kullanıcı kelime ve cümleleri ortak bir sözlükle düzenlemeyi istedi.
+Kanonik kelime/ton kaynağı `UI_GLOSSARY.md`'dir. Ödeme/tahsilat açma eylemi,
+form başlığı, hesap seçimi, bakiye/borç önizlemesi ve kaydet düğmesi birlikte
+incelendi. Uygulama banka transferi başlatmaz; metinler kayıt işlemini
+anlatır. Ödendi say, silme/geri alma/düzeltme ve finans terimleri birbirine
+karıştırılmaz. Karşılaştırma, bildirim ve banka içe aktarma panellerinde
+teknik ifadeler sadeleştirildi; DB enum'u, RPC ve eski kayıtlar korunur.
+
+Girişteki sabit tanıtım rakamlarına “Örnek” eklendi. Masaüstü panelinde
+safiri yeşille ezen yerel tema token'ları kaldırıldı; küçük etiketler 12px
+ve hücrelerde %95 beyazla okunur hâle getirildi. Kaynak kod incelemesidir; bütün
+sunucu hataları ve bütün import durumları ayrı ayrı çalıştırılmış değildir.
+Son kalite/görsel kontrol sonuçları bu bölümün devamında kaydedilir.
+
+Son kaynakla `npm run verify` başarılı: 150 dosyada 1.634 test, lint,
+coverage, production audit (0 açık), build, JS gzip 988,3/1.030 kB ve 6 edge
+tip kontrolü. Yeni metinleri aynalayan test eklenmedi; mevcut ödeme kaydı,
+hesap dışı kaynak, bilgi amaçlı kişi takibi ve Veri kontrolü callback
+testlerinin erişilebilir ad beklentileri yeni dille güncellendi.
+360px yerel demoda Özet, Ödemeler, kartlar, krediler, kişiler, Veri kontrolü,
+maaş ve araçlar tarandı: açık içerikte ellipsis ile kesilen metin ve belge
+taşması 0. Ortak ekstre ödeme formu hesap önizlemesiyle açıldı, kaydetmeden
+kapatıldı; kaydet düğmesine kaydırarak erişildi. 1280px açık tema girişinde
+panel/ikonların global safiri miras aldığı doğrulandı. Küçük beyaz hücre
+etiketinin en açık safir uçta hesaplanan kontrastı 4,71:1'dir. Ekran/DOM
+kanıtları ve tam verify çıktısı sohbetin repo dışındaki görsel klasöründedir.
+Fiziksel cihaz, tüm hata/import durumları ve üretim hesabında finansal yazma
+testi yapılmadı. Yayın kullanıcının mevcut canlıya alma onayıyla PR → CI →
+Deploy Production hattından izlenir; finans hesabı/RPC/şema değişmedi.
+
 ## 16 Ekim 2026 — safir metin ve kırpılma eki
 
 Kullanıcının yeni inceleme/yayın isteğiyle 19 rotanın mobil açık içerikleri

@@ -109,7 +109,7 @@ export function LiveReconciliationPanel({
       setLoadError(
         isMissingSupabaseCapabilityError(loadResult.error)
           ? missingSupabaseCapabilityMessage('Canlı mutabakat altyapısı', loadResult.error)
-          : loadResult.error.message ?? 'Mutabakat kayıtları yüklenemedi.',
+          : loadResult.error.message ?? 'Banka karşılaştırmaları yüklenemedi. Tekrar dene.',
       )
       return
     }
@@ -167,7 +167,7 @@ export function LiveReconciliationPanel({
     setSavingId(null)
 
     if (!saveResult.ok) {
-      setError(saveResult.error.message ?? 'Mutabakat kaydedilemedi.')
+      setError(saveResult.error.message ?? 'Karşılaştırma kaydedilemedi. Tekrar dene.')
       return
     }
     setInputs((prev) => ({ ...prev, [cardId]: '' }))

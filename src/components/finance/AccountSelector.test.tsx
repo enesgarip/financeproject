@@ -37,7 +37,7 @@ describe('AccountSelector hesap dışı kaynak', () => {
         outsideAccountsValue="outside-accounts"
       />,
     )
-    expect(screen.getByText(/izlenen hesap, nakit cüzdanı ve kredi kartı bakiyesi değişmez/i)).toBeTruthy()
+    expect(screen.getByText(/kayıtlı hesaplarının, nakit cüzdanlarının ve kartlarının bakiyesi değişmez/i)).toBeTruthy()
   })
 
   it('banka, nakit ve kredi kartı kaynaklarını ayrı gruplar', () => {

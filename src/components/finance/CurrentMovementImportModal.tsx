@@ -516,7 +516,7 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
 
     setReconcileSaving(false)
     if (!saveResult.ok) {
-      setReconcileError(saveResult.error.message ?? 'Mutabakat kaydedilemedi.')
+      setReconcileError(saveResult.error.message ?? 'Karşılaştırma kaydedilemedi. Tekrar dene.')
       return
     }
     setReconcileDone(corrected ? 'corrected' : 'matched')
@@ -549,7 +549,7 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
         <div className="sticky top-0 z-10 flex items-center justify-between border-b border-line-strong bg-raised px-4 py-3 backdrop-blur">
           <div className="flex min-w-0 items-center gap-2">
             <Scale size={16} className="shrink-0 text-primary" aria-hidden="true" />
-            <span id="movement-import-title" className="truncate text-sm font-black text-ink">Hareket mutabakatı</span>
+            <span id="movement-import-title" className="break-words text-sm font-semibold text-ink">Hareket karşılaştırması</span>
             <span className="hidden rounded-md bg-page px-2 py-0.5 text-xs font-bold text-ink-muted sm:inline">
               {card.card_name}
             </span>
@@ -713,7 +713,7 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
                       <span className="mt-0.5 block text-[11px] text-ink-muted">
                         {provisionPromotions.length > 0
                           ? `Banka hareketi ile app kaydı uyuşuyor. ${provisionPromotions.length} provizyon kesinleşmiş olarak işaretlenecek.`
-                          : 'Banka hareketi ile app kaydı uyuşuyor — aksiyon gerekmez.'}
+                          : 'Banka hareketi ile uygulamadaki kayıt uyuşuyor. İşlem gerekmiyor.'}
                       </span>
                     </span>
                     <ChevronDown size={16} className={`shrink-0 text-ink-muted transition-transform ${showMatched ? 'rotate-180' : ''}`} />
@@ -989,7 +989,7 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
                 <div className="p-6 text-center">
                   <CheckCircle2 size={32} className="mx-auto text-success" />
                   <p className="mt-2 text-sm font-bold text-ink">Tüm hareketler eşleşiyor</p>
-                  <p className="mt-1 text-xs text-ink-muted">Mutabakat tamam.</p>
+                  <p className="mt-1 text-xs text-ink-muted">Tutarlar uyuşuyor.</p>
                 </div>
               )}
             </div>
@@ -1051,8 +1051,8 @@ export function CurrentMovementImportModal({ card, onClose, onSuccess }: Props) 
                   <p className="flex items-start gap-2 text-sm font-bold text-success">
                     <CheckCircle2 size={15} className="mt-0.5 shrink-0" />
                     {reconcileDone === 'corrected'
-                      ? 'Fark düzeltildi ve mutabakat kaydedildi.'
-                      : 'Mutabakat kaydedildi — app ve banka aynı.'}
+                      ? 'Fark düzeltildi ve karşılaştırma kaydedildi.'
+                      : 'Karşılaştırma kaydedildi. Uygulama ve banka tutarları aynı.'}
                   </p>
                 ) : (
                   <>
