@@ -54,6 +54,27 @@ export type HealthData = {
   kasaBuckets: KasaBucket[]
 }
 
+// Boş veri şekli saf sözleşmeyle birlikte yaşar; testler actions/repo yüklemez.
+export const emptyData: HealthData = {
+  assets: [],
+  budgets: [],
+  cards: [],
+  cardExpenses: [],
+  cardInstallments: [],
+  cardLedger: [],
+  accountLedger: [],
+  cardStatementArchives: [],
+  debts: [],
+  loans: [],
+  loanInstallments: [],
+  payments: [],
+  salaryHistory: [],
+  savingsGoals: [],
+  savingsGoalComponents: [],
+  savingsGoalSources: [],
+  kasaBuckets: [],
+}
+
 export type HealthIssue = {
   id: string
   area: 'Varlıklar' | 'Bütçeler' | 'Kartlar' | 'Krediler' | 'Kişiler' | 'Planlı' | 'Maaş' | 'Hedefler'

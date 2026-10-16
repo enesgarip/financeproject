@@ -12,9 +12,11 @@
     "verify": "npm run lint && npm run test:coverage && npm audit --omit=dev --audit-level=high && npm run build && npm run check:bundle && node scripts/verify-edge.mjs",
     "lint": "eslint . --cache --cache-strategy content --cache-location node_modules/.cache/eslint/.eslintcache",
     "preview": "vite preview",
-    "test:unit": "vitest run",
+    "test:guards": "node scripts/run-guards.mjs",
+    "test:unit": "npm run test:guards && vitest run",
+    "test:changed": "npm run test:guards && vitest run --changed=origin/main --passWithNoTests",
     "test:unit:watch": "vitest",
-    "test:coverage": "vitest run --coverage",
+    "test:coverage": "npm run test:guards && vitest run --coverage",
     "check:bundle": "node scripts/check-bundle-size.mjs",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
@@ -47,7 +49,7 @@
     "db:test:all": "node scripts/run-db-tests.mjs",
     "db:reset:local": "supabase db reset --local --no-seed",
     "db:seed:local": "supabase db reset --local",
-    "ci:local": "npm exec -- eslint . && npm exec -- tsc -b && npm exec -- vitest run && npm exec -- vite build && npm exec -- playwright test"
+    "ci:local": "npm exec -- eslint . && npm exec -- tsc -b && npm run test:unit && npm exec -- vite build && npm exec -- playwright test"
   },
   "dependencies": {
     "@fontsource-variable/dm-sans": "^5.3.0",

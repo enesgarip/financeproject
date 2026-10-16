@@ -20,6 +20,9 @@ oluşmaması için branch push tetikleyicisi yoktur.
 ## Local Commands
 
 - `npm run verify` — lint + coverage + audit + build + bundle + varsa Deno
+- `npm run test:guards` — doğrudan Node ile encoding ve kaynak/doküman haritası
+- `npm run test:unit` — önce guard'lar, sonra tüm Vitest testleri
+- `npm run test:changed` — önce guard'lar, sonra `origin/main`'e göre etkilenen testler
 - `npm run lint`
 - `npm run build`
 - `npm run test:e2e`
@@ -62,6 +65,35 @@ oluşmaması için branch push tetikleyicisi yoktur.
 - `npm run docker:preview`
 
 Docker is intentionally optional for day-to-day coding. It is included for clean local preview/build verification, while Playwright runs directly on the host locally and inside GitHub Actions in CI.
+
+## Test geri bildirimi ve tam kapı
+
+Kaynak encoding/pointer/repository-sayfa haritası guard'ları `tests/guards`
+altındadır. `scripts/run-guards.mjs` yeni `.test.mjs` dosyalarını otomatik
+kapsar; zorunlu docs/encoding dosyalarından biri eksikse hata verir. Node 24'ün
+yerleşik test runner'ı dosyaları doğrudan okur; yüzlerce
+dosya Vite `?raw` modülüne dönüştürülmez. Önceki dört guard testi ve tarama
+alanları korunur. `test:unit` ve `test:coverage` önce `test:guards` çalıştırır;
+`verify`, CI/deploy quality ve `ci:local` bu kapıyı devralır.
+
+Geliştirirken `npm run test:changed`, yereldeki `origin/main` ile farktan
+etkilenen Vitest testlerini çalıştırır; staged/unstaged değişiklikler de dahil
+edilir. İlgili test yoksa başarılı çıkar, fakat Node guard'ları her zaman
+koşar. `origin/main` ref'ini güncel tut. Alternatif taban için doğrudan
+`npx vitest run --changed=HEAD~1` kullanılabilir.
+
+Bu hızlı komut coverage, dinamik bağımlılıkların tamamı, E2E veya SQL kontrolü
+iddiası taşımaz; işi kapatırken `npm run verify` zorunludur. CI tam test
+kümesini koşmaya devam eder. Worker/izolasyon, property-test tekrar sayıları ve
+coverage eşikleri düşürülmedi. Saf veri sağlığı testi boş veri nesnesini
+`DataHealth.logic.ts` üzerinden aldığı için actions/repo/Supabase zincirini yüklemez.
+
+16 Ekim yerel ölçümü (4 worker, iki koşu): Vitest ortalaması 8,96 → 8,37 sn;
+doğrudan Node guard + Vitest toplamı 9,54 → 9,26 sn (npm/launcher ek yükü hariç).
+Bu küçük kazanç GitHub runner'ında henüz ölçülmedi. Etkilenen test komutu bu
+pakette 135 testi 0,72 sn'de koştu; her değişiklikte aynı süre/test sayısı
+beklenmez. Guard'lar ayrıca yaklaşık 0,3 sn sürer. Doğrulama/ölçüm kaydı:
+`docs/BACKLOG.md` 16 Ekim test hızlandırması maddesi.
 
 ## GitHub Actions
 

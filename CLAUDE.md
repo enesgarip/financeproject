@@ -18,7 +18,7 @@ değişen davranışı/önceliği aynı PR/commit içinde yansıtmalı. Yeni
 `data/repositories/*` veya route sayfası (`*Page.tsx`/`*Hub.tsx`) eklediysen
 `docs/AI_CONTEXT_INDEX.md`'in konu→dosya tablosuna satır ekle. Dosya
 taşıdıysan/sildiysen docs'taki referansını güncelle. Bunu CI'da
-`docs.guard.test.ts` zorlar (kırık pointer + eksik harita = kırmızı).
+`tests/guards/docs.guard.test.mjs` zorlar (kırık pointer + eksik harita = kırmızı).
 
 ## Proje
 
@@ -38,7 +38,9 @@ npm run dev:local      # Yerel Supabase başlat + Vite'ı ona bağla (üretime d
 npm run dev:local:stop # Yerel Supabase docker'ı kapat
 npm run verify         # "BİTTİ" KAPISI — CI kalite kontrollerinin yerel aynası
 npm run lint           # ESLint (tüm repo)
-npm run test:unit      # Vitest (saf util/servis testleri)
+npm run test:guards    # Node: encoding + kaynak pointer + repo/sayfa haritası
+npm run test:unit      # Node guard'ları + tüm Vitest testleri
+npm run test:changed   # Guard'lar + origin/main'e göre etkilenen Vitest testleri
 npm run test:e2e       # Playwright smoke (CI'da çalışır)
 npm run build          # tsc -b && vite build
 npm run db:seed:local  # Yerel DB'yi sıfırla + seed.sql yükle (test kullanıcısı)
@@ -53,6 +55,11 @@ test + prod dependency audit + build + bundle bütçesi + (deno kuruluysa) edge 
 kontrolü. CI quality kapısının birebir aynası: eski üçlü (lint+test:unit+build)
 coverage eşiğini, bundle bütçesini ve audit'i KOŞMUYORDU — "yerelde yeşil, CI'da
 kırmızı" sürprizi iki kez yaşandı (PR-0 ve PR B bundle olayları).
+
+`test:unit` ve `test:coverage` önce Node dosya guard'larını çalıştırır; CI ve
+`verify` bunları atlayamaz. `test:changed` yalnız yerel hızlı geri bildirimdir:
+coverage/toplu doğrulama yerine geçmez. `origin/main` ref'inin yerelde güncel
+olması gerekir. Test izolasyonu ve coverage eşikleri korunur.
 
 ## Mimari katmanlar (sınır ESLint ile zorlanır)
 

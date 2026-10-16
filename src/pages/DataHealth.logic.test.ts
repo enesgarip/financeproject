@@ -14,8 +14,7 @@ import type {
   Payment,
 } from '../types/database'
 import { dateInputValue } from '../utils/date'
-import { buildAreaCoverage, buildIssues, HEALTH_AREAS } from './DataHealth.logic'
-import { emptyData } from './DataHealth.actions'
+import { buildAreaCoverage, buildIssues, emptyData, HEALTH_AREAS } from './DataHealth.logic'
 
 const base = {
   id: 'asset-1',

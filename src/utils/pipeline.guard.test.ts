@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import deploy from '../../.github/workflows/deploy.yml?raw'
 import ci from '../../.github/workflows/ci.yml?raw'
+import packageSource from '../../package.json?raw'
 
 type Result = 'success' | 'failure' | 'cancelled' | 'skipped'
 type Job = { result: Result; outputs?: Record<string, string> }
@@ -81,5 +82,16 @@ describe('production yayın kapıları', () => {
       expect(block).toContain('needs: [checks, build]')
       expect(block).toContain('test "$CHECKS_RESULT" = success && test "$BUILD_RESULT" = success')
     }
+  })
+
+  it('Node dosya kontrollerini tam test ve CI kapılarında zorunlu tutar', () => {
+    const { scripts } = JSON.parse(packageSource) as { scripts: Record<string, string> }
+    for (const command of ['test:unit', 'test:coverage', 'test:changed']) {
+      expect(scripts[command]).toMatch(/^npm run test:guards && /)
+    }
+    expect(scripts['test:guards']).toBe('node scripts/run-guards.mjs')
+    expect(scripts['ci:local']).toContain('npm run test:unit')
+    expect(scripts.verify).toContain('npm run test:coverage')
+    for (const workflow of [ci, deploy]) expect(workflow).toContain('run: npm run test:coverage')
   })
 })

@@ -1,5 +1,34 @@
 # Priority Backlog
 
+## 2026-10-16 — Test yükleme maliyeti ve hızlı yerel geri bildirim — UYGULANDI
+
+Kullanıcı onaylı üç madde uygulandı. Encoding ve doküman pointer/harita
+guard'ları `tests/guards/*.test.mjs` altında Node ile koşar; eski dört kontrol
+ve tarama kapsamı korunur. `test:unit`, `test:coverage`, `verify`, CI/deploy
+ve `ci:local` guard'ları zorunlu tutar. `test:changed` guard'lardan sonra
+yerel `origin/main` farkından etkilenen Vitest testlerini seçer; tam kapının
+yerine geçmez. `DataHealth.logic.ts` boş veri nesnesinin saf kaynağıdır;
+actions export'u korunur, saf test fixture için repo/Supabase yüklemez.
+Coverage eşikleri, izolasyon, finans/property/SQL test kapsamı değişmez.
+`scripts/run-guards.mjs` zorunlu dosya eksikliği/boş kümede hata verir ve yeni
+guard dosyalarını otomatik kapsar; Node'un boş glob'da 0 test ile başarılı
+çıkması engellendi. Encoding taramasının 672 dosyalık beklenen kapsamı
+Git dosya listesiyle eşleşti. Geçici örneklerde bozuk encoding, kırık pointer,
+eksik rota haritası, eksik zorunlu guard ve yeni testin hata aktarımı doğrulandı.
+
+Yerel 4-worker iki koşu ortalaması: Vitest kısmı 8,96 → 8,37 sn; doğrudan
+Node + Vitest toplamı 9,54 → 9,26 sn (npm/launcher ek yükü hariç). Tam suite
+kazancı küçüktür; GitHub runner'ında henüz ölçülmedi. `test:changed` bu
+değişiklik kümesinde 135 Vitest testini 0,72 sn'de, guard'ları ~0,3 sn'de koştu.
+DataHealth.logic.test.ts import profili 384 → 137 ms; repo/Supabase zinciri yok.
+
+`npm run verify` başarılı: 149 Vitest dosyasında 1.641 test + dört Node guard,
+coverage oranları aynı (statement %92,91 / branch %84,46 / function %94,04 /
+line %95,04), production audit 0 açık, build, bundle ve altı edge tipi.
+`npm run ci:local` başarılı; Playwright 10 geçti / canlı backend isteyen 3
+test mevcut koşuluyla atlandı. Güncel komutlar ve sınırlar: `docs/PIPELINE.md`;
+kaynak haritası: `docs/AI_CONTEXT_INDEX.md`. Push/deploy yapılmadı.
+
 ## 2026-10-16 — CI/deploy süreleri ve güncel GitHub belgeleri — UYGULANDI
 
 Kullanıcı onaylı kapsam: lint/coverage/audit ve build paralel; branch

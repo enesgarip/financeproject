@@ -197,6 +197,11 @@ npm run verify
 For an end-to-end smoke test, `npm run test:e2e` (Playwright) can be run
 separately.
 
+For quicker local feedback, `npm run test:changed` runs repository guards plus
+tests affected by changes against the local `origin/main` ref. Keep that ref
+current. It does not replace `verify`: full unit/coverage commands and CI still
+require all tests and the Node-based file guards (`npm run test:guards`).
+
 ## Deploy
 
 A merge into protected `main` starts production deployment (GitHub Actions →

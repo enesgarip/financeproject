@@ -7,6 +7,10 @@ Manuel kayıt etiketli Harcama ekle veya hızlı işlem menüsünden doğrudan g
 üst özet ve ilgili döküm menüsüdür. Borç/ledger kuralları değişmedi.
 Last reviewed: 2026-10-16
 
+16 Ekim test hızlandırma eki: dosya guard'ları Node'a taşındı; saf veri
+sağlığı fixture'ının import'u repo'dan ayrıldı. Kart borcu/ledger hesapları,
+finans testlerinin kapsamı, SQL ikiz testleri ve coverage eşikleri değişmez.
+
 16 Ekim CI/dokümantasyon eki: release kontrolleri paralelleştirildi; gerekli
 DB/yedek/edge işleri tamamlanmadan frontend yayını yapılamaz. README demo
 görselleri güncel tasarıma taşındı. Bu paket kart borcu alanlarını, RPC'leri,

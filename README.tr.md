@@ -178,6 +178,11 @@ npm run verify
 
 Uçtan uca duman testi için `npm run test:e2e` (Playwright) ayrıca koşulabilir.
 
+Geliştirmede hızlı geri bildirim için `npm run test:changed`, dosya guard'larını
+ve yereldeki `origin/main`'e göre değişiklikten etkilenen testleri çalıştırır.
+Bu ref'i güncel tut. `verify` yerine geçmez: tam unit/coverage komutları ve CI,
+tüm testleri ve Node dosya guard'larını (`npm run test:guards`) zorunlu çalıştırır.
+
 ## Deploy
 
 Korumalı `main` dalına merge, üretim deploy'unu başlatır (GitHub Actions →
