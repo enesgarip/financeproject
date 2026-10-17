@@ -92,6 +92,8 @@ describe('ekstre abonelik keşfi', () => {
     const result=discoverSubscriptions(gameRows,[],now)
     expect(result).toHaveLength(1)
     expect(result[0]!.dates).toHaveLength(5)
+    const gamePlan=plan({title:'Oyun paketi',amount:269,recurrence:'monthly',match_merchant:'FS *SUPERCELLSTORE fsprg.nl NLD'})
+    expect(discoverSubscriptions(gameRows,[gamePlan],now)[0]?.status).toBe('planned')
   })
   it('kimliği belirsiz fatura tekrarı mevcut kurum planını kopyalatmaz', () => {
     const rows=['2026-08-25','2026-09-25'].map((d) => expense(d,427,'TURK TELEKOM MOBİL 543761'))

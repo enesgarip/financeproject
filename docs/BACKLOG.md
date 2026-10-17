@@ -9,6 +9,8 @@ fatura/telefon tekrarı aynı kurumda plan varsa belirsiz gösterilir; ikinci
 plan oluşturma düğmesi sunulmaz. Finansal banka matcher'ı değişmedi.
 Ek doğrulama: `npm run verify` 1.702 test, audit/build/bundle/edge kontrolleri
 başarılı; yeni planın özgün banka adıyla kanonik matcher'a uyumu test edildi.
+Özel hizmet adıyla kaydedilmiş Supercell planının açık işyeri alanı da aynı
+keşif ad eşleştirmesine girer; kısaltılmış sonraki ekstre ikinci aday oluşturmaz.
 
 Ekstre aktarımı başarılı olduktan sonra son altı ay yeniden okunur; iki farklı
 ay olası, en az üç ay güçlü adaydır. Aynı kart/işyeri ve 25–38 günlük aralık

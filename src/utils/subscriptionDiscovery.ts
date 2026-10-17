@@ -67,7 +67,7 @@ function matchingPlans(rows: DiscoveryExpense[], payments: DiscoveryPayment[]): 
     && (paymentMatchesExpense(p, last.description, last.amount)
       || (!apple && (paymentDescriptionMatches(p, last.description)
         || (digitalMerchant(last.description) && !p.match_reference
-          && merchantKey(p.title).replace(/ premium$/, '') === merchantKey(last.description).replace(/^google /, ''))))))
+          && merchantKey(p.match_merchant || p.title).replace(/ premium$/, '') === merchantKey(last.description).replace(/^google /, ''))))))
 }
 
 export function discoverSubscriptions(expenses: DiscoveryExpense[], payments: DiscoveryPayment[], now: Date = new Date()): SubscriptionCandidate[] {
