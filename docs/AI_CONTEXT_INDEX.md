@@ -1,6 +1,18 @@
 # AI Context Index
 
-Last reviewed: 2026-10-16
+Last reviewed: 2026-10-18
+
+Ekstre sonrası abonelik keşfi: `utils/subscriptionDiscovery.ts` iki ayı olası,
+üç ayı güçlü aday olarak ayrı okuma modeliyle sunar; tarih aralığı, aynı kart,
+işyeri yazımı, ek alışveriş, zam ve Apple tutar/gün ayrımı kullanılır.
+`components/finance/SubscriptionDiscoveryPanel.tsx` Analiz'de ve başarılı
+`StatementImportModal.tsx` aktarımında ortak incele/planla yüzeyidir.
+`data/repositories/cardsRepo.ts` / `fetchSubscriptionExpenses` altı aylık
+hareketleri sayfalar; kayıttan önce `fetchCardPaymentMatchRows` yeniden okunur.
+Mevcut `utils/subscriptions.ts` finansal tahmin hesabı değişmez; yeni aday
+kullanıcı planlamadan o hesaba girmez. Analiz aylık planların tümünü gösterir.
+Sözleşme: `docs/FINANCE_RULES.md`; regresyon: `subscriptionDiscovery.test.ts`,
+`SubscriptionDiscoveryPanel.test.tsx`, `cardsRepo.test.ts`.
 
 Abonelik aylık eşleşmesi: `utils/paymentHistory.ts` / `matchedPaymentsInMonth`
 vade ayını, açık harcama bağlantısını veya eski SMS RPC sözleşmesini okur;

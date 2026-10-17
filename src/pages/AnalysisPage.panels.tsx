@@ -1,8 +1,5 @@
 import { CheckCircle2, Repeat, TrendingUp, Users, WalletCards } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import { useQueryClient } from '@tanstack/react-query'
-import { useAuth } from '../auth/useAuth'
-import { saveCrudRow } from '../data/repositories/crudRepo'
 import { Badge } from '../components/ui/badge'
 import { PaymentMatchStatus } from '../components/finance/PaymentMatchStatus'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
@@ -20,12 +17,7 @@ import { type PriceTrend } from '../utils/priceIncreaseRadar'
 import { canCutCurrentStatement } from '../utils/statementCycle'
 import { buildFinanceObligationsForMonth } from '../utils/obligations'
 
-import {
-  buildSubscriptionPaymentDraft,
-  buildSubscriptionSummary,
-  subscriptionAlreadyPlanned,
-  type SubscriptionItem,
-} from '../utils/subscriptions'
+import { SubscriptionDiscoveryPanel } from '../components/finance/SubscriptionDiscoveryPanel'
 import { diffTL, sumTL } from '../utils/money'
 import { matchedPaymentsInMonth } from '../utils/paymentHistory'
 import { StatPill } from './AnalysisPage.atoms'
@@ -420,109 +412,32 @@ export function MonthCloseAssistant({ data, missingTables }: { data: AnalysisDat
 
 export function SubscriptionsPanel({ data }: { data: AnalysisData }) {
   const { formatAmount } = useBalancePrivacy()
-  const { user } = useAuth()
-  const queryClient = useQueryClient()
-  const salary = getCurrentSalary(data.salaryHistory)
   const monthKey = dateInputValue(startOfMonth(new Date()))
   const matchMonth = useMemo(() => new Date(`${monthKey}T12:00:00`), [monthKey])
   const monthMatches = useMemo(() => matchedPaymentsInMonth(data.transactionHistory, matchMonth, data.cardExpenses), [data.transactionHistory, data.cardExpenses, matchMonth])
-  const result = useMemo(
-    () => buildSubscriptionSummary(data.cardExpenses, data.payments, salary?.amount ?? null),
-    [data.cardExpenses, data.payments, salary],
-  )
-
-  // Radar → plan köprüsü: tespit yalnız bilgiydi, tek tıkla obligations/
-  // forecast'in gördüğü aylık ödemeye döner. Yalnız kredi kartı kaynaklı
-  // satırlarda sunulur (bank_auto + kart = nakit 0, çift sayma yok).
-  const creditCardIds = useMemo(
-    () => new Set(data.cards.filter((card) => card.card_type === 'kredi_karti').map((card) => card.id)),
-    [data.cards],
-  )
-  const [planBusyId, setPlanBusyId] = useState<string | null>(null)
-  const [planError, setPlanError] = useState('')
-
-  async function planSubscription(item: SubscriptionItem) {
-    if (!user) return
-    const draft = buildSubscriptionPaymentDraft(item, (cardId) => creditCardIds.has(cardId))
-    if (!draft) return
-    setPlanBusyId(item.id)
-    setPlanError('')
-    const saveResult = await saveCrudRow('payments', { user_id: user.id, ...draft }, null)
-    setPlanBusyId(null)
-    if (!saveResult.ok) {
-      setPlanError(saveResult.error.message ?? 'Ödeme planı eklenemedi.')
-      return
-    }
-    // Analiz verisi snapshot'tan gelir; payments tazelensin. Plan sayfasının
-    // cache'li CrudPage listesi de aynı yazmayı görmeli (prefix eşleşir).
-    void queryClient.invalidateQueries({ queryKey: ['finance-snapshot'] })
-    void queryClient.invalidateQueries({ queryKey: ['crud-rows', 'payments'] })
-  }
-
+  const plans = data.payments.filter((p) => p.recurrence === 'monthly' && p.status === 'bekliyor')
+  const monthlyTotal = sumTL(plans.map((p) => p.amount))
+  const salary = getCurrentSalary(data.salaryHistory)
   return (
     <Card className="border-line-strong lg:col-span-5">
       <CardHeader className="pb-0">
         <div className="flex items-start justify-between gap-3">
-          <div>
-            <CardTitle>Abonelik & sabit giderler</CardTitle>
-            <p className="mt-1 text-sm text-ink-muted">
-              {result.items.filter((i) => i.isActive).length} aktif · toplam {formatAmount(result.monthlyTotal)}/ay
-              {result.incomeRatio !== null ? ` · gelire oranı %${result.incomeRatio}` : ''}
-            </p>
-          </div>
-          <Repeat className="text-success" />
+          <div><CardTitle>Abonelik & sabit giderler</CardTitle>
+            <p className="mt-1 text-sm text-ink-muted">{plans.length} aylık plan · toplam {formatAmount(monthlyTotal)}/ay{salary && salary.amount > 0 ? ` · gelire oranı %${Math.round(monthlyTotal / salary.amount * 100)}` : ''}</p>
+          </div><Repeat className="text-success" />
         </div>
       </CardHeader>
-      <CardContent className="space-y-2 pt-2">
-        {planError ? (
-          <p role="alert" className="rounded-xl border border-warning/20 bg-warning/8 p-3 text-sm font-medium text-warning">
-            {planError}
-          </p>
-        ) : null}
-        {result.items.length === 0 ? (
-          <p className="rounded-xl bg-page p-3 text-sm text-ink-muted">Tekrarlayan harcama veya ödeme tespit edilmedi.</p>
-        ) : (
-          result.items.slice(0, 8).map((item) => {
-            const planned = item.source === 'recurring_expense' && subscriptionAlreadyPlanned(item, data.payments)
-            const automatic = item.paymentId && data.payments.some((payment) => payment.id === item.paymentId && payment.payment_method === 'bank_auto')
-            const plannable =
-              !planned &&
-              item.isActive &&
-              buildSubscriptionPaymentDraft(item, (cardId) => creditCardIds.has(cardId)) !== null
-            return (
-            <div key={item.id} className={`rounded-xl px-3 py-2 text-sm ${item.isActive ? 'bg-page' : 'bg-page opacity-60'}`}>
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="break-words font-semibold text-ink">{item.title}</p>
-                  <p className="mt-0.5 text-xs text-ink-muted">
-                    {item.category}
-                    {item.source === 'recurring_expense' ? ` · ${item.monthCount} aydır tekrarlıyor` : ' · planlı ödeme'}
-                    {planned ? ' · planda' : ''}
-                    {!item.isActive ? ' · durdurulmuş olabilir' : ''}
-                  </p>
-                </div>
-                <span className="shrink-0 whitespace-nowrap rounded-lg bg-page px-2 py-1 font-mono text-xs font-bold tabular-nums text-ink ring-1 ring-line-strong">
-                  {formatAmount(item.amount)}
-                </span>
-              </div>
-              {automatic && item.paymentId ? <PaymentMatchStatus month={matchMonth} match={monthMatches.get(item.paymentId)} /> : null}
-              {plannable ? (
-                <div className="mt-1.5 flex flex-wrap items-center justify-between gap-2">
-                  <p className="text-xs text-ink-muted">Ödeme planına eklensin mi? Nakit takvimi ve hatırlatmalar görür.</p>
-                  <button
-                    type="button"
-                    disabled={planBusyId !== null}
-                    onClick={() => void planSubscription(item)}
-                    className="shrink-0 rounded-lg border border-line-strong bg-raised px-2.5 py-1 text-xs font-bold text-ink transition hover:bg-black/[.03] disabled:opacity-60 dark:hover:bg-white/[.04]"
-                  >
-                    {planBusyId === item.id ? 'Ekleniyor...' : 'Planla'}
-                  </button>
-                </div>
-              ) : null}
+      <CardContent className="space-y-4 pt-2">
+        {plans.length === 0 ? <p className="text-sm text-ink-muted">Kayıtlı aylık plan yok.</p> : (
+          <div className="space-y-2" aria-label="Kayıtlı aylık planlar">{plans.map((plan) => (
+            <div key={plan.id} className="rounded-xl bg-page px-3 py-2 text-sm">
+              <div className="flex items-start justify-between gap-3"><p className="min-w-0 break-words font-semibold text-ink">{plan.title}</p><span className="shrink-0 font-mono text-xs text-ink">{formatAmount(plan.amount)}</span></div>
+              <p className="text-xs text-ink-muted">{plan.category} · planlı ödeme</p>
+              {plan.payment_method === 'bank_auto' ? <PaymentMatchStatus month={matchMonth} match={monthMatches.get(plan.id)} /> : null}
             </div>
-            )
-          })
+          ))}</div>
         )}
+        <SubscriptionDiscoveryPanel expenses={data.cardExpenses} payments={data.payments} cards={data.cards} />
       </CardContent>
     </Card>
   )

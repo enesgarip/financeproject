@@ -150,6 +150,21 @@ export async function fetchCardExpenseMatchRows(cardId: string): Promise<Result<
   return resultFromSupabase((data ?? []) as ExpenseMatchRow[], error, 'Kart harcamaları yüklenemedi.')
 }
 
+/** Complete six-month discovery input; PostgREST's default row cap must not hide repeats. */
+export async function fetchSubscriptionExpenses(cardId: string, since: string): Promise<Result<(ExpenseMatchRow & { card_id: string })[]>> {
+  const rows: (ExpenseMatchRow & { card_id: string })[] = []
+  const pageSize = 500
+  for (let offset = 0; ; offset += pageSize) {
+    const { data, error } = await supabase.from('card_expenses')
+      .select('id, card_id, spent_at, amount, status, description, category, installment_count, note')
+      .eq('card_id', cardId).gte('spent_at', since).eq('status', 'posted')
+      .lte('installment_count', 1).order('id').range(offset, offset + pageSize - 1)
+    if (error) return resultFromSupabase([], error, 'Abonelik taraması için harcamalar yüklenemedi.')
+    rows.push(...(data ?? []) as (ExpenseMatchRow & { card_id: string })[])
+    if ((data?.length ?? 0) < pageSize) return resultFromSupabase(rows, null)
+  }
+}
+
 export async function fetchCardPaymentMatchRows(cardId: string): Promise<Result<PaymentMatchRow[]>> {
   const { data, error } = await supabase
     .from('payments')

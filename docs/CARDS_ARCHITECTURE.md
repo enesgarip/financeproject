@@ -1,6 +1,14 @@
 # Cards Architecture Note
 
-Last reviewed: 2026-10-16
+Last reviewed: 2026-10-18
+
+Ekstre aktarımının başarı adımı `SubscriptionDiscoveryPanel.tsx` içindeki
+`StatementSubscriptionDiscovery` ile son altı aylık abonelik adaylarını açar.
+`cardsRepo.fetchSubscriptionExpenses` tüm sayfaları okur; plan sorgusu paralel
+başlar. İkincil yükleme/hata/yeniden deneme ekstre sonucundan ayrıdır.
+Analiz aynı aday bileşenini kullanır. Kayıt öncesi plan yeniden kontrol edilir;
+aylık tekrar kullanıcı onayıyla mevcut `saveCrudRow('payments')` yoluna gider.
+Şema/RPC/borç/ledger sözleşmesi değişmez; `docs/FINANCE_RULES.md` keşif bölümüne bak.
 
 Çalışma zamanı performansı: `CardsPage.hooks.ts` detay sorgularını kullanıcıya
 özel TanStack cache'te tutar (30 sn tazelik / 30 dk bellekte tutma). Hesaplarda

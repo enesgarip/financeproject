@@ -509,6 +509,42 @@ Nominal tutar, `cashImpactAmount`, matcher/RPC, ledger ve şema değişmez.
 - Kanıt: `supabase/tests/variable_bill_matching.sql`,
   `src/utils/paymentMatching.test.ts`, abonelik/aktivite/nakit akışı regresyonları.
 
+## Ekstrelerden abonelik keşfi (2026-10-18)
+
+`src/utils/subscriptionDiscovery.ts` finansal projeksiyondan ayrı öneri modelidir.
+Son altı takvim ayında aynı kart/normalleştirilmiş işyerinde en az iki farklı
+ay, 25–38 gün aralığı aranır. İki ay “Olası abonelik”, en az üç ay “Güçlü aday”
+der; bu kesin abonelik kanıtı değildir. Market/yakıt gibi alışveriş kategorileri,
+taksitler, provizyonlar, iptal/negatif/sıfır hareketler ve planın kendisinden
+üretilmiş kayıtlar kanıt olmaz. Tekrarlayan aynı kimlik tek sayılır.
+
+Noktalama farkları ve bilinen şehir/ülke son ekleri normalleştirilir. Sabit fiyat
+dizisi ek alışverişten ayrılır; isimli dijital işyerinin aynı gün devam eden
+fiyat değişimi son tutarla önerilir. Değişken fatura yalnız ayda tek hareketle
+değerlendirilir. Apple aynı tutar ve yakın günlerde ayrı izlenir; hizmet adı
+uydurulmaz. Supercell gibi dönemlik paketler aylık sözleşme kabul edilmez;
+aylık plan oluşturulması kullanıcı doğrulaması gerektirir.
+
+Plan karşılaştırması aynı kredi kartına bağlı aktif banka talimatlarında
+yapılır. Mevcut planla uyumda “Zaten kayıtlı”, tek seferlikte “Tekrar tanımı
+eksik”, çoklu eşleşmede belirsizlik gösterilir. Apple tutar eşleşmesi kesindir.
+Mevcut Apple planının aynı güne gelen eski fiyatı da belirsiz sayılır; ikinci
+hizmet gibi eklenemez.
+Kullanıcı hizmet adını/günü inceler ve aylık tekrarı doğrular. Kayıttan önce
+planlar yeniden okunur; var olan plan kopyalanmaz. Tek seferlik kayıt
+düzeltmesi yalnız tekrar/gün/vade/bitiş metadata'sını günceller. Yeni plan
+`bank_auto` + kredi kartı bağlı, son tutarı `estimated`, dijitalde ayırt edici
+tutar ve işyeriyle oluşturulur. Bu eylem banka ödeme/harcama/ledger kaydı yazmaz.
+İşlem tarihi kanıtı geçmişte değiştirilmez.
+
+Analiz tüm aylık planları ve ayrı aday listesini gösterir; plan toplamı yalnız
+kayıtlı aylık ödemelerdir. Başarılı PDF aktarımından sonra aynı yüzey açılır;
+tarama hatası ekstre başarısını geri almaz. İkincil tarama hatası “aday yok”
+değildir ve tekrar denenir. Harcamalar sayfalanarak eksiksiz okunur. Yeni
+keşif adayları otomatik olarak `buildSubscriptionSummary`, nakit akışı veya
+ekstre projeksiyonuna eklenmez; önceki üç aylık finansal tahmin sözleşmesi
+aynıdır. İki aylık/belirsiz yeni öneriler ancak planlandıktan sonra yük olur.
+
 ## Salary
 
 - `salary_history` records the monthly net salary amount that becomes effective

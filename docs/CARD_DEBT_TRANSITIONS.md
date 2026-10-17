@@ -57,6 +57,13 @@ listesinin altındaki yönetim ayrıntısında görünür. Grup özeti mevcut
 `buildCreditLimitGroups` hesabını kullanır: limit en yüksek kart limiti, borç
 bağlı kartların toplamıdır. Bu görünüm borç geçişlerini veya ledger kayıtlarını değiştirmez.
 
+18 Ekim abonelik keşfi eki: başarılı PDF aktarımı sonrasında ayrı aday taraması
+açılır. Kullanıcı onaylı yeni plan `bank_auto` + kredi kartı bağlantısı kurar;
+tek seferlik plan düzeltmesi yalnız tekrar metadata'sını değiştirir. Bu
+işlemler harcama, ödeme, borç veya ledger olayı oluşturmaz. Yeni keşif
+adayları onaysız finansal projeksiyona girmez; eski tahmin kaynağı korunur.
+Sözleşme: `docs/FINANCE_RULES.md` / Ekstrelerden abonelik keşfi.
+
 ## Canonical Fields
 
 For `cards.card_type = 'kredi_karti'`:
