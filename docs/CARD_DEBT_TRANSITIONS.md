@@ -63,6 +63,9 @@ tek seferlik plan düzeltmesi yalnız tekrar metadata'sını değiştirir. Bu
 işlemler harcama, ödeme, borç veya ledger olayı oluşturmaz. Yeni keşif
 adayları onaysız finansal projeksiyona girmez; eski tahmin kaynağı korunur.
 Sözleşme: `docs/FINANCE_RULES.md` / Ekstrelerden abonelik keşfi.
+Canlı ad eşleştirme eki: Prime/Supercell keşif adları ortaklaştırılır; yeni
+planın banka eşleşme alanı özgün işyeri adını korur. Kurum/abone kimliği eksik
+tekrarda ikinci plan yazılmaz. Banka matcher'ı ve borç geçişleri aynı kalır.
 
 ## Canonical Fields
 

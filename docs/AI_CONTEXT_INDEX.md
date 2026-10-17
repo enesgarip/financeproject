@@ -5,6 +5,8 @@ Last reviewed: 2026-10-18
 Ekstre sonrası abonelik keşfi: `utils/subscriptionDiscovery.ts` iki ayı olası,
 üç ayı güçlü aday olarak ayrı okuma modeliyle sunar; tarih aralığı, aynı kart,
 işyeri yazımı, ek alışveriş, zam ve Apple tutar/gün ayrımı kullanılır.
+Birleşik Amazon Prime ve kısaltılmış Supercell işlemci adları birleştirilir;
+kimliği eksik kurum tekrarı mevcut planla belirsizse ikinci plan önerilmez.
 `components/finance/SubscriptionDiscoveryPanel.tsx` Analiz'de ve başarılı
 `StatementImportModal.tsx` aktarımında ortak incele/planla yüzeyidir.
 `data/repositories/cardsRepo.ts` / `fetchSubscriptionExpenses` altı aylık

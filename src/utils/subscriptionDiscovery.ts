@@ -28,9 +28,17 @@ export function discoverySince(now: Date = new Date()): string {
   return dateInputValue(new Date(now.getFullYear(), now.getMonth() - 5, 1))
 }
 
-function merchantKey(description: string): string {
+function bankMerchantKey(description: string): string {
   return paymentMatchKey(description)
     .replace(/\b(london gbr|cork irl|istanbul tr|istanbul tur)$/, '').trim()
+}
+
+function merchantKey(description: string): string {
+  const key = bankMerchantKey(description)
+  // Statement parsers may truncate the processor suffix or join PRIME + TR.
+  if (/^(iyzico )?amazonprimet$|^amazon prime$/.test(key)) return 'amazon prime'
+  if (/^fs supercellstore\b/.test(key)) return key.replace(/\s+fsprg(?: nl)?(?: nld)?$/, '')
+  return key
 }
 
 function digitalMerchant(description: string): boolean {
@@ -58,7 +66,8 @@ function matchingPlans(rows: DiscoveryExpense[], payments: DiscoveryPayment[]): 
     && (!p.recurrence_end_date || p.recurrence_end_date >= last.spent_at)
     && (paymentMatchesExpense(p, last.description, last.amount)
       || (!apple && (paymentDescriptionMatches(p, last.description)
-        || (digitalMerchant(last.description) && merchantKey(p.title).replace(/ premium$/, '') === merchantKey(last.description).replace(/^google /, ''))))))
+        || (digitalMerchant(last.description) && !p.match_reference
+          && merchantKey(p.title).replace(/ premium$/, '') === merchantKey(last.description).replace(/^google /, ''))))))
 }
 
 export function discoverSubscriptions(expenses: DiscoveryExpense[], payments: DiscoveryPayment[], now: Date = new Date()): SubscriptionCandidate[] {
@@ -117,12 +126,19 @@ export function discoverSubscriptions(expenses: DiscoveryExpense[], payments: Di
         && p.recurrence === 'monthly' && (!p.recurrence_end_date || p.recurrence_end_date >= latest.spent_at)
         && Math.abs((p.recurrence_day ?? day(p.due_date)) - day(latest.spent_at)) <= 3
         && paymentDescriptionMatches(p, latest.description))
+      // Provider-only resemblance cannot identify a phone line/utility contract.
+      // A possible existing plan needs review rather than a second plan button.
+      const possibleBillPlan = variable && plans.length === 0 && payments.some((p) =>
+        p.status === 'bekliyor' && p.payment_method === 'bank_auto' && p.auto_source_card_id === latest.card_id
+        && (!p.recurrence_end_date || p.recurrence_end_date >= latest.spent_at)
+        && (paymentProvider(p.match_merchant || p.title)
+          ?? (/telefon/.test(paymentMatchKey(p.title)) ? 'mobile' : null)) === paymentProvider(latest.description))
       const monthCount = new Set(stream.map((r) => r.spent_at.slice(0, 7))).size
       candidates.push({
         id: `${key}|${apple ? `${toKurus(latest.amount)}|${day(stream[0]!.spent_at)}` : toKurus(stream[0]!.amount)}`,
         cardId: latest.card_id, merchant: latest.description, category: latest.category, amount: latest.amount,
         dates: stream.map((r) => r.spent_at), confidence: monthCount >= 3 ? 'strong' : 'possible',
-        status: plans.length > 1 || possibleApplePlan ? 'ambiguous' : plan ? plan.recurrence === 'monthly' ? 'planned' : 'missing_recurrence' : 'new',
+        status: plans.length > 1 || possibleApplePlan || possibleBillPlan ? 'ambiguous' : plan ? plan.recurrence === 'monthly' ? 'planned' : 'missing_recurrence' : 'new',
         paymentId: plan?.id ?? null, needsServiceName: apple && !plan, variable,
         priceChanged: stream.some((r) => !closeAmount(r.amount, latest.amount)),
         calendarMonthly: !/\bsupercellstore\b/.test(merchantKey(latest.description))
@@ -149,7 +165,7 @@ export function candidatePlanDraft(candidate: SubscriptionCandidate, title: stri
     amount: candidate.amount, amount_status: 'estimated' as const, due_date: dateInputValue(date),
     status: 'bekliyor' as const, payment_method: 'bank_auto' as const, auto_source_card_id: candidate.cardId,
     recurrence: 'monthly' as const, recurrence_day: recurrenceDay, recurrence_end_date: null,
-    match_merchant: merchantKey(candidate.merchant), match_amount: candidate.variable ? null : candidate.amount,
+    match_merchant: bankMerchantKey(candidate.merchant), match_amount: candidate.variable ? null : candidate.amount,
     note: 'Ekstre tekrarları incelenerek aylık plan oluşturuldu.',
   }
 }

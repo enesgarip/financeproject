@@ -2,6 +2,14 @@
 
 ## 2026-10-18 — Ekstrelerden abonelik adaylarını keşfetme — UYGULANDI
 
+Canlı doğrulama eki (PR #267 sonrası): birleşik `IYZICO /AMAZONPRIMET`
+adı mevcut Amazon Prime planıyla eşleştirilir; Supercell'in kısaltılmış
+`fsprg` ve tam işlemci son ekleri tek adayda toplanır. Kimliği tam okunmayan
+fatura/telefon tekrarı aynı kurumda plan varsa belirsiz gösterilir; ikinci
+plan oluşturma düğmesi sunulmaz. Finansal banka matcher'ı değişmedi.
+Ek doğrulama: `npm run verify` 1.702 test, audit/build/bundle/edge kontrolleri
+başarılı; yeni planın özgün banka adıyla kanonik matcher'a uyumu test edildi.
+
 Ekstre aktarımı başarılı olduktan sonra son altı ay yeniden okunur; iki farklı
 ay olası, en az üç ay güçlü adaydır. Aynı kart/işyeri ve 25–38 günlük aralık
 aranır; yazım/noktalama farkları birleştirilir. İşyeri içindeki ek alışveriş ve

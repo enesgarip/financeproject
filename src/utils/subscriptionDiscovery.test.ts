@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { candidatePlanDraft, discoverSubscriptions, type DiscoveryExpense, type DiscoveryPayment } from './subscriptionDiscovery'
+import { paymentMatchesExpense } from './paymentMatching'
 
 const now = new Date(2026, 9, 18)
 function expense(date: string, amount = 269, description = 'FS *SUPERCELLSTORE fsprg.nl NLD', extra: Partial<DiscoveryExpense> = {}): DiscoveryExpense {
@@ -80,5 +81,22 @@ describe('ekstre abonelik keşfi', () => {
     const rows = ['2026-08-08','2026-09-08'].map((d) => expense(d,500,'SİGORTA PAKETİ',{category:'Sigorta'}))
     expect(discoverSubscriptions(rows.map((r) => ({...r,note:'Ödeme kaydından oluşturuldu.'})),[],now)).toEqual([])
     expect(candidatePlanDraft(discoverSubscriptions(rows,[],now)[0]!,'Sigorta',8,now)?.category).toBe('Sigorta')
+  })
+  it('birleşik Prime işyeri mevcut planla eşleşir; kısaltılmış Supercell tek akıştır', () => {
+    const primeRows=['2026-07-15','2026-08-15','2026-09-15'].map((d) => expense(d,69.9,'IYZICO /AMAZONPRIMET'))
+    expect(discoverSubscriptions(primeRows,[plan({title:'amazon prime',amount:69.9,recurrence:'monthly'})],now)[0]?.status).toBe('planned')
+    const draft=candidatePlanDraft(discoverSubscriptions(primeRows,[],now)[0]!,'Amazon Prime',15,now)!
+    expect(draft.match_merchant).toBe('iyzico amazonprimet')
+    expect(paymentMatchesExpense(draft,'IYZICO /AMAZONPRIMET',69.9)).toBe(true)
+    const gameRows=['2026-06-04','2026-07-03','2026-08-06','2026-09-03','2026-10-01'].map((d,i) => expense(d,269,i<2?'FS *SUPERCELLSTORE fsprg.nl NLD':'FS *SUPERCELLSTORE fsprg'))
+    const result=discoverSubscriptions(gameRows,[],now)
+    expect(result).toHaveLength(1)
+    expect(result[0]!.dates).toHaveLength(5)
+  })
+  it('kimliği belirsiz fatura tekrarı mevcut kurum planını kopyalatmaz', () => {
+    const rows=['2026-08-25','2026-09-25'].map((d) => expense(d,427,'TURK TELEKOM MOBİL 543761'))
+    const existing=plan({title:'Telefonum',match_merchant:'TURK TELEKOM MOBİL',match_reference:'5437616572',recurrence:'monthly'})
+    expect(discoverSubscriptions(rows,[existing],now)[0]?.status).toBe('ambiguous')
+    expect(discoverSubscriptions(rows,[plan({title:'BenimTelefon',recurrence:'monthly'})],now)[0]?.status).toBe('ambiguous')
   })
 })
