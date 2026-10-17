@@ -518,6 +518,14 @@ der; bu kesin abonelik kanıtı değildir. Market/yakıt gibi alışveriş kateg
 taksitler, provizyonlar, iptal/negatif/sıfır hareketler ve planın kendisinden
 üretilmiş kayıtlar kanıt olmaz. Tekrarlayan aynı kimlik tek sayılır.
 
+Keşif katmanında `IYZICO /AMAZONPRIMET` Amazon Prime adıyla, Supercell'in
+kısaltılmış/tam `fsprg` işlemci son ekleri aynı işyeriyle eşleştirilir.
+Kimliği eksik fatura/telefon tekrarının kurumunda mevcut plan bulunuyorsa
+kanıtsız yeni plan önerilmez; belirsizlik gösterilir. Bu ad eşleştirmeleri
+kanonik banka/SMS ödeme matcher'ını veya geçmiş eşleşme kanıtını değiştirmez.
+Yeni planın banka işyeri alanı keşif takma adını değil, özgün banka açıklamasını
+taşır; banka matcher'ı ile yeniden eşleşebilir.
+
 Noktalama farkları ve bilinen şehir/ülke son ekleri normalleştirilir. Sabit fiyat
 dizisi ek alışverişten ayrılır; isimli dijital işyerinin aynı gün devam eden
 fiyat değişimi son tutarla önerilir. Değişken fatura yalnız ayda tek hareketle
