@@ -1,5 +1,34 @@
 # Priority Backlog
 
+## 2026-10-18 — Ekstrelerden abonelik adaylarını keşfetme — UYGULANDI
+
+Ekstre aktarımı başarılı olduktan sonra son altı ay yeniden okunur; iki farklı
+ay olası, en az üç ay güçlü adaydır. Aynı kart/işyeri ve 25–38 günlük aralık
+aranır; yazım/noktalama farkları birleştirilir. İşyeri içindeki ek alışveriş ve
+aynı gündeki fiyat değişimi ayrı değerlendirilir; son tutar önerilir. Apple
+tutar/günle ayrılır, hizmet adı kullanıcıdan alınır. Supercell gibi dönemlik
+alışverişler aylık abonelik diye otomatik kaydedilmez. Market/yakıt kategorisi,
+taksit, provizyon, iptal/iade ve plan tarafından üretilmiş hareketler elenir.
+
+`subscriptionDiscovery.ts` yalnız öneri üretir. Yeni/planlı/tekrar tanımı eksik/
+belirsiz durumu; tarihler, kart ve son tutar görünür. İncele ve planla formunda
+aylık tekrar açıkça doğrulanır; mevcut tek seferlik plan yalnız tekrar
+metadata'sıyla güncellenir. Kayıttan hemen önce planlar yeniden okunur; çift
+tıklama, hata/yeniden deneme ve çakışan eşleşmeler korunur. Abonelik paneli
+sekizde kesilmez; aylık planlar ve keşif adayları ayrı gösterilir. Ekstre
+sonrası tarama hatası başarılı aktarımı geri almaz, tekrar denenebilir.
+Kart harcamaları sayfalanır; eksik sayfa sonucu başarı sayılmaz. Yeni adaylar
+mevcut `buildSubscriptionSummary` projeksiyonuna eklenmez; önceki finansal
+hesap/ledger/RPC/şema aynı kalır. Sözleşme: `docs/FINANCE_RULES.md`.
+
+Doğrulama: `npm run verify` (158 dosya / 1.700 Vitest test + dört Node guard),
+production audit 0 açık, build/bundle/altı edge tipi başarılı. Playwright 10
+geçti / gerçek yerel backend isteyen üç test koşuluyla atlandı. Yerel örnek
+HTTP API üzerinde gerçek tarayıcıyla aday → form → yeni plan POST ve tek
+seferlik → aylık PATCH → yeniden okuma akışı doğrulandı; yakalanmamış JS
+hatası yok, 390px mobil genişlikte yatay taşma yok. Kayıp kayıt yanıtı sonrası
+retry ve Apple planının eski fiyatını ikinci hizmet sanmama regresyonları var.
+
 ## 2026-10-16 — Abonelikte aylık eşleşme görünürlüğü — UYGULANDI
 
 Planlı ödemeler ve Analiz'de banka talimatlı aylık aboneliğin eşleşme ayı,

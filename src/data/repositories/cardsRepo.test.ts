@@ -7,6 +7,7 @@ import {
   fetchPostedInstallmentExpenses,
   fetchUncategorizedExpenses,
   fetchStatementArchives,
+  fetchSubscriptionExpenses,
   payPaymentFromCardImport,
   replaceCardStatementImport,
   recordCardInstallmentCarryover,
@@ -35,6 +36,21 @@ function readQuery(response: { data: unknown[] | null; error: { message: string 
 }
 
 describe('kart ayrıntısı veri kapsamı', () => {
+  it('abonelik taramasında varsayılan satır sınırını aşar; sonraki sayfa hatası eksik başarı sayılmaz', async () => {
+    const query = (data: unknown[] | null, error: { message: string } | null = null) => ({
+      ...readQuery({ data, error }), gte: vi.fn().mockReturnThis(), lte: vi.fn().mockReturnThis(), range: vi.fn().mockResolvedValue({data,error}),
+    })
+    const first=query(Array.from({length:500},(_,i) => ({id:`e${i}`})))
+    const second=query([{id:'last'}])
+    supabaseMocks.from.mockReturnValueOnce(first).mockReturnValueOnce(second)
+    const result=await fetchSubscriptionExpenses('black','2026-05-01')
+    expect(result.ok && result.data.length).toBe(501)
+    expect(first.eq).toHaveBeenCalledWith('card_id','black')
+    expect(first.gte).toHaveBeenCalledWith('spent_at','2026-05-01')
+    expect(second.range).toHaveBeenCalledWith(500,999)
+    supabaseMocks.from.mockReturnValueOnce(first).mockReturnValueOnce(query(null,{message:'Hata'}))
+    expect((await fetchSubscriptionExpenses('black','2026-05-01')).ok).toBe(false)
+  })
   it.each([fetchRecentCardExpenses, fetchPostedInstallmentExpenses, fetchUncategorizedExpenses])('kart seçimi sorguya aktarılır', async (fetch) => {
     const query = readQuery({ data: [], error: null })
     supabaseMocks.from.mockReturnValue(query)

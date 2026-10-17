@@ -36,6 +36,7 @@ import { checkInstallmentNotation } from '../../utils/importedInstallmentPlan'
 import { parseStatementText } from '../../lib/statementParseClient'
 import { extractPdfText } from '../../lib/pdfText'
 import { CardExpenseHistorySection } from './CardExpenseHistorySection'
+import { StatementSubscriptionDiscovery } from './SubscriptionDiscoveryPanel'
 import { importedRowEventIds, sha256Hex } from '../../utils/sourceEventId'
 
 /**
@@ -796,6 +797,7 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
               </p>
             )}
 
+            <StatementSubscriptionDiscovery card={card} />
             <button
               type="button"
               onClick={onSuccess}
