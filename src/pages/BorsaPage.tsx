@@ -345,12 +345,12 @@ export function BorsaPage() {
   const assets: Asset[] = useMemo(() => (assetsQuery.data ?? []) as Asset[], [assetsQuery.data])
   const stockAssets = useMemo(() => assets.filter((asset) => asset.category === 'Hisse'), [assets])
 
-  if (assetsQuery.isError) return <QueryError title="Varlıklar yüklenemedi" message="Borsa karşılaştırması için varlık kayıtları gerekli." onRetry={() => void assetsQuery.refetch()} />
+  if (assetsQuery.isError) return <QueryError title="Varlıklar yüklenemedi" message="Hisse karşılaştırması için varlık kayıtları gerekli." onRetry={() => void assetsQuery.refetch()} />
   if (assetsQuery.isPending) return <p role="status">Varlıklar yükleniyor…</p>
   return (
     <CrudPage
       table="stock_trades"
-      pageTitle="Borsa"
+      pageTitle="Hisseler"
       pageLabel="Yatırım"
       pageDescription="Hisse alım-satım defteri; ortalama maliyet, gerçekleşmiş ve gerçekleşmemiş kâr/zarar, seçtiğin dönemin getirisi."
       addLabel="Geçmiş işlem ekle"

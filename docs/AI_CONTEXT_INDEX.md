@@ -2,6 +2,13 @@
 
 Last reviewed: 2026-10-18
 
+Alt menü adları: `components/navigation.ts` Alınacaklar, Bütçe ve hedefler,
+Hisseler ve Bakım adlarını sekme/sayfa başlığında ortak tutar. Bulgular ve
+ana menü korunur. `pages/PlanningHub.tsx` araç etiketini doğrudan kaynaktan
+okur; eski Liste → Alışveriş listesi istisnası yoktur. İlgili başlık ve
+yönlendirmeler aynı dile uyar; rotalar ve finans davranışı değişmez.
+Sözleşme: `docs/UI_GLOSSARY.md`; kayıt: `docs/UI_COPY_REVIEW.md`.
+
 Ekstre sonrası abonelik keşfi: `utils/subscriptionDiscovery.ts` iki ayı olası,
 üç ayı güçlü aday olarak ayrı okuma modeliyle sunar; tarih aralığı, aynı kart,
 işyeri yazımı, ek alışveriş, zam ve Apple tutar/gün ayrımı kullanılır.

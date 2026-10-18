@@ -183,7 +183,7 @@ export function WishlistPage() {
     addMutation.mutate({ name, price: newPrice })
   }
 
-  if (isError) return <QueryError title="Alışveriş listesi yüklenemedi" message="Kayıtlar alınamadı; toplam henüz bilinmiyor." onRetry={() => void refetch()} />
+  if (isError) return <QueryError title="Alınacaklar yüklenemedi" message="Kayıtlar alınamadı; toplam henüz bilinmiyor." onRetry={() => void refetch()} />
   if (isLoading) {
     return (
       <div className="flex flex-col gap-3 p-1">
@@ -214,7 +214,7 @@ export function WishlistPage() {
               ref={nameInputRef}
               type="text"
               placeholder="Ne almak istiyorsun?"
-              aria-label="Alışveriş listesi maddesi"
+              aria-label="Alınacak ürün"
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               className="h-11"

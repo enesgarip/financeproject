@@ -15,7 +15,7 @@ export function PlanningHub() {
         <nav aria-label="Planlama araçları" className="grid gap-1 pb-3 sm:grid-cols-3">
           {tools.map((tab) => (
             <Link key={tab.to} to={tab.to} aria-current={pathname === tab.to ? 'page' : undefined} className="flex min-h-11 items-center rounded-lg px-3 text-sm text-ink hover:bg-primary/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary">
-              {tab.label === 'Liste' ? 'Alışveriş listesi' : tab.label}
+              {tab.label}
             </Link>
           ))}
         </nav>

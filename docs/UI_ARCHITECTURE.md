@@ -1,6 +1,12 @@
 # UI Architecture
 
-Last reviewed: 2026-10-16
+Last reviewed: 2026-10-18
+
+18 Ekim alt menü eki: Alınacaklar, Bütçe ve hedefler, Hisseler ve Bakım
+sekme ve sayfa başlıklarında ortak adlardır. Bulgular ve ana menü korunur.
+`navigation.ts` tek ad kaynağıdır; Plan araçları etiketi yeniden adlandırmaz.
+Uzun Bütçe ve hedefler sekmesi mevcut yatay kaydırma davranışını kullanır.
+Dil sözleşmesi: `docs/UI_GLOSSARY.md`; rotalar ve finans hesapları değişmez.
 
 Abonelik satırında ay etiketli eşleşme durumu ve banka işlem tarihi/gerçek
 tutar görünür; Ödemeler'de takvim ayı, Analiz'de bu ay kullanılır. Aylık kart
@@ -319,7 +325,7 @@ skill'inde (`validate_palette.js`), zemin olarak `--card` değerlerini ver.
 Özet odak önerileri ayrıntılar kapalıyken görünür. Masaüstü vade listesi altı grupla başlar, kullanıcı genişletir. Mobil takvimde b=bin, m=milyon açıklaması görünür; tam tutar seçilen gün detayındadır, kompakt tutarlar gizlilik moduna uyar. Kart döngüsü varsayımları aynı panelde, harcama senaryosu isteğe bağlı details içinde kalır.
 
 ## 2026-09-07 — Günlük kullanım sadeleştirmesi
-Hesap/kart sayfasında iki açıklamalı büyük seçim alanı kullanılır: Kredi kartları (borç, ekstre ve limit) ve Banka hesapları (bakiye ve hareketler). Alt şerit Özet/İşlemler/Ekstreler araçlarını taşır. Kalan kart limiti nakit bakiye gibi adlandırılmaz. Plan ana sekmeleri Ödemeler/Hedefler; diğer araçlar native details ile açılır, aktif araç üst sekmede görünür. Hızlı işlem seçenekleri tüm rotalarda sabittir.
+Hesap/kart sayfasında iki açıklamalı büyük seçim alanı kullanılır: Kredi kartları (borç, ekstre ve limit) ve Banka hesapları (bakiye ve hareketler). Alt şerit Özet/İşlemler/Ekstreler araçlarını taşır. Kalan kart limiti nakit bakiye gibi adlandırılmaz. Plan ana sekmeleri Ödemeler/Bütçe ve hedefler; diğer araçlar native details ile açılır, aktif araç üst sekmede görünür. Hızlı işlem seçenekleri tüm rotalarda sabittir.
 
 2026-09-07 üretim öncesi takip: Hızlı menü Harcama ekle ile başlar; form kaynağı Hesap / kredi kartı olarak adlandırılır. Banka hesabı menüsü taşmaya açıktır; dekoratif üst çizgi köşelerin içine alınır.
 

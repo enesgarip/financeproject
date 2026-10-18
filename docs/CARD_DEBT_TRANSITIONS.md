@@ -1,5 +1,8 @@
 # Card Debt Transitions
 
+18 Ekim alt menü eki: Alınacaklar, Bütçe ve hedefler, Hisseler ve Bakım
+adları kullanıcı onayıyla güncellendi; Bulgular korundu. Bu dil değişikliği
+kart borcu, ödeme, RPC veya ledger geçişlerini değiştirmez.
 
 Kart ayrıntısı düzeni: döküm seçenekleri ikonlu iki sütunlu menüdedir.
 Manuel kayıt etiketli Harcama ekle veya hızlı işlem menüsünden doğrudan görev ekranında açılır. Kart ayarları ve kayıt geçmişi bölümünde yinelenen borç/limit

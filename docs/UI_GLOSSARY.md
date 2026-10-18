@@ -1,5 +1,13 @@
 # Denge — Türkçe arayüz sözlüğü
 
+## Alt menü adları — 18 Ekim 2026
+
+Kullanıcı onaylı adlar: “Alınacaklar”, “Bütçe ve hedefler”, “Hisseler” ve
+“Bakım”. Menü, sayfa başlığı ve ilgili yönlendirmeler aynı adı kullanır.
+“Bulgular” ve ana menü adları korunur; “Ayrıntılar” bu pakete dahil değildir.
+Tek kaynak `src/components/navigation.ts`'dir; Plan araçlarında ayrı etiket
+çevirisi yapılmaz. Rotalar, teknik bileşen adları ve finans kuralları değişmez.
+
 Abonelik aylık durumları: “Eşleşti” banka işleminin ilgili abonelik vadesine
 bağlandığını söyler; kart ekstresinin ödendiği anlamına gelmez. Ay, işlem günü
 ve gerçek tutar ayrıca gösterilir. Kanıt yoksa “Henüz eşleşme yok”, iptal/geri

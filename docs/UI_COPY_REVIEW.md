@@ -1,5 +1,20 @@
 # Denge — arayüz dili araştırması ve düzenleme planı
 
+## 18 Ekim 2026 — kısa alt menü adları
+
+Kullanıcı Bulgular adını korudu; Liste → Alınacaklar, Hedefler → Bütçe ve
+hedefler, Borsa → Hisseler, Yedek ve ayarlar → Bakım değişikliklerini onayladı.
+Sekme/sayfa başlıkları, ilgili hata metinleri ve Alınacaklara ekle eylemi
+aynı dili kullanır. Plan araçlarının Liste için ayrı uzun ad üretmesi kaldırıldı.
+Ana menü ve Ayrıntılar bu pakette değişmedi. Teknik adlar, rotalar, RPC ve
+finans hesapları korunur. Güncel sözlük: `UI_GLOSSARY.md`.
+
+Doğrulama: `npm run verify` başarılı; 158 dosyada 1.702 Vitest test ve dört
+Node guard geçti. Lint, coverage, production audit (0 açık), build, bundle
+bütçesi (993,6/1.030 kB gzip) ve altı edge tip kontrolü başarılı. React kaynak
+incelemesinde değişiklikler metin ve etiket sunumuyla sınırlı; yeni hook,
+sorgu veya katman geçişi yok. Bu tur tarayıcıda görsel kontrol yapılmadı.
+
 Tarih: 2026-09-05. Durum: ilk düzenleme paketi ve aşağıdaki adlandırmalar uygulandı.
 Kullanıcı kısa/doğal dil planını uygulamak üzere onayladı. Finans hesapları ve
 veri yazma davranışı korunuyor. Sonraki geniş kapsamlı mesaj taraması açık iştir.
