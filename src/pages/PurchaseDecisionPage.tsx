@@ -378,9 +378,9 @@ export function PurchaseDecisionPage() {
                   <div className="mt-2.5">
                     {listSave === 'done' ? (
                       <p className="text-xs font-semibold">
-                        Listeye eklendi —{' '}
+                        Alınacaklara eklendi —{' '}
                         <Link to="/odemeler/liste" className="underline underline-offset-2">
-                          Alışveriş Listesi
+                          Alınacaklar
                         </Link>
                       </p>
                     ) : (
@@ -390,7 +390,7 @@ export function PurchaseDecisionPage() {
                         disabled={listSave === 'saving'}
                         className="rounded-lg px-3 py-1.5 text-xs font-bold ring-1 ring-current/40 transition hover:bg-black/[.04] dark:hover:bg-white/[.06] disabled:opacity-50"
                       >
-                        Alışveriş listesine ekle
+                        Alınacaklara ekle
                       </button>
                     )}
                     {listError ? <p className="mt-1 text-xs">{listError}</p> : null}

@@ -182,7 +182,7 @@ export function DataHealthOperationsPage() {
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-lg">
               <Settings size={20} className="text-primary" />
-              Yedek ve ayarlar
+              Bakım
             </CardTitle>
             <p className="text-sm text-ink-muted">Yedek, geri yükleme, bildirim ve sıfırlama işlemleri.</p>
           </CardHeader>

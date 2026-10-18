@@ -73,7 +73,7 @@ export const assetsHubTabs: HubTab[] = [
   { to: '/varliklar', label: 'Varlıklar', icon: Gem, end: true },
   { to: '/varliklar/maas', label: 'Maaş', icon: Banknote },
   { to: '/varliklar/altin', label: 'Altın', icon: Coins },
-  { to: '/varliklar/borsa', label: 'Borsa', icon: TrendingUp },
+  { to: '/varliklar/borsa', label: 'Hisseler', icon: TrendingUp },
   { to: '/varliklar/araclar', label: 'Araçlar', icon: Car },
 ]
 
@@ -84,9 +84,9 @@ export const liabilitiesHubTabs: HubTab[] = [
 
 export const planningHubTabs: HubTab[] = [
   { to: '/odemeler', label: 'Ödemeler', icon: CalendarDays, end: true },
-  { to: '/odemeler/hedefler', label: 'Hedefler', icon: Target },
+  { to: '/odemeler/hedefler', label: 'Bütçe ve hedefler', icon: Target },
   { to: '/odemeler/alsam-mi', label: 'Alsam mı?', icon: ShoppingCart },
-  { to: '/odemeler/liste', label: 'Liste', icon: ListChecks },
+  { to: '/odemeler/liste', label: 'Alınacaklar', icon: ListChecks },
   { to: '/odemeler/baglamlar', label: 'Gider grupları', icon: FolderKanban },
 ]
 
@@ -98,7 +98,7 @@ export const analysisHubTabs: HubTab[] = [
 
 export const dataHealthHubTabs: HubTab[] = [
   { to: '/veri-sagligi', label: 'Bulgular', icon: ShieldCheck, end: true },
-  { to: '/veri-sagligi/islemler', label: 'Yedek ve ayarlar', icon: DatabaseBackup },
+  { to: '/veri-sagligi/islemler', label: 'Bakım', icon: DatabaseBackup },
 ]
 
 type RouteWidth = 'wide' | 'medium' | 'narrow'
@@ -110,19 +110,19 @@ const routeMeta: Record<string, { title: string; subtitle?: string; width: Route
   '/varliklar': { title: 'Varlıklar', subtitle: 'Nakit, yatırım ve birikimler', width: 'medium' },
   '/varliklar/maas': { title: 'Maaş', subtitle: 'Maaş geçmişi ve değişimi', width: 'medium' },
   '/varliklar/altin': { title: 'Altın', subtitle: 'Altın varlıkları ve değerleme', width: 'narrow' },
-  '/varliklar/borsa': { title: 'Borsa', subtitle: 'Hisse işlem defteri ve portföy performansı', width: 'medium' },
+  '/varliklar/borsa': { title: 'Hisseler', subtitle: 'Hisse işlem defteri ve portföy performansı', width: 'medium' },
   '/varliklar/araclar': { title: 'Araçlar', subtitle: 'Araç başına gider takibi ve dağılımı', width: 'wide' },
   '/borclar/krediler': { title: 'Krediler', subtitle: 'Aktif krediler ve taksit planları', width: 'wide' },
   '/borclar/kisiler': { title: 'Kişiler', subtitle: 'Borç, alacak ve sadece takip kayıtları', width: 'medium' },
   '/odemeler': { title: 'Ödemeler', subtitle: 'Yaklaşan ödemeler, tahsilatlar ve takvim', width: 'medium' },
   '/odemeler/hedefler': { title: 'Bütçe ve hedefler', subtitle: 'Birikim hedefleri ve bütçe takibi', width: 'medium' },
   '/odemeler/alsam-mi': { title: 'Alsam mı?', subtitle: 'Alışverişin önümüzdeki aylara etkisi', width: 'narrow' },
-  '/odemeler/liste': { title: 'Alışveriş listesi', subtitle: 'Almak istediğin şeyler', width: 'medium' },
+  '/odemeler/liste': { title: 'Alınacaklar', subtitle: 'Almak istediğin şeyler', width: 'medium' },
   '/analiz': { title: 'Analiz', subtitle: 'Aylık rapor ve ay kapanış kontrolü', width: 'wide' },
   '/analiz/detay': { title: 'Ayrıntılı analiz', subtitle: 'Gelir, gider ve zaman içindeki değişim', width: 'wide' },
   '/analiz/asistan': { title: 'Asistan', subtitle: 'Finansal verilerinle sohbet', width: 'narrow' },
   '/veri-sagligi': { title: 'Veri kontrolü', subtitle: 'Tutarlılık denetimi ve bulgular', width: 'wide' },
-  '/veri-sagligi/islemler': { title: 'Yedek ve ayarlar', subtitle: 'Veri yedekleme ve bakım', width: 'medium' },
+  '/veri-sagligi/islemler': { title: 'Bakım', subtitle: 'Veri yedekleme ve bakım', width: 'medium' },
 }
 
 const WIDTH_CLASS: Record<RouteWidth, string> = {

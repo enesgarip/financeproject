@@ -1,5 +1,17 @@
 # Priority Backlog
 
+## 2026-10-18 — Alt menü adlarını netleştirme — UYGULANDI
+
+Kullanıcı onayıyla Liste → Alınacaklar, Hedefler → Bütçe ve hedefler,
+Borsa → Hisseler, Yedek ve ayarlar → Bakım olarak değiştirildi. Bulgular ve
+ana menü adları korundu; Ayrıntılar bu pakete dahil edilmedi. Sekmeler,
+sayfa başlıkları ve ilgili hata/erişilebilirlik/yönlendirme metinleri tutarlı.
+Plan araçları `navigation.ts` etiketini doğrudan kullanır. Rota, veri erişimi
+ve finans hesapları değişmedi. Sözleşme: `docs/UI_GLOSSARY.md`.
+
+Doğrulama: `npm run verify` başarılı; 1.702 test, dört Node guard, lint,
+coverage, audit (0 açık), build/bundle ve altı edge tip kontrolü geçti.
+
 ## 2026-10-18 — Ekstrelerden abonelik adaylarını keşfetme — UYGULANDI
 
 Canlı doğrulama eki (PR #267 sonrası): birleşik `IYZICO /AMAZONPRIMET`
