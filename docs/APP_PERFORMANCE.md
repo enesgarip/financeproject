@@ -1,6 +1,13 @@
 # Uygulama çalışma zamanı performansı
 
-Last reviewed: 2026-10-16
+Last reviewed: 2026-10-18
+
+18 Ekim ekstre toplamı: Kredi kartları özetindeki üç aylık tüm-kart tahmini
+“Borç kırılımı ve dökümler” `DeferredDetails` katmanının ilk açılışına kadar
+kurulmaz. Ayrı bir açılır bölüm yoktur. Açıldığında kullanıcıya özel
+ortak `useFinanceSnapshot` cache'ini kullanır; kart başına yeni sorgu yoktur.
+Kart/taksit/harcama/ödeme girdileri aynı snapshot'tandır ve mevcut mutation
+invalidation'ıyla tazelenir. Normal Hesaplar görünümünün sorgu kapsamı değişmez.
 
 ## 16 Ekim 2026 — Uygulanan paket
 

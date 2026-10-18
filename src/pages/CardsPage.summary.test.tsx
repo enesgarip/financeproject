@@ -5,7 +5,14 @@ import type { Card, CardInstallment, CardStatementArchive, CardStatementPayment 
 import { CardsSummary, SharedLimitGroups } from './CardsPage.summary'
 
 vi.mock('../hooks/useBalancePrivacy', () => ({ useBalancePrivacy: () => ({ formatAmount: (value: number) => `${value.toFixed(2)} TL` }) }))
+vi.mock('../components/finance/AllCardStatementProjectionPanel', () => ({ AllCardStatementProjectionPanel: () => null }))
 afterEach(cleanup)
+
+function openDebtBreakdown() {
+  const details = screen.getByText('Borç kırılımı ve dökümler').closest('details')!
+  details.open = true
+  fireEvent(details, new Event('toggle'))
+}
 
 const props = {
   rows: [{ id: 'c1', card_type: 'kredi_karti', current_period_spending: 100, provision_amount: 20, debt_amount: 230, statement_debt_amount: 50 }] as Card[],
@@ -18,6 +25,7 @@ const props = {
 describe('kart özeti', () => {
   it('dönem içi, provizyon, gelecek taksit ve ekstre kalanını ayrı gösterir', () => {
     render(<CardsSummary {...props} />)
+    openDebtBreakdown()
     expect(within(screen.getByRole('button', { name: /Dönem içi toplam/ })).getByText('100.00 TL')).toBeTruthy()
     expect(within(screen.getByRole('button', { name: /Gelecek taksit toplamı/ })).getByText('60.00 TL')).toBeTruthy()
     expect(within(screen.getByRole('button', { name: /Ödenecek ekstre/ })).getByText('40.00 TL')).toBeTruthy()
@@ -26,6 +34,7 @@ describe('kart özeti', () => {
 
   it('taksit sorgusu hata verince sıfır toplam iddiası üretmez', () => {
     render(<CardsSummary {...props} installments={[]} installmentsError="Bağlantı kurulamadı" />)
+    openDebtBreakdown()
     const total = screen.getByRole('button', { name: /Gelecek taksit toplamı/ })
     expect(within(total).getByText('—')).toBeTruthy()
     expect(within(total).getByText('Bağlantı kurulamadı')).toBeTruthy()

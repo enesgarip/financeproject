@@ -1,6 +1,8 @@
 import { Banknote, ChevronRight, Heart } from 'lucide-react'
 import { BankLogo } from '../components/finance/BankLogo'
+import { AllCardStatementProjectionPanel } from '../components/finance/AllCardStatementProjectionPanel'
 import { HeroNumber } from '../components/serit'
+import { DeferredDetails } from '../components/ui/deferred-details'
 import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
 import type { Card, CardInstallment, CardStatementArchive, CardStatementPayment } from '../types/database'
 import { buildStatementPaidMap } from '../utils/cardStatementPayments'
@@ -60,7 +62,7 @@ export function CardsSummary({ rows, installments, statements, statementPayments
   return (
     <section className="pt-3" aria-label="Kredi kartları özeti">
       <HeroNumber label="Ödenecek ekstre" value={openStatement} unavailable={statementsLoading || Boolean(statementError)} description={statementsLoading ? 'Ekstreler yükleniyor…' : statementError || 'Kısmi ödemeler düşüldü. Dönem içi harcamalar ve gelecek taksitler bu toplamda yok.'} />
-      <details className="mt-2"><summary className="min-h-11 cursor-pointer py-3 text-sm font-semibold text-ink-muted">Borç kırılımı ve dökümler</summary>
+      <DeferredDetails className="mt-2" summaryClassName="min-h-11 cursor-pointer py-3 text-sm font-semibold text-ink-muted" summary="Borç kırılımı ve dökümler">
       <div className="grid grid-cols-2 gap-x-5 divide-y-0 border-b border-line">
         {metrics.map((metric) => (
           <button key={metric.id} type="button" onClick={() => onOpenPanel(metric.id)} aria-expanded={panel === metric.id}
@@ -72,7 +74,11 @@ export function CardsSummary({ rows, installments, statements, statementPayments
         ))}
       </div>
       <p className="mt-3 text-xs text-ink-muted">Toplam kart yükü <strong className="font-semibold text-ink">{formatAmount(sumTL(creditCards.map((row) => row.debt_amount)))}</strong> · ekstre, dönem içi, provizyon ve gelecek taksitler dahil.</p>
-      </details>
+      {creditCards.length > 0 ? <div className="mt-4 border-t border-line pt-4">
+        <h3 className="mb-3 text-sm font-semibold text-ink">Önümüzdeki 3 ay · tüm kartlar</h3>
+        <AllCardStatementProjectionPanel />
+      </div> : null}
+      </DeferredDetails>
     </section>
   )
 }

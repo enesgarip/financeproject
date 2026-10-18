@@ -1,5 +1,11 @@
 # Card Debt Transitions
 
+18 Ekim tüm kartlar tahmini: mevcut kart projeksiyonları kesim ayına göre
+birleştirilerek üç aylık toplam sunulur. Görünüm “Borç kırılımı ve dökümler”
+katmanında toplam yükün ardından açılır. İlk dönemde abonelik çift sayılmaz;
+kesilmiş ekstre/provizyon/faiz/serbest harcama dahil edilmez. Bu salt okuma
+yüzeyi kart borcu alanlarını, ödeme geçişlerini veya ledger'ı değiştirmez.
+
 18 Ekim alt menü eki: Alınacaklar, Bütçe ve hedefler, Hisseler ve Bakım
 adları kullanıcı onayıyla güncellendi; Bulgular korundu. Bu dil değişikliği
 kart borcu, ödeme, RPC veya ledger geçişlerini değiştirmez.

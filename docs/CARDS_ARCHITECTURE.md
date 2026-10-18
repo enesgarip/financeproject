@@ -2,6 +2,20 @@
 
 Last reviewed: 2026-10-18
 
+Kredi kartları özetindeki “Borç kırılımı ve dökümler” katmanında, toplam kart
+yükünün ardından “Önümüzdeki 3 ay · tüm kartlar” bulunur; ikinci bir açılır
+katman yoktur. `AllCardStatementProjectionPanel.tsx` borç kırılımının ilk açılışında ortak finance
+snapshot'ını okur; kart, taksit, harcama ve talimat aynı veri kümesindendir.
+`statementProjection.ts` / `projectAllCardStatements` mevcut kart tahminlerini
+sıra numarasıyla değil gerçek kesim ayıyla birleştirir; en yakın kesimin
+ayından itibaren üç ay gösterilir. Son ödeme ayı farklı olabilir. Dönem içi,
+taksit ve abonelik/talimat kırılımı ve toplam gizlilik maskesine uyar.
+Eksik kesim/vade bilgili kartlar adlarıyla dışlanır, kısmi toplam uyarılır;
+hiç hesaplanabilir kart yoksa sıfır toplam verilmez. Snapshot hatası veya
+erişilemeyen taksit tablosu toplamı gizler ve tekrar deneme sunar.
+Kesilmiş ekstre, serbest harcama, provizyon ve faiz dahil değildir.
+Mevcut kart tahmini formülleri ve tüm yazma/ledger akışları korunur.
+
 Ekstre aktarımının başarı adımı `SubscriptionDiscoveryPanel.tsx` içindeki
 `StatementSubscriptionDiscovery` ile son altı aylık abonelik adaylarını açar.
 `cardsRepo.fetchSubscriptionExpenses` tüm sayfaları okur; plan sorgusu paralel
