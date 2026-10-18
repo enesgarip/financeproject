@@ -1,5 +1,30 @@
 # Priority Backlog
 
+## 2026-10-18 — Tüm kartların üç aylık ekstre tahmini — UYGULANDI
+
+Kredi kartları özetinde “Borç kırılımı ve dökümler” katmanına, toplam yükün
+ardından “Önümüzdeki 3 ay · tüm kartlar” eklendi; ikinci açılır bölüm yoktur.
+Mevcut kart tahminleri kesim ayına göre birleştirilir; dönem içi, taksit ve
+abonelik/talimat kırılımı gösterilir. Farklı kesim günleri/yıl dönüşü, ilk ay
+aboneliği çift saymama ve kuruş hassasiyeti korunur. Eksik takvimli kartlar
+uyarılır; yükleme/hata/eksik taksit verisi sıfır sayılmaz. Tutar gizliliği tüm
+kırılımları kapsar. İlk açılışa kadar sorgu kurulmaz; ortak snapshot cache'i
+kullanılır. Kart/ödeme/ledger/şema değişmedi. Sözleşme:
+`docs/CARDS_ARCHITECTURE.md`, `docs/FINANCE_RULES.md`.
+
+Doğrulama: saf hesap ve UI'da 11 yeni regresyon; borç kırılımı açılana kadar
+snapshot sorgusunun kurulmadığı ve tahminin aynı katmanın içinde bulunduğu
+gerçek özet bileşeniyle test edilir. `npm run verify` başarılı: 159 dosyada
+1.713 test, dört Node guard, lint/coverage/audit (0 açık), build/bundle
+(996,6/1.030 kB gzip) ve altı edge tip kontrolü geçti. Mevcut özet testleri
+kullanıcının borç kırılımını açma adımını izler. Gerçek panel
+örnek verilerle statik render edilerek 390px iframe ve masaüstünde tarayıcıda
+incelendi; mobilde tutar ve para birimi birlikte kalır, kırılım satıra yayılır.
+Bu görsel kontrol oturum açılmış veri/yazma akışı testi değildir.
+Son konum ayrıca gerçek `CardsSummary` ve tahmin paneli birlikte örnek
+verilerle render edilerek masaüstünde kontrol edildi; tahmin toplam yükün
+altında aynı borç kırılımının içindedir.
+
 ## 2026-10-18 — Alt menü adlarını netleştirme — UYGULANDI
 
 Kullanıcı onayıyla Liste → Alınacaklar, Hedefler → Bütçe ve hedefler,

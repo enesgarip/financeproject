@@ -2,6 +2,14 @@
 
 Last reviewed: 2026-10-18
 
+Kredi kartları özetinde “Borç kırılımı ve dökümler” `DeferredDetails`
+katmanında, toplam yükün ardından “Önümüzdeki 3 ay · tüm kartlar” bulunur.
+Ayrı bir açılır bölüm yoktur. Borç kırılımının ilk açılışında snapshot sorgusu kurulur;
+aylık toplam ve dönem içi/taksit/abonelik-talimat kırılımı gösterilir.
+Mobilde ay ve tutar ayrı satırlara geçer; kırılım sarılır, tutar kırpılmaz.
+Kesim ayı/son ödeme ayı ayrımı, kapsam eksikleri ve tahmin sınırı görünürdür.
+Hata/eksik veri sıfır sayılmaz; toplam ve kırılım ortak gizlilik maskesindedir.
+
 18 Ekim alt menü eki: Alınacaklar, Bütçe ve hedefler, Hisseler ve Bakım
 sekme ve sayfa başlıklarında ortak adlardır. Bulgular ve ana menü korunur.
 `navigation.ts` tek ad kaynağıdır; Plan araçları etiketi yeniden adlandırmaz.

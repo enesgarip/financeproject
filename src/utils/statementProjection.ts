@@ -103,6 +103,45 @@ export function projectUpcomingStatements(
   return projections
 }
 
+export type CombinedStatementMonth = Pick<UpcomingStatementProjection,
+  'monthLabel' | 'currentPeriod' | 'installmentTotal' | 'recurringTotal' | 'amount'> & { monthKey: string }
+
+/** Kartların sıra numarasını değil, gerçek kesim aylarını birleştirir. */
+export function projectAllCardStatements(
+  cards: Pick<Card, 'id' | 'card_type' | 'statement_day' | 'due_day' | 'current_period_spending'>[],
+  installments: CardInstallment[],
+  subscriptions: SubscriptionItem[],
+  payments: Payment[],
+  today: Date = new Date(),
+): { rows: CombinedStatementMonth[]; excludedCardIds: string[] } {
+  const months = new Map<string, CombinedStatementMonth>()
+  const excludedCardIds: string[] = []
+  for (const card of cards) {
+    if (card.card_type !== 'kredi_karti') continue
+    const projections = projectUpcomingStatements(card, installments, subscriptions, payments, today)
+    if (projections.length !== 3) {
+      excludedCardIds.push(card.id)
+      continue
+    }
+    for (const row of projections) {
+      const monthKey = row.statementDate.slice(0, 7)
+      const previous = months.get(monthKey)
+      months.set(monthKey, {
+        monthKey,
+        monthLabel: row.monthLabel,
+        currentPeriod: sumTL([previous?.currentPeriod ?? 0, row.currentPeriod]),
+        installmentTotal: sumTL([previous?.installmentTotal ?? 0, row.installmentTotal]),
+        recurringTotal: sumTL([previous?.recurringTotal ?? 0, row.recurringTotal]),
+        amount: sumTL([previous?.amount ?? 0, row.amount]),
+      })
+    }
+  }
+  return {
+    rows: [...months.values()].sort((a, b) => a.monthKey.localeCompare(b.monthKey)).slice(0, 3),
+    excludedCardIds,
+  }
+}
+
 /**
  * Serbest harcama tabanı: son 90 günün tek-çekim, kesinleşmiş kart harcaması
  * aylık ortalaması − abonelik/talimat aylık toplamı (çift sayma olmasın).

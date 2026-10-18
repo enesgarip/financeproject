@@ -2,6 +2,18 @@
 
 Last reviewed: 2026-10-18
 
+Tüm kartların üç aylık ekstre tahmini: `utils/statementProjection.ts` /
+`projectAllCardStatements` mevcut kart tahminlerini kesim ayına göre toplar;
+en yakın kesimden başlayan üç ortak takvim ayını gösterir. Eksik kesim/vade
+kartları ayrı bildirilir. `components/finance/AllCardStatementProjectionPanel.tsx`
+aynı finance snapshot'tan beslenir; `pages/CardsPage.summary.tsx` içindeki
+“Borç kırılımı ve dökümler” `DeferredDetails` katmanının ilk açılışına kadar
+sorgu kurulmaz. Tahmin bu katmanda toplam yükün ardından yer alır; ikinci
+açılır bölüm yoktur. Yükleme/hata/eksik taksit verisi sıfır
+sayılmaz; gizlilik toplam ve kırılımları maskeler. Kaynak sözleşme:
+`docs/CARDS_ARCHITECTURE.md`, `docs/FINANCE_RULES.md`; saf ve UI regresyonları
+`statementProjection.test.ts`, `AllCardStatementProjectionPanel.test.tsx`.
+
 Alt menü adları: `components/navigation.ts` Alınacaklar, Bütçe ve hedefler,
 Hisseler ve Bakım adlarını sekme/sayfa başlığında ortak tutar. Bulgular ve
 ana menü korunur. `pages/PlanningHub.tsx` araç etiketini doğrudan kaynaktan

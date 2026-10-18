@@ -553,6 +553,21 @@ keşif adayları otomatik olarak `buildSubscriptionSummary`, nakit akışı veya
 ekstre projeksiyonuna eklenmez; önceki üç aylık finansal tahmin sözleşmesi
 aynıdır. İki aylık/belirsiz yeni öneriler ancak planlandıktan sonra yük olur.
 
+## Tüm kartların ekstre tahmini
+
+Kredi kartları özetindeki üç aylık toplam, `projectUpcomingStatements`
+sonuçlarının `projectAllCardStatements` ile kesim ayına göre birleştirilmesidir.
+Kartların ilk/ikinci/üçüncü ekstreleri farklı aylara düşebilir; sıra numarasıyla
+toplanmaz. En yakın gelecek kesim ayından başlayan üç takvim ayı gösterilir.
+Bu kesim ayıdır; son ödeme ayı değildir. Her kartın ilk kesiminde dönem içi
+harcama + planlı taksit, sonraki kesimlerinde taksit + mevcut abonelik/talimat
+kuralı aynen kullanılır; ilk dönemde abonelik yeniden eklenmez. Toplamlar
+`sumTL` üzerinden kuruş hassasiyetindedir. Kesilmiş ekstre borcu, yeni serbest
+harcama, provizyon ve faiz toplama girmez; gerçek ekstre daha yüksek çıkabilir.
+Eksik kesim/vade bilgili kredi kartı dışlanır ve kısmi kapsam açıkça belirtilir;
+yükleme/hata/erişilemeyen taksit verisi doğrulanmış sıfır olarak sunulmaz.
+Yeni abonelik keşfi adayları bu toplamda da kullanıcı planlamadan yük olmaz.
+
 ## Salary
 
 - `salary_history` records the monthly net salary amount that becomes effective

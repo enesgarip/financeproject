@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Card, CardExpense, CardInstallment, Payment } from '../types/database'
 import type { SubscriptionItem } from './subscriptions'
-import { discretionaryMonthlyBase, projectUpcomingStatements } from './statementProjection'
+import { discretionaryMonthlyBase, projectAllCardStatements, projectUpcomingStatements } from './statementProjection'
 
 const TODAY = new Date(2026, 7, 20) // 20 Ağustos 2026
 
@@ -102,6 +102,54 @@ describe('projectUpcomingStatements', () => {
   it('returns empty for cards without a statement schedule', () => {
     expect(projectUpcomingStatements({ ...card, statement_day: null }, [], [], [], TODAY)).toEqual([])
     expect(projectUpcomingStatements({ ...card, card_type: 'banka_karti' }, [], [], [], TODAY)).toEqual([])
+  })
+})
+
+describe('projectAllCardStatements', () => {
+  it('farklı kesim aylarını sıra numarasına göre birleştirmez; kuruşları ve kırılımı korur', () => {
+    const cards = [
+      { ...card, current_period_spending: 100.1 }, // sıradaki kesim Eylül
+      { ...card, id: 'c2', statement_day: 25, due_day: 5, current_period_spending: 200.2 }, // Ağustos
+    ]
+    const installments = [
+      installment({ amount: 10.01 }),
+      installment({ card_id: 'c2', due_month: '2026-08-01', amount: 20.02 }),
+      installment({ card_id: 'c2', amount: 30.03 }),
+      installment({ card_id: 'c2', amount: 999, status: 'posted' }),
+    ]
+    const result = projectAllCardStatements(cards, installments, [], [payment({ amount: 40.04, auto_source_card_id: 'c2' })], TODAY)
+    expect(result.excludedCardIds).toEqual([])
+    expect(result.rows).toEqual([
+      { monthKey: '2026-08', monthLabel: 'Ağustos 2026', currentPeriod: 200.2, installmentTotal: 20.02, recurringTotal: 0, amount: 220.22 },
+      { monthKey: '2026-09', monthLabel: 'Eylül 2026', currentPeriod: 100.1, installmentTotal: 40.04, recurringTotal: 40.04, amount: 180.18 },
+      { monthKey: '2026-10', monthLabel: 'Ekim 2026', currentPeriod: 0, installmentTotal: 0, recurringTotal: 40.04, amount: 40.04 },
+    ])
+  })
+
+  it('aynı ayın kart tutarlarını toplar; ilk dönemde abonelik/talimatı tekrar eklemez', () => {
+    const cards = [card, { ...card, id: 'c2', current_period_spending: 0.1 }]
+    const result = projectAllCardStatements(cards, [installment({ amount: 0.2 })], [subscription({ amount: 0.1 })], [payment({ amount: 0.2 })], TODAY)
+    expect(result.rows[0]).toMatchObject({ currentPeriod: 4000.1, installmentTotal: 0.2, recurringTotal: 0, amount: 4000.3 })
+    expect(result.rows[1]).toMatchObject({ currentPeriod: 0, recurringTotal: 0.3, amount: 0.3 })
+  })
+
+  it('banka kartlarını dışlar; eksik takvimli kredi kartlarını açıkça bildirir', () => {
+    const result = projectAllCardStatements([
+      card,
+      { ...card, id: 'kesim-yok', statement_day: null },
+      { ...card, id: 'vade-yok', due_day: null },
+      { ...card, id: 'banka', card_type: 'banka_karti', current_period_spending: 999 },
+    ], [], [], [], TODAY)
+    expect(result.excludedCardIds).toEqual(['kesim-yok', 'vade-yok'])
+    expect(result.rows[0]?.amount).toBe(4000)
+    expect(projectAllCardStatements([], [], [], [], TODAY)).toEqual({ rows: [], excludedCardIds: [] })
+    expect(projectAllCardStatements([{ ...card, statement_day: null }], [], [], [], TODAY).rows).toEqual([])
+  })
+
+  it('yıl dönüşünde üç ortak kesim ayını kronolojik sıralar; ödeme ayına taşımaz', () => {
+    const result = projectAllCardStatements([{ ...card, statement_day: 25, due_day: 5 }], [], [], [], new Date(2026, 11, 20))
+    expect(result.rows.map((row) => row.monthKey)).toEqual(['2026-12', '2027-01', '2027-02'])
+    expect(result.rows[0]?.monthLabel).toBe('Aralık 2026')
   })
 })
 
