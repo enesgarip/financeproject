@@ -54,7 +54,7 @@ jobs:
             changed=$(git diff --name-only "$BEFORE" "$SHA")
             while IFS= read -r file; do
               case "$file" in
-                src/*|public/*|index.html|package.json|package-lock.json|vite.config.*|tsconfig*.json|vercel.json|scripts/check-bundle-size.mjs|scripts/promote-vercel-deployment.mjs|.github/workflows/deploy.yml)
+                src/*|public/*|index.html|package.json|package-lock.json|vite.config.*|tsconfig*.json|vercel.json|scripts/check-bundle-size.mjs|scripts/archive-source-maps.mjs|scripts/promote-vercel-deployment.mjs|.github/workflows/deploy.yml)
                   frontend=true
                   ;;
               esac
@@ -185,6 +185,18 @@ jobs:
       - name: Bundle size budget
         run: npm run check:bundle
 
+      - name: Verify source maps are private
+        run: node scripts/archive-source-maps.mjs --check-public
+
+      - name: Archive release source maps
+        uses: actions/upload-artifact@v7
+        with:
+          name: client-error-maps-${{ github.sha }}
+          path: .diagnostics/source-maps
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 90
+
       - name: Upload staged prebuilt production
         if: ${{ needs.changes.outputs.frontend == 'true' }}
         id: stage
@@ -217,6 +229,8 @@ jobs:
     needs: changes
     if: ${{ needs.changes.outputs.database == 'true' }}
     runs-on: ubuntu-latest
+    env:
+      SUPABASE_INTERNAL_IMAGE_REGISTRY: ghcr.io
     timeout-minutes: 10
     steps:
       - name: Checkout

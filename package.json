@@ -8,7 +8,7 @@
     "dev": "vite",
     "dev:local": "node scripts/dev-local.mjs",
     "dev:local:stop": "supabase stop",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && vite build && node scripts/archive-source-maps.mjs",
     "verify": "npm run lint && npm run test:coverage && npm audit --omit=dev --audit-level=high && npm run build && npm run check:bundle && node scripts/verify-edge.mjs",
     "lint": "eslint . --cache --cache-strategy content --cache-location node_modules/.cache/eslint/.eslintcache",
     "preview": "vite preview",

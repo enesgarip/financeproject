@@ -122,7 +122,7 @@ export type SmsLog = {
   raw_sms: string
 }
 
-export type ClientErrorSource = 'boundary' | 'error' | 'unhandledrejection'
+export type ClientErrorSource = 'boundary' | 'error' | 'unhandledrejection' | 'resource' | 'security' | 'network'
 
 // Sentry'siz istemci hata izleme (lib/errorReport yazar, DataHealth okur).
 export type ClientError = {
@@ -136,6 +136,7 @@ export type ClientError = {
   commit_sha: string | null
   user_agent: string | null
   fingerprint: string
+  diagnostics?: Json | null
 }
 
 export type AiChatRole = 'user' | 'assistant'
