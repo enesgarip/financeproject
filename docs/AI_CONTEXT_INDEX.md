@@ -2,6 +2,10 @@
 
 Last reviewed: 2026-10-20
 
+20 Ekim CI yayın eki: Supabase yerel DB kontrol işleri ECR kotasına karşı
+resmi GHCR aynasını kullanır (`SUPABASE_INTERNAL_IMAGE_REGISTRY`); sürüm ve
+test kapsamı değişmez. Akış: `docs/PIPELINE.md`.
+
 20 Ekim ayrıntılı istemci teşhisi: `lib/errorReport.ts` JS/React/Promise,
 kaynak/CSP/fetch hatalarını `client_errors.diagnostics` ile toplar;
 `lib/errorDiagnostics.ts` teknik bağlam sınırı ve maskeleme kaynağıdır.

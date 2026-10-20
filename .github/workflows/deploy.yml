@@ -229,6 +229,8 @@ jobs:
     needs: changes
     if: ${{ needs.changes.outputs.database == 'true' }}
     runs-on: ubuntu-latest
+    env:
+      SUPABASE_INTERNAL_IMAGE_REGISTRY: ghcr.io
     timeout-minutes: 10
     steps:
       - name: Checkout

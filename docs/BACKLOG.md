@@ -16,6 +16,9 @@ lint/coverage/audit/build/bundle/altı edge tipi başarılı. Yerel gerçek
 Postgres seed/reset, 50 SQL regresyonu, DB lint, RLS ve grant denetimi geçti.
 Production preview + yerel Supabase üzerinde Playwright hata → DB → ayrıntı
 → pano zincirini doğruladı; parola/URL sırrı rapora taşınmadı.
+Yayın sırasında CI ECR kotasına DB başlamadan iki kez takıldı; CI/deploy DB
+kontrolleri aynı sürüm/digest'li resmi GHCR aynasına yönlendirildi. Kaynak
+uygulama ve test kapsamı değişmedi; akış `docs/PIPELINE.md` içinde.
 
 ## 2026-10-18 — Tüm kartların üç aylık ekstre tahmini — UYGULANDI
 

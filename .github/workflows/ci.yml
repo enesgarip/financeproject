@@ -362,6 +362,9 @@ jobs:
     needs: changes
     if: ${{ github.event_name != 'schedule' && needs.changes.outputs.database == 'true' }}
     runs-on: ubuntu-latest
+    env:
+      # ECR ortak runner IP'lerinde indirme kotasına takılabiliyor; resmi aynı-tag aynası.
+      SUPABASE_INTERNAL_IMAGE_REGISTRY: ghcr.io
     steps:
       - name: Checkout
         uses: actions/checkout@v7
