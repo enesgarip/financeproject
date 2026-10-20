@@ -9,7 +9,8 @@ import { Bug, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { useAuth } from '../../auth/useAuth'
 import { clearClientErrors, fetchRecentClientErrors } from '../../data/repositories/clientErrorsRepo'
-import type { ClientErrorSource } from '../../types/database'
+import type { ClientError, ClientErrorSource } from '../../types/database'
+import { diagnosticText } from '../../lib/errorDiagnostics'
 import { Card as SurfaceCard, CardContent, CardHeader, CardTitle } from '../ui/card'
 
 const CLIENT_ERRORS_QUERY_KEY = ['client-errors'] as const
@@ -18,6 +19,35 @@ const SOURCE_LABELS: Record<ClientErrorSource, string> = {
   boundary: 'Çökme (boundary)',
   error: 'Yakalanmamış hata',
   unhandledrejection: 'Promise reddi',
+  resource: 'Kaynak yükleme hatası',
+  security: 'Güvenlik politikası ihlali',
+  network: 'Ağ isteği hatası',
+}
+
+function ErrorDetails({ row }: { row: ClientError }) {
+  const [copyState, setCopyState] = useState('')
+  // Eski kayıtlar da okunur; kopyalama ekran görüntüsüne gerek bırakmaz.
+  const report = JSON.stringify({
+    id: row.id, recorded_at: row.created_at, source: row.source,
+    message: diagnosticText(row.message), route: row.route,
+    release: row.commit_sha, fingerprint: row.fingerprint,
+    user_agent: row.user_agent, stack: row.stack ? diagnosticText(row.stack, 8000) : null,
+    diagnostics: row.diagnostics ?? null,
+  }, null, 2)
+  const context = row.diagnostics && typeof row.diagnostics === 'object' && !Array.isArray(row.diagnostics) ? row.diagnostics : null
+  return <details className="mt-2 text-xs">
+    <summary className="cursor-pointer py-2 font-semibold">Teşhis ayrıntıları</summary>
+    {context?.opaque === true ? <p className="my-2 text-warning">Tarayıcı hata ayrıntılarını gizledi. Dosya ve hata izi alınamadı; tekrarında tarayıcı konsolu gerekebilir.</p> : null}
+    {!context ? <p className="my-2 text-ink-muted">Eski kayıt: genişletilmiş teknik bağlam bulunmuyor.</p> : null}
+    <button type="button" className="tap-target my-2 rounded-lg border border-line px-3 py-2" onClick={() => {
+      void (async () => {
+        try { await navigator.clipboard.writeText(report); setCopyState('Rapor kopyalandı.') }
+        catch { setCopyState('Kopyalanamadı. Aşağıdaki raporu seçerek kopyalayabilirsin.') }
+      })()
+    }}>Teşhis raporunu kopyala</button>
+    {copyState ? <p role="status" className="my-2 text-ink-muted">{copyState}</p> : null}
+    <pre className="max-h-96 overflow-auto whitespace-pre-wrap break-words rounded-lg bg-surface p-3 text-[11px]">{report}</pre>
+  </details>
 }
 
 export function ClientErrorsPanel() {
@@ -60,7 +90,7 @@ export function ClientErrorsPanel() {
               İstemci hataları
             </CardTitle>
             <p className="mt-1 text-xs text-ink-muted">
-              Son 7 gün · uygulama içi çökme ve yakalanmamış hatalar (Sentry'siz izleme).
+              Son 7 gün · en yeni 50 kayıt. Çökme, betik, kaynak, güvenlik ve ağ hataları.
             </p>
           </div>
           {rows.length > 0 ? (
@@ -92,8 +122,9 @@ export function ClientErrorsPanel() {
                     {row.commit_sha ? ` · ${row.commit_sha.slice(0, 7)}` : ''}
                   </span>
                 </div>
-                <p className="mt-1 break-words text-sm text-ink">{row.message}</p>
+                <p className="mt-1 break-words text-sm text-ink">{diagnosticText(row.message)}</p>
                 {row.route ? <p className="mt-0.5 text-[11px] text-ink-faint">{row.route}</p> : null}
+                <ErrorDetails row={row} />
               </li>
             ))}
           </ul>

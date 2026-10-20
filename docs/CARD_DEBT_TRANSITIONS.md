@@ -1,5 +1,9 @@
 # Card Debt Transitions
 
+20 Ekim teşhis eki: `docs/CLIENT_ERROR_DIAGNOSTICS.md` hata kayıtlarının yeni
+teknik bağlam ve inceleme sözleşmesidir. Kart/hesap/ödeme/ledger tabloları veya
+aşağıdaki geçişler bu izleme değişikliğiyle güncellenmez.
+
 18 Ekim tüm kartlar tahmini: mevcut kart projeksiyonları kesim ayına göre
 birleştirilerek üç aylık toplam sunulur. Görünüm “Borç kırılımı ve dökümler”
 katmanında toplam yükün ardından açılır. İlk dönemde abonelik çift sayılmaz;

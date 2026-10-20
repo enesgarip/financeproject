@@ -2,6 +2,12 @@
 
 > Kanonik özet `CLAUDE.md`'de. Bu dosya CI/deploy detayını tutar.
 
+20 Ekim teşhis eki: Vite hidden source map üretir; `npm run build` sonunda
+`scripts/archive-source-maps.mjs` bunları public dist'ten çıkarır. Production
+staged yüklemesinden önce dist/Vercel static alanında map olmadığı doğrulanır;
+`client-error-maps-<GITHUB_SHA>` Actions artifact'ı 90 gün tutulur. Manifest
+bundle SHA-256 taşır. İnceleme: `docs/CLIENT_ERROR_DIAGNOSTICS.md`.
+
 ## Goal
 
 Gerçek akış: **`main` güncellemesi = üretim deploy.** `main` korumalıdır; değişiklik

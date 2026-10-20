@@ -7,7 +7,13 @@ was recently verified. `LiveReconciliationPanel` is canonical on this route;
 other screens may show status and deep-link here, but must not duplicate its
 manual amount-entry form.
 
-Last reviewed: 2026-10-16
+Last reviewed: 2026-10-20
+
+Bakım istemci teşhisi eki: `ClientErrorsPanel` finansal bulgulardan ayrı kalır;
+JS/React/Promise/kaynak/CSP/ağ olaylarının mevcut hata izi, tarayıcı ve yeni
+teknik bağlamını açar, JSON raporunu kopyalar. Eski kayıtlar korunur. Taşıma,
+RLS, mahremiyet, sınırlar ve özel build haritaları sözleşmesi:
+`docs/CLIENT_ERROR_DIAGNOSTICS.md`. Finansal onarım/ledger hesabı değişmez.
 
 Test/import eki: boş `HealthData` nesnesi `DataHealth.logic.ts` içindedir.
 `DataHealth.actions.ts` mevcut `emptyData` export'unu yeniden sunar; UI aynı

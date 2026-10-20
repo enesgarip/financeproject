@@ -1,5 +1,22 @@
 # Priority Backlog
 
+## 2026-10-20 — Ayrıntılı istemci hata teşhisi — UYGULANDI
+
+`Script error.` incelemesinde görülen bağlam kaybı giderildi: JS/React/Promise,
+kaynak/CSP/fetch olayları teknik bağlam, konum, hata/neden/bileşen izi ve
+son olaylarla saklanır. Günlük mesaj dedupe kaldırıldı; UUID retry çoğalmaz,
+hesap değişiminde kuyruk temizlenir. Panel eski/yeni ayrıntıyı açar ve raporu
+kopyalar. Bilinen sırlar maskelenir, form/DOM/ağ gövdesi toplanmaz. Sınırlar
+ve opak hata koşulları açıkça belgeli. Hidden source map'ler public çıktıdan
+çıkarılır; production artifact'ında sürümle saklanır, kaynak satırına çözülür.
+Sözleşme/kanıt: `docs/CLIENT_ERROR_DIAGNOSTICS.md`. Yayın PR/CI/main hattını izler.
+
+Doğrulama: güncel main üzerine alındıktan sonra `npm run verify` 1.733 Vitest testi + yedi Node guard;
+lint/coverage/audit/build/bundle/altı edge tipi başarılı. Yerel gerçek
+Postgres seed/reset, 50 SQL regresyonu, DB lint, RLS ve grant denetimi geçti.
+Production preview + yerel Supabase üzerinde Playwright hata → DB → ayrıntı
+→ pano zincirini doğruladı; parola/URL sırrı rapora taşınmadı.
+
 ## 2026-10-18 — Tüm kartların üç aylık ekstre tahmini — UYGULANDI
 
 Kredi kartları özetinde “Borç kırılımı ve dökümler” katmanına, toplam yükün
@@ -962,8 +979,10 @@ CodeQL, heartbeat, push_run_log, SECRETS.md, retention, Web Vitals RUM).
   DEĞİŞTİRİYORDU (denendi, geri alındı); parser'lar iki satır sonunu da tolere
   ettiğinden doğru bayt-sabitlik varsayılan normalize'ın kendisi
   (.gitattributes'ta gerekçeli yorum).
-- ~~**② — client_errors: Sentry'siz istemci hata izleme.**~~ DONE (migration
-  `20260826180000`). Üretim telefon PWA'sında çökmeler tamamen görünmezdi
+- ~~**② — client_errors: Sentry'siz istemci hata izleme.**~~ DONE (migration `20260826180000`).
+  20 Ekim genişletmesi eski 5 kayıt/günlük dedupe/3 saniye gecikme sözleşmesini
+  değiştirdi; güncel davranış `docs/CLIENT_ERROR_DIAGNOSTICS.md` içindedir.
+  İlk uygulamada üretim telefon PWA'sında çökmeler tamamen görünmezdi
   (Sentry 2026-08-19'da bilinçli kaldırılmıştı — DSN zaten boştu). Yeni
   `lib/errorReport.ts`: AppErrorBoundary (dinamik import — entry şişmez) +
   window error/unhandledrejection (PROD'da 3 sn gecikmeli kurulum,

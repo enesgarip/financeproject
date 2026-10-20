@@ -19,9 +19,8 @@ export default defineConfig({
     __APP_COMMIT__: JSON.stringify(process.env.GITHUB_SHA?.slice(0, 12) ?? 'dev'),
   },
   build: {
-    // Sentry kaldirildiktan sonra source map'i tuketen kimse kalmadi; uretime
-    // sunulmayan harita uretmek bosuna build maliyeti + sizinti yuzeyi.
-    sourcemap: false,
+    // Build sonunda haritalar dist'ten özel teşhis arşivine taşınır; web'e çıkmaz.
+    sourcemap: 'hidden',
     rollupOptions: {
       output: {
         // Fonksiyon formu şart: obje formundaki 'react-dom' kaydı yalnız

@@ -47,7 +47,7 @@ jobs:
             changed=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA")
             while IFS= read -r file; do
               case "$file" in
-                src/*|public/*|tests/e2e/*|index.html|package.json|package-lock.json|vite.config.*|vitest.config.*|playwright.config.*|tsconfig*.json|eslint.config.*|.lighthouserc.cjs|vercel.json|.github/workflows/ci.yml|.github/workflows/deploy.yml|scripts/check-bundle-size.mjs|scripts/promote-vercel-deployment.mjs)
+                src/*|public/*|tests/e2e/*|index.html|package.json|package-lock.json|vite.config.*|vitest.config.*|playwright.config.*|tsconfig*.json|eslint.config.*|.lighthouserc.cjs|vercel.json|.github/workflows/ci.yml|.github/workflows/deploy.yml|scripts/check-bundle-size.mjs|scripts/archive-source-maps.mjs|scripts/promote-vercel-deployment.mjs)
                   frontend=true
                   ;;
               esac
