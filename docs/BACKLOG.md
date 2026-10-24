@@ -1,5 +1,43 @@
 # Priority Backlog
 
+## 2026-10-24 — Benzer render/veri tazeliği hataları — UYGULANDI
+
+İlk ledger düzeltmesi genişletildi: son üç hesap hareketi bakiye revizyonunu
+izler ve hata/yeniden deneme sunar. Ödeme sonrası aktif finans listeleri
+yenilenir; kapalı cards/payments/loans/debts/assets/stock_trades, son hareket ve
+kart temposu cache'i aynı kullanıcı kapsamında eski işaretlenir. Varlık
+al/sat, manuel CRUD ve değer güncelleme; gerçek altın asset senkronu ortak
+yenilemeyi çağırır. Değer geçmişi eski yanıt/hata karışmasını engeller.
+Hisselerde iki kaynak yenilenirken sahte adet uyuşmazlığı gösterilmez.
+Eski revizyonda başlayan düzeltme callback'i paneli yüklemede bırakamaz.
+Finansal yazma/RPC/SQL değişmez. Bulgu ve kanıt matrisi:
+`docs/RENDER_DATA_FRESHNESS_2026-10-24.md`.
+
+Doğrulama: güncel main üzerinde 40 yeni regresyonla `npm run verify` başarılı;
+169 dosyada 1.773 test, yedi Node guard, lint/coverage/audit (0 açık),
+build/bundle (999,5/1.030 kB gzip), özel source-map arşivi ve altı edge tip
+kontrolü geçti. Playwright smoke: 10 geçti, yerel backend isteyen dört test
+koşuluyla atlandı. Gerçek alım formu/cache ve gecikmeli okuma regresyonlarında
+repository/RPC yanıtları kontrollü örneklerdir; canlı veriye test yazması yok.
+Yayın kapısı: PR CI, ardından main üretim workflow'unda promote + `/login` smoke.
+
+## 2026-10-24 — Para hareketi sonrası sahte ledger farkı — UYGULANDI
+
+Cüzdan/banka hesabı ayrıntısı açıkken bakiye yenileniyor, `AccountLedgerPanel`
+eski hareketleri tutuyordu; sayfaya yeniden girilene kadar sahte fark ve
+“Ledger’a göre düzelt” çıkıyordu. Hesap ve kart panelleri id/zaman damgası/tutar
+revizyonuyla yenilenir; yeni kayıtlar yüklenirken eski kayıtlarla fark üretilmez.
+Geciken eski sorgular elenir; panel içi düzeltme sürerken geçici fark sunulmaz.
+Güncel verideki gerçek fark ve okuma hataları görünür kalır. RPC/ledger/para
+hesabı değişmedi. Regresyonlar: `src/components/finance/LedgerPanels.test.tsx`.
+Sözleşme: `docs/CARDS_ARCHITECTURE.md`.
+
+Doğrulama: hata düzeltme öncesinde testte üretildi; 27 yeni regresyon geçti.
+`npm run verify` başarılı: 160 dosyada 1.740 test, dört Node guard, lint,
+coverage, production audit (0 açık), build/bundle (996,7/1.030 kB gzip) ve
+altı edge tip kontrolü geçti. Bu doğrulama canlı kullanıcı hesabında yazma
+veya tarayıcı uçtan uca testi değildir.
+
 ## 2026-10-20 — Ayrıntılı istemci hata teşhisi — UYGULANDI
 
 `Script error.` incelemesinde görülen bağlam kaybı giderildi: JS/React/Promise,

@@ -38,6 +38,7 @@ import { LineGroup } from '../components/serit'
 import { formatCurrency } from '../utils/formatCurrency'
 import { Button } from '../components/ui/button'
 import { DeferredDetails } from '../components/ui/deferred-details'
+import { QueryError } from '../components/ui/query-error'
 
 function AccountRecentTransactions({
   card,
@@ -49,14 +50,19 @@ function AccountRecentTransactions({
   const { user } = useAuth()
   // Eski useEffect sürümü her mount'ta tüm hesap geçmişini çekip 3'e kesiyordu;
   // limit DB'de, sonuç TanStack cache'inde (remount bedava).
-  const { data: events } = useQuery({
-    queryKey: ['account-ledger-recent', user?.id, card.id],
+  const query = useQuery({
+    queryKey: ['account-ledger-recent', user?.id, card.id, card.updated_at, card.current_balance],
     enabled: Boolean(user),
     queryFn: async () => {
       const result = await fetchAccountLedgerEvents(card.id, 3)
-      return result.ok ? result.data : []
+      if (!result.ok) throw new Error(result.error.message ?? 'Son hareketler yüklenemedi.')
+      return result.data
     },
   })
+
+  if (query.isError) return <QueryError title="Son hareketler yüklenemedi" message={query.error.message} onRetry={() => void query.refetch()} />
+  if (query.isPending) return <p role="status" className="mt-3 text-xs text-ink-muted">Son hareketler yükleniyor…</p>
+  const events = query.data
 
   if (!events || events.length === 0) return null
 

@@ -390,7 +390,7 @@ export function BorsaPage() {
         return (
           <div className="space-y-3">
             <RatesBanner onSynced={reload} />
-            {!loading ? <BorsaSection trades={trades} assets={stockAssets} /> : null}
+            {!loading ? <BorsaSection trades={trades} assets={stockAssets} comparisonPending={assetsQuery.isFetching} /> : null}
           </div>
         )
       }}
@@ -407,8 +407,11 @@ export function BorsaPage() {
 }
 
 /** Canlı fiyatları defterdeki sembollerden toplar; overview'a geçirir. */
-function BorsaSection({ trades, assets }: { trades: StockTrade[]; assets: Asset[] }) {
+function BorsaSection({ trades, assets, comparisonPending }: { trades: StockTrade[]; assets: Asset[]; comparisonPending: boolean }) {
+  // CrudPage'in sorgusuyla aynı cache: yeni varlıklar eski defterle kıyaslanmaz.
+  const tradesQuery = useCrudRows('stock_trades', 'trade_date', false)
   const symbols = useMemo(() => Array.from(new Set([...trades.map((row) => row.symbol), ...assets.map((a) => a.symbol).filter((s): s is string => Boolean(s))])), [trades, assets])
   const prices = useStockPrices(symbols)
+  if (comparisonPending || tradesQuery.isFetching) return <p role="status">Portföy kayıtları güncelleniyor…</p>
   return <BorsaOverview trades={trades} assets={assets} prices={prices} />
 }

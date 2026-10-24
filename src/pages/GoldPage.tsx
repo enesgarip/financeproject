@@ -1,6 +1,6 @@
 import { useMemo, useEffect, useRef } from 'react'
 import { useAuth } from '../auth/useAuth'
-import { useFinanceSnapshot } from '../app/useFinanceSnapshot'
+import { useFinanceSnapshot, useInvalidateFinanceSnapshot } from '../app/useFinanceSnapshot'
 import { CrudPage, type FormField } from '../components/CrudPage'
 import { LineChart } from '../components/charts/LineChart'
 import { RatesBanner } from '../components/finance/RatesBanner'
@@ -156,6 +156,7 @@ function GoldLedgerAssetSync({
   setError: (message: string) => void
 }) {
   const { user } = useAuth()
+  const invalidateSnapshot = useInvalidateFinanceSnapshot()
   const lastSyncKey = useRef('')
   const hasSeenLots = useRef(false)
   const rowsKey = useMemo(
@@ -177,8 +178,9 @@ function GoldLedgerAssetSync({
     lastSyncKey.current = syncKey
 
     void syncGoldLedgerAssets(rows, user.id, snapshot)
-      .then(() => {
+      .then(async (result) => {
         if (rows.length === 0) hasSeenLots.current = false
+        if (result.inserted + result.updated + result.deleted > 0) await invalidateSnapshot()
       })
       .catch((error: unknown) => {
         const message = typeof error === 'object' && error !== null && 'message' in error
@@ -186,7 +188,7 @@ function GoldLedgerAssetSync({
           : 'Altın defteri varlık senkronu tamamlanamadı.'
         setError(message)
       })
-  }, [loading, ratesKey, rows, rowsKey, setError, snapshot, user])
+  }, [loading, ratesKey, rows, rowsKey, setError, snapshot, user, invalidateSnapshot])
 
   return null
 }

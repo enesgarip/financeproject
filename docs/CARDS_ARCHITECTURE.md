@@ -97,8 +97,19 @@ repositories, services, or focused `CardsPage.*` modules.
 - `CardsPage.list.tsx`: account/card list item presentation, row action menus,
   bank IBAN/copy affordance, masked card number, recent bank movements, and
   ledger/detail panels
-- `components/finance/CardLedgerPanel.tsx`: refreshes ledger events when the card's
-  `updated_at` changes, including expenses entered while card details remain open.
+- `components/finance/AccountLedgerPanel.tsx` and `CardLedgerPanel.tsx`: refresh
+  events when id, `updated_at`, or balance/debt changes, including movements made
+  while account/cash-wallet/card details remain open. Only events loaded for the
+  current revision can produce a drift warning or recompute action; pending reads
+  show loading and failed reads show an error. Superseded responses are ignored.
+  Panel corrections suppress transient drift while ledger and parent rows reload.
+  Genuine drift remains actionable. Regression: `components/finance/LedgerPanels.test.tsx`.
+- `CardsPage.list.tsx` recent account transactions share user-scoped cache with
+  id/updated_at/balance in the key. A pending revision never anchors old events
+  to a new balance; read failures expose retry rather than an empty history.
+  Finance invalidation also refreshes card expense pace and related CRUD lists
+  across pages. Contract and audit: `docs/APP_PERFORMANCE.md`,
+  `docs/RENDER_DATA_FRESHNESS_2026-10-24.md`.
 - `CardsPage.installment.tsx`: legacy installment migration fallback/reference;
   the primary user flow is now the unified installment form in
   `CardsPage.expense.tsx`

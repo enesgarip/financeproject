@@ -1,6 +1,22 @@
 # AI Context Index
 
-Last reviewed: 2026-10-20
+Last reviewed: 2026-10-24
+
+24 Ekim veri tazeliği denetimi: `app/useFinanceSnapshot.ts` ödeme/hareket sonrası
+aynı kullanıcının finans listelerini, son hesap hareketlerini ve kart temposunu
+da geçersiz kılar. `pages/AssetsPage.tsx` tüm yazma girişlerinde, `GoldPage.tsx`
+gerçek asset senkron değişikliğinde bunu kullanır. `pages/CardsPage.list.tsx`
+son hareketleri bakiye revizyonuyla okur; `AssetValueHistoryPanel.tsx` eski
+yanıtı eler. `pages/BorsaPage.tsx` assets/defter yenilenirken karşılaştırmayı
+bekletir. Bulgular/kapsam/regresyon: `docs/RENDER_DATA_FRESHNESS_2026-10-24.md`;
+kalıcı sözleşme: `docs/APP_PERFORMANCE.md`, `docs/CARDS_ARCHITECTURE.md`.
+
+Para hareketi sonrası ledger tazeliği: `components/finance/AccountLedgerPanel.tsx`
+ve `CardLedgerPanel.tsx` id + `updated_at` + bakiye/borç revizyonuyla hareketleri
+yeniler. Eski kayıtlar yeni tutarla karşılaştırılmaz; geciken yanıtlar elenir.
+Panel içi düzeltme sürerken geçici fark önerilmez. Gerçek fark/hata korunur.
+Regresyon: `components/finance/LedgerPanels.test.tsx`; sözleşme:
+`docs/CARDS_ARCHITECTURE.md`. Finansal yazma/ledger hesabı değişmez.
 
 20 Ekim CI yayın eki: Supabase yerel DB kontrol işleri ECR kotasına karşı
 resmi GHCR aynasını kullanır (`SUPABASE_INTERNAL_IMAGE_REGISTRY`); sürüm ve
