@@ -35,9 +35,15 @@ invalidation'ıyla tazelenir. Normal Hesaplar görünümünün sorgu kapsamı de
 - Kredi bölümünde özet için ekstre/taksitler, provizyon dökümünde provizyonlar,
   seçili kart ayrıntısında karşılaştırmalar yüklenir. CrudPage ile kart listesi
   aynı anahtarı paylaşır; ek observer ikinci HTTP isteği oluşturmaz.
-- `useInvalidateFinanceSnapshot` para hareketlerinden sonra kart detay cache'ini
-  de geçersiz kılar. Aktif detaylar yenilenir; kapalı query sonraki etkinleşmede
-  tazelenir. Bakım gerçekten satır değiştirdiyse kart listesi/detayları da yenilenir.
+- `useInvalidateFinanceSnapshot` para hareketlerinden sonra aynı kullanıcıya ait
+  cards/payments/loans/debts/assets/stock_trades listelerini, kart detaylarını,
+  son hesap hareketlerini ve kart temposunu snapshot ile birlikte geçersiz kılar.
+  Aktif sorgular yenilenir; kapalı query sonraki etkinleşmede tazelenir.
+  Bakım gerçekten satır değiştirdiyse aynı invalidation yolu kullanılır.
+  Varlık al/sat, manuel CRUD/değer güncelleme ve gerçek altın asset senkronu
+  değişikliği de bu sözleşmeye uyar. Hisseler assets/stock_trades yenilenirken
+  farklı zamanların verisini adet uyuşmazlığı olarak sunmaz. Denetim/regresyon:
+  `docs/RENDER_DATA_FRESHNESS_2026-10-24.md`.
   Veri sağlığı düzeltme/geri alma/ödeme/karşılaştırma işlemleri ortak snapshot
   ve kart listesi/detay cache'lerini yeniler. Geri yükleme girişimi (kısmi yazma
   olasılığı dahil) ve başarılı sıfırlama paylaşılan query'leri geçersiz kılar.

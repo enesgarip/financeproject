@@ -9,7 +9,8 @@ import { RatesBanner } from '../components/finance/RatesBanner'
 import { Button } from '../components/ui/button'
 import { ConfidenceBadge } from '../components/ui/confidence-badge'
 import { QueryError } from '../components/ui/query-error'
-import { useCrudRows, useInvalidateCrudRows } from '../app/useCrudRows'
+import { useCrudRows } from '../app/useCrudRows'
+import { useInvalidateFinanceSnapshot } from '../app/useFinanceSnapshot'
 import { useMarketRates } from '../hooks/useMarketRates'
 import { useStockPrices } from '../hooks/useStockPrices'
 import { normalizeTicker, type StockPrices } from '../lib/stockQuotesClient'
@@ -398,11 +399,11 @@ export function AssetsPage() {
   const { formatAmount } = useBalancePrivacy()
   const { snapshot } = useMarketRates()
   const [stockPrices, setStockPrices] = useState<StockPrices>({})
-  // Hesap listesi CardsPage'in liste sorgusuyla AYNI anahtarı paylaşır (tablo +
-  // sıralama birebir): iki sayfa arası tek fetch, işlem sonrası tek invalidation.
+  // Sıralama cache anahtarındadır; ortak tablo prefix'i tüm hesap listelerini
+  // işlem sonrası yeniler (CardsPage card_type, bu sayfa created_at kullanır).
   const accountsQuery = useCrudRows('cards', 'created_at', false)
   const accounts: FinanceCard[] = accountsQuery.data ?? EMPTY_ACCOUNTS
-  const invalidateAccounts = useInvalidateCrudRows('cards')
+  const invalidateSnapshot = useInvalidateFinanceSnapshot()
   const [trade, setTrade] = useState<AssetTradeDraft | null>(null)
   const [tradeAccountId, setTradeAccountId] = useState('')
   const [tradeAmount, setTradeAmount] = useState('')
@@ -439,7 +440,6 @@ export function AssetsPage() {
 
   async function handleTradeSubmit(
     event: FormEvent<HTMLFormElement>,
-    reloadAssets: () => Promise<void>,
     setPageError: (message: string) => void,
   ) {
     event.preventDefault()
@@ -497,7 +497,7 @@ export function AssetsPage() {
     setTrade(null)
     setTradeSaving(false)
     try {
-      await Promise.all([reloadAssets(), invalidateAccounts()])
+      await invalidateSnapshot()
     } catch (reloadError) {
       setPageError(reloadError instanceof Error ? reloadError.message : 'İşlem tamamlandı ama liste yenilenemedi.')
     }
@@ -513,6 +513,8 @@ export function AssetsPage() {
         fields={fields}
         fieldContext={fieldContext}
         validateForm={validateAssetForm}
+        afterSave={invalidateSnapshot}
+        afterDelete={invalidateSnapshot}
         emptyTitle="Henüz varlık yok"
         emptyDescription="Nakit, fon, hisse veya diğer varlıklarını buradan ekleyebilirsin. Altın işlemleri ayrı Altın sekmesinde tutulur."
         renderBeforeList={({ loading, rows, reload, setError }) => (
@@ -531,7 +533,7 @@ export function AssetsPage() {
               onAmountChange={setTradeAmount}
               onQuantityChange={setTradeQuantity}
               onNoteChange={setTradeNote}
-              onSubmit={(event) => void handleTradeSubmit(event, reload, setError)}
+              onSubmit={(event) => void handleTradeSubmit(event, setError)}
             />
             <StockPriceSync rows={rows as Asset[]} onPrices={setStockPrices} />
             {accountsError ? (
@@ -638,7 +640,7 @@ export function AssetsPage() {
         }}
         canEditRow={(row) => row.category !== 'Altın'}
         canDeleteRow={(row) => !isGoldLedgerAsset(row)}
-        renderCard={(row, { menu, rowActions, reload }) => {
+        renderCard={(row, { menu, rowActions }) => {
           const asset = row as Asset
           // Canlı kur gelmediğinde sessizce saklı değere düşülüyordu; kaynak
           // artık rozetle görünür (Faz D3).
@@ -700,7 +702,7 @@ export function AssetsPage() {
               {pl ? <ProfitBadge profit={pl.profit} profitPct={pl.profitPct} /> : null}
 
               {!asset.auto_valued && !isGoldLedgerAsset(asset) ? (
-                <AssetValueHistoryPanel asset={asset} formatAmount={formatAmount} onChanged={reload} />
+                <AssetValueHistoryPanel asset={asset} formatAmount={formatAmount} onChanged={invalidateSnapshot} />
               ) : null}
             </article>
           )

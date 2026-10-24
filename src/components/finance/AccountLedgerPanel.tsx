@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { fetchAccountLedgerEvents } from '../../data/repositories/financePanelsRepo'
 import { postAccountBalanceCorrection, recomputeAccountBalance } from '../../services/accountLedgerActions'
 import type { AccountLedger, Card } from '../../types/database'
@@ -39,6 +39,11 @@ export function AccountLedgerPanel({
   formatAmount?: (value: number | null | undefined) => string
 }) {
   const [events, setEvents] = useState<AccountLedger[] | null>(null)
+  // Compare only events loaded for this exact balance/debt revision.
+  const revision = JSON.stringify([card.id, card.updated_at, card.current_balance])
+  const [loadedRevision, setLoadedRevision] = useState('')
+  const loadSequence = useRef(0)
+  const activeRevision = useRef<string | null>(null)
   const [loadError, setLoadError] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -48,7 +53,12 @@ export function AccountLedgerPanel({
   const [note, setNote] = useState('')
 
   const load = useCallback(async () => {
+    // A mutation may finish after its originating row revision was replaced.
+    if (activeRevision.current !== revision) return
+    const sequence = ++loadSequence.current
     const loadResult = await fetchAccountLedgerEvents(card.id)
+    if (sequence !== loadSequence.current) return
+    setLoadedRevision(revision)
 
     if (!loadResult.ok) {
       setLoadError(
@@ -60,12 +70,17 @@ export function AccountLedgerPanel({
     }
     setLoadError('')
     setEvents(loadResult.data)
-  }, [card.id])
+  }, [card.id, revision])
 
   useEffect(() => {
+    activeRevision.current = revision
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void load()
-  }, [load])
+    return () => {
+      activeRevision.current = null
+      loadSequence.current += 1
+    }
+  }, [load, revision])
 
   async function afterMutation() {
     await load()
@@ -107,6 +122,7 @@ export function AccountLedgerPanel({
     setBusy(false)
   }
 
+  if (loadedRevision !== revision) return <p role="status" className="mt-3 text-xs text-ink-muted">Hareketler yükleniyor…</p>
   if (loadError) return <Alert variant="warning" className="mt-3">{loadError}</Alert>
   if (events === null) return null
 
@@ -127,7 +143,7 @@ export function AccountLedgerPanel({
         </dl>
       </div>
 
-      {drift !== 0 ? (
+      {!busy && drift !== 0 ? (
         <div className="mt-2 rounded-lg bg-warning/8 px-3 py-2 ring-1 ring-warning/20">
           <p className="text-xs font-semibold text-warning" aria-live="polite">
             {formatAmount(Math.abs(drift))} hareketlerle açıklanamıyor — kayıt dışı bir {drift > 0 ? 'giriş' : 'çıkış'} olabilir.

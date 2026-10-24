@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query'
 import { useCallback } from 'react'
 import { useAuth } from '../auth/useAuth'
 import {
@@ -17,6 +17,20 @@ export { financeSnapshotKey }
 const FINANCE_MAINTENANCE_THROTTLE_MS = 5 * 60 * 1000
 let lastFinanceMaintenanceAt = 0
 let financeMaintenancePromise: Promise<number> | null = null
+
+// RPC'ler birden çok tabloyu değiştirir. Snapshot ve sayfa listeleri aynı
+// yazmadan sonra tazelenmeli; kapalı listeler bir sonraki açılışta okunur.
+const FINANCE_CRUD_TABLES = ['cards', 'payments', 'loans', 'debts', 'assets', 'stock_trades'] as const
+
+async function invalidateFinanceViews(queryClient: QueryClient, userId: string | undefined) {
+  await Promise.all([
+    queryClient.invalidateQueries({ queryKey: financeSnapshotKey(userId) }),
+    queryClient.invalidateQueries({ queryKey: cardPageDataKey(userId) }),
+    queryClient.invalidateQueries({ queryKey: ['account-ledger-recent', userId] }),
+    queryClient.invalidateQueries({ queryKey: ['card-expense-pace', userId] }),
+    ...FINANCE_CRUD_TABLES.map((table) => queryClient.invalidateQueries({ queryKey: crudRowsInvalidationKey(table, userId) })),
+  ])
+}
 
 /**
  * Bakımın değiştirdiği satır toplamını döndürür; throttle/hata = 0. Çoğu koşu
@@ -57,10 +71,7 @@ export function useFinanceSnapshot() {
       const snapshotPromise = fetchFinanceSnapshot()
       runFinanceMaintenanceInBackground().then((changedRows) => {
         if (changedRows > 0) {
-          queryClient.invalidateQueries({ queryKey: financeSnapshotKey(userId) })
-          queryClient.invalidateQueries({ queryKey: crudRowsInvalidationKey('payments', userId) })
-          queryClient.invalidateQueries({ queryKey: crudRowsInvalidationKey('cards', userId) })
-          queryClient.invalidateQueries({ queryKey: cardPageDataKey(userId) })
+          void invalidateFinanceViews(queryClient, userId)
         }
       })
       return snapshotPromise
@@ -75,12 +86,7 @@ export function useInvalidateFinanceSnapshot() {
   const userId = user?.id
 
   return useCallback(
-    async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: financeSnapshotKey(userId) }),
-        queryClient.invalidateQueries({ queryKey: cardPageDataKey(userId) }),
-      ])
-    },
+    () => invalidateFinanceViews(queryClient, userId),
     [queryClient, userId],
   )
 }

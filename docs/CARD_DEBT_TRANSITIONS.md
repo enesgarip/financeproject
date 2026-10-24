@@ -1,5 +1,17 @@
 # Card Debt Transitions
 
+24 Ekim genişletilmiş tazelik denetimi: finans mutation'ları aynı kullanıcıdaki
+liste/özet/detay cache'lerini yeniler; son hesap hareketleri ve hisse/varlık
+geçmişleri eski/yeni okuma sonuçlarını karıştırmaz. Borç geçişleri ve finansal
+yazma yolları değişmez. Bulgular: `docs/RENDER_DATA_FRESHNESS_2026-10-24.md`.
+
+24 Ekim ledger görünümü eki: hesap/cüzdan ve kart ayrıntısında hareketler,
+satır id/zaman damgası/tutar revizyonuyla yenilenir; yükleme sırasında eski
+ledger yeni bakiye/borçla karşılaştırılmaz. Geciken sorgular ve panel içi
+düzeltmenin ara durumu sahte fark/düzeltme önerisi üretmez. Güncel gerçek fark
+korunur. Bu değişiklik aşağıdaki borç geçişlerini, RPC'leri veya ledger olaylarını
+değiştirmez. Sözleşme: `docs/CARDS_ARCHITECTURE.md`.
+
 20 Ekim teşhis eki: `docs/CLIENT_ERROR_DIAGNOSTICS.md` hata kayıtlarının yeni
 teknik bağlam ve inceleme sözleşmesidir. Kart/hesap/ödeme/ledger tabloları veya
 aşağıdaki geçişler bu izleme değişikliğiyle güncellenmez.

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { fetchCardLedgerEvents } from '../../data/repositories/financePanelsRepo'
 import { postCardDebtCorrection, recomputeCardDebt } from '../../services/cardLedgerActions'
 import type { Card, CardLedger } from '../../types/database'
@@ -41,6 +41,11 @@ export function CardLedgerPanel({
   formatAmount?: (value: number | null | undefined) => string
 }) {
   const [events, setEvents] = useState<CardLedger[] | null>(null)
+  // Compare only events loaded for this exact balance/debt revision.
+  const revision = JSON.stringify([card.id, card.updated_at, card.debt_amount])
+  const [loadedRevision, setLoadedRevision] = useState('')
+  const loadSequence = useRef(0)
+  const activeRevision = useRef<string | null>(null)
   const [loadError, setLoadError] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -50,7 +55,12 @@ export function CardLedgerPanel({
   const [note, setNote] = useState('')
 
   const load = useCallback(async () => {
+    // A mutation may finish after its originating row revision was replaced.
+    if (activeRevision.current !== revision) return
+    const sequence = ++loadSequence.current
     const loadResult = await fetchCardLedgerEvents(card.id)
+    if (sequence !== loadSequence.current) return
+    setLoadedRevision(revision)
 
     if (!loadResult.ok) {
       setLoadError(
@@ -62,12 +72,17 @@ export function CardLedgerPanel({
     }
     setLoadError('')
     setEvents(loadResult.data)
-  }, [card.id])
+  }, [card.id, revision])
 
   useEffect(() => {
+    activeRevision.current = revision
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void load()
-  }, [load, card.updated_at])
+    return () => {
+      activeRevision.current = null
+      loadSequence.current += 1
+    }
+  }, [load, revision])
 
   async function afterMutation() {
     await load()
@@ -109,6 +124,7 @@ export function CardLedgerPanel({
     setBusy(false)
   }
 
+  if (loadedRevision !== revision) return <p role="status" className="mt-3 text-xs text-ink-muted">Hareketler yükleniyor…</p>
   if (loadError) return <Alert variant="warning" className="mt-3">{loadError}</Alert>
   if (events === null) return null
 
@@ -133,7 +149,7 @@ export function CardLedgerPanel({
         </p>
       ) : null}
 
-      {drift !== 0 ? (
+      {!busy && drift !== 0 ? (
         <div className="mt-2 rounded-lg bg-warning/8 px-3 py-2 ring-1 ring-warning/20">
           <p className="text-xs font-semibold text-warning" aria-live="polite">
             {formatAmount(Math.abs(drift))} hareketlerle açıklanamıyor — kayıt dışı bir {drift > 0 ? 'artış' : 'azalış'} olabilir.

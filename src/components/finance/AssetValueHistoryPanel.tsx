@@ -1,5 +1,5 @@
 import { ChevronDown, ChevronUp } from 'lucide-react'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { fetchAssetValueEvents } from '../../data/repositories/assetValueEventsRepo'
 import { updateAssetValue } from '../../services/assetValueHistory'
 import type { Asset, AssetValueEvent } from '../../types/database'
@@ -48,6 +48,10 @@ export function AssetValueHistoryPanel({
   formatAmount?: (value: number | null | undefined) => string
 }) {
   const [events, setEvents] = useState<AssetValueEvent[] | null>(null)
+  const revision = JSON.stringify([asset.id, asset.updated_at, asset.estimated_value_try])
+  const [loadedRevision, setLoadedRevision] = useState('')
+  const loadSequence = useRef(0)
+  const activeRevision = useRef<string | null>(null)
   const [loadError, setLoadError] = useState('')
   const [open, setOpen] = useState(false)
   const [range, setRange] = useState<RangeKey>('all')
@@ -60,7 +64,12 @@ export function AssetValueHistoryPanel({
   const [note, setNote] = useState('')
 
   const load = useCallback(async () => {
+    // A mutation may finish after its originating row revision was replaced.
+    if (activeRevision.current !== revision) return
+    const sequence = ++loadSequence.current
     const result = await fetchAssetValueEvents(asset.id)
+    if (sequence !== loadSequence.current) return
+    setLoadedRevision(revision)
     if (!result.ok) {
       setLoadError(
         isMissingSupabaseCapabilityError(result.error)
@@ -71,12 +80,17 @@ export function AssetValueHistoryPanel({
     }
     setLoadError('')
     setEvents(result.data)
-  }, [asset.id])
+  }, [asset.id, revision])
 
   useEffect(() => {
+    activeRevision.current = revision
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void load()
-  }, [load, asset.updated_at])
+    return () => {
+      activeRevision.current = null
+      loadSequence.current += 1
+    }
+  }, [load, revision])
 
   async function handleSubmit() {
     const nextValue = parseNumber(value)
@@ -110,6 +124,9 @@ export function AssetValueHistoryPanel({
     await onChanged?.()
   }
 
+  if (loadedRevision !== revision) return <p role="status" className="mt-3 text-xs text-ink-muted">Değer geçmişi yükleniyor…</p>
+  if (loadError) return <p role="alert" className="mt-3 text-xs font-semibold text-destructive">{loadError}</p>
+
   const allRows = events ? buildAssetValueRows(events) : []
   const since = rangeSince(range)
   const rows = since ? allRows.filter((row) => row.event.occurred_at >= since) : allRows
@@ -128,8 +145,6 @@ export function AssetValueHistoryPanel({
         </span>
         {open ? <ChevronUp size={14} className="shrink-0 text-ink-muted" /> : <ChevronDown size={14} className="shrink-0 text-ink-muted" />}
       </button>
-
-      {loadError ? <p className="mt-2 text-xs font-semibold text-destructive">{loadError}</p> : null}
 
       {summary.count > 0 ? (
         <p className="mt-1.5 text-xs font-semibold text-ink-muted">
