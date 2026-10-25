@@ -239,7 +239,7 @@ export function CardsPage() {
       setExpensesVersion((version) => version + 1)
     }
     return (
-      <section id="kart-bilgi-dokumu" className={`flex flex-col gap-3 ${panel === 'manuel' ? '' : 'border-t border-line pt-4'}`} aria-label={panel === 'manuel' ? 'Harcama girişi' : 'Seçilen bilgi dökümü'}>
+      <section id="kart-bilgi-dokumu" className={`flex scroll-mt-[calc(env(safe-area-inset-top)+6rem)] flex-col gap-3 ${panel === 'manuel' ? '' : 'border-t border-line pt-4'}`} aria-label={panel === 'manuel' ? 'Harcama girişi' : 'Seçilen bilgi dökümü'}>
         <div className="flex"><button type="button" onClick={() => openPanel(null)} aria-label={panel === 'manuel' ? 'Kapat' : undefined} className="interaction-press flex min-h-11 items-center gap-2 text-sm font-semibold text-primary">{panel === 'manuel' ? <><ArrowLeft size={18} strokeWidth={1.8} aria-hidden="true" />Hesaplara dön</> : 'Dökümü kapat'}</button></div>
         {panel === 'donem' ? <><PeriodSpendingBreakdown cards={scopedCards} /><CategoryCleanupPanel key={selectedCardId ?? 'all'} collapsible cardId={selectedCardId ?? undefined} refreshKey={expensesVersion} onChanged={() => { void invalidateSnapshot(); setExpensesVersion((version) => version + 1) }} /><RecentCardExpensesPanel key={selectedCardId ?? 'all'} cardId={selectedCardId ?? undefined} cards={cardRows} reload={refresh} setError={setError} refreshKey={expensesVersion} /></> : null}
         {panel === 'kategoriler' ? <CategoryCleanupPanel key={selectedCardId ?? 'all'} cardId={selectedCardId ?? undefined} onChanged={() => { void invalidateSnapshot(); setExpensesVersion((version) => version + 1) }} /> : null}

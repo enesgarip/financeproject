@@ -66,10 +66,11 @@ export function CardsSummary({ rows, installments, statements, statementPayments
       <div className="grid grid-cols-2 gap-x-5 divide-y-0 border-b border-line">
         {metrics.map((metric) => (
           <button key={metric.id} type="button" onClick={() => onOpenPanel(metric.id)} aria-expanded={panel === metric.id}
-            aria-controls="kart-bilgi-dokumu" className="min-w-0 border-t border-line py-4 text-left transition-colors hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary">
-            <span className="flex items-center justify-between gap-1 text-xs font-semibold text-ink-muted">{metric.label}<ChevronRight size={15} aria-hidden="true" /></span>
+            aria-controls="kart-bilgi-dokumu" className={`interaction-press min-w-0 border-t px-2 py-4 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary ${panel === metric.id ? 'border-primary bg-primary/10 text-primary' : 'border-line hover:bg-primary/5 hover:text-primary'}`}>
+            <span className={`flex items-center justify-between gap-1 text-xs font-semibold ${panel === metric.id ? 'text-primary' : 'text-ink-muted'}`}>{metric.label}<ChevronRight size={15} className={`shrink-0 transition-transform motion-reduce:transition-none ${panel === metric.id ? 'rotate-90' : ''}`} aria-hidden="true" /></span>
             <span className={`serit-num mt-2 block break-words font-semibold ${metric.prominent ? 'text-[clamp(1.25rem,4.6vw,2.5rem)] leading-tight' : 'text-lg'}`}>{metric.unavailable ? '—' : formatAmount(metric.amount)}</span>
             <span className="mt-1 block text-[11px] leading-relaxed text-ink-muted">{metric.unavailable ? (metric.id === 'taksitler' && installmentsError) || (metric.id === 'ekstreler' && statementError) || 'Yükleniyor…' : metric.hint}</span>
+            <span className={`mt-2 block text-[11px] font-semibold ${panel === metric.id ? 'text-primary' : 'text-ink-muted'}`}>{panel === metric.id ? 'Döküm açık · Kapat' : 'Dökümü aç'}</span>
           </button>
         ))}
       </div>

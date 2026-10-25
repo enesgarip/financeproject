@@ -1,8 +1,10 @@
 // @vitest-environment happy-dom
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
+import { useState } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { Card, CardInstallment, CardStatementArchive, CardStatementPayment } from '../types/database'
 import { CardsSummary, SharedLimitGroups } from './CardsPage.summary'
+import type { CardPanel } from './CardsPage.hooks'
 
 vi.mock('../hooks/useBalancePrivacy', () => ({ useBalancePrivacy: () => ({ formatAmount: (value: number) => `${value.toFixed(2)} TL` }) }))
 vi.mock('../components/finance/AllCardStatementProjectionPanel', () => ({ AllCardStatementProjectionPanel: () => null }))
@@ -23,6 +25,29 @@ const props = {
 }
 
 describe('kart özeti', () => {
+  it('seçilen dökümü belirtir, seçim değişince vurguyu taşır ve tekrar dokununca kapatır', () => {
+    function SummaryHarness() {
+      const [panel, setPanel] = useState<CardPanel>(null)
+      return <CardsSummary {...props} panel={panel} onOpenPanel={(next) => setPanel(next === panel ? null : next)} />
+    }
+    render(<SummaryHarness />)
+    openDebtBreakdown()
+    for (const label of ['Dönem içi toplam', 'Gelecek taksit toplamı', 'Ödenecek ekstre', 'Bekleyen provizyon']) {
+      const button = screen.getByRole('button', { name: new RegExp(label) })
+      fireEvent.click(button)
+      expect(button.getAttribute('aria-expanded')).toBe('true')
+      expect(button.getAttribute('aria-controls')).toBe('kart-bilgi-dokumu')
+      expect(button.className).toContain('bg-primary/10')
+      expect(within(button).getByText('Döküm açık · Kapat')).toBeTruthy()
+      expect(screen.getAllByText('Döküm açık · Kapat')).toHaveLength(1)
+    }
+    const selected = screen.getByRole('button', { name: /Bekleyen provizyon/ })
+    fireEvent.click(selected)
+    expect(selected.getAttribute('aria-expanded')).toBe('false')
+    expect(selected.className).not.toContain('bg-primary/10')
+    expect(screen.queryByText('Döküm açık · Kapat')).toBeNull()
+  })
+
   it('dönem içi, provizyon, gelecek taksit ve ekstre kalanını ayrı gösterir', () => {
     render(<CardsSummary {...props} />)
     openDebtBreakdown()

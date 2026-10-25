@@ -20,15 +20,43 @@ function Harness() {
     <button onClick={() => navigation.openCardDetails(account)}>Hesap aç</button>
     <button onClick={() => navigation.openCardDetails(credit)}>Kart aç</button>
     <button onClick={() => navigation.openPanel('taksitler')}>Taksit göster</button>
+    <button onClick={() => navigation.openPanel('provizyon')}>Provizyon göster</button>
+    <button onClick={() => navigation.openPanel('manuel')}>Harcama ekle</button>
     <button onClick={navigation.backToList}>Listeye dön</button>
     <button onClick={() => navigate(-1)}>Tarayıcı geri</button>
+    {navigation.panel ? <section id="kart-bilgi-dokumu">{navigation.panel}</section> : null}
   </>
 }
 
-afterEach(cleanup)
+afterEach(() => { cleanup(); vi.restoreAllMocks() })
 beforeEach(() => { vi.spyOn(window, 'scrollTo').mockImplementation(() => {}) })
 
 describe('hesap ve kart ayrıntısı navigasyonu', () => {
+  it.each([false, true])('dokunulan dökümü görünür konuma kaydırır; hareketi azalt tercihi: %s', (reducedMotion) => {
+    const scrollIntoView = vi.spyOn(HTMLElement.prototype, 'scrollIntoView').mockImplementation(() => {})
+    vi.spyOn(window, 'matchMedia').mockReturnValue({ matches: reducedMotion } as MediaQueryList)
+    render(<MemoryRouter initialEntries={['/kartlar?section=kartlar']}><Harness /></MemoryRouter>)
+    expect(scrollIntoView).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByText('Taksit göster'))
+    expect(scrollIntoView).toHaveBeenLastCalledWith({ behavior: reducedMotion ? 'instant' : 'smooth', block: 'start' })
+    expect(scrollIntoView.mock.instances[0]).toBe(document.getElementById('kart-bilgi-dokumu'))
+    fireEvent.click(screen.getByText('Provizyon göster'))
+    expect(scrollIntoView).toHaveBeenCalledTimes(2)
+    fireEvent.click(screen.getByText('Provizyon göster'))
+    expect(document.getElementById('kart-bilgi-dokumu')).toBeNull()
+    expect(scrollIntoView).toHaveBeenCalledTimes(2)
+    fireEvent.click(screen.getByText('Harcama ekle'))
+    expect(scrollIntoView).toHaveBeenCalledTimes(2)
+  })
+
+  it('doğrudan döküm bağlantısını açarken veya kapatırken konumu değiştirmez', () => {
+    const scrollIntoView = vi.spyOn(HTMLElement.prototype, 'scrollIntoView').mockImplementation(() => {})
+    render(<MemoryRouter initialEntries={['/kartlar?section=kartlar&panel=taksitler']}><Harness /></MemoryRouter>)
+    expect(document.getElementById('kart-bilgi-dokumu')).not.toBeNull()
+    fireEvent.click(screen.getByText('Taksit göster'))
+    expect(scrollIntoView).not.toHaveBeenCalled()
+  })
+
   it.each(['/kartlar', '/kartlar?section=bilinmeyen'])('varsayılan olarak hesapları açar: %s', (url) => {
     render(<MemoryRouter initialEntries={[url]}><Harness /></MemoryRouter>)
     expect(screen.getByLabelText('Seçim').textContent).toBe('hesaplar::')

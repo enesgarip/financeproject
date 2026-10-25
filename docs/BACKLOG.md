@@ -1,5 +1,22 @@
 # Priority Backlog
 
+## 2026-10-25 — Kart dökümü dokunma geri bildirimi — UYGULANDI
+
+Borç kırılımındaki dört toplamda açık döküm safir zemin/çizgi, aşağı dönen ok
+ve “Döküm açık · Kapat” metniyle belirtilir; kapalı eylem “Dökümü aç”tır.
+Dokunarak açma/değiştirme, dökümün başına sabit üst başlık payıyla kaydırır;
+hareketi azalt tercihinde animasyon yoktur. Aynı toplama tekrar dokunmak kapatır.
+Doğrudan bağlantı, kapatma ve veri yenilemesi otomatik kaydırma başlatmaz.
+Kaynak: `docs/CARDS_ARCHITECTURE.md`, `docs/UI_ARCHITECTURE.md`.
+Regresyon: `CardsPage.summary.test.tsx`, `CardsPage.navigation.test.tsx`.
+Finansal hesap/RPC/ledger değişmez.
+
+Doğrulama: `npm run verify` başarılı; 169 dosyada 1.777 test, yedi Node guard,
+lint/coverage, üretim dependency audit (0 açık), build/bundle ve altı edge tip
+kontrolü geçti. Yerel temsili veri görünümünde Playwright ile 320/390/1024px,
+açık/koyu tema, seçili belirteç, döküme kaydırma, tekrar dokunarak kapatma ve
+yatay taşma kontrolü geçti. Bu görsel kontrol canlı finans verisi kullanmaz.
+
 ## 2026-10-24 — Benzer render/veri tazeliği hataları — UYGULANDI
 
 İlk ledger düzeltmesi genişletildi: son üç hesap hareketi bakiye revizyonunu

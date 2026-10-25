@@ -1,5 +1,10 @@
 # Card Debt Transitions
 
+25 Ekim döküm geri bildirimi: kart özetinde seçili toplam görünür biçimde
+işaretlenir; kullanıcı döküm açınca/değiştirince ilgili içeriğe kaydırılır.
+Bu sunum değişikliği borç alanlarını, ödeme/RPC geçişlerini veya ledger
+olaylarını değiştirmez. Sözleşme: `docs/CARDS_ARCHITECTURE.md`.
+
 24 Ekim genişletilmiş tazelik denetimi: finans mutation'ları aynı kullanıcıdaki
 liste/özet/detay cache'lerini yeniler; son hesap hareketleri ve hisse/varlık
 geçmişleri eski/yeni okuma sonuçlarını karıştırmaz. Borç geçişleri ve finansal

@@ -39,11 +39,22 @@ export function useCardSectionNavigation() {
   const panel: CardPanel = ['donem', 'taksitler', 'ekstreler', 'provizyon', 'kategoriler', 'manuel'].includes(rawPanel ?? '') ? rawPanel as CardPanel : null
   const listScroll = useRef(0)
   const previousCard = useRef(selectedCardId)
+  const pendingPanelScroll = useRef<CardPanel>(null)
 
   useLayoutEffect(() => {
     if (previousCard.current && !selectedCardId) window.scrollTo({ top: listScroll.current, behavior: 'instant' })
     previousCard.current = selectedCardId
   }, [selectedCardId])
+
+  useLayoutEffect(() => {
+    if (!panel || pendingPanelScroll.current !== panel) return
+    pendingPanelScroll.current = null
+    // Yalnız kullanıcı döküm açınca kaydır; doğrudan URL ve veri yenilemesi konumu korur.
+    document.getElementById('kart-bilgi-dokumu')?.scrollIntoView({
+      behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth',
+      block: 'start',
+    })
+  }, [panel])
 
   const handleSectionChange = useCallback((next: CardSection) => {
     const nextParams = new URLSearchParams(searchParams)
@@ -77,6 +88,7 @@ export function useCardSectionNavigation() {
   }, [location.state, navigate, searchParams, section, setSearchParams])
 
   const openPanel = useCallback((next: CardPanel) => {
+    pendingPanelScroll.current = next !== panel && next !== 'manuel' ? next : null
     const nextParams = new URLSearchParams(searchParams)
     nextParams.set('section', section)
     if (next && next !== panel) nextParams.set('panel', next)
