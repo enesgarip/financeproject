@@ -1,6 +1,15 @@
 # AI Context Index
 
-Last reviewed: 2026-10-24
+Last reviewed: 2026-10-25
+
+25 Ekim kart dökümü geri bildirimi: `pages/CardsPage.summary.tsx` seçili toplamı
+safir vurgu, aşağı ok ve “Döküm açık · Kapat” metniyle belirtir.
+`pages/CardsPage.hooks.ts` yalnız kullanıcı döküm açıp/değiştirince görünür
+konuma kaydırır; hareketi azalt tercihini gözetir. `pages/CardsPage.tsx`
+dökümünde sabit üst başlık payı vardır. Tekrar dokunma kapatır; doğrudan URL,
+kapatma ve veri yenilemesi kaydırmaz. Sözleşme: `docs/CARDS_ARCHITECTURE.md`,
+`docs/UI_ARCHITECTURE.md`; regresyon: `CardsPage.summary.test.tsx`,
+`CardsPage.navigation.test.tsx`. Finans hesabı ve yazma yolları değişmez.
 
 24 Ekim veri tazeliği denetimi: `app/useFinanceSnapshot.ts` ödeme/hareket sonrası
 aynı kullanıcının finans listelerini, son hesap hareketlerini ve kart temposunu

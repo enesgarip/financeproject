@@ -1,6 +1,13 @@
 # UI Architecture
 
-Last reviewed: 2026-10-18
+Last reviewed: 2026-10-25
+
+Kart borcu kırılımında dokunulan toplam, açık kaldığı sürece safir zemin/çizgi,
+aşağı dönen ok ve “Döküm açık · Kapat” metni taşır; durum yalnız renkle anlatılmaz.
+Kapalı toplamda “Dökümü aç” görünür. Açma/değiştirme dökümün başına kaydırır;
+sabit üst başlık payı ve hareketi azalt tercihi korunur. Aynı toplam tekrar
+dokununca kapanır. Doğrudan URL, kapatma veya veri yenilemesi kaydırmayı başlatmaz.
+Kaynak: `pages/CardsPage.summary.tsx`, `pages/CardsPage.hooks.ts`, `pages/CardsPage.tsx`.
 
 Kredi kartları özetinde “Borç kırılımı ve dökümler” `DeferredDetails`
 katmanında, toplam yükün ardından “Önümüzdeki 3 ay · tüm kartlar” bulunur.

@@ -1,6 +1,15 @@
 # Cards Architecture Note
 
-Last reviewed: 2026-10-18
+Last reviewed: 2026-10-25
+
+Borç kırılımındaki dört toplamın açık durumu `panel` URL seçimine bağlıdır:
+safir zemin/üst çizgi, aşağı dönen ok ve “Döküm açık · Kapat” metni birlikte
+gösterilir; kapalı toplam “Dökümü aç” der. Aynı toplama tekrar dokunmak kapatır.
+`useCardSectionNavigation` kullanıcı döküm açıp/değiştirdiğinde DOM kurulduktan
+sonra `kart-bilgi-dokumu` başına kaydırır; sabit başlık için scroll-margin vardır.
+Hareketi azalt tercihinde kaydırma anlıktır. İlk URL yüklemesi, kapatma, manuel
+harcama açma ve veri yenilemesi bu kaydırmayı tetiklemez. Özet geri bildirimi ve
+navigasyon regresyonları `CardsPage.summary.test.tsx`, `CardsPage.navigation.test.tsx`.
 
 Kredi kartları özetindeki “Borç kırılımı ve dökümler” katmanında, toplam kart
 yükünün ardından “Önümüzdeki 3 ay · tüm kartlar” bulunur; ikinci bir açılır
