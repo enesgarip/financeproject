@@ -1,3 +1,4 @@
+import { DeferredDetails } from '../components/ui/deferred-details'
 import { DatabaseZap, Download, Settings, Upload } from 'lucide-react'
 import { useRef, useState, type ChangeEvent, type FormEvent } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
@@ -182,7 +183,7 @@ export function DataHealthOperationsPage() {
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-lg">
               <Settings size={20} className="text-primary" />
-              Bakım
+              Yedek ve geri yükleme
             </CardTitle>
             <p className="text-sm text-ink-muted">Yedek, geri yükleme, bildirim ve sıfırlama işlemleri.</p>
           </CardHeader>
@@ -217,7 +218,16 @@ export function DataHealthOperationsPage() {
                 {csvExporting ? 'CSV hazırlanıyor...' : 'Kontrol verisi CSV'}
                 <span className="block text-xs">Kısmi dışa aktarım; tam yedek için JSON kullan.</span>
               </button>
-              <button
+
+            </div>
+            {message ? <Alert variant="success">{message}</Alert> : null}
+            {error ? <Alert variant="destructive">{error}</Alert> : null}
+          </CardContent>
+        </SurfaceCard>
+
+        <DeferredDetails summary="Bildirim ayarları" summaryClassName="min-h-11 cursor-pointer py-3 font-semibold text-primary"><NotificationSettings /></DeferredDetails>
+        <DeferredDetails summary="Otomasyon ve teşhis" summaryClassName="min-h-11 cursor-pointer py-3 font-semibold text-primary"><div className="space-y-4"><AutomationCoveragePanel /><SmsLogPanel /><ClientErrorsPanel /></div></DeferredDetails>
+        <DeferredDetails summary="Verileri sıfırlama" className="border-t border-line pt-3" summaryClassName="min-h-11 cursor-pointer py-3 font-semibold text-destructive"><p className="mb-3 text-sm text-ink-muted">Tüm finans kayıtlarını kaldırma işlemi. Mevcut doğrulama ve yedek alma adımları uygulanır.</p>              <button
                 type="button"
                 onClick={() => {
                   setResetConfirm('')
@@ -228,17 +238,7 @@ export function DataHealthOperationsPage() {
               >
                 <DatabaseZap size={15} />
                 Tüm veriyi sil
-              </button>
-            </div>
-            {message ? <Alert variant="success">{message}</Alert> : null}
-            {error ? <Alert variant="destructive">{error}</Alert> : null}
-          </CardContent>
-        </SurfaceCard>
-
-        <NotificationSettings />
-        <AutomationCoveragePanel />
-        <SmsLogPanel />
-        <ClientErrorsPanel />
+              </button></DeferredDetails>
       </section>
 
       <ResetDataModal

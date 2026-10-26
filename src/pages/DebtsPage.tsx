@@ -12,6 +12,7 @@ import { saveCrudRow } from '../data/repositories/crudRepo'
 import type { Card as FinanceCard, Debt } from '../types/database'
 import { dateInputValue, formatDate } from '../utils/date'
 import { formatCurrency, formatNumber, parseNumber } from '../utils/formatCurrency'
+import { PeopleLedger } from './AnalysisPage.panels'
 import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
 import { useFinancePaymentDrawer } from '../hooks/useFinancePaymentDrawer'
 import type { MarketRatesSnapshot } from '../utils/marketRates'
@@ -347,7 +348,7 @@ export function DebtsPage() {
                 await Promise.all([reload(), invalidateSnapshot()])
               }}
             />
-            {!loading ? <DebtsOverview rows={rows as Debt[]} snapshot={snapshot} /> : null}
+            {!loading ? <><DebtsOverview rows={rows as Debt[]} snapshot={snapshot} /><details className="border-b border-line py-3"><summary className="min-h-11 cursor-pointer py-3 font-semibold text-primary">Kişi bazında toplamlar</summary><PeopleLedger debts={rows as Debt[]} /></details></> : null}
           </div>
         )}
         getInitialValues={(row?: Debt) => ({

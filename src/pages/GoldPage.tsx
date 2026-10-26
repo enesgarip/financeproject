@@ -235,10 +235,7 @@ function GoldOverview({ rows, assets, snapshot }: { rows: GoldLot[]; assets: Ass
 
       <div className="mt-5">
         <LineGroup>
-          <LineRow
-            title="Toplam miktar"
-            subtitle={holdings.map((holding) => displayQuantity(holding.quantity, holding.goldType)).join(' · ')}
-          />
+          {holdings.length > 1 ? <LineRow title="Toplam miktar" subtitle={holdings.map((holding) => displayQuantity(holding.quantity, holding.goldType)).join(' · ')} /> : null}
           <LineRow
             title="Bilinen maliyet"
             subtitle="elde kalan altının kayıtlı maliyeti"
@@ -255,7 +252,7 @@ function GoldOverview({ rows, assets, snapshot }: { rows: GoldLot[]; assets: Ass
             <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3">
               <div className="min-w-0"><dt className="text-xs text-ink-muted">Eldeki miktar</dt><dd className="serit-num mt-1 break-words text-sm font-semibold text-ink">{displayQuantity(holding.quantity, holding.goldType)}</dd></div>
               <div className="min-w-0"><dt className="text-xs text-ink-muted">Kayıtlı ayarlar</dt><dd className="mt-1 text-sm font-semibold text-ink">{holding.ayars.length === 0 ? 'Belirtilmedi' : [...holding.ayars.map((ayar) => `${ayar} ayar`), ...(holding.hasUnspecifiedAyar ? ['Bazıları belirtilmedi'] : [])].join(' · ')}</dd></div>
-              <div className="min-w-0"><dt className="text-xs text-ink-muted">Güncel eder</dt><dd className="serit-num mt-1 break-words text-sm font-semibold text-ink">{holding.value === null ? 'Kur bekleniyor' : formatAmount(holding.value)}</dd></div>
+              {holdings.length > 1 ? <div className="min-w-0"><dt className="text-xs text-ink-muted">Güncel eder</dt><dd className="serit-num mt-1 break-words text-sm font-semibold text-ink">{holding.value === null ? 'Kur bekleniyor' : formatAmount(holding.value)}</dd></div> : null}
               <div className="min-w-0"><dt className="text-xs text-ink-muted">Ortalama birim maliyet</dt><dd className="serit-num mt-1 break-words text-sm font-semibold text-ink">{holding.avgUnitCost === null ? 'Bilinmiyor' : formatAmount(holding.avgUnitCost)}</dd></div>
             </dl>
           </div>
@@ -423,7 +420,7 @@ export function GoldPage() {
                   ? 'Maliyet bilinmiyor · miktara dahil, kâr/zarara dahil değil.'
                   : `Birim ${lot.direction === 'sell' ? 'fiyat' : 'maliyet'}: ${formatAmount(lot.unit_price!)}`}
               </p>
-              {lot.note ? <p className="break-words text-xs leading-relaxed text-ink-muted sm:col-span-2">{maskText(lot.note)}</p> : null}
+              {lot.note ? /^\[gold-import-\d{4}-\d{2}-\d{2}\]/.test(lot.note) ? <details className="text-xs text-ink-muted sm:col-span-2"><summary className="min-h-11 cursor-pointer py-3">Aktarım bilgisi</summary><p className="break-words">{maskText(lot.note)}</p></details> : <p className="break-words text-xs leading-relaxed text-ink-muted sm:col-span-2">{maskText(lot.note)}</p> : null}
             </div>
             <div className="shrink-0">{menu}</div>
           </article>

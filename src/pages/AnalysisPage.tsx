@@ -9,7 +9,6 @@ import {
   PriceIncreaseRadar,
   SchemaMigrationNotice,
   SubscriptionsPanel,
-  UpcomingInstallments,
 } from './AnalysisPage.panels'
 import { useAnalysisPageData } from './AnalysisPage.data'
 import { AnalysisHero } from './AnalysisPage.hero'
@@ -67,12 +66,11 @@ export function AnalysisPage() {
   return (
     <section className="space-y-6">
       {auxiliaryError ? <QueryError title="Geçmiş veriler yüklenemedi" message="Trend ve fiyat karşılaştırmaları şu an doğrulanamıyor." onRetry={() => void retryAuxiliary()} /> : null}
-      <div className="grid gap-5 lg:grid-cols-12">
+      <div className="grid items-start gap-5 lg:grid-cols-12">
+        <MonthlyReport data={data} />
         <AnalysisHero data={data} snapshots={snapshots} historyStatus={auxiliaryError ? "error" : auxiliaryLoading ? "loading" : "ready"} />
         <SchemaMigrationNotice missingTables={missingTables} />
         <MonthCloseAssistant data={data} missingTables={missingTables} />
-        <MonthlyReport data={data} />
-        <UpcomingInstallments data={data} />
         {/* 7+5 çiftleri: kategori dağılımı ve abonelikler yan yana; fiyat radarı
             (veri yoksa null döner) tam satır — sağ yarı boş kalmasın (UX turu B14). */}
         <CategorySpendingChart data={data} />

@@ -549,20 +549,6 @@ export function DataHealthPage() {
           </div>
         </div>
 
-        {!loading && data.cards.length > 0 ? (
-          <section aria-labelledby="bank-verification-heading" className="border-t border-line pt-4">
-            <div className="mb-3">
-              <h2 id="bank-verification-heading" className="font-bold text-ink">Rutin banka doğrulaması</h2>
-              <p className="mt-1 text-sm text-ink-muted">Veri hatasından bağımsızdır: uygulamadaki rakamı bankada gördüğün güncel bakiye veya borçla karşılaştır.</p>
-            </div>
-            <LiveReconciliationPanel
-              cards={data.cards}
-              onChanged={async () => {
-                await refreshAfterChange()
-              }}
-            />
-          </section>
-        ) : null}
 
         {!loading ? (
           <SurfaceCard variant="default">
@@ -654,6 +640,21 @@ export function DataHealthPage() {
             ))}
           </div>
         )}
+        {!loading && data.cards.length > 0 ? (
+          <section aria-labelledby="bank-verification-heading" className="border-t border-line pt-4">
+            <div className="mb-3">
+              <h2 id="bank-verification-heading" className="font-bold text-ink">Rutin banka doğrulaması</h2>
+              <p className="mt-1 text-sm text-ink-muted">Veri hatasından bağımsızdır: uygulamadaki rakamı bankada gördüğün güncel bakiye veya borçla karşılaştır.</p>
+            </div>
+            <LiveReconciliationPanel
+              cards={data.cards}
+              onChanged={async () => {
+                await refreshAfterChange()
+              }}
+            />
+          </section>
+        ) : null}
+
       </section>
 
       <FixAllModal

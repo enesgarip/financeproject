@@ -1,5 +1,21 @@
 # Priority Backlog
 
+## 2026-10-26 — Uygulama sadeleştirme — UYGULANDI
+
+24 bulgu dört sunum paketiyle uygulandı. Özet kısa bağlantılara, Ödemeler
+vade/plan görünümlerine, Analiz aylık rapor + isteğe bağlı araçlara ayrıldı.
+Transfer kaynak hesap seçimiyle mevcut formu açar; kart döngüsü Kartlar'a,
+kişi özeti Kişiler'e taşındı. Portföy, hedefler, araç/grup ve bakım yüzeyleri
+özet önce/ayrıntı sonra düzenindedir; teknik kayıtlar ve özellikler erişilebilir.
+Ana menü/rota adları, para hesapları, RPC/ledger/şema korunur.
+
+İnceleme: `docs/SIMPLIFICATION_AUDIT_2026-10-26.md`; uygulama/kabul kaydı:
+`docs/SIMPLIFICATION_PLAN_2026-10-26.md`. Kullanıcı kontroller uygunsa yayını da
+onayladı. Manuel canlı kayıt/ayar değişikliği ve finansal yazma testi yapılmadı.
+Doğrulama: `npm run verify`, 1.777 test/7 guard, production audit 0 açık,
+build/bundle ve altı edge tipi; sentetik Playwright ile 19 ekran,
+320/390/1280px ve değişen görevler. Kapsam sınırları plan kaydında.
+
 ## 2026-10-25 — Kart dökümü dokunma geri bildirimi — UYGULANDI
 
 Borç kırılımındaki dört toplamda açık döküm safir zemin/çizgi, aşağı dönen ok

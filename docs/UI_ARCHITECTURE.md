@@ -1,6 +1,18 @@
 # UI Architecture
 
-Last reviewed: 2026-10-25
+26 Ekim sadeleştirme: her işin tam yönetimi ilgili ekrandadır; diğer yerler
+kısa özet/bağlantı sunar. Ödemeler'de Vadeler/Kayıtlı planlar, Hisseler'de
+Pozisyonlar/İşlem geçmişi ayrıdır; takvim ve hisse eşitlemesi görünüm değişince
+kurulumunu korur. Plan'ın tüm araçları masaüstünde sabit sekme, mobilde etiketli
+seçicidir. Varlık kayıtları, araç/grup formları, kredi notu/maaş grafikleri ve
+bakım araçları gerektiğinde açılır. Yerel form durumu `DeferredDetails` ile ilk
+açılıştan sonra korunur; boş araç/grup yönetimi otomatik açılır. Banka formu ve
+aktarılmış altın notları native details kullanır. Ayrıntılar'ın `new=1` kredi
+notu kısayolu bölümü ve mevcut formu açar. Hata, tutar kapsamı ve gerçek farklar
+görünür kalır. Kapsam/kanıt: `docs/SIMPLIFICATION_PLAN_2026-10-26.md`.
+
+
+Last reviewed: 2026-10-26
 
 Kart borcu kırılımında dokunulan toplam, açık kaldığı sürece safir zemin/çizgi,
 aşağı dönen ok ve “Döküm açık · Kapat” metni taşır; durum yalnız renkle anlatılmaz.

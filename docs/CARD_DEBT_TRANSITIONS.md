@@ -1,5 +1,12 @@
 # Card Debt Transitions
 
+26 Ekim sadeleştirme yalnız sunum ve erişimi değiştirir. Transfer kısayolu
+mevcut formu, ödeme ve düzeltme eylemleri aynı servis/RPC'yi açar. Kart döngüsü
+Kartlar bağlamına taşınır; dönem toplamı/son hareket kapsamı adlandırılır.
+Sıfır tutarlı teknik olaylar filtreyle erişilebilir, ledger'dan çıkarılmaz.
+Bu geçiş tablosunda, tutarlarda, otomatik bakımda ve SQL'de değişiklik yoktur.
+
+
 25 Ekim döküm geri bildirimi: kart özetinde seçili toplam görünür biçimde
 işaretlenir; kullanıcı döküm açınca/değiştirince ilgili içeriğe kaydırılır.
 Bu sunum değişikliği borç alanlarını, ödeme/RPC geçişlerini veya ledger

@@ -16,9 +16,10 @@
  * Sayfa veri akışı ve modül haritası: docs/CARDS_ARCHITECTURE.md.
  */
 import { Suspense, useState, useCallback } from 'react'
-import { Link } from 'react-router'
+import { Link, useSearchParams } from 'react-router'
 import { ArrowLeft, CalendarClock, FileText, ScanSearch, ShieldCheck, List, Clock, ChevronRight } from 'lucide-react'
 import { CrudPage } from '../components/CrudPage'
+import { CardsPaymentCycle } from '../components/dashboard/CardPaymentCyclePanel'
 import { DeferredDetails } from '../components/ui/deferred-details'
 import { CategoryCleanupPanel } from '../components/finance/CategoryCleanupPanel'
 import { FinancePaymentDrawer } from '../components/finance/FinancePaymentDrawer'
@@ -79,6 +80,8 @@ const CurrentMovementImportModal = lazyWithReload(() =>
 )
 
 export function CardsPage() {
+  const [taskParams, setTaskParams] = useSearchParams()
+  const selectingTransfer = taskParams.get('task') === 'transfer'
   const { handleSectionChange, section, selectedCardId, openCardDetails, backToList, panel, openPanel } = useCardSectionNavigation()
   const { formatAmount, hidden: balancesHidden } = useBalancePrivacy()
   const {
@@ -277,9 +280,9 @@ export function CardsPage() {
         emptyTitle={section === 'hesaplar' ? 'Henüz hesap veya nakit cüzdanı yok' : 'Henüz kredi kartı yok'}
         emptyDescription="Banka hesaplarını, nakit cüzdanlarını ve kredi kartlarını buradan takip edebilirsin."
         orderBy="card_type"
-        showToolbar={!selectedCardId}
+        showToolbar={!selectedCardId && !selectingTransfer}
         showList={panel !== 'manuel' || Boolean(selectedCardId)}
-        listFilter={(row) => selectedCardId ? row.id === selectedCardId : row.card_type === (section === 'hesaplar' ? 'banka_karti' : 'kredi_karti')}
+        listFilter={(row) => selectedCardId ? row.id === selectedCardId : row.card_type === (selectingTransfer || section === 'hesaplar' ? 'banka_karti' : 'kredi_karti')}
         sortRows={favoritesFirst}
         afterSave={async () => {
           await invalidateSnapshot()
@@ -304,7 +307,8 @@ export function CardsPage() {
               {postImportBanner ? <div className="flex flex-wrap items-center gap-3 border-b border-line py-3 text-xs text-info"><ShieldCheck size={18} /><p className="flex-1">İçe aktarma tamamlandı.</p><Link to="/veri-sagligi" className="min-h-11 py-3 font-semibold" onClick={() => setPostImportBanner(false)}>Veri tutarlılığını kontrol et</Link><button type="button" className="min-h-11 px-2" onClick={() => setPostImportBanner(false)}>Kapat</button></div> : null}
               {selectedCardId ? <div className="flex items-center gap-3 border-b border-line pb-3"><button type="button" onClick={backToList} className="flex min-h-11 items-center gap-1 text-sm font-semibold text-primary"><ArrowLeft size={17} /> Listeye dön</button><h2 className="ml-auto text-sm font-semibold text-ink">{selected?.card_type === 'banka_karti' ? 'Hesap ayrıntıları' : 'Kart ayrıntıları'}</h2></div> : <CardSectionNav section={section} onSelect={handleSectionChange} counts={counts} />}
               {!loading && selectedCardId && !selected ? <p role="alert" className="py-5 text-sm text-ink-muted">Bu kayıt bulunamadı. Silinmiş olabilir; listeye dönerek başka bir kayıt seçebilirsin.</p> : null}
-              {!loading && !selectedCardId ? <>
+              {selectingTransfer ? <div className="border-b border-line py-3"><h2 className="text-base font-semibold">Transfer için kaynak hesap seç</h2><p className="mt-1 text-sm text-ink-muted">Paranın çıkacağı hesabı seç; tutarı ve hedef hesabı sonraki adımda belirle.</p><button type="button" className="min-h-11 text-sm text-primary" onClick={() => { const next = new URLSearchParams(taskParams); next.delete('task'); setTaskParams(next, { replace: true }) }}>Vazgeç</button></div> : null}
+              {!loading && !selectedCardId && !selectingTransfer ? <>
                 <CardsSummary rows={cardRows} installments={installments} statements={statements} statementPayments={statementPayments} installmentsLoading={installmentsLoading} installmentsError={installmentsError} statementsLoading={statementsLoading} statementError={statementError} section={section === 'hesaplar' ? 'hesaplar' : 'kartlar'} panel={panel} onOpenPanel={openPanel} />
                 {section === 'kartlar' ? renderPanels(cardRows, reload, setError) : null}
               </> : null}
@@ -312,7 +316,7 @@ export function CardsPage() {
             </div>
           )
         }}
-        renderAfterList={({ loading, rows }) => !loading && !selectedCardId && section === 'kartlar' && panel !== 'manuel' ? <DeferredDetails className="border-t border-line pt-1" summaryClassName="min-h-11 cursor-pointer py-3 text-sm font-semibold text-ink-muted" summary="Ortak limitleri yönet"><SharedLimitGroups rows={rows as Card[]} onOpenCard={openCardDetails} /></DeferredDetails> : null}
+        renderAfterList={({ loading, rows }) => !loading && !selectedCardId && section === 'kartlar' && panel !== 'manuel' ? <><DeferredDetails defaultOpen={taskParams.get('cycle') === '1'} className="border-t border-line pt-1" summaryClassName="min-h-11 cursor-pointer py-3 text-sm font-semibold text-ink-muted" summary="Kart ödeme döngüsü"><CardsPaymentCycle /></DeferredDetails><DeferredDetails className="border-t border-line pt-1" summaryClassName="min-h-11 cursor-pointer py-3 text-sm font-semibold text-ink-muted" summary="Ortak limitleri yönet"><SharedLimitGroups rows={rows as Card[]} onOpenCard={openCardDetails} /></DeferredDetails></> : null}
         getInitialValues={(row) => ({ ...getCardInitialValues(row), ...(!row && section === 'hesaplar' ? { entry_type: 'banka_karti' } : {}) })}
         mapForm={mapCardForm}
         renderTitle={renderCardTitle}
@@ -325,7 +329,7 @@ export function CardsPage() {
             {row.card_type === 'kredi_karti' ? <>
               <nav className="grid grid-cols-2 gap-2" aria-label="Kart dökümleri">
                 {([
-                  ['donem', 'Dönem hareketleri', List],
+                  ['donem', 'Son hareketler ve dönem özeti', List],
                   ['taksitler', 'Gelecek taksitler', CalendarClock],
                   ['ekstreler', 'Ekstre dökümü', FileText],
                   ['provizyon', 'Provizyonlar', Clock],
@@ -334,7 +338,13 @@ export function CardsPage() {
               {renderPanels(helpers.rows as Card[], helpers.reload, helpers.setError)}
             </> : null}
           </div>
-        ) : <AccountListRow card={row as Card} statements={statements} statementPayments={statementPayments} statementsKnown={!statementsLoading && !statementError} onOpen={openCardDetails} />}
+        ) : <AccountListRow actionLabel={selectingTransfer ? `${row.card_name} hesabından transfer` : undefined} card={row as Card} statements={statements} statementPayments={statementPayments} statementsKnown={!statementsLoading && !statementError} onOpen={(card) => {
+          if (!selectingTransfer) return openCardDetails(card)
+          openTransaction(card, helpers.reload, helpers.rows as Card[], 'transfer')
+          const next = new URLSearchParams(taskParams)
+          next.delete('task')
+          setTaskParams(next, { replace: true })
+        }} />}
         getCardClassName={getCardClassName}
         getDetailClassName={getDetailClassName}
         getCardStyle={getCardStyle}

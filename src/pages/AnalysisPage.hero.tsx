@@ -9,7 +9,7 @@ import type { NetWorthSnapshot } from '../types/database'
 import { buildFinancialPosition, type FinanceSummaryInput } from '../utils/financeSummary'
 import { aggregateNetWorthByMonth } from '../utils/netWorthSeries'
 import { diffTL } from '../utils/money'
-import { Delta, HeroNumber, LineGroup, LineRow, SectionEyebrow, TrendBars } from '../components/serit'
+import { Delta, HeroNumber, LineGroup, LineRow, SectionEyebrow } from '../components/serit'
 
 const TREND_MONTHS = 12
 
@@ -43,24 +43,6 @@ export function AnalysisHero({
       />
 
       {delta === null ? null : <Delta value={delta} percent={deltaPct} suffix="geçen ay sonuna göre" />}
-
-      {monthly.length >= 2 ? (
-        <div className="mt-4">
-          <TrendBars
-            values={monthly.map((snapshot) => snapshot.net_worth)}
-            label={`Son ${monthly.length} ayın net değer trendi`}
-          />
-          <div className="mt-2 flex justify-between text-[10.5px] text-ink-ghost">
-            {monthly
-              .filter((_, index) => index === 0 || index === monthly.length - 1 || index % Math.ceil(monthly.length / 4) === 0)
-              .map((snapshot) => (
-                <span key={snapshot.snapshot_date} className="serit-num">
-                  {snapshot.snapshot_date.slice(5, 7)}.{snapshot.snapshot_date.slice(2, 4)}
-                </span>
-              ))}
-          </div>
-        </div>
-      ) : null}
 
       <div className="mt-6">
         <SectionEyebrow className="mb-1">Bileşenler</SectionEyebrow>

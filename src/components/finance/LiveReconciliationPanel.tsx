@@ -356,7 +356,7 @@ export function LiveReconciliationPanel({
                 </div>
               ) : null}
 
-              <div className="mt-2 flex flex-wrap items-end gap-2">
+              <details className="mt-2"><summary className="min-h-11 cursor-pointer py-3 text-sm font-semibold text-primary">Karşılaştırma formunu aç</summary><div className="flex flex-wrap items-end gap-2">
                 <label className="flex-1 min-w-[140px] text-xs font-semibold text-ink-muted">
                   {item.target === 'debt'
                     ? 'Bankadaki toplam kalan kart yükü (gelecek taksitler dahil)'
@@ -403,7 +403,7 @@ export function LiveReconciliationPanel({
                     {correctingId === item.card.id ? 'Düzeltiliyor…' : 'Farkı düzelt'}
                   </Button>
                 ) : null}
-              </div>
+              </div></details>
             </div>
           )
         })}

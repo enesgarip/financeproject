@@ -29,10 +29,10 @@ function CreditScoreOverview({ rows }: { rows: CreditScoreHistory[] }) {
         <p className="mt-2.5 text-[13px] text-ink-muted">Sonraki sorgunda puan değişimi burada görünecek.</p>
       )}
       {trend.length >= 2 ? (
-        <div className="mt-5">
+        <details className="mt-5"><summary className="min-h-11 cursor-pointer py-3 text-sm font-semibold text-primary">Kredi notu grafiği</summary>
           <SectionEyebrow className="mb-2">Son {trend.length} sorgu</SectionEyebrow>
           <TrendBars values={trend} label={`Son ${trend.length} Findeks kredi notunun trendi`} />
-        </div>
+        </details>
       ) : null}
     </section>
   )
@@ -75,6 +75,8 @@ export function CreditScorePanel() {
           checked_on: String(formData.get('checked_on') ?? ''),
           note: String(formData.get('note') ?? '').trim() || null,
         })}
+        listGridClassName="flex flex-col"
+        renderCard={(row, { menu }) => <article className="flex flex-wrap items-center justify-between gap-3 border-b border-line py-3"><div><h3 className="text-sm font-semibold">{formatDate(row.checked_on)}</h3><p className="text-xs text-ink-muted">Findeks</p>{row.note ? <p className="break-words text-xs text-ink-muted">{row.note}</p> : null}</div><div className="flex items-center gap-3"><span className="serit-num font-semibold">{row.score} puan</span>{menu}</div></article>}
         renderTitle={(row) => `${row.score} puan`}
         renderSubtitle={(row) => formatDate(row.checked_on)}
         renderDetails={() => ['Kaynak: Findeks']}

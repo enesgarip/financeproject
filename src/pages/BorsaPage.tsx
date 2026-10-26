@@ -1,3 +1,4 @@
+import { Link, useSearchParams } from 'react-router'
 import { TrendingUp } from 'lucide-react'
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useCrudRows } from '../app/useCrudRows'
@@ -224,7 +225,7 @@ function BorsaOverview({
           </label>
         ) : null}
 
-        <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-xs sm:grid-cols-3">
+        <details key={period} open={period !== 'all'} className="mt-2"><summary className="min-h-11 cursor-pointer py-3 text-xs font-semibold text-primary">{period === 'all' ? 'İşlem toplamları ve hesap ayrıntısı' : 'Dönem hesap ayrıntısı'}</summary><div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-xs sm:grid-cols-3">
           {start ? (
             <div>
               <p className="text-ink-muted">Dönem başı ({formatDate(start)})</p>
@@ -263,6 +264,7 @@ function BorsaOverview({
         <p className="mt-2 text-[11px] text-ink-muted">
           Kazanç = bugünkü değer − dönem başı değer − alımlar + satışlar; yüzde tabanı dönem başı + alımlar. Dönemdeki alım kazanç sayılmaz.
         </p>
+        </details>
         {!historyPending && (perf.missingStartPrices.length > 0 || perf.missingEndPrices.length > 0) ? (
           <p className="mt-1 text-[12px] font-semibold" style={{ color: SERIT_TEXT.warning }}>
             Fiyatı bulunamayan sembol: {[...new Set([...perf.missingStartPrices, ...perf.missingEndPrices])].join(', ')} — sonuç eksik.
@@ -341,6 +343,8 @@ function TradeCard({ trade, realized, menu }: { trade: StockTrade; realized: num
 }
 
 export function BorsaPage() {
+  const [stockParams] = useSearchParams()
+  const [showHistory, setShowHistory] = useState(() => stockParams.get('new') === '1')
   const assetsQuery = useCrudRows('assets', 'created_at', false)
   const assets: Asset[] = useMemo(() => (assetsQuery.data ?? []) as Asset[], [assetsQuery.data])
   const stockAssets = useMemo(() => assets.filter((asset) => asset.category === 'Hisse'), [assets])
@@ -350,6 +354,8 @@ export function BorsaPage() {
   return (
     <CrudPage
       table="stock_trades"
+      showList={showHistory}
+      showToolbar={showHistory}
       pageTitle="Hisseler"
       pageLabel="Yatırım"
       pageDescription="Hisse alım-satım defteri; ortalama maliyet, gerçekleşmiş ve gerçekleşmemiş kâr/zarar, seçtiğin dönemin getirisi."
@@ -389,8 +395,10 @@ export function BorsaPage() {
         const trades = rows as StockTrade[]
         return (
           <div className="space-y-3">
-            <RatesBanner onSynced={reload} />
-            {!loading ? <BorsaSection trades={trades} assets={stockAssets} comparisonPending={assetsQuery.isFetching} /> : null}
+            <div hidden aria-hidden="true"><RatesBanner onSynced={reload} /></div>
+            <p className="text-xs text-ink-muted">BIST fiyatları Yahoo Finance üzerinden yaklaşık 15 dakika gecikmelidir. Eksik fiyatlar ayrıca belirtilir.</p>
+            <div role="group" aria-label="Hisseler görünümü" className="flex flex-wrap gap-2"><button type="button" aria-pressed={!showHistory} className="min-h-11 rounded-lg border border-line-strong px-3 text-sm aria-pressed:bg-primary/10" onClick={() => setShowHistory(false)}>Pozisyonlar</button><button type="button" aria-pressed={showHistory} className="min-h-11 rounded-lg border border-line-strong px-3 text-sm aria-pressed:bg-primary/10" onClick={() => setShowHistory(true)}>İşlem geçmişi</button><Link className="inline-flex min-h-11 items-center px-3 text-sm font-semibold text-primary" to="/varliklar?view=records">Al / Sat kaydet →</Link></div>
+            <div hidden={showHistory}>{!loading ? <BorsaSection trades={trades} assets={stockAssets} comparisonPending={assetsQuery.isFetching} /> : null}</div>
           </div>
         )
       }}

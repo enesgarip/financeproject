@@ -22,7 +22,7 @@ import { Input, Textarea } from '../ui/input'
 import { useConfirmDialog } from '../ui/use-confirm-dialog'
 
 /**
- * Kasa modu: banka bakiyesini kovalara ayır, gerçek harcanabiliri gör.
+ * Ayrılan para: banka bakiyesini paylara ayır, gerçek harcanabiliri gör.
  * Planlama katmanı — gerçek bakiyeyi değiştirmez (bkz. utils/kasaMode.ts).
  */
 export function KasaModuPanel({ liquidCash }: { liquidCash: number }) {
@@ -36,6 +36,8 @@ export function KasaModuPanel({ liquidCash }: { liquidCash: number }) {
   const bucketsQuery = useKasaBuckets()
   const buckets: KasaBucket[] = bucketsQuery.data ?? []
   const loading = bucketsQuery.isPending
+  const [includeLinked, setIncludeLinked] = useState(false)
+  const visibleBuckets = includeLinked ? buckets : buckets.filter((bucket) => !bucket.goal_id)
   const [mutationError, setError] = useState('')
   const error = mutationError || (bucketsQuery.error ? bucketsQuery.error.message : '')
   const [modalOpen, setModalOpen] = useState(false)
@@ -71,15 +73,15 @@ export function KasaModuPanel({ liquidCash }: { liquidCash: number }) {
 
   async function handleDelete(bucket: KasaBucket) {
     const confirmed = await confirm({
-      title: 'Kovayı sil',
-      description: `"${bucket.name}" kovası silinecek. Bakiye etkilenmez.`,
+      title: 'Ayrılan payı sil',
+      description: `"${bucket.name}" payı silinecek. Bakiye etkilenmez.`,
       confirmLabel: 'Sil',
       variant: 'destructive',
     })
     if (!confirmed) return
     const result = await deleteKasaBucket(bucket.id)
     if (!result.ok) {
-      setError(result.error.message ?? 'Kova silinemedi.')
+      setError(result.error.message ?? 'Ayrılan pay silinemedi.')
       return
     }
     await load()
@@ -92,12 +94,12 @@ export function KasaModuPanel({ liquidCash }: { liquidCash: number }) {
     if (!user) return
     const trimmedName = name.trim()
     if (!trimmedName) {
-      setFormError('Kova adı yazmalısın.')
+      setFormError('Pay adı yazmalısın.')
       return
     }
     const reservedAmount = parseNumber(reserved)
     if (reservedAmount < 0) {
-      setFormError('Rezerve tutar negatif olamaz.')
+      setFormError('Ayrılan tutar negatif olamaz.')
       return
     }
 
@@ -135,34 +137,34 @@ export function KasaModuPanel({ liquidCash }: { liquidCash: number }) {
                 <Wallet size={22} />
               </div>
               <div>
-                <h2 className="text-lg font-bold text-ink">Kasa modu</h2>
+                <h2 className="text-lg font-bold text-ink">Ayrılan para</h2>
                 <p className="text-sm text-ink-muted">
-                  Bakiyeni kovalara ayır; rezerv sonrası kalan likidi gör. Bakiye değişmez.
+                  Bakiyeni paylara ayır; rezerv sonrası kalan likidi gör. Bakiye değişmez.
                 </p>
               </div>
             </div>
             <Button type="button" size="sm" onClick={openCreate}>
               <Plus size={16} />
-              Kova ekle
+              Pay ekle
             </Button>
           </div>
 
           <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-2">
             <MiniStat label="Likit" value={formatAmount(liquidCash)} tone="neutral" />
-            <MiniStat label="Rezerve" value={formatAmount(reservedTotal)} tone={reservedTotal > 0 ? 'warning' : 'neutral'} />
+            <MiniStat label="Toplam ayrılan (hedefler dahil)" value={formatAmount(reservedTotal)} tone={reservedTotal > 0 ? 'warning' : 'neutral'} />
             {/* "Harcanabilir" DEĞİL: o etiket kanonik buildSafeToSpend sayısına
                 ait (yükümlülük+tampon da düşer). Buradaki sayı yalnız
                 likit − rezerv'dir; aynı adı taşıması iki farklı rakamı aynı
                 kavram gibi gösteriyordu (denetim 2026-08-12 K11). */}
             <MiniStat
-              label="Rezerv sonrası"
+              label="Ayırma sonrası nakit"
               value={formatAmount(spendable)}
               tone={spendable < 0 ? 'danger' : 'good'}
             />
           </div>
           {spendable < 0 ? (
             <p className="mt-2 text-xs font-semibold text-destructive">
-              Kovalara likidinden fazlasını ayırdın; rezerveyi azalt.
+              Paylara likidinden fazlasını ayırdın; ayrılan tutarı azalt.
             </p>
           ) : null}
         </CardContent>
@@ -170,26 +172,27 @@ export function KasaModuPanel({ liquidCash }: { liquidCash: number }) {
 
       {error ? <Alert variant="destructive">{error}</Alert> : null}
 
+      {buckets.some((bucket) => bucket.goal_id) ? <label className="flex min-h-11 items-center gap-2 text-sm text-ink-muted"><input type="checkbox" checked={includeLinked} onChange={(event) => setIncludeLinked(event.target.checked)} />Hedefe bağlı payları da göster</label> : null}
       {loading ? (
-        <p className="text-sm text-ink-muted">Kovalar yükleniyor...</p>
-      ) : buckets.length === 0 ? (
+        <p className="text-sm text-ink-muted">Ayrılan paylar yükleniyor...</p>
+      ) : visibleBuckets.length === 0 ? (
         <Card className="border border-dashed border-line-strong bg-page shadow-none">
           <CardContent className="flex flex-col items-center gap-2 p-8 text-center">
             <div className="grid size-14 place-items-center rounded-2xl bg-primary/8 text-primary/60">
               <Boxes size={28} />
             </div>
-            <p className="text-sm font-semibold text-ink">Henüz kova yok</p>
-            <p className="text-xs text-ink-muted">Acil fon, vergi, tatil gibi kovalar ekleyerek başla.</p>
+            <p className="text-sm font-semibold text-ink">Henüz ayrılan para yok</p>
+            <p className="text-xs text-ink-muted">Acil fon, vergi, tatil gibi paylar ekleyerek başla.</p>
           </CardContent>
         </Card>
       ) : (
         <div className="grid gap-2 min-[520px]:grid-cols-2">
-          {buckets.map((bucket) => (
+          {visibleBuckets.map((bucket) => (
             <Card key={bucket.id} className="border-line-strong">
               <CardContent className="flex items-center justify-between gap-3 p-4">
                 <div className="min-w-0">
                   <p className="truncate text-sm font-bold text-ink">{bucket.name}</p>
-                  {/* Bu kovayı bir hedef besliyor: tutarı elle değiştirmek
+                  {/* Bu ayrılan payı bir hedef besliyor: tutarı elle değiştirmek
                       hedefin planıyla çelişebilir, o yüzden görünür olsun. */}
                   {bucket.goal_id ? (
                     <p className="mt-0.5 text-[11px] font-semibold text-primary">Birikim hedefine bağlı</p>
@@ -201,7 +204,7 @@ export function KasaModuPanel({ liquidCash }: { liquidCash: number }) {
                   <button
                     type="button"
                     onClick={() => openEdit(bucket)}
-                    aria-label={`${bucket.name} kovasını düzenle`}
+                    aria-label={`${bucket.name} payını düzenle`}
                     className="tap-target grid size-9 place-items-center rounded-lg text-ink-muted hover:bg-black/[.03] dark:hover:bg-white/[.04] hover:text-ink"
                   >
                     <Pencil size={14} />
@@ -209,7 +212,7 @@ export function KasaModuPanel({ liquidCash }: { liquidCash: number }) {
                   <button
                     type="button"
                     onClick={() => void handleDelete(bucket)}
-                    aria-label={`${bucket.name} kovasını sil`}
+                    aria-label={`${bucket.name} payını sil`}
                     className="tap-target grid size-9 place-items-center rounded-lg text-destructive/60 hover:bg-destructive/10 hover:text-destructive"
                   >
                     <Trash2 size={14} />
@@ -221,20 +224,20 @@ export function KasaModuPanel({ liquidCash }: { liquidCash: number }) {
         </div>
       )}
 
-      <SimpleModal title={editing ? 'Kovayı düzenle' : 'Kova ekle'} open={modalOpen} onClose={() => setModalOpen(false)}>
+      <SimpleModal title={editing ? 'Ayrılan payı düzenle' : 'Pay ekle'} open={modalOpen} onClose={() => setModalOpen(false)}>
         <form onSubmit={handleSubmit} className="space-y-4">
           <label className="block text-sm font-medium">
-            Kova adı
+            Pay adı
             <Input value={name} onChange={(e) => setName(e.target.value)} className="mt-1" placeholder="Örn. Acil fon" required />
           </label>
           {/* Ham `type="number"` TR klavyede virgülü reddediyordu ("1.250,50" ya da
               "1250,5" girilemiyordu). MoneyInput `parseNumber` üzerinden iki
               locale'i de kabul eder ve tutarı biçimlenmiş gösterir (denetim §6). */}
           {/* Zorunlu DEĞİL: `MoneyInput` blur'da 0'ı boşa çeviriyor, zorunlu alanla
-              birleşince "kovayı şimdi aç, parayı sonra ayır" akışı HİÇ
+              birleşince "ayrılan payı şimdi aç, parayı sonra ayır" akışı HİÇ
               kaydedilemiyordu — üstelik hedefe bağlı kovanın doğal başlangıcı
               tam olarak 0. Boş = 0; gönderimdeki negatif kontrolü yerinde duruyor. */}
-          <MoneyInput label="Rezerve tutar (₺)" value={reserved} onValueChange={setReserved} />
+          <MoneyInput label="Ayrılan tutar (₺)" value={reserved} onValueChange={setReserved} />
           <label className="block text-sm font-medium">
             Not
             <Textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} className="mt-1" />

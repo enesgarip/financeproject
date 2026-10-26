@@ -46,7 +46,7 @@ export function WishlistIntentTest({ answers, onChange }: {
   )
 }
 
-export function WishlistAssessment({ plan }: { plan: WishlistPlan }) {
+export function WishlistAssessment({ plan, compact = false }: { plan: WishlistPlan; compact?: boolean }) {
   const { formatAmount } = useBalancePrivacy()
   const { impact } = plan
   const label = impact.verdict === 'zorlayici'
@@ -55,11 +55,11 @@ export function WishlistAssessment({ plan }: { plan: WishlistPlan }) {
   return (
     <div className="space-y-1 text-xs leading-relaxed">
       <p className={`font-semibold ${impact.verdict === 'zorlayici' ? 'text-destructive' : impact.verdict === 'dikkat' ? 'text-warning' : 'text-ink'}`}>{label}</p>
-      <p className="text-ink-muted">Alım sonrası bu ay harcanabilir: <span className="serit-num">{formatAmount(impact.safeToSpendAfter)}</span></p>
+      <div hidden={compact}><p className="text-ink-muted">Alım sonrası bu ay harcanabilir: <span className="serit-num">{formatAmount(impact.safeToSpendAfter)}</span></p>
       <p className="text-ink-muted">{impact.reasons.slice(0, 2).join(' ')}</p>
       {!plan.affordableNow && plan.month ? <p className="text-ink-muted">Tahmini fiyatı ilk karşılayan ay: {plan.month.label}.</p> : null}
       {!plan.affordableNow && !plan.month ? <p className="text-ink-muted">Önümüzdeki 6 aylık planda bu tutara yer görünmüyor.</p> : null}
-      {plan.goalMonths > 0 && plan.goalName ? <p className="text-ink-muted">{plan.goalName} hedefine ayıracağın yaklaşık {plan.goalMonths} aylık paya denk.</p> : null}
+      {plan.goalMonths > 0 && plan.goalName ? <p className="text-ink-muted">{plan.goalName} hedefine ayıracağın yaklaşık {plan.goalMonths} aylık paya denk.</p> : null}</div>
     </div>
   )
 }

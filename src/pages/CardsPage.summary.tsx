@@ -106,7 +106,7 @@ export function SharedLimitGroups({ rows, onOpenCard }: { rows: Card[]; onOpenCa
   )
 }
 
-export function AccountListRow({ card, onOpen, statements, statementPayments, statementsKnown }: { card: Card; onOpen: (card: Card) => void; statements: CardStatementArchive[]; statementPayments: CardStatementPayment[]; statementsKnown: boolean }) {
+export function AccountListRow({ card, onOpen, statements, statementPayments, statementsKnown, actionLabel }: { actionLabel?: string; card: Card; onOpen: (card: Card) => void; statements: CardStatementArchive[]; statementPayments: CardStatementPayment[]; statementsKnown: boolean }) {
   const { formatAmount } = useBalancePrivacy()
   const credit = card.card_type === 'kredi_karti'
   const paidMap = buildStatementPaidMap(statementPayments)
@@ -115,7 +115,7 @@ export function AccountListRow({ card, onOpen, statements, statementPayments, st
   const value = credit ? openAmount > 0 ? openAmount : card.current_period_spending : card.current_balance
   return (
     <button type="button" onClick={() => onOpen(card)} className="flex min-h-20 w-full min-w-0 items-center gap-3 border-b border-line py-4 text-left interaction-press hover:bg-primary/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
-      aria-label={`${card.card_name} ${credit ? 'kart' : 'hesap'} ayrıntıları`}>
+      aria-label={actionLabel ?? `${card.card_name} ${credit ? 'kart' : 'hesap'} ayrıntıları`}>
       {card.account_kind === 'cash' ? <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary"><Banknote size={18} aria-hidden="true" /></span> : <BankLogo bankName={card.bank_name} size="sm" />}
       <span className="grid min-w-0 flex-1 gap-x-3 gap-y-2 min-[460px]:grid-cols-[minmax(0,1fr)_auto] min-[460px]:items-center">
         <span className="min-w-0"><span className="flex items-center gap-1 text-sm font-semibold"><span className="min-w-0 break-words">{card.card_name}</span>{card.is_favorite ? <Heart size={12} fill="currentColor" className="shrink-0 text-primary" aria-label="Favori" /> : null}</span><span className="mt-1 block truncate text-xs text-ink-muted">{card.account_kind === 'cash' ? 'Nakit cüzdanı' : card.bank_name}{card.holder_name ? ` · ${card.holder_name}` : ''}</span></span>

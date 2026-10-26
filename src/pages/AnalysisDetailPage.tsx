@@ -1,11 +1,11 @@
 import { ChevronDown } from 'lucide-react'
 import { useState } from 'react'
+import { Link, useSearchParams } from 'react-router'
 import { useFinanceSnapshot } from '../app/useFinanceSnapshot'
 import { QueryError } from '../components/ui/query-error'
 import { SkeletonCard } from '../components/ui/skeleton'
 import { InflationShieldPanel, ZakatPanel } from './AnalysisPage.wealth'
 import { SearchExport, YearEndReport } from './AnalysisPage.reports'
-import { PeopleLedger } from './AnalysisPage.panels'
 import { ActivityFeedPanel } from './AnalysisPage.activity'
 import { useAnalysisPageData } from './AnalysisPage.data'
 import { CreditScorePanel } from '../components/finance/CreditScorePanel'
@@ -14,8 +14,8 @@ import { CreditScorePanel } from '../components/finance/CreditScorePanel'
  * Yılda bir bakılan paneller (zekât, yıl sonu özeti) katlanır durur: sayfayı
  * her açılışta uzatmasınlar ama silinmesinler de.
  */
-function CollapsibleSection({ label, children }: { label: string; children: React.ReactNode }) {
-  const [open, setOpen] = useState(false)
+function CollapsibleSection({ label, children, defaultOpen = false }: { label: string; children: React.ReactNode; defaultOpen?: boolean }) {
+  const [open, setOpen] = useState(defaultOpen)
 
   return (
     <div className="lg:col-span-12">
@@ -34,6 +34,7 @@ function CollapsibleSection({ label, children }: { label: string; children: Reac
 }
 
 export function AnalysisDetailPage() {
+  const [params] = useSearchParams()
   const { data, error, loading, ratesSnapshot, searchItems, snapshots } = useAnalysisPageData()
   const snapshotQuery = useFinanceSnapshot()
 
@@ -69,14 +70,13 @@ export function AnalysisDetailPage() {
   return (
     <section className="min-w-0 space-y-5">
       <p className="text-[13px] text-ink-muted">
-        Aktivite geçmişini, kredi notunu, kişi bakiyelerini, enflasyon etkisini ve uzun dönem raporlarını incele.
+        İşlem geçmişini incele; arama, kredi notu ve uzun dönem raporlarını ihtiyaç duyduğunda aç. <Link to="/borclar/kisiler" className="font-semibold text-primary">Kişi bakiyelerine git →</Link>
       </p>
       <div className="grid min-w-0 gap-5 lg:grid-cols-12 [&>*]:min-w-0">
-        <CreditScorePanel />
-        <InflationShieldPanel data={data} />
-        <PeopleLedger debts={data.debts} />
-        <ActivityFeedPanel data={data} />
-        <SearchExport items={searchItems} />
+        <div className="lg:col-span-12"><h2 className="mb-3 text-base font-semibold">İşlem geçmişi</h2><ActivityFeedPanel data={data} /></div>
+        <CollapsibleSection label="Genel arama ve dışa aktarım"><SearchExport items={searchItems} /></CollapsibleSection>
+        <CollapsibleSection label="Kredi notum" defaultOpen={params.get('new') === '1'}><CreditScorePanel /></CollapsibleSection>
+        <CollapsibleSection label="Varlık dağılımı ve enflasyon"><InflationShieldPanel data={data} /></CollapsibleSection>
 
         <CollapsibleSection label="Yıl sonu özeti">
           <YearEndReport data={data} snapshots={snapshots} />

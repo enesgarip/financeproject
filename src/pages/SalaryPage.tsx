@@ -1,12 +1,10 @@
-import { ArrowDownRight, ArrowUpRight } from 'lucide-react'
 import { CrudPage, type FormField } from '../components/CrudPage'
 import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
 import { Delta, HeroNumber, SectionEyebrow, TrendBars } from '../components/serit'
 import type { SalaryHistory } from '../types/database'
 import { formatDate } from '../utils/date'
-import { formatPercent, parseNumber } from '../utils/formatCurrency'
+import { parseNumber } from '../utils/formatCurrency'
 import { getSalaryTrend } from '../utils/financeSummary'
-import { diffTL } from '../utils/money'
 
 const salaryFields: FormField[] = [
   { name: 'title', label: 'Başlık', type: 'text', required: true },
@@ -40,17 +38,17 @@ function SalaryOverview({ rows }: { rows: SalaryHistory[] }) {
       )}
 
       {trend.length >= 2 ? (
-        <div className="mt-5">
+        <details className="mt-5"><summary className="min-h-11 cursor-pointer py-3 text-sm font-semibold text-primary">Maaş değişim grafiği</summary>
           <SectionEyebrow className="mb-2">Maaş trendi · son {trend.length} kayıt</SectionEyebrow>
           <TrendBars values={trend} label={`Son ${trend.length} maaş kaydının trendi`} />
-        </div>
+        </details>
       ) : null}
     </section>
   )
 }
 
 export function SalaryPage() {
-  const { formatAmount } = useBalancePrivacy()
+  const { formatAmount, maskText } = useBalancePrivacy()
   return (
     <CrudPage
       table="salary_history"
@@ -80,24 +78,8 @@ export function SalaryPage() {
       renderTitle={(row) => row.title}
       renderSubtitle={(row) => formatDate(row.effective_date)}
       renderDetails={(row) => [`Net maaş: ${formatAmount(row.amount)}`]}
-      renderExtra={(row, helpers) => {
-        const orderedRows = [...(helpers.rows as SalaryHistory[])].sort((a, b) => a.effective_date.localeCompare(b.effective_date))
-        const index = orderedRows.findIndex((item) => item.id === row.id)
-        const previous = index > 0 ? orderedRows[index - 1] : null
-        if (!previous || previous.amount <= 0) return null
-
-        const difference = diffTL(row.amount, previous.amount)
-        const percentage = (difference / previous.amount) * 100
-        const isUp = difference >= 0
-        return (
-          <div className={`mt-3 flex items-center gap-1.5 rounded-xl border px-3 py-2 text-sm ${isUp ? 'border-success/20 bg-success/8 text-success' : 'border-destructive/20 bg-destructive/8 text-destructive'}`}>
-            {isUp ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
-            <span className="font-mono font-semibold tabular-nums">
-              {difference >= 0 ? '+' : ''}{formatAmount(difference)} ({formatPercent(percentage, { signed: true })})
-            </span>
-          </div>
-        )
-      }}
+      listGridClassName="flex flex-col"
+      renderCard={(row, { menu }) => <article className="flex flex-wrap items-center justify-between gap-3 border-b border-line py-3"><div className="min-w-0"><h2 className="break-words text-sm font-semibold">{row.title}</h2><p className="text-xs text-ink-muted">{formatDate(row.effective_date)}</p>{row.note ? <p className="break-words text-xs text-ink-muted">{maskText(row.note)}</p> : null}</div><div className="flex items-center gap-3"><span className="serit-num font-semibold">{formatAmount(row.amount)}</span>{menu}</div></article>}
       getCardClassName={() => 'border-success/20 bg-success/5 dark:bg-success/8'}
       getDetailClassName={() => 'bg-page'}
     />

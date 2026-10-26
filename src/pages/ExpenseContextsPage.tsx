@@ -1,3 +1,5 @@
+import { normalizeSearchText } from '../utils/searchText'
+import { DeferredDetails } from '../components/ui/deferred-details'
 import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
 import { Briefcase, CreditCard, FolderKanban, HeartPulse, Palette, PawPrint, Plane, Plus, Trash2, Wallet, type LucideIcon } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
@@ -66,31 +68,7 @@ export function ExpenseContextsPage() {
   return (
     <div className="flex flex-col gap-5">
       {query.isError ? <Alert variant="warning">Gider grupları yüklenemedi. Sayfayı yenilemeyi dene.</Alert> : null}
-      <ContextManager
-        contexts={contexts}
-        userId={user?.id}
-        onChanged={refresh}
-        onError={(message) => toast.error('Kayıt değiştirilemedi', message)}
-        confirm={confirm}
-        showCompleted={showCompleted}
-        onShowCompleted={setShowCompleted}
-      />
-      {activeContexts.length > 0 && !showCompleted ? (
-        <>
-          <ManualContextExpenseForm
-            key={activeContexts.map((context) => context.id).join(':')}
-            contexts={activeContexts}
-            userId={user?.id}
-            onChanged={async () => { await refresh(); toast.success('Gider eklendi.') }}
-            onError={(message) => toast.error('Gider eklenemedi', message)}
-          />
-          <ContextCardTagging
-            contexts={contexts}
-            onChanged={refresh}
-            onError={(message) => toast.error('Harcama ilişkilendirilemedi', message)}
-          />
-        </>
-      ) : null}
+      <div className="flex flex-wrap gap-2" role="group" aria-label="Gider grubu görünümü"><button type="button" aria-pressed={!showCompleted} onClick={() => setShowCompleted(false)} className="min-h-11 rounded-lg border border-line-strong px-3 text-sm aria-pressed:bg-primary/10">Aktif gruplar</button><button type="button" aria-pressed={showCompleted} onClick={() => setShowCompleted(true)} className="min-h-11 rounded-lg border border-line-strong px-3 text-sm aria-pressed:bg-primary/10">Tamamlanan gruplar</button></div>
           <section className="grid gap-4 lg:grid-cols-2" aria-label={showCompleted ? 'Tamamlanan grupların geçmişi' : 'Aktif grupların özeti'}>
             {(query.data?.summaries ?? []).filter((summary) => Boolean(summary.context.completed_at) === showCompleted).map((summary) => (
               <ContextSummaryCard
@@ -104,6 +82,33 @@ export function ExpenseContextsPage() {
               />
             ))}
           </section>
+      {activeContexts.length > 0 && !showCompleted ? (
+        <>
+          <DeferredDetails summary="Gider ekle" summaryClassName="min-h-11 cursor-pointer py-3 font-semibold text-primary"><ManualContextExpenseForm
+            key={activeContexts.map((context) => context.id).join(':')}
+            contexts={activeContexts}
+            userId={user?.id}
+            onChanged={async () => { await refresh(); toast.success('Gider eklendi.') }}
+            onError={(message) => toast.error('Gider eklenemedi', message)}
+          />
+          </DeferredDetails><DeferredDetails summary="Kart hareketi ilişkilendir" summaryClassName="min-h-11 cursor-pointer py-3 font-semibold text-primary"><ContextCardTagging
+            contexts={contexts}
+            onChanged={refresh}
+            onError={(message) => toast.error('Harcama ilişkilendirilemedi', message)}
+          />
+          </DeferredDetails>
+        </>
+      ) : null}
+      <DeferredDetails summary="Gider gruplarını yönet" defaultOpen={contexts.length === 0} summaryClassName="min-h-11 cursor-pointer py-3 font-semibold text-primary">      <ContextManager
+        contexts={contexts}
+        userId={user?.id}
+        onChanged={refresh}
+        onError={(message) => toast.error('Kayıt değiştirilemedi', message)}
+        confirm={confirm}
+        showCompleted={showCompleted}
+        onShowCompleted={setShowCompleted}
+      />
+</DeferredDetails>
       {confirmDialog}
     </div>
   )
@@ -287,6 +292,10 @@ function ContextCardTagging({ contexts, onChanged, onError }: { contexts: Expens
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void load()
   }, [load])
+  const [search, setSearch] = useState('')
+  const [expanded, setExpanded] = useState(false)
+  const matching = expenses.filter((expense) => normalizeSearchText(expense.description).includes(normalizeSearchText(search)))
+  const visibleExpenses = expanded || search.trim() ? matching : matching.slice(0, 10)
   const names = useMemo(() => new Map(contexts.map((context) => [context.id, context.name])), [contexts])
   const activeContexts = contexts.filter((context) => !context.completed_at)
 
@@ -301,10 +310,12 @@ function ContextCardTagging({ contexts, onChanged, onError }: { contexts: Expens
   }
 
   return (
-    <Card><CardHeader className="pb-2"><CardTitle className="flex items-center gap-2 text-base"><CreditCard className="size-4 text-primary" /> Kart harcamasını gruba ekle</CardTitle><p className="text-xs text-ink-muted">Etiketleme kart borcunu değiştirmez. Henüz kesinleşmemiş provizyonlar da listelenir.</p></CardHeader><CardContent>
+    <Card><CardHeader className="pb-2"><CardTitle className="flex items-center gap-2 text-base"><CreditCard className="size-4 text-primary" /> Kart harcamasını gruba ekle</CardTitle><p className="text-xs text-ink-muted">Etiketleme kart borcunu değiştirmez. Henüz kesinleşmemiş provizyonlar da listelenir.</p></CardHeader><CardContent><label className="mb-3 block text-sm">Kart hareketi ara<Input className="mt-1" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="İşyeri veya açıklama" /></label>
+        {matching.length > 10 && !search.trim() ? <button type="button" aria-expanded={expanded} onClick={() => setExpanded((value) => !value)} className="min-h-11 text-sm text-primary">{expanded ? 'İlk 10 hareketi göster' : `${matching.length} hareketin tümünü göster`}</button> : null}
+
       {loading ? <Skeleton className="h-24 rounded-xl" /> : (
         <ul className="flex flex-col divide-y divide-line">
-          {expenses.map((expense) => (
+          {visibleExpenses.map((expense) => (
             <li key={expense.id} className="flex min-w-0 flex-col gap-2 py-3 min-[560px]:flex-row min-[560px]:items-center min-[560px]:justify-between">
               <div className="min-w-0 flex-1">
                 <p className="flex flex-wrap items-center gap-2 text-sm font-semibold">

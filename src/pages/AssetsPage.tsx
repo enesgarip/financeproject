@@ -1,3 +1,4 @@
+import { Link, useSearchParams } from 'react-router'
 import { ArrowDownRight, ArrowUpRight, Banknote, Coins, Landmark, LineChart, Minus, Plus, ShieldCheck, TrendingUp, Wallet } from 'lucide-react'
 import { useEffect, useMemo, useState, type ComponentType, type FormEvent } from 'react'
 import { CrudPage, type FormField } from '../components/CrudPage'
@@ -396,6 +397,8 @@ function AssetsOverview({ rows, snapshot, stockPrices, bankCash }: { rows: Asset
 }
 
 export function AssetsPage() {
+  const [assetParams] = useSearchParams()
+  const [showRecords, setShowRecords] = useState(() => assetParams.get('view') === 'records' || assetParams.get('new') === '1')
   const { formatAmount } = useBalancePrivacy()
   const { snapshot } = useMarketRates()
   const [stockPrices, setStockPrices] = useState<StockPrices>({})
@@ -506,6 +509,8 @@ export function AssetsPage() {
   return (
     <CrudPage
         table="assets"
+        showList={showRecords}
+        showToolbar={showRecords}
         pageTitle="Varlıklar"
         pageLabel="Servet merkezi"
         pageDescription="Nakit, yatırım ve fiziksel varlıklarının güncel değerini tek portföy görünümünde yönet."
@@ -559,6 +564,7 @@ export function AssetsPage() {
                 bankCash={sumTL(accounts.filter((account) => account.card_type === 'banka_karti').map((account) => account.current_balance))}
               />
             ) : null}
+            <div className="flex flex-wrap gap-3"><Link to="/varliklar/altin" className="inline-flex min-h-11 items-center text-sm font-semibold text-primary">Altın ayrıntıları →</Link><Link to="/varliklar/borsa" className="inline-flex min-h-11 items-center text-sm font-semibold text-primary">Hisse pozisyonları →</Link><button type="button" aria-expanded={showRecords} onClick={() => setShowRecords((value) => !value)} className="min-h-11 text-sm font-semibold text-primary">{showRecords ? 'Varlık kayıtlarını gizle' : 'Varlık kayıtlarını yönet / Al-Sat'}</button></div>
           </div>
         )}
         getInitialValues={(row?: Asset) => ({

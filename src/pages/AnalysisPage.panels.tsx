@@ -1,7 +1,8 @@
+import { Link } from 'react-router'
+import { DeferredDetails } from '../components/ui/deferred-details'
 import { CheckCircle2, Repeat, TrendingUp, Users, WalletCards } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Badge } from '../components/ui/badge'
-import { PaymentMatchStatus } from '../components/finance/PaymentMatchStatus'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { SERIT_FILL, SERIT_TEXT, useSeritAmount } from '../components/serit'
 import type { Budget, CardExpense, Debt } from '../types/database'
@@ -19,7 +20,6 @@ import { buildFinanceObligationsForMonth } from '../utils/obligations'
 
 import { SubscriptionDiscoveryPanel } from '../components/finance/SubscriptionDiscoveryPanel'
 import { diffTL, sumTL } from '../utils/money'
-import { matchedPaymentsInMonth } from '../utils/paymentHistory'
 import { StatPill } from './AnalysisPage.atoms'
 
 export function UpcomingInstallments({ data }: { data: AnalysisData }) {
@@ -386,6 +386,8 @@ export function MonthCloseAssistant({ data, missingTables }: { data: AnalysisDat
   const completed = checks.filter((check) => check.done).length
 
   return (
+    <details className="lg:col-span-12">
+      <summary className="min-h-11 cursor-pointer py-3 text-sm font-semibold text-primary">Ay kapanış kontrolü <span className={completed < checks.length ? 'text-warning' : 'text-ink-muted'}>· {completed < checks.length ? `${checks.length - completed} kontrol dikkat istiyor` : 'Kontrollerde uyarı yok'}</span></summary>
     <Card className="border-0 bg-raised text-ink ring-1 ring-line-strong lg:col-span-12">
       <CardContent className="grid gap-4 p-4 min-[760px]:grid-cols-[0.72fr_1.28fr] min-[760px]:items-center">
         <div>
@@ -407,14 +409,12 @@ export function MonthCloseAssistant({ data, missingTables }: { data: AnalysisDat
         </div>
       </CardContent>
     </Card>
+    </details>
   )
 }
 
 export function SubscriptionsPanel({ data }: { data: AnalysisData }) {
   const { formatAmount } = useBalancePrivacy()
-  const monthKey = dateInputValue(startOfMonth(new Date()))
-  const matchMonth = useMemo(() => new Date(`${monthKey}T12:00:00`), [monthKey])
-  const monthMatches = useMemo(() => matchedPaymentsInMonth(data.transactionHistory, matchMonth, data.cardExpenses), [data.transactionHistory, data.cardExpenses, matchMonth])
   const plans = data.payments.filter((p) => p.recurrence === 'monthly' && p.status === 'bekliyor')
   const monthlyTotal = sumTL(plans.map((p) => p.amount))
   const salary = getCurrentSalary(data.salaryHistory)
@@ -428,16 +428,8 @@ export function SubscriptionsPanel({ data }: { data: AnalysisData }) {
         </div>
       </CardHeader>
       <CardContent className="space-y-4 pt-2">
-        {plans.length === 0 ? <p className="text-sm text-ink-muted">Kayıtlı aylık plan yok.</p> : (
-          <div className="space-y-2" aria-label="Kayıtlı aylık planlar">{plans.map((plan) => (
-            <div key={plan.id} className="rounded-xl bg-page px-3 py-2 text-sm">
-              <div className="flex items-start justify-between gap-3"><p className="min-w-0 break-words font-semibold text-ink">{plan.title}</p><span className="shrink-0 font-mono text-xs text-ink">{formatAmount(plan.amount)}</span></div>
-              <p className="text-xs text-ink-muted">{plan.category} · planlı ödeme</p>
-              {plan.payment_method === 'bank_auto' ? <PaymentMatchStatus month={matchMonth} match={monthMatches.get(plan.id)} /> : null}
-            </div>
-          ))}</div>
-        )}
-        <SubscriptionDiscoveryPanel expenses={data.cardExpenses} payments={data.payments} cards={data.cards} />
+        <Link to="/odemeler?view=plans" className="inline-flex min-h-11 items-center text-sm font-semibold text-primary">Kayıtlı planları yönet →</Link>
+        <DeferredDetails summary="Abonelik adaylarını incele" summaryClassName="min-h-11 cursor-pointer py-3 font-semibold text-primary"><SubscriptionDiscoveryPanel expenses={data.cardExpenses} payments={data.payments} cards={data.cards} /></DeferredDetails>
       </CardContent>
     </Card>
   )

@@ -1,5 +1,12 @@
 # Dashboard Architecture Note
 
+26 Ekim: Özet en çok üç yaklaşan vade ve tümünü açma yolunu gösterir.
+Tam hesap listesi/kart dağılımı kısa bağlamsal bağlantılardır. Net değer Analiz'e
+bağlanır. Kart ödeme döngüsü Kartlar'daki `cycle=1` açılır bölümüne taşındı;
+Özet ayrıntılarında yalnız bağlantı kalır. Hesap, snapshot ve `safeToSpend`
+formülleri değişmez. `CardPaymentCyclePanel` aynı veriyi yeni bağlamda okur.
+
+
 Last reviewed: 2026-10-16
 
 Kalıcı Layout günlük fotoğrafı `app/useDailyNetWorthSnapshot.ts` ile başlatır.
