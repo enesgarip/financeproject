@@ -162,6 +162,7 @@ for (const width of [320, 390, 1280]) {
     await expect(list).toContainText('Deneme açıklaması 1004:')
     await ledger.getByRole('button', { name: 'Daha eski' }).click()
     await expect(ledger.getByRole('status')).toHaveText('11–20 / 1005 hareket · Sayfa 2 / 101')
+    await expect(list).toBeFocused()
     await expect(list).toContainText('Deneme açıklaması 994:')
     await ledger.getByRole('button', { name: 'Daha yeni' }).click()
     await expect(list).toContainText('Deneme açıklaması 1004:')

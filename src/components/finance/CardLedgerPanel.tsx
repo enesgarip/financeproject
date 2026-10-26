@@ -140,7 +140,8 @@ export function CardLedgerPanel({
   const visibleEvents = events.slice(start, start + VISIBLE_EVENTS)
   function showPage(nextPage: number) {
     setPagination({ cardId: card.id, page: nextPage })
-    historyRef.current?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth', block: 'start' })
+    historyRef.current?.scrollIntoView({ behavior: 'instant', block: 'start' })
+    historyRef.current?.focus({ preventScroll: true })
   }
 
   return (
@@ -185,7 +186,7 @@ export function CardLedgerPanel({
 
       {events.length > 0 ? (
         <div className="mt-3">
-        <ol ref={historyRef} aria-label="Kart borç hareketi kayıtları" className="scroll-mt-[calc(env(safe-area-inset-top)+6rem)] divide-y divide-line">
+        <ol ref={historyRef} tabIndex={-1} aria-label="Kart borç hareketi kayıtları" className="scroll-mt-[calc(env(safe-area-inset-top)+6rem)] divide-y divide-line">
           {visibleEvents.map((event) => {
             const meta = KIND_LABELS[event.kind]
             const amountTL = toTL(event.amount_kurus)

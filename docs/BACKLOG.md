@@ -8,7 +8,7 @@ sorgusunun PostgREST 1000 satır sınırında kesilebildiği görüldü; kısmi 
 fark/düzeltme önerilebiliyordu. Canlıda düzeltme veya manuel yazma yapılmadı.
 
 Özet üç tutar alanı, açıklamalar sarılan satırlar ve 10'ar kayıtlık sayfalama
-olarak düzenlendi. Kart/hesap tam ledger ve banka karşılaştırması tarih aralığı
+olarak düzenlendi. Sayfa değişimi animasyonsuz liste başına kaydırır ve klavye odağını yeni kayıtlara taşır. Kart/hesap tam ledger ve banka karşılaştırması tarih aralığı
 okumaları PK keyset sayfalarıyla tamamlanır; sayfa hatası kısmi başarı olamaz.
 Son üç hareket gibi sınırlı özetler korunur. Hesap formülü/RPC/SQL değişmez.
 Kaynak sözleşme: `docs/CARDS_ARCHITECTURE.md`, `docs/CARD_DEBT_TRANSITIONS.md`.

@@ -2,7 +2,7 @@
 
 26 Ekim kart geçmişi eki: `CardLedgerPanel.tsx` borçlanma/ödeme/net tutarlarını
 ayrı alanlarda, hareketleri 10'ar kayıtlık sayfalarda sunar. Açıklama kırpılmaz;
-mobilde tutar alt satıra iner. Tüm geçmişin toplamı sayfa seçiminden bağımsızdır.
+mobilde tutar alt satıra iner. Tüm geçmişin toplamı sayfa seçiminden bağımsızdır. Sayfa geçişi animasyonsuz liste başını görünür kılar ve listeye odak verir.
 `financePanelsRepo.ts` kart/hesap tam geçmişini ve tarih aralığı karşılaştırmasını
 500 satırlık PK keyset sayfalarıyla tamamlar; PostgREST 1000 sınırı toplam/fark
 hesabını kesemez. Son üç hareket gibi açık limitli özet tek istek olarak kalır.
