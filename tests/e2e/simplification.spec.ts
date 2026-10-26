@@ -39,7 +39,13 @@ async function mockApp(page: Page, theme: string, overrides: typeof tables = {})
     }
     if (url.hostname === 'example.supabase.co') {
       const name = url.pathname.split('/').at(-1)!
-      const data = name === 'fetch_finance_snapshot' ? snapshot : name === 'bist-quote' ? { prices: {}, asOf: now } : url.pathname.includes('/rpc/') ? 0 : name === 'user' ? user : rows[name] ?? []
+      let data: unknown = name === 'fetch_finance_snapshot' ? snapshot : name === 'bist-quote' ? { prices: {}, asOf: now } : url.pathname.includes('/rpc/') ? 0 : name === 'user' ? user : rows[name] ?? []
+      if (name === 'card_ledger' || name === 'account_ledger') {
+        const before = url.searchParams.get('id')?.replace(/^lt\./, '')
+        const cardId = url.searchParams.get('card_id')?.replace(/^eq\./, '')
+        data = (rows[name] ?? []).filter(row => (!before || String(row.id) < before) && (!cardId || row.card_id === cardId))
+          .toSorted((a, b) => String(b.id).localeCompare(String(a.id))).slice(0, Number(url.searchParams.get('limit') ?? 1000))
+      }
       return route.fulfill({ json: data })
     }
     return route.abort()
@@ -136,5 +142,35 @@ for (const types of [['gram'], ['gram', 'ceyrek']]) {
     await page.locator('summary').filter({ hasText: 'Aktarım bilgisi' }).click()
     await expect(page.getByText('[gold-import-2026-10-01] Örnek aktarım', { exact: true })).toBeVisible()
     if (types.length > 1) await expect(page.getByText('Kullanıcı notu', { exact: true })).toBeVisible()
+  })
+}
+
+for (const width of [320, 390, 1280]) {
+  test(`uzun kart geçmişi tam okunur ve sayfalanır: ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 })
+    await mockApp(page, width === 390 ? 'dark' : 'light', {
+      cards: [{ ...tables.cards[2], debt_amount: 1005, current_period_spending: 1005 }],
+      card_ledger: Array.from({ length: 1005 }, (_, i) => ({ ...base, id: String(i).padStart(6, '0'), card_id: 'credit-1', kind: 'adjustment', amount_kurus: 100, occurred_at: now, source_table: null, source_id: null, statement_delta_kurus: null, current_delta_kurus: null, provision_delta_kurus: null, note: `Deneme açıklaması ${i}: Önceki hareketlerin bütün açıklamaları dar ekranda da kesilmeden okunabilmeli.` })),
+    })
+    await page.goto('/kartlar?section=kartlar&card=credit-1')
+    await page.locator('summary').filter({ hasText: 'Kart ayarları ve kayıt geçmişi' }).click()
+    const ledger = page.getByRole('region', { name: 'Kart borç hareketleri', exact: true })
+    await expect(ledger.getByText('1005 hareket', { exact: true })).toBeVisible()
+    await expect(ledger.getByRole('button', { name: /ledger.a göre düzelt/i })).toHaveCount(0)
+    const list = ledger.getByRole('list', { name: 'Kart borç hareketi kayıtları' })
+    await expect(list.getByRole('listitem')).toHaveCount(10)
+    await expect(list).toContainText('Deneme açıklaması 1004:')
+    await ledger.getByRole('button', { name: 'Daha eski' }).click()
+    await expect(ledger.getByRole('status')).toHaveText('11–20 / 1005 hareket · Sayfa 2 / 101')
+    await expect(list).toContainText('Deneme açıklaması 994:')
+    await ledger.getByRole('button', { name: 'Daha yeni' }).click()
+    await expect(list).toContainText('Deneme açıklaması 1004:')
+    await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1)
+    await ledger.getByRole('button', { name: 'En eski', exact: true }).click()
+    await expect(ledger.getByRole('status')).toHaveText('1001–1005 / 1005 hareket · Sayfa 101 / 101')
+    await expect(list.getByRole('listitem')).toHaveCount(5)
+    await ledger.getByRole('button', { name: 'En yeni', exact: true }).click()
+    await expect(list.getByRole('listitem')).toHaveCount(10)
+    await ledger.screenshot({ path: `test-results/card-ledger-${width}.png` })
   })
 }

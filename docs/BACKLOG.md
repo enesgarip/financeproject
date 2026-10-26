@@ -1,5 +1,22 @@
 # Priority Backlog
 
+## 2026-10-26 — Black kart kayıt geçmişi okunabilirliği ve tam okuma — UYGULANDI
+
+Canlı incelemede Borç hareketleri özeti uzun tek satırda, açıklamalar kırpılmış
+ve devamı erişilemeyen “+992 hareket daha” metniydi. Aynı incelemede tam geçmiş
+sorgusunun PostgREST 1000 satır sınırında kesilebildiği görüldü; kısmi olaylardan
+fark/düzeltme önerilebiliyordu. Canlıda düzeltme veya manuel yazma yapılmadı.
+
+Özet üç tutar alanı, açıklamalar sarılan satırlar ve 10'ar kayıtlık sayfalama
+olarak düzenlendi. Kart/hesap tam ledger ve banka karşılaştırması tarih aralığı
+okumaları PK keyset sayfalarıyla tamamlanır; sayfa hatası kısmi başarı olamaz.
+Son üç hareket gibi sınırlı özetler korunur. Hesap formülü/RPC/SQL değişmez.
+Kaynak sözleşme: `docs/CARDS_ARCHITECTURE.md`, `docs/CARD_DEBT_TRANSITIONS.md`.
+Doğrulama: 1005 aynı zamanlı olay, sonraki sayfa hatası, sınırlı özet, revizyon
+ve 10'lu sayfalama regresyonları; sentetik 320/390/1280px tarayıcı kontrolü.
+Tam kalite kapısı `npm run verify` geçti: 170 dosyada 1.783 test, 7 guard, lint/coverage, production audit 0 açık, build/bundle ve 6 edge tipi. Canlı finansal yazma testi yok.
+
+
 ## 2026-10-26 — Uygulama sadeleştirme — UYGULANDI
 
 24 bulgu dört sunum paketiyle uygulandı. Özet kısa bağlantılara, Ödemeler
