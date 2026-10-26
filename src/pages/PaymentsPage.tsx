@@ -1,5 +1,6 @@
+import { useSearchParams } from 'react-router'
 import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
-import { CalendarDays, CreditCard, Receipt, RefreshCw } from 'lucide-react'
+import { CalendarDays, CreditCard, Receipt } from 'lucide-react'
 import { CrudPage, type FormField } from '../components/CrudPage'
 import { FinancePaymentDrawer } from '../components/finance/FinancePaymentDrawer'
 import { PaymentMatchStatus } from '../components/finance/PaymentMatchStatus'
@@ -252,6 +253,8 @@ function PaymentsOverview({ rows, transactionHistory }: { rows: Payment[]; trans
 }
 
 export function PaymentsPage() {
+  const [viewParams] = useSearchParams()
+  const [showPlans, setShowPlans] = useState(() => viewParams.get('view') === 'plans' || viewParams.get('new') === '1')
   const { maskText, formatAmount } = useBalancePrivacy()
   const snapshotQuery = useFinanceSnapshot()
   const invalidateSnapshot = useInvalidateFinanceSnapshot()
@@ -369,6 +372,8 @@ export function PaymentsPage() {
     <>
       <CrudPage
         table="payments"
+        showList={showPlans}
+        showToolbar={showPlans}
         pageTitle="Planlı ödemeler"
         pageLabel="Nakit takvimi"
         pageDescription="Fatura, kira ve tek seferlik yükümlülükleri vadeye göre planla ve ödeme akışını yönet."
@@ -393,13 +398,14 @@ export function PaymentsPage() {
           return (
             <div className="flex flex-col gap-3">
               {planningError ? <Alert variant="warning">{planningError}</Alert> : null}
-              <ObligationsCalendar
+              <div className="flex flex-wrap gap-2" role="group" aria-label="Ödemeler bölümü"><button type="button" aria-pressed={!showPlans} className="min-h-11 rounded-lg border border-line-strong px-3 text-sm font-semibold aria-pressed:bg-primary/10 aria-pressed:text-primary" onClick={() => setShowPlans(false)}>Vadeler</button><button type="button" aria-pressed={showPlans} className="min-h-11 rounded-lg border border-line-strong px-3 text-sm font-semibold aria-pressed:bg-primary/10 aria-pressed:text-primary" onClick={() => setShowPlans(true)}>Kayıtlı planlar</button></div>
+              <div hidden={showPlans}><ObligationsCalendar
                 loading={loading || planningLoading}
                 data={{ ...planningData, payments }}
                 onPayObligation={(obligation) => void openObligationPayment(obligation, reload)}
                 onMonthChange={setMatchMonth}
-              />
-              {!loading ? <PaymentsOverview rows={payments} transactionHistory={transactionHistory} /> : null}
+              /></div>
+              {showPlans && !loading ? <PaymentsOverview rows={payments} transactionHistory={transactionHistory} /> : null}
             </div>
           )
         }}
@@ -477,13 +483,6 @@ export function PaymentsPage() {
               <div className="mt-3 flex min-h-9 items-center justify-between gap-3">
                 <div className="flex min-w-0 flex-wrap items-center gap-2">
                   {isPaid ? <Badge variant="success">Ödendi</Badge> : null}
-                  {isRecurring && !isPaid ? (
-                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-ink-muted">
-                      <RefreshCw size={13} />
-                      Aylık
-                    </span>
-                  ) : null}
-                  {payment.amount_status === 'estimated' && !isPaid ? <Badge variant="outline">Tahmini</Badge> : null}
                 </div>
                 {!isPaid && obligation.action ? (
                   <Button

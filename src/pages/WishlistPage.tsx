@@ -385,7 +385,7 @@ function WishlistRow({
             türer, listede saklanmaz. Ufukta karşılanmıyorsa tarih UYDURMAYIZ. */}
         {/* truncate DEĞİL: dar ekranda "…" ile kesilince cümlenin asıl bilgisi
             (hangi hedefin kaç aylık payı) kayboluyordu. */}
-        {!purchased && plan ? <div className="mt-2"><WishlistAssessment plan={plan} /></div> : null}
+        {!purchased && plan ? <div className="mt-2"><WishlistAssessment plan={plan} compact /><details><summary className="min-h-11 cursor-pointer py-3 text-xs text-primary">Değerlendirme ayrıntıları</summary><WishlistAssessment plan={plan} /></details></div> : null}
       </div>
 
       <div className="hover-actions flex shrink-0 items-center gap-2 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100">

@@ -1,26 +1,21 @@
-import { Link, Outlet, useLocation } from 'react-router'
+import { Link, Outlet, useLocation, useNavigate } from 'react-router'
 import { HubNav } from '../components/HubNav'
 import { planningHubTabs } from '../components/navigation'
+import { Select } from '../components/ui/input'
 
 export function PlanningHub() {
   const { pathname } = useLocation()
-  const mainTabs = planningHubTabs.slice(0, 2)
-  const tools = planningHubTabs.slice(2)
-  const activeTool = tools.find((tab) => tab.to === pathname)
+  const navigate = useNavigate()
   return (
     <div>
-      <HubNav tabs={activeTool ? [...mainTabs, activeTool] : mainTabs} />
-      <details key={pathname} className="mb-5 rounded-xl border border-line-strong bg-raised px-4">
-        <summary className="min-h-11 cursor-pointer py-3 text-sm font-semibold text-ink-muted">Diğer planlama araçları</summary>
-        <nav aria-label="Planlama araçları" className="grid gap-1 pb-3 sm:grid-cols-3">
-          {tools.map((tab) => (
-            <Link key={tab.to} to={tab.to} aria-current={pathname === tab.to ? 'page' : undefined} className="flex min-h-11 items-center rounded-lg px-3 text-sm text-ink hover:bg-primary/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary">
-              {tab.label}
-            </Link>
-          ))}
-        </nav>
-      </details>
+      <div className="hidden md:block"><HubNav tabs={planningHubTabs} /></div>
+      <label className="mb-4 block text-sm font-semibold md:hidden">Plan bölümü
+        <Select className="mt-1" value={pathname} onChange={(event) => navigate(event.target.value)}>
+          {planningHubTabs.map((tab) => <option key={tab.to} value={tab.to}>{tab.label}</option>)}
+        </Select>
+      </label>
       <Outlet />
+      <p className="mt-6 border-t border-line py-3 text-xs text-ink-muted">Gelir kaydın için <Link className="inline-flex min-h-11 items-center font-semibold text-primary" to="/varliklar/maas">Maaş geçmişi →</Link></p>
     </div>
   )
 }

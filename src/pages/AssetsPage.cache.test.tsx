@@ -34,6 +34,7 @@ it('gerçek alım formu sonrası snapshot, hesap, varlık ve kapalı hisse defte
   client.setQueryData(tradesKey, [])
   try {
     render(<QueryClientProvider client={client}><MemoryRouter><BalancePrivacyProvider><AssetsPage /></BalancePrivacyProvider></MemoryRouter></QueryClientProvider>)
+    fireEvent.click(await screen.findByRole('button', { name: 'Varlık kayıtlarını yönet / Al-Sat' }))
     fireEvent.click(await screen.findByRole('button', { name: 'Al' }))
     const dialog = within(screen.getByRole('dialog'))
     fireEvent.change(dialog.getByLabelText('İşlem tutarı'), { target: { value: '25' } })

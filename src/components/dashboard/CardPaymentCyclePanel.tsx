@@ -1,8 +1,11 @@
 import { useMemo, useState } from 'react'
+import { useFinanceSnapshot } from '../../app/useFinanceSnapshot'
+import { readSafeToSpendBuffer, useKasaReserved } from '../../hooks/useSafeToSpend'
+import { QueryError } from '../ui/query-error'
 import { HelpTooltip } from '../ui/help-tooltip'
 import { useBalancePrivacy } from '../../hooks/useBalancePrivacy'
 import { buildCardPaymentCycle, buildCardCycleForecast, cardSpendingScenario } from '../../utils/cardPaymentCycle'
-import { formatDate } from '../../utils/date'
+import { formatDate, startOfDay } from '../../utils/date'
 import { parseNumber } from '../../utils/formatCurrency'
 import type { FinanceSummaryInput } from '../../utils/financeSummary'
 
@@ -72,4 +75,13 @@ export function CardPaymentCyclePanel({ data, from, buffer, reserved, reservedKn
       {extra !== '' && extraAmount >= 0 && <div className="mt-3 overflow-x-auto"><table className="w-full text-left text-xs"><thead><tr><th className="py-2">Ay</th><th>Kayıtlı plan</th><th>Yeni harcamayla</th></tr></thead><tbody>{scenario.map((month) => <tr key={month.monthKey} className="border-t border-line"><th className="py-3 font-normal">{month.monthLabel}</th><td>{formatAmount(month.baseline)}</td><td>{formatAmount(month.scenario)}</td></tr>)}</tbody></table><p className="text-xs text-ink-muted">Her iki sütunda tampon, kasa rezervi ve vadesiz kişisel borç ayrıldı.</p></div>}
     </details>
   </section>
+}
+
+/** Kart bağlamında ilk açılışta aynı snapshot ve rezerv hesabını kurar. */
+export function CardsPaymentCycle() {
+  const query = useFinanceSnapshot()
+  const { reserved, reservedKnown } = useKasaReserved()
+  if (query.isPending) return <p role="status" className="py-3 text-sm text-ink-muted">Kart ödeme planı yükleniyor…</p>
+  if (query.isError) return <QueryError title="Kart ödeme planı yüklenemedi" message={query.error.message} onRetry={() => void query.refetch()} />
+  return <CardPaymentCyclePanel data={query.data} from={startOfDay(new Date())} buffer={readSafeToSpendBuffer()} reserved={reserved} reservedKnown={reservedKnown} />
 }

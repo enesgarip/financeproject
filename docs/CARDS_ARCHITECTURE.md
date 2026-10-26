@@ -1,6 +1,16 @@
 # Cards Architecture Note
 
-Last reviewed: 2026-10-25
+26 Ekim: `task=transfer` kaynak banka/nakit hesabı seçtirir, mevcut para
+hareketi formunu transfer modunda açar. Seçim URL'den tüketilir; form açmak
+yeni kayıt üretmez. Satır erişilebilir adı transfer görevini belirtir.
+`cycle=1` kart ödeme döngüsünü açar; `CardsPaymentCycle` ilk açılışta ortak
+snapshot, mevcut tampon ve rezerv hook'unu kullanır. Özet'teki tam döngü
+buraya taşındı; formüller/yazma yolları aynı. “Son hareketler ve dönem özeti”
+menü adı dönem toplamıyla son 20 geçmiş hareketin farklı kapsamını açıklar;
+eski `panel=donem` bağlantısı korunur.
+
+
+Last reviewed: 2026-10-26
 
 Borç kırılımındaki dört toplamın açık durumu `panel` URL seçimine bağlıdır:
 safir zemin/üst çizgi, aşağı dönen ok ve “Döküm açık · Kapat” metni birlikte

@@ -1,3 +1,5 @@
+import { normalizeSearchText } from '../utils/searchText'
+import { DeferredDetails } from '../components/ui/deferred-details'
 import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
 import { Bell, Car as CarIcon, Check, CreditCard, Fuel, Gauge, Pencil, Plus, Share2, Trash2, Wallet } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
@@ -65,37 +67,7 @@ export function CarsPage() {
         <Alert variant="warning">Araç verisi yüklenemedi. Sayfayı yenilemeyi dene.</Alert>
       ) : null}
 
-      <CarManager
-        cars={cars}
-        userId={user?.id}
-        onChanged={refresh}
-        onAdded={() => toast.success('Araç eklendi.')}
-        onError={(m) => toast.error('Araç işlemi tamamlanamadı', m)}
-        confirm={confirm}
-      />
-
-      {cars.length > 0 ? (
-        <>
-          <ManualExpenseForm
-            cars={cars}
-            userId={user?.id}
-            onAdded={async () => {
-              await refresh()
-              toast.success('Araç gideri eklendi.')
-            }}
-            onError={(m) => toast.error('Gider eklenemedi', m)}
-          />
-
-          <CarRemindersPanel
-            cars={cars}
-            reminders={reminders}
-            userId={user?.id}
-            onChanged={refresh}
-            onError={(m) => toast.error('Hatırlatıcı güncellenemedi', m)}
-          />
-
-          <CardTagging cars={cars} onChanged={refresh} onError={(m) => toast.error('Atanamadı', m)} />
-
+      {cars.length > 0 ? <>
           <section className="flex flex-col gap-4">
             {summaries.map((summary) => (
               <CarSummaryCard
@@ -112,8 +84,32 @@ export function CarsPage() {
               />
             ))}
           </section>
-        </>
-      ) : null}
+          <CarRemindersPanel
+            cars={cars}
+            reminders={reminders}
+            userId={user?.id}
+            onChanged={refresh}
+            onError={(m) => toast.error('Hatırlatıcı güncellenemedi', m)}
+          />
+        <DeferredDetails summary="Gider ekle" summaryClassName="min-h-11 cursor-pointer py-3 font-semibold text-primary">          <ManualExpenseForm
+            cars={cars}
+            userId={user?.id}
+            onAdded={async () => {
+              await refresh()
+              toast.success('Araç gideri eklendi.')
+            }}
+            onError={(m) => toast.error('Gider eklenemedi', m)}
+          /></DeferredDetails>
+        <DeferredDetails summary="Kart hareketi ilişkilendir" summaryClassName="min-h-11 cursor-pointer py-3 font-semibold text-primary">          <CardTagging cars={cars} onChanged={refresh} onError={(m) => toast.error('Atanamadı', m)} /></DeferredDetails>
+      </> : null}
+      <DeferredDetails summary="Araçları yönet" defaultOpen={cars.length === 0} summaryClassName="min-h-11 cursor-pointer py-3 font-semibold text-primary">      <CarManager
+        cars={cars}
+        userId={user?.id}
+        onChanged={refresh}
+        onAdded={() => toast.success('Araç eklendi.')}
+        onError={(m) => toast.error('Araç işlemi tamamlanamadı', m)}
+        confirm={confirm}
+      /></DeferredDetails>
 
       {confirmDialog}
     </div>
@@ -611,6 +607,10 @@ function CardTagging({
     await onChanged()
   }
 
+  const [search, setSearch] = useState('')
+  const [expanded, setExpanded] = useState(false)
+  const matching = expenses.filter((expense) => normalizeSearchText(expense.description).includes(normalizeSearchText(search)))
+  const visibleExpenses = expanded || search.trim() ? matching : matching.slice(0, 10)
   const carName = useMemo(() => new Map(cars.map((c) => [c.id, c.name])), [cars])
 
   return (
@@ -624,13 +624,15 @@ function CardTagging({
         </p>
       </CardHeader>
       <CardContent>
+<label className="mb-3 block text-sm">Kart hareketi ara<Input className="mt-1" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="İşyeri veya açıklama" /></label>
+        {matching.length > 10 && !search.trim() ? <button type="button" aria-expanded={expanded} onClick={() => setExpanded((value) => !value)} className="min-h-11 text-sm text-primary">{expanded ? 'İlk 10 hareketi göster' : `${matching.length} hareketin tümünü göster`}</button> : null}
         {loading ? (
           <Skeleton className="h-24 w-full rounded-xl" />
         ) : expenses.length === 0 ? (
           <p className="py-2 text-center text-sm text-ink-muted">Görüntülenecek kart harcaması yok.</p>
         ) : (
           <ul className="flex flex-col divide-y divide-line">
-            {expenses.map((expense) => (
+            {visibleExpenses.map((expense) => (
               <li key={expense.id} className="flex flex-col gap-2 py-2">
                 <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">

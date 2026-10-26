@@ -259,34 +259,6 @@ export function PurchaseDecisionPage() {
             className="finance-value mt-4 h-14 w-full bg-page px-4 text-center text-2xl font-bold tabular-nums"
           />
 
-          {/* Nakit/banka seçiliyken taksit yoktur: butonlar tıklanabilir kalıyordu ve
-              "nakit + 6 taksit" gibi gerçekte olmayan bir kombinasyon seçilebiliyordu
-              (seçim zaten 1'e zorlanıyordu ama arayüz aksini söylüyordu). */}
-          <div className="mt-3">
-            <p className="finance-label" id="installment-group-label">Taksit</p>
-            <div className="mt-1.5 grid grid-cols-5 gap-1.5" role="group" aria-labelledby="installment-group-label">
-              {INSTALLMENT_PRESETS.map((count) => (
-                <button
-                  key={count}
-                  type="button"
-                  onClick={() => setInstallments(count)}
-                  disabled={method === 'cash' && count !== 1}
-                  aria-pressed={installments === count}
-                  className={`min-h-11 rounded-lg text-sm font-bold ring-1 transition disabled:cursor-not-allowed disabled:opacity-45 ${
-                    installments === count
-                      ? 'bg-primary text-primary-foreground ring-primary'
-                      : 'bg-raised text-ink ring-line-strong enabled:hover:bg-black/[.03] dark:hover:bg-white/[.04]'
-                  }`}
-                >
-                  {count === 1 ? 'Peşin' : count}
-                </button>
-              ))}
-            </div>
-            {method === 'cash' ? (
-              <p className="mt-1.5 text-[11px] text-ink-muted">Nakit ve banka ödemesi peşindir; taksit yalnız kredi kartında seçilebilir.</p>
-            ) : null}
-          </div>
-
           <div className="mt-3">
             <p className="finance-label">Ödeme şekli</p>
             <div className="mt-1.5 grid grid-cols-2 gap-1.5">
@@ -310,7 +282,7 @@ export function PurchaseDecisionPage() {
               ))}
             </div>
             {timingChoices.length > 0 ? (
-              <div className="mt-2">
+              <details className="mt-2"><summary className="min-h-11 cursor-pointer py-3 text-xs font-semibold text-primary">Kartların ödeme zamanını karşılaştır</summary>
                 <p className="text-[11px] text-ink-muted">Kartlara göre ilk ödemeye kalan tahmini süre. Bu tarihler aşağıdaki hesaplamayı değiştirmez.</p>
                 <div className="mt-1.5 flex flex-wrap gap-1.5">
                   {timingChoices.map((choice) => (
@@ -339,9 +311,36 @@ export function PurchaseDecisionPage() {
                     </span>
                   ))}
                 </div>
-              </div>
+              </details>
             ) : null}
           </div>
+          {method === 'card' ? <>
+          {/* Nakit/banka seçiliyken taksit yoktur: butonlar tıklanabilir kalıyordu ve
+              "nakit + 6 taksit" gibi gerçekte olmayan bir kombinasyon seçilebiliyordu
+              (seçim zaten 1'e zorlanıyordu ama arayüz aksini söylüyordu). */}
+          <div className="mt-3">
+            <p className="finance-label" id="installment-group-label">Taksit</p>
+            <div className="mt-1.5 grid grid-cols-5 gap-1.5" role="group" aria-labelledby="installment-group-label">
+              {INSTALLMENT_PRESETS.map((count) => (
+                <button
+                  key={count}
+                  type="button"
+                  onClick={() => setInstallments(count)}
+                  aria-pressed={installments === count}
+                  className={`min-h-11 rounded-lg text-sm font-bold ring-1 transition disabled:cursor-not-allowed disabled:opacity-45 ${
+                    installments === count
+                      ? 'bg-primary text-primary-foreground ring-primary'
+                      : 'bg-raised text-ink ring-line-strong enabled:hover:bg-black/[.03] dark:hover:bg-white/[.04]'
+                  }`}
+                >
+                  {count === 1 ? 'Peşin' : count}
+                </button>
+              ))}
+            </div>
+
+          </div>
+
+          </> : null}
         </CardContent>
       </Card>
 

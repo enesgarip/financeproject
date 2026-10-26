@@ -1,3 +1,4 @@
+import { MemoryRouter } from 'react-router'
 // @vitest-environment happy-dom
 import type { ReactNode } from 'react'
 import { cleanup, render, screen } from '@testing-library/react'
@@ -20,12 +21,12 @@ afterEach(() => { cleanup(); mocks.assetsFetching = false; mocks.tradesFetching 
 it.each(['assets', 'trades'])('%s yenilenirken eski/yeni portföyden sahte uyuşmazlık sunmaz', (pending) => {
   mocks.assetsFetching = pending === 'assets'
   mocks.tradesFetching = pending === 'trades'
-  const view = render(<BalancePrivacyProvider><BorsaPage /></BalancePrivacyProvider>)
+  const view = render(<MemoryRouter><BalancePrivacyProvider><BorsaPage /></BalancePrivacyProvider></MemoryRouter>)
   expect(screen.getByRole('status')).toBeTruthy()
   expect(screen.queryByText(/Defter ile Varlıklar satırı uyuşmuyor/)).toBeNull()
   mocks.assetsFetching = false
   mocks.tradesFetching = false
-  view.rerender(<BalancePrivacyProvider><BorsaPage /></BalancePrivacyProvider>)
+  view.rerender(<MemoryRouter><BalancePrivacyProvider><BorsaPage /></BalancePrivacyProvider></MemoryRouter>)
   expect(screen.queryByRole('status')).toBeNull()
   expect(screen.getByText(/Defter ile Varlıklar satırı uyuşmuyor/)).toBeTruthy()
 })

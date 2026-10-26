@@ -1,6 +1,19 @@
 # AI Context Index
 
-Last reviewed: 2026-10-25
+Last reviewed: 2026-10-26
+
+26 Ekim sadeleştirme uygulandı: `docs/SIMPLIFICATION_PLAN_2026-10-26.md`
+dört paketin son durumu ve doğrulama kaydıdır; önceki canlı kanıtlar
+`docs/SIMPLIFICATION_AUDIT_2026-10-26.md` içindedir. Transfer `CardsPage.tsx`
+üzerinden mevcut formu açar; `CardPaymentCyclePanel.tsx` / `CardsPaymentCycle`
+Kartlar'daki isteğe bağlı döngüyü aynı snapshot/rezerv hesabıyla sunar.
+Ödemeler vade/plan, Hisseler pozisyon/geçmiş görünümündedir. Plan araç seçimi
+`PlanningHub.tsx` içindedir. Analiz'in kişi özeti Kişiler'e; yardımcı araçlar
+Ayrıntılar'da adlandırılmış açılır bölümlere taşındı. Kaynak sözleşmeler:
+`docs/UI_ARCHITECTURE.md`, `docs/UI_GLOSSARY.md`, `docs/CARDS_ARCHITECTURE.md`,
+`docs/DATA_HEALTH_ARCHITECTURE.md`. Sunum ve regresyon testi;
+finans hesabı/RPC/ledger/şema değişmez. Tarayıcı regresyonu:
+`tests/e2e/simplification.spec.ts` (sentetik, dış ağ kapalı).
 
 25 Ekim kart dökümü geri bildirimi: `pages/CardsPage.summary.tsx` seçili toplamı
 safir vurgu, aşağı ok ve “Döküm açık · Kapat” metniyle belirtir.
@@ -68,7 +81,7 @@ kimliği eksik kurum tekrarı mevcut planla belirsizse ikinci plan önerilmez.
 `data/repositories/cardsRepo.ts` / `fetchSubscriptionExpenses` altı aylık
 hareketleri sayfalar; kayıttan önce `fetchCardPaymentMatchRows` yeniden okunur.
 Mevcut `utils/subscriptions.ts` finansal tahmin hesabı değişmez; yeni aday
-kullanıcı planlamadan o hesaba girmez. Analiz aylık planların tümünü gösterir.
+kullanıcı planlamadan o hesaba girmez. Analiz aylık planların toplamını ve Ödemeler yönetim bağlantısını gösterir.
 Sözleşme: `docs/FINANCE_RULES.md`; regresyon: `subscriptionDiscovery.test.ts`,
 `SubscriptionDiscoveryPanel.test.tsx`, `cardsRepo.test.ts`.
 
@@ -76,7 +89,7 @@ Abonelik aylık eşleşmesi: `utils/paymentHistory.ts` / `matchedPaymentsInMonth
 vade ayını, açık harcama bağlantısını veya eski SMS RPC sözleşmesini okur;
 manuel ödeme benzerliği kanıt değildir. `components/finance/PaymentMatchStatus.tsx`
 ay/tarih/gerçek tutar ve iptal/yükleme/hata durumunu gösterir. `pages/PaymentsPage.tsx`
-takvim ayını izler; `pages/AnalysisPage.panels.tsx` abonelikleri bu ay için gösterir.
+takvim ayını izler; `pages/AnalysisPage.panels.tsx` abonelik toplamını sunar; aylık eşleşme kanıtı Ödemeler kayıtlarındadır.
 `utils/obligations.ts` aylık kredi kartı talimatında manuel eylem sunmaz;
 diğer ödemeler korunur. Sözleşme: `docs/FINANCE_RULES.md`, `docs/TRANSACTION_HISTORY.md`.
 Tarihçe penceresi dışındaki/ilk sınır ayındaki eksik veri eşleşme yok sayılmaz;

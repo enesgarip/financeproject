@@ -7,16 +7,14 @@
  * Hesap yok — her sayı DashboardPage'den hazır gelir; burası yalnız sunum.
  */
 import { useState, type ReactNode } from 'react'
-import { CalendarDays, ChevronRight, Landmark, ShieldAlert, ShieldCheck } from 'lucide-react'
+import { CalendarDays, ChevronRight, ShieldAlert, ShieldCheck } from 'lucide-react'
 import { Link } from 'react-router'
 import type { MonthStrip } from '../../utils/dashboardMonthStrip'
 import { monthStripTone } from '../../utils/dashboardMonthStrip'
 import { groupDashboardInstallments, type DashboardUpcomingItem } from '../../utils/dashboardUpcoming'
 import type { SafeToSpendResult } from '../../utils/safeToSpend'
 import { daysUntil } from '../../utils/date'
-import { formatPercent } from '../../utils/formatCurrency'
 import {
-  BreakdownBar,
   DayBadge,
   HeroNumber,
   LineGroup,
@@ -81,13 +79,10 @@ export function SeritOverview({
   strip,
   upcoming,
   cardBuckets,
-  creditUsageRate,
-  totalCreditLimit,
   netWorth,
   totalAssets,
   totalDebts,
   staleRatesLabel,
-  liquidAccounts,
   totalCashAssets,
   cashFlowBreakdown,
   health,
@@ -136,11 +131,11 @@ export function SeritOverview({
 }) {
   const [showAllUpcoming, setShowAllUpcoming] = useState(false)
   const groupedUpcoming = groupDashboardInstallments(upcoming)
-  const visibleUpcoming = showAllUpcoming ? groupedUpcoming : groupedUpcoming.slice(0, 6)
+  const visibleUpcoming = showAllUpcoming ? groupedUpcoming : groupedUpcoming.slice(0, 3)
   const format = useSeritAmount()
   const daysLeft = Math.max(1, daysInMonth - today.getDate())
   const perDay = format(perDayAllowance)
-  const nextThree = upcoming.slice(0, 3)
+  const nextThree = showAllUpcoming ? upcoming : upcoming.slice(0, 3)
   return (
     <div className="lg:grid lg:grid-cols-[1.4fr_1fr] lg:items-start lg:gap-9">
       {/* ── Sol kolon: kahraman rakam, şerit, vadeler ── */}
@@ -217,6 +212,7 @@ export function SeritOverview({
               ))}
             </LineGroup>
           )}
+          {upcoming.length > 3 ? <button type="button" aria-expanded={showAllUpcoming} onClick={() => setShowAllUpcoming((value) => !value)} className="min-h-11 text-sm font-semibold text-primary">{showAllUpcoming ? 'Vadeleri daralt' : 'Tüm yaklaşanları göster'}</button> : null}
         </section>
 
         {isOnboarding ? null : (
@@ -298,7 +294,7 @@ export function SeritOverview({
               </tbody>
             </table>
           )}
-          {groupedUpcoming.length > 6 && <button type="button" aria-expanded={showAllUpcoming} onClick={() => setShowAllUpcoming((value) => !value)} className="mt-2 min-h-11 text-sm font-semibold text-primary">{showAllUpcoming ? 'Vadeleri daralt' : `${groupedUpcoming.length - 6} vade daha göster`}</button>}
+          {groupedUpcoming.length > 3 && <button type="button" aria-expanded={showAllUpcoming} onClick={() => setShowAllUpcoming((value) => !value)} className="mt-2 min-h-11 text-sm font-semibold text-primary">{showAllUpcoming ? 'Vadeleri daralt' : `${groupedUpcoming.length - 3} vade daha göster`}</button>}
         </section>
       </div>
 
@@ -307,7 +303,7 @@ export function SeritOverview({
           net değer / kart borcu görünür kalır ve alt boşluk hissi azalır (B14). */}
       <div className="mt-8 flex min-w-0 flex-col gap-6 lg:sticky lg:top-6 lg:mt-0 lg:gap-7">
         <SidePanel title="Net değer" first>
-          <SideNumber value={netWorth} />
+          <Link to="/analiz" className="block rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"><SideNumber value={netWorth} /><span className="inline-flex min-h-11 items-center text-xs font-semibold text-primary">Net değer analizini aç →</span></Link>
           <p className="mt-1 text-[13px] text-ink-muted">
             <span className="serit-num text-ink">{format(totalAssets).amount}</span> varlık ·{' '}
             <span className="serit-num" style={{ color: SERIT_TEXT.danger }}>
@@ -325,38 +321,12 @@ export function SeritOverview({
           ) : null}
         </SidePanel>
 
-        <SidePanel title={`Kart borcu · ${format(cardBuckets.total).amount} ${format(cardBuckets.total).unit}`}>
-          <div className="mt-3">
-            <BreakdownBar
-              height={8}
-              segments={[
-                { label: 'Ekstre', value: cardBuckets.statement, tone: 'danger' },
-                { label: 'Dönem içi', value: cardBuckets.current, tone: 'warning' },
-                { label: 'Provizyon', value: cardBuckets.provision, tone: 'info' },
-                { label: 'Taksit / sınıflanmamış borç', value: cardBuckets.future, tone: 'neutral' },
-              ]}
-            />
-          </div>
-          {totalCreditLimit > 0 ? (
-            <p className="mt-3.5 text-[12.5px] text-ink-muted">
-              Limit kullanımı <span className="serit-num font-semibold text-ink">{formatPercent(creditUsageRate)}</span> ·{' '}
-              <span className="serit-num">{format(totalCreditLimit).amount}</span> toplam limit
-            </p>
-          ) : null}
-        </SidePanel>
-
-        <SidePanel className="order-first lg:order-none" title="Hesapların">
-          <p className="mt-1 text-xs text-ink-muted">Toplam {format(totalCashAssets).amount} {format(totalCashAssets).unit}</p>
-          {liquidAccounts.length === 0 ? (
-            <p className="mt-2 text-[13px] text-ink-muted">Kayıtlı banka hesabı veya nakit cüzdanı yok.</p>
-          ) : (
-            <LineGroup className="mt-1">
-              {liquidAccounts.map((account) => (
-                <LineRow key={account.id} title={account.name} subtitle={account.subtitle} amount={account.amount} lead={<Landmark size={18} strokeWidth={1.8} className="shrink-0 text-primary" aria-hidden="true" />} />
-              ))}
-            </LineGroup>
-          )}
-        </SidePanel>
+        <section className="border-t border-line pt-3" aria-label="Finans kısayolları">
+          <Link to="/kartlar" className="flex min-h-11 flex-wrap items-center justify-between gap-2 border-b border-line py-3"><span className="text-sm text-ink-muted">Hesap ve nakit</span><span className="serit-num font-semibold">{format(totalCashAssets).amount} {format(totalCashAssets).unit} →</span></Link>
+          <Link to="/kartlar?section=kartlar&panel=ekstreler" className="flex min-h-11 flex-wrap items-center justify-between gap-2 border-b border-line py-3"><span className="text-sm text-ink-muted">Ödenecek ekstre</span><span className="serit-num font-semibold">{format(cardBuckets.statement).amount} {format(cardBuckets.statement).unit} →</span></Link>
+          <Link to="/kartlar?section=kartlar" className="inline-flex min-h-11 items-center text-sm font-semibold text-primary">Kart borç kırılımını aç →</Link>
+          <Link to="/odemeler" className="flex min-h-11 items-center text-sm font-semibold text-primary">Ödeme takvimini aç →</Link>
+        </section>
 
         {/* Renk yalnızca sinyal: temiz geçen kontrol kırmızı/sarı olmaz, jade tik alır. */}
         <div className="border-t border-line-strong pt-4">

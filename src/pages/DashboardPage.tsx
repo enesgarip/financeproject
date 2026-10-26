@@ -33,7 +33,7 @@ import type {
   TransactionHistory,
 } from '../types/database'
 import { HistorySection } from '../components/dashboard/DashboardCards'
-import { CardPaymentCyclePanel } from '../components/dashboard/CardPaymentCyclePanel'
+import { Link } from 'react-router'
 import { FocusActionPanel } from '../components/dashboard/DashboardInsights'
 import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
 import { FinancePaymentDrawer } from '../components/finance/FinancePaymentDrawer'
@@ -433,7 +433,7 @@ export function DashboardPage() {
           <DetailSectionDivider label="Kart ödeme döngüsü" />
 
           <div className="min-w-0 lg:col-span-12">
-            <CardPaymentCyclePanel data={data} from={monthMeta.today} buffer={safeToSpend.buffer} reserved={safeToSpend.reserved} reservedKnown={safeToSpend.reservedKnown} />
+            <Link to="/kartlar?section=kartlar&cycle=1" className="inline-flex min-h-11 items-center text-sm font-semibold text-primary">Kart ödeme hazırlığı ve senaryosunu aç →</Link>
           </div>
 
           {/* ─ Odak ve hatırlatıcılar ─ */}

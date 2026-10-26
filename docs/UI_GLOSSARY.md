@@ -1,5 +1,19 @@
 # Denge — Türkçe arayüz sözlüğü
 
+## Sadeleştirme dili — 26 Ekim 2026
+
+Planlama rezervi için kullanıcı metinleri “Ayrılan para”, “Pay ekle”, “Pay ayır”
+ve “Ayrılan tutar”dır. Hedefe bağlı pay hedef kartında görünür; bağımsız pay
+yönetimindeki toplam hedefleri de içerdiğini söyler. “Ayırma sonrası nakit”
+yalnız likit eksi ayrılan paradır; kanonik “harcanabilir” yerine kullanılmaz.
+Kasa/kova teknik tablo, alan ve bileşen adları korunur. Geçmiş kayıt metinleri
+bu sözlüğe uydurulmak için değiştirilmez.
+
+Ödemeler bölümleri “Vadeler” / “Kayıtlı planlar”, hisse bölümleri “Pozisyonlar” /
+“İşlem geçmişi”dir. “Son hareketler ve dönem özeti” son 20 kayıt ile dönem
+borcunun aynı kapsam olmadığını açıklar. Ana menü/sekme adları değişmez.
+
+
 ## Alt menü adları — 18 Ekim 2026
 
 Kullanıcı onaylı adlar: “Alınacaklar”, “Bütçe ve hedefler”, “Hisseler” ve

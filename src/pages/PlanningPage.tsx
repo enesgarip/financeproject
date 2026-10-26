@@ -1,3 +1,4 @@
+import { DeferredDetails } from '../components/ui/deferred-details'
 import { useMemo, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../auth/useAuth'
@@ -345,52 +346,6 @@ export function PlanningPage() {
         </div>
       ) : null}
 
-      {/* Maaş değişikliği önerisi: yeni tutar tek tıkla salary_history'e girer;
-          maaş yüzdesi bütçe çıpaları ve nakit projeksiyonu da düzelir. */}
-      {salaryChange ? (
-        <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-info/25 bg-info/8 px-3 py-2.5">
-          <p className="text-sm font-medium text-info">
-            {formatDate(salaryChange.matchedAt)} tarihinde {formatAmount(salaryChange.amount)} yattı — kayıtlı maaşın{' '}
-            {formatAmount(salaryAmount ?? 0)}. Maaşın değişti mi?
-          </p>
-          <button
-            type="button"
-            disabled={salaryUpdateBusy}
-            onClick={() => void applySalaryChange(salaryChange.amount)}
-            className="shrink-0 rounded-lg bg-info px-3 py-1.5 text-xs font-bold text-white transition hover:bg-info/90 disabled:opacity-60"
-          >
-            {salaryUpdateBusy ? 'Güncelleniyor...' : `${formatAmount(salaryChange.amount)} olarak güncelle`}
-          </button>
-          {salaryUpdateError ? (
-            <p role="alert" className="w-full text-xs font-medium text-warning">{salaryUpdateError}</p>
-          ) : null}
-        </div>
-      ) : null}
-
-      {/* Maaş günü dürtüsü: bilgi şeridi; aksiyon hedef kartlarındaki mevcut
-          tek-tık "Ayır" akışıdır, burada ikinci bir yazma yolu açılmaz. */}
-      {salaryStrip ? (
-        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-info/25 bg-info/8 px-3 py-2.5">
-          <p className="text-sm font-medium text-info">
-            Maaş yattı görünüyor ({formatDate(salaryStrip.matchedAt)}) — {salaryStrip.pendingCount} hedefin bu ay
-            ayırması bekliyor; aşağıdan tek tıkla ayırabilirsin.
-          </p>
-        </div>
-      ) : null}
-
-      {/* Varlık ve hesaplar hedefin "takip kaynağı" seçimi için gerekiyor;
-          panel Supabase görmez, veriyi hazır snapshot'tan alır. */}
-      {canManageGoals ? (
-        <SavingsGoalsPanel
-          monthlySurplus={monthlySurplus}
-          assets={snapshotQuery.data?.assets ?? []}
-          cards={snapshotQuery.data?.cards ?? []}
-          monthlyOutflow={monthlyOutflow}
-        />
-      ) : null}
-
-      <KasaModuPanel liquidCash={liquidCash} />
-
       {canManageBudgets ? (
         <CrudPage
           table="budgets"
@@ -518,6 +473,54 @@ export function PlanningPage() {
           }}
         />
       ) : null}
+
+      {/* Maaş değişikliği önerisi: yeni tutar tek tıkla salary_history'e girer;
+          maaş yüzdesi bütçe çıpaları ve nakit projeksiyonu da düzelir. */}
+      {salaryChange ? (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-info/25 bg-info/8 px-3 py-2.5">
+          <p className="text-sm font-medium text-info">
+            {formatDate(salaryChange.matchedAt)} tarihinde {formatAmount(salaryChange.amount)} yattı — kayıtlı maaşın{' '}
+            {formatAmount(salaryAmount ?? 0)}. Maaşın değişti mi?
+          </p>
+          <button
+            type="button"
+            disabled={salaryUpdateBusy}
+            onClick={() => void applySalaryChange(salaryChange.amount)}
+            className="shrink-0 rounded-lg bg-info px-3 py-1.5 text-xs font-bold text-white transition hover:bg-info/90 disabled:opacity-60"
+          >
+            {salaryUpdateBusy ? 'Güncelleniyor...' : `${formatAmount(salaryChange.amount)} olarak güncelle`}
+          </button>
+          {salaryUpdateError ? (
+            <p role="alert" className="w-full text-xs font-medium text-warning">{salaryUpdateError}</p>
+          ) : null}
+        </div>
+      ) : null}
+
+      {/* Maaş günü dürtüsü: bilgi şeridi; aksiyon hedef kartlarındaki mevcut
+          tek-tık "Ayır" akışıdır, burada ikinci bir yazma yolu açılmaz. */}
+      {salaryStrip ? (
+        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-info/25 bg-info/8 px-3 py-2.5">
+          <p className="text-sm font-medium text-info">
+            Maaş yattı görünüyor ({formatDate(salaryStrip.matchedAt)}) — {salaryStrip.pendingCount} hedefin bu ay
+            ayırması bekliyor; aşağıdan tek tıkla ayırabilirsin.
+          </p>
+        </div>
+      ) : null}
+
+      {/* Varlık ve hesaplar hedefin "takip kaynağı" seçimi için gerekiyor;
+          panel Supabase görmez, veriyi hazır snapshot'tan alır. */}
+      {canManageGoals ? (
+        <SavingsGoalsPanel
+          monthlySurplus={monthlySurplus}
+          assets={snapshotQuery.data?.assets ?? []}
+          cards={snapshotQuery.data?.cards ?? []}
+          monthlyOutflow={monthlyOutflow}
+        />
+      ) : null}
+
+      <DeferredDetails summary="Bağımsız ayrılan parayı yönet" summaryClassName="min-h-11 cursor-pointer py-3 font-semibold text-primary"><KasaModuPanel liquidCash={liquidCash} /></DeferredDetails>
+
+
     </section>
   )
 }

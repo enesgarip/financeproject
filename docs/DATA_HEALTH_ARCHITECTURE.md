@@ -1,5 +1,12 @@
 # Data Health Architecture Note
 
+26 Ekim: gerçek bulgu kartları rutin banka doğrulamasından önce gelir.
+Her hesapta durum görünür; karşılaştırma giriş formu seçilerek açılır.
+Bakım yedek/geri yükleme ile başlar; bildirimler ve otomasyon/teşhis ayrı
+`DeferredDetails` bölümleridir. Sıfırlama en alttaki ayrı bölümdedir; mevcut
+onay/yedek koşulları değişmez. Teşhis E2E'si bölümü açarak aynı kaydı inceler.
+
+
 The hero count represents data-integrity findings only. Routine real-bank
 balance/debt verification is a separate section headed “Rutin banka
 doğrulaması”; a clean integrity result must not imply that every bank account
@@ -7,7 +14,7 @@ was recently verified. `LiveReconciliationPanel` is canonical on this route;
 other screens may show status and deep-link here, but must not duplicate its
 manual amount-entry form.
 
-Last reviewed: 2026-10-20
+Last reviewed: 2026-10-26
 
 Bakım istemci teşhisi eki: `ClientErrorsPanel` finansal bulgulardan ayrı kalır;
 JS/React/Promise/kaynak/CSP/ağ olaylarının mevcut hata izi, tarayıcı ve yeni

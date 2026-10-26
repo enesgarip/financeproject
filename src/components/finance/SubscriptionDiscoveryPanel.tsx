@@ -16,11 +16,15 @@ type Props = {
 
 export function SubscriptionDiscoveryPanel({ expenses, payments, cards }: Props) {
   const candidates = useMemo(() => discoverSubscriptions(expenses, payments), [expenses, payments])
+  const [includePlanned, setIncludePlanned] = useState(false)
+  const visible = includePlanned ? candidates : candidates.filter((candidate) => candidate.status !== 'planned')
+  const plannedCount = candidates.filter((candidate) => candidate.status === 'planned').length
   return (
     <section aria-label="Ekstrelerden abonelik adayları" className="space-y-3 text-left">
       <h3 className="font-semibold text-ink">Ekstrelerden abonelik adayları</h3>
       <p className="text-xs text-ink-muted">İki ay tekrar olası, üç ay ve üzeri güçlü adaydır. Yeni adaylar planlanana kadar aylık ödeme planına eklenmez.</p>
-      {candidates.length === 0 ? <p className="text-sm text-ink-muted">Yüklü son altı ayda düzenli bir tekrar bulunamadı.</p> : candidates.map((candidate) => (
+      {plannedCount > 0 ? <button type="button" aria-expanded={includePlanned} className="min-h-11 text-sm font-semibold text-primary" onClick={() => setIncludePlanned((value) => !value)}>{includePlanned ? 'Yalnız incelenecek adayları göster' : `${plannedCount} zaten kayıtlı adayı göster`}</button> : null}
+      {visible.length === 0 ? <p className="text-sm text-ink-muted">{candidates.length === 0 ? 'Yüklü son altı ayda düzenli bir tekrar bulunamadı.' : 'İncelenecek yeni aday yok.'}</p> : visible.map((candidate) => (
         <CandidateRow key={candidate.id} candidate={candidate} expenses={expenses} payments={payments} cards={cards} />
       ))}
     </section>

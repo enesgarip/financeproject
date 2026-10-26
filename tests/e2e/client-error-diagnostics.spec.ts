@@ -42,6 +42,7 @@ test('istemci hatası → own-row DB → ayrıntı → kopyalama', async ({ page
     expect(JSON.stringify(data)).not.toContain('example-token')
     expect(data.stack).toContain(marker)
     await page.goto('/veri-sagligi/islemler')
+    await page.locator('summary').filter({ hasText: 'Otomasyon ve teşhis' }).click()
     const row = page.locator('li').filter({ hasText: marker })
     await row.getByText('Teşhis ayrıntıları', { exact: true }).click()
     await expect(row.locator('pre')).toContainText('"line": 42')

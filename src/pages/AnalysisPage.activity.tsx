@@ -33,6 +33,7 @@ const PAGE_SIZE = 30
 
 export function ActivityFeedPanel({ data }: { data: AnalysisData }) {
   const [filter, setFilter] = useState<ActivityFilter>('all')
+  const [includeTechnical, setIncludeTechnical] = useState(false)
   const [cardLedger, setCardLedger] = useState<Awaited<ReturnType<typeof fetchRecentCardLedgerEvents>> | null>(null)
   const [accountLedger, setAccountLedger] = useState<Awaited<ReturnType<typeof fetchRecentAccountLedgerEvents>> | null>(null)
   const [loading, setLoading] = useState(true)
@@ -60,7 +61,8 @@ export function ActivityFeedPanel({ data }: { data: AnalysisData }) {
     return buildActivityFeed(cl, al, data.transactionHistory, data.cards, filter)
   }, [cardLedger, accountLedger, data.transactionHistory, data.cards, filter])
 
-  const visibleItems = useMemo(() => allItems.slice(0, visibleCount), [allItems, visibleCount])
+  const displayItems = useMemo(() => includeTechnical ? allItems : allItems.filter((item) => !(item.source === 'card_ledger' && item.amountTL === 0)), [allItems, includeTechnical])
+  const visibleItems = useMemo(() => displayItems.slice(0, visibleCount), [displayItems, visibleCount])
   const grouped = useMemo(() => groupByDate(visibleItems), [visibleItems])
 
   return (
@@ -96,14 +98,15 @@ export function ActivityFeedPanel({ data }: { data: AnalysisData }) {
         ))}
       </div>
 
+      <label className="mb-3 flex min-h-11 items-center gap-2 text-xs text-ink-muted"><input type="checkbox" checked={includeTechnical} onChange={(event) => setIncludeTechnical(event.target.checked)} />Tutar değiştirmeyen teknik kart olaylarını da göster</label>
       {loading ? (
         <div className="space-y-2">
           {Array.from({ length: 5 }, (_, i) => (
             <div key={i} className="h-10 animate-pulse rounded-lg bg-page" />
           ))}
         </div>
-      ) : allItems.length === 0 ? (
-        <p className="py-6 text-center text-xs text-ink-muted">Henüz kayıt yok.</p>
+      ) : displayItems.length === 0 ? (
+        <p className="py-6 text-center text-xs text-ink-muted">{allItems.length > 0 ? 'Bu görünümde tutar değiştiren hareket yok. Teknik kart olaylarını yukarıdan açabilirsin.' : 'Henüz kayıt yok.'}</p>
       ) : (
         <div className="space-y-4">
           {[...grouped.entries()].map(([date, items]) => (
@@ -119,13 +122,13 @@ export function ActivityFeedPanel({ data }: { data: AnalysisData }) {
             </div>
           ))}
 
-          {visibleCount < allItems.length ? (
+          {visibleCount < displayItems.length ? (
             <button
               type="button"
               onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}
               className="w-full rounded-lg border border-line-strong py-2 text-xs font-bold text-ink-muted hover:bg-black/[.03] dark:hover:bg-white/[.04] transition"
             >
-              Daha fazla göster ({allItems.length - visibleCount} kayıt)
+              Daha fazla göster ({displayItems.length - visibleCount} kayıt)
             </button>
           ) : null}
         </div>

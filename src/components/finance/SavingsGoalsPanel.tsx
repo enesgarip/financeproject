@@ -404,7 +404,7 @@ export function SavingsGoalsPanel({
     if (bucketChoice === '') {
       if (!current) return null
       const result = await updateKasaBucket(current.id, { goal_id: null })
-      return result.ok ? null : (result.error.message ?? 'Kova bağı kaldırılamadı.')
+      return result.ok ? null : (result.error.message ?? 'Ayrılan pay bağlantısı kaldırılamadı.')
     }
 
     if (bucketChoice === NEW_BUCKET) {
@@ -417,7 +417,7 @@ export function SavingsGoalsPanel({
         note: null,
         goal_id: goalId,
       })
-      return result.ok ? null : (result.error.message ?? 'Kova oluşturulamadı.')
+      return result.ok ? null : (result.error.message ?? 'Ayrılan pay oluşturulamadı.')
     }
 
     if (current?.id === bucketChoice) return null
@@ -425,19 +425,19 @@ export function SavingsGoalsPanel({
     // Önce eski bağı kopar: hedef başına tek kova (DB'de unique index).
     if (current) {
       const unlink = await updateKasaBucket(current.id, { goal_id: null })
-      if (!unlink.ok) return unlink.error.message ?? 'Eski kova bağı kaldırılamadı.'
+      if (!unlink.ok) return unlink.error.message ?? 'Eski pay bağlantısı kaldırılamadı.'
     }
     const result = await updateKasaBucket(bucketChoice, { goal_id: goalId })
-    return result.ok ? null : (result.error.message ?? 'Kova bağlanamadı.')
+    return result.ok ? null : (result.error.message ?? 'Ayrılan pay bağlanamadı.')
   }
 
-  /** Plan kadar kovaya ayırır; harcanabilir tutar bu andan sonra gerçekten azalır. */
+  /** Plan kadar ayrılan paya ayırır; harcanabilir tutar bu andan sonra gerçekten azalır. */
   async function contributeToGoal(goalId: string, bucketId: string, amount: number, options: { again?: boolean; goalName?: string } = {}) {
     // Tek tıkla onaysız ayırma ve yanındaki "Tekrar ayır" çift ayırmaya
     // açıktı (UX turu B3): kova sanal ama "harcanabilir" bu andan sonra azalır.
     const confirmed = await confirm({
-      title: options.again ? 'Tekrar ayır?' : 'Kovaya ayır?',
-      description: `${formatAmount(amount)} ${options.goalName ? `"${options.goalName}" ` : ''}kovasına ayrılacak; harcanabilir tutar bu kadar azalır. Bakiye değişmez.${options.again ? ' Bu ay zaten ayrılmıştı; ikinci kez ayırıyorsun.' : ''}`,
+      title: options.again ? 'Tekrar ayır?' : 'Pay ayır?',
+      description: `${formatAmount(amount)} ${options.goalName ? `"${options.goalName}" ` : ''}payına ayrılacak; harcanabilir tutar bu kadar azalır. Bakiye değişmez.${options.again ? ' Bu ay zaten ayrılmıştı; ikinci kez ayırıyorsun.' : ''}`,
       confirmLabel: options.again ? 'Tekrar ayır' : 'Ayır',
     })
     if (!confirmed) return
@@ -446,7 +446,7 @@ export function SavingsGoalsPanel({
     setContributingGoalId(null)
 
     if (!result.ok) {
-      setError(result.error.message ?? 'Kovaya ayrılamadı.')
+      setError(result.error.message ?? 'Paya ayrılamadı.')
       return
     }
     await queryClient.invalidateQueries({ queryKey: KASA_BUCKETS_QUERY_KEY })
@@ -664,11 +664,11 @@ export function SavingsGoalsPanel({
       })
       if (!result.ok) throw new Error(result.error.message)
 
-      // Kova bağı ayrı tabloda; hedef yazıldıktan SONRA kurulur. Düşerse hedef
+      // Ayrılan pay bağlantısı ayrı tabloda; hedef yazıldıktan SONRA kurulur. Düşerse hedef
       // kaydı korunur ve kullanıcı "hiç kaydolmadı" sanmasın diye uyarı görür.
       const bucketError = valueType === 'TRY' ? await syncGoalBucket(result.data, trimmedName) : null
       if (bucketError) {
-        setError(`Hedef kaydedildi ama kasa kovası bağlanamadı: ${bucketError}`)
+        setError(`Hedef kaydedildi ama ayrılan pay bağlanamadı: ${bucketError}`)
       }
       await queryClient.invalidateQueries({ queryKey: KASA_BUCKETS_QUERY_KEY })
 
@@ -941,7 +941,7 @@ export function SavingsGoalsPanel({
                               <p className="mt-0.5 text-[11px] text-ink-faint">
                                 Bu para hedefe ayrılmış nakittir; ilerleme takip kaynağından hesaplanır.{' '}
                                 {/* Hedefin başka kaynağı yoksa ayırdığın para ilerlemeye
-                                    HİÇ yansımaz; kovayı kaynak yapmak tek tık uzakta
+                                    HİÇ yansımaz; ayrılan payı kaynak yapmak tek tık uzakta
                                     olsun. Başka kaynağı varsa (ör. hisse portföyü) bu
                                     gerçekten ayrı bir kap — önerme. */}
                                 {!sources.some((source) => source.goal_id === goal.id) ? (
@@ -951,7 +951,7 @@ export function SavingsGoalsPanel({
                                     onClick={() => void applySuggestedSource(goal, `bucket:${plan.bucket.id}`)}
                                     className="tap-target ml-1 font-bold text-primary hover:underline disabled:opacity-50"
                                   >
-                                    Bu kovayı kaynak yap
+                                    Bu ayrılan payı kaynak yap
                                   </button>
                                 ) : null}
                               </p>
@@ -1327,22 +1327,22 @@ export function SavingsGoalsPanel({
             </>
           )}
 
-          {/* Kasa kovası yalnız TL hedefte anlamlı: kova TL rezerv tutar, gram
+          {/* Ayrılan para bölümü yalnız TL hedefte anlamlı: kova TL rezerv tutar, gram
               hedefinin "aylık gerekli"si gram cinsindendir. */}
           {valueType === 'TRY' ? (
             <label className="block text-sm font-medium">
-              Kasa kovası
+              Ayrılan para bölümü
               {/* aria-label açık veriliyor: <label> içeriği seçeneklerle birleşince
-                  erişilebilir ad "Kasa kovasıYok — …" gibi çıkıyor ve başka
+                  erişilebilir ad "Ayrılan para bölümüYok — …" gibi çıkıyor ve başka
                   alanların adıyla çakışıyordu. */}
               <Select
                 value={bucketChoice}
-                aria-label="Kasa kovası"
+                aria-label="Ayrılan para bölümü"
                 onChange={(e) => setBucketChoice(e.target.value)}
                 className="mt-1"
               >
                 <option value="">Yok — harcanabilirden düşme</option>
-                <option value={NEW_BUCKET}>Yeni kova oluştur</option>
+                <option value={NEW_BUCKET}>Yeni pay oluştur</option>
                 {(buckets ?? [])
                   .filter((bucket) => !bucket.goal_id || (editing && bucket.goal_id === editing.id))
                   .map((bucket) => (
@@ -1352,7 +1352,7 @@ export function SavingsGoalsPanel({
                   ))}
               </Select>
               <span className="mt-1 block text-xs font-normal text-ink-muted">
-                Yeni kova hedefin adıyla açılır. Kovaya ayırdığın para "bu ay harcayabilirim" tutarından düşer; ayırma her ay tek tıkla yapılır.
+                Yeni pay hedefin adıyla açılır. Pay ayırdığın para "bu ay harcayabilirim" tutarından düşer; ayırma her ay tek tıkla yapılır.
               </span>
             </label>
           ) : null}
