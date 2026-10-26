@@ -19,7 +19,7 @@ const KIND_LABELS: Record<CardLedger['kind'], { label: string; className: string
   reclass: { label: 'Kırılım değişikliği', className: 'text-ink-muted' },
 }
 
-const VISIBLE_EVENTS = 8
+const VISIBLE_EVENTS = 10
 
 /**
  * "Bu borç neyden oluşuyor?" (roadmap D9) — the user-facing read side of the
@@ -40,6 +40,8 @@ export function CardLedgerPanel({
   onChanged?: () => void | Promise<void>
   formatAmount?: (value: number | null | undefined) => string
 }) {
+  const historyRef = useRef<HTMLOListElement>(null)
+  const [pagination, setPagination] = useState({ cardId: card.id, page: 0 })
   const [events, setEvents] = useState<CardLedger[] | null>(null)
   // Compare only events loaded for this exact balance/debt revision.
   const revision = JSON.stringify([card.id, card.updated_at, card.debt_amount])
@@ -132,21 +134,35 @@ export function CardLedgerPanel({
   // Events arrive newest-first; order doesn't matter for the sums.
   const drift = ledgerDrift(events, card.debt_amount)
   const splitProjection = projectCardSplit(events)
+  const pageCount = Math.max(1, Math.ceil(events.length / VISIBLE_EVENTS))
+  const page = pagination.cardId === card.id ? Math.min(pagination.page, pageCount - 1) : 0
+  const start = page * VISIBLE_EVENTS
+  const visibleEvents = events.slice(start, start + VISIBLE_EVENTS)
+  function showPage(nextPage: number) {
+    setPagination({ cardId: card.id, page: nextPage })
+    historyRef.current?.scrollIntoView({ behavior: 'instant', block: 'start' })
+    historyRef.current?.focus({ preventScroll: true })
+  }
 
   return (
-    <div className="mt-3 rounded-lg bg-raised p-3 ring-1 ring-line-strong">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-xs font-black uppercase text-ink-muted">Borç hareketleri</p>
-        <p className="text-xs font-semibold text-ink-muted">
-          {summary.count} hareket · Borçlanma {formatAmount(summary.totalDebit)} − Ödeme {formatAmount(summary.totalCredit)} ={' '}
-          <span className="font-black text-ink">{formatAmount(summary.net)}</span>
-        </p>
+    <section className="mt-4 min-w-0 border-t border-line pt-4" aria-label="Kart borç hareketleri">
+      <div className="space-y-3">
+        <div className="flex flex-wrap items-baseline justify-between gap-2"><h3 className="text-sm font-semibold text-ink">Borç hareketleri</h3><p className="text-xs text-ink-muted">{summary.count} hareket</p></div>
+        <dl className="grid gap-3 border-b border-line pb-4 min-[460px]:grid-cols-3">
+          <div className="min-w-0"><dt className="text-xs text-ink-muted">Borçlanma</dt><dd className="serit-num mt-1 break-words text-base font-semibold">{formatAmount(summary.totalDebit)}</dd></div>
+          <div className="min-w-0"><dt className="text-xs text-ink-muted">Ödeme/azalış</dt><dd className="serit-num mt-1 break-words text-base font-semibold">{formatAmount(summary.totalCredit)}</dd></div>
+          <div className="min-w-0"><dt className="text-xs text-ink-muted">Hareketlerin neti</dt><dd className="serit-num mt-1 break-words text-base font-semibold">{formatAmount(summary.net)}</dd></div>
+        </dl>
       </div>
 
       {splitProjection.complete && summary.count > 0 ? (
-        <p className="mt-1 text-xs text-ink-muted">
-          Hareketlerden hesaplanan borç dağılımı: Ekstre {formatAmount(splitProjection.statement)} · Dönem içi {formatAmount(splitProjection.current)} · Provizyon {formatAmount(splitProjection.provision)}
-        </p>
+        <details className="mt-2"><summary className="min-h-11 cursor-pointer py-3 text-xs font-semibold text-primary">Hareketlerden hesaplanan borç dağılımı</summary>
+          <dl className="grid gap-3 pb-3 text-sm min-[460px]:grid-cols-3">
+            <div className="min-w-0"><dt className="text-xs text-ink-muted">Ekstre</dt><dd className="serit-num mt-1 break-words">{formatAmount(splitProjection.statement)}</dd></div>
+            <div className="min-w-0"><dt className="text-xs text-ink-muted">Dönem içi</dt><dd className="serit-num mt-1 break-words">{formatAmount(splitProjection.current)}</dd></div>
+            <div className="min-w-0"><dt className="text-xs text-ink-muted">Provizyon</dt><dd className="serit-num mt-1 break-words">{formatAmount(splitProjection.provision)}</dd></div>
+          </dl>
+        </details>
       ) : null}
 
       {!busy && drift !== 0 ? (
@@ -169,21 +185,22 @@ export function CardLedgerPanel({
       ) : null}
 
       {events.length > 0 ? (
-        <div className="mt-3 flex flex-col gap-2">
-          {events.slice(0, VISIBLE_EVENTS).map((event) => {
+        <div className="mt-3">
+        <ol ref={historyRef} tabIndex={-1} aria-label="Kart borç hareketi kayıtları" className="scroll-mt-[calc(env(safe-area-inset-top)+6rem)] divide-y divide-line">
+          {visibleEvents.map((event) => {
             const meta = KIND_LABELS[event.kind]
             const amountTL = toTL(event.amount_kurus)
             return (
-              <div key={event.id} className="rounded-lg bg-page px-3 py-2 text-xs">
-                <div className="flex min-w-0 items-center justify-between gap-3">
-                  <span className="min-w-0 truncate">
-                    <span className={`font-black ${meta.className}`}>{meta.label}</span>
-                    <span className="ml-2 text-ink-muted">{formatDate(event.occurred_at.slice(0, 10))}</span>
+              <li key={event.id} className="min-w-0 py-4 text-[13px]">
+                <div className="grid min-w-0 items-start gap-x-4 gap-y-2 min-[460px]:grid-cols-[minmax(0,1fr)_auto]">
+                  <span className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1">
+                    <span className={`font-semibold ${meta.className}`}>{meta.label}</span>
+                    <span className="text-xs text-ink-muted">{formatDate(event.occurred_at.slice(0, 10))}</span>
                     {(event.kind === 'adjustment' || event.kind === 'reclass') && event.note ? (
-                      <span className="ml-2 italic text-ink-muted">· {event.note}</span>
+                      <span className="w-full whitespace-pre-wrap break-words text-xs text-ink-muted">{event.note}</span>
                     ) : null}
                   </span>
-                  <span className={`shrink-0 font-black tabular-nums ${meta.className}`}>
+                  <span className={`serit-num break-words font-semibold min-[460px]:text-right ${meta.className}`}>
                     {amountTL > 0 ? '+' : ''}
                     {formatAmount(amountTL)}
                   </span>
@@ -197,13 +214,22 @@ export function CardLedgerPanel({
                   if (c !== 0) parts.push(`dönem ${c > 0 ? '+' : ''}${formatAmount(c)}`)
                   if (p !== 0) parts.push(`provizyon ${p > 0 ? '+' : ''}${formatAmount(p)}`)
                   if (parts.length === 0) return null
-                  return <p className="mt-0.5 text-[10px] text-ink-muted">{parts.join(' · ')}</p>
+                  return <p className="mt-2 break-words text-xs leading-5 text-ink-muted">{parts.join(' · ')}</p>
                 })() : null}
-              </div>
+              </li>
             )
           })}
+        </ol>
           {events.length > VISIBLE_EVENTS ? (
-            <p className="text-xs font-semibold text-ink-muted">+{events.length - VISIBLE_EVENTS} hareket daha</p>
+            <nav className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-line pt-3" aria-label="Kart hareketi sayfaları">
+              <p className="text-xs text-ink-muted" role="status">{start + 1}–{Math.min(start + VISIBLE_EVENTS, events.length)} / {events.length} hareket · Sayfa {page + 1} / {pageCount}</p>
+              <div className="flex flex-wrap gap-2">
+                <Button type="button" variant="outline" size="sm" className="min-h-11" disabled={page === 0} onClick={() => showPage(0)}>En yeni</Button>
+                <Button type="button" variant="outline" size="sm" className="min-h-11" disabled={page === 0} onClick={() => showPage(page - 1)}>Daha yeni</Button>
+                <Button type="button" variant="outline" size="sm" className="min-h-11" disabled={page + 1 >= pageCount} onClick={() => showPage(page + 1)}>Daha eski</Button>
+                <Button type="button" variant="outline" size="sm" className="min-h-11" disabled={page + 1 >= pageCount} onClick={() => showPage(pageCount - 1)}>En eski</Button>
+              </div>
+            </nav>
           ) : null}
         </div>
       ) : (
@@ -218,7 +244,7 @@ export function CardLedgerPanel({
             setError('')
           }}
           aria-expanded={formOpen}
-          className="text-xs font-black text-info underline-offset-2 hover:underline"
+          className="min-h-11 text-xs font-semibold text-primary underline-offset-2 hover:underline"
         >
           {formOpen ? 'Düzeltmeyi kapat' : 'Düzelt (ters kayıt)'}
         </button>
@@ -283,6 +309,6 @@ export function CardLedgerPanel({
 
         {error ? <p className="mt-2 text-xs font-semibold text-destructive">{error}</p> : null}
       </div>
-    </div>
+    </section>
   )
 }

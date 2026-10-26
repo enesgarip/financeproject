@@ -1,5 +1,12 @@
 # UI Architecture
 
+Kart kayıt geçmişi: üç tutar alanı mobilde alt alta, geniş ekranda yan yanadır.
+10'ar kayıt, Daha eski/Daha yeni sayfaları ve görünen aralık/toplam belirtilir.
+İşlem türü/tarih, açıklama, tutar ve borç dağılımı ayrı satırlarda sarılır;
+uzun açıklama truncate ile kesilmez. Finans farkı varsa görünür kalır; geçmişin
+bir sayfası yüklenemediyse eksik toplamdan düzeltme önerilmez.
+
+
 26 Ekim sadeleştirme: her işin tam yönetimi ilgili ekrandadır; diğer yerler
 kısa özet/bağlantı sunar. Ödemeler'de Vadeler/Kayıtlı planlar, Hisseler'de
 Pozisyonlar/İşlem geçmişi ayrıdır; takvim ve hisse eşitlemesi görünüm değişince

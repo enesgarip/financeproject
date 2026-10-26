@@ -1,5 +1,20 @@
 # AI Context Index
 
+26 Ekim kart geçmişi eki: `CardLedgerPanel.tsx` borçlanma/ödeme/net tutarlarını
+ayrı alanlarda, hareketleri 10'ar kayıtlık sayfalarda sunar. Açıklama kırpılmaz;
+mobilde tutar alt satıra iner. Tüm geçmişin toplamı sayfa seçiminden bağımsızdır. Sayfa geçişi animasyonsuz liste başını görünür kılar ve listeye odak verir.
+`financePanelsRepo.ts` kart/hesap tam geçmişini ve tarih aralığı karşılaştırmasını
+500 satırlık PK keyset sayfalarıyla tamamlar; PostgREST 1000 sınırı toplam/fark
+hesabını kesemez. Son üç hareket gibi açık limitli özet tek istek olarak kalır.
+Herhangi bir sayfa/anahtar hatası kısmi başarı döndürmez; panel fark/düzeltme
+sunmak yerine hata gösterir. Veri revizyonu ve geciken yanıt korumaları sürer.
+Ayrı istekler tek DB snapshot'ı değildir; eşzamanlı eklemeler yeni revizyonda
+tekrar okunur, sabit PK imleci offset kaymalarını önler. Finans formülleri,
+borç alanları ve yazma/ters kayıt RPC'leri değişmez. Regresyonlar:
+`src/data/repositories/financePanelsRepo.test.ts`,
+`src/components/finance/LedgerPanels.test.tsx`, `tests/e2e/simplification.spec.ts`.
+
+
 Last reviewed: 2026-10-26
 
 26 Ekim sadeleştirme uygulandı: `docs/SIMPLIFICATION_PLAN_2026-10-26.md`
