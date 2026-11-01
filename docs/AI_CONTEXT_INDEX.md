@@ -1,5 +1,16 @@
 # AI Context Index
 
+2 Kasım kategori analizi: `utils/categorySpending.ts` güncel kart dönemlerini,
+gerçek arşiv bağıyla geçmiş kesim aylarını ve takvim aylarını ayrı türetir.
+`pages/AnalysisPage.categories.tsx` kart/dönem seçimi, tarih aralıkları ve kategori
+hareketlerini sunar; `pages/AnalysisPage.wealth.tsx` mevcut export'u korur.
+`data/repositories/analysisRepo.ts` / `fetchCategorySpendingHistory` üç tablonun
+tam geçmişini 500'lük PK imleciyle okur; snapshot'ın 25 ay/120 arşiv sınırını
+kullanmaz. `app/useCategorySpendingHistory.ts` kullanıcı cache'i ortak finans
+invalidation'ıyla yenilenir. Ekstrede çocuk taksit, takvim ayında alışveriş
+toplamı sayılır; provizyon/iptal hariçtir. Eksik arşiv ve kapsam farkı açıklanır.
+Sözleşme: `docs/FINANCE_RULES.md`, `docs/UI_ARCHITECTURE.md`.
+
 26 Ekim kart geçmişi eki: `CardLedgerPanel.tsx` borçlanma/ödeme/net tutarlarını
 ayrı alanlarda, hareketleri 10'ar kayıtlık sayfalarda sunar. Açıklama kırpılmaz;
 mobilde tutar alt satıra iner. Tüm geçmişin toplamı sayfa seçiminden bağımsızdır. Sayfa geçişi animasyonsuz liste başını görünür kılar ve listeye odak verir.
@@ -548,7 +559,7 @@ invalidate et (örnek: AnalysisPage abonelik→plan, PlanningPage maaş şeridi)
 | **Kasa modu (bucket → gerçek harcanabilir)** | `utils/kasaMode.ts` (+test; likit − rezerve), `utils/safeToSpend.ts` (`reserved` alanı), `utils/goalBucket.ts` (+test; hedefe bağlı kovanın aylık planı, "bu ay ayrıldı mı", kova hedefin KAYNAĞI mı; `dominantBucketGoal` — budgetBridge + Vazgeçme Kazancı'nın ortak "asıl beslenen kovalı hedef" seçicisi), `utils/foregoneGain.ts` (+test; Alsam mı? "vazgeçtim → hedefe ayır" önizlemesi — tempo gate'i geçilmemişse tarih uydurulmaz), `app/savingsGoalSnapshotsKey.ts` (paylaşılan snapshot sorgu anahtarı) | `data/repositories/kasaBucketsRepo.ts` (`contributeToGoalBucket` → RPC; artırım sunucuda), `supabase/migrations/20260728120000_add_kasa_buckets.sql`, `supabase/migrations/20260824140000_goal_bucket_link.sql` (hedef bağı + ay damgası), `supabase/tests/goal_bucket_contribution.sql` | `components/finance/KasaModuPanel.tsx` (PlanningPage), `components/finance/SavingsGoalsPanel.tsx` (hedef kartında "Ayır"), `hooks/useSafeToSpend.ts` (rezerve düşülür; `useKasaBuckets` kova listesini de verir) |
 | **Alışveriş listesi** | `utils/wishlistPlan.ts` (+test; mevcut nakit + aylık harcanabilir + altı aylık peşin etki; tampon/kasa tabanı ve hedef payı), `utils/wishlistIntent.ts` (üç soruluk, kalıcı kaydedilmeyen istek/ihtiyaç testi), `utils/wishlistAge.ts` (+test; 30 gün rozetleri), `utils/purchaseEffort.ts` (+test; iş günü / çıkış günü / hedef payı) | `data/repositories/wishlistRepo.ts`, `hooks/useWishlistItems.ts` (paylaşılan sorgu + `WISHLIST_QUERY_KEY`) | `pages/WishlistPage.tsx` (snapshot + rezerv doğrulanmadan finansal yorum yok), `pages/WishlistPage.assessment.tsx` (ekleme testi ve ortak yorum sunumu), `pages/PurchaseDecisionPage.tsx` (liste köprüsü; `?tutar=` ile ters yön) |
 | **Finansal rapor (PDF/AI paylaşım)** | `utils/financialReport.ts` (+test; anonim kart/hedef, hesap/nakit/harcanabilir, planlanan–kaydedilen ödeme ayrımı, taksit + 30 gün + harcama eğilimi; mevcut domain util'lerine delege) | `app/useFinanceSnapshot.ts` (tam ekstre + kısmi ödeme + hedef kaynakları), `hooks/useMarketRates.ts`, `hooks/useSafeToSpend.ts` (kasa + tampon) | `pages/AnalysisPage.reports.tsx` (mobil tam genişlik kopyala/PDF, pano hata/başarı durumu) |
-| **Aylık özet / kategori dağılımı** | `utils/monthlySummary.ts` | — | `pages/AnalysisPage.reports.tsx` (MonthlyReport) |
+| **Aylık özet / kategori dağılımı** | `utils/monthlySummary.ts`, `utils/categorySpending.ts` (+test; kartın güncel dönemi / geçmiş kesim ayı / takvim ayı) | `data/repositories/analysisRepo.ts` (tam kategori geçmişi), `app/useCategorySpendingHistory.ts` | `pages/AnalysisPage.reports.tsx` (MonthlyReport), `pages/AnalysisPage.categories.tsx` (kart/dönem seçimi + kategoriden 10'lu hareket listesi) |
 | **Abonelik / sabit gider yönetimi** | `utils/paymentMatching.ts` (+test; kurum/ref/tutar SQL ikizi), `utils/subscriptions.ts` (+test; aynı kart ≥3 ay, tanınan tekil faturada değişken tutar, diğerinde ±%15; `buildSubscriptionPaymentDraft` tek tık "Planla" → bank_auto+kart bağlı aylık ödeme, yalnız kredi kartı kaynaklı — çift sayma yok; `subscriptionAlreadyPlanned` rozeti) | `data/repositories/cardsRepo.ts` (`reconcileCardPaymentExpenses`), `financeSnapshotRepo.ts` (bakım), `supabase/tests/variable_bill_matching.sql` | `pages/PaymentsPage.tsx` (kurum/abone no/tutar), `pages/AnalysisPage.panels.tsx` (SubscriptionsPanel; yazma `saveCrudRow('payments')`) |
 | **Paylaşılabilir özet kartı** | `utils/shareableCard.ts` | — | `pages/AnalysisPage.reports.tsx` (MonthlyReport "Kart" butonu) |
 | **Yıl sonu finansal rapor** | `utils/yearEndReport.ts` | — | `pages/AnalysisPage.reports.tsx` (YearEndReport) |

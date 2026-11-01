@@ -1,25 +1,17 @@
-import { HandCoins, PieChart, ShieldCheck } from 'lucide-react'
+import { HandCoins, ShieldCheck } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { CompositionBar, type CompositionSlice } from '../components/charts/CompositionBar'
 import { buildVizColorMap, orderSlicesCanonically, vizColor } from '../components/charts/vizPalette'
-import { Badge } from '../components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
-import { isDateInMonth } from '../utils/date'
 import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
 
-import { buildCategoryInsights, type AnalysisData } from '../utils/analysisView'
-import { expenseCategories } from '../utils/categories'
-import { mergeCategoryTail } from '../utils/categoryComposition'
-import { activeExpense as activeCardExpense } from '../utils/budgetAlerts'
+import { type AnalysisData } from '../utils/analysisView'
 import { type MarketRatesSnapshot } from '../utils/marketRates'
 import { buildInflationShield } from '../utils/inflationShield'
-import { sumTL } from '../utils/money'
 import { computeZakat } from '../utils/zakat'
 import { StatPill } from './AnalysisPage.atoms'
 
-/* Harcama kategorisi rengi kanonik listeden gelir, veri sıralamasından değil —
-   ayın en büyük kalemi değişince renkler yer değiştirmesin. */
-const CATEGORY_COLORS = buildVizColorMap(expenseCategories, ['Diğer'])
+export { CategorySpendingChart } from './AnalysisPage.categories'
 
 /* Enflasyon kalkanı da kimlik gösterir (hangi varlık sınıfı), durum değil;
    "eriyen/korumalı" ayrımını panelin kendi metni ve yüzdeleri taşıyor.
@@ -168,76 +160,6 @@ export function ZakatPanel({ data, ratesSnapshot }: { data: AnalysisData; ratesS
           Bu bir tahmindir; uygulama bir mal üzerinden bir yıl (hawl) geçip geçmediğini takip edemez ve hisse/fon için
           basitleştirilmiş piyasa değeri kullanır. Kesin hüküm için bir yetkiliye danışın.
         </p>
-      </CardContent>
-    </Card>
-  )
-}
-
-export function CategorySpendingChart({ data }: { data: AnalysisData }) {
-  // İçgörü açıklamaları tutarı metin içinde taşır — gizlilik modunda maskele (K1).
-  const { formatAmount, maskText } = useBalancePrivacy()
-  const monthlyExpenses = useMemo(
-    () => data.cardExpenses.filter((expense) => activeCardExpense(expense) && isDateInMonth(expense.spent_at)),
-    [data.cardExpenses],
-  )
-  const insights = useMemo(() => buildCategoryInsights(data), [data])
-  const categoryTotals = Array.from(
-    monthlyExpenses.reduce((map, expense) => {
-      const category = expense.category || 'Diğer'
-      map.set(category, sumTL([map.get(category), expense.amount]))
-      return map
-    }, new Map<string, number>()),
-    ([category, amount]) => ({ category, amount }),
-  ).sort((a, b) => b.amount - a.amount)
-
-  // En büyük 6 kalem tutara göre seçilir; kalanı "Diğer" altında BİRLEŞİR ki
-  // çubuğun toplamı aylık raporun "Kart harcaması" rakamıyla aynı olsun (UX
-  // turu B6: eskiden 8+ kategoride toplam yalnız gösterilenleri sayıyordu).
-  // Sonra halka kanonik sıraya dizilir.
-  const donutData: CompositionSlice[] = orderSlicesCanonically(
-    mergeCategoryTail(categoryTotals, 6).map((item) => ({
-      name:  item.category,
-      value: item.amount,
-      color: vizColor(CATEGORY_COLORS, item.category),
-    })),
-    expenseCategories,
-  )
-
-  return (
-    <Card className="border-line-strong lg:col-span-7">
-      <CardHeader className="pb-0">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <CardTitle>Kategori harcaması</CardTitle>
-            <p className="mt-1 text-xs text-ink-muted">Bu ay kart harcamalarının dağılımı.</p>
-          </div>
-          <PieChart size={18} className="text-primary" />
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-3 pt-3">
-        {donutData.length === 0 ? (
-          <p className="rounded-xl bg-page p-3 text-sm text-ink-muted">Bu ay kategorili kart harcaması yok.</p>
-        ) : (
-          <CompositionBar data={donutData} totalLabel="Bu ay" />
-        )}
-        {insights.length > 0 ? (
-          <div className="rounded-xl bg-page p-3">
-            <p className="finance-label mb-2">Kategori içgörüleri</p>
-            <div className="grid gap-2">
-              {insights.map((insight) => (
-                <div key={`${insight.category}-${insight.title}`} className="flex min-w-0 items-start justify-between gap-3 rounded-lg bg-raised px-3 py-2 text-sm ring-1 ring-line-strong">
-                  <div className="min-w-0">
-                    <p className="truncate font-semibold text-ink">{insight.category}</p>
-                    <p className="mt-0.5 text-xs text-ink-muted">{insight.title} · {maskText(insight.description)}</p>
-                  </div>
-                  <Badge variant={insight.tone === 'rose' ? 'destructive' : insight.tone === 'amber' ? 'warning' : 'success'}>
-                    {formatAmount(insight.amount)}
-                  </Badge>
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : null}
       </CardContent>
     </Card>
   )

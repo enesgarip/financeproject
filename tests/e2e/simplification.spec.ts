@@ -40,7 +40,7 @@ async function mockApp(page: Page, theme: string, overrides: typeof tables = {})
     if (url.hostname === 'example.supabase.co') {
       const name = url.pathname.split('/').at(-1)!
       let data: unknown = name === 'fetch_finance_snapshot' ? snapshot : name === 'bist-quote' ? { prices: {}, asOf: now } : url.pathname.includes('/rpc/') ? 0 : name === 'user' ? user : rows[name] ?? []
-      if (name === 'card_ledger' || name === 'account_ledger') {
+      if (['card_ledger', 'account_ledger', 'card_expenses', 'card_installments', 'card_statement_archives'].includes(name)) {
         const before = url.searchParams.get('id')?.replace(/^lt\./, '')
         const cardId = url.searchParams.get('card_id')?.replace(/^eq\./, '')
         data = (rows[name] ?? []).filter(row => (!before || String(row.id) < before) && (!cardId || row.card_id === cardId))
@@ -49,6 +49,51 @@ async function mockApp(page: Page, theme: string, overrides: typeof tables = {})
       return route.fulfill({ json: data })
     }
     return route.abort()
+  })
+}
+
+for (const [width, theme] of [[320, 'light'], [390, 'dark'], [1280, 'light']] as const) {
+  test(`kategori analizi ekstre dönemi, geçmiş ay ve kart seçimi: ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 })
+    const expense = { ...base, card_id: 'credit-1', statement_archive_id: null, status: 'posted', installment_count: 1, installment_amount: 0, posted_at: now, category: 'Market', amount: 123.45, spent_at: '2026-10-10' }
+    await mockApp(page, theme, {
+      cards: [...tables.cards, { ...tables.cards[2], id: 'credit-2', card_name: 'İkinci kart', statement_day: 20, due_day: 30 }],
+      card_expenses: [
+        { ...expense, id: 'expense-1', description: 'Ekimde yapılan market alışverişi' },
+        { ...expense, id: 'expense-2', card_id: 'credit-2', spent_at: '2026-11-01', category: 'Yemek', amount: 55, description: 'Kasımda yemek' },
+        { ...expense, id: 'expense-3', statement_archive_id: 'archive-oct', spent_at: '2026-09-18', amount: 77, description: 'Önceki ekstre harcaması' },
+      ],
+      card_statement_archives: [{ ...base, id: 'archive-oct', card_id: 'credit-1', statement_date: '2026-10-04', period_year: 2026, period_month: 10, statement_debt_amount: 77, current_period_spending: 77, total_debt_amount: 77, status: 'paid', due_date: '2026-10-14' }],
+    })
+    await page.clock.setFixedTime(new Date('2026-11-02T09:00:00Z'))
+    const errors: string[] = []
+    page.on('pageerror', error => errors.push(error.message))
+    await page.goto('/analiz')
+    const panel = page.locator('[data-slot="card"]').filter({ has: page.getByText('Kategori harcaması', { exact: true }) })
+    await expect(panel.getByLabel('Görünüm')).toHaveValue('statement')
+    await expect(panel.getByRole('img')).toHaveAttribute('aria-label', /178,45/)
+    await expect(panel).toContainText('05 Eki 2026 – 04 Kas 2026')
+    await expect(panel).toContainText('21 Eki 2026 – 20 Kas 2026')
+    await panel.locator('summary').filter({ hasText: 'Market' }).focus()
+    await page.keyboard.press('Enter')
+    await expect(panel.getByText('Ekimde yapılan market alışverişi', { exact: true })).toBeVisible()
+    await panel.getByRole('combobox', { name: 'Kart', exact: true }).selectOption('credit-1')
+    await expect(panel.getByRole('img')).toHaveAttribute('aria-label', /123,45/)
+    await panel.getByRole('combobox', { name: 'Dönem', exact: true }).selectOption('2026-10')
+    await panel.locator('summary').filter({ hasText: 'Market' }).click()
+    await expect(panel.getByText('Önceki ekstre harcaması', { exact: true })).toBeVisible()
+    await panel.getByLabel('Görünüm').selectOption('calendar')
+    await expect(panel.getByRole('combobox', { name: 'Dönem', exact: true })).toHaveValue('2026-11')
+    await expect(panel.getByRole('img')).toHaveAttribute('aria-label', /55,00/)
+    await panel.getByRole('combobox', { name: 'Dönem', exact: true }).selectOption('2026-10')
+    await expect(panel.getByRole('img')).toHaveAttribute('aria-label', /123,45/)
+    await panel.locator('summary').filter({ hasText: 'Market' }).click()
+    await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1)
+    await panel.screenshot({ path: `test-results/category-period-${width}.png` })
+    await page.getByRole('button', { name: 'Tutarları gizle', exact: true }).click()
+    await expect(panel.getByRole('img')).not.toHaveAttribute('aria-label', /123,45/)
+    await expect(panel).not.toContainText('123,45')
+    expect(errors).toEqual([])
   })
 }
 

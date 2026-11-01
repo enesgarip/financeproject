@@ -1,5 +1,28 @@
 # Priority Backlog
 
+## 2026-11-02 — Kategori analizinde ekstre dönemi ve geçmiş — UYGULANDI
+
+Analiz → Kategori harcaması varsayılan olarak güncel ekstre dönemini gösterir.
+Tüm kartlar her kredi kartının kendi dönemini toplar; tek kart, geçmiş kesim
+ayı ve Takvim ayı seçilebilir. Kartların tarih aralıkları görünürdür; ilk arşivin
+başlangıcı bilinmiyorsa tarih uydurulmaz. Kategori satırları tutar/pay ve 10'lu
+hareket ayrıntısına açılır. Geçmiş, bugünkü kesim gününden değil gerçek arşiv
+bağlantısından okunur. Eksik ekstre veya banka toplamından farklı kayıt kapsamı
+uyarılır. Taksitler ekstrede çocuk tutarıyla, takvim ayında alışveriş toplamıyla
+sayılır; provizyon ve iptal kayıtları dışarıdadır.
+
+`analysisRepo.ts` tam geçmişi üç tabloda 500'lük PK imleciyle okur; hata kısmi
+başarı olmaz. Kullanıcıya özel cache finans yazması/bakım sonrası yenilenir.
+Borç/ödeme/ledger/RPC/şema değişmez. Kaynak: `docs/FINANCE_RULES.md`,
+`docs/UI_ARCHITECTURE.md`. Doğrulama: dönem/kart/sınır/taksit/kuruş, 1005 satır,
+sayfa hatası, UI seçimi/gizlilik ve sentetik tarayıcı regresyonları.
+
+Doğrulama tamamlandı: `npm run verify` geçti; 173 dosyada 1.802 test,
+7 guard, lint/coverage, production audit (0 açık), build/bundle ve altı edge
+tip kontrolü başarılı. `tests/e2e/simplification.spec.ts`: 14 test geçti;
+320/390/1280px kategori akışı ve 19 ekran taraması sentetik veriyledir.
+Canlı finans verisi veya üretim yayını bu doğrulamaya dahil değildir.
+
 ## 2026-10-26 — Black kart kayıt geçmişi okunabilirliği ve tam okuma — UYGULANDI
 
 Canlı incelemede Borç hareketleri özeti uzun tek satırda, açıklamalar kırpılmış

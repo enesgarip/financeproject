@@ -4,6 +4,37 @@ import { addMonths, dateInputValue, startOfMonth } from '../../utils/date'
 import type { GoalSnapshotEntry } from '../../utils/goalSnapshots'
 import { isMissingSupabaseCapabilityError } from '../../utils/supabaseErrors'
 import { ok, resultFromSupabase, voidResultFromSupabase, type Result } from '../result'
+import type { CategoryHistory } from '../../utils/categorySpending'
+
+/** Kategori geçmişi snapshot'ın ay/arşiv sınırından bağımsızdır. Her sayfa
+ * tamamlanmadan toplam yayımlanmaz; UUID imleci aynı tarihli satırları korur. */
+export async function fetchCategorySpendingHistory(): Promise<Result<CategoryHistory>> {
+  async function read<T extends { id: string }>(table: 'card_expenses' | 'card_installments' | 'card_statement_archives', columns: string): Promise<Result<T[]>> {
+    const rows: T[] = []
+    let before: string | null = null
+    for (;;) {
+      let query = supabase.from(table).select(columns).order('id', { ascending: false })
+      if (before) query = query.lt('id', before)
+      const { data, error } = await query.limit(500)
+      if (error) return resultFromSupabase<T[]>([], error, 'Kategori geçmişi tamamen yüklenemedi.')
+      const page = (data ?? []) as unknown as T[]
+      rows.push(...page)
+      if (page.length < 500) return ok(rows)
+      const next = page.at(-1)?.id
+      if (!next || (before && next >= before)) return resultFromSupabase<T[]>([], { message: 'Kategori geçmişinin devamı doğrulanamadı.' })
+      before = next
+    }
+  }
+  const [expenses, installments, statements] = await Promise.all([
+    read<CategoryHistory['expenses'][number]>('card_expenses', 'id,card_id,statement_archive_id,spent_at,amount,description,category,installment_count,status'),
+    read<CategoryHistory['installments'][number]>('card_installments', 'id,card_id,card_expense_id,statement_archive_id,due_month,amount,description,category,installment_no,installment_count,status'),
+    read<CategoryHistory['statements'][number]>('card_statement_archives', 'id,card_id,statement_date,statement_debt_amount'),
+  ])
+  if (!expenses.ok) return expenses
+  if (!installments.ok) return installments
+  if (!statements.ok) return statements
+  return ok({ expenses: expenses.data, installments: installments.data, statements: statements.data })
+}
 
 export const PRICE_RADAR_MONTHS = 13
 
