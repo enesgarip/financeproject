@@ -19,10 +19,12 @@ it('ödeme sonrası aktif hesap listesini yeniler; kapalı finans listeleri eski
   const otherKeys = [
     ['crud-rows', 'cards', 'u2', 'created_at', false], ['finance-snapshot', 'u2'],
     ['account-ledger-recent', 'u2', 'c1'], ['card-expense-pace', 'u2', '2026-10-01'],
+    ['category-spending-history', 'u2'],
   ]
   const detailKeys = [
     ['finance-snapshot', 'u1'], ['card-page-data', 'u1', 'statements'],
     ['account-ledger-recent', 'u1', 'c1'], ['card-expense-pace', 'u1', '2026-10-01'],
+    ['category-spending-history', 'u1'],
   ]
   for (const key of [...keys, ...otherKeys, ...detailKeys]) client.setQueryData(key, [])
   client.setQueryData(keys[0], [{ id: 'c1', current_balance: 100 }])

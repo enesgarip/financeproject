@@ -1,5 +1,12 @@
 # Card Debt Transitions
 
+2 Kasım kategori görünümü: Analiz güncel ekstre dönemini kart bazında,
+geçmişi gerçek `statement_archive_id` bağlarıyla okur. Ekstre kategorilerinde
+tek çekim harcamalar ve ilgili çocuk taksitler sayılır; parent toplamı tekrar
+eklenmez. Takvim ayı alışveriş toplamını işlem tarihinde gösterir. Provizyon
+ve iptal kayıtları dışarıdadır. Bu salt okuma görünümü kesim, ödeme, borç
+alanları veya ledger olaylarını değiştirmez. Kaynak: `docs/FINANCE_RULES.md`.
+
 26 Ekim kart geçmişi eki: `CardLedgerPanel.tsx` borçlanma/ödeme/net tutarlarını
 ayrı alanlarda, hareketleri 10'ar kayıtlık sayfalarda sunar. Açıklama kırpılmaz;
 mobilde tutar alt satıra iner. Tüm geçmişin toplamı sayfa seçiminden bağımsızdır. Sayfa geçişi animasyonsuz liste başını görünür kılar ve listeye odak verir.

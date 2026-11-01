@@ -1,6 +1,36 @@
 # Finance Rules
 
-Last reviewed: 2026-10-15
+Last reviewed: 2026-11-02
+
+## Kategori harcaması dönemleri
+
+Analiz'deki Kategori harcaması varsayılan olarak her kredi kartının güncel
+ekstre dönemini kullanır. Tüm kartlar seçimi ortak tarih aralığı varsaymaz;
+her kartın başlangıç/kesim tarihi görünür. Vade günü kategori dönemi için
+gerekmez. Kesim günü eksik kart toplam dışında ve adıyla uyarılır. Kesim
+günü henüz arşivlenmemişse o döneme dahildir; aynı gün arşiv varsa yeni dönem
+açılır. Gelecek tarihli kayıtlar güncel harcamaya eklenmez.
+
+Geçmiş ay, o ayda **kesilen ekstrelerdir**; ödeme tarihi/ödendi durumu harcama
+dağılımını değiştirmez. Kayıtlar gerçek arşiv bağıyla seçilir; bugünkü kesim
+gününden geçmişe eşleme yapılmaz. Önceki arşiv yoksa dönem başlangıcı bilinmiyor
+denir. Kartın o ay arşivi yoksa sıfır ekstre sayılmaz, eksik kapsam belirtilir.
+Banka ekstre tutarı ile kategori kayıt toplamı farklıysa faiz/iade/düzeltme
+ve eksik ayrıntı olasılığı açıklanır; fark için kategori üretilmez.
+
+Ekstre görünümünde kesinleşmiş tek çekimler ve posted/paid çocuk taksitler
+sayılır; taksitli parent'ın alışveriş toplamı tekrar eklenmez. Scheduled
+taksitler, provizyonlar ve iptal parent'a bağlı çocuklar dışarıdadır.
+Takvim ayı görünümü kesinleşmiş alışverişin **toplam tutarını işlem ayında**
+sayar; çocuk taksitleri tekrar eklemez, banka hesabı harcamaları da seçilebilir.
+Bu nedenle takvim ayı ile ekstre kategorileri ve borç kovaları aynı sayı olmak
+zorunda değildir. Aylık rapor/bütçe/diğer kategori içgörülerinin mevcut takvim
+ayı sözleşmesi değişmez.
+
+Tam kategori geçmişi snapshot sınırlarından bağımsız olarak sayfalanır.
+Herhangi bir tablo/sayfa hatası toplamı gizler ve yeniden deneme sunar.
+Uygulamada kayıtlı olmayan banka hareketleri bu görünümden üretilemez.
+Kaynak: `src/utils/categorySpending.ts`, `src/data/repositories/analysisRepo.ts`.
 
 ## Scope
 

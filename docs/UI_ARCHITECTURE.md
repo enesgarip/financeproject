@@ -1,5 +1,16 @@
 # UI Architecture
 
+2 Kasım kategori analizi: Analiz'de Kategori harcaması Görünüm/Kart/Dönem
+etiketli seçicilerle açılır; varsayılan Tüm kartlar + Güncel ekstre dönemidir.
+Ekstre dönemi/Takvim ayı ayrımı, kartların tarihleri ve taksit sayım yöntemi
+grafiğin yanında açıklanır. Geçmiş ekstreler kesim ayıyla adlandırılır.
+Kategori satırlarının tamamı tutar ve payla görünür; native details/summary
+klavyeyle hareket ayrıntılarını açar. Hareketler 10'lu sayfalıdır; kart/tarih/
+taksit etiketi, sarılan açıklama ve tutar vardır. Dönem/kart değişimi ayrıntı
+seçimini sıfırlar. Toplam, satır, açıklamaya gömülü tutar ve erişilebilir
+grafik özeti gizlilik maskesini kullanır. Kapsam eksikleri görünürdür;
+yükleme/hata sıfır harcama sayılmaz. Finans sözleşmesi `docs/FINANCE_RULES.md`.
+
 Kart kayıt geçmişi: üç tutar alanı mobilde alt alta, geniş ekranda yan yanadır.
 10'ar kayıt, Daha eski/Daha yeni sayfaları ve görünen aralık/toplam belirtilir.
 İşlem türü/tarih, açıklama, tutar ve borç dağılımı ayrı satırlarda sarılır;
