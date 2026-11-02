@@ -275,7 +275,7 @@ export function buildAiFinanceContext(input: AiContextInput, options: AiContextO
     const reserved = totalReservedTL(options.kasaBuckets)
     const safe = buildSafeToSpend({
       liquidCash: position.totalCashAssets,
-      expectedIncome: flow.expectedIncome,
+      expectedIncome: flow.spendableIncome,
       remainingOutflow: flow.remainingOutflow,
       buffer: options.safeToSpendBuffer,
       reserved,

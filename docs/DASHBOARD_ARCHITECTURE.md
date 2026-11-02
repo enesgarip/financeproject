@@ -1,5 +1,12 @@
 # Dashboard Architecture Note
 
+3 Kasım 2026: “Ay sonuna kalan” ve aynı harcanabilir tutarı kullanan planlama,
+alınacaklar, karar ekranı, rapor ve asistan tahsil edilmemiş alacakları eklemez.
+`buildMonthlyCashFlow.spendableIncome` alacak hariç kalan maaşı verir;
+`expectedIncome`/`projectedCash` beklenen tahsilatı içeren plan alanlarıdır.
+Özet'in “Nasıl hesaplandı?” dökümü de `spendableIncome` kullanır. Tahsilat
+hesap bakiyesine geçince sayılır; ilk iş günü maaş varsayımı korunur.
+
 26 Ekim: Özet en çok üç yaklaşan vade ve tümünü açma yolunu gösterir.
 Tam hesap listesi/kart dağılımı kısa bağlamsal bağlantılardır. Net değer Analiz'e
 bağlanır. Kart ödeme döngüsü Kartlar'daki `cycle=1` açılır bölümüne taşındı;
@@ -215,7 +222,7 @@ Dashboard gün damgasını dakika aralığı, focus ve visibilitychange ile yeni
 ## Ay sonuna kalan dökümü (2026-10-10)
 
 `SeritOverview` kahraman tutarının altındaki “Nasıl hesaplandı?” bölümü hazır
-likit bakiye + bu ay beklenen gelir − kalan çıkış − tampon − kasa rezervini
+likit bakiye + bu ay beklenen maaş (`spendableIncome`) − kalan çıkış − tampon − kasa rezervini
 aynı `useSafeToSpend` girdilerinden gösterir; yeni hesap formülü üretmez.
 Maaş ilk iş günü dahil bakiyede kabul edilir; ay sonu beklenen gelire tekrar
 katılmaz. Aynı gün 00/09/23 ve hafta sonu öncesi/sonrası regresyonları vardır.

@@ -119,7 +119,7 @@ export function useSafeToSpend(
   return {
     ...buildSafeToSpend({
       liquidCash,
-      expectedIncome: cashFlow.expectedIncome,
+      expectedIncome: cashFlow.spendableIncome,
       remainingOutflow: cashFlow.remainingOutflow,
       buffer,
       reserved,

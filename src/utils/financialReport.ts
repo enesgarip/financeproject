@@ -140,7 +140,7 @@ export function buildFinancialReport(data: FinancialReportInput, options: Financ
       ...(options.kasaBuckets != null && options.safeToSpendBuffer != null ? [
         `Güvenlik tamponu: ${tl(options.safeToSpendBuffer)}`,
         `Kasa rezervi: ${tl(totalReservedTL(options.kasaBuckets))}`,
-        `Bu ay harcanabilir: ${tl(buildSafeToSpend({ liquidCash: position.totalCashAssets, expectedIncome: monthly.expectedIncome, remainingOutflow: monthly.remainingOutflow, buffer: options.safeToSpendBuffer, reserved: totalReservedTL(options.kasaBuckets) }).amount)}`,
+        `Bu ay harcanabilir: ${tl(buildSafeToSpend({ liquidCash: position.totalCashAssets, expectedIncome: monthly.spendableIncome, remainingOutflow: monthly.remainingOutflow, buffer: options.safeToSpendBuffer, reserved: totalReservedTL(options.kasaBuckets) }).amount)}`,
       ] : ['Bu ay harcanabilir tutar hesaplanamadı: güvenlik tamponu veya kasa rezervi doğrulanamadı.']),
     ],
     note: 'Kart borcu sonrası fark ile bu ay harcanabilir tutar farklıdır. Harcanabilir tutar kalan gelir, yükümlülük, tampon ve kasa rezervini dikkate alır.',

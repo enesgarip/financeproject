@@ -1,5 +1,21 @@
 # Priority Backlog
 
+## 2026-11-03 — Ay sonuna kalan tutarda tahsil edilmemiş alacak — UYGULANDI
+
+“Ay sonuna kalan” hesabı açık alacakları kullanılabilir para olarak saymıyor.
+Ortak `CashFlowSummary.spendableIncome` yalnız henüz bakiyede varsayılmayan
+maaşı içeriyor. Özet, planlama, karar, alınacaklar, rapor ve asistan aynı alanı
+kullanıyor; Özet açıklaması ve hesap dökümü bu kurala uyuyor. Kısmi/tam
+tahsilat yalnız güncel hesap bakiyesiyle dahil olur. Alacaklı nakit akışı
+projeksiyonu, maaş günü kuralı ve yazma/RPC/ledger yolları korunur.
+Kaynak: `docs/FINANCE_RULES.md`, `docs/DASHBOARD_ARCHITECTURE.md`.
+Regresyon: açık alacak, maaş günü öncesi/sonrası, kuruşlu kısmi/tam tahsilat,
+rapor/asistan tutarları ve sentetik Özet hesap dökümü.
+Doğrulama: `npm run verify` geçti; 173 dosyada 1.808 test, 7 guard,
+lint/coverage, production audit (0 açık), build/bundle ve altı edge tip
+kontrolü başarılı. Sentetik Özet tarayıcı regresyonu 1/1 geçti. Üretime
+finansal yazma veya yayın yapılmadı.
+
 ## 2026-11-02 — Kategori analizinde ekstre dönemi ve geçmiş — UYGULANDI
 
 Analiz → Kategori harcaması varsayılan olarak güncel ekstre dönemini gösterir.

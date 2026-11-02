@@ -109,7 +109,9 @@ export type CashFlowSummary = {
   remainingOutflow: number
   /** Henüz girmemiş gelir (maaş yatmadıysa + kalan tahsilat). */
   expectedIncome: number
-  /** expectedIncome'un tahsil edilmemiş kişisel alacak kısmı; UI ayrı satırda gösterir (B15). */
+  /** Harcanabilir tutara eklenebilen kalan gelir; tahsil edilmemiş alacakları içermez. */
+  spendableIncome: number
+  /** expectedIncome'un tahsil edilmemiş kişisel alacak kısmı; harcanabilir tutara eklenmez. */
   remainingReceivableIncome: number
   netFlow: number
   projectedCash: number
@@ -499,7 +501,8 @@ export function buildMonthlyCashFlow(
   const remainingReceivableIncome = obligationSum(remainingObligations, (item) => item.kind === 'personal_receivable')
 
   const salaryLikelyReceived = isCurrentMonth && dateInputValue(today) >= dateInputValue(getFirstBusinessDay(monthStart))
-  const projectedIncome = sumTL([salaryLikelyReceived ? 0 : salaryIncome, remainingReceivableIncome])
+  const spendableIncome = salaryLikelyReceived ? 0 : salaryIncome
+  const projectedIncome = sumTL([spendableIncome, remainingReceivableIncome])
 
   return {
     monthLabel,
@@ -510,6 +513,7 @@ export function buildMonthlyCashFlow(
     outflow,
     remainingOutflow,
     expectedIncome: projectedIncome,
+    spendableIncome,
     remainingReceivableIncome,
     netFlow,
     projectedCash: sumTL([cashAssets, diffTL(projectedIncome, remainingOutflow)]),

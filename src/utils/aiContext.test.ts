@@ -324,6 +324,14 @@ describe('buildAiFinanceContext', () => {
     expect(without).not.toContain('Güvenle harcanabilir')
   })
 
+  it('asistan harcanabilir tutara tahsil edilmemiş alacağı eklemez', () => {
+    const input = { ...emptyInput(), cards: [card({ card_type: 'banka_karti', current_balance: 10000 })],
+      debts: [debt({ direction: 'borç_verdim', estimated_value_try: 5000, due_date: '2026-08-30' })] }
+    const out = buildAiFinanceContext(input, { now: NOW, safeToSpendBuffer: 500, kasaBuckets: [] })
+
+    expect(out).toContain('Güvenle harcanabilir: 9.500,00 ₺')
+  })
+
   it('abonelik radarını basar (≥3 ay tutarlı kart tekrarı + planlı ödeme)', () => {
     const input = richInput()
     input.cardExpenses.push(
