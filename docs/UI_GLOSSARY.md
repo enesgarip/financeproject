@@ -62,7 +62,7 @@ sözlüğe uydurmak için değiştirilmez.
 | Provizyon | Henüz kesinleşmemiş kart harcaması. Gerektiğinde yakın açıklama “Bekleyen harcama”dır; kesin borç gibi anlatılmaz. |
 | Toplam kart yükü | Ekstre, dönem içi harcama, provizyon ve gelecek taksitleri kapsayan mevcut toplam. Sadece bugünkü ödenecek borç diye yeniden adlandırılmaz. |
 | Net değer | Varlıklardan borçlar çıkarıldıktan sonraki değer. Hesap bakiyesi veya ay sonu tahmini değildir. |
-| Ay sonuna kalan | Özet'teki mevcut harcanabilir tutar hesabı. Tampon, ayrılan para ve beklenen alacak açıklamaları rakamın yanında kalır. |
+| Ay sonuna kalan | Özet'teki harcanabilir tutar hesabı. Tahsil edilmemiş alacaklar eklenmez; tampon ve ayrılan para düşülür. Beklenen alacak açıklaması bu ayrımı belirtir. |
 | Güvenlik tamponu | Harcanabilir tutardan düşülen, elde tutmak istediğin tutar. |
 | Tahmin | Modelin/önceki kayıtların hesapladığı değer. Kullanıcı metninde “projeksiyon” yerine kullanılır; kesinlik iddiası taşımaz. |
 | Beklenen gelir | Henüz gerçekleşmiş kabul edilmeyen gelir. Hesaptaki para diye sunulmaz. |

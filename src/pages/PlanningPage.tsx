@@ -76,7 +76,7 @@ export function PlanningPage() {
     const cashFlow = buildMonthlyCashFlow(data)
     const surplus = buildSafeToSpend({
       liquidCash: position.totalCashAssets,
-      expectedIncome: cashFlow.expectedIncome,
+      expectedIncome: cashFlow.spendableIncome,
       remainingOutflow: cashFlow.remainingOutflow,
       buffer: readSafeToSpendBuffer(),
       reserved,

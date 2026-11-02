@@ -110,7 +110,7 @@ export function PurchaseDecisionPage() {
     const buffer = readSafeToSpendBuffer()
     const safe = buildSafeToSpend({
       liquidCash: buildFinancialPosition(summaryInput).totalCashAssets,
-      expectedIncome: cashFlow.expectedIncome,
+      expectedIncome: cashFlow.spendableIncome,
       remainingOutflow: cashFlow.remainingOutflow,
       buffer,
       // Kasa rezervi burada düşülmüyordu: kararın verildiği ekran harcanabilir

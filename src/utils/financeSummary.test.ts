@@ -22,6 +22,7 @@ import {
   totalCreditLimit,
 } from './financeSummary'
 import { roundTL } from './money'
+import { buildSafeToSpend } from './safeToSpend'
 
 const base = { id: 'id', user_id: 'u', created_at: '2026-01-01T00:00:00Z', updated_at: '2026-01-01T00:00:00Z' }
 const JUNE_START = new Date(2026, 5, 1)
@@ -732,6 +733,44 @@ describe('buildMonthlyCashFlow', () => {
     )
     expect(flow.receivableIncome).toBe(5000)
     expect(flow.income).toBe(5000)
+  })
+
+  it.each([1, 3])('açık alacak harcanabilir tutarı artırmaz; maaş kuralı korunur (Kasım %s)', (day) => {
+    const today = new Date(2026, 10, day)
+    const input = {
+      ...emptyInput,
+      cards: [bankCard({ current_balance: 10000 })],
+      salaryHistory: [salary({ amount: 50000 })],
+      debts: [debt({ direction: 'borç_verdim', estimated_value_try: 5000.25, due_date: '2026-11-10' })],
+      payments: [payment({ amount: 3000, due_date: '2026-11-20' })],
+    }
+    const flow = buildMonthlyCashFlow(input, today, { today })
+    const withoutReceivable = buildMonthlyCashFlow({ ...input, debts: [] }, today, { today })
+    const safe = buildSafeToSpend({ liquidCash: flow.cashAssets, expectedIncome: flow.spendableIncome,
+      remainingOutflow: flow.remainingOutflow, buffer: 2000, reserved: 1000 })
+
+    expect(flow.spendableIncome).toBe(day === 1 ? 50000 : 0)
+    expect(flow.spendableIncome).toBe(withoutReceivable.spendableIncome)
+    expect(safe.amount).toBe(day === 1 ? 54000 : 4000)
+    expect(flow.remainingReceivableIncome).toBe(5000.25)
+    expect(flow.projectedCash).toBe(roundTL(withoutReceivable.projectedCash + 5000.25))
+  })
+
+  it.each([
+    { collected: 2000.1, remaining: 3000.15, status: 'açık' as const },
+    { collected: 5000.25, remaining: 0, status: 'kapandı' as const },
+  ])('yalnız bakiyeye geçen tahsilat harcanabilir tutarı artırır: $collected TL', ({ collected, remaining, status }) => {
+    const today = new Date(2026, 10, 3)
+    const flow = buildMonthlyCashFlow({
+      ...emptyInput,
+      cards: [bankCard({ current_balance: roundTL(10000 + collected) })],
+      debts: [debt({ direction: 'borç_verdim', estimated_value_try: remaining, due_date: '2026-11-10', status })],
+    }, today, { today })
+    const safe = buildSafeToSpend({ liquidCash: flow.cashAssets, expectedIncome: flow.spendableIncome,
+      remainingOutflow: flow.remainingOutflow, buffer: 2000, reserved: 1000 })
+
+    expect(safe.amount).toBe(roundTL(7000 + collected))
+    expect(flow.remainingReceivableIncome).toBe(remaining)
   })
 
   it('counts pending payments in outflow', () => {

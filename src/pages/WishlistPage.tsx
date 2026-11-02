@@ -84,7 +84,7 @@ export function WishlistPage() {
     const cashFlow = buildMonthlyCashFlow(summaryInput)
     const safe = buildSafeToSpend({
       liquidCash: buildFinancialPosition(summaryInput).totalCashAssets,
-      expectedIncome: cashFlow.expectedIncome,
+      expectedIncome: cashFlow.spendableIncome,
       remainingOutflow: cashFlow.remainingOutflow,
       buffer,
       reserved,

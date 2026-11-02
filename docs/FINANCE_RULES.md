@@ -48,6 +48,11 @@ This file records the current business rules inferred from the codebase. If code
   net değeri iyimser şişirirdi (ihtiyatlılık). Alacak iki yerde ayrı yaşar:
   nakit AKIŞINDA beklenen gelir (`buildMonthlyCashFlow.receivableIncome`,
   `personal_receivable` yükümlülük kalemi) ve borç panellerinde ayrı satır.
+  **3 Kasım 2026:** Bu beklenen tahsilat harcanabilir paraya eklenmez.
+  `CashFlowSummary.spendableIncome` yalnız kalan maaşı içerir; `expectedIncome`
+  ve `projectedCash` alacaklı plan/projeksiyon alanları olarak kalır.
+  Tahsilat kaydedilip hesap/nakit bakiyesine geçtiğinde harcanabilir tutara
+  yalnız bu bakiye üzerinden girer; kısmi tahsilatta açık kalan pay eklenmez.
   Borç tarafı (`borç_aldım`) ise net değerden DÜŞÜLÜR — asimetri bilinçlidir:
   borcun ödeneceği kesin, alacağın tahsili değil.
 
@@ -56,7 +61,7 @@ This file records the current business rules inferred from the codebase. If code
 - Kaynak `src/utils/wishlistPlan.ts`; peşin senaryo hesabı mevcut
   `buildPurchaseImpact` üzerinden yapılır. Tahmini fiyat alım anında nakitten
   düşer ve etkisi sonraki aylara taşınır. Liste her ürünü ayrı değerlendirir.
-- Bu ay harcanabilir = likit + beklenen gelir − kalan yükümlülük − tampon −
+- Bu ay harcanabilir = likit + alacak hariç beklenen gelir (`spendableIncome`) − kalan yükümlülük − tampon −
   kasa rezervi. Alım sonrası harcanabilir bu tutardan fiyatın çıkarılmasıdır.
   Beklenen gelir bugün eldeki nakit sayılmaz: peşin fiyat mevcut likidi aşıyorsa
   zorlayıcı, bugünkü tampon + rezerv tabanını bozuyorsa en az dikkat sonucu çıkar.
@@ -639,6 +644,7 @@ app; there is no affordability decision surface anymore.
 - debts may be TRY, FX, gram gold, or quarter gold in type
 - summaries often use `estimated_value_try`
 - open receivables are shown as expected collection and are not added to net worth until collected
+- uncollected receivables are excluded from spendable cash; recorded collections enter through the updated account/cash balance
 - an open receivable with a due date can be deferred one calendar month; this changes only `due_date`, never its amount, status, balance, or ledger
 
 ### Sadece takip (2026-10-13)
@@ -677,7 +683,7 @@ Non-composite goal progress rule:
 Current dashboard (Şerit) behavior includes:
 
 - the hero number is the "harcanabilir" figure (`buildSafeToSpend`: liquid cash
-  + remaining income − remaining obligations − buffer − kasa reserve; the
+  + remaining salary (`spendableIncome`, excluding receivables) − remaining obligations − buffer − kasa reserve; the
   `reserved` input is mandatory, see `docs/DASHBOARD_ARCHITECTURE.md`)
 - net worth equals assets minus card, loan, personal debt, and pending payment liabilities
 - open receivables are shown separately as expected collection

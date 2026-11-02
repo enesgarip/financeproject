@@ -1,5 +1,10 @@
 # Card Debt Transitions
 
+3 Kasım harcanabilir tutar eki: tahsil edilmemiş kişisel alacaklar “Ay sonuna
+kalan” hesabından çıkarıldı (`CashFlowSummary.spendableIncome`). Kart borcu,
+ekstre/taksit geçişleri, hesap bakiyesi ve tahsilat RPC/ledger davranışı aynı
+kalır; değişiklik yalnız okuma hesabındadır. Sözleşme: `docs/FINANCE_RULES.md`.
+
 2 Kasım kategori görünümü: Analiz güncel ekstre dönemini kart bazında,
 geçmişi gerçek `statement_archive_id` bağlarıyla okur. Ekstre kategorilerinde
 tek çekim harcamalar ve ilgili çocuk taksitler sayılır; parent toplamı tekrar

@@ -52,6 +52,25 @@ async function mockApp(page: Page, theme: string, overrides: typeof tables = {})
   })
 }
 
+test('ay sonuna kalan açık alacağı saymaz ve hesap dökümüyle tutarlıdır', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 900 })
+  await mockApp(page, 'light', {
+    cards: [bank],
+    debts: [{ ...base, id: 'receivable-1', person_name: 'Örnek kişi', direction: 'borç_verdim', value_type: 'TRY',
+      currency: null, amount: 5000, estimated_value_try: 5000, auto_valued: false, valued_at: null,
+      valuation_rate: null, due_date: '2026-10-28', status: 'açık' }],
+  })
+  await page.addInitScript(() => localStorage.setItem('denge:safe-to-spend-buffer', '5000'))
+  await page.goto('/')
+  const hero = page.getByText('Ay sonuna kalan', { exact: true }).locator('..')
+  await expect(hero).toContainText('14.600,00')
+  await expect(hero).toContainText('alacak bu tutara dahil değil.')
+  await page.getByText('Nasıl hesaplandı?', { exact: true }).click()
+  const breakdown = page.locator('details').filter({ has: page.getByText('Nasıl hesaplandı?', { exact: true }) })
+  await expect(breakdown.locator('dt').filter({ hasText: 'Bu ay beklenen maaş' }).locator('+ dd')).toContainText('0,00')
+  await expect(breakdown).toContainText('tahsilat kaydedilip hesap bakiyesine geçene kadar bu tutara dahil edilmez')
+})
+
 for (const [width, theme] of [[320, 'light'], [390, 'dark'], [1280, 'light']] as const) {
   test(`kategori analizi ekstre dönemi, geçmiş ay ve kart seçimi: ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 })

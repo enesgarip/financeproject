@@ -94,8 +94,7 @@ export function SeritOverview({
   daysInMonth: number
   safeToSpend: SafeToSpendResult
   /**
-   * Kahraman rakamın içinde sayılan, henüz tahsil edilmemiş kişisel alacak.
-   * Ayrı satırda söylenir; alacak gelmezse rakam bu kadar iyimserdir (B15).
+   * Harcanabilir tutara eklenmeyen, henüz tahsil edilmemiş kişisel alacak.
    */
   pendingReceivables?: number
   /** false = kasa rezervi doğrulanamadı; kahraman rakam rezervsiz (şişkin) olabilir (K16). */
@@ -173,8 +172,8 @@ export function SeritOverview({
                     kayıtlı planlardan arta kalıyor.
                     {pendingReceivables > 0 ? (
                       <>
-                        {' '}Bu tutar henüz tahsil edilmemiş{' '}
-                        <span className="serit-num font-semibold">{format(pendingReceivables).amount} {format(pendingReceivables).unit}</span> alacağı sayıyor.
+                        {' '}Henüz tahsil edilmemiş{' '}
+                        <span className="serit-num font-semibold">{format(pendingReceivables).amount} {format(pendingReceivables).unit}</span> alacak bu tutara dahil değil.
                       </>
                     ) : null}
                   </>
@@ -223,12 +222,12 @@ export function SeritOverview({
                 <summary className="min-h-11 cursor-pointer py-3 font-semibold text-ink">Nasıl hesaplandı?</summary>
                 <dl className="grid grid-cols-[1fr_auto] gap-x-4 gap-y-2 border-t border-line py-3">
                   <dt>Güncel hesap ve nakit bakiyesi</dt><dd>{`${format(totalCashAssets).amount} ${format(totalCashAssets).unit}`}</dd>
-                  <dt>Bu ay beklenen gelir</dt><dd>+ {`${format(cashFlowBreakdown.expectedIncome).amount} ${format(cashFlowBreakdown.expectedIncome).unit}`}</dd>
+                  <dt>Bu ay beklenen maaş</dt><dd>+ {`${format(cashFlowBreakdown.expectedIncome).amount} ${format(cashFlowBreakdown.expectedIncome).unit}`}</dd>
                   <dt>Bu ay kalan ödemeler</dt><dd>− {`${format(cashFlowBreakdown.remainingOutflow).amount} ${format(cashFlowBreakdown.remainingOutflow).unit}`}</dd>
                   <dt>Güvenlik tamponu</dt><dd>− {`${format(buffer).amount} ${format(buffer).unit}`}</dd>
                   <dt>Kasa için ayrılan</dt><dd>{reservedKnown ? `− ${format(cashFlowBreakdown.reserved).amount} ${format(cashFlowBreakdown.reserved).unit}` : 'Doğrulanamadı'}</dd>
                 </dl>
-                <p className="max-w-md leading-relaxed">Maaş, ayın ilk iş gününden itibaren güncel bakiyenin içinde kabul edilir ve tekrar eklenmez. Bu tarihten önce bu ayın beklenen gelirine dahildir. Gelecek ayın maaşı bu tutara eklenmez.</p>
+                <p className="max-w-md leading-relaxed">Maaş, ayın ilk iş gününden itibaren güncel bakiyenin içinde kabul edilir ve tekrar eklenmez. Bu tarihten önce bu ayın beklenen gelirine dahildir. Gelecek ayın maaşı bu tutara eklenmez. Alacaklar, tahsilat kaydedilip hesap bakiyesine geçene kadar bu tutara dahil edilmez.</p>
               </details>
             ) : null}
 

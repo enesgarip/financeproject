@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { Asset, Card, CardExpense, CardInstallment, CardStatementArchive, KasaBucket, Loan, Payment, SalaryHistory, SavingsGoal, SavingsGoalSource } from '../types/database'
+import type { Asset, Card, CardExpense, CardInstallment, CardStatementArchive, Debt, KasaBucket, Loan, Payment, SalaryHistory, SavingsGoal, SavingsGoalSource } from '../types/database'
 import type { FinanceSummaryInput } from './financeSummary'
 import { buildFinancialReport, reportToMarkdown } from './financialReport'
 import type { FinancialReportInput } from './financialReport'
@@ -122,6 +122,17 @@ describe('buildFinancialReport', () => {
     const unknown = reportToMarkdown(buildFinancialReport(input, { now: NOW, safeToSpendBuffer: 500 }))
     expect(unknown).toContain('harcanabilir tutar hesaplanamadı')
     expect(unknown).not.toContain('Bu ay harcanabilir:')
+  })
+
+  it('rapordaki harcanabilir tutara beklenen alacağı eklemez', () => {
+    const receivable: Debt = { ...base, person_name: 'Gizli kişi', direction: 'borç_verdim', value_type: 'TRY',
+      currency: null, amount: 5000, estimated_value_try: 5000, auto_valued: false, valued_at: null,
+      valuation_rate: null, due_date: '2026-06-20', status: 'açık', note: null }
+    const input = { ...empty, cards: [bankCard({ current_balance: 10000 })], debts: [receivable] }
+    const report = reportToMarkdown(buildFinancialReport(input, { now: NOW, safeToSpendBuffer: 500, kasaBuckets: [] }))
+
+    expect(report).toContain('Bu ay harcanabilir: ₺9.500,00')
+    expect(report).toContain('alacak tahsilatı ₺5.000,00')
   })
 
   it('uses partial statement payments in the upcoming cash obligations without exposing names', () => {

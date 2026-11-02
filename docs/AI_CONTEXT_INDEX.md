@@ -1,5 +1,14 @@
 # AI Context Index
 
+3 Kasım harcanabilir tutar: `utils/financeSummary.ts` içindeki
+`CashFlowSummary.spendableIncome` tahsil edilmemiş alacakları dışarıda bırakır.
+Tüm `buildSafeToSpend` tüketicileri ve Özet hesap dökümü bu alanı kullanır.
+`expectedIncome`/`projectedCash` alacaklı plan/projeksiyon olarak korunur.
+Tahsilat hesap bakiyesine geçince sayılır; maaş ilk iş günü kuralı aynıdır.
+Sözleşme: `docs/FINANCE_RULES.md`, `docs/DASHBOARD_ARCHITECTURE.md`.
+Regresyon: `financeSummary.test.ts`, `financialReport.test.ts`,
+`aiContext.test.ts`, `tests/e2e/simplification.spec.ts`.
+
 2 Kasım kategori analizi: `utils/categorySpending.ts` güncel kart dönemlerini,
 gerçek arşiv bağıyla geçmiş kesim aylarını ve takvim aylarını ayrı türetir.
 `pages/AnalysisPage.categories.tsx` kart/dönem seçimi, tarih aralıkları ve kategori

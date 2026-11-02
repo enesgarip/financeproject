@@ -4,7 +4,7 @@
  * Dashboard 8 rakamı yan yana gösteriyordu; hiçbiri doğrudan izin vermiyordu.
  * Bu hesap onları tek karara indirir:
  *
- *   harcanabilir = likit nakit + kalan gelir − kalan yükümlülük − güvenlik tamponu
+ *   harcanabilir = likit nakit + alacak hariç kalan gelir − kalan yükümlülük − güvenlik tamponu
  *
  * Tanımlar bilinçli:
  *  - Likit = banka bakiyeleri + nakit varlıklar. Araç/BES/hisse SAYILMAZ;
@@ -20,7 +20,7 @@ import { diffTL, roundTL, sumTL } from './money'
 export type SafeToSpendInput = {
   /** Banka bakiyeleri + nakit varlıklar (financeSummary.totalCashAssets). */
   liquidCash: number
-  /** Bu ay henüz girmemiş gelir (maaş yatmadıysa). */
+  /** Bu ay henüz girmemiş maaş (CashFlowSummary.spendableIncome); açık alacak hariç. */
   expectedIncome: number
   /** Bugünden ay sonuna kalan nakit çıkışı. */
   remainingOutflow: number
