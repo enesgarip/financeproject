@@ -77,6 +77,9 @@ Dump sahiplik ve yetki tanımlarını sıyırmaz; aksi halde SECURITY DEFINER
 fonksiyonlarının güvenlik sınırı ve managed auth/storage izinleri bozulabilir.
 Restore testi aynı Supabase kurulumu içindeki boş `template0` DB'de provider
 yönetici rolüyle çalışır; finans işlemleri authenticated rolüyle denenir.
+CI'daki parola doğrulaması için yalnız test container'ının kendi
+`POSTGRES_PASSWORD` değeri container içinde psql ortamına verilir; host'a veya
+log'a çıkarılmaz. Test üretim bağlantısı/parolası kabul etmez.
 
 Bu, üretim verisini başka bir projeye taşıma provası değildir. Kurtarma hedefi
 uyumlu PostgreSQL/Supabase extension'ları ve managed rollerle hazırlanmalı;

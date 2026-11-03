@@ -21,6 +21,8 @@ Kalıcı edge regresyonu `tests/edge/pushAutomation.test.ts`, Vitest ve tsc kaps
 Sonraki ürün paketi günlük eylem özeti/vade bekçisi/inceleme kutusudur.
 Scheduler bootstrap secret'ı edge ile aynı `trim` sözleşmesiyle Vault'a yazar;
 boş/satır-sonlu değer guard regresyonundadır.
+Restore smoke testi CI'da yerel container'ın kendi parolasını içeride psql'a
+aktarır; host/log'a çıkarmaz ve üretim bağlantısı kabul etmez.
 
 3 Kasım ikinci tur senaryo/UX denetimi: `docs/SCENARIO_UX_AUDIT_2026-11-03.md`.
 Kabul: `docs/SCENARIO_UX_FIXES_2026-11-03.md`. Sekiz bulgu uygulandı.

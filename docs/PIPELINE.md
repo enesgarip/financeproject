@@ -11,6 +11,8 @@ rolü gerekir; boş genel Postgres'e sıradan kullanıcıyla tek komut vaat edil
 `npm run db:test:backup` gerçek yerel dump/restore + işlem makbuzu/no-op,
 yeni ödeme ve yetki testi; `npm run db:test:notifications` üç paralel worker
 tek claim testidir. İkisi de CI/production database kapısında, SQL suite sonrası.
+Restore admin bağlantısı için yalnız yerel test container'ının kendi
+`POSTGRES_PASSWORD` değeri container içinde kullanılır; üretim sırrı gerekmez.
 
 Release migration ve edge deploy ardından `scripts/configure-push-scheduler.mjs`
 ile DB cron'u 15 dakikaya kurar. Mevcut proje ref/access token/anon key/cron secret

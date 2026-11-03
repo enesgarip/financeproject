@@ -34,7 +34,9 @@ try {
   sql(db, 'drop schema public;')
   // Managed auth/storage default ACL'lerini yalnız provider admin geri kurabilir.
   // Dump ACL'leri sıyırmak private SECURITY DEFINER fonksiyonlarını public'e açardı.
-  docker(['psql','-U','supabase_admin','-d',db,'-v','ON_ERROR_STOP=1','-At','-f','-'], dump)
+  // CI socket'i admin için parola ister. Değer host'a/log'a taşınmaz;
+  // yalnız sabit yerel container'ın kendi env'i psql'a aktarılır.
+  docker(['sh','-c','export PGPASSWORD="$POSTGRES_PASSWORD"; exec psql -w -h 127.0.0.1 -U supabase_admin -d "$1" -v ON_ERROR_STOP=1 -At -f -','restore',db], dump)
   sql(db, `begin; ${claims} set local role authenticated; ${payment} reset role;
     do $$ begin
       if has_function_privilege('anon','public.submit_finance_payment(uuid,text,jsonb)','EXECUTE') or

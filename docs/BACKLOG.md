@@ -10,6 +10,7 @@ Migration/edge/scheduler ve frontend yayını [PR #285](https://github.com/enesg
   hareketi doğru kalır. Gerçek SQL tekrar regresyonu.
 - [x] **AUTO-02:** DB yedeği private + extensions + owner/ACL taşır;
   şifreli artifact 30 gün. Gerçek restore + makbuz/no-op/yeni ödeme ve yetki testi.
+  CI admin bağlantısı test container'ının kendi env parolasıyla doğrulanır.
 - [x] **AUTO-03/04:** Ortak cari tekrar tarihi; eksik kasa/kaynak/fiyat hedef
   tarihçesine sıfır olmaz. Hedef ve net değer damgaları ayrı; aynı gün retry.
 - [x] **AUTO-05–08:** Cihaz bazlı kalıcı claim/lease; PK ile eski log kontrolü;
