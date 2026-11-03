@@ -8,14 +8,15 @@ import { useDailyNetWorthSnapshot } from './useDailyNetWorthSnapshot'
 
 const mocks = vi.hoisted(() => ({
   user: { id: 'u1' } as { id: string } | null,
-  snapshot: { assets: [], cards: [], loans: [], loanInstallments: [], debts: [], payments: [], salaryHistory: [], cardInstallments: [], savingsGoals: [] },
-  record: vi.fn(), fetch: vi.fn(),
+  snapshot: { assets: [], cards: [], loans: [], loanInstallments: [], debts: [], payments: [], salaryHistory: [], cardInstallments: [], savingsGoals: [] as Array<{status: string}> },
+  record: vi.fn(), fetch: vi.fn(), goals: vi.fn(),
 }))
 vi.mock('../auth/useAuth', () => ({ useAuth: () => ({ user: mocks.user }) }))
 vi.mock('../data/repositories/analysisRepo', () => ({ recordNetWorthSnapshot: mocks.record }))
 vi.mock('../data/repositories/financeSnapshotRepo', () => ({ fetchFinanceSnapshot: mocks.fetch }))
 vi.mock('../utils/financeSummary', () => ({ buildFinancialPosition: () => ({ netWorth: 100 }) }))
 vi.mock('../lib/marketRatesClient', () => ({ ensureRatesLoaded: async () => null }))
+vi.mock('./dailyGoalSnapshots', () => ({ recordDailyGoalSnapshots: mocks.goals }))
 
 const clients: QueryClient[] = []
 function setup() {
@@ -39,7 +40,9 @@ beforeEach(() => {
   vi.setSystemTime(new Date('2026-10-16T12:00:00'))
   localStorage.clear()
   mocks.user = { id: 'u1' }
-  mocks.record.mockReset().mockResolvedValue({ ok: true })
+  mocks.snapshot.savingsGoals = []
+  mocks.record.mockReset().mockResolvedValue({ ok: true, data: true })
+  mocks.goals.mockReset().mockResolvedValue(true)
   mocks.fetch.mockReset().mockResolvedValue(mocks.snapshot)
 })
 afterEach(() => { cleanup(); clients.splice(0).forEach(client => client.clear()); vi.useRealTimers(); localStorage.clear() })
@@ -85,4 +88,17 @@ it('çıkışta bekleyen koşuyu iptal eder', async () => {
   hook.rerender()
   await advance(4000)
   expect(mocks.record).not.toHaveBeenCalled()
+})
+
+it('hedef kaydı başarısızsa aynı gün net değeri yinelemeden yeniden dener', async () => {
+  mocks.snapshot.savingsGoals = [{ status: 'active' }]
+  mocks.goals.mockResolvedValueOnce(false)
+  const hook = setup()
+  await advance(4000)
+  expect(localStorage.getItem('denge:goal-snapshot-day')).toBeNull()
+  act(() => hook.result.current('/analiz'))
+  await advance(4000)
+  expect(mocks.goals).toHaveBeenCalledTimes(2)
+  expect(mocks.record).toHaveBeenCalledTimes(1)
+  expect(localStorage.getItem('denge:goal-snapshot-day')).toBe('u1:2026-10-16')
 })

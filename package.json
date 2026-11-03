@@ -47,6 +47,8 @@
     "db:test:provision-cut-order": "docker exec -i supabase_db_financeproject psql -U postgres -d postgres -v ON_ERROR_STOP=1 -f - < supabase/tests/provision_statement_cut_order.sql",
     "db:test:statement-double-payment": "docker exec -i supabase_db_financeproject psql -U postgres -d postgres -v ON_ERROR_STOP=1 -f - < supabase/tests/statement_double_payment_guard.sql",
     "db:test:all": "node scripts/run-db-tests.mjs",
+    "db:test:backup": "node scripts/test-backup-restore.mjs",
+    "db:test:notifications": "node scripts/test-notification-concurrency.mjs",
     "db:reset:local": "supabase db reset --local --no-seed",
     "db:seed:local": "supabase db reset --local",
     "ci:local": "npm exec -- eslint . && npm exec -- tsc -b && npm run test:unit && npm exec -- vite build && npm exec -- playwright test"

@@ -15,6 +15,8 @@ import {
 import { sendTestPushNotification } from '../../services/pushNotifications'
 import {
   fetchLastNotification,
+  fetchAutomationHealth,
+  type AutomationHealth,
   fetchNotificationPreferences,
   upsertNotificationPreferences,
   type NotificationLogEntry,
@@ -84,6 +86,8 @@ export function NotificationSettings() {
   const [checked, setChecked] = useState(false)
   const [prefs, setPrefs] = useState<PrefFlags>(DEFAULT_NOTIFICATION_PREFERENCES)
   const [lastNotif, setLastNotif] = useState<NotificationLogEntry | null>(null)
+  const [health, setHealth] = useState<AutomationHealth | null>(null)
+  const [healthError, setHealthError] = useState(false)
   const [savingPref, setSavingPref] = useState(false)
 
   const refresh = useCallback(async () => {
@@ -105,7 +109,9 @@ export function NotificationSettings() {
 
   const loadPrefs = useCallback(async () => {
     if (!user) return
-    const [prefResult, lastResult] = await Promise.all([fetchNotificationPreferences(), fetchLastNotification()])
+    const [prefResult, lastResult, healthResult] = await Promise.all([fetchNotificationPreferences(), fetchLastNotification(), fetchAutomationHealth()])
+    setHealth(healthResult.ok ? healthResult.data : null)
+    setHealthError(!healthResult.ok)
     if (prefResult.ok && prefResult.data) {
       const row = prefResult.data
       setPrefs({
@@ -194,6 +200,28 @@ export function NotificationSettings() {
     }
   }, [user])
 
+  const httpStatus = health?.scheduler?.last_http_status
+  const lastControlOk = httpStatus != null && httpStatus >= 200 && httpStatus < 300
+  const automationStatus = user ? (
+    <div className="space-y-1 rounded-xl border border-line-strong p-3 text-xs text-ink-muted" aria-live="polite">
+      <p className="font-semibold text-ink">Otomasyon durumu</p>
+      <p>Gün içinde 15 dakikada bir kontrol edilir; cihazda gösterilme zamanı değişebilir.</p>
+      {healthError ? <p className="text-warning">Otomasyon durumu alınamadı. Daha sonra tekrar kontrol et.</p> : null}
+      {health ? <>
+        <p>{!health.scheduler ? 'Zamanlayıcı henüz yapılandırılmadı.' : !health.scheduler.last_dispatched_at ? 'İlk zamanlayıcı kontrolü bekleniyor.' : `Son zamanlayıcı çağrısı: ${new Date(health.scheduler.last_dispatched_at).toLocaleString('tr-TR', { timeZone: 'Europe/Istanbul' })}`}</p>
+        {health.scheduler?.stale ? <p className="text-warning">Zamanlayıcı kontrolü gecikmiş olabilir.</p> : null}
+        {health.scheduler?.last_success_at ? <p>Son başarılı bildirim kontrolü: {new Date(health.scheduler.last_success_at).toLocaleString('tr-TR', { timeZone: 'Europe/Istanbul' })}</p> : null}
+        {health.scheduler?.last_http_status != null ? <p className={lastControlOk ? '' : 'text-warning'}>{lastControlOk ? 'Son tamamlanan bildirim kontrolü başarılı.' : 'Son tamamlanan bildirim kontrolü başarısız.'}</p> : null}
+        {health.maintenance ? <p className={health.maintenance.ok ? '' : 'text-warning'}>{health.maintenance.ok ? 'Son kart bakımı başarılı.' : `Kart bakımında ${health.maintenance.errors} hata var.`}</p> : <p>Kart bakımı için henüz sonuç yok.</p>}
+        {health.maintenance?.last_success_at ? <p>Son başarılı kart bakımı: {new Date(health.maintenance.last_success_at).toLocaleString('tr-TR', { timeZone: 'Europe/Istanbul' })}</p> : null}
+        {health.unknown_deliveries > 0 ? <p className="text-warning">{health.unknown_deliveries} bildirimin teslim sonucu belirsiz; aynı bildirim otomatik yinelenmez.</p> : null}
+        {health.retry_deliveries > 0 ? <p>{health.retry_deliveries} cihaz teslimi yeniden denenecek.</p> : null}
+        {health.failed_deliveries > 0 ? <p className="text-warning">{health.failed_deliveries} cihaz teslimi başarısız. Cihaz iznini kontrol edip test bildirimi deneyebilirsin.</p> : null}
+      </> : null}
+      <Button variant="ghost" size="sm" disabled={savingPref} onClick={() => void loadPrefs()}>Durumu yenile</Button>
+    </div>
+  ) : null
+
   // Desteklenmeyen ortamda kartı GİZLEME — sebebini söyle. En sık vaka iPhone:
   // Safari sekmesinde Web Push yoktur, yalnız ana ekrana eklenmiş PWA'da vardır.
   if (unavailableReason) {
@@ -220,6 +248,7 @@ export function NotificationSettings() {
               Bildirim anahtarı (VAPID) bu sürümde tanımlı değil, gönderim yapılamaz.
             </p>
           )}
+          {automationStatus}
         </CardContent>
       </SurfaceCard>
     )
@@ -340,9 +369,8 @@ export function NotificationSettings() {
               ) : null}
               {quietOn && quietHoursMuteDailyPush(prefs.quiet_hours_start, prefs.quiet_hours_end) ? (
                 <p className="mt-2 text-xs font-medium text-warning">
-                  Bildirimler her gün {String(DAILY_PUSH_HOUR).padStart(2, '0')}:00'de gönderiliyor ve bu saat seçtiğin
-                  sessiz aralığın içinde — bu haliyle hiçbir bildirim ulaşmaz. Aralığı {String(DAILY_PUSH_HOUR).padStart(2, '0')}:00'i
-                  dışarıda bırakacak şekilde daralt.
+                  Günlük kontrol {String(DAILY_PUSH_HOUR).padStart(2, '0')}:00'den sonra başlar.
+                  Bu saat sessiz aralıkta: uygun adaylar sessiz saat bittikten sonraki kontrolde yeniden değerlendirilir.
                 </p>
               ) : null}
             </div>
@@ -352,6 +380,7 @@ export function NotificationSettings() {
                 ? `Son gönderilen: ${NOTIFICATION_TYPE_LABELS[lastNotif.notification_type] ?? lastNotif.notification_type} · ${formatDate(lastNotif.sent_at.slice(0, 10))}`
                 : 'Henüz bildirim gönderilmedi.'}
             </p>
+            {automationStatus}
           </div>
         ) : null}
 

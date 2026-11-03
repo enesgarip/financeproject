@@ -9,6 +9,7 @@
 // Deliberately avoids npm modules: Web Push payload encryption and VAPID signing
 // use WebCrypto plus small local helpers for P-256 public-key derivation.
 
+import { paymentOccurrenceIso, salaryDepositCandidates } from '../_shared/automationRules.ts'
 import { fetchWithTimeout, handlePreflight, jsonResponse, timingSafeEqual } from '../_shared/edge.ts'
 
 const TIME_ZONE = 'Europe/Istanbul'
@@ -57,6 +58,10 @@ type PaymentRow = {
   title: string
   amount: number | string
   due_date: string
+  status: string
+  recurrence: string | null
+  recurrence_day: number | null
+  recurrence_end_date: string | null
 }
 
 type LoanInstallmentRow = {
@@ -143,12 +148,6 @@ type ReconciliationRow = {
 // src/utils/reconciliation.ts STALE_AFTER_DAYS ile aynı tutulmalı.
 const RECONCILE_STALE_AFTER_DAYS = 7
 
-type NotificationLogRow = {
-  user_id: string
-  notification_type: string
-  reference_id: string
-}
-
 type CarReminderRow = {
   id: string
   user_id: string
@@ -172,7 +171,7 @@ type GoalProfileRow = { id: string; name: string; status: string; value_type: st
 
 type SalaryRow = { user_id: string; amount: number; effective_date: string }
 
-type DepositRow = { user_id: string; amount_kurus: number; occurred_at: string }
+type DepositRow = { user_id: string; kind: string; amount_kurus: number; occurred_at: string }
 
 /**
  * Ayırma hatırlatmasının penceresi: ayın 2-5'i.
@@ -281,7 +280,7 @@ type NotificationCandidate = {
 }
 
 type PushNotifyRequest = {
-  mode?: 'test'
+  mode?: 'test' | 'scheduled'
   endpoint?: string | null
 }
 
@@ -290,11 +289,12 @@ type DeliverySummary = {
   deviceDeliveries: number
   staleDeleted: number
   failed: number
+  unknown: number
 }
 
 type RestClient = {
   select<T>(table: string, params: Record<string, string | string[]>): Promise<T[]>
-  insert(table: string, rows: Record<string, unknown>[]): Promise<void>
+  rpc<T>(name: string, args: Record<string, unknown>): Promise<T>
   deleteById(table: string, id: string): Promise<void>
 }
 
@@ -341,12 +341,22 @@ function getServiceRoleKey(): string | null {
  * için kabul edilmeye devam eder (fonksiyon kendi env'inden zaten alıyor);
  * GitHub secrets'taki kopya emekliye ayrılır.
  */
-function isAuthorized(req: Request, serviceRoleKey: string): boolean {
+async function isAuthorized(req: Request, serviceRoleKey: string): Promise<boolean> {
   // İki taraf da trim'lenir: sır bir kez pipe'tan satır-sonuyla set edilmişti
   // ve fark 401 olarak döndü — görünmez whitespace sınıfı burada ölür.
   const cronSecret = Deno.env.get('PUSH_CRON_SECRET')?.trim() || null
   const headerSecret = req.headers.get('x-cron-secret')?.trim() || null
   if (cronSecret && headerSecret && timingSafeEqual(headerSecret, cronSecret)) return true
+
+  const timestamp = req.headers.get('x-cron-timestamp') ?? ''
+  const nonce = req.headers.get('x-cron-nonce') ?? ''
+  const signature = req.headers.get('x-cron-signature') ?? ''
+  if (cronSecret && /^\d{10}$/.test(timestamp) && /^[a-f0-9-]{36}$/.test(nonce)
+    && /^[a-f0-9]{64}$/.test(signature) && Math.abs(Date.now() / 1000 - Number(timestamp)) <= 120) {
+    const bytes = await hmacSha256(textEncoder.encode(cronSecret), textEncoder.encode(`${timestamp}:${nonce}`))
+    const expected = Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('')
+    if (timingSafeEqual(signature, expected)) return true
+  }
 
   const bearer = bearerToken(req)
   return bearer === serviceRoleKey || req.headers.get('apikey') === serviceRoleKey
@@ -363,7 +373,7 @@ async function readRequestBody(req: Request): Promise<PushNotifyRequest> {
     if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {}
     const body = parsed as Record<string, unknown>
     return {
-      mode: body.mode === 'test' ? 'test' : undefined,
+      mode: body.mode === 'test' ? 'test' : body.mode === 'scheduled' ? 'scheduled' : undefined,
       endpoint: typeof body.endpoint === 'string' && body.endpoint.trim() ? body.endpoint.trim() : null,
     }
   } catch {
@@ -404,50 +414,27 @@ function createRestClient(supabaseUrl: string, serviceRoleKey: string): RestClie
 
   return {
     async select<T>(table: string, params: Record<string, string | string[]>): Promise<T[]> {
-      const url = new URL(`${baseUrl}/rest/v1/${table}`)
-      for (const [key, value] of Object.entries(params)) {
-        if (Array.isArray(value)) {
-          for (const item of value) url.searchParams.append(key, item)
-        } else {
-          url.searchParams.set(key, value)
+      const rows: T[] = []
+      for (let offset = 0; ; offset += 500) {
+        const url = new URL(`${baseUrl}/rest/v1/${table}`)
+        const order = params.order ? `${params.order},id.asc` : (table === 'notification_preferences' ? 'user_id.asc' : 'id.asc')
+        for (const [key, value] of Object.entries({ ...params, order, offset: String(offset), limit: '500' })) {
+          for (const item of Array.isArray(value) ? value : [value]) url.searchParams.append(key, item)
         }
+        const res = await fetchWithTimeout(url, { headers: { ...baseHeaders, Accept: 'application/json' } }, DB_TIMEOUT_MS)
+        if (!res.ok) throw new Error(`${table} select failed (${res.status})`)
+        const page = await res.json() as T[]
+        rows.push(...page)
+        if (page.length < 500) return rows
       }
-
-      const res = await fetchWithTimeout(
-        url,
-        {
-          headers: {
-            ...baseHeaders,
-            Accept: 'application/json',
-          },
-        },
-        DB_TIMEOUT_MS,
-      )
-
-      if (!res.ok) throw new Error(`${table} select failed (${res.status}): ${await res.text()}`)
-      return (await res.json()) as T[]
     },
-
-    async insert(table, rows) {
-      if (rows.length === 0) return
-
-      const res = await fetchWithTimeout(
-        `${baseUrl}/rest/v1/${table}`,
-        {
-          method: 'POST',
-          headers: {
-            ...baseHeaders,
-            'Content-Type': 'application/json',
-            Prefer: 'return=minimal',
-          },
-          body: JSON.stringify(rows),
-        },
-        DB_TIMEOUT_MS,
-      )
-
-      if (!res.ok && res.status !== 409) {
-        throw new Error(`${table} insert failed (${res.status}): ${await res.text()}`)
-      }
+    async rpc<T>(name: string, args: Record<string, unknown>): Promise<T> {
+      const res = await fetchWithTimeout(`${baseUrl}/rest/v1/rpc/${name}`, {
+        method: 'POST', headers: { ...baseHeaders, 'Content-Type': 'application/json' }, body: JSON.stringify(args),
+      }, DB_TIMEOUT_MS)
+      if (!res.ok) throw new Error(`${name} failed (${res.status})`)
+      const text = await res.text()
+      return text ? JSON.parse(text) as T : undefined as T
     },
 
     async deleteById(table, id) {
@@ -745,7 +732,8 @@ async function sendWebPush(
     {
       method: 'POST',
       headers: {
-        TTL: String(PUSH_TTL_SECONDS),
+      // Günlük metin ("yarın", "bugün") ertesi güne taşınmasın.
+      TTL: String(Math.max(0, Math.min(PUSH_TTL_SECONDS, Math.floor((Date.parse(`${addDaysIso(dateOnlyInTimeZone(), 1)}T00:00:00+03:00`) - Date.now()) / 1000)))),
         Urgency: 'normal',
         'Content-Encoding': 'aes128gcm',
         'Content-Type': 'application/octet-stream',
@@ -879,8 +867,7 @@ async function loadCandidates(
   const userFilter = inFilter(userIds)
 
   const [
-    paymentsTomorrow,
-    paymentsThisWeek,
+    paymentRows,
     loanInstallmentsTomorrow,
     loanInstallmentsThisWeek,
     cards,
@@ -891,16 +878,8 @@ async function loadCandidates(
     monthDeposits,
   ] = await Promise.all([
     db.select<PaymentRow>('payments', {
-      select: 'id,user_id,title,amount,due_date',
-      user_id: userFilter,
-      status: 'eq.bekliyor',
-      due_date: `eq.${tomorrowIso}`,
-    }),
-    db.select<PaymentRow>('payments', {
-      select: 'id,user_id,title,amount,due_date',
-      user_id: userFilter,
-      status: 'eq.bekliyor',
-      due_date: [`gte.${weekStartIso}`, `lte.${weekEndIso}`],
+      select: 'id,user_id,title,amount,due_date,status,recurrence,recurrence_day,recurrence_end_date',
+      user_id: userFilter, status: 'eq.bekliyor',
     }),
     db.select<LoanInstallmentRow>('loan_installments', {
       select: 'id,user_id,loan_id,installment_no,due_date,amount',
@@ -949,12 +928,21 @@ async function loadCandidates(
       order: 'effective_date.desc',
     }),
     db.select<DepositRow>('account_ledger', {
-      select: 'user_id,amount_kurus,occurred_at',
+      select: 'user_id,kind,amount_kurus,occurred_at',
       user_id: userFilter,
-      kind: 'eq.deposit',
-      occurred_at: `gte.${todayIso.slice(0, 7)}-01`,
+      occurred_at: [`gte.${todayIso.slice(0, 7)}-01T00:00:00+03:00`, `lte.${todayIso}T23:59:59.999999+03:00`],
     }),
   ])
+
+  const occurrences = (from: string, to: string) => paymentRows.flatMap(payment => {
+    const months = new Set([from.slice(0, 7), to.slice(0, 7)])
+    return [...months].flatMap(month => {
+      const due = paymentOccurrenceIso(payment, month + '-01')
+      return due && due >= from && due <= to ? [{ ...payment, due_date: due }] : []
+    })
+  })
+  const paymentsTomorrow = occurrences(tomorrowIso, tomorrowIso)
+  const paymentsThisWeek = occurrences(weekStartIso, weekEndIso)
 
   const loanIds = Array.from(
     new Set([...loanInstallmentsTomorrow, ...loanInstallmentsThisWeek].map((row) => row.loan_id)),
@@ -1031,7 +1019,7 @@ async function loadCandidates(
     if (!salaryByUser.has(row.user_id) && row.amount > 0) salaryByUser.set(row.user_id, row.amount)
   }
   const salaryLandedUsers = new Set<string>()
-  for (const deposit of monthDeposits) {
+  for (const deposit of salaryDepositCandidates(monthDeposits)) {
     const salary = salaryByUser.get(deposit.user_id)
     if (!salary) continue
     if (Math.abs(deposit.amount_kurus / 100 - salary) <= salary * SALARY_MATCH_TOLERANCE) {
@@ -1427,35 +1415,6 @@ async function loadCandidates(
   return candidates
 }
 
-function logKey(candidate: Pick<NotificationCandidate, 'userId' | 'notificationType' | 'referenceId'>): string {
-  return `${candidate.userId}:${candidate.notificationType}:${candidate.referenceId}`
-}
-
-async function filterAlreadySent(db: RestClient, candidates: NotificationCandidate[]): Promise<NotificationCandidate[]> {
-  if (candidates.length === 0) return []
-
-  const userIds = Array.from(new Set(candidates.map((candidate) => candidate.userId)))
-  const notificationTypes = Array.from(new Set(candidates.map((candidate) => candidate.notificationType)))
-  const wantedKeys = new Set(candidates.map(logKey))
-
-  const logs = await db.select<NotificationLogRow>('notification_log', {
-    select: 'user_id,notification_type,reference_id',
-    user_id: inFilter(userIds),
-    notification_type: inFilter(notificationTypes),
-  })
-  const sentKeys = new Set(
-    logs
-      .map((log) => logKey({
-        userId: log.user_id,
-        notificationType: log.notification_type,
-        referenceId: log.reference_id,
-      }))
-      .filter((key) => wantedKeys.has(key)),
-  )
-
-  return candidates.filter((candidate) => !sentKeys.has(logKey(candidate)))
-}
-
 function groupSubscriptionsByUser(subscriptions: PushSubscriptionRow[]): Map<string, PushSubscriptionRow[]> {
   const subscriptionsByUser = new Map<string, PushSubscriptionRow[]>()
   for (const subscription of subscriptions) {
@@ -1475,59 +1434,40 @@ async function deliverCandidates(
   vapidSubject: string,
   shouldWriteLog: boolean,
 ): Promise<DeliverySummary> {
-  const sentLogs: Record<string, unknown>[] = []
-  let sent = 0
-  let delivered = 0
-  let staleDeleted = 0
-  let failed = 0
-
+  let sent = 0, delivered = 0, staleDeleted = 0, failed = 0, unknown = 0
   for (const candidate of candidates) {
-    const userSubscriptions = subscriptionsByUser.get(candidate.userId) ?? []
     let candidateDelivered = 0
-
-    for (const subscription of userSubscriptions) {
+    for (const subscription of subscriptionsByUser.get(candidate.userId) ?? []) {
+      let token: string | null = null
+      if (shouldWriteLog) {
+        const claim = await db.rpc<{ token: string } | null>('claim_notification_delivery', {
+          p_user_id: candidate.userId, p_type: candidate.notificationType,
+          p_reference: candidate.referenceId, p_subscription_id: subscription.id,
+        })
+        if (!claim) continue
+        token = claim.token
+      }
+      let outcome: 'accepted' | 'retry' | 'discarded' | 'unknown'
+      let stale = false
       try {
         const res = await sendWebPush(subscription, candidate.payload, vapidKeys, vapidSubject)
-        if (res.status === 404 || res.status === 410) {
-          await db.deleteById('push_subscriptions', subscription.id)
-          staleDeleted += 1
-          continue
-        }
-
-        if (res.ok) {
-          delivered += 1
-          candidateDelivered += 1
-          continue
-        }
-
-        failed += 1
-        console.error(`Push failed ${res.status} for ${subscription.endpoint}: ${await res.text()}`)
-      } catch (error) {
-        failed += 1
-        console.error('Push send failed', error)
+        stale = res.status === 404 || res.status === 410
+        outcome = res.ok ? 'accepted' : stale ? 'discarded' : (res.status === 429 || res.status >= 500) ? 'retry' : 'discarded'
+      } catch {
+        // Timeout/bağlantı kaybında sunucunun kabul edip etmediği bilinmez.
+        outcome = 'unknown'
       }
-    }
-
-    if (candidateDelivered > 0) {
-      sent += 1
-      if (shouldWriteLog) {
-        sentLogs.push({
-          user_id: candidate.userId,
-          notification_type: candidate.notificationType,
-          reference_id: candidate.referenceId,
-        })
+      if (token) {
+        try { await db.rpc('finish_notification_delivery', { p_token: token, p_status: outcome }) }
+        catch { failed++; unknown++; continue } // Lease dolunca kalıcı unknown; kör retry yok.
       }
+      if (stale) { await db.deleteById('push_subscriptions', subscription.id); staleDeleted++; continue }
+      if (outcome === 'accepted') { delivered++; candidateDelivered++ }
+      else { failed++; if (outcome === 'unknown') unknown++ }
     }
+    if (candidateDelivered > 0) sent++
   }
-
-  await db.insert('notification_log', sentLogs)
-
-  return {
-    sent,
-    deviceDeliveries: delivered,
-    staleDeleted,
-    failed,
-  }
+  return { sent, deviceDeliveries: delivered, staleDeleted, failed, unknown }
 }
 
 function buildTestCandidate(userId: string): NotificationCandidate {
@@ -1571,7 +1511,7 @@ Deno.serve(async (req: Request) => {
     : null
   if (body.mode === 'test') {
     if (!testUserId) return jsonResponse({ error: 'Unauthorized' }, 401)
-  } else if (!isAuthorized(req, serviceRoleKey)) {
+  } else if (!await isAuthorized(req, serviceRoleKey)) {
     return jsonResponse({ error: 'Unauthorized' }, 401)
   }
 
@@ -1626,7 +1566,7 @@ Deno.serve(async (req: Request) => {
     // loglarında izlenebilir). RPC'ler idempotent, çifte koşu güvenli.
     // En-iyi-çaba: bakım hatası bildirimleri BLOKLAMAZ; abonelik kontrolünden
     // ÖNCE koşar — bakım aboneliğe bağlı bir iş değildir.
-    let maintenance: unknown = null
+    let maintenance: { error?: string; ok?: boolean; errors?: number } = {}
     try {
       const maintenanceResponse = await fetchWithTimeout(
         `${supabaseUrl}/rest/v1/rpc/run_scheduled_card_maintenance`,
@@ -1648,20 +1588,21 @@ Deno.serve(async (req: Request) => {
       maintenance = { error: error instanceof Error ? error.message : 'maintenance failed' }
     }
 
+    const maintenanceFailed = Boolean(maintenance.error) || maintenance.ok === false || (maintenance.errors ?? 0) > 0
     const subscriptions = await db.select<PushSubscriptionRow>('push_subscriptions', {
       select: 'id,user_id,endpoint,p256dh,auth',
     })
 
     if (subscriptions.length === 0) {
       return jsonResponse({
-        ok: true,
+        ok: !maintenanceFailed,
         today: todayIso,
         maintenance,
         candidates: 0,
         sent: 0,
         staleDeleted: 0,
         failed: 0,
-      })
+      }, maintenanceFailed ? 502 : 200)
     }
 
     const preferencesByUser = await loadPreferences(
@@ -1673,7 +1614,8 @@ Deno.serve(async (req: Request) => {
       preferencesByUser,
       currentHourInTimeZone(),
     )
-    const candidates = await filterAlreadySent(db, allowedCandidates)
+    // 07:00 öncesi bugünün günlük adayını erken gönderme; sessiz saatten sonra yeniden değerlendirilir.
+    const candidates = currentHourInTimeZone() >= 7 ? allowedCandidates : []
     const result = await deliverCandidates(
       db,
       groupSubscriptionsByUser(subscriptions),
@@ -1682,16 +1624,16 @@ Deno.serve(async (req: Request) => {
       vapidSubject,
       true,
     )
-    const failedEveryDelivery = candidates.length > 0 && result.sent === 0 && result.failed > 0
+    const failedRun = maintenanceFailed || result.failed > 0
 
     return jsonResponse({
-      ok: !failedEveryDelivery,
+      ok: !failedRun,
       today: todayIso,
       weekday,
       maintenance,
       candidates: candidates.length,
       ...result,
-    }, failedEveryDelivery ? 502 : 200)
+    }, failedRun ? 502 : 200)
   } catch (error) {
     console.error('push-notify failed', error)
     return jsonResponse({ error: 'Push bildirimleri gönderilemedi.' }, 500)

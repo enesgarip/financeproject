@@ -7,6 +7,21 @@ export type NotificationLogEntry = {
   sent_at: string
 }
 
+export type AutomationHealth = {
+  maintenance: { ran_at: string; ok: boolean; errors: number; last_success_at: string | null } | null
+  scheduler: { last_dispatched_at: string | null; last_response_at: string | null; last_http_status: number | null; last_success_at: string | null; stale: boolean } | null
+  unknown_deliveries: number
+  retry_deliveries: number
+  failed_deliveries: number
+}
+
+export async function fetchAutomationHealth(): Promise<Result<AutomationHealth>> {
+  const { data, error } = await supabase.rpc('fetch_automation_health')
+  if (error) return fail(appErrorFromSupabase(error, 'Otomasyon durumu okunamadı.'))
+  if (!data || typeof data !== 'object' || Array.isArray(data) || !('unknown_deliveries' in data)) return fail({ type: 'unknown', message: 'Otomasyon durumu doğrulanamadı.' })
+  return ok(data as AutomationHealth)
+}
+
 export async function fetchNotificationPreferences(): Promise<Result<NotificationPreferences | null>> {
   const { data, error } = await supabase
     .from('notification_preferences')

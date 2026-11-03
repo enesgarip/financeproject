@@ -1,6 +1,19 @@
 # Finance Rules
 
-Last reviewed: 2026-11-03
+Last reviewed: 2026-11-04
+
+4 Kasım otomasyon sözleşmesi: `docs/AUTOMATION_FIXES_2026-11-04.md`.
+Tek harfli parça içeren kişi adı SMS'te otomatik borç/alacak eşlemesi değildir;
+kanıtsız kayıtta banka hareketi sürer, kişisel kayıt değişmez. Başarılı/tekrar
+finansal yollar korunur, geçmiş tahminle yazılmaz. Günlük hedef fotoğrafı eksik
+kaynak/fiyatı sıfır saymaz; gerçek sıfır yazılır. Net değer ve hedef başarı
+izleri ayrıdır. Maaşa eşit transfer ipucu sayılmaz; kalan tutar benzerliği
+kesin maaş/işveren kanıtı değildir ve otomatik rezerv/maaş yazımı üretmez.
+UI/edge aylık vade aynı saf tekrar kuralını kullanır. Bildirim tekilliği cihaz
+bazlı SQL claim'dir; belirsiz dış teslim kör tekrar edilmez. Bakım alt hatası
+başarı sayılmaz. Kullanıcı JSON export'u dışındaki private işlem hash'i ayrı
+DB felaket kurtarma yedeğinde korunur; reset/JSON restore sözleşmesi değişmez.
+Bu düzeltmeler yerelde doğrulandı; yayın [PR #285](https://github.com/enesgarip/financeproject/pull/285) üzerinden izlenir.
 
 İkinci tur kabulü: `docs/SCENARIO_UX_FIXES_2026-11-03.md`.
 Arşivli kartın dönem içi vadesi gerçek kesimden gelir; eski açık ekstrenin

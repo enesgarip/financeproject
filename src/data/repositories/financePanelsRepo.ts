@@ -6,12 +6,13 @@ const LEDGER_PAGE_SIZE = 500
 
 /** PostgREST'in varsayılan 1000 satır sınırı projeksiyonu eksik bırakamaz. */
 async function fetchLedgerHistory<T extends { id: string; occurred_at: string }>(
-  table: 'card_ledger' | 'account_ledger', cardId: string, since?: string,
+  table: 'card_ledger' | 'account_ledger', cardId: string | null, since?: string,
 ): Promise<Result<T[]>> {
   const rows: T[] = []
   let beforeId: string | null = null
   for (;;) {
-    let query = supabase.from(table).select('*').eq('card_id', cardId).order('id', { ascending: false })
+    let query = supabase.from(table).select('*').order('id', { ascending: false })
+    if (cardId !== null) query = query.eq('card_id', cardId)
     if (since !== undefined) query = query.gte('occurred_at', since)
     if (beforeId !== null) query = query.lt('id', beforeId)
     const { data, error } = await query.limit(LEDGER_PAGE_SIZE)
@@ -52,14 +53,7 @@ export async function fetchAccountLedgerEvents(cardId: string, limit?: number): 
  * `findSalaryChangeCandidate`) aynı gün eşit tutarlı çıkışı arar.
  */
 export async function fetchAccountEventsSince(since: string): Promise<Result<AccountLedger[]>> {
-  const { data, error } = await supabase
-    .from('account_ledger')
-    .select('*')
-    .gte('occurred_at', since)
-    .order('occurred_at', { ascending: true })
-    .limit(200)
-
-  return resultFromSupabase((data ?? []) as AccountLedger[], error, 'Hesap hareketleri yüklenemedi.')
+  return fetchLedgerHistory<AccountLedger>('account_ledger', null, since.length === 10 ? `${since}T00:00:00+03:00` : since)
 }
 
 export async function fetchCardLedgerEvents(cardId: string): Promise<Result<CardLedger[]>> {

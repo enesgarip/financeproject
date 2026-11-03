@@ -54,6 +54,31 @@ async function mockApp(page: Page, theme: string, overrides: typeof tables = {})
 
 const sampleDebt = { ...base, id: 'debt-1', person_name: 'Örnek borçlu', direction: 'borç_aldım', value_type: 'TRY', currency: null, amount: 1000, estimated_value_try: 1000, auto_valued: false, due_date: null, status: 'açık' }
 
+test('320px otomasyon durumu API sonucunu gösterir ve yenileyince bekleyenleri günceller', async ({ page }) => {
+  await page.setViewportSize({width:320,height:900})
+  await mockApp(page,'light')
+  let healthy=false
+  await page.route('**/rest/v1/rpc/fetch_automation_health',route=>{
+    expect(route.request().method()).toBe('POST')
+    return route.fulfill({json:{maintenance:{ran_at:now,last_success_at:now,ok:healthy,errors:healthy?0:2},scheduler:{last_dispatched_at:now,last_response_at:now,last_success_at:now,last_http_status:healthy?200:502,stale:false},unknown_deliveries:healthy?0:1,retry_deliveries:healthy?0:2,failed_deliveries:0}})
+  })
+  const errors:string[]=[]
+  page.on('pageerror',error=>errors.push(error.message))
+  await page.goto('/veri-sagligi/islemler')
+  await page.locator('summary').filter({hasText:'Bildirim ayarları'}).click()
+  await expect(page.getByText('Kart bakımında 2 hata var.',{exact:true})).toBeVisible()
+  await expect(page.getByText(/1 bildirimin teslim sonucu belirsiz/)).toBeVisible()
+  await expect(page.getByText('Son tamamlanan bildirim kontrolü başarısız.',{exact:true})).toBeVisible()
+  healthy=true
+  await page.getByRole('button',{name:'Durumu yenile',exact:true}).click()
+  await expect(page.getByText('Son kart bakımı başarılı.',{exact:true})).toBeVisible()
+  await expect(page.getByText(/1 bildirimin teslim sonucu belirsiz/)).toHaveCount(0)
+  await expect(page.getByText('Son tamamlanan bildirim kontrolü başarılı.',{exact:true})).toBeVisible()
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1)).toBe(true)
+  expect(errors).toEqual([])
+  await page.screenshot({path:'test-results/automation-health-320.png',fullPage:true})
+})
+
 test('kirli ödeme formunda tarayıcı Geri vazgeçilince rota ve tutar korunur', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 900 })
   await mockApp(page, 'light', { debts: [sampleDebt] })

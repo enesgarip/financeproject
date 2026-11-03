@@ -13,6 +13,7 @@
  */
 import type { AccountLedger } from '../types/database'
 import { toTL } from './money'
+import { salaryDepositCandidates, salaryEventDay } from '../../supabase/functions/_shared/automationRules'
 
 const SALARY_MATCH_TOLERANCE = 0.1
 
@@ -23,8 +24,8 @@ export type SalaryDepositMatch = {
 }
 
 /**
- * Verilen (çağıranın ay başından beri diye pencerelediği) deposit event'leri
- * içinde maaşa benzeyen ilk girişi bulur; yoksa null.
+ * Ay başından beri TÜM hesap hareketlerinde transferi eleyip maaşa benzeyen
+ * ilk girişi bulur; yoksa null. Bu sinyal işveren/maaş kimliği doğrulaması değildir.
  */
 export function findSalaryDeposit(
   deposits: Array<Pick<AccountLedger, 'kind' | 'occurred_at' | 'amount_kurus'>>,
@@ -33,13 +34,11 @@ export function findSalaryDeposit(
   if (!salaryAmount || salaryAmount <= 0) return null
 
   const tolerance = salaryAmount * SALARY_MATCH_TOLERANCE
-  const match = deposits
-    .filter((event) => event.kind === 'deposit')
+  const match = salaryDepositCandidates(deposits)
     .map((event) => ({ occurredAt: event.occurred_at, amount: toTL(event.amount_kurus) }))
-    .filter((event) => event.amount > 0 && Math.abs(event.amount - salaryAmount) <= tolerance)
-    .sort((a, b) => a.occurredAt.localeCompare(b.occurredAt))[0]
+    .find((event) => event.amount > 0 && Math.abs(event.amount - salaryAmount) <= tolerance)
 
-  return match ? { matchedAt: match.occurredAt.slice(0, 10), amount: match.amount } : null
+  return match ? { matchedAt: salaryEventDay(match.occurredAt), amount: match.amount } : null
 }
 
 /** Değişiklik adayının bandı: maaşın yarısından az giriş maaş değildir (prim
@@ -65,20 +64,10 @@ export function findSalaryChangeCandidate(
   // Maaş ±%10 bandında yattıysa değişiklik yok; öneri gürültü olur.
   if (findSalaryDeposit(events, salaryAmount)) return null
 
-  // Gün + mutlak kuruş anahtarıyla çıkışlar: transfer bacağı eşleme tablosu.
-  const outflowKeys = new Set(
-    events
-      .filter((event) => toTL(event.amount_kurus) < 0)
-      .map((event) => `${event.occurred_at.slice(0, 10)}:${Math.abs(event.amount_kurus)}`),
-  )
-
-  const candidate = events
-    .filter((event) => event.kind === 'deposit')
-    .map((event) => ({ occurredAt: event.occurred_at, amount: toTL(event.amount_kurus), kurus: event.amount_kurus }))
+  const candidate = salaryDepositCandidates(events)
+    .map((event) => ({ occurredAt: event.occurred_at, amount: toTL(event.amount_kurus) }))
     .filter((event) => event.amount >= salaryAmount * SALARY_CHANGE_MIN_RATIO)
-    .filter((event) => event.amount <= salaryAmount * SALARY_CHANGE_MAX_RATIO)
-    .filter((event) => !outflowKeys.has(`${event.occurredAt.slice(0, 10)}:${Math.abs(event.kurus)}`))
-    .sort((a, b) => a.occurredAt.localeCompare(b.occurredAt))[0]
+    .find((event) => event.amount <= salaryAmount * SALARY_CHANGE_MAX_RATIO)
 
-  return candidate ? { matchedAt: candidate.occurredAt.slice(0, 10), amount: candidate.amount } : null
+  return candidate ? { matchedAt: salaryEventDay(candidate.occurredAt), amount: candidate.amount } : null
 }

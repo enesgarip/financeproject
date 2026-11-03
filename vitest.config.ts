@@ -21,7 +21,7 @@ export default defineConfig({
     },
   },
   test: {
-    include: ['src/**/*.test.{ts,tsx}'],
+    include: ['src/**/*.test.{ts,tsx}', 'tests/edge/**/*.test.ts'],
     environment: 'node',
     // Varsayılan 'forks' her test dosyası için child process açar (~110 dosya ×
     // spawn maliyeti). Testler saf util + pragma'lı happy-dom; paylaşılan
