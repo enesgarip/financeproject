@@ -35,10 +35,12 @@ export function CardLedgerPanel({
   card,
   onChanged,
   formatAmount = formatCurrency,
+  maskText = (text: string) => text,
 }: {
   card: Card
   onChanged?: () => void | Promise<void>
   formatAmount?: (value: number | null | undefined) => string
+  maskText?: (text: string) => string
 }) {
   const historyRef = useRef<HTMLOListElement>(null)
   const [pagination, setPagination] = useState({ cardId: card.id, page: 0 })
@@ -196,8 +198,8 @@ export function CardLedgerPanel({
                   <span className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1">
                     <span className={`font-semibold ${meta.className}`}>{meta.label}</span>
                     <span className="text-xs text-ink-muted">{formatDate(event.occurred_at.slice(0, 10))}</span>
-                    {(event.kind === 'adjustment' || event.kind === 'reclass') && event.note ? (
-                      <span className="w-full whitespace-pre-wrap break-words text-xs text-ink-muted">{event.note}</span>
+                    {event.note ? (
+                      <span className="w-full whitespace-pre-wrap break-words text-xs text-ink-muted">{maskText(event.note)}</span>
                     ) : null}
                   </span>
                   <span className={`serit-num break-words font-semibold min-[460px]:text-right ${meta.className}`}>

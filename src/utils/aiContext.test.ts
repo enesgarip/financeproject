@@ -38,6 +38,13 @@ function emptyInput(): AiContextInput {
   }
 }
 
+it('eksik kart takviminden olumlu harcama önerisi üretmez', () => {
+  const input = { ...emptyInput(), cards: [card({ card_type: 'kredi_karti', debt_amount: 25000, statement_debt_amount: 10000, statement_day: null, due_day: null })] }
+  const out = buildAiFinanceContext(input, { now: NOW, safeToSpendBuffer: 5000, kasaBuckets: [] })
+  expect(out).toContain('Güvenle harcanabilir: doğrulanamadı')
+  expect(out).toContain('Harcama önerisi verme.')
+})
+
 function asset(overrides: Partial<Asset>): Asset {
   return { ...base, name: 'Varlık', category: 'Nakit', amount: 0, unit: 'TRY', currency: null, symbol: null, unit_cost: null, estimated_value_try: 0, auto_valued: false, valued_at: null, valuation_rate: null, source: null, note: null, ...overrides }
 }

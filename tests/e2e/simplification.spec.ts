@@ -71,6 +71,34 @@ test('ay sonuna kalan açık alacağı saymaz ve hesap dökümüyle tutarlıdır
   await expect(breakdown).toContainText('tahsilat kaydedilip hesap bakiyesine geçene kadar bu tutara dahil edilmez')
 })
 
+test('eksik kart takviminde harcanabilir sayı ve satın alma önerisi sunulmaz', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 900 })
+  await mockApp(page, 'light', { cards: [bank, { ...tables.cards[2], debt_amount: 25000, statement_debt_amount: 10000, current_period_spending: 15000, statement_day: null, due_day: null }] })
+  await page.goto('/')
+  const hero = page.getByText('Ay sonuna kalan', { exact: true }).locator('..')
+  await expect(hero).toContainText('harcanabilir tutar doğrulanamadı')
+  await expect(hero).not.toContainText('günde')
+  await expect(hero.getByRole('link', { name: 'Kart takvimini tamamla' })).toBeVisible()
+  await page.goto('/alsam-mi')
+  await expect(page.getByRole('alert')).toContainText('satın alma değerlendirmesi doğrulanamadı')
+  await page.goto('/odemeler/liste')
+  await expect(page.getByText('Finansal veriler henüz doğrulanamadı.', { exact: false })).toBeVisible()
+})
+
+test('gecikmiş ve vadesiz borçlar harcanabilir tutardan bir kez düşer', async ({ page }) => {
+  await mockApp(page, 'light', {
+    cards: [bank],
+    payments: [{ ...tables.payments[0], recurrence: 'none', recurrence_day: null, due_date: '2026-09-20', amount: 1000 }],
+    debts: [{ ...base, id: 'borrowed', person_name: 'Örnek borç', direction: 'borç_aldım', value_type: 'TRY', currency: null, amount: 2000, estimated_value_try: 2000, auto_valued: false, due_date: null, status: 'açık' }],
+  })
+  await page.addInitScript(() => localStorage.setItem('denge:safe-to-spend-buffer', '5000'))
+  await page.goto('/')
+  const hero = page.getByText('Ay sonuna kalan', { exact: true }).locator('..')
+  await expect(hero).toContainText('11.700,00')
+  await page.getByText('Nasıl hesaplandı?', { exact: true }).click()
+  await expect(page.locator('dt').filter({ hasText: 'Kalan, gecikmiş ve vadesiz ödemeler' }).locator('+ dd')).toContainText('3.000,00')
+})
+
 for (const [width, theme] of [[320, 'light'], [390, 'dark'], [1280, 'light']] as const) {
   test(`kategori analizi ekstre dönemi, geçmiş ay ve kart seçimi: ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 })
@@ -210,11 +238,30 @@ for (const types of [['gram'], ['gram', 'ceyrek']]) {
 }
 
 for (const width of [320, 390, 1280]) {
+  test(`uzun hesap geçmişinin eski kayıtlarına ulaşılır: ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 })
+    await mockApp(page, width === 390 ? 'dark' : 'light', {
+      cards: [{ ...bank, current_balance: 1206 }],
+      account_ledger: Array.from({ length: 1206 }, (_, i) => ({ ...base, id: String(i).padStart(6, '0'), card_id: 'bank-1', kind: 'deposit', amount_kurus: 100, occurred_at: now, source_table: null, source_id: null, note: `Hesap açıklaması ${i}: Eski kayıtlara erişim korunmalı.` })),
+    })
+    await page.goto('/kartlar?section=hesaplar&card=bank-1')
+    const list = page.getByRole('list', { name: 'Hesap hareketi kayıtları' })
+    await expect(list.getByRole('listitem')).toHaveCount(8)
+    await expect(list).toContainText('Hesap açıklaması 1205:')
+    await expect(page.getByRole('button', { name: /ledger.a göre düzelt/i })).toHaveCount(0)
+    await page.getByRole('button', { name: 'En eski', exact: true }).click()
+    await expect(list.getByRole('listitem')).toHaveCount(6)
+    await expect(list).toContainText('Hesap açıklaması 0:')
+    await expect(list).toBeFocused()
+    await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1)
+    await list.screenshot({ path: `test-results/account-ledger-${width}.png` })
+  })
+
   test(`uzun kart geçmişi tam okunur ve sayfalanır: ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 })
     await mockApp(page, width === 390 ? 'dark' : 'light', {
       cards: [{ ...tables.cards[2], debt_amount: 1005, current_period_spending: 1005 }],
-      card_ledger: Array.from({ length: 1005 }, (_, i) => ({ ...base, id: String(i).padStart(6, '0'), card_id: 'credit-1', kind: 'adjustment', amount_kurus: 100, occurred_at: now, source_table: null, source_id: null, statement_delta_kurus: null, current_delta_kurus: null, provision_delta_kurus: null, note: `Deneme açıklaması ${i}: Önceki hareketlerin bütün açıklamaları dar ekranda da kesilmeden okunabilmeli.` })),
+      card_ledger: Array.from({ length: 1005 }, (_, i) => ({ ...base, id: String(i).padStart(6, '0'), card_id: 'credit-1', kind: 'debit', amount_kurus: 100, occurred_at: now, source_table: null, source_id: null, statement_delta_kurus: null, current_delta_kurus: null, provision_delta_kurus: null, note: `Deneme açıklaması ${i}: Önceki hareketlerin bütün açıklamaları dar ekranda da kesilmeden okunabilmeli. Ödeme 100 TL.` })),
     })
     await page.goto('/kartlar?section=kartlar&card=credit-1')
     await page.locator('summary').filter({ hasText: 'Kart ayarları ve kayıt geçmişi' }).click()
@@ -236,6 +283,9 @@ for (const width of [320, 390, 1280]) {
     await expect(list.getByRole('listitem')).toHaveCount(5)
     await ledger.getByRole('button', { name: 'En yeni', exact: true }).click()
     await expect(list.getByRole('listitem')).toHaveCount(10)
+    await page.getByRole('button', { name: 'Tutarları gizle', exact: true }).click()
+    await expect(list).not.toContainText('100 TL')
+    await expect(list).toContainText('Ödeme •••• ₺')
     await ledger.screenshot({ path: `test-results/card-ledger-${width}.png` })
   })
 }

@@ -825,7 +825,7 @@ describe('buildMonthlyCashFlow', () => {
     expect(flow.outflow).toBe(2200)
   })
 
-  it('scheduled card installments have zero cash impact (debt stays on card)', () => {
+  it('scheduled installments become cash once at the actual statement due date', () => {
     const flow = buildMonthlyCashFlow(
       {
         ...emptyInput,
@@ -836,8 +836,8 @@ describe('buildMonthlyCashFlow', () => {
       { from: JUNE_START },
     )
 
-    expect(flow.cardOutflow).toBe(0)
-    expect(flow.outflow).toBe(0)
+    expect(flow.cardOutflow).toBe(450)
+    expect(flow.outflow).toBe(450)
   })
 
   it('includes scheduled loan installments in outflow', () => {

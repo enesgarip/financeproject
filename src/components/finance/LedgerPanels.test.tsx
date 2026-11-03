@@ -47,6 +47,34 @@ describe.each(['cash', 'bank', 'credit'] as const)('%s ledger tazeliği', (kind)
   })
   const warning = () => screen.queryByRole('button', { name: /ledger'a göre düzelt/i })
 
+  it('tüm hareket türlerinde açıklamayı gösterir ve gizlilik biçimleyicisini uygular', async () => {
+    const row = { ...events(100)[0], note: 'Alışveriş 100 TL' }
+    fetchEvents.mockResolvedValue({ ok: true, data: [row] })
+    render(<Panel card={card} maskText={(text) => text.replace('100 TL', '•••• ₺')} />)
+    expect(await screen.findByText('Alışveriş •••• ₺')).toBeTruthy()
+    expect(screen.queryByText('Alışveriş 100 TL')).toBeNull()
+  })
+
+  if (kind !== 'credit') it('hesap geçmişinin tamamına sayfalarla ulaşır ve her sayfada gerçek sonraki bakiyeyi korur', async () => {
+    const scroll = vi.spyOn(HTMLElement.prototype, 'scrollIntoView').mockImplementation(() => {})
+    const history = Array.from({ length: 19 }, (_, i) => ({ ...events(1, `event-${i}`)[0], kind: 'deposit', note: `Hesap açıklaması ${i}` }))
+    fetchEvents.mockResolvedValue({ ok: true, data: history })
+    render(<Panel card={{ ...card, current_balance: 19 }} />)
+    const list = await screen.findByRole('list', { name: 'Hesap hareketi kayıtları' })
+    expect(within(list).getAllByRole('listitem')).toHaveLength(8)
+    expect(screen.getByText('1–8 / 19 hareket · Sayfa 1 / 3')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'En eski' }))
+    expect(within(list).getAllByRole('listitem')).toHaveLength(3)
+    expect(within(list).getByText('Hesap açıklaması 18')).toBeTruthy()
+    expect(warning()).toBeNull()
+    expect(document.activeElement).toBe(list)
+    fireEvent.click(screen.getByRole('button', { name: 'Daha yeni' }))
+    expect(screen.getByText('9–16 / 19 hareket · Sayfa 2 / 3')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'En yeni' }))
+    expect(within(list).getByText('Hesap açıklaması 0')).toBeTruthy()
+    scroll.mockRestore()
+  })
+
   if (kind === 'credit') it('uzun geçmişi 10 kayıtlık sayfalarda gösterir; tam toplam ve uzun not korunur', async () => {
     const scroll = vi.spyOn(HTMLElement.prototype, 'scrollIntoView').mockImplementation(() => {})
     const history = Array.from({ length: 25 }, (_, i) => ({ ...events(1, `event-${i}`)[0], kind: 'adjustment' as const, note: `Uzun açıklama ${i}: Banka karşılaştırmasında verilen açıklamanın tamamı okunabilmeli.` }))

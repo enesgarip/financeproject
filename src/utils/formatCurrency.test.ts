@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest'
 import { formatCompactCurrency, formatPercent, formatSeritAmount, formatSeritParts, parseNumber } from './formatCurrency'
 
 describe('parseNumber', () => {
+  it.each([['-1.234', -1234], ['−1.234', -1234], ['−1.234,56 TL', -1234.56], ['+1.234', 1234], ['-1234.56', -1234.56], ['−2,5k', -2500], ['-1,234.56', -1234.56]])('işaretli %s girdisini korur', (input, expected) => {
+    expect(parseNumber(input)).toBe(expected)
+  })
   it('"k" kısaltmasını 1000 ile çarpar (eskiden çarpan uygulanmıyordu → "5k" 5 veriyordu)', () => {
     expect(parseNumber('5k')).toBe(5000)
     expect(parseNumber('5K')).toBe(5000)

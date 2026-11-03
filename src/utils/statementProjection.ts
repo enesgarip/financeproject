@@ -20,7 +20,8 @@
  */
 import type { Card, CardExpense, CardInstallment, Payment } from '../types/database'
 import { getCardStatementPeriod } from './cardStatement'
-import { addDays, startOfDay } from './date'
+import { addDays, addMonths, dateInputValue, startOfDay, startOfMonth } from './date'
+import { paymentOccurrenceInMonth } from './financeObligationRules'
 import { roundTL, sumTL } from './money'
 import type { SubscriptionItem } from './subscriptions'
 
@@ -58,17 +59,9 @@ export function projectUpcomingStatements(
       .filter((item) => item.isActive && item.source === 'recurring_expense' && item.sourceCardId === card.id)
       .map((item) => item.amount),
   )
-  const autoPaymentTotal = sumTL(
-    payments
-      .filter(
-        (payment) =>
-          payment.payment_method === 'bank_auto' &&
-          payment.auto_source_card_id === card.id &&
-          payment.recurrence === 'monthly',
-      )
-      .map((payment) => payment.amount),
+  const autoPayments = payments.filter((payment) =>
+    payment.payment_method === 'bank_auto' && payment.auto_source_card_id === card.id && payment.recurrence === 'monthly',
   )
-  const recurringMonthly = roundTL(sumTL([subscriptionTotal, autoPaymentTotal]))
 
   const projections: UpcomingStatementProjection[] = []
   let cursor = today
@@ -76,14 +69,21 @@ export function projectUpcomingStatements(
     const period = getCardStatementPeriod(card, cursor)
     if (!period) return projections
 
-    const statementMonth = period.statementDate.slice(0, 7)
     const installmentTotal = sumTL(
       cardInstallments
-        .filter((item) => item.due_month.slice(0, 7) === statementMonth)
+        .filter((item) => getCardStatementPeriod(card, item.due_month)?.statementDate === period.statementDate)
         .map((item) => item.amount),
     )
+    const autoPaymentTotal = sumTL(autoPayments.flatMap((payment) => {
+      const amounts: number[] = []
+      for (let month = startOfMonth(new Date(`${period.periodStart}T00:00:00`)); dateInputValue(month) <= period.periodEnd; month = addMonths(month, 1)) {
+        const occurrence = paymentOccurrenceInMonth(payment, month)
+        if (occurrence && getCardStatementPeriod(card, occurrence)?.statementDate === period.statementDate) amounts.push(payment.amount)
+      }
+      return amounts
+    }))
     const currentPeriod = index === 0 ? roundTL(card.current_period_spending) : 0
-    const recurringTotal = index === 0 ? 0 : recurringMonthly
+    const recurringTotal = index === 0 ? 0 : sumTL([subscriptionTotal, autoPaymentTotal])
 
     projections.push({
       statementDate: period.statementDate,

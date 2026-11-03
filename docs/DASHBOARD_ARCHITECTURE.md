@@ -1,5 +1,16 @@
 # Dashboard Architecture Note
 
+3 Kasım senaryo denetimi: `remainingOutflow` cari ayın kalan nakit yüküne gerçek
+eski açık kayıtları ve vadesiz kişisel borçları ekler. Aynı kayıt tek sayılır;
+geçmişte kaydı olmayan aylık ödemeler üretilmez. Gerçek kesim/vadesi bu ay olan
+scheduled taksit de nakit yüküdür. `unplacedCardIds` borcu olan, takvimi eksik
+kartları bildirir; Özet ana rakam/günlük öneri yerine takvimi tamamlama bağlantısı
+sunar. Plan/karar/liste/rapor/asistan aynı kapsamı gözetir. Hafif veri kontrolü
+her kredi kartında takvim dahil dört kontrol yapar. Kart döngüsünde vadesiz borç
+hazırlık rezervinde, senaryo forecast'ında nakit çıkışında bir kez sayılır;
+senaryo tabanından ayrıca yalnız tampon + kasa rezervi düşülür.
+Doğrulama: `docs/SCENARIO_FIXES_2026-11-03.md`.
+
 3 Kasım 2026: “Ay sonuna kalan” ve aynı harcanabilir tutarı kullanan planlama,
 alınacaklar, karar ekranı, rapor ve asistan tahsil edilmemiş alacakları eklemez.
 `buildMonthlyCashFlow.spendableIncome` alacak hariç kalan maaşı verir;

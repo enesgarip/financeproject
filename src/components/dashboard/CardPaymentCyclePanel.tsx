@@ -8,6 +8,7 @@ import { buildCardPaymentCycle, buildCardCycleForecast, cardSpendingScenario } f
 import { formatDate, startOfDay } from '../../utils/date'
 import { parseNumber } from '../../utils/formatCurrency'
 import type { FinanceSummaryInput } from '../../utils/financeSummary'
+import { sumTL } from '../../utils/money'
 
 export function CardPaymentCyclePanel({ data, from, buffer, reserved, reservedKnown }: {
   data: FinanceSummaryInput; from: Date; buffer: number; reserved: number; reservedKnown: boolean
@@ -17,7 +18,9 @@ export function CardPaymentCyclePanel({ data, from, buffer, reserved, reservedKn
   const cycle = useMemo(() => buildCardPaymentCycle(data, { from, buffer, reserved }), [data, from, buffer, reserved])
   const forecast = useMemo(() => buildCardCycleForecast(data, from), [data, from])
   const extraAmount = parseNumber(extra)
-  const scenario = useMemo(() => cardSpendingScenario(forecast, extraAmount, cycle.held), [forecast, extraAmount, cycle.held])
+  // Undated debt is already a first-month cash outflow in the shared forecast.
+  const scenarioReserve = sumTL([buffer, reserved])
+  const scenario = useMemo(() => cardSpendingScenario(forecast, extraAmount, scenarioReserve), [forecast, extraAmount, scenarioReserve])
   if (!cycle.next.length) return null
   return <section className="mt-6 border-t border-line-strong pt-4" aria-labelledby="card-cycle-title">
     <h2 id="card-cycle-title" className="text-base font-semibold text-ink">

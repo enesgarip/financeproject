@@ -74,6 +74,22 @@ function payment(over: Partial<Payment>): Payment {
 }
 
 describe('projectUpcomingStatements', () => {
+  it('kesimden sonraki taksiti sonraki ekstreye yerleştirir', () => {
+    const rows = projectUpcomingStatements({ ...card, statement_day: 25, due_day: 5 }, [installment({ due_month: '2026-11-28', amount: 3000 })], [], [], new Date(2026, 10, 3))
+    expect(rows.map((row) => [row.installmentTotal, row.dueDate])).toEqual([[0, '2026-12-05'], [3000, '2027-01-05'], [0, '2027-02-05']])
+  })
+
+  it('talimatın başlangıç, bitiş ve ödeme durumunu gerçek kesim döneminde gözetir', () => {
+    const plans = [
+      payment({ amount: 100, due_date: '2026-09-01', recurrence_end_date: '2026-10-31' }),
+      payment({ id: 'future', amount: 200, due_date: '2027-01-05' }),
+      payment({ id: 'paid', amount: 400, status: 'ödendi' }),
+      payment({ id: 'active', amount: 800, due_date: '2026-12-28', recurrence_day: 28 }),
+    ]
+    const rows = projectUpcomingStatements({ ...card, statement_day: 25, due_day: 5 }, [], [], plans, new Date(2026, 10, 3), 4)
+    expect(rows.map((row) => row.recurringTotal)).toEqual([0, 0, 1000, 1000])
+  })
+
   const installments = [
     installment({ id: 'i1', due_month: '2026-09-01', amount: 1200 }),
     installment({ id: 'i2', due_month: '2026-10-01', amount: 800 }),

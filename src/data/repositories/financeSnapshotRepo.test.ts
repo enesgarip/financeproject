@@ -1,17 +1,21 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { runFinanceMaintenance } from './financeSnapshotRepo'
+import { fetchFinanceSnapshot, runFinanceMaintenance } from './financeSnapshotRepo'
 
 const mocks = vi.hoisted(() => ({
   ensureRatesLoaded: vi.fn(),
   rpc: vi.fn(),
+  from: vi.fn(),
+  archives: vi.fn(),
   syncAutoValuedRows: vi.fn(),
 }))
 
 vi.mock('../../lib/supabase', () => ({
   supabase: {
     rpc: mocks.rpc,
+    from: mocks.from,
   },
 }))
+vi.mock('./cardsRepo', () => ({ fetchStatementArchives: mocks.archives, fetchCardInstallments: async () => ({ ok: true, data: [] }), fetchStatementPayments: async () => ({ ok: true, data: [] }) }))
 
 vi.mock('../../lib/marketRatesClient', () => ({
   ensureRatesLoaded: mocks.ensureRatesLoaded,
@@ -70,5 +74,17 @@ describe('financeSnapshotRepo.runFinanceMaintenance', () => {
       .mockResolvedValueOnce({ data: 0, error: null })
 
     await expect(runFinanceMaintenance()).resolves.toBe(0)
+  })
+})
+
+describe('snapshot legacy archive scope', () => {
+  it('RPC yokken açık ekstreleri koruyan ortak repository yolunu kullanır', async () => {
+    const query = { select: vi.fn().mockReturnThis(), order: vi.fn().mockReturnThis(), gte: vi.fn().mockReturnThis(), then: (resolve: (value: unknown) => unknown) => Promise.resolve({ data: [], error: null }).then(resolve) }
+    mocks.from.mockReturnValue(query)
+    mocks.rpc.mockResolvedValue({ data: null, error: { code: 'PGRST202', message: 'Missing RPC' } })
+    const rows = [{ id: 'old-open', statement_date: '2025-01-25', due_date: '2025-02-05', status: 'open' }]
+    mocks.archives.mockResolvedValue({ ok: true, data: rows })
+    expect((await fetchFinanceSnapshot()).cardStatements).toEqual(rows)
+    expect(mocks.archives).toHaveBeenCalledWith(120)
   })
 })

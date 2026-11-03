@@ -56,7 +56,7 @@ export type GoalSourceLike = Pick<SavingsGoalSource, 'kind' | 'asset_id' | 'asse
 export type GoalSourceResolution<T extends GoalSourceLike = SavingsGoalSource> = {
   /** Türetilen tutar, hedefin biriminde (TL ya da gram/adet). */
   amount: number
-  /** Tutara katkı veren kaynak sayısı. */
+  /** Çözülebilen kaynak sayısı; örtüşen varlık tutarı yalnız bir kez sayılır. */
   matched: number
   /** Bu birimde çözülemeyen kaynaklar (ör. altın hedefine bağlı banka hesabı). */
   unusable: T[]
@@ -144,8 +144,8 @@ function resolveSingleSource(
 /**
  * Bir satırın (hedef ya da bileşen) kaynaklarını tek tutara indirger.
  *
- * "Tüm varlıklar" bağı diğer bağları GEREKSİZ kılar ama ikisi birden seçilirse
- * aynı varlık iki kez sayılırdı; bu yüzden `all_assets` varsa yalnız o kullanılır.
+ * Varlık kimliklerinin birleşimini sayar: kategori/tekil/tüm-varlık örtüşmesi
+ * tutarı şişirmez. Banka ve kasa rezervi mevcut ayrı kaynak anlamını korur.
  */
 export function resolveGoalSources<T extends GoalSourceLike>(
   sources: T[],
@@ -160,12 +160,26 @@ export function resolveGoalSources<T extends GoalSourceLike>(
     : sources
 
   const amounts: number[] = []
+  const countedAssets = new Set<string>()
   const unusable: T[] = []
   const missing: T[] = []
 
   for (const source of effective) {
     const outcome = resolveSingleSource(source, valueType, refs)
-    if (outcome.status === 'ok') amounts.push(outcome.amount)
+    if (outcome.status === 'ok') {
+      if (isMoneyOnlyKind(source)) amounts.push(outcome.amount)
+      else {
+        const rows = refs.assets.filter((asset) => assetCountsForUnit(asset, valueType) && (
+          source.kind === 'all_assets' ||
+          (source.kind === 'asset_category' && asset.category === source.asset_category) ||
+          (source.kind === 'asset' && asset.id === source.asset_id)
+        ))
+        amounts.push(sumTL(rows.filter((asset) => !countedAssets.has(asset.id)).map((asset) => {
+          countedAssets.add(asset.id)
+          return assetAmountForUnit(asset, valueType, refs)
+        })))
+      }
+    }
     else if (outcome.status === 'unusable') unusable.push(source)
     else missing.push(source)
   }

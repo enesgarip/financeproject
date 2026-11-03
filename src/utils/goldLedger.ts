@@ -42,49 +42,42 @@ function round4(value: number): number {
   return Math.round((value + Number.EPSILON) * 10000) / 10000
 }
 
-export function summarizeGoldType(lots: GoldLot[], goldType: GoldType): GoldTypeSummary {
-  const rows = lots.filter((lot) => lot.gold_type === goldType)
-  let totalQuantity = 0
-  let knownQuantity = 0
-  // Ağırlıklı ortalama maliyet yöntemi: ortalama YALNIZ alışlardan türetilir.
-  // Satış elde kalanın maliyetini değiştirmez (satış fiyatı ortalamaya karışırsa,
-  // kârlı satış kalan altının maliyetini yapay düşürüp k/z'yi şişirir).
-  let buyQuantity = 0
-  let buyCost = 0
+type GoldPool = { totalQuantity: number; knownQuantity: number; knownCost: number }
 
-  for (const lot of rows) {
-    const qty = Number(lot.quantity) || 0
-    if (lot.direction === 'sell') {
-      // Satış fiyatının bilinip bilinmemesi maliyet tabanını İLGİLENDİRMEZ:
-      // satılan altın elden çıkar ve bilinen-maliyetli havuzdan düşer. Eski
-      // sürüm fiyatsız satışı atlıyordu → knownCost elde kalandan fazla
-      // miktar üzerinden hesaplanıp şişiyordu (denetim 2026-08-12 O1).
-      // Clamp DÖNGÜ SONUNDA (heldKnownQuantity): satırlar tarih sırasında
-      // gelmeyebilir, ara clamp satışı yutar.
-      totalQuantity -= qty
-      knownQuantity -= qty
-    } else {
-      totalQuantity += qty
-      if (lot.unit_price != null && Number.isFinite(lot.unit_price)) {
-        knownQuantity += qty
-        buyQuantity += qty
-        buyCost += qty * lot.unit_price
-      }
+function sortedLots(lots: GoldLot[]): GoldLot[] {
+  // Undated opening holdings precede dated trades; same-day buys precede sells.
+  return [...lots].sort((a, b) => (a.purchase_date ?? '').localeCompare(b.purchase_date ?? '') ||
+    Number(a.direction === 'sell') - Number(b.direction === 'sell') ||
+    a.created_at.localeCompare(b.created_at) || a.id.localeCompare(b.id))
+}
+
+function applyLot(pool: GoldPool, lot: GoldLot) {
+  const qty = Number(lot.quantity) || 0
+  if (lot.direction === 'sell') {
+    const removed = Math.min(qty, pool.knownQuantity)
+    const average = pool.knownQuantity > 0 ? pool.knownCost / pool.knownQuantity : 0
+    pool.knownCost = Math.max(0, pool.knownCost - average * removed)
+    pool.knownQuantity -= removed
+    pool.totalQuantity = Math.max(0, pool.totalQuantity - qty)
+  } else {
+    pool.totalQuantity += qty
+    if (lot.unit_price != null && Number.isFinite(lot.unit_price)) {
+      pool.knownQuantity += qty
+      pool.knownCost += qty * lot.unit_price
     }
   }
+}
 
-  const avgUnitCost = buyQuantity > 0 ? round2(buyCost / buyQuantity) : null
-  const heldKnownQuantity = Math.max(0, knownQuantity)
-  // Elde kalan bilinen-maliyetli miktarın maliyet tabanı = ortalama alış × kalan adet.
-  const knownCost = avgUnitCost != null ? round2(avgUnitCost * heldKnownQuantity) : 0
-
+export function summarizeGoldType(lots: GoldLot[], goldType: GoldType): GoldTypeSummary {
+  const pool: GoldPool = { totalQuantity: 0, knownQuantity: 0, knownCost: 0 }
+  for (const lot of sortedLots(lots.filter((row) => row.gold_type === goldType))) applyLot(pool, lot)
   return {
     goldType,
-    totalQuantity: round4(Math.max(0, totalQuantity)),
-    knownQuantity: round4(heldKnownQuantity),
-    unknownQuantity: round4(Math.max(0, totalQuantity - knownQuantity)),
-    knownCost,
-    avgUnitCost,
+    totalQuantity: round4(pool.totalQuantity),
+    knownQuantity: round4(pool.knownQuantity),
+    unknownQuantity: round4(Math.max(0, pool.totalQuantity - pool.knownQuantity)),
+    knownCost: round2(pool.knownCost),
+    avgUnitCost: pool.knownQuantity > 0 ? round2(pool.knownCost / pool.knownQuantity) : null,
   }
 }
 
@@ -108,38 +101,17 @@ export type GoldAccumulationPoint = {
  * `goldType` is omitted, all types are combined.
  */
 export function buildGoldAccumulation(lots: GoldLot[], goldType?: GoldType): GoldAccumulationPoint[] {
-  const dated = lots
-    .filter((lot) => lot.purchase_date && (!goldType || lot.gold_type === goldType))
-    .sort((a, b) => String(a.purchase_date).localeCompare(String(b.purchase_date)))
-
-  let cumulativeQuantity = 0
-  // Maliyet havuzu ağırlıklı ortalama ile yürütülür: satış, maliyeti o anki
-  // ortalamadan düşer (satış fiyatından değil) — özet ile aynı yöntem.
-  let costPoolQuantity = 0
-  let costPool = 0
-  const points: GoldAccumulationPoint[] = []
-
-  for (const lot of dated) {
-    const qty = Number(lot.quantity) || 0
-    const isSell = lot.direction === 'sell'
-    cumulativeQuantity += qty * (isSell ? -1 : 1)
-    if (isSell) {
-      // Satışta fiyat bilgisi gereksiz: maliyet havuzundan her zaman o anki
-      // ortalama maliyet düşer (fiyatsız satış da havuzu küçültür — O1).
-      const avg = costPoolQuantity > 0 ? costPool / costPoolQuantity : 0
-      const removed = Math.min(qty, costPoolQuantity)
-      costPool -= avg * removed
-      costPoolQuantity -= removed
-    } else if (lot.unit_price != null && Number.isFinite(lot.unit_price)) {
-      costPool += qty * lot.unit_price
-      costPoolQuantity += qty
-    }
-    points.push({
+  const dated = sortedLots(lots.filter((lot) => lot.purchase_date && (!goldType || lot.gold_type === goldType)))
+  const pools = new Map<GoldType, GoldPool>()
+  return dated.map((lot) => {
+    const pool = pools.get(lot.gold_type) ?? { totalQuantity: 0, knownQuantity: 0, knownCost: 0 }
+    pools.set(lot.gold_type, pool)
+    applyLot(pool, lot)
+    const values = [...pools.values()]
+    return {
       date: String(lot.purchase_date),
-      cumulativeQuantity: round4(cumulativeQuantity),
-      cumulativeCost: round2(Math.max(0, costPool)),
-    })
-  }
-
-  return points
+      cumulativeQuantity: round4(values.reduce((total, row) => total + row.totalQuantity, 0)),
+      cumulativeCost: round2(values.reduce((total, row) => total + row.knownCost, 0)),
+    }
+  })
 }

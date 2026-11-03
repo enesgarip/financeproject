@@ -7,6 +7,7 @@ import {
   fetchPostedInstallmentExpenses,
   fetchUncategorizedExpenses,
   fetchStatementArchives,
+  fetchStatementPayments,
   fetchSubscriptionExpenses,
   payPaymentFromCardImport,
   replaceCardStatementImport,
@@ -36,6 +37,27 @@ function readQuery(response: { data: unknown[] | null; error: { message: string 
 }
 
 describe('kart ayrıntısı veri kapsamı', () => {
+  it('kısmi ekstre ödemelerini sayfalayıp kalan borcu eksik kanıtla hesaplamaz', async () => {
+    const first = readQuery({ data: Array.from({ length: 500 }, (_, i) => ({ id: `z${999 - i}`, paid_at: '2026-10-01' })), error: null })
+    const last = readQuery({ data: [{ id: 'a', paid_at: '2025-01-01' }], error: null })
+    supabaseMocks.from.mockReturnValueOnce(first).mockReturnValueOnce(last)
+    const result = await fetchStatementPayments()
+    expect(result.ok && result.data.length).toBe(501)
+    expect(last.lt).toHaveBeenCalledWith('id', 'z500')
+    supabaseMocks.from.mockReturnValueOnce(first).mockReturnValueOnce(readQuery({ data: null, error: { message: 'Ağ hatası' } }))
+    expect((await fetchStatementPayments()).ok).toBe(false)
+  })
+  it('500 açık ekstre sonrasını okur; sonraki sayfa hatasında eksik başarı sunmaz', async () => {
+    const first = readQuery({ data: Array.from({ length: 500 }, (_, i) => ({ id: `z${999 - i}`, statement_date: '2026-10-01' })), error: null })
+    const paid = readQuery({ data: [], error: null })
+    const last = readQuery({ data: [{ id: 'a', statement_date: '2025-01-01' }], error: null })
+    supabaseMocks.from.mockReturnValueOnce(first).mockReturnValueOnce(paid).mockReturnValueOnce(last)
+    const result = await fetchStatementArchives(120)
+    expect(result.ok && result.data.length).toBe(501)
+    expect(last.lt).toHaveBeenCalledWith('id', 'z500')
+    supabaseMocks.from.mockReturnValueOnce(first).mockReturnValueOnce(paid).mockReturnValueOnce(readQuery({ data: null, error: { message: 'Ağ hatası' } }))
+    expect((await fetchStatementArchives(120)).ok).toBe(false)
+  })
   it('abonelik taramasında varsayılan satır sınırını aşar; sonraki sayfa hatası eksik başarı sayılmaz', async () => {
     const query = (data: unknown[] | null, error: { message: string } | null = null) => ({
       ...readQuery({ data, error }), gte: vi.fn().mockReturnThis(), lte: vi.fn().mockReturnThis(), range: vi.fn().mockResolvedValue({data,error}),
@@ -84,7 +106,7 @@ describe('kart ayrıntısı veri kapsamı', () => {
     expect(result.ok).toBe(true)
     if (!result.ok) throw new Error('Ekstreler yüklenemedi')
     expect(result.data.map((row) => row.id)).toEqual(['new-paid', 'old-open'])
-    expect(open.limit).not.toHaveBeenCalled()
+    expect(open.limit).toHaveBeenCalledWith(500)
     expect(paid.limit).toHaveBeenCalledWith(24)
   })
 })

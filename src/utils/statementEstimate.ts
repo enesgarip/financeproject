@@ -37,11 +37,10 @@ export function estimateStatementTotal(
   )
   if (daysToCut < 0 || daysToCut > ESTIMATE_WINDOW_DAYS) return null
 
-  const statementMonth = period.statementDate.slice(0, 7)
   const installmentTotal = sumTL(
     installments
       .filter((item) => item.card_id === card.id && item.status === 'scheduled')
-      .filter((item) => item.due_month.slice(0, 7) === statementMonth)
+      .filter((item) => getCardStatementPeriod(card, item.due_month)?.statementDate === period.statementDate)
       .map((item) => item.amount),
   )
 

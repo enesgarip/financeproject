@@ -125,6 +125,13 @@ const refs = {
 }
 
 describe('resolveGoalSources · TRY hedef', () => {
+  it.each([false, true])('kategori ve tekil varlığın örtüşmesini sıradan bağımsız tek sayar (%s)', (reverse) => {
+    const sources = [source({ id: 'category', kind: 'asset_category', asset_category: 'Hisse' }), source({ id: 'individual', kind: 'asset', asset_id: 'a1' })]
+    if (reverse) sources.reverse()
+    expect(resolveGoalSources(sources, 'TRY', refs).amount).toBe(350000)
+    expect(resolveGoalSources([...sources, ...sources], 'TRY', refs).amount).toBe(350000)
+  })
+
   it('tek varlığı canlı fiyatla değerler', () => {
     const result = resolveGoalSources([source({ id: 's1', kind: 'asset', asset_id: 'a1' })], 'TRY', refs)
 

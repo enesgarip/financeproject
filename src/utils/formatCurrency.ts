@@ -101,6 +101,7 @@ export function parseNumber(value: FormDataEntryValue | null) {
     .toLocaleLowerCase('tr-TR')
     .replace(/\s/g, '')
     .replace(/₺|tl/g, '')
+    .replace(/−/g, '-')
 
   if (!raw) return 0
 
@@ -117,7 +118,7 @@ export function parseNumber(value: FormDataEntryValue | null) {
     normalized = normalized.replace(',', '.')
   } else if ((normalized.match(/\./g) ?? []).length > 1) {
     normalized = normalized.replaceAll('.', '')
-  } else if (/^\d{1,3}\.\d{3}$/.test(normalized)) {
+  } else if (/^[+-]?\d{1,3}\.\d{3}$/.test(normalized)) {
     normalized = normalized.replace('.', '')
   }
 
