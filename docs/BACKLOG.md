@@ -1,5 +1,30 @@
 # Priority Backlog
 
+## 2026-11-03 — Kişisel kullanım senaryoları denetimi — UYGULANDI
+
+F001–F005 ve F007–F012 düzeltildi: planlı taksit gerçek kesim/vadesinde tek
+sayılır; talimat yaşam döngüsü gözetilir; hedefte kategori/varlık örtüşmesi
+tekilleştirilir; negatif tutar işareti korunur. Snapshot bütün açık ekstreleri
+ve son 120 ödenmiş arşivi getirir; eski REST yolu açıklar, taksitler ve kısmi
+ödemeleri sayfalar. Hesap geçmişi 8'li sayfalıdır; kart/hesap hareket notları
+tüm türlerde görünür ve gizlilikte maskelenir. Eksik kart takviminde harcanabilir
+rakam ve satın alma önerisi gösterilmez; hızlı kontrol takvimi de denetler.
+
+Kullanıcının iki ürün kararı uygulandı: eski açık yükümlülükler + vadesiz
+kişisel borçlar harcanabilirden düşer; altın satıştan sonra kalan maliyet
+havuzunu taşır. Kısmi döviz/altın borcunda miktar `numeric(38,26)` olur;
+geçmişte kaybolmuş hassasiyet otomatik tahmin edilmez. İki migration yalnız
+yerelde uygulandı. Kapsam, karşı örnekler, doğrulama ve açık gözlemler:
+`docs/SCENARIO_FIXES_2026-11-03.md`.
+
+Doğrulama: `npm run verify` (174 dosya / 1.838 test, 7 guard, lint/coverage,
+audit 0 açık, build/bundle ve 6 edge tipi), yerel SQL 52/52; tarayıcı 30 geçti,
+4 live-backend testi atlandı. 320/390/1280px ve 19 ekran taraması dahil.
+
+Takip: soğuk çevrimdışı PWA açılışı/son okuma etiketi, F006 eksik şema
+kapsamının Özet'te görünürlüğü ve sunucu commit sonrası kayıp yanıtta kısmi
+ödeme tekrarının idempotency testi ayrı işlerdir; doğrulanmış düzeltme sayılmaz.
+
 ## 2026-11-03 — Ay sonuna kalan tutarda tahsil edilmemiş alacak — UYGULANDI
 
 “Ay sonuna kalan” hesabı açık alacakları kullanılabilir para olarak saymıyor.

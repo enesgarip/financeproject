@@ -14,8 +14,8 @@ function makeCard(overrides: Partial<Card> = {}): Card {
     statement_debt_amount: 300,
     current_period_spending: 200,
     provision_amount: 0,
-    statement_closing_day: 15,
-    payment_due_day: 5,
+    statement_day: 15,
+    due_day: 5,
     limit_group_name: null,
     created_at: '2026-01-01',
     updated_at: '2026-01-01',
@@ -92,6 +92,11 @@ const emptyInput = {
 }
 
 describe('buildHealthCounts', () => {
+  it('eksik kesim/vade takvimini temiz kontrol olarak sunmaz', () => {
+    const result = buildHealthCounts({ ...emptyInput, cards: [makeCard({ statement_day: null, due_day: null })] })
+    expect(result.warnings).toBe(1)
+    expect(result.cleanChecks).toBe(4)
+  })
   it('returns zero counts for empty data', () => {
     const result = buildHealthCounts(emptyInput)
     expect(result).toEqual({ errors: 0, warnings: 0, total: 0, checksRun: 0, cleanChecks: 0 })
@@ -163,10 +168,10 @@ describe('checksRun / cleanChecks', () => {
     expect(result.total).toBe(0)
   })
 
-  it('her kredi kartı üç kontrol koşturur', () => {
+  it('her kredi kartı dört kontrol koşturur', () => {
     const result = buildHealthCounts({ ...emptyInput, cards: [makeCard({ id: 'c1' }), makeCard({ id: 'c2' })] })
-    // 2 kart x 3 kontrol + 2 tekil limit grubu
-    expect(result.checksRun).toBe(8)
+    // 2 kart x 4 kontrol + 2 tekil limit grubu
+    expect(result.checksRun).toBe(10)
   })
 
   it('banka kartı kontrol sayacına girmez', () => {
@@ -196,7 +201,7 @@ describe('checksRun / cleanChecks', () => {
   it('cleanChecks = checksRun − bulgu; bulgulu kartta düşer', () => {
     const bad = makeCard({ debt_amount: 100, statement_debt_amount: 900, current_period_spending: 900, credit_limit: 10000 })
     const result = buildHealthCounts({ ...emptyInput, cards: [bad] })
-    expect(result.checksRun).toBe(4) // 3 kart kontrolü + 1 limit grubu
+    expect(result.checksRun).toBe(5) // 4 kart kontrolü + 1 limit grubu
     expect(result.cleanChecks).toBe(result.checksRun - result.total)
     expect(result.cleanChecks).toBeGreaterThanOrEqual(0)
   })
@@ -204,6 +209,6 @@ describe('checksRun / cleanChecks', () => {
   it('limitsiz grup aşım kontrolüne girmez', () => {
     const noLimit = makeCard({ credit_limit: 0, debt_amount: 0, statement_debt_amount: 0, current_period_spending: 0 })
     const result = buildHealthCounts({ ...emptyInput, cards: [noLimit] })
-    expect(result.checksRun).toBe(3)
+    expect(result.checksRun).toBe(4)
   })
 })

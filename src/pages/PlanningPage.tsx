@@ -81,7 +81,7 @@ export function PlanningPage() {
       buffer: readSafeToSpendBuffer(),
       reserved,
     }).amount
-    return { liquidCash: position.totalCashAssets, monthlySurplus: surplus }
+    return { liquidCash: position.totalCashAssets, monthlySurplus: cashFlow.unplacedCardIds.length ? undefined : surplus }
   }, [snapshotQuery.data, reserved])
 
   /**

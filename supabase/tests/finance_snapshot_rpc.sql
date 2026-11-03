@@ -205,11 +205,15 @@ begin
     raise exception 'BAŞARISIZ: asset satırı tablo satırıyla birebir değil.';
   end if;
 
-  -- 6) Limit parametresi: 1 istenirse yalnız en yeni arşiv döner.
+  -- 6) Limit paid history only; every open liability survives even a zero limit.
   v_limited := public.fetch_finance_snapshot(v_window_start, v_window_start::date, 1);
-  if jsonb_array_length(v_limited->'card_statement_archives') <> 1
+  if jsonb_array_length(v_limited->'card_statement_archives') <> 2
     or v_limited->'card_statement_archives'->0->>'id' <> 'b0000000-0000-4000-8000-0000000000d2' then
-    raise exception 'BAŞARISIZ: statement limit 1 en yeni arşivi döndürmedi.';
+    raise exception 'BAŞARISIZ: statement limit 1 açık + son ödenmiş arşivi döndürmedi.';
+  end if;
+  v_limited := public.fetch_finance_snapshot(v_window_start, v_window_start::date, 0);
+  if jsonb_array_length(v_limited->'card_statement_archives') <> 1 then
+    raise exception 'FAIL: paid limit zero must retain the open archive';
   end if;
 
   raise notice 'GEÇTİ: payload anahtarları, satır sayıları, RLS, pencere, sıralama, limit.';

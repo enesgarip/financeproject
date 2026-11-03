@@ -82,6 +82,7 @@ export function WishlistPage() {
 
     const buffer = readSafeToSpendBuffer()
     const cashFlow = buildMonthlyCashFlow(summaryInput)
+    if (cashFlow.unplacedCardIds.length) return null
     const safe = buildSafeToSpend({
       liquidCash: buildFinancialPosition(summaryInput).totalCashAssets,
       expectedIncome: cashFlow.spendableIncome,

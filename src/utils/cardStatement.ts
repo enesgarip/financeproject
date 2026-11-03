@@ -7,8 +7,9 @@
  * taşar (due_day <= statement_day → +1 ay). `getNextCardPaymentDueDate` ise
  * obligations.ts'in kart borcu projeksiyonunda "bir sonraki ödeme günü" için kullanılır.
  */
-import type { Card } from '../types/database'
-import { addDays, dateInMonth, dateInputValue, startOfDay } from './date'
+import type { Card, CardInstallment } from '../types/database'
+import { addDays, dateInMonth, dateInputValue, isDateInMonth, startOfDay, startOfMonth } from './date'
+import { sumTL } from './money'
 
 export type CardStatementPeriod = {
   periodStart: string
@@ -81,4 +82,15 @@ export function getNextCardPaymentDueDate(card: StatementCard | null | undefined
   const dueThisMonth = dateInMonth(baseDate.getFullYear(), baseDate.getMonth(), card.due_day)
   const dueDate = dueThisMonth >= baseDate ? dueThisMonth : dateInMonth(baseDate.getFullYear(), baseDate.getMonth() + 1, card.due_day)
   return dateInputValue(dueDate)
+}
+
+/** Scheduled rows are not yet in current-period debt; count cash once at the real due date. */
+export function scheduledCardCashOutflow(cards: Card[], installments: CardInstallment[], month: Date, includeOverdue = false): number {
+  const cardsById = new Map(cards.map((card) => [card.id, card]))
+  const monthStart = dateInputValue(startOfMonth(month))
+  return sumTL(installments.filter((row) => {
+    if (row.status !== 'scheduled') return false
+    const due = getCardStatementPeriod(cardsById.get(row.card_id), row.due_month)?.dueDate
+    return due != null && (isDateInMonth(due, month) || (includeOverdue && due < monthStart))
+  }).map((row) => row.amount))
 }

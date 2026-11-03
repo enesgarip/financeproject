@@ -38,11 +38,29 @@ export async function fetchProvisionExpenses(): Promise<Result<CardExpense[]>> {
 export async function fetchStatementArchives(limit: number): Promise<Result<CardStatementArchive[]>> {
   // Geçmiş sınırı açık borcu gizlemesin: açıklar + son N ödenmiş ekstre.
   const [open, paid] = await Promise.all([
-    supabase.from('card_statement_archives').select('*').eq('status', 'open').order('statement_date', { ascending: false }),
-    supabase.from('card_statement_archives').select('*').eq('status', 'paid').order('statement_date', { ascending: false }).limit(limit),
+    fetchOpenStatementArchives(),
+    supabase.from('card_statement_archives').select('*').eq('status', 'paid').order('statement_date', { ascending: false }).order('id', { ascending: false }).limit(Math.max(0, limit)),
   ])
-  const rows = [...(open.data ?? []), ...(paid.data ?? [])] as CardStatementArchive[]
-  return resultFromSupabase(rows.sort((a, b) => b.statement_date.localeCompare(a.statement_date)), open.error ?? paid.error, 'Ekstreler yüklenemedi.')
+  if (!open.ok) return open
+  const rows = [...open.data, ...(paid.data ?? [])] as CardStatementArchive[]
+  return resultFromSupabase(rows.sort((a, b) => b.statement_date.localeCompare(a.statement_date) || b.id.localeCompare(a.id)), paid.error, 'Ekstreler yüklenemedi.')
+}
+
+async function fetchOpenStatementArchives(): Promise<Result<CardStatementArchive[]>> {
+  const rows: CardStatementArchive[] = []
+  let beforeId: string | null = null
+  for (;;) {
+    let query = supabase.from('card_statement_archives').select('*').eq('status', 'open').order('id', { ascending: false }).limit(500)
+    if (beforeId) query = query.lt('id', beforeId)
+    const { data, error } = await query
+    if (error) return fail(appErrorFromSupabase(error, 'Açık ekstreler yüklenemedi.'))
+    const page = (data ?? []) as CardStatementArchive[]
+    rows.push(...page)
+    if (page.length < 500) return ok(rows)
+    const nextId = page[page.length - 1]?.id
+    if (!nextId || (beforeId && nextId >= beforeId)) return fail({ type: 'unknown', message: 'Açık ekstrelerin devamı doğrulanamadı.' })
+    beforeId = nextId
+  }
 }
 
 /**
@@ -50,12 +68,20 @@ export async function fetchStatementArchives(limit: number): Promise<Result<Card
  * yüzden ekstre gösteren her ekran arşivlerle BİRLİKTE bunu da yükler.
  */
 export async function fetchStatementPayments(): Promise<Result<CardStatementPayment[]>> {
-  const { data, error } = await supabase
-    .from('card_statement_payments')
-    .select('*')
-    .order('paid_at', { ascending: false })
-
-  return resultFromSupabase((data ?? []) as CardStatementPayment[], error, 'Ekstre ödemeleri yüklenemedi.')
+  const rows: CardStatementPayment[] = []
+  let beforeId: string | null = null
+  for (;;) {
+    let query = supabase.from('card_statement_payments').select('*').order('id', { ascending: false }).limit(500)
+    if (beforeId) query = query.lt('id', beforeId)
+    const { data, error } = await query
+    if (error) return fail(appErrorFromSupabase(error, 'Ekstre ödemeleri yüklenemedi.'))
+    const page = (data ?? []) as CardStatementPayment[]
+    rows.push(...page)
+    if (page.length < 500) return ok(rows.sort((a, b) => b.paid_at.localeCompare(a.paid_at) || b.id.localeCompare(a.id)))
+    const nextId = page[page.length - 1]?.id
+    if (!nextId || (beforeId && nextId >= beforeId)) return fail({ type: 'unknown', message: 'Ekstre ödemelerinin devamı doğrulanamadı.' })
+    beforeId = nextId
+  }
 }
 
 export async function fetchCardInstallments(): Promise<Result<CardInstallment[]>> {

@@ -33,11 +33,15 @@ export function AccountLedgerPanel({
   card,
   onChanged,
   formatAmount = formatCurrency,
+  maskText = (text: string) => text,
 }: {
   card: Card
   onChanged?: () => void | Promise<void>
   formatAmount?: (value: number | null | undefined) => string
+  maskText?: (text: string) => string
 }) {
+  const historyRef = useRef<HTMLOListElement>(null)
+  const [pagination, setPagination] = useState({ cardId: card.id, page: 0 })
   const [events, setEvents] = useState<AccountLedger[] | null>(null)
   // Compare only events loaded for this exact balance/debt revision.
   const revision = JSON.stringify([card.id, card.updated_at, card.current_balance])
@@ -130,6 +134,14 @@ export function AccountLedgerPanel({
   // Events arrive newest-first; order doesn't matter for the sums.
   const drift = balanceDrift(events, card.current_balance)
   const balanceRows = buildAccountLedgerBalanceRows(events, card.current_balance)
+  const pageCount = Math.max(1, Math.ceil(events.length / VISIBLE_EVENTS))
+  const page = pagination.cardId === card.id ? Math.min(pagination.page, pageCount - 1) : 0
+  const start = page * VISIBLE_EVENTS
+  function showPage(nextPage: number) {
+    setPagination({ cardId: card.id, page: nextPage })
+    historyRef.current?.scrollIntoView({ behavior: 'instant', block: 'start' })
+    historyRef.current?.focus({ preventScroll: true })
+  }
 
   return (
     <div className="mt-3 border-t border-line pt-4">
@@ -163,30 +175,40 @@ export function AccountLedgerPanel({
       ) : null}
 
       {events.length > 0 ? (
-        <div className="mt-3 divide-y divide-line">
-          {balanceRows.slice(0, VISIBLE_EVENTS).map(({ event, balanceAfter }) => {
+        <div className="mt-3">
+        <ol ref={historyRef} tabIndex={-1} aria-label="Hesap hareketi kayıtları" className="scroll-mt-[calc(env(safe-area-inset-top)+6rem)] divide-y divide-line">
+          {balanceRows.slice(start, start + VISIBLE_EVENTS).map(({ event, balanceAfter }) => {
             const meta = KIND_LABELS[event.kind]
             const amountTL = toTL(event.amount_kurus)
             return (
-              <div key={event.id} className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-1 py-3 text-xs">
+              <li key={event.id} className="grid min-w-0 gap-x-3 gap-y-1 py-3 text-xs min-[460px]:grid-cols-[minmax(0,1fr)_auto]">
                 <span className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1">
                   <span className={`font-semibold ${meta.className}`}>{meta.label}</span>
                   <span className="text-ink-muted">{formatDate(event.occurred_at.slice(0, 10))}</span>
-                  {event.kind === 'adjustment' && event.note ? (
-                    <span className="w-full break-words italic text-ink-muted">{event.note}</span>
+                  {event.note ? (
+                    <span className="w-full whitespace-pre-wrap break-words text-ink-muted">{maskText(event.note)}</span>
                   ) : null}
                 </span>
-                <span className={`serit-num text-right font-semibold ${meta.className}`}>
+                <span className={`serit-num break-words font-semibold min-[460px]:text-right ${meta.className}`}>
                   {amountTL > 0 ? '+' : ''}
                   {formatAmount(amountTL)}
                 </span>
-                <span className="col-span-2 text-ink-muted">Sonrası <span className="serit-num">{formatAmount(balanceAfter)}</span></span>
-              </div>
+                <span className="text-ink-muted min-[460px]:col-span-2">Sonrası <span className="serit-num">{formatAmount(balanceAfter)}</span></span>
+              </li>
             )
           })}
-          {events.length > VISIBLE_EVENTS ? (
-            <p className="text-xs font-semibold text-ink-muted">+{events.length - VISIBLE_EVENTS} hareket daha</p>
-          ) : null}
+        </ol>
+        {events.length > VISIBLE_EVENTS ? (
+          <nav className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-line pt-3" aria-label="Hesap hareketi sayfaları">
+            <p className="text-xs text-ink-muted" role="status">{start + 1}–{Math.min(start + VISIBLE_EVENTS, events.length)} / {events.length} hareket · Sayfa {page + 1} / {pageCount}</p>
+            <div className="flex flex-wrap gap-2">
+              <Button type="button" variant="outline" size="sm" className="min-h-11" disabled={page === 0} onClick={() => showPage(0)}>En yeni</Button>
+              <Button type="button" variant="outline" size="sm" className="min-h-11" disabled={page === 0} onClick={() => showPage(page - 1)}>Daha yeni</Button>
+              <Button type="button" variant="outline" size="sm" className="min-h-11" disabled={page + 1 >= pageCount} onClick={() => showPage(page + 1)}>Daha eski</Button>
+              <Button type="button" variant="outline" size="sm" className="min-h-11" disabled={page + 1 >= pageCount} onClick={() => showPage(pageCount - 1)}>En eski</Button>
+            </div>
+          </nav>
+        ) : null}
         </div>
       ) : (
         <p className="mt-3 text-sm text-ink-muted">Henüz hareket kaydı yok; bakiye değiştikçe burada listelenecek.</p>

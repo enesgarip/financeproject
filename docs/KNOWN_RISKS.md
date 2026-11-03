@@ -1,5 +1,12 @@
 # Known Risks
 
+3 Kasım senaryo eki: kısmi altın/döviz borçlarında yeni miktar hassasiyeti
+korunur; geçmişte iki/dört haneye yuvarlanarak kaybolan miktar bilgisi migration
+ile tahmin edilmez. Eski kayıtlar banka/işlem kanıtıyla mutabakat gerektirebilir.
+Çevrimdışı son okuma etiketi/soğuk açılış, F006 Özet şema kapsamı görünürlüğü ve
+sunucu commit sonrası yanıt kaybında kısmi ödeme tekrarının idempotency testi
+açık gözlemlerdir. Kanıt ve sınırlar: `docs/SCENARIO_FIXES_2026-11-03.md`.
+
 ## 1. Encoding / Mojibake (mitigated)
 
 A repo-wide scan on 2026-06-05 found **no** UTF-8 mojibake in `src`, `docs`, the SQL migrations, or `README.md` — Turkish characters render correctly. The audit was repeated on 2026-06-15 with the encoding guard plus a manual signature scan across 305 source/doc/migration files; no mojibake signatures were found. Earlier reports were most likely a terminal display artifact rather than corrupted bytes.

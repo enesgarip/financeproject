@@ -24,6 +24,7 @@ import { addMonths, dateInputValue, startOfMonth } from '../../utils/date'
 import { isMissingSupabaseCapabilityError, missingSupabaseCapabilityMessage, type SupabaseLikeError } from '../../utils/supabaseErrors'
 import { syncAutoValuedRows } from '../../utils/valuationSync'
 import { resultFromSupabase, type Result } from '../result'
+import { fetchCardInstallments, fetchStatementArchives, fetchStatementPayments } from './cardsRepo'
 
 // Yıllık raporun cari ve önceki takvim yılını her ay eksiksiz karşılaştırabilmesi
 // için 24 tamamlanmış ay + cari ay yüklenir. Ekranlar kendi penceresini daraltır.
@@ -55,6 +56,10 @@ export type FinanceSnapshot = {
 }
 
 type RowsResponse<T> = { data: T[] | null; error: SupabaseLikeError | null }
+
+function rowsFromResult<T>(result: Result<T[]>): RowsResponse<T> {
+  return result.ok ? { data: result.data, error: null } : { data: null, error: result.error }
+}
 
 function requiredRows<T>(response: RowsResponse<T>): T[] {
   if (response.error) throw new Error(response.error.message ?? 'Veri yüklenemedi.')
@@ -170,9 +175,9 @@ async function fetchFinanceSnapshotViaTableQueries(): Promise<FinanceSnapshot> {
     supabase.from('transaction_history').select('*').gte('occurred_at', windowStart.toISOString()).order('occurred_at', { ascending: false }),
     supabase.from('budgets').select('*').gte('month', windowStartValue).order('month', { ascending: false }),
     supabase.from('card_expenses').select('*').gte('spent_at', windowStartValue).order('spent_at', { ascending: false }),
-    supabase.from('card_installments').select('*').order('due_month', { ascending: true }),
-    supabase.from('card_statement_archives').select('*').order('statement_date', { ascending: false }).limit(STATEMENT_ARCHIVE_LIMIT),
-    supabase.from('card_statement_payments').select('*').order('paid_at', { ascending: false }),
+    fetchCardInstallments().then(rowsFromResult),
+    fetchStatementArchives(STATEMENT_ARCHIVE_LIMIT).then(rowsFromResult),
+    fetchStatementPayments().then(rowsFromResult),
     supabase.from('savings_goals').select('*').order('created_at', { ascending: false }),
     supabase.from('savings_goal_components').select('*'),
     supabase.from('savings_goal_sources').select('*').order('sort_order', { ascending: true }),

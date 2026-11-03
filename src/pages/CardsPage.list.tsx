@@ -2,6 +2,7 @@ import { AlertTriangle, Banknote, Check, CheckCircle2, Copy, Heart, ShieldCheck 
 import { useCallback, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '../auth/useAuth'
+import { maskAmountsInText } from '../hooks/useBalancePrivacy'
 import { BankLogo } from '../components/finance/BankLogo'
 import { AccountLedgerPanel } from '../components/finance/AccountLedgerPanel'
 import { CardAliasPanel } from '../components/finance/CardAliasPanel'
@@ -275,7 +276,7 @@ export function CreditAccountListCard({
             </div>
           ) : null}
 
-          {ledgerOpen ? <AccountLedgerPanel card={row} onChanged={onChanged} formatAmount={formatAmount} /> : <AccountRecentTransactions card={row} formatAmount={formatAmount} />}
+          {ledgerOpen ? <AccountLedgerPanel card={row} onChanged={onChanged} formatAmount={formatAmount} maskText={(text) => maskAmountsInText(text, balancesHidden)} /> : <AccountRecentTransactions card={row} formatAmount={formatAmount} />}
         </DeferredDetails>
       </article>
     )
@@ -455,7 +456,7 @@ export function CreditAccountListCard({
           </div>
           <CardStatementProjectionPanel card={row} installments={cardInstallments} formatAmount={formatAmount} />
           <CardAliasPanel card={row} />
-          <CardLedgerPanel card={row} onChanged={onChanged} formatAmount={formatAmount} />
+          <CardLedgerPanel card={row} onChanged={onChanged} formatAmount={formatAmount} maskText={(text) => maskAmountsInText(text, balancesHidden)} />
         </DeferredDetails>
       ) : null}
       </div>

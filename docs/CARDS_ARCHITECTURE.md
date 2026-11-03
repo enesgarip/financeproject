@@ -1,5 +1,14 @@
 # Cards Architecture Note
 
+3 Kasım senaryo düzeltmeleri: hesap geçmişi 8'li sayfalarda en eski kayda kadar
+erişilebilir; sayfa değişimi listeyi görünür kılıp odağı taşır. Kart ve hesap
+hareket notları tüm türlerde satıra sarılır ve gizlilikte maskelenir. Tam geçmiş
+toplamları sayfa seçiminden bağımsızdır. Snapshot RPC ile eski REST fallback
+bütün açık ekstreleri + son 120 ödenmiş arşivi yükler; açık arşiv/kısmi ödeme
+kanıtı/taksit okumaları REST satır sınırını sayfalama ile aşar. Projeksiyon
+taksitleri gerçek kesim/vadede bir kez sayar; talimatın başlangıç/bitiş/durumunu
+gözetir. Kaynak ve regresyon kaydı: `docs/SCENARIO_FIXES_2026-11-03.md`.
+
 26 Ekim kart geçmişi eki: `CardLedgerPanel.tsx` borçlanma/ödeme/net tutarlarını
 ayrı alanlarda, hareketleri 10'ar kayıtlık sayfalarda sunar. Açıklama kırpılmaz;
 mobilde tutar alt satıra iner. Tüm geçmişin toplamı sayfa seçiminden bağımsızdır. En eski/En yeni ilk ve son sayfaya götürür; kullanıcı sayfa değiştirdiğinde liste başı sabit başlık payıyla animasyonsuz görünür konuma gelir ve klavye odağını alır.

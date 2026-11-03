@@ -169,7 +169,6 @@ function currentPeriodPaymentDueDate(card: Card, nextDue: string, from: Date | u
   if (hasPendingStatement) {
     return dateInputValue(addMonths(new Date(`${nextDue}T00:00:00`), 1))
   }
-
   return getCardStatementPeriod(card, from)?.dueDate ?? nextDue
 }
 
@@ -509,6 +508,34 @@ export function buildFinanceObligationsForMonth(
     right.amount - left.amount ||
     left.title.localeCompare(right.title, 'tr')
   ))
+}
+
+/** Explicit older unpaid records only; never invent missed recurring months. */
+export function buildOutstandingObligations(data: FinanceObligationsInput, from: Date): FinanceObligation[] {
+  const monthStart = dateInputValue(startOfMonth(from))
+  const dates = [
+    ...data.payments.filter((row) => row.status === 'bekliyor').map((row) => row.due_date),
+    ...data.loanInstallments.filter((row) => row.status === 'bekliyor').map((row) => row.due_date),
+    ...data.debts.filter((row) => row.status === 'açık' && row.direction === 'borç_aldım').map((row) => row.due_date),
+    ...data.cardStatements.filter((row) => row.status === 'open').map((row) => row.due_date ?? row.statement_date),
+  ].filter((date): date is string => typeof date === 'string' && date < monthStart)
+  const items = [...new Set(dates.map((date) => date.slice(0, 7)))].flatMap((month) =>
+    buildFinanceObligationsForMonth(data, new Date(`${month}-01T00:00:00`), { from }).filter((item) =>
+      item.date < monthStart && item.direction === 'outflow' && (
+        item.kind === 'card_statement' || item.kind === 'loan_installment' || item.kind === 'personal_debt' ||
+        (item.kind === 'payment' && data.payments.some((row) => row.id === item.sourceId && row.due_date === item.date))
+      ),
+    ),
+  )
+  for (const debt of data.debts) {
+    if (debt.status !== 'açık' || debt.direction !== 'borç_aldım' || debt.due_date) continue
+    addObligation(items, {
+      id: `debt-${debt.id}`, kind: 'personal_debt', action: 'settle_debt', sourceId: debt.id,
+      title: debt.person_name, subtitle: 'Vadesiz kişisel borç', date: dateInputValue(from),
+      amount: debt.estimated_value_try, direction: 'outflow', isEstimate: debt.auto_valued,
+    })
+  }
+  return items
 }
 
 export function summarizeFinanceObligations(

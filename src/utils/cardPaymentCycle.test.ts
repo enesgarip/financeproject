@@ -142,8 +142,8 @@ it('adds scheduled installments at the bill date without adding current spending
   const basic=buildCashFlowForecast(input,{from:FROM})
   const cycle=buildCardCycleForecast(input,FROM)
   expect(cycle.months[0].endingBalance).toBe(basic.months[0].endingBalance)
-  expect(cycle.months[1].endingBalance).toBe(basic.months[1].endingBalance-60)
-  expect(cycle.months[2].endingBalance).toBe(basic.months[2].endingBalance-60)
+  expect(cycle.months.map((month) => month.endingBalance)).toEqual(basic.months.map((month) => month.endingBalance))
+  expect(cycle.months.map((month) => month.cardOutflow)).toEqual([100, 60, 0, 0, 0, 0])
 })
 it('honors the end date of a card payment plan in the scenario', () => {
   const input=buildInput({cards:[card({id:'cc',card_type:'kredi_karti',statement_day:20,due_day:30})],payments:[payment({amount:20,payment_method:'bank_auto',auto_source_card_id:'cc',due_date:'2026-06-10',recurrence:'monthly',recurrence_day:10,recurrence_end_date:'2026-06-30'})]})

@@ -57,15 +57,12 @@ export function buildCardPaymentCycle(data: FinanceSummaryInput, options: { from
   }
 }
 
-/** Scenario-only supplement: scheduled card loads become cash at their statement due date. */
+/** Scenario-only supplement: future card-funded payment plans, at their statement due date. */
 export function buildCardCycleForecast(data: FinanceSummaryInput, from: Date): CashFlowForecast {
   const forecast = buildCashFlowForecast(data, { from })
   const futureBills: { date: string; amount: number }[] = []
-  for (const card of data.cards.filter((row) => row.card_type === 'kredi_karti')) {
-    for (const period of projectUpcomingStatements(card, data.cardInstallments, [], [], from, 7)) {
-      futureBills.push({ date: period.dueDate, amount: period.installmentTotal })
-    }
-  }
+  // Scheduled installments already belong to the shared forecast. Only future
+  // card-funded payment plans are supplemented here.
   for (const month of forecast.months) {
     const obligations = buildFinanceObligationsForMonth({ ...data, cardStatements: data.cardStatements ?? [] }, new Date(`${month.monthKey}T00:00:00`), { from })
     for (const item of obligations) {

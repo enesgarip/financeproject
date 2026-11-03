@@ -368,6 +368,7 @@ export function DashboardPage() {
           safeToSpend={safeToSpend}
           pendingReceivables={summary.cashFlow.remainingReceivableIncome}
           reservedKnown={safeToSpend.reservedKnown}
+          calculationKnown={safeToSpend.calculationKnown}
           isOnboarding={isOnboarding}
           buffer={safeToSpend.buffer}
           onBufferChange={safeToSpend.setBuffer}

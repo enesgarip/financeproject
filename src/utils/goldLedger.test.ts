@@ -24,6 +24,19 @@ function lot(overrides: Partial<GoldLot>): GoldLot {
 }
 
 describe('gold ledger summaries', () => {
+  it('satıştan sonraki alışta yalnız kalan maliyeti taşır; özet ve grafik aynı havuzdur', () => {
+    const rows = [lot({ id: 'a', purchase_date: '2026-01-01', quantity: 10, unit_price: 1000 }), lot({ id: 'b', purchase_date: '2026-02-01', quantity: 9, unit_price: 1500, direction: 'sell' }), lot({ id: 'c', purchase_date: '2026-03-01', quantity: 9, unit_price: 2000 })]
+    for (const input of [rows, [...rows].reverse()]) {
+      expect(summarizeGoldType(input, 'gram')).toMatchObject({ totalQuantity: 10, knownQuantity: 10, knownCost: 19000, avgUnitCost: 1900 })
+      expect(buildGoldAccumulation(input, 'gram').at(-1)?.cumulativeCost).toBe(19000)
+    }
+  })
+
+  it('tam satıştan sonra eski maliyet yeni alışa sızmaz ve fiyatsız miktar eksiye düşmez', () => {
+    const rows = [lot({ purchase_date: null, quantity: 2, unit_price: null }), lot({ id: 'buy', quantity: 1, unit_price: 1000 }), lot({ id: 'sell', purchase_date: '2026-07-01', quantity: 3, direction: 'sell' }), lot({ id: 'new', purchase_date: '2026-08-01', quantity: 1, unit_price: 2000 })]
+    expect(summarizeGoldType(rows, 'gram')).toMatchObject({ totalQuantity: 1, knownQuantity: 1, unknownQuantity: 0, knownCost: 2000, avgUnitCost: 2000 })
+  })
+
   it('counts unknown-cost lots in quantity but excludes them from average cost', () => {
     const summary = summarizeGoldType(
       [

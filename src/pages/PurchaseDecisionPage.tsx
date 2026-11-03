@@ -84,6 +84,8 @@ export function PurchaseDecisionPage() {
   const amount = parseNumber(amountInput)
   const hasAmount = amount > 0
   const { reserved, reservedKnown } = useKasaReserved()
+  const calendarIncomplete = useMemo(() => snapshotQuery.data
+    ? buildMonthlyCashFlow(snapshotQuery.data).unplacedCardIds.length > 0 : false, [snapshotQuery.data])
 
   const impact = useMemo(() => {
     const snapshot = snapshotQuery.data
@@ -104,6 +106,7 @@ export function PurchaseDecisionPage() {
 
     const forecast = buildCashFlowForecast(summaryInput, { horizonMonths: HORIZON_MONTHS })
     const cashFlow = buildMonthlyCashFlow(summaryInput)
+    if (calendarIncomplete) return null
     // Tampon okuması kanonik sürümden (`hooks/useSafeToSpend`): yerel kopya
     // try/catch'siz localStorage okuyordu — gizli modda/depolama kapalıyken
     // sayfa çöküyordu.
@@ -127,7 +130,7 @@ export function PurchaseDecisionPage() {
       safeToSpend: safe.amount,
       buffer,
     })
-  }, [snapshotQuery.data, hasAmount, amount, installments, method, reserved])
+  }, [snapshotQuery.data, hasAmount, amount, installments, method, reserved, calendarIncomplete])
 
   const verdict = impact ? VERDICT_PRESENTATION[impact.verdict] : null
 
@@ -359,6 +362,7 @@ export function PurchaseDecisionPage() {
         />
       ) : null}
 
+      {calendarIncomplete ? <p role="alert" className="rounded-xl border border-warning p-4 text-sm">Kart kesim veya son ödeme günü eksik; satın alma değerlendirmesi doğrulanamadı. <Link className="font-semibold underline" to="/kartlar?section=kartlar">Kart takvimini tamamla</Link>.</p> : null}
       {impact && verdict ? (
         <>
           <div className={`rounded-2xl border p-4 ${verdict.className}`}>

@@ -9,8 +9,8 @@
  * Tanımlar bilinçli:
  *  - Likit = banka bakiyeleri + nakit varlıklar. Araç/BES/hisse SAYILMAZ;
  *    bu ay harcanamayacak parayı "harcanabilir" göstermek yanıltıcı olur.
- *  - Kalan yükümlülük = bugünden ay sonuna kalan nakit çıkışı
- *    (financeSummary.remainingOutflow) — geçmiş vadeleri tekrar saymaz.
+ *  - Kalan yükümlülük = bu ayın kalan nakit çıkışı, eski açık kayıtlar ve
+ *    vadesiz kişisel borçlar (financeSummary.remainingOutflow). Ödenmişler hariçtir.
  *  - Tampon kullanıcı tercihidir; sıfır tampon "her kuruşu harcayabilirsin"
  *    demek olur ki beklenmedik gider ihtimalinde yanlış tavsiyedir.
  * Saf; Supabase görmez.
@@ -22,7 +22,7 @@ export type SafeToSpendInput = {
   liquidCash: number
   /** Bu ay henüz girmemiş maaş (CashFlowSummary.spendableIncome); açık alacak hariç. */
   expectedIncome: number
-  /** Bugünden ay sonuna kalan nakit çıkışı. */
+  /** Bu ayın kalan çıkışı, gecikmiş açık kayıtlar ve vadesiz borçlar. */
   remainingOutflow: number
   /** Kullanıcının dokunulmaz tamponu. */
   buffer: number

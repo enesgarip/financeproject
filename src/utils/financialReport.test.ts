@@ -41,6 +41,11 @@ const empty: FinanceSummaryInput = {
 }
 
 describe('buildFinancialReport', () => {
+  it('eksik kart takviminde harcanabilir tutarı doğrulanmış sayı gibi yazmaz', () => {
+    const input = { ...empty, cards: [bankCard({ current_balance: 45000 }), creditCard({ debt_amount: 25000, statement_debt_amount: 10000, current_period_spending: 15000, statement_day: null, due_day: null })] }
+    const md = reportToMarkdown(buildFinancialReport(input, { now: NOW, safeToSpendBuffer: 5000, kasaBuckets: [] }))
+    expect(md).toContain('Bu ay harcanabilir: doğrulanamadı; kart kesim/son ödeme günü eksik.')
+  })
   it('produces a titled, dated report with the core sections', () => {
     const report = buildFinancialReport(empty, { now: NOW })
     expect(report.title).toBe('Finansal Özet')

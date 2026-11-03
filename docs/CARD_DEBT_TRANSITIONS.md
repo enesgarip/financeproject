@@ -1,5 +1,17 @@
 # Card Debt Transitions
 
+3 Kasım senaryo düzeltmeleri: scheduled taksitler borç kovalarına ikinci kez
+eklenmez; nakit tahmini gerçek işlem günü → kesim → vade eşlemesini kullanır.
+Kesimden sonraki taksit sonraki ekstreye gider. Aylık özet ve forecast ortak
+`scheduledCardCashOutflow` kullanır; kart döngüsü bunu yeniden eklemez.
+Snapshot geçmiş sınırı yalnız ödenmiş arşivler içindir; açık ekstrelerin gerçek
+vadesi ve kısmi ödeme kanıtı korunur. REST fallback açık arşiv, taksit ve ödeme
+kanıtlarını sayfalar. Kart/hesap ledger olayları ve kart yazma RPC'leri değişmez.
+Kişisel borç kısmi kapama miktar kolonu `numeric(38,26)` olur; dört haneli ara
+yuvarlama kaldırılır, TL ve ledger kuruş hassasiyeti korunur. Eski miktarlar
+tahminle düzeltilmez. Sözleşme/doğrulama: `docs/FINANCE_RULES.md`,
+`docs/SCENARIO_FIXES_2026-11-03.md`.
+
 3 Kasım harcanabilir tutar eki: tahsil edilmemiş kişisel alacaklar “Ay sonuna
 kalan” hesabından çıkarıldı (`CashFlowSummary.spendableIncome`). Kart borcu,
 ekstre/taksit geçişleri, hesap bakiyesi ve tahsilat RPC/ledger davranışı aynı

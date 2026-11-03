@@ -29,7 +29,7 @@ export type HealthSummary = {
   /** Bulgu toplamı (errors + warnings). Yapılan kontrol sayısı DEĞİL. */
   total: number
   /**
-   * Kaç kontrol koşturuldu. Her kart 3, ödeme planı olan her kredi 2, taksitli
+   * Kaç kontrol koşturuldu. Her kart 4, ödeme planı olan her kredi 2, taksitli
    * her harcama 1, her limit grubu 1 kontrol demek.
    *
    * Neden gerekli: "2 bulgu" tek başına kötü mü iyi mi belli değil — 2/4 ile
@@ -60,7 +60,8 @@ export function buildHealthCounts(data: HealthCountInput): HealthSummary {
 
   for (const card of data.cards.filter((c) => c.card_type === 'kredi_karti')) {
     const breakdown = cardDebtBreakdown(card, scheduledByCard.get(card.id) ?? 0)
-    checksRun += 3
+    checksRun += 4
+    if (!card.statement_day || !card.due_day) warnings++
     if (breakdown.hasSplitOverflow) errors++
     if (breakdown.hasScheduledDebtGap) errors++
     if (breakdown.hasUnexplainedDebt) warnings++

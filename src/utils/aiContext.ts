@@ -286,7 +286,9 @@ export function buildAiFinanceContext(input: AiContextInput, options: AiContextO
         : ' — tampon eldekinden büyük (yükümlülük kaynaklı değil)'
       : ''
     monthLines.push(
-      `- Güvenle harcanabilir: ${tl(safe.amount)}${causeNote} (tampon ${tl(options.safeToSpendBuffer)} ve kasa rezervi ${tl(reserved)} düşülmüş)`,
+      flow.unplacedCardIds.length
+        ? '- Güvenle harcanabilir: doğrulanamadı; borcu olan kartlarda kesim/son ödeme günü eksik. Harcama önerisi verme.'
+        : `- Güvenle harcanabilir: ${tl(safe.amount)}${causeNote} (tampon ${tl(options.safeToSpendBuffer)} ve kasa rezervi ${tl(reserved)} düşülmüş)`,
     )
   }
   sections.push(monthLines.join('\n'))

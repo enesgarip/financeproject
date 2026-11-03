@@ -11,6 +11,8 @@ import type {
   SalaryHistory,
 } from '../types/database'
 import { buildCashFlowForecast, salaryCutRunwayMonths } from './cashFlowForecast'
+import { buildCardCycleForecast } from './cardPaymentCycle'
+import { buildMonthlyCashFlow } from './financeSummary'
 import type { FinanceSummaryInput } from './financeSummary'
 
 const base = { id: 'id', user_id: 'u', created_at: '2026-06-01T00:00:00.000Z', updated_at: '2026-06-01T00:00:00.000Z' }
@@ -92,6 +94,32 @@ function buildInput(overrides: Partial<FinanceSummaryInput> = {}): FinanceSummar
 }
 
 describe('buildCashFlowForecast', () => {
+  it.each([[25, 5, '2026-12-01', [0, 0, 3000]], [20, 30, '2026-12-01', [0, 3000, 0]], [25, 5, '2026-11-28', [0, 0, 3000]], [20, 30, '2026-11-04', [3000, 0, 0]]] as const)('taksit %s/%s takviminde %s tarihinde nakitten bir kez çıkar', (cut, due, date, expected) => {
+    const from = new Date(2026, 10, 3)
+    const data = buildInput({ cards: [card({ id: 'cc', card_type: 'kredi_karti', statement_day: cut, due_day: due, debt_amount: 3000 }), card({ id: 'bank', current_balance: 100000 })], cardInstallments: [cardInstallment({ card_id: 'cc', due_month: date, amount: 3000 })] })
+    const baseForecast = buildCashFlowForecast(data, { from, horizonMonths: 3 })
+    const cycle = buildCardCycleForecast(data, from)
+    expect(baseForecast.months.map((row) => row.cardOutflow)).toEqual(expected)
+    expect(cycle.months.slice(0, 3).map((row) => row.cardOutflow)).toEqual(expected)
+    expect(baseForecast.endingBalance).toBe(97000)
+    expect(cycle.endingBalance).toBe(97000)
+    expect(buildMonthlyCashFlow(data, from, { today: from }).remainingOutflow).toBe(expected[0])
+  })
+
+  it('eski açık kayıtları ve vadesiz borcu ilk ay bir kez taşır; kapanmış ve alacakları katmaz', () => {
+    const from = new Date(2026, 10, 3)
+    const data = buildInput({
+      payments: [payment({ id: 'old', due_date: '2026-09-08', amount: 1000 }), payment({ id: 'monthly', recurrence: 'monthly', recurrence_day: 10, due_date: '2026-09-10', amount: 100 }), payment({ id: 'paid', due_date: '2026-09-01', amount: 9999, status: 'ödendi' })],
+      debts: [debt({ id: 'undated', estimated_value_try: 2000 }), debt({ id: 'old', estimated_value_try: 3000, due_date: '2026-10-01' }), debt({ id: 'closed', status: 'kapandı', estimated_value_try: 9999 }), debt({ id: 'lent', direction: 'borç_verdim', estimated_value_try: 9999 })],
+      loanInstallments: [loanInstallment({ due_date: '2026-09-02', amount: 400 })],
+      cardStatements: [statement({ due_date: '2026-10-05', statement_debt_amount: 500 })],
+      cardStatementPayments: [{ statement_archive_id: base.id, amount: 100 }],
+    })
+    const forecast = buildCashFlowForecast(data, { from, horizonMonths: 2 })
+    expect(forecast.months.map((row) => row.outflow)).toEqual([7000, 100])
+    expect(buildMonthlyCashFlow(data, from, { today: from }).remainingOutflow).toBe(7000)
+  })
+
   it('defaults to a 6-month horizon with month keys and labels', () => {
     const { months } = buildCashFlowForecast(buildInput(), { from: FROM })
     expect(months).toHaveLength(6)
@@ -238,23 +266,22 @@ describe('buildCashFlowForecast', () => {
           debt({ direction: 'borç_verdim', due_date: '2026-07-15', estimated_value_try: 8000 }),
           debt({ direction: 'borç_aldım', due_date: '2026-09-10', estimated_value_try: 6000 }),
         ],
-        cardInstallments: [cardInstallment({ due_month: '2026-08-01', amount: 1500 })],
+        cardInstallments: [cardInstallment({ card_id: 'cc', due_month: '2026-08-01', amount: 1500 })],
       }),
       { from: FROM, horizonMonths: 6 },
     )
 
     expect(forecast.startingBalance).toBe(15000)
-    // Ağustos'ta ekstreye giren 1.500 ₺ planlı taksit Eylül vadesinde nakitten
-    // çıkar (B27); Eylül ve sonrası o kadar düşük.
-    expect(forecast.months.map((m) => m.endingBalance)).toEqual([6000, 27000, 40000, 50500, 68500, 86500])
+    // Kesim 1 / vade 10: 1 Ağustos taksiti aynı ayın 10'unda nakitten çıkar.
+    expect(forecast.months.map((m) => m.endingBalance)).toEqual([6000, 27000, 38500, 50500, 68500, 86500])
     expect(forecast.endingBalance).toBe(86500)
     expect(forecast.firstNegative).toBeNull()
     expect(forecast.lowest).toMatchObject({ monthKey: '2026-06-01', balance: 6000 })
 
     expect(forecast.months[1]).toMatchObject({ receivables: 8000, cardOutflow: 1000, income: 28000, outflow: 7000, net: 21000 })
-    expect(forecast.months[2]).toMatchObject({ paymentOutflow: 7000, installmentOutflow: 0, outflow: 7000 })
-    // Eylül: 2.000 planlı ödeme + 6.000 kişisel borç + Ağustos taksiti 1.500 (B27).
-    expect(forecast.months[3]).toMatchObject({ debtOutflow: 6000, cardOutflow: 1500, outflow: 9500 })
+    expect(forecast.months[2]).toMatchObject({ paymentOutflow: 7000, installmentOutflow: 0, cardOutflow: 1500, outflow: 8500 })
+    // Eylül: 2.000 planlı ödeme + 6.000 kişisel borç; Ağustos taksiti tekrar yok.
+    expect(forecast.months[3]).toMatchObject({ debtOutflow: 6000, cardOutflow: 0, outflow: 8000 })
   })
 
   it('flags the first negative month and the lowest balance in a deficit', () => {

@@ -17,6 +17,7 @@
  * sumTL, exceedsTL...). Çıplak Math.round veya +0.01 toleransı YAZMA.
  */
 import { dateInputValue } from './date'
+import { scheduledCardCashOutflow } from './cardStatement'
 import type {
   Asset,
   Card,
@@ -33,7 +34,7 @@ import type {
 } from '../types/database'
 import { endOfMonth, startOfMonth } from './date'
 import { diffTL, exceedsTL, roundTL, sumTL, toKurus, toTL } from './money'
-import { buildFinanceObligationsForMonth, getFirstBusinessDay, type FinanceObligation, type FinanceObligationsInput } from './obligations'
+import { buildFinanceObligationsForMonth, buildOutstandingObligations, getFirstBusinessDay, type FinanceObligation, type FinanceObligationsInput } from './obligations'
 
 export {
   buildCreditCardIdCheck,
@@ -105,8 +106,10 @@ export type CashFlowSummary = {
   salaryIncome: number
   receivableIncome: number
   outflow: number
-  /** Cari ayda bugünden ay sonuna kalan çıkış; geçmiş aylar için outflow ile aynı. */
+  /** Cari ayın kalan çıkışı + önceki aylardan açık kayıtlar + vadesiz kişisel borçlar. */
   remainingOutflow: number
+  /** Borcu olan, kesim/vade takvimi tanımsız kartlar; harcanabilir hesap tamamlanamaz. */
+  unplacedCardIds: string[]
   /** Henüz girmemiş gelir (maaş yatmadıysa + kalan tahsilat). */
   expectedIncome: number
   /** Harcanabilir tutara eklenebilen kalan gelir; tahsil edilmemiş alacakları içermez. */
@@ -475,10 +478,11 @@ export function buildMonthlyCashFlow(
     (item) => item.kind === 'payment',
   )
   const recurringPayments = data.payments.filter((payment) => payment.recurrence === 'monthly' && payment.status === 'bekliyor').length
-  const cardOutflow = obligationSum(
+  const scheduledCash = scheduledCardCashOutflow(data.cards, data.cardInstallments, monthStart)
+  const cardOutflow = sumTL([scheduledCash, obligationSum(
     obligations,
     (item) => item.kind === 'card_statement' || item.kind === 'card_debt' || item.kind === 'card_installment',
-  )
+  )])
   const cardStatementDebt = cardOutflow
   const loanOutflow = obligationSum(
     obligations,
@@ -497,7 +501,9 @@ export function buildMonthlyCashFlow(
     item.kind === 'loan_installment' ||
     item.kind === 'legacy_loan_installment' ||
     item.kind === 'personal_debt'
-  const remainingOutflow = obligationSum(remainingObligations, isOutflowKind)
+  const outstanding = isCurrentMonth ? buildOutstandingObligations(obligationsInput(data), today) : []
+  const remainingOutflow = sumTL([obligationSum([...remainingObligations, ...outstanding], isOutflowKind),
+    scheduledCardCashOutflow(data.cards, data.cardInstallments, monthStart, isCurrentMonth)])
   const remainingReceivableIncome = obligationSum(remainingObligations, (item) => item.kind === 'personal_receivable')
 
   const salaryLikelyReceived = isCurrentMonth && dateInputValue(today) >= dateInputValue(getFirstBusinessDay(monthStart))
@@ -512,6 +518,9 @@ export function buildMonthlyCashFlow(
     receivableIncome,
     outflow,
     remainingOutflow,
+    unplacedCardIds: data.cards.filter((card) => card.card_type === 'kredi_karti' &&
+      (!card.statement_day || !card.due_day) && (card.debt_amount > 0 || data.cardInstallments.some((row) => row.card_id === card.id && row.status === 'scheduled' && row.amount > 0)),
+    ).map((card) => card.id),
     expectedIncome: projectedIncome,
     spendableIncome,
     remainingReceivableIncome,

@@ -1,6 +1,48 @@
 # Finance Rules
 
-Last reviewed: 2026-11-02
+Last reviewed: 2026-11-03
+
+## Senaryo denetimi kararları (3 Kasım 2026)
+
+- Harcanabilir tutarın kalan çıkışı bu ayın kayıtlı yükümlülüklerine ek olarak
+  önceki aylardan açık ödeme, gerçek kredi taksiti, kalan açık ekstre ve kişisel
+  borçları; ayrıca vadesiz açık kişisel borçları içerir. `remainingOutflow` cari
+  ayda bu kapsamı taşır. Ödenmiş/kapalı kayıtlar ve vadesiz alacaklar katılmaz;
+  kayıtsız geçmiş aylık tekrarlar üretilmez. Forecast bu yükü ilk ay bir kez taşır.
+- Scheduled taksit gerçek `due_month` gününün ait olduğu kesim ve ödeme
+  tarihinde nakitten çıkar. Kesim sonrası gün sonraki ekstreye gider; vade
+  kesimden büyükse ödeme aynı ay olabilir. Aylık özet ve forecast bu hesabı
+  `scheduledCardCashOutflow` üzerinden paylaşır. Kart döngüsü ikinci kez eklemez.
+  Posted taksit zaten mevcut kart kovasındadır; tekrar sayılmaz. Ödemeler takvimi
+  nominal taksiti kendi gününde kart yükü/nakit etkisi sıfır olarak göstermeyi sürdürür.
+- Ekstre projeksiyonunda kart talimatı yalnız bekliyorsa, başlangıç/bitiş
+  penceresinde ve gerçekleşeceği günün ait olduğu kesimde sayılır. İlk dönem
+  abonelik/talimat medyanı eklememe kuralı korunur.
+- Borcu bulunan kartta kesim/son ödeme günü eksikse harcanabilir rakam ve günlük
+  harcama önerisi doğrulanmış olarak sunulmaz. Karar ve alınacaklar değerlendirmesi,
+  planlama artan-para önerisi, rapor ve asistan da bunu gözetir. Hafif kontrol
+  takvim eksikliğini uyarı sayar.
+- Hedefin tekil varlık, kategori ve tüm-varlık kaynakları varlık kimliklerinin
+  birleşimidir; örtüşme miktarı ikiye katlamaz. Banka + kasa ayrı kaynak anlamını
+  korur. Aynı tutar form önizlemesi ve kayıtlı hedefte kullanılır.
+- Altın maliyeti tarih sıralı ağırlıklı ortalama havuzudur. Satış önce maliyeti
+  bilinen miktarı o andaki ortalamayla azaltır; satış fiyatı kalan maliyete girmez.
+  Sonraki alış yalnız kalan havuza eklenir. Fiyatsız miktar toplamda kalır;
+  maliyet uydurulmaz. Tarihsiz açılışlar önce, aynı gün alışlar satışlardan önce
+  işlenir. Özet ve grafik aynı havuz kuralını kullanır; grafik yalnız tarihli
+  satırları çizer, farklı altın türlerinin maliyet havuzları karışmaz.
+- Kısmi döviz/altın borcu miktarı `numeric(38,26)` hassasiyetinde saklanır ve ara
+  dört hane yuvarlaması yapılmaz. TL ödeme/kalan değer iki ondalıktır; sabit kurda
+  yeniden değerleme kalan değeri korur. Eski yuvarlanmış miktarlar otomatik
+  yeniden yazılmaz; geçmiş kanıtla mutabakat gerekir.
+- Snapshot bütün açık ekstreleri ve son N ödenmiş arşivi döndürür (varsayılan
+  N=120). Tarih/PK sıralaması kararlıdır. REST fallback aynı kapsamı kullanır;
+  açık arşivler, taksitler ve kısmi ödeme kanıtları sayfalanır. Herhangi bir sayfa
+  hatası kısmi bir başarı sonucu sunmaz.
+- `parseNumber` ASCII ve Unicode eksi işaretini, işaretli Türkçe binlik yazımı
+  korur: `−1.234` = −1234, `−1.234,56 TL` = −1234,56.
+
+Kanıt, migration ve açık gözlemler: `docs/SCENARIO_FIXES_2026-11-03.md`.
 
 ## Kategori harcaması dönemleri
 

@@ -1,5 +1,27 @@
 # AI Context Index
 
+3 Kasım senaryo denetimi düzeltmeleri: kayıt/kanıt ve kalan sınırlar
+`docs/SCENARIO_FIXES_2026-11-03.md` içinde. `cardStatement.ts` içindeki
+`scheduledCardCashOutflow` aylık özet ve forecast'ın ortak taksit nakit tarihidir;
+`cardPaymentCycle.ts` taksitleri yeniden eklemez. `statementProjection.ts` /
+`statementEstimate.ts` taksitin gerçek gününü kesime eşler; talimat projeksiyonu
+`paymentOccurrenceInMonth` başlangıç/bitiş/durumunu gözetir.
+`obligations.ts` / `buildOutstandingObligations` yalnız gerçek eski açık kayıtları
+ve vadesiz borçları cari ayın kalan çıkışına taşır; kayıtsız aylık borç üretmez.
+`CashFlowSummary.unplacedCardIds` eksik takvimde Özet/karar/liste/plan/rapor/asistan
+harcanabilir iddiasını kapatır. `dataHealthSummary.ts` kart takvimini de denetler.
+`goalSources.ts` varlık kimliklerinin birleşimini sayar; `goldLedger.ts` tarih
+sıralı kalan maliyet havuzunu özet ve grafikte ortak kullanır.
+`AccountLedgerPanel.tsx` 8'li geçmiş sayfaları sunar; iki ledger panelinde her
+türün notu gizlilik biçimleyicisinden geçer. `financeSnapshotRepo.ts` RPC ve
+fallback açık ekstreleri tarih sınırından korur; fallback `cardsRepo.ts` ortak
+sayfalı taksit/açık arşiv/kısmi ödeme okumalarını kullanır. SQL:
+`20261103090000_debt_quantity_precision.sql`,
+`20261103091000_snapshot_open_statements.sql`; regresyonlar:
+`supabase/tests/debt_quantity_precision.sql`,
+`supabase/tests/snapshot_open_statement_scope.sql`,
+`supabase/tests/finance_snapshot_rpc.sql`, `tests/e2e/simplification.spec.ts`.
+
 3 Kasım harcanabilir tutar: `utils/financeSummary.ts` içindeki
 `CashFlowSummary.spendableIncome` tahsil edilmemiş alacakları dışarıda bırakır.
 Tüm `buildSafeToSpend` tüketicileri ve Özet hesap dökümü bu alanı kullanır.
@@ -14,7 +36,7 @@ gerçek arşiv bağıyla geçmiş kesim aylarını ve takvim aylarını ayrı t�
 `pages/AnalysisPage.categories.tsx` kart/dönem seçimi, tarih aralıkları ve kategori
 hareketlerini sunar; `pages/AnalysisPage.wealth.tsx` mevcut export'u korur.
 `data/repositories/analysisRepo.ts` / `fetchCategorySpendingHistory` üç tablonun
-tam geçmişini 500'lük PK imleciyle okur; snapshot'ın 25 ay/120 arşiv sınırını
+tam geçmişini 500'lük PK imleciyle okur; snapshot'ın 25 ay/120 ödenmiş arşiv sınırını
 kullanmaz. `app/useCategorySpendingHistory.ts` kullanıcı cache'i ortak finans
 invalidation'ıyla yenilenir. Ekstrede çocuk taksit, takvim ayında alışveriş
 toplamı sayılır; provizyon/iptal hariçtir. Eksik arşiv ve kapsam farkı açıklanır.
