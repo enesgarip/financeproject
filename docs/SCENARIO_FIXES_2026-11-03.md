@@ -1,5 +1,12 @@
 # Kişisel kullanım denetimi — düzeltme kaydı
 
+Takip denetimi: `docs/SCENARIO_UX_AUDIT_2026-11-03.md`. Kayıp yanıt sonrası
+kısmi ödeme tekrarı ve soğuk offline açılış artık yeniden üretildi; önceki
+“henüz doğrulanmadı” notları bu düzeltme paketinin tarihsel kapsamını anlatır.
+İkinci turdaki dört hata/gösterim bulgusu ve dört UX grubu artık
+`docs/SCENARIO_UX_FIXES_2026-11-03.md` ile kapatıldı; bu dosya önceki paketin
+tarihsel kapsamını korur.
+
 Başlangıç: `eacd115` üzerindeki 3 Kasım senaryo raporu. Bu kayıt önceki
 denetimin ölçümlerini yeni sürümün sonucu saymaz; düzeltmelerin kendi kalıcı
 regresyonlarını ve kapsam sınırlarını tutar. Kullanıcı eski açık/vadesiz

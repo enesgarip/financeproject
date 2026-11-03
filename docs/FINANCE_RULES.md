@@ -2,6 +2,17 @@
 
 Last reviewed: 2026-11-03
 
+İkinci tur kabulü: `docs/SCENARIO_UX_FIXES_2026-11-03.md`.
+Arşivli kartın dönem içi vadesi gerçek kesimden gelir; eski açık ekstrenin
+ödenmesi bunu değiştirmez. Arşivsiz eski kovadaki muhafazakâr ayrım korunur.
+Ödeme drawer'ındaki beş RPC kullanıcı + UUID + canonical payload hash'iyle
+aynı transaction'da tekilleşir. Aynı kimlik/farklı payload reddedilir; başarısız
+transaction makbuz bırakmaz. Hash makbuzu reset/restore'da korunur, Auth
+silinince silinir. Ham tutar/kişi/hesap bilgisi makbuzda ve finans yedeğinde yoktur.
+İstemci belirsiz sonucu aynı kimlik/alanlarla doğrular; yeni ödeme ayrı niyettir.
+Tam kişisel/ekstre ödemesinde de girilen TL tutarı açıkça gönderilir; eski
+ekranın tam tutarı güncel kalanı aşıyorsa reddedilir, null ile farklı tutara dönüşmez.
+
 ## Senaryo denetimi kararları (3 Kasım 2026)
 
 - Harcanabilir tutarın kalan çıkışı bu ayın kayıtlı yükümlülüklerine ek olarak

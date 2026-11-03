@@ -37,6 +37,7 @@ type FinancePaymentDrawerProps = {
   onClose: () => void
   onSubmit: (payload: AccountPaymentSubmit) => Promise<void> | void
   saving?: boolean
+  uncertain?: boolean
   externalError?: string
   detail?: ReactNode
 }
@@ -50,7 +51,7 @@ function defaultPaymentDetail(intent: FinanceObligation | null, formatAmount: (v
       <p className="mt-0.5">{intent.subtitle}</p>
       <p className="mt-0.5">Tarih: {formatDate(intent.date)}</p>
       <p className="mt-0.5">
-        Planlanan tutar:{' '}
+        {intent.action === 'settle_debt' || intent.action === 'collect_debt' || intent.action === 'pay_card_statement' ? 'Güncel kalan:' : 'Planlanan tutar:'}{' '}
         <span className="font-mono font-semibold text-ink">{formatAmount(intent.amount)}</span>
       </p>
     </>
@@ -68,6 +69,7 @@ export function FinancePaymentDrawer({
   onClose,
   onSubmit,
   saving = false,
+  uncertain = false,
   externalError = '',
   detail,
 }: FinancePaymentDrawerProps) {
@@ -162,8 +164,9 @@ export function FinancePaymentDrawer({
       accountLabel={accountLabelForObligation(intent)}
       emptyMessage={emptyAccountMessageForObligation(intent)}
       outsideAccountsValue={outsideAccountsValue}
-      submitLabel={submitLabelForObligation(intent)}
+      submitLabel={uncertain ? 'Sonucu doğrula' : submitLabelForObligation(intent)}
       saving={saving}
+      confirming={uncertain}
       externalError={externalError}
       amountEditable={obligationAmountEditable(intent)}
       accountPreviewAmount={(amount) =>

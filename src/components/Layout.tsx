@@ -12,6 +12,7 @@ import { contentWidthClass, overflowNavItems, primaryNavItems, routeSubtitle, ro
 import { PullToRefresh } from './PullToRefresh'
 import { QuickActionsButton, QuickActionsProvider } from './QuickActions'
 import { useDialogA11y } from './ui/use-dialog-a11y'
+import { FinanceDataStatus } from './FinanceDataStatus'
 
 /**
  * Uygulama kabuğu — Şerit (`4e`). Kart yok, gölge yok: rail sayfadan 1px
@@ -185,6 +186,7 @@ function LayoutInner() {
           )}
         >
           <PullToRefresh>
+            <FinanceDataStatus />
             <Outlet />
           </PullToRefresh>
         </main>

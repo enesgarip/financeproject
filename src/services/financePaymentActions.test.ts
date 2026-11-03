@@ -108,18 +108,19 @@ describe('finance payment action helpers', () => {
     } as never)
 
     const result = await submitFinanceObligationPayment({
+      requestId: 'request-1',
       obligation: obligation({ action: 'pay_payment' }),
       account: card({ id: 'bank' }),
       amount: 125,
     })
 
     expect(rpcMock).toHaveBeenCalledTimes(1)
-    expect(rpcMock).toHaveBeenCalledWith('pay_payment', {
+    expect(rpcMock).toHaveBeenCalledWith('submit_finance_payment', { p_request_id: 'request-1', p_method: 'pay_payment', p_args: {
       p_payment_id: 'source',
       p_source_card_id: 'bank',
       p_paid_amount: 125,
       p_outside_accounts: false,
-    })
+    } })
     expect(result.error?.message).toContain('PGRST202')
   })
 
@@ -127,54 +128,58 @@ describe('finance payment action helpers', () => {
     rpcMock.mockResolvedValueOnce({ data: null, error: null } as never)
 
     await submitFinanceObligationPayment({
+      requestId: 'request-1',
       obligation: obligation({ action: 'pay_payment' }),
       account: null,
       amount: 300,
       paidAt: '2026-09-18',
     })
 
-    expect(rpcMock).toHaveBeenCalledWith('pay_payment', {
+    expect(rpcMock).toHaveBeenCalledWith('submit_finance_payment', { p_request_id: 'request-1', p_method: 'pay_payment', p_args: {
       p_payment_id: 'source',
       p_source_card_id: null,
       p_paid_amount: 300,
       p_paid_at: '2026-09-18',
       p_outside_accounts: true,
-    })
+    } })
   })
 
-  it('sends p_amount only when the statement payment is partial (K7)', async () => {
+  it('tam ödemede de girilen tutarı gönderir; başka sekmenin kalanını sessizce ödemez', async () => {
     const statement = obligation({ kind: 'card_statement', action: 'pay_card_statement', amount: 1_000 })
 
     rpcMock.mockResolvedValueOnce({ data: null, error: null } as never)
-    await submitFinanceObligationPayment({ obligation: statement, account: card({ id: 'bank' }), amount: 400 })
-    expect(rpcMock).toHaveBeenLastCalledWith('pay_card_statement', {
+    await submitFinanceObligationPayment({ requestId: 'request-1', obligation: statement, account: card({ id: 'bank' }), amount: 400 })
+    expect(rpcMock).toHaveBeenLastCalledWith('submit_finance_payment', { p_request_id: 'request-1', p_method: 'pay_card_statement', p_args: {
       p_statement_id: 'source',
       p_source_card_id: 'bank',
       p_skip_source_debit: false,
       p_amount: 400,
-    })
+    } })
 
-    // Kalanın tamamı: p_amount GÖNDERİLMEZ → sunucu tam kapama yapar.
+    // Kalanın tamamı açık tutarla gider; güncel kalana eşitse sunucu kapatır.
     rpcMock.mockResolvedValueOnce({ data: null, error: null } as never)
-    await submitFinanceObligationPayment({ obligation: statement, account: card({ id: 'bank' }), amount: 1_000 })
-    expect(rpcMock).toHaveBeenLastCalledWith('pay_card_statement', {
+    await submitFinanceObligationPayment({ requestId: 'request-2', obligation: statement, account: card({ id: 'bank' }), amount: 1_000 })
+    expect(rpcMock).toHaveBeenLastCalledWith('submit_finance_payment', { p_request_id: 'request-2', p_method: 'pay_card_statement', p_args: {
       p_statement_id: 'source',
       p_source_card_id: 'bank',
       p_skip_source_debit: false,
-    })
+      p_amount: 1_000,
+    } })
 
     // Kuruş altı fark tam ödeme sayılır (float tozu kısmi ödemeye düşmez).
     rpcMock.mockResolvedValueOnce({ data: null, error: null } as never)
     await submitFinanceObligationPayment({
+      requestId: 'request-3',
       obligation: obligation({ kind: 'card_statement', action: 'pay_card_statement', amount: 1_000.0000001 }),
       account: card({ id: 'bank' }),
       amount: 1_000,
     })
-    expect(rpcMock).toHaveBeenLastCalledWith('pay_card_statement', {
+    expect(rpcMock).toHaveBeenLastCalledWith('submit_finance_payment', { p_request_id: 'request-3', p_method: 'pay_card_statement', p_args: {
       p_statement_id: 'source',
       p_source_card_id: 'bank',
       p_skip_source_debit: false,
-    })
+      p_amount: 1_000,
+    } })
   })
 
   it('computes the estimated minimum card payment with TL rounding', () => {

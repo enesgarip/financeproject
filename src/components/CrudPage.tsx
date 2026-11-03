@@ -535,7 +535,7 @@ export function CrudPage<T extends CrudTableName>({
                     >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
-                      <h2 className="truncate text-base font-black text-ink">{title}</h2>
+                      <h2 className="whitespace-normal break-words [overflow-wrap:anywhere] text-base font-black text-ink">{title}</h2>
                       {subtitle ? (
                         <p className="mt-1 text-sm text-ink-muted">{subtitle}</p>
                       ) : null}

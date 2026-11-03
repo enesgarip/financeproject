@@ -165,7 +165,20 @@ function cardLabel(card: Card | undefined) {
   return card ? `${card.bank_name} - ${card.card_name}` : 'Kart'
 }
 
-function currentPeriodPaymentDueDate(card: Card, nextDue: string, from: Date | undefined, hasPendingStatement: boolean) {
+function currentPeriodPaymentDueDate(card: Card, nextDue: string, from: Date | undefined, hasPendingStatement: boolean, statements: CardStatementArchive[]) {
+  const today = dateInputValue(from ?? new Date())
+  const latestCut = statements.filter((row) => row.card_id === card.id && row.statement_date <= today)
+    .map((row) => row.statement_date).sort().at(-1)
+  if (latestCut) {
+    const period = getCardStatementPeriod(card, from)
+    // Eski açık ekstrenin durumu bugünkü açık dönemin vadesini değiştirmez.
+    // Bugün kesim zaten kaydedildiyse yeni dönem bir sonraki kesime aittir.
+    return (period && latestCut >= period.statementDate
+      ? getCardStatementPeriod(card, addDays(new Date(`${latestCut}T00:00:00`), 1))?.dueDate
+      : period?.dueDate) ?? nextDue
+  }
+  // Arşivsiz eski kayıtta ekstre kovasının hangi kesime ait olduğu bilinmez.
+  // Mevcut muhafazakâr ayrımı koru; tarih kanıtı olan kartı bu varsayıma sokma.
   if (hasPendingStatement) {
     return dateInputValue(addMonths(new Date(`${nextDue}T00:00:00`), 1))
   }
@@ -359,15 +372,14 @@ export function buildFinanceObligationsForMonth(
     }
 
     // Dönem içi harcama henüz ekstreye girmedi; gerçek nakit çıkışı, açık dönemin
-    // kesileceği ekstrenin son ödeme gününde olur. Bekleyen ekstre varsa mevcut
-    // vade o ekstreye aittir; açık dönem bir sonraki çevrimde ödenir. Bekleyen
-    // ekstre yoksa tarihi kartın kesim/vade periyodundan türetiriz; böylece
+    // kesileceği ekstrenin son ödeme gününde olur. Arşiv varsa açık/ödenmiş
+    // durumundan bağımsız gerçek kesim/vade periyodu kullanılır; böylece
     // son ekstre erken ödendikten sonra bugünkü dönem içi harcama eski vade gününe
     // (ör. 14 Temmuz) tekrar bindirilmez.
     // action: null — ekstre kesilmeden ödenecek bir kalem yok (sadece projeksiyon).
     if (nextDue && card.current_period_spending > 0) {
       const hasPendingStatement = cardsWithOpenStatements.has(card.id) || card.statement_debt_amount > 0
-      const currentPeriodDueDate = currentPeriodPaymentDueDate(card, nextDue, options.from, hasPendingStatement)
+      const currentPeriodDueDate = currentPeriodPaymentDueDate(card, nextDue, options.from, hasPendingStatement, data.cardStatements)
       if (isDateInMonth(currentPeriodDueDate, monthStart)) {
         addObligation(items, {
           id: `card-debt-current-${card.id}-${currentPeriodDueDate}`,

@@ -52,6 +52,79 @@ async function mockApp(page: Page, theme: string, overrides: typeof tables = {})
   })
 }
 
+const sampleDebt = { ...base, id: 'debt-1', person_name: 'Örnek borçlu', direction: 'borç_aldım', value_type: 'TRY', currency: null, amount: 1000, estimated_value_try: 1000, auto_valued: false, due_date: null, status: 'açık' }
+
+test('kirli ödeme formunda tarayıcı Geri vazgeçilince rota ve tutar korunur', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 900 })
+  await mockApp(page, 'light', { debts: [sampleDebt] })
+  await page.goto('/')
+  await page.getByRole('link', { name: 'Borçlar', exact: true }).filter({ visible: true }).first().click()
+  await page.getByRole('link', { name: 'Kişiler', exact: true }).filter({ visible: true }).first().click()
+  await page.getByRole('button', { name: 'Ödeme kaydet', exact: true }).click()
+  const modal = page.getByRole('dialog')
+  await modal.getByLabel(/^Ödeme tutarı/).fill('100')
+  const confirmations: string[] = []
+  page.on('dialog', dialog => { confirmations.push(dialog.message()); return dialog.dismiss() })
+  await page.goBack()
+  await expect(page).toHaveURL(/\/borclar\/kisiler$/)
+  await expect(modal.getByLabel(/^Ödeme tutarı/)).toHaveValue('100')
+  expect(confirmations).toHaveLength(1)
+  page.removeAllListeners('dialog')
+  page.on('dialog', dialog => dialog.accept())
+  await page.goBack()
+  await expect(page).toHaveURL(/\/borclar\/krediler$/)
+})
+
+test('kayıp ödeme yanıtından sonra yenileme aynı işlem kimliği ve tutarla doğrular', async ({ page }) => {
+  await mockApp(page, 'light', { debts: [sampleDebt] })
+  const requests: Record<string, unknown>[] = []
+  await page.route('**/rest/v1/rpc/submit_finance_payment', async route => {
+    requests.push(route.request().postDataJSON())
+    if (requests.length === 1) return route.abort('connectionreset')
+    return route.fulfill({ json: null })
+  })
+  page.on('dialog', dialog => dialog.accept())
+  await page.goto('/borclar/kisiler')
+  await page.getByRole('button', { name: 'Ödeme kaydet', exact: true }).click()
+  let modal = page.getByRole('dialog')
+  await modal.getByLabel(/^Ödeme tutarı/).fill('100')
+  await modal.locator('select').selectOption('bank-1')
+  await modal.getByRole('button', { name: 'Ödemeyi kaydet', exact: true }).click()
+  await expect(modal.getByRole('button', { name: 'Sonucu doğrula', exact: true })).toBeEnabled()
+  await expect(modal.getByLabel(/^Ödeme tutarı/)).toBeDisabled()
+  await page.reload()
+  await page.getByRole('button', { name: 'Ödeme kaydet', exact: true }).click()
+  modal = page.getByRole('dialog')
+  await expect(modal.getByLabel(/^Ödeme tutarı/)).toHaveValue('100')
+  await modal.getByRole('button', { name: 'Sonucu doğrula', exact: true }).click()
+  await expect(modal).toHaveCount(0)
+  expect(requests).toHaveLength(2)
+  expect(requests[1]).toEqual(requests[0])
+})
+
+test('320px benzer uzun kişi adları ödeme öncesi tam okunur', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 900 })
+  const names = ['Muhammed Emin Abdülkadir Karahasanoğlu', 'Muhammed Emin Abdülkadir Karaosmanoğlu']
+  await mockApp(page, 'light', { debts: names.map((person_name, i) => ({ ...sampleDebt, id: `debt-${i}`, person_name })) })
+  await page.goto('/borclar/kisiler')
+  for (const name of names) {
+    const title = page.getByRole('heading', { name, exact: true })
+    await expect(title).toBeVisible()
+    expect(await title.evaluate(el => el.scrollWidth <= el.clientWidth + 1 && getComputedStyle(el).textOverflow !== 'ellipsis')).toBe(true)
+  }
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1)
+})
+
+test('çevrimdışı açık özette son okuma ve eski veri durumu görünür', async ({ page, context }) => {
+  await mockApp(page, 'light')
+  await page.goto('/')
+  await expect(page.getByText(/^Son okuma:/)).toBeVisible()
+  await context.setOffline(true)
+  await expect(page.getByText('Çevrimdışısın. Gösterilen tutarlar son okunan verilerdir.', { exact: false })).toBeVisible()
+  await expect(page.getByText('Ay sonuna kalan', { exact: true })).toBeVisible()
+  await context.setOffline(false)
+})
+
 test('ay sonuna kalan açık alacağı saymaz ve hesap dökümüyle tutarlıdır', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 900 })
   await mockApp(page, 'light', {
@@ -255,6 +328,11 @@ for (const width of [320, 390, 1280]) {
     await expect(list).toBeFocused()
     await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1)
     await list.screenshot({ path: `test-results/account-ledger-${width}.png` })
+    await page.getByRole('searchbox', { name: 'Hareketlerde ara' }).fill('açıklaması 605:')
+    await expect(list.getByRole('listitem')).toHaveCount(1)
+    await expect(list).toContainText('Hesap açıklaması 605:')
+    await expect(page.getByText('1 / 1206 hareket bulundu')).toBeVisible()
+    await expect(page.getByText('1206 kayıt · Toplamlar tüm geçmiş içindir')).toBeVisible()
   })
 
   test(`uzun kart geçmişi tam okunur ve sayfalanır: ${width}px`, async ({ page }) => {

@@ -1,5 +1,13 @@
 # Card Debt Transitions
 
+3 Kasım ikinci tur düzeltmesi: `obligations.ts` arşivli kartın açık dönemini
+gerçek kesim/vadeye yerleştirir; eski ekstrenin ödenmesi vade/harcanabilir
+tutarı kaydırmaz. Beş ödeme yolu `submit_finance_payment` transaction makbuzuyla
+tekilleşir; aynı kullanıcı/UUID/payload ikinci kez domain RPC'yi çalıştırmaz.
+Kayıp yanıt doğrulaması ve tam ödemede açık tutar kullanılır. Mevcut domain
+RPC'leri/trigger/append-only ledger geçişleri korunur. Makbuz yalnız kimlik/hash
+tutar; reset/restore tekrar korumasını silmez. Kabul: `docs/SCENARIO_UX_FIXES_2026-11-03.md`.
+
 3 Kasım senaryo düzeltmeleri: scheduled taksitler borç kovalarına ikinci kez
 eklenmez; nakit tahmini gerçek işlem günü → kesim → vade eşlemesini kullanır.
 Kesimden sonraki taksit sonraki ekstreye gider. Aylık özet ve forecast ortak

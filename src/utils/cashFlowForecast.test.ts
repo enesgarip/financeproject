@@ -94,6 +94,16 @@ function buildInput(overrides: Partial<FinanceSummaryInput> = {}): FinanceSummar
 }
 
 describe('buildCashFlowForecast', () => {
+  it('eski ekstre ödenince cari dönem vadesi ve harcanabilir çıkış farkı değişmez', () => {
+    const from = new Date(2026, 10, 3)
+    const cc = card({ id: 'cc', card_type: 'kredi_karti', debt_amount: 9000, statement_debt_amount: 5000, current_period_spending: 4000, statement_day: 20, due_day: 30 })
+    const archive = statement({ id: 'old', card_id: 'cc', statement_date: '2026-10-20', due_date: '2026-10-30', statement_debt_amount: 5000 })
+    const before = buildInput({ cards: [cc, card({ id: 'bank', current_balance: 10000 })], cardStatements: [archive] })
+    const after = buildInput({ cards: [{ ...cc, debt_amount: 4000, statement_debt_amount: 0 }, card({ id: 'bank', current_balance: 5000 })], cardStatements: [{ ...archive, status: 'paid' }] })
+    expect(buildCashFlowForecast(before, { from, horizonMonths: 2 }).months.map((row) => row.cardOutflow)).toEqual([9000, 0])
+    expect(buildCashFlowForecast(after, { from, horizonMonths: 2 }).months.map((row) => row.cardOutflow)).toEqual([4000, 0])
+    expect(buildMonthlyCashFlow(before, from, { today: from }).remainingOutflow - buildMonthlyCashFlow(after, from, { today: from }).remainingOutflow).toBe(5000)
+  })
   it.each([[25, 5, '2026-12-01', [0, 0, 3000]], [20, 30, '2026-12-01', [0, 3000, 0]], [25, 5, '2026-11-28', [0, 0, 3000]], [20, 30, '2026-11-04', [3000, 0, 0]]] as const)('taksit %s/%s takviminde %s tarihinde nakitten bir kez çıkar', (cut, due, date, expected) => {
     const from = new Date(2026, 10, 3)
     const data = buildInput({ cards: [card({ id: 'cc', card_type: 'kredi_karti', statement_day: cut, due_day: due, debt_amount: 3000 }), card({ id: 'bank', current_balance: 100000 })], cardInstallments: [cardInstallment({ card_id: 'cc', due_month: date, amount: 3000 })] })

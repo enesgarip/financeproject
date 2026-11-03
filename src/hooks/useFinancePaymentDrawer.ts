@@ -1,14 +1,20 @@
-import { useCallback, useMemo, useState, type ReactNode } from 'react'
+import { useCallback, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useAuth } from '../auth/useAuth'
 import {
   emptyAccountMessageForObligation,
   getAccountsForObligation,
   lastUsedKeyForObligation,
   submitFinanceObligationPayment,
+  refreshFinancePaymentState,
 } from '../services/financePaymentActions'
 import type { Card } from '../types/database'
 import { getLastUsed, resolvePreferred, setLastUsed } from '../utils/lastUsed'
 import type { FinanceObligation } from '../utils/obligations'
 import type { SupabaseLikeError } from '../utils/supabaseErrors'
+import { clearPaymentAttempt, readPaymentAttempt, savePaymentAttempt, type PaymentAttempt } from '../utils/paymentAttempt'
+import { userMessage } from '../utils/userMessage'
+
+const UNCERTAIN_MESSAGE = 'İşlemin sonucu doğrulanamadı. Tutarı değiştirmeden “Sonucu doğrula” ile aynı kaydı güvenle tekrar dene; ikinci ödeme oluşturulmaz.'
 
 type AccountPaymentSubmit = {
   account: Card | null
@@ -41,6 +47,8 @@ type FinancePaymentDrawerState = {
   amountValue: string
   error: string
   saving: boolean
+  attempt: PaymentAttempt | null
+  uncertain: boolean
   detail?: ReactNode
   formatSubmitError?: (error: SupabaseLikeError) => string
   onSubmitEnd?: (context: FinancePaymentSubmitContext & { error: SupabaseLikeError | null }) => void
@@ -50,6 +58,8 @@ type FinancePaymentDrawerState = {
 }
 
 export function useFinancePaymentDrawer() {
+  const { user } = useAuth()
+  const submitting = useRef(false)
   const [state, setState] = useState<FinancePaymentDrawerState | null>(null)
 
   const closePaymentDrawer = useCallback(() => {
@@ -66,13 +76,20 @@ export function useFinancePaymentDrawer() {
       ? ['outside-accounts', ...accounts.map((account) => account.id)]
       : accounts.map((account) => account.id)
 
+    let attempt: PaymentAttempt | null = null
+    let pendingError = ''
+    try { if (user) attempt = readPaymentAttempt(user.id, intent) } catch (error) {
+      pendingError = error instanceof Error ? error.message : 'Önceki ödeme okunamadı. İşlem geçmişini kontrol et.'
+    }
     setState({
       intent,
       accounts,
-      selectedAccountId: resolvePreferred(getLastUsed(lastUsedKey), selectableSourceIds),
-      amountValue: intent.amount > 0 ? String(intent.amount) : '',
-      error: accounts.length === 0 && intent.action !== 'pay_payment' ? emptyAccountMessageForObligation(intent) : '',
+      selectedAccountId: attempt ? attempt.accountId ?? 'outside-accounts' : resolvePreferred(getLastUsed(lastUsedKey), selectableSourceIds),
+      amountValue: attempt ? String(attempt.amount) : intent.amount > 0 ? String(intent.amount) : '',
+      error: pendingError || (attempt ? UNCERTAIN_MESSAGE : accounts.length === 0 && intent.action !== 'pay_payment' ? emptyAccountMessageForObligation(intent) : ''),
       saving: false,
+      attempt,
+      uncertain: Boolean(attempt || pendingError),
       detail: options.detail,
       formatSubmitError: options.formatSubmitError,
       onSubmitEnd: options.onSubmitEnd,
@@ -80,46 +97,76 @@ export function useFinancePaymentDrawer() {
       reload: options.reload,
       afterSuccess: options.afterSuccess,
     })
-  }, [])
+  }, [user])
 
   const handleSelectedAccountChange = useCallback((value: string) => {
-    setState((current) => (current ? { ...current, selectedAccountId: value, error: '' } : current))
+    setState((current) => (current && !current.uncertain && !current.saving ? { ...current, selectedAccountId: value, error: '' } : current))
   }, [])
 
   const handleAmountValueChange = useCallback((value: string) => {
-    setState((current) => (current ? { ...current, amountValue: value, error: '' } : current))
+    setState((current) => (current && !current.uncertain && !current.saving ? { ...current, amountValue: value, error: '' } : current))
   }, [])
 
   const handleSubmit = useCallback(async ({ account, amount, skipSourceDebit, paidAt }: AccountPaymentSubmit) => {
-    if (!state?.intent.action) return
+    if (!state?.intent.action || !user || submitting.current) return
 
     const current = state
+    let attempt: PaymentAttempt
+    try {
+      const stored = readPaymentAttempt(user.id, current.intent)
+      attempt = stored ?? {
+        id: crypto.randomUUID(), accountId: account?.id ?? null, amount,
+        obligationAmount: current.intent.amount, skipSourceDebit: skipSourceDebit ?? false, paidAt,
+      }
+      if (stored && !current.attempt) {
+        setState({ ...current, attempt, uncertain: true, amountValue: String(attempt.amount), selectedAccountId: attempt.accountId ?? 'outside-accounts', error: UNCERTAIN_MESSAGE })
+        return
+      }
+      savePaymentAttempt(user.id, current.intent, attempt)
+    } catch (error) {
+      setState({ ...current, error: error instanceof Error && /Önceki ödeme/.test(error.message) ? error.message : 'İşlem kimliği cihazda saklanamadı. Tarayıcı depolamasını kontrol et; ödeme gönderilmedi.' })
+      return
+    }
+    submitting.current = true
     const submitContext = { intent: current.intent, account, amount }
-    setState({ ...current, saving: true, error: '' })
+    setState({ ...current, attempt, saving: true, error: '' })
     current.onSubmitStart?.(submitContext)
 
     const { error } = await submitFinanceObligationPayment({
-      obligation: current.intent,
-      account,
-      amount,
-      skipSourceDebit,
-      paidAt,
-    })
+      requestId: attempt.id,
+      obligation: { ...current.intent, amount: attempt.obligationAmount },
+      account: attempt.accountId ? { id: attempt.accountId } : null,
+      amount: attempt.amount,
+      skipSourceDebit: attempt.skipSourceDebit,
+      paidAt: attempt.paidAt,
+    }).catch((cause: unknown) => ({ error: { message: cause instanceof Error ? cause.message : 'Bağlantı sonucu doğrulanamadı.' } as SupabaseLikeError }))
     current.onSubmitEnd?.({ ...submitContext, error })
 
     if (error) {
+      const uncertain = !error.code || /fetch|network|timeout|connection/i.test(error.message ?? '')
+      let fresh: Awaited<ReturnType<typeof refreshFinancePaymentState>> | null = null
+      if (!uncertain) {
+        clearPaymentAttempt(user.id, current.intent)
+        try { fresh = await refreshFinancePaymentState(current.intent) } catch { /* Hata kullanıcıya söylenir; eski tutar kesin sunulmaz. */ }
+        await Promise.allSettled([current.reload?.(), current.afterSuccess?.()])
+      }
       setState((latest) => (
         latest?.intent.id === current.intent.id
-          ? { ...latest, saving: false, error: current.formatSubmitError?.(error) ?? error.message ?? 'Ödeme işlemi tamamlanamadı.' }
+          ? { ...latest, ...(fresh ?? {}), detail: fresh ? undefined : latest.detail,
+            saving: false, attempt: uncertain ? attempt : null, uncertain,
+            error: uncertain ? UNCERTAIN_MESSAGE : `${userMessage(current.formatSubmitError?.(error) ?? error.message, error.code)} ${fresh ? 'Güncel kalan ve hesap bakiyeleri gösteriliyor.' : 'Güncel veriler alınamadı; yeniden kayıt girmeden ekranı yenile.'}` }
           : latest
       ))
+      submitting.current = false
       return
     }
 
-    setLastUsed(lastUsedKeyForObligation(current.intent), account?.id ?? 'outside-accounts')
-    closePaymentDrawer()
-    await Promise.all([current.reload?.(), current.afterSuccess?.()])
-  }, [closePaymentDrawer, state])
+    clearPaymentAttempt(user.id, current.intent)
+    setLastUsed(lastUsedKeyForObligation(current.intent), attempt.accountId ?? 'outside-accounts')
+    setState((latest) => latest?.intent.id === current.intent.id ? null : latest)
+    await Promise.allSettled([current.reload?.(), current.afterSuccess?.()])
+    submitting.current = false
+  }, [state, user])
 
   const drawerProps = useMemo(() => ({
     intent: state?.intent ?? null,
@@ -132,6 +179,7 @@ export function useFinancePaymentDrawer() {
     onClose: closePaymentDrawer,
     onSubmit: handleSubmit,
     saving: state?.saving ?? false,
+    uncertain: state?.uncertain ?? false,
     externalError: state?.error ?? '',
     detail: state?.detail,
   }), [closePaymentDrawer, handleAmountValueChange, handleSelectedAccountChange, handleSubmit, state])

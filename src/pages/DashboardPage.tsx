@@ -60,6 +60,9 @@ import { buildDashboardUpcomingItems } from '../utils/dashboardUpcoming'
 import { buildStatementReminders } from '../utils/statementReminder'
 import { SkeletonDashboard } from '../components/ui/skeleton'
 import { CreditScoreReminder } from '../components/dashboard/CreditScoreReminder'
+import { useOnlineStatus } from '../hooks/useOnlineStatus'
+import { userMessage } from '../utils/userMessage'
+import { QueryError } from '../components/ui/query-error'
 
 type DashboardData = {
   assets: Asset[]
@@ -132,6 +135,7 @@ export function DashboardPage() {
   }, [todayStamp])
 
   const snapshotQuery = useFinanceSnapshot()
+  const online = useOnlineStatus()
   // Dikkat bandı tutarı metin içinde taşır; gizlilik modunda maskelenmeli (K1).
   const { maskText } = useBalancePrivacy()
 
@@ -302,11 +306,14 @@ export function DashboardPage() {
     })
   }, [])
 
+  if (!online && !snapshotQuery.data) {
+    return <QueryError title="Çevrimdışısın" message="Bu açılışta gösterilebilecek bir finans özeti yok. İnternete bağlandığında güncel veriler yüklenecek." onRetry={() => void snapshotQuery.refetch()} retrying={snapshotQuery.isFetching} />
+  }
   if (loading) {
     return <SkeletonDashboard />
   }
 
-  if (error) {
+  if (error && !snapshotQuery.data) {
     return (
       <section
         role="alert"
@@ -318,7 +325,8 @@ export function DashboardPage() {
             <AlertTriangle className="mt-0.5 size-5 shrink-0" aria-hidden="true" />
             <div className="min-w-0">
               <h2 className="font-black text-destructive">Özet yüklenemedi</h2>
-              <p className="mt-1 leading-6 text-destructive/85">{error}</p>
+              <p className="mt-1 leading-6 text-destructive/85">{userMessage(error)}</p>
+              <p className="mt-1 leading-6 text-destructive/85">Bu açılışta gösterilebilecek son okuma yok. Bağlantı sağlandığında tekrar dene.</p>
             </div>
           </div>
           <button
@@ -339,6 +347,7 @@ export function DashboardPage() {
 
   return (
     <section className="grid gap-6 lg:grid-cols-12 lg:items-start">
+      {error ? <p role="alert" className="lg:col-span-12 text-sm text-warning">Güncel özet alınamadı. Son başarılı okumadaki veriler gösteriliyor. {userMessage(error)}</p> : null}
       {/* ── Şerit katmanı: ekranın cevapladığı tek soru ve onu açan çizgiler ── */}
 
       {attentionLine ? (

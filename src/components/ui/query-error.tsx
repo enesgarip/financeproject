@@ -1,4 +1,5 @@
 import { AlertTriangle, RefreshCw } from 'lucide-react'
+import { userMessage } from '../../utils/userMessage'
 
 /**
  * Veri yüklenemediğinde gösterilen ortak hata bloğu: `role="alert"` + "Tekrar dene".
@@ -32,7 +33,7 @@ export function QueryError({
           <AlertTriangle className="mt-0.5 size-5 shrink-0" aria-hidden="true" />
           <div className="min-w-0">
             <h2 className="font-black text-destructive">{title}</h2>
-            {message ? <p className="mt-1 leading-6 text-destructive/85">{message}</p> : null}
+            {message ? <p className="mt-1 leading-6 text-destructive/85">{userMessage(message)}</p> : null}
           </div>
         </div>
         {onRetry ? (
