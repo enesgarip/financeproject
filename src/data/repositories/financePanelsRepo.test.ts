@@ -1,6 +1,6 @@
 import { beforeEach, expect, it, vi } from 'vitest'
 import { ledgerDrift } from '../../utils/cardLedger'
-import { fetchAccountLedgerEvents, fetchAccountLedgerEventsSince, fetchCardLedgerEvents, fetchCardLedgerEventsSince } from './financePanelsRepo'
+import { fetchAccountEventsSince, fetchAccountLedgerEvents, fetchAccountLedgerEventsSince, fetchCardLedgerEvents, fetchCardLedgerEventsSince } from './financePanelsRepo'
 
 const mocks = vi.hoisted(() => ({ from: vi.fn(), failureAfterFirst: false, reads: 0, limits: [] as number[] }))
 vi.mock('../../lib/supabase', () => ({ supabase: { from: mocks.from } }))
@@ -12,7 +12,7 @@ beforeEach(() => {
   mocks.limits = []
   mocks.from.mockImplementation(() => {
     let before: string | null = null
-    let cardId = ''
+    let cardId: string | null = null
     let since = ''
     const query = {
       select: () => query,
@@ -23,7 +23,7 @@ beforeEach(() => {
       limit: async (limit: number) => {
         mocks.limits.push(limit)
         if (mocks.failureAfterFirst && mocks.reads++ > 0) return { data: null, error: { message: 'İkinci sayfa okunamadı.' } }
-        return { data: rows.filter(row => row.card_id === cardId && row.occurred_at >= since && (before === null || row.id < before)).toSorted((a, b) => b.id.localeCompare(a.id)).slice(0, limit), error: null }
+        return { data: rows.filter(row => (cardId === null || row.card_id === cardId) && row.occurred_at >= since && (before === null || row.id < before)).toSorted((a, b) => b.id.localeCompare(a.id)).slice(0, limit), error: null }
       },
     }
     return query
@@ -49,6 +49,11 @@ it('tam hesap geçmişi ve tarih aralığı karşılaştırmaları da kesilmez',
   }
   expect(await fetchCardLedgerEventsSince('black', '2026-11-01')).toEqual({ ok: true, data: [] })
   expect(await fetchCardLedgerEvents('other-card')).toEqual({ ok: true, data: [] })
+})
+it('maaş sinyali için transferin iki bacağı 200/1000 sınırında kaybolmaz', async () => {
+  const result = await fetchAccountEventsSince('2026-10-01')
+  expect(result.ok && result.data.length).toBe(1005)
+  expect(mocks.limits).toEqual([500,500,500])
 })
 
 it('son üç hareket özeti tek sınırlı okumadır', async () => {

@@ -1,5 +1,35 @@
 # Priority Backlog
 
+## 2026-11-04 — Otomasyon denetimi — YERELDE UYGULANDI
+
+Denetim: `docs/AUTOMATION_AUDIT_2026-11-03.md`.
+Son davranış/kabul: `docs/AUTOMATION_FIXES_2026-11-04.md`.
+Üretime migration/edge/scheduler veya frontend yayını yapılmadı.
+
+- [x] **AUTO-01:** Baş harfli/kanıtsız kişi SMS eşlemesi reddedilir; banka
+  hareketi doğru kalır. Gerçek SQL tekrar regresyonu.
+- [x] **AUTO-02:** DB yedeği private + extensions + owner/ACL taşır;
+  şifreli artifact 30 gün. Gerçek restore + makbuz/no-op/yeni ödeme ve yetki testi.
+- [x] **AUTO-03/04:** Ortak cari tekrar tarihi; eksik kasa/kaynak/fiyat hedef
+  tarihçesine sıfır olmaz. Hedef ve net değer damgaları ayrı; aynı gün retry.
+- [x] **AUTO-05–08:** Cihaz bazlı kalıcı claim/lease; PK ile eski log kontrolü;
+  başarısız cihaz retry, belirsiz sonuçta kör tekrar yok. Alt bakım hata/son
+  başarı durumu ve HTTP 502; UI sağlık görünürlüğü. Üç eşzamanlı worker tek claim.
+- [x] **AUTO-09/10:** Ortak İstanbul-günü transfer elemesi ve tam hesap olayı
+  okuması; kaynak metrikleri PK sayfalı (1200 satırda %50).
+- [x] **AUTO-11:** Release'te kurulacak 15 dakikalık DB cron + Vault/HMAC;
+  GitHub yalnız manuel fallback. Sessiz saat sonrası güncel adayı yeniden
+  değerlendirir; günlük push TTL'i gece yarısında biter. Canlı aktivasyon/ilk
+  koşu gözlemi yayın sırasında ayrıca yapılacak.
+- [ ] **Sonraki ürün paketi:** Bugünün yapılacakları/7 günlük nakit riski,
+  gerçek ekstre ve kişisel borç vade uyarısı, inceleme bekleyen işlemler.
+  Bu düzeltme paketine dahil değil; plan/kabul sınırları denetim dosyasında.
+
+Doğrulama: 180 dosya / 1875 test + 10 guard; prod audit 0 açık,
+1013 kB civarı bundle (1030 sınırı), 6 edge tipi; yerel SQL 54/54,
+DB lint, eşzamanlı claim ve tam yerel restore; 25 tarayıcı senaryosu.
+Belirsiz Web Push sonucu otomatik retry edilmez; exactly-once teslim iddiası yok.
+
 ## 2026-11-03 — İkinci tur yoğun kullanım + UX — UYGULANDI
 
 Kaynak/kanıt ve 16 ana görev: `docs/SCENARIO_UX_AUDIT_2026-11-03.md`.

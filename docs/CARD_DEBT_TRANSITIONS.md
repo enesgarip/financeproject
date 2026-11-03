@@ -1,5 +1,14 @@
 # Card Debt Transitions
 
+4 Kasım otomasyon düzeltmeleri: `docs/AUTOMATION_FIXES_2026-11-04.md`.
+Kart geçiş/ledger kuralı değişmez; bakım sırası stale provizyon → taksit →
+kesimdir. Alt aşama istisnaları artık hata sayacında ve son bakım/son başarı
+zamanında görünür; edge bakım/teslim hatasında HTTP 502 döner. DB yedeği
+private yardımcıları ve hash makbuzlarını owner/ACL ile kapsar; gerçek restore
+sonrası aynı ödeme no-op ve yeni ödeme doğrulanır. JSON restore farklıdır.
+Yeni bildirim lease tabloları finansal ledger değildir; belirsiz push sonucu
+para hareketi veya tahmini ödeme üretmez. Yerelde doğrulandı; yayın yapılmadı.
+
 3 Kasım ikinci tur düzeltmesi: `obligations.ts` arşivli kartın açık dönemini
 gerçek kesim/vadeye yerleştirir; eski ekstrenin ödenmesi vade/harcanabilir
 tutarı kaydırmaz. Beş ödeme yolu `submit_finance_payment` transaction makbuzuyla

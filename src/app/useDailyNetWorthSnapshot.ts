@@ -31,6 +31,7 @@ import { SAVINGS_GOAL_SNAPSHOTS_QUERY_KEY } from './savingsGoalSnapshotsKey'
  */
 
 const STORAGE_KEY = 'denge:net-worth-snapshot-day'
+const GOAL_STORAGE_KEY = 'denge:goal-snapshot-day'
 const RECORD_DELAY_MS = 4000
 
 function localDay(value: Date | number): string {
@@ -59,7 +60,7 @@ export function useDailyNetWorthSnapshot() {
     if (!userId || activeRun.current) return
 
     const marker = todayKey(userId)
-    if (localStorage.getItem(STORAGE_KEY) === marker) return
+    if (localStorage.getItem(STORAGE_KEY) === marker && localStorage.getItem(GOAL_STORAGE_KEY) === marker) return
 
     let cancelled = false
     const cancelRun = () => {
@@ -103,29 +104,32 @@ export function useDailyNetWorthSnapshot() {
           const rates = await ratesClient.ensureRatesLoaded().catch(() => null)
           if (cancelled) return
 
-          const result = await analysisRepo.recordNetWorthSnapshot(userId, {
-            netWorth: position.netWorth,
-            goldTry: rates?.rates?.GRA?.buying ?? null,
-            usdTry: rates?.rates?.USD?.buying ?? null,
-          })
-          if (cancelled || !result.ok) return
-
-          // Damga kayıt ANINDAKİ günden türetilir: gece yarısını geçen bir koşu
-          // dünün anahtarını yazmasın (yoksa bugün ikinci kez tetiklenir).
-          localStorage.setItem(STORAGE_KEY, todayKey(userId))
-          // Analiz sayfası açıksa bugünün noktasını hemen görsün.
-          void queryClient.invalidateQueries({ queryKey: ['net-worth-snapshots'] })
+          if (localStorage.getItem(STORAGE_KEY) !== todayKey(userId)) {
+            const result = await analysisRepo.recordNetWorthSnapshot(userId, {
+              netWorth: position.netWorth,
+              goldTry: rates?.rates?.GRA?.buying ?? null,
+              usdTry: rates?.rates?.USD?.buying ?? null,
+            })
+            if (cancelled || !result.ok || !result.data) return
+            localStorage.setItem(STORAGE_KEY, todayKey(userId))
+            void queryClient.invalidateQueries({ queryKey: ['net-worth-snapshots'] })
+          }
 
           // Hedef fotoğrafları: aynı günlük koşunun ikinci yarısı. Biriken
           // tutar yalnız client'ta türetilebilir (canlı kur/BIST fiyatı) —
           // sunucu bu seriyi üretemez. Akışın gövdesi lazy modülde
           // (dailyGoalSnapshots): çözümleme zinciri entry bütçesine girmesin.
-          // Damgadan SONRA ve en-iyi-çaba: hatası net değer kaydını geri
-          // almaz, seri bir gün atlar ve ertesi koşuda devam eder.
-          if (!snapshot.savingsGoals.some((goal) => goal.status === 'active')) return
+          // Net değer damgası bağımsızdır; hedef hatası sonraki gezinmede
+          // aynı gün tekrar denenir ve başarılı net değeri yeniden yazmaz.
+          if (!snapshot.savingsGoals.some((goal) => goal.status === 'active')) {
+            localStorage.setItem(GOAL_STORAGE_KEY, todayKey(userId))
+            return
+          }
           const goalRunner = await import('./dailyGoalSnapshots')
           if (cancelled) return
-          await goalRunner.recordDailyGoalSnapshots(userId, snapshot, rates, () => cancelled)
+          const goalsRecorded = await goalRunner.recordDailyGoalSnapshots(userId, snapshot, rates, () => cancelled)
+          if (cancelled || !goalsRecorded) return
+          localStorage.setItem(GOAL_STORAGE_KEY, todayKey(userId))
           // Hedef kartındaki tempo/varış şeridi açıksa bugünün noktasını görsün.
           void queryClient.invalidateQueries({ queryKey: SAVINGS_GOAL_SNAPSHOTS_QUERY_KEY })
         } catch {

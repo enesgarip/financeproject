@@ -54,7 +54,7 @@ jobs:
             changed=$(git diff --name-only "$BEFORE" "$SHA")
             while IFS= read -r file; do
               case "$file" in
-                src/*|public/*|index.html|package.json|package-lock.json|vite.config.*|tsconfig*.json|vercel.json|scripts/check-bundle-size.mjs|scripts/archive-source-maps.mjs|scripts/promote-vercel-deployment.mjs|.github/workflows/deploy.yml)
+                supabase/functions/_shared/automationRules.ts|src/*|public/*|index.html|package.json|package-lock.json|vite.config.*|tsconfig*.json|vercel.json|scripts/check-bundle-size.mjs|scripts/archive-source-maps.mjs|scripts/promote-vercel-deployment.mjs|.github/workflows/deploy.yml)
                   frontend=true
                   ;;
               esac
@@ -63,10 +63,10 @@ jobs:
                   database=true
                   migrations=true
                   ;;
-                supabase/seed.sql|supabase/config.toml|supabase/tests/*)
+                supabase/seed.sql|supabase/config.toml|supabase/tests/*|scripts/test-backup-restore.mjs|scripts/test-notification-concurrency.mjs|scripts/backup-schemas.txt|.github/workflows/db-backup.yml)
                   database=true
                   ;;
-                supabase/functions/*)
+                supabase/functions/*|scripts/configure-push-scheduler.mjs)
                   edge=true
                   ;;
               esac
@@ -296,6 +296,17 @@ jobs:
             echo "::endgroup::"
           done
 
+      - name: Setup Node for database verification
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - name: Verify concurrent notification claims
+        run: node scripts/test-notification-concurrency.mjs
+
+      - name: Verify backup restore and payment replay
+        run: node scripts/test-backup-restore.mjs
+
   backup:
     name: Pre-migration backup
     needs: changes
@@ -381,6 +392,8 @@ jobs:
             changed="ALL"
           else
             changed=$(git diff --name-only "$BEFORE" "$SHA" -- supabase/functions)
+            config_changed=$(git diff --name-only "$BEFORE" "$SHA" -- scripts/configure-push-scheduler.mjs)
+            if [ -n "$config_changed" ]; then changed="ALL"; fi
           fi
 
           if [ "$changed" = "ALL" ] \
@@ -408,6 +421,17 @@ jobs:
             echo "Deploying edge function: $function"
             supabase functions deploy "$function" --project-ref "$SUPABASE_PROJECT_REF"
           done
+
+      - name: Setup Node for scheduler configuration
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - name: Configure database push scheduler
+        env:
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          PUSH_CRON_SECRET: ${{ secrets.PUSH_CRON_SECRET }}
+        run: node scripts/configure-push-scheduler.mjs
 
   publish_frontend:
     name: Promote staged Vercel production

@@ -12,7 +12,7 @@
  * gerçek çıkış ekstre ödenince olur). Bkz. `paymentCashOutflowAmount`.
  */
 import type { Card, Payment } from '../types/database'
-import { isDateInMonth, monthlyOccurrenceDate } from './date'
+import { paymentOccurrenceIso } from '../../supabase/functions/_shared/automationRules'
 import { roundTL, sumTL } from './money'
 
 // Kartın bu ay ödenecek tutarı = yalnızca kesilmiş ekstre borcu.
@@ -31,20 +31,8 @@ export function cardPayableDebt(card: Pick<Card, 'statement_debt_amount' | 'curr
 }
 
 export function paymentOccurrenceInMonth(payment: Payment, month = new Date()) {
-  if (payment.status !== 'bekliyor') return null
-
-  if (payment.recurrence === 'monthly') {
-    const occurrence = monthlyOccurrenceDate(payment.recurrence_day, month)
-    if (!occurrence) return null
-
-    const dueDate = new Date(`${payment.due_date}T00:00:00`)
-    const endDate = payment.recurrence_end_date ? new Date(`${payment.recurrence_end_date}T00:00:00`) : null
-    if (occurrence < dueDate) return null
-    if (endDate && occurrence > endDate) return null
-    return occurrence
-  }
-
-  return isDateInMonth(payment.due_date, month) ? new Date(`${payment.due_date}T00:00:00`) : null
+  const date = paymentOccurrenceIso(payment, `${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, '0')}-01`)
+  return date ? new Date(`${date}T00:00:00`) : null
 }
 
 /** "Bu kart id'si bilinen bir kredi kartı mı?" sorusuna cevap veren predicate. */

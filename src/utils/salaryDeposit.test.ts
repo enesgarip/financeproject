@@ -6,6 +6,18 @@ function deposit(occurredAt: string, amountTL: number, kind: 'deposit' | 'withdr
 }
 
 describe('findSalaryDeposit', () => {
+  it('maaşa eşit transferi ve farklı offsetle aynı İstanbul günündeki çıkışı eler', () => {
+    expect(findSalaryDeposit([deposit('2026-11-02T22:00:00Z',50000)],50000)).toEqual({matchedAt:'2026-11-03',amount:50000})
+    expect(findSalaryDeposit([
+      deposit('2026-11-03T10:00:00+03:00', 50000),
+      deposit('2026-11-03T07:00:00Z', -50000, 'withdrawal'),
+    ], 50000)).toBeNull()
+    expect(findSalaryDeposit([
+      deposit('2026-11-03T00:15:00+03:00', 50000),
+      deposit('2026-11-02T21:15:00Z', -50000, 'withdrawal'),
+      deposit('2026-11-04T09:00:00+03:00', 50000),
+    ], 50000)).toEqual({ matchedAt: '2026-11-04', amount: 50000 })
+  })
   it('maaşın ±%10 bandındaki ilk yatışı eşler', () => {
     const match = findSalaryDeposit(
       [

@@ -77,9 +77,8 @@ export function isWithinQuietHours(hour: number, start: number | null, end: numb
 }
 
 /**
- * Günlük gönderim penceresi TEK saattir (push-notify cron'u 07:00 Europe/Istanbul).
- * Sessiz saat o tek saati kapsıyorsa "sessiz" demek pratikte "kapalı" demektir —
- * kullanıcı bunu bilmeden tüm bildirimleri susturabiliyor, o yüzden UI uyarır.
+ * Günlük adaylar 07:00'den sonra, 15 dakikalık kontrollerde değerlendirilir.
+ * Sessiz saat başlangıcı kapsıyorsa UI erteleme bilgisini gösterir.
  */
 export const DAILY_PUSH_HOUR = 7
 

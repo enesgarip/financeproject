@@ -47,17 +47,17 @@ jobs:
             changed=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA")
             while IFS= read -r file; do
               case "$file" in
-                src/*|public/*|tests/e2e/*|index.html|package.json|package-lock.json|vite.config.*|vitest.config.*|playwright.config.*|tsconfig*.json|eslint.config.*|.lighthouserc.cjs|vercel.json|.github/workflows/ci.yml|.github/workflows/deploy.yml|scripts/check-bundle-size.mjs|scripts/archive-source-maps.mjs|scripts/promote-vercel-deployment.mjs)
+                supabase/functions/_shared/automationRules.ts|src/*|public/*|tests/e2e/*|tests/edge/*|index.html|package.json|package-lock.json|vite.config.*|vitest.config.*|playwright.config.*|tsconfig*.json|eslint.config.*|.lighthouserc.cjs|vercel.json|.github/workflows/ci.yml|.github/workflows/deploy.yml|scripts/check-bundle-size.mjs|scripts/archive-source-maps.mjs|scripts/promote-vercel-deployment.mjs)
                   frontend=true
                   ;;
               esac
               case "$file" in
-                supabase/migrations/*|supabase/tests/*|supabase/seed.sql|supabase/config.toml)
+                supabase/migrations/*|supabase/tests/*|supabase/seed.sql|supabase/config.toml|scripts/test-backup-restore.mjs|scripts/test-notification-concurrency.mjs|scripts/backup-schemas.txt|.github/workflows/db-backup.yml)
                   database=true
                   ;;
               esac
               case "$file" in
-                supabase/functions/*)
+                supabase/functions/*|scripts/configure-push-scheduler.mjs)
                   edge=true
                   ;;
               esac
@@ -432,15 +432,20 @@ jobs:
             echo "::endgroup::"
           done
 
-      # SQL↔TS ikiz diferansiyel harness'i (muh. turu ④): rastgele yazma dizisi
-      # gerçek trigger'lardan geçer, çıktı TS ikizleriyle kuruş-birebir kıyaslanır.
-      # Trigger migration'ı ikizden saparsa (K4 tipi yeniden yazım) burada kırmızı.
-      - name: Setup Node (twin harness)
+      - name: Setup Node for database verification
         uses: actions/setup-node@v7
         with:
           node-version: 24
-          cache: npm
 
+      - name: Verify concurrent notification claims
+        run: node scripts/test-notification-concurrency.mjs
+
+      - name: Verify backup restore and payment replay
+        run: node scripts/test-backup-restore.mjs
+
+      # SQL↔TS ikiz diferansiyel harness'i (muh. turu ④): rastgele yazma dizisi
+      # gerçek trigger'lardan geçer, çıktı TS ikizleriyle kuruş-birebir kıyaslanır.
+      # Trigger migration'ı ikizden saparsa (K4 tipi yeniden yazım) burada kırmızı.
       - name: Restore node_modules
         id: node-modules-cache
         uses: actions/cache@v4

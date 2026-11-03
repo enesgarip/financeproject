@@ -1,9 +1,7 @@
 name: Push Notifications
 
 on:
-  schedule:
-    # 07:00 Europe/Istanbul (UTC+3) = 04:00 UTC.
-    - cron: '0 4 * * *'
+  # Ana schedule artık pg_cron; bu workflow yalnız elle tetiklenen fallback.
   workflow_dispatch:
 
 concurrency:

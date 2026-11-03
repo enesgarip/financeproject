@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   addCardExpense,
   fetchCardInstallmentMatchRows,
+  fetchExpenseSourceRows,
   fetchCardInstallments,
   fetchRecentCardExpenses,
   fetchPostedInstallmentExpenses,
@@ -37,6 +38,15 @@ function readQuery(response: { data: unknown[] | null; error: { message: string 
 }
 
 describe('kart ayrıntısı veri kapsamı', () => {
+  it('1200 kaynak satırını tam okur ve sayfa hatasını başarı saymaz', async () => {
+    const page = (start: number, count: number) => ({ ...readQuery({ data: Array.from({ length: count }, (_, i) => ({ id: String(start - i).padStart(5, '0'), spent_at: '2026-11-03', source: start - i > 600 ? 'sms' : 'manual' })), error: null }), gte: vi.fn().mockReturnThis() })
+    supabaseMocks.from.mockReturnValueOnce(page(1200,500)).mockReturnValueOnce(page(700,500)).mockReturnValueOnce(page(200,200))
+    const result = await fetchExpenseSourceRows('2026-09-01')
+    expect(result.ok && result.data.length).toBe(1200)
+    expect(result.ok && result.data.filter(r => r.source === 'sms').length).toBe(600)
+    supabaseMocks.from.mockReturnValueOnce(page(1200,500)).mockReturnValueOnce({ ...readQuery({ data:null,error:{message:'Sayfa kaybı'} }), gte:vi.fn().mockReturnThis() })
+    expect((await fetchExpenseSourceRows('2026-09-01')).ok).toBe(false)
+  })
   it('kısmi ekstre ödemelerini sayfalayıp kalan borcu eksik kanıtla hesaplamaz', async () => {
     const first = readQuery({ data: Array.from({ length: 500 }, (_, i) => ({ id: `z${999 - i}`, paid_at: '2026-10-01' })), error: null })
     const last = readQuery({ data: [{ id: 'a', paid_at: '2025-01-01' }], error: null })

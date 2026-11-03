@@ -2,6 +2,25 @@
 
 > Kanonik özet `CLAUDE.md`'de. Bu dosya CI/deploy detayını tutar.
 
+4 Kasım otomasyon düzeltmeleri: `docs/AUTOMATION_FIXES_2026-11-04.md`.
+DB backup workflow'u `scripts/backup-schemas.txt` manifestiyle
+public/auth/storage/private/extensions içerir; owner/ACL sıyırmaz ve şifreli
+artifact'ı 30 gün tutar. En yeni 5 adede prune kaldırıldı. Restore için uyumlu
+managed roller/extensions ve owner/default ACL'leri uygulayabilen yönetici
+rolü gerekir; boş genel Postgres'e sıradan kullanıcıyla tek komut vaat edilmez.
+`npm run db:test:backup` gerçek yerel dump/restore + işlem makbuzu/no-op,
+yeni ödeme ve yetki testi; `npm run db:test:notifications` üç paralel worker
+tek claim testidir. İkisi de CI/production database kapısında, SQL suite sonrası.
+
+Release migration ve edge deploy ardından `scripts/configure-push-scheduler.mjs`
+ile DB cron'u 15 dakikaya kurar. Mevcut proje ref/access token/anon key/cron secret
+env'leri kullanılır; cron secret edge ile aynı olmalıdır. Secret Vault'ta,
+pg_net HTTP kuyruğunda yalnız 120 saniyelik HMAC vardır. GitHub push workflow'u
+manuel fallback'tir; tüm çağrılar cihaz/olay SQL claim'iyle tekilleşir.
+Yayın job'u yapılandırma hatasında başarılı sayılmaz. Üretim cron/Vault/edge'i
+bu yerel düzeltme çalışmasında değiştirilmedi; aktivasyon/ilk koşu kanıtı yayın
+sırasında alınacaktır. Kurulum kodu değişimi edge release olarak sınıflanır.
+
 20 Ekim yayın kontrolü eki: CI `supabase` ve production `database_check`
 işleri `SUPABASE_INTERNAL_IMAGE_REGISTRY=ghcr.io` kullanır. ECR indirme kotası
 iki koşuda DB başlamadan hata verdi; resmi GHCR aynası aynı PostgreSQL

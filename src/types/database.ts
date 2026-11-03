@@ -1225,6 +1225,10 @@ export type Database = {
         Args: { p_request_id: string; p_method: string; p_args: Json }
         Returns: void
       }
+      fetch_automation_health: {
+        Args: Record<string, never>
+        Returns: Json
+      }
     }
     Enums: Record<string, never>
     CompositeTypes: Record<string, never>

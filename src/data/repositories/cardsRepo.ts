@@ -514,13 +514,21 @@ export async function fetchExpensePaceRows(sinceIso: string): Promise<Result<Exp
 export type ExpenseSourceRow = Pick<CardExpense, 'source' | 'note' | 'amount' | 'status' | 'spent_at'>
 
 export async function fetchExpenseSourceRows(sinceIso: string): Promise<Result<ExpenseSourceRow[]>> {
-  const { data, error } = await supabase
-    .from('card_expenses')
-    .select('source, note, amount, status, spent_at')
-    .gte('spent_at', sinceIso)
-    .order('spent_at', { ascending: false })
-
-  return resultFromSupabase((data ?? []) as ExpenseSourceRow[], error, 'Harcama kaynakları yüklenemedi.')
+  const rows: Array<ExpenseSourceRow & { id: string }> = []
+  let beforeId: string | null = null
+  for (;;) {
+    let query = supabase.from('card_expenses').select('id, source, note, amount, status, spent_at')
+      .gte('spent_at', sinceIso).order('id', { ascending: false }).limit(500)
+    if (beforeId) query = query.lt('id', beforeId)
+    const { data, error } = await query
+    if (error) return fail(appErrorFromSupabase(error, 'Harcama kaynakları yüklenemedi.'))
+    const page = (data ?? []) as Array<ExpenseSourceRow & { id: string }>
+    rows.push(...page)
+    if (page.length < 500) return ok(rows.sort((a, b) => b.spent_at.localeCompare(a.spent_at) || b.id.localeCompare(a.id)))
+    const nextId = page[page.length - 1]?.id
+    if (!nextId || (beforeId && nextId >= beforeId)) return fail({ type: 'unknown', message: 'Harcama kaynaklarının devamı doğrulanamadı.' })
+    beforeId = nextId
+  }
 }
 
 /** Mevcut banka harcamalarını bağlar; yeni harcama/borç oluşturmaz. */
