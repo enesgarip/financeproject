@@ -54,6 +54,8 @@ deploy başarılı olduktan sonra `scripts/configure-push-scheduler.mjs` çalı�
 Mevcut `SUPABASE_PROJECT_REF`, `SUPABASE_ACCESS_TOKEN`, `SUPABASE_ANON_KEY`,
 `PUSH_CRON_SECRET` ortam ayarları kullanılır. Edge'in cron secret'ı ile GitHub
 secret'ı aynı olmalıdır. SQL veya hata yanıtı loglanmaz.
+Kurulum, anahtarın baş/son boşluğunu edge ile aynı biçimde temizler;
+satır-sonlu ortam değeri farklı bir HMAC anahtarı üretmez.
 
 Yapılandırma yalnız DB yönetim rolüne açıktır; anon/authenticated/service_role
 tarafından çağrılamaz. Secret Vault'tadır. `pg_net` geçici HTTP kuyruğuna ham

@@ -3,9 +3,9 @@ import { pathToFileURL } from 'node:url'
 import { resolve } from 'node:path'
 export async function configurePushScheduler(env = process.env, request = fetch) {
   const { SUPABASE_PROJECT_REF: ref, SUPABASE_ACCESS_TOKEN: token, SUPABASE_ANON_KEY: apikey, PUSH_CRON_SECRET: secret } = env
-  if (!ref || !/^[a-z0-9]+$/.test(ref) || !token || !apikey || !secret) throw new Error('Push zamanlayıcı ortam ayarları eksik.')
+  if (!ref || !/^[a-z0-9]+$/.test(ref) || !token || !apikey || !secret?.trim()) throw new Error('Push zamanlayıcı ortam ayarları eksik.')
   const quote = value => "'" + value.replaceAll("'", "''") + "'"
-  const query = `select public.configure_push_scheduler(${quote(`https://${ref}.supabase.co/functions/v1/push-notify`)},${quote(apikey)},${quote(secret)}) as configured;`
+  const query = `select public.configure_push_scheduler(${quote(`https://${ref}.supabase.co/functions/v1/push-notify`)},${quote(apikey)},${quote(secret.trim())}) as configured;`
   let response
   try {
     response = await request(`https://api.supabase.com/v1/projects/${ref}/database/query`, {

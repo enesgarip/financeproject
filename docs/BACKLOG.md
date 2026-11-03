@@ -21,6 +21,7 @@ Son davranış/kabul: `docs/AUTOMATION_FIXES_2026-11-04.md`.
   GitHub yalnız manuel fallback. Sessiz saat sonrası güncel adayı yeniden
   değerlendirir; günlük push TTL'i gece yarısında biter. Canlı aktivasyon/ilk
   koşu gözlemi yayın sırasında ayrıca yapılacak.
+  Bootstrap anahtar normalizasyonu edge ile eşit; boş/satır-sonlu env regresyonu var.
 - [ ] **Sonraki ürün paketi:** Bugünün yapılacakları/7 günlük nakit riski,
   gerçek ekstre ve kişisel borç vade uyarısı, inceleme bekleyen işlemler.
   Bu düzeltme paketine dahil değil; plan/kabul sınırları denetim dosyasında.
