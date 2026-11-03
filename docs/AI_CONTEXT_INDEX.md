@@ -1,7 +1,7 @@
 # AI Context Index
 
 4 Kasım otomasyon düzeltmeleri: `docs/AUTOMATION_FIXES_2026-11-04.md`.
-AUTO-01–11 yerelde uygulandı; üretime yayımlanmadı. Tarihsel kanıt:
+AUTO-01–11 uygulandı; yayın [PR #285](https://github.com/enesgarip/financeproject/pull/285) üzerinden izlenir. Tarihsel kanıt:
 `docs/AUTOMATION_AUDIT_2026-11-03.md`. `supabase/functions/_shared/automationRules.ts`
 UI/edge cari tekrar ve transfer elemesini paylaşır. `app/dailyGoalSnapshots.ts`
 eksik kaynak/fiyatta yazmaz; `app/useDailyNetWorthSnapshot.ts` iki başarı damgası tutar.

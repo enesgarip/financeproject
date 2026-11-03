@@ -17,9 +17,8 @@ ile DB cron'u 15 dakikaya kurar. Mevcut proje ref/access token/anon key/cron sec
 env'leri kullanılır; cron secret edge ile aynı olmalıdır. Secret Vault'ta,
 pg_net HTTP kuyruğunda yalnız 120 saniyelik HMAC vardır. GitHub push workflow'u
 manuel fallback'tir; tüm çağrılar cihaz/olay SQL claim'iyle tekilleşir.
-Yayın job'u yapılandırma hatasında başarılı sayılmaz. Üretim cron/Vault/edge'i
-bu yerel düzeltme çalışmasında değiştirilmedi; aktivasyon/ilk koşu kanıtı yayın
-sırasında alınacaktır. Kurulum kodu değişimi edge release olarak sınıflanır.
+Yayın job'u yapılandırma hatasında başarılı sayılmaz. Yerel doğrulama aşamasında üretim cron/Vault/edge'i değiştirilmedi.
+Aktivasyon ve ilk koşu kanıtı [PR #285](https://github.com/enesgarip/financeproject/pull/285) yayınının parçasıdır. Kurulum kodu değişimi edge release olarak sınıflanır.
 
 20 Ekim yayın kontrolü eki: CI `supabase` ve production `database_check`
 işleri `SUPABASE_INTERNAL_IMAGE_REGISTRY=ghcr.io` kullanır. ECR indirme kotası

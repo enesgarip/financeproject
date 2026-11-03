@@ -1,6 +1,6 @@
 # Otomasyon düzeltmeleri — 4 Kasım 2026
 
-Durum: **AUTO-01–11 uygulandı; yerel doğrulama tamamlandı. Üretime yayımlanmadı.**
+Durum: **AUTO-01–11 uygulandı; yerel doğrulama tamamlandı.** Yayın: [PR #285](https://github.com/enesgarip/financeproject/pull/285).
 Başlangıç kanıtı: `docs/AUTOMATION_AUDIT_2026-11-03.md`.
 Bu paket mevcut otomasyonları düzeltir. Günlük eylem özeti, yeni gerçek ekstre /
 kişisel borç vade bekçisi ve inceleme kutusu sonraki ürün paketidir.

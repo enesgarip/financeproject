@@ -1,10 +1,10 @@
 # Priority Backlog
 
-## 2026-11-04 — Otomasyon denetimi — YERELDE UYGULANDI
+## 2026-11-04 — Otomasyon denetimi — UYGULANDI
 
 Denetim: `docs/AUTOMATION_AUDIT_2026-11-03.md`.
 Son davranış/kabul: `docs/AUTOMATION_FIXES_2026-11-04.md`.
-Üretime migration/edge/scheduler veya frontend yayını yapılmadı.
+Migration/edge/scheduler ve frontend yayını [PR #285](https://github.com/enesgarip/financeproject/pull/285) üzerinden izlenir.
 
 - [x] **AUTO-01:** Baş harfli/kanıtsız kişi SMS eşlemesi reddedilir; banka
   hareketi doğru kalır. Gerçek SQL tekrar regresyonu.

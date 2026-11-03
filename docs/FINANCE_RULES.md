@@ -13,7 +13,7 @@ UI/edge aylık vade aynı saf tekrar kuralını kullanır. Bildirim tekilliği c
 bazlı SQL claim'dir; belirsiz dış teslim kör tekrar edilmez. Bakım alt hatası
 başarı sayılmaz. Kullanıcı JSON export'u dışındaki private işlem hash'i ayrı
 DB felaket kurtarma yedeğinde korunur; reset/JSON restore sözleşmesi değişmez.
-Bu düzeltmeler yerelde doğrulandı, üretime henüz yayımlanmadı.
+Bu düzeltmeler yerelde doğrulandı; yayın [PR #285](https://github.com/enesgarip/financeproject/pull/285) üzerinden izlenir.
 
 İkinci tur kabulü: `docs/SCENARIO_UX_FIXES_2026-11-03.md`.
 Arşivli kartın dönem içi vadesi gerçek kesimden gelir; eski açık ekstrenin

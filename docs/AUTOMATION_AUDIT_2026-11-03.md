@@ -1,6 +1,6 @@
 # Otomasyon denetimi ve geliştirme planı — 3 Kasım 2026
 
-Durum: **denetim tamamlandı; AUTO-01–11 yerelde düzeltildi, henüz yayımlanmadı**.
+Durum: **denetim tamamlandı; AUTO-01–11 düzeltildi**. Yayın: [PR #285](https://github.com/enesgarip/financeproject/pull/285).
 Düzeltme ve son kabul sözleşmesi: `docs/AUTOMATION_FIXES_2026-11-04.md`.
 Aşağıdaki karşı örnekler denetim anındaki sürümün tarihsel kanıtlarıdır.
 İncelenen üretim kaynak sürümü: `86c69cf847443ef4c9eb9aa5e46b3917ee926a52`.
