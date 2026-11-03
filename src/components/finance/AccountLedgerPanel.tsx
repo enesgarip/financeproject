@@ -6,6 +6,7 @@ import { balanceDrift, buildAccountLedgerBalanceRows, summarizeAccountLedger } f
 import { formatDate } from '../../utils/date'
 import { formatCurrency, parseNumber } from '../../utils/formatCurrency'
 import { toTL } from '../../utils/money'
+import { normalizeSearchText } from '../../utils/searchText'
 import { isMissingSupabaseCapabilityError, missingSupabaseCapabilityMessage } from '../../utils/supabaseErrors'
 import { Alert } from '../ui/alert'
 import { Button } from '../ui/button'
@@ -55,6 +56,7 @@ export function AccountLedgerPanel({
   const [direction, setDirection] = useState<'deposit' | 'withdrawal'>('deposit')
   const [amount, setAmount] = useState('')
   const [note, setNote] = useState('')
+  const [search, setSearch] = useState({ cardId: card.id, value: '' })
 
   const load = useCallback(async () => {
     // A mutation may finish after its originating row revision was replaced.
@@ -134,7 +136,13 @@ export function AccountLedgerPanel({
   // Events arrive newest-first; order doesn't matter for the sums.
   const drift = balanceDrift(events, card.current_balance)
   const balanceRows = buildAccountLedgerBalanceRows(events, card.current_balance)
-  const pageCount = Math.max(1, Math.ceil(events.length / VISIBLE_EVENTS))
+  const searchValue = search.cardId === card.id ? search.value : ''
+  const query = normalizeSearchText(searchValue)
+  const visibleRows = query ? balanceRows.filter(({ event }) => normalizeSearchText([
+    KIND_LABELS[event.kind].label, event.occurred_at.slice(0, 10),
+    formatDate(event.occurred_at.slice(0, 10)), maskText(event.note ?? ''), formatAmount(toTL(event.amount_kurus)),
+  ].join(' ')).includes(query)) : balanceRows
+  const pageCount = Math.max(1, Math.ceil(visibleRows.length / VISIBLE_EVENTS))
   const page = pagination.cardId === card.id ? Math.min(pagination.page, pageCount - 1) : 0
   const start = page * VISIBLE_EVENTS
   function showPage(nextPage: number) {
@@ -147,7 +155,7 @@ export function AccountLedgerPanel({
     <div className="mt-3 border-t border-line pt-4">
       <div className="space-y-2">
         <p className="serit-eyebrow">Hesap hareketleri</p>
-        <p className="text-xs text-ink-muted">{summary.count} kayıt</p>
+        <p className="text-xs text-ink-muted">{summary.count} kayıt · Toplamlar tüm geçmiş içindir</p>
         <dl className="grid grid-cols-2 gap-x-4 gap-y-2 border-b border-line pb-3 text-xs">
           <div className="min-w-0"><dt className="text-ink-muted">Toplam giriş</dt><dd className="serit-num mt-1 break-words font-semibold">{formatAmount(summary.totalIn)}</dd></div>
           <div className="min-w-0"><dt className="text-ink-muted">Toplam çıkış</dt><dd className="serit-num mt-1 break-words font-semibold">{formatAmount(summary.totalOut)}</dd></div>
@@ -176,8 +184,17 @@ export function AccountLedgerPanel({
 
       {events.length > 0 ? (
         <div className="mt-3">
+        <label className="mb-3 block text-xs font-semibold text-ink-muted">
+          Hareketlerde ara
+          <Input type="search" value={searchValue} placeholder="Not, tarih veya tutar"
+            className="mt-1" onChange={(event) => {
+              setSearch({ cardId: card.id, value: event.target.value })
+              setPagination({ cardId: card.id, page: 0 })
+            }} />
+        </label>
+        {query ? <p role="status" className="mb-2 text-xs text-ink-muted">{visibleRows.length} / {events.length} hareket bulundu</p> : null}
         <ol ref={historyRef} tabIndex={-1} aria-label="Hesap hareketi kayıtları" className="scroll-mt-[calc(env(safe-area-inset-top)+6rem)] divide-y divide-line">
-          {balanceRows.slice(start, start + VISIBLE_EVENTS).map(({ event, balanceAfter }) => {
+          {visibleRows.slice(start, start + VISIBLE_EVENTS).map(({ event, balanceAfter }) => {
             const meta = KIND_LABELS[event.kind]
             const amountTL = toTL(event.amount_kurus)
             return (
@@ -198,9 +215,9 @@ export function AccountLedgerPanel({
             )
           })}
         </ol>
-        {events.length > VISIBLE_EVENTS ? (
+        {visibleRows.length > VISIBLE_EVENTS ? (
           <nav className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-line pt-3" aria-label="Hesap hareketi sayfaları">
-            <p className="text-xs text-ink-muted" role="status">{start + 1}–{Math.min(start + VISIBLE_EVENTS, events.length)} / {events.length} hareket · Sayfa {page + 1} / {pageCount}</p>
+            <p className="text-xs text-ink-muted" role="status">{start + 1}–{Math.min(start + VISIBLE_EVENTS, visibleRows.length)} / {visibleRows.length} hareket · Sayfa {page + 1} / {pageCount}</p>
             <div className="flex flex-wrap gap-2">
               <Button type="button" variant="outline" size="sm" className="min-h-11" disabled={page === 0} onClick={() => showPage(0)}>En yeni</Button>
               <Button type="button" variant="outline" size="sm" className="min-h-11" disabled={page === 0} onClick={() => showPage(page - 1)}>Daha yeni</Button>
@@ -209,6 +226,7 @@ export function AccountLedgerPanel({
             </div>
           </nav>
         ) : null}
+        {visibleRows.length === 0 ? <p className="py-3 text-sm text-ink-muted">Aramana uygun hareket yok.</p> : null}
         </div>
       ) : (
         <p className="mt-3 text-sm text-ink-muted">Henüz hareket kaydı yok; bakiye değiştikçe burada listelenecek.</p>

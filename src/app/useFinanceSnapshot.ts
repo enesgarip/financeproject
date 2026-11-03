@@ -24,7 +24,9 @@ const FINANCE_CRUD_TABLES = ['cards', 'payments', 'loans', 'debts', 'assets', 's
 
 async function invalidateFinanceViews(queryClient: QueryClient, userId: string | undefined) {
   await Promise.all([
-    queryClient.invalidateQueries({ queryKey: financeSnapshotKey(userId) }),
+    // Kaydetme tamamlanmadan kapalı Özet de tazelensin; dönüşte eski "veri yok"
+    // veya eski harcanabilir tutar bir kareliğine doğrulanmış gibi görünmesin.
+    queryClient.invalidateQueries({ queryKey: financeSnapshotKey(userId), refetchType: 'all' }),
     queryClient.invalidateQueries({ queryKey: cardPageDataKey(userId) }),
     queryClient.invalidateQueries({ queryKey: ['account-ledger-recent', userId] }),
     queryClient.invalidateQueries({ queryKey: ['card-expense-pace', userId] }),

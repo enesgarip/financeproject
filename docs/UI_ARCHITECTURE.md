@@ -1,5 +1,17 @@
 # UI Architecture
 
+3 Kasım ikinci tur UX kabulü: `docs/SCENARIO_UX_FIXES_2026-11-03.md`.
+Kaydetme kapalı Özet'in yenilenmesini bekler; eski boş gösterim aralığı kapanır.
+Gezinme koruması router'dan önce kurulur; tarayıcı Geri ve Escape vazgeçildiğinde
+form/rota korunur. Hesap geçmişi not/tarih/tutar ile tam veri kümesinde aranır;
+satır sonrası bakiye/toplamlar filtreden türetilmez. Uzun kayıt başlıkları sarılır.
+Son okuma ve offline/eski veri durumu görünür; soğuk açılışta kalıcı finans
+cache'i bulunmadığı açıkça anlatılır. Belirsiz ödeme alanları kilitli aynı işlem
+kimliğiyle “Sonucu doğrula” sunar; alanların ilk gönderimden olduğu açıklanır.
+SQL çakışmasında güncel kalan/hesaplar okunur, eski özel detay yenilenir,
+girilen tutar korunur ve Türkçe hata gösterilir. Başarılı reset/restore bu
+cihazdaki kullanıcı kapsamlı bekleyen niyetleri temizler; sunucu hash makbuzu kalır.
+
 2 Kasım kategori analizi: Analiz'de Kategori harcaması Görünüm/Kart/Dönem
 etiketli seçicilerle açılır; varsayılan Tüm kartlar + Güncel ekstre dönemidir.
 Ekstre dönemi/Takvim ayı ayrımı, kartların tarihleri ve taksit sayım yöntemi

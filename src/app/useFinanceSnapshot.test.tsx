@@ -12,6 +12,24 @@ vi.mock('../data/repositories/crudRepo', () => ({ fetchCrudRows: mocks.rows }))
 vi.mock('../data/repositories/financeSnapshotRepo', () => ({ fetchFinanceSnapshot: vi.fn(), runFinanceMaintenance: vi.fn() }))
 afterEach(() => { cleanup(); vi.resetAllMocks() })
 
+it('kaydetme kapalı Özet sorgusu da yenilenmeden tamamlanmaz', async () => {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } })
+  let finish!: (value: { cards: { current_balance: number }[] }) => void
+  const key = ['finance-snapshot', 'u1']
+  const queryFn = vi.fn().mockResolvedValueOnce({ cards: [] }).mockImplementationOnce(() => new Promise((resolve) => { finish = resolve }))
+  await client.fetchQuery({ queryKey: key, queryFn })
+  const wrapper = ({ children }: { children: ReactNode }) => <QueryClientProvider client={client}>{children}</QueryClientProvider>
+  const hook = renderHook(useInvalidateFinanceSnapshot, { wrapper })
+  let done = false
+  const invalidation = hook.result.current().then(() => { done = true })
+  await waitFor(() => expect(queryFn).toHaveBeenCalledTimes(2))
+  expect(done).toBe(false)
+  finish({ cards: [{ current_balance: 10000 }] })
+  await invalidation
+  expect(client.getQueryData(key)).toEqual({ cards: [{ current_balance: 10000 }] })
+  client.clear()
+})
+
 it('ödeme sonrası aktif hesap listesini yeniler; kapalı finans listeleri eski cache ile açılmaz', async () => {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } })
   const tables = ['cards', 'payments', 'loans', 'debts', 'assets', 'stock_trades']

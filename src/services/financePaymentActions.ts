@@ -1,11 +1,43 @@
 import { supabase } from '../lib/supabase'
-import type { Card } from '../types/database'
-import { greaterThanTL, roundTL } from '../utils/money'
+import type { Card, Json } from '../types/database'
+import { userMessage } from '../utils/userMessage'
+import { fetchFinanceSnapshot } from '../data/repositories/financeSnapshotRepo'
+import { cardPayableDebt } from '../utils/financeSummary'
+import { buildStatementPaidMap, statementRemainingAmount } from '../utils/cardStatementPayments'
+import { effectiveDebtValue } from '../utils/valuation'
+import { roundTL } from '../utils/money'
 import type { FinanceObligation } from '../utils/obligations'
 import { isMissingSupabaseCapabilityError, missingSupabaseCapabilityMessage, type SupabaseLikeError } from '../utils/supabaseErrors'
 
 export type FinancePaymentResult = {
   error: SupabaseLikeError | null
+}
+
+/** SQL reddinden sonra açık modalın eski tavan/bakiye ile kullanıcıyı döndürmesini önle. */
+export async function refreshFinancePaymentState(intent: FinanceObligation) {
+  const data = await fetchFinanceSnapshot()
+  let amount = intent.amount
+  let maxPayableAmount = intent.maxPayableAmount
+  if (intent.action === 'settle_debt' || intent.action === 'collect_debt') {
+    const row = data.debts.find((row) => row.id === intent.sourceId)
+    amount = row?.status === 'açık' ? effectiveDebtValue(row, null) : 0
+    maxPayableAmount = amount
+  } else if (intent.action === 'pay_card_statement') {
+    const row = data.cardStatements.find((row) => row.id === intent.sourceId)
+    amount = row?.status === 'open' ? statementRemainingAmount(row, buildStatementPaidMap(data.cardStatementPayments)) : 0
+    maxPayableAmount = amount
+  } else if (intent.action === 'pay_card_debt') {
+    const row = data.cards.find((row) => row.id === intent.sourceId)
+    amount = row?.statement_debt_amount ?? 0
+    maxPayableAmount = row ? cardPayableDebt(row) : 0
+  } else if (intent.action === 'pay_loan_installment') {
+    const row = data.loanInstallments.find((row) => row.id === intent.sourceId)
+    amount = row?.status !== 'ödendi' ? row?.amount ?? 0 : 0
+  } else if (intent.action === 'pay_payment') {
+    const row = data.payments.find((row) => row.id === intent.sourceId)
+    amount = row?.status === 'bekliyor' ? row.amount : 0
+  }
+  return { intent: { ...intent, amount, maxPayableAmount, minimumPaymentBase: amount }, accounts: getAccountsForObligation(intent, data.cards) }
 }
 
 function missingCapabilityFeatureForObligation(obligation: FinanceObligation) {
@@ -127,14 +159,16 @@ export function obligationSupportsPaidAt(obligation: FinanceObligation | null | 
 }
 
 export async function submitFinanceObligationPayment({
+  requestId,
   obligation,
   account,
   amount,
   skipSourceDebit = false,
   paidAt,
 }: {
+  requestId: string
   obligation: FinanceObligation
-  account: Card | null
+  account: Pick<Card, 'id'> | null
   amount: number
   skipSourceDebit?: boolean
   /** Gerçek ödeme günü (YYYY-MM-DD). Boş/bugün ise RPC bugünü kullanır. */
@@ -143,10 +177,15 @@ export async function submitFinanceObligationPayment({
   if (!obligation.action) return { error: { message: 'Bu kayıt doğrudan ödenebilir bir aksiyon taşımıyor.' } }
 
   let submitError: SupabaseLikeError | null = null
+  // Domain RPC'lerin ownership/ledger kuralları aynıdır; ortak transaction
+  // makbuzu tam ve kısmi bütün drawer ödemelerini tekrar güvenli yapar.
+  const paymentRpc = (method: string, args: Json) => supabase.rpc('submit_finance_payment', {
+    p_request_id: requestId, p_method: method, p_args: args,
+  })
   const paidAtArg = paidAt ? { p_paid_at: paidAt } : {}
 
   if (obligation.action === 'pay_payment') {
-    const { error } = await supabase.rpc('pay_payment', {
+    const { error } = await paymentRpc('pay_payment', {
       p_payment_id: obligation.sourceId,
       p_source_card_id: account?.id ?? null,
       p_paid_amount: amount,
@@ -158,21 +197,18 @@ export async function submitFinanceObligationPayment({
 
   } else if (obligation.action === 'pay_card_statement') {
     if (!account) return { error: { message: 'Ekstre ödemesi için kaynak hesap seçmelisin.' } }
-    // K7: girilen tutar kalanın ALTINDAysa kısmi ödeme (arşiv açık kalır, kalan
-    // çocuk tablodan türer); kalana eşitse p_amount gönderilmez = tam kapama.
-    // Kuruş hassasiyeti şart: obligation.amount kalan projeksiyonundan gelir ve
-    // çıplak `<` float tozunda "tam" ödemeyi kısmi işleyip arşivi açık bırakırdı.
-    const isPartial = amount > 0 && greaterThanTL(obligation.amount, amount)
-    const { error } = await supabase.rpc('pay_card_statement', {
+    // Tutar tam ödemede de açıktır: başka sekme kalanı değiştirdiyse "null =
+    // şu anki tamamı" kullanıcının girdiği tutardan farklı para oynatmamalı.
+    const { error } = await paymentRpc('pay_card_statement', {
       p_statement_id: obligation.sourceId,
       p_source_card_id: account.id,
       p_skip_source_debit: skipSourceDebit,
-      ...(isPartial ? { p_amount: amount } : {}),
+      p_amount: roundTL(amount),
     })
     submitError = error
   } else if (obligation.action === 'pay_card_debt') {
     if (!account) return { error: { message: 'Kart borcu ödemesi için kaynak hesap seçmelisin.' } }
-    const { error } = await supabase.rpc('pay_card_debt', {
+    const { error } = await paymentRpc('pay_card_debt', {
       p_card_id: obligation.sourceId,
       p_source_card_id: account.id,
       p_amount: amount,
@@ -181,7 +217,7 @@ export async function submitFinanceObligationPayment({
     submitError = error
   } else if (obligation.action === 'pay_loan_installment') {
     if (!account) return { error: { message: 'Kredi taksiti için kaynak hesap seçmelisin.' } }
-    const { error } = await supabase.rpc('pay_loan_installment', {
+    const { error } = await paymentRpc('pay_loan_installment', {
       p_installment_id: obligation.sourceId,
       p_source_card_id: account.id,
       ...paidAtArg,
@@ -189,16 +225,12 @@ export async function submitFinanceObligationPayment({
     submitError = error
   } else if (obligation.action === 'settle_debt' || obligation.action === 'collect_debt') {
     if (!account) return { error: { message: 'Borç/alacak işlemi için kaynak hesap seçmelisin.' } }
-    // BM-8 D-1: girilen tutar toplam değerin altındaysa kısmi ödeme; toplam
-    // değere eşitse (varsayılan) tam kapama. RPC tavanı borç değeridir.
-    // Kuruş hassasiyeti şart: obligation.amount döviz/altın borcunda çarpımdan
-    // gelir ve float tozu taşıyabilir; çıplak `<` kullanıcının "tam" ödemesini
-    // kısmi işleyip borcu kuruş altı açık bırakırdı.
-    const isPartial = amount > 0 && greaterThanTL(obligation.amount, amount)
-    const { error } = await supabase.rpc('settle_personal_debt', {
+    // Kalanla aynı tutar RPC'de tam kapamadır; eski ekrandan gelen tam ödeme
+    // artık null ile sessizce yeni bir tutara dönüşmez. Para iki ondalıktır.
+    const { error } = await paymentRpc('settle_personal_debt', {
       p_debt_id: obligation.sourceId,
       p_account_card_id: account.id,
-      p_amount: isPartial ? amount : null,
+      p_amount: roundTL(amount),
       // Para SMS ile zaten hesaba girdi/çıktı: yalnız kaydı kapat.
       p_skip_account_move: skipSourceDebit,
     })
@@ -214,5 +246,5 @@ export async function submitFinanceObligationPayment({
     }
   }
 
-  return { error: submitError }
+  return { error: submitError ? { ...submitError, message: userMessage(submitError.message, submitError.code) } : null }
 }

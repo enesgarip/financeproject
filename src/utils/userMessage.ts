@@ -5,6 +5,8 @@ export function userMessage(message: string | undefined, code?: string, fallback
   if ((!message && code === '42501') || /row.level security|permission denied/i.test(message ?? '')) return 'Bu işlem için erişim doğrulanamadı. Oturumunu yenileyip tekrar dene.'
   if (/JWT|token.*expired/i.test(message ?? '')) return 'Oturumun sona erdi. Yeniden giriş yap.'
   if (/Failed to fetch|NetworkError|fetch failed|timeout/i.test(message ?? '')) return 'Sunucuya ulaşılamadı. Bağlantını kontrol edip yeniden dene.'
+  if (/Odeme tutari borc\/alacak degerinden buyuk olamaz/i.test(message ?? '')) return 'Kalan borç veya alacak değişmiş. Ödeme tutarını güncel kalana göre kontrol et.'
+  if (/yetersiz|insufficient/i.test(message ?? '')) return 'Hesabın kullanılabilir bakiyesi bu işlem için yetersiz.'
   if (/Once siradaki taksit/i.test(message ?? '')) return 'Önce sıradaki taksiti ödemelisin.'
   return message || fallback
 }

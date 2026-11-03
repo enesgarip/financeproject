@@ -4,6 +4,7 @@ import { useRef, useState, type ChangeEvent, type FormEvent } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../auth/useAuth'
 import { userMessage } from '../utils/userMessage'
+import { clearUserPaymentAttempts } from '../utils/paymentAttempt'
 import { NotificationSettings } from '../components/finance/NotificationSettings'
 import { AutomationCoveragePanel } from '../components/finance/AutomationCoveragePanel'
 import { ClientErrorsPanel } from '../components/finance/ClientErrorsPanel'
@@ -117,6 +118,7 @@ export function DataHealthOperationsPage() {
       downloadBackupFile(payload, 'financeproject-restore-oncesi')
 
       await restoreBackup(restoreParsed, user.id, (progress) => setRestoreStep(progress.step))
+      clearUserPaymentAttempts(user.id)
 
       setRestoreParsed(null)
       setRestoreConfirm('')
@@ -162,6 +164,7 @@ export function DataHealthOperationsPage() {
       }
 
       setResetConfirm('')
+      if (user) clearUserPaymentAttempts(user.id)
       await queryClient.invalidateQueries()
       setResetOpen(false)
       setMessage(`Tüm finans verisi silindi. Sıfırlama öncesi JSON yedek indirildi (${totalRows} kayıt).`)

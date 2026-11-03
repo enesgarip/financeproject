@@ -38,6 +38,8 @@ type AccountPaymentModalProps = {
   accountLabel?: string
   submitLabel: string
   saving?: boolean
+  /** Yanıtı kayıp işlemin donmuş alanlarıyla aynı kimliği doğrular. */
+  confirming?: boolean
   externalError?: string
   amountEditable?: boolean
   amountActions?: ReactNode
@@ -76,6 +78,7 @@ export function AccountPaymentModal({
   accountLabel = 'Kaynak hesap',
   submitLabel,
   saving = false,
+  confirming = false,
   externalError = '',
   amountEditable = true,
   amountActions,
@@ -107,6 +110,15 @@ export function AccountPaymentModal({
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setValidationError('')
+
+    if (!navigator.onLine) {
+      setValidationError('Çevrimdışısın. Bağlantı geldikten sonra aynı kaydı yeniden dene.')
+      return
+    }
+    if (confirming) {
+      void onSubmit({ account: selectedAccount ?? null, amount })
+      return
+    }
 
     if (amount <= 0) {
       setValidationError('Tutar 0’dan büyük olmalı.')
@@ -149,12 +161,14 @@ export function AccountPaymentModal({
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         {children ? (
           <div className="rounded-lg border border-line-strong bg-page p-3 text-sm text-ink-muted">
+            {confirming ? <p className="mb-2 font-semibold">Alanlar ilk gönderdiğin kaydı gösteriyor; güncel sonuç henüz doğrulanmadı.</p> : null}
             {children}
           </div>
         ) : null}
 
         <p className="text-xs leading-relaxed text-ink-muted">Bankada yaptığın ödeme veya tahsilatı buraya kaydet. Bu ekran bankadan para göndermez.</p>
 
+        <fieldset disabled={saving || confirming} className="flex min-w-0 flex-col gap-4">
         {paidAtEditable ? (
           <label className="block text-sm font-semibold text-ink">
             Ödeme günü
@@ -198,6 +212,7 @@ export function AccountPaymentModal({
         />
 
         {extraControls}
+        </fieldset>
 
         {info ? <Alert variant="success">{info}</Alert> : null}
         {displayedError ? <Alert variant="destructive">{displayedError}</Alert> : null}

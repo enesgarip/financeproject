@@ -1,5 +1,33 @@
 # Priority Backlog
 
+## 2026-11-03 — İkinci tur yoğun kullanım + UX — UYGULANDI
+
+Kaynak/kanıt ve 16 ana görev: `docs/SCENARIO_UX_AUDIT_2026-11-03.md`.
+Kabul/yayın kaydı: `docs/SCENARIO_UX_FIXES_2026-11-03.md`.
+Production build + izole yerel gerçek Supabase ile doğrulandı; kullanıcı yayını istedi.
+
+- [x] **P1 / R2-F02:** Commit sonrası kayıp yanıtta aynı kısmi ödeme tekrarı
+  iki kez borç/bakiye/geçmiş değiştiriyor. Kalıcı işlem kimliği ve gerçek DB
+  tekrar regresyonu; çift tıklama kilidi tek başına yeterli değil.
+- [x] **P1 / R2-F01:** Gecikmiş açık ekstre dönem içi harcamayı bir ay öteler.
+  Karşı örnek: 72.000 yerine 76.000 TL harcanabilir; eski ekstre ödenince
+  harcanabilirin 4.000 TL düşmesi aynı kök hatanın kanıtı.
+- [x] **P2 / R2-F03:** İlk hesap sonrası kısa süreli eski boş Özet gösterimi;
+  callback çalışıyordu. Kapalı snapshot artık kaydetme bitmeden yenilenir.
+- [x] **P2 / R2-F04:** Kirli ödeme formunda tarayıcı Geri onaysız giriş
+  kaybettiriyor; Escape koruması aynı durumda çalışıyor.
+- [x] **P2 / R2-U03/U04:** Offline/son okuma ve belirsiz commit/iki sekme
+  hata geri bildirimi; soğuk offline açılışta teknik hata yerine açık durum.
+- [x] **P2 / R2-U01/U02:** Kalabalık hesap geçmişinde arama/atlama ve
+  mobilde benzer uzun kişi adlarını ödeme öncesi ayırt edebilme.
+
+Sağlam kalanlar: tahsilat, altın hassasiyeti+not düzenleme, transfer,
+takip dışı ödeme, örtüşen hedef, rezerv, çift tıklama ve sunucu eski-tutar
+koruması. Düzeltme kapısı 176 dosya / 1.848 test ve 7 guard; SQL 53/53,
+tarayıcı 34 geçti / 4 mevcut live testi atlandı. Yeni transaction makbuzu beş
+ödeme yolunu kapsar; tam ödeme de açık tutarla gider. Tarihsel bulgu metinlerinin
+son davranışı ve sınırları yukarıdaki kabul kaydında tutulur.
+
 ## 2026-11-03 — Kişisel kullanım senaryoları denetimi — UYGULANDI
 
 F001–F005 ve F007–F012 düzeltildi: planlı taksit gerçek kesim/vadesinde tek
@@ -13,17 +41,17 @@ rakam ve satın alma önerisi gösterilmez; hızlı kontrol takvimi de denetler.
 Kullanıcının iki ürün kararı uygulandı: eski açık yükümlülükler + vadesiz
 kişisel borçlar harcanabilirden düşer; altın satıştan sonra kalan maliyet
 havuzunu taşır. Kısmi döviz/altın borcunda miktar `numeric(38,26)` olur;
-geçmişte kaybolmuş hassasiyet otomatik tahmin edilmez. İki migration yalnız
-yerelde uygulandı. Kapsam, karşı örnekler, doğrulama ve açık gözlemler:
+geçmişte kaybolmuş hassasiyet otomatik tahmin edilmez. İki migration PR #283
+yayınıyla üretime geçti. Kapsam, karşı örnekler, doğrulama ve açık gözlemler:
 `docs/SCENARIO_FIXES_2026-11-03.md`.
 
 Doğrulama: `npm run verify` (174 dosya / 1.838 test, 7 guard, lint/coverage,
 audit 0 açık, build/bundle ve 6 edge tipi), yerel SQL 52/52; tarayıcı 30 geçti,
 4 live-backend testi atlandı. 320/390/1280px ve 19 ekran taraması dahil.
 
-Takip: soğuk çevrimdışı PWA açılışı/son okuma etiketi, F006 eksik şema
-kapsamının Özet'te görünürlüğü ve sunucu commit sonrası kayıp yanıtta kısmi
-ödeme tekrarının idempotency testi ayrı işlerdir; doğrulanmış düzeltme sayılmaz.
+Takip: F006 eksik şema kapsamının Özet'te görünürlüğü açık. Soğuk çevrimdışı
+açılış ve commit sonrası kayıp yanıtta kısmi ödeme tekrarı ikinci turda
+yeniden üretildi; yukarıdaki R2-F02 / R2-U03 kayıtlarında açık tutuluyor.
 
 ## 2026-11-03 — Ay sonuna kalan tutarda tahsil edilmemiş alacak — UYGULANDI
 

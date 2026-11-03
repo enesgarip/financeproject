@@ -1,5 +1,22 @@
 # AI Context Index
 
+3 Kasım ikinci tur senaryo/UX denetimi: `docs/SCENARIO_UX_AUDIT_2026-11-03.md`.
+Kabul: `docs/SCENARIO_UX_FIXES_2026-11-03.md`. Sekiz bulgu uygulandı.
+`obligations.ts` arşivli açık dönemi gerçek kesim/vadeye eşler; eski ekstrenin
+ödenmesi tarihi değiştirmez. `services/financePaymentActions.ts` beş ödeme
+yolunu `submit_finance_payment` üzerinden sabit işlem kimliğiyle çağırır.
+`utils/paymentAttempt.ts` belirsiz niyeti kullanıcı/kaynak bazında saklar;
+`hooks/useFinancePaymentDrawer.ts` aynı kimlikle doğrular ve SQL reddinde
+güncel kalan/hesapları getirir. SQL `20261103120000_finance_payment_requests.sql`
+private kullanıcı/UUID/hash makbuzudur; ham finans alanı ve backup kapsamı yok,
+reset/restore'da tekrar koruması kalır. Regresyon: `supabase/tests/finance_payment_requests.sql`.
+`app/useFinanceSnapshot.ts` kapalı Özet'i de yenilemeyi bekler (önceki kalıcı
+cache teşhisi hatalıydı; kısa eski gösterim düzeltildi). `main.tsx` gezinme
+korumasını router'dan önce kurar. `AccountLedgerPanel.tsx` tam geçmişte arar,
+`CrudPage.tsx` başlıkları sarar. `components/FinanceDataStatus.tsx` +
+`hooks/useOnlineStatus.ts` son okuma/bağlantı durumunu sunar; soğuk offline
+finans cache'i yoktur. Kanıtlar: saf/hook/SQL testleri ve `tests/e2e/simplification.spec.ts`.
+
 3 Kasım senaryo denetimi düzeltmeleri: kayıt/kanıt ve kalan sınırlar
 `docs/SCENARIO_FIXES_2026-11-03.md` içinde. `cardStatement.ts` içindeki
 `scheduledCardCashOutflow` aylık özet ve forecast'ın ortak taksit nakit tarihidir;

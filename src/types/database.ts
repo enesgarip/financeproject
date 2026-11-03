@@ -1221,6 +1221,10 @@ export type Database = {
         Args: Record<string, never>
         Returns: number
       }
+      submit_finance_payment: {
+        Args: { p_request_id: string; p_method: string; p_args: Json }
+        Returns: void
+      }
     }
     Enums: Record<string, never>
     CompositeTypes: Record<string, never>

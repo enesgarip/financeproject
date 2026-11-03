@@ -346,6 +346,23 @@ describe('cash-impacting obligation date placement (billing-cycle correctness)',
     return buildFinanceObligationsForMonth(data, month, { from }).filter((item) => item.kind === 'card_debt')
   }
 
+  it.each(['open', 'paid'] as const)('eski %s ekstre, bu ay kesilecek dönem içi borcu ertelemez', (status) => {
+    const data = input({ cards: [creditCard({ id: 'c', statement_day: 20, due_day: 30, statement_debt_amount: status === 'open' ? 5000 : 0, current_period_spending: 4000 })],
+      cardStatements: [statement({ card_id: 'c', statement_date: '2026-10-20', due_date: '2026-10-30', statement_debt_amount: 5000, status })] })
+    const from = new Date(2026, 10, 3)
+    expect(cardDebtItems(data, new Date(2026, 10, 1), from).filter((row) => row.action === null).map((row) => [row.date, row.amount]))
+      .toEqual([['2026-11-30', 4000]])
+    expect(cardDebtItems(data, new Date(2026, 11, 1), from)).toEqual([])
+  })
+
+  it('bugün zaten arşivlenen kesimden sonraki açık dönemi bir sonraki kesime yerleştirir', () => {
+    const data = input({ cards: [creditCard({ id: 'c', statement_day: 20, due_day: 30, current_period_spending: 4000 })],
+      cardStatements: [statement({ card_id: 'c', statement_date: '2026-11-20', due_date: '2026-11-30', status: 'paid' })] })
+    const from = new Date(2026, 10, 20)
+    expect(cardDebtItems(data, new Date(2026, 10, 1), from)).toEqual([])
+    expect(cardDebtItems(data, new Date(2026, 11, 1), from).map((row) => row.date)).toEqual(['2026-12-30'])
+  })
+
   it('places statement debt on its due date and current-period spending one cycle later (due_day > statement_day)', () => {
     const data = input({
       cards: [creditCard({ id: 'c', statement_day: 15, due_day: 25, statement_debt_amount: 3000, current_period_spending: 1000 })],
