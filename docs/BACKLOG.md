@@ -1,5 +1,23 @@
 # Priority Backlog
 
+## 2026-11-07 — Grafik bilgi kutusunda kesilen tutar ve etiket
+
+- [x] Kullanıcı ekran görüntüsündeki hata 320/390/768px gerçek tarayıcıda
+  yeniden üretildi: sabit SVG yüksekliği alt satırı kesiyor, dar yatay düzen
+  para simgesini ayrı satıra itiyordu.
+- [x] `ChartTooltip.tsx`: iki grafikte ortak doğal yüksekliğe sahip HTML
+  katmanı, tam seri adı, ayrı tek-satırlı tutar alanı ve grafik sınırına göre
+  konum. Sütun gövdesi de hover/dokunmayı yakalar. Geçmiş veri noktasının
+  kaldırılması açık kutuda geçersiz satır erişimi üretmez.
+- [x] İlk/orta/son noktada gerçek metin sınırları ve dokunma tarayıcı
+  regresyonuna eklendi; veri/finans hesabı değişmez. Sözleşme:
+  `docs/UI_ARCHITECTURE.md`.
+
+Doğrulama: `npm run verify` geçti (185 dosya / 1907 test, production audit
+0 açık, build/bundle ve 6 edge tip kontrolü). Üç gerçek tarayıcı senaryosu
+320/390/768px'de bilgi kutusu sınırları, satır bölünmesi ve dokunmayı doğruladı;
+açık/koyu ekran görüntüleri incelendi. Yeni migration veya finansal yazma yok.
+
 ## 2026-11-07 — Başarısız kur isteğinde yeniden deneme aralığı
 
 - [x] `marketRatesClient.ts`: otomatik istekler başarısızlıktan sonra 60 saniye

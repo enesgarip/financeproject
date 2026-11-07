@@ -339,6 +339,36 @@ for (const width of [320, 390, 768]) {
         return errors
       }))
       expect(problems).toEqual([])
+      const chart = page.locator('svg:has([data-axis="x"])').first()
+      await chart.evaluate(element => element.scrollIntoView({ block: 'center' }))
+      const points = chart.locator(path.includes('altin') ? 'rect[fill="transparent"]' : 'g > rect[fill]:not([fill="transparent"])')
+      const count = await points.count()
+      for (const index of [0, Math.floor(count / 2), count - 1]) {
+        await points.nth(index).hover()
+        const tooltip = chart.locator('..').locator('[role="tooltip"], foreignObject > div')
+        await expect(tooltip).toBeVisible()
+        const clipping = await tooltip.evaluate(element => {
+          const chartBox = element.closest('[role="img"]')!.getBoundingClientRect()
+          const bounds = element.closest('foreignObject')?.getBoundingClientRect() ?? element.getBoundingClientRect()
+          const errors: string[] = []
+          if (bounds.left < chartBox.left || bounds.right > chartBox.right + 1 || bounds.top < chartBox.top || bounds.bottom > chartBox.bottom + 1) errors.push('Bilgi kutusu grafik dışına taşıyor')
+          for (const child of element.querySelectorAll('p, span')) {
+            const box = child.getBoundingClientRect()
+            if (box.bottom > bounds.bottom + 1 || box.right > bounds.right + 1 || box.left < bounds.left - 1) errors.push('Bilgi kutusunda içerik kesiliyor')
+            if (child.classList.contains('font-mono')) {
+              const range = document.createRange()
+              range.selectNodeContents(child)
+              if (range.getClientRects().length > 1) errors.push('Tutar birden fazla satıra bölünüyor')
+            }
+          }
+          return errors
+        })
+        expect(clipping).toEqual([])
+      }
+      await chart.evaluate(element => element.scrollIntoView({ block: 'center' }))
+      await points.first().dispatchEvent('pointerdown', { pointerType: 'touch' })
+      await expect(chart.locator('..').getByRole('tooltip')).toBeVisible()
+      await chart.locator('..').screenshot({ path: `test-results/chart-tooltip-${path.includes('altin') ? 'line' : 'bar'}-${width}.png` })
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true)
       await page.screenshot({ path: `test-results/chart-${path.includes('altin') ? 'line' : 'bar'}-${width}.png`, fullPage: true })
     }
