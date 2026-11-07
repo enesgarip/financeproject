@@ -48,4 +48,18 @@ describe('aylık hedef gerçekleşmeleri', () => {
     expect(buildGoalMonthlyRows('g', [small], [], [lot('2026-11-01', 0.004)], today)[0].status).toBe('pending')
     expect(buildGoalMonthlyRows('g', [small], [], [lot('2026-11-01', 0.004), lot('2026-11-02', 0.001)], today)[0].status).toBe('complete')
   })
+  it('aynı karma hedefin bileşen planlarını, sürümlerini ve elle girişlerini ayırır', () => {
+    const gram = { ...plan, component_id: 'gram' }
+    const quarter = { ...plan, component_id: 'quarter', value_type: 'ceyrek_altin' as const, target_amount: 1 }
+    const secondGram = { ...plan, component_id: 'second-gram', target_amount: 10 }
+    const versions = [plan, gram, quarter, secondGram, { ...gram, effective_month: '2026-11-01', target_amount: 6 }]
+    const entries = [{ ...entry('2026-11-01', 1), component_id: 'quarter' }, { ...entry('2026-11-01', 0), component_id: 'second-gram' }]
+    const lots = [lot('2026-10-01', 5), lot('2026-11-01', 5)]
+    const rows = (componentId?: string) => buildGoalMonthlyRows('g', versions, entries, lots, today, 2026, componentId)
+    expect(rows('gram').slice(0, 2).map(row => [row.amount, row.plan.target_amount, row.status])).toEqual([[5, 6, 'pending'], [5, 5, 'complete']])
+    expect(rows('quarter')[0]).toMatchObject({ amount: 1, manual: true, status: 'complete' })
+    expect(rows('second-gram')[0]).toMatchObject({ amount: 0, manual: true, status: 'pending' })
+    expect(rows()[0]).toMatchObject({ amount: 5, manual: false, status: 'complete' })
+    expect(rows('missing')).toEqual([])
+  })
 })

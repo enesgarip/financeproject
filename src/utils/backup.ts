@@ -55,6 +55,8 @@ export const RESTORE_TABLE_ORDER = [
   'card_installments',
   'loan_installments',
   'savings_goal_components',
+  'savings_goal_component_monthly_plans',
+  'savings_goal_component_monthly_entries',
   // Hedef takip kaynakları: hedef, bileşen, varlık, kart ve kovadan SONRA (FK).
   'savings_goal_sources',
   'payments',
@@ -342,6 +344,8 @@ export const BACKUP_TABLE_LABELS: Record<RestoreTable, string> = {
   savings_goal_snapshots: 'Hedef fotoğrafı',
   savings_goal_monthly_plans: 'Aylık hedef planı',
   savings_goal_monthly_entries: 'Aylık hedef gerçekleşmesi',
+    savings_goal_component_monthly_plans: 'Bileşen aylık planı',
+    savings_goal_component_monthly_entries: 'Bileşen aylık gerçekleşmesi',
   card_statement_archives: 'Ekstre arşivi',
   card_statement_payments: 'Ekstre ödemesi',
   card_expenses: 'Kart harcaması',

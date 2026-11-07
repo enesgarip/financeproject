@@ -311,6 +311,81 @@ test('aylık hedef: otomatik alım, geçmişe sıfır girişi, plan değişikli�
   await expect(tracking.getByText('5 gram / 5 gram', { exact: false })).toHaveCount(0)
 })
 
+test('karma hedef: gram, çeyrek ve TL bileşenleri ayrı aylık plan ve gerçekleşme tutar', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 900 })
+  await mockApp(page, 'light', {
+    savings_goals: [{ ...tables.savings_goals[0], name: 'Karma hedefim', value_type: 'composite', target_amount: 0, current_amount: 0 }],
+    savings_goal_components: [
+      { ...base, id: 'comp-gram', goal_id: 'goal-1', label: 'Gram birikimi', value_type: 'gram_altin', target_amount: 100, current_amount: 0, sort_order: 0 },
+      { ...base, id: 'comp-quarter', goal_id: 'goal-1', label: 'Çeyrek birikimi', value_type: 'ceyrek_altin', target_amount: 20, current_amount: 0, sort_order: 1 },
+      { ...base, id: 'comp-tl', goal_id: 'goal-1', label: 'Nakit birikimi', value_type: 'TRY', target_amount: 100000, current_amount: 0, sort_order: 2 },
+    ],
+    gold_lots: [{ ...base, id: 'lot-gram', gold_type: 'gram', direction: 'buy', purchase_date: '2026-11-02', quantity: 5, unit_price: 5000, ayar: 24 }],
+  })
+  await page.clock.setFixedTime(new Date('2026-11-07T09:00:00Z'))
+  let plans: Record<string, unknown>[] = []
+  let entries: Record<string, unknown>[] = []
+  for (const table of ['savings_goal_component_monthly_plans', 'savings_goal_component_monthly_entries']) {
+    await page.route(`**/rest/v1/${table}*`, async route => {
+      const request = route.request()
+      if (request.method() === 'POST') {
+        const row = { ...base, ...request.postDataJSON(), id: `monthly-${request.postDataJSON().component_id}` }
+        if (table.endsWith('plans')) plans = [...plans.filter(p => p.component_id !== row.component_id || p.effective_month !== row.effective_month), row]
+        else entries = [...entries.filter(e => e.component_id !== row.component_id || e.month !== row.month), row]
+      }
+      if (request.method() === 'DELETE') {
+        const params = new URL(request.url()).searchParams
+        const month = params.get('month')?.replace('eq.', '')
+        const componentId = params.get('component_id')?.replace('eq.', '')
+        expect(componentId).toBeTruthy()
+        entries = entries.filter(e => e.month !== month || e.component_id !== componentId)
+      }
+      return route.fulfill({ json: table.endsWith('plans') ? plans : entries })
+    })
+  }
+  await page.goto('/odemeler/hedefler')
+  await page.getByText('Aylık takip', { exact: true }).click()
+  for (const [label, unit, amount] of [['Gram birikimi', 'gram', '5'], ['Çeyrek birikimi', 'çeyrek', '1'], ['Nakit birikimi', 'TL', '10000']]) {
+    await page.locator('summary').filter({ hasText: `${label} · ${unit}` }).click()
+    const tracking = page.getByLabel(`Karma hedefim · ${label} aylık takibi`, { exact: true })
+    await tracking.getByRole('button', { name: 'Aylık plan oluştur' }).click()
+    await page.getByLabel(`Aylık miktar (${unit})`, { exact: true }).fill(amount)
+    if (unit === 'TL') await expect(page.getByRole('dialog').getByRole('combobox').locator('option')).toHaveCount(1)
+    await page.getByRole('button', { name: 'Planı kaydet' }).click()
+    await expect(tracking.getByText(unit === 'gram' ? '✓ Tamamlandı' : '◷ Bekliyor', { exact: true })).toBeVisible()
+  }
+  expect(plans.map(p => [p.component_id, p.value_type, p.target_amount, p.source])).toEqual([
+    ['comp-gram', 'gram_altin', 5, 'gold_buys'], ['comp-quarter', 'ceyrek_altin', 1, 'gold_buys'], ['comp-tl', 'TRY', 10000, 'manual'],
+  ])
+  const gram = page.getByLabel('Karma hedefim · Gram birikimi aylık takibi', { exact: true })
+  const quarter = page.getByLabel('Karma hedefim · Çeyrek birikimi aylık takibi', { exact: true })
+  const tl = page.getByLabel('Karma hedefim · Nakit birikimi aylık takibi', { exact: true })
+  for (const [tracking, unit, amount] of [[quarter, 'çeyrek', '1'], [tl, 'TL', '10000']] as const) {
+    await tracking.getByRole('button', { name: 'Gerçekleşen miktarı gir' }).click()
+    await page.getByLabel(`Gerçekleşen toplam (${unit})`, { exact: true }).fill(amount)
+    await page.getByRole('button', { name: 'Miktarı kaydet' }).click()
+    await expect(tracking.getByText('✓ Tamamlandı', { exact: true })).toBeVisible()
+  }
+  await quarter.getByRole('button', { name: 'Elle girişi kaldır' }).click()
+  await expect(quarter.getByText('◷ Bekliyor', { exact: true })).toBeVisible()
+  await expect(gram.getByText('✓ Tamamlandı', { exact: true })).toBeVisible()
+  await expect(tl.getByText('✓ Tamamlandı', { exact: true })).toBeVisible()
+  await gram.getByRole('button', { name: 'Aylık planı değiştir' }).click()
+  await page.getByLabel('Aylık miktar (gram)', { exact: true }).fill('6')
+  await page.getByRole('button', { name: 'Planı kaydet' }).click()
+  await expect(gram.getByText('◷ Bekliyor', { exact: true })).toBeVisible()
+  await page.reload()
+  await page.getByText('Aylık takip', { exact: true }).click()
+  for (const label of ['Gram birikimi · gram', 'Çeyrek birikimi · çeyrek', 'Nakit birikimi · TL']) await page.locator('summary').filter({ hasText: label }).click()
+  await expect(gram.getByText('Her ay 6 gram', { exact: true })).toBeVisible()
+  await expect(quarter.getByText('Her ay 1 çeyrek', { exact: true })).toBeVisible()
+  await expect(tl.getByText('✓ Tamamlandı', { exact: true })).toBeVisible()
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true)
+  await page.screenshot({ path: 'test-results/component-monthly-320.png', fullPage: true })
+  await page.getByRole('button', { name: 'Tutarları gizle', exact: true }).click()
+  await expect(page.getByText('Her ay ••••', { exact: true })).toHaveCount(3)
+})
+
 for (const width of [320, 390, 768]) {
   test(`grafik eksenleri gerçek yazı boyutunda çakışmaz: ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 })

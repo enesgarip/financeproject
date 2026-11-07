@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../../auth/useAuth'
 import { useBalancePrivacy } from '../../hooks/useBalancePrivacy'
-import type { SavingsGoal } from '../../types/database'
+import type { SavingsGoal, SavingsGoalComponent } from '../../types/database'
 import { deleteGoalMonthlyEntry, fetchGoalMonthlyData, saveGoalMonthlyEntry, saveGoalMonthlyPlan } from '../../data/repositories/savingsGoalsRepo'
 import { buildGoalMonthlyRows, type GoalMonthlyRow } from '../../utils/goalMonthly'
 import { dateInputValue, startOfMonth } from '../../utils/date'
@@ -28,15 +28,23 @@ function parseQuantity(text: string): number | null {
   return Number.isFinite(amount) && amount <= 1e9 ? amount : null
 }
 
-export function GoalMonthlyChecklist({ goal }: { goal: SavingsGoal }) {
+const unitLabels = { TRY: 'TL', gram_altin: 'gram', ceyrek_altin: 'çeyrek' }
+
+export function GoalMonthlyChecklist({ goal, components = [] }: { goal: SavingsGoal; components?: SavingsGoalComponent[] }) {
   return (
     <DeferredDetails summary="Aylık takip" className="mt-3 border-t border-line-strong pt-3" summaryClassName="cursor-pointer py-2 text-sm font-semibold text-primary">
-      <MonthlyChecklistContent goal={goal} />
+      {goal.value_type === 'composite' ? <div className="space-y-3">
+        <p className="text-xs text-ink-muted">Her bileşene kendi biriminde ayrı aylık plan oluştur. Tamamlanma ve elle girişler ayrı izlenir.</p>
+        {components.map(component => <DeferredDetails key={component.id} summary={`${component.label || 'Bileşen'} · ${unitLabels[component.value_type]}`} className="border-t border-line-strong pt-2" summaryClassName="cursor-pointer break-words py-3 text-sm font-semibold text-primary">
+          <MonthlyChecklistContent goal={goal} component={component} />
+        </DeferredDetails>)}
+        {!components.length ? <p className="text-sm text-ink-muted">Aylık plan oluşturmak için hedefe bileşen ekle.</p> : null}
+      </div> : <MonthlyChecklistContent goal={goal} />}
     </DeferredDetails>
   )
 }
 
-function MonthlyChecklistContent({ goal }: { goal: SavingsGoal }) {
+function MonthlyChecklistContent({ goal, component }: { goal: SavingsGoal; component?: SavingsGoalComponent }) {
   const { user } = useAuth()
   const { hidden } = useBalancePrivacy()
   const queryClient = useQueryClient()
@@ -58,27 +66,30 @@ function MonthlyChecklistContent({ goal }: { goal: SavingsGoal }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const data = query.data
-  const plans = data?.plans.filter(plan => plan.goal_id === goal.id) ?? []
-  const currentPlan = plans.filter(plan => plan.effective_month <= currentMonth).toSorted((a, b) => b.effective_month.localeCompare(a.effective_month))[0]
-  const rows = data ? buildGoalMonthlyRows(goal.id, data.plans, data.entries, data.lots, today, year) : []
+  const plans = data?.plans.filter(plan => plan.goal_id === goal.id && plan.component_id === component?.id) ?? []
+  const currentPlan = plans.filter(plan => plan.effective_month <= currentMonth).toSorted((a, b) => b.effective_month.localeCompare(a.effective_month)).at(0)
+  const rows = data ? buildGoalMonthlyRows(goal.id, data.plans, data.entries, data.lots, today, year, component?.id) : []
   const firstYear = plans.length ? Math.min(...plans.map(plan => Number(plan.effective_month.slice(0, 4)))) : today.getFullYear()
-  const unit = goal.value_type === 'TRY' ? 'TL' : goal.value_type === 'gram_altin' ? 'gram' : 'çeyrek'
+  // Bileşen sonradan düzenlense de mevcut aylık miktar başka birime dönüşmez.
+  const valueType = currentPlan?.value_type ?? component?.value_type ?? goal.value_type
+  const unit = valueType === 'composite' ? 'TL' : unitLabels[valueType]
+  const scopeLabel = component ? `${goal.name} · ${component.label || unitLabels[component.value_type]}` : goal.name
   const format = (row: GoalMonthlyRow, amount: number) => hidden ? '••••' : formatMonthlyAmount(row.plan, amount)
 
   async function savePlan(event: FormEvent) {
     event.preventDefault()
-    if (!user || goal.value_type === 'composite') return
+    if (!user || valueType === 'composite') return
     const amount = parseQuantity(monthlyAmount)
     const effectiveMonth = plans.length ? currentMonth : `${startsOn}-01`
-    if (amount === null || amount <= 0 || (goal.value_type === 'TRY' && roundTL(amount) <= 0) || !/^\d{4}-(0[1-9]|1[0-2])-01$/.test(effectiveMonth) || effectiveMonth > currentMonth || effectiveMonth < '1900-01-01') {
+    if (amount === null || amount <= 0 || (valueType === 'TRY' && roundTL(amount) <= 0) || !/^\d{4}-(0[1-9]|1[0-2])-01$/.test(effectiveMonth) || effectiveMonth > currentMonth || effectiveMonth < '1900-01-01') {
       setError('Geçerli bir başlangıç ayı ve sıfırdan büyük aylık miktar gir.'); return
     }
     setBusy(true); setError('')
     try {
       const result = await saveGoalMonthlyPlan({
-        user_id: user.id, goal_id: goal.id, effective_month: effectiveMonth,
-        value_type: goal.value_type, target_amount: goal.value_type === 'TRY' ? roundTL(amount) : amount,
-        source, automatic_from: source === 'gold_buys' ? currentMonth : null,
+        user_id: user.id, goal_id: goal.id, component_id: component?.id, effective_month: effectiveMonth,
+        value_type: valueType, target_amount: valueType === 'TRY' ? roundTL(amount) : amount,
+        source: valueType === 'TRY' ? 'manual' : source, automatic_from: valueType !== 'TRY' && source === 'gold_buys' ? currentMonth : null,
       })
       if (!result.ok) throw new Error(result.error.message)
       await queryClient.invalidateQueries({ queryKey })
@@ -94,7 +105,7 @@ function MonthlyChecklistContent({ goal }: { goal: SavingsGoal }) {
     if (amount === null || amount < 0) { setError('Sıfır veya daha büyük geçerli bir miktar gir.'); return }
     setBusy(true); setError('')
     try {
-      const result = await saveGoalMonthlyEntry({ user_id: user.id, goal_id: goal.id, month: editing.month, amount: editing.plan.value_type === 'TRY' ? roundTL(amount) : amount })
+      const result = await saveGoalMonthlyEntry({ user_id: user.id, goal_id: goal.id, component_id: component?.id, month: editing.month, amount: editing.plan.value_type === 'TRY' ? roundTL(amount) : amount })
       if (!result.ok) throw new Error(result.error.message)
       await queryClient.invalidateQueries({ queryKey })
       setEditing(null)
@@ -105,7 +116,7 @@ function MonthlyChecklistContent({ goal }: { goal: SavingsGoal }) {
   async function removeActual(row: GoalMonthlyRow) {
     setBusy(true); setError('')
     try {
-      const result = await deleteGoalMonthlyEntry(goal.id, row.month)
+      const result = await deleteGoalMonthlyEntry(goal.id, row.month, component?.id)
       if (!result.ok) throw new Error(result.error.message)
       await queryClient.invalidateQueries({ queryKey })
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Elle girilen miktar kaldırılamadı.') }
@@ -116,12 +127,12 @@ function MonthlyChecklistContent({ goal }: { goal: SavingsGoal }) {
   if (query.isError) return <QueryError title="Aylık takip yüklenemedi" message={query.error.message} onRetry={() => void query.refetch()} />
 
   return (
-    <div className="space-y-3" aria-label={`${goal.name} aylık takibi`}>
+    <div className="space-y-3" aria-label={`${scopeLabel} aylık takibi`}>
       {error && !planOpen && !editing ? <p role="alert" className="text-sm text-destructive">{error}</p> : null}
       {currentPlan ? <p className="text-sm text-ink">Her ay {hidden ? '••••' : formatMonthlyAmount(currentPlan, currentPlan.target_amount)}</p> : <p className="text-sm text-ink-muted">Her ay ne kadar biriktirmek istediğini belirle.</p>}
       <Button variant="outline" className="min-h-11 w-full whitespace-normal" onClick={() => {
         setMonthlyAmount(currentPlan ? String(currentPlan.target_amount).replace('.', ',') : '')
-        setSource(goal.value_type === 'TRY' ? 'manual' : currentPlan?.source ?? 'gold_buys')
+        setSource(valueType === 'TRY' ? 'manual' : currentPlan?.source ?? 'gold_buys')
         setStartsOn(currentMonth.slice(0, 7)); setError(''); setPlanOpen(true)
       }}>{currentPlan ? 'Aylık planı değiştir' : 'Aylık plan oluştur'}</Button>
       {currentPlan?.source === 'gold_buys' ? <p className="text-xs text-ink-muted">Altın defterindeki tüm {currentPlan.value_type === 'gram_altin' ? 'gram' : 'çeyrek'} alımları sayılır; satışlar düşülmez. Tarihi olmayan alımlar sayılmaz.</p> : null}
@@ -151,7 +162,7 @@ function MonthlyChecklistContent({ goal }: { goal: SavingsGoal }) {
           <label className="block text-sm font-semibold">Aylık miktar ({unit})<Input className="mt-1 min-h-11" inputMode="decimal" value={monthlyAmount} onChange={event => setMonthlyAmount(event.target.value)} required /></label>
           {!plans.length ? <label className="block text-sm font-semibold">Başlangıç ayı<Input className="mt-1 min-h-11" type="month" value={startsOn} min="1900-01" max={currentMonth.slice(0, 7)} onChange={event => setStartsOn(event.target.value)} required /></label> : <p className="text-sm text-ink-muted">Değişiklik bu aydan itibaren geçerli olur. Önceki ayların hedefleri korunur.</p>}
           <label className="block text-sm font-semibold">Gerçekleşen miktar<Select className="mt-1 min-h-11" value={source} onChange={event => setSource(event.target.value as typeof source)}>
-            {goal.value_type !== 'TRY' ? <option value="gold_buys">Altın defterindeki tüm {unit} alımları</option> : null}
+            {valueType !== 'TRY' ? <option value="gold_buys">Altın defterindeki tüm {unit} alımları</option> : null}
             <option value="manual">Her ay elle gireceğim</option>
           </Select></label>
           <p className="text-xs text-ink-muted">Bu takip, birikim ve hesap bakiyelerini değiştirmez.</p>

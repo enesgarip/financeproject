@@ -1,5 +1,14 @@
 # AI Context Index
 
+7 Kasım karma hedef aylık planı: `GoalMonthlyChecklist.tsx` her bileşeni
+ayrı açar; aylık miktar bileşenin kendi TL/gram/çeyrek birimindedir.
+`goalMonthly.ts` hedef+bileşen kapsamıyla plan/elle toplamı ayırır;
+`savingsGoalsRepo.ts` iki yeni bileşen tablosunu mevcut cache'e birleştirir.
+`20261107160000_component_monthly_goals.sql` RLS, bileşen+hedef+sahip FK,
+cascade ve transactional restore ekler; basit hedef API'si korunur.
+Sözleşme: `docs/GOAL_MONTHLY_TRACKING.md`; SQL kanıtı:
+`supabase/tests/component_monthly_goals.sql`; tarayıcı: üç birimde 320px.
+
 7 Kasım grafik bilgi kutusu: `components/charts/ChartTooltip.tsx` doğal HTML
 yüksekliği ve sınıra göre konumla hem `LineChart` hem `BarChart` kutularının
 kesilmesini önler; seri adı tamdır, tutar/para simgesi tek satırda kalır.
