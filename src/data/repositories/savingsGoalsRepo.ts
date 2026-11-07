@@ -1,5 +1,6 @@
 import { supabase } from '../../lib/supabase'
-import type { GoldLot, InsertFor, SavingsGoal, SavingsGoalComponent, SavingsGoalSource, SavingsGoalMonthlyPlan, SavingsGoalMonthlyEntry } from '../../types/database'
+import type { GoldLot, InsertFor, SavingsGoal, SavingsGoalComponent, SavingsGoalSource } from '../../types/database'
+import type { GoalMonthlyPlan, GoalMonthlyEntry } from '../../utils/goalMonthly'
 import { missingSupabaseCapabilityMessage } from '../../utils/supabaseErrors'
 import {
   appErrorFromSupabase,
@@ -20,9 +21,9 @@ export type SavingsGoalsRows = {
 
 export type SavingsGoalFields = Omit<InsertFor<'savings_goals'>, 'user_id' | 'id' | 'created_at' | 'updated_at'>
 
-export type GoalMonthlyData = { plans: SavingsGoalMonthlyPlan[]; entries: SavingsGoalMonthlyEntry[]; lots: GoldLot[] }
+export type GoalMonthlyData = { plans: GoalMonthlyPlan[]; entries: GoalMonthlyEntry[]; lots: GoldLot[] }
 
-async function monthlyRows(table: 'savings_goal_monthly_plans' | 'savings_goal_monthly_entries' | 'gold_lots') {
+async function monthlyRows(table: 'savings_goal_monthly_plans' | 'savings_goal_monthly_entries' | 'savings_goal_component_monthly_plans' | 'savings_goal_component_monthly_entries' | 'gold_lots') {
   const rows: unknown[] = []
   let cursor: string | null = null
   for (;;) {
@@ -41,25 +42,39 @@ async function monthlyRows(table: 'savings_goal_monthly_plans' | 'savings_goal_m
 }
 
 export async function fetchGoalMonthlyData(): Promise<Result<GoalMonthlyData>> {
-  const [plans, entries, lots] = await Promise.all([monthlyRows('savings_goal_monthly_plans'), monthlyRows('savings_goal_monthly_entries'), monthlyRows('gold_lots')])
+  const [plans, entries, componentPlans, componentEntries, lots] = await Promise.all([
+    monthlyRows('savings_goal_monthly_plans'), monthlyRows('savings_goal_monthly_entries'),
+    monthlyRows('savings_goal_component_monthly_plans'), monthlyRows('savings_goal_component_monthly_entries'), monthlyRows('gold_lots'),
+  ])
   if (!plans.ok) return plans
   if (!entries.ok) return entries
+  if (!componentPlans.ok) return componentPlans
+  if (!componentEntries.ok) return componentEntries
   if (!lots.ok) return lots
-  return ok({ plans: plans.data as SavingsGoalMonthlyPlan[], entries: entries.data as SavingsGoalMonthlyEntry[], lots: lots.data as GoldLot[] })
+  return ok({ plans: [...plans.data, ...componentPlans.data] as GoalMonthlyPlan[], entries: [...entries.data, ...componentEntries.data] as GoalMonthlyEntry[], lots: lots.data as GoldLot[] })
 }
 
-export async function saveGoalMonthlyPlan(row: InsertFor<'savings_goal_monthly_plans'>): Promise<Result<void>> {
-  const { error } = await supabase.from('savings_goal_monthly_plans').upsert(row, { onConflict: 'goal_id,effective_month' })
+export async function saveGoalMonthlyPlan({ component_id, ...row }: InsertFor<'savings_goal_monthly_plans'> & { component_id?: string }): Promise<Result<void>> {
+  const result = component_id
+    ? await supabase.from('savings_goal_component_monthly_plans').upsert({ ...row, component_id }, { onConflict: 'component_id,effective_month' })
+    : await supabase.from('savings_goal_monthly_plans').upsert(row, { onConflict: 'goal_id,effective_month' })
+  const { error } = result
   return voidResultFromSupabase(error, 'Aylık hedef kaydedilemedi.')
 }
 
-export async function saveGoalMonthlyEntry(row: InsertFor<'savings_goal_monthly_entries'>): Promise<Result<void>> {
-  const { error } = await supabase.from('savings_goal_monthly_entries').upsert(row, { onConflict: 'goal_id,month' })
+export async function saveGoalMonthlyEntry({ component_id, ...row }: InsertFor<'savings_goal_monthly_entries'> & { component_id?: string }): Promise<Result<void>> {
+  const result = component_id
+    ? await supabase.from('savings_goal_component_monthly_entries').upsert({ ...row, component_id }, { onConflict: 'component_id,month' })
+    : await supabase.from('savings_goal_monthly_entries').upsert(row, { onConflict: 'goal_id,month' })
+  const { error } = result
   return voidResultFromSupabase(error, 'Aylık gerçekleşen miktar kaydedilemedi.')
 }
 
-export async function deleteGoalMonthlyEntry(goalId: string, month: string): Promise<Result<void>> {
-  const { error } = await supabase.from('savings_goal_monthly_entries').delete().eq('goal_id', goalId).eq('month', month)
+export async function deleteGoalMonthlyEntry(goalId: string, month: string, componentId?: string): Promise<Result<void>> {
+  const result = componentId
+    ? await supabase.from('savings_goal_component_monthly_entries').delete().eq('goal_id', goalId).eq('component_id', componentId).eq('month', month)
+    : await supabase.from('savings_goal_monthly_entries').delete().eq('goal_id', goalId).eq('month', month)
+  const { error } = result
   return voidResultFromSupabase(error, 'Elle girilen miktar kaldırılamadı.')
 }
 

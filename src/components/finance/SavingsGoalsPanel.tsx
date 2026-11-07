@@ -1069,7 +1069,7 @@ export function SavingsGoalsPanel({
                   {goal.note ? (
                     <p className="mt-2 truncate text-[11px] italic text-ink-muted">{goal.note}</p>
                   ) : null}
-                  {goal.value_type !== 'composite' ? <GoalMonthlyChecklist goal={goal} /> : null}
+                  <GoalMonthlyChecklist goal={goal} components={goalComponents} />
                 </CardContent>
               </Card>
             )

@@ -1,5 +1,23 @@
 # Priority Backlog
 
+## 2026-11-07 — Karma hedefte bileşen başına aylık plan
+
+- [x] Her karma hedef bileşeninde bağımsız aylık plan ve checklist: gram,
+  çeyrek ve TL kendi biriminde girilir, otomatik TL dönüşümü yapılmaz.
+- [x] Bileşen kapsamlı plan sürümleri ve elle toplam/giriş silme. Aynı hedefin
+  diğer bileşenleri ve mevcut basit hedef geçmişi korunur.
+- [x] İki yeni RLS'li çocuk tablo; hedef+bileşen+sahip FK'leri, cascade reset,
+  JSON yedek ve tek transaction'lı restore. Kaynak sözleşmesi:
+  `docs/GOAL_MONTHLY_TRACKING.md`.
+- [x] Saf hesapta bileşen izolasyonu; gerçek Postgres'te CRUD, RLS/FK,
+  hassasiyet, restore rollback ve cascade; 320px tarayıcıda üç birimde
+  oluşturma, otomatik/elle takip, silme, değişiklik, yenileme ve gizlilik.
+
+Doğrulama: `npm run verify` (185 dosya / 1908 test, prod audit 0 açık,
+build/bundle ve 6 edge tip kontrolü), temiz yerel DB reset ve 57 SQL testi,
+30 Playwright senaryosu geçti. Yeni migration önce DB'ye, ardından frontend
+mevcut üretim hattıyla yayınlanır; eski basit hedef API'si uyumludur.
+
 ## 2026-11-07 — Grafik bilgi kutusunda kesilen tutar ve etiket
 
 - [x] Kullanıcı ekran görüntüsündeki hata 320/390/768px gerçek tarayıcıda
