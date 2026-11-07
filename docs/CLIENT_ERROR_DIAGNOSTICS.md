@@ -4,6 +4,16 @@
 olay yazar. Üçüncü taraf hata servisi veya yeni servis anahtarı gerekmez.
 Finans kayıtları, bakiyeler ve ledger bu akışa dahil değildir.
 
+7 Kasım incelemesinde görünen altı kayıt aynı dış kur beslemesi bağlantı
+hatasıdır (`finans.truncgil.com`, 6 Kasım, aynı Linux/Chrome oturumu).
+İncelenen kayıtlarda React çökmesi veya Supabase hatası yoktur; geçmiş ağ
+hatasının DNS/CORS/bağlantı kaynağı mevcut teşhis verisiyle ayrıştırılamaz.
+`marketRatesClient.ts` başarısızlıktan sonra otomatik çağrıları 60 saniye
+bekletir, elle Yenile serbesttir. Hata yakalama/saklama sürer; gerçek hata
+kayıtları gizlenmez veya bu düzeltmeyle silinmez. Son kurlar ve onların yaşı
+korunur. Davranış: `docs/APP_PERFORMANCE.md`; test:
+`src/lib/marketRatesClient.test.ts`.
+
 ## Yakalanan olaylar
 
 - `error`: JavaScript hatası; dosya, 1 tabanlı satır/sütun, varsa hata izi.

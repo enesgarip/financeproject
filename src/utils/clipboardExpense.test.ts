@@ -50,6 +50,10 @@ describe('buildClipboardPrefill', () => {
     expect(buildClipboardPrefill('Kira ödemesi ₺22.000', aliases)).toMatchObject({ kind: 'generic', amount: 22000 })
   })
 
+  it('Yapı Kredi gelen transferini harcama formuna dönüştürmez', () => {
+    expect(buildClipboardPrefill('52***047 hesabiniza, EN***** GA***** tarafindan 34.820,00 TL FAST odemesi gelmistir. Guncel Bakiye 34.905,37 TL 07/11/2026 15:31:54 B016', aliases)).toEqual({ kind: 'sms-account-in' })
+  })
+
   it('returns generic with null amount when no TL pattern exists, empty for blank', () => {
     expect(buildClipboardPrefill('toplantı notları önemli', aliases)).toMatchObject({ kind: 'generic', amount: null })
     expect(buildClipboardPrefill('   \n ', aliases)).toEqual({ kind: 'empty' })

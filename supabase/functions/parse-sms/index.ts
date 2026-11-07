@@ -1,7 +1,7 @@
 // Supabase Edge Function: parse-sms
 // iOS Shortcuts'tan gelen banka SMS'ini parse edip kart harcaması (provizyon)
 // veya hesap hareketi (giriş/çıkış) kaydeder.
-// Desteklenen bankalar: DenizBank (kart + hesap), Yapı Kredi (kart)
+// Desteklenen bankalar: DenizBank (kart + hesap), Yapı Kredi (kart + gelen hesap transferi)
 //
 // Deploy:  supabase functions deploy parse-sms
 // Secrets: SMS_WEBHOOK_SECRET (iOS Shortcut'ta header olarak gönderilir)
@@ -204,6 +204,27 @@ function parseDenizbankIncomingAccountSms(text: string): ParsedAccountSms | null
 
 type ParsedSms = ParsedCardSms | ParsedAccountSms
 
+// B016 bankası + saniyeli tam bildirim: bakiye alanı yalnız bağlamdır.
+const YAPIKREDI_INCOMING_ACCOUNT_REGEX =
+  /^(\d{2,}\*+\d{3,})\s+hesab[ıi]n[ıi]za,\s*(.+?)\s+taraf[ıi]ndan\s+([\d.,]+)\s+TL\s+(FAST|HAVALE|EFT)\s+[öo]demesi\s+gelmi[şs]tir\.\s+G[üu]ncel\s+Bakiye\s+-?[\d.,]+\s+TL\s+(\d{2}\/\d{2}\/\d{4})\s+(\d{2}:\d{2}:\d{2})\s+B016$/i
+
+function parseYapikrediIncomingAccountSms(text: string): ParsedAccountSms | null {
+  const match = normalizeSmsWhitespace(text).match(YAPIKREDI_INCOMING_ACCOUNT_REGEX)
+  if (!match) return null
+  const [, accountNumber, counterparty, amountStr, transactionType, datePart, timePart] = match
+  const amount = parseAmount(amountStr!)
+  if (amount === null) return null
+  return {
+    type: 'account',
+    occurredAt: toIsoDate(datePart!.replaceAll('/', '.'), timePart!),
+    accountNumber: accountNumber!,
+    counterparty: counterparty!.trim(),
+    amount,
+    direction: 'in',
+    transactionType: transactionType!.toUpperCase(),
+  }
+}
+
 function parseSms(text: string): ParsedSms | null {
   return (
     parseDenizbankCardSms(text) ??
@@ -211,7 +232,8 @@ function parseSms(text: string): ParsedSms | null {
     parseDenizbankCardTransactionSms(text) ??
     parseYapikrediCardSms(text) ??
     parseDenizbankAccountSms(text) ??
-    parseDenizbankIncomingAccountSms(text)
+    parseDenizbankIncomingAccountSms(text) ??
+    parseYapikrediIncomingAccountSms(text)
   )
 }
 
@@ -373,7 +395,7 @@ Deno.serve(async (req: Request) => {
     ? body.eventId.trim()
     : req.headers.get('x-source-event-id')?.trim()
 
-  // SMS'i parse et (DenizBank kart/hesap + Yapı Kredi kart)
+  // SMS'i parse et (DenizBank kart/hesap + Yapı Kredi kart/gelen transfer)
   // Hata satırlarına da sahip damgası: RLS yalnız kendi user_id'li satırları
   // gösterir (20260718121000) — damgasız hata satırı SmsLogPanel'de GÖRÜNMEZ
   // ve sms_failure_daily push'unun açtığı ekran boş kalırdı. Tek-kullanıcı

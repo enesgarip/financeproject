@@ -1,5 +1,6 @@
 import { supabase } from '../../lib/supabase'
-import type { InsertFor, SavingsGoal, SavingsGoalComponent, SavingsGoalSource } from '../../types/database'
+import type { GoldLot, InsertFor, SavingsGoal, SavingsGoalComponent, SavingsGoalSource, SavingsGoalMonthlyPlan, SavingsGoalMonthlyEntry } from '../../types/database'
+import { missingSupabaseCapabilityMessage } from '../../utils/supabaseErrors'
 import {
   appErrorFromSupabase,
   fail,
@@ -18,6 +19,49 @@ export type SavingsGoalsRows = {
 }
 
 export type SavingsGoalFields = Omit<InsertFor<'savings_goals'>, 'user_id' | 'id' | 'created_at' | 'updated_at'>
+
+export type GoalMonthlyData = { plans: SavingsGoalMonthlyPlan[]; entries: SavingsGoalMonthlyEntry[]; lots: GoldLot[] }
+
+async function monthlyRows(table: 'savings_goal_monthly_plans' | 'savings_goal_monthly_entries' | 'gold_lots') {
+  const rows: unknown[] = []
+  let cursor: string | null = null
+  for (;;) {
+    let query = supabase.from(table).select('*').order('id', { ascending: false }).limit(500)
+    if (cursor) query = query.lt('id', cursor)
+    const { data, error } = await query
+    if (error) {
+      const appError = appErrorFromSupabase(error, 'Aylık hedef geçmişi yüklenemedi.')
+      if (appError.type === 'missing-capability') appError.message = missingSupabaseCapabilityMessage('Aylık hedef takibi', error)
+      return fail(appError)
+    }
+    rows.push(...data)
+    if (data.length < 500) return ok(rows)
+    cursor = data[data.length - 1].id
+  }
+}
+
+export async function fetchGoalMonthlyData(): Promise<Result<GoalMonthlyData>> {
+  const [plans, entries, lots] = await Promise.all([monthlyRows('savings_goal_monthly_plans'), monthlyRows('savings_goal_monthly_entries'), monthlyRows('gold_lots')])
+  if (!plans.ok) return plans
+  if (!entries.ok) return entries
+  if (!lots.ok) return lots
+  return ok({ plans: plans.data as SavingsGoalMonthlyPlan[], entries: entries.data as SavingsGoalMonthlyEntry[], lots: lots.data as GoldLot[] })
+}
+
+export async function saveGoalMonthlyPlan(row: InsertFor<'savings_goal_monthly_plans'>): Promise<Result<void>> {
+  const { error } = await supabase.from('savings_goal_monthly_plans').upsert(row, { onConflict: 'goal_id,effective_month' })
+  return voidResultFromSupabase(error, 'Aylık hedef kaydedilemedi.')
+}
+
+export async function saveGoalMonthlyEntry(row: InsertFor<'savings_goal_monthly_entries'>): Promise<Result<void>> {
+  const { error } = await supabase.from('savings_goal_monthly_entries').upsert(row, { onConflict: 'goal_id,month' })
+  return voidResultFromSupabase(error, 'Aylık gerçekleşen miktar kaydedilemedi.')
+}
+
+export async function deleteGoalMonthlyEntry(goalId: string, month: string): Promise<Result<void>> {
+  const { error } = await supabase.from('savings_goal_monthly_entries').delete().eq('goal_id', goalId).eq('month', month)
+  return voidResultFromSupabase(error, 'Elle girilen miktar kaldırılamadı.')
+}
 
 /**
  * RPC'ye gönderilen kaynak satırı. Yeni bileşenlerin henüz id'si olmadığı için

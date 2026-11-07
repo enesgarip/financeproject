@@ -27,6 +27,19 @@ export type CardExpenseSource =
   | 'carryover'
 export type CardStatementStatus = 'open' | 'paid'
 export type SavingsGoalStatus = 'active' | 'completed'
+export type SavingsGoalMonthlyPlan = BaseRow & {
+  goal_id: string
+  effective_month: string
+  value_type: Exclude<SavingsGoalValueType, 'composite'>
+  target_amount: number
+  source: 'gold_buys' | 'manual'
+  automatic_from: string | null
+}
+export type SavingsGoalMonthlyEntry = BaseRow & {
+  goal_id: string
+  month: string
+  amount: number
+}
 export type SavingsGoalValueType = 'TRY' | 'gram_altin' | 'ceyrek_altin' | 'composite'
 /** Hedef tutarının çıpası: sabit TL, altın/dolar endeksli ya da aylık gider katı. */
 export type SavingsGoalTargetAnchor = 'manual' | 'gold' | 'usd' | 'expense_months'
@@ -765,6 +778,8 @@ export type Database = {
       >
       budgets: Table<Budget, WithBaseInsert<Budget>, WithBaseUpdate<Budget>>
       savings_goals: Table<SavingsGoal, WithBaseInsert<SavingsGoal>, WithBaseUpdate<SavingsGoal>>
+      savings_goal_monthly_plans: Table<SavingsGoalMonthlyPlan, WithBaseInsert<SavingsGoalMonthlyPlan>, WithBaseUpdate<SavingsGoalMonthlyPlan>>
+      savings_goal_monthly_entries: Table<SavingsGoalMonthlyEntry, WithBaseInsert<SavingsGoalMonthlyEntry>, WithBaseUpdate<SavingsGoalMonthlyEntry>>
       savings_goal_components: Table<SavingsGoalComponent, WithBaseInsert<SavingsGoalComponent>, WithBaseUpdate<SavingsGoalComponent>>
       savings_goal_sources: Table<SavingsGoalSource, WithBaseInsert<SavingsGoalSource>, WithBaseUpdate<SavingsGoalSource>>
       card_installments: Table<CardInstallment, WithBaseInsert<CardInstallment>, WithBaseUpdate<CardInstallment>>

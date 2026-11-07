@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useBalancePrivacy } from '../../hooks/useBalancePrivacy'
 import { useChartWidth } from './useChartWidth'
-import { DEFAULT_PADDING, buildPathD, formatTickValue, niceScale } from './chartUtils'
+import { DEFAULT_PADDING, buildPathD, chartPadding, formatTickValue, niceScale, xAxisLabels } from './chartUtils'
 
 export type LineSeriesConfig = {
   key: string
@@ -47,10 +47,6 @@ export function LineChart({ data, series, height = 260 }: LineChartProps) {
     )
   }
 
-  const pad = { ...DEFAULT_PADDING, left: 66 }
-  const plotW = chartWidth - pad.left - pad.right
-  const plotH = height - pad.top - pad.bottom
-
   const allValues = data.flatMap((d) => series.map((s) => d[s.key]).filter((v): v is number => typeof v === 'number'))
 
   // Tüm değerler null ise Math.max(...[]) = -Infinity → NaN koordinatlı bozuk
@@ -67,13 +63,17 @@ export function LineChart({ data, series, height = 260 }: LineChartProps) {
     )
   }
 
-  const ticks = niceScale(Math.min(0, ...allValues), Math.max(...allValues))
+  const ticks = niceScale(Math.min(0, ...allValues), Math.max(...allValues), Math.max(2, Math.floor((height - DEFAULT_PADDING.top - DEFAULT_PADDING.bottom) / 36)))
+  const pad = chartPadding(ticks)
+  const plotW = Math.max(1, chartWidth - pad.left - pad.right)
+  const plotH = Math.max(1, height - pad.top - pad.bottom)
   const yMin = ticks[0]
   const yMax = ticks[ticks.length - 1]
   const yRange = yMax - yMin || 1
 
   const toX = (i: number) => pad.left + (data.length === 1 ? plotW / 2 : (i / (data.length - 1)) * plotW)
   const toY = (v: number) => pad.top + plotH - ((v - yMin) / yRange) * plotH
+  const labels = xAxisLabels(data.map(point => point.label), data.map((_, i) => toX(i)), pad.left, chartWidth - pad.right)
 
   const seriesData = series.map((s) => {
     const raw = data.map((d, i) => {
@@ -143,34 +143,15 @@ export function LineChart({ data, series, height = 260 }: LineChartProps) {
               textAnchor="end"
               dominantBaseline="middle"
               fill="var(--muted-foreground)"
-              fontSize={11}
+              fontSize={12}
             >
               {formatTickValue(tick)}
             </text>
           ))}
 
-          {/* X axis labels — thin to avoid overlap */}
-          {(() => {
-            const charW = 6
-            const maxLabelW = Math.max(...data.map((d) => d.label.length)) * charW + 12
-            const step = Math.max(1, Math.ceil((data.length * maxLabelW) / Math.max(plotW, 1)))
-            const visible = data.filter((_d, i) => i % step === 0 || i === data.length - 1)
-            return visible.map((d) => {
-              const idx = data.indexOf(d)
-              return (
-                <text
-                  key={d.label}
-                  x={toX(idx)}
-                  y={height - 4}
-                  textAnchor={idx === 0 ? 'start' : idx === data.length - 1 ? 'end' : 'middle'}
-                  fill="var(--muted-foreground)"
-                  fontSize={11}
-                >
-                  {d.label}
-                </text>
-              )
-            })
-          })()}
+          <g data-axis="x">
+            {labels.map(label => <text key={label.index} x={label.x} y={height - 6} textAnchor="start" fill="var(--muted-foreground)" fontSize={12}><title>{data[label.index].label}</title>{label.text}</text>)}
+          </g>
 
           {/* Lines + dots */}
           {seriesData.map((s) => {
@@ -216,6 +197,7 @@ export function LineChart({ data, series, height = 260 }: LineChartProps) {
                 height={plotH}
                 fill="transparent"
                 onMouseEnter={() => setHoverIndex(i)}
+                onPointerDown={() => setHoverIndex(i)}
               />
             )
           })}

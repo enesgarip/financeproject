@@ -188,6 +188,27 @@ export function parseDenizbankIncomingAccountSms(text: string): ParsedAccountSms
   }
 }
 
+// B016 bankası + saniyeli tam bildirim: bakiye alanı yalnız bağlamdır.
+const YAPIKREDI_INCOMING_ACCOUNT_REGEX =
+  /^(\d{2,}\*+\d{3,})\s+hesab[ıi]n[ıi]za,\s*(.+?)\s+taraf[ıi]ndan\s+([\d.,]+)\s+TL\s+(FAST|HAVALE|EFT)\s+[öo]demesi\s+gelmi[şs]tir\.\s+G[üu]ncel\s+Bakiye\s+-?[\d.,]+\s+TL\s+(\d{2}\/\d{2}\/\d{4})\s+(\d{2}:\d{2}:\d{2})\s+B016$/i
+
+export function parseYapikrediIncomingAccountSms(text: string): ParsedAccountSms | null {
+  const match = normalizeSmsWhitespace(text).match(YAPIKREDI_INCOMING_ACCOUNT_REGEX)
+  if (!match) return null
+  const [, accountNumber, counterparty, amountStr, transactionType, datePart, timePart] = match
+  const amount = parseAmount(amountStr!)
+  if (amount === null) return null
+  return {
+    type: 'account',
+    occurredAt: toIsoDate(datePart!.replaceAll('/', '.'), timePart!),
+    accountNumber: accountNumber!,
+    counterparty: counterparty!.trim(),
+    amount,
+    direction: 'in',
+    transactionType: transactionType!.toUpperCase(),
+  }
+}
+
 export function parseSms(text: string): ParsedSms | null {
   return (
     parseDenizbankCardSms(text) ??
@@ -195,7 +216,8 @@ export function parseSms(text: string): ParsedSms | null {
     parseDenizbankCardTransactionSms(text) ??
     parseYapikrediCardSms(text) ??
     parseDenizbankAccountSms(text) ??
-    parseDenizbankIncomingAccountSms(text)
+    parseDenizbankIncomingAccountSms(text) ??
+    parseYapikrediIncomingAccountSms(text)
   )
 }
 

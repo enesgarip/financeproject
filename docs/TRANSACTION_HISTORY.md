@@ -1,6 +1,16 @@
 # Transaction History Side Effects
 
-Last reviewed: 2026-10-16
+Last reviewed: 2026-11-07
+
+7 Kasım 2026: Yapı Kredi B016 gelen FAST/HAVALE/EFT formatı `parse-sms`
+tarafından tanınır. `record_sms_account_movement` mevcut `transfer` geçmiş
+satırını gerçek işlem tutarı ve `+03:00` SMS saatiyle yazar; metindeki güncel
+bakiye ikinci hareket veya bakiye düzeltmesi değildir. Maskeli hesap yalnız
+Yapı Kredi banka hesapları arasında tek adaya çözülür (cash hariç); maskeli
+gönderici adı kişisel borç/alacak kapatmaz. Retry aynı `source_event_id` ile
+bakiye/ledger/history yazımını yinelemez. Eski mesajlar otomatik replay edilmez.
+Regresyon: `supabase/tests/yapikredi_masked_sms_account.sql`,
+`tests/edge/parseSms.test.ts`; kural: `docs/FINANCE_RULES.md`.
 
 This document is the source of truth for `transaction_history` side effects. Read
 it before changing a finance mutation, RPC wrapper, payment drawer action, or

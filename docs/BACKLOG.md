@@ -1,5 +1,60 @@
 # Priority Backlog
 
+## 2026-11-07 — Başarısız kur isteğinde yeniden deneme aralığı
+
+- [x] `marketRatesClient.ts`: otomatik istekler başarısızlıktan sonra 60 saniye
+  bekler; sayfa geçişi isteği çoğaltmaz. Elle Yenile beklemeyi aşar; başarı
+  beklemeyi temizler. Aynı uçuşta isteği paylaşma ve cache yaşı korunur.
+- [x] Eksik cache, eski cache, 60 saniye sınırı, elle başarı/başarısızlık,
+  uçuşta manuel isteği paylaşma ve HTTP/okunamayan gövde regresyonları.
+- [x] İstemci hata gözlemcisi ve saklanan hatalar korunur. Kaynak sözleşme:
+  `docs/APP_PERFORMANCE.md`, inceleme: `docs/CLIENT_ERROR_DIAGNOSTICS.md`.
+
+Doğrulama: ilgili 27 test ve `npm run verify` geçti (185 dosya / 1907 test,
+coverage, prod audit 0 açık, build/bundle ve 6 edge tip kontrolü). Bu ek
+değişiklik yalnız istemci tarafındadır; yeni DB migration'ı yoktur.
+
+## 2026-11-07 — Yapı Kredi gelen transfer SMS'i
+
+- [x] B016 / `52***047 hesabiniza ... FAST odemesi gelmistir` formatı
+  frontend ayrıştırıcısı ve canlı `parse-sms` aynasına eklendi. İşlem tutarı,
+  maske ve saniyeli Türkiye saati korunur; güncel bakiye ikinci giriş değildir.
+- [x] SMS RPC'si yıldızları düşürmeden Yapı Kredi banka hesabının iki ucunu
+  veya kayıtlı maskesini eşler; yanlış banka/cash ve birden çok aday reddedilir.
+  Mevcut service-role, sahiplik, ledger/history ve retry sözleşmesi korunur.
+  Maskeli kişi adından kişisel borç/alacak tahmini yapılmaz.
+- [x] Gerçek SMS formatı, webhook→RPC/log, panodan gelen transferi harcama
+  saymama ve gerçek PostgreSQL bakiye/history/ledger/tekillik regresyonları.
+
+Kaynak: `docs/FINANCE_RULES.md`, `docs/TRANSACTION_HISTORY.md`,
+`docs/RPC_ACTION_REFERENCE.md`. Yayın: migration + `parse-sms` edge birlikte;
+geçmiş SMS otomatik replay edilmez.
+
+Doğrulama: `npm run verify` geçti (184 dosya / 1900 test, coverage, prod audit
+0 açık, build/bundle ve 6 edge tip kontrolü). Temiz `db:seed:local`, DB lint
+ve 56/56 gerçek SQL testi geçti. Önceki grafik/hedef değişiklikleri korunur;
+bu maddeler aynı korumalı PR/production yayın paketindedir. Geçmiş SMS replay
+bu yayının parçası değildir.
+
+## 2026-11-07 — Mobil grafikler ve aylık hedef kontrol listesi
+
+- [x] Ortak BarChart/LineChart eksenlerinde metin genişliği/gerçek konum
+  tabanlı seyreltme, kenarlarda kırpmama, Y tutarına göre sol boşluk ve
+  yüksekliğe göre tick yoğunluğu. Dokunmayla tutar ayrıntısı açılır.
+- [x] Basit hedefte aylık miktar/başlangıç; altın alımlarından otomatik
+  gerçekleşme veya elle takip. Eski ay için toplam/0 girişi, elle toplamın
+  otomatiğin yerine geçmesi, geçmişi koruyan plan sürümleri ve yıl seçimi.
+- [x] Eksik eski veri “Kayıt yok”; cari ay bekliyor; tamamlanan/kanıtlı eksik
+  ay tik/çarpı. Kullanıcı bazlı cache, altın CRUD sonrası yenileme, RLS/FK,
+  JSON yedek/restore/reset kapsamı. Sözleşme: `docs/GOAL_MONTHLY_TRACKING.md`.
+
+Doğrulama: `npm run verify` geçti (183 dosya / 1888 test, coverage kapısı,
+prod audit 0 açık, build, bundle ve 6 edge tip kontrolü). Temiz
+`db:seed:local`, DB lint ve 55/55 gerçek SQL testi (RLS/grant dahil) geçti.
+Tarayıcı: 29/29 sadeleştirme senaryosu, 320px aylık giriş/hata/retry akışı,
+320/390/768px gerçek SVG yazı çakışma kontrolü; son miktar/gizlilik düzenlemesi
+sonrasında aylık akış yeniden geçti. Yayın mevcut korumalı PR/main hattını izler.
+
 ## 2026-11-04 — Otomasyon denetimi — UYGULANDI
 
 Denetim: `docs/AUTOMATION_AUDIT_2026-11-03.md`.

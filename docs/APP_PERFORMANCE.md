@@ -2,6 +2,19 @@
 
 Last reviewed: 2026-10-18
 
+## 7 Kasım 2026 — Kur isteğinde yeniden deneme aralığı
+
+`lib/marketRatesClient.ts` ağ/HTTP/zaman aşımı/okunamayan kur yanıtından sonra
+otomatik istekleri son başarısızlıktan itibaren 60 saniye bekletir. Süre
+dolunca sonraki tüketici çağrısı yeniden dener; bağımsız periyodik istek yoktur.
+Sayfa geçişleri aynı hata için yeni bir ağ isteği açmaz. Beklerken son kayıtlı
+snapshot, kendi zaman damgası ve `cache`/hata durumu korunur; veri yoksa null
+kalır. Elle **Yenile** beklemeyi aşar; başarısızsa süre yeniden başlar,
+başarılıysa bekleme ve hata temizlenir. Uçuşta olan manuel isteği otomatik
+tüketiciler de paylaşır. Ağ hata gözlemcisi ve kayıtlar bastırılmaz.
+Bekleme yalnız bu sekmenin belleğindedir, yenileme/sekme kapatmada sıfırlanır.
+Regresyon: `src/lib/marketRatesClient.test.ts`.
+
 18 Ekim ekstre toplamı: Kredi kartları özetindeki üç aylık tüm-kart tahmini
 “Borç kırılımı ve dökümler” `DeferredDetails` katmanının ilk açılışına kadar
 kurulmaz. Ayrı bir açılır bölüm yoktur. Açıldığında kullanıcıya özel

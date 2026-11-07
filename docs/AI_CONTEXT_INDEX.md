@@ -1,5 +1,35 @@
 # AI Context Index
 
+7 Kasım kur istekleri: `lib/marketRatesClient.ts` başarısız otomatik kur
+isteğinden sonra 60 saniye bekler; sayfa geçişleri bu süreyi aşamaz, elle
+Yenile aşar. Başarı süreyi sıfırlar; cache zamanı ve hata kaydı korunur.
+Regresyon: `lib/marketRatesClient.test.ts`. Sözleşme:
+`docs/APP_PERFORMANCE.md`, canlı kayıt incelemesi:
+`docs/CLIENT_ERROR_DIAGNOSTICS.md`.
+
+7 Kasım Yapı Kredi hesap SMS'i: `utils/smsParser.ts` ve
+`supabase/functions/parse-sms/index.ts` saniyeli, B016 kodlu gelen FAST/HAVALE/EFT
+formatını tanır. `52***047` maskesi korunur; işlem tutarı ve güncel bakiye
+ayrılır. `20261107130000_yapikredi_masked_sms_account.sql` mevcut SMS RPC
+imzasını korur; `private.matches_yapikredi_sms_account` yalnız Yapı Kredi banka
+hesabında tekil önek/son ek veya maskeyi eşler. Maskeli kişi adı borç/alacak
+kapatmaz. Regresyon: `smsParser.test.ts`, `clipboardExpense.test.ts`,
+`tests/edge/parseSms.test.ts`, `supabase/tests/yapikredi_masked_sms_account.sql`.
+Finansal yan etkiler: `docs/TRANSACTION_HISTORY.md`; deploy için migration ve
+parse-sms edge gerekir. Eski mesajlar kendiliğinden yeniden işlenmez.
+
+7 Kasım mobil grafik ve aylık hedef takibi: `docs/GOAL_MONTHLY_TRACKING.md`.
+`components/charts/chartUtils.ts` iki grafiğin etiket yerleşimini paylaşır;
+etiket alanı/konumu çakışmayı engeller, veri noktaları korunur.
+`utils/goalMonthly.ts` plan sürümüne göre aylık alım/elle toplam ve durum
+türetir; `components/finance/GoalMonthlyChecklist.tsx` hedef kartından açılır.
+`data/repositories/savingsGoalsRepo.ts` plan/gerçekleşme CRUD ve üç tablonun
+PK sayfalı tam okumasını içerir. `app/useCrudRows.ts` altın yenilemesinde,
+`app/useFinanceSnapshot.ts` finansal yazımda kullanıcıya ait aylık cache'i
+yeniler. Migration: `20261107120000_goal_monthly_checklist.sql`; SQL regresyonu
+`supabase/tests/goal_monthly_checklist.sql`. Yeni tablolar JSON yedek/restore
+ve hedef FK cascade reset kapsamındadır. Bakiye/ledger değişmez.
+
 4 Kasım otomasyon düzeltmeleri: `docs/AUTOMATION_FIXES_2026-11-04.md`.
 AUTO-01–11 uygulandı; yayın [PR #285](https://github.com/enesgarip/financeproject/pull/285) üzerinden izlenir. Tarihsel kanıt:
 `docs/AUTOMATION_AUDIT_2026-11-03.md`. `supabase/functions/_shared/automationRules.ts`
@@ -98,7 +128,7 @@ borç alanları ve yazma/ters kayıt RPC'leri değişmez. Regresyonlar:
 `src/components/finance/LedgerPanels.test.tsx`, `tests/e2e/simplification.spec.ts`.
 
 
-Last reviewed: 2026-11-04
+Last reviewed: 2026-11-07
 
 26 Ekim sadeleştirme uygulandı: `docs/SIMPLIFICATION_PLAN_2026-10-26.md`
 dört paketin son durumu ve doğrulama kaydıdır; önceki canlı kanıtlar

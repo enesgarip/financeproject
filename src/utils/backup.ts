@@ -43,6 +43,8 @@ export const RESTORE_TABLE_ORDER = [
   'net_worth_snapshots',
   // Hedef fotoğrafları: savings_goals'tan SONRA (FK goal_id).
   'savings_goal_snapshots',
+  'savings_goal_monthly_plans',
+  'savings_goal_monthly_entries',
   'card_statement_archives',
   // Kısmi ekstre ödemeleri (K7): arşivden SONRA (FK: cards + archives).
   'card_statement_payments',
@@ -338,6 +340,8 @@ export const BACKUP_TABLE_LABELS: Record<RestoreTable, string> = {
   gold_lots: 'Altın alımı',
   net_worth_snapshots: 'Net değer fotoğrafı',
   savings_goal_snapshots: 'Hedef fotoğrafı',
+  savings_goal_monthly_plans: 'Aylık hedef planı',
+  savings_goal_monthly_entries: 'Aylık hedef gerçekleşmesi',
   card_statement_archives: 'Ekstre arşivi',
   card_statement_payments: 'Ekstre ödemesi',
   card_expenses: 'Kart harcaması',
