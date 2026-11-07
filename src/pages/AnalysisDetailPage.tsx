@@ -1,6 +1,7 @@
 import { ChevronDown } from 'lucide-react'
 import { useState } from 'react'
-import { Link, useSearchParams } from 'react-router'
+import { Link, useLocation, useSearchParams } from 'react-router'
+import { FeatureSection } from '../components/FeatureSection'
 import { useFinanceSnapshot } from '../app/useFinanceSnapshot'
 import { QueryError } from '../components/ui/query-error'
 import { SkeletonCard } from '../components/ui/skeleton'
@@ -14,14 +15,17 @@ import { CreditScorePanel } from '../components/finance/CreditScorePanel'
  * Yılda bir bakılan paneller (zekât, yıl sonu özeti) katlanır durur: sayfayı
  * her açılışta uzatmasınlar ama silinmesinler de.
  */
-function CollapsibleSection({ label, children, defaultOpen = false }: { label: string; children: React.ReactNode; defaultOpen?: boolean }) {
-  const [open, setOpen] = useState(defaultOpen)
+function CollapsibleSection({ id, label, children, defaultOpen = false }: { id: string; label: string; children: React.ReactNode; defaultOpen?: boolean }) {
+  const location = useLocation()
+  const [expanded, setExpanded] = useState(defaultOpen)
+  const [dismissedRequest, setDismissedRequest] = useState<string | null>(null)
+  const open = expanded || (location.hash === `#${id}` && dismissedRequest !== location.key)
 
   return (
-    <div className="lg:col-span-12">
+    <FeatureSection id={id} className="lg:col-span-12">
       <button
         type="button"
-        onClick={() => setOpen((prev) => !prev)}
+        onClick={() => { setExpanded(!open); if (open) setDismissedRequest(location.key) }}
         aria-expanded={open}
         className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-line-strong bg-raised px-4 py-3 text-sm font-bold text-ink-muted transition hover:border-primary/30 hover:bg-primary/5 hover:text-ink"
       >
@@ -29,7 +33,7 @@ function CollapsibleSection({ label, children, defaultOpen = false }: { label: s
         <ChevronDown size={16} aria-hidden="true" className={`transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
       {open ? <div className="mt-5 grid min-w-0 gap-5 lg:grid-cols-12">{children}</div> : null}
-    </div>
+    </FeatureSection>
   )
 }
 
@@ -74,15 +78,15 @@ export function AnalysisDetailPage() {
       </p>
       <div className="grid min-w-0 gap-5 lg:grid-cols-12 [&>*]:min-w-0">
         <div className="lg:col-span-12"><h2 className="mb-3 text-base font-semibold">İşlem geçmişi</h2><ActivityFeedPanel data={data} /></div>
-        <CollapsibleSection label="Genel arama ve dışa aktarım"><SearchExport items={searchItems} /></CollapsibleSection>
-        <CollapsibleSection label="Kredi notum" defaultOpen={params.get('new') === '1'}><CreditScorePanel /></CollapsibleSection>
-        <CollapsibleSection label="Varlık dağılımı ve enflasyon"><InflationShieldPanel data={data} /></CollapsibleSection>
+        <CollapsibleSection id="kayit-arama" label="Genel arama ve dışa aktarım"><SearchExport items={searchItems} /></CollapsibleSection>
+        <CollapsibleSection id="kredi-notu" label="Kredi notum" defaultOpen={params.get('new') === '1'}><CreditScorePanel /></CollapsibleSection>
+        <CollapsibleSection id="enflasyon" label="Varlık dağılımı ve enflasyon"><InflationShieldPanel data={data} /></CollapsibleSection>
 
-        <CollapsibleSection label="Yıl sonu özeti">
+        <CollapsibleSection id="yil-sonu" label="Yıl sonu özeti">
           <YearEndReport data={data} snapshots={snapshots} />
         </CollapsibleSection>
 
-        <CollapsibleSection label="Zekât hesaplayıcı">
+        <CollapsibleSection id="zekat" label="Zekât hesaplayıcı">
           <ZakatPanel data={data} ratesSnapshot={ratesSnapshot} />
         </CollapsibleSection>
       </div>

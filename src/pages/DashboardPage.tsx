@@ -12,6 +12,7 @@
  * (yeni panel/hesap eklemeden önce oraya bak).
  */
 import { AlertTriangle, ChevronDown, RefreshCw } from 'lucide-react'
+import { ForeignCardSmsNotice } from '../components/dashboard/ForeignCardSmsNotice'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useFinanceSnapshot, useInvalidateFinanceSnapshot } from '../app/useFinanceSnapshot'
 import type {
@@ -347,6 +348,7 @@ export function DashboardPage() {
 
   return (
     <section className="grid gap-6 lg:grid-cols-12 lg:items-start">
+      <ForeignCardSmsNotice />
       {error ? <p role="alert" className="lg:col-span-12 text-sm text-warning">Güncel özet alınamadı. Son başarılı okumadaki veriler gösteriliyor. {userMessage(error)}</p> : null}
       {/* ── Şerit katmanı: ekranın cevapladığı tek soru ve onu açan çizgiler ── */}
 

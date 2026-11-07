@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useLocation } from 'react-router'
 import { useAuth } from '../../auth/useAuth'
 import { useBalancePrivacy } from '../../hooks/useBalancePrivacy'
 import type { SavingsGoal, SavingsGoalComponent } from '../../types/database'
@@ -31,8 +32,9 @@ function parseQuantity(text: string): number | null {
 const unitLabels = { TRY: 'TL', gram_altin: 'gram', ceyrek_altin: 'çeyrek' }
 
 export function GoalMonthlyChecklist({ goal, components = [] }: { goal: SavingsGoal; components?: SavingsGoalComponent[] }) {
+  const location = useLocation()
   return (
-    <DeferredDetails summary="Aylık takip" className="mt-3 border-t border-line-strong pt-3" summaryClassName="cursor-pointer py-2 text-sm font-semibold text-primary">
+    <DeferredDetails summary="Aylık takip" openRequestKey={location.hash === '#aylik-hedef' ? location.key : undefined} className="mt-3 border-t border-line-strong pt-3" summaryClassName="cursor-pointer py-2 text-sm font-semibold text-primary">
       {goal.value_type === 'composite' ? <div className="space-y-3">
         <p className="text-xs text-ink-muted">Her bileşene kendi biriminde ayrı aylık plan oluştur. Tamamlanma ve elle girişler ayrı izlenir.</p>
         {components.map(component => <DeferredDetails key={component.id} summary={`${component.label || 'Bileşen'} · ${unitLabels[component.value_type]}`} className="border-t border-line-strong pt-2" summaryClassName="cursor-pointer break-words py-3 text-sm font-semibold text-primary">

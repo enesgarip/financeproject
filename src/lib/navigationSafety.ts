@@ -20,7 +20,7 @@ export function installNavigationSafety() {
   }, true)
   document.addEventListener('input', event => {
     const field = event.target
-    if (!(field instanceof HTMLElement) || !field.closest('form, [role="dialog"]')) return
+    if (!(field instanceof HTMLElement) || field.closest('[data-navigation-transient]') || !field.closest('form, [role="dialog"]')) return
     if (!hasUnsavedInput()) editingHistoryIndex = window.history.state?.idx
     edited.set(field, initial.get(field) ?? '')
   }, true)

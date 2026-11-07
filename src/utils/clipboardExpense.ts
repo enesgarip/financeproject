@@ -30,6 +30,7 @@ export type ClipboardPrefill =
     }
   | { kind: 'sms-account-out'; amount: number; description: string; spentAt: string }
   | { kind: 'sms-account-in' }
+  | { kind: 'sms-card-foreign'; currency: string; amount: number }
   | { kind: 'generic'; amount: number | null; description: string }
   | { kind: 'empty' }
 
@@ -63,6 +64,7 @@ export function buildClipboardPrefill(
   if (!trimmed) return { kind: 'empty' }
 
   const parsed = parseSms(trimmed)
+  if (parsed?.type === 'card' && parsed.currency) return { kind: 'sms-card-foreign', currency: parsed.currency, amount: parsed.amount }
   if (parsed?.type === 'card') {
     return {
       kind: 'sms-card',

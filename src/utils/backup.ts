@@ -52,6 +52,7 @@ export const RESTORE_TABLE_ORDER = [
   'car_expenses',
   'context_expenses',
   'card_expenses',
+  'foreign_card_sms',
   'card_installments',
   'loan_installments',
   'savings_goal_components',
@@ -300,6 +301,9 @@ export async function restoreBackup(
   }
 
   // Eski REST yolu — yalnız RPC henüz deploy değilken (migration drift).
+  if (backup.tables.foreign_card_sms?.length) {
+    throw new Error('Dövizli SMS kayıtları için güncel atomik geri yükleme gerekli. Hiçbir veri değiştirilmedi.')
+  }
   const steps = RESTORE_TABLE_ORDER.length + 1
   let done = 1
 
@@ -344,6 +348,7 @@ export const BACKUP_TABLE_LABELS: Record<RestoreTable, string> = {
   savings_goal_snapshots: 'Hedef fotoğrafı',
   savings_goal_monthly_plans: 'Aylık hedef planı',
   savings_goal_monthly_entries: 'Aylık hedef gerçekleşmesi',
+    foreign_card_sms: 'Dövizli SMS inceleme kayıtları',
     savings_goal_component_monthly_plans: 'Bileşen aylık planı',
     savings_goal_component_monthly_entries: 'Bileşen aylık gerçekleşmesi',
   card_statement_archives: 'Ekstre arşivi',

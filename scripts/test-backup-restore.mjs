@@ -16,6 +16,7 @@ function docker(args, input) {
 }
 const sql = (database, text) => docker(['psql','-U','postgres','-d',database,'-v','ON_ERROR_STOP=1','-At','-f','-'], text)
 const user = randomUUID(), bank = randomUUID(), debt = randomUUID(), request = randomUUID()
+const credit = randomUUID(), foreignEvent = randomUUID()
 const claims = `set local request.jwt.claim.sub='${user}'; set local request.jwt.claims='{"sub":"${user}","role":"authenticated"}';`
 const args = JSON.stringify({ p_debt_id: debt, p_account_card_id: bank, p_amount: 100, p_skip_account_move: false })
 const payment = `select public.submit_finance_payment('${request}','settle_personal_debt','${args}'::jsonb);`
@@ -24,8 +25,10 @@ try {
   sql('postgres', `begin;
     insert into auth.users(id,email) values('${user}','backup-${user}@example.test');
     insert into public.cards(id,user_id,bank_name,card_name,card_type,current_balance) values('${bank}','${user}','Test','Restore','banka_karti',1000);
+    insert into public.cards(id,user_id,bank_name,card_name,card_type,credit_limit,statement_day,due_day) values('${credit}','${user}','Test','Restore USD','kredi_karti',10000,25,10);
     insert into public.debts(id,user_id,person_name,direction,value_type,amount,estimated_value_try,status) values('${debt}','${user}','Restore Kişisi','borç_aldım','TRY',500,500,'açık');
-    ${claims} set local role authenticated; ${payment} commit;`)
+    ${claims} set local role authenticated; ${payment}
+    select public.queue_foreign_card_sms('${user}','${credit}',59.99,'USD','Restore USD',now(),'Diğer','${foreignEvent}','LOCAL-RESTORE-FOREIGN'); commit;`)
   seeded = true
   const dump = docker(['pg_dump','-U','postgres','-d','postgres',...schemas.map(s => `--schema=${s}`)])
   if (!dump.includes('finance_payment_requests') || !dump.includes('CREATE SCHEMA private')) throw new Error('Private makbuz dump içinde değil.')
@@ -50,11 +53,19 @@ try {
     end $$;
     set local role authenticated;
     select public.submit_finance_payment('${randomUUID()}','settle_personal_debt','${args}'::jsonb);
+    do $$ begin
+      if not exists(select 1 from public.foreign_card_sms where user_id='${user}' and source_event_id='${foreignEvent}' and native_amount=59.99 and completed_at is null) then
+        raise exception 'Restore bekleyen dövizli SMS kaydını korumadı.';
+      end if;
+    end $$;
+    select public.complete_foreign_card_sms((select id from public.foreign_card_sms where user_id='${user}' and source_event_id='${foreignEvent}'),100.25);
+    select public.complete_foreign_card_sms((select id from public.foreign_card_sms where user_id='${user}' and source_event_id='${foreignEvent}'),100.25);
     reset role;
     do $$ begin
       if (select current_balance from public.cards where id='${bank}') <> 800 or (select estimated_value_try from public.debts where id='${debt}') <> 300 then raise exception 'Restore sonrası yeni ödeme çalışmadı.'; end if;
+      if (select debt_amount from public.cards where id='${credit}')<>100.25 or (select count(*) from public.card_expenses where card_id='${credit}')<>1 then raise exception 'Restore sonrası dövizli SMS tamamlama/retry hatalı.'; end if;
     end $$; rollback;`)
-  console.log('Gerçek yerel dump/restore: private kod + makbuz + tekrar/no-op + yeni ödeme başarılı.')
+  console.log('Gerçek yerel dump/restore: private kod + ödeme makbuzu/retry + yeni ödeme + dövizli SMS/kesin TL/retry başarılı.')
 } finally {
   if (created) sql('postgres', `drop database "${db}" with (force);`)
   if (seeded) sql('postgres', `begin; ${claims} select public.reset_user_finance_data(); delete from auth.users where id='${user}'; commit;`)

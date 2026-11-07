@@ -1,5 +1,26 @@
 # AI Context Index
 
+7 Kasım dövizli SMS: `docs/FOREIGN_CARD_SMS.md`.
+`data/repositories/foreignCardSmsRepo.ts` eski hata SMS'lerini tekil alias ile
+kurtarır, sayfalı bekleme listesini ve kesin TL RPC'sini sunar.
+`app/useForeignCardSms.ts` Özet/Hesaplar cache'ini paylaşır;
+`components/finance/ForeignCardSmsPanel.tsx` kesin TL girişi,
+`components/dashboard/ForeignCardSmsNotice.tsx` toplam kapsam uyarısıdır.
+`smsParser.ts`/parse-sms aynası USD/EUR/GBP birimini korur; panodan TL'ye
+aktarılmaz. Migration `20261107210000_foreign_card_sms_pending.sql`: RLS,
+idempotent kuyruk/tamamlama, yedek/restore. SQL: `supabase/tests/foreign_card_sms.sql`.
+Mesaj hash'i yerleşik `pg_catalog.sha256` ile yazımda hesaplanır; tablo tanımı
+uzantı işlevi gerektirmez. Boş DB restore kanıtı: `scripts/test-backup-restore.mjs`.
+
+7 Kasım özellik keşfi: `docs/FEATURE_DISCOVERY.md`.
+`components/FeatureExplorerLauncher.tsx` kabukta her sayfadan açar ve dizini
+ilk kullanımda yükler. `components/FeatureExplorer.tsx` arama/gruplar/favorileri,
+`utils/featureDiscovery.ts` 39 özellik + eş anlamlılar + yerel favori doğrulamasını
+tutar. `components/FeatureSection.tsx` bölüm bağlantılarını içerik hazırken
+görünür kılar; `ui/deferred-details.tsx` yeni açma isteğini taslak kaybetmeden
+işler. Arama alanı `lib/navigationSafety.ts` için geçici filtre olarak işaretlidir.
+320/390/1280px tarayıcı kanıtı: `tests/e2e/simplification.spec.ts`.
+
 7 Kasım karma hedef aylık planı: `GoalMonthlyChecklist.tsx` her bileşeni
 ayrı açar; aylık miktar bileşenin kendi TL/gram/çeyrek birimindedir.
 `goalMonthly.ts` hedef+bileşen kapsamıyla plan/elle toplamı ayırır;

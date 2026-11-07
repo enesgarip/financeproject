@@ -30,3 +30,19 @@ it('doğrudan açık gelen ledger ayrıntısını hemen kurar', () => {
   render(<DeferredDetails summary="Hareketler" defaultOpen><p>Ledger</p></DeferredDetails>)
   expect(screen.getByText('Ledger')).toBeTruthy()
 })
+
+it('yeni özellik bağlantısı kapalı bölümü açar; kapatılabilir ve yeniden bağlantıda taslak korunur', () => {
+  const renderDetails = (key?: string) => <DeferredDetails summary="Ayrıntılar" openRequestKey={key}><input aria-label="Taslak" /></DeferredDetails>
+  const view = render(renderDetails())
+  expect(screen.queryByLabelText('Taslak')).toBeNull()
+  view.rerender(renderDetails('first'))
+  const details = view.container.querySelector('details')!
+  expect(details.open).toBe(true)
+  fireEvent.change(screen.getByLabelText('Taslak'), { target: { value: 'Korunacak' } })
+  details.open = false
+  fireEvent(details, new Event('toggle'))
+  expect(details.open).toBe(false)
+  view.rerender(renderDetails('second'))
+  expect(details.open).toBe(true)
+  expect((screen.getByLabelText('Taslak') as HTMLInputElement).value).toBe('Korunacak')
+})

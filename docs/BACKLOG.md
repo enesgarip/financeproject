@@ -1,5 +1,41 @@
 # Priority Backlog
 
+## 2026-11-07 — Dövizli DenizBank SMS'ini kesin TL bekleyen kayda alma
+
+- [x] USD/EUR/GBP birimi frontend/edge aynasında korunur; döviz tutarı TL
+  yazıcısına ve panodan TL alanına aktarılmaz.
+- [x] Bekleme kuyruğu, Özet kapsam uyarısı ve Hesaplar'da kesin TL girişi.
+  Eski sahipli hata SMS'leri tekil kart eşleşmesiyle sayfalı taramadan kurtarılır.
+- [x] Aynı SMS/olay tekilliği; kesin TL ile atomik provizyon, aynı tutarlı retry
+  no-op. RLS/FK, JSON restore/rollback ve cascade reset tamamlandı.
+- [x] Ayrıştırıcı, edge, günlük sayfalama, belirsiz alias, gerçek Postgres ve
+  320px kayıp-yanıt/gizlilik senaryoları. Sözleşme: `docs/FOREIGN_CARD_SMS.md`.
+
+Doğrulama: `npm run verify` (187 dosya / 1922 test, prod audit 0 açık,
+1023,5/1030 kB JS gzip ve 6 edge tip kontrolü), temiz yerel DB reset + 58
+SQL testi ve 36 Playwright senaryosu geçti. Mobil bekleme/kesin TL ekranları
+incelendi. Yayın için yeni migration ve parse-sms edge güncellemesi gerekir.
+Boş DB'ye gerçek dump/restore, bekleyen döviz kaydı ve restore sonrasında
+kesin TL/tamamlama retry'ını da doğrular. Hash yazımda yerleşik SHA-256 ile
+hesaplanır; tablo tanımı uzantı işlevlerinin restore sırasına bağımlı değildir.
+
+## 2026-11-07 — Özellikleri bulma ve keşfetme
+
+- [x] Her sayfadan metinli Ara ve keşfet; açıklamalı, gruplu 39 özellik,
+  Türkçe karakterlere toleranslı amaç/eş anlamlı araması ve boş sonuç durumu.
+- [x] Kullanıcıya özel cihaz favorileri; kalıcılık hatasında oturum içi
+  çalışma ve açık bilgilendirme. Dizin ilk açılışta yüklenir.
+- [x] Gizli bölümlere doğrudan bağlantı, açma/odak/kaydırma; kullanıcı
+  bölümü kapatabilir, yeni bağlantı yeniden açar ve details taslağı korunur.
+- [x] Geçici özellik araması kaydedilmemiş finans formu sayılmaz. Mevcut
+  gerçek form ve gezinme korumaları sürer. Sözleşme:
+  `docs/FEATURE_DISCOVERY.md`; görsel kaynak: `docs/UI_ARCHITECTURE.md`.
+
+Doğrulama: `npm run verify` geçti (186 dosya / 1913 test, prod audit 0 açık,
+1020,5 kB JS gzip / 1030 kB bütçe ve 6 edge tip kontrolü). 35 Playwright
+senaryosu geçti; 320px açık, 390px koyu ve masaüstü ekran görüntüleri incelendi.
+Şema veya finansal yazma değişikliği yok.
+
 ## 2026-11-07 — Karma hedefte bileşen başına aylık plan
 
 - [x] Her karma hedef bileşeninde bağımsız aylık plan ve checklist: gram,

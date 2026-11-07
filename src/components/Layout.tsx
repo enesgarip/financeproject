@@ -13,6 +13,7 @@ import { PullToRefresh } from './PullToRefresh'
 import { QuickActionsButton, QuickActionsProvider } from './QuickActions'
 import { useDialogA11y } from './ui/use-dialog-a11y'
 import { FinanceDataStatus } from './FinanceDataStatus'
+import { FeatureExplorerLauncher } from './FeatureExplorerLauncher'
 
 /**
  * Uygulama kabuğu — Şerit (`4e`). Kart yok, gölge yok: rail sayfadan 1px
@@ -175,6 +176,7 @@ function LayoutInner() {
               </div>
             </div>
           </div>
+          <div className={cn('mx-auto', contentWidth)}><FeatureExplorerLauncher /></div>
         </header>
 
         <main

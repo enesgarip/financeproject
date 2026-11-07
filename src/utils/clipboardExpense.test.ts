@@ -6,6 +6,11 @@ const aliases = [
   { card_id: 'card-world', last_four_digits: '4415' },
 ]
 
+it('dövizli SMS tutarını TL harcama alanına doldurmaz', () => {
+  const sms = '07.11.2026 19:37:28 tarihinde 9032 ile biten kartinizla, STEAMGAMES.COM 4259522 firmasindan, 59,99 USD islem yapilmistir.'
+  expect(buildClipboardPrefill(sms, aliases)).toEqual({ kind: 'sms-card-foreign', currency: 'USD', amount: 59.99 })
+})
+
 // smsParser.test.ts'teki gerçek format örnekleriyle aynı kalıp.
 const DENIZBANK_CARD_SMS =
   'Sayin ENES GARIP, 20.08.2026 14:35:12 tarihinde 9032 ile biten kartinizla, MIGROS TICARET AS firmasindan, 1.250,75 TL islem yapilmistir.'

@@ -47,6 +47,14 @@ describe('normalizeSmsWhitespace', () => {
 // -- DenizBank kart SMS'leri --------------------------------------------------
 
 describe('parseDenizbankCardSms', () => {
+  it('USD işleminde döviz tutarını ve saniyeli tarihi korur; TRY eski TL sözleşmesini korur', () => {
+    const sms = 'Degerli Musterimiz, 07.11.2026 19:37:28 tarihinde 9032 ile biten kartinizla, STEAMGAMES.COM 4259522 firmasindan, 59,99 USD islem yapilmistir. Bilgi:08502220800 B002'
+    for (const currency of ['USD', 'EUR', 'GBP']) {
+      expect(parseSms(sms.replace('USD', currency))).toEqual({ type: 'card', spentAt: '2026-11-07T19:37:28+03:00', lastFour: '9032', merchant: 'STEAMGAMES.COM 4259522', amount: 59.99, currency })
+    }
+    expect(parseSms(sms.replace('USD', 'TRY'))).not.toHaveProperty('currency')
+    expect(parseSms(sms.replace('USD', 'AUD'))).toBeNull()
+  })
   const SAMPLE = 'Degerli Musterimiz, 23.06.2026 15:18:21 tarihinde 9032 ile biten kartinizla, FINDEKS FINANSAL YONETI firmasindan, 200 TL islem yapilmistir.'
 
   it('standart DenizBank kart SMS parse eder', () => {

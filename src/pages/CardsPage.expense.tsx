@@ -254,6 +254,9 @@ export function QuickExpensePanel({
       setLocalError('Panoda kullanılabilir bir metin yok.')
       return
     }
+    if (prefill.kind === 'sms-card-foreign') {
+      setLocalWarning('Bu dövizli SMS için Hesaplar sayfasındaki “TL karşılığı bekleyen işlemler” bölümünü kullan.'); return
+    }
     if (prefill.kind === 'sms-account-in') {
       setLocalError('Bu bir gelen para SMS’i — hızlı harcama formu gider içindir.')
       return

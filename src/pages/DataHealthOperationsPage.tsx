@@ -1,4 +1,5 @@
 import { DeferredDetails } from '../components/ui/deferred-details'
+import { FeatureDetails, FeatureSection } from '../components/FeatureSection'
 import { DatabaseZap, Download, Settings, Upload } from 'lucide-react'
 import { useRef, useState, type ChangeEvent, type FormEvent } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
@@ -181,7 +182,7 @@ export function DataHealthOperationsPage() {
         <p className="text-[13px] text-ink-muted">
           Finans verisinin taşınabilirliğini, bildirimleri ve otomatik veri giriş kapsamını tek yerde yönet.
         </p>
-        <SurfaceCard variant="elevated" className="overflow-hidden">
+        <FeatureSection id="yedek"><SurfaceCard variant="elevated" className="overflow-hidden">
           <div className="pointer-events-none -mt-4 mb-1 h-[2px] bg-gradient-to-r from-success via-info to-destructive opacity-80" />
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-lg">
@@ -226,10 +227,10 @@ export function DataHealthOperationsPage() {
             {message ? <Alert variant="success">{message}</Alert> : null}
             {error ? <Alert variant="destructive">{error}</Alert> : null}
           </CardContent>
-        </SurfaceCard>
+        </SurfaceCard></FeatureSection>
 
-        <DeferredDetails summary="Bildirim ayarları" summaryClassName="min-h-11 cursor-pointer py-3 font-semibold text-primary"><NotificationSettings /></DeferredDetails>
-        <DeferredDetails summary="Otomasyon ve teşhis" summaryClassName="min-h-11 cursor-pointer py-3 font-semibold text-primary"><div className="space-y-4"><AutomationCoveragePanel /><SmsLogPanel /><ClientErrorsPanel /></div></DeferredDetails>
+        <FeatureDetails id="bildirimler" summary="Bildirim ayarları" summaryClassName="min-h-11 cursor-pointer py-3 font-semibold text-primary"><NotificationSettings /></FeatureDetails>
+        <FeatureDetails id="otomasyon" summary="Otomasyon ve teşhis" summaryClassName="min-h-11 cursor-pointer py-3 font-semibold text-primary"><div className="space-y-4"><AutomationCoveragePanel /><SmsLogPanel /><ClientErrorsPanel /></div></FeatureDetails>
         <DeferredDetails summary="Verileri sıfırlama" className="border-t border-line pt-3" summaryClassName="min-h-11 cursor-pointer py-3 font-semibold text-destructive"><p className="mb-3 text-sm text-ink-muted">Tüm finans kayıtlarını kaldırma işlemi. Mevcut doğrulama ve yedek alma adımları uygulanır.</p>              <button
                 type="button"
                 onClick={() => {

@@ -1,5 +1,20 @@
 # UI Architecture
 
+7 Kasım dövizli SMS: Özet bekleyen adet ve toplam kapsamını, Hesaplar
+“TL karşılığı bekleyen işlemler” bölümünde satıcı/tarih/döviz birimini gösterir.
+Döviz tutarı gizlilik maskesine uyar. Kesin TL formu yanıt kaybında tutarı
+korur; başarılı kayıt sonrası yenileme hatası ayrı açıklanır. Ara ve keşfet
+“Dövizli SMS işlemleri” bağlantısıyla bölümü açar. `docs/FOREIGN_CARD_SMS.md`.
+
+7 Kasım özellik keşfi: her sayfa başlığında metinli **Ara ve keşfet** düğmesi
+vardır. Açılan panel amaç açıklaması, menü yolu ve yıldızlı favorilerle tüm
+özellikleri gösterir; Türkçe karakter farklarına toleranslı arama yapar.
+Kritik açıklamalar sarılır, yıldız en az 44px dokunma alanı ve basılı durum
+etiketi taşır. Favoriler bu cihazda kullanıcıya özel saklanır; depolama hatası
+açıklanır. Bölüm bağlantıları kapalı içeriği açıp başlık payıyla odağa getirir.
+Keşif araması geçici filtredir; finans formu taslağı gibi uyarı üretmez.
+Kaynak ve kapsam: `docs/FEATURE_DISCOVERY.md`.
+
 3 Kasım ikinci tur UX kabulü: `docs/SCENARIO_UX_FIXES_2026-11-03.md`.
 Kaydetme kapalı Özet'in yenilenmesini bekler; eski boş gösterim aralığı kapanır.
 Gezinme koruması router'dan önce kurulur; tarayıcı Geri ve Escape vazgeçildiğinde
