@@ -1,4 +1,4 @@
-import { Link } from 'react-router'
+import { Link, useLocation } from 'react-router'
 import { DeferredDetails } from '../components/ui/deferred-details'
 import { CheckCircle2, Repeat, TrendingUp, Users, WalletCards } from 'lucide-react'
 import { useMemo, useState } from 'react'
@@ -349,6 +349,7 @@ export function PeopleLedger({ debts }: { debts: Debt[] }) {
 }
 
 export function MonthCloseAssistant({ data, missingTables }: { data: AnalysisData; missingTables: string[] }) {
+  const location = useLocation()
   const { formatAmount } = useBalancePrivacy()
   // Pahalı türetmeler (yükümlülük inşası + bütçe×harcama taraması) memo'da:
   // eskiden her üst render'da baştan koşuyordu. Gün anahtarı deps'te — veri
@@ -386,8 +387,7 @@ export function MonthCloseAssistant({ data, missingTables }: { data: AnalysisDat
   const completed = checks.filter((check) => check.done).length
 
   return (
-    <details className="lg:col-span-12">
-      <summary className="min-h-11 cursor-pointer py-3 text-sm font-semibold text-primary">Ay kapanış kontrolü <span className={completed < checks.length ? 'text-warning' : 'text-ink-muted'}>· {completed < checks.length ? `${checks.length - completed} kontrol dikkat istiyor` : 'Kontrollerde uyarı yok'}</span></summary>
+    <DeferredDetails className="lg:col-span-12" openRequestKey={location.hash === '#ay-kapanisi' ? location.key : undefined} summaryClassName="min-h-11 cursor-pointer py-3 text-sm font-semibold text-primary" summary={<>Ay kapanış kontrolü <span className={completed < checks.length ? 'text-warning' : 'text-ink-muted'}>· {completed < checks.length ? `${checks.length - completed} kontrol dikkat istiyor` : 'Kontrollerde uyarı yok'}</span></>}>
     <Card className="border-0 bg-raised text-ink ring-1 ring-line-strong lg:col-span-12">
       <CardContent className="grid gap-4 p-4 min-[760px]:grid-cols-[0.72fr_1.28fr] min-[760px]:items-center">
         <div>
@@ -409,11 +409,12 @@ export function MonthCloseAssistant({ data, missingTables }: { data: AnalysisDat
         </div>
       </CardContent>
     </Card>
-    </details>
+    </DeferredDetails>
   )
 }
 
 export function SubscriptionsPanel({ data }: { data: AnalysisData }) {
+  const location = useLocation()
   const { formatAmount } = useBalancePrivacy()
   const plans = data.payments.filter((p) => p.recurrence === 'monthly' && p.status === 'bekliyor')
   const monthlyTotal = sumTL(plans.map((p) => p.amount))
@@ -429,7 +430,7 @@ export function SubscriptionsPanel({ data }: { data: AnalysisData }) {
       </CardHeader>
       <CardContent className="space-y-4 pt-2">
         <Link to="/odemeler?view=plans" className="inline-flex min-h-11 items-center text-sm font-semibold text-primary">Kayıtlı planları yönet →</Link>
-        <DeferredDetails summary="Abonelik adaylarını incele" summaryClassName="min-h-11 cursor-pointer py-3 font-semibold text-primary"><SubscriptionDiscoveryPanel expenses={data.cardExpenses} payments={data.payments} cards={data.cards} /></DeferredDetails>
+        <DeferredDetails openRequestKey={location.hash === '#abonelikler' ? location.key : undefined} summary="Abonelik adaylarını incele" summaryClassName="min-h-11 cursor-pointer py-3 font-semibold text-primary"><SubscriptionDiscoveryPanel expenses={data.cardExpenses} payments={data.payments} cards={data.cards} /></DeferredDetails>
       </CardContent>
     </Card>
   )

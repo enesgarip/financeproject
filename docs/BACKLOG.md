@@ -1,5 +1,22 @@
 # Priority Backlog
 
+## 2026-11-07 — Özellikleri bulma ve keşfetme
+
+- [x] Her sayfadan metinli Ara ve keşfet; açıklamalı, gruplu 38 özellik,
+  Türkçe karakterlere toleranslı amaç/eş anlamlı araması ve boş sonuç durumu.
+- [x] Kullanıcıya özel cihaz favorileri; kalıcılık hatasında oturum içi
+  çalışma ve açık bilgilendirme. Dizin ilk açılışta yüklenir.
+- [x] Gizli bölümlere doğrudan bağlantı, açma/odak/kaydırma; kullanıcı
+  bölümü kapatabilir, yeni bağlantı yeniden açar ve details taslağı korunur.
+- [x] Geçici özellik araması kaydedilmemiş finans formu sayılmaz. Mevcut
+  gerçek form ve gezinme korumaları sürer. Sözleşme:
+  `docs/FEATURE_DISCOVERY.md`; görsel kaynak: `docs/UI_ARCHITECTURE.md`.
+
+Doğrulama: `npm run verify` geçti (186 dosya / 1913 test, prod audit 0 açık,
+1020,5 kB JS gzip / 1030 kB bütçe ve 6 edge tip kontrolü). 35 Playwright
+senaryosu geçti; 320px açık, 390px koyu ve masaüstü ekran görüntüleri incelendi.
+Şema veya finansal yazma değişikliği yok.
+
 ## 2026-11-07 — Karma hedefte bileşen başına aylık plan
 
 - [x] Her karma hedef bileşeninde bağımsız aylık plan ve checklist: gram,

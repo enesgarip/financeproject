@@ -1,4 +1,4 @@
-import { DeferredDetails } from '../components/ui/deferred-details'
+import { FeatureDetails, FeatureSection } from '../components/FeatureSection'
 import { useMemo, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../auth/useAuth'
@@ -510,15 +510,15 @@ export function PlanningPage() {
       {/* Varlık ve hesaplar hedefin "takip kaynağı" seçimi için gerekiyor;
           panel Supabase görmez, veriyi hazır snapshot'tan alır. */}
       {canManageGoals ? (
-        <SavingsGoalsPanel
+        <FeatureSection id="birikim-hedefleri" aliases={['aylik-hedef']}><SavingsGoalsPanel
           monthlySurplus={monthlySurplus}
           assets={snapshotQuery.data?.assets ?? []}
           cards={snapshotQuery.data?.cards ?? []}
           monthlyOutflow={monthlyOutflow}
-        />
+        /></FeatureSection>
       ) : null}
 
-      <DeferredDetails summary="Bağımsız ayrılan parayı yönet" summaryClassName="min-h-11 cursor-pointer py-3 font-semibold text-primary"><KasaModuPanel liquidCash={liquidCash} /></DeferredDetails>
+      <FeatureDetails id="kasa" summary="Bağımsız ayrılan parayı yönet" summaryClassName="min-h-11 cursor-pointer py-3 font-semibold text-primary"><KasaModuPanel liquidCash={liquidCash} /></FeatureDetails>
 
 
     </section>

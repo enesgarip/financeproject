@@ -12,6 +12,7 @@ import {
 } from './AnalysisPage.panels'
 import { useAnalysisPageData } from './AnalysisPage.data'
 import { AnalysisHero } from './AnalysisPage.hero'
+import { FeatureSection } from '../components/FeatureSection'
 
 /**
  * Yüklenirken paneller BOŞ VERİYLE çizilmez. Eskiden yükleme göstergesi sayfanın
@@ -67,14 +68,14 @@ export function AnalysisPage() {
     <section className="space-y-6">
       {auxiliaryError ? <QueryError title="Geçmiş veriler yüklenemedi" message="Trend ve fiyat karşılaştırmaları şu an doğrulanamıyor." onRetry={() => void retryAuxiliary()} /> : null}
       <div className="grid items-start gap-5 lg:grid-cols-12">
-        <MonthlyReport data={data} />
+        <FeatureSection id="aylik-rapor" className="lg:col-span-12"><MonthlyReport data={data} /></FeatureSection>
         <AnalysisHero data={data} snapshots={snapshots} historyStatus={auxiliaryError ? "error" : auxiliaryLoading ? "loading" : "ready"} />
         <SchemaMigrationNotice missingTables={missingTables} />
-        <MonthCloseAssistant data={data} missingTables={missingTables} />
+        <FeatureSection id="ay-kapanisi" className="lg:col-span-12"><MonthCloseAssistant data={data} missingTables={missingTables} /></FeatureSection>
         {/* 7+5 çiftleri: kategori dağılımı ve abonelikler yan yana; fiyat radarı
             (veri yoksa null döner) tam satır — sağ yarı boş kalmasın (UX turu B14). */}
-        <CategorySpendingChart data={data} />
-        <SubscriptionsPanel data={data} />
+        <FeatureSection id="kategori-analizi" className="lg:col-span-7"><CategorySpendingChart data={data} /></FeatureSection>
+        <FeatureSection id="abonelikler" className="lg:col-span-5"><SubscriptionsPanel data={data} /></FeatureSection>
         {!auxiliaryError && !auxiliaryLoading ? <PriceIncreaseRadar trends={priceTrends} /> : null}
         {!auxiliaryError && !auxiliaryLoading ? <NetWorthTrend snapshots={snapshots} ratesSnapshot={ratesSnapshot} /> : null}
         <ForwardForecast data={data} />

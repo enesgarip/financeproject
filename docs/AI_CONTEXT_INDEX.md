@@ -1,5 +1,14 @@
 # AI Context Index
 
+7 Kasım özellik keşfi: `docs/FEATURE_DISCOVERY.md`.
+`components/FeatureExplorerLauncher.tsx` kabukta her sayfadan açar ve dizini
+ilk kullanımda yükler. `components/FeatureExplorer.tsx` arama/gruplar/favorileri,
+`utils/featureDiscovery.ts` 38 özellik + eş anlamlılar + yerel favori doğrulamasını
+tutar. `components/FeatureSection.tsx` bölüm bağlantılarını içerik hazırken
+görünür kılar; `ui/deferred-details.tsx` yeni açma isteğini taslak kaybetmeden
+işler. Arama alanı `lib/navigationSafety.ts` için geçici filtre olarak işaretlidir.
+320/390/1280px tarayıcı kanıtı: `tests/e2e/simplification.spec.ts`.
+
 7 Kasım karma hedef aylık planı: `GoalMonthlyChecklist.tsx` her bileşeni
 ayrı açar; aylık miktar bileşenin kendi TL/gram/çeyrek birimindedir.
 `goalMonthly.ts` hedef+bileşen kapsamıyla plan/elle toplamı ayırır;
