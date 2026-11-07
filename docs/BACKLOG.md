@@ -15,6 +15,9 @@ Doğrulama: `npm run verify` (187 dosya / 1922 test, prod audit 0 açık,
 1023,5/1030 kB JS gzip ve 6 edge tip kontrolü), temiz yerel DB reset + 58
 SQL testi ve 36 Playwright senaryosu geçti. Mobil bekleme/kesin TL ekranları
 incelendi. Yayın için yeni migration ve parse-sms edge güncellemesi gerekir.
+Boş DB'ye gerçek dump/restore, bekleyen döviz kaydı ve restore sonrasında
+kesin TL/tamamlama retry'ını da doğrular. Hash yazımda yerleşik SHA-256 ile
+hesaplanır; tablo tanımı uzantı işlevlerinin restore sırasına bağımlı değildir.
 
 ## 2026-11-07 — Özellikleri bulma ve keşfetme
 

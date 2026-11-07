@@ -9,6 +9,8 @@ kurtarır, sayfalı bekleme listesini ve kesin TL RPC'sini sunar.
 `smsParser.ts`/parse-sms aynası USD/EUR/GBP birimini korur; panodan TL'ye
 aktarılmaz. Migration `20261107210000_foreign_card_sms_pending.sql`: RLS,
 idempotent kuyruk/tamamlama, yedek/restore. SQL: `supabase/tests/foreign_card_sms.sql`.
+Mesaj hash'i yerleşik `pg_catalog.sha256` ile yazımda hesaplanır; tablo tanımı
+uzantı işlevi gerektirmez. Boş DB restore kanıtı: `scripts/test-backup-restore.mjs`.
 
 7 Kasım özellik keşfi: `docs/FEATURE_DISCOVERY.md`.
 `components/FeatureExplorerLauncher.tsx` kabukta her sayfadan açar ve dizini

@@ -33,6 +33,9 @@ Kuyrukta kullanıcı+olay ve kullanıcı+normalize ham mesaj hash'i benzersizdir
 farklı çağırıcı kimliğiyle aynı SMS'te ilk kimlik korunur. Aynı olay kimliğinde
 farklı payload reddedilir. Banka metni saniyeli olduğundan eski normalize-hash
 fallback sözleşmesi sürer; saniyesiz hesap hareketi bu akışa girmez.
+Hash kuyruk/JSON restore yazımında PostgreSQL'in yerleşik SHA-256 işlevi ve
+açık UTF-8 dönüşümüyle hesaplanır. Tablo tanımı pgcrypto işlevine bağımlı değildir;
+aynı şema manifestiyle boş veritabanına gerçek dump/restore bu sırayı doğrular.
 
 Migration `20261107210000_foreign_card_sms_pending.sql`: own-row SELECT RLS,
 yazma yalnız sahiplik doğrulayan RPC'lerdedir. Kuyruğa servis veya kayıt sahibi,

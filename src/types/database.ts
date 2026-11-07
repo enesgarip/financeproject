@@ -786,7 +786,7 @@ export type Database = {
       cards: Table<Card, WithBaseInsert<Card>, WithBaseUpdate<Card>>
       card_aliases: Table<CardAlias, WithBaseInsert<CardAlias>, WithBaseUpdate<CardAlias>>
       card_expenses: Table<CardExpense, WithBaseInsert<CardExpense>, WithBaseUpdate<CardExpense>>
-      foreign_card_sms: Table<ForeignCardSms, WithBaseInsert<Omit<ForeignCardSms, 'message_hash'>>, WithBaseUpdate<Omit<ForeignCardSms, 'message_hash'>>>
+      foreign_card_sms: Table<ForeignCardSms, WithBaseInsert<ForeignCardSms>, WithBaseUpdate<ForeignCardSms>>
       card_current_settlements: Table<
         CardCurrentSettlement,
         WithBaseInsert<CardCurrentSettlement>,
