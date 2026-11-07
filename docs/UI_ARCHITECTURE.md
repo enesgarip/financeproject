@@ -344,6 +344,15 @@ skill'inde (`validate_palette.js`), zemin olarak `--card` değerlerini ver.
 
 ## Responsive ve Erişilebilirlik
 
+7 Kasım bilgi kutusu eki: `components/charts/ChartTooltip.tsx` çizgi ve sütun
+grafiklerinde ortak, doğal yüksekliğe sahip HTML katmanıdır. Sabit boyutlu
+SVG `foreignObject` içine yazı çizilmez. Seri adları sarılır ve tam görünür;
+tutar + para simgesi aynı satırda, ayrı alandadır. Kutunun genişliği grafik
+genişliğine, üst konumu ölçülen içerik yüksekliğine göre sınırlandırılır.
+İlk/orta/son noktada grafik sınırları içinde kalır. Sütunun kendisi ve boş
+nokta alanı hover/dokunmada aynı bilgiyi açar. 320/390/768px tarayıcı testi
+gerçek metin kutularında kesilme ve tutar bölünmesini denetler.
+
 7 Kasım 2026: `BarChart`/`LineChart` ortak `chartUtils.xAxisLabels` ile
 etiketleri gerçek X konumları ve korumalı metin genişliklerine göre seçer;
 son etiketi zorlamak komşusunu ezmez. İlk/son etiketler çizim alanına alınır,

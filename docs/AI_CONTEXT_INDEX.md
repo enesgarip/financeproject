@@ -1,5 +1,13 @@
 # AI Context Index
 
+7 Kasım grafik bilgi kutusu: `components/charts/ChartTooltip.tsx` doğal HTML
+yüksekliği ve sınıra göre konumla hem `LineChart` hem `BarChart` kutularının
+kesilmesini önler; seri adı tamdır, tutar/para simgesi tek satırda kalır.
+Sütun gövdesi de hover/dokunmayı yakalar. Tarayıcı kanıtı:
+`tests/e2e/simplification.spec.ts` (320/390/768px, ilk/orta/son nokta,
+bilgi kutusu sınırları, metin kesilmesi ve dokunma).
+Görsel sözleşme: `docs/UI_ARCHITECTURE.md`.
+
 7 Kasım kur istekleri: `lib/marketRatesClient.ts` başarısız otomatik kur
 isteğinden sonra 60 saniye bekler; sayfa geçişleri bu süreyi aşamaz, elle
 Yenile aşar. Başarı süreyi sıfırlar; cache zamanı ve hata kaydı korunur.

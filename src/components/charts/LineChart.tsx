@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useBalancePrivacy } from '../../hooks/useBalancePrivacy'
 import { useChartWidth } from './useChartWidth'
+import { ChartTooltip } from './ChartTooltip'
 import { DEFAULT_PADDING, buildPathD, chartPadding, formatTickValue, niceScale, xAxisLabels } from './chartUtils'
 
 export type LineSeriesConfig = {
@@ -102,7 +103,7 @@ export function LineChart({ data, series, height = 260 }: LineChartProps) {
     return { ...s, raw, validPoints, segments }
   })
 
-  const hovered = hoverIndex !== null ? data[hoverIndex] : null
+  const hovered = hoverIndex !== null ? data[hoverIndex] ?? null : null
   const hoverX = hoverIndex !== null ? toX(hoverIndex) : 0
 
   return (
@@ -110,7 +111,7 @@ export function LineChart({ data, series, height = 260 }: LineChartProps) {
       ref={chartRef}
       role="img"
       aria-label={`Çizgi grafiği. ${chartSummary}`}
-      className="min-w-0"
+      className="relative min-w-0"
       style={{ height, minHeight: height }}
     >
       {chartWidth > 0 ? (
@@ -214,36 +215,17 @@ export function LineChart({ data, series, height = 260 }: LineChartProps) {
             />
           ) : null}
 
-          {/* Tooltip */}
-          {hovered !== null && hoverIndex !== null ? (
-            <foreignObject
-              x={Math.max(pad.left, Math.min(hoverX - 90, chartWidth - 188))}
-              y={Math.max(0, pad.top)}
-              width={180}
-              height={24 + series.length * 20}
-              style={{ pointerEvents: 'none' }}
-            >
-              <div className="rounded-xl border border-line-strong bg-raised shadow-[var(--shadow-card)] p-2.5">
-                <p className="mb-1.5 text-[10px] font-semibold uppercase text-ink-muted">{hovered.label}</p>
-                {series.map((s) => {
-                  const v = hovered[s.key]
-                  if (v == null) return null
-                  return (
-                    <div key={s.key} className="flex items-center justify-between gap-3 text-[10px]">
-                      <span className="flex min-w-0 items-center gap-1.5 text-ink-muted">
-                        <span className="size-1.5 shrink-0 rounded-full" style={{ background: s.stroke }} />
-                        <span className="truncate">{s.name}</span>
-                      </span>
-                      <span className="font-mono font-semibold tabular-nums text-ink">
-                        {formatAmount(v as number)}
-                      </span>
-                    </div>
-                  )
-                })}
-              </div>
-            </foreignObject>
-          ) : null}
         </svg>
+      ) : null}
+      {chartWidth > 0 && hovered !== null ? (
+        <ChartTooltip
+          label={hovered.label}
+          items={series.flatMap(s => typeof hovered[s.key] === 'number' ? [{ label: s.name, value: formatAmount(hovered[s.key] as number), color: s.stroke }] : [])}
+          anchorX={hoverX}
+          anchorY={pad.top}
+          chartWidth={chartWidth}
+          chartHeight={height}
+        />
       ) : null}
     </div>
   )

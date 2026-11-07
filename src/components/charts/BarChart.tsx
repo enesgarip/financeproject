@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useBalancePrivacy } from '../../hooks/useBalancePrivacy'
 import { useChartWidth } from './useChartWidth'
+import { ChartTooltip } from './ChartTooltip'
 import { DEFAULT_PADDING, chartPadding, formatTickValue, niceScale, xAxisLabels } from './chartUtils'
 
 export type BarDataPoint = {
@@ -70,7 +71,7 @@ export function BarChart({
 
   const labels = xAxisLabels(data.map(point => point.label), data.map((_, i) => pad.left + (i + 0.5) * barGroupWidth), pad.left, chartWidth - pad.right)
 
-  const hovered = hoverIndex !== null ? data[hoverIndex] : null
+  const hovered = hoverIndex !== null ? data[hoverIndex] ?? null : null
   const hoverX = hoverIndex !== null ? pad.left + hoverIndex * barGroupWidth + barGroupWidth / 2 : 0
 
   return (
@@ -78,7 +79,7 @@ export function BarChart({
       ref={chartRef}
       role="img"
       aria-label={`Sütun grafiği. ${chartSummary}`}
-      className="min-w-0"
+      className="relative min-w-0"
       style={{ height, minHeight: height }}
     >
       {chartWidth > 0 ? (
@@ -126,7 +127,7 @@ export function BarChart({
             const barH = Math.max(1, Math.abs(toY(point.value) - zeroY))
 
             return (
-              <g key={point.label}>
+              <g key={point.label} onMouseEnter={() => setHoverIndex(i)} onPointerDown={() => setHoverIndex(i)}>
                 {/* Hit area */}
                 <rect
                   x={groupX}
@@ -134,8 +135,6 @@ export function BarChart({
                   width={barGroupWidth}
                   height={plotH}
                   fill="transparent"
-                  onMouseEnter={() => setHoverIndex(i)}
-                  onPointerDown={() => setHoverIndex(i)}
                 />
                 <rect
                   x={barX}
@@ -166,35 +165,20 @@ export function BarChart({
             {labels.map(label => <text key={label.index} x={label.x} y={height - 6} textAnchor="start" fill="var(--muted-foreground)" fontSize={12}><title>{data[label.index].label}</title>{label.text}</text>)}
           </g>
 
-          {/* Tooltip */}
-          {hovered !== null && hoverIndex !== null ? (
-            <foreignObject
-              x={Math.max(pad.left, Math.min(hoverX - 70, chartWidth - 148))}
-              y={Math.max(pad.top, toY(Math.max(hovered.value, hovered.prevValue ?? 0)) - 60)}
-              width={140}
-              height={grouped ? 72 : 52}
-              style={{ pointerEvents: 'none' }}
-            >
-              <div className="rounded-xl border border-line-strong bg-raised shadow-[var(--shadow-card)] p-2">
-                <p className="mb-1 text-[10px] font-semibold uppercase text-ink-muted">{hovered.label}</p>
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-[10px] text-ink-muted">Tutar</span>
-                  <span className="font-mono text-[10px] font-semibold tabular-nums text-ink">
-                    {formatAmount(hovered.value)}
-                  </span>
-                </div>
-                {grouped && hovered.prevValue != null ? (
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-[10px] text-ink-muted">Önceki Ay</span>
-                    <span className="font-mono text-[10px] font-semibold tabular-nums text-ink">
-                      {formatAmount(hovered.prevValue)}
-                    </span>
-                  </div>
-                ) : null}
-              </div>
-            </foreignObject>
-          ) : null}
         </svg>
+      ) : null}
+      {chartWidth > 0 && hovered !== null ? (
+        <ChartTooltip
+          label={hovered.label}
+          items={[
+            { label: 'Tutar', value: formatAmount(hovered.value), color: hovered.color ?? (hovered.value >= 0 ? positiveColor : negativeColor) },
+            ...(grouped && hovered.prevValue != null ? [{ label: 'Önceki ay', value: formatAmount(hovered.prevValue), color: 'var(--muted-foreground)' }] : []),
+          ]}
+          anchorX={hoverX}
+          anchorY={toY(Math.max(hovered.value, hovered.prevValue ?? 0))}
+          chartWidth={chartWidth}
+          chartHeight={height}
+        />
       ) : null}
     </div>
   )
