@@ -344,6 +344,17 @@ skill'inde (`validate_palette.js`), zemin olarak `--card` değerlerini ver.
 
 ## Responsive ve Erişilebilirlik
 
+7 Kasım 2026: `BarChart`/`LineChart` ortak `chartUtils.xAxisLabels` ile
+etiketleri gerçek X konumları ve korumalı metin genişliklerine göre seçer;
+son etiketi zorlamak komşusunu ezmez. İlk/son etiketler çizim alanına alınır,
+tek başına sığmayan uzun metin kısaltılır (tam adı SVG title/erişilebilir
+özette kalır). Tüm veri noktaları korunur. Eksen yazısı 12px; Y alanı kısa TL
+etiket genişliğine, tick sayısı grafik yüksekliğine göre ayrılır. Mobilde
+dokunma tutar ayrıntısını açar. Gerçek tarayıcı yazı kutuları 320/390/768px'de
+denetlenir. Hedefte **Aylık takip** ilk açılışta yüklenir; durum renk yanında
+tik/çarpı/metinle anlatılır, miktarlar gizliliği izler. Sözleşme:
+`docs/GOAL_MONTHLY_TRACKING.md`.
+
 - Ana dokunma hedefi en az 44px olmalıdır. İkon-only butonlarda görsel boyutu
   büyütmek yerine `.tap-target` kullan: `::after` ile hit alanını 44px'e çıkarır,
   düzeni bozmaz. `Button`'ın `icon`, `icon-sm`, `icon-xs` boyutlarında hazır

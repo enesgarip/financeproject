@@ -45,7 +45,12 @@ export function useInvalidateCrudRows(table: CrudTableName) {
   const userId = user?.id
 
   return useCallback(
-    () => queryClient.invalidateQueries({ queryKey: crudRowsInvalidationKey(table, userId) }),
+    async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: crudRowsInvalidationKey(table, userId) }),
+        ...(table === 'gold_lots' ? [queryClient.invalidateQueries({ queryKey: ['goal-monthly', userId] })] : []),
+      ])
+    },
     [queryClient, table, userId],
   )
 }

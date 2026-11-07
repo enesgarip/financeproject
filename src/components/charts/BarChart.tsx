@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useBalancePrivacy } from '../../hooks/useBalancePrivacy'
 import { useChartWidth } from './useChartWidth'
-import { DEFAULT_PADDING, formatTickValue, niceScale } from './chartUtils'
+import { DEFAULT_PADDING, chartPadding, formatTickValue, niceScale, xAxisLabels } from './chartUtils'
 
 export type BarDataPoint = {
   label: string
@@ -52,12 +52,11 @@ export function BarChart({
     )
   }
 
-  const pad = DEFAULT_PADDING
-  const plotW = chartWidth - pad.left - pad.right
-  const plotH = height - pad.top - pad.bottom
-
   const allValues = data.flatMap((d) => grouped && d.prevValue != null ? [d.value, d.prevValue] : [d.value])
-  const ticks = niceScale(Math.min(0, ...allValues), Math.max(0, ...allValues))
+  const ticks = niceScale(Math.min(0, ...allValues), Math.max(0, ...allValues), Math.max(2, Math.floor((height - DEFAULT_PADDING.top - DEFAULT_PADDING.bottom) / 36)))
+  const pad = chartPadding(ticks)
+  const plotW = Math.max(1, chartWidth - pad.left - pad.right)
+  const plotH = Math.max(1, height - pad.top - pad.bottom)
   const yMin = ticks[0]
   const yMax = ticks[ticks.length - 1]
   const yRange = yMax - yMin || 1
@@ -69,10 +68,7 @@ export function BarChart({
   const barPad = barGroupWidth * 0.32
   const barWidth = grouped ? (barGroupWidth - barPad * 2) / 2 : barGroupWidth - barPad * 2
 
-  // X ekseni etiket seyreltme: uzun serilerde (ör. 30 günlük) her noktaya etiket
-  // basınca yazılar üst üste biniyordu. Etiket başına ~44px ayır, aradan atla —
-  // ilk ve son nokta her zaman etiketli kalır.
-  const labelStep = Math.max(1, Math.ceil(data.length / Math.max(1, Math.floor(plotW / 44))))
+  const labels = xAxisLabels(data.map(point => point.label), data.map((_, i) => pad.left + (i + 0.5) * barGroupWidth), pad.left, chartWidth - pad.right)
 
   const hovered = hoverIndex !== null ? data[hoverIndex] : null
   const hoverX = hoverIndex !== null ? pad.left + hoverIndex * barGroupWidth + barGroupWidth / 2 : 0
@@ -115,7 +111,7 @@ export function BarChart({
               textAnchor="end"
               dominantBaseline="middle"
               fill="var(--muted-foreground)"
-              fontSize={11}
+              fontSize={12}
             >
               {formatTickValue(tick)}
             </text>
@@ -139,6 +135,7 @@ export function BarChart({
                   height={plotH}
                   fill="transparent"
                   onMouseEnter={() => setHoverIndex(i)}
+                  onPointerDown={() => setHoverIndex(i)}
                 />
                 <rect
                   x={barX}
@@ -161,21 +158,13 @@ export function BarChart({
                   />
                 ) : null}
 
-                {/* X label — seyreltilmiş (ilk/son daima) */}
-                {i % labelStep === 0 || i === data.length - 1 ? (
-                  <text
-                    x={groupX + barGroupWidth / 2}
-                    y={height - 4}
-                    textAnchor="middle"
-                    fill="var(--muted-foreground)"
-                    fontSize={11}
-                  >
-                    {point.label}
-                  </text>
-                ) : null}
               </g>
             )
           })}
+
+          <g data-axis="x">
+            {labels.map(label => <text key={label.index} x={label.x} y={height - 6} textAnchor="start" fill="var(--muted-foreground)" fontSize={12}><title>{data[label.index].label}</title>{label.text}</text>)}
+          </g>
 
           {/* Tooltip */}
           {hovered !== null && hoverIndex !== null ? (

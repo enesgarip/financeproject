@@ -62,6 +62,7 @@ import { valuationConfidence } from '../../utils/dataConfidence'
 import { effectiveGoalValueWithSource, valueGoal } from '../../utils/valuation'
 import { ConfidenceBadge } from '../ui/confidence-badge'
 import { MoneyInput } from './MoneyInput'
+import { GoalMonthlyChecklist } from './GoalMonthlyChecklist'
 
 type ComponentDraft = {
   key: string
@@ -1068,6 +1069,7 @@ export function SavingsGoalsPanel({
                   {goal.note ? (
                     <p className="mt-2 truncate text-[11px] italic text-ink-muted">{goal.note}</p>
                   ) : null}
+                  {goal.value_type !== 'composite' ? <GoalMonthlyChecklist goal={goal} /> : null}
                 </CardContent>
               </Card>
             )

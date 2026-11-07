@@ -1,6 +1,38 @@
 # Finance Rules
 
-Last reviewed: 2026-11-04
+## Yapı Kredi gelen transfer SMS'i (2026-11-07)
+
+`parse-sms`, B016 kodlu `52***047 hesabiniza ... TL FAST/HAVALE/EFT odemesi
+gelmistir. Guncel Bakiye ... TL GG/AA/YYYY HH:mm:ss B016` biçimini destekler.
+Giriş tutarı işlem tutarıdır; güncel bakiye muhasebe hareketi/otomatik bakiye
+düzeltmesi değildir. Maske ve maskeli gönderici adı aynen taşınır, tarih
+Türkiye saatiyle (`+03:00`) yazılır. Bu biçim saniyeli olmalıdır.
+
+Maskeli numara, yalnız adı Yapı Kredi olarak normalize edilen **banka**
+hesabında (cash hariç), görünür önek (en az 2 hane) + son ek (en az 3 hane)
+ile tam numaraya veya aynı kayıtlı maskeye eşlenir. Yıldız sayısı gerçek
+gizlenen hane sayısı kabul edilmez; maskeyi silip `52047` aramak yasaktır.
+Tek aday gerekir; aynı maskenin birden çok hesap/kullanıcıya uyması reddedilir.
+`SMS_OWNER_USER_ID` mevcut sahiplik filtresidir. Hesapta tam numara veya SMS
+maskesi ve Yapı Kredi banka adı kayıtlı olmalıdır; IBAN'dan hesap no türetilmez.
+Maskeli gönderici adı kişisel borç/alacak kimlik kanıtı sayılmaz. Banka hareketi
+işlenir; kişisel kayıt kapatılmaz. Normal DenizBank eşlemesi ve service-role
+RPC imzası korunur. Aynı kaynak olay tekrarında bakiye/ledger/geçmiş yinelenmez.
+Eski SMS veya geçmiş bakiye tahminle geriye dönük değiştirilmez.
+
+## Aylık hedef alışkanlığı (2026-11-07)
+
+Kaynak sözleşme: `docs/GOAL_MONTHLY_TRACKING.md`. Aylık takip toplam hedef
+ilerlemesinden bağımsızdır; finansal değer/rezerv/ledger yazmaz. Gram/çeyrek
+hedefte açıkça seçilen altın defterinin tüm ilgili tür alımları gerçek işlem
+ayında sayılır; TL elle izlenir. Satış düşülmez, fazla miktar devretmez.
+Elle girilen aylık toplam otomatik toplamın yerini alır; 0 geçerlidir.
+Plan değişikliği önceki ayların miktar/birimini yeniden yorumlamaz.
+Takip öncesi eksik/kayıtsız geçmiş başarısızlık sayılmaz; cari ay bitmeden
+eksik gerçekleşme beklemede kalır. Yeni tablolar kullanıcı/sahiplik korumalıdır
+ve JSON export/transactional restore/reset kapsamındadır.
+
+Last reviewed: 2026-11-07
 
 4 Kasım otomasyon sözleşmesi: `docs/AUTOMATION_FIXES_2026-11-04.md`.
 Tek harfli parça içeren kişi adı SMS'te otomatik borç/alacak eşlemesi değildir;

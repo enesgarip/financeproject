@@ -2,7 +2,35 @@ import { formatCompactCurrency } from '@/utils/formatCurrency'
 
 export type Padding = { top: number; right: number; bottom: number; left: number }
 
-export const DEFAULT_PADDING: Padding = { top: 8, right: 8, left: 60, bottom: 28 }
+export const DEFAULT_PADDING: Padding = { top: 12, right: 12, left: 60, bottom: 32 }
+
+/** 12px eksen yazısı için korumalı genişlik; veri noktaları seyreltilmez. */
+export const axisTextWidth = (text: string) => Array.from(text).length * 8
+
+export function chartPadding(ticks: number[]): Padding {
+  return { ...DEFAULT_PADDING, left: Math.max(44, ...ticks.map(tick => axisTextWidth(formatTickValue(tick)) + 16)) }
+}
+
+/** Gerçek konumları karşılaştırır; son etiketi eklemek komşusunu ezemez. */
+export function xAxisLabels(labels: string[], positions: number[], left: number, right: number) {
+  const available = Math.max(1, right - left)
+  const candidates = labels.map((label, index) => {
+    const maxChars = Math.max(1, Math.floor(available / 8))
+    const text = Array.from(label).length > maxChars ? `${Array.from(label).slice(0, Math.max(0, maxChars - 1)).join('')}…` : label
+    const width = axisTextWidth(text)
+    const x = Math.max(left, Math.min(positions[index] - width / 2, right - width))
+    return { index, text, x, end: x + width }
+  })
+  if (candidates.length < 2) return candidates
+  const first = candidates[0]
+  const last = candidates[candidates.length - 1]
+  if (first.end + 12 > last.x) return [first]
+  const visible = [first]
+  for (const candidate of candidates.slice(1, -1)) {
+    if (candidate.x >= visible[visible.length - 1].end + 12 && candidate.end + 12 <= last.x) visible.push(candidate)
+  }
+  return [...visible, last]
+}
 
 export function niceScale(min: number, max: number, ticks = 5): number[] {
   if (min === max) {

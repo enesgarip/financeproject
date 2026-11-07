@@ -9,6 +9,7 @@ import {
   parseDenizbankMaskedCardSms,
   parseSms,
   parseYapikrediCardSms,
+  parseYapikrediIncomingAccountSms,
 } from './smsParser'
 
 // -- Whitespace normalization -------------------------------------------------
@@ -167,6 +168,33 @@ describe('parseYapikrediCardSms', () => {
 })
 
 // -- DenizBank hesap hareketi SMS'leri ----------------------------------------
+
+describe('parseYapikrediIncomingAccountSms', () => {
+  const sms = '52***047 hesabiniza, EN***** GA***** tarafindan 34.820,00 TL FAST odemesi gelmistir. Guncel Bakiye 34.905,37 TL 07/11/2026 15:31:54 B016'
+
+  it('gerçek gelen FAST formatını maskesi, tutarı ve Türkiye saatiyle tanır; güncel bakiyeyi tutar saymaz', () => {
+    const expected = { type: 'account', occurredAt: '2026-11-07T15:31:54+03:00', accountNumber: '52***047', counterparty: 'EN***** GA*****', amount: 34820, direction: 'in', transactionType: 'FAST' }
+    expect(parseYapikrediIncomingAccountSms(sms)).toEqual(expected)
+    expect(parseSms(sms)).toEqual(expected)
+    expect(accountSmsNeedsExternalEventId(parseSms(sms)!)).toBe(false)
+  })
+
+  it('satır sonu, Türkçe harf ve alternatif transfer türünü destekler', () => {
+    const text = '52***047 hesabınıza,\n AYŞE YILMAZ tarafından 1.234,56 TL EFT ödemesi gelmiştir.\nGüncel Bakiye 9.999,99 TL 07/11/2026 15:31:54 B016'
+    expect(parseSms(text)).toMatchObject({ amount: 1234.56, counterparty: 'AYŞE YILMAZ', transactionType: 'EFT', direction: 'in' })
+  })
+
+  it.each([
+    sms.replace('34.820,00 TL FAST', '0,00 TL FAST'),
+    sms.replace('15:31:54', '15:31'),
+    sms.replace('B016', 'B002'),
+    sms.replace('52***047', '***047'),
+    sms.replace('07/11/2026', 'tarih yok'),
+    sms.replace('gelmistir', 'iptal edilmistir'),
+  ])('kanıtsız/eksik formatı otomatik hareket saymaz: %s', text => {
+    expect(parseYapikrediIncomingAccountSms(text)).toBeNull()
+  })
+})
 
 describe('parseDenizbankAccountSms', () => {
   const OUTGOING = 'Degerli Musterimiz, 24.06.2026 21:40:15\'da Ipek Bayram alicisina 4230-13300128-351 numarali hesabinizdan 600,00 TL tutarinda FAST islemi gerceklesmistir.'

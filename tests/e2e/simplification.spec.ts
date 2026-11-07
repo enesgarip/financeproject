@@ -244,6 +244,107 @@ for (const [width, theme] of [[320, 'light'], [390, 'dark'], [1280, 'light']] as
 
 const routes = ['/', '/kartlar', '/varliklar', '/varliklar/maas', '/varliklar/altin', '/varliklar/borsa', '/varliklar/araclar', '/borclar/krediler', '/borclar/kisiler', '/odemeler', '/odemeler/hedefler', '/odemeler/alsam-mi', '/odemeler/liste', '/odemeler/baglamlar', '/analiz', '/analiz/detay', '/analiz/asistan', '/veri-sagligi', '/veri-sagligi/islemler']
 
+test('aylık hedef: otomatik alım, geçmişe sıfır girişi, plan değişikliği ve elle toplamı kaldırma', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 900 })
+  await mockApp(page, 'light', {
+    savings_goals: [{ ...tables.savings_goals[0], name: 'Altın hedefim', value_type: 'gram_altin', target_amount: 100, current_amount: 10 }],
+    gold_lots: ['2026-10-02', '2026-11-02'].map((date, i) => ({ ...base, id: `lot-${i}`, gold_type: 'gram', direction: 'buy', purchase_date: date, quantity: 5, unit_price: 5000, ayar: 24 })),
+  })
+  await page.clock.setFixedTime(new Date('2026-11-07T09:00:00Z'))
+  let plans: Record<string, unknown>[] = []
+  let entries: Record<string, unknown>[] = []
+  let rejectSave = false
+  for (const table of ['savings_goal_monthly_plans', 'savings_goal_monthly_entries']) {
+    await page.route(`**/rest/v1/${table}*`, async route => {
+      const request = route.request()
+      if (request.method() === 'POST') {
+        if (rejectSave) return route.fulfill({ status: 500, json: { message: 'Kayıt sırasında hata oluştu.' } })
+        const row = { ...base, ...request.postDataJSON(), id: 'monthly-row' }
+        if (table.endsWith('plans')) plans = [...plans.filter(p => p.effective_month !== row.effective_month), row]
+        else entries = [...entries.filter(e => e.month !== row.month), row]
+      }
+      if (request.method() === 'DELETE') {
+        const month = new URL(request.url()).searchParams.get('month')?.replace('eq.', '')
+        entries = entries.filter(e => e.month !== month)
+      }
+      return route.fulfill({ json: table.endsWith('plans') ? plans : entries })
+    })
+  }
+  await page.goto('/odemeler/hedefler')
+  await page.getByText('Aylık takip', { exact: true }).click()
+  await page.getByRole('button', { name: 'Aylık plan oluştur' }).click()
+  await page.getByLabel('Aylık miktar (gram)', { exact: true }).fill('5')
+  await page.getByLabel('Başlangıç ayı').fill('2026-09')
+  await page.getByRole('button', { name: 'Planı kaydet' }).click()
+  const tracking = page.getByLabel('Altın hedefim aylık takibi')
+  await expect(tracking.getByText('✓ Tamamlandı', { exact: true })).toHaveCount(2)
+  const september = tracking.getByRole('listitem').filter({ hasText: 'Eylül' })
+  await expect(september.getByText('— Kayıt yok', { exact: true })).toBeVisible()
+  await september.getByRole('button', { name: 'Gerçekleşen miktarı gir' }).click()
+  await page.getByLabel('Gerçekleşen toplam (gram)', { exact: true }).fill('0')
+  rejectSave = true
+  await page.getByRole('button', { name: 'Miktarı kaydet' }).click()
+  await expect(page.getByRole('dialog')).toBeVisible()
+  await expect(page.getByRole('dialog').getByRole('alert')).toBeVisible()
+  rejectSave = false
+  await page.getByRole('button', { name: 'Miktarı kaydet' }).click()
+  await expect(september.getByText('✕ Eksik kaldı', { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Aylık planı değiştir' }).click()
+  await page.getByLabel('Aylık miktar (gram)', { exact: true }).fill('10')
+  await page.getByRole('button', { name: 'Planı kaydet' }).click()
+  const november = tracking.getByRole('listitem').filter({ hasText: 'Kasım' })
+  await expect(november.getByText('◷ Bekliyor', { exact: true })).toBeVisible()
+  await expect(tracking.getByRole('listitem').filter({ hasText: 'Ekim' }).getByText('✓ Tamamlandı', { exact: true })).toBeVisible()
+  await november.getByRole('button', { name: 'Gerçekleşen miktarı gir' }).click()
+  await page.getByLabel('Gerçekleşen toplam (gram)', { exact: true }).fill('10')
+  await page.getByRole('button', { name: 'Miktarı kaydet' }).click()
+  await expect(november.getByText('✓ Tamamlandı', { exact: true })).toBeVisible()
+  await november.getByRole('button', { name: 'Elle girişi kaldır' }).click()
+  await expect(november.getByText('◷ Bekliyor', { exact: true })).toBeVisible()
+  await page.reload()
+  await page.getByText('Aylık takip', { exact: true }).click()
+  await expect(september.getByText('✕ Eksik kaldı', { exact: true })).toBeVisible()
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true)
+  await page.screenshot({ path: 'test-results/monthly-goal-320.png', fullPage: true })
+  await page.getByRole('button', { name: 'Tutarları gizle', exact: true }).click()
+  await expect(tracking.getByText('Her ay ••••', { exact: true })).toBeVisible()
+  await expect(tracking.getByText('5 gram / 5 gram', { exact: false })).toHaveCount(0)
+})
+
+for (const width of [320, 390, 768]) {
+  test(`grafik eksenleri gerçek yazı boyutunda çakışmaz: ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 })
+    await mockApp(page, width === 390 ? 'dark' : 'light', {
+      gold_lots: Array.from({ length: 30 }, (_, i) => ({ ...base, id: `lot-${i}`, purchase_date: `2026-09-${String(i + 1).padStart(2, '0')}`, quantity: 50, unit_price: 5000, direction: 'buy', gold_type: 'gram', ayar: 24 })),
+      net_worth_snapshots: Array.from({ length: 30 }, (_, i) => ({ ...base, id: `snap-${i}`, snapshot_date: `2026-09-${String(i + 1).padStart(2, '0')}`, net_worth: (i + 1) * 1000000, gold_try: 5000, usd_try: 40 })),
+    })
+    for (const path of ['/varliklar/altin', '/analiz']) {
+      await page.goto(path)
+      if (path.includes('altin')) await page.locator('summary').filter({ hasText: 'Birikim grafiği' }).click()
+      await expect(page.locator('[data-axis="x"]').first()).toBeVisible()
+      await page.evaluate(() => document.fonts.ready)
+      const problems = await page.locator('svg:has([data-axis="x"])').evaluateAll(svgs => svgs.flatMap(svg => {
+        const errors: string[] = []
+        const bounds = svg.getBoundingClientRect()
+        const horizontal = [...svg.querySelectorAll('[data-axis="x"] > text')].map(el => el.getBoundingClientRect())
+        const vertical = [...svg.querySelectorAll(':scope > text')].map(el => el.getBoundingClientRect()).sort((a, b) => a.top - b.top)
+        for (const [i, box] of horizontal.entries()) {
+          if (box.left < bounds.left || box.right > bounds.right + 1) errors.push('X etiketi kırpılıyor')
+          if (i && box.left < horizontal[i - 1].right + 4) errors.push('X etiketleri çakışıyor')
+        }
+        for (const [i, box] of vertical.entries()) {
+          if (box.left < bounds.left || box.top < bounds.top - 1) errors.push('Y etiketi kırpılıyor')
+          if (i && box.top < vertical[i - 1].bottom + 4) errors.push('Y etiketleri çakışıyor')
+        }
+        return errors
+      }))
+      expect(problems).toEqual([])
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true)
+      await page.screenshot({ path: `test-results/chart-${path.includes('altin') ? 'line' : 'bar'}-${width}.png`, fullPage: true })
+    }
+  })
+}
+
 for (const [width, theme] of [[320, 'light'], [390, 'dark'], [1280, 'light']] as const) {
   test(`19 ekran taşmadan açılır: ${width}px ${theme}`, async ({ page }) => {
     test.setTimeout(120000)

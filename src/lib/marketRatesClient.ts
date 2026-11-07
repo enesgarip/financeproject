@@ -18,6 +18,7 @@ import {
 
 const FEED_URL = 'https://finans.truncgil.com/v4/today.json'
 const STORAGE_KEY = 'fp.marketRates.v1'
+const RETRY_DELAY_MS = 60_000
 
 export type RatesSource = 'live' | 'cache' | null
 
@@ -37,6 +38,7 @@ let state: RatesState = {
 
 const listeners = new Set<() => void>()
 let inflight: Promise<MarketRatesSnapshot | null> | null = null
+let retryAfter = 0
 
 export function getRatesState(): RatesState {
   return state
@@ -128,6 +130,9 @@ async function fetchLiveSnapshot(): Promise<MarketRatesSnapshot | null> {
  */
 export async function refreshRates(force = false): Promise<MarketRatesSnapshot | null> {
   if (inflight && !force) return inflight
+  // Sayfa geçişi eski/eksik kurda aynı başarısız isteği tekrar tekrar açmasın.
+  // Elle Yenile bu beklemeyi aşar; cache'in tarihi ve hata durumu korunur.
+  if (!force && Date.now() < retryAfter) return state.snapshot
 
   setState({ loading: true, error: null })
 
@@ -135,12 +140,14 @@ export async function refreshRates(force = false): Promise<MarketRatesSnapshot |
     try {
       const snapshot = await fetchLiveSnapshot()
       if (snapshot) {
+        retryAfter = 0
         writeCachedSnapshot(snapshot)
         setState({ snapshot, source: 'live', loading: false, error: null })
         return snapshot
       }
       throw new Error('Kur verisi okunamadı.')
     } catch (error) {
+      retryAfter = Date.now() + RETRY_DELAY_MS
       const cached = state.snapshot ?? readCachedSnapshot()
       setState({
         snapshot: cached,
