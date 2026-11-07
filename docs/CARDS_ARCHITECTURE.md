@@ -1,5 +1,12 @@
 # Cards Architecture Note
 
+7 Kasım dövizli SMS: `components/finance/ForeignCardSmsPanel.tsx` liste
+başlığında kesin TL bekleyen döviz kayıtlarını gösterir; manuel harcama ve
+transfer görevinde yinelenmez. `app/useForeignCardSms.ts` Özet ile cache
+paylaşır, veri erişimi `data/repositories/foreignCardSmsRepo.ts`'dedir.
+Kesin TL tek transaction'da mevcut provizyon yazıcısına geçer; bankanın döviz
+tutarı TL alanına doldurulmaz. Kaynak: `docs/FOREIGN_CARD_SMS.md`.
+
 3 Kasım senaryo düzeltmeleri: hesap geçmişi 8'li sayfalarda en eski kayda kadar
 erişilebilir; sayfa değişimi listeyi görünür kılıp odağı taşır. Kart ve hesap
 hareket notları tüm türlerde satıra sarılır ve gizlilikte maskelenir. Tam geçmiş

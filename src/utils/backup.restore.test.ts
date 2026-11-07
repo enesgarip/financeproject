@@ -32,6 +32,14 @@ function backupFixture(): ParsedBackup {
 }
 
 describe('restoreBackup', () => {
+  it('dövizli SMS içeren yedekte atomik RPC yoksa reset öncesinde durur', async () => {
+    mocks.restoreViaTransactionalRpc.mockResolvedValue(null)
+    const backup = backupFixture()
+    backup.tables.foreign_card_sms = [{ id: 'pending', native_amount: 59.99, currency: 'USD' }]
+    await expect(restoreBackup(backup, 'new-user')).rejects.toThrow('Hiçbir veri değiştirilmedi')
+    expect(mocks.resetOwnFinanceData).not.toHaveBeenCalled()
+    expect(mocks.insertRows).not.toHaveBeenCalled()
+  })
   beforeEach(() => {
     vi.clearAllMocks()
     mocks.resetOwnFinanceData.mockResolvedValue(undefined)

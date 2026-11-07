@@ -136,6 +136,19 @@ export type SmsLog = {
   error_message: string | null
   raw_sms: string
 }
+export type ForeignCardSms = BaseRow & {
+  card_id: string
+  native_amount: number
+  currency: 'USD' | 'EUR' | 'GBP'
+  description: string
+  spent_at: string
+  category: string
+  source_event_id: string
+  raw_sms: string
+  message_hash: string
+  completed_amount: number | null
+  completed_at: string | null
+}
 
 export type ClientErrorSource = 'boundary' | 'error' | 'unhandledrejection' | 'resource' | 'security' | 'network'
 
@@ -773,6 +786,7 @@ export type Database = {
       cards: Table<Card, WithBaseInsert<Card>, WithBaseUpdate<Card>>
       card_aliases: Table<CardAlias, WithBaseInsert<CardAlias>, WithBaseUpdate<CardAlias>>
       card_expenses: Table<CardExpense, WithBaseInsert<CardExpense>, WithBaseUpdate<CardExpense>>
+      foreign_card_sms: Table<ForeignCardSms, WithBaseInsert<Omit<ForeignCardSms, 'message_hash'>>, WithBaseUpdate<Omit<ForeignCardSms, 'message_hash'>>>
       card_current_settlements: Table<
         CardCurrentSettlement,
         WithBaseInsert<CardCurrentSettlement>,
@@ -899,6 +913,14 @@ export type Database = {
     }
     Views: Record<string, never>
     Functions: {
+      queue_foreign_card_sms: {
+        Args: { p_user_id: string; p_card_id: string; p_native_amount: number; p_currency: string; p_description: string; p_spent_at: string; p_category: string; p_source_event_id: string; p_raw_sms: string }
+        Returns: string
+      }
+      complete_foreign_card_sms: {
+        Args: { p_id: string; p_amount_tl: number }
+        Returns: undefined
+      }
       reconcile_card_payment_expenses: {
         Args: Record<string, never>
         Returns: number

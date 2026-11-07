@@ -1,5 +1,12 @@
 # Transaction History Side Effects
 
+7 Kasım dövizli kart SMS'i: kuyruk kaydı `transaction_history` veya ledger
+yazmaz. Kesin TL tamamlanınca mevcut `add_card_expense` provizyon yolu,
+ödeme eşleme ve taksit niyeti kuralları çalışır; makbuz aynı transaction'dadır.
+Kaynak kimliği ve satır kilidi aynı TL ile retry'ı no-op yapar. Eski hata
+SMS'lerini kurtarmak yalnız inceleme kaydı üretir; günlük geçmişi değişmez.
+Sözleşme: `docs/FOREIGN_CARD_SMS.md`.
+
 Last reviewed: 2026-11-07
 
 7 Kasım 2026: Yapı Kredi B016 gelen FAST/HAVALE/EFT formatı `parse-sms`

@@ -244,6 +244,60 @@ for (const [width, theme] of [[320, 'light'], [390, 'dark'], [1280, 'light']] as
 
 const routes = ['/', '/kartlar', '/varliklar', '/varliklar/maas', '/varliklar/altin', '/varliklar/borsa', '/varliklar/araclar', '/borclar/krediler', '/borclar/kisiler', '/odemeler', '/odemeler/hedefler', '/odemeler/alsam-mi', '/odemeler/liste', '/odemeler/baglamlar', '/analiz', '/analiz/detay', '/analiz/asistan', '/veri-sagligi', '/veri-sagligi/islemler']
 
+test('dövizli SMS: eski hata mesajı kurtarılır, tutar gizlenir ve kayıp yanıtta aynı TL ile tek kez tamamlanır', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 900 })
+  const raw = 'Degerli Musterimiz, 07.11.2026 19:37:28 tarihinde 9032 ile biten kartinizla, STEAMGAMES.COM 4259522 firmasindan, 59,99 USD islem yapilmistir. Bilgi:08502220800 B002'
+  await mockApp(page, 'light', {
+    sms_log: [{ ...base, id: 'old-sms', raw_sms: raw, status: 'error', sms_type: 'unrecognized' }],
+    card_aliases: [{ ...base, id: 'alias', card_id: 'credit-1', last_four_digits: '9032', label: 'Deniz' }],
+  })
+  const queued: Record<string, unknown>[] = []
+  const requests: Record<string, unknown>[] = []
+  let completed: number | null = null
+  let writes = 0
+  await page.route('**/rest/v1/rpc/queue_foreign_card_sms', async route => {
+    const input = route.request().postDataJSON()
+    queued.push(input)
+    expect(input).toMatchObject({ p_native_amount: 59.99, p_currency: 'USD', p_card_id: 'credit-1' })
+    return route.fulfill({ json: 'pending-usd' })
+  })
+  await page.route('**/rest/v1/foreign_card_sms*', route => route.fulfill({ json: completed === null ? [{ ...base, id: 'pending-usd', card_id: 'credit-1', native_amount: 59.99, currency: 'USD', description: 'STEAMGAMES.COM 4259522', spent_at: '2026-11-07T19:37:28+03:00', completed_amount: null, completed_at: null }] : [] }))
+  await page.route('**/rest/v1/rpc/complete_foreign_card_sms', async route => {
+    const input = route.request().postDataJSON()
+    requests.push(input)
+    if (completed === null) { completed = input.p_amount_tl; writes++ }
+    if (requests.length === 1) return route.abort('connectionreset')
+    return route.fulfill({ json: null })
+  })
+  await page.goto('/')
+  await expect(page.getByText('1 dövizli işlemin kesin TL tutarı bekleniyor. Finansal toplamlar bu işlemleri içermiyor.', { exact: true })).toBeVisible()
+  await page.getByRole('link', { name: 'Dövizli işlemleri incele →', exact: true }).click()
+  const pending = page.locator('#doviz-sms')
+  await expect(pending.getByText('59,99 USD', { exact: true })).toBeVisible()
+  await pending.screenshot({ path: 'test-results/foreign-sms-pending-320.png' })
+  await expect(pending).toContainText('Bekleyen tutarlar borç ve harcama toplamlarına dahil değildir.')
+  await page.getByRole('button', { name: 'Tutarları gizle', exact: true }).click()
+  await expect(pending.getByText('59,99 USD', { exact: true })).toHaveCount(0)
+  await expect(pending.getByText('•••• USD', { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Tutarları göster', exact: true }).click()
+  await pending.getByRole('button', { name: 'Kesin TL tutarını gir' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Dövizli işlemi tamamla' })
+  await dialog.getByLabel('Kesin TL tutarı', { exact: true }).fill('2600,25')
+  await dialog.screenshot({ path: 'test-results/foreign-sms-complete-320.png' })
+  await dialog.getByRole('button', { name: 'Harcamayı kaydet', exact: true }).click()
+  await expect(dialog.getByRole('alert')).toBeVisible()
+  await expect(dialog.getByLabel('Kesin TL tutarı', { exact: true })).toHaveValue('2600,25')
+  await dialog.getByRole('button', { name: 'Harcamayı kaydet', exact: true }).click()
+  await expect(dialog).not.toBeVisible()
+  await expect(pending.getByText('Harcama kaydedildi.', { exact: true })).toBeVisible()
+  await expect(pending.getByText('TL karşılığı bekleyen dövizli SMS yok.', { exact: true })).toBeVisible()
+  expect(writes).toBe(1)
+  expect(requests).toEqual([{ p_id: 'pending-usd', p_amount_tl: 2600.25 }, { p_id: 'pending-usd', p_amount_tl: 2600.25 }])
+  expect(queued.length).toBeGreaterThan(0)
+  expect(queued.every(input => input.p_source_event_id === queued[0].p_source_event_id)).toBe(true)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true)
+})
+
 for (const [width, theme] of [[320, 'light'], [390, 'dark'], [1280, 'light']] as const) {
   test(`ara ve keşfet: arama, favoriler, klavye ve doğrudan bölüm açma ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 })

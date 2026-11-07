@@ -53,7 +53,7 @@ function toIsoDate(datePart: string, timePart: string): string {
 // -- Kart harcama SMS'leri --
 
 const DENIZBANK_CARD_REGEX =
-  /(\d{2}\.\d{2}\.\d{4})\s+(\d{2}:\d{2}:\d{2})\s+tarihinde\s+(\d{4})\s+ile\s+biten\s+kartinizla,\s+(.+?)\s+firmasindan,\s+([\d.,]+)\s+TL\s+islem/i
+  /(\d{2}\.\d{2}\.\d{4})\s+(\d{2}:\d{2}:\d{2})\s+tarihinde\s+(\d{4})\s+ile\s+biten\s+kartinizla,\s+(.+?)\s+firmasindan,\s+([\d.,]+)\s+(TL|TRY|USD|EUR|GBP)\s+islem/i
 
 const DENIZBANK_MASKED_CARD_REGEX =
   /\d{6}\*+(\d{4})\s+kartinizla\s+(\d{1,2}\.\d{1,2}\.\d{4})\s+(\d{2}:\d{2}:\d{2})\s+tarihinde\s+(.+?)\s+isyerinden\s+yapilan\s+([\d.,]+)\s+TRY\s+tutarindaki\s+islem/i
@@ -67,6 +67,7 @@ type ParsedCardSms = {
   lastFour: string
   merchant: string
   amount: number
+  currency?: 'USD' | 'EUR' | 'GBP'
 }
 
 function parseDenizbankCardSms(text: string): ParsedCardSms | null {
@@ -74,7 +75,7 @@ function parseDenizbankCardSms(text: string): ParsedCardSms | null {
   const m = normalized.match(DENIZBANK_CARD_REGEX)
   if (!m) return null
 
-  const [, datePart, timePart, lastFour, merchant, amountStr] = m
+  const [, datePart, timePart, lastFour, merchant, amountStr, currency] = m
   const amount = parseAmount(amountStr!)
   if (amount === null) return null
 
@@ -84,6 +85,7 @@ function parseDenizbankCardSms(text: string): ParsedCardSms | null {
     lastFour: lastFour!,
     merchant: merchant!.trim(),
     amount,
+    ...(currency && !['TL', 'TRY'].includes(currency.toUpperCase()) ? { currency: currency.toUpperCase() as ParsedCardSms['currency'] } : {}),
   }
 }
 
@@ -463,7 +465,7 @@ async function handleCardSms(
       smsType: 'card_expense',
       status: 'error',
       errorMessage: 'Kart sorgusu başarısız.',
-      amount: parsed.amount,
+      amount: parsed.currency ? null : parsed.amount,
       summary: parsed.merchant,
       rawSms,
     })
@@ -490,7 +492,7 @@ async function handleCardSms(
       smsType: 'card_expense',
       status: 'error',
       errorMessage: `Son 4 hanesi "${parsed.lastFour}" olan kart takma adı bulunamadı.`,
-      amount: parsed.amount,
+      amount: parsed.currency ? null : parsed.amount,
       summary: parsed.merchant,
       rawSms,
     })
@@ -508,7 +510,7 @@ async function handleCardSms(
       smsType: 'card_expense',
       status: 'error',
       errorMessage,
-      amount: parsed.amount,
+      amount: parsed.currency ? null : parsed.amount,
       summary: parsed.merchant,
       rawSms,
     })
@@ -520,6 +522,22 @@ async function handleCardSms(
   }
   const card = scopedAliases[0]!.cards
   const category = inferCategory(parsed.merchant)
+
+  if (parsed.currency) {
+    const pending = await fetch(`${supabaseUrl}/rest/v1/rpc/queue_foreign_card_sms`, {
+      method: 'POST', headers, body: JSON.stringify({
+        p_user_id: card.user_id, p_card_id: card.id, p_native_amount: parsed.amount,
+        p_currency: parsed.currency, p_description: parsed.merchant, p_spent_at: parsed.spentAt,
+        p_category: category, p_source_event_id: sourceEventId, p_raw_sms: rawSms,
+      }),
+    })
+    if (!pending.ok) {
+      await logSms(supabaseUrl, headers, { userId: card.user_id, smsType: 'card_expense', status: 'error', summary: parsed.merchant, errorMessage: 'Dövizli SMS bekleme listesine kaydedilemedi.', rawSms })
+      return jsonResponse({ error: 'Dövizli SMS bekleme listesine kaydedilemedi.' }, 502)
+    }
+    await logSms(supabaseUrl, headers, { userId: card.user_id, smsType: 'card_expense', status: 'success', summary: `${card.card_name} · ${parsed.merchant} · ${parsed.currency} · TL karşılığı bekleniyor`, rawSms })
+    return jsonResponse({ ok: true, type: 'foreign_card_pending', amount: parsed.amount, currency: parsed.currency, merchant: parsed.merchant, spentAt: parsed.spentAt })
+  }
 
   const rpcUrl = `${supabaseUrl}/rest/v1/rpc/record_sms_card_expense`
   const rpcRes = await fetch(rpcUrl, {
@@ -543,7 +561,7 @@ async function handleCardSms(
       smsType: 'card_expense',
       status: 'error',
       errorMessage: `Harcama kaydedilemedi: ${errBody}`,
-      amount: parsed.amount,
+      amount: parsed.currency ? null : parsed.amount,
       summary: `${card.card_name} · ${parsed.merchant}`,
       rawSms,
     })

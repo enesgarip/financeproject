@@ -1,5 +1,12 @@
 # Dashboard Architecture Note
 
+7 Kasım dövizli SMS: `components/dashboard/ForeignCardSmsNotice.tsx` Özet'te
+kesin TL bekleyen adet ve finansal toplamların kapsamını açıklar; Hesaplar'a
+doğrudan bağlantı verir. `app/useForeignCardSms.ts` aynı kullanıcı cache'ini
+Hesaplar ile paylaşır, eski sahipli hata SMS'lerini finansal etkisiz kuyruğa
+kurtarır. Durum doğrulanamadığında hata/eksik kapsam görünürdür. Harcanabilir
+ve borç formülleri döviz kuruyla tahmin edilmez. `docs/FOREIGN_CARD_SMS.md`.
+
 3 Kasım senaryo denetimi: `remainingOutflow` cari ayın kalan nakit yüküne gerçek
 eski açık kayıtları ve vadesiz kişisel borçları ekler. Aynı kayıt tek sayılır;
 geçmişte kaydı olmayan aylık ödemeler üretilmez. Gerçek kesim/vadesi bu ay olan

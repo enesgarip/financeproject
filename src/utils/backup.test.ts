@@ -177,6 +177,7 @@ describe('RESTORE_TABLE_ORDER FK safety', () => {
     expect(pos('asset_value_events')).toBeGreaterThan(pos('assets')) // asset_id
     expect(pos('stock_trades')).toBeGreaterThan(pos('assets')) // asset_id
     expect(pos('savings_goal_components')).toBeGreaterThan(pos('savings_goals'))
+    expect(pos('foreign_card_sms')).toBeGreaterThan(pos('card_expenses'))
     expect(pos('savings_goal_component_monthly_plans')).toBeGreaterThan(pos('savings_goal_components'))
     expect(pos('savings_goal_component_monthly_entries')).toBeGreaterThan(pos('savings_goal_components'))
   })

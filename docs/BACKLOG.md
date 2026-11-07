@@ -1,8 +1,24 @@
 # Priority Backlog
 
+## 2026-11-07 — Dövizli DenizBank SMS'ini kesin TL bekleyen kayda alma
+
+- [x] USD/EUR/GBP birimi frontend/edge aynasında korunur; döviz tutarı TL
+  yazıcısına ve panodan TL alanına aktarılmaz.
+- [x] Bekleme kuyruğu, Özet kapsam uyarısı ve Hesaplar'da kesin TL girişi.
+  Eski sahipli hata SMS'leri tekil kart eşleşmesiyle sayfalı taramadan kurtarılır.
+- [x] Aynı SMS/olay tekilliği; kesin TL ile atomik provizyon, aynı tutarlı retry
+  no-op. RLS/FK, JSON restore/rollback ve cascade reset tamamlandı.
+- [x] Ayrıştırıcı, edge, günlük sayfalama, belirsiz alias, gerçek Postgres ve
+  320px kayıp-yanıt/gizlilik senaryoları. Sözleşme: `docs/FOREIGN_CARD_SMS.md`.
+
+Doğrulama: `npm run verify` (187 dosya / 1922 test, prod audit 0 açık,
+1023,5/1030 kB JS gzip ve 6 edge tip kontrolü), temiz yerel DB reset + 58
+SQL testi ve 36 Playwright senaryosu geçti. Mobil bekleme/kesin TL ekranları
+incelendi. Yayın için yeni migration ve parse-sms edge güncellemesi gerekir.
+
 ## 2026-11-07 — Özellikleri bulma ve keşfetme
 
-- [x] Her sayfadan metinli Ara ve keşfet; açıklamalı, gruplu 38 özellik,
+- [x] Her sayfadan metinli Ara ve keşfet; açıklamalı, gruplu 39 özellik,
   Türkçe karakterlere toleranslı amaç/eş anlamlı araması ve boş sonuç durumu.
 - [x] Kullanıcıya özel cihaz favorileri; kalıcılık hatasında oturum içi
   çalışma ve açık bilgilendirme. Dizin ilk açılışta yüklenir.

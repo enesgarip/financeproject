@@ -27,6 +27,7 @@ import { CardInstallmentCalendarPanel } from '../components/finance/CardInstallm
 import { CardInstallmentIntentPanel } from '../components/finance/CardInstallmentIntentPanel'
 import { CardInstallmentExpensesPanel } from '../components/finance/CardInstallmentExpensesPanel'
 import { RecentCardExpensesPanel } from '../components/finance/RecentCardExpensesPanel'
+import { ForeignCardSmsPanel } from '../components/finance/ForeignCardSmsPanel'
 import type { Card, CardStatementArchive } from '../types/database'
 import { buildStatementPaidMap, statementRemainingAmount } from '../utils/cardStatementPayments'
 import { dateInputValue, formatDate } from '../utils/date'
@@ -305,6 +306,7 @@ export function CardsPage() {
           return (
             <div className="flex flex-col gap-3">
               {postImportBanner ? <div className="flex flex-wrap items-center gap-3 border-b border-line py-3 text-xs text-info"><ShieldCheck size={18} /><p className="flex-1">İçe aktarma tamamlandı.</p><Link to="/veri-sagligi" className="min-h-11 py-3 font-semibold" onClick={() => setPostImportBanner(false)}>Veri tutarlılığını kontrol et</Link><button type="button" className="min-h-11 px-2" onClick={() => setPostImportBanner(false)}>Kapat</button></div> : null}
+              {!loading && !selectingTransfer && panel !== 'manuel' ? <ForeignCardSmsPanel cards={cardRows} onCompleted={async () => { await refreshCardsAndProvisions(reload); setExpensesVersion(version => version + 1) }} /> : null}
               {selectedCardId ? <div className="flex items-center gap-3 border-b border-line pb-3"><button type="button" onClick={backToList} className="flex min-h-11 items-center gap-1 text-sm font-semibold text-primary"><ArrowLeft size={17} /> Listeye dön</button><h2 className="ml-auto text-sm font-semibold text-ink">{selected?.card_type === 'banka_karti' ? 'Hesap ayrıntıları' : 'Kart ayrıntıları'}</h2></div> : <CardSectionNav section={section} onSelect={handleSectionChange} counts={counts} />}
               {!loading && selectedCardId && !selected ? <p role="alert" className="py-5 text-sm text-ink-muted">Bu kayıt bulunamadı. Silinmiş olabilir; listeye dönerek başka bir kayıt seçebilirsin.</p> : null}
               {selectingTransfer ? <div className="border-b border-line py-3"><h2 className="text-base font-semibold">Transfer için kaynak hesap seç</h2><p className="mt-1 text-sm text-ink-muted">Paranın çıkacağı hesabı seç; tutarı ve hedef hesabı sonraki adımda belirle.</p><button type="button" className="min-h-11 text-sm text-primary" onClick={() => { const next = new URLSearchParams(taskParams); next.delete('task'); setTaskParams(next, { replace: true }) }}>Vazgeç</button></div> : null}

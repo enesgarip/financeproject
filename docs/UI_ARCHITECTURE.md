@@ -1,5 +1,11 @@
 # UI Architecture
 
+7 Kasım dövizli SMS: Özet bekleyen adet ve toplam kapsamını, Hesaplar
+“TL karşılığı bekleyen işlemler” bölümünde satıcı/tarih/döviz birimini gösterir.
+Döviz tutarı gizlilik maskesine uyar. Kesin TL formu yanıt kaybında tutarı
+korur; başarılı kayıt sonrası yenileme hatası ayrı açıklanır. Ara ve keşfet
+“Dövizli SMS işlemleri” bağlantısıyla bölümü açar. `docs/FOREIGN_CARD_SMS.md`.
+
 7 Kasım özellik keşfi: her sayfa başlığında metinli **Ara ve keşfet** düğmesi
 vardır. Açılan panel amaç açıklaması, menü yolu ve yıldızlı favorilerle tüm
 özellikleri gösterir; Türkçe karakter farklarına toleranslı arama yapar.

@@ -11,6 +11,8 @@ export type ParsedCardSms = {
   lastFour: string
   merchant: string
   amount: number
+  /** Yoksa TL; döviz tutarı TL harcama yazıcısına doğrudan verilmez. */
+  currency?: 'USD' | 'EUR' | 'GBP'
 }
 
 export type ParsedAccountSms = {
@@ -54,7 +56,7 @@ function toIsoDate(datePart: string, timePart: string): string {
 // --- Regex'ler --------------------------------------------------------------
 
 const DENIZBANK_CARD_REGEX =
-  /(\d{2}\.\d{2}\.\d{4})\s+(\d{2}:\d{2}:\d{2})\s+tarihinde\s+(\d{4})\s+ile\s+biten\s+kartinizla,\s+(.+?)\s+firmasindan,\s+([\d.,]+)\s+TL\s+islem/i
+  /(\d{2}\.\d{2}\.\d{4})\s+(\d{2}:\d{2}:\d{2})\s+tarihinde\s+(\d{4})\s+ile\s+biten\s+kartinizla,\s+(.+?)\s+firmasindan,\s+([\d.,]+)\s+(TL|TRY|USD|EUR|GBP)\s+islem/i
 
 const YAPIKREDI_CARD_REGEX =
   /(\d{4})\s+ile\s+biten\s+.+?\s+kartinizla\s+(\d{2}\.\d{2}\.\d{4})\s+saat\s+(\d{2}:\d{2})'de,\s*(.+?)\s+is\s+yerinden\s+([\d.,]+)\s+TL\s+islem/i
@@ -78,7 +80,7 @@ export function parseDenizbankCardSms(text: string): ParsedCardSms | null {
   const m = normalized.match(DENIZBANK_CARD_REGEX)
   if (!m) return null
 
-  const [, datePart, timePart, lastFour, merchant, amountStr] = m
+  const [, datePart, timePart, lastFour, merchant, amountStr, currency] = m
   const amount = parseAmount(amountStr!)
   if (amount === null) return null
 
@@ -88,6 +90,7 @@ export function parseDenizbankCardSms(text: string): ParsedCardSms | null {
     lastFour: lastFour!,
     merchant: merchant!.trim(),
     amount,
+    ...(currency && !['TL', 'TRY'].includes(currency.toUpperCase()) ? { currency: currency.toUpperCase() as ParsedCardSms['currency'] } : {}),
   }
 }
 

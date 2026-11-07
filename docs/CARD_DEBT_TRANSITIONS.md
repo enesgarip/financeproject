@@ -1,5 +1,13 @@
 # Card Debt Transitions
 
+7 Kasım dövizli SMS: `foreign_card_sms` kesin TL beklerken borç/kova/ledger
+yazmaz. Tamamlama RPC'si kullanıcının kesin TL tutarıyla mevcut
+`add_card_expense` provizyonunu yazar; otomatik ödeme eşleme ve taksit niyeti
+mevcut SMS sırasındadır. Satır kilidi + kaynak olay kimliği ve tamamlama makbuzu
+retry'da ikinci borç üretmez; farklı TL ile tekrar reddedilir. Özet/Hesaplar
+bekleyenlerin toplam dışında olduğunu açıklar. Sözleşme/kanıt:
+`docs/FOREIGN_CARD_SMS.md`, `supabase/tests/foreign_card_sms.sql`.
+
 4 Kasım otomasyon düzeltmeleri: `docs/AUTOMATION_FIXES_2026-11-04.md`.
 Kart geçiş/ledger kuralı değişmez; bakım sırası stale provizyon → taksit →
 kesimdir. Alt aşama istisnaları artık hata sayacında ve son bakım/son başarı
