@@ -853,7 +853,7 @@ export function SavingsGoalsPanel({
                     <div className="min-w-0 flex-1">
                       <div className="flex items-start justify-between gap-1">
                         <div className="min-w-0">
-                          <p className="truncate text-sm font-bold text-ink">{goal.name}</p>
+                          <p className="break-words text-sm font-bold text-ink">{goal.name}</p>
                           <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
                             {isCompleted ? (
                               <Badge variant="default" className="bg-success/15 text-success text-[10px] px-1.5 py-0">Tamamlandı</Badge>
@@ -897,7 +897,7 @@ export function SavingsGoalsPanel({
                           </button>
                         </div>
                       </div>
-                      <p className="mt-1.5 text-xs font-semibold tabular-nums text-ink-muted">{hidden ? '••••' : formatSavingsGoalProgress(goal, goalComponents)}</p>
+                      <p className="mt-1.5 text-xs font-semibold tabular-nums text-ink-muted">Birikim / hedef: {hidden ? '••••' : formatSavingsGoalProgress(goal, goalComponents)}</p>
                       {missingSourceCount > 0 ? (
                         <p className="mt-0.5 text-[11px] font-medium text-warning">
                           {missingSourceCount} takip kaynağı bulunamadı; tutar eksik olabilir.
@@ -908,58 +908,6 @@ export function SavingsGoalsPanel({
                           Hedef tutarı güncellenemedi (kur/gider verisi yok); en son bilinen değer gösteriliyor.
                         </p>
                       ) : null}
-                      {(() => {
-                        const plan = buildGoalBucketPlan(goal, buckets ? bucketForGoal(goal.id, buckets) : null, sources)
-                        if (!plan) return null
-                        const busy = contributingGoalId === goal.id
-                        return (
-                          <div className="mt-1.5 rounded-lg bg-raised px-2 py-1.5 ring-1 ring-line-strong">
-                            <p className="text-[11px] text-ink-muted">
-                              Kasada ayrılan:{' '}
-                              <span className="font-semibold tabular-nums text-ink">{formatAmount(plan.reserved)}</span>
-                              {plan.contributedThisMonth ? <span className="text-success"> · bu ay ayrıldı</span> : null}
-                            </p>
-                            {plan.monthlyNeeded > 0 ? (
-                              <div className="mt-1 flex items-center gap-2">
-                                <span className="min-w-0 flex-1 text-[11px] text-ink-muted">
-                                  {plan.contributedThisMonth ? 'Bu ayın planı' : 'Bu ay ayrılacak'}:{' '}
-                                  <span className="font-semibold tabular-nums text-ink">{formatAmount(plan.monthlyNeeded)}</span>
-                                </span>
-                                <button
-                                  type="button"
-                                  disabled={busy}
-                                  onClick={() => void contributeToGoal(goal.id, plan.bucket.id, plan.monthlyNeeded, { again: plan.contributedThisMonth, goalName: goal.name })}
-                                  className="tap-target shrink-0 rounded-md px-2 py-1 text-[11px] font-bold text-primary hover:bg-primary/10 disabled:opacity-50"
-                                >
-                                  {busy ? 'Ayrılıyor…' : plan.contributedThisMonth ? 'Tekrar ayır' : 'Ayır'}
-                                </button>
-                              </div>
-                            ) : null}
-                            {/* Kova hedefin KAYNAĞI değilse ayrılan nakit ilerlemeye
-                                yansımaz; "ayırdım ama yüzde artmadı" şaşkınlığını
-                                yaşatmadan önce söyle. */}
-                            {!plan.fundsProgress ? (
-                              <p className="mt-0.5 text-[11px] text-ink-faint">
-                                Bu para hedefe ayrılmış nakittir; ilerleme takip kaynağından hesaplanır.{' '}
-                                {/* Hedefin başka kaynağı yoksa ayırdığın para ilerlemeye
-                                    HİÇ yansımaz; ayrılan payı kaynak yapmak tek tık uzakta
-                                    olsun. Başka kaynağı varsa (ör. hisse portföyü) bu
-                                    gerçekten ayrı bir kap — önerme. */}
-                                {!sources.some((source) => source.goal_id === goal.id) ? (
-                                  <button
-                                    type="button"
-                                    disabled={linkingGoalId === goal.id}
-                                    onClick={() => void applySuggestedSource(goal, `bucket:${plan.bucket.id}`)}
-                                    className="tap-target ml-1 font-bold text-primary hover:underline disabled:opacity-50"
-                                  >
-                                    Bu ayrılan payı kaynak yap
-                                  </button>
-                                ) : null}
-                              </p>
-                            ) : null}
-                          </div>
-                        )
-                      })()}
                       {(() => {
                         const suggestion = suggestionByGoal.get(goal.id)
                         if (!suggestion) return null
@@ -1069,7 +1017,58 @@ export function SavingsGoalsPanel({
                   {goal.note ? (
                     <p className="mt-2 truncate text-[11px] italic text-ink-muted">{goal.note}</p>
                   ) : null}
-                  <GoalMonthlyChecklist goal={goal} components={goalComponents} />
+                  <GoalMonthlyChecklist goal={goal} components={goalComponents} contribution={(() => {
+                        const plan = buildGoalBucketPlan(goal, buckets ? bucketForGoal(goal.id, buckets) : null, sources)
+                        if (!plan) return null
+                        const busy = contributingGoalId === goal.id
+                        return (
+                          <div className="mt-1.5 rounded-lg bg-raised px-2 py-1.5 ring-1 ring-line-strong">
+                            <p className="text-[11px] text-ink-muted">
+                              Bu hedefe ayrılan:{' '}
+                              <span className="font-semibold tabular-nums text-ink">{formatAmount(plan.reserved)}</span>
+                              {plan.contributedThisMonth ? <span className="text-success"> · bu ay ayrıldı</span> : null}
+                            </p>
+                            {plan.monthlyNeeded > 0 ? (
+                              <div className="mt-1 flex items-center gap-2">
+                                <span className="min-w-0 flex-1 text-[11px] text-ink-muted">
+                                  {plan.contributedThisMonth ? 'Tarihe göre önerilen' : 'Tarihe göre ayrılacak'}:{' '}
+                                  <span className="font-semibold tabular-nums text-ink">{formatAmount(plan.monthlyNeeded)}</span>
+                                </span>
+                                <button
+                                  type="button"
+                                  disabled={busy}
+                                  onClick={() => void contributeToGoal(goal.id, plan.bucket.id, plan.monthlyNeeded, { again: plan.contributedThisMonth, goalName: goal.name })}
+                                  className="tap-target shrink-0 rounded-md px-2 py-1 text-[11px] font-bold text-primary hover:bg-primary/10 disabled:opacity-50"
+                                >
+                                  {busy ? 'Ayrılıyor…' : plan.contributedThisMonth ? 'Tekrar ayır' : 'Ayır'}
+                                </button>
+                              </div>
+                            ) : null}
+                            {/* Kova hedefin KAYNAĞI değilse ayrılan nakit ilerlemeye
+                                yansımaz; "ayırdım ama yüzde artmadı" şaşkınlığını
+                                yaşatmadan önce söyle. */}
+                            {!plan.fundsProgress ? (
+                              <p className="mt-0.5 text-[11px] text-ink-faint">
+                                Bu para hedefe ayrılmış nakittir; ilerleme takip kaynağından hesaplanır.{' '}
+                                {/* Hedefin başka kaynağı yoksa ayırdığın para ilerlemeye
+                                    HİÇ yansımaz; ayrılan payı kaynak yapmak tek tık uzakta
+                                    olsun. Başka kaynağı varsa (ör. hisse portföyü) bu
+                                    gerçekten ayrı bir kap — önerme. */}
+                                {!sources.some((source) => source.goal_id === goal.id) ? (
+                                  <button
+                                    type="button"
+                                    disabled={linkingGoalId === goal.id}
+                                    onClick={() => void applySuggestedSource(goal, `bucket:${plan.bucket.id}`)}
+                                    className="tap-target ml-1 font-bold text-primary hover:underline disabled:opacity-50"
+                                  >
+                                    Bu ayrılan payı kaynak yap
+                                  </button>
+                                ) : null}
+                              </p>
+                            ) : null}
+                          </div>
+                        )
+                      })()} />
                 </CardContent>
               </Card>
             )

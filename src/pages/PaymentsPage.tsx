@@ -1,4 +1,5 @@
 import { useSearchParams } from 'react-router'
+import { FeatureDetails } from '../components/FeatureSection'
 import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
 import { CalendarDays, CreditCard, Receipt } from 'lucide-react'
 import { CrudPage, type FormField } from '../components/CrudPage'
@@ -30,7 +31,9 @@ import { matchedPaymentsInMonth, paidPaymentIdsInMonth } from '../utils/paymentH
 import { buildPaymentObligation, type FinanceObligation, type FinanceObligationsInput } from '../utils/obligations'
 import { Button } from '../components/ui/button'
 import { useFinancePaymentDrawer } from '../hooks/useFinancePaymentDrawer'
-import { useCallback, useMemo, useState } from 'react'
+import { lazy, Suspense, useCallback, useMemo, useState } from 'react'
+
+const RegularExpensesPanel = lazy(() => import('./AnalysisPage.panels').then(module => ({ default: module.RegularExpensesPanel })))
 
 const paymentCategoryOptions: { label: PaymentCategory; value: PaymentCategory }[] = [
   { label: 'Fatura', value: 'Fatura' },
@@ -406,6 +409,9 @@ export function PaymentsPage() {
                 onMonthChange={setMatchMonth}
               /></div>
               {showPlans && !loading ? <PaymentsOverview rows={payments} transactionHistory={transactionHistory} /> : null}
+              {snapshotQuery.data && !planningError ? <FeatureDetails id="abonelikler" summary="Abonelik adayları ve fiyat değişimleri" summaryClassName="min-h-11 cursor-pointer py-3 text-sm font-semibold text-primary">
+                <Suspense fallback={<p role="status">Düzenli giderler yükleniyor…</p>}><RegularExpensesPanel data={snapshotQuery.data} /></Suspense>
+              </FeatureDetails> : null}
             </div>
           )
         }}

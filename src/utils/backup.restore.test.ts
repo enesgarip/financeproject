@@ -32,6 +32,14 @@ function backupFixture(): ParsedBackup {
 }
 
 describe('restoreBackup', () => {
+  it.each(['account_income_labels', 'car_service_completions'] as const)('%s içeren yedek atomik RPC olmadan reset başlatmaz', async table => {
+    mocks.restoreViaTransactionalRpc.mockResolvedValue(null)
+    const backup = backupFixture()
+    backup.tables[table] = [{ id: 'workflow-record' }]
+    await expect(restoreBackup(backup, 'new-user')).rejects.toThrow('Hiçbir veri değiştirilmedi')
+    expect(mocks.resetOwnFinanceData).not.toHaveBeenCalled()
+    expect(mocks.insertRows).not.toHaveBeenCalled()
+  })
   it('dövizli SMS içeren yedekte atomik RPC yoksa reset öncesinde durur', async () => {
     mocks.restoreViaTransactionalRpc.mockResolvedValue(null)
     const backup = backupFixture()

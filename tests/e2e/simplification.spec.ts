@@ -54,6 +54,272 @@ async function mockApp(page: Page, theme: string, overrides: typeof tables = {})
 
 const sampleDebt = { ...base, id: 'debt-1', person_name: 'Örnek borçlu', direction: 'borç_aldım', value_type: 'TRY', currency: null, amount: 1000, estimated_value_try: 1000, auto_valued: false, due_date: null, status: 'açık' }
 
+test('bağlı harcama: grup önceden seçilir, araçla aynı harcama yazılır ve mevcut harekete geçilir', async ({ page }) => {
+  const errors: string[] = []
+  page.on('pageerror', error => errors.push(error.message))
+  await page.setViewportSize({ width: 320, height: 900 })
+  await mockApp(page, 'light')
+  const expenseWrites: Record<string, unknown>[] = []
+  const tags: Record<string, unknown>[] = []
+  await page.route('**/rest/v1/rpc/add_card_expense', route => {
+    expenseWrites.push(route.request().postDataJSON())
+    return route.fulfill({ json: { id: 'linked-expense', card_id: 'credit-1', amount: 250 } })
+  })
+  await page.route('**/rest/v1/card_expenses*', route => {
+    if (route.request().method() === 'PATCH') tags.push(route.request().postDataJSON())
+    return route.fulfill({ json: [] })
+  })
+  await page.goto('/odemeler/baglamlar')
+  await page.getByRole('link', { name: 'Harcama kaydet →', exact: true }).click()
+  await expect(page.getByRole('combobox', { name: 'Gider grubu', exact: true })).toHaveValue('context-1')
+  await page.getByRole('combobox', { name: 'Araç', exact: true }).selectOption('car-1')
+  await page.getByRole('textbox', { name: 'Tutar (TL)', exact: true }).fill('250')
+  await page.getByRole('textbox', { name: 'Açıklama', exact: true }).fill('Veteriner ulaşımı')
+  expect(await page.locator('#hizli-harcama form').evaluate(form => Array.from(form.querySelectorAll<HTMLInputElement>('input,select')).filter(field => !field.validity.valid).map(field => ({ name: field.name, type: field.type, value: field.value, error: field.validationMessage })))).toEqual([])
+  await page.getByRole('button', { name: 'Harcamayı kaydet', exact: true }).click()
+  await expect(page.getByText('Harcama kaydedildi.', { exact: true })).toBeVisible()
+  expect(expenseWrites).toHaveLength(1)
+  expect(tags).toEqual([{ car_id: 'car-1' }, { context_id: 'context-1' }])
+  await expect(page.getByRole('combobox', { name: 'Gider grubu', exact: true })).toHaveValue('context-1')
+  await page.getByRole('link', { name: /SMS veya ekstrede zaten varsa/ }).click()
+  await expect(page).toHaveURL(/\/odemeler\/baglamlar\?context=context-1#kart-iliskilendir$/)
+  await expect(page.locator('#kart-iliskilendir details')).toHaveAttribute('open', '')
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true)
+  expect(errors).toEqual([])
+})
+
+test('bağlı gelir: kayıp yanıt aynı hareketle doğrulanır ve alacak eşlemesi tekrar para yazmaz', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 900 })
+  const movement = { ...base, id: 'income-1', occurred_at: now, type: 'transfer', source_table: 'cards', source_id: 'bank-1', source_event_id: null, title: 'Örnek hesap para girişi', amount: 2000 }
+  await mockApp(page, 'dark', { cards: [bank], transaction_history: [movement], debts: [{ ...sampleDebt, direction: 'borç_verdim', person_name: 'Örnek alacaklı' }] })
+  let labels: Record<string, unknown>[] = []
+  const requests: Record<string, unknown>[] = []
+  const balanceWrites: string[] = []
+  page.on('request', request => { if (/record_manual_account_movement|settle_personal_debt|post_account_balance/.test(request.url())) balanceWrites.push(request.url()) })
+  await page.route('**/rest/v1/account_income_labels*', route => route.fulfill({ json: labels }))
+  await page.route('**/rest/v1/rpc/classify_account_income', route => {
+    requests.push(route.request().postDataJSON())
+    labels = [{ ...base, id: 'label-1', movement_id: 'income-1', kind: 'receivable', debt_id: 'debt-1', debt_amount: 400 }]
+    return requests.length === 1 ? route.abort('connectionreset') : route.fulfill({ json: labels[0] })
+  })
+  await page.goto('/kartlar?section=hesaplar&card=bank-1')
+  await page.getByText('Gelen para neydi?', { exact: true }).click()
+  await page.getByRole('button', { name: 'Bu para neydi?', exact: true }).click()
+  const modal = page.getByRole('dialog', { name: 'Gelen parayı sınıflandır' })
+  await modal.getByRole('combobox', { name: 'Para girişinin türü', exact: true }).selectOption('receivable')
+  await modal.getByRole('combobox', { name: 'Açık TL alacağı', exact: true }).selectOption('debt-1')
+  await modal.getByRole('textbox', { name: 'Bu alacağa sayılacak tutar (TL)', exact: true }).fill('400')
+  await page.screenshot({ path: 'test-results/linked-income-form-320.png' })
+  await modal.getByRole('button', { name: 'Sınıflandırmayı kaydet', exact: true }).click()
+  await expect(modal.getByRole('alert')).toBeVisible()
+  await modal.getByRole('button', { name: 'Sınıflandırmayı kaydet', exact: true }).click()
+  await expect(modal).toHaveCount(0)
+  expect(requests).toHaveLength(2)
+  expect(requests[1]).toEqual(requests[0])
+  expect(requests[0]).toMatchObject({ p_movement_id: 'income-1', p_kind: 'receivable', p_debt_id: 'debt-1', p_debt_amount: 400 })
+  expect(balanceWrites).toEqual([])
+  await expect(page.getByText(/Alacak tahsilatı · 400,00/)).toBeVisible()
+  await page.reload()
+  await page.getByText('Gelen para neydi?', { exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Bu para neydi?', exact: true })).toHaveCount(0)
+  await expect(page.getByText(/Alacak tahsilatı · 400,00/)).toBeVisible()
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true)
+  await page.screenshot({ path: 'test-results/linked-income-320.png', fullPage: true })
+})
+
+test('bağlı bakım: gider ve sonraki plan kayıp yanıttan sonra yenilemede aynı işlemle doğrulanır', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 900 })
+  await mockApp(page, 'light')
+  let reminders = [{ ...base, id: 'reminder-1', car_id: 'car-1', title: 'Yağ değişimi', kind: 'bakim', due_date: '2026-10-25', due_odometer_km: 50000, repeat_months: 6, repeat_km: 10000 }]
+  let completions: Record<string, unknown>[] = []
+  const requests: Record<string, unknown>[] = []
+  await page.route('**/rest/v1/car_reminders*', route => route.fulfill({ json: reminders }))
+  await page.route('**/rest/v1/car_service_completions*', route => route.fulfill({ json: completions }))
+  await page.route('**/rest/v1/rpc/complete_car_service', route => {
+    const body = route.request().postDataJSON()
+    requests.push(body)
+    if (!completions.length) {
+      completions = [{ ...base, id: body.p_request_id, car_id: 'car-1', reminder_id: 'reminder-1', title: 'Yağ değişimi', completed_on: '2026-10-26', odometer_km: 51500, card_expense_id: null, car_expense_id: 'reporting-expense-1', request: body.p_input }]
+      reminders = reminders.map(reminder => ({ ...reminder, due_date: '2027-04-26', due_odometer_km: 61500, updated_at: '2026-10-26T09:01:00Z' }))
+    }
+    return requests.length === 1 ? route.abort('connectionreset') : route.fulfill({ json: completions[0] })
+  })
+  page.on('dialog', dialog => dialog.accept())
+  await page.goto('/varliklar/araclar')
+  await page.getByRole('button', { name: 'Tamamlandı', exact: true }).click()
+  let modal = page.getByRole('dialog', { name: 'Bakımı veya yenilemeyi tamamla' })
+  await modal.getByRole('textbox', { name: 'İşlem kilometresi (opsiyonel)', exact: true }).fill('51500')
+  await expect(modal.getByRole('textbox', { name: 'Sonraki kilometre (opsiyonel)', exact: true })).toHaveValue('61500')
+  await modal.getByRole('combobox', { name: 'Bu işin gideri', exact: true }).selectOption('manual')
+  await modal.getByRole('textbox', { name: 'Gider tutarı (TL)', exact: true }).fill('750')
+  await page.screenshot({ path: 'test-results/linked-service-form-320.png' })
+  await modal.getByRole('button', { name: 'İşi tamamla', exact: true }).click()
+  await expect(modal.getByRole('alert')).toBeVisible()
+  await expect(modal.getByRole('textbox', { name: 'Gider tutarı (TL)', exact: true })).toBeDisabled()
+  await page.reload()
+  await page.getByRole('button', { name: 'Tamamlandı', exact: true }).click()
+  modal = page.getByRole('dialog', { name: 'Bakımı veya yenilemeyi tamamla' })
+  await expect(modal.getByRole('textbox', { name: 'Gider tutarı (TL)', exact: true })).toHaveValue('750')
+  await modal.getByRole('button', { name: 'Sonucu doğrula', exact: true }).click()
+  await expect(modal).toHaveCount(0)
+  expect(requests).toHaveLength(2)
+  expect(requests[1]).toEqual(requests[0])
+  expect(requests[0].p_input).toMatchObject({ expenseMode: 'manual', amount: 750, nextDate: '2027-04-26', nextKm: 61500 })
+  await page.getByText('Tamamlanan işler', { exact: true }).click()
+  await expect(page.getByText('Son 50 tamamlanan iş', { exact: true })).toBeVisible()
+  expect(completions).toHaveLength(1)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true)
+  await page.screenshot({ path: 'test-results/linked-service-320.png', fullPage: true })
+})
+
+test('bağlı ay kapanışı: ilgili işe geçilir, dönüşte kontrol açılır ve rapora gidilir', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 900 })
+  await mockApp(page, 'light')
+  await page.goto('/analiz#ay-kapanisi')
+  const close = page.locator('#ay-kapanisi')
+  const check = close.getByText('Planlı ödemeler', { exact: true }).locator('..')
+  await check.getByRole('link', { name: 'Kontrolü tamamla →', exact: true }).click()
+  await expect(page).toHaveURL(/\/odemeler\?returnTo=/)
+  await page.getByRole('link', { name: '← Ay kapanış kontrolüne dön', exact: true }).click()
+  await expect(close.locator('details')).toHaveAttribute('open', '')
+  await close.getByRole('link', { name: 'Aylık raporu aç →', exact: true }).click()
+  await expect(page).toHaveURL(/\/analiz#aylik-rapor$/)
+  await expect(page.locator('#aylik-rapor')).toBeFocused()
+})
+
+test('bağlı mevcut hareket: provizyon gruba tek etiketle bağlanır, yeni harcama veya gider oluşmaz', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 900 })
+  const expense = { ...base, id: 'existing-provision', card_id: 'credit-1', description: 'Veteriner', amount: 250, spent_at: '2026-10-26', category: 'Sağlık', status: 'provision', installment_count: 1, context_id: null, car_id: null }
+  await mockApp(page, 'light', { card_expenses: [expense] })
+  const writes: { table: string; body: unknown }[] = []
+  await page.route('**/rest/v1/card_expenses*', route => {
+    if (route.request().method() === 'PATCH') writes.push({ table: 'card_expenses', body: route.request().postDataJSON() })
+    return route.fulfill({ json: [expense] })
+  })
+  page.on('request', request => { if (request.method() === 'POST' && /add_card_expense|car_expenses|context_expenses/.test(request.url())) writes.push({ table: 'unexpected', body: request.postDataJSON() }) })
+  await page.goto('/odemeler/baglamlar?context=context-1#kart-iliskilendir')
+  await page.getByRole('button', { name: 'Örnek grup grubuna ekle', exact: true }).click()
+  await expect(page.getByRole('combobox', { name: 'Veteriner için gider grubu', exact: true })).toHaveValue('context-1')
+  expect(writes).toEqual([{ table: 'card_expenses', body: { context_id: 'context-1' } }])
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true)
+})
+
+test('birleşik alışveriş: isteğe bağlı test, aynı ürünle karar, bekletme ve alındı kaydı', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 900 })
+  await mockApp(page, 'light')
+  let items = tables.wishlist_items.map(item => ({ ...item }))
+  const writes: { method: string; body: Record<string, unknown> }[] = []
+  await page.route('**/rest/v1/wishlist_items*', async route => {
+    const request = route.request()
+    const method = request.method()
+    if (method === 'POST') {
+      const body = request.postDataJSON()
+      writes.push({ method, body })
+      const item = { ...base, ...body, id: 'wish-new', purchased_at: null }
+      items.push(item)
+      return route.fulfill({ json: item })
+    }
+    if (method === 'PATCH') {
+      const body = request.postDataJSON()
+      writes.push({ method, body })
+      const id = new URL(request.url()).searchParams.get('id')?.replace('eq.', '')
+      items = items.map(item => item.id === id ? { ...item, ...body } : item)
+      return route.fulfill({ json: items.find(item => item.id === id) })
+    }
+    return route.fulfill({ json: items })
+  })
+  await page.goto('/odemeler/liste')
+  await page.getByLabel('Alınacak ürün', { exact: true }).fill('Yeni kulaklık')
+  await page.getByRole('button', { name: 'Listeye ekle', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Yeni kulaklık', exact: true })).toBeVisible()
+  expect(writes).toHaveLength(1)
+  await page.getByRole('button', { name: 'Bekleyen ürün', exact: true }).click()
+  let dialog = page.getByRole('dialog', { name: 'Alışverişi değerlendir' })
+  await expect(dialog.getByLabel('Alışveriş tutarı')).toHaveValue('500')
+  await expect(dialog.getByText('Bekleyen ürün', { exact: true })).toBeVisible()
+  await dialog.getByRole('button', { name: '6', exact: true }).click()
+  await expect(dialog.getByRole('button', { name: '6', exact: true })).toHaveAttribute('aria-pressed', 'true')
+  await expect(dialog.getByRole('button', { name: 'Alınacaklara ekle', exact: true })).toHaveCount(0)
+  await dialog.getByRole('button', { name: 'Listede beklet', exact: true }).click()
+  expect(writes).toHaveLength(1)
+  await expect(page).toHaveURL(/\/odemeler\/liste$/)
+  await page.getByRole('button', { name: 'Yeni kulaklık', exact: true }).click()
+  dialog = page.getByRole('dialog', { name: 'Alışverişi değerlendir' })
+  await dialog.getByLabel('Alışveriş tutarı').fill('1250')
+  await dialog.getByRole('button', { name: 'Aldım', exact: true }).click()
+  await expect(dialog).toHaveCount(0)
+  await expect(page.getByText('Yeni kulaklık', { exact: true })).toHaveClass(/line-through/)
+  expect(writes).toHaveLength(2)
+  expect(writes[1]).toMatchObject({ method: 'PATCH', body: { is_purchased: true } })
+  await page.reload()
+  await expect(page.getByText('Yeni kulaklık', { exact: true })).toHaveClass(/line-through/)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true)
+  await page.getByRole('button', { name: 'Bekleyen ürün', exact: true }).click()
+  await expect(page.getByRole('dialog').getByLabel('Alışveriş tutarı')).toHaveValue('500')
+  await page.screenshot({ path: 'test-results/unified-shopping-320.png' })
+})
+
+test('birleşik hedef: aylık plan, gerçekleşen ve ayrılan para aynı kartta bağımsız görünür', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 900 })
+  await mockApp(page, 'dark', {
+    savings_goal_monthly_plans: [{ ...base, id: 'monthly-1', goal_id: 'goal-1', effective_month: '2026-10-01', value_type: 'TRY', target_amount: 5000, source: 'manual', automatic_from: null }],
+    savings_goal_monthly_entries: [{ ...base, id: 'entry-1', goal_id: 'goal-1', month: '2026-10-01', amount: 1250 }],
+  })
+  const writes: string[] = []
+  page.on('request', request => { if (request.url().includes('/rest/') && ['PATCH', 'POST', 'DELETE'].includes(request.method()) && !request.url().includes('/rpc/')) writes.push(request.url()) })
+  await page.goto('/odemeler/hedefler')
+  const summary = page.getByLabel('Örnek hedef bu ayki takip özeti')
+  await expect(summary).toContainText('Plan: 5.000,00')
+  await expect(summary).toContainText('Gerçekleşen: 1.250,00')
+  await expect(summary).toContainText('Kalan: 3.750,00')
+  await expect(page.getByText('Bu hedefe ayrılan:', { exact: false })).toContainText('200,00')
+  await expect(page.getByText('Birikim / hedef:', { exact: false })).toContainText('1.000')
+  await expect(page.getByText('Aylık takip bilgi amaçlıdır;', { exact: false })).toBeVisible()
+  await page.getByRole('button', { name: 'Tutarları gizle', exact: true }).click()
+  await expect(summary).toContainText('Plan: ••••')
+  await expect(summary).not.toContainText('5.000')
+  expect(writes).toEqual([])
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true)
+  await page.locator('[data-slot="card"]').filter({ has: page.getByText('Örnek hedef', { exact: true }) }).screenshot({ path: 'test-results/unified-goals-320.png' })
+})
+
+test('kategori hareketlerinden bütçe düzenlenir; ekstre veya tek kartta limit gösterilmez', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 900 })
+  const budget = { ...base, id: 'budget-1', month: '2026-10-01', category: 'Market', limit_amount: 1000, limit_anchor: 'manual', limit_anchor_value: null }
+  const expense = { ...base, id: 'expense-budget', card_id: 'credit-1', spent_at: '2026-10-20', amount: 200, description: 'Örnek market', category: 'Market', status: 'posted', installment_count: 1, statement_archive_id: null }
+  await mockApp(page, 'light', { budgets: [budget], card_expenses: [expense] })
+  let saved: Record<string, unknown> | null = null
+  await page.route('**/rest/v1/budgets*', route => {
+    if (route.request().method() === 'PATCH') saved = route.request().postDataJSON()
+    return route.fulfill({ json: [{ ...budget, ...(saved ?? {}) }] })
+  })
+  await page.goto('/analiz#kategori-analizi')
+  const chart = page.locator('#kategori-analizi')
+  await expect(chart.getByRole('button', { name: 'Limiti düzenle' })).toHaveCount(0)
+  await chart.getByRole('combobox', { name: 'Görünüm', exact: true }).selectOption('calendar')
+  await chart.locator('summary').filter({ hasText: 'Market' }).click()
+  await expect(chart.getByText('Bütçe kullanımı:', { exact: false })).toContainText('200,00')
+  await chart.getByRole('button', { name: 'Limiti düzenle' }).click()
+  await page.getByLabel('Aylık sabit limit (TL)', { exact: true }).fill('2500')
+  await page.getByRole('button', { name: 'Limiti kaydet', exact: true }).click()
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+  expect(saved).toMatchObject({ category: 'Market', month: '2026-10-01', limit_amount: 2500, limit_anchor: 'manual' })
+  await chart.getByRole('combobox', { name: 'Kart', exact: true }).selectOption('credit-1')
+  await expect(chart.getByRole('button', { name: 'Limiti düzenle' })).toHaveCount(0)
+})
+
+test('inceleme listesi düzeltilmiş hesap farkını tekrar açmaz ve ödemelerde keşfi açar', async ({ page }) => {
+  await mockApp(page, 'light', {
+    account_reconciliations: [{ ...base, id: 'recon-1', card_id: 'bank-1', reconciled_at: now, app_amount: 20000, real_amount: 19900, drift: 100, resolution: 'corrected' }, { ...base, id: 'recon-2', card_id: 'bank-2', reconciled_at: now, app_amount: 5000, real_amount: 4900, drift: 100, resolution: 'open' }],
+  })
+  await page.goto('/')
+  await expect(page.getByRole('region', { name: 'İncelenecekler' })).toContainText('1 hesap veya kart karşılaştırmasında açık fark var.')
+  await page.goto('/odemeler?view=plans#abonelikler')
+  await expect(page.locator('#abonelikler details')).toHaveAttribute('open', '')
+  await expect(page.getByRole('heading', { name: 'Ekstrelerden abonelik adayları', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Kayıtlı planlar', exact: true })).toHaveAttribute('aria-pressed', 'true')
+})
+
 test('320px otomasyon durumu API sonucunu gösterir ve yenileyince bekleyenleri günceller', async ({ page }) => {
   await page.setViewportSize({width:320,height:900})
   await mockApp(page,'light')
@@ -355,7 +621,7 @@ test('özellik rehberindeki kapalı bölümler doğrudan bağlantı ile görün�
   await mockApp(page, 'light')
   for (const [url, id] of [
     ['/analiz#aylik-rapor', 'aylik-rapor'], ['/analiz#kategori-analizi', 'kategori-analizi'],
-    ['/analiz#ay-kapanisi', 'ay-kapanisi'], ['/analiz#abonelikler', 'abonelikler'],
+    ['/analiz#ay-kapanisi', 'ay-kapanisi'], ['/odemeler?view=plans#abonelikler', 'abonelikler'],
     ['/odemeler/hedefler#kasa', 'kasa'], ['/veri-sagligi/islemler#otomasyon', 'otomasyon'],
     ['/veri-sagligi/islemler#yedek', 'yedek'], ['/analiz/detay#kayit-arama', 'kayit-arama'],
     ['/analiz/detay#kredi-notu', 'kredi-notu'], ['/analiz/detay#enflasyon', 'enflasyon'], ['/analiz/detay#yil-sonu', 'yil-sonu'],
@@ -588,7 +854,10 @@ for (const width of [320, 390, 768]) {
         })
         expect(clipping).toEqual([])
       }
+      // Dokunmayı, kaydırma sonrasında gelebilen eski mouseleave'den ayır.
+      await page.mouse.move(0, 0)
       await chart.evaluate(element => element.scrollIntoView({ block: 'center' }))
+      await expect(chart.locator('..').getByRole('tooltip')).toHaveCount(0)
       await points.first().dispatchEvent('pointerdown', { pointerType: 'touch' })
       await expect(chart.locator('..').getByRole('tooltip')).toBeVisible()
       await chart.locator('..').screenshot({ path: `test-results/chart-tooltip-${path.includes('altin') ? 'line' : 'bar'}-${width}.png` })

@@ -1,9 +1,9 @@
 import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
 import { QueryError } from '../components/ui/query-error'
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useMemo, useRef, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Check, ChevronDown, ChevronUp, Plus, ShoppingCart, Trash2, Undo2 } from 'lucide-react'
-import { Link } from 'react-router'
+import { SimpleModal } from '../components/SimpleModal'
 import { useAuth } from '../auth/useAuth'
 import { useConfirmDialog } from '../components/ui/use-confirm-dialog'
 import { useToast } from '../components/ui/toast'
@@ -25,7 +25,7 @@ import { resolveSavingsGoalRows } from '../utils/goalSources'
 import { buildSafeToSpend } from '../utils/safeToSpend'
 import { buildWishlistAge } from '../utils/wishlistAge'
 import { buildWishlistPlan, type WishlistPlan } from '../utils/wishlistPlan'
-import { assessWishlistIntent, type WishlistIntentAnswers } from '../utils/wishlistIntent'
+import type { WishlistIntentAnswers } from '../utils/wishlistIntent'
 import { WishlistAssessment, WishlistIntentTest } from './WishlistPage.assessment'
 import { parseNumber } from '../utils/formatCurrency'
 import { sumTL } from '../utils/money'
@@ -34,6 +34,7 @@ import type { WishlistItem } from '../types/database'
 /** "Ne zaman alabilirim" projeksiyon ufku; PurchaseDecisionPage ile aynı mantık. */
 const PLAN_HORIZON_MONTHS = 6
 const EMPTY_INTENT: WishlistIntentAnswers = { essential: null, alternative: null, delayCost: null }
+const PurchaseDecision = lazy(() => import('./PurchaseDecisionPage').then(module => ({ default: module.PurchaseDecision })))
 
 export function WishlistPage() {
   const { user } = useAuth()
@@ -110,6 +111,8 @@ export function WishlistPage() {
   const [newName, setNewName] = useState('')
   const [newPrice, setNewPrice] = useState('')
   const [intentAnswers, setIntentAnswers] = useState<WishlistIntentAnswers>(EMPTY_INTENT)
+  const [decisionId, setDecisionId] = useState<string | null>(null)
+  const decisionItem = items.find(item => item.id === decisionId && !item.is_purchased)
   const nameInputRef = useRef<HTMLInputElement>(null)
   const draftPrice = newPrice.trim() ? parseNumber(newPrice) : null
   const priceInvalid = draftPrice !== null && (!Number.isFinite(draftPrice) || draftPrice <= 0)
@@ -180,7 +183,7 @@ export function WishlistPage() {
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     const name = newName.trim()
-    if (!name || priceInvalid || !assessWishlistIntent(intentAnswers)) return
+    if (!name || priceInvalid) return
     addMutation.mutate({ name, price: newPrice })
   }
 
@@ -237,7 +240,7 @@ export function WishlistPage() {
             {priceInvalid ? <p id="wishlist-price-error" className="text-xs text-destructive">Pozitif bir fiyat gir. Fiyat bilinmiyorsa alanı boş bırak.</p> : null}
             {newName.trim() ? (
               <fieldset disabled={addMutation.isPending} className="space-y-4">
-                <WishlistIntentTest answers={intentAnswers} onChange={setIntentAnswers} />
+                <details><summary className="min-h-11 cursor-pointer py-3 text-sm font-semibold text-primary">İstek mi, ihtiyaç mı? (isteğe bağlı)</summary><WishlistIntentTest answers={intentAnswers} onChange={setIntentAnswers} /></details>
                 {draftPlan ? <div aria-live="polite"><WishlistAssessment plan={draftPlan} /></div> : null}
                 {!newPrice.trim() ? <p className="text-xs text-ink-muted">Fiyat ekleyince bütçene etkisini de görebilirsin.</p> : null}
               </fieldset>
@@ -245,7 +248,7 @@ export function WishlistPage() {
             <Button
               type="submit"
               size="lg"
-              disabled={!newName.trim() || priceInvalid || !assessWishlistIntent(intentAnswers) || addMutation.isPending}
+              disabled={!newName.trim() || priceInvalid || addMutation.isPending}
               aria-label="Listeye ekle"
               className="w-full sm:w-auto"
             >
@@ -257,7 +260,7 @@ export function WishlistPage() {
       </Card>
 
       <div className="space-y-2 text-xs leading-relaxed text-ink-muted">
-        <p>Değerlendirmeler her ürün için ayrı, bugünkü tahmini fiyatla peşin alıma göre hesaplanır. Tampon, ayrılmış para, kayıtlı ödemeler ve beklenen gelir dikkate alınır; gelecekteki yeni harcamalar dahil değildir. Taksit veya kartla alım için Alsam mı? ekranını kullan.</p>
+        <p>Liste özetleri her ürün için ayrı, bugünkü tahmini fiyatla peşin alıma göredir. Ürünü açarak kart ve taksit seçeneklerini değerlendirebilirsin. Tampon, ayrılmış para ve kayıtlı planlar hesaba katılır; gelecekteki yeni harcamalar dahil değildir.</p>
         {!planContext ? (
           <div role="status">
             <p>Finansal veriler henüz doğrulanamadı. Bütçe değerlendirmesi hazır değil; listeye ekleyebilirsin.</p>
@@ -289,6 +292,8 @@ export function WishlistPage() {
               }
               onToggle={() => toggleMutation.mutate({ id: item.id, purchased: true })}
               onDelete={() => handleDelete(item)}
+              onEvaluate={() => setDecisionId(item.id)}
+              busy={toggleMutation.isPending || deleteMutation.isPending}
             />
           ))}
         </ul>
@@ -314,6 +319,7 @@ export function WishlistPage() {
                   onToggle={() => toggleMutation.mutate({ id: item.id, purchased: false })}
                   onDelete={() => handleDelete(item)}
                   purchased
+                  busy={toggleMutation.isPending || deleteMutation.isPending}
                 />
               ))}
             </ul>
@@ -321,6 +327,13 @@ export function WishlistPage() {
         </div>
       )}
 
+      <SimpleModal open={Boolean(decisionItem)} title="Alışverişi değerlendir" onClose={() => { if (!toggleMutation.isPending) setDecisionId(null) }}>
+        {decisionItem ? <Suspense fallback={<p role="status">Değerlendirme yükleniyor…</p>}>
+          <PurchaseDecision key={decisionItem.id} item={decisionItem} saving={toggleMutation.isPending} onDefer={() => setDecisionId(null)} onPurchased={() => {
+            void toggleMutation.mutateAsync({ id: decisionItem.id, purchased: true }).then(() => setDecisionId(null)).catch(() => { /* Hata toast ile gösterilir; tekrar denenebilir. */ })
+          }} />
+        </Suspense> : null}
+      </SimpleModal>
       {confirmDialog}
     </div>
   )
@@ -332,6 +345,8 @@ function WishlistRow({
   onToggle,
   onDelete,
   purchased,
+  onEvaluate,
+  busy,
 }: {
   item: WishlistItem
   /** Projeksiyondan türeyen "ne zaman + neyin payı"; veri hazır değilse null. */
@@ -339,6 +354,8 @@ function WishlistRow({
   onToggle: () => void
   onDelete: () => void
   purchased?: boolean
+  onEvaluate?: () => void
+  busy?: boolean
 }) {
   const { formatAmount: formatCurrency } = useBalancePrivacy()
 
@@ -351,6 +368,7 @@ function WishlistRow({
       <button
         type="button"
         onClick={onToggle}
+        disabled={busy}
         className={`tap-target grid size-7 shrink-0 place-items-center rounded-lg border transition ${
           purchased
             ? 'border-primary/40 bg-primary/10 text-primary'
@@ -362,9 +380,7 @@ function WishlistRow({
       </button>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <span className={`truncate text-sm font-medium ${purchased ? 'text-ink-muted line-through' : 'text-ink'}`}>
-          {item.name}
-        </span>
+        {purchased ? <span className="break-words text-sm font-medium text-ink-muted line-through">{item.name}</span> : <button type="button" onClick={onEvaluate} className="min-h-11 break-words text-left text-sm font-semibold text-ink underline decoration-primary/30 underline-offset-4">{item.name}</button>}
         {(item.estimated_price || purchasedDate) && (
           <span className="truncate text-xs text-ink-muted">
             {item.estimated_price ? formatCurrency(item.estimated_price) : ''}
@@ -392,20 +408,22 @@ function WishlistRow({
       <div className="hover-actions flex shrink-0 items-center gap-2 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100">
         {/* Karar–Liste köprüsünün ters yönü: fiyatlı bekleyen madde karar
             ekranına tutarıyla taşınır (?tutar= tek seferlik form doldurur). */}
-        {!purchased && item.estimated_price ? (
-          <Link
-            to={`/odemeler/alsam-mi?tutar=${item.estimated_price}`}
+        {!purchased ? (
+          <button
+            type="button"
+            onClick={onEvaluate}
             className="tap-target grid size-8 place-items-center rounded-lg text-ink-muted transition hover:bg-black/[.03] dark:hover:bg-white/[.04] hover:text-ink"
-            aria-label={`"${item.name}" için Alsam mı ekranında değerlendir`}
+            aria-label={`"${item.name}" alışverişini değerlendir`}
             title="Alsam mı?"
           >
             <ShoppingCart size={14} />
-          </Link>
+          </button>
         ) : null}
         {purchased && (
           <button
             type="button"
             onClick={onToggle}
+            disabled={busy}
             className="tap-target grid size-8 place-items-center rounded-lg text-ink-muted transition hover:bg-black/[.03] dark:hover:bg-white/[.04] hover:text-ink"
             aria-label="Geri al"
           >
@@ -415,6 +433,7 @@ function WishlistRow({
         <button
           type="button"
           onClick={onDelete}
+          disabled={busy}
           className="tap-target grid size-8 place-items-center rounded-lg text-ink-muted transition hover:bg-destructive/10 hover:text-destructive"
           aria-label="Sil"
         >

@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useState, type FormEvent, type ReactNode } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useLocation } from 'react-router'
 import { useAuth } from '../../auth/useAuth'
@@ -8,7 +8,7 @@ import { deleteGoalMonthlyEntry, fetchGoalMonthlyData, saveGoalMonthlyEntry, sav
 import { buildGoalMonthlyRows, type GoalMonthlyRow } from '../../utils/goalMonthly'
 import { dateInputValue, startOfMonth } from '../../utils/date'
 import { formatComponentAmount } from '../../utils/savingsGoal'
-import { roundTL } from '../../utils/money'
+import { diffTL, roundTL } from '../../utils/money'
 import { DeferredDetails } from '../ui/deferred-details'
 import { QueryError } from '../ui/query-error'
 import { Button } from '../ui/button'
@@ -31,9 +31,38 @@ function parseQuantity(text: string): number | null {
 
 const unitLabels = { TRY: 'TL', gram_altin: 'gram', ceyrek_altin: 'çeyrek' }
 
-export function GoalMonthlyChecklist({ goal, components = [] }: { goal: SavingsGoal; components?: SavingsGoalComponent[] }) {
+function useGoalMonthlyData() {
+  const { user } = useAuth()
+  return useQuery({ queryKey: ['goal-monthly', user?.id], enabled: !!user, queryFn: async () => {
+    const result = await fetchGoalMonthlyData()
+    if (!result.ok) throw new Error(result.error.message)
+    return result.data
+  } })
+}
+
+export function GoalMonthlyChecklist({ goal, components = [], contribution }: { goal: SavingsGoal; components?: SavingsGoalComponent[]; contribution?: ReactNode }) {
   const location = useLocation()
+  const query = useGoalMonthlyData()
+  const { hidden } = useBalancePrivacy()
+  const today = new Date()
+  const currentMonth = dateInputValue(startOfMonth(today))
+  const scopes = goal.value_type === 'composite' ? components : [undefined]
   return (
+    <div className="mt-3 space-y-3 border-t border-line-strong pt-3">
+      <p className="text-sm font-semibold text-ink">Bu ayın birikimi</p>
+      {query.isPending ? <p role="status" className="text-xs text-ink-muted">Aylık takip yükleniyor…</p> : query.isError ? <QueryError title="Aylık takip yüklenemedi" onRetry={() => void query.refetch()} /> : scopes.map(component => {
+        const row = query.data ? buildGoalMonthlyRows(goal.id, query.data.plans, query.data.entries, query.data.lots, today, today.getFullYear(), component?.id).find(row => row.month === currentMonth) : null
+        if (!row) return <p key={component?.id ?? goal.id} className="text-xs text-ink-muted">{component ? `${component.label || unitLabels[component.value_type]}: ` : ''}Aylık plan henüz oluşturulmadı.</p>
+        const remaining = row.amount === null ? null : Math.max(0, row.plan.value_type === 'TRY' ? diffTL(row.plan.target_amount, row.amount) : row.plan.target_amount - row.amount)
+        const format = (amount: number) => hidden ? '••••' : formatMonthlyAmount(row.plan, amount)
+        return <div key={component?.id ?? goal.id} className="space-y-1 text-xs text-ink-muted" aria-label={`${component?.label || goal.name} bu ayki takip özeti`}>
+          {component ? <p className="font-semibold text-ink">{component.label || unitLabels[component.value_type]}</p> : null}
+          <p>Plan: <span className="font-semibold text-ink">{format(row.plan.target_amount)}</span> · Gerçekleşen: <span className="font-semibold text-ink">{row.amount === null ? 'Kayıt yok' : format(row.amount)}</span></p>
+          <p>{remaining === null ? 'Kalan miktar için gerçekleşen toplamı gir.' : row.status === 'complete' ? '✓ Bu ayın planı tamamlandı' : `Kalan: ${format(remaining)}`}</p>
+        </div>
+      })}
+      {contribution}
+      <p className="text-xs text-ink-muted">Aylık takip bilgi amaçlıdır; toplam birikime eklenmez. Para ayırmak, hesabındaki tutarın harcanabilir payını azaltır.</p>
     <DeferredDetails summary="Aylık takip" openRequestKey={location.hash === '#aylik-hedef' ? location.key : undefined} className="mt-3 border-t border-line-strong pt-3" summaryClassName="cursor-pointer py-2 text-sm font-semibold text-primary">
       {goal.value_type === 'composite' ? <div className="space-y-3">
         <p className="text-xs text-ink-muted">Her bileşene kendi biriminde ayrı aylık plan oluştur. Tamamlanma ve elle girişler ayrı izlenir.</p>
@@ -43,6 +72,7 @@ export function GoalMonthlyChecklist({ goal, components = [] }: { goal: SavingsG
         {!components.length ? <p className="text-sm text-ink-muted">Aylık plan oluşturmak için hedefe bileşen ekle.</p> : null}
       </div> : <MonthlyChecklistContent goal={goal} />}
     </DeferredDetails>
+    </div>
   )
 }
 
@@ -51,11 +81,7 @@ function MonthlyChecklistContent({ goal, component }: { goal: SavingsGoal; compo
   const { hidden } = useBalancePrivacy()
   const queryClient = useQueryClient()
   const queryKey = ['goal-monthly', user?.id]
-  const query = useQuery({ queryKey, enabled: !!user, queryFn: async () => {
-    const result = await fetchGoalMonthlyData()
-    if (!result.ok) throw new Error(result.error.message)
-    return result.data
-  } })
+  const query = useGoalMonthlyData()
   const today = new Date()
   const currentMonth = dateInputValue(startOfMonth(today))
   const [year, setYear] = useState(today.getFullYear())

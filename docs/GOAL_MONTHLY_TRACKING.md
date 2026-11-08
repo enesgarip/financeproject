@@ -1,5 +1,11 @@
 # Aylık hedef takibi
 
+8 Kasım: hedefte aylık plan/gerçekleşen/kalan özeti varsayılan görünür; para
+ayırma aynı bölümdedir. Geçmiş Aylık takip'te açılır. Aynı `buildGoalMonthlyRows`
+ve kullanıcı sorgusu kullanılır; kayıtsız miktar sıfır değildir. Tarihe göre
+ayırma önerisi ayrı adlandırılır; aylık bilgi kaydı toplam birikim/rezervle
+toplanmaz. Sözleşme: `docs/SIMPLIFICATION_FLOWS_2026-11-08.md`.
+
 7 Kasım 2026. Birikim hedefinin toplam ilerlemesinden ayrı, bilgi amaçlı aylık
 alışkanlık takibidir. Bakiye, varlık, kasa rezervi, harcanabilir tutar, ledger
 ve hedefin `current_amount` alanını değiştirmez.

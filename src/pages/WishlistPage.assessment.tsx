@@ -28,7 +28,6 @@ export function WishlistIntentTest({ answers, onChange }: {
                 <input
                   type="radio"
                   name={`intent-${key}`}
-                  required
                   checked={answers[key] === value}
                   onChange={() => onChange({ ...answers, [key]: value })}
                   className="size-4 accent-primary"

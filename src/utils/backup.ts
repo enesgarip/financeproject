@@ -62,6 +62,8 @@ export const RESTORE_TABLE_ORDER = [
   'savings_goal_sources',
   'payments',
   'transaction_history',
+  'account_income_labels',
+  'car_service_completions',
   'account_reconciliations',
   'dismissed_upcoming_items',
   'data_health_issue_acknowledgements',
@@ -301,7 +303,10 @@ export async function restoreBackup(
   }
 
   // Eski REST yolu — yalnız RPC henüz deploy değilken (migration drift).
-  if (backup.tables.foreign_card_sms?.length) {
+    if (backup.tables.account_income_labels?.length || backup.tables.car_service_completions?.length) {
+      throw new Error('Bağlı iş akışı kayıtları için güncel atomik geri yükleme gerekli. Hiçbir veri değiştirilmedi.')
+    }
+    if (backup.tables.foreign_card_sms?.length) {
     throw new Error('Dövizli SMS kayıtları için güncel atomik geri yükleme gerekli. Hiçbir veri değiştirilmedi.')
   }
   const steps = RESTORE_TABLE_ORDER.length + 1
@@ -324,6 +329,8 @@ export async function restoreBackup(
 }
 
 export const BACKUP_TABLE_LABELS: Record<RestoreTable, string> = {
+  account_income_labels: 'Para girişi sınıfları',
+  car_service_completions: 'Tamamlanan araç işleri',
   cards: 'Hesap/Kart',
   cars: 'Araç',
   expense_contexts: 'Gider bağlamı',

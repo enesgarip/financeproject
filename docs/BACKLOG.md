@@ -1,5 +1,42 @@
 # Priority Backlog
 
+## 2026-11-08 — Bağlı akışlar, ikinci paket (1/2/3/5)
+
+- [x] Araç/gider grubundan ortak harcama ve mevcut harekete çift kayıtsız bağlama.
+- [x] Bakımı gider ve sonraki planla atomik tamamlama; masrafsız seçenek, geçmiş,
+  sürüm kontrolü ve kayıp yanıtta yenilemeyle aynı UUID doğrulaması.
+- [x] Gelen parayı türüne veya açık TL alacağına bağlama; bakiye tekrar yazılmaz,
+  otomatik eşleşmiş SMS tekrar tüketilmez; hareket başına kalıcı tek sınıf.
+- [x] Ay kapanışından ilgili işe, geri kontrole ve rapora geçiş.
+- [x] Own-row tablolar/RPC, JSON yedek/restore/reset; 59 SQL regresyonu geçti.
+- [x] `npm run verify`: 189 dosya / 1930 test, prod audit 0 açık, build,
+  1038,7/1060 kB JS gzip ve 6 edge tip kontrolü geçti.
+- [x] Temiz yerel migration/seed, 59 SQL regresyonu, şema lint, RLS/grant
+  denetimleri ve gerçek dump/restore kontrolü geçti.
+- [x] 45 Playwright senaryosu geçti: toplu koşuda ilk 31, ağ askıya alınması
+  (`ERR_NETWORK_IO_SUSPENDED`) sonrasında kalan 14 ayrı koşuda doğrulandı.
+  320px gelir/bakım görüntüleri incelendi; 19 ekranın 320/390/1280px taraması geçti.
+
+Altın alımı (4) kapsam dışıdır. Sözleşme: `docs/LINKED_FINANCE_WORKFLOWS.md`.
+Yayın için `20261108140000_linked_finance_workflows.sql` migration'ı gerekir.
+
+## 2026-11-08 — Birlikte kullanılan özelliklerin sadeleştirilmesi
+
+- [x] Alınacaklar içinde aynı ürünle ortak karar formu, beklet/aldım; hızlı
+  karar rotası korunur, ihtiyaç testi isteğe bağlıdır.
+- [x] Hedefte toplam birikim, aylık plan/gerçekleşen/kalan ve para ayırma;
+  aylık bilgi kaydı, kaynak ve rezerv birbirine eklenmez.
+- [x] Ödemeler'de abonelik/fiyat geçmişi; Analiz'de özet ve yönetim bağlantısı.
+- [x] Cari ay/tüm kartlarda kategori ayrıntısından bütçe limiti düzenleme;
+  provizyon kapsamı ve sabit limite geçiş açıklanır.
+- [x] Özet'te dövizli SMS, açık hesap farkı, veri bulgusu ve abonelik adaylarına
+  ortak inceleme bağlantıları; düzeltilmiş fark yeniden açılmaz.
+- [x] `npm run verify`: 187 dosya / 1922 test, prod audit 0 açık, build,
+  1028,7/1030 kB JS gzip ve 6 edge tip kontrolü geçti. İlgili 40 Playwright
+  senaryosu geçti (320/390/1280px); alışveriş ve hedef görüntüleri incelendi.
+
+Sözleşme: `docs/SIMPLIFICATION_FLOWS_2026-11-08.md`. Şema/migration değişmedi.
+
 ## 2026-11-07 — Dövizli DenizBank SMS'ini kesin TL bekleyen kayda alma
 
 - [x] USD/EUR/GBP birimi frontend/edge aynasında korunur; döviz tutarı TL

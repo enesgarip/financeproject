@@ -1,5 +1,28 @@
 # AI Context Index
 
+8 Kasım ikinci akış paketi (altın alımı kapsam dışı):
+Sözleşme: `docs/LINKED_FINANCE_WORKFLOWS.md`.
+`data/repositories/linkedWorkflowsRepo.ts` para girişi sınıfları ve bakım
+tamamlama RPC'lerinin kaynağıdır. `components/finance/AccountIncomePanel.tsx`
+Hesap hareketlerinden açılır; `components/finance/CarServiceModal.tsx` bakım
+gideri/sonraki plan/geçmişi sunar. `utils/carServiceAttempt.ts` belirsiz isteği
+kullanıcı+hatırlatıcı bazında saklar; `utils/carServicePlan.ts` tarih/km önerisidir.
+Migration: `supabase/migrations/20261108140000_linked_finance_workflows.sql`;
+kanıt: `supabase/tests/linked_finance_workflows.sql`. Ortak harcama
+`pages/CardsPage.expense.tsx` araç/grup seçimlerini, `pages/CarsPage.tsx` ve
+`pages/ExpenseContextsPage.tsx` çift yönlü bağlantıları kullanır. Ay kapanışı
+`pages/AnalysisPage.panels.tsx`, dönüş `components/Layout.tsx` içindedir.
+
+8 Kasım akış birleşimleri: `docs/SIMPLIFICATION_FLOWS_2026-11-08.md`.
+`pages/WishlistPage.tsx` kimlikle lazy `PurchaseDecision` açar;
+`pages/PurchaseDecisionPage.tsx` hızlı rota ve ortak formdur.
+`components/finance/GoalMonthlyChecklist.tsx` aylık özeti rezerv eylemiyle sunar.
+`app/usePriceTrends.ts` Ödemeler'deki lazy `RegularExpensesPanel` fiyat kaynağıdır
+(`pages/AnalysisPage.panels.tsx`). `components/finance/CategoryBudgetControl.tsx`
+cari ay/tüm kartlarda bütçe düzenler. `components/dashboard/ForeignCardSmsNotice.tsx`
+ortak inceleme listesidir. `utils/featureDiscovery.ts` aboneliği Ödemeler'e bağlar.
+Kanıt: `tests/e2e/simplification.spec.ts`; finans formülleri/ledger değişmez.
+
 7 Kasım dövizli SMS: `docs/FOREIGN_CARD_SMS.md`.
 `data/repositories/foreignCardSmsRepo.ts` eski hata SMS'lerini tekil alias ile
 kurtarır, sayfalı bekleme listesini ve kesin TL RPC'sini sunar.
@@ -661,6 +684,7 @@ invalidate et (örnek: AnalysisPage abonelik→plan, PlanningPage maaş şeridi)
 
 | İş / konu | Önce bak (domain/util) | Veri katmanı | UI |
 |---|---|---|---|
+| **Bağlı harcama / bakım tamamlama / gelen para sınıflandırma** | `docs/LINKED_FINANCE_WORKFLOWS.md`, `utils/carServicePlan.ts`, `utils/carServiceAttempt.ts` | `data/repositories/linkedWorkflowsRepo.ts`, `data/repositories/cardsRepo.ts` | `components/finance/AccountIncomePanel.tsx`, `components/finance/CarServiceModal.tsx`, `pages/CardsPage.expense.tsx`, `pages/CarsPage.tsx`, `pages/ExpenseContextsPage.tsx` |
 | **Ortak UI/UX tasarım sistemi, sayfa şablonu ve performans** | `docs/UI_ARCHITECTURE.md`, `index.css`, `lib/lazyWithReload.ts` (orta genişlikte 144px etiketli rail; ikon-only navigasyon yok) | — | `components/Layout.tsx`, `components/BottomNav.tsx`, `components/HubNav.tsx`, `components/navigation.ts`, `components/CrudPage.tsx`, `components/ui/*`, `components/finance/FinanceUI.tsx`, `pages/LoginPage.tsx` |
 | **Telefonla aynı tema / elle tema seçimi** | `hooks/useTheme.ts` (+ `hooks/useTheme.test.tsx`; `denge:theme-preference`, canlı media-query + uygulamaya dönüş + sekmeler arası tercih eşitleme) | — | `components/Layout.tsx` (yalnız ikon; Sistem → Açık → Koyu → Sistem); tarayıcı/PWA tema rengi ve yerel form renk şeması aynı seçimi izler |
 | **Para hesabı/yuvarlama** | `utils/money.ts` (+ `money.test.ts`, `money.property.test.ts`) | — | — |

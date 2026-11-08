@@ -9,7 +9,11 @@ import { invalidateCategoryMemory, useCategoryMemory } from '../hooks/useCategor
 import { addCardExpense, fetchRecentCardExpenses, recordCardInstallmentCarryover } from '../data/repositories/cardsRepo'
 import { fetchAllCardAliases } from '../data/repositories/cardAliasesRepo'
 import { fetchCars } from '../data/repositories/carsRepo'
-import type { Car, Card, CardExpense, CardExpenseStatus } from '../types/database'
+import { fetchExpenseContexts } from '../data/repositories/expenseContextsRepo'
+import { Link } from 'react-router'
+import { useInvalidateCars } from '../app/useCars'
+import { useInvalidateExpenseContexts } from '../app/useExpenseContexts'
+import type { Car, Card, CardExpense, CardExpenseStatus, ExpenseContext } from '../types/database'
 import { buildRepeatSuggestions, type RepeatSuggestion } from '../utils/expenseRepeat'
 import { buildClipboardPrefill } from '../utils/clipboardExpense'
 import { normalizeSmsWhitespace } from '../utils/smsParser'
@@ -35,6 +39,7 @@ export function QuickExpensePanel({
   focus,
   formatAmount,
   onSaved,
+  initialTags,
 }: {
   rows: Card[]
   reload: () => Promise<void>
@@ -43,6 +48,7 @@ export function QuickExpensePanel({
   formatAmount?: (value: number | null | undefined) => string
   /** Başarılı kayıttan sonra; aynı sayfadaki "Son kart hareketleri" listesi bununla tazelenir (UX turu B2). */
   onSaved?: () => void
+  initialTags?: { carId?: string; contextId?: string }
 }) {
   const [cardId, setCardId] = useState(() => getLastUsed('expenseCard'))
   const [amount, setAmount] = useState('')
@@ -87,7 +93,12 @@ export function QuickExpensePanel({
   })
   const [recentExpenses, setRecentExpenses] = useState<CardExpense[]>([])
   const [vehicles, setVehicles] = useState<Car[]>([])
-  const [carId, setCarId] = useState('')
+  const [contexts, setContexts] = useState<ExpenseContext[]>([])
+  const [tagsLoaded, setTagsLoaded] = useState(false)
+  const [carId, setCarId] = useState(initialTags?.carId ?? '')
+  const [contextId, setContextId] = useState(initialTags?.contextId ?? '')
+  const invalidateCars = useInvalidateCars()
+  const invalidateContexts = useInvalidateExpenseContexts()
   const cards = useMemo(
     () => favoritesFirst(rows.filter((row) => row.card_type === 'kredi_karti' || row.card_type === 'banka_karti')),
     [rows],
@@ -147,7 +158,9 @@ export function QuickExpensePanel({
     trimmedDescription.length > 0 &&
     !saving &&
     !exceedsAccountBalance &&
-    (!isCarryover || Boolean(nextDueDate))
+    (!isCarryover || Boolean(nextDueDate)) &&
+    (!carId || (tagsLoaded && vehicles.some(car => car.id === carId))) &&
+    (!contextId || (tagsLoaded && contexts.some(context => context.id === contextId && !context.completed_at)))
 
   // "Harcama ekle / Taksit ekle" kısayolundan gelen kartı ve modu önceden seç.
   const focusCardId = focus?.cardId
@@ -179,9 +192,14 @@ export function QuickExpensePanel({
 
   // Arabalarım: harcamayı girerken bir araca etiketleme seçeneği (opsiyonel).
   useEffect(() => {
-    void fetchCars().then((result) => {
-      if (result.ok) setVehicles(result.data)
+    let active = true
+    void Promise.all([fetchCars(), fetchExpenseContexts()]).then(([cars, groups]) => {
+      if (!active) return
+      if (cars.ok) setVehicles(cars.data)
+      if (groups.ok) setContexts(groups.data.filter(context => !context.completed_at))
+      setTagsLoaded(true)
     })
+    return () => { active = false }
   }, [])
 
   function applyRepeat(suggestion: RepeatSuggestion) {
@@ -319,6 +337,10 @@ export function QuickExpensePanel({
       setLocalError('Bu tutar hesap bakiyesini aşıyor. Sunucu da reddeder; tutarı düşür ya da başka hesap seç.')
       return
     }
+    if ((carId && !vehicles.some(car => car.id === carId)) || (contextId && !contexts.some(context => context.id === contextId && !context.completed_at))) {
+      setLocalError('Seçilen araç veya gider grubu kullanılamıyor. Seçimini güncelle.')
+      return
+    }
     const source = prefilledBySms ? 'sms' : prefilledByScan ? 'receipt_scan' : 'manual'
     const signature = JSON.stringify({
       cardId: selectedCard.id,
@@ -355,6 +377,7 @@ export function QuickExpensePanel({
         category,
         sourceEventId,
         carId: carId || null,
+        contextId: contextId || null,
       })
       : await addCardExpense({
         cardId: selectedCard.id,
@@ -367,6 +390,7 @@ export function QuickExpensePanel({
         source,
         sourceEventId,
         carId: carId || null,
+        contextId: contextId || null,
       })
 
     submittingRef.current = false
@@ -382,7 +406,7 @@ export function QuickExpensePanel({
 
     // Harcama yazıldı; araç etiketi düştüyse formu SIFIRLAMAYA devam ederiz —
     // tekrar gönderim çift harcama üretirdi.
-    setLocalWarning(submitResult.data.carTagWarning ?? '')
+    setLocalWarning([submitResult.data.carTagWarning, submitResult.data.contextTagWarning].filter(Boolean).join(' '))
     setSaved(true)
     invalidateCategoryMemory()
     setLastUsed('expenseCard', selectedCard.id)
@@ -397,10 +421,11 @@ export function QuickExpensePanel({
     setNextDueDate(dateInputValue(new Date()))
     setExpenseStatus('posted')
     clearPrefillOrigins()
-    setCarId('')
+    setCarId(initialTags?.carId ?? '')
+    setContextId(initialTags?.contextId ?? '')
     submissionIdentityRef.current = null
     onSaved?.()
-    await Promise.all([reload(), loadRecent()])
+    await Promise.all([reload(), loadRecent(), invalidateCars(), invalidateContexts()])
   }
 
   if (cards.length === 0) return null
@@ -417,6 +442,14 @@ export function QuickExpensePanel({
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="flex flex-col gap-2.5">
+          {vehicles.length || contexts.length || carId || contextId ? <div className="space-y-2 rounded-xl border border-line-strong p-3">
+            <p className="text-xs text-ink-muted">Bu harcamayı araç ve gider grubunda da takip edebilirsin. Aynı gideri ikinci kez eklemene gerek yok.</p>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <label className="text-sm font-semibold">Araç<select className="mt-1 min-h-11 w-full rounded-lg border border-line-strong bg-raised px-2" value={carId} onChange={event => setCarId(event.target.value)}><option value="">Araç yok</option>{carId && !vehicles.some(car => car.id === carId) ? <option value={carId}>Araç yüklenemedi veya kaldırıldı</option> : null}{vehicles.map(car => <option key={car.id} value={car.id}>{car.name}</option>)}</select></label>
+              <label className="text-sm font-semibold">Gider grubu<select className="mt-1 min-h-11 w-full rounded-lg border border-line-strong bg-raised px-2" value={contextId} onChange={event => setContextId(event.target.value)}><option value="">Grup yok</option>{contextId && !contexts.some(context => context.id === contextId) ? <option value={contextId}>Grup yüklenemedi veya tamamlandı</option> : null}{contexts.map(context => <option key={context.id} value={context.id}>{context.name}</option>)}</select></label>
+            </div>
+            {carId || contextId ? <Link className="inline-flex min-h-11 items-center text-xs font-semibold text-primary" to={carId ? `/varliklar/araclar?car=${encodeURIComponent(carId)}#kart-iliskilendir` : `/odemeler/baglamlar?context=${encodeURIComponent(contextId)}#kart-iliskilendir`}>SMS veya ekstrede zaten varsa mevcut hareketi ilişkilendir →</Link> : null}
+          </div> : null}
           <input
             ref={cameraInputRef}
             type="file"
@@ -610,24 +643,6 @@ export function QuickExpensePanel({
               </select>
             </label>
           </div>
-          {vehicles.length > 0 ? (
-            <label className="block text-sm font-semibold text-ink">
-              Araç <span className="font-normal text-ink-muted">(opsiyonel · Araçlar)</span>
-              <select
-                value={carId}
-                onChange={(event) => setCarId(event.target.value)}
-                className="mt-1 w-full rounded-lg border border-line-strong bg-white px-3 py-2.5 outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20 dark:bg-raised dark:text-ink"
-              >
-                <option value="">Araç yok</option>
-                {vehicles.map((vehicle) => (
-                  <option key={vehicle.id} value={vehicle.id}>
-                    {vehicle.name}
-                    {vehicle.plate ? ` · ${vehicle.plate}` : ''}
-                  </option>
-                ))}
-              </select>
-            </label>
-          ) : null}
           {canUseInstallments && paymentMode === 'installment' ? (
             <label className="block text-sm font-semibold text-ink">
               Taksit sayısı

@@ -215,6 +215,18 @@ describe('cardsRepo.addCardExpense', () => {
     expect(result.data.carTagWarning).toBeNull()
   })
 
+  it('gider grubu etiketi hata verirse yazılmış harcamayı başarısız saymaz veya yeniden yazmaz', async () => {
+    supabaseMocks.rpc.mockResolvedValue({ data: { id: 'expense-1' }, error: null })
+    const eq = vi.fn().mockResolvedValue({ error: { message: 'Etiket yazılamadı' } })
+    supabaseMocks.from.mockReturnValue({ update: vi.fn(() => ({ eq })) })
+    const result = await addCardExpense({ ...input, contextId: 'context-1' })
+    expect(result.ok).toBe(true)
+    if (!result.ok) throw new Error('Harcama zaten yazıldı')
+    expect(result.data.contextTagWarning).toContain('Tekrar harcama ekleme')
+    expect(supabaseMocks.rpc).toHaveBeenCalledTimes(1)
+    expect(eq).toHaveBeenCalledWith('id', 'expense-1')
+  })
+
   it('does not retry the retired legacy RPC signature on missing capability', async () => {
     supabaseMocks.rpc.mockResolvedValue({
       error: { code: 'PGRST202', message: 'Could not find the function public.add_card_expense in the schema cache' },

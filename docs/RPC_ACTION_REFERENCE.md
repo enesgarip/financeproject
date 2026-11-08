@@ -1,5 +1,13 @@
 # Supabase RPC Action Reference
 
+8 Kasım bağlı akış RPC'leri: `docs/LINKED_FINANCE_WORKFLOWS.md`.
+`classify_account_income(p_movement_id,p_kind,p_debt_id,p_debt_amount)` kaydedilmiş
+girişi etiketler veya açık TL alacağını skip-account helper ile azaltır.
+Kaynak kilidi/tek sınıf güvenli retry'dır; banka tekrar yazılmaz.
+`complete_car_service(p_request_id,p_input)` sahipli/sürümü güncel hatırlatıcıyı
+gider seçimi, km ve sonraki planla atomik tamamlar; aynı UUID/gövde makbuz okur.
+Doğrudan tablo yazması yoktur. Migration: 20261108140000_linked_finance_workflows.sql.
+
 Last reviewed: 2026-11-07
 
 This file maps Supabase RPCs to the user-visible actions that call them. Keep it

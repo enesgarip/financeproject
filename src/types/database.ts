@@ -461,6 +461,14 @@ export type CardLedger = BaseRow & {
 }
 
 export type AccountLedgerKind = 'opening' | 'deposit' | 'withdrawal' | 'adjustment'
+export type AccountIncomeKind = 'salary' | 'receivable' | 'own_transfer' | 'other'
+export type AccountIncomeLabel = BaseRow & { movement_id: string; kind: AccountIncomeKind; debt_id: string | null; debt_amount: number | null }
+export type CarServiceCompletion = BaseRow & { car_id: string; reminder_id: string; title: string; completed_on: string; odometer_km: number | null; card_expense_id: string | null; car_expense_id: string | null; request: Json }
+export type CarServiceInput = {
+  reminderId: string; expectedUpdatedAt: string; expectedDueDate: string | null; expectedDueKm: number | null; completedOn: string; odometerKm: number | null;
+  nextDate: string | null; nextKm: number | null; expenseMode: 'none' | 'card' | 'existing_manual' | 'manual';
+  existingExpenseId: string | null; amount: number | null; paymentMethod: 'nakit' | 'banka' | 'diger';
+}
 
 /**
  * Append-only event log of bank-account balance changes (roadmap Faz 3). Each
@@ -831,6 +839,8 @@ export type Database = {
       cars: Table<Car, WithBaseInsert<Car>, WithBaseUpdate<Car>>
       car_expenses: Table<CarExpense, WithBaseInsert<CarExpense>, WithBaseUpdate<CarExpense>>
       car_reminders: Table<CarReminder, WithBaseInsert<CarReminder>, WithBaseUpdate<CarReminder>>
+      car_service_completions: Table<CarServiceCompletion, WithBaseInsert<CarServiceCompletion>, WithBaseUpdate<CarServiceCompletion>>
+      account_income_labels: Table<AccountIncomeLabel, WithBaseInsert<AccountIncomeLabel>, WithBaseUpdate<AccountIncomeLabel>>
       expense_contexts: Table<ExpenseContext, WithBaseInsert<ExpenseContext>, WithBaseUpdate<ExpenseContext>>
       context_expenses: Table<ContextExpense, WithBaseInsert<ContextExpense>, WithBaseUpdate<ContextExpense>>
       notification_preferences: Table<
@@ -1049,6 +1059,8 @@ export type Database = {
         }
         Returns: number
       }
+      classify_account_income: { Args: { p_movement_id: string; p_kind: AccountIncomeKind; p_debt_id?: string | null; p_debt_amount?: number | null }; Returns: AccountIncomeLabel }
+      complete_car_service: { Args: { p_request_id: string; p_input: Json }; Returns: CarServiceCompletion }
       post_account_balance_correction: {
         Args: {
           p_card_id: string

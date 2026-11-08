@@ -46,6 +46,6 @@ export function clearPaymentAttempt(userId: string, intent: FinanceObligation) {
 export function clearUserPaymentAttempts(userId: string) {
   try {
     const keys = Array.from({ length: localStorage.length }, (_, i) => localStorage.key(i))
-    for (const storageKey of keys) if (storageKey?.startsWith(`denge:payment-attempt:v1:${userId}:`)) localStorage.removeItem(storageKey)
+    for (const storageKey of keys) if (storageKey?.startsWith(`denge:payment-attempt:v1:${userId}:`) || storageKey?.startsWith(`denge:car-service-attempt:v1:${userId}:`)) localStorage.removeItem(storageKey)
   } catch { /* Depolamaya erişilemezse eski kayıt yeni niyet gibi gönderilmez. */ }
 }

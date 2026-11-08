@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
+import { DeferredDetails } from '../ui/deferred-details'
 import { fetchAccountLedgerEvents } from '../../data/repositories/financePanelsRepo'
 import { postAccountBalanceCorrection, recomputeAccountBalance } from '../../services/accountLedgerActions'
 import type { AccountLedger, Card } from '../../types/database'
@@ -20,6 +21,7 @@ const KIND_LABELS: Record<AccountLedger['kind'], { label: string; className: str
 }
 
 const VISIBLE_EVENTS = 8
+const AccountIncomePanel = lazy(() => import('./AccountIncomePanel').then(module => ({ default: module.AccountIncomePanel })))
 
 /**
  * "Bu bakiye neyden oluşuyor?" — the user-facing side of the bank account
@@ -233,6 +235,7 @@ export function AccountLedgerPanel({
       )}
 
       <div className="mt-3 border-t border-line-strong pt-3">
+        <DeferredDetails summary="Gelen para neydi?" summaryClassName="min-h-11 cursor-pointer py-3 text-sm font-semibold text-primary"><Suspense fallback={<p role="status">Para girişleri yükleniyor…</p>}><AccountIncomePanel key={card.id} cardId={card.id} /></Suspense></DeferredDetails>
         <button
           type="button"
           onClick={() => {

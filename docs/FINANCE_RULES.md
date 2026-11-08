@@ -1,5 +1,19 @@
 # Finance Rules
 
+8 Kasım ikinci paket: `docs/LINKED_FINANCE_WORKFLOWS.md`.
+Kaydedilmiş girişi alacağa bağlamak yalnız açık TL alacağını azaltır;
+classify_account_income hareketi tek kez tüketir, hesabı tekrar artırmaz.
+Maaş/transfer/diğer etiketi bilgi amaçlıdır; maaş/karşı hesap yazmaz.
+Otomatik eşleşmiş SMS tekrar tahsil edilmez. complete_car_service rapor
+gideri/etiket/km/sonraki planı makbuzla atomik yazar; para hareketi üretmez.
+Altın alımı/hesap/hedef birleşimi kapsam dışıdır.
+
+8 Kasım: liste içi Aldım finansal harcama üretmez. Aylık hedef kaydı toplam
+birikime eklenmez. Kategori bütçesi yalnız cari takvim ayı/tüm kartlarda
+düzenlenir; kullanım provizyonları kapsayan `buildBudgetUsage` hesabıdır.
+Çıpalı limit, açık bilgilendirmeyle sabit limite geçer. Para/ledger hesapları
+korunur. Sözleşme: `docs/SIMPLIFICATION_FLOWS_2026-11-08.md`.
+
 ## Yapı Kredi gelen transfer SMS'i (2026-11-07)
 
 `parse-sms`, B016 kodlu `52***047 hesabiniza ... TL FAST/HAVALE/EFT odemesi
