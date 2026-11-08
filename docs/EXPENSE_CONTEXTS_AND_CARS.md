@@ -1,5 +1,13 @@
 # Expense Contexts and Cars
 
+8 Kasım bağlı akışlar: `docs/LINKED_FINANCE_WORKFLOWS.md`.
+Araç/aktif grup kartından ortak harcama hazır car/context seçimiyle açılır;
+mevcut hareket hash bağlantısıyla ilişkilendirilir. Tek harcama iki rapor
+etiketi taşıyabilir; etiket hatası yazılmış harcamayı başarısız saymaz.
+Bakım tamamlamada tarih/km, masrafsız/mevcut kart/mevcut rapor/yeni rapor gideri
+ve sonraki plan tek RPC'dir. Geçmiş, UUID tekrarı ve sürüm kontrolü kalıcıdır.
+Yeni rapor gideri hesap/ledger yazmaz; JSON restore/reset kapsamındadır.
+
 Bu doküman `/odemeler/baglamlar` ve `/varliklar/araclar` için davranış kaynağıdır.
 
 ## Değişmezler
@@ -61,7 +69,7 @@ Litre ve odometre, hem manuel araç giderinde hem etiketli kart giderinde nullab
 
 `car_reminders` tarih, kilometre veya ikisini taşır. Sayfada 30 gün / 1.000 km kala “Yaklaşıyor”, hedef geçince “Gecikti” görünür. Tarihli reminder için `push-notify` 7 gün kala `car_reminder_due_7d` üretir ve `notification_preferences.cars_enabled` kapısına uyar.
 
-Tekrarlı iş tamamlanınca tarih `repeat_months`, kilometre `repeat_km` kadar ileri taşınır. Tekrarsız iş aktif listeden silinir.
+Tekrarlı işte sonraki tarih/km gerçekleşen tarih/km + repeat_months/repeat_km olarak önerilir ve düzenlenebilir. Sonraki iki alan boşsa hatırlatıcı kapanır; tamamlanma makbuzu korunur. Eski vade üzerinden sessiz öteleme yapılmaz.
 
 ## TCO
 

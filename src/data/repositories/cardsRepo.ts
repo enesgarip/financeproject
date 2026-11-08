@@ -216,6 +216,7 @@ export type AddCardExpenseInput = {
   sourceEventId?: string
   /** Harcamayı bir araca etiketler (Arabalarım). Borç RPC'sine dokunmaz. */
   carId?: string | null
+  contextId?: string | null
 }
 
 /**
@@ -230,6 +231,7 @@ export type AddCardExpenseInput = {
 export type CardExpenseWriteResult = {
   /** Harcama kaydedildi ama araç etiketi uygulanamadıysa kullanıcıya gösterilecek uyarı. */
   carTagWarning: string | null
+  contextTagWarning?: string | null
 }
 
 export async function addCardExpense(input: AddCardExpenseInput): Promise<Result<CardExpenseWriteResult>> {
@@ -246,7 +248,15 @@ export async function addCardExpense(input: AddCardExpenseInput): Promise<Result
   })
 
   if (error) return fail(appErrorFromSupabase(error, 'Harcama kaydedilemedi.'))
-  return ok(await tagExpenseCar((data as CardExpense | null)?.id, input.carId))
+  return ok(await tagExpense((data as CardExpense | null)?.id, input.carId, input.contextId))
+}
+
+async function tagExpense(expenseId: string | undefined, carId?: string | null, contextId?: string | null): Promise<CardExpenseWriteResult> {
+  const result = await tagExpenseCar(expenseId, carId)
+  if (!contextId) return result
+  if (!expenseId) return { ...result, contextTagWarning: 'Harcama kaydedildi; kayıt kimliği dönmediği için gider grubuna atanamadı. Tekrar harcama ekleme; mevcut hareketi ilişkilendir.' }
+  const { error } = await supabase.from('card_expenses').update({ context_id: contextId }).eq('id', expenseId)
+  return { ...result, contextTagWarning: error ? 'Harcama kaydedildi; gider grubu atanamadı. Tekrar harcama ekleme; mevcut hareketi ilişkilendir.' : null }
 }
 
 /**
@@ -306,6 +316,7 @@ export type CardInstallmentCarryoverInput = {
   sourceEventId?: string
   /** Taksit devrini bir araca etiketler (Arabalarım). Borca dokunmaz. */
   carId?: string | null
+  contextId?: string | null
 }
 
 export async function fetchCardInstallmentMatchRows(cardId: string): Promise<Result<InstallmentMatchRow[]>> {
@@ -332,7 +343,7 @@ export async function recordCardInstallmentCarryover(
   })
 
   if (error) return fail(appErrorFromSupabase(error, 'Taksit devri kaydedilemedi.'))
-  return ok(await tagExpenseCar((data as CardExpense | null)?.id, input.carId))
+  return ok(await tagExpense((data as CardExpense | null)?.id, input.carId, input.contextId))
 }
 
 export async function cutDueCardStatements(): Promise<Result<number>> {

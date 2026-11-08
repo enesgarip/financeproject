@@ -1,5 +1,15 @@
 # Card Debt Transitions
 
+8 Kasım ikinci paket: araç/grup etiketleri ve bakım tamamlama mevcut
+harcamayı yeniden borç yazmaz. Yeni araç gideri raporlamadır. Gelen para
+alacağa kaynak hareketle tek kez bağlanır; banka tekrar kredilendirilmez.
+Eski ledger güncellenmez. `docs/LINKED_FINANCE_WORKFLOWS.md`.
+
+8 Kasım sunum birleşimleri borç/ledger geçişi üretmez. Alınacaklar'da Aldım
+yalnız liste durumudur; harcama SMS/ekstre/manuel yoldadır. Ortak karar mevcut
+projeksiyonu kullanır. Özet son karşılaştırmadaki açık farkı gösterir;
+corrected/matched ölçüm yeniden açılmaz. `docs/SIMPLIFICATION_FLOWS_2026-11-08.md`.
+
 7 Kasım dövizli SMS: `foreign_card_sms` kesin TL beklerken borç/kova/ledger
 yazmaz. Tamamlama RPC'si kullanıcının kesin TL tutarıyla mevcut
 `add_card_expense` provizyonunu yazar; otomatik ödeme eşleme ve taksit niyeti

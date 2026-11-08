@@ -6,7 +6,6 @@ import { MonthlyReport } from './AnalysisPage.reports'
 import { CategorySpendingChart } from './AnalysisPage.wealth'
 import {
   MonthCloseAssistant,
-  PriceIncreaseRadar,
   SchemaMigrationNotice,
   SubscriptionsPanel,
 } from './AnalysisPage.panels'
@@ -47,7 +46,7 @@ function AnalysisSkeleton() {
 }
 
 export function AnalysisPage() {
-  const { data, error, loading, missingTables, priceTrends, ratesSnapshot, snapshots, auxiliaryError, retryAuxiliary, auxiliaryLoading } = useAnalysisPageData()
+  const { data, error, loading, missingTables, ratesSnapshot, snapshots, auxiliaryError, retryAuxiliary, auxiliaryLoading } = useAnalysisPageData()
   // Aynı TanStack sorgusu (paylaşılan cache) — yalnız "Tekrar dene" için gerekiyor.
   const snapshotQuery = useFinanceSnapshot()
 
@@ -76,7 +75,6 @@ export function AnalysisPage() {
             (veri yoksa null döner) tam satır — sağ yarı boş kalmasın (UX turu B14). */}
         <FeatureSection id="kategori-analizi" className="lg:col-span-7"><CategorySpendingChart data={data} /></FeatureSection>
         <FeatureSection id="abonelikler" className="lg:col-span-5"><SubscriptionsPanel data={data} /></FeatureSection>
-        {!auxiliaryError && !auxiliaryLoading ? <PriceIncreaseRadar trends={priceTrends} /> : null}
         {!auxiliaryError && !auxiliaryLoading ? <NetWorthTrend snapshots={snapshots} ratesSnapshot={ratesSnapshot} /> : null}
         <ForwardForecast data={data} />
       </div>

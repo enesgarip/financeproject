@@ -29,6 +29,7 @@ import { buildPurchaseImpact, type PurchasePaymentMethod, type PurchaseVerdict }
 import { buildSafeToSpend } from '../utils/safeToSpend'
 import { dominantSavingsGoal } from '../utils/wishlistPlan'
 import { formatCurrency, parseNumber } from '../utils/formatCurrency'
+import type { WishlistItem } from '../types/database'
 
 /**
  * Karar anı ekranı: "bunu alsam ne olur?" Mağazada telefonda 10 saniyede
@@ -47,15 +48,26 @@ const VERDICT_PRESENTATION: Record<PurchaseVerdict, { label: string; className: 
 }
 
 export function PurchaseDecisionPage() {
+  const [searchParams] = useSearchParams()
+  return <PurchaseDecision initialAmount={searchParams.get('tutar') ?? ''} />
+}
+
+/** Liste içi değerlendirme ve hızlı karar aynı formu ve hesapları kullanır. */
+export function PurchaseDecision({ initialAmount = '', item, onDefer, onPurchased, saving = false }: {
+  initialAmount?: string
+  item?: WishlistItem
+  onDefer?: () => void
+  onPurchased?: () => void
+  saving?: boolean
+}) {
   const { formatAmount } = useBalancePrivacy()
   const snapshotQuery = useFinanceSnapshot()
   const { user } = useAuth()
   const qc = useQueryClient()
-  const [searchParams] = useSearchParams()
   const [amountInput, setAmountInput] = useState(() => {
     // Wishlist köprüsü: ?tutar=12500 ile gelince form dolu açılır. TEK SEFERLİK
     // lazy init — sürekli senkron, autoFocus'lu serbest yazmayı bozardı.
-    const seed = searchParams.get('tutar')
+    const seed = item?.estimated_price?.toString() ?? initialAmount
     return seed && parseNumber(seed) > 0 ? seed : ''
   })
   const [installments, setInstallments] = useState(1)
@@ -228,11 +240,19 @@ export function PurchaseDecisionPage() {
   }, [snapshotQuery.data, method, amount, todayKey])
 
   return (
-    <section className="mx-auto min-w-0 max-w-xl space-y-4">
+    <section data-navigation-transient className="mx-auto min-w-0 max-w-xl space-y-4">
       {goalSnapshotsQuery.isError ? <QueryError title="Hedef geçmişi yüklenemedi" onRetry={() => void goalSnapshotsQuery.refetch()} /> : null}
       <p className="text-[13px] text-ink-muted">
         Tutarı ve ödeme şeklini seç; önümüzdeki altı aya etkisini birkaç saniyede gör.
       </p>
+      {item ? <div className="space-y-2 border-b border-line pb-3">
+        <p className="break-words text-base font-semibold text-ink">{item.name}</p>
+        <div className="flex flex-wrap gap-2">
+          <button type="button" disabled={saving} onClick={onDefer} className="min-h-11 rounded-lg border border-line-strong px-4 text-sm font-semibold">Listede beklet</button>
+          <button type="button" disabled={saving} onClick={onPurchased} className="min-h-11 rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground">{saving ? 'Kaydediliyor…' : 'Aldım'}</button>
+        </div>
+        <p className="text-xs text-ink-muted">Aldım yalnız listeyi günceller. Harcama kaydı, SMS veya ekstre üzerinden ayrıca izlenir.</p>
+      </div> : null}
       <Card variant="elevated" className="border-primary/20">
         <CardContent className="p-4 sm:p-5">
           <div className="flex items-center gap-2.5">
@@ -377,7 +397,7 @@ export function PurchaseDecisionPage() {
                 </ul>
                 {/* Karar–Liste köprüsü: "hayır" yerine tek tıkla "sonra" —
                     dürtü anı satın almadan erteleme eylemine çevrilir. */}
-                {impact.verdict !== 'rahat' ? (
+                {!item ? (
                   <div className="mt-2.5">
                     {listSave === 'done' ? (
                       <p className="text-xs font-semibold">

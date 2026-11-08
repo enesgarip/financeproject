@@ -8,7 +8,9 @@ import { CategorySpendingChart } from './AnalysisPage.categories'
 
 const mocks = vi.hoisted(() => ({ query: vi.fn(), refetch: vi.fn() }))
 vi.mock('../app/useCategorySpendingHistory', () => ({ useCategorySpendingHistory: () => mocks.query() }))
-const data = { cards: [{ id: 'a', card_name: 'Kart A', card_type: 'kredi_karti', statement_day: 4, due_day: 14 }, { id: 'b', card_name: 'Kart B', card_type: 'kredi_karti', statement_day: 20, due_day: 30 }] } as AnalysisData
+vi.mock('../auth/useAuth', () => ({ useAuth: () => ({ user: { id: 'test-user' } }) }))
+vi.mock('../app/useFinanceSnapshot', () => ({ useInvalidateFinanceSnapshot: () => vi.fn() }))
+const data = { budgets: [], cardExpenses: [], salaryHistory: [], cards: [{ id: 'a', card_name: 'Kart A', card_type: 'kredi_karti', statement_day: 4, due_day: 14 }, { id: 'b', card_name: 'Kart B', card_type: 'kredi_karti', statement_day: 20, due_day: 30 }] } as unknown as AnalysisData
 const h: CategoryHistory = {
   expenses: [{ id: 'oct', card_id: 'a', statement_archive_id: null, spent_at: '2026-10-10', amount: 123.45, description: 'Market alışverişi 123,45 TL', category: 'Market', installment_count: 1, status: 'posted' }, { id: 'nov', card_id: 'b', statement_archive_id: null, spent_at: '2026-11-01', amount: 55, description: 'Yemek', category: 'Yemek', installment_count: 1, status: 'posted' }, { id: 'old', card_id: 'a', statement_archive_id: 's', spent_at: '2026-09-15', amount: 77, description: 'Geçmiş alışveriş', category: 'Market', installment_count: 1, status: 'posted' }],
   installments: [], statements: [{ id: 's', card_id: 'a', statement_date: '2026-10-04', statement_debt_amount: 77 }],

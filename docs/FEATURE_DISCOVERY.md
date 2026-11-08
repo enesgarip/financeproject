@@ -1,5 +1,15 @@
 # Özellik arama ve keşif
 
+8 Kasım ikinci paket: Araç/gider grupları ortak harcama ve mevcut hareket
+bağlantıları taşır. Hesap hareketlerinde para girişi sınıflandırma, Araçlar'da
+bakım tamamlama/geçmiş, ay kapanışında ilgili işe geçiş vardır. Mevcut özellik
+kimlikleri korunur. Kaynak: `docs/LINKED_FINANCE_WORKFLOWS.md`.
+
+8 Kasım: abonelik adayının favori kimliği korunur; yönetim bağlantısı
+`/odemeler?view=plans#abonelikler` olur. Alınacaklar açıklaması liste içi karar
+akışını içerir. Eski Analiz hash'i özet/yönetim bağlantısına ulaşır.
+`docs/SIMPLIFICATION_FLOWS_2026-11-08.md`.
+
 7 Kasım 2026. Kullanıcı bazı özellikleri bulmakta zorlandığını ve bir kısmının
 varlığını sonradan fark ettiğini belirtti. Kabul edilen kapsam: her sayfadan
 **Ara ve keşfet**, açıklamalı rehber ve kullanıcıya özel favori kısayollar.

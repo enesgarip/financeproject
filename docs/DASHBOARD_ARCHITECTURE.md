@@ -1,5 +1,11 @@
 # Dashboard Architecture Note
 
+8 Kasım: `ForeignCardSmsNotice` İncelenecekler listesinde dövizli SMS, son
+karşılaştırmadaki açık fark, hafif veri bulgusu ve aktif abonelik adaylarını
+bağlantılarla toplar. Sayaç konu başlığı sayısıdır; snapshot hatasında o kaynaktan
+yeni iddia verilmez. Mevcut SMS hook'u ve snapshot/saf util'ler kullanılır.
+Sözleşme: `docs/SIMPLIFICATION_FLOWS_2026-11-08.md`.
+
 7 Kasım dövizli SMS: `components/dashboard/ForeignCardSmsNotice.tsx` Özet'te
 kesin TL bekleyen adet ve finansal toplamların kapsamını açıklar; Hesaplar'a
 doğrudan bağlantı verir. `app/useForeignCardSms.ts` aynı kullanıcı cache'ini

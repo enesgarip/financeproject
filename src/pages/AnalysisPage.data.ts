@@ -1,16 +1,14 @@
 import { useQuery } from '@tanstack/react-query'
-import { useEffect, useMemo, useRef } from 'react'
+import { useMemo } from 'react'
 import { useFinanceSnapshot } from '../app/useFinanceSnapshot'
 import { useAuth } from '../auth/useAuth'
-import { fetchNetWorthSnapshots, fetchPriceRadarRows } from '../data/repositories/analysisRepo'
+import { fetchNetWorthSnapshots } from '../data/repositories/analysisRepo'
 import { useMarketRates } from '../hooks/useMarketRates'
 import {
   buildSearchItems,
   type AnalysisData,
 } from '../utils/analysisView'
 import { resolveSavingsGoalRows } from '../utils/goalSources'
-import { type MarketRatesSnapshot } from '../utils/marketRates'
-import { buildPriceObservations, detectPriceIncreases } from '../utils/priceIncreaseRadar'
 
 const emptyAnalysisData: AnalysisData = {
   assets: [],
@@ -40,8 +38,6 @@ const STATEMENT_ARCHIVE_LIMIT = 48
 export function useAnalysisPageData() {
   const { user } = useAuth()
   const { snapshot: ratesSnapshot } = useMarketRates()
-  const ratesSnapshotRef = useRef<MarketRatesSnapshot | null>(null)
-  useEffect(() => { ratesSnapshotRef.current = ratesSnapshot }, [ratesSnapshot])
 
   const snapshotQuery = useFinanceSnapshot()
   const userId = user?.id
@@ -73,11 +69,6 @@ export function useAnalysisPageData() {
       ).goals,
     }
   }, [snapshotQuery.data, ratesSnapshot])
-  const dataRef = useRef<AnalysisData>(emptyAnalysisData)
-  useEffect(() => {
-    dataRef.current = data
-  }, [data])
-
   const missingTables = useMemo(
     () => (snapshotQuery.data?.missingTables ?? []).filter((table) => table in optionalTableLabels),
     [snapshotQuery.data],
@@ -99,26 +90,6 @@ export function useAnalysisPageData() {
     },
   })
 
-  // 13 aylık zam radarı trend analizi — mutation'ı dakikası dakikasına izlemesi
-  // gerekmez; 10 dk'lık pencere yeterli tazelik verir (anahtar çöpü için üstteki not).
-  const priceTrendsQuery = useQuery({
-    queryKey: ['price-trends', userId],
-    enabled: Boolean(userId && snapshotQuery.data),
-    staleTime: 10 * 60_000,
-    queryFn: async () => {
-      const radarResult = await fetchPriceRadarRows()
-        if (!radarResult.ok) throw new Error(radarResult.error.message)
-
-        const radar = radarResult.data
-        const latestData = dataRef.current
-        const observations = buildPriceObservations({
-          transactionHistory: radar.transactionHistory,
-          payments: latestData.payments,
-          cardExpenses: radar.cardExpenses,
-        })
-        return detectPriceIncreases(observations)
-    },
-  })
 
   const searchItems = useMemo(() => buildSearchItems(data), [data])
 
@@ -127,10 +98,9 @@ export function useAnalysisPageData() {
     error: snapshotQuery.error instanceof Error ? snapshotQuery.error.message : '',
     loading: snapshotQuery.isPending,
     missingTables,
-    auxiliaryLoading: netWorthQuery.isPending || priceTrendsQuery.isPending,
-    auxiliaryError: netWorthQuery.isError || priceTrendsQuery.isError,
-    retryAuxiliary: () => Promise.all([netWorthQuery.refetch(), priceTrendsQuery.refetch()]),
-    priceTrends: priceTrendsQuery.data ?? [],
+    auxiliaryLoading: netWorthQuery.isPending,
+    auxiliaryError: netWorthQuery.isError,
+    retryAuxiliary: () => netWorthQuery.refetch(),
     ratesSnapshot,
     searchItems,
     snapshots: netWorthQuery.data ?? [],

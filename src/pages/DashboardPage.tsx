@@ -64,6 +64,7 @@ import { CreditScoreReminder } from '../components/dashboard/CreditScoreReminder
 import { useOnlineStatus } from '../hooks/useOnlineStatus'
 import { userMessage } from '../utils/userMessage'
 import { QueryError } from '../components/ui/query-error'
+import { discoverSubscriptions } from '../utils/subscriptionDiscovery'
 
 type DashboardData = {
   assets: Asset[]
@@ -229,6 +230,7 @@ export function DashboardPage() {
     [openPaymentDrawer, data.cards, invalidateSnapshot],
   )
   const healthCounts = useMemo(() => buildHealthCounts(data), [data])
+  const subscriptionReviewCount = useMemo(() => snapshotQuery.data ? discoverSubscriptions(snapshotQuery.data.cardExpenses, snapshotQuery.data.payments).filter(candidate => candidate.isActive && candidate.status !== 'planned').length : 0, [snapshotQuery.data])
 
   // ── Şerit katmanı (yeni görsel dil, `2a`/`4e`) ──
   // Kahraman rakam SafeToSpendCard'ın hesabıdır; kart kaldırıldığı için hesap
@@ -348,7 +350,7 @@ export function DashboardPage() {
 
   return (
     <section className="grid gap-6 lg:grid-cols-12 lg:items-start">
-      <ForeignCardSmsNotice />
+      <ForeignCardSmsNotice cards={error ? [] : data.cards} reconciliations={error ? [] : data.accountReconciliations} healthCount={error ? 0 : healthCounts.total} subscriptionCount={error ? 0 : subscriptionReviewCount} />
       {error ? <p role="alert" className="lg:col-span-12 text-sm text-warning">Güncel özet alınamadı. Son başarılı okumadaki veriler gösteriliyor. {userMessage(error)}</p> : null}
       {/* ── Şerit katmanı: ekranın cevapladığı tek soru ve onu açan çizgiler ── */}
 

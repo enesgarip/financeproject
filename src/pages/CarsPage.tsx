@@ -1,9 +1,13 @@
 import { normalizeSearchText } from '../utils/searchText'
 import { DeferredDetails } from '../components/ui/deferred-details'
+import { FeatureDetails } from '../components/FeatureSection'
+import { Link, useSearchParams } from 'react-router'
 import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
 import { Bell, Car as CarIcon, Check, CreditCard, Fuel, Gauge, Pencil, Plus, Share2, Trash2, Wallet } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react'
 import { useCars, useInvalidateCars } from '../app/useCars'
+import { useInvalidateFinanceSnapshot } from '../app/useFinanceSnapshot'
+import { useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../auth/useAuth'
 import { Alert } from '../components/ui/alert'
 import { Badge } from '../components/ui/badge'
@@ -22,9 +26,8 @@ import {
   insertCarReminder,
   setCardExpenseCar,
   updateCar,
-  updateCarReminder,
 } from '../data/repositories/carsRepo'
-import { fetchRecentCardExpenses } from '../data/repositories/cardsRepo'
+import { fetchTaggableCardExpenses } from '../data/repositories/cardsRepo'
 import type { Car, CardExpense, CarPaymentMethod, CarReminder, CarReminderKind } from '../types/database'
 import { CAR_EXPENSE_CATEGORIES, carReminderState, type CarSummary } from '../utils/carExpenses'
 import { downloadCarTcoCard, renderCarTcoCard } from '../utils/carTcoCard'
@@ -100,7 +103,7 @@ export function CarsPage() {
             }}
             onError={(m) => toast.error('Gider eklenemedi', m)}
           /></DeferredDetails>
-        <DeferredDetails summary="Kart hareketi ilişkilendir" summaryClassName="min-h-11 cursor-pointer py-3 font-semibold text-primary">          <CardTagging cars={cars} onChanged={refresh} onError={(m) => toast.error('Atanamadı', m)} /></DeferredDetails>
+        <FeatureDetails id="kart-iliskilendir" summary="Kart hareketi ilişkilendir" summaryClassName="min-h-11 cursor-pointer py-3 font-semibold text-primary"><CardTagging cars={cars} onChanged={refresh} onError={(m) => toast.error('Atanamadı', m)} /></FeatureDetails>
       </> : null}
       <DeferredDetails summary="Araçları yönet" defaultOpen={cars.length === 0} summaryClassName="min-h-11 cursor-pointer py-3 font-semibold text-primary">      <CarManager
         cars={cars}
@@ -473,15 +476,15 @@ const REMINDER_KINDS: { value: CarReminderKind; label: string }[] = [
   { value: 'kasko', label: 'Kasko' }, { value: 'lastik', label: 'Lastik' }, { value: 'diger', label: 'Diğer' },
 ]
 
-function addMonthsIso(dateIso: string, months: number): string {
-  const date = new Date(`${dateIso}T12:00:00`)
-  date.setMonth(date.getMonth() + months)
-  return dateInputValue(date)
-}
+const CarServiceModal = lazy(() => import('../components/finance/CarServiceModal').then(module => ({ default: module.CarServiceModal })))
+const CarServiceHistory = lazy(() => import('../components/finance/CarServiceModal').then(module => ({ default: module.CarServiceHistory })))
 
 function CarRemindersPanel({ cars, reminders, userId, onChanged, onError }: {
   cars: Car[]; reminders: CarReminder[]; userId?: string; onChanged: () => Promise<void>; onError: (message: string) => void
 }) {
+  const [completing, setCompleting] = useState<CarReminder | null>(null)
+  const queryClient = useQueryClient()
+  const invalidateFinance = useInvalidateFinanceSnapshot()
   const [carId, setCarId] = useState(cars[0]?.id ?? '')
   const [title, setTitle] = useState('')
   const [kind, setKind] = useState<CarReminderKind>('bakim')
@@ -509,20 +512,6 @@ function CarRemindersPanel({ cars, reminders, userId, onChanged, onError }: {
     await onChanged()
   }
 
-  async function complete(reminder: CarReminder) {
-    if (reminder.repeat_months || reminder.repeat_km) {
-      const result = await updateCarReminder(reminder.id, {
-        due_date: reminder.due_date && reminder.repeat_months ? addMonthsIso(reminder.due_date, reminder.repeat_months) : reminder.due_date,
-        due_odometer_km: reminder.due_odometer_km != null && reminder.repeat_km ? reminder.due_odometer_km + reminder.repeat_km : reminder.due_odometer_km,
-      })
-      if (!result.ok) return onError(result.error.message)
-    } else {
-      const result = await deleteCarReminder(reminder.id)
-      if (!result.ok) return onError(result.error.message)
-    }
-    await onChanged()
-  }
-
   return (
     <Card>
       <CardHeader className="pb-2"><CardTitle className="flex items-center gap-2 text-base"><Bell className="size-4 text-primary" /> Bakım ve yenilemeler</CardTitle><p className="text-xs text-ink-muted">Tarih, kilometre veya ikisi birden yaklaşınca görünür; açık Web Push varsa tarihli işler 7 gün önce bildirilir.</p></CardHeader>
@@ -531,8 +520,10 @@ function CarRemindersPanel({ cars, reminders, userId, onChanged, onError }: {
           const car = carsById.get(reminder.car_id)
           if (!car) return null
           const state = carReminderState(reminder, car, todayIso)
-          return <li key={reminder.id} className={`flex items-center justify-between gap-3 rounded-xl border px-3 py-2 ${state === 'overdue' ? 'border-destructive/40 bg-destructive/5' : state === 'due-soon' ? 'border-warning/40 bg-warning/5' : 'border-line-strong'}`}><div className="min-w-0"><div className="flex items-center gap-2"><p className="truncate text-sm font-bold">{reminder.title}</p><Badge variant={state === 'overdue' ? 'destructive' : state === 'due-soon' ? 'warning' : 'outline'}>{state === 'overdue' ? 'Gecikti' : state === 'due-soon' ? 'Yaklaşıyor' : 'Planlı'}</Badge></div><p className="truncate text-xs text-ink-muted">{car.name}{reminder.due_date ? ` · ${formatDate(reminder.due_date)}` : ''}{reminder.due_odometer_km != null ? ` · ${reminder.due_odometer_km.toLocaleString('tr-TR')} km` : ''}</p></div><div className="flex shrink-0 gap-1"><Button size="icon-sm" variant="ghost" aria-label="Tamamlandı" onClick={() => void complete(reminder)}><Check /></Button><Button size="icon-sm" variant="ghost" aria-label="Hatırlatıcıyı sil" onClick={async () => { const result = await deleteCarReminder(reminder.id); if (!result.ok) return onError(result.error.message); await onChanged() }}><Trash2 /></Button></div></li>
+          return <li key={reminder.id} className={`flex items-center justify-between gap-3 rounded-xl border px-3 py-2 ${state === 'overdue' ? 'border-destructive/40 bg-destructive/5' : state === 'due-soon' ? 'border-warning/40 bg-warning/5' : 'border-line-strong'}`}><div className="min-w-0"><div className="flex items-center gap-2"><p className="truncate text-sm font-bold">{reminder.title}</p><Badge variant={state === 'overdue' ? 'destructive' : state === 'due-soon' ? 'warning' : 'outline'}>{state === 'overdue' ? 'Gecikti' : state === 'due-soon' ? 'Yaklaşıyor' : 'Planlı'}</Badge></div><p className="truncate text-xs text-ink-muted">{car.name}{reminder.due_date ? ` · ${formatDate(reminder.due_date)}` : ''}{reminder.due_odometer_km != null ? ` · ${reminder.due_odometer_km.toLocaleString('tr-TR')} km` : ''}</p></div><div className="flex shrink-0 gap-1"><Button size="icon-sm" variant="ghost" aria-label="Tamamlandı" onClick={() => setCompleting(reminder)}><Check /></Button><Button size="icon-sm" variant="ghost" aria-label="Hatırlatıcıyı sil" onClick={async () => { const result = await deleteCarReminder(reminder.id); if (!result.ok) return onError(result.error.message); await onChanged() }}><Trash2 /></Button></div></li>
         })}</ul> : <p className="text-sm text-ink-muted">Henüz bakım veya yenileme hatırlatıcısı yok.</p>}
+        {completing && carsById.get(completing.car_id) ? <Suspense fallback={<p role="status">Tamamlama formu yükleniyor…</p>}><CarServiceModal key={completing.id} reminder={completing} car={carsById.get(completing.car_id)!} onClose={() => setCompleting(null)} onCompleted={async () => { await Promise.all([onChanged(), invalidateFinance(), queryClient.invalidateQueries({ queryKey: ['car-services', userId] })]) }} /></Suspense> : null}
+        <DeferredDetails summary="Tamamlanan işler" summaryClassName="min-h-11 cursor-pointer py-3 text-sm font-semibold text-primary"><Suspense fallback={<p role="status">Tamamlanan işler yükleniyor…</p>}><CarServiceHistory /></Suspense></DeferredDetails>
         <form onSubmit={add} className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
           <Select value={carId} onChange={(e) => setCarId(e.target.value)} aria-label="Hatırlatıcı aracı">{cars.map((car) => <option key={car.id} value={car.id}>{car.name}</option>)}</Select>
           <Input value={title} onChange={(e) => setTitle(e.target.value)} aria-label="Hatırlatıcı başlığı" placeholder="Yağ değişimi, MTV..." required />
@@ -557,6 +548,8 @@ function CardTagging({
   onChanged: () => Promise<void>
   onError: (message: string) => void
 }) {
+  const [params] = useSearchParams()
+  const focusCar = cars.find(car => car.id === params.get('car'))
   const { formatAmount: formatCurrency } = useBalancePrivacy()
 
   const [expenses, setExpenses] = useState<CardExpense[]>([])
@@ -564,7 +557,7 @@ function CardTagging({
   const [busyId, setBusyId] = useState<string | null>(null)
 
   const load = useCallback(async () => {
-    const result = await fetchRecentCardExpenses(40)
+    const result = await fetchTaggableCardExpenses(100)
     if (result.ok) setExpenses(result.data)
     setLoading(false)
   }, [])
@@ -659,6 +652,7 @@ function CardTagging({
                   ))}
                 </Select>
                 </div>
+                {focusCar && expense.car_id !== focusCar.id ? <Button size="sm" disabled={busyId !== null} onClick={() => void assign(expense.id, focusCar.id)}>{focusCar.name} aracına ekle</Button> : null}
                 {expense.car_id && (expense.category === CAR_EXPENSE_CATEGORIES[0] || expense.fuel_liters != null) ? (
                   <form onSubmit={(event) => void saveFuel(event, expense)} className="grid grid-cols-[1fr_1fr_auto] gap-2 pl-2 sm:max-w-lg sm:self-end">
                     <Input name="liters" defaultValue={expense.fuel_liters ?? ''} inputMode="decimal" placeholder="Litre" aria-label={`${expense.description} litre`} />
@@ -700,7 +694,7 @@ function CarSummaryCard({
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <CardTitle className="truncate text-base">{car.name}</CardTitle>
+            <CardTitle className="break-words text-base">{car.name}</CardTitle>
             {car.plate ? (
               <p className="text-xs font-medium uppercase tracking-wide text-ink-muted">{car.plate}</p>
             ) : null}
@@ -712,6 +706,7 @@ function CarSummaryCard({
           </div>
         </div>
       </CardHeader>
+      <div className="flex flex-wrap gap-x-4 px-4"><Link to={`/kartlar?section=kartlar&panel=manuel&car=${encodeURIComponent(car.id)}`} className="inline-flex min-h-11 items-center text-sm font-semibold text-primary">Harcama kaydet →</Link><Link to={`/varliklar/araclar?car=${encodeURIComponent(car.id)}#kart-iliskilendir`} className="inline-flex min-h-11 items-center text-sm font-semibold text-primary">Mevcut hareketi ilişkilendir →</Link></div>
       <CardContent className="flex flex-col gap-4">
         {total === 0 ? (
           <p className="rounded-xl border border-dashed border-line-strong p-4 text-center text-sm text-ink-muted">

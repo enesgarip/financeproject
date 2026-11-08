@@ -40,7 +40,8 @@ export function QuickActionsProvider({ children }: { children: ReactNode }) {
   const location = useLocation()
   const open = openPath === location.pathname
   useEffect(() => {
-    const syncFocus = () => setFormFocused(Boolean(document.activeElement?.closest('input, textarea, select, [contenteditable="true"]')))
+    // Kaydet'e odak geçerken alt bar geri gelip dokunmanın üstünü örtmesin.
+    const syncFocus = () => setFormFocused(Boolean(document.activeElement?.closest('form, input, textarea, select, [contenteditable="true"]')))
     let blurTimer = 0
     const syncBlur = () => { blurTimer = window.setTimeout(syncFocus, 0) }
     syncFocus()

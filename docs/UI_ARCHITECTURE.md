@@ -1,5 +1,19 @@
 # UI Architecture
 
+8 Kasım ikinci paket: `docs/LINKED_FINANCE_WORKFLOWS.md`.
+Araç/grup kartından ortak harcama hazır seçimle açılır; mevcut hareket ayrı
+bağlantıyla ilişkilendirilir. Bakım gider/sonraki plan formu ve kalıcı geçmişi
+vardır; belirsiz istekte alanlar kilitlenir, yenileme aynı UUID'yi doğrular.
+Hesap hareketlerinden gelen para sınıflandırılır; bakiye yeniden yazılmaz.
+Ay kapanışından ilgili işe ve geri kontrole geçilir. Form düğmelerinde de
+mobil alt bar gizli kalır; ilk Kaydet dokunuşunu örtmez.
+
+8 Kasım: `docs/SIMPLIFICATION_FLOWS_2026-11-08.md`. Alınacaklar ürün kimliğiyle
+ortak kararı liste içinde açar; ihtiyaç testi isteğe bağlıdır. Hedef aylık özeti
+ve para ayırma aynı alandadır. Abonelik keşfi/fiyat geçmişi Ödemeler'dedir.
+Cari ay/tüm kartlar kategori ayrıntısından bütçe düzenlenir. Özet İncelenecekler
+alanı görevleri ilgili yönetime bağlar. Ana gezinme korunur.
+
 7 Kasım dövizli SMS: Özet bekleyen adet ve toplam kapsamını, Hesaplar
 “TL karşılığı bekleyen işlemler” bölümünde satıcı/tarih/döviz birimini gösterir.
 Döviz tutarı gizlilik maskesine uyar. Kesin TL formu yanıt kaybında tutarı

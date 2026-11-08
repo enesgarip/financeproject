@@ -32,6 +32,7 @@ async function invalidateFinanceViews(queryClient: QueryClient, userId: string |
     queryClient.invalidateQueries({ queryKey: ['card-expense-pace', userId] }),
     queryClient.invalidateQueries({ queryKey: ['category-spending-history', userId] }),
     queryClient.invalidateQueries({ queryKey: ['goal-monthly', userId] }),
+    queryClient.invalidateQueries({ queryKey: ['account-income', userId] }),
     ...FINANCE_CRUD_TABLES.map((table) => queryClient.invalidateQueries({ queryKey: crudRowsInvalidationKey(table, userId) })),
   ])
 }

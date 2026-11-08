@@ -1,5 +1,12 @@
 # Transaction History Side Effects
 
+8 Kasım: classify_account_income mevcut gerçek transfer türü para girişine
+bağlanır. Maaş/transfer/diğer etiketleri yeni history/bakiye yazmaz. TL alacak
+eşlemesi tek debt olayı yazar; tarihi kaynak hareket tarihidir ve source_event_id
+`income-match:<movement_id>` olur. Makbuz account_income_labels'tadır; eski
+history/ledger değişmez. Bakım tamamlama history yazmaz.
+Kaynak: `docs/LINKED_FINANCE_WORKFLOWS.md`.
+
 7 Kasım dövizli kart SMS'i: kuyruk kaydı `transaction_history` veya ledger
 yazmaz. Kesin TL tamamlanınca mevcut `add_card_expense` provizyon yolu,
 ödeme eşleme ve taksit niyeti kuralları çalışır; makbuz aynı transaction'dadır.

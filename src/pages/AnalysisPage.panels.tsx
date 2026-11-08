@@ -20,6 +20,8 @@ import { buildFinanceObligationsForMonth } from '../utils/obligations'
 
 import { SubscriptionDiscoveryPanel } from '../components/finance/SubscriptionDiscoveryPanel'
 import { diffTL, sumTL } from '../utils/money'
+import { usePriceTrends } from '../app/usePriceTrends'
+import { QueryError } from '../components/ui/query-error'
 import { StatPill } from './AnalysisPage.atoms'
 
 export function UpcomingInstallments({ data }: { data: AnalysisData }) {
@@ -384,6 +386,7 @@ export function MonthCloseAssistant({ data, missingTables }: { data: AnalysisDat
     { label: 'Bütçe kontrolü', done: budgetOverruns === 0, detail: budgetOverruns > 0 ? `${budgetOverruns} kategori limit üstü` : hasBudgetLimit ? 'Tanımlı bütçelerde aşım yok' : 'Bu ay için bütçe limiti yok' },
     { label: 'Veri erişimi', done: missingTables.length === 0, detail: missingTables.length > 0 ? `${missingTables.length} veri tablosuna erişilemiyor` : 'Veri tablolarına erişilebiliyor' },
   ]
+  const destinations = ['/kartlar?section=kartlar&panel=ekstreler', '/kartlar?section=kartlar&panel=taksitler', '/varliklar/maas', '/odemeler', '/odemeler/hedefler', '/veri-sagligi']
   const completed = checks.filter((check) => check.done).length
 
   return (
@@ -400,13 +403,15 @@ export function MonthCloseAssistant({ data, missingTables }: { data: AnalysisDat
           </p>
         </div>
         <div className="grid gap-2 min-[560px]:grid-cols-2 min-[980px]:grid-cols-3">
-          {checks.map((check) => (
+          {checks.map((check, index) => (
             <div key={check.label} className={`rounded-lg px-3 py-2 ${check.done ? 'bg-success/10 text-success' : 'bg-page text-ink-muted'}`}>
               <p className="text-xs font-bold">{check.label}</p>
               <p className="mt-0.5 text-[11px] opacity-70">{check.detail}</p>
+              <Link className="inline-flex min-h-11 items-center text-xs font-semibold underline underline-offset-2" to={`${destinations[index]}${destinations[index].includes('?') ? '&' : '?'}returnTo=${encodeURIComponent('/analiz#ay-kapanisi')}`}>{check.done ? 'İncele' : 'Kontrolü tamamla'} →</Link>
             </div>
           ))}
         </div>
+        <Link to="/analiz#aylik-rapor" className="inline-flex min-h-11 items-center text-sm font-semibold text-primary">Aylık raporu aç →</Link>
       </CardContent>
     </Card>
     </DeferredDetails>
@@ -414,7 +419,6 @@ export function MonthCloseAssistant({ data, missingTables }: { data: AnalysisDat
 }
 
 export function SubscriptionsPanel({ data }: { data: AnalysisData }) {
-  const location = useLocation()
   const { formatAmount } = useBalancePrivacy()
   const plans = data.payments.filter((p) => p.recurrence === 'monthly' && p.status === 'bekliyor')
   const monthlyTotal = sumTL(plans.map((p) => p.amount))
@@ -430,11 +434,20 @@ export function SubscriptionsPanel({ data }: { data: AnalysisData }) {
       </CardHeader>
       <CardContent className="space-y-4 pt-2">
         <Link to="/odemeler?view=plans" className="inline-flex min-h-11 items-center text-sm font-semibold text-primary">Kayıtlı planları yönet →</Link>
-        <DeferredDetails openRequestKey={location.hash === '#abonelikler' ? location.key : undefined} summary="Abonelik adaylarını incele" summaryClassName="min-h-11 cursor-pointer py-3 font-semibold text-primary"><SubscriptionDiscoveryPanel expenses={data.cardExpenses} payments={data.payments} cards={data.cards} /></DeferredDetails>
+        <Link to="/odemeler?view=plans#abonelikler" className="inline-flex min-h-11 items-center text-sm font-semibold text-primary">Abonelik adayları ve fiyat değişimlerini incele →</Link>
       </CardContent>
     </Card>
   )
 }
+/** Düzenli giderlerin keşfi ve fiyat geçmişi ödeme yönetiminin yanında açılır. */
+export function RegularExpensesPanel({ data }: { data: Pick<AnalysisData, 'cardExpenses' | 'payments' | 'cards'> }) {
+  const trends = usePriceTrends()
+  return <div className="space-y-4">
+    <SubscriptionDiscoveryPanel expenses={data.cardExpenses} payments={data.payments} cards={data.cards} />
+    {trends.isPending ? <p role="status" className="text-sm text-ink-muted">Fiyat değişimleri yükleniyor…</p> : trends.isError ? <QueryError title="Fiyat geçmişi yüklenemedi" onRetry={() => void trends.refetch()} /> : <PriceIncreaseRadar trends={trends.data} />}
+  </div>
+}
+
 export function SchemaMigrationNotice({ missingTables }: { missingTables: string[] }) {
   if (missingTables.length === 0) return null
 

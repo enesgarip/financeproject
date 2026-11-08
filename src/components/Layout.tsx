@@ -189,6 +189,7 @@ function LayoutInner() {
         >
           <PullToRefresh>
             <FinanceDataStatus />
+            {new URLSearchParams(search).get('returnTo') === '/analiz#ay-kapanisi' ? <Link to="/analiz#ay-kapanisi" className="mb-4 inline-flex min-h-11 items-center text-sm font-semibold text-primary">← Ay kapanış kontrolüne dön</Link> : null}
             <Outlet />
           </PullToRefresh>
         </main>
